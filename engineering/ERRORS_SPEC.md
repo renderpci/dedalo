@@ -176,7 +176,10 @@ optional passthrough. The stated removal condition — the
 `client_error_contract_tripwire` census of client reads of `.result` / `.msg` /
 `.errors` reaches 0 — was met on 2026-08-16: **0 compat reads across 648
 scanned files** (`client/dedalo/**/*.js` minus the browser test harness +
-`tools/*/js/**/*.js`; one counter, `scripts/lib/client_compat_census.ts`,
+`tools/*/js/**/*.js`; widened on 2026-09-02 to the WHOLE `tools/**/*.js` tree —
+the sub-path shape left nine tracked browser files outside the census, GATE-31 —
+and the tripwire now proves `git ls-files` under both roots ⊆ the scan; one
+counter, `scripts/lib/client_compat_census.ts`,
 comments and strings blanked, the named non-envelope shapes excused one
 expression at a time in `NON_ENVELOPE_READS` with a reason; the core sweep
 `2f8ad44f03`, the tools sweep `505ad279de`). The block, the schema

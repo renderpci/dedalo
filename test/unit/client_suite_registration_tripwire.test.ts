@@ -14,37 +14,28 @@
  *
  * CENSUS: TOTAL over `client/dedalo/test/client/js/test_*.js`, with the
  * infrastructure modules ENUMERATED — they are named `test_*` but are the
- * harness itself, not suites.
+ * harness itself, not suites. The list lives in test/helpers/client_suite_census.ts,
+ * shared with client_gate_inventory_tripwire.
  */
 
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { Glob } from 'bun';
+import {
+	NOT_A_SUITE,
+	NOT_A_SUITE_COUNT,
+	REGISTRY_PATH,
+	registeredSuiteNames,
+	suiteFiles,
+} from '../helpers/client_suite_census.ts';
 
-const REPO_ROOT = join(import.meta.dir, '..', '..');
-const SUITE_DIR = join(REPO_ROOT, 'client/dedalo/test/client/js');
-const REGISTRY = join(SUITE_DIR, 'test_registry.js');
-
-/**
- * Named `test_*` but NOT suites — the runner's own machinery. Each says what it
- * is, so "infrastructure" cannot become a place to park a suite nobody runs.
- */
-const NOT_A_SUITE: Record<string, string> = {
-	test_registry: 'THE manifest itself — the list every other entry is checked against.',
-	test_bootstrap: 'Boots Mocha and the page shell before any suite loads; imported by the runner.',
-	test_stats: 'The counters model (cards, group stats, window.global_stats for Puppeteer).',
-};
-
-function suiteFiles(): string[] {
-	return [...new Glob('test_*.js').scanSync({ cwd: SUITE_DIR })]
-		.map((name) => name.replace(/\.js$/, ''))
-		.sort();
-}
+// The census (the file walk, the registry parse and the ENUMERATED non-suite
+// exemptions) is SHARED with client_gate_inventory_tripwire through
+// test/helpers/client_suite_census.ts — one list, so a harness file added to one
+// gate's exemptions cannot silently be a suite to the other.
 
 describe('every client test file is registered', () => {
 	const files = suiteFiles();
-	const registry = readFileSync(REGISTRY, 'utf8');
+	const registry = readFileSync(REGISTRY_PATH, 'utf8');
 
 	test('the census sees the suite directory (anti-vacuity)', () => {
 		// "Every file is registered" over an empty listing is not a verdict.
@@ -67,13 +58,14 @@ describe('every client test file is registered', () => {
 	test('every registry entry names a file that exists', () => {
 		// The other direction: a renamed or deleted suite leaves a registry entry
 		// pointing at nothing, and the runner would report a phantom.
-		const named = [...registry.matchAll(/'(test_[a-z0-9_]+)'/g)].map((match) => match[1] as string);
+		const named = registeredSuiteNames(registry);
 		expect(named.length).toBeGreaterThan(90);
-		const missing = [...new Set(named)].filter((name) => !files.includes(name)).sort();
+		const missing = named.filter((name) => !files.includes(name)).sort();
 		expect(missing, `registry names suites with no file:\n  ${missing.join('\n  ')}`).toEqual([]);
 	});
 
-	test('each infrastructure exemption is real and reasoned', () => {
+	test('each infrastructure exemption is real and reasoned, and the list is shrink-only', () => {
+		expect(Object.keys(NOT_A_SUITE).length).toBeLessThanOrEqual(NOT_A_SUITE_COUNT);
 		for (const [name, reason] of Object.entries(NOT_A_SUITE)) {
 			expect(reason.length, `${name}: an exemption needs a real reason`).toBeGreaterThan(40);
 			expect(files, `${name} no longer exists — DELETE its exemption`).toContain(name);

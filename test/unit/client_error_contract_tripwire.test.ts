@@ -16,7 +16,8 @@
  *     (WC-2026-08-12-authorization-denial-token).
  *  2. NO FOURTH COPY — `worker_cache.js` and `sw.js` (the two non-page
  *     contexts that fetch the API) import `api_transport.js`; and no file under
- *     client/ or tools/*\/js defines a `request(` / `fetch_api(` function that
+ *     client/ or tools/ (the WHOLE tree — a worker under `transcribers/lib/`
+ *     is browser code too) defines a `request(` / `fetch_api(` function that
  *     wraps `fetch(` itself, other than api_transport.js. A second parse of the
  *     envelope is a second place for the contract to rot.
  *  4. THE EXEMPTION LIST — `NON_ENVELOPE_READS` (the census's named blind
@@ -47,7 +48,11 @@
  *    a computed `obj['msg']` does not; `client/dedalo/test/**` and `-min.js`
  *    twins are ungated by design.
  *  - The corpus is CLIENT CODE BY DESTINATION, not by directory: browser JS
- *    served from a tree outside the two scan roots is ungated. That is how the
+ *    served from a tree outside the two scan roots is ungated. Within them the
+ *    corpus is TOTAL by derivation — `git ls-files` under both roots must be a
+ *    subset of the scan (rule 3's totality test), so a glob that stops at one
+ *    directory shape (`tools/*\/js/**`, GATE-31: nine tracked files outside
+ *    it) cannot come back silently. That is how the
  *    two stale `.result` reads in `tool_common.js` survived P4 and blanked every
  *    tool header (2026-08-16, when it still lived under `src/`); it now sits in
  *    `client/dedalo/core/tools_common/` (WC-006) and is pinned below.
@@ -68,6 +73,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join, sep } from 'node:path';
 import { Glob } from 'bun';
@@ -78,6 +84,7 @@ import {
 	countCompatReads,
 	NON_ENVELOPE_READS,
 	REPO_ROOT,
+	SCAN_ROOTS,
 	summarize,
 } from '../../scripts/lib/client_compat_census.ts';
 import { stripComments } from '../helpers/strip_comments.ts';
@@ -128,11 +135,7 @@ function codeOf(file: string): string {
 /** Every measured client JS file (mirrors the census roots; the test suite excluded). */
 function clientJsFiles(): string[] {
 	const files: string[] = [];
-	const roots: Array<[string, string]> = [
-		['client/dedalo', '**/*.js'],
-		['tools', '*/js/**/*.js'],
-	];
-	for (const [root, glob] of roots) {
+	for (const { root, glob } of SCAN_ROOTS) {
 		for (const match of new Glob(glob).scanSync({
 			cwd: join(REPO_ROOT, root),
 			dot: true,
@@ -324,6 +327,8 @@ const RESULTS = census();
 const TOTALS = summarize(RESULTS);
 /** Far below the measured corpus (~650 files); proves the glob saw a tree, not a stub. */
 const CORPUS_FLOOR = 300;
+/** Far below the ~640 tracked browser files under the two roots (154 of them under tools/). */
+const TRACKED_JS_FLOOR = 300;
 const FIX_COMMAND = 'bun run scripts/client_compat_census.ts';
 
 describe('client error contract — rule 3: compat-read census is 0 and the compat block is ABSENT (P4, 2026-08-16)', () => {
@@ -375,8 +380,87 @@ describe('client error contract — rule 3: compat-read census is 0 and the comp
 			).toBe(true);
 	});
 
-	// The pins above prove the census REACHES two known files. This proves no
-	// browser JS exists where the census cannot reach — the failure mode itself.
+	// The pins above prove the census REACHES two known files. The next two prove
+	// it reaches EVERY tracked browser file under its roots — TOTAL by derivation
+	// (`git ls-files` ⊆ the scan), not by the shape of a glob. The old tools glob
+	// (`*\/js/**\/*.js`) stopped at one directory shape per tool, and nine tracked
+	// files — web workers under `transcribers/lib/`, a browser transformer under
+	// `translators/`, a vendored QR library under `lib/` — sat outside both this
+	// census and rule 2 (GATE-31, 2026-08-26). A file the index tracks under a
+	// scan root and the scan does not reach is exactly that hole, wherever the
+	// next tool keeps its browser code.
+	test('every tracked .js under the scan roots is in the corpus (git ls-files ⊆ the scan) — the tools glob is not a sub-path', () => {
+		const roots = SCAN_ROOTS.map((entry) => entry.root);
+		expect(roots).toEqual(['client/dedalo', 'tools']);
+		const tracked = execFileSync(
+			'git',
+			['ls-files', '--', ...roots.map((root) => `${root}/**/*.js`)],
+			{
+				cwd: REPO_ROOT,
+				encoding: 'utf8',
+			},
+		)
+			.split('\n')
+			.filter(Boolean)
+			.filter((file) => !file.startsWith('client/dedalo/test/'));
+		expect(
+			tracked.length,
+			'git ls-files returned almost nothing under client/dedalo + tools — the pathspecs or the index broke; fix the derivation, never the floor.',
+		).toBeGreaterThan(TRACKED_JS_FLOOR);
+		const corpus = new Set(clientJsFiles());
+		const unreached = tracked.filter((file) => !corpus.has(file)).sort();
+		expect(
+			unreached,
+			`Tracked browser JS the census cannot see. Every tracked .js under ${roots.join(', ')} must be reached by SCAN_ROOTS (scripts/lib/client_compat_census.ts): outside the scan, a compat read or a fourth fetch wrapper is UNGATED — the GATE-31 hole. Widen the glob; never move the file to dodge the census.\n  ${unreached.join('\n  ')}`,
+		).toEqual([]);
+		// The census must count them too (rule 3 shares the derivation, minus the
+		// minified twins and vendored segments it excludes by shape).
+		const counted = new Set(RESULTS.map((result) => result.file));
+		const uncounted = tracked
+			.filter((file) => !counted.has(file))
+			.filter(
+				(file) =>
+					!/\.min\.js$|-min\.js$/.test(file) && !/\/(dist|node_modules|vendor)\//.test(file),
+			)
+			.sort();
+		expect(
+			uncounted,
+			`Tracked, unexcluded browser JS missing from the compat census:\n  ${uncounted.join('\n  ')}`,
+		).toEqual([]);
+		// Today the tools tree ships browser JS outside `<tool>/js/`; the assertion
+		// above already proved each of them is reached — this only makes the fact
+		// visible in the run log (it is a measurement, not an invariant: a tree
+		// whose every file moved under js/ is not a regression).
+		const outsideShape = tracked.filter(
+			(file) => /^tools\//.test(file) && !/^tools\/[^/]+\/js\//.test(file),
+		);
+		console.info(
+			`tracked browser JS under tools/ outside <tool>/js/: ${outsideShape.length}${outsideShape.length ? `\n  ${outsideShape.join('\n  ')}` : ''}`,
+		);
+	});
+
+	test('anti-vacuity: the tools glob matches browser JS at ANY depth, the retired sub-path glob did not', () => {
+		const toolsGlob = SCAN_ROOTS.find((entry) => entry.root === 'tools')?.glob;
+		expect(toolsGlob).toBeDefined();
+		// The planted-offender shape from the GATE-31 repro: a fetch wrapper or an
+		// envelope read under tools/<tool>/lib/... must be INSIDE the corpus.
+		for (const planted of [
+			'tool_qr/lib/zz_probe/probe.js',
+			'tool_transcription/transcribers/lib/vad.js',
+			'tool_lang/translators/browser_transformer/browser_transformer.js',
+			'tool_x/js/render_tool_x.js',
+		]) {
+			expect(
+				new Glob(toolsGlob as string).match(planted),
+				`${toolsGlob} must reach ${planted}`,
+			).toBe(true);
+		}
+		expect(new Glob('*/js/**/*.js').match('tool_qr/lib/zz_probe/probe.js')).toBe(false);
+		expect(new Glob(toolsGlob as string).match('tool_x/server/index.ts')).toBe(false);
+	});
+
+	// This proves no browser JS exists where the census cannot reach at all —
+	// the 2026-08-16 failure mode itself.
 	test('no browser JS hides under src/ (the 2026-08-16 blind spot, re-armed)', () => {
 		const strays = [...new Glob('**/*.{js,mjs,cjs}').scanSync({ cwd: join(REPO_ROOT, 'src') })]
 			.map((match) => `src/${match.split(sep).join('/')}`)
@@ -384,7 +468,7 @@ describe('client error contract — rule 3: compat-read census is 0 and the comp
 			.sort();
 		expect(
 			strays,
-			`Tracked JS under src/. src/ is engine TypeScript; a .js there is browser code, and browser code outside the census scan roots (client/dedalo/**, tools/*/js/**) is UNGATED — exactly how two stale \`.result\` envelope reads in tool_common.js survived P4 and blanked every tool header (WC-006, 2026-08-16). Move it to client/dedalo/, or add a SCAN_ROOT in scripts/lib/client_compat_census.ts AND a reason in SRC_BROWSER_JS_EXEMPT.`,
+			`Tracked JS under src/. src/ is engine TypeScript; a .js there is browser code, and browser code outside the census scan roots (client/dedalo/**, tools/**) is UNGATED — exactly how two stale \`.result\` envelope reads in tool_common.js survived P4 and blanked every tool header (WC-006, 2026-08-16). Move it to client/dedalo/, or add a SCAN_ROOT in scripts/lib/client_compat_census.ts AND a reason in SRC_BROWSER_JS_EXEMPT.`,
 		).toEqual([]);
 	});
 

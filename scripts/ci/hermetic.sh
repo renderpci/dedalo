@@ -272,6 +272,20 @@ HERMETIC_TRIPWIRES=(
 	#     backup script over a mkdtemp host it removes again. Needs rsync, which the
 	#     hermetic image already has (store 3 of the backup set uses it too).
 	test/unit/operator_commands_tripwire.test.ts
+	# --- 2026-09-02 (audit 2026-08-26 closure, batch 1). DB-free: they read the tree,
+	#     the workflows, package.json and the two red baselines, build scratch git
+	#     repos / scratch baselines / planted corpora under mkdtemp, and spawn only
+	#     `bun` over those. rag_drain_cli_native is here ON PURPOSE: its order leg
+	#     (usage error exits BEFORE ensureRagQueueTable) is observable only where no
+	#     database answers, so the unit tier alone would let that mutation stay green.
+	test/unit/tier_wiring_tripwire.test.ts
+	test/unit/update_drill_config_tripwire.test.ts
+	test/unit/production_entrypoint_coverage_tripwire.test.ts
+	test/unit/rag_drain_cli_native.test.ts
+	test/unit/suite_assertion_floor_tripwire.test.ts
+	test/unit/client_gate_inventory_tripwire.test.ts
+	test/unit/authz_substring_gate_tripwire.test.ts
+	test/unit/census_derivation_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"
@@ -315,6 +329,34 @@ echo "== hermetic: static tripwires (${#HERMETIC_TRIPWIRES[@]})"
 tw_rc=0
 bun test --timeout=30000 "${HERMETIC_TRIPWIRES[@]}" || tw_rc=$?
 [ "$tw_rc" -eq 0 ] || { echo "== hermetic: RED in static tripwires (exit $tw_rc)"; tier_status=1; }
+
+# THE DEBT LEDGER, APPEND-ONLY AGAINST HISTORY (P2-18 / GATE-22). The crap
+# ratchet's artifact carries its own ledger and the static tripwires above hold
+# every line to its rule; a REWRITTEN line, or a per-file entry raised with the
+# counters flat, shows only against the artifact as it stood at a reference
+# commit. This checkout is shallow, so the reference is FETCHED, never assumed:
+# on a pull request the base branch's tip (the checkout IS the merge of the PR
+# onto that tip, so the tip is the merge-base); on a push, the first parent.
+# A reference that cannot be resolved yields an EMPTY argument, which
+# crap_baseline.ts refuses (proved in ratchet_integrity_tripwire) — red, never
+# a comparison against the index. scripts/verify.ts's `crap:ledger` stage is
+# the developer-desk twin (merge-base of HEAD and --base).
+crap_ledger_reference() {
+	local target="${GITHUB_BASE_REF:-${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-}}"
+	if [ -n "$target" ]; then
+		git fetch --quiet --depth=1 origin "$target" >&2 || return 1
+		git rev-parse --verify --quiet FETCH_HEAD || return 1
+	else
+		if ! git rev-parse --verify --quiet 'HEAD^' >/dev/null 2>&1; then
+			git fetch --quiet --deepen=1 >&2 || return 1
+		fi
+		git rev-parse --verify --quiet 'HEAD^' || return 1
+	fi
+}
+echo "== hermetic: crap ledger (append-only vs the reference)"
+cl_rc=0
+bun run scripts/crap_baseline.ts --check --reference "$(crap_ledger_reference)" || cl_rc=$?
+[ "$cl_rc" -eq 0 ] || { echo "== hermetic: RED in crap ledger (exit $cl_rc)"; tier_status=1; }
 
 # Dependency advisories, as a RATCHET against engineering/dependency_audit_baseline.json:
 # a NEW advisory is red, a known one is not (the tree already carried 7 on the day this

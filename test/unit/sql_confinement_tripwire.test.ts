@@ -31,8 +31,7 @@
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
-import { Glob } from 'bun';
+import { join } from 'node:path';
 import type { DdOntologyNode } from '../../src/core/db/dd_ontology.ts';
 import { deleteTldNodes, upsertDdOntologyNode } from '../../src/core/db/dd_ontology.ts';
 import {
@@ -44,21 +43,27 @@ import {
 	getPropertiesByTipo,
 } from '../../src/core/ontology/resolver.ts';
 import { stripComments } from '../helpers/strip_comments.ts';
+import {
+	REPO_ROOT,
+	WRITE_PATH_CORPUS_FLOOR,
+	writePathSourceFiles,
+} from '../helpers/write_path_corpus.ts';
 
-const REPO_ROOT = join(import.meta.dir, '..', '..');
+/**
+ * THE census corpus: src/ + tools/ + scripts/, shared with the other write-path
+ * gates (test/helpers/write_path_corpus.ts) so the roots cannot drift per gate.
+ * scripts/ joined 2026-09-02 (P2-20/S-3): a one-off migration script queries
+ * dd_ontology and rewrites matrix jsonb exactly like engine code does.
+ */
+const sourceFiles = writePathSourceFiles;
 
-/** All non-test TS source files under src/ and tools/, repo-relative paths. */
-function sourceFiles(): string[] {
-	const files: string[] = [];
-	for (const dir of ['src', 'tools']) {
-		const glob = new Glob('**/*.ts');
-		for (const match of glob.scanSync({ cwd: join(REPO_ROOT, dir) })) {
-			if (match.endsWith('.test.ts')) continue;
-			files.push(relative(REPO_ROOT, join(REPO_ROOT, dir, match)));
-		}
-	}
-	return files.sort();
-}
+describe('census corpus', () => {
+	test('the shared write-path corpus is populated and includes scripts/', () => {
+		const files = sourceFiles();
+		expect(files.length).toBeGreaterThan(WRITE_PATH_CORPUS_FLOOR);
+		expect(files).toContain('scripts/migrate_section_id_locators.ts');
+	});
+});
 
 function read(file: string): string {
 	return readFileSync(join(REPO_ROOT, file), 'utf-8');
@@ -143,6 +148,13 @@ const DD_ONTOLOGY_DIRECT_READ_RATCHET = new Set<string>([
 	'src/core/ts_object/ts_object.ts',
 	'src/diffusion/plan/virtual_tree.ts',
 	'src/diffusion/resolve/resolver.ts',
+	// scripts/ entered the census 2026-09-02 (P2-20/S-3, shared write-path
+	// corpus). An install-specific (numisdata) one-off migration that reads
+	// dd_ontology directly to find the alias/model rows it rewrites; never run
+	// by the engine. Listed, not migrated: the T2 confinement of scripts/ is a
+	// later batch (P1-15), and the resolver caches are the wrong tool for a
+	// one-shot CLI that must see the rows it just wrote.
+	'scripts/migrate_component_alias.ts',
 ]);
 
 /**
@@ -250,6 +262,11 @@ const SUBSYSTEM_OWNED_TABLES: readonly {
 		family: 'RAG (separate pgvector DB)',
 		tablePattern: /rag_embeddings|rag_index_queue/,
 		owners: ['src/ai/rag/'],
+		// NAME-ONLY exemption (no SQL against the table): the suite-database
+		// builder names the vendored schema FILE `install/db/rag_embeddings.sql`
+		// in its docblock and its completion log line; the vector database itself
+		// is rebuilt through src/ai/rag's exported API.
+		exempt: ['scripts/test_db_setup.ts'],
 	},
 	{
 		family: 'user activity stats',
@@ -258,7 +275,12 @@ const SUBSYSTEM_OWNED_TABLES: readonly {
 		// NAME-ONLY exemptions (no SQL against the table): the projects-filter
 		// exemption constant (PHP $ar_tables_skip_projects parity) lists
 		// 'matrix_stats' as an excluded-from-ACL table name.
-		exempt: ['src/core/search/sql_assembler.ts'],
+		exempt: [
+			'src/core/search/sql_assembler.ts',
+			// The suite-database builder's docblock inventories what the vendored
+			// dump holds ("`matrix_stats` 2 rows") — prose, no SQL.
+			'scripts/test_db_setup.ts',
+		],
 	},
 	{
 		family: 'error-report intake (WC-017)',
@@ -298,6 +320,13 @@ const SUBSYSTEM_OWNED_TABLES: readonly {
 			// has the shape it does. It issues no SQL against the matrix table and
 			// owns a different one.
 			'src/ai/rag/test_rag_db.ts',
+			// scripts/ entered the census 2026-09-02 (P2-20/S-3). Both name the
+			// marker ROW in prose only: test_db_setup.ts's docblock says which step
+			// stamps it (through the owner module), client_test_runner.ts's says
+			// the `/health` fingerprint is derived from the same row this process
+			// reads. Neither issues SQL against the table.
+			'scripts/test_db_setup.ts',
+			'scripts/client_test_runner.ts',
 		],
 	},
 	{

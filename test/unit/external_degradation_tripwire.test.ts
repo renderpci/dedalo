@@ -58,8 +58,19 @@ const SECTION = 'test3';
 const COMPONENT = 'test215';
 const REMOTE_ID = '000848571';
 
-/** The closed state set, restated so ADDING a state fails here until it is mapped. */
-const ALL_STATES: readonly ExternalSourceState[] = [
+/**
+ * The closed state set, restated so ADDING a state fails here until it is mapped.
+ *
+ * TYPE-LEVEL TOTALITY (2026-09-02, P2-20/S-3): the old annotation
+ * `readonly ExternalSourceState[]` let a SUBSET type-check — a ninth state added
+ * to the union would have compiled here unlisted, and every "covers the closed
+ * set" assertion below would have passed over eight. `as const satisfies` keeps
+ * the literal element type, and `MissingState` is `never` exactly when the list
+ * IS the union: adding a state to `ExternalSourceState` without adding it here
+ * fails `tsc` on the line that pins `MissingState` to never. This is the
+ * closed-set exemption `census_derivation_tripwire` names for this file.
+ */
+const ALL_STATES = [
 	'ok',
 	'stale',
 	'unavailable',
@@ -68,7 +79,10 @@ const ALL_STATES: readonly ExternalSourceState[] = [
 	'circuit_open',
 	'disabled',
 	'misconfigured',
-];
+] as const satisfies readonly ExternalSourceState[];
+type MissingState = Exclude<ExternalSourceState, (typeof ALL_STATES)[number]>;
+const _allStatesAreListed: MissingState extends never ? true : never = true;
+void _allStatesAreListed;
 
 /** The closed error-kind set of src/external/errors.ts. */
 const ALL_ERROR_KINDS: readonly ExternalErrorKind[] = [
@@ -312,9 +326,11 @@ describe('the modules carry no blank-emitting shape', () => {
 describe('the test-only transport seam has no production caller', () => {
 	test('nothing under src/ or tools/ calls setExternalTransportDepsForTests', () => {
 		const callers: string[] = [];
+		let scanned = 0;
 		for (const root of ['src', 'tools']) {
 			for (const relative of new Glob('**/*.ts').scanSync({ cwd: join(REPO_ROOT, root) })) {
 				const path = join(root, relative);
+				scanned += 1;
 				const text = readFileSync(join(REPO_ROOT, path), 'utf8');
 				// The DEFINITION lives in value.ts; only a CALL is a violation.
 				if (path.endsWith('component_external/value.ts')) continue;
@@ -325,6 +341,7 @@ describe('the test-only transport seam has no production caller', () => {
 			callers,
 			'the transport seam is TEST-ONLY — production must never inject a fetch:',
 		).toEqual([]);
+		expect(scanned).toBeGreaterThan(600); // anti-vacuity: the walk saw the engine
 	});
 });
 

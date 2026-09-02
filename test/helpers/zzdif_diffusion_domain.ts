@@ -44,6 +44,19 @@
  *         zzdif71  database 'zzdif_broken_db'
  *           zzdif72  table 'zzdif_broken' → section zzdif20
  *             zzdif73  field_varchar 'bad_parser'  parser fn NOT in the registry
+ *       zzdif80  diffusion_element  {"diffusion":{"type":"markdown","service_name":"zzdif_md"}}
+ *         zzdif81  table 'zzdif_primary_md' → section zzdif1   ← the FILE element
+ *           zzdif82  field_varchar 'title'  | zzdif83 field_varchar 'code'
+ *           zzdif84  field_int 'counter'    | zzdif85 field_enum 'publication' (exclude_column)
+ *
+ *   The file element (2026-09-02) exists so the RUNNER gate can drive the real
+ *   `runJob` end to end on Postgres + a scratch files root alone: the sql
+ *   element needs a MariaDB target the suite does not own, a markdown target
+ *   needs only DEDALO_DIFFUSION_FILES_ROOT (writers/files.ts) and lands ONE
+ *   file per record (`zzdif1_<id>.md`), so a removal is an observable unlink.
+ *   No portal field, so the run has no frontier and its output is exactly the
+ *   primary section. (markdown, not json/csv: those two writers exist but the
+ *   compiler's KNOWN_FORMATS is the PHP validate set, which never took them.)
  *
  * and the data side:
  *
@@ -90,6 +103,14 @@ export const ZZDIF_SECTION = 'zzdif1';
 export const ZZDIF_LINKED_SECTION = 'zzdif20';
 /** The alias table node (published under the ALIAS label). */
 export const ZZDIF_TABLE_ALIAS = 'zzdif50';
+/** The markdown FILE element — the runner gate's subject (Postgres + files root only). */
+export const ZZDIF_FILE_ELEMENT = 'zzdif80';
+/** Its output format (`properties.diffusion.type`) — the `<files root>/<format>/` segment. */
+export const ZZDIF_FILE_FORMAT = 'markdown';
+/** Its `service_name`: the directory label under `<files root>/markdown/`. */
+export const ZZDIF_FILE_SERVICE_NAME = 'zzdif_md';
+/** The table label under the file element — the `tables[].table_name` a run reports. */
+export const ZZDIF_FILE_TABLE_NAME = 'zzdif_primary_md';
 /** The parser fn no registry entry exists for — the loud-failure subject. */
 export const ZZDIF_UNKNOWN_PARSER_FN = 'parser_zzdif::no_such_fn';
 
@@ -386,6 +407,53 @@ function buildSituation(): Situation {
 				relations: [{ tipo: 'zzdif21' }],
 				properties: { process: { parser: [{ fn: ZZDIF_UNKNOWN_PARSER_FN }] } },
 			},
+
+			// element 4 — the FILE element the runner gate publishes through
+			// (see the header note): the primary section's plain fields, no hop.
+			{
+				tipo: 'zzdif80',
+				parent: 'zzdif41',
+				model: 'diffusion_element',
+				term: { 'lg-spa': 'zzdif markdown file element' },
+				properties: {
+					diffusion: { type: ZZDIF_FILE_FORMAT, service_name: ZZDIF_FILE_SERVICE_NAME },
+				},
+				order_number: 4,
+			},
+			{
+				tipo: 'zzdif81',
+				parent: 'zzdif80',
+				model: 'table',
+				term: { 'lg-spa': ZZDIF_FILE_TABLE_NAME },
+				relations: [{ tipo: 'zzdif1' }],
+			},
+			{
+				tipo: 'zzdif82',
+				parent: 'zzdif81',
+				model: 'field_varchar',
+				term: { 'lg-spa': 'title' },
+				relations: [{ tipo: 'zzdif2' }],
+				properties: { varchar: 500 },
+				order_number: 1,
+			},
+			{
+				tipo: 'zzdif83',
+				parent: 'zzdif81',
+				model: 'field_varchar',
+				term: { 'lg-spa': 'code' },
+				relations: [{ tipo: 'zzdif3' }],
+				properties: { varchar: 64 },
+				order_number: 2,
+			},
+			{
+				tipo: 'zzdif84',
+				parent: 'zzdif81',
+				model: 'field_int',
+				term: { 'lg-spa': 'counter' },
+				relations: [{ tipo: 'zzdif5' }],
+				order_number: 3,
+			},
+			{ ...publicationField('zzdif85', 'zzdif6'), parent: 'zzdif81', order_number: 4 },
 		],
 		records: [
 			{

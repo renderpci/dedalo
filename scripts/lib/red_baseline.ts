@@ -21,9 +21,9 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import { Glob } from 'bun';
-import { type ParityRun, REPO_ROOT, runTier } from './parity_census.ts';
+import { type FileCounts, type ParityRun, REPO_ROOT, runTier } from './parity_census.ts';
 
 /** Everything that differs between one ratcheted tier and another. */
 export interface TierSpec {
@@ -85,6 +85,31 @@ export interface RedBaseline {
 		failing_tests: number;
 	};
 	files: Record<string, string[]>;
+	/**
+	 * THE PER-FILE FLOOR (P0-2 / GATE-09..13, suite_assertion_floor_tripwire).
+	 *
+	 * What every file of the tier reported — cases, skips, and the number of
+	 * `expect` calls that EXECUTED — straight from the file-level attributes of
+	 * bun's JUnit report. It lives INSIDE the red baseline rather than in a third
+	 * artifact because it is the same measure (one junit run per tier, one
+	 * `--check`, one generator with one refusal); a separate runner would be a
+	 * second implementation of the census, which is the thing this file exists to
+	 * forbid.
+	 *
+	 * The rule per file: `skipped` may only SHRINK, `assertions` and `tests` may
+	 * only RISE (they are FLOORS — a rise is green and is banked on the next
+	 * regenerate). A drop in assertions, a drop in cases, or a rise in skips is a
+	 * REGRESSION: the generator refuses it without `--allow-regression`, and the
+	 * commit message must say why. An on-disk file with no entry, or an entry for
+	 * a file that no longer reports, is STALE — re-freeze. That is what makes an
+	 * early `return` inside a test body (a PASS with `assertions="0"`, GATE-26)
+	 * visible: the file's assertion count falls.
+	 *
+	 * A file whose assertion count VARIES between identical runs is reading
+	 * ambient state (a DB row count, a machine's binaries). That is a determinism
+	 * defect in the test, never grounds for an exemption — fix the test.
+	 */
+	per_file: Record<string, FileCounts>;
 }
 
 export interface TierDrift {
@@ -96,6 +121,16 @@ export interface TierDrift {
 	summary: string[];
 	/** The tier did not really run. */
 	vacuity: string[];
+	/**
+	 * Per-file floor REGRESSIONS: assertions fell, cases fell, or skips rose,
+	 * relative to `per_file`. Refused by the generator like a new red.
+	 */
+	floors: string[];
+	/**
+	 * Per-file floor STALENESS: a file on disk with no record, a recorded file that
+	 * reported nothing, or skips that FELL. Re-freeze to lock the state in.
+	 */
+	floorsStale: string[];
 }
 
 export function generatedBy(spec: TierSpec): string {
@@ -114,6 +149,7 @@ export function ruleText(spec: TierSpec): string {
 		spec.exactCounts
 			? '`measured` is the frozen debt AND the size: this tier does not grow, so tier_files/tier_tests/tier_pass/tier_skip are all asserted exactly — which is what makes silencing a GREEN gate with `.skip` arithmetic (pass falls by one, skip rises by one) instead of invisible.'
 			: '`measured` freezes the DEBT (failing_files/failing_tests) exactly; the SIZE counts are advisory here because this tier grows on most commits, and reddening on every added test would train the regenerate-to-green reflex the ratchet exists to prevent. The size is held by the anti-vacuity FLOORS instead, so a tier that silently stopped running is still red.',
+		"`per_file` is the PER-FILE FLOOR: for every file of the tier, the cases it ran, the cases it skipped and the `expect` calls that EXECUTED (bun's own file-level JUnit attributes). Skips may only shrink; cases and assertions may only rise — a drop, or a skip that appears, is a regression the generator refuses without --allow-regression, because a test that returns before its first assertion is a PASS with assertions=0 and this count is the only thing that notices. An unrecorded file, or a recorded file that no longer reports, is stale: re-freeze.",
 		`DO NOT hand-edit. Regenerate with: ${spec.fixCommand}`,
 		spec.whyRed,
 	].join(' ');
@@ -130,6 +166,11 @@ export function buildBaseline(spec: TierSpec, run: ParityRun): RedBaseline {
 	}
 	const sorted: Record<string, string[]> = {};
 	for (const file of Object.keys(files).sort()) sorted[file] = (files[file] ?? []).sort();
+	const perFile: Record<string, FileCounts> = {};
+	for (const file of Object.keys(run.perFile).sort()) {
+		const counts = run.perFile[file];
+		if (counts !== undefined) perFile[file] = counts;
+	}
 	return {
 		generated_by: generatedBy(spec),
 		rule: ruleText(spec),
@@ -142,6 +183,7 @@ export function buildBaseline(spec: TierSpec, run: ParityRun): RedBaseline {
 			failing_tests: run.totals.fail,
 		},
 		files: sorted,
+		per_file: perFile,
 	};
 }
 
@@ -150,7 +192,7 @@ export function buildBaseline(spec: TierSpec, run: ParityRun): RedBaseline {
  * must fail the gate, never silently become "no constraints".
  */
 export function loadBaseline(spec: TierSpec): RedBaseline {
-	const path = join(REPO_ROOT, spec.baselinePath);
+	const path = baselineFile(spec);
 	let raw: string;
 	try {
 		raw = readFileSync(path, 'utf8');
@@ -175,11 +217,23 @@ export function loadBaseline(spec: TierSpec): RedBaseline {
 	) {
 		throw new Error(`${spec.id}_baseline: ${spec.baselinePath} lacks files/measured`);
 	}
+	if (typeof parsed.per_file !== 'object' || parsed.per_file === null) {
+		throw new Error(
+			`${spec.id}_baseline: ${spec.baselinePath} lacks per_file — the per-file assertion floor cannot run without it. Regenerate with: ${spec.fixCommand}`,
+		);
+	}
 	return parsed;
 }
 
 export function computeDrift(spec: TierSpec, run: ParityRun, baseline: RedBaseline): TierDrift {
-	const drift: TierDrift = { regressions: [], stale: [], summary: [], vacuity: [] };
+	const drift: TierDrift = {
+		regressions: [],
+		stale: [],
+		summary: [],
+		vacuity: [],
+		floors: [],
+		floorsStale: [],
+	};
 
 	// Status of every case actually observed, keyed file + name.
 	const observed = new Map(run.cases.map((c) => [`${c.file} ${c.name}`, c.status]));
@@ -221,6 +275,45 @@ export function computeDrift(spec: TierSpec, run: ParityRun, baseline: RedBaseli
 	for (const key of Object.keys(measured) as (keyof RedBaseline['measured'])[]) {
 		if (baseline.measured[key] !== measured[key]) {
 			drift.summary.push(`measured.${key} ${baseline.measured[key]} → measured ${measured[key]}`);
+		}
+	}
+
+	// THE PER-FILE FLOOR. Compared on every tier: a count that only rises never
+	// needs a regenerate to stay green, so this cannot train the regenerate reflex
+	// the way exact size equality would.
+	for (const [file, now] of Object.entries(run.perFile)) {
+		const frozen = baseline.per_file[file];
+		if (frozen === undefined) {
+			drift.floorsStale.push(
+				`${file}: no per_file record (new or renamed file) — re-freeze so its assertion floor exists`,
+			);
+			continue;
+		}
+		if (now.assertions < frozen.assertions) {
+			drift.floors.push(
+				`${file}: ASSERTIONS FELL ${frozen.assertions} → ${now.assertions} — a test now asserts less than it did (an early return? a deleted expect?)`,
+			);
+		}
+		if (now.tests < frozen.tests) {
+			drift.floors.push(
+				`${file}: CASES FELL ${frozen.tests} → ${now.tests} — a test was removed or no longer registers`,
+			);
+		}
+		if (now.skipped > frozen.skipped) {
+			drift.floors.push(
+				`${file}: SKIPS ROSE ${frozen.skipped} → ${now.skipped} — a gate stopped running (.skip, a false .if())`,
+			);
+		} else if (now.skipped < frozen.skipped) {
+			drift.floorsStale.push(
+				`${file}: skips FELL ${frozen.skipped} → ${now.skipped} — re-freeze to lock the win in`,
+			);
+		}
+	}
+	for (const file of Object.keys(baseline.per_file)) {
+		if (run.perFile[file] === undefined) {
+			drift.floorsStale.push(
+				`${file}: recorded in per_file but reported nothing this run (deleted, renamed, or crashed before its first case)`,
+			);
 		}
 	}
 
@@ -278,41 +371,124 @@ export function formatDrift(d: TierDrift): string {
 	if (d.stale.length) lines.push('STALE:', ...d.stale.map((l) => `  ${l}`));
 	if (d.summary.length) lines.push('SUMMARY:', ...d.summary.map((l) => `  ${l}`));
 	if (d.vacuity.length) lines.push('VACUITY:', ...d.vacuity.map((l) => `  ${l}`));
+	if (d.floors.length)
+		lines.push('PER-FILE FLOORS (regressions):', ...d.floors.map((l) => `  ${l}`));
+	if (d.floorsStale.length)
+		lines.push('PER-FILE FLOORS (stale, re-freeze):', ...d.floorsStale.map((l) => `  ${l}`));
 	return lines.join('\n');
 }
 
 export function driftCount(d: TierDrift): number {
-	return d.regressions.length + d.stale.length + d.summary.length + d.vacuity.length;
+	return (
+		d.regressions.length +
+		d.stale.length +
+		d.summary.length +
+		d.vacuity.length +
+		d.floors.length +
+		d.floorsStale.length
+	);
+}
+
+/** An all-empty drift, for callers that need to mask buckets when formatting. */
+export function emptyDrift(): TierDrift {
+	return { regressions: [], stale: [], summary: [], vacuity: [], floors: [], floorsStale: [] };
+}
+
+/**
+ * THE WRITER'S REFUSAL, as a pure decision: the message that stops the
+ * regenerate, or null when the write may go ahead. Per-file floor regressions
+ * are refused by the SAME guard as a new red — a file that asserts less, runs
+ * fewer cases or skips more is debt growing, and a ratchet that could absorb it
+ * by regeneration is not a ratchet. Pure so the hermetic floor gate proves the
+ * GENERATOR refuses a floor drop (the fix command every red points at), not
+ * only that `--check` reports one. Staleness never refuses: a re-freeze is
+ * exactly what the writer is for.
+ */
+export function writeRefusal(
+	spec: TierSpec,
+	drift: TierDrift,
+	allowRegression: boolean,
+): string | null {
+	if (allowRegression) return null;
+	if (drift.regressions.length === 0 && drift.floors.length === 0) return null;
+	return `${spec.id}_baseline: REFUSING to write — the ${spec.id} tier GREW new reds or LOWERED a per-file floor. A ratchet cannot absorb a regression by regeneration.\n${formatDrift({ ...emptyDrift(), regressions: drift.regressions, floors: drift.floors })}\nEither fix the regression, or re-run with --allow-regression and state in the commit message WHY the new red is acceptable.`;
+}
+
+/**
+ * WHAT THE CLI TOUCHES, as an injectable seam — so the hermetic floor gate can
+ * run {@link runBaselineCli} itself, end to end, over a planted measurement and
+ * a scratch baseline, and observe the ONE thing that matters: whether the
+ * lowered floor reached the disk. The pure {@link writeRefusal} was proved
+ * before this seam existed and the CLI could still have ignored it (adversarial
+ * review of P0-2 demonstrated exactly that mutation, gates green). Defaults are
+ * the real process: argv, `runTier`, the filesystem, `process.exit`.
+ */
+export interface BaselineCliIo {
+	argv: string[];
+	/** The measure. `runTier` by default; a planted {@link ParityRun} under test. */
+	measure: (paths: string[]) => ParityRun;
+	writeFile: (absolutePath: string, text: string) => void;
+	/** The repo formatter over the written file, so a regenerated baseline is never lint-red. */
+	format: (absolutePath: string) => void;
+	exit: (code: number) => never;
+	log: (line: string) => void;
+	error: (line: string) => void;
+}
+
+export function realBaselineCliIo(): BaselineCliIo {
+	return {
+		argv: process.argv.slice(2),
+		measure: runTier,
+		writeFile: (path, text) => writeFileSync(path, text),
+		format: (path) => {
+			// The repo's formatter owns JSON layout. Run it so a regenerated baseline
+			// is byte-identical to a linted one — never lint-red.
+			Bun.spawnSync(['bunx', 'biome', 'format', '--write', path], { cwd: REPO_ROOT });
+		},
+		exit: (code) => process.exit(code),
+		log: (line) => console.log(line),
+		error: (line) => console.error(line),
+	};
+}
+
+/** Where the frozen JSON lives on disk. Absolute stays absolute (a scratch baseline under test). */
+export function baselineFile(spec: TierSpec): string {
+	return isAbsolute(spec.baselinePath) ? spec.baselinePath : join(REPO_ROOT, spec.baselinePath);
 }
 
 /**
  * The shared CLI: `--report` prints what the tier does today, `--check` exits non-zero
  * on drift, and the default (re)writes the baseline — refusing to absorb a NEW red
- * unless `--allow-regression` is passed, because a ratchet that can be cleared by
- * regeneration is not a ratchet. That refusal is the whole reason this is a script and
- * not a `--update` flag.
+ * OR a lowered per-file floor unless `--allow-regression` is passed, because a
+ * ratchet that can be cleared by regeneration is not a ratchet. That refusal is the
+ * whole reason this is a script and not a `--update` flag.
+ *
+ * The refusal is proved where it bites: test/unit/suite_assertion_floor_tripwire
+ * runs THIS function over a planted floor drop (in-process through {@link BaselineCliIo},
+ * and as a real subprocess through the default io) and asserts the baseline on
+ * disk did not move and the exit code is 1.
  */
-export function runBaselineCli(spec: TierSpec): void {
-	const args = new Set(process.argv.slice(2));
-	const run = runTier(spec.paths);
+export function runBaselineCli(spec: TierSpec, io: BaselineCliIo = realBaselineCliIo()): void {
+	const args = new Set(io.argv);
+	const run = io.measure(spec.paths);
 
 	if (args.has('--report')) {
-		console.log(
+		io.log(
 			`${spec.id} tier: ${run.files.length} files, ${run.totals.tests} cases — ${run.totals.pass} pass / ${run.totals.fail} fail / ${run.totals.skip} skip`,
 		);
 		const built = buildBaseline(spec, run);
 		for (const [file, names] of Object.entries(built.files)) {
-			console.log(`${file} (${names.length})`);
-			for (const n of names) console.log(`    ${n}`);
+			io.log(`${file} (${names.length})`);
+			for (const n of names) io.log(`    ${n}`);
 		}
-		process.exit(0);
+		io.exit(0);
 	}
 
 	if (args.has('--check')) {
 		const drift = computeDrift(spec, run, loadBaseline(spec));
 		const any = driftCount(drift);
-		console.log(any ? formatDrift(drift) : `${spec.id}_baseline: no drift`);
-		process.exit(any ? 1 : 0);
+		io.log(any ? formatDrift(drift) : `${spec.id}_baseline: no drift`);
+		io.exit(any ? 1 : 0);
 	}
 
 	let existing: RedBaseline | null = null;
@@ -321,21 +497,22 @@ export function runBaselineCli(spec: TierSpec): void {
 	} catch {
 		existing = null;
 	}
-	if (existing !== null && !args.has('--allow-regression')) {
-		const drift = computeDrift(spec, run, existing);
-		if (drift.regressions.length > 0) {
-			console.error(
-				`${spec.id}_baseline: REFUSING to write — the ${spec.id} tier GREW new reds. A ratchet cannot absorb a regression by regeneration.\n${formatDrift({ ...drift, stale: [], summary: [], vacuity: [] })}\nEither fix the regression, or re-run with --allow-regression and state in the commit message WHY the new red is acceptable.`,
-			);
-			process.exit(1);
+	if (existing !== null) {
+		const refusal = writeRefusal(
+			spec,
+			computeDrift(spec, run, existing),
+			args.has('--allow-regression'),
+		);
+		if (refusal !== null) {
+			io.error(refusal);
+			io.exit(1);
 		}
 	}
 	const baseline = buildBaseline(spec, run);
-	writeFileSync(join(REPO_ROOT, spec.baselinePath), `${JSON.stringify(baseline, null, '\t')}\n`);
-	// The repo's formatter owns JSON layout. Run it so a regenerated baseline is
-	// byte-identical to a linted one — never lint-red.
-	Bun.spawnSync(['bunx', 'biome', 'format', '--write', spec.baselinePath], { cwd: REPO_ROOT });
-	console.log(
+	const target = baselineFile(spec);
+	io.writeFile(target, `${JSON.stringify(baseline, null, '\t')}\n`);
+	io.format(target);
+	io.log(
 		`${spec.id}_baseline: wrote ${spec.baselinePath} — ${baseline.measured.failing_tests} frozen reds across ${baseline.measured.failing_files} files (tier: ${baseline.measured.tier_tests} cases in ${baseline.measured.tier_files} files)`,
 	);
 }

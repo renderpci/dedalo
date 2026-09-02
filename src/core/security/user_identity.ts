@@ -22,6 +22,13 @@ const USER_NAME_COMPONENT = 'dd132';
  * Null is a real answer, not a failure: a user record whose name component was
  * never filled has no name to show, and callers render the id or nothing rather
  * than inventing a label.
+ *
+ * COVERAGE-EXEMPT (coverage plan §5.1; reason registered in
+ * engineering/crap_coverage_exempt.json): three dynamic imports and one component
+ * read turning a dd128 id into a display name — every branch is null-vs-value on
+ * its own read. Its callers INJECT it as a function into the gated fold
+ * (`foldStatsRows`, area_maintenance/user_stats.ts), which is where the label
+ * behaviour is actually asserted.
  */
 export async function resolveUserName(
 	userId: string | number,

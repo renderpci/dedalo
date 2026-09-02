@@ -30,9 +30,9 @@
  * ── THE RULES ────────────────────────────────────────────────────────────────
  *  1. SHRINK-ONLY (the forward gate): no file may EXCEED its recorded baseline
  *     max, and the frozen DEBT census (functionsOverCap / filesOverCap) may not
- *     move. A raised entry is a deliberate, reviewable diff whose commit message
- *     must say why, and `--update` refuses to write one without
- *     `--allow-regression`. Deliberately NOT asserted: the `files` and
+ *     move. A raised entry is a deliberate, reviewable diff whose reason is
+ *     written into the baseline's ledger, and `--update` refuses to write one
+ *     without `--allow-regression --reason "<why>"`. Deliberately NOT asserted: the `files` and
  *     `functions` totals. They carry no complexity information, and freezing
  *     them made this gate red on ANY added or removed file — a 4-complexity
  *     helper did it — whose only offered remedy was a blanket regeneration,
@@ -119,6 +119,7 @@ import { describe, expect, test } from 'bun:test';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { CoverageExemptEntry } from '../../scripts/crap_baseline.ts';
 import {
 	BASELINE_PATH,
 	CENSUS_FLOORS,
@@ -135,6 +136,7 @@ import {
 	unmeasuredSources,
 } from '../../scripts/crap_baseline.ts';
 import { analyzeFile, COMPLEXITY_CAP, summarize } from '../../scripts/lib/complexity.ts';
+import { thinReasonProblem } from '../../scripts/lib/reason_validator.ts';
 import { findStatusProse } from '../../scripts/lib/status_prose.ts';
 
 /**
@@ -157,18 +159,17 @@ const METRIC_NOTE =
 // 1. SHRINK-ONLY — the forward gate.
 // ---------------------------------------------------------------------------
 
-/**
- * Words that are not a reason. A reason names the IRREDUCIBLE structure.
- *
- * SHARED BY BOTH REASON VALIDATORS (P2-18 / GATE-23). This lived inside the
- * coverage-exempt describe block while the NEW-FILE exemption check 180 lines
- * above validated by WORD COUNT ALONE — and its failure message promised
- * exactly this blacklist ("temporary", "TODO", "hard to split" are not
- * reasons). So "This is temporary and we will refactor it later on" was
- * ACCEPTED by the rule whose own message named it as rejected. A message that
- * describes a stricter rule than the code enforces is worse than no message.
+/*
+ * THE REASON VALIDATOR IS SHARED (P2-18 / GATE-23), imported from
+ * scripts/lib/reason_validator.ts — the ONE blacklist and the ONE predicate,
+ * used here at both sites and by the dependency-advisory and debt-ledger
+ * ratchets. A local blacklist lived inside the coverage-exempt describe block
+ * while the NEW-FILE exemption check 180 lines above validated by WORD COUNT
+ * ALONE, though its failure message promised exactly that blacklist. So "This
+ * is temporary and we will refactor it later on" was ACCEPTED by the rule whose
+ * own message named it as rejected. ratchet_integrity_tripwire asserts that no
+ * second declaration exists anywhere under scripts/ or test/.
  */
-const THIN_REASONS = /\b(todo|temporar|later|hard to test|no time|refactor soon)\b/i;
 
 describe('crap ratchet — src/core/ complexity may only shrink', () => {
 	test('no file exceeds its frozen baseline max', () => {
@@ -176,7 +177,7 @@ describe('crap ratchet — src/core/ complexity may only shrink', () => {
 			DRIFT.regressions,
 			`COMPLEXITY GREW past the frozen baseline in ${SCAN_ROOT}. ${METRIC_NOTE}\n` +
 				`Each line names the file, its recorded value, the new value, and the offending function with its line:\n${formatDrift({ ...DRIFT, stale: [], summary: [], vacuity: [] })}\n` +
-				`Two legitimate answers, and only two: SIMPLIFY the function (split it; extract the branchy part), or RAISE that file's entry DELIBERATELY — edit nothing by hand, run \`${FIX_COMMAND} --allow-regression\` (a plain \`${FIX_COMMAND}\` REFUSES to raise an entry, precisely so a red gate cannot be cleared by reflex), commit ${BASELINE_PATH} in the same change, and state in the commit message WHY the function had to get more complex. Never raise a number to get green.`,
+				`Two legitimate answers, and only two: SIMPLIFY the function (split it; extract the branchy part), or RAISE that file's entry DELIBERATELY — edit nothing by hand, run \`${FIX_COMMAND} --allow-regression --reason "<why>"\` (a plain \`${FIX_COMMAND}\` REFUSES to raise an entry, precisely so a red gate cannot be cleared by reflex; the reason is validated and written into the baseline ledger, where this gate reads it), and commit ${BASELINE_PATH} in the same change. Never raise a number to get green.`,
 		).toEqual([]);
 
 		// The per-file max cannot see a NEW over-cap function added below an
@@ -284,12 +285,9 @@ describe('crap ratchet — a NEW src/core/ file may not be born over the cap', (
 		const stale: string[] = [];
 		const measured = new Map(RESULTS.map((result) => [result.file, result]));
 		for (const [file, reason] of Object.entries(NEW_FILE_COMPLEXITY_EXEMPTIONS)) {
-			if (
-				typeof reason !== 'string' ||
-				reason.trim().split(/\s+/).length < 8 ||
-				THIN_REASONS.test(reason)
-			) {
-				thin.push(`${file}: ${JSON.stringify(reason)}`);
+			const problem = thinReasonProblem(reason, 8);
+			if (problem !== null) {
+				thin.push(`${file}: ${JSON.stringify(reason)} — ${problem}`);
 			}
 			const result = measured.get(file);
 			if (!result) {
@@ -466,6 +464,178 @@ describe('crap ratchet — the scan is not vacuous', () => {
  * genuinely uncovered, nor that an unlisted one is covered. That needs the
  * coverage run this project deliberately does not gate on.
  */
+/**
+ * A top-level DECLARATION of `symbol` in `source` — function / const / let /
+ * class, exported or not — or null. An IMPORT of the symbol is not a
+ * declaration: GATE-42(b) found an entry whose file only imported the symbol
+ * after it had been extracted elsewhere, and `source.includes(symbol)` let it
+ * pass; a substring check is not a declaration check.
+ */
+function findSymbolDeclaration(
+	source: string,
+	symbol: string,
+): { start: number; line: number } | null {
+	const escaped = symbol.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	const declaration = new RegExp(
+		`^(?:export\\s+)?(?:async\\s+)?(?:function\\s*\\*?\\s*|const\\s+|let\\s+|class\\s+)${escaped}\\b`,
+		'm',
+	);
+	const match = declaration.exec(source);
+	if (match === null) return null;
+	return { start: match.index, line: source.slice(0, match.index).split('\n').length };
+}
+
+/** The next top-level declaration start AFTER `from`, or the end of the source. */
+function nextTopLevelDeclarationStart(source: string, from: number): number {
+	const next =
+		/^(?:export\s+)?(?:async\s+)?(?:function\s*\*?\s*|const\s+|let\s+|class\s+|interface\s+|type\s+)[A-Za-z_$]/gm;
+	next.lastIndex = from;
+	const match = next.exec(source);
+	return match === null ? source.length : match.index;
+}
+
+/**
+ * The contiguous run of comment / blank lines that ENDS at `declarationStart`
+ * (a declaration's own doc block), as [text, startOffset]. Empty when the line
+ * above the declaration is code.
+ */
+function commentRunAbove(
+	source: string,
+	declarationStart: number,
+): { text: string; start: number } {
+	const before = source.slice(0, declarationStart);
+	const lines = before.split('\n');
+	lines.pop(); // the (empty) tail of the declaration's own line
+	const block: string[] = [];
+	for (let index = lines.length - 1; index >= 0; index--) {
+		const line = lines[index] ?? '';
+		const isComment = /^\s*(\/\*|\*|\/\/)/.test(line) || /\*\/\s*$/.test(line);
+		if (!isComment && line.trim() !== '') break;
+		block.unshift(line);
+	}
+	const text = block.join('\n');
+	return { text, start: declarationStart - text.length - (block.length > 0 ? 1 : 0) };
+}
+
+/**
+ * Is the COVERAGE-EXEMPT marker ATTACHED to `symbol`, in one of the three
+ * shapes the tree carries? (1) in the contiguous comment block IMMEDIATELY
+ * above the declaration (only blank lines between); (2) inside the
+ * declaration's own span — up to the NEXT declaration's doc block, which is
+ * that declaration's, not this one's (an "arm" exemption: the marker sits on
+ * the branch that cannot run); (3) in a REASONED BLOCK comment that NAMES the
+ * symbol — a slash-star BLOCK comment of at least NAMING_BLOCK_MIN_LINES lines (one
+ * header covering several passes of one file, the reason written out). A bare
+ * `// COVERAGE-EXEMPT: see X below` line is a cross-reference, not an
+ * attachment, and does not count: shape (3) has to carry the reason itself.
+ * A marker elsewhere in the file — the "orphan" GATE-42(b) found, left above
+ * a DIFFERENT function by an extraction — is not attached, and a whole-file
+ * `source.includes(marker)` cannot tell.
+ */
+/** Shape (3): the naming block must be a block comment this many lines long. */
+const NAMING_BLOCK_MIN_LINES = 4;
+function markerAttachedToSymbol(source: string, symbol: string, marker: string): boolean {
+	const declaration = findSymbolDeclaration(source, symbol);
+	if (declaration === null) return false;
+	// (1) the comment run ending at the declaration
+	if (commentRunAbove(source, declaration.start).text.includes(marker)) return true;
+	// (2) inside the declaration's span, minus the next declaration's own doc block
+	const nextStart = nextTopLevelDeclarationStart(source, declaration.start + 1);
+	const spanEnd =
+		nextStart === source.length ? nextStart : commentRunAbove(source, nextStart).start;
+	if (source.slice(declaration.start, Math.max(declaration.start, spanEnd)).includes(marker)) {
+		return true;
+	}
+	// (3) a reasoned BLOCK comment naming the symbol
+	const symbolWord = new RegExp(`\\b${symbol.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+	for (const comment of source.match(/\/\*[\s\S]*?\*\//g) ?? []) {
+		if (comment.split('\n').length < NAMING_BLOCK_MIN_LINES) continue;
+		if (comment.includes(marker) && symbolWord.test(comment)) return true;
+	}
+	return false;
+}
+
+/**
+ * THE ENTRY VALIDATORS — the two per-entry checks the loops below apply,
+ * extracted so the positive control runs THE SAME predicates on planted
+ * entries (GATE-42(b)): a loop weakened back to `source.includes(symbol)`
+ * turns the control red, instead of staying green until the next extraction
+ * leaves an orphan behind.
+ */
+function symbolDeclarationProblem(source: string, symbol: string): string | null {
+	if (findSymbolDeclaration(source, symbol) !== null) return null;
+	return source.includes(symbol)
+		? 'symbol is only REFERENCED in the file (an import, a call), not DECLARED there — it was extracted or renamed; point the entry at the file that declares it'
+		: 'symbol not found in the file — renamed or removed, the entry is STALE';
+}
+function markerAttachmentProblem(source: string, symbol: string): string | null {
+	if (!source.includes(COVERAGE_EXEMPT_MARKER)) return 'no marker anywhere in the file';
+	if (markerAttachedToSymbol(source, symbol, COVERAGE_EXEMPT_MARKER)) return null;
+	return 'the file carries a marker but NONE is attached to this symbol (not in the comment block above its declaration, not inside its body, not naming it) — an orphaned marker sits on some OTHER function';
+}
+
+/** The entry's source, or null when the file is gone (the STALE shape). */
+function readSourceOrNull(file: string): string | null {
+	try {
+		return readFileSync(file, 'utf-8');
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * THE LIST WALKS, as functions of (entries, reader) rather than loops over the
+ * real list: the positive control feeds them a PLANTED entry and a fake reader,
+ * so the wiring — that each entry actually goes through the validators above —
+ * is under the control too, not only the validators.
+ */
+function exemptEntryProblems(
+	entries: readonly CoverageExemptEntry[],
+	readSource: (file: string) => string | null,
+): string[] {
+	const problems: string[] = [];
+	const seen = new Set<string>();
+	for (const entry of entries) {
+		const key = `${entry.file}::${entry.symbol}`;
+		if (seen.has(key)) problems.push(`${key}: DUPLICATE entry`);
+		seen.add(key);
+		if (!entry.file.startsWith(`${SCAN_ROOT}/`)) {
+			problems.push(`${key}: file is outside ${SCAN_ROOT}/ — this list covers the scan root only`);
+			continue;
+		}
+		const source = readSource(entry.file);
+		if (source === null) {
+			problems.push(`${key}: file does not exist (deleted or moved) — the entry is STALE`);
+			continue;
+		}
+		const declarationProblem = symbolDeclarationProblem(source, entry.symbol);
+		if (declarationProblem !== null) problems.push(`${key}: ${declarationProblem}`);
+		const reasonProblem = thinReasonProblem(entry.reason, 12);
+		if (reasonProblem !== null) {
+			problems.push(`${key}: THIN reason ${JSON.stringify(entry.reason)} — ${reasonProblem}`);
+		}
+		if (typeof entry.class !== 'string' || entry.class.trim() === '') {
+			problems.push(`${key}: no class`);
+		}
+	}
+	return problems;
+}
+
+function unmarkedExemptEntries(
+	entries: readonly CoverageExemptEntry[],
+	readSource: (file: string) => string | null,
+): string[] {
+	const unmarked: string[] = [];
+	for (const entry of entries) {
+		if (entry.class === RESCUED_CLASS) continue; // handled by its own test below
+		const source = readSource(entry.file);
+		if (source === null) continue; // already reported as stale above
+		const markerProblem = markerAttachmentProblem(source, entry.symbol);
+		if (markerProblem !== null) unmarked.push(`${entry.file}::${entry.symbol}: ${markerProblem}`);
+	}
+	return unmarked;
+}
+
 describe('crap ratchet — the COVERAGE-EXEMPT list is named, reasoned, marked and honest', () => {
 	const EXEMPT = loadCoverageExempt();
 	/** Anti-vacuity: a truncated list would make every check below trivially green. */
@@ -479,38 +649,7 @@ describe('crap ratchet — the COVERAGE-EXEMPT list is named, reasoned, marked a
 	});
 
 	test('every entry names a real file and symbol, is unique, and carries a substantive reason', () => {
-		const problems: string[] = [];
-		const seen = new Set<string>();
-		for (const entry of EXEMPT.entries) {
-			const key = `${entry.file}::${entry.symbol}`;
-			if (seen.has(key)) problems.push(`${key}: DUPLICATE entry`);
-			seen.add(key);
-			if (!entry.file.startsWith(`${SCAN_ROOT}/`)) {
-				problems.push(
-					`${key}: file is outside ${SCAN_ROOT}/ — this list covers the scan root only`,
-				);
-				continue;
-			}
-			let source: string;
-			try {
-				source = readFileSync(entry.file, 'utf-8');
-			} catch {
-				problems.push(`${key}: file does not exist (deleted or moved) — the entry is STALE`);
-				continue;
-			}
-			if (!source.includes(entry.symbol)) {
-				problems.push(
-					`${key}: symbol not found in the file — renamed or removed, the entry is STALE`,
-				);
-			}
-			const reason = typeof entry.reason === 'string' ? entry.reason.trim() : '';
-			if (reason.split(/\s+/).length < 12 || THIN_REASONS.test(reason)) {
-				problems.push(`${key}: THIN reason ${JSON.stringify(reason)}`);
-			}
-			if (typeof entry.class !== 'string' || entry.class.trim() === '') {
-				problems.push(`${key}: no class`);
-			}
-		}
+		const problems = exemptEntryProblems(EXEMPT.entries, readSourceOrNull);
 		expect(
 			problems,
 			`${COVERAGE_EXEMPT_PATH} is stale or thin. This list records which src/core/ functions no test may execute, and why — it is about LINE COVERAGE (Bun emits no BRDA records, so nothing in this repo measures branch coverage) and has NO effect on the complexity ratchet. A reason must name the IRREDUCIBLE structure: what executing the function would destroy, or why there is no decision to assert. "Temporary" and "hard to test" are not reasons. If a symbol was renamed or deleted, update or remove the entry — a stale exemption makes the list look like it is doing work it is not.\n  ${problems.join('\n  ')}`,
@@ -521,23 +660,148 @@ describe('crap ratchet — the COVERAGE-EXEMPT list is named, reasoned, marked a
 		// THE LOAD-BEARING ONE (DEC-12). A reason readable only in engineering/ is
 		// invisible to the person editing the function, which is exactly who needs
 		// it. The JSON indexes the markers; it does not replace them.
-		const unmarked: string[] = [];
-		for (const entry of EXEMPT.entries) {
-			if (entry.class === RESCUED_CLASS) continue; // handled by its own test below
-			let source: string;
-			try {
-				source = readFileSync(entry.file, 'utf-8');
-			} catch {
-				continue; // already reported as stale above
-			}
-			if (!source.includes(COVERAGE_EXEMPT_MARKER)) {
-				unmarked.push(`${entry.file}::${entry.symbol}`);
-			}
-		}
+		const unmarked = unmarkedExemptEntries(EXEMPT.entries, readSourceOrNull);
 		expect(
 			unmarked,
-			`These exempt files carry no ${COVERAGE_EXEMPT_MARKER} marker. Per DEC-12 an invariant stated without a mechanical gate is prohibited, and an exemption stated only in ${COVERAGE_EXEMPT_PATH} is exactly that: place the reason in a comment ON the function, then this gate holds the two together. (Again: this is LINE-coverage bookkeeping, not a complexity rule.)\n  ${unmarked.join('\n  ')}`,
+			`These exempt symbols carry no ATTACHED ${COVERAGE_EXEMPT_MARKER} marker. Per DEC-12 an invariant stated without a mechanical gate is prohibited, and an exemption stated only in ${COVERAGE_EXEMPT_PATH} is exactly that: place the reason in a comment ON the function, then this gate holds the two together. (Again: this is LINE-coverage bookkeeping, not a complexity rule.)\n  ${unmarked.join('\n  ')}`,
 		).toEqual([]);
+	});
+
+	test('positive controls: an imported-only symbol and an orphaned marker are REPORTED', () => {
+		// The two GATE-42(b) shapes, planted. Without these the two checks above
+		// could be weakened back to substring tests and stay green.
+		const importedOnly = [
+			"import { resolveUserName } from '../security/user_identity.ts';",
+			'',
+			'export function foldStatsRows(): void {',
+			'\tresolveUserName(1, "lg-spa");',
+			'}',
+		].join('\n');
+		expect(findSymbolDeclaration(importedOnly, 'resolveUserName')).toBeNull();
+		expect(findSymbolDeclaration(importedOnly, 'foldStatsRows')?.line).toBe(3);
+		// …through the validator the entry loop applies: the imported-only entry
+		// is reported as REFERENCED-not-DECLARED, the declaring one is clean.
+		expect(symbolDeclarationProblem(importedOnly, 'resolveUserName')).toContain('only REFERENCED');
+		expect(symbolDeclarationProblem(importedOnly, 'foldStatsRows')).toBeNull();
+		expect(symbolDeclarationProblem(importedOnly, 'neverMentioned')).toContain('STALE');
+		// …and through the LIST WALK itself, with a planted entry + a fake reader:
+		// the real list's shape (a src/core file naming an imported-only symbol).
+		const plantedReason =
+			'three dynamic imports and one component read turning an id into a display name; every branch is null-vs-value on its own read, asserted where its callers inject it';
+		const planted: CoverageExemptEntry = {
+			file: `${SCAN_ROOT}/zz_synthetic/importer.ts`,
+			symbol: 'resolveUserName',
+			class: 'vacuous-projection',
+			reason: plantedReason,
+		};
+		const fakeReader = (file: string): string | null =>
+			file === planted.file ? importedOnly : null;
+		expect(exemptEntryProblems([planted], fakeReader)).toEqual([
+			`${planted.file}::resolveUserName: symbol is only REFERENCED in the file (an import, a call), not DECLARED there — it was extracted or renamed; point the entry at the file that declares it`,
+		]);
+		expect(exemptEntryProblems([{ ...planted, symbol: 'foldStatsRows' }], fakeReader)).toEqual([]);
+		expect(
+			exemptEntryProblems([{ ...planted, file: `${SCAN_ROOT}/zz_synthetic/gone.ts` }], fakeReader),
+		).toEqual([
+			`${SCAN_ROOT}/zz_synthetic/gone.ts::resolveUserName: file does not exist (deleted or moved) — the entry is STALE`,
+		]);
+
+		const orphaned = [
+			'/**',
+			` * ${COVERAGE_EXEMPT_MARKER} (reason): a thin wrapper.`,
+			' */',
+			'/** A later insertion split the marker from its function. */',
+			'async function deleteRestorePointOwned(): Promise<void> {}',
+			'',
+			'async function restoreCodeOwned(): Promise<void> {}',
+		].join('\n');
+		expect(markerAttachedToSymbol(orphaned, 'restoreCodeOwned', COVERAGE_EXEMPT_MARKER)).toBe(
+			false,
+		);
+		// …and through the marker validator the loop applies: the file CARRIES a
+		// marker (a whole-file substring check is green) yet the entry is reported.
+		expect(markerAttachmentProblem(orphaned, 'restoreCodeOwned')).toContain('NONE is attached');
+		expect(markerAttachmentProblem(orphaned, 'deleteRestorePointOwned')).toBeNull();
+		expect(markerAttachmentProblem('export function x(): void {}', 'x')).toBe(
+			'no marker anywhere in the file',
+		);
+		// …and through the marker walk with a planted entry: the orphan is listed,
+		// the attached one is not, a RESCUED entry is skipped by its own rule.
+		const orphanEntry: CoverageExemptEntry = {
+			file: `${SCAN_ROOT}/zz_synthetic/orphan.ts`,
+			symbol: 'restoreCodeOwned',
+			class: 'shell',
+			reason: 'a planted reason long enough to pass the thin-reason rule of twelve words here',
+		};
+		const orphanReader = (file: string): string | null =>
+			file === orphanEntry.file ? orphaned : null;
+		expect(unmarkedExemptEntries([orphanEntry], orphanReader)).toEqual([
+			`${orphanEntry.file}::restoreCodeOwned: the file carries a marker but NONE is attached to this symbol (not in the comment block above its declaration, not inside its body, not naming it) — an orphaned marker sits on some OTHER function`,
+		]);
+		expect(
+			unmarkedExemptEntries([{ ...orphanEntry, symbol: 'deleteRestorePointOwned' }], orphanReader),
+		).toEqual([]);
+		expect(unmarkedExemptEntries([{ ...orphanEntry, class: RESCUED_CLASS }], orphanReader)).toEqual(
+			[],
+		);
+		// …and the three legitimate shapes are recognised.
+		expect(
+			markerAttachedToSymbol(orphaned, 'deleteRestorePointOwned', COVERAGE_EXEMPT_MARKER),
+		).toBe(true);
+		const arm = [
+			'async function setScheduler(): Promise<void> {',
+			`\t// ${COVERAGE_EXEMPT_MARKER}, this arm: needs a live drain.`,
+			'\tif (x) throw new Error();',
+			'}',
+			'',
+			'async function other(): Promise<void> {}',
+		].join('\n');
+		expect(markerAttachedToSymbol(arm, 'setScheduler', COVERAGE_EXEMPT_MARKER)).toBe(true);
+		expect(markerAttachedToSymbol(arm, 'other', COVERAGE_EXEMPT_MARKER)).toBe(false);
+		// the NEXT declaration's doc block is not part of this declaration's span
+		const neighbour = [
+			'async function unmarkedFirst(): Promise<void> {}',
+			'',
+			'/**',
+			` * ${COVERAGE_EXEMPT_MARKER}: the second one is thin.`,
+			' */',
+			'async function markedSecond(): Promise<void> {}',
+		].join('\n');
+		expect(markerAttachedToSymbol(neighbour, 'unmarkedFirst', COVERAGE_EXEMPT_MARKER)).toBe(false);
+		expect(markerAttachedToSymbol(neighbour, 'markedSecond', COVERAGE_EXEMPT_MARKER)).toBe(true);
+		const named = [
+			'/**',
+			` * ${COVERAGE_EXEMPT_MARKER}: the passes rebuildTables / rebuildIndexes are never run —`,
+			' * each one rewrites the live schema of the installation, which no suite',
+			' * database may stand in for; the SQL they emit is gated by its own tripwire.',
+			' */',
+			'export async function ensure(): Promise<void> {}',
+			'',
+			'export function rebuildTables(): void {}',
+			'export function rebuildTriggers(): void {}',
+		].join('\n');
+		expect(markerAttachedToSymbol(named, 'rebuildTables', COVERAGE_EXEMPT_MARKER)).toBe(true);
+		expect(markerAttachedToSymbol(named, 'rebuildTriggers', COVERAGE_EXEMPT_MARKER)).toBe(false);
+		// A CROSS-REFERENCE is not an attachment: a bare line naming the symbol
+		// next to an unrelated declaration, or a block too short to hold a reason.
+		const crossReference = [
+			`// ${COVERAGE_EXEMPT_MARKER}: see resolveUserName below`,
+			"const USER_NAME_COMPONENT = 'test5';",
+			'',
+			'export async function resolveUserName(): Promise<void> {}',
+		].join('\n');
+		expect(markerAttachedToSymbol(crossReference, 'resolveUserName', COVERAGE_EXEMPT_MARKER)).toBe(
+			false,
+		);
+		const thinBlock = [
+			`/* ${COVERAGE_EXEMPT_MARKER}: resolveUserName */`,
+			"const USER_NAME_COMPONENT = 'test5';",
+			'',
+			'export async function resolveUserName(): Promise<void> {}',
+		].join('\n');
+		expect(markerAttachedToSymbol(thinBlock, 'resolveUserName', COVERAGE_EXEMPT_MARKER)).toBe(
+			false,
+		);
 	});
 
 	test('a RESCUED entry is a tombstone: it carries no exemption marker and stays classified as not exempt', () => {
@@ -580,7 +844,7 @@ describe('crap ratchet — the COVERAGE-EXEMPT list is named, reasoned, marked a
 			.map((entry) => `${entry.file}::${entry.symbol}`);
 		expect(
 			abuse,
-			`These files are exempt from COVERAGE and are ALSO currently over their frozen complexity max. The two are unrelated and this list may not be used to soften the first gate: an exemption is for code that CANNOT be covered, not a silencer for a legitimate complexity regression. Fix rule 1 (simplify, or \`${FIX_COMMAND} --allow-regression\` with the reason in the commit message), then re-add the coverage exemption if it is still true.\n  ${abuse.join('\n  ')}`,
+			`These files are exempt from COVERAGE and are ALSO currently over their frozen complexity max. The two are unrelated and this list may not be used to soften the first gate: an exemption is for code that CANNOT be covered, not a silencer for a legitimate complexity regression. Fix rule 1 (simplify, or \`${FIX_COMMAND} --allow-regression --reason "<why>"\`, the reason written into the baseline ledger), then re-add the coverage exemption if it is still true.\n  ${abuse.join('\n  ')}`,
 		).toEqual([]);
 	});
 });
@@ -638,7 +902,7 @@ describe("crap ratchet — the gate's own prose narrates rules, never transient 
 			offenders,
 			"A gate's own prose is where a RULE lives, never where its current state lives. Transient state — which files the ratchet is over on, at which commit — belongs in rewrite/LEDGER.md (gitignored, not on a clone) or in the commit message of the change that opened it. Written into the gate, it makes a non-green ratchet read as the normal condition and hands the next reader the regeneration reflex rule 1 exists to starve. The general rule wording around such a sentence is usually correct — keep it; delete only the dated instance claim, after actually closing the gap it described (simplify the code, or `" +
 				FIX_COMMAND +
-				' --allow-regression` with the reason in the commit message). Each line quotes the offending excerpt:\n  ' +
+				' --allow-regression --reason "<why>"`, the reason written into the baseline ledger). Each line quotes the offending excerpt:\n  ' +
 				offenders.join('\n  '),
 		).toEqual([]);
 	});

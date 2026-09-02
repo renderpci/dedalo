@@ -29,7 +29,7 @@
  * Phase-B abort, the Phase-C auto-restore + D7 message, and the success tail
  * (schema-changes CONTENT, counter consolidation).
  *
- * COVERAGE-EXEMPT, deliberately and permanently:
+ * COVERAGE-EXEMPT (`updateOntology`, arms only), deliberately and permanently:
  *   - the real remote-download arm of Phase A — a gate never makes a network
  *     fetch; the local fixture server IS the configured origin instead.
  *   - the `engineOwnsInstall()` refusal — collapsed to `true` at the

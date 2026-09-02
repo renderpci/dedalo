@@ -24,10 +24,10 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { Glob } from 'bun';
 import { contributorComponentTipos } from '../../src/ai/rag/retrieval.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { scopeInverseReferenceHits } from '../../src/core/security/record_scope.ts';
+import { WRITE_PATH_CORPUS_FLOOR, writePathSourceFiles } from '../helpers/write_path_corpus.ts';
 
 /** Seed-shipped tipo, spelled so the census sees a reference, not a binding. */
 const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
@@ -203,13 +203,17 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 	};
 
 	test('every caller of the unscoped inverse scan is classified (door registry)', () => {
+		// The corpus is the shared write-path lister (src/ + tools/ + scripts/) —
+		// the roots are registered in census_derivation_tripwire, not chosen here.
+		const corpus = writePathSourceFiles();
+		expect(corpus.length).toBeGreaterThan(WRITE_PATH_CORPUS_FLOOR);
 		const found = new Set<string>();
-		for (const dir of ['src', 'tools']) {
-			for (const rel of new Glob('**/*.ts').scanSync(join(ROOT, dir))) {
-				const path = `${dir}/${rel}`;
-				if (read(path).includes('findInverseReference')) found.add(path);
-			}
+		for (const path of corpus) {
+			if (read(path).includes('findInverseReference')) found.add(path);
 		}
+		// The registry is the walk's own result, floored: an emptied corpus finds
+		// no caller and would otherwise pass with every entry 'stale'.
+		expect(found.size).toBeGreaterThan(10);
 
 		const unclassified = [...found].filter((p) => INVERSE_SCAN_CALLERS[p] === undefined).sort();
 		expect(

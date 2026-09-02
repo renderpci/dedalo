@@ -11,7 +11,8 @@ import type { WidgetModule, WidgetResponse } from './support.ts';
 import { engineDenied, fromOutcome, gated } from './support.ts';
 
 /*
- * COVERAGE-EXEMPT, all three functions in this file (coverage plan §5.2; reason
+ * COVERAGE-EXEMPT, all three functions in this file — buildRecoveryOwned,
+ * restoreRecoveryOwned, buildDatabaseVersionGetValue (coverage plan §5.2; reason
  * registered in engineering/crap_coverage_exempt.json): single-expression
  * delegations to core/ontology/recovery_file.ts, gated THERE (including the
  * truncated-recovery-file case). `restoreDdOntologyRecoveryFromFile` REPLACES the

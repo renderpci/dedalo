@@ -4,8 +4,13 @@
 # directory may target the self-hosted runner. A fork PR runs attacker-controlled
 # code, and the self-hosted Mac holds the real ../private/.env and the live matrix
 # Postgres — a self-hosted PR job there is remote code execution on the data host.
-# The DB/parity/client tier lives in .github/workflows-selfhosted/ (inert here; GitHub
-# only executes .github/workflows/) and runs ONLY on the private mirror.
+# What needs a database runs HOSTED, against a throwaway service container:
+# .github/workflows/db.yml — the `db` job (DB-backed tripwires, unit tier, parity)
+# and the `instance` job (the browser client suite and the two update drills; the
+# gates that boot a real server). .github/workflows-selfhosted/ is the PRIVATE
+# MIRROR's copy of those same steps (inert here; GitHub only executes
+# .github/workflows/), and test/unit/tier_wiring_tripwire.test.ts holds that every
+# one of its steps has an executing hosted twin.
 # Do NOT move a self-hosted job back into this directory.
 #
 # hermetic — GitHub-hosted; typecheck + lint + DB-less tripwires via the shared
@@ -23,12 +28,12 @@ name: ci
 # actually lands ON, not only the ones it is merged INTO. (P0-1 of the
 # 2026-08-26 deep audit.)
 #
-# WHAT THIS DOES NOT FIX, stated so the comment is not read as more than it is:
-# `scripts/verify.ts` — the command that sat RED for 45 commits — is still run by
-# NO executing workflow. It appears only in .github/workflows-selfhosted/, a
-# directory GitHub does not read, so the self-hosted tier is inert until it is
-# registered. Making the hermetic tier fire on `v7` is a precondition for that
-# signal, not a substitute for it.
+# `scripts/verify.ts` — the command that sat RED for 45 commits — is the
+# DEVELOPER's gate and is run by no workflow; every stage it reports has a hosted
+# twin that executes (typecheck/lint/lint:browser/site_builder here, the
+# tripwires split hermetic ∪ db, the neighbours' directories claimed by the unit
+# and parity tiers), and test/unit/tier_wiring_tripwire.test.ts derives that
+# stage list from verify.ts itself and holds each twin.
 on:
   pull_request:
   push:

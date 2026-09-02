@@ -354,5 +354,10 @@ if (import.meta.main) {
 	process.exit(0);
 }
 
-/** Exported for the end-to-end publish gate (drives a job in-process). */
+/**
+ * Exported for test/unit/diffusion_runner_native.test.ts, which drives a
+ * claimed job IN-PROCESS on the suite database (enqueue → claim → runJob →
+ * job row + published files) — the gate that executes this module's real
+ * pipeline rather than spawning it in stub mode.
+ */
 export { runJob };

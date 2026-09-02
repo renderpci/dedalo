@@ -22,7 +22,19 @@
 # dedalo_test_marker row every test-data writer demands. Nothing here reads an
 # installation's data, because there is no installation on this runner.
 #
-# Invariants in this file are enforced by test/unit/ci_workflow_tripwire.test.ts.
+# TWO JOBS, ONE SERVICE SHAPE (2026-09-02, P0-1 residual). `db` runs the in-process
+# gates; `instance` runs the gates that BOOT A REAL SERVER over the wire — the
+# browser client suite and the two code-update drills (scripts/ci/instance_tier.sh).
+# Those three commands were invoked only from .github/workflows-selfhosted/, which
+# GitHub does not execute on a public repo, so they ran on NO CI. A second job
+# rather than two more stages of db_tier.sh because the instance gates need a
+# FRESH suite database: the db job's 725-file unit stage pollutes the fixture the
+# client baseline was measured on. Each job gets its own service container, so
+# the isolation is structural. The service block is repeated verbatim — GitHub
+# Actions has no YAML anchors — and rule 12 digest-pins both copies.
+#
+# Invariants in this file are enforced by test/unit/ci_workflow_tripwire.test.ts
+# and test/unit/tier_wiring_tripwire.test.ts.
 
 name: db
 
@@ -118,3 +130,66 @@ jobs:
 
       - name: DB tier (build the suite database + the DB-backed tripwires)
         run: bash scripts/ci/db_tier.sh
+
+  instance:
+    runs-on: ubuntu-latest
+    # The suite build (~15 min, see `db`) plus the browser suite (133 suites) and
+    # two update drills (~3-5 min each warm). 60 is the first pin, from the db
+    # job's measured build plus the drills' documented runtimes — MEASURE the first
+    # green run and re-pin from that, never from a guess.
+    timeout-minutes: 60
+
+    services:
+      postgres:
+        # The SAME digest as the `db` job above, with its reasons (pgvector, not
+        # library/postgres; digest, not tag). Bump both copies in one change.
+        image: pgvector/pgvector@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a # pgvector/pgvector:pg18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        # Without a health gate the first psql races the server's own init.
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The update drills `git clone` THIS checkout as the release build's
+          # source, and git refuses to clone a shallow repository.
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version # the load-bearing pin — never inline a version
+
+      # Same client-18 install as `db`, for the same reason: the suite build runs
+      # pg_dump/pg_restore/psql, and a client older than the server is refused.
+      - name: Install postgresql-client 18
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-18
+
+      - name: Install dependencies (frozen lockfile)
+        run: bun install --frozen-lockfile
+
+      # The client runner launches the SYSTEM Chrome (`channel: 'chrome'`,
+      # PUPPETEER_SKIP_DOWNLOAD=1) and already passes --no-sandbox; the drills
+      # need zip/unzip/zipinfo and git. ubuntu-latest ships all of them — this
+      # step only makes their absence a named failure instead of a mystery.
+      - name: Runner toolchain (Chrome, zip, git)
+        run: |
+          google-chrome --version
+          zip -v | head -1
+          zipinfo -h >/dev/null 2>&1 || unzip -v | head -1
+          git --version
+
+      - name: Instance tier (build the suite database + client suite + update drills)
+        run: bash scripts/ci/instance_tier.sh

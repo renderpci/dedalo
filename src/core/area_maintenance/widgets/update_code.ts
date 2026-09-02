@@ -154,22 +154,6 @@ async function updateCodeOwned(
 }
 
 /**
- * The OPEN (owned) code RESTORE: a BACKGROUND mediaJobs job putting a restore
- * point back on the tree (pre-flight smoke boot + swap + restart), answering
- * the same {pid, pfile} poll handle and streaming the same
- * `UpdatePhaseFrame`s — `download`/`verify`/`extract`/`deps` arrive `skipped`,
- * so the client's phase reducer needs no restore-specific branch.
- *
- * The SAME known limit as the update, by design: the restart kills this
- * process and orphans the job, and the client switches to /health polling on
- * the `restart` frame's `expected_version`. Do not "fix" the interruption away.
- *
- * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
- * engineering/crap_coverage_exempt.json): a thin job-submission wrapper over
- * `core/update/code_restore.ts`, gated in its own suite. EXECUTING it replaces
- * the code tree on disk and restarts the process.
- */
-/**
  * The OPEN (owned) restore-point DELETE — synchronous, unlike its two
  * neighbours, and deliberately.
  *
@@ -189,6 +173,22 @@ async function deleteRestorePointOwned(
 	return fromEnvelope(await deleteRestorePoint(options, principal));
 }
 
+/**
+ * The OPEN (owned) code RESTORE: a BACKGROUND mediaJobs job putting a restore
+ * point back on the tree (pre-flight smoke boot + swap + restart), answering
+ * the same {pid, pfile} poll handle and streaming the same
+ * `UpdatePhaseFrame`s — `download`/`verify`/`extract`/`deps` arrive `skipped`,
+ * so the client's phase reducer needs no restore-specific branch.
+ *
+ * The SAME known limit as the update, by design: the restart kills this
+ * process and orphans the job, and the client switches to /health polling on
+ * the `restart` frame's `expected_version`. Do not "fix" the interruption away.
+ *
+ * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
+ * engineering/crap_coverage_exempt.json): a thin job-submission wrapper over
+ * `core/update/code_restore.ts`, gated in its own suite. EXECUTING it replaces
+ * the code tree on disk and restarts the process.
+ */
 async function restoreCodeOwned(
 	options: Record<string, unknown>,
 	principal: Principal,

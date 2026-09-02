@@ -58,12 +58,14 @@ describe('PHP oracle canary', () => {
 		'ORACLE_MODE=fixtures — parity runs against the harvested golden store, not live PHP',
 		() => {
 			const stats = fixtureStoreStats();
-			if (stats.interactions === 0) {
-				throw new Error(
-					'ORACLE_MODE=fixtures but test/parity/fixtures/oracle_harvest/ is empty or missing. ' +
-						'Run `bun run scripts/oracle_harvest.ts` against the live oracle first (engineering/ORACLE_HARVEST.md).',
-				);
-			}
+			// An `expect`, not a bare throw: the per-file assertion floor
+			// (suite_assertion_floor_tripwire) counts EXECUTED expects, and a file
+			// whose only check is a throw reads as "ran and asserted nothing".
+			expect(
+				stats.interactions,
+				'ORACLE_MODE=fixtures but test/parity/fixtures/oracle_harvest/ is empty or missing. ' +
+					'The store is frozen (a re-harvest is impossible, engineering/ORACLE_HARVEST.md) — restore it from git.',
+			).toBeGreaterThan(0);
 			console.warn(
 				`[oracle_canary] ORACLE_MODE=fixtures: serving ${stats.interactions} frozen oracle responses ` +
 					`from ${stats.files} harvested gate files. Read-path parity is verified against the FROZEN ` +

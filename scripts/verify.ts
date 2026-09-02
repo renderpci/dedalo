@@ -212,6 +212,14 @@ const TRIPWIRES = [
 	'test/unit/catalog_behaviour_tripwire.test.ts',
 	'test/unit/marc_identity_native.test.ts',
 	'test/parity/oracle_canary.test.ts',
+	'test/unit/tier_wiring_tripwire.test.ts',
+	'test/unit/update_drill_config_tripwire.test.ts',
+	'test/unit/production_entrypoint_coverage_tripwire.test.ts',
+	'test/unit/rag_drain_cli_native.test.ts',
+	'test/unit/suite_assertion_floor_tripwire.test.ts',
+	'test/unit/client_gate_inventory_tripwire.test.ts',
+	'test/unit/authz_substring_gate_tripwire.test.ts',
+	'test/unit/census_derivation_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------
@@ -374,6 +382,47 @@ async function runTestFiles(name: string, files: string[], forgiven?: Set<string
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
+/**
+ * THE DEBT LEDGER IS APPEND-ONLY AGAINST HISTORY (P2-18 / GATE-22).
+ *
+ * `engineering/crap_complexity_baseline.json` carries its own ledger, and the
+ * hermetic predicate (crap_complexity_ratchet + ratchet_integrity_tripwire)
+ * holds every line to its rule — but a REWRITTEN line, or a per-file entry
+ * raised with the counters flat, is visible only against the artifact as it
+ * stood at a reference commit. The reference is the merge-base of HEAD and
+ * `--base` (HEAD itself by default: the working tree against the committed
+ * artifact, which is where a hand edit lives before it is committed). An
+ * empty merge-base is a RED stage, never a comparison against nothing —
+ * crap_baseline.ts refuses an empty `--reference` on its own as well. CI's
+ * twin is the `crap ledger` stage of scripts/ci/hermetic.sh (leg C of
+ * tier_wiring_tripwire holds the pairing).
+ */
+async function crapLedger(): Promise<void> {
+	banner('crap ledger (append-only vs the merge-base)');
+	const mb = await $`git merge-base HEAD ${base}`.nothrow().quiet();
+	const reference = mb.stdout.toString().trim();
+	if (mb.exitCode !== 0 || reference === '') {
+		console.log(mb.stderr.toString().trim());
+		results.push({
+			name: 'crap:ledger',
+			ok: false,
+			detail: `no merge-base between HEAD and ${base} — the reference is unresolvable, which is red, not skipped`,
+		});
+		return;
+	}
+	const r = await $`bun run scripts/crap_baseline.ts --check --reference ${reference}`
+		.nothrow()
+		.quiet();
+	const out = (r.stdout.toString() + r.stderr.toString()).trim();
+	const ok = r.exitCode === 0;
+	if (!ok) console.log(out.split('\n').slice(-12).join('\n'));
+	results.push({
+		name: 'crap:ledger',
+		ok,
+		detail: ok ? `append-only vs ${reference.slice(0, 12)}` : 'ledger inconsistent (see above)',
+	});
+}
+
 const changed = await changedFiles();
 
 if (changedOnly) {
@@ -388,12 +437,12 @@ console.log(`\x1b[1mVERIFY\x1b[0m — ${changed.length} changed file(s) vs ${bas
 // verdicts are always recorded, so a red lint cannot mask a red typecheck.
 // Their console output is buffered inside each stage and printed on completion,
 // so a concurrent run still reads top-to-bottom rather than interleaving.
-await Promise.all([typecheck(), lint(), lintBrowserBudget()]);
+await Promise.all([typecheck(), lint(), lintBrowserBudget(), crapLedger()]);
 // Concurrency made the PUSH order a race, which made the summary's row order
 // vary between runs — a verdict table that reshuffles is a verdict table people
 // stop reading. Pin the two static stages to their declared order; the test
 // stages below append after them, as they always did.
-const STATIC_STAGE_ORDER = ['typecheck', 'lint', 'lint:browser'];
+const STATIC_STAGE_ORDER = ['typecheck', 'lint', 'lint:browser', 'crap:ledger'];
 results.sort((a, b) => STATIC_STAGE_ORDER.indexOf(a.name) - STATIC_STAGE_ORDER.indexOf(b.name));
 
 if (runTests) {

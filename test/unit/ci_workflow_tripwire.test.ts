@@ -48,8 +48,9 @@
  *      becomes the expected condition and trains the regeneration reflex the
  *      ratchets exist to starve — and it was never load-bearing: rule 4's parser
  *      takes only the first column, and scripts/verify.ts has no allowlist.
- *  13. DB TIER NEEDS NO PRIVATE ENV (2026-08-25) — scripts/ci/db_tier.sh may
- *      contain NO command that requires ../private/.env. Its own header states
+ *  13. HOSTED TIERS NEED NO PRIVATE ENV (2026-08-25; generalized 2026-09-02 to
+ *      every script an executing workflow runs, following `source` lines) —
+ *      scripts/ci/db_tier.sh may contain NO command that requires ../private/.env. Its own header states
  *      the tier needs "no secrets, no ../private/.env, no sibling tree", but the
  *      script called env_guard.sh, whose check 2 hard-fails on a missing
  *      ../private/.env — so on every GitHub run the tier died BEFORE
@@ -183,6 +184,69 @@ function dbTierTripwires(): string[] {
 			if (!m) throw new Error(`scripts/ci/db_tier.sh: unparsable DB_TIER_TRIPWIRES line: ${line}`);
 			return m[1] as string;
 		});
+}
+
+/**
+ * THE HOSTED TIER SCRIPTS — DERIVED from the executing workflows, never a hand list.
+ *
+ * Rules 6, 6b and 13 used to iterate `['scripts/ci/hermetic.sh', 'scripts/ci/db_tier.sh']`.
+ * A third hosted tier (scripts/ci/instance_tier.sh, 2026-09-02) would then have been
+ * held to none of them until somebody remembered the list — the rot every derived
+ * census in this repo exists to prevent. So the set is read off the `run:` lines of
+ * .github/workflows/*.yml and the script lines of .gitlab-ci.yml: a script an
+ * executing workflow runs is a hosted tier, and inherits every rule below on the day
+ * it is wired. (test/unit/tier_wiring_tripwire.test.ts holds the converse — that every
+ * scripts/ci/*.sh IS reached from such a chain or carries a reason.)
+ */
+function hostedTierScripts(): string[] {
+	const roots = [...workflowFiles.map((f) => join('.github', 'workflows', f)), '.gitlab-ci.yml'];
+	const found = new Set<string>();
+	for (const rel of roots) {
+		for (const m of read(rel).matchAll(
+			/^\s*(?:-\s+|run:\s+)bash (scripts\/ci\/[a-z0-9_]+\.sh)\b/gm,
+		)) {
+			found.add(m[1] as string);
+		}
+	}
+	const scripts = [...found].sort();
+	// Anti-vacuity: the two tiers this file has always known must still be found, or
+	// the grammar drifted and every rule below is iterating an empty list.
+	for (const known of ['scripts/ci/hermetic.sh', 'scripts/ci/db_tier.sh']) {
+		if (!scripts.includes(known)) {
+			throw new Error(
+				`hostedTierScripts(): ${known} not found on any executing workflow's run: line — the derivation is blind`,
+			);
+		}
+	}
+	return scripts;
+}
+
+/**
+ * A tier script's EFFECTIVE text: itself plus every scripts/ci/*.sh it `source`s,
+ * transitively. The environment composition moved out of db_tier.sh into
+ * scripts/ci/hosted_env.sh (one copy for the db and instance tiers), so a rule that
+ * read db_tier.sh alone would now find no stub, no allowlist — and report the tier
+ * broken, or, with a laxer grammar, report nothing. Only a LINE-START `source` (or
+ * `.`) counts: a `# shellcheck source=` comment is not an inclusion.
+ */
+function effectiveSource(rel: string, seen: Set<string> = new Set()): string {
+	if (seen.has(rel)) return '';
+	seen.add(rel);
+	const src = read(rel);
+	let out = src;
+	for (const m of src.matchAll(
+		/^\s*(?:source|\.)\s+"?(?:\$REPO_ROOT\/)?(scripts\/ci\/[a-z0-9_]+\.sh)"?/gm,
+	)) {
+		out += `\n${effectiveSource(m[1] as string, seen)}`;
+	}
+	return out;
+}
+
+/** The hosted tier scripts that BUILD the suite database — the ones whose environment must be complete. */
+function suiteBuildingTiers(): string[] {
+	return hostedTierScripts().filter((rel) =>
+		/^\s*bun run test:db:setup\b/m.test(effectiveSource(rel)),
+	);
 }
 
 /**
@@ -470,7 +534,7 @@ describe('CI workflow tripwire', () => {
 	 * hermetic script that reads a file it swears it does not read is not hermetic —
 	 * and only CI could tell us. Now the stub list cannot drift from the catalog.
 	 */
-	test('hermetic.sh and db_tier.sh stub every required-no-default config key', () => {
+	test('every hosted tier script stubs every required-no-default config key (following its source lines)', () => {
 		const required = new Set(
 			Object.entries(CONFIG_CATALOG)
 				.filter(([, entry]) => entry.required === true)
@@ -481,8 +545,18 @@ describe('CI workflow tripwire', () => {
 			'no required config keys in the catalog — src/config/catalog/ moved or lost its `required` flags',
 		).toBeGreaterThan(0);
 
-		for (const script of ['scripts/ci/hermetic.sh', 'scripts/ci/db_tier.sh']) {
-			const src = read(script);
+		// Control for the source-following: the db tier's stubs live in the file it
+		// sources, so a reader that does not follow `source` sees none of them.
+		expect(
+			/^\s*: "\$\{DB_HOST:=/m.test(read('scripts/ci/db_tier.sh')),
+			'db_tier.sh assigns DB_HOST inline again — the composition moved to hosted_env.sh; keep one copy',
+		).toBe(false);
+		expect(/^\s*: "\$\{DB_HOST:=/m.test(effectiveSource('scripts/ci/db_tier.sh'))).toBe(true);
+
+		const scripts = hostedTierScripts();
+		expect(scripts.length).toBeGreaterThanOrEqual(3);
+		for (const script of scripts) {
+			const src = effectiveSource(script);
 			// A key counts as stubbed iff it is ASSIGNED and EXPORTED. The old grammar
 			// (`${KEY:[=-]`) credited any `${KEY:-fallback}` READ anywhere in the file:
 			// the DEDALO_APPLICATION_LANGS if-block passed only through its guard's
@@ -511,7 +585,7 @@ describe('CI workflow tripwire', () => {
 				.sort();
 			expect(
 				unstubbed,
-				`Required config keys not assigned-and-exported in ${script}. On a bare CI runner there is no ../private/.env, so the config catalog THROWS at module init and the whole tier dies (with cascading "Cannot access 'config' before initialization" TDZ noise). Add a harmless stub — it only has to parse — and put the key on an export line:`,
+				`Required config keys not assigned-and-exported in ${script} (or the scripts it sources). On a bare CI runner there is no ../private/.env, so the config catalog THROWS at module init and the whole tier dies (with cascading "Cannot access 'config' before initialization" TDZ noise). Add a harmless stub — it only has to parse — and put the key on an export line:`,
 			).toEqual([]);
 		}
 	});
@@ -538,7 +612,7 @@ describe('CI workflow tripwire', () => {
 	 * without allowlisting its host reds THIS gate rather than a dozen unrelated ones on
 	 * a runner nobody can reproduce.
 	 */
-	test('db_tier.sh allowlists every api_config host the vendored seed ships', () => {
+	test('every suite-building hosted tier allowlists every api_config host the vendored seed ships', () => {
 		const sql = new TextDecoder().decode(
 			Bun.gunzipSync(readFileSync(join(repoRoot, 'install', 'db', 'dedalo_install.pgsql.gz'))),
 		);
@@ -556,18 +630,25 @@ describe('CI workflow tripwire', () => {
 			'no api_config host found in the install seed — the extraction broke, or the seed changed shape',
 		).toBeGreaterThan(0);
 
-		const declared = read('scripts/ci/db_tier.sh').match(
-			/^\s*: "\$\{DEDALO_EXTERNAL_ALLOWED_HOSTS:=([^}]*)\}"/m,
-		)?.[1];
+		const tiers = suiteBuildingTiers();
 		expect(
-			declared,
-			'scripts/ci/db_tier.sh must compose DEDALO_EXTERNAL_ALLOWED_HOSTS — the tier builds its whole environment, and the seed it installs names external hosts',
-		).toBeDefined();
-		const allowed = new Set((declared ?? '').split(',').map((host) => host.trim()));
-		expect(
-			seedHosts.filter((host) => !allowed.has(host)),
-			'api_config hosts the seed ships that the db tier does not allowlist. The refusal lands on the RESTORE path, not on anything external — add the host to db_tier.sh:',
-		).toEqual([]);
+			tiers,
+			'no hosted tier runs `bun run test:db:setup` — the derivation is blind',
+		).toContain('scripts/ci/db_tier.sh');
+		for (const tier of tiers) {
+			const declared = effectiveSource(tier).match(
+				/^\s*: "\$\{DEDALO_EXTERNAL_ALLOWED_HOSTS:=([^}]*)\}"/m,
+			)?.[1];
+			expect(
+				declared,
+				`${tier} must compose DEDALO_EXTERNAL_ALLOWED_HOSTS (itself or via scripts/ci/hosted_env.sh) — the tier builds its whole environment, and the seed it installs names external hosts`,
+			).toBeDefined();
+			const allowed = new Set((declared ?? '').split(',').map((host) => host.trim()));
+			expect(
+				seedHosts.filter((host) => !allowed.has(host)),
+				`api_config hosts the seed ships that ${tier} does not allowlist. The refusal lands on the RESTORE path, not on anything external — add the host to scripts/ci/hosted_env.sh:`,
+			).toEqual([]);
+		}
 	});
 
 	// The self-hosted tier must stay IN THE REPO. Gitignoring it would (a) never reach
@@ -967,11 +1048,10 @@ describe('CI workflow tripwire', () => {
 	});
 
 	test('the GitHub hermetic jobs and .gitlab-ci.yml invoke the shared hermetic.sh', () => {
-		for (const file of [
-			'.github/workflows/ci.yml',
-			'.github/workflows/main.yml',
-			'.gitlab-ci.yml',
-		]) {
+		// main.yml (push-to-master hermetic) was DELETED 2026-09-02: ci.yml fires on
+		// pull_request + push to every landing branch (tier_wiring leg G), so it was a
+		// second hermetic run on the same push carrying no information.
+		for (const file of ['.github/workflows/ci.yml', '.gitlab-ci.yml']) {
 			expect(read(file), `${file}: hermetic tier must run scripts/ci/hermetic.sh`).toContain(
 				'scripts/ci/hermetic.sh',
 			);
@@ -1052,7 +1132,7 @@ describe('CI workflow tripwire', () => {
 	 * the measured breakage: the tier's guard call hard-failed on the file every
 	 * GitHub run, so "wired" meant "never reached" from the day the tier landed.
 	 */
-	test('db_tier.sh contains no command that requires ../private/.env (rule 13)', () => {
+	test('no hosted tier script contains a command that requires ../private/.env (rule 13)', () => {
 		// Positive controls FIRST — a matcher that cannot catch the planted
 		// offender proves nothing about a clean scan. Each control is one of the
 		// three shapes the matcher claims to catch, plus the two shapes it must
@@ -1078,21 +1158,24 @@ describe('CI workflow tripwire', () => {
 			'matcher control: comments must stay free to discuss the file they forswear',
 		).toHaveLength(0);
 
-		const src = read('scripts/ci/db_tier.sh');
-		expect(
-			privateEnvOffenders(src),
-			'scripts/ci/db_tier.sh requires ../private/.env, which never exists on a hosted runner: the tier dies before test:db:setup and its tripwires run NOWHERE while reporting as wired — the exact never-reached state measured 2026-08-25. Compose the config in-process (the export block) or pass --no-private-env to env_guard.sh:',
-		).toEqual([]);
+		for (const tier of hostedTierScripts()) {
+			expect(
+				privateEnvOffenders(effectiveSource(tier)),
+				`${tier} (or a script it sources) requires ../private/.env, which never exists on a hosted runner: the tier dies before its gates and they run NOWHERE while reporting as wired — the exact never-reached state measured 2026-08-25. Compose the config in-process (scripts/ci/hosted_env.sh) or pass --no-private-env to env_guard.sh:`,
+			).toEqual([]);
+		}
 
 		// Guard the guard, both halves: the bun-pin check must still be reached
 		// (deleting the env_guard call would also pass the scan above), and
 		// env_guard.sh must still HAVE a private-env check for its self-hosted
 		// callers — if check 2 were deleted outright, --no-private-env would be
 		// skipping nothing and the flag's meaning silently rots.
-		expect(
-			src.includes('env_guard.sh --no-private-env'),
-			'db_tier.sh no longer calls env_guard.sh at all — the scan is happy but the bun-pin verification is gone; keep the call with --no-private-env',
-		).toBe(true);
+		for (const tier of suiteBuildingTiers()) {
+			expect(
+				effectiveSource(tier).includes('env_guard.sh --no-private-env'),
+				`${tier} no longer calls env_guard.sh at all — the scan is happy but the bun-pin verification is gone; keep the call with --no-private-env`,
+			).toBe(true);
+		}
 		const guard = read('scripts/ci/env_guard.sh');
 		expect(
 			guard.includes('REQUIRE_PRIVATE_ENV') && guard.includes('../private/.env'),
@@ -1312,15 +1395,39 @@ describe('CI workflow tripwire', () => {
 		// check .` cannot see the trees biome.jsonc excludes, so a green lint says
 		// nothing about them and the budget is a SEPARATE verdict that must survive
 		// alongside the other two.
-		expect(verify).toContain('await Promise.all([typecheck(), lint(), lintBrowserBudget()]);');
+		// DERIVED, not spelled: the functions the concurrent block awaits are read
+		// off the `Promise.all([...])` call, each resolved to the stage NAME its body
+		// pushes, and every one of those names must sit in STATIC_STAGE_ORDER (and
+		// nothing else may — a name in the order that no concurrent stage reports
+		// is a stale row). A pin on the literal line let a fourth stage be added
+		// only by rewriting the gate; the rule is about the pairing.
+		const concurrent = verify.match(/await Promise\.all\(\[([^\]]+)\]\);/)?.[1];
 		expect(
-			verify,
-			'every concurrently-run static stage must appear in STATIC_STAGE_ORDER, or the summary reshuffles',
-		).toContain("const STATIC_STAGE_ORDER = ['typecheck', 'lint', 'lint:browser'];");
+			concurrent,
+			'verify.ts no longer runs its static stages under Promise.all',
+		).toBeDefined();
+		const awaited = [...(concurrent as string).matchAll(/(\w+)\(\)/g)].map((m) => m[1] as string);
+		expect(awaited.length, 'the concurrent static block lost its stages').toBeGreaterThanOrEqual(3);
+		const stageNameOf = (fn: string): string => {
+			const body = verify.match(new RegExp(`async function ${fn}\\(\\)[\\s\\S]*?\\n}`))?.[0] ?? '';
+			const names = [...body.matchAll(/results\.push\(\{\s*name:\s*'([A-Za-z0-9_:]+)'/g)].map(
+				(m) => m[1] as string,
+			);
+			expect(new Set(names).size, `${fn}() must report exactly one stage name`).toBe(1);
+			return names[0] as string;
+		};
+		const reported = awaited.map(stageNameOf);
+		const order = verify.match(/const STATIC_STAGE_ORDER = \[([^\]]+)\];/)?.[1];
 		expect(
-			verify,
+			order,
 			'verify.ts runs its static stages concurrently, so it must pin their summary order — a verdict table that reshuffles is one people stop reading',
-		).toContain('STATIC_STAGE_ORDER');
+		).toBeDefined();
+		const pinned = [...(order as string).matchAll(/'([^']+)'/g)].map((m) => m[1] as string);
+		expect(
+			[...reported].sort(),
+			'every concurrently-run static stage must appear in STATIC_STAGE_ORDER, and nothing else may, or the summary reshuffles',
+		).toEqual([...pinned].sort());
+		expect(reported).toContain('lint:browser');
 	});
 
 	test('hermetic.sh tripwires are a subset of verify.ts TRIPWIRES', () => {

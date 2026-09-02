@@ -1,6 +1,14 @@
 # Nightly full-fat run — everything the repo can gate on this machine:
 # the whole bun test tree (unit + parity + integration/MariaDB) plus the
-# browser client gate (puppeteer against a CI-scoped server on :3510).
+# browser client gate (puppeteer against the runner's own server on the suite
+# database, port 4390+).
+#
+# PRIVATE-MIRROR DUPLICATE (2026-09-02). Every step here has an executing hosted
+# twin on the public repo — the suite via the unit and parity tiers of
+# .github/workflows/db.yml `db`, the client gate via its `instance` job — and
+# test/unit/tier_wiring_tripwire.test.ts holds that mapping. What this file adds
+# that a hosted runner cannot: the test/integration MariaDB legs, which skip
+# loudly without DEDALO_DIFFUSION_DB_*, actually RUN here.
 #
 # GitHub caveats (docs/CI.md): schedules run only on the default branch, and
 # GitHub pauses them after ~60 days of repo inactivity — re-enable from the
@@ -52,7 +60,7 @@ jobs:
       - name: Full suite (unit + parity + integration)
         shell: bash
         run: bun test --timeout=30000 2>&1 | tee nightly-suite.log
-      - name: Client gate (browser suite vs CI server on :3510)
+      - name: Client gate (browser suite vs the runner's own server)
         shell: bash
         run: bash scripts/ci/client_gate.sh 2>&1 | tee client-gate.log
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

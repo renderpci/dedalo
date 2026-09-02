@@ -31,6 +31,11 @@ import {
 	persistRecordKeys,
 	registerRagRecordHook,
 } from '../../src/core/section_record/index.ts';
+import {
+	REPO_ROOT,
+	WRITE_PATH_CORPUS_FLOOR,
+	writePathSourceFiles,
+} from '../helpers/write_path_corpus.ts';
 
 /** Reserved coordinates in matrix_test — collide with nothing real. */
 const TEST_TABLE = 'matrix_test';
@@ -293,14 +298,24 @@ describe('write-chokepoint grep gate', () => {
 		// (no new snapshots). EXECUTE-gated behind the update-engine
 		// standalone-ownership COEX gate; never a request-path write.
 		'src/core/update/transform/portalize.ts',
+		// scripts/ entered the census 2026-09-02 (P2-20/S-3, shared write-path
+		// corpus). A one-shot operator repair of the geolocation studio default:
+		// deliberately a per-key write inside withTransaction with its own
+		// recordTimeMachine row per repaired component (the transition is what
+		// the TM row records), never a request-path save.
+		'scripts/repair_geolocation_studio_default.ts',
 	];
 
 	test('no new direct updateMatrixKeyData callers appear outside the allowlist', async () => {
-		const { Glob } = await import('bun');
-		const root = new URL('../../', import.meta.url).pathname;
+		// THE shared write-path corpus (src/ + tools/ + scripts/,
+		// test/helpers/write_path_corpus.ts, 2026-09-02 P2-20/S-3): a repair
+		// script that calls the matrix writer directly is a direct caller like any
+		// other, and until the roots were shared this scan stopped at tools/.
+		const files = writePathSourceFiles();
+		expect(files.length).toBeGreaterThan(WRITE_PATH_CORPUS_FLOOR);
 		const offenders: string[] = [];
-		for await (const file of new Glob('{src,tools}/**/*.ts').scan(root)) {
-			const content = await Bun.file(`${root}${file}`).text();
+		for (const file of files) {
+			const content = await Bun.file(`${REPO_ROOT}/${file}`).text();
 			// Match usage (call or import), not mentions in comments — a plain
 			// substring check is enough to force a conscious decision either way.
 			if (/\bupdateMatrixKeysData?\(/.test(content) && !ALLOWED_DIRECT_CALLERS.includes(file)) {

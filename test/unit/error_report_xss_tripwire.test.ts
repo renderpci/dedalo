@@ -14,29 +14,52 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-
-const REPO_ROOT = join(import.meta.dir, '..', '..');
+import { discoverFiles, REPO_ROOT } from '../../scripts/lib/client_compat_census.ts';
+import { stripComments } from '../helpers/strip_comments.ts';
 
 /**
- * Files that render untrusted error-report content — textContent only.
- *
- * The client error contract (ERRORS_SPEC; `client/dedalo/core/common/js/`) put
- * every failure through ONE renderer, so the same DS-1 invariant now has to
- * hold there: an `error.message` is server text, an `error.details` value can be
- * a user-typed string echoed back, and a stream frame can be anything at all.
- * `render_api_error.js` is the renderer and `error_dispatch.js` the policy
- * executor that feeds it; `notifications.js` is the bubble both end in.
- * `render_common.js` is deliberately NOT here: it still renders ontology labels
- * through the ui.js `inner_html` option, which is a separate burn-down.
+ * The DIRECTORIES that own untrusted error-report text — every browser JS file
+ * under them is a render sink candidate the day it is written. The corpus is
+ * DERIVED: the shared browser-JS lister (`scripts/lib/client_compat_census.ts`,
+ * rooted at client/dedalo + tools/*\/js, registered in
+ * census_derivation_tripwire) is filtered by these prefixes, so a new file in
+ * either widget is inside the census without editing this gate (P2-20/S-3 —
+ * a hand array of paths was the GATE-37 shape).
  */
-const XSS_SENSITIVE_FILES: readonly string[] = [
-	'client/dedalo/core/area_maintenance/widgets/error_reports/js/render_error_reports.js',
+const UNTRUSTED_TEXT_DIRECTORIES: readonly string[] = [
+	'client/dedalo/core/area_maintenance/widgets/error_reports/js/',
+	'tools/tool_error_report/js/',
+];
+
+/**
+ * The client error contract (ERRORS_SPEC §client; `client/dedalo/core/common/js/`)
+ * puts every failure through ONE renderer chain, so the same DS-1 invariant
+ * holds there: an `error.message` is server text, an `error.details` value can
+ * be a user-typed string echoed back, and a stream frame can be anything at
+ * all. `error_dispatch.js` is the policy executor, `render_api_error.js` the
+ * renderer it feeds, `notifications.js` the bubble both end in. This is the
+ * chain the spec NAMES — a policy list, not a corpus — and each member is
+ * asserted to be inside the derived listing (a renamed file is loud, not
+ * silently out of the census). `render_common.js` is deliberately NOT here: it
+ * still renders ontology labels through the ui.js `inner_html` option, which
+ * is a separate burn-down.
+ */
+const ERROR_CONTRACT_CHAIN: readonly string[] = [
 	'client/dedalo/core/common/js/error_dispatch.js',
 	'client/dedalo/core/common/js/render_api_error.js',
 	'client/dedalo/core/common/js/utils/notifications.js',
-	'tools/tool_error_report/js/render_tool_error_report.js',
-	'tools/tool_error_report/js/tool_error_report.js',
 ];
+
+/** Every browser JS file the two surfaces own, plus the renderer chain — from the shared listing. */
+function xssSensitiveFiles(): string[] {
+	const listed = discoverFiles();
+	// Anti-vacuity: the listing is the browser client and the tool clients.
+	expect(listed.length).toBeGreaterThan(400);
+	const chain = new Set(ERROR_CONTRACT_CHAIN);
+	return listed.filter(
+		(file) => chain.has(file) || UNTRUSTED_TEXT_DIRECTORIES.some((dir) => file.startsWith(dir)),
+	);
+}
 
 /**
  * HTML-parsing sinks. The `inner_html` ui.js option maps to insertAdjacentHTML;
@@ -45,14 +68,25 @@ const XSS_SENSITIVE_FILES: readonly string[] = [
  */
 const HTML_SINK = /\b(innerHTML|inner_html|insertAdjacentHTML|outerHTML|update_node_content)\b/;
 
-function stripComments(source: string): string {
-	return source
-		.replace(/\/\*[\s\S]*?\*\//g, '') // block comments
-		.replace(/(^|[^:])\/\/[^\n]*/g, '$1'); // line comments (not URLs)
-}
-
 describe('error-report XSS tripwire (DS-1: textContent only)', () => {
-	for (const file of XSS_SENSITIVE_FILES) {
+	const sensitive = xssSensitiveFiles();
+
+	test('the census is derived and populated: both surfaces and the whole renderer chain are listed', () => {
+		// 8 files on 2026-09-02 (2 widget + 3 tool + 3 chain): a listing that
+		// finds fewer is a broken walk or a deleted sink — a deliberate edit here.
+		expect(sensitive.length).toBeGreaterThanOrEqual(8);
+		for (const dir of UNTRUSTED_TEXT_DIRECTORIES) {
+			expect(
+				sensitive.some((file) => file.startsWith(dir)),
+				`${dir}: the surface directory lists no browser JS — moved or renamed without this gate`,
+			).toBe(true);
+		}
+		for (const file of ERROR_CONTRACT_CHAIN) {
+			expect(sensitive, `${file}: the renderer chain member is not in the listing`).toContain(file);
+		}
+	});
+
+	for (const file of sensitive) {
 		test(`${file} contains no HTML-parsing sink`, () => {
 			const code = stripComments(readFileSync(join(REPO_ROOT, file), 'utf-8'));
 			const match = HTML_SINK.exec(code);
@@ -62,19 +96,4 @@ describe('error-report XSS tripwire (DS-1: textContent only)', () => {
 			).toBeNull();
 		});
 	}
-
-	test('the sensitive-file list stays honest — every entry exists (staleness self-test)', () => {
-		const missing = XSS_SENSITIVE_FILES.filter((file) => {
-			try {
-				readFileSync(join(REPO_ROOT, file), 'utf-8');
-				return false;
-			} catch {
-				return true;
-			}
-		});
-		expect(
-			missing,
-			`Stale XSS_SENSITIVE_FILES entries (no such file): ${missing.join(', ')}`,
-		).toEqual([]);
-	});
 });

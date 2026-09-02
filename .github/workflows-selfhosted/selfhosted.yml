@@ -15,13 +15,25 @@
 # These two jobs were lifted verbatim out of ci.yml (`verify`) and main.yml (`full`)
 # when the public repo was stripped back to the hermetic tier.
 #
+# PRIVATE-MIRROR DUPLICATE (2026-09-02). Nothing here is the ONLY home of a gate
+# any more: `verify`'s stages are twinned on the hosted tiers (typecheck, lint,
+# lint:browser and site_builder in scripts/ci/hermetic.sh; the tripwires split
+# hermetic ∪ db; the neighbours' directories claimed by the unit and parity tiers
+# of scripts/ci/db_tier.sh), and `full`'s `bun test test/unit test/parity` IS
+# those two tiers. test/unit/tier_wiring_tripwire.test.ts derives verify's stage
+# list from scripts/verify.ts and holds every twin, so this file may lag the hosted
+# workflows but can no longer hide an unrun gate.
+#
 # ORACLE NOTE (post-cutover): ORACLE_REQUIRED=1 is now largely VESTIGIAL. PHP is
 # decommissioned and `oracleMode()` defaults to `fixtures`, so the live-oracle canary
 # test is skipped and parity replays the frozen store credlessly. The flag is kept so
 # that if anyone ever sets ORACLE_MODE=live, an absent oracle still hard-fails rather
-# than silently skipping. The self-hosted tier's REAL remaining dependency is the live
-# Postgres (unit tests read real records), plus the PHP tree for client/dedalo/lib
-# (118 MB, gitignored — see scripts/ci/link_siblings.sh).
+# than silently skipping. The self-hosted tier's REAL remaining dependency is the
+# sibling ../private tree scripts/ci/link_siblings.sh materializes — the one script
+# a hosted runner cannot run (tier_wiring_tripwire SELF_HOSTED_ONLY). The old
+# claims that unit tests "read real records" and that the PHP tree supplies
+# client/dedalo/lib are both stale: the suite builds its own database from vendored
+# bytes, and the client libs come from bun install + vendor/.
 name: selfhosted
 
 on:

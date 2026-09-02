@@ -52,7 +52,12 @@
 				<span class="stat stat-pending">0</span>
 			</div>
 
-			<button id="test_run_all" class="terminal_btn terminal_btn_primary" title="Run all tests sequentially">
+			<!-- ships DISABLED: index.js enables it only once list.js has populated the
+			     cards. The headless runner waits for `:not([disabled])` as its readiness
+			     signal, so an import-time failure in the module chain leaves the button
+			     dead and the run refuses instead of clicking a listener-less button and
+			     reporting green over zero suites (GATE-10). -->
+			<button id="test_run_all" class="terminal_btn terminal_btn_primary" title="Run all tests sequentially" disabled>
 				<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg>
 				<span class="run_all_text">run all</span>
 			</button>

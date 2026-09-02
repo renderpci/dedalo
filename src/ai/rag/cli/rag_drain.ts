@@ -52,38 +52,75 @@ async function reconcile(
 	);
 }
 
-async function main(): Promise<number> {
+/**
+ * The parsed CLI: `[batch]` and `--reconcile <section_tipo>`, or the usage
+ * error. Discriminated by `kind`, deliberately NOT the `{ok:false, error}`
+ * wire envelope — an internal parse outcome is not an API failure body
+ * (error_taxonomy_tripwire B1 ratchets hand-built envelope literals to zero).
+ */
+export type DrainArguments =
+	| { kind: 'run'; batch: number; reconcileSectionTipo: string | null }
+	| { kind: 'usage_error'; message: string };
+
+/**
+ * Parse the drain CLI's arguments (argv WITHOUT the runtime + script entries).
+ * A bare `--reconcile`, or one followed by another flag, is the usage error;
+ * a non-numeric batch falls back to 100 (the cron line has always tolerated
+ * an empty batch argument).
+ */
+export function parseDrainArguments(args: readonly string[]): DrainArguments {
+	const rest = [...args];
+	let reconcileSectionTipo: string | null = null;
+	const reconcileFlag = rest.indexOf('--reconcile');
+	if (reconcileFlag !== -1) {
+		reconcileSectionTipo = rest[reconcileFlag + 1] ?? null;
+		if (reconcileSectionTipo === null || reconcileSectionTipo.startsWith('-')) {
+			return { kind: 'usage_error', message: '--reconcile requires a <section_tipo> argument' };
+		}
+		rest.splice(reconcileFlag, 2);
+	}
+	const batch = Number(rest[0] ?? '100') || 100;
+	return { kind: 'run', batch, reconcileSectionTipo };
+}
+
+/**
+ * The drain CLI body — exit code, never process.exit: the `import.meta.main`
+ * block below owns the process, so a test can run this in-process
+ * (test/unit/rag_drain_cli_native.test.ts). Order is deliberate: the RAG
+ * switch is read BEFORE the arguments, so a disabled install's cron line
+ * exits 0 whatever it carries, and the usage error is answered BEFORE any
+ * database access.
+ */
+export async function runRagDrainCli(args: readonly string[]): Promise<number> {
 	if (!isRagEnabled()) {
 		console.log('[rag] drain: DEDALO_RAG_ENABLED is not set — nothing to do.');
 		return 0;
 	}
+	const parsed = parseDrainArguments(args);
+	if (parsed.kind === 'usage_error') {
+		console.error(`[rag] drain: ${parsed.message}`);
+		return 1;
+	}
 	await ensureRagQueueTable();
-	const args = process.argv.slice(2);
-	const reconcileFlag = args.indexOf('--reconcile');
-	let reconcileSectionTipo: string | null = null;
-	if (reconcileFlag !== -1) {
-		reconcileSectionTipo = args[reconcileFlag + 1] ?? null;
-		if (reconcileSectionTipo === null || reconcileSectionTipo.startsWith('-')) {
-			console.error('[rag] drain: --reconcile requires a <section_tipo> argument');
-			return 1;
-		}
-		args.splice(reconcileFlag, 2);
-	}
-	const batch = Number(args[0] ?? '100') || 100;
 	const queue = buildRagQueue();
-	if (reconcileSectionTipo !== null) {
-		await reconcile(queue, reconcileSectionTipo);
+	if (parsed.reconcileSectionTipo !== null) {
+		await reconcile(queue, parsed.reconcileSectionTipo);
 	}
-	const result = await queue.drain({ batch });
+	const result = await queue.drain({ batch: parsed.batch });
 	console.log(
 		`[rag] drain: ${JSON.stringify(result)}${result.ranSingleFlight ? '' : ' (another worker holds the lock)'}`,
 	);
 	return 0;
 }
 
-main()
-	.then((code) => process.exit(code))
-	.catch((error) => {
-		console.error('[rag] drain failed:', error);
-		process.exit(1);
-	});
+// Entry point ONLY when invoked directly (`bun run src/ai/rag/cli/rag_drain.ts`):
+// importing this module from a test must execute nothing and exit nothing
+// (production_entrypoint_coverage_tripwire).
+if (import.meta.main) {
+	runRagDrainCli(process.argv.slice(2))
+		.then((code) => process.exit(code))
+		.catch((error) => {
+			console.error('[rag] drain failed:', error);
+			process.exit(1);
+		});
+}

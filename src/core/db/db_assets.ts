@@ -577,8 +577,9 @@ export function decideSearchStores(
  * search_store_{ensure,decision}_native.test.ts; this shell only ACTS on it.
  * COVERAGE-EXEMPT / NAMED EXEMPTION (coverage plan §5.2; reason registered in
  * engineering/crap_coverage_exempt.json): the acted-upon passes themselves (createExtensions /
- * rebuildTables / rebuildFunctions / rebuildTriggers / rebuildIndexes /
- * backfillSearchStores) are never executed by a gate — they rewrite the shared
+ * rebuildTables / rebuildFunctions / rebuildTriggers / rebuildConstraints /
+ * rebuildIndexes / execMaintenance / backfillSearchStores) are never executed
+ * by a gate — they rewrite the shared
  * schema and backfill multi-million-row stores — and that exemption is valid
  * ONLY while the decision above stays gated.
  */

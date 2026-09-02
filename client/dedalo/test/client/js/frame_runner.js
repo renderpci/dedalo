@@ -115,8 +115,18 @@ if (ready) {
 			type	: 'test_end',
 			area	: area,
 			stats	: {
+				// tests: how many mocha tests REGISTERED and ran. The parent reds a
+				// suite that reports zero — a file that imports cleanly and
+				// registers nothing has `failures === 0` and used to be a PASS
+				// (GATE-12). Sent explicitly, never derived from pass+fail, so the
+				// headless runner can floor the mocha TEST count, not the card count.
+				tests	: runner.stats.tests,
 				pass	: runner.stats.passes,
 				fail	: runner.stats.failures,
+				// pending: mocha counts a pending test (it.skip, a callback-less
+				// it(), this.skip()) INSIDE `tests`, so the parent subtracts this
+				// to know how many tests RAN — a suite whose tests are all pending
+				// reports N tests and ran none (GATE-12, the all-pending variant).
 				pending	: runner.stats.pending
 			},
 			failures : failures

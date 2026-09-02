@@ -10,6 +10,7 @@
 	import {set_environment} from '../../../core/common/js/common.js'
 	import {url_vars_to_object} from '../../../core/common/js/utils/index.js'
 	import {response_data} from '../../../core/common/js/api_error.js'
+	import {card_state_from_message, apply_card_state, count_run, reset_run_count} from './card_state.js'
 
 // check url vars
 	const url_vars = url_vars_to_object(window.location.search);
@@ -73,38 +74,22 @@
 	let active_watchdog = null
 	const WATCHDOG_MS = 120000 // force-fail a suite that never reports back
 
-	// record_failures: park the failing test titles/messages ON THE CARD, so the
-	// reason a suite is red survives out of the iframe and is readable both in the
-	// UI (title attribute) and by the headless runner, which scrapes the DOM.
-	// A suite is opaque without this: the frame only ever reported counters.
-	function record_failures(test_name, failures) {
+	// find_card: the sidebar card for a suite name (cards are keyed lower-case)
+	function find_card(test_name) {
 		const key = test_name.toLowerCase()
-		for (const card of test_cards) {
-			if (card.dataset.testName !== key) continue
-			if (!failures || failures.length === 0) {
-				// a retry that went green must not keep the old reason
-				delete card.dataset.testFailures
-				card.removeAttribute('title')
-				break
-			}
-			// A RETRY MUST NOT DOWNGRADE THE FIRST RUN'S REASON. A red suite is
-			// re-run once (see the retry below), and the second attempt can fail
-			// LESS informatively than the first — real assertion titles replaced by
-			// a watchdog line or a setup error. Keep both attempts, labelled: the
-			// first run's assertions are usually the true diagnosis, and the retry
-			// only tells you whether it reproduced.
-			const previous = card.dataset.testFailures
-				? JSON.parse(card.dataset.testFailures)
-				: []
-			const merged = previous.length === 0
-				? failures
-				: previous
-					.map(f => ({ ...f, title: '[attempt 1] ' + f.title }))
-					.concat(failures.map(f => ({ ...f, title: '[attempt 2] ' + f.title })))
-			card.dataset.testFailures = JSON.stringify(merged)
-			card.title = merged.map(f => `${f.title}: ${f.message}`).join('\n')
-			break
-		}
+		return test_cards.find(card => card.dataset.testName === key) || null
+	}
+
+	// settle_card: park the page-side verdict of ONE suite on its card. The
+	// DECISION is card_state.js (pure, no DOM — proved in bun by
+	// test/unit/client_gate_inventory_tripwire over the frame's own messages,
+	// through the runner's scrape and verdict); this only applies it. A suite is
+	// run ONCE per queue pass (the silent retry was deleted, GATE-11), so a
+	// card's reason is always the reason of the run that produced its dot — a
+	// manual re-run replaces it wholesale.
+	function settle_card(test_name, state, on_complete) {
+		apply_card_state(find_card(test_name), state)
+		finish_active(test_name, state.status, on_complete)
 	}
 
 	// clear_active: detach the current message listener and watchdog
@@ -141,6 +126,7 @@ window.load_test = function(area, model, test_name, on_complete) {
 
 	// mark as running
 	mark_test_status(test_name, 'running')
+	count_run(find_card(test_name))
 
 	// update url
 	const params = new URLSearchParams()
@@ -161,54 +147,29 @@ window.load_test = function(area, model, test_name, on_complete) {
 		if (e.data.type === 'test_start') {
 			mark_test_status(test_name, 'running')
 		}
-		else if (e.data.type === 'test_end') {
-			const fail_count = e.data.stats?.fail || 0
-			const final_status = fail_count > 0 ? 'fail' : 'pass'
-			// The frame COUNTS failures and REPORTS their detail separately, so the
-			// two can disagree. If it counted failures and sent no detail, SAY THAT:
-			// falling through to the empty case would leave the runner printing
-			// "the suite did not run to completion", which is a different diagnosis
-			// and, here, a false one. The live way to reach this is a stale
-			// frame_runner.js in the browser cache — the client is served without
-			// Cache-Control and `?v=` cannot bust an ES-module import.
-			const detail = fail_count > 0 && (!e.data.failures || e.data.failures.length === 0)
-				? [{
-					title	: '(the frame counted ' + fail_count + ' failure(s) but sent no detail)',
-					message	: 'stale frame_runner.js in the browser cache? hard-reload and re-run',
-					stack	: ''
-				}]
-				: e.data.failures
-			record_failures(test_name, detail)
-			finish_active(test_name, final_status, on_complete)
-		}
-		else if (e.data.type === 'test_error') {
-			// setup failure: mocha never ran, so there is no failing test — say so
-			// explicitly rather than leave the card reasonless (the distinction
-			// between "an assertion failed" and "the suite never started" IS the
-			// diagnosis).
-			record_failures(test_name, [{
-				title	: '(suite setup error — mocha did not run)',
-				message	: String(e.data.error || 'unknown error'),
-				stack	: ''
-			}])
-			finish_active(test_name, 'fail', on_complete)
+		else {
+			// test_end / test_error: the verdict is card_state.js's, over the
+			// message EXACTLY as posted — nothing here reads a count.
+			const state = card_state_from_message(e.data)
+			if (state) settle_card(test_name, state, on_complete)
 		}
 	}
 	window.addEventListener('message', active_handler)
 
 	// watchdog: never let a stuck iframe stall the queue
 	active_watchdog = setTimeout(function() {
-		record_failures(test_name, [{
-			title	: '(watchdog — suite never reported back)',
-			message	: `no test_end within ${WATCHDOG_MS}ms`,
-			stack	: ''
-		}])
-		finish_active(test_name, 'fail', on_complete)
+		settle_card(test_name, card_state_from_message({ type: 'watchdog', ms: WATCHDOG_MS }), on_complete)
 	}, WATCHDOG_MS)
 }
 
 // run all
 	const run_all_btn = document.getElementById('test_run_all')
+	// READINESS. index.html ships the button DISABLED; it is enabled here, after
+	// list.js populated the cards and the click listener is attached. That makes
+	// `#test_run_all:not([disabled])` a real signal: the headless runner used to
+	// wait on it while nothing ever disabled the button, so an import-time throw
+	// anywhere in this file's chain left a listener-less button that matched
+	// from first paint, and the run reported green over zero suites (GATE-10).
 	if (run_all_btn) {
 		run_all_btn.addEventListener('click', () => {
 			if (run_all_btn.disabled) return
@@ -219,6 +180,8 @@ window.load_test = function(area, model, test_name, on_complete) {
 
 			run_all_btn.disabled = true
 			run_all_btn.querySelector('.run_all_text').textContent = 'running…'
+			// A fresh run counts its own loads only (card_state.js count_run).
+			for (const card of visible_cards) reset_run_count(card)
 			run_all_queue = visible_cards
 			run_all_index = 0
 			run_all_active = true
@@ -237,18 +200,15 @@ window.load_test = function(area, model, test_name, on_complete) {
 				const model = card.dataset.model || null
 				const test_name = card.dataset.testName
 
+				// NO RETRY. A failed suite used to be re-run once, its first
+				// attempt's reasons deleted and the retry's PASS reported — so the
+				// headline "132/132" could not tell a stable green from a suite
+				// failing every other run (GATE-11). A flaky failure is simply RED
+				// and gets fixed; the headless runner additionally reds any card
+				// whose `data-run-count` reads more than 1 (every frame load
+				// bumps it), so the mechanism cannot come back quietly under any
+				// name.
 				const on_done = () => {
-					// retry a failed suite once. Many integration suites are flaky
-					// only under full-run load (memory/timing pressure after dozens of
-					// sequential iframe runs) yet pass in isolation; a single fresh
-					// re-run separates transient hiccups from real failures. The stats
-					// counters already handle the fail→pass transition on retry.
-					const dot = card.querySelector('.test_card_status')
-					if (dot && dot.classList.contains('fail') && !card.dataset.retried) {
-						card.dataset.retried = '1'
-						setTimeout(() => window.load_test(area, model, test_name, on_done), 400)
-						return
-					}
 					card.classList.remove('test_card_active')
 					setTimeout(run_next, 200)
 				}
@@ -258,6 +218,9 @@ window.load_test = function(area, model, test_name, on_complete) {
 
 			run_next()
 		})
+		if (test_cards.length > 0) {
+			run_all_btn.disabled = false
+		}
 	}
 
 // theme toggle

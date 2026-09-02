@@ -29,23 +29,28 @@
 
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
-import { Glob } from 'bun';
+import { join } from 'node:path';
+import {
+	REPO_ROOT,
+	WRITE_PATH_CORPUS_FLOOR,
+	writePathSourceFiles,
+} from '../helpers/write_path_corpus.ts';
 
-const REPO_ROOT = join(import.meta.dir, '..', '..');
+/**
+ * THE census corpus: src/ + tools/ + scripts/, shared with the other write-path
+ * gates (test/helpers/write_path_corpus.ts). scripts/ joined 2026-09-02
+ * (P2-20/S-3): `scripts/migrate_section_id_locators.ts` rewrites matrix jsonb
+ * and was outside the jsonb-bind law and the locator law.
+ */
+const sourceFiles = writePathSourceFiles;
 
-/** All non-test TS source files under src/ and tools/, repo-relative paths. */
-function sourceFiles(): string[] {
-	const files: string[] = [];
-	for (const dir of ['src', 'tools']) {
-		const glob = new Glob('**/*.ts');
-		for (const match of glob.scanSync({ cwd: join(REPO_ROOT, dir) })) {
-			if (match.endsWith('.test.ts')) continue;
-			files.push(relative(REPO_ROOT, join(REPO_ROOT, dir, match)));
-		}
-	}
-	return files.sort();
-}
+describe('census corpus', () => {
+	test('the shared write-path corpus is populated and includes scripts/', () => {
+		const files = sourceFiles();
+		expect(files.length).toBeGreaterThan(WRITE_PATH_CORPUS_FLOOR);
+		expect(files).toContain('scripts/migrate_section_id_locators.ts');
+	});
+});
 
 function read(file: string): string {
 	return readFileSync(join(REPO_ROOT, file), 'utf-8');
@@ -156,6 +161,18 @@ const INLINE_SECTION_ID_MATCH_RATCHET = new Set<string>([
 	'src/diffusion/resolve/resolver.ts',
 	'tools/tool_propagate_component_data/server/propagate.ts',
 	'tools/tool_time_machine/server/tool_time_machine.ts',
+	// scripts/ entered the census 2026-09-02 (P2-20/S-3, shared write-path
+	// corpus). Two hits, neither an upward extension of the locator debt:
+	// clone_into_test_tld.ts: `Number(items[0].section_id) === 1` reads a
+	// yes/no radio (dd64-style 1/0 value, same shape as tools/register.ts) — a
+	// boolean, not a locator match.
+	'scripts/clone_into_test_tld.ts',
+	// migrate_component_alias.ts: `String(modelLocator?.section_id) === '164'`
+	// recognizes the component_alias MODEL locator (dd0/164) on an
+	// install-specific (numisdata) one-off migration that is never run by the
+	// engine; derive_test_corpus.ts's real locator dedup was migrated onto
+	// compareLocators in the same change instead of being listed.
+	'scripts/migrate_component_alias.ts',
 ]);
 
 /**

@@ -459,8 +459,11 @@ function scanSrc(): {
 	configLangCapture: string[];
 	moduleMapSet: string[];
 	moduleConstMutated: string[];
+	/** Files the walk actually read — floored below so an emptied walk cannot pass. */
+	scannedFiles: number;
 } {
 	const glob = new Glob('**/*.ts');
+	let scannedFiles = 0;
 	const moduleLet: string[] = [];
 	const accessorCapture: string[] = [];
 	const configLangCapture: string[] = [];
@@ -496,6 +499,7 @@ function scanSrc(): {
 	for (const [root, prefix] of roots)
 		for (const relRaw of glob.scanSync(root)) {
 			const rel = `${prefix}${relRaw}`;
+			scannedFiles++;
 			const content = readFileSync(join(root, relRaw), 'utf8');
 			const lines = content.split('\n');
 			for (const line of lines) {
@@ -511,12 +515,33 @@ function scanSrc(): {
 				}
 			}
 		}
-	return { moduleLet, accessorCapture, configLangCapture, moduleMapSet, moduleConstMutated };
+	return {
+		moduleLet,
+		accessorCapture,
+		configLangCapture,
+		moduleMapSet,
+		moduleConstMutated,
+		scannedFiles,
+	};
 }
 
 describe('module-state tripwire (§4 request isolation)', () => {
-	const { moduleLet, accessorCapture, configLangCapture, moduleMapSet, moduleConstMutated } =
-		scanSrc();
+	const {
+		moduleLet,
+		accessorCapture,
+		configLangCapture,
+		moduleMapSet,
+		moduleConstMutated,
+		scannedFiles,
+	} = scanSrc();
+
+	test('the src/ + tools/ walk read a populated tree (anti-vacuity floor)', () => {
+		// 600+ .ts files under src/ and tools/ on 2026-09-02. A walk that returns
+		// fewer is a broken walk (wrong root, a glob that stopped matching), not a
+		// smaller engine — and every allowlist below would pass vacuously on it.
+		expect(scannedFiles).toBeGreaterThan(600);
+		expect(moduleLet.length).toBeGreaterThan(10);
+	});
 
 	test('no NEW module-level let/var carrying request state (allowlist known-safe caches)', () => {
 		const unexpected = moduleLet.filter((entry) => !ALLOWLISTED_MODULE_LET.has(entry));

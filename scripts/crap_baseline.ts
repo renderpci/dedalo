@@ -54,7 +54,9 @@
  * reflexive "gate is red, run the fix command" path from silently absorbing the
  * very growth this ratchet exists to stop: the developer has to type the word
  * regression, and the diff then carries a raised number that a reviewer sees.
- * Its reason belongs in the commit message.
+ * `--allow-regression` also REQUIRES `--reason "<text>"`: the reason is
+ * validated by the one shared validator and written into the baseline's
+ * `ledger`, where the gate reads it (a commit message is read by no gate).
  *
  * ── WHAT THE BASELINE IS KEYED BY, AND WHAT THAT DOES NOT CATCH ─────────────
  * Entries are keyed by FILE, not by function, and hold that file's MAXIMUM
@@ -89,7 +91,7 @@
  * sorted, so a macOS run and a debian-slim container write identical bytes.
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
 	byPath,
@@ -100,6 +102,7 @@ import {
 	summarize,
 	unmeasuredSourceFiles,
 } from './lib/complexity.ts';
+import { readFlagValue, readReasonArg, thinReasonProblem } from './lib/reason_validator.ts';
 
 /**
  * The measured tree. src/core/ only — the engine's core, where the debt is.
@@ -135,8 +138,65 @@ export interface ComplexityBaseline {
 		functionsOverCap: number;
 		filesOverCap: number;
 	};
+	/** The debt's history, inside the artifact. See LedgerEntry. */
+	ledger: LedgerEntry[];
 	files: Record<string, number>;
 }
+
+/**
+ * One line of the debt's history — APPEND-ONLY, written by --update whenever
+ * either asserted counter changed.
+ *
+ * WHY THE HISTORY LIVES IN THE ARTIFACT (P2-18 / GATE-22). The generator
+ * guards the write IT performs; a merge resolution or a hand edit writes the
+ * file without invoking it, and measured across this ratchet's life the frozen
+ * debt GREW that way (+19 over-cap functions net, under a bare merge message).
+ * The reference a working tree must be compared against cannot be ONLY git:
+ * the hermetic CI tier checks out shallow, inside a container, so a merge-base
+ * comparison would be vacuous exactly where it must run. The hermetic
+ * reference is therefore the file's own ledger, anchored at `LEDGER_BIRTH`
+ * (a constant in CODE, so the artifact cannot restart its own history):
+ * `ledger[0]` MUST be the birth line, `summary` MUST equal the last line, and
+ * every line that grew over its predecessor MUST carry a reason the shared
+ * validator accepts. Hence every counter value above the birth is reachable
+ * only through a reasoned line — a merge that raises the counters without
+ * appending one is RED with no git at all.
+ *
+ * WHAT THAT DOES NOT CATCH, said out loud: a hand edit that REWRITES an
+ * existing line's numbers (and summary to match) passes the hermetic
+ * predicate — the birth pin stops it only for the first line. That edit is
+ * visible in the diff of a history that is otherwise append-only, and where
+ * history exists (`--check --reference <git-rev>`: verify.ts's `crap:ledger`
+ * stage against the merge-base, hermetic.sh's `crap ledger` stage against a
+ * reference it fetches)
+ * `ledgerPrefixProblems` proves the append-only property itself: the
+ * reference's ledger must be a PREFIX of the working ledger, line for line.
+ *
+ * `generated` is the one clock read in this generator, taken only when a line
+ * is appended; an unchanged census re-writes byte-identical output.
+ */
+export interface LedgerEntry {
+	generated: string;
+	functionsOverCap: number;
+	filesOverCap: number;
+	reason?: string;
+}
+
+/**
+ * The FIRST line of the ledger, forever. The day the history began and the debt
+ * it began with; a constant here for the same reason `cap` is compared against
+ * COMPLEXITY_CAP — the artifact does not get to redefine the gate, and a
+ * ledger truncated to a fresh opener at today's census would otherwise be a
+ * clean history. Never edit: history is not a setting.
+ */
+export const LEDGER_BIRTH: Readonly<LedgerEntry> = Object.freeze({
+	generated: '2026-09-01',
+	functionsOverCap: 688,
+	filesOverCap: 268,
+});
+
+/** A ledgered growth is a decision about the engine's debt: a full sentence. */
+export const LEDGER_REASON_MIN_WORDS = 12;
 
 const PROSE = [
 	'SHRINK-ONLY cyclomatic-complexity ratchet over src/core/.',
@@ -144,8 +204,9 @@ const PROSE = [
 	`Why ${COMPLEXITY_CAP}: CRAP(m) = comp^2 * (1 - cov)^3 + comp collapses to CRAP = comp at full coverage, so "CRAP <= ${COMPLEXITY_CAP}" IS a cyclomatic cap of ${COMPLEXITY_CAP}. A flat cap can never pass here (see summary.functionsOverCap), which is exactly why this is a ratchet and not a threshold.`,
 	'The metric has ONE implementation, scripts/lib/complexity.ts (AST-only, @babel/parser pinned EXACT because these numbers are a function of the parser taxonomy). Coverage is deliberately not an input: there is no lcov artifact in CI, and a gate needing an 8-minute coverage run is a gate nobody runs.',
 	'DO NOT hand-edit. Regenerate with: bun run scripts/crap_baseline.ts --update — that is the entire compliance workflow after a refactor lowers complexity.',
-	'An entry may only go DOWN. Raising one, or adding a file, means a function got more complex: that is a deliberate act and the commit message MUST say why. Lowering or removing an entry needs no justification, only the regenerated file in the same change.',
+	'An entry may only go DOWN. Raising one, or adding a file, means a function got more complex: that is a deliberate act, taken with --allow-regression --reason "<text>", and the reason is written into the ledger below. Lowering or removing an entry needs no justification, only the regenerated file in the same change.',
 	'Stale entries are a gate failure, not a nuisance: an entry higher than reality makes the ratchet look stricter than it is and lets a simplified file quietly regress back up.',
+	`ledger is the APPEND-ONLY history of the two asserted counters, written by --update whenever one changed. Its first line is pinned in code (LEDGER_BIRTH: ${LEDGER_BIRTH.generated}, ${LEDGER_BIRTH.functionsOverCap}/${LEDGER_BIRTH.filesOverCap}), summary must equal its last line, and a line that is not a shrink over the previous one (counters up, or flat: a per-file entry raised) must carry a reason (validated by scripts/lib/reason_validator.ts) — so every counter above the birth is reachable only through a reasoned line, and a merge resolution that raises summary without the generator is red without reading git. A rewritten line is the one edit the hermetic predicate cannot see; it shows in the diff, and --check --reference <git-rev> proves the prefix where history exists.`,
 	'summary is the census of the frozen debt. functionsOverCap and filesOverCap are ASSERTED exactly (they ARE the debt); files and functions are ADVISORY — they carry no complexity information, and asserting them turned every added or removed file into a red gate whose only remedy was a blanket regeneration.',
 	'SCOPE, so nobody assumes more: this measures *.ts under src/core ONLY. src/ai, src/config, src/diffusion, src/external, tools/, scripts/, publication/ and client/ are UNGATED, and non-.ts source inside src/core (three tracked .js files) is outside the metric — that set is enumerated and pinned by the gate rather than silently skipped.',
 	"It is NOT a CRAP score and it measures NO coverage: the cap comes from CRAP's best case (cov = 1), so this gate is strictly WEAKER than a real CRAP <= 6. It also cannot see a function SPLIT out into a new file — the totals do not move and only the baseline diff shows it.",
@@ -171,16 +232,190 @@ export function buildBaseline(results: readonly FileComplexity[]): ComplexityBas
 		cap: COMPLEXITY_CAP,
 		root: SCAN_ROOT,
 		summary: summarize(results),
+		ledger: [],
 		files,
 	};
+}
+
+/** The counters the ledger tracks, taken from a summary or an entry. */
+function counters(of: { functionsOverCap: number; filesOverCap: number }) {
+	return { functionsOverCap: of.functionsOverCap, filesOverCap: of.filesOverCap };
+}
+
+/**
+ * Carry the previous ledger onto a fresh measurement and append a line when a
+ * tracked counter moved — OR when `regression` says the write raises a per-file
+ * entry with the counters flat (a function already over the cap got worse: no
+ * counter sees it, but it is a growth decision and its reason must land
+ * somewhere a gate reads). `reason` (from --reason) is attached to the appended
+ * line whenever given; `ledgerProblems` decides whether one was REQUIRED. The
+ * writer then validates its own output with the same predicate the gate uses,
+ * so a generator can never write a file the gate would refuse.
+ */
+export function appendLedger(
+	previous: ComplexityBaseline | null,
+	next: ComplexityBaseline,
+	reason: string | null,
+	today: string,
+	regression = false,
+): ComplexityBaseline {
+	const carried = Array.isArray(previous?.ledger) ? [...previous.ledger] : [];
+	const last = carried.at(-1);
+	const fresh = counters(next.summary);
+	const unchanged =
+		last !== undefined &&
+		last.functionsOverCap === fresh.functionsOverCap &&
+		last.filesOverCap === fresh.filesOverCap;
+	if (!unchanged || regression) {
+		carried.push(
+			reason === null ? { generated: today, ...fresh } : { generated: today, ...fresh, reason },
+		);
+	}
+	return { ...next, ledger: carried };
+}
+
+/**
+ * Everything wrong with a baseline's ledger, as message lines. Empty is green.
+ *   - the ledger exists and has at least one line, and its first line IS
+ *     `LEDGER_BIRTH` (a truncated history is not a clean one);
+ *   - every line's counters are numbers and `generated` a date;
+ *   - `summary` equals the LAST line (a hand edit or merge that raised the
+ *     counters without the generator leaves them apart);
+ *   - every line that is not a SHRINK over the previous line (counters up, or
+ *     flat — a per-file raise) carries a reason the shared validator accepts.
+ */
+export function ledgerProblems(baseline: ComplexityBaseline): string[] {
+	const problems: string[] = [];
+	const ledger = baseline.ledger;
+	if (!Array.isArray(ledger) || ledger.length === 0) {
+		return [
+			`${BASELINE_PATH}: no ledger — the debt's history is missing, so nothing pins summary to a reasoned line. Regenerate (${FIX_COMMAND}).`,
+		];
+	}
+	const first = ledger[0] as LedgerEntry;
+	if (
+		first.generated !== LEDGER_BIRTH.generated ||
+		first.functionsOverCap !== LEDGER_BIRTH.functionsOverCap ||
+		first.filesOverCap !== LEDGER_BIRTH.filesOverCap
+	) {
+		problems.push(
+			`ledger[0]: the history must begin at its birth (${LEDGER_BIRTH.generated}, ${LEDGER_BIRTH.functionsOverCap}/${LEDGER_BIRTH.filesOverCap} over-cap functions/files), found ${String(first.generated)}, ${String(first.functionsOverCap)}/${String(first.filesOverCap)} — a truncated or rewritten opening line restarts the debt's history at a number nobody reasoned for. Restore the committed ledger.`,
+		);
+	}
+	ledger.forEach((entry, index) => {
+		const where = `ledger[${index}]`;
+		if (
+			typeof entry.functionsOverCap !== 'number' ||
+			typeof entry.filesOverCap !== 'number' ||
+			!/^\d{4}-\d{2}-\d{2}$/.test(String(entry.generated))
+		) {
+			problems.push(
+				`${where}: malformed (numeric functionsOverCap/filesOverCap and a YYYY-MM-DD generated are required)`,
+			);
+			return;
+		}
+		const before = index === 0 ? undefined : ledger[index - 1];
+		if (before === undefined) return;
+		const shrank =
+			entry.functionsOverCap <= before.functionsOverCap &&
+			entry.filesOverCap <= before.filesOverCap &&
+			(entry.functionsOverCap < before.functionsOverCap ||
+				entry.filesOverCap < before.filesOverCap);
+		// Anything that is not a shrink is a growth decision: counters up, or
+		// counters FLAT (the generator appends a flat line only for a per-file
+		// raise under unchanged counters). Both carry a reason or are red.
+		if (!shrank) {
+			const problem = thinReasonProblem(entry.reason, LEDGER_REASON_MIN_WORDS);
+			if (problem !== null)
+				problems.push(
+					`${where} (${entry.generated}): the debt GREW (${before.functionsOverCap}/${before.filesOverCap} -> ${entry.functionsOverCap}/${entry.filesOverCap} over-cap functions/files${entry.functionsOverCap === before.functionsOverCap && entry.filesOverCap === before.filesOverCap ? '; flat counters mean a per-file entry was raised' : ''}) and the line ${problem}`,
+				);
+		}
+	});
+	const last = ledger.at(-1) as LedgerEntry;
+	const fresh = counters(
+		baseline.summary ?? { functionsOverCap: Number.NaN, filesOverCap: Number.NaN },
+	);
+	if (
+		last.functionsOverCap !== fresh.functionsOverCap ||
+		last.filesOverCap !== fresh.filesOverCap
+	) {
+		problems.push(
+			`summary (${fresh.functionsOverCap}/${fresh.filesOverCap} over-cap functions/files) does not equal the last ledger line (${last.functionsOverCap}/${last.filesOverCap}, ${last.generated}) — the counters were written WITHOUT the generator (a merge resolution or a hand edit). Regenerate (${FIX_COMMAND}); growth needs --allow-regression --reason "<text>".`,
+		);
+	}
+	return problems;
+}
+
+/**
+ * APPEND-ONLY, proved where history exists. `reference` is the artifact at a
+ * git revision (the merge-base, on a tier that checks out full history) and
+ * `current` the working tree's: every line of the reference must reappear,
+ * byte-for-byte in its counters, reason and date, at the same index. A
+ * rewritten, reordered or dropped line is the edit the hermetic predicate
+ * cannot see, and this one can. Empty is green.
+ */
+export function ledgerPrefixProblems(
+	reference: ComplexityBaseline,
+	current: ComplexityBaseline,
+): string[] {
+	const problems: string[] = [];
+	const before = Array.isArray(reference.ledger) ? reference.ledger : [];
+	const after = Array.isArray(current.ledger) ? current.ledger : [];
+	if (after.length < before.length) {
+		problems.push(
+			`ledger: the reference holds ${before.length} lines and the working tree ${after.length} — history was truncated; the ledger is append-only.`,
+		);
+	}
+	// A per-file entry raised over the reference (counters flat or not) is a
+	// growth decision, and a growth decision is a ledger line: the working
+	// ledger must have grown past the reference's, and ledgerProblems holds
+	// every such line to a reason.
+	const raised = raisedEntries(reference, current);
+	if (raised.length > 0) {
+		const summary = `${raised.length} entr${raised.length === 1 ? 'y is' : 'ies are'} raised over the reference (${raised[0]}${raised.length > 1 ? ', …' : ''})`;
+		if (after.length <= before.length) {
+			problems.push(
+				`ledger: ${summary} but no line was appended to the history — a raised number without a reasoned line is the hand edit this ratchet exists to refuse.`,
+			);
+		} else if (
+			// The appended lines must carry the raise's reason. A SHRINK line needs
+			// none by design, so "a line was appended" is not enough: a hand-raised
+			// entry paired with a simplification elsewhere appended an unreasoned
+			// net-shrink line and passed both legs (measured, 2026-09-02 review of
+			// P2-18). At least one line past the reference's prefix must be reasoned.
+			!after
+				.slice(before.length)
+				.some((line) => thinReasonProblem(line.reason, LEDGER_REASON_MIN_WORDS) === null)
+		) {
+			problems.push(
+				`ledger: ${summary} and the ${after.length - before.length} line(s) appended since the reference carry no validated reason — a raise is a growth decision whatever the counters did elsewhere; it needs --allow-regression --reason "<text>" on the line that records it.`,
+			);
+		}
+	}
+	before.forEach((line, index) => {
+		const now = after[index];
+		if (now === undefined) return;
+		if (
+			now.generated !== line.generated ||
+			now.functionsOverCap !== line.functionsOverCap ||
+			now.filesOverCap !== line.filesOverCap ||
+			(now.reason ?? null) !== (line.reason ?? null)
+		) {
+			problems.push(
+				`ledger[${index}]: rewritten (reference ${line.generated} ${line.functionsOverCap}/${line.filesOverCap}${line.reason === undefined ? '' : ' with reason'}; working tree ${String(now.generated)} ${String(now.functionsOverCap)}/${String(now.filesOverCap)}${now.reason === undefined ? '' : ' with reason'}) — a history line is never edited, only followed.`,
+			);
+		}
+	});
+	return problems;
 }
 
 /**
  * Read the baseline. THROWS loudly if it is missing or malformed — a missing
  * baseline must fail the gate, never silently become "no constraints".
+ * `path` defaults to the committed artifact; the gate hands a scratch copy.
  */
-export function loadBaseline(): ComplexityBaseline {
-	const path = join(REPO_ROOT, BASELINE_PATH);
+export function loadBaseline(path = join(REPO_ROOT, BASELINE_PATH)): ComplexityBaseline {
 	let raw: string;
 	try {
 		raw = readFileSync(path, 'utf-8');
@@ -417,16 +652,45 @@ function serialize(baseline: ComplexityBaseline): string {
 }
 
 /**
- * The baseline, or null if there is none yet (the FIRST --update). Only the
- * --update guard may treat "absent" as acceptable; every read path that GATES
- * must use loadBaseline(), which throws.
+ * The committed baseline in THREE states — never a null that means "compare
+ * against nothing" (P2-18 / GATE-22, second round). The first draft returned
+ * null on ANY load failure and `--update` then skipped `raisedEntries` and
+ * opened a fresh one-line ledger AT the measurement: a merge-conflicted file
+ * (unparseable JSON) DISABLED the guard, so "resolve the conflict by running
+ * the fix command" froze whatever src/core had grown to, reason-less.
+ *   - `present`: the parsed, validated artifact;
+ *   - `absent`: no file — a bootstrap, compared against the EMPTY baseline
+ *     (every over-cap file is new, the counters grow from 0), so it takes
+ *     --allow-regression --reason like any other growth;
+ *   - `unparseable`: a file that is not the artifact — the generator REFUSES.
+ * Only the --update path may consume this; every read path that GATES uses
+ * loadBaseline(), which throws.
  */
-function loadBaselineIfPresent(): ComplexityBaseline | null {
+export type PreviousBaseline =
+	| { kind: 'present'; baseline: ComplexityBaseline }
+	| { kind: 'absent' }
+	| { kind: 'unparseable'; error: string };
+
+export function readPreviousBaseline(path = join(REPO_ROOT, BASELINE_PATH)): PreviousBaseline {
+	if (!existsSync(path)) return { kind: 'absent' };
 	try {
-		return loadBaseline();
-	} catch {
-		return null;
+		return { kind: 'present', baseline: loadBaseline(path) };
+	} catch (error) {
+		return { kind: 'unparseable', error: String(error) };
 	}
+}
+
+/** The baseline a bootstrap is compared against: no files, no debt, the birth line. */
+function emptyBaseline(): ComplexityBaseline {
+	return {
+		_: '',
+		generated: '',
+		cap: COMPLEXITY_CAP,
+		root: SCAN_ROOT,
+		summary: { files: 0, functions: 0, functionsOverCap: 0, filesOverCap: 0 },
+		ledger: [{ ...LEDGER_BIRTH }],
+		files: {},
+	};
 }
 
 /** Entries the new baseline would RAISE, or add above the cap. Message text. */
@@ -470,22 +734,166 @@ export function raisedEntries(previous: ComplexityBaseline, next: ComplexityBase
 	return raised;
 }
 
+/** What `--update` decided: a refusal (message, exit 1) or the baseline to write. */
+export type UpdateDecision =
+	| { kind: 'refuse'; message: string }
+	| { kind: 'write'; baseline: ComplexityBaseline };
+
+/**
+ * THE --update DECISION, pure and exported so the gate proves the OUTCOME on
+ * constructed fixtures — a conflicted file, a missing file, a growth with and
+ * without a reason — instead of grepping the block that calls it.
+ *
+ * THE ANTI-LAUNDERING GUARD. Every failure message points at --update, so
+ * --update must never be able to absorb growth by itself: a shrink-only
+ * ratchet whose regeneration silently raises entries is not a ratchet. A
+ * regression is a DECISION, and the decision's reason lives in the artifact
+ * (the ledger), not in a commit message no gate reads. The writer refuses what
+ * the gate would refuse — one predicate (`ledgerProblems`), two doors.
+ */
+export function updateDecision(
+	previous: PreviousBaseline,
+	measured: ComplexityBaseline,
+	options: { allowRegression: boolean; reason: string | null; today: string },
+): UpdateDecision {
+	if (previous.kind === 'unparseable') {
+		return {
+			kind: 'refuse',
+			message: [
+				`REFUSING to write ${BASELINE_PATH}: the file exists but is not the artifact — ${previous.error}`,
+				'A conflict marker or a truncated merge is not "no baseline": resolve the file to the version you mean (the merge-base copy, or one side), then re-run. The generator never compares against a baseline it could not read.',
+			].join('\n'),
+		};
+	}
+	const reference = previous.kind === 'present' ? previous.baseline : emptyBaseline();
+	const raised = raisedEntries(reference, measured);
+	if (!options.allowRegression) {
+		if (raised.length > 0) {
+			return {
+				kind: 'refuse',
+				message: [
+					`REFUSING to write ${BASELINE_PATH}: this would RAISE ${raised.length} entr${raised.length === 1 ? 'y' : 'ies'} — i.e. freeze a complexity INCREASE${previous.kind === 'absent' ? ' (there is no committed baseline: every over-cap file is new)' : ''}. That is the one thing this ratchet exists to stop, and it must never happen as a side effect of "the gate was red so I ran the fix command".`,
+					...raised.map((entry) => `  ^ ${entry}`),
+					'',
+					'Two legitimate answers, and only two:',
+					'  (a) SIMPLIFY the function — split it, extract the branchy part; then --update writes cleanly;',
+					`  (b) if the complexity is genuinely irreducible, say so out loud: ${FIX_COMMAND} --allow-regression --reason "<why>" — the reason is written into the baseline ledger, where the gate reads it, and the raised number is a visible, reviewable diff.`,
+				].join('\n'),
+			};
+		}
+	}
+	if (options.allowRegression) {
+		const problem =
+			options.reason === null
+				? 'none given'
+				: thinReasonProblem(options.reason, LEDGER_REASON_MIN_WORDS);
+		if (problem !== null) {
+			return {
+				kind: 'refuse',
+				message: `REFUSING: --allow-regression needs --reason "<text>": ${problem}. A reason names the IRREDUCIBLE structure that forces the growth (at least ${LEDGER_REASON_MIN_WORDS} words; "temporary" and "later" are not reasons). It is written into ${BASELINE_PATH}'s ledger.`,
+			};
+		}
+	}
+	const baseline = appendLedger(
+		reference,
+		measured,
+		options.reason,
+		options.today,
+		raised.length > 0,
+	);
+	const ledgerRed = ledgerProblems(baseline);
+	if (ledgerRed.length > 0) {
+		return {
+			kind: 'refuse',
+			message: [
+				`REFUSING to write ${BASELINE_PATH}: its ledger would not pass the gate:`,
+				...ledgerRed.map((line) => `  ^ ${line}`),
+			].join('\n'),
+		};
+	}
+	return { kind: 'write', baseline };
+}
+
+/**
+ * The artifact at a git revision, for `--check --reference <rev>`. Throws when
+ * the revision or the file cannot be read: an EXPLICIT reference that cannot be
+ * resolved is a red gate, never a skipped leg.
+ *
+ * A value that names an EXISTING FILE is read as the reference artifact itself
+ * (the gate's scratch probes, like `--baseline <path>`): that is how the
+ * `--check --reference` EXIT CODE is proved on a rewritten history without
+ * planting objects in the repository. CI passes a merge-base sha, never a path.
+ */
+export function loadReferenceBaseline(rev: string): ComplexityBaseline {
+	if (rev.trim() === '') {
+		// `git show ':<path>'` reads the INDEX, so an empty reference compared the
+		// working tree against itself and every prefix leg was vacuous — exactly
+		// what `--reference "$(git merge-base …)"` produces when merge-base fails.
+		throw new Error(
+			`crap_baseline: --reference is empty — the caller's revision lookup (merge-base, base branch fetch) produced nothing. An explicit reference that does not resolve is a red gate, not a comparison against the index.`,
+		);
+	}
+	if (existsSync(rev) && statSync(rev).isFile()) {
+		return JSON.parse(readFileSync(rev, 'utf-8')) as ComplexityBaseline;
+	}
+	const proc = Bun.spawnSync(['git', 'show', `${rev}:${BASELINE_PATH}`], {
+		cwd: REPO_ROOT,
+		stdout: 'pipe',
+		stderr: 'pipe',
+	});
+	if (proc.exitCode !== 0) {
+		throw new Error(
+			`crap_baseline: cannot read ${BASELINE_PATH} at --reference ${rev}: ${proc.stderr.toString().trim()}. An explicit reference that does not resolve is a red gate, not a skipped one.`,
+		);
+	}
+	return JSON.parse(proc.stdout.toString()) as ComplexityBaseline;
+}
+
+/** The `--reference <rev>` (or `--reference=<rev>`) argument, or null when absent. */
+export function readReferenceArg(argv: readonly string[]): string | null {
+	const value = readFlagValue(argv, '--reference');
+	const named = argv.some((arg) => arg === '--reference' || arg.startsWith('--reference='));
+	if (named && (value === null || value.trim() === '')) {
+		// The flag was GIVEN and its value is missing or blank (an unquoted
+		// `$(git merge-base …)` that printed nothing): that is an explicit reference
+		// that did not resolve, never "no reference asked for".
+		throw new Error(
+			'crap_baseline: --reference was given without a revision — an explicit reference that does not resolve is a red gate, not an absent one.',
+		);
+	}
+	return value;
+}
+
 function main(): number {
 	const args = new Set(process.argv.slice(2));
 	const update = args.has('--update');
 	const check = args.has('--check');
 	const report = args.has('--report');
 	const allowRegression = args.has('--allow-regression');
+	const reason = readReasonArg(process.argv.slice(2));
+	const referenceRev = readReferenceArg(process.argv.slice(2));
+	// `--baseline <path>`: the artifact to read (and on --update, write) instead
+	// of the committed one — for the gate's subprocess probes over a scratch
+	// copy (a conflict marker, a missing file). CI never passes it.
+	const baselinePath =
+		readFlagValue(process.argv.slice(2), '--baseline') ?? join(REPO_ROOT, BASELINE_PATH);
 
 	if (!update && !check && !report) {
 		console.error(
 			[
-				'usage: bun run scripts/crap_baseline.ts (--check | --update | --report) [--allow-regression]',
+				'usage: bun run scripts/crap_baseline.ts (--check [--reference <git-rev>] | --update [--allow-regression --reason "<text>"] | --report)',
 				'  --check   compare src/core/ against the frozen baseline; exit 1 on any drift',
 				'  --update  rewrite engineering/crap_complexity_baseline.json from the measurement',
 				'  --report  print the census and the worst offenders; never fails',
 				'  --allow-regression  with --update: permit RAISING an entry or freezing a new',
 				'                      over-cap file. Without it --update may only lower or remove.',
+				'  --reason "<text>"   with --allow-regression: WHY the debt grows, written into the',
+				'                      baseline ledger where the gate reads it (a commit message is not).',
+				'  --reference <rev>   with --check: ALSO prove the ledger is append-only against the',
+				'                      artifact at that git revision (the merge-base, where history exists;',
+				"                      an existing file path is read as the artifact — the gate's probes).",
+				'  --baseline <path>   read/write the artifact at <path> instead of the committed one',
+				"                      (the gate's scratch probes; never passed by CI).",
 			].join('\n'),
 		);
 		return 2;
@@ -511,35 +919,42 @@ function main(): number {
 	}
 
 	if (update) {
-		const baseline = buildBaseline(results);
-		// THE ANTI-LAUNDERING GUARD. Every failure message points at --update, so
-		// --update must never be able to absorb growth by itself: a shrink-only
-		// ratchet whose regeneration silently raises entries is not a ratchet.
-		if (!allowRegression) {
-			const previous = loadBaselineIfPresent();
-			const raised = previous === null ? [] : raisedEntries(previous, baseline);
-			if (raised.length > 0) {
-				console.error(
-					[
-						`REFUSING to write ${BASELINE_PATH}: this would RAISE ${raised.length} entr${raised.length === 1 ? 'y' : 'ies'} — i.e. freeze a complexity INCREASE. That is the one thing this ratchet exists to stop, and it must never happen as a side effect of "the gate was red so I ran the fix command".`,
-						...raised.map((entry) => `  ^ ${entry}`),
-						'',
-						'Two legitimate answers, and only two:',
-						'  (a) SIMPLIFY the function — split it, extract the branchy part; then --update writes cleanly;',
-						`  (b) if the complexity is genuinely irreducible, say so out loud: ${FIX_COMMAND} --allow-regression, and state WHY in the commit message. The raised number is then a visible, reviewable diff.`,
-					].join('\n'),
-				);
-				return 1;
-			}
+		// The decision is `updateDecision` — pure, exported, proved by the gate on
+		// a conflicted file, a missing file and a growth. This block carries it out.
+		const decision = updateDecision(readPreviousBaseline(baselinePath), buildBaseline(results), {
+			allowRegression,
+			reason,
+			today: new Date().toISOString().slice(0, 10),
+		});
+		if (decision.kind === 'refuse') {
+			console.error(decision.message);
+			return 1;
 		}
-		writeFileSync(join(REPO_ROOT, BASELINE_PATH), serialize(baseline), 'utf-8');
+		writeFileSync(baselinePath, serialize(decision.baseline), 'utf-8');
 		console.log(
-			`wrote ${BASELINE_PATH}: ${Object.keys(baseline.files).length} files over complexity ${COMPLEXITY_CAP} (of ${census.files} scanned, ${census.functions} functions, ${census.functionsOverCap} functions over cap).`,
+			`wrote ${baselinePath === join(REPO_ROOT, BASELINE_PATH) ? BASELINE_PATH : baselinePath}: ${Object.keys(decision.baseline.files).length} files over complexity ${COMPLEXITY_CAP} (of ${census.files} scanned, ${census.functions} functions, ${census.functionsOverCap} functions over cap).`,
 		);
 		return 0;
 	}
 
-	const drift = computeDrift(results, loadBaseline());
+	const committed = loadBaseline(baselinePath);
+	const ledgerRed = ledgerProblems(committed);
+	if (referenceRev !== null) {
+		// Where history exists, prove append-only against it (verify.ts: the
+		// merge-base; hermetic.sh: the fetched base tip / first parent). An
+		// unresolvable or EMPTY reference throws: loud, never skipped.
+		ledgerRed.push(...ledgerPrefixProblems(loadReferenceBaseline(referenceRev), committed));
+	}
+	if (ledgerRed.length > 0) {
+		console.error(
+			[
+				'DEBT LEDGER (the history inside the baseline) is inconsistent:',
+				...ledgerRed.map((line) => `  ! ${line}`),
+			].join('\n'),
+		);
+		return 1;
+	}
+	const drift = computeDrift(results, committed);
 	if (!hasDrift(drift)) {
 		console.log(
 			`crap baseline clean: ${census.files} files, ${census.functions} functions, ${census.functionsOverCap} over complexity ${COMPLEXITY_CAP}.`,

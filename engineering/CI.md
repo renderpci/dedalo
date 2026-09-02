@@ -21,18 +21,22 @@ its whole environment in-process precisely so nothing is inherited, and a runner
 place the code ever met the runner's environment, and CI became the debugger: ~10 minutes
 and a pasted log per iteration.
 
-    bun run ci:local              # both tiers, as CI runs them
+    bun run ci:local              # every tier, as CI runs them
     bun run ci:local --hermetic   # typecheck + lint + static tripwires + daemon packages
     bun run ci:local --db         # suite build + DB tripwires + unit tier + parity
+    bun run ci:local --instance   # suite build + browser client suite + both update drills
     bun run ci:local --keep       # leave the scratch private dir for inspection
 
-It runs `scripts/ci/hermetic.sh` and `scripts/ci/db_tier.sh` unchanged, with
-`DEDALO_PRIVATE_DIR` pointed at an EMPTY directory — the runner's condition, since
-db_tier.sh creates `../private` itself and it is the FILE's absence that matters. The one
-thing it takes from your machine is the Postgres **connection** (host, port, user,
-password); every `DEDALO_*` key the tiers need they compose themselves, which is the
-property under test. Its db tier drops and rebuilds its own `dedalo_ci_test`, so the suite
-database `bun run test:db:setup` builds for you is untouched.
+It runs `scripts/ci/hermetic.sh`, `scripts/ci/db_tier.sh` and `scripts/ci/instance_tier.sh`
+unchanged, with `DEDALO_PRIVATE_DIR` pointed at an EMPTY directory — the runner's
+condition, since the tiers create `../private` themselves and it is the FILE's absence
+that matters. The one thing it takes from your machine is the Postgres **connection**
+(host, port, user, password); every `DEDALO_*` key the tiers need they compose themselves
+(`scripts/ci/hosted_env.sh`, one copy sourced by both database tiers), which is the
+property under test. The db and instance tiers each drop and rebuild their own
+`dedalo_ci_test`, so the suite database `bun run test:db:setup` builds for you is
+untouched. On macOS run the instance tier under a short `TMPDIR` (`TMPDIR=/tmp/dd`): the
+update drills bind unix sockets there and macOS caps that path at 104 bytes.
 
 WHAT IT CATCHES, and what it does not. It catches the class where the developer environment
 supplies something the runner does not — measured 2026-08-31, that was four of twelve
@@ -48,38 +52,54 @@ two different environments and both matter.
 
 ## Pipeline map
 
-**Two repos, by trust level.** GitHub is public and gets the hermetic tier only;
-everything that needs the live matrix Postgres, the PHP oracle or a browser runs
-on a PRIVATE mirror with the self-hosted runner. GitHub executes ONLY
-`.github/workflows/` — so that tier is parked, inert but preserved, in
-`.github/workflows-selfhosted/`.
+**Two repos, by trust level.** GitHub is public, so nothing there may target the
+self-hosted runner (rule 5); `.github/workflows-selfhosted/` is the PRIVATE
+MIRROR's copy of the same steps — GitHub executes ONLY `.github/workflows/`, so
+that directory is inert here, preserved for a mirror with the runner attached.
 
-**A DB tier is no longer part of that parked set (2026-08-25).** The gates that
-need *a* Postgres — as opposed to *the installation's* Postgres — now run hosted,
-against a throwaway service container, in `.github/workflows/db.yml`. That became
-possible once the suite stopped borrowing the developer's database: the preload
-repoints to a dedicated one and refuses to fall back, and `test:db:setup` builds
-it from bytes vendored in this repo. Before it, 19 tripwires ran on NO executing
-tier at all — the DB tier's only home was the inert directory, so its nightly
-cron has never fired.
+**Every gate has an EXECUTING hosted home (2026-08-25, completed 2026-09-02).**
+The gates that need *a* Postgres — as opposed to *the installation's* Postgres —
+run hosted, against a throwaway service container, in `.github/workflows/db.yml`.
+That became possible once the suite stopped borrowing the developer's database:
+the preload repoints to a dedicated one and refuses to fall back, and
+`test:db:setup` builds it from bytes vendored in this repo. The `db` job runs the
+in-process gates; the `instance` job runs the gates that BOOT A REAL SERVER over
+the wire — the browser client suite (`scripts/ci/client_gate.sh`, 133 suites) and
+the two code-update drills (`test:update`, `test:update:dev`) — on a FRESH suite
+database of its own, because the `db` job's 725-file unit stage pollutes the
+fixture the client baseline was measured on. Before the first step, 19 tripwires
+ran on NO executing tier; before the second, those three commands were invoked
+only from the inert directory and so ran on no CI at all (P0-1 residual of the
+2026-08-26 deep audit). `test/unit/tier_wiring_tripwire.test.ts` now holds the
+whole wiring: every `scripts/ci/*.sh` is reached from an executing workflow chain
+or carries a self-hosted-only reason, every step of the parked tier has a hosted
+twin, every stage `scripts/verify.ts` reports is executed by one, and every
+`test:*`/`ci:*` package script is run by name on a hosted chain or is local-only
+with a reason.
 
 | Workflow | Trigger | Runner | Runs |
 |---|---|---|---|
-| `.github/workflows/ci.yml` | pull_request | hosted ubuntu | `hermetic` (scripts/ci/hermetic.sh) |
-| `.github/workflows/main.yml` | push to **master** | hosted ubuntu | `hermetic` |
-| `.github/workflows/db.yml` | pull_request + push master + dispatch | hosted ubuntu + `postgres` service (digest-pinned) | `db` tier (scripts/ci/db_tier.sh): builds the suite database from repo-vendored bytes, then the 19 DB-backed tripwires |
+| `.github/workflows/ci.yml` | pull_request + push master/v7 | hosted ubuntu | `hermetic` (scripts/ci/hermetic.sh) |
+| `.github/workflows/db.yml` | pull_request + push master/v7 + dispatch | hosted ubuntu + `pgvector` service (digest-pinned), one per job | `db` (scripts/ci/db_tier.sh): builds the suite database from repo-vendored bytes, then the DB-backed tripwires, the unit tier (advisory) and the parity tier; `instance` (scripts/ci/instance_tier.sh): builds its OWN suite database, then the browser client suite (scripts/ci/client_gate.sh) and both update drills (`test:update`, `test:update:dev`). Both source `scripts/ci/hosted_env.sh` |
 | `.github/workflows/security.yml` | PR + push master + weekly cron + dispatch | hosted ubuntu | secret scan (gitleaks, digest-pinned image): working tree every run, FULL HISTORY weekly |
 | `.github/workflows/codeql.yml` | PR + push master + weekly cron | hosted ubuntu | CodeQL dataflow SAST (javascript-typescript, `build-mode: none`) → Security tab |
 | `.gitlab-ci.yml` | MR + default-branch push (GitLab mirror) | GitLab shared runners | hermetic tier only — the SAME scripts/ci/hermetic.sh |
-| *— PRIVATE MIRROR ONLY (inert on the public repo) —* | | | |
-| `.github/workflows-selfhosted/selfhosted.yml` | dispatch (restore PR/push triggers on the mirror) | self-hosted mac | `verify` (scripts/verify.ts --base origin/master) + `full` (bun test test/unit test/parity) |
-| `.github/workflows-selfhosted/nightly.yml` | cron 01:00 UTC + manual | self-hosted mac | full `bun test` (unit+parity+integration/MariaDB) + client gate (scripts/ci/client_gate.sh) |
+| *— PRIVATE MIRROR ONLY (inert on the public repo; every step twinned hosted, held by tier_wiring_tripwire) —* | | | |
+| `.github/workflows-selfhosted/selfhosted.yml` | dispatch (restore PR/push triggers on the mirror) | self-hosted mac | `verify` (scripts/verify.ts --base origin/master — the developer gate; its stages are twinned in hermetic.sh + db_tier.sh) + `full` (bun test test/unit test/parity — the `db` job's unit + parity tiers) |
+| `.github/workflows-selfhosted/nightly.yml` | cron 01:00 UTC + manual | self-hosted mac | full `bun test` (unit+parity+integration/MariaDB — the MariaDB legs are the only thing that runs HERE and nowhere else) + client gate (the `instance` job) |
 | `.github/workflows-selfhosted/deploy.yml` | manual dispatch | self-hosted mac | **PARKED** — loud failure until DEPLOY_HOST/DEPLOY_SSH_KEY secrets exist, then deploy/deploy.sh |
 
 **Branch:** the workflows used to trigger on `main`, a branch that does not exist
-in this repo — `main.yml` therefore NEVER FIRED, and `ci.yml`'s verify job diffed
-against a non-existent `origin/main`. Fixed 2026-07-11: everything targets
-`master`. Nothing tripwires branch names; re-check them if the default changes.
+in this repo — the old `main.yml` therefore NEVER FIRED, and `ci.yml`'s verify job
+diffed against a non-existent `origin/main`. Fixed 2026-07-11: everything targets
+`master`. `main.yml` itself (a push-to-master hermetic) was deleted 2026-09-02 as a
+duplicate once `ci.yml` fired on every push to a landing branch. Branch names ARE
+tripwired now: `tier_wiring_tripwire` leg G holds every workflow that runs a tier
+root to `pull_request` (bare — no `paths`/`branches`/`types` narrowing) plus `push`
+to EXACTLY its `LANDING_BRANCHES` constant (`master`, `v7`) — a branch added on one
+side and not the other is red — and the GitLab hermetic job to its merge-request +
+default-branch rules with no `allow_failure`/`when: manual`. If the branch work
+lands on changes, change the constant and the two `on:` blocks together.
 
 **Oracle (post-cutover):** `ORACLE_REQUIRED: "1"` is now largely VESTIGIAL. PHP is
 decommissioned and `oracleMode()` defaults to `fixtures`, so parity replays the
@@ -113,8 +133,9 @@ cache would need `pg_restore --disable-triggers` (superuser) and `--no-owner
   budget over the browser trees `biome.jsonc` excludes — a green `bun run lint`
   says nothing about them; P1-17) + the **100** DB-less/sibling-less tripwires
   (measured 2026-08-31 from the script itself; the previous figure of 76 had
-  drifted) + the
-  dependency-audit ratchet + the two isolated publication packages
+  drifted) + the crap-ledger append-only check against a FETCHED reference
+  (base-branch tip on a PR, first parent on a push — see the ratchets section) +
+  the dependency-audit ratchet + the two isolated publication packages
   (`site_builder`, `server_api/v2` — each `bun install` + `tsc` + `bun test`).
   One source of truth: `scripts/ci/hermetic.sh` — GitHub and GitLab both call
   it, so the platforms cannot drift. Every required config key gets a harmless
@@ -135,16 +156,49 @@ cache would need `pg_restore --disable-triggers` (superuser) and `--no-owner
   here or to carry a written reason in its `NOT_HERMETIC` map (stale rows red in
   both directions), and the tier went 41 → 76 gates, ~16 s. Each entry
   was empirically re-verified DB-less (`DB_PORT` closed) before being added.
-- **Self-hosted** (this Mac — the machine that has the live matrix Postgres
-  with real Dédalo data, the PHP oracle at :8080, the sibling PHP tree, and
-  Chrome): the FULL unit tier against a populated database, the parity tier
-  against a live oracle, the client gate (puppeteer + a booted server), and
-  `test/integration/**` (MariaDB, and three of its four files are bound to a
-  specific installation's records).
+- **Instance** (hosted ubuntu, its own `pgvector` service — the `instance` job of
+  `db.yml`, `scripts/ci/instance_tier.sh`): the gates that boot a real server and
+  drive it over the wire. The browser client suite (`scripts/ci/client_gate.sh` →
+  `bun run test:client`: the runner starts its own server on the suite database,
+  logs in for real, pins the diffusion domain and the projects fixture, drives
+  Mocha in the system Chrome), then `bun run test:update` and `bun run
+  test:update:dev` (`scripts/update_drill.ts`: a real master builds and serves a
+  release through the wire, a supervised consumer copy installs it across the
+  planned-death restart; the dev channel is the only pass proving the post-swap
+  identity story). A fresh suite database per job, because the `db` job's unit
+  stage pollutes the fixture the client baseline was measured on. The checkout is
+  `fetch-depth: 0` — the drill `git clone`s it, and git refuses a shallow source.
+  The drills are configured from `scripts/lib/operator_config.ts` (the private
+  file if present, overlaid by the CATALOG keys of the process environment —
+  never PATH or a runner token; `update_drill_config_tripwire`), which is what
+  lets them run where no `../private/.env` exists. And the release commit is cut
+  through `scripts/lib/release_clone.ts` (`git checkout -B`, never `branch -m`):
+  a `pull_request` checkout is a DETACHED HEAD (`refs/remotes/pull/N/merge`) and
+  `branch -m` refuses it — the drills would die at STEP 1 on every PR run. The
+  same gate runs that sequence against a detached scratch source. A tier job
+  carries no `if:` and no `continue-on-error:`, `needs:` no job that carries an
+  `if:` (a skipped upstream skips the tier, green), and the step's payload is
+  EXACTLY `bash scripts/ci/<tier>.sh` — no `|| true`, no `; true`, no `run: |`
+  block around it, no `| tee` (the default shell has no pipefail, so the tee's
+  status would be the step's) — a conditioned job is silent on the events it
+  excludes and a tolerated step is green whatever the tier said
+  (`tier_wiring_tripwire` leg F). Inside every reached script each STAGE line
+  (`bun …`, `bash scripts/ci/…`) either aborts the script bare under `set -e` or
+  raises the accumulator through its `_rc` check; a `|| true` on a stage is red
+  (leg H), with ONE reasoned, shrink-only `ADVISORY_STAGES` row for the unit tier
+  vs its baseline, whose restore criterion db_tier.sh states.
 
-  **What moved off it (2026-08-25):** the 19 tripwires that need only *a*
-  Postgres now run hosted — see `db.yml` above. What stays needs something a
-  hosted runner cannot have: an installation's records, an oracle, a browser.
+- **Self-hosted** (the private mirror's Mac): a DUPLICATE of the hosted tiers
+  with one addition a hosted runner cannot have — `test/integration/**`'s MariaDB
+  legs actually run there (three of its four files are bound to a specific
+  installation's records). Everything else it runs is twinned hosted, and
+  `tier_wiring_tripwire` refuses a step there that is not.
+
+  **What moved off it:** 2026-08-25, the tripwires that need only *a* Postgres
+  (`db.yml`); 2026-09-02, the browser suite and the update drills (the `instance`
+  job). The claims that used to justify it — "unit tests read real records", "the
+  client gate needs the PHP tree", "a browser needs the Mac" — are all stale:
+  ubuntu-latest ships Chrome and the runner already launches it `--no-sandbox`.
 
   Two claims that used to live here were stale and are deleted rather than
   amended: unit tests do **not** "read real records" — `test/preload/test_database.ts`
@@ -204,7 +258,41 @@ cache would need `pg_restore --disable-triggers` (superuser) and `--no-owner
   `engineering/dependency_audit_baseline.json`. A NEW advisory is red; an accepted
   one is data. The tree carried 7 (5 high, all transitive) on the day it was wired
   — a blocking bare `bun audit` would have been red on day one and ignored by
-  week two. Accept one deliberately with `--update` and say why in the commit.
+  week two. A plain `--update` REFUSES an advisory the baseline does not hold
+  (compared by KEY, so a swap is a regression); accept one deliberately with
+  `--update --allow-regression --reason "<why it is accepted rather than fixed>"`
+  — the reason is validated by `scripts/lib/reason_validator.ts` (the ONE
+  validator every ratchet shares) and written INTO the entry, where the check
+  path and `ratchet_integrity_tripwire` read it; a commit message is read by no
+  gate. Neither generator compares against "nothing": a missing baseline makes
+  every entry NEW (the flag applies in full) and a conflicted or truncated one
+  is REFUSED outright — resolving a merge by running the fix command launders
+  nothing. The crap ratchet keeps its history the same way: an append-only
+  `ledger` in `engineering/crap_complexity_baseline.json`, born at a line
+  pinned in code (`LEDGER_BIRTH`), whose last line `summary` must equal, with
+  every non-shrink line reasoned — so a merge resolution that raises the
+  counters without the generator, or truncates the history to a fresh opener,
+  is red without reading git. Against a REFERENCE commit,
+  `bun run scripts/crap_baseline.ts --check --reference <rev>` ALSO proves the
+  ledger is append-only line for line and that no per-file entry rose without
+  a REASONED appended line — the edits the hermetic predicate cannot see (a
+  hand-raised per-file entry with flat counters, or one laundered under an
+  unreasoned net-shrink line). That step is a GATE, not a suggestion, and it
+  runs in two places that are held paired by `tier_wiring_tripwire` leg C:
+  `scripts/verify.ts`'s `crap:ledger` stage (always, against
+  `git merge-base HEAD <base>` — `HEAD` itself by default, so an uncommitted
+  hand edit is caught on the desk) and the `crap ledger` stage of
+  `scripts/ci/hermetic.sh`, which FETCHES its reference rather than assuming
+  history on a shallow checkout: the base branch's tip on a pull request (the
+  checkout is the merge of the PR onto that tip, so the tip IS the merge-base),
+  the first parent on a push. A reference that does not resolve — an empty
+  merge-base, a base branch that cannot be fetched, a bare `--reference` — is
+  a red run, never a comparison against the index (`ratchet_integrity_tripwire`
+  proves that exit code). Both generators read their artifact FIRST,
+  before any network or measurement, and `--baseline <path>` points them at a
+  scratch copy (`--reference` reads an existing file path the same way) — that
+  is how `ratchet_integrity_tripwire` proves the conflict-marker refusal and
+  the `--reference` exit code offline, by subprocess; CI never passes a path.
 
 ## CI seam environment (why CI never collides with interactive dev)
 
@@ -226,7 +314,7 @@ over `../private/.env` (readEnv precedence). The jobs and
 Since 2026-08-19 the client gate sets NONE of these itself: `scripts/client_test_runner.ts`
 starts its own server with all of them, so a developer typing `bun run test:client` gets the
 same isolation CI gets — including the database. `scripts/ci/client_gate.sh` is a one-line
-wrapper kept for the nightly workflow.
+wrapper, run by the `instance` job (and named by the mirror's nightly).
 
 The `dedalo_ts_test_` table prefix is schema-enforced. Proven 2026-07-09: the
 client gate ran green on :3510 while the dev server served :3500.
@@ -236,7 +324,8 @@ client gate ran green on :3510 while the dev server served :3500.
 A GitHub checkout lands in `.../_work/<repo>/<repo>`, so the repo's two
 out-of-tree assumptions resolve inside runner-owned space.
 `scripts/ci/link_siblings.sh` (idempotent, first step of every self-hosted
-job) plants symlinks: `../private` → the real private dir and
+job — and the ONE `scripts/ci` script no hosted chain may run, its reason in
+`tier_wiring_tripwire`'s `SELF_HOSTED_ONLY`) plants symlinks: `../private` → the real private dir and
 `../../v7/master_dedalo` → the real PHP tree. Deliberately
 NOT `sync_client.sh`: rsyncing `core/` over checked-out files could mask a
 divergence the `client_serving` byte-identity tripwire exists to catch.
@@ -287,11 +376,12 @@ and prose does not stop a paste. It is now **rule 5 of
 under `.github/workflows/`. The self-hosted jobs live in
 `.github/workflows-selfhosted/`, which GitHub never executes.
 
-Consequence: the DB/parity/client tier does not run on GitHub. Options, in order
-of preference — (a) a PRIVATE mirror repo with the runner attached; (b) the
-private `gitdedalo` remote; (c) simply `bun run scripts/verify.ts` locally before
-pushing. If the repo is ever made private again, retire rule 5 DELIBERATELY (with
-a ledger line) rather than deleting it in passing.
+Consequence: nothing that needs the DATA HOST runs on GitHub — and since
+2026-09-02 nothing the repo gates on does: the database, browser and update-drill
+gates run hosted against throwaway services (`db.yml`). The private mirror is an
+optional duplicate (plus the MariaDB integration legs), not the home of anything.
+If the repo is ever made private again, retire rule 5 DELIBERATELY (with a
+ledger line) rather than deleting it in passing.
 
 Also set, in GitHub repo settings: Actions → General → "Require approval for all
 outside collaborators", and restrict allowed actions to GitHub-authored +
@@ -350,11 +440,24 @@ the GitHub UI — none of it can be done from the CLI without a token.
    - push a branch with a whitespace change, open a PR → `ci / hermetic` runs on
      ubuntu and goes green;
    - add a deliberate biome violation → `hermetic` goes RED; revert;
-   - merge to `master` → `main / hermetic` fires (it never did before: it was
-     listening on a branch named `main` that does not exist here).
-5. **Branch protection** (public repos get this free): Settings → Rules → Rulesets →
-   require the `hermetic` status check on `master`, and require a PR to merge.
-   Without it, the posture is only "a red run is the alarm".
+   - merge to `master` → `ci / hermetic` fires again on the push (the old
+     `main / hermetic` listened on a branch named `main` that does not exist here;
+     it is gone).
+5. **Branch protection** (public repos get this free) — OWNER-ONLY, and NOT GATED:
+   nothing in the repository can observe a ruleset, so this step is a runbook, not a
+   tripwire, and it is written here rather than pretended elsewhere. Settings → Rules →
+   Rulesets → on **both** `master` **and** `v7` (development lands on `v7` directly;
+   a rule on `master` alone protects the merge and nothing before it): require the
+   three status checks `ci / hermetic`, `db / db` and `db / instance`, and require
+   a PR to merge. Without it, the posture is only "a red run is the alarm".
+   **Periodic check** (owner, with a token; put it in the calendar because no gate
+   will fire): `gh api repos/renderpci/dedalo/branches/master/protection` and the
+   same for `v7` must list exactly those three contexts under
+   `required_status_checks.contexts` — a missing one, or a job renamed without
+   the ruleset following, silently turns a required check into an optional one.
+   The `instance` job's `timeout-minutes` (60) is a first pin from the `db` job's
+   measured build plus the drills' documented runtimes: re-pin it from the first
+   green run's wall clock, never from a guess.
 6. **GitLab mirror**: the same `.gitlab-ci.yml` hermetic tier runs there on shared
    runners — no runner, no secrets needed.
 

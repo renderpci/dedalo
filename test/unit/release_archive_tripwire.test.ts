@@ -59,7 +59,10 @@ function archiveEntries(): string[] {
 describe('release archive shape', () => {
 	test('every tracked symlink is export-ignored', () => {
 		const symlinks = trackedSymlinks();
-		if (symlinks.length === 0) return; // nothing to exclude — vacuously installable
+		// The repo COMMITS symlinks by design (`CLAUDE.md` → `AGENTS.md`, `.claude`
+		// → `.agents`: AGENTS.md "Agent tooling layout"). A listing that finds none
+		// is a broken listing, not an installable tree — never a vacuous pass.
+		expect(symlinks.length).toBeGreaterThanOrEqual(2);
 
 		const checked = Bun.spawnSync(
 			['git', '-C', projectRoot, 'check-attr', 'export-ignore', '--', ...symlinks],
