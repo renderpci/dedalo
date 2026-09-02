@@ -4,7 +4,7 @@
  * CLOSED for unregistered names (SEC-053 collapse). `crop_50` is the first
  * ported processor (`tools/tool_import_files/server/script_files/numisdata/crop_50.ts`,
  * registered at module load) — its region-detection/pairing pure logic is
- * covered separately in `test/unit/coin_split.test.ts` (no ImageMagick spawn).
+ * covered separately in `test/unit/region_split.test.ts` (no ImageMagick spawn).
  *
  * DDO-map role writes (setComponentsData): pure routing/lang/copy-plan logic
  * runs credless; the WRITE drives run scratch-twin against the REAL DB

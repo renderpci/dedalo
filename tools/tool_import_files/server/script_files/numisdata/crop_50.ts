@@ -40,7 +40,7 @@
  *    shell_exec/exec ignored failures entirely — a broken pipeline there
  *    cascaded into a silent "0 regions found" with no diagnostic);
  *  - an AREA-SIMILARITY floor between the two regions
- *    (`coin_split.ts assertPlausibleCoinPair`) — a single coin accidentally
+ *    (`region_split.ts assertPlausibleObjectPair`) — a single coin accidentally
  *    split into two blobs (a hole, a crack, a glare spot) no longer silently
  *    produces two garbage crops; it is refused with a diagnostic instead.
  */
@@ -48,15 +48,15 @@
 import { rmSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-	assertPlausibleCoinPair,
-	parseConnectedComponentsReport,
-} from '../../../../../src/core/media/coin_split.ts';
-import {
 	buildBilevelMask,
 	cropAndPadImage,
 	runConnectedComponents,
 } from '../../../../../src/core/media/engine/imagemagick.ts';
 import { sanitizeSegment, stagingDir } from '../../../../../src/core/media/ingest/add_file.ts';
+import {
+	assertPlausibleObjectPair,
+	parseConnectedComponentsReport,
+} from '../../../../../src/core/media/region_split.ts';
 import type {
 	FileProcessor,
 	FileProcessorOutput,
@@ -133,7 +133,7 @@ export const cropCoinPair: FileProcessor = async (input) => {
 		}
 
 		const regions = parseConnectedComponentsReport(report, DEFAULT_MIN_DIMENSION);
-		const [left, right] = assertPlausibleCoinPair(regions, DEFAULT_MIN_SIMILARITY);
+		const [left, right] = assertPlausibleObjectPair(regions, DEFAULT_MIN_SIMILARITY);
 		const maxHeight = Math.max(left.height, right.height);
 
 		const outputs: FileProcessorOutput[] = [];
@@ -147,7 +147,7 @@ export const cropCoinPair: FileProcessor = async (input) => {
 				tmpName,
 				fileName: `${stem}_crop-${index}.${extension}`,
 				// left (index 0) -> destinations[0] (Obverse), right (index 1) -> destinations[1]
-				// (Reverse) — same order `assertPlausibleCoinPair` already returns them in.
+				// (Reverse) — same order `assertPlausibleObjectPair` already returns them in.
 				portalComponentTipo: destinations[index],
 			});
 		}

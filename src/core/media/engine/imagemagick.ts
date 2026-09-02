@@ -551,7 +551,7 @@ export function buildBilevelMaskArgv(source: string, target: string): string[] {
  * (ImageMagick's own noise floor, BEFORE this module's own dimension filter).
  * Run this one through `runBinary` directly (not `runMagickTo` — there is no
  * output file to verify) and parse the result with
- * `parseConnectedComponentsReport` (`../coin_split.ts`).
+ * `parseConnectedComponentsReport` (`../region_split.ts`).
  */
 export function buildConnectedComponentsArgv(source: string, areaThreshold: number): string[] {
 	return [

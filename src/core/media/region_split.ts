@@ -1,9 +1,15 @@
 /**
- * COIN-PAIR REGION DETECTION — pure logic split out of the ImageMagick spawn
- * calls (`engine/imagemagick.ts`) so it is unit-testable without spawning a
- * process. Ported from PHP tool_import_files' crop_50 (the numisdata "split
- * obverse/reverse" script) — see `tools/tool_import_files/server/script_files/numisdata/crop_50.ts`
- * for the orchestrator that calls this.
+ * IMAGE REGION SPLITTING — pure logic split out of the ImageMagick spawn calls
+ * (`engine/imagemagick.ts`) so it is unit-testable without spawning a process.
+ *
+ * Generic: this detects foreground blobs against a near-white background and
+ * validates a plausible PAIR among them — it is not coin-specific. Any image
+ * whose subject is two similarly-sized objects on a clean background fits
+ * (e.g. a scanned document's front/back, two objects photographed together).
+ * The first consumer is PHP tool_import_files' crop_50 (the numisdata "split
+ * obverse/reverse" script) — see
+ * `tools/tool_import_files/server/script_files/numisdata/crop_50.ts` for that
+ * orchestrator — but nothing here assumes the subject is a coin.
  */
 
 import { DedaloError } from '../errors/dedalo_error.ts';
@@ -49,23 +55,23 @@ export function parseConnectedComponentsReport(report: string, minDimension: num
 }
 
 /**
- * Validate that exactly two detected regions plausibly represent ONE coin's
- * two faces, and return them ordered LEFT-TO-RIGHT.
+ * Validate that exactly two detected regions plausibly represent one matched
+ * PAIR of objects, and return them ordered LEFT-TO-RIGHT.
  *
  * TWO gates, not one:
- *  1. exactly 2 regions (the PHP original's only check) — a dirty background,
- *     an in-frame scale card/label, or shadow artifacts produce a different
- *     count and refuse here, with a diagnostic naming what was actually found
- *     (the PHP original gave no such detail).
+ *  1. exactly 2 regions (the PHP crop_50 original's only check) — a dirty
+ *     background, an in-frame scale card/label, or shadow artifacts produce a
+ *     different count and refuse here, with a diagnostic naming what was
+ *     actually found (the PHP original gave no such detail).
  *  2. NEW, agreed before porting: the two regions' pixel AREAS must be within
  *     `minSimilarity` of each other (smaller/larger ratio). Without this, a
- *     single coin accidentally split into two blobs — a hole, a crack, a
+ *     single object accidentally split into two blobs — a hole, a crack, a
  *     glare spot breaking the silhouette — passed the PHP original's count
  *     check silently and was mis-cropped into two garbage halves with no
  *     error at all. This is the failure mode that actually corrupts data,
  *     as opposed to just rejecting a bad photo.
  */
-export function assertPlausibleCoinPair(
+export function assertPlausibleObjectPair(
 	regions: Region[],
 	minSimilarity: number,
 ): [Region, Region] {
@@ -74,7 +80,7 @@ export function assertPlausibleCoinPair(
 			.map((r) => `${r.width}x${r.height}+${r.x}+${r.y} (area ${r.area})`)
 			.join(', ');
 		const message =
-			`Expected exactly 2 coin-sized regions, found ${regions.length}` +
+			`Expected exactly 2 object-sized regions, found ${regions.length}` +
 			`${summary === '' ? '' : `: [${summary}]`}. Likely cause: a scale card/label in frame, ` +
 			'a non-white or dirty background, or uneven lighting/shadow.';
 		throw new DedaloError('tool.action_failed', {
@@ -89,15 +95,15 @@ export function assertPlausibleCoinPair(
 	const b = regions[1];
 	if (a === undefined || b === undefined) {
 		throw new DedaloError('internal.invariant', {
-			message: 'assertPlausibleCoinPair: length was 2 but an index was undefined',
+			message: 'assertPlausibleObjectPair: length was 2 but an index was undefined',
 		});
 	}
 	const ratio = Math.min(a.area, b.area) / Math.max(a.area, b.area);
 	if (ratio < minSimilarity) {
 		const message =
-			"Found 2 regions but their sizes are too different to be one coin's two faces " +
+			"Found 2 regions but their sizes are too different to be one object's matched pair " +
 			`(areas ${a.area} vs ${b.area}, ratio ${ratio.toFixed(2)}, need >= ${minSimilarity.toFixed(2)}). ` +
-			'Likely cause: a single coin split into two blobs by a hole, crack, or glare — not two separate coin faces.';
+			'Likely cause: a single object split into two blobs by a hole, crack, or glare — not two separate objects.';
 		throw new DedaloError('tool.action_failed', {
 			message,
 			publicMessage: message,

@@ -1,14 +1,16 @@
 /**
- * Pure-logic gate for `src/core/media/coin_split.ts` — the crop_50 region
- * detection/pairing rules, tested against synthetic ImageMagick
- * connected-components report text. No ImageMagick spawn, no DB, credless.
+ * Pure-logic gate for `src/core/media/region_split.ts` — the generic
+ * two-region detection/pairing rules (crop_50's numismatic obverse/reverse
+ * split is the first consumer, not the definition), tested against synthetic
+ * ImageMagick connected-components report text. No ImageMagick spawn, no DB,
+ * credless.
  */
 
 import { describe, expect, test } from 'bun:test';
 import {
-	assertPlausibleCoinPair,
+	assertPlausibleObjectPair,
 	parseConnectedComponentsReport,
-} from '../../src/core/media/coin_split.ts';
+} from '../../src/core/media/region_split.ts';
 
 /** One synthetic ImageMagick verbose connected-components report line. */
 function ccLine(
@@ -28,8 +30,8 @@ describe('parseConnectedComponentsReport', () => {
 		const report = [
 			'Objects (id: bounding-box centroid area mean-color):',
 			ccLine(0, 800, 600, 0, 0, 420000, 0), // background label — always present, dropped
-			ccLine(1, 200, 220, 40, 60, 38000, 255), // left coin
-			ccLine(2, 205, 215, 400, 65, 37500, 255), // right coin
+			ccLine(1, 200, 220, 40, 60, 38000, 255), // left object
+			ccLine(2, 205, 215, 400, 65, 37500, 255), // right object
 			ccLine(3, 10, 10, 5, 5, 90, 255), // dust speck, below min dimension
 		].join('\n');
 
@@ -46,35 +48,36 @@ describe('parseConnectedComponentsReport', () => {
 	});
 });
 
-describe('assertPlausibleCoinPair', () => {
+describe('assertPlausibleObjectPair', () => {
 	test('two similar-area regions are accepted and ordered left-to-right', () => {
 		const rightFirst = [
 			{ x: 400, y: 65, width: 205, height: 215, area: 37500 },
 			{ x: 40, y: 60, width: 200, height: 220, area: 38000 },
 		];
-		const [left, right] = assertPlausibleCoinPair(rightFirst, 0.4);
+		const [left, right] = assertPlausibleObjectPair(rightFirst, 0.4);
 		expect(left.x).toBe(40);
 		expect(right.x).toBe(400);
 	});
 
 	test('a count other than 2 is refused with the region summary in the message', () => {
-		expect(() => assertPlausibleCoinPair([], 0.4)).toThrow(/found 0/i);
+		expect(() => assertPlausibleObjectPair([], 0.4)).toThrow(/found 0/i);
 		const three = [
 			{ x: 0, y: 0, width: 100, height: 100, area: 8000 },
 			{ x: 200, y: 0, width: 100, height: 100, area: 8000 },
 			{ x: 400, y: 0, width: 60, height: 40, area: 2200 }, // e.g. a scale card
 		];
-		expect(() => assertPlausibleCoinPair(three, 0.4)).toThrow(/found 3/i);
+		expect(() => assertPlausibleObjectPair(three, 0.4)).toThrow(/found 3/i);
 	});
 
-	test('NEW: two regions with very different areas are refused (single coin split by a hole/crack)', () => {
-		// One coin's silhouette broken into a big piece and a sliver by (say) a
-		// hole punched through it — count is 2, but they are not two coin faces.
-		const brokenSingleCoin = [
+	test('NEW: two regions with very different areas are refused (single object split by a hole/crack)', () => {
+		// One object's silhouette broken into a big piece and a sliver by (say) a
+		// hole punched through it (e.g. a pierced coin) — count is 2, but they
+		// are not two separate objects.
+		const brokenSingleObject = [
 			{ x: 40, y: 60, width: 200, height: 220, area: 38000 },
 			{ x: 240, y: 260, width: 15, height: 12, area: 140 },
 		];
-		expect(() => assertPlausibleCoinPair(brokenSingleCoin, 0.4)).toThrow(/too different/i);
+		expect(() => assertPlausibleObjectPair(brokenSingleObject, 0.4)).toThrow(/too different/i);
 	});
 
 	test('similarity ratio is inclusive at the floor', () => {
@@ -83,6 +86,6 @@ describe('assertPlausibleCoinPair', () => {
 			{ x: 0, y: 0, width: 100, height: 100, area: 10000 },
 			{ x: 200, y: 0, width: 100, height: 100, area: 4000 },
 		];
-		expect(() => assertPlausibleCoinPair(atFloor, 0.4)).not.toThrow();
+		expect(() => assertPlausibleObjectPair(atFloor, 0.4)).not.toThrow();
 	});
 });
