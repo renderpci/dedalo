@@ -174,7 +174,7 @@ describe('reconcile registry completeness (S-10)', () => {
 	test('the live registry equals REGISTERED_NAMES exactly, in order, and every definition validates', () => {
 		expect(REGISTERED.map((definition) => definition.name)).toEqual([...REGISTERED_NAMES]);
 		expect(ALL_RECONCILES.map((definition) => definition.name)).toEqual([...REGISTERED_NAMES]);
-		expect(REGISTERED_NAMES.length).toBeGreaterThanOrEqual(7);
+		expect(REGISTERED_NAMES.length).toBeGreaterThanOrEqual(8);
 		for (const definition of REGISTERED) expect(() => validateDefinition(definition)).not.toThrow();
 	});
 
@@ -208,6 +208,7 @@ describe('reconcile registry completeness (S-10)', () => {
 			rag_index: 'src/ai/rag/reconcile.ts',
 			ontology: 'src/core/ontology/ontology_state.ts',
 			hierarchy: 'src/core/ontology/hierarchy_state.ts',
+			public_tier: 'src/diffusion/api/reconcile.ts',
 		};
 		for (const definition of REGISTERED) {
 			const owner = owners[definition.name];
@@ -232,6 +233,7 @@ describe('reconcile registry completeness (S-10)', () => {
 			'observer_mirrors',
 			'ontology',
 			'hierarchy',
+			'public_tier',
 		]) {
 			expect((REGISTERED.find((d) => d.name === name) as ReconcileDefinition).schedule).toBe(
 				'operator',

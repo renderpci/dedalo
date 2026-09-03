@@ -15,8 +15,11 @@ of the PostgreSQL work database, into the server's own backup directory.
 
 !!! warning "What backup does NOT cover"
     It does **not** back up the publication database, uploaded media files,
-    configuration, or source code — and it has **no restore path**. Restoring is
-    an operator procedure with `pg_restore`, not an in-app action.
+    configuration, or source code. The restore path is the sibling module
+    `src/core/area_maintenance/restore_door.ts`, driven from the shell by
+    `bun scripts/restore.ts` with the engine stopped — never an in-app action,
+    because the running engine cannot swap the database its own pool holds.
+    See [How do I backup and restore](../../management/backup.md).
 
     The publication database (MariaDB) belongs to the diffusion engine; this
     server never connects to it. The widget's MySQL file list is therefore always
@@ -99,6 +102,12 @@ an operator watches the dump run and sees the failure tail live.
   and the backup directory. See [area_maintenance](../areas/area_maintenance.md).
 - **The update preconditions** read `newestBackupMtimeMs()` to warn before a
   destructive operation runs without a recent backup.
+- **The restore door** (`restore_door.ts`) reuses `verifyBackupArtifact` for its
+  first phase — the full-read proof that an artifact is a restore point — and
+  `getBackupDir()` for its journal directory (`<backup dir>/restores/`). It is
+  CLI-only (`scripts/restore.ts`): verify, refuse writers, one-transaction
+  restore into a sidecar database, rename swap, the post-restore reconcile plan
+  (`src/core/reconcile/post_restore.ts`), journal.
 - **Diffusion** is not involved: MariaDB belongs to the diffusion engine. See
   [Diffusion](diffusion.md).
 

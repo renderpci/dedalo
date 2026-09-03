@@ -19,7 +19,7 @@ Concrete scenario: an oral-history archive keeps its interviews, informants and 
 
 When *not* to use it:
 
-- To download a spreadsheet or a re-importable backup — use [Export](using_export.md).
+- To download a spreadsheet — use [Export](using_export.md); for a backup of a section set, the archive door in [Exporting data](../core/exporting_data.md#the-archive-door).
 - To produce a printed document — use [Print](using_print.md).
 
 ## Where to find it

@@ -390,6 +390,13 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 			(await import('../helpers/hierarchy_pruning_fixture.ts')).removeHierarchyPruningFixture(),
 	},
 	{
+		name: 'ensureZzarc',
+		run: async () => {
+			const module = await import('../helpers/zzarc_archive_situation.ts');
+			return module.ensureZzarc(module.zzarcSituation());
+		},
+	},
+	{
 		name: 'installScopeBindingFixture',
 		run: async () =>
 			(await import('../helpers/scope_binding_fixture.ts')).installScopeBindingFixture(),

@@ -543,3 +543,42 @@ function restoreNewest(versions: string[], live: string, mediaRoot?: string): st
 	renameSync(assertInsideMediaRoot(newest, mediaRoot), target);
 	return target;
 }
+
+/**
+ * ENUMERATE a record's media files as they exist on disk RIGHT NOW — the
+ * read-only third direction of the walk, for the archive extraction
+ * (core/archive/extract.ts). Same census as the two movers: every quality ×
+ * managed extension plus the AV posterframe, `files_info` never consulted (it is
+ * a cache, and an archive built from a stale cache would be an archive with
+ * holes). Absent files are simply not listed; nothing is touched.
+ *
+ * NOT listed, and stated so the archive can say the same: the `deleted/`
+ * versions (history, not state — the archive's own scope rule) and the AV
+ * subtitles, whose grammar lives on component_av alone (`path.ts subtitlesPath`)
+ * and is not a quality slot of any type.
+ */
+export async function listSectionMediaFiles(
+	sectionTipo: string,
+	sectionId: number,
+	mediaColumn: Record<string, unknown[]> | null | undefined,
+	options: SectionMediaFilesOptions = {},
+): Promise<SectionMediaFilesOutcome> {
+	return walkSectionMedia(
+		sectionTipo,
+		sectionId,
+		mediaColumn,
+		options,
+		(spec, identity, pathOpts) => {
+			const present: string[] = [];
+			for (const [quality, extension] of managedFileSlots(spec)) {
+				const path = buildMediaLocation(spec, identity, quality, extension, pathOpts).absolutePath;
+				if (existsSync(path) && statSync(path).isFile()) present.push(path);
+			}
+			const posterframe = posterframeLocation(spec, identity, pathOpts);
+			if (posterframe !== null && existsSync(posterframe.absolutePath)) {
+				present.push(posterframe.absolutePath);
+			}
+			return present;
+		},
+	);
+}

@@ -26,7 +26,7 @@ level or an administrator/developer role — the page notes when that is the cas
 
 Bring data into Dédalo from outside files and other installations.
 
-- **[CSV import](using_import_dedalo_csv.md)** — import a CSV (notably a `tool_export` **Dédalo Raw** round-trip) back into a section, cell by cell, with languages preserved.
+- **[CSV import](using_import_dedalo_csv.md)** — import a CSV (notably a `tool_export` **Dédalo Raw** export, edited in a spreadsheet) back into a section, cell by cell, with languages preserved.
 - **[File import](using_import_files.md)** — ingest a batch of uploaded media files into a media section, reading metadata and matching or creating records.
 - **[MARC21 import](using_import_marc21.md)** — load a `.mrc` bibliographic catalogue and map its fields to components.
 - **[RDF import](using_import_rdf.md)** — import an RDF/OWL graph, mapping classes and properties to components.
@@ -36,7 +36,7 @@ Bring data into Dédalo from outside files and other installations.
 
 Get data and media out of Dédalo, and prepare it for print or the public site.
 
-- **[Export](using_export.md)** — turn the current selection of a section into a spreadsheet-style flat table (CSV/XLSX/…), or a re-importable backup.
+- **[Export](using_export.md)** — turn the current selection of a section into a spreadsheet-style flat table (CSV/XLSX/…), or a raw CSV the CSV import tool loads back (a backup is [the archive door](../core/exporting_data.md#the-archive-door), not an export).
 - **[Print](using_print.md)** — design a paginated report layout for a section and print it (or save the layout as a reusable template).
 - **[Diffusion](using_diffusion.md)** — inspect how a section is mapped to the public diffusion targets.
 - **[PDF extractor](using_pdf_extractor.md)** — pull the text out of PDF files so it can be indexed and searched.

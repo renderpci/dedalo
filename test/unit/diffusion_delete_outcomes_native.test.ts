@@ -27,11 +27,14 @@ import {
 	deleteDiffusionRecord,
 	registerNativeDiffusionSqlDelete,
 	resetNativeDiffusionSqlDeleteForTests,
+	resolvePublishedFile,
 	resolvePublishedFilePath,
 	retryPendingDiffusion,
 	unlinkPublishedFiles,
 } from '../../src/core/diffusion_bridge/diffusion_delete.ts';
 import { getSectionDiffusionTargets } from '../../src/core/diffusion_bridge/diffusion_map.ts';
+import { diffusionFilesRoot } from '../../src/core/diffusion_bridge/published_files.ts';
+import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 import {
 	countZzdOntology,
 	dropZzdOntology,
@@ -49,6 +52,9 @@ const DIFFUSION_ACTIVITY_TABLE = SCRATCH_ACTIVITY_TABLE;
 const PRELOAD_ACTIVITY_TABLE = process.env.DIFFUSION_ACTIVITY_TABLE;
 process.env.DIFFUSION_ACTIVITY_TABLE = SCRATCH_ACTIVITY_TABLE;
 
+// A MARKED scratch root (test/helpers/media_scratch_root.ts): the producer both
+// sides use (published_files.ts) asks the test-media guard for any root it
+// resolves, the explicit one a gate passes included.
 const FILE_ROOT = `${tmpdir()}/dedalo_ts_zzd_diffusion_${process.pid}`;
 
 /** dd1758 rows of one processed record (dd1763), ordered by element. */
@@ -91,7 +97,7 @@ beforeAll(async () => {
 	const { preCount } = await seedZzdOntology();
 	// Standing hygiene: the scratch tld must be EMPTY before the fixture lands.
 	expect(preCount).toBe(0);
-	mkdirSync(FILE_ROOT, { recursive: true });
+	markMediaRoot(FILE_ROOT);
 });
 
 beforeEach(async () => {
@@ -242,7 +248,7 @@ describe('deleteDiffusionRecord — sql outcomes', () => {
 
 		const outcome = await deleteDiffusionRecord('test38', 932005, true, 77);
 
-		expect(outcome).toEqual({ deleted: [], pending: [] });
+		expect(outcome).toEqual({ deleted: [], pending: [], terminal: [] });
 		expect(calls).toBe(0);
 		expect(await activityRowsFor('test38', 932005)).toEqual([]);
 	});
@@ -259,9 +265,11 @@ describe('deleteDiffusionRecord — file-type elements', () => {
 		const outcome = await deleteDiffusionRecord(FILE_SECTION, 932010, true, 77);
 
 		// zzd8 declares a service_name and nothing is published → idempotent
-		// success; zzd7 declares none → unresolvable → pending.
+		// success; zzd7 declares none → it never published → TERMINAL (PUB-02:
+		// ledgered with its reason, never re-queued), not a retryable pending.
 		expect(outcome.deleted).toEqual(['xml:zzd8']);
-		expect(outcome.pending).toEqual(['rdf:zzd7']);
+		expect(outcome.pending).toEqual([]);
+		expect(outcome.terminal.map((entry) => entry.key)).toEqual(['rdf:zzd7']);
 		expect(calls).toBe(0); // no sql target → the executor is never consulted
 
 		// D10, FIXED 2026-08-09: the old `if (sqlTargets.length === 0) return
@@ -298,20 +306,29 @@ describe('resolvePublishedFilePath', () => {
 		expect(await resolvePublishedFilePath('zzd8', 'rdf', 'test3', 7, FILE_ROOT)).toBe(null);
 	});
 
-	test('an unknown type falls through to the rdf resolution', async () => {
+	test('an unknown type is TERMINAL — it no longer falls through to the rdf grammar (PUB-02)', async () => {
+		// Before 2026-09-03 every non-xml/markdown type took the rdf branch, so a
+		// csv/json/typeless element resolved an rdf path that never existed and
+		// sat in the retry queue forever.
+		const resolved = await resolvePublishedFile('zzd8', 'unknown', FILE_SECTION, 7, FILE_ROOT);
+		expect(resolved.kind).toBe('terminal');
 		expect(await resolvePublishedFilePath('zzd8', 'unknown', FILE_SECTION, 7, FILE_ROOT)).toBe(
-			`${FILE_ROOT}/rdf/testsvc/nmotestclass-zzd9-7.rdf`,
+			null,
 		);
 	});
 
-	test('empty media root and a missing service_name both resolve to null', async () => {
-		expect(await resolvePublishedFilePath('zzd8', 'xml', FILE_SECTION, 7, '')).toBe(null);
-		// zzd7 declares diffusion.type but no service_name (the live rdf config)
-		expect(await resolvePublishedFilePath('zzd7', 'rdf', FILE_SECTION, 7, FILE_ROOT)).toBe(null);
-		// an element outside the ontology has no properties row at all
-		expect(await resolvePublishedFilePath('zzd_absent1', 'xml', FILE_SECTION, 7, FILE_ROOT)).toBe(
-			null,
+	test('no explicit root → the PRODUCER root publish uses (PUB-03); a missing service_name is terminal', async () => {
+		// '' is "no root given": the delete side then resolves the same root the
+		// writers do (diffusionFilesRoot), never MEDIA_PATH on its own.
+		expect(await resolvePublishedFilePath('zzd8', 'xml', FILE_SECTION, 7, '')).toBe(
+			`${diffusionFilesRoot()}/xml/testsvc/zzd9_7.xml`,
 		);
+		// zzd7 declares diffusion.type but no service_name (the live rdf config)
+		const noService = await resolvePublishedFile('zzd7', 'rdf', FILE_SECTION, 7, FILE_ROOT);
+		expect(noService.kind).toBe('terminal');
+		// an element outside the ontology has no properties row at all
+		const absent = await resolvePublishedFile('zzd_absent1', 'xml', FILE_SECTION, 7, FILE_ROOT);
+		expect(absent.kind).toBe('terminal');
 	});
 
 	test('the legacy {base}_*.rdf sweep fires for rdf only, never for another type', async () => {
@@ -322,20 +339,30 @@ describe('resolvePublishedFilePath', () => {
 		const other = `${dir}/nmotestclass-zzd9-8.rdf`;
 		for (const path of [canonical, legacy, other]) writeFileSync(path, 'x');
 
-		// type 'unknown' resolves the SAME path but takes no legacy sweep
-		expect(await unlinkPublishedFiles('zzd8', 'unknown', FILE_SECTION, 7, FILE_ROOT)).toBe(true);
-		expect(existsSync(canonical)).toBe(false);
-		expect(existsSync(legacy)).toBe(true);
+		// the xml grammar unlinks ONLY its own file — no sibling sweep
+		const xmlDir = `${FILE_ROOT}/xml/testsvc`;
+		mkdirSync(xmlDir, { recursive: true });
+		writeFileSync(`${xmlDir}/zzd9_7.xml`, 'x');
+		writeFileSync(`${xmlDir}/zzd9_7_2024.xml`, 'x');
+		expect(await unlinkPublishedFiles('zzd8', 'xml', FILE_SECTION, 7, FILE_ROOT)).toEqual({
+			kind: 'unpublished',
+		});
+		expect(existsSync(`${xmlDir}/zzd9_7.xml`)).toBe(false);
+		expect(existsSync(`${xmlDir}/zzd9_7_2024.xml`)).toBe(true);
 
 		// type 'rdf' sweeps the legacy variants of the SAME base
-		writeFileSync(canonical, 'x');
-		expect(await unlinkPublishedFiles('zzd8', 'rdf', FILE_SECTION, 7, FILE_ROOT)).toBe(true);
+		expect(await unlinkPublishedFiles('zzd8', 'rdf', FILE_SECTION, 7, FILE_ROOT)).toEqual({
+			kind: 'unpublished',
+		});
 		expect(existsSync(canonical)).toBe(false);
 		expect(existsSync(legacy)).toBe(false);
 		expect(existsSync(other)).toBe(true); // another record is untouched
-		// nothing left to remove → still true (idempotent)
-		expect(await unlinkPublishedFiles('zzd8', 'rdf', FILE_SECTION, 7, FILE_ROOT)).toBe(true);
-		// unresolvable → false (the caller's pending marker)
-		expect(await unlinkPublishedFiles('zzd7', 'rdf', FILE_SECTION, 7, FILE_ROOT)).toBe(false);
+		// nothing left to remove → still unpublished (idempotent)
+		expect(await unlinkPublishedFiles('zzd8', 'rdf', FILE_SECTION, 7, FILE_ROOT)).toEqual({
+			kind: 'unpublished',
+		});
+		// never publishable → terminal (ledgered with its reason, never retried)
+		const terminal = await unlinkPublishedFiles('zzd7', 'rdf', FILE_SECTION, 7, FILE_ROOT);
+		expect(terminal.kind).toBe('terminal');
 	});
 });

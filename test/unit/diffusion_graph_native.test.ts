@@ -18,6 +18,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+	type ElementOutcome,
 	foldElementOutcomes,
 	targetKey,
 } from '../../src/core/diffusion_bridge/diffusion_delete.ts';
@@ -773,40 +774,70 @@ describe('targetKey', () => {
 });
 
 describe('foldElementOutcomes', () => {
+	/** The delete-side outcome shape the fold reads (2026-09-03: + terminal). */
+	const confirmed = (keys: string[], terminal: { key: string; reason: string }[] = []) => ({
+		deleted: keys,
+		terminal,
+	});
+	const UNPUBLISHED: ElementOutcome = { kind: 'unpublished' };
+	const PENDING: ElementOutcome = { kind: 'pending' };
+
 	test('empty targets → empty Map', () => {
-		expect(foldElementOutcomes([], new Set())).toEqual(new Map());
+		expect(foldElementOutcomes([], confirmed([]))).toEqual(new Map());
 	});
 
-	test('the `?? true` seed: a SINGLE confirmed target makes its element successful', () => {
+	test('a SINGLE confirmed target makes its element successful', () => {
 		const target = sqlTarget({ element_tipo: 'E1' });
-		const folded = foldElementOutcomes([target], new Set([targetKey(target)]));
-		expect(folded).toEqual(new Map([['E1', true]]));
+		const folded = foldElementOutcomes([target], confirmed([targetKey(target)]));
+		expect(folded).toEqual(new Map([['E1', UNPUBLISHED]]));
 	});
 
 	test('AND, not OR: ONE unconfirmed target poisons its whole element', () => {
 		const ok = sqlTarget({ element_tipo: 'E1', table_name: 'people' });
 		const bad = sqlTarget({ element_tipo: 'E1', table_name: 'places' });
-		expect(foldElementOutcomes([ok, bad], new Set([targetKey(ok)]))).toEqual(
-			new Map([['E1', false]]),
+		expect(foldElementOutcomes([ok, bad], confirmed([targetKey(ok)]))).toEqual(
+			new Map([['E1', PENDING]]),
 		);
 		// order-independent — the poison survives a later confirmation
-		expect(foldElementOutcomes([bad, ok], new Set([targetKey(ok)]))).toEqual(
-			new Map([['E1', false]]),
+		expect(foldElementOutcomes([bad, ok], confirmed([targetKey(ok)]))).toEqual(
+			new Map([['E1', PENDING]]),
 		);
-		// both confirmed → true
-		expect(foldElementOutcomes([ok, bad], new Set([targetKey(ok), targetKey(bad)]))).toEqual(
-			new Map([['E1', true]]),
+		// both confirmed → unpublished
+		expect(foldElementOutcomes([ok, bad], confirmed([targetKey(ok), targetKey(bad)]))).toEqual(
+			new Map([['E1', UNPUBLISHED]]),
 		);
 	});
 
 	test('elements fold INDEPENDENTLY', () => {
 		const good = sqlTarget({ element_tipo: 'E1', table_name: 'people' });
 		const bad = sqlTarget({ element_tipo: 'E2', table_name: 'places' });
-		expect(foldElementOutcomes([good, bad], new Set([targetKey(good)]))).toEqual(
-			new Map([
-				['E1', true],
-				['E2', false],
+		expect(foldElementOutcomes([good, bad], confirmed([targetKey(good)]))).toEqual(
+			new Map<string, ElementOutcome>([
+				['E1', UNPUBLISHED],
+				['E2', PENDING],
 			]),
+		);
+	});
+
+	test('TERMINAL (PUB-02): an element is terminal only when NOTHING confirmed and EVERY target is terminal', () => {
+		const csv = sqlTarget({ element_tipo: 'E1', type: 'csv', database_name: '', table_name: '' });
+		const noDb = sqlTarget({ element_tipo: 'E2', database_name: '', table_name: 'people' });
+		const live = sqlTarget({ element_tipo: 'E2', database_name: 'web_a', table_name: 'places' });
+		const reasons = [
+			{ key: targetKey(csv), reason: 'full export' },
+			{ key: targetKey(noDb), reason: 'no database' },
+		];
+		// E1: its only target is terminal → terminal, with the reason
+		expect(foldElementOutcomes([csv], confirmed([], reasons))).toEqual(
+			new Map([['E1', { kind: 'terminal', reason: 'full export' }]]),
+		);
+		// E2: one terminal + one TRANSIENT (neither confirmed nor terminal) → pending
+		expect(foldElementOutcomes([noDb, live], confirmed([], reasons))).toEqual(
+			new Map([['E2', PENDING]]),
+		);
+		// E2: the live target confirmed, the terminal one did not → pending (AND law)
+		expect(foldElementOutcomes([noDb, live], confirmed([targetKey(live)], reasons))).toEqual(
+			new Map([['E2', PENDING]]),
 		);
 	});
 
@@ -823,12 +854,12 @@ describe('foldElementOutcomes', () => {
 		});
 		const producedKeys = [sqlSide, fileSide].map(targetKey);
 		expect(producedKeys).toEqual(['web_a|people', 'rdf:E1']);
-		expect(foldElementOutcomes([sqlSide, fileSide], new Set(producedKeys))).toEqual(
-			new Map([['E1', true]]),
+		expect(foldElementOutcomes([sqlSide, fileSide], confirmed(producedKeys))).toEqual(
+			new Map([['E1', UNPUBLISHED]]),
 		);
 		// drop ONE produced key → the element goes pending
-		expect(foldElementOutcomes([sqlSide, fileSide], new Set(['web_a|people']))).toEqual(
-			new Map([['E1', false]]),
+		expect(foldElementOutcomes([sqlSide, fileSide], confirmed(['web_a|people']))).toEqual(
+			new Map([['E1', PENDING]]),
 		);
 	});
 });
@@ -861,7 +892,7 @@ describe('REWIRE — the inline logic is GONE from the call sites', () => {
 		const del = read('src/core/diffusion_bridge/diffusion_delete.ts');
 		expect(del.includes('export function targetKey')).toBe(true);
 		expect(del.includes('export function foldElementOutcomes')).toBe(true);
-		expect(del.includes('foldElementOutcomes(targets, new Set(outcome.deleted))')).toBe(true);
+		expect(del.includes('foldElementOutcomes(targets, outcome)')).toBe(true);
 		// exactly ONE producer of each key grammar in the file — the one inside
 		// targetKey(); every call site now delegates
 		const inlineSqlKey = /`\$\{target\.database_name\}\|\$\{target\.table_name\}`/g;

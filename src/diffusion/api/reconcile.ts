@@ -1,7 +1,13 @@
 /**
- * DIFFUSION FACADE — the publication-marker reconcile as a registry definition
+ * DIFFUSION FACADE — the diffusion reconciles as registry definitions
  * (core/reconcile/registry.ts, S-10). The ONE legal core→diffusion import
- * target for it (boundary_seam_tripwire: facade-only).
+ * target for them (boundary_seam_tripwire: facade-only).
+ *
+ * Two definitions: `media_index` (pub/ markers derived from dbs/ markers — a
+ * pure filesystem hygiene, applied at boot) and `public_tier` (P1-12: what the
+ * public tier holds — MariaDB rows, dbs/ markers, per-record files — against
+ * what the matrix holds and flags publishable; operator-run, apply removes
+ * ghosts only).
  *
  * Stores: `.publication/dbs/<db>/<table>/<key>` (ground truth per publication
  * target, written by applyTableState) versus `.publication/pub/<key>` (the
@@ -12,6 +18,7 @@
  */
 
 import type { ReconcileDefinition } from '../../core/reconcile/registry.ts';
+import { runPublicTierReconcile } from '../targets/mariadb/public_tier_reconcile.ts';
 import { diffMediaIndex, reconcileMediaIndex } from '../targets/mediastore/media_index.ts';
 
 export const MEDIA_INDEX_RECONCILE: ReconcileDefinition = {
@@ -43,5 +50,24 @@ export const MEDIA_INDEX_RECONCILE: ReconcileDefinition = {
 		if (healed === null) return { drift: 0, applied: 0, detail: { enabled: false } };
 		const drift = healed.added + healed.removed;
 		return { drift, applied: drift, detail: { enabled: true, ...healed } };
+	},
+};
+
+export const PUBLIC_TIER_RECONCILE: ReconcileDefinition = {
+	name: 'public_tier',
+	stores: [
+		'matrix (record existence + publication flag)',
+		'public tier (MariaDB rows, .publication/dbs markers, per-record rdf/xml/markdown files)',
+	],
+	description:
+		'Report public-tier GHOSTS (records the matrix no longer holds or no longer flags publishable, still served) and MISSING publications (flagged, not in a target), plus the pending/terminal dd1758 unpublish debt; apply unpublishes ghosts only — a missing publication is a job, never a reconcile side effect. An unreachable MariaDB target is reported, its markers and files still compared.',
+	scopeLabel: 'section tipo',
+	schedule: 'operator',
+	sources: [
+		'src/diffusion/targets/mariadb/public_tier_reconcile.ts',
+		'src/diffusion/api/reconcile.ts',
+	],
+	async run({ apply, scope }) {
+		return runPublicTierReconcile(scope === undefined ? { apply } : { apply, scope });
 	},
 };

@@ -14,9 +14,9 @@
  * where rdfName is the owl:Class label — EXACTLY what the plan compiler puts
  * in SectionPlan.tableName for file formats (compile.ts keeps rdf/xml labels
  * VERBATIM: 'nmo:NumismaticObject' is an RDF identity, not a SQL identifier)
- * and sanitize is the verbatim PHP sanitize_file_name subset ported below
- * (MUST stay byte-identical to diffusion_delete.ts sanitizePublishedFileName
- * :336-344 — the test suite pins the two functions against each other).
+ * and sanitize is the PHP sanitize_file_name subset — IMPORTED from the one
+ * producer both sides use (core/diffusion_bridge/published_files.ts), so the
+ * delete side cannot drift from it (PUB-03).
  *
  * Document shape (pinned against a REAL PHP-published file,
  * media_monedaiberica/rdf/nomisma/nmonumismaticobject-numisdata4-1-*.rdf):
@@ -59,6 +59,10 @@
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync } from 'node:fs';
+import {
+	publishedRecordFileName,
+	sanitizePublishedFileName,
+} from '../../core/diffusion_bridge/published_files.ts';
 import { DedaloError } from '../../core/errors/index.ts';
 import type { PublicationPlan, SectionPlan } from '../plan/types.ts';
 import type { ProjectedRow } from '../project/lang_ladder.ts';
@@ -108,19 +112,13 @@ export function requireFilesTarget(format: string, plan: PublicationPlan): strin
 }
 
 /**
- * PHP sanitize_file_name + beautify (delete-side subset) — VERBATIM copy of
- * diffusion_delete.ts sanitizePublishedFileName (:336-344). Duplicated here
- * on purpose: writers consume only the diffusion-side modules (boundary
- * doctrine), so the lockstep is pinned by test, not by import.
+ * PHP sanitize_file_name + beautify (delete-side subset). ONE implementation —
+ * the core producer's (published_files.ts sanitizePublishedFileName); this
+ * name is kept for the writer's callers and tests. The duplicate copy this
+ * module carried "pinned by test, not by import" was the PUB-03 class of
+ * drift (2026-09-03): a lockstep that lives in two files is a promise.
  */
-export function sanitizeRdfFileName(name: string): string {
-	let out = name.replace(/[^\w\s\d\-_~,;[\]().]/gu, '');
-	out = out.replace(/\.{2,}/g, '');
-	out = out.toLowerCase().replace(/[^a-z0-9.]+/g, '-');
-	out = out.replace(/[\s_]+/g, '-').replace(/-+/g, '-');
-	out = out.replace(/-*\.-*/g, '.').replace(/\.{2,}/g, '.');
-	return out.replace(/^[-.]+|[-.]+$/g, '');
-}
+export const sanitizeRdfFileName = sanitizePublishedFileName;
 
 /**
  * Per-record rdf file name — the EXACT delete-side grammar
@@ -129,7 +127,13 @@ export function sanitizeRdfFileName(name: string): string {
  * verbatim owl:Class label).
  */
 export function rdfRecordFileName(section: SectionPlan, sectionId: number | string): string {
-	return `${sanitizeRdfFileName(`${section.tableName}_${section.sectionTipo}_${sectionId}`)}.rdf`;
+	const name = publishedRecordFileName('rdf', section.sectionTipo, sectionId, section.tableName);
+	if (name === null) {
+		throw new DedaloError('internal.invariant', {
+			message: `rdf writer: section '${section.sectionTipo}' has no owl:Class label (tableName) to name its files`,
+		});
+	}
+	return name;
 }
 
 /**

@@ -13,8 +13,17 @@
  * every component, keep the row — deleteSectionData).
  *
  * ATOMICITY (S2-02): the DB steps (snapshot, TM row, inverse-ref rewrites,
- * row delete, RAG delete marker) run in ONE transaction; media moves and
- * diffusion unpublish are post-commit side effects.
+ * row delete, RAG delete marker, the diffusion UNPUBLISH INTENT rows) run in
+ * ONE transaction; media moves and the diffusion unpublish itself are
+ * post-commit side effects. DURABLE INTENT (LIFE-07, 2026-09-03): the dd1758
+ * unpublish_pending rows are written INSIDE the transaction
+ * (diffusion_bridge/diffusion_delete.ts ledgerUnpublishIntent — one per
+ * publication element, or ONE record-level row when target resolution
+ * throws) and settled after the commit (settleUnpublishIntent: flipped to
+ * unpublished when the target confirms, stamped otherwise). A committed delete
+ * therefore always leaves its public-tier debt on the ledger, whatever fails
+ * after the commit — a crash, the MariaDB link, the executor; the retry queue
+ * and the public_tier reconcile read exactly those rows.
  * OUT OF THIS MODULE (header re-dated 2026-07-10, S2-45): the ontology-main
  * cascade (deleting a hierarchy/ontology registry record uninstalls its TLD —
  * ontology/ontology_delete.ts deleteOntologyMain) runs at the DISPATCH
@@ -38,6 +47,7 @@ import { deleteMatrixRecord } from '../../db/matrix_write.ts';
 import { sql, withTransaction } from '../../db/postgres.ts';
 import { ensureRecordGenerationTable, tmEpochPredicate } from '../../db/record_generation.ts';
 import { recordTimeMachine } from '../../db/time_machine.ts';
+import type { UnpublishIntent } from '../../diffusion_bridge/diffusion_delete.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { getMatrixTableFromTipo } from '../../ontology/resolver.ts';
 import { fireRagRecordEvent, fireSaveEvent } from '../../section_record/save_event.ts';
@@ -99,6 +109,7 @@ export async function deleteSectionRecord(
 			snapshot: Record<string, unknown>;
 			removedCount: number;
 			inverseRewrites: InverseRewrite[];
+			unpublishIntent: UnpublishIntent;
 		} | null> => {
 			// 1. Read the full record (every jsonb column) for the TM snapshot — this is
 			//    PHP section_record::get_data(), the object stored in matrix_time_machine.
@@ -146,7 +157,13 @@ export async function deleteSectionRecord(
 			//    the ambient sql handle, so a rolled-back delete leaves no marker.
 			await fireRagRecordEvent({ kind: 'delete', sectionTipo, sectionId });
 
-			return { snapshot, removedCount, inverseRewrites };
+			// 5b. Diffusion UNPUBLISH INTENT (LIFE-07): the dd1758 pending rows the
+			//     public tier is owed, written INSIDE the transaction so the commit
+			//     can never outrun its debt (see the header). Settled in step 7.
+			const { ledgerUnpublishIntent } = await import('../../diffusion_bridge/diffusion_delete.ts');
+			const unpublishIntent = await ledgerUnpublishIntent(sectionTipo, sectionId, userId);
+
+			return { snapshot, removedCount, inverseRewrites, unpublishIntent };
 		},
 	);
 	if (txOutcome === null) {
@@ -192,10 +209,12 @@ export async function deleteSectionRecord(
 	}
 
 	// 7. Diffusion unpublish (POST-COMMIT — PHP diffusion_delete::delete_record):
-	//    sql targets via the native executor; file targets + retry queue ledgered.
+	//    settle the intent rows step 5b wrote — sql targets via the native
+	//    executor, file targets by unlink; a row that does not settle stays
+	//    pending (stamped) for the retry queue, a terminal one is reported.
 	{
-		const { deleteDiffusionRecord } = await import('../../diffusion_bridge/diffusion_delete.ts');
-		await deleteDiffusionRecord(sectionTipo, sectionId, true, userId);
+		const { settleUnpublishIntent } = await import('../../diffusion_bridge/diffusion_delete.ts');
+		await settleUnpublishIntent(txOutcome.unpublishIntent);
 	}
 
 	// 8. Cache invalidation (S1-11): a delete stales the same caches a write

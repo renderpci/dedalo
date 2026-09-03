@@ -49,6 +49,11 @@ have to be copied too, or a restore will bring back records that point at files 
 exist. This key is distinct from \`DEDALO_BACKUP_PATH\`, which is where a code update stages the
 previous code tree.
 
+The engine's restore door (\`bun scripts/restore.ts <artifact>\`, run with the engine stopped) is
+the way back: it proves the artifact by a full read, restores it in one transaction beside the
+current database and swaps the two by name. Each run writes its report to a \`restores/\`
+directory inside this one.
+
 \`\`\`bash
 DEDALO_BACKUP_DIR="/srv/backups/dedalo/db"
 \`\`\``,

@@ -613,7 +613,7 @@
 			"tld": "test",
 			"properties": {
 				"diffusion": {
-					"class_name": "diffusion_mysql"
+					"type": "sql"
 				}
 			},
 			"model_tipo": "dd1743",
@@ -2416,7 +2416,7 @@
 			"tipo": "test75",
 			"parent": "test209",
 			"term": {
-				"lg-spa": "3d"
+				"lg-spa": "model_3d"
 			},
 			"model": "field_text",
 			"order_number": 2,
@@ -4134,7 +4134,11 @@
 			"order_number": 1,
 			"relations": null,
 			"tld": "test",
-			"properties": null,
+			"properties": {
+				"diffusion": {
+					"type": "sql"
+				}
+			},
 			"model_tipo": "dd1743",
 			"is_model": false,
 			"is_translatable": false,
@@ -157787,7 +157791,7 @@
 			"tld": "test",
 			"properties": {
 				"diffusion": {
-					"class_name": "diffusion_mysql"
+					"type": "sql"
 				}
 			},
 			"model_tipo": "dd1743",
@@ -174834,7 +174838,7 @@
 					"crmarchaeo": "http://www.cidoc-crm.org/cidoc-crm/CRMarchaeo/"
 				},
 				"diffusion": {
-					"class_name": "diffusion_rdf",
+					"type": "rdf",
 					"service_name": "nomisma",
 					"service_type": 2
 				}
@@ -175750,7 +175754,7 @@
 			"tld": "test",
 			"properties": {
 				"diffusion": {
-					"class_name": "diffusion_mysql"
+					"type": "sql"
 				}
 			},
 			"model_tipo": "dd1743",
@@ -199475,7 +199479,11 @@
 			"order_number": 1,
 			"relations": null,
 			"tld": "test",
-			"properties": null,
+			"properties": {
+				"diffusion": {
+					"type": "sql"
+				}
+			},
 			"model_tipo": "dd1743",
 			"is_model": false,
 			"is_translatable": true,

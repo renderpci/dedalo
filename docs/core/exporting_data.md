@@ -2,7 +2,7 @@
 
 > See also: [Importing data](importing_data.md) · [Component dataframe](components/component_dataframe.md) · [Glossary](glossary.md)
 
-Take a section's records and turn them into a flat downloadable table (CSV, TSV, ODS, XLSX, HTML or print), or a re-importable raw backup. This page covers the export tool's UI and, for developers, the export pipeline and component contract.
+Take a section's records and turn them into a flat downloadable table (CSV, TSV, ODS, XLSX, HTML or print), or a machine-readable raw CSV for the import tool. This page covers the export tool's UI and, for developers, the export pipeline and component contract. For a complete, verified copy of a section set — the backup, the move between installations, the preservation copy — see [The archive door](#the-archive-door): the export tool is not that.
 
 ## Introduction
 
@@ -19,9 +19,12 @@ simple dump. The export tool lets you decide **which components become columns**
 spreadsheet, so the result is meaningful for the use you have in mind (a report, a
 migration, a backup, an analysis in a spreadsheet, etc.).
 
-A special **raw** format produces an export that can be re-imported without any
-change (round-trip), which makes it a convenient way to back up or move data
-between Dédalo installations.
+A special **raw** format produces machine-shaped cells (`{"dedalo_data": …}`) the
+[CSV import tool](importing_data.md) recognizes. It is **not** a backup and **not**
+a way to move data between installations — see
+[Raw export and the import tool](#raw-export-and-the-import-tool) for what it
+does and does not preserve, and [The archive door](#the-archive-door) for the
+door that is.
 
 !!! info "What gets exported"
 
@@ -81,7 +84,7 @@ All options are in the right-hand configuration panel.
 | --- | --- | --- |
 | **Standard** | `value` | One flat value per cell. Multiple values of a relation are joined in the same cell. The most readable format. |
 | **Breakdown** | `grid_value` | Relation items are *exploded* into extra rows and/or extra `\|n` columns, so each related item gets its own cell. See [Breakdown mode](#breakdown-mode). |
-| **Dédalo (Raw)** | `dedalo_raw` | Each cell is the exact Dédalo internal value wrapped as `{"dedalo_data": …}`. Not meant to be read by humans; it is the **round-trip** format (see [Raw export and round-trip](#raw-export-and-round-trip)). |
+| **Dédalo (Raw)** | `dedalo_raw` | Each cell is the stored Dédalo value wrapped as `{"dedalo_data": …}`. Not meant to be read by humans; it is the format the **import tool** unwraps (see [Raw export and the import tool](#raw-export-and-the-import-tool)) — not a verbatim copy of the stored row. |
 
 ### Breakdown mode
 
@@ -188,20 +191,39 @@ own presets are private unless you mark them public.
     tool restores where you left off. Presets are the named, shareable, cross-device
     version stored in the database.
 
-## Raw export and round-trip
+## Raw export and the import tool
 
-The **Dédalo (Raw)** format (`dedalo_raw`) exports each cell as the exact internal
-value, wrapped with the `dedalo_data` property:
+The **Dédalo (Raw)** format (`dedalo_raw`) exports each cell as the stored value,
+wrapped with the `dedalo_data` property:
 
 ```json
 {"dedalo_data":[{"value":"Hello","lang":"lg-eng","id":1}]}
 ```
 
-A CSV produced with this format can be **re-imported as-is** with the
-[CSV import tool](importing_data.md): the import detects and unwraps the
-`dedalo_data` wrapper transparently, reproducing the exact stored data (a
-round-trip). This makes raw export a practical way to **back up** a section or
-**move data** between installations.
+A CSV produced with this format can be fed to the [CSV import tool](importing_data.md),
+which detects and unwraps the `dedalo_data` wrapper. What it does **not** do is
+reproduce the stored row verbatim, and the manual used to say it did:
+
+- The import runs the same **human-input conform** over a wrapped cell as over a
+  typed one. Measured over every component model: `component_text_area` rewrites
+  `<br>` and newlines into paragraph markup, and `component_geolocation` writes the
+  item without its stored `id` (so the save stamps a fresh one — the identity every
+  remove, Time Machine restore and dataframe pairing addresses). The other models
+  measured lossless.
+- A component with **no stored data** exports as an empty cell and imports as an
+  **explicit clear** — a full-section re-import re-saves every component of every
+  record and stamps a Time Machine row for each.
+- Relation cells carry **locators** — `{section_tipo, section_id}` — and
+  `section_id` is a **per-installation counter value**. The import checks a
+  locator's shape only, so in another installation each link resolves to whatever
+  record holds that id there.
+- Media cells carry `files_info` (a manifest of files) and **no bytes**; the media
+  zip is a separate download with nothing tying the two together.
+
+So use raw export for what it is: a machine-shaped CSV for the **same installation**,
+edited or filtered outside Dédalo and brought back through the import tool. For a
+backup, a move between installations or a preservation copy use
+[The archive door](#the-archive-door).
 
 See [The dedalo_data wrapper](importing_data.md#the-dedalo_data-wrapper) and
 [Dataframe columns](importing_data.md#dataframe-columns) for the details of
@@ -210,8 +232,47 @@ travel in their own column).
 
 !!! warning "Raw is not for reading"
 
-    The raw format is meant for machines (round-trip), not for analysis. Use
+    The raw format is meant for machines, not for analysis. Use
     **Standard** or **Breakdown** when a person or a spreadsheet will read the result.
+
+## The archive door
+
+The **archive** is the one complete, self-describing, verified extraction of a
+section set, and its reconstruction. It is a command-line door on the server
+(`bun scripts/archive.ts`), not a button in the export tool:
+
+```
+bun scripts/archive.ts extract --sections <tipo,tipo,…> --out <directory>
+bun scripts/archive.ts verify  --archive <directory>
+bun scripts/archive.ts restore --archive <directory> --user-id <n> [--allow-external] …
+```
+
+`extract` writes a **directory** (tar it for transport) holding, for every record
+of every named section, **all eleven stored columns exactly as the database holds
+them** — nothing conformed, no item renumbered, every locator and every
+`files_info` as stored — plus the ontology subtree that gives them meaning, byte
+copies of every media file the records own, and a `manifest.json` with the engine
+version, the section list with record counts, a digest of the ontology, a digest
+of every file, and a census of every locator that points **outside** the set
+(with whether the source held its target). Time Machine history, soft-deleted
+media versions, subtitles files and the per-installation counters are deliberately
+not archived, and the manifest says so.
+
+`restore` rebuilds the set in a database that need never have held it, and
+**refuses before writing anything** on a digest mismatch, on an ontology node that
+exists with a different definition, on a record that already exists, on a media
+file that exists with different bytes, and — the cross-installation case — on a
+locator that resolves neither to an archived record nor to a record the
+destination holds. Each refusal has an explicit override flag; the dangling
+locators written under `--allow-external` are reported, never silently re-pointed.
+Every restored record receives one whole-record Time Machine row, so the restore
+is visible in its history. Archive the sections that link to each other
+**together** and no locator is external.
+
+The format is defined in the repository file `engineering/ARCHIVE_FORMAT.md` and
+verified by a reconstruction test that builds a section set with every component
+model, extracts it, drops it, restores it from the artifact alone and asserts
+byte equality on every column.
 
 ---
 

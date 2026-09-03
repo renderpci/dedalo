@@ -398,7 +398,8 @@ const PRIVATE_ROOT_WALKERS: Readonly<Record<string, string>> = {
 	'test/unit/dd128_write_census_tripwire.test.ts': 'ROOTS: `src` `tools` — servers.',
 	'test/unit/dependency_integrity_tripwire.test.ts':
 		'ROOTS: `.` — `git ls-files` for every tracked package.json.',
-	'test/unit/deploy_env_contract_tripwire.test.ts': 'ROOTS: `deploy`.',
+	'test/unit/deploy_env_contract_tripwire.test.ts':
+		'ROOTS: `.`; `deploy` ×2 — the compose stacks at the repo root (leg G, by pattern), the deploy/ units and scripts (legs A-F), and the recursive deploy/** walk leg G reads for mirrors.',
 	'test/unit/diffusion_boundaries.test.ts': 'ROOTS: `src`.',
 	'test/unit/diffusion_queue_stream_tripwire.test.ts':
 		'ROOTS: `client/dedalo/core/area_maintenance`; `client/dedalo/core/area_maintenance/widgets` — the area JS, and the widget LESS one level down.',
@@ -614,6 +615,20 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 	'scripts/lib/test_shard_db.ts': {
 		roots: [],
 		scope: 'NOT a corpus: `readdirSync` lists the suite media base for marked shard twins to sweep',
+	},
+	'test/helpers/docs_corpus.ts': {
+		roots: [['docs']],
+		scope: 'the manual — every docs/**/*.md page, the one lister a docs-censusing gate imports',
+	},
+	'test/helpers/zzarc_media_digests.ts': {
+		roots: [],
+		scope:
+			'NOT a corpus: `zzarcMediaDigests` fingerprints the scratch media tree the zzarc situation plants; the CALLER hands its own scratch root',
+	},
+	'scripts/seed_diffusion_type_rewrite.ts': {
+		roots: [['install/import/ontology/7.0']],
+		scope:
+			'the importable ontology packages (`<tld>.copy.gz`) the diffusion-type rewrite judges or rewrites (ontologyPackageFiles, ONTOLOGY_PACKAGE_DIR)',
 	},
 	'scripts/lib/site_builder_census.ts': {
 		roots: [

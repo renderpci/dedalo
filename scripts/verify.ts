@@ -228,6 +228,14 @@ const TRIPWIRES = [
 	'test/unit/write_obligations_native.test.ts',
 	'test/unit/value_law_agreement_native.test.ts',
 	'test/unit/reconcile_registry_native.test.ts',
+	'test/unit/restore_door_native.test.ts',
+	'test/unit/unpublish_debt_native.test.ts',
+	'test/unit/diffusion_frontier_scope_native.test.ts',
+	'test/unit/diffusion_seed_compiles_native.test.ts',
+	'test/unit/diffusion_seed_vocabulary_tripwire.test.ts',
+	'test/unit/raw_roundtrip_native.test.ts',
+	'test/unit/conform_locator_existence_native.test.ts',
+	'test/unit/archive_docs_claim_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

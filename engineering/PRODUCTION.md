@@ -451,65 +451,102 @@ cannot even be attempted before step 1:
 1. **`../private/`** (store 4). It carries the `.env` every other step reads —
    the DB credentials, `MEDIA_PATH`, and the `DEDALO_SITE_BUILDER_*` pairing
    lines. Restoring it last means restoring everything else blind.
-2. **Matrix Postgres DB** (store 1). Stop the engine, prove the artifact is
-   readable, restore into an **empty** database, and **check the exit status**.
-   `pg_restore` continues past errors by default: a run that reports nothing
-   but leaves a table whose `COPY` failed keeps that table's OLD rows beside
-   restored neighbours, and the result looks exactly like a successful restore
-   from every angle an operator has. So the flags below are not decoration —
-   they are the difference between a restore and a half-restore.
+2. **Matrix Postgres DB** (store 1) — **the engine's restore door**
+   (`src/core/area_maintenance/restore_door.ts`, CLI `bun scripts/restore.ts`;
+   gate `test/unit/restore_door_native.test.ts`). Stop the engine, run the
+   door, read its report:
 
    ```bash
-   # The three names this procedure needs, set by hand — do not assume the
-   # environment file exports them under these spellings.
-   ARTIFACT=/opt/dedalo/private/backups/db/2026-08-29_033000.dedalo.custom.backup
-   DB_NAME=dedalo
-   DB_USER=dedalo
-
    # 1. Nothing may write while you restore. Stop the engine AND the watchdog
-   #    timer, which would otherwise restart it under you (§2).
+   #    timer, which would otherwise restart it under you (§2). The door
+   #    REFUSES while any client backend holds the database — it cannot stop a
+   #    service it does not see, so this step is yours.
    systemctl stop dedalo-ts.service dedalo-ts-watchdog.timer
 
-   # 2. Prove the file is a dump BEFORE destroying anything — with a FULL READ.
-   #    NOT `--list`: the table of contents sits at the FRONT of a custom
-   #    archive, so a dump cut in half lists perfectly and exits 0. Measured
-   #    2026-08-30 on a real 7.6 MB dump truncated to 60%:
-   #      pg_restore --list        -> exit 0        (says nothing is wrong)
-   #      pg_restore -f /dev/null  -> exit 1        ("could not read from input
-   #                                                 file: end of file")
-   #    Reading the archive end to end is the only check that detects it, and
-   #    this is the cheapest moment there is to find out. ~7.4 s/GB.
-   pg_restore -f /dev/null "$ARTIFACT" || { echo "NOT A USABLE DUMP"; exit 1; }
-
-   # 3. An EMPTY target. Never restore over a populated database: --clean is
-   #    best-effort per object and leaves whatever it failed to drop.
-   dropdb --if-exists "$DB_NAME"
-   createdb -T template0 -O "$DB_USER" "$DB_NAME"
-
-   # 4. One transaction, stop at the first error, say what you are doing — and
-   #    ACT on the exit status. Unchecked, a failed restore is indistinguishable
-   #    from a successful one until somebody opens a record.
-   pg_restore --dbname "$DB_NAME" --no-owner --no-privileges \
-              --single-transaction --exit-on-error --verbose "$ARTIFACT" \
-     || { echo "RESTORE FAILED - the database is NOT restored"; exit 1; }
-   echo "pg_restore exit 0 - restored"
+   # 2. The door. Exit 0 = restored and nothing held; 2 = restored, reconcile
+   #    verdicts HELD for your decision (read them); 1 = refused or failed, and
+   #    the database is exactly as it was.
+   cd /opt/dedalo/master_dedalo
+   bun scripts/restore.ts /opt/dedalo/private/backups/db/2026-08-29_033000.dedalo.custom.backup
    ```
 
-   `--single-transaction` makes the whole restore atomic — it either lands
-   completely or leaves an empty database — and already implies
-   `--exit-on-error`; both are written so the intent survives somebody dropping
-   one of them. The price is that it cannot be combined with a parallel restore
-   (`-j`): if a dump is large enough to want parallelism, restore it into a
-   database nothing can reach, check the exit status by hand, and only then
-   point the engine at it. Start `dedalo-ts.service` again after the whole
-   order below has run and §6.2 reconciles — not between steps.
+   What the door does, in order — each phase gates the next, and the shell
+   recipe below is what it runs, kept here so the procedure is readable
+   without the code:
+
+   1. **Proves the artifact with a FULL READ.** NOT `--list`: the table of
+      contents sits at the FRONT of a custom archive, so a dump cut in half
+      lists perfectly and exits 0. Measured 2026-08-30 on a real 7.6 MB dump
+      truncated to 60%: `pg_restore --list` → exit 0; `pg_restore -f /dev/null`
+      → exit 1 ("could not read from input file: end of file"). Anything short
+      of `verified_deep` is `recovery.artifact_unusable`, before any statement
+      reaches Postgres. ~7.4 s/GB.
+   2. **Requires ZERO client backends** on the target (`pg_stat_activity`), else
+      `recovery.writers_active` naming pid and application. Then stamps
+      `maintenance_mode: true` in `ts_state.json`, so an engine started before
+      you have read the report boots refusing non-superusers.
+   3. **Restores into a SIDECAR** `<db>_restoring_<stamp>`, created empty from
+      `template0`, with `--single-transaction --exit-on-error --no-owner
+      --no-privileges`, and ACTS on the exit status. `pg_restore` continues
+      past errors by default: a run that reports nothing but leaves a table
+      whose `COPY` failed keeps that table's OLD rows beside restored
+      neighbours, and the result looks exactly like a successful restore from
+      every angle an operator has. A non-zero exit DROPS the sidecar
+      (`recovery.restore_failed`); the target was never touched.
+   4. **Swaps by rename**: target → `<db>_pre_restore_<stamp>` (KEPT — a full
+      second copy on the same volume, yours to drop once the restore is
+      accepted, or `--drop-previous` at the door), sidecar → target. Two
+      `ALTER DATABASE … RENAME`, both needing the zero connections phase 2
+      guaranteed. This is why the door does not `dropdb` first: an emptied
+      target plus a failed restore leaves NOTHING, a sidecar leaves everything.
+   5. **Runs the post-restore reconcile plan** (§6.5, `POST_RESTORE_PLAN`) and
+      writes the journal `<DEDALO_BACKUP_DIR>/restores/<stamp>.json`.
+
+   ```bash
+   # The equivalent by hand (what the door runs), for a host without bun:
+   pg_restore -f /dev/null "$ARTIFACT" || { echo "NOT A USABLE DUMP"; exit 1; }
+   createdb -T template0 -O "$DB_USER" "${DB_NAME}_restoring"
+   pg_restore --dbname "${DB_NAME}_restoring" --no-owner --no-privileges \
+              --single-transaction --exit-on-error "$ARTIFACT" \
+     || { dropdb "${DB_NAME}_restoring"; echo "RESTORE FAILED - $DB_NAME untouched"; exit 1; }
+   psql -d postgres -c "ALTER DATABASE \"$DB_NAME\" RENAME TO \"${DB_NAME}_pre_restore\"" \
+                    -c "ALTER DATABASE \"${DB_NAME}_restoring\" RENAME TO \"$DB_NAME\""
+   ```
+
+   `--single-transaction` makes the restore atomic — it lands completely or
+   the sidecar stays empty — and already implies `--exit-on-error`; both are
+   written so the intent survives somebody dropping one. The price is that it
+   cannot be combined with a parallel restore (`-j`); the sidecar design is
+   what makes that price cheap: nothing can reach the sidecar while it fills.
+   The role needs `CREATEDB` (`ALTER ROLE dedalo CREATEDB`): `CREATE DATABASE`
+   and both renames require it. `--maintenance-db` covers a cluster without
+   the `postgres` maintenance database. `--database <other>` is a REHEARSAL,
+   not a restore of the installation: the door has TWO MODES decided by one
+   comparison, the target against the configured database (`DB_NAME`). Only
+   the configured target gets phase 2's maintenance stamp and phase 5's plan —
+   the plan runs through the engine's pool, which is bound to the configured
+   database for the life of the process, and the stamp is what the engine
+   SERVING that database reads. A rehearsal into another name therefore
+   verifies, restores and swaps (phases 1, 3, 4; the zero-backends check still
+   guards the rename) and reports `mode: "rehearsal"`, `reconcile: null`; it
+   never writes to the live database or its `ts_state.json`, so it is safe
+   while the engine serves. Start `dedalo-ts.service` again after
+   the whole order below has run — not between steps — and **lift maintenance
+   mode** from the maintenance area once the journal's `held` list is decided.
 3. **RAG pgvector DB** (store 2) if enabled; it is derived from the matrix DB
    and can also be re-embedded rather than restored.
-4. **Media originals** (store 3), then rebuild derivatives with
-   `tool_update_cache` — do not restore derivatives.
-5. **RECONCILE THE ID COUNTERS AGAINST THE MEDIA TREE** — maintenance area →
-   *Dédalo counters status* → **reconcile media counters**. Run it DRY first and
-   read the list.
+4. **Media originals** (store 3), from a DATED GENERATION of the tree backup
+   (`deploy/dedalo-tree-backup.sh` writes `<dest>/<YYYY-MM-DD_HHMMSS>/` with a
+   `latest` link; pick the generation OLDER than the mistake, not `latest`):
+   `rsync -a "/opt/dedalo/backups/media/<generation>/" "$MEDIA_PATH/"`. Then
+   rebuild derivatives with `tool_update_cache` — do not restore derivatives.
+   The restore door does NOT copy media; this step is yours.
+5. **RECONCILE THE ID COUNTERS AGAINST THE MEDIA TREE** — the door's
+   `POST_RESTORE_PLAN` already APPLIED `counters_media` (raise-only) against
+   the media tree as it stood at restore time; if step 4 changed the tree
+   AFTER the door ran, run it again: maintenance area → *Dédalo counters
+   status* → **reconcile media counters** (or `bun scripts/reconcile.ts run
+   counters_media --apply`). Run it DRY first and read the list.
 
    A restore rolls `matrix_counter` back WITH the data. The media filesystem was
    not rolled back: it still holds the files of every record created between the
@@ -578,7 +615,7 @@ That comparison is the same one `publication/site_builder/src/provision/verify.t
 runs before and after an adoption. It is not yet reachable as a standalone verb;
 until it is, a restore is reconciled by the three reads above.
 
-### 6.3 Retention (documentation only — no mechanical keeper)
+### 6.3 Retention
 
 One copy is not a retention policy, and the failure a backup set most often
 has to survive is not a dead disk but a **mistake that was faithfully copied**:
@@ -593,50 +630,78 @@ The rule for an installation:
   `date +%F_%H%M%S`, so generations accumulate by construction — and so does
   the disk usage. Something must prune them, and pruning is where a policy
   becomes real.
-- **A `--delete` mirror is ONE generation.** Measured 2026-08-30, the reference
-  unit's media step (`deploy/dedalo-backup.service`) is
-  `rsync -a --delete "$MEDIA_PATH/" …`: a deletion in the media originals is
-  propagated into the only media backup at the next nightly run. For the store
-  §6 itself calls "the source of truth every derivative rebuilds from", that is
-  not a recovery point. Give the media destination real generations —
-  filesystem snapshots (ZFS/Btrfs/LVM) or dated `rsync --link-dest` trees,
-  which cost one hardlink per unchanged file.
+- **A `--delete` mirror is ONE generation, and the shipped jobs no longer
+  ship one.** Stores 3 and 4 are copied by `deploy/dedalo-tree-backup.sh`:
+  dated `rsync --link-dest` generations (one hardlink per unchanged file),
+  built under an `.incomplete_` name and promoted only on rsync exit 0, pruned
+  to `--keep N` (14 in the systemd unit, `DEDALO_BACKUP_KEEP` in the compose
+  stacks). A deletion in the media originals reaches the NEWEST generation at
+  the next run and no other. `test/unit/deploy_env_contract_tripwire.test.ts`
+  leg G holds this over `deploy/**` and the compose stacks: every rsync that
+  deletes must build a `--link-dest` generation under a stated retention, and
+  every tree-backup invocation must carry `--keep` — the one mirror still
+  exempt (store 5, the site-builder instances) is enumerated there with its
+  reason. Filesystem snapshots (ZFS/Btrfs/LVM) on the destination remain a
+  good second layer.
 - **At least one generation must be OFF this host** and, for the ransomware
   case, not writable from it.
 - **Restore-test quarterly** (§6, already stated): a backup that has never been
   restored is a hypothesis.
 
-**None of this is enforced.** Nothing in the repo counts generations, measures
-the age of the oldest one, or notices that a retention policy was never
-implemented — no gate, no `/health` field, no panel line. The engine's only
-automated opinion about backups is the FRESHNESS of the newest file
-(`DEDALO_BACKUP_TIME_RANGE`, read by `src/core/update/preconditions.ts`), which
-gates a code update and says nothing about how far back you can go. Treat this
-subsection as what it is: a rule an operator implements and audits by hand.
+**What is mechanical and what is not.** The SHAPE of the shipped jobs is
+gated (generations, `--keep`, no bare mirror — leg G above), and the tree
+backup script's behaviour is run by `operator_commands_tripwire` (a source
+deletion does not reach the previous generation; retention removes only whole
+generations beyond `--keep`). What no gate can see is a museum's HOST: whether
+the timer is enabled, how old the oldest generation there really is, whether a
+copy exists off the host. The engine's only runtime opinion about backups is
+the USABILITY and freshness of the newest dump (`newestUsableBackup`,
+`DEDALO_BACKUP_TIME_RANGE`, read by `src/core/update/preconditions.ts`), which
+gates a code update and says nothing about how far back you can go. The
+off-host copy and the quarterly restore test are still yours.
 
-### 6.4 A restore is an operator procedure the engine does not own
+### 6.4 What the engine restores, and what stays an operator's
 
-Say it plainly, because the rest of §6 reads like a system with a recovery
-feature and there is none. Nothing in this repo restores DATA: no API action,
-no widget, no script. §6.1 is a procedure a human performs with `pg_restore`,
-`rsync` and `systemctl`. The one restore the engine does own,
-`update_code.restore_code` (`src/core/area_maintenance/widgets/update_code.ts`),
-puts back a previous CODE TREE (§12) and touches neither the database nor the
-media. And whatever the engine checks about a backup FILE, it never performs a
-restore and never verifies that one would succeed.
+Since S-7 (2026-09-03) the engine owns the DATA restore: `bun scripts/restore.ts
+<artifact>` is the door described in §6.1 step 2 — verify by full read, refuse
+writers, one-transaction restore into a sidecar, rename swap, reconcile plan,
+journal. Its contract is gated on a real Postgres with real archive bytes
+(`test/unit/restore_door_native.test.ts`: a truncated artifact is refused
+before any write; a held backend is refused; a mid-restore failure leaves the
+target fingerprint-equal with no sidecar behind; a clean artifact restores,
+keeps the previous copy, reconciles after the swap through the real plan,
+journals; a swap failure drops the sidecar; a rehearsal into another database
+runs no plan and stamps nothing). The other
+restore the engine owns, `update_code.restore_code`
+(`src/core/area_maintenance/widgets/update_code.ts`), puts back a previous CODE
+TREE (§12).
 
-Two consequences worth stating for anyone reading this as a backlog:
+What stays an operator procedure, and why:
 
-- **Neither §6.3 nor this subsection can be gated as written.** A tripwire can
-  hold a document to the code (that is what
-  `test/unit/operator_commands_tripwire.test.ts` does for §6's store table); it
-  cannot hold a museum's host to a retention policy the code never sees. If we
-  want these mechanically kept, the engine has to grow something that observes
-  the backup destination — and that is a feature, not a documentation fix.
-- **The quarterly restore test is the only thing that actually proves any of
-  it.** Everything above is a hypothesis until a dump has been restored into a
-  scratch database and the record count checked
-  (`docs/install/migrating_from_v6.md` shows that shape for a v6 artifact).
+- **Media originals** (store 3): a copy from a dated generation (§6.1 step 4).
+  The door does not move media — a media tree is tens of GB to TB, the copy is
+  a plain rsync, and which generation to restore is a judgement (the one older
+  than the mistake), not a computation.
+- **`../private/`** (store 4) and the **RAG database** (store 2): steps 1 and 3
+  of §6.1. The `.env` is what the door itself reads to find the database.
+- **Site-builder instances** (store 5): §6.1 step 6 — `provision apply` is the
+  restore.
+- **Stopping the engine.** The door refuses while any client backend holds the
+  database; it does not (cannot) stop a service it does not see. CLI-only, by
+  design: a maintenance-area button would have to swap the database its own
+  pool is holding. A read-only "last restore journal" row in the maintenance
+  area is the follow-up.
+- **Pruning `<db>_pre_restore_<stamp>`** and **lifting maintenance mode**: both
+  after the journal has been read.
+
+**The quarterly restore test is still the only thing that proves a museum's
+backup.** The gate proves the DOOR; it cannot see a museum's artifact. Run the
+door against a scratch database name (`--database dedalo_restore_test`) with
+the newest nightly dump — WITHOUT stopping the engine: that is a rehearsal
+(§6.1 step 2), which runs no plan and stamps nothing — and check the record
+count in `dedalo_restore_test` yourself. The door's `mode: "rehearsal"`,
+`previous: null` (no target existed) and exit 0 are the pass; the row counts
+are the verdict. Drop the rehearsal database afterwards.
 
 ### 6.5 Cross-store reconciles: ONE registry, three doors
 
@@ -667,6 +732,20 @@ and demands it be here):
 | `rag_index` | matrix records ↔ `rag_embeddings` | operator | enqueues index/delete for the drain (§11) |
 | `ontology` | `<tld>0` source records ↔ `dd_ontology` | operator | destructive re-projection per drifted TLD |
 | `hierarchy` | `hierarchy1` active rows ↔ their provisioning | operator | `ensure` per broken hierarchy |
+
+**After a data restore** the door runs the registry through
+`POST_RESTORE_PLAN` (`src/core/reconcile/post_restore.ts`): EVERY registered
+name, in registry order, with an explicit verdict and reason per entry — the
+gate holds the plan and `REGISTERED_NAMES` equal, so a new reconcile has to
+decide what a restore does with it. Two APPLY: `counters_media` (raise-only,
+idempotent — only the disk remembers the ids minted after the backup) and
+`media_index` (a pure derivation). The rest run DRY and their drift is
+reported as `held` in the journal and the CLI's exit 2: `files_info`,
+`observer_mirrors`, `rag_index`, `ontology`, `hierarchy`, `public_tier` — each a
+decision (a shrink, a budgeted recompute, a re-embed, a destructive
+re-projection, an unpublish from a museum site) the operator takes with the dry
+list in view, through the three doors above. A step that throws is recorded by
+its error code and the plan continues.
 
 Scheduling is the registry's, not each owner's: `boot`-class definitions run
 once after the server listens, `{everyMs}` ones on their period, both

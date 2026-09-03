@@ -33,7 +33,9 @@ import {
 
 /** Every definition the engine ships, in registry order (the diffusion one lazily). */
 export async function loadAllReconciles(): Promise<readonly ReconcileDefinition[]> {
-	const { MEDIA_INDEX_RECONCILE } = await import('../../diffusion/api/reconcile.ts');
+	const { MEDIA_INDEX_RECONCILE, PUBLIC_TIER_RECONCILE } = await import(
+		'../../diffusion/api/reconcile.ts'
+	);
 	return [
 		COUNTERS_MEDIA_RECONCILE,
 		FILES_INFO_RECONCILE,
@@ -42,6 +44,7 @@ export async function loadAllReconciles(): Promise<readonly ReconcileDefinition[
 		RAG_INDEX_RECONCILE,
 		ONTOLOGY_RECONCILE,
 		HIERARCHY_RECONCILE,
+		PUBLIC_TIER_RECONCILE,
 	];
 }
 

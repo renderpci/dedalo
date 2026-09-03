@@ -28,8 +28,19 @@
  *     zzd10 owl:Class 'nmo:TestClass'        → section zzd9
  *   zzd9  section (scratch section node, parent test1) — the FILE-ONLY section
  *
+ *   The NEVER-RESOLVING producers (PUB-02, 2026-09-03) — every target of
+ *   zzd15 is one a retry can never settle, so the unpublish_debt gate's
+ *   census is TOTAL over this section:
+ *   zzd12 diffusion_element  {"diffusion":{"type":"csv","service_name":"testsvc"}}
+ *     zzd17 table     'zzd_csv_child'        → section zzd15   (full-export format)
+ *   zzd13 diffusion_element  {"diffusion":{"type":"sql"}}   (NO database node)
+ *     zzd14 table     'zzd_nodb_table'       → section zzd15   (empty database_name)
+ *   zzd7  (above, NO service_name)
+ *     zzd16 table     'zzd_rdf_child_two'    → section zzd15   (never published)
+ *   zzd15 section (scratch section node, parent test1) — the TERMINAL section
+ *
  * so: `test3` → two sql targets (one per element/database), `zzd9` → two
- * file-type targets and NO sql target.
+ * file-type targets and NO sql target, `zzd15` → three terminal targets.
  */
 
 import { readEnv } from '../../src/config/env.ts';
@@ -44,6 +55,10 @@ import {
 export const SQL_SECTION = 'test3';
 /** The scratch section node whose targets are file-type only. */
 export const FILE_SECTION = 'zzd9';
+/** The scratch section node whose EVERY target is a never-resolving producer (PUB-02). */
+export const TERMINAL_SECTION = 'zzd15';
+/** The three terminal targets of TERMINAL_SECTION, as the delete side keys them. */
+export const TERMINAL_KEYS = ['csv:zzd12', '|zzd_nodb_table', 'rdf:zzd7'] as const;
 // Scratch section-id range owned by these gates: 932000-932999 (the purge
 // predicates in both test files key on it).
 
@@ -138,6 +153,48 @@ function buildZzdSituation() {
 				relations: [{ tipo: 'zzd9' }],
 			},
 			{ tipo: 'zzd9', parent: 'test1', model: 'section', term: { 'lg-spa': 'zzd probe section' } },
+			// ---- the never-resolving producers (PUB-02) → zzd15 ----------------
+			{
+				tipo: 'zzd12',
+				parent: 'zzd0',
+				model: 'diffusion_element',
+				term: { 'lg-spa': 'zzd csv element' },
+				properties: { diffusion: { type: 'csv', service_name: 'testsvc' } },
+			},
+			{
+				tipo: 'zzd17',
+				parent: 'zzd12',
+				model: 'table',
+				term: { 'lg-spa': 'zzd_csv_child' },
+				relations: [{ tipo: 'zzd15' }],
+			},
+			{
+				tipo: 'zzd13',
+				parent: 'zzd0',
+				model: 'diffusion_element',
+				term: { 'lg-spa': 'zzd sql element without database' },
+				properties: sql('sql'),
+			},
+			{
+				tipo: 'zzd14',
+				parent: 'zzd13',
+				model: 'table',
+				term: { 'lg-spa': 'zzd_nodb_table' },
+				relations: [{ tipo: 'zzd15' }],
+			},
+			{
+				tipo: 'zzd16',
+				parent: 'zzd7',
+				model: 'table',
+				term: { 'lg-spa': 'zzd_rdf_child_two' },
+				relations: [{ tipo: 'zzd15' }],
+			},
+			{
+				tipo: 'zzd15',
+				parent: 'test1',
+				model: 'section',
+				term: { 'lg-spa': 'zzd terminal section' },
+			},
 		],
 	});
 }

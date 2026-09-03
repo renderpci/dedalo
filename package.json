@@ -23,6 +23,7 @@
 		"dedalo:install": "bun run scripts/install.ts",
 		"dedalo:migrate-config": "bun run scripts/migrate_v6_config.ts",
 		"dedalo:migrate-passwords": "bun run scripts/migrate_v6_passwords.ts",
+		"dedalo:restore": "bun run scripts/restore.ts",
 		"test": "bun test --timeout=30000",
 		"lint:browser": "bun run scripts/lint_browser_budget.ts",
 		"ci:local": "bun run scripts/ci_local.ts",

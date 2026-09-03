@@ -33,6 +33,7 @@ import {
 	getDiffusionWriter,
 	UnknownDiffusionFormatError,
 } from '../../src/diffusion/writers/registry.ts';
+import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const ROOT = `${tmpdir()}/dedalo_ts_diffusion_file_writers_${process.pid}`;
 let savedRoot: string | undefined;
@@ -40,6 +41,9 @@ let savedRoot: string | undefined;
 beforeAll(() => {
 	savedRoot = process.env.DEDALO_DIFFUSION_FILES_ROOT;
 	process.env.DEDALO_DIFFUSION_FILES_ROOT = ROOT;
+	// The root producer (published_files.ts) asks the test-media guard for any
+	// root it resolves — a scratch root must DECLARE itself one.
+	markMediaRoot(ROOT);
 	mkdirSync(ROOT, { recursive: true });
 });
 

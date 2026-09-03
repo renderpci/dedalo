@@ -101,6 +101,12 @@ export const ZZDIF_BROKEN_ELEMENT = 'zzdif70';
 export const ZZDIF_SECTION = 'zzdif1';
 /** The linked section reached through the portal hop (frontier level 0). */
 export const ZZDIF_LINKED_SECTION = 'zzdif20';
+/** The primary section's component_publication (dd64 twin). */
+export const ZZDIF_PUBLICATION = 'zzdif6';
+/** The primary section's component_portal into the linked section. */
+export const ZZDIF_PORTAL = 'zzdif7';
+/** The linked section's component_publication. */
+export const ZZDIF_LINKED_PUBLICATION = 'zzdif22';
 /** The alias table node (published under the ALIAS label). */
 export const ZZDIF_TABLE_ALIAS = 'zzdif50';
 /** The markdown FILE element — the runner gate's subject (Postgres + files root only). */
@@ -191,14 +197,14 @@ function buildSituation(): Situation {
 				order_number: 4,
 			},
 			{
-				tipo: 'zzdif6',
+				tipo: ZZDIF_PUBLICATION,
 				parent: 'zzdif1',
 				model: 'component_publication',
 				term: { 'lg-spa': 'publication source' },
 				order_number: 5,
 			},
 			{
-				tipo: 'zzdif7',
+				tipo: ZZDIF_PORTAL,
 				parent: 'zzdif1',
 				model: 'component_portal',
 				term: { 'lg-spa': 'linked source' },
@@ -214,7 +220,7 @@ function buildSituation(): Situation {
 				order_number: 1,
 			},
 			{
-				tipo: 'zzdif22',
+				tipo: ZZDIF_LINKED_PUBLICATION,
 				parent: 'zzdif20',
 				model: 'component_publication',
 				term: { 'lg-spa': 'linked publication source' },
@@ -315,7 +321,7 @@ function buildSituation(): Situation {
 				parent: 'zzdif44',
 				model: 'field_text',
 				term: { 'lg-spa': 'linked_ids' },
-				relations: [{ tipo: 'zzdif7' }],
+				relations: [{ tipo: ZZDIF_PORTAL }],
 				properties: {
 					process: {
 						parser: [{ fn: 'parser_locator::get_v6_section_id' }],

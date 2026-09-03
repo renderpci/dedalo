@@ -103,6 +103,30 @@ principle:
    definitions so ontology and engine never diverge. Legacy v6
    `propiedades`/`process_dato` is out of scope (separate migration plan) — the
    engine reads v7 `properties` only.
+   **Correction (2026-09-03, audit 2026-08-26 PUB-04 / P1-13).** The
+   "starting contract" above was asserted, not measured: until this date every
+   ontology the repo shipped spelled the output format with the RETIRED v6 key
+   `properties->diffusion->class_name` (`diffusion_mysql`/`_rdf`/`_socrata`) —
+   the install seed, the generic `test` TLD source of record and all 13
+   importable packages carrying diffusion definitions — and several elements
+   had no v7 block at all (the block only in v5 `propiedades`). The compiler
+   reads `type` ONLY and has no alias, so on a fresh install no shipped element
+   compiled. The rule stands and is now enforced in the three shipped copies:
+   the seed is corrected at first boot by
+   `install/db/migrations/0008_diffusion_element_type.sql` (a SHARED-ROW SEED
+   CORRECTION moving `matrix_ontology.ontology18`, `dd_ontology.properties` and
+   `dd_ontology_recovery` together, v5 copies left byte-identical), the JSON
+   source of record and the packages were rewritten once
+   (`scripts/seed_diffusion_type_rewrite.ts`). Retired keys are REPORTED,
+   never aliased: `process_dato` in either shape (the shipped string fn, or an
+   object with `parser`) compiles to a `retired_parser_spelling` degradation
+   naming the field and the replacement (`process`). dd60
+   (`diffusion_section_stats`, a v6 renderer with no v7 format) is the one
+   shipped element that stays untyped and fails loudly. Gates:
+   `diffusion_seed_compiles_native` (every shipped element of every domain
+   through the real compiler, on the suite database as a booted install),
+   `diffusion_seed_vocabulary_tripwire` (the three shipped copies + the
+   mapping), `diffusion_publication_gate_native` (both `process_dato` shapes).
 2. **Parity is judged at the artifacts.** The oracle contract surfaces are:
    (a) published MariaDB rows/schema, (b) rendered RDF/XML/MD files, (c) the
    copied tool_diffusion client's wire (action set + SSE format), (d) shared
@@ -179,8 +203,18 @@ Study these in the reference trees, then re-express their *semantics*:
   `fields:'delete'` sentinel), fail-closed.
 - **Delete propagation + retry** — `section_record.delete()` → target
   resolution → per-format removal; failures → dd1758 `unpublish_pending`,
-  retried on boot/opportunistically/manually (already native in
-  `src/core/diffusion_bridge/diffusion_delete.ts` minus the socket hop).
+  retried on boot/opportunistically/manually (native in
+  `src/core/diffusion_bridge/diffusion_delete.ts`). Since 2026-09-03 (audit
+  2026-08-26 P1-12): the pending rows are written INSIDE the delete
+  transaction and settled post-commit (durable intent, LIFE-07); the file
+  paths come from the ONE producer publish uses
+  (`core/diffusion_bridge/published_files.ts`, PUB-03); the retry queue is
+  drained least-recently-attempted first with an attempt stamp per row
+  (`misc.dd1758_retry`), and never-resolving targets (csv/json full exports,
+  an element without service_name, an rdf without an owl:Class for the
+  section, an sql element without a database) are TERMINAL — ledgered with a
+  reason, excluded from the queue, reported by the `public_tier` reconcile
+  (PUB-02). Gate: `test/unit/unpublish_debt_native.test.ts`.
 - **v6-parity side-channels** — `global_table_maps`, `merge_columns`,
   `preserve_order`, `empty_value`, `empty_to_string`, `default_value`,
   `add_parents`: today smuggled through the wire context; in the new engine
@@ -595,12 +629,42 @@ gates. The standing rule: no third resolution walker may ever be written.
    never publish.
 6. Per-target-db MariaDB user with minimal grants (deployment requirement).
    NOTE (2026-07, audit S2-35): no mysqldump surface is implemented anywhere —
-   MariaDB publication tables are DERIVED data, rebuildable by re-publishing;
-   back them up externally if desired (see engineering/PRODUCTION.md, backup set).
-   If a dump surface ever lands: mysqldump via argv + `MYSQL_PWD`, validated
-   names, version-probed binary, output outside web root.
+   MariaDB publication tables are DERIVED data; additions and changes are
+   rebuildable by re-publishing. **Deletions are NOT** (amended 2026-09-03,
+   audit 2026-08-26 LIFE-02): delete propagation is event-driven, a restored
+   matrix emits no event for rows it no longer holds, and a re-publish is a
+   per-record upsert against tables that are never truncated — so a ghost
+   row survives every re-publish and a later re-minted id replaces its content
+   under the same public URL. The public tier is therefore RECONCILED, not
+   rebuilt: the `public_tier` definition in the reconcile registry
+   (`src/diffusion/targets/mariadb/public_tier_reconcile.ts`, operator-run,
+   dry by default) compares MariaDB rows, `.publication/dbs` markers and the
+   per-record rdf/xml/markdown files against record existence + the
+   publication flag, reports ghosts / missing publications / the pending and
+   terminal dd1758 debt, and on apply unpublishes ghosts only — an unreachable
+   target is reported, never silent. Run it after every matrix restore. Back
+   the tables up externally if desired (see engineering/PRODUCTION.md, backup
+   set). If a dump surface ever lands: mysqldump via argv + `MYSQL_PWD`,
+   validated names, version-probed binary, output outside web root.
 7. Media markers in lockstep with dedalo-media-protection; marker failures
    never fail a run; `reconcile()` on boot.
+8. **Publication scope is the ELEMENT's, never the caller's** (decided
+   2026-09-03, audit 2026-08-26 CARRY-03 / DIFF-C). A plan spans whatever
+   sections its element declares; the PRIMARY selection is principal-scoped
+   (the enqueuing caller's projects predicate), and every FRONTIER record —
+   reached through a stored locator — passes the same two keys the search and
+   export surfaces apply (`security/frontier_scope.ts`, property 3): section
+   grant, then record scope. A record the caller may not read is DROPPED from
+   the run with a `[frontier] REFUSED` ledger line naming the section and the
+   key — never published, and never marked 'unpublish' either (a caller who
+   cannot read a record must not be able to remove it from the public tier).
+   A dropped record's publication state is left exactly as the last run that
+   could read it set it. `diffuse` therefore stays enqueueable by non-admins:
+   with DIFF-B stripping `skip_publication_state_check` and clamping `levels`,
+   a scoped caller can only move records inside their own scope, under the
+   per-record publication gate (item 5). Gate:
+   `test/unit/diffusion_frontier_scope_native.test.ts` (the flag ↔ frontier
+   census and the drop-and-ledger law); class gate `frontier_class_native`.
 
 ## 9. Phases & parity gates
 

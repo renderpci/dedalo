@@ -7,15 +7,31 @@
  *     [{database_name, table_name, section_ids:[id], section_tipo}] — the
  *     engine wire shape, kept verbatim across the seam;
  *   - rdf / xml / markdown elements → published-file unlinks under the
- *     media root: rdf = /rdf/{service}/{sanitize(rdfName_st_id)}.rdf (+ the
- *     legacy '{base}_*.rdf' variants), xml/markdown = /{type}/{service}/
- *     {st}_{id}.{ext}; missing service_name (this install's live rdf
- *     config) → pending; nothing published → idempotent success;
+ *     published-files root — the ONE producer publish uses too
+ *     (./published_files.ts, PUB-03): rdf = /rdf/{service}/
+ *     {sanitize(rdfName_st_id)}.rdf (+ the legacy '{base}_*.rdf' variants),
+ *     xml/markdown = /{type}/{service}/{st}_{id}.{ext}; nothing published →
+ *     idempotent success; no root configured → pending;
+ *   - TERMINAL targets (PUB-02): a csv/json full-export element (a record
+ *     leaves it only by re-publishing), an element without service_name, an
+ *     rdf element with no owl:Class for the section, an sql element with no
+ *     database/table — none of these ever published a per-record artifact,
+ *     or cannot unpublish one. They are ledgered pending WITH a terminal
+ *     reason and EXCLUDED from the retry queue, so they can neither starve
+ *     it nor pretend to be settled; the public_tier reconcile reports them;
  *   - per-element outcomes land in the dd1758 diffusion log
  *     (matrix_activity_diffusion): unpublished (2) on success,
  *     unpublish_pending (3) on failure — retryPendingDiffusion() re-runs the
  *     pending rows and flips them in place (PHP retry_pending, DIFFU-08
- *     rule: only flip when the retry actually resolved targets).
+ *     rule: only flip when the retry actually resolved targets). Every retry
+ *     stamps the row (misc.dd1758_retry {attempts,last_attempt}) and the
+ *     queue is drained least-recently-attempted first, so one row that fails
+ *     forever cannot occupy the head for every run (PUB-02);
+ *   - DURABLE INTENT (LIFE-07): the record delete writes its pending rows
+ *     INSIDE its transaction (ledgerUnpublishIntent) — when target resolution
+ *     itself throws, a record-level row — and settles them post-commit
+ *     (settleUnpublishIntent). A committed delete therefore always leaves
+ *     the debt it owes on the ledger, whatever happens after the commit.
  *
  * No registered executor → DEC-19 loud warning + pending rows (see
  * deleteDiffusionRecord); no targets → silent no-op, matching a fresh
@@ -30,16 +46,36 @@ import { readEnv } from '../../config/env.ts';
 import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import { sql } from '../db/postgres.ts';
 import { DedaloError } from '../errors/index.ts';
+import { assertTestMediaRoot } from '../media/test_media_root.ts';
 import { relationProbeGroups } from '../search/containment.ts';
 import { virtualDateNow } from '../section/record/create_record.ts';
 import type { DiffusionSqlTarget } from './diffusion_graph.ts';
 import { getSectionDiffusionTargets } from './diffusion_map.ts';
+import {
+	diffusionFilesRoot,
+	PER_RECORD_FILE_FORMATS,
+	publishedRecordFilePath,
+	publishedTermLabel,
+	sanitizePublishedFileName,
+} from './published_files.ts';
+
+// The sanitizer is the producer's (published_files.ts); the name stays exported
+// here for the delete-side callers and the gates that pin it.
+export { sanitizePublishedFileName };
 
 export interface DiffusionDeleteOutcome {
 	/** db|table keys the engine confirmed deleted. */
 	deleted: string[];
-	/** Targets that failed or were ledgered (rdf/xml/markdown). */
+	/** Targets that failed transiently (retryable): executor errors, unlink failures, no root. */
 	pending: string[];
+	/**
+	 * Targets that can NEVER be settled by a retry (PUB-02): full-export
+	 * formats, an element without service_name, an rdf without an owl:Class
+	 * for the section, an sql element without database/table. Ledgered with
+	 * their reason, excluded from the retry queue, reported by the
+	 * public_tier reconcile.
+	 */
+	terminal: { key: string; reason: string }[];
 }
 
 /**
@@ -208,6 +244,19 @@ export function resetNativeMediaIndexForTests(): void {
 	nativeMediaIndexOps = null;
 }
 
+/**
+ * The keys of an sql/socrata target that never published anything: the
+ * compiler refuses an element without a database or table label, so a
+ * delete-side target with an empty name has NOTHING to unpublish — terminal,
+ * never pending (PUB-02: these rows used to sit at the head of the retry
+ * queue forever).
+ */
+function sqlTargetTerminalReason(target: DiffusionSqlTarget): string | null {
+	if (target.database_name === '') return 'sql element has no database node — never published';
+	if (target.table_name === '') return 'sql element has no table label — never published';
+	return null;
+}
+
 /** Propagate a record deletion to the diffusion targets. Never throws. */
 export async function deleteDiffusionRecord(
 	sectionTipo: string,
@@ -224,30 +273,31 @@ export async function deleteDiffusionRecord(
 	 */
 	onlyElementTipos?: readonly string[],
 ): Promise<DiffusionDeleteOutcome> {
-	const outcome: DiffusionDeleteOutcome = { deleted: [], pending: [] };
+	const outcome: DiffusionDeleteOutcome = { deleted: [], pending: [], terminal: [] };
 	// Hoisted so the dd1758 fold below sees the SAME (restricted) target set
 	// this run acted on — and is reached on every path that produced one.
 	let targets: readonly DiffusionSqlTarget[] = [];
 	try {
 		targets = restrictToElements(await getSectionDiffusionTargets(sectionTipo), onlyElementTipos);
 
-		const sqlTargets = targets.filter(
-			(target) =>
-				(target.type === 'sql' || target.type === 'socrata') &&
-				target.database_name !== '' &&
-				target.table_name !== '',
-		);
+		const sqlTargets: DiffusionSqlTarget[] = [];
 		for (const target of targets) {
-			if (target.type !== 'sql' && target.type !== 'socrata') {
-				const unlinked = await unlinkPublishedFiles(
-					target.element_tipo,
-					target.type,
-					sectionTipo,
-					sectionId,
-				);
-				if (unlinked) outcome.deleted.push(targetKey(target));
-				else outcome.pending.push(targetKey(target));
+			if (target.type === 'sql' || target.type === 'socrata') {
+				const terminal = sqlTargetTerminalReason(target);
+				if (terminal === null) sqlTargets.push(target);
+				else outcome.terminal.push({ key: targetKey(target), reason: terminal });
+				continue;
 			}
+			const unlinked = await unlinkPublishedFiles(
+				target.element_tipo,
+				target.type,
+				sectionTipo,
+				sectionId,
+			);
+			if (unlinked.kind === 'unpublished') outcome.deleted.push(targetKey(target));
+			else if (unlinked.kind === 'terminal') {
+				outcome.terminal.push({ key: targetKey(target), reason: unlinked.reason });
+			} else outcome.pending.push(targetKey(target));
 		}
 
 		// NATIVE path (DIFFUSION_SPEC §4.2) — the ONLY executor since the
@@ -282,7 +332,16 @@ export async function deleteDiffusionRecord(
 			);
 		}
 	} catch (error) {
-		console.error('diffusion unpublish failed (swallowed, pending rows persist):', error);
+		// Swallowed on purpose (a delete must not fail on its side effects) — but
+		// NOT silent about the debt: the caller that owns the record delete has
+		// already written its intent rows inside its transaction
+		// (ledgerUnpublishIntent, LIFE-07); a direct caller gets the ledger below
+		// from whatever target list was resolved (possibly none — which is why
+		// the record delete no longer relies on this path for its debt).
+		console.error(
+			`diffusion unpublish of ${sectionTipo}/${sectionId} failed (swallowed; the intent rows written inside the delete transaction keep the debt):`,
+			error,
+		);
 	}
 	await logUnpublishOutcome(targets, sectionTipo, sectionId, outcome, logActivity, userId);
 	return outcome;
@@ -339,30 +398,76 @@ export function targetKey(target: DiffusionSqlTarget): string {
 		: `${target.type}:${target.element_tipo}`;
 }
 
+/** How one element of a run ended (the fold of its targets). */
+export type ElementOutcome =
+	| { kind: 'unpublished' }
+	| { kind: 'pending' }
+	| { kind: 'terminal'; reason: string };
+
 /**
  * Fold per-target confirmations into per-element outcomes: an element is
  * successful ONLY when EVERY one of its targets confirmed (AND, not OR — one
- * unconfirmed target poisons its element). Elements fold independently; the
- * `?? true` seed makes the first target of an element decide on its own.
+ * unconfirmed target poisons its element). Elements fold independently. An
+ * element is TERMINAL when nothing of it confirmed and every unconfirmed
+ * target is terminal (PUB-02: a retry can never settle it); one transient
+ * target keeps the element pending (retryable).
  */
 export function foldElementOutcomes(
 	targets: readonly DiffusionSqlTarget[],
-	deletedKeys: ReadonlySet<string>,
-): Map<string, boolean> {
-	const elements = new Map<string, boolean>();
+	outcome: Pick<DiffusionDeleteOutcome, 'deleted' | 'terminal'>,
+): Map<string, ElementOutcome> {
+	const deletedKeys = new Set(outcome.deleted);
+	const terminalReasons = new Map(outcome.terminal.map((entry) => [entry.key, entry.reason]));
+	const perElement = new Map<string, DiffusionSqlTarget[]>();
 	for (const target of targets) {
-		const previous = elements.get(target.element_tipo) ?? true;
-		elements.set(target.element_tipo, previous && deletedKeys.has(targetKey(target)));
+		const list = perElement.get(target.element_tipo) ?? [];
+		list.push(target);
+		perElement.set(target.element_tipo, list);
+	}
+	const elements = new Map<string, ElementOutcome>();
+	for (const [elementTipo, list] of perElement) {
+		elements.set(elementTipo, foldOneElement(list, deletedKeys, terminalReasons));
 	}
 	return elements;
 }
 
+/** One element's fold: unpublished when every target confirmed; terminal when none did and none can. */
+function foldOneElement(
+	list: readonly DiffusionSqlTarget[],
+	deletedKeys: ReadonlySet<string>,
+	terminalReasons: ReadonlyMap<string, string>,
+): ElementOutcome {
+	const unconfirmed = list.filter((target) => !deletedKeys.has(targetKey(target)));
+	if (unconfirmed.length === 0) return { kind: 'unpublished' };
+	const reasons = unconfirmed.map((target) => terminalReasons.get(targetKey(target)) ?? null);
+	if (unconfirmed.length === list.length && reasons.every((reason) => reason !== null)) {
+		return { kind: 'terminal', reason: reasons.join('; ') };
+	}
+	return { kind: 'pending' };
+}
+
+/** The whole-record fold: every element unpublished / all terminal / else pending. */
+export function foldRecordOutcome(
+	targets: readonly DiffusionSqlTarget[],
+	outcome: Pick<DiffusionDeleteOutcome, 'deleted' | 'terminal'>,
+): ElementOutcome {
+	const elements = [...foldElementOutcomes(targets, outcome).values()];
+	if (elements.length === 0) return { kind: 'pending' }; // nothing resolved: keep the debt
+	if (elements.every((element) => element.kind === 'unpublished')) return { kind: 'unpublished' };
+	const terminal = elements.filter(
+		(element): element is { kind: 'terminal'; reason: string } => element.kind === 'terminal',
+	);
+	if (terminal.length === elements.length) {
+		return { kind: 'terminal', reason: terminal.map((element) => element.reason).join('; ') };
+	}
+	return { kind: 'pending' };
+}
+
 /**
  * dd1758 diffusion log: one row per element (sql AND file) — unpublished (2)
- * when every one of its targets confirmed, unpublish_pending (3) otherwise.
- * Shared by
- * the native and engine-socket delete paths so the ledger is identical
- * regardless of executor.
+ * when every one of its targets confirmed, unpublish_pending (3) otherwise; a
+ * terminal element's pending row carries its reason in misc.dd1758_retry so
+ * the retry queue skips it and the reconcile reports it.
  */
 async function logUnpublishOutcome(
 	/** The targets this run acted on — already restricted by onlyElementTipos. */
@@ -375,14 +480,20 @@ async function logUnpublishOutcome(
 ): Promise<void> {
 	if (!logActivity) return;
 	try {
-		const elements = foldElementOutcomes(targets, new Set(outcome.deleted));
-		for (const [elementTipo, success] of elements) {
+		const elements = foldElementOutcomes(targets, outcome);
+		for (const [elementTipo, result] of elements) {
 			await logDiffusionActivity({
 				sectionTipo,
 				sectionId,
 				elementTipo,
-				action: success ? 2 : 3, // unpublished | unpublish_pending
+				action:
+					result.kind === 'unpublished'
+						? DIFFUSION_ACTION.unpublished
+						: DIFFUSION_ACTION.unpublishPending,
 				userId,
+				...(result.kind === 'terminal'
+					? { retry: { attempts: 0, last_attempt: null, terminal: result.reason } }
+					: {}),
 			});
 		}
 	} catch (error) {
@@ -462,6 +573,24 @@ export function diffusionActionContains(
  * OMITTED entirely (PHP diffusion_activity_logger `if ($user_id)`) — never a
  * fabricated superuser −1 locator.
  */
+/**
+ * THE RETRY STAMP — misc.dd1758_retry on a pending row (PUB-02). `attempts`
+ * counts the settle/retry runs that did not resolve the row; `last_attempt`
+ * orders the queue (least-recently-attempted first, unattempted first of all);
+ * `terminal` names why no retry can ever settle it. misc is the matrix column
+ * for non-component state, the key is no component tipo, and the section read
+ * never emits unknown misc keys — so the stamp is not on the wire (no WC).
+ */
+export const RETRY_STAMP_KEY = 'dd1758_retry';
+
+export interface RetryStamp {
+	attempts: number;
+	/** ISO instant of the last unsuccessful attempt; null before the first. */
+	last_attempt: string | null;
+	/** Present ⇔ the row is terminal (never retried, always reported). */
+	terminal?: string;
+}
+
 export async function logDiffusionActivity(entry: {
 	sectionTipo: string;
 	sectionId: number;
@@ -469,7 +598,9 @@ export async function logDiffusionActivity(entry: {
 	action: number;
 	userId?: number;
 	now?: Date;
-}): Promise<void> {
+	/** A retry stamp to write with the row (terminal rows are born stamped). */
+	retry?: RetryStamp;
+}): Promise<number> {
 	const now = entry.now ?? new Date();
 	const relation: Record<string, unknown[]> = {
 		dd1763: [
@@ -519,23 +650,49 @@ export async function logDiffusionActivity(entry: {
 	}
 	const { encodeForJsonb } = await import('../db/json_codec.ts');
 	await ensureActivityTable();
-	await sql.unsafe(
+	const misc = entry.retry === undefined ? {} : { [RETRY_STAMP_KEY]: entry.retry };
+	const inserted = (await sql.unsafe(
 		`INSERT INTO "${activityTable()}" (section_tipo, relation, string, date, number, misc)
-		 VALUES ('dd1758', $1::text::jsonb, $2::text::jsonb, $3::text::jsonb, $4::text::jsonb, '{}'::text::jsonb)`,
+		 VALUES ('dd1758', $1::text::jsonb, $2::text::jsonb, $3::text::jsonb, $4::text::jsonb, $5::text::jsonb)
+		 RETURNING section_id`,
 		[
 			encodeForJsonb(relation),
 			encodeForJsonb({ dd1765: [{ lang: 'lg-nolan', value: entry.sectionTipo }] }),
 			encodeForJsonb({ dd1761: [{ start: virtualDateNow(now) }] }),
 			encodeForJsonb({ dd1764: [{ value: entry.sectionId }] }),
+			encodeForJsonb(misc),
 		],
-	);
+	)) as { section_id: number }[];
+	return Number(inserted[0]?.section_id);
 }
+
+/** One pending dd1758 row as the retry/settle loop reads it. */
+interface PendingRow {
+	section_id: number;
+	target_section: string | null;
+	target_id: string | null;
+	element_section: string | null;
+	element_id: string | null;
+}
+
+const PENDING_ROW_PROJECTION = `section_id,
+	        relation->'dd1763'->0->>'section_tipo' AS target_section,
+	        relation->'dd1763'->0->>'section_id' AS target_id,
+	        relation->'dd1766'->0->>'section_tipo' AS element_section,
+	        relation->'dd1766'->0->>'section_id' AS element_id`;
 
 /**
  * Re-run pending unpublish rows (PHP diffusion_delete::retry_pending): read
  * dd1758 rows whose dd1767 action is unpublish_pending, re-run the delete
  * restricted to the row's element, and flip the action locator IN PLACE to
  * unpublished — only when the retry actually confirmed targets (DIFFU-08).
+ *
+ * QUEUE FAIRNESS (PUB-02). The window is the `limit` LEAST-RECENTLY-ATTEMPTED
+ * rows — never-attempted first, then by the stamp, then by age — and every
+ * row the run could not settle is stamped, so the next run's window starts
+ * past it. A row that fails forever therefore rotates through the queue
+ * instead of pinning its head; and a TERMINAL row (misc.dd1758_retry.terminal)
+ * is not selected at all — it stays on the ledger as reported debt.
  */
 export async function retryPendingDiffusion(
 	limit = 100,
@@ -551,64 +708,211 @@ export async function retryPendingDiffusion(
 		(payload) => `$${pendingParams.push(payload)}`,
 	);
 	const rows = (await sql.unsafe(
-		`SELECT section_id,
-		        relation->'dd1763'->0->>'section_tipo' AS target_section,
-		        relation->'dd1763'->0->>'section_id' AS target_id,
-		        relation->'dd1766'->0->>'section_tipo' AS element_section,
-		        relation->'dd1766'->0->>'section_id' AS element_id
+		`SELECT ${PENDING_ROW_PROJECTION}
 		 FROM "${activityTable()}"
 		 WHERE section_tipo = 'dd1758'
 		   AND ${pendingProbe}
-		 ORDER BY section_id ASC LIMIT ${Math.max(1, Math.floor(limit))}`,
+		   AND (misc->'${RETRY_STAMP_KEY}'->>'terminal') IS NULL
+		 ORDER BY (misc->'${RETRY_STAMP_KEY}'->>'last_attempt') ASC NULLS FIRST, section_id ASC
+		 LIMIT ${Math.max(1, Math.floor(limit))}`,
 		pendingParams,
-	)) as {
-		section_id: number;
-		target_section: string | null;
-		target_id: string | null;
-		element_section: string | null;
-		element_id: string | null;
-	}[];
+	)) as PendingRow[];
 	const outcome = { total: rows.length, retried: 0, remaining: 0 };
 	for (const row of rows) {
 		if (row.target_section === null || row.target_id === null) {
 			outcome.remaining++;
 			continue;
 		}
-		const element = pendingRowElementTipo(row.element_section, row.element_id);
-		const retry = await deleteDiffusionRecord(
-			row.target_section,
-			Number(row.target_id),
-			false, // the pending row already represents the intent — no new rows
-			undefined,
-			// D10b (fixed 2026-08-09): restrict the retry to THIS row's element
-			// (PHP retry_pending `only_element_tipos`). Without it the flip below
-			// — record-level `retry.deleted.length > 0` — marks a still-failing
-			// element 'unpublished' because a SIBLING element succeeded.
-			element === null ? undefined : [element],
-		);
-		if (retry.deleted.length > 0) {
-			// Flip unpublish_pending → unpublished in place, AND upgrade the
-			// element to the D16 shape in the same statement: drop whatever
-			// legacy `section_id` token the row carried (string '3' or the int 3
-			// a canonicalization sweep left) and stamp the action under its own
-			// key. Shape-agnostic, so it is correct for old and new rows alike.
-			await sql.unsafe(
-				`UPDATE "${activityTable()}"
-				 SET relation = jsonb_set(
-				         relation,
-				         '{${DIFFUSION_ACTION_COMPONENT},0}',
-				         ((relation->'${DIFFUSION_ACTION_COMPONENT}'->0) - 'section_id')
-				             || jsonb_build_object('${DIFFUSION_ACTION_KEY}', $2::int)
-				     )
-				 WHERE section_tipo = 'dd1758' AND section_id = $1`,
-				[row.section_id, DIFFUSION_ACTION.unpublished],
-			);
+		if (
+			await settlePendingRow({
+				...row,
+				target_section: row.target_section,
+				target_id: row.target_id,
+			})
+		)
 			outcome.retried++;
-		} else {
-			outcome.remaining++;
-		}
+		else outcome.remaining++;
 	}
 	return outcome;
+}
+
+/**
+ * Re-run ONE pending row's unpublish and update the row from the result:
+ * flipped to unpublished (true) when its targets confirmed; stamped terminal
+ * when none can ever confirm; otherwise stamped with one more attempt
+ * (false). Shared by the retry queue and the post-commit settle of a record
+ * delete's intent rows, so both update the ledger by the same rule.
+ */
+async function settlePendingRow(
+	row: PendingRow & { target_section: string; target_id: string },
+): Promise<boolean> {
+	const element = pendingRowElementTipo(row.element_section, row.element_id);
+	const retry = await deleteDiffusionRecord(
+		row.target_section,
+		Number(row.target_id),
+		false, // the pending row already represents the intent — no new rows
+		undefined,
+		// D10b (fixed 2026-08-09): restrict the retry to THIS row's element
+		// (PHP retry_pending `only_element_tipos`). Without it the flip below
+		// — record-level `retry.deleted.length > 0` — marks a still-failing
+		// element 'unpublished' because a SIBLING element succeeded.
+		element === null ? undefined : [element],
+	);
+	// Settled ⇔ something confirmed AND nothing this row addresses is still
+	// owed: the AND law of the element fold, applied to the row. For an
+	// element-restricted row that is the element's own targets; for a
+	// record-level row (resolution threw at delete time) it is EVERY element —
+	// one confirmed sibling must not flip a row that still owes another.
+	const settled =
+		retry.deleted.length > 0 && retry.pending.length === 0 && retry.terminal.length === 0;
+	if (settled) {
+		await flipPendingRowUnpublished(row.section_id);
+		return true;
+	}
+	await stampPendingRow(row.section_id, terminalReasonOf(retry));
+	return false;
+}
+
+/**
+ * Terminal only when EVERYTHING this row addresses is terminal — an
+ * element-less (record-level) row folds over the whole record. Null = retryable.
+ */
+function terminalReasonOf(
+	retry: Pick<DiffusionDeleteOutcome, 'pending' | 'terminal'>,
+): string | null {
+	if (retry.terminal.length === 0 || retry.pending.length > 0) return null;
+	return retry.terminal.map((entry) => entry.reason).join('; ');
+}
+
+/**
+ * Flip unpublish_pending → unpublished in place, AND upgrade the element to
+ * the D16 shape in the same statement: drop whatever legacy `section_id`
+ * token the row carried (string '3' or the int 3 a canonicalization sweep
+ * left) and stamp the action under its own key. Shape-agnostic, so it is
+ * correct for old and new rows alike.
+ */
+async function flipPendingRowUnpublished(rowId: number): Promise<void> {
+	await sql.unsafe(
+		`UPDATE "${activityTable()}"
+		 SET relation = jsonb_set(
+		         relation,
+		         '{${DIFFUSION_ACTION_COMPONENT},0}',
+		         ((relation->'${DIFFUSION_ACTION_COMPONENT}'->0) - 'section_id')
+		             || jsonb_build_object('${DIFFUSION_ACTION_KEY}', $2::int)
+		     )
+		 WHERE section_tipo = 'dd1758' AND section_id = $1`,
+		[rowId, DIFFUSION_ACTION.unpublished],
+	);
+}
+
+/** attempts + 1, last_attempt = now (+ the terminal reason when given). */
+async function stampPendingRow(rowId: number, terminal: string | null): Promise<void> {
+	const { encodeForJsonb } = await import('../db/json_codec.ts');
+	await sql.unsafe(
+		`UPDATE "${activityTable()}"
+		 SET misc = jsonb_set(
+		         COALESCE(misc, '{}'::jsonb),
+		         '{${RETRY_STAMP_KEY}}',
+		         jsonb_build_object(
+		             'attempts', COALESCE((misc->'${RETRY_STAMP_KEY}'->>'attempts')::int, 0) + 1,
+		             'last_attempt', $2::text
+		         ) || $3::text::jsonb
+		     )
+		 WHERE section_tipo = 'dd1758' AND section_id = $1`,
+		[rowId, new Date().toISOString(), encodeForJsonb(terminal === null ? {} : { terminal })],
+	);
+}
+
+/**
+ * DURABLE INTENT, half one (LIFE-07): called INSIDE the record delete's
+ * transaction, after the matrix row is gone. Writes one unpublish_pending row
+ * per publication element of the section — the debt the delete owes the
+ * public tier — so a commit can never outrun its ledger: whatever fails after
+ * it (the executor, the process, the MariaDB link), the rows are there for the
+ * retry queue and the reconcile. When target resolution itself throws, ONE
+ * record-level row (no dd1766 element) is written instead; the settle and the
+ * retry run such a row unrestricted. No targets → no rows (fresh-install
+ * posture). `resolveTargets` is the seam the gate uses to make resolution
+ * throw; production passes nothing.
+ */
+export interface UnpublishIntent {
+	sectionTipo: string;
+	sectionId: number;
+	/** dd1758 row ids written, with the element each represents (null = record-level). */
+	rows: { rowId: number; elementTipo: string | null }[];
+}
+
+export async function ledgerUnpublishIntent(
+	sectionTipo: string,
+	sectionId: number,
+	userId?: number,
+	resolveTargets: (
+		sectionTipo: string,
+	) => Promise<readonly DiffusionSqlTarget[]> = getSectionDiffusionTargets,
+): Promise<UnpublishIntent> {
+	const intent: UnpublishIntent = { sectionTipo, sectionId, rows: [] };
+	let elements: (string | null)[];
+	try {
+		const targets = await resolveTargets(sectionTipo);
+		elements = [...new Set(targets.map((target) => target.element_tipo))];
+	} catch (error) {
+		console.error(
+			`[diffusion] target resolution for ${sectionTipo}/${sectionId} threw inside the delete — writing a record-level pending row so the debt survives:`,
+			error,
+		);
+		elements = [null];
+	}
+	for (const elementTipo of elements) {
+		const rowId = await logDiffusionActivity({
+			sectionTipo,
+			sectionId,
+			elementTipo,
+			action: DIFFUSION_ACTION.unpublishPending,
+			userId,
+		});
+		intent.rows.push({ rowId, elementTipo });
+	}
+	return intent;
+}
+
+/** The dd1766 locator halves of an element tipo (`zzd7` → `zzd0` / `7`); nulls for a record-level row. */
+function elementLocatorParts(elementTipo: string | null | undefined): {
+	element_section: string | null;
+	element_id: string | null;
+} {
+	const match = elementTipo?.match(/^([a-z]+)([0-9]+)$/) ?? null;
+	if (match === null) return { element_section: null, element_id: null };
+	return { element_section: `${match[1]}0`, element_id: match[2] as string };
+}
+
+/**
+ * DURABLE INTENT, half two: post-commit, run the unpublish for each intent row
+ * and settle it by the retry rule (flip / stamp terminal / stamp attempt).
+ * Never throws — a row it could not settle stays pending for the queue.
+ */
+export async function settleUnpublishIntent(
+	intent: UnpublishIntent,
+): Promise<{ settled: number; pending: number }> {
+	const summary = { settled: 0, pending: 0 };
+	for (const row of intent.rows) {
+		try {
+			const settled = await settlePendingRow({
+				section_id: row.rowId,
+				target_section: intent.sectionTipo,
+				target_id: String(intent.sectionId),
+				...elementLocatorParts(row.elementTipo),
+			});
+			if (settled) summary.settled++;
+			else summary.pending++;
+		} catch (error) {
+			summary.pending++;
+			console.error(
+				`[diffusion] settling intent row ${row.rowId} of ${intent.sectionTipo}/${intent.sectionId} failed (the row stays pending):`,
+				error,
+			);
+		}
+	}
+	return summary;
 }
 
 /**
@@ -628,20 +932,99 @@ export function pendingRowElementTipo(
 	return `${match[1]}${elementId}`;
 }
 
-/** PHP sanitize_file_name + beautify (delete-side subset: dash-safe names). */
-export function sanitizePublishedFileName(name: string): string {
-	let out = name.replace(/[^\w\s\d\-_~,;[\]().]/gu, '');
-	out = out.replace(/\.{2,}/g, '');
-	out = out.toLowerCase().replace(/[^a-z0-9.]+/g, '-');
-	out = out.replace(/[\s_]+/g, '-').replace(/-+/g, '-');
-	out = out.replace(/-*\.-*/g, '.').replace(/\.{2,}/g, '.');
-	return out.replace(/^[-.]+|[-.]+$/g, '');
+/**
+ * What a file element's per-record path resolves to. `terminal` = no retry
+ * can ever produce a path (PUB-02); `unavailable` = transient (no root
+ * configured here and now) — pending, retried.
+ */
+export type PublishedFileResolution =
+	| { kind: 'file'; path: string }
+	| { kind: 'terminal'; reason: string }
+	| { kind: 'unavailable'; reason: string };
+
+/**
+ * Resolve one file element's published path THROUGH THE PRODUCER publish
+ * uses (published_files.ts; PHP diffusion_rdf/xml/markdown
+ * get_record_file_path). The root is `mediaRoot` when a caller passes one
+ * (gates), else diffusionFilesRoot() — the same call the writers make.
+ */
+export async function resolvePublishedFile(
+	elementTipo: string,
+	type: string,
+	sectionTipo: string,
+	sectionId: number,
+	mediaRoot?: string,
+): Promise<PublishedFileResolution> {
+	if (!PER_RECORD_FILE_FORMATS.has(type)) {
+		return {
+			kind: 'terminal',
+			reason: `'${type}' publishes no per-record file — a record leaves it only when the element is re-published`,
+		};
+	}
+	let root: string;
+	try {
+		root =
+			mediaRoot !== undefined && mediaRoot !== ''
+				? assertTestMediaRoot(mediaRoot, 'resolvePublishedFile')
+				: diffusionFilesRoot();
+	} catch (error) {
+		// The text goes to the log; the reason on the outcome is a sentence.
+		console.error('[diffusion] published-files root unavailable:', error);
+		return { kind: 'unavailable', reason: 'published-files root unavailable (see log)' };
+	}
+	const propsRows = (await sql.unsafe(
+		`SELECT properties->'diffusion'->>'service_name' AS service FROM dd_ontology WHERE tipo = $1`,
+		[elementTipo],
+	)) as { service: string | null }[];
+	const service = propsRows[0]?.service ?? null;
+	if (service === null || service === '') {
+		// The compiler refuses such an element (compile.ts service_name check):
+		// it never published a file, so there is nothing a retry could remove.
+		return {
+			kind: 'terminal',
+			reason: `element '${elementTipo}' has no service_name — never published`,
+		};
+	}
+
+	let rdfName: string | null = null;
+	if (type === 'rdf') {
+		// rdf: the owl:Class child whose related section matches names the file.
+		const owlRows = (await sql.unsafe(
+			`SELECT term, relations FROM dd_ontology WHERE parent = $1 AND model = 'owl:Class'`,
+			[elementTipo],
+		)) as { term: Record<string, string> | null; relations: { tipo?: string }[] | null }[];
+		for (const row of owlRows) {
+			const related = (row.relations ?? []).map((link) => link.tipo);
+			if (related.includes(sectionTipo)) {
+				rdfName = publishedTermLabel(row.term);
+				break;
+			}
+		}
+		if (rdfName === null) {
+			return {
+				kind: 'terminal',
+				reason: `rdf element '${elementTipo}' has no owl:Class for section '${sectionTipo}' — never published`,
+			};
+		}
+	}
+	const path = publishedRecordFilePath({
+		root,
+		type,
+		dirLabel: service,
+		sectionTipo,
+		sectionId,
+		rdfName,
+	});
+	if (path === null) {
+		return { kind: 'terminal', reason: `'${type}' publishes no per-record file` };
+	}
+	return { kind: 'file', path };
 }
 
 /**
- * Resolve one file element's published path (PHP diffusion_rdf/xml/markdown
- * get_record_file_path). Null when the element declares no service_name —
- * the live rdf config here — which the caller records as pending.
+ * The path form of resolvePublishedFile: the per-record path, or null when
+ * there is none (terminal or unavailable — callers that need the distinction
+ * use resolvePublishedFile).
  */
 export async function resolvePublishedFilePath(
 	elementTipo: string,
@@ -650,41 +1033,21 @@ export async function resolvePublishedFilePath(
 	sectionId: number,
 	mediaRoot?: string,
 ): Promise<string | null> {
-	const root = mediaRoot ?? readEnv('MEDIA_PATH');
-	if (root === undefined || root === '') return null;
-	const propsRows = (await sql.unsafe(
-		`SELECT properties->'diffusion'->>'service_name' AS service FROM dd_ontology WHERE tipo = $1`,
-		[elementTipo],
-	)) as { service: string | null }[];
-	const service = propsRows[0]?.service ?? null;
-	if (service === null || service === '') return null;
-
-	if (type === 'xml' || type === 'markdown') {
-		const extension = type === 'xml' ? 'xml' : 'md';
-		return `${root}/${type}/${service}/${sectionTipo}_${sectionId}.${extension}`;
-	}
-	// rdf: the owl:Class child whose related section matches names the file.
-	const owlRows = (await sql.unsafe(
-		`SELECT term, relations FROM dd_ontology WHERE parent = $1 AND model = 'owl:Class'`,
-		[elementTipo],
-	)) as { term: Record<string, string> | null; relations: { tipo?: string }[] | null }[];
-	let rdfName: string | null = null;
-	for (const row of owlRows) {
-		const related = (row.relations ?? []).map((link) => link.tipo);
-		if (related.includes(sectionTipo)) {
-			rdfName = row.term?.['lg-spa'] ?? Object.values(row.term ?? {})[0] ?? null;
-			break;
-		}
-	}
-	if (rdfName === null) return null;
-	const fileName = `${sanitizePublishedFileName(`${rdfName}_${sectionTipo}_${sectionId}`)}.rdf`;
-	return `${root}/rdf/${service}/${fileName}`;
+	const resolved = await resolvePublishedFile(elementTipo, type, sectionTipo, sectionId, mediaRoot);
+	return resolved.kind === 'file' ? resolved.path : null;
 }
+
+/** How one file element's unpublish ended. */
+export type UnlinkOutcome =
+	| { kind: 'unpublished' }
+	| { kind: 'pending'; reason: string }
+	| { kind: 'terminal'; reason: string };
 
 /**
  * Unlink a file element's published copy (+ rdf legacy '{base}_*.rdf'
- * variants). True on success INCLUDING the nothing-published idempotent
- * case; false when the path is unresolvable or an unlink fails.
+ * variants). 'unpublished' on success INCLUDING the nothing-published
+ * idempotent case; 'pending' when the root is unavailable or an unlink
+ * fails; 'terminal' when no path can ever exist for this element.
  */
 export async function unlinkPublishedFiles(
 	elementTipo: string,
@@ -692,16 +1055,18 @@ export async function unlinkPublishedFiles(
 	sectionTipo: string,
 	sectionId: number,
 	mediaRoot?: string,
-): Promise<boolean> {
+): Promise<UnlinkOutcome> {
 	try {
-		const filePath = await resolvePublishedFilePath(
+		const resolved = await resolvePublishedFile(
 			elementTipo,
 			type,
 			sectionTipo,
 			sectionId,
 			mediaRoot,
 		);
-		if (filePath === null) return false; // unresolvable → pending
+		if (resolved.kind === 'terminal') return resolved;
+		if (resolved.kind === 'unavailable') return { kind: 'pending', reason: resolved.reason };
+		const filePath = resolved.path;
 		const toUnlink: string[] = [];
 		if (existsSync(filePath)) toUnlink.push(filePath);
 		if (type === 'rdf') {
@@ -717,10 +1082,10 @@ export async function unlinkPublishedFiles(
 			}
 		}
 		for (const path of toUnlink) unlinkSync(path);
-		return true; // empty toUnlink = already removed (idempotent)
+		return { kind: 'unpublished' }; // empty toUnlink = already removed (idempotent)
 	} catch (error) {
 		console.error('published-file unlink failed:', error);
-		return false;
+		return { kind: 'pending', reason: 'published-file unlink failed (see log)' };
 	}
 }
 

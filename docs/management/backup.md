@@ -74,54 +74,96 @@ You can see `pg_dump` official documentation [here](https://www.postgresql.org/d
 
 ## Restore a backup for the work system
 
-To restore a Dédalo backup you will need to access to your sever with administration privileges.
+A restore is a procedure the engine owns. Do not run `pg_restore` by hand
+against a live database: `pg_restore` continues past errors by default, so a
+run whose copy of one table failed leaves that table's OLD rows beside restored
+neighbours, and nothing you can see distinguishes it from a successful restore.
+The engine's restore door does the whole procedure in the right order, refuses
+at the first thing that is wrong, and leaves your database exactly as it was
+whenever it refuses.
 
-To import the file that you previously created, or restore the DB backup by running the following commands:
+You need shell access to the server with administration privileges, and the
+database role Dédalo connects with needs the `CREATEDB` privilege (the door
+builds the restored database beside the current one and swaps them by name):
 
-- If you want restore into a existent database go to point 4,
-- If you want restore into a fresh Dédalo database follow all points.
+```sql
+ALTER ROLE dedalo_database_user CREATEDB;
+```
 
-1. Enter into `psql`:
-
-    ```shell
-    su - postgres
-    psql
-    ```
-
-2. Create a Dédalo user:
-
-    ```sql
-    CREATE USER dedalo_database_user PASSWORD 'My_super_Secret_pw';
-    ```
-
-3. Create a Dédalo database and comment it:
-
-    ```sql
-    CREATE DATABASE dedalo_database_name
-    WITH ENCODING='UTF8'
-    OWNER=dedalo_database_user
-    CONNECTION LIMIT=-1
-    TABLESPACE=pg_default;
-    ```
-
-    ```sql
-    COMMENT ON DATABASE dedalo_database_name
-    IS 'Dédalo: Cultural Heritage and Memory management system';
-    ```
-
-4. Restore the backup
+1. Stop the engine, and the watchdog timer that would restart it:
 
     ```shell
-    pg_restore --host localhost --port 5432 --username "dedalo_database_user" --dbname "dedalo_database_name" --role "dedalo_database_user" --no-owner --no-privileges --clean --verbose "../dedalo_backup_database.backup"
+    systemctl stop dedalo-ts.service dedalo-ts-watchdog.timer
     ```
 
-    You can see `pg_restore` official documentation [here](https://www.postgresql.org/docs/current/app-pgrestore.html).
+    The door refuses while anything is still connected to the database — it
+    tells you which connection, by process id.
+
+2. Run the door with the backup file:
+
+    ```shell
+    cd /opt/dedalo/master_dedalo
+    bun scripts/restore.ts /opt/dedalo/private/backups/db/2026-08-29_033000.my_dedalo_db.custom.backup
+    ```
+
+    What it does, in order: it reads the WHOLE file to prove it is a complete
+    dump (a file cut short by a failed backup passes every cheaper check);
+    checks that nothing is connected; restores into a new, empty database in
+    one transaction that either lands completely or not at all; renames your
+    current database to `<name>_pre_restore_<stamp>` and the restored one to
+    `<name>`; runs the reconcile checks a restore needs (the media counters are
+    repaired, the rest are reported); writes a report to
+    `<backups>/restores/<stamp>.json`; and switches maintenance mode on so an
+    engine started early lets only superusers in.
+
+    Exit status `0` means restored with nothing left to decide; `2` means
+    restored, and the report lists checks HELD for your decision (the
+    `reconcile` panel in the maintenance area, or `bun scripts/reconcile.ts`);
+    `1` means it refused or failed — and your database is untouched.
+
+3. Restore the media files from a backup generation older than the problem
+   (see below), rebuild the derivatives with the *update cache* tool, and start
+   the engine again. Switch maintenance mode off from the maintenance area once
+   you have read the report.
+
+4. When the restored system is accepted, drop the previous copy — it is a full
+   second database on the same disk:
+
+    ```sql
+    DROP DATABASE my_dedalo_db_pre_restore_20260829_033000;
+    ```
+
+    (or pass `--drop-previous` to the door to skip keeping it).
+
+To restore into a database with a different name — for a rehearsal, or a fresh
+server — pass `--database other_name`; when that database does not exist yet
+the door simply creates it, and nothing is renamed. This is a REHEARSAL, and
+the door treats it as one: it verifies, restores and swaps, but it does not
+run the reconcile checks and does not switch maintenance mode on — both belong
+to the database in your `.env`, the one the running engine serves, so a
+rehearsal is safe while the engine is up. Its verdict is the record count in
+`other_name`, which you read yourself; drop that database when you are done.
+Rehearse a restore quarterly this way: a backup that has never been restored
+is a hypothesis.
 
 ## Backup of media files
 
 Media files are the most large data to be backup, usually it will be a large list of image, audiovisual, pdf, and other documents. If your Dédalo project has large audiovisual files, or thousands or millions image files, you will expect a server with large storage (TBs instead GBs) and your backup storage need to be set to retain almost 3 copies of the media files.
 
-To achieve backup of all media files, if your system has a large set of media files, should not possible a full daily backup, so the plan will be to create a rsync or similar script to create a incremental backup of the media files coping  only the daily changes, but not the full backup. In incremental backup the old files are not copied daily, and to prevent errors in the backup your scrip need to create a full backup at week or month.
+The nightly backup job the engine ships (`deploy/dedalo-backup.service`, or the
+`backup` service of the compose stacks) already copies the media originals as
+dated generations: each night's copy is a directory named by its timestamp in
+which unchanged files are hard links into the previous night's, so fourteen
+generations cost little more disk than one, and a file deleted by mistake is
+still in every generation older than the mistake. The number kept is the
+`--keep` value of the job. To restore, copy the generation you want back over
+the media directory — never the newest one if the newest one already contains
+the mistake.
+
+If you write your own script instead, keep the same rule: never a single
+mirror that deletes on the destination what was deleted at the source (`rsync
+--delete` into one directory is ONE copy, and it follows the mistake). Use
+dated `rsync --link-dest` generations, or filesystem snapshots.
 
 ### Creating an incremental script for media files
 

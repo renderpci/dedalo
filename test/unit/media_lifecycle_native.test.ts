@@ -346,16 +346,11 @@ describe('section media delete/restore round trip', () => {
 		// repo-wide scan, and it is a SUBSET assertion against a named list: a new
 		// offender fails it, while the workstream that owns a listed one can strike its
 		// entry without breaking this suite.
-		const known = new Set([
-			// Handed off, 2026-08-09: `resolvePublishedFilePath` returns null when the
-			// key is unset, so on a default install diffusion UNPUBLISH silently deletes
-			// no published file at all — the same defect class, in the diffusion bridge.
-			'src/core/diffusion_bridge/diffusion_delete.ts',
-			// Its publish-side twin. This one at least FAILS LOUD
-			// (MissingDiffusionFilesRootError) instead of no-op'ing, but it still means
-			// file diffusion is unusable on an install that never wrote the key.
-			'src/diffusion/writers/files.ts',
-		]);
+		// Struck 2026-09-03 (P1-12 / PUB-03): the two diffusion entries — the
+		// delete-side `resolvePublishedFilePath` and its publish-side twin
+		// writers/files.ts — now resolve through ONE producer that reads
+		// `config.media.rootPath` (src/core/diffusion_bridge/published_files.ts).
+		const known = new Set<string>([]);
 		const repo = join(import.meta.dir, '../..');
 		/** Files matching `pattern` under src/ + tools/, repo-relative. */
 		const scan = (pattern: string): string[] => {

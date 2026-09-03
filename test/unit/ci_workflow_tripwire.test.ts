@@ -351,6 +351,30 @@ function ledgerTripwires(): string[] {
  */
 const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	[
+		'test/unit/restore_door_native.test.ts',
+		'It pg_dumps the whole suite database into a real custom-format archive and drives the door against a scratch Postgres database (CREATE/RENAME/DROP DATABASE, pg_restore, a held psql backend, the real reconcile plan through the pool), so without Postgres + pg_dump/pg_restore the describe.if skips 10 of 12 tests loudly and only the plan-totality and identifier-grammar legs run',
+	],
+	[
+		'test/unit/unpublish_debt_native.test.ts',
+		'Every leg drives the real dd1758 ledger, the zzd diffusion ontology and a real record delete on the suite Postgres (describe.if(DB_READY) skips all 5 cases on a closed port)',
+	],
+	[
+		'test/unit/diffusion_frontier_scope_native.test.ts',
+		'It runs the real resolver over the zzdif domain records and the ACL identity fixture on the suite Postgres (describe.if(DB_READY) skips both cases on a closed port)',
+	],
+	[
+		'test/unit/diffusion_seed_compiles_native.test.ts',
+		"It compiles the real dd_ontology of the suite database — the ontology index, every dd1190 domain's virtual tree and inspectOntology's drift all read matrix_ontology/dd_ontology, and the migration-recorded check reads dedalo_ts_schema_migrations",
+	],
+	[
+		'test/unit/raw_roundtrip_native.test.ts',
+		'Every case builds the zzarc situation on the suite database and restores into it after a real drop; with the port closed all 9 cases SKIP via describe.if(DB_READY)',
+	],
+	[
+		'test/unit/conform_locator_existence_native.test.ts',
+		'The gate extracts from and restores into the suite database (a second, outside-only situation plays the destination); with the port closed all 5 cases SKIP via describe.if(DB_READY)',
+	],
+	[
 		'test/unit/write_obligations_native.test.ts',
 		"Every case drives a real write door on the suite database (matrix_test rows, matrix_activity rows, matrix_time_machine, the observer recompute's SQL) and is describe.if(DB_READY)-gated, so without Postgres the file is 13 skips and asserts nothing",
 	],

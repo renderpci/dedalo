@@ -110,6 +110,7 @@ export const REGISTERED_NAMES: readonly string[] = [
 	'rag_index',
 	'ontology',
 	'hierarchy',
+	'public_tier',
 ];
 
 // Process-lifetime registry state (module_state_tripwire allowlisted): the

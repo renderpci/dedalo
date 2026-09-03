@@ -14,11 +14,35 @@
  * DIFF-B — `diffuse` trusted client options: skip_publication_state_check turned
  * the fail-closed per-record publication gate OFF, and `levels` was unclamped.
  * Fix: the enqueue path gates the bypass on isGlobalAdmin and clamps levels.
+ *
+ * PUB-03 (audit 2026-08-26, P1-12) — PATH lockstep for the FILE half, measured
+ * as an OUTCOME, not a spelling: for EVERY file writer the registry serves
+ * (census TOTAL over WRITER_REGISTRY minus the table formats), a file planted
+ * at the path the ONE producer names (core/diffusion_bridge/published_files.ts
+ * — what the delete side resolves) is the file that writer's own
+ * removeRecords unlinks; a full-export format (csv/json) has NO per-record
+ * path on either side and the delete side classifies it TERMINAL. The two
+ * sanitizers are one function object. Hermetic: a marked scratch root, no DB.
  */
 
-import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import {
+	resolvePublishedFile,
+	sanitizePublishedFileName,
+} from '../../src/core/diffusion_bridge/diffusion_delete.ts';
+import {
+	PER_RECORD_FILE_FORMATS,
+	sanitizePublishedFileName as producerSanitize,
+	publishedRecordFilePath,
+} from '../../src/core/diffusion_bridge/published_files.ts';
+import { TABLE_FORMATS } from '../../src/diffusion/plan/formats.ts';
+import type { PublicationPlan, SectionPlan } from '../../src/diffusion/plan/types.ts';
+import { diffusionFilesRoot } from '../../src/diffusion/writers/files.ts';
+import { sanitizeRdfFileName } from '../../src/diffusion/writers/rdf.ts';
+import { getDiffusionWriter, WRITER_REGISTRY } from '../../src/diffusion/writers/registry.ts';
+import { scratchMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const ROOT = join(import.meta.dir, '..', '..');
 const read = (rel: string): string => readFileSync(join(ROOT, rel), 'utf8');
@@ -60,5 +84,119 @@ describe('DIFF-B — publication scope is server-authoritative', () => {
 	test('the recursion budget is clamped to the server ceiling', () => {
 		expect(actions.includes('diffusionResolveLevels()')).toBe(true);
 		expect(actions.includes('Math.min(requestedLevels, diffusionResolveLevels())')).toBe(true);
+	});
+});
+
+describe('PUB-03 — publish/delete PATH lockstep, TOTAL over the file writers', () => {
+	const SERVICE = 'lock_svc';
+	const SECTION = 'zzlk1';
+	const RDF_LABEL = 'nmo:LockClass';
+	const RECORD = 7;
+	const OTHER = 8;
+	let root = '';
+	let savedRoot: string | undefined;
+
+	beforeAll(() => {
+		root = scratchMediaRoot('dedalo_scope_lockstep_');
+		savedRoot = process.env.DEDALO_DIFFUSION_FILES_ROOT;
+		process.env.DEDALO_DIFFUSION_FILES_ROOT = root;
+	});
+
+	afterAll(() => {
+		if (savedRoot !== undefined) process.env.DEDALO_DIFFUSION_FILES_ROOT = savedRoot;
+		else delete process.env.DEDALO_DIFFUSION_FILES_ROOT;
+		rmSync(root, { recursive: true, force: true });
+	});
+
+	const section: SectionPlan = {
+		sectionTipo: SECTION,
+		tableName: RDF_LABEL,
+		tableTipo: 'zzlk2',
+		fields: [],
+	};
+	const planFor = (format: string): PublicationPlan => ({
+		planId: `scope_lockstep_${format}`,
+		elementTipo: 'zzlk0',
+		format,
+		serviceName: SERVICE,
+		target: { kind: 'files', serviceName: SERVICE },
+		sections: [section],
+		recursion: { maxLevels: 1 },
+		langPolicy: { langs: ['lg-eng'], mainLang: 'lg-eng' },
+		warnings: [],
+	});
+
+	/** The census: every writer the registry serves that is not a MariaDB table format. */
+	const fileFormats = [...WRITER_REGISTRY.keys()].filter((format) => !TABLE_FORMATS.has(format));
+
+	test('the census is the registry (floor 5) and both halves of the classification are represented', () => {
+		expect(fileFormats.length).toBeGreaterThanOrEqual(5);
+		expect(
+			fileFormats.filter((format) => PER_RECORD_FILE_FORMATS.has(format)).length,
+		).toBeGreaterThanOrEqual(3);
+		expect(
+			fileFormats.filter((format) => !PER_RECORD_FILE_FORMATS.has(format)).length,
+		).toBeGreaterThanOrEqual(2);
+		// The writers' root IS the producer's (the re-export): the same directory both sides write under.
+		expect(diffusionFilesRoot()).toBe(root);
+	});
+
+	for (const format of fileFormats) {
+		test(`${format}: the producer's per-record path is what the writer's removeRecords unlinks (or neither side has one)`, async () => {
+			const producerPath = publishedRecordFilePath({
+				root,
+				type: format,
+				dirLabel: SERVICE,
+				sectionTipo: SECTION,
+				sectionId: RECORD,
+				rdfName: RDF_LABEL,
+			});
+			const session = await getDiffusionWriter(format).open(planFor(format));
+			try {
+				await session.ensureSchema();
+				if (!PER_RECORD_FILE_FORMATS.has(format)) {
+					// FULL-EXPORT: no per-record file on either side, and the delete side
+					// says TERMINAL before touching any store (pure classification).
+					expect(producerPath).toBeNull();
+					const removed = await session.removeRecords(section, [RECORD]);
+					expect(removed.deleted).toBe(0);
+					const classified = await resolvePublishedFile('zzlk0', format, SECTION, RECORD, root);
+					expect(classified.kind).toBe('terminal');
+					return;
+				}
+				expect(producerPath).not.toBeNull();
+				const path = producerPath as string;
+				expect(path.startsWith(`${root}/${format}/${SERVICE}/`)).toBe(true);
+				// Plant the record's file at the PRODUCER's path, and a positive
+				// control: ANOTHER record's file the unlink must not touch.
+				mkdirSync(dirname(path), { recursive: true });
+				writeFileSync(path, 'published');
+				const otherPath = publishedRecordFilePath({
+					root,
+					type: format,
+					dirLabel: SERVICE,
+					sectionTipo: SECTION,
+					sectionId: OTHER,
+					rdfName: RDF_LABEL,
+				}) as string;
+				writeFileSync(otherPath, 'published');
+
+				const removed = await session.removeRecords(section, [RECORD]);
+				expect(
+					removed.deleted,
+					`${format}: the writer did not find the file at the producer's path`,
+				).toBe(1);
+				expect(existsSync(path)).toBe(false);
+				expect(existsSync(otherPath)).toBe(true);
+			} finally {
+				await session.abort();
+			}
+		});
+	}
+
+	test('ONE sanitizer: the rdf writer, the delete side and the producer are the same function object', () => {
+		expect(sanitizeRdfFileName).toBe(producerSanitize);
+		expect(sanitizePublishedFileName).toBe(producerSanitize);
+		expect(producerSanitize('nmo:LockClass_zzlk1_7')).toBe('nmolockclass-zzlk1-7');
 	});
 });

@@ -8,9 +8,9 @@ Atoms-based export of a section's records to a flat table (CSV / TSV / ODS / XLS
 
 Concrete heritage scenario: a numismatics cataloguer has filtered the *Coins* section down to the issues of one mint and wants a report for a colleague. They open the tool on that filtered list, drag the *Inventory number*, *Weight*, *Diameter* and the related *Mint → name* into the active columns, choose **Breakdown / rows** so each linked type lands on its own row, tick **parents** on the type column to also get the term's ancestor chain, run the export, and download an XLSX. The same configuration can be saved as a named preset for the next batch.
 
-A second, machine-facing use: the **Dédalo (Raw)** format produces cells wrapped as `{"dedalo_data":…}` that the [CSV import tool](tool_import_dedalo_csv.md) re-imports byte-for-byte (round-trip) — a practical way to back up a section or move data between installations.
+A second, machine-facing use: the **Dédalo (Raw)** format produces cells wrapped as `{"dedalo_data":…}` that the [CSV import tool](tool_import_dedalo_csv.md) unwraps and conforms like typed input — an edit-and-reload format, NOT a backup and not a way to move data between installations: `component_text_area` markup is rewritten, `component_geolocation` item ids are dropped, empty cells clear values, no media bytes travel, and a locator's `section_id` is checked for shape only. The complete, verified copy of a section set is the [archive door](../../../core/exporting_data.md#the-archive-door).
 
-Use it when: someone needs section data as a spreadsheet/report, a re-importable backup, or the media files referenced by a record set. Do not use it for single-record edits or for tabular *editing* — it is read-only export.
+Use it when: someone needs section data as a spreadsheet/report, a raw CSV to bulk-edit and load back, or the media files referenced by a record set. Do not use it for single-record edits or for tabular *editing* — it is read-only export.
 
 ## How it works (server + client)
 
@@ -39,7 +39,7 @@ Key options read by `get_export_grid` / `setup`:
 | --- | --- | --- |
 | `section_tipo` | string (req.) | Target section to export. Falls back to `tipo` for legacy callers. Read-gated. |
 | `model` | string | Element model; defaults to `'section'`. |
-| `data_format` | string | `value` (default, one flat cell per column) \| `grid_value` (breakdown) \| `dedalo_raw` (round-trip wrapper). Unknown values fall back to `value`. |
+| `data_format` | string | `value` (default, one flat cell per column) \| `grid_value` (breakdown) \| `dedalo_raw` (the wrapped edit-and-reload form). Unknown values fall back to `value`. |
 | `breakdown` | string | Relation explosion for `grid_value`: `default` \| `rows` \| `columns`. Defaults to `default`. |
 | `fill_the_gaps` | bool | Repeat spanning (record-level) values on each exploded row. Default `true`. |
 | `value_with_parents` (per ddo) | bool | PER-DDO ONLY (WC-049): set `value_with_parents: true` on an `ar_ddo_to_export` entry to emit that column's locator-target ancestor chains (`getParentsRecursive` × term resolver, `' > '` nearest-first, self excluded) as a sibling `#parents` column. `grid_value` format only; a request-global `options.value_with_parents` is ignored. Targets without hierarchy emit nothing. |
@@ -96,7 +96,7 @@ The server emits NDJSON, one JSON object per line, discriminated by `t`:
 {"t":"end","columns":[0,1,2],"rows":340,"records":128}
 ```
 
-Raw round-trip cell shape (`data_format:'dedalo_raw'`), re-importable by the CSV import tool — always the component's stored value wrapped exactly once:
+Raw cell shape (`data_format:'dedalo_raw'`), the form the CSV import tool unwraps — always the component's stored value wrapped exactly once:
 
 ```json
 {"dedalo_data":[{"value":"Hello","lang":"lg-eng","id":1}]}
@@ -107,6 +107,6 @@ A component with [dataframe](../../../core/components/component_dataframe.md) sl
 ## Related
 
 - [Exporting data](../../../core/exporting_data.md) — the end-user + developer guide for this tool (UI walkthrough, formats, breakdown, presets, NDJSON protocol, component `get_export_value` contract).
-- [tool_import_dedalo_csv](tool_import_dedalo_csv.md) — consumes the `dedalo_raw` export for the round-trip; see [Importing data](../../../core/importing_data.md).
+- [tool_import_dedalo_csv](tool_import_dedalo_csv.md) — consumes the `dedalo_raw` export (loading edited cells back, not a restore); see [Importing data](../../../core/importing_data.md).
 - [Creating new tools](../creating_tools.md) · [Server contract](../server_contract.md) — the tool model, `apiActions`, gates and lifecycle this page builds on.
 - Source: `tools/tool_export/server/{index,tool_export}.ts`, `tools/tool_export/register.json`, `tools/tool_export/js/{tool_export,render_tool_export,flat_table,drag_tool_export,export_user_presets}.js`; the reused resolution core: `src/core/resolve/relation_list.ts`.

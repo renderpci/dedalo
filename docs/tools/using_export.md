@@ -2,7 +2,7 @@
 
 > See also: [Tools user guide](index.md) · [Developer reference](../development/tools/reference/tool_export.md)
 
-Export turns the records you are currently looking at in a section into a spreadsheet-style flat table. You choose which components become columns, in what order, and how relations and hierarchies are flattened, then download the result as CSV, TSV, ODS, XLSX or HTML — or as a re-importable backup.
+Export turns the records you are currently looking at in a section into a spreadsheet-style flat table. You choose which components become columns, in what order, and how relations and hierarchies are flattened, then download the result as CSV, TSV, ODS, XLSX or HTML — or as a machine-readable raw CSV for the [CSV import tool](using_import_dedalo_csv.md). It is a table, not a backup: for a complete, verified copy of a section set see [The archive door](../core/exporting_data.md#the-archive-door).
 
 ## What it's for
 
@@ -13,7 +13,7 @@ Concrete scenario: a numismatics cataloguer has filtered the *Coins* section dow
 ## When to use it
 
 - You need section data as a spreadsheet or report (CSV / TSV / ODS / XLSX / HTML).
-- You want a re-importable backup of a section, or to move data between installations. Use the **Dédalo (Raw)** format, which wraps each cell so the [CSV import tool](using_import_dedalo_csv.md) can read it back byte-for-byte.
+- You want to bulk-edit a section's values in a spreadsheet and load the edited cells back. Use the **Dédalo (Raw)** format, which wraps each cell so the [CSV import tool](using_import_dedalo_csv.md) can unwrap it and conform it like typed input.
 - You want the media files referenced by a set of records.
 
 When *not* to use it:
@@ -46,7 +46,7 @@ The window has three panes: available components on the left, your active column
 | Option | What it does |
 | --- | --- |
 | Active columns (drag order) | The components to export, in output order. Drag them from the available pane; reorder by dragging within the active pane. |
-| Data format | `value` — one flat cell per column (the everyday choice). `grid_value` — a breakdown that explodes multi-valued relations. `dedalo_raw` — the round-trip wrapper for re-import and backups. |
+| Data format | `value` — one flat cell per column (the everyday choice). `grid_value` — a breakdown that explodes multi-valued relations. `dedalo_raw` — the wrapped form the CSV import tool unwraps (an edit-and-reload format, not a backup). |
 | Breakdown | For the `grid_value` format only: `default`, `rows` (one row per related item) or `columns`. |
 | Fill the gaps | Repeats record-level values on each exploded row so no cell is left blank. On by default. |
 | Parents (per column) | On eligible relation columns (portal / autocomplete pointing at a hierarchical section), adds a sibling column with the target's ancestor chain. Off by default; set on each column in the active list — there is no global switch. `grid_value` format only. |
@@ -56,15 +56,15 @@ The window has three panes: available components on the left, your active column
 !!! tip
     Save a preset once you have a column arrangement you like. Next time you export the same section you can load it instead of dragging every column again.
 
-!!! tip
-    The **Dédalo (Raw)** format is the safe way to back up a section or hand data to another installation — its cells import back exactly, unlike a plain CSV where structure is lost.
+!!! warning "Raw CSV is not a backup and not a move"
+    The **Dédalo (Raw)** format keeps a cell's structure through a spreadsheet edit, but the import re-conforms every cell as typed input: `component_text_area` markup is rewritten, `component_geolocation` item ids are dropped, empty cells clear values, media cells carry no files, and a relation's `section_id` is checked for shape only — on another installation it may name a different record. To back up a section set, carry it to another installation or keep a preservation copy, use [The archive door](../core/exporting_data.md#the-archive-door), which is verified to reconstruct every stored column byte for byte.
 
 !!! warning
     Export always serializes the **entire filtered selection**, not the visible page. If you only want some records, tighten the section filter before you export; there is no page limit inside the tool.
 
 ## Related
 
-- **[Import from Dédalo CSV](using_import_dedalo_csv.md)** — consumes the `dedalo_raw` export to re-import records byte-for-byte.
+- **[Import from Dédalo CSV](using_import_dedalo_csv.md)** — consumes the `dedalo_raw` export to load edited cells back into the section.
 - **[Print](using_print.md)** — for a positioned, paginated, record-driven document rather than a flat table.
 - **[Diffusion](using_diffusion.md)** — the other way data leaves Dédalo: publishing to a live target instead of downloading a file.
 - **[Exporting data](../core/exporting_data.md)** — the deeper guide to formats, breakdown modes, presets and the export contract.

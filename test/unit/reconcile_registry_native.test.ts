@@ -22,7 +22,8 @@
  *   - `zzro` TLD: two ontology source records projected by rebuildOntology.
  *   - `zzrh` TLD: one hierarchy1 registry row provisioned by ensureHierarchy.
  *   - the shared `zzot` observer situation (test/helpers/observer_term_seed.ts).
- *   - the suite media root's `.publication/pub` marker store.
+ *   - the suite media root's `.publication/pub` marker store, and its
+ *     `.publication/dbs` ground truth (the public_tier pair, scoped to zzrc1).
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
@@ -191,6 +192,10 @@ async function sweepObserverScratch(): Promise<void> {
 
 beforeAll(async () => {
 	await registerAllReconciles();
+	// The situation is BUILT, not inherited: a freshly rebuilt suite media root
+	// (`bun run test:db:setup`) holds only its marker, and files_info's sweep
+	// refuses a root without the `image/original` tier as "the wrong tree".
+	mkdirSync(join(mediaRoot(), 'image', 'original'), { recursive: true });
 	await sweepMediaSituation();
 	await sweepOntologySituation();
 	await sweepHierarchySituation();
@@ -271,6 +276,10 @@ afterAll(async () => {
 	await sweepOntologySituation();
 	await sweepHierarchySituation();
 	rmSync(join(mediaRoot(), '.publication', 'pub', `${MEDIA_SECTION}_999999`), { force: true });
+	rmSync(join(mediaRoot(), '.publication', 'dbs', 'zzrc_ghost_db'), {
+		recursive: true,
+		force: true,
+	});
 }, 120000);
 
 /* --------------------------------------------------------------- planters */
@@ -424,6 +433,35 @@ const PLANTERS: Record<string, Planter> = {
 		async unplant() {
 			await sql.unsafe('DELETE FROM dd_ontology WHERE tipo = $1', [`${ONTO_TLD}9`]);
 			await clearOntologyDerivedCaches();
+		},
+	},
+	public_tier: {
+		scope: [MEDIA_SECTION],
+		async plant() {
+			// A dbs/ publication marker for a record the matrix never held — the
+			// public tier granting anonymous media access to a ghost (LIFE-02 shape:
+			// a restore, or an unpublish that never settled). The scan reads the
+			// store's ground-truth dirs directly, whatever the ontology's targets are
+			// today, so the marker's db/table need not exist anywhere else.
+			const tableDir = join(
+				mediaRoot(),
+				'.publication',
+				'dbs',
+				'zzrc_ghost_db',
+				'zzrc_ghost_table',
+			);
+			mkdirSync(tableDir, { recursive: true });
+			const ghost = join(tableDir, `${MEDIA_SECTION}_999997`);
+			writeFileSync(ghost, '');
+			planted.push(ghost);
+			return 1;
+		},
+		async unplant() {
+			for (const path of planted.splice(0)) rmSync(path, { force: true });
+			rmSync(join(mediaRoot(), '.publication', 'dbs', 'zzrc_ghost_db'), {
+				recursive: true,
+				force: true,
+			});
 		},
 	},
 	hierarchy: {

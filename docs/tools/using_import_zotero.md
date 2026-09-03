@@ -20,7 +20,7 @@ Concrete scenario: a museum's research department keeps the bibliography of an e
 
 When NOT to use it:
 
-- To round-trip Dédalo's own exports, use [CSV import](using_import_dedalo_csv.md).
+- To load Dédalo's own `dedalo_raw` exports back, use [CSV import](using_import_dedalo_csv.md).
 - For a library MARC21 catalogue, use [MARC21 import](using_import_marc21.md).
 - To fetch a single external resource's graph by IRI, use [RDF import](using_import_rdf.md) — it shares this tool's parser but resolves one live IRI rather than importing a file.
 
@@ -58,7 +58,7 @@ The tool attaches to **sections** and surfaces on Publications-style sections on
 ## Related
 
 - **[MARC21 import](using_import_marc21.md)** — MARC21 library-catalogue import (shares the same write path).
-- **[CSV import](using_import_dedalo_csv.md)** — CSV import and Dédalo export round-trips.
+- **[CSV import](using_import_dedalo_csv.md)** — CSV import, including Dédalo's own `dedalo_raw` exports.
 - **[RDF import](using_import_rdf.md)** — the sibling RDF/XML tool whose parser this one reuses; that one fetches a live IRI, this one imports a file and writes records.
 - **[Media file import](using_import_files.md)** — media ingest, including PDFs, after the references are in.
 - **[Importing data](../core/importing_data.md)** — the per-component import-data contract.

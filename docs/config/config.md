@@ -2826,6 +2826,11 @@ have to be copied too, or a restore will bring back records that point at files 
 exist. This key is distinct from `DEDALO_BACKUP_PATH`, which is where a code update stages the
 previous code tree.
 
+The engine's restore door (`bun scripts/restore.ts <artifact>`, run with the engine stopped) is
+the way back: it proves the artifact by a full read, restores it in one transaction beside the
+current database and swaps the two by name. Each run writes its report to a `restores/`
+directory inside this one.
+
 ```bash
 DEDALO_BACKUP_DIR="/srv/backups/dedalo/db"
 ```
@@ -4959,12 +4964,18 @@ DEDALO_DIFFUSION_DOMAIN="default"
 DEDALO_DIFFUSION_FILES_ROOT `string`
 
 The directory under which the file-format publications (RDF, XML, Markdown, CSV,
-JSON…) are written, one subdirectory per publication target. When unset — the normal
-case — Dédalo publishes under `MEDIA_PATH`, the same root the media files live in, so
-that publishing and un-publishing (which removes the files of a deleted record) always
-agree on where the artifacts are.
+JSON…) are written, one subdirectory per format and publication target. When unset — the
+normal case — Dédalo publishes under its media root (the resolved `MEDIA_PATH`, or the
+derived default when that key is unset).
 
-Set it only when the published files must live outside the media root, for example on a
+Publishing and un-publishing (which removes the files of a deleted record) resolve the
+root through ONE function (`src/core/diffusion_bridge/published_files.ts`), so they
+agree on where the artifacts are whether this key is set or not. Change it only between
+publications: files published under the previous root are not moved, and a record deleted
+after the change is un-published under the NEW root only — run the `public_tier`
+reconcile against the old root before retiring it.
+
+Set it when the published files must live outside the media root, for example on a
 volume that the public web server exposes and the media root is not.
 
 ```bash
