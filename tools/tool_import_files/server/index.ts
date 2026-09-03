@@ -68,6 +68,7 @@ import {
 	basenamesMatch,
 	fileBasename,
 	getFileProcessor,
+	registerFileProcessor,
 } from '../../../src/core/tools/import_files_match.ts';
 import {
 	type ToolActionContext,
@@ -76,6 +77,14 @@ import {
 	toolRequestId,
 } from '../../../src/core/tools/module.ts';
 import { parseFilename } from './filename_grammar.ts';
+import { cropCoinPair } from './script_files/numisdata/crop_50.ts';
+
+// Registered at module load — the tool loader imports this module once, so
+// this runs exactly once per process. Keeps the SEC-053 allowlist model
+// intact (getFileProcessor still refuses anything not explicitly registered
+// here) while giving crop_50 a real implementation instead of the previous
+// permanently-empty registry.
+registerFileProcessor('crop_50', cropCoinPair);
 
 /**
  * A caller fault. `message` AND `publicMessage`: import_files is
@@ -686,13 +695,38 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 		import_mode?: string;
 		import_file_name_mode?: string | null;
 		ddo_map?: DdoMapEntry[];
+		/** file_processor_properties on the wire (PHP naming) — processor descriptors + custom_arguments. */
+		file_processor?: unknown[];
 	};
 	const importMode = String(toolConfig.import_mode ?? 'default');
 	const nameMode = String(toolConfig.import_file_name_mode ?? 'default');
 	const ddoMap = Array.isArray(toolConfig.ddo_map) ? toolConfig.ddo_map : [];
 	const sectionTipo = String(o.section_tipo ?? '');
 	const componentTipo = String(o.tipo ?? '');
-	const callerSectionId = Number(o.section_id ?? 0);
+	// NEVER `?? 0`: 0 is a real, structurally-valid section_id elsewhere in this
+	// engine (concepts/section_id.ts), so silently defaulting a MISSING id to 0
+	// does not fail loud — it addresses whatever record happens to sit at 0 (or,
+	// worse, materializes a fresh one there). But ABSENT is legitimate here too:
+	// a caller with no open record at all (the section-LIST "Add images" button
+	// — `numisdata256`'s `button_import`) sends no section_id on purpose, because
+	// its whole job is to CREATE a fresh record per file, same as `enumerate`/
+	// `named`/the plain-default branch below already do. So this stays a
+	// distinct three-state value (real id / absent / garbage) rather than a
+	// boolean gate — `callerSectionId` is `null` for "no caller record", and
+	// each call site below decides for itself whether that is fine (creating a
+	// fresh destination) or a real error (writing onto "the calling record",
+	// which requires one to exist).
+	const rawCallerSectionId = o.section_id;
+	const callerSectionIdIsAbsent =
+		rawCallerSectionId === null || rawCallerSectionId === undefined || rawCallerSectionId === '';
+	if (!callerSectionIdIsAbsent && !Number.isSafeInteger(Number(rawCallerSectionId))) {
+		throw invalidRequest(
+			`Invalid section_id (caller record address): ${JSON.stringify(rawCallerSectionId)}`,
+		);
+	}
+	const callerSectionId: number | null = callerSectionIdIsAbsent
+		? null
+		: Number(rawCallerSectionId);
 	const componentsTempData = (o.components_temp_data ?? []) as TempDataEntry[];
 	const optionsKeyDir = String(o.key_dir ?? '');
 	// The Quality selector's choice (render_tool_import_files.js :989). PHP
@@ -739,7 +773,14 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 	const dataLang = currentDataLang();
 
 	const namedGroups = new Map<string, number>();
+	// `imported` = total RECORDS created (a file_processor can turn one upload
+	// into several — crop_50: 1 photo -> 2 records). `filesProcessed` = how many
+	// of `filesData` actually produced something, which is what "N of TOTAL"
+	// in the summary must count — using `imported` there read as "Imported 2 of
+	// 1", nonsensical for a single split upload. Both are reported; they only
+	// diverge when a processor's output count isn't 1:1.
 	let imported = 0;
+	let filesProcessed = 0;
 	const errors: string[] = [];
 
 	/**
@@ -824,6 +865,276 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 		result.startTranscode?.();
 	};
 
+	/**
+	 * Resolve the HOST record id for one staged file — enumerate / named /
+	 * default name-mode, PHP :916-1070 — WITHOUT the portal chain or ingest.
+	 * Split out so the file_processor branch can resolve a real host BEFORE
+	 * calling the processor (crop_50 needs a real record to add its two portal
+	 * children onto — see `importIntoPortal`), sharing the exact same
+	 * enumerate/named/create-fresh logic the ordinary per-file path uses, rather
+	 * than a second, drifting copy of it.
+	 *
+	 * Returns `null` when the file should be skipped (already pushed its own
+	 * error) — either an incompatible mode combination, or `import_mode:
+	 * 'default'` with no caller record to attach to (that mode's whole contract
+	 * is "the CALLING record's own portal", PHP's `else` branch at :1141 — there
+	 * is no fresh-record fallback for it, unlike every other mode here).
+	 */
+	const resolveHostSectionId = async (
+		resolvedFileName: string,
+		sectionIdHint: number | string | null | undefined,
+	): Promise<number | null> => {
+		if (
+			ddoMap.length > 0 &&
+			nameMode === 'enumerate' &&
+			importMode !== 'section' &&
+			importMode !== 'section_resource'
+		) {
+			// PHP :916-926: enumerate needs a section import mode.
+			errors.push(
+				`${resolvedFileName}: Incompatible import mode: '${importMode}' with import_file_name_mode: 'enumerate'. Ignored action`,
+			);
+			return null;
+		}
+
+		const parsedForResolve = parseFilename(resolvedFileName);
+		if (ddoMap.length > 0 && importMode === 'default') {
+			// PHP 'default' import_mode (:1132-1141): files go into the portal
+			// on the CALLING record — no record is created per name mode, so a
+			// missing caller here is a real error, not "create one instead".
+			if (callerSectionId === null) {
+				errors.push(
+					`${resolvedFileName}: import_mode 'default' targets the calling record's own portal, but no caller section_id was provided`,
+				);
+				return null;
+			}
+			return callerSectionId;
+		}
+		if (sectionIdHint != null) {
+			return Number(sectionIdHint); // pre-matched
+		}
+		if (nameMode === 'enumerate' && parsedForResolve.section_id) {
+			// PHP :1060-1070: the numeric prefix is the explicit section_id;
+			// create_record() returns the existing id without duplicating.
+			const explicitId = Number(parsedForResolve.section_id);
+			await createSectionRecord(sectionTipo, ctx.userId, new Date(), explicitId, {
+				conflictTolerant: true,
+			});
+			return explicitId;
+		}
+		if (nameMode === 'named') {
+			const key = parsedForResolve.base_name || parsedForResolve.section_id || resolvedFileName;
+			const existing = namedGroups.get(key);
+			if (existing !== undefined) return existing;
+			const created = await createSectionRecord(sectionTipo, ctx.userId);
+			namedGroups.set(key, created);
+			return created;
+		}
+		// Plain default: a brand-new record per file — this is the branch the
+		// section-LIST "Add images" button rides (import_mode 'section', no
+		// name_mode, no caller record at all: each upload becomes its own record).
+		return createSectionRecord(sectionTipo, ctx.userId);
+	};
+
+	/**
+	 * Resolve the destination record for ONE staged file (enumerate / named /
+	 * default name-mode + the component_option portal chain), apply the ddo_map
+	 * role writes, and ingest — the body every non-matcher file goes through.
+	 *
+	 * Factored out of the main loop so a `file_processor` that SPLITS one upload
+	 * into several files (crop_50: one photo -> obverse + reverse) can run this
+	 * once per output, exactly as if each output had been uploaded directly —
+	 * without duplicating the portal/record-creation logic a second time.
+	 *
+	 * `sectionIdHint`/`componentOption` are the ORIGINAL file entry's
+	 * `section_id`/`component_option` (pre-matched routing), reused unchanged for
+	 * every output of a processor-split file — the routing choice was made once,
+	 * by the operator, for the upload as a whole.
+	 */
+	const importResolvedFile = async (
+		resolvedFileName: string,
+		resolvedTmpName: string,
+		resolvedExtension: string,
+		resolvedKeyDir: string,
+		sectionIdHint: number | string | null | undefined,
+		componentOption: string | undefined,
+	): Promise<'imported' | 'skipped'> => {
+		const resolvedSectionId = await resolveHostSectionId(resolvedFileName, sectionIdHint);
+		if (resolvedSectionId === null) return 'skipped';
+
+		// ── media destination: portal chain vs the record itself ─────────
+		let targetSectionTipo = sectionTipo;
+		let targetSectionId = resolvedSectionId;
+		if (ddoMap.length > 0 && importMode !== 'section_resource') {
+			// PORTAL-LINKING chain (PHP :1108-1251): the component_option ddo
+			// is the portal that receives the new media record's locator.
+			let portalDdo: DdoMapEntry;
+			if (importMode === 'section') {
+				const optionTipo = String(componentOption ?? '');
+				const found = ddoMap.find(
+					(ddo) => ddo.role === 'component_option' && ddo.tipo === optionTipo,
+				);
+				if (found === undefined) {
+					// PHP :1113-1122 skips the file. (TS checks BEFORE creating the
+					// destination record, so a config error leaves no orphan row —
+					// deliberate ordering improvement over PHP.)
+					errors.push(
+						`${resolvedFileName}: empty target_ddo for role "component_option" and tipo "${optionTipo}"`,
+					);
+					return 'skipped';
+				}
+				// 'self' placeholder substitution (PHP :1128-1130).
+				portalDdo = found.section_tipo === 'self' ? { ...found, section_tipo: sectionTipo } : found;
+			} else {
+				// PHP 'default' import_mode: the CALLING component is the portal.
+				portalDdo = { tipo: componentTipo, section_tipo: sectionTipo };
+			}
+			const portalTipo = String(portalDdo.tipo ?? '');
+			const portalSectionTipo = String(portalDdo.section_tipo ?? '');
+			const portalTarget =
+				portalDdo.target_section_tipo ??
+				(await portalTargetSectionTipo(portalTipo, portalSectionTipo));
+			if (portalTarget == null || portalTarget === '') {
+				throw new DedaloError('tool.unsupported_target', {
+					coordinates: { tool: 'tool_import_files', tipo: portalTipo },
+					message: `cannot resolve the portal target section for '${portalTipo}' (no target_section_tipo and no resolvable request_config)`,
+				});
+			}
+			// Create + link the media record through the portal — the
+			// add_new_element relation hook (relations/save.ts) inside the
+			// tx-wrapped, TM-audited saveComponentData (PHP :1217-1232).
+			const save = await saveComponentData({
+				componentTipo: portalTipo,
+				sectionTipo: portalSectionTipo,
+				sectionId: resolvedSectionId,
+				lang: 'lg-nolan',
+				changedData: [{ action: 'add_new_element', id: null, value: portalTarget }],
+				userId: ctx.userId,
+			});
+			const created = (save as { ok: boolean; created_section_id?: number }).created_section_id;
+			if (!save.ok || created == null) {
+				// PHP :1220-1227 aborts the whole batch on portal-create failure.
+				throw new DedaloError('record.save_failed', {
+					coordinates: { tool: 'tool_import_files', section_tipo: targetSectionTipo },
+					message: `Error on create portal children: ${save.message}`,
+				});
+			}
+			targetSectionTipo = portalTarget;
+			targetSectionId = created;
+		}
+
+		// Role writes BEFORE the media move (PHP order :1254-1285) — the
+		// staged file is still in place for the target_date capture read.
+		if (ddoMap.length > 0) {
+			await setComponentsData({
+				ddoMap,
+				sectionTipo,
+				sectionId: resolvedSectionId,
+				targetSectionId,
+				currentFileName: resolvedFileName,
+				mediaFilePath: join(
+					stagingDir(ctx.userId, resolvedKeyDir),
+					sanitizeSegment(resolvedTmpName),
+				),
+				targetComponentModel: targetComponentModel ?? '',
+				componentsTempData,
+				userId: ctx.userId,
+				dataLang,
+			});
+		}
+		await ingest(
+			targetSectionTipo,
+			targetSectionId,
+			resolvedKeyDir,
+			resolvedTmpName,
+			resolvedExtension,
+			resolvedFileName,
+		);
+		return 'imported';
+	};
+
+	/**
+	 * Add ONE staged file as a new child through a SPECIFIC portal, on a HOST
+	 * record — never a fresh top-level record of its own. This is the exact PHP
+	 * crop_50 behaviour (:139-171): `component_portal->add_new_element` called
+	 * with a real `section_id`, once per `custom_arguments` destination — which
+	 * is why "splitting a photo" reads as filling two fields on ONE record, not
+	 * creating new rows.
+	 *
+	 * `hostSectionId` is NOT always the caller's own `section_id` — resolved by
+	 * `resolveHostSectionId` before this is called: opening an existing record's
+	 * own Other-images field uses that record directly, but the section-LIST
+	 * "Add images" button (no caller record at all) creates a FRESH host per
+	 * photo first, same as an ordinary import would, then both crop outputs
+	 * attach to that new record. Passing `callerSectionId` straight through here
+	 * — the earlier version of this function — is what produced an unaddressable
+	 * `section_id: 0` record: a portal write with no real host to write onto.
+	 *
+	 * Deliberately NOT `importResolvedFile`: that function's whole job is
+	 * choosing/creating a DESTINATION record (enumerate/named/default,
+	 * component_option) — a decision this path never makes, because the
+	 * processor already named the exact portal. Bending that function to
+	 * skip its own logic would be more surprising than a small, direct twin.
+	 */
+	const importIntoPortal = async (
+		resolvedFileName: string,
+		resolvedTmpName: string,
+		resolvedExtension: string,
+		resolvedKeyDir: string,
+		portalComponentTipo: string,
+		hostSectionId: number,
+	): Promise<'imported' | 'skipped'> => {
+		const portalTarget = await portalTargetSectionTipo(portalComponentTipo, sectionTipo);
+		if (portalTarget == null || portalTarget === '') {
+			throw new DedaloError('tool.unsupported_target', {
+				coordinates: { tool: 'tool_import_files', tipo: portalComponentTipo },
+				message: `cannot resolve the portal target section for '${portalComponentTipo}' (no resolvable request_config)`,
+			});
+		}
+		const save = await saveComponentData({
+			componentTipo: portalComponentTipo,
+			sectionTipo,
+			sectionId: hostSectionId,
+			lang: 'lg-nolan',
+			changedData: [{ action: 'add_new_element', id: null, value: portalTarget }],
+			userId: ctx.userId,
+		});
+		const created = (save as { ok: boolean; created_section_id?: number }).created_section_id;
+		if (!save.ok || created == null) {
+			throw new DedaloError('record.save_failed', {
+				coordinates: { tool: 'tool_import_files', section_tipo: portalComponentTipo },
+				message: `Error on create portal children: ${save.message}`,
+			});
+		}
+
+		if (ddoMap.length > 0) {
+			await setComponentsData({
+				ddoMap,
+				sectionTipo,
+				sectionId: hostSectionId,
+				targetSectionId: created,
+				currentFileName: resolvedFileName,
+				mediaFilePath: join(
+					stagingDir(ctx.userId, resolvedKeyDir),
+					sanitizeSegment(resolvedTmpName),
+				),
+				targetComponentModel: targetComponentModel ?? '',
+				componentsTempData,
+				userId: ctx.userId,
+				dataLang,
+			});
+		}
+		await ingest(
+			portalTarget,
+			created,
+			resolvedKeyDir,
+			resolvedTmpName,
+			resolvedExtension,
+			resolvedFileName,
+		);
+		return 'imported';
+	};
+
 	// Live progress + cooperative cancellation. `import_files` runs under the
 	// background executor (backgroundRunnable below), which supplies both
 	// publishProgress and signal; a direct call has neither, so both are
@@ -889,13 +1200,88 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 			const plainExtension = lastDot > 0 ? fileName.slice(lastDot + 1).toLowerCase() : '';
 			const extension = String(file.extension ?? parsed.extension ?? plainExtension ?? '');
 
-			// Per-file named-processor selections are fail-closed (SEC-053): no
-			// processor is ported (crop_50 ledgered), so the selection is an
-			// explicit per-file error — never a silent generic import.
+			// Per-file named-processor selection (SEC-053: allowlist, only a
+			// REGISTERED name runs). A processor that splits one upload into
+			// several files (crop_50) reports them as `outputs`. An output that
+			// names its own `portalComponentTipo` (crop_50 does, from
+			// custom_arguments) is added through THAT portal on the calling
+			// record via `importIntoPortal` — no new top-level record. An output
+			// with no portal tipo falls back to `importResolvedFile`, the
+			// ordinary enumerate/named/default + component_option path, for a
+			// future processor that transforms a file without also choosing its
+			// destination.
 			if (file.file_processor) {
-				errors.push(
-					`${fileName}: file_processor '${file.file_processor}' is not a registered processor (none ported)`,
-				);
+				const processorName = String(file.file_processor);
+				const processor = getFileProcessor(processorName);
+				if (processor === null) {
+					errors.push(
+						`${fileName}: file_processor '${processorName}' is not a registered processor`,
+					);
+					continue;
+				}
+				// Resolve a REAL host record BEFORE running the processor — the same
+				// enumerate/named/create-fresh resolution an ordinary file goes
+				// through. crop_50's two outputs need somewhere real to attach their
+				// portals; using the raw, possibly-absent `callerSectionId` here is
+				// what produced an unaddressable `section_id: 0` record when this
+				// tool was launched with no caller record at all (the section-LIST
+				// "Add images" button).
+				const hostSectionId = await resolveHostSectionId(fileName, file.section_id);
+				if (hostSectionId === null) continue; // resolveHostSectionId already logged why
+				const outcome = await processor({
+					file_name: fileName,
+					file_path: join(stagingDir(ctx.userId, keyDir), sanitizeSegment(tmpName)),
+					user_id: ctx.userId,
+					key_dir: keyDir,
+					section_tipo: sectionTipo,
+					section_id: hostSectionId,
+					tool_config: toolConfig,
+					// PHP naming (options->file_processor_properties): the button's OWN
+					// tool_config.file_processor array, carrying this processor's
+					// custom_arguments — a SEPARATE field from tool_config on the wire,
+					// kept that way here too rather than folded into tool_config.
+					file_processor_properties: toolConfig.file_processor ?? [],
+					custom_target_quality: customTargetQuality ?? null,
+					components_temp_data: componentsTempData,
+				});
+				if (!outcome.ok || outcome.outputs === undefined || outcome.outputs.length === 0) {
+					errors.push(
+						`${fileName}: ${outcome.message || `file_processor '${processorName}' produced no output`}`,
+					);
+					continue;
+				}
+				let producedAny = false;
+				for (const output of outcome.outputs) {
+					const result =
+						output.portalComponentTipo !== undefined
+							? await importIntoPortal(
+									output.fileName,
+									output.tmpName,
+									extension,
+									keyDir,
+									output.portalComponentTipo,
+									hostSectionId,
+								)
+							: await importResolvedFile(
+									output.fileName,
+									output.tmpName,
+									extension,
+									keyDir,
+									hostSectionId,
+									file.component_option,
+								);
+					if (result === 'imported') {
+						imported += 1;
+						producedAny = true;
+					}
+				}
+				if (producedAny) {
+					filesProcessed += 1;
+				} else {
+					errors.push(
+						`${fileName}: file_processor '${processorName}' produced no importable output`,
+					);
+				}
 				continue;
 			}
 
@@ -906,6 +1292,16 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				(importMode === 'section' || importMode === 'section_resource') &&
 				(nameMode === 'match' || nameMode === 'match_freename')
 			) {
+				// Match mode's role writes below target the CALLER's own component
+				// (PHP set_components_data's self-section branch) — unlike enumerate/
+				// named/default it has no "create a fresh record instead" fallback,
+				// because matching only makes sense FROM an already-open record.
+				if (callerSectionId === null) {
+					errors.push(
+						`${fileName}: match/match_freename requires an open record (caller section_id)`,
+					);
+					continue;
+				}
 				const targetSectionTipo = String(targetDdoComponent.section_tipo ?? '');
 				const targetFilenameDdo = ddoMap.find(
 					(ddo) => ddo.role === 'target_filename' && ddo.section_tipo === targetSectionTipo,
@@ -970,131 +1366,25 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 					errors.push(`${fileName}: no target record matched`);
 				} else {
 					imported += 1;
+					filesProcessed += 1;
 				}
 				continue;
 			}
 
-			// ── enumerate / named / default: resolve the destination record ──
-			if (
-				ddoMap.length > 0 &&
-				nameMode === 'enumerate' &&
-				importMode !== 'section' &&
-				importMode !== 'section_resource'
-			) {
-				// PHP :916-926: enumerate needs a section import mode.
-				errors.push(
-					`${fileName}: Incompatible import mode: '${importMode}' with import_file_name_mode: 'enumerate'. Ignored action`,
-				);
-				continue;
+			// ── enumerate / named / default: resolve the destination record,
+			// portal chain, role writes and ingest ──────────────────────────
+			const result = await importResolvedFile(
+				fileName,
+				tmpName,
+				extension,
+				keyDir,
+				file.section_id,
+				file.component_option,
+			);
+			if (result === 'imported') {
+				imported += 1;
+				filesProcessed += 1;
 			}
-
-			let resolvedSectionId: number;
-			if (ddoMap.length > 0 && importMode === 'default') {
-				// PHP 'default' import_mode (:1132-1141): files go into the portal
-				// on the CALLING record — no record is created per name mode.
-				resolvedSectionId = callerSectionId;
-			} else if (file.section_id != null) {
-				resolvedSectionId = Number(file.section_id); // pre-matched
-			} else if (nameMode === 'enumerate' && parsed.section_id) {
-				// PHP :1060-1070: the numeric prefix is the explicit section_id;
-				// create_record() returns the existing id without duplicating.
-				resolvedSectionId = Number(parsed.section_id);
-				await createSectionRecord(sectionTipo, ctx.userId, new Date(), resolvedSectionId, {
-					conflictTolerant: true,
-				});
-			} else if (nameMode === 'named') {
-				const key = parsed.base_name || parsed.section_id || fileName;
-				const existing = namedGroups.get(key);
-				if (existing !== undefined) {
-					resolvedSectionId = existing;
-				} else {
-					resolvedSectionId = await createSectionRecord(sectionTipo, ctx.userId);
-					namedGroups.set(key, resolvedSectionId);
-				}
-			} else {
-				resolvedSectionId = await createSectionRecord(sectionTipo, ctx.userId);
-			}
-
-			// ── media destination: portal chain vs the record itself ─────────
-			let targetSectionTipo = sectionTipo;
-			let targetSectionId = resolvedSectionId;
-			if (ddoMap.length > 0 && importMode !== 'section_resource') {
-				// PORTAL-LINKING chain (PHP :1108-1251): the component_option ddo
-				// is the portal that receives the new media record's locator.
-				let portalDdo: DdoMapEntry;
-				if (importMode === 'section') {
-					const optionTipo = String(file.component_option ?? '');
-					const found = ddoMap.find(
-						(ddo) => ddo.role === 'component_option' && ddo.tipo === optionTipo,
-					);
-					if (found === undefined) {
-						// PHP :1113-1122 skips the file. (TS checks BEFORE creating the
-						// destination record, so a config error leaves no orphan row —
-						// deliberate ordering improvement over PHP.)
-						errors.push(
-							`${fileName}: empty target_ddo for role "component_option" and tipo "${optionTipo}"`,
-						);
-						continue;
-					}
-					// 'self' placeholder substitution (PHP :1128-1130).
-					portalDdo =
-						found.section_tipo === 'self' ? { ...found, section_tipo: sectionTipo } : found;
-				} else {
-					// PHP 'default' import_mode: the CALLING component is the portal.
-					portalDdo = { tipo: componentTipo, section_tipo: sectionTipo };
-				}
-				const portalTipo = String(portalDdo.tipo ?? '');
-				const portalSectionTipo = String(portalDdo.section_tipo ?? '');
-				const portalTarget =
-					portalDdo.target_section_tipo ??
-					(await portalTargetSectionTipo(portalTipo, portalSectionTipo));
-				if (portalTarget == null || portalTarget === '') {
-					throw new DedaloError('tool.unsupported_target', {
-						coordinates: { tool: 'tool_import_files', tipo: portalTipo },
-						message: `cannot resolve the portal target section for '${portalTipo}' (no target_section_tipo and no resolvable request_config)`,
-					});
-				}
-				// Create + link the media record through the portal — the
-				// add_new_element relation hook (relations/save.ts) inside the
-				// tx-wrapped, TM-audited saveComponentData (PHP :1217-1232).
-				const save = await saveComponentData({
-					componentTipo: portalTipo,
-					sectionTipo: portalSectionTipo,
-					sectionId: resolvedSectionId,
-					lang: 'lg-nolan',
-					changedData: [{ action: 'add_new_element', id: null, value: portalTarget }],
-					userId: ctx.userId,
-				});
-				const created = (save as { ok: boolean; created_section_id?: number }).created_section_id;
-				if (!save.ok || created == null) {
-					// PHP :1220-1227 aborts the whole batch on portal-create failure.
-					throw new DedaloError('record.save_failed', {
-						coordinates: { tool: 'tool_import_files', section_tipo: targetSectionTipo },
-						message: `Error on create portal children: ${save.message}`,
-					});
-				}
-				targetSectionTipo = portalTarget;
-				targetSectionId = created;
-			}
-
-			// Role writes BEFORE the media move (PHP order :1254-1285) — the
-			// staged file is still in place for the target_date capture read.
-			if (ddoMap.length > 0) {
-				await setComponentsData({
-					ddoMap,
-					sectionTipo,
-					sectionId: resolvedSectionId,
-					targetSectionId,
-					currentFileName: fileName,
-					mediaFilePath: join(stagingDir(ctx.userId, keyDir), sanitizeSegment(tmpName)),
-					targetComponentModel: targetComponentModel ?? '',
-					componentsTempData,
-					userId: ctx.userId,
-					dataLang,
-				});
-			}
-			await ingest(targetSectionTipo, targetSectionId, keyDir, tmpName, extension, fileName);
-			imported += 1;
 		} catch (error) {
 			errors.push(`${file.name}: ${(error as Error).message}`);
 		} finally {
@@ -1137,10 +1427,16 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 			console.warn('[tool_import_files] scratch clear failed:', (error as Error).message);
 		}
 	}
+	// The record-count aside only appears when it would say something the "N of
+	// TOTAL" phrase doesn't already: a 1:1 run (the overwhelming common case)
+	// never shows "(1 record created)" noise, but a crop_50 run reads "Imported
+	// 1 of 1 (1 record created)" -> "(2 records created)", not "Imported 2 of 1".
+	const recordCountNote =
+		imported !== filesProcessed ? ` (${imported} record${imported === 1 ? '' : 's'} created)` : '';
 	// Per-file failures are PAYLOAD: the batch never aborts on one file.
 	return ok(
 		{
-			summary: `OK. Imported ${imported} of ${filesData.length} (${nameMode} mode)${errors.length > 0 ? ' with errors' : ''}.`,
+			summary: `OK. Imported ${filesProcessed} of ${filesData.length} (${nameMode} mode)${recordCountNote}${errors.length > 0 ? ' with errors' : ''}.`,
 			errors,
 			imported,
 		},
