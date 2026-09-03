@@ -16,7 +16,7 @@ Use it for any one-shot or recurring bulk ingest of bibliographic data already a
 
 `tools/tool_import_marc21/server/index.ts` (+ `src/core/tools/marc21.ts`) implements a from-scratch ISO 2709 parser (no 3rd-party library) plus `applyMarcMap` → the shared import executor, scratch-twin verified (a synthetic MARC record + map produces the mapped record, then deleted — no orphans). The single remotely callable action is `import_files`.
 
-1. **WRITE gate.** Declaratively gated `permission: 'tipo', minLevel: 2`, enforced before the handler runs. A missing `section_tipo` or empty `files_data` returns an error response immediately.
+1. **WRITE gate.** Declaratively gated `permission: 'targets', minLevel: 2` on the caller pair AND every component the `config.map` binds (the `id` entry's ddo_map code component included), enforced before the handler runs. A missing `section_tipo` or empty `files_data` returns an error response immediately.
 2. **Config shape.** `readMarcMap` reads the marc21 map from `tool_config.config.main` as **one flat array** of `{name, value}` entries: it treats the entry named `field_to_section_id` as the id anchor and every other entry as a field-mapping rule. `tool_config.config` must carry exactly that one `main` array — a config shaped with `main` and a separate `map` block will not map correctly, because `readMarcMap` never reads a `map` key. Build (or reshape) the config to the single flat-array shape before relying on a production marc21_map.
 3. **Per-file parse.** Each staged `.mrc` file (path-confined under the user's upload temp dir) is read and parsed with `parseMarc` (`src/core/tools/marc21.ts`), a from-scratch ISO 2709 reader.
 4. **Per-record mapping.** `applyMarcMap` extracts and transforms each mapped field (subfield/joined/control-field extraction, `field_to_section_id` resolution) into a `MappedRecord`.
@@ -31,11 +31,11 @@ Only `import_files` is dispatchable; the parser, mapper and executor are plain f
 
 ## Actions & options
 
-`apiActions = { import_files: { permission: 'tipo', minLevel: 2, handler: importFiles } }`.
+`apiActions = { import_files: { permission: 'targets', minLevel: 2, targets: importMarc21Targets, handler: importFiles } }`.
 
 | Action | Permission | Key options it reads |
 | --- | --- | --- |
-| `import_files` | declarative `permission: 'tipo', minLevel: 2` on `(section_tipo, tipo)` | `section_tipo` (target section, **required**), `tipo` (portal/component context), `section_id` (current section), `tool_config` (carries `ddo_map` + the `config.main` marc21 map array — see the shape divergence above), `files_data` (uploaded `.mrc` file objects), `components_temp_data` (manual "Values" inputs), `key_dir` (upload directory id) |
+| `import_files` | declarative `permission: 'targets', minLevel: 2` on `(section_tipo, tipo)` + `(section_tipo, <every config.map tipo>)` | `section_tipo` (target section, **required**), `tipo` (portal/component context), `section_id` (current section), `tool_config` (carries `ddo_map` + the `config.main` marc21 map array — see the shape divergence above), `files_data` (uploaded `.mrc` file objects), `components_temp_data` (manual "Values" inputs), `key_dir` (upload directory id) |
 
 `import_files` is the only remotely callable action. It is **not** in `backgroundRunnable`; the long-running work runs synchronously behind the client's extended request timeout.
 

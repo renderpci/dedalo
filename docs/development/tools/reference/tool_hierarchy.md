@@ -38,8 +38,8 @@ Root terms are **resolved or created, never assumed at a fixed id**: if the loca
 
 **Server** (`tools/tool_hierarchy/server/{index,tool_hierarchy}.ts`). Two API actions:
 
-- `inspect_hierarchy` — **read**, `permission: 'section', minLevel: 1`. Returns the checklist. The client calls it when the tool opens.
-- `generate_virtual_section` — **write**, `permission: 'section', minLevel: 2`. Converges the record (`ensureHierarchy`); with `force_to_create`, tears the TLD's ontology down first and rebuilds it (`rebuildHierarchy`). The action name is kept because it is wire contract; the semantics are "make this hierarchy consistent", which is what pressing the button always meant.
+- `inspect_hierarchy` — **read**, `permission: 'targets', minLevel: 1` over `hierarchy1/<section_id>`. Returns the checklist. The client calls it when the tool opens.
+- `generate_virtual_section` — **write**, `permission: 'targets', minLevel: 2` over `hierarchy1/<section_id>` — the record the core writer is pinned to, never the `section_tipo` the client sends (which the writer ignores). Converges the record (`ensureHierarchy`); with `force_to_create`, tears the TLD's ontology down first and rebuilds it (`rebuildHierarchy`). The action name is kept because it is wire contract; the semantics are "make this hierarchy consistent", which is what pressing the button always meant.
 
 The handler sequences nothing itself. The invariant, and every write that establishes it, lives in `src/core/ontology/hierarchy_state.ts` — one writer, guarded by `test/unit/hierarchy_single_writer_tripwire.test.ts`. Afterwards the ontology-derived caches are invalidated (`clearOntologyDerivedCaches`) so the menu and the tree pick the hierarchy up.
 
@@ -51,13 +51,13 @@ The write response carries the fresh `state`, so the panel repaints from what ac
 
 | Action | Permission gate | Background | Reads from `options` |
 | --- | --- | --- | --- |
-| `inspect_hierarchy` | declarative: `permission: 'section', minLevel: 1` | no | `section_id`, `section_tipo` |
-| `generate_virtual_section` | declarative: `permission: 'section', minLevel: 2` | no | `section_id`, `section_tipo`, `force_to_create` |
+| `inspect_hierarchy` | declarative: `permission: 'targets', minLevel: 1` on `hierarchy1/<section_id>` | no | `section_id`, `section_tipo` |
+| `generate_virtual_section` | declarative: `permission: 'targets', minLevel: 2` on `hierarchy1/<section_id>` | no | `section_id`, `section_tipo`, `force_to_create` |
 
 | Option | Type | Required | Meaning |
 | --- | --- | --- | --- |
 | `section_id` | int | yes | the hierarchy-definition record (the caller record) |
-| `section_tipo` | string | yes | that record's section (`hierarchy1`); also the section the write gate is asserted on |
+| `section_tipo` | string | yes | that record's section — must be `hierarchy1`; any other value is refused as an unusable target. The gate is asserted on `hierarchy1` itself, not on this value |
 | `force_to_create` | bool | no (default `false`) | **Rebuild**: tear the TLD's ontology down (its `dd_ontology` nodes, its ontology-main row and its `<tld>0` node records) and re-provision. The `<tld>1` **terms are not touched** |
 
 Response: `{ result, msg, errors[], state, applied[] }`, where `state` is `{section_id, tld, typology, usable, checks: [{id, label, ok, detail}]}`.

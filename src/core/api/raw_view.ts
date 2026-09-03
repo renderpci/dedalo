@@ -16,6 +16,14 @@
  *      'dd128') is refused BEFORE any DB read, so password hashes / user data can
  *      never be dumped. This block overrides even the superuser.
  *
+ *   4. the COMPONENT KEY (P1-3 / SEC-04, 2026-09-03) — not here, INSIDE
+ *      `readRaw`: every jsonb column of the row is projected to the keys the
+ *      admin's OWN profile grants on the row's section (`security/read_door.ts`
+ *      projectAuthorizedColumns; global admins resolve through their profile
+ *      like the human read). Gate 3's dd128 denylist stays as DEFENSE IN DEPTH:
+ *      the projection is the rule, the denylist is the belt for the one section
+ *      whose disclosure is a credential.
+ *
  * Because GET can only ever reach this one server-built read_raw, no arbitrary
  * action is reachable by GET and the global CSRF-exempt set is untouched. The
  * new-tab GET authenticates via the SameSite=Lax session cookie the browser

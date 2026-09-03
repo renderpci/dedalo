@@ -77,7 +77,24 @@ const GLOBAL_ADMIN_COMPONENT = 'dd244';
 const DEVELOPER_COMPONENT = 'dd515';
 const AREA_MAINTENANCE = 'dd88';
 const TOOLS_REGISTER_SECTION = 'dd1324';
-const TEMP_PRESET_SECTION = 'dd655';
+/**
+ * dd655 — the per-user EDITING preset section (one transient "current search"
+ * record per user and section, client search_user_presets.js). Every principal
+ * resolves level 2 on it (getPermissions below): that is the RULE that lets any
+ * profile keep its own editing preset without an install-wide dd655 grant. It
+ * is NOT authority over other users' rows: the rule is bounded by the OWNER
+ * predicate the search assembler applies to this section
+ * (sql_assembler.ts buildPresetOwnerFilter — `dd654` owner locator or
+ * `created_by_user_id`), which the list, the count, the UNION branches,
+ * `isRecordInScope` and therefore the save/delete doors all inherit. Exported
+ * so the assembler binds the predicate to the same tipo this rule names.
+ * Audit CARRY-07 (TOOLS-03): before the predicate, 80 preset rows owned by
+ * three users were each readable and writable by any of them by id.
+ * Gate: test/unit/preset_ownership_native.test.ts.
+ */
+export const TEMP_PRESET_SECTION = 'dd655';
+/** dd654 — the owner locator (→ dd128) on a dd655/dd623 preset record. */
+export const PRESET_OWNER_COMPONENT = 'dd654';
 const INVERSE_RELATIONS_COMPONENT = 'dd1596';
 /**
  * Sections whose list values are publicly readable when the matrix says 0.
@@ -480,6 +497,8 @@ export async function getPermissions(
 	// Core resolver order.
 	if (principal.userId === SUPERUSER_ID) return 3;
 	if (parentTipo === TOOLS_REGISTER_SECTION) return 1;
+	// The blanket editing-preset grant — bounded to the caller's OWN rows by the
+	// assembler's owner predicate (see TEMP_PRESET_SECTION).
 	if (parentTipo === TEMP_PRESET_SECTION) return 2;
 	// Inverse-relations / 'all' read wildcard (the related "who-calls-me" path).
 	// AUTHZ-05 guard: the wildcard grant requires a CONCRETE parent section tipo,

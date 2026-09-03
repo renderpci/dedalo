@@ -235,11 +235,16 @@ async function resolveProfile(
 		// "no profile" here would turn a transient DB error into a permanent,
 		// cached "this section cannot be identified". Fail loudly and cache
 		// nothing — resolveProfile's caller only caches what it returns, and this
-		// path throws past it.
+		// path throws past it. The exception's own text (a relation name, a host) is
+		// LOG-ONLY: ProfileError's message reaches the wire under a public code
+		// (SEC-18), so the sentence is deliberate and what threw rides as `cause`.
+		console.error(
+			`[identify/profile_source] could not read the '${IDENTIFY_PROPERTY}' descriptor of section '${sectionTipo}'`,
+			error,
+		);
 		throw new ProfileError(
-			`could not read the '${IDENTIFY_PROPERTY}' descriptor of section '${sectionTipo}': ${
-				error instanceof Error ? error.message : String(error)
-			}`,
+			`could not read the '${IDENTIFY_PROPERTY}' descriptor of section '${sectionTipo}' (the server log records why)`,
+			{ cause: error },
 		);
 	}
 	if (raw === null || raw === undefined) return { kind: 'none' };

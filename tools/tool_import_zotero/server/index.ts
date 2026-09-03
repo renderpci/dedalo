@@ -33,6 +33,7 @@ import {
 	type ToolResponse,
 	type ToolServerModule,
 	toolRequestId,
+	type WriteTarget,
 } from '../../../src/core/tools/module.ts';
 import { applyRdfMap, parseRdfXml, type RdfMapEntry } from '../../../src/core/tools/rdf_xml.ts';
 
@@ -143,10 +144,33 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 	);
 }
 
+/**
+ * The WRITE TARGETS of a Zotero import — what the 'targets' gate authorizes
+ * (audit CARRY-08 / TOOLS-04): every component the CLIENT-SUPPLIED field-map
+ * binds (`tool_config.config.main[].component_tipo`), on the import section,
+ * plus the caller pair. A 'tipo' gate on `(section_tipo, tipo)` authorized the
+ * component the tool was OPENED from and none of the ones the map writes.
+ */
+export function importZoteroTargets(options: Record<string, unknown>): WriteTarget[] {
+	const sectionTipo = options.section_tipo;
+	return [
+		{ section_tipo: sectionTipo, tipo: options.tipo },
+		...readFieldMap(options.tool_config).map((entry) => ({
+			section_tipo: sectionTipo,
+			tipo: entry.component_tipo,
+		})),
+	];
+}
+
 export const tool: ToolServerModule = {
 	name: 'tool_import_zotero',
 	apiActions: {
-		import_files: { permission: 'tipo', minLevel: 2, handler: importFiles },
+		import_files: {
+			permission: 'targets',
+			minLevel: 2,
+			targets: importZoteroTargets,
+			handler: importFiles,
+		},
 	},
 	backgroundRunnable: ['import_files'],
 };

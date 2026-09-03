@@ -21,14 +21,16 @@
  * an ontology, an active flag, and a pointer to a term that never existed (live: Albania).
  * The invariant, and every write that establishes it, now lives in ONE module.
  *
- * WRITE gate (permission:'section', level >= 2) is enforced by tool_request.ts before
- * this handler runs (PHP security::assert_section_permission).
+ * WRITE gate (permission:'targets', level >= 2 on hierarchy1/<section_id>) is enforced
+ * by the dispatcher before this handler runs — see hierarchyTargets: the target is the
+ * record the state module is PINNED to, not the section_tipo the client happens to send.
  */
 
 import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import { clearOntologyDerivedCaches } from '../../../src/core/ontology/cache_invalidation.ts';
 import {
 	ensureHierarchy,
+	HIERARCHY_SECTION,
 	inspectHierarchy,
 	rebuildHierarchy,
 } from '../../../src/core/ontology/hierarchy_state.ts';
@@ -37,6 +39,7 @@ import {
 	type ToolActionContext,
 	type ToolResponse,
 	toolRequestId,
+	type WriteTarget,
 } from '../../../src/core/tools/module.ts';
 
 /** Neither action can address a hierarchy without its record — a caller fault. */
@@ -44,18 +47,43 @@ function missingTarget(action: string): DedaloError {
 	return new DedaloError('request.invalid_options', {
 		coordinates: { action },
 		message: `Missing section_id or section_tipo [${action}]`,
-		publicMessage: 'section_tipo and a positive section_id are required',
+		publicMessage: `section_tipo '${HIERARCHY_SECTION}' and a positive section_id are required`,
 	});
 }
 
-/** The caller's hierarchy1 record, or null when the options are unusable. */
+/**
+ * The ONE record both actions address: `hierarchy1/<options.section_id>`.
+ *
+ * `inspectHierarchy` / `ensureHierarchy` / `rebuildHierarchy` take only the id
+ * and write HIERARCHY_SECTION by constant, so `options.section_tipo` can name
+ * nothing else: a request carrying any other section is refused here as
+ * unusable, and — the half that matters — the 'targets' gate authorizes the
+ * pinned pair BEFORE this handler runs (hierarchyTargets), so a write grant on
+ * some unrelated section is no longer authority to rewrite a hierarchy record
+ * (audit CARRY-08 / TOOLS-04).
+ */
 function targetOf(context: ToolActionContext): { sectionTipo: string; sectionId: number } | null {
 	const sectionTipo =
 		typeof context.options.section_tipo === 'string' ? context.options.section_tipo : '';
 	const raw = context.options.section_id;
 	const sectionId = raw === undefined || raw === null || raw === '' ? 0 : Number(raw);
-	if (sectionTipo === '' || !Number.isFinite(sectionId) || sectionId <= 0) return null;
+	if (sectionTipo !== HIERARCHY_SECTION || !Number.isFinite(sectionId) || sectionId <= 0) {
+		return null;
+	}
 	return { sectionTipo, sectionId };
+}
+
+/**
+ * The 'targets' extractor for BOTH actions: the pinned hierarchy record. The
+ * gate validates the id (a positive integer, inside the caller's scope) and the
+ * level on HIERARCHY_SECTION itself — the client's `section_tipo` is deliberately
+ * NOT consulted for the grant, because the writer never consults it either;
+ * targetOf above refuses a mismatching one as a caller fault.
+ */
+export function hierarchyTargets(options: Record<string, unknown>): WriteTarget[] {
+	// `?? null`: an ABSENT id must be a record-target denial, not a section-only
+	// pass — the gate skips the record half only when no id is named at all.
+	return [{ section_tipo: HIERARCHY_SECTION, section_id: options.section_id ?? null }];
 }
 
 /** READ: the invariant checklist the client renders as the status panel. */

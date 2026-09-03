@@ -136,6 +136,15 @@ export async function searchSectionRecords(
  * record — so component resolution, permission stamping and (for non-admins)
  * the projects filter all apply. A record the principal may not see resolves to
  * empty `data`, never an error that would confirm the record exists.
+ *
+ * THE SECTION GRANT FIRST (P1-3 / SEC-11's shape, 2026-09-03): `readSection`
+ * gates each ddo on the component key but the SECTION read grant lives in the
+ * HTTP handler (dd_core_api Gate B), which this tool bypasses — a principal
+ * granted components of a section but not the section itself received the
+ * record identity + those components here while the record page refused. The
+ * read door's one-typed-question law applies: the caller named one section,
+ * "no" is `perm.denied` (the section is not a record, so nothing about the
+ * record's existence is disclosed).
  */
 export async function readSectionRecord(
 	principal: Principal,
@@ -143,6 +152,11 @@ export async function readSectionRecord(
 ): Promise<{ context: unknown[]; data: unknown[] }> {
 	const sectionTipo = assertValidTipo(input.section_tipo, 'mcp.read.section_tipo');
 	const sectionId = Math.floor(input.section_id);
+	const { authorizeComponentRead } = await import('../../../core/security/read_door.ts');
+	await authorizeComponentRead(
+		{ principal, door: 'mcp.dedalo_read_record' },
+		{ sectionTipo, componentTipo: sectionTipo },
+	);
 	const lang = input.lang ?? 'lg-eng';
 	const mode = input.mode === 'edit' ? 'edit' : 'list';
 

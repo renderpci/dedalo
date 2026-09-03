@@ -63,6 +63,19 @@ export const LOGIN_ACCOUNT_MAX_ATTEMPTS = Number(readString('LOGIN_ACCOUNT_MAX_A
 export interface Session {
 	userId: number;
 	username: string;
+	/**
+	 * The login-time SNAPSHOT of the account's global-admin grant — DESCRIPTIVE ONLY,
+	 * NOT AN AUTHORIZATION INPUT. Nothing rewrites it after login, so any reader would
+	 * serve a demoted administrator the old authority for the session's whole TTL
+	 * (SEC-14). Every admin-only surface resolves the Principal per request instead:
+	 * dispatched actions via `dispatchRqo`, the raw routes via
+	 * `security/session_gate.ts`. Behavioural gate: account_revocation_native ("the
+	 * principal, not the snapshot, decides").
+	 *
+	 * FOLLOW-UP (named, not silent): the column and `createSession`'s third argument
+	 * are now reader-less; removing them changes the createSession arity across the
+	 * test helpers and scripts/client_test_runner.ts, which is a separate sweep.
+	 */
 	isGlobalAdmin: boolean;
 	csrfToken: string;
 	/**

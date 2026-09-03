@@ -45,11 +45,13 @@ interface ToolServerModule {
 }
 interface ToolActionSpec {
   // declarative gate — see "Choosing a permission kind" below for record/tipo/record_tipo
-  permission: 'section'|'section_list'|'tipo'|'record'|'record_tipo'|'developer'|null;
+  permission: 'section'|'section_list'|'targets'|'tipo'|'record'|'record_tipo'|'developer'|null;
   minLevel?: number;                            // dd774 level (1 read / 2 write / 3 admin), default 2
   sectionTipos?: (options) => unknown[];        // REQUIRED for 'section_list': the batch's targets
+  targets?: (options) => WriteTarget[];         // REQUIRED for 'targets': the action's WRITE targets
   handler: (context: ToolActionContext) => Promise<ToolResponse>;
 }
+interface WriteTarget { section_tipo: unknown; tipo?: unknown; section_id?: unknown }
 ```
 
 **`section_list`** is for a BATCH action whose section targets ride *inside* the
@@ -61,6 +63,39 @@ background fork** (gate 7), where a denial is still observable to the caller —
 in-handler loop would be invisible to a `background_running` request. PHP's twin is
 the `assert_section_permission` loop at the top of `import_files` (SEC-024 §9.2).
 
+**`targets`** is for an action whose EFFECT TARGET is not a top-level option —
+the scope rides in `options.sqo` (`tool_update_cache::update_cache` re-saves the
+selected components on every row the SQO matches), in a nested client map
+(`tool_import_files::import_files` writes into every `tool_config.ddo_map`
+destination; the marc21/zotero field-maps bind components the same way), or is a
+section the handler PINS by constant (`tool_hierarchy` writes `hierarchy1/<id>`
+whatever `section_tipo` the client sends). `targets(options)` derives the
+(section_tipo, tipo?, section_id?) triples the handler will mutate **off the same
+keys the handler reads**; `minLevel` is asserted on each — the (section,
+component) PAIR when a `tipo` is named, the record's scope (`isRecordInScope`)
+when a `section_id` is — and an empty list, a malformed entry or a throwing
+extractor is a denial. Declaring `section`/`tipo` on such an action asserts a
+right about a SIBLING field and leaves the thing actually written ungated: that
+is audit CARRY-08 (TOOLS-04), three doors proven open by execution. `section_list`
+is the tipo-less, id-less special case and stays for the pure per-section batch.
+A target the handler can only resolve at run time — an ontology-derived portal
+section, and above all a RECORD the handler binds while it runs (a filename's
+numeric prefix in enumerate mode, a matcher hit, the destination of a role
+write) — is authorized in-handler, at the point it is bound and before the
+first write into it, through the save door's own rule
+(`record_scope.ts assertRecordWriteTarget`); a record born in the same run is
+admitted as a create is. The declarative extractor proves the PAIRS and the
+records the request SPELLS; it cannot see an id the handler derives, and a
+gate that stops at the extractor leaves the record axis open (audit CARRY-08's
+third door, refuted by reproduction: the same record refused as
+`files_data[].section_id` and written as a filename prefix).
+Gates: `test/unit/action_scope_binding_tripwire.test.ts` — TOTAL over every
+action of every loaded tool server module, binding each handler that reads a
+request SQO, a nested client map key, or a pinned section constant to an
+extractor that references the same key; `action_scope_binding_native` — the
+pair, the level and the record halves refused through the real gate and, for
+the run-time-bound records, through the real handler.
+
 A handler's returned `ToolResponse` **replaces the API envelope wholesale** — the
 tool owns its `result` / `msg` / `errors` (and any extra fields, e.g. a streaming
 body). There is **no reflection**: a method exists on the API only if it is a
@@ -69,6 +104,7 @@ property of `apiActions`, and the handler is a typed function, so PHP's
 
 `tools/tool_dev_template/server/index.ts` is the exemplar: EVERY permission kind
 the contract declares (`section`, `section_list` + its `sectionTipos` extractor,
+`targets` + its `targets` extractor — as `scoped_batch_demo` —
 `tipo`, `record`, `record_tipo` — as `component_write_demo` — and `developer`)
 plus a null-spec action, `backgroundRunnable`, the background-only
 `publishProgress` / `signal` seams, `isAvailable` and the lifecycle hooks. For
@@ -290,6 +326,7 @@ COMBINATION. The one that matters:
 | a component (no record) | `tipo` | level on the (section, component) PAIR |
 | a record | `record` | SECTION level + the record's project scope |
 | **a COMPONENT OF A RECORD** | **`record_tipo`** | **the PAIR + the record's project scope** |
+| whatever `options.sqo` / a nested client map / a pinned constant names | `targets` | level on EVERY derived (section, tipo?, id?) — pair and scope halves per entry |
 
 `record` resolves `getPermissions(principal, sectionTipo, sectionTipo)` — a
 *section*-level right. It never consults the component tipo. So an action that
@@ -713,8 +750,12 @@ actions are a read and a write over an invariant that lives in the core:
 
 | action | gate | core |
 | --- | --- | --- |
-| `inspect_hierarchy` | `section`, minLevel 1 | `inspectHierarchy` — the checklist the client renders as its status panel |
-| `generate_virtual_section` | `section`, minLevel 2 | `ensureHierarchy` (idempotent converge); `force_to_create` → `rebuildHierarchy` |
+| `inspect_hierarchy` | `targets` over `hierarchy1/<section_id>`, minLevel 1 | `inspectHierarchy` — the checklist the client renders as its status panel |
+| `generate_virtual_section` | `targets` over `hierarchy1/<section_id>`, minLevel 2 | `ensureHierarchy` (idempotent converge); `force_to_create` → `rebuildHierarchy` |
+
+Both gates are bound to the record the core is PINNED to — `hierarchy_state.ts` takes only
+the id and writes `hierarchy1` by constant — never to the `section_tipo` the client sends,
+which the writer ignores (audit CARRY-08; `action_scope_binding_native`).
 
 Both live in `src/core/ontology/hierarchy_state.ts`, which is the **single writer** for
 hierarchy consistency (`test/unit/hierarchy_single_writer_tripwire.test.ts`). The tool used

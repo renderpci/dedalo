@@ -319,6 +319,45 @@ describe('staged identity: colliding client names stay two distinct files', () =
  * halves of that — the mechanism still catches a container that is not what it
  * claims (JPEG), and it no longer applies a predicate no consumer enforces (text).
  */
+describe('the refusal speaks a DedaloError’s WIRE sentence, never its log-only message (SEC-17)', () => {
+	test('a hostile key_dir is refused with the registry sentence; the segment itself (raw client input) stays in the log', async () => {
+		// `sanitizeSegment` throws `media.invalid_path` (OPERATOR disclosure) with
+		// the rejected segment in the log-only `message`. `rejectedUpload` read
+		// `error.message` off it — forwarding whatever a validator keeps for the
+		// log (raw input, a path) onto the public `media.upload_rejected` body.
+		const s = newSession(UPLOAD_USER);
+		const segment = 'kd_zz/../SENTINEL_ESCAPE';
+		const form = new FormData();
+		form.set('key_dir', segment);
+		form.set('file_name', 'x.jpg');
+		form.set('chunked', 'false');
+		form.set('file_to_upload', new Blob([new Uint8Array([0xff, 0xd8, 0xff]) as BlobPart]), 'x.jpg');
+		const res = await handleRequest(
+			new Request(API_URL, {
+				method: 'POST',
+				body: form,
+				headers: {
+					Cookie: `dedalo_ts_session=${s.token}`,
+					'x-dedalo-csrf-token': s.csrf,
+					'X-File-Name': encodeURIComponent('x.jpg'),
+				},
+			}),
+			context,
+		);
+		expect(res.status).toBe(400);
+		const body = (await res.json()) as Record<string, unknown>;
+		expect(body.ok).toBe(false);
+		expect((body.error as ApiError).code).toBe('media.upload_rejected');
+		expect((body.error as ApiError).message).toBe('Invalid media path');
+		// Everything but the SEC-19 debug block (DEDALO_DEBUG_API_ERRORS collapses
+		// the whole ladder by design and is gated on its own): no raw input.
+		const { debug: _debug, ...error } = body.error as Record<string, unknown>;
+		const wire = JSON.stringify({ ...body, error });
+		expect(wire).not.toContain('SENTINEL_ESCAPE');
+		expect(wire).not.toContain('Unsafe path segment');
+	});
+});
+
 describe('join verification reaches past the first 8192 bytes', () => {
 	async function upload(
 		s: { token: string; csrf: string },

@@ -49,7 +49,7 @@ apiActions: {
 | Action | Permission gate | Reads from `options` |
 | --- | --- | --- |
 | `apply_value` | declarative: `tipo` @ level 2 (write) on `(section_tipo, tipo)`. For a section restore `tipo === section_tipo`, so it is equivalent to the section gate. ✅ **Per-record project scope IS enforced**: the declarative `tipo` kind checks the section/tipo write level only, so the handler adds the record check itself — `principalCanAccessRecord(section_tipo, section_id, principal)` (`tool_time_machine.ts`, SEC-024 §9.4), skipped only for `section_id <= 0` which addresses no record. (This row previously claimed the check was absent; it was already present. Corrected 2026-08-14.) | `section_tipo`, `section_id`, `tipo`, `lang`, `matrix_id`, `caller_dataframe` |
-| `bulk_revert_process` | declarative: `section` @ level 2 (write). Plus imperative **per-row** re-gate: `getPermissions(section_tipo, tipo) >= 2` for every record in the bulk set (rows the caller cannot write are skipped with a `permissions_denied:…` error, not aborting the whole run). ✅ Per-record project scope is enforced PER ROW: the loop calls `principalCanAccessRecord(row.section_tipo, row.section_id, principal)` (`bulk_revert.ts`) alongside the write-level re-gate, so an out-of-scope row is skipped rather than reverted. (This row previously claimed the check was absent; corrected 2026-08-14.) | `section_tipo`, `section_id`, `tipo`, `lang`, `bulk_process_id`, `bulk_revert_process_label` |
+| `bulk_revert_process` | declarative: `section` @ level 2 (write). Plus imperative **per-row** re-gate: `getPermissions(section_tipo, tipo) >= 2` for every record in the bulk set (rows the caller cannot write are skipped as a `{ reason: 'out_of_scope' }` entry of `data.skipped` — counted, never located — not aborting the whole run). ✅ Per-record project scope is enforced PER ROW: the loop calls `principalCanAccessRecord(row.section_tipo, row.section_id, principal)` (`bulk_revert.ts`) alongside the write-level re-gate, so an out-of-scope row is skipped rather than reverted. (This row previously claimed the check was absent; corrected 2026-08-14.) | `section_tipo`, `section_id`, `tipo`, `lang`, `bulk_process_id`, `bulk_revert_process_label` |
 
 Key option meanings:
 
@@ -64,7 +64,7 @@ Key option meanings:
 | `bulk_process_id` | int (req. for `bulk_revert_process`) | The batch run to undo; all rows with this id are reverted. |
 | `bulk_revert_process_label` | string | Human label stored on the new revert process record. |
 
-Both actions return the standard `{result, msg, errors}`; `apply_value` on a section restore also returns `restore_deleted_section_media_files`. Neither action is listed in `backgroundRunnable` — they run inline (the client gives `bulk_revert_process` a 180 s timeout).
+Both actions answer the envelope v2 `{ok, request_id, data}`. `bulk_revert_process` returns `data: {counter, bulk_process_id, skipped}` where `skipped` is a list of typed entries `{reason, section_tipo?, tipo?, section_id?}` — `reason` is a closed vocabulary (`out_of_scope`, `no_pre_batch_state`, `no_column`, `frameless_wipe`, `no_lang`, `failed`), the coordinates ride an entry only once the row has passed the caller's scope gate, and the words (a refusal's detail, an exception's text) go to the server log with the request id, never on the wire. `apply_value` on a section restore also returns `restore_deleted_section_media_files`. Neither action is listed in `backgroundRunnable` — they run inline (the client gives `bulk_revert_process` a 180 s timeout).
 
 There is also a lifecycle hook (never inside `apiActions`):
 
@@ -104,7 +104,7 @@ const rqo = {
     }
 }
 const response = await data_manager.request({ body: rqo, retries: 1, timeout: 60000 })
-// response → { result:true, msg:'OK. Request done successfully', errors:[] }
+// response → { ok:true, request_id:'…', data:true }
 ```
 
 Reverting a whole batch run (admin-only `bulk_revert_process`):
@@ -124,6 +124,7 @@ const rqo = {
     }
 }
 const response = await data_manager.request({ body: rqo, retries: 1, timeout: 180000 })
+// response → { ok:true, request_id:'…', data:{ counter:12, bulk_process_id:5602, skipped:[ { reason:'out_of_scope' }, … ] } }
 ```
 
 A section restore is the same `apply_value` call with `tipo === section_tipo` (the model resolves to `section`); on success the response additionally carries `restore_deleted_section_media_files`.

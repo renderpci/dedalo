@@ -4,8 +4,9 @@
  * every part of the ToolServerModule contract:
  *
  *  - apiActions in MAP form with EVERY permission kind the contract defines
- *    ('section', 'section_list' + its required sectionTipos extractor, 'tipo',
- *    'record', 'developer') plus a null-spec (handler-gated) action;
+ *    ('section', 'section_list' + its required sectionTipos extractor,
+ *    'targets' + its required targets extractor, 'tipo', 'record',
+ *    'record_tipo', 'developer') plus a null-spec (handler-gated) action;
  *  - backgroundRunnable (the second allowlist for async execution) and the
  *    background-only context seams `publishProgress` / `signal`;
  *  - isAvailable (toolbar availability hook);
@@ -26,7 +27,7 @@
  * calls through `tool_request` exists in `apiActions` below.
  */
 
-import { ok } from '../../../src/core/errors/index.ts';
+import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import {
 	type ToolActionContext,
 	type ToolResponse,
@@ -80,6 +81,36 @@ async function componentWriteDemo(context: ToolActionContext): Promise<ToolRespo
 async function batchDemo(context: ToolActionContext): Promise<ToolResponse> {
 	const items = Array.isArray(context.options.items) ? context.options.items : [];
 	return ok({ batch: items.length, gated: true }, { requestId: toolRequestId(context) });
+}
+
+/**
+ * 'targets' gate demo: the kind for an action whose EFFECT TARGET is not a
+ * top-level option — here the scope rides in `options.sqo` (the records the
+ * batch will touch) and the components in `options.components_selection`, so
+ * the extractor names every (sqo section × selected component) PAIR and the
+ * gate asserts minLevel on each, before the handler and before any background
+ * fork. Declaring 'section' on `options.section_tipo` here would authorize a
+ * SIBLING field and leave the thing actually written ungated (audit CARRY-08).
+ * A target may also carry a `section_id` (a positive record, scope-checked),
+ * or pin a section by CONSTANT when the handler writes one by constant.
+ */
+async function scopedBatchDemo(context: ToolActionContext): Promise<ToolResponse> {
+	// THE BATCH-SCOPE RULE (TOOLS_SPEC "a batch action takes its scope from the
+	// REQUEST, or refuses"): an absent or malformed sqo is a refusal — never a
+	// fallback to "every record of the section". The gate already refused an
+	// sqo naming no section; this is the handler's own half of the same rule.
+	const sqoRaw = context.options.sqo;
+	if (sqoRaw === null || typeof sqoRaw !== 'object' || Array.isArray(sqoRaw)) {
+		throw new DedaloError('request.invalid_options', {
+			message: 'scoped_batch_demo: sqo is required (the scope to act on)',
+			publicMessage: 'sqo is required',
+		});
+	}
+	const sqo = sqoRaw as { section_tipo?: unknown };
+	return ok(
+		{ sqo_section_tipo: sqo.section_tipo ?? null, scoped: true },
+		{ requestId: toolRequestId(context) },
+	);
 }
 
 /** 'developer' gate demo: caller is a developer; no section target is asserted. */
@@ -151,6 +182,30 @@ export const tool: ToolServerModule = {
 					(item) => (item as { section_tipo?: unknown })?.section_tipo,
 				),
 			handler: batchDemo,
+		},
+		scoped_batch_demo: {
+			permission: 'targets',
+			minLevel: 2,
+			// REQUIRED for 'targets': derive the WRITE TARGETS from the SAME keys
+			// the handler reads. Every entry is gated at minLevel — the (section,
+			// tipo) PAIR when a tipo is named, the record scope when a section_id
+			// is — and an empty list, a malformed entry or a throwing extractor is
+			// a DENIAL (fail-closed).
+			targets: (options) => {
+				const sqo = options.sqo as { section_tipo?: unknown } | undefined;
+				const raw = sqo?.section_tipo;
+				const sections = Array.isArray(raw) ? raw : raw === undefined ? [] : [raw];
+				const selection = Array.isArray(options.components_selection)
+					? options.components_selection
+					: [];
+				return sections.flatMap((section_tipo) =>
+					selection.map((item) => ({
+						section_tipo,
+						tipo: (item as { tipo?: unknown })?.tipo,
+					})),
+				);
+			},
+			handler: scopedBatchDemo,
 		},
 	},
 	// Only long_job may be forked to the background executor.

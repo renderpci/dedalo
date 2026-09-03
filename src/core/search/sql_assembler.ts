@@ -48,8 +48,10 @@ import { getUserFilterRecords } from '../security/filter_records.ts';
 import { FRONTIER_VISIBLE_TABLES, type SqlFrontierScope } from '../security/frontier_scope.ts';
 import {
 	getUserProjects,
+	PRESET_OWNER_COMPONENT,
 	PROFILES_SECTION,
 	type Principal,
+	TEMP_PRESET_SECTION,
 	FILTER_MASTER_COMPONENT as USERS_FILTER_MASTER_COMPONENT,
 } from '../security/permissions.ts';
 import { bareBrowseCount } from './bare_count.ts';
@@ -620,6 +622,88 @@ async function buildUsersProjectsFilter(
 }
 
 /**
+ * THE EDITING-PRESET (dd655) OWNER RULE — audit CARRY-07 (TOOLS-03), and the
+ * ONLY statement of that rule in the engine:
+ *
+ *   section_id > 0 AND ( its dd654 owner locator IS me
+ *                        OR I created it   (data.created_by_user_id = me) )
+ *
+ * dd655 resolves to matrix_list, a PROJECTS_FILTER_EXEMPT table, and every
+ * principal holds level 2 on it by rule (permissions.ts TEMP_PRESET_SECTION —
+ * each user keeps ONE transient editing preset per section without an
+ * install-wide grant). Until this predicate the client built the owner
+ * condition INSIDE its own SQO and no server module re-imposed it, so any user
+ * could list, read, rewrite or delete any other user's preset by id. The rule
+ * lives HERE — like buildUsersProjectsFilter, and for the same reason — so the
+ * list, the count, every UNION branch, the frontier hop, and the per-record
+ * existence probe (isRecordInScope → the save/delete doors) inherit one
+ * predicate. Global admins and internal searches are exempt exactly as the
+ * projects filter is (the caller decides, see sectionIsOwnerBound's callers).
+ *
+ * The created_by arm covers the create→populate window: the client creates the
+ * bare record first and writes dd654 in a second request, and the creator must
+ * be able to make that second write. Both typed section_id forms are probed
+ * (WC-2026-08-10-section-id-int-canonical), as everywhere in this file.
+ */
+function buildPresetOwnerFilter(
+	alias: string,
+	principal: Principal,
+	params: ParamsCollector,
+): string {
+	const bind = (payload: string) => params.getPlaceholder(payload);
+	const owner = [
+		composeContains(
+			`${alias}.relation`,
+			relationProbeGroups(PRESET_OWNER_COMPONENT, [
+				{ section_tipo: config.usersSectionTipo, section_id: principal.userId },
+			]),
+			bind,
+		),
+		`${alias}.data @> ${bind(`{"created_by_user_id":${principal.userId}}`)}::text::jsonb`,
+		`${alias}.data @> ${bind(`{"created_by_user_id":"${principal.userId}"}`)}::text::jsonb`,
+	];
+	return `(${alias}.section_id > 0 AND (${owner.join(' OR ')}))`;
+}
+
+/**
+ * A section whose rows are bound to their OWNER regardless of the table they
+ * live in: consulted BEFORE the PROJECTS_FILTER_EXEMPT_TABLES exemption at
+ * both gating sites (the main alias and the frontier hop), because the
+ * exemption is about shared vocabulary tables and dd655 merely happens to
+ * live in one of them.
+ */
+function sectionIsOwnerBound(sectionTipo: string): boolean {
+	return sectionTipo === TEMP_PRESET_SECTION;
+}
+
+/**
+ * Does the per-record ACL predicate apply to this section for a non-admin?
+ * Owner-bound sections always; otherwise every section outside the shared
+ * vocabulary/infrastructure tables (PHP search::$ar_tables_skip_projects).
+ */
+async function sectionNeedsRecordAcl(sectionTipo: string): Promise<boolean> {
+	if (sectionIsOwnerBound(sectionTipo)) return true;
+	const sectionTable = (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix';
+	return !PROJECTS_FILTER_EXEMPT_TABLES.has(sectionTable);
+}
+
+/**
+ * The per-record ACL predicate for ONE section: the owner rule for an
+ * owner-bound section, the projects filter for everything else. The ONE entry
+ * every gating site calls (main alias, UNION branch, frontier hop), so the
+ * owner rule can never be reached by one door and skipped by another.
+ */
+async function buildRecordAclFilter(
+	sectionTipo: string,
+	alias: string,
+	principal: Principal,
+	params: ParamsCollector,
+): Promise<string> {
+	if (sectionIsOwnerBound(sectionTipo)) return buildPresetOwnerFilter(alias, principal, params);
+	return buildProjectsFilter(sectionTipo, alias, principal, params);
+}
+
+/**
  * Projects filter (PHP build_sql_projects_filter) for one section: restrict to
  * records whose component_filter relation references one of the user's
  * projects. Returns '' when the section is not project-gated. A gated section
@@ -689,7 +773,7 @@ async function buildMultiSectionProjectsFilter(
 		// PHP $ar_tables_skip_projects sections (thesaurus/vocabulary tables)
 		// pass with a bare guard — they are never project-gated.
 		const sectionPredicate = gateable.has(sectionTipo)
-			? await buildProjectsFilter(sectionTipo, alias, principal, params)
+			? await buildRecordAclFilter(sectionTipo, alias, principal, params)
 			: '';
 		const guard = `${alias}.section_tipo = ${params.getPlaceholder(sectionTipo)}::text`;
 		if (sectionPredicate === '') {
@@ -944,9 +1028,12 @@ function hopNeedsProjectsFilter(
 	principal: Principal | undefined,
 	skipProjectsFilter: boolean,
 	hopTable: string,
+	hopSection: string,
 ): principal is Principal {
 	if (principal === undefined || principal.isGlobalAdmin) return false;
 	if (skipProjectsFilter) return false;
+	// Owner-bound BEFORE the table exemption (dd655 lives in an exempt table).
+	if (sectionIsOwnerBound(hopSection)) return true;
 	return !PROJECTS_FILTER_EXEMPT_TABLES.has(hopTable);
 }
 
@@ -969,8 +1056,8 @@ function buildPathScope(
 		door: 'search.path',
 		recordPredicate: async ({ sectionTipo: hopSection, table: hopTable, alias: hopAlias }) => {
 			const parts: string[] = [];
-			if (hopNeedsProjectsFilter(principal, skipProjectsFilter, hopTable)) {
-				pushFragment(parts, await buildProjectsFilter(hopSection, hopAlias, principal, params));
+			if (hopNeedsProjectsFilter(principal, skipProjectsFilter, hopTable, hopSection)) {
+				pushFragment(parts, await buildRecordAclFilter(hopSection, hopAlias, principal, params));
 			}
 			pushFragment(parts, await buildHopUserRecordsFilter(hopAlias, principal, params));
 			return parts.join(' AND ');
@@ -1208,11 +1295,11 @@ async function buildPlainSearchSql(sqo: Sqo, options: SearchOptions): Promise<Bu
 	if (principal !== undefined && !principal.isGlobalAdmin && sqo.skip_projects_filter !== true) {
 		// PHP auto-exemption (search::$ar_tables_skip_projects): shared
 		// vocabulary/infrastructure tables never carry project locators. Applies
-		// per SECTION so a mixed UNION only gates the gateable branches.
+		// per SECTION so a mixed UNION only gates the gateable branches — and an
+		// OWNER-BOUND section (dd655) is gated whatever table it lives in.
 		const gateableSections: string[] = [];
 		for (const sectionTipo of sectionTipos) {
-			const sectionTable = (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix';
-			if (!PROJECTS_FILTER_EXEMPT_TABLES.has(sectionTable)) gateableSections.push(sectionTipo);
+			if (await sectionNeedsRecordAcl(sectionTipo)) gateableSections.push(sectionTipo);
 		}
 		if (gateableSections.length > 0) {
 			const projectsFilter = multiSection
@@ -1223,7 +1310,7 @@ async function buildPlainSearchSql(sqo: Sqo, options: SearchOptions): Promise<Bu
 						principal,
 						params,
 					)
-				: await buildProjectsFilter(mainSectionTipo, alias, principal, params);
+				: await buildRecordAclFilter(mainSectionTipo, alias, principal, params);
 			if (projectsFilter !== '') {
 				whereParts.push(projectsFilter);
 				projectsFilterActive = true;

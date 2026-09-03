@@ -104,6 +104,7 @@ import { z } from 'zod';
 import { config } from '../../config/config.ts';
 import { buildLocatorLookupKey, type Locator } from '../../core/concepts/locator.ts';
 import { canonicalizeStoredSectionId } from '../../core/concepts/section_id.ts';
+import { DedaloError, wireMessage } from '../../core/errors/index.ts';
 import { type ComponentGrant, criterionReadableOn } from '../../core/identify/component_access.ts';
 import {
 	type AccessFilter,
@@ -112,7 +113,11 @@ import {
 	normalizeText,
 	type ValueReader,
 } from '../../core/identify/match.ts';
-import { IDENTITY_LOCATOR_PROPERTIES, readPathValues } from '../../core/identify/path_read.ts';
+import {
+	createPathReadScope,
+	IDENTITY_LOCATOR_PROPERTIES,
+	readPathValues,
+} from '../../core/identify/path_read.ts';
 import type {
 	Criterion,
 	CriterionValue,
@@ -421,10 +426,14 @@ const WIRE_MEDIA_TYPES: Readonly<Record<string, 'image/jpeg' | 'image/png' | 'im
 export async function proposeFromVision(input: VisionProposeInput): Promise<VisionProposeReport> {
 	const { profile, seed, principal } = input;
 	const lang = input.lang ?? config.lang.dataLangDefault;
-	const readValues: ValueReader =
-		input.readValues ?? ((record, path) => readPathValues(record, path, { lang }));
-	const filterAccessible = input.filterAccessible ?? defaultAccessFilter;
 	const componentGrant = input.componentGrant ?? getPermissions;
+	// ONE path-reader scope per run: every landed record is authorized on its
+	// own section inside the reader (path_read.ts ACCESS, P1-3 / SEC-12).
+	const pathScope = createPathReadScope({ principal, door: 'identify.vision', componentGrant });
+	const readValues: ValueReader =
+		input.readValues ??
+		((record, path) => readPathValues(record, path, { lang, scope: pathScope }));
+	const filterAccessible = input.filterAccessible ?? defaultAccessFilter;
 	const resolveModel = input.resolveModel ?? defaultModelResolver;
 	const resolveVocabulary = input.resolveVocabulary ?? defaultVocabularyResolver;
 	const extractImage = input.extractImage ?? extractImageForEmbedding;
@@ -655,6 +664,11 @@ export async function proposeFromVision(input: VisionProposeInput): Promise<Visi
 		const turn = await provider.createTurn(request);
 		answerText = turn.text;
 	} catch (error) {
+		// The exception text is a provider/transport message (a fetch failure
+		// naming the endpoint, an ENOENT naming a media path): it is for the log
+		// above. `detail` reaches an ok:true payload verbatim through
+		// dd_identify_api (`declined.detail`), at read level 1, where no
+		// disclosure ladder applies — so it is a DELIBERATE sentence (SEC-18).
 		console.warn(`[identify/vision] model '${model.id}' failed: ${String(error)}`);
 		return {
 			...base,
@@ -663,7 +677,7 @@ export async function proposeFromVision(input: VisionProposeInput): Promise<Visi
 			skipped,
 			declined: {
 				reason: 'model_error',
-				detail: `model '${model.id}' did not answer: ${(error as Error).message}`,
+				detail: `model '${model.id}' did not answer; the server log records why`,
 			},
 		};
 	}
@@ -830,15 +844,27 @@ export function visionEgressRefusal(
 /**
  * The production model seam: the deployment catalog. A catalog problem (none
  * configured, malformed, unknown id, missing key) is a DECLINE with the
- * catalog's own message, not a throw — this source is optional by design.
+ * catalog's own WIRE sentence, not a throw — this source is optional by design.
+ *
+ * `message` here IS wire text: dd_identify_api copies `declined.detail` into
+ * an ok:true `sources[]` at read level 1 (SEC-18). So a DedaloError speaks
+ * only through `wireMessage` (registry English / vetted publicMessage) — its
+ * `.message` is the log-only field, and a provider constructor names the
+ * api_key_env it could not read there, the very field `publicModelList` hides.
+ * Anything else merely happened: a deliberate sentence, the text to the log.
  */
+const NO_USABLE_MODEL_DETAIL = 'no usable vision model; the server log records why';
 const defaultModelResolver: VisionModelResolver = async (modelId) => {
 	try {
 		const { model, provider } = resolveProvider(modelId);
 		return { ok: true, model, provider };
 	} catch (error) {
-		if (error instanceof ModelCatalogError) return { ok: false, message: error.message };
-		return { ok: false, message: `no usable vision model: ${(error as Error).message}` };
+		if (error instanceof ModelCatalogError) return { ok: false, message: wireMessage(error) };
+		console.warn(`[identify/vision] no usable vision model: ${String(error)}`);
+		return {
+			ok: false,
+			message: error instanceof DedaloError ? wireMessage(error) : NO_USABLE_MODEL_DETAIL,
+		};
 	}
 };
 

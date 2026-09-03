@@ -622,6 +622,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			}
 		}
 		const { readRaw } = await import('./read_raw.ts');
+		const { readDoorNotices } = await import('../../security/read_door.ts');
 		const outcome = await readRaw(
 			{
 				sectionTipo: options.section_tipo,
@@ -632,11 +633,18 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			},
 			principal,
 		);
+		// P1-3: the per-component key inside readRaw may have NARROWED the rows
+		// (a refused key is absent / null). Never silently: one notice per request.
+		const notices = readDoorNotices();
 		return {
 			status: 200,
 			// `table` is an owned top-level extension key (the client + the raw view
 			// read it by name); the raw rows are the payload.
-			body: ok(outcome.result, { requestId: context.requestId, extend: { table: outcome.table } }),
+			body: ok(outcome.result, {
+				requestId: context.requestId,
+				extend: { table: outcome.table },
+				...(notices === undefined ? {} : { notices }),
+			}),
 		};
 	},
 	create: async (rqo, context) => {
@@ -1488,6 +1496,10 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			mode,
 			lang,
 			permissions,
+			// P1-3 / SEC-13: WITH the principal, so a section context's buttons pass
+			// the per-button grant (buildSectionButtons) — without it the builder
+			// takes the caller-cap path and emits every button, level 0 included.
+			principal,
 		});
 		return {
 			status: 200,

@@ -22,7 +22,12 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sanitizeClientSqo } from '../../src/core/concepts/sqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { criteriaToFilter, criterionToSqoLeaf } from '../../src/core/identify/criteria.ts';
-import { MAX_PATH_HOPS, readPathValues } from '../../src/core/identify/path_read.ts';
+import {
+	internalPathReadScope,
+	MAX_PATH_HOPS,
+	type PathReadOptions,
+	readPathValues,
+} from '../../src/core/identify/path_read.ts';
 import type {
 	Criterion,
 	CriterionPathStep,
@@ -30,6 +35,20 @@ import type {
 } from '../../src/core/identify/types.ts';
 import { buildSearchSql } from '../../src/core/search/sql_assembler.ts';
 import { DB_READY } from '../helpers/db_ready.ts';
+
+/**
+ * The harness's OWN declared scope: an INTERNAL read (no principal, nothing
+ * gated). The reader REFUSES an absent scope (path_read.ts "A SCOPE IS
+ * MANDATORY" — probed in read_door_acl_tripwire), so every value-shape test
+ * below names its posture instead of leaning on a default.
+ */
+const INTERNAL = internalPathReadScope('gate.identify_path_read');
+const readInternal: (
+	seed: Parameters<typeof readPathValues>[0],
+	path: Parameters<typeof readPathValues>[1],
+	options?: Omit<PathReadOptions, 'scope'>,
+) => ReturnType<typeof readPathValues> = (seed, path, options = {}) =>
+	readPathValues(seed, path, { ...options, scope: INTERNAL });
 
 const SEED = { sectionTipo: 'test3', sectionId: 1 };
 
@@ -53,16 +72,16 @@ function step(componentTipo: string): CriterionPathStep[] {
 
 describe.if(DB_READY)('readPathValues — leaf kinds are descriptor-driven', () => {
 	test('string family → text', async () => {
-		expect(await readPathValues(SEED, step('test52'), { lang: 'lg-eng' })).toEqual({
+		expect(await readInternal(SEED, step('test52'), { lang: 'lg-eng' })).toEqual({
 			kind: 'text',
 			values: ['input text content of one'],
 		});
 	});
 
 	test('number family → number, in stored order, deduped', async () => {
-		expect(await readPathValues(SEED, step('test22'))).toEqual({ kind: 'number', values: [99] });
+		expect(await readInternal(SEED, step('test22'))).toEqual({ kind: 'number', values: [99] });
 		// test139 stores two items (365, 100) — the fan-out is a UNION, not a first-wins.
-		expect(await readPathValues(SEED, step('test139'))).toEqual({
+		expect(await readInternal(SEED, step('test139'))).toEqual({
 			kind: 'number',
 			values: [365, 100],
 		});
@@ -78,7 +97,7 @@ describe.if(DB_READY)('readPathValues — leaf kinds are descriptor-driven', () 
 		// This fixture USED to be that disagreement — item 1 carried year 1628 with
 		// a year-628 stamp — which is why the rule above matters. The fixture is now
 		// corrected and the agreement is enforced by test3_canonical_fixture.test.ts.
-		expect(await readPathValues(SEED, step('test145'))).toEqual({
+		expect(await readInternal(SEED, step('test145'))).toEqual({
 			kind: 'date',
 			ranges: [
 				{ from: 52339305600, to: 52339305600 },
@@ -88,7 +107,7 @@ describe.if(DB_READY)('readPathValues — leaf kinds are descriptor-driven', () 
 	});
 
 	test('relation family → locators, with the transient id stripped', async () => {
-		const value = (await readPathValues(SEED, step('test88'))) as Extract<
+		const value = (await readInternal(SEED, step('test88'))) as Extract<
 			CriterionValue,
 			{ kind: 'locators' }
 		>;
@@ -102,7 +121,7 @@ describe.if(DB_READY)('readPathValues — leaf kinds are descriptor-driven', () 
 	});
 
 	test('section_id is preserved as STORED (string here) — jsonb containment is type-strict', async () => {
-		const value = (await readPathValues(SEED, step('test80'))) as Extract<
+		const value = (await readInternal(SEED, step('test80'))) as Extract<
 			CriterionValue,
 			{ kind: 'locators' }
 		>;
@@ -111,13 +130,13 @@ describe.if(DB_READY)('readPathValues — leaf kinds are descriptor-driven', () 
 	});
 
 	test('an empty stored relation resolves to null, not to an empty value', async () => {
-		expect(await readPathValues(SEED, step('test54'))).toBeNull();
+		expect(await readInternal(SEED, step('test54'))).toBeNull();
 	});
 });
 
 describe.if(DB_READY)('readPathValues — walking the path', () => {
 	test('a relation hop reaches the linked record and reads its leaf there', async () => {
-		expect(await readPathValues(SEED, HOP_TO_27, { lang: 'lg-spa' })).toEqual({
+		expect(await readInternal(SEED, HOP_TO_27, { lang: 'lg-spa' })).toEqual({
 			kind: 'text',
 			values: ['El dos'],
 		});
@@ -126,7 +145,7 @@ describe.if(DB_READY)('readPathValues — walking the path', () => {
 	test('the language is a PARAMETER (no ALS), and the component fallback chain still applies', async () => {
 		// test3/27's test52 exists only in lg-spa; asking in lg-eng resolves through
 		// resolveComponentValue's fallback rather than reading nothing.
-		expect(await readPathValues(SEED, HOP_TO_27, { lang: 'lg-eng' })).toEqual({
+		expect(await readInternal(SEED, HOP_TO_27, { lang: 'lg-eng' })).toEqual({
 			kind: 'text',
 			values: ['El dos'],
 		});
@@ -139,7 +158,7 @@ describe.if(DB_READY)('readPathValues — walking the path', () => {
 			{ section_tipo: 'test3', component_tipo: 'test80' },
 			{ section_tipo: 'test3', component_tipo: 'test52' },
 		];
-		expect(await readPathValues(SEED, twoHops, { lang: 'lg-spa' })).toBeNull();
+		expect(await readInternal(SEED, twoHops, { lang: 'lg-spa' })).toBeNull();
 	});
 
 	test('a non-relation hop is refused — conform can only join through the relation column', async () => {
@@ -147,7 +166,7 @@ describe.if(DB_READY)('readPathValues — walking the path', () => {
 			{ section_tipo: 'test3', component_tipo: 'test52' },
 			{ section_tipo: 'test3', component_tipo: 'test52' },
 		];
-		expect(await readPathValues(SEED, badHop)).toBeNull();
+		expect(await readInternal(SEED, badHop)).toBeNull();
 	});
 
 	test('the depth cap refuses an over-long path instead of walking it', async () => {
@@ -156,7 +175,7 @@ describe.if(DB_READY)('readPathValues — walking the path', () => {
 			component_tipo: 'test80',
 		}));
 		expect(tooDeep.length - 1).toBeGreaterThan(MAX_PATH_HOPS);
-		expect(await readPathValues(SEED, tooDeep)).toBeNull();
+		expect(await readInternal(SEED, tooDeep)).toBeNull();
 	});
 
 	test('a path whose hops run out of frontier stops (the canonical fixture has no back-link)', async () => {
@@ -170,7 +189,7 @@ describe.if(DB_READY)('readPathValues — walking the path', () => {
 			component_tipo: 'test80',
 		}));
 		atCap.push({ section_tipo: 'test3', component_tipo: 'test52' });
-		expect(await readPathValues(SEED, atCap)).toBeNull();
+		expect(await readInternal(SEED, atCap)).toBeNull();
 	});
 });
 
@@ -246,14 +265,14 @@ describe.if(DB_READY)(
 		test('the fixture really links back to itself (the anti-vacuous half)', async () => {
 			// Without this, "returns null" below would prove nothing: an unreadable
 			// record returns null too.
-			const linked = (await readPathValues(SELF, [
+			const linked = (await readInternal(SELF, [
 				{ section_tipo: 'test3', component_tipo: 'test80' },
 			])) as Extract<CriterionValue, { kind: 'locators' }>;
 			expect(linked.locators).toHaveLength(1);
 			expect(linked.locators[0]?.section_tipo).toBe('test3');
 			expect(String(linked.locators[0]?.section_id)).toBe(String(SELF_ID));
 			// One hop through the self-link lands back on the record and reads its leaf.
-			expect(await readPathValues(SELF, selfHops(1), { lang: 'lg-eng' })).toEqual({
+			expect(await readInternal(SELF, selfHops(1), { lang: 'lg-eng' })).toEqual({
 				kind: 'text',
 				values: [LEAF_TEXT],
 			});
@@ -264,46 +283,44 @@ describe.if(DB_READY)(
 			// expand the very same triple: the guard skips it, the frontier empties, and
 			// the walk returns null. Remove `visited` from path_read.ts and this hop
 			// expands again, reaches the leaf, and the case returns LEAF_TEXT.
-			expect(await readPathValues(SELF, selfHops(2), { lang: 'lg-eng' })).toBeNull();
+			expect(await readInternal(SELF, selfHops(2), { lang: 'lg-eng' })).toBeNull();
 		});
 
 		test('a self-link at full depth reads exactly once, not MAX_PATH_HOPS times', async () => {
-			expect(await readPathValues(SELF, selfHops(MAX_PATH_HOPS), { lang: 'lg-eng' })).toBeNull();
+			expect(await readInternal(SELF, selfHops(MAX_PATH_HOPS), { lang: 'lg-eng' })).toBeNull();
 		});
 	},
 );
 
 describe('readPathValues — refusals return null, never throw', () => {
 	test('an empty path', async () => {
-		expect(await readPathValues(SEED, [])).toBeNull();
+		expect(await readInternal(SEED, [])).toBeNull();
 	});
 
 	test.if(DB_READY)('a missing seed record', async () => {
 		expect(
-			await readPathValues({ sectionTipo: 'test3', sectionId: 999999 }, step('test52')),
+			await readInternal({ sectionTipo: 'test3', sectionId: 999999 }, step('test52')),
 		).toBeNull();
 	});
 
 	test.if(DB_READY)('an unknown component tipo', async () => {
-		expect(await readPathValues(SEED, step('nope999'))).toBeNull();
+		expect(await readInternal(SEED, step('nope999'))).toBeNull();
 	});
 
 	test.if(DB_READY)('an unknown section tipo', async () => {
-		expect(
-			await readPathValues({ sectionTipo: 'nope999', sectionId: 1 }, step('test52')),
-		).toBeNull();
+		expect(await readInternal({ sectionTipo: 'nope999', sectionId: 1 }, step('test52'))).toBeNull();
 	});
 
 	test.if(DB_READY)(
 		"the pseudo tipo 'section_id' is refused (its matcher is a different builder)",
 		async () => {
-			expect(await readPathValues(SEED, step('section_id'))).toBeNull();
+			expect(await readInternal(SEED, step('section_id'))).toBeNull();
 		},
 	);
 
 	test.if(DB_READY)('a step with no component_tipo', async () => {
 		expect(
-			await readPathValues(SEED, [{ section_tipo: 'test3' } as unknown as CriterionPathStep]),
+			await readInternal(SEED, [{ section_tipo: 'test3' } as unknown as CriterionPathStep]),
 		).toBeNull();
 	});
 });
@@ -349,11 +366,7 @@ describe.if(DB_READY)('reader ∘ criteria ∘ search — the seed finds itself'
 	}
 
 	async function expectSelfMatch(criterionSpec: Criterion, lang?: string): Promise<void> {
-		const value = await readPathValues(
-			SEED,
-			criterionSpec.path,
-			lang === undefined ? {} : { lang },
-		);
+		const value = await readInternal(SEED, criterionSpec.path, lang === undefined ? {} : { lang });
 		expect(value).not.toBeNull();
 		const filter = criteriaToFilter(
 			[criterionSpec],
@@ -370,7 +383,7 @@ describe.if(DB_READY)('reader ∘ criteria ∘ search — the seed finds itself'
 	test('same_locator OR semantics: EACH of the seed locators matches on its own', async () => {
 		// The $or must not collapse into one multi-locator (AND) leaf: pairing the
 		// seed's real locator with an absent one must still return the seed.
-		const value = (await readPathValues(SEED, step('test88'))) as Extract<
+		const value = (await readInternal(SEED, step('test88'))) as Extract<
 			CriterionValue,
 			{ kind: 'locators' }
 		>;
@@ -434,10 +447,205 @@ describe.if(DB_READY)('reader ∘ criteria ∘ search — the seed finds itself'
 		];
 		const values = new Map<string, CriterionValue | null>();
 		for (const item of criteria) {
-			values.set(item.id, await readPathValues(SEED, item.path, { lang: 'lg-spa' }));
+			values.set(item.id, await readInternal(SEED, item.path, { lang: 'lg-spa' }));
 		}
 		const filter = criteriaToFilter(criteria, values) as { $and: unknown[] };
 		expect(filter.$and).toHaveLength(3);
 		expect(await idsMatching(filter)).toContain(SEED.sectionId);
 	});
 });
+
+/**
+ * THE LANDED SECTION (P1-3 / SEC-12). A multi-target portal's locator may point
+ * at a section OTHER than the declared step's — a sibling sharing the matrix
+ * table — and the walk lands there exactly as the SQL LEFT JOIN does. Until
+ * this batch the ONLY authorization was `criterionReadableOn`'s check of the
+ * DECLARED leaf (test3.test52), memoized against the declared path: a caller
+ * with no grant at all on test2 read test2's test52 through a test3 path.
+ *
+ * Now the reader authorizes every landed record on its OWN section (component
+ * key, hop and leaf) and every landed record by the RECORD key, under
+ * `options.scope`. Two identities prove it as PAIRS: the injected grant proves
+ * the component key asks about the LANDED section and drops that record only;
+ * the read-door fixture's non-admin proves the record key drops a landed
+ * record outside their project scope. No scope = internal read, both served.
+ *
+ * SCRATCH: four rows (test3 ×3, test2 ×1) in matrix_test, ids 9990111-9990114,
+ * swept in afterAll with a throw-if-nothing-deleted.
+ */
+describe.if(DB_READY)(
+	'readPathValues — the LANDED section is authorized, not the declared one',
+	() => {
+		const SEED_ID = 9990111;
+		const SAME_SECTION_ID = 9990112;
+		const SIBLING_ID = 9990113;
+		const OUT_OF_SCOPE_ID = 9990114;
+		const SEED_RECORD = { sectionTipo: 'test3', sectionId: SEED_ID };
+		const SAME_TEXT = 'landed in the declared section';
+		const SIBLING_TEXT = 'landed in the SIBLING section';
+		const OUT_OF_SCOPE_TEXT = 'landed outside the project scope';
+		const SUPERUSER = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
+		/** test54 (component_relation_related): a relation hop BOTH fixture readers hold. */
+		const HOP = 'test54';
+		const LANDED_PATH: CriterionPathStep[] = [
+			{ section_tipo: 'test3', component_tipo: HOP },
+			{ section_tipo: 'test3', component_tipo: 'test52' },
+		];
+
+		function portalLocator(id: number, sectionTipo: string, sectionId: number) {
+			return {
+				id,
+				type: 'dd151',
+				section_id: sectionId,
+				section_tipo: sectionTipo,
+				from_component_tipo: HOP,
+			};
+		}
+
+		async function insertRow(
+			sectionTipo: string,
+			sectionId: number,
+			relation: unknown,
+			text: string,
+		) {
+			await sql.unsafe(
+				`INSERT INTO matrix_test (section_id, section_tipo, relation, string)
+			 VALUES ($1, $2, $3::text::jsonb, $4::text::jsonb)`,
+				[
+					sectionId,
+					sectionTipo,
+					JSON.stringify(relation),
+					JSON.stringify({ test52: [{ id: 1, lang: 'lg-eng', value: text }] }),
+				],
+			);
+		}
+
+		beforeAll(async () => {
+			const fixture = await import('../helpers/read_door_identity_fixture.ts');
+			await fixture.installReadDoorIdentityFixture();
+			await insertRow(
+				'test3',
+				SEED_ID,
+				{
+					test101: [fixture.doorProjectLocator()],
+					[HOP]: [
+						portalLocator(1, 'test3', SAME_SECTION_ID),
+						portalLocator(2, 'test2', SIBLING_ID),
+						portalLocator(3, 'test3', OUT_OF_SCOPE_ID),
+					],
+				},
+				'the seed',
+			);
+			await insertRow(
+				'test3',
+				SAME_SECTION_ID,
+				{ test101: [fixture.doorProjectLocator()] },
+				SAME_TEXT,
+			);
+			// The sibling: same table, ANOTHER section, in the readers' project.
+			await insertRow(
+				'test2',
+				SIBLING_ID,
+				{ test41: [{ ...fixture.doorProjectLocator(), from_component_tipo: 'test41' }] },
+				SIBLING_TEXT,
+			);
+			// A test3 record in a FOREIGN project — the record key's case.
+			await insertRow(
+				'test3',
+				OUT_OF_SCOPE_ID,
+				{ test101: [fixture.doorProjectLocator(936999)] },
+				OUT_OF_SCOPE_TEXT,
+			);
+		});
+
+		afterAll(async () => {
+			const removed = (await sql.unsafe(
+				'DELETE FROM matrix_test WHERE section_id BETWEEN $1 AND $2 RETURNING section_id',
+				[SEED_ID, OUT_OF_SCOPE_ID],
+			)) as unknown[];
+			if (removed.length !== 4) {
+				throw new Error(
+					`path_read landed-section sweep removed ${removed.length} rows, expected 4`,
+				);
+			}
+			const fixture = await import('../helpers/read_door_identity_fixture.ts');
+			await fixture.removeReadDoorIdentityFixture();
+		});
+
+		test('no scope (an internal read) lands on all three and quotes all three — the anti-vacuous half', async () => {
+			const value = await readInternal(SEED_RECORD, LANDED_PATH, { lang: 'lg-eng' });
+			expect(value).toEqual({ kind: 'text', values: [SAME_TEXT, SIBLING_TEXT, OUT_OF_SCOPE_TEXT] });
+		});
+
+		test('the component key is asked about the LANDED section (test2), and only that record is dropped', async () => {
+			const { createPathReadScope } = await import('../../src/core/identify/path_read.ts');
+			const asked: string[] = [];
+			const scope = createPathReadScope({
+				principal: SUPERUSER,
+				door: 'gate',
+				// Everything on test3 is granted; NOTHING on test2 is.
+				componentGrant: async (_principal, sectionTipo, componentTipo) => {
+					asked.push(`${sectionTipo}|${componentTipo}`);
+					return sectionTipo === 'test2' ? 0 : 1;
+				},
+			});
+			const value = await readPathValues(SEED_RECORD, LANDED_PATH, { lang: 'lg-eng', scope });
+			// EXACT: the sibling's value is absent, the other two present (the
+			// superuser record key passes the out-of-scope one).
+			expect(value).toEqual({ kind: 'text', values: [SAME_TEXT, OUT_OF_SCOPE_TEXT] });
+			// The refused question names the LANDED section — the declared path never
+			// mentions test2, so a memo keyed on the declared path could not have.
+			expect(asked).toContain('test2|test52');
+			expect(asked).toContain(`test3|${HOP}`);
+
+			// POSITIVE CONTROL: the identical scope with test2 granted quotes it.
+			const granted = createPathReadScope({
+				principal: SUPERUSER,
+				door: 'gate',
+				componentGrant: async () => 1,
+			});
+			expect(
+				await readPathValues(SEED_RECORD, LANDED_PATH, { lang: 'lg-eng', scope: granted }),
+			).toEqual({
+				kind: 'text',
+				values: [SAME_TEXT, SIBLING_TEXT, OUT_OF_SCOPE_TEXT],
+			});
+		});
+
+		test('the hop component itself is authorized on the SEED record before any locator is followed', async () => {
+			const { createPathReadScope } = await import('../../src/core/identify/path_read.ts');
+			const scope = createPathReadScope({
+				principal: SUPERUSER,
+				door: 'gate',
+				componentGrant: async (_principal, _sectionTipo, componentTipo) =>
+					componentTipo === HOP ? 0 : 1,
+			});
+			expect(await readPathValues(SEED_RECORD, LANDED_PATH, { lang: 'lg-eng', scope })).toBeNull();
+		});
+
+		test('the RECORD key drops a landed record outside the non-admin’s project scope; the control keeps the sibling', async () => {
+			const fixture = await import('../helpers/read_door_identity_fixture.ts');
+			const { resolvePrincipal } = await import('../../src/core/security/permissions.ts');
+			const { createPathReadScope } = await import('../../src/core/identify/path_read.ts');
+			const reader = await resolvePrincipal(fixture.DOOR_READER_USER_ID);
+			const control = await resolvePrincipal(fixture.DOOR_CONTROL_USER_ID);
+			expect(reader.isGlobalAdmin).toBe(false);
+
+			// The READER: test3 granted, NO test2 grant → the sibling drops on the
+			// component key; the foreign-project record drops on the record key.
+			const readerValue = await readPathValues(SEED_RECORD, LANDED_PATH, {
+				lang: 'lg-eng',
+				scope: createPathReadScope({ principal: reader, door: 'gate' }),
+			});
+			expect(readerValue).toEqual({ kind: 'text', values: [SAME_TEXT] });
+
+			// The CONTROL: test2 + test2.test52 granted → the sibling is quoted; the
+			// foreign-project record still drops (same project scope as the reader).
+			const controlValue = await readPathValues(SEED_RECORD, LANDED_PATH, {
+				lang: 'lg-eng',
+				scope: createPathReadScope({ principal: control, door: 'gate' }),
+			});
+			expect(controlValue).toEqual({ kind: 'text', values: [SAME_TEXT, SIBLING_TEXT] });
+		});
+	},
+);

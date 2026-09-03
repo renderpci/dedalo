@@ -46,9 +46,11 @@ import {
 	readProposalSources,
 } from '../../src/core/api/handlers/dd_identify_api.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
+import { toErrorBody } from '../../src/core/errors/convert.ts';
 import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { IdentifyAccessError } from '../../src/core/identify/match.ts';
 import { ProfileError, parseProfile } from '../../src/core/identify/profile.ts';
+import { loadProfileForSection } from '../../src/core/identify/profile_source.ts';
 import type { IdentificationProfile } from '../../src/core/identify/types.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 
@@ -492,6 +494,103 @@ describe('get_proposals — the clean declines', () => {
 		const detail = (vision?.declined as { detail: string }).detail;
 		expect(detail).not.toContain('refused the connection');
 		expect(detail).toContain('the server log records why');
+	});
+
+	test('a source failing with a DedaloError speaks its WIRE sentence, never its log-only message (SEC-18)', async () => {
+		// `.message` of a DedaloError is the LOG field (dedalo_error.ts): a
+		// provider constructor names the api_key_env it could not read there.
+		// `declineDetail` forwarded it verbatim into the ok:true `sources[]`.
+		const quiet = console.warn;
+		console.warn = () => {};
+		try {
+			const spy = spyDeps({
+				runVision: async () => {
+					throw new DedaloError('ai.provider_failed', {
+						message:
+							'AnthropicProvider requires MUSEUM_SECRET_VISION_KEY (private/.env or process env).',
+						coordinates: { env_key: 'MUSEUM_SECRET_VISION_KEY' },
+					});
+				},
+			});
+			const res = await buildGetProposals(spy.deps)(
+				rqo(seedOptions({ source: 'all' })),
+				ctx(SUPERUSER),
+			);
+			expect(res.body.ok).toBe(true);
+			const wire = JSON.stringify(res.body);
+			expect(wire).not.toContain('MUSEUM_SECRET_VISION_KEY');
+			expect(wire).not.toContain('AnthropicProvider');
+			const vision = (res.body.data as { sources: Record<string, unknown>[] }).sources.find(
+				(source) => source.source === 'vision_model',
+			);
+			expect(vision?.declined).toEqual({
+				reason: 'source_failed',
+				// the registry sentence of an OPERATOR-disclosure code
+				detail: 'The assistant is not available right now (see server logs)',
+			});
+			// …while a PUBLIC code's vetted publicMessage still reaches the curator
+			const spoken = spyDeps({
+				runVision: async () => {
+					throw new DedaloError('ai.model_unknown', {
+						message: 'log-only: catalog at /srv/private/.env',
+						publicMessage: 'Unknown model "x" — pick one from agent_models',
+					});
+				},
+			});
+			const said = await buildGetProposals(spoken.deps)(
+				rqo(seedOptions({ source: 'all' })),
+				ctx(SUPERUSER),
+			);
+			const spokenVision = (said.body.data as { sources: Record<string, unknown>[] }).sources.find(
+				(source) => source.source === 'vision_model',
+			);
+			expect((spokenVision?.declined as { detail: string }).detail).toBe(
+				'Unknown model "x" — pick one from agent_models',
+			);
+			expect(JSON.stringify(said.body)).not.toContain('/srv/private');
+		} finally {
+			console.warn = quiet;
+		}
+	});
+
+	test('a descriptor READ that failed declines with a deliberate sentence — the transport text stays in the log (SEC-18)', async () => {
+		// The audit's variant the first pass missed: `identify.invalid_profile` is a
+		// PUBLIC code, so ProfileError.message IS the wire `error.message`. The
+		// read-failure branch of profile_source interpolated the exception — a
+		// relation name and a host on the wire, outside the debug block.
+		const quiet = console.error;
+		console.error = () => {};
+		try {
+			const spy = spyDeps({
+				loadProfile: (sectionTipo) =>
+					loadProfileForSection(sectionTipo, {
+						getIdentifyDescriptor: async () => {
+							throw new Error(
+								'relation "dd_ontology_zz_internal" does not exist (host 10.0.0.9:5432)',
+							);
+						},
+					}),
+			});
+			const decline = await declineOf(
+				buildGetProposals(spy.deps)(rqo(seedOptions()), ctx(SUPERUSER)),
+			);
+			expect(decline.code).toBe('identify.invalid_profile');
+			// The body minus the SEC-19 `debug` block (the deliberate developer door,
+			// on in the suite): everything a production caller sees.
+			const { debug: _debug, ...wireBody } = toErrorBody(decline);
+			const body = JSON.stringify(wireBody);
+			expect(body).toContain('the server log records why');
+			expect(body).not.toContain('dd_ontology_zz_internal');
+			expect(body).not.toContain('10.0.0.9');
+			expect(decline.publicMessage).toContain('the server log records why');
+			// …and what threw is still reachable by the log: DedaloError → ProfileError → the
+			// transport error, as causes.
+			const profileError = decline.cause as Error | undefined;
+			expect(profileError).toBeInstanceOf(ProfileError);
+			expect((profileError?.cause as Error | undefined)?.message ?? '').toContain('10.0.0.9');
+		} finally {
+			console.error = quiet;
+		}
 	});
 
 	test("a vision source that declined itself reports its OWN reason, not 'failed'", async () => {

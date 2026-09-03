@@ -55,6 +55,7 @@ import {
 	type ToolResponse,
 	type ToolServerModule,
 	toolRequestId,
+	type WriteTarget,
 } from '../../../src/core/tools/module.ts';
 
 /**
@@ -352,10 +353,37 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 	);
 }
 
+/**
+ * The WRITE TARGETS of a MARC21 import — what the 'targets' gate authorizes
+ * (audit CARRY-08 / TOOLS-04): every component the CLIENT-SUPPLIED marc21 map
+ * binds (`tool_config.config.map[].tipo`, the `id` entry's ddo_map code
+ * component included) on the import section, plus the caller pair. A 'tipo'
+ * gate on `(section_tipo, tipo)` authorized only the component the tool was
+ * OPENED from. The id ddo_map's own section is pinned to the import section by
+ * the handler (`idTarget.sectionTipo !== sectionTipo` is refused), so the
+ * section half here is always `options.section_tipo`.
+ */
+export function importMarc21Targets(options: Record<string, unknown>): WriteTarget[] {
+	const sectionTipo = options.section_tipo;
+	const { entries, idTarget } = readMarcMap(options.tool_config);
+	return [
+		{ section_tipo: sectionTipo, tipo: options.tipo },
+		...entries.map((entry) => ({ section_tipo: sectionTipo, tipo: entry.component_tipo })),
+		...(idTarget === undefined
+			? []
+			: [{ section_tipo: idTarget.sectionTipo, tipo: idTarget.componentTipo }]),
+	];
+}
+
 export const tool: ToolServerModule = {
 	name: 'tool_import_marc21',
 	apiActions: {
-		import_files: { permission: 'tipo', minLevel: 2, handler: importFiles },
+		import_files: {
+			permission: 'targets',
+			minLevel: 2,
+			targets: importMarc21Targets,
+			handler: importFiles,
+		},
 	},
 	backgroundRunnable: ['import_files'],
 };

@@ -84,7 +84,23 @@ describe('tool_update_cache module', () => {
 		expect(mustGet(actions.get_component_list, 'get_component_list').permission).toBe(
 			'section_list',
 		);
-		expect(mustGet(actions.update_cache, 'update_cache').permission).toBe('section');
+		// 'targets': the handler re-saves components_selection[].tipo on every row
+		// options.sqo matches — the gate is declared over THOSE pairs, never over
+		// options.section_tipo (which only labels the dd800 record; CARRY-08).
+		const updateCache = mustGet(actions.update_cache, 'update_cache');
+		expect(updateCache.permission).toBe('targets');
+		expect(
+			updateCache.targets!({
+				section_tipo: SECTION,
+				sqo: { section_tipo: ['test65'] },
+				components_selection: [{ tipo: 'test52' }, { tipo: 'test91' }],
+			}),
+		).toEqual([
+			{ section_tipo: 'test65', tipo: 'test52' },
+			{ section_tipo: 'test65', tipo: 'test91' },
+		]);
+		// No sqo, or an empty selection: nothing to authorize ⇒ the gate refuses.
+		expect(updateCache.targets!({ section_tipo: SECTION })).toEqual([]);
 		expect(loaded!.module.backgroundRunnable).toEqual(['update_cache']);
 	});
 

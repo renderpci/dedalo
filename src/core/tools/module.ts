@@ -88,6 +88,20 @@ export function toolRequestId(context: ToolActionContext): string {
  *  - 'section_list' → the same level on EVERY target `sectionTipos` pulls out of
  *                     the options (a batch action whose targets ride inside the
  *                     payload — PHP's per-file assert_section_permission loop);
+ *  - 'targets'      → level `minLevel` on EVERY write target `targets` derives
+ *                     from the options — each a (section_tipo, tipo?, section_id?)
+ *                     triple: the component half is gated as the PAIR when
+ *                     present, and a section_id must be a positive record
+ *                     inside the caller's scope. THE KIND FOR AN ACTION WHOSE
+ *                     EFFECT TARGET IS NOT A TOP-LEVEL OPTION: a scope that
+ *                     rides in `options.sqo`, a nested client map (a
+ *                     tool_config ddo_map), or a section the handler PINS by
+ *                     constant. Declaring 'section'/'tipo' on such an action
+ *                     asserts a right about a sibling field and leaves the
+ *                     thing actually written ungated (audit CARRY-08, 2026-08-26:
+ *                     three doors proven open by execution). 'section_list' is
+ *                     its tipo-less, id-less special case and stays for the
+ *                     pure per-section batch;
  *  - 'tipo'         → level `minLevel` on options.section_tipo + options.tipo;
  *  - 'record'       → section level + the record (numeric options.section_id) must
  *                     be inside the caller's project scope;
@@ -107,7 +121,14 @@ export function toolRequestId(context: ToolActionContext): string {
  * (assert_tipo_permission + assert_record_in_user_scope).
  */
 export interface GatedToolActionSpec {
-	permission: 'section' | 'section_list' | 'tipo' | 'record' | 'record_tipo' | 'developer';
+	permission:
+		| 'section'
+		| 'section_list'
+		| 'targets'
+		| 'tipo'
+		| 'record'
+		| 'record_tipo'
+		| 'developer';
 	/** dd774 level required on the target (1=read, 2=write, 3=admin). Default 2. */
 	minLevel?: number;
 	/**
@@ -118,7 +139,34 @@ export interface GatedToolActionSpec {
 	 * where a denial is still observable to the caller.
 	 */
 	sectionTipos?: (options: Record<string, unknown>) => unknown[];
+	/**
+	 * REQUIRED for 'targets': derive the action's WRITE TARGETS from the request
+	 * options — the very (section, component, record) triples the handler will
+	 * mutate, read off the same keys the handler reads (`options.sqo`, the
+	 * ddo_map, the pinned section constant). Every entry is gated at `minLevel`;
+	 * an empty list, an invalid entry, or an extractor that throws is a denial
+	 * (fail-closed). Pure over the options: it runs BEFORE the background fork,
+	 * so it may not read the database — a target the handler can only resolve
+	 * at run time (an ontology-derived portal target) is re-authorized IN the
+	 * handler and named in the action_scope_binding gate's exemption prose.
+	 * Gate: test/unit/action_scope_binding_tripwire.test.ts binds every handler
+	 * that reads a scope off a nested key to this extractor.
+	 */
+	targets?: (options: Record<string, unknown>) => WriteTarget[];
 	handler: (context: ToolActionContext) => Promise<ToolResponse>;
+}
+
+/**
+ * One write target a 'targets' extractor names. `section_tipo` is required;
+ * `tipo` (the component) turns the level check into the PAIR check; a
+ * `section_id` must be a positive existing record and is scope-checked
+ * (isRecordInScope) like the 'record' kinds. The values are `unknown` on
+ * purpose — they come off the request, and the gate validates each one.
+ */
+export interface WriteTarget {
+	section_tipo: unknown;
+	tipo?: unknown;
+	section_id?: unknown;
 }
 
 /**
@@ -143,7 +191,7 @@ export interface GatedToolActionSpec {
  * the census exists to be read as a to-do list, and a lie removes the entry from
  * it.
  *
- * `minLevel` / `sectionTipos` are `never` here: they are inputs to the
+ * `minLevel` / `sectionTipos` / `targets` are `never` here: they are inputs to the
  * declarative gate, so on an action that has no declarative gate they would be
  * dead decoration that reads like protection.
  */
@@ -157,6 +205,7 @@ export interface ExemptToolActionSpec {
 	gatedInHandler: string;
 	minLevel?: never;
 	sectionTipos?: never;
+	targets?: never;
 	handler: (context: ToolActionContext) => Promise<ToolResponse>;
 }
 

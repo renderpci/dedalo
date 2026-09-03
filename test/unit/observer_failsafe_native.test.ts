@@ -65,6 +65,7 @@ import { Glob } from 'bun';
 import { getCounters } from '../../src/core/api/counters.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { recomputeExternalRelation } from '../../src/core/section/record/observers.ts';
+import { stripComments } from '../helpers/strip_comments.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const KERNEL_FILE = 'src/core/section/record/observers.ts';
@@ -286,7 +287,9 @@ describe('removal plumbing (static)', () => {
 			const glob = new Glob('**/*.ts');
 			for (const match of glob.scanSync({ cwd: join(REPO_ROOT, dir) })) {
 				const file = relative(REPO_ROOT, join(REPO_ROOT, dir, match));
-				const text = readFileSync(join(REPO_ROOT, file), 'utf-8');
+				// Comments stripped: a docblock that NAMES the door (as scripts/lib/
+				// authz_substring_census.ts does) is prose, not a call site.
+				const text = stripComments(readFileSync(join(REPO_ROOT, file), 'utf-8'));
 				for (const short of scanCallsMissingRemoved(text)) {
 					offenders.push(`${file}@${short.at}: ${short.snippet}`);
 				}

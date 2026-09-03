@@ -20,7 +20,7 @@
  * every transfer.
  */
 
-import { DedaloError, ok, toErrorEnvelope } from '../../errors/index.ts';
+import { DedaloError, ok, toErrorEnvelope, wireMessage } from '../../errors/index.ts';
 import type { Session } from '../../security/session_store.ts';
 import { verifyCsrf } from '../../security/session_store.ts';
 import { createStagedThumbnail } from './staged_thumbnail.ts';
@@ -149,10 +149,12 @@ function rejectedUpload(error: unknown): DedaloError {
 	// '/srv/dedalo/media/…'"), and authorization at this door is session-only, so
 	// a consultation-only account reaches it.
 	//
-	// A DedaloError is the validator SPEAKING DELIBERATELY: its message was
-	// written to be read by a curator. Anything else is an exception that merely
-	// happened, and it travels as `cause` — into the log, never onto the wire.
-	const deliberate = error instanceof DedaloError ? error.message : null;
+	// A DedaloError is the validator SPEAKING DELIBERATELY — through its WIRE
+	// sentence (`wireMessage`: registry English, or its own vetted publicMessage
+	// under a public code); `.message` is the log-only field (dedalo_error.ts)
+	// and may name a path. Anything else is an exception that merely happened,
+	// and it travels as `cause` — into the log, never onto the wire.
+	const deliberate = error instanceof DedaloError ? wireMessage(error) : null;
 	return new DedaloError('media.upload_rejected', {
 		publicMessage:
 			deliberate ??

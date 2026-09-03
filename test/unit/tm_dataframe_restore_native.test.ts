@@ -564,11 +564,21 @@ describe('bulk_revert_process refuses a frameless pre-batch state too', () => {
 		const response = await toolTimeMachineBulkRevert(
 			await context({ section_tipo: SECTION, bulk_process_id: BATCH }),
 		);
-		const skippedBatch = response.data as { skipped: string[]; bulk_process_id?: unknown };
+		const skippedBatch = response.data as {
+			skipped: { reason: string; tipo?: string; section_id?: number }[];
+			bulk_process_id?: unknown;
+		};
 		if (typeof skippedBatch.bulk_process_id === 'number') {
 			mintedBulkIds.push(skippedBatch.bulk_process_id);
 		}
-		expect(skippedBatch.skipped.some((error) => error.includes(`${MAIN}#${recordId}`))).toBe(true);
+		// Typed entry, coordinates present (the row is in scope); the refusal's
+		// words (the slot names) are the log's (SEC-16).
+		expect(
+			skippedBatch.skipped.some(
+				(entry) =>
+					entry.reason === 'frameless_wipe' && entry.tipo === MAIN && entry.section_id === recordId,
+			),
+		).toBe(true);
 		expect(await storedKey(recordId, MAIN)).toEqual(MAIN_B);
 		expect(await storedKey(recordId, SLOT)).toEqual(FRAMES_B);
 	});

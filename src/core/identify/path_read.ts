@@ -54,6 +54,39 @@
  * REQUEST IDENTITY is a PARAMETER, never an ALS read: the language to resolve
  * values in is passed in (default: the install's main data lang), so this module
  * is callable from a background job with no request scope.
+ *
+ * ACCESS (P1-3 / SEC-12, 2026-09-03). A criterion path is a FRONTIER CROSSING
+ * (security/frontier_scope.ts): every hop reads another record. The walk is
+ * authorized HERE, per frontier record, on the record's OWN section — the one
+ * it LANDED in, which for a multi-target portal is the LOCATOR's section, not
+ * the step's DECLARED one. Before, `component_access.ts criterionReadableOn`
+ * authorized the declared leaf while this reader landed wherever the locator
+ * pointed: fail-open, and memoized against the declared path. Now:
+ *   - the hop component of every frontier record is checked on THAT record's
+ *     section before its locators are followed; a landed record is checked by
+ *     the RECORD key (the caller's projects scope) before it is read; the leaf
+ *     component is checked on each landed record's section before it is quoted;
+ *   - the two keys are the frontier's own (`frontierComponentAllowed` with its
+ *     engine-minted exemptions — this walk mirrors search's join chain, which
+ *     applies the same — and `frontierRecordAllowed`), under
+ *     `options.scope`, surface 'door';
+ *   - a refusal DROPS that frontier record, loudly (`noteFrontierRefusal`),
+ *     and the read continues over the rest: the value simply does not include
+ *     what the caller may not read. The caller's DECLARED-leaf pre-check
+ *     (criterionReadableOn) stays the source of the `restricted` outcome
+ *     marker; a refusal that only appears here reads as absence, which is the
+ *     honest limit of a per-record answer that must not count what it hid.
+ * A SCOPE IS MANDATORY. An INTERNAL read (a background job, a unit harness)
+ * declares itself with {@link internalPathReadScope} — a scope with no
+ * principal gates nothing, the posture every caller-less read in this engine
+ * takes — but a wiring cannot hand the reader NO scope: the property is
+ * required at the type level (tsc, verify.ts step 1) and `readPathValues`
+ * REFUSES an absent one at runtime (`internal.invariant`, thrown BEFORE the
+ * swallowing try so it is never read as "absent"). Before P1-3 an omitted scope
+ * silently meant "internal", so a request-bound wiring that forgot it read
+ * ungated — the class the SEC-12 frontier belonged to. The SEED itself is never
+ * re-gated here: it is the caller's record, gated at the door that accepted it
+ * (match.ts filterAccessible, the API's record scope).
  */
 
 import { config } from '../../config/config.ts';
@@ -61,6 +94,7 @@ import { getComponentModel, getSearchBuilderFamily } from '../components/registr
 import { buildLocatorLookupKey, type Locator } from '../concepts/locator.ts';
 import { canonicalizeStoredSectionId, isSectionId } from '../concepts/section_id.ts';
 import { type MatrixRecord, readMatrixRecord } from '../db/matrix.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { type DdDate, ddDateToSeconds } from '../media/file_date.ts';
 import {
 	getColumnNameByModel,
@@ -68,6 +102,12 @@ import {
 	getModelByTipo,
 } from '../ontology/resolver.ts';
 import { resolveComponentValue } from '../resolve/component_data.ts';
+import {
+	type FrontierScope,
+	frontierComponentAllowed,
+	frontierRecordAllowed,
+	noteFrontierRefusal,
+} from '../security/frontier_scope.ts';
 import type { CriterionPathStep, CriterionValue, ValueLocator } from './types.ts';
 
 /**
@@ -93,6 +133,39 @@ export interface PathReadOptions {
 	lang?: string;
 	/** Locator-identity properties for de-duplication + the cycle guard. */
 	readonly locatorKeyProperties?: readonly string[];
+	/**
+	 * The caller's authorization scope (module doc, ACCESS) — REQUIRED. A
+	 * request-bound wiring builds ONE per request/run with
+	 * {@link createPathReadScope} and threads it (the record key's answers are
+	 * memoised on it); a caller-less read declares {@link internalPathReadScope}.
+	 */
+	readonly scope: PathReadScope;
+}
+
+/**
+ * A frontier scope for the path reader. `createPathReadScope` attaches a
+ * per-scope memo of RECORD-key answers, because the same Type record is landed
+ * on by every candidate that links to it and the record key costs a query.
+ */
+export interface PathReadScope extends FrontierScope {
+	/** (section_tipo, section_id) → allowed; private to the scope object. */
+	readonly recordAnswers?: Map<string, Promise<boolean>>;
+}
+
+/** Build the ONE scope a run threads through every readPathValues call. */
+export function createPathReadScope(
+	scope: Omit<PathReadScope, 'recordAnswers' | 'surface'>,
+): PathReadScope {
+	return { ...scope, surface: 'door', recordAnswers: new Map() };
+}
+
+/**
+ * The declared scope of a CALLER-LESS read: no principal, nothing gated. Name
+ * the door so the declaration is greppable ('job.identify_index', a gate's
+ * name) — an internal read is a decision, never a forgotten argument.
+ */
+export function internalPathReadScope(door: string): PathReadScope {
+	return createPathReadScope({ door });
 }
 
 /**
@@ -243,8 +316,17 @@ function visitKey(sectionTipo: string, sectionId: number | string, componentTipo
 export async function readPathValues(
 	seed: PathReadSeed,
 	path: CriterionPathStep[],
-	options: PathReadOptions = {},
+	options: PathReadOptions,
 ): Promise<CriterionValue | null> {
+	// Outside the swallowing try: a wiring without a scope is a contract
+	// violation, not an absent value (module doc, "A SCOPE IS MANDATORY").
+	if (options?.scope === undefined) {
+		throw new DedaloError('internal.invariant', {
+			message:
+				'readPathValues: no scope — declare internalPathReadScope() or thread createPathReadScope()',
+			coordinates: { section_tipo: seed.sectionTipo, section_id: seed.sectionId },
+		});
+	}
 	try {
 		return await walk(seed, path, options);
 	} catch (error) {
@@ -253,6 +335,61 @@ export async function readPathValues(
 		warn(`path read failed for ${seed.sectionTipo}/${seed.sectionId}: ${(error as Error).message}`);
 		return null;
 	}
+}
+
+/**
+ * THE COMPONENT KEY on a frontier record's OWN section (module doc, ACCESS).
+ * A scope without a principal (internal read) admits inside the predicate.
+ */
+async function componentAllowedOn(
+	scope: PathReadScope,
+	record: FrontierRecord,
+	componentTipo: string,
+	table: string,
+): Promise<boolean> {
+	const allowed = await frontierComponentAllowed(scope, {
+		sectionTipo: record.sectionTipo,
+		componentTipo,
+		table,
+		sectionId: record.sectionId,
+	});
+	if (!allowed) {
+		noteFrontierRefusal(scope, {
+			surface: scope.surface,
+			door: scope.door,
+			sectionTipo: record.sectionTipo,
+			componentTipo,
+			sectionId: record.sectionId,
+			key: 'component',
+		});
+	}
+	return allowed;
+}
+
+/** THE RECORD KEY on a LANDED record, memoised per scope. */
+function recordAllowed(
+	scope: PathReadScope,
+	sectionTipo: string,
+	sectionId: number,
+): Promise<boolean> {
+	const key = recordKey(sectionTipo, sectionId);
+	const memo = scope.recordAnswers;
+	const cached = memo?.get(key);
+	if (cached !== undefined) return cached;
+	const answer = frontierRecordAllowed(scope, sectionTipo, sectionId).then((allowed) => {
+		if (!allowed) {
+			noteFrontierRefusal(scope, {
+				surface: scope.surface,
+				door: scope.door,
+				sectionTipo,
+				sectionId,
+				key: 'record',
+			});
+		}
+		return allowed;
+	});
+	memo?.set(key, answer);
+	return answer;
 }
 
 async function walk(
@@ -281,38 +418,17 @@ async function walk(
 	let frontier: FrontierRecord[] = [
 		{ record: seedRecord, sectionTipo: seed.sectionTipo, sectionId: seed.sectionId },
 	];
+	/** The table the CURRENT frontier lives in (the frontier's exemption arm). */
+	let frontierTable = seedTable;
+	const scope = options.scope;
 
 	// --- HOPS: mirror search/conform.ts buildJoinChain (see the module doc) ---
 	for (let index = 1; index < path.length; index++) {
-		const hopComponent = (path[index - 1] as CriterionPathStep).component_tipo;
-		const stepSection = (path[index] as CriterionPathStep).section_tipo;
-		if (
-			typeof hopComponent !== 'string' ||
-			hopComponent === '' ||
-			typeof stepSection !== 'string' ||
-			stepSection === ''
-		) {
-			warn('a multi-hop path step needs section_tipo + component_tipo');
-			return null;
-		}
-		const hopModel = await getModelByTipo(hopComponent);
-		if (hopModel === null) {
-			warn(`unknown hop component '${hopComponent}'`);
-			return null;
-		}
-		if (getColumnNameByModel(hopModel) !== 'relation') {
-			// conform's join chain unnests `<alias>.relation->'<tipo>'`; a hop that
-			// stores anywhere else simply cannot be joined through. Loud, not silent.
-			warn(
-				`hop component '${hopComponent}' is model '${hopModel}', which stores no locators — a criterion path can only hop through the relation family`,
-			);
-			return null;
-		}
-		const stepTable = await getMatrixTableFromTipo(stepSection);
-		if (stepTable === null) {
-			warn(`no matrix table for join step '${stepSection}'`);
-			return null;
-		}
+		const steps = hopSteps(path, index);
+		if (steps === null) return null;
+		const hop = await resolveHopStorage(steps.hopComponent, steps.stepSection);
+		if (hop === null) return null;
+		const { hopComponent, hopModel, stepTable } = hop;
 
 		const next: FrontierRecord[] = [];
 		const reached = new Set<string>();
@@ -321,6 +437,8 @@ async function walk(
 			if (visited.has(key)) continue;
 			visited.add(key);
 
+			// The hop component is read off THIS record, in ITS section.
+			if (!(await componentAllowedOn(scope, current, hopComponent, frontierTable))) continue;
 			const items = await readItems(current.record, hopComponent, hopModel, lang);
 			for (const item of items) {
 				const locator = itemToLocator(item);
@@ -336,7 +454,10 @@ async function walk(
 				if (reached.has(reachedKey)) continue;
 				reached.add(reachedKey);
 				// The landing row is matched on the LOCATOR's identity inside the
-				// STEP's table — the LEFT JOIN's ON clause, verbatim.
+				// STEP's table — the LEFT JOIN's ON clause, verbatim — and the RECORD
+				// key (the join's ON-clause predicate, out of SQL) decides whether
+				// the caller may read it at all.
+				if (!(await recordAllowed(scope, targetTipo, targetId))) continue;
 				const targetRecord = await readMatrixRecord(stepTable, targetTipo, targetId);
 				if (targetRecord === null) continue;
 				next.push({ record: targetRecord, sectionTipo: targetTipo, sectionId: targetId });
@@ -344,11 +465,78 @@ async function walk(
 		}
 		if (next.length === 0) return null;
 		frontier = next;
+		frontierTable = stepTable;
 	}
 
 	// --- LEAF ---------------------------------------------------------------
-	const leafStep = path[path.length - 1] as CriterionPathStep;
-	const leafComponent = leafStep.component_tipo;
+	const leaf = await resolveLeaf(path);
+	if (leaf === null) return null;
+	const { leafComponent, leafModel } = leaf;
+
+	const rawItems: unknown[] = [];
+	for (const current of frontier) {
+		const key = visitKey(current.sectionTipo, current.sectionId, leafComponent);
+		if (visited.has(key)) continue;
+		visited.add(key);
+		// The leaf is quoted off THIS record, in ITS section — the LANDED one.
+		if (!(await componentAllowedOn(scope, current, leafComponent, frontierTable))) continue;
+		rawItems.push(...(await readItems(current.record, leafComponent, leafModel, lang)));
+	}
+	if (rawItems.length === 0) return null;
+
+	return collectLeafValue(rawItems, leafModel, options.locatorKeyProperties);
+}
+
+/** The (hop component, step section) pair of hop `index`, or null (loudly) when a step is incomplete. */
+function hopSteps(
+	path: CriterionPathStep[],
+	index: number,
+): { hopComponent: string; stepSection: string } | null {
+	const hopComponent = (path[index - 1] as CriterionPathStep).component_tipo;
+	const stepSection = (path[index] as CriterionPathStep).section_tipo;
+	if (
+		typeof hopComponent !== 'string' ||
+		hopComponent === '' ||
+		typeof stepSection !== 'string' ||
+		stepSection === ''
+	) {
+		warn('a multi-hop path step needs section_tipo + component_tipo');
+		return null;
+	}
+	return { hopComponent, stepSection };
+}
+
+/** Where a hop reads (its model, relation-family only) and where it lands (the step's table). */
+async function resolveHopStorage(
+	hopComponent: string,
+	stepSection: string,
+): Promise<{ hopComponent: string; hopModel: string; stepTable: string } | null> {
+	const hopModel = await getModelByTipo(hopComponent);
+	if (hopModel === null) {
+		warn(`unknown hop component '${hopComponent}'`);
+		return null;
+	}
+	if (getColumnNameByModel(hopModel) !== 'relation') {
+		// conform's join chain unnests `<alias>.relation->'<tipo>'`; a hop that
+		// stores anywhere else simply cannot be joined through. Loud, not silent.
+		warn(
+			`hop component '${hopComponent}' is model '${hopModel}', which stores no locators — a criterion path can only hop through the relation family`,
+		);
+		return null;
+	}
+	const stepTable = await getMatrixTableFromTipo(stepSection);
+	if (stepTable === null) {
+		warn(`no matrix table for join step '${stepSection}'`);
+		return null;
+	}
+	return { hopComponent, hopModel, stepTable };
+}
+
+/** The leaf component and its model, or null (loudly) when the last step cannot be quoted. */
+async function resolveLeaf(
+	path: CriterionPathStep[],
+): Promise<{ leafComponent: string; leafModel: string } | null> {
+	const leafComponent = (path[path.length - 1] as CriterionPathStep).component_tipo;
 	if (typeof leafComponent !== 'string' || leafComponent === '') {
 		warn('the last path step carries no component_tipo');
 		return null;
@@ -366,17 +554,7 @@ async function walk(
 		warn(`unknown leaf component '${leafComponent}'`);
 		return null;
 	}
-
-	const rawItems: unknown[] = [];
-	for (const current of frontier) {
-		const key = visitKey(current.sectionTipo, current.sectionId, leafComponent);
-		if (visited.has(key)) continue;
-		visited.add(key);
-		rawItems.push(...(await readItems(current.record, leafComponent, leafModel, lang)));
-	}
-	if (rawItems.length === 0) return null;
-
-	return collectLeafValue(rawItems, leafModel, options.locatorKeyProperties);
+	return { leafComponent, leafModel };
 }
 
 /**

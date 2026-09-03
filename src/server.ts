@@ -72,6 +72,7 @@ import { DedaloError } from './core/errors/dedalo_error.ts';
 import { describeInstallAllowPolicy, installInProgress } from './core/install/gate.ts';
 import { HIERARCHY_IMPORT_DIR } from './core/install/paths.ts';
 import { corsPreflightResponse, corsResponseHeaders } from './core/security/cors.ts';
+import { globalAdminSessionFromCookie } from './core/security/session_gate.ts';
 import {
 	getSession,
 	SESSION_COOKIE,
@@ -643,9 +644,11 @@ async function serveClientAsset(
  *
  * Unlike its ontology-snapshot sibling below, this is NOT a public master
  * surface: a hierarchy dump is the complete contents of a thesaurus, so the
- * route is gated on an authenticated GLOBAL-ADMIN session — the same principal
- * the maintenance area requires — and answers 404 (never 403) to everyone else,
- * so an anonymous probe cannot even confirm a file exists.
+ * route is gated on an authenticated session whose Principal is a GLOBAL ADMIN
+ * AS OF THIS REQUEST (security/session_gate.ts — the same resolver the maintenance
+ * area's dispatch uses, never the session row's login-time stamp) and answers 404
+ * (never 403) to everyone else, so an anonymous probe cannot even confirm a file
+ * exists.
  *
  * Basenames are allowlisted to exactly the two shapes the exporter produces
  * (`<tipo>.copy.gz` with safeExportTipo's tipo grammar, and the timestamped
@@ -655,9 +658,10 @@ async function serveClientAsset(
  */
 async function serveHierarchyExportFile(pathname: string, request: Request, requestId: string) {
 	const notFound = () => notFoundResponse(requestId);
-	const sessionToken = readCookie(request.headers.get('cookie') ?? '', SESSION_COOKIE);
-	const session = sessionToken !== undefined ? getSession(sessionToken) : null;
-	if (session === null || session.isGlobalAdmin !== true) return notFound();
+	// The Principal, resolved for THIS request — never the login-time session stamp
+	// (SEC-14: a demoted admin kept this download for the session TTL).
+	const session = await globalAdminSessionFromCookie(request.headers.get('cookie'));
+	if (session === null) return notFound();
 	const fileName = pathname.slice(HIERARCHY_EXPORT_URL_PREFIX.length);
 	if (!/^[a-z]{2,}[0-9]+\.copy\.gz$/.test(fileName) && !/^all_[0-9_-]+\.copy\.gz$/.test(fileName)) {
 		return notFound();

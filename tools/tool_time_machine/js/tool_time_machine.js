@@ -539,8 +539,9 @@ tool_time_machine.prototype.get_component = async function(lang, mode, matrix_id
 * @param {string} options.tipo        - Component tipo being restored (equals section_tipo for section restores)
 * @param {string} options.lang        - Language code of the data to restore
 * @param {number} options.matrix_id   - PK of the `matrix_time_machine` row containing the snapshot
-* @returns {Promise<Object>} Resolves with the API response object
-*                            ({result: boolean, msg: string, errors: Array})
+* @returns {Promise<Object>} Resolves with the envelope v2 response object
+*                            ({ok: boolean, request_id: string, data: true} on success;
+*                            a section restore adds restore_deleted_section_media_files)
 */
 tool_time_machine.prototype.apply_value = function(options) {
 
@@ -603,11 +604,12 @@ tool_time_machine.prototype.apply_value = function(options) {
 * Sends a tool_request to revert ALL changes that belong to a previous bulk
 * operation identified by `bulk_process_id`.
 *
-* This is a potentially long-running, wide-scope operation: the PHP handler
-* searches `matrix_time_machine` for every row with the given `bulk_process_id`,
-* iterates each affected component, and restores the component to its state
-* immediately prior to the bulk change.  If a component had no pre-bulk
-* history the handler writes an empty array.
+* This is a potentially long-running, wide-scope operation: the server handler
+* (`tools/tool_time_machine/server/bulk_revert.ts`) searches `matrix_time_machine`
+* for every row with the given `bulk_process_id`, iterates each affected
+* component, and restores the component to its state immediately prior to the
+* bulk change. A component whose ONLY history row is the batch write is
+* blanked; one whose pre-batch state cannot be determined is skipped.
 *
 * The operation is recorded as a new bulk-process entry in the
 * `DEDALO_BULK_PROCESS_SECTION_TIPO` (dd800) section so that this revert is
@@ -615,9 +617,14 @@ tool_time_machine.prototype.apply_value = function(options) {
 *
 * Access control: only global admins can trigger the bulk-revert UI button
 * (enforced in `render_tool_time_machine`), but the server enforces its own
-* per-row permission check via `security::assert_tipo_permission` and
-* `security::assert_record_in_user_scope`.  Rows the caller cannot write are
-* skipped and recorded in `response.errors`.
+* per-row permission check (level 2 on the (section_tipo, tipo) pair AND
+* per-record project scope). Rows the caller cannot write are skipped and
+* COUNTED in `response.data.skipped[]` as `{reason:'out_of_scope'}` — with no
+* coordinates, since the batch may name records outside the caller's scope
+* (SEC-16, WC-2026-09-03-bulk-revert-skipped-typed-entries). Every other
+* skipped row (`no_pre_batch_state`, `no_column`, `frameless_wipe`, `no_lang`,
+* `failed`) carries `section_tipo`/`tipo`/`section_id`; the words behind a
+* refusal are in the server log, never on the wire.
 *
 * Timeout is set to 180 s to accommodate very large bulk processes spanning
 * hundreds of records.
@@ -636,8 +643,9 @@ tool_time_machine.prototype.apply_value = function(options) {
 * @param {string} options.lang                    - Active language code
 * @param {number} options.selected_bulk_process_id - The bulk_process_id (dd1371) to revert
 * @param {string} options.bulk_revert_process_label - Human-readable name logged as the new process label
-* @returns {Promise<Object>} Resolves with the API response object
-*                            ({result: boolean, msg: string, errors: Array})
+* @returns {Promise<Object>} Resolves with the envelope v2 response: on success
+*                            `data` is `{counter, bulk_process_id, skipped}`;
+*                            a refusal carries the coded `error` and no data
 */
 tool_time_machine.prototype.bulk_revert_process = function(options) {
 

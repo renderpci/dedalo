@@ -220,6 +220,8 @@ const TRIPWIRES = [
 	'test/unit/client_gate_inventory_tripwire.test.ts',
 	'test/unit/authz_substring_gate_tripwire.test.ts',
 	'test/unit/census_derivation_tripwire.test.ts',
+	'test/unit/read_door_acl_tripwire.test.ts',
+	'test/unit/action_scope_binding_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------
@@ -300,8 +302,10 @@ async function lintBrowserBudget(): Promise<void> {
 }
 
 /**
- * Failing test names this run is allowed to see WITHOUT going red — the parity
- * tier's frozen corpus-bound reds (engineering/parity_baseline.json).
+ * Failing test names this run is allowed to see WITHOUT going red — the two
+ * frozen, SHRINK-ONLY red baselines: the parity tier's corpus-bound reds
+ * (engineering/parity_baseline.json) and the unit tier's frozen debt
+ * (engineering/unit_baseline.json).
  *
  * WHY THIS EXISTS. The parity tier is red BY CONSTRUCTION: 100 of its cases are
  * frozen because they were harvested against one installation's records, which
@@ -311,26 +315,32 @@ async function lintBrowserBudget(): Promise<void> {
  * widely-imported module reported VERIFY RED for failures that are not the
  * developer's and cannot be fixed here. A gate that is red for reasons the
  * reader cannot act on is a gate the reader learns to ignore — which is exactly
- * how this repo's verify went unread for 45 commits.
+ * how this repo's verify went unread for 45 commits. The unit tier's frozen
+ * reds are the same shape seen from the other tier: a golden that has been red
+ * since 2026-08-30 turns every change touching its module's imports RED here
+ * while `unit_baseline --check` on the db tier says "no drift".
  *
  * So a frozen failure is FORGIVEN and COUNTED, never hidden; a failure that is
- * NOT in the baseline still reddens the stage. The baseline itself is
- * shrink-only and is guarded by parity_baseline_tripwire, so this cannot become
- * a way to silence a real regression.
+ * NOT in a baseline still reddens the stage. Both baselines are shrink-only —
+ * the generators refuse a new red without --allow-regression, a listed test
+ * that PASSES is itself a drift — and are guarded by parity_baseline_tripwire /
+ * the db tier's `unit_baseline.ts --check`, so this cannot become a way to
+ * silence a real regression.
  */
-function frozenParityFailures(): Set<string> {
-	try {
-		const json = JSON.parse(readFileSync('engineering/parity_baseline.json', 'utf8')) as {
-			files?: Record<string, string[]>;
-		};
-		const out = new Set<string>();
-		for (const names of Object.values(json.files ?? {})) for (const n of names) out.add(n);
-		return out;
-	} catch {
-		// No baseline, or unreadable: forgive NOTHING. Fail-closed by design —
-		// a missing baseline must never become a blanket amnesty.
-		return new Set<string>();
+function frozenBaselineFailures(): Set<string> {
+	const out = new Set<string>();
+	for (const path of ['engineering/parity_baseline.json', 'engineering/unit_baseline.json']) {
+		try {
+			const json = JSON.parse(readFileSync(path, 'utf8')) as {
+				files?: Record<string, string[]>;
+			};
+			for (const names of Object.values(json.files ?? {})) for (const n of names) out.add(n);
+		} catch {
+			// No baseline, or unreadable: forgive NOTHING from it. Fail-closed by
+			// design — a missing baseline must never become a blanket amnesty.
+		}
 	}
+	return out;
 }
 
 async function runTestFiles(name: string, files: string[], forgiven?: Set<string>): Promise<void> {
@@ -450,7 +460,7 @@ if (runTests) {
 	const neighbours = await neighbourTests(changed);
 	// Do not re-run a tripwire as a "neighbour".
 	const only = neighbours.filter((f) => !TRIPWIRES.includes(f));
-	await runTestFiles('neighbours', only, frozenParityFailures());
+	await runTestFiles('neighbours', only, frozenBaselineFailures());
 
 	// The site-builder daemon is its own package (publication/site_builder) — outside the
 	// src/+test/ trees the neighbour scan covers — so its suite runs as a targeted stage

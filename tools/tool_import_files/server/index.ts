@@ -64,6 +64,8 @@ import { currentDataLang } from '../../../src/core/resolve/request_lang.ts';
 import { buildSearchSql } from '../../../src/core/search/sql_assembler.ts';
 import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
 import { saveComponentData } from '../../../src/core/section/record/save_component.ts';
+import { getPermissions, type Principal } from '../../../src/core/security/permissions.ts';
+import { assertRecordWriteTarget } from '../../../src/core/security/record_scope.ts';
 import {
 	basenamesMatch,
 	fileBasename,
@@ -74,6 +76,7 @@ import {
 	type ToolResponse,
 	type ToolServerModule,
 	toolRequestId,
+	type WriteTarget,
 } from '../../../src/core/tools/module.ts';
 import { parseFilename } from './filename_grammar.ts';
 
@@ -279,28 +282,45 @@ async function matchFreeName(
 }
 
 /**
- * The permission targets of the two MATCHER actions (the 'section_list' gate).
+ * The permission targets of the two MATCHER actions (the 'targets' gate, at
+ * level 1 — both are reads).
  *
  * Both read records — the SOURCE record and, more importantly, the TARGET
- * section's stored filename values — and neither posts a top-level
- * `section_tipo` in the shape its handler understands. A plain 'section' spec
- * therefore (a) missed the target section entirely on `..._from_souce`, so the
- * section whose data is actually read was ungated, and (b) denied
- * `get_media_section_match` outright ("invalid section target"), because that
- * handler only ever receives `target_filename.section_tipo`.
+ * section's stored filename values (`target_filename.tipo`, the component the
+ * match scans) — and neither posts a top-level `section_tipo` in the shape its
+ * handler understands. A plain 'section' spec therefore (a) missed the target
+ * section entirely on `..._from_souce`, so the section whose data is actually
+ * read was ungated, and (b) denied `get_media_section_match` outright
+ * ("invalid section target"), because that handler only ever receives
+ * `target_filename.section_tipo`. The targets name the PAIR the handler reads
+ * (target section × filename component) and the source record's scope.
  *
  * NOTE the action name `get_media_section_match_from_souce` keeps PHP's typo:
  * it is the literal API_ACTIONS entry of the oracle
  * (class.tool_import_files.php :74) and therefore a WIRE fact, not a slip.
  */
-export function matchFromSourceSectionTipos(options: Record<string, unknown>): unknown[] {
-	const target = options.target_section_tipo;
-	return [options.section_tipo, ...(target === undefined ? [] : [target])];
+export function matchFromSourceTargets(options: Record<string, unknown>): WriteTarget[] {
+	const targetFilename = (options.target_filename ?? {}) as { tipo?: unknown };
+	const sourceId = Number(options.section_id ?? 0);
+	return [
+		{
+			section_tipo: options.section_tipo,
+			...(Number.isInteger(sourceId) && sourceId > 0 ? { section_id: sourceId } : {}),
+		},
+		...(options.target_section_tipo === undefined
+			? []
+			: [{ section_tipo: options.target_section_tipo, tipo: targetFilename.tipo }]),
+	];
 }
 
-export function matchFreeNameSectionTipos(options: Record<string, unknown>): unknown[] {
-	const targetFilename = (options.target_filename ?? {}) as { section_tipo?: unknown };
-	return targetFilename.section_tipo === undefined ? [] : [targetFilename.section_tipo];
+export function matchFreeNameTargets(options: Record<string, unknown>): WriteTarget[] {
+	const targetFilename = (options.target_filename ?? {}) as {
+		section_tipo?: unknown;
+		tipo?: unknown;
+	};
+	return targetFilename.section_tipo === undefined
+		? []
+		: [{ section_tipo: targetFilename.section_tipo, tipo: targetFilename.tipo }];
 }
 
 /** get_media_section_match_from_souce: relation-driven match (PHP parity). */
@@ -438,6 +458,15 @@ export interface SetComponentsDataOptions {
 	/** Caller section tipo/id (the record the tool was opened from). */
 	sectionTipo: string;
 	sectionId: number;
+	/**
+	 * The TARGET record's section — the one section besides the caller's a
+	 * role write may land in (the media record: the caller section itself in
+	 * section_resource mode, the matcher's target section, or the portal
+	 * target). A write-role ddo living anywhere else is REFUSED: its
+	 * destination id would be a record of a third section that merely shares
+	 * the target's number.
+	 */
+	targetSectionTipo: string;
 	/** The created/matched target media record id. */
 	targetSectionId: number;
 	/** Decoded filename recorded by the target_filename role. */
@@ -454,6 +483,13 @@ export interface SetComponentsDataOptions {
 	targetComponentModel: string;
 	componentsTempData: TempDataEntry[];
 	userId: number;
+	/**
+	 * The actor. Every role write is scope-checked against it (record_scope.ts
+	 * assertRecordWriteTarget — the save door's own rule) BEFORE the save: the
+	 * destination record is resolved at run time (a filename prefix, a matcher
+	 * hit, a freshly created row), so no declarative gate could have named it.
+	 */
+	principal: Principal;
 	/**
 	 * The request data language for translatable role writes (PHP DEDALO_DATA_LANG).
 	 * Threaded EXPLICITLY (captured by importFiles while in request scope) rather
@@ -474,12 +510,14 @@ export async function setComponentsData(options: SetComponentsDataOptions): Prom
 		ddoMap,
 		sectionTipo,
 		sectionId,
+		targetSectionTipo,
 		targetSectionId,
 		currentFileName,
 		mediaFilePath,
 		targetComponentModel,
 		componentsTempData,
 		userId,
+		principal,
 		dataLang,
 	} = options;
 
@@ -501,6 +539,16 @@ export async function setComponentsData(options: SetComponentsDataOptions): Prom
 		const tipo = String(ddo.tipo ?? '');
 		const ddoSectionTipo = String(ddo.section_tipo ?? '');
 		if (tipo === '' || ddoSectionTipo === '') continue;
+		// The destination is EITHER the caller record OR the target record —
+		// there is no third: an id resolved in the target section addresses
+		// nothing in any other section, so a ddo declared there would write a
+		// record of a third section that happens to share the number (audit
+		// CARRY-08, the record axis). Refused per file, never silently routed.
+		if (ddoSectionTipo !== sectionTipo && ddoSectionTipo !== targetSectionTipo) {
+			throw invalidRequest(
+				`ddo_map '${ddo.role}' entry '${tipo}' lives in '${ddoSectionTipo}', which is neither the caller section '${sectionTipo}' nor the target section '${targetSectionTipo}'`,
+			);
+		}
 
 		const translatable = await getTranslatableByTipo(tipo);
 		// PHP :1630: translatable → DEDALO_DATA_LANG (threaded by importFiles from
@@ -511,6 +559,15 @@ export async function setComponentsData(options: SetComponentsDataOptions): Prom
 			sectionTipo,
 			sectionId,
 			targetSectionId,
+		);
+		// The RECORD half of the write authorization, at the write: the
+		// declarative 'targets' gate proved the (section, component) PAIR; the
+		// record it lands in is only known here. Same rule as the save door.
+		await assertRecordWriteTarget(
+			ddoSectionTipo,
+			destinationSectionId,
+			principal,
+			`tool_import_files.import_files ${role}`,
 		);
 
 		switch (role) {
@@ -738,6 +795,46 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 	// role writes must not read the ALS from a leaf on the background path.
 	const dataLang = currentDataLang();
 
+	// THE RECORD HALF OF THE GATE, IN-HANDLER (audit CARRY-08, record axis). The
+	// declarative 'targets' gate (importFilesTargets) authorizes every
+	// (section, component) pair the request names and the records it names
+	// EXPLICITLY (files_data[].section_id, the caller record). But this handler
+	// binds most of its destination records at RUN TIME — a filename's numeric
+	// prefix in enumerate mode, a matcher hit in the match modes, a row created
+	// a moment ago — and a request that could not spell a record id was never
+	// scope-checked for it. So every record this run writes into passes the
+	// save door's own rule (record_scope.ts assertRecordWriteTarget: a positive
+	// id, inside the caller's scope; global admins unscoped) at the point it is
+	// bound, BEFORE the first write into it. Memoized per run: one probe per
+	// distinct record, not one per write.
+	//
+	// A record BORN IN THIS RUN (a fresh create, the portal's add_new_element)
+	// is admitted without the probe, as the framework's own create rule admits a
+	// create (security.ts scopeIfRecordTargeted: no prior record, no scope to
+	// check — the section write grant is the whole authorization). Its
+	// reachability afterwards is the birth defaults' business
+	// (record_defaults.ts), not this handler's.
+	const writableRecords = new Set<string>();
+	const recordKey = (recordSectionTipo: string, recordSectionId: number): string =>
+		`${recordSectionTipo}/${recordSectionId}`;
+	const bornInThisRun = (recordSectionTipo: string, recordSectionId: number): void => {
+		writableRecords.add(recordKey(recordSectionTipo, recordSectionId));
+	};
+	const assertWritableRecord = async (
+		recordSectionTipo: string,
+		recordSectionId: number,
+	): Promise<void> => {
+		const key = recordKey(recordSectionTipo, recordSectionId);
+		if (writableRecords.has(key)) return;
+		await assertRecordWriteTarget(
+			recordSectionTipo,
+			recordSectionId,
+			ctx.principal,
+			'tool_import_files.import_files',
+		);
+		writableRecords.add(key);
+	};
+
 	const namedGroups = new Map<string, number>();
 	let imported = 0;
 	const errors: string[] = [];
@@ -768,6 +865,9 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 		extension: string,
 		originalFileName: string,
 	): Promise<void> => {
+		// The media write lands on THIS record: prove it writable first (memoized —
+		// the loop below has usually already done so at the binding point).
+		await assertWritableRecord(targetSectionTipo, targetSectionId);
 		// The context is RE-RESOLVED per call (stored items read fresh), so importing
 		// several files into the SAME record accumulates instead of each one clobbering
 		// the last.
@@ -929,6 +1029,15 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 					matches = await matchFreeName(fileName, filenameTipo, targetSectionTipo);
 				}
 
+				// Every matched record is proven writable BEFORE the first copy or
+				// ingest: a file is imported whole or not at all, so one out-of-scope
+				// match refuses the whole file rather than half its targets.
+				// (matchFreeName deliberately searches ACROSS projects, exactly as
+				// PHP; this is where the caller's scope is imposed on its hits.)
+				for (const matchedId of matches) {
+					await assertWritableRecord(targetSectionTipo, matchedId);
+				}
+
 				const plan = buildMultiMatchCopyPlan(matches, fileName, tmpName);
 				for (const step of plan) {
 					if (!step.isLast) {
@@ -952,6 +1061,7 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 						ddoMap,
 						sectionTipo,
 						sectionId: callerSectionId,
+						targetSectionTipo,
 						targetSectionId: step.targetSectionId,
 						currentFileName: step.fileName,
 						// PHP file_data['file_path'] stays the ORIGINAL staged file for
@@ -961,6 +1071,7 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 						targetComponentModel: targetComponentModel ?? '',
 						componentsTempData,
 						userId: ctx.userId,
+						principal: ctx.principal,
 						dataLang,
 					});
 				}
@@ -997,11 +1108,17 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				resolvedSectionId = Number(file.section_id); // pre-matched
 			} else if (nameMode === 'enumerate' && parsed.section_id) {
 				// PHP :1060-1070: the numeric prefix is the explicit section_id;
-				// create_record() returns the existing id without duplicating.
+				// create_record() returns the existing id without duplicating. An
+				// EXISTING row is somebody's record and gets the scope probe below;
+				// a row this call creates is born in this run.
 				resolvedSectionId = Number(parsed.section_id);
+				const table = await getMatrixTableFromTipo(sectionTipo);
+				const existing =
+					table === null ? null : await readMatrixRecord(table, sectionTipo, resolvedSectionId);
 				await createSectionRecord(sectionTipo, ctx.userId, new Date(), resolvedSectionId, {
 					conflictTolerant: true,
 				});
+				if (existing === null) bornInThisRun(sectionTipo, resolvedSectionId);
 			} else if (nameMode === 'named') {
 				const key = parsed.base_name || parsed.section_id || fileName;
 				const existing = namedGroups.get(key);
@@ -1010,10 +1127,19 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				} else {
 					resolvedSectionId = await createSectionRecord(sectionTipo, ctx.userId);
 					namedGroups.set(key, resolvedSectionId);
+					bornInThisRun(sectionTipo, resolvedSectionId);
 				}
 			} else {
 				resolvedSectionId = await createSectionRecord(sectionTipo, ctx.userId);
+				bornInThisRun(sectionTipo, resolvedSectionId);
 			}
+			// The resolved record — the caller's own, a filename-prefixed EXISTING
+			// row (the enumerate create is a no-op on one), a named-group row or a
+			// fresh create — is written next (the portal link, the role writes, the
+			// media itself): prove it writable NOW, before any of them. A row born
+			// in this run carries the creator's project (record_defaults.ts), so
+			// this admits exactly what the caller can reach.
+			await assertWritableRecord(sectionTipo, resolvedSectionId);
 
 			// ── media destination: portal chain vs the record itself ─────────
 			let targetSectionTipo = sectionTipo;
@@ -1045,6 +1171,16 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				}
 				const portalTipo = String(portalDdo.tipo ?? '');
 				const portalSectionTipo = String(portalDdo.section_tipo ?? '');
+				// The portal receives the locator ON THE RESOLVED RECORD, whose id is
+				// an address in the caller's section only — a component_option ddo
+				// declared in another section would write a record of THAT section
+				// at the same number. Refused per file (a configuration error).
+				if (portalSectionTipo !== sectionTipo) {
+					errors.push(
+						`${fileName}: component_option '${portalTipo}' lives in '${portalSectionTipo}', not in the caller section '${sectionTipo}'`,
+					);
+					continue;
+				}
 				const portalTarget =
 					portalDdo.target_section_tipo ??
 					(await portalTargetSectionTipo(portalTipo, portalSectionTipo));
@@ -1054,6 +1190,11 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 						message: `cannot resolve the portal target section for '${portalTipo}' (no target_section_tipo and no resolvable request_config)`,
 					});
 				}
+				// The ontology-resolved target is the one section the declarative
+				// gate could not see (importFilesTargets) — authorize it HERE, before
+				// the record is created in it. Runs on the declared form too: cheap
+				// (cached), and it keeps the handler honest if the extractor drifts.
+				await assertPortalTargetWritable(ctx.principal, portalTarget, targetComponentTipo);
 				// Create + link the media record through the portal — the
 				// add_new_element relation hook (relations/save.ts) inside the
 				// tx-wrapped, TM-audited saveComponentData (PHP :1217-1232).
@@ -1075,6 +1216,7 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				}
 				targetSectionTipo = portalTarget;
 				targetSectionId = created;
+				bornInThisRun(targetSectionTipo, targetSectionId);
 			}
 
 			// Role writes BEFORE the media move (PHP order :1254-1285) — the
@@ -1084,12 +1226,14 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 					ddoMap,
 					sectionTipo,
 					sectionId: resolvedSectionId,
+					targetSectionTipo,
 					targetSectionId,
 					currentFileName: fileName,
 					mediaFilePath: join(stagingDir(ctx.userId, keyDir), sanitizeSegment(tmpName)),
 					targetComponentModel: targetComponentModel ?? '',
 					componentsTempData,
 					userId: ctx.userId,
+					principal: ctx.principal,
 					dataLang,
 				});
 			}
@@ -1148,25 +1292,138 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 	);
 }
 
+/** The ddo_map roles whose handling WRITES a component (setComponentsData +
+ * the media ingest + the portal chain). `component_option` is the portal that
+ * receives the add_new_element; `target_component` receives the file. */
+const DDO_WRITE_ROLES: ReadonlySet<string> = new Set([
+	'target_filename',
+	'target_date',
+	'input_component',
+	'target_component',
+	'component_option',
+]);
+
+/**
+ * The WRITE TARGETS of an import_files request — what the 'targets' gate
+ * authorizes (audit CARRY-08 / TOOLS-04). The handler writes into the sections
+ * and components the CLIENT-SUPPLIED `tool_config.ddo_map` names (the role
+ * writes of setComponentsData, the media component that receives the file, the
+ * portal that receives the new locator and the section that portal creates
+ * into), plus the caller pair and — when a file arrives pre-matched — the
+ * matched record itself. A gate declared on `(options.section_tipo,
+ * options.tipo)` alone authorized the caller's component and left every
+ * ddo_map destination ungated. Read off the SAME keys the handler reads;
+ * `'self'` is the caller section, exactly as the portal chain substitutes it.
+ *
+ * What cannot be named here, and is therefore authorized IN-HANDLER at the
+ * point it is bound: a `component_option` portal with no `target_section_tipo`
+ * resolves its target section from the ontology at run time
+ * (portalTargetSectionTipo → assertPortalTargetWritable), and the RECORDS the
+ * run writes into are mostly resolved at run time too — a filename's numeric
+ * prefix (enumerate), a matcher hit (match / match_freename), a row created a
+ * moment ago — so every one of them passes the save door's record-scope rule
+ * (assertRecordWriteTarget) before the first write into it (importFiles
+ * assertWritableRecord + setComponentsData). This extractor proves the PAIRS
+ * and the EXPLICIT records; the handler proves the rest.
+ */
+export function importFilesTargets(options: Record<string, unknown>): WriteTarget[] {
+	const callerSection = options.section_tipo;
+	const callerId = Number(options.section_id ?? 0);
+	const targets: WriteTarget[] = [
+		{
+			section_tipo: callerSection,
+			tipo: options.tipo,
+			...(Number.isInteger(callerId) && callerId > 0 ? { section_id: callerId } : {}),
+		},
+	];
+	const toolConfig = (options.tool_config ?? {}) as {
+		import_mode?: unknown;
+		import_file_name_mode?: unknown;
+		ddo_map?: unknown;
+	};
+	const ddoMap = (Array.isArray(toolConfig.ddo_map) ? toolConfig.ddo_map : []) as DdoMapEntry[];
+	const sectionOf = (ddo: DdoMapEntry): unknown =>
+		ddo.section_tipo === 'self' ? callerSection : ddo.section_tipo;
+	for (const ddo of ddoMap) {
+		if (ddo === null || typeof ddo !== 'object' || !DDO_WRITE_ROLES.has(String(ddo.role ?? ''))) {
+			continue;
+		}
+		targets.push({ section_tipo: sectionOf(ddo), tipo: ddo.tipo });
+		if (ddo.role === 'component_option' && ddo.target_section_tipo !== undefined) {
+			targets.push({ section_tipo: ddo.target_section_tipo });
+		}
+	}
+	// Pre-matched files (the matcher responses echoed back): in the match modes
+	// the record lives in the target_component's section, otherwise it is the
+	// caller section's record the handler resolves (importFiles' mode logic).
+	const targetDdo = ddoMap.find((ddo) => ddo?.role === 'target_component');
+	const importMode = String(toolConfig.import_mode ?? 'default');
+	const nameMode = String(toolConfig.import_file_name_mode ?? 'default');
+	const matchMode =
+		targetDdo !== undefined &&
+		(importMode === 'section' || importMode === 'section_resource') &&
+		(nameMode === 'match' || nameMode === 'match_freename');
+	const filesData = Array.isArray(options.files_data) ? options.files_data : [];
+	for (const file of filesData as { section_id?: unknown }[]) {
+		if (file?.section_id == null) continue;
+		targets.push(
+			matchMode
+				? { section_tipo: sectionOf(targetDdo), tipo: targetDdo.tipo, section_id: file.section_id }
+				: { section_tipo: callerSection, section_id: file.section_id },
+		);
+	}
+	return targets;
+}
+
+/**
+ * The run-time half of the import_files gate: a `component_option` portal
+ * without `target_section_tipo` resolves its target section from the ontology,
+ * so the declarative extractor above cannot name it. Before the handler
+ * creates a record there (the portal's add_new_element) and ingests the file
+ * into `targetComponentTipo` on it, the caller must hold write on that section
+ * AND on the pair — the same two checks the 'targets' gate would have run.
+ */
+export async function assertPortalTargetWritable(
+	principal: Principal,
+	targetSectionTipo: string,
+	targetComponentTipo: string,
+): Promise<void> {
+	const sectionLevel = await getPermissions(principal, targetSectionTipo, targetSectionTipo);
+	const pairLevel = await getPermissions(principal, targetSectionTipo, targetComponentTipo);
+	if (sectionLevel < 2 || pairLevel < 2) {
+		throw new DedaloError('perm.denied', {
+			coordinates: { section_tipo: targetSectionTipo, tipo: targetComponentTipo, required: 2 },
+			message: `import_files: no write grant on the portal target ${targetSectionTipo}/${targetComponentTipo}`,
+		});
+	}
+}
+
 export const tool: ToolServerModule = {
 	name: 'tool_import_files',
 	apiActions: {
 		// Both matchers READ record data out of the TARGET section, which rides
 		// inside the payload — so the gate is declared over the payload targets.
 		get_media_section_match_from_souce: {
-			permission: 'section_list',
+			permission: 'targets',
 			minLevel: 1,
-			sectionTipos: matchFromSourceSectionTipos,
+			targets: matchFromSourceTargets,
 			handler: getMediaSectionMatchFromSource,
 		},
 		get_media_section_match: {
-			permission: 'section_list',
+			permission: 'targets',
 			minLevel: 1,
-			sectionTipos: matchFreeNameSectionTipos,
+			targets: matchFreeNameTargets,
 			handler: getMediaSectionMatch,
 		},
 		file_processor: { permission: 'section', minLevel: 2, handler: fileProcessor },
-		import_files: { permission: 'tipo', minLevel: 2, handler: importFiles },
+		// The write targets ride in the client's tool_config.ddo_map — the gate
+		// is declared over THEM (importFilesTargets), not over the caller pair.
+		import_files: {
+			permission: 'targets',
+			minLevel: 2,
+			targets: importFilesTargets,
+			handler: importFiles,
+		},
 	},
 	backgroundRunnable: ['import_files'],
 };

@@ -565,15 +565,13 @@ export async function login(
 	// :636-690): the superuser (-1) is always admin, everyone else is admin iff
 	// their dd244 security-administrator locator points at dd64/1.
 	//
-	// It was `user.section_id === -1` — so a REAL global admin logged in with a
-	// non-admin session flag and was refused by every admin-only endpoint that
-	// reads the SESSION rather than the request Principal (api/counters.ts).
-	// resolvePrincipal is the ONE resolver of that grant (permissions.ts), so the
-	// session flag and the per-request Principal can never disagree.
-	//
-	// The stamp is a SNAPSHOT taken at login, exactly like PHP's: a grant flipped
-	// mid-session reaches the Principal on the next request (dispatch re-resolves
-	// it) but not this session row until the next login.
+	// The stamp is a SNAPSHOT taken at login, exactly like PHP's, and since
+	// 2026-09-03 it is NOT AN AUTHORIZATION INPUT: no route reads it (SEC-14 — the
+	// two that did resolve the Principal per request through
+	// security/session_gate.ts, like every dispatched action). It is kept as the
+	// row's descriptive column only (session_store.ts Session.isGlobalAdmin), and
+	// resolvePrincipal — the ONE resolver of the grant (permissions.ts) — is what
+	// fills it, so it cannot disagree with the Principal at the moment of login.
 	const { isGlobalAdmin } = await resolvePrincipal(user.section_id);
 	const sessionToken = createSession(
 		user.section_id,

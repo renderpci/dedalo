@@ -370,6 +370,16 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 			(await import('../helpers/acl_identity_fixture.ts')).removeAclIdentityFixture(),
 	},
 	{
+		name: 'installReadDoorIdentityFixture',
+		run: async () =>
+			(await import('../helpers/read_door_identity_fixture.ts')).installReadDoorIdentityFixture(),
+	},
+	{
+		name: 'removeReadDoorIdentityFixture',
+		run: async () =>
+			(await import('../helpers/read_door_identity_fixture.ts')).removeReadDoorIdentityFixture(),
+	},
+	{
 		name: 'installHierarchyPruningFixture',
 		run: async () =>
 			(await import('../helpers/hierarchy_pruning_fixture.ts')).installHierarchyPruningFixture(),
@@ -378,6 +388,16 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 		name: 'removeHierarchyPruningFixture',
 		run: async () =>
 			(await import('../helpers/hierarchy_pruning_fixture.ts')).removeHierarchyPruningFixture(),
+	},
+	{
+		name: 'installScopeBindingFixture',
+		run: async () =>
+			(await import('../helpers/scope_binding_fixture.ts')).installScopeBindingFixture(),
+	},
+	{
+		name: 'removeScopeBindingFixture',
+		run: async () =>
+			(await import('../helpers/scope_binding_fixture.ts')).removeScopeBindingFixture(),
 	},
 	// NOT LISTED, deliberately: `test/helpers/observer_term_seed.ts`. Until
 	// 2026-08-20 it wrote an install thesaurus (`on1`) with its own

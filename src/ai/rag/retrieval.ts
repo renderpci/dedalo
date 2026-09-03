@@ -147,16 +147,21 @@ async function aclGate(
 		//    on every host-section component that fed the chunk; drop on any level
 		//    0. Contributors are always written by the indexer for a stored group
 		//    chunk (a doc with no harvested text is never indexed), so an empty set
-		//    is anomalous → fail CLOSED. A per-component (image-path) chunk keeps
-		//    its single component-level gate.
+		//    is anomalous → fail CLOSED. A per-component (image-path) chunk gates
+		//    its ONE component.
 		const isGroupChunk = candidate.componentTipo.startsWith(RAG_GROUP_PREFIX);
 		const gateTipos = isGroupChunk
 			? contributorComponentTipos(candidate.chunkMeta)
 			: [candidate.componentTipo];
 		if (isGroupChunk && gateTipos.length === 0) continue; // fail closed
-		// A group chunk additionally requires the section read grant beside its
+		// EVERY chunk additionally requires the section read grant beside its
 		// components (the human read shows the record only when section ≥ 1).
-		const requiredTipos = isGroupChunk ? [candidate.sectionTipo, ...gateTipos] : gateTipos;
+		// Until P1-3 (SEC-11, 2026-09-03) only a GROUP chunk did: an image chunk
+		// passed on its media component alone, so a principal granted a media
+		// component but NOT its section still received the record — through
+		// similar_objects / search_by_text_image / identify_by_image with an
+		// omitted scope — while the human read of the same record was refused.
+		const requiredTipos = [candidate.sectionTipo, ...gateTipos];
 		let blocked = false;
 		for (const gateTipo of requiredTipos) {
 			const schemaKey = `${candidate.sectionTipo}|${gateTipo}`;

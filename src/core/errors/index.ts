@@ -20,6 +20,7 @@ export {
 	toFailureRecord,
 	toStreamFrame,
 	toStructuredErr,
+	wireMessage,
 } from './convert.ts';
 export {
 	DedaloError,

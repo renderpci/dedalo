@@ -40,6 +40,18 @@
  * the SAME helpers as that one (`mergeRestoredLangSlice` / `snapshotLangs` /
  * `tmAuditSlice`, imported from `tool_time_machine.ts`), so there is one law and
  * one implementation of it.
+ *
+ * THE SKIP CHANNEL (SEC-16, WC-2026-09-03-bulk-revert-skipped-typed-entries):
+ * `data.skipped[]` is a list of TYPED entries `{reason, section_tipo?, tipo?,
+ * section_id?}`, never sentences. The batch row set comes from a TM search with
+ * NO projects filter and the bulk id is a small enumerable integer, so a
+ * level-2 holder on ANY section could once read, off this channel, the
+ * coordinates of every record outside their scope that a batch touched — plus
+ * the raw Postgres/fs text of whatever threw. Now a row's coordinates ride an
+ * entry ONLY once the row has passed the scope gate (`inScope`); a denial is an
+ * `out_of_scope` entry with no coordinates (counted, never located); and the
+ * refusal TEXT (frameless slot names, the exception message) goes to the server
+ * log with the request id, never to the caller.
  */
 
 import { dbTimestamp } from '../../../src/core/db/db_timestamp.ts';
@@ -85,6 +97,38 @@ import { mergeRestoredLangSlice, snapshotLangs, tmAuditSlice } from './tool_time
 
 const BULK_PROCESS_SECTION_TIPO = 'dd800';
 const BULK_PROCESS_LABEL_TIPO = 'dd796';
+
+/**
+ * Why a batch row was NOT reverted — a closed vocabulary, one code per branch
+ * of the loop below. The wire carries the code; the WHY in words is the log's.
+ */
+export type BulkRevertSkipReason =
+	/** the caller lacks level 2 on the (section_tipo, tipo) pair OR the record
+	 *  is outside their project scope — one code for both halves, because
+	 *  telling them apart already says whether the record exists */
+	| 'out_of_scope'
+	/** no determinable pre-batch state (preBulkState found:false) */
+	| 'no_pre_batch_state'
+	/** the model resolves to no matrix column, or the section to no table */
+	| 'no_column'
+	/** the snapshot carries no frames over LIVE frames (refuseFramelessWipe) */
+	| 'frameless_wipe'
+	/** a lang-sliced snapshot nothing can name a language for */
+	| 'no_lang'
+	/** the row's revert threw; the exception text is in the server log */
+	| 'failed';
+
+/**
+ * One `skipped[]` entry. Coordinates are present ONLY for a row the caller was
+ * entitled to see (it passed the scope gate); an `out_of_scope` entry, or a
+ * `failed` one from before the gate, carries the reason alone.
+ */
+export interface BulkRevertSkipped {
+	reason: BulkRevertSkipReason;
+	section_tipo?: string;
+	tipo?: string;
+	section_id?: number;
+}
 
 interface TmRow {
 	id: number;
@@ -217,9 +261,35 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 	);
 	const activityHost = hostFromClientIp(ctx.clientIp);
 
-	const errors: string[] = [];
+	const requestId = toolRequestId(ctx);
+	const skipped: BulkRevertSkipped[] = [];
+	/** The coordinates of a row the caller may be told about; the log always may. */
+	const locate = (row: TmRow): string => `${row.section_tipo}/${row.tipo}#${row.section_id}`;
+	/**
+	 * Refuse this row: the code goes on the wire, the coordinates only when the
+	 * row has passed the scope gate, and the words (if any) to the log.
+	 */
+	const skip = (
+		row: TmRow,
+		reason: BulkRevertSkipReason,
+		inScope: boolean,
+		detail: string | null,
+		level: 'warn' | 'error' = 'warn',
+	): void => {
+		skipped.push(
+			inScope
+				? { reason, section_tipo: row.section_tipo, tipo: row.tipo, section_id: row.section_id }
+				: { reason },
+		);
+		const line = `[tool_time_machine/bulk_revert] request ${requestId}: bulk ${bulkProcessId} row ${locate(row)} skipped (${reason})${detail === null ? '' : `: ${detail}`}`;
+		if (level === 'error') console.error(line);
+		else console.warn(line);
+	};
 	let counter = 0;
 	for (const row of batchRows) {
+		// Set ONLY after both halves of the per-row gate pass; the catch below
+		// reads it, so a throw from inside the gate itself locates nothing.
+		let inScope = false;
 		try {
 			const model = await getModelByTipo(row.tipo);
 			if (model === null || !model.startsWith('component_')) {
@@ -235,9 +305,10 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 				(await getPermissions(principal, row.section_tipo, row.tipo)) < 2 ||
 				!(await principalCanAccessRecord(row.section_tipo, row.section_id, principal))
 			) {
-				errors.push(`permissions_denied: ${row.section_tipo}/${row.tipo}#${row.section_id}`);
+				skip(row, 'out_of_scope', false, null);
 				continue;
 			}
+			inScope = true;
 
 			// Full per-component history (id DESC) → the pre-batch snapshot.
 			await ensureRecordGenerationTable();
@@ -253,14 +324,14 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 			if (!found) {
 				// No determinable pre-batch state — PHP saves nothing rather than
 				// blanking the component. Surfaced, never silent.
-				errors.push(`no pre-batch state: ${row.section_tipo}/${row.tipo}#${row.section_id}`);
+				skip(row, 'no_pre_batch_state', inScope, null);
 				continue;
 			}
 
 			const column = getColumnNameByModel(model);
 			const table = await getMatrixTableFromTipo(row.section_tipo);
 			if (column === null || table === null) {
-				errors.push(`no column/table for ${model}/${row.section_tipo}`);
+				skip(row, 'no_column', inScope, `no column/table for ${model}/${row.section_tipo}`);
 				continue;
 			}
 			const writeTarget = { table, sectionTipo: row.section_tipo, sectionId: row.section_id };
@@ -296,7 +367,7 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 			// this component is left untouched rather than half-reverted.
 			const framelessRefusal = await refuseFramelessWipe(writeTarget, row.tipo, framePlan);
 			if (framelessRefusal !== null) {
-				errors.push(`${row.section_tipo}/${row.tipo}#${row.section_id}: ${framelessRefusal}`);
+				skip(row, 'frameless_wipe', inScope, framelessRefusal);
 				continue;
 			}
 
@@ -324,7 +395,7 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 				// unlike apply_value there is no request lang to fall back on. A guess
 				// deletes curated content nothing can name — refuse this row
 				// (surfaced in `skipped`), never the batch.
-				errors.push(`no lang for the slice: ${row.section_tipo}/${row.tipo}#${row.section_id}`);
+				skip(row, 'no_lang', inScope, null);
 				continue;
 			}
 
@@ -431,15 +502,15 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 			});
 			counter += 1;
 		} catch (error) {
-			errors.push(`${row.section_tipo}/${row.tipo}#${row.section_id}: ${(error as Error).message}`);
+			// The exception text (Postgres, fs — internal names and paths) is for
+			// the log; the caller learns that the row failed, and where, only if
+			// the row was theirs to see.
+			skip(row, 'failed', inScope, error instanceof Error ? error.message : String(error), 'error');
 		}
 	}
 
 	// `skipped` is the per-row refusal/failure list — a NON-FATAL part of the
 	// payload (the batch never aborts on one row), so it rides inside `data`
 	// instead of the legacy body's `errors[]`, which meant "the call failed".
-	return ok(
-		{ counter, bulk_process_id: newBulkId, skipped: errors },
-		{ requestId: toolRequestId(ctx) },
-	);
+	return ok({ counter, bulk_process_id: newBulkId, skipped }, { requestId });
 }

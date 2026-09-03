@@ -16,7 +16,7 @@ Use it for bulk ingest of references already curated in Zotero, once a predicate
 
 `tools/tool_import_zotero/server/index.ts` — this tool's `import_files` action writes, through the same shared executor the other import tools use. The single remotely callable action, `import_files`:
 
-1. **WRITE gate.** Declaratively gated `permission: 'tipo', minLevel: 2` on `(section_tipo, tipo)`.
+1. **WRITE gate.** Declaratively gated `permission: 'targets', minLevel: 2` on `(section_tipo, tipo)` AND on `(section_tipo, <component_tipo>)` for every `config.main` field-map entry — the components the import actually writes.
 2. **Config.** Reads the field-map from `tool_config.config.main` as an array of `{predicate, component_tipo}` entries (`readFieldMap`). Missing or empty map → refused (`Missing Zotero field-map`).
 3. **File filter.** Keeps only staged files under the per-user upload temp dir; each is read as **RDF/XML text**.
 4. **Parse + map.** `parseRdfXml` (`src/core/tools/rdf_xml.ts`) extracts subjects/predicates from the RDF/XML; `applyRdfMap` resolves each subject's predicates against the field-map into a `MappedRecord` (`{component_tipo, value}` pairs) — a flat predicate→component mapping: no dedicated author-name flattening, `issued`/`accessed` date parsing, container-title Series/Collection resolve-or-create, type→typology lookup, or ISBN/ISSN→standard-number-typology handling; a plain predicate maps straight to a component value.
@@ -33,11 +33,11 @@ PDF import with first-page identifying-image extraction (an `archive` field nami
 
 ## Actions & options
 
-`apiActions = { import_files: { permission: 'tipo', minLevel: 2, handler: importFiles } }` — only `import_files` is declared:
+`apiActions = { import_files: { permission: 'targets', minLevel: 2, targets: importZoteroTargets, handler: importFiles } }` — only `import_files` is declared:
 
 | Action | Permission | Key options it reads |
 | --- | --- | --- |
-| `import_files` | declarative `permission: 'tipo', minLevel: 2` on `(section_tipo, tipo)` | `section_tipo` (target section, **required**, gated), `tipo` (caller component/portal tipo), `section_id` (current section), `tool_config` (carries `config.main`, the field-map array — see below), `files_data` (uploaded file descriptors — an RDF/XML export), `key_dir` (upload directory id) |
+| `import_files` | declarative `permission: 'targets', minLevel: 2` on `(section_tipo, tipo)` + every field-map component | `section_tipo` (target section, **required**, gated), `tipo` (caller component/portal tipo), `section_id` (current section), `tool_config` (carries `config.main`, the field-map array — see below), `files_data` (uploaded file descriptors — an RDF/XML export), `key_dir` (upload directory id) |
 
 **Config shape — `tool_config.config.main`, an array of flat entries:**
 

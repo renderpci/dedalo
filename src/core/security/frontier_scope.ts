@@ -43,6 +43,12 @@
  *       DIFFUSION DROPS the row and leaves a ledger line. The published target
  *                 is public; a record the enqueuing principal may not read must
  *                 not be pushed there by them, and the run must still finish.
+ *       DOOR      (P1-3, 2026-09-03) a record-addressing READ DOOR other than
+ *                 the human read — read_raw, the MCP media tool, the identify
+ *                 surfaces, the criterion path reader. The law is owned by
+ *                 `security/read_door.ts`: a door that answers ONE typed
+ *                 (record, component) THROWS `perm.denied`; a door that
+ *                 assembles MANY narrows per key and says so in `notices[]`.
  *
  *     And in EVERY case the refusal is LOUD: {@link noteFrontierRefusal} writes
  *     a named operator log line and records a request-scoped notice. AGENTS.md
@@ -110,8 +116,8 @@ import { config } from '../../config/config.ts';
 import { ddoIsAuthorized, type Principal } from './permissions.ts';
 import { currentRequestContext } from './request_context.ts';
 
-/** The three surfaces the refusal law is written for (property 3). */
-export type FrontierSurface = 'search' | 'export' | 'diffusion';
+/** The four surfaces the refusal law is written for (property 3). */
+export type FrontierSurface = 'search' | 'export' | 'diffusion' | 'door';
 
 /**
  * The per-request/per-run authorization scope a crossing site builds ONCE and
@@ -127,6 +133,20 @@ export interface FrontierScope {
 	readonly surface: FrontierSurface;
 	/** The concrete door, for the log line: 'search.filter', 'tool_export', … */
 	readonly door: string;
+	/**
+	 * The per-(section, component) LEVEL the component key reads — injectable
+	 * so a gate can prove the RULE ("declared ≠ landed → refused", "asked once
+	 * per section") without a dd774 fixture standing between the assertion and
+	 * the rule, exactly as `identify/component_access.ts` ComponentGrant is
+	 * injected. Production omits it and gets `ddoIsAuthorized`'s own predicate
+	 * (`getPermissions >= 1`); an injected grant replaces ONLY the level read,
+	 * never the exemptions above it.
+	 */
+	readonly componentGrant?: (
+		principal: Principal,
+		sectionTipo: string,
+		componentTipo: string,
+	) => Promise<number>;
 }
 
 /** ONE step of a crossing: the (section, component) pair about to be read. */
@@ -276,11 +296,27 @@ export async function frontierComponentAllowed(
 	step: FrontierStep,
 ): Promise<boolean> {
 	if (scope.principal === undefined) return true; // internal resolution
-	const componentTipo = step.componentTipo;
-	if (componentTipo === undefined || componentTipo === '') return true; // no data read here
-	if (IDENTITY_PATH_TIPOS.has(componentTipo)) return true;
-	if (frontierSectionIsGloballyVisible(step.sectionTipo, step.table)) return true;
+	const componentTipo = grantedComponentOf(step);
+	if (componentTipo === null) return true;
+	if (scope.componentGrant !== undefined) {
+		// The injected level read, under ddoIsAuthorized's own fail-closed rule
+		// for an unresolvable section (SEC-01).
+		if (step.sectionTipo === '') return false;
+		return (await scope.componentGrant(scope.principal, step.sectionTipo, componentTipo)) >= 1;
+	}
 	return ddoIsAuthorized(scope.principal, step.sectionTipo, componentTipo);
+}
+
+/**
+ * The component whose grant a step consults, or null when it consults NONE: no
+ * component at all (no data read here), an identity path tipo, or a globally
+ * visible section.
+ */
+function grantedComponentOf(step: FrontierStep): string | null {
+	const componentTipo = step.componentTipo;
+	if (componentTipo === undefined || componentTipo === '') return null;
+	if (IDENTITY_PATH_TIPOS.has(componentTipo)) return null;
+	return frontierSectionIsGloballyVisible(step.sectionTipo, step.table) ? null : componentTipo;
 }
 
 /**

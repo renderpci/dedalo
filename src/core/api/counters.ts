@@ -15,7 +15,6 @@
 
 import { toErrorEnvelope } from '../errors/convert.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
-import { getSession, SESSION_COOKIE } from '../security/session_store.ts';
 import { getProcessPoison } from './process_health.ts';
 
 const counters = new Map<string, number>();
@@ -116,7 +115,8 @@ export async function collectOpsCounters(): Promise<Record<string, unknown>> {
 
 /**
  * GET /api/v1/counters — session-gated, global-admin-only diagnostics.
- * Anything short of an admin session answers a plain 404 (fail-closed).
+ * Anything short of a session whose Principal is a global admin AS OF THIS
+ * REQUEST (security/session_gate.ts) answers a plain 404 (fail-closed).
  */
 export async function handleCountersRequest(
 	request: Request,
@@ -124,14 +124,16 @@ export async function handleCountersRequest(
 	// id here yet; a fresh one keeps `request_id` present and unique per response.
 	requestId: string = crypto.randomUUID(),
 ): Promise<Response> {
-	const cookieHeader = request.headers.get('cookie') ?? '';
-	const token = cookieHeader
-		.split(';')
-		.map((pair) => pair.trim())
-		.find((pair) => pair.startsWith(`${SESSION_COOKIE}=`))
-		?.slice(SESSION_COOKIE.length + 1);
-	const session = token !== undefined ? getSession(token) : null;
-	if (session === null || session.isGlobalAdmin !== true) {
+	// The Principal, resolved for THIS request — never the login-time session stamp
+	// (SEC-14: a demoted admin kept these counters for the session TTL).
+	// Dynamic import, CONVENTIONS §2 rationale 1 (cycle-breaking at a chokepoint):
+	// this module is the metrics LEAF that db/postgres.ts itself imports
+	// (recordPoolWait), and the gate resolves the Principal THROUGH postgres — a
+	// static edge here would fuse the leaf into the DB component (import_scc_tripwire).
+	// Same posture as the gauge providers above (media/jobs, tools/background).
+	const { globalAdminSessionFromCookie } = await import('../security/session_gate.ts');
+	const session = await globalAdminSessionFromCookie(request.headers.get('cookie'));
+	if (session === null) {
 		// Converter-made (ERRORS_SPEC §4): the same 404 shape a route miss answers.
 		const converted = toErrorEnvelope(new DedaloError('resource.not_found'), { requestId });
 		return new Response(JSON.stringify(converted.body), {

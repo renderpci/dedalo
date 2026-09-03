@@ -364,7 +364,7 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	],
 	[
 		'test/unit/account_revocation_native.test.ts',
-		'Every assertion is about what a REAL write did to real state: it inserts dd128 records through the counter-allocating writer, logs them in, applies each of the six account transitions through a real door, and then asks the session store and the media marker directory what survived — a revocation gate that mocked either surface would prove nothing about the property it exists to hold',
+		'Every assertion is about what a REAL write did to real state: it inserts dd128 records through the counter-allocating writer, logs them in, applies each of the five account transitions (and the record delete) through a real door, drives the two SEC-14 raw admin routes through handleRequest / handleCountersRequest against the live Principal, and then asks the session store and the media marker directory what survived — with the DB port closed 35 of its 40 legs are red, and a revocation gate that mocked either surface would prove nothing about the property it exists to hold',
 	],
 	[
 		'test/unit/dd128_write_census_tripwire.test.ts',

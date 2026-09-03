@@ -43,8 +43,8 @@ Use it when: a component's *stored* value must be regenerated across many record
 
 ```ts
 apiActions: {
-	get_component_list: { permission: 'section', minLevel: 1, handler: getComponentList },
-	update_cache:       { permission: 'section', minLevel: 2, handler: updateCache },
+	get_component_list: { permission: 'section_list', minLevel: 1, sectionTipos: componentListSectionTipos, handler: getComponentList },
+	update_cache:       { permission: 'targets', minLevel: 2, targets: updateCacheTargets, handler: updateCache },
 },
 backgroundRunnable: ['update_cache'],
 ```
