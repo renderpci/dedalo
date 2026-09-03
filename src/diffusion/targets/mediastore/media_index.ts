@@ -237,11 +237,12 @@ export async function applyTableState(
 }
 
 /**
- * reconcileMediaIndex (oracle reconcile): rebuilds pub/ from the dbs/ ground
- * truth (pure filesystem diff). Run at server boot to heal drift from crashes
- * between SQL commit and marker apply. Cheap: two directory walks, no SQL.
+ * diffMediaIndex — the READ half of the reconcile: which pub/ markers the
+ * dbs/ ground truth says are missing, and which are stray. Pure filesystem
+ * read, no SQL, writes nothing — the dry run every door (boot, widget, CLI)
+ * reports from. Null when the store is off.
  */
-export async function reconcileMediaIndex(): Promise<{ added: number; removed: number } | null> {
+export async function diffMediaIndex(): Promise<{ toAdd: string[]; toRemove: string[] } | null> {
 	const base = markerStoreBase();
 	if (base === null) {
 		return null;
@@ -285,24 +286,28 @@ export async function reconcileMediaIndex(): Promise<{ added: number; removed: n
 		if ((error as NodeJS.ErrnoException)?.code !== 'ENOENT') throw error;
 	}
 
-	let added = 0;
-	let removed = 0;
-
 	const currentSet = new Set(current);
-	for (const key of truth) {
-		if (!currentSet.has(key)) {
-			await touch(path.join(pubDir, key));
-			added++;
-		}
-	}
-	for (const key of current) {
-		if (!truth.has(key)) {
-			await unlinkQuiet(path.join(pubDir, key));
-			removed++;
-		}
-	}
+	const toAdd = [...truth].filter((key) => !currentSet.has(key)).sort();
+	const toRemove = current.filter((key) => !truth.has(key)).sort();
+	return { toAdd, toRemove };
+}
 
-	return { added, removed };
+/**
+ * reconcileMediaIndex (oracle reconcile): rebuilds pub/ from the dbs/ ground
+ * truth (pure filesystem diff, diffMediaIndex above, then applied). Run at
+ * server boot to heal drift from crashes between SQL commit and marker apply.
+ * Cheap: two directory walks, no SQL.
+ */
+export async function reconcileMediaIndex(): Promise<{ added: number; removed: number } | null> {
+	const base = markerStoreBase();
+	const diff = await diffMediaIndex();
+	if (base === null || diff === null) {
+		return null;
+	}
+	const pubDir = path.join(base, 'pub');
+	for (const key of diff.toAdd) await touch(path.join(pubDir, key));
+	for (const key of diff.toRemove) await unlinkQuiet(path.join(pubDir, key));
+	return { added: diff.toAdd.length, removed: diff.toRemove.length };
 }
 
 /**

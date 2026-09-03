@@ -279,7 +279,15 @@ export) exceeds it; measure first with `DEDALO_SLOW_QUERY_MS`.
   terms. `observers_propagation_failed_in_tx` counts level-0 propagation
   failures that happened INSIDE an ambient transaction (e.g. a CSV-import
   row) — those rethrow to the transaction owner instead of being swallowed,
-  so the import row's error names the real cause. Cascade hops always run
+  so the import row's error names the real cause. Its sibling
+  `observers_propagation_failed` counts the INTERACTIVE lane — the save
+  calls propagation post-commit and a failure there is swallowed by design
+  (a post-commit side effect must never fail the save), so this counter is
+  the only ops-visible signal that a STORED, searchable mirror was left
+  stale; the log line names the observed tipo and record, and
+  `scripts/observer_reconcile.ts` repairs the drift. It should stay at zero;
+  the residual deadlock window documented in `observers.ts` lands here.
+  Cascade hops always run
   post-COMMIT (a rolled-back import fires nothing) and the relay writes
   nothing (`WC-2026-08-02-observer-relay-writes-nothing`).
   **Discovery is observer-declared** (subscription registry,
@@ -629,6 +637,46 @@ Two consequences worth stating for anyone reading this as a backlog:
   it.** Everything above is a hypothesis until a dump has been restored into a
   scratch database and the record count checked
   (`docs/install/migrating_from_v6.md` shows that shape for a v6 artifact).
+
+### 6.5 Cross-store reconciles: ONE registry, three doors
+
+Every pair of stores the engine keeps next to the matrix can drift — a restore
+(§6.1), a write that bypassed a cascade, a crash between two commits. Each
+pair's reconcile is a REGISTERED definition (`src/core/reconcile/registry.ts`;
+the assembly is `catalog.ts`): the two stores it compares, a schedule, and one
+`run({apply})` that REPORTS drift without writing (the default everywhere) or
+REPAIRS it. The logic stays with its owner module; the registry only gives it
+a shape, so an operator learns three doors, not one per subsystem:
+
+| door | what |
+| --- | --- |
+| maintenance area → **Reconcile** (`reconcile_status` widget) | lists every reconcile with its last verdict; **Check** (dry) / **Apply** per row |
+| `bun scripts/reconcile.ts list` / `run <name> [--apply] [--scope a,b] [--json]` | the same from a terminal; exit 2 = drift reported and not repaired |
+| `GET /api/v1/counters` → `gauges.reconcile` | per name: `schedule`, `last_run_at`, `last_apply`, `last_drift`, `last_applied`, `last_error` (a code, never text) |
+
+The registered set (grow/shrink only through `REGISTERED_NAMES` + the catalog;
+`reconcile_registry_tripwire` derives every reconcile-shaped module in the tree
+and demands it be here):
+
+| name | stores | schedule | apply |
+| --- | --- | --- | --- |
+| `counters_media` | `matrix_counter` ↔ media file names | operator | raise-only (§6.1 step 5) |
+| `files_info` | media column `files_info` ↔ media tree | operator | GROW/DIFF rewritten, SHRINK held (`scripts/media_repair_files_info.ts --allow-shrink`) |
+| `observer_mirrors` | `matrix_relation_index` ↔ observer mirror slots | operator | full-law recompute (`scripts/observer_reconcile.ts` keeps `--budget`) |
+| `media_index` | `.publication/dbs` ↔ `.publication/pub` | **boot, auto-apply** | pub/ is a pure derivation: recomputed after every listen |
+| `rag_index` | matrix records ↔ `rag_embeddings` | operator | enqueues index/delete for the drain (§11) |
+| `ontology` | `<tld>0` source records ↔ `dd_ontology` | operator | destructive re-projection per drifted TLD |
+| `hierarchy` | `hierarchy1` active rows ↔ their provisioning | operator | `ensure` per broken hierarchy |
+
+Scheduling is the registry's, not each owner's: `boot`-class definitions run
+once after the server listens, `{everyMs}` ones on their period, both
+fire-and-forget and non-fatal (`last_error` in the gauge), stopped on SIGTERM.
+`DEDALO_RECONCILE_SCHEDULER_ENABLED=false` (same posture as the diffusion
+scheduler, §8) keeps a smoke/maintenance copy from healing a shared store from
+the wrong root; the widget, the CLI and the gauge keep working. A scheduled run
+applies only when its definition says `autoApply` WITH a reason — today only
+`media_index`; a walk of the whole media tree or a destructive re-projection
+is an operator's decision, with the dry report in view.
 
 ## 7. Schema: migrations + provisioning (S2-39, DEC-17/DEC-19)
 

@@ -9,6 +9,7 @@ import type { ComponentModel } from '../types.ts';
 export const component_select: ComponentModel = {
 	model: 'component_select',
 	column: 'relation',
+	monovalue: true,
 	defaultRelationType: 'dd151',
 	resolveData: 'select_family',
 	flatValue: 'datalist',

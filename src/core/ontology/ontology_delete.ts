@@ -22,6 +22,7 @@
  * tld can match. Empty or unsafe tld → refuse (never guess).
  */
 
+import { deleteTldNodesReturningTipos } from '../db/dd_ontology.ts';
 import { sql } from '../db/postgres.ts';
 import { clearOntologyDerivedCaches } from './cache_invalidation.ts';
 import { ONTOLOGY_MAIN_SECTION } from './ontology_tipos.ts';
@@ -92,10 +93,8 @@ export async function deleteOntologyByTld(
 	}
 
 	// 1. dd_ontology nodes of the tld.
-	const nodeResult = (await sql.unsafe('DELETE FROM dd_ontology WHERE tld = $1 RETURNING tipo', [
-		safe,
-	])) as { tipo: string }[];
-	outcome.deletedNodes = nodeResult.length;
+	// The DELETE lives in db/dd_ontology.ts (T2): this module issues no DML.
+	outcome.deletedNodes = (await deleteTldNodesReturningTipos(safe)).length;
 
 	// 2. the ontology_main registry row FOR THIS TLD (PHP delete_ontology step 2).
 	// Resolved from the tld, never from the caller — the caller may be a

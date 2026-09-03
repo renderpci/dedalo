@@ -7,6 +7,7 @@ import type { ComponentModel } from '../types.ts';
 export const component_publication: ComponentModel = {
 	model: 'component_publication',
 	column: 'relation',
+	monovalue: true,
 	defaultRelationType: 'dd151',
 	resolveData: 'select_family',
 	search: { status: 'ported' },

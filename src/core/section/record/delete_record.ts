@@ -596,8 +596,8 @@ export async function deleteSectionData(
 		getModelByTipo,
 		getColumnNameByModel,
 		getTranslatableByTipo,
-		getNode,
 		getOrderedSubtree,
+		getSectionRealTipo,
 	} = await import('../../ontology/resolver.ts');
 	const { persistRecordKeys, persistModifiedStamp } = await import('../../section_record/index.ts');
 	const { maintainRelationSearchIndex } = await import('../../relations/save.ts');
@@ -616,12 +616,9 @@ export async function deleteSectionData(
 			.map((node) => ({ tipo: node.tipo, model: node.model as string }));
 	let components = await childrenOf(sectionTipo);
 	if (components.length === 0) {
-		// Virtual section: relations[0].tipo points at the REAL section.
-		const relations = (await getNode(sectionTipo))?.relations;
-		const realTipo = Array.isArray(relations)
-			? (relations[0] as { tipo?: unknown } | undefined)?.tipo
-			: undefined;
-		if (typeof realTipo === 'string') components = await childrenOf(realTipo);
+		// Virtual section: its components are the REAL section's (getSectionRealTipo).
+		const realTipo = await getSectionRealTipo(sectionTipo);
+		if (realTipo !== sectionTipo) components = await childrenOf(realTipo);
 	}
 
 	const dataLang = (config.menu as { dataLang?: string }).dataLang ?? 'lg-spa';

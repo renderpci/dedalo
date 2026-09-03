@@ -574,6 +574,19 @@ console.log(
 		.join(', ')} — data lang ${synthetic.dataLang}, activated through the installer's own door`,
 );
 
+// 5d. THE DERIVED-STORE HEAL — the same self-provisioning a real boot runs
+// (db_assets.ts ensureSearchStores, startServer): the install seed carries the
+// sync trigger FUNCTIONS as they were when the dump was cut, and the declared
+// bodies in db_pg_definitions.json move on (the record-address predicate of
+// DATA-26 is one such move). A booted install re-creates a drifted function on
+// its first start; the suite database never boots, so it takes the same step
+// here. Read-only when nothing drifted; per-table refills otherwise.
+const { ensureSearchStores } = await import('../src/core/db/db_assets.ts');
+const stores = await ensureSearchStores();
+console.log(
+	`[test-db] derived search stores ensured (healthy: ${stores.healthy}, ddl applied: ${stores.ddlApplied}, refilled: ${JSON.stringify(stores.backfilled)}${stores.errors.length > 0 ? `, errors: ${JSON.stringify(stores.errors)}` : ''})`,
+);
+
 // 5b. THE READ-ONLY ROLE for the DB-free shard bands (see the header). Sits
 // HERE — after every guard and after the schema exists — never as a
 // convenience step that could run before a refusal. Everything is idempotent:

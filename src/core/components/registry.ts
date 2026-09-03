@@ -189,6 +189,16 @@ export function getFlatValueFamily(model: string): ComponentModel['flatValue'] {
 	return resolveCanonical(model)?.flatValue;
 }
 
+/**
+ * PHP component_common::$components_monovalue membership — THE value law
+ * (`monovalue` facet, alias-following): only element 0 of the data array is
+ * ever read. Consulted by save_component.ts (insert REPLACES, id-less update
+ * of the one item replaces) and tool_propagate_component_data (`add` refused).
+ */
+export function isMonovalueModel(model: string): boolean {
+	return resolveCanonical(model)?.monovalue === true;
+}
+
 /** PHP $components_using_value_property membership (CSV import). */
 export function usesImportValueProperty(model: string): boolean {
 	return resolveCanonical(model)?.importValueProperty === true;

@@ -112,6 +112,9 @@ DB_TIER_TRIPWIRES=(
 	test/unit/tm_mode_retired_tripwire.test.ts
 	test/unit/tools_cache_invalidation.test.ts
 	test/unit/write_lang_provenance_native.test.ts
+	test/unit/write_obligations_native.test.ts
+	test/unit/value_law_agreement_native.test.ts
+	test/unit/reconcile_registry_native.test.ts
 )
 
 # ── THE STAGES ARE INDEPENDENT ───────────────────────────────────────────────

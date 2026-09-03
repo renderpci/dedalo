@@ -6,11 +6,12 @@
  * PHP section::get_ar_children_tipo_by_model_name_in_section with
  * resolve_virtual=true (class.section.php:868).
  *
- * A VIRTUAL section (its node's relations[0].tipo → the real section) inherits
+ * A VIRTUAL section (its 'section'-model relation → the real section) inherits
  * the real section's definition nodes.
  */
 
 import { sql } from '../../db/postgres.ts';
+import { getSectionRealTipo } from '../../ontology/resolver.ts';
 
 /** A located definition node (its tipo + raw properties + relations). */
 export interface ListDefinitionNode {
@@ -36,13 +37,10 @@ export async function findSectionChildByModel(
 		)) as ListDefinitionNode[];
 	let rows = await read(sectionTipo);
 	if (rows.length === 0) {
-		// virtual section: its node's relations[0].tipo points at the real section.
-		const nodeRows = (await sql.unsafe(
-			'SELECT relations FROM dd_ontology WHERE tipo = $1 LIMIT 1',
-			[sectionTipo],
-		)) as { relations: { tipo?: unknown }[] | null }[];
-		const real = nodeRows[0]?.relations?.[0]?.tipo;
-		if (typeof real === 'string') rows = await read(real);
+		// virtual section: borrow the REAL section's definition (the one law,
+		// getSectionRealTipo — a matrix_table at relations[0] is NOT a real section).
+		const real = await getSectionRealTipo(sectionTipo);
+		if (real !== sectionTipo) rows = await read(real);
 	}
 	return rows[0] ?? null;
 }

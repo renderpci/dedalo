@@ -14959,6 +14959,48 @@ dd-modal:has(.tool_header) {
   grid-template-columns: minmax(5rem, 8rem) minmax(7rem, 1fr) 5rem 5.5rem 7rem;
 }
 /**
+* reconcile_status
+*
+* Included from area_maintenance.less file.
+* The registry listing is a shared .dd_table (kit); only the column template
+* and the report block are widget-specific.
+*/
+.wrapper_widget.reconcile_status .reconcile_total {
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--fg_muted);
+}
+.wrapper_widget.reconcile_status .dd_table {
+  grid-template-columns: minmax(9rem, 1.2fr) minmax(10rem, 1.6fr) 7rem minmax(10rem, 1.4fr) 9rem;
+}
+.wrapper_widget.reconcile_status .dd_table .description {
+  font-size: 0.8rem;
+  color: var(--fg_muted);
+}
+.wrapper_widget.reconcile_status .dd_table .actions {
+  display: flex;
+  gap: 0.35rem;
+}
+.wrapper_widget.reconcile_status .body_response {
+  margin-top: 0.75rem;
+  white-space: pre-wrap;
+}
+.wrapper_widget.reconcile_status .report_pre {
+  padding: 0.7rem 0.85rem;
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--fg_default);
+  white-space: pre-wrap;
+  word-break: break-word;
+  background-color: var(--bg_surface_alt);
+  border: 1px solid var(--border_default);
+  border-radius: 6px;
+  margin-top: 0.5rem;
+  max-height: 24rem;
+  overflow: auto;
+}
+/**
 * database_info
 *
 * Included from area_maintenance.less file.

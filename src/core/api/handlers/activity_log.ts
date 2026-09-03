@@ -19,7 +19,7 @@
  */
 
 import { canonicalizeStoredSectionId } from '../../concepts/section_id.ts';
-import { sql } from '../../db/postgres.ts';
+import { insertMatrixRowSequenceId } from '../../db/matrix_write.ts';
 import { virtualDateNow } from '../../section/record/create_record.ts';
 
 /**
@@ -117,7 +117,6 @@ export async function logActivity(entry: ActivityEntry, now: Date = new Date()):
 		// that every current and future emitter inherits them:
 		if (entry.tipo.length === 0) return; // no WHERE → the row would be meaningless
 		if (ACTIVITY_OWN_TIPOS.has(entry.tipo)) return; // audit-of-the-audit loop
-		const { encodeForJsonb } = await import('../../db/json_codec.ts');
 		const relation = {
 			dd543: [
 				{
@@ -146,16 +145,14 @@ export async function logActivity(entry: ActivityEntry, now: Date = new Date()):
 		};
 		const dateColumn = { dd547: [{ start: virtualDateNow(now) }] };
 		const miscColumn = { dd551: [{ lang: 'lg-nolan', value: entry.data }] };
-		await sql.unsafe(
-			`INSERT INTO matrix_activity (section_tipo, relation, string, date, misc)
-			 VALUES ('dd542', $1::text::jsonb, $2::text::jsonb, $3::text::jsonb, $4::text::jsonb)`,
-			[
-				encodeForJsonb(relation),
-				encodeForJsonb(stringColumn),
-				encodeForJsonb(dateColumn),
-				encodeForJsonb(miscColumn),
-			],
-		);
+		// The table allocates section_id from its own sequence; the INSERT lives in
+		// matrix_write.ts (T2) — this handler issues no DML of its own.
+		await insertMatrixRowSequenceId('matrix_activity', 'dd542', {
+			relation,
+			string: stringColumn,
+			date: dateColumn,
+			misc: miscColumn,
+		});
 	} catch (error) {
 		console.error('activity log write failed (swallowed):', error);
 	}

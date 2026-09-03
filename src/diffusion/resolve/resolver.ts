@@ -51,6 +51,7 @@ import {
 	getModelByTipo,
 	getNode,
 	getPropertiesByTipo,
+	getSectionRealTipo,
 } from '../../core/ontology/resolver.ts';
 import { getSectionMapValue } from '../../core/ontology/section_map.ts';
 import { getChildren } from '../../core/relations/children.ts';
@@ -275,7 +276,7 @@ const RECORD_KEY = (sectionTipo: string, sectionId: number | string): string =>
  * strict own-subtree mode); the virtual-section fallback stays LOCAL because
  * this module's semantics are stricter than the accessor default: chained
  * virtual sections resolve up to 3 hops and every hop validates that both the
- * virtual node and its relations[0].tipo target are model 'section'.
+ * virtual node and its getSectionRealTipo target are model 'section'.
  */
 async function findSectionComponentByModel(
 	sectionTipo: string,
@@ -288,16 +289,13 @@ async function findSectionComponentByModel(
 	if (found !== null) return found;
 	if (depth >= 3) return null;
 
-	// Virtual-section fallback (mirrors core node_find.ts / matrix-table walk).
+	// Virtual-section fallback through the ONE law (getSectionRealTipo: the
+	// first relation of model 'section'); this module additionally requires the
+	// virtual node itself to be a section.
 	const node = await getNode(sectionTipo);
-	const relations = node?.relations;
-	const realTipo = Array.isArray(relations)
-		? (relations[0] as { tipo?: unknown } | undefined)?.tipo
-		: undefined;
-	if (node?.model !== 'section' || typeof realTipo !== 'string' || realTipo === sectionTipo) {
-		return null;
-	}
-	if ((await getNode(realTipo))?.model !== 'section') return null;
+	if (node?.model !== 'section') return null;
+	const realTipo = await getSectionRealTipo(sectionTipo);
+	if (realTipo === sectionTipo) return null;
 	return findSectionComponentByModel(realTipo, model, depth + 1);
 }
 

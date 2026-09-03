@@ -175,6 +175,13 @@ const BEHAVIOUR_CLAIMS: readonly BehaviourClaim[] = [
 		wiredInto: 'SECURITY_HEADERS',
 	},
 	{
+		key: 'DEDALO_RECONCILE_SCHEDULER_ENABLED',
+		claim:
+			'the server runs the boot-class cross-store reconciles once after it listens and the interval-class ones on their period',
+		performedBy: 'startReconcileScheduler',
+		definedIn: 'src/core/reconcile/scheduler.ts',
+	},
+	{
 		key: 'DEDALO_UPLOAD_SERVICE_CHUNK_FILES',
 		claim: 'a file larger than this is segmented into chunks for upload',
 		performedBy: 'create_transfer',
@@ -188,9 +195,10 @@ const BEHAVIOUR_CLAIMS: readonly BehaviourClaim[] = [
  * SHRINK-ONLY RATCHET. The census may GROW freely (more gated claims is strictly
  * better). It may only shrink when a key genuinely leaves the catalog or stops
  * claiming a behaviour — which means lowering this number in the same change,
- * with the reason in the diff. Measured 2026-08-30: 14 rows.
+ * with the reason in the diff. Measured 2026-08-30: 14 rows; 15 with the
+ * reconcile scheduler (S-10).
  */
-const COVERAGE_FLOOR = 14;
+const COVERAGE_FLOOR = 15;
 
 /**
  * LEG B trigger: prose that promises an action the engine takes BY ITSELF —

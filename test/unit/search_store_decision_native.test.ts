@@ -8,8 +8,12 @@
  * file gates the other half: what the boot DECIDES to do given what the probes
  * observed. Both directions of that decision are expensive and silent — a false
  * `ddlNeeded` re-runs the extension/table/function/trigger/index passes on every
- * restart, and a lost `empty`/`exists`/`sourceWithRows` guard TRUNCATEs and
- * rebuilds a populated multi-million-row store on boot.
+ * restart, and a lost `holdsRows`/`exists`/`sourceProducesRows` guard rewrites
+ * a populated multi-million-row store on boot.
+ *
+ * PER (store, table) since DATA-32 (P2-17): the observation is one pair, and the
+ * decision names the pairs to refill — a store populated for other tables is
+ * no longer evidence that THIS table is covered.
  *
  * Compute-then-act, NOT a dryRun flag: `decideSearchStores` is the object the
  * production boot path (ensureSearchStores → startServer) consumes, so the arms
@@ -40,9 +44,10 @@ const DB_ASSETS_PATH = join(import.meta.dir, '../../src/core/db/db_assets.ts');
 function observation(partial: Partial<SearchStoreObservation> = {}): SearchStoreObservation {
 	return {
 		store: 'matrix_string_search',
+		table: 'matrix_test',
 		exists: true,
-		empty: false,
-		sourceWithRows: null,
+		holdsRows: true,
+		sourceProducesRows: false,
 		...partial,
 	};
 }
@@ -57,38 +62,47 @@ describe('decideSearchStores (pure fold — the boot decision)', () => {
 		expect(decision.healthy).toBe(false);
 		// ANTI-VACUITY: the DDL arm must not drag the backfill arm with it — a
 		// healthy populated store is still not backfilled while the DDL runs.
-		expect(decision.storesNeedingBackfill).toEqual([]);
+		expect(decision.tablesNeedingBackfill).toEqual([]);
 	});
 
-	test('a POPULATED store is NOT backfilled — while an empty one beside it IS', () => {
-		// The pairing is the anti-vacuity: `storesNeedingBackfill === []` alone is
-		// satisfied by a fold that never selects anything.
+	test('a COVERED (store, table) is NOT refilled — while an uncovered pair beside it IS', () => {
+		// The pairing is the anti-vacuity: `tablesNeedingBackfill === []` alone is
+		// satisfied by a fold that never selects anything. And the uncovered pair
+		// is on the SAME store as a covered one: a populated store is no evidence
+		// for a table it has never seen (DATA-32).
 		const decision = decideSearchStores({ ddlNeeded: false }, [
-			observation({ store: 'matrix_string_search', empty: false, sourceWithRows: null }),
-			observation({ store: 'matrix_relation_index', empty: true, sourceWithRows: 'matrix_test' }),
+			observation({ store: 'matrix_relation_index', table: 'matrix_test', holdsRows: true }),
+			observation({
+				store: 'matrix_relation_index',
+				table: 'matrix_users',
+				holdsRows: false,
+				sourceProducesRows: true,
+			}),
 		]);
-		expect(decision.storesNeedingBackfill).toEqual(['matrix_relation_index']);
+		expect(decision.tablesNeedingBackfill).toEqual([
+			{ store: 'matrix_relation_index', table: 'matrix_users' },
+		]);
 		expect(decision.healthy).toBe(false);
 	});
 
-	test('an EMPTY store whose sources would produce NO rows is left alone (empty install)', () => {
+	test('a table whose rows would produce NO store rows is left alone (nothing to index)', () => {
 		const decision = decideSearchStores({ ddlNeeded: false }, [
-			observation({ empty: true, sourceWithRows: null }),
+			observation({ holdsRows: false, sourceProducesRows: false }),
 		]);
-		expect(decision.storesNeedingBackfill).toEqual([]);
+		expect(decision.tablesNeedingBackfill).toEqual([]);
 		expect(decision.healthy).toBe(true);
 	});
 
 	test('a store that does NOT exist is never backfilled (its DDL failed)', () => {
 		const decision = decideSearchStores({ ddlNeeded: true }, [
-			observation({ exists: false, empty: true, sourceWithRows: 'matrix_test' }),
+			observation({ exists: false, holdsRows: false, sourceProducesRows: true }),
 		]);
-		expect(decision.storesNeedingBackfill).toEqual([]);
+		expect(decision.tablesNeedingBackfill).toEqual([]);
 	});
 
 	test('`healthy` is derived from BOTH probes, never defaulted', () => {
 		const clean = observation();
-		const needy = observation({ empty: true, sourceWithRows: 'matrix_test' });
+		const needy = observation({ holdsRows: false, sourceProducesRows: true });
 		expect(decideSearchStores({ ddlNeeded: false }, [clean]).healthy).toBe(true);
 		expect(decideSearchStores({ ddlNeeded: true }, [clean]).healthy).toBe(false);
 		expect(decideSearchStores({ ddlNeeded: false }, [needy]).healthy).toBe(false);
@@ -97,24 +111,28 @@ describe('decideSearchStores (pure fold — the boot decision)', () => {
 });
 
 describe('observeSearchStores (read-only backfill probe, live DB)', () => {
-	test('reports both declared stores as existing and NON-empty on this install', async () => {
+	test('reports (store, matrix_test) for both declared stores as existing and COVERED on this install', async () => {
 		const observations = await observeSearchStores(new Set(['matrix_test']));
-		expect(observations.map(({ store }) => store)).toEqual(
-			SEARCH_STORE_BACKFILLS.map(({ store }) => store),
+		expect(observations.map(({ store, table }) => `${store}/${table}`)).toEqual(
+			SEARCH_STORE_BACKFILLS.map(({ store }) => `${store}/matrix_test`),
 		);
 		for (const observed of observations) {
 			expect(observed.exists).toBe(true);
-			expect(observed.empty).toBe(false);
-			// a non-empty store short-circuits before any source probe
-			expect(observed.sourceWithRows).toBeNull();
+			expect(observed.holdsRows).toBe(true);
+			// a covered pair short-circuits before any source probe
+			expect(observed.sourceProducesRows).toBe(false);
 		}
 	});
 
 	test('the live probes fold to "healthy, nothing to do" — no DDL, no backfill', async () => {
 		const inspection = await inspectSearchStores();
-		const decision = decideSearchStores(inspection, await observeSearchStores(inspection.present));
+		const observations = await observeSearchStores(inspection.present);
+		// anti-vacuity: the census is every PRESENT declared table of every store
+		expect(observations.length).toBeGreaterThan(2 * 5);
+		const decision = decideSearchStores(inspection, observations);
 		expect(decision.ddlNeeded).toBe(false);
-		expect(decision.storesNeedingBackfill).toEqual([]);
+		expect(inspection.staleFunctions).toEqual([]);
+		expect(decision.tablesNeedingBackfill).toEqual([]);
 		expect(decision.healthy).toBe(true);
 	});
 });
@@ -128,7 +146,10 @@ describe('ensureSearchStores rewire (the shell consumes the decision)', () => {
 	test('the shell delegates to observeSearchStores + decideSearchStores', () => {
 		expect(body).toContain('await observeSearchStores(');
 		expect(body).toContain('decideSearchStores(');
-		expect(body).toContain('decision.storesNeedingBackfill');
+		expect(body).toContain('decision.tablesNeedingBackfill');
+		expect(body).toContain('backfillSearchStoreTables(');
+		// never a store-wide TRUNCATE at boot (DATA-32)
+		expect(body).not.toContain('backfillSearchStores(');
 		expect(body).toContain('result.healthy = decision.healthy');
 	});
 

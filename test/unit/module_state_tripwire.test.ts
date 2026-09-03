@@ -216,6 +216,12 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// idempotent across two admins and lets resumeScheduler abort an in-flight
 	// wait. Process-wide operational state, no request identity.
 	'diffusion/jobs/scheduler.ts:draining',
+	// Reconcile registry + scheduler (audit 2026-08-26 S-10): the gauge
+	// registration latch, the scheduler's armed latch and its interval handles —
+	// process-wide wiring like diffusion/jobs/scheduler.ts above; no request
+	// identity (a run is keyed by reconcile NAME, actor-less by design).
+	'core/reconcile/registry.ts:gaugeRegistered',
+	'core/reconcile/scheduler.ts:started',
 	// Login-timing decoy hash (foundation audit AUTHZ-03): a memoized Argon2id
 	// hash of a random string, verified against on the no-user / legacy-hash
 	// failure paths so login timing never reveals whether an account exists.
@@ -322,6 +328,16 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// nothing request-derived is stored, so there is nothing to leak between
 	// requests and nothing to invalidate.
 	'core/api/activity.ts:activityProviders',
+	// Reconcile registry (S-10): `definitions` is the same registration-only
+	// inversion as gaugeProviders (written at boot, holds definitions, never
+	// request-derived data); `lastRuns` is the per-name last-outcome record the
+	// `reconcile` gauge publishes — ops visibility state with the counters'
+	// lifecycle (process restart; resetReconcileRunsForTests for gates).
+	'core/reconcile/registry.ts:definitions',
+	'core/reconcile/registry.ts:lastRuns',
+	// Reconcile scheduler interval handles: armed by startReconcileScheduler,
+	// cleared by stopReconcileScheduler (SIGTERM drain). Timers, not data.
+	'core/reconcile/scheduler.ts:timers',
 	// Diffusion MariaDB pool cache: one pool per DSN for the process lifetime;
 	// closed on shutdown by the graceful-drain path.
 	'diffusion/targets/mariadb/db.ts:poolCache',

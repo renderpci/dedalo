@@ -4,16 +4,22 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 522,
-		"functions": 4769,
-		"functionsOverCap": 688,
-		"filesOverCap": 268
+		"files": 527,
+		"functions": 4844,
+		"functionsOverCap": 694,
+		"filesOverCap": 273
 	},
 	"ledger": [
 		{
 			"generated": "2026-09-01",
 			"functionsOverCap": 688,
 			"filesOverCap": 268
+		},
+		{
+			"generated": "2026-09-03",
+			"functionsOverCap": 694,
+			"filesOverCap": 273,
+			"reason": "Batch-3 synthesis of audit 2026-08-26 (P1-8, S-10): five files born over the cap by the remediation itself — reconcile_status.ts reconcileStatusRunReconcile 12, files_info_reconcile.ts sweepFilesInfo 26, reconcile/registry.ts validateDefinition 15, create_record.ts createSectionRecord 8, save_event.ts fireSaveEvent 7. Frozen, not accepted: each is a flat sequence of checks/steps whose split is owed by its item's owner (extract-and-rewire; the write_obligations tripwire pins createSectionRecord/fireSaveEvent BODIES, so their split must move the gate's bodyOf targets with it). The synthesis pass registers gates and may not refactor five files other items still own; the number is here so the debt is visible, and it may only go down."
 		}
 	],
 	"files": {
@@ -51,6 +57,7 @@
 		"src/core/area_maintenance/widgets/diffusion_server_control.ts": 8,
 		"src/core/area_maintenance/widgets/lock_components.ts": 9,
 		"src/core/area_maintenance/widgets/media_control.ts": 17,
+		"src/core/area_maintenance/widgets/reconcile_status.ts": 12,
 		"src/core/area_maintenance/widgets/register_tools.ts": 15,
 		"src/core/area_maintenance/widgets/registry.ts": 12,
 		"src/core/area_maintenance/widgets/sequences_status.ts": 10,
@@ -131,6 +138,7 @@
 		"src/core/media/file_date.ts": 11,
 		"src/core/media/file_ops.ts": 18,
 		"src/core/media/files_info.ts": 12,
+		"src/core/media/files_info_reconcile.ts": 26,
 		"src/core/media/ingest/add_file.ts": 8,
 		"src/core/media/ingest/companion_writes.ts": 7,
 		"src/core/media/ingest/process_uploaded_file.ts": 21,
@@ -167,8 +175,9 @@
 		"src/core/ontology/ontology_write.ts": 19,
 		"src/core/ontology/parser.ts": 32,
 		"src/core/ontology/recovery_file.ts": 9,
-		"src/core/ontology/resolver.ts": 14,
+		"src/core/ontology/resolver.ts": 13,
 		"src/core/ontology/section_map.ts": 9,
+		"src/core/reconcile/registry.ts": 15,
 		"src/core/relations/children.ts": 12,
 		"src/core/relations/config_ddo_map.ts": 12,
 		"src/core/relations/dataframe.ts": 9,
@@ -226,7 +235,8 @@
 		"src/core/section/read.ts": 81,
 		"src/core/section/read_facade.ts": 61,
 		"src/core/section/read_source.ts": 11,
-		"src/core/section/record/delete_record.ts": 31,
+		"src/core/section/record/create_record.ts": 8,
+		"src/core/section/record/delete_record.ts": 30,
 		"src/core/section/record/duplicate_record.ts": 28,
 		"src/core/section/record/observer_reconcile.ts": 16,
 		"src/core/section/record/observer_subscriptions.ts": 44,
@@ -237,6 +247,7 @@
 		"src/core/section/record/temporal.ts": 23,
 		"src/core/section/record/temporal_store.ts": 11,
 		"src/core/section/record_loader.ts": 12,
+		"src/core/section_record/save_event.ts": 7,
 		"src/core/section_record/virtual_record.ts": 7,
 		"src/core/security/auth.ts": 9,
 		"src/core/security/password_reset.ts": 11,

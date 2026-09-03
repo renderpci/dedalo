@@ -45,6 +45,7 @@ import {
 	normalizeDataframeEntry,
 } from '../concepts/subdatum.ts';
 import { dbTimestamp } from '../db/db_timestamp.ts';
+import type { MatrixJsonbColumn } from '../db/matrix.ts';
 import { sql, withTransaction } from '../db/postgres.ts';
 import { recordTimeMachine } from '../db/time_machine.ts';
 import { DedaloError } from '../errors/index.ts';
@@ -305,9 +306,7 @@ export async function applyAddNewElement(
 ): Promise<{ items: unknown[]; sectionId: number } | null> {
 	if (targetSectionTipo === '') return null;
 	const { createSectionRecord } = await import('../section/record/create_record.ts');
-	const { currentPrincipal, currentRequestContext } = await import(
-		'../security/request_context.ts'
-	);
+	const { currentPrincipal } = await import('../security/request_context.ts');
 	const { SUPERUSER_ID } = await import('../security/permissions.ts');
 	const userId = currentPrincipal()?.userId ?? SUPERUSER_ID;
 
@@ -327,26 +326,9 @@ export async function applyAddNewElement(
 	});
 	if (!newSectionId) return null;
 
-	// Activity audit (PHP logger 'NEW' code 3 — section::create_record step 7,
-	// which add_new_element reaches like every other create door). Never fails
-	// the create: logActivity swallows its own errors.
-	{
-		const { logActivity, hostFromClientIp } = await import('../api/handlers/activity_log.ts');
-		const { getMatrixTableFromTipo } = await import('../ontology/resolver.ts');
-		await logActivity({
-			what: 'NEW',
-			tipo: targetSectionTipo,
-			userId,
-			host: hostFromClientIp(currentRequestContext()?.clientIp),
-			data: {
-				msg: 'Created section record',
-				section_id: newSectionId,
-				section_tipo: targetSectionTipo,
-				tipo: targetSectionTipo,
-				table: (await getMatrixTableFromTipo(targetSectionTipo)) ?? 'matrix',
-			},
-		});
-	}
+	// The 'NEW' activity row is appended by createSectionRecord itself (P1-8 /
+	// DATA-19, 2026-09-03 — PHP logged it at the engine, section::create_record
+	// step 7, which add_new_element reaches like every other create door).
 
 	// append the link locator (dedup like PHP add_locator_to_data). PHP's
 	// save assigns the next ITEM id (1 on an empty portal).
@@ -1388,7 +1370,7 @@ export async function deletePortalLocator(
 		'../ontology/resolver.ts'
 	);
 	const { readMatrixRecord } = await import('../db/matrix.ts');
-	const { updateMatrixKeyData } = await import('../db/matrix_write.ts');
+	const { persistRecordKeys } = await import('../section_record/index.ts');
 	const model = (await getModelByTipo(tipo)) ?? '';
 	const column = getColumnNameByModel(model) ?? 'relation';
 	const table = (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix';
@@ -1510,7 +1492,23 @@ export async function deletePortalLocator(
 			if (column === 'relation') {
 				await maintainRelationSearchIndex(table, sectionTipo, Number(sectionId), tipo, kept);
 			}
-			await updateMatrixKeyData(table, sectionTipo, Number(sectionId), column, tipo, kept);
+			// THE SURVIVORS GO THROUGH THE WRITE CHOKEPOINT (P1-8 / DATA-16 + DATA-17,
+			// 2026-09-03). This door used to re-persist them with the raw per-key
+			// primitive, so the record's own dd197/dd201 kept naming the PREVIOUS
+			// edit while the Time Machine said "user U changed this at T" — every
+			// modified-date sort and provenance read was wrong about the one change
+			// that actually happened (PHP's delete_locator → $component->Save() DID
+			// refresh the stamps) — and nothing enqueued the record for re-index, so
+			// the vector store kept naming the removed target. persistRecordKeys
+			// merges the stamps into the SAME UPDATE, and its post-write hook fires
+			// the save event (deferred to COMMIT), the security reaction (a removed
+			// dd244/dd131 locator is an account transition — the revocation rides the
+			// COMMIT-ONLY lane) and the RAG index event (joins this transaction).
+			await persistRecordKeys(
+				{ table, sectionTipo, sectionId: Number(sectionId) },
+				[{ column: column as MatrixJsonbColumn, key: tipo, value: kept }],
+				{ userId: principal.userId },
+			);
 			await recordTimeMachine(
 				{
 					sectionTipo,
@@ -1541,19 +1539,15 @@ export async function deletePortalLocator(
 	}
 	const removed = outcome.removed;
 	if (removed > 0) {
-		// Cache invalidation (Opus review 2026-07-10, C2): this door bypassed the
-		// save chokepoint's event fan-out, so removing a SECURITY locator (dd244
-		// admin flag, dd1725 profile, dd170 projects) left every security cache
-		// stale until the TTL — a demoted admin kept admin for up to 300s. The
-		// event channel + the targeted clear close all three caches at once.
-		// Post-COMMIT (W11): fired after the transaction above settles, so a
-		// concurrent request repopulating the cache reads the committed bag.
-		{
-			const { fireSaveEvent } = await import('../section_record/save_event.ts');
-			const { invalidatePermissionsForWrite } = await import('../security/permissions.ts');
-			await fireSaveEvent(sectionTipo);
-			invalidatePermissionsForWrite(sectionTipo, tipo, Number(sectionId));
-		}
+		// Cache invalidation + the security reaction (Opus review 2026-07-10, C2:
+		// removing a SECURITY locator — dd244 admin flag, dd1725 profile, dd170
+		// projects — used to leave every security cache stale until the TTL; a
+		// demoted admin kept admin for up to 300s) are OBLIGATIONS OF THE WRITE
+		// CHOKEPOINT since this door persists through it (above): the save event
+		// and the idempotent cache clears were deferred to the COMMIT of the
+		// transaction above, the revocation to its COMMIT-ONLY lane — so by this
+		// line they have all run against the committed bag. Nothing to remember
+		// here any more; the census gate pins the reach.
 		// Observer cascade (2026-07-24): this door bypasses saveComponentData,
 		// so it fires propagation itself. This is a PURE REMOVAL door — the
 		// removed locators name the records whose mirrors must recompute, and

@@ -56,13 +56,11 @@ API action, the delivery path for **async** widgets.
 flowchart TB
     ONT["ontology node (component_info)<br/>properties.widgets = [ {widget_name, path, ipo}, … ]"]
     ONT --> CI["section read → component_info emit hook"]
-    CI -->|"stored misc present?"| STORED["serve the STORED value"]
-    CI -->|"empty → live fallback"| REG["computeInfoWidgets(componentTipo, context)<br/>widgets/registry.ts"]
+    CI -->|"always live (a stored misc value is ignored + counted)"| REG["computeInfoWidgets(componentTipo, context)<br/>widgets/registry.ts"]
     REG -->|"INFO_WIDGETS.get(widget_name)"| W["descriptor.computeData(ipo, context)<br/>widgets/&lt;tld&gt;/&lt;name&gt;.ts"]
     W -->|"reads via readWidgetComponentData"| COMP["other components of the record"]
     W -->|"[{widget, key, widget_id, id, value}]"| REG
     REG --> DDO["component_info datum {context, data.entries}"]
-    STORED --> DDO
     DDO --> CL["client: component_info.js → per-widget render_&lt;name&gt;.js"]
 ```
 

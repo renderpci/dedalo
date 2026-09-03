@@ -90,7 +90,7 @@
 
 import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
-import { getNode } from '../ontology/resolver.ts';
+import { getNode, getSectionRealTipo } from '../ontology/resolver.ts';
 import {
 	ProfileError,
 	parseProfile,
@@ -152,27 +152,29 @@ registerOntologyCacheClearer(clearIdentifyProfileCache);
  * VIRTUAL-AWARE, like every other per-section descriptor read in this engine
  * (getSectionMap, RagConfig.getSectionMapRag): the virtual section's OWN node
  * wins, and only when it declares nothing does the real section's node answer
- * (`relations[0].tipo`). Without the fallback every virtual view of a section
+ * (getSectionRealTipo — the ONE virtual→real law). Without the fallback every virtual view of a section
  * would silently have no identification; with it, a virtual section can still
  * override with its own descriptor.
  */
 export function defaultProfileSourcePort(): ProfileSourcePort {
-	return buildOntologyProfileSourcePort(getNode);
+	return buildOntologyProfileSourcePort(getNode, getSectionRealTipo);
 }
 
 /** The node fields the ontology port reads (the ResolvedNode slice it needs). */
 export interface ProfileSourceNode {
 	properties: unknown;
-	relations: unknown;
 }
 
 /**
- * The ontology port over an injectable node reader. Production passes
- * `getNode`; the virtual-section fallback is testable through a fake reader
- * rather than by writing to dd_ontology.
+ * The ontology port over an injectable node reader and an injectable
+ * virtual→real resolver. Production passes `getNode` + `getSectionRealTipo`
+ * (the ONE law, DATA-33 — this port used to read `relations[0].tipo` itself);
+ * the virtual-section fallback is testable through fakes rather than by
+ * writing to dd_ontology.
  */
 export function buildOntologyProfileSourcePort(
 	readNode: (tipo: string) => Promise<ProfileSourceNode | null>,
+	realSectionOf: (tipo: string) => Promise<string>,
 ): ProfileSourcePort {
 	return {
 		async getIdentifyDescriptor(sectionTipo: string): Promise<unknown> {
@@ -181,11 +183,8 @@ export function buildOntologyProfileSourcePort(
 			const own = readIdentify(node.properties);
 			if (own !== null) return own;
 
-			const relations = node.relations;
-			const realTipo = Array.isArray(relations)
-				? (relations[0] as { tipo?: unknown } | undefined)?.tipo
-				: undefined;
-			if (typeof realTipo !== 'string' || realTipo === sectionTipo) return null;
+			const realTipo = await realSectionOf(sectionTipo);
+			if (realTipo === sectionTipo) return null;
 			return readIdentify((await readNode(realTipo))?.properties);
 		},
 	};

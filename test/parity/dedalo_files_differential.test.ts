@@ -93,7 +93,9 @@ function isTsOnlyEntry(entry: ManifestEntry): boolean {
 		entry.url.startsWith('/dedalo/tools/tool_sitebuilder/') ||
 		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/site_builder_status/') ||
 		entry.url.startsWith('/dedalo/tools/tool_identify/') ||
-		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/ai_models/')
+		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/ai_models/') ||
+		// WC-2026-09-03-maintenance-reconcile-status-widget (audit S-10, TS-only registry)
+		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/reconcile_status/')
 	);
 }
 

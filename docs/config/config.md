@@ -2933,6 +2933,29 @@ DEDALO_DEV_MODE=true bun run dev
 
 ---
 
+### Reconcile scheduler
+
+DEDALO_RECONCILE_SCHEDULER_ENABLED `bool`
+
+Whether **this** server runs the scheduled cross-store reconciles by itself: the
+boot-class ones once after it starts listening (today: the publication-marker index, which
+re-derives the web server's `pub/` markers from the per-target truth) and the interval-class
+ones on their period. Every outcome is published under `reconcile` on `/api/v1/counters`
+and listed by the **Reconcile** maintenance widget, which — like `bun scripts/reconcile.ts` —
+keeps working with the scheduler off; only the automatic runs stop.
+
+Enabled by default. Set it to `false` on an instance that must not touch a shared store — a
+maintenance or smoke-test copy that shares the database or the media tree with the live
+installation, where a boot-time repair from the wrong root would do harm.
+
+```bash
+DEDALO_RECONCILE_SCHEDULER_ENABLED=false
+```
+
+*Default: true*
+
+---
+
 ### Defining the slow request threshold
 
 DEDALO_SLOW_REQUEST_MS `int`

@@ -9,7 +9,7 @@
  *     with allocateComponentItemId before the write (the PHP set_data_item_counter
  *     twin), so the save response carries the id and the client's
  *     build_changed_data_item recovers it into the NEXT change.
- *  2. the monovalue guard (MONOVALUE_MODELS) is the belt: an id-less update of an
+ *  2. the monovalue guard (the `monovalue` descriptor facet) is the belt: an id-less update of an
  *     already-populated monovalue component replaces element 0 instead of
  *     appending, so the array cannot double even when a door sends id:null twice.
  *
@@ -24,11 +24,11 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { isMonovalueModel } from '../../src/core/components/registry.ts';
 import {
 	applyUpdate,
 	getIdFromKey,
 	isLangSlicedModel,
-	isMonovalueModel,
 	normalizeItemId,
 } from '../../src/core/section/record/save_component.ts';
 

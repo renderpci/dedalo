@@ -1573,6 +1573,12 @@ async function shutdownGracefully(
 	} catch (error) {
 		console.error('[shutdown] stopping diffusion scheduler failed:', error);
 	}
+	try {
+		const { stopReconcileScheduler } = await import('./core/reconcile/scheduler.ts');
+		stopReconcileScheduler();
+	} catch (error) {
+		console.error('[shutdown] stopping reconcile scheduler failed:', error);
+	}
 	// Stop ACCEPTING; in-flight requests keep running until the drain deadline.
 	for (const server of servers) server.stop();
 	const deadline = Date.now() + config.ops.shutdownGraceMs;
@@ -1903,20 +1909,40 @@ export async function startServer() {
 				getStatus: getMediaIndexStatus,
 				reconcile: reconcileMediaIndex,
 			});
-			void reconcileMediaIndex()
-				.then((healed) => {
-					if (healed !== null && (healed.added > 0 || healed.removed > 0)) {
-						console.warn(
-							`[media_index] boot reconcile: pub/ healed (+${healed.added} / -${healed.removed} marker(s))`,
-						);
-					}
-				})
-				.catch((error) => console.error('[media_index] boot reconcile failed:', error));
+			// The boot reconcile itself now runs through the RECONCILE REGISTRY
+			// (core/reconcile — audit S-10): `media_index` is its one boot-class,
+			// auto-apply definition, so the scheduler below fires it.
 		} catch (error) {
 			console.error(
 				'[media_index] DEC-19: native media-index NOT registered — publication markers ' +
 					'will not be maintained (no fallback since the 2026-07-11 cutover). ' +
 					'Fix and restart. Cause:',
+				error,
+			);
+		}
+
+		// RECONCILE REGISTRY (audit 2026-08-26 S-10): every cross-store reconcile
+		// in ONE shape — listed and run by the reconcile_status widget,
+		// scripts/reconcile.ts and the `reconcile` gauge on /api/v1/counters.
+		// Registration is pure in-memory wiring; the scheduler runs the
+		// boot-class reconciles (media_index heals pub/ from dbs/) and any
+		// interval-class ones, fire-and-forget and non-fatal. Gated like the
+		// diffusion scheduler: an ephemeral/smoke instance must not heal a shared
+		// store from the wrong media root.
+		try {
+			const { registerAllReconciles } = await import('./core/reconcile/catalog.ts');
+			await registerAllReconciles();
+			if (readString('DEDALO_RECONCILE_SCHEDULER_ENABLED') !== 'false') {
+				const { startReconcileScheduler } = await import('./core/reconcile/scheduler.ts');
+				startReconcileScheduler();
+			} else {
+				console.warn(
+					'[reconcile] scheduler disabled (DEDALO_RECONCILE_SCHEDULER_ENABLED=false) — boot/interval reconciles will not run',
+				);
+			}
+		} catch (error) {
+			console.error(
+				'[reconcile] registry boot failed — the maintenance reconcile panel is empty until restart:',
 				error,
 			);
 		}

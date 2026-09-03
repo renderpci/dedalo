@@ -2185,11 +2185,18 @@ export async function emitDdoData(
 			// get_counter — data.counters[tipo], 0 when never assigned).
 			const counters = (record.columns.data as { counters?: Record<string, number> } | null)
 				?.counters;
-			item.counter = Number(counters?.[ddo.tipo] ?? 0);
+			const frameCounter = Number(counters?.[ddo.tipo] ?? 0);
+			item.counter = frameCounter;
 			const storedIds = (Array.isArray(value) ? value : [])
 				.map((valueItem) => (valueItem as { id?: number | string } | null)?.id)
 				.filter((id): id is number | string => id !== undefined && id !== null);
-			const pairIds = storedIds.length > 0 ? storedIds : [1];
+			// Blank slot = the NEXT provisional id, counter+1 — the client's own
+			// derivation (dataframe.js `item?.id ?? self.data.counter + 1`,
+			// render_edit_component_iri `current_value.id ?? self.data.counter+1`),
+			// so the emitted frame is the one the editor looks up. A literal `1`
+			// here (DATA-27) paired the blank frame at a key the client never asks
+			// for whenever the counter had moved past zero.
+			const pairIds = storedIds.length > 0 ? storedIds : [frameCounter + 1];
 			// The main's OWN declared ddo for each slot. A dataframe must behave
 			// IDENTICALLY on a literal and on a relation main — one component,
 			// one ontology contract — so the frame's mode/target come from the

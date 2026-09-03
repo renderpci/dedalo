@@ -55,6 +55,11 @@ const DIFFUSION_IMPORT_SEAMS = new Set([
 	// widget seam above. Listed so widening the boundary stays a deliberate act.
 	'core/area_maintenance/widgets/check_config.ts',
 	'core/install/db_probe.ts',
+	// The reconcile catalog (audit 2026-08-26 S-10): the ONE assembly of every
+	// registered ReconcileDefinition. The diffusion definition (media_index) is
+	// the diffusion FACADE's export (src/diffusion/api/reconcile.ts) and enters
+	// lazily — registerAllReconciles() is async for exactly this reason.
+	'core/reconcile/catalog.ts',
 ]);
 const DISPATCH_SEAM = 'core/api/handlers/dd_diffusion_api.ts';
 

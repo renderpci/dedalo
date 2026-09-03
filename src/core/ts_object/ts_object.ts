@@ -52,6 +52,7 @@ import {
 	getMatrixTableFromTipo,
 	getModelByTipo,
 	getNode,
+	getSectionRealTipo,
 	getTranslatableByTipo,
 } from '../ontology/resolver.ts';
 import { getSectionMap } from '../ontology/section_map.ts';
@@ -171,12 +172,9 @@ async function readDdoMap(sectionTipo: string): Promise<DdoMapEntry[] | null> {
 	let rows = await read(sectionTipo);
 	let props = rows[0]?.properties ?? null;
 	if (props?.show?.ddo_map === undefined) {
-		// virtual section → real section fallback (relations[0].tipo).
-		const nodeRows = (await sql.unsafe('SELECT relations FROM dd_ontology WHERE tipo = $1', [
-			sectionTipo,
-		])) as { relations: { tipo?: unknown }[] | null }[];
-		const real = nodeRows[0]?.relations?.[0]?.tipo;
-		if (typeof real === 'string' && real !== sectionTipo) {
+		// virtual section → real section fallback (the one law, getSectionRealTipo).
+		const real = await getSectionRealTipo(sectionTipo);
+		if (real !== sectionTipo) {
 			rows = await read(real);
 			props = rows[0]?.properties ?? null;
 		}

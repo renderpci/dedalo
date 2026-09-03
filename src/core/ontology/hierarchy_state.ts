@@ -62,6 +62,7 @@
 import { compareLocators } from '../concepts/locator.ts';
 import { updateMatrixKeyData } from '../db/matrix_write.ts';
 import { sql } from '../db/postgres.ts';
+import type { ReconcileDefinition } from '../reconcile/registry.ts';
 import { applyAddNewElement } from '../relations/save.ts';
 import { generateVirtualSection } from './hierarchy_provision.ts';
 import { deleteOntologyByTld } from './ontology_delete.ts';
@@ -847,3 +848,56 @@ export async function inspectAllHierarchies(): Promise<HierarchyState[]> {
 	}
 	return states;
 }
+
+/* --------------------------------------------------------------- registry */
+
+/**
+ * Drift of ONE hierarchy under the invariant this module owns: an ACTIVE
+ * hierarchy must be usable. An inactive registry row (a shipped country
+ * nobody activated) is not drift — its provisioning is deliberately absent.
+ */
+export function hierarchyIsDrifted(state: HierarchyState): boolean {
+	const active = state.checks.find((check) => check.id === 'active')?.ok === true;
+	return active && !state.usable;
+}
+
+/**
+ * The registry shape (core/reconcile/registry.ts, S-10): the hierarchy1
+ * registry versus the provisioning it promises (ontology, root term, targets).
+ * Apply = `ensureHierarchy` on each drifted row (the single writer, idempotent
+ * — but it WRITES registry defaults and roots, so never automatically).
+ * `scope` = hierarchy1 section ids.
+ */
+export const HIERARCHY_RECONCILE: ReconcileDefinition = {
+	name: 'hierarchy',
+	stores: [
+		'hierarchy1 registry (active rows)',
+		'hierarchy provisioning (ontology, root term, targets)',
+	],
+	description:
+		'Check that every ACTIVE hierarchy is provisioned and browsable; apply runs ensure on each broken one (creates the missing root/targets, relinks a dangling root).',
+	scopeLabel: 'hierarchy1 section id',
+	schedule: 'operator',
+	sources: ['src/core/ontology/hierarchy_state.ts'],
+	async run({ apply, scope }) {
+		const states =
+			scope === undefined
+				? await inspectAllHierarchies()
+				: await Promise.all(scope.map((id) => inspectHierarchy(Number(id))));
+		const drifted = states.filter(hierarchyIsDrifted);
+		const ensured: Record<number, EnsureResult> = {};
+		let applied = 0;
+		if (apply) {
+			for (const state of drifted) {
+				const outcome = await ensureHierarchy(state.section_id, -1);
+				ensured[state.section_id] = outcome;
+				if (outcome.ok) applied++;
+			}
+		}
+		return {
+			drift: drifted.length,
+			applied,
+			detail: { inspected: states.length, drifted, ensured },
+		};
+	},
+};

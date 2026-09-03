@@ -13,11 +13,25 @@
 // Migrated to the generic `test` TLD 2026-08-19: the clone SOURCE is the gate's
 // own `testmint1` corpus record (provisioned/dropped here), not whatever record
 // an install happens to hold.
+//
+// P1-15 (T2, one writer per family): the three doors that absorbed DML from
+// save_component.ts / activity_log.ts / update/engine.ts are proven here by
+// BYTES and BEHAVIOUR — the static gates (sql_confinement T2, ws_a GATE-18)
+// see that the statements moved, this gate sees that they still write what
+// their callers wrote: an atomic append survives a concurrent append, a
+// sequence-id row is readable through readMatrixRecord with its jsonb intact
+// (no double encoding), and a matrix_updates row lands as one object.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { MATRIX_JSONB_COLUMNS, readMatrixRecord } from '../../src/core/db/matrix.ts';
-import { deleteMatrixRecord, updateMatrixRecord } from '../../src/core/db/matrix_write.ts';
-import { sql } from '../../src/core/db/postgres.ts';
+import {
+	appendMatrixKeyItems,
+	appendMatrixUpdateRow,
+	deleteMatrixRecord,
+	insertMatrixRowSequenceId,
+	updateMatrixRecord,
+} from '../../src/core/db/matrix_write.ts';
+import { sql, withTransaction } from '../../src/core/db/postgres.ts';
 import {
 	dropTestCorpus,
 	ensureTestCorpus,
@@ -122,5 +136,132 @@ describe('matrix write round-trip (Phase 2 gate, real DB)', () => {
 		await expect(
 			updateMatrixRecord(TEST_TABLE, TEST_SECTION_TIPO, TEST_SECTION_ID, {}),
 		).rejects.toThrow(/empty values/);
+	});
+});
+
+describe('T2 doors moved into matrix_write.ts (P1-15) — bytes and behaviour', () => {
+	const SEQUENCE_ID_TABLE = 'matrix_activity';
+	const ACTIVITY_SECTION_TIPO = 'testrt2';
+	const allocated: number[] = [];
+
+	beforeAll(async () => {
+		await cleanupTestRecord();
+	});
+	afterAll(async () => {
+		await cleanupTestRecord();
+		for (const sectionId of allocated) {
+			await deleteMatrixRecord(SEQUENCE_ID_TABLE, ACTIVITY_SECTION_TIPO, sectionId);
+		}
+		await sql`DELETE FROM matrix_updates WHERE data ? 'zz_roundtrip_probe'`;
+	});
+
+	test('appendMatrixKeyItems: two CONCURRENT appends to the same key both survive (no lost update)', async () => {
+		await updateMatrixRecord(TEST_TABLE, TEST_SECTION_TIPO, TEST_SECTION_ID, {
+			string: { testcomp1: [{ id: 1, value: 'first', lang: 'lg-spa' }] },
+		});
+		// Two transactions append at once: a read-modify-write would keep one.
+		await Promise.all([
+			withTransaction(() =>
+				appendMatrixKeyItems(
+					TEST_TABLE,
+					TEST_SECTION_TIPO,
+					TEST_SECTION_ID,
+					'string',
+					'testcomp1',
+					[{ id: 2, value: 'second', lang: 'lg-spa' }],
+				),
+			),
+			withTransaction(() =>
+				appendMatrixKeyItems(
+					TEST_TABLE,
+					TEST_SECTION_TIPO,
+					TEST_SECTION_ID,
+					'string',
+					'testcomp1',
+					[{ id: 3, value: 'third', lang: 'lg-spa' }],
+				),
+			),
+		]);
+		const readBack = await readMatrixRecord(TEST_TABLE, TEST_SECTION_TIPO, TEST_SECTION_ID);
+		const items = (readBack?.columns.string as { testcomp1: { id: number }[] }).testcomp1;
+		expect(items.map((item) => item.id).sort()).toEqual([1, 2, 3]);
+		// A missing key is created ('[]' || items), a NULL column materializes '{}'.
+		expect(
+			await appendMatrixKeyItems(
+				TEST_TABLE,
+				TEST_SECTION_TIPO,
+				TEST_SECTION_ID,
+				'misc',
+				'testcomp2',
+				[{ id: 1, value: 'x' }],
+			),
+		).toBe(1);
+		const again = await readMatrixRecord(TEST_TABLE, TEST_SECTION_TIPO, TEST_SECTION_ID);
+		expect(again?.columns.misc).toEqual({ testcomp2: [{ id: 1, value: 'x' }] });
+		// 0 rows when the record is not there; refusals for a bad column / key / empty payload.
+		expect(
+			await appendMatrixKeyItems(
+				TEST_TABLE,
+				TEST_SECTION_TIPO,
+				TEST_SECTION_ID + 1,
+				'misc',
+				'testcomp2',
+				[{}],
+			),
+		).toBe(0);
+		await expect(
+			appendMatrixKeyItems(TEST_TABLE, TEST_SECTION_TIPO, TEST_SECTION_ID, 'misc', 'not a tipo', [
+				{},
+			]),
+		).rejects.toThrow(/tipo grammar/);
+		await expect(
+			appendMatrixKeyItems(TEST_TABLE, TEST_SECTION_TIPO, TEST_SECTION_ID, 'misc', 'testcomp2', []),
+		).rejects.toThrow(/empty items/);
+	});
+
+	test('insertMatrixRowSequenceId: the table allocates section_id; the jsonb lands once-encoded', async () => {
+		const relation = {
+			testcomp3: [
+				{ type: 'dd151', section_id: 7, section_tipo: 'test1', from_component_tipo: 'testcomp3' },
+			],
+		};
+		const stringColumn = { testcomp4: [{ lang: 'lg-nolan', value: 'héllo "quoted" \\ slash' }] };
+		const first = await insertMatrixRowSequenceId(SEQUENCE_ID_TABLE, ACTIVITY_SECTION_TIPO, {
+			relation,
+			string: stringColumn,
+			misc: null,
+		});
+		allocated.push(first);
+		expect(Number.isInteger(first)).toBe(true);
+		const second = await insertMatrixRowSequenceId(SEQUENCE_ID_TABLE, ACTIVITY_SECTION_TIPO, {
+			string: stringColumn,
+		});
+		allocated.push(second);
+		expect(second).toBeGreaterThan(first);
+		const row = await readMatrixRecord(SEQUENCE_ID_TABLE, ACTIVITY_SECTION_TIPO, first);
+		expect(row?.columns.relation).toEqual(relation);
+		expect(row?.columns.string).toEqual(stringColumn);
+		expect(row?.rawText.misc ?? null).toBeNull();
+		// The canonical text is an OBJECT, not a jsonb string scalar (the double-encoding trap).
+		expect(row?.rawText.string?.startsWith('{')).toBe(true);
+		// Refused: a table without a section_id sequence, an empty payload, a bad column.
+		await expect(
+			insertMatrixRowSequenceId(TEST_TABLE, ACTIVITY_SECTION_TIPO, { string: {} }),
+		).rejects.toThrow(/allocates no section_id sequence/);
+		await expect(
+			insertMatrixRowSequenceId(SEQUENCE_ID_TABLE, ACTIVITY_SECTION_TIPO, {}),
+		).rejects.toThrow(/empty values/);
+	});
+
+	test('appendMatrixUpdateRow: one matrix_updates row, the object as written', async () => {
+		const marker = {
+			zz_roundtrip_probe: { origin: 'matrix_write_roundtrip', n: 1, nested: ['a', 2] },
+		};
+		await appendMatrixUpdateRow(marker);
+		const rows = (await sql`SELECT data FROM matrix_updates WHERE data ? 'zz_roundtrip_probe'`) as {
+			data: unknown;
+		}[];
+		expect(rows).toHaveLength(1);
+		expect(rows[0]?.data).toEqual(marker);
 	});
 });

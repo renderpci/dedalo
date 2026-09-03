@@ -16,9 +16,13 @@
  * fields; a differential must normalize them.
  *
  * This writer inserts through db/matrix_write.ts DIRECTLY — it does NOT pass the
- * record_write.ts chokepoint — so it fires the save event itself (PHP
- * section_record::create() does the same). Gated by
- * test/unit/tools_cache_invalidation.test.ts.
+ * record_write.ts chokepoint — so it declares the chokepoint's post-write
+ * obligations for itself through the chokepoint's OWN hook (afterRecordWrite:
+ * save event, security reaction, RAG index event) and appends the 'NEW'
+ * activity row here, at the engine (PHP section::create_record :1159 logged at
+ * the engine too, so every door — client, MCP, import, portal "+" — gets a
+ * row). Gated by test/unit/tools_cache_invalidation.test.ts +
+ * test/unit/write_obligations_{tripwire,native}.test.ts.
  */
 
 import { config } from '../../../config/config.ts';
@@ -31,7 +35,7 @@ import {
 import { sql } from '../../db/postgres.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { getMatrixTableFromTipo } from '../../ontology/resolver.ts';
-import { fireSaveEvent } from '../../section_record/save_event.ts';
+import { currentRequestContext } from '../../security/request_context.ts';
 
 /** Audit component tipos (PHP section::get_metadata_definition + relation types). */
 export const CREATED_BY_USER = 'dd200';
@@ -96,6 +100,19 @@ async function resolveSectionLabel(sectionTipo: string): Promise<string> {
 		if (value) return value;
 	}
 	return '';
+}
+
+/** Does a row already sit at this address? (the tolerated-conflict pre-check above). */
+async function recordExists(
+	table: string,
+	sectionTipo: string,
+	sectionId: number,
+): Promise<boolean> {
+	const rows = (await sql.unsafe(
+		`SELECT 1 FROM "${table}" WHERE section_tipo = $1 AND section_id = $2 LIMIT 1`,
+		[sectionTipo, sectionId],
+	)) as unknown[];
+	return rows.length > 0;
 }
 
 /**
@@ -217,6 +234,17 @@ export async function createSectionRecord(
 		},
 		date: { ...defaults.date, [CREATED_DATE]: [auditDateItem(now)] },
 	};
+	// THE 'NEW' ACTIVITY ROW needs to know whether this call CREATED the row. The
+	// tolerated-conflict insert answers the requested id either way (matrix_write
+	// opens no epoch and hands the id back), so the race loser — the one caller
+	// that did NOT create anything — is told apart by a pre-check on the address.
+	// Only on that path: an ordinary create allocates a fresh id and cannot
+	// pre-exist. The residual race (a row born between the check and the insert)
+	// costs one surplus NEW row on the address, never a missing one.
+	const preExisted =
+		sectionId !== undefined && options.conflictTolerant === true
+			? await recordExists(table, sectionTipo, sectionId)
+			: false;
 	const newSectionId =
 		sectionId === undefined
 			? await insertMatrixRecordWithCounter(table, sectionTipo, jsonbColumns)
@@ -224,25 +252,75 @@ export async function createSectionRecord(
 					onConflict: options.conflictTolerant === true ? 'ignore' : 'throw',
 				});
 
-	// Cache invalidation: like duplicate_record.ts this writer inserts through
-	// matrix_write DIRECTLY, so it never passes the record_write.ts chokepoint
-	// that fires for every other write. PHP fires here too (section_record::
-	// create() :2074 → save_event()), and a create is a real cache input: the
-	// record now EXISTS, which is what the data-derived caches (datalist option
-	// lists, authorized projects, hierarchy targets …) enumerate.
-	// For the three tool sections a bare create used to be inert because every
-	// tools reader skips a nameless row AND fetchActiveToolRows filters on the
-	// dd1354 active relation — but that second half is GONE since the birth
-	// defaults landed: dd1324/dd996 declare `dato_default` on dd1354, so a fresh
-	// tool-register row is now born ACTIVE (still nameless, so still skipped).
-	// "Inert because of what the readers happen to select" was never an
-	// invariant anyone maintained; "every dd1324/dd996/dd234 write reaches
-	// invalidateAllToolCaches" is. Over-invalidation is cheap and harmless; a
-	// missed hop is permanent staleness. Fired unconditionally, including the
-	// conflictTolerant no-op
-	// (the S1-02 materialize-on-save race loser) — that path is inside a
-	// transaction and fireSaveEvent self-defers its listener fan-out there.
-	await fireSaveEvent(sectionTipo);
+	// THE POST-WRITE OBLIGATIONS. This writer inserts through matrix_write
+	// DIRECTLY, so it never passes the record_write.ts chokepoint that fires for
+	// every other write — it declares the same obligations through the
+	// chokepoint's own hook (P1-8, 2026-09-03), not through calls it remembers:
+	//  - the save event: PHP fires here too (section_record::create() :2074 →
+	//    save_event()), and a create is a real cache input: the record now
+	//    EXISTS, which is what the data-derived caches (datalist option lists,
+	//    authorized projects, hierarchy targets …) enumerate. For the three tool
+	//    sections a bare create used to be inert because every tools reader
+	//    skips a nameless row AND fetchActiveToolRows filters on the dd1354
+	//    active relation — but that second half is GONE since the birth
+	//    defaults landed: dd1324/dd996 declare `dato_default` on dd1354, so a
+	//    fresh tool-register row is now born ACTIVE (still nameless, so still
+	//    skipped). "Inert because of what the readers happen to select" was
+	//    never an invariant anyone maintained; "every dd1324/dd996/dd234 write
+	//    reaches invalidateAllToolCaches" is. Over-invalidation is cheap and
+	//    harmless; a missed hop is permanent staleness.
+	//  - the security reaction: the birth keys (dd200/dd199 + defaults) can
+	//    never be an account transition; the reaction no-ops on every section
+	//    but dd128/dd234 and clears caches there.
+	//  - the RAG index event (DATA-18): a born-empty record enqueues cheaply
+	//    (ON CONFLICT dedupes in the queue) and uniformly — the alternative was
+	//    one lifecycle door exempt "because it is nearly harmless".
+	// Fired unconditionally, including the conflictTolerant no-op (the S1-02
+	// materialize-on-save race loser) — that path is inside a transaction and
+	// every obligation self-defers or joins it. Dynamic import: record_write.ts
+	// statically imports the audit builders from THIS module (a static edge back
+	// would close an import cycle — import_scc_tripwire).
+	const { afterRecordWrite } = await import('../../section_record/record_write.ts');
+	await afterRecordWrite(
+		{ table, sectionTipo, sectionId: newSectionId },
+		{
+			door: 'createSectionRecord',
+			touchedKeys: Object.values(jsonbColumns).flatMap((bag) =>
+				bag !== null && typeof bag === 'object' ? Object.keys(bag) : [],
+			),
+			rag: 'index',
+		},
+	);
+
+	// Activity audit (PHP logger 'NEW' code 3, section::create_record :1159 —
+	// logged at the ENGINE, so imports, MCP, the portal "+" and the client door
+	// all get a row; P1-8 / DATA-19 moved it here from the client door). The
+	// host is the request's client IP when there is a request scope (ALS), and
+	// PHP's 'unknown' for CLI/scripts/provisioning. Never fails the create:
+	// logActivity swallows its own errors. Skipped for the race loser (above):
+	// nothing was created, so a NEW row would describe an event that did not
+	// happen.
+	if (!preExisted) {
+		const { logActivity, hostFromClientIp } = await import('../../api/handlers/activity_log.ts');
+		await logActivity(
+			{
+				what: 'NEW',
+				tipo: sectionTipo,
+				userId,
+				host: hostFromClientIp(currentRequestContext()?.clientIp),
+				data: {
+					msg: 'Created section record',
+					// int, repealing the String() minting: a record address is emitted
+					// in canonical form (WC-2026-08-10-section-id-int-canonical).
+					section_id: newSectionId,
+					section_tipo: sectionTipo,
+					tipo: sectionTipo,
+					table,
+				},
+			},
+			now,
+		);
+	}
 
 	return newSectionId;
 }

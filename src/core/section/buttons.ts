@@ -17,7 +17,7 @@ import { sql } from '../db/postgres.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
 import { labelByTipo } from '../ontology/labels.ts';
-import { getModelByTipo, getNode } from '../ontology/resolver.ts';
+import { getNode, getSectionRealTipo } from '../ontology/resolver.ts';
 import { getPermissions, type Principal } from '../security/permissions.ts';
 
 /** One emitted button DDO (PHP dd_object type='button' — null keys dropped). */
@@ -73,7 +73,7 @@ async function readButtonRows(parent: string): Promise<{ tipo: string; model: st
  * buildSectionButtons below.
  *
  * VIRTUAL-AWARE (PHP section::get_section_buttons_tipo, class.section.php:1121-1196):
- * a virtual section (its node's relations[0].tipo → a real section) INHERITS the
+ * a virtual section (getSectionRealTipo → a real section) INHERITS the
  * real section's button_* children, THEN appends its OWN, both filtered by the
  * tipos named in its FIRST exclude_elements child. A plain `WHERE parent = tipo`
  * query returns nothing for a virtual section whose only children are
@@ -88,19 +88,11 @@ export async function sectionButtonRows(
 
 	const ownRows = await readButtonRows(sectionTipo);
 
-	// Resolve the real section (relations[0].tipo of model 'section'); non-virtual
-	// sections resolve to themselves and take their own buttons unchanged (mirrors
-	// section::get_section_real_tipo_static + resolveVirtualEditScope).
-	const nodeRows = (await sql`
-		SELECT relations FROM dd_ontology WHERE tipo = ${sectionTipo} LIMIT 1
-	`) as { relations: { tipo?: unknown }[] | null }[];
-	const candidate = nodeRows[0]?.relations?.[0]?.tipo;
-	const realTipo =
-		typeof candidate === 'string' &&
-		candidate !== sectionTipo &&
-		(await getModelByTipo(candidate)) === 'section'
-			? candidate
-			: null;
+	// Resolve the real section (the ONE law, getSectionRealTipo: the first
+	// relation of model 'section'); non-virtual sections resolve to themselves
+	// and take their own buttons unchanged (mirrors resolveVirtualEditScope).
+	const candidate = await getSectionRealTipo(sectionTipo);
+	const realTipo = candidate !== sectionTipo ? candidate : null;
 
 	let rows: { tipo: string; model: string }[];
 	if (realTipo === null) {
@@ -211,7 +203,7 @@ export async function buildSectionButtons(
  * A section's relation_list child tipo (PHP config.relation_list_tipo,
  * class.common.php:2094). PHP resolves it with resolve_virtual=true
  * (get_ar_children_tipo_by_model_name_in_section), so a VIRTUAL section
- * (relations[0].tipo → real section) inherits the real section's relation_list
+ * (getSectionRealTipo → real section) inherits the real section's relation_list
  * node — e.g. rsc167 (virtual of rsc2) resolves rsc17 under rsc2.
  */
 export async function sectionRelationListTipo(sectionTipo: string): Promise<string | null> {
@@ -225,12 +217,9 @@ export async function sectionRelationListTipo(sectionTipo: string): Promise<stri
 		`) as { tipo: string }[];
 	let rows = await read(sectionTipo);
 	if (rows.length === 0) {
-		// virtual section: its node's relations[0].tipo points at the real section
-		const nodeRows = (await sql`
-			SELECT relations FROM dd_ontology WHERE tipo = ${sectionTipo} LIMIT 1
-		`) as { relations: { tipo?: unknown }[] | null }[];
-		const real = nodeRows[0]?.relations?.[0]?.tipo;
-		if (typeof real === 'string') rows = await read(real);
+		// virtual section: borrow the REAL section's relation_list (getSectionRealTipo)
+		const real = await getSectionRealTipo(sectionTipo);
+		if (real !== sectionTipo) rows = await read(real);
 	}
 	const resolved = rows[0]?.tipo ?? null;
 	relationListTipoCache.set(sectionTipo, resolved);

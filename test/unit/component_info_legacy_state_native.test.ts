@@ -1,33 +1,40 @@
 /**
- * component_info LEGACY-STORED-VALUE fall-through (audit 2026-08 finding L1) —
- * TS-native gate for WC-2026-08-09-info-legacy-stored-value-fallthrough.
+ * component_info: THE STORED VALUE IS NEVER SERVED — TS-native gate for
+ * WC-2026-09-03-info-stored-value-never-served (P1-8 / DATA-15), which
+ * repeals the stored-wins rule of
+ * WC-2026-08-09-info-legacy-stored-value-fallthrough (audit 2026-08 finding
+ * L1) that this file used to pin.
  *
- * ~690 records of the target install (84 rsc167, 596 rsc170, 7 test6813, 1 rsc176 —
- * census run read-only against dedalo7_mht 2026-08-09) hold a v5-era blob in
- * their `misc` column instead of widget entries:
+ * HISTORY. ~690 records of the 2026-08 target install (84 rsc167, 596 rsc170,
+ * 7 test6813, 1 rsc176 — census run read-only against dedalo7_mht 2026-08-09)
+ * hold a v5-era blob in their `misc` column instead of widget entries:
  *
  *   {"id":1,"value":null,"state":{"lg-spa":{"dd203_1":[100,0]}},
  *    "section_id":"44","section_tipo":"test6813","component_tipo":"test6835"}
  *
  * PHP's get_db_data only falls back on `empty($data)`, so that blob won the
  * emission and reached the client, whose state renderer selects on `key` and
- * `widget_id` (render_list_state.js:114/185) and therefore drew nothing.
+ * `widget_id` (render_list_state.js:114/185) and therefore drew nothing. The
+ * first fix classified the blob (isLegacyStateResidue) and fell through to
+ * the live compute for it ALONE, keeping stored-wins for every other array.
  *
- * THE RULE UNDER TEST (isLegacyStateResidue — see widgets/widget_common.ts):
- * a stored array falls through to the live compute IFF EVERY entry is a
- * POSITIVELY identified v5 blob — no widget/key/widget_id, value null, a
- * non-empty `lg-`-keyed `state` map, and the id/section_id/section_tipo/
- * component_tipo quartet. Every other stored array keeps PHP's behaviour.
+ * WHY STORED-WINS WAS REPEALED (DATA-15, 2026-08-26 audit). The value of a
+ * component_info is DERIVED: computed per record, per principal, at read
+ * time. No door AUTHORS it — no client widget saves, and the server-side
+ * observer (recomputeInfoObserver) writes only a Time Machine row. With
+ * stored-wins, a Time Machine restore of one of those observer rows put a
+ * modern-shaped array into `misc` and FROZE the served value there for good:
+ * the observer kept writing correct TM rows nobody read. So the read now
+ * ALWAYS serves the live compute; a stored array — legacy, modern, mixed or
+ * unclassifiable — is ignored and COUNTED (`component_info_stored_value_ignored`,
+ * the v5 blob also under `component_info_legacy_stored_value` so the residue
+ * corpus stays visible). Nothing is rewritten.
  *
- * This gate is two-sided on purpose, because the rule has two failure modes
- * and each has already been shipped once:
- *  - too LOOSE (`value.length > 0`, the original defect): the blob wins and
- *    reaches the wire → the fall-through tests below go red.
- *  - too STRICT (`!hasWidgetEntry`, a negative test for the modern shape):
- *    every stored array we cannot classify is discarded as well → the
- *    "unclassifiable" test below goes red. That direction is the never-narrow
- *    violation, and it is the one a reader is most likely to "simplify" back
- *    into the code, so it is pinned explicitly.
+ * THE RULE UNDER TEST is therefore one-sided by design — "served === live" for
+ * EVERY stored shape — and the shapes are kept precisely because each once had
+ * its own branch: a regression that re-serves any one of them goes red on its
+ * own case. The residue classifier stays under test as the counter's
+ * discriminator.
  *
  * Fixtures are REAL shapes lifted from the live archive: the legacy blob from
  * test6813/44 + rsc167/1, the modern entry from rsc167/3, and the untagged
@@ -58,12 +65,12 @@ const SECTION = seed('rsc', 2);
 const SECTION_TABLE = 'matrix';
 
 const ID = {
-	legacy: 900351, // misc holds ONLY the v5 blob → must fall through
-	modern: 900352, // misc holds modern widget entries → stored wins
-	mixed: 900353, // raw non-widget item + one modern entry (the tags shape) → stored wins
-	control: 900354, // no misc at all → live compute (the fall-through target)
+	legacy: 900351, // misc holds ONLY the v5 blob → live compute
+	modern: 900352, // misc holds modern widget entries → live compute (was: stored wins)
+	mixed: 900353, // raw non-widget item + one modern entry (the tags shape) → live compute
+	control: 900354, // no misc at all → live compute (what every other row must equal)
 	legacyEmptySource: 900355, // v5 blob on a record with NOTHING to compute from
-	unclassifiable: 900356, // untagged but NOT legacy → stored MUST still win
+	unclassifiable: 900356, // untagged but NOT legacy → live compute (was: stored wins)
 };
 
 /**
@@ -137,6 +144,12 @@ const STATE_RELATIONS = {
 	[seed('rsc', 156)]: [locatorOf('dd501', 2, seed('rsc', 156))],
 	[seed('rsc', 80)]: [locatorOf('dd174', 1, seed('rsc', 80))],
 };
+
+/** What the repealed stored-wins branch put on the wire for MODERN_ENTRIES (WC-026 dualised). */
+const STORED_MODERN_ON_WIRE = [
+	{ ...MODERN_ENTRIES[0], widget_id: 'digitization' },
+	{ ...MODERN_ENTRIES[1], widget_id: 'digitization' },
+];
 
 const SCRATCH_IDS = Object.values(ID);
 
@@ -245,8 +258,8 @@ afterAll(async () => {
 	}
 });
 
-describe('component_info legacy stored-value fall-through (L1)', () => {
-	test('the RULE: only a positively identified, wholly-v5 array is residue', () => {
+describe('component_info: the stored value is never served (DATA-15)', () => {
+	test('the residue CLASSIFIER (now the counter discriminator): only a positively identified, wholly-v5 array is residue', () => {
 		// the live corpus shape (all 1365 entries of the 688 affected arrays)
 		expect(isLegacyStateResidue([LEGACY_ENTRY])).toBe(true);
 		expect(isLegacyStateResidue([LEGACY_ENTRY, { ...LEGACY_ENTRY, id: 2 }])).toBe(true);
@@ -310,45 +323,60 @@ describe('component_info legacy stored-value fall-through (L1)', () => {
 		}
 	}, 30000);
 
-	test('modern stored entries still WIN over the live compute (use_db_data preserved)', async () => {
+	test('MODERN stored entries are IGNORED — the live compute is served (repeals stored-wins)', async () => {
+		// The stored values are 0/'digitization'; the live compute on the same
+		// relations is not — so the two branches disagree, and equality with the
+		// control proves the live branch ran. This is the DATA-15 trap shape: a
+		// modern array is exactly what a Time Machine restore of an observer row
+		// puts into `misc`, and it must never freeze what is served.
 		const served = (await entriesOf(ID.modern)) as Record<string, unknown>[];
-		// stored values are 0/'digitization'; the live compute on the same
-		// relations is not — so equality here proves the stored branch ran
-		expect(served).toEqual([
-			// WC-026 dualisation applies to the stored branch too
-			{ ...MODERN_ENTRIES[0], widget_id: 'digitization' },
-			{ ...MODERN_ENTRIES[1], widget_id: 'digitization' },
-		] as never);
-		const live = await entriesOf(ID.control);
-		expect(served).not.toEqual(live as never);
+		const live = (await entriesOf(ID.control)) as Record<string, unknown>[];
+		expect(live.length).toBeGreaterThan(0);
+		expect(served).toEqual(live as never);
+		// and NOT the stored bag (WC-026-dualised, as the repealed branch served it)
+		expect(served).not.toEqual(STORED_MODERN_ON_WIRE as never);
 	}, 30000);
 
-	test('a PARTIALLY modern array (the tags shape) is stored data, not legacy', async () => {
+	test('MODERN stored entries are ignored in EDIT mode too (the form the client renders)', async () => {
+		const served = await entriesOf(ID.modern, 'edit');
+		const live = await entriesOf(ID.control, 'edit');
+		expect(served).toEqual(live as never);
+		expect(served).not.toEqual(STORED_MODERN_ON_WIRE as never);
+	}, 30000);
+
+	test('a PARTIALLY modern array (the tags shape) is ignored like any other', async () => {
 		const served = (await entriesOf(ID.mixed)) as Record<string, unknown>[];
-		expect(served).toEqual([
-			MIXED_ENTRIES[0], // raw item passes through verbatim
-			{ ...MIXED_ENTRIES[1], id: 'total_missing_tags' }, // WC-026 dualisation
-		] as never);
-	}, 30000);
-
-	test('an UNCLASSIFIABLE stored array is served, not recomputed (never-narrow)', async () => {
-		// The whole point of the positive rule. This array carries none of the
-		// keys a renderer selects on, so the retired negative rule would have
-		// discarded it and served the live compute instead — silently narrowing
-		// a stored shape the engine simply does not know. PHP served it; so do we.
-		const served = (await entriesOf(ID.unclassifiable)) as Record<string, unknown>[];
-		expect(served).toEqual(UNCLASSIFIABLE_ENTRIES as never);
 		const live = await entriesOf(ID.control);
-		expect(served).not.toEqual(live as never);
+		expect(served).toEqual(live as never);
+		expect(JSON.stringify(served)).not.toContain('raw transcription text');
 	}, 30000);
 
-	test('the discarded legacy value is COUNTED, never silently dropped', async () => {
+	test('an UNCLASSIFIABLE stored array is ignored like any other (no stored shape is served)', async () => {
+		// Under the repealed rule this was the never-narrow case: an unknown
+		// stored shape had to be served because it MIGHT be data. It cannot be:
+		// nothing authors a component_info value, so an unknown shape in `misc`
+		// is residue of some engine that no longer exists, and serving it would
+		// freeze the derived value at whatever that engine last wrote.
+		const served = (await entriesOf(ID.unclassifiable)) as Record<string, unknown>[];
+		const live = await entriesOf(ID.control);
+		expect(served).toEqual(live as never);
+		expect(JSON.stringify(served)).not.toContain('"ts_web"');
+	}, 30000);
+
+	test('every ignored stored value is COUNTED, never silently dropped', async () => {
 		resetCountersForTests();
+		await entriesOf(ID.control); // an EMPTY row is the ordinary case, nothing ignored
+		expect(getCounters().component_info_stored_value_ignored ?? 0).toBe(0);
+		expect(getCounters().component_info_legacy_stored_value ?? 0).toBe(0);
 		await entriesOf(ID.modern);
 		await entriesOf(ID.unclassifiable);
-		await entriesOf(ID.control); // an EMPTY row is PHP behaviour, not a divergence
+		await entriesOf(ID.mixed);
+		expect(getCounters().component_info_stored_value_ignored).toBe(3);
+		// the v5 blob is ALSO counted under its own name, so the residue corpus
+		// an install still carries stays visible to ops
 		expect(getCounters().component_info_legacy_stored_value ?? 0).toBe(0);
 		await entriesOf(ID.legacy);
+		expect(getCounters().component_info_stored_value_ignored).toBe(4);
 		expect(getCounters().component_info_legacy_stored_value).toBe(1);
 	}, 30000);
 });

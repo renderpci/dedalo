@@ -29,12 +29,14 @@
 ## The 60-second mental model
 
 A `component_info` node declares a list of widgets in `properties.widgets`. On a
-section read the emit hook (`src/core/components/component_info/emit.ts`) serves
-the **stored** misc value if one exists, else falls back to **live compute**:
+section read the emit hook (`src/core/components/component_info/emit.ts`)
+always serves the **live compute** (a stored misc value is ignored and counted —
+the value is derived, see
+[The derived-value rule](component_info.md#the-derived-value-rule)):
 
 ```text
-component_info node ──▶ emit hook ──▶ stored misc value?  ──yes─▶ serve it (WC-026 normalized)
-                                          │ no (the usual case)
+component_info node ──▶ emit hook
+                                          │
                                           ▼
                    computeInfoWidgets(componentTipo, context)   [widgets/registry.ts]
                                           │  per widget: INFO_WIDGETS.get(widget_name)
@@ -459,8 +461,9 @@ response item carries WC-026 dual keys.
     every such edge in the boot log.
 
 !!! note "What lands where"
-    Per target: exactly **one** TM row (never the live misc column — stored misc
-    is legacy). Same-record targets additionally ride the save response. Gated in
+    Per target: exactly **one** TM row (never the live misc column — the served
+    value is derived at read time, so the row is history only). Same-record
+    targets additionally ride the save response. Gated in
     `test/parity/info_observer_differential.test.ts`. An insert save used to
     double-fire before the cutover, so the frozen fixture data can contain two
     identical rows per insert — the gate compares TM counts **deduped** to stay

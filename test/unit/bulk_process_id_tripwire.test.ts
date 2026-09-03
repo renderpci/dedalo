@@ -181,18 +181,15 @@ const BULK_DOORS: ReadonlyMap<string, { onCreateFailure: 'refuse' | 'proceed'; r
 		[
 			'tools/tool_time_machine/server/bulk_revert.ts',
 			{
-				onCreateFailure: 'proceed',
+				onCreateFailure: 'refuse',
 				reason:
-					'OPEN: createRevertBulkProcess() is explicitly "best-effort" — it returns null on failure and the revert proceeds, so a revert whose own dd800 mint failed is itself irreversible. Same class as the propagation door; outside P0-7’s edit scope.',
+					'The revert door: createRevertBulkProcess() throws tool.action_failed when the dd800 mint fails, BEFORE the row loop, so a revert that could not be undone never starts (P1-9 / DATA-31). Behaviourally gated by bulk_operation_atomicity_native (a DB-injected mint fault: no dd800 row, no TM row, live values untouched).',
 			},
 		],
 	]);
 
 /** Doors still allowed to proceed unattributably. FROZEN — this list may only shrink. */
-const OPEN_PROCEED_DOORS = new Set([
-	'tools/tool_propagate_component_data/server/index.ts',
-	'tools/tool_time_machine/server/bulk_revert.ts',
-]);
+const OPEN_PROCEED_DOORS = new Set(['tools/tool_propagate_component_data/server/index.ts']);
 
 function censusBulkDoors(): string[] {
 	const glob = new Glob('**/*.ts');

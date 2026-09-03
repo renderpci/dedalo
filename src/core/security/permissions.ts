@@ -280,22 +280,24 @@ export function invalidatePermissionsForWrite(
 	sectionId: number,
 ): void {
 	clearSecurityCachesForWrite(sectionTipo, componentTipo, sectionId);
-	// THE REVOCATION SEAM — the SECOND reach, for the ONE door that writes a dd128
+	// THE REVOCATION SEAM — the SECOND reach, for a door that writes a dd128
 	// relation key without going through the record-write chokepoint.
 	//
-	// The PRIMARY reach is `section_record/record_write.ts` (persistRecordKeys /
-	// persistRecordColumns → revocation.reactToRecordComponentWrite): that is where
-	// every save door, both importers, the MCP tools, the agent change-plan,
-	// tool_propagate_component_data and both time-machine restore doors land.
-	// `relations/save.ts deletePortalLocator` does NOT — it removes a locator with a
-	// direct `updateMatrixKeyData` and then calls THIS function post-commit — so without
-	// this line a portal-unlink of a dd244 (security administrator) or dd131 locator
-	// would revoke nothing. Enumerated as such in
-	// test/unit/dd128_write_census_tripwire.test.ts.
+	// The PRIMARY reach is `section_record/record_write.ts` (afterRecordWrite, the
+	// post-write hook of persistRecordKeys / persistRecordColumns →
+	// revocation.reactToRecordComponentWrite): that is where every save door, both
+	// importers, the MCP tools, the agent change-plan, tool_propagate_component_data,
+	// both time-machine restore doors AND — since P1-8 (2026-09-03) — the portal
+	// unlink door `relations/save.ts deletePortalLocator` land (it used to remove the
+	// locator with a direct `updateMatrixKeyData` and call THIS function post-commit).
+	// No engine door reaches the seam through this function today; it stays because
+	// its contract (clear + revoke, commit-only) is the right shape for the next door
+	// that legitimately cannot use the chokepoint, and because the census gate
+	// (test/unit/dd128_write_census_tripwire.test.ts) names it as a seam symbol.
 	//
-	// COMMIT-ONLY LANE. When this function is already post-commit (deletePortalLocator)
-	// there is no ambient transaction, `registerCommitAction` returns false and the
-	// revocation runs inline — the same answer, reached honestly.
+	// COMMIT-ONLY LANE. Called post-commit, there is no ambient transaction,
+	// `registerCommitAction` returns false and the revocation runs inline — the same
+	// answer, reached honestly.
 	//
 	// (!) A CALLER ON THE DEFERRED LANE MUST NOT USE THIS FUNCTION. `deferPostTransaction`
 	// replays on ROLLBACK, and a replay happens after the commit queue has closed, so

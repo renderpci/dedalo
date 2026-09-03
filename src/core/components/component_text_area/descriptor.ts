@@ -8,6 +8,7 @@ import type { ComponentModel } from '../types.ts';
 export const component_text_area: ComponentModel = {
 	model: 'component_text_area',
 	column: 'string',
+	monovalue: true,
 	classSupportsTranslation: true,
 	searchBuilder: 'string',
 	flatValue: 'string',

@@ -8,6 +8,7 @@ import type { ComponentModel } from '../types.ts';
 export const component_geolocation: ComponentModel = {
 	model: 'component_geolocation',
 	column: 'geo',
+	monovalue: true,
 	sortable: false, // PHP component_geolocation::get_sortable() → false
 	importConform: 'geolocation',
 };

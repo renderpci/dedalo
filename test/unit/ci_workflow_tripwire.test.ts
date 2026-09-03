@@ -351,6 +351,18 @@ function ledgerTripwires(): string[] {
  */
 const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	[
+		'test/unit/write_obligations_native.test.ts',
+		"Every case drives a real write door on the suite database (matrix_test rows, matrix_activity rows, matrix_time_machine, the observer recompute's SQL) and is describe.if(DB_READY)-gated, so without Postgres the file is 13 skips and asserts nothing",
+	],
+	[
+		'test/unit/value_law_agreement_native.test.ts',
+		'It builds a zzvl scratch ontology + records on the suite database and drives saveComponentData, dispatchRqo, the derived-store probes and the live relation-index trigger against Postgres',
+	],
+	[
+		'test/unit/reconcile_registry_native.test.ts',
+		'Every registered reconcile is run dry against the suite database and suite media root on situations the file builds (zzrc/zzro/zzrh scratch TLDs, the zzot observer seed, the suite RAG database, the .publication marker store), so it needs the suite Postgres and the vector database',
+	],
+	[
 		'test/unit/concurrency_interleave.test.ts',
 		'Four of its six layers are DB-backed by construction: the resolver reads a real section in two languages, the grid-columns and tools-registry caches are built from real ontology rows, and the ISO-02 core-cache regression (P2-35) resolves a real element through buildStructureContext at two permission levels. The whole file is about what a LONG-LIVED PROCESS holds between requests, and a mocked store holds nothing',
 	],

@@ -28,6 +28,19 @@
  * with a surfaced error instead of reverted (`refuseFramelessWipe` — the
  * unported capture half would make that revert an unrecoverable deletion).
  *
+ * ATOMIC PER ROW, AND LOCKED FIRST (P1-9 / DATA-30, the same law `apply_value`
+ * carries — gate `test/unit/bulk_operation_atomicity_native.test.ts`): every
+ * read a row's revert depends on (the live frames the guard inspects, the
+ * pre-revert items the cascade diffs against, the sibling languages the merge
+ * keeps) happens INSIDE the row's transaction and BEHIND its `FOR UPDATE` row
+ * lock, taken for every model — not only the lang-sliced one. The guard and
+ * the pre-revert read used to run before the transaction opened and the lock
+ * was taken only for lang-sliced models, so a portal main took NO lock at all
+ * before `applyDataframeRestore`: a frame a curator committed in the
+ * check-to-commit window was wiped by a plan built from a stale read, with
+ * `ok:true` to both sides. A refusal raised inside the transaction rolls it
+ * back, so a refused row writes NOTHING — no half-applied frames, no TM row.
+ *
  * The observer cascade fires per reverted component, POST-COMMIT — PHP
  * reverted through `element->save()`, whose last act is
  * `propagate_to_observers()`.
@@ -92,7 +105,7 @@ import {
 	refuseFramelessWipe,
 	resolveDataframeSlotTipos,
 } from './dataframe_restore.ts';
-import { propagateRestoreToObservers, readComponentItems } from './restore_common.ts';
+import { propagateRestoreToObservers } from './restore_common.ts';
 import { mergeRestoredLangSlice, snapshotLangs, tmAuditSlice } from './tool_time_machine.ts';
 
 const BULK_PROCESS_SECTION_TIPO = 'dd800';
@@ -179,7 +192,17 @@ export function preBulkState(
 	return row === undefined ? { data: [], found: false } : { data: row.data, found: true };
 }
 
-/** Best-effort dd800 bulk-process record + label so this revert is itself revertible. */
+/**
+ * The frameless-wipe refusal, raised INSIDE a row's transaction so the rollback
+ * writes nothing, and mapped right after it onto the closed skip vocabulary
+ * (`frameless_wipe`). File-local on purpose: it is a control-flow marker
+ * between the transaction body and the loop's catch, never a wire error — the
+ * message is the guard's sentence, LOG-only (slot tipos), like every other
+ * `detail` the skip channel keeps off the caller.
+ */
+class FramelessWipeRefusal extends Error {}
+
+/** dd800 bulk-process record + label so this revert is itself revertible. */
 async function createRevertBulkProcess(label: string, userId: number): Promise<number> {
 	try {
 		const bulkId = await createSectionRecord(BULK_PROCESS_SECTION_TIPO, userId);
@@ -361,16 +384,6 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 						await resolveDataframeSlotTipos(row.tipo),
 					);
 
-			// Same frameless-wipe guard as apply_value: a snapshot with no frames
-			// over live frames would DELETE them unrecoverably (the CAPTURE half is
-			// unported — dataframe_restore.ts). Surfaced per row, never silent, and
-			// this component is left untouched rather than half-reverted.
-			const framelessRefusal = await refuseFramelessWipe(writeTarget, row.tipo, framePlan);
-			if (framelessRefusal !== null) {
-				skip(row, 'frameless_wipe', inScope, framelessRefusal);
-				continue;
-			}
-
 			// THE LANG PLAN (DATA-03). `revertLangs` is the set of languages this
 			// row's snapshot speaks for — the only ones the revert may replace. For
 			// a model the engine does not slice by language it stays null and the
@@ -399,79 +412,98 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 				continue;
 			}
 
-			// The locators this revert DROPS — the observer cascade needs them.
-			const preRevertItems = await readComponentItems(
-				table,
-				row.section_tipo,
-				row.section_id,
-				column,
-				row.tipo,
-			);
-
 			// What this revert WRITES: the snapshot for an unsliced model, the
 			// snapshot merged over the languages it does not speak for otherwise.
 			// Declared out here because the observer cascade below diffs against it
 			// — fed the slice, it would report every surviving sibling language as
 			// a removed target and unwire mirrors the revert never touched.
 			let revertedValue: unknown = mainData;
+			// The locators this revert DROPS — the observer cascade needs them.
+			// Read under the lock, with everything else the row depends on.
+			let preRevertItems: unknown[] = [];
 
-			await withTransaction(async () => {
-				// The merge's read is `FOR UPDATE` and INSIDE the transaction: this
-				// is a read-modify-write of a whole component key, so an unlocked
-				// read would silently revert whatever a concurrent save committed on
-				// the sibling languages in between. Taken FIRST, before the frame
-				// writes, so the whole revert holds one view of the record.
-				if (revertLangs !== null) {
-					const liveItems = await readMatrixKeyForUpdate(
+			try {
+				await withTransaction(async () => {
+					// THE ROW LOCK, FIRST AND UNCONDITIONALLY (P1-9 / DATA-30; the
+					// header). Every model, not only the lang-sliced one: it is the
+					// same row this revert is about to write, and a portal main that
+					// took no lock had its curator's fresh frame wiped by a plan built
+					// from a read that predated it. One lock, one view: the guard, the
+					// pre-revert items and the merge all read behind it.
+					const lockedItems = await readMatrixKeyForUpdate(
 						table,
 						row.section_tipo,
 						row.section_id,
 						column as MatrixJsonbColumn,
 						row.tipo,
 					);
-					// null = the ROW does not exist; there is nothing to merge over.
-					revertedValue = mergeRestoredLangSlice(liveItems ?? [], snapshotItems, revertLangs);
-				}
+					preRevertItems = Array.isArray(lockedItems) ? lockedItems : [];
 
-				// Frames FIRST (PHP apply_value's order; see dataframe_restore.ts).
-				await applyDataframeRestore(writeTarget, framePlan);
-				await persistRecordKeys(
-					writeTarget,
-					[{ column: column as MatrixJsonbColumn, key: row.tipo, value: revertedValue }],
-					{ userId },
-				);
-				// Reverted items carry explicit ids; raise the counter so a later
-				// insert cannot mint a duplicate (PHP raises on every set_data).
-				await absorbComponentItemIds(
-					table,
-					row.section_tipo,
-					row.section_id,
-					row.tipo,
-					Array.isArray(revertedValue) ? revertedValue : [],
-				);
-				// ONE ROW IS ONE LANGUAGE (tmAuditSlice): the audit row this revert
-				// appends carries the batch row's own language, sliced out of the
-				// post-merge value, so reverting THE REVERT replaces that language
-				// and leaves the others standing.
-				await recordTimeMachine(
-					{
-						sectionTipo: row.section_tipo,
-						sectionId: row.section_id,
-						componentTipo: row.tipo,
-						// The column is nullable; the UNSLICED branch preserves whatever
-						// the batch row held (PHP wrote it verbatim), so the cast widens
-						// the type, never the value.
-						lang: (langSliced ? auditLang : row.lang) as string,
-						userId,
-						data: composeTimeMachineSnapshot(
-							langSliced ? tmAuditSlice(revertedValue, auditLang as string) : revertedValue,
-							framePlan,
-						),
-						bulkProcessId: newBulkId,
-					},
-					dbTimestamp(),
-				);
-			});
+					// Same frameless-wipe guard as apply_value: a snapshot with no
+					// frames over live frames would DELETE them unrecoverably (the
+					// CAPTURE half is unported — dataframe_restore.ts). Raised INSIDE
+					// the transaction so the refusal rolls back and writes nothing;
+					// surfaced per row (the catch below maps it to `frameless_wipe`),
+					// never silent, and this component is left untouched rather than
+					// half-reverted.
+					const framelessRefusal = await refuseFramelessWipe(writeTarget, row.tipo, framePlan);
+					if (framelessRefusal !== null) throw new FramelessWipeRefusal(framelessRefusal);
+
+					// The merge, over the value read under the lock above: this is a
+					// read-modify-write of a whole component key, so an unlocked read
+					// would silently revert whatever a concurrent save committed on
+					// the sibling languages in between. null = the ROW does not exist;
+					// there is nothing to merge over.
+					if (revertLangs !== null) {
+						revertedValue = mergeRestoredLangSlice(lockedItems ?? [], snapshotItems, revertLangs);
+					}
+
+					// Frames FIRST (PHP apply_value's order; see dataframe_restore.ts).
+					await applyDataframeRestore(writeTarget, framePlan);
+					await persistRecordKeys(
+						writeTarget,
+						[{ column: column as MatrixJsonbColumn, key: row.tipo, value: revertedValue }],
+						{ userId },
+					);
+					// Reverted items carry explicit ids; raise the counter so a later
+					// insert cannot mint a duplicate (PHP raises on every set_data).
+					await absorbComponentItemIds(
+						table,
+						row.section_tipo,
+						row.section_id,
+						row.tipo,
+						Array.isArray(revertedValue) ? revertedValue : [],
+					);
+					// ONE ROW IS ONE LANGUAGE (tmAuditSlice): the audit row this revert
+					// appends carries the batch row's own language, sliced out of the
+					// post-merge value, so reverting THE REVERT replaces that language
+					// and leaves the others standing.
+					await recordTimeMachine(
+						{
+							sectionTipo: row.section_tipo,
+							sectionId: row.section_id,
+							componentTipo: row.tipo,
+							// The column is nullable; the UNSLICED branch preserves whatever
+							// the batch row held (PHP wrote it verbatim), so the cast widens
+							// the type, never the value.
+							lang: (langSliced ? auditLang : row.lang) as string,
+							userId,
+							data: composeTimeMachineSnapshot(
+								langSliced ? tmAuditSlice(revertedValue, auditLang as string) : revertedValue,
+								framePlan,
+							),
+							bulkProcessId: newBulkId,
+						},
+						dbTimestamp(),
+					);
+				});
+			} catch (error) {
+				// The guard's refusal, rolled back: the row is skipped on the closed
+				// vocabulary; anything else is the row's failure (the outer catch).
+				if (!(error instanceof FramelessWipeRefusal)) throw error;
+				skip(row, 'frameless_wipe', inScope, error.message);
+				continue;
+			}
 
 			// POST-COMMIT (a cascade hop refuses to run inside a transaction).
 			await propagateRestoreToObservers(

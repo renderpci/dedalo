@@ -36,7 +36,7 @@
 import { EXPLICIT_CONFIG_REQUIRED_MODELS } from '../../concepts/request_config.ts';
 import { sql } from '../../db/postgres.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
-import { getModelByTipo, getNode } from '../../ontology/resolver.ts';
+import { getModelByTipo, getNode, getSectionRealTipo } from '../../ontology/resolver.ts';
 import { contextLabelOf } from '../../resolve/structure_context.ts';
 import {
 	buildSqoSectionTipoDdos,
@@ -332,15 +332,10 @@ export async function resolveVirtualEditScope(
 	sectionTipo: string,
 ): Promise<{ realTipo: string; excludeSet: Set<string> }> {
 	const excludeSet = new Set<string>();
-	// A virtual section's node relations[0].tipo points at the real section.
-	const nodeRows = (await sql`
-		SELECT relations FROM dd_ontology WHERE tipo = ${sectionTipo} LIMIT 1
-	`) as { relations: { tipo?: unknown }[] | null }[];
-	const candidate = nodeRows[0]?.relations?.[0]?.tipo;
-	if (typeof candidate !== 'string' || candidate === sectionTipo) {
-		return { realTipo: sectionTipo, excludeSet };
-	}
-	if ((await getModelByTipo(candidate)) !== 'section') {
+	// The ONE virtual→real law (getSectionRealTipo: the first relation of model
+	// 'section', identity for a real section).
+	const candidate = await getSectionRealTipo(sectionTipo);
+	if (candidate === sectionTipo) {
 		return { realTipo: sectionTipo, excludeSet };
 	}
 	// The FIRST exclude_elements child (by order) of the VIRTUAL section names
@@ -361,7 +356,7 @@ export async function buildImplicitSectionEditConfig(
 ): Promise<ParsedRequestConfigItem[]> {
 	// VIRTUAL SECTION resolution (PHP get_ar_children_tipo_by_model_name_in_section
 	// with resolve_virtual=true, class.section.php:897-940): a virtual section
-	// (its node's relations[0].tipo points at a real section) borrows the REAL
+	// (getSectionRealTipo names a real section) borrows the REAL
 	// section's edit components, MINUS the tipos named by its FIRST
 	// exclude_elements child. Without this, a virtual section's edit form is
 	// empty (its own children are only exclude_elements/section_list/buttons).

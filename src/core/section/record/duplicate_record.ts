@@ -18,10 +18,20 @@
  *   counter shape — array-wrapped, PHP canonical);
  * - Time Machine: one audit row per copied component tipo with the DATA-LANG
  *   slice of the copied value (nolan slice for non-translatable components);
- * - save event: fired ONCE, LAST (this writer bypasses the record_write.ts
- *   chokepoint, so it invalidates for itself — a duplicated dd1324 row clones a
- *   tool's name + active flag into the registry). Gated by
- *   test/unit/tools_cache_invalidation.test.ts.
+ * - post-write obligations: declared ONCE, LAST, through the write chokepoint's
+ *   own hook (afterRecordWrite — save event, security reaction, RAG index
+ *   event; this writer bypasses record_write.ts, so it declares the same
+ *   obligations for itself rather than remembering them one by one — a
+ *   duplicated dd1324 row clones a tool's name + active flag into the registry,
+ *   and a duplicate is born carrying the FULL content of its source, so it must
+ *   reach the vector store like any other record, P1-8 / DATA-18); then ONE
+ *   'NEW' activity row (P1-8 / DATA-19 — the closed WHAT vocabulary has no
+ *   DUPLICATE code; PHP logged per-component SAVE rows from the re-save loop,
+ *   this engine logs the record's birth with `source_section_id` —
+ *   engineering/wire_contract/WC-2026-09-03-duplicate-record-new-activity-row.md
+ *   records the divergence from the oracle's per-component shape). Gated by
+ *   test/unit/tools_cache_invalidation.test.ts +
+ *   test/unit/write_obligations_{tripwire,native}.test.ts.
  *
  * Media-file duplication (physical file copies + files_info refresh) is now
  * wired (engineering/MEDIA_SPEC.md Phase B): for every copied media component the
@@ -53,7 +63,7 @@
  * NO transaction. The clone COMMITS at step 4 (insertMatrixRecordWithCounter is
  * a single autocommit statement), and steps 3b, 4b, 5, 6 and 7 — frame-target
  * re-minting, media file copies, the two Time Machine rows per component, the
- * observer cascade and fireSaveEvent — run outside any transaction, before and
+ * observer cascade and afterRecordWrite — run outside any transaction, before and
  * after that commit. Consequences a caller must know:
  *
  *   - A THROW HERE DOES NOT MEAN NOTHING HAPPENED. A failure at step 5 leaves a
@@ -87,7 +97,7 @@
  * The structurally correct form is therefore not "add withTransaction" but a
  * SPLIT: a transaction covering step 3b's re-mints + the insert + the Time
  * Machine rows + the in-tx observer writes, with the media copies and
- * fireSaveEvent moved strictly AFTER the commit (so a rollback can never leave a
+ * afterRecordWrite moved strictly AFTER the commit (so a rollback can never leave a
  * file addressed by a reusable id). That is a restructure of the engine's most
  * delicate write path and belongs with its own gate, in its own change — it must
  * not ride along inside an idempotency fix, and it does not remove the need for
@@ -114,8 +124,9 @@ import {
 	getTranslatableByTipo,
 } from '../../ontology/resolver.ts';
 import { currentDataLang } from '../../resolve/request_lang.ts';
-import { fireSaveEvent } from '../../section_record/save_event.ts';
+import { afterRecordWrite } from '../../section_record/record_write.ts';
 import type { Principal } from '../../security/permissions.ts';
+import { currentRequestContext } from '../../security/request_context.ts';
 import {
 	auditDateItem,
 	auditUserLocator,
@@ -345,18 +356,54 @@ export async function duplicateSectionRecord(
 		}
 	}
 
-	// 7. Cache invalidation: this writer inserts through matrix_write DIRECTLY,
-	//    so it never passes the record_write.ts chokepoint that fires for every
-	//    other write — it must fire for itself (PHP duplicate() closes with
-	//    $new_section_record->save(), which calls save_event). ONE fire, LAST:
-	//    the caches must be dropped after the copy, the media refresh and the
-	//    observer cascade have all landed, or a concurrent read repopulates them
-	//    with a half-built duplicate. Load-bearing for dd1324/dd996/dd234, where
-	//    the duplicate clones a tool's name AND active flag into the registry:
-	//    without this the tool is wrong in every user's menu until restart
-	//    (no TTL since the cutover). Not tx-wrapped here, and fireSaveEvent
-	//    self-defers its listener fan-out if a caller wraps us in one.
-	await fireSaveEvent(sectionTipo);
+	// 7. The post-write obligations: this writer inserts through matrix_write
+	//    DIRECTLY, so it never passes the record_write.ts chokepoint that fires
+	//    for every other write — it declares the chokepoint's obligations for
+	//    itself through the chokepoint's OWN hook (PHP duplicate() closes with
+	//    $new_section_record->save(), which calls save_event AND enqueues the
+	//    record for indexing). ONE fire, LAST: the caches must be dropped after
+	//    the copy, the media refresh and the observer cascade have all landed,
+	//    or a concurrent read repopulates them with a half-built duplicate.
+	//    Load-bearing for dd1324/dd996/dd234, where the duplicate clones a
+	//    tool's name AND active flag into the registry: without this the tool
+	//    is wrong in every user's menu until restart (no TTL since the
+	//    cutover). The touched keys are every copied component tipo — a
+	//    duplicated dd128 record carries its source's dd131/dd133, and the
+	//    security reaction judges them exactly as it would a save. Not
+	//    tx-wrapped here, and every obligation self-defers if a caller wraps us
+	//    in one.
+	await afterRecordWrite(
+		{ table, sectionTipo, sectionId: newSectionId },
+		{
+			door: 'duplicateSectionRecord',
+			touchedKeys: copied.map((component) => component.tipo),
+			rag: 'index',
+		},
+	);
+
+	// 8. Activity audit — ONE 'NEW' row for the record's birth (see header).
+	//    Host from the request scope when there is one, PHP's 'unknown' for
+	//    CLI/scripts; never fails the duplicate (logActivity swallows).
+	{
+		const { logActivity, hostFromClientIp } = await import('../../api/handlers/activity_log.ts');
+		await logActivity(
+			{
+				what: 'NEW',
+				tipo: sectionTipo,
+				userId,
+				host: hostFromClientIp(currentRequestContext()?.clientIp),
+				data: {
+					msg: 'Duplicated section record',
+					section_id: newSectionId,
+					source_section_id: sourceSectionId,
+					section_tipo: sectionTipo,
+					tipo: sectionTipo,
+					table,
+				},
+			},
+			now,
+		);
+	}
 
 	return newSectionId;
 }

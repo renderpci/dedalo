@@ -18,7 +18,12 @@
 
 import { getComponentModel } from '../components/registry.ts';
 import { mediaTypeOf } from '../concepts/media.ts';
-import { getModelByTipo, getNode, getRecursiveChildrenTipos } from '../ontology/resolver.ts';
+import {
+	getModelByTipo,
+	getNode,
+	getRecursiveChildrenTipos,
+	getSectionRealTipo,
+} from '../ontology/resolver.ts';
 import { MAX_PATH_HOPS } from './path_read.ts';
 import type {
 	Criterion,
@@ -335,11 +340,9 @@ async function sectionHoldsComponent(
 	if (components === undefined) {
 		components = new Set(await getRecursiveChildrenTipos(sectionTipo));
 		if (components.size === 0) {
-			const relations = (await getNode(sectionTipo))?.relations;
-			const realTipo = Array.isArray(relations)
-				? (relations[0] as { tipo?: unknown } | undefined)?.tipo
-				: undefined;
-			if (typeof realTipo === 'string' && realTipo !== sectionTipo) {
+			// virtual section: the REAL section's components (getSectionRealTipo)
+			const realTipo = await getSectionRealTipo(sectionTipo);
+			if (realTipo !== sectionTipo) {
 				components = new Set(await getRecursiveChildrenTipos(realTipo));
 			}
 		}

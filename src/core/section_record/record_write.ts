@@ -30,6 +30,20 @@
  *      security cache stale. Two lanes, not one: the cache clears are idempotent
  *      and ride deferPostTransaction, the revocation is destructive and rides the
  *      COMMIT-ONLY lane.
+ *   3c. THE RAG SEAM — every persisted write enqueues the record for re-indexing
+ *      (PHP save() :988 enqueue_index). It fires from the SAME post-write hook as
+ *      the save event (P1-8 / DATA-17, 2026-09-03): before that only
+ *      persistRecordColumns and one save branch fired it, so a record delete
+ *      rewrote every holder's relation bag through persistRecordKeys and enqueued
+ *      NONE of them — the vector store kept naming the deleted target.
+ *   3d. ONE HOOK, NOT THREE REMEMBERED CALLS — `afterRecordWrite` is the single
+ *      post-write obligation hook of this module: save event + security reaction
+ *      + RAG event. Every writer in this module ends in it, and the two record
+ *      INSERT doors that bypass this module by design (create_record.ts,
+ *      duplicate_record.ts) call it too, so "which obligations does this door
+ *      fire" has exactly one answer. Gated by
+ *      test/unit/write_obligations_tripwire.test.ts (doors × obligations, census
+ *      TOTAL over the raw matrix_write callers) + write_obligations_native.test.ts.
  *   4. THE COMPONENT_IMAGE SVG ENVELOPE — a `media`-column write persists any
  *      `svg_file_data` its items carry to the .svg overlay file BEFORE the row
  *      write (PHP component_image::save → create_svg_file, which likewise
@@ -153,12 +167,52 @@ export async function persistRecordKeys(
 	);
 	assertRecordStillExists(affected, target, 'persistRecordKeys');
 
+	await afterRecordWrite(target, {
+		door: 'persistRecordKeys',
+		touchedKeys: writes.map((item) => item.key),
+		rag: 'index',
+	});
+}
+
+/**
+ * The downstream obligations of ONE persisted record write (§3, §3b, §3c).
+ *
+ * `touchedKeys` — the component tipos the write landed on (the security reaction
+ * decides on them; the audit stamps may ride along, they are inert there).
+ * `rag` — `'index'` for a write that changed record CONTENT; `null` for a write
+ * that touched only the modified stamps (persistModifiedStamp), whose data door
+ * fires its own index event — stated by the caller, never defaulted, so the
+ * tripwire can pin every null.
+ * `door` — the writer's name, threaded into the revocation log line.
+ */
+export interface RecordWriteObligations {
+	door: string;
+	touchedKeys: readonly string[];
+	rag: 'index' | null;
+}
+
+/**
+ * THE post-write hook (§3d). Order is load-bearing and mirrors the pre-hook
+ * order of the callers it replaced: the cache fan-out first (deferred to
+ * COMMIT/ROLLBACK under an ambient transaction — save_event.ts), then the
+ * security reaction (idempotent clears on the deferred lane, the revocation on
+ * the COMMIT-ONLY lane), then the RAG seam (best-effort; the enqueue joins the
+ * ambient transaction so a rolled-back write leaves no marker). None of the
+ * three may fail the write: each swallows and logs its own failure.
+ */
+export async function afterRecordWrite(
+	target: RecordWriteTarget,
+	obligations: RecordWriteObligations,
+): Promise<void> {
 	await fireSaveEvent(target.sectionTipo);
-	await reactToSecurityWrite(
-		target,
-		writes.map((item) => item.key),
-		'persistRecordKeys',
-	);
+	await reactToSecurityWrite(target, obligations.touchedKeys, obligations.door);
+	if (obligations.rag !== null) {
+		await fireRagRecordEvent({
+			kind: obligations.rag,
+			sectionTipo: target.sectionTipo,
+			sectionId: target.sectionId,
+		});
+	}
 }
 
 /**
@@ -239,7 +293,15 @@ export async function persistModifiedStamp(
 		writes,
 	);
 	assertRecordStillExists(affected, target, 'persistModifiedStamp');
-	await fireSaveEvent(target.sectionTipo);
+	// rag: null — a stamp-only write. The DATA door that called this (the
+	// atomic-insert branch of saveComponentData, the delete pipeline) fires the
+	// index event for the content it wrote; firing it twice here would only
+	// dedupe in the queue. Pinned as the one null cell of the obligations matrix.
+	await afterRecordWrite(target, {
+		door: 'persistModifiedStamp',
+		touchedKeys: [],
+		rag: null,
+	});
 }
 
 /**
@@ -252,8 +314,9 @@ export async function persistModifiedStamp(
  * upsert — the caller must therefore pass the FULL intended content of any
  * column it includes (whole-column writes replace, they do not patch).
  *
- * Fires the save event and the RAG 'index' seam (PHP save() :564 enqueues the
- * record for re-indexing on every full save).
+ * Ends in afterRecordWrite like every writer here (save event, security
+ * reaction, the RAG 'index' seam — PHP save() :564 enqueues the record for
+ * re-indexing on every full save).
  */
 export async function persistRecordColumns(
 	target: RecordWriteTarget,
@@ -291,24 +354,18 @@ export async function persistRecordColumns(
 		values,
 	);
 
-	await fireSaveEvent(target.sectionTipo);
 	// The WHOLE-COLUMN door — the Time Machine's full-record restore. Its keys are the
 	// component tipos inside each column bag, so a restore that puts back an old dd133
 	// or flips dd131 is an account transition exactly like a per-key save, and used to
 	// be the one shape that reached nothing at all.
-	await reactToSecurityWrite(
-		target,
-		Object.values(values).flatMap((bag) =>
+	await afterRecordWrite(target, {
+		door: 'persistRecordColumns',
+		touchedKeys: Object.values(values).flatMap((bag) =>
 			bag !== null && bag !== undefined && typeof bag === 'object'
 				? Object.keys(bag as Record<string, unknown>)
 				: [],
 		),
-		'persistRecordColumns',
-	);
-	await fireRagRecordEvent({
-		kind: 'index',
-		sectionTipo: target.sectionTipo,
-		sectionId: target.sectionId,
+		rag: 'index',
 	});
 
 	return result;

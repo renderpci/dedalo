@@ -97,6 +97,14 @@ bottom; the descriptor-facet steps are enforced by
    no matrix row to resolve. Both omissions are named exemptions in
    `descriptor_completeness_tripwire` (NO_IMPORT_CONFORM / NO_RESOLVE_DATA);
    the write half is gated by `external_write_refusal_tripwire`.
+8b. Single-value model (only element 0 of the data array is ever read — the
+   PHP `$components_monovalue` class: media, geolocation, json, password,
+   publication, section_id, security_access, select, select_lang, text_area)?
+   Declare `monovalue: true`. It is THE value law every writer consults through
+   `isMonovalueModel` (registry): `saveComponentData` REPLACES the (lang-)slice
+   on `insert` and on an id-less `update` of the one stored item, and
+   `tool_propagate_component_data` refuses `add`. Omitted = multi-value
+   (append). Pinned against the frozen PHP list by `value_law_agreement_tripwire`.
 9. (Optional) drop a `samples/` reference set alongside it.
 
 **Engine side (STILL SCATTERED — check each; this is the honest part):**

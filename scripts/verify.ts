@@ -222,6 +222,12 @@ const TRIPWIRES = [
 	'test/unit/census_derivation_tripwire.test.ts',
 	'test/unit/read_door_acl_tripwire.test.ts',
 	'test/unit/action_scope_binding_tripwire.test.ts',
+	'test/unit/write_obligations_tripwire.test.ts',
+	'test/unit/value_law_agreement_tripwire.test.ts',
+	'test/unit/reconcile_registry_tripwire.test.ts',
+	'test/unit/write_obligations_native.test.ts',
+	'test/unit/value_law_agreement_native.test.ts',
+	'test/unit/reconcile_registry_native.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

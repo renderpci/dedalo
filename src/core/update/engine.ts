@@ -25,7 +25,7 @@
 import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { privateDir, readEnv } from '../../config/env.ts';
-import { encodeForJsonb } from '../db/json_codec.ts';
+import { appendMatrixUpdateRow } from '../db/matrix_write.ts';
 import { sql } from '../db/postgres.ts';
 import { DedaloError } from '../errors/index.ts';
 import {
@@ -82,9 +82,7 @@ async function writeVersionRowReal(version: string): Promise<void> {
 	const now = new Date();
 	const pad = (value: number) => String(value).padStart(2, '0');
 	const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-	await sql.unsafe('INSERT INTO "matrix_updates" ("data") VALUES ($1::text::jsonb)', [
-		encodeForJsonb({ dedalo_version: version, update_date: stamp }),
-	]);
+	await appendMatrixUpdateRow({ dedalo_version: version, update_date: stamp });
 }
 
 function resolveLogPath(seams: UpdateEngineSeams): string {

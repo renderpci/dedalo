@@ -8,6 +8,7 @@ import type { ComponentModel } from '../types.ts';
 export const component_select_lang: ComponentModel = {
 	model: 'component_select_lang',
 	column: 'relation',
+	monovalue: true,
 	defaultRelationType: 'dd151',
 	resolveData: 'select_family',
 	search: { status: 'ported' },

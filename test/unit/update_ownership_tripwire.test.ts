@@ -96,6 +96,8 @@ const ENGINE_NATIVE: Record<string, string> = {
 		'matrix_counter repair through the TS write path (PHP-parity action)',
 	'counters_status.reconcile_media_counters':
 		'matrix_counter repair through the TS write path — the restore-day reconcile against the MEDIA tree (P0-14/LIFE-01); raise-only and dry by default',
+	'reconcile_status.run_reconcile':
+		'the reconcile REGISTRY door (core/reconcile, S-10): runs one registered cross-store reconcile through the TS write paths it wraps — dry by default, apply only on the explicit flag',
 	'counters_status.repair_all_counters':
 		'matrix_counter repair through the TS write path — the bulk form of modify_counter fix (P0-14); raise-only',
 	'dataframe_control.get_value': 'read-only dataframe panel',

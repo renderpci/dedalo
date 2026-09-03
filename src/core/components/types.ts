@@ -279,4 +279,16 @@ export interface ComponentModel {
 	 * buildCore. Pinned by list_column_sortable_tripwire.
 	 */
 	readonly sortable?: boolean;
+	/**
+	 * MONOVALUE (PHP component_common::$components_monovalue, class.component_common
+	 * .php:180-196): the data is an array but ONLY ELEMENT 0 IS EVER READ. The one
+	 * value law every writer consults through registry.ts isMonovalueModel — an
+	 * `insert` on such a model REPLACES the (lang-)slice instead of appending
+	 * (PHP :4128-4131), an id-less `update` of the one stored item replaces it
+	 * (WC-2026-08-08), and the propagate tool refuses `add`. Alias models
+	 * (html_text → text_area) inherit through the canonical hop. Declared as
+	 * `true` only; omitted = multi-value. Pinned against the frozen PHP list by
+	 * value_law_agreement_tripwire.
+	 */
+	readonly monovalue?: true;
 }

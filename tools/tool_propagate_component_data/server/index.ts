@@ -25,6 +25,7 @@
  */
 
 import { config } from '../../../src/config/config.ts';
+import { isMonovalueModel } from '../../../src/core/components/registry.ts';
 import { sanitizeClientSqo } from '../../../src/core/concepts/sqo.ts';
 import { dbTimestamp } from '../../../src/core/db/db_timestamp.ts';
 import type { MatrixJsonbColumn } from '../../../src/core/db/matrix.ts';
@@ -59,25 +60,6 @@ import { applyPropagation, COMPONENTS_WITH_RELATIONS, type PropagateAction } fro
 const BULK_PROCESS_SECTION_TIPO = 'dd800';
 const BULK_PROCESS_LABEL_TIPO = 'dd796';
 const VALID_ACTIONS: ReadonlySet<string> = new Set(['replace', 'delete', 'add']);
-
-/** PHP component_common::$components_monovalue — cannot 'add' (single value only). */
-const COMPONENTS_MONOVALUE: ReadonlySet<string> = new Set([
-	'component_3d',
-	'component_av',
-	'component_geolocation',
-	'component_image',
-	'component_json',
-	'component_password',
-	'component_pdf',
-	'component_publication',
-	'component_model',
-	'component_section_id',
-	'component_security_access',
-	'component_select',
-	'component_select_lang',
-	'component_svg',
-	'component_text_area',
-]);
 
 /**
  * A caller-fault refusal. `message` AND `publicMessage`: the action is
@@ -151,7 +133,9 @@ async function propagateComponentData(ctx: ToolActionContext): Promise<ToolRespo
 		});
 	}
 	const withRelations = COMPONENTS_WITH_RELATIONS.has(model);
-	if (action === 'add' && COMPONENTS_MONOVALUE.has(model)) {
+	// The value law is the `monovalue` descriptor facet (registry isMonovalueModel)
+	// — this tool used to carry its own copy of the PHP list (DATA-14).
+	if (action === 'add' && isMonovalueModel(model)) {
 		throw invalidRequest(`'add' is not allowed on mono-value model '${model}'`);
 	}
 	const translatable = await getTranslatableByTipo(componentTipo);

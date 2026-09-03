@@ -17,6 +17,7 @@
  * else about the action's wire response, ordering or skip rules changed.
  */
 
+import { sectionIdAddressSqlPredicate } from '../../concepts/section_id.ts';
 import { runWithoutStatementTimeout, sql, withTransaction } from '../../db/postgres.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import {
@@ -614,7 +615,10 @@ async function databaseInfoRelationIntegrityReport(): Promise<WidgetResponse> {
 		}
 	}
 
-	// non-numeric section_id locators per source table (skipped by the sync trigger)
+	// locators whose section_id is NOT a record address (skipped by the sync
+	// trigger) per source table — the SAME predicate the trigger applies
+	// (concepts/section_id.ts, DATA-26), so the report enumerates exactly what
+	// the index refused: non-numeric, zero-padded, '-0', past int4.
 	const nonNumeric: Record<string, number> = {};
 	const sourceTables = (await sql.unsafe(
 		`SELECT DISTINCT c.relname AS t FROM pg_trigger g JOIN pg_class c ON c.oid = g.tgrelid
@@ -625,7 +629,7 @@ async function databaseInfoRelationIntegrityReport(): Promise<WidgetResponse> {
 		const rows = (await sql.unsafe(
 			`SELECT count(*)::bigint AS n FROM "${t}" m, jsonb_each(m.relation) kv, jsonb_array_elements(kv.value) e
 			 WHERE jsonb_typeof(m.relation) = 'object' AND jsonb_typeof(kv.value) = 'array'
-			   AND (e->>'section_id' IS NULL OR e->>'section_id' !~ '^-?[0-9]+$')`,
+			   AND (e->>'section_id' IS NULL OR NOT ${sectionIdAddressSqlPredicate("e->>'section_id'")})`,
 			[],
 		)) as { n: string }[];
 		const n = Number(rows[0]?.n ?? 0);

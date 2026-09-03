@@ -47,6 +47,7 @@ import { widget as move_tld } from './move_tld.ts';
 import { widget as move_to_portal } from './move_to_portal.ts';
 import { widget as move_to_table } from './move_to_table.ts';
 import { widget as publication_api } from './publication_api.ts';
+import { widget as reconcile_status } from './reconcile_status.ts';
 import { widget as register_tools } from './register_tools.ts';
 import { widget as runtime_info } from './runtime_info.ts';
 import { widget as sequences_status } from './sequences_status.ts';
@@ -117,6 +118,7 @@ const CORE_WIDGET_MODULES: readonly WidgetModule[] = [
 	sequences_status,
 	media_control,
 	counters_status,
+	reconcile_status,
 	dataframe_control,
 	runtime_info,
 	system_info,

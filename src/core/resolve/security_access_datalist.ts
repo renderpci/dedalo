@@ -67,7 +67,7 @@ import { sql } from '../db/postgres.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
 import { labelByTipo } from '../ontology/labels.ts';
-import { getModelByTipo } from '../ontology/resolver.ts';
+import { getModelByTipo, getSectionRealTipo } from '../ontology/resolver.ts';
 import { getGrantedTipos, type Principal } from '../security/permissions.ts';
 import { currentPrincipal } from '../security/request_context.ts';
 import { getEffectiveAreasDeny } from './server_state.ts';
@@ -160,32 +160,18 @@ async function getProperties(tipo: string): Promise<Record<string, unknown> | nu
 }
 
 /**
- * section::get_section_real_tipo_static — the first `related` node whose model
- * is 'section' (common::get_ar_related_by_model('section', tipo)[0]); the input
- * tipo itself when there is none (i.e. it is already a real section).
+ * section::get_section_real_tipo_static — THE virtual→real law lives in
+ * ontology/resolver.ts (DATA-33: one home, every consumer). Re-exported here
+ * because this module was its first TS home and its importers link to it;
+ * a link, never a second copy.
  */
-const realTipoCache = createOntologyCache<string, string>();
-export async function getSectionRealTipo(sectionTipo: string): Promise<string> {
-	const cached = realTipoCache.get(sectionTipo);
-	if (cached !== undefined) return cached;
-	let real = sectionTipo;
-	for (const relation of await getRelations(sectionTipo)) {
-		if (typeof relation?.tipo !== 'string') continue;
-		if ((await getModelByTipo(relation.tipo)) === 'section') {
-			real = relation.tipo;
-			break;
-		}
-	}
-	realTipoCache.set(sectionTipo, real);
-	return real;
-}
+export { getSectionRealTipo } from '../ontology/resolver.ts';
 
-/** Drop the four ontology-derived walk caches of this module. */
+/** Drop the three ontology-derived walk caches of this module. */
 export function clearSecurityAccessCaches(): void {
 	childrenOfCache.clear();
 	relationsCache.clear();
 	propertiesCache.clear();
-	realTipoCache.clear();
 }
 registerOntologyCacheClearer(clearSecurityAccessCaches);
 

@@ -169,7 +169,7 @@ async function rekeyLang(
 	}
 	const rows = (await sql.unsafe(
 		`UPDATE "${table}"
-		 SET "${column}" = jsonb_set("${column}" #- ARRAY[$1, $2], ARRAY[$1, $3], "${column}" -> $1 -> $2)
+		 SET "${column}" = jsonb_set("${column}" #- ARRAY[$1::text, $2::text], ARRAY[$1::text, $3::text], "${column}" -> $1::text -> $2::text)
 		 WHERE ${movable} RETURNING id`,
 		[tipo, fromLang, toLang],
 	)) as unknown[];

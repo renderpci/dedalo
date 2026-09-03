@@ -38,6 +38,7 @@ import { isMatrixTable } from '../db/matrix.ts';
 import { counterFloorExpression, counterTableFor } from '../db/matrix_write.ts';
 import { sql } from '../db/postgres.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from '../ontology/resolver.ts';
+import type { ReconcileDefinition } from '../reconcile/registry.ts';
 import { requireMediaRoot } from './path.ts';
 
 /**
@@ -217,3 +218,27 @@ export async function reconcileCountersWithMedia(
 
 	return { raises, skipped, filesScanned, sectionsWithMedia: witnesses.size };
 }
+
+/**
+ * The registry shape of this reconcile (core/reconcile/registry.ts, S-10):
+ * drift = counters the media tree proves too low; apply = the raise-only
+ * upsert above. Unscopable — the evidence is the whole media tree.
+ */
+export const COUNTERS_MEDIA_RECONCILE: ReconcileDefinition = {
+	name: 'counters_media',
+	stores: ['matrix_counter (section-id allocator)', 'media tree (file names)'],
+	description:
+		'Raise a section counter to the highest id its media files name — the restore-day repair; raise-only, so apply can never point a counter at a live id.',
+	scopeLabel: null,
+	// Walks the whole media tree: a deliberate restore-day action, never a boot step.
+	schedule: 'operator',
+	sources: ['src/core/media/counter_reconcile.ts'],
+	async run({ apply }) {
+		const outcome = await reconcileCountersWithMedia({ apply });
+		return {
+			drift: outcome.raises.length,
+			applied: apply ? outcome.raises.length : 0,
+			detail: outcome,
+		};
+	},
+};
