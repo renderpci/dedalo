@@ -110,26 +110,33 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 		source: 'npm',
 		probe: 'es/core.min.js',
 	},
-	transformers: {
-		// The in-browser AI runtime (tool_transcription's speech recognition,
-		// tool_lang's translation). It USED to be imported straight from a CDN by
-		// each tool — which made "local, private inference" depend on a third party
-		// being reachable, and leaked to that third party WHEN a record was being
-		// transcribed. Served from here, an air-gapped archive works and nothing
-		// leaves the building.
-		base: 'node_modules/@huggingface/transformers',
-		source: 'npm',
-		probe: 'dist/transformers.js',
-	},
 	onnxruntime: {
 		// Transformers.js runs its models on onnxruntime-web, whose WASM binaries it
-		// otherwise fetches from a CDN at inference time. It is a transitive dep of
-		// @huggingface/transformers, but pinned EXPLICITLY in package.json because
-		// this registry only serves what the lockfile names — and because the WASM
-		// build must match the runtime that loads it.
+		// otherwise fetches from a CDN at inference time. Since the transformers
+		// bundle is vendored (above) this is the ONLY onnxruntime-web the lockfile
+		// holds — pinned explicitly because the registry only serves what the
+		// lockfile names, and because the WASM build must match the runtime that
+		// loads it (wasmPaths → /dedalo/lib/onnxruntime/dist/).
 		base: 'node_modules/onnxruntime-web',
 		source: 'npm',
 		probe: 'dist/ort-wasm-simd-threaded.jsep.wasm',
+	},
+	qrcode: {
+		// EasyQRCodeJS (tool_qr). Until P2-5-residue (CLI-12) this was a 4.6.1 copy
+		// committed under tools/tool_qr/lib/ — served to browsers with no lockfile
+		// line, no digest, no advisory watch. The dist is on the registry, so it is
+		// a pin: the UMD bundle binds `QRCode` on globalThis when imported.
+		base: 'node_modules/easyqrcodejs',
+		source: 'npm',
+		probe: 'dist/easy.qrcode.min.js',
+	},
+	'client-zip': {
+		// Streaming ZIP writer for tool_export's media download. Same story as
+		// qrcode: a byte-identical copy of the 2.5.0 dist sat under
+		// tools/tool_export/js/lib/ outside every integrity mechanism.
+		base: 'node_modules/client-zip',
+		source: 'npm',
+		probe: 'index.js',
 	},
 	svgedit: {
 		// Was a vendored ~7.2.x-era build (2.0 MB) with no upstream package. 7.4.2 is a
@@ -148,7 +155,20 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 	// specifiers), loaded through the harness import map. See client/dedalo/test/client/.
 	chai: { base: 'node_modules/chai', source: 'npm', probe: 'index.js', devOnly: true },
 
-	// --- COMMITTED under vendor/ (4 trees; digest-pinned, see the header) ---------
+	// --- COMMITTED under vendor/ (6 trees; digest-pinned, see the header) ---------
+	transformers: {
+		// The in-browser AI runtime (tool_transcription's speech recognition,
+		// tool_lang's translation, the remove_background processor). It USED to be
+		// imported straight from a CDN by each tool — which made "local, private
+		// inference" depend on a third party being reachable, and leaked to that
+		// third party WHEN a record was being transcribed. Served from here, an
+		// air-gapped archive works and nothing leaves the building.
+		base: 'vendor/transformers',
+		source: 'vendor',
+		probe: 'dist/transformers.js',
+		reason:
+			'The npm package is a Node-side bundle first: its `dependencies` pull onnxruntime-node (211 MB of native binaries, unpacked at install by adm-zip) and sharp/@img (16 MB of libvips) into every `bun install --production` of every installation and of every code-update quarantine — while the engine imports NONE of it (no src/tools/publication module names @huggingface/transformers; the browser is the only consumer, through this registry). That never-executed native closure was also the only path to two of the three HIGH advisories the dependency baseline accepted (adm-zip, sharp). A browser-only bundle has no install-time Node dependency at all, so dist/transformers.js — the ONE file any client imports — is committed under vendor/ (P1-23 / DEAD-12, 2026-09-04): byte-identical to the 4.2.0 lockfile install it replaces, archive sha256 recorded in vendor/vendor_manifest.json, feed-watched by vendor_advisory_tripwire; the 567 MB stops shipping, and production_import_tripwire keeps a never-imported production dependency from coming back. Its onnxruntime WASM glue is NOT in this tree: every importer pins env.backends.onnx.wasm.wasmPaths to /dedalo/lib/onnxruntime/dist/ (the `onnxruntime` row below, an explicit npm pin), which no_remote_code_tripwire enforces.',
+	},
 	ckeditor: {
 		base: 'vendor/ckeditor',
 		source: 'vendor',
@@ -169,6 +189,14 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 		probe: 'xlsx.mjs',
 		reason:
 			"SheetJS left the npm registry (npm's `xlsx` is abandoned at 0.18.5), so this was a bare CDN tarball URL in package.json — and a tarball-URL dependency is the ONE shape bun records with no integrity: bun.lock carried `sha512-` for all 581 other entries and nothing for this one. That is not a paperwork gap. These bytes are SERVED TO BROWSERS (tools/tool_export/js/tool_export.js imports /dedalo/lib/xlsx/xlsx.mjs), and every code update re-runs `bun install` in the quarantine, so each update re-fetched unverified third-party client code over the network — a supply-chain write into the page, once per update, forever. Committed 2026-08-24 from the installed 0.20.3 tree, byte-identical to a fresh download of the upstream .tgz (archive sha256 8dc73fc3…, recorded in vendor/vendor_manifest.json and hashed by scripts/vendor_verify.ts). Trimmed to xlsx.mjs — the only file the client loads — plus the Apache-2.0 LICENSE. Bump it with scripts/vendor_fetch.ts, which refuses a download whose sha256 is not the stated one.",
+	},
+
+	'lz-string': {
+		base: 'vendor/lz-string',
+		source: 'vendor',
+		probe: 'lz-string.js',
+		reason:
+			'lz-string ships UMD only (libs/lz-string.js declares a top-level `var LZString` and exports through define/module/angular — no ESM entry, no `module` field in any release up to 1.5.0). A classic <script> would make it a global; an ES module import cannot reach a module-scoped var, and this client is all modules. So the registry copy is unusable as served, and the tree under vendor/ is the 1.5.0 npm dist (archive sha256 recorded in vendor/vendor_manifest.json) with ONE declared patch: `var LZString =` → `export const LZString =` and the UMD tail removed. The patch is stated in the manifest row and covered by its tree digest. Until P2-5-residue (CLI-12) this was a 1.4.5 copy with the same patch committed under client/dedalo/core/common/js/utils/ with no digest and no advisory watch.',
 	},
 
 	pdfjs: {

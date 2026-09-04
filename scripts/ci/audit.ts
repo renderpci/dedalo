@@ -4,7 +4,11 @@
  * WHY A RATCHET AND NOT A BARE `bun audit`. On 2026-08-03, the day this was written,
  * the tree already carried 7 advisories (5 high) — all transitive, most through
  * `@huggingface/transformers` (sharp/libvips, adm-zip) and the MCP SDK (fast-uri,
- * @hono/node-server). A blocking bare audit would have been RED on day one, which
+ * @hono/node-server). (Historical: the transformers package has been a vendored
+ * browser bundle since 2026-09-04 — P1-23/DEAD-12 — so its native closure is not in
+ * the lockfile at all, and the entries the baseline still accepts are mocha's,
+ * which test/unit/production_import_tripwire.test.ts proves are outside the
+ * production closure rather than trusting the reason text.) A blocking bare audit would have been RED on day one, which
  * teaches everyone to ignore the step; a non-blocking one proves nothing and rots
  * into decoration ("tripwire or delete", DEC-12). So: the KNOWN set is data, in
  * `engineering/dependency_audit_baseline.json`, and a NEW advisory is the failure.

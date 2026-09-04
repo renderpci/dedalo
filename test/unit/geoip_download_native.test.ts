@@ -11,6 +11,7 @@
  */
 
 import { afterAll, afterEach, describe, expect, test } from 'bun:test';
+import { createHash } from 'node:crypto';
 import {
 	existsSync,
 	mkdirSync,
@@ -31,6 +32,7 @@ import {
 	downloadCountryDb,
 	gunzipWithCaps,
 	pumpToFile,
+	sidecarPath,
 	validateDownloadUrl,
 } from '../../src/core/geoip/download.ts';
 
@@ -317,10 +319,20 @@ describe('downloadCountryDb', () => {
 				if (calls === 1) throw Object.assign(new Error('404-ish'), { notFound: true });
 				return 10;
 			},
-			gunzipWithCaps: async () => 20,
+			// A decompress that claims success must have LEFT A FILE: the
+			// rest-integrity sidecar (P1-25) is hashed from it, so a stub that
+			// writes nothing is now caught as the lie it is.
+			gunzipWithCaps: async (_src, dest) => {
+				writeFileSync(dest, 'MMDB-BYTES');
+				return 10;
+			},
 		});
 		expect(result).toEqual({ ok: true, mmdbPath: join(dir, DB_BASENAME) });
 		expect(calls).toBe(2);
+		// …and the sidecar beside it carries that file's sha256.
+		expect(readFileSync(sidecarPath(join(dir, DB_BASENAME)), 'utf8').split(/\s+/)[0]).toBe(
+			createHash('sha256').update('MMDB-BYTES').digest('hex'),
+		);
 	});
 
 	test('D11 (wired 2026-08-09): a hard failure does NOT consume the second candidate', async () => {

@@ -12,6 +12,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
+	expectedDigest,
 	expectedSize,
 	forgetFile,
 	MANIFEST_FILE,
@@ -63,6 +64,23 @@ describe('the manifest records completion', () => {
 		expect(expectedSize(store, MODEL, 'onnx/decoder_model_merged.onnx')).toBeNull();
 		// the siblings' claims survive
 		expect(expectedSize(store, MODEL, 'config.json')).toBe(42);
+	});
+
+	test('a VERIFIED record carries the digest and revision; a size-only record replaces it', () => {
+		const sha256 = 'f'.repeat(64);
+		const revision = '0'.repeat(40);
+		recordFileComplete(store, MODEL, 'tokenizer.json', 7, { sha256, revision });
+		expect(expectedDigest(store, MODEL, 'tokenizer.json')).toBe(sha256);
+		expect(readManifest(store, MODEL).files['tokenizer.json']).toEqual({
+			size: 7,
+			sha256,
+			revision,
+		});
+		// "verified" is never inherited: a later size-only claim describes the
+		// file as it is NOW and drops the digest with it.
+		recordFileComplete(store, MODEL, 'tokenizer.json', 8);
+		expect(expectedDigest(store, MODEL, 'tokenizer.json')).toBeNull();
+		expect(expectedSize(store, MODEL, 'tokenizer.json')).toBe(8);
 	});
 
 	test('an unsafe model id or file never escapes the store', () => {

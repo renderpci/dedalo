@@ -87,6 +87,7 @@ import {
 	ADVISORY_REASON_CODES,
 	checkVendorAdvisories,
 	checkVendorAdvisoriesIn,
+	checkVendorRootsIn,
 	checkVendorVersionEvidence,
 	checkVendorVersionEvidenceIn,
 	compareVersions,
@@ -102,6 +103,14 @@ import {
 
 const REPO_ROOT = resolve(import.meta.dir, '../..');
 
+/** The row ids whose tree is `vendor/<id>` — the half the complement law is over. */
+function rowsUnderVendor(libs: VendorManifest['libs']): string[] {
+	return Object.entries(libs)
+		.filter(([, entry]) => typeof entry.root !== 'string')
+		.map(([id]) => id)
+		.sort();
+}
+
 describe('vendor advisory tripwire — the manifest is queryable', () => {
 	test('every vendored tree carries an advisory block (TOTAL census, no exemptions)', () => {
 		const libs = readManifest().libs;
@@ -109,7 +118,13 @@ describe('vendor advisory tripwire — the manifest is queryable', () => {
 		// Anti-empty guard: an advisory gate over zero rows is the vacuous green this
 		// whole file exists to remove.
 		expect(dirs.length).toBeGreaterThan(0);
-		expect(Object.keys(libs).sort()).toEqual(dirs);
+		// The census is EVERY row. vendor/ dirs equal the rows that live there by
+		// default; a row with an explicit `root` (swagger-ui inside the v1 publication
+		// API) lives elsewhere and is checked by checkVendorRootsIn — it is a row all
+		// the same, and every assertion below runs over it.
+		expect(rowsUnderVendor(libs)).toEqual(dirs);
+		expect(Object.keys(libs).length).toBeGreaterThan(dirs.length);
+		expect(checkVendorRootsIn(readManifest())).toEqual([]);
 
 		const missing: string[] = [];
 		for (const [id, entry] of Object.entries(libs)) {
@@ -165,7 +180,7 @@ describe('vendor advisory tripwire — the declared version is the version the b
 
 	test('the census is TOTAL and not vacuous — every tree carries the field', () => {
 		const libs = readManifest().libs;
-		expect(Object.keys(libs).sort()).toEqual(listVendorDirs());
+		expect(rowsUnderVendor(libs)).toEqual(listVendorDirs());
 		const shapes: string[] = [];
 		let withClauses = 0;
 		for (const [id, entry] of Object.entries(libs)) {
@@ -836,6 +851,8 @@ function checkSynthetic(options: {
 						'synthetic row for the advisory controls — the version-binding axis has its own harness below.',
 					clauses: [],
 				},
+				// Nor is the licence axis (dependency_integrity_tripwire drives it).
+				licence: { spdx: 'Apache-2.0', file: 'LICENSE' },
 			},
 		},
 	};
@@ -877,6 +894,7 @@ function checkEvidenceSynthetic(options: {
 					unprovable_reason: options.unprovable_reason ?? null,
 					clauses: options.clauses,
 				},
+				licence: { spdx: 'Apache-2.0', file: 'LICENSE' },
 			},
 		},
 	};

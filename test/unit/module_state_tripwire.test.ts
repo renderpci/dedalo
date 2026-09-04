@@ -274,6 +274,13 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
  * list.
  */
 const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
+	// Model-artifact digest VERDICT cache (2026-09-04, P1-25): absolute path →
+	// {size, mtimeMs, ino, sha256}, so the serving door hashes a gigabyte weight
+	// once per process and re-hashes only when the stat identity moves. A digest
+	// is the same fact for every user, session and language — boot-stable, no
+	// request identity. Cleared per entry by `forgetVerdict` (quarantine, repair);
+	// a stale entry cannot mask a changed file because the identity check fails.
+	'core/ai/model_integrity.ts:verdicts',
 	// FOUND 2026-08-31 by widening this census to tools/ (P2-20 / GATE-34).
 	// PROCESS-level job liveness, not request state: it maps a model name to the
 	// download/repair claim currently running, so a second request refuses instead

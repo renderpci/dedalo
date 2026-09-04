@@ -72,6 +72,27 @@
  * gate is red. A date alone could never do that; that is the difference between
  * this and the nudge it replaces.
  *
+ * THE ROOT AXIS (P2-5-residue / CLI-12 + PUB-12, 2026-09-04). A row used to MEAN
+ * `vendor/<id>/` and nothing else, and `listVendorDirs()` was the census — so a
+ * committed third-party tree anywhere else (five bundles under tools/** and
+ * client/**, a 16 MB swagger-ui-dist under publication/) was outside every axis
+ * above. Three of the five were registry packages and became package.json pins;
+ * the trees that cannot be installed are rows here. swagger-ui must stay INSIDE the
+ * v1 PHP publication API (a self-contained Apache+PHP folder that has no
+ * node_modules and that `release_archive_tripwire` will not let us symlink into),
+ * so a row may carry an explicit `root`: a tracked repo directory OUTSIDE vendor/
+ * and node_modules. The complement law is unchanged for vendor/ — its directories
+ * equal the rows WITHOUT a root — and `scripts/lib/third_party_census.ts` derives,
+ * from the tree, every committed file that LOOKS third-party and requires it to lie
+ * under some row's root. So a bundle dropped anywhere is red until it has a row.
+ *
+ * THE LICENCE AXIS (OPS-08, same date). Redistribution has a fourth question the
+ * other three never asked: under what terms. Four of the trees shipped no licence
+ * text at all. Every row now carries `licence: { spdx, file }` — an id from a
+ * CLOSED set of licences compatible with this project's AGPL-3.0-only, and a file
+ * INSIDE the row's own tree that must exist and must read as that licence
+ * (`checkVendorLicencesIn`). A tree with no licence text cannot have a row.
+ *
  * Usage:
  *   bun run scripts/vendor_verify.ts            verify (exit 1 on any drift)
  *   bun run scripts/vendor_verify.ts --write    recompute digests/counts into the
@@ -98,6 +119,14 @@ export const MANIFEST_PATH = join(VENDOR_ROOT, 'vendor_manifest.json');
 const MANIFEST_BASENAME = 'vendor_manifest.json';
 
 export interface VendorManifestEntry {
+	/**
+	 * Where the tree lives, repo-relative, WHEN it is not `vendor/<id>/`. Absent for
+	 * the ordinary case. Present only for a tree that must sit inside another
+	 * self-contained subsystem (swagger-ui inside the v1 PHP publication API); it
+	 * must be a tracked directory outside vendor/ and node_modules, and the
+	 * `note` must say why the tree cannot live under vendor/.
+	 */
+	root?: string;
 	/** Upstream release this tree was taken from. */
 	version: string;
 	/** Where the bytes came from — a release/download URL a human can re-fetch. */
@@ -120,6 +149,72 @@ export interface VendorManifestEntry {
 	advisory: VendorAdvisoryBlock;
 	/** Machine evidence that `version` is what these BYTES say — see `checkVendorVersionEvidence`. */
 	version_evidence: VendorVersionEvidence;
+	/** The terms these bytes are redistributed under — see `checkVendorLicencesIn`. */
+	licence: VendorLicence;
+}
+
+/**
+ * THE CLOSED SET of licences a vendored tree may carry.
+ *
+ * Closed for the same reason the acceptance reason codes are: a free-text licence
+ * field is a field nobody checks. Every id here is an OSI licence the FSF lists as
+ * compatible with the GPL family, so a tree under it can be redistributed inside
+ * this AGPL-3.0-only project. Adding an id is a licensing decision, made here with
+ * a reason in the commit — never by typing a new string into a row.
+ */
+export const LICENCE_SPDX_IDS = [
+	'MIT',
+	'ISC',
+	'BSD-2-Clause',
+	'BSD-3-Clause',
+	'Apache-2.0',
+	'GPL-2.0-or-later',
+	'GPL-3.0-only',
+	'GPL-3.0-or-later',
+	'LGPL-2.1-or-later',
+	'LGPL-3.0-or-later',
+	'MPL-2.0',
+] as const;
+export type LicenceSpdxId = (typeof LICENCE_SPDX_IDS)[number];
+
+/**
+ * What the licence FILE must say for each id — one of these phrases, so a row
+ * cannot declare MIT over a file that is the GPL text. The phrases are the
+ * licences' own canonical titles (or, for the BSD texts that never name
+ * themselves, the sentence that identifies them).
+ */
+const LICENCE_TEXT_MARKERS: Readonly<Record<LicenceSpdxId, readonly string[]>> = {
+	MIT: ['MIT License', 'MIT license', 'Permission is hereby granted, free of charge'],
+	ISC: ['ISC License', 'Permission to use, copy, modify, and/or distribute this software'],
+	'BSD-2-Clause': ['Redistribution and use in source and binary forms'],
+	'BSD-3-Clause': ['Redistribution and use in source and binary forms'],
+	'Apache-2.0': ['Apache License'],
+	'GPL-2.0-or-later': [
+		'GNU General Public License Version 2 or later',
+		'version 2 of the License, or (at your option) any later version',
+	],
+	'GPL-3.0-only': ['GNU GENERAL PUBLIC LICENSE'],
+	'GPL-3.0-or-later': ['GNU GENERAL PUBLIC LICENSE'],
+	'LGPL-2.1-or-later': ['GNU LESSER GENERAL PUBLIC LICENSE'],
+	'LGPL-3.0-or-later': ['GNU LESSER GENERAL PUBLIC LICENSE'],
+	'MPL-2.0': ['Mozilla Public License'],
+};
+
+export interface VendorLicence {
+	/** One of LICENCE_SPDX_IDS. */
+	spdx: LicenceSpdxId;
+	/** Path RELATIVE TO THE ROW'S ROOT of the licence text these bytes ship with. */
+	file: string;
+}
+
+/** The repo-relative directory of a row's tree: its explicit `root`, else `vendor/<id>`. */
+export function libRootRelative(id: string, entry: Pick<VendorManifestEntry, 'root'>): string {
+	return typeof entry.root === 'string' ? entry.root.replace(/\/+$/, '') : `vendor/${id}`;
+}
+
+/** The absolute directory of a row's tree. */
+export function libRootAbsolute(id: string, entry: Pick<VendorManifestEntry, 'root'>): string {
+	return join(REPO_ROOT, libRootRelative(id, entry));
 }
 
 /**
@@ -304,16 +399,17 @@ export function checkVendorVersionEvidenceIn(manifest: VendorManifest): string[]
 	const problems: string[] = [];
 
 	for (const [id, entry] of Object.entries(manifest.libs)) {
+		const label = libRootRelative(id, entry);
 		const evidence = entry.version_evidence as VendorVersionEvidence | undefined;
 		if (evidence === undefined || evidence === null || typeof evidence !== 'object') {
 			problems.push(
-				`vendor/${id}: no "version_evidence". The row declares a version; something in the tree must SAY that version, or the row must state why nothing can.`,
+				`${label}: no "version_evidence". The row declares a version; something in the tree must SAY that version, or the row must state why nothing can.`,
 			);
 			continue;
 		}
 		const clauses = Array.isArray(evidence.clauses) ? evidence.clauses : null;
 		if (clauses === null) {
-			problems.push(`vendor/${id}: version_evidence.clauses must be an array (empty is fine)`);
+			problems.push(`${label}: version_evidence.clauses must be an array (empty is fine)`);
 			continue;
 		}
 
@@ -330,37 +426,37 @@ export function checkVendorVersionEvidenceIn(manifest: VendorManifest): string[]
 				evidence.unprovable_reason.trim().length < 40
 			) {
 				problems.push(
-					`vendor/${id}: version_evidence has no clauses AND no substantive unprovable_reason. State why these bytes cannot state their own version; do not leave it implied.`,
+					`${label}: version_evidence has no clauses AND no substantive unprovable_reason. State why these bytes cannot state their own version; do not leave it implied.`,
 				);
 			}
 			continue;
 		}
 		if (typeof evidence.unprovable_reason === 'string') {
 			problems.push(
-				`vendor/${id}: version_evidence carries BOTH clauses and an unprovable_reason — one or the other, never a hedge`,
+				`${label}: version_evidence carries BOTH clauses and an unprovable_reason — one or the other, never a hedge`,
 			);
 		}
 		if (declared === null) {
 			problems.push(
-				`vendor/${id}: version_evidence carries clauses but the row has no machine advisory.version for them to evidence`,
+				`${label}: version_evidence carries clauses but the row has no machine advisory.version for them to evidence`,
 			);
 			continue;
 		}
 
 		for (const clause of clauses) {
 			if (typeof clause?.file !== 'string' || typeof clause.must_contain !== 'string') {
-				problems.push(`vendor/${id}: a version_evidence clause needs a file and a must_contain`);
+				problems.push(`${label}: a version_evidence clause needs a file and a must_contain`);
 				continue;
 			}
-			if (!clause.file.startsWith(`vendor/${id}/`)) {
+			if (!clause.file.startsWith(`${label}/`)) {
 				problems.push(
-					`vendor/${id}: version_evidence clause names "${clause.file}", which is outside vendor/${id}/. The bytes must state their own version; our own prose about them is not evidence.`,
+					`${label}: version_evidence clause names "${clause.file}", which is outside ${label}/. The bytes must state their own version; our own prose about them is not evidence.`,
 				);
 				continue;
 			}
 			if (!clause.must_contain.includes(declared)) {
 				problems.push(
-					`vendor/${id}: version_evidence clause over "${clause.file}" looks for "${clause.must_contain}", which does not contain the declared version "${declared}" — that clause could pass on any version`,
+					`${label}: version_evidence clause over "${clause.file}" looks for "${clause.must_contain}", which does not contain the declared version "${declared}" — that clause could pass on any version`,
 				);
 				continue;
 			}
@@ -368,14 +464,12 @@ export function checkVendorVersionEvidenceIn(manifest: VendorManifest): string[]
 			try {
 				text = readFileSync(join(REPO_ROOT, clause.file), 'utf-8');
 			} catch {
-				problems.push(
-					`vendor/${id}: version_evidence names "${clause.file}", which does not exist`,
-				);
+				problems.push(`${label}: version_evidence names "${clause.file}", which does not exist`);
 				continue;
 			}
 			if (!text.includes(clause.must_contain)) {
 				problems.push(
-					`vendor/${id}: DECLARED VERSION IS NOT IN THE BYTES — ${clause.file} does not contain "${clause.must_contain}".\n` +
+					`${label}: DECLARED VERSION IS NOT IN THE BYTES — ${clause.file} does not contain "${clause.must_contain}".\n` +
 						`      The row says ${declared}. Either the tree was replaced without moving the label, or the label\n` +
 						'      was moved without replacing the tree. Both make every other check in this file ask its\n' +
 						'      question about a version that is not here.',
@@ -392,6 +486,149 @@ export function checkVendorVersionEvidence(): string[] {
 }
 
 /**
+ * THE LICENCE CHECK. Returns the problems, EMPTY when green.
+ *
+ * Every row: `licence.spdx` is in the closed set, `licence.file` names a file INSIDE
+ * the row's own tree (a licence text we wrote elsewhere is our claim, not theirs),
+ * the file exists, and its text reads as that licence. A row with no `licence`
+ * block is a PROBLEM — a tree whose terms nobody wrote down cannot be redistributed.
+ */
+export function checkVendorLicencesIn(manifest: VendorManifest): string[] {
+	const problems: string[] = [];
+	for (const [id, entry] of Object.entries(manifest.libs)) {
+		const label = libRootRelative(id, entry);
+		const licence = entry.licence as VendorLicence | undefined;
+		if (licence === undefined || licence === null || typeof licence !== 'object') {
+			problems.push(
+				`${label}: no "licence" block. Every redistributed tree declares { spdx, file }: the terms it ships under, and the licence text inside the tree that says so.`,
+			);
+			continue;
+		}
+		if (!(LICENCE_SPDX_IDS as readonly string[]).includes(licence.spdx)) {
+			problems.push(
+				`${label}: licence.spdx "${String(licence.spdx)}" is not one of ${LICENCE_SPDX_IDS.join(', ')} — the set is closed; widening it is a licensing decision, not a row edit`,
+			);
+			continue;
+		}
+		if (typeof licence.file !== 'string' || licence.file.trim() === '') {
+			problems.push(`${label}: licence.file must name the licence text inside the tree`);
+			continue;
+		}
+		const relative = licence.file.replace(/^\/+/, '');
+		if (relative.startsWith('..') || relative.includes('/../')) {
+			problems.push(
+				`${label}: licence.file "${licence.file}" reaches outside the tree — the terms must ship WITH the bytes`,
+			);
+			continue;
+		}
+		let text: string;
+		try {
+			text = readFileSync(join(libRootAbsolute(id, entry), relative), 'utf-8');
+		} catch {
+			problems.push(
+				`${label}: licence.file "${licence.file}" does not exist under ${label}/. A tree with no licence text cannot be redistributed; fetch the upstream LICENSE into the tree.`,
+			);
+			continue;
+		}
+		const markers = LICENCE_TEXT_MARKERS[licence.spdx];
+		if (!markers.some((marker) => text.includes(marker))) {
+			problems.push(
+				`${label}: ${licence.file} does not read as ${licence.spdx} (none of: ${markers.map((m) => JSON.stringify(m)).join(', ')}). The declared id and the shipped text disagree.`,
+			);
+		}
+	}
+	return problems;
+}
+
+/** The same over the manifest on disk. */
+export function checkVendorLicences(): string[] {
+	return checkVendorLicencesIn(readManifest());
+}
+
+/** Repo-relative POSIX paths git tracks under `relativeDir` (empty when untracked or absent). */
+function trackedFilesUnder(relativeDir: string): string[] {
+	const result = Bun.spawnSync(['git', 'ls-files', '--', relativeDir], {
+		cwd: REPO_ROOT,
+		stdout: 'pipe',
+		stderr: 'pipe',
+	});
+	return result.stdout
+		.toString()
+		.split('\n')
+		.filter((line) => line.trim() !== '');
+}
+
+/**
+ * THE ROOT CHECK for rows with an explicit `root`. Returns the problems, EMPTY when
+ * green. A root must be a repo-relative directory that exists, that git tracks (an
+ * untracked tree is not "committed third-party bytes", it is a local accident),
+ * that is neither under vendor/ (use the default) nor under node_modules (that is
+ * the package manager's, and the lockfile hashes it), and that no other row's root
+ * contains or equals — one tree, one digest. The note must say why the tree is not
+ * under vendor/ (the never-narrow law: an exception states its reason).
+ */
+export function checkVendorRootsIn(manifest: VendorManifest): string[] {
+	const problems: string[] = [];
+	const roots = new Map<string, string>();
+	for (const [id, entry] of Object.entries(manifest.libs)) {
+		if (typeof entry.root !== 'string') {
+			roots.set(libRootRelative(id, entry), id);
+			continue;
+		}
+		const root = entry.root;
+		if (
+			root.trim() === '' ||
+			root.startsWith('/') ||
+			root.startsWith('..') ||
+			root.includes('/../') ||
+			root.endsWith('/')
+		) {
+			problems.push(
+				`${id}: root "${root}" must be a repo-relative directory (no leading or trailing slash)`,
+			);
+			continue;
+		}
+		if (root === 'vendor' || root.startsWith('vendor/')) {
+			problems.push(
+				`${id}: root "${root}" is under vendor/ — drop the field; vendor/<id> is the default and the complement law covers it`,
+			);
+			continue;
+		}
+		if (root.split('/').includes('node_modules')) {
+			problems.push(
+				`${id}: root "${root}" is under node_modules — an installed package is pinned by the lockfile, never by a manifest row`,
+			);
+			continue;
+		}
+		const info = lstatSync(libRootAbsolute(id, entry), { throwIfNoEntry: false });
+		if (info === undefined || !info.isDirectory()) {
+			problems.push(`${id}: root "${root}" does not exist as a directory`);
+			continue;
+		}
+		if (trackedFilesUnder(root).length === 0) {
+			problems.push(
+				`${id}: root "${root}" holds no git-tracked file — a manifest row is for COMMITTED bytes`,
+			);
+			continue;
+		}
+		if (typeof entry.note !== 'string' || !/vendor\//.test(entry.note)) {
+			problems.push(
+				`${id}: a row with an explicit root must say in its note why the tree cannot live under vendor/`,
+			);
+		}
+		for (const [other, otherId] of roots) {
+			if (other === root || other.startsWith(`${root}/`) || root.startsWith(`${other}/`)) {
+				problems.push(
+					`${id}: root "${root}" overlaps row "${otherId}" (${other}) — one tree, one digest`,
+				);
+			}
+		}
+		roots.set(root, id);
+	}
+	return problems;
+}
+
+/**
  * Verify every vendored tree against the manifest.
  *
  * Returns the list of problems, EMPTY when green. It never throws on drift — the
@@ -401,24 +638,39 @@ export function checkVendorVersionEvidence(): string[] {
 export function verifyVendorTrees(): string[] {
 	const manifest = readManifest();
 	const onDisk = listVendorDirs();
-	const declared = Object.keys(manifest.libs).sort();
+	// The complement law is over vendor/: its directories equal the rows that live
+	// there by default. A row with an explicit root is checked by checkVendorRootsIn
+	// and digested below like any other.
+	const declaredUnderVendor = Object.entries(manifest.libs)
+		.filter(([, entry]) => typeof entry.root !== 'string')
+		.map(([id]) => id)
+		.sort();
 	const problems: string[] = [];
 
 	for (const id of onDisk) {
-		if (!declared.includes(id)) {
+		if (!declaredUnderVendor.includes(id)) {
 			problems.push(`vendor/${id}/ exists but no vendor_manifest.json row declares it`);
 		}
 	}
-	for (const id of declared) {
+	for (const id of declaredUnderVendor) {
 		if (!onDisk.includes(id)) {
 			problems.push(`vendor_manifest.json declares "${id}" but vendor/${id}/ does not exist`);
-			continue;
 		}
-		const entry = manifest.libs[id] as VendorManifestEntry;
-		const { digest, files } = treeDigest(join(VENDOR_ROOT, id));
+	}
+	const rootProblems = checkVendorRootsIn(manifest);
+	problems.push(...rootProblems);
+	const unverifiable = new Set(
+		rootProblems.map((problem) => problem.slice(0, problem.indexOf(':'))),
+	);
+
+	for (const [id, entry] of Object.entries(manifest.libs)) {
+		const label = libRootRelative(id, entry);
+		const present = typeof entry.root === 'string' ? !unverifiable.has(id) : onDisk.includes(id);
+		if (!present) continue;
+		const { digest, files } = treeDigest(libRootAbsolute(id, entry));
 		if (digest !== entry.tree_sha256) {
 			problems.push(
-				`vendor/${id}/ tree digest drifted:\n` +
+				`${label}/ tree digest drifted:\n` +
 					`      manifest ${entry.tree_sha256}\n` +
 					`      on disk  ${digest}\n` +
 					'      Either the tree was edited (vendored code is NEVER patched in place —\n' +
@@ -426,14 +678,16 @@ export function verifyVendorTrees(): string[] {
 			);
 		}
 		if (files !== entry.files) {
-			problems.push(`vendor/${id}/ file count: manifest ${entry.files}, on disk ${files}`);
+			problems.push(`${label}/ file count: manifest ${entry.files}, on disk ${files}`);
 		}
 	}
 	// The digest proves the bytes are the ones we pinned; the version evidence proves
-	// the LABEL on the row is the label those bytes wear. Both are the manifest checked
-	// against the tree, both must hold offline, and separating them is how a mislabelled
-	// row would keep a green integrity gate — so they are one answer.
+	// the LABEL on the row is the label those bytes wear; the licence proves we may
+	// redistribute them at all. All three are the manifest checked against the tree,
+	// all three must hold offline, and separating them is how a mislabelled or
+	// unlicensed row would keep a green integrity gate — so they are one answer.
 	problems.push(...checkVendorVersionEvidenceIn(manifest));
+	problems.push(...checkVendorLicencesIn(manifest));
 	return problems;
 }
 
@@ -524,7 +778,7 @@ function verifyAcceptanceClauses(
 	const problems: string[] = [];
 	if (acceptance.verify.length === 0) {
 		problems.push(
-			`vendor/${libId}: acceptance of ${advisoryId} carries no verify clause — an acceptance a gate cannot re-prove is a rubber stamp`,
+			`${libId}: acceptance of ${advisoryId} carries no verify clause — an acceptance a gate cannot re-prove is a rubber stamp`,
 		);
 	}
 	for (const clause of acceptance.verify) {
@@ -534,7 +788,7 @@ function verifyAcceptanceClauses(
 			text = readFileSync(target, 'utf-8');
 		} catch {
 			problems.push(
-				`vendor/${libId}: acceptance of ${advisoryId} verifies against "${clause.file}", which does not exist`,
+				`${libId}: acceptance of ${advisoryId} verifies against "${clause.file}", which does not exist`,
 			);
 			continue;
 		}
@@ -542,18 +796,18 @@ function verifyAcceptanceClauses(
 		const hasNotContain = typeof clause.must_not_contain === 'string';
 		if (hasContain === hasNotContain) {
 			problems.push(
-				`vendor/${libId}: acceptance of ${advisoryId} — a verify clause needs exactly one of must_contain / must_not_contain (${clause.file})`,
+				`${libId}: acceptance of ${advisoryId} — a verify clause needs exactly one of must_contain / must_not_contain (${clause.file})`,
 			);
 			continue;
 		}
 		if (hasContain && !text.includes(clause.must_contain as string)) {
 			problems.push(
-				`vendor/${libId}: acceptance of ${advisoryId} FAILED — ${clause.file} no longer contains "${clause.must_contain}". The mitigation is gone; the advisory is live again.`,
+				`${libId}: acceptance of ${advisoryId} FAILED — ${clause.file} no longer contains "${clause.must_contain}". The mitigation is gone; the advisory is live again.`,
 			);
 		}
 		if (hasNotContain && text.includes(clause.must_not_contain as string)) {
 			problems.push(
-				`vendor/${libId}: acceptance of ${advisoryId} FAILED — ${clause.file} now contains "${clause.must_not_contain}". The precondition this acceptance said was absent is present.`,
+				`${libId}: acceptance of ${advisoryId} FAILED — ${clause.file} now contains "${clause.must_not_contain}". The precondition this acceptance said was absent is present.`,
 			);
 		}
 	}
@@ -583,10 +837,11 @@ export function checkVendorAdvisoriesIn(manifest: VendorManifest, today: Date): 
 	const problems: string[] = [];
 
 	for (const [id, entry] of Object.entries(manifest.libs)) {
+		const label = libRootRelative(id, entry);
 		const block = entry.advisory as VendorAdvisoryBlock | undefined;
 		if (block === undefined || block === null || typeof block !== 'object') {
 			problems.push(
-				`vendor/${id}: no "advisory" block. Every vendored tree declares the coordinate an advisory feed is keyed to, or states why it has none.`,
+				`${label}: no "advisory" block. Every vendored tree declares the coordinate an advisory feed is keyed to, or states why it has none.`,
 			);
 			continue;
 		}
@@ -600,7 +855,7 @@ export function checkVendorAdvisoriesIn(manifest: VendorManifest, today: Date): 
 			try {
 				parseVersion(block.version as string);
 			} catch (error) {
-				problems.push(`vendor/${id}: ${(error as Error).message}`);
+				problems.push(`${label}: ${(error as Error).message}`);
 			}
 			// The prose `version` field and the machine one must not drift apart: the
 			// human reads the first, the gate compares the second. Bounded, not a bare
@@ -611,25 +866,25 @@ export function checkVendorAdvisoriesIn(manifest: VendorManifest, today: Date): 
 			);
 			if (!boundedVersion.test(entry.version)) {
 				problems.push(
-					`vendor/${id}: advisory.version "${block.version}" does not appear in the row's version "${entry.version}" — the two identities have drifted`,
+					`${label}: advisory.version "${block.version}" does not appear in the row's version "${entry.version}" — the two identities have drifted`,
 				);
 			}
 		} else if (typeof block.unkeyable_reason !== 'string' || block.unkeyable_reason.length < 40) {
 			problems.push(
-				`vendor/${id}: no advisory coordinate AND no substantive unkeyable_reason. State why no feed can be keyed to these bytes; do not leave it implied.`,
+				`${label}: no advisory coordinate AND no substantive unkeyable_reason. State why no feed can be keyed to these bytes; do not leave it implied.`,
 			);
 		}
 
 		// --- the review window (was a nudge, is now a gate) --------------------
 		if (!Number.isInteger(block.review_window_days) || block.review_window_days < 1) {
-			problems.push(`vendor/${id}: review_window_days must be a positive integer`);
+			problems.push(`${label}: review_window_days must be a positive integer`);
 		} else {
 			const age = daysBetween(entry.reviewed, today);
 			if (age === null) {
-				problems.push(`vendor/${id}: reviewed "${entry.reviewed}" is not a parseable date`);
+				problems.push(`${label}: reviewed "${entry.reviewed}" is not a parseable date`);
 			} else if (age > block.review_window_days) {
 				problems.push(
-					`vendor/${id}: reviewed ${entry.reviewed} — ${age} days ago, past its ${block.review_window_days}-day window.\n` +
+					`${label}: reviewed ${entry.reviewed} — ${age} days ago, past its ${block.review_window_days}-day window.\n` +
 						'      Dependabot cannot watch a vendored tree, so this date IS the watch. Re-check the\n' +
 						'      upstream release feed and the advisory feed (scripts/ci/audit.ts does the second\n' +
 						'      for you when online), record any new advisory in this row, then move `reviewed`.',
@@ -639,23 +894,23 @@ export function checkVendorAdvisoriesIn(manifest: VendorManifest, today: Date): 
 
 		// --- the ledger --------------------------------------------------------
 		if (!Array.isArray(block.advisories)) {
-			problems.push(`vendor/${id}: advisory.advisories must be an array (empty is fine)`);
+			problems.push(`${label}: advisory.advisories must be an array (empty is fine)`);
 			continue;
 		}
 		const seen = new Set<string>();
 		for (const advisory of block.advisories) {
 			if (typeof advisory.id !== 'string' || advisory.id.trim() === '') {
-				problems.push(`vendor/${id}: an advisory row has no id`);
+				problems.push(`${label}: an advisory row has no id`);
 				continue;
 			}
 			if (seen.has(advisory.id)) {
-				problems.push(`vendor/${id}: advisory ${advisory.id} is listed twice`);
+				problems.push(`${label}: advisory ${advisory.id} is listed twice`);
 			}
 			seen.add(advisory.id);
 
 			if (!keyed) {
 				problems.push(
-					`vendor/${id}: advisory ${advisory.id} is ledgered but the row has no version to compare it against`,
+					`${label}: advisory ${advisory.id} is ledgered but the row has no version to compare it against`,
 				);
 				continue;
 			}
@@ -665,7 +920,7 @@ export function checkVendorAdvisoriesIn(manifest: VendorManifest, today: Date): 
 				inRange = versionInRange(block.version as string, advisory.vulnerable_range);
 			} catch (error) {
 				// Unparseable range = unanswered question = RED.
-				problems.push(`vendor/${id}: advisory ${advisory.id} — ${(error as Error).message}`);
+				problems.push(`${label}: advisory ${advisory.id} — ${(error as Error).message}`);
 				continue;
 			}
 
@@ -675,7 +930,7 @@ export function checkVendorAdvisoriesIn(manifest: VendorManifest, today: Date): 
 				// version inherits a decision nobody made about it.
 				if (advisory.accepted !== null && advisory.accepted !== undefined) {
 					problems.push(
-						`vendor/${id}: advisory ${advisory.id} does not affect ${block.version} any more, but still carries an acceptance. Drop the acceptance (or the whole row).`,
+						`${label}: advisory ${advisory.id} does not affect ${block.version} any more, but still carries an acceptance. Drop the acceptance (or the whole row).`,
 					);
 				}
 				continue;
@@ -684,7 +939,7 @@ export function checkVendorAdvisoriesIn(manifest: VendorManifest, today: Date): 
 			const acceptance = advisory.accepted;
 			if (acceptance === null || acceptance === undefined) {
 				problems.push(
-					`vendor/${id}: version ${block.version} is INSIDE published advisory ${advisory.id}` +
+					`${label}: version ${block.version} is INSIDE published advisory ${advisory.id}` +
 						`${advisory.cve === null ? '' : ` / ${advisory.cve}`} (${advisory.severity}, published ${advisory.published})\n` +
 						`      range "${advisory.vulnerable_range}" — ${advisory.summary}\n` +
 						`      Fix: take the tree to ${advisory.first_patched_version ?? 'a patched release'} ` +
@@ -696,32 +951,32 @@ export function checkVendorAdvisoriesIn(manifest: VendorManifest, today: Date): 
 
 			if (!ADVISORY_REASON_CODES.includes(acceptance.reason_code)) {
 				problems.push(
-					`vendor/${id}: acceptance of ${advisory.id} has reason_code "${acceptance.reason_code}", which is not one of ${ADVISORY_REASON_CODES.join(', ')}`,
+					`${label}: acceptance of ${advisory.id} has reason_code "${acceptance.reason_code}", which is not one of ${ADVISORY_REASON_CODES.join(', ')}`,
 				);
 			}
 			if (typeof acceptance.reason !== 'string' || acceptance.reason.trim().length < 40) {
 				problems.push(
-					`vendor/${id}: acceptance of ${advisory.id} has no substantive reason (>= 40 chars)`,
+					`${label}: acceptance of ${advisory.id} has no substantive reason (>= 40 chars)`,
 				);
 			}
 			if (typeof acceptance.evidence !== 'string' || acceptance.evidence.trim().length < 4) {
 				problems.push(
-					`vendor/${id}: acceptance of ${advisory.id} names no evidence a reader can chase`,
+					`${label}: acceptance of ${advisory.id} names no evidence a reader can chase`,
 				);
 			}
 			if (!/^\d{4}-\d{2}-\d{2}$/.test(acceptance.assessed ?? '')) {
-				problems.push(`vendor/${id}: acceptance of ${advisory.id} has no ISO "assessed" date`);
+				problems.push(`${label}: acceptance of ${advisory.id} has no ISO "assessed" date`);
 			}
 			// daysBetween(expires, today) is POSITIVE once today is past the expiry date.
 			const daysPastExpiry = daysBetween(acceptance.expires ?? '', today);
 			if (!/^\d{4}-\d{2}-\d{2}$/.test(acceptance.expires ?? '') || daysPastExpiry === null) {
-				problems.push(`vendor/${id}: acceptance of ${advisory.id} has no ISO "expires" date`);
+				problems.push(`${label}: acceptance of ${advisory.id} has no ISO "expires" date`);
 			} else if (daysPastExpiry > 0) {
 				problems.push(
-					`vendor/${id}: acceptance of ${advisory.id} EXPIRED on ${acceptance.expires}. Re-assess the advisory against the current bytes, or fix it.`,
+					`${label}: acceptance of ${advisory.id} EXPIRED on ${acceptance.expires}. Re-assess the advisory against the current bytes, or fix it.`,
 				);
 			}
-			problems.push(...verifyAcceptanceClauses(id, advisory.id, acceptance));
+			problems.push(...verifyAcceptanceClauses(label, advisory.id, acceptance));
 		}
 	}
 	return problems;
@@ -761,18 +1016,29 @@ if (import.meta.main) {
 			);
 			process.exit(1);
 		}
+		// The same refusal for the other two curated axes: a digest blessed over a tree
+		// whose root is not what the row says, or that ships no licence text, is a
+		// digest over a row every later check would misread.
+		const rowProblems = [...checkVendorRootsIn(manifest), ...checkVendorLicencesIn(manifest)];
+		if (rowProblems.length > 0) {
+			console.error('== vendor: REFUSING TO WRITE — a row is not verifiable as declared:\n');
+			for (const problem of rowProblems) console.error(`   ${problem}`);
+			process.exit(1);
+		}
 		for (const id of listVendorDirs()) {
-			const { digest, files } = treeDigest(join(VENDOR_ROOT, id));
 			const previous = manifest.libs[id];
-			if (previous === undefined) {
+			if (previous === undefined || typeof previous.root === 'string') {
 				console.error(
 					`== vendor: vendor/${id}/ has no manifest row. Add it by hand (version, upstream,\n` +
-						'   archive_sha256, reviewed, note are CURATED — --write only fills the digests).',
+						'   archive_sha256, reviewed, note, licence are CURATED — --write only fills the digests).',
 				);
 				process.exit(1);
 			}
-			previous.tree_sha256 = digest;
-			previous.files = files;
+		}
+		for (const [id, entry] of Object.entries(manifest.libs)) {
+			const { digest, files } = treeDigest(libRootAbsolute(id, entry));
+			entry.tree_sha256 = digest;
+			entry.files = files;
 		}
 		await Bun.write(MANIFEST_PATH, `${JSON.stringify(manifest, null, '\t')}\n`);
 		console.log(`== vendor: digests rewritten (${MANIFEST_PATH}) — review the diff.`);
@@ -792,7 +1058,7 @@ if (import.meta.main) {
 		);
 		process.exit(1);
 	}
-	const ids = listVendorDirs();
+	const ids = Object.keys(readManifest().libs).sort();
 	console.log(
 		`== vendor: GREEN — ${ids.length} vendored trees match the manifest (${ids.join(', ')})`,
 	);

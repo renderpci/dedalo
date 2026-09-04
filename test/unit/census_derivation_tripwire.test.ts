@@ -316,8 +316,6 @@ const FLOORLESS_WALK_BASELINE: Readonly<Record<string, string>> = {
 		'DEBT: the recursive `readdirSync` walk is never floored.',
 	'test/unit/media_job_target_tripwire.test.ts':
 		'DEBT: the recursive `readdirSync` walk is never floored.',
-	'test/unit/no_remote_code_tripwire.test.ts':
-		'DEBT: the recursive `readdirSync` walk is never floored (the only floor is on `id:` occurrences).',
 	'test/unit/ontology_single_writer_tripwire.test.ts':
 		'DEBT: the recursive `readdirSync` walk is never floored.',
 	'test/unit/operator_commands_tripwire.test.ts':
@@ -397,7 +395,7 @@ const PRIVATE_ROOT_WALKERS: Readonly<Record<string, string>> = {
 	'test/unit/date_flat_value_single_source_tripwire.test.ts': 'ROOTS: `src`.',
 	'test/unit/dd128_write_census_tripwire.test.ts': 'ROOTS: `src` `tools` — servers.',
 	'test/unit/dependency_integrity_tripwire.test.ts':
-		'ROOTS: `.` — `git ls-files` for every tracked package.json.',
+		'ROOTS: `.` — `git ls-files` for every tracked package.json; the committed third-party census is the shared lister scripts/lib/third_party_census.ts (registered below), and the scratch trees the positive controls build resolve to no repo directory.',
 	'test/unit/deploy_env_contract_tripwire.test.ts':
 		'ROOTS: `.`; `deploy` ×2 — the compose stacks at the repo root (leg G, by pattern), the deploy/ units and scripts (legs A-F), and the recursive deploy/** walk leg G reads for mirrors.',
 	'test/unit/diffusion_boundaries.test.ts': 'ROOTS: `src`.',
@@ -449,7 +447,8 @@ const PRIVATE_ROOT_WALKERS: Readonly<Record<string, string>> = {
 	'test/unit/mock_isolation_tripwire.test.ts':
 		'ROOTS: `test` — every `*.test.ts` under test/, join(import.meta.dir, "..").',
 	'test/unit/module_state_tripwire.test.ts': 'ROOTS: `src` `tools` ×3.',
-	'test/unit/no_remote_code_tripwire.test.ts': 'ROOTS: `client/dedalo` `src` `tools`.',
+	'test/unit/no_remote_code_tripwire.test.ts':
+		'ROOTS: `client/dedalo` `publication` `src` `tools` `vendor` — the five trees whose code may load code (GATE-54 added vendor/ and publication/).',
 	'test/unit/ontology_single_writer_tripwire.test.ts': 'ROOTS: `scripts` `src` `tools`.',
 	'test/unit/operator_commands_tripwire.test.ts':
 		'NO-ROOT: readdirSync lists the scratch backup trees the gate builds under test/.tmp-*.',
@@ -565,6 +564,16 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		roots: [['src', 'tools']],
 		scope: 'untyped-throw sites in the engine (SCAN_ROOTS)',
 	},
+	'scripts/lib/third_party_census.ts': {
+		roots: [['client', 'deploy', 'install', 'publication', 'tools', 'vendor']],
+		scope:
+			'every git-tracked js/mjs/cjs/css/less file under the trees that ship to a browser or an installation — the committed third-party byte census behind dependency_integrity_tripwire (SCAN_ROOTS)',
+	},
+	'scripts/lib/production_corpus.ts': {
+		roots: [['tools']],
+		scope:
+			"the production source corpus behind production_import_tripwire: every package root derived from the tree (a bun.lock beside a package.json, walked from the repo root — no root chosen), then per package the trees sourceRootsOf returns — the engine's src/ plus every tools/<tool>/server/ (the one site this rule reads: the readdirSync over `tools`), and each other package's src/ — handed to walkFiles through a return value the evaluator does not read as a root",
+	},
 	'scripts/lib/client_compat_census.ts': {
 		roots: [
 			['client/dedalo', 'tools'],
@@ -650,7 +659,7 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		scope: 'every tracked package.json in the repo — the dependency-advisory ratchet',
 	},
 	'scripts/vendor_verify.ts': {
-		roots: [['vendor'], ['vendor']],
+		roots: [['vendor']],
 		scope: 'the vendored third-party tree, verified against its manifest',
 	},
 };

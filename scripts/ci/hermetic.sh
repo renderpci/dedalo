@@ -293,6 +293,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/reconcile_registry_tripwire.test.ts
 	test/unit/diffusion_seed_vocabulary_tripwire.test.ts
 	test/unit/archive_docs_claim_tripwire.test.ts
+	test/unit/production_import_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

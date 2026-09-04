@@ -18,7 +18,8 @@
 *
 * tool_qr generates printable QR-code sheets for the records returned by the
 * current section. On init it dynamically loads the EasyQRCodeJS library from
-* `lib/qrcode/easy.qrcode.min.js`. On build it fetches the caller's full
+* the client-lib registry (`/dedalo/lib/qrcode/dist/easy.qrcode.min.js`, the
+* pinned `easyqrcodejs` package). On build it fetches the caller's full
 * section data (limit 0, offset 0) and renders one QR tile per record onto
 * an A4-sized print canvas. Each tile contains:
 *   - a QR code whose payload is the canonical Dédalo page URL for the record,
@@ -41,8 +42,9 @@
 *   - render_tool_qr.js    — DOM rendering: edit(), get_content_data(),
 *                            render_info_container(), render_canvas(),
 *                            render_component(), generate_qr().
-*   - lib/qrcode/          — vendored EasyQRCodeJS library (loaded lazily in
-*                            tool_qr.prototype.init).
+*   - (EasyQRCodeJS itself is NOT in this directory: it is the pinned
+*     `easyqrcodejs` npm package, served through the client-lib registry
+*     and loaded lazily in tool_qr.prototype.init.)
 */
 
 

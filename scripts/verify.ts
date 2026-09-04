@@ -236,6 +236,7 @@ const TRIPWIRES = [
 	'test/unit/raw_roundtrip_native.test.ts',
 	'test/unit/conform_locator_existence_native.test.ts',
 	'test/unit/archive_docs_claim_tripwire.test.ts',
+	'test/unit/production_import_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

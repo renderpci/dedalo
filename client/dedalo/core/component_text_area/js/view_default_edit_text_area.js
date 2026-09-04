@@ -12,7 +12,7 @@
 	import {get_fallback_value} from '../../common/js/common.js'
 	import {pause, url_vars_to_object, same_section_id} from '../../common/js/utils/index.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
-	import {LZString as lzstring} from '../../common/js/utils/lzstring.js'
+	import {LZString as lzstring} from '/dedalo/lib/lz-string/lz-string.js'
 	import {render_draw} from './render_draw.js'
 
 

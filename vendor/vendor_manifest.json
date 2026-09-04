@@ -1,14 +1,14 @@
 {
-	"note": "CENSUS OF COMMITTED THIRD-PARTY TREES. Every directory under vendor/ has exactly one row here and vice versa (exact complements — test/unit/dependency_integrity_tripwire.test.ts). A vendored lib has no lockfile line, no sha512- integrity, no registry and no Dependabot: tree_sha256 is the ONLY thing in this repo that hashes those bytes. Verify: bun run scripts/vendor_verify.ts. Bump: bun run scripts/vendor_fetch.ts --lib <id> --version <v> --url <archive> --sha256 <expected>. tree_sha256 = sha256 over the sorted concatenation of `<posix relpath>\\0<sha256(file bytes)>\\n` for every regular file under the lib root, so contents AND file set are covered. THREE AXES, and a row must satisfy all three. (1) INTEGRITY — tree_sha256/files, recomputed every run. (2) IDENTITY — version_evidence: the declared version must appear verbatim in a file of the lib's OWN tree, so the label cannot be moved without the bytes (a mislabelled row would otherwise satisfy the digest, the range check and the feed query at once). A tree that states no version anywhere says so in unprovable_reason. scripts/vendor_verify.ts --write REFUSES to bless a tree whose bytes do not state the declared version. (3) ADVISORIES + STALENESS — the `advisory` block: the coordinate a feed is keyed to, a per-row review window, and a LEDGER of the published advisories known to touch that version; `reviewed` is the ISO date a human last checked THIS lib's upstream release feed AND the advisory feed (Dependabot cannot watch a vendored tree). Since CLI-26 (2026-08-28) that date is GATED, not printed: test/unit/vendor_advisory_tripwire.test.ts hard-fails when the declared version is inside a ledgered range or when `reviewed` is past the window, and scripts/ci/audit.ts asks the GitHub advisory feed the same question when it can reach it, reds on anything this ledger does not already carry, and reports a lookup that did not complete as DEGRADED rather than as a finding. All four rows were reviewed on 2026-08-28 and carry that date: ckeditor5@42.0.1 (two moderate XSS advisories in range, both ledgered and accepted on re-proved clauses), pdfjs-dist@6.2.108 and xlsx@0.20.3 (feed returns nothing), and json-view, which no feed can be keyed to at all and whose review window is therefore its only signal. Moving a `reviewed` date is a claim that a human read both feeds — which is the one thing this field exists to make expensive.",
+	"note": "CENSUS OF COMMITTED THIRD-PARTY TREES. Every directory under vendor/ has exactly one row here and vice versa (exact complements — test/unit/dependency_integrity_tripwire.test.ts); a row may instead carry an explicit `root` (a tracked directory outside vendor/ and node_modules) for a tree that must live inside another self-contained subsystem, and scripts/lib/third_party_census.ts derives from the tree every committed file that looks third-party and requires it to lie under some row's root. FOUR AXES since 2026-09-04: the three below plus LICENCE — every row carries `licence: {spdx, file}`, an id from the closed set in scripts/vendor_verify.ts and a licence text INSIDE the tree that must read as that licence (OPS-08). A vendored lib has no lockfile line, no sha512- integrity, no registry and no Dependabot: tree_sha256 is the ONLY thing in this repo that hashes those bytes. Verify: bun run scripts/vendor_verify.ts. Bump: bun run scripts/vendor_fetch.ts --lib <id> --version <v> --url <archive> --sha256 <expected>. tree_sha256 = sha256 over the sorted concatenation of `<posix relpath>\\0<sha256(file bytes)>\\n` for every regular file under the lib root, so contents AND file set are covered. THREE AXES, and a row must satisfy all three. (1) INTEGRITY — tree_sha256/files, recomputed every run. (2) IDENTITY — version_evidence: the declared version must appear verbatim in a file of the lib's OWN tree, so the label cannot be moved without the bytes (a mislabelled row would otherwise satisfy the digest, the range check and the feed query at once). A tree that states no version anywhere says so in unprovable_reason. scripts/vendor_verify.ts --write REFUSES to bless a tree whose bytes do not state the declared version. (3) ADVISORIES + STALENESS — the `advisory` block: the coordinate a feed is keyed to, a per-row review window, and a LEDGER of the published advisories known to touch that version; `reviewed` is the ISO date a human last checked THIS lib's upstream release feed AND the advisory feed (Dependabot cannot watch a vendored tree). Since CLI-26 (2026-08-28) that date is GATED, not printed: test/unit/vendor_advisory_tripwire.test.ts hard-fails when the declared version is inside a ledgered range or when `reviewed` is past the window, and scripts/ci/audit.ts asks the GitHub advisory feed the same question when it can reach it, reds on anything this ledger does not already carry, and reports a lookup that did not complete as DEGRADED rather than as a finding. The rows added or re-blessed on 2026-09-04 (lz-string, swagger-ui, the licence files under ckeditor and json-view) carry that date; the four original rows were reviewed on 2026-08-28 and carry that date: ckeditor5@42.0.1 (two moderate XSS advisories in range, both ledgered and accepted on re-proved clauses), pdfjs-dist@6.2.108 and xlsx@0.20.3 (feed returns nothing), and json-view, which no feed can be keyed to at all and whose review window is therefore its only signal. Moving a `reviewed` date is a claim that a human read both feeds — which is the one thing this field exists to make expensive.",
 	"libs": {
 		"ckeditor": {
 			"version": "CKEditor 5 42.0.1 (custom Dédalo build)",
 			"upstream": "none — a bespoke Dédalo webpack build (ddEditor + the dedalo_image_tags and reference plugins); no upstream artifact exists to re-fetch",
 			"archive_sha256": null,
-			"tree_sha256": "efdba3473f8d4bf492c205def8db842cd0a79d7e4ee737faa55a957e869c33d2",
-			"files": 73,
+			"tree_sha256": "a1d763eaccd6fa5a83e62d38e09b45577081c0598e2fe28bbd909195a9b31b27",
+			"files": 74,
 			"reviewed": "2026-08-28",
-			"note": "Not reproducible: the build project no longer exists in any checkout, and build/ckeditor.js.map is the only surviving copy of the plugin source — which is why the map is committed. Standing risk: the bundle can only be replaced wholesale, never patched. Reviewed 2026-08-28 against the GitHub advisory feed (ckeditor5@42.0.1): two moderate XSS advisories in range, both requiring General HTML Support — ledgered and accepted below on a clause this repo re-proves every run.",
+			"note": "Not reproducible: the build project no longer exists in any checkout, and build/ckeditor.js.map is the only surviving copy of the plugin source — which is why the map is committed. Standing risk: the bundle can only be replaced wholesale, never patched. Reviewed 2026-08-28 against the GitHub advisory feed (ckeditor5@42.0.1): two moderate XSS advisories in range, both requiring General HTML Support — ledgered and accepted below on a clause this repo re-proves every run. LICENCE (OPS-08, 2026-09-04): the tree shipped no licence text; LICENSE.md is CKEditor 5's own v42.0.1 LICENSE.md (GPL-2.0-or-later, per the file's 'Licensed under the terms of GNU General Public License Version 2 or later' and the 'For licensing, see LICENSE.md' banner every served chunk carries). Adding it moved tree_sha256 (73 → 74 files); the bundle bytes are unchanged.",
 			"advisory": {
 				"ecosystem": "npm",
 				"package": "ckeditor5",
@@ -78,16 +78,20 @@
 						"must_contain": "=\"42.0.1\""
 					}
 				]
+			},
+			"licence": {
+				"spdx": "GPL-2.0-or-later",
+				"file": "LICENSE.md"
 			}
 		},
 		"json-view": {
 			"version": "pgrabovets/json-view (unversioned bundle)",
 			"upstream": "https://github.com/pgrabovets/json-view",
 			"archive_sha256": null,
-			"tree_sha256": "fbc6f5a78caf9e8261e9cae3e46dcfaea089f60cdac03f4473b58e1b499ec154",
-			"files": 3,
+			"tree_sha256": "47eb3f60254a27a1aadc15f993c8568ae13fb39ca36a3b6657459dd529e56062",
+			"files": 4,
 			"reviewed": "2026-08-28",
-			"note": "Distributed via GitHub/jsDelivr only, never published to npm. The bundle carries no version string, so the tree digest IS the identity of this copy. Reviewed 2026-08-28: no npm advisories can be keyed to it (never published there), no upstream release since the bundle was taken, last upstream commit 2025-12-03.",
+			"note": "Distributed via GitHub/jsDelivr only, never published to npm. The bundle carries no version string, so the tree digest IS the identity of this copy. Reviewed 2026-08-28: no npm advisories can be keyed to it (never published there), no upstream release since the bundle was taken, last upstream commit 2025-12-03. LICENCE (OPS-08, 2026-09-04): the bundle shipped no licence text; LICENSE is the upstream repository's MIT text (pgrabovets/json-view, master). Adding it moved tree_sha256 (3 → 4 files); the bundle bytes are unchanged.",
 			"advisory": {
 				"ecosystem": null,
 				"package": null,
@@ -99,6 +103,10 @@
 			"version_evidence": {
 				"unprovable_reason": "The bundle carries no version string of any kind: jsonview.bundle.js is 6316 bytes and the word \"version\" does not occur in it, so there is no literal in these bytes that could evidence a declared version. That is also why the advisory coordinate is null. tree_sha256 IS the identity of this copy — it is the whole identity, not a corroboration of one — and the review window is the only staleness signal the row can carry.",
 				"clauses": []
+			},
+			"licence": {
+				"spdx": "MIT",
+				"file": "LICENSE"
 			}
 		},
 		"pdfjs": {
@@ -144,6 +152,10 @@
 						"must_contain": "const viewerVersion = \"6.2.108\";"
 					}
 				]
+			},
+			"licence": {
+				"spdx": "Apache-2.0",
+				"file": "LICENSE"
 			}
 		},
 		"xlsx": {
@@ -170,6 +182,101 @@
 						"must_contain": "XLSX.version = '0.20.3';"
 					}
 				]
+			},
+			"licence": {
+				"spdx": "Apache-2.0",
+				"file": "LICENSE"
+			}
+		},
+		"lz-string": {
+			"version": "1.5.0",
+			"upstream": "https://registry.npmjs.org/lz-string/-/lz-string-1.5.0.tgz",
+			"archive_sha256": "ad640cf79fc54bc8035a66edd33974f1334db9ba079c8b845f13e5d54c5e011b",
+			"tree_sha256": "7ea30245f0c829c319bdeb5116e7523107bf302786b6df694e30e4fff4db62bb",
+			"files": 3,
+			"reviewed": "2026-09-04",
+			"note": "URL-state compression for tool_common / component_text_area (compressToEncodedURIComponent). WHY VENDORED: lz-string ships UMD only — libs/lz-string.js declares a top-level `var LZString` and exports through define/module/angular; there is no ESM entry and no `module` field in any release up to 1.5.0. A classic <script> would make it a global; an ES module import cannot reach a module-scoped var, and this client is all modules — so the registry copy is unusable AS SERVED, which is VENDORING.md §1's fifth case. ONE DECLARED PATCH over the npm 1.5.0 dist: `var LZString = (function() {` → `export const LZString = (function() {` and the 11-line UMD tail removed; nothing else differs (diffed 2026-09-04 against the extracted archive, whose sha256 is archive_sha256). The patch is covered by tree_sha256 — the 'never patched in place' rule means never patched SILENTLY. Tree: lz-string.js (patched), LICENSE and package.json verbatim (the latter carries the only 1.5.0 literal — the bundle banner still says 'version 1.4.5', which upstream never bumped). Until P2-5-residue (CLI-12) a 1.4.5 copy with the same patch and a WTFPL banner lived at client/dedalo/core/common/js/utils/lzstring.js with no digest and no advisory watch; 1.5.0 is the npm dist-tag latest and is MIT. Reviewed 2026-09-04 against the GitHub advisory feed (lz-string@1.5.0): none.",
+			"advisory": {
+				"ecosystem": "npm",
+				"package": "lz-string",
+				"version": "1.5.0",
+				"unkeyable_reason": null,
+				"review_window_days": 180,
+				"advisories": []
+			},
+			"version_evidence": {
+				"unprovable_reason": null,
+				"clauses": [
+					{
+						"file": "vendor/lz-string/package.json",
+						"must_contain": "\"version\": \"1.5.0\""
+					}
+				]
+			},
+			"licence": {
+				"spdx": "MIT",
+				"file": "LICENSE"
+			}
+		},
+		"swagger-ui": {
+			"root": "publication/server_api/v1/docu/ui/swagger-ui",
+			"version": "5.32.14",
+			"upstream": "https://registry.npmjs.org/swagger-ui-dist/-/swagger-ui-dist-5.32.14.tgz",
+			"archive_sha256": "609702d791d8d3cdcbc3a52632f6be2f9b743eadf6ba49ca9737dac2a6e0b2a3",
+			"tree_sha256": "6a42858741b30313c7005d6d7df8fbcd4790d5dfd108a8b8b04baea9cb357fc7",
+			"files": 9,
+			"reviewed": "2026-09-04",
+			"note": "The Swagger UI page of the v1 PHP publication API (publication/server_api/v1/docu/ui/index.html). WHY NOT UNDER vendor/: the v1 tree is a self-contained Apache+PHP folder deployed on its own — it has no node_modules and no engine to serve /dedalo/lib/, and release_archive_tripwire refuses symlinks, so the bytes must sit inside that folder; the explicit `root` is what lets this manifest hash them there. Bumped 2026-09-04 (PUB-12) from 4.5.2 (2022-02-21, built from a dirty tree, 16 MB with every map and es bundle, no pin, no reason) to 5.32.14, the npm dist-tag latest. TRIMMED to what index.html loads plus the licence texts: swagger-ui-bundle.js, swagger-ui-standalone-preset.js, swagger-ui.css, the two favicons, LICENSE, NOTICE and the two *.LICENSE.txt. DROPPED: every .map, swagger-ui.js and the es bundles (nothing loads them), the upstream index.html/index.css/index.js/swagger-initializer.js/absolute-path.js/README/package.json/log.* (not served), and oauth2-redirect.html — its 5.x form loads oauth2-redirect.js and this API has no OAuth2 flow, so shipping the page without the script would be a broken page, and shipping both would be dead code. Every kept file is byte-identical to the archive's copy (archive_sha256 is the sha256 of the .tgz, verified on download). Reviewed 2026-09-04 against the GitHub advisory feed (swagger-ui-dist@5.32.14): none.",
+			"advisory": {
+				"ecosystem": "npm",
+				"package": "swagger-ui-dist",
+				"version": "5.32.14",
+				"unkeyable_reason": null,
+				"review_window_days": 180,
+				"advisories": []
+			},
+			"version_evidence": {
+				"unprovable_reason": null,
+				"clauses": [
+					{
+						"file": "publication/server_api/v1/docu/ui/swagger-ui/swagger-ui-bundle.js",
+						"must_contain": "\"5.32.14\""
+					}
+				]
+			},
+			"licence": {
+				"spdx": "Apache-2.0",
+				"file": "LICENSE"
+			}
+		},
+		"transformers": {
+			"version": "4.2.0",
+			"upstream": "https://registry.npmjs.org/@huggingface/transformers/-/transformers-4.2.0.tgz",
+			"archive_sha256": "0874b37bbeed0441d37e4445f8a543ab37b41c2ba6bb89f37c5474074b34deee",
+			"tree_sha256": "b5d088a370f257cab696df8cef027bfe5550942b353ba0883c3fbca7a05930d0",
+			"files": 2,
+			"reviewed": "2026-09-04",
+			"note": "The in-browser AI runtime (transformers.js): tool_transcription's speech recognition, tool_lang's translation, the remove_background processor — served at /dedalo/lib/transformers/dist/transformers.js, the ONLY file of the package any client imports. WHY VENDORED (P1-23 / DEAD-12): the registry package is a Node-side bundle first. Its `dependencies` pull onnxruntime-node (211 MB of native binaries, unpacked at install by adm-zip) and sharp/@img (16 MB of libvips) into every `bun install --production` of every installation and of every code-update quarantine, while the engine imports NONE of it — no src/tools/publication module names @huggingface/transformers; the sole consumer is the browser, through the client-lib registry. That native closure was also the ONLY path to two of the three HIGH entries the advisory baseline accepted (adm-zip, sharp). A browser-only bundle has no install-time Node dependency at all, so it is committed like any other served third-party tree: 1.28 MB gitignored-nowhere, digest-pinned, feed-watched, and the 567 MB stops shipping. The bundle is self-contained esbuild output (no relative imports): it fetches its onnxruntime-web WASM glue from env.backends.onnx.wasm.wasmPaths, which every importer pins to /dedalo/lib/onnxruntime/dist/ (no_remote_code_tripwire), served from the explicit onnxruntime-web npm pin — the registry `onnxruntime` row. That pin (1.29.0) is NOT the 1.26.0-dev range 4.2.0 declares; it predates this row and is deliberately left as it was (a runtime/WASM alignment decision is its own change, not this one). Trimmed with --strip 1 --keep dist/transformers.js --keep LICENSE: dropped transformers.min.js / .web(.min).js (nothing imports them; switching the client to the .min build is a separate change), every transformers.node.* build (Node-side, never served), dist/ort-wasm-simd-threaded.jsep.mjs (referenced by no string in the kept bundle — its loader resolves the .asyncify glue through wasmPaths), src/, types/, README.md, package.json. Byte-verified 2026-09-04: the kept transformers.js is identical to node_modules/@huggingface/transformers/dist/transformers.js of the 4.2.0 lockfile install it replaces (cmp), and the archive's sha512 equals the registry's published `integrity` (sha512-8BRCoBMH0Xs…) — archive_sha256 is the sha256 of that verified archive, since the registry publishes sha512 and vendor_fetch records sha256. Reviewed 2026-09-04 against the GitHub advisory feed (@huggingface/transformers@4.2.0, and the package at any version): none.",
+			"advisory": {
+				"ecosystem": "npm",
+				"package": "@huggingface/transformers",
+				"version": "4.2.0",
+				"unkeyable_reason": null,
+				"review_window_days": 180,
+				"advisories": []
+			},
+			"version_evidence": {
+				"unprovable_reason": null,
+				"clauses": [
+					{
+						"file": "vendor/transformers/dist/transformers.js",
+						"must_contain": "var VERSION = \"4.2.0\";"
+					}
+				]
+			},
+			"licence": {
+				"spdx": "Apache-2.0",
+				"file": "LICENSE"
 			}
 		}
 	}

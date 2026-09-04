@@ -2,16 +2,16 @@
 
 ## Purpose
 
-The Dédalo client loads 20 third-party browser libraries. **Since 2026-07-12 most
+The Dédalo client loads 23 third-party browser libraries. **Since 2026-07-12 most
 of them are package-manager tracked**, which is what this document used to exist to
 compensate for.
 
 The old model was a 118 MB gitignored `client/dedalo/lib/` directory of hand-dropped
 bundles that no package manager watched — so **SEC-103** made a human re-check every
-one against the CVE feeds each release. That gap is now closed on both sides: 16 of
-the 20 libs are pinned dependencies in `package.json`, so Dependabot and `bun audit`
-see them like any other dep; the other four are committed under `vendor/`, pinned by a
-digest, bound to their declared version, and watched by a
+one against the CVE feeds each release. That gap is now closed on both sides: 17 of
+the 23 libs are pinned dependencies in `package.json`, so Dependabot and `bun audit`
+see them like any other dep; the other six are committed under `vendor/`, pinned by a
+digest, bound to their declared version, licensed on record, and watched by a
 [gated advisory ledger](#advisories-and-staleness-the-axis-a-digest-cannot-cover)
 rather than by a human's memory. See also
 [Integrity](#integrity-the-manifest-and-why-vendored-code-needs-one).
@@ -27,8 +27,13 @@ the repo any more. **Two** sources back that URL, and that is the whole story:
 
 | Source | Count | Root | In git? |
 |---|---|---|---|
-| **npm** | 16 | `node_modules/` | no — `bun install` |
-| **vendor** | 4 | `vendor/` | **yes** — committed (ckeditor, json-view, pdfjs, xlsx) |
+| **npm** | 17 | `node_modules/` | no — `bun install` |
+| **vendor** | 6 | `vendor/` | **yes** — committed (ckeditor, json-view, lz-string, pdfjs, transformers, xlsx) |
+
+A sixth committed tree, `swagger-ui`, is not a client lib at all: it is the Swagger
+page of the v1 publication API and lives *inside* that self-contained folder
+(`publication/server_api/v1/docu/ui/swagger-ui/`) under a manifest row with an
+explicit `root` — see [Every committed third-party byte](#every-committed-third-party-byte-the-derived-census).
 
 !!! note "No install-time fetch step, deliberately"
     An earlier design downloaded pdf.js from its GitHub release via a `postinstall`
@@ -54,8 +59,8 @@ Pinned **exactly** (no `^`). The pins were chosen by byte-comparing each file
 against the previously-vendored copy: **18 of the 20 files the client loads are
 byte-identical** to what shipped before this migration.
 
-All 20, re-measured against `package.json` and `vendor/vendor_manifest.json` on
-2026-08-28.
+All 23, re-measured against `package.json` and `vendor/vendor_manifest.json` on
+2026-09-04.
 
 | id | Package | Version | Notes |
 |---|---|---|---|
@@ -74,18 +79,22 @@ All 20, re-measured against `package.json` and `vendor/vendor_manifest.json` on
 | split | `split.js` | 1.6.5 | Used by `tool_indexation`. |
 | iro | `@jaames/iro` | 5.5.2 | |
 | codex-tooltip | `codex-tooltip` | 1.0.6 | |
-| transformers | `@huggingface/transformers` | 4.2.0 | Runs the RAG/identify models in the browser. |
-| onnxruntime | `onnxruntime-web` | 1.27.0 | Transformers.js's WASM runtime, pinned explicitly — see the registry's `reason`. |
+| transformers | *(vendor)* | 4.2.0 | The in-browser AI runtime (`tool_transcription`, `tool_lang`, the remove-background processor). **Vendored 2026-09-04** — was the `@huggingface/transformers` npm pin, which no engine module imported and which shipped 567 MB of native Node code to every install. See below. |
+| qrcode | `easyqrcodejs` | 4.6.2 | `tool_qr`. **Pinned 2026-09-04** — was a 4.6.1 copy committed under `tools/tool_qr/lib/` with no digest. |
+| client-zip | `client-zip` | 2.5.0 | `tool_export`'s streaming ZIP download. **Pinned 2026-09-04** — was a byte-identical copy under `tools/tool_export/js/lib/`. |
+| lz-string | *(vendor)* | 1.5.0 | URL-state compression (`tool_common`, `component_text_area`). UMD-only upstream; committed with one declared patch. See below. |
+| onnxruntime | `onnxruntime-web` | 1.29.0 | Transformers.js's WASM runtime; since the bundle is vendored this is the only `onnxruntime-web` the lockfile holds — see the registry's `reason`. |
 | json-view | *(vendor)* | — | The bundle carries no version string at all. See below. |
+| swagger-ui | *(vendor)* | 5.32.14 | Not a client lib: the v1 publication API's Swagger page, rooted inside that folder. **Bumped 2026-09-04** from 4.5.2. See below. |
 | mocha | `mocha` | 11.8.0 | **devDependency** — client test harness. |
 | chai | `chai` | 6.2.2 | **devDependency** — client test harness. |
 
 !!! warning "This table is prose, and prose rots"
     Eight of these rows were stale when they were re-measured on 2026-08-28 — the
-    npm pins had moved under them with nothing to notice. The **four vendored rows
+    npm pins had moved under them with nothing to notice. The **vendored rows
     are gated** (`test/unit/vendor_advisory_tripwire.test.ts` asserts this table
     against `vendor/vendor_manifest.json`, which is in turn bound to the bytes); the
-    16 npm rows are not, and `package.json` remains the only authority for them.
+    npm rows are not, and `package.json` remains the only authority for them.
 
 Two files are not byte-identical to the old copies, both benignly: `highlightjs`
 differs by the build hash in its banner (same 11.9.0 release), and the old `chai`
@@ -139,7 +148,7 @@ Verified as a drop-in in a **real browser**, not by inspection:
 
 The import path moved from `lib/svgedit/svgcanvas.js` to `lib/svgedit/dist/svgcanvas.js`.
 
-## The four that cannot come from npm
+## The trees that cannot come from npm
 
 Each carries its `reason` in the registry, next to the code, not only here.
 
@@ -192,6 +201,39 @@ Each carries its `reason` in the registry, next to the code, not only here.
 - **json-view** — `pgrabovets/json-view` is distributed via GitHub/jsDelivr only and
   was never published to npm. It is 16 KB, so it is simply committed.
 
+- **lz-string** — on npm, but **UMD only**: `libs/lz-string.js` declares a top-level
+  `var LZString` and exports through `define`/`module`/`angular`; no release up to
+  1.5.0 has an ESM entry. A classic `<script>` would make it a global; an ES module
+  import cannot reach a module-scoped `var`, and this client is all modules — so the
+  registry copy is unusable *as served*. Committed 2026-09-04 from the npm 1.5.0
+  archive (sha256 recorded) with **one declared patch**, `var LZString =` →
+  `export const LZString =` plus the UMD tail removed, stated in the manifest row and
+  covered by its tree digest. Until then a 1.4.5 copy with the same patch lived at
+  `client/dedalo/core/common/js/utils/lzstring.js`, outside every gate.
+
+- **swagger-ui** — on npm as `swagger-ui-dist`, but it must sit *inside* the v1
+  publication API, a self-contained web-server-served folder with no `node_modules` and no
+  engine to serve `/dedalo/lib/`. Its manifest row carries an explicit **`root`**
+  (`publication/server_api/v1/docu/ui/swagger-ui`). Bumped 2026-09-04 from a 4.5.2
+  drop (2022, built from a dirty tree, 16 MB with every map and es bundle) to
+  5.32.14, trimmed to the two bundles, the stylesheet, the favicons and the licence
+  texts.
+
+- **transformers** — on npm as `@huggingface/transformers`, and the registry package
+  is a *Node-side* bundle first: its `dependencies` pull `onnxruntime-node` (211 MB of
+  native binaries, unpacked at install by `adm-zip`) and `sharp`/`@img` (16 MB of
+  libvips) into every `bun install --production` of every installation and every
+  code-update quarantine — while no engine module imports the package at all. The
+  only consumer is the browser, and the only file it loads is `dist/transformers.js`,
+  a self-contained esbuild bundle that fetches its WASM glue from the `onnxruntime`
+  row. That never-executed native closure was also the only path to two of the three
+  HIGH advisories the dependency baseline accepted (`adm-zip`, `sharp`). Committed
+  2026-09-04 from the npm 4.2.0 archive (sha256 recorded; its sha512 equals the
+  registry's published `integrity`), byte-identical to the lockfile install it
+  replaces, trimmed to `dist/transformers.js` + the Apache-2.0 LICENSE.
+  `test/unit/production_import_tripwire.test.ts` is what keeps a never-imported
+  production dependency from coming back.
+
 - **xlsx** — SheetJS **left the npm registry** (npm's `xlsx` is abandoned at
   0.18.5), so the dep used to be pinned to *their* tarball URL,
   `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`. That looked lockfile-pinned
@@ -203,6 +245,49 @@ Each carries its `reason` in the registry, next to the code, not only here.
   Committed 2026-08-24 from the installed 0.20.3 tree, byte-verified against a fresh
   download of the upstream `.tgz` (archive sha256 `8dc73fc3…`), trimmed to
   `xlsx.mjs` — the only file the client loads — plus the LICENSE.
+
+## Every committed third-party byte: the derived census
+
+Until 2026-09-04 the committed arm of `dependency_integrity_tripwire` was
+`vendor/` ↔ `vendor_manifest.json` — a directory, not a question. Seven third-party
+files were committed elsewhere and outside every axis above: a byte-identical
+`@huggingface/transformers` dist and two EasyQRCodeJS copies under `tools/`,
+`client-zip` under `tools/`, `lz-string` and a dead `findAndReplaceDOMText` UMD
+under `client/`, and the swagger-ui drop under `publication/`. Three became
+`package.json` pins, two became rows, two were deleted.
+
+What stops it recurring is `scripts/lib/third_party_census.ts`: every git-tracked
+`.js`/`.mjs`/`.cjs`/`.css`/`.less` under `client/`, `deploy/`, `install/`,
+`publication/`, `tools/` and `vendor/` is read — and every tracked **model
+artifact** there (`.onnx`, `.safetensors`, `.wasm`…, a `tokenizer.json`-style
+model-card file, a `config.json` with a `model_type`), because code is not the only
+third-party byte: the review of this closure found 20 MB of a TranslateGemma
+tokenizer committed under `tools/tool_lang/`, now gone — a model lives in the
+install's [model store](../tools/using_transcription.md), never in the code tree —
+and a file that wears a third-party
+**signature** (a `.min`/`-min` name, a line over 1000 characters, a `/*!` banner, a
+`sourceMappingURL` pointer, a copyright notice naming someone other than Dédalo,
+or being a model artifact at all)
+and no first-party **marker** (the AGPL LibreJS tag, or a `.css` built from a
+sibling `.less`) must lie under a manifest row's root — `vendor/<id>` or the row's
+explicit `root` — or be one of a short, shrink-only list of enumerated exemptions,
+each with its reason and licence written next to it (normalize.css inlined in
+`reset.less`; the `reference` plugin's CKSource-scaffolded source). The gate also
+requires every manifest root to contain at least one census hit, so the signatures
+cannot silently stop seeing bundles.
+
+A row may carry a `root` only for a tree that must live inside another
+self-contained subsystem; the root must be a tracked directory outside `vendor/` and
+`node_modules`, and the row's note must say why. The complement law over `vendor/`
+is unchanged: its directories equal the rows *without* a root.
+
+**Licence.** Every row also carries `licence: { spdx, file }` — an id from the closed
+set in `scripts/vendor_verify.ts` (MIT, ISC, BSD, Apache-2.0, the GPL/LGPL family,
+MPL-2.0 — all compatible with this project's AGPL-3.0-only) and a licence text
+*inside* the tree that must exist and read as that licence. Four trees shipped with
+no licence text before this; ckeditor (GPL-2.0-or-later) and json-view (MIT) now
+carry the upstream files. The four `package.json` manifests declare
+`"license": "AGPL-3.0-only"`, gated equal.
 
 ## Integrity: the manifest, and why vendored code needs one
 
@@ -223,7 +308,7 @@ added or removed.
 | `bun run scripts/vendor_verify.ts` | Recompute every tree digest and compare. |
 | `bun run scripts/vendor_verify.ts --write` | Rewrite the derived fields (digest, file count) after a deliberate bump. **Refuses** when a row's declared version is not evidenced in its own bytes. |
 | `bun run scripts/ci/audit.ts [--require-network]` | Integrity, then the offline advisory/review arm, then the networked one. |
-| `bun run scripts/vendor_fetch.ts --lib <id> --version <v> --url <archive> --sha256 <expected>` | Download a bump and **refuse** unless the archive's sha256 is the stated one. |
+| `bun run scripts/vendor_fetch.ts --lib <id> --version <v> --url <archive> --sha256 <expected>` | Download a bump and **refuse** unless the archive's sha256 is the stated one. Lands under the row's `root` when it has one. |
 
 Where it runs: `test/unit/dependency_integrity_tripwire.test.ts` and
 `test/unit/vendor_advisory_tripwire.test.ts` (every `bun test`) and

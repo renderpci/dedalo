@@ -79,9 +79,9 @@ server_config_api.php
 # `css_build_tripwire` therefore checks maps FRESHLY BUILT (relative + resolvable
 # sources), not on disk; `css:check` compares only the .css bytes.
 *.css.map
-# ...except the vendored swagger-ui bundle under publication/, which we ship verbatim
-# and never build.
-!publication/server_api/v1/docu/ui/*.map
+# (The swagger-ui maps under publication/ used to be un-ignored here. Since P2-5-residue
+# the trimmed swagger-ui-dist tree ships NO maps — vendor/vendor_manifest.json row
+# "swagger-ui" — so there is nothing to un-ignore.)
 
 # Logs and changelog
 *.log

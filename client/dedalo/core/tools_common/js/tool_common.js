@@ -54,7 +54,7 @@
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
-	import {LZString as lzstring} from '../../../core/common/js/utils/lzstring.js'
+	import {LZString as lzstring} from '/dedalo/lib/lz-string/lz-string.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {response_data} from '../../../core/common/js/api_error.js'
 	import {

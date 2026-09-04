@@ -19,16 +19,27 @@
  * and only for model ids the CALLER has already validated against the catalog —
  * this module never invents a URL from user input on its own.
  *
+ * PINNED AND VERIFIED (2026-09-04, P1-25 / CARRY-06). A file is fetched at the
+ * IMMUTABLE hub revision recorded in `model_pins.json` — never the mutable
+ * `main` head — and after transport its bytes are sha256-hashed against the pin
+ * BEFORE the manifest records completion. A mismatch is quarantined under
+ * `<store>/.quarantine` (evidence kept, file never served) and reported as a
+ * refusal; a model with no pin is refused before any byte, because a download
+ * the engine cannot verify is a download it must not make. The transport's
+ * `-C -` resume is exactly why the length test was never enough: a resumed file
+ * can carry the head of one object and the tail of another at the right length.
+ *
  * The DECISIONS live in three pure exports — `resolveFetchTarget` (path
  * confinement + URL policy), `curlArgv` (transport flags) and
  * `isUsableCachedFile` (cache freshness) — gated by
  * `test/unit/ai_model_fetch_native.test.ts`. What remains is byte plumbing,
- * split one concern per function (`acceptCached` / `recordIfComplete` for the
- * manifest bookkeeping, `curlFetch` / `plainFetch` — over `idleAbort` /
+ * split one concern per function (`acceptCached` / `verifyAndRecord` for the
+ * digest verdict and manifest bookkeeping, `curlFetch` / `plainFetch` — over `idleAbort` /
  * `streamToFile` / `pumpToWriter` — and `transport` for the wire),
- * so `fetchOneFile` reads as the six-line sequence it is. That plumbing is NOT
- * gated: it needs the network. The orchestration in `downloadModel` is drivable
- * through the injectable `options.fetchFile`.
+ * so `fetchOneFile` reads as the six-line sequence it is. The whole path —
+ * transport included — is driven against a LOOPBACK hub by
+ * `test/unit/model_artifact_integrity_native.test.ts`; the orchestration in
+ * `downloadModel` is also drivable through the injectable `options.fetchFile`.
  */
 
 import { existsSync, mkdirSync, rmSync, statSync } from 'node:fs';
@@ -41,7 +52,9 @@ function isSafeModelSegment(value: string): boolean {
 	return value !== '' && SAFE_MODEL_SEGMENT.test(value) && !value.split('/').includes('..');
 }
 
-import { expectedSize, recordFileComplete } from './model_manifest.ts';
+import { forgetVerdict, quarantineFile, verifiedDigest } from './model_integrity.ts';
+import { expectedDigest, forgetFile, recordFileComplete } from './model_manifest.ts';
+import { type FilePin, type PinTable, pinFor, pinnedRevision, REVISION_HEX } from './model_pins.ts';
 import { type ModelKind, modelFiles, modelStoreRoot } from './model_store.ts';
 
 /** Where model files are fetched from when a download is requested. */
@@ -71,26 +84,49 @@ export const OPTIONAL_FILES: readonly string[] = [
 export const DIARIZATION_COMMON_FILES: readonly string[] = ['preprocessor_config.json'];
 
 /**
- * Resolve where one model file lands on disk and where it comes from, or null
- * when the request is refused.
+ * Where one model file lands on disk, or null when the request is refused.
  *
  * MODEL-01 (2026-07-28 audit): modelId/file flow into BOTH the hub URL and the
  * on-disk path (join(store, modelId, file)). Reject traversal / URL-breaking
  * segments so a crafted id cannot write outside the store or rewrite the fetch
- * target, and confirm the resolved path stays under the store. (HUB_BASE is a
- * pinned https:// constant. A full content checksum needs a per-file hash
- * manifest, which the hub does not ship here — tracked separately.)
+ * target, and confirm the resolved path stays under the store.
+ */
+export function resolveStoreTarget(modelId: string, file: string, store: string): string | null {
+	if (!isSafeModelSegment(modelId) || !isSafeModelSegment(file)) return null;
+	const target = join(store, modelId, file);
+	const storeRoot = resolve(store);
+	if (!resolve(target).startsWith(storeRoot + sep)) return null;
+	return target;
+}
+
+/** Where a file is fetched FROM: the immutable revision, and (test seam) which hub. */
+export interface FetchSource {
+	/** A 40-hex hub commit sha. Anything else — `main` included — is refused. */
+	revision: string;
+	/** Defaults to HUB_BASE; a gate points it at a loopback fixture hub. */
+	hubBase?: string;
+}
+
+/**
+ * Resolve where one model file lands on disk AND where it comes from, or null
+ * when the request is refused. The URL names the pinned REVISION, never a
+ * branch: `…/resolve/<sha>/<file>` is content-addressed by the hub, so the
+ * bytes a revision answers cannot move underneath an install. (CARRY-06: the
+ * previous `/resolve/main/` fetched whatever the mutable head pointed at that
+ * day, and the comment beside it claiming the hub ships no per-file hash was
+ * measurably false.)
  */
 export function resolveFetchTarget(
 	modelId: string,
 	file: string,
 	store: string,
+	source: FetchSource,
 ): { target: string; url: string } | null {
-	if (!isSafeModelSegment(modelId) || !isSafeModelSegment(file)) return null;
-	const target = join(store, modelId, file);
-	const storeRoot = resolve(store);
-	if (!resolve(target).startsWith(storeRoot + sep)) return null;
-	return { target, url: `${HUB_BASE}/${modelId}/resolve/main/${file}` };
+	const target = resolveStoreTarget(modelId, file, store);
+	if (target === null) return null;
+	if (!REVISION_HEX.test(source.revision)) return null;
+	const hubBase = source.hubBase ?? HUB_BASE;
+	return { target, url: `${hubBase}/${modelId}/resolve/${source.revision}/${file}` };
 }
 
 /**
@@ -112,15 +148,6 @@ export function isUsableCachedFile(target: string, expected?: number | null): bo
 }
 
 /**
- * How long a HEAD probe waits before giving up. `verify_model` runs this
- * INLINE on the request path (unlike `downloadModel`, which is a detached
- * background job) — behind a drop-all firewall a bare `fetch` with no timeout
- * never resolves, and an admin's click hangs forever instead of getting the
- * clean "could not learn it" this function already promises.
- */
-const HEAD_TIMEOUT_MS = 10_000;
-
-/**
  * How long a download may produce NOTHING before it is abandoned.
  *
  * Deliberately an idle bound rather than a total one: weights are gigabytes and a
@@ -129,30 +156,6 @@ const HEAD_TIMEOUT_MS = 10_000;
  * to last, because the lane it occupies is one of three the whole engine shares.
  */
 const DOWNLOAD_IDLE_TIMEOUT_MS = 120_000;
-
-/**
- * The hub's byte length for one file, or null when it cannot be learnt (offline,
- * blocked, a timeout, or a hub that does not answer HEAD). Null is not a
- * failure: it drops the caller back to the size-agnostic cache test.
- */
-export async function headContentLength(url: string): Promise<number | null> {
-	try {
-		const response = await fetch(url, {
-			method: 'HEAD',
-			redirect: 'follow',
-			signal: AbortSignal.timeout(HEAD_TIMEOUT_MS),
-		});
-		if (!response.ok) return null;
-		// The hub serves LFS weights through a CDN redirect; x-linked-size is the
-		// real object length when Content-Length describes the pointer.
-		const linked = response.headers.get('x-linked-size');
-		const length = linked ?? response.headers.get('content-length');
-		const parsed = Number(length);
-		return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-	} catch {
-		return null;
-	}
-}
 
 /**
  * The curl transport invocation.
@@ -186,13 +189,31 @@ export function curlArgv(target: string, url: string, quiet: boolean): string[] 
 	];
 }
 
-/** Fetch one file into the store; false = not obtained. */
+/**
+ * What one file is EXPECTED to be: the revision it is fetched at, the digest
+ * and size it must hash to. Built by downloadModel from the pin table, so a
+ * transport never decides for itself what it is allowed to accept.
+ */
+export interface FileExpectation {
+	revision: string;
+	hubBase: string;
+	pin: FilePin;
+}
+
+/**
+ * Fetch one file into the store. `true` = on disk and verified; `false` = not
+ * obtained (absent upstream, transport failure); `'refused'` = obtained and
+ * REJECTED on integrity grounds (quarantined) — a distinct answer, because the
+ * remedy differs and the report must name the cause.
+ */
+export type FetchOutcome = boolean | 'refused';
 export type FetchFile = (
 	modelId: string,
 	file: string,
 	store: string,
 	quiet: boolean,
-) => Promise<boolean>;
+	expect: FileExpectation,
+) => Promise<FetchOutcome>;
 
 export interface DownloadOptions {
 	/** Target store root; defaults to the configured one. */
@@ -227,6 +248,13 @@ export interface DownloadOptions {
 	/** Transport seam: defaults to the real curl/fetch implementation. Injected
 	 * by tests so the orchestration is drivable without the network. */
 	fetchFile?: FetchFile;
+	/**
+	 * TEST SEAMS, never configuration: the pin table (defaults to the repo's
+	 * `model_pins.json`) and the hub base URL (defaults to HUB_BASE). A gate pins
+	 * a fixture model against a loopback hub; production never passes either.
+	 */
+	pins?: PinTable;
+	hubBase?: string;
 }
 
 export interface DownloadReport {
@@ -236,6 +264,13 @@ export interface DownloadReport {
 	/** Optional files the model does not publish (informational). */
 	skipped: string[];
 	errors: string[];
+	/**
+	 * INTEGRITY refusals — a subset of `errors`, kept apart so a caller can name
+	 * the cause (`ai.model_integrity`) instead of a generic failure: a model with
+	 * no revision pin, a required file with no digest pin, or bytes that did not
+	 * hash to the pin (quarantined).
+	 */
+	refused: string[];
 }
 
 /** Whether curl is on PATH (checked once per process). */
@@ -269,23 +304,43 @@ interface FileRef {
 }
 
 /**
- * The already-on-disk answer. When a cached file proves complete against a size
- * the manifest did not yet hold, the manifest learns it here — that is how a
- * store seeded before the manifest existed becomes verifiable without a re-download.
+ * The verdict on the file that is on disk NOW, against its pin: hash the bytes
+ * (once — `verifiedDigest` caches by stat identity), and on a MATCH record size,
+ * digest and revision in the manifest. On a MISMATCH the file is quarantined and
+ * the manifest forgets it, so nothing downstream can mistake it for complete.
+ *
+ * Serves both the cached path (a store seeded before pins existed becomes
+ * verified without a re-download) and the post-transport path.
  */
-function acceptCached(ref: FileRef, expected: number | null, recorded: number | null): boolean {
-	if (!isUsableCachedFile(ref.target, expected)) return false;
-	if (expected !== null && recorded === null) {
-		recordFileComplete(ref.store, ref.modelId, ref.file, expected);
+async function verifyAndRecord(ref: FileRef, expect: FileExpectation): Promise<FetchOutcome> {
+	if (!existsSync(ref.target)) return false;
+	const size = statSync(ref.target).size;
+	// Shorter than the pin is a PARTIAL (the transport resumes it next time);
+	// longer can never be, and a resume would only append to the wrong object.
+	if (size < expect.pin.size) return false;
+	const actual = size === expect.pin.size ? await verifiedDigest(ref.target) : null;
+	if (actual !== expect.pin.sha256) {
+		quarantineFile(ref.store, `${ref.modelId}/${ref.file}`);
+		forgetFile(ref.store, ref.modelId, ref.file);
+		return 'refused';
 	}
+	recordFileComplete(ref.store, ref.modelId, ref.file, expect.pin.size, {
+		sha256: expect.pin.sha256,
+		revision: expect.revision,
+	});
 	return true;
 }
 
-/** Post-transport verdict: complete on disk ⇒ record the actual size and accept. */
-function recordIfComplete(ref: FileRef, expected: number | null): boolean {
-	if (!isUsableCachedFile(ref.target, expected)) return false;
-	recordFileComplete(ref.store, ref.modelId, ref.file, statSync(ref.target).size);
-	return true;
+/**
+ * The already-on-disk answer: a file whose manifest entry ALREADY carries the
+ * pinned digest at the pinned size is accepted without re-hashing (the serving
+ * door re-checks anyway); any other present file is hashed against the pin.
+ */
+async function acceptCached(ref: FileRef, expect: FileExpectation): Promise<FetchOutcome> {
+	if (!isUsableCachedFile(ref.target, expect.pin.size)) return verifyAndRecord(ref, expect);
+	const recorded = expectedDigest(ref.store, ref.modelId, ref.file);
+	if (recorded === expect.pin.sha256) return true;
+	return verifyAndRecord(ref, expect);
 }
 
 /**
@@ -468,31 +523,33 @@ export function transport(target: string, url: string, quiet: boolean): Promise<
 }
 
 /**
- * Download one file into the store unless it is already there, complete.
- * Returns false when the file is absent upstream (the caller decides whether
- * that is fatal — it is not for OPTIONAL_FILES).
+ * Download one file into the store unless it is already there, complete AND
+ * matching its pin. Returns false when the file is absent upstream or its
+ * bytes fail the digest (the caller decides whether absence is fatal — it is
+ * not for OPTIONAL_FILES; a digest failure always is, and is quarantined).
  */
 async function fetchOneFile(
 	modelId: string,
 	file: string,
 	store: string,
 	quiet: boolean,
-): Promise<boolean> {
-	const resolved = resolveFetchTarget(modelId, file, store);
+	expect: FileExpectation,
+): Promise<FetchOutcome> {
+	const resolved = resolveFetchTarget(modelId, file, store, expect);
 	if (resolved === null) return false;
 	const { target, url } = resolved;
 	const ref: FileRef = { store, modelId, file, target };
 
-	// What SHOULD be on disk: the manifest first (no network), the hub second.
-	// Without either, the cache test stays size-agnostic — see isUsableCachedFile.
-	const recorded = expectedSize(store, modelId, file);
-	const expected = recorded ?? (await headContentLength(url));
-
-	if (acceptCached(ref, expected, recorded)) return true;
+	// A cached file that FAILS its digest is quarantined and then re-fetched:
+	// that is a repair, and the fresh bytes get their own verdict below.
+	if ((await acceptCached(ref, expect)) === true) return true;
 
 	mkdirSync(dirname(target), { recursive: true });
+	// The transport may have resumed into a stale partial: forget any verdict
+	// cached for the old bytes before the post-transport hash.
+	forgetVerdict(target);
 	if (!(await transport(target, url, quiet))) return false;
-	return recordIfComplete(ref, expected);
+	return verifyAndRecord(ref, expect);
 }
 
 /** Every default `DownloadOptions` leaves open, resolved once. */
@@ -504,6 +561,8 @@ interface DownloadPlan {
 	/** Of those, the ones a 404 may not fail. */
 	optional: readonly string[];
 	fetchFile: FetchFile;
+	pins: PinTable | undefined;
+	hubBase: string;
 }
 
 /**
@@ -531,20 +590,28 @@ function planDownload(
 		wanted: wantedFiles(dtype, options),
 		optional: options.optionalFiles ?? OPTIONAL_FILES,
 		fetchFile: options.fetchFile ?? fetchOneFile,
+		pins: options.pins,
+		hubBase: options.hubBase ?? HUB_BASE,
 	};
 }
 
 /**
- * Record one obtained file at its ACTUAL on-disk size. fetchOneFile already does
- * this on its own path; an injected transport (tests, or a future non-curl
- * transport) still needs the manifest to end up correct, so the recording lives
- * here too — recordFileComplete is idempotent.
+ * The integrity verdict on one obtained file, INDEPENDENT of the transport.
+ * fetchOneFile already verifies and records on its own path (its manifest entry
+ * then carries the pinned digest, so this re-check costs a manifest read, not a
+ * second hash); an injected transport (tests, or a future non-curl transport)
+ * is held to the same pin here, so no transport can hand the store unverified
+ * bytes. False = refused (quarantined, manifest forgotten).
  */
-function recordObtained(store: string, modelId: string, file: string): void {
-	const resolved = resolveFetchTarget(modelId, file, store);
-	if (resolved !== null && existsSync(resolved.target)) {
-		recordFileComplete(store, modelId, file, statSync(resolved.target).size);
-	}
+async function verifyObtained(
+	store: string,
+	modelId: string,
+	file: string,
+	expect: FileExpectation,
+): Promise<FetchOutcome> {
+	const target = resolveStoreTarget(modelId, file, store);
+	if (target === null || !existsSync(target)) return true; // nothing landed; the transport's own verdict stands
+	return acceptCached({ store, modelId, file, target }, expect);
 }
 
 /**
@@ -569,32 +636,94 @@ export async function downloadModel(
 	dtype: Record<string, string> | undefined,
 	options: DownloadOptions = {},
 ): Promise<DownloadReport> {
-	const { store, quiet, wanted, optional, fetchFile } = planDownload(dtype, options);
-	const report: DownloadReport = { ok: false, files: [], skipped: [], errors: [] };
+	const plan = planDownload(dtype, options);
+	const report: DownloadReport = { ok: false, files: [], skipped: [], errors: [], refused: [] };
 
-	mkdirSync(store, { recursive: true });
-
-	let gotWeights = false;
-	for (const file of wanted) {
-		options.onFile?.(file);
-		const ok = await fetchFile(modelId, file, store, quiet);
-		if (ok) {
-			recordObtained(store, modelId, file);
-			report.files.push(file);
-			if (file.endsWith('.onnx')) gotWeights = true;
-			continue;
-		}
-		if (optional.includes(file)) {
-			report.skipped.push(file);
-			continue;
-		}
-		report.errors.push(`${file}: download failed from ${HUB_BASE}/${modelId}`);
+	// NO PIN, NO BYTE. The hub's `main` is a mutable head; without an immutable
+	// revision and per-file digests there is nothing to verify a download
+	// against, so the engine does not make it (the operator pins the model with
+	// scripts/pin_ai_models.ts, or seeds the store by rsync and owns the bytes).
+	const revision = pinnedRevision(modelId, plan.pins);
+	if (revision === null) {
+		refuse(
+			report,
+			`${modelId}: no revision pin in model_pins.json — refusing to fetch from a mutable hub head`,
+		);
+		return report;
 	}
 
-	if (weightsMissing(wanted, gotWeights)) {
+	mkdirSync(plan.store, { recursive: true });
+
+	for (const file of plan.wanted) {
+		options.onFile?.(file);
+		await obtainOne(modelId, file, revision, plan, report);
+	}
+
+	if (
+		weightsMissing(
+			plan.wanted,
+			report.files.some((file) => file.endsWith('.onnx')),
+		)
+	) {
 		report.errors.push(`${modelId}: no ONNX weights were obtained`);
 	}
 
 	report.ok = report.errors.length === 0;
 	return report;
+}
+
+/** An integrity refusal is an error that also names its cause. */
+function refuse(report: DownloadReport, why: string): void {
+	report.refused.push(why);
+	report.errors.push(why);
+}
+
+/**
+ * One file, start to finish: pin lookup, transport, the integrity verdict, and
+ * the report line it earns. A file is either obtained AND verified, skipped
+ * (optional, unpublished or unpinned), refused (integrity) or failed (transport).
+ */
+async function obtainOne(
+	modelId: string,
+	file: string,
+	revision: string,
+	plan: DownloadPlan,
+	report: DownloadReport,
+): Promise<void> {
+	const pin = pinFor(modelId, file, plan.pins);
+	if (pin === null) {
+		// The pin generator records every wanted file the repository PUBLISHES
+		// at the revision; an optional file without a pin is one it does not.
+		if (plan.optional.includes(file)) report.skipped.push(file);
+		else
+			refuse(
+				report,
+				`${file}: no digest pin for ${modelId} — refusing to fetch an unverifiable file`,
+			);
+		return;
+	}
+	const expect: FileExpectation = { revision, hubBase: plan.hubBase, pin };
+	const outcome = await plan.fetchFile(modelId, file, plan.store, plan.quiet, expect);
+	const verdict =
+		outcome === true ? await verifyObtained(plan.store, modelId, file, expect) : outcome;
+	recordVerdict(modelId, file, verdict, plan, report);
+}
+
+/** The report line one file's verdict earns. */
+function recordVerdict(
+	modelId: string,
+	file: string,
+	verdict: FetchOutcome,
+	plan: DownloadPlan,
+	report: DownloadReport,
+): void {
+	if (verdict === 'refused') {
+		refuse(report, `${file}: bytes do not match the pinned sha256 for ${modelId} — quarantined`);
+	} else if (verdict === true) {
+		report.files.push(file);
+	} else if (plan.optional.includes(file)) {
+		report.skipped.push(file);
+	} else {
+		report.errors.push(`${file}: download failed from ${plan.hubBase}/${modelId}`);
+	}
 }

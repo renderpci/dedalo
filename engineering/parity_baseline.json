@@ -275,7 +275,7 @@
 		"test/parity/dedalo_files_differential.test.ts": {
 			"tests": 7,
 			"skipped": 0,
-			"assertions": 2058
+			"assertions": 2055
 		},
 		"test/parity/default_ddo_map_differential.test.ts": {
 			"tests": 3,

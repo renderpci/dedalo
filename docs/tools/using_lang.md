@@ -43,7 +43,7 @@ The translator is attached to individual **text fields**, not to the section as 
 | Automatic translation | Runs the selected engine and fills the target. |
 | Copy to target | Copies the source value into the target verbatim (no translation). |
 
-Which engines appear, and whether machine translation is available at all, depends on how your installation is configured. A server engine needs its service address and key set up by an administrator; the "Local AI translator" downloads and runs a model in your browser the first time you use it.
+Which engines appear, and whether machine translation is available at all, depends on how your installation is configured. A server engine needs its service address and key set up by an administrator; the "Local AI translator" loads its model into your browser the first time you use it — from **your own installation's model store**, never from an internet service, so it works in an archive with no outside connection. An administrator seeds the store with the model (`onnx-community/translategemma-text-4b-it-ONNX`) the same way as the [transcription models](using_transcription.md): from a machine with internet with `scripts/fetch_ai_models.ts`, or by copying the model folder in. Until it is seeded the engine reports that the model is not installed.
 
 ## Tips and gotchas
 

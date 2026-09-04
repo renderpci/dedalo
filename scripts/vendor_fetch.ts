@@ -37,6 +37,14 @@
  *       --url https://github.com/mozilla/pdf.js/releases/download/v6.2.108/pdfjs-6.2.108-dist.zip \
  *       --sha256 <expected> --drop '**\/*.map' --drop 'web/compressed.tracemonkey-pldi-09.pdf'
  *
+ *   bun run scripts/vendor_fetch.ts --lib swagger-ui --version 5.32.14 \
+ *       --url https://registry.npmjs.org/swagger-ui-dist/-/swagger-ui-dist-5.32.14.tgz \
+ *       --sha256 <expected> --keep swagger-ui-bundle.js … --keep LICENSE
+ *       (its manifest row carries an explicit `root`, so the tree lands THERE —
+ *       publication/server_api/v1/docu/ui/swagger-ui — not under vendor/; the row
+ *       must already exist, because the root is the row's declaration, never the
+ *       fetcher's guess.)
+ *
  * Supported archives: .tgz/.tar.gz and .zip (extracted with the system `tar`/`unzip`
  * — no in-repo archive parser, which is machinery this needs once per year).
  */
@@ -45,11 +53,13 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+	libRootAbsolute,
+	libRootRelative,
 	listTreeFiles,
-	listVendorDirs,
+	MANIFEST_PATH,
 	REPO_ROOT,
+	readManifest,
 	treeDigest,
-	VENDOR_ROOT,
 } from './vendor_verify.ts';
 
 /** `--flag value` / `--flag=value`; `--keep` and `--drop` may repeat. */
@@ -113,6 +123,17 @@ if (lib === '' || version === '' || url === '') {
 }
 if (!/^[a-z0-9][a-z0-9._-]*$/.test(lib)) fail(`--lib "${lib}" is not a plain directory name.`);
 if (!url.startsWith('https://')) fail('--url must be https:// — an archive is code we will serve.');
+
+// WHERE THE TREE LANDS is the manifest row's decision: `vendor/<lib>/` by default, or
+// the row's explicit `root` for a tree that must live inside another self-contained
+// subsystem. A first-time lib has no row yet and lands under vendor/ — a row with a
+// `root` is written BEFORE its first fetch, because the root is a declaration the
+// verifier checks (tracked, outside vendor/ and node_modules), not a path to guess.
+const existingRow = existsSync(MANIFEST_PATH) ? readManifest().libs[lib] : undefined;
+const targetRelative = libRootRelative(lib, existingRow ?? {});
+const target =
+	existingRow === undefined ? join(REPO_ROOT, targetRelative) : libRootAbsolute(lib, existingRow);
+const replacing = existsSync(target);
 
 // The download is a temporary file OUTSIDE vendor/, so a refused fetch can never
 // leave a half-extracted tree where the verifier expects a vendored lib.
@@ -194,20 +215,19 @@ if (drop.length > 0) {
 	console.log(`   dropped ${removed} files matching ${drop.join(', ')}`);
 }
 
-const target = join(VENDOR_ROOT, lib);
-const replacing = listVendorDirs().includes(lib);
 rmSync(target, { recursive: true, force: true });
 renameSync(staged, target);
 rmSync(workRoot, { recursive: true, force: true });
 
 const { digest, files } = treeDigest(target);
 console.log(
-	`\n== vendor_fetch: ${replacing ? 'REPLACED' : 'CREATED'} vendor/${lib}/ — ${files} files\n` +
+	`\n== vendor_fetch: ${replacing ? 'REPLACED' : 'CREATED'} ${targetRelative}/ — ${files} files\n` +
 		`   tree_sha256 ${digest}\n\n` +
 		'Now, by hand (these are curated fields, not derived ones):\n' +
 		`   1. vendor/vendor_manifest.json → "${lib}": version "${version}", upstream "${url}",\n` +
 		`      archive_sha256 "${actual}", reviewed "${new Date().toISOString().slice(0, 10)}", and a\n` +
-		'      note saying what was trimmed and WHY this lib cannot come from a package manager.\n' +
+		'      note saying what was trimmed and WHY this lib cannot come from a package manager,\n' +
+		'      and a licence { spdx, file } naming the licence text INSIDE the tree.\n' +
 		'   2. bun run scripts/vendor_verify.ts --write   (fills tree_sha256 + files)\n' +
 		'   3. bun test test/unit/dependency_integrity_tripwire.test.ts test/unit/client_libs_tripwire.test.ts\n' +
 		'   4. bun run test:client, then smoke-test the component that loads it.\n' +
@@ -215,7 +235,6 @@ console.log(
 );
 
 // Read back: prove the manifest is now the thing that is stale, not the tree.
-const manifestPath = join(VENDOR_ROOT, 'vendor_manifest.json');
-if (existsSync(manifestPath) && !readFileSync(manifestPath, 'utf-8').includes(digest)) {
+if (existsSync(MANIFEST_PATH) && !readFileSync(MANIFEST_PATH, 'utf-8').includes(digest)) {
 	console.log('\n   (vendor_verify is RED until step 2 — that is the intended state.)');
 }

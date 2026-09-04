@@ -25,6 +25,25 @@
  * extensions, canonical-realpath confinement to the store root, and a plain 404
  * for everything else (never an existence leak). Nothing here is writable over
  * HTTP — seeding is an operator action, not an engine action.
+ *
+ * INTEGRITY AT THE DOOR (2026-09-04, P1-25). A file with a known digest — the
+ * repo's pin in `model_pins.json`, or the manifest's recorded sha256 — is
+ * re-verified before it is served: hashed once per process (`verifiedDigest`
+ * caches by stat identity) and, on a mismatch, QUARANTINED and answered 404.
+ * The download side verifies what arrives; this side verifies what is about
+ * to be executed in a curator's browser, so a file rewritten in the store after
+ * download (a compromised rsync, a bad disk) is caught at the last moment it
+ * can be. Nothing under `.quarantine` is ever servable. A file with no known
+ * digest (an operator's own model) is served as before — `unverified`, never
+ * refused: the store was always a folder the institution owns.
+ *
+ * The digest is looked up by the NAME THE REQUEST ASKS FOR (the store-relative
+ * path the pin and the manifest name), and the bytes hashed are whatever that
+ * name RESOLVES to. Keying the lookup on the realpath instead would let a
+ * symlink planted under a pinned name — `rsync -a` carries symlinks, and the
+ * header above says a compromised rsync is the threat — point at an unpinned
+ * file inside the store and be served under the pinned name with no check at
+ * all (refuted 2026-09-04, review of P1-25).
  */
 
 import {
@@ -36,12 +55,14 @@ import {
 	realpathSync,
 	statSync,
 } from 'node:fs';
-import { basename, extname, resolve, sep } from 'node:path';
+import { basename, extname, relative, resolve, sep } from 'node:path';
 import { privateDir } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
 import { staticAssetResponse } from '../api/static_asset.ts';
 import { DedaloError, toErrorEnvelope } from '../errors/index.ts';
-import { expectedSize, MANIFEST_FILE } from './model_manifest.ts';
+import { isQuarantinePath, quarantineFile, verifiedDigest } from './model_integrity.ts';
+import { expectedDigest, expectedSize, forgetFile, MANIFEST_FILE } from './model_manifest.ts';
+import { pinForPath } from './model_pins.ts';
 
 /** URL prefix the store is served at. */
 export const AI_MODEL_URL_PREFIX = '/dedalo/ai_models/';
@@ -468,10 +489,26 @@ export function modelHubAllowed(): boolean {
 }
 
 /**
- * Resolve `/dedalo/ai_models/<subpath>` to a confined absolute path, or null to
- * 404. Exported so a gate can assert the mapping without standing a server up.
+ * A store path a request named, resolved: the NAME it asked for (store-relative,
+ * `..` normalised — the name a pin or a manifest entry is keyed by) and the
+ * canonical file that name currently points at (the bytes that get served).
+ * The two differ exactly when a symlink sits somewhere under the requested name.
  */
-export function resolveModelPath(subPath: string): string | null {
+export interface ResolvedStorePath {
+	/** Canonical store root the path is confined to. */
+	canonicalRoot: string;
+	/** Store-relative requested name, e.g. `Xenova/whisper-small/config.json`. */
+	requested: string;
+	/** Realpath of the file the name resolves to; confined to the store. */
+	realFull: string;
+}
+
+/**
+ * Resolve `/dedalo/ai_models/<subpath>` to a confined store path, or null to
+ * 404. Both the requested name and the realpath are confined (the realpath
+ * again after following symlinks); NEITHER may sit under `.quarantine`.
+ */
+export function resolveStorePath(subPath: string): ResolvedStorePath | null {
 	// One call answers "is there a store, is it a legitimate one, and what is its
 	// canonical path" — the three questions that must all hold before anything is
 	// confined to it.
@@ -479,9 +516,7 @@ export function resolveModelPath(subPath: string): string | null {
 	if (canonicalRoot === null) return null;
 
 	const fullPath = resolve(canonicalRoot, subPath);
-	if (fullPath !== canonicalRoot && !fullPath.startsWith(canonicalRoot + sep)) {
-		return null; // traversal attempt
-	}
+	if (!withinServableStore(canonicalRoot, fullPath)) return null; // traversal attempt
 	if (!isServableFile(fullPath)) return null;
 	if (!existsSync(fullPath)) return null;
 	// MODEL-02 (2026-07-28 audit): the string check above only confines resolve()'s
@@ -495,23 +530,114 @@ export function resolveModelPath(subPath: string): string | null {
 	} catch {
 		return null;
 	}
-	if (realFull !== canonicalRoot && !realFull.startsWith(canonicalRoot + sep)) return null;
-	return realFull;
+	if (!withinServableStore(canonicalRoot, realFull)) return null;
+	return { canonicalRoot, requested: relative(canonicalRoot, fullPath), realFull };
 }
 
 /**
- * The absolute path this URL names inside the store, or null when it names
- * none — an undecodable escape sequence included, which is a refusal like any
- * other rather than a throw the route would have to catch.
+ * The confined absolute (real) path `/dedalo/ai_models/<subpath>` names, or null
+ * to 404. Exported so a gate can assert the mapping without standing a server up.
  */
-function storePathFor(pathname: string): string | null {
+export function resolveModelPath(subPath: string): string | null {
+	return resolveStorePath(subPath)?.realFull ?? null;
+}
+
+/**
+ * Confined under the canonical root AND outside `.quarantine`. Evidence of a
+ * refused artifact is kept for the operator, never served — judged on the
+ * RESOLVED path (and again on the realpath), so `a/../.quarantine/x` cannot
+ * dodge it.
+ */
+function withinServableStore(canonicalRoot: string, path: string): boolean {
+	if (path !== canonicalRoot && !path.startsWith(canonicalRoot + sep)) return false;
+	return !isQuarantinePath(relative(canonicalRoot, path));
+}
+
+/**
+ * Which model and file a store-relative path names, together with the digest
+ * the store KNOWS for it — or null when it knows none.
+ *
+ * A model id is `org/name` on the hub but the store does not fix the depth, so
+ * every split of the path is a candidate. TWO PASSES, by AUTHORITY, never by
+ * depth: first the REPO PIN at any split, only then a MANIFEST at any split.
+ * A single pass that took the first split with ANY digest let a manifest
+ * planted one directory UP (`<store>/Xenova/.dedalo_model.json` claiming
+ * `whisper-small/config.json`) answer before the repo pin of
+ * `Xenova/whisper-small` was ever consulted — and the manifest is exactly the
+ * store-writable file a compromised rsync controls (refuted 2026-09-04, review
+ * of P1-25). The pin is not store-writable; it is the authority, at every depth.
+ *
+ * The pin pass is `pinForPath`: exact name at every depth, then CASE-FOLDED —
+ * on a case-insensitive filesystem a differently-cased request names the same
+ * bytes, and those bytes carry the pin (review of P1-25, 2026-09-04).
+ *
+ * Within the manifest pass the DEEPEST split wins: a manifest vouches for the
+ * files of its OWN directory (`onnx/model.onnx` under `org/name/`), and a
+ * directory that carries its own manifest is never spoken for by an ancestor's.
+ * Honest limit: a writer who can rewrite the model's own manifest is trusted by
+ * it — the manifest was always this install's own claim, which is why the pin
+ * exists. Exported for the gate.
+ */
+export function knownDigestFor(
+	relPath: string,
+): { modelId: string; file: string; sha256: string; source: 'pin' | 'manifest' } | null {
+	const root = modelStoreRoot();
+	const segments = relPath.split(sep);
+	const pinned = pinForPath(segments.join('/'));
+	if (pinned !== null) {
+		return { modelId: pinned.modelId, file: pinned.file, sha256: pinned.pin.sha256, source: 'pin' };
+	}
+	// Deepest model directory first.
+	for (let split = segments.length - 1; split >= 1; split--) {
+		const modelId = segments.slice(0, split).join('/');
+		const file = segments.slice(split).join('/');
+		const recorded = expectedDigest(root, modelId, file);
+		if (recorded !== null) return { modelId, file, sha256: recorded, source: 'manifest' };
+	}
+	return null;
+}
+
+/**
+ * The serve-side integrity verdict: true when the file may be served. A file
+ * with a known digest that does not hash to it is quarantined (and its manifest
+ * claim dropped) so the next request 404s without re-hashing.
+ *
+ * The digest is KNOWN for the REQUESTED name and the bytes hashed are the ones
+ * that name RESOLVES to — never the other way round (see the module header: a
+ * symlink under a pinned name pointing at an unpinned store file must be judged
+ * against the pin of the name it hides behind). What gets quarantined is the
+ * requested name: for a symlink leaf that is the link itself, the evidence.
+ */
+async function servable(resolved: ResolvedStorePath): Promise<boolean> {
+	const known = knownDigestFor(resolved.requested);
+	if (known === null) return true;
+	const actual = await verifiedDigest(resolved.realFull);
+	if (actual === known.sha256) return true;
+	console.error(
+		`[ai] refusing to serve '${resolved.requested}': sha256 ${actual ?? 'unreadable'} != ${known.source} ${known.sha256}`,
+	);
+	quarantineFile(resolved.canonicalRoot, resolved.requested);
+	forgetFile(modelStoreRoot(), known.modelId, known.file);
+	return false;
+}
+
+/**
+ * The absolute path this URL names inside the store, VERIFIED, or null when it
+ * names none — an undecodable escape sequence included, which is a refusal like
+ * any other rather than a throw the route would have to catch — or names a file
+ * whose bytes fail their known digest (quarantined on the way).
+ */
+async function storePathFor(pathname: string): Promise<string | null> {
 	let decoded: string;
 	try {
 		decoded = decodeURIComponent(pathname);
 	} catch {
 		return null;
 	}
-	return resolveModelPath(decoded.slice(AI_MODEL_URL_PREFIX.length));
+	const resolved = resolveStorePath(decoded.slice(AI_MODEL_URL_PREFIX.length));
+	if (resolved === null) return null;
+	// The integrity verdict is part of "does this URL name a servable file".
+	return (await servable(resolved)) ? resolved.realFull : null;
 }
 
 /**
@@ -534,7 +660,18 @@ function storePathFor(pathname: string): string | null {
  *
  * Model files are immutable once written — a model id names an exact set of
  * weights — so they are served with a long-lived cache, which is what keeps a
- * second transcription from re-downloading a gigabyte over the LAN.
+ * second transcription from re-downloading a gigabyte over the LAN. The cache
+ * is PRIVATE (ROUTE-01 residual): `public` invites a shared or proxy cache to
+ * hand the bytes to the next caller with no session at all, re-opening the
+ * anonymous door the session gate just closed. The browser's own cache is the
+ * only one that may keep a copy.
+ *
+ * ROUTE-01 "metered" — DECISION: the engine has no rate-limit primitive, and
+ * a per-session byte meter would be a bespoke mechanism for one route. The
+ * unbounded-download exposure is closed by the session gate (an authenticated
+ * curator, revocable) + the private cache (no anonymous replay through a
+ * shared cache) + the integrity check above; per-session download metering
+ * is OUT OF SCOPE here and would be an engine-wide concern if ever needed.
  */
 export async function serveModelRequest(
 	pathname: string,
@@ -546,15 +683,15 @@ export async function serveModelRequest(
 	// store's existence or contents.
 	if (hasSession !== true) return notFound();
 
-	const fullPath = storePathFor(pathname);
+	const fullPath = await storePathFor(pathname);
 	if (fullPath === null) return notFound();
 
 	const response = await staticAssetResponse(fullPath, request);
 	if (response === null) return notFound();
 
-	// Immutable content: a model id IS its version.
+	// Immutable content: a model id IS its version — cached by THIS browser only.
 	if (response.status === 200) {
-		response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+		response.headers.set('Cache-Control', 'private, max-age=31536000, immutable');
 	}
 	return response;
 }

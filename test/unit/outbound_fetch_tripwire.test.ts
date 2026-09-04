@@ -77,8 +77,8 @@ const BOUNDED_BY: Record<string, { sites: number; how: string }> = {
 		how: 'local site_builder daemon over a unix socket',
 	},
 	'src/core/ai/model_fetch.ts': {
-		sites: 2,
-		how: 'multi-GB weights: IDLE bound on both transports, size checked against the manifest',
+		sites: 1,
+		how: 'multi-GB weights: IDLE bound on both transports, bytes hashed against the sha256 pinned in model_pins.json (size pinned too) before the manifest records them',
 	},
 	'src/core/geoip/download.ts': {
 		sites: 1,

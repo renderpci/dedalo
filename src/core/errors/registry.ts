@@ -1309,6 +1309,20 @@ export const ERROR_REGISTRY = {
 		disclosure: 'public',
 		retryable: false,
 	},
+	// A model ARTIFACT refused on integrity grounds (P1-25): no revision pin, or
+	// downloaded/stored bytes that do not hash to the pinned sha256 (quarantined
+	// under <store>/.quarantine). Operator disclosure: the message names files
+	// and digests, which an administrator needs and a cataloguer does not.
+	'ai.model_integrity': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_ai_model_integrity',
+		message: 'The model artifact failed its integrity check and was refused',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+		hint: 'Pin the model (scripts/pin_ai_models.ts) or repair it from a clean source; see the server log.',
+	},
 	// A provider/transport failure during an agent run. Its text carries config
 	// internals (env key names, upstream bodies) — never echoed; log-only cause.
 	'ai.provider_failed': {

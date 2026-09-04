@@ -1137,6 +1137,38 @@ describe('model actions are admin-gated and catalog-bound', () => {
 		}
 	});
 
+	test('verify_model judges a PINNED catalog model LOCALLY: wrong bytes → damaged + quarantined (no network)', async () => {
+		// P1-25: the catalog model has a repo pin (src/core/ai/model_pins.json), so
+		// verification is a sha256 against it — no hub HEAD, nothing leaves the box.
+		// Both files are pinned (config + the dtype's fp16 encoder) and both carry
+		// bytes that are NOT the pinned ones — a plausible header is not a verdict.
+		const scratchStore = `${ROOT}/verify_store_pinned`;
+		const modelDir = `${scratchStore}/${KNOWN_CATALOG_MODEL}`;
+		mkdirSync(`${modelDir}/onnx`, { recursive: true });
+		writeFileSync(`${modelDir}/config.json`, '{"model_type":"whisper","tampered":true}');
+		writeFileSync(`${modelDir}/onnx/encoder_model_fp16.onnx`, '\x08NOT-THE-PINNED-BYTES');
+		const prior = process.env.DEDALO_AI_MODEL_STORE;
+		process.env.DEDALO_AI_MODEL_STORE = scratchStore;
+		try {
+			const verdict = await tool.apiActions.verify_model!.handler({
+				options: { model: KNOWN_CATALOG_MODEL },
+				principal: admin,
+				userId: 1,
+			} as unknown as ToolActionContext);
+			expect(verdict.ok).toBe(true);
+			const data = verdict.data as { state: string; quarantined: string[]; unverifiable: string[] };
+			expect(data.state).toBe('damaged');
+			expect([...data.quarantined].sort()).toEqual(['config.json', 'onnx/encoder_model_fp16.onnx']);
+			expect(data.unverifiable).toEqual([]);
+			expect(existsSync(`${modelDir}/config.json`)).toBe(false);
+			expect(existsSync(`${modelDir}/onnx/encoder_model_fp16.onnx`)).toBe(false);
+			expect(existsSync(`${scratchStore}/.quarantine/${KNOWN_CATALOG_MODEL}`)).toBe(true);
+		} finally {
+			if (prior === undefined) delete process.env.DEDALO_AI_MODEL_STORE;
+			else process.env.DEDALO_AI_MODEL_STORE = prior;
+		}
+	});
+
 	test('repair_model reaches the scheduling seam for a known catalog model, refuses a neighbor', async () => {
 		// scheduleBackground fires a fully detached job (real network fetch, real
 		// store writes) that nothing inside repairModelAction can stop once

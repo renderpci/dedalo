@@ -132,6 +132,7 @@
 	"environment": "Environment",
 	"error": "Error",
 	"error_ai_model_catalog_invalid": "The assistant model catalog is invalid (assistant disabled)",
+	"error_ai_model_integrity": "The model artifact failed its integrity check and was refused",
 	"error_ai_model_no_vision": "The selected model does not accept images",
 	"error_ai_model_unknown": "Unknown assistant model",
 	"error_ai_models_unconfigured": "No assistant models configured",

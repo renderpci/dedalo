@@ -28,12 +28,30 @@
  * of src/core/ontology/data_io_import.ts's: different ceilings, different message
  * text, and importing the ontology one would drag the ontology / DB / install
  * graph into the lean geoip subsystem (see the paragraph above).
+ *
+ * REST INTEGRITY (2026-09-04, P1-25). DB-IP publishes no checksum and rotates the
+ * file monthly, so there is NO upstream pin to verify a download against — that
+ * is stated, not hidden. What CAN be guaranteed is that the file loaded at boot
+ * is the file this install decompressed: the sha256 of the `.mmdb` is written to
+ * a `<mmdb>.sha256` sidecar at download, `verifyCountryDb` re-hashes before
+ * `loadReader`, and a mismatch quarantines the pair and treats the cache as
+ * absent (re-download). The digest helpers are the artifact-integrity leaf
+ * `core/ai/model_integrity.ts` (node-only imports; no ai/ graph comes with it).
  */
 
-import { createWriteStream, mkdirSync, readFileSync, rmSync, statSync } from 'node:fs';
-import { join, resolve, sep } from 'node:path';
+import {
+	createWriteStream,
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	rmSync,
+	statSync,
+	writeFileSync,
+} from 'node:fs';
+import { basename, dirname, join, resolve, sep } from 'node:path';
 import { createGunzip } from 'node:zlib';
 import { readEnv } from '../../config/env.ts';
+import { quarantineFile, SHA256_HEX, sha256File } from '../ai/model_integrity.ts';
 
 const DOWNLOAD_TIMEOUT_MS = 600_000; // total per-file deadline
 const DOWNLOAD_STALL_TIMEOUT_MS = 60_000; // per-read idle guard
@@ -46,6 +64,59 @@ const DBIP_ORIGIN = 'https://download.db-ip.com';
 
 /** Stable on-disk name of the decompressed database (month-independent). */
 export const DB_BASENAME = 'dbip-country-lite.mmdb';
+
+/** The rest-integrity sidecar beside the database: its sha256, hex, one line. */
+export function sidecarPath(mmdbPath: string): string {
+	return `${mmdbPath}.sha256`;
+}
+
+/** Hash the decompressed database and write the sidecar. Throws on I/O failure. */
+export async function writeDigestSidecar(mmdbPath: string): Promise<string> {
+	const digest = await sha256File(mmdbPath);
+	writeFileSync(sidecarPath(mmdbPath), `${digest}  ${basename(mmdbPath)}\n`);
+	return digest;
+}
+
+/** What the cached database can be said to be, at rest. */
+export type CountryDbVerdict = 'ok' | 'mismatch' | 'unpinned' | 'absent';
+
+/**
+ * Re-hash the cached database against its sidecar. `unpinned` is a cache
+ * written before sidecars existed (loaded as-is — the next refresh pins it);
+ * `mismatch` is a file that is not the one this install decompressed.
+ */
+export async function verifyCountryDb(mmdbPath: string): Promise<CountryDbVerdict> {
+	if (!existsSync(mmdbPath)) return 'absent';
+	const expected = readSidecarDigest(mmdbPath);
+	if (expected === null) return 'unpinned';
+	if (!SHA256_HEX.test(expected)) return 'mismatch'; // a sidecar that is not a digest is not a pin
+	try {
+		return (await sha256File(mmdbPath)) === expected ? 'ok' : 'mismatch';
+	} catch {
+		return 'absent';
+	}
+}
+
+/** The sidecar's first token, lowercased; null when there is no readable sidecar. */
+function readSidecarDigest(mmdbPath: string): string | null {
+	try {
+		return (readFileSync(sidecarPath(mmdbPath), 'utf8').split(/\s+/)[0] ?? '').toLowerCase();
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Move a mismatching database and its sidecar under `<dir>/.quarantine/` so the
+ * evidence stays and nothing loads it. Best-effort on the sidecar (it may be the
+ * thing that was wrong).
+ */
+export function quarantineCountryDb(mmdbPath: string): string | null {
+	const dir = dirname(mmdbPath);
+	const moved = quarantineFile(dir, basename(mmdbPath));
+	quarantineFile(dir, basename(sidecarPath(mmdbPath)));
+	return moved;
+}
 
 /** Result of a download attempt. */
 export interface GeoipDownloadResult {
@@ -336,10 +407,14 @@ async function attemptCandidate(
 	try {
 		await fetchFile(url, gzPath, pinToDbip);
 		await decompress(gzPath, mmdbPath);
+		// The sidecar is written from the bytes just decompressed: the ONLY
+		// integrity claim this download can make (see the file header).
+		await writeDigestSidecar(mmdbPath);
 		safeRemove(gzPath);
 		return { ok: true };
 	} catch (error) {
 		safeRemove(gzPath);
+		safeRemove(sidecarPath(mmdbPath));
 		// Defence in depth: a half-written .mmdb must never survive a failed
 		// candidate. A leftover zero-byte file dates to NOW, so decideGeoipAction
 		// reads it as present+fresh and suppresses the re-download for the whole

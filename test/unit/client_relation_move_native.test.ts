@@ -94,6 +94,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { plugin } from 'bun';
+import { CLIENT_LIB_URL_PREFIX, resolveClientLibPath } from '../../src/core/client_libs/serving.ts';
 import { unnamedRemoveRefusal } from '../../src/core/section/record/save_component.ts';
 
 const REPO_ROOT = resolve(import.meta.dir, '..', '..');
@@ -122,6 +123,19 @@ const SERVE_ALIAS: ReadonlyArray<readonly [RegExp, string]> = [
 plugin({
 	name: 'dedalo-client-serve-alias',
 	setup(build) {
+		// A ROOT-RELATIVE lib URL (`/dedalo/lib/<id>/<subpath>` — the spelling the
+		// client uses since WC-2026-09-04 moved lz-string out of the client tree)
+		// resolves through the SERVER'S OWN resolver, so the module the test loads
+		// is the file the engine would serve, allowlist and confinement included.
+		build.onResolve({ filter: /^\/dedalo\/lib\// }, (args) => {
+			const importer = args.importer ?? '';
+			if (!importer.startsWith(CLIENT_ROOT) && !importer.startsWith(TOOLS_ROOT)) return undefined;
+			const rest = args.path.slice(CLIENT_LIB_URL_PREFIX.length);
+			const slash = rest.indexOf('/');
+			if (slash < 0) return undefined;
+			const path = resolveClientLibPath(rest.slice(0, slash), rest.slice(slash + 1));
+			return path === null ? undefined : { path };
+		});
 		build.onResolve({ filter: /^\.\.?\// }, (args) => {
 			const importer = args.importer ?? '';
 			if (!importer.startsWith(CLIENT_ROOT) && !importer.startsWith(TOOLS_ROOT)) return undefined;
