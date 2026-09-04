@@ -255,10 +255,13 @@ describe('client gate verdict — every leg, in memory', () => {
 		expect(ranTests({ testCount: null, pendingCount: 0 })).toBeNull();
 	});
 
-	test('pending tests count against the mocha TEST floor: 133 all-pending suites are red', () => {
+	test('pending tests count against the mocha TEST floor: a floor of all-pending suites is red', () => {
 		// The exact shape the reviewer reproduced: every card green, 30 registered
-		// tests each, all 30 pending. 3990 registered, 0 ran.
-		const suites = healthy(133, 30).map((s) => ({ ...s, pendingCount: 30 }));
+		// tests each, all 30 pending — exactly the suite floor of cards, so the
+		// ONLY error is the test floor (a card count under the floor would be
+		// reported first and hide it).
+		const count = INVENTORY.suite_floor;
+		const suites = healthy(count, 30).map((s) => ({ ...s, pendingCount: 30 }));
 		const v = computeVerdict({
 			suites,
 			pending: 0,
@@ -269,9 +272,9 @@ describe('client gate verdict — every leg, in memory', () => {
 		expect(v.exitCode).toBe(1);
 		expect(v.mochaTests).toBe(0);
 		expect(v.errors[0]).toContain(
-			`0 mocha tests RAN (3990 pending), floor is ${INVENTORY.mocha_test_floor}`,
+			`0 mocha tests RAN (${count * 30} pending), floor is ${INVENTORY.mocha_test_floor}`,
 		);
-		expect(v.errors.filter((l) => l.startsWith('ZERO TESTS:'))).toHaveLength(133);
+		expect(v.errors.filter((l) => l.startsWith('ZERO TESTS:'))).toHaveLength(count);
 	});
 
 	test("a suite with NO test count (never reached mocha's end) is red", () => {

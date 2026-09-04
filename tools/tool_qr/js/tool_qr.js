@@ -45,6 +45,7 @@
 	import {common} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../../core/tools_common/js/tool_common.js'
 	import {render_tool_qr} from './render_tool_qr.js' // self tool rendered (called from render common)
+	import {max_page_limit} from '../../../core/common/js/sqo_limit.js'
 
 
 
@@ -201,14 +202,16 @@ tool_qr.prototype.build = async function(autoload=false) {
 *     from `element_context.properties.tool_config.tool_qr.ddo_map`. Kept as a
 *     reference; not active.
 *
-* After obtaining the ddo_map the method deliberately overrides the SQO pagination
-* to `limit = 0 / offset = 0`, fetching ALL records in one request — this is safe
-* only because the tool is designed for printing small, bounded datasets.
-* (!) Callers with large record sets should be aware of potential memory pressure.
+* After obtaining the ddo_map the method overrides the SQO pagination to
+* `limit = max_page_limit() / offset = 0` — the SERVER's client ceiling
+* (common/js/sqo_limit.js), which is what one request can ever return. It used
+* to send `limit = 0`: the server read that as the same ceiling and clamped in
+* silence, so a sheet over a large selection was truncated with nothing to say
+* so — the worst outcome for a QR sheet is a record silently missing (P2-31).
 *
-* The resolved section's `total` counter is set from `section.data.value.length`
-* after the build because pagination is disabled (`limit = 0`), making `length`
-* equivalent to the server-side total.
+* The resolved section's `total` is the SERVER's count (section.get_total);
+* when it exceeds the rows fetched the render surfaces the truncation
+* (render_tool_qr `qr_truncated`) instead of printing a partial sheet as whole.
 *
 * @returns {Promise<Object|boolean>} Resolves with the built section instance, or
 *   `false` when the element_context API call fails or returns no rows.
@@ -247,8 +250,8 @@ tool_qr.prototype.load_section = async function() {
 			: element_context.properties?.tool_config?.tool_qr?.ddo_map || [] // from section_list properties
 
 		request_config_dedalo.show.ddo_map = ddo_map
-		// overwrite pagination
-		request_config_dedalo.sqo.limit = 0
+		// overwrite pagination: one page at the server's client ceiling
+		request_config_dedalo.sqo.limit = max_page_limit()
 		request_config_dedalo.sqo.offset = 0
 
 	// section
@@ -265,8 +268,19 @@ tool_qr.prototype.load_section = async function() {
 
 		await section.build(true)
 
-	// set total (use value.length safely here because limit = 0)
-		section.total = section.data.value?.length || 0
+	// set total: the SERVER's count, so a selection above the ceiling is seen
+	// as truncated (rows fetched < total) rather than reported as whole
+		const fetched = section.data.value?.length || 0
+		let total = fetched
+		if (typeof section.get_total==='function') {
+			// the FILTERED count: the same sqo the rows were read with
+			const server_total = await section.get_total(section.rqo?.sqo || request_config_dedalo.sqo)
+			if (Number.isFinite(Number(server_total))) {
+				total = Number(server_total)
+			}
+		}
+		section.total		= total
+		section.truncated	= total > fetched
 
 
 	return section

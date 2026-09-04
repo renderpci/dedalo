@@ -6,7 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {get_fallback_value} from '../../common/js/common.js'
+	import {render_fallback_value, render_value} from '../../common/js/utils/render_escape.js'
 	import {attach_item_dataframe, activate_edit_in_list} from '../../component_common/js/component_common.js'
 
 
@@ -69,14 +69,14 @@ view_default_list_input_text.render = async function(self, options) {
 		const data					= self.data || {}
 		const entries				= data.entries || []
 		const fallback_value		= data.fallback_value || []
-		const fallback				= get_fallback_value(entries, fallback_value)
+		const fallback				= render_fallback_value(entries, fallback_value, self.context.render_class)
 		const with_lang_versions	= self.context.properties.with_lang_versions ?? false
 		const transliterate_value 	= self.data.transliterate_value || []
 
 	// transliterate components
 	// add the translation of the data
 		const transliterate_value_text = (with_lang_versions && transliterate_value[0]?.value && entries.length > 0)
-			? ' (' + transliterate_value[0].value + ')'
+			? ' (' + render_value(transliterate_value[0].value, self.context.render_class) + ')'
 			: ''
 
 	// wrapper
@@ -92,12 +92,10 @@ view_default_list_input_text.render = async function(self, options) {
 		const fallback_length = fallback.length
 		for (let i = 0; i < fallback_length; i++) {
 
-			// (!) BUG FLAG: `transliterate_value` is the raw array (e.g. [{id,value,lang}]),
-			// not the computed string `transliterate_value_text`. Concatenating an Array with
-			// a string coerces it via Array.prototype.toString() — producing a comma-joined
-			// representation of the raw items rather than the formatted parenthetical string.
-			// The intended value is `transliterate_value_text`. Do NOT fix here; flagged only.
-			const value_string = fallback[i] + transliterate_value
+			// The transliteration is appended as the rendered parenthetical
+			// (`transliterate_value_text`, escaped above) — the raw array used to
+			// be concatenated here, which coerced it through Array.toString().
+			const value_string = fallback[i] + transliterate_value_text
 
 			// Each fallback item gets its own <span> so dataframe controls can be
 			// anchored to the correct item element and positioned correctly by CSS.
@@ -125,7 +123,7 @@ view_default_list_input_text.render = async function(self, options) {
 					// separator
 					ui.create_dom_element({
 						element_type	: 'span',
-						inner_html		: self.context.fields_separator,
+						inner_html		: render_value(self.context.fields_separator, 'text'),
 						parent			: content_value
 					})
 				}

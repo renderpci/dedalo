@@ -52,6 +52,7 @@
 	import {common, create_source} from '../../common/js/common.js'
 	import {tr} from '../../common/js/tr.js'
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {service_ckeditor} from '../../services/service_ckeditor/js/service_ckeditor.js'
 	import {
@@ -322,7 +323,7 @@ component_text_area.prototype.init = async function(options) {
 					}
 				}else{
 					const last_tag_id	= self.get_last_tag_id('index', current_text_editor)
-					const label			= (get_label.create_fragment || "Create fragment") + ` ${last_tag_id+1} ` + (SHOW_DEBUG ? ` (chars:${selection.length})` : "")
+					const label			= (get_label.create_fragment || "Create fragment") + ` ${render_value(last_tag_id+1, 'number')} ` + (SHOW_DEBUG ? ` (chars:${render_value(selection.length, 'number')})` : "")
 					if (!button) {
 						const create_button = function(selection) {
 							const button_create_fragment = ui.create_dom_element({
@@ -726,7 +727,7 @@ component_text_area.prototype.preprocess_text_to_save = async function(html_valu
 
 	// clone text. Avoid interactions between html nodes
 		const cloned_text = document.createElement('div')
-			  cloned_text.insertAdjacentHTML('afterbegin', html_value);
+			  cloned_text.insertAdjacentHTML('afterbegin', render_value(html_value, self.context.render_class));
 
 	// reference tags
 		// Iterate all reference elements
@@ -747,8 +748,9 @@ component_text_area.prototype.preprocess_text_to_save = async function(html_valu
 				const tag_out		= self.build_data_tag('referenceOut', tag_id, state, label, data)
 				const final_string	= tag_in + reference_elements[i].innerHTML + tag_out
 
-				// Replaces tag content string with new created
-				reference_elements[i].innerHTML = final_string
+				// Replaces tag content string with new created (the editor's own
+				// markup — the component's wire render_class, 'html' for text_area)
+				reference_elements[i].innerHTML = render_value(final_string, self.context.render_class)
 
 				// Unwrap section tag node (removes tags and leaves only contents)
 				unwrap_element(reference_elements[i]);
@@ -802,8 +804,8 @@ component_text_area.prototype.preprocess_text_to_save = async function(html_valu
 														 current_element.dataset.label,
 														 current_element.dataset.data)
 				if (final_string) {
-					// Replaces tag content string with new created
-					current_element.innerHTML = final_string
+					// Replaces tag content string with new created (editor markup)
+					current_element.innerHTML = render_value(final_string, self.context.render_class)
 					// Unwrap section tag node (removes tags and leaves only contents)
 					unwrap_element(current_element)
 				}

@@ -7,9 +7,9 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {render_value, render_fallback_value} from '../../common/js/utils/render_escape.js'
 	import {attach_item_dataframe} from '../../component_common/js/component_common.js'
 	import {get_instance} from '../../common/js/instances.js'
-	import {get_fallback_value} from '../../common/js/common.js'
 	import {pause, url_vars_to_object, same_section_id} from '../../common/js/utils/index.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {LZString as lzstring} from '/dedalo/lib/lz-string/lz-string.js'
@@ -194,7 +194,7 @@ view_default_edit_text_area.render = async function(self, options) {
 		// Developer mode only: append a badge showing the active language code so
 		// editors can confirm which language slot they are editing.
 		if (SHOW_DEVELOPER===true && self.view!=='line') {
-			wrapper.label.innerHTML += ' <span class="note">[' + self.lang + ']</span>'
+			wrapper.label.innerHTML += ' <span class="note">[' + render_value(self.lang, 'text') + ']</span>'
 		}
 
 	// label custom style based on activate/deactivate events. (!) Deactivated 11-02-2023. Moved to inspector)
@@ -330,7 +330,7 @@ const get_content_value = (i, current_value, self) => {
 		const entries				= data.entries || []
 
 		const ar_fallback_value		= data.fallback_value || []
-		const fallback				= get_fallback_value(entries, ar_fallback_value)
+		const fallback				= render_fallback_value(entries, ar_fallback_value, self.context.render_class)
 		const dirty_fallback_value	= fallback[i]
 
 	// clean fallback of any tag (deferred until needed)
@@ -345,7 +345,7 @@ const get_content_value = (i, current_value, self) => {
 			const fallback_fragment = document.createDocumentFragment()
 			ui.create_dom_element({
 				element_type	: 'div',
-				inner_html		: dirty_fallback_value,
+				inner_html		: render_value(dirty_fallback_value, self.context.render_class),
 				parent			: fallback_fragment
 			})
 			fallback_value = fallback_fragment.firstChild.innerText
@@ -362,7 +362,7 @@ const get_content_value = (i, current_value, self) => {
 		const raw_value				= current_value?.value || null
 		const defer_large_value		= raw_value !== null && raw_value.length > LARGE_VALUE_DEFER_LENGTH
 		const value_string = (raw_value && !defer_large_value)
-			? self.tags_to_html(raw_value)
+			? render_value(self.tags_to_html(raw_value), self.context.render_class)
 			: null
 
 	// content_value
@@ -396,7 +396,7 @@ const get_content_value = (i, current_value, self) => {
 			? ui.create_dom_element({
 				element_type	: 'p',
 				class_name		: 'placeholder ck-placeholder',
-				inner_html		: get_fallback_value_clean(),
+				inner_html		: render_value(get_fallback_value_clean(), 'text'),
 				parent			: value_container
 			  })
 			: null
@@ -411,7 +411,7 @@ const get_content_value = (i, current_value, self) => {
 			if (!defer_large_value || value_container.dataset.materialized === 'true') {
 				return
 			}
-			value_container.innerHTML = self.tags_to_html(raw_value)
+			value_container.innerHTML = render_value(self.tags_to_html(raw_value), self.context.render_class)
 			value_container.dataset.materialized = 'true'
 		}
 
@@ -633,7 +633,7 @@ const get_content_value_read = (i, current_value, self) => {
 		const raw_value			= current_value?.value || null
 		const defer_large_value	= raw_value !== null && raw_value.length > LARGE_VALUE_DEFER_LENGTH
 		const value = (raw_value && !defer_large_value)
-			? self.tags_to_html(raw_value)
+			? render_value(self.tags_to_html(raw_value), self.context.render_class)
 			: null
 
 	// content_value
@@ -647,7 +647,7 @@ const get_content_value_read = (i, current_value, self) => {
 		if (defer_large_value) {
 			content_value.appendChild(build_large_value_preview(raw_value))
 			content_value.addEventListener('click', () => {
-				content_value.innerHTML = self.tags_to_html(raw_value)
+				content_value.innerHTML = render_value(self.tags_to_html(raw_value), self.context.render_class)
 			}, { once: true })
 		}
 
@@ -1179,7 +1179,7 @@ const get_custom_events = (self, i, text_editor) => {
 							// modal. create new modal with the person full name
 								ui.attach_to_modal({
 									header	: 'Person info',
-									body	: person.full_name,
+									body	: render_value(person.full_name, 'text'), // record data; a string body is parsed as HTML
 									footer	: null,
 									size	: 'small'
 								})
@@ -1222,7 +1222,7 @@ const get_custom_events = (self, i, text_editor) => {
 						// modal tag lang info
 							ui.attach_to_modal({
 								header	: 'Lang info',
-								body	: lang_obj.label,
+								body	: render_value(lang_obj.label, 'text'), // a string body is parsed as HTML
 								footer	: null,
 								size	: 'small'
 							})
@@ -1616,7 +1616,7 @@ const render_note = async function(options) {
 			const header_label_node = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'label',
-				inner_html		: (get_label.note || 'Note') + ' ' + note_section_id,
+				inner_html		: (get_label.note || 'Note') + ' ' + render_value(note_section_id, 'text'),
 				parent			: header
 			})
 
@@ -1884,9 +1884,9 @@ const render_persons_list = function(self, text_editor, i) {
 						}
 
 					// label
-						const label = 	section_label + ' | ' +
+						const label = 	render_value(section_label + ' | ' +
 										current_locator.section_id +' | ' +
-										ar_component_value.join(' | ')
+										ar_component_value.join(' | '), 'text')
 
 					// section_label_node
 						ui.create_dom_element({
@@ -1929,7 +1929,7 @@ const render_persons_list = function(self, text_editor, i) {
 							class_name		: 'label person_keyboard',
 							parent			: person_container
 						})
-						const html_tag = self.tags_to_html(current_person.tag)
+						const html_tag = render_value(self.tags_to_html(current_person.tag), self.context.render_class)
 						person_container.insertAdjacentHTML('afterbegin', html_tag)
 
 					// person_name
@@ -2062,7 +2062,7 @@ const render_langs_list = function(self, text_editor, i) {
 					ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'lang_label',
-						inner_html		: current_lang.label,
+						inner_html		: render_value(current_lang.label, 'text'),
 						parent			: lang_container
 					})
 

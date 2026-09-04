@@ -15,6 +15,10 @@
  * This survives the refuted retention claim in the audit's own notes: a rAF loop
  * and an undisposed renderer are LIVE WORK, not a garbage-collection question.
  * The loop keeps running whether or not anything still references the viewer.
+ *
+ * Widened (P2-2 / CLI-19): the destroy-override census is TOTAL and derived
+ * from the tree (every `<x>.prototype.destroy = function`), and the search
+ * filter model's remove door tears down the whole subtree it removes.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -49,6 +53,31 @@ const functionBody = (source: string, opening: string): string => {
 	const end = source.indexOf('\n}', from);
 	expect(end, `unterminated: ${opening}`).toBeGreaterThan(from);
 	return source.slice(from, end);
+};
+
+const CLIENT_JS_ROOTS = ['client', 'tools'];
+
+/** Every .js under the browser trees, excluding vendored libraries. */
+const browserSources = (): string[] =>
+	execFileSync('git', ['ls-files', '--', ...CLIENT_JS_ROOTS.map((r) => `${r}/**/*.js`)], {
+		cwd: REPO_ROOT,
+		encoding: 'utf8',
+	})
+		.split('\n')
+		.filter(Boolean)
+		.filter((f) => !/\/(lib|vendor|node_modules)\/|\.min\.js$/.test(f));
+
+/** The brace-balanced body starting at the `{` at `open`. */
+const balancedBody = (source: string, open: number): string => {
+	let depth = 0;
+	for (let i = open; i < source.length; i++) {
+		if (source[i] === '{') depth++;
+		else if (source[i] === '}') {
+			depth--;
+			if (depth === 0) return source.slice(open, i);
+		}
+	}
+	throw new Error('unterminated function body');
 };
 
 describe('a 3D viewer does not outlive its record', () => {
@@ -190,44 +219,150 @@ describe('a 3D viewer does not outlive its record', () => {
 		expect(destroy.slice(0, tryStart)).toMatch(/self\.viewer\s*&&/);
 	});
 
-	test('every teardown override keeps the base signature', () => {
+	test('every teardown override keeps the base signature (TOTAL census, derived)', () => {
 		// common.prototype.destroy is (delete_self, delete_dependencies, remove_dom).
 		// An override with fewer parameters silently drops the last one — measured:
-		// the first draft had two and would have dropped remove_dom.
+		// the first draft had two and would have dropped remove_dom. Every
+		// FUNCTION override in client/ + tools/ is found by the tree walk (an
+		// alias `x.prototype.destroy = common.prototype.destroy` is not an
+		// override); each keeps the arity (or forwards `...args` / `arguments`)
+		// AND delegates to its base, or is a standalone class ENUMERATED below with
+		// a reason. Measured 2026-09-04: 20 overrides + the base.
 		const base = code('client/dedalo/core/common/js/common.js');
 		const baseSig = /common\.prototype\.destroy\s*=\s*async function\(([^)]*)\)/.exec(base)?.[1];
 		expect(baseSig, 'common.prototype.destroy not found').toBeDefined();
 		const arity = (baseSig as string).split(',').length;
 
-		// Every override in the tree, not just this row's — the trap is generic.
-		const OVERRIDES: Array<[string, string]> = [
-			[COMPONENT, 'component_3d'],
-			['client/dedalo/core/area_maintenance/js/area_maintenance.js', 'area_maintenance'],
-			['client/dedalo/core/menu/js/menu.js', 'menu'],
-			['client/dedalo/core/section/js/section.js', 'section'],
+		// SHRINK-ONLY: classes that do not extend common and own their whole
+		// teardown. A new standalone class belongs here only with the reason it
+		// cannot inherit the base chain.
+		const STANDALONE: Array<{ file: string; name: string; reason: string }> = [
+			{
+				file: 'client/dedalo/core/paginator/js/paginator.js',
+				name: 'paginator',
+				reason:
+					'plain object with events_tokens only; no registry entry, no ar_instances, no node ownership',
+			},
+			{
+				file: 'client/dedalo/core/services/service_upload/js/upload_queue.js',
+				name: 'upload_queue',
+				reason: 'the upload transport queue: owns XHRs and timers, never registered as an instance',
+			},
+			{
+				file: 'client/dedalo/core/component_image/js/vector_editor.js',
+				name: 'vector_editor',
+				reason:
+					'canvas editor owned by component_image; torn down by its component, not the registry',
+			},
 		];
-		for (const [file, name] of OVERRIDES) {
-			const sig = new RegExp(
-				`${name}\\.prototype\\.destroy\\s*=\\s*async function\\(([^)]*)\\)`,
-			).exec(code(file))?.[1];
-			expect(sig, `${name} no longer overrides destroy`).toBeDefined();
-			expect((sig as string).split(',').length, `${name}'s override drops a parameter`).toBe(arity);
-			expect(code(file), `${name} does not delegate`).toMatch(/common\.prototype\.destroy\.call/);
+		expect(STANDALONE.length, 'this list is shrink-only').toBeLessThanOrEqual(3);
+
+		const overrides: Array<{ file: string; name: string; params: string; body: string }> = [];
+		for (const file of browserSources()) {
+			const source = code(file);
+			for (const m of source.matchAll(
+				/\b([\w$]+)\.prototype\.destroy\s*=\s*(?:async\s+)?function\s*\(([^)]*)\)\s*\{/g,
+			)) {
+				const name = m[1] as string;
+				if (name === 'common' && file.endsWith('/common/js/common.js')) continue;
+				overrides.push({
+					file,
+					name,
+					params: (m[2] as string).trim(),
+					body: balancedBody(source, (m.index as number) + m[0].length - 1),
+				});
+			}
+		}
+		// the floor: a broken regex must not pass by finding nothing
+		expect(overrides.length, 'the override census found almost none').toBeGreaterThanOrEqual(15);
+		// positive controls: the overrides this gate was born for are in the census
+		for (const name of ['component_3d', 'section', 'menu', 'area_maintenance']) {
+			expect(
+				overrides.some((o) => o.name === name),
+				`${name} left the census`,
+			).toBe(true);
+		}
+
+		const offenders: string[] = [];
+		for (const o of overrides) {
+			const standalone = STANDALONE.find((s) => s.file === o.file && s.name === o.name);
+			if (standalone) continue;
+			const forwardsAll =
+				/^\.\.\.\w+$/.test(o.params) || (o.params === '' && /\barguments\b/.test(o.body));
+			const keepsArity = o.params.split(',').length === arity && o.params !== '';
+			if (!forwardsAll && !keepsArity) {
+				offenders.push(
+					`${o.file} → ${o.name}(${o.params}) drops a parameter of the base (${arity})`,
+				);
+			}
+			// delegation: the base called through call/apply, or through a stored
+			// `_parent_destroy` alias that the same file binds to the base
+			const delegates =
+				/\b(?:common|widget_common|tool_common)\.prototype\.destroy\.(?:call|apply)\(/.test(
+					o.body,
+				) ||
+				(/\b_parent_destroy\(/.test(o.body) &&
+					/_parent_destroy\s*=\s*(?:common|widget_common|tool_common)\.prototype\.destroy\b/.test(
+						code(o.file),
+					));
+			if (!delegates) {
+				offenders.push(`${o.file} → ${o.name} does not delegate to its base destroy`);
+			}
+		}
+		expect(
+			offenders,
+			'a destroy override that drops a parameter or never reaches the base chain — the instance ' +
+				'(or its DOM) leaks; keep the 3-arity (or ...args) and delegate',
+		).toEqual([]);
+		// every STANDALONE entry is live: a class that gained the chain leaves the list
+		for (const s of STANDALONE) {
+			expect(
+				overrides.some((o) => o.file === s.file && o.name === s.name),
+				`stale STANDALONE entry: ${s.name} no longer overrides destroy`,
+			).toBe(true);
 		}
 	});
+
+	test('removing a search filter node tears down every instance in its subtree (CLI-19)', () => {
+		// The GROUP close button removed the model node and the DOM node only; the
+		// ROW close button also spliced and destroyed. So every component inside a
+		// removed group stayed in the registry with its render/sync subscriptions,
+		// and reset() then refreshed the orphans. The fix is ONE door:
+		// remove_model_node walks the subtree and destroys, so the caller that
+		// forgets is no longer possible.
+		const source = code('client/dedalo/core/search/js/search.js');
+		const remove = functionBody(source, 'search.prototype.remove_model_node = function');
+		expect(remove, 'remove_model_node no longer destroys the subtree').toMatch(
+			/self\.destroy_model_subtree\(node\)/,
+		);
+		const walk = functionBody(source, 'search.prototype.destroy_model_subtree = function');
+		// splices its own instance out of ar_instances …
+		expect(walk).toMatch(/self\.ar_instances\.splice\(/);
+		// … destroys it (self + dependencies) …
+		expect(walk).toMatch(/instance\.destroy\(\s*true\s*,\s*true\s*,/);
+		// … and RECURSES over children, or a nested group still leaks
+		expect(walk, 'the walk does not descend into children').toMatch(
+			/self\.destroy_model_subtree\(children\[i\]\)/,
+		);
+		// the group close in the renderer goes through the door (not edited here:
+		// render_search.js is P2-6's; this pins that the door is what it calls)
+		const renderer = code('client/dedalo/core/search/js/render_search.js');
+		expect((renderer.match(/self\.remove_model_node\(/g) ?? []).length).toBeGreaterThanOrEqual(2);
+	});
+
+	test('search.reset cannot hang on a throwing orphan (no async Promise executor)', () => {
+		// `new Promise(async function(resolve){ … await refresh … resolve() })`
+		// turns a throw into an unhandled rejection that never reaches resolve —
+		// the reset's Promise.all waits forever. A plain async function rejects.
+		const source = code('client/dedalo/core/search/js/search.js');
+		const reset = functionBody(source, 'search.prototype.reset = async function');
+		expect(reset, 'reset uses an async Promise executor again').not.toMatch(
+			/new Promise\(\s*async/,
+		);
+		expect(reset).toMatch(/const reset_instance = async function/);
+		expect(reset).toMatch(/Promise\.all\(ar_promises\)/);
+	});
 });
-
-const CLIENT_JS_ROOTS = ['client', 'tools'];
-
-/** Every .js under the browser trees, excluding vendored libraries. */
-const browserSources = (): string[] =>
-	execFileSync('git', ['ls-files', '--', ...CLIENT_JS_ROOTS.map((r) => `${r}/**/*.js`)], {
-		cwd: REPO_ROOT,
-		encoding: 'utf8',
-	})
-		.split('\n')
-		.filter(Boolean)
-		.filter((f) => !/\/(lib|vendor|node_modules)\/|\.min\.js$/.test(f));
 
 describe('census: no observer is built unreachable', () => {
 	test('every observer is assigned before it observes', () => {

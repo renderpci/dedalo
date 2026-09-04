@@ -27,7 +27,8 @@
 
 import { config } from '../../config/config.ts';
 import { publishApiConfig } from '../../external/api/index.ts';
-import { getComponentModel } from '../components/registry.ts';
+import { getComponentModel, getRenderClass } from '../components/registry.ts';
+import type { RenderClass } from '../components/types.ts';
 import { isAreaModel } from '../concepts/area.ts';
 import {
 	isConsultationOnlySection,
@@ -65,6 +66,13 @@ export interface StructureContextCore {
 	tools: unknown[];
 	buttons: unknown[];
 	sortable: boolean;
+	/**
+	 * The value's render class at the client DOM boundary (descriptor `render`
+	 * facet, WC-2026-09-04-context-render-class) — ADDITIVE wire key, present
+	 * on COMPONENT entries only (sections/groupers/areas carry no value). The
+	 * client's ONE escaper (render_escape.js render_value) switches on it.
+	 */
+	render_class?: RenderClass;
 }
 
 /**
@@ -423,6 +431,10 @@ async function buildCore(
 		// request-invariant function of model+tipo+section (the cache key carries
 		// section_tipo), so it lives in the cached core.
 		sortable: resolveSortable(model, tipo, sectionTipo),
+		// render class (P2-6 / CARRY-01): the client escapes every component
+		// value by THIS key, so it is stamped from the descriptor on every
+		// component entry — request-invariant, so it lives in the cached core.
+		...(getComponentModel(model) !== undefined ? { render_class: getRenderClass(model) } : {}),
 		configSourceProperties,
 		ownConfigProperties: effectiveProperties,
 		structuralView,

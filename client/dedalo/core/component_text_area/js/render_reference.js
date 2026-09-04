@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {get_instance, find_instances} from '../../common/js/instances.js'
 	import {clone, same_section_id} from '../../common/js/utils/index.js'
 
@@ -246,7 +247,7 @@ export const render_reference = async function(options) {
 				// modal
 				ui.attach_to_modal({
 					header	: get_label.warning || 'Warning',
-					body	: label+': '+ reference_component.label,
+					body	: label+': '+ render_value(reference_component.label, 'text'), // a string body is parsed as HTML
 					footer	: false,
 					size	: 'small' // string size big|normal
 				})
@@ -285,7 +286,7 @@ export const render_reference = async function(options) {
 			class_name		: 'header'
 		})
 		// header_label. created label with Title case (first letter to uppercase)
-			const header_label		= (view_tag.label || 'Reference')
+			const header_label		= render_value(view_tag.label || 'Reference', 'text')
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'label',
@@ -336,7 +337,7 @@ export const render_reference = async function(options) {
 				const existing_value_node = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'value',
-					inner_html		: current_value.display_value,
+					inner_html		: render_value(current_value.display_value, 'text'),
 					parent			: existing_tags_container
 				})
 				existing_value_node.data = current_value
@@ -390,7 +391,7 @@ export const render_reference = async function(options) {
 			// When the user click on remove button, two actions happens:
 			// first, delete the section in the server
 			// second, remove the tag from the text_area
-			button_remove.addEventListener("click", function(e){
+			button_remove.addEventListener("click", async function(e){
 				e.stopPropagation()
 				// ask to user if really want delete the note
 				const delete_label = get_label.are_you_sure_to_delete_reference || 'Are you sure you want to delete this reference?'
@@ -400,9 +401,21 @@ export const render_reference = async function(options) {
 					if(locator.length > 0){
 
 						// if the locator is not empty, remove it of the component.
-						component_tags_reference.unlink_record(locator[0]);
+						// Its ANSWER is READ: on a refusal the locator is still linked, so
+						// stripping the reference attribute from the text and closing the
+						// modal would leave the prose without a reference while the
+						// relation survives in the database — the screen asserting the
+						// version that did not happen.
+						// (!) No toast here: the refusal travelled through change_value ->
+						// data_manager.request, which published its ApiError, and
+						// error_dispatch's deduped_toast rendered it ONCE. A direct
+						// render_error_toast would double-notice the same failure.
+						const removed = await component_tags_reference.unlink_record(locator[0]);
 						// refresh the component of the tags to get the real data
 						// component_tags_reference.reset_filter_data()
+						if (removed!==true) {
+							return
+						}
 					}
 					// remove the reference attribute of the text selected in the component_text_area
 						text_editor.remove_reference()
@@ -449,14 +462,28 @@ export const render_reference = async function(options) {
 					// see the ontology node properties
 					delete new_locator.type
 
-					// Persist the locator into the tags_reference portal. `link_record`
+					// Persist the locator into the tags_reference portal. `link_records`
 					// is the v7 relation verb (it stamps from_component_tipo and saves
 					// through the normal portal change_value path); the v6 `add_value`
 					// this code shipped with never existed in the v7 client, so Apply
-					// crashed here and the reference never reached the text. A `false`
-					// return means the locator was already linked — the text span must
-					// still get its reference attribute below, so we continue either way.
-					await component_tags_reference.link_record(new_locator);
+					// crashed here and the reference never reached the text.
+					// THE OUTCOME IS READ. `link_record`'s bare boolean cannot tell the
+					// one benign non-landing — `duplicate`, the locator is ALREADY linked,
+					// and the span must still be stamped — from a real refusal
+					// (data_limit, api_error, refused_by_server), which must NOT stamp
+					// anything: a reference attribute over an unsaved relation points the
+					// prose at a link the database does not hold. So the door is called by
+					// its outcome-returning name and the refusal reason decides.
+					// (!) No toast here: a refusal that came from the server travelled
+					// through change_value -> data_manager.request, which published its
+					// ApiError, and error_dispatch's deduped_toast rendered it ONCE. A
+					// direct render_error_toast would double-notice the same failure.
+					const link_outcome	= await component_tags_reference.link_records([new_locator]);
+					const already_linked	= link_outcome.refused.some(el => el.reason==='duplicate')
+					if (link_outcome.linked.length!==1 && already_linked===false) {
+						console.error('(!) [render_reference] reference NOT stamped: link refused', link_outcome.refused);
+						return
+					}
 
 					// get the data from the new locator
 					// Look up the datum.data entry for the newly added locator so we can

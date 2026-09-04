@@ -7,6 +7,7 @@
 // imports
 	import { get_instance } from '../../common/js/instances.js'
 	import { ui } from '../../common/js/ui.js'
+	import { render_value } from '../../common/js/utils/render_escape.js'
 	import { render_open_list_with_direct_relations } from '../../section/js/render_open_list_with_direct_relations.js'
 	import {
 		clone,
@@ -200,7 +201,9 @@ buttons.render_button_add = (self) => {
 				const section_id	= new_value.section_id
 
 				// header
-				const header = (get_label.new || 'New section') + ' ' + (target_section[0]?.label || '')
+				// (!) attach_to_modal parses a string header as HTML: the section label
+				// is ontology data and goes through the ONE escaper as text.
+				const header = (get_label.new || 'New section') + ' ' + render_value(target_section[0]?.label || '', 'text')
 
 				// body section. Create the new section instance
 				const section = await get_instance({
@@ -381,7 +384,7 @@ buttons.render_button_link = (self) => {
 						ui.create_dom_element({
 							element_type	: 'option',
 							value			: item.tipo,
-							inner_html		: item.label + ' [' + item.tipo + ']',
+							inner_html		: render_value(item.label + ' [' + item.tipo + ']', 'text'),
 							parent			: select_section
 						})
 					}

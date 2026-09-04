@@ -8,6 +8,7 @@ import type { ComponentModel } from '../types.ts';
 export const component_check_box: ComponentModel = {
 	model: 'component_check_box',
 	column: 'relation',
+	render: 'text',
 	defaultRelationType: 'dd151',
 	resolveData: 'select_family',
 	flatValue: 'datalist',

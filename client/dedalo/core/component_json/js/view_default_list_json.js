@@ -36,6 +36,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {activate_edit_in_list} from '../../component_common/js/component_common.js'
 
 
@@ -123,7 +124,7 @@ view_default_list_json.render = async function(self, options) {
 	// value
 		ui.create_dom_element({
 			element_type	: 'span',
-			inner_html		: value_string,
+			inner_html		: render_value(value_string, self.context.render_class),
 			parent			: content_data
 		})
 

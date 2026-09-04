@@ -44,6 +44,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {when_in_viewport, dd_request_idle_callback} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {create_row_window} from '../../common/js/row_window.js'
 	import {
 		on_dragstart,
 		on_dragend,
@@ -316,6 +317,13 @@ export const render_children = async function(options) {
 	// Clean children container before build contents
 		if (clean_children_container===true) {
 
+			// the previous row window stops first: its observer must not fire a
+			// grow into a container that is being emptied
+			if (self.row_window) {
+				self.row_window.destroy()
+			}
+			self.children_window_descriptors = 0
+
 			// destroy stale child instances first (recursive: delete_dependencies
 			// reclaims the whole open subtree from the instances map and events).
 			// Their DOM is removed by the container cleanup below. Fresh instances
@@ -351,25 +359,37 @@ export const render_children = async function(options) {
 		);
 
 	// children_number
-	// It is used as base to set the correct order when pagination is present
-	// The 'virtual_order' sums children_number + array key + 1 to create a continuous sequence
-	// It is necessary to get from real DOM nodes because the pagination loads blocks or records.
-	const children_number = is_paginated
-		? ([...self.children_container.childNodes].filter(el => el.classList.contains('wrap_ts_object')).length || 0)
+	// It is used as base to set the correct order when pagination is present:
+	// the 'virtual_order' sums children_number + array key + 1 to create a
+	// continuous sequence across the pages appended by "Show more".
+	// INDEX-based (audit P2-31 / CLI-30): the count of descriptor children the
+	// row window already holds — never a DOM count, because a windowed container
+	// holds only the rows in reach and a DOM count is wrong from the second
+	// window on. A fresh render (clean container, or no window yet) starts at 0.
+	const appending = clean_children_container!==true && Boolean(self.row_window)
+	const children_number = appending
+		? (self.children_window_descriptors || 0)
 		: 0
 
 	// --------------------------------------------------------------------------------
 	// CHILDREN DATA ITERATION
 	// --------------------------------------------------------------------------------
 
-	// Build DOM elements iterating ar_children_data.
-	// Nodes are collected into fragments and attached SYNCHRONOUSLY once after
-	// the loop: when render_children resolves, the children are really in the
-	// tree (one paint, no interleaving). Search hierarchization and any caller
-	// awaiting this promise rely on that invariant.
+	// Partition the children by container, with their virtual_order. The
+	// descriptor children (and, on the root node, every child) go through a ROW
+	// WINDOW over children_container (common/js/row_window.js): at most
+	// ROW_WINDOW_MAX_ROWS nodes exist at once, grown as the viewport approaches
+	// an edge and released past the other (audit P2-31 / CLI-30 — a node
+	// expansion built up to the whole page, 300 terms by default and the
+	// ceiling on the post-duplicate refresh, each a registered instance with
+	// its own subtree). The first window is materialized SYNCHRONOUSLY with this
+	// call: when render_children resolves, the rows in reach are really in the
+	// tree. A consumer that needs a specific child in the DOM — search
+	// hierarchization, scroll-to-term — goes through `self.reveal_child(ts_id)`.
+	// Non-descriptor children (nd_container) are few and rendered eagerly.
 
-	const children_fragment	= new DocumentFragment()
-	const nd_fragment		= new DocumentFragment()
+	const windowed	= []
+	const eager		= []
 
 	let counter = 0
 	const ar_children_data_len = children_data.ar_children_data.length
@@ -388,17 +408,14 @@ export const render_children = async function(options) {
 			? children_number + counter + 1
 			: counter + 1
 
-		// Init, build and render the child instance.
-		const node_wrapper = await render_child(self, child_data, virtual_order);
-
-		// Append node to the proper fragment
-		if (node_wrapper) {
-			const target_fragment = (child_data.is_descriptor || self.is_root_node)
-				? children_fragment
-				: nd_fragment
-			target_fragment.appendChild( node_wrapper )
+		const entry = {
+			child_data		: child_data,
+			virtual_order	: virtual_order
+		}
+		if (child_data.is_descriptor || self.is_root_node) {
+			windowed.push(entry)
 		}else{
-			console.warn('Error. Ignored invalid node wrapper. child_data:', child_data);
+			eager.push(entry)
 		}
 
 		// update virtual_order counter
@@ -407,13 +424,55 @@ export const render_children = async function(options) {
 		}
 	}
 
-	// attach fragments (single synchronous append per container)
-		if (children_fragment.hasChildNodes()) {
-			children_container.appendChild(children_fragment)
+	// row window over children_container
+	if (appending) {
+		await self.row_window.append(windowed)
+	}else{
+		const row_window = create_row_window({
+			owner		: self,
+			container	: children_container,
+			items		: windowed,
+			spacer		: 'block',
+			row_height	: 28,
+			materialize	: async (entry) => {
+				const node_wrapper = await render_child(self, entry.child_data, entry.virtual_order)
+				if (!node_wrapper) {
+					console.warn('Error. Ignored invalid node wrapper. child_data:', entry.child_data);
+					return null
+				}
+				return node_wrapper
+			},
+			release		: async (entry) => {
+				// the released child leaves with its whole subtree; revealed again,
+				// it is rebuilt from its data (closed)
+				const ts_id = entry.child_data.section_tipo + '_' + entry.child_data.section_id
+				const instance = self.ar_instances.find(el => el.model==='ts_object' && el.ts_id===ts_id)
+				if (instance && instance.status!=='destroyed') {
+					await instance.destroy(
+						true, // delete_self
+						true, // delete_dependencies
+						true  // remove_dom
+					)
+				}
+			}
+		})
+		await row_window.fill()
+	}
+	self.children_window_descriptors = children_number + counter
+
+	// non-descriptors: eager, into nd_container
+	const nd_fragment = new DocumentFragment()
+	for (const entry of eager) {
+		const node_wrapper = await render_child(self, entry.child_data, entry.virtual_order);
+		if (node_wrapper) {
+			nd_fragment.appendChild( node_wrapper )
+		}else{
+			console.warn('Error. Ignored invalid node wrapper. child_data:', entry.child_data);
 		}
-		if (nd_fragment.hasChildNodes() && self.nd_container) {
-			self.nd_container.appendChild(nd_fragment)
-		}
+	}
+	if (nd_fragment.hasChildNodes() && self.nd_container) {
+		self.nd_container.appendChild(nd_fragment)
+	}
 
 	// --------------------------------------------------------------------------------
 	// END CHILDREN DATA ITERATION
@@ -444,6 +503,40 @@ export const render_children = async function(options) {
 
 	return true
 }//end render_children
+
+
+
+/**
+* REVEAL_CHILD
+* Makes the child `ts_id` of this node MATERIALIZED — the row window
+* re-centres on it when it is out of reach — and resolves its wrapper node, or
+* null when it is not a child of this node. The door for every consumer that
+* needs a specific child in the DOM (search hierarchization opens branches by
+* instance; a windowed container holds only the rows in reach).
+*
+* Bound to ts_object.prototype.reveal_child.
+*
+* @param {string} ts_id - `<section_tipo>_<section_id>` of the child.
+* @returns {Promise<HTMLElement|null>}
+*/
+export const reveal_child = async function(ts_id) {
+
+	const self = this
+
+	if (!self.row_window || !self.children_data?.ar_children_data) {
+		return null
+	}
+
+	// the window's item list is the descriptor (or, on the root, every) child
+	// in data order — the same partition render_children made
+	const windowed = self.children_data.ar_children_data.filter(el => el.is_descriptor || self.is_root_node)
+	const index = windowed.findIndex(el => (el.section_tipo + '_' + el.section_id)===ts_id)
+	if (index===-1) {
+		return null
+	}
+
+	return self.row_window.reveal(index)
+}//end reveal_child
 
 
 

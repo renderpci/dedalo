@@ -1057,8 +1057,8 @@ export interface ChildrenDataResult {
 
 /**
  * Load, paginate and format the direct children of a node (PHP get_children_data).
- * countChildrenOrNull → load-and-count fallback when null. Paginate only when
- * limit>0 && total>limit. default limit 300.
+ * countChildrenOrNull → load-and-count fallback when null. Paginate whenever
+ * limit>0 (a client-supplied total never switches paging off). default limit 300.
  */
 export async function getChildrenData(
 	sectionTipo: string,
@@ -1097,10 +1097,16 @@ export async function getChildrenData(
 		currentPagination.total = total;
 	}
 
+	// The read is PAGED whenever the limit is positive (audit P2-31 / CLI-30).
+	// PHP paged only when `total > limit`, and `total` here may be the CLIENT's
+	// own cached count — so a client total at or below its limit switched
+	// paging OFF and the whole branch came back through a request that named a
+	// limit. The total still drives nothing but the echo; the limit itself is
+	// clamped at the door (ts_api clampChildrenPagination), so it is never 0
+	// from a client. A non-positive limit can only be server-internal.
 	const limit = Number(currentPagination.limit ?? defaultLimit);
 	const offset = Number(currentPagination.offset ?? 0);
-	const total = Number(currentPagination.total ?? 0);
-	const usePagination = limit > 0 && total > limit;
+	const usePagination = limit > 0;
 	const children = usePagination
 		? await getChildren(sectionId, sectionTipo, childrenTipo, limit, offset)
 		: await getChildren(sectionId, sectionTipo, childrenTipo);

@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_join} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -68,7 +69,7 @@ view_mini_list_filter_records.render = async function(self, options) {
 		const string_values = entries.map(el => {
 			return JSON.stringify(el)
 		})
-		const value_string = string_values.join(self.context.fields_separator)
+		const value_string = render_join(string_values, self.context.fields_separator, 'text')
 
 	// wrapper
 		// Build the <span> with classes 'mini' and '<model>_mini'. value_string is
@@ -80,8 +81,7 @@ view_mini_list_filter_records.render = async function(self, options) {
 		// const value_string = value.join(' | ')
 
 	// Set value
-		// Inject the serialised entries directly into the wrapper. Because entries
-		// come from the trusted server data layer, no client-side escaping is applied.
+		// The serialised entries were escaped by the render-boundary escaper above.
 		wrapper.insertAdjacentHTML('afterbegin', value_string)
 
 

@@ -105,6 +105,19 @@ bottom; the descriptor-facet steps are enforced by
    on `insert` and on an id-less `update` of the one stored item, and
    `tool_propagate_component_data` refuses `add`. Omitted = multi-value
    (append). Pinned against the frozen PHP list by `value_law_agreement_tripwire`.
+8c. **Render class — REQUIRED on every column-bearing descriptor.** Declare
+   `render: 'text' | 'html' | 'url' | 'number'` (types.ts RenderClass): what
+   the client may DO with the value at the DOM boundary. `'html'` is the
+   decision to store markup — `saveComponentData` runs the ONE HTML sanitizer
+   on that class (never on a model name), and the client's ONE escaper
+   (`client/dedalo/core/common/js/utils/render_escape.js`) passes it
+   through; `'url'` runs the scheme allowlist then escapes; `'number'`
+   renders a numeral; `'text'` (every other model, the relation family
+   included) is HTML-escaped. The structure context stamps it on the wire as
+   `render_class` (WC-2026-09-04-context-render-class), so a client view
+   never guesses by model name. Alias stubs inherit through the hop and must
+   NOT declare it. Gates: `descriptor_completeness_tripwire`,
+   `render_class_native`, `render_escape_tripwire`.
 9. (Optional) drop a `samples/` reference set alongside it.
 
 **Engine side (STILL SCATTERED — check each; this is the honest part):**

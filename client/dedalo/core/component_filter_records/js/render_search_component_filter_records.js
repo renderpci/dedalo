@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -255,7 +256,7 @@ const get_input_element = (i, datalist_item, self) => {
 		const option_tipo = ui.create_dom_element({
 			element_type	: 'span',
 			class_name 		: 'tipo',
-			inner_html		: tipo,
+			inner_html		: render_value(tipo, 'text'),
 			parent			: li
 		})
 
@@ -263,7 +264,7 @@ const get_input_element = (i, datalist_item, self) => {
 		const option_label = ui.create_dom_element({
 			element_type	: 'span',
 			class_name 		: 'label',
-			inner_html		: label,
+			inner_html		: render_value(label, self.context.render_class),
 			parent			: li
 		})
 

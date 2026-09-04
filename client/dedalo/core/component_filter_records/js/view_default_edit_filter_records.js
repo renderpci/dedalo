@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {set_before_unload} from '../../common/js/events.js'
 
 
@@ -287,7 +288,7 @@ const get_content_value = (i, datalist_item, self) => {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'body_item section_tipo',
-			inner_html		: tipo,
+			inner_html		: render_value(tipo, 'text'),
 			parent			: content_value
 		})
 
@@ -296,7 +297,7 @@ const get_content_value = (i, datalist_item, self) => {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'body_item',
-			inner_html		: label,
+			inner_html		: render_value(label, self.context.render_class),
 			parent			: content_value
 		})
 
@@ -374,7 +375,7 @@ const get_content_value_read = (i, current_value, self) => {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'label',
-			inner_html		: current_value.tipo || '',
+			inner_html		: render_value(current_value.tipo, 'text'),
 			parent			: content_value
 		})
 
@@ -382,7 +383,7 @@ const get_content_value_read = (i, current_value, self) => {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'label',
-			inner_html		: current_value.label || '',
+			inner_html		: render_value(current_value.label, self.context.render_class),
 			parent			: content_value
 		})
 
@@ -390,7 +391,7 @@ const get_content_value_read = (i, current_value, self) => {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'label',
-			inner_html		: current_value.value || '',
+			inner_html		: render_value(current_value.value, self.context.render_class),
 			parent			: content_value
 		})
 

@@ -63,6 +63,7 @@
 	import {delete_dataframe} from '../../component_common/js/component_common.js'
 	import {object_to_url_vars, open_window, get_caller_by_model, same_section_id} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {render_relation_list} from '../../section/js/render_common_section.js'
 	import {view_default_edit_portal} from './view_default_edit_portal.js'
 	import {view_line_edit_portal} from './view_line_edit_portal.js'
@@ -564,7 +565,7 @@ export const render_column_component_info = function(options) {
 				ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'ddinfo_value',
-					inner_html		: info_value,
+					inner_html		: render_value(info_value, 'text'),
 					parent			: fragment
 				})
 			}
@@ -661,7 +662,7 @@ export const render_column_remove = function(options) {
 					ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'label',
-						inner_html		: (get_label.delete || 'Delete') + ` ID: ${section_id} <span class="note">[${section_tipo}]</span>`,
+						inner_html		: (get_label.delete || 'Delete') + ` ID: ${render_value(section_id, 'text')} <span class="note">[${render_value(section_tipo, 'text')}]</span>`,
 						parent			: header
 					})
 
@@ -793,12 +794,21 @@ export const render_column_remove = function(options) {
 						// dataframe cleanup is server-authoritative: unlink_record sends
 						// update_data_value 'remove' and the server cascades the paired
 						// dataframe rows (single-writer rule). No client delete_dataframe.
-						await self.unlink_record(options.locator)
-
-						// close modal
-						modal.close()
+						const removed = await self.unlink_record(options.locator)
 
 						footer.classList.remove('loading')
+
+						// close modal ONLY after the unlink landed. A closing modal is the
+						// grammar of "the link is gone": closing over a refusal tells the
+						// curator the locator was removed while it is still stored.
+						// (!) No toast here. The refusal travelled through change_value ->
+						// data_manager.request, which already published its ApiError, and
+						// error_dispatch's deduped_toast rendered it ONCE. A direct
+						// render_error_toast would double-notice the same failure.
+						if (removed!==true) {
+							return
+						}
+						modal.close()
 					}
 					button_unlink_record.addEventListener('click', fn_click_unlink_record)
 
@@ -1245,7 +1255,7 @@ export const render_references = function(ar_references) {
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'label',
-				inner_html		: reference.label,
+				inner_html		: render_value(reference.label, 'text'),
 				parent			: li
 			})
 	}//end for (let i = 0; i < ref_length; i++)

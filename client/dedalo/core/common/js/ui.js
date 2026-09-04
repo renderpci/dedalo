@@ -19,6 +19,11 @@
 	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
 	import {open_tool} from '../../../core/tools_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
+	// error system. The cycle ui ↔ render_api_error (it builds its nodes through
+	// ui.create_dom_element) is resolved at call time, as in common.js: nothing
+	// here is used while the modules evaluate.
+	import {ApiError, CLIENT_ERROR, is_api_error} from '../../common/js/api_error.js'
+	import {render_error_panel} from '../../common/js/render_api_error.js'
 	import '../../../lib/codex-tooltip/dist/tooltip.js';
 
 
@@ -2593,10 +2598,17 @@ export const ui = {
 	* 1. Creates a <dd-modal> element and appends it to modal_parent
 	* 2. Slots header/body/footer into the shadow DOM (blank hidden divs fill empty slots)
 	* 3. Sets data-size attribute which triggers attributeChangedCallback → _showModal*()
-	* 4. On close: publish_close fires the 'modal_close' event, then on_close runs, then the
-	*    element dispatches 'dd-modal-close' and removes ITSELF from the DOM. The framework
-	*    teardown (options.on_close callback + previous-selection restore) is bound to that
-	*    event, not to the on_close property, because callers overwrite on_close wholesale.
+	* 4. On close: on_close runs, then the element dispatches 'dd-modal-close' and removes
+	*    ITSELF from the DOM. The framework teardown (options.on_close callback, the
+	*    previous-selection restore, and for size 'big' the scroll-offset restore) is bound
+	*    to that ELEMENT event, not to the on_close property, because callers overwrite
+	*    on_close wholesale — and never to a global channel: dd-modal keeps a real modal
+	*    stack (a confirm opened from inside a big modal is routine), and the former
+	*    global one-shot 'modal_close' subscription was consumed by whichever modal
+	*    closed FIRST, so a nested confirm's Cancel scrolled the page back under the
+	*    still-open big modal and nothing restored when it finally closed. No publisher
+	*    is installed on the element's optional `publish_close` hook any more (its doc
+	*    step 4 is inert from this caller): the 'modal_close' channel has no subscribers.
 	*
 	* Drag: the modal header is draggable. On first mousedown the CSS-centered position
 	* is pinned to inline styles (position:absolute, margin:0) so the modal stays under
@@ -2680,11 +2692,6 @@ export const ui = {
 				modal_node.classList.add("remove_overlay")
 			}
 
-		// publish close event
-			modal_container.publish_close = function(e) {
-				event_manager.publish('modal_close', e)
-			}
-
 		// header. Add node header to modal header and insert it into slot
 			if (header) {
 				header.slot = 'header'
@@ -2750,33 +2757,13 @@ export const ui = {
 			//		dd_modal.modal_content.style.width = '20rem'
 			// }
 			switch(size) {
-				case 'big' : {
-					// hide contents to avoid double scrollbars
-					const content_data_page	= document.querySelector('.content_data.page')
-					const debug_div			= document.getElementById('debug')
-
-					// show hidden elements again on close
-					const modal_close_handler = () => {
-
-						if(content_data_page) {
-							content_data_page.classList.remove('hide')
-						}
-
-						if(debug_div) {
-							debug_div.classList.remove('hide')
-						}
-
-						// scroll window to previous scroll position
-						window.scrollTo({
-							top			: page_y_offset,
-							behavior	: 'auto'
-						})
-					}
-					event_manager.subscribe_once('modal_close', modal_close_handler)
-
+				case 'big' :
+					// the scroll offset is restored by THIS modal's own teardown
+					// below (element-scoped), never by a global subscription. The
+					// former handler also removed 'hide' from `.content_data.page`
+					// and `#debug`, which nothing adds any more: dead, dropped.
 					modal_container.dataset.size = 'big';
 					break;
-				}
 				case 'small' :
 					modal_container.dataset.size = 'small';
 					break;
@@ -2812,6 +2799,16 @@ export const ui = {
 				// re-activate previous component selection
 				if (previous_component_selection) {
 					ui.component.activate(previous_component_selection)
+				}
+
+				// big modal: scroll window back to where it was when THIS modal
+				// opened — keyed to this element's close, so a nested dialog's
+				// close cannot fire it early
+				if (size==='big') {
+					window.scrollTo({
+						top			: page_y_offset,
+						behavior	: 'auto'
+					})
 				}
 			}
 			modal_container.addEventListener('dd-modal-close', teardown)
@@ -2973,7 +2970,7 @@ export const ui = {
 			// close_with. Commits the value BEFORE closing so the value is already
 			// final when the 'dd-modal-close' listener below runs.
 			// (!) modal.close() and not modal.on_close(): close() is the symmetric
-			// sequence (publish_close fires, autocomplete is destroyed, the element
+			// sequence (autocomplete is destroyed, the element
 			// removes itself), and with transient:true it contains no await, so it
 			// runs to completion synchronously.
 				const close_with = (value) => {
@@ -4082,7 +4079,18 @@ export const ui = {
 	* @param {string} [options.model] - Optional model name for specific CSS targeting.
 	* @param {Function} options.callback - Async function that must return an HTMLElement or DocumentFragment.
 	* @param {Object} [options.style] - Optional inline styles for the placeholder.
-	* @returns {Promise<HTMLElement|DocumentFragment|null>} result_node
+	*
+	* A THROWING callback is not swallowed into an empty container. The container
+	* was already emptied (preserve_content is false by default) when the callback
+	* ran, so "log and return null" left the user a blank pane with no message —
+	* the documented "blank render on contract drift" failure, inside the helper
+	* that renders the page's top-level elements. The catch now mints
+	* `client.render_failed` (or keeps the ApiError it was thrown) and puts the
+	* engine's own `render_error_panel` where the result node would have gone,
+	* returning that node.
+	* @returns {Promise<HTMLElement|DocumentFragment|null>} result_node — the
+	*   callback's node, the error panel when it threw, null on invalid options
+	*   or a callback that returned no node.
 	*/
 	load_item_with_spinner : async function(options) {
 
@@ -4171,10 +4179,29 @@ export const ui = {
 
 			} catch (error) {
 				console.error('Error during callback execution:', error);
-				if (container_placeholder.parentNode) {
-					container_placeholder.remove();
-				}
-				return null;
+
+				// the failure, typed: an ApiError travels as it is (its code drives
+				// the panel's affordance), anything else is the client's own
+				// render failure
+					const api_error = is_api_error(error)
+						? error
+						: new ApiError({
+							code	: CLIENT_ERROR.RENDER_FAILED,
+							source	: 'client',
+							raw		: error
+						})
+
+				// the panel takes the place the result node would have taken
+					const error_node = render_error_panel(api_error)
+					if (replace_container) {
+						container.replaceWith(error_node)
+					} else if (container_placeholder.parentNode) {
+						container_placeholder.replaceWith(error_node)
+					} else {
+						container.appendChild(error_node)
+					}
+
+				return error_node
 			}
 	},//end load_item_with_spinner
 

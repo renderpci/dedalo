@@ -14,6 +14,7 @@ import type { ComponentModel } from '../types.ts';
 export const component_relation_children: ComponentModel = {
 	model: 'component_relation_children',
 	column: 'relation',
+	render: 'text',
 	defaultRelationType: 'dd48',
 	resolveData: 'relation_children',
 	search: { status: 'ported' }, // builder_relation_children.ts (dedicated inverse-parent pipeline)

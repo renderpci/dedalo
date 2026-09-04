@@ -69,6 +69,7 @@
 	// picker (mode, channel name, publisher, selection cap) is re-declared here.
 	import {PICKER_LINK_CHANNEL_PREFIX, attach_picker} from '../../area_thesaurus/js/thesaurus_picker.js'
 	import {response_data, request_failed} from '../../common/js/api_error.js'
+	import {max_page_limit} from '../../common/js/sqo_limit.js'
 
 
 
@@ -214,6 +215,11 @@ export const component_portal = function() {
 		// closes on the click that just linked a term. The pane's lifetime is the
 		// COMPONENT's, not its refresh cycle.
 		const delete_self = args[0]===true
+		// the list view's row window (section.js window_section_rows) holds the
+		// viewport observer over rows that are dependencies of this portal
+		if (self.row_window && (delete_self || args[1]===true)) {
+			self.row_window.destroy()
+		}
 		if (delete_self) {
 			if (self.thesaurus_pane_resize_observer) {
 				self.thesaurus_pane_resize_observer.disconnect()
@@ -942,14 +948,19 @@ component_portal.prototype.build = async function(autoload=false) {
 
 					// paginator_show_all_
 					// Published when the user clicks the "show all" button.
-					// limit=0 tells the server to return all records without pagination.
+					// "All" is the SERVER's client ceiling (page_globals
+					// dedalo_search_client_max_limit, WC-2026-09-04-client-limit-bound):
+					// the client never sends 0 — the server read 0 as the same ceiling
+					// and clamped in silence (DEC-07), so a portal above the ceiling
+					// was truncated with nothing to say so. Sending the bound the
+					// server applies keeps the paginator's total honest about it.
 						const paginator_show_all_handler = function() {
 							// navigate
 							self.navigate({
 								callback : async () => {
 									// rqo and request_config_object set offset and limit
 									self.rqo.sqo.offset	= self.request_config_object.sqo.offset	= 0
-									self.rqo.sqo.limit	= self.request_config_object.sqo.limit	= 0 // (limit + 1000)
+									self.rqo.sqo.limit	= self.request_config_object.sqo.limit	= max_page_limit()
 								}
 							})
 						}

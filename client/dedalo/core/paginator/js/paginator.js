@@ -601,8 +601,10 @@ paginator.prototype.navigate_to_previous_page = function() {
 /**
 * SHOW_ALL
 * Publishes the 'paginator_show_all_<id>' event.
-* The owning section/portal subscribes to this event and responds by setting
-* rqo.sqo.limit = 0 (i.e. "no limit"), then refreshing the data.
+* The owning portal subscribes to this event and responds by setting
+* rqo.sqo.limit to the SERVER's client ceiling (common/js/sqo_limit.js
+* max_page_limit — never 0: the server read 0 as the same ceiling and clamped
+* in silence, audit P2-31 / CLI-29), then refreshing the data.
 *
 * The show_interface.show_all flag (set during init) controls whether the
 * render layer exposes a "Show all" button to the user.

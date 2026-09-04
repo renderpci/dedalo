@@ -37,6 +37,8 @@ import {
 	dateModeOf,
 	type PeriodLabels,
 } from '../components/component_date/date_value.ts';
+import { getComponentModel, getRenderClass } from '../components/registry.ts';
+import type { RenderClass } from '../components/types.ts';
 import { mediaTypeOf } from '../concepts/media.ts';
 import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import { getActiveTlds } from '../db/dd_ontology.ts';
@@ -59,6 +61,7 @@ import { optimizeTcIn, optimizeTcOut, secondsToTc, tcToSeconds } from '../resolv
 import { currentApplicationLang, currentDataLang } from '../resolve/request_lang.ts';
 import { truncateHtml } from '../resolve/truncate_html.ts';
 import { findInverseReferenceLocators } from '../search/search_related.ts';
+import { sanitizeRichText } from '../security/html_sanitize.ts';
 import type { Principal } from '../security/permissions.ts';
 import { getIndexationListConfig } from './list_definitions/indexation_list.ts';
 
@@ -90,9 +93,21 @@ export interface GridCell {
 	ar_columns_obj: unknown[] | null;
 	features: Record<string, unknown> | null;
 	model: string | null;
+	/**
+	 * ADDITIVE (P2-6 / CARRY-01, WC-2026-09-04-context-render-class): the
+	 * value's render class, derived from `model` through the descriptor
+	 * `render` facet. Absent (not null) on cells with no component model — the
+	 * client's escaper treats an absent class as 'text'.
+	 */
+	render_class?: RenderClass;
 }
 
 function cell(partial: Partial<GridCell>): GridCell {
+	const model = partial.model ?? null;
+	const renderClass =
+		model !== null && getComponentModel(model) !== undefined
+			? { render_class: getRenderClass(model) }
+			: {};
 	return {
 		id: null,
 		class_list: null,
@@ -114,6 +129,7 @@ function cell(partial: Partial<GridCell>): GridCell {
 		features: null,
 		model: null,
 		...partial,
+		...renderClass,
 	};
 }
 
@@ -793,11 +809,18 @@ async function textAreaIndexationCell(
 			class_list: 'record_link',
 			value: [{ section_id: locSectionId, section_tipo: locSectionTipo }],
 		});
+		// The fragment is a slice of the RICH text (fragmentFromTag decodes the
+		// stored entities back to markup, as PHP component_text_area.php:474-476
+		// did before injecting it raw): it is MARKUP, so it is stamped 'html' for
+		// the client escaper AND run through the ONE sanitizer here — the decode
+		// re-creates `<` from `&lt;`, so a pre-XSS-01 or migrated payload would
+		// otherwise reach the grid's innerHTML intact (P2-6 / CARRY-01).
 		const textFragmentColumn = cell({
 			type: 'column',
 			cell_type: 'text',
 			class_list: 'text_fragment',
-			value: [textFragment],
+			value: [sanitizeRichText(textFragment)],
+			render_class: 'html',
 		});
 
 		switch (ddo.format_columns) {

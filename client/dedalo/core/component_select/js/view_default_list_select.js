@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_join} from '../../common/js/utils/render_escape.js'
 	import {activate_edit_in_list} from '../../component_common/js/component_common.js'
 
 
@@ -58,7 +59,7 @@ view_default_list_select.render = async function(self, options) {
 		const entries		= data.entries || []
 		// entries are already label strings at list-mode resolution; join with a
 		// space to separate multiple values when component_select allows them.
-		const value_string	= entries.join(' ')
+		const value_string	= render_join(entries, ' ', self.context.render_class)
 
 	// wrapper
 		// build_wrapper_list applies the standard CSS class set and, when

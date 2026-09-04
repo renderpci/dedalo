@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_join} from '../../common/js/utils/render_escape.js'
 	import {attach_item_dataframe} from '../../component_common/js/component_common.js'
 	import {activate_edit_in_list} from '../../component_common/js/component_common.js'
 
@@ -84,7 +85,7 @@ view_default_list_number.render = async function(self, options) {
 		// entries[n].value is a JS number (or null); String coercion happens inside
 		// build_wrapper_list's innerHTML assignment.
 		const value_string	= (entries.length>0)
-			? entries.map(item => item.value).join(self.context.fields_separator)
+			? render_join(entries.map(item => item.value), self.context.fields_separator, self.context.render_class)
 			: ''
 
 	// wrapper

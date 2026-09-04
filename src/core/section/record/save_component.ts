@@ -42,7 +42,7 @@
  */
 
 import { INSTALLED_DATA_LANGS } from '../../../config/config.ts';
-import { getComponentModel, isMonovalueModel } from '../../components/registry.ts';
+import { getComponentModel, getRenderClass, isMonovalueModel } from '../../components/registry.ts';
 import { dataframePairingOf } from '../../concepts/rqo.ts';
 import { isConsultationOnlySection } from '../../concepts/section.ts';
 import type { DataframePairing } from '../../concepts/subdatum.ts';
@@ -984,6 +984,43 @@ export async function saveComponentData(request: SaveRequest): Promise<SaveResul
 }
 
 /** The transactional body of saveComponentData (see the wrapper above). */
+/**
+ * The write engine's two VALUE gates, each keyed on what the model itself
+ * declares — extracted from `applySaveComponentData` so the save path does not
+ * carry their branches (the complexity ratchet is the reason, and the shape is
+ * better: both read the changed data and nothing else of the request).
+ *
+ * SEC — component_password is an ordinary string component to the write engine,
+ * so an unhashed value would be stored VERBATIM: the client's plaintext password
+ * straight into matrix_users.string.dd133 (and it would then fail every login,
+ * since auth.ts accepts only Argon2id). PHP hashed on the way in
+ * (component_password::Save → hash_password); this is that gate.
+ *
+ * XSS-01 (2026-07-28 audit) / P2-6 (2026-08-26) — a value whose descriptor
+ * declares the `html` render class is the ONE class the client passes through
+ * unescaped, so it is the ONE class sanitized here (strip script/style/on*=/js:
+ * URLs, keep formatting). Keyed on the descriptor facet, never on the model
+ * string: a model that declares 'html' opts into this sanitizer in that line.
+ * A model WITHOUT a descriptor (component_ip, component_layout, …) is not asked
+ * for a class — it has no matrix column either, so the graceful `no matrix
+ * column` refusal downstream stays the answer, as it was before.
+ *
+ * Both sit at the write engine precisely so EVERY door funnels through them —
+ * the client API, the MCP tools, the agent change-plan and import alike.
+ */
+async function applyWriteValueGates(
+	model: string,
+	changedData: SaveRequest['changedData'],
+): Promise<SaveRequest['changedData']> {
+	if (model === 'component_password') {
+		return await (await import('../../security/password_hash.ts')).hashPasswordChanges(changedData);
+	}
+	if (getComponentModel(model) !== undefined && getRenderClass(model) === 'html') {
+		return (await import('../../security/html_sanitize.ts')).sanitizeRichTextChanges(changedData);
+	}
+	return changedData;
+}
+
 async function applySaveComponentData(request: SaveRequest): Promise<SaveResult> {
 	const { componentTipo, sectionTipo, sectionId, lang, userId } = request;
 	const callerDataframe = request.callerDataframe ?? null;
@@ -1006,16 +1043,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 	// behind the enforcing CSP; sits here at the write engine so EVERY door
 	// (client API, MCP, change-plan, import) funnels through it, exactly like the
 	// password hash gate below.
-	let changedData = request.changedData;
-	if (model === 'component_password') {
-		changedData = await (await import('../../security/password_hash.ts')).hashPasswordChanges(
-			request.changedData,
-		);
-	} else if (model === 'component_text_area') {
-		changedData = (await import('../../security/html_sanitize.ts')).sanitizeRichTextChanges(
-			request.changedData,
-		);
-	}
+	const changedData = await applyWriteValueGates(model, request.changedData);
 	const mappedColumn = getColumnNameByModel(model);
 	if (mappedColumn === null || !MATRIX_JSONB_COLUMNS.includes(mappedColumn as MatrixJsonbColumn)) {
 		return { ok: false, message: `no matrix column for model '${model}'` };

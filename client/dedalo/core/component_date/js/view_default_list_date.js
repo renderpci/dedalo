@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_join} from '../../common/js/utils/render_escape.js'
 	import {activate_edit_in_list, attach_item_dataframe} from '../../component_common/js/component_common.js'
 	import {get_ar_raw_data_value} from './render_edit_component_date.js'
 
@@ -81,7 +82,7 @@ view_default_list_date.render = async function(self, options) {
 		// get_ar_raw_data_value converts raw entries to display strings per date_mode
 		const ar_value		= get_ar_raw_data_value(self)
 		// join multiple date values using the ontology-configured separator
-		const value_string	= ar_value.join(self.context.fields_separator)
+		const value_string	= render_join(ar_value, self.context.fields_separator, self.context.render_class)
 
 	// wrapper
 		// build_wrapper_list creates a <div> with component/model/tipo/section_tipo CSS classes

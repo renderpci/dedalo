@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {
 		get_value_string
 	}
@@ -86,7 +87,7 @@ view_mini_json.render = async function(self, options) {
 	// value_string
 	// Delegate to the shared helper so that the display logic (list_show_key lookup,
 	// truncated-JSON fallback) stays in one place and is consistent with the list view.
-		const value_string = get_value_string(self)
+		const value_string = render_value(get_value_string(self), self.context.render_class)
 
 	// wrapper
 	// build_wrapper_mini creates <span class="mini component_json_mini"> and inserts

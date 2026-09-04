@@ -5,7 +5,7 @@
 
 
 // imports
-	import {get_fallback_value} from '../../common/js/common.js'
+	import {render_fallback_value, escape_html} from '../../common/js/utils/render_escape.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -97,10 +97,10 @@ view_text_list_text_area.render = async function(self, options) {
 
 	// fallback
 		const fallback_value	= data.fallback_value || []
-		const fallback			= get_fallback_value(entries, fallback_value)
+		const fallback			= render_fallback_value(entries, fallback_value, self.context.render_class)
 
 	// Value as string. Note that value already is parsed as resolved string (add_tag_img_on_the_fly is applied on server)
-		const value_string = fallback.join(self.context.fields_separator)
+		const value_string = fallback.join(escape_html(self.context.fields_separator))
 
 	// wrapper. Set as span to preserve html tags like images, bold, italic, etc.
 	// (!) Using innerHTML (via inner_html) is intentional here: the stored rich-text

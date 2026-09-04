@@ -7,6 +7,7 @@ import type { ComponentModel } from '../types.ts';
 export const component_email: ComponentModel = {
 	model: 'component_email',
 	column: 'string',
+	render: 'text',
 	classSupportsTranslation: true,
 	searchBuilder: 'string',
 	flatValue: 'string',

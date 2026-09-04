@@ -30,9 +30,12 @@ import { describe, expect, test } from 'bun:test';
 import {
 	allComponentModels,
 	getComponentModel,
+	getRenderClass,
 	getSearchBuilderFamily,
 	relationDataModels,
+	renderClassOfDescriptor,
 } from '../../src/core/components/registry.ts';
+import type { ComponentModel } from '../../src/core/components/types.ts';
 import { TARGET_SOURCE_IMPLEMENTATIONS } from '../../src/core/relations/request_config/target_sources.ts';
 import { IMPORT_CONFORM } from '../../src/core/tools/import_conform.ts';
 import { VALUE_PROPERTY_MODELS } from '../../src/core/tools/import_data.ts';
@@ -403,6 +406,69 @@ describe('descriptor completeness (S2-26 tripwire)', () => {
 				`${descriptor.model}: sortable:true is redundant — omit it (component_common base is true)`,
 			).not.toBe(true);
 		}
+	});
+
+	// ------------------------------------------------------------------
+	// RENDER CLASS (P2-6 / CARRY-01): the render-boundary escaper's key.
+	// ------------------------------------------------------------------
+
+	test('every column-bearing descriptor declares a render class, and alias stubs never do', () => {
+		// canonical = column-bearing AND not an alias (component_autocomplete_hi
+		// keeps a defensive column entry but resolves through its alias)
+		const withColumn = descriptors.filter((d) => d.column !== undefined && d.alias === undefined);
+		expect(withColumn.length).toBeGreaterThan(30); // anti-vacuity: the canonical models
+		for (const descriptor of withColumn) {
+			expect(
+				descriptor.render,
+				`${descriptor.model}: a model that stores a value must say how the client may render it (\`render\` facet)`,
+			).toBeDefined();
+			expect(['text', 'html', 'url', 'number']).toContain(descriptor.render as string);
+		}
+		for (const descriptor of descriptors.filter((d) => d.alias !== undefined)) {
+			expect(
+				descriptor.render,
+				`${descriptor.model}: an alias inherits its canonical target's render class — declaring one here would let the two disagree`,
+			).toBeUndefined();
+			// and the alias hop resolves to a class
+			expect(getRenderClass(descriptor.model)).toBe(getRenderClass(descriptor.alias as string));
+		}
+	});
+
+	test("'html' is declared by the rich-text model ONLY — it is the one class the sanitizer runs on", () => {
+		// Adding a model here is the decision to store markup: save_component.ts
+		// sanitizes by this facet, and the client passes the class through unescaped.
+		const html = descriptors.filter((d) => d.render === 'html').map((d) => d.model);
+		expect(html).toEqual(['component_text_area']);
+		expect(getRenderClass('component_html_text')).toBe('html'); // legacy alias, via the hop
+		expect(getRenderClass('component_input_text_large')).toBe('html');
+	});
+
+	test("'url' is component_iri, 'number' is component_number; everything else is text", () => {
+		expect(descriptors.filter((d) => d.render === 'url').map((d) => d.model)).toEqual([
+			'component_iri',
+		]);
+		expect(descriptors.filter((d) => d.render === 'number').map((d) => d.model)).toEqual([
+			'component_number',
+		]);
+		const text = descriptors.filter((d) => d.render === 'text').length;
+		expect(text).toBe(
+			descriptors.filter((d) => d.column !== undefined && d.alias === undefined).length - 3,
+		);
+	});
+
+	test('getRenderClass throws on an unregistered model (no silent default)', () => {
+		expect(() => getRenderClass('component_no_such_model')).toThrow(/no descriptor/);
+	});
+
+	test('a class-less canonical descriptor is REFUSED, never defaulted to text', () => {
+		// no live canonical model lacks the facet (asserted above), so the branch
+		// is exercised with a fabricated column-bearing descriptor
+		const classless = { model: 'component_zz_classless', column: 'string' } as ComponentModel;
+		expect(() => renderClassOfDescriptor(classless, 'component_zz_classless')).toThrow(
+			/declares no render class/,
+		);
+		// and a declared one resolves to exactly its declaration
+		expect(renderClassOfDescriptor({ ...classless, render: 'url' }, classless.model)).toBe('url');
 	});
 
 	test('relationDataModels derivation covers the legacy autocomplete aliases', () => {

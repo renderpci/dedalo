@@ -5,6 +5,7 @@
 
 
 // imports
+	import {render_join} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -81,7 +82,7 @@ view_text_list_filter_records.render = async function(self, options) {
 		const string_values	= entries_flat.map((el)=>{
 			return JSON.stringify(el)
 		})
-		const value_string	= string_values.join('\n')
+		const value_string	= render_join(string_values, '\n', 'text')
 
 	const wrapper = document.createElement('span')
 	wrapper.insertAdjacentHTML('afterbegin', value_string)

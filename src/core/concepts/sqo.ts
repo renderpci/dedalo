@@ -207,6 +207,45 @@ function stripServerOnlyKeysRecursive(
 }
 
 /**
+ * THE client limit clamp (DEC-07, audit P2-31 / CLI-29 / CLI-30). Every limit an
+ * untrusted client sends — an SQO `limit`, the tree children door's
+ * `pagination.limit` — goes through here and comes out a positive integer no
+ * larger than CLIENT_MAX_LIMIT:
+ *
+ * - 0, negative, 'all', non-numeric, > ceiling → CLIENT_MAX_LIMIT (an EXPLICIT
+ *   ask beyond the ceiling gets a loud server-log line: the response is
+ *   truncated and a completeness consumer must be able to see that);
+ * - an absent limit (undefined/null) → CLIENT_MAX_LIMIT silently (the shape
+ *   default; callers that want another default resolve it BEFORE calling).
+ *
+ * The client mirrors the bound (client/dedalo/core/common/js/sqo_limit.js reads
+ * `page_globals.dedalo_search_client_max_limit`) so it never sends 0 at all;
+ * this is the server's own refusal to treat 0 as "unbounded", whatever arrives.
+ *
+ * @param rawLimit the client value, any type
+ * @param scope a label for the log line (the section_tipo, or the door)
+ */
+/** The client's raw limit as an integer: a number truncated, anything else parsed. */
+function parsedClientLimit(rawLimit: unknown): number {
+	return typeof rawLimit === 'number'
+		? Math.trunc(rawLimit)
+		: Number.parseInt(String(rawLimit ?? ''), 10);
+}
+
+export function clampClientLimit(rawLimit: unknown, scope: string): number {
+	const limit = parsedClientLimit(rawLimit);
+	if (Number.isFinite(limit) && limit > 0 && limit <= CLIENT_MAX_LIMIT) {
+		return limit;
+	}
+	if (rawLimit !== undefined && rawLimit !== null) {
+		console.warn(
+			`[sqo] client limit ${JSON.stringify(rawLimit)} (section_tipo ${scope}) clamped to CLIENT_MAX_LIMIT=${CLIENT_MAX_LIMIT} — response may be truncated (DEC-07)`,
+		);
+	}
+	return CLIENT_MAX_LIMIT;
+}
+
+/**
  * §7.5 SECURITY GATE — scrub an untrusted client SQO before it may enter the
  * search pipeline. PHP: search_query_object::sanitize_client_sqo (:834).
  *
@@ -224,27 +263,12 @@ export function sanitizeClientSqo(untrustedSqo: Record<string, unknown>): Sqo {
 		unknown
 	>;
 
-	// limit: clamp to the client ceiling
-	const rawLimit = stripped.limit;
-	let limit =
-		typeof rawLimit === 'number'
-			? Math.trunc(rawLimit)
-			: Number.parseInt(String(rawLimit ?? ''), 10);
-	if (!Number.isFinite(limit) || limit <= 0 || limit > CLIENT_MAX_LIMIT) {
-		// DEC-07: the ceiling stays; the SILENCE was the defect. An EXPLICIT ask
-		// beyond it ("show all" sends 0/'all', exports send big numbers) gets a
-		// loud line — the caller's response is truncated at the ceiling and data-
-		// completeness consumers (exports, scripts) must be able to see that in
-		// the server log. An ABSENT limit is just the shape default: stay quiet.
-		if (rawLimit !== undefined && rawLimit !== null) {
-			const sectionTipo = typeof stripped.section_tipo === 'string' ? stripped.section_tipo : '?';
-			console.warn(
-				`[sqo] client limit ${JSON.stringify(rawLimit)} (section_tipo ${sectionTipo}) clamped to CLIENT_MAX_LIMIT=${CLIENT_MAX_LIMIT} — response may be truncated (DEC-07)`,
-			);
-		}
-		limit = CLIENT_MAX_LIMIT;
-	}
-	stripped.limit = limit;
+	// limit: clamp to the client ceiling (the ONE clamp — the tree children door
+	// applies the same function to its pagination.limit, ts_api.ts).
+	stripped.limit = clampClientLimit(
+		stripped.limit,
+		typeof stripped.section_tipo === 'string' ? stripped.section_tipo : '?',
+	);
 
 	// offset / total: integer coercion; clamp offset to >= 0 (INJ-06 — a negative
 	// offset is meaningless and must never reach the assembler as a raw value).

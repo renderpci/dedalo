@@ -24,6 +24,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_join} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -85,7 +86,7 @@ view_text_list_email.render = async function(self, options) {
 		const entries		= data.entries || []
 		// Join all entry values with the context separator.
 		// An empty entries array produces an empty string → blank span.
-		const value_string	= entries.map(item => item.value).join(self.context.fields_separator)
+		const value_string	= render_join(entries.map(item => item.value), self.context.fields_separator, self.context.render_class)
 
 	// wrapper. Set as span
 		// ui.create_dom_element creates a bare HTMLElement; no interactive wiring.

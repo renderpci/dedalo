@@ -58,6 +58,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {same_section_id} from '../../common/js/utils/index.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {build_changed_data_item} from './component_check_box.js'
 
 
@@ -70,6 +71,9 @@
 */
 export const render_search_component_check_box = function() {
 
+	// NOT an arrow function: the next statements assign onto its `prototype`
+	// (the mixin contract component_check_box.js relies on), and an arrow has
+	// none — the module throws at load and every instance resolves null.
 	return true
 }//end render_search_component_check_box
 
@@ -99,19 +103,17 @@ export const render_search_component_check_box = function() {
 */
 render_search_component_check_box.prototype.search = async function(options) {
 
-	const self = this
-
 	// render_level
 		const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = get_content_data(self)
+		const content_data = get_content_data(this)
 		if (render_level==='content') {
 			return content_data
 		}
 
 	// ui build_edit returns component wrapper
-		const wrapper = ui.component.build_wrapper_search(self, {
+		const wrapper = ui.component.build_wrapper_search(this, {
 			content_data : content_data
 		})
 		// set pointers
@@ -148,7 +150,7 @@ render_search_component_check_box.prototype.search = async function(options) {
 * @returns {HTMLElement} `content_data` div populated with the q_operator input
 *   and one checkbox node per datalist item.
 */
-const get_content_data = function(self) {
+const get_content_data = (self) => {
 
 	// short vars
 		const datalist	= self.data.datalist || []
@@ -167,7 +169,7 @@ const get_content_data = function(self) {
 			class_name		: 'q_operator',
 			parent			: content_data
 		})
-		input_q_operator.addEventListener('change',function() {
+		input_q_operator.addEventListener('change',() => {
 			// value
 				const value = (input_q_operator.value.length>0) ? input_q_operator.value : null
 			// q_operator. Fix the data in the instance previous to save
@@ -257,7 +259,7 @@ const get_input_element = (i, current_value, self) => {
 		const option_label = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'label',
-			inner_html		: label,
+			inner_html		: render_value(label, self.context.render_class),
 			parent			: content_value
 		})
 
@@ -268,7 +270,7 @@ const get_input_element = (i, current_value, self) => {
 		})
 		option_label.prepend(input_checkbox)
 		// change handler
-		const change_handler = function() {
+		const change_handler = () => {
 
 			// build changed_data_item using shared function
 				const {changed_data_item} = build_changed_data_item(

@@ -5,7 +5,7 @@
 
 
 // imports
-	import {get_section_records} from '../../section/js/section.js'
+	import {window_section_rows} from '../../section/js/section.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {set_element_css} from '../../page/js/css.js'
@@ -44,7 +44,7 @@
 *     <div.list_body>
 *       <div.list_header>…</div>       — column labels; hidden when 0 records
 *       <div.content_data>
-*         <div.no_records>             — when ar_section_record.length === 0
+*         <div.no_records>             — when the page has no rows
 *         | <div>…</div>              — one section_record row per record
 *       </div>
 *     </div>
@@ -86,9 +86,9 @@ export const view_base_list_section = function() {
 *   set_element_css() using a scoped selector so that multiple sections on the
 *   same page do not clash.
 *
-* (!) ar_instances is populated lazily: if already present and non-empty it is
-*   reused, otherwise get_section_records() is called. This avoids a redundant
-*   server round-trip when render() is called again after a navigation event.
+* (!) ar_instances holds only the MATERIALIZED rows: the row window
+*   (section.js window_section_rows) builds them on demand and a released row
+*   leaves the array through its own destroy.
 *
 * @param {Object} self    - The section instance (type: section). Expected
 *                           properties: id, type, model, tipo, section_tipo,
@@ -114,17 +114,17 @@ view_base_list_section.render = async function(self, options) {
 	// assign the result of rebuild columns_map to the instance
 	self.columns_map = columns_map
 
-	// ar_section_record. section_record instances (initialized and built)
-		self.ar_instances = self.ar_instances && self.ar_instances.length>0
-			? self.ar_instances
-			: await get_section_records({caller: self})
+	// rows. The page's locator entries; instances are built by the row window
+	// (section.js window_section_rows) only for the rows the viewport reaches
+		const rows = self.data?.entries || []
+		self.ar_instances = self.ar_instances || []
 
 	// content_data
-		const content_data = await get_content_data(self, self.ar_instances)
+		const content_data = await get_content_data(self, rows)
 		if (render_level==='content') {
 
 			// list_header_node. Remove possible style 'hide' if not empty
-				if (self.ar_instances.length>0) {
+				if (rows.length>0) {
 					const wrapper = self.node
 					if (wrapper.list_header_node && wrapper.list_header_node.classList.contains('hide')) {
 						wrapper.list_header_node.classList.remove('hide')
@@ -208,7 +208,7 @@ view_base_list_section.render = async function(self, options) {
 	// list_header_node. Create and append if ar_instances is not empty
 		const list_header_node = ui.render_list_header(columns_map, self)
 		list_body.appendChild(list_header_node)
-		if (self.ar_instances.length<1) {
+		if (rows.length<1) {
 			list_header_node.classList.add('hide')
 		}
 
@@ -237,10 +237,11 @@ view_base_list_section.render = async function(self, options) {
 * GET_CONTENT_DATA
 * Builds the scrollable row area for the list view.
 *
-* Iterates over ar_section_record in parallel (Promise.all) and appends each
-* rendered section_record node to a DocumentFragment in their original order.
-* When the array is empty, a localised "No records found" placeholder is
-* rendered instead via no_records_node().
+* Hands the page's rows to the row window (at most ROW_WINDOW_MAX_ROWS built at
+* once — audit P2-31 / CLI-29) instead of iterating them; each materialized
+* row is a section_record node in its original server order, and the first
+* window is filled before this resolves. When the array is empty, a localised
+* "No records found" placeholder is rendered instead via no_records_node().
 *
 * The returned div carries the CSS classes 'content_data', self.mode, and
 * self.type so that layout rules can target mode/type combinations without
@@ -248,40 +249,35 @@ view_base_list_section.render = async function(self, options) {
 *
 * @param {Object} self              - The section instance (used for .mode and
 *                                     .type class names on content_data).
-* @param {Array}  ar_section_record - Array of initialised section_record
-*                                     instances. Each must expose a render()
-*                                     method that accepts { add_hilite_row }.
+* @param {Array}  rows - The page's locator entries (`self.data.entries`); rows
+*                        are built and rendered by the row window on demand.
 * @returns {Promise<HTMLElement>} A div.content_data element containing all
 *   row nodes (or the no_records placeholder).
 */
-const get_content_data = async function(self, ar_section_record) {
-
-	const fragment = new DocumentFragment()
-
-	// add all section_record rendered nodes
-		const ar_section_record_length = ar_section_record.length
-		if (ar_section_record_length===0) {
-
-			// no records found case
-			const row_item = no_records_node()
-			fragment.appendChild(row_item)
-
-		}else{
-			// rows
-			// parallel mode
-				const ar_promises = ar_section_record.map(el => el.render({
-					add_hilite_row : true
-				}))
-				const ar_nodes = await Promise.all(ar_promises)
-				for (const section_record_node of ar_nodes) {
-					fragment.appendChild(section_record_node)
-				}
-		}
+const get_content_data = async function(self, rows) {
 
 	// content_data
 		const content_data = document.createElement('div')
 			  content_data.classList.add('content_data', self.mode, self.type)
-			  content_data.appendChild(fragment)
+
+	// rows. A row window (section.js window_section_rows) builds and renders
+	// section_record rows on demand, at most ROW_WINDOW_MAX_ROWS at once
+		if (!rows || rows.length===0) {
+
+			// no records found case
+			content_data.appendChild(no_records_node())
+
+		}else{
+
+			await window_section_rows({
+				caller			: self,
+				container		: content_data,
+				rows			: rows,
+				render_options	: {
+					add_hilite_row : true
+				}
+			})
+		}
 
 
 	return content_data

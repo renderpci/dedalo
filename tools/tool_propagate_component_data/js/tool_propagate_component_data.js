@@ -376,9 +376,10 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 			return Promise.reject(new Error('Invalid total'))
 		}
 
-		// clean sqo
-		sqo.offset	= 0
-		sqo.limit	= 0
+		// sqo pagination is NOT overridden: the server forces limit null (all)
+		// and offset 0 on the target set itself (tools/tool_propagate_component_data/
+		// server/index.ts) — a client `limit: 0` was an undeclared ask the server
+		// clamped and then overrode (audit P2-31)
 
 	// rqo
 		const rqo = {

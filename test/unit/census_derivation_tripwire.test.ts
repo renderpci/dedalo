@@ -533,6 +533,24 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		scope:
 			'config keys read by call literal. KNOWN SUBSET: scripts/ and tools/ read keys through readEnv too (PUPPETEER_EXECUTABLE_PATH is read only under scripts/) — widening to the write-path roots is the open item, recorded here so the gap lives where the roots do',
 	},
+	'test/helpers/browser_corpus.ts': {
+		roots: [
+			['client', 'tools'],
+			['client/dedalo', 'tools'],
+		],
+		scope:
+			"the first-party browser trees — every served .js of the app client and of every tool client, vendored libraries excluded (browserSources is git's view, firstPartyClientFiles the on-disk walk)",
+	},
+	'test/helpers/deploy_conf_corpus.ts': {
+		roots: [
+			[
+				'publication/site_builder/deploy/examples/rendered-apache/etc/apache2/sites-available',
+				'publication/site_builder/deploy/examples/rendered/etc/nginx/sites-available',
+			],
+		],
+		scope:
+			'the site-builder committed rendered host configurations (nginx + apache sites-available)',
+	},
 	'test/helpers/client_suite_census.ts': {
 		roots: [['client/dedalo/test/client/js']],
 		scope: 'the browser client suite files (test_*.js) and their registry',

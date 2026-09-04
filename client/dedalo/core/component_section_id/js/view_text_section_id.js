@@ -6,6 +6,7 @@
 
 // import
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -88,7 +89,7 @@ view_text_section_id.render = function(self, options) {
 		const wrapper = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: `wrapper_component ${self.model} ${self.mode} view_${self.view}`,
-			inner_html		: value_string
+			inner_html		: render_value(value_string, self.context.render_class)
 		})
 
 

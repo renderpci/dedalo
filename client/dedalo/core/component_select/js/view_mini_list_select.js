@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_join} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -62,7 +63,7 @@ export const view_mini_list_select = function() {
 view_mini_list_select.render = async function(self, options) {
 
 	// short vars
-		const value_string	= self.data.entries || ''
+		const value_string	= render_join(self.data.entries, ', ', self.context.render_class)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self, {

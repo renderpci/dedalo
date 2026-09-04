@@ -54,6 +54,7 @@
 	import {get_instance, get_all_instances} from '../../common/js/instances.js'
 	import {get_caller_by_model} from '../../common/js/utils/util.js'
 	import {render_link_children} from './view_default_edit_ts_object.js'
+	import {bound_sqo_limit} from '../../common/js/sqo_limit.js'
 
 
 
@@ -258,9 +259,13 @@ export const render_ts_line = function(self) {
 						}
 
 						// pagination. Built by value: never mutate the cached
-						// parent_instance.children_data.pagination object
+						// parent_instance.children_data.pagination object. The parent's
+						// OWN page size is re-sent from offset 0 (audit P2-31 / CLI-30:
+						// this sent `limit: 0` — "the whole branch" — exactly when the
+						// parent was known to be paginated); the bound is the server's
+						// client ceiling, never 0.
 						const pagination = parent_instance.children_data?.pagination
-							? { limit: 0, offset: 0 }
+							? { limit: bound_sqo_limit(parent_instance.children_data.pagination.limit), offset: 0 }
 							: null
 
 						// children_data - render_children_data from API

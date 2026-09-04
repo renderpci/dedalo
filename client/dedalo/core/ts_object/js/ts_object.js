@@ -20,10 +20,11 @@
 	import {dd_request_idle_callback, when_in_dom} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_edit_ts_object} from './render_edit_ts_object.js'
-	import {render_children} from './view_default_edit_ts_object.js'
+	import {render_children, reveal_child} from './view_default_edit_ts_object.js'
 	import {ApiError, CLIENT_ERROR, request_failed, response_data} from '../../common/js/api_error.js'
 	import {handle_api_error} from '../../common/js/error_dispatch.js'
 	import {error_text} from '../../common/js/render_api_error.js'
+	import {request_complete} from '../../common/js/sqo_limit.js'
 
 
 
@@ -188,13 +189,23 @@ export const ts_object = function() {
 // prototypes assign
 	ts_object.prototype.render	= common.prototype.render
 	ts_object.prototype.refresh	= common.prototype.refresh
-	ts_object.prototype.destroy	= common.prototype.destroy
+	// destroy — the children row window (view_default_edit_ts_object
+	// render_children) holds the viewport observer over rows that are this
+	// node's dependencies. Signature MIRRORS common.prototype.destroy.
+	ts_object.prototype.destroy	= async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
+		const self = this
+		if (self.row_window && (delete_self || delete_dependencies)) {
+			self.row_window.destroy()
+		}
+		return common.prototype.destroy.call(self, delete_self, delete_dependencies, remove_dom)
+	}
 
 	// render
 	ts_object.prototype.edit			= render_edit_ts_object.prototype.edit
 	// search mode intentionally reuses the edit render — same DOM, different mode flag
 	ts_object.prototype.search			= render_edit_ts_object.prototype.edit
 	ts_object.prototype.render_children	= render_children
+	ts_object.prototype.reveal_child	= reveal_child
 
 
 
@@ -1065,14 +1076,15 @@ ts_object.prototype.update_children_state = async function(options = {}) {
 * issuing a section search with children_recursive:true. Used when a
 * batch operation needs every descendant (e.g. deletion with cascade).
 * (!) Uses the generic section search API (action:'read'), not dd_ts_api,
-* with a hardcoded ddo_map:[] — no component data is requested.
+* with a hardcoded ddo_map:[] — no component data is requested. The read is
+* walked at the server's client ceiling (request_complete), never `limit: 0`.
 * @param {Object} options
 * @param {string} options.section_tipo - Tipo of the root term to recurse from.
 * @param {string|number} options.section_id - Record ID of the root term.
 * @returns {Promise<Array|boolean>} Array of { section_tipo, section_id }
 *   locator objects on success; false on validation failure or API error.
 */
-ts_object.prototype.get_children_recursive = function( options ) {
+ts_object.prototype.get_children_recursive = async function( options ) {
 
 	// short vars
 		const section_tipo	= options.section_tipo
@@ -1081,68 +1093,68 @@ ts_object.prototype.get_children_recursive = function( options ) {
 	// check vars
 		if (!section_tipo || typeof section_tipo==="undefined") {
 			console.log("[get_children_recursive] Error. section_tipo is not defined");
-			return Promise.resolve(false);
+			return false
 		}
 		if (!section_id || typeof section_id==="undefined") {
 			console.log("[get_children_recursive] Error. section_id is not defined");
-			return Promise.resolve(false);
+			return false
 		}
 
-	return new Promise(function(resolve){
-
-		// API call
-		const rqo = {
-			action			: 'read',
-			source			: {
-				typo			: 'source',
-				type			: 'section',
-				action			: 'search',
-				model			: 'section',
-				tipo			: section_tipo,
+	// API call. A COMPLETENESS read (the whole descendant set): walked page
+	// by page at the server's client ceiling through request_complete
+	// (common/js/sqo_limit.js) — never one request with `limit: 0`, which the
+	// server read as the same ceiling and truncated in silence (audit P2-31 /
+	// CLI-30). Each page answers ONE section item whose `value` holds that
+	// page's locators; the pages' values are concatenated.
+	const rqo = {
+		action			: 'read',
+		source			: {
+			typo			: 'source',
+			type			: 'section',
+			action			: 'search',
+			model			: 'section',
+			tipo			: section_tipo,
+			section_tipo	: section_tipo,
+			section_id		: null,
+			mode			: 'list',
+			lang			: page_globals.dedalo_data_nolan,
+		},
+		show : {
+			ddo_map : []
+		},
+		sqo : {
+			section_tipo	: [section_tipo],
+			filter_by_locators: [{
 				section_tipo	: section_tipo,
-				section_id		: null,
-				mode			: 'list',
-				lang			: page_globals.dedalo_data_nolan,
-			},
-			show : {
-				ddo_map : []
-			},
-			sqo : {
-				section_tipo	: [section_tipo],
-				limit			: 0,
-				offset			: 0,
-				filter_by_locators: [{
-					section_tipo	: section_tipo,
-					section_id		: section_id
-				}],
-				children_recursive: true
-			}
+				section_id		: section_id
+			}],
+			children_recursive: true
 		}
-		data_manager.request({
-			body : rqo
-		})
-		.then(async function(response) {
+	}
+	const complete = await request_complete(rqo, {
+		count_rows : (datum) => {
+			const item = datum.data.find(el => el.tipo === section_tipo)
+			return Array.isArray(item?.value) ? item.value.length : 0
+		}
+	})
+	if (!complete) {
+		// error case
+		console.warn("[ts_object.get_children] Error, response is null");
+		return false
+	}
 
-			const response_datum = response_data(response)
-			if (response_datum) {
-				const section_data = response_datum.data.find(el => el.tipo === section_tipo)
-				console.log('----> get_children_recursive section_data X', section_data);
-				const children_recursive = section_data.value.map(el =>{
-					return {
-						section_tipo	: el.section_tipo,
-						section_id		: el.section_id
-					}
-				})
-
-				resolve(children_recursive)
-
-			}else{
-				// error case
-				console.warn("[ts_object.get_children] Error, response is null");
-				resolve(false)
+	const children_recursive = complete.data
+		.filter(el => el.tipo === section_tipo && Array.isArray(el.value))
+		.flatMap(el => el.value)
+		.map(el => {
+			return {
+				section_tipo	: el.section_tipo,
+				section_id		: el.section_id
 			}
 		})
-	})
+
+
+	return children_recursive
 }//end get_children_recursive
 
 
@@ -1672,11 +1684,13 @@ ts_object.prototype.swap_parent = async function (options) {
 	// Move moving instance node from old parent to the new one (current dropped)
 	target_instance.children_container.appendChild( moving_instance.node );
 
-	// Update moving instance virtual_order
-	const total = [...target_instance.children_container.childNodes].filter(el =>
-		el.classList.contains('wrap_ts_object')
-	).length;
-	moving_instance.virtual_order = total
+	// Update moving instance virtual_order. INDEX-based (audit P2-31 / CLI-30):
+	// the target's descriptor children in DATA plus the moved one — never a DOM
+	// count, because a windowed children_container holds only the rows in reach.
+	const target_descriptors = (target_instance.children_data?.ar_children_data || [])
+		.filter(el => el.is_descriptor===true && el.ts_id!==moving_instance.ts_id)
+		.length
+	moving_instance.virtual_order = target_descriptors + 1
 	// Refresh the instance (without call API) to update the order value.
 	await moving_instance.refresh({
 		build_autoload	: false, // Do not load data from API
@@ -2497,7 +2511,16 @@ const open_search_branches = async function(node_info, to_open) {
 
 		// resolve the live instance. For roots it was rendered in phase 1;
 		// for deeper nodes the parent's render_children just created it
-		// (same key: key parts are identical to render_child's)
+		// (same key: key parts are identical to render_child's) — but a windowed
+		// parent (row_window) holds only the children in reach, so the child is
+		// REVEALED first: the window re-centres on it and materializes it
+		if (info.data.ts_parent !== 'root') {
+			const parent_info = node_info.get(info.data.ts_parent)
+			const parent_instance = parent_info ? get_instance_by_id(parent_info.key) : null
+			if (parent_instance && typeof parent_instance.reveal_child==='function') {
+				await parent_instance.reveal_child(ts_id)
+			}
+		}
 		const instance = get_instance_by_id(info.key)
 		if (!instance) {
 			console.error('[open_search_branches] Instance not found for node:', ts_id, info.key);

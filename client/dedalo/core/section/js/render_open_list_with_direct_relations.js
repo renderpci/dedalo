@@ -8,6 +8,7 @@
 	import { is_filter_empty } from '../../search/js/search_utils.js'
 	import { data_manager } from '../../common/js/data_manager.js'
 	import {response_data} from '../../common/js/api_error.js'
+	import {max_page_limit} from '../../common/js/sqo_limit.js'
 	import {
 		clone,
 		open_records_in_window,
@@ -128,7 +129,10 @@ export const build_scoped_sqo = function(sqo, scope, caller_record) {
 		if (is_own_record_pin(pins, caller_record)===true) {
 			scoped_sqo.filter_by_locators = []
 		}
-		scoped_sqo.limit	= 0
+		// "every row" is the SERVER's client ceiling (max_page_limit): read_raw
+		// clamps a client limit there anyway (DEC-07), so sending 0 only hid the
+		// bound; sending the bound the server applies says what is asked for
+		scoped_sqo.limit	= max_page_limit()
 		scoped_sqo.offset	= 0
 	}else{
 		// Current record only.

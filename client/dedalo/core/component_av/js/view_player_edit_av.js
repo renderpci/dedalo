@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {when_in_viewport} from '../../common/js/events.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 
@@ -439,7 +440,7 @@ const get_av_control_buttons = (self) => {
 			element_type	: 'span',
 			class_name		: 'smpte',
 			parent			: fragment,
-			inner_html		: self.get_current_tc()
+			inner_html		: render_value(self.get_current_tc(), 'text')
 		})
 		// throttle DOM updates and use textContent (no HTML parse) to avoid
 		// excessive reflows during playback (timeupdate can fire many times/sec)

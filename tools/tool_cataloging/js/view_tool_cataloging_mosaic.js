@@ -6,7 +6,7 @@
 
 // imports
 	import {event_manager} from '../../../core/common/js/event_manager.js'
-	import {get_section_records} from '../../../core/section/js/section.js'
+	import {window_section_rows} from '../../../core/section/js/section.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {set_element_css} from '../../../core/page/js/css.js'
 	import {
@@ -32,13 +32,14 @@
 * Each entry in `self.columns_map` may carry two optional boolean flags:
 *   - `in_mosaic: true`  — include this column in the main mosaic grid
 *   - `hover: true`      — include this column in the hover overlay
-* Both sets of columns are filtered from the full columns_map and routed to
-* separate `get_section_records` calls before being merged with control columns
-* added by `rebuild_columns_map`.
+* Both sets of columns are filtered from the full columns_map and merged with
+* the control columns added by `rebuild_columns_map`; the ROW WINDOW then builds
+* ONE section_record per set for each row it materializes.
 *
 * DRAG-AND-DROP FLOW
-* 1. `render` calls `get_section_records` to obtain section_record instances.
-* 2. `get_content_data` renders each record node and calls `set_drag_and_drop`.
+* 1. `get_content_data` hands the page's entries to the row window, which builds
+*    the two section_records (tile + hover) of a row when the viewport reaches it.
+* 2. The window's materialize renders the tile node and calls `set_drag_and_drop`.
 * 3. `set_drag_and_drop` marks the node draggable and attaches a dragstart handler.
 * 4. `on_dragstart_mosaic` serialises locator + paginated_key as JSON in
 *    dataTransfer so the drop target (thesaurus) can read them.
@@ -47,11 +48,20 @@
 *    of the matching mosaic card.
 *
 * HOVER OVERLAY
-* A parallel set of section_records (hover columns) is rendered into a hidden
-* `hover_body` div. On `mouseenter` the appropriate hover record is moved into the
-* hovered card node, revealed, and then returned to `hover_body` on `mouseleave`.
-* Events are keyed by `mosaic_hover_<id_base>_<section_tipo>_<section_id>` to
-* avoid cross-record collisions.
+* Each row's hover record (hover columns, `id_variant: 'hover'`) is built by the
+* same window step as its tile and prepended into it, hidden (`display_none`)
+* until `mouseenter`. It is the row's own node — no shared park container and no
+* pub/sub bridge: a windowed row must own everything it built, or a released row
+* would leave a subscriber behind (this is the shape core's
+* view_mosaic_edit_portal already uses).
+*
+* ROW WINDOW (audit P2-31 / CLI-29 / CLI-30)
+* This view is an ordinary section in list mode: it renders the same search
+* filter and paginator as the default list and reads the same saved pagination
+* key (`<tipo>_list`), so a page size set in the normal list — up to the DEC-07
+* ceiling of 1000 — lands here whole. Its rows are therefore windowed exactly
+* like the default list's: at most ROW_WINDOW_MAX_ROWS rows (tile + hover each)
+* exist at once, and rows past the far edge are released.
 *
 * Exports:
 *   view_tool_cataloging_mosaic           — constructor (no-op; required by module system)
@@ -98,39 +108,15 @@ view_tool_cataloging_mosaic.render = async function(self, options) {
 	// options
 		const render_level = options.render_level || 'full'
 
-	// hover_body. Alternative section_record with selected ddo to show when user hover the mosaic
-		const hover_body = await (async ()=>{
+	// interface configurations. Applied to every section_record the window builds
+		// button_delete prevent to show
+		self.show_interface.button_delete = false
+		// button edit click, opens record in a new window instead navigate
+		self.show_interface.button_edit_options.action_mousedown = 'open_window'
 
-			// hover_body
-				const hover_body = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'hover_body display_none'
-				})
-
-			// columns
-				const hover_columns		= self.columns_map.filter(el => el.hover===true)
-				const hover_columns_map	= await rebuild_columns_map(hover_columns, self, false)
-
-			// interface configurations
-				// button_delete prevent to show
-				self.show_interface.button_delete = false
-				// button edit click, opens record in a new window instead navigate
-				self.show_interface.button_edit_options.action_mousedown = 'open_window'
-
-			// hover_view (body)
-				const hover_ar_section_record = await get_section_records({
-					caller		: self,
-					mode		: 'list',
-					columns_map	: hover_columns_map,
-					id_variant	: 'hover'
-				})
-				// store to allow destroy later
-				self.ar_instances.push(...hover_ar_section_record)
-				const hover_view = await render_hover_view(self, hover_ar_section_record, hover_body)
-				hover_body.appendChild(hover_view)
-
-			return hover_body
-		})()
+	// hover columns. The overlay's column slice (one section_record per row)
+		const hover_columns		= self.columns_map.filter(el => el.hover===true)
+		const hover_columns_map	= await rebuild_columns_map(hover_columns, self, false)
 
 	// content_data. Create the mosaic with only the marked ddo as "mosaic" with true value
 		// columns_map
@@ -138,17 +124,15 @@ view_tool_cataloging_mosaic.render = async function(self, options) {
 			const columns_map		= await rebuild_columns_map(base_columns_map, self, true)
 			self.columns_map		= columns_map
 
-		// ar_section_record. section_record instances (initialized and built)
-			const ar_section_record	= await get_section_records({
-				caller		: self,
-				mode		: 'list',
-				columns_map	: columns_map
-			})
-			// store to allow destroy later
-			self.ar_instances.push(...ar_section_record)
+		// rows. The page's locator entries; instances are built by the row window
+			const rows = self.data?.entries || []
+			self.ar_instances = self.ar_instances || []
 
 		// content_data
-			const content_data = await get_content_data(self, ar_section_record)
+			const content_data = await get_content_data(self, rows, {
+				columns_map			: columns_map,
+				hover_columns_map	: hover_columns_map
+			})
 			if (render_level==='content') {
 
 				// force to refresh paginator
@@ -238,68 +222,121 @@ view_tool_cataloging_mosaic.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* Renders each section_record in `ar_section_record`, attaches drag-and-drop and
-* hover events to every record node, then places them all inside a `content_data`
-* div returned by `ui.tool.build_content_data`.
+* Builds the `content_data` div and hands the page's rows to a ROW WINDOW
+* (section.js window_section_rows → common/js/row_window.js): the TWO
+* section_records of a row (the mosaic tile and its hover overlay) are built and
+* rendered only for the rows the viewport can reach — at most ROW_WINDOW_MAX_ROWS
+* at once — and released again past the far edge (audit P2-31 / CLI-29 / CLI-30:
+* this view reads the same saved pagination key as the ordinary list, so its page
+* is the same 1000-row page, and it used to build 2 instances for every row of it).
 *
-* Hover events use namespaced event_manager channels:
-*   `mosaic_hover_<id_base>_<section_tipo>_<section_id>`     — published on mouseenter
-*   `mosaic_mouseleave_<id_base>_<section_tipo>_<section_id>` — published on mouseleave
+* Per materialized row:
+*   1. Builds the tile and hover records through the window's `build_row` (each
+*      registered in `self.ar_instances`, with the row's page-wide row_key).
+*   2. Renders both, prepends the hover overlay into the tile (hidden until hover).
+*   3. Attaches drag-and-drop (`set_drag_and_drop`, `paginated_key` = row index).
+*   4. Attaches the `mouseenter` / `mouseleave` listeners that toggle the overlay
+*      and the `mosaic_over` class.
+* Per released row: destroys both records and unsubscribes the drag column's
+* `ts_add_child_tool_cataloging` listeners (see render_column_drag).
 *
 * CSS from `self.context.css['.content_data'].style.height` is applied inline if
 * present (legacy selector support for per-section overrides stored in the ontology).
 *
 * @param {Object} self - Section instance.
-* @param {Array<Object>} ar_section_record - Array of already-built section_record instances.
-* @returns {Promise<HTMLElement>} content_data div containing all rendered record nodes.
+* @param {Array}  rows - The page's locator entries (`self.data.entries`).
+* @param {Object} maps
+* @param {Array}  maps.columns_map       - The `in_mosaic` columns (tile).
+* @param {Array}  maps.hover_columns_map - The `hover` columns (overlay).
+* @returns {Promise<HTMLElement>} content_data div holding the windowed rows.
 */
-const get_content_data = async function(self, ar_section_record) {
-
-	// build_values
-		const fragment = new DocumentFragment()
-
-		// add all section_record rendered nodes
-			const ar_section_record_length = ar_section_record.length
-			if (ar_section_record_length>0) {
-
-				for (let i = 0; i < ar_section_record_length; i++) {
-
-					// section record
-						const section_record		= ar_section_record[i]
-						const section_record_node	= await section_record.render()
-
-						set_drag_and_drop({
-							section_record_node	: section_record_node,
-							total_records		: self.total,
-							locator				: section_record.locator,
-							paginated_key		: i,
-							caller				: self
-						})
-
-					// mouseenter event
-						section_record_node.addEventListener('mouseenter',function(e){
-							e.stopPropagation()
-							const event_id = `mosaic_hover_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
-							event_manager.publish(event_id, this)
-							section_record_node.classList.add('mosaic_over')
-						})
-
-					// mouseleave event
-						section_record_node.addEventListener('mouseleave',function(e){
-							e.stopPropagation()
-							const event_id = `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
-							event_manager.publish(event_id, this)
-							section_record_node.classList.remove('mosaic_over')
-						})
-
-					// section record append
-						fragment.appendChild(section_record_node)
-				}
-			}//end if (ar_section_record_length===0)
+const get_content_data = async function(self, rows, maps) {
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
-			  content_data.appendChild(fragment)
+
+	// row window
+		if (rows.length > 0) {
+
+			// index → the row's two instances
+			const companions = new Map()
+
+			await window_section_rows({
+				caller			: self,
+				container		: content_data,
+				rows			: rows,
+				records_options	: {
+					mode : 'list'
+				},
+				materialize		: async (row, i, build_row) => {
+
+					// the two records of the row, built together
+					const [section_record, hover_section_record] = await Promise.all([
+						build_row({ columns_map: maps.columns_map }),
+						build_row({ columns_map: maps.hover_columns_map, id_variant: 'hover' })
+					])
+					if (!section_record || !hover_section_record) {
+						for (const built of [section_record, hover_section_record]) {
+							if (built && built.status!=='destroyed') {
+								await built.destroy(true, true, true)
+							}
+						}
+						return null
+					}
+
+					// tile + hover overlay
+					const [section_record_node, hover_view] = await Promise.all([
+						section_record.render(),
+						render_hover_view(hover_section_record)
+					])
+					section_record_node.prepend(hover_view)
+
+					// drag and drop
+					set_drag_and_drop({
+						section_record_node	: section_record_node,
+						total_records		: self.total,
+						locator				: section_record.locator,
+						paginated_key		: i,
+						caller				: self
+					})
+
+					// mouseenter event
+					section_record_node.addEventListener('mouseenter', function(e){
+						e.stopPropagation()
+						hover_view.classList.remove('display_none')
+						section_record_node.classList.add('mosaic_over')
+					})
+
+					// mouseleave event
+					section_record_node.addEventListener('mouseleave', function(e){
+						e.stopPropagation()
+						hover_view.classList.add('display_none')
+						section_record_node.classList.remove('mosaic_over')
+					})
+
+					companions.set(i, {
+						section_record			: section_record,
+						hover_section_record	: hover_section_record
+					})
+
+					return section_record_node
+				},
+				release			: async (row, i) => {
+					// the drag column subscribes one listener per rendered card
+					unsubscribe_drag_tokens(self, i)
+					const companion = companions.get(i)
+					companions.delete(i)
+					if (!companion) {
+						return
+					}
+					for (const built of [companion.section_record, companion.hover_section_record]) {
+						if (built && built.status!=='destroyed') {
+							await built.destroy(true, true, true)
+						}
+					}
+				}
+			})
+		}//end if (rows.length > 0)
 
 	// css
 		const element_css	= self.context.css || {}
@@ -411,104 +448,74 @@ const on_dragstart_mosaic = function(node, event, options) {
 
 /**
 * RENDER_HOVER_VIEW
-* Renders each hover-column section_record and wires bidirectional event_manager
-* subscriptions so the correct hover card appears over the hovered mosaic card.
+* Renders ONE row's hover overlay node.
 *
-* HOW THE HOVER MECHANISM WORKS
-* `hover_body` is a hidden container that holds all hover section_records. When the
-* user hovers a mosaic card, `get_content_data`'s `mouseenter` handler publishes
-* `mosaic_hover_<key>`. The matching `fn_mosaic_hover` subscriber:
-*   1. Hides all children of `hover_body` (adds `display_none`).
-*   2. Moves its own `section_record_node` into the hovered card (caller_node.prepend).
-*   3. Removes `display_none` from that node so it is visible.
+* The overlay is the row's own hover section_record (built by the window in the
+* same step as the tile), rendered with the classes `sr_mosaic_hover display_none`
+* and prepended into the tile by `get_content_data`; the tile's
+* `mouseenter` / `mouseleave` listeners toggle `display_none`.
 *
-* On `mouseleave` (`fn_mosaic_mouseleave`):
-*   1. Returns `section_record_node` to `hover_body` (appendChild).
-*   2. Hides all children of `hover_body` again for the next hover.
+* (Before the row window this was a page-wide parallel set parked in a hidden
+* `hover_body` and teleported into the hovered card through the event_manager
+* channels `mosaic_hover_*` / `mosaic_mouseleave_*`. A windowed row owns what it
+* built — a released row cannot leave a subscriber behind — so the bridge is gone
+* and the overlay is simply the tile's hidden first child, the shape core's
+* view_mosaic_edit_portal uses.)
 *
-* Event subscriptions are guarded with `event_manager.event_name_exists` to
-* prevent double-registration across pagination renders. Each subscription token
-* is pushed onto `self.events_tokens` so `common.destroy()` can unsubscribe.
-*
-* @param {Object} self - Section instance; `self.events_tokens` is mutated.
-* @param {Array<Object>} ar_section_record - Array of built hover-column section_record instances.
-* @param {HTMLElement} hover_body - Hidden container that owns the hover record nodes when idle.
-* @returns {Promise<DocumentFragment>} Fragment containing all hover section_record nodes
-*   (already subscribed; caller should append this to `hover_body`).
+* @param {Object} hover_section_record - The row's hover-columns section_record
+*   instance (`id_variant: 'hover'`).
+* @returns {Promise<HTMLElement>} The rendered overlay node (initially hidden).
 */
-const render_hover_view = async function(self, ar_section_record, hover_body) {
+const render_hover_view = async function(hover_section_record) {
 
-	// build_values
-		const fragment = new DocumentFragment()
-
-	// add all section_record rendered nodes
-		const ar_section_record_length = ar_section_record.length
-		if (ar_section_record_length>0) {
-
-			for (let i = 0; i < ar_section_record_length; i++) {
-
-				// section_record
-					const section_record		= ar_section_record[i]
-					const section_record_node	= await section_record.render()
-						  section_record_node.classList.add('sr_mosaic_hover')
-
-				// event subscribe
-				// On user hover mosaic a event that we subscribe here to show the
-				// proper hover record and hide the others
-					// over event
-					const fn_mosaic_hover = function(caller_node) {
-						// hide all
-							const ar_children_nodes	= hover_body.children;
-							const len			= ar_children_nodes.length
-							for (let i = len - 1; i >= 0; i--) {
-								const node = ar_children_nodes[i]
-								node.classList.add('display_none')
-							}
-
-						// move to the section record
-							caller_node.prepend(section_record_node)
-							section_record_node.classList.remove('display_none')
-					}
-					const event_id_hover = `mosaic_hover_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
-					const found_hover	 = event_manager.event_name_exists(event_id_hover)
-					if (!found_hover) {
-						const token = event_manager.subscribe(event_id_hover, fn_mosaic_hover)
-						self.events_tokens.push(token)
-					}
-
-					// leave event
-					const fn_mosaic_mouseleave = function() {
-						// return
-						hover_body.appendChild(section_record_node)
-						// hide all
-						const ar_children_nodes	= hover_body.children;
-						const len				= ar_children_nodes.length
-						for (let i = len - 1; i >= 0; i--) {
-							const node = ar_children_nodes[i]
-							node.classList.add('display_none')
-						}
-					}
-					const event_id_mouseleave	= `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
-					const found_mouseleave		= event_manager.event_name_exists(event_id_mouseleave)
-					if (!found_mouseleave) {
-						const token = event_manager.subscribe(event_id_mouseleave, fn_mosaic_mouseleave)
-						self.events_tokens.push(token)
-					}
-
-				// section record append
-					fragment.appendChild(section_record_node)
-			}
-		}//end if (ar_section_record_length===0)
+	// section_record
+		const section_record_node = await hover_section_record.render()
+			  section_record_node.classList.add('sr_mosaic_hover', 'display_none')
 
 
-	return fragment
+	return section_record_node
 }//end render_hover_view
 
 
 
 /**
+* UNSUBSCRIBE_DRAG_TOKENS
+* Releases the `ts_add_child_tool_cataloging` subscriptions the drag column
+* opened for ONE row (see render_column_drag). Called when the window releases
+* that row: a windowed mosaic re-materializes rows as the user scrolls, so an
+* unreleased listener would accumulate on the shared channel — and would keep
+* pointing at a node that is no longer in the DOM.
+*
+* The tokens live on the SECTION keyed by row index, not on the section_record:
+* a column callback is handed `self.caller` (the section), never the record
+* itself — see view_default_list_section_record.render_callback.
+*
+* @param {Object} self    - Section instance.
+* @param {number} row_key - The released row's page index.
+* @returns {boolean} Always true.
+*/
+const unsubscribe_drag_tokens = function(self, row_key) {
+
+	const ar_tokens = self.ar_drag_tokens instanceof Map
+		? self.ar_drag_tokens.get(row_key)
+		: null
+	if (Array.isArray(ar_tokens)) {
+		for (let i = ar_tokens.length - 1; i >= 0; i--) {
+			event_manager.unsubscribe(ar_tokens[i])
+		}
+		self.ar_drag_tokens.delete(row_key)
+	}
+
+
+	return true
+}//end unsubscribe_drag_tokens
+
+
+
+/**
 * REBUILD_COLUMNS_MAP
-* Builds the final columns_map array to pass to `get_section_records` by prepending
+* Builds the final columns_map array handed to the row window (one section_record
+* per row and slice) by prepending
 * or appending control columns around the caller-supplied data columns:
 *
 *   Hover mode  (view_mosaic=false):  section_id column prepended, no drag column.
@@ -527,7 +534,7 @@ const render_hover_view = async function(self, ar_section_record, hover_body) {
 *   for API symmetry with other rebuild helpers across the codebase).
 * @param {boolean} view_mosaic - True when building the main mosaic columns; false when
 *   building the hover overlay columns.
-* @returns {Promise<Array<Object>>} Augmented columns_map ready for get_section_records.
+* @returns {Promise<Array<Object>>} Augmented columns_map ready for the row window.
 */
 const rebuild_columns_map = async function(base_columns_map, self, view_mosaic) {
 
@@ -580,16 +587,18 @@ const rebuild_columns_map = async function(base_columns_map, self, view_mosaic) 
 *
 * EVENT SUBSCRIPTION
 * Subscribes to `ts_add_child_tool_cataloging` on every render call — one
-* subscription per card. (!) This creates one persistent listener per card on the
-* shared event_manager channel. The subscription is not stored in
-* `self.events_tokens`, so these listeners are NOT cleaned up by `common.destroy`.
-* This is a known limitation; the `add_data_to_ts_component` handler is idempotent
-* and the event fires rarely, so the practical impact is low.
+* subscription per card. The token is stored on the card's section_record
+* (`ar_drag_tokens`) and released by the row window's `release`
+* (unsubscribe_drag_tokens): a windowed row re-materializes as the user scrolls,
+* so an unreleased listener would accumulate on the shared channel.
 *
 * @param {Object} options
-* @param {Object} options.caller - The section_record instance rendering this column.
-* @param {Object} options.caller.caller - The tool_cataloging-owned section instance
-*   (`tool_caller`), giving access to `area_thesaurus`.
+* @param {Object} options.caller - The tool_cataloging-owned SECTION instance (a
+*   column callback receives the record's `caller`, not the record itself).
+* @param {Object} options.caller.caller - The tool_cataloging instance, giving
+*   access to `area_thesaurus`.
+* @param {number} options.row_key - The row's page index; keys the subscription
+*   token released when the row window releases the row.
 * @param {Object} options.locator - Locator of the record being rendered
 *   ({ section_id, section_tipo }).
 * @returns {DocumentFragment} Fragment containing the dragger div (and the used indicator).
@@ -597,8 +606,11 @@ const rebuild_columns_map = async function(base_columns_map, self, view_mosaic) 
 const render_column_drag = function(options) {
 
 	// options
-		const tool_caller		= options.caller.caller
-		const section_record	= options.caller
+	// (!) a column callback is handed `self.caller` — for a mosaic card that is
+	// the tool_cataloging-owned SECTION, not the section_record
+	// (view_default_list_section_record.render_callback)
+		const caller			= options.caller
+		const tool_caller		= caller.caller
 		const locator			= options.locator
 
 	// area_thesaurus
@@ -612,7 +624,7 @@ const render_column_drag = function(options) {
 
 	// get inverse_relations data
 		const inverse_relations_tipo = DD_TIPOS.DEDALO_SECTION_INFO_INVERSE_RELATIONS
-		const relation_data = section_record.datum.data.find(el => el.tipo === inverse_relations_tipo
+		const relation_data = caller.datum.data.find(el => el.tipo === inverse_relations_tipo
 			&& el.section_tipo === locator.section_tipo
 			&& el.section_id === locator.section_id)
 
@@ -652,7 +664,16 @@ const render_column_drag = function(options) {
 	// ts_add_child_tool_cataloging event subscription
 		// when the user drop a node in thesaurus, it send an event
 		// use it to change the class of the dragged
-		event_manager.subscribe('ts_add_child_tool_cataloging', add_data_to_ts_component)
+		// The token is stored on the section, keyed by the row's page index: the
+		// row window's release unsubscribes it (unsubscribe_drag_tokens) when the
+		// row leaves the window.
+		const drag_token = event_manager.subscribe('ts_add_child_tool_cataloging', add_data_to_ts_component)
+		caller.ar_drag_tokens = (caller.ar_drag_tokens instanceof Map)
+			? caller.ar_drag_tokens
+			: new Map()
+		const ar_row_tokens = caller.ar_drag_tokens.get(options.row_key) || []
+		ar_row_tokens.push(drag_token)
+		caller.ar_drag_tokens.set(options.row_key, ar_row_tokens)
 		async function add_data_to_ts_component(options) {
 			// the locator drag by the user (the section as the term of the ts)
 			const added_locator = options.locator

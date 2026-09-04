@@ -716,20 +716,32 @@ search.prototype.get_section_id = function() {
 
 	/**
 	* REMOVE_MODEL_NODE
-	* Detaches a node (group or component) from its parent's children array.
+	* THE teardown door of the filter model: detaches a node (group or component)
+	* from its parent's children array AND destroys every component instance
+	* bound in the removed subtree, splicing each out of `self.ar_instances`.
 	*
-	* Locates the node by reference using `indexOf` and splices it out.
-	* Returns `false` without mutating anything if the node has no parent or the
-	* parent's children is not an array (e.g. already removed or detached root).
+	* Until 2026-09-04 this only spliced the model, with a note that "callers are
+	* responsible for calling instance.destroy()". The ROW close button did; the
+	* GROUP close button did not, so removing a group leaked every instance
+	* inside it: still in the global registry (whose only removal path is the
+	* destroy chain), still answering their render/sync subscriptions, and — since
+	* the search instance key is minted with a timestamp — unreusable by
+	* construction. `reset()` then iterated the still-polluted list and refreshed
+	* each orphan against a DOM node no longer in the document. One door, walked
+	* recursively, removes the class of defect instead of the instance of it: a
+	* caller that also destroys (the row handler's own splice + destroy) finds the
+	* instance already gone and is a no-op.
 	*
-	* Note: this does not destroy bound component instances — callers are
-	* responsible for calling `instance.destroy()` on component nodes before or
-	* after removal.
+	* Locates the node by reference using `indexOf`. Returns `false` without
+	* mutating anything if the node has no parent or the parent's children is
+	* not an array (e.g. already removed or detached root).
 	*
 	* @param {Object} node - The group or component model node to remove.
 	* @returns {boolean} `true` if removed; `false` if no parent or node not found.
 	*/
 	search.prototype.remove_model_node = function(node) {
+
+		const self = this
 
 		const parent = node?.parent
 		if (!parent || !Array.isArray(parent.children)) {
@@ -741,8 +753,61 @@ search.prototype.get_section_id = function() {
 			parent.children.splice(index, 1)
 		}
 
+		// destroy the bound instances of the whole subtree. Detach from the
+		// model FIRST (above) so a destroy that re-enters here finds nothing.
+		self.destroy_model_subtree(node)
+
 		return true
 	}//end remove_model_node
+
+
+
+	/**
+	* DESTROY_MODEL_SUBTREE
+	* Walks a model node and its descendants; every bound component instance is
+	* spliced from `self.ar_instances` and destroyed (self + dependencies, the
+	* wrapper DOM is removed by the caller with the group/row node). The walk is
+	* depth-first over `children`, so nested groups are covered; a component
+	* node whose instance was never bound (closed while still building) has
+	* nothing to destroy.
+	*
+	* @param {Object} node - A group or component model node.
+	* @returns {number} instances destroyed
+	*/
+	search.prototype.destroy_model_subtree = function(node) {
+
+		const self = this
+
+		if (!node) {
+			return 0
+		}
+
+		let destroyed = 0
+
+		// own instance (component node)
+			const instance = node.instance
+			if (instance && typeof instance.destroy==='function') {
+				node.instance = null
+				const index = self.ar_instances.findIndex(item => item===instance || item.id===instance.id)
+				if (index!==-1) {
+					self.ar_instances.splice(index, 1)
+				}
+				instance.destroy(
+					true, // delete_self
+					true, // delete_dependencies
+					false // remove_dom
+				)
+				destroyed++
+			}
+
+		// children (group node) — iterate over a copy: a destroy may detach nodes
+			const children = Array.isArray(node.children) ? node.children.slice() : []
+			for (let i = 0; i < children.length; i++) {
+				destroyed += self.destroy_model_subtree(children[i])
+			}
+
+		return destroyed
+	}//end destroy_model_subtree
 
 
 
@@ -1985,30 +2050,33 @@ search.prototype.reset = async function () {
 
 	const self = this
 
+	// reset_instance. A plain async function, NOT `new Promise(async …)`: an
+	// async executor's rejection reaches nobody, so a throwing refresh left the
+	// executor's resolve() unreached and the whole reset hanging forever. As an
+	// async function the throw rejects Promise.all and the caller sees it.
+	const reset_instance = async function(instance) {
+		if (!instance.data) {
+			instance.data = {}
+		}
+		instance.data.entries		= []
+		instance.data.q_operator	= null
+		instance.data.q_lang		= null
+		// refresh component without load DB data
+		await instance.refresh({
+			build_autoload : false
+		})
+		// remove the 'has value' highlight (wrapper class, not repainted by refresh)
+		ui.hilite({
+			instance	: instance, // instance object
+			hilite		: false // bool
+		})
+		return instance
+	}
+
 	const ar_promises			= []
 	const ar_instances_length	= self.ar_instances.length
 	for (let i = ar_instances_length - 1; i >= 0; i--) {
-		const instance = self.ar_instances[i]
-		ar_promises.push(
-			new Promise(async function(resolve){
-				if (!instance.data) {
-					instance.data = {}
-				}
-				instance.data.entries		= []
-				instance.data.q_operator	= null
-				instance.data.q_lang		= null
-				// refresh component without load DB data
-				await instance.refresh({
-					build_autoload : false
-				})
-				// remove the 'has value' highlight (wrapper class, not repainted by refresh)
-				ui.hilite({
-					instance	: instance, // instance object
-					hilite		: false // bool
-				})
-				resolve(instance)
-			})
-		)
+		ar_promises.push(reset_instance(self.ar_instances[i]))
 	}
 	await Promise.all(ar_promises)
 

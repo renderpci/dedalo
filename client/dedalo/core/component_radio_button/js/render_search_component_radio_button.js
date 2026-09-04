@@ -7,6 +7,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {same_section_id} from '../../common/js/utils/index.js'
 	import {build_changed_data_item} from './component_radio_button.js'
 
@@ -193,7 +194,7 @@ const get_input_element = (i, datalist_item, self) => {
 		const input_label = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'label',
-			inner_html		: label,
+			inner_html		: render_value(label, self.context.render_class),
 			parent			: content_value
 		})
 

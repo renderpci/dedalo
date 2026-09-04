@@ -781,13 +781,19 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 				source	: create_source(self, 'delete_transcribable_audio_file'),
 				options	: rqo.options
 			}
+			// housekeeping, so the answer is READ and logged, not surfaced: a
+			// leftover temporary file is the server's to sweep, and the operator
+			// can do nothing about it. (data_manager.request never rejects on an
+			// envelope failure — a `.catch` here read nothing.)
 			data_manager.request({
 				body	: cleanup_rqo,
 				retries	: 1,
 				timeout	: 3600 * 1000
 			})
-			.catch(function(error){
-				console.error('[tool_transcription] could not delete the temporary audio file:', error);
+			.then(function(api_response){
+				if (request_failed(api_response)) {
+					console.error('[tool_transcription] could not delete the temporary audio file:', api_response.error);
+				}
 			})
 		}
 

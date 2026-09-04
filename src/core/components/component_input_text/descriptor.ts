@@ -8,6 +8,7 @@ import type { ComponentModel } from '../types.ts';
 export const component_input_text: ComponentModel = {
 	model: 'component_input_text',
 	column: 'string',
+	render: 'text',
 	classSupportsTranslation: true,
 	searchBuilder: 'string',
 	flatValue: 'string',

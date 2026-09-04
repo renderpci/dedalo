@@ -7,6 +7,7 @@
 // imports
 	import {object_to_url_vars, open_window, same_section_id} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {handle_select_change} from './component_select.js'
 	import {
 		get_content_data
@@ -197,7 +198,7 @@ const get_content_value = (i, current_value, self) => {
 			const option_node = ui.create_dom_element({
 				element_type	: 'option',
 				value			: JSON.stringify(datalist_item.value),
-				inner_html		: current_label,
+				inner_html		: render_value(current_label, self.context.render_class),
 				parent			: select
 			})
 			// selected options set on match
@@ -292,7 +293,7 @@ const get_content_value_read = (i, current_value, self) => {
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_value read_only',
-			inner_html		: current_value
+			inner_html		: render_value(current_value, self.context.render_class)
 		})
 
 

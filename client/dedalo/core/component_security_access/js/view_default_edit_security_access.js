@@ -8,6 +8,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {set_before_unload} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {dd_request_idle_callback, when_in_viewport} from '../../common/js/events.js'
 
@@ -610,14 +611,14 @@ const render_area_item = function(item, datalist, value, self) {
 		const label = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: css_selectors.join(' '),
-			inner_html		: item.label,
+			inner_html		: render_value(item.label, 'text'),
 			parent			: li
 		})
 		// info_text
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'info_text',
-			inner_html		: `[${item.tipo} ${item.model} ${permissions}]`,
+			inner_html		: render_value(`[${item.tipo} ${item.model} ${permissions}]`, 'text'),
 			parent			: label
 		})
 
@@ -770,14 +771,14 @@ const render_permissions_item = function(item, datalist, value, self) {
 		const label = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'area_label',
-			inner_html		: item.label,
+			inner_html		: render_value(item.label, 'text'),
 			parent			: li
 		})
 		// info_text
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'info_text',
-			inner_html		: `[${item.tipo} ${item.model} ${permissions}]`,
+			inner_html		: render_value(`[${item.tipo} ${item.model} ${permissions}]`, 'text'),
 			parent			: label
 		})
 
@@ -912,7 +913,7 @@ const create_permissions_radio_group = function(self, item, permissions) {
 				const radio_input_label = ui.create_dom_element({
 					element_type	: 'label',
 					class_name		: 'radio_label',
-					inner_html		: title
+					inner_html		: render_value(title, 'text')
 				})
 				radio_input_label.prepend(radio_input)
 
@@ -1101,7 +1102,7 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 			const radio_input_label = ui.create_dom_element({
 				element_type	: 'label',
 				class_name		: 'radio_label',
-				inner_html		: title
+				inner_html		: render_value(title, 'text')
 			})
 			radio_input_label.prepend(radio_input)
 
@@ -1342,7 +1343,7 @@ const render_area_item_read = function(item, datalist, value) {
 		const label = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: css_selectors.join(' '),
-			inner_html		: permissions_label + ' ' + item.label,
+			inner_html		: render_value(permissions_label + ' ' + item.label, 'text'),
 			parent			: li
 		})
 
@@ -1441,7 +1442,7 @@ const render_permissions_item_read = function(item, datalist, value) {
 		const label = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'area_label',
-			inner_html		: permissions_label + ' ' + item.label,
+			inner_html		: render_value(permissions_label + ' ' + item.label, 'text'),
 			parent			: li
 		})
 
@@ -1591,7 +1592,7 @@ const render_changes_files_selector = function (options) {
 			// option
 			ui.create_dom_element({
 				element_type	: 'option',
-				inner_html		: name,
+				inner_html		: render_value(name, 'text'),
 				value			: current_file,
 				parent			: changes_files_selector
 			})
@@ -1680,7 +1681,7 @@ const render_changes_data = function (options) {
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'parents_labels',
-				inner_html		: parents_labels,
+				inner_html		: render_value(parents_labels, 'text'),
 				parent			: change_container
 			})
 
@@ -1688,7 +1689,7 @@ const render_changes_data = function (options) {
 			const section_label = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'section_label',
-				inner_html		: current_section.section.label,
+				inner_html		: render_value(current_section.section.label, 'text'),
 				parent			: change_container
 			})
 			// when the user click into the section label active all parent nodes and the section
@@ -1771,7 +1772,7 @@ const render_changes_data = function (options) {
 				ui.create_dom_element({
 					element_type	: 'li',
 					class_name		: 'child_label',
-					inner_html		: current_child.label,
+					inner_html		: render_value(current_child.label, 'text'),
 					parent			: children_container
 				})
 			}

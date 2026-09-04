@@ -38,6 +38,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_join} from '../../common/js/utils/render_escape.js'
 	import {get_ar_raw_data_value} from './render_edit_component_date.js'
 
 
@@ -112,7 +113,7 @@ export const view_text_list_date = function() {
 view_text_list_date.render = async function(self, options) {
 
 	const ar_value		= get_ar_raw_data_value(self)
-	const value_string	= ar_value.join(self.context.fields_separator)
+	const value_string	= render_join(ar_value, self.context.fields_separator, self.context.render_class)
 
 	// wrapper. Set as span
 		const wrapper = ui.create_dom_element({

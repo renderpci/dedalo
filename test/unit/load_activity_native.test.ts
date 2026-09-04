@@ -19,6 +19,15 @@ import { sql } from '../../src/core/db/postgres.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 
 const SECTION = 'test3';
+// A CLIENT HOST NOBODY ELSE WRITES. `test3` is the shared playground and the
+// LOAD rows this file asserts on are keyed by that section, so any other file
+// reading test3 in the same window used to land inside this file's watermark:
+// the "exactly one row" assertions flapped under full-tier order, and the
+// afterEach cleanup deleted the OTHER file's audit rows with them. dd544 (the
+// client host) is the row's own discriminator — TEST-NET-3 (RFC 5737), which
+// is not 127.0.0.1/::1 so hostFromClientIp stores it verbatim.
+const CLIENT_IP = '203.0.113.77';
+const CLIENT_HOST = CLIENT_IP;
 
 // coreApiActions is a Record<string, ActionHandler>, so under noUncheckedIndexedAccess
 // every lookup is possibly-undefined. Resolve the handler ONCE and fail loudly if the
@@ -33,7 +42,7 @@ const admin = await resolvePrincipal(-1);
 const ctx = {
 	principal: admin,
 	session: { userId: -1 },
-	clientIp: '127.0.0.1',
+	clientIp: CLIENT_IP,
 	requestId: 't',
 } as unknown as Parameters<(typeof coreApiActions)['read']>[1];
 
@@ -46,14 +55,21 @@ async function rowsSince(mark: number): Promise<{ what: string; where_tipo: stri
 	return (await sql.unsafe(
 		`SELECT relation->'dd545'->0->>'section_id' AS what,
 		        string->'dd546'->0->>'value' AS where_tipo
-		 FROM matrix_activity WHERE section_id > $1 ORDER BY section_id`,
-		[mark],
+		 FROM matrix_activity
+		 WHERE section_id > $1 AND string->'dd544'->0->>'value' = $2
+		 ORDER BY section_id`,
+		[mark, CLIENT_HOST],
 	)) as { what: string; where_tipo: string }[];
 }
 
 let mark = 0;
 afterEach(async () => {
-	await sql.unsafe('DELETE FROM matrix_activity WHERE section_id > $1', [mark]);
+	// Scoped to THIS file's rows: an unscoped delete above the watermark takes
+	// whatever another file logged in the same window with it.
+	await sql.unsafe(
+		"DELETE FROM matrix_activity WHERE section_id > $1 AND string->'dd544'->0->>'value' = $2",
+		[mark, CLIENT_HOST],
+	);
 });
 
 test("list-mode section read writes a section-keyed 'LOAD LIST' (code 7) row", async () => {

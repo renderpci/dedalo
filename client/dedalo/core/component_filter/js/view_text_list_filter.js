@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_join} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -93,7 +94,7 @@ view_text_list_filter.render = async function(self, options) {
 		// Join the pre-resolved label strings using the separator defined in the section-map
 		// context. innerHTML is used (not textContent) so that embedded HTML tags in labels
 		// (e.g. <mark> from search highlighting) are rendered rather than escaped.
-		const value_string	= entries.join(self.context.fields_separator)
+		const value_string	= render_join(entries, self.context.fields_separator, self.context.render_class)
 
 	// wrapper. Set as span
 		// A bare <span> is used instead of ui.component.build_wrapper_list so that

@@ -5,7 +5,7 @@
 
 
 // imports
-	import {get_section_records} from '../../section/js/section.js'
+	import {window_section_rows} from '../../section/js/section.js'
 	import {ui} from '../../common/js/ui.js'
 	import {set_element_css} from '../../page/js/css.js'
 
@@ -29,7 +29,7 @@
 *   view_default_list_portal.render(self, options) — entry point called by `list()`.
 *
 * Private helpers (module-scoped, not exported):
-*   get_content_data(self, ar_section_record) — builds the content_data container.
+*   get_content_data(self, rows, children_view) — builds the content_data container.
 */
 export const view_default_list_portal = function() {
 
@@ -44,9 +44,9 @@ export const view_default_list_portal = function() {
 *
 * Orchestrates the full render pipeline:
 *   1. Resolves the child view name from context (falls back to 'default').
-*   2. Calls `get_section_records()` to obtain fully-built `section_record`
-*      instances for every locator in `self.data.entries`.
-*   3. Delegates to `get_content_data()` to render each record node.
+*   2. Hands the locators in `self.data.entries` to `get_content_data()`, whose
+*      row window (section.js window_section_rows) builds and renders a
+*      `section_record` only for the rows the viewport reaches.
 *   4. Builds the list_body grid container and injects per-section CSS grid
 *      column widths using `set_element_css()`.
 *   5. Wraps everything in a standard list wrapper with an absorbing click
@@ -58,8 +58,8 @@ export const view_default_list_portal = function() {
 * rebuilding the full outer shell.
 *
 * Side effects:
-*   - Pushes all created `section_record` instances into `self.ar_instances`
-*     so that `common.destroy()` can tear them down on unmount.
+*   - Materialized `section_record` instances are pushed into `self.ar_instances`
+*     by the row window so that `common.destroy()` can tear them down on unmount.
 *   - Calls `set_element_css()` (async, not awaited here) to inject a scoped
 *     CSS rule for `grid-template-columns` on the `.list_body` cell.
 *     The key is scoped to `<section_tipo>_<tipo>.list.view_<view_name>` to
@@ -79,16 +79,12 @@ view_default_list_portal.render = async function(self, options) {
 	// view
 		const children_view	= self.context.children_view || self.context.view || 'default'
 
-	// ar_section_record
-		const ar_section_record	= await get_section_records({
-			caller	: self,
-			view	: children_view
-		})
-		// store to allow destroy later
-		self.ar_instances.push(...ar_section_record)
+	// rows. The page's locator entries; instances are built by the row window
+		const rows = self.data?.entries || []
+		self.ar_instances = self.ar_instances || []
 
 	// content_data
-		const content_data = await get_content_data(self, ar_section_record)
+		const content_data = await get_content_data(self, rows, children_view)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -149,52 +145,41 @@ view_default_list_portal.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* Renders all section_record instances and collects their DOM nodes into a
-* single `content_data` container element.
+* Builds the `content_data` container and hands the page's rows to a ROW
+* WINDOW (section.js window_section_rows → common/js/row_window.js): a
+* `section_record` is built and rendered only for the rows the viewport can
+* reach — at most ROW_WINDOW_MAX_ROWS at once — and released past the far
+* edge (audit P2-31 / CLI-29: "show all" is the server ceiling, up to 1000
+* rows, and every one used to be built at once). The first window is filled
+* before this resolves.
 *
-* Uses `Promise.all()` to fan-out the per-record `render()` calls concurrently,
-* then appends the resolved nodes via a `DocumentFragment` to minimise reflows.
-* Records whose `render()` resolves to a falsy value are silently skipped — this
-* covers records that failed to build (null returned by `get_instance()` inside
-* `get_section_records()`).
+* Returns an empty `content_data` immediately when `rows` is empty.
 *
-* Returns an empty `content_data` immediately when `ar_section_record` is empty,
-* avoiding unnecessary async work.
-*
-* @param {Object} self              - The `component_portal` instance being rendered.
-* @param {Array}  ar_section_record - Array of built `section_record` instances
-*   returned by `get_section_records()`.  May be empty.
+* @param {Object} self          - The `component_portal` instance being rendered.
+* @param {Array}  rows          - The page's locator entries (`self.data.entries`).
+* @param {string} children_view - The view each row is rendered with.
 * @returns {Promise<HTMLElement>} The populated `content_data` div element.
 */
-const get_content_data = async function(self, ar_section_record) {
+const get_content_data = async function(self, rows, children_view) {
 
 	// content_data
 	const content_data = ui.component.build_content_data(self)
 		  content_data.classList.add(self.mode, self.tipo)
 
-	const section_record_count	= ar_section_record.length
-
 	// empty cases
-	if (section_record_count === 0) {
+	if (!rows || rows.length === 0) {
 		return content_data;
 	}
 
-	// Render promises
-	const render_promises = ar_section_record.map(record => record.render());
-
-	// fragment
-	const fragment = new DocumentFragment()
-
-	// Add all section_record rendered nodes to the fragment
-	const rendered_nodes = await Promise.all(render_promises);
-	for (let i = 0; i < section_record_count; i++) {
-		if (rendered_nodes[i]) {
-			fragment.appendChild(rendered_nodes[i])
+	// row window
+	await window_section_rows({
+		caller			: self,
+		container		: content_data,
+		rows			: rows,
+		records_options	: {
+			view : children_view
 		}
-	}
-
-	// Append final fragment at end
-	content_data.appendChild(fragment)
+	})
 
 
 	return content_data

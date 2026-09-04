@@ -44,6 +44,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_value, render_join} from '../../common/js/utils/render_escape.js'
 	import {view_table_dd_grid} from './view_table_dd_grid.js'
 	import {view_default_dd_grid} from './view_default_dd_grid.js'
 	import {view_mini_dd_grid} from './view_mini_dd_grid.js'
@@ -159,22 +160,15 @@ export const get_text_column = function(data_item, use_fallback=false) {
 		? (data_item.value && data_item.value[0]!==undefined ? data_item.value : data_item.fallback_value)
 		: data_item.value
 
-	// Convert value to string
-	const value_string = value
-		? (()=>{
-			if (Array.isArray(value)) {
-				// Check array length limit
-				if (value.length > 25) {
-					return 'Data is too big';
-				} else {
-					return value.join(records_separator);
-				}
-			}else{
-				// Handle non-array values
-				return String(value);
-			}
-		  })()
-		: ''
+	// Convert value to string — through the render-boundary escaper, keyed on
+	// the cell's server-stamped render_class (absent → text).
+	const value_string = !value
+		? ''
+		: Array.isArray(value)
+			? (value.length > 25
+				? 'Data is too big' // array length limit
+				: render_join(value, records_separator, data_item.render_class))
+			: render_value(value, data_item.render_class) // non-array values
 
 	// safe_value_string. Max chars is 2000 characters
 	const safe_value_string = value_string.length > 2000
@@ -315,7 +309,7 @@ export const get_label_column = function(current_data) {
 
 	const label_node = ui.create_dom_element({
 		element_type	: 'label',
-		inner_html		: current_data.label
+		inner_html		: render_value(current_data.label, 'text')
 	})
 
 	return label_node
@@ -399,7 +393,7 @@ export const get_json_column = function(current_data) {
 	const text_json = ui.create_dom_element({
 		element_type	: 'span',
 		class_name		: class_list,
-		inner_html		: JSON.stringify(current_data.value)
+		inner_html		: render_value(JSON.stringify(current_data.value), 'text')
 	})
 
 	return text_json
@@ -427,7 +421,7 @@ export const get_section_id_column = function(current_data) {
 	const section_id_node = ui.create_dom_element({
 		element_type	: 'span',
 		class_name		: class_list,
-		inner_html		: current_data.value
+		inner_html		: render_value(current_data.value, 'number')
 	})
 
 	return section_id_node

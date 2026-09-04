@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import { render_value } from '../../common/js/utils/render_escape.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {same_section_id} from '../../common/js/utils/index.js'
 
@@ -355,7 +356,9 @@ const open_target_section = async function (self) {
 		})
 
 	// header
-		const header = self.target_section[0].label
+		// (!) The modal header is parsed as HTML by attach_to_modal: the section
+		// label is ontology data, it goes through the ONE escaper as text.
+		const header = render_value(self.target_section[0].label, 'text')
 
 	// footer
 		const footer_container = ui.create_dom_element({
@@ -391,13 +394,18 @@ const open_target_section = async function (self) {
 					// 	})
 					// }
 
-				// soft delete (default)
-					self.unlink_record(last_value)
-
-				// close modal
-					modal.close()
+				// soft delete (default). AWAITED and READ: the modal closing is the
+				// grammar of "deleted", and it must not play over a refused or
+				// cancelled unlink (false — the API failure itself is already
+				// surfaced by the save path's handle_api_error).
+					const removed = await self.unlink_record(last_value)
 
 				footer_container.classList.remove('loading')
+
+				// close modal only after the unlink landed
+					if (removed===true) {
+						modal.close()
+					}
 			})
 
 	// modal. Create a modal to attach the section node

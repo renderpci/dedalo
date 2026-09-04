@@ -521,11 +521,17 @@ export const delete_dataframe = async function(options) {
 	// (!) the target section record is never hard-deleted here: time machine
 	// needs to render previous states. Orphan records are reclaimed by the
 	// dataframe GC maintenance task.
-		await component_dataframe.unlink_record({
+		const removed = await component_dataframe.unlink_record({
 			paginated_key	: row_key,
 			row_key			: row_key,
 			section_id		: section_id
 		})
+		// READ: a refused unlink (already surfaced by the save path) keeps the
+		// frame on the record — destroying its instance would leave the screen
+		// asserting a deletion that did not happen
+		if (removed!==true) {
+			return false
+		}
 
 	// remove the instance
 		if(delete_instace===true){

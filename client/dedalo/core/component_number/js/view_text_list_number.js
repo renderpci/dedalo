@@ -30,6 +30,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_join} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -101,7 +102,7 @@ view_text_list_number.render = async function(self, options) {
 
 	// Value as string
 		const value_string	= (entries.length>0)
-			? entries.map(item => item.value).join(self.context.fields_separator)
+			? render_join(entries.map(item => item.value), self.context.fields_separator, self.context.render_class)
 			: ''
 
 	// wrapper. Set as span

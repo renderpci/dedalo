@@ -8,6 +8,7 @@ export const component_pdf: ComponentModel = {
 	model: 'component_pdf',
 	flatValue: 'media',
 	column: 'media',
+	render: 'text',
 	monovalue: true,
 	emitHook: 'media',
 	sortable: false, // PHP component_media_common::get_sortable() → false

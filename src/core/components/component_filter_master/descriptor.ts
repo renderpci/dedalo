@@ -8,6 +8,7 @@ import type { ComponentModel } from '../types.ts';
 export const component_filter_master: ComponentModel = {
 	model: 'component_filter_master',
 	column: 'relation',
+	render: 'text',
 	defaultRelationType: 'dd675',
 	resolveData: 'filter',
 	search: { status: 'ported' },

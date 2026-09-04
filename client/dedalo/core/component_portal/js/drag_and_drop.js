@@ -407,7 +407,18 @@ export const on_drop = async function(node, event, options) {
 					return false
 				}
 
-				await source_instance.unlink_record(source_locator)
+			// the answer is READ: a refused unlink (already surfaced by the save
+			// path) leaves the record linked in BOTH portals, and a move that
+			// half-happened must not be reported as a move.
+				const removed = await source_instance.unlink_record(source_locator)
+				if (removed!==true) {
+					console.error(
+						'(!) [drag_and_drop.on_drop] the record was linked into the target portal but the'
+						+ ' source portal refused to unlink it. It is now linked in BOTH portals. locator:',
+						source_locator
+					);
+					return false
+				}
 
 			return true
 		}

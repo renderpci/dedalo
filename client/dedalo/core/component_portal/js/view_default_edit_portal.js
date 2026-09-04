@@ -37,7 +37,7 @@
 
 
 // imports
-	import {get_section_records} from '../../section/js/section.js'
+	import {window_section_rows} from '../../section/js/section.js'
 	import {ui} from '../../common/js/ui.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {
@@ -90,8 +90,8 @@ export const view_default_edit_portal = function() {
 * - Calls `rebuild_columns_map(self)`, which sets `self.columns_map` and
 *   `self.fixed_columns_map = true` after the first build so subsequent partial
 *   refreshes reuse the cached result.
-* - Pushes all instantiated section_record instances onto `self.ar_instances` so
-*   that `self.destroy()` can clean them up.
+* - The row window pushes the MATERIALIZED section_record instances onto
+*   `self.ar_instances` (never the whole page) so that `self.destroy()` can clean them up.
 * - Injects a dynamic `<style>` rule via `set_element_css` to set the CSS Grid
 *   `grid-template-columns` value for the `.list_body` element.  The selector is
 *   scoped to `<section_tipo>_<tipo>.edit.view_<view>` to avoid collisions.
@@ -114,23 +114,19 @@ view_default_edit_portal.render = async function(self, options) {
 		const columns_map	= await rebuild_columns_map(self)
 		self.columns_map	= columns_map
 
-	// ar_section_record
-		const ar_section_record	= await get_section_records({
-			caller	: self,
-			mode	: 'list'
-		})
-		// store to allow destroy later
-		self.ar_instances.push(...ar_section_record)
+	// rows. The page's locator entries; instances are built by the row window
+		const rows = self.data?.entries || []
+		self.ar_instances = self.ar_instances || []
 
 	// content_data
-		const content_data = await get_content_data(self, ar_section_record)
+		const content_data = await get_content_data(self, rows)
 		if (render_level==='content') {
 			// show header_wrapper_list if is hidden
 			const header_wrapper_list = self.node.list_body
 				? self.node.list_body.querySelector(":scope >.header_wrapper_list")
 				: null;
 			if (header_wrapper_list) {
-				if (ar_section_record.length>0) {
+				if (rows.length>0) {
 					header_wrapper_list.classList.remove('hide')
 				}else{
 					header_wrapper_list.classList.add('hide')
@@ -141,7 +137,7 @@ view_default_edit_portal.render = async function(self, options) {
 		}
 
 	// header
-		const list_header_node = build_header(columns_map, ar_section_record, self)
+		const list_header_node = build_header(columns_map, rows, self)
 
 	// list_body
 		const list_body = ui.create_dom_element({
@@ -198,119 +194,51 @@ view_default_edit_portal.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* Render all linked section_record instances and collect their nodes into a
-* `content_data` container element.
+* Build the `content_data` container and hand the page's rows to a ROW WINDOW
+* (section.js window_section_rows → common/js/row_window.js): a `section_record`
+* is built and rendered only for the rows the viewport can reach — at most
+* ROW_WINDOW_MAX_ROWS at once — and released past the far edge (audit P2-31 /
+* CLI-29: "show all" is the server ceiling, up to 1000 rows, and every one of
+* them used to be built at once on the main thread). The first window is
+* filled before this resolves.
 *
-* For each entry in `ar_section_record` the method calls `section_record.render()` —
-* an async operation that builds the row's component cells according to `columns_map`.
-* Rows are batched into a `DocumentFragment` and appended to `content_data` in a
-* single DOM write to minimise layout thrashing.
-*
-* A numeric index pointer (`content_data[i] = section_record_node`) is stored on the
-* container so that callers can quickly look up a specific row's DOM node by its
-* zero-based position in the current page window.
+* `content_data[0]` keeps pointing at the first materialized row: ui.js reads it
+* to auto-focus the first input of an activated component.
 *
 * If `self.data.references` is populated (used by `component_relation_related` to
 * expose back-reference links), a references block is appended after the rows.
 *
-* The empty-list branch (`ar_section_record_length === 0`) is a no-op by design;
-* commented-out code shows an earlier approach of rendering a "no records" placeholder
-* that was superseded by hiding the header row instead.
-*
 * @param {Object} self - The `component_portal` instance.
-* @param {Array} ar_section_record - Array of `section_record` instances for the current
-*   page, as returned by `get_section_records`.
+* @param {Array} rows - The page's locator entries (`self.data.entries`).
 * @returns {Promise<HTMLElement>} The populated `content_data` element, ready to be
 *   inserted into `list_body`.
 */
-const get_content_data = async function(self, ar_section_record) {
-
-	// DocumentFragment
-		const fragment = new DocumentFragment()
+const get_content_data = async function(self, rows) {
 
 	// content_data node
 		const content_data = ui.component.build_content_data(self)
 
-		// section_record. Add all section_record rendered nodes
-			const ar_section_record_length = ar_section_record.length
-			if (ar_section_record_length===0) {
-
-				// no records found case
-				// const row_item = no_records_node()
-				// fragment.appendChild(row_item)
-			}else{
-
-				// const ar_promises = []
-				for (let i = 0; i < ar_section_record_length; i++) {
-
-					const section_record	= ar_section_record[i]
-					// const section_id		= section_record.section_id
-					// const section_tipo	= section_record.section_tipo
-
-					// section_record wrapper
-						// const row_wrapper = ui.create_dom_element({
-						// 	element_type	: 'div',
-						// 	class_name		: 'row_wrapper section_record ' + ' ' + self.tipo + ' ' + self.mode
-						// })
-						// row_wrapper.addEventListener("click", (e) => {
-						// 	// e.stopPropagation()
-						// 	if (!e.target.classList.contains("row_active")) {
-						// 		e.target.classList.add("row_active")
-						// 	}
-						// })
-
-					// section_record NODE
-						// const row_container = ui.create_dom_element({
-						// 	element_type	: 'div',
-						// 	class_name		: 'section_record_container',
-						// 	parent			: row_wrapper
-						// })
-						const section_record_node = await section_record.render()
-						// set the pointer
-						content_data[i] = section_record_node
-
-					// button_remove
-						// if (self.permissions>1) {
-						// 	const column = ui.create_dom_element({
-						// 		element_type	: 'div',
-						// 		class_name		: 'column remove_column',
-						// 		parent			: row_wrapper
-						// 	})
-						// 	ui.create_dom_element({
-						// 		element_type	: 'span',
-						// 		class_name		: 'button remove',
-						// 		dataset			: { key : i },
-						// 		parent			: column
-						// 	})
-						// }
-
-					// section record
-						fragment.appendChild(section_record_node)
+	// row window
+		if (rows.length > 0) {
+			const row_window = await window_section_rows({
+				caller			: self,
+				container		: content_data,
+				rows			: rows,
+				records_options	: {
+					mode : 'list'
 				}
-			}//end if (ar_section_record_length===0)
+			})
+			// first row pointer (auto-focus)
+			content_data[0] = row_window ? row_window.node_of(0) : null
+		}
 
-		// references. Build references if exists
-		// `self.data.references` is populated only on component_relation_related portals
-		// that expose computed back-references; regular portals omit the property.
-			if(self.data.references && self.data.references.length > 0){
-				const references_node = render_references(self.data.references)
-				fragment.appendChild(references_node)
-			}
-
-		// add fragment
-			content_data.appendChild(fragment)
-
-
-	// set node only when it is in DOM (to save browser resources)
-		// const observer = new IntersectionObserver(async function(entries) {
-		// 	const entry = entries[1] || entries[0]
-		// 	if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
-		// 		observer.disconnect();
-		// 		const fragment = await build_values()
-		// 		content_data.appendChild(fragment)
-		// 	}
-		// }, { threshold: [0] });
-		// observer.observe(content_data);
+	// references. Build references if exists
+	// `self.data.references` is populated only on component_relation_related portals
+	// that expose computed back-references; regular portals omit the property.
+		if(self.data.references && self.data.references.length > 0){
+			const references_node = render_references(self.data.references)
+			content_data.appendChild(references_node)
+		}
 
 
 	return content_data

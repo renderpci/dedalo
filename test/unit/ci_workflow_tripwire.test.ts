@@ -531,6 +531,10 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		'Its final test’s dynamic import pulls the postgres pool module into the closure (no query is ever executed — pickReadSource only selects a function — so splitting that one test out or asserting the wiring from source would make the remainder hermetic), but as written the gate reaches the DB layer',
 	],
 	[
+		'test/unit/render_class_native.test.ts',
+		'Builds a zz scratch situation (dd_ontology rows + matrix_test records) on the SUITE database and saves through the real saveComponentData, which needs Postgres.',
+	],
+	[
 		'test/unit/tools_cache_invalidation.test.ts',
 		'Its reachability and registry-cache tests create, duplicate and delete real records in the suite database to observe cache invalidation end-to-end, so it requires the live matrix Postgres',
 	],

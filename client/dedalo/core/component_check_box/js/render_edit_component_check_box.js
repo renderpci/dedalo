@@ -6,6 +6,7 @@
 
 // import
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {object_to_url_vars, open_window, same_section_id} from '../../common/js/utils/index.js'
 	import {view_default_edit_check_box} from './view_default_edit_check_box.js'
 	import {view_tools_edit_check_box} from './view_tools_edit_check_box.js'
@@ -254,7 +255,7 @@ const get_content_value = (i, current_value, self) => {
 	// label
 		const option_label = ui.create_dom_element({
 			element_type	: 'label',
-			inner_html		: label,
+			inner_html		: render_value(label, self.context.render_class),
 			parent			: content_value
 		})
 
@@ -329,7 +330,9 @@ const get_content_value = (i, current_value, self) => {
 *                                 inside this function but kept for API symmetry with
 *                                 get_content_value
 * @returns {HTMLElement} <div class="content_value read_only"> with inner_html set to
-*                        the label text
+*                        the label text, rendered through the ONE escaper by the
+*                        component's wire render_class (a datalist label is
+*                        record data — the target section's own values)
 */
 const get_content_value_read = (i, current_value, self) => {
 
@@ -337,7 +340,7 @@ const get_content_value_read = (i, current_value, self) => {
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_value read_only',
-			inner_html		: current_value
+			inner_html		: render_value(current_value, self.context.render_class)
 		})
 
 	return content_value

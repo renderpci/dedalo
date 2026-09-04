@@ -20,6 +20,7 @@
 
 import type { Rqo } from '../concepts/rqo.ts';
 import { coerceSectionId } from '../concepts/section_id.ts';
+import { clampClientLimit } from '../concepts/sqo.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
 import { updateMatrixKeyData } from '../db/matrix_write.ts';
 import { acquireNodeLock, withTransaction } from '../db/postgres.ts';
@@ -192,9 +193,40 @@ function parseChildrenDataRequest(rqo: Rqo): ChildrenDataRequest {
 		childrenTipo: (source.children_tipo as string | undefined) ?? null,
 		areaModel: (source.model as string | undefined) ?? 'area_thesaurus',
 		children: (source.children as ParseLocator[] | undefined) ?? null,
-		pagination: (options.pagination as Record<string, unknown> | undefined) ?? null,
+		pagination: clampChildrenPagination(
+			(options.pagination as Record<string, unknown> | undefined) ?? null,
+			(source.section_tipo as string | undefined) ?? 'get_children_data',
+		),
 		thesaurusViewMode: (options.thesaurus_view_mode as string | undefined) ?? 'default',
 	};
+}
+
+/**
+ * The children door's pagination is CLIENT input and goes through the SAME
+ * clamp as an SQO limit (DEC-07, audit P2-31 / CLI-30): a `limit` of 0, a
+ * negative, a non-number or anything above CLIENT_MAX_LIMIT becomes the
+ * ceiling; an ABSENT limit keeps the door's own default (300, applied by
+ * ts_object.getChildrenData). Until this clamp the door took `pagination`
+ * verbatim, so a client `limit: 0` was an UNPAGED read of the whole branch —
+ * exactly what the post-duplicate refresh paths sent. Offset is coerced the way
+ * sanitizeClientSqo coerces it; `total` is left to the delegate (it is the
+ * client's cached count, trusted for the echo, never for the paging decision).
+ * A null pagination stays null (the delegate's default page). Cloned: the
+ * caller's object is never mutated.
+ */
+function clampChildrenPagination(
+	pagination: Record<string, unknown> | null,
+	scope: string,
+): Record<string, unknown> | null {
+	if (pagination === null) return null;
+	const clamped: Record<string, unknown> = { ...pagination };
+	if (clamped.limit !== undefined) {
+		clamped.limit = clampClientLimit(clamped.limit, scope);
+	}
+	clamped.offset = Number.isFinite(Number(clamped.offset))
+		? Math.max(0, Math.trunc(Number(clamped.offset)))
+		: 0;
+	return clamped;
 }
 
 export async function getChildrenData(rqo: Rqo, principal: Principal): Promise<TsApiOutcome> {

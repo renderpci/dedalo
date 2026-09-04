@@ -121,6 +121,7 @@ DB_TIER_TRIPWIRES=(
 	test/unit/diffusion_seed_compiles_native.test.ts
 	test/unit/raw_roundtrip_native.test.ts
 	test/unit/conform_locator_existence_native.test.ts
+	test/unit/render_class_native.test.ts
 )
 
 # ── THE STAGES ARE INDEPENDENT ───────────────────────────────────────────────

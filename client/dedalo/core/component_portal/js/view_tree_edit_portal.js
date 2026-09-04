@@ -24,7 +24,7 @@
 *   attach new terms in this view). It is DECLARED on the view's registration entry in
 *   `component_portal.js` and composed once by `component_portal.prototype.build`; this
 *   module writes no `show_interface` flag, so there is exactly one writer per view.
-* - `get_section_records` is called in `'list'` mode (not `'tree'` mode) so the child
+* - The rows are windowed (`window_section_rows`) in `'list'` mode (not `'tree'` mode) so the child
 *   section records use their own list render, not a further recursive tree render.
 * - Like other portal views, a `render_level='content'` early return lets callers
 *   refresh only the record list without rebuilding the full wrapper.
@@ -44,7 +44,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {get_section_records} from '../../section/js/section.js'
+	import {window_section_rows} from '../../section/js/section.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {
 		render_column_remove,
@@ -112,16 +112,12 @@ view_tree_edit_portal.render = async function(self, options) {
 		const columns_map = await rebuild_columns_map(self)
 		self.columns_map = columns_map
 
-	// ar_section_record
-		const ar_section_record	= await get_section_records({
-			caller	: self,
-			mode	:'list'
-		})
-		// store to allow destroy later
-		self.ar_instances.push(...ar_section_record)
+	// rows. The page's locator entries; instances are built by the row window
+		const rows = self.data?.entries || []
+		self.ar_instances = self.ar_instances || []
 
 	// content_data
-		const content_data = await get_content_data(self, ar_section_record)
+		const content_data = await get_content_data(self, rows)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -204,50 +200,40 @@ export const add_events = function(self, wrapper) {
 
 /**
 * GET_CONTENT_DATA
-* Render all received section records and place them into a `content_data` container div.
+* Build the `content_data` container and hand the page's rows to a ROW WINDOW
+* (section.js window_section_rows → common/js/row_window.js): a `section_record`
+* is built and rendered only for the rows the viewport can reach — at most
+* ROW_WINDOW_MAX_ROWS at once — and released past the far edge (audit P2-31 /
+* CLI-29: the picker's page is the portal's, and "show all" is the server
+* ceiling). The first window is filled before this resolves.
 *
-* Iterates `ar_section_record`, awaiting each record's `render()` call and appending the
-* resulting node to a DocumentFragment before wrapping it in the standard `content_data`
-* div produced by `ui.component.build_content_data`.
-*
-* Empty list handling: when `ar_section_record` is empty the fragment remains blank.
-* A no-records placeholder node was considered but is currently commented out; the
-* layout remains consistent regardless because the CSS grid columns are defined by
+* Empty list handling: when `rows` is empty the container stays blank. The layout
+* remains consistent regardless because the CSS grid columns are defined by
 * `rebuild_columns_map` and `set_element_css`, not by the row count.
 *
 * The `button_close: null` option passed to `build_content_data` suppresses the
 * close-button that some other views add to the content area header.
 *
 * @param {Object} self - The `component_portal` instance (forwarded for `build_content_data`).
-* @param {Array} ar_section_record - Resolved section_record instances for the current page.
+* @param {Array} rows - The page's locator entries (`self.data.entries`).
 * @returns {Promise<HTMLElement>} The populated content_data div node.
 */
-const get_content_data = async function(self, ar_section_record) {
-
-	// build_values
-		const fragment = new DocumentFragment()
-
-		// add all section_record rendered nodes
-			const ar_section_record_length	= ar_section_record.length
-			if (ar_section_record_length===0) {
-
-				// no records found case
-				// const row_item = no_records_node()
-				// fragment.appendChild(row_item)
-			}else{
-				const ar_promises = ar_section_record.map(rec => rec.render())
-				const rendered_nodes = await Promise.all(ar_promises)
-
-				for (let i = 0; i < ar_section_record_length; i++) {
-					if (rendered_nodes[i]) {
-						fragment.appendChild(rendered_nodes[i])
-					}
-				}
-			}//end if (ar_section_record_length>0)
+const get_content_data = async function(self, rows) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self,{button_close: null})
-			  content_data.appendChild(fragment)
+
+	// row window
+		if (rows.length > 0) {
+			await window_section_rows({
+				caller			: self,
+				container		: content_data,
+				rows			: rows,
+				records_options	: {
+					mode : 'list'
+				}
+			})
+		}
 
 
 	return content_data

@@ -28,7 +28,12 @@ import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { CATEGORY_STATUS, specOf } from '../../src/core/errors/registry.ts';
 import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
 import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
-import { adoptErrorEnvelopeV2, adoptTipoIdMap, normalizeSectionIdTypes } from './normalize.ts';
+import {
+	adoptErrorEnvelopeV2,
+	adoptTipoIdMap,
+	normalizeSectionIdTypes,
+	stripRenderClass,
+} from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 /** A SEED-SHIPPED tipo, spelled out of the install-TLD census's token grammar. */
@@ -163,6 +168,16 @@ describe.if(hasPhpCredentials())('get_indexation_grid differential', () => {
 			// so, or the translation went vacuous.
 			const tokenFree = ['testterr1_140', 'test2819_47'].includes(`${termTipo}_${termId}`);
 			if (!tokenFree) expect(adopted.rewrites.tipos).toBeGreaterThan(0);
+			// WC-2026-09-04-context-render-class: every grid cell with a component
+			// model carries the ADDITIVE `render_class` the frozen PHP grid predates.
+			// Stripped before the deep-equal — and COUNTED: a case whose TS grid
+			// renders any cell must have carried the key (section-level cells hold
+			// no model and no class), so the strip can never quietly cover a grid
+			// that stopped stamping.
+			const cells = JSON.stringify(ts.body.data).split('"cell_type"').length - 1;
+			const stripped = stripRenderClass(ts.body.data);
+			if (cells > 0)
+				expect(stripped, 'render_class stamped on the rendered component cells').toBeGreaterThan(0);
 			// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
 			expect(normalizeSectionIdTypes(ts.body.data)).toEqual(
 				normalizeSectionIdTypes(adopted.body) as never,

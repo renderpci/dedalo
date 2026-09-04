@@ -150,7 +150,14 @@ const get_content_data_edit = async function(self) {
 			// Persist the selected language server-side so subsequent imports use it
 			// as the default for language-untagged RDF literals.
 			action		: async function() { // change event action
-				await data_manager.request({
+				// The ANSWER IS READ: data_manager.request RESOLVES a refusal (the
+				// envelope carries `error`, it never rejects on one), so a bare await
+				// left the selector showing a default language the server never stored
+				// and the next import would tag literals with the OLD one.
+				// (!) No toast here: the transport already published the ApiError and
+				// error_dispatch's deduped_toast rendered it once. What this branch owes
+				// is to put the selector back to the language still in force.
+				const api_response = await data_manager.request({
 					body : {
 						action	: 'change_lang',
 						dd_api	: 'dd_utils_api',
@@ -160,6 +167,12 @@ const get_content_data_edit = async function(self) {
 						}
 					}
 				})
+				if (request_failed(api_response)) {
+					dedalo_aplication_langs_selector.value = page_globals.dedalo_application_lang
+					return false
+				}
+
+				return true
 			}
 		})
 		components_container.appendChild(dedalo_aplication_langs_selector)

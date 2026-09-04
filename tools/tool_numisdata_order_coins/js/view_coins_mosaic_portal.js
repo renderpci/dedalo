@@ -25,7 +25,17 @@
 * calls `view_coins_mosaic_portal.render(self, options)` when `self.context.view`
 * equals `'coins_mosaic'`.
 *
-* Two parallel sets of section records are built:
+* Row window (audit P2-31 / CLI-29 / CLI-30)
+* ------------------------------------------
+* This is a `component_portal` in EDIT mode, i.e. behind the paginator's
+* "show all" door, whose page is `max_page_limit()`. Its rows are therefore
+* WINDOWED exactly like every core portal edit view: `get_content_data` hands the
+* page's entries to section.js `window_section_rows`, whose materialize builds the
+* TWO section_records of ONE row (tile + hover overlay) and whose release destroys
+* them again — at most ROW_WINDOW_MAX_ROWS rows exist at once, however many rows
+* "show all" brings.
+*
+* Two section records are built PER MATERIALIZED ROW:
 *
 *   1. MOSAIC records (in_mosaic === true columns) — the visible draggable tiles.
 *      Each tile renders its coin image plus an "Info" column produced by
@@ -37,11 +47,12 @@
 *        - A drag handle div (`div.drag`) that becomes `div.drag.used` once the
 *          coin has been assigned to an ordered position.
 *
-*   2. HOVER records (hover === true columns) — a lightweight detail panel that
-*      is teleported into (prepended to) the hovered tile via event_manager
-*      pub/sub.  Event names follow the pattern:
-*        `mosaic_hover_{id_base}_{section_tipo}_{section_id}`   — on mouseenter
-*        `mosaic_mouseleave_{id_base}_{section_tipo}_{section_id}` — on mouseleave
+*   2. HOVER record (hover === true columns, `id_variant: 'hover'`) — a lightweight
+*      detail panel, prepended into its own tile hidden (`display_none`) and
+*      revealed on `mouseenter`. It is the row's own node: a windowed row must own
+*      everything it built, so the former page-wide parked set and its
+*      `mosaic_hover_*` / `mosaic_mouseleave_*` event_manager bridge are gone (the
+*      shape core's view_mosaic_edit_portal already uses).
 *
 * Drag-and-drop integration
 * -------------------------
@@ -74,8 +85,7 @@
 
 
 // imports
-	import {event_manager} from '../../../core/common/js/event_manager.js'
-	import {get_section_records} from '../../../core/section/js/section.js'
+	import {window_section_rows} from '../../../core/section/js/section.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {
 		render_column_id,
@@ -146,33 +156,9 @@ view_coins_mosaic_portal.render = async function(self, options) {
 		const render_level 	= options.render_level || 'full'
 
 
-	// hover_body. Alternative section_record with selected ddo to show when user hover the mosaic
-		const hover_body = await (async ()=>{
-
-			// hover_body
-				const hover_body = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'hover_body display_none'
-				})
-
-			// columns
-				const hover_columns		= self.columns_map.filter(el => el.hover===true)
-				const hover_columns_map	= await rebuild_columns_map(hover_columns, self, false)
-
-			// hover_view (body)
-				const hover_ar_section_record = await get_section_records({
-					caller		: self,
-					mode		: 'list',
-					columns_map	: hover_columns_map,
-					id_variant	: 'hover'
-				})
-				// store to allow destroy later
-				self.ar_instances.push(...hover_ar_section_record)
-				const hover_view = await render_hover_view(self, hover_ar_section_record, hover_body)
-				hover_body.appendChild(hover_view)
-
-			return hover_body
-		})()
+	// hover columns. The overlay's column slice (one section_record per row)
+		const hover_columns		= self.columns_map.filter(el => el.hover===true)
+		const hover_columns_map	= await rebuild_columns_map(hover_columns, self, false)
 
 	// content_data. Create the mosaic with only the marked ddo as "mosaic" with true value
 		// columns_map
@@ -180,16 +166,15 @@ view_coins_mosaic_portal.render = async function(self, options) {
 			const base_columns_map	= self.columns_map.filter(el => el.in_mosaic===true)
 			const columns_map		= await rebuild_columns_map(base_columns_map, self, true)
 
-		// content_data
-			const ar_section_record	= await get_section_records({
-				caller		: self,
-				mode		: 'list',
-				columns_map	: columns_map
-			})
-			// store to allow destroy later
-			self.ar_instances.push(...ar_section_record)
+		// rows. The page's locator entries; instances are built by the row window
+			const rows			= self.data?.entries || []
+			self.ar_instances	= self.ar_instances || []
 
-			const content_data = await get_content_data(self, ar_section_record)
+		// content_data
+			const content_data = await get_content_data(self, rows, {
+				columns_map			: columns_map,
+				hover_columns_map	: hover_columns_map
+			})
 
 
 		// render_level
@@ -245,70 +230,119 @@ view_coins_mosaic_portal.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* Render all received section records and place it into a new div 'content_data'
+* Build the `content_data` node and hand the page's rows to a ROW WINDOW
+* (section.js window_section_rows → common/js/row_window.js): the TWO
+* section_records of a row (draggable tile + hover detail panel) are built and
+* rendered only for the rows the viewport can reach — at most ROW_WINDOW_MAX_ROWS
+* at once — and released past the far edge (audit P2-31 / CLI-29 / CLI-30: this
+* portal is in EDIT mode, so "show all" can bring a `max_page_limit()` page and
+* every row of it used to be built twice, eagerly).
 *
-* Iterates over `ar_section_record`, renders each one, then:
-*   1. Wires drag-and-drop via `drag_and_drop()` so tiles can be dragged onto
-*      the ordered-coins right panel.
-*   2. Publishes event_manager events on mouseenter / mouseleave so that the
-*      hover detail panel can be teleported into the hovered tile.
-*      Event IDs follow the pattern:
-*        `mosaic_hover_{id_base}_{section_tipo}_{section_id}`
-*        `mosaic_mouseleave_{id_base}_{section_tipo}_{section_id}`
-*   3. Applies height CSS from `self.context.css['.content_data'].style.height`
-*      if present (legacy per-instance CSS override from the ontology).
+* Per materialized row:
+*   1. Builds the tile and hover records through the window's `build_row` (each
+*      registered in `self.ar_instances`, with the row's page-wide row_key).
+*   2. Renders both and prepends the hover panel into the tile, hidden.
+*   3. Wires drag-and-drop via `drag_and_drop()` so tiles can be dragged onto the
+*      ordered-coins right panel (`paginated_key` = the row's page index).
+*   4. Attaches the `mouseenter` / `mouseleave` listeners that toggle the hover
+*      panel and the `mosaic_over` class on the tile.
+* Per released row: destroys both records.
 *
-* @param {Object} self              - The component_portal instance.
-* @param {Array}  ar_section_record - Array of section_record instances to render.
-* @returns {Promise<HTMLElement>} The assembled content_data div containing all tile nodes.
+* Applies the height CSS from `self.context.css['.content_data'].style.height` if
+* present (legacy per-instance CSS override from the ontology).
+*
+* @param {Object} self - The component_portal instance.
+* @param {Array}  rows - The page's locator entries (`self.data.entries`).
+* @param {Object} maps
+* @param {Array}  maps.columns_map       - The `in_mosaic` columns (tile).
+* @param {Array}  maps.hover_columns_map - The `hover` columns (overlay).
+* @returns {Promise<HTMLElement>} The content_data div holding the windowed rows.
 */
-const get_content_data = async function(self, ar_section_record) {
-
-	// build_values
-		const fragment = new DocumentFragment()
-
-		// add all section_record rendered nodes
-			const ar_section_record_length = ar_section_record.length
-			if (ar_section_record_length>0) {
-
-				for (let i = 0; i < ar_section_record_length; i++) {
-
-					// section record
-						const section_record		= ar_section_record[i]
-						const section_record_node	= await section_record.render()
-
-						drag_and_drop({
-							section_record_node	: section_record_node,
-							paginated_key		: i,
-							total_records		: self.total,
-							locator 			: section_record.locator,
-							caller 				: self
-						})
-
-						// mouseover event
-							section_record_node.addEventListener('mouseenter',function(e){
-								e.stopPropagation()
-								const event_id = `mosaic_hover_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
-								event_manager.publish(event_id, this)
-								section_record_node.classList.add('mosaic_over')
-							})
-
-						// mouseleave event
-							section_record_node.addEventListener('mouseleave',function(e){
-								e.stopPropagation()
-								const event_id = `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
-								event_manager.publish(event_id, this)
-								section_record_node.classList.remove('mosaic_over')
-							})
-
-					// section record append
-						fragment.appendChild(section_record_node)
-				}
-			}//end if (ar_section_record_length>0)
+const get_content_data = async function(self, rows, maps) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
-			  content_data.appendChild(fragment)
+
+	// row window
+		if (rows.length > 0) {
+
+			// index → the row's two instances
+			const companions = new Map()
+
+			await window_section_rows({
+				caller			: self,
+				container		: content_data,
+				rows			: rows,
+				records_options	: {
+					mode : 'list'
+				},
+				materialize		: async (row, i, build_row) => {
+
+					// the two records of the row, built together
+					const [section_record, hover_section_record] = await Promise.all([
+						build_row({ columns_map: maps.columns_map }),
+						build_row({ columns_map: maps.hover_columns_map, id_variant: 'hover' })
+					])
+					if (!section_record || !hover_section_record) {
+						for (const built of [section_record, hover_section_record]) {
+							if (built && built.status!=='destroyed') {
+								await built.destroy(true, true, true)
+							}
+						}
+						return null
+					}
+
+					// tile + hover panel
+					const [section_record_node, hover_view] = await Promise.all([
+						section_record.render(),
+						render_hover_view(hover_section_record)
+					])
+					section_record_node.prepend(hover_view)
+
+					// drag and drop
+					drag_and_drop({
+						section_record_node	: section_record_node,
+						paginated_key		: i,
+						total_records		: self.total,
+						locator 			: section_record.locator,
+						caller 				: self
+					})
+
+					// mouseenter event
+					section_record_node.addEventListener('mouseenter', function(e){
+						e.stopPropagation()
+						hover_view.classList.remove('display_none')
+						section_record_node.classList.add('mosaic_over')
+					})
+
+					// mouseleave event
+					section_record_node.addEventListener('mouseleave', function(e){
+						e.stopPropagation()
+						hover_view.classList.add('display_none')
+						section_record_node.classList.remove('mosaic_over')
+					})
+
+					companions.set(i, {
+						section_record			: section_record,
+						hover_section_record	: hover_section_record
+					})
+
+					return section_record_node
+				},
+				release			: async (row, i) => {
+					const companion = companions.get(i)
+					companions.delete(i)
+					if (!companion) {
+						return
+					}
+					for (const built of [companion.section_record, companion.hover_section_record]) {
+						if (built && built.status!=='destroyed') {
+							await built.destroy(true, true, true)
+						}
+					}
+				}
+			})
+		}//end if (rows.length > 0)
 
 	// css
 		const element_css	= self.context.css || {}
@@ -466,92 +500,30 @@ const drag_and_drop = function(options) {
 
 /**
 * RENDER_HOVER_VIEW
-* Render all received section records and place it into a DocumentFragment
+* Render ONE row's hover detail panel.
 *
-* For each section record in `ar_section_record`:
-*   1. Renders the record node and adds the CSS class `sr_mosaic_hover`.
-*   2. Subscribes to two event_manager events keyed on the record's identity:
-*      - `mosaic_hover_{id_base}_{section_tipo}_{section_id}`:
-*        Hides all sibling nodes inside `hover_body`, then prepends (teleports)
-*        this record's node into the caller tile so it appears as an overlay.
-*      - `mosaic_mouseleave_{id_base}_{section_tipo}_{section_id}`:
-*        Returns the record node back to `hover_body` and hides all children,
-*        effectively resetting the hover state.
+* The panel is the row's own hover section_record (built by the window in the same
+* step as its tile), rendered with the classes `sr_mosaic_hover display_none` and
+* prepended into the tile by `get_content_data`; the tile's `mouseenter` /
+* `mouseleave` listeners toggle `display_none`.
 *
-* Subscriptions are guarded with `event_manager.event_name_exists` to prevent
-* duplicate subscriptions across re-renders.  Tokens are stored in
-* `self.events_tokens` for cleanup on destroy.
+* (Before the row window this was a page-wide parallel set parked in a hidden
+* `hover_body` and teleported into the hovered tile through the event_manager
+* channels `mosaic_hover_*` / `mosaic_mouseleave_*`. A windowed row owns what it
+* built — a released row cannot leave a subscriber behind — so the bridge is gone.)
 *
-* @param {Object}      self              - The component_portal instance.
-* @param {Array}       ar_section_record - Array of section_record instances (hover columns set).
-* @param {HTMLElement} hover_body        - The container node that holds hover-view nodes
-*                                          when not displayed; used as the "park" node
-*                                          between hover events.
-* @returns {Promise<DocumentFragment>} Fragment containing all rendered hover section record nodes.
+* @param {Object} hover_section_record - The row's hover-columns section_record
+*   instance (`id_variant: 'hover'`).
+* @returns {Promise<HTMLElement>} The rendered panel node (initially hidden).
 */
-const render_hover_view = async function(self, ar_section_record, hover_body) {
+const render_hover_view = async function(hover_section_record) {
 
-	// build_values
-		const fragment = new DocumentFragment()
+	// section_record
+		const section_record_node = await hover_section_record.render()
+			  section_record_node.classList.add('sr_mosaic_hover', 'display_none')
 
-	// add all section_record rendered nodes
-		const ar_section_record_length = ar_section_record.length
 
-		if (ar_section_record_length>0) {
-
-			for (let i = 0; i < ar_section_record_length; i++) {
-
-				// section_record
-					const section_record		= ar_section_record[i]
-					const section_record_node	= await section_record.render()
-						  section_record_node.classList.add('sr_mosaic_hover')
-
-				// event subscribe
-				// On user hover mosaic a event that we subscribe here to show the
-				// proper hover record and hide the others
-					const event_id_hover = `mosaic_hover_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
-					const found_hover 	 = event_manager.event_name_exists(event_id_hover)
-					if (!found_hover) {
-						const token = event_manager.subscribe(event_id_hover, fn_mosaic_hover)
-						self.events_tokens.push(token)
-					}
-					function fn_mosaic_hover(caller_node) {
-						// hide all
-							const ar_children_nodes	= hover_body.children;
-							const len			= ar_children_nodes.length
-							for (let i = len - 1; i >= 0; i--) {
-								const node = ar_children_nodes[i]
-								node.classList.add('display_none')
-							}
-
-						// move to the section record
-							caller_node.prepend(section_record_node)
-							section_record_node.classList.remove('display_none')
-					}
-					const event_id_mouseleave = `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
-					const found_mouseleave	  = event_manager.event_name_exists(event_id_mouseleave)
-					if (!found_mouseleave) {
-						const token = event_manager.subscribe(event_id_mouseleave, fn_mosaic_mouseleave)
-						self.events_tokens.push(token)
-					}
-					function fn_mosaic_mouseleave() {
-						// return
-						hover_body.appendChild(section_record_node)
-						// hide all
-							const ar_children_nodes	= hover_body.children;
-							const len				= ar_children_nodes.length
-							for (let i = len - 1; i >= 0; i--) {
-								const node = ar_children_nodes[i]
-								node.classList.add('display_none')
-							}
-					}
-
-				// section record append
-					fragment.appendChild(section_record_node)
-			}
-		}//end if (ar_section_record_length>0)
-
-	return fragment
+	return section_record_node
 }//end render_hover_view
 
 

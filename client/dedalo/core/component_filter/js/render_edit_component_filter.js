@@ -36,6 +36,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {object_to_url_vars, open_window, same_section_id} from '../../common/js/utils/index.js'
 	import {view_default_edit_filter} from './view_default_edit_filter.js'
 	import {view_line_edit_filter} from './view_line_edit_filter.js'
@@ -325,7 +326,7 @@ export const get_input_element = (element, self) => {
 		ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'item_label',
-			inner_html		: label,
+			inner_html		: render_value(label, self.context.render_class),
 			title			: 'ID: ' + section_id,
 			parent			: li
 		})
@@ -454,7 +455,7 @@ export const get_input_element_read = (element, self) => {
 				const label_node = ui.create_dom_element({
 					element_type	: 'label',
 					class_name		: 'item_label',
-					inner_html		: label,
+					inner_html		: render_value(label, self.context.render_class),
 					parent			: li
 				})
 

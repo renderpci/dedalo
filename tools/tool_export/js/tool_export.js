@@ -281,7 +281,7 @@ tool_export.prototype.get_section_id = function() {
  * Request shape:
  *   dd_api: 'dd_tools_api', action: 'tool_request', source: create_source(self, 'get_export_grid')
  *   options.section_tipo  – the caller's section_tipo (determines which records to fetch)
- *   options.sqo           – cloned from self.sqo with limit=0/offset=0 (server forces 'ALL')
+ *   options.sqo           – cloned from self.sqo, pagination untouched (server forces 'ALL')
  *   options.ar_ddo_to_export – the ordered column DDO array
  *   options.ndjson_stream = true
  *
@@ -321,14 +321,12 @@ tool_export.prototype.get_export_grid = async function(options) {
 		const show_tipo_in_label	= options.show_tipo_in_label
 		const fill_the_gaps			= options.fill_the_gaps
 
-	// sqo
-	// note: limit/offset values are informational only. The API client gate
-	// clamps any client-sent limit, and tool_export::setup() forces the
-	// internal 'ALL' sentinel server-side: the export always serialises the
-	// whole filtered selection.
+	// sqo. The caller's filter, cloned. No limit/offset override: the export
+	// grid forces the internal 'ALL' sentinel server-side (src/diffusion/export/
+	// grid.ts, after sanitizeClientSqo) so the export always serialises the whole
+	// filtered selection — a client `limit: 0` here was an undeclared ask the
+	// server clamped and then overrode (audit P2-31).
 		const sqo = clone(self.sqo)
-		sqo.limit	= 0
-		sqo.offset	= 0
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'get_export_grid'
 	// this generates a call as my_tool_name::my_function_name(options)

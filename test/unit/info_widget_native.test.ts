@@ -108,6 +108,7 @@ import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
 import cloneMapJson from '../../src/core/test_data/test_tld_tipo_map.json';
 import { ensureCanonicalTest3 } from '../helpers/test_data.ts';
+import { stripRenderClass } from '../parity/normalize.ts';
 import golden from './fixtures/info_widget_native/entries.golden.json';
 
 /** Seed-shipped tipo, spelled so the census sees a reference, not a binding. */
@@ -649,18 +650,29 @@ async function expectCaseGolden(
 	sectionTipo: string,
 	sectionId: number | string,
 	componentTipo: string,
-	options: { expectStateItems?: boolean; expectPreservedToolScope?: boolean } = {},
+	options: {
+		expectStateItems?: boolean;
+		expectPreservedToolScope?: boolean;
+		expectGridCells?: boolean;
+	} = {},
 ): Promise<void> {
+	let renderClasses = 0;
 	for (const mode of ['list', 'edit'] as const) {
 		const entries = await tsEntries(readRqo(sectionTipo, sectionId, componentTipo, mode));
 		const stripped = stripStateTotalItems(entries);
 		if (options.expectStateItems === true) {
 			expect(stripped).toBeGreaterThan(0);
 		}
+		renderClasses += stripRenderClass(entries);
 		expect(entries).toEqual(
 			adoptedGolden(golden.cases[caseName][mode], {
 				expectPreserved: options.expectPreservedToolScope,
 			}) as never,
+		);
+	}
+	if (options.expectGridCells === true) {
+		expect(renderClasses, `${caseName}: the additive render_class key was there`).toBeGreaterThan(
+			0,
 		);
 	}
 }
@@ -789,6 +801,8 @@ describe('component_info widget read-time compute (TS-native, oracle-captured go
 		await expectCaseGolden(MEDIA_ICONS_CASE, INTERVIEW, IW.interview, MEDIA_ICONS, {
 			// the declared tool_config carve-out is REAL here (see adoptedGolden)
 			expectPreservedToolScope: true,
+			// the descriptors term grid carries the additive render_class per cell
+			expectGridCells: true,
 		});
 	}, 60000);
 

@@ -7,6 +7,7 @@ import type { ComponentModel } from '../types.ts';
 export const component_3d: ComponentModel = {
 	model: 'component_3d',
 	column: 'media',
+	render: 'text',
 	monovalue: true,
 	emitHook: 'media',
 	sortable: false, // PHP component_media_common::get_sortable() → false

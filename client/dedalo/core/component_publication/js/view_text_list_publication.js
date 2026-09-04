@@ -34,6 +34,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_join} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -88,7 +89,7 @@ view_text_list_publication.render = async function(self, options) {
 		// Join all entry labels with the context-defined separator.
 		// For component_publication this array normally has 0 or 1 items,
 		// so the join acts as a safe stringify for the common single-value case.
-		const value_string	= entries.join(self.context.fields_separator)
+		const value_string	= render_join(entries, self.context.fields_separator, self.context.render_class)
 
 	// wrapper. Set as span
 		// A plain <span> is intentional: 'text' view must be safe to inline inside

@@ -12,6 +12,7 @@ import type { ComponentModel } from '../types.ts';
 export const component_relation_index: ComponentModel = {
 	model: 'component_relation_index',
 	column: 'relation',
+	render: 'text',
 	defaultRelationType: 'dd96',
 	resolveData: 'relation_index',
 	search: { status: 'ported' }, // builder_relation_index.ts (dedicated computed-inverse pipeline)

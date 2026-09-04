@@ -801,16 +801,15 @@ tool_identify.prototype.cluster = async function(options={}) {
 			return false
 		}
 
-	// sqo. The caller's live filter, CLONED (never the caller's own object) and
-	// unpaginated: the curator means "the records I am looking at", not "the ten
-	// on this page".
+	// sqo. The caller's live filter, CLONED (never the caller's own object). Its
+	// pagination is NOT overridden here: the curator means "the records I am
+	// looking at", not "the ten on this page", and the server states that bound
+	// itself — the record pool sets limit to its cap + 1 and offset 0
+	// (src/core/identify/record_pool.ts) after sanitizing the SQO, so a client
+	// `limit: 0` was an undeclared ask the server clamped and overrode (P2-31).
 		const caller_sqo = (self.caller && self.caller.rqo && self.caller.rqo.sqo)
 			? clone(self.caller.rqo.sqo)
 			: null
-		if (caller_sqo) {
-			caller_sqo.limit	= 0
-			caller_sqo.offset	= 0
-		}
 
 	try {
 

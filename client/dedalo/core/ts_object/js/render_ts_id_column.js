@@ -40,6 +40,7 @@
 		render_term_pick_control,
 		term_selectability
 	} from '../../area_thesaurus/js/thesaurus_picker.js'
+	import {bound_sqo_limit} from '../../common/js/sqo_limit.js'
 
 
 
@@ -183,10 +184,12 @@ export const render_id_column = function(self) {
 						// pagination. Built by value: never mutate the cached
 						// self.children_data.pagination object.
 						// When a pagination object is present (children were previously loaded
-						// with limit/offset) reset to 0/0 so the refreshed list starts from
-						// the beginning, revealing the newly added child.
+						// with limit/offset) restart at offset 0 with the SAME page size so
+						// the refreshed list starts from the beginning, revealing the newly
+						// added child (audit P2-31 / CLI-30: this sent `limit: 0` — the
+						// whole branch — exactly when the node was known to be paginated).
 							const pagination = self.children_data?.pagination
-								? { limit: 0, offset: 0 }
+								? { limit: bound_sqo_limit(self.children_data.pagination.limit), offset: 0 }
 								: null
 
 						// children_data - get_children_data from API

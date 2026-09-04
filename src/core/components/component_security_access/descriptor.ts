@@ -8,6 +8,7 @@ import type { ComponentModel } from '../types.ts';
 export const component_security_access: ComponentModel = {
 	model: 'component_security_access',
 	column: 'misc',
+	render: 'text',
 	monovalue: true,
 	emitHook: 'security_access',
 	sortable: false, // PHP component_security_access::get_sortable() → false

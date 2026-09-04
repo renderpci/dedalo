@@ -58,8 +58,9 @@
 
 
 // imports
-	import {get_section_records} from '../../section/js/section.js'
+	import {window_section_rows} from '../../section/js/section.js'
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {get_all_instances} from '../../common/js/instances.js'
 	import {when_in_dom, dd_request_idle_callback} from '../../common/js/events.js'
@@ -100,12 +101,13 @@ export const view_indexation_edit_portal = function() {
 * 2. De-duplicates `self.data.entries` by `section_tipo`+`section_id` to obtain a
 *    unique list of target records (`entries_combined`). The same record may be tagged
 *    multiple times (e.g. two index tags pointing at the same authority record), but
-*    `get_section_records` needs one request per unique record.
+*    the row window needs one row per unique record.
 * 3. Builds a stable `id_variant` for the section-record cache key: when a tag filter
 *    is active (`self.active_tag`) it appends the tag_id so filtered and unfiltered
 *    render passes do not collide in the instance cache.
-* 4. Fetches and renders `section_record` instances for all unique entries, then
-*    alphabetically sorts the resulting DOM nodes by their `innerText`.
+* 4. Sorts the unique entries alphabetically by their DATA text (`entry_sort_key`,
+*    from the shared datum) and hands them to a row window that builds and renders
+*    a `section_record` only for the rows the viewport reaches.
 * 5. Wraps everything in the standard `ui.component.build_wrapper_edit` shell and
 *    appends the `'portal'` and `'view_indexation'` CSS classes.
 *
@@ -130,7 +132,7 @@ view_indexation_edit_portal.render = async function(self, options) {
 
 	// entries_combined (grouped by tag id)
 	// De-duplicate entries so that each unique target record (section_tipo + section_id)
-	// appears only once in the get_section_records request, even if it is tagged multiple times.
+	// appears only once as a row, even if it is tagged multiple times.
 		const data				= self.data || {}
 		const entries			= data.entries || []
 		const entries_combined	= []
@@ -143,31 +145,25 @@ view_indexation_edit_portal.render = async function(self, options) {
 			}
 		}
 
-	// ar_section_record
+	// id_variant
 	// Build a tag-aware cache key: if a tag filter is active, include its tag_id in
 	// the id_variant so filtered renders are cached independently of the full list.
 		const id_variant = self.active_tag && self.active_tag.tag
 			? self.id_variant + '_' + self.active_tag.tag.tag_id
 			: self.id_variant + '_' + (new Date()).getTime()
 
-		// (!) The key MUST be `entries`. get_section_records reads options.entries and
-		// falls back to self.data.entries — passing the de-duplicated list under any
-		// other name silently renders one row PER TAG (each showing every chip of the
-		// record) instead of one row per record.
-		const ar_section_record	= await get_section_records({
-			caller		: self,
-			mode		: 'list',
-			columns_map	: self.columns_map,
-			entries		: entries_combined,
-			id_variant	: id_variant,
-			view		: 'text'
-		})
-
-		// store to allow destroy later
-		self.ar_instances.push(...ar_section_record)
+	// sort. Alphabetical by the record's text, read from the shared datum (the
+	// rows are windowed, so the rendered text of every row is not available)
+		const keyed = entries_combined.map(entry => ({ entry, key: entry_sort_key(self, entry) }))
+		keyed.sort((a, b) => a.key > b.key ? 1 : -1)
+		const rows = keyed.map(el => el.entry)
 
 	// content_data
-		const content_data = await get_content_data(self, ar_section_record)
+	// (!) The de-duplicated list is what the window rows are: handing it the raw
+	// entries would render one row PER TAG (each showing every chip of the record)
+	// instead of one row per record.
+		self.ar_instances = self.ar_instances || []
+		const content_data = await get_content_data(self, rows, id_variant)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -199,67 +195,53 @@ view_indexation_edit_portal.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* Renders all resolved section-record nodes and assembles the scrollable content area.
+* Build the `content_data` container and hand the (sorted, de-duplicated) rows
+* to a ROW WINDOW (section.js window_section_rows → common/js/row_window.js): a
+* `section_record` is built and rendered only for the rows the viewport can
+* reach — at most ROW_WINDOW_MAX_ROWS at once — and released past the far edge
+* (audit P2-31 / CLI-29). The first window is filled before this resolves.
 *
 * Steps performed:
-* 1. Calls `render()` on every `section_record` instance in parallel using `Promise.all`.
-* 2. Sorts the resulting DOM nodes alphabetically by their `innerText`. Because the
-*    section records are fetched by unique (section_tipo, section_id) pairs and may
-*    arrive in any order from the server, client-side sorting gives a consistent list.
-* 3. If `self.data.references` is non-empty, appends a read-only back-reference list
+* 1. Windows the rows (view `text`, the indexation columns_map).
+* 2. If `self.data.references` is non-empty, appends a read-only back-reference list
 *    via `render_references` (used by relation-related indexation portals).
-* 4. When a tag filter is active (`self.active_tag` is set), appends a footer bar with a
+* 3. When a tag filter is active (`self.active_tag` is set), appends a footer bar with a
 *    "Remove filter" button that calls `self.reset_filter_data()` to restore the full list.
-* 5. Wraps the DocumentFragment in the standard `ui.component.build_content_data` node.
 *
-* @param {Object}   self              - The `component_portal` instance.
-* @param {Array}    ar_section_record - Array of section_record instances returned by
-*                                       `get_section_records`. May be empty when there are
-*                                       no matching indexed entries.
+* @param {Object} self       - The `component_portal` instance.
+* @param {Array}  rows       - The unique, sorted locator entries. May be empty when
+*                              there are no matching indexed entries.
+* @param {string} id_variant - Instance id variant for the rows of this render.
 * @returns {Promise<HTMLElement>} The assembled `content_data` DOM node, ready to be
 *   inserted into the wrapper.
 */
-const get_content_data = async function(self, ar_section_record) {
+const get_content_data = async function(self, rows, id_variant) {
 
-	// build_values
-		const fragment = new DocumentFragment()
+	// content_data
+		const content_data = ui.component.build_content_data(self)
 
-		// add all section_record rendered nodes
-			const ar_section_record_length	= ar_section_record.length
-			if (ar_section_record_length===0) {
-
-				// no records found case
-				// const row_item = no_records_node()
-				// fragment.appendChild(row_item)
-			}else{
-
-				const ar_promises = []
-				for (let i = 0; i < ar_section_record_length; i++) {
-					const render_promise = ar_section_record[i].render()
-					ar_promises.push(render_promise)
+	// row window
+		if (rows.length > 0) {
+			await window_section_rows({
+				caller			: self,
+				container		: content_data,
+				rows			: rows,
+				records_options	: {
+					mode		: 'list',
+					columns_map	: self.columns_map,
+					id_variant	: id_variant,
+					view		: 'text'
 				}
-				const values = await Promise.all(ar_promises)
+			})
+		}
 
-				// sort values alphabetically
-				// Records arrive in fetch order (by section_id). Sort by innerText so the
-				// list is stable and easy to scan regardless of when records were created.
-					values.sort((a,b)=>a.innerText>b.innerText?1:-1)
-
-				for (let i = 0; i < ar_section_record_length; i++) {
-
-					const section_record = values[i]
-
-					fragment.appendChild(section_record)
-				}
-			}//end if (ar_section_record_length===0)
-
-		// build references
-		// Render back-references when `self.data.references` is populated.
-		// This applies to portals configured as relation-related (inverse relation) views.
-			if(self.data.references && self.data.references.length > 0){
-				const references_node = render_references(self.data.references)
-				fragment.appendChild(references_node)
-			}
+	// build references
+	// Render back-references when `self.data.references` is populated.
+	// This applies to portals configured as relation-related (inverse relation) views.
+		if(self.data.references && self.data.references.length > 0){
+			const references_node = render_references(self.data.references)
+			content_data.appendChild(references_node)
+		}
 
 	// active_tag
 	// When a tag filter is active, add a footer button that lets the cataloguer
@@ -268,7 +250,7 @@ const get_content_data = async function(self, ar_section_record) {
 			const list_footer =  ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'list_footer',
-				parent			: fragment
+				parent			: content_data
 			})
 			const button_remove_filter = ui.create_dom_element({
 				element_type	: 'button',
@@ -284,13 +266,72 @@ const get_content_data = async function(self, ar_section_record) {
 			button_remove_filter.addEventListener('click', fn_click)
 		}
 
-	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.appendChild(fragment)
-
 
 	return content_data
 }//end get_content_data
+
+
+
+/**
+* ENTRY_SORT_KEY
+* The text a row sorts by, read from the shared datum instead of the rendered
+* row: the rows are windowed, so only the reachable ones are ever rendered.
+* Walks the portal's data columns (the ontology-defined ones in `self.columns_map`)
+* in order and concatenates the list-mode values stored for the entry's record;
+* a locator value contributes the first text value stored for its own record
+* (one hop — the same datum carries the related records' data).
+*
+* @param {Object} self  - The `component_portal` instance.
+* @param {Object} entry - A locator `{section_tipo, section_id}`.
+* @returns {string} The sort key ('' when the datum holds nothing for the record).
+*/
+const entry_sort_key = function(self, entry) {
+
+	const datum_data = self.datum?.data || []
+	const columns	 = (self.columns_map || []).map(el => el.id)
+
+	const text_of = function(value, depth) {
+		if (value===null || value===undefined) {
+			return ''
+		}
+		if (typeof value==='string' || typeof value==='number') {
+			return String(value)
+		}
+		if (Array.isArray(value)) {
+			return value.map(el => text_of(el, depth)).filter(Boolean).join(' ')
+		}
+		if (typeof value==='object') {
+			if (value.section_tipo && value.section_id!==undefined && depth < 1) {
+				const related = datum_data.find(el =>
+					el.section_tipo===value.section_tipo
+					&& same_section_id(el.section_id, value.section_id)
+					&& el.value!==null && el.value!==undefined
+				)
+				return related ? text_of(related.value, depth + 1) : ''
+			}
+			// lang-keyed or other object: its string leaves in order
+			return Object.values(value).map(el => text_of(el, depth)).filter(Boolean).join(' ')
+		}
+		return ''
+	}
+
+	const parts = []
+	for (const tipo of columns) {
+		const row = datum_data.find(el =>
+			el.tipo===tipo
+			&& el.section_tipo===entry.section_tipo
+			&& same_section_id(el.section_id, entry.section_id)
+		)
+		if (row) {
+			const text = text_of(row.value, 0)
+			if (text) {
+				parts.push(text)
+			}
+		}
+	}
+
+	return parts.join(' ')
+}//end entry_sort_key
 
 
 
@@ -551,7 +592,7 @@ const render_tag_column = function(options) {
 			const tag_node = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: class_name+' '+tag_type,
-				inner_html		: text_value,
+				inner_html		: render_value(text_value, 'text'),
 				parent			: fragment
 			})
 			tag_node.addEventListener('click', function(e) {
@@ -684,7 +725,7 @@ const render_info_column = function(options) {
 		const info_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'note italic',
-			inner_html		: '[' + section_label + ']',
+			inner_html		: '[' + render_value(section_label, 'text') + ']',
 			parent			: fragment
 		})
 
@@ -907,12 +948,16 @@ const render_column_remove_indexation = function(options, section_label) {
 					// deletes every locator of the row in ONE save and refreshes the component
 					// (!) unlink_record re-applies the active tag filter after the refresh.
 					// dataframe cleanup is server-authoritative (single-writer rule).
-					await self.unlink_record(row_locators)
-
-					// close modal
-					modal.close()
+					const removed = await self.unlink_record(row_locators)
 
 					footer.classList.remove('loading')
+
+					// close modal only after the unlink landed: a closing modal is the
+					// grammar of "removed" (a false answer is already surfaced by the
+					// save path's handle_api_error, or was the user's own cancel)
+					if (removed===true) {
+						modal.close()
+					}
 				}
 				button_unlink_record.addEventListener('click', fn_click_unlink_record)
 

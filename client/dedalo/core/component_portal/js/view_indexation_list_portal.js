@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 
 /**
 * VIEW_INDEXATION_LIST_PORTAL
@@ -72,7 +73,7 @@ view_indexation_list_portal.render = async function(self, options) {
 	// is not referenced afterwards.
 		const content_value = ui.create_dom_element({
 			element_type	: 'span',
-			inner_html		: value_string,
+			inner_html		: render_value(value_string, 'number'),
 			parent			: wrapper
 		})
 

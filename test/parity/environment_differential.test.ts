@@ -213,6 +213,16 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 			expect(key in phpGlobals).toBe(false);
 			delete tsGlobals[key];
 		}
+		// engineering/wire_contract/WC-2026-09-04-client-limit-bound.md: the SERVER's
+		// client ceiling is a TS-ONLY page_globals key — the client bounds every
+		// limit it sends to it instead of sending 0. PHP had no twin: its client
+		// sent 0 and its server clamped in silence. Same explicit-then-strip
+		// handling as WC-031.
+		expect(typeof tsGlobals.dedalo_search_client_max_limit).toBe('number');
+		expect(tsGlobals.dedalo_search_client_max_limit as number).toBeGreaterThan(0);
+		expect('dedalo_search_client_max_limit' in phpGlobals).toBe(false);
+		// biome-ignore lint/performance/noDelete: same as the WC-031 strip above — undefined would keep the key in Object.keys()
+		delete tsGlobals.dedalo_search_client_max_limit;
 		expect(Object.keys(tsGlobals).sort()).toEqual(Object.keys(phpGlobals).sort());
 		// engineering/wire_contract/WC-2026-08-23-projects-default-langs-derived.md:
 		// `dedalo_projects_default_langs` is DERIVED per installation now, and its ORDER

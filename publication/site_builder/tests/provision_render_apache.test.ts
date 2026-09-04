@@ -720,3 +720,61 @@ describe('the bytes are a pure function of the layout', () => {
     );
   });
 });
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * The Content Security Policy — on every served surface (audit P2-6 / CARRY-01)
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+describe('the content security policy', () => {
+  const CSP = /Header always set Content-Security-Policy "([^"]+)"/g;
+  const policies = (body: string): string[] => [...body.matchAll(CSP)].map(m => m[1] as string);
+
+  test('every VirtualHost that serves a DocumentRoot carries it, `always`, on both surfaces', () => {
+    for (const tls of [
+      { mode: 'none' },
+      { mode: 'files', certificate: '/etc/ssl/gate/one.pem', key: '/etc/ssl/gate/one.key' },
+    ]) {
+      const layout = layoutFrom(docWith({ serving: { ...baseDoc().serving, prod: { tls } } }));
+      for (const site of layout.sites) {
+        for (const surface of ['preprod', 'prod'] as const) {
+          const body = fileFor(layout, site, surface);
+          const roots = directiveValues(body, 'DocumentRoot').length;
+          expect(roots, `${tls.mode}/${surface}: the fixture serves a tree`).toBeGreaterThan(0);
+          expect(policies(body).length, `${tls.mode}/${surface}: one policy per served vhost`).toBe(roots);
+        }
+      }
+    }
+  });
+
+  test("script-src is 'self' alone — no inline, no eval — and the bypass routes are closed", () => {
+    const layout = layoutFrom(baseDoc());
+    for (const surface of ['preprod', 'prod'] as const) {
+      for (const policy of policies(fileFor(layout, layout.sites[0]!, surface))) {
+        const directives = new Map(policy.split('; ').map(d => [d.split(' ')[0], d.split(' ').slice(1).join(' ')]));
+        expect(directives.get('script-src')).toBe("'self'");
+        expect(policy).not.toContain('unsafe-inline');
+        expect(policy).not.toContain('unsafe-eval');
+        expect(directives.get('object-src')).toBe("'none'");
+        expect(directives.get('base-uri')).toBe("'self'");
+        expect(directives.get('frame-ancestors')).toBe("'none'");
+        expect(directives.get('form-action')).toBe("'self'");
+      }
+    }
+  });
+
+  test('the policy is not wrapped in <IfModule> — a host without mod_headers must fail configtest', () => {
+    const layout = layoutFrom(baseDoc());
+    const body = fileFor(layout, layout.sites[0]!, 'prod');
+    expect(body).toContain('Content-Security-Policy');
+    expect(body).not.toContain('<IfModule');
+  });
+
+  test('the redirect-only port-80 vhost of a TLS site carries no policy', () => {
+    const layout = layoutFrom(docWith({ serving: { ...baseDoc().serving, prod: { tls: { mode: 'files', certificate: '/etc/ssl/gate/one.pem', key: '/etc/ssl/gate/one.key' } } } }));
+    const body = fileFor(layout, layout.sites[0]!, 'prod');
+    const [http] = body.split('<VirtualHost *:80>').slice(1);
+    const redirectVhost = (http as string).split('</VirtualHost>')[0] as string;
+    expect(redirectVhost).toContain('Redirect');
+    expect(redirectVhost).not.toContain('Content-Security-Policy');
+  });
+});

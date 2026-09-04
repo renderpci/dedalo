@@ -25,8 +25,10 @@
  *         7. children_tipo whose model is not component_relation_children →
  *            'Wrong model', with the CALCULATED model in the message.
  *         8. pagination absent → {limit: defaultLimit, offset: 0}.
- *         9. total absent → counted; usePagination = limit > 0 && total > limit,
- *            so a limit at or above the total returns the UNPAGED read.
+ *         9. total absent → counted; usePagination = limit > 0 (since audit
+ *            P2-31 / CLI-30: a client total never switches paging off, and the
+ *            door clamps limit 0 / >ceiling to CLIENT_MAX_LIMIT —
+ *            engineering/wire_contract/WC-2026-09-04-client-limit-bound.md).
  *        10. the caller's pagination object is never mutated.
  *
  * KNOWN DEAD, deliberately not tested (stated rather than covered, per the
@@ -50,6 +52,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { CLIENT_MAX_LIMIT } from '../../src/core/concepts/sqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { DedaloError } from '../../src/core/errors/index.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
@@ -240,12 +243,9 @@ describe('get_children_data — mode A (resolve the children ourselves)', () => 
 	});
 
 	test('a limit EQUAL to the total returns every child', async () => {
-		// NOTE, measured: at limit === total the two branches are OBSERVATIONALLY
-		// EQUIVALENT — the unpaged read and `getChildren(limit=3, offset=0)` return
-		// the same three rows, so flipping `>` to `>=` here changes nothing a caller
-		// can see. This test pins the RESULT, not which branch produced it; the
-		// strictness itself is pinned by the next test, which is the case where the
-		// two branches genuinely diverge.
+		// The paged read at limit=3 over three children returns all three; the
+		// total is counted server-side. (Under the old `total > limit` rule this
+		// was the unpaged branch; the result is the same either way.)
 		const response = await getChildrenData(
 			{
 				dd_api: 'dd_ts_api',
@@ -259,14 +259,14 @@ describe('get_children_data — mode A (resolve the children ourselves)', () => 
 		expect(resultOf(response).pagination).toEqual({ limit: 3, offset: 0, total: 3 });
 	});
 
-	test('a supplied total EQUAL to the limit takes the UNPAGED read — and can return more rows than the limit', async () => {
-		// This is where `total > limit` and `total >= limit` diverge observably, and
-		// it is a real quirk of trusting a client total: with total=2 and limit=2
-		// over a parent that really has 3 children, `>` makes usePagination FALSE,
-		// so the unpaged read runs and THREE children come back through a request
-		// that asked for two. Under `>=` it would page and return two.
-		// Pinned as the behaviour that ships today, not endorsed — a client that
-		// under-reports the total defeats its own limit.
+	test('a supplied total EQUAL to the limit still PAGES — never more rows than the limit', async () => {
+		// The PHP twin paged only when `total > limit`, and `total` here is the
+		// client's own cached count: total=2 with limit=2 over a parent that
+		// really has 3 children made usePagination FALSE and THREE children came
+		// back through a request that asked for two — a client that under-reported
+		// its total defeated its own limit. Since P2-31 / CLI-30 the read pages
+		// whenever the limit is positive (ts_object.getChildrenData) — the wire
+		// divergence is recorded in WC-2026-09-04-client-limit-bound.md.
 		const response = await getChildrenData(
 			{
 				dd_api: 'dd_ts_api',
@@ -276,7 +276,43 @@ describe('get_children_data — mode A (resolve the children ourselves)', () => 
 			} as never,
 			SUPERUSER,
 		);
+		expect(resultOf(response).ar_children_data).toHaveLength(2);
+	});
+
+	test('limit 0 from the client is NOT an unpaged read — it is the client ceiling (DEC-07)', async () => {
+		// The two post-duplicate refresh paths sent `{limit: 0, offset: 0}` and the
+		// door took it verbatim: usePagination false, the whole branch built. Now
+		// the door clamps through the same clampClientLimit as an SQO limit: 0 →
+		// CLIENT_MAX_LIMIT, echoed in the pagination so the client sees the bound
+		// it got, and the read is the paged one at that bound. Three children fit
+		// under any ceiling; what is asserted is the ECHOED limit — the only
+		// observable that distinguishes "clamped and paged" from "taken verbatim".
+		const response = await getChildrenData(
+			{
+				dd_api: 'dd_ts_api',
+				action: 'get_children_data',
+				source: { section_tipo: TIPO, section_id: PARENT, children_tipo: CHILDREN_TIPO },
+				options: { pagination: { limit: 0, offset: 0 } },
+			} as never,
+			SUPERUSER,
+		);
+		expect(resultOf(response).pagination).toEqual({
+			limit: CLIENT_MAX_LIMIT,
+			offset: 0,
+			total: 3,
+		});
 		expect(resultOf(response).ar_children_data).toHaveLength(3);
+		// …and so is anything ABOVE the ceiling, or a negative offset.
+		const above = await getChildrenData(
+			{
+				dd_api: 'dd_ts_api',
+				action: 'get_children_data',
+				source: { section_tipo: TIPO, section_id: PARENT, children_tipo: CHILDREN_TIPO },
+				options: { pagination: { limit: CLIENT_MAX_LIMIT + 1, offset: -4 } },
+			} as never,
+			SUPERUSER,
+		);
+		expect(resultOf(above).pagination).toEqual({ limit: CLIENT_MAX_LIMIT, offset: 0, total: 3 });
 	});
 
 	test('a supplied total is TRUSTED — it is not recounted', async () => {

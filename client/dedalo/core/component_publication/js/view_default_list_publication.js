@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_join} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -91,7 +92,7 @@ view_default_list_publication.render = async function(self, options) {
 		const data			= self.data || {}
 		const entries		= data.entries || []
 		// (!) entries contains locator objects; join coerces each to "[object Object]"
-		const value_string	= entries.join(' ')
+		const value_string	= render_join(entries, ' ', self.context.render_class)
 
 	// wrapper
 		// build_wrapper_list creates the standard component wrapper <div> and

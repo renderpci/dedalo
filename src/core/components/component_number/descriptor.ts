@@ -7,6 +7,7 @@ import type { ComponentModel } from '../types.ts';
 export const component_number: ComponentModel = {
 	model: 'component_number',
 	column: 'number',
+	render: 'number',
 	searchBuilder: 'number',
 	flatValue: 'string',
 	importValueProperty: true,

@@ -9,6 +9,7 @@ import type { ComponentModel } from '../types.ts';
 export const component_filter_records: ComponentModel = {
 	model: 'component_filter_records',
 	column: 'misc',
+	render: 'text',
 	importValueProperty: true,
 	emitHook: 'filter_records',
 };

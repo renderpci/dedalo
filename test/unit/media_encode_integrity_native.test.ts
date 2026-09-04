@@ -128,6 +128,29 @@ function writeScript(name: string, body: string): string {
 	return path;
 }
 
+/**
+ * Pay macOS's FIRST-EXEC cost before a timed spawn. A freshly written
+ * executable is scanned by the OS on its first exec — measured on a dev Mac at
+ * ~520 ms for a 100-byte /bin/sh script, ~10 ms once warm — and the inactivity
+ * cap is armed at spawn, so an UNWARMED script under a 400 ms cap measures
+ * Gatekeeper and not the engine's silence policy (that is a test artefact, not
+ * a product one: the shipped producer cap is PRODUCER_IDLE_TIMEOUT_MS, ten
+ * minutes). Warming keeps the cap tight enough for the assertion to mean what
+ * it says.
+ */
+async function warmExec(bin: string): Promise<void> {
+	const child = Bun.spawn([bin], { stdout: 'pipe', stderr: 'ignore' });
+	// Wait for the FIRST BYTE, not a fixed delay: the cost being paid is the
+	// OS's exec-time scan, and a timed kill can land in the middle of it and
+	// leave the next exec to pay it again. First output proves the scan is done
+	// and the interpreter is running.
+	const reader = (child.stdout as ReadableStream<Uint8Array>).getReader();
+	await reader.read();
+	await reader.cancel();
+	child.kill(9);
+	await child.exited;
+}
+
 const FAKE_FFMPEG = join(BIN, 'ffmpeg');
 const FAKE_FASTSTART = join(BIN, 'qt-faststart');
 
@@ -347,6 +370,7 @@ describe('spawn integrity', () => {
 			'talker',
 			'i=0; while [ $i -lt 15 ]; do printf "tick\\n"; i=$((i+1)); sleep 0.1; done; printf done',
 		);
+		await warmExec(bin);
 		const result = await runBinary([bin], { nice: false, idleTimeoutMs: 400 });
 		expect(result.ok).toBe(true);
 		expect(result.timedOut).toBe(false);
@@ -357,11 +381,15 @@ describe('spawn integrity', () => {
 	test('an INACTIVITY cap kills a process that has gone silent', async () => {
 		const { runBinary } = await import('../../src/core/media/engine/spawn.ts');
 		const bin = writeScript('mute', 'printf hello; exec sleep 60');
+		await warmExec(bin);
 		const result = await runBinary([bin], { nice: false, idleTimeoutMs: 300 });
 		expect(result.ok).toBe(false);
 		expect(result.timedOut).toBe(true);
 		expect(result.timeoutKind).toBe('idle');
 		expect(result.signal).toBe('SIGKILL');
+		// It SPOKE, then went silent: without this the case would also pass on a
+		// process killed before it ever ran, which is the opposite of the rule.
+		expect(result.stdout).toContain('hello');
 	}, 20_000);
 
 	test('the two caps are mutually exclusive — a spawn is governed by ONE policy', async () => {

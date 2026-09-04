@@ -12,7 +12,12 @@ import { ui } from '../../../../common/js/ui.js';
  * shared body_response for the server sentence, and the last report as JSON.
  * Every server string reaches the DOM through textContent (SEC-XSS-011).
  */
-export const render_reconcile_status = () => true; //end render_reconcile_status
+export const render_reconcile_status = function () {
+	// NOT an arrow: `render_reconcile_status.prototype.list` is assigned below,
+	// and an arrow has no prototype — the module would throw while evaluating
+	// and the widget would resolve null (client_prototype_contract_tripwire).
+	return true;
+}; //end render_reconcile_status
 
 /**
  * SCHEDULE_TEXT

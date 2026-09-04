@@ -230,6 +230,12 @@ const POST_HARVEST_CLIENT_ADDITIONS: readonly string[] = [
 	'/dedalo/core/page/js/job_tray.js',
 	// external record services client render (WC-2026-08-06-external-client-render)
 	'/dedalo/core/component_external/js/external_render.js',
+	// the ONE render-boundary escaper (WC-2026-09-04-context-render-class)
+	'/dedalo/core/common/js/utils/render_escape.js',
+	// the client limit bound + the row window (WC-2026-09-04-client-limit-bound,
+	// audit P2-31 / CLI-29 / CLI-30)
+	'/dedalo/core/common/js/sqo_limit.js',
+	'/dedalo/core/common/js/row_window.js',
 	// inverse search render — census-adopted post-harvest addition
 	'/dedalo/core/component_inverse/js/render_search_component_inverse.js',
 	// TM list view replacing the service_time_machine package

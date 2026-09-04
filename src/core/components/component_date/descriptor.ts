@@ -10,6 +10,7 @@ export const component_date: ComponentModel = {
 	model: 'component_date',
 	flatValue: 'date',
 	column: 'date',
+	render: 'text',
 	searchBuilder: 'date',
 	importConform: 'date',
 };

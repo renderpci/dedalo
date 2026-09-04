@@ -4,8 +4,8 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 533,
-		"functions": 4977,
+		"files": 535,
+		"functions": 5016,
 		"functionsOverCap": 694,
 		"filesOverCap": 273
 	},
@@ -93,7 +93,7 @@
 		"src/core/concepts/locator.ts": 13,
 		"src/core/concepts/media.ts": 11,
 		"src/core/concepts/rqo.ts": 10,
-		"src/core/concepts/sqo.ts": 16,
+		"src/core/concepts/sqo.ts": 9,
 		"src/core/concepts/subdatum.ts": 7,
 		"src/core/db/db_assets.ts": 17,
 		"src/core/db/dd_ontology.ts": 16,
@@ -243,7 +243,7 @@
 		"src/core/section/record/observers.ts": 40,
 		"src/core/section/record/record_defaults.ts": 23,
 		"src/core/section/record/record_metadata.ts": 10,
-		"src/core/section/record/save_component.ts": 113,
+		"src/core/section/record/save_component.ts": 111,
 		"src/core/section/record/temporal.ts": 23,
 		"src/core/section/record/temporal_store.ts": 11,
 		"src/core/section/record_loader.ts": 12,

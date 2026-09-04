@@ -66,6 +66,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {strip_tags, url_vars_to_object} from '../../../core/common/js/utils/index.js'
 	import {request_failed, response_data, response_extension} from '../../common/js/api_error.js'
 	import {error_text} from '../../common/js/render_api_error.js'
@@ -231,7 +232,15 @@ const get_content_data = function(self) {
 					const lang = e.target.value || null
 					if (lang) {
 						// data_manager api call
-						await data_manager.request({
+						// The ANSWER IS READ: data_manager.request RESOLVES a refusal
+						// (the envelope carries `error`, it never rejects on one), so a
+						// bare await reloaded the page in the OLD language and presented
+						// it as the language the user picked.
+						// (!) No toast here: the transport already published the ApiError
+						// and error_dispatch's deduped_toast rendered it once. What this
+						// branch owes is to NOT reload — a reload would wipe that notice
+						// off the screen along with the selection that did not persist.
+						const api_response = await data_manager.request({
 							use_worker	: false,
 							body		: {
 								action	: 'change_lang',
@@ -241,6 +250,11 @@ const get_content_data = function(self) {
 								}
 							}
 						})
+						if (request_failed(api_response)) {
+							// restore the selector to the language still in force
+							e.target.value = page_globals.dedalo_application_lang
+							return
+						}
 						window.location.reload();
 					}
 				}
@@ -488,7 +502,7 @@ const get_content_data = function(self) {
 			const button_enter_label = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button_enter_label',
-				inner_html		: strip_tags(login_item_enter.label || 'Enter'),
+				inner_html		: render_value(strip_tags(login_item_enter.label || 'Enter'), 'text'),
 				parent			: button_enter
 			})
 		// event click
@@ -918,7 +932,7 @@ const get_content_data = function(self) {
 			// label
 				ui.create_dom_element({
 					element_type	: 'span',
-					inner_html		: item.label,
+					inner_html		: render_value(item.label, 'text'),
 					parent			: info_container
 				})
 
@@ -949,18 +963,21 @@ const get_content_data = function(self) {
 						break;
 					}
 					default:
-						// Array values (e.g. list of warnings) are joined with <br>
-						// so they render as separate lines inside the info panel span.
-						if (Array.isArray(value)) {
-							value = value.join('<br>')
-						}
 						break;
 				}
+				// Every info value is text (CLI-21): the operator's entity label,
+				// version strings and the ontology-version array come from config
+				// and the DB — escaped here, never parsed. Array values (e.g. a
+				// list of warnings) render one per line: each element escaped,
+				// the <br> between them is the panel's own markup.
+				const value_html = Array.isArray(value)
+					? render_value(value, 'text').join('<br>')
+					: render_value(value, 'text')
 
 			// value
 				ui.create_dom_element({
 					element_type	: 'span',
-					inner_html		: value,
+					inner_html		: value_html,
 					class_name		: class_name,
 					parent			: info_container
 				})

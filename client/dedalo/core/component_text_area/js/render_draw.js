@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {get_instance, find_instances} from '../../common/js/instances.js'
 	import {clone, same_section_id} from '../../common/js/utils/index.js'
 	import {render_layer_selector} from './render_edit_component_text_area.js'
@@ -169,7 +170,7 @@ export const render_draw = async function(options) {
 				// early-return path; it is created solely to display the warning to the user.
 				const modal = ui.attach_to_modal({
 					header	: get_label.warning || 'Warning',
-					body	: label+': '+ reference_component.label,
+					body	: label+': '+ render_value(reference_component.label, 'text'), // a string body is parsed as HTML
 					footer	: false,
 					size	: 'small' // string size big|normal
 				})
@@ -212,7 +213,7 @@ export const render_draw = async function(options) {
 		})
 		// header_label. created label with Title case (first letter to uppercase)
 			const ar_info_label = view_tag.label.split(':')
-			const header_label = `${get_label.tag || 'Tag'} id: ${ar_info_label[0]} | ${get_label.layer || 'Layer'} id: ${ar_info_label[1]} `
+			const header_label = `${get_label.tag || 'Tag'} id: ${render_value(ar_info_label[0], 'text')} | ${get_label.layer || 'Layer'} id: ${render_value(ar_info_label[1], 'text')} `
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'label',
@@ -276,7 +277,7 @@ export const render_draw = async function(options) {
 				const existing_value_node = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'value',
-					inner_html		: current_value.fallback_value.join(' | '),
+					inner_html		: render_value(current_value.fallback_value, 'text').join(' | '),
 					parent			: existing_tags_container
 				})
 				// existing_value_node.data = current_value
@@ -375,7 +376,7 @@ export const render_draw = async function(options) {
 			// When the user click on remove button, two actions happens:
 			// first, delete the section in the server
 			// second, remove the tag from the text_area
-			button_remove.addEventListener("click", function(e){
+			button_remove.addEventListener("click", async function(e){
 				e.stopPropagation()
 				// ask to user if really want delete the note
 				const delete_label = get_label.are_you_sure_to_delete_reference || 'Are you sure you want to delete this reference?'
@@ -387,7 +388,17 @@ export const render_draw = async function(options) {
 						// if the locator is not empty, remove it of the component.
 						// unlink_record signals component_tags_draw to remove the locator
 						// from its entries array and persist the change to the server.
-						component_tags_draw.unlink_record(locator[0]);
+						// Its ANSWER is READ: on a refusal the locator is still stored, so
+						// removing the modal would play the grammar of a deletion that did
+						// not happen. Keep the modal open and leave the tag alone.
+						// (!) No toast here: the refusal travelled through change_value ->
+						// data_manager.request, which published its ApiError, and
+						// error_dispatch's deduped_toast rendered it ONCE. A direct
+						// render_error_toast would double-notice the same failure.
+						const removed = await component_tags_draw.unlink_record(locator[0]);
+						if (removed!==true) {
+							return
+						}
 					}
 
 					// remove the modal

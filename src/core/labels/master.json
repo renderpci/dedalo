@@ -150,6 +150,7 @@
 	"error_client_http_status": "The server answered with an unexpected HTTP status",
 	"error_client_network": "The server could not be reached; check your connection",
 	"error_client_offline": "You are offline; changes cannot be saved until the connection returns",
+	"error_client_render_failed": "This part of the page could not be built; reload the page",
 	"error_client_timeout": "The server took too long to answer",
 	"error_client_worker": "A background worker failed; reload the page",
 	"error_diffusion_already_draining": "The diffusion server is already draining",

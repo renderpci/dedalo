@@ -43,6 +43,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {when_in_viewport,dd_request_idle_callback} from '../../common/js/events.js'
 	import {open_tool} from '../../../core/tools_common/js/tool_common.js'
 	import {get_quality_selector} from './render_edit_component_3d.js'
@@ -487,7 +488,7 @@ export const get_content_value_read = (i, current_value, self) => {
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_value media_content_value read_only',
-			inner_html		: 'Working in this view ' + self.view
+			inner_html		: 'Working in this view ' + render_value(self.view, 'text')
 		})
 
 	// posterframe
