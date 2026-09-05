@@ -23,8 +23,8 @@
 
 import { compareLocators, type Locator } from '../concepts/locator.ts';
 import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
-import { readMatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
+import { memoizedReadMatrixRecord } from '../db/record_memo.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from '../ontology/resolver.ts';
@@ -134,7 +134,7 @@ export async function getUserAuthorizedProjects(): Promise<AuthorizedProject[]> 
 
 	const projects: AuthorizedProject[] = [];
 	for (const id of ids) {
-		const record = await readMatrixRecord(table, PROJECTS_SECTION_TIPO, id);
+		const record = await memoizedReadMatrixRecord(table, PROJECTS_SECTION_TIPO, id);
 		if (record === null) continue;
 		// label — dd156 name in the data lang (fallback chain via resolveComponentValue)
 		const name = await resolveComponentValue(record, PROJECTS_NAME_TIPO, nameModel, dataLang);

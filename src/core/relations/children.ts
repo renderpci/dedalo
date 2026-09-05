@@ -9,9 +9,12 @@
  * dedicated component (section_map->thesaurus->order, typically a
  * component_number), paired by id_key to the CHILD's parent-link locator id
  * (the same child can hold different positions under different parents).
- * Ordering resolves per child (resolve_parent_link_id_key → the inline
- * get_value_by_id_key contract) and applies as a stable ascending sort;
- * children WITHOUT an order value sink last.
+ * The order and parent-link arrays of a whole child set are read in ONE
+ * statement per section_tipo group and resolved in process by the shared
+ * pairing rule (`ts_object/node_repository.ts` pickOrderValueForParent, the
+ * same rule the thesaurus tree uses — WC-2026-09-05-children-order-one-rule);
+ * the result applies as a stable ascending sort, and children WITHOUT an order
+ * value sink last.
  *
  * PHP references: class.component_relation_children.php — get_children :528,
  * count_children :597, get_children_recursive :802 (visited-map cycle
@@ -25,14 +28,18 @@
  * on very large nodes.
  */
 
-import { readMatrixRecord } from '../db/matrix.ts';
+import { isValidTipo } from '../concepts/ontology.ts';
+import { assertMatrixTable } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
+import { memoizedReadMatrixRecord } from '../db/record_memo.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
 import {
 	findFirstDescendantTipoByModel,
 	getMatrixTableFromTipo,
 	getModelByTipo,
+	getNode,
 } from '../ontology/resolver.ts';
 import { getSectionMap } from '../ontology/section_map.ts';
 import {
@@ -40,7 +47,7 @@ import {
 	findInverseReferences,
 	type RelatedLocatorFilter,
 } from '../search/search_related.ts';
-import { getInlineValueByIdKey } from './dataframe.ts';
+import { pickOrderValueForParent } from '../ts_object/node_repository.ts';
 
 /** PHP DEDALO_RELATION_TYPE_PARENT_TIPO — the upward hierarchy link type. */
 export const PARENT_RELATION_TYPE = 'dd47';
@@ -107,11 +114,11 @@ export async function getRelatedParentTipo(
 	childrenTipo: string,
 	sectionTipo: string,
 ): Promise<string | null> {
-	const rows = (await sql.unsafe(
-		`SELECT relations FROM dd_ontology WHERE tipo = $1 AND jsonb_typeof(relations) = 'array'`,
-		[childrenTipo],
-	)) as { relations: { tipo?: string }[] | null }[];
-	for (const link of rows[0]?.relations ?? []) {
+	// The node's own bytes are already in the resolver's nodeCache — a second
+	// direct ontology-table read here is a per-call round-trip for a row the
+	// cache holds (resolver.ts is the ONE dd_ontology reader; audit S2-19).
+	const relations = (await getNode(childrenTipo))?.relations;
+	for (const link of Array.isArray(relations) ? (relations as { tipo?: string }[]) : []) {
 		if (typeof link.tipo !== 'string') continue;
 		if ((await getModelByTipo(link.tipo)) === 'component_relation_parent') return link.tipo;
 	}
@@ -134,7 +141,7 @@ export async function resolveParentLinkIdKey(
 	if (parentRelationTipo === null) return 0;
 	const table = await getMatrixTableFromTipo(childSectionTipo);
 	if (table === null) return 0;
-	const record = await readMatrixRecord(table, childSectionTipo, Number(childSectionId));
+	const record = await memoizedReadMatrixRecord(table, childSectionTipo, Number(childSectionId));
 	// KEPT UNION: this is the RAW stored jsonb of the child's parent-link
 	// component — an unswept row still holds the legacy string form (and, on
 	// external tipos, a non-convertible remote id). Read tolerance only; the
@@ -179,9 +186,79 @@ async function findChildHits(
 
 /**
  * The sibling order values of a child set (PHP compute_ordered_child_ids
- * :1344): per child, resolve the parent-link id_key and read the order
- * component's paired inline value; missing values sort last (stable).
+ * :1344), read in ONE STATEMENT PER SECTION.
+ *
+ * WHAT IT USED TO COST. Per child it issued TWO full-row reads — one to
+ * resolve the child's parent-link id_key, one to read the order component —
+ * so a node with 440 children paid ~880 statements to sort a page of 20. The
+ * question each pair answered is the same one the tree's `fetchNodeInfo`
+ * already answers batched: give me, for this set of ids, the order array and
+ * the parent-relation array. Both arrays live in the same row, so one
+ * `= ANY($2::int[])` per section_tipo group returns everything, and the
+ * per-parent value is then resolved IN PROCESS by the shared rule.
+ *
+ * ONE RULE, NOT TWO. The pairing chain is
+ * pickOrderValueForParent (`ts_object/node_repository.ts`) — the same function
+ * `fetchNodeInfo` uses. It keeps
+ * the POSITIONAL fallback this engine documented (v6 reads the order
+ * positionally, `component_relation_children::get_children :471-486`, and its
+ * writer stores a flat single-value array, `sort_children :855-881`; a
+ * POLYHIERARCHY child listed under a non-first parent has an id_key with no
+ * matching entry — mht160/6). In the picker that fallback is step 3 (the entry
+ * carrying no pairing key of any generation) and, failing that, the first
+ * entry: the same value the old `paired ?? items[0]` produced, plus the legacy
+ * section-coords step the tree already honoured.
+ * WC-2026-09-05-children-order-one-rule.
+ *
+ * Children WITHOUT a resolvable order value sink last (stable within the
+ * group, by the hits' incoming order).
  */
+/** Refuse a tipo that may not be interpolated into a jsonb key (spec §7.6). */
+function assertOrderTipo(tipo: string, role: string, sectionTipo: string): void {
+	if (isValidTipo(tipo)) return;
+	throw new DedaloError('ontology.invalid_node', {
+		message: `order_child_hits: invalid ${role} tipo '${tipo}' for section '${sectionTipo}'`,
+		coordinates: { section_tipo: sectionTipo, [`${role}_tipo`]: tipo },
+	});
+}
+
+/**
+ * ONE section group's raw order rows: `{section_id, order_arr, parent_arr}` for
+ * the whole id set, in one statement. Returns [] when the section has no matrix
+ * table (nothing to order by).
+ */
+async function readOrderRows(
+	childSectionTipo: string,
+	sectionIds: readonly number[],
+	orderComponentTipo: string,
+): Promise<Record<string, unknown>[]> {
+	const table = await getMatrixTableFromTipo(childSectionTipo);
+	if (table === null || table === '') return [];
+	assertMatrixTable(table);
+
+	const parentRelationTipo = await getParentTipo(childSectionTipo);
+	if (parentRelationTipo !== null) {
+		assertOrderTipo(parentRelationTipo, 'parent', childSectionTipo);
+	}
+	const parentSelect =
+		parentRelationTipo === null ? '' : `, relation->'${parentRelationTipo}' AS parent_arr`;
+
+	return (await sql.unsafe(
+		`SELECT section_id, "number"->'${orderComponentTipo}' AS order_arr${parentSelect}
+		 FROM "${table}"
+		 WHERE section_tipo = $1 AND section_id = ANY($2::int[])`,
+		[childSectionTipo, `{${sectionIds.join(',')}}`],
+	)) as Record<string, unknown>[];
+}
+
+/** The stored array under a raw row key, tolerant of a missing/!array value. */
+function storedItems(value: unknown): Record<string, unknown>[] {
+	// KEPT UNION: raw stored jsonb — an unswept row still holds legacy string
+	// ids and legacy unkeyed order entries. The picker is the tolerance point;
+	// nothing read here is re-persisted.
+	return Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
+}
+
 async function orderChildHits(
 	hits: { section_tipo: string; section_id: number }[],
 	sectionId: number,
@@ -189,46 +266,39 @@ async function orderChildHits(
 	orderComponentTipo: string,
 ): Promise<{ section_tipo: string; section_id: number }[]> {
 	const UNORDERED = Number.MAX_SAFE_INTEGER;
-	const decorated: { hit: (typeof hits)[number]; order: number; index: number }[] = [];
-	for (const [index, hit] of hits.entries()) {
-		const idKey = await resolveParentLinkIdKey(
-			hit.section_tipo,
-			hit.section_id,
-			sectionTipo,
-			sectionId,
-		);
-		let order = UNORDERED;
-		{
-			const table = await getMatrixTableFromTipo(hit.section_tipo);
-			const record =
-				table === null ? null : await readMatrixRecord(table, hit.section_tipo, hit.section_id);
-			const orderModel = await getModelByTipo(orderComponentTipo);
-			const column = orderModel === null ? null : 'number';
-			const items =
-				column === null
-					? []
-					: (((record?.columns.number as Record<string, unknown[]> | null)?.[
-							orderComponentTipo
-						] as { id?: number | string; value?: unknown }[]) ?? []);
-			// POSITIONAL FALLBACK. v6 reads the order POSITIONALLY —
-			// jsonb_path_query_first(datos, '…dato."lg-nolan"[0]')
-			// (component_relation_children::get_children :471-486) — it has no id_key
-			// concept at all, and its writer stores a flat single-value array
-			// (sort_children :855-881). Pairing by the parent-link id_key matches it
-			// for every ordinary record, but a POLYHIERARCHY child listed under a
-			// non-first parent has an id_key with no matching entry, so it scored
-			// UNORDERED and sank last: mht160/6 (parents 20 and 86, order value 1)
-			// sorted after mht160/8 (order 2), and games.norder published 0 for
-			// record 8 where v6 says 1.
-			// Keep the pairing where it resolves — it is v7's per-parent design and
-			// costs nothing on data that has one entry per component — and fall back
-			// to v6's positional read when it does not.
-			const paired = idKey > 0 ? getInlineValueByIdKey(items, idKey) : null;
-			const value = paired ?? items[0]?.value ?? null;
-			if (value !== null && value !== '') order = Number(value);
-		}
-		decorated.push({ hit, order, index });
+	assertOrderTipo(orderComponentTipo, 'order', sectionTipo);
+
+	// A child set can SPAN SECTIONS (a virtual section's children, a portal of
+	// mixed tipos), and each section has its own table and its own parent
+	// component — so the batch is per section_tipo group.
+	const groups = new Map<string, number[]>();
+	for (const hit of hits) {
+		const list = groups.get(hit.section_tipo) ?? [];
+		list.push(hit.section_id);
+		groups.set(hit.section_tipo, list);
 	}
+
+	const orderByKey = new Map<string, number>();
+	for (const [childSectionTipo, sectionIds] of groups) {
+		for (const row of await readOrderRows(childSectionTipo, sectionIds, orderComponentTipo)) {
+			const value = pickOrderValueForParent(
+				storedItems(row.order_arr),
+				storedItems(row.parent_arr),
+				sectionTipo,
+				sectionId,
+			);
+			const order =
+				value === null || value === undefined || value === '' ? Number.NaN : Number(value);
+			if (!Number.isFinite(order)) continue;
+			orderByKey.set(`${childSectionTipo}_${Math.trunc(Number(row.section_id))}`, order);
+		}
+	}
+
+	const decorated = hits.map((hit, index) => ({
+		hit,
+		order: orderByKey.get(`${hit.section_tipo}_${hit.section_id}`) ?? UNORDERED,
+		index,
+	}));
 	decorated.sort((a, b) => a.order - b.order || a.index - b.index);
 	return decorated.map((entry) => entry.hit);
 }
@@ -399,49 +469,155 @@ export async function getChildrenOfType(
 }
 
 /**
- * ALL descendants at every depth, flat (PHP get_children_recursive :802):
- * direct children per level, then recursion per child. Cycle detection via
- * the visited map (keyed "tipo_id"); visited is passed BY VALUE, matching
- * PHP — independent subtrees do not share visit state.
+ * THE SUBTREE WALK'S BOUNDS — fixed constants, stated arithmetic, no env knob.
+ *
+ * A bound that an installation can move is not a bound: the refusal below is
+ * an INVARIANT of the read path, and a knob would make it un-gateable (the same
+ * reasoning the museum-scale corpus states for having no resize parameter).
+ *
+ * DEPTH. A heritage thesaurus is a classification, not a linked list: the
+ * deepest real hierarchies in the corpora this engine serves run to a dozen
+ * levels or so. 64 is several times that, and small enough that a CYCLE the
+ * visited set somehow failed to close (a poly-hierarchy lattice re-entering
+ * through a section boundary) stops at 64 frames instead of exhausting the
+ * stack.
+ *
+ * NODES. The scale corpus's whole tree is 1,199 descendants at depth 3; the
+ * largest single thesaurus branch an install expands in one read is orders of
+ * magnitude under 200,000. Past that this is no longer a subtree read, it is a
+ * table scan issued one `getChildren` at a time, and answering it slowly is
+ * worse than refusing it: the caller (a fixed_filter, a client SQO) has asked
+ * the wrong question and must be told so.
  */
-export async function getChildrenRecursive(
-	sectionId: number | string,
-	sectionTipo: string,
-	componentTipo?: string | null,
-	visited: Record<string, boolean> = {},
-): Promise<ChildLocator[]> {
-	const key = `${sectionTipo}_${sectionId}`;
-	if (visited[key] === true) return [];
-	const nextVisited = { ...visited, [key]: true };
+export const CHILDREN_RECURSIVE_MAX_DEPTH = 64;
+export const CHILDREN_RECURSIVE_MAX_NODES = 200000;
 
+/** Which bound a subtree walk breached, or null while it is within both. */
+export type SubtreeBound = 'depth' | 'nodes';
+
+/**
+ * THE BOUND PREDICATE — pure, and the ONE place both caps are compared, so the
+ * walk has a single guarded call site and neither cap can be enforced while the
+ * other silently is not. `depth` is the depth of the node about to be emitted
+ * (the root's own children are depth 1); `emitted` counts it.
+ */
+export function subtreeBoundExceeded(depth: number, emitted: number): SubtreeBound | null {
+	if (depth > CHILDREN_RECURSIVE_MAX_DEPTH) return 'depth';
+	if (emitted > CHILDREN_RECURSIVE_MAX_NODES) return 'nodes';
+	return null;
+}
+
+/** The walk's live state: ONE visited set and ONE node budget per call. */
+interface SubtreeWalkState {
+	visited: Set<string>;
+	emitted: number;
+	root: { section_tipo: string; section_id: number };
+}
+
+function refuseSubtree(state: SubtreeWalkState, limit: SubtreeBound): never {
+	throw new DedaloError('relation.subtree_too_large', {
+		message:
+			limit === 'depth'
+				? `children_recursive: the subtree below ${state.root.section_tipo}/${state.root.section_id} is deeper than ${CHILDREN_RECURSIVE_MAX_DEPTH} levels`
+				: `children_recursive: the subtree below ${state.root.section_tipo}/${state.root.section_id} exceeds ${CHILDREN_RECURSIVE_MAX_NODES} descendants`,
+		coordinates: { section_tipo: state.root.section_tipo, section_id: state.root.section_id },
+		details: {
+			limit,
+			cap: limit === 'depth' ? CHILDREN_RECURSIVE_MAX_DEPTH : CHILDREN_RECURSIVE_MAX_NODES,
+		},
+	});
+}
+
+/**
+ * ONE root's descendants, marking the SHARED visited set as it walks.
+ *
+ * EMISSION AND EXPANSION ARE THE SAME EVENT: a node is added to `visited` at
+ * the moment it is emitted and is expanded exactly then, so every node appears
+ * in the result AT MOST ONCE however many parents list it, and its subtree is
+ * walked once. That is the contract {@link getChildrenRecursiveBatch} always
+ * documented ("already deduplicated by locator") and did not keep — it pushed
+ * the whole `direct` list before the recursion pruned, so a POLY-HIERARCHY node
+ * came back once per parent.
+ *
+ * Level-first emission is preserved (a level's own children, then their
+ * subtrees), so the flat order callers see is unchanged apart from the removed
+ * duplicates.
+ */
+async function collectDescendantsShared(
+	// int by contract: the ONE tolerated string id is normalised at the public
+	// entry below (WC-2026-08-10-section-id-int-canonical).
+	sectionId: number,
+	sectionTipo: string,
+	componentTipo: string | null | undefined,
+	state: SubtreeWalkState,
+	depth: number,
+): Promise<ChildLocator[]> {
 	const direct = await getChildren(sectionId, sectionTipo, componentTipo);
-	const all: ChildLocator[] = [...direct];
+	const fresh: ChildLocator[] = [];
 	for (const child of direct) {
+		const key = `${child.section_tipo}_${child.section_id}`;
+		if (state.visited.has(key)) continue;
+		state.visited.add(key);
+		state.emitted++;
+		const breach = subtreeBoundExceeded(depth, state.emitted);
+		if (breach !== null) refuseSubtree(state, breach);
+		fresh.push(child);
+	}
+	const all: ChildLocator[] = [...fresh];
+	for (const child of fresh) {
 		all.push(
-			...(await getChildrenRecursive(child.section_id, child.section_tipo, null, nextVisited)),
+			...(await collectDescendantsShared(
+				child.section_id,
+				child.section_tipo,
+				componentTipo,
+				state,
+				depth + 1,
+			)),
 		);
 	}
 	return all;
 }
 
 /**
+ * ALL descendants at every depth, flat (PHP get_children_recursive :802).
+ *
+ * ONE SHARED visited set, and BOUNDED. PHP passed `visited` BY VALUE, which
+ * prunes only along the path currently being walked: a node reachable from
+ * several parents — a POLY-HIERARCHY, which Dédalo supports by design — was
+ * expanded once per path (O(depth) copies per node, exponential on a diamond
+ * lattice), and its subtree came back duplicated. Parity is not a bound, and
+ * the shared set changes results ONLY where a subtree would have been
+ * DUPLICATED. WC-2026-09-05-children-order-one-rule.
+ *
+ * The depth and node caps REFUSE loudly (`relation.subtree_too_large`) rather
+ * than truncating: a silently narrowed subtree is a wrong answer that looks
+ * like a right one.
+ */
+export async function getChildrenRecursive(
+	sectionId: number | string,
+	sectionTipo: string,
+	componentTipo?: string | null,
+): Promise<ChildLocator[]> {
+	const rootId = Math.trunc(Number(sectionId));
+	const state: SubtreeWalkState = {
+		visited: new Set([`${sectionTipo}_${rootId}`]),
+		emitted: 0,
+		root: { section_tipo: sectionTipo, section_id: rootId },
+	};
+	return collectDescendantsShared(rootId, sectionTipo, componentTipo, state, 1);
+}
+
+/**
  * ALL descendants of MANY roots, flat, with ONE visited set shared across the
- * whole batch (PHP get_children_recursive_batch :?? → get_children_recursive_shared,
- * class.component_relation_children.php — the `&$visited` by-REFERENCE twin of
- * {@link getChildrenRecursive}).
+ * whole batch — the `&$visited` by-REFERENCE twin of {@link getChildrenRecursive}
+ * (which now shares its own set too; what remains distinct here is that the set
+ * spans the ROOTS, so a root contained in an earlier root's subtree costs
+ * nothing and emits nothing twice).
  *
- * The distinction is not cosmetic. By-value visited prunes only along the path
- * currently being walked, so a node reachable from several roots — or, in a
- * POLYHIERARCHY, from several parents, which Dédalo supports by design — is
- * expanded once per path: O(N·depth) at best and exponential on a diamond
- * lattice, each expansion paying getChildren's index query plus the per-child
- * record reads that resolve child ORDER. Sharing the set expands every node at
- * most once per call, which is what a whole-subtree search must do — the
- * descendant-expanding search (`sqo.children_recursive`) hands this an
- * unbounded root set straight from a client SQO.
- *
- * Roots are walked in order and the result is already deduplicated by locator
- * (a node visited under an earlier root is not re-emitted under a later one).
+ * The descendant-expanding search (`sqo.children_recursive`) hands this an
+ * unbounded root set straight from a client SQO, so the caps of the single-root
+ * walk apply to the batch as a whole: `CHILDREN_RECURSIVE_MAX_NODES` counts
+ * every node the batch emits, not every node per root.
  */
 export async function getChildrenRecursiveBatch(
 	// int by contract (WC-2026-08-10-section-id-int-canonical): roots come from
@@ -449,41 +625,24 @@ export async function getChildrenRecursiveBatch(
 	roots: readonly { section_id: number; section_tipo: string }[],
 	componentTipo?: string | null,
 ): Promise<ChildLocator[]> {
-	const visited: Record<string, boolean> = {};
 	const all: ChildLocator[] = [];
+	const state: SubtreeWalkState = {
+		visited: new Set<string>(),
+		emitted: 0,
+		root: { section_tipo: roots[0]?.section_tipo ?? '', section_id: roots[0]?.section_id ?? 0 },
+	};
 	for (const root of roots) {
+		const key = `${root.section_tipo}_${root.section_id}`;
+		if (state.visited.has(key)) continue;
+		state.visited.add(key);
+		state.root = { section_tipo: root.section_tipo, section_id: root.section_id };
 		all.push(
 			...(await collectDescendantsShared(
 				root.section_id,
 				root.section_tipo,
 				componentTipo,
-				visited,
-			)),
-		);
-	}
-	return all;
-}
-
-/** One root's descendants, marking the SHARED visited set as it walks. */
-async function collectDescendantsShared(
-	sectionId: number | string,
-	sectionTipo: string,
-	componentTipo: string | null | undefined,
-	visited: Record<string, boolean>,
-): Promise<ChildLocator[]> {
-	const key = `${sectionTipo}_${sectionId}`;
-	if (visited[key] === true) return [];
-	visited[key] = true;
-
-	const direct = await getChildren(sectionId, sectionTipo, componentTipo);
-	const all: ChildLocator[] = [...direct];
-	for (const child of direct) {
-		all.push(
-			...(await collectDescendantsShared(
-				child.section_id,
-				child.section_tipo,
-				componentTipo,
-				visited,
+				state,
+				1,
 			)),
 		);
 	}

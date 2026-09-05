@@ -565,9 +565,24 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 			'the standalone publication packages the engine ships beside itself — the read-only API v2 source tree (whole, and its mcp/ + routes/ entry layers), the site-builder daemon source tree, and the site-builder tool client',
 	},
 	'test/helpers/engine_source_corpus.ts': {
-		roots: [['src', 'src/core/api/handlers', 'src/core/media']],
+		roots: [
+			[
+				'src',
+				'src/core/api/handlers',
+				'src/core/media',
+				'src/core/relations',
+				'src/core/resolve',
+				'src/core/search/builders',
+				'src/core/section',
+			],
+		],
 		scope:
-			"the engine's own source roots for gates that census src/ — the whole tree, the API handler layer (every door a request reaches), and the media subsystem (every converter spawn)",
+			"the engine's own source roots for gates that census src/ — the whole tree, the API handler layer (every door a request reaches), the media subsystem (every converter spawn), the three read-path trees (relations/resolve/section) and the search fragment builders",
+	},
+	'test/helpers/migrations_corpus.ts': {
+		roots: [['install/db/migrations']],
+		scope:
+			'the numbered boot migrations — what an EXISTING installation actually applies, for gates proving a schema or SQL-function change reaches one',
 	},
 	'test/helpers/deploy_artifact_corpus.ts': {
 		roots: [['.'], ['deploy']],

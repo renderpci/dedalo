@@ -91,6 +91,20 @@
 			"info": "Used to remove accents from a text string. Useful for case-insensitive and accent-insensitive searches."
 		},
 		{
+			"add": "\n\t\tCREATE OR REPLACE FUNCTION f_regex_literal(text)\n\t\tRETURNS text LANGUAGE 'sql' COST 100 IMMUTABLE STRICT PARALLEL SAFE\n\t\tAS $BODY$ SELECT regexp_replace($1, '([.*+?\\[\\]{}()|\\\\^$])', '\\\\\\1', 'g') $BODY$;\n\t",
+			"drop": "DROP FUNCTION IF EXISTS f_regex_literal",
+			"sample": "SELECT f_unaccent('Museo © 1998') ~* f_regex_literal(f_unaccent('Museo © 1998')) AS finds_itself, f_unaccent('Museo C 1998') ~* f_regex_literal(f_unaccent('Museo © 1998')) AS over_matches",
+			"name": "f_regex_literal",
+			"info": "Makes a text value LITERAL for the `~*` operator: every POSIX regex metacharacter is backslash-escaped. Applied ON THE SQL SIDE OF f_unaccent by every search builder (builders/types.ts regexOperand) because the unaccent dictionary EXPANDS characters into metacharacters (× → *, © → (C), … → ..., ∖ → \\), so an escape performed before normalization neutralises metacharacters that do not exist yet."
+		},
+		{
+			"add": "\n\t\tCREATE OR REPLACE FUNCTION f_like_literal(text)\n\t\tRETURNS text LANGUAGE 'sql' COST 100 IMMUTABLE STRICT PARALLEL SAFE\n\t\tAS $BODY$ SELECT regexp_replace($1, '([\\\\%_])', '\\\\\\1', 'g') $BODY$;\n\t",
+			"drop": "DROP FUNCTION IF EXISTS f_like_literal",
+			"sample": "SELECT 'a%b' LIKE '%' || f_like_literal(lower(f_unaccent('％'))) || '%' AS literal_percent",
+			"name": "f_like_literal",
+			"info": "The LIKE twin of f_regex_literal: escapes LIKE's own class (\\ % _). Applied on the SQL side of f_unaccent by the search-store trigram pre-filter (builders/types.ts likeOperand), for the same reason — unaccent expands ％ and ﹪ to %, ＿ to _, so the superset would stop agreeing with the exact predicate."
+		},
+		{
 			"add": "",
 			"drop": "DROP FUNCTION IF EXISTS data_relations_flat_st_si CASCADE",
 			"sample": "-- Removed 2026-07-20: matrix_relation_index is the only relation engine",

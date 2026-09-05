@@ -264,6 +264,7 @@
 	"error_recovery_restore_failed": "The restore failed; the sidecar was dropped and the target database is untouched",
 	"error_recovery_writers_active": "The target database still has connections; a restore needs zero",
 	"error_relation_insert_refused": "The link into '{section_tipo}' was refused ({constraint})",
+	"error_relation_subtree_too_large": "The requested subtree is too large to expand ({limit} cap {cap})",
 	"error_request_invalid": "The request is invalid",
 	"error_request_invalid_context": "The page context could not be built",
 	"error_request_invalid_data": "The request data is invalid or incomplete",

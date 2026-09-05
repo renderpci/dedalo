@@ -1000,7 +1000,9 @@ describe('T2 — matrix DML confinement (one writer per table family)', () => {
  */
 const DD_ONTOLOGY_DIRECT_READ_RATCHET = new Set<string>([
 	'src/core/area/dashboard.ts',
-	'src/core/relations/children.ts',
+	// children.ts: getRelatedParentTipo's direct `relations` read now goes
+	// through the resolver's nodeCache (getNode) — entry retired 2026-09-05
+	// (PERF-02; the staleness self-test below enforces this pruning).
 	'src/core/relations/request_config/build.ts',
 	'src/core/relations/request_config/implicit.ts',
 	'src/core/relations/request_config/explicit.ts',

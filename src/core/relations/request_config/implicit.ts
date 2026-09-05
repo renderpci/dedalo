@@ -36,7 +36,12 @@
 import { EXPLICIT_CONFIG_REQUIRED_MODELS } from '../../concepts/request_config.ts';
 import { sql } from '../../db/postgres.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
-import { getModelByTipo, getNode, getSectionRealTipo } from '../../ontology/resolver.ts';
+import {
+	getModelByTipo,
+	getNode,
+	getSectionRealTipo,
+	relatedTipoByExactModel,
+} from '../../ontology/resolver.ts';
 import { contextLabelOf } from '../../resolve/structure_context.ts';
 import {
 	buildSqoSectionTipoDdos,
@@ -103,16 +108,11 @@ async function filterAuthorizedRelated(
  * section (PHP resolve_ar_related_list_component :454-473).
  */
 export async function getMainRelatedSectionTipo(componentTipo: string): Promise<string | null> {
-	const rows = (await sql`
-		SELECT relations FROM dd_ontology WHERE tipo = ${componentTipo}
-		  AND jsonb_typeof(relations) = 'array'
-		LIMIT 1
-	`) as { relations: { tipo?: string }[] | null }[];
-	for (const link of rows[0]?.relations ?? []) {
-		if (typeof link.tipo !== 'string') continue;
-		if ((await getModelByTipo(link.tipo)) === 'section') return link.tipo;
-	}
-	return null;
+	// Answered from the resolver's cached node + its own (tipo|model) cache
+	// instead of a raw dd_ontology SELECT per list element — measured 8 times in
+	// ONE read (audit PERF-12). EXACT-model, never relatedTipoByModel: that one
+	// substring-matches, so 'section' would also answer 'section_list'.
+	return await relatedTipoByExactModel(componentTipo, 'section');
 }
 
 /**

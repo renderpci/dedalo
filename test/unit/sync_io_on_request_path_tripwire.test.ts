@@ -48,6 +48,19 @@
  * (3) Comments and `//`-suffixed lines are stripped before scanning, so prose
  * describing an anti-pattern is not a false positive — and a real call written
  * after a `//` on the same line would be missed with it.
+ *
+ * SECOND CLASS — THE DIRECTORY WALK (audit PERF-13, added with it). A metadata
+ * syscall is O(1) and stays legal above; a metadata syscall IN A LOOP is not,
+ * because its cost scales with the DIRECTORY. `get_dedalo_files` — the service
+ * worker's pre-cache manifest, on an AUTHENTICATED request path — walked the
+ * whole client tree with `readdirSync` and then `statSync`'d every manifested
+ * file, thousands of blocking syscalls, once per requesting browser. It is a
+ * frozen boot-time manifest now (`core/api/dedalo_files.ts`), and the census
+ * below is what keeps the shape from coming back somewhere else. Its detector
+ * is deliberately NARROWER than "the module calls readdirSync": with brace
+ * tracking it counts only the calls INSIDE a `for`/`while` body — the per-file
+ * stat loop and the directory walk — which is 16 files instead of 44, and a
+ * ledger of 44 justifications is one nobody reads.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -298,6 +311,98 @@ const EXEMPTIONS: { file: string; reason: string }[] = [
 	},
 ];
 
+/**
+ * THE WALK LEDGER (second detector class — see the header). Every reachable
+ * module that makes a metadata syscall INSIDE A LOOP, with the reason its cost
+ * is not paid per served request. Shrink-only, and a stale entry is RED.
+ * Measured at the PERF-13 fix: 16 files, 20 calls.
+ */
+const WALK_CEILING_FILES = 16;
+const WALK_CEILING_CALLS = 20;
+
+const WALK_EXEMPTIONS: { file: string; reason: string }[] = [
+	{
+		file: 'src/core/api/dedalo_files.ts',
+		reason:
+			'THE PERF-13 CONVERSION: the client-tree walk and its per-file stat now run ONCE, at boot, into a frozen manifest (prewarmDedaloFilesManifest); a served get_dedalo_files reads the frozen result. Dev mode recomputes per call on purpose — that is where client files change under a running server',
+	},
+	{
+		file: 'src/core/area_maintenance/backup.ts',
+		reason:
+			'lists the backup directory to date the artifacts for the maintenance panel; operator-driven, and bounded by the number of backup files, not by the collection',
+	},
+	{
+		file: 'src/core/install/media_tree.ts',
+		reason:
+			'probes the media tree layout during installation and the maintenance media probe — a fixed set of quality folders, off every served data path',
+	},
+	{
+		file: 'src/core/media/file_ops.ts',
+		reason:
+			"collects the existing quality files of ONE record's media during duplication or delete; bounded by that record's qualities and extensions",
+	},
+	{
+		file: 'src/core/media/ingest/staged_files.ts',
+		reason:
+			"lists the CALLER'S OWN staging directory to answer list_uploaded_files; bounded by that user's staged files, which is the answer being asked for",
+	},
+	{
+		file: 'src/core/media/ingest/staged_name_record.ts',
+		reason:
+			'sweeps the same staging directory by mtime to drop stale display-name sidecars; bounded by that one directory',
+	},
+	{
+		file: 'src/core/media/ingest/staging_gc.ts',
+		reason:
+			"the staging garbage sweep: ages one user's upload artifacts; a maintenance pass over a directory whose size the uploader controls, not the archive",
+	},
+	{
+		file: 'src/core/media/ingest/upload.ts',
+		reason:
+			'sums the parts of ONE in-flight transfer to enforce the assembled-size ceiling; bounded by the chunks of that upload, and the size gate has to see them',
+	},
+	{
+		file: 'src/core/media/jobs.ts',
+		reason:
+			'lists the media job store to date the job records; bounded by the jobs on file, on an operator/poll path rather than the read path',
+	},
+	{
+		file: 'src/core/tools/loader.ts',
+		reason:
+			'enumerates the tool root directory during tool discovery — a fixed ~36-entry directory, walked while the loader builds its process-wide table',
+	},
+	{
+		file: 'src/core/tools/paths.ts',
+		reason:
+			'lists the tool root to resolve the tool directories; the roots are memoized for the life of the process, so a served request does not repeat it',
+	},
+	{
+		file: 'src/core/tools/register.ts',
+		reason:
+			'walks the tool roots while SYNCHRONISING the dd1324 tool registry — an operator/boot registration action over the same fixed directory',
+	},
+	{
+		file: 'src/core/update/code_manifest.ts',
+		reason:
+			'walks the release directory to build the update manifest; an operator-driven update action over the release artifacts',
+	},
+	{
+		file: 'src/core/update/code_update.ts',
+		reason:
+			'walks the candidate code tree during a code update and its rollback; operator-driven, and it ends in a planned restart',
+	},
+	{
+		file: 'src/core/update/status.ts',
+		reason:
+			'lists the restore-point and archive directories for the update panel; an admin panel read, off the served data path',
+	},
+	{
+		file: 'src/diffusion/writers/rdf.ts',
+		reason:
+			'merges the part files of a FINISHED diffusion run into one document; a background publication job, never a served request',
+	},
+];
+
 /** Strip block and line comments so prose about an anti-pattern is not a hit. */
 function stripComments(source: string): string {
 	return source
@@ -305,6 +410,40 @@ function stripComments(source: string): string {
 		.split('\n')
 		.map((line) => line.replace(/\/\/.*$/, ''))
 		.join('\n');
+}
+
+/**
+ * Every metadata syscall made INSIDE A LOOP body — the walk class. Brace
+ * tracking, not a whole-file grep: a `statSync` at the top of a function costs
+ * one syscall, the same call inside a `for` costs one PER ENTRY, and only the
+ * second is what this class is about.
+ */
+const WALK_CALLS = ['readdirSync', 'statSync', 'lstatSync'] as const;
+const WALK_RE = new RegExp(`\\b(${WALK_CALLS.join('|')})\\s*\\(`, 'g');
+const LOOP_RE = /\b(for|while)\s*\(/;
+
+function walkCallsIn(source: string): { name: string; line: number }[] {
+	const hits: { name: string; line: number }[] = [];
+	let depth = 0;
+	const loopDepths: number[] = [];
+	const lines = stripComments(source).split('\n');
+	for (let i = 0; i < lines.length; i++) {
+		const line = lines[i] as string;
+		const isLoop = LOOP_RE.test(line);
+		if (!/^\s*(import|export)\b/.test(line) && loopDepths.length > 0) {
+			for (const match of line.matchAll(WALK_RE)) {
+				hits.push({ name: match[1] as string, line: i + 1 });
+			}
+		}
+		const opens = (line.match(/\{/g) ?? []).length;
+		const closes = (line.match(/\}/g) ?? []).length;
+		if (isLoop && opens > 0) loopDepths.push(depth + 1);
+		depth += opens - closes;
+		while (loopDepths.length > 0 && depth < (loopDepths[loopDepths.length - 1] as number)) {
+			loopDepths.pop();
+		}
+	}
+	return hits;
 }
 
 /** Every forbidden CALL SITE in `source` (import/export statements excluded). */
@@ -355,6 +494,13 @@ const OFFENDERS = new Map<string, { name: string; line: number }[]>();
 for (const absolute of REACHABLE) {
 	const hits = forbiddenCallsIn(readFileSync(absolute, 'utf8'));
 	if (hits.length > 0) OFFENDERS.set(absolute.slice(REPO_ROOT.length + 1), hits);
+}
+
+/** file (repo-relative) -> loop-scoped metadata syscalls (the walk class). */
+const WALK_OFFENDERS = new Map<string, { name: string; line: number }[]>();
+for (const absolute of REACHABLE) {
+	const hits = walkCallsIn(readFileSync(absolute, 'utf8'));
+	if (hits.length > 0) WALK_OFFENDERS.set(absolute.slice(REPO_ROOT.length + 1), hits);
 }
 
 describe('sync I/O on the request path: the census is real', () => {
@@ -501,5 +647,100 @@ describe('sync I/O on the request path: the MEDIA-02 conversion is pinned', () =
 			'utf8',
 		);
 		expect(ingest).toContain('await regenerate3d(');
+	});
+});
+
+describe('directory walks on the request path (PERF-13): the second class', () => {
+	test('the walk detector really matched something (corpus floor)', () => {
+		const total = [...WALK_OFFENDERS.values()].reduce((sum, hits) => sum + hits.length, 0);
+		expect(WALK_OFFENDERS.size).toBeGreaterThanOrEqual(10);
+		expect(total).toBeGreaterThanOrEqual(15);
+	});
+
+	test('positive control — a per-file stat loop and a walk are flagged', () => {
+		const planted = [
+			'for (const name of readdirSync(dir)) {',
+			'  const info = statSync(join(dir, name));',
+			'  total += info.size;',
+			'}',
+		].join('\n');
+		expect(walkCallsIn(planted).map((hit) => hit.name)).toEqual(['statSync']);
+		const nested = [
+			'while (queue.length > 0) {',
+			'  entries = readdirSync(queue.pop());',
+			'}',
+		].join('\n');
+		expect(walkCallsIn(nested).map((hit) => hit.name)).toEqual(['readdirSync']);
+	});
+
+	test('negative control — a ONE-SHOT metadata syscall is not a walk', () => {
+		const single = [
+			'function sizeOf(path) {',
+			'  const info = statSync(path);',
+			'  return info.size;',
+			'}',
+			'const entries = readdirSync(dir);',
+		].join('\n');
+		expect(walkCallsIn(single)).toEqual([]);
+	});
+
+	test('negative control — a loop that has CLOSED does not capture later calls', () => {
+		const source = [
+			'for (const x of xs) {',
+			'  touch(x);',
+			'}',
+			'const info = statSync(path);',
+		].join('\n');
+		expect(walkCallsIn(source)).toEqual([]);
+	});
+
+	test('no module outside the walk ledger walks a directory on the request path', () => {
+		const exempt = new Set(WALK_EXEMPTIONS.map((entry) => entry.file));
+		const unexempted = [...WALK_OFFENDERS.entries()]
+			.filter(([file]) => !exempt.has(file))
+			.map(([file, hits]) => `${file} (${hits.map((h) => `${h.name}@${h.line}`).join(', ')})`);
+		expect(
+			unexempted,
+			`A metadata syscall inside a LOOP on a module reachable from the dispatch or route table: its cost scales with the DIRECTORY, and Bun serves every request from one event loop. Compute it ONCE (a boot-time frozen answer, as core/api/dedalo_files.ts now does for the client manifest), move it off the request path, or add it to WALK_EXEMPTIONS with the reason its cost is not paid per served request: ${unexempted.join(' | ')}`,
+		).toEqual([]);
+	});
+
+	test('every walk-ledger entry still walks (a stale exemption is RED)', () => {
+		const stale = WALK_EXEMPTIONS.filter((entry) => !WALK_OFFENDERS.has(entry.file)).map(
+			(entry) => entry.file,
+		);
+		expect(
+			stale,
+			`These files no longer make a loop-scoped metadata syscall. DELETE their entries — the ledger is shrink-only: ${stale.join(', ')}`,
+		).toEqual([]);
+	});
+
+	test('the walk ledger only ever shrinks, and every entry carries a reason', () => {
+		expect(WALK_EXEMPTIONS.length).toBeLessThanOrEqual(WALK_CEILING_FILES);
+		const exempt = new Set(WALK_EXEMPTIONS.map((entry) => entry.file));
+		const exemptCalls = [...WALK_OFFENDERS.entries()]
+			.filter(([file]) => exempt.has(file))
+			.reduce((sum, [, hits]) => sum + hits.length, 0);
+		expect(exemptCalls).toBeLessThanOrEqual(WALK_CEILING_CALLS);
+		expect(WALK_CEILING_CALLS - exemptCalls).toBeLessThan(5);
+		const files = WALK_EXEMPTIONS.map((entry) => entry.file);
+		expect(new Set(files).size).toBe(files.length);
+		for (const entry of WALK_EXEMPTIONS) {
+			expect(
+				entry.reason.trim().length,
+				`${entry.file}: the reason must SAY why the walk is not paid per served request`,
+			).toBeGreaterThanOrEqual(40);
+		}
+	});
+
+	test('the PERF-13 conversion is pinned: the manifest is frozen at boot', () => {
+		// The behavioural half is dedalo_files_manifest_native.test.ts (it counts
+		// the walks). Here: the module still exposes the boot seam server.ts calls,
+		// and the server still calls it — a walk moved off the request path only if
+		// something warms it.
+		const manifest = readFileSync(resolve(REPO_ROOT, 'src/core/api/dedalo_files.ts'), 'utf8');
+		expect(manifest).toContain('export function prewarmDedaloFilesManifest(');
+		const server = readFileSync(resolve(REPO_ROOT, 'src/server.ts'), 'utf8');
+		expect(server).toContain('prewarmDedaloFilesManifest()');
 	});
 });

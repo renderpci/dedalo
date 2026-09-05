@@ -22,7 +22,7 @@
  */
 
 import type { Ddo } from '../../concepts/ddo.ts';
-import { readMatrixRecord } from '../../db/matrix.ts';
+import { memoizedReadMatrixRecord } from '../../db/record_memo.ts';
 import { getMatrixTableFromTipo } from '../../ontology/resolver.ts';
 import { buildDataItem, type DataItem, EmissionContext } from '../../resolve/component_data.ts';
 import type { EmitDdoFn, RelationEmitContext, RelationModelResolver } from '../registry.ts';
@@ -264,7 +264,7 @@ async function emitRelationIndexData(
 		const childTipos = await getRelatedListChildTipos(pointingSection);
 		if (childTipos.length === 0) continue;
 		for (const recordId of recordIds) {
-			const targetRecord = await readMatrixRecord(table, pointingSection, recordId);
+			const targetRecord = await memoizedReadMatrixRecord(table, pointingSection, recordId);
 			if (targetRecord === null) continue;
 			for (const childTipo of childTipos) {
 				const before = emission.items.length;
@@ -414,7 +414,11 @@ export async function readRelationIndexData(
 		for (const entry of pool) {
 			const table = await getMatrixTableFromTipo(entry.sectionTipo);
 			if (table === null) continue;
-			const targetRecord = await readMatrixRecord(table, entry.sectionTipo, entry.sectionId);
+			const targetRecord = await memoizedReadMatrixRecord(
+				table,
+				entry.sectionTipo,
+				entry.sectionId,
+			);
 			if (targetRecord === null) continue;
 			for (const childTipo of await getRelatedListChildTipos(entry.sectionTipo)) {
 				const before = emission.items.length;

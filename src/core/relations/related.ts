@@ -19,7 +19,8 @@
 
 import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import { DATAFRAME_RELATION_TYPE } from '../concepts/subdatum.ts';
-import { readMatrixRecord } from '../db/matrix.ts';
+import { memoizedReadMatrixRecord } from '../db/record_memo.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { getMatrixTableFromTipo, getNode } from '../ontology/resolver.ts';
 import { findInverseReferences } from '../search/search_related.ts';
 
@@ -98,7 +99,7 @@ async function readStoredLinks(
 ): Promise<StoredRelationLink[]> {
 	const table = await getMatrixTableFromTipo(sectionTipo);
 	if (table === null) return [];
-	const record = await readMatrixRecord(table, sectionTipo, Number(sectionId));
+	const record = await memoizedReadMatrixRecord(table, sectionTipo, Number(sectionId));
 	return (
 		((record?.columns.relation as Record<string, unknown[]> | null)?.[
 			tipo
@@ -130,6 +131,109 @@ export interface RelatedGraphIO {
 
 // Immutable function-pair default (never mutated — module_state rule satisfied).
 const DB_GRAPH_IO: RelatedGraphIO = { getInverse: getReferences, readStored: readStoredLinks };
+
+/**
+ * CLOSURE BOUNDS (audit PERF-04). The walk is linear in QUERIES, but nothing
+ * bounded its SIZE: a degenerate equivalence class — a hub every record points
+ * at — expands until it has walked the section, on the request thread, inside
+ * the caller's FOR UPDATE lock. The audit measured a 70,000-node closure at
+ * 17.8 s (the `visited` list was scanned with `.includes`, O((V+E)^2); it is a
+ * Set now, and the same walk is ~55 ms) — but 70,000 nodes of a "related"
+ * graph is not a slow answer, it is a broken ontology, and answering it at all
+ * is the defect.
+ *
+ * A breach THROWS (`engine.uncovered_scope`) and names the numbers. It never
+ * truncates: a silently narrowed closure is a WRONG answer — the observer
+ * equivalence-class seed would mirror a partial class and the Referencias grid
+ * would drop real references, with nothing red anywhere. (The observers.ts
+ * EQUIVALENCE_CLASS_WIDE counter warns and proceeds at 500 because it is a
+ * SIGNAL about a class that still resolved; these are the walls behind it.)
+ *
+ * TWO numbers, not three, and deliberately: DEPTH is the async recursion frame
+ * count and NODES is the class size. A separate cap on the RESULT length would
+ * be dead code — every reference pushed is first checked against the visited
+ * cache, so the result can never be longer than the node count that already has
+ * a wall.
+ */
+const RELATED_CLOSURE_MAX_DEPTH = 2_000;
+const RELATED_CLOSURE_MAX_NODES = 50_000;
+
+/**
+ * The published closure gauge — the biggest class this process has walked and
+ * how many walks were refused. Registered on GET /api/v1/counters from
+ * server.ts (the registerOpsGauge inversion: core/relations must not import
+ * core/api). Process-wide by nature: it is a HIGH-WATER MARK, carries no user,
+ * language, section or record, and a stale value only ages a number on an ops
+ * page.
+ */
+let closureStats: { readonly maxClosureNodes: number; readonly refusals: number } = {
+	maxClosureNodes: 0,
+	refusals: 0,
+};
+
+/** The closure BOUNDS, published so a gate asserts against the real numbers. */
+export const RELATED_CLOSURE_BOUNDS = {
+	maxDepth: RELATED_CLOSURE_MAX_DEPTH,
+	maxNodes: RELATED_CLOSURE_MAX_NODES,
+} as const;
+
+/** The closure gauge (ops/introspection): high-water class size + refusals. */
+export function relatedClosureStats(): { max_closure_nodes: number; refusals: number } {
+	return { max_closure_nodes: closureStats.maxClosureNodes, refusals: closureStats.refusals };
+}
+
+/** Reset the gauge (gates only — a high-water mark is otherwise never lowered). */
+export function resetRelatedClosureStats(): void {
+	closureStats = { maxClosureNodes: 0, refusals: 0 };
+}
+
+/**
+ * The two walls, in ONE place: the walk body stays about the traversal, and the
+ * bounds stay about the bounds (they are also the only two branches in this
+ * function, which is where the complexity ratchet wants them).
+ */
+function assertClosureWithinBounds(
+	tipo: string,
+	// The node's ADDRESS as already-formatted text, not the locator: this helper
+	// only names the offender in a refusal, and taking the locator would add a
+	// `number | string` section_id declaration to a file the section_id int
+	// tripwire (WC-2026-08-10-section-id-int-canonical) holds to a ceiling.
+	address: string,
+	depth: number,
+	nodes: number,
+): void {
+	if (depth > RELATED_CLOSURE_MAX_DEPTH) {
+		refuseClosure(
+			`relation graph too DEEP at ${address}: depth ${depth} exceeds ${RELATED_CLOSURE_MAX_DEPTH} (component ${tipo})`,
+		);
+	}
+	if (nodes > RELATED_CLOSURE_MAX_NODES) {
+		refuseClosure(
+			`relation graph too WIDE from ${address}: more than ${RELATED_CLOSURE_MAX_NODES} nodes in one closure (component ${tipo})`,
+		);
+	}
+}
+
+/**
+ * Raise the high-water mark — from the ROOT frame only, whose `expanded` set is
+ * the whole closure. A helper rather than two inline conditions so the walk body
+ * keeps its decisions about the traversal (and its complexity budget with them).
+ */
+function publishClosureSize(recursion: boolean, nodes: number): void {
+	if (recursion || nodes <= closureStats.maxClosureNodes) return;
+	closureStats = { maxClosureNodes: nodes, refusals: closureStats.refusals };
+}
+
+function refuseClosure(message: string): never {
+	closureStats = {
+		maxClosureNodes: closureStats.maxClosureNodes,
+		refusals: closureStats.refusals + 1,
+	};
+	throw new DedaloError('engine.uncovered_scope', {
+		message,
+		publicMessage: 'This record is related to too many others to resolve the relation graph',
+	});
+}
 
 /**
  * The relation-graph traversal (PHP get_references_recursive :274, ported
@@ -164,11 +268,17 @@ export async function getReferencesRecursive(
 	typeRel: string = RELATED_MULTIDIRECTIONAL,
 	recursion = false,
 	lang = 'lg-spa',
-	visited: string[] = [],
+	// A SET, not a list (audit PERF-04): this is membership-only state, and the
+	// `.includes` scan it replaces made the walk quadratic in the CPU on the
+	// request thread while every query stayed linear.
+	visited: Set<string> = new Set(),
 	io: RelatedGraphIO = DB_GRAPH_IO,
 	expanded: Set<string> = new Set(),
+	depth = 0,
 ): Promise<RelatedReference[]> {
-	const cache = recursion ? visited : [];
+	const address = `${locator.section_tipo}/${locator.section_id}`;
+	assertClosureWithinBounds(tipo, address, depth, 0);
+	const cache = recursion ? visited : new Set<string>();
 	const selfKey = `${locator.section_tipo}_${locator.section_id}_${lang}`;
 	// Re-entry of an already-expanded node contributes nothing (see the memo
 	// note above) — return before firing its inverse/stored queries. Safe to
@@ -176,7 +286,8 @@ export async function getReferencesRecursive(
 	// already put its key in `cache`.
 	if (expanded.has(selfKey)) return [];
 	expanded.add(selfKey);
-	cache.push(selfKey);
+	assertClosureWithinBounds(tipo, address, depth, expanded.size);
+	cache.add(selfKey);
 	const references: RelatedReference[] = [];
 
 	// References to me (inverse hop).
@@ -187,9 +298,9 @@ export async function getReferencesRecursive(
 	);
 	for (const result of inverse) {
 		const key = `${result.section_tipo}_${result.section_id}_${lang}`;
-		if (cache.includes(key)) continue;
+		if (cache.has(key)) continue;
 		references.push(result);
-		cache.push(key);
+		cache.add(key);
 	}
 
 	if (typeRel === RELATED_MULTIDIRECTIONAL) {
@@ -210,7 +321,7 @@ export async function getReferencesRecursive(
 			// TARGET (e.g. a vocabulary term) as a graph node — review 2026-08-02.
 			if (dataLocator.type === DATAFRAME_RELATION_TYPE) continue;
 			const key = `${dataLocator.section_tipo}_${dataLocator.section_id}_${lang}`;
-			if (cache.includes(key)) continue;
+			if (cache.has(key)) continue;
 			const element: RelatedReference = {
 				section_tipo: dataLocator.section_tipo,
 				// Canonicalize what the stored bag holds ('7' → 7) instead of
@@ -221,7 +332,7 @@ export async function getReferencesRecursive(
 			// Only recursive calls add stored links (the root's own data is the
 			// caller's stored data — never duplicated, PHP :333-336).
 			if (recursion) references.push(element);
-			cache.push(key);
+			cache.add(key);
 			// recurse into the stored link
 			references.push(
 				...(await getReferencesRecursive(
@@ -233,17 +344,30 @@ export async function getReferencesRecursive(
 					cache,
 					io,
 					expanded,
+					depth + 1,
 				)),
 			);
 		}
 		// References to references (c=a closure).
 		for (const current of [...references]) {
 			references.push(
-				...(await getReferencesRecursive(tipo, current, typeRel, true, lang, cache, io, expanded)),
+				...(await getReferencesRecursive(
+					tipo,
+					current,
+					typeRel,
+					true,
+					lang,
+					cache,
+					io,
+					expanded,
+					depth + 1,
+				)),
 			);
 		}
 	}
 
+	// The ROOT frame owns the gauge: `expanded` is the whole closure it walked.
+	publishClosureSize(recursion, expanded.size);
 	return references;
 }
 
@@ -317,7 +441,7 @@ export async function getStoredWithReferences(
 			typeRel,
 			false,
 			lang,
-			[],
+			new Set(),
 			io,
 		);
 		for (const reference of references) {

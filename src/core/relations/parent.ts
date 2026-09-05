@@ -22,8 +22,8 @@
  * component_relation_children sort_children (:1057), get_children_of_type (:664).
  */
 
-import { readMatrixRecord } from '../db/matrix.ts';
 import { allocateComponentItemId, updateMatrixKeyData } from '../db/matrix_write.ts';
+import { memoizedReadMatrixRecord } from '../db/record_memo.ts';
 import { RELATION_TYPE_PARENT } from '../ontology/ontology_tipos.ts';
 import { getMatrixTableFromTipo } from '../ontology/resolver.ts';
 import {
@@ -80,7 +80,7 @@ export async function getParents(
 	if (componentTipo === null) return [];
 	const table = await getMatrixTableFromTipo(sectionTipo);
 	if (table === null) return [];
-	const record = await readMatrixRecord(table, sectionTipo, Number(sectionId));
+	const record = await memoizedReadMatrixRecord(table, sectionTipo, Number(sectionId));
 	const items =
 		((record?.columns.relation as Record<string, ParentLocator[]> | null)?.[componentTipo] as
 			| ParentLocator[]
@@ -181,7 +181,7 @@ async function readOrderItems(
 	childSectionId: number,
 	orderTipo: string,
 ): Promise<{ id?: number | string; value?: unknown }[]> {
-	const record = await readMatrixRecord(table, childSectionTipo, childSectionId);
+	const record = await memoizedReadMatrixRecord(table, childSectionTipo, childSectionId);
 	return (
 		((
 			record?.columns.number as Record<string, { id?: number | string; value?: unknown }[]> | null
@@ -327,7 +327,7 @@ export async function addParent(
 	// The check runs BEFORE the id allocation and the order write (defect D15,
 	// fixed 2026-08-09): a refused duplicate used to burn an item id and leave a
 	// stray order-component entry keyed to a locator that never lands.
-	const record = await readMatrixRecord(table, childSectionTipo, childSectionId);
+	const record = await memoizedReadMatrixRecord(table, childSectionTipo, childSectionId);
 	const existing =
 		((record?.columns.relation as Record<string, ParentLocator[]> | null)?.[parentRelationTipo] as
 			| ParentLocator[]
@@ -381,7 +381,7 @@ export async function removeParent(
 
 	const table = await getMatrixTableFromTipo(childSectionTipo);
 	if (table === null) return false;
-	const record = await readMatrixRecord(table, childSectionTipo, childSectionId);
+	const record = await memoizedReadMatrixRecord(table, childSectionTipo, childSectionId);
 	const existing =
 		((record?.columns.relation as Record<string, ParentLocator[]> | null)?.[parentRelationTipo] as
 			| ParentLocator[]

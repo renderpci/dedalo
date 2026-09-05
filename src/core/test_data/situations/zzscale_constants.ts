@@ -27,7 +27,7 @@
  *     `builder_relation_index`'s only shape (`{type:'dd96', section_tipo}`)
  *     has never been exercised against real rows here;
  *   - a STRING DISTRIBUTION that includes every regex metacharacter
- *     `builder_string.ts`'s REGEX_META class names, so the search-store LIKE
+ *     `builders/types.ts`'s REGEX_META class names, so the search-store LIKE
  *     pre-filter's false-negative guard has values to be wrong about.
  *
  * NOT A RESIDENT FIXTURE. The suite database does not carry this corpus. A
@@ -120,12 +120,16 @@ export const ZZSCALE_POLY_ORDER_A = 11;
 export const ZZSCALE_POLY_ORDER_B = 22;
 
 /**
- * REGEX METACHARACTERS — the class `src/core/search/builders/builder_string.ts`
- * declares as REGEX_META. A `q` carrying any of these is NOT literally
- * LIKE-matchable, so the search-store pre-filter must not be applied to it;
- * the corpus therefore carries one VALUE per character, and the gate re-derives
- * this list FROM that source file so a character added there without a value
- * here goes red.
+ * REGEX METACHARACTERS — the class `src/core/search/builders/types.ts` declares
+ * as REGEX_META and the SQL function `f_regex_literal` escapes. A `q` carrying
+ * any of these is a PATTERN to Postgres unless it is escaped, so the corpus
+ * carries one VALUE per character and the gate re-derives this list FROM that
+ * source file: a character added there without a value here goes red.
+ *
+ * It is the class a curator TYPES, not the class Postgres compiles: the
+ * unaccent dictionary expands 143 further characters INTO metacharacters, and
+ * that (database-derived) census lives in search_literal_native, which also
+ * reaches every value below through its unaccent PRE-IMAGE.
  */
 export const ZZSCALE_REGEX_META_CHARS: readonly string[] = [
 	'.',
@@ -245,7 +249,14 @@ export function zzScaleParentIdOf(sectionId: number): number | null {
 	return band ? band.parentOf(sectionId) : null;
 }
 
+/**
+ * The shared prefix of every tree/island record's term. Exported because the
+ * TLD's literals have exactly ONE owner (scratch_tld_uniqueness_tripwire): a
+ * gate searching this corpus asks for the prefix, it does not spell it.
+ */
+export const ZZSCALE_TERM_PREFIX = 'zzscale record';
+
 /** The generic term text of a tree/island record — contaminates no census. */
 export function zzScaleTermOf(sectionId: number): string {
-	return `zzscale record ${sectionId}`;
+	return `${ZZSCALE_TERM_PREFIX} ${sectionId}`;
 }

@@ -2161,6 +2161,21 @@ export const ERROR_REGISTRY = {
 		retryable: false,
 		details_keys: ['constraint', 'section_tipo'],
 	},
+	'relation.subtree_too_large': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_relation_subtree_too_large',
+		// The recursive children walk hit its DEPTH or NODE cap
+		// (relations/children.ts CHILDREN_RECURSIVE_MAX_DEPTH / _MAX_NODES).
+		// Refused, never truncated: a narrowed subtree is a wrong answer that
+		// looks like a right one. `limit` says which cap, `cap` its value; the
+		// root coordinates stay off the wire (coordinates, not details).
+		message: 'The requested subtree is too large to expand',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+		details_keys: ['limit', 'cap'],
+	},
 	'section.no_matrix_table': {
 		category: 'caller',
 		status: 400,

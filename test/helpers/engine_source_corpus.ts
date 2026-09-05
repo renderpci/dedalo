@@ -19,6 +19,20 @@ export const ENGINE_SRC = join(REPO_ROOT, 'src');
 export const API_HANDLERS_DIR = join(REPO_ROOT, 'src/core/api/handlers');
 export const MEDIA_DIR = join(REPO_ROOT, 'src/core/media');
 
+/**
+ * THE READ PATH — the three trees a section read flows through (relations,
+ * resolve, section). Owned here so the bare-`readMatrixRecord` census and any
+ * later read-path census walk the SAME corpus.
+ */
+export const READ_PATH_ROOTS = [
+	'src/core/relations',
+	'src/core/resolve',
+	'src/core/section',
+] as const;
+
+/** The search-family fragment builders (src/core/search/builders). */
+export const SEARCH_BUILDERS_DIR = join(REPO_ROOT, 'src/core/search/builders');
+
 function walk(dir: string, out: string[] = []): string[] {
 	for (const entry of readdirSync(dir)) {
 		const full = join(dir, entry);
@@ -46,4 +60,16 @@ export function apiHandlerFiles(): string[] {
 /** Every .ts under the media subsystem (src/core/media), absolute, sorted. */
 export function mediaSourceFiles(): string[] {
 	return walk(MEDIA_DIR).sort();
+}
+
+/** Every .ts under the read-path roots, absolute, sorted. */
+export function readPathSourceFiles(): string[] {
+	const out: string[] = [];
+	for (const root of READ_PATH_ROOTS) walk(join(REPO_ROOT, root), out);
+	return out.sort();
+}
+
+/** Every .ts of the search builder family, absolute, sorted. */
+export function searchBuilderFiles(): string[] {
+	return walk(SEARCH_BUILDERS_DIR).sort();
 }

@@ -260,6 +260,8 @@ const TRIPWIRES = [
 	'test/unit/slow_query_scope_native.test.ts',
 	'test/unit/query_tap_tripwire.test.ts',
 	'test/unit/zzscale_corpus_native.test.ts',
+	'test/unit/read_path_record_reuse_tripwire.test.ts',
+	'test/unit/search_pattern_escape_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

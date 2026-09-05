@@ -5,9 +5,9 @@
 	"root": "src/core",
 	"summary": {
 		"files": 546,
-		"functions": 5174,
-		"functionsOverCap": 694,
-		"filesOverCap": 273
+		"functions": 5214,
+		"functionsOverCap": 692,
+		"filesOverCap": 272
 	},
 	"ledger": [
 		{
@@ -20,6 +20,11 @@
 			"functionsOverCap": 694,
 			"filesOverCap": 273,
 			"reason": "Batch-3 synthesis of audit 2026-08-26 (P1-8, S-10): five files born over the cap by the remediation itself — reconcile_status.ts reconcileStatusRunReconcile 12, files_info_reconcile.ts sweepFilesInfo 26, reconcile/registry.ts validateDefinition 15, create_record.ts createSectionRecord 8, save_event.ts fireSaveEvent 7. Frozen, not accepted: each is a flat sequence of checks/steps whose split is owed by its item's owner (extract-and-rewire; the write_obligations tripwire pins createSectionRecord/fireSaveEvent BODIES, so their split must move the gate's bodyOf targets with it). The synthesis pass registers gates and may not refactor five files other items still own; the number is here so the debt is visible, and it may only go down."
+		},
+		{
+			"generated": "2026-09-05",
+			"functionsOverCap": 692,
+			"filesOverCap": 272
 		}
 	],
 	"files": {
@@ -194,7 +199,7 @@
 		"src/core/relations/request_config/build.ts": 20,
 		"src/core/relations/request_config/explicit.ts": 26,
 		"src/core/relations/request_config/external.ts": 8,
-		"src/core/relations/request_config/filters.ts": 31,
+		"src/core/relations/request_config/filters.ts": 30,
 		"src/core/relations/request_config/implicit.ts": 27,
 		"src/core/relations/request_config/presets.ts": 18,
 		"src/core/relations/save.ts": 26,
@@ -220,9 +225,8 @@
 		"src/core/search/builders/builder_number.ts": 12,
 		"src/core/search/builders/builder_relation.ts": 13,
 		"src/core/search/builders/builder_relation_children.ts": 10,
-		"src/core/search/builders/builder_relation_index.ts": 10,
 		"src/core/search/builders/builder_section_id.ts": 19,
-		"src/core/search/builders/builder_string.ts": 36,
+		"src/core/search/builders/builder_string.ts": 33,
 		"src/core/search/builders/types.ts": 7,
 		"src/core/search/conform.ts": 37,
 		"src/core/search/order_path.ts": 13,

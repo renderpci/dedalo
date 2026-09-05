@@ -23,9 +23,9 @@ import { SELF_SENTINEL } from '../concepts/ddo.ts';
 import type { Rqo } from '../concepts/rqo.ts';
 import type { Sqo } from '../concepts/sqo.ts';
 import type { MatrixRecord } from '../db/matrix.ts';
-import { readMatrixRecord, readMatrixRecordBatch } from '../db/matrix.ts';
+import { readMatrixRecordBatch } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
-import { seedRecordMemo } from '../db/record_memo.ts';
+import { memoizedReadMatrixRecord, seedRecordMemo } from '../db/record_memo.ts';
 import { getMatrixTableFromTipo } from '../ontology/resolver.ts';
 import type { EmissionContext } from '../resolve/component_data.ts';
 import type { StructureContextEntry } from '../resolve/structure_context.ts';
@@ -174,7 +174,7 @@ export const matrixReadSource: SectionReadSource = {
 		const record =
 			row.raw !== undefined
 				? (row.raw as MatrixRecord | null)
-				: await readMatrixRecord(
+				: await memoizedReadMatrixRecord(
 						(await getMatrixTableFromTipo(row.section_tipo)) ?? 'matrix',
 						row.section_tipo,
 						row.section_id,

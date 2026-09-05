@@ -29,7 +29,7 @@
  * per-record answer EQUALS the list answer, record by record".
  */
 
-import { sanitizeClientSqo } from '../concepts/sqo.ts';
+import { CLIENT_MAX_LIMIT, CLIENT_MAX_LOCATOR_PINS, sanitizeClientSqo } from '../concepts/sqo.ts';
 import { sql } from '../db/postgres.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { buildSearchSql } from '../search/sql_assembler.ts';
@@ -63,17 +63,75 @@ export async function isRecordInScope(
 	sectionId: number,
 	principal: Principal,
 ): Promise<boolean> {
-	const scopeSqo = sanitizeClientSqo({
-		section_tipo: [sectionTipo],
-		filter_by_locators: [{ section_tipo: sectionTipo, section_id: sectionId }],
-		limit: 1,
-	});
-	const scopeQuery = await buildSearchSql(scopeSqo, { principal });
-	const visible = (await sql.unsafe(
-		scopeQuery.sql,
-		scopeQuery.params as (string | number | null)[],
-	)) as unknown[];
-	return visible.length > 0;
+	const visible = await visibleSectionIds(sectionTipo, [sectionId], principal);
+	return visible.has(Number(sectionId));
+}
+
+/**
+ * How many record addresses one scope probe pins at a time.
+ *
+ * The probe is an ORDINARY CLIENT SQO run through `sanitizeClientSqo`, and that
+ * sanitizer CLAMPS both halves this depends on: `filter_by_locators` at
+ * {@link CLIENT_MAX_LOCATOR_PINS} and `limit` at {@link CLIENT_MAX_LIMIT}
+ * (config-driven). A chunk above either ceiling would be silently truncated —
+ * and a truncated probe does not fail loudly, it HIDES records the caller may
+ * legitimately see. The chunk is therefore derived from both ceilings rather
+ * than declared, so an installation that lowers `searchClientMaxLimit` cannot
+ * turn this into a silent under-answer.
+ */
+const SCOPE_PROBE_CHUNK = Math.max(1, Math.min(200, CLIENT_MAX_LIMIT, CLIENT_MAX_LOCATOR_PINS));
+
+/**
+ * THE PREDICATE, STATED ONCE — which of `sectionIds` this principal may see in
+ * `sectionTipo`, asked of the real assembler in ONE statement per chunk.
+ *
+ * Both doors of this module run through here: {@link isRecordInScope} asks it
+ * for a single id, {@link scopeInverseReferenceHits} asks it for a whole hit
+ * list. That is deliberate and is the module's own law (see the docblock on
+ * scopeInverseReferenceHits: "the boundary must never be re-decided per
+ * caller") — a batched COPY of the rule would be a second ACL, free to drift
+ * from the one the list path applies.
+ *
+ * WHY BATCHED (PERF-01 / P2-11). The per-hit form ran `sanitizeClientSqo` +
+ * `buildSearchSql` + one `sql.unsafe` PER CANDIDATE: an identification pool of
+ * 500 records cost 500 assembler runs and 500 round-trips, all of them the same
+ * query with one number changed. `filter_by_locators` is the assembler's own
+ * OR-of-locators shape, so the same predicate answers the whole chunk at once —
+ * same WHERE clauses, same projects filter, same exemptions, one statement.
+ *
+ * `idsOnly` because a boolean needs no data columns: the ten wide jsonb columns
+ * the default projection carries were never read by either caller.
+ */
+async function visibleSectionIds(
+	sectionTipo: string,
+	sectionIds: readonly number[],
+	principal: Principal,
+): Promise<Set<number>> {
+	const visible = new Set<number>();
+	for (let start = 0; start < sectionIds.length; start += SCOPE_PROBE_CHUNK) {
+		const chunk = sectionIds.slice(start, start + SCOPE_PROBE_CHUNK);
+		const scopeSqo = sanitizeClientSqo({
+			section_tipo: [sectionTipo],
+			filter_by_locators: chunk.map((sectionId) => ({
+				section_tipo: sectionTipo,
+				section_id: sectionId,
+			})),
+			// Exactly the chunk: every pinned record may legitimately be visible,
+			// and a smaller limit would drop survivors as if they were denied.
+			limit: chunk.length,
+		});
+		const scopeQuery = await buildSearchSql(scopeSqo, { principal, idsOnly: true });
+		const rows = (await sql.unsafe(
+			scopeQuery.sql,
+			scopeQuery.params as (string | number | null)[],
+			// `unknown`, not `number | string`: the driver's row type is not a
+			// place to widen the section_id union (WC-2026-08-10-section-id-int-canonical
+			// — section_id_int_tripwire ratchets this file at zero), and every use
+			// below canonicalizes through Number() anyway.
+		)) as Array<{ section_id: unknown }>;
+		for (const row of rows) visible.add(Number(row.section_id));
+	}
+	return visible;
 }
 
 /**
@@ -170,12 +228,41 @@ export async function assertRecordWriteTarget(
 }
 
 /**
+ * LEG 1 of {@link scopeInverseReferenceHits}, extracted so each leg stays one
+ * readable decision: the hits whose SECTION the principal may read, in input
+ * order, together with the per-section id sets the projects probe then asks
+ * about (deduplicated for the query, re-expanded onto the input by the caller).
+ * One `getPermissions` per distinct section, cached across the walk.
+ */
+async function hitsWithSectionGrant<T extends { section_tipo: string; section_id: number }>(
+	hits: readonly T[],
+	principal: Principal,
+): Promise<{ granted: T[]; probeIds: Map<string, Set<number>> }> {
+	const sectionReadable = new Map<string, boolean>();
+	const granted: T[] = [];
+	const probeIds = new Map<string, Set<number>>();
+	for (const hit of hits) {
+		let readable = sectionReadable.get(hit.section_tipo);
+		if (readable === undefined) {
+			readable = (await getPermissions(principal, hit.section_tipo, hit.section_tipo)) >= 1;
+			sectionReadable.set(hit.section_tipo, readable);
+		}
+		if (!readable) continue;
+		granted.push(hit);
+		const ids = probeIds.get(hit.section_tipo);
+		if (ids === undefined) probeIds.set(hit.section_tipo, new Set([Number(hit.section_id)]));
+		else ids.add(Number(hit.section_id));
+	}
+	return { granted, probeIds };
+}
+
+/**
  * Drop record hits a principal cannot reach (AUTHZ-05) — the LIST-shaped twin of
  * {@link principalCanAccessRecord}. A hit survives only when the caller (a)
  * holds a read grant on its SECTION and (b) has the RECORD inside their projects
  * filter. Global admins are unscoped (the current, correct behavior). One
- * getPermissions per distinct section (cached); one isRecordInScope per
- * surviving hit.
+ * getPermissions per distinct section (cached); ONE STATEMENT per (section,
+ * chunk of {@link SCOPE_PROBE_CHUNK} records) — never one per hit.
  *
  * NAMED for the door it was written at: the inverse scan
  * (search_related.findInverseReferences) is a shared low-level primitive that
@@ -199,19 +286,22 @@ export async function scopeInverseReferenceHits<
 	T extends { section_tipo: string; section_id: number },
 >(hits: T[], principal: Principal): Promise<T[]> {
 	if (principal.isGlobalAdmin) return hits;
-	const sectionReadable = new Map<string, boolean>();
-	const out: T[] = [];
-	for (const hit of hits) {
-		let readable = sectionReadable.get(hit.section_tipo);
-		if (readable === undefined) {
-			readable = (await getPermissions(principal, hit.section_tipo, hit.section_tipo)) >= 1;
-			sectionReadable.set(hit.section_tipo, readable);
-		}
-		if (!readable) continue;
-		if (!(await isRecordInScope(hit.section_tipo, hit.section_id, principal))) continue;
-		out.push(hit);
+
+	// LEG 1 — the section read grant, per distinct section, in input order.
+	const { granted, probeIds } = await hitsWithSectionGrant(hits, principal);
+
+	// LEG 2 — the projects boundary, ONE probe per (section, chunk). The ids are
+	// deduplicated for the query and re-expanded onto the input below, so a hit
+	// repeated in the input is not silently collapsed, and the survivors come
+	// back in INPUT ORDER: callers rank by score/similarity, and a reordered
+	// answer would be a wire change nobody asked for.
+	const visible = new Map<string, Set<number>>();
+	for (const [sectionTipo, ids] of probeIds) {
+		visible.set(sectionTipo, await visibleSectionIds(sectionTipo, [...ids], principal));
 	}
-	return out;
+	return granted.filter(
+		(hit) => visible.get(hit.section_tipo)?.has(Number(hit.section_id)) === true,
+	);
 }
 
 /**

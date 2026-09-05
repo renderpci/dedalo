@@ -234,16 +234,19 @@ SEARCH_LATE_ROW_LOOKUP_OFFSET=1000
 
 ---
 
-### Time machine total cache lifetime
+### Browse total cache lifetime
 
 TM_COUNT_CACHE_TTL_MS `int`
 
-The unfiltered time-machine browse shows a total that costs a full count of the
-(typically huge, append-only) `matrix_time_machine` table. That total is cached and
-invalidated on every save this engine performs; this key is the freshness backstop
-(in milliseconds) for rows inserted by anything else. Default `30000` (30 s). Set
-`0` to disable the cache and count exactly on every request — the right setting for
-parity test environments.
+The freshness backstop (in milliseconds) for every cached BROWSE TOTAL. It was
+named for the first of them: the unfiltered time-machine browse shows a total that
+costs a full count of the (typically huge, append-only) `matrix_time_machine` table.
+It now also floors the list assembler's totals — the unfiltered per-section browse
+count (per ACL scope), the projects-density verdict and the section-total verdict —
+each of which is a full count of a section's records. All are invalidated on every
+save this engine performs; this key bounds how long one may survive a change made by
+anything else. Default `30000` (30 s). Set `0` to disable the caches and count
+exactly on every request — the right setting for parity test environments.
 
 ```bash
 TM_COUNT_CACHE_TTL_MS=30000
