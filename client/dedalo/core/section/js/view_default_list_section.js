@@ -9,6 +9,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {clone, get_font_fit_size} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
+	import {a11y} from '../../common/js/a11y.js'
 	import {open_tool} from '../../../core/tools_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {no_records_node} from './render_common_section.js'
@@ -523,7 +524,11 @@ const get_buttons = function(self) {
 			// Note that self section is who is observing this event (init)
 			event_manager.publish('toggle_search_panel_'+self.id)
 		}
-		filter_button.addEventListener('mousedown', mousedown_handler)
+		// a11y (audit P1-18 / CLI-11): a mousedown-only <button> is keyboard-dead.
+		a11y.make_activable(filter_button, {
+			pointer_event	: 'mousedown',
+			on_activate		: mousedown_handler
+		})
 
 	// show_all_button. Show all records button
 		const show_all_button	= ui.create_dom_element({
@@ -538,7 +543,10 @@ const get_buttons = function(self) {
 			// Trigger section filter (search.js instance) method 'show_all' like search form do.
 			self.filter.show_all(show_all_button)
 		}
-		show_all_button.addEventListener('mousedown', show_all_mousedown_handler)
+		a11y.make_activable(show_all_button, {
+			pointer_event	: 'mousedown',
+			on_activate		: show_all_mousedown_handler
+		})
 
 	// semantic quick input (RAG, 2026-07-22). Hidden unless the searched
 	// section declares embed groups; Enter fires the search instance's
@@ -666,6 +674,9 @@ const get_buttons = function(self) {
 			},
 			parent			: buttons_container
 		})
+		// a11y: icon-only toggle — the title is the name the operator reads on
+		// hover, so it is the name the accessibility tree gets too.
+		a11y.set_label(show_other_buttons_button, show_other_buttons_label)
 		show_other_buttons_button.addEventListener('click', function(e) {
 			e.stopPropagation()
 		})

@@ -106,11 +106,35 @@ export interface ScrapedCard {
 	dataset: Record<string, string | undefined>;
 }
 
+/**
+ * ONE axe-core violation, per SURFACE and per rule: `nodes` is how many elements
+ * on that surface the rule fired on. The pair (surface, rule id) is the budget's
+ * key, so a regression on one surface cannot hide behind another surface's debt.
+ */
+export interface AxeViolation {
+	surface: string;
+	id: string;
+	impact: string | null;
+	nodes: number;
+}
+
+/** What the axe phase observed: which surfaces it actually mounted, and every violation. */
+export interface AxeObservation {
+	surfaces: string[];
+	violations: AxeViolation[];
+}
+
 /** The page scrape, raw: the cards, the page's counters, the per-group stats. Also the `--replay` file shape. */
 export interface ScrapedRun {
 	cards: ScrapedCard[];
 	counters: { total: number; pass: number; fail: number; pending: number };
 	groups: Record<string, { pass: number; fail: number; pending: number }>;
+	/**
+	 * The accessibility phase. Absent means it did not run (an old replay file);
+	 * present means its verdict is part of this run's, judged against
+	 * engineering/client_a11y_budget.json.
+	 */
+	axe?: AxeObservation;
 }
 
 /** One card interpreted: the verdict's input plus the failure detail the runner prints. */
@@ -165,6 +189,7 @@ export interface RunResults {
 	pending: number;
 	groups: ScrapedRun['groups'];
 	suites: SuiteResult[];
+	axe?: AxeObservation;
 }
 
 export function observeRun(scraped: ScrapedRun): RunResults {
@@ -179,7 +204,88 @@ export function observeRun(scraped: ScrapedRun): RunResults {
 		suites: (scraped.cards ?? []).map((card) =>
 			observeCard({ status: String(card?.status ?? 'pending'), dataset: card?.dataset ?? {} }),
 		),
+		axe: scraped.axe,
 	};
+}
+
+// ---------------------------------------------------------------------------
+// The accessibility budget (audit 2026-08-26 row P1-18 / finding CLI-10, CLI-22).
+// ---------------------------------------------------------------------------
+
+export const A11Y_BUDGET_PATH = 'engineering/client_a11y_budget.json';
+
+export interface A11yBudget {
+	rule: string;
+	/** The surfaces the phase must have mounted; a missing one is red, not skipped. */
+	required_surfaces: string[];
+	/** key: `<surface>:<axe rule id>` → the node count still allowed, with its reason. */
+	violations: Record<string, { nodes: number; reason: string }>;
+}
+
+export function loadA11yBudget(): A11yBudget {
+	const path = join(REPO_ROOT, A11Y_BUDGET_PATH);
+	if (!existsSync(path)) {
+		throw new Error(
+			`client_a11y_budget: ${A11Y_BUDGET_PATH} is missing — the axe phase cannot be judged without it.`,
+		);
+	}
+	const parsed = JSON.parse(readFileSync(path, 'utf8')) as Partial<A11yBudget>;
+	if (!Array.isArray(parsed.required_surfaces) || parsed.required_surfaces.length === 0) {
+		throw new Error(
+			`client_a11y_budget: ${A11Y_BUDGET_PATH}.required_surfaces must be a non-empty array`,
+		);
+	}
+	if (parsed.violations === null || typeof parsed.violations !== 'object') {
+		throw new Error(`client_a11y_budget: ${A11Y_BUDGET_PATH}.violations must be an object`);
+	}
+	return parsed as A11yBudget;
+}
+
+/**
+ * The pure a11y verdict: every reason the axe phase is red, one line each.
+ *
+ * The law is the one every other baseline in this repo follows. A violation
+ * over its budget is red; an unbudgeted violation is red; a SURFACE the phase
+ * did not mount is red (silence is not a pass); and a budgeted violation that
+ * no longer fires is red too — a shrink that is not banked leaves an excuse
+ * standing for a defect that is gone.
+ */
+export function judgeAxe(observed: AxeObservation, budget: A11yBudget): string[] {
+	const errors: string[] = [];
+	for (const surface of budget.required_surfaces) {
+		if (!observed.surfaces.includes(surface)) {
+			errors.push(
+				`A11Y: the axe phase did not mount the '${surface}' surface — an unjudged surface is red, never silent`,
+			);
+		}
+	}
+	const seen = new Set<string>();
+	for (const violation of observed.violations) {
+		const key = `${violation.surface}:${violation.id}`;
+		seen.add(key);
+		const banked = budget.violations[key];
+		if (banked === undefined) {
+			errors.push(
+				`A11Y: NEW violation ${key} on ${violation.nodes} node(s)${violation.impact ? ` (${violation.impact})` : ''} — fix it, or bank it with a reason in ${A11Y_BUDGET_PATH}`,
+			);
+		} else if (violation.nodes > banked.nodes) {
+			errors.push(
+				`A11Y: ${key} fired on ${violation.nodes} node(s), budget is ${banked.nodes} — the budget is SHRINK-ONLY`,
+			);
+		}
+	}
+	for (const [key, banked] of Object.entries(budget.violations)) {
+		const surface = key.split(':')[0] ?? '';
+		if (!observed.surfaces.includes(surface)) continue; // already reported as unmounted
+		const violation = observed.violations.find((v) => `${v.surface}:${v.id}` === key);
+		const nodes = violation?.nodes ?? 0;
+		if (nodes < banked.nodes) {
+			errors.push(
+				`A11Y: ${key} now fires on ${nodes} node(s), banked ${banked.nodes} — lower it in ${A11Y_BUDGET_PATH} in the change that fixed it`,
+			);
+		}
+	}
+	return errors;
 }
 
 export interface VerdictInput {
@@ -189,6 +295,9 @@ export interface VerdictInput {
 	strict: boolean;
 	knownFailing: ReadonlyMap<string, string>;
 	inventory: ClientGateInventory;
+	/** The accessibility phase's observation, when it ran, plus the budget it is judged against. */
+	axe?: AxeObservation;
+	a11yBudget?: A11yBudget;
 }
 
 export interface Verdict {
@@ -303,6 +412,13 @@ export function computeVerdict(input: VerdictInput): Verdict {
 		errors.push(
 			`${name} is listed in KNOWN_FAILING but PASSED — delete its row in the same change that fixed it (a stale excuse becomes a blanket).`,
 		);
+	}
+
+	// The accessibility phase. It rides the SAME verdict and the SAME exit, so a
+	// keyboard- or screen-reader regression on the cataloguing surface reds the
+	// client gate exactly like a failing suite does.
+	if (input.axe !== undefined && input.a11yBudget !== undefined) {
+		errors.push(...judgeAxe(input.axe, input.a11yBudget));
 	}
 
 	return {

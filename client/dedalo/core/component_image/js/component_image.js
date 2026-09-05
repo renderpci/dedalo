@@ -28,8 +28,16 @@
 * - Exposes view-specific render methods by aliasing the corresponding render_* module
 *   prototypes (edit, list, search, tm).
 * - Owns the optional vector_editor (lazy-loaded SVG drawing canvas built on SvgCanvas).
-*   When the editor is active, `ar_layers` is the single source of truth for layer state;
-*   `update_draw_data` serialises it back into `self.data.changed_data` ready for save().
+*   When the editor is active, `ar_layers` is the single source of truth for layer state,
+*   and `vector_editor.prototype.save_data` serialises it back into changed_data.
+*
+* REMOVED 2026-09-04 (P2-25 / DEAD-02): `component_image.prototype.update_draw_data`.
+* It read a bare `project` global — the paper.js document object of an editor this
+* component has not used since the SvgCanvas rewrite — so calling it threw a
+* ReferenceError. It had no caller: the only one, in vector_editor.js's colour
+* picker, had already been commented out, and `vector_editor.prototype.save_data`
+* is the live serialiser. A method that cannot be called without throwing is not a
+* fallback, it is a trap for the next reader.
 * - Handles quality changes across both the vector-editor path and the raw SVG <object>
 *   path via the unified `image_quality_change_handler`.
 *
@@ -418,72 +426,6 @@ component_image.prototype.load_tag_into_vector_editor = async function(options) 
 
 	return true
 }//end load_tag_into_vector_editor
-
-
-
-/**
-* UPDATE_DRAW_DATA
-* Serialises the current state of the active PaperJS/SvgCanvas layer into
-* self.data.changed_data so that save() can persist it to the server.
-*
-* Reads the active layer from the `project` global (a PaperJS / SvgCanvas
-* namespace injected by the vector editor at runtime) and:
-*   1. Updates the matching LayerDescriptor in self.ar_layers with the
-*      exportJSON representation of the current layer's drawn paths.
-*   2. Builds an 'update' changed_data action that wraps the full entry value
-*      including the updated lib_data and a fresh SVG string export.
-*
-* (!) `project` is an implicit global provided by the vector editor environment.
-*     This method must only be called while the vector editor is active and a
-*     canvas has been initialised; calling it outside that context will throw
-*     because `project` will be undefined.
-*
-* (!) The commented-out block at the end is dead code from an earlier tag-save
-*     approach and should be removed in a separate cleanup pass.
-*
-* @returns {boolean} true when changed_data has been updated
-*/
-component_image.prototype.update_draw_data = function() {
-
-	const self = this
-
-	//remove the layer_ string in the name and parse to int
-	const layer_id					= project.activeLayer.layer_id
-
-	const current_layer				= self.ar_layers.find((item) => item.layer_id === layer_id)
-	current_layer.layer_data		= project.activeLayer.exportJSON({asString:false})
-
-	// current_layer.layer_color	= project.activeLayer.selectedColor.toCSS()
-	current_layer.user_layer_name	= project.activeLayer.data.user_layer_name
-
-	// update the data in the instance previous to save
-	const value =  typeof(self.data.entries[0])!=='undefined'
-		? clone(self.data.entries[0])
-		: {}
-	value.lib_data		= self.ar_layers
-	value.svg_file_data	= project.exportSVG({asString:true,embedImages:false})
-
-	// set the changed_data for update the component data and send it to the server for change when save
-		const changed_data = {
-			action	: 'update',
-			id		: value?.id || null,
-			value	: value
-		}
-
-	// set the change_data to the instance
-		self.data.changed_data = changed_data
-
-	// tag save OLD
-		// const tag_id			= project.activeLayer.name.replace('_layer','')
-		// const current_tag	= self.ar_tag_loaded.find((item) => item.tag_id === tag_id)
-
-		// const data				= project.activeLayer.exportJSON()
-		// const current_draw_data	= data.replace(/"/g, '\'');
-		// current_tag.dataset		= {data:current_draw_data}
-		// current_tag.save			= false
-
-	return true
-}//end update_draw_data
 
 
 

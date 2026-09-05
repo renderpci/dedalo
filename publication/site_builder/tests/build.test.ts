@@ -12,8 +12,10 @@ import {
 } from './fixtures/instance';
 import { createSite } from '../src/sites/workspace';
 import { readManifest, writeManifest } from '../src/sites/manifest';
-import { startBuild, getBuild, latestBuild } from '../src/build/builder';
+import { startBuild, getBuild, getBuildLog, latestBuild } from '../src/build/builder';
 import { currentRelease } from '../src/build/promote';
+import { handleGetBuild } from '../src/routes/builds';
+import { NotFoundError } from '../src/errors';
 
 const ACTOR = { user_id: 3, username: 'builder-tester' };
 
@@ -136,6 +138,44 @@ describe('build runner', () => {
     expect(record?.outcome).toBe('failed');
     expect(record?.error).toContain('outside the workspace');
     expect(await currentRelease(surfaceOf('via-link', 'preprod'))).toBeNull();
+  });
+
+  /**
+   * PUB-10. The build id arrives from a URL segment the router `decodeURIComponent`s, so it
+   * is caller data all the way down to the filename. These two assert the CONFINEMENT, not
+   * the absence: each plants a real, readable file at the escape target first, so a null
+   * answer can only mean the daemon refused to leave the builds directory.
+   */
+  test('a build id spelling a traversal reads nothing and answers as an unknown build', async () => {
+    await makeSite('confined', 'Confined');
+
+    // Two real files, both OUTSIDE `<workspace>/.builder/builds/` — one of each shape the
+    // build doors read back (a parsed .json, a verbatim .log).
+    const secretJson = workspacePath('confined', 'secret.json');
+    await writeFile(secretJson, JSON.stringify({ outcome: 'success', id: 'stolen' }), 'utf8');
+    const secretLog = workspacePath('confined', 'secret.log');
+    await writeFile(secretLog, 'SECRET LOG BYTES', 'utf8');
+    expect(existsSync(secretJson)).toBe(true);
+    expect(existsSync(secretLog)).toBe(true);
+
+    // `.builder/builds/` is two levels under the workspace, so this id names those files.
+    expect(await getBuild('confined', '../../secret')).toBeNull();
+    expect(await getBuildLog('confined', '../../secret')).toBeNull();
+
+    // Nothing was consumed and nothing was written over.
+    expect(await Bun.file(secretLog).text()).toBe('SECRET LOG BYTES');
+  });
+
+  test('the build route answers a traversal id exactly as it answers an unknown one', async () => {
+    await makeSite('confined-route', 'Confined Route');
+    const params = { slug: 'confined-route', id: '../../../../../../../../etc/hosts' };
+    const request = new Request('http://daemon.invalid/builds');
+
+    // Same class, same status, same shape: a token holder learns nothing about the host.
+    await expect(handleGetBuild(request, params)).rejects.toBeInstanceOf(NotFoundError);
+    await expect(
+      handleGetBuild(request, { slug: 'confined-route', id: 'no-such-build' }),
+    ).rejects.toBeInstanceOf(NotFoundError);
   });
 
   test('a build whose output dir is missing fails cleanly', async () => {

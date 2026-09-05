@@ -55,6 +55,7 @@
 	import {get_caller_by_model} from '../../common/js/utils/util.js'
 	import {render_link_children} from './view_default_edit_ts_object.js'
 	import {bound_sqo_limit} from '../../common/js/sqo_limit.js'
+	import {a11y} from '../../common/js/a11y.js'
 
 
 
@@ -208,6 +209,8 @@ export const render_ts_line = function(self) {
 						}
 					}
 				}
+				// a11y: the badge is read-only debug information, not a control — it
+				// takes no tab stop and no role, only the click guard it always had.
 				id_info.addEventListener('click', click_handler_id_info)
 
 				// button_duplicate
@@ -336,7 +339,12 @@ export const render_ts_line = function(self) {
 						element_children_nd.classList.remove('loading_spinner')
 					})
 				}
-				element_children_nd.addEventListener('mousedown', mousedown_handler)
+				// a11y (CLI-11): one callback, pointer AND Enter/Space. The node's own
+				// term text is its accessible name.
+				a11y.make_activable(element_children_nd, {
+					pointer_event	: 'mousedown',
+					on_activate		: mousedown_handler
+				})
 				break;
 			}
 
@@ -412,7 +420,11 @@ export const render_ts_line = function(self) {
 								button_show_indexations.classList.remove('loading_spinner')
 							})
 						}
-						button_show_indexations.addEventListener('mousedown', mousedown_handler)
+						a11y.make_activable(button_show_indexations, {
+							pointer_event	: 'mousedown',
+							on_activate		: mousedown_handler,
+							label			: (typeof get_label!=='undefined' ? (get_label.indexations || 'Indexations') : 'Indexations')
+						})
 					}
 
 				}else if(current_element.show_data === 'children') {
@@ -459,7 +471,11 @@ export const render_ts_line = function(self) {
 							})
 						})
 					}
-					button_recursive_indexations.addEventListener('mousedown', mousedown_handler)
+					a11y.make_activable(button_recursive_indexations, {
+						pointer_event	: 'mousedown',
+						on_activate		: mousedown_handler,
+						label			: (typeof get_label!=='undefined' ? (get_label.indexations || 'Indexations') : 'Indexations') + ' (+)'
+					})
 				}
 				break;
 			}
@@ -494,7 +510,13 @@ export const render_ts_line = function(self) {
 							element_img.classList.remove('loading_spinner')
 						})
 					}
-					element_img.addEventListener('mousedown', mousedown_handler)
+					// a11y (CLI-11): a thumbnail with a listener is a control and needs a
+					// NAME — the image alone announces nothing.
+					a11y.make_activable(element_img, {
+						pointer_event	: 'mousedown',
+						on_activate		: mousedown_handler,
+						label			: (typeof get_label!=='undefined' ? (get_label.image || 'Image') : 'Image')
+					})
 					// image
 					ui.create_dom_element({
 						element_type	: 'img',
@@ -536,7 +558,10 @@ export const render_ts_line = function(self) {
 						button_show_component.classList.remove('loading_spinner')
 					})
 				}
-				button_show_component.addEventListener('mousedown', mousedown_handler)
+				a11y.make_activable(button_show_component, {
+					pointer_event	: 'mousedown',
+					on_activate		: mousedown_handler
+				})
 				break;
 			}
 		}//end switch(true)
@@ -648,7 +673,10 @@ const render_term = function(options) {
 				term_node.classList.remove('loading_spinner')
 			})
 		}
-		term_text.addEventListener('click', click_handler)
+		// a11y (CLI-11): the term IS the thesaurus surface. Its text is its name.
+		a11y.make_activable(term_text, {
+			on_activate : click_handler
+		})
 
 	// element_to_hilite
 	// (!) Note: term_node has no data-set assigned here, so dataset.section_id
@@ -780,7 +808,9 @@ const render_ontology_term = function(options) {
 				term_node.classList.remove('loading_spinner')
 			})
 		}
-		term_text_node.addEventListener('click', click_handler)
+		a11y.make_activable(term_text_node, {
+			on_activate : click_handler
+		})
 		// fix term pointer
 		self.term_text = term_text_node
 

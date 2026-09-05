@@ -3,7 +3,8 @@
  * is the mistake this header exists to prevent:
  *
  *   1. **Denial-of-service bounds** (MAX_LIMIT, MAX_BATCH_QUERIES, MAX_FRAGMENT_TERMS,
- *      MAX_TERM_LENGTH, MAX_SCAN_LENGTH, MAX_RESOLVE_*). These are SECURITY limits, not
+ *      MAX_TERM_LENGTH, MAX_SCAN_LENGTH, MAX_RESOLVE_*, MAX_QUERIES_PER_REQUEST). These
+ *      are SECURITY limits, not
  *      style preferences or round numbers someone liked. This is a public, unauthenticated-
  *      by-default read API over a database that may hold very large transcriptions; each of
  *      these caps one way a single cheap request could otherwise buy an expensive amount of
@@ -103,6 +104,30 @@ export const PUBLICATION_SCHEMA_ID = 1;
 // fan-out at each step (excess related ids are dropped, not fetched).
 export const MAX_RESOLVE_DEPTH = 3;
 export const MAX_RESOLVE_ROWS = 50;
+
+// The third resolve dimension, and the one that was missing: how many COLUMNS a single
+// request may ask to expand. Depth and width bound one cell; the cost of a request is
+// rows × keys × width × depth, so an uncapped map multiplied the other two caps by
+// whatever cardinality the caller felt like sending. Over the cap is a 400, like MAX_LIMIT
+// — silently dropping half of a resolve map would answer a question nobody asked.
+export const MAX_RESOLVE_KEYS = 10;
+
+/**
+ * The backstop under all of the above: how many SQL statements ONE HTTP request may
+ * commission, counted at db/pool.ts (the single query chokepoint) against a
+ * request-scoped budget (security/request-budget.ts).
+ *
+ * The per-parameter caps bound each dimension of fan-out; this bounds their PRODUCT, which
+ * is the number that actually reaches the database. It is deliberately generous — a
+ * worst-case legitimate page (rows × resolve keys × depth) stays well under it — because
+ * its job is to stop the pathological multiplication, not to shape ordinary use. A request
+ * that exceeds it is answered 429 (see BudgetExceededError): the caller asked for more
+ * work than one request may buy, and splitting it across requests is the honest remedy.
+ *
+ * /batch does NOT get a budget per sub-query: the scope is opened once per HTTP request and
+ * REUSED when router.dispatch re-enters, so a 20-query envelope shares one budget.
+ */
+export const MAX_QUERIES_PER_REQUEST = 500;
 
 /**
  * Dédalo's inline transcription markers, embedded in the transcription text itself.

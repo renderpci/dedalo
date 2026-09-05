@@ -551,6 +551,19 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		scope:
 			'the site-builder committed rendered host configurations (nginx + apache sites-available)',
 	},
+	'test/helpers/publication_corpus.ts': {
+		roots: [
+			[
+				'publication/server_api/v2/src',
+				'publication/server_api/v2/src/mcp',
+				'publication/server_api/v2/src/routes',
+				'publication/site_builder/src',
+				'tools/tool_sitebuilder/js',
+			],
+		],
+		scope:
+			'the standalone publication packages the engine ships beside itself — the read-only API v2 source tree (whole, and its mcp/ + routes/ entry layers), the site-builder daemon source tree, and the site-builder tool client',
+	},
 	'test/helpers/client_suite_census.ts': {
 		roots: [['client/dedalo/test/client/js']],
 		scope: 'the browser client suite files (test_*.js) and their registry',

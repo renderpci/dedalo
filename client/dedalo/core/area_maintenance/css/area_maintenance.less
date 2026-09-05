@@ -643,7 +643,7 @@
 				transition: background-color 140ms ease, color 140ms ease;
 
 				&.active {
-					color: @map_orange_text;
+					color: var(--fg_on_brand); // AA on the brand fill in both themes (audit P1-18)
 					background-color: var(--color_orange_dedalo);
 				}
 			}
@@ -848,7 +848,7 @@
 				height: 1.1rem;
 				display: grid;
 				place-items: center;
-				color: #fff;
+				color: var(--fg_on_brand); // the warning fill is dark in light and bright in dark; the ink flips with it (audit P1-18)
 				background-color: var(--color_warning);
 				border-radius: 50%;
 				font-size: 0.62rem;

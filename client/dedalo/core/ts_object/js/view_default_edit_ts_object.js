@@ -53,6 +53,7 @@
 		on_dragleave
 	} from './drag_and_drop.js'
 	import {ts_object} from '../../ts_object/js/ts_object.js'
+	import {a11y} from '../../common/js/a11y.js'
 	import {render_ts_line} from './render_ts_line.js'
 	import {render_id_column} from './render_ts_id_column.js'
 
@@ -715,7 +716,10 @@ const render_ts_pagination = function(options) {
 				})
 			})
 		}
-		button_show_more.addEventListener('mousedown', mousedown_handler)//end click
+		a11y.make_activable(button_show_more, {
+			pointer_event	: 'mousedown',
+			on_activate		: mousedown_handler
+		})
 
 
 	return button_show_more
@@ -888,7 +892,15 @@ export const render_link_children = function (self) {
 				console.error('[link_children] Error toggling children:', self.ts_id, error);
 			})
 		}
-		link_children_element.addEventListener('mousedown', mousedown_handler)
+		// a11y (CLI-11): the expand/collapse arrow is an icon-only div — without a
+		// name and an expanded state it announces nothing at all. `aria-expanded` is
+		// projected from the ONE open/close entry point (ts_object.sync_open_dom).
+		a11y.make_activable(link_children_element, {
+			pointer_event	: 'mousedown',
+			on_activate		: mousedown_handler,
+			label			: (typeof get_label!=='undefined' ? (get_label.children || 'Children') : 'Children'),
+			expanded		: self.is_open===true
+		})
 
 	// restore open arrow status from the persisted local db state
 		if (self.mode!=='search') {

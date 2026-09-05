@@ -25,10 +25,14 @@
  * file is that promise, not a swallowed bug. Consequently a client must always be prepared
  * to see the raw id array it asked to have expanded.
  *
- * BOUNDS — resolution is client-directed fan-out, so it is capped in both dimensions:
- * MAX_RESOLVE_DEPTH (3) on nesting and MAX_RESOLVE_ROWS (50) on ids per cell. See the
- * comments at each site; together they are what keeps one cheap-looking request from
- * turning into thousands of queries.
+ * BOUNDS — resolution is client-directed fan-out, so it is capped in every dimension it
+ * has: MAX_RESOLVE_DEPTH (3) on nesting, MAX_RESOLVE_ROWS (50) on ids per cell, and
+ * MAX_RESOLVE_KEYS (10) on how many columns one request may name. The first two used to be
+ * the whole story and were claimed to keep a cheap request from turning into thousands of
+ * queries; they bound one CELL, while the cost of a request is rows × keys × ids × depth
+ * (audit 2026-08-26, PUB-05). The product is bounded in turn by the per-request query
+ * budget charged in db/pool.ts (security/request-budget.ts) — the backstop that holds
+ * however these caps are combined.
  *
  * MUTATION — the row objects are written IN PLACE (the arrays are shallow-copied, the rows
  * inside them are not). Rows here are freshly fetched per request and owned by the caller
@@ -38,8 +42,8 @@
 import { dbExecute } from '../db/pool';
 import { validateTableName, validateColumnName } from '../db/query-builder';
 import { parseJsonStrings } from '../utils/parse-json';
-import { ValidationError } from '../errors';
-import { COLUMNS, PUBLICATION_SCHEMA_TABLE, PUBLICATION_SCHEMA_ID, MAX_RESOLVE_DEPTH, MAX_RESOLVE_ROWS } from '../constants';
+import { BudgetExceededError, ValidationError } from '../errors';
+import { COLUMNS, PUBLICATION_SCHEMA_TABLE, PUBLICATION_SCHEMA_ID, MAX_RESOLVE_DEPTH, MAX_RESOLVE_ROWS, MAX_RESOLVE_KEYS } from '../constants';
 import { TTLCache } from '../db/schema-cache';
 import type { DbRow } from '../db/types';
 
@@ -87,6 +91,26 @@ export async function getPublicationSchema(db: string): Promise<InverseRelationM
   return ddRelations;
 }
 
+/**
+ * DoS bound #3 — the CARDINALITY of the request map, the dimension the original two caps
+ * did not cover (audit 2026-08-26, PUB-05). Depth bounds nesting and MAX_RESOLVE_ROWS
+ * bounds one cell, but the number of COLUMNS to expand was whatever the caller sent, and
+ * the cost of a request is rows × keys × rows-per-cell × depth. A map with a hundred keys
+ * multiplied the other two caps by a hundred.
+ *
+ * Refused, not truncated: unlike a cell's id list (data we did not write, silently capped),
+ * the map is the caller's own question, and answering half of it without saying so would be
+ * a wrong answer rather than a partial one.
+ */
+function assertResolveCardinality(map: Record<string, string>, parameter: string): void {
+  const keys = Object.keys(map).length;
+  if (keys > MAX_RESOLVE_KEYS) {
+    throw new ValidationError(
+      `${parameter} names ${keys} columns; at most ${MAX_RESOLVE_KEYS} may be resolved in one request`,
+    );
+  }
+}
+
 // The relation map arrives as a JSON string in a query parameter, so it is UNTRUSTED
 // input twice over: it must be valid JSON, and it must be a flat object of strings —
 // every value ends up naming a table (and possibly a column), which is then interpolated
@@ -107,6 +131,7 @@ function parseRelationMap(value: string): RelationMap {
         throw new ValidationError(`resolve_relations value for "${key}" must be a string, got ${typeof val}`);
       }
     }
+    assertResolveCardinality(parsed as RelationMap, 'resolve_relations');
     return parsed as RelationMap;
   } catch (err) {
     if (err instanceof ValidationError) throw err;
@@ -125,6 +150,7 @@ function parseInverseRelationMap(value: string): InverseRelationMap {
         throw new ValidationError(`resolve_inverse_relations value for "${key}" must be a string, got ${typeof val}`);
       }
     }
+    assertResolveCardinality(parsed as InverseRelationMap, 'resolve_inverse_relations');
     return parsed as InverseRelationMap;
   } catch (err) {
     if (err instanceof ValidationError) throw err;
@@ -207,7 +233,12 @@ export async function resolveRelations(
           deepKeys,
           depth,
         );
-      } catch {
+      } catch (error) {
+        // The per-request query budget is NOT an unresolvable column: it is the request
+        // being stopped. Swallowing it here returned 200 with silently truncated columns —
+        // the DoS bound held, but the documented 429 was unreachable on the only path that
+        // can actually spend the budget (audit 2026-08-26, PUB-05).
+        if (error instanceof BudgetExceededError) throw error;
         // skip unresolvable columns, leave original value
       }
     }
@@ -359,7 +390,8 @@ async function resolveColumn(
             {},
             depth + 1,
           );
-        } catch {
+        } catch (error) {
+          if (error instanceof BudgetExceededError) throw error;
           // skip unresolvable child columns
         }
       }
@@ -499,7 +531,8 @@ export async function resolveInverseRelations(
         validateTableName(targetTable);
         const fetched = await fetchRows(db, targetTable, [sectionId]);
         resolved.push(...fetched);
-      } catch {
+      } catch (error) {
+        if (error instanceof BudgetExceededError) throw error;
         // skip unresolvable locators
       }
     }

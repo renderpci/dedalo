@@ -7,7 +7,7 @@ import { createSite } from '../src/sites/workspace';
 import { __setTestDriver } from '../src/drivers/registry';
 import { startSession, sendMessage, stopSession, getSessionState } from '../src/sessions/manager';
 import { sessionEventStream } from '../src/sessions/sse';
-import { readMeta, listSessions } from '../src/sessions/store';
+import { readMeta, listSessions, replayEvents } from '../src/sessions/store';
 import { startBuild, getBuild } from '../src/build/builder';
 import { readManifest, writeManifest } from '../src/sites/manifest';
 import type { AgentDriver, AgentEvent, AgentProcess, SessionStartOptions } from '../src/drivers/types';
@@ -213,6 +213,30 @@ describe('session flow', () => {
     const events = await collectStream(sessionEventStream('replay', session_id, -1));
     expect(events.some(e => e.body.type === 'turn_start')).toBe(true);
     expect(events.at(-1)?.body.type).toBe('turn_end');
+  });
+
+  /**
+   * PUB-10, the session half. The session id is a URL segment too, and the store's meta and
+   * event-log paths were joined onto the confined sessions directory instead of being built
+   * through it. The escape targets below are REAL FILES, planted first: a null/empty answer
+   * can therefore only be a refusal, never an absence.
+   */
+  test('a session id spelling a traversal reads nothing', async () => {
+    await makeSite('confined-session', 'Confined Session');
+
+    // `.builder/sessions/` is two levels under the workspace, so '../../secret' names these.
+    const secretMeta = workspacePath('confined-session', 'secret.meta.json');
+    await writeFile(secretMeta, JSON.stringify({ session_id: 'stolen', state: 'done' }), 'utf8');
+    const secretLog = workspacePath('confined-session', 'secret.jsonl');
+    await writeFile(secretLog, JSON.stringify({ seq: 1, ts: '', body: { type: 'stolen' } }) + '\n', 'utf8');
+    expect(existsSync(secretMeta)).toBe(true);
+    expect(existsSync(secretLog)).toBe(true);
+
+    expect(await readMeta('confined-session', '../../secret')).toBeNull();
+    expect(await replayEvents('confined-session', '../../secret', -1)).toEqual([]);
+
+    // And an id that climbs right out of the instance is the same non-answer.
+    expect(await readMeta('confined-session', '../../../../../../../etc/hosts')).toBeNull();
   });
 });
 

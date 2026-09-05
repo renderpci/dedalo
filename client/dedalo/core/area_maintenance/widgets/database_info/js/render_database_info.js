@@ -1284,9 +1284,18 @@ const render_rebuild_user_stats = (self) => {
 						.map(el => el.trim())
 
 					if (!users || users.length < 1) {
-						// loading  remove
-						spinner.remove()
-						e.target.classList.remove('lock')
+						// EARLY EXIT, NOTHING TO UNDO (P2-25 / DEAD-04).
+						//
+						// This called `spinner.remove()` on a binding that does not exist
+						// in this scope — a ReferenceError on the one path a user reaches
+						// by submitting with no users selected, so the widget crashed
+						// instead of doing nothing. The binding was deleted when
+						// handle_submit stopped creating its own spinner ("build_form
+						// already puts a button_spinner on the submit button for the whole
+						// request, so both were redundant"); these two lines were left
+						// behind. handle_submit owns the lifecycle: returning is enough.
+						// (A THIRD site of the same defect, missed by the 2026-08-31 pass
+						// that fixed the other two and found by the DEAD-01/02/07 gate.)
 						return
 					}
 

@@ -19,6 +19,10 @@
 	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
 	import {open_tool} from '../../../core/tools_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
+	// a11y. THE shared operability/naming helper (audit P1-18 / CLI-10, CLI-11, CLI-22):
+	// every non-native control and every component label is named and keyboard-
+	// activated through this one module, never ad hoc at the call site.
+	import {a11y} from '../../common/js/a11y.js'
 	// error system. The cycle ui ↔ render_api_error (it builds its nodes through
 	// ui.create_dom_element) is resolved at call time, as in common.js: nothing
 	// here is used while the modules evaluate.
@@ -91,7 +95,12 @@ const CREATE_DOM_ELEMENT_OPTIONS = new Set([
 	'title_label', 'title', 'dataset', 'data_set', 'value',
 	'inner_html', 'text_node', 'text_content',
 	'draggable', 'contenteditable', 'name', 'placeholder', 'pattern',
-	'disabled', 'selected', 'checked', 'parent'
+	'disabled', 'selected', 'checked', 'parent',
+	// accessibility (audit P1-18). Declared HERE so a surface can name and expose a
+	// node at the same call that builds it, instead of a setAttribute afterthought
+	// at 200 call sites. Operability (tab stop + activation keys) is NOT one of
+	// these: it needs the callback too, so it goes through a11y.make_activable.
+	'role', 'tabindex', 'aria'
 ])
 
 export const ui = {
@@ -306,10 +315,22 @@ export const ui = {
 
 				// Label handling
 				if (options.label === null || show_label === false) {
-					// Skip label
+					// No label NODE is rendered — the line views (view_line_edit_*, the
+					// shipped default of every column of a portal row and of every
+					// section_record line) and any component whose ontology sets
+					// show_interface.label = false. The GROUP is real all the same, and
+					// its controls are this component's, so the a11y chokepoint still
+					// runs: the name is carried as TEXT (CLI-10). Without this, the
+					// nearest labelled ancestor of a column input was the PORTAL, so
+					// every field in a row announced the portal's name — present and
+					// wrong — and a line control outside a portal had no name at all.
+					a11y.label_group_text(wrapper, label)
 				} else if (options.label) {
 					fragment.appendChild(options.label)
 					wrapper.label = options.label // Pointer reference
+
+					// a caller-supplied label node is a label node: same association
+					a11y.label_group(wrapper, options.label)
 				} else {
 					const component_label = ui.create_dom_element({
 						element_type	: 'div',
@@ -318,6 +339,12 @@ export const ui = {
 					})
 					fragment.appendChild(component_label)
 					wrapper.label = component_label
+
+					// a11y (CLI-10). THE association: the label node gets an id, the
+					// wrapper is announced as a group named by it, and every control
+					// inside — including the ones this component appends later, when its
+					// own request resolves — is pointed at that label.
+					a11y.label_group(wrapper, component_label)
 
 					// State indicators (e.g., deprecated)
 					if (state_of_component) {
@@ -648,6 +675,10 @@ export const ui = {
 			// DocumentFragment
 				const fragment = new DocumentFragment()
 
+			// a11y (CLI-10). Holds the default label node until the wrapper exists,
+			// so the same group association the edit wrapper gets is made here too.
+				let search_component_label = null
+
 			// label. If node label received, it is placed at first. Else a new one will be built from scratch (default)
 				if (label===null || items.label===null) {
 					// no label add
@@ -689,6 +720,10 @@ export const ui = {
 						const label_structure_css = typeof element_css.label!=="undefined" ? element_css.label : []
 						const ar_css = ['label', ...label_structure_css]
 						component_label.className = ar_css.join(' ')
+
+					// a11y (CLI-10). Same association as the edit wrapper; the search
+					// wrapper is built below, so the group is bound once it exists.
+						search_component_label = component_label
 				}
 
 			// content_data
@@ -752,6 +787,11 @@ export const ui = {
 					})
 
 				wrapper.appendChild(fragment)
+
+				// a11y (CLI-10). Bind the group once both nodes exist.
+					if (search_component_label) {
+						a11y.label_group(wrapper, search_component_label)
+					}
 
 
 			return wrapper
@@ -1904,6 +1944,23 @@ export const ui = {
 				}
 			}
 
+		// role / tabindex / aria-*. Accessibility attributes (audit P1-18).
+		// `aria` is a plain map of aria-* names WITHOUT the prefix:
+		// {label:'Delete', expanded:false, hidden:true}.
+			if (options.role) {
+				element.setAttribute('role', options.role)
+			}
+			if (options.tabindex!==undefined && options.tabindex!==null) {
+				element.setAttribute('tabindex', String(options.tabindex))
+			}
+			if (options.aria) {
+				for (const key in options.aria) {
+					const aria_value = options.aria[key]
+					if (aria_value===undefined || aria_value===null) continue
+					element.setAttribute(`aria-${key}`, String(aria_value))
+				}
+			}
+
 		// class_name. Add CSS classes property to element
 			if(options.class_name) {
 				element.className = options.class_name
@@ -2074,6 +2131,16 @@ export const ui = {
 			title_label		: options.title_label || undefined,
 			parent			: options.parent || undefined
 		})
+
+		// accessible name (audit P1-18 / CLI-10). An ICON-ONLY button announces as
+		// "button" and nothing else — the icon is a ::before, invisible to the
+		// accessibility tree. The title the button already carries is the name the
+		// operator reads on hover, so it is the name to expose; `aria_label` wins
+		// when the caller has a better one.
+		const accessible_name = options.aria_label || options.title_label
+		if (!options.label && accessible_name) {
+			a11y.set_label(button, accessible_name)
+		}
 
 		if (typeof options.on_click === 'function') {
 			button.addEventListener('click', options.on_click)
@@ -2622,6 +2689,13 @@ export const ui = {
 	* @param {HTMLElement} [options.modal_parent] - Container for the <dd-modal> element
 	*   (default: .wrapper.page or document.body).
 	* @param {boolean} [options.remove_overlay=false] - When true, weakens the overlay background.
+	*   It also declares the dialog NON-MODAL by default: such a panel is documented as
+	*   letting the user keep working on the surface behind it (find-and-replace over the
+	*   text editor, the diffusion panel), so it must not be announced as `aria-modal`,
+	*   must not inert the page and must not trap Tab.
+	* @param {string} [options.modality] - 'modal' | 'non_modal'. Explicit override of the
+	*   modality derived from remove_overlay; set on the element BEFORE it is connected,
+	*   because connectedCallback applies the isolation.
 	* @param {boolean} [options.minimizable=true] - Shows or hides the minimize button.
 	* @param {boolean} [options.transient=false] - When true the modal skips the page-wide
 	*   unsaved-data guard on close. For transient dialogs that own no editable data
@@ -2680,8 +2754,12 @@ export const ui = {
 		// modal container build new DOM on each call and remove on close
 			const modal_container = document.createElement('dd-modal')
 			// (!) set BEFORE the element is connected: connectedCallback and the
-			// first close path must already see the flag.
+			// first close path must already see the flags. `modality` is the one
+			// the accessibility contract reads — a dialog that isolates the page is
+			// a decision the CALLER makes, never something the element infers.
 			modal_container.transient = transient
+			modal_container.modality = options.modality
+				?? ((remove_overlay===true) ? 'non_modal' : 'modal')
 			modal_parent.appendChild(modal_container)
 
 		// modal_node

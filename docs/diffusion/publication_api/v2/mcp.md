@@ -6,7 +6,7 @@ A Model Context Protocol (MCP) endpoint that exposes the read-only Publication A
 
 The Publication API v2 ships an embedded [Model Context Protocol](https://modelcontextprotocol.io/) server. It lets an MCP-capable agent (Claude Desktop, a custom MCP client, an IDE assistant, etc.) discover and query the published Dédalo databases through structured tool calls instead of hand-built URLs.
 
-The server wraps the same services that back the REST routes, so the data, the security model and the DoS bounds described in [endpoints.md](endpoints.md) and [http_semantics.md](http_semantics.md) all still apply. It is **read-only**: there is no tool that writes, updates or deletes.
+The server wraps the same services that back the REST routes, so the data, the security model and the DoS bounds described in [endpoints.md](endpoints.md) and [http_semantics.md](http_semantics.md) all still apply — and since the 2026-08-26 audit that is enforced rather than assumed: the tools parse the **same** bound schemas the REST routes do, on every call, before a query is built. It is **read-only**: there is no tool that writes, updates or deletes.
 
 !!! info "Tool results are JSON text"
     Every tool returns a single MCP `text` content block whose body is a pretty-printed JSON string. The payload is the *service envelope* (`{ data, ... }`), not the full REST envelope — there is no `pagination` block and no `meta.response_time_ms` inside a tool result. On error the block is the plain string `Error: <message>` rather than an RFC 9457 Problem Details body.
@@ -41,7 +41,8 @@ your MCP client's HTTP transport at the URL above.
     - `value` — comparison value (optional). For `in` / `not_in` pass **pipe-separated** values, e.g. `"1|2|3"`. Omit `value` entirely for `is_null` / `is_not_null`. Any other operator requires a value or the call errors.
     - Conditions are combined with **AND**.
 - **`fields`, `sort`, `resolve_relations`, `resolve_inverse_relations`** keep the same string forms as the REST query model: comma-separated field lists, `-`-prefixed descending sort keys, and JSON-string relation maps (or `"auto"` / `"true"`). See [querying.md](querying.md) for the full semantics.
-- **`limit` / `offset`** are numbers (limit defaults to `100`, max `1000`; offset defaults to `0`).
+- **`limit` / `offset`** are numbers (limit defaults to `100`, max `1000`; offset defaults to `0`). **Over the cap is an error result, not a clamp** — the tool answers `Error: Invalid arguments for <tool> — limit: …` and nothing is queried. The bounds are the same objects the REST routes parse (`src/validators.ts`), so the two doors cannot drift; the advertised JSON Schema carries the maxima, and the same holds for `section_id` (positive integer), `max_characters` (10–5000), `max_occurrences` (1–10) and the 512-character cap on `q`/`terms`.
+- **A tool call is bounded as a whole, too.** Relation resolution is capped at 10 resolve-map keys, depth 3 and 50 related rows per cell, and one request may issue at most 500 database statements (`MAX_QUERIES_PER_REQUEST`) — past that the call fails rather than saturating the published database's connection pool.
 - **`lang`** uses the `lg-xxx` form (e.g. `lg-eng`, `lg-spa`).
 
 Source: `src/mcp/tools.ts` (`dbParam`, `filtersParam`, `resolveDb`, `toConditions`).
@@ -82,7 +83,7 @@ Search and query records from any published table — the workhorse tool. Suppor
 | `fields` | string | no | Comma-separated columns to return. |
 | `filters` | array | no | `[{ field, op?, value? }]`, combined with AND. |
 | `sort` | string | no | Comma-separated; prefix `-` for descending (`"title,-section_id"`). |
-| `limit` | number | no | Default `100`, max `1000`. |
+| `limit` | number | no | Default `100`, max `1000` (a larger value is refused, not clamped). |
 | `offset` | number | no | Default `0`. |
 | `lang` | string | no | `lg-xxx`; rejected on tables without a `lang` column. |
 | `count` | boolean | no | When `true`, also return the total match count. |
@@ -132,7 +133,7 @@ MariaDB `FULLTEXT` search (`MATCH … AGAINST` in boolean mode). Returns rows wi
 | `table` | string | **yes** | Target table. |
 | `q` | string | **yes** | Query; supports boolean operators (`+word`, `-word`, `"phrase"`). |
 | `column` | string | no | Column to search (default `transcription`). |
-| `limit` | number | no | Default `100`. |
+| `limit` | number | no | Default `100`, max `1000` (a larger value is refused, not clamped). |
 | `offset` | number | no | Default `0`. |
 | `count` | boolean | no | When `true`, also return the total match count. |
 | `resolve_relations` | string | no | Forward relation map. |

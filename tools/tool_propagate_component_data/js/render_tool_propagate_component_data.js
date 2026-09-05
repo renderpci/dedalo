@@ -7,6 +7,7 @@
 // imports
 	import {ui} from '../../../core/common/js/ui.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {render_stream} from '../../../core/common/js/render_common.js'
 	import {is_filter_empty} from '../../../core/search/js/search.js'
 	import {response_data} from '../../../core/common/js/api_error.js'
@@ -516,7 +517,7 @@ const get_content_data = async function(self) {
 * the call site).
 *
 * `on_done` removes the 'loading' class from all lock_items and publishes the
-* `'process_done'` event via the module-global `event_manager` so that button
+* `'process_done'` event via the imported `event_manager` singleton so that button
 * spinners and other cross-component listeners can react.
 *
 * (!) `event_manager` is a module-global injected by the page bootstrap — it is

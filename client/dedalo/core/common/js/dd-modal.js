@@ -18,7 +18,14 @@
  *     pinned from CSS centering to inline position:absolute so drag offsets are
  *     stable. Movement is clamped to the overlay container bounds.
  *   - Minimize to a bottom strip: clicking the '_' button toggles the .mini class
- *     and stacks minimized modals at the bottom-right with computed offsets.
+ *     and stacks minimized modals at the bottom-right with computed offsets. A
+ *     minimized modal is PARKED, not open: its background isolation (aria-modal,
+ *     the inert sweep, the focus trap) is released while it is in the strip and
+ *     re-armed when it is restored, because the whole point of the strip is that
+ *     the page behind stays usable.
+ *   - Modality is DECLARED by the caller (`modality`, set by ui.attach_to_modal
+ *     before connect): 'non_modal' (a `remove_overlay` panel) is announced as a
+ *     dialog and manages its own focus, but never isolates the page.
  *   - Close via the '×' button, overlay click, or Escape key (topmost stack entry).
  *   - Self-detaching: a closed modal removes itself from the DOM, so listener
  *     de-registration and modal_stack removal always happen (never delegated to
@@ -43,6 +50,10 @@
  *                                   via event_manager before on_close runs
  *   transient     {boolean}       — when true, close() skips the page-wide unsaved-data
  *                                   guard. Set by ui.confirm() for transient yes/no dialogs.
+ *   modality      {string}        — 'modal' (default) | 'non_modal'. Set by
+ *                                   ui.attach_to_modal BEFORE the element is connected;
+ *                                   'non_modal' suppresses aria-modal, the ancestor-chain
+ *                                   inert sweep and the Tab trap (see _apply_isolation).
  *
  * DOM events dispatched:
  *   'dd-modal-close' — on the element itself (bubbles:false), after on_close and
@@ -67,6 +78,7 @@
 
 // imports
 import {check_unsaved_data} from '../../component_common/js/component_common.js'
+import {a11y} from './a11y.js'
 
 
 
@@ -116,12 +128,29 @@ class DDModal extends HTMLElement {
 
 		// Pre-bind event handlers to `this` so removeEventListener can de-register them.
 		this._boundHideModal	= this._hideModal.bind(this);
+		this._boundHeaderSlotchange = () => this._apply_dialog_name();
 		this._boundMiniModal	= this._miniModal.bind(this);
 		this._boundDetectKey	= this.detect_key.bind(this);
 		this._boundMousemove	= this.mousemove.bind(this);
 		this._boundMouseup		= this.mouseup.bind(this);
 		this._boundOverlayClick	= this._hideModal.bind(this);
 		this._boundHeaderMousedown	= this._onHeaderMousedown.bind(this);
+		this._boundChromeKeydown	= this._onChromeKeydown.bind(this);
+		// Focus management state (CLI-22): the trap's release function and the
+		// background-isolation release, so both are undone exactly once.
+		this._release_focus	= null;
+		this._release_inert	= null;
+		// The element that really had focus when the dialog opened. Captured ONCE,
+		// because isolation is applied and released more than once in a dialog's
+		// life (minimize parks it, restore re-arms it) and the opener must not be
+		// re-read from a page the dialog itself is holding focus in.
+		this._restore_focus_to = null;
+		// MODALITY, declared by the caller BEFORE connect (ui.attach_to_modal), not
+		// inferred from construction. 'modal' isolates the page; 'non_modal' does
+		// not — `remove_overlay` dialogs are documented as leaving the surface
+		// behind them usable, so aria-modal, the inert sweep and the Tab trap would
+		// each be a lie about them.
+		this.modality = 'modal';
 
 		// Transient drag state. Reset to null on mouseup. x/y store the cursor-to-element
 		// offset computed at drag start so mousemove can move cleanly.
@@ -349,8 +378,8 @@ class DDModal extends HTMLElement {
 		<div class="modal" part="overlay">
 			<div class="modal-content draggable" part="content">
 				<div class="modal-header dragger" part="header">
-					<span class="mini_modal">_</span>
-					<span class="close_modal">&times;</span>
+					<span class="mini_modal" role="button" tabindex="0" aria-label="Minimize dialog">_</span>
+					<span class="close_modal" role="button" tabindex="0" aria-label="Close dialog">&times;</span>
 					<slot name="header" class="header">Modal box default header</slot>
 				</div>
 				<div class="modal-body" part="body">
@@ -398,6 +427,20 @@ class DDModal extends HTMLElement {
 		const header = this.shadowRoot.querySelector(".modal-header");
 		header.addEventListener('mousedown', this._boundHeaderMousedown);
 
+		// DIALOG SEMANTICS + FOCUS MANAGEMENT (audit P1-18 / CLI-22).
+		// Before this, the application's single dialog primitive had no role, no
+		// accessible name, no focus move, no trap and no restore: the destructive
+		// delete confirmation opened and announced nothing, with the virtual cursor
+		// left behind on the record list.
+		this._apply_dialog_semantics();
+
+		// The keyboard activation of the two shadow chrome controls. They are spans
+		// (their styling is the '×' and '_' glyph, not a button box), so they get
+		// the same treatment every non-native control in the client gets: ONE
+		// callback reached by pointer AND by Enter/Space.
+		this.shadowRoot.querySelector(".mini_modal").addEventListener('keydown', this._boundChromeKeydown);
+		this.shadowRoot.querySelector(".close_modal").addEventListener('keydown', this._boundChromeKeydown);
+
 		// Register in global stack so Escape always targets the topmost modal.
 		if (!window.modal_stack) window.modal_stack = [];
 		window.modal_stack.push(this);
@@ -409,6 +452,175 @@ class DDModal extends HTMLElement {
 			set : () => {},
 			configurable : true
 		});
+	}
+
+	/**
+	 * _APPLY_DIALOG_SEMANTICS
+	 * Everything a dialog owes its user, applied at mount (audit P1-18 / CLI-22):
+	 *   role="dialog" + aria-modal, so it is announced AS a dialog;
+	 *   an accessible NAME taken from the slotted header — LAZILY, see below;
+	 *   focus moved INTO the dialog and trapped across BOTH its trees;
+	 *   everything outside the dialog made `inert` along the whole ancestor
+	 *   chain, so Tab, the pointer and the virtual cursor cannot leave it.
+	 *
+	 * (!) THE NAME CANNOT BE READ AT CONNECT TIME. `ui.attach_to_modal` — the ONE
+	 * caller that creates a `<dd-modal>` in this client — appends the element to
+	 * its parent FIRST (which is when this runs) and slots the header, body and
+	 * footer AFTERWARDS. Reading `[slot="header"]` here therefore always found
+	 * null in production and the dialog was permanently named the literal string
+	 * "Dialog"; only the gate's own hand-built surface, which slotted first and
+	 * appended last, ever saw a header. The name is now (re)applied on every
+	 * `slotchange` of the header slot, which is the event the platform raises
+	 * exactly when that content arrives.
+	 *
+	 * @return {void}
+	 */
+	_apply_dialog_semantics() {
+
+		this.setAttribute('role', 'dialog');
+
+		// name now (a caller that slotted first) and again when the header arrives
+		this._apply_dialog_name();
+		const header_slot = this.shadowRoot.querySelector('slot[name="header"]');
+		if (header_slot) {
+			header_slot.addEventListener('slotchange', this._boundHeaderSlotchange);
+		}
+
+		// The opener, read BEFORE anything of this dialog takes focus.
+		this._restore_focus_to = a11y.deep_active_element();
+
+		this._apply_isolation();
+	}
+
+	/**
+	 * _APPLY_ISOLATION
+	 * The MODAL half of the dialog contract, applied on open and RE-applied when a
+	 * minimized dialog is restored: `aria-modal`, the ancestor-chain inert sweep
+	 * and the Tab trap across both trees.
+	 *
+	 * (!) A NON-MODAL dialog gets none of the three. `attach_to_modal` declares the
+	 * modality; `remove_overlay:true` callers (the text editor's find-and-replace,
+	 * tool_diffusion's panel) exist precisely so the user can keep working on the
+	 * surface behind them. Focus is still moved IN and restored on release, because
+	 * a panel opened from the keyboard that leaves focus behind is unusable too —
+	 * that is `trap:false`, not "no focus management".
+	 * @return {void}
+	 */
+	_apply_isolation() {
+
+		if (this._release_inert || this._release_focus) return; // already armed
+
+		const is_modal = this.modality!=='non_modal';
+
+		if (is_modal) {
+			this.setAttribute('aria-modal', 'true');
+			// Background isolation, ANCESTOR-CHAIN wide (a body-children sweep is a
+			// no-op here: the modal is appended inside `.wrapper.page`).
+			this._release_inert = a11y.inert_background(this);
+		}else{
+			this.removeAttribute('aria-modal');
+		}
+
+		// Focus in (+ trap, when modal). `restore_to` is the element that REALLY
+		// had focus when the dialog opened — the old code saved a component-
+		// activation pointer instead, so even its restore path restored the wrong
+		// thing. BOTH roots: the slotted light DOM (every content control lives
+		// there) and the shadow chrome (close / minimize).
+		this._release_focus = a11y.trap_focus(this, {
+			roots		: [this.shadowRoot, this],
+			restore_to	: this._restore_focus_to,
+			trap		: is_modal
+		});
+	}
+
+	/**
+	 * _RELEASE_ISOLATION
+	 * Lift the inert sweep and the trap. Called on close (focus restored to the
+	 * opener) and on MINIMIZE (`restore_focus:false`).
+	 *
+	 * (!) MINIMIZE IS A RELEASE. `.mini` shrinks the overlay to a 15rem strip in
+	 * the corner: the feature exists so the page behind is usable while the dialog
+	 * is parked. Leaving the whole application inert behind a parked dialog makes
+	 * the record surface unclickable, unfocusable and absent from the accessibility
+	 * tree until the dialog is restored or closed — the isolation must follow the
+	 * dialog's STATE, not merely its lifetime.
+	 * @param {Object} [options] - {boolean} [restore_focus=true]
+	 * @return {void}
+	 */
+	_release_isolation(options={}) {
+
+		// UN-INERT FIRST, RESTORE SECOND. An inert element cannot take focus, and
+		// the element that opened the dialog is behind it — so restoring before
+		// lifting the inert leaves focus on <body>.
+		if (typeof this._release_inert==='function') {
+			this._release_inert();
+			this._release_inert = null;
+		}
+		this.removeAttribute('aria-modal');
+
+		if (typeof this._release_focus==='function') {
+			this._release_focus({restore: options.restore_focus!==false});
+			this._release_focus = null;
+		}
+	}
+
+	/**
+	 * _APPLY_DIALOG_NAME
+	 * Take the accessible name from the slotted header once there is one to take.
+	 * A modal with no header (or an empty placeholder one — `attach_to_modal`
+	 * slots a hidden empty div when the caller gave no header) keeps a generic
+	 * `aria-label`, which is REPLACED as soon as a real title is slotted: an
+	 * unnamed dialog and a permanently mis-named one are the same defect.
+	 * @return {boolean} true when the name comes from the header
+	 */
+	_apply_dialog_name() {
+
+		const header_node	= this.querySelector('[slot="header"]');
+		const header_text	= header_node ? (header_node.textContent || '').trim() : '';
+
+		if (header_node && header_text!=='') {
+			if (!header_node.id) {
+				header_node.id = a11y.generate_id('dd_modal_title');
+			}
+			this.removeAttribute('aria-label');
+			this.setAttribute('aria-labelledby', header_node.id);
+			return true;
+		}
+
+		if (!this.getAttribute('aria-labelledby')) {
+			this.setAttribute('aria-label', 'Dialog');
+		}
+		return false;
+	}
+
+	/**
+	 * _RELEASE_DIALOG_SEMANTICS
+	 * Undo of the above: release the trap (restoring focus to the opener) and
+	 * un-inert exactly the elements this modal inerted. Idempotent.
+	 * @return {void}
+	 */
+	_release_dialog_semantics() {
+
+		this._release_isolation();
+		this._restore_focus_to = null;
+	}
+
+	/**
+	 * _ONCHROMEKEYDOWN
+	 * Enter/Space on the shadow '×' / '_' controls. They carry mousedown
+	 * listeners and keyboard activation dispatches `click`, never `mousedown`, so
+	 * without this the two controls are unreachable without a pointer.
+	 * @param {KeyboardEvent} e
+	 * @return {void}
+	 */
+	_onChromeKeydown(e) {
+		if (e.key!=='Enter' && e.key!==' ' && e.key!=='Spacebar') return;
+		e.preventDefault();
+		if (e.target && e.target.classList.contains('mini_modal')) {
+			this._miniModal(e);
+		} else {
+			this._hideModal(e);
+		}
 	}
 
 	/**
@@ -437,6 +649,22 @@ class DDModal extends HTMLElement {
 		if (header) {
 			header.removeEventListener('mousedown', this._boundHeaderMousedown);
 		}
+
+		const mini_modal_key = this.shadowRoot.querySelector(".mini_modal");
+		if (mini_modal_key) {
+			mini_modal_key.removeEventListener('keydown', this._boundChromeKeydown);
+		}
+		this.shadowRoot.querySelector(".close_modal").removeEventListener('keydown', this._boundChromeKeydown);
+
+		const header_slot = this.shadowRoot.querySelector('slot[name="header"]');
+		if (header_slot) {
+			header_slot.removeEventListener('slotchange', this._boundHeaderSlotchange);
+		}
+
+		// Release the focus trap and un-inert the page (CLI-22). Both are
+		// idempotent, and both run here — the element removes itself on close, so
+		// this is the one exit every close path shares.
+		this._release_dialog_semantics();
 
 		// Remove from global stack so Escape no longer targets this closed modal.
 		if (window.modal_stack) {
@@ -580,6 +808,9 @@ class DDModal extends HTMLElement {
 				const header = this.querySelector("[slot='header']");
 				if (header) header.classList.remove('mini');
 				this.mini = false;
+				// Un-parked: the dialog is a dialog again, so its isolation is
+				// re-armed (aria-modal, inert, trap) before the strip is restacked.
+				this._apply_isolation();
 				// This modal just left the strip: close the gap it leaves behind.
 				this._restack_minis();
 
@@ -588,6 +819,10 @@ class DDModal extends HTMLElement {
 				const header = this.querySelector("[slot='header']");
 				if (header) header.classList.add('mini');
 				this.mini = true;
+				// PARKED: minimize exists so the page behind is usable. Lift the
+				// inert sweep, the trap and aria-modal — but do NOT move focus,
+				// which stays where the user just put it (the strip's own control).
+				this._release_isolation({restore_focus: false});
 				this._restack_minis();
 			}
 		}

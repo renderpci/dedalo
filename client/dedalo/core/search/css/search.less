@@ -291,7 +291,7 @@
 							font-size: 1em;
 							background-color: @color_tag_indexation_normal;
 							opacity: 1;
-							color: @color_white;
+							color: var(--fg_on_accent); // dark ink on the amber fill, 8.5:1 (audit P1-18)
 							border: none; // quiet grid: no white outlines between buttons
 							border-radius: var(--radius-md);
 							word-break: break-word;
@@ -540,11 +540,11 @@
 
 // button toggle container_selector (list of fields) and button toggle presets
 	.toggle_container_selector, .toggle_container_selection_presets {
-		background-color: @color_grey_11;
+		background-color: var(--bg_fill_inverse);
 		writing-mode: vertical-lr;
 		text-transform: uppercase;
 		cursor: pointer;
-		color: @color_grey_15;
+		color: var(--fg_inverse);
 		padding: 0.25rem;
 		padding-top: 0.75rem;
 		letter-spacing: 1px;

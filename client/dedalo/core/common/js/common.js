@@ -16,7 +16,11 @@
 	// error system (api_error.js → error_policy.js → error_dispatch.js → render_api_error.js).
 	// The cycle common ↔ render_api_error (format_label) is resolved at call time:
 	// nothing here is used while the modules evaluate.
-	import {request_failed, response_data} from '../../common/js/api_error.js'
+	// (!) ApiError + CLIENT_ERROR are USED HERE (the missing-context branch of
+	// render() builds one). They were referenced without being imported until
+	// 2026-09-04 (P2-25 / DEAD-07 gate): the branch threw ReferenceError instead
+	// of rendering the error panel it promises.
+	import {ApiError, CLIENT_ERROR, request_failed, response_data} from '../../common/js/api_error.js'
 	import {handle_api_error} from '../../common/js/error_dispatch.js'
 	import {render_error_panel} from '../../common/js/render_api_error.js'
 

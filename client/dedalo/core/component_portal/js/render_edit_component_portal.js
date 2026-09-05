@@ -58,6 +58,7 @@
 
 
 // imports
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {when_in_dom,dd_request_idle_callback} from '../../common/js/events.js'
 	import {delete_dataframe} from '../../component_common/js/component_common.js'
@@ -894,11 +895,6 @@ export const render_column_remove = function(options) {
 * - `tools`            — injects tool buttons (time-machine, propagate, etc.) via `ui.add_tools`.
 * - `button_fullscreen` — toggles the component node into fullscreen; publishes
 *                        `full_screen_<id>` on the event bus before and after.
-*
-* (!) `event_manager` is used inside the `button_fullscreen` click handler but is not
-* imported in this file.  It is expected to be available as a module-scope global via
-* the page environment.  See the global directive at the top of the file — `event_manager`
-* is not listed there, which may cause an eslint no-undef warning at runtime.
 *
 * @param {Object} self - The `component_portal` instance.
 * @returns {HTMLElement} The fully populated buttons_container node.

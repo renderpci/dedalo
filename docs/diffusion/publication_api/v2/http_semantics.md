@@ -65,6 +65,7 @@ Each problem `type` maps to a fixed status and title:
 | `404` | `not-found` | Not Found | Unknown database, table, record, or route. |
 | `405` | `method-not-allowed` | Method Not Allowed | Wrong HTTP method for an existing path. Includes an `Allow` header. |
 | `429` | `rate-limit-exceeded` | Too Many Requests | Per-IP rate limit exceeded. |
+| `429` | `request-budget-exceeded` | Request Budget Exceeded | One request asked for more database statements than its budget allows (page size × resolve keys × related rows × depth). See the DoS bounds in [security.md](security.md). |
 | `500` | `internal-error` | Internal Server Error | Unexpected server-side failure. |
 | `504` | `timeout` | Gateway Timeout | Request exceeded `REQUEST_TIMEOUT_MS`. |
 

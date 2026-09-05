@@ -1081,10 +1081,11 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 					}
 					this.button_color_picker.style.backgroundColor	= color.hexString
 					this.button_color_picker.style.opacity			= color.alpha
-					// update the instance with the new layer information, prepared to save
-					// (but is not saved directly, the user need click in the save button)
-					// self.update_draw_data()
-					// event_manager.publish('color_change_'+this.active_layer.data.layer_id, color.hex8String)
+					// (!) The layer is NOT serialised here: the user must click the
+					// save button, which runs vector_editor.prototype.save_data.
+					// A commented-out `self.update_draw_data()` sat here until
+					// 2026-09-04 (P2-25 / DEAD-02); that method read a bare paper.js
+					// `project` global and threw, and it is now deleted.
 				}
 
 				// listen to a color picker's color:change event

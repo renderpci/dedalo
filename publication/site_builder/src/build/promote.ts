@@ -241,7 +241,10 @@ export async function currentRelease(surface: SurfacePaths): Promise<string | nu
  * passes a web server configured (as the generated vhosts are) to distrust links.
  */
 async function swapSymlink(surface: SurfacePaths, release: string): Promise<void> {
-  const relativeTarget = relative(dirname(surface.linkPath), join(surface.storeDir, release));
+  // confinedPath, never join — the release name reaches this function from the wire on
+  // the publish and rollback paths, and the law that keeps it inside the store is the
+  // helper, not the '..' test below (which only asks whether the LINK could be relative).
+  const relativeTarget = relative(dirname(surface.linkPath), confinedPath(surface.storeDir, release));
   if (relativeTarget.startsWith('..')) {
     throw new Error(
       `promoteRelease: ${describe(surface)} has its release store at '${surface.storeDir}', ` +

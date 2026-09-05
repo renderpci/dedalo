@@ -51,7 +51,7 @@ function workspaceDir(slug: string): string {
 }
 
 export function siteExists(slug: string): boolean {
-  return isValidSlug(slug) && existsSync(join(config.SITES_ROOT, slug, 'site.json'));
+  return isValidSlug(slug) && existsSync(confinedPath(config.SITES_ROOT, slug, 'site.json'));
 }
 
 /** Lists slugs of existing sites (directories under SITES_ROOT that hold a site.json). */
@@ -62,7 +62,7 @@ export async function listSlugs(): Promise<string[]> {
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
     if (entry.name.startsWith('.')) continue; // .audit and friends
-    if (existsSync(join(config.SITES_ROOT, entry.name, 'site.json'))) {
+    if (existsSync(confinedPath(config.SITES_ROOT, entry.name, 'site.json'))) {
       slugs.push(entry.name);
     }
   }
@@ -171,7 +171,7 @@ export async function createSite(input: CreateSiteInput): Promise<SiteManifest> 
     });
     await writeManifest(manifest);
     await writeAgentsFile(manifest);
-    await mkdir(join(dir, '.builder'), { recursive: true });
+    await mkdir(confinedPath(dir, '.builder'), { recursive: true });
     await initRepo(input.slug);
 
     return manifest;

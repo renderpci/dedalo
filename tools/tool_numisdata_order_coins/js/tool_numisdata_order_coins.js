@@ -38,6 +38,7 @@
 */
 
 // import
+	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../../core/tools_common/js/tool_common.js'
@@ -161,9 +162,6 @@ tool_numisdata_order_coins.prototype.init = async function(options) {
 *
 * Roles missing from the Ontology's ddo_map are skipped with a console warning
 * rather than throwing, allowing partial configurations to render gracefully.
-*
-* (!) `event_manager` is used inside this method but is not imported here — it is
-*     expected to be present as a global or injected by tool_common at build time.
 *
 * @param {boolean} [autoload=false] - When true, tool_common will auto-fetch remote data
 *     for each ddo_map component.  Pass false to defer loading.

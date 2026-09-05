@@ -46,6 +46,50 @@ export const sqlIdentifierList = z
     'must be a comma-separated list of plain SQL identifiers',
   );
 
+/**
+ * A REAL boolean from the environment — `z.coerce.boolean()` is not one.
+ *
+ * `z.coerce.boolean()` is `Boolean(input)`, and every environment variable is a string:
+ * `TRUST_PROXY=false` and `MCP_ENABLED=0` therefore parsed to TRUE. Every mitigation
+ * written around those two keys — the deployment guide's standalone recipe, the security
+ * page's "set TRUST_PROXY=false", the .env.example line — was inert, which is what made
+ * PUB-09 unfixable by configuration rather than merely misconfigured by default.
+ *
+ * The accepted spellings are the ones an operator actually writes; anything else FAILS THE
+ * PROCESS, in keeping with this file's rule. A value nobody can interpret must not be
+ * silently read as one of the two things it might have meant — least of all on a key whose
+ * wrong side is a rate-limit bypass.
+ */
+const TRUE_SPELLINGS = new Set(['true', '1', 'yes', 'on']);
+const FALSE_SPELLINGS = new Set(['false', '0', 'no', 'off']);
+
+// An env var that is present but EMPTY (`TRUST_PROXY=` in a .env) means "unset" — that is
+// what the deployment guide's Default column promises — so it is normalised away before
+// the parser sees it, and the key's default (or derivation) applies.
+const emptyToUndefined = (value: unknown) =>
+  typeof value === 'string' && value.trim() === '' ? undefined : value;
+
+export const envBoolean = z
+  .union([z.boolean(), z.string()])
+  .transform((value, ctx) => {
+    if (typeof value === 'boolean') return value;
+    const normalized = value.trim().toLowerCase();
+    if (TRUE_SPELLINGS.has(normalized)) return true;
+    if (FALSE_SPELLINGS.has(normalized)) return false;
+    ctx.addIssue({
+      code: 'custom',
+      message: `must be one of ${[...TRUE_SPELLINGS, ...FALSE_SPELLINGS].join(', ')} (got "${value}")`,
+    });
+    return z.NEVER;
+  });
+
+/** `envBoolean`, with an absent-or-empty value falling back to `fallback`. */
+export const envBooleanDefault = (fallback: boolean) =>
+  z.preprocess(emptyToUndefined, envBoolean.default(fallback));
+
+/** `envBoolean`, left undefined when absent or empty (the caller derives the meaning). */
+export const envBooleanOptional = z.preprocess(emptyToUndefined, envBoolean.optional());
+
 const envSchema = z.object({
   DEPLOYMENT_MODE: z.enum(['apache', 'nginx', 'standalone']).default('apache'),
   PORT: z.coerce.number().default(3100),
@@ -54,11 +98,38 @@ const envSchema = z.object({
   HOST: z.string().default('127.0.0.1'),
   // The subpath the proxy mounts us under; router.ts strips it before matching.
   BASE_PATH: z.string().default('/publication/server_api/v2'),
-  // Whether X-Forwarded-For / X-Real-IP may be believed when identifying the caller. True
-  // is right behind a proxy and a rate-limit bypass without one — the headers are
-  // attacker-controlled, so a directly-exposed server must set this false (see
-  // security/client-ip.ts).
-  TRUST_PROXY: z.coerce.boolean().default(true),
+  // Whether X-Forwarded-For / X-Real-IP may be believed when identifying the caller. The
+  // headers are attacker-controlled, so believing them without a proxy in front is a
+  // rate-limit bypass, not a rate limit (audit 2026-08-26, PUB-09) — and the rate limiter
+  // is the only thing metering an API that is unauthenticated by default.
+  //
+  // UNSET, it is DERIVED from the deployment: apache/nginx put a proxy in front and rewrite
+  // these headers, so they may be believed; `standalone` is directly exposed, so they may
+  // not. A blanket `false` default would be no safer and would quietly break the two proxy
+  // modes — every caller would collapse onto the proxy's own address, i.e. one global
+  // bucket — which is the same failure PUB-09 describes, arrived at from the other side.
+  //
+  // SET, it is honoured, with one refusal: `standalone` + TRUST_PROXY=true is the exact
+  // bypassable configuration, so it needs the explicit acknowledgement below. That is for
+  // the real case of a standalone process behind a load balancer someone else operates.
+  // See security/client-ip.ts and the cross-field refine under this schema.
+  TRUST_PROXY: envBooleanOptional,
+  // The opt-in that makes `standalone` + TRUST_PROXY=true bootable. Deliberately a second
+  // key rather than a comment: it puts the operator's "yes, a proxy I control is in front
+  // of this" in the environment, where it can be read, instead of in a wiki.
+  TRUST_PROXY_IN_STANDALONE: envBooleanDefault(false),
+  // HOW MANY hops of X-Forwarded-For this deployment's OWN proxies append — the number that
+  // turns a spoofable header into an identity.
+  //
+  // Both shipped configs APPEND rather than overwrite (nginx `$proxy_add_x_forwarded_for`,
+  // Apache mod_proxy_http), so the header a request arrives with is
+  // `<whatever the client sent>, <what our proxy saw>`: the LEFTMOST entry is attacker text
+  // and the RIGHTMOST entries are the ones our own chain wrote. The caller is therefore at
+  // `chain.length - TRUSTED_PROXY_HOPS` — 1 for a single Apache/nginx in front (the shipped
+  // deployments), 2 when a CDN or load balancer you also control terminates in front of it.
+  // Over-declaring is not free: each extra hop hands one more attacker-supplied entry the
+  // identity, so this is an exact count of proxies you operate, never a guess.
+  TRUSTED_PROXY_HOPS: z.preprocess(emptyToUndefined, z.coerce.number().int().min(1).max(10).default(1)),
   // Defaults to production: the unsafe direction (leaking internal error messages, see
   // middleware/error-handler.ts) must be the one you have to ask for.
   NODE_ENV: z.enum(['development', 'production', 'test']).default('production'),
@@ -118,7 +189,9 @@ const envSchema = z.object({
   AV_VIDEO_COLUMN: sqlIdentifier.default('rsc35'),
   AV_THESAURUS_TABLES: sqlIdentifierList.default('ts_themes,ts_onomastic,ts_chronological'),
 
-  MCP_ENABLED: z.coerce.boolean().default(true),
+  // envBoolean, not z.coerce.boolean(): MCP_ENABLED=false used to parse TRUE, so the
+  // documented way to switch the agent surface off did nothing.
+  MCP_ENABLED: envBooleanDefault(true),
   MCP_PATH: z.string().default('/mcp'),
 
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
@@ -128,7 +201,26 @@ const envSchema = z.object({
 // something was set to a value that cannot mean what it was meant to mean — booting anyway
 // would serve traffic under a configuration nobody chose. All field errors are reported at
 // once so a misconfigured deploy is fixed in one pass, not one restart per typo.
-const parsed = envSchema.safeParse(process.env);
+// EXPORTED FOR THE GATES, for the same reason sqlIdentifier is: the cross-field refine
+// below decides whether a deployment may believe a spoofable header, and a boot that takes
+// the default never exercises it. Asserting on the schema is the only way to prove the
+// refusal still refuses.
+export const environmentSchema = envSchema.superRefine((env, ctx) => {
+  // The cross-field refine PUB-09 asks for. It cannot be a field-level check: whether
+  // believing a forwarding header is safe is a fact about the DEPLOYMENT, not about the
+  // value. Refusing to boot is the right severity — a server that reads spoofable headers
+  // as identity meters nobody, and it would do so silently for the life of the install.
+  if (env.DEPLOYMENT_MODE === 'standalone' && env.TRUST_PROXY === true && env.TRUST_PROXY_IN_STANDALONE !== true) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['TRUST_PROXY'],
+      message:
+        'TRUST_PROXY=true with DEPLOYMENT_MODE=standalone lets any client forge X-Forwarded-For and get a fresh rate-limit bucket per request. Put the API behind the proxy it claims to be behind (DEPLOYMENT_MODE=apache|nginx), drop TRUST_PROXY, or set TRUST_PROXY_IN_STANDALONE=true to state that a proxy you control terminates every request.',
+    });
+  }
+});
+
+const parsed = environmentSchema.safeParse(process.env);
 
 if (!parsed.success) {
   console.error('Invalid environment variables:', parsed.error.flatten().fieldErrors);
@@ -136,6 +228,24 @@ if (!parsed.success) {
 }
 
 export const config = parsed.data;
+
+/**
+ * The resolved trust decision — the ONE answer to "may this request's forwarding headers be
+ * believed", derived once at boot so no caller re-derives it (and none can forget the
+ * derivation and read a bare, possibly-undefined `config.TRUST_PROXY`).
+ */
+export function resolveTrustProxy(mode: string, explicit: boolean | undefined): boolean {
+  if (explicit !== undefined) return explicit;
+  return mode !== 'standalone';
+}
+
+export const trustProxy = resolveTrustProxy(config.DEPLOYMENT_MODE, config.TRUST_PROXY);
+
+/**
+ * The number of X-Forwarded-For entries this deployment's own proxies append — the index
+ * from the RIGHT at which the caller's address sits. See security/client-ip.ts.
+ */
+export const trustedProxyHops = config.TRUSTED_PROXY_HOPS;
 
 export const isProduction = config.NODE_ENV === 'production';
 export const isDevelopment = config.NODE_ENV === 'development';

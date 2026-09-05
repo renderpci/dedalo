@@ -27,7 +27,7 @@ Documentation: http://127.0.0.1:3100/publication/server_api/v2/docs
 
 ## Environment reference
 
-Every variable below is read by `src/config.ts`. The **Default** column is the value applied when the variable is absent or empty. Numeric and boolean values are coerced (`z.coerce.*`), so `TRUST_PROXY=true`, `PORT=3100` etc. are passed as plain strings in `.env`.
+Every variable below is read by `src/config.ts`. The **Default** column is the value applied when the variable is absent or empty. Numbers are coerced and booleans are PARSED from the usual spellings (`true/1/yes/on`, `false/0/no/off`), so `TRUST_PROXY=false`, `PORT=3100` etc. are written as plain strings in `.env`; a boolean that reads as neither aborts startup rather than being guessed.
 
 ### Deployment / server
 
@@ -37,7 +37,9 @@ Every variable below is read by `src/config.ts`. The **Default** column is the v
 | `PORT` | int | `3100` | TCP port the Bun server binds to. |
 | `HOST` | string | `127.0.0.1` | Bind address. Use `127.0.0.1` behind a reverse proxy; `0.0.0.0` to expose directly. |
 | `BASE_PATH` | string | `/publication/server_api/v2` | Path prefix the router serves under. Set to an empty string when a proxy strips the prefix, or for standalone root-mounted serving. |
-| `TRUST_PROXY` | bool | `true` | When `true`, the client IP for rate limiting is taken from `X-Forwarded-For` (first hop) or `X-Real-IP`. Set to `false` when the API is internet-facing with no trusted proxy, so spoofed forwarding headers cannot bypass the limiter. |
+| `TRUST_PROXY` | bool | *derived from `DEPLOYMENT_MODE`* — `true` for `apache`/`nginx`, `false` for `standalone` | When on, the client IP for rate limiting is taken from `X-Forwarded-For`, counted from the RIGHT (see `TRUSTED_PROXY_HOPS`); `X-Real-IP` is never believed, because Apache does not set it and a client-supplied one would pass straight through. Leave it unset unless your topology is not what the mode says: an internet-facing server that believes those headers has no rate limit, because every request forges its own bucket. `standalone` + `true` is refused at startup unless `TRUST_PROXY_IN_STANDALONE=true`. |
+| `TRUST_PROXY_IN_STANDALONE` | bool | `false` | The explicit acknowledgement that lets `standalone` trust forwarding headers — for a standalone process that really is behind a proxy someone else operates. |
+| `TRUSTED_PROXY_HOPS` | int (1–10) | `1` | How many `X-Forwarded-For` entries **your own** proxies append. Both shipped configs append rather than overwrite, so the header arrives as `<what the client typed>, <what your proxy saw>` and the caller is the entry at `length - TRUSTED_PROXY_HOPS`. `1` for a single Apache/nginx; `2` when a CDN or load balancer you also operate terminates in front of it. Over-declaring gives one more attacker-supplied entry the identity; a header shorter than the declared chain is not believed at all. |
 | `NODE_ENV` | enum | `production` | One of `development`, `production`, `test`. |
 
 ### MariaDB connection
@@ -108,6 +110,7 @@ here**. A project that published under other names points these at its own table
 | Variable | Type | Default | Description |
 | --- | --- | --- | --- |
 | `MCP_ENABLED` | bool | `true` | Enables the MCP endpoint for AI agents. |
+| | | | *Booleans accept `true/1/yes/on` and `false/0/no/off`; an unreadable value aborts startup. Before the 2026-08-26 audit they were coerced with `Boolean(<string>)`, so `MCP_ENABLED=false` was TRUE.* |
 | `MCP_PATH` | string | `/mcp` | Path (under `BASE_PATH`) where the MCP endpoint is served. |
 
 ### Logging
@@ -229,7 +232,7 @@ TRUST_PROXY=true
 The supplied config defines an `upstream dedalo_api_v2` (with `keepalive 32`), forwards `Host`, `X-Real-IP`, `X-Forwarded-For` and `X-Forwarded-Proto`, applies the same four security headers, and disables buffering plus extends `proxy_read_timeout` to `3600s` on the `/mcp` SSE block. A commented HTTPS server block is included as a starting point for TLS.
 
 !!! tip "Forwarded headers and `TRUST_PROXY`"
-    Both proxy configs pass `X-Forwarded-For`/`X-Real-IP`. Keep `TRUST_PROXY=true` so the rate limiter attributes requests to the real client IP rather than the proxy's. If you expose Bun directly to the internet (no proxy), set `TRUST_PROXY=false`.
+    Both proxy configs pass `X-Forwarded-For`/`X-Real-IP`, and the `apache`/`nginx` modes derive `TRUST_PROXY=true` for exactly that reason, so the rate limiter attributes requests to the real client IP rather than the proxy's. Because both **append**, the trustworthy address is the one your proxy wrote — the rightmost — which is why the caller is read at `length - TRUSTED_PROXY_HOPS` and never as the first hop. Expose Bun directly (`standalone`) and the derivation flips to `false` by itself — you do not have to remember to write it.
 
 ### Mode C — Standalone
 
@@ -240,14 +243,13 @@ DEPLOYMENT_MODE=standalone
 HOST=0.0.0.0
 PORT=80
 BASE_PATH=
-TRUST_PROXY=false
 ```
 
 ```bash
 sudo bun run start   # root needed to bind port 80
 ```
 
-With `BASE_PATH=` the API is served at the root (`GET /`, `GET /databases`, …). Because there is no trusted proxy, leave `TRUST_PROXY=false` so forwarding headers are ignored for rate limiting.
+With `BASE_PATH=` the API is served at the root (`GET /`, `GET /databases`, …). There is no trusted proxy here, so `TRUST_PROXY` derives to `false` and forwarding headers are ignored for rate limiting — nothing to set. Forcing it on (`TRUST_PROXY=true`) is refused at startup unless `TRUST_PROXY_IN_STANDALONE=true` states that a proxy you control terminates every request.
 
 !!! warning
     In standalone mode the Bun process is internet-facing. Prefer setting `API_KEYS`, a sensible `RATE_LIMIT_RPM`, and a non-wildcard `CORS_ORIGIN`, and terminate TLS in front of it (or run behind a load balancer) for production traffic.

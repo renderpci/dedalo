@@ -54,6 +54,7 @@
 */
 
 // imports
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {paginator} from '../../paginator/js/paginator.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
@@ -852,9 +853,6 @@ export const get_section_id_column = function(current_data) {
 *   - `view`           (default: 'micro') → paginator display mode
 *   - `show_interface` (default: {})      → controls which paginator UI elements appear
 *
-* (!) `event_manager` is accessed as a module-scope global (not imported here);
-* the calling module must load event_manager before this view renders.
-*
 * @param {Object} self - dd_grid instance with `paginator_options`, `rqo`, and `events_tokens`.
 * @returns {Promise<boolean>} Resolves to true when the paginator is ready.
 */
@@ -930,7 +928,6 @@ const init_paginator = async function(self){
 * checkbox before the current refresh finishes, which could corrupt the paginator
 * state when the new result set has fewer pages than expected.
 *
-* (!) `event_manager` is used as a module-scope global; see init_paginator note.
 * (!) `self.node.content_data` must already be set as a pointer on the wrapper
 *      node before this function's event handlers fire (guaranteed by render()).
 *

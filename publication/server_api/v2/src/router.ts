@@ -39,6 +39,7 @@ import { handleError } from './middleware/error-handler';
 import { validateApiKey } from './security/auth';
 import { checkRateLimit } from './security/rate-limiter';
 import { noContent } from './utils/response';
+import { withRequestBudget } from './security/request-budget';
 
 export type RouteHandler = (
   req: Request,
@@ -161,39 +162,46 @@ export async function dispatch(method: string, pathAndQuery: string): Promise<Re
 }
 
 export async function routeRequest(req: Request): Promise<Response> {
-  // Metering and authentication run BEFORE the path is even looked at, so the cost of an
-  // unauthenticated request is bounded by the cheapest possible work: a Map lookup and a
-  // constant-time key compare. It also means the route table is not an oracle — probing for
-  // which paths exist costs a token and still needs a key, since 404 and 200 are both
-  // reached only after these two have passed.
-  checkRateLimit(req);
-  await validateApiKey(req);
+  // The QUERY BUDGET is opened here, around everything that follows, and nowhere else: one
+  // scope per HTTP request, so a /batch envelope re-entering through `dispatch` keeps
+  // spending the same envelope instead of getting a fresh one per sub-query
+  // (security/request-budget.ts). Rate limiting and auth run inside it, which costs
+  // nothing — neither queries the database.
+  return withRequestBudget(async () => {
+    // Metering and authentication run BEFORE the path is even looked at, so the cost of an
+    // unauthenticated request is bounded by the cheapest possible work: a Map lookup and a
+    // constant-time key compare. It also means the route table is not an oracle — probing for
+    // which paths exist costs a token and still needs a key, since 404 and 200 are both
+    // reached only after these two have passed.
+    checkRateLimit(req);
+    await validateApiKey(req);
 
-  const url = new URL(req.url);
-  let pathname = url.pathname;
+    const url = new URL(req.url);
+    let pathname = url.pathname;
 
-  // The routing table is written in deployment-independent terms (`/databases`, not
-  // `/publication/server_api/v2/databases`). BASE_PATH — the subpath Apache or nginx mounts
-  // us under — is peeled off here, once, so relocating the API never touches a route.
-  if (config.BASE_PATH && pathname.startsWith(config.BASE_PATH)) {
-    pathname = pathname.slice(config.BASE_PATH.length) || '/';
-  }
+    // The routing table is written in deployment-independent terms (`/databases`, not
+    // `/publication/server_api/v2/databases`). BASE_PATH — the subpath Apache or nginx mounts
+    // us under — is peeled off here, once, so relocating the API never touches a route.
+    if (config.BASE_PATH && pathname.startsWith(config.BASE_PATH)) {
+      pathname = pathname.slice(config.BASE_PATH.length) || '/';
+    }
 
-  // MCP and the doc assets are handled ahead of findRoute because they are not exact-arity
-  // segment matches: MCP_PATH is configurable (it need not be a single segment), and the
-  // vendored Swagger/Scalar bundles are an open-ended prefix of files that no fixed route
-  // could enumerate.
-  if (config.MCP_ENABLED && pathname === config.MCP_PATH) {
-    return handleMcpRequest(req);
-  }
+    // MCP and the doc assets are handled ahead of findRoute because they are not exact-arity
+    // segment matches: MCP_PATH is configurable (it need not be a single segment), and the
+    // vendored Swagger/Scalar bundles are an open-ended prefix of files that no fixed route
+    // could enumerate.
+    if (config.MCP_ENABLED && pathname === config.MCP_PATH) {
+      return handleMcpRequest(req);
+    }
 
-  if (pathname.startsWith('/docs/swagger/') && pathname !== '/docs/swagger/') {
-    return handleSwaggerAssets(req);
-  }
-  if (pathname.startsWith('/docs/scalar/') && pathname !== '/docs/scalar/') {
-    return handleScalarAssets(req);
-  }
+    if (pathname.startsWith('/docs/swagger/') && pathname !== '/docs/swagger/') {
+      return handleSwaggerAssets(req);
+    }
+    if (pathname.startsWith('/docs/scalar/') && pathname !== '/docs/scalar/') {
+      return handleScalarAssets(req);
+    }
 
-  const { handler, params } = findRoute(req.method, pathname);
-  return handler(req, params, url);
+    const { handler, params } = findRoute(req.method, pathname);
+    return handler(req, params, url);
+  });
 }

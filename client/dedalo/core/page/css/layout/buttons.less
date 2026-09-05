@@ -172,7 +172,7 @@ button {
 	&.primary {
 		background-color: @color_primary;
 		border-color: @color_primary_border;
-		color: @color_white ;
+		color: var(--fg_inverse); // white in BOTH themes (audit P1-18)
 		&:before {
 			background-color: var(--button-bg-color, @color_white) !important;
 		}

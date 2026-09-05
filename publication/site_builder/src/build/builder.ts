@@ -45,7 +45,6 @@
 
 import { existsSync, lstatSync } from 'node:fs';
 import { appendFile, mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import { confinedPath, confinedRealPath } from '../util/paths';
 import { config } from '../config';
 import { ConflictError, NotFoundError } from '../errors';
@@ -73,12 +72,39 @@ function buildsDir(slug: string): string {
   return confinedPath(config.SITES_ROOT, slug, '.builder', 'builds');
 }
 
+/**
+ * THE BUILD ID IS CALLER DATA, SO ITS PATH IS CONFINED LIKE EVERY OTHER PATH HERE.
+ *
+ * `buildsDir` confines the SLUG; joining the id onto the result undid that — the router
+ * `decodeURIComponent`s each URL segment, so an id spelling a traversal chain resolved
+ * outside the builds directory and `getBuild`/`getBuildLog` read (and returned) whatever
+ * `.json`/`.log` file it named. `confinedPath` is the daemon's law for exactly this
+ * (`promote.ts`: confinedPath, never join), and it applies to the LAST segment too.
+ *
+ * These two throw on an escaping id. That is right for the daemon's own minted ids (a
+ * writer must never write outside), and the caller-facing doors below translate the throw
+ * into the same answer an unknown id already gets — see `pathForCallerId`.
+ */
 function recordPath(slug: string, id: string): string {
-  return join(buildsDir(slug), `${id}.json`);
+  return confinedPath(buildsDir(slug), `${id}.json`);
 }
 
 function logPath(slug: string, id: string): string {
-  return join(buildsDir(slug), `${id}.log`);
+  return confinedPath(buildsDir(slug), `${id}.log`);
+}
+
+/**
+ * The caller-supplied-id door: the confined path, or null when the id escapes.
+ *
+ * A traversal id answers EXACTLY as an unknown id does (the route's 404), reading nothing
+ * — a distinct status would be an oracle telling a token holder which host paths exist.
+ */
+function pathForCallerId(build: () => string): string | null {
+  try {
+    return build();
+  } catch {
+    return null;
+  }
 }
 
 /** Kicks off a build, returning its id. The work runs detached; poll getBuild. */
@@ -317,8 +343,8 @@ async function appendLog(slug: string, id: string, text: string): Promise<void> 
 
 /** A specific build's status record. */
 export async function getBuild(slug: string, id: string): Promise<BuildStatus | null> {
-  const path = recordPath(slug, id);
-  if (!existsSync(path)) return null;
+  const path = pathForCallerId(() => recordPath(slug, id));
+  if (path === null || !existsSync(path)) return null;
   try {
     return JSON.parse(await readFile(path, 'utf8')) as BuildStatus;
   } catch {
@@ -328,8 +354,8 @@ export async function getBuild(slug: string, id: string): Promise<BuildStatus | 
 
 /** A build's captured log text. */
 export async function getBuildLog(slug: string, id: string): Promise<string | null> {
-  const path = logPath(slug, id);
-  if (!existsSync(path)) return null;
+  const path = pathForCallerId(() => logPath(slug, id));
+  if (path === null || !existsSync(path)) return null;
   return readFile(path, 'utf8');
 }
 

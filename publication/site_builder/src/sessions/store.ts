@@ -16,7 +16,6 @@
 
 import { existsSync } from 'node:fs';
 import { appendFile, mkdir, readFile, readdir, rename, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import { confinedPath } from '../util/paths';
 import { config } from '../config';
 import type { SessionEventBody, StoredEvent, SessionMeta } from './events';
@@ -27,12 +26,32 @@ function sessionsDir(slug: string): string {
   return confinedPath(config.SITES_ROOT, slug, '.builder', 'sessions');
 }
 
+/**
+ * A SESSION ID IS CALLER DATA TOO, SO ITS PATH IS CONFINED LIKE THE SLUG'S.
+ *
+ * `sessionsDir` confines the slug; joining the id onto the result undid that, exactly as
+ * it did for the build id (`build/builder.ts`). The router decodes each URL segment, so an
+ * id spelling a traversal chain would resolve outside the sessions directory. The law is
+ * `confinedPath`, never `join` — and it covers the LAST segment.
+ *
+ * Both throw on an escaping id: a writer must never write outside. The two READ doors
+ * translate the throw into the same answer an unknown id already gets.
+ */
 function logPath(slug: string, sessionId: string): string {
-  return join(sessionsDir(slug), `${sessionId}.jsonl`);
+  return confinedPath(sessionsDir(slug), `${sessionId}.jsonl`);
 }
 
 function metaPath(slug: string, sessionId: string): string {
-  return join(sessionsDir(slug), `${sessionId}.meta.json`);
+  return confinedPath(sessionsDir(slug), `${sessionId}.meta.json`);
+}
+
+/** The confined path for a caller-supplied session id, or null when the id escapes. */
+function pathForCallerId(build: () => string): string | null {
+  try {
+    return build();
+  } catch {
+    return null;
+  }
 }
 
 async function ensureDir(slug: string): Promise<void> {
@@ -81,8 +100,8 @@ export async function appendEvent(
 
 /** Replays events with seq strictly greater than `afterSeq`. */
 export async function replayEvents(slug: string, sessionId: string, afterSeq: number): Promise<StoredEvent[]> {
-  const path = logPath(slug, sessionId);
-  if (!existsSync(path)) return [];
+  const path = pathForCallerId(() => logPath(slug, sessionId));
+  if (path === null || !existsSync(path)) return [];
   const text = await readFile(path, 'utf8');
   const out: StoredEvent[] = [];
   for (const line of text.split('\n')) {
@@ -98,8 +117,8 @@ export async function replayEvents(slug: string, sessionId: string, afterSeq: nu
 }
 
 export async function readMeta(slug: string, sessionId: string): Promise<SessionMeta | null> {
-  const path = metaPath(slug, sessionId);
-  if (!existsSync(path)) return null;
+  const path = pathForCallerId(() => metaPath(slug, sessionId));
+  if (path === null || !existsSync(path)) return null;
   try {
     return JSON.parse(await readFile(path, 'utf8')) as SessionMeta;
   } catch {

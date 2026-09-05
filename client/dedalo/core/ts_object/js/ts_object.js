@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {a11y} from '../../common/js/a11y.js'
 	import {common} from '../../common/js/common.js'
 	import {
 		get_instance,
@@ -976,6 +977,10 @@ ts_object.prototype.sync_open_dom = function() {
 		}else{
 			self.link_children_element.classList.remove('open')
 		}
+		// a11y (audit P1-18 / CLI-11). The open state is projected onto the
+		// accessibility tree from the SAME single entry point that projects it onto
+		// the CSS class — a second place to keep in step is how the two drift.
+		a11y.set_expanded(self.link_children_element, self.is_open===true)
 	}
 
 	return true

@@ -14,7 +14,7 @@
  * one global limit shared by the whole internet.
  */
 
-import { config } from '../config';
+import { trustProxy, trustedProxyHops } from '../config';
 
 const socketIps = new WeakMap<Request, string>();
 
@@ -24,23 +24,55 @@ export function setSocketIp(req: Request, ip: string | undefined): void {
 }
 
 /**
- * The caller's IP. Behind a reverse proxy (TRUST_PROXY=true, the default for the
- * apache/nginx deployment modes) the forwarding headers are authoritative — the
- * socket peer is the proxy. Standalone, only the socket address can be trusted:
- * headers are attacker-controlled and would let anyone forge a fresh bucket per
- * request, which is a rate-limit bypass rather than a rate limit.
+ * The caller's IP.
+ *
+ * Standalone, only the socket address can be trusted: the forwarding headers are
+ * attacker-controlled and would let anyone forge a fresh bucket per request, which is a
+ * rate-limit bypass rather than a rate limit (audit 2026-08-26, PUB-09).
+ *
+ * Behind a proxy, the header is still MOSTLY attacker text — and this is where the first
+ * fix was wrong. Both shipped configurations APPEND (nginx `$proxy_add_x_forwarded_for`,
+ * Apache mod_proxy_http), so a request arrives as
+ * `X-Forwarded-For: <anything the client typed>, <the address our proxy actually saw>`.
+ * Taking `split(',')[0]` therefore read the ATTACKER'S text as the identity under the
+ * DEFAULT deployment mode, and a rotating header bought a fresh bucket per request exactly
+ * as before. `[0]` is correct only under a proxy that OVERWRITES the header, which neither
+ * shipped config does.
+ *
+ * The honest rule: count from the RIGHT. Our own chain wrote the last
+ * `TRUSTED_PROXY_HOPS` entries, so the caller is the entry immediately to their left, at
+ * `chain.length - hops`. A header SHORTER than the declared chain cannot have been written
+ * by that chain, so it is not believed at all — the socket peer answers instead.
+ *
+ * X-Real-IP is deliberately NOT consulted. nginx sets it from `$remote_addr` (safe), but
+ * Apache's mod_proxy does not set it at all, so under the default deployment mode a
+ * client-supplied X-Real-IP would pass straight through and reopen the same bypass. One
+ * header, one rule, safe in both modes.
+ *
+ * The decision and the hop count are ARGUMENTS with the boot-resolved defaults, not config
+ * reads inside the branch: the caller of record still passes nothing, but every behaviour
+ * can then be exercised in one process — a guard nobody can run both sides of is a guard
+ * nobody knows the state of.
  */
-export function clientIp(req: Request): string {
-  if (config.TRUST_PROXY) {
-    const forwarded = req.headers.get('x-forwarded-for');
-    if (forwarded) {
-      return forwarded.split(',')[0].trim();
-    }
-    const realIp = req.headers.get('x-real-ip');
-    if (realIp) {
-      return realIp;
-    }
-  }
+export function clientIp(
+  req: Request,
+  trusted: boolean = trustProxy,
+  hops: number = trustedProxyHops,
+): string {
+  const socket = socketIps.get(req) ?? 'anonymous';
 
-  return socketIps.get(req) ?? 'anonymous';
+  if (!trusted) return socket;
+
+  const forwarded = req.headers.get('x-forwarded-for');
+  if (!forwarded) return socket;
+
+  const chain = forwarded
+    .split(',')
+    .map(entry => entry.trim())
+    .filter(Boolean);
+
+  const index = chain.length - Math.max(1, hops);
+  if (index < 0) return socket;
+
+  return chain[index] ?? socket;
 }

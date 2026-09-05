@@ -102,6 +102,21 @@ export class RateLimitError extends ApiError {
   }
 }
 
+/**
+ * The request asked for more database work than one request may commission — the
+ * per-request query budget (security/request-budget.ts) ran out.
+ *
+ * 429 rather than 500 or 400: nothing is malformed and nothing failed, the caller simply
+ * spent more than a single request's share of a shared read-only database, exactly as with
+ * the rate limiter. The remedy is in the client's hands, and the detail says which knob.
+ */
+export class BudgetExceededError extends ApiError {
+  constructor(detail: string) {
+    super(429, `${PROBLEM_TYPE_BASE}request-budget-exceeded`, 'Request Budget Exceeded', detail);
+    this.name = 'BudgetExceededError';
+  }
+}
+
 // Our fault, not the caller's. The error handler routes every *unrecognised* throw here, and
 // only echoes the underlying message in development — in production the detail is a fixed
 // string, so a driver error or a stack trace can never become part of a public response body.

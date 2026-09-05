@@ -83,6 +83,7 @@
  */
 
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import puppeteer, { type Browser, type Page } from 'puppeteer';
 import { readEnv } from '../src/config/env.ts';
 import { staticCensusTotals } from '../test/helpers/client_suite_census.ts';
@@ -100,8 +101,11 @@ import {
 	suiteServerPaths,
 } from './client_test_server.ts';
 import {
+	type AxeObservation,
+	type AxeViolation,
 	computeVerdict,
 	concludeRun,
+	loadA11yBudget,
 	loadInventory,
 	observeRun,
 	type RunResults,
@@ -482,6 +486,8 @@ function sweepOnSignal(): void {
  */
 function report(results: RunResults): 0 | 1 {
 	const verdict: Verdict = computeVerdict({
+		axe: results.axe,
+		a11yBudget: results.axe === undefined ? undefined : loadA11yBudget(),
 		suites: results.suites,
 		pending: results.pending,
 		strict,
@@ -592,6 +598,94 @@ function conclude(scraped: ScrapedRun): never {
 }
 
 /** The browser run: everything up to and including the scrape, then its cleanup. Returns the RAW scrape; `conclude` exits on it. */
+/**
+ * THE ACCESSIBILITY PHASE (audit 2026-08-26 row P1-18).
+ *
+ * After the suites have run, the SAME browser mounts the named cataloguing
+ * surfaces (client/dedalo/test/client/js/a11y_surfaces.js — built by the
+ * client's own builders, from repo-owned inputs, so they are identical on every
+ * machine) and runs axe-core over each one. The result rides the ordinary
+ * ScrapedRun, so `--replay` can carry it and the ONE exit judges it.
+ *
+ * No new CI runtime: axe-core is a devDependency, read off disk and injected
+ * into the page this run already has open.
+ *
+ * @param page the run's page, already authenticated
+ * @param origin the run's own server origin
+ * @returns what axe saw, per surface
+ */
+async function runAxePhase(page: Page, origin: string): Promise<AxeObservation> {
+	const axeSource = readFileSync(
+		join(import.meta.dir, '..', 'node_modules', 'axe-core', 'axe.min.js'),
+		'utf8',
+	);
+	const framePage = `${origin}/dedalo/test/client/frame.html?area=a11y_surfaces`;
+	log(`a11y: mounting the named surfaces (${framePage})`);
+	const response = await page.goto(framePage, { waitUntil: 'networkidle0', timeout: 30000 });
+	if (!response?.ok()) {
+		throw new Error(`a11y phase: the surfaces page did not load (${response?.status()})`);
+	}
+	await page.waitForFunction('window.dd_a11y_surfaces !== undefined', { timeout: 20000 });
+	await page.evaluate(axeSource);
+
+	const observed: { surfaces: string[]; violations: AxeViolation[] } = await page.evaluate(
+		async () => {
+			const w = window as unknown as {
+				dd_a11y_surfaces: { SURFACE_BUILDERS: Record<string, () => unknown | Promise<unknown>> };
+				axe: {
+					run: (
+						ctx: unknown,
+						options: unknown,
+					) => Promise<{
+						violations: Array<{ id: string; impact: string | null; nodes: unknown[] }>;
+					}>;
+				};
+			};
+			const surfaces: string[] = [];
+			const violations: Array<{
+				surface: string;
+				id: string;
+				impact: string | null;
+				nodes: number;
+			}> = [];
+			for (const name of Object.keys(w.dd_a11y_surfaces.SURFACE_BUILDERS)) {
+				const builder = w.dd_a11y_surfaces.SURFACE_BUILDERS[name];
+				if (builder === undefined) continue;
+				// AWAITED: a builder may be async (the login form asks the server for
+				// its own context). Reading the host before it resolved would run axe
+				// over an empty div and call the surface clean.
+				await builder();
+				const host = document.getElementById(`a11y_surface_${name}`);
+				// EMPTY IS NOT MOUNTED. The host is created before the surface is
+				// filled, so a builder that threw — or an async one whose promise was
+				// not awaited — would leave an empty div here and axe would call it
+				// clean. Such a surface is reported as NOT mounted, which is red for
+				// every required one.
+				if (host === null || host.children.length === 0) continue;
+				surfaces.push(name);
+				const result = await w.axe.run(host, {
+					runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] },
+				});
+				for (const violation of result.violations) {
+					violations.push({
+						surface: name,
+						id: violation.id,
+						impact: violation.impact ?? null,
+						nodes: violation.nodes.length,
+					});
+				}
+			}
+			return { surfaces, violations };
+		},
+	);
+
+	const sorted: AxeViolation[] = observed.violations.sort((a, b) =>
+		`${a.surface}:${a.id}` < `${b.surface}:${b.id}` ? -1 : 1,
+	);
+	log(`a11y: ${observed.surfaces.length} surface(s), ${sorted.length} violation kind(s)`);
+	return { surfaces: observed.surfaces, violations: sorted };
+}
+
 async function main(): Promise<ScrapedRun> {
 	let browser: Browser | undefined;
 	let server: ClientTestServer | undefined;
@@ -756,6 +850,10 @@ async function main(): Promise<ScrapedRun> {
 				groups,
 			};
 		});
+
+		// The accessibility phase runs LAST: it navigates the page away from the
+		// runner, so nothing after it may read the runner's DOM.
+		scraped.axe = await runAxePhase(page, originOf(testUrl));
 
 		return scraped;
 	} finally {

@@ -301,7 +301,9 @@ DEPLOYMENT_MODE=standalone
 HOST=0.0.0.0
 PORT=80
 BASE_PATH=
-TRUST_PROXY=false
+# TRUST_PROXY may be omitted here: standalone derives it to false. Setting it to true
+# refuses to boot unless TRUST_PROXY_IN_STANDALONE=true says a proxy you control is in
+# front — otherwise any client forges X-Forwarded-For and gets a fresh rate-limit bucket.
 ```
 
 ```bash
@@ -312,8 +314,8 @@ sudo bun run start  # root needed for port 80
 
 - **Read-only**: no write endpoint exists; use a read-only DB user
 - **SQL injection**: every value is a bound parameter; identifiers are validated against `^[A-Za-z_][A-Za-z0-9_]*$`
-- **DoS bounds**: max 1000 rows per page, fragment extraction capped (10 terms, 64 chars/term, 1 MB scanned), request-level timeout (`REQUEST_TIMEOUT_MS`) bounding every query
-- **Rate limiting**: token bucket per IP (`RATE_LIMIT_RPM`, default 100/min) → `429`. A `POST /batch` costs one token **per sub-query**, so batching saves round trips without multiplying the quota. The client IP comes from the forwarding headers when `TRUST_PROXY` is on, and from the connection's peer address otherwise
+- **DoS bounds**: max 1000 rows per page, at most 10 resolve-map keys, relation expansion capped at depth 3 × 50 rows per cell, at most 500 database statements per request (`429` past that), fragment extraction capped (10 terms, 64 chars/term, 1 MB scanned), request-level timeout (`REQUEST_TIMEOUT_MS`) bounding every query. **Every bound is declared once** (`src/validators.ts`) and parsed by BOTH doors — REST and MCP — and clamped again at the SQL boundary, so no caller and no future entry layer can skip one. Over a bound is a `400`, never a silent clamp
+- **Rate limiting**: token bucket per IP (`RATE_LIMIT_RPM`, default 100/min) → `429`. A `POST /batch` costs one token **per sub-query**, so batching saves round trips without multiplying the quota. The client IP comes from `X-Forwarded-For` only when a proxy is declared (`TRUST_PROXY`, which defaults to the deployment mode: on for apache/nginx, off for standalone), and from the connection's peer address otherwise. Behind a proxy the header is read from the RIGHT — both shipped configs APPEND, so the trustworthy entry is the one your proxy wrote, at `length - TRUSTED_PROXY_HOPS` (default 1) — so a spoofed or rotating `X-Forwarded-For` cannot buy a fresh bucket in either mode
 - **Optional API key**: set `API_KEYS=key1,key2` to require `X-API-Key` (timing-safe comparison); empty = open access
 - **CORS**: configurable via `CORS_ORIGIN`
 

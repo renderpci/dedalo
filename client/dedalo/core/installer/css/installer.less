@@ -167,7 +167,7 @@
 				box-shadow: 0 0 0 4px var(--ut_accent_soft);
 			}
 			&.completed {
-				color: #fff;
+				color: var(--ut_on_accent); // AA on the success fill in BOTH themes (audit P1-18)
 				background: var(--ut_green);
 				border-color: var(--ut_green);
 			}
@@ -320,7 +320,7 @@
 			}
 		}
 		&.success {
-			color: #fff;
+			color: var(--ut_on_accent); // AA on the success fill in BOTH themes (audit P1-18)
 			background: var(--ut_green);
 			box-shadow: 0 2px 12px -3px var(--ut_green_glow);
 		}
@@ -409,7 +409,7 @@
 				}
 				&.info {
 					background: rgba(56,139,253,0.15);
-					color: #4493f8;
+					color: var(--ut_blue_ink, #12539e); // AA on its own tint (audit P1-18)
 				}
 			}
 

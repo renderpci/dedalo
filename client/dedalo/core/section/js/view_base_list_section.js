@@ -8,6 +8,7 @@
 	import {window_section_rows} from '../../section/js/section.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {a11y} from '../../common/js/a11y.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {no_records_node} from './render_common_section.js'
 
@@ -334,10 +335,16 @@ const get_buttons = function(self) {
 			inner_html		: get_label.find || 'Search',
 			parent			: buttons_container
 		})
-		filter_button.addEventListener('mousedown', function(e) {
-			e.stopPropagation()
-			// Note that self section is who is observing this event (init)
-			event_manager.publish('toggle_search_panel_'+self.id)
+		// a11y (audit P1-18 / CLI-11). A real <button> whose ONLY listener is
+		// `mousedown` is keyboard-dead: Enter and Space dispatch `click`. Routing
+		// both through the shared helper is what makes the search panel reachable.
+		a11y.make_activable(filter_button, {
+			pointer_event	: 'mousedown',
+			on_activate		: function(e) {
+				e.stopPropagation()
+				// Note that self section is who is observing this event (init)
+				event_manager.publish('toggle_search_panel_'+self.id)
+			}
 		})
 
 

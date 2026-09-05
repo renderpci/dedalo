@@ -121,7 +121,7 @@ export async function excludeDaemonState(slug: string): Promise<void> {
   // that holds no repository — manufacturing the very evidence the caller's guard looks
   // for, and leaving a `.git` that is not one.
   assertIsRepository(cwd, 'exclude daemon state');
-  const exclude = join(cwd, '.git', 'info', 'exclude');
+  const exclude = confinedPath(cwd, '.git', 'info', 'exclude');
   await mkdir(dirname(exclude), { recursive: true });
   await writeFile(exclude, EXCLUDE_BODY, 'utf8');
   await runBinary(['git', 'rm', '-r', '--cached', '--quiet', '--ignore-unmatch', DAEMON_STATE_DIR], {

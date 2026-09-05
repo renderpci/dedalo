@@ -62,20 +62,20 @@
 
 					&.total_index {
 						>.value {
-							.fn_build_tag_indexation(@color_tag_indexation_normal, @color_white);
+							.fn_build_tag_indexation(@color_tag_indexation_normal, var(--fg_on_accent));
 							.tag_label();
 						}
 					}
 
 					&.total_missing_tags {
 						>.value {
-							.fn_build_tag_indexation(@color_tag_indexation_removed, @color_white);
+							.fn_build_tag_indexation(@color_tag_indexation_removed, var(--fg_inverse));
 							.tag_label();
 						}
 					}
 					&.total_to_review_tags {
 						>.value {
-							.fn_build_tag_indexation(@color_tag_indexation_to_review, @color_white);
+							.fn_build_tag_indexation(@color_tag_indexation_to_review, var(--fg_inverse));
 							.tag_label();
 						}
 					}
@@ -89,7 +89,7 @@
 
 					&.total_public_notes {
 						>.value {
-							.fn_build_tag_note(@color_green_success);
+							.fn_build_tag_note(@color_green_success, var(--fg_inverse));
 							.tag_label();
 						}
 					}

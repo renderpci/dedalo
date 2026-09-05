@@ -457,7 +457,7 @@
 					// ontology RQO properties
 					&.ontology17 {
 						background-color: @color_ontology_rqo;
-						color: @color_white;
+						color: var(--fg_inverse); // white in BOTH themes (--color_white is the theme's SURFACE ink, dark in dark) — audit P1-18
 					}
 
 					// ontology properties
@@ -622,7 +622,7 @@
 		>.content_data >.elements_container {
 			background-color: @color_blue_2;
 			border-radius: 3px;
-			color: @color_white !important;
+			color: var(--fg_inverse) !important; // white in BOTH themes (--color_white is the theme's SURFACE ink, dark in dark) — audit P1-18
 
 			mark {
 				color: @color_white !important;

@@ -78,7 +78,7 @@
 	}
 
 	code {
-		color: @color_grey_8;
+		color: @color_grey_13; // the code block's surface is the INVERTED grey, so its ink is the inverted ramp step too — AA in both themes (audit P1-18)
 		font-size: 1.3rem;
 		display: block;
 		background-color: @color_grey_2;
@@ -167,7 +167,7 @@
 	.notification_container {
 		padding: 1rem;
 		background-color: @color_danger_dark;
-		color: @color_white;
+		color: var(--fg_inverse); // white in BOTH themes: --color_white is the theme's SURFACE ink, which is dark in dark (audit P1-18)
 		font-size: 1.2rem;
 		text-align: center;
 		z-index: 5;
@@ -182,7 +182,7 @@
 			padding-right: 1.2rem;
 			font-size: 0.86rem;
 			line-height: 0.99rem;
-			color: @color_white ;
+			color: var(--fg_inverse); // white in BOTH themes (--color_white is the theme's SURFACE ink, dark in dark) — audit P1-18
 			background-color: @color_green_success;
 			position: relative;
 			border-radius: var(--radius-md);
