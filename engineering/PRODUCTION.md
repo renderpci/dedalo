@@ -223,13 +223,16 @@ Config keys (all in `../private/.env`; catalog `src/config/config.ts` `ops`):
 | `DB_POOL_MAX` | 10 | Per PROCESS. Budget: server + each diffusion runner (up to `DEDALO_DIFFUSION_MAX_RUNNERS`) + RAG drain + coexisting PHP must stay under Postgres `max_connections` (typically 100). Example: server 10 + 2 runners × 10 + PHP ~20 → fine; 8 runners × 10 → NOT. |
 | `DB_POOL_ACQUIRE_TIMEOUT_MS` | 0 (wait forever) | Set (e.g. 30000) so pool exhaustion becomes a loud error instead of a silent indefinite hang. |
 | `DB_STATEMENT_TIMEOUT_MS` | 0 (off) | **Set 60000 in production** (WC-055). It is the ONLY bound on a search that cannot abort early — a deliberately-unindexed match (dd551 Data, `f_unaccent(…) ~* …`) reads the whole table, ~175 s on a 33 M-row activity log, and a client disconnecting does **not** cancel it. Maintenance is exempt (below), so this no longer conflicts with REINDEX/VACUUM. |
-| `DEDALO_SLOW_QUERY_MS` | 0 (off) | Warn-log statements slower than this. |
+| `DEDALO_SLOW_QUERY_MS` | 0 (off) | Warn-log statements slower than this — on EVERY lane: pooled, inside a transaction (the write path) and on a reserved connection. The line names the lane (OPS-13). |
 
 All four keys are live in `src/core/db/postgres.ts` (verified 2026-07-07):
 `DB_POOL_MAX` sizes the pool, an acquire gate fronts it so saturation is
 observable (`db_pool_waits` counter) and bounded (`DB_POOL_ACQUIRE_TIMEOUT_MS`
 fail-loud), `DB_STATEMENT_TIMEOUT_MS` is a per-connection GUC, and
-`DEDALO_SLOW_QUERY_MS` warn-logs slow statements.
+`DEDALO_SLOW_QUERY_MS` warn-logs slow statements. That last one is evaluated in
+`src/core/db/query_tap.ts`, called from all three executor lanes — until OPS-13
+it lived in the pooled branch alone, so nothing issued inside a transaction or
+on a reserved connection was ever measured.
 
 **Maintenance is exempt from the ceiling** (`runWithoutStatementTimeout`,
 WC-055). `DB_STATEMENT_TIMEOUT_MS` is a POOL-WIDE GUC, so before this it could

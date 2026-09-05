@@ -538,6 +538,14 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		'test/unit/tools_cache_invalidation.test.ts',
 		'Its reachability and registry-cache tests create, duplicate and delete real records in the suite database to observe cache invalidation end-to-end, so it requires the live matrix Postgres',
 	],
+	[
+		'test/unit/slow_query_scope_native.test.ts',
+		'It drives real statements (pg_sleep) on the pool, inside a transaction and on a reserved connection — in-process and in a spawned child carrying DEDALO_SLOW_QUERY_MS — and reads the resulting slow-query log, so it needs a live Postgres.',
+	],
+	[
+		'test/unit/zzscale_corpus_native.test.ts',
+		"Every leg builds 1,220 real matrix_test records through the engine's explicit-id write door and reads them back through getChildren / getChildrenRecursive / findInverseReferenceLocators / the ontology resolver and the trigger-derived matrix_string_search and matrix_relation_index tables, so the gate cannot run without a live suite Postgres carrying the dedalo_test_marker.",
+	],
 ]);
 
 describe('CI workflow tripwire', () => {

@@ -254,6 +254,9 @@ const TRIPWIRES = [
 	'test/unit/rqo_scalar_bound_tripwire.test.ts',
 	'test/unit/store_retention_tripwire.test.ts',
 	'test/unit/magick_policy_tripwire.test.ts',
+	'test/unit/slow_query_scope_native.test.ts',
+	'test/unit/query_tap_tripwire.test.ts',
+	'test/unit/zzscale_corpus_native.test.ts',
 ];
 
 // ---------------------------------------------------------------------------
