@@ -5,7 +5,7 @@
  * behaviour questions that have no repro on the suite database get one: a WIDE
  * node, a DEEP subtree, a POLY-HIERARCHY island, dd96 indexation locators (the
  * suite holds zero) and a string distribution covering every regex
- * metacharacter `builder_string.ts` names. A corpus that silently lost one of
+ * metacharacter `builders/types.ts` names. A corpus that silently lost one of
  * those shapes would make every gate built on it vacuous while staying green,
  * so each shape is asserted HERE, measured through the ENGINE's own doors
  * (getChildren / getChildrenRecursive / findInverseReferenceLocators / the
@@ -260,8 +260,11 @@ describe('zzscale corpus — the string distribution (search-store pre-filter)',
 		);
 	});
 
-	test('EVERY metacharacter builder_string declares has a corpus value', () => {
-		const source = readFileSync('src/core/search/builders/builder_string.ts', 'utf8');
+	test('EVERY metacharacter the builder family declares has a corpus value', () => {
+		// The class moved to builders/types.ts with `literalPattern` (DATA-34):
+		// it is now the ESCAPE class every `~*` operand in the family is escaped
+		// with, so it belongs next to the escaper rather than in one builder.
+		const source = readFileSync('src/core/search/builders/types.ts', 'utf8');
 		const declared = declaredRegexMetaChars(source);
 		// Corpus floor: the class is 14 characters today; a parse that silently
 		// found none would make this leg vacuous.

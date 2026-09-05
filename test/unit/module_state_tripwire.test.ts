@@ -135,6 +135,20 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// Pool-saturation gauge (WS-E observability): process-wide slot accounting
 	// decremented/incremented around every pool acquire — ops state, never
 	// request identity; read by the counters endpoint.
+	// The relation-CLOSURE gauge (audit PERF-04): a high-water mark of the biggest
+	// equivalence class this process has walked, plus how many walks were refused
+	// at the bounds. Ops accounting, published on GET /api/v1/counters — it holds
+	// two integers and can hold nothing else: no principal, no language, no
+	// section, no record. A stale value only ages a number on an ops page.
+	'core/relations/related.ts:closureStats',
+	// The frozen client-asset MANIFEST (audit PERF-13): the service-worker
+	// pre-cache list plus its cache key, computed ONCE at boot because building it
+	// is a recursive readdir of the client tree plus a stat per file — thousands of
+	// synchronous syscalls that used to run on an authenticated request path and
+	// stall the whole event loop. Derived from FILES ON DISK, which cannot change
+	// under a running server without a deploy (and a deploy restarts it); dev mode
+	// recomputes per call instead of reading this. Carries no request identity.
+	'core/api/dedalo_files.ts:manifestState',
 	'core/db/postgres.ts:availablePoolSlots',
 	'core/tools/loader.ts:loadedTools',
 	'core/tools/loader.ts:collisions',

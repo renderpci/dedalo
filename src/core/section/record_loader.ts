@@ -21,8 +21,8 @@
  * pattern byte-identical.
  */
 
-import { type MatrixRecord, readMatrixRecord, readMatrixRecordBatch } from '../db/matrix.ts';
-import { seedRecordMemo } from '../db/record_memo.ts';
+import { type MatrixRecord, readMatrixRecordBatch } from '../db/matrix.ts';
+import { memoizedReadMatrixRecord, seedRecordMemo } from '../db/record_memo.ts';
 import { getMatrixTableFromTipo } from '../ontology/resolver.ts';
 import type { EmissionContext } from '../resolve/component_data.ts';
 
@@ -44,7 +44,7 @@ function cacheOf(emission: EmissionContext): RecordCache {
 }
 
 /**
- * Read one record through the per-read cache. Drop-in for readMatrixRecord at
+ * Read one record through the per-read cache. Drop-in for the matrix read at
  * the relation-emission call sites: same signature after `emission`, same
  * null-for-missing contract. The caller resolves the table FIRST (and
  * early-returns on null table) exactly as before — the loader must never
@@ -61,7 +61,11 @@ export async function loadRecordCached(
 	const key = `${sectionTipo}/${sectionId}`;
 	const hit = cache.get(key);
 	if (hit !== undefined) return hit;
-	const record = await readMatrixRecord(tableName, sectionTipo, sectionId);
+	// The MISS goes through the read-scoped memo, not straight to the DB: this
+	// cache is per-EMISSION and the memo is per-READ, so a row another emission
+	// (or a widget) already fetched inside the same read is answered without a
+	// second round-trip — one row, one read, across both caches.
+	const record = await memoizedReadMatrixRecord(tableName, sectionTipo, sectionId);
 	if (cache.size > RECORD_CACHE_LIMIT) cache.clear();
 	cache.set(key, record); // null too: a miss must not re-query
 	return record;

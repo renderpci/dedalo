@@ -57,13 +57,19 @@ afterAll(async () => {
 });
 
 describe('full_count SELECT shape', () => {
-	test('single section, no filter → plain count(*) (no DISTINCT)', async () => {
-		const { sql: builtSql } = await buildSearchSql({
+	// The UNFILTERED browse no longer reaches the SELECT shape at all: it is
+	// answered from the save-event-evicted, TTL-floored browse-count cache and
+	// returned as a literal (PERF-10, list_count_budget_native). The count(*)
+	// vs count(DISTINCT) law this file exists for is asserted on every shape
+	// that still emits a counting query — the filtered, UNION and join-chain
+	// cases below, which is where the DISTINCT question actually lives.
+	test('single section, no filter → the cached browse total, as a literal', async () => {
+		const { sql: builtSql, params } = await buildSearchSql({
 			section_tipo: [SECTION],
 			full_count: true,
 		} as never);
-		expect(builtSql).toContain('count(*) as full_count');
-		expect(builtSql).not.toContain('count(DISTINCT');
+		expect(builtSql).toMatch(/^SELECT \d+::int AS full_count;$/);
+		expect(params).toEqual([]);
 	});
 
 	test('single section, flat (non-join) filter → still plain count(*)', async () => {

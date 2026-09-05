@@ -35,8 +35,11 @@ describe('builder_json', () => {
 		expect((result as { sentence: string }).sentence).toContain(
 			"jsonb_path_query(dd542.misc, '$.dd551[*]')",
 		);
+		// DATA-34 (2026-09-05): the operand is made literal IN SQL, on the far
+		// side of f_unaccent — unaccent expands characters INTO metacharacters,
+		// so an escape applied before it escapes nothing.
 		expect((result as { sentence: string }).sentence).toContain(
-			"f_unaccent(elem->>'value') ~* f_unaccent(_Q1_)",
+			"f_unaccent(elem->>'value') ~* f_regex_literal(f_unaccent(_Q1_))",
 		);
 	});
 
@@ -61,9 +64,9 @@ describe('builder_json', () => {
 
 	test('wildcard anchoring: begins-with vs ends-with', () => {
 		const begins = buildJsonFragment(['list*'], '', ctx()) as { sentence: string };
-		expect(begins.sentence).toContain("~* ('^' || f_unaccent(_Q1_))");
+		expect(begins.sentence).toContain("~* ('^' || f_regex_literal(f_unaccent(_Q1_)))");
 		const ends = buildJsonFragment(['*list'], '', ctx()) as { sentence: string };
-		expect(ends.sentence).toContain("~* (f_unaccent(_Q1_) || '$')");
+		expect(ends.sentence).toContain("~* (f_regex_literal(f_unaccent(_Q1_)) || '$')");
 	});
 
 	test('absent q with no operator drops the clause', () => {

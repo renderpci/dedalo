@@ -276,7 +276,13 @@ Three distinct filtering concepts that are easy to confuse:
 |-----|----------|---------|---------|
 | `filter` | the **SQO** (RQO side) | the live query `WHERE` the client sends per call (search box, panel) | n/a — part of the request, not the config; see [sqo.md](sqo.md) |
 | `filter_by_list` | `sqo.filter_by_list` | a pre-filter dropdown whose option values are read **live from the DB** | `expandFilterByList()` (`relations/request_config/filters.ts`) |
-| `fixed_filter` | `sqo.fixed_filter` | a context/record-derived filter that varies by `section_id`, over three sources: `fixed_dato` (embedded SQO filter objects), `component_data` (multi-hop live read of the calling record's own data), `hierarchy_terms` (thesaurus-subtree section_id IN-filter) | `expandFixedFilter()` (`relations/request_config/filters.ts`) |
+| `fixed_filter` | `sqo.fixed_filter` | a context/record-derived filter that varies by `section_id`, over three sources: `fixed_dato` (embedded SQO filter objects), `component_data` (multi-hop live read of the calling record's own data), `hierarchy_terms` (thesaurus-subtree section_id IN-filter, capped at 50,000 expanded ids) | `expandFixedFilter()` (`relations/request_config/filters.ts`) |
+
+A `hierarchy_terms` term that expands past 50,000 ids is REFUSED with
+`ontology.invalid_node` naming the term and the cap. A `fixed_filter` is
+hand-authored ontology config and this filter is a narrowing device: an
+expansion that large names a root where the author meant a branch, so it is
+reported as the configuration error it is rather than silently truncated.
 
 Both are resolved inside `buildExplicitRequestConfig()` (`explicit.ts`) whenever the raw sqo carries the key, reading LIVE record/DB data. There is no cache-invalidation signal to flip because the build never caches (see [Caching](#caching-and-the-cache-key)) — every call already re-reads this live data.
 

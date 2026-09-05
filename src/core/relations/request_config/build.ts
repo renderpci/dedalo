@@ -18,7 +18,8 @@
  */
 
 import { selectRequestConfigStrategy } from '../../concepts/request_config.ts';
-import { sql } from '../../db/postgres.ts';
+import { isInTransaction, sql } from '../../db/postgres.ts';
+import { createOntologyCache } from '../../ontology/cache_factory.ts';
 import { RETIRED_PROPERTY_KEYS } from '../../ontology/property_census.ts';
 import { getModelByTipo, getNode } from '../../ontology/resolver.ts';
 import { getSectionRealTipo } from '../../resolve/security_access_datalist.ts';
@@ -39,15 +40,32 @@ import { resolveTargetSourceFor } from './target_sources.ts';
  * (class.ontology_node.php:1250-1253), and multi-child parents exist
  * (tch546×4, oh123×2, tch20×2), so the ordering is load-bearing.
  */
+const sectionListChildCache = createOntologyCache<string, string | null>();
+
+/**
+ * CACHED, because this runs once PER LIST ELEMENT: a single list read asked it
+ * 24 times (audit PERF-12), each time a raw dd_ontology SELECT for an answer
+ * that is pure ontology — no principal, no language, no record. The cache comes
+ * from `createOntologyCache`, so ANY dd_ontology write clears it through the
+ * invalidation hub; nothing here has to remember to invalidate.
+ */
 export async function findSectionListChild(
 	ownerTipo: string,
 	model = 'section_list',
 ): Promise<string | null> {
+	const cacheKey = `${ownerTipo}|${model}`;
+	const cached = sectionListChildCache.get(cacheKey);
+	if (cached !== undefined) return cached;
 	const rows = (await sql`
 		SELECT tipo FROM dd_ontology WHERE parent = ${ownerTipo} AND model = ${model}
 		ORDER BY order_number ASC LIMIT 1
 	`) as { tipo: string }[];
-	return rows[0]?.tipo ?? null;
+	const found = rows[0]?.tipo ?? null;
+	// Not written from inside a transaction: an uncommitted ontology write must
+	// not be able to publish its answer process-wide (the resolver's own
+	// cacheWrite rule).
+	if (!isInTransaction()) sectionListChildCache.set(cacheKey, found);
+	return found;
 }
 
 /**

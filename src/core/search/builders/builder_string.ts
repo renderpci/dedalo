@@ -14,7 +14,16 @@
  */
 
 import type { BuilderContext, BuilderResult, Fragment } from './types.ts';
-import { compound, extractNormalizedQ, fragment, isLiteralQ, splitSearchTerms } from './types.ts';
+import {
+	anchoredRegexOperand,
+	compound,
+	extractNormalizedQ,
+	fragment,
+	isLiteralQ,
+	likeContainsPattern,
+	regexOperand,
+	splitSearchTerms,
+} from './types.ts';
 
 /** The lang-scoped jsonpath used by @? existence envelopes. */
 function buildJsonPath(context: BuilderContext): string {
@@ -32,14 +41,6 @@ function existsEnvelope(context: BuilderContext, matchLogic: string): string {
 		`WHERE ${matchLogic})`
 	);
 }
-
-/**
- * Regex metacharacters that make a q NOT literally LIKE-matchable: the exact
- * predicate treats q as a POSIX regex, so a q carrying any of these could
- * match values the literal-substring pre-filter would reject (false
- * negative). Plain words — the overwhelmingly normal case — pass.
- */
-const REGEX_META = /[.*+?[\]{}()|\\^$]/;
 
 /**
  * SEARCH-STORE PRE-FILTER for POSITIVE match shapes (contains / begins /
@@ -72,15 +73,22 @@ const REGEX_META = /[.*+?[\]{}()|\\^$]/;
  * - the table is store-covered (context.searchStoreCovered — the sync
  *   trigger exists; see search_store.ts: against an unmaintained table the
  *   empty store would wrongly EXCLUDE rows, so the gate is correctness);
- * - q is regex-plain (no REGEX_META): the exact predicate is regex-semantic,
- *   the pre-filter is literal-substring — they only agree on plain text.
- *   LIKE's own wildcards (% _) are then escaped into literals;
+ * - NO regex-plainness gate any more
+ *   (DATA-34): every `~*` operand is now `f_regex_literal`-escaped in SQL,
+ *   so the exact predicate is a LITERAL substring/anchor match for EVERY term
+ *   — the pre-filter and the exact predicate agree on metacharacter-carrying
+ *   terms too, which is exactly the class that used to fall back to the slow
+ *   classic scan. The RAW (unescaped) q is what the pre-filter must match, so
+ *   the two arrive separately: `tokenValues` carries the escaped pattern,
+ *   `likeQ` the raw term, LIKE-escaped here (`% _ \\`);
  * - q has at least 3 characters: pg_trgm cannot extract trigrams from a
  *   shorter pattern, so `LIKE '%a%'` degenerates into a full store scan
  *   feeding a giant id array (measured: a 1-char autocomplete search went to
  *   31s, 2026-07-20). Short q's are also exactly where the CLASSIC path is
  *   fast — a common substring fills the ordered LIMIT walk almost instantly.
- * Never emitted for negations ('!*', '!=', '-', '!!') or bare '*'.
+ * Never emitted for negations ('!*', '!=', '-') or bare '*'. The '!!'
+ * duplicated shape has NO q at all and carries its own store superset (below),
+ * which is a different clause built from the store's own duplicate groups.
  */
 const TRGM_MIN_Q_LENGTH = 3;
 
@@ -88,24 +96,61 @@ function withStorePrefilter(
 	context: BuilderContext,
 	sentence: string,
 	tokenValues: Record<string, unknown>,
-	q: string,
+	/** The RAW term the value must literally contain (escaped in SQL, after unaccent). */
+	rawQ: string,
 ): Fragment {
-	if (
-		context.searchStoreCovered !== true ||
-		[...q].length < TRGM_MIN_Q_LENGTH ||
-		REGEX_META.test(q)
-	) {
+	if (context.searchStoreCovered !== true || [...rawQ].length < TRGM_MIN_Q_LENGTH) {
 		return fragment(sentence, tokenValues);
 	}
-	// % and _ are literal characters in the regex-exact predicate — escape
-	// them so LIKE treats them literally too (backslash is excluded by the
-	// regex-plain guard, so it cannot collide with the escape character).
-	const likeQ = q.replaceAll('%', '\\%').replaceAll('_', '\\_');
+	// LIKE's own wildcards and its escape character are literal characters in
+	// the (now literal) exact predicate — `likeOperand` escapes them ON THE SQL
+	// SIDE OF f_unaccent, the same order the exact predicate uses, or the
+	// superset and the predicate disagree on every term unaccent expands into
+	// one of them (`％`→`%`, `＿`→`_`).
 	return fragment(
 		`${context.alias}.section_id = ANY (ARRAY(SELECT sv.section_id FROM matrix_string_search sv ` +
-			`WHERE sv.component_tipo = _Qt_ AND sv.string LIKE '%' || lower(f_unaccent(_Q0_)) || '%')) AND ${sentence}`,
-		{ _Qt_: context.tipo, _Q0_: likeQ, ...tokenValues },
+			`WHERE sv.component_tipo = _Qt_ AND sv.string LIKE ${likeContainsPattern('_Q0_')})) AND ${sentence}`,
+		{ _Qt_: context.tipo, _Q0_: rawQ, ...tokenValues },
 	);
+}
+
+/**
+ * '!!' — DUPLICATED values, extracted so the operator dispatch stays under the
+ * complexity cap: the branch carries its own lang/store decisions and none of
+ * them depend on q.
+ */
+function buildDuplicatedFragment(context: BuilderContext): Fragment {
+	const dupLang = context.lang === 'all' ? 'all' : context.translatable ? context.lang : 'lg-nolan';
+	const jsonPath =
+		dupLang === 'all' ? `$.${context.tipo}[*]` : `$.${context.tipo}[*] ? (@.lang == "${dupLang}")`;
+	const duplicatedSet = `(${context.alias}.section_tipo, ${context.alias}.section_id) IN (
+  SELECT dup.section_tipo, dup_id
+  FROM (
+    SELECT dv.section_tipo AS section_tipo, array_agg(DISTINCT dv.section_id) AS ids
+    FROM (SELECT m2.section_tipo AS section_tipo, m2.section_id AS section_id,
+                 f_unaccent(m2_elem->>'value') AS val
+          FROM ${context.table} AS m2,
+               jsonb_path_query(m2.${context.column}, '${jsonPath}') AS m2_elem
+          WHERE m2_elem->>'value' IS NOT NULL) dv
+    GROUP BY dv.section_tipo, dv.val
+    HAVING count(DISTINCT dv.section_id) > 1
+  ) dup, unnest(dup.ids) AS dup_id
+ )`;
+	if (context.searchStoreCovered === true && dupLang === 'all') {
+		// Store SUPERSET (lang-blind comparison only): every record whose value
+		// duplicates another's is in a store group of >1 distinct section_id —
+		// the store normalises with lower(), which is WIDER than the exact
+		// predicate's case-sensitive f_unaccent equality, so the AND still
+		// decides. The tipo travels bound, exactly as in withStorePrefilter.
+		return fragment(
+			`${context.alias}.section_id = ANY (ARRAY(SELECT sv.section_id FROM matrix_string_search sv ` +
+				`WHERE sv.component_tipo = _Qt_ AND sv.string IN (` +
+				`SELECT sv2.string FROM matrix_string_search sv2 WHERE sv2.component_tipo = _Qt_ ` +
+				`GROUP BY sv2.string HAVING count(DISTINCT sv2.section_id) > 1))) AND ${duplicatedSet}`,
+			{ _Qt_: context.tipo },
+		);
+	}
+	return fragment(duplicatedSet, {});
 }
 
 export function buildStringFragment(
@@ -158,28 +203,35 @@ export function buildStringFragment(
 
 	// '!!' — DUPLICATED values: rows whose value (this lang) also appears on
 	// ANOTHER record of the same section, unaccent-compared (PHP
-	// resolve_duplicated_sql — correlated EXISTS self-join over the same
-	// matrix table; non-translatable components force nolan).
+	// resolve_duplicated_sql; non-translatable components force nolan).
+	//
+	// ONE UNCORRELATED SELF-AGGREGATE, materialised once per query (PERF-07,
+	// 2026-09-05). The PHP shape this replaces was a CORRELATED EXISTS whose
+	// inner FROM cross-joined the WHOLE matrix table with two
+	// jsonb_path_query calls and was re-executed for EVERY outer row — O(n^2)
+	// jsonpath evaluations, which on a museum-scale section is not slow but
+	// unfinishable. The duplicate set does not depend on the outer row at all:
+	// it is `group the lang-projected values, keep the groups holding more than
+	// one record`, computed ONCE. Same rows, O(n log n).
+	//
+	// Section-exact by TUPLE, not by id: the groups are keyed by section_tipo
+	// as well, and membership is asked as (section_tipo, section_id) — a bare
+	// `section_id IN (…)` would let a duplicate pair in ANOTHER tipo of the
+	// same physical table match a same-numbered record here.
+	//
+	// Lang-exact WITHOUT the store: `matrix_string_search` has no lang column
+	// (db_pg_definitions.json), so it can only ever be a SUPERSET pre-filter,
+	// and only when the comparison itself is lang-blind ('all'). No lang column
+	// is added to the store here.
+	//
+	// VALUELESS ENTRIES ARE NOT DUPLICATES. The retired correlated shape
+	// compared `f_unaccent(a) = f_unaccent(b)`, and NULL never equals NULL, so
+	// entries carrying no `value` key could not pair. `GROUP BY` treats NULLs as
+	// EQUAL, so the aggregate would report every such record as a duplicate of
+	// every other — a widening of the answer, not of the plan. The inner
+	// projection drops them.
 	if (effective.startsWith('!!')) {
-		const dupLang =
-			context.lang === 'all' ? 'all' : context.translatable ? context.lang : 'lg-nolan';
-		const jsonPath =
-			dupLang === 'all'
-				? `$.${context.tipo}[*]`
-				: `$.${context.tipo}[*] ? (@.lang == "${dupLang}")`;
-		return fragment(
-			`(${context.alias}.${context.column} @? '${jsonPath}') AND EXISTS (
-  SELECT 1
-  FROM ${context.table} AS m2,
-       jsonb_path_query(m2.${context.column}, '${jsonPath}') AS m2_elem,
-       jsonb_path_query(${context.alias}.${context.column}, '${jsonPath}') AS m1_elem
-  WHERE m2.${context.column} @? '${jsonPath}'
-    AND m2.section_id != ${context.alias}.section_id
-    AND m2.section_tipo = ${context.alias}.section_tipo
-    AND f_unaccent(m2_elem->>'value') = f_unaccent(m1_elem->>'value')
- )`,
-			{},
-		);
+		return buildDuplicatedFragment(context);
 	}
 
 	// '!=' — has data for the lang AND no entry matches
@@ -189,13 +241,16 @@ export function buildStringFragment(
 		const hasTrail = effective.slice(2).endsWith('*');
 		const matchLogic =
 			hasLead && hasTrail
-				? `f_unaccent(elem->>'value') ~* f_unaccent(_Q1_)`
+				? `f_unaccent(elem->>'value') ~* ${regexOperand('_Q1_')}`
 				: hasLead
-					? `f_unaccent(elem->>'value') ~* (f_unaccent(_Q1_) || '$')`
+					? `f_unaccent(elem->>'value') ~* ${anchoredRegexOperand('_Q1_', 'ends')}`
 					: hasTrail
-						? `f_unaccent(elem->>'value') ~* ('^' || f_unaccent(_Q1_))`
+						? `f_unaccent(elem->>'value') ~* ${anchoredRegexOperand('_Q1_', 'begins')}`
 						: `f_unaccent(elem->>'value') = f_unaccent(_Q1_)`;
 		const jsonPath = buildJsonPath(context);
+		// The term travels RAW in every arm: the wildcard arms make it literal in
+		// SQL (`regexOperand`, after f_unaccent), the plain arm compares with '='
+		// and must keep it raw (DATA-34 boundary).
 		return fragment(
 			`(${context.alias}.${context.column} @? '${jsonPath}') AND NOT EXISTS (` +
 				`SELECT 1 FROM jsonb_path_query(${context.alias}.${context.column}, '${jsonPath}') AS elem ` +
@@ -241,7 +296,7 @@ export function buildStringFragment(
 			context.lang !== 'all' ? { _Q1_: qClean, _Q2_: context.lang } : { _Q1_: qClean };
 		return fragment(
 			`NOT EXISTS (SELECT 1 FROM jsonb_path_query(${context.alias}.${context.column}, '$.${context.tipo}[*]') AS elem ` +
-				`WHERE elem->>'value' IS NOT NULL AND f_unaccent(elem->>'value') ~* f_unaccent(_Q1_)${langFilter})`,
+				`WHERE elem->>'value' IS NOT NULL AND f_unaccent(elem->>'value') ~* ${regexOperand('_Q1_')}${langFilter})`,
 			tokenValues,
 		);
 	}
@@ -264,11 +319,11 @@ export function buildStringFragment(
 		const qClean = effective.replaceAll('*', '').replaceAll("'", '');
 		const matchLogic =
 			hasLead && hasTrail
-				? `f_unaccent(elem->>'value') ~* f_unaccent(_Q1_)`
+				? `f_unaccent(elem->>'value') ~* ${regexOperand('_Q1_')}`
 				: hasLead
-					? `f_unaccent(elem->>'value') ~* (f_unaccent(_Q1_) || '$')`
-					: `f_unaccent(elem->>'value') ~* ('^' || f_unaccent(_Q1_))`;
-		// Anchored variants still pre-filter on the plain (unanchored) q —
+					? `f_unaccent(elem->>'value') ~* ${anchoredRegexOperand('_Q1_', 'ends')}`
+					: `f_unaccent(elem->>'value') ~* ${anchoredRegexOperand('_Q1_', 'begins')}`;
+		// Anchored variants still pre-filter on the plain (unanchored) RAW q —
 		// a value matching '^q'/'q$' contains q, so the superset holds.
 		return withStorePrefilter(
 			context,
@@ -285,7 +340,7 @@ export function buildStringFragment(
 	}
 	return withStorePrefilter(
 		context,
-		existsEnvelope(context, `f_unaccent(elem->>'value') ~* f_unaccent(_Q1_)`),
+		existsEnvelope(context, `f_unaccent(elem->>'value') ~* ${regexOperand('_Q1_')}`),
 		{ _Q1_: qClean },
 		qClean,
 	);

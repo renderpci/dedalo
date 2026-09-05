@@ -172,7 +172,7 @@ const EXEMPTIONS: Record<string, Exemption> = {
 	},
 	'test/unit/security_audit_2026_07_23_tripwire.test.ts': {
 		reason:
-			'AUTHZ-05 pins WHERE the inverse-reference scan is scoped (record_scope + the related-count door) and AUTHZ-06 WHERE the projects datalist narrows and the get_data facade self-gates; the file itself drives scopeInverseReferenceHits only as a global admin.',
+			'AUTHZ-05 pins WHERE the inverse-reference scan is scoped (record_scope + the related-count door) and AUTHZ-06 WHERE the projects datalist narrows and the get_data facade self-gates; the file itself drives scopeInverseReferenceHits only as a global admin. The isRecordInScope pin is GONE (PERF-01): that file no longer substring-pins the per-hit call — the projects leg is now pinned as the SHARED PREDICATE (one buildSearchSql site, both doors routed through it), and its behavioural twin stays count_native.test.ts.',
 		pins: {
 			getPermissions: [
 				{
@@ -180,14 +180,6 @@ const EXEMPTIONS: Record<string, Exemption> = {
 					case: 'a caller with no read grant on the section loses its rows',
 					covers:
 						'AUTHZ-05 — the section-read half of scopeInverseReferenceHits (getPermissions(principal, hit.section_tipo, hit.section_tipo)), driven through the indexation grid with a level-0 caller',
-				},
-			],
-			isRecordInScope: [
-				{
-					file: 'test/unit/count_native.test.ts',
-					case: 'AUTHZ-05: the non-admin total counts ONLY references inside their projects',
-					covers:
-						'AUTHZ-05 — the projects half of scopeInverseReferenceHits, driven through the related-count door with a resolved one-project non-admin against a two-project admin',
 				},
 			],
 			[ROLE_FLAG_MEMBER]: [

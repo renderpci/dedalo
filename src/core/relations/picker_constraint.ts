@@ -29,7 +29,7 @@
 
 import { asSectionId, canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import type { DataframePairing } from '../concepts/subdatum.ts';
-import { readMatrixRecord } from '../db/matrix.ts';
+import { memoizedReadMatrixRecord } from '../db/record_memo.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
 import {
@@ -222,7 +222,7 @@ async function countHeldLocators(
 			coordinates: { tipo: callerTipo, section_tipo: callerSectionTipo },
 		});
 	}
-	const record = await readMatrixRecord(table, callerSectionTipo, sectionId);
+	const record = await memoizedReadMatrixRecord(table, callerSectionTipo, sectionId);
 	const items = (record?.columns.relation as Record<string, unknown[]> | null)?.[callerTipo];
 	return Array.isArray(items) ? inCapScope(items, pairing).length : 0;
 }

@@ -10,8 +10,12 @@
  * THE ONE RULE THIS FILE OBEYS: it must walk the path exactly the way the
  * SEARCH side walks it, because the two are the halves of one comparison. A
  * reader that disagrees with the matcher is worse than no reader — it produces
- * seeds that cannot find themselves. The hop semantics below are a deliberate,
- * line-by-line mirror of `search/conform.ts` buildJoinChain (:83-121):
+ * seeds that cannot find themselves. The hop semantics below mirror the hop
+ * semantics of `search/conform.ts` buildJoinChain — its FILTER purpose, the one
+ * a criterion compares against. (The chain builder also has an ORDER purpose,
+ * which collapses the fan-out to the first stored locator and carries its own
+ * alias namespace; a READER has no such collapse, and no line here corresponds
+ * to it.) The shared rules:
  *
  *   - the HOP component of step `i` is `path[i-1].component_tipo` and the
  *     section it lands in is `path[i].section_tipo` (the join reads the
@@ -93,7 +97,8 @@ import { config } from '../../config/config.ts';
 import { getComponentModel, getSearchBuilderFamily } from '../components/registry.ts';
 import { buildLocatorLookupKey, type Locator } from '../concepts/locator.ts';
 import { canonicalizeStoredSectionId, isSectionId } from '../concepts/section_id.ts';
-import { type MatrixRecord, readMatrixRecord } from '../db/matrix.ts';
+import type { MatrixRecord } from '../db/matrix.ts';
+import { memoizedReadMatrixRecord } from '../db/record_memo.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { type DdDate, ddDateToSeconds } from '../media/file_date.ts';
 import {
@@ -410,7 +415,14 @@ async function walk(
 		warn(`no matrix table for seed section '${seed.sectionTipo}'`);
 		return null;
 	}
-	const seedRecord = await readMatrixRecord(seedTable, seed.sectionTipo, seed.sectionId);
+	// THE MEMO, not a bare read (PERF-01 / P2-11): one identification asks this
+	// reader for EVERY criterion of a profile, and every criterion re-walks from
+	// the same seed row — a 6-criterion profile read that row 6 times, and each
+	// scored candidate re-read its own row once per criterion too. The memo is
+	// the engine's read-scoped one (`db/record_memo.ts`): active only inside a
+	// scope a READ opened (findMatches, the identify API actions), degrading to a
+	// direct read everywhere else, so nothing changes for a caller outside one.
+	const seedRecord = await memoizedReadMatrixRecord(seedTable, seed.sectionTipo, seed.sectionId);
 	if (seedRecord === null) return null;
 
 	/** (section_tipo, section_id, component_tipo) triples already expanded. */
@@ -458,7 +470,7 @@ async function walk(
 				// key (the join's ON-clause predicate, out of SQL) decides whether
 				// the caller may read it at all.
 				if (!(await recordAllowed(scope, targetTipo, targetId))) continue;
-				const targetRecord = await readMatrixRecord(stepTable, targetTipo, targetId);
+				const targetRecord = await memoizedReadMatrixRecord(stepTable, targetTipo, targetId);
 				if (targetRecord === null) continue;
 				next.push({ record: targetRecord, sectionTipo: targetTipo, sectionId: targetId });
 			}

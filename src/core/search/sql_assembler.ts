@@ -33,7 +33,6 @@ import { readString } from '../../config/readers.ts';
 import type { Sqo } from '../concepts/sqo.ts';
 import { getSectionTipos } from '../concepts/sqo.ts';
 import { assertMatrixTable } from '../db/matrix.ts';
-import { policyForTable } from '../db/matrix_index_policy.ts';
 import { sql } from '../db/postgres.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
@@ -54,7 +53,7 @@ import {
 	TEMP_PRESET_SECTION,
 	FILTER_MASTER_COMPONENT as USERS_FILTER_MASTER_COMPONENT,
 } from '../security/permissions.ts';
-import { bareBrowseCount } from './bare_count.ts';
+import { bareBrowseCount, scopedBrowseCount } from './bare_count.ts';
 import type { BuilderResult } from './builders/types.ts';
 import type { ConformedFilter } from './conform.ts';
 import { conformFilter } from './conform.ts';
@@ -277,10 +276,17 @@ async function buildOrderClauses(
 		let orderAlias = alias;
 		if (path.length > 1) {
 			const { buildJoinChain } = await import('./conform.ts');
+			// 'order': the locator fan-out is COLLAPSED to the record's FIRST stored
+			// locator (PERF-08). A relation component holds an array, and sorting on
+			// the fanned shape both picked an ARBITRARY locator's value as the sort
+			// key and forced the whole related section to materialise before the
+			// LIMIT. The rule lives in buildJoinChain's docstring, next to the
+			// filter twin, so the two cannot drift.
 			const chain = await buildJoinChain(
 				path as { section_tipo?: string; component_tipo?: string }[],
 				alias,
 				scope,
+				'order',
 			);
 			// SEC-02, the SEARCH refusal law: a sort key the caller may not read is
 			// DROPPED, not emitted. The filter twin answers `1=0` because a leaf
@@ -922,7 +928,45 @@ function multiSectionUserRecordsFilter(
  */
 const PROJECTS_DENSE_FRACTION = 0.05;
 const PROJECTS_PROBE_FLOOR = 2000;
-const projectsDensityCache = createDataCache<string, boolean>((cache, sectionTipo) => {
+/**
+ * BOTH verdict caches carry a TTL FLOOR as well as their save-event eviction
+ * (PERF-09, copied from bare_count.ts). The eviction is exact for writes THIS
+ * process sees, and blind to every other one: a sibling worker's save, an
+ * importer, a diffusion job, a psql session. Without a floor a stale verdict —
+ * "this user's matches are sparse", "this section holds 4 rows" — could be
+ * served for the whole life of the process and quietly pick the wrong plan or
+ * an undersized probe cap. `tmCountCacheTtlMs` is the same freshness backstop
+ * the browse counts use; TTL 0 means EXACT (measure every call), the
+ * parity-environment setting.
+ */
+type Timestamped<T> = { value: T; at: number };
+
+/**
+ * THE CACHE KEY of a scoped browse count — what makes two paints the same paint.
+ *
+ * BOTH halves are load-bearing, and the second one is the ACL. The rendered
+ * WHERE carries `$1`-style PLACEHOLDERS, not values, so two principals with
+ * different project grants render the SAME TEXT and differ only in what is
+ * bound: a key built from the text alone would serve one curator's total to
+ * another. Exported for its gate (list_count_budget_native).
+ */
+export function browseCountScopeSignature(whereAll: string[], boundValues: unknown[]): string {
+	return `${whereAll.join(' AND ')} :: ${JSON.stringify(boundValues)}`;
+}
+
+/**
+ * A stamped hit, or undefined when absent or past the floor.
+ *
+ * Exported for its gate (list_count_budget_native): the floor is a rule about
+ * TIME, and the only way to assert it is to hand it a stamp.
+ */
+export function freshValue<T>(hit: Timestamped<T> | undefined): T | undefined {
+	const ttl = config.ops.tmCountCacheTtlMs;
+	if (ttl <= 0 || hit === undefined) return undefined;
+	return Date.now() - hit.at < ttl ? hit.value : undefined;
+}
+
+const projectsDensityCache = createDataCache<string, Timestamped<boolean>>((cache, sectionTipo) => {
 	if (sectionTipo === config.usersSectionTipo) {
 		cache.clear();
 		return;
@@ -931,7 +975,7 @@ const projectsDensityCache = createDataCache<string, boolean>((cache, sectionTip
 		if (key.endsWith(`|${sectionTipo}`)) cache.delete(key);
 	}
 });
-const sectionTotalCache = createDataCache<string, number>((cache, sectionTipo) => {
+const sectionTotalCache = createDataCache<string, Timestamped<number>>((cache, sectionTipo) => {
 	cache.delete(sectionTipo);
 });
 // Schema property (data events never change an index definition) — keep entries.
@@ -974,14 +1018,14 @@ async function sectionRowTotal(
 	alias: string,
 	sectionTipo: string,
 ): Promise<number> {
-	const cached = sectionTotalCache.get(sectionTipo);
+	const cached = freshValue(sectionTotalCache.get(sectionTipo));
 	if (cached !== undefined) return cached;
 	const rows = (await sql.unsafe(
 		`SELECT count(*) AS n FROM ${fromClause} WHERE ${alias}.section_tipo = $1::text`,
 		[sectionTipo],
 	)) as { n: number | string }[];
 	const total = Number(rows[0]?.n ?? 0);
-	sectionTotalCache.set(sectionTipo, total);
+	sectionTotalCache.set(sectionTipo, { value: total, at: Date.now() });
 	return total;
 }
 
@@ -994,7 +1038,7 @@ async function projectsFilterIsSparse(
 	boundParams: unknown[],
 ): Promise<boolean> {
 	const cacheKey = `${userId}|${sectionTipo}`;
-	const cached = projectsDensityCache.get(cacheKey);
+	const cached = freshValue(projectsDensityCache.get(cacheKey));
 	if (cached !== undefined) return cached;
 	const total = await sectionRowTotal(fromClause, alias, sectionTipo);
 	const cap = Math.max(PROJECTS_PROBE_FLOOR, Math.ceil(total * PROJECTS_DENSE_FRACTION));
@@ -1005,7 +1049,7 @@ async function projectsFilterIsSparse(
 		n: number | string;
 	}[];
 	const sparse = Number(rows[0]?.n ?? 0) < cap;
-	projectsDensityCache.set(cacheKey, sparse);
+	projectsDensityCache.set(cacheKey, { value: sparse, at: Date.now() });
 	return sparse;
 }
 
@@ -1272,6 +1316,17 @@ async function buildPlainSearchSql(sqo: Sqo, options: SearchOptions): Promise<Bu
 
 	// --- WHERE: user filter tree -------------------------------------------
 	const whereParts: string[] = [];
+	/**
+	 * How many of `whereParts` are NOT the caller's ACL (PERF-10).
+	 *
+	 * `whereParts` is pushed in a FIXED order — [0] the client filter tree,
+	 * then the projects predicate, then filter_records, then
+	 * filter_by_locators. The ACL span is the middle two; this counts the OTHER
+	 * two, so `nonAclWhereParts === 0` means "whereParts hold ONLY the ACL".
+	 * Counted at the push, never sniffed out of the rendered SQL: a string test
+	 * would be a spelling gate, and the spelling is not the invariant.
+	 */
+	let nonAclWhereParts = 0;
 	const joinFragments = new Map<string, string>();
 	if (sqo.filter !== undefined && sqo.filter !== null) {
 		const conformed = await conformFilter(
@@ -1282,7 +1337,10 @@ async function buildPlainSearchSql(sqo: Sqo, options: SearchOptions): Promise<Bu
 		);
 		collectJoins(conformed, joinFragments);
 		const filterSql = parseConformedFilter(conformed, params);
-		if (filterSql !== '') whereParts.push(filterSql);
+		if (filterSql !== '') {
+			whereParts.push(filterSql);
+			nonAclWhereParts += 1;
+		}
 	}
 
 	// --- projects filter (per-record ACL, §7.4) — non-admins only -----------
@@ -1341,6 +1399,7 @@ async function buildPlainSearchSql(sqo: Sqo, options: SearchOptions): Promise<Bu
 			return `( ${fields.join(' AND ')} )`;
 		});
 		whereParts.push(`(${locatorClauses.join(' OR ')})`);
+		nonAclWhereParts += 1;
 	}
 
 	// --- ORDER ---------------------------------------------------------------
@@ -1429,19 +1488,36 @@ async function buildPlainSearchSql(sqo: Sqo, options: SearchOptions): Promise<Bu
 			// Each branch yields its own count row; caller sums (PHP trait.count).
 			return { sql: `${queryInside};`, params: params.toArray() };
 		}
-		// Cached bare-browse total for the big append-only logs. whereParts empty
-		// ⇒ the count is exactly `count(*) WHERE section_tipo = $` — no filter, no
-		// projects-ACL predicate (a non-admin's filter lands in whereParts) — so
-		// the save-event-wired bareBrowseCount is the exact value, served as a
-		// literal instead of a ~2.5 s parallel scan on every list paint. Scoped to
-		// policy-governed tables (matrix_activity/…); other sections keep the
-		// live count. This is the SAME bare-browse determination the flip uses.
-		if (
-			joinFragments.size === 0 &&
-			whereParts.length === 0 &&
-			policyForTable(matrixTable) !== undefined
-		) {
-			const total = await bareBrowseCount(matrixTable, mainSectionTipo);
+		// CACHED BROWSE TOTAL, served as a literal instead of re-counting the
+		// section on every list paint.
+		//
+		// THE SCOPE: no joins, one section, and `whereParts` holding NOTHING that
+		// is not the caller's own ACL (`nonAclWhereParts === 0`). That covers the
+		// bare browse AND — the whole point of PERF-10 — the NON-ADMIN's browse,
+		// whose projects predicate lands in `whereParts` and could therefore never
+		// reach the old `whereParts.length === 0` short-circuit. The old
+		// `policyForTable` gate is dropped too: it scoped the saving to the
+		// append-only logs, but a museum's ordinary section is counted on exactly
+		// the same paint and is exactly as cacheable.
+		//
+		// THE QUERY IS THE ASSEMBLER'S OWN, handed to the cache verbatim and keyed
+		// by its rendered WHERE plus its bound values. Never re-derived as
+		// `count(*) WHERE section_tipo`: `mainWhere` may carry more than the tipo
+		// pin (the users section's root-record exclusion), and a re-derived count
+		// would silently drop it. The key changes when the predicate does, so a
+		// grant change re-counts and no principal reads another's total.
+		//
+		// A client filter or a locator list makes the count request-specific:
+		// nonAclWhereParts is then > 0 and this does not fire.
+		if (joinFragments.size === 0 && !multiSection && nonAclWhereParts === 0) {
+			const boundValues = params.toArray();
+			const total = await scopedBrowseCount(
+				matrixTable,
+				mainSectionTipo,
+				browseCountScopeSignature(whereAll, boundValues),
+				queryInside,
+				boundValues,
+			);
 			return { sql: `SELECT ${Number(total)}::int AS full_count;`, params: [] };
 		}
 		return { sql: `${queryInside};`, params: params.toArray() };

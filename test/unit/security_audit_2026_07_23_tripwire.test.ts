@@ -84,7 +84,40 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 		expect(recordScope).toContain('export async function scopeInverseReferenceHits');
 		// The non-admin branch checks BOTH the section read grant and the projects filter.
 		expect(recordScope).toContain('getPermissions(principal, hit.section_tipo, hit.section_tipo)');
-		expect(recordScope).toContain('isRecordInScope(hit.section_tipo, hit.section_id, principal)');
+		// The projects half — pinned as the SHARED PREDICATE, not as a call
+		// spelling. The old pin was the literal `isRecordInScope(hit.section_tipo,
+		// hit.section_id, principal)`, which said nothing about the rule and broke
+		// the day the door stopped asking per hit (PERF-01: one statement per
+		// section-chunk instead of one per candidate). What must hold is the
+		// invariant the module's own docblock states — the boundary is decided in
+		// ONE place — so that is what is measured: exactly one buildSearchSql call
+		// site in this file, inside one helper, and BOTH doors (the single-record
+		// one and the hit-list one) route through that helper.
+		const predicateSites = recordScope.match(/buildSearchSql\(/g) ?? [];
+		expect(
+			predicateSites,
+			'record_scope.ts must state the scope predicate exactly once: 0 = the projects leg left the module, >1 = a second ACL free to drift from the list path',
+		).toHaveLength(1);
+		const beforePredicate = recordScope.slice(0, recordScope.indexOf('buildSearchSql('));
+		const enclosing = [...beforePredicate.matchAll(/function (\w+)\(/g)].pop();
+		const predicateName = enclosing?.[1];
+		expect(predicateName, 'the buildSearchSql call must sit inside a named function').toBeDefined();
+		/** A top-level function body: from its declaration to the next column-0 `}`. */
+		const bodyOf = (name: string): string => {
+			// No trailing `(`: a generic door declares its type parameter first.
+			const start = recordScope.indexOf(`function ${name}`);
+			expect(start, `record_scope.ts must still declare ${name}`).toBeGreaterThan(-1);
+			const end = recordScope.indexOf('\n}', start);
+			return recordScope.slice(start, end === -1 ? undefined : end);
+		};
+		expect(
+			bodyOf('isRecordInScope'),
+			'the single-record door must ask the one predicate',
+		).toContain(`${predicateName}(`);
+		expect(
+			bodyOf('scopeInverseReferenceHits'),
+			'the hit-list door must ask the SAME predicate — a private copy of the projects rule is the drift this module refuses',
+		).toContain(`${predicateName}(`);
 
 		// The panel data path passes the principal into buildRelationList.
 		const readFacade = read('src/core/section/read_facade.ts');
@@ -168,6 +201,13 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 			why: 'get_ar_identifying_image: descriptors of the records referencing the target (TOOLS-08, 2026-07-28 audit)',
 		},
 
+		// NOT LISTED, and deliberately: src/core/search/builders/builder_relation_index.ts
+		// was a 'system' row here while it materialised the dd96 inverse scan in
+		// JS. It no longer calls the scan at all — it emits ONE uncorrelated
+		// semi-join over matrix_relation_index (audit PERF-05) — so a row for it
+		// would be exactly the stale entry the census below refuses. The predicate
+		// is still unscoped by design; that reasoning now lives in the builder's
+		// own header, where the code is.
 		// ── system paths: must NOT scope ────────────────────────────────────────
 		'src/core/section/record/delete_record.ts': {
 			kind: 'system',
@@ -180,10 +220,6 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 		'src/diffusion/resolve/resolver.ts': {
 			kind: 'system',
 			why: 'diffusion publishes with no request principal; its own gate is the publication config, not the operator’s grants',
-		},
-		'src/core/search/builders/builder_relation_index.ts': {
-			kind: 'system',
-			why: 'builds a section_id IN (…) PREDICATE, not a result set: the fragment is ANDed into the caller’s own already-scoped search (buildSearchSql applies the projects filter around it)',
 		},
 		'src/core/relations/children.ts': {
 			kind: 'system',

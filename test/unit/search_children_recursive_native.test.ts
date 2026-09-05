@@ -262,17 +262,20 @@ test('the batch walk shares ONE visited set: a subtree is EXPANDED once', async 
 	expect(scratch.filter((id) => id === A1).length).toBe(1);
 });
 
-test('a diamond node is EXPANDED once, however many parents list it', async () => {
-	// D hangs under BOTH A and B, so both parents' direct-children lists name it
-	// (PHP does not dedup those either — the search dedups by locator). What the
-	// SHARED visited set buys is that D's own subtree is walked ONCE: with a
-	// per-path visited set D1 comes back twice, once per parent branch.
+test('a diamond node is EMITTED once, however many parents list it', async () => {
+	// D hangs under BOTH A and B, so both parents' direct-children lists name it.
+	// The walk EMITS AND EXPANDS in the same step against the shared visited set,
+	// so D appears ONCE and its subtree is walked once — the "already
+	// deduplicated by locator" contract this function always documented and did
+	// not keep (it pushed the whole direct list before the recursion pruned, so a
+	// poly-hierarchy node came back once per parent; the search dedups downstream,
+	// which is what masked it). WC-2026-09-05-children-order-one-rule.
 	const descendants = await getChildrenRecursiveBatch([{ section_id: R, section_tipo: SECTION }]);
 	const count = (id: number): number =>
 		descendants.filter((child) => Number(child.section_id) === id).length;
 
-	expect(count(D)).toBe(2); // listed by A and by B
-	expect(count(D1)).toBe(1); // but expanded exactly once
+	expect(count(D)).toBe(1); // listed by A and by B, emitted once
+	expect(count(D1)).toBe(1); // and expanded exactly once
 });
 
 test('the flag survives the CLIENT sanitizer — the door it actually arrives through', async () => {

@@ -132,10 +132,21 @@ export function formatNumberValue(
  * so for a multi-item dataframe (multi-parent / moved node) it falls through to
  * the unkeyed scan and returns the FIRST item's stale value — the
  * reorder-reverts-on-reload bug. Deliberate divergence: WC-015.
+ *
+ * THE ONE RULE, TWO CALLERS (WC-2026-09-05-children-order-one-rule). The
+ * CHILDREN engine (`relations/children.ts` orderChildHits) asks the same
+ * question and used to answer it with a shorter chain of its own
+ * (`paired ?? items[0]`), so a record carrying a legacy section-coords entry
+ * sorted one way in the tree and another in a list. It now imports THIS
+ * function. Step 3 plus the first-entry fallback are what preserve the
+ * POSITIONAL v6 read that engine documented (mht160/6). The rule stays in this
+ * module — its historical home, and the one both ratchets already recognise —
+ * rather than moving to a new file: the code is unchanged, and a move would
+ * report it as new debt.
  */
 export function pickOrderValueForParent(
-	orderItems: Record<string, unknown>[],
-	parentItems: Record<string, unknown>[],
+	orderItems: readonly Record<string, unknown>[],
+	parentItems: readonly Record<string, unknown>[],
 	parentTipo: string,
 	parentId: number,
 ): unknown {

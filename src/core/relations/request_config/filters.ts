@@ -28,10 +28,43 @@
  * config item whose sqo carries either key.
  */
 
-import { readMatrixRecord } from '../../db/matrix.ts';
+import { memoizedReadMatrixRecord } from '../../db/record_memo.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { getMatrixTableFromTipo, getModelByTipo, getNode } from '../../ontology/resolver.ts';
 import { readComponentItems } from '../../resolve/component_data.ts';
+
+/**
+ * The most ids ONE `hierarchy_terms` fixed_filter term may expand to.
+ *
+ * ARITHMETIC. The expansion becomes a single bound `integer[]` parameter, and
+ * a picker's filter is a NARROWING device: a term whose subtree runs past
+ * 50,000 records is not narrowing anything — it names a root where the author
+ * meant a branch. 50,000 is well above every real branch a fixed_filter points
+ * at and well below the 200,000-node ceiling the walk itself refuses at
+ * (`relations/children.ts` CHILDREN_RECURSIVE_MAX_NODES), so this cap reports
+ * a config mistake while the walk's cap reports a runaway subtree. Fixed, not
+ * configurable: a bound an install can move is not a bound.
+ */
+export const HIERARCHY_TERMS_MAX_IDS = 50000;
+
+/**
+ * REFUSE an over-cap `hierarchy_terms` expansion. Exported so the bound is
+ * gateable as arithmetic: the 50,000-id case cannot be built as records, and a
+ * cap enforced only inside a branch no test can reach is not enforced.
+ */
+export function assertHierarchyTermsWithinCap(
+	expanded: number,
+	sectionTipo: string,
+	sectionId: number,
+): void {
+	if (expanded <= HIERARCHY_TERMS_MAX_IDS) return;
+	throw new DedaloError('ontology.invalid_node', {
+		message:
+			`fixed_filter hierarchy_terms: term ${sectionTipo}/${sectionId} expands to ${expanded} ` +
+			`ids, past the ${HIERARCHY_TERMS_MAX_IDS} cap. Name a narrower term, or drop \`recursive\`.`,
+		coordinates: { section_tipo: sectionTipo, section_id: sectionId },
+	});
+}
 
 /** One filter_by_list descriptor as stored in the ontology. */
 interface FilterByListDescriptor {
@@ -197,10 +230,21 @@ export async function expandFixedFilter(
 						recursive?: boolean;
 					} | null;
 					if (term === null || typeof term.section_tipo !== 'string') continue;
+					const termId = term.section_id ?? 0;
 					const children =
 						term.recursive === true
-							? await getChildrenRecursive(term.section_id ?? 0, term.section_tipo)
-							: await getChildren(term.section_id ?? 0, term.section_tipo);
+							? await getChildrenRecursive(termId, term.section_tipo)
+							: await getChildren(termId, term.section_tipo);
+					// THE EXPANSION IS CAPPED. This filter becomes ONE `q` of joined
+					// ids, bound downstream as `= ANY(_Q1_::integer[])`
+					// (builder_section_id.ts), so it never reaches statement TEXT —
+					// but it is still unbounded in SIZE, and a recursive term over a
+					// whole thesaurus root turns a picker's filter into a
+					// hundred-thousand-element array parameter. A fixed_filter is
+					// HAND-AUTHORED ontology config, so an expansion past the cap is
+					// a configuration error and says so (operator disclosure), never
+					// a silent truncation to a filter that quietly matches less.
+					assertHierarchyTermsWithinCap(children.length, term.section_tipo, Number(termId));
 					const idComponent = await getSectionIdComponentTipo(term.section_tipo);
 					items.push({
 						q: children.map((child) => child.section_id).join(','),
@@ -263,7 +307,7 @@ async function resolveComponentDataRecursively(
 	if (model === null) return [];
 	const table = await getMatrixTableFromTipo(data.section_tipo);
 	if (table === null) return [];
-	const record = await readMatrixRecord(table, data.section_tipo, Number(data.section_id));
+	const record = await memoizedReadMatrixRecord(table, data.section_tipo, Number(data.section_id));
 	if (record === null) return [];
 	const componentData = readComponentItems(record, tipo, model) ?? [];
 	if (componentData.length === 0) return [];

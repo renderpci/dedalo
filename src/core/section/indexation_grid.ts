@@ -42,8 +42,9 @@ import type { RenderClass } from '../components/types.ts';
 import { mediaTypeOf } from '../concepts/media.ts';
 import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import { getActiveTlds } from '../db/dd_ontology.ts';
-import { MATRIX_JSONB_COLUMNS, readMatrixRecord } from '../db/matrix.ts';
+import { MATRIX_JSONB_COLUMNS, type MatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
+import { memoizedReadMatrixRecord } from '../db/record_memo.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { getLabels } from '../labels/catalog.ts';
 import { additionalPath as mediaBucketPath } from '../media/path.ts';
@@ -180,7 +181,7 @@ interface GridContext {
 	applicationLang: string;
 	uiLabels: Record<string, string>;
 	activeTlds: ReadonlySet<string>;
-	records: Map<string, Awaited<ReturnType<typeof readMatrixRecord>>>;
+	records: Map<string, MatrixRecord | null>;
 	/** Memoized default request_config ddo_maps for leaf relation ddos. */
 	defaultDdoMaps: Map<string, GridDdo[]>;
 	/** Memoized element tool contexts, keyed `${elementTipo}|${toolName}` (PHP structure_context->tools). */
@@ -191,12 +192,12 @@ async function readRecordOnce(
 	ctx: GridContext,
 	sectionTipo: string,
 	sectionId: string | number,
-): Promise<Awaited<ReturnType<typeof readMatrixRecord>>> {
+): Promise<MatrixRecord | null> {
 	const key = `${sectionTipo}_${sectionId}`;
 	if (ctx.records.has(key)) return ctx.records.get(key) ?? null;
 	const table = await getMatrixTableFromTipo(sectionTipo);
 	const record =
-		table === null ? null : await readMatrixRecord(table, sectionTipo, Number(sectionId));
+		table === null ? null : await memoizedReadMatrixRecord(table, sectionTipo, Number(sectionId));
 	ctx.records.set(key, record);
 	return record;
 }

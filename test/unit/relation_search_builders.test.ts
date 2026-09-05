@@ -403,26 +403,41 @@ describe('relation_index builder (PHP trait.search_component_relation_index)', (
 		model: 'component_relation_index',
 	};
 
-	test("'*' emits a literal intval'd IN list over the dd96 references", async () => {
+	test("'*' emits an UNCORRELATED SEMI-JOIN over matrix_relation_index", async () => {
+		// PERF-05: the ids are no longer materialised in the process and inlined
+		// as literals — the database resolves the set. The rows are identical
+		// (proved by executing both shapes in relation_index_semijoin_native).
 		const result = await buildRelationIndexFragment(null, '*', indexContext);
 		const { sql: rendered, params } = render(result as never);
-		expect(rendered).toMatch(/^h1\.section_id IN \(\d+(,\d+)*\)$/);
-		// EXACT set, not just "well-shaped": the ids are the ones minted above.
-		expect(rendered).toBe(`h1.section_id IN (${[...INDEXED_IDS].sort().join(',')})`);
-		expect(params).toEqual([]); // zero params — PHP interpolates intval'd ids
+		expect(rendered).toStartWith('h1.section_id IN (SELECT');
+		expect(rendered).toContain('matrix_relation_index');
+		expect(rendered).not.toMatch(/IN \(\s*\d/); // no inlined id list
+		expect(params).toEqual([INDEXED_SECTION, 'dd96']); // bound, not interpolated
 	});
 
-	test("'!*' emits NOT IN over the same set", async () => {
+	test("'!*' emits NOT IN over the same subselect", async () => {
 		const result = await buildRelationIndexFragment(null, '!*', indexContext);
 		const { sql: rendered } = render(result as never);
-		expect(rendered).toMatch(/^h1\.section_id NOT IN \(\d+(,\d+)*\)$/);
-		expect(rendered).toBe(`h1.section_id NOT IN (${[...INDEXED_IDS].sort().join(',')})`);
+		expect(rendered).toStartWith('h1.section_id NOT IN (SELECT');
+		expect(rendered).toContain('matrix_relation_index');
+		// NULL-safe by construction: the subselect excludes NULL target ids.
+		expect(rendered).toContain('target_section_id IS NOT NULL');
 	});
 
-	test('a reference-less section degenerates to 1=0 / 1=1 (PHP :184/:225)', async () => {
+	test('a reference-less section needs no 1=0 / 1=1 (the empty semi-join answers)', async () => {
+		// The set is EMPTY, not special-cased: `IN (empty)` is false for every row
+		// and `NOT IN (empty)` is true for every row. The behavioural proof (real
+		// rows, both operators) is relation_index_semijoin_native.test.ts.
 		const bare = { ...indexContext, tipo: 'test149', sectionTipo: 'test65', table: 'matrix_test' };
-		expect(render((await buildRelationIndexFragment(null, '*', bare)) as never).sql).toBe('1=0');
-		expect(render((await buildRelationIndexFragment(null, '!*', bare)) as never).sql).toBe('1=1');
+		expect(render((await buildRelationIndexFragment(null, '*', bare)) as never).sql).not.toBe(
+			'1=0',
+		);
+		expect(render((await buildRelationIndexFragment(null, '!*', bare)) as never).sql).not.toBe(
+			'1=1',
+		);
+		expect(render((await buildRelationIndexFragment(null, '*', bare)) as never).sql).toContain(
+			'matrix_relation_index',
+		);
 	});
 
 	test('any other operator drops the clause (PHP returns the SQO sentence-less)', async () => {

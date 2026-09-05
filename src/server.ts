@@ -2057,6 +2057,22 @@ export async function startServer() {
 			console.error('[observers] subscription registry boot probe failed:', error),
 		);
 
+		// RELATION-CLOSURE gauge (audit PERF-04) + the client-asset MANIFEST
+		// (audit PERF-13), both registered here for the registerOpsGauge reason:
+		// core/relations and core/api must not import the process root, and the
+		// manifest walk must happen at BOOT rather than on an authenticated
+		// request. The manifest prewarm is fire-and-forget: a failure only means
+		// the first get_dedalo_files pays the walk it used to pay every time.
+		void (async () => {
+			const { registerOpsGauge } = await import('./core/api/counters.ts');
+			const { relatedClosureStats } = await import('./core/relations/related.ts');
+			registerOpsGauge('relation_closure', async () => relatedClosureStats());
+			const { prewarmDedaloFilesManifest } = await import('./core/api/dedalo_files.ts');
+			prewarmDedaloFilesManifest();
+		})().catch((error) =>
+			console.error('[boot] relation-closure gauge / client manifest prewarm failed:', error),
+		);
+
 		void import('./diffusion/jobs/schema.ts')
 			.then(({ ensureDiffusionJobTables }) => ensureDiffusionJobTables())
 			.then(async () => {

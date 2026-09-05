@@ -33,8 +33,8 @@ import { callerDataframePairing, isTemporalSource, type Rqo } from '../concepts/
 import { isConsultationOnlySection, TIME_MACHINE_SECTION_TIPO } from '../concepts/section.ts';
 import { canonicalizeStoredSectionId, classifyWireSectionId } from '../concepts/section_id.ts';
 import { mergeSessionSqo, sanitizeClientSqo } from '../concepts/sqo.ts';
-import { type MatrixRecord, readMatrixRecord } from '../db/matrix.ts';
-import { runWithRecordMemo } from '../db/record_memo.ts';
+import type { MatrixRecord } from '../db/matrix.ts';
+import { memoizedReadMatrixRecord, runWithRecordMemo } from '../db/record_memo.ts';
 import { DedaloError, isErrorInDomain } from '../errors/dedalo_error.ts';
 import {
 	getColumnNameByModel,
@@ -840,7 +840,7 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 	if (getColumnNameByModel(model) !== 'relation') {
 		const literalTable = (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix';
 		let literalRecord = hasRecordId
-			? await readMatrixRecord(literalTable, sectionTipo, numericSectionId)
+			? await memoizedReadMatrixRecord(literalTable, sectionTipo, numericSectionId)
 			: null;
 		/** The no-record SEARCH shell — drives the id fixups after the emission. */
 		let literalSearchShell = false;
@@ -953,7 +953,9 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 		model === 'component_filter_master';
 
 	const table = (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix';
-	let record = hasRecordId ? await readMatrixRecord(table, sectionTipo, numericSectionId) : null;
+	let record = hasRecordId
+		? await memoizedReadMatrixRecord(table, sectionTipo, numericSectionId)
+		: null;
 	if (record === null && tmOverride !== null) {
 		// TM preview of a component whose live record is gone: play back the
 		// snapshot against an empty virtual record (PHP get_data still renders it).
@@ -1983,7 +1985,7 @@ const MAX_DDO_DEPTH = 12;
 export async function emitDdoData(
 	ddo: Ddo,
 	ddoMap: Ddo[],
-	record: NonNullable<Awaited<ReturnType<typeof readMatrixRecord>>>,
+	record: MatrixRecord,
 	row: { section_tipo: string; section_id: number },
 	defaultMode: string,
 	defaultLang: string,

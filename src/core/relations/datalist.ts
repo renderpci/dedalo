@@ -29,8 +29,9 @@
  */
 
 import { compareLocators, type Locator } from '../concepts/locator.ts';
-import { readMatrixRecord } from '../db/matrix.ts';
+import type { MatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
+import { memoizedReadMatrixRecord } from '../db/record_memo.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
 import { registerPairingChangeListener } from '../ontology/model_section.ts';
@@ -226,7 +227,7 @@ export function strnatcmp(a: string, b: string): number {
  * Resolve one show-ddo's display value on a record (the datalist label atom).
  */
 async function resolveDdoLabel(
-	record: NonNullable<Awaited<ReturnType<typeof readMatrixRecord>>>,
+	record: MatrixRecord,
 	ddoTipo: string,
 	lang: string,
 ): Promise<string> {
@@ -432,7 +433,7 @@ export async function getDatalist(
 			// component per ddo against the same row) — the read is the expensive
 			// part, and a 60k-option thesaurus cannot afford two.
 			if (labelDdos.length > 0 || hideDdos.length > 0) {
-				const record = await readMatrixRecord(table, targetSection, row.section_id);
+				const record = await memoizedReadMatrixRecord(table, targetSection, row.section_id);
 				if (record !== null) {
 					for (const ddo of labelDdos) {
 						labelParts.push(await resolveDdoLabel(record, ddo.tipo, lang));
@@ -551,7 +552,7 @@ export async function resolveLocatorLabels(
 		if (targetSection === '' || !Number.isFinite(targetId)) continue;
 		const table = await getMatrixTableFromTipo(targetSection);
 		if (table === null) continue;
-		const record = await readMatrixRecord(table, targetSection, targetId);
+		const record = await memoizedReadMatrixRecord(table, targetSection, targetId);
 		if (record === null) continue;
 		const { value, fallbackValue } = await resolveComponentValue(
 			record,

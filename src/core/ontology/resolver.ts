@@ -126,6 +126,7 @@ export function clearOntologyCaches(): void {
 	componentFilterTipoCache.clear();
 	descendantByModelCache.clear();
 	relatedTipoByModelCache.clear();
+	relatedTipoByExactModelCache.clear();
 	sectionRealTipoCache.clear();
 	ancestorSectionCache.clear();
 }
@@ -675,6 +676,27 @@ export async function getSectionRealTipo(sectionTipo: string): Promise<string> {
 }
 
 /**
+ * THE WALK, STATED ONCE: the first tipo in a node's `relations` JSON whose
+ * MODEL satisfies `matches`. Both related-tipo accessors below are this walk
+ * plus their own cache and their own predicate — a second copy of the walk
+ * would be a second answer to "which relation comes first", the one thing they
+ * must agree on.
+ */
+async function firstRelatedTipoMatching(
+	tipo: string,
+	matches: (relatedModel: string | null) => boolean,
+): Promise<string | null> {
+	const relations = (await getNode(tipo))?.relations;
+	if (!Array.isArray(relations)) return null;
+	for (const relation of relations) {
+		const relatedTipo = (relation as { tipo?: unknown } | null)?.tipo;
+		if (typeof relatedTipo !== 'string' || relatedTipo === '') continue;
+		if (matches(await getModelByTipo(relatedTipo))) return relatedTipo;
+	}
+	return null;
+}
+
+/**
  * The first tipo in a node's `relations` JSON whose model CONTAINS `model`
  * (PHP ontology_node::get_ar_tipo_by_model_and_relation(tipo, model, 'related')
  * first hit — substring match, search_exact=false, so 'component_av' also
@@ -693,20 +715,37 @@ export async function relatedTipoByModel(tipo: string, model: string): Promise<s
 	const cached = relatedTipoByModelCache.get(cacheKey);
 	if (cached !== undefined) return cached;
 
-	let resolved: string | null = null;
-	const relations = (await getNode(tipo))?.relations;
-	if (Array.isArray(relations)) {
-		for (const relation of relations) {
-			const relatedTipo = (relation as { tipo?: unknown } | null)?.tipo;
-			if (typeof relatedTipo !== 'string' || relatedTipo === '') continue;
-			const relatedModel = await getModelByTipo(relatedTipo);
-			if (relatedModel?.includes(model)) {
-				resolved = relatedTipo;
-				break;
-			}
-		}
-	}
+	const resolved = await firstRelatedTipoMatching(
+		tipo,
+		(relatedModel) => relatedModel?.includes(model) === true,
+	);
 	cacheWrite(relatedTipoByModelCache, cacheKey, resolved);
+	return resolved;
+}
+
+/**
+ * The first tipo in a node's `relations` JSON whose model is EXACTLY `model`
+ * (PHP get_ar_tipo_by_model_and_relation with search_exact — the law
+ * getSectionRealTipo applies to a section, applied to any node). Null when
+ * nothing matches.
+ *
+ * SEPARATE FROM relatedTipoByModel BY NECESSITY, not by taste: that one matches
+ * with `relatedModel.includes(model)`, so asking it for 'section' also answers
+ * 'section_list' and 'section_group' — silently the wrong node. A caller that
+ * means "the related SECTION" must ask this one.
+ *
+ * Cached per (tipo, model): pure ontology, no lang/principal dimension, cleared
+ * by the hub on any dd_ontology write.
+ */
+const relatedTipoByExactModelCache = createOntologyCache<string, string | null>();
+
+export async function relatedTipoByExactModel(tipo: string, model: string): Promise<string | null> {
+	const cacheKey = `${tipo}|${model}`;
+	const cached = relatedTipoByExactModelCache.get(cacheKey);
+	if (cached !== undefined) return cached;
+
+	const resolved = await firstRelatedTipoMatching(tipo, (relatedModel) => relatedModel === model);
+	cacheWrite(relatedTipoByExactModelCache, cacheKey, resolved);
 	return resolved;
 }
 
