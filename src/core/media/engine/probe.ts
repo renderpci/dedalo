@@ -33,6 +33,7 @@
  * honest limit. Ledgered as known-open.
  */
 
+import { dirname } from 'node:path';
 import { runIdentify } from './binaries.ts';
 import { sceneToken } from './scene.ts';
 import { describeSpawnFailure } from './spawn.ts';
@@ -150,8 +151,27 @@ const PROBE_FIELDS = 11;
  * on every derivative build, inside `runMagickTo` on every output written, and
  * behind `getDimensions`. It is also reached from the authenticated upload request
  * (createStagedThumbnail → buildThumbAtomically). A 14 GB allocation on a request
- * path is a denial of service, and the engine's ImageMagick policy sets no
- * `domain="resource"` limit to bound it. Do NOT drop `-ping` from this call.
+ * path is a denial of service. Since 2026-09-05 (audit MEDIA-01) it is BOUNDED —
+ * the shipped policy carries a `domain="resource"` ceiling, every ImageMagick argv
+ * carries `magickResourceLimitArgs()`, and the one process neither could reach —
+ * the Ghostscript delegate — is denied outright, the PDF render having moved to
+ * engine/ghostscript.ts — but a bound is a refusal, not a free
+ * read: under `-ping` this probe costs 4.5 MB and never approaches the limit,
+ * without it the same call would spend the whole memory budget and then the disk
+ * cache on every derivative build. Do NOT drop `-ping` from this call.
+ *
+ * `-ping` IS NOT, BY ITSELF, A BOUND — measured 2026-09-05, and it is why this
+ * call is no longer exempt from converter admission. `-ping` skips the PIXELS; it
+ * still ENUMERATES EVERY SCENE, and PROBE_FORMAT below is a PER-SCENE format, so
+ * the cost is O(scene count) in both RAM and time, and none of the pixel-cache
+ * limits sees it (a scene struct is not the pixel cache). A hand-written 4.6 MB
+ * GIF89a of 200000 1x1 frames — 0.2 % of the upload cap, on the thumbnailable
+ * extension list — cost this exact argv 26.3 s / 8.73 GB RSS under
+ * `-limit memory 2GiB`, and four concurrent calls were four concurrent identify
+ * processes. Two structural answers, both required: `magickResourceLimitArgs()`
+ * carries `-limit list-length`, which refuses such a source at 180 MB before the
+ * enumeration completes (a legitimate 63-frame animation is unaffected), and
+ * `runIdentify` takes a CONVERTER PERMIT for every identify, `-ping` included.
  *
  * WHAT `-ping` COSTS US, precisely and only: the META-CHANNEL COUNT. Measured on
  * the 3-scene medal master `rsc29_rsc170_440866.tif`:
@@ -178,7 +198,13 @@ export async function probeImageSource(source: string): Promise<ImageSourceProbe
 	// coder by CONTENT, so this reads RAW UPLOADED BYTES with a coder we did not
 	// choose (a `.png` holding PostScript selects PS). It must run under the
 	// hardened policy like every other ImageMagick process.
-	const result = await runIdentify(['-ping', '-quiet', '-format', PROBE_FORMAT, source]);
+	// The scratch dir is the source's own directory (engine/binaries.ts): a `-ping`
+	// read spills nothing, but every ImageMagick spawn in this engine names where a
+	// spill would land, so no call site can be the one that forgot.
+	const result = await runIdentify(
+		['-ping', '-quiet', '-format', PROBE_FORMAT, source],
+		dirname(source),
+	);
 	// A KILLED identify, not merely a TIMED-OUT one (audit 2026-08 B2, corrected
 	// 2026-08-09). `timedOut` is `capExpired && signal !== null` — a strict SUBSET
 	// of the kills — so the old `if (result.timedOut)` test was blind to every kill
@@ -382,12 +408,16 @@ export interface MetaChannelReport {
  */
 export async function probeMetaChannels(source: string): Promise<MetaChannelReport> {
 	const unknown: MetaChannelReport = { metaChannels: 0, hasAlpha: true };
-	const result = await runIdentify([
-		'-quiet',
-		'-format',
-		'%[channels]\n',
-		sceneToken(source, 'representative'),
-	]);
+	// The converter permit is taken by `runIdentify` itself (engine/binaries.ts),
+	// for EVERY identify — a second one here would be a permit held while waiting
+	// for a permit, i.e. a deadlock at concurrency 1. This probe is the reason the
+	// runner's exemption was never safe: it cannot use `-ping`, so it decodes every
+	// pixel (7.23 s / 14.4 GB RSS on a 40000x30000 TIFF), a conversion in everything
+	// but the missing output file.
+	const result = await runIdentify(
+		['-quiet', '-format', '%[channels]\n', sceneToken(source, 'representative')],
+		dirname(source),
+	);
 	// Any KILL, not just our own timeout — see probeImageSource for why `timedOut`
 	// is the wrong test. Here the cost of getting it wrong is subtler and worse: a
 	// killed identify can still have printed a channels line, and `'srgb  4.1'` cut
@@ -426,7 +456,13 @@ export async function probeMetaChannels(source: string): Promise<MetaChannelRepo
  * evidence of damage" — a failed measurement may not condemn a good derivative.
  */
 export async function probeContentSpread(path: string): Promise<number | null> {
-	const result = await runIdentify(['-quiet', '-format', '%[fx:standard_deviation]', path]);
+	// The other full decode in this module — statistics over a written derivative.
+	// Its permit, like every identify's, is taken inside `runIdentify`; wrapping it
+	// again here would nest two permits. See probeMetaChannels.
+	const result = await runIdentify(
+		['-quiet', '-format', '%[fx:standard_deviation]', path],
+		dirname(path),
+	);
 	// Any KILL, not just our own timeout. This is the SAFETY NET for the meta-alpha
 	// promotion, and it is the one probe here that reads a FULL decode of a written
 	// derivative — the most likely thing on this box to meet the OOM killer. A

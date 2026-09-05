@@ -152,6 +152,20 @@ principle:
    `section_record.delete()`'s "diffusion failure never blocks the work-system
    delete" invariant are shared with the rest of the system — reuse
    `src/core/diffusion_bridge/diffusion_delete.ts`'s implementations.
+
+   **Retention of the ledger (audit 2026-08-26 PUB-14).** dd1758 is append-only
+   and grows with how OFTEN you publish, not with how much you hold: one row per
+   primary record per run, and republishing the same catalogue writes them all
+   again (measured 293 MB for a single 500k-record run, inside the matrix
+   database every backup copies). The rule is now stated and executable —
+   `DEDALO_DIFFUSION_LEDGER_RETENTION_DAYS`, registered in
+   `src/core/retention/` and applied by
+   `pruneSettledLedgerRows`. Default `0` = keep everything, which is the right
+   default for a publication audit trail; what was wrong was having no rule at
+   all while the job purge cited this table as "the durable audit trail".
+   **PENDING rows are never pruned at any window**: an unpublish still owed to a
+   public target is outstanding debt, not history, and dropping it would leave a
+   withdrawn record live with nothing left to say it should not be.
 7. **REWRITE_SPEC §2b code style and §4 request-isolation rules apply.** All
    mutable run state lives in a per-run context; the only process-global is the
    immutable plan cache.

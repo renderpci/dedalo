@@ -43,7 +43,10 @@ Reference units in `deploy/`:
 - `dedalo-ts-watchdog.service` + `.timer` — every 30 s:
   `curl --fail --unix-socket /tmp/dedalo_ts.sock http://localhost/health`;
   on failure restarts the main unit. (systemd `WatchdogSec` needs `sd_notify`,
-  which Bun does not speak — the curl timer is the equivalent.)
+  which Bun does not speak — the curl timer is the equivalent.) The main unit
+  `Wants=` it and `[Install] Also=` it, so `systemctl enable dedalo-ts` enables
+  the health consumer with the server instead of leaving it to a second typed
+  command (P2-33 / OPS-09).
 - `dedalo-backup.service` + `.timer` — the nightly backup set (§6).
 - `dedalo-ts-rollback.service` — restores the previous code tree after a
   failed code update (§12; fired by `OnFailure=` on the main unit and by the
@@ -53,6 +56,21 @@ Reference units in `deploy/`:
 `/health` answers `200 {result:'ok', db:'ok'}` only when **Postgres answers**
 (S3-48); DB down / pool wedged → `503 {db:'down'}` → watchdog restart + a
 red monitoring check.
+
+**On a docker host the watchdog IS the healthcheck** (P2-33 / OPS-09).
+`scripts/ops/container_watchdog.sh` is the `test:` of the `dedalo` service in
+both shipped stacks: it runs the same probe, still exits non-zero so
+`docker compose ps` reads *unhealthy*, and on the 3rd consecutive red — the same
+number as the compose `retries`, held equal by
+`test/unit/stack_ops_policy_tripwire.test.ts` — sends `SIGTERM` to PID 1, the
+engine itself, so the drain runs and `restart: unless-stopped` recycles the
+container (≈90 s, not systemd's 30 s). Without it nothing consumed the 503
+there: a Compose healthcheck only feeds start ordering and `docker ps`, Docker
+Engine never restarts an unhealthy container, and the restart policy fires on
+process EXIT — which a poisoned or wedged process never does. It escalates only
+after a first GREEN probe, which leaves a container still on the install wizard
+(no database ⇒ red `/health`) untouched. Behaviour gate:
+`test/unit/container_watchdog_native.test.ts`.
 
 **Graceful shutdown (S2-17).** On SIGTERM/SIGINT the server: stops the
 diffusion scheduler cadences → stops accepting connections → drains in-flight
@@ -89,7 +107,8 @@ with a green DB-only health check). A warm-up failure aborts the boot (exit 1
 if a TDZ-shaped `ReferenceError` ever reaches the dispatch catch anyway, the
 process flips a poison latch (`core/api/process_health.ts`) — `/health`
 answers `503 {process:'poisoned'}` from then on and the watchdog recycles the
-process within its 30 s cadence. Gate: `test/unit/process_health.test.ts`.
+process — within its 30 s cadence under systemd, within ~90 s on a docker stack
+(§2). Gate: `test/unit/process_health.test.ts`.
 
 ## 3. Sockets, reverse proxy, timeouts (S2-33)
 
@@ -822,8 +841,37 @@ delete-propagation executor registers regardless. `DEDALO_DIFFUSION_MAX_RUNNERS`
 Automatic: media pfiles reconciled at boot + pruned after 30 days (terminal);
 in-memory job registries evict terminal records after 1 h (pfile mirror
 remains); `login_attempts` rows GC'd past the throttle window; terminal
-diffusion job rows purged after 7 days (daily, sweeper cadence); the dd1758
-ledger keeps the durable publication audit trail.
+diffusion job rows purged after 7 days (daily, sweeper cadence).
+
+**Every append-only store now states its rule in one place** —
+`src/core/retention/registry.ts` + `prune.ts`, listed by store with either a
+configured window and an executable prune, or an explicit reasoned "kept
+forever" (the records themselves, the Time Machine). The scheduler
+(`DEDALO_RETENTION_SCHEDULER_ENABLED`, on by default) applies the windows once
+shortly after boot and daily thereafter; with every window at its default it has
+nothing to do.
+
+| store | rule |
+|---|---|
+| `matrix` and the other record tables | kept forever — removal is a curator's delete, never a clock |
+| `matrix_time_machine` | kept forever — it is the only store an undelete restores from |
+| `matrix_activity` | `DEDALO_ACTIVITY_RETENTION_DAYS` (default `0` = keep) |
+| dd1758 publication ledger | `DEDALO_DIFFUSION_LEDGER_RETENTION_DAYS` (default `0` = keep); rows still OWING an unpublish are never pruned |
+| error reports (master only) | `DEDALO_ERROR_REPORT_RETENTION_DAYS` **and** `DEDALO_ERROR_REPORT_MAX_ROWS` — an age window alone cannot bound a burst |
+| diffusion jobs | terminal rows at 7 days (the diffusion sweeper) |
+| session store | sessions/attempts/resets GC'd past their own windows |
+
+Why the two matrix windows default to keeping everything: the activity log is
+the record of who changed what and the ledger is the record of what was
+published, so a heritage installation's correct default is permanence. What was
+missing was not a deletion policy but a STATED one with a door the engine can
+open (audit 2026-08-26 P2-9 / SEC-21 / PUB-14).
+
+**Rate ceiling at the proxy.** The shipped nginx configs declare
+`limit_req_zone $binary_remote_addr zone=dedalo_api:10m rate=20r/s` and apply it
+with `burst=40 nodelay` on the API location. It is the cheapest of the three
+walls in front of the audit trail — the other two being the request-scalar
+bounds at the parse door and the source-global login bucket.
 
 ## 10. Publication API (the isolated public surface)
 

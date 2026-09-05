@@ -161,6 +161,10 @@ function makeInstance(): Instance {
     state_base: join(prefix, 'var/lib/dedalo_sites'),
     unit_dir: join(prefix, 'etc/systemd/system'),
     vhost_dir: join(prefix, 'etc/nginx/sites-available'),
+    // The agent authorization is a host file like the unit: relocated with everything
+    // else, so this gate writes inside its own scratch prefix and never into a real
+    // /etc/polkit-1 on the machine running the suite.
+    polkit_rules_dir: join(prefix, 'etc/polkit-1/rules.d'),
   };
 
   const manifest = parseManifest(raw);

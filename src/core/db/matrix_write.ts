@@ -848,6 +848,48 @@ export async function appendMatrixUpdateRow(data: Record<string, unknown>): Prom
 	]);
 }
 
+/**
+ * The APPEND-ONLY EVENT tables a retention window may prune by age
+ * (core/retention/prune.ts). Deliberately NOT the record tables: a heritage
+ * record is removed by a curator through the delete door, never by a clock, and
+ * this door exists so that rule is enforced by an allowlist rather than by
+ * everyone remembering it.
+ */
+export const AGE_PRUNABLE_MATRIX_TABLES: readonly string[] = ['matrix_activity'];
+
+/**
+ * Count (dry) or remove (apply) the event rows older than `cutoffIso`.
+ *
+ * The SAME predicate answers both, so what an operator is shown before they
+ * commit is exactly what the commit removes. Lives here because this file is the
+ * matrix DML writer home (sql_confinement T2): the retention registry decides
+ * WHETHER and WHEN, the writer owns the statement.
+ */
+export async function pruneMatrixEventRowsByAge(
+	tableName: string,
+	cutoffIso: string,
+	options: { apply: boolean },
+): Promise<{ candidates: number; deleted: number }> {
+	assertMatrixTable(tableName);
+	if (!AGE_PRUNABLE_MATRIX_TABLES.includes(tableName)) {
+		throw new DedaloError('internal.invariant', {
+			message: `pruneMatrixEventRowsByAge: '${tableName}' is not an append-only event table — records are deleted by a curator, not by a clock`,
+			coordinates: { table: tableName },
+		});
+	}
+	const counted = (await sql.unsafe(
+		`SELECT count(*)::int AS n FROM "${tableName}" WHERE "timestamp" < $1`,
+		[cutoffIso],
+	)) as { n: number }[];
+	const candidates = Number(counted[0]?.n ?? 0);
+	if (!options.apply || candidates === 0) return { candidates, deleted: 0 };
+	const deleted = (await sql.unsafe(
+		`DELETE FROM "${tableName}" WHERE "timestamp" < $1 RETURNING id`,
+		[cutoffIso],
+	)) as unknown[];
+	return { candidates, deleted: deleted.length };
+}
+
 /** Delete one record. Returns the number of rows removed (0 or 1). */
 export async function deleteMatrixRecord(
 	tableName: string,

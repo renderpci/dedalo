@@ -380,6 +380,18 @@ docker compose ps
 `postgres` and `dedalo` should report *healthy*. `nginx` has no healthcheck —
 check it with `docker compose logs nginx`.
 
+**The engine's healthcheck also acts.** It is not a bare `curl` but
+`scripts/ops/container_watchdog.sh`, which probes `/health` over the socket,
+reports *unhealthy* to `docker compose ps` exactly as a bare probe would, and
+after **three consecutive red probes 30 seconds apart** sends `SIGTERM` to the
+engine so it drains and `restart: unless-stopped` recycles the container. That is
+the consumer of the 503 the engine emits when its process is poisoned, its pool
+is wedged or the database is gone — Docker Engine itself never restarts an
+unhealthy container. It escalates only after the container has answered green at
+least once, so an instance still sitting on the browser wizard (no database yet,
+so `/health` is red) is left alone. Budget roughly 90 seconds for a recycle here,
+not the 30 seconds of the systemd deployment.
+
 ### Step 9 — Confirm the engine answers
 
 ```shell

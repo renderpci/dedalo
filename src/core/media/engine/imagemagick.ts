@@ -26,11 +26,17 @@
 import { randomUUID } from 'node:crypto';
 import { existsSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { config } from '../../../config/config.ts';
 import { pixelAreaBudget } from '../../concepts/media.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
-import { magickPolicyEnv, resolveIdentify, resolveMagick } from './binaries.ts';
+import { withConverterSlot } from './admission.ts';
+import {
+	magickPolicyEnv,
+	magickResourceLimitArgs,
+	resolveIdentify,
+	resolveMagick,
+} from './binaries.ts';
 import { probeImageSource } from './probe.ts';
 import { type SceneSelection, sceneToken } from './scene.ts';
 import { describeSpawnFailure, runBinary, type SpawnResult } from './spawn.ts';
@@ -354,8 +360,6 @@ export interface ConvertOptions {
 	 * absent) and why — unlike v6 — it is applied for opaque targets too.
 	 */
 	applyMetaAlpha?: MetaAlphaOption;
-	/** PDF source: rasterization density (dpi) + cropbox. */
-	pdfDensity?: number;
 	/**
 	 * Explicit thumbnail box (WxH, shrink-only). When set it OVERRIDES the quality
 	 * pixel-area budget — for the fixed-size thumb tier whose dimensions come from
@@ -378,16 +382,15 @@ export function buildConvertArgv(
 	options: ConvertOptions,
 ): string[] {
 	const argv: string[] = [resolveMagick()];
-	// PDF source: density + antialias + cropbox BEFORE the input (PHP :342-351).
-	if (options.pdfDensity !== undefined) {
-		argv.push(
-			'-density',
-			String(options.pdfDensity),
-			'-antialias',
-			'-define',
-			'pdf:use-cropbox=true',
-		);
-	}
+	// NO PDF BRANCH, deliberately (audit MEDIA-01, 2026-09-05). This recipe used to
+	// begin with `-density N -antialias -define pdf:use-cropbox=true` so ImageMagick
+	// would rasterize a PDF page itself — which it cannot do: it forks Ghostscript as
+	// a DELEGATE, an unbounded process this engine never sees and cannot kill (the
+	// measurements are in engine/ghostscript.ts). PDF pages are now rendered by
+	// engine/ghostscript.ts and this recipe only ever sees the RASTER it produced, so
+	// there is no density to pass and no PDF option to get wrong. The shipped policy
+	// denies the `gs` delegate, so a PDF handed here fails loudly rather than
+	// silently forking one.
 	argv.push(sceneToken(source, options.selection));
 	// IMMEDIATELY after the source and BEFORE the profiles and the background:
 	// v6's ordering (a `$middle_flags` that precedes the background/merge). The
@@ -519,7 +522,41 @@ async function runMagickTo(
 	// `magickPolicyEnv()` (engine/binaries.ts) is the hardened policy.xml every
 	// ImageMagick process in this engine loads — see that module for why the
 	// identify spawns carry it too.
-	const result = await runBinary(argv, { env: magickPolicyEnv() });
+	//
+	// `magickResourceLimitArgs()` is the other half (audit MEDIA-01): the policy is
+	// the hard ceiling, these argv are the install's operating bound. They are
+	// spliced HERE, in the runner, and never into a `build*Argv` recipe — the recipes
+	// are the wire contract `tier1_media_argv_native` pins, and a resource bound is
+	// not part of a recipe. Position: directly after the binary (`argv[0]`), before
+	// the source path, because ImageMagick reads `-limit` as a setting that must
+	// precede the image it governs.
+	//
+	// `withConverterSlot` (engine/admission.ts) is the THIRD half, and the one the
+	// other two cannot supply: a bound on ONE process multiplied by K concurrent
+	// uploads is not a bound. Measured 2026-09-05 — under the limits above, a 2.4 MB
+	// 20000x20000 TIFF no longer takes the RAM, it spends the whole `-limit disk`
+	// budget instead (16 GiB apparent / 8.2 GiB real) over 22 s, and two of them ran
+	// at once because `createStagedThumbnail` is awaited inline on the upload
+	// request. The permit is taken around the SPAWN only, never around the probe
+	// below, so no permit is ever held while waiting for another.
+	//
+	// `magickPolicyEnv(dirname(expectedOutput))` also names WHERE that spill may
+	// land: the directory of the file being written, inside the media root, the twin
+	// of the `TMPDIR` the PDF rasterizer hands Ghostscript. Left unset it followed
+	// the OS temp dir, which on both shipped compose stacks is the database's volume.
+	const result = await withConverterSlot('magick', () =>
+		runBinary([argv[0] as string, ...magickResourceLimitArgs(), ...argv.slice(1)], {
+			env: magickPolicyEnv(dirname(expectedOutput)),
+			// THE SAME BUDGET THE ARGV ASKS FOR, as a real process cap. `-limit time`
+			// is ImageMagick's own promise to stop, and a converter that is thrashing a
+			// disk cache is precisely the one least able to keep it; the default spawn
+			// budget (10 minutes) was longer than the limit the recipe declares, so the
+			// runner would sit past the point the engine had already called too long.
+			// One key (`DEDALO_MAGICK_LIMIT_TIME`) now bounds a conversion whichever
+			// program is doing it — the twin of the cap engine/ghostscript.ts uses.
+			timeoutMs: config.media.magickLimits.time * 1000,
+		}),
+	);
 	// A KILLED magick, not merely a TIMED-OUT one (audit 2026-08 B2, corrected
 	// 2026-08-09). `timedOut` is `capExpired && signal !== null` — a strict SUBSET
 	// of the kills — so `if (result.timedOut)` let through every kill we did not

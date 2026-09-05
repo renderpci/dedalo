@@ -73,6 +73,20 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// process-lifecycle latch of the same family as `shuttingDown` below: it holds a
 	// Timeout, is set once at boot and cleared once at shutdown, and no user, session
 	// or language can reach it. It exists so a second start() call cannot stack timers.
+	// The process-wide converter admission pool (audit MEDIA-01, 2026-09-05):
+	// ONE lazily built ConverterAdmission holding the permit count for heavy image /
+	// PDF / SVG conversions. Config-derived and boot-stable — it holds a COUNT and a
+	// FIFO of pending continuations, never a user, a session, a language or a record,
+	// and it is deliberately process-wide because the resource it bounds (this box's
+	// RAM, disk and cores) is process-wide: a request-scoped pool would bound each
+	// request against itself and nothing against K of them, which is the defect.
+	'core/media/engine/admission.ts:processAdmission',
+	// The AV twin of the same pool (audit MEDIA-01, the ffmpeg half): a second
+	// process-wide permit count, for the ffmpeg producers rather than the image
+	// converters. Same contents (a count + a FIFO of continuations, never a
+	// principal, a language or a record) and the same reason for being
+	// process-wide: it bounds this box's cores, which no request owns.
+	'core/media/engine/admission.ts:processAvAdmission',
 	'core/security/session_media.ts:sweepTimer',
 	// Warn-once latch for the reconcile refusal (SEC-09, 2026-08-28). The hourly sweeper
 	// skips the marker half when this process holds a throwaway session store against an
@@ -222,6 +236,12 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// identity (a run is keyed by reconcile NAME, actor-less by design).
 	'core/reconcile/registry.ts:gaugeRegistered',
 	'core/reconcile/scheduler.ts:started',
+	// Retention scheduler (audit 2026-08-26 P2-9): the armed latch and the daily
+	// interval handle. Same class as the reconcile scheduler above — process-wide
+	// wiring, no request identity (a retention pass is keyed by STORE name and has
+	// no actor at all).
+	'core/retention/scheduler.ts:started',
+	'core/retention/scheduler.ts:timer',
 	// Login-timing decoy hash (foundation audit AUTHZ-03): a memoized Argon2id
 	// hash of a random string, verified against on the no-user / legacy-hash
 	// failure paths so login timing never reveals whether an account exists.
@@ -345,6 +365,11 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// Reconcile scheduler interval handles: armed by startReconcileScheduler,
 	// cleared by stopReconcileScheduler (SIGTERM drain). Timers, not data.
 	'core/reconcile/scheduler.ts:timers',
+	// The retention registry's definition table (audit 2026-08-26 P2-9): one entry
+	// per append-only store, filled once at import by core/retention/prune.ts and
+	// never per request. A closed set — registerRetention refuses a name outside
+	// REGISTERED_NAMES — so it cannot grow at runtime.
+	'core/retention/registry.ts:definitions',
 	// Diffusion MariaDB pool cache: one pool per DSN for the process lifetime;
 	// closed on shutdown by the graceful-drain path.
 	'diffusion/targets/mariadb/db.ts:poolCache',

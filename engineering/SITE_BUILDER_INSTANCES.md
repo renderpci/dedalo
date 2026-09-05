@@ -65,7 +65,10 @@ boundary this whole design defends is the one BETWEEN museums.
 
 Isolation is uid-level rather than path-level, and that is the load-bearing decision. An
 agent turn executes arbitrary generated code (a template's `bun install`, a build script
-the agent just wrote) as the service user. Confinement helpers (`src/util/paths.ts`) keep
+the agent just wrote) — as the AGENT uid, never as the service user: the turn, the build and
+the daemon's own `git` commands all run through `runConfined()`
+(`src/drivers/confinement.ts`), and `src/util/spawn.ts` refuses any spawn whose working
+directory is inside `SITES_ROOT` without that door's token. Confinement helpers (`src/util/paths.ts`) keep
 the DAEMON's own copies and deletes inside a root; they cannot constrain a child process
 the daemon spawned. What constrains that child is the uid it runs as, and the fact that
 nothing belonging to another museum is readable by that uid.
@@ -248,6 +251,9 @@ Example values are for `instance = museum-a`, `sites[n]` = `{ slug: 'coleccion',
 | Service group | `layout.identity.group` | `dedalo-site-museum-a` |
 | Web server's group | `layout.identity.webGroup` | the declared `web.group` |
 | Engine's group | `layout.identity.engineGroup` | the declared `engine.group` |
+| Agent user (a turn's uid) | `layout.identity.agentUser` | `dedalo-agent-museum-a` |
+| Transient agent-unit prefix | `layout.agentUnitPrefix` | `dedalo-site-museum-a-agent-` |
+| Agent authorization (polkit) | `layout.agentPolicyPath` | `/etc/polkit-1/rules.d/49-dedalo-site-museum-a-agent.rules` |
 | systemd unit name | `layout.unitName` | `dedalo-site-builder@museum-a.service` |
 | Unit file | `layout.unitPath` | `/etc/systemd/system/dedalo-site-builder@museum-a.service` |
 | Declaration dir | `layout.configDir` | `/etc/dedalo_sites/instances/museum-a` |
@@ -348,7 +354,8 @@ owners and modes and re-asserts them on every run; `MODES` in
 `publication/site_builder/src/provision/layout.ts` is its executable copy, and the gate
 reads both and demands they agree, row for row and in both directions (§11). `<i>` is the
 instance, `SU`/`SG` the service user/group, `WG` the declared `web.group`, `EG` the
-declared `engine.group`.
+declared `engine.group`, `AU` the AGENT user — the second uid a turn runs as
+(`identity.agentUser`), whose primary group is `SG`.
 
 Every row carries an owner AND a group AND a mode, because **a mode without an owner is
 not a permission**: `0750` reads as "the daemon may write here" or "the daemon may NOT
@@ -370,10 +377,10 @@ root:root and is the ONE hand-written file.
 | `…/<i>/engine.env.fragment` | `engineFragment` | root | EG | `0640` | the paired engine's operator | provisioner |
 | the unit, and the two vhosts per site | `hostConfig` | root | root | `0644` | anyone | provisioner |
 | `/var/lib/dedalo_sites/<i>/` | `stateDir` | root | root | `0755` | anyone (traverse) | root only |
-| `…/<i>/workspaces/` | `workspaces` | SU | SG | `0750` | SG | SU (the daemon AND its agent children) |
-| `…/<i>/home/` | `home` | SU | SG | `0700` | SU only | SU |
+| `…/<i>/workspaces/` | `workspaces` | SU | SG | `2770` | SG | SU and AU (the daemon and its agent) |
+| `…/<i>/home/` | `home` | SU | SG | `2770` | SG | SU and AU |
 | `…/<i>/audit/` | `auditDir` | root | SG | `0750` | SG | root only |
-| `…/<i>/audit/audit.jsonl` | `auditFile` | SU | SG | `0640` | SG | SU (append) |
+| `…/<i>/audit/audit.jsonl` | `auditFile` | SU | SG | `0600` | SU alone | SU (append) |
 | `/run/dedalo-sites/<i>/` | `runtimeDir` | SU | SG | `0750` | SG | SU |
 | `…/<i>/daemon.sock` | `socket` | SU | EG | `0660` | EG | EG |
 | `/home/www/<domain>/` | `webspace` | SU | WG | `2750` | the web server | SU |
@@ -382,13 +389,34 @@ root:root and is the ONE hand-written file.
 
 Read the design out of five of those rows:
 
-- **`workspaces/` is the SERVICE USER's, 0750.** The daemon `mkdir`s a site workspace, so
+- **`workspaces/` is the SERVICE USER's, 2770.** The daemon `mkdir`s a site workspace, so
   a root-owned workspaces root makes creating a site a permission error. The property
   "the daemon cannot replace its own roots" is kept by the row above it instead:
   `stateDir` is root-owned 0755, so the daemon writes INSIDE its roots and can neither
-  create, move nor replace one.
-- **`home/` is 0700.** The agent's HOME holds `~/.claude` — session state, caches,
-  whatever the vendor CLI decides to keep. Not even the instance group sees it.
+  create, move nor replace one. The group WRITE bit and the SETGID bit are what make a
+  second uid possible at all: the DAEMON creates the workspace and reads it back to commit,
+  the AGENT writes the files, and setgid keeps an agent-created file in the museum's group
+  rather than the agent's. The world bits stay closed, which is the half that must never
+  move — an open one is every museum's unpublished draft readable by every uid on the host.
+  Group-writable also means the agent can put a SYMLINK where the daemon writes, so every
+  daemon-side write into this tree goes through `src/util/shared_tree.ts`, which creates each
+  level and opens each file `O_NOFOLLOW` and modes the descriptor: a link at `site.json.tmp`,
+  `AGENTS.md`, `.builder/`, `.git/info/exclude`, a driver's MCP config or a session log is
+  refused with nothing written, and so is a second HARD link on the file (`O_NOFOLLOW` says
+  nothing about one; the link count on the handle does, and the file is emptied only after
+  that question). Without it the 0600 audit trail two rows down would be truncatable,
+  rewritable and re-modable by the daemon on the agent's behalf. A directory is moded by the
+  call that CREATED it and never on the way past, so the daemon's own 0700 `.builder/` is not
+  re-opened to 2770 by the first build under it. The same module is also the only way the
+  daemon READS back out of this tree (`readFileShared`/`readFilePrivate`/`readdirShared`): a
+  link planted at a build log had the daemon open it as itself and the API return the bytes,
+  which is the disclosure this row is about, arriving through the read half instead of the
+  write half. And every door asks whose inode it is — a file the agent authored where the
+  daemon writes takes the museum's key with the mode the agent chose.
+- **`home/` is 2770 for the same reason.** The agent's HOME holds `~/.claude` — session
+  state, caches, whatever the vendor CLI decides to keep — and the AGENT is the process that
+  writes it, while the daemon still owns the directory so a turn cannot replace it. It was
+  0700 while one uid was both.
 - **`audit/` is root-owned 0750, and the FILE is the daemon's 0640.** Append-only is
   otherwise a convention (`src/audit.ts` says so honestly: "enforced by convention here,
   not by the filesystem"). Unlink and rename are permissions on the DIRECTORY, so a

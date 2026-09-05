@@ -19,6 +19,7 @@ import { randomUUID } from 'node:crypto';
 import { config, parseEnvPairs } from '../config';
 import { confinedPath } from '../util/paths';
 import { ConflictError, LimitExceededError, NotFoundError, ValidationError } from '../errors';
+import { assertTurnConfinementAvailable } from '../drivers/confinement';
 import { getDriver } from '../drivers/registry';
 import type { AgentProcess, DriverId, SessionStartOptions } from '../drivers/types';
 import { readManifest } from '../sites/manifest';
@@ -113,6 +114,10 @@ export interface StartResult {
 export async function startSession(slug: string, prompt: string, driverOverride?: DriverId): Promise<StartResult> {
   validatePrompt(prompt);
   if (!siteExists(slug)) throw new NotFoundError(`No site named '${slug}'`);
+  // BEFORE ANY RESERVATION. A host that cannot run a turn under the agent's own uid refuses
+  // the REQUEST (503, naming what is missing) instead of accepting a session and failing it
+  // asynchronously — and, above all, instead of running the agent as this daemon.
+  assertTurnConfinementAvailable();
 
   // Reserve the workspace SYNCHRONOUSLY — check-and-mark with no await in between, and
   // cross-exclusive with builds (workspace_activity.ts). From here every failure path
@@ -175,6 +180,9 @@ export async function sendMessage(sessionId: string, message: string): Promise<v
   validatePrompt(message);
   const slug = slugBySession.get(sessionId) ?? (await resolveSlugFromDisk(sessionId));
   if (!slug) throw new NotFoundError(`No session '${sessionId}'`);
+  // Asked again, for the same reason: a second turn is as much an agent run as the first,
+  // and a host that lost its runner between them must not answer it as this daemon.
+  assertTurnConfinementAvailable();
 
   // Same synchronous reservation as startSession (cross-exclusive with builds).
   if (!tryBeginTurn(slug)) {

@@ -60,6 +60,12 @@ const DIFFUSION_IMPORT_SEAMS = new Set([
 	// the diffusion FACADE's export (src/diffusion/api/reconcile.ts) and enters
 	// lazily — registerAllReconciles() is async for exactly this reason.
 	'core/reconcile/catalog.ts',
+	// The retention catalog (audit 2026-08-26 P2-9): the ONE statement of what
+	// every append-only store keeps and for how long. The diffusion jobs table is
+	// one of those stores, and its prune enters through the diffusion FACADE
+	// (src/diffusion/api/actions.ts), lazily — the same shape as the reconcile
+	// catalog above.
+	'core/retention/prune.ts',
 ]);
 const DISPATCH_SEAM = 'core/api/handlers/dd_diffusion_api.ts';
 

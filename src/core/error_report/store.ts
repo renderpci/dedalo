@@ -3,8 +3,10 @@
  * dedalo_ts_error_reports table (sql_confinement T4; WC-017).
  *
  * Append-only by construction: this module exports insert/list/count plus the
- * retention prune — no UPDATE and no targeted DELETE exist, so a stored report
- * cannot be edited through any door. The retention prune (opportunistic, on
+ * retention prune — no UPDATE exists and the only DELETEs are the retention
+ * ones (by age, and the oldest-first eviction that enforces the row ceiling), so
+ * a stored report cannot be edited, and cannot be singled out for removal,
+ * through any door. The retention prune (opportunistic, on
  * insert — the session_store login-attempts GC precedent) bounds total disk
  * footprint; "append-only" governs integrity WITHIN the retention window, not
  * permanence (SECURITY_DECISIONS: error-report intake).
@@ -89,7 +91,7 @@ export async function ensureErrorReportsTable(table?: string): Promise<void> {
  */
 export async function insertErrorReport(
 	report: ErrorReportRow,
-	options?: { table?: string; retentionDays?: number },
+	options?: { table?: string; retentionDays?: number; maxRows?: number },
 ): Promise<number> {
 	const name = tableOrThrow(options?.table);
 	const rows = (await sql.unsafe(
@@ -112,19 +114,94 @@ export async function insertErrorReport(
 		],
 	)) as { id: number }[];
 
-	const retentionDays = options?.retentionDays ?? config.errorReport.retentionDays;
-	if (retentionDays > 0) {
-		try {
-			await sql.unsafe(
-				`DELETE FROM "${name}" WHERE received_at < now() - make_interval(days => $1)`,
-				[retentionDays],
-			);
-		} catch (error) {
-			console.warn('[error_report] retention prune failed', error);
-		}
+	try {
+		await pruneErrorReports({
+			apply: true,
+			table: name,
+			retentionDays: options?.retentionDays,
+			maxRows: options?.maxRows,
+		});
+	} catch (error) {
+		console.warn('[error_report] retention prune failed', error);
 	}
 
 	return Number(rows[0]?.id);
+}
+
+/**
+ * THE ONE PRUNE for this store — by AGE and by ROW COUNT (audit 2026-08-26
+ * SEC-20). Registered in core/retention/prune.ts; also run opportunistically by
+ * every insert, the way session_store GCs its own login attempts.
+ *
+ * WHY A ROW CEILING AND NOT ONLY A WINDOW. The intake is pre-auth by design and
+ * its documented default posture is OPEN. An age window cannot bound a burst:
+ * everything a flood delivers today is inside the window for the whole of it,
+ * and since 2026-07-17 a report may carry an inline base64 screenshot of up to
+ * ~200 KiB, which raised the realistic per-report size by two orders of
+ * magnitude — the volume model the intake was accepted under predates it.
+ *
+ * EVICT THE OLDEST, DO NOT REFUSE THE NEWEST. A ceiling that refused at the door
+ * would let anyone who can reach the intake silence the genuine reports it
+ * exists to collect, simply by filling it first. Dropping the oldest instead
+ * keeps the store bounded AND keeps it useful.
+ */
+export async function pruneErrorReports(options: {
+	apply: boolean;
+	table?: string;
+	retentionDays?: number;
+	maxRows?: number;
+}): Promise<{ candidates: number; deleted: number; detail: Record<string, unknown> }> {
+	const name = tableOrThrow(options.table);
+	const retentionDays = options.retentionDays ?? config.errorReport.retentionDays;
+	const maxRows = options.maxRows ?? config.errorReport.maxRows;
+	const detail: Record<string, unknown> = {
+		table: name,
+		window_days: retentionDays,
+		max_rows: maxRows,
+	};
+	const total = await countErrorReports(name);
+	const aged = await countAgedReports(name, retentionDays);
+	const candidates = aged + (maxRows > 0 ? Math.max(0, total - maxRows) : 0);
+	if (!options.apply) return { candidates, deleted: 0, detail };
+	const deletedByAge = await deleteAgedReports(name, retentionDays);
+	// Recount AFTER the age pass: the window may already have brought the store
+	// under the ceiling, and evicting rows nobody asked to lose is not free.
+	const deletedByCeiling = await evictOldestReports(name, maxRows);
+	return { candidates, deleted: deletedByAge + deletedByCeiling, detail };
+}
+
+/** How many rows are outside the age window (0 when there is none). */
+async function countAgedReports(name: string, retentionDays: number): Promise<number> {
+	if (retentionDays <= 0) return 0;
+	const counted = (await sql.unsafe(
+		`SELECT count(*)::int AS n FROM "${name}" WHERE received_at < now() - make_interval(days => $1)`,
+		[retentionDays],
+	)) as { n: number }[];
+	return Number(counted[0]?.n ?? 0);
+}
+
+/** Remove the rows outside the age window. Returns how many went. */
+async function deleteAgedReports(name: string, retentionDays: number): Promise<number> {
+	if (retentionDays <= 0) return 0;
+	const removed = (await sql.unsafe(
+		`DELETE FROM "${name}" WHERE received_at < now() - make_interval(days => $1) RETURNING id`,
+		[retentionDays],
+	)) as unknown[];
+	return removed.length;
+}
+
+/** Bring the store under the row ceiling, oldest first. Returns how many went. */
+async function evictOldestReports(name: string, maxRows: number): Promise<number> {
+	if (maxRows <= 0) return 0;
+	const remaining = await countErrorReports(name);
+	if (remaining <= maxRows) return 0;
+	const evicted = (await sql.unsafe(
+		`DELETE FROM "${name}" WHERE id IN (
+			SELECT id FROM "${name}" ORDER BY received_at ASC, id ASC LIMIT $1
+		) RETURNING id`,
+		[remaining - maxRows],
+	)) as unknown[];
+	return evicted.length;
 }
 
 /** Newest-first page of stored reports for the admin widget. */

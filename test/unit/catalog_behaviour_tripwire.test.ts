@@ -182,6 +182,13 @@ const BEHAVIOUR_CLAIMS: readonly BehaviourClaim[] = [
 		definedIn: 'src/core/reconcile/scheduler.ts',
 	},
 	{
+		key: 'DEDALO_RETENTION_SCHEDULER_ENABLED',
+		claim:
+			'the server applies the configured retention windows once shortly after boot and daily thereafter',
+		performedBy: 'startRetentionScheduler',
+		definedIn: 'src/core/retention/scheduler.ts',
+	},
+	{
 		key: 'DEDALO_UPLOAD_SERVICE_CHUNK_FILES',
 		claim: 'a file larger than this is segmented into chunks for upload',
 		performedBy: 'create_transfer',
@@ -376,8 +383,8 @@ describe('catalog behaviour: documented behaviour is performed by live code', ()
 
 		// This is the leg that catches a NEW key: prose promising the engine acts on
 		// its own must either name the code that acts, or say in writing why the
-		// wording is not a promise. Nine keys match the pattern today (measured
-		// 2026-08-30) — eight claims and one waiver.
+		// wording is not a promise. Ten keys match the pattern today (measured
+		// 2026-09-05) — nine claims and one waiver.
 		expect(unaccounted.sort()).toEqual([]);
 	});
 

@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
@@ -16,6 +16,8 @@ import { startBuild, getBuild, getBuildLog, latestBuild } from '../src/build/bui
 import { currentRelease } from '../src/build/promote';
 import { handleGetBuild } from '../src/routes/builds';
 import { NotFoundError } from '../src/errors';
+import { policyFromConfig } from '../src/drivers/confinement';
+import { ConfinementUnavailableError } from '../src/errors';
 
 const ACTOR = { user_id: 3, username: 'builder-tester' };
 
@@ -67,6 +69,18 @@ describe('build runner', () => {
     // latestBuild reflects it.
     const latest = await latestBuild('buildable');
     expect(latest?.id).toBe(build_id);
+
+    // AND THE BUILD DID NOT OPEN THE DAEMON'S OWN STATE TO THE AGENT. `startBuild` creates
+    // `<slug>/.builder/builds`, and a directory-creating helper that moded every component
+    // it walked re-opened `.builder` — 0700, the daemon's — to 2770 on the first build of
+    // every site, handing the uid the agent runs as rwx over the build records the API
+    // serves back. Measured: the leaf and the records are the daemon's, and so is the
+    // directory above them.
+    const builder = workspacePath('buildable', '.builder');
+    // eslint-disable-next-line no-bitwise -- the permission word is the assertion
+    expect(statSync(builder).mode & 0o7777).toBe(0o700);
+    expect(statSync(join(builder, 'builds')).mode & 0o7777).toBe(0o700);
+    expect(statSync(join(builder, 'builds', `${build_id}.json`)).mode & 0o7777).toBe(0o600);
   });
 
   test('a failing build is recorded as failed and nothing is promoted', async () => {
@@ -80,6 +94,28 @@ describe('build runner', () => {
     expect(record?.outcome).toBe('failed');
     expect(record?.release).toBeNull();
     expect(await currentRelease(surfaceOf('broken', 'preprod'))).toBeNull();
+  });
+
+  test('a host that cannot confine has its BUILD REQUEST refused, before anything is reserved', async () => {
+    // The build door's ordering half. `runConfined` refuses a step on such a host, so the
+    // build is never run as the daemon either way — but a refusal that arrives at step 1
+    // means the museum's workspace was already reserved and a build record already written,
+    // i.e. a failed build instead of a rejected request. Asserted here because a policy is
+    // a PARAMETER of startBuild: this machine has no systemd, so the failing host has to be
+    // stated rather than found.
+    await makeSite('unconfinable', 'Unconfinable');
+    await useTrivialBuild('unconfinable', 'src', true);
+    const impossible = { ...policyFromConfig(), mode: 'systemd_scope' as const, agentUser: '' };
+
+    await expect(startBuild('unconfinable', impossible)).rejects.toBeInstanceOf(
+      ConfinementUnavailableError,
+    );
+    // Nothing was reserved and nothing was written: no build record directory…
+    expect(existsSync(join(workspacePath('unconfinable'), '.builder', 'builds'))).toBe(false);
+    // …and the next request is a first build, not "a build is already running".
+    const { build_id } = await startBuild('unconfinable');
+    await waitForBuild('unconfinable', build_id);
+    expect((await getBuild('unconfinable', build_id))?.outcome).toBe('success');
   });
 
   test('a build for a site whose webspace is gone is refused before it runs', async () => {

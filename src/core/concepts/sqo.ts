@@ -23,6 +23,12 @@
 import { z } from 'zod';
 import { config } from '../../config/config.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
+import {
+	boundedFreeText,
+	boundedIdentifier,
+	boundedLang,
+	boundedShortName,
+} from './scalar_bounds.ts';
 
 /** Max rows an untrusted (client) SQO may request. PHP: DEDALO_SEARCH_CLIENT_MAX_LIMIT. */
 export const CLIENT_MAX_LIMIT = config.features.searchClientMaxLimit;
@@ -49,14 +55,14 @@ export const SERVER_ONLY_SQO_KEYS: readonly string[] = [
 /** One step of a filter path: which component of which section to match on. */
 export const sqoPathStepSchema = z
 	.object({
-		section_tipo: z.string().optional(),
-		component_tipo: z.string().optional(),
-		name: z.string().optional(), // human label, ontology-authored; ignored by SQL build
+		section_tipo: boundedIdentifier().optional(),
+		component_tipo: boundedIdentifier().optional(),
+		name: boundedFreeText().optional(), // human label, ontology-authored; ignored by SQL build
 		// ORDER paths only: name an exact DB column to sort by (id/section_id/…),
 		// as an alternative to `component_tipo` (a component value). `component_tipo`
 		// wins when both are present. Validated against VALID_DATA_COLUMNS at SQL
 		// build (buildOrderClauses); NOT a server-only key, so it survives sanitize.
-		column: z.string().optional(),
+		column: boundedIdentifier().optional(),
 	})
 	.passthrough();
 export type SqoPathStep = z.infer<typeof sqoPathStepSchema>;
@@ -72,14 +78,14 @@ export const sqoFilterLeafSchema = z
 		q: z.unknown().optional(),
 		// The REAL client sends explicit null for an unset operator (verified in
 		// the browser E2E); accept + treat as absent (see conform.ts `?? null`).
-		q_operator: z.string().nullish(),
+		q_operator: boundedShortName().nullish(),
 		path: z.array(sqoPathStepSchema).optional(),
-		format: z.string().optional(), // direct | array_elements | typeof | column | in_column | relation | function (deprecated)
-		use_function: z.string().optional(), // DEPRECATED (format:'function' only): legacy flat-variant name, e.g. relations_flat_fct_st_si — wire vocabulary, no DB function exists
+		format: boundedShortName().optional(), // direct | array_elements | typeof | column | in_column | relation | function (deprecated)
+		use_function: boundedIdentifier().optional(), // DEPRECATED (format:'function' only): legacy flat-variant name, e.g. relations_flat_fct_st_si — wire vocabulary, no DB function exists
 		q_split: z.boolean().optional(),
 		unaccent: z.boolean().optional(),
-		type: z.string().optional(), // jsonb | string
-		lang: z.string().optional(),
+		type: boundedShortName().optional(), // jsonb | string
+		lang: boundedLang().optional(),
 	})
 	.passthrough();
 export type SqoFilterLeaf = z.infer<typeof sqoFilterLeafSchema>;
@@ -110,8 +116,8 @@ export const sqoOrderSchema = z
 /** Locator-shaped record pin used by filter_by_locators. */
 export const sqoLocatorPinSchema = z
 	.object({
-		section_tipo: z.string(),
-		section_id: z.union([z.number(), z.string()]),
+		section_tipo: boundedIdentifier(),
+		section_id: z.union([z.number(), boundedIdentifier()]),
 	})
 	.passthrough();
 
@@ -123,16 +129,16 @@ export const sqoLocatorPinSchema = z
 export const sqoSchema = z
 	.object({
 		/** Optional identifier, e.g. 'oh1_list'. */
-		id: z.string().nullish(),
+		id: boundedIdentifier().nullish(),
 		/** MANDATORY target section(s). Single string accepted, normalized to array. */
-		section_tipo: z.union([z.string(), z.array(z.string())]),
+		section_tipo: z.union([boundedIdentifier(), z.array(boundedIdentifier())]),
 		/** Which matrix table model to target: edit | list | tm | related. */
-		mode: z.string().nullish(),
+		mode: boundedShortName().nullish(),
 		filter: sqoFilterNodeSchema.optional().nullable(),
 		select: z.array(sqoPathStepSchema).nullish(),
 		// The REAL client sends explicit nulls for unset limit/offset (verified in
 		// the browser E2E); accept + treat as absent ('all' allowed server-side only).
-		limit: z.union([z.number(), z.string()]).nullish(),
+		limit: z.union([z.number(), boundedShortName()]).nullish(),
 		offset: z.number().nullish(),
 		total: z.number().nullable().optional(),
 		full_count: z.boolean().nullish(),

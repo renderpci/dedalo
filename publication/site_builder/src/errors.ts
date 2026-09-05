@@ -85,6 +85,29 @@ export class LimitExceededError extends ApiError {
   }
 }
 
+/**
+ * THE HOST CANNOT CONFINE AN AGENT TURN, so no agent turn is started.
+ *
+ * 503 and not 500: nothing is wrong with the request and nothing is wrong with the daemon's
+ * own code — the host is missing the runner, the agent identity or the authorization that
+ * makes a confined turn possible, and the honest answer is "not right now, and here is
+ * what is missing". It is a class of its own because the alternative is the failure this
+ * whole boundary exists to prevent: a daemon that quietly runs the agent unconfined,
+ * as itself, when the confinement it advertises is unavailable.
+ */
+export class ConfinementUnavailableError extends ApiError {
+  constructor(detail: string) {
+    super(
+      503,
+      `${PROBLEM_TYPE_BASE}confinement-unavailable`,
+      'Agent Confinement Unavailable',
+      detail,
+      { reason: 'confinement_unavailable' },
+    );
+    this.name = 'ConfinementUnavailableError';
+  }
+}
+
 // Our fault, not the caller's. Only echoes the underlying message in development —
 // in production the detail is a fixed string so an agent CLI's stderr or a stack trace
 // never becomes part of a response the engine relays to a browser.

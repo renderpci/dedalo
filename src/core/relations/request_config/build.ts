@@ -19,6 +19,7 @@
 
 import { selectRequestConfigStrategy } from '../../concepts/request_config.ts';
 import { sql } from '../../db/postgres.ts';
+import { RETIRED_PROPERTY_KEYS } from '../../ontology/property_census.ts';
 import { getModelByTipo, getNode } from '../../ontology/resolver.ts';
 import { getSectionRealTipo } from '../../resolve/security_access_datalist.ts';
 import {
@@ -156,6 +157,13 @@ async function withModelDefaultTargets(
  * sqo (CONVENTIONS §1: degraded, reported, defined), then resolves by the
  * ordinary rule — an install that missed the ontology migration sees a
  * greppable error, never silently different options.
+ *
+ * ONE LAW, ONE HOME (DEAD-08 / P2-27): the fact that this key is retired, and
+ * WHAT replaces it, are read from `ontology/property_census.ts` — the same
+ * registry the resolver tripline and the install report use. This site adds
+ * what that registry cannot know: the node's OWN target_values, spelled as the
+ * sqo entry the author should paste. Its `reportedAtUse` mark is what keeps
+ * the generic tripline quiet here.
  */
 function reportRetiredTargetMode(ownProperties: unknown, ownerTipo: string): void {
 	const properties = ownProperties as
@@ -165,10 +173,12 @@ function reportRetiredTargetMode(ownProperties: unknown, ownerTipo: string): voi
 	const targetMode = properties?.target_mode;
 	if (targetMode === undefined || targetMode === null) return;
 	const targetValues = Array.isArray(properties?.target_values) ? properties.target_values : [];
+	const retired = RETIRED_PROPERTY_KEYS.target_mode;
 	console.error(
 		`[request_config/build] node '${ownerTipo}' carries RETIRED properties.target_mode ` +
-			`('${String(targetMode)}') — no longer read. Replace it with an explicit sqo section_tipo ` +
-			`entry {"source":"section","value":${JSON.stringify(targetValues)}}. ` +
+			`('${String(targetMode)}') — read by nothing. ${retired?.reason ?? ''} ` +
+			`Replace it with ${retired?.replacement ?? 'an explicit sqo section_tipo entry'}, here ` +
+			`{"source":"section","value":${JSON.stringify(targetValues)}}. ` +
 			'Resolving by the ordinary rule.',
 	);
 }

@@ -31,24 +31,52 @@
  *      is a tokenisation of a command, not an injection surface. A spec naming `sh` gets
  *      a shell the same way a turn naming `sh` does — by asking for one, at its own
  *      privilege, which is the next point.
- *   2. A BUILD STEP RUNS AT EXACTLY AN AGENT TURN'S PRIVILEGE, NEVER WIDER. Same unix
- *      user, same workspace, and — the part that must never drift — the same CONSTRUCTED
- *      environment: `{ PATH, HOME }` and nothing else. Not the daemon's SERVICE_TOKEN, not
- *      `$CREDENTIALS_DIRECTORY`, not a provider key (a turn gets its own driver's key; a
- *      build gets none at all). An agent that rewrites the build spec therefore obtains
- *      nothing it did not already have while the turn was running.
+ *   2. A BUILD STEP RUNS AT EXACTLY AN AGENT TURN'S PRIVILEGE, NEVER WIDER — and this is
+ *      now a MECHANISM rather than a description. Every step goes through `runConfined`
+ *      (drivers/confinement.ts): the same second unix identity a turn runs as
+ *      (`AGENT_USER`), inside a transient unit of the same museum-scoped prefix, with the
+ *      same egress policy (public internet yes — a package registry has to be reachable;
+ *      loopback, the private ranges and the link-local metadata block no) and the same
+ *      per-run caps. Plus the same CONSTRUCTED environment it always had: `{ PATH, HOME }`
+ *      and nothing else — not the daemon's SERVICE_TOKEN, not `$CREDENTIALS_DIRECTORY`,
+ *      not a provider key.
+ *
+ *      THE ROW THIS CLOSES. While the turn was confined and the build was not, the build
+ *      was a WIDER principal than the turn: an agent that rewrote `site.json`'s `build`
+ *      block — or shipped a `package.json` whose lifecycle scripts `bun install` runs —
+ *      had its own command executed as the SERVICE user, the uid that owns the workspaces,
+ *      the audit trail and the credential directory the museum's bearer token is read
+ *      from. Measured end to end before the confinement existed: a turn that wrote a new
+ *      spec had its own command executed by the next build, reported as `success`. It is
+ *      still executed; it is no longer executed as anyone the turn was not.
+ *
+ *      `util/spawn.ts` REFUSES any spawn whose cwd is inside `SITES_ROOT` without the
+ *      confinement's token, so this cannot be undone by adding a call site.
  *
  * `tests/agent_boundary.test.ts` holds (2) as the key SET of the child environment, on this
  * path and on the driver and shared-spawn paths beside it. The day a build step needs a
  * credential, it is that gate that must be argued with first.
  */
 
-import { existsSync, lstatSync } from 'node:fs';
-import { appendFile, mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { lstatSync } from 'node:fs';
+import { relative } from 'node:path';
 import { confinedPath, confinedRealPath } from '../util/paths';
+import {
+  appendFilePrivate,
+  mkdirPrivate,
+  readdirShared,
+  readFilePrivate,
+  writeFilePrivate,
+  writeFilePrivateAtomic,
+} from '../util/shared_tree';
 import { config } from '../config';
 import { ConflictError, NotFoundError } from '../errors';
-import { runBinary } from '../util/spawn';
+import {
+  assertTurnConfinementAvailable,
+  policyFromConfig,
+  runConfined,
+  type ConfinementPolicy,
+} from '../drivers/confinement';
 import { readManifest, type BuildSpec } from '../sites/manifest';
 import { assertWithinQuota, siteExists, treeSizeMb } from '../sites/workspace';
 import { siteSurface } from '../sites/webspace';
@@ -70,6 +98,18 @@ export interface BuildStatus {
 
 function buildsDir(slug: string): string {
   return confinedPath(config.SITES_ROOT, slug, '.builder', 'builds');
+}
+
+/**
+ * THE SAME PATH, STATED AS THE WRITERS NEED IT: a trusted root plus an untrusted remainder.
+ *
+ * `.builder/` is 0700, but it sits inside a directory the agent may write, so a turn can
+ * unlink it and put a symlink in its place. Every daemon-side write below therefore goes
+ * through `util/shared_tree.ts`, which opens each component under `SITES_ROOT` with
+ * `O_NOFOLLOW` and refuses a link rather than following it out of the workspace.
+ */
+function underSitesRoot(absolute: string): string {
+  return relative(config.SITES_ROOT, absolute);
 }
 
 /**
@@ -108,7 +148,17 @@ function pathForCallerId(build: () => string): string | null {
 }
 
 /** Kicks off a build, returning its id. The work runs detached; poll getBuild. */
-export async function startBuild(slug: string): Promise<{ build_id: string }> {
+export async function startBuild(
+  slug: string,
+  /**
+   * The policy the whole build runs under. It defaults to this instance's, and it is a
+   * PARAMETER for the same reason `runConfined`'s is: the refusal below decides whether a
+   * museum's request is accepted at all, and a check whose input cannot be stated is a
+   * check no gate can put a failing host in front of. What is asserted is also what runs —
+   * the same value is threaded into every step.
+   */
+  policy: ConfinementPolicy = policyFromConfig(),
+): Promise<{ build_id: string }> {
   if (!siteExists(slug)) throw new NotFoundError(`No site named '${slug}'`);
 
   // WHERE THIS BUILD WILL LAND, PROVED BEFORE IT RUNS. `siteSurface` refuses a site whose
@@ -116,6 +166,12 @@ export async function startBuild(slug: string): Promise<{ build_id: string }> {
   // ProtectSystem=strict. Asking now costs one stat and one probe; asking only at promote
   // time would mean the museum waits five minutes to be told it had nowhere to publish.
   siteSurface(await readManifest(slug), 'preprod');
+
+  // CAN THIS HOST RUN A BUILD AS THE AGENT AT ALL? Asked before the reservation, for the
+  // same reason the session manager asks it before reserving a workspace: a host that
+  // cannot confine must answer the REQUEST with a refusal naming what is missing, never
+  // accept the work and then run agent-authored commands as this daemon.
+  assertTurnConfinementAvailable(policy);
 
   // Reserve the workspace synchronously — one check-and-mark, cross-exclusive with agent
   // turns (workspace_activity.ts), so a build can never start while an agent edits the
@@ -132,7 +188,8 @@ export async function startBuild(slug: string): Promise<{ build_id: string }> {
 
   try {
     const id = newReleaseId();
-    await mkdir(buildsDir(slug), { recursive: true });
+    // 0700: the build records and logs are the DAEMON's, inside a tree the agent writes.
+    await mkdirPrivate(config.SITES_ROOT, underSitesRoot(buildsDir(slug)));
     const record: BuildStatus = {
       id,
       outcome: 'running',
@@ -142,13 +199,13 @@ export async function startBuild(slug: string): Promise<{ build_id: string }> {
       error: null,
     };
     await writeRecord(slug, record);
-    await writeFile(logPath(slug, id), '', 'utf8');
+    await writeFilePrivate(config.SITES_ROOT, underSitesRoot(logPath(slug, id)), '');
 
     // Detached: the reservation is released when the build settles. executeBuild funnels
     // every failure into its terminal record, but its own failure handling can still
     // reject (an unwritable log), so the .catch is load-bearing — without it that becomes
     // an unhandled rejection.
-    void executeBuild(slug, id, record)
+    void executeBuild(slug, id, record, policy)
       .catch(error => console.error(`[build] detached build '${id}' for '${slug}' failed unexpectedly:`, error))
       .finally(() => endBuild(slug));
     return { build_id: id };
@@ -166,7 +223,12 @@ export async function startBuild(slug: string): Promise<{ build_id: string }> {
  * clears the per-slug lock. A missing output directory is a failure, not a crash: a build
  * command can exit 0 yet produce nothing.
  */
-async function executeBuild(slug: string, id: string, record: BuildStatus): Promise<void> {
+async function executeBuild(
+  slug: string,
+  id: string,
+  record: BuildStatus,
+  policy: ConfinementPolicy,
+): Promise<void> {
   const workspace = confinedPath(config.SITES_ROOT, slug);
   const manifest = await readManifest(slug);
   const spec = manifest.build;
@@ -178,13 +240,27 @@ async function executeBuild(slug: string, id: string, record: BuildStatus): Prom
 
   try {
     await append(`# install: ${spec.install}\n`);
-    const install = await runStep(spec.install, workspace, env, config.INSTALL_TIMEOUT_MS, append);
+    const install = await runStep(
+      spec.install,
+      workspace,
+      env,
+      config.INSTALL_TIMEOUT_MS,
+      append,
+      policy,
+    );
     if (install.exitCode !== 0 || install.timedOut) {
       return finish(slug, record, 'failed', null, install.timedOut ? 'install timed out' : 'install failed');
     }
 
     await append(`\n# build: ${spec.build}\n`);
-    const build = await runStep(spec.build, workspace, env, config.BUILD_TIMEOUT_MS, append);
+    const build = await runStep(
+      spec.build,
+      workspace,
+      env,
+      config.BUILD_TIMEOUT_MS,
+      append,
+      policy,
+    );
     if (build.exitCode !== 0 || build.timedOut) {
       return finish(slug, record, 'failed', null, build.timedOut ? 'build timed out' : 'build failed');
     }
@@ -239,9 +315,21 @@ function runStep(
   env: Record<string, string>,
   timeoutMs: number,
   onOutput: (text: string) => void,
-): ReturnType<typeof runBinary> {
+  policy: ConfinementPolicy,
+): ReturnType<typeof runConfined> {
   const argv = command.trim().split(/\s+/).filter(Boolean);
-  return runBinary(argv, { cwd, env, timeoutMs, onStdout: onOutput, onStderr: onOutput });
+  return runConfined(
+    {
+      argv,
+      cwd,
+      env,
+      timeoutMs,
+      label: 'build step',
+      onStdout: onOutput,
+      onStderr: onOutput,
+    },
+    policy,
+  );
 }
 
 /**
@@ -331,22 +419,48 @@ async function finish(
 }
 
 async function writeRecord(slug: string, record: BuildStatus): Promise<void> {
-  const target = recordPath(slug, record.id);
-  const tmp = target + '.tmp';
-  await writeFile(tmp, JSON.stringify(record, null, 2) + '\n', 'utf8');
-  await rename(tmp, target);
+  // ATOMIC, and 0600. The record is polled by the UI while the build settles, so a
+  // truncate-then-write through one descriptor is a window in which `getBuild` reads an
+  // empty file and the route above answers "no build '<id>'" for a build that exists — and
+  // a death inside that window leaves the emptiness for good. The tmp sibling is not the
+  // plant a path-based one would be: `writeFilePrivateAtomic` writes it through the same
+  // O_NOFOLLOW/hard-link/owner door and renames the daemon's OWN inode over the target.
+  await writeFilePrivateAtomic(
+    config.SITES_ROOT,
+    underSitesRoot(recordPath(slug, record.id)),
+    JSON.stringify(record, null, 2) + '\n',
+  );
 }
 
 async function appendLog(slug: string, id: string, text: string): Promise<void> {
-  await appendFile(logPath(slug, id), text, 'utf8');
+  await appendFilePrivate(config.SITES_ROOT, underSitesRoot(logPath(slug, id)), text);
 }
+
+/*
+ * THE READ DOORS, THROUGH THE SAME O_NOFOLLOW WRITER MODULE — because this was the half the
+ * first repair left open.
+ *
+ * `recordPath`/`logPath` are LEXICAL (`confinedPath`), and `.builder/` sits inside a
+ * workspace the agent may write. A turn that replaced `.builder` and dropped
+ * `<id>.log -> <the instance .env>` had this daemon open it AS ITSELF and `handleGetBuild`
+ * return the bytes as `{...record, log}` — measured, on this package's own fixture: the
+ * daemon's SERVICE_TOKEN served over the API as a build log. `readFilePrivate` walks every
+ * component `O_NOFOLLOW`, refuses a second name on the inode, and refuses an inode the
+ * daemon does not own (an agent-authored record is not this daemon's word about a build).
+ *
+ * AN ABSENT FILE IS `null`; A PLANTED ONE THROWS. Folding a refusal into the same `null` an
+ * unknown id gets would answer an incident with a 404 — the leak would be closed and nobody
+ * would ever hear about it.
+ */
 
 /** A specific build's status record. */
 export async function getBuild(slug: string, id: string): Promise<BuildStatus | null> {
   const path = pathForCallerId(() => recordPath(slug, id));
-  if (path === null || !existsSync(path)) return null;
+  if (path === null) return null;
+  const text = await readFilePrivate(config.SITES_ROOT, underSitesRoot(path));
+  if (text === null) return null;
   try {
-    return JSON.parse(await readFile(path, 'utf8')) as BuildStatus;
+    return JSON.parse(text) as BuildStatus;
   } catch {
     return null;
   }
@@ -355,15 +469,15 @@ export async function getBuild(slug: string, id: string): Promise<BuildStatus | 
 /** A build's captured log text. */
 export async function getBuildLog(slug: string, id: string): Promise<string | null> {
   const path = pathForCallerId(() => logPath(slug, id));
-  if (path === null || !existsSync(path)) return null;
-  return readFile(path, 'utf8');
+  if (path === null) return null;
+  return readFilePrivate(config.SITES_ROOT, underSitesRoot(path));
 }
 
 /** The most recent build record for a site, or null if it has never been built. */
 export async function latestBuild(slug: string): Promise<BuildStatus | null> {
-  const dir = buildsDir(slug);
-  if (!existsSync(dir)) return null;
-  const files = (await readdir(dir)).filter(f => f.endsWith('.json'));
+  const names = await readdirShared(config.SITES_ROOT, underSitesRoot(buildsDir(slug)));
+  if (names === null) return null;
+  const files = names.filter(f => f.endsWith('.json'));
   if (files.length === 0) return null;
   files.sort();
   return getBuild(slug, files[files.length - 1].slice(0, -'.json'.length));

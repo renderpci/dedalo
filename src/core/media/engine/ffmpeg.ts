@@ -23,6 +23,7 @@ import { existsSync, renameSync, rmSync, statSync } from 'node:fs';
 import { basename, dirname, extname } from 'node:path';
 import { config } from '../../../config/config.ts';
 import { withTempSibling, writeAtomically } from '../atomic.ts';
+import { withAvSlot } from './admission.ts';
 import { resolveFaststart } from './binaries.ts';
 import { type FfmpegProfile, getFfmpegProfile } from './ffmpeg_profiles.ts';
 import { chainStdout, createFfmpegProgressReader } from './ffmpeg_progress.ts';
@@ -95,7 +96,15 @@ async function runProducer(
 	spawnOptions: SpawnOptions,
 	progress = true,
 ): Promise<SpawnResult> {
-	return runBinary(progress ? withProgress(argv) : argv, producerSpawnOptions(spawnOptions));
+	// THE PERMIT IS TAKEN HERE, at the spawn, not at the caller (audit MEDIA-01,
+	// the ffmpeg half). This door used to be exempt because "the AV producer runs
+	// in a media/jobs.ts lane" — false for `create_posterframe`, which is awaited
+	// INLINE in an API handler and belongs to no lane, and for every other inline
+	// caller written after that reason was written. A permit at the door bounds
+	// all of them; a job takes its lane AND this permit, which is correct.
+	return withAvSlot('ffmpeg', () =>
+		runBinary(progress ? withProgress(argv) : argv, producerSpawnOptions(spawnOptions)),
+	);
 }
 
 /**

@@ -27,7 +27,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, rm, writeFile, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { resetInstance, roots, workspacePath } from './fixtures/instance';
-import { runBinary } from '../src/util/spawn';
+import { runConfined } from '../src/drivers/confinement';
 import { commitAll, initRepo, changedFiles } from '../src/sites/git';
 
 beforeEach(resetInstance);
@@ -38,7 +38,12 @@ async function makeEnclosingRepo(): Promise<{ dir: string; head: () => Promise<s
   const dir = roots.sitesRoot;
   await mkdir(dir, { recursive: true });
   const env = { PATH: process.env.PATH ?? '/usr/bin:/bin', HOME: dir };
-  const run = (...args: string[]) => runBinary(['git', ...args], { cwd: dir, env, timeoutMs: 30_000 });
+  // Through the CONFINEMENT door, like every other command this daemon runs inside the
+  // workspaces root: `runBinary` refuses that cwd outright (util/spawn.ts), which is the
+  // rule that keeps a build step or a git hook from executing as the daemon. Under the
+  // suite's declared `none` it runs the same argv, unwrapped.
+  const run = (...args: string[]) =>
+    runConfined({ argv: ['git', ...args], cwd: dir, env, timeoutMs: 30_000 });
   await run('init', '--quiet', '--initial-branch=main');
   await writeFile(join(dir, 'PRECIOUS.txt'), 'the enclosing project', 'utf8');
   await run('-c', 'user.email=a@b.c', '-c', 'user.name=A', 'add', '-A');

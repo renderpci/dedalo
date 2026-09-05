@@ -564,6 +564,16 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		scope:
 			'the standalone publication packages the engine ships beside itself — the read-only API v2 source tree (whole, and its mcp/ + routes/ entry layers), the site-builder daemon source tree, and the site-builder tool client',
 	},
+	'test/helpers/engine_source_corpus.ts': {
+		roots: [['src', 'src/core/api/handlers', 'src/core/media']],
+		scope:
+			"the engine's own source roots for gates that census src/ — the whole tree, the API handler layer (every door a request reaches), and the media subsystem (every converter spawn)",
+	},
+	'test/helpers/deploy_artifact_corpus.ts': {
+		roots: [['.'], ['deploy']],
+		scope:
+			'what the engine SHIPS to an operator — the reverse-proxy configurations under deploy/ and the compose stacks git tracks at the repo root',
+	},
 	'test/helpers/client_suite_census.ts': {
 		roots: [['client/dedalo/test/client/js']],
 		scope: 'the browser client suite files (test_*.js) and their registry',

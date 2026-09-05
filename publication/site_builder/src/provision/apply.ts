@@ -951,7 +951,10 @@ export function observeHost(layout: InstanceLayout, manifest: InstanceManifest):
   ];
 
   return Object.freeze({
-    users: Object.freeze([layout.identity.user].filter(userExists)),
+    // BOTH identities: the daemon's and the agent's. A host observation that named only the
+    // first would plan the agent's useradd on every run, or — worse, once the plan learned
+    // to skip it — never at all.
+    users: Object.freeze([layout.identity.user, layout.identity.agentUser].filter(userExists)),
     groups: Object.freeze(
       declaredNames
         .filter((name, index) => declaredNames.indexOf(name) === index)

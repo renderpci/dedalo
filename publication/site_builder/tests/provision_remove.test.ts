@@ -120,6 +120,10 @@ function makeHost(options: { published?: boolean } = {}): Host {
     unit_dir: join(prefix, 'etc/systemd/system'),
     vhost_dir: join(prefix, 'etc/nginx/sites-available'),
     vhost_enabled_dir: join(prefix, 'etc/nginx/sites-enabled'),
+    // The agent authorization is a host file like the unit: relocated with everything
+    // else, so this gate writes inside its own scratch prefix and never into a real
+    // /etc/polkit-1 on the machine running the suite.
+    polkit_rules_dir: join(prefix, 'etc/polkit-1/rules.d'),
   };
 
   const manifest = parseManifest(raw);

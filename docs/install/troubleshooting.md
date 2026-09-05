@@ -554,8 +554,13 @@ PostgreSQL's `max_connections`. Watch `db_pool_waits` on
 for the life of the process. The engine latches this and reports it so that the
 watchdog recycles the process rather than serving identical failures forever.
 
-**Fix.** The watchdog restarts it within 30 seconds. It is a code defect —
-capture the log and report it.
+**Fix.** A watchdog recycles the process; how fast depends on the deployment.
+Under systemd the health timer polls every 30 seconds and restarts the unit.
+On a docker stack the healthcheck is `scripts/ops/container_watchdog.sh`, which
+recycles the container after **three consecutive red probes at 30-second
+intervals — roughly 90 seconds**, and only once the container has answered green
+at least once (so it never recycles a box that is still on the install wizard).
+Either way it is a code defect — capture the log and report it.
 
 ### The maintenance widget reports the engine down while the socket probe is green
 

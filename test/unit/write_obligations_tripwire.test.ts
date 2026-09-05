@@ -191,6 +191,8 @@ const RAW_CALLER_EXEMPT: Record<string, string> = {
 		'files_info refresh of the copied media items onto the new row (S1-04): technical metadata, no TM, no stamp — the record’s birth stamps are the insert’s.',
 	[`${CREATE_RECORD}#createSectionRecord`]:
 		'the record INSERT door that bypasses the chokepoint by design (a fresh row carries its birth columns at once); it declares the obligations for itself through afterRecordWrite and appends the NEW activity row (matrix leg).',
+	'src/core/retention/prune.ts#registerRetentionCatalog':
+		"the RETENTION prune of matrix_activity (audit 2026-08-26 P2-9): it DELETES aged audit rows through the matrix_write door and writes no record value — there is nothing to stamp, no component history to append and no index to refresh, and the rows it removes are audit events, not records (the record tables are refused by that door's own allowlist).",
 	'src/core/section/record/record_metadata.ts#setRecordMetadata':
 		'the `data` column METADATA writer (diffusion_info, label): system bookkeeping PHP writes with an unstamped save(); no component value changes, so no stamp, no history, no index.',
 	'src/core/media/tools/files_info_persist.ts#writeItems':
@@ -242,7 +244,7 @@ const RAW_CALLER_EXEMPT_PREFIXES = ['src/core/test_data/', MATRIX_WRITE];
  * that equals the list's own length can never go red): adding a row means
  * lowering nothing and reddening this pin, which is the point.
  */
-const RAW_CALLER_EXEMPT_COUNT = 30;
+const RAW_CALLER_EXEMPT_COUNT = 31;
 
 interface CensusVerdict {
 	unreached: string[];

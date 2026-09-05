@@ -481,8 +481,13 @@ export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
  * The base64 length that could decode to more than {@link MAX_IMAGE_BYTES}, plus
  * slack for a `data:` prefix and whitespace. Checked BEFORE decoding: an
  * unbounded body must not be materialised as bytes just to measure it.
+ *
+ * EXPORTED because the request parse door must not be TIGHTER than this: the
+ * `options.image` budget in `core/concepts/scalar_bounds.ts` is sized above it,
+ * and `test/unit/rqo_scalar_bound_tripwire.test.ts` reads both so raising this
+ * cap without raising that budget is RED rather than a silent refusal.
  */
-const MAX_IMAGE_BASE64_CHARS = Math.ceil(MAX_IMAGE_BYTES / 3) * 4 + 1024;
+export const MAX_IMAGE_BASE64_CHARS = Math.ceil(MAX_IMAGE_BYTES / 3) * 4 + 1024;
 
 /**
  * Sniffed kinds (media/engine/mime.ts) an image encoder can actually be handed.

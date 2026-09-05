@@ -371,9 +371,9 @@ const T2_DML_OUTSIDE_WRITER: Readonly<Record<string, { writes: number; reason: s
 			'consolidate_table: renumbers the PRIMARY KEY `id` of a whole table (UPDATE … SET id = …), a maintenance shape no record door has — the jsonb columns are untouched.',
 	},
 	'src/core/diffusion_bridge/diffusion_delete.ts': {
-		writes: 3,
+		writes: 4,
 		reason:
-			'activityTable() may resolve to a dedalo_ts_test_* SEAM table that assertMatrixTable refuses by design; all three statements (the dd1758 INSERT, the pending→unpublished flip, the PUB-02 retry stamp) are ::text::jsonb / in-SQL jsonb_set (no JS-side read-modify-write).',
+			'activityTable() may resolve to a dedalo_ts_test_* SEAM table that assertMatrixTable refuses by design; all four statements (the dd1758 INSERT, the retention DELETE of SETTLED rows only, the pending→unpublished flip, the PUB-02 retry stamp) are ::text::jsonb / in-SQL jsonb_set (no JS-side read-modify-write).',
 	},
 	// --- offline v6→v7 transforms (the engine is not serving) ---------------
 	'src/core/update/transform/lang.ts': {
@@ -457,7 +457,7 @@ const T2_DML_OUTSIDE_WRITER: Readonly<Record<string, { writes: number; reason: s
  */
 const T2_UNRESOLVED_OWNER_TARGETS: Readonly<Record<string, { targets: number; reason: string }>> = {
 	'src/core/error_report/store.ts': {
-		targets: 2,
+		targets: 3,
 		reason:
 			'`${name}` = tableOrThrow(options.table) ?? ERROR_REPORTS_TABLE (dedalo_ts_error_reports).',
 	},

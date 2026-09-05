@@ -26,6 +26,7 @@ import { isInTransaction, sql } from '../db/postgres.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { createOntologyCache } from './cache_factory.ts';
 import { registerOntologyCacheClearer } from './cache_invalidation.ts';
+import { formatRetiredPropertyLine, retiredKeysOf } from './property_census.ts';
 import { getSectionIdFromTipo } from './tld.ts';
 
 /**
@@ -175,8 +176,32 @@ export async function getNode(tipo: string): Promise<ResolvedNode | null> {
 					properties: row.properties,
 					relations: row.relations,
 				};
+	if (node !== null && !isInTransaction()) reportRetiredProperties(node);
 	cacheSet(tipo, node);
 	return node;
+}
+
+/**
+ * RETIRED-PROPERTY TRIPLINE (DEAD-08 / P2-27). `properties` is a free-form bag:
+ * a key the engine stopped reading looks exactly like one it honours, so an
+ * author's configuration silently does nothing. Every node in the process
+ * passes through this cache miss exactly once, which makes it THE chokepoint —
+ * one loud, greppable line per (node, retired key), then resolve by the
+ * ordinary rule (CONVENTIONS §1: degraded, reported, defined).
+ *
+ * The node cache is the dedupe (no new module-level state); a read inside a
+ * transaction is not memoized, so it is not reported either — the same node is
+ * reported on its first uncached read outside one. Keys marked `reportedAtUse`
+ * are skipped: their consumer already reports them with context this site
+ * cannot have (the concrete replacement sqo, the named v6 fn).
+ *
+ * The registry, the reasons and the wording live in one place —
+ * ./property_census.ts.
+ */
+function reportRetiredProperties(node: ResolvedNode): void {
+	for (const key of retiredKeysOf(node.properties, { skipReportedAtUse: true })) {
+		console.error(`[ontology/resolver] ${formatRetiredPropertyLine(node.tipo, key)}`);
+	}
 }
 
 /**
@@ -499,6 +524,25 @@ export async function getNodesWithProperty(propertyKey: string): Promise<NodeWit
 	return (await sql.unsafe('SELECT tipo, properties FROM dd_ontology WHERE properties ? $1', [
 		propertyKey,
 	])) as NodeWithProperties[];
+}
+
+/**
+ * EVERY node whose `properties` is a JSON object, with those properties — the
+ * whole-table scan the ontology property census needs
+ * (`scripts/ontology_property_report.ts`, DEAD-08). Lives here because
+ * src/core/ontology/ is the exempt canonical home for `FROM dd_ontology`
+ * (sql_confinement T3): a script must never grow its own direct read.
+ *
+ * UNCACHED and unbounded by design: it is a maintenance report over the live
+ * table, not a runtime read path.
+ */
+export async function listNodesWithProperties(): Promise<NodeWithProperties[]> {
+	return (await sql`
+		SELECT tipo, properties
+		FROM dd_ontology
+		WHERE properties IS NOT NULL AND jsonb_typeof(properties) = 'object'
+		ORDER BY tipo
+	`) as NodeWithProperties[];
 }
 
 /**

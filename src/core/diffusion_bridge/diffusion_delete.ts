@@ -666,6 +666,64 @@ export async function logDiffusionActivity(entry: {
 	return Number(inserted[0]?.section_id);
 }
 
+/**
+ * RETENTION for the dd1758 ledger (audit 2026-08-26 PUB-14).
+ *
+ * The logger INSERTs — never upserts — one row per PRIMARY record per run, so
+ * republishing the same catalogue writes them all again. Measured: 293 MB for a
+ * single publish run of a 500k-record catalogue on a reduced-index clone,
+ * growing linearly, inside the matrix database `pg_dump` copies. Meanwhile the
+ * engine prunes its terminal JOB rows at 7 days and justifies doing so by
+ * pointing at THIS table as "the durable audit trail" — so the one store
+ * expected to hold history was the one with no policy for it.
+ *
+ * PENDING ROWS ARE NEVER PRUNED, whatever the window says. A dd1767 = 3
+ * (unpublish pending) row is outstanding DEBT to a public target, not history:
+ * dropping it would leave a withdrawn record live on a public site with nothing
+ * left in the system to say it should not be.
+ *
+ * The window itself lives in the retention registry (core/retention/prune.ts);
+ * the statement lives here, because this module owns the table.
+ */
+export async function pruneSettledLedgerRows(options: {
+	windowDays: number;
+	apply: boolean;
+	now?: Date;
+}): Promise<{ candidates: number; deleted: number; detail: Record<string, unknown> }> {
+	const table = activityTable();
+	const detail: Record<string, unknown> = { table, window_days: options.windowDays };
+	if (options.windowDays <= 0) {
+		return { candidates: 0, deleted: 0, detail: { ...detail, kept: 'no window set' } };
+	}
+	await ensureActivityTable();
+	const cutoff = new Date(
+		(options.now ?? new Date()).getTime() - options.windowDays * 24 * 60 * 60 * 1000,
+	).toISOString();
+	const params: string[] = [cutoff];
+	const pending = diffusionActionContains(
+		'relation',
+		DIFFUSION_ACTION.unpublishPending,
+		(payload) => {
+			params.push(payload);
+			return `$${params.length}`;
+		},
+	);
+	const where = `"timestamp" < $1 AND NOT ${pending}`;
+	const counted = (await sql.unsafe(
+		`SELECT count(*)::int AS n FROM "${table}" WHERE ${where}`,
+		params,
+	)) as { n: number }[];
+	const candidates = Number(counted[0]?.n ?? 0);
+	if (!options.apply || candidates === 0) {
+		return { candidates, deleted: 0, detail: { ...detail, cutoff } };
+	}
+	const deleted = (await sql.unsafe(
+		`DELETE FROM "${table}" WHERE ${where} RETURNING id`,
+		params,
+	)) as unknown[];
+	return { candidates, deleted: deleted.length, detail: { ...detail, cutoff } };
+}
+
 /** One pending dd1758 row as the retry/settle loop reads it. */
 interface PendingRow {
 	section_id: number;

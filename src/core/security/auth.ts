@@ -34,11 +34,13 @@ import { runWithoutAccountRevocation } from './revocation.ts';
 import { endUserSessions } from './session_media.ts';
 import {
 	buildAccountThrottleKey,
+	buildSourceThrottleKey,
 	buildThrottleKey,
 	clearAttempts,
 	createSession,
 	isThrottled,
 	LOGIN_ACCOUNT_MAX_ATTEMPTS,
+	LOGIN_SOURCE_MAX_ATTEMPTS,
 	recordFailedAttempt,
 } from './session_store.ts';
 
@@ -91,10 +93,16 @@ async function logLoginActivity(
 		userId: actor,
 		host: hostFromClientIp(clientIp),
 		data: {
+			// THE UNTRUSTED STRING IS STORED ONCE (audit 2026-08-26 SEC-21;
+			// WC-2026-09-05-preauth-intake-bounds). It used to appear in `msg` AND
+			// in `username`, so every denial — including a THROTTLED one, which by
+			// definition refuses the login and used to pay the storage anyway —
+			// wrote the caller's own bytes to the audit trail twice over. `username`
+			// is the field that MEANS it; the sentence now says what happened.
 			msg:
 				outcome === 'allow'
 					? `User ${actor} is logged. Hello ${username}`
-					: `Denied login attempted by: ${username}. ${cause}`,
+					: `Denied login. ${cause}`,
 			result: outcome,
 			cause,
 			username,
@@ -378,16 +386,21 @@ async function resolveLoginCandidate(
 		clientIp: string;
 		throttleKey: string;
 		accountKey: string;
+		sourceKey: string;
 	},
 	recordFailure: () => void,
 ): Promise<
 	| { user: null; refusal: LoginResult }
 	| { user: { section_id: number; passwordHash: string; activeAccount: ActiveAccountState } }
 > {
-	const { username, password, clientIp, throttleKey, accountKey } = request;
+	const { username, password, clientIp, throttleKey, accountKey, sourceKey } = request;
 	const refusal = { user: null, refusal: { ok: false, message: LOGIN_FAILED_MESSAGE } } as const;
 
-	if (isThrottled(throttleKey) || isThrottled(accountKey, LOGIN_ACCOUNT_MAX_ATTEMPTS)) {
+	if (
+		isThrottled(throttleKey) ||
+		isThrottled(accountKey, LOGIN_ACCOUNT_MAX_ATTEMPTS) ||
+		isThrottled(sourceKey, LOGIN_SOURCE_MAX_ATTEMPTS)
+	) {
 		// Same ambiguous message: lockout must not confirm the account exists.
 		// (No PHP twin — v6 had no throttle. Logged anyway: a lockout is exactly
 		// the event an operator reviewing the audit trail wants to see.)
@@ -473,17 +486,23 @@ export async function login(
 	password: string,
 	clientIp: string,
 ): Promise<LoginResult> {
-	// Two throttle dimensions: per-IP (fast lockout of one source) and
-	// account-global (IP-independent — a spoofed X-Forwarded-For rotation cannot
-	// evade it). A lockout on EITHER refuses, with the same ambiguous message.
+	// THREE throttle dimensions: per-(username, IP), account-global (IP-independent
+	// — a spoofed X-Forwarded-For rotation cannot evade it) and SOURCE-GLOBAL
+	// (username-independent). The third exists because the first two both start
+	// from the username, so a caller ROTATING usernames minted a fresh bucket on
+	// both at every request and the throttle bounded guessing but not VOLUME
+	// (audit 2026-08-26 SEC-21). A lockout on ANY of them refuses, with the same
+	// ambiguous message.
 	const throttleKey = buildThrottleKey('login', username, clientIp);
 	const accountKey = buildAccountThrottleKey('login', username);
+	const sourceKey = buildSourceThrottleKey('login', clientIp);
 	const recordFailure = (): void => {
 		recordFailedAttempt(throttleKey);
 		recordFailedAttempt(accountKey);
+		recordFailedAttempt(sourceKey);
 	};
 	const candidate = await resolveLoginCandidate(
-		{ username, password, clientIp, throttleKey, accountKey },
+		{ username, password, clientIp, throttleKey, accountKey, sourceKey },
 		recordFailure,
 	);
 	if (candidate.user === null) return candidate.refusal;

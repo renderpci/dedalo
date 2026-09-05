@@ -3,8 +3,9 @@
  *
  * pure `build*Argv` + `run*` over the spawn discipline. Text/HTML extraction
  * uses XPDF/Poppler `pdftotext`/`pdftohtml`; OCR uses `ocrmypdf`; page count via
- * `pdfinfo`. The PDF→jpg cover is produced by the ImageMagick adapter with a
- * rasterization density (see imagemagick.buildConvertArgv pdfDensity).
+ * `pdfinfo`. The PDF→jpg cover is rendered by `engine/ghostscript.ts` (the engine
+ * spawns Ghostscript itself; ImageMagick only encodes the raster it produces) and
+ * the page box that render is refused on is read here, by `readPdfPageSize`.
  *
  * PHP anchors: get_text_from_pdf (:743, command :831), OCR (:1003-1006),
  * transcription/ocr engine consts (media_docs.php :100/:109).
@@ -12,7 +13,7 @@
 
 import { config } from '../../../config/config.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
-import { runBinary } from './spawn.ts';
+import { describeSpawnFailure, runBinary } from './spawn.ts';
 
 export interface PdfExtractOptions {
 	method: 'text' | 'html';
@@ -73,6 +74,65 @@ export function buildOcrArgv(source: string, target: string, lang: string): stri
 /** pdfinfo argv (page count / metadata). */
 export function buildPdfInfoArgv(source: string): string[] {
 	return [config.media.binaries.pdfinfo, source];
+}
+
+/**
+ * pdfinfo argv for ONE page's box: `-f N -l N` restricts the report to that page,
+ * which is what makes `Page N size:` appear instead of the document-wide
+ * `Page size:` (a PDF may declare a different MediaBox per page).
+ */
+export function buildPdfPageSizeArgv(source: string, page: number): string[] {
+	return [config.media.binaries.pdfinfo, '-f', String(page), '-l', String(page), source];
+}
+
+/** A PDF page box, in PDF user-space points (1/72 inch) — never pixels. */
+export interface PdfPageSize {
+	readonly widthPoints: number;
+	readonly heightPoints: number;
+}
+
+/**
+ * The page box of ONE page, read with poppler.
+ *
+ * THIS IS THE MEASUREMENT THE PDF RASTERIZER REFUSES ON (engine/ghostscript.ts,
+ * audit MEDIA-01): a 441-byte PDF may declare a 200000x200000-point page, and the
+ * only cheap place to see that is a header read. poppler is used rather than
+ * ImageMagick because `identify` on a PDF is not a header read at all — it invokes
+ * the Ghostscript DELEGATE, which is the unbounded child this whole path exists to
+ * stop (measured: refused outright under the shipped policy, which denies `gs`).
+ *
+ * IT THROWS RATHER THAN DEGRADING, unlike `getPageCount` next door, and the
+ * difference is what the answer is FOR: an unknown page count costs a metadata
+ * field, an unknown page box would mean rendering an untrusted document with no
+ * idea how large it is. No geometry, no render.
+ */
+export async function readPdfPageSize(source: string, page = 1): Promise<PdfPageSize> {
+	const result = await runBinary(buildPdfPageSizeArgv(source, page), { nice: false });
+	if (!result.ok) {
+		throw new DedaloError('media.operation_failed', {
+			message: `pdf page size: pdfinfo failed for ${source} page ${String(page)}: ${describeSpawnFailure(result)}`,
+			publicMessage: 'The page geometry of this PDF could not be read.',
+		});
+	}
+	// `Page 1 size: 612 x 792 pts (letter)` — the trailing paper name is optional.
+	const match = result.stdout.match(/^Page\s+\d+\s+size:\s*([0-9.]+)\s*x\s*([0-9.]+)\s*pts/m);
+	if (match === null) {
+		throw new DedaloError('media.operation_failed', {
+			message: `pdf page size: pdfinfo reported no page box for ${source} page ${String(page)}: ${
+				result.stdout.slice(0, 400) || '<empty stdout>'
+			}`,
+			publicMessage: 'The page geometry of this PDF could not be read.',
+		});
+	}
+	const widthPoints = Number(match[1]);
+	const heightPoints = Number(match[2]);
+	if (!Number.isFinite(widthPoints) || !Number.isFinite(heightPoints)) {
+		throw new DedaloError('media.operation_failed', {
+			message: `pdf page size: unparseable page box '${String(match[0])}' for ${source} page ${String(page)}`,
+			publicMessage: 'The page geometry of this PDF could not be read.',
+		});
+	}
+	return { widthPoints, heightPoints };
 }
 
 // -------- runners --------

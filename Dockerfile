@@ -24,7 +24,14 @@ FROM oven/bun:1.4.0-debian AS runtime
 # derivatives and no thumbnails.
 #   ffmpeg  → transcoding, posterframes, probing (also ships qt-faststart)
 #   imagemagick (v6: convert/identify — the engine falls back automatically)
-#   poppler-utils → pdftotext / pdftohtml / pdfinfo
+#   poppler-utils → pdftotext / pdftohtml / pdfinfo, AND the page box the PDF
+#             rasterizer refuses on (engine/pdf.ts readPdfPageSize)
+#   ghostscript → the PDF page rasterizer, spawned BY THE ENGINE (not as an
+#             ImageMagick delegate, which the shipped policy denies: a delegate
+#             child is unbounded and survives the kill that ends the request —
+#             audit MEDIA-01). Explicit because --no-install-recommends drops it,
+#             so without this line a container built PDF covers through a
+#             delegate that was not even installed
 #   ocrmypdf → optional automatic OCR
 #   git, unzip, gzip, file → used by the code-update subsystem and MIME sniffing
 #   rsync   → the `backup` service of both compose stacks: it is what copies the
@@ -42,7 +49,7 @@ RUN apt-get update \
  && apt-get update \
  && apt-get install -y --no-install-recommends \
       postgresql-client-18 \
-      ffmpeg imagemagick poppler-utils ocrmypdf \
+      ffmpeg imagemagick poppler-utils ocrmypdf ghostscript \
       git unzip gzip file rsync \
  && rm -rf /var/lib/apt/lists/*
 
@@ -87,6 +94,35 @@ COPY tools ./tools
 COPY vendor ./vendor
 COPY .bun-version .dockerignore .gitattributes .gitignore .gitleaks.toml AGENTS.md Dockerfile License.md README.md SECURITY.md biome.jsonc bun.lock bunfig.toml cliff.toml docker-compose.simple.yml docker-compose.yml install.sh mkdocs.yml package.json tsconfig.json ./
 # <<< BUILD-CONTEXT ALLOWLIST <<<
+
+# --- ImageMagick policy, system-wide (audit MEDIA-01 / MEDIA-02) -------------
+# The engine already points its OWN ImageMagick spawns at the shipped policy via
+# MAGICK_CONFIGURE_PATH (core/media/engine/binaries.ts), and splices the
+# DEDALO_MAGICK_LIMIT_* `-limit` argv into each of them. Neither reaches an
+# ImageMagick process this engine did not build: a delegate child, a maintenance
+# `convert` in a shell, anything a future script adds. Installing the SAME FILE at
+# the system config path makes the coder denials and the resource ceiling the
+# container-wide law instead of a property of one caller.
+#
+# Debian ships ImageMagick 6, whose config path is /etc/ImageMagick-6; the v7 path
+# is written too, so an image built on a base that has moved on keeps the policy.
+# This REPLACES Debian's own policy.xml deliberately: the shipped file is the
+# considered version of the trade-off — the PS/EPS/XPS/MSL/MVG/URL coders are
+# denied, so is the Ghostscript delegate (the engine spawns gs itself), and the
+# resource ceiling applies container-wide. Gate:
+# test/unit/magick_policy_tripwire.test.ts.
+#
+# THE DIRECTORY IS CREATED, NEVER TESTED FOR. An `if [ -d "$d" ]` guard made the
+# whole system-wide half a SILENT NO-OP on any base image whose ImageMagick config
+# path moved — the build stayed green, the gate (which reads this file's text)
+# stayed green, and the container ran under the distribution's permissive policy.
+# An unconditional install of a config file that only ImageMagick reads costs an
+# empty directory at worst.
+RUN set -eu; \
+    for d in /etc/ImageMagick-6 /etc/ImageMagick-7; do \
+      install -d "$d"; \
+      cp src/core/media/engine/imagemagick-policy/policy.xml "$d/policy.xml"; \
+    done
 
 # --- Writable trees ----------------------------------------------------------
 # THE CONTAINER PROBLEM: `../private/` is a SIBLING of the repo, and in an image

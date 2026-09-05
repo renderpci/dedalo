@@ -37,7 +37,7 @@ import { join } from 'node:path';
 import { provisionSite, resetInstance, workspacePath } from './fixtures/instance';
 import { createSite } from '../src/sites/workspace';
 import { commitAll } from '../src/sites/git';
-import { runBinary } from '../src/util/spawn';
+import { runConfined } from '../src/drivers/confinement';
 
 const ACTOR = { user_id: 11, username: 'boundary-tester' };
 const SRC = join(import.meta.dir, '..', 'src');
@@ -107,7 +107,10 @@ describe("every child environment's HOME is the agent's own root", () => {
 
 describe('the daemon never commits its own state into a site it publishes', () => {
   async function gitOut(slug: string, ...args: string[]): Promise<string> {
-    const result = await runBinary(['git', ...args], {
+    // Through the confinement door — see git_confinement.test.ts: a command whose cwd is
+    // inside the workspaces root is refused by `runBinary` itself.
+    const result = await runConfined({
+      argv: ['git', ...args],
       cwd: workspacePath(slug),
       env: { PATH: process.env.PATH ?? '/usr/bin:/bin', HOME: workspacePath(slug) },
       timeoutMs: 30_000,

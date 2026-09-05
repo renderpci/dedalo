@@ -11,9 +11,10 @@
  * template is dropping a directory there (with a template.json), no code change.
  */
 
-import { cp, readdir, readFile, writeFile, stat } from 'node:fs/promises';
+import { cp, readdir, readFile, stat } from 'node:fs/promises';
+import { applySharedModes, readFileShared, writeFileShared } from '../util/shared_tree';
 import { existsSync } from 'node:fs';
-import { join, extname, basename } from 'node:path';
+import { join, extname, basename, relative } from 'node:path';
 import { confinedPath } from '../util/paths';
 import { config } from '../config';
 
@@ -88,26 +89,39 @@ export async function scaffold(slug: string, templateId: string): Promise<void> 
     },
   });
 
-  await substituteTree(dest);
+  await substituteTree(dest, dest);
+  // `cp` carries the TEMPLATE's modes into the workspace, and the daemon's umask decides
+  // the rest — neither of them knows that a second uid works in this tree. Stated here
+  // instead: every scaffolded directory and file is the shared pair (2770/0660).
+  await applySharedModes(dest);
 }
 
 const PLACEHOLDERS: Record<string, string> = {
   __PUBLICATION_API_URL__: config.PUBLICATION_API_URL,
 };
 
-async function substituteTree(dir: string): Promise<void> {
+/**
+ * `root` is the workspace this daemon just created (trusted); `dir` is somewhere inside it.
+ * The rewrite goes through `writeFileShared`, which re-walks the components below `root`
+ * with O_NOFOLLOW — a template that ships a symlink is refused, never followed out.
+ */
+async function substituteTree(root: string, dir: string): Promise<void> {
   const entries = await readdir(dir, { withFileTypes: true });
   for (const entry of entries) {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
       if (entry.name === '.git' || entry.name === 'node_modules') continue;
-      await substituteTree(full);
+      await substituteTree(root, full);
       continue;
     }
     if (!SUBSTITUTE_EXTENSIONS.has(extname(entry.name))) continue;
     const info = await stat(full);
     if (info.size > 1_000_000) continue; // do not rewrite large files
-    let text = await readFile(full, 'utf8');
+    // Read through the same door it is written through: `dir` is inside the workspace, so a
+    // template that ships (or a race that plants) a link is refused rather than followed out.
+    const text0 = await readFileShared(root, relative(root, full));
+    if (text0 === null) continue;
+    let text = text0;
     let changed = false;
     for (const [needle, value] of Object.entries(PLACEHOLDERS)) {
       if (text.includes(needle)) {
@@ -115,6 +129,6 @@ async function substituteTree(dir: string): Promise<void> {
         changed = true;
       }
     }
-    if (changed) await writeFile(full, text, 'utf8');
+    if (changed) await writeFileShared(root, relative(root, full), text);
   }
 }

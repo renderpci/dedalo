@@ -38,6 +38,13 @@
  */
 
 import { z } from 'zod';
+import {
+	boundedIdentifier,
+	boundedLabel,
+	boundedLang,
+	boundedShortName,
+	SCALAR_BOUNDS,
+} from './scalar_bounds.ts';
 
 /** Sentinel meaning "the calling section/component" in section_tipo / parent. */
 export const SELF_SENTINEL = 'self' as const;
@@ -60,40 +67,40 @@ const paginationField = z.number().int().nonnegative().optional().catch(undefine
  */
 export const ddoSchema = z.object({
 	/** Ontology typo discriminator, present in some ontology-authored ddos. */
-	typo: z.string().optional(),
+	typo: boundedIdentifier().optional(),
 	/** Component tipo to resolve (MANDATORY). */
-	tipo: z.string(),
+	tipo: boundedIdentifier(),
 	/** Target section tipo; 'self' = current section. Multi-target components
 	 * (hierarchy_types portals) carry the full ARRAY of target tipos — the
 	 * client echoes back the shape our own context responses ship. */
-	section_tipo: z.union([z.string(), z.array(z.string())]).optional(),
+	section_tipo: z.union([boundedIdentifier(), z.array(boundedIdentifier())]).optional(),
 	/** Explicit record id (rare; usually resolved at runtime). Ontology-authored
 	 * tool/button ddos that name a section but NO record write an explicit null
 	 * (rsc36/oh83 tool_transcription roles, numisdata672), and the client echoes
 	 * it back — same client-null class as the SQO fields pinned by
 	 * test/unit/sqo_client_nulls.test.ts. */
-	section_id: z.union([z.number(), z.string()]).nullable().optional(),
+	section_id: z.union([z.number(), boundedIdentifier()]).nullable().optional(),
 	/** Parent tipo in the ddo_map tree; 'self' = direct child of the caller. */
-	parent: z.string().optional(),
+	parent: boundedIdentifier().optional(),
 	/** Render mode: edit | list | search | ... */
-	mode: z.string().optional(),
+	mode: boundedShortName().optional(),
 	/** Language override ('lg-*'). */
-	lang: z.string().optional(),
+	lang: boundedLang().optional(),
 	/** Custom view name. The client sends null for columns with no explicit view
 	 * (e.g. tool_time_machine's fixed_mode list columns), so null is accepted. */
-	view: z.string().nullable().optional(),
+	view: boundedShortName().nullable().optional(),
 	/** UI label text. */
-	label: z.string().optional(),
+	label: boundedLabel().optional(),
 	/** Glue for multi-value display, e.g. ' | '. */
-	fields_separator: z.string().optional(),
+	fields_separator: boundedLabel().optional(),
 	/** Glue for record arrays, e.g. '<br>'. */
-	records_separator: z.string().optional(),
+	records_separator: boundedLabel().optional(),
 	/** Prepend the parent chain to the display value (thesaurus paths). */
 	value_with_parents: z.boolean().optional(),
 	/** Table column identifier (list mode). */
-	column_id: z.string().optional(),
+	column_id: boundedShortName().optional(),
 	/** CSS width hint. */
-	width: z.string().optional(),
+	width: boundedShortName().optional(),
 	/** Mosaic layout flag. */
 	in_mosaic: z.boolean().optional(),
 	/** Show this ddo's value as the row's TOOLTIP instead of a column (portal
@@ -133,20 +140,71 @@ export type Ddo = z.infer<typeof ddoSchema>;
  * census in test/unit/ddo_schema_native.test.ts, which parses every authored
  * ddo through `ddoSchema` STRICTLY.
  */
-export const ddoMapSchema = z.array(z.unknown()).transform((entries) =>
-	entries.flatMap((entry) => {
-		const parsed = ddoSchema.safeParse(entry);
-		if (parsed.success) return [parsed.data];
-		const tipo = (entry as { tipo?: unknown } | null)?.tipo;
-		console.warn(
-			`[ddo] dropped unusable ddo_map entry (tipo ${JSON.stringify(tipo)}): ${parsed.error.issues
-				.map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
-				.join('; ')}`,
-		);
-		return [];
-	}),
-);
+/**
+ * ONE ENTRY of a ddo_map: a real ddo, or a DESCRIPTION of why it could not be
+ * used. Declared as a UNION rather than hidden behind `z.array(z.unknown())`
+ * plus a transform, because a schema a caller can send bytes into must be
+ * REACHABLE from the parse door's schema tree — that is what
+ * `rqo_scalar_bound_tripwire` walks, and behind an opaque `z.unknown()` every
+ * bound in `ddoSchema` could be deleted without a gate noticing.
+ */
+const ddoMapEntrySchema = z.union([ddoSchema, z.unknown().transform(describeUnusableEntry)]);
+
+export const ddoMapSchema = z
+	.array(ddoMapEntrySchema)
+	.max(SCALAR_BOUNDS.ddoMapEntries)
+	.transform(keepUsableDdoEntries);
 export type DdoMap = z.infer<typeof ddoMapSchema>;
+
+/** The marker an unusable entry carries out of the union branch. */
+const UNUSABLE = Symbol.for('dedalo.ddo.unusable');
+
+interface UnusableDdoEntry {
+	[UNUSABLE]: true;
+	tipo: unknown;
+	why: string;
+}
+
+/** Second union branch: never fails, and says WHY the entry is unusable. */
+function describeUnusableEntry(entry: unknown): UnusableDdoEntry {
+	const parsed = ddoSchema.safeParse(entry);
+	const why = parsed.success
+		? 'unusable'
+		: parsed.error.issues
+				.map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
+				.join('; ');
+	return { [UNUSABLE]: true, tipo: (entry as { tipo?: unknown } | null)?.tipo, why };
+}
+
+/**
+ * Keep the entries that parsed, and SAY how many did not — with the saying
+ * itself bounded (`SCALAR_BOUNDS.ddoMapWarnings`), because "one log line per bad
+ * entry" is an amplifier a caller controls. The array's own `.max()` bounds the
+ * work; this bounds the noise.
+ */
+function keepUsableDdoEntries(entries: readonly (Ddo | UnusableDdoEntry)[]): Ddo[] {
+	const kept: Ddo[] = [];
+	let dropped = 0;
+	for (const entry of entries) {
+		if ((entry as UnusableDdoEntry)[UNUSABLE] !== true) {
+			kept.push(entry as Ddo);
+			continue;
+		}
+		dropped += 1;
+		if (dropped <= SCALAR_BOUNDS.ddoMapWarnings) {
+			const unusable = entry as UnusableDdoEntry;
+			console.warn(
+				`[ddo] dropped unusable ddo_map entry (tipo ${JSON.stringify(unusable.tipo)}): ${unusable.why}`,
+			);
+		}
+	}
+	if (dropped > SCALAR_BOUNDS.ddoMapWarnings) {
+		console.warn(
+			`[ddo] dropped ${dropped} unusable ddo_map entries (${SCALAR_BOUNDS.ddoMapWarnings} shown)`,
+		);
+	}
+	return kept;
+}
 
 /**
  * Sanitize a client-supplied ddo_map: whitelist fields (schema strips unknown

@@ -210,6 +210,49 @@ const envSchema = z.object({
   OPENCODE_ENV: z.string().default(''),
   PI_ENV: z.string().default(''),
 
+  /**
+   * HOW AN AGENT TURN IS CONFINED — the key that decides whether a turn is a process of
+   * this daemon's own or a unit of its own.
+   *
+   * `systemd_scope` runs each turn as a TRANSIENT systemd service under AGENT_USER, with
+   * per-turn memory/CPU/task/wall-clock caps and an egress policy the kernel enforces
+   * (src/drivers/confinement.ts). It is the default because the unsafe direction must be
+   * the one an operator asks for, and it is what `render/env.ts` writes on every
+   * provisioned host.
+   *
+   * `none` is the honest name for a laptop, a container and this suite: hosts with no
+   * systemd, where the only alternative to saying so is pretending. It is REFUSED under
+   * NODE_ENV=production below, and every unconfined turn announces itself into the
+   * session's durable event log — an unconfined run is a fact in the audit, never an
+   * absence.
+   */
+  AGENT_CONFINEMENT: z.enum(['systemd_scope', 'none']).default('systemd_scope'),
+  /** The unix user an agent turn runs as. Never the daemon's own — see layout.identity. */
+  AGENT_USER: z.string().default(''),
+  /** The name every transient agent unit begins with; the polkit grant's whole scope. */
+  AGENT_UNIT_PREFIX: z.string().default(''),
+  /**
+   * The runner. Pinned absolute, like the driver binaries and for the same reason: PATH is
+   * the one thing a compromised turn can arrange to control, and this binary is the door to
+   * PID 1.
+   */
+  SYSTEMD_RUN_BIN: z.string().default('/usr/bin/systemd-run'),
+  /**
+   * EXTRA destinations an agent turn may reach, as systemd `IPAddressAllow=` tokens
+   * (comma-separated: '10.4.0.7/32', 'localhost'). The turn already denies the host's own
+   * loopback and every private range — that is where the engine, the databases and the
+   * other museums live — while allowing the public internet the model provider is on. A
+   * museum whose Publication API answers on a private address states it here; the address
+   * derivable from PUBLICATION_API_URL is added automatically.
+   */
+  AGENT_EGRESS_ALLOW: z.string().default(''),
+  // The per-TURN share of the host, enforced by the kernel on the transient unit. Separate
+  // from the daemon's own (instance.json `resources`): that one caps the museum, these cap
+  // one agent run, and a runaway turn must not be able to spend the museum's whole budget.
+  AGENT_TURN_MEMORY_MAX: z.string().default('2G'),
+  AGENT_TURN_CPU_QUOTA: z.string().default('200%'),
+  AGENT_TURN_TASKS_MAX: z.coerce.number().int().min(1).default(512),
+
   // Limits. MAX_CONCURRENT_SESSIONS is a global semaphore across sites; per site it is
   // always exactly one active turn (sessions/manager.ts).
   MAX_SITES: z.coerce.number().int().min(1).default(20),
@@ -468,6 +511,25 @@ export function resolveConfig(sources: ConfigSources): { config: Config; report:
         `valid.\n  ${detail}\nRead from ` +
         `${envFileExists ? `'${envFilePath}'` : `no env file (looked at '${envFilePath}')`}` +
         `${sources.credentialsDir ? ` plus the credentials in '${sources.credentialsDir}'` : ' and no credential directory'}.`,
+    );
+  }
+
+  /* 6. The one cross-field law: a production daemon may not run unconfined agents.
+   *
+   * It is checked HERE rather than at the turn, because the answer cannot depend on which
+   * museum happened to start a session first: a host that would run an agent turn as the
+   * daemon's own uid, with the daemon's credentials one `/proc` read away, is misconfigured
+   * before it answers anything. A provisioned host never sees this refusal — `layout.ts`
+   * renders AGENT_CONFINEMENT into every instance's env — so it fires only where it should:
+   * a hand-run production daemon that was never told. */
+  if (parsed.data.NODE_ENV === 'production' && parsed.data.AGENT_CONFINEMENT === 'none') {
+    refuse(
+      `AGENT_CONFINEMENT is 'none' under NODE_ENV=production. An unconfined turn runs the ` +
+        `coding agent as this daemon's own uid, which is the uid holding the shared bearer, ` +
+        `every provider key and the audit handle — no filesystem mode separates a process ` +
+        `from itself. Set AGENT_CONFINEMENT=systemd_scope with AGENT_USER (a provisioned ` +
+        `instance renders both), or run this host as NODE_ENV=development and accept the ` +
+        `announcement every turn will write into its own event log.`,
     );
   }
 

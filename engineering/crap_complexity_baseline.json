@@ -4,8 +4,8 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 535,
-		"functions": 5016,
+		"files": 542,
+		"functions": 5113,
 		"functionsOverCap": 694,
 		"filesOverCap": 273
 	},
@@ -28,7 +28,7 @@
 		"src/core/api/dedalo_files.ts": 12,
 		"src/core/api/dispatch.ts": 19,
 		"src/core/api/handlers/dd_component_3d_api.ts": 13,
-		"src/core/api/handlers/dd_component_av_api.ts": 11,
+		"src/core/api/handlers/dd_component_av_api.ts": 7,
 		"src/core/api/handlers/dd_component_info.ts": 12,
 		"src/core/api/handlers/dd_component_text_area_api.ts": 20,
 		"src/core/api/handlers/dd_core_api.ts": 67,

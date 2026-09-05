@@ -13,11 +13,22 @@
  * The child environment is a tight allowlist — ANTHROPIC_API_KEY, HOME, PATH — assembled
  * by the session manager, never process.env. Claude Code reads CLAUDE.md natively (the
  * symlink to AGENTS.md).
+ *
+ * THE TOOL SET IS STATED, NOT INHERITED. `--permission-mode acceptEdits` decides how a
+ * request for a tool is ANSWERED; it does not decide which tools exist. Relying on "Bash is
+ * not auto-granted in headless mode" is relying on another project's default: it is not
+ * this daemon's to keep, it is not visible in this file, and the day it changes nothing
+ * here goes red. So the argv names the tools a site build legitimately needs and DENIES the
+ * three that turn a workspace-scoped agent into a host-scoped one — Bash (arbitrary
+ * execution as the agent uid), WebFetch and WebSearch (an exfiltration channel for anything
+ * the read tools can reach). The deny list wins over the allow list in Claude Code, so the
+ * two together are a closed statement rather than a preference.
  */
 
-import { writeFile } from 'node:fs/promises';
+import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { config } from '../config';
+import { relativeUnderRoot, writeFileAgentReadable } from '../util/shared_tree';
 import { runBinary } from '../util/spawn';
 import { spawnAgentProcess } from './process';
 import type {
@@ -54,15 +65,56 @@ async function detect(): Promise<DriverInfo | null> {
  * .builder/ dir (the agent is told not to touch it) rather than the workspace root, so it
  * never lands in the site's committed source. Returns the path for the argv.
  */
-async function writeMcpConfig(opts: SessionStartOptions): Promise<string> {
-  const path = join(opts.workspace, '.builder', 'mcp.json');
+export async function writeMcpConfig(opts: SessionStartOptions): Promise<string> {
   const server: Record<string, unknown> = { type: 'http', url: opts.mcp.url };
   if (opts.mcp.headers && Object.keys(opts.mcp.headers).length > 0) {
     server.headers = opts.mcp.headers;
   }
-  await writeFile(path, JSON.stringify({ mcpServers: { [opts.mcp.name]: server } }, null, 2), 'utf8');
-  return path;
+  // 0640, and DELETED WHEN THE TURN ENDS (the cleanup thunk below). This file carries the
+  // museum's Publication API key: the turn needs it, nothing after the turn does, and a
+  // credential that stays resident in a directory an agent writes to is a credential
+  // waiting to be committed, published or read by the next turn on another site. The mode
+  // keeps it out of every uid on the host except the daemon and its own agent, which share
+  // this instance's group.
+  //
+  // AND IT IS WRITTEN THROUGH THE FD-BASED WRITER, because a path-based one wrote the key
+  // wherever a planted `.builder/mcp.json -> …` pointed — the museum's Publication API key
+  // in a file of the agent's choosing, outliving the turn (the cleanup unlinks the LINK).
+  // `SITES_ROOT` is the trusted prefix; everything below it, the workspace directory
+  // included, is walked `O_NOFOLLOW`.
+  return writeFileAgentReadable(
+    config.SITES_ROOT,
+    join(relativeUnderRoot(config.SITES_ROOT, opts.workspace), '.builder', 'mcp.json'),
+    JSON.stringify({ mcpServers: { [opts.mcp.name]: server } }, null, 2),
+  );
 }
+
+/**
+ * THE TOOLS A SITE BUILD NEEDS, and the complete set this driver grants.
+ *
+ * Read, Write, Edit and Glob/Grep are the whole of "build a website in this directory"; the
+ * MCP server is the one door to museum data and is named as a wildcard so the publication
+ * API's tool list can grow without this constant becoming a second census of it.
+ */
+export const ALLOWED_TOOLS: readonly string[] = Object.freeze([
+  'Read',
+  'Write',
+  'Edit',
+  'Glob',
+  'Grep',
+  'TodoWrite',
+  'mcp__dedalo_publication',
+]);
+
+/**
+ * THE TOOLS NO SITE BUILD MAY HAVE, whatever the allow list or a future default says.
+ *
+ * Bash is arbitrary execution — the confinement makes that a bounded uid rather than a
+ * bounded capability, and a museum's site builder has no legitimate use for it. WebFetch
+ * and WebSearch are the outbound half of a disclosure: everything the read tools can reach
+ * becomes exfiltrable the moment the agent can address a URL of its own choosing.
+ */
+export const DENIED_TOOLS: readonly string[] = Object.freeze(['Bash', 'WebFetch', 'WebSearch']);
 
 function startTurn(opts: SessionStartOptions): AgentProcess {
   return spawnAgentProcess(opts, async () => {
@@ -80,11 +132,19 @@ function startTurn(opts: SessionStartOptions): AgentProcess {
       '50',
       '--mcp-config',
       mcpConfigPath,
+      '--allowedTools',
+      ALLOWED_TOOLS.join(','),
+      '--disallowedTools',
+      DENIED_TOOLS.join(','),
     ];
     if (opts.resumeToken) {
       argv.push('--resume', opts.resumeToken);
     }
-    return { argv, parseLine: parseStreamJsonLine };
+    return {
+      argv,
+      parseLine: parseStreamJsonLine,
+      cleanup: () => rm(mcpConfigPath, { force: true }),
+    };
   });
 }
 

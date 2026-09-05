@@ -280,15 +280,17 @@ export function removalPlan(
     });
   }
 
-  /* 5 — the identity, kept. */
-  steps.push({
-    kind: 'exec',
-    what: `lock the account ${layout.identity.user} — it is NOT deleted, and its uid is never reused`,
-    argv: ['usermod', '--lock', layout.identity.user],
-    // TOLERANT: an account already locked, or one this host never created, is not a reason
-    // to report a decommission as failed after every byte has been archived.
-    onFailure: 'tolerate',
-  });
+  /* 5 — the identities, kept. Both of them: the daemon's and the agent's. */
+  for (const account of [layout.identity.user, layout.identity.agentUser]) {
+    steps.push({
+      kind: 'exec',
+      what: `lock the account ${account} — it is NOT deleted, and its uid is never reused`,
+      argv: ['usermod', '--lock', account],
+      // TOLERANT: an account already locked, or one this host never created, is not a reason
+      // to report a decommission as failed after every byte has been archived.
+      onFailure: 'tolerate',
+    });
+  }
 
   assertRemovalIsCoherent(steps, layout);
   return steps.map(step => Object.freeze(step));

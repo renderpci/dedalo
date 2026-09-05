@@ -204,6 +204,27 @@ build, not about any request. `settingName()` / `standardFromFps()` recompute on
 every call, and the stream probes (`probeStreams` / `probeFormat`) are not cached
 at all.
 
+!!! warning "How MANY conversions may run at once is bounded, in two pools"
+    A resource limit bounds ONE conversion; the server also bounds how many run
+    at the same time, because a derivative is often built while somebody waits
+    and nothing else would stop ten simultaneous uploads from starting ten
+    simultaneous conversions.
+
+    Every ImageMagick, Ghostscript and librsvg spawn takes a permit from the
+    image pool (`DEDALO_MEDIA_CONVERT_CONCURRENCY`), and every `ffmpeg` the
+    engine starts — the media jobs and the two interactive audiovisual actions
+    alike, `create_posterframe` and `download_fragment`, which run inside the
+    request and belong to no job — takes one from the audio/video pool
+    (`DEDALO_MEDIA_AV_CONCURRENCY`). The two are separate because an image
+    permit is held for seconds and a video one for minutes; sharing them would
+    make every thumbnail queue behind a transcode.
+
+    A conversion that arrives when the lanes are busy waits and then runs
+    normally. One that waits longer than its pool's queue ceiling
+    (`DEDALO_MEDIA_CONVERT_QUEUE_SECONDS` / `DEDALO_MEDIA_AV_QUEUE_SECONDS`) is
+    answered "too many requests, try again": nothing is lost, and the original
+    file is never modified by a conversion.
+
 !!! warning "Every binary runs as an argv array — never a shell string"
     All media binaries are invoked through `runBinary()` (`spawn.ts`), which
     spawns an **argv array** via `Bun.spawn`. There is no shell, no string
@@ -342,7 +363,7 @@ source and target paths (`path.ts`) and calls the engine. The call map:
 | --- | --- | --- |
 | image (`processing.ts` `buildImageVersion`/`buildThumbVersion`) | `imagemagick.convertImage`, `buildThumb`, `getColorspace`, `getDimensions` | quality/format renditions, thumbnail, probing |
 | av (`ingest/process_uploaded_file.ts`, `tools/posterframe.ts`, `tools/versions.ts`) | `ffmpeg.transcodeTwoPass`, `extractAudio`, `conformHeader`, `createPosterframe`, `probeStreams`, `probeFormat` + `imagemagick.buildThumb` | quality versions, header conform, poster frame → thumbnail, probing. The posterframe is MINTED automatically when a thumb is needed and none exists (clamped to `min(10s, duration/2)`), so a fresh av record is never pictureless. |
-| pdf (`processing.ts` `regeneratePdf`/`buildPdfCover`, `tools/pdf_extract.ts`) | `imagemagick.convertImage` (page rasterize via `pdfDensity`), `imagemagick.buildThumb` + `pdf.extractText`/`getPageCount` | web copy, jpg cover, thumbnail; text/HTML extraction, page count |
+| pdf (`processing.ts` `regeneratePdf`/`buildPdfCovers`, `tools/pdf_extract.ts`) | `ghostscript.rasterizePdfPage` (the page raster — ImageMagick may not read a PDF: it can only do so by forking Ghostscript as an unbounded delegate, which the shipped policy denies), then `imagemagick.convertImage`/`buildThumb` on that PNG + `pdf.extractText`/`getPageCount` | web copy, jpg cover, thumbnail; text/HTML extraction, page count |
 | 3d (`processing.ts` `regenerate3d`; `tools/posterframe.ts` `moveUploadedToMediaDir` / `buildThumbFromPosterframe`) | none in `regenerate3d` (naive copy only); `imagemagick.buildThumb` when the uploaded posterframe canvas snapshot is bound, and again when the media-versions panel rebuilds the `thumb` tier from the stored posterframe | web-quality copy; thumbnail of the client-rendered preview image. The model file itself NEVER reaches the image engine — `identify` has no decode delegate for a mesh, so a `thumb` build with no posterframe refuses instead of trying |
 | svg (`processing.ts` `regenerateSvg`/`buildThumbVersion`) | `svg.rasterizeSvg` (librsvg) then `imagemagick.buildThumb` | web-quality copy + raster thumbnail. The vector is rendered by **librsvg, not ImageMagick** — the hardened policy disables the `MVG` coder ImageMagick's own SVG renderer emits, so `magick x.svg` is refused (`engine/svg.ts`). The render is an intermediate; the indexed thumb still comes out of the shared recipe. |
 

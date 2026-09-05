@@ -11,12 +11,27 @@
   Hardened ImageMagick policy for the Dédalo TS media engine (foundation audit
   MEDIA-02). Loaded via MAGICK_CONFIGURE_PATH (set by engine/imagemagick.ts).
 
-  Dédalo rasterizes PDFs (buildPdfCovers → Ghostscript delegate) and converts
-  raster images, so the PDF coder stays enabled and safety there depends on
-  Ghostscript >= 9.50 (SAFER by default — a hard deploy requirement). This policy
-  removes the OTHER classic ImageMagick/Ghostscript RCE / SSRF / file-disclosure
-  vectors that Dédalo never needs: the PostScript/EPS/XPS coders, the scripting
-  coders (MSL/MVG), remote-fetch delegates (URL/HTTP/HTTPS/FTP), and @-indirection.
+  Dédalo converts raster images here and NOTHING ELSE that needs a second program.
+  This policy removes the classic ImageMagick/Ghostscript RCE / SSRF /
+  file-disclosure vectors that Dédalo never needs: the PostScript/EPS/XPS coders,
+  the scripting coders (MSL/MVG), remote-fetch delegates (URL/HTTP/HTTPS/FTP), and
+  @-indirection.
+
+  THE GHOSTSCRIPT DELEGATE IS DENIED (2026-09-05, audit MEDIA-01). It used to be
+  the one delegate left enabled, because ImageMagick cannot read a PDF without it
+  and Dédalo needs the PDF cover. A delegate, though, is a process the ENGINE never
+  spawns: it inherits neither the resource block below nor the `-limit` argv, and
+  it is not the process our request cap kills. Measured on a 441-byte PDF declaring
+  a 200000x200000-point page: with both MEDIA-01 halves armed, `magick` sat
+  bounded while its `gs` child grew an intermediate towards 120 TB, and after
+  `kill -9` of the magick we spawned, gs REPARENTED TO PID 1 and kept running
+  (+8.8 MB/min, one core) with nothing in the engine able to reap it. So Dédalo
+  now spawns Ghostscript ITSELF (src/core/media/engine/ghostscript.ts): the page
+  box is read with poppler first, a page above the configured pixel ceiling is
+  refused before anything renders, the render runs under the spawn discipline's
+  cap, and the process the cap kills IS the one doing the work. The engine hands
+  ImageMagick the resulting PNG. Denying `gs` here is what makes that the ONLY
+  route — including for the ImageMagick runs this engine did not build.
 
   Every ImageMagick process in the engine loads this file — conversions through
   runMagickTo AND reads through runIdentify (engine/binaries.ts), because
@@ -40,8 +55,49 @@
   was between requiring a librsvg delegate and narrowing the policy; requiring
   librsvg won, as a DEDICATED renderer rather than an ImageMagick delegate — a
   program that parses SVG and nothing else has no coder dispatch to reach.
+
+  RESOURCE CEILINGS (2026-09-05, audit MEDIA-01). The coder/delegate denials above
+  bound WHAT ImageMagick may parse; they bound nothing about HOW MUCH it may
+  allocate. A 40000x30000 solid-colour TIFF is a few MB on the wire, passes the
+  magic-byte sniff, and decodes to 14.4 GB RSS (measured, engine/probe.ts) on the
+  AUTHENTICATED UPLOAD REQUEST PATH — a denial of service by a legitimate-looking
+  heritage file. The `domain="resource"` block below is the HARD CEILING: an
+  ImageMagick process cannot raise a resource above a policy value, only below it
+  (measured — `-limit width 300000` under `width 200000` here fails with "cache
+  resources exhausted"). It is deliberately GENEROUS, because a large-format map
+  scan is a real heritage artefact and the ceiling must not refuse one.
+
+  THE OPERATING LIMITS ARE ARGV, NOT THIS FILE: `magickResourceLimitArgs()`
+  (engine/binaries.ts) splices `-limit` into every ImageMagick argv from the
+  DEDALO_MAGICK_LIMIT_* catalog keys, so an install tunes its own bound without
+  editing a shipped file, and this ceiling is what an install cannot exceed. Both
+  halves are required: the policy also binds the ImageMagick invocations this
+  engine does not build (a delegate child, an operator's shell), which no argv can
+  reach. Gate: test/unit/magick_policy_tripwire.test.ts.
+
+  A SEQUENCE IS NOT A PIXEL CACHE, which is why `list-length` is in the block too
+  (2026-09-05): `-ping` reads headers and allocates no pixels, but it still
+  enumerates every SCENE of a multi-image source, so a 4.6 MB GIF declaring 200000
+  one-pixel frames cost a HEADER READ 26.3 s and 8.73 GB RSS with every limit above
+  armed — on the upload preview path. It is the one row here that bounds a probe.
+
+  MEMORY/MAP/AREA/DISK DEGRADE; WIDTH/HEIGHT/TIME/LIST-LENGTH REFUSE. Exceeding the pixel-cache
+  budgets moves the cache to disk (slower, still correct); exceeding width, height
+  or time kills the run, which is why those three are the ones an install may
+  legitimately need to raise for an outsized master.
+
+  NO DELEGATE RESIDUE: the one process this block could not reach was the
+  Ghostscript delegate, and it is denied above — the engine spawns gs itself,
+  refusing an oversized page before the render and killing the render it started.
+  What remains outside every bound here is the HOST's own share of a legitimate
+  large conversion (cgroup/systemd), which is an ops decision, not a converter one.
 -->
 <policymap>
+  <!-- Ghostscript: DENIED, the engine spawns gs itself (see the header). -->
+  <policy domain="delegate" rights="none" pattern="gs" />
+  <policy domain="delegate" rights="none" pattern="ps:alpha" />
+  <policy domain="delegate" rights="none" pattern="ps:cmyk" />
+  <policy domain="delegate" rights="none" pattern="ps:color" />
   <!-- Remote fetch / SSRF via delegates -->
   <policy domain="delegate" rights="none" pattern="URL" />
   <policy domain="delegate" rights="none" pattern="HTTP" />
@@ -66,4 +122,26 @@
   <policy domain="coder" rights="none" pattern="XPS" />
   <!-- Indirect reads via @filename in arguments -->
   <policy domain="path" rights="none" pattern="@*" />
+  <!-- Resource ceilings (MEDIA-01) — the HARD ceiling an install cannot exceed. -->
+  <!-- The OPERATING limit is DEDALO_MAGICK_LIMIT_*, spliced as -limit argv. -->
+  <!-- Keep every comment in this element on ONE LINE: measured 2026-09-05, a -->
+  <!-- MULTI-LINE comment inside policymap makes ImageMagick's parser drop -->
+  <!-- every policy after it (magick -list policy showed zero resource rows). -->
+  <policy domain="resource" name="memory" value="8GiB" />
+  <policy domain="resource" name="map" value="16GiB" />
+  <policy domain="resource" name="area" value="8GiB" />
+  <policy domain="resource" name="disk" value="64GiB" />
+  <policy domain="resource" name="width" value="200000" />
+  <policy domain="resource" name="height" value="200000" />
+  <policy domain="resource" name="time" value="1800" />
+  <!-- list-length: how many IMAGES one source may hold. The ONLY row here that -->
+  <!-- bounds a header-only read: -ping skips pixels but still enumerates every -->
+  <!-- scene, and a scene struct is not the pixel cache, so memory/map/area/disk -->
+  <!-- never see it. Measured 2026-09-05: a 4.6 MB GIF of 200000 1x1 frames cost -->
+  <!-- identify -ping 26.3 s / 8.73 GB RSS with every limit above armed; under a -->
+  <!-- list-length of 4096 the same file is refused at 180 MB. -->
+  <!-- NO BACKTICK MAY APPEAR IN A COMMENT IN THIS ELEMENT: measured 2026-09-05, -->
+  <!-- a backtick makes ImageMagick drop every policy that FOLLOWS the comment -->
+  <!-- (this very row read back as unlimited), exactly like a multi-line one. -->
+  <policy domain="resource" name="list-length" value="65536" />
 </policymap>

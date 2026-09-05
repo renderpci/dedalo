@@ -242,6 +242,31 @@ per-address limit alone.
 LOGIN_ACCOUNT_MAX_ATTEMPTS=50
 \`\`\``,
 	},
+	LOGIN_SOURCE_MAX_ATTEMPTS: {
+		type: 'number',
+		scope: 'operator',
+		default: 100,
+		heading: 'Defining the source-wide login attempt limit',
+		typeLabel: 'int',
+		doc: `The third dimension of the login throttle: how many failed logins one **address**
+may accumulate inside \`LOGIN_ATTEMPT_WINDOW\` **whatever user name they name**, before
+that address is refused for \`LOGIN_LOCKOUT_SECONDS\`.
+
+The other two dimensions both start from the user name, so a caller who ROTATES the name
+got a fresh bucket on both at every request: they bounded guessing against an account and
+did nothing at all about VOLUME from one source — which is how one unauthenticated client
+could keep the engine writing denial rows for as long as it liked (audit 2026-08-26
+SEC-21).
+
+It is a FLOOD ceiling, not a guessing ceiling: it must never refuse a shared address doing
+ordinary work — a museum behind one NAT, a reading room, a proxy. Raise it if a large
+institution shares one address; at the default, that many failed logins from one address
+inside the window is not a person mistyping a password.
+
+\`\`\`bash
+LOGIN_SOURCE_MAX_ATTEMPTS=100
+\`\`\``,
+	},
 	LOGIN_ATTEMPT_WINDOW: {
 		type: 'number',
 		scope: 'operator',

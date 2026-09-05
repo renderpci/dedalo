@@ -317,6 +317,7 @@ describe('the one declaration composes into a complete host set', () => {
     // five renderers and says nothing about the fifth.
     const kinds = new Set(RENDERS.flatMap(r => r.artifacts.map(a => a.kind)));
     expect([...kinds].sort()).toEqual([
+      'agent_authorization',
       'apache_vhost',
       'engine_fragment',
       'env',
@@ -628,7 +629,12 @@ describe('the stamp shape §4 describes is the one hash.ts renders', () => {
         // reader strips before parsing (src/sites/site_table.ts). Asserting '#' everywhere
         // would have been a gate that could only be satisfied by making the one artifact a
         // program reads unparseable.
-        const prefix = artifact.kind === 'sites' ? SITE_TABLE_COMMENT_PREFIX : '#';
+        // The polkit rule is the second such artifact: it is JavaScript, so its stamp rides
+        // on the same `//` line — and it is the reason this is a SET of exceptions rather
+        // than one name, because the next non-'#' format would otherwise have been discovered
+        // as a museum's polkitd refusing to parse its own rule.
+        const slashSlash: readonly string[] = ['sites', 'agent_authorization'];
+        const prefix = slashSlash.includes(artifact.kind) ? SITE_TABLE_COMMENT_PREFIX : '#';
         expect({ path: artifact.path, startsWith: firstLine.startsWith(`${prefix} ${STAMP_TOKEN} `) }).toEqual({
           path: artifact.path,
           startsWith: true,

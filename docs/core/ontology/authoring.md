@@ -366,6 +366,33 @@ skip — never guessed. Full rules, counters and diagnostics:
 property-injection hook. If a node needs different behaviour, edit its
 `properties` and regenerate.
 
+### Retired property keys
+
+`properties` is a free-form bag, so a key the engine no longer reads looks
+exactly like one it honours: the node saves and nothing happens. The keys that
+are inert today are enumerated, each with the reason and the replacement, in
+`src/core/ontology/property_census.ts` — 35 of them across the shipped
+ontology, `portal_link_open` on 90 nodes, `hard_delete` on 58, `multi_value`
+on 48. Three things follow from that one registry:
+
+- **The engine says so.** The first time a node is read, every retired key it
+  carries produces one line naming the node, the key and the replacement.
+  Grep the log for `RETIRED properties.`.
+- **An install can audit itself**, including nodes it authored locally:
+
+    ```bash
+    bun scripts/ontology_property_report.ts            # every inert key, node by node
+    bun scripts/ontology_property_report.ts --unknown  # keys the census has never seen
+    ```
+
+    `RETIRED` means this engine knows the key and knows nothing reads it;
+    `UNKNOWN` means the key is in neither census — usually a typo. The author
+    conventions (`DES_`/`_DES`, a `99` suffix, `______TEST_`, `_info`) are
+    understood as deliberately parked and are never reported.
+- **A newly-dead key cannot appear in silence**: the census is a gate
+  (`test/unit/ontology_property_census_tripwire.test.ts`), so a key that stops
+  being read turns the suite red until it is enumerated.
+
 ## TLD creation and management
 
 A TLD (Top-Level Domain) is the namespace prefix of a `tipo`. Creating one

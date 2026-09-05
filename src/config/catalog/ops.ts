@@ -190,6 +190,65 @@ installation, where a boot-time repair from the wrong root would do harm.
 DEDALO_RECONCILE_SCHEDULER_ENABLED=false
 \`\`\``,
 	},
+	DEDALO_ACTIVITY_RETENTION_DAYS: {
+		type: 'number',
+		scope: 'operator',
+		default: 0,
+		heading: 'Activity log retention',
+		typeLabel: 'int',
+		doc: `How many days of \`matrix_activity\` rows this installation keeps. Every
+state-changing action appends one row — and so does every DENIED login, which nobody has to
+be authenticated to cause — so the table grows with use and with abuse alike, inside the
+database every backup copies.
+
+The default is \`0\`: **keep everything**. That is the right default for a heritage archive,
+because the activity log is the record of who changed what. The key exists so an institution
+that has decided otherwise can say so, and so that the deletion is performed by the engine
+(the retention scheduler, or \`bun scripts/reconcile.ts\`-style operator surfaces) rather than
+by hand-written SQL against the matrix.
+
+\`\`\`bash
+DEDALO_ACTIVITY_RETENTION_DAYS=1095
+\`\`\``,
+	},
+	DEDALO_DIFFUSION_LEDGER_RETENTION_DAYS: {
+		type: 'number',
+		scope: 'operator',
+		default: 0,
+		heading: 'Publication ledger retention',
+		typeLabel: 'int',
+		doc: `How many days of SETTLED rows the \`dd1758\` publication ledger keeps. The ledger
+appends one row per record per publish run — republishing the same catalogue writes them all
+again — so it grows linearly with how often you publish, not with how much you hold.
+
+PENDING rows (an unpublish still owed to a public target) are NEVER pruned, whatever this is
+set to: they are outstanding debt, not history.
+
+The default is \`0\`: keep everything. Set a window if your publication history does not need
+to be permanent.
+
+\`\`\`bash
+DEDALO_DIFFUSION_LEDGER_RETENTION_DAYS=365
+\`\`\``,
+	},
+	DEDALO_RETENTION_SCHEDULER_ENABLED: {
+		type: 'boolean',
+		scope: 'operator',
+		default: true,
+		heading: 'Retention scheduler',
+		typeLabel: 'bool',
+		doc: `Whether **this** server applies the configured retention windows by itself, once
+after boot and then daily. With every window at its default (\`0\` = keep everything) it has
+nothing to do, so leaving it on costs nothing and means that the day an operator sets a
+window, it takes effect.
+
+Set it to \`false\` on an instance that shares a database with the live installation — a
+maintenance or smoke-test copy — where a scheduled delete would act on data it does not own.
+
+\`\`\`bash
+DEDALO_RETENTION_SCHEDULER_ENABLED=false
+\`\`\``,
+	},
 	DEDALO_SLOW_REQUEST_MS: {
 		type: 'number',
 		scope: 'operator',

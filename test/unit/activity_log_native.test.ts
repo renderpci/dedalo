@@ -442,7 +442,10 @@ describe('activity log rows, TS-native (dd542 anatomy)', () => {
 		expect(row.string.dd546?.[0]?.value).toBe('dd229');
 
 		expect(row.misc.dd551?.[0]?.value).toEqual({
-			msg: `Denied login attempted by: ${ABSENT_USERNAME}. User does not exist`,
+			// The untrusted string is stored ONCE, in `username`
+			// (WC-2026-09-05-preauth-intake-bounds / SEC-21): it used to
+			// appear here too, so every denial wrote the caller's bytes twice.
+			msg: 'Denied login. User does not exist',
 			result: 'deny',
 			cause: 'User does not exist',
 			username: ABSENT_USERNAME,

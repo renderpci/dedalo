@@ -162,10 +162,50 @@ to this interface, so adding an agent is a file under `drivers/` plus one regist
   then SIGKILL). The child's environment is exactly `SessionStartOptions.env` — a tight
   allowlist the manager builds. **Spreading `process.env` would hand a coding agent the
   daemon's token and provider keys**; the allowlist is the secrets boundary.
+- `src/drivers/confinement.ts` decides what the turn RUNS AS, and every spawn goes through
+  it — a turn, a build step and a git command alike (`runConfined`). Under `AGENT_CONFINEMENT=systemd_scope` (what a provisioned host renders) one turn is
+  one transient systemd service started with `systemd-run --uid=<AGENT_USER>`: a second unix
+  identity, so the daemon's `$CREDENTIALS_DIRECTORY`, its provider keys and its audit handle
+  are not merely undocumented to the agent but unreadable. The same call carries the per-turn
+  caps (`MemoryMax`, `CPUQuota`, `TasksMax`, and a `RuntimeMaxSec` PID 1 enforces even if the
+  daemon dies), the filesystem confinement (`ProtectSystem=strict` plus the workspace and the
+  agent home) and the egress policy (`IPAddressAllow=any` with loopback and every private
+  range denied, the Publication API allowed back). The child's environment travels in a
+  per-turn `0600` `EnvironmentFile` — never a unit property, which any uid can read with
+  `systemctl show` — and is deleted when the turn ends. A host that cannot do this REFUSES
+  the session (503, naming what is missing); `AGENT_CONFINEMENT=none` is the declared
+  laptop/container mode, is refused under `NODE_ENV=production`, and makes every turn
+  announce itself into its own durable session log (a build step announces into the build
+  log). The tree the two uids share states its modes explicitly (`src/util/shared_tree.ts`:
+  directories 2770 setgid, files 0660, the daemon's own `.builder/` 0700) because the
+  daemon's `UMask=0027` would otherwise hand the agent a site it can read and never write —
+  and that same module is the only way the daemon writes into the tree, creating each
+  directory level and opening each file `O_NOFOLLOW` with the mode set on the descriptor, so
+  a symlink the turn planted where the daemon writes is a refusal rather than a redirect —
+  every writer, not only the workspace-building ones: the git exclusion rewritten on every
+  commit, both drivers' MCP configs and the session store go through it too, and the gate's
+  census is total over `src/` and asks about the DESTINATION rather than the directory a
+  module happens to live in. A HARD link is refused as well (the link count is read off the
+  handle before anything is truncated), and a directory that already exists is proved, never
+  re-moded, so a build's `.builder/builds` cannot widen the daemon's own `.builder/`. The
+  READS are the same door and the same census: `getBuild`, `getBuildLog`, `latestBuild`,
+  `readManifest`, `replayEvents`, `readMeta` and `listSessions` go through
+  `readFileShared`/`readFilePrivate`/`readdirShared`, because a `readFile` on a lexical path
+  follows a planted link too — measured, a link at `.builder/builds/<id>.log` was served
+  through `GET /sites/<slug>/builds/<id>` with the daemon's `SERVICE_TOKEN` in it. An absent
+  file answers `null`, a planted one throws, and the daemon's own state also refuses an inode
+  it does not own (an agent-authored build record is not the daemon's word about a build).
+  The build record and the session meta are written tmp+rename through that same door, so a
+  poller never reads a half-written one.
 - `claude_code.ts` runs `claude -p … --output-format stream-json --mcp-config …` and parses
   the stream-json frames; `opencode.ts` runs `opencode run … --format json`; `pi.ts` is a
-  `detect()`-able stub. Each writes its own MCP config (Claude reads `.builder/mcp.json`,
-  OpenCode reads a workspace-root `opencode.json`) pointing at the publication `/mcp`.
+  `detect()`-able stub that refuses a turn rather than inheriting a default. Each writes its
+  own MCP config (Claude reads `.builder/mcp.json`, OpenCode reads a workspace-root
+  `opencode.json`) pointing at the publication `/mcp` — `0640`, and DELETED when the turn
+  ends, because it carries the museum's Publication API key into a directory an agent writes
+  to. Each also STATES its tool set rather than inheriting one: Claude Code gets an explicit
+  `--allowedTools` with `Bash`, `WebFetch` and `WebSearch` in `--disallowedTools`, and
+  OpenCode gets the same statement as a `permission` block in the file the daemon writes.
 - `src/drivers/registry.ts` maps `DriverId → AgentDriver`, exposes `detectDrivers()` (backs
   `/health` and `/capabilities`), and a test-only `__setTestDriver` seam.
 
@@ -373,6 +413,11 @@ the daemon *reads*, not as something anyone writes:
 - Agent: `AGENT_DRIVER` and the driver bins `CLAUDE_CODE_BIN` / `OPENCODE_BIN` / `PI_BIN`
   (absolute paths — a bare name resolved through the shared search path is a
   cross-instance substitution vector).
+- Agent confinement: `AGENT_CONFINEMENT` (`systemd_scope` on every provisioned host,
+  `none` only where it is declared and never under `NODE_ENV=production`), `AGENT_USER` and
+  `AGENT_UNIT_PREFIX` (both derived per instance and rendered), plus the host-shaped
+  `SYSTEMD_RUN_BIN`, `AGENT_EGRESS_ALLOW` and the per-turn caps `AGENT_TURN_MEMORY_MAX` /
+  `AGENT_TURN_CPU_QUOTA` / `AGENT_TURN_TASKS_MAX`.
 - Limits: `MAX_SITES`, `MAX_CONCURRENT_SESSIONS`, `SESSION_TURN_TIMEOUT_MS`,
   `INSTALL_TIMEOUT_MS`, `BUILD_TIMEOUT_MS`, `SITE_DISK_QUOTA_MB`, `RELEASES_RETAINED`. A
   limit absent from the rendered file means "the daemon's own default", never a frozen copy
@@ -398,13 +443,31 @@ the daemon *reads*, not as something anyone writes:
 ## Security model
 
 The engine authorizes; the daemon executes under a dedicated unix user with systemd
-hardening (`ProtectSystem=strict`, `ReadWritePaths` limited to the three roots). Agent and
-build children get a constructed environment (never the daemon's secrets); the toolchain is
-Bun-only, which does not run npm lifecycle scripts except `trustedDependencies` — the cheapest
-real mitigation against a malicious dependency. Path confinement + slug grammar + no-shell
-argv spawns bound what a workspace can reach on disk. Egress is not firewalled in the MVP
-(the agent needs the LLM API and the package registry); the documented hardening is an
-allowlisting proxy or per-uid rules.
+hardening (`ProtectSystem=strict`, `ReadWritePaths` limited to the three roots,
+`ProtectProc=invisible`, `RestrictSUIDSGID`, `LockPersonality`). Agent and build children get
+a constructed environment (never the daemon's secrets); the toolchain is Bun-only, which does
+not run npm lifecycle scripts except `trustedDependencies` — the cheapest real mitigation
+against a malicious dependency. Path confinement + slug grammar + no-shell argv spawns bound
+what a workspace can reach on disk.
+
+**An agent turn is a different principal from the daemon.** It runs as `AGENT_USER`, a second
+per-instance uid whose primary group is the instance's own, in a transient systemd unit the
+museum's rendered polkit rule authorizes by unit-name prefix and by nothing else
+(`src/provision/render/agent_authorization.ts`). The workspaces root and the agent home are
+`2770` so both uids can work in them and no other uid on the host can look; the credential
+store, the audit handle and `$CREDENTIALS_DIRECTORY` stay the daemon's alone. Egress IS
+policed per turn — the public internet stays reachable (the model provider cannot be
+enumerated) while loopback, every RFC1918 range and the link-local metadata block are denied,
+with the Publication API allowed back explicitly. THE ACCEPTED LIMIT: all sites of ONE museum
+share that uid, so an agent turn on one site of an instance can read another site of the SAME
+instance; the sites of an instance are one tenant, and the replacement if that ever stops
+being true is a pre-provisioned pool of per-site agent uids (recorded beside the derivation in
+`src/provision/layout.ts`). A SITE BUILD AND A `git add` ARE THE SAME PRINCIPAL: `site.json`, `package.json` and `.git`
+all live inside the workspace a turn writes, so an install script, a build command and a git
+filter are agent-authored text on a routine publisher-triggered path. Both go through
+`runConfined()` — the same uid, the same unit prefix, the same egress and caps — and
+`src/util/spawn.ts` REFUSES any spawn whose working directory is inside `SITES_ROOT` without
+the confinement's token, so a new call site cannot quietly reopen the door.
 
 ## Testing
 

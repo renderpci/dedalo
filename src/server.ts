@@ -1579,6 +1579,12 @@ async function shutdownGracefully(
 	} catch (error) {
 		console.error('[shutdown] stopping reconcile scheduler failed:', error);
 	}
+	try {
+		const { stopRetentionScheduler } = await import('./core/retention/scheduler.ts');
+		stopRetentionScheduler();
+	} catch (error) {
+		console.error('[shutdown] stopping retention scheduler failed:', error);
+	}
 	// Stop ACCEPTING; in-flight requests keep running until the drain deadline.
 	for (const server of servers) server.stop();
 	const deadline = Date.now() + config.ops.shutdownGraceMs;
@@ -1945,6 +1951,21 @@ export async function startServer() {
 				'[reconcile] registry boot failed — the maintenance reconcile panel is empty until restart:',
 				error,
 			);
+		}
+
+		// RETENTION (audit 2026-08-26 P2-9): apply the configured retention
+		// windows — matrix_activity, the dd1758 publication ledger, the error
+		// report store — once shortly after boot and daily thereafter. With every
+		// window at its default (0 = keep everything) this is a no-op; the point
+		// is that a window an operator SETS takes effect without anyone having to
+		// remember a command. Same gate shape as the reconcile scheduler.
+		try {
+			if (readString('DEDALO_RETENTION_SCHEDULER_ENABLED') !== 'false') {
+				const { startRetentionScheduler } = await import('./core/retention/scheduler.ts');
+				startRetentionScheduler();
+			}
+		} catch (error) {
+			console.error('[retention] scheduler boot failed — retention windows will not run:', error);
 		}
 
 		// MEDIA TREE (audit 2026-08_oh1_beta §5.2). PHP provisioned the whole tree

@@ -1091,6 +1091,138 @@ DEDALO_SVG_THUMB_DPI=150
 
 ---
 
+### ImageMagick resource limits
+
+DEDALO_MAGICK_LIMIT_MEMORY `string`
+
+This parameter defines how much memory one ImageMagick process may use for its pixel cache before it starts spilling to disk.
+
+It is not a refusal: an image that needs more than this still converts, using the memory-mapped and then the disk-backed cache (DEDALO_MAGICK_LIMIT_MAP and DEDALO_MAGICK_LIMIT_DISK). What it bounds is how much of the server's RAM a single upload can take while the person who sent it waits, which is what makes a deliberately outsized file a denial of service rather than a slow conversion.
+
+Accepts an ImageMagick size: a plain number of bytes, or a number with a unit (`2GiB`, `512MiB`).
+
+```bash
+DEDALO_MAGICK_LIMIT_MEMORY="2GiB"
+```
+
+*Default: 2GiB*
+
+---
+
+### ImageMagick resource limits
+
+DEDALO_MAGICK_LIMIT_MAP `string`
+
+This parameter defines how much memory-mapped address space one ImageMagick process may use for its pixel cache before it falls back to the disk-backed cache.
+
+It is the second step of the same ladder as DEDALO_MAGICK_LIMIT_MEMORY and behaves the same way: crossing it slows a conversion down, it never refuses one. Keep it above the memory limit; a value below it makes the middle step useless.
+
+```bash
+DEDALO_MAGICK_LIMIT_MAP="4GiB"
+```
+
+*Default: 4GiB*
+
+---
+
+### ImageMagick resource limits
+
+DEDALO_MAGICK_LIMIT_AREA `string`
+
+This parameter defines the pixel area above which ImageMagick caches an image on disk instead of in memory.
+
+It is the threshold that decides, for one image, whether the ladder above is entered at all. Like the two limits above it degrades rather than refuses.
+
+```bash
+DEDALO_MAGICK_LIMIT_AREA="2GiB"
+```
+
+*Default: 2GiB*
+
+---
+
+### ImageMagick resource limits
+
+DEDALO_MAGICK_LIMIT_DISK `string`
+
+This parameter defines how much disk one ImageMagick process may use for its pixel cache.
+
+This is the bottom of the ladder, and the first of these limits that REFUSES: an image whose cache does not fit in this much disk fails to convert, with `cache resources exhausted`. Dédalo treats that as a failed derivative — nothing half-written is ever published — so the cost of a value that is too low is a refused conversion, and the cost of one that is too high is a scratch directory that can fill the volume the media library lives on.
+
+```bash
+DEDALO_MAGICK_LIMIT_DISK="16GiB"
+```
+
+*Default: 16GiB*
+
+---
+
+### ImageMagick resource limits
+
+DEDALO_MAGICK_LIMIT_WIDTH `int`
+
+This parameter defines the largest image WIDTH, in pixels, that ImageMagick will read.
+
+Unlike the cache limits above, this is a REFUSAL, and it is the one that stops a decode bomb before a single pixel is allocated: the dimensions are read from the file header, so an image declaring more than this is rejected at header-parse time whatever its size on disk.
+
+The default is deliberately far above any real scan. Raise it only when an institution genuinely holds masters wider than this — large-format map and panorama scans are the real case — and remember the shipped ImageMagick policy carries its own ceiling of 200000, which no value here can exceed.
+
+```bash
+DEDALO_MAGICK_LIMIT_WIDTH=100000
+```
+
+*Default: 100000*
+
+---
+
+### ImageMagick resource limits
+
+DEDALO_MAGICK_LIMIT_HEIGHT `int`
+
+This parameter defines the largest image HEIGHT, in pixels, that ImageMagick will read. It is the counterpart of DEDALO_MAGICK_LIMIT_WIDTH and everything said there applies to it unchanged, including the 200000 ceiling in the shipped policy.
+
+```bash
+DEDALO_MAGICK_LIMIT_HEIGHT=100000
+```
+
+*Default: 100000*
+
+---
+
+### ImageMagick resource limits
+
+DEDALO_MAGICK_LIMIT_LIST_LENGTH `int`
+
+This parameter defines how many IMAGES one file may contain before ImageMagick refuses to read it.
+
+An image file is not necessarily one image: a PDF has pages, a TIFF can have pages or layers, a GIF has frames. Reading such a file costs memory for every image in it, and that cost is paid even when Dédalo only wants the header — which it does on every upload, to build the preview. A small file can declare an enormous number of tiny images: a 4.6 MB animation of two hundred thousand one-pixel frames, well inside the upload limit, made a single header read take 26 seconds and nearly 9 GB of memory. None of the limits above stops that, because the cost is not in the pixels.
+
+The default admits any real heritage object measured on this engine — a long multi-page scan, a long animation — and refuses the crafted case at about 180 MB. Raise it if an institution genuinely holds masters with more images than this in one file; a file above the limit is refused with `list length exceeds limit` and no derivative is written.
+
+```bash
+DEDALO_MAGICK_LIMIT_LIST_LENGTH=4096
+```
+
+*Default: 4096*
+
+---
+
+### ImageMagick resource limits
+
+DEDALO_MAGICK_LIMIT_TIME `int`
+
+This parameter defines how long, in seconds, one ImageMagick process may run before it is refused.
+
+It is a second, independent bound on the same exposure the dimension limits cover: an image small enough to pass them can still be shaped so that decoding it takes hours. Fifteen minutes is far longer than any legitimate derivative build measured on this engine, and short enough that a wedged conversion does not hold a request open for a day.
+
+```bash
+DEDALO_MAGICK_LIMIT_TIME=900
+```
+
+*Default: 900*
+
+---
+
 ### Image
 
 DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS `array` *optional*
@@ -1369,6 +1501,82 @@ DEDALO_MEDIA_EXPORT_BASE="https://my_institution.org/dedalo/media"
 
 ---
 
+### Defining how many image conversions run at the same time
+
+DEDALO_MEDIA_CONVERT_CONCURRENCY `int`
+
+This parameter defines how many image, PDF or SVG conversions Dédalo will run at the same time.
+
+Unlike media jobs, these conversions happen while somebody waits: the preview of a file being uploaded, a regenerated thumbnail, a rotation. Each one is already limited in how much memory and disk it may use (see the `DEDALO_MAGICK_LIMIT_*` parameters), but that limit applies to ONE conversion, and a large photograph can legitimately use all of it. Without this parameter, ten simultaneous uploads meant ten simultaneous conversions, each allowed to spend the whole budget, and the server ran out of disk while every upload waited.
+
+With it, a conversion that arrives when the lanes are busy waits for a free one and then runs normally. Nothing is lost and nobody is refused, unless the wait exceeds `DEDALO_MEDIA_CONVERT_QUEUE_SECONDS`.
+
+By default Dédalo runs 2 conversions at a time. Raise it on a server with cores and disk to spare and many people uploading at once; lower it to 1 on a small machine that also serves the public website. Values below 1 are raised to 1.
+
+```bash
+DEDALO_MEDIA_CONVERT_CONCURRENCY=2
+```
+
+*Default: 2*
+
+---
+
+### Defining how long a conversion waits for a free lane
+
+DEDALO_MEDIA_CONVERT_QUEUE_SECONDS `int (seconds)`
+
+This parameter defines how long a conversion may wait for a free conversion lane (`DEDALO_MEDIA_CONVERT_CONCURRENCY`) before it is refused.
+
+Waiting is not free: the person's browser is holding a connection open while it waits. When the server is so busy that the wait becomes long, answering "too many requests, try again" is more useful than an operation that eventually times out with no explanation. The client can retry, and the record is untouched — the original file is never modified by a conversion.
+
+By default Dédalo waits up to 120 seconds. Raise it on an installation that ingests large masters in bulk and prefers slow success to a refusal; lower it on an interactive installation where a quick answer matters more.
+
+```bash
+DEDALO_MEDIA_CONVERT_QUEUE_SECONDS=120
+```
+
+*Default: 120*
+
+---
+
+### Defining how many audio and video conversions run at the same time
+
+DEDALO_MEDIA_AV_CONCURRENCY `int`
+
+This parameter defines how many audio or video conversions (`ffmpeg` processes) Dédalo will run at the same time.
+
+Video work is the heaviest thing this server does, and not all of it happens in a media job: two actions of the audiovisual component run WHILE THE PERSON WAITS — creating a posterframe, and cutting the fragment an index entry points at. Those belong to no job lane, so before this parameter existed the only limit on how many transcodes a server ran at once was how many people pressed the button.
+
+With it, every ffmpeg the engine starts — the jobs and the two interactive actions alike — takes one of these lanes; one that arrives when they are all busy waits, and is refused with "too many requests" if the wait exceeds `DEDALO_MEDIA_AV_QUEUE_SECONDS`.
+
+By default Dédalo allows one more than the media-job lanes (`DEDALO_MEDIA_JOB_CONCURRENCY`), so a full job queue still leaves room for one interactive fragment. Raise both together on a machine with cores to spare; lower this to 1 on a small server. Values below 1 are raised to 1.
+
+```bash
+DEDALO_MEDIA_AV_CONCURRENCY=4
+```
+
+*Default: `DEDALO_MEDIA_JOB_CONCURRENCY` + 1*
+
+---
+
+### Defining how long an audio or video conversion waits for a free lane
+
+DEDALO_MEDIA_AV_QUEUE_SECONDS `int (seconds)`
+
+This parameter defines how long an audio or video conversion may wait for a free lane (`DEDALO_MEDIA_AV_CONCURRENCY`) before it is refused.
+
+It exists for the two audiovisual actions that run while somebody waits (the posterframe and the fragment download): when every lane is busy transcoding, answering "too many requests, try again" is more useful than a browser holding a connection open for an hour. Nothing is lost — the original file is never modified, and the person can repeat the action.
+
+A queued media JOB is refused the same way, and its failure is reported in the job's own status, so raise this value on an installation that ingests long interviews in bulk and prefers a slow success to a refusal.
+
+```bash
+DEDALO_MEDIA_AV_QUEUE_SECONDS=120
+```
+
+*Default: 120*
+
+---
+
 ### Defining media job concurrency
 
 DEDALO_MEDIA_JOB_CONCURRENCY `int`
@@ -1589,6 +1797,24 @@ DEDALO_PDFTOHTML_PATH="/usr/bin/pdftohtml"
 ```
 
 *Default: `<DEDALO_BINARY_BASE>/pdftohtml`*
+
+---
+
+### PDF
+
+DEDALO_GS_PATH `string`
+
+This parameter defines the path to the `gs` program in the server, the [Ghostscript](https://www.ghostscript.com/) interpreter. Dédalo uses it — and only it — to turn the first page of an uploaded PDF into an image, which is how the cover and the thumbnail of a PDF record are produced.
+
+ImageMagick is deliberately NOT asked to do this. ImageMagick cannot read a PDF by itself either: it hands the file to Ghostscript as a *delegate*, i.e. a second program that Dédalo did not start, cannot bound and cannot stop — a PDF declaring an enormous page then keeps a Ghostscript process running, and filling the disk, after the conversion that started it has already been killed. Dédalo therefore runs Ghostscript itself, refuses a page larger than DEDALO_MAGICK_LIMIT_WIDTH x DEDALO_MAGICK_LIMIT_HEIGHT before rendering anything, and the hardened ImageMagick policy denies the Ghostscript delegate outright.
+
+Install Ghostscript (`brew install ghostscript`, `apt install ghostscript`; version 9.50 or newer, where the safe interpreter mode is the default) and the path is derived from DEDALO_BINARY_BASE, so no configuration is needed. Set this key only to point at a binary in a non-standard location. Without it, PDF records keep working — upload, storage, text extraction, display and download are unaffected — but their cover image and thumbnail cannot be built, and the media-versions panel says so.
+
+```bash
+DEDALO_GS_PATH="/usr/bin/gs"
+```
+
+*Default: `<DEDALO_BINARY_BASE>/gs`*
 
 ---
 
@@ -2224,6 +2450,33 @@ LOGIN_ACCOUNT_MAX_ATTEMPTS=50
 ```
 
 *Default: 50*
+
+---
+
+### Defining the source-wide login attempt limit
+
+LOGIN_SOURCE_MAX_ATTEMPTS `int`
+
+The third dimension of the login throttle: how many failed logins one **address**
+may accumulate inside `LOGIN_ATTEMPT_WINDOW` **whatever user name they name**, before
+that address is refused for `LOGIN_LOCKOUT_SECONDS`.
+
+The other two dimensions both start from the user name, so a caller who ROTATES the name
+got a fresh bucket on both at every request: they bounded guessing against an account and
+did nothing at all about VOLUME from one source — which is how one unauthenticated client
+could keep the engine writing denial rows for as long as it liked (audit 2026-08-26
+SEC-21).
+
+It is a FLOOD ceiling, not a guessing ceiling: it must never refuse a shared address doing
+ordinary work — a museum behind one NAT, a reading room, a proxy. Raise it if a large
+institution shares one address; at the default, that many failed logins from one address
+inside the window is not a person mistyping a password.
+
+```bash
+LOGIN_SOURCE_MAX_ATTEMPTS=100
+```
+
+*Default: 100*
 
 ---
 
@@ -2961,6 +3214,71 @@ DEDALO_RECONCILE_SCHEDULER_ENABLED=false
 
 ---
 
+### Activity log retention
+
+DEDALO_ACTIVITY_RETENTION_DAYS `int`
+
+How many days of `matrix_activity` rows this installation keeps. Every
+state-changing action appends one row — and so does every DENIED login, which nobody has to
+be authenticated to cause — so the table grows with use and with abuse alike, inside the
+database every backup copies.
+
+The default is `0`: **keep everything**. That is the right default for a heritage archive,
+because the activity log is the record of who changed what. The key exists so an institution
+that has decided otherwise can say so, and so that the deletion is performed by the engine
+(the retention scheduler, or `bun scripts/reconcile.ts`-style operator surfaces) rather than
+by hand-written SQL against the matrix.
+
+```bash
+DEDALO_ACTIVITY_RETENTION_DAYS=1095
+```
+
+*Default: 0*
+
+---
+
+### Publication ledger retention
+
+DEDALO_DIFFUSION_LEDGER_RETENTION_DAYS `int`
+
+How many days of SETTLED rows the `dd1758` publication ledger keeps. The ledger
+appends one row per record per publish run — republishing the same catalogue writes them all
+again — so it grows linearly with how often you publish, not with how much you hold.
+
+PENDING rows (an unpublish still owed to a public target) are NEVER pruned, whatever this is
+set to: they are outstanding debt, not history.
+
+The default is `0`: keep everything. Set a window if your publication history does not need
+to be permanent.
+
+```bash
+DEDALO_DIFFUSION_LEDGER_RETENTION_DAYS=365
+```
+
+*Default: 0*
+
+---
+
+### Retention scheduler
+
+DEDALO_RETENTION_SCHEDULER_ENABLED `bool`
+
+Whether **this** server applies the configured retention windows by itself, once
+after boot and then daily. With every window at its default (`0` = keep everything) it has
+nothing to do, so leaving it on costs nothing and means that the day an operator sets a
+window, it takes effect.
+
+Set it to `false` on an instance that shares a database with the live installation — a
+maintenance or smoke-test copy — where a scheduled delete would act on data it does not own.
+
+```bash
+DEDALO_RETENTION_SCHEDULER_ENABLED=false
+```
+
+*Default: true*
+
+---
+
 ### Defining the slow request threshold
 
 DEDALO_SLOW_REQUEST_MS `int`
@@ -3080,6 +3398,26 @@ DEDALO_ERROR_REPORT_RETENTION_DAYS=90
 ```
 
 *Default: 90*
+
+---
+
+### Error reports: stored row ceiling
+
+DEDALO_ERROR_REPORT_MAX_ROWS `int`
+
+Only meaningful on the **master** installation. The highest number of reports the
+store may hold. The age window (`DEDALO_ERROR_REPORT_RETENTION_DAYS`) cannot bound a burst:
+a flood arriving today is inside the window and stays for the whole of it, and since a
+report may carry an inline screenshot each one can be a few hundred kilobytes. When the
+store is over this ceiling the OLDEST reports are dropped until it is under it again —
+eviction, not refusal, because refusing would let a flood silence the genuine reports the
+intake exists for. Default `100000`; `0` removes the ceiling.
+
+```bash
+DEDALO_ERROR_REPORT_MAX_ROWS=100000
+```
+
+*Default: 100000*
 
 ---
 

@@ -14,6 +14,7 @@
 
 import type { Rqo } from '../../concepts/rqo.ts';
 import { ok } from '../../errors/convert.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import {
 	type ActionHandler,
 	type ApiRequestContext,
@@ -133,9 +134,31 @@ async function mediaStreamsAction(rqo: Rqo, context: ApiRequestContext): Promise
  * no longer a wire fact (it can carry filesystem paths) — it rides the log line
  * + the `cause` chain, and reaches a debugger through DEDALO_DEBUG_API_ERRORS.
  */
-async function downloadFragmentAction(rqo: Rqo, context: ApiRequestContext): Promise<ApiResult> {
-	const resolved = await resolveMediaActionContext(rqo, context, 1, 'component_av');
+/** What the client asked to be cut, coerced out of the untyped RQO. */
+interface FragmentRequest {
+	readonly quality: string;
+	readonly tagId: string;
+	readonly tcInSeconds: number;
+	readonly tcOutSeconds: number;
+	readonly watermark: boolean;
+}
 
+/**
+ * Read the fragment request out of the RQO. Every field is untyped on the wire,
+ * so each one is coerced here — an empty or non-string quality falls back to the
+ * spec's default, and the watermark flag arrives as a boolean OR as the string
+ * the form serializer produces.
+ */
+function fragmentQuality(value: unknown, defaultQuality: string): string {
+	return typeof value === 'string' && value !== '' ? value : defaultQuality;
+}
+
+/** The watermark flag arrives as a boolean, or as the string the form serializer produces. */
+function fragmentWatermark(value: unknown): boolean {
+	return value === true || value === 'true';
+}
+
+function readFragmentRequest(rqo: Rqo, defaultQuality: string): FragmentRequest {
 	const source = (rqo.source ?? {}) as { tag_id?: unknown };
 	const options = (rqo.options ?? {}) as {
 		quality?: unknown;
@@ -143,11 +166,21 @@ async function downloadFragmentAction(rqo: Rqo, context: ApiRequestContext): Pro
 		tc_out_secs?: unknown;
 		watermark?: unknown;
 	};
+	return {
+		quality: fragmentQuality(options.quality, defaultQuality),
+		tagId: String(source.tag_id ?? ''),
+		tcInSeconds: Number(options.tc_in_secs ?? 0),
+		tcOutSeconds: Number(options.tc_out_secs ?? 0),
+		watermark: fragmentWatermark(options.watermark),
+	};
+}
+
+async function downloadFragmentAction(rqo: Rqo, context: ApiRequestContext): Promise<ApiResult> {
+	const resolved = await resolveMediaActionContext(rqo, context, 1, 'component_av');
+
 	const { spec, identity, pathOpts } = resolved.ctx;
-	const quality =
-		typeof options.quality === 'string' && options.quality !== ''
-			? options.quality
-			: spec.defaultQuality;
+	const request = readFragmentRequest(rqo, spec.defaultQuality);
+	const { quality, tagId } = request;
 
 	const { buildAvFragment } = await import('../../media/tools/fragment.ts');
 	try {
@@ -156,19 +189,21 @@ async function downloadFragmentAction(rqo: Rqo, context: ApiRequestContext): Pro
 			identity,
 			pathOpts,
 			quality,
-			tagId: String(source.tag_id ?? ''),
-			tcInSeconds: Number(options.tc_in_secs ?? 0),
-			tcOutSeconds: Number(options.tc_out_secs ?? 0),
-			watermark: options.watermark === true || options.watermark === 'true',
+			tagId,
+			tcInSeconds: request.tcInSeconds,
+			tcOutSeconds: request.tcOutSeconds,
+			watermark: request.watermark,
 		});
 		return { status: 200, body: ok(fragment.url, { requestId: context.requestId }) };
 	} catch (error) {
+		// ADMISSION REFUSALS PASS THROUGH UNCHANGED. `rate.limited` is the honest,
+		// retryable answer for "every AV lane is busy" (DEDALO_MEDIA_AV_CONCURRENCY);
+		// folding it into `media.action_failed` would tell the reader their clip
+		// could not be cut, when in fact it was never attempted.
+		if (error instanceof DedaloError && error.code === 'rate.limited') throw error;
 		// The core's message names exactly what was refused — kept as the LOG line
 		// and the `cause` chain, not as a wire field.
-		avActionFail(
-			`on create the fragment file (${quality}, tag ${String(source.tag_id ?? '')})`,
-			error,
-		);
+		avActionFail(`on create the fragment file (${quality}, tag ${tagId})`, error);
 	}
 }
 

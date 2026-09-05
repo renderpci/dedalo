@@ -171,12 +171,20 @@ function requireAgentHttp(action: string): void {
 
 const QUESTION_MAX_CHARS = 32_768;
 const HISTORY_MAX_ENTRIES = 64;
-const HISTORY_MAX_BYTES = 262_144;
+/**
+ * EXPORTED — not for another caller, but because the parse door's per-key budget
+ * for `options.history` (`OPTIONS_KEY_BUDGETS` in core/concepts/scalar_bounds.ts)
+ * must never be TIGHTER than what this handler declares it accepts, and
+ * `rqo_scalar_bound_tripwire` asserts that relation against these very
+ * constants. Raising a cap here without raising the budget is then RED, not a
+ * silent 400 in production.
+ */
+export const HISTORY_MAX_BYTES = 262_144;
 const IMAGES_MAX = 8;
 /** ≈ 5 MiB decoded per image (base64 is ~4/3 of the byte length). */
-const IMAGE_MAX_BASE64_CHARS = 7_000_000;
+export const IMAGE_MAX_BASE64_CHARS = 7_000_000;
 /** ≈ 15 MiB decoded across all attachments of one turn. */
-const IMAGES_MAX_TOTAL_BASE64_CHARS = 21_000_000;
+export const IMAGES_MAX_TOTAL_BASE64_CHARS = 21_000_000;
 const CONTEXT_SUMMARY_MAX_CHARS = 2_000;
 const IMAGE_MEDIA_TYPES: ReadonlySet<string> = new Set([
 	'image/jpeg',

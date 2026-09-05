@@ -220,6 +220,9 @@ function scratchDoc(instance = 'census') {
 			state_base: join(SCRATCH, 'state'),
 			unit_dir: join(SCRATCH, 'systemd'),
 			vhost_dir: join(SCRATCH, 'vhosts'),
+			// …the agent authorization included: its default is /etc/polkit-1/rules.d, which is
+			// root's on every host that has polkit at all.
+			polkit_rules_dir: join(SCRATCH, 'polkit'),
 		},
 		webspace_base: join(SCRATCH, 'webspaces'),
 		sites: [
