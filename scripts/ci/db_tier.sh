@@ -122,6 +122,8 @@ DB_TIER_TRIPWIRES=(
 	test/unit/raw_roundtrip_native.test.ts
 	test/unit/conform_locator_existence_native.test.ts
 	test/unit/render_class_native.test.ts
+	test/unit/slow_query_scope_native.test.ts
+	test/unit/zzscale_corpus_native.test.ts
 )
 
 # ── THE STAGES ARE INDEPENDENT ───────────────────────────────────────────────

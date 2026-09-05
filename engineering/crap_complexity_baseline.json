@@ -4,8 +4,8 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 543,
-		"functions": 5136,
+		"files": 546,
+		"functions": 5174,
 		"functionsOverCap": 694,
 		"filesOverCap": 273
 	},

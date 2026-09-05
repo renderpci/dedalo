@@ -82,7 +82,7 @@ const locatorOf = (sectionTipo: string, sectionId: number, from: string, id = 1)
 	from_component_tipo: from,
 });
 
-const fixtures = { host: 0, coinA: 0, coinB: 0, coinC: 0 };
+const fixtures = { host: 0, coinA: 0, coinB: 0, coinC: 0, emptyHost: 0 };
 
 function contextFor(sectionId: number): WidgetContext {
 	return { sectionTipo: 'test6099', sectionId, mode: 'list', lang: 'lg-spa' };
@@ -96,6 +96,12 @@ beforeAll(async () => {
 	fixtures.coinA = track('test6100', await createSectionRecord('test6100', -1));
 	fixtures.coinB = track('test6100', await createSectionRecord('test6100', -1));
 	fixtures.coinC = track('test6100', await createSectionRecord('test6100', -1));
+	// A HOST OF ITS OWN for the empty-portal case, never a coin's id read as a
+	// host. Section counters are per-section, so `test6099/<a test6100 id>` is
+	// empty only while nothing else has created that many test6099 records —
+	// which made the case pass alone and fail in a full run as soon as another
+	// file added hosts. This record IS a test6099 host and has no portal.
+	fixtures.emptyHost = track('test6099', await createSectionRecord('test6099', -1));
 	// Every coin starts from a DECLARED state, never from whatever record birth
 	// leaves behind: wipe the two state components on all three, then plant only
 	// what each scenario means (coinC stays wiped — it is the unanswered one).
@@ -228,7 +234,7 @@ describe('get_archive_states port (PHP class contract shapes)', () => {
 
 	test('get_archive_states: empty portal → [] for the whole widget', async () => {
 		if (!('computeData' in get_archive_states)) throw new Error('descriptor is a stub');
-		const empty = await get_archive_states.computeData(STATES_IPO, contextFor(fixtures.coinC));
+		const empty = await get_archive_states.computeData(STATES_IPO, contextFor(fixtures.emptyHost));
 		expect(empty).toEqual([]);
 	});
 });
