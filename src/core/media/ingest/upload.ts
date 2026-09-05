@@ -137,8 +137,40 @@ export interface UploadReceiveResult {
  */
 export const UPLOAD_ID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
 
-/** Ceiling on the chunk count/index a client may declare (a sanity bound, not a policy). */
+/**
+ * Ceiling on the chunk count/index a client may declare — a SANITY BOUND on an
+ * integer field, and deliberately NOT the size policy.
+ *
+ * The size policy is `config.media.upload.maxSizeBytes` counted over the
+ * ASSEMBLED BYTES (see assembledCap / the join's pre-check and running total).
+ * Reading this constant as the ceiling on how much a chunked transfer may
+ * deliver is exactly the mistake MEDIA-03 records: 100 000 parts each under the
+ * per-request cap summed to an arbitrarily large file that nothing refused.
+ */
 const MAX_CHUNKS = 100_000;
+
+/**
+ * The ceiling on ONE TRANSFER'S ASSEMBLED SIZE.
+ *
+ * `override` exists for gates that must exercise the refusal without writing
+ * gigabytes. It is a FUNCTION ARGUMENT and never a wire field: no API action may
+ * pass a client-supplied value here, or the ceiling becomes caller-chosen.
+ */
+function assembledCap(override?: number): number {
+	return typeof override === 'number' && Number.isFinite(override) && override > 0
+		? override
+		: config.media.upload.maxSizeBytes;
+}
+
+/** The ONE cumulative-size refusal, so its code and sentence cannot drift. */
+function tooLarge(where: string, total: number, max: number, remedy: string): DedaloError {
+	const sentence = `${where}: the upload exceeds the maximum allowed size — ${remedy}`;
+	return new DedaloError('media.too_large', {
+		message: sentence,
+		publicMessage: sentence,
+		coordinates: { size: total, max },
+	});
+}
 
 /**
  * The two refusals the join raises from more than one place, each as ONE typed
@@ -207,6 +239,11 @@ export async function parseUploadRequest(request: Request): Promise<ParsedUpload
 	// configured cap (the value get_system_info advertises), rather than trusting
 	// the client. The transport-layer maxRequestBodySize is the outer bound; this
 	// enforces the ADVERTISED limit explicitly with a clean error.
+	//
+	// THIS BOUNDS ONE REQUEST, NOT ONE TRANSFER (MEDIA-03). A chunked upload is
+	// N requests, so the whole-file ceiling the catalog advertises is counted
+	// where the bytes accumulate: receiveUpload's running total per chunk and
+	// joinChunkedUpload's pre-check + assembly total.
 	if (file.size > config.media.upload.maxSizeBytes) {
 		throw new DedaloError('media.too_large', {
 			message: 'upload: file exceeds the maximum allowed size',
@@ -435,6 +472,16 @@ interface UploadMeta {
 	 * parts were actually uploaded as. Same reasoning as `proposal`.
 	 */
 	name: string;
+	/**
+	 * The RUNNING TOTAL of bytes staged for this transfer, so the per-chunk
+	 * cumulative check is O(1) instead of re-stat'ing 100 000 parts per request.
+	 *
+	 * null = a transfer whose parts were written by an OLDER server (no total in
+	 * its meta). That must not invalidate the meta — it would strand every
+	 * in-flight upload across a deploy — so it degrades to "recount from stat
+	 * once" (stagedBytes), never to "unknown, allow".
+	 */
+	received: number | null;
 }
 
 function writeUploadMeta(upDir: string, meta: UploadMeta): void {
@@ -449,20 +496,63 @@ function readUploadMeta(upDir: string): UploadMeta | null {
 	const path = resolve(upDir, 'meta.json');
 	if (!existsSync(path)) return null;
 	try {
-		const parsed = JSON.parse(readFileSync(path, 'utf8')) as Partial<UploadMeta>;
-		if (typeof parsed?.proposal !== 'string' || typeof parsed?.extension !== 'string') return null;
-		return {
-			proposal: sanitizeSegment(parsed.proposal),
-			extension: parsed.extension,
-			// A transfer whose parts were written by an OLDER server has no `name` in
-			// its meta. That must not invalidate the meta (it would strand every
-			// in-flight upload across a deploy), so it degrades to the proposal — the
-			// same lossy value the engine used to record everywhere.
-			name: typeof parsed.name === 'string' ? displayFileName(parsed.name) : parsed.proposal,
-		};
+		return normalizeUploadMeta(JSON.parse(readFileSync(path, 'utf8')) as Partial<UploadMeta>);
 	} catch {
 		return null;
 	}
+}
+
+/**
+ * The stored meta as this server understands it, or null when the record is not
+ * one. Split out of readUploadMeta so each half is one idea: that one reads and
+ * fails closed, this one decides what the bytes mean.
+ */
+function normalizeUploadMeta(parsed: Partial<UploadMeta>): UploadMeta | null {
+	if (typeof parsed?.proposal !== 'string' || typeof parsed?.extension !== 'string') return null;
+	return {
+		proposal: sanitizeSegment(parsed.proposal),
+		extension: parsed.extension,
+		// A transfer whose parts were written by an OLDER server has no `name` in
+		// its meta. That must not invalidate the meta (it would strand every
+		// in-flight upload across a deploy), so it degrades to the proposal — the
+		// same lossy value the engine used to record everywhere.
+		name: typeof parsed.name === 'string' ? displayFileName(parsed.name) : parsed.proposal,
+		received:
+			typeof parsed.received === 'number' && Number.isFinite(parsed.received)
+				? parsed.received
+				: null,
+	};
+}
+
+/**
+ * The bytes this transfer has already staged. Trusts the meta's running total
+ * when it has one; otherwise recounts the parts on disk ONCE (the degrade path
+ * for a transfer that predates the total).
+ */
+function stagedBytes(upDir: string, meta: UploadMeta | null): number {
+	if (meta !== null && meta.received !== null) return meta.received;
+	return sumPartBytes(upDir);
+}
+
+/** The bytes of every `*.part` currently in `upDir` — the recount degrade path. */
+function sumPartBytes(upDir: string): number {
+	let entries: string[];
+	try {
+		entries = readdirSync(upDir);
+	} catch {
+		return 0;
+	}
+	let sum = 0;
+	for (const entry of entries) {
+		if (!entry.endsWith('.part')) continue;
+		try {
+			sum += statSync(resolve(upDir, entry)).size;
+		} catch {
+			// A part that vanished under us contributes nothing; the join's own
+			// pre-check is the authority, this is the cheap early door.
+		}
+	}
+	return sum;
 }
 
 /**
@@ -475,11 +565,18 @@ function readUploadMeta(upDir: string): UploadMeta | null {
  * only AFTER all chunks arrive fires a separate `join_chunked_files_uploaded`
  * RQO. So a chunk POST here just STORES the part and echoes its index/total —
  * the join (assemble + SEC-066 re-verify) happens in joinChunkedUpload, not here.
+ *
+ * SIZE (MEDIA-03): the parse layer bounds ONE REQUEST; this bounds THE TRANSFER,
+ * at receipt — which is where disk exhaustion actually happens, since the join
+ * only runs after every byte is already on the disk. `maxSizeBytes` overrides
+ * the configured ceiling for gates; it is a function argument, never a wire
+ * field.
  */
 export function receiveUpload(
 	parsed: ParsedUpload,
 	userId: number,
 	mediaRoot?: string,
+	maxSizeBytes?: number,
 ): UploadReceiveResult {
 	// Identity BEFORE any filesystem effect: a refused upload_id must leave no
 	// trace at all, not even an empty staging dir.
@@ -549,6 +646,21 @@ export function receiveUpload(
 		}
 	}
 
+	return stageChunkPart(parsed, upDir, { proposal, name, extension, uploadId }, maxSizeBytes);
+}
+
+/**
+ * Store ONE chunk of a transfer inside its artifact dir, enforcing the
+ * cumulative ceiling at receipt. Split out of receiveUpload so the single-shot
+ * door and the chunk door are each one idea.
+ */
+function stageChunkPart(
+	parsed: ParsedUpload,
+	upDir: string,
+	names: { proposal: string; name: string; extension: string; uploadId: string },
+	maxSizeBytes?: number,
+): UploadReceiveResult {
+	const { proposal, name, extension, uploadId } = names;
 	// Chunked: store the part inside THIS transfer's artifact dir. The client
 	// drives the join once it has counted all chunks. Echo index/total so its
 	// counter works, and the upload id so the join can find these parts.
@@ -559,8 +671,47 @@ export function receiveUpload(
 		});
 	}
 	mkdirSync(upDir, { recursive: true, mode: 0o700 });
-	writeUploadMeta(upDir, { proposal, extension, name });
-	writeFileSync(resolve(upDir, `${parsed.chunkIndex}.part`), parsed.blob);
+	// CUMULATIVE CEILING AT RECEIPT (MEDIA-03). The per-request cap in
+	// parseUploadRequest bounds one part; the documented ceiling is on the file,
+	// so the transfer carries a running total and a part that would push it past
+	// the cap is refused BEFORE it is written. A RESEND of a part already on disk
+	// replaces it rather than adding to the total.
+	//
+	// Best effort by construction — two chunks of one transfer can race on
+	// meta.json and lose an update — so it is the cheap early door, not the
+	// authority. The join's pre-check and assembly total (which stat the parts
+	// that actually exist) are what the ceiling is finally enforced by.
+	const cap = assembledCap(maxSizeBytes);
+	const partPath = resolve(upDir, `${parsed.chunkIndex}.part`);
+	let replacing = 0;
+	try {
+		replacing = statSync(partPath).size;
+	} catch {
+		// Not a resend: this part is new.
+	}
+	const total = stagedBytes(upDir, readUploadMeta(upDir)) - replacing + parsed.blob.length;
+	if (total > cap) {
+		// QUARANTINE, never destruction: the parts already staged are the only copy
+		// of what the curator sent, so they stay and the transfer is marked refused
+		// (the join then says 'already rejected', not 'missing chunks'). The 24 h
+		// sweep and the explicit cancel release it, as for any other refusal here.
+		writeRejectionMarker(upDir, {
+			reason: `upload: the transfer exceeds the maximum allowed size (${total} > ${cap} bytes)`,
+			rejected_at: new Date().toISOString(),
+			proposal,
+			extension,
+			size: total - parsed.blob.length,
+			parts_kept: true,
+		});
+		throw tooLarge(
+			'upload',
+			total,
+			cap,
+			'the parts already received are NOT deleted: this transfer is quarantined and can be released by cancelling it (delete_uploaded_file with upload_id), or is collected by the 24 h sweep',
+		);
+	}
+	writeUploadMeta(upDir, { proposal, extension, name, received: total });
+	writeFileSync(partPath, parsed.blob);
 	return {
 		complete: false,
 		// The PROPOSAL, not the final name: the client uses it only to fill
@@ -584,6 +735,13 @@ export interface JoinChunkedUploadInput {
 	/** `file_data.upload_id`, round-tripped from the chunk responses. */
 	uploadId?: string | null;
 	mediaRoot?: string;
+	/**
+	 * Override of the assembled-size ceiling, for gates that must exercise the
+	 * refusal without writing gigabytes. NEVER wired to client input: the
+	 * `join_chunked_files_uploaded` action does not read a cap off the RQO, or
+	 * the ceiling would be whatever the caller says it is.
+	 */
+	maxSizeBytes?: number;
 }
 
 /**
@@ -659,6 +817,25 @@ export interface RejectionRecord {
 	proposal: string;
 	extension: string;
 	size: number;
+	/**
+	 * True when the transfer's PARTS are what is retained (a size refusal, where
+	 * no verified assembly exists), rather than a parked `rejected.<proposal>`
+	 * file. Either way nothing was destroyed — this says WHERE the bytes are.
+	 */
+	parts_kept?: boolean;
+}
+
+/**
+ * Write the marker that makes a transfer QUARANTINED. Extracted so every refusal
+ * on this path parks through one function: a refusal is never a delete, and the
+ * marker is what a later join and listQuarantinedUploads both read.
+ */
+function writeRejectionMarker(upDir: string, record: RejectionRecord): void {
+	try {
+		writeFileSync(resolve(upDir, REJECTION_MARKER), JSON.stringify(record), { mode: 0o640 });
+	} catch (error) {
+		console.warn('[upload] could not write the rejection marker:', (error as Error).message);
+	}
 }
 
 /**
@@ -694,18 +871,13 @@ function quarantineAssembled(
 		// stays there and the age sweep is the backstop.
 		console.warn('[upload] could not park a rejected assembly:', (error as Error).message);
 	}
-	const record: RejectionRecord = {
+	writeRejectionMarker(upDir, {
 		reason,
 		rejected_at: new Date().toISOString(),
 		proposal,
 		extension,
 		size,
-	};
-	try {
-		writeFileSync(resolve(upDir, REJECTION_MARKER), JSON.stringify(record), { mode: 0o640 });
-	} catch (error) {
-		console.warn('[upload] could not write the rejection marker:', (error as Error).message);
-	}
+	});
 	return quarantined;
 }
 
@@ -762,6 +934,96 @@ const yieldToLoop = (): Promise<void> =>
 	});
 
 /**
+ * Fail-closed pre-flight for a join: every declared part is on disk, and the
+ * bytes they hold do not already exceed the ceiling.
+ *
+ * SIZE PRE-CHECK (MEDIA-03), BEFORE a byte of output exists. `total_chunks`
+ * bounds the COUNT of parts and nothing else, so a transfer of 100 000 parts
+ * each under the per-request cap used to assemble unrefused into a file
+ * arbitrarily past the ceiling the catalog advertises and get_system_info
+ * publishes. Summing the parts that are actually on disk is what the ceiling
+ * means, and doing it here refuses without ever allocating the output.
+ */
+function assertPartsCompleteAndUnderCap(
+	upDir: string,
+	totalChunks: number,
+	cap: number,
+	proposal: string,
+	extension: string,
+): void {
+	let declaredBytes = 0;
+	for (let i = 0; i < totalChunks; i++) {
+		const partPath = resolve(upDir, `${i}.part`);
+		if (!existsSync(partPath)) {
+			throw new DedaloError('media.upload_rejected', {
+				message: `join: missing chunk ${i} of ${totalChunks}`,
+				publicMessage: `join: missing chunk ${i} of ${totalChunks}`,
+			});
+		}
+		declaredBytes += statSync(partPath).size;
+	}
+	if (declaredBytes <= cap) return;
+	// The parts STAY — they are the only copy of the transfer — and the marker
+	// makes the state legible (a retry reads 'already rejected', not 'missing
+	// chunks'). Release is the ordinary cancel or the 24 h sweep.
+	writeRejectionMarker(upDir, {
+		reason: `join: the assembled upload exceeds the maximum allowed size (${declaredBytes} > ${cap} bytes)`,
+		rejected_at: new Date().toISOString(),
+		proposal,
+		extension,
+		size: declaredBytes,
+		parts_kept: true,
+	});
+	throw tooLarge(
+		'join',
+		declaredBytes,
+		cap,
+		'the uploaded bytes are NOT deleted: this transfer is quarantined and can be released by cancelling it (delete_uploaded_file with upload_id), or is collected by the 24 h sweep',
+	);
+}
+
+/**
+ * Open the assembly output EXCLUSIVELY, recovering an abandoned one.
+ *
+ * The client's transport retries the join after 10 s and up to 5 times, so on a
+ * slow (multi-GB) assembly a second join can arrive while the first is still
+ * writing. Two writers on one output produce a silently corrupt file; refusing
+ * the second produces a loud, retryable error, and between those two the loud
+ * one is the only acceptable answer.
+ *
+ * RECOVERY (2026-08-03): an INTERRUPTED join used to leave this file behind
+ * forever, and every retry then failed on it — a permanently stuck transfer,
+ * reachable in ordinary operation because the transport retries at 10 s. An
+ * output nobody has written to for ASSEMBLY_STALE_MS has no writer, and the
+ * parts are all still on disk (they are removed only once the join is
+ * finished), so the honest recovery is to discard the partial output and
+ * assemble again.
+ */
+function openAssemblyOutput(assembled: string): number {
+	const openAssembly = (): number => openSync(assembled, 'wx', 0o640);
+	try {
+		return openAssembly();
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+	}
+	let idleFor = 0;
+	try {
+		idleFor = Date.now() - statSync(assembled).mtimeMs;
+	} catch {
+		idleFor = 0; // it vanished under us: let the retry below decide
+	}
+	if (idleFor < ASSEMBLY_STALE_MS) throw alreadyAssembling();
+	rmSync(assembled, { force: true });
+	try {
+		return openAssembly();
+	} catch {
+		// Another join won the race to recover it — that one is live, so this is
+		// the ordinary concurrent case again.
+		throw alreadyAssembling();
+	}
+}
+
+/**
  * Assemble a chunked upload's parts into the final staged file and RE-VERIFY the
  * whole (SEC-066 + verify_content.ts), then return the staged descriptor. Called
  * by the dd_utils_api.join_chunked_files_uploaded action after the client has
@@ -783,6 +1045,7 @@ export async function joinChunkedUpload(
 	input: JoinChunkedUploadInput,
 ): Promise<UploadReceiveResult> {
 	const { keyDir, tmpName, totalChunks, userId, uploadId, mediaRoot } = input;
+	const cap = assembledCap(input.maxSizeBytes);
 	const dir = stagingDir(userId, keyDir, mediaRoot);
 	if (!Number.isInteger(totalChunks) || totalChunks < 1 || totalChunks > MAX_CHUNKS) {
 		throw new DedaloError('media.upload_rejected', {
@@ -811,56 +1074,19 @@ export async function joinChunkedUpload(
 		throw new DedaloError('media.upload_rejected', { message: reason, publicMessage: reason });
 	}
 
-	// Confirm every part is present before joining (fail-closed).
-	for (let i = 0; i < totalChunks; i++) {
-		if (!existsSync(resolve(upDir, `${i}.part`))) {
-			throw new DedaloError('media.upload_rejected', {
-				message: `join: missing chunk ${i} of ${totalChunks}`,
-				publicMessage: `join: missing chunk ${i} of ${totalChunks}`,
-			});
-		}
-	}
+	assertPartsCompleteAndUnderCap(upDir, totalChunks, cap, proposal, extension);
 	const assembled = resolve(upDir, 'assembled');
-	// EXCLUSIVE create: the client's transport retries the join after 10 s and up
-	// to 5 times, so on a slow (multi-GB) assembly a second join can arrive while
-	// the first is still writing. Two writers on one output produce a silently
-	// corrupt file; refusing the second produces a loud, retryable error, and
-	// between those two the loud one is the only acceptable answer.
-	//
-	// RECOVERY (2026-08-03): an INTERRUPTED join used to leave this file behind
-	// forever, and every retry then failed on it — a permanently stuck transfer,
-	// reachable in ordinary operation because the transport retries at 10 s. An
-	// output nobody has written to for ASSEMBLY_STALE_MS has no writer, and the
-	// parts are all still on disk (they are removed only once the join is
-	// finished), so the honest recovery is to discard the partial output and
-	// assemble again.
-	const openAssembly = (): number => openSync(assembled, 'wx', 0o640);
-	let out: number;
-	try {
-		out = openAssembly();
-	} catch (error) {
-		if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-		let idleFor = 0;
-		try {
-			idleFor = Date.now() - statSync(assembled).mtimeMs;
-		} catch {
-			idleFor = 0; // it vanished under us: let the retry below decide
-		}
-		if (idleFor < ASSEMBLY_STALE_MS) {
-			throw alreadyAssembling();
-		}
-		rmSync(assembled, { force: true });
-		try {
-			out = openAssembly();
-		} catch {
-			// Another join won the race to recover it — that one is live, so this is
-			// the ordinary concurrent case again.
-			throw alreadyAssembling();
-		}
-	}
+	// EXCLUSIVE create, with recovery of an abandoned output — see
+	// openAssemblyOutput above for both halves of the reasoning.
+	const out = openAssemblyOutput(assembled);
+	// The AUTHORITATIVE total: the pre-check reads the parts as they were a moment
+	// ago, this counts the bytes actually copied, so a part still growing under a
+	// concurrent chunk POST cannot slip past the ceiling.
+	let writtenBytes = 0;
+	let overflowed = false;
 	try {
 		const buffer = new Uint8Array(1 << 20);
-		for (let i = 0; i < totalChunks; i++) {
+		assembly: for (let i = 0; i < totalChunks; i++) {
 			const partPath = resolve(upDir, `${i}.part`);
 			const part = openSync(partPath, 'r');
 			try {
@@ -868,7 +1094,15 @@ export async function joinChunkedUpload(
 				for (;;) {
 					const read = readSync(part, buffer, 0, buffer.length, position);
 					if (read <= 0) break;
+					if (writtenBytes + read > cap) {
+						// Checked BEFORE the write: not one byte past the ceiling is ever
+						// put on disk.
+						writtenBytes += read;
+						overflowed = true;
+						break assembly;
+					}
 					writeSync(out, buffer, 0, read);
+					writtenBytes += read;
 					position += read;
 					// Hand the loop back between windows: a 30 GB join is ~30 000 of these,
 					// and holding the thread for all of them froze every other user.
@@ -886,6 +1120,27 @@ export async function joinChunkedUpload(
 		}
 	} finally {
 		closeSync(out);
+	}
+	if (overflowed) {
+		// The PARTIAL output is a derived duplicate of parts that are all still on
+		// disk, so discarding it destroys nothing (the same reasoning the stale
+		// -assembly recovery above already rests on); the PARTS are what is kept,
+		// and the marker is what makes the transfer legible as quarantined.
+		rmSync(assembled, { force: true });
+		writeRejectionMarker(upDir, {
+			reason: `join: the assembled upload exceeds the maximum allowed size (>= ${writtenBytes} > ${cap} bytes)`,
+			rejected_at: new Date().toISOString(),
+			proposal,
+			extension,
+			size: writtenBytes,
+			parts_kept: true,
+		});
+		throw tooLarge(
+			'join',
+			writtenBytes,
+			cap,
+			'the uploaded bytes are NOT deleted: this transfer is quarantined and can be released by cancelling it (delete_uploaded_file with upload_id), or is collected by the 24 h sweep',
+		);
 	}
 	try {
 		// SEC-066, now over the whole CONTAINER within a bounded budget: the head

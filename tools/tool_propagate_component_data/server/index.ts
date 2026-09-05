@@ -321,4 +321,6 @@ export const tool: ToolServerModule = {
 		},
 	},
 	backgroundRunnable: ['propagate_component_data'],
+	// A bulk write sweep — operator work (PERF-11 lane declaration).
+	backgroundLanes: { propagate_component_data: 'maintenance' },
 };

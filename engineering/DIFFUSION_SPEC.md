@@ -401,7 +401,7 @@ to the computed sources. Ledger:
 - **Data plane = spawned runner.** `diffuse` enqueues a durable job; a
   scheduler claims it (`FOR UPDATE SKIP LOCKED`, global limit default 2,
   uniqueness: one active run per element+section) and spawns
-  `<this process' bun> run src/diffusion/runner.ts --job <uuid>` — same
+  `<this process' bun> run src/diffusion/runner.ts --job <uuid> --epoch <n>` — same
   codebase, own process, own memory ceiling, killable. The interpreter is
   `process.execPath`, never a bare `bun` off `$PATH`: a deployment pins an
   absolute binary its unit file's `$PATH` need not contain, and the spawn throws
@@ -437,8 +437,37 @@ to the computed sources. Ledger:
   ledger; the queue is infrastructure (matrix-as-state is wrong for high-churn
   heartbeats/checkpoints — deliberate, documented exception to "no bespoke
   tables").
-- **Crash recovery:** boot + periodic sweep marks stale-heartbeat/dead-pid jobs
-  `interrupted` and auto-requeues from checkpoint (≤3 attempts). Safe because
+- **The lease is `(job_id, attempt)`.** A row can be claimed more than once —
+  the sweep requeues a stale-heartbeat run and the next tick hands it to a new
+  runner — so ownership must be checkable, not assumed. `attempt` is stamped
+  inside the claim and is STRICTLY MONOTONIC for the life of the row, which
+  makes each claim's number a unique EPOCH. The claim is the only statement that
+  assigns it and only as `attempt + 1`; NOTHING rewinds it, because an epoch that
+  can be re-issued is not an epoch (a reset hands the same number to a second
+  claim while a slow-but-alive earlier holder still has it, and the fence then
+  matches for the loser — an ABA, measured). Retry BUDGET therefore lives in
+  `max_attempts`: the admin requeue grants it forward
+  (`max_attempts = attempt + 3`) and leaves the counter alone. It travels to the
+  runner on its argv (never re-read
+  from the row: a re-read is a second race) and fences every write a lease
+  holder makes — `recordRunnerPid`, `heartbeatJob`, `updateJobProgress`,
+  `checkpointJob`, `finishJob` — with `AND attempt = $epoch AND state =
+  'running'`. Zero rows affected throws `diffusion.lease_revoked` and the caller
+  writes NOTHING; the runner treats it as an abort and exits without finishing
+  the job, because the ending belongs to the live epoch. The control plane's own
+  writes (the claim that issues the epoch, the sweep that revokes it, the cancel
+  flag, the queued-row finalizer, the admin requeue) are unfenced by
+  construction and enumerated in the census gate. The sweep deliberately does
+  NOT cross-check `runner.pid`: a remote runner has no pid on this host, so pid
+  liveness could only ever cover the local deployment — the epoch fence is the
+  closure it was reaching for, and it holds whether the loser is alive or not.
+  Gates: `test/unit/queue_fence_native.test.ts`,
+  `test/unit/queue_fence_tripwire.test.ts`. Wire:
+  `engineering/wire_contract/WC-2026-09-05-diffusion-lease-epoch-fence.md`.
+- **Crash recovery:** boot + periodic sweep marks STALE-HEARTBEAT jobs
+  `interrupted` and auto-requeues from checkpoint (budget in `max_attempts`).
+  Liveness is the heartbeat alone — never `runner.pid`, see the sweep note
+  above; the epoch fence, not pid death, is what stops the old holder. Safe because
   chunks are deterministic ordered slices and every write is an idempotent
   upsert or temp+rename file. Keystone gate: kill -9 mid-run, resume →
   byte-identical final artifacts.

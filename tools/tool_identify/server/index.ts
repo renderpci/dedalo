@@ -232,4 +232,6 @@ export const tool: ToolServerModule = {
 		},
 	},
 	backgroundRunnable: ['cluster'],
+	// Clustering drives the RAG image index (PERF-11 lane declaration).
+	backgroundLanes: { cluster: 'rag' },
 };

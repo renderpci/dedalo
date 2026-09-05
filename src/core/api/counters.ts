@@ -100,7 +100,14 @@ export async function collectOpsCounters(): Promise<Record<string, unknown>> {
 	}
 	try {
 		const { mediaJobs } = await import('../media/jobs.ts');
-		payload.media_jobs = { has_headroom: mediaJobs.hasHeadroom() };
+		payload.media_jobs = {
+			has_headroom: mediaJobs.hasHeadroom(),
+			// PER-LANE DEPTH (PERF-11) — the in-process twin of the diffusion queue's
+			// depth. `has_headroom` alone is a boolean about ONE budget: it cannot say
+			// which class of work is backed up, which is the only question worth asking
+			// of a saturated box.
+			lanes: mediaJobs.laneDepths(),
+		};
 	} catch (error) {
 		payload.media_jobs = { error: (error as Error).message };
 	}

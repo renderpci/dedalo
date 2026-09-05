@@ -34,7 +34,8 @@
  * `Y-m-d_Gis`. Do NOT unify: time-machine scanners and humans read both.
  */
 
-import { copyFileSync, existsSync, mkdirSync, readdirSync, renameSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, renameSync, statSync } from 'node:fs';
+import { copyFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { config } from '../../config/config.ts';
 import { isMediaModel, type MediaTypeSpec, mediaTypeOf } from '../concepts/media.ts';
@@ -128,13 +129,21 @@ export function renameOldFiles(
  * identity (PHP duplicate_component_media_files :1999). Returns the created
  * absolute paths. The caller then refreshStoredFilesInfo + save on the target so
  * files_info carries the target's paths, not the source's.
+ *
+ * ASYNCHRONOUS because the copies are WHOLE MEDIA FILES and this runs on the
+ * request path (duplicate_record): one record can hold several components, each
+ * with every quality × managed extension on disk, so a synchronous copy here
+ * blocks the single event loop for the sum of them and every other request on
+ * the install waits. Only the byte copy is async — the existsSync/mkdirSync
+ * around it are O(1) metadata syscalls (gate:
+ * test/unit/sync_io_on_request_path_tripwire.test.ts).
  */
-export function duplicateMediaFiles(
+export async function duplicateMediaFiles(
 	spec: MediaTypeSpec,
 	source: MediaIdentity,
 	target: MediaIdentity,
 	pathOpts: { source: MediaPathOptions; target: MediaPathOptions },
-): string[] {
+): Promise<string[]> {
 	const created: string[] = [];
 	for (const [quality, extension] of managedFileSlots(spec)) {
 		const from = buildMediaLocation(spec, source, quality, extension, pathOpts.source).absolutePath;
@@ -142,7 +151,7 @@ export function duplicateMediaFiles(
 		const to = buildMediaLocation(spec, target, quality, extension, pathOpts.target).absolutePath;
 		const toDir = dirname(to);
 		if (!existsSync(toDir)) mkdirSync(toDir, { recursive: true, mode: 0o775 });
-		copyFileSync(from, to);
+		await copyFile(from, to);
 		created.push(to);
 	}
 	return created;

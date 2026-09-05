@@ -64,8 +64,12 @@
 *     UX only, so failing open here is safe.
 *
 * (!) A falsy or 0 `max_size_bytes` likewise means "no limit advertised", not
-*     "maximum zero bytes". The server enforces its own cap in
-*     parseUploadRequest (config.media.upload.maxSizeBytes).
+*     "maximum zero bytes". The server enforces its own cap
+*     (config.media.upload.maxSizeBytes) independently of this check, and it
+*     enforces it on the WHOLE FILE, not just on one request: parseUploadRequest
+*     bounds each part as it arrives, receiveUpload keeps a running total per
+*     transfer, and joinChunkedUpload sums the parts before assembling them.
+*     So chunking a file does not get it past the limit.
 *
 * @param {Object} options
 *   @param {File|Blob} options.file - The file to check (needs `name` and `size`).

@@ -126,7 +126,7 @@ from them on read:
 | Gauge | Owner | What it reports |
 | --- | --- | --- |
 | diffusion | the diffusion boot chain in `startServer()` | queue depths |
-| `media_jobs` | `src/core/media/jobs.ts` (`mediaJobs.hasHeadroom()`) | whether the supervised media-job manager can take more work |
+| `media_jobs` | `src/core/media/jobs.ts` (`mediaJobs.hasHeadroom()`, `mediaJobs.laneDepths()`) | whether the media lane can take more work, plus `lanes[class] = {active, queued, max}` for every job lane (`media`, `transcription`, `rag`, `maintenance`) |
 | `background_jobs` | `src/core/tools/background.ts` (`getBackgroundJobStats()`) | running/queued background tool jobs |
 
 ## Slow-query investigation

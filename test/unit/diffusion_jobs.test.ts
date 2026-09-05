@@ -17,7 +17,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
 import { DedaloError } from '../../src/core/errors/index.ts';
-import type { DiffusionJobSpec } from '../../src/diffusion/jobs/queue.ts';
+import type { DiffusionJobSpec, JobLease } from '../../src/diffusion/jobs/queue.ts';
 import {
 	claimNextQueuedJob,
 	countQueuedJobs,
@@ -37,6 +37,26 @@ import {
 	updateJobProgress,
 } from '../../src/diffusion/jobs/queue.ts';
 import { DIFFUSION_JOBS_TABLE } from '../../src/diffusion/jobs/schema.ts';
+
+/**
+ * Claim THIS row and return its LEASE (job_id + the attempt the claim stamped).
+ * `claimNextQueuedJob` takes the OLDEST queued row, which in a shared suite
+ * database need not be the one a test just enqueued; the mutators are
+ * lease-fenced (PUB-13), so a test that wants to write to its own row claims it
+ * by id. Same transition as the real claim, on one named row.
+ */
+async function claimThisJob(jobId: string): Promise<JobLease> {
+	const rows = (await sql.unsafe(
+		`UPDATE "${DIFFUSION_JOBS_TABLE}"
+		 SET state = 'running', started_at = COALESCE(started_at, now()),
+		     heartbeat_at = now(), attempt = attempt + 1
+		 WHERE job_id = $1 RETURNING attempt`,
+		[jobId],
+	)) as { attempt: number }[];
+	const attempt = rows[0]?.attempt;
+	if (attempt === undefined) throw new Error(`claimThisJob: no row ${jobId}`);
+	return { job_id: jobId, attempt };
+}
 
 const OWNER_A = 424201;
 const OWNER_B = 424202;
@@ -119,8 +139,11 @@ describe('diffusion job queue (durable, Postgres-backed)', () => {
 
 	test('progress + checkpoint + finish shape the row the SSE layer reads', async () => {
 		const jobId = createdJobIds[0] ?? '';
-		await heartbeatJob(jobId);
-		await updateJobProgress(jobId, {
+		// Claimed by the previous test — read the epoch the claim stamped.
+		const claimed = await getJobById(jobId);
+		const lease: JobLease = { job_id: jobId, attempt: claimed?.attempt ?? 1 };
+		await heartbeatJob(lease);
+		await updateJobProgress(lease, {
 			counter: 3,
 			msg: 'Processing records 3 of 5...',
 			current: { section_id: 3, time: 120 },
@@ -133,11 +156,11 @@ describe('diffusion job queue (durable, Postgres-backed)', () => {
 		// The enqueue-time total survives the merge.
 		expect(row?.totals.total).toBe(5);
 
-		await updateJobProgress(jobId, { counter: 4, error: 'record 4 failed' });
+		await updateJobProgress(lease, { counter: 4, error: 'record 4 failed' });
 		row = await getJobById(jobId);
 		expect(row?.errors).toEqual(['record 4 failed']);
 
-		await finishJob(jobId, 'completed', { ok: true, msg: 'OK. Request done', tables: [] });
+		await finishJob(lease, 'completed', { ok: true, msg: 'OK. Request done', tables: [] });
 		row = await getJobById(jobId);
 		expect(row?.state).toBe('completed');
 		expect(row?.finished_at).not.toBeNull();
@@ -232,7 +255,7 @@ describe('diffusion job queue (durable, Postgres-backed)', () => {
 		});
 		createdJobIds.push(job.job.job_id);
 		expect(await countQueuedJobs()).toBeGreaterThanOrEqual(1);
-		await finishJob(job.job.job_id, 'completed', { ok: true, msg: 'done' });
+		await finishJob(await claimThisJob(job.job.job_id), 'completed', { ok: true, msg: 'done' });
 		// The row is no longer queued (other suites may still have queued rows, so
 		// assert on THIS job's state rather than a global count).
 		expect((await getJobById(job.job.job_id))?.state).toBe('completed');
@@ -246,15 +269,21 @@ describe('diffusion job queue (durable, Postgres-backed)', () => {
 		});
 		createdJobIds.push(job.job.job_id);
 		await finishJob(
-			job.job.job_id,
+			await claimThisJob(job.job.job_id),
 			'failed',
 			failedJobResult(new DedaloError('diffusion.run_failed'), 'boom'),
 		);
 
+		const failed = await getJobById(job.job.job_id);
+
 		const requeued = await requeueTerminalJob(job.job.job_id);
 		expect(requeued).not.toBeNull();
 		expect(requeued?.state).toBe('queued');
-		expect(requeued?.attempt).toBe(0);
+		// The budget is granted FORWARD: `attempt` is the epoch (PUB-13) and is
+		// never rewound — rewinding it would re-issue an epoch a slow runner from
+		// the previous claim may still hold. max_attempts moves instead.
+		expect(requeued?.attempt).toBe(failed?.attempt);
+		expect(requeued?.max_attempts).toBe((failed?.attempt ?? 0) + 3);
 		expect(requeued?.finished_at).toBeNull();
 		expect(requeued?.cancel_requested).toBe(false);
 		expect(requeued?.errors).toEqual([]);
@@ -282,7 +311,7 @@ describe('diffusion job queue (durable, Postgres-backed)', () => {
 			spec: spec('jobtest8', 'jobsec1'),
 		});
 		createdJobIds.push(job.job.job_id);
-		await finishJob(job.job.job_id, 'completed', { ok: true, msg: 'done' });
+		await finishJob(await claimThisJob(job.job.job_id), 'completed', { ok: true, msg: 'done' });
 
 		// Not yet aged: a 24h purge leaves it.
 		await purgeTerminalJobs(24);

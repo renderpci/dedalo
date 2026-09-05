@@ -98,7 +98,8 @@ async function unitTestLongProcessStream(
 			}
 			return longProcessFrame(true, `OK. Long process finished (${iterations} iterations)`);
 		},
-		{ userId: principal.userId },
+		// The dev long-process probe is operator work (PERF-11 lane).
+		{ lane: 'maintenance', userId: principal.userId },
 	);
 
 	return {

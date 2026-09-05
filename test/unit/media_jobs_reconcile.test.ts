@@ -60,7 +60,7 @@ describe('lazy reconcile on pfile fallback (S2-15)', () => {
 			startedAt: 0,
 			updatedAt: 10,
 		});
-		const manager = new MediaJobManager(1); // fresh = post-restart registry
+		const manager = new MediaJobManager({ budgets: { media: 1 } }); // fresh = post-restart registry
 		const record = manager.status(id);
 		expect(record?.status).toBe('interrupted');
 		expect(record?.errors.join(' ')).toContain('owning server process died');
@@ -154,16 +154,20 @@ describe('boot sweep + pfile GC (S3-46/62)', () => {
 
 describe('shutdown hook (S2-17)', () => {
 	test('interruptLive marks live jobs interrupted and persists the pfiles', async () => {
-		const manager = new MediaJobManager(1);
+		const manager = new MediaJobManager({ budgets: { media: 1 } });
 		let release: () => void = () => {};
 		const gate = new Promise<void>((resolvePromise) => {
 			release = resolvePromise;
 		});
-		const record = manager.submit('av', async ({ signal }) => {
-			await gate;
-			if (signal.aborted) throw new Error('aborted');
-			return null;
-		});
+		const record = manager.submit(
+			'av',
+			async ({ signal }) => {
+				await gate;
+				if (signal.aborted) throw new Error('aborted');
+				return null;
+			},
+			{ lane: 'media' },
+		);
 		await Bun.sleep(10); // let it enter 'running'
 		const interrupted = manager.interruptLive('server shutdown');
 		expect(interrupted).toContain(record.id);
@@ -187,12 +191,14 @@ describe('shutdown hook (S2-17)', () => {
  */
 describe("jobs are detached from the submitter's transaction scope", () => {
 	test('a job submitted INSIDE withTransaction runs outside it', async () => {
-		const manager = new MediaJobManager(1, () => 0);
+		const manager = new MediaJobManager({ budgets: { media: 1 }, clock: () => 0 });
 		let jobId = '';
 		let submittedInTx = false;
 		await withTransaction(async () => {
 			submittedInTx = isInTransaction();
-			jobId = manager.submit('detach_probe', async () => ({ inTx: isInTransaction() })).id;
+			jobId = manager.submit('detach_probe', async () => ({ inTx: isInTransaction() }), {
+				lane: 'media',
+			}).id;
 		});
 		expect(submittedInTx).toBe(true); // the submit really was inside a tx
 		for (let i = 0; i < 100 && manager.status(jobId)?.status !== 'done'; i++) {

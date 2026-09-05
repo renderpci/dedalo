@@ -210,6 +210,9 @@ export const tool: ToolServerModule = {
 	},
 	// Only long_job may be forked to the background executor.
 	backgroundRunnable: ['long_job'],
+	// The developer probe: operator work, so it exercises the same lane an
+	// operator's own jobs use (PERF-11 lane declaration).
+	backgroundLanes: { long_job: 'maintenance' },
 	// Availability hook: hide the tool on relation-children callers (example rule).
 	isAvailable: (context) => context.callerModel !== 'component_relation_children',
 	// Lifecycle hooks (framework-called, never in apiActions). Failures are

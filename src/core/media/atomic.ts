@@ -16,12 +16,23 @@
  * sweep is bounded by the temp's UNIQUE stem, which is what makes it
  * concurrency-safe: it can only ever match files this call produced.
  *
- * WHY A SYNC TWIN EXISTS: `processing.ts::copyToQuality` is synchronous and is
- * called by `regenerate3d`, which is itself synchronous and is called UNAWAITED
- * from `ingest/process_uploaded_file.ts`. Making the writer async-only would
- * cascade an `await` through three call sites, the last of which does not await
- * at all — the failure would become an unhandled rejection instead of an error.
- * The two functions are deliberately identical apart from the `await`.
+ * WHY A SYNC TWIN EXISTS: its ONE caller is
+ * `ingest/staged_name_record.ts`, which stages a record of the uploader's own
+ * FILE NAME — a fixed-size string of a few dozen bytes, best-effort, beside a
+ * file that has already been moved. Its cost does not scale with a media file,
+ * so it cannot stall the event loop the way a whole-file copy does.
+ *
+ * IT IS NOT A GENERAL ESCAPE HATCH, and it used to be defended as one:
+ * `processing.ts::copyToQuality` used it to copy WHOLE MEDIA FILES, arguing that
+ * `regenerate3d` was called unawaited from `ingest/process_uploaded_file.ts` and
+ * that returning a promise would make a copy failure an unhandled rejection.
+ * The concern was real; the remedy was backwards. A floating promise is fixed by
+ * awaiting it (or handling it explicitly) at the call site — never by blocking
+ * the single event loop of the whole install for the length of a copy. Every one
+ * of those call sites already sat inside an async function with a try/catch, so
+ * the copy path is now async end to end. Anything whose byte count scales with a
+ * file or a subprocess belongs in `writeAtomically`
+ * (gate: `test/unit/sync_io_on_request_path_tripwire.test.ts`).
  */
 
 import { existsSync, mkdirSync, renameSync, rmSync } from 'node:fs';
@@ -81,8 +92,10 @@ export async function writeAtomically(
 }
 
 /**
- * Synchronous twin of `writeAtomically` (see the header for why it exists —
- * `copyToQuality` → `regenerate3d` → an unawaited ingest call site).
+ * Synchronous twin of `writeAtomically`, for a FIXED-SIZE payload only (see the
+ * header): the one caller is `ingest/staged_name_record.ts`, which writes the
+ * uploader's display name as a short string. Never use it for bytes that scale
+ * with a media file or a subprocess — that blocks the event loop.
  */
 export function writeAtomicallySync(target: string, produce: (temp: string) => void): string {
 	ensureDir(target);

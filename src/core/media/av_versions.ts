@@ -428,6 +428,8 @@ export function submitAvTranscode(
 			};
 		},
 		{
+			// ffmpeg work — the media budget, by declaration (PERF-11).
+			lane: 'media',
 			userId,
 			target: {
 				section_tipo: identity.sectionTipo,
@@ -604,7 +606,8 @@ export async function submitAvVersionBuild(
 				faststart_error: faststartErrorOf(outcome),
 			};
 		},
-		{ userId, target },
+		// ffmpeg work — the media budget, by declaration (PERF-11).
+		{ lane: 'media', userId, target },
 	);
 	return record.id;
 }

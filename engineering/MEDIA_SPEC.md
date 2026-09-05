@@ -340,11 +340,60 @@ directory away. Until then, treat `ActivityRow` as scaffolding: it is a third
 vocabulary over two wires plus the legacy `get_process_status` poll, and every
 surface built on it is one more thing the promotion must preserve.
 
+### 5.5c Job LANES and DEADLINES (PERF-11)
+
+§5.5's concurrency cap was ONE semaphore for everything. `av_transcode`,
+`update_code`/`restore_code`, `update_data`, the dev long-process probe and every
+backgroundable tool action drew from the same slots, so an ingest queue starved
+the code update an operator was waiting on.
+
+**The class is declared, never inferred.** `submit`'s `meta.lane` is REQUIRED and
+typed (`JobLane` = `media | transcription | rag | maintenance`); a tool declares
+one per `backgroundRunnable` action in `backgroundLanes`, and `scheduleBackground`
+refuses an undeclared one (`tool.background_lane_undeclared`). A `kind`-prefix rule
+was rejected on purpose: it files a new job into whatever lane its name happens to
+resemble, and the starvation returns with nobody having edited a budget. There is
+no `publication` lane — publication work runs on the durable diffusion queue, and a
+lane no call site can reach would publish a permanently-zero counters row.
+
+**Budgets** are per lane, one operator key each (`DEDALO_MEDIA_JOB_CONCURRENCY` is
+unchanged and IS the media budget; `DEDALO_JOB_LANE_*_CONCURRENCY` for the rest).
+`acquire`/`release` are per lane, so a full lane can only queue its own class.
+
+**Deadlines** are per lane (`DEDALO_JOB_DEADLINE_*_S`, seconds; `0` = none, which is
+`media`'s default because a master transcode is legitimately hours long), with a
+per-submit override. The clock starts at RUN START, after the slot is acquired: a
+job starved behind a full lane must not be killed for having waited. On expiry the
+job's existing `AbortController` is fired and the record goes terminal `stopped` —
+but the LANE SLOT IS NOT RELEASED until the worker actually settles, because
+releasing it while ffmpeg still holds the CPU over-subscribes the box. A worker
+still unsettled after the grace bumps `job_deadline_lane_held`, so a wedged lane is
+observable rather than silent.
+
+**The abort now REACHES an awaited outbound call.** The job's signal is the ambient
+`media/job_scope.ts` AsyncLocalStorage value for the whole dynamic extent of the
+worker, and `security/ssrf_guard.ts::fetchBoundedText` composes it with its own
+timeout (`AbortSignal.any`). Before this, an abort stopped at the worker's first
+await and the socket stayed open. **Out of scope, named rather than absent:**
+`Bun.spawn` children (ffmpeg, pg_dump, the transcriber) do not subscribe to the
+signal; their cancellation is their own subprocess handle, a separate change with
+its own gate — and the held-lane counter is precisely what measures the gap.
+
+**Published depth.** `/api/v1/counters` carries `media_jobs.lanes[class] =
+{active, queued, max}` beside the legacy `has_headroom` boolean — the in-process
+twin of the diffusion queue depth. A boolean cannot say WHICH class is backed up,
+which is the only question worth asking of a saturated box.
+
+Gates: `test/unit/job_lane_budget_native.test.ts` (budgets hold under load, a job
+past its deadline is cancelled, the signal reaches an awaited outbound call),
+`test/unit/job_lane_census_tripwire.test.ts` (every submit site and every
+backgroundRunnable action declares a lane).
+
 ### 5.6 File ops (`media/file_ops.ts`)
 ```ts
 export function moveToDeleted(absolutePath: string, opts?: { bulkProcessId?: string; now?: Date; mediaRoot?: string }): string | null;
 export function renameOldFiles(absolutePath: string, now?: Date, mediaRoot?: string): string | null;
-export function duplicateMediaFiles(spec, source: MediaIdentity, target: MediaIdentity, opts): string[]; // (:1999)
+export async function duplicateMediaFiles(spec, source: MediaIdentity, target: MediaIdentity, opts): Promise<string[]>; // (:1999) — the byte copy is async: whole media files on the request path
 export function listDeletedVersions(spec, id: MediaIdentity, quality: string, extension: string, opts): string[]; // TM natsort scan
 // THE RECORD-LEVEL PAIR — one file, written against each other (§8):
 export function removeSectionMediaFiles(sectionTipo, sectionId, mediaColumn, opts?): Promise<SectionMediaFilesOutcome>;

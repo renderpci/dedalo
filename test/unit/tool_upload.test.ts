@@ -27,7 +27,9 @@ async function seedJob(userId?: number): Promise<string> {
 	const record = mediaJobs.submit(
 		'test_report_job',
 		async () => ({ secret_report: 'another users import report' }),
-		userId === undefined ? {} : { userId },
+		userId === undefined
+			? { lane: 'maintenance' as const }
+			: { lane: 'maintenance' as const, userId },
 	);
 	// The worker resolves on the next tick; poll until terminal so `data` is set.
 	for (let i = 0; i < 50 && mediaJobs.status(record.id)?.status === 'queued'; i++) {

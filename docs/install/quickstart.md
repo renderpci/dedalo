@@ -76,6 +76,8 @@ nothing unauthenticated is ever served.
 | **3. I already have a certificate** | your files are copied in and used | your institution issues certificates, or you have a wildcard |
 | **4. No HTTPS** | plain HTTP, and it asks you to confirm | a throwaway trial on a laptop, never for real records |
 
+Modes 1-3 also make the page **faster**, which is easy to miss: they mount a TLS configuration with `http2 on;`, and HTTP/2 is what lets the browser fetch the client's 36-module boot graph over one multiplexed connection. Mode 4 cannot: browsers negotiate HTTP/2 through the TLS handshake, so a plain-HTTP server has no way to offer it and the 40 cold-boot requests queue over at most 6 connections. That trade is written down, with the measured numbers, in the `TRANSPORT` block at the top of `deploy/nginx.simple.conf`.
+
 Option 1 fails fast if the name does not point here, and offers a Let's Encrypt **staging** dry run first so a misconfiguration does not burn your rate limit.
 
 Then it asks for:

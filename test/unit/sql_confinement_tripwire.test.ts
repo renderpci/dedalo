@@ -467,7 +467,11 @@ const T2_UNRESOLVED_OWNER_TARGETS: Readonly<Record<string, { targets: number; re
 			'`${name}` = tableOrThrow(options.table) ?? TEMPORAL_SCRATCH_TABLE (dedalo_ts_temporal_scratch).',
 	},
 	'src/diffusion/jobs/queue.ts': {
-		targets: 12,
+		// 12 → 13 with PUB-13: `finishJob` is now LEASE-fenced (it may only end a
+		// row the caller still owns), so the terminal transition of a QUEUED row
+		// that no runner ever claimed — the owner-scoped cancel — became its own
+		// state-guarded statement, `finalizeQueuedJob`.
+		targets: 13,
 		reason:
 			'`${DIFFUSION_JOBS_TABLE}` = resolveJobsTable() (dedalo_ts_diffusion_jobs or its seam).',
 	},

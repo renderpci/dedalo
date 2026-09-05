@@ -98,11 +98,16 @@ async function updateDataVersionRunOwned(
 
 	if (options.background_running === true) {
 		const { mediaJobs } = await import('../../media/jobs.ts');
-		const record = mediaJobs.submit('update_data', async () => {
-			// The final job payload IS the engine response (the client's last
-			// SSE frame shows it; PHP: the final pfile line).
-			return await updateVersion(updatesChecked);
-		});
+		const record = mediaJobs.submit(
+			'update_data',
+			async () => {
+				// The final job payload IS the engine response (the client's last
+				// SSE frame shows it; PHP: the final pfile line).
+				return await updateVersion(updatesChecked);
+			},
+			// Operator work, not media: it must not queue behind an ingest (PERF-11).
+			{ lane: 'maintenance' },
+		);
 		return {
 			data: true,
 			msg: `OK. Running publication ${process.pid}`,

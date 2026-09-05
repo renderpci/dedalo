@@ -1708,4 +1708,12 @@ export const tool: ToolServerModule = {
 		BACKGROUND_DOWNLOAD_ACTION,
 		BACKGROUND_REPAIR_ACTION,
 	],
+	// All three wait on the ASR sidecar, so they spend the transcription budget
+	// and never the media one — a poll loop must not cost a transcode a slot
+	// (PERF-11 lane declaration).
+	backgroundLanes: {
+		[BACKGROUND_POLL_ACTION]: 'transcription',
+		[BACKGROUND_DOWNLOAD_ACTION]: 'transcription',
+		[BACKGROUND_REPAIR_ACTION]: 'transcription',
+	},
 };

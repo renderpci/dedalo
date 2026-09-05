@@ -69,7 +69,9 @@ afterAll(() => {
 
 describe('media job status through the tool dispatch (DEC-22a)', () => {
 	test('serves the frame of a completed scratch job, end-to-end', async () => {
-		const record = mediaJobs.submit('test_probe', async () => ({ built: ['a.mp4'] }));
+		const record = mediaJobs.submit('test_probe', async () => ({ built: ['a.mp4'] }), {
+			lane: 'media',
+		});
 		// Let the trivial worker finish.
 		await new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -94,10 +96,14 @@ describe('media job status through the tool dispatch (DEC-22a)', () => {
 		const gate = new Promise<void>((resolve) => {
 			release = resolve;
 		});
-		const record = mediaJobs.submit('test_probe', async () => {
-			await gate;
-			return null;
-		});
+		const record = mediaJobs.submit(
+			'test_probe',
+			async () => {
+				await gate;
+				return null;
+			},
+			{ lane: 'media' },
+		);
 		await new Promise((resolve) => setTimeout(resolve, 10));
 		const response = await dispatchToolRequest(
 			SUPERUSER,
@@ -141,6 +147,8 @@ function makeLoaded(name: string, result: unknown): LoadedTool {
 			},
 		},
 		backgroundRunnable: ['long_job'],
+		// Every backgroundRunnable action declares its lane (PERF-11).
+		backgroundLanes: { long_job: 'maintenance' as const },
 	};
 	return { module, dir: '/x', rootIndex: 0 };
 }

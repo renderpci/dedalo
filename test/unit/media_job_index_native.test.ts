@@ -75,9 +75,9 @@ describe('job target key', () => {
 
 describe('live-by-target index', () => {
 	test('a submitted job makes its target live', () => {
-		const manager = new MediaJobManager(2);
+		const manager = new MediaJobManager({ budgets: { media: 2, maintenance: 2 } });
 		const { worker, release } = blockingWorker();
-		manager.submit('av_transcode', worker, { target: target('404') });
+		manager.submit('av_transcode', worker, { lane: 'media', target: target('404') });
 		expect(manager.hasLiveJobForTarget(target('404'))).toBe(true);
 		// A DIFFERENT tier of the same record is NOT blocked — the guard is per
 		// tier, or building 720 while 404 runs would be refused for no reason.
@@ -86,9 +86,9 @@ describe('live-by-target index', () => {
 	});
 
 	test('a finished job leaves the live set', async () => {
-		const manager = new MediaJobManager(2);
+		const manager = new MediaJobManager({ budgets: { media: 2, maintenance: 2 } });
 		const { worker, release } = blockingWorker();
-		manager.submit('av_transcode', worker, { target: target('404') });
+		manager.submit('av_transcode', worker, { lane: 'media', target: target('404') });
 		release();
 		await Bun.sleep(20);
 		// THE regression this exists for: a target left in the index after its job
@@ -98,13 +98,13 @@ describe('live-by-target index', () => {
 	});
 
 	test('a FAILED job also leaves the live set', async () => {
-		const manager = new MediaJobManager(2);
+		const manager = new MediaJobManager({ budgets: { media: 2, maintenance: 2 } });
 		manager.submit(
 			'av_transcode',
 			async () => {
 				throw new Error('encode blew up');
 			},
-			{ target: target('404') },
+			{ lane: 'media', target: target('404') },
 		);
 		await Bun.sleep(20);
 		// A failure must not wedge the tier: retry is exactly what the operator
@@ -113,9 +113,9 @@ describe('live-by-target index', () => {
 	});
 
 	test('interruptLive clears targets so a restart does not wedge a tier', () => {
-		const manager = new MediaJobManager(2);
+		const manager = new MediaJobManager({ budgets: { media: 2, maintenance: 2 } });
 		const { worker, release } = blockingWorker();
-		manager.submit('av_transcode', worker, { target: target('404') });
+		manager.submit('av_transcode', worker, { lane: 'media', target: target('404') });
 		manager.interruptLive('server shutdown');
 		expect(manager.hasLiveJobForTarget(target('404'))).toBe(false);
 		release();
@@ -127,9 +127,10 @@ describe('live-by-target index', () => {
 		// on the audio gear mid-ingest started a second ffmpeg writing the file the
 		// running job was about to produce — the very race the guard exists for,
 		// surviving in the one path that motivated this whole change.
-		const manager = new MediaJobManager(2);
+		const manager = new MediaJobManager({ budgets: { media: 2, maintenance: 2 } });
 		const { worker, release } = blockingWorker();
 		manager.submit('av_transcode', worker, {
+			lane: 'media',
 			target: { ...target('404'), also_qualities: ['audio'] },
 		});
 		expect(manager.hasLiveJobForTarget(target('404'))).toBe(true);
@@ -140,9 +141,10 @@ describe('live-by-target index', () => {
 	});
 
 	test('a companion tier is released when the job ends', async () => {
-		const manager = new MediaJobManager(2);
+		const manager = new MediaJobManager({ budgets: { media: 2, maintenance: 2 } });
 		const { worker, release } = blockingWorker();
 		manager.submit('av_transcode', worker, {
+			lane: 'media',
 			target: { ...target('404'), also_qualities: ['audio'] },
 		});
 		release();
@@ -153,9 +155,9 @@ describe('live-by-target index', () => {
 	});
 
 	test('an untargeted job never blocks anything', () => {
-		const manager = new MediaJobManager(2);
+		const manager = new MediaJobManager({ budgets: { media: 2, maintenance: 2 } });
 		const { worker, release } = blockingWorker();
-		manager.submit('backup', worker, {});
+		manager.submit('backup', worker, { lane: 'maintenance' });
 		expect(manager.hasLiveJobForTarget(target('404'))).toBe(false);
 		release();
 	});
@@ -163,11 +165,11 @@ describe('live-by-target index', () => {
 
 describe('jobsForRecord', () => {
 	test('returns the record’s jobs and excludes other records', () => {
-		const manager = new MediaJobManager(3);
+		const manager = new MediaJobManager({ budgets: { media: 3, maintenance: 3 } });
 		const { worker, release } = blockingWorker();
-		manager.submit('av_transcode', worker, { target: target('404', 7) });
-		manager.submit('av_transcode', worker, { target: target('720', 7) });
-		manager.submit('av_transcode', worker, { target: target('404', 99) });
+		manager.submit('av_transcode', worker, { lane: 'media', target: target('404', 7) });
+		manager.submit('av_transcode', worker, { lane: 'media', target: target('720', 7) });
+		manager.submit('av_transcode', worker, { lane: 'media', target: target('404', 99) });
 
 		const found = manager.jobsForRecord('test94', 7);
 		expect(found.map((job) => job.target?.quality).sort()).toEqual(['404', '720']);
@@ -175,13 +177,13 @@ describe('jobsForRecord', () => {
 	});
 
 	test('keeps TERMINAL jobs visible — a failed tier must stay readable', async () => {
-		const manager = new MediaJobManager(2);
+		const manager = new MediaJobManager({ budgets: { media: 2, maintenance: 2 } });
 		manager.submit(
 			'av_transcode',
 			async () => {
 				throw new Error('no profile for this source');
 			},
-			{ target: target('404') },
+			{ lane: 'media', target: target('404') },
 		);
 		await Bun.sleep(20);
 		const found = manager.jobsForRecord('test94', 7);
@@ -193,8 +195,8 @@ describe('jobsForRecord', () => {
 	});
 
 	test('an untargeted job is not attributed to any record', async () => {
-		const manager = new MediaJobManager(2);
-		manager.submit('backup', async () => 'done', {});
+		const manager = new MediaJobManager({ budgets: { media: 2, maintenance: 2 } });
+		manager.submit('backup', async () => 'done', { lane: 'maintenance' });
 		await Bun.sleep(20);
 		expect(manager.jobsForRecord('test94', 7)).toEqual([]);
 	});
@@ -202,10 +204,10 @@ describe('jobsForRecord', () => {
 
 describe('jobsForUser', () => {
 	test('returns only the caller’s jobs', async () => {
-		const manager = new MediaJobManager(3);
+		const manager = new MediaJobManager({ budgets: { media: 3, maintenance: 3 } });
 		const { worker, release } = blockingWorker();
-		manager.submit('av_transcode', worker, { userId: 42, target: target('404') });
-		manager.submit('av_transcode', worker, { userId: 99, target: target('720') });
+		manager.submit('av_transcode', worker, { lane: 'media', userId: 42, target: target('404') });
+		manager.submit('av_transcode', worker, { lane: 'media', userId: 99, target: target('720') });
 
 		expect(manager.jobsForUser(42).map((job) => job.target?.quality)).toEqual(['404']);
 		expect(manager.jobsForUser(99).map((job) => job.target?.quality)).toEqual(['720']);
@@ -221,6 +223,8 @@ describe('pfile discovery across a process life', () => {
 		const orphan: JobRecord = {
 			id: 'av_transcode_999999_1',
 			kind: 'av_transcode',
+			lane: 'media',
+			deadline_ms: 0,
 			pid: null,
 			owner_pid: 999999,
 			user_id: 42,
@@ -235,7 +239,7 @@ describe('pfile discovery across a process life', () => {
 		};
 		writeFileSync(join(scratchDir, `${orphan.id}.json`), JSON.stringify(orphan));
 
-		const manager = new MediaJobManager(2);
+		const manager = new MediaJobManager({ budgets: { media: 2, maintenance: 2 } });
 		const found = manager.jobsForRecord('test94', 7);
 		expect(found).toHaveLength(1);
 		expect(found[0]?.status).toBe('interrupted');
@@ -249,6 +253,8 @@ describe('pfile discovery across a process life', () => {
 		const orphan: JobRecord = {
 			id: 'av_transcode_999999_2',
 			kind: 'av_transcode',
+			lane: 'media',
+			deadline_ms: 0,
 			pid: null,
 			owner_pid: 999999,
 			user_id: 7,
@@ -263,7 +269,7 @@ describe('pfile discovery across a process life', () => {
 		};
 		writeFileSync(join(scratchDir, `${orphan.id}.json`), JSON.stringify(orphan));
 
-		const manager = new MediaJobManager(2);
+		const manager = new MediaJobManager({ budgets: { media: 2, maintenance: 2 } });
 		const found = manager.jobsForUser(7);
 		expect(found).toHaveLength(1);
 		expect(found[0]?.status).toBe('interrupted');

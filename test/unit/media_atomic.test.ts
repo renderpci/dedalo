@@ -182,12 +182,15 @@ describe('writeAtomicallySync: the sync twin stays sync', () => {
 		expect(existsSync(sequenceSibling(temp, 0))).toBe(false);
 	});
 
-	test('copyToQuality is a SYNCHRONOUS function and returns the path, not a promise', () => {
-		// It is called by regenerate3d, which is itself sync and is called UNAWAITED
-		// from ingest/process_uploaded_file.ts: making it async would turn a copy
-		// failure into an unhandled rejection three call sites away, and no compile
-		// error would say so. `constructor.name` is the mechanical check.
-		expect(copyToQuality.constructor.name).toBe('Function');
+	test('copyToQuality is ASYNCHRONOUS — a whole media file never blocks the event loop', async () => {
+		// INVERTED 2026-09-05 (MEDIA-02). It used to assert copyToQuality was SYNC,
+		// on the argument that regenerate3d was called unawaited from
+		// ingest/process_uploaded_file.ts and a promise would become an unhandled
+		// rejection. Measured: every call site already awaited inside a try/catch,
+		// so the only thing the sync twin bought was a blocked event loop for the
+		// length of a whole-file copy. The sync writer itself STAYS — its one caller
+		// (ingest/staged_name_record.ts) writes a fixed-size display-name string.
+		expect(copyToQuality.constructor.name).toBe('AsyncFunction');
 		expect(writeAtomicallySync.constructor.name).toBe('Function');
 
 		const spec = mediaTypeOf('component_3d');
@@ -207,7 +210,14 @@ describe('writeAtomicallySync: the sync twin stays sync', () => {
 		ensureDir(source);
 		writeFileSync(source, 'v 0.0 0.0 0.0\n');
 
-		const created = copyToQuality(spec, identity, spec.defaultQuality, source, 'obj', pathOpts);
+		const created = await copyToQuality(
+			spec,
+			identity,
+			spec.defaultQuality,
+			source,
+			'obj',
+			pathOpts,
+		);
 		expect(typeof created).toBe('string');
 		expect(existsSync(created)).toBe(true);
 		expect(readdirSync(created.slice(0, created.lastIndexOf('/')))).toEqual([

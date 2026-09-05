@@ -141,7 +141,9 @@ async function updateCodeOwned(
 			// phase frames stream through the job's data channel as it advances.
 			return await updateCode(options, principal, { onPhase: (frame) => onData(frame) });
 		},
-		{ userId: principal.userId },
+		// THE lane starvation this class exists to end: an operator's code update
+		// must never queue behind a transcode backlog (PERF-11).
+		{ lane: 'maintenance', userId: principal.userId },
 	);
 	return {
 		data: true,
@@ -202,7 +204,8 @@ async function restoreCodeOwned(
 			// phase frames stream through the job's data channel as it advances.
 			return await restoreCode(options, principal, { onPhase: (frame) => onData(frame) });
 		},
-		{ userId: principal.userId },
+		// Same lane as the update it rolls back (PERF-11).
+		{ lane: 'maintenance', userId: principal.userId },
 	);
 	return {
 		data: true,

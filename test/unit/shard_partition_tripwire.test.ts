@@ -102,7 +102,14 @@ function binOf(bins: readonly Bin[], file: string): number {
 const PURE_CONTROL = 'test/unit/locator_law.test.ts';
 const CORPUS_CONTROL = 'test/unit/json_codec_roundtrip.test.ts';
 const CORPUS_TWIN = 'test/unit/test_corpus_fixture.test.ts';
-const SPAWNER_CONTROL = 'test/unit/diffusion_dispatch_gate.test.ts';
+// A file that REALLY spawns: queue_fence_tripwire runs the diffusion runner as
+// a child to prove it refuses a missing/non-integer --epoch. The previous
+// control, diffusion_dispatch_gate.test.ts, only ASSERTED ON the spelling of a
+// spawn in src/ — and when that assertion became a regex (`/Bun\.spawn\(/`)
+// the classifier stopped seeing a spawn in it, correctly: it never spawned
+// anything. A positive control must be an instance of the class, not a file
+// that mentions it.
+const SPAWNER_CONTROL = 'test/unit/queue_fence_tripwire.test.ts';
 
 describe("shard partition — totality and disjointness against bun's own discovery", () => {
 	test('anti-vacuity floor: discovery saw the real suite', () => {

@@ -100,10 +100,14 @@ describe('dd_utils_api:get_process_status (S2-15/DEC-22a)', () => {
 		const gate = new Promise<void>((resolve) => {
 			release = resolve;
 		});
-		const record = mediaJobs.submit('gate_test', async () => {
-			await gate;
-			return { built: true };
-		});
+		const record = mediaJobs.submit(
+			'gate_test',
+			async () => {
+				await gate;
+				return { built: true };
+			},
+			{ lane: 'media' },
+		);
 		const outcome = getUtilsProcessStatus(
 			rqoFor({ pid: process.pid, pfile: `${record.id}.json` }),
 			OWNER,
@@ -128,6 +132,7 @@ describe('dd_utils_api:get_process_status (S2-15/DEC-22a)', () => {
 			'tool_import_dedalo_csv_import_files',
 			async () => ({ rows: 7 }),
 			{
+				lane: 'maintenance',
 				userId: OWNER.userId,
 			},
 		);

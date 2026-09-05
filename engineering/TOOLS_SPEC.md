@@ -39,6 +39,7 @@ interface ToolServerModule {
   name: string;                               // must equal the dir name, ^tool_[a-z0-9_]+$
   apiActions: Record<string, ToolActionSpec>;  // the remote surface (PHP API_ACTIONS)
   backgroundRunnable?: readonly string[];      // second allowlist for async (PHP BACKGROUND_RUNNABLE)
+  backgroundLanes?: Record<string, JobLane>;   // REQUIRED per backgroundRunnable action (PERF-11)
   isAvailable?: (ctx) => boolean | Promise<boolean>;  // toolbar availability (PHP is_available)
   onRegister?: () => Promise<void>;            // lifecycle hooks — NEVER inside apiActions
   onRemove?: () => Promise<void>;
@@ -131,7 +132,17 @@ source (this paragraph and the code block are checked, not trusted).
 7. the declarative permission gate must pass — **before** any background fork;
 8. execute directly, or (when `options.background_running === true` — the
    BOOLEAN, a truthy string does not fork) via the background executor, which
-   additionally enforces `backgroundRunnable`.
+   additionally enforces `backgroundRunnable`;
+9. the action must DECLARE ITS JOB LANE in the module's `backgroundLanes`
+   (PERF-11). Background actions no longer share one process-wide concurrency
+   cap: each spends a per-class budget (`media | transcription | rag |
+   maintenance`, `src/core/media/jobs.ts`), so an ingest queue cannot starve an
+   operator's code update. The lane is DECLARED, never inferred from the tool or
+   action name — a prefix rule silently files a new action into whatever lane its
+   name resembles — and an undeclared one is refused with its own closed-registry
+   code, `tool.background_lane_undeclared`, because reusing
+   `tool.background_not_allowed` would name the wrong cause. Census gate:
+   `test/unit/job_lane_census_tripwire.test.ts`.
 
 **Every gate is tripwired.** `test/unit/tools_dispatch.test.ts` carries one case
 per gate, each written so that DELETING that gate makes it fail — the messages are

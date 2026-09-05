@@ -1426,4 +1426,7 @@ export const tool: ToolServerModule = {
 		},
 	},
 	backgroundRunnable: ['import_files'],
+	// A bulk MEDIA import: it builds derivatives, so it spends the media budget
+	// (PERF-11 lane declaration).
+	backgroundLanes: { import_files: 'media' },
 };
