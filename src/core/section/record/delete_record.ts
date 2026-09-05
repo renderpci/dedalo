@@ -629,6 +629,34 @@ export async function deleteSectionData(
 	// it replaces (no containment guard; PHP delete_data empties every declared
 	// component key in the record). The 'component' prefix filter (old LIKE
 	// 'component%') stays local.
+	/**
+	 * THE ANCESTOR INDEX MOVES WITH THE LOCATORS (P1-7 / DATA-12). Emptying a
+	 * relation component removes every locator it held, so `relation_search`
+	 * must lose their ancestors in the SAME write: `conform.ts` reads
+	 * `direct OR ancestor`, so an index left standing keeps answering for a
+	 * component that now points at nothing — in both directions, since the
+	 * negating operators read it too. The three sibling removal doors (the
+	 * component save, `deletePortalLocator`, `removeAllInverseReferences`) were
+	 * wired when P1-7 landed; this one imported the maintainer and never called
+	 * it, and `relation_search_coherence_native` did not cover it until
+	 * 2026-09-05. Extracted rather than inlined so the wipe loop stays under the
+	 * complexity cap.
+	 */
+	const reindexEmptiedRelation = async (
+		column: string,
+		componentTipo: string,
+		newData: unknown,
+	): Promise<void> => {
+		if (column !== 'relation') return;
+		await maintainRelationSearchIndex(
+			table,
+			sectionTipo,
+			sectionId,
+			componentTipo,
+			Array.isArray(newData) ? newData : [],
+		);
+	};
+
 	const childrenOf = async (root: string): Promise<{ tipo: string; model: string }[]> =>
 		(await getOrderedSubtree(root, { crossSections: true }))
 			.filter((node) => node.model?.startsWith('component') === true)
@@ -738,6 +766,9 @@ export async function deleteSectionData(
 		// defensible while the recompute could not shrink at all; now that an
 		// ordinary edit corrects a mirror instantly, leaving the wipe door
 		// permanently stale would be an arbitrary asymmetry.
+		// THE ANCESTOR INDEX MOVES WITH THE LOCATORS (P1-7 / DATA-12) — see
+		// reindexEmptiedRelation below for why this door owes it.
+		await reindexEmptiedRelation(column, component.tipo, newData);
 		if (column === 'relation' && Array.isArray(stored)) {
 			const edges = stored.filter(
 				(entry) =>

@@ -96,6 +96,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { plugin } from 'bun';
 import { CLIENT_LIB_URL_PREFIX, resolveClientLibPath } from '../../src/core/client_libs/serving.ts';
 import { unnamedRemoveRefusal } from '../../src/core/section/record/save_component.ts';
+import { resolveClientModuleOverride } from '../helpers/client_module_overrides.ts';
 
 const REPO_ROOT = resolve(import.meta.dir, '..', '..');
 const CLIENT_ROOT = join(REPO_ROOT, 'client');
@@ -128,6 +129,11 @@ plugin({
 		// resolves through the SERVER'S OWN resolver, so the module the test loads
 		// is the file the engine would serve, allowlist and confinement included.
 		build.onResolve({ filter: /^\/dedalo\/lib\// }, (args) => {
+			// A deliberate substitution another gate registered wins over this
+			// plugin's own resolution: Bun plugins are global and first-match-wins,
+			// so without this the answer would depend on which file ran first.
+			const overridden = resolveClientModuleOverride(args.path);
+			if (overridden !== null) return { path: overridden };
 			const importer = args.importer ?? '';
 			if (!importer.startsWith(CLIENT_ROOT) && !importer.startsWith(TOOLS_ROOT)) return undefined;
 			const rest = args.path.slice(CLIENT_LIB_URL_PREFIX.length);
@@ -137,6 +143,9 @@ plugin({
 			return path === null ? undefined : { path };
 		});
 		build.onResolve({ filter: /^\.\.?\// }, (args) => {
+			// See the sibling hook: the shared registry answers first.
+			const overridden = resolveClientModuleOverride(args.path);
+			if (overridden !== null) return { path: overridden };
 			const importer = args.importer ?? '';
 			if (!importer.startsWith(CLIENT_ROOT) && !importer.startsWith(TOOLS_ROOT)) return undefined;
 			const direct = resolve(dirname(importer), args.path);

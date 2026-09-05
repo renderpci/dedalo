@@ -525,7 +525,15 @@ const MATRIX: DoorRow[] = [
 	{
 		file: DELETE_RECORD,
 		fn: 'deleteSectionData',
-		must: ['persistRecordKeys(', 'persistModifiedStamp(', 'propagateToObservers('],
+		must: [
+			'persistRecordKeys(',
+			'persistModifiedStamp(',
+			'propagateToObservers(',
+			// P1-7's fourth door: emptying a relation component drops every locator
+			// it held, so the ancestor index must lose them in the same write. This
+			// door imported the maintainer without calling it until 2026-09-05.
+			'maintainRelationSearchIndex(',
+		],
 		mustNot: ['updateMatrixKeyData(', 'updateMatrixRecord('],
 		empty: {},
 	},

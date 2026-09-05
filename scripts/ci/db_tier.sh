@@ -124,6 +124,7 @@ DB_TIER_TRIPWIRES=(
 	test/unit/render_class_native.test.ts
 	test/unit/slow_query_scope_native.test.ts
 	test/unit/zzscale_corpus_native.test.ts
+	test/unit/dataframe_contract_tripwire.test.ts
 )
 
 # ── THE STAGES ARE INDEPENDENT ───────────────────────────────────────────────

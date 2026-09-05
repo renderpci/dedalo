@@ -262,6 +262,15 @@ const TRIPWIRES = [
 	'test/unit/zzscale_corpus_native.test.ts',
 	'test/unit/read_path_record_reuse_tripwire.test.ts',
 	'test/unit/search_pattern_escape_tripwire.test.ts',
+	'test/unit/closure_openquestions_tripwire.test.ts',
+	'test/unit/client_dashboard_sink_tripwire.test.ts',
+	'test/unit/client_event_manager_dispatch_tripwire.test.ts',
+	'test/unit/client_instances_inflight_tripwire.test.ts',
+	'test/unit/client_local_db_singleton_tripwire.test.ts',
+	'test/unit/client_read_stream_release_tripwire.test.ts',
+	'test/unit/client_request_coalescing_tripwire.test.ts',
+	'test/unit/dataframe_contract_tripwire.test.ts',
+	'test/unit/ontology_property_census_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

@@ -546,6 +546,10 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		'test/unit/zzscale_corpus_native.test.ts',
 		"Every leg builds 1,220 real matrix_test records through the engine's explicit-id write door and reads them back through getChildren / getChildrenRecursive / findInverseReferenceLocators / the ontology resolver and the trigger-derived matrix_string_search and matrix_relation_index tables, so the gate cannot run without a live suite Postgres carrying the dedalo_test_marker.",
 	],
+	[
+		'test/unit/dataframe_contract_tripwire.test.ts',
+		"Its normalizer and identity-predicate legs are pure, but the last describe drives the real dataframe doors against the generic test TLD's sections on the suite database — the frame is written and read back, and the deliberate test6100 target exemption is ASSERTED by asking the ontology what selectability contract that section declares — so with the port closed the behavioural half is red.",
+	],
 ]);
 
 describe('CI workflow tripwire', () => {

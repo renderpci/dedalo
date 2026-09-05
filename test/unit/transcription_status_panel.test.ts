@@ -29,6 +29,10 @@
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 import { join } from 'node:path';
 import { plugin } from 'bun';
+import {
+	clearClientModuleOverride,
+	registerClientModuleOverride,
+} from '../helpers/client_module_overrides.ts';
 
 // Path derived from this file's location — never a checkout-specific literal.
 const RENDER_PATH = join(
@@ -139,11 +143,25 @@ function fake_create_dom_element(options: Record<string, unknown>): FakeNode {
 }
 
 const UI_STUB_VIRTUAL_PATH = '/virtual/tool_transcription_status__ui_stub.js';
+/** The seam this gate substitutes; shared with the override registry. */
+const UI_STUB_SPECIFIER = /core\/common\/js\/ui\.js$/;
 
 beforeAll(() => {
 	mock.module(UI_STUB_VIRTUAL_PATH, () => ({
 		ui: { create_dom_element: fake_create_dom_element },
 	}));
+	// DECLARE the substitution where every resolver plugin can see it. This
+	// gate's own plugin below is not enough: Bun plugins are process-global and
+	// first-match-wins, so a gate that ran earlier (client_relation_move_native
+	// claims every relative import under tools/, which this file's importer is)
+	// answered this specifier with the REAL ui.js and left the panel measuring a
+	// foreign element — 30 assertions down to 13, red in every full run and green
+	// alone.
+	registerClientModuleOverride(
+		UI_STUB_SPECIFIER,
+		UI_STUB_VIRTUAL_PATH,
+		'transcription_status_panel',
+	);
 	plugin({
 		name: 'transcription-status-panel-ui-stub',
 		setup(build) {
@@ -151,7 +169,7 @@ beforeAll(() => {
 			// serving-time seam with no real relative path on disk. Redirect it to
 			// the mocked virtual module before Bun's resolver tries (and fails) to
 			// find it on the filesystem.
-			build.onResolve({ filter: /core\/common\/js\/ui\.js$/ }, () => {
+			build.onResolve({ filter: UI_STUB_SPECIFIER }, () => {
 				return { path: UI_STUB_VIRTUAL_PATH };
 			});
 		},
@@ -331,4 +349,9 @@ describe('create_status_panel — label resolution', () => {
 
 afterAll(() => {
 	mock.restore();
+});
+
+afterAll(() => {
+	// The registry is process-global; a gate owns its entry only while it runs.
+	clearClientModuleOverride(UI_STUB_SPECIFIER);
 });
