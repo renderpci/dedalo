@@ -41,4 +41,6 @@ export const tool: ToolServerModule = {
 		get_job_status: MEDIA_JOB_STATUS_ACTION,
 	},
 	backgroundRunnable: ['build_version'],
+	// ffmpeg/ImageMagick derivative building (PERF-11 lane declaration).
+	backgroundLanes: { build_version: 'media' },
 };

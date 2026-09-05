@@ -66,7 +66,7 @@ describe('mediaJobs.subscribe — every state change wakes the consumer', () => 
 				onData({ step: 2 });
 				return { done: true };
 			},
-			{ userId: OWNER },
+			{ lane: 'media', userId: OWNER },
 		);
 		const unsubscribe = mediaJobs.subscribe(record.id, (frame) => seen.push(frame));
 		release();
@@ -89,6 +89,7 @@ describe('mediaJobs.subscribe — every state change wakes the consumer', () => 
 describe('get_job_events', () => {
 	test('an ALREADY-FINISHED job answers one terminal frame with its result', async () => {
 		const record = mediaJobs.submit('test_finished', async () => ({ report: 'ok' }), {
+			lane: 'media',
 			userId: OWNER,
 		});
 		await Bun.sleep(20);
@@ -113,7 +114,7 @@ describe('get_job_events', () => {
 				await gate;
 				return { report: 'done' };
 			},
-			{ userId: OWNER },
+			{ lane: 'media', userId: OWNER },
 		);
 
 		const result = getJobEvents(rqo(record.id), principal(OWNER));
@@ -129,6 +130,7 @@ describe('get_job_events', () => {
 
 	test("another user's job is refused — and looks exactly like a job that does not exist", async () => {
 		const record = mediaJobs.submit('test_owned', async () => ({ secret: 'records' }), {
+			lane: 'media',
 			userId: OWNER,
 		});
 		await Bun.sleep(20);
@@ -150,6 +152,7 @@ describe('get_job_events', () => {
 
 	test('a global admin may stream any job', async () => {
 		const record = mediaJobs.submit('test_admin', async () => ({ report: 'ok' }), {
+			lane: 'media',
 			userId: OWNER,
 		});
 		await Bun.sleep(20);

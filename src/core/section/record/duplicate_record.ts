@@ -805,7 +805,10 @@ async function duplicateRecordMediaFiles(
 					lang,
 				};
 				const target: MediaIdentity = { ...source, sectionId: newSectionId };
-				duplicateMediaFiles(spec, source, target, { source: pathOpts, target: pathOpts });
+				await duplicateMediaFiles(spec, source, target, {
+					source: pathOpts,
+					target: pathOpts,
+				});
 			}
 			// Refresh files_info on the copied items in the media column value.
 			const mediaColumn = values.media as Record<string, unknown[]> | undefined;

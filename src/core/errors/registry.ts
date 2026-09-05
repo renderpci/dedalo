@@ -610,6 +610,22 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 	},
+	/**
+	 * A backgroundRunnable action whose module declares NO lane for it (PERF-11).
+	 * Distinct from `background_not_allowed`, which says the action may not run in
+	 * the background at all: this one says it may, but the module never said which
+	 * budget it spends — and a lane guessed from the action name is exactly how a
+	 * new job silently starves another class of work.
+	 */
+	'tool.background_lane_undeclared': {
+		category: 'internal',
+		status: 500,
+		label_key: 'error_tool_background_lane_undeclared',
+		message: 'Background action declares no job lane',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
 	'tool.job_not_found': {
 		category: 'not_found',
 		status: 404,
@@ -1246,6 +1262,20 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: true,
 		details_keys: ['attempts'],
+	},
+	// A runner (or the scheduler acting for one) tried to write to a job row it
+	// no longer owns: the lease is (job_id, attempt) and the sweeper's requeue
+	// handed the row to a NEW attempt. The loser aborts without writing —
+	// engineering/wire_contract/WC-2026-09-05-diffusion-lease-epoch-fence.md.
+	// Never a caller-facing HTTP failure: it is a runner-process abort.
+	'diffusion.lease_revoked': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_diffusion_lease_revoked',
+		message: 'The diffusion job lease was revoked (the row belongs to a newer attempt)',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
 	},
 	'diffusion.runner_spawn_failed': {
 		category: 'unavailable',

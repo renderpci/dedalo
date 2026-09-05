@@ -202,14 +202,14 @@ export async function buildVersionCore(
 		// A cover this host cannot encode travels in `errors` beside a SUCCESS,
 		// exactly like an image twin — the copy landed, and telling the operator the
 		// build failed would be a lie about what is on disk.
-		const built = [copyToQuality(spec, identity, quality, source, 'pdf', pathOpts)];
+		const built = [await copyToQuality(spec, identity, quality, source, 'pdf', pathOpts)];
 		const covers = await buildPdfCovers(spec, identity, source, pathOpts);
 		built.push(...covers.created);
 		return { built, jobId: null, errors: covers.errors };
 	}
 	// svg / 3d: naive copy to the target quality.
 	return {
-		built: [copyToQuality(spec, identity, quality, source, spec.defaultExtension, pathOpts)],
+		built: [await copyToQuality(spec, identity, quality, source, spec.defaultExtension, pathOpts)],
 		jobId: null,
 		errors: [],
 	};

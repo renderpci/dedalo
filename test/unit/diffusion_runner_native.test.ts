@@ -10,7 +10,7 @@
  * cannot see, by construction: pass the FULL record list to `removeRecords`
  * and every string still matches — this gate is what turns that red.
  *
- * WHAT IT DRIVES. The exported `runJob(jobId)` IN-PROCESS on the suite
+ * WHAT IT DRIVES. The exported `runJob(jobId, epoch)` IN-PROCESS on the suite
  * database, through the real queue: enqueue → claim (the scheduler's own
  * transition) → runJob → read the job row + the published output back. The
  * situation is the zzdif generic domain (test/helpers/zzdif_diffusion_domain.ts)
@@ -208,7 +208,7 @@ describe('runJob — the real publication pipeline on the file element', () => {
 			`# stale publication of ${ZZDIF_UNPUBLISHABLE_ID} — must be removed by the run\n`,
 		);
 		job = await enqueueAndClaim(ZZDIF_FILE_ELEMENT);
-		await runJob(job.job_id);
+		await runJob(job.job_id, job.attempt);
 		const row = await getJobById(job.job_id);
 		if (row === null) throw new Error('job row vanished during the run');
 		finished = row;
@@ -254,7 +254,7 @@ describe('runJob — the real publication pipeline on the file element', () => {
 describe('runJob — failure is a typed FAILURE RECORD on the job row', () => {
 	test('the broken element (unknown parser fn) fails the job with the compile code and msg prefix', async () => {
 		const job = await enqueueAndClaim(ZZDIF_BROKEN_ELEMENT);
-		await runJob(job.job_id);
+		await runJob(job.job_id, job.attempt);
 		const finished = await getJobById(job.job_id);
 		expect(finished?.state).toBe('failed');
 		expect(finished?.result?.ok).toBe(false);
@@ -270,7 +270,7 @@ describe('runJob — cancellation and idempotent restarts', () => {
 		const job = await enqueueAndClaim(ZZDIF_FILE_ELEMENT);
 		const { cancelled } = await requestCancel(job.client_process_id, OWNER);
 		expect(cancelled).toBe(true);
-		await runJob(job.job_id);
+		await runJob(job.job_id, job.attempt);
 		const finished = await getJobById(job.job_id);
 		expect(finished?.state).toBe('cancelled');
 		expect(finished?.result?.ok).toBe(false);
@@ -294,12 +294,15 @@ describe('runJob — cancellation and idempotent restarts', () => {
 		const cursor = ZZDIF_UNPUBLISHABLE_ID;
 		const alreadyProcessed = 2; // 940001 + 940002
 		const firstAttemptStartedAt = 1_800_000_000; // a pinned past instant
-		await checkpointJob(job.job_id, {
-			cursor,
-			run_started_at: firstAttemptStartedAt,
-			processed: alreadyProcessed,
-		});
-		await runJob(job.job_id);
+		await checkpointJob(
+			{ job_id: job.job_id, attempt: job.attempt },
+			{
+				cursor,
+				run_started_at: firstAttemptStartedAt,
+				processed: alreadyProcessed,
+			},
+		);
+		await runJob(job.job_id, job.attempt);
 		const finished = await getJobById(job.job_id);
 		expect(finished?.state).toBe('completed');
 		const remaining = PUBLISHABLE_IDS.filter((id) => id > cursor);
@@ -327,7 +330,7 @@ describe('runJob — cancellation and idempotent restarts', () => {
 		});
 		createdJobIds.push(job.job_id);
 		expect(job.state).toBe('queued');
-		await runJob(job.job_id);
+		await runJob(job.job_id, job.attempt);
 		const after = await getJobById(job.job_id);
 		expect(after?.state).toBe('queued');
 		expect(after?.result).toBeNull();
@@ -335,6 +338,6 @@ describe('runJob — cancellation and idempotent restarts', () => {
 	});
 
 	test('an unknown job id is a no-op, not a throw', async () => {
-		await expect(runJob('00000000-0000-4000-8000-000000000000')).resolves.toBeUndefined();
+		await expect(runJob('00000000-0000-4000-8000-000000000000', 1)).resolves.toBeUndefined();
 	});
 });

@@ -17,6 +17,31 @@
  *
  * All timing math uses DB now() (single clock); JS Date appears only in the
  * SSE projection layer (sse.ts) where the client expects epoch ms.
+ *
+ * LEASE MODEL (PUB-13, WC-2026-09-05-diffusion-lease-epoch-fence). A row can be
+ * claimed more than once: the sweeper requeues a stale-heartbeat run and a later
+ * claim hands it to a NEW runner. `attempt` is incremented inside the claim
+ * statement and `(job_id, attempt)` is the per-claim EPOCH — the lease. Every
+ * write a lease-holder makes carries it and is fenced with
+ * `AND attempt = $epoch AND state = 'running'`; zero rows affected means the
+ * lease was revoked and the caller throws `diffusion.lease_revoked` WITHOUT
+ * writing. Reads are never fenced.
+ *
+ * `attempt` IS STRICTLY MONOTONIC FOR THE LIFE OF THE ROW — the claim is the
+ * ONLY statement that assigns it, and only as `attempt + 1`. Nothing lowers or
+ * resets it, because an epoch that can be RE-ISSUED is not an epoch: a reset
+ * hands epoch 1 to a second claim while a slow-but-alive runner from the first
+ * claim still holds epoch 1, and both fence legs then match for the loser (an
+ * ABA on the counter — the defect this model exists to close). The retry BUDGET
+ * is therefore carried by `max_attempts`, never by rewinding the epoch: the
+ * admin requeue extends the budget (`max_attempts = attempt + N`) and leaves
+ * the counter alone. Gate: `queue_fence_tripwire` (census of every assignment
+ * to `attempt`) + `queue_fence_native` (the ABA is built and refused).
+ *
+ * The only unfenced writers are the control plane's own: the claim (which
+ * ISSUES the epoch), the sweeper (which REVOKES it), the owner-scoped cancel
+ * flag, the queued-row finalizer and the admin requeue — each state-guarded on
+ * its own terms and enumerated in `queue_fence_tripwire`.
  */
 
 import { sql, withTransaction } from '../../core/db/postgres.ts';
@@ -105,6 +130,28 @@ function normalizeJobRows(rows: unknown): DiffusionJobRow[] {
 /** Notify observers (SSE pollers today, LISTEN subscribers later) of a change. */
 async function notifyProgress(jobId: string): Promise<void> {
 	await sql.unsafe(`SELECT pg_notify('${JOB_PROGRESS_CHANNEL}', $1)`, [jobId]);
+}
+
+/**
+ * The per-claim capability: a job row plus the attempt that claimed it. Held by
+ * the runner process (passed on its argv, never re-read from the row — a re-read
+ * is a second race) and by the scheduler for the row it just claimed.
+ */
+export interface JobLease {
+	job_id: string;
+	attempt: number;
+}
+
+/**
+ * Refuse a fenced write whose predicate matched nothing: another claim owns the
+ * row (or it is no longer running). Typed, so the runner can abort its own
+ * process without writing a terminal state over the live epoch's run.
+ */
+function assertLeaseHeld(rows: unknown, lease: JobLease, operation: string): void {
+	if ((rows as unknown[]).length > 0) return;
+	throw new DedaloError('diffusion.lease_revoked', {
+		coordinates: { job: lease.job_id, attempt: lease.attempt, operation },
+	});
 }
 
 export interface EnqueueResult {
@@ -218,21 +265,36 @@ export async function claimNextQueuedJob(
 	});
 }
 
-/** Record the spawned runner's pid on a claimed job (post-spawn, scheduler side). */
-export async function recordRunnerPid(jobId: string, pid: number): Promise<void> {
-	await sql.unsafe(
+/**
+ * Record the spawned runner's pid on a claimed job (post-spawn, scheduler side).
+ * LEASE-FENCED: by the time the spawn returns the sweeper may already have
+ * requeued and re-claimed the row, and stamping the dead runner's pid onto the
+ * live epoch would make the sweeper's cross-check name the wrong process.
+ */
+export async function recordRunnerPid(lease: JobLease, pid: number): Promise<void> {
+	const rows = (await sql.unsafe(
 		`UPDATE "${DIFFUSION_JOBS_TABLE}"
-		 SET runner = runner || jsonb_build_object('pid', $2::int)
-		 WHERE job_id = $1`,
-		[jobId, pid],
-	);
+		 SET runner = runner || jsonb_build_object('pid', $3::int)
+		 WHERE job_id = $1 AND attempt = $2::int AND state = 'running'
+		 RETURNING job_id`,
+		[lease.job_id, lease.attempt, pid],
+	)) as unknown;
+	assertLeaseHeld(rows, lease, 'recordRunnerPid');
 }
 
-/** Runner heartbeat — proves liveness to the sweeper. */
-export async function heartbeatJob(jobId: string): Promise<void> {
-	await sql.unsafe(`UPDATE "${DIFFUSION_JOBS_TABLE}" SET heartbeat_at = now() WHERE job_id = $1`, [
-		jobId,
-	]);
+/**
+ * Runner heartbeat — proves liveness to the sweeper. LEASE-FENCED: a revoked
+ * runner that kept beating would keep the row looking alive and stop the
+ * sweeper from ever healing the run the live epoch is doing.
+ */
+export async function heartbeatJob(lease: JobLease): Promise<void> {
+	const rows = (await sql.unsafe(
+		`UPDATE "${DIFFUSION_JOBS_TABLE}" SET heartbeat_at = now()
+		 WHERE job_id = $1 AND attempt = $2::int AND state = 'running'
+		 RETURNING job_id`,
+		[lease.job_id, lease.attempt],
+	)) as unknown;
+	assertLeaseHeld(rows, lease, 'heartbeatJob');
 }
 
 /**
@@ -241,7 +303,7 @@ export async function heartbeatJob(jobId: string): Promise<void> {
  * projection is a straight read.
  */
 export async function updateJobProgress(
-	jobId: string,
+	lease: JobLease,
 	update: {
 		counter: number;
 		msg?: string;
@@ -253,28 +315,32 @@ export async function updateJobProgress(
 	},
 ): Promise<void> {
 	const { error, ...totalsPatch } = update;
-	await sql.unsafe(
+	const rows = (await sql.unsafe(
 		`UPDATE "${DIFFUSION_JOBS_TABLE}"
-		 SET totals = totals || $2::jsonb,
+		 SET totals = totals || $3::jsonb,
 		     heartbeat_at = now(),
-		     errors = CASE WHEN $3::text IS NULL THEN errors ELSE errors || to_jsonb($3::text) END
-		 WHERE job_id = $1`,
-		[jobId, totalsPatch, error ?? null],
-	);
-	await notifyProgress(jobId);
+		     errors = CASE WHEN $4::text IS NULL THEN errors ELSE errors || to_jsonb($4::text) END
+		 WHERE job_id = $1 AND attempt = $2::int AND state = 'running'
+		 RETURNING job_id`,
+		[lease.job_id, lease.attempt, totalsPatch, error ?? null],
+	)) as unknown;
+	assertLeaseHeld(rows, lease, 'updateJobProgress');
+	await notifyProgress(lease.job_id);
 }
 
 /** Persist the resume checkpoint of the last COMMITTED chunk (runner side). */
 export async function checkpointJob(
-	jobId: string,
+	lease: JobLease,
 	checkpoint: Record<string, unknown>,
 ): Promise<void> {
-	await sql.unsafe(
+	const rows = (await sql.unsafe(
 		`UPDATE "${DIFFUSION_JOBS_TABLE}"
-		 SET checkpoint = $2::jsonb, heartbeat_at = now()
-		 WHERE job_id = $1`,
-		[jobId, checkpoint],
-	);
+		 SET checkpoint = $3::jsonb, heartbeat_at = now()
+		 WHERE job_id = $1 AND attempt = $2::int AND state = 'running'
+		 RETURNING job_id`,
+		[lease.job_id, lease.attempt, checkpoint],
+	)) as unknown;
+	assertLeaseHeld(rows, lease, 'checkpointJob');
 }
 
 /**
@@ -298,17 +364,46 @@ export function failedJobResult(
 	return { ...toFailureRecord(error, extend), msg };
 }
 
-/** Terminal transition (runner side): completed | failed | cancelled. */
+/**
+ * Terminal transition (lease-holder side): completed | failed | cancelled.
+ * LEASE-FENCED — the write this fence exists for. A revoked runner finishing
+ * "its" job would stamp the loser's outcome onto the row the LIVE attempt is
+ * still publishing into, and the follow stream would report the loser's state
+ * as the run's ending.
+ */
 export async function finishJob(
-	jobId: string,
+	lease: JobLease,
 	state: Extract<DiffusionJobState, 'completed' | 'failed' | 'cancelled'>,
+	result: DiffusionJobResult,
+): Promise<void> {
+	const rows = (await sql.unsafe(
+		`UPDATE "${DIFFUSION_JOBS_TABLE}"
+		 SET state = $3, result = $4::jsonb, finished_at = now(),
+		     totals = totals || jsonb_build_object('msg', $5::text)
+		 WHERE job_id = $1 AND attempt = $2::int AND state = 'running'
+		 RETURNING job_id`,
+		[lease.job_id, lease.attempt, state, result, result.msg],
+	)) as unknown;
+	assertLeaseHeld(rows, lease, 'finishJob');
+	await notifyProgress(lease.job_id);
+}
+
+/**
+ * Terminal transition for a job that was NEVER claimed (server side): the
+ * owner-scoped cancel of a QUEUED row. No lease exists — no runner ever owned
+ * it — so the guard is the state itself; a row that got claimed between the
+ * cancel flag and this call belongs to its runner, which honors the flag.
+ */
+export async function finalizeQueuedJob(
+	jobId: string,
+	state: Extract<DiffusionJobState, 'cancelled' | 'failed'>,
 	result: DiffusionJobResult,
 ): Promise<void> {
 	await sql.unsafe(
 		`UPDATE "${DIFFUSION_JOBS_TABLE}"
 		 SET state = $2, result = $3::jsonb, finished_at = now(),
 		     totals = totals || jsonb_build_object('msg', $4::text)
-		 WHERE job_id = $1`,
+		 WHERE job_id = $1 AND state = 'queued'`,
 		[jobId, state, result, result.msg],
 	);
 	await notifyProgress(jobId);
@@ -339,7 +434,7 @@ export async function requestCancel(
 	if (job !== null) {
 		// A QUEUED job has no runner to honor the flag — finalize it here.
 		if (job.state === 'queued') {
-			await finishJob(
+			await finalizeQueuedJob(
 				job.job_id,
 				'cancelled',
 				failedJobResult(new DedaloError('diffusion.cancelled'), 'Process cancelled by user'),
@@ -543,23 +638,39 @@ export async function countQueuedJobs(): Promise<number> {
 }
 
 /**
+ * Attempts an admin requeue grants, counted FORWARD from the current epoch.
+ * Mirrors the schema's `max_attempts` DEFAULT (schema.ts) — the same budget a
+ * freshly enqueued job gets.
+ */
+const ADMIN_REQUEUE_ATTEMPT_BUDGET = 3;
+
+/**
  * Manual admin requeue of a TERMINAL/interrupted job → queued with a FRESH
  * attempt budget. Mirrors the sweepStaleJobs requeue SQL but is user-driven and
  * clears the previous outcome (result/errors/finished_at). The state guard
  * (only failed|cancelled|interrupted) guarantees a live running/queued row is
  * never disturbed. Returns the updated row, or null when no eligible row matched.
+ *
+ * (!) It does NOT reset `attempt` (PUB-13). Rewinding the counter re-issues an
+ * epoch: a runner that was merely SLOW under epoch 1 — the sweeper took its row,
+ * the budget ran out, an admin revived it — would find its lease matching the
+ * NEW claim's epoch 1 again and every fenced write would land on the live run
+ * (measured ABA). The budget is granted by raising `max_attempts` instead, so
+ * the epoch only ever moves forward and the loser stays locked out for the life
+ * of the row.
  */
 export async function requeueTerminalJob(jobId: string): Promise<DiffusionJobRow | null> {
 	await ensureDiffusionJobTables();
 	const rows = (await sql.unsafe(
 		`UPDATE "${DIFFUSION_JOBS_TABLE}"
 		 SET state = 'queued', runner = '{}'::jsonb, heartbeat_at = NULL,
-		     cancel_requested = false, attempt = 0, finished_at = NULL, result = NULL,
+		     cancel_requested = false, finished_at = NULL, result = NULL,
+		     max_attempts = attempt + $2::int,
 		     errors = '[]'::jsonb,
 		     totals = totals || jsonb_build_object('msg', 'Requeued by admin')
 		 WHERE job_id = $1 AND state IN ('failed','cancelled','interrupted')
 		 RETURNING ${JOB_COLUMNS}`,
-		[jobId],
+		[jobId, ADMIN_REQUEUE_ATTEMPT_BUDGET],
 	)) as unknown;
 	const job = normalizeJobRows(rows)[0] ?? null;
 	if (job !== null) await notifyProgress(job.job_id);
@@ -622,6 +733,11 @@ export async function sweepStaleJobs(staleAfterSeconds: number): Promise<{
 		     totals = CASE WHEN attempt < max_attempts THEN totals ELSE
 		         totals || jsonb_build_object(
 		             'msg', 'Interrupted after ' || attempt || ' attempts (runner lost)') END
+		 -- UNFENCED BY DESIGN: this statement is the REVOKER. It does not check
+		 -- runner.pid either — a runner on another host has no pid here, so pid
+		 -- liveness could only ever cover the local deployment. The epoch fence is
+		 -- the structural closure: whichever process lost the row cannot write to
+		 -- it again, alive or not (PUB-13).
 		 WHERE state = 'running'
 		   AND (heartbeat_at IS NULL OR heartbeat_at < now() - make_interval(secs => $1))
 		 RETURNING job_id, state`,

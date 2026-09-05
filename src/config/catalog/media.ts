@@ -1269,9 +1269,11 @@ DEDALO_TOOL_EXPORT_FOLDER_PATH="/srv/exports/dedalo"
 		typeLabel: 'int',
 		doc: `This parameter defines the largest file, in BYTES, that Dédalo will accept in an upload.
 
-The limit is enforced twice. The server publishes it to the client (the upload service reads it when it starts), so the interface can refuse an oversize file before a single byte travels and tell the user why; and the server checks the size of every part it receives, so the limit holds even against a client that ignores it.
+The limit is enforced at three points, and it is a ceiling on the FILE, not on one request. The server publishes it to the client (the upload service reads it when it starts), so the interface can refuse an oversize file before a single byte travels and tell the user why; the server checks the size of every part it receives, so a single oversize request is refused whatever the client believes; and, because a chunked upload is many requests, the server also keeps a running total per transfer and sums the parts before it assembles them, so a file that only exceeds the limit once its chunks are added together is refused too.
 
-By default the limit is 2 GB (\`2147483648\`). Raise it for collections of long, high-resolution video — and remember that the web server in front of Dédalo has a limit of its own (\`client_max_body_size\` in nginx, \`LimitRequestBody\` in Apache) which must be at least as large, or the upload dies before it reaches the engine. Splitting the file into chunks (DEDALO_UPLOAD_SERVICE_CHUNK_FILES) is what keeps a single request small; this ceiling applies to the file as a whole.
+A transfer refused for size is QUARANTINED, never deleted: the parts already received stay on disk under a rejection marker, and are released by cancelling the upload or by the ordinary 24 h sweep of staged files.
+
+By default the limit is 2 GB (\`2147483648\`). Raise it for collections of long, high-resolution video — and remember that the web server in front of Dédalo has a limit of its own (\`client_max_body_size\` in nginx, \`LimitRequestBody\` in Apache) which must be at least as large, or the upload dies before it reaches the engine. Splitting the file into chunks (DEDALO_UPLOAD_SERVICE_CHUNK_FILES) is what keeps a single request small; it does not raise this ceiling.
 
 \`\`\`bash
 DEDALO_UPLOAD_MAX_SIZE_BYTES=2147483648

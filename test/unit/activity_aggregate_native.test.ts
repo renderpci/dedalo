@@ -79,6 +79,8 @@ function mediaRecord(overrides: Partial<JobRecord> = {}): JobRecord {
 	return {
 		id: 'av_transcode_1_1',
 		kind: 'av_transcode',
+		lane: 'media',
+		deadline_ms: 0,
 		pid: null,
 		owner_pid: process.pid,
 		user_id: 42,

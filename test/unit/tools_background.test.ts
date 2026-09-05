@@ -54,6 +54,9 @@ function makeLoaded(backgroundRunnable: readonly string[] | undefined): {
 		name: 'tool_demo',
 		apiActions: { long_job: spec },
 		...(backgroundRunnable !== undefined ? { backgroundRunnable } : {}),
+		// Every backgroundRunnable action declares its lane (PERF-11); the
+		// undeclared case has its own test below.
+		backgroundLanes: { long_job: 'maintenance' as const },
 	};
 	return { loaded: { module, dir: '/x', rootIndex: 0 }, spec, ran };
 }
@@ -76,6 +79,21 @@ describe('background executor', () => {
 			scheduleBackground(loaded, 'long_job', spec, {}, PRINCIPAL, -1),
 		);
 		expect(refusal?.code).toBe('tool.background_not_allowed');
+		expect(ran.value).toBe(false); // never scheduled
+	});
+
+	test('refuses an allowed action that declares NO job lane (PERF-11)', () => {
+		const { loaded, spec, ran } = makeLoaded(['long_job']);
+		// The lane declaration is removed: the action IS backgroundable, but the
+		// module never said which budget it spends. Filing it into a fallback lane
+		// is how one class of work starts starving another, so it is a refusal —
+		// and with its OWN code, because `background_not_allowed` would name the
+		// wrong cause.
+		const unlaned = { ...loaded, module: { ...loaded.module, backgroundLanes: {} } };
+		const refusal = refusalOf(() =>
+			scheduleBackground(unlaned, 'long_job', spec, {}, PRINCIPAL, -1),
+		);
+		expect(refusal?.code).toBe('tool.background_lane_undeclared');
 		expect(ran.value).toBe(false); // never scheduled
 	});
 

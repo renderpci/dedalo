@@ -563,7 +563,14 @@ describe('production entrypoint coverage tripwire (GATE-41)', () => {
 		expect(spawnedByTests([bystander], exists).has(orphan.path)).toBe(false);
 		// and the real tree: install_e2e spawns scripts/install.ts through its CLI const
 		expect(SPAWNED.has(join(ROOT, 'scripts/install.ts'))).toBe(true);
-		expect(SPAWNED.has(join(ROOT, 'src/diffusion/runner.ts'))).toBe(false);
+		// …and queue_fence_tripwire spawns the diffusion runner itself, to measure
+		// that a runner started without a valid --epoch refuses (PUB-13): the
+		// collector must SEE that spawn, or the runner would count as unreached.
+		expect(SPAWNED.has(join(ROOT, 'src/diffusion/runner.ts'))).toBe(true);
+		// The negative half stays: an import.meta.main entrypoint that the suite
+		// only IMPORTS (mcp/server.ts — buildMcpServer in mcp_write_tools.test.ts)
+		// is not collected, so spawnedByTests does not over-collect from imports.
+		expect(SPAWNED.has(join(ROOT, 'src/ai/mcp/server.ts'))).toBe(false);
 
 		// the unguarded CLI shape (rag_drain before GATE-41) is a top-level side effect
 		expect(

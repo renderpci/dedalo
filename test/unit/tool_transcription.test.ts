@@ -1596,9 +1596,13 @@ describe('a cancelled repair job does not lock the model out', () => {
 		// A REAL job record, stopped before its worker could run — exactly what the
 		// jobs UI's cancel button does to a queued job. Nothing else reaches the
 		// worker, so nothing else clears a flag.
-		const record = mediaJobs.submit('test_repair_guard', async () => {
-			throw new Error('the worker must never run for a job stopped while queued');
-		});
+		const record = mediaJobs.submit(
+			'test_repair_guard',
+			async () => {
+				throw new Error('the worker must never run for a job stopped while queued');
+			},
+			{ lane: 'transcription' },
+		);
 		mediaJobs.stop(record.id);
 
 		const schedule: ScheduleRepair = () => ({
@@ -1631,12 +1635,16 @@ describe('a cancelled repair job does not lock the model out', () => {
 		// The guard must still guard: a job the registry considers live blocks both
 		// write actions on that model (they write the same files).
 		let release: (() => void) | null = null;
-		const record = mediaJobs.submit('test_repair_guard_live', async () => {
-			await new Promise<void>((resolve) => {
-				release = resolve;
-			});
-			return true;
-		});
+		const record = mediaJobs.submit(
+			'test_repair_guard_live',
+			async () => {
+				await new Promise<void>((resolve) => {
+					release = resolve;
+				});
+				return true;
+			},
+			{ lane: 'transcription' },
+		);
 		const schedule: ScheduleRepair = () => ({
 			...ok(true, { requestId: 'tool-transcription-test' }),
 			job_id: record.id,

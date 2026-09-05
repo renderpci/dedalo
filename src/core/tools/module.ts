@@ -16,6 +16,7 @@
  */
 
 import type { ApiEnvelope } from '../errors/schema.ts';
+import type { JobLane } from '../media/jobs.ts';
 import type { Principal } from '../security/permissions.ts';
 import { currentRequestContext } from '../security/request_context.ts';
 
@@ -237,6 +238,18 @@ export interface ToolServerModule {
 	 * fork even if the client requests one; absent means no background actions.
 	 */
 	backgroundRunnable?: readonly string[];
+	/**
+	 * The JOB LANE each backgroundRunnable action spends its slot from (PERF-11).
+	 *
+	 * REQUIRED for every name in `backgroundRunnable` — `scheduleBackground`
+	 * refuses an undeclared one (`tool.background_lane_undeclared`) and
+	 * `job_lane_census_tripwire` refuses it at build time. Deliberately NOT
+	 * derivable from the tool or action name: a prefix rule silently files a new
+	 * action into whatever lane its name happens to resemble, which is precisely
+	 * how one class of work starts starving another without anyone editing a
+	 * budget.
+	 */
+	backgroundLanes?: Readonly<Record<string, JobLane>>;
 	/**
 	 * Availability hook (PHP is_available) — decides whether the tool shows in a
 	 * given element's toolbar. MUST be fast and side-effect-free (the result is

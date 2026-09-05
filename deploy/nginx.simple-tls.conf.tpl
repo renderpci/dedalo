@@ -44,7 +44,7 @@ server {
 server {
 	listen 443 ssl;
 	listen [::]:443 ssl;
-	http2 on;                       # multiplexes the ~100-module client boot graph
+	http2 on;                       # multiplexes the 36-module client boot graph
 	server_name @@SERVER_NAME@@;
 
 	ssl_certificate     @@SSL_CERT@@;

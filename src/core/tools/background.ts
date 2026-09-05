@@ -164,6 +164,18 @@ export function scheduleBackground(
 		});
 	}
 
+	// THE LANE, read from the module's declaration — never inferred from the tool
+	// or action name (PERF-11). An undeclared lane is a refusal, not a default:
+	// silently filing the job into a fallback lane is how the starvation this
+	// change removes would come back, and `tool.background_not_allowed` would lie
+	// about the cause, so the refusal has its own closed-registry code.
+	const lane = loaded.module.backgroundLanes?.[method];
+	if (lane === undefined) {
+		throw new DedaloError('tool.background_lane_undeclared', {
+			coordinates: { tool: loaded.module.name, method },
+		});
+	}
+
 	const job: BackgroundJob = {
 		id: '',
 		tool: loaded.module.name,
@@ -219,8 +231,9 @@ export function scheduleBackground(
 			}
 		},
 		// The owner: these ids are derived (guessable), so the status stream must be
-		// able to refuse a poll from another user (api/process_status.ts).
-		{ userId },
+		// able to refuse a poll from another user (api/process_status.ts). The lane
+		// is the module's own declaration (see above).
+		{ lane, userId },
 	);
 
 	job.id = record.id;

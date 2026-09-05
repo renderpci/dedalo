@@ -20,11 +20,12 @@
  * (:1375), component_av build_version (:1437, async transcode via jobs).
  */
 
-import { copyFileSync, existsSync } from 'node:fs';
+import { existsSync } from 'node:fs';
+import { copyFile } from 'node:fs/promises';
 import { config } from '../../config/config.ts';
 import { canonicalCoverExtension, type MediaTypeSpec } from '../concepts/media.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
-import { withTempSibling, writeAtomically, writeAtomicallySync } from './atomic.ts';
+import { withTempSibling, writeAtomically } from './atomic.ts';
 import {
 	assertWritableTargetExtension,
 	backgroundForTarget,
@@ -588,22 +589,36 @@ export async function buildPdfCovers(
 	return { created, errors };
 }
 
-/** Copy the original to a target quality with the same extension (PHP base build_version copy). */
-export function copyToQuality(
+/**
+ * Copy the original to a target quality with the same extension (PHP base
+ * build_version copy).
+ *
+ * ASYNCHRONOUS, and that is load-bearing. The bytes here are a WHOLE MEDIA FILE
+ * — a heritage mesh or scanned PDF is routinely hundreds of MB — and this runs on
+ * the REQUEST PATH (tool_upload → processUploadedFile). A `copyFileSync` blocks
+ * the single Bun event loop for the whole copy, so every other request on the
+ * install waits for it (measured: 0 ms on APFS, where the copy is a
+ * copy-on-write clone, but 232 ms for a 1 GB file on NVMe — and the shipped path
+ * is Linux/ext4, which has no clone).
+ *
+ * The sync twin it used to use was defended in-comment as avoiding a floating
+ * rejection from an unawaited `regenerate3d` at the ingest call site. That
+ * defence was stale: every call site already sits inside an async function that
+ * awaits its siblings inside a try/catch. The remedy for an unawaited promise is
+ * an explicit handler at the call site, never a blocked event loop
+ * (gate: test/unit/sync_io_on_request_path_tripwire.test.ts).
+ */
+export async function copyToQuality(
 	spec: MediaTypeSpec,
 	identity: MediaIdentity,
 	quality: string,
 	source: string,
 	extension: string,
 	pathOpts: MediaPathOptions,
-): string {
+): Promise<string> {
 	const target = buildMediaLocation(spec, identity, quality, extension, pathOpts).absolutePath;
-	// SYNCHRONOUS on purpose (writeAtomicallySync, not writeAtomically): this is
-	// called by regenerate3d, which is itself sync and is called UNAWAITED from
-	// ingest/process_uploaded_file.ts. Returning a promise from here would turn a
-	// copy failure into an unhandled rejection three call sites away.
-	return writeAtomicallySync(target, (temp) => {
-		copyFileSync(source, temp);
+	return await writeAtomically(target, async (temp) => {
+		await copyFile(source, temp);
 	});
 }
 
@@ -1207,7 +1222,7 @@ export async function regeneratePdf(
 	const source = resolveMasterSource(spec, identity, pathOpts, 'pdf');
 	if (source === null) return { created: [], errors: [] };
 	const created: string[] = [];
-	created.push(copyToQuality(spec, identity, spec.defaultQuality, source, 'pdf', pathOpts));
+	created.push(await copyToQuality(spec, identity, spec.defaultQuality, source, 'pdf', pathOpts));
 	const errors: string[] = [];
 	// NON-FATAL (2026-08-08): an unwrapped throw here took the COVERS with it — the
 	// jpg cover is the only visual a pdf record has in a list view, so a thumb
@@ -1265,7 +1280,7 @@ export async function regenerateSvg(
 	const source = resolveMasterSource(spec, identity, pathOpts, 'svg');
 	if (source === null) return { created: [], errors: [] };
 	const created: string[] = [];
-	created.push(copyToQuality(spec, identity, spec.defaultQuality, source, 'svg', pathOpts));
+	created.push(await copyToQuality(spec, identity, spec.defaultQuality, source, 'svg', pathOpts));
 	try {
 		created.push(await buildThumbVersion(spec, identity, created[0] as string, pathOpts));
 	} catch (error) {
@@ -1277,15 +1292,22 @@ export async function regenerateSvg(
 }
 
 /** Regenerate a 3D record: web copy (converters are ledgered PHP-dead — naive copy). */
-export function regenerate3d(
+export async function regenerate3d(
 	spec: MediaTypeSpec,
 	identity: MediaIdentity,
 	pathOpts: MediaPathOptions,
 	rawExtension: string,
-): string[] {
+): Promise<string[]> {
 	const source = resolveMasterSource(spec, identity, pathOpts, rawExtension);
 	if (source === null) return [];
 	return [
-		copyToQuality(spec, identity, spec.defaultQuality, source, spec.defaultExtension, pathOpts),
+		await copyToQuality(
+			spec,
+			identity,
+			spec.defaultQuality,
+			source,
+			spec.defaultExtension,
+			pathOpts,
+		),
 	];
 }

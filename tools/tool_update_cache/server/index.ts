@@ -423,4 +423,6 @@ export const tool: ToolServerModule = {
 		},
 	},
 	backgroundRunnable: ['update_cache'],
+	// A stored-data rebuild — operator work (PERF-11 lane declaration).
+	backgroundLanes: { update_cache: 'maintenance' },
 };

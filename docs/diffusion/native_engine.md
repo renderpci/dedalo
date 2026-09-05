@@ -69,7 +69,7 @@ flowchart TB
 
     TD -->|RQO diffuse| API --> Q
     SCHED -->|claim FOR UPDATE SKIP LOCKED| Q
-    SCHED -->|Bun.spawn --job uuid| RUNNER
+    SCHED -->|Bun.spawn --job uuid --epoch n| RUNNER
     RUNNER -->|heartbeat · progress · checkpoint| Q
     Q --> SSE --> TD
     PLAN --> RES --> TRF --> PRJ --> WRT
@@ -84,7 +84,7 @@ Two planes, one codebase:
   stream that *observes the job row* — the stream is a view, not the run.
 - **Data plane (runner process).** A scheduler claims queued jobs
   (`FOR UPDATE SKIP LOCKED`, bounded by `DEDALO_DIFFUSION_MAX_RUNNERS`) and
-  spawns `bun run src/diffusion/runner.ts --job <uuid>`: same codebase, its own
+  spawns `bun run src/diffusion/runner.ts --job <uuid> --epoch <attempt>`: same codebase, its own
   process — own memory ceiling, crash-isolated from the interactive API,
   killable. The runner communicates **exclusively** through the job row
   (heartbeat, progress, checkpoint, terminal state) plus the targets. Because
@@ -189,6 +189,12 @@ dd1758 remains the *user-facing* publication ledger).
 
 - **States:** `queued → running → completed | failed | cancelled`, plus
   `interrupted → queued` (sweeper re-queue, ≤ `max_attempts`).
+- **Lease:** a row can be claimed more than once, so ownership is checked, not
+  assumed. The lease is `(job_id, attempt)`: the claim stamps `attempt`, the
+  scheduler passes it to the runner as `--epoch`, and every write the runner
+  makes is fenced on it — a runner whose row was taken from it writes nothing
+  and aborts. `attempt` only ever moves forward; an admin requeue grants a fresh
+  retry budget by raising `max_attempts`, never by resetting the counter.
 - **Identity:** the server-generated `job_id` UUID is the internal capability;
   the client's deterministic label
   (`process_diffusion_{user}_{element}_{section}`) is the **client-facing**

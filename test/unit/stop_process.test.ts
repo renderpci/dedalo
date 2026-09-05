@@ -79,7 +79,7 @@ describe('dd_utils_api stop_process', () => {
 				sawAbort = signal.aborted;
 				return { done: signal.aborted ? 'aborted' : 'timeout' };
 			},
-			{ userId: -1 },
+			{ lane: 'media', userId: -1 },
 		);
 
 		// Give the worker a tick to start, then stop it through the API handler.

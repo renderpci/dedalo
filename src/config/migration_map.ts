@@ -662,6 +662,18 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_RSVG_CONVERT_PATH',
 	'DEDALO_SVG_THUMB_DPI',
 	'DEDALO_MEDIA_JOB_CONCURRENCY',
+	// THE OTHER LANE BUDGETS AND THE LANE DEADLINES (PERF-11). NEW_IN_V7 by
+	// construction: v6 had one media-job cap and no notion of a work class or of a
+	// per-job deadline at all, so there is no v6 constant any of these could be a
+	// rename of. DEDALO_MEDIA_JOB_CONCURRENCY above IS the media lane's budget and
+	// is neither renamed nor retired.
+	'DEDALO_JOB_LANE_TRANSCRIPTION_CONCURRENCY',
+	'DEDALO_JOB_LANE_RAG_CONCURRENCY',
+	'DEDALO_JOB_LANE_MAINTENANCE_CONCURRENCY',
+	'DEDALO_JOB_DEADLINE_MEDIA_S',
+	'DEDALO_JOB_DEADLINE_TRANSCRIPTION_S',
+	'DEDALO_JOB_DEADLINE_RAG_S',
+	'DEDALO_JOB_DEADLINE_MAINTENANCE_S',
 	'DEDALO_MEDIA_PROCESSES_DIR',
 	// The test-media seam: repoints the media root AND arms the marker guard
 	// (src/core/media/test_media_root.ts). NEW_IN_V7 by construction — v6 had no

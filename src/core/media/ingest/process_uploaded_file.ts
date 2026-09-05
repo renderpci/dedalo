@@ -327,7 +327,7 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 					derivativeErrors.push(...(await regenerateSvg(spec, identity, pathOpts)).errors);
 					break;
 				case 'component_3d':
-					regenerate3d(spec, identity, pathOpts, added.extension);
+					await regenerate3d(spec, identity, pathOpts, added.extension);
 					// A NEW MESH MAKES THE OLD PICTURE A LIE. The posterframe and the
 					// thumb depict the model that was just replaced, and nothing here can
 					// re-render a mesh — so both are RETIRED to deleted/ rather than left

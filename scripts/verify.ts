@@ -250,6 +250,9 @@ const TRIPWIRES = [
 	'test/unit/contrast_ratio_tripwire.test.ts',
 	'test/unit/publication_bounds_tripwire.test.ts',
 	'test/unit/sitebuilder_path_confinement_tripwire.test.ts',
+	'test/unit/job_lane_census_tripwire.test.ts',
+	'test/unit/sync_io_on_request_path_tripwire.test.ts',
+	'test/unit/queue_fence_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

@@ -169,6 +169,153 @@ without editing anything:
 DEDALO_DEV_MODE=true bun run dev
 \`\`\``,
 	},
+	DEDALO_JOB_DEADLINE_MAINTENANCE_S: {
+		type: 'number',
+		scope: 'operator',
+		default: 21600,
+		heading: 'Defining the maintenance job deadline',
+		typeLabel: 'int',
+		doc: `This parameter defines how long, in seconds, a maintenance job may run before Dédalo cancels it.
+
+Maintenance jobs are the work an administrator starts: a code or data update, a cache rebuild, a
+bulk import, a value propagated across records. Six hours by default, which is generous for a
+full cache rebuild of a large collection and far more than any update needs. A job that passes
+its deadline is asked to stop and its record is marked stopped, so the lane is not held for ever
+by work that will never finish.
+
+Set it to \`0\` to switch the deadline off, on an installation whose imports legitimately run
+longer than the default. Raise it rather than switching it off if you can name the ceiling: a
+deadline is what turns a wedged job into a reported one.
+
+\`\`\`bash
+DEDALO_JOB_DEADLINE_MAINTENANCE_S=21600
+\`\`\``,
+	},
+	DEDALO_JOB_DEADLINE_MEDIA_S: {
+		type: 'number',
+		scope: 'operator',
+		default: 0,
+		heading: 'Defining the media job deadline',
+		typeLabel: 'int',
+		doc: `This parameter defines how long, in seconds, a media job may run before Dédalo cancels it.
+
+There is NO deadline by default (\`0\`), and that is deliberate: transcoding a master video is
+legitimately hours of work, and a deadline that killed it would be the fault, not the guard.
+
+Set it on an installation that knows its own ceiling — if nothing you hold should ever take more
+than two hours to convert, \`7200\` turns a stuck conversion into a reported one instead of a lane
+that stays busy for ever. Note that the cancellation reaches the job itself; a conversion program
+already running as a separate process finishes its own work, and the fact that it is still
+holding its lane is reported in the counters.
+
+\`\`\`bash
+DEDALO_JOB_DEADLINE_MEDIA_S=0
+\`\`\``,
+	},
+	DEDALO_JOB_DEADLINE_RAG_S: {
+		type: 'number',
+		scope: 'operator',
+		default: 3600,
+		heading: 'Defining the index job deadline',
+		typeLabel: 'int',
+		doc: `This parameter defines how long, in seconds, an index-building job may run before Dédalo
+cancels it.
+
+These are the jobs that compute the semantic index used by assisted search and by object
+identification. One hour by default, which comfortably covers a pass over a single group of
+records. A job that passes its deadline is asked to stop and its record is marked stopped.
+
+Set it to \`0\` to switch the deadline off, or raise it when you index very large groups in one
+go.
+
+\`\`\`bash
+DEDALO_JOB_DEADLINE_RAG_S=3600
+\`\`\``,
+	},
+	DEDALO_JOB_DEADLINE_TRANSCRIPTION_S: {
+		type: 'number',
+		scope: 'operator',
+		default: 14400,
+		heading: 'Defining the transcription job deadline',
+		typeLabel: 'int',
+		doc: `This parameter defines how long, in seconds, a transcription job may run before Dédalo
+cancels it.
+
+Transcription jobs wait on the speech-to-text service, so they are mostly idle time; four hours
+by default, which covers a long interview with room to spare. A batch that runs longer than this
+is almost always a service that has stopped answering rather than work still in progress, and
+the deadline turns that into a stopped job with a reason instead of a lane held for ever.
+
+Set it to \`0\` to switch the deadline off.
+
+\`\`\`bash
+DEDALO_JOB_DEADLINE_TRANSCRIPTION_S=14400
+\`\`\``,
+	},
+	DEDALO_JOB_LANE_MAINTENANCE_CONCURRENCY: {
+		type: 'number',
+		scope: 'operator',
+		default: 2,
+		heading: 'Defining maintenance job concurrency',
+		typeLabel: 'int',
+		doc: `This parameter defines how many maintenance jobs Dédalo will run at the same time.
+
+Background work in Dédalo runs in lanes, and each class of work has its own budget of
+simultaneous jobs: media derivatives, transcription, index building and the maintenance work an
+administrator starts by hand. The lanes are independent on purpose — a queue of video
+transcodes must never be able to hold up the code update you are waiting for.
+
+Maintenance is the administrator's own lane: code and data updates, cache rebuilds, imports,
+propagations. Two by default, so that starting an import does not have to wait for a cache
+rebuild to finish. Values below 1 are raised to 1.
+
+\`\`\`bash
+DEDALO_JOB_LANE_MAINTENANCE_CONCURRENCY=2
+\`\`\``,
+	},
+	DEDALO_JOB_LANE_RAG_CONCURRENCY: {
+		type: 'number',
+		scope: 'operator',
+		default: 2,
+		heading: 'Defining index job concurrency',
+		typeLabel: 'int',
+		doc: `This parameter defines how many index-building jobs Dédalo will run at the same time.
+
+Background work in Dédalo runs in lanes, and each class of work has its own budget of
+simultaneous jobs: media derivatives, transcription, index building and the maintenance work an
+administrator starts by hand. The lanes are independent on purpose — a queue of video
+transcodes must never be able to hold up the code update you are waiting for.
+
+This lane builds the semantic index used by assisted search and object identification. Two by
+default. Raise it if you index frequently and the machine has cores to spare; lower it to 1 to
+keep the index work out of the way of everything else. Values below 1 are raised to 1.
+
+\`\`\`bash
+DEDALO_JOB_LANE_RAG_CONCURRENCY=2
+\`\`\``,
+	},
+	DEDALO_JOB_LANE_TRANSCRIPTION_CONCURRENCY: {
+		type: 'number',
+		scope: 'operator',
+		default: 2,
+		heading: 'Defining transcription job concurrency',
+		typeLabel: 'int',
+		doc: `This parameter defines how many transcription jobs Dédalo will run at the same time.
+
+Background work in Dédalo runs in lanes, and each class of work has its own budget of
+simultaneous jobs: media derivatives, transcription, index building and the maintenance work an
+administrator starts by hand. The lanes are independent on purpose — a queue of video
+transcodes must never be able to hold up the code update you are waiting for.
+
+Transcription jobs spend nearly all their time waiting on the speech-to-text service rather than
+using this machine, so their slots are cheap to hold: two by default, which keeps a short
+recording from queueing behind a long interview. Raise it if your transcription service handles
+several requests at once. Values below 1 are raised to 1.
+
+\`\`\`bash
+DEDALO_JOB_LANE_TRANSCRIPTION_CONCURRENCY=2
+\`\`\``,
+	},
 	DEDALO_RECONCILE_SCHEDULER_ENABLED: {
 		type: 'boolean',
 		scope: 'operator',

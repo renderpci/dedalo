@@ -83,8 +83,10 @@ describe('diffusion dispatch gate', () => {
 		// systemd's PATH. A bare 'bun' throws inside the tick, AFTER the row is
 		// claimed — leaving a job nobody owns until the stale-heartbeat sweep.
 		const source = await schedulerSource();
-		expect(source).toContain('Bun.spawn([process.execPath,');
-		expect(source).not.toMatch(/Bun\.spawn\(\['bun',/);
+		// The argv is multi-line since the epoch joined it (PUB-13): assert the
+		// interpreter element, not the one-line spelling it used to have.
+		expect(source).toMatch(/Bun\.spawn\(\s*\[\s*process\.execPath,/);
+		expect(source).not.toMatch(/Bun\.spawn\(\s*\[\s*'bun',/);
 	});
 
 	test('a runner that never spawns releases its claim', async () => {
@@ -96,7 +98,7 @@ describe('diffusion dispatch gate', () => {
 			source.indexOf('export async function schedulerTick'),
 		);
 		expect(spawnFn).toContain('catch');
-		expect(spawnFn).toMatch(/finishJob\(jobId, 'failed'/);
+		expect(spawnFn).toMatch(/finishJob\(lease, 'failed'/);
 	});
 });
 
