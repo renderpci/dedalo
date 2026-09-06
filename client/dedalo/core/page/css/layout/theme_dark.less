@@ -115,6 +115,7 @@
 	// colour-coded in dark too, so the ink is dark here as well — audit P1-18).
 	--fg_on_accent:   #16181b;
 	--fg_on_brand:    #16181b; // the brand fill is LIGHT in dark, so its ink is dark (audit P1-18)
+	--fg_on_warning:  #16181b; // the warning fill is BRIGHT in dark (#f08245), so its ink is dark too
 	--bg_fill_inverse: #4a5059; // neutral fill under white ink, AA in dark too (audit P1-18)
 	--border_default: #353a42;
 	--border_strong:  #4a5059;
@@ -255,6 +256,7 @@
 	--ut_accent_hi: #fca340;
 	--ut_accent_soft: rgba(247,138,28,.16);
 	--ut_on_accent: #16181b; // ink on the dark --ut_accent fill (audit P1-18)
+	--ut_on_green: #16181b; // ink on the BRIGHT dark-theme green fill (see light palette)
 	--ut_green: #56d364; // AA as ink on its own 15% tint over the dark canvas (audit P1-18)
 	--ut_green_soft: rgba(63,185,80,.15);
 	--ut_green_glow: rgba(63,185,80,.4);
@@ -269,8 +271,29 @@
 	--ut_grain: .03;
 
 	// ---- TOOL COLORS (dark variants) ----
-	// Tools that alias existing vars inherit their dark values automatically.
-	// Tools with hardcoded hex get dark-optimized variants here.
+	// A tool declares the LIGHT half of its colour tokens in its own sheet's bare
+	// `:root`; the dark half is declared here for the 46 names below. This block
+	// is ONE of three ways a tool colour is correct on the dark axis, not the
+	// rule for all of them (CSS coherence audit 2026-09-05, finding C2 / DESIGN
+	// clause 2.b):
+	//   1. a dark twin HERE — a tool sheet is injected into the main.css document,
+	//      so `:root[data-theme="dark"]` from this file outranks the tool's `:root`;
+	//   2. a dark twin in the tool's OWN `:root[data-theme="dark"]` block
+	//      (tool_print does this for its paper-preview tokens) — equivalent, and
+	//      the only door for a sheet that is loaded into a document WITHOUT
+	//      main.css;
+	//   3. an alias of a palette token (`--tool_cataloging: var(--color_orange_dedalo)`)
+	//      or a DECLARED theme-invariant hue with its reason stated in the tool's
+	//      sheet (tool_diffusion below) — no twin needed.
+	// A token in none of the three keeps its light value under dark, where the
+	// inherited document ink is near-white: that is how a tint meant as a soft
+	// panel becomes a 1.07:1 slab (tool_identify, tool_error_report, measured
+	// 2026-09-05). NOTHING MECHANICAL READS THIS COMMENT TODAY: `theme_token_parity`
+	// pairs four core prefixes only, and the contrast gate judges `main.css`,
+	// not the tool sheets. Until the palette-axis gate the audit prescribes
+	// lands, a twin's PRESENCE is checked by the author and a twin's LEGIBILITY
+	// by nobody — a copied light value here would pass such a gate and still be
+	// unreadable, so choose the value against the ink that lands on it.
 	--tool_dd_label:                  #b0b0b0;
 	--tool_dd_label_border:           #808080;
 	--tool_dev_template:              #ffa040;

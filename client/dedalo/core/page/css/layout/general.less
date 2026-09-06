@@ -14,6 +14,16 @@
 		background-color: @color_white;
 
 		// font size. Note that default browser font size is 16px
+		//
+		// 0.8125rem = 13px, and EVERY dimension in the app is relative to it —
+		// including the shared `.button { width: 1em }` icon box, which is why
+		// every icon button in the client measures 13x13 CSS px, 29% of the
+		// area WCAG 2.2 SC 2.5.8 asks for (24x24). That is the root cause of
+		// the 2026-09 audit's finding M2, and it is recorded here rather than
+		// fixed here: changing this number moves every length in the client at
+		// once, which is a look-and-feel decision, not a defect fix. The fix
+		// that belongs to M2 is a hit-box floor on the shared button base
+		// (a `--hit_min` token), which leaves the type scale alone.
 		font-size: 0.8125rem;
 
 		-webkit-font-smoothing: antialiased;
@@ -141,7 +151,7 @@
 	.maintenance_container {
 		padding: 1.5rem;
 		background-color: @color_orange_dedalo;
-		color: @color_white;
+		color: var(--fg_on_brand);
 		font-size: 1.5rem;
 		text-align: center;
 		box-shadow: inset 0px -1px 0 @color_grey_13;
@@ -678,7 +688,7 @@
 	.warning_text {
 		background-color: @color_orange_dedalo !important;
 		transition: background-color 0.3s ease;
-		color: @color_white;
+		color: var(--fg_on_brand);
 	}
 
 // success

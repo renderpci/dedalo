@@ -7,6 +7,12 @@
   --tool_tc: #000000;
   --tool_tc_border: #000000;
   --tool_tc_border_strong: #000000;
+  --tool_tc_terminal_bg: #000000;
+  --tool_tc_terminal_fg: #00e801;
+}
+:root[data-theme="dark"] {
+  --tool_tc_terminal_bg: #000000;
+  --tool_tc_terminal_fg: #00e801;
 }
 .wrapper_tool.tool_tc .spinner {
   background-color: var(--tool_tc);
@@ -32,9 +38,9 @@
   padding: 0;
 }
 .wrapper_tool.tool_tc > .content_data .tc_management_container .button_apply {
-  color: #00e801;
+  color: var(--tool_tc_terminal_fg);
   text-transform: capitalize;
-  background-color: var(--tool_tc);
+  background-color: var(--tool_tc_terminal_bg);
   border-color: var(--tool_tc_border);
 }
 .wrapper_tool.tool_tc > .content_data .tc_management_container .button_apply:focus {

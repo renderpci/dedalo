@@ -116,8 +116,75 @@
 	@menu_bg_active_border              : var(--menu_bg_active_border);
 	@service_bg_dark                    : var(--service_bg_dark);
 
-// break points
-	@width_break_point_0 : 1024px; // desktop small;
-	@width_break_point_1 : 960px; // mobile
-	@width_break_point_2 : 780px; // images minimum width
-	@width_break_point_3 : 1185px; // menu break;
+// ---- BREAK POINTS — THE responsive scale -----------------------------------
+//
+// This block is the RECORD of every width the client is allowed to branch on.
+// A raw length inside an `@media` is drift: it says nothing about which layout
+// mode it belongs to, and the next author copies the number instead of the
+// meaning. Every tier below therefore carries WHAT IT IS FOR, not just a value.
+//
+// The record is stated here because it was NOT stated for three years, and the
+// omission cost exactly what an unstated record costs: `@width_break_point_2`
+// (780px, "images minimum width") was declared at inception and referenced by
+// ZERO rules ever — the scale advertised four tiers and had three. Deleted
+// 2026-09-05; the CSS coherence audit's finding M5 is its obituary.
+//
+// The numeric names are HISTORICAL and are NOT ordered by width (_0 is 1024,
+// _1 is 960, _3 is 1185). They are kept because ~100 rules across 40 sheets
+// name them; new tiers get a descriptive name instead. Read the comment, never
+// the ordinal.
+//
+// Values are `px` on purpose. Inside an `@media` condition `rem` resolves
+// against the BROWSER's initial font size (16px), not against this app's 13px
+// root (general.less), so a `rem` threshold silently means something ~23%
+// wider than its author computed — the trap `installer.less`'s `48rem` fell
+// into. If a tier ever needs to follow the user's font preference, that is a
+// deliberate decision and it says so on the line.
+
+	// Menu chrome. Above it the menu bar lays out at full width; below it the
+	// bar's side items compact. NOTE the hamburger swap itself is NOT gated on
+	// this width — it is overflow-driven (a ResizeObserver on the bar height,
+	// view_default_edit_menu.js), which is correct for a bar whose length
+	// depends on the install's ontology rather than on the viewport.
+	@width_break_point_3 : 1185px;
+
+	// Desktop small. The tier at which the app stops being a multi-column
+	// desktop: the list view drops to a labelled card stack, the inspector
+	// gives up its fixed rail, section columns collapse, and the root font
+	// size steps up for legibility (general.less). ~64 rules.
+	@width_break_point_0 : 1024px;
+
+	// Tablet. The tier at which components stop sharing a row: every edit
+	// field goes 100% wide, button rows and label/value pairs reflow. ~98
+	// rules — the most used tier in the app.
+	@width_break_point_1 : 960px;
+
+	// Phone. Added 2026-09-05 (audit finding M3). Until then the SMALLEST
+	// app-wide tier was 960px, so a 390px phone — which `index.html`'s
+	// `width=device-width` viewport meta guarantees really is laid out at 390
+	// CSS px — rendered the TABLET design and nothing else.
+	//
+	// HONEST SCOPE: this tier is the attachment point, not a phone layout.
+	// No phone layout exists yet; designing one is a design project, not a
+	// value. What lives here today is widget-level narrowing that was already
+	// being written against private literals (520px, 48rem) and now shares one
+	// threshold. Rules that make the cataloguing surfaces usable on a phone
+	// belong here when they are designed.
+	@width_break_point_phone : 600px;
+
+	// Ultra-wide. NOT a layout mode: an opportunistic enhancement for very
+	// large displays (a widget that shows more columns when there is room).
+	// Declared here so its one site stops being a bare literal; it is a
+	// min-width, the only one in the scale that is not a `+ 1` complement of
+	// a tier above.
+	@width_break_point_ultra_wide : 2000px;
+
+	// The narrowest viewport the layout is INTENDED to survive.
+	//
+	// It is deliberately NOT a `@width_break_point_*` name and no `@media` may
+	// reference it: it is a floor, not a threshold. It exists so that "does
+	// the app work on a phone?" has a number to be answered against instead of
+	// an assumption — today the honest answer is NO (nothing below the tablet
+	// tier is designed), and the viewport-matrix gate, when it lands, renders
+	// the cataloguing surfaces at this width and judges them.
+	@min_target_viewport : 360px;

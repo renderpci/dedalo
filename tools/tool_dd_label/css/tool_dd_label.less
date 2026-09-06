@@ -8,9 +8,41 @@
 @import (once) '../../../client/dedalo/core/page/css/layout/vars';
 
 // local vars
+//
+// THE IDENTITY GREY IS AN EDGE, NOT A FILL (CSS coherence audit 2026-09-06,
+// DESIGN clause 2.c). `--tool_dd_label` is what names this tool: tool_common
+// demotes it to the 4px top edge of the header, and the spinner reads it. At
+// #818181 it is a MID-TONE, so it cannot carry text — the label-matrix header
+// painted the theme ink on it at 3.90:1 in light (3.87:1 on the redesign line),
+// under the 4.5:1 floor. Darkening the identity to buy that contrast would take
+// the tool's colour away from the edge that is its only name, so the fill splits
+// off from the hue instead: the same split the brand made
+// (--color_orange_dedalo fill / --fg_on_brand ink) and the redesign line makes
+// (--accent / --accent-text).
+//
+// The fill is declared PER AXIS because the ink it carries is `@color_white`,
+// which a tool sheet reads as the THEME's surface ink — #ffffff in light,
+// #1b1d20 in dark — so the two axes need opposite lightness:
+//   light  #6b6b6b under #ffffff = 5.33:1 (5.29:1 under the redesign #fffefc)
+//   dark   theme_dark already inverts the identity grey to #b0b0b0, a light band
+//          that carries the dark ink at 7.79:1 (7.15:1 redesign-dark) — so in
+//          dark the fill IS the identity hue and the theme's own inversion
+//          stands untouched. Nothing about the dark appearance changes here.
 :root {
 	--tool_dd_label: #818181;
-	--tool_dd_label_border: #5b5b5b;
+	// The NAME column's deeper twin. Deepened with the fill (#4a4a4a on #6b6b6b
+	// = 1.66:1, the same step #5b5b5b on #818181 gave = 1.74:1) so the two-tone
+	// header keeps the separation it was designed with; 8.86:1 under white ink.
+	// (!) Its DARK value lives in theme_dark.less (#808080) and is 4.28:1 under
+	// the dark ink — 3.93:1 under redesign-dark. The static gate cannot see that
+	// pair (this cell inherits its ink from the rule above), and the palette file
+	// is not this tool's to edit; the fix belongs with that declaration.
+	--tool_dd_label_border: #4a4a4a;
+	--tool_dd_label_fill: #6b6b6b;
+}
+// dark theme override (self-contained — the tool's own tokens, never a palette name)
+:root[data-theme="dark"] {
+	--tool_dd_label_fill: var(--tool_dd_label);
 }
 @tool_color : var(--tool_dd_label);
 
@@ -50,7 +82,9 @@
 					>.label {
 						padding: 0.6em;
 						text-align: center;
-						background-color: @tool_color;
+						// the deepened fill, never the identity hue: this cell
+						// carries text (see the :root header)
+						background-color: var(--tool_dd_label_fill);
 						color: @color_white;
 						font-weight: 400;
 						z-index: 2;

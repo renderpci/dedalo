@@ -119,6 +119,24 @@
 
 	// ---- COLOR PALETTE (LIGHT) ----
 	// Each token is overridden under `:root[data-theme="dark"]` in theme_dark.less.
+	//
+	// THE GREY RAMP IS STRUCTURAL, NOT TONAL (CSS coherence audit 2026-09-05,
+	// finding C16 / DESIGN clause 2.a). The ordinal in `--color_grey_N` names a
+	// slot, not a brightness rank: the light ramp was never monotonic (grey_4 is
+	// darker than grey_3 since the first commit), and the P1-18 AA retune of
+	// grey_8 / grey_7 / grey_6 — three steps darkened to serve TEXT — left grey_6
+	// (L 0.150) and grey_8 (L 0.150) indistinguishable with grey_7 (L 0.133) the
+	// darkest of the three. That order is NOT restored here, on purpose: a
+	// re-ordering would move ~94 ink sites that still read these three steps and
+	// would fight the contrast gate on the next AA retune, and a monotonicity gate
+	// was rejected for the same reason (it would have been red before P1-18 and
+	// cannot see a 1.09:1 adjacent step). The direction of travel is the other
+	// way round: ink moves OFF the ramp onto the role tokens below
+	// (`--fg_default` / `--fg_muted` / `--field_label_fg` …, "SEMANTIC SURFACE
+	// TOKENS"), the ramp stays for borders, dividers and canvases
+	// (`engineering/ACCESSIBILITY.md`, `--bg_fill_inverse`), and once no text
+	// reads a grey ordinal its tonal order stops mattering. Do not add a text
+	// consumer to a ramp step; do not retune a step to serve one.
 	--color_white:                    #ffffff;
 	--color_grey_16:                  #fcfcfc; // used in list rows background
 	--color_grey_15:                  #f6f6f6; // used in section record column_section_id background
@@ -152,17 +170,27 @@
 	--selection_bg_blur:              #d9d9d9; // CKEditor default, kept in light
 
 	--color_orange:                   #f8b544; // used in security read only option
-	// THE ACCENT, AT AA (audit P1-18 / CLI-23). This token is a UI ACCENT, not the
-	// logo file: it is a filled surface that carries white text in 16 rules —
-	// every modal title bar, the login's primary button, the area buttons, the
-	// thesaurus badges — and at the old #f78a1c that pairing was 2.44:1, well
-	// under the 4.5:1 floor, for the DEFAULT theme of every user who never opens
-	// the theme switch. The dark palette already retunes this same token to a
-	// teal, which is the proof that the value is themeable and the brand lives in
-	// the logo asset. `_bright` keeps the original hue for DECORATIVE use (a rule,
-	// a border, a glyph on white) where no text sits on it.
-	--color_orange_dedalo:            #ad5e0d; // Dédalo accent (AA under white text: 4.83:1)
-	--color_orange_dedalo_bright:     #f78a1c; // the bright logo orange — decoration only, never behind text
+	// THE BRAND ACCENT. #f78a1c is Dédalo's official orange and this token
+	// carries it, unmodified, in the default theme. That is a brand fact, not a
+	// tunable: an institution's identity colour is not ours to darken.
+	//
+	// The AA problem P1-18 was solving is real, but it was solved at the wrong
+	// end. #f78a1c is a LIGHT fill (relative luminance .38): white ink on it is
+	// 2.44:1, far under the 4.5:1 floor. P1-18 fixed that by darkening the fill
+	// to #ad5e0d — which bought AA by giving up the brand. The fill was never
+	// the defect; the INK was. Dark ink on #f78a1c is 7.29:1, comfortably AA,
+	// and keeps the orange exactly as the institution specifies it.
+	//
+	// So the pairing rule is: this token is a FILL, and the ink that goes on it
+	// is `--fg_on_brand` (below), never `--color_white`. The redesign line
+	// reached the same conclusion independently and split fill from text ink for
+	// the same reason ("pure orange is too light for text on near-white").
+	//
+	// `--color_orange_dedalo_bright` was a second declaration of this same hue,
+	// kept "for decoration only"; it had ZERO consumers ever and was removed
+	// 2026-09-05 (CSS coherence audit, clause 2.b leg 4). There is one brand
+	// orange and this is it.
+	--color_orange_dedalo:            #f78a1c; // Dédalo official orange. FILL ONLY — ink is --fg_on_brand (7.29:1)
 	--color_warning:                  #c4511d; // used to show alert warning text in inspector. AA under white text (was #ed6223, 3.30:1)
 	--color_mandatory:                #ffeaea; // used in mandatory components (light red)
 	--color_red_light:                #ff9e87; // used in indexation tool (light red)
@@ -220,10 +248,18 @@
 	// dividers) and must not be darkened to serve one use, so the use gets its own
 	// token: dark in BOTH themes, because the ink on it is white in both.
 	--bg_fill_inverse: #666666;
-	// The ink on the BRAND fill (--color_orange_dedalo). It flips per theme: the
-	// light accent is dark orange and takes white; the dark accent is a bright
-	// amber and takes near-black. One token, so no rule has to know which.
-	--fg_on_brand:     #ffffff;
+	// The ink on the BRAND fill (--color_orange_dedalo). The brand orange is a
+	// LIGHT fill in BOTH themes, so its ink is dark in both: #16181b on #f78a1c
+	// is 7.29:1. It was #ffffff here only for as long as the light palette
+	// darkened the fill to #ad5e0d to make white work; with the official orange
+	// restored (see the token's header) white ink would be 2.44:1.
+	// One token, so no rule has to know which theme it is in — and no rule may
+	// put --color_white on the brand fill.
+	--fg_on_brand:     #16181b;
+	// Ink on the --color_warning FILL. A THIRD flipping ink: warning is DARK in
+	// light (#c4511d) and BRIGHT in dark (#f08245), i.e. the opposite lightness to
+	// the brand fill in the same theme, so it cannot share --fg_on_brand.
+	--fg_on_warning:   #ffffff;
 	--border_default:  var(--color_grey_13);
 	--border_strong:   var(--color_grey_11);
 	--shadow_default:  rgba(0, 0, 0, 0.1);
@@ -331,7 +367,7 @@
 	--modal_content_shadow:       var(--shadow-4);
 	--modal_header_bg:            var(--color_orange_dedalo);
 	--modal_header_shadow:        var(--shadow-2);
-	--modal_header_color:         var(--color_white);
+	--modal_header_color:         var(--fg_on_brand); // brand fill carries dark ink (7.29:1)
 	--modal_btn_color:            var(--color_white);
 	--modal_btn_hover_color:      var(--color_black);
 	--modal_mini_header_bg:       var(--color_orange_dedalo);
@@ -407,7 +443,12 @@
 	--ut_accent: @color_orange_dedalo;
 	--ut_accent_hi: #fca340;
 	--ut_accent_soft: rgba(247,138,28,.13);
-	--ut_on_accent: #ffffff; // ink on --ut_accent (the Dédalo accent fill): AA at 4.8:1 (audit P1-18)
+	--ut_on_accent: #16181b; // ink on --ut_accent (the brand orange fill): 7.29:1
+	// Ink on the --ut_green FILL. Flips per theme like --fg_on_brand: the light
+	// green is dark and takes white, the dark green is bright and takes near-black.
+	// It is NOT --ut_on_accent: that one belongs to the orange fill, and the two
+	// fills have opposite lightness in the same theme.
+	--ut_on_green: #ffffff;
 	--ut_green: #157030;
 	--ut_green_soft: rgba(26,127,55,.12);
 	--ut_green_glow: rgba(26,127,55,.3);

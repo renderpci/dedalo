@@ -133,7 +133,7 @@
 }
 .wrapper_tool.tool_import_dedalo_csv > .content_data > .files_list > .file_item .warning {
   background-color: var(--color_orange_dedalo);
-  color: var(--color_white);
+  color: var(--fg_on_brand);
   padding: 0.5rem;
   border-radius: 3px;
 }

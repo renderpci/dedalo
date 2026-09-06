@@ -168,7 +168,10 @@ HERMETIC_TRIPWIRES=(
 	test/unit/verify_selector_selftest.test.ts
 	test/unit/build_context_secret_tripwire.test.ts
 	test/unit/vendor_advisory_tripwire.test.ts
-	test/unit/theme_token_parity.test.ts
+	test/unit/palette_axis_parity_tripwire.test.ts
+	test/unit/css_corpus_tripwire.test.ts
+	test/unit/colour_literal_ratchet_tripwire.test.ts
+	test/unit/breakpoint_record_tripwire.test.ts
 	test/unit/crap_complexity_ratchet.test.ts
 	test/unit/read_door_acl_tripwire.test.ts
 	test/unit/action_scope_binding_tripwire.test.ts

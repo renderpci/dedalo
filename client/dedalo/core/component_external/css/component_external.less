@@ -37,6 +37,24 @@
 * cataloguer deciding whether to trust what is on screen needs to tell them
 * apart without hovering. They are given different colours AND different
 * borders, so the difference survives a monochrome print and colour-blindness.
+*
+* THE COLOURS ARE LITERALS, PAIRED PER RULE, PER THEME. Each state paints its own
+* ink AND its own fill in one rule, so the pair is judged as a pair by
+* `contrast_ratio_tripwire` and no palette inversion can split it (the bug the
+* mosaic chips had: a fixed fill under a flipping ink). The cost of that choice
+* is that a literal cannot follow the theme by itself: the light chips below
+* were born (2026-08-06) without a dark half and rendered as 14–15:1 pastel slabs
+* on the dark card — legible, but the loudest thing on the page, for a marker
+* whose whole design is "visible without shouting". The `:root[data-theme="dark"]`
+* block at the end carries one twin per state: a dark tint of the same hue
+* under a light ink, the same border STYLE (the style is the colour-blind
+* channel and does not change), and a border lifted so the edge still reads on
+* the dark ground. Every dark pair was measured, not eyeballed (WCAG 2.1):
+*   ink on chip ≥ 6.27:1, border on chip ≥ 3.21:1, border on --bg_surface
+*   #1b1d20 ≥ 4.02:1. The palette's semantic tokens are not consumed here on
+* purpose: no role token carries "stale amber" or "outage red", and pointing
+* a state at `--color_hilite` / `--color_mandatory` would tie its meaning to
+* whatever those are retuned for next.
 */
 .external_source_status {
 	display: inline-block;
@@ -142,5 +160,50 @@
 		background-color: #ededed;
 		border-color: #9a9a9a;
 		border-style: dashed;
+	}
+
+	// DARK — one twin per state (see the header). Only colours: the border
+	// styles and widths above are the theme-independent channel and cascade
+	// through untouched. Ratios are ink/chip · border/chip · border/#1b1d20.
+	:root[data-theme="dark"] & {
+		&.state_stale {
+			color: #f6c95a;             // 8.39:1
+			background-color: #3b2f0e;
+			border-color: #c99a1e;      // 5.08:1 · 6.54:1
+		}
+		// unavailable / timeout / circuit_open share the one alarm family in
+		// light; they share it here too, still told apart by border style.
+		&.state_unavailable,
+		&.state_timeout,
+		&.state_circuit_open {
+			color: #ffab9e;             // 8.45:1
+			background-color: #3f1a15;
+			border-color: #d65a48;      // 3.95:1 · 4.36:1
+		}
+		&.state_not_found,
+		&.state_unknown {
+			color: #cfd4dc;             // 8.66:1
+			background-color: #2e3238;
+			border-color: #7c838e;      // 3.37:1 · 4.42:1
+		}
+		&.state_disabled {
+			color: #aab0b8;             // 6.77:1 — quieter than not_found, as in light
+			background-color: #25282d;
+			border-color: #767c86;      // 3.52:1 · 4.02:1
+		}
+		// The one state that asks for a human keeps its saturated fill in both
+		// themes (white on it is 8.16:1 either way); only the border moves,
+		// because light's #58156f is 1.41:1 against the dark card and the edge
+		// would vanish.
+		&.state_misconfigured {
+			color: #ffffff;             // 8.16:1
+			background-color: #7c1fa2;
+			border-color: #c98ae6;      // 3.21:1 · 6.65:1
+		}
+		&.state_ok {
+			color: #b0c8f5;             // 8.08:1
+			background-color: #1f2d4c;
+			border-color: #5b83c4;      // 3.57:1 · 4.41:1
+		}
 	}
 }//end .external_source_status

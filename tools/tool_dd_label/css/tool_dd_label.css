@@ -5,7 +5,11 @@
 */
 :root {
   --tool_dd_label: #818181;
-  --tool_dd_label_border: #5b5b5b;
+  --tool_dd_label_border: #4a4a4a;
+  --tool_dd_label_fill: #6b6b6b;
+}
+:root[data-theme="dark"] {
+  --tool_dd_label_fill: var(--tool_dd_label);
 }
 .wrapper_tool.tool_dd_label .spinner {
   background-color: var(--tool_dd_label);
@@ -33,7 +37,7 @@
 .wrapper_tool.tool_dd_label > .content_data > .label_matix > .row.label_header > .label {
   padding: 0.6em;
   text-align: center;
-  background-color: var(--tool_dd_label);
+  background-color: var(--tool_dd_label_fill);
   color: var(--color_white);
   font-weight: 400;
   z-index: 2;

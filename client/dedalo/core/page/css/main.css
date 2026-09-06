@@ -564,8 +564,7 @@ template {
   --selection_fg: var(--color_black);
   --selection_bg_blur: #d9d9d9;
   --color_orange: #f8b544;
-  --color_orange_dedalo: #ad5e0d;
-  --color_orange_dedalo_bright: #f78a1c;
+  --color_orange_dedalo: #f78a1c;
   --color_warning: #c4511d;
   --color_mandatory: #ffeaea;
   --color_red_light: #ff9e87;
@@ -607,7 +606,8 @@ template {
   --fg_inverse: var(--color_white);
   --fg_on_accent: var(--color_grey_1);
   --bg_fill_inverse: #666666;
-  --fg_on_brand: #ffffff;
+  --fg_on_brand: #16181b;
+  --fg_on_warning: #ffffff;
   --border_default: var(--color_grey_13);
   --border_strong: var(--color_grey_11);
   --shadow_default: rgba(0, 0, 0, 0.1);
@@ -676,7 +676,7 @@ template {
   --modal_content_shadow: var(--shadow-4);
   --modal_header_bg: var(--color_orange_dedalo);
   --modal_header_shadow: var(--shadow-2);
-  --modal_header_color: var(--color_white);
+  --modal_header_color: var(--fg_on_brand);
   --modal_btn_color: var(--color_white);
   --modal_btn_hover_color: var(--color_black);
   --modal_mini_header_bg: var(--color_orange_dedalo);
@@ -732,7 +732,8 @@ template {
   --ut_accent: var(--color_orange_dedalo);
   --ut_accent_hi: #fca340;
   --ut_accent_soft: rgba(247, 138, 28, 0.13);
-  --ut_on_accent: #ffffff;
+  --ut_on_accent: #16181b;
+  --ut_on_green: #ffffff;
   --ut_green: #157030;
   --ut_green_soft: rgba(26, 127, 55, 0.12);
   --ut_green_glow: rgba(26, 127, 55, 0.3);
@@ -834,6 +835,7 @@ template {
   --fg_inverse: #ffffff;
   --fg_on_accent: #16181b;
   --fg_on_brand: #16181b;
+  --fg_on_warning: #16181b;
   --bg_fill_inverse: #4a5059;
   --border_default: #353a42;
   --border_strong: #4a5059;
@@ -938,6 +940,7 @@ template {
   --ut_accent_hi: #fca340;
   --ut_accent_soft: rgba(247, 138, 28, 0.16);
   --ut_on_accent: #16181b;
+  --ut_on_green: #16181b;
   --ut_green: #56d364;
   --ut_green_soft: rgba(63, 185, 80, 0.15);
   --ut_green_glow: rgba(63, 185, 80, 0.4);
@@ -1124,7 +1127,7 @@ pre {
 .maintenance_container {
   padding: 1.5rem;
   background-color: var(--color_orange_dedalo);
-  color: var(--color_white);
+  color: var(--fg_on_brand);
   font-size: 1.5rem;
   text-align: center;
   box-shadow: inset 0px -1px 0 var(--color_grey_13);
@@ -1686,7 +1689,7 @@ li .reset_input select {
 .warning_text {
   background-color: var(--color_orange_dedalo) !important;
   transition: background-color 0.3s ease;
-  color: var(--color_white);
+  color: var(--fg_on_brand);
 }
 .success_text {
   color: var(--color_success);
@@ -2134,7 +2137,7 @@ button.danger:hover {
 button.warning {
   background-color: var(--color_orange_dedalo);
   border-color: var(--color_orange_border);
-  color: var(--color_white);
+  color: var(--fg_on_brand);
 }
 button.warning:before {
   background-color: var(--button-bg-color, var(--color_white)) !important;
@@ -4947,7 +4950,7 @@ input::placeholder {
 }
 .wrapper_area > .buttons > .button {
   background-color: var(--color_orange_dedalo);
-  color: var(--color_white);
+  color: var(--fg_on_brand);
   display: flex;
   width: auto;
   padding: 1em;
@@ -5859,7 +5862,7 @@ dd-modal.dd_confirm .body.content {
 }
 .components_list_container ul li.component_label:hover {
   background-color: var(--color_orange_dedalo) !important;
-  color: var(--color_white);
+  color: var(--fg_on_brand);
 }
 .components_list_container ul li.component_label:active {
   opacity: 0.6;
@@ -6157,7 +6160,7 @@ dd-modal.dd_confirm .body.content {
   padding: 0.75rem;
   padding-left: 1.25rem;
   padding-right: 2rem;
-  color: var(--color_white);
+  color: var(--fg_on_brand);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -7269,7 +7272,7 @@ body:has(.assistant_container.standalone.show) {
   box-shadow: 0 0 0 4px var(--ut_accent_soft);
 }
 .installer.wrapper .step_indicator .step_dot.completed {
-  color: var(--ut_on_accent);
+  color: var(--ut_on_green);
   background: var(--ut_green);
   border-color: var(--ut_green);
 }
@@ -7401,7 +7404,7 @@ body:has(.assistant_container.standalone.show) {
   animation: installer-spin 0.7s linear infinite;
 }
 .installer.wrapper .button_common_mixin.success {
-  color: var(--ut_on_accent);
+  color: var(--ut_on_green);
   background: var(--ut_green);
   box-shadow: 0 2px 12px -3px var(--ut_green_glow);
 }
@@ -7448,7 +7451,7 @@ body:has(.assistant_container.standalone.show) {
   animation: installer-spin 0.7s linear infinite;
 }
 .installer.wrapper button.success {
-  color: var(--ut_on_accent);
+  color: var(--ut_on_green);
   background: var(--ut_green);
   box-shadow: 0 2px 12px -3px var(--ut_green_glow);
 }
@@ -7967,7 +7970,7 @@ body:has(.assistant_container.standalone.show) {
 .installer.wrapper .fade_in {
   animation: installer-fade-in 0.4s ease-out;
 }
-@media (max-width: 48rem) {
+@media screen and (max-width: 600px) {
   .installer.wrapper > .content_data {
     padding: 1.25rem 1rem 4rem;
   }
@@ -8287,7 +8290,7 @@ body:has(.assistant_container.standalone.show) {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color_orange_dedalo);
+  color: var(--color_orange_dark);
   padding: var(--space-3) var(--space-4);
   font-size: 1rem;
   font-weight: 600;
@@ -8448,7 +8451,7 @@ body:has(.assistant_container.standalone.show) {
   background-color: var(--color_orange_dedalo);
   padding: 1rem 0.33rem;
   font-size: 0.78rem;
-  color: var(--color_white);
+  color: var(--fg_on_brand);
 }
 .inspector > .inspector_content_data > .relation_list_container > .relation_list_body {
   contain: content;
@@ -9078,11 +9081,6 @@ body:has(.assistant_container.standalone.show) {
 }
 @media screen and (max-width: 1024px) {
   .wrapper_search > .search_global_container > .search_container_selection .search_group_container .search_group {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-@media screen and (max-width: 1024px) {
-  .wrapper_search > .search_global_container > .search_container_selection .search_group_container .search_group {
     grid-template-columns: 1fr;
   }
 }
@@ -9300,7 +9298,7 @@ body:has(.assistant_container.standalone.show) {
   background-color: var(--color_white);
 }
 .wrapper_search > .search_global_container .search_container_selection_presets > .wrapper_section > .list_body .section_record.selected .wrapper_component {
-  color: var(--color_white);
+  color: var(--fg_on_brand);
 }
 .wrapper_search > .search_global_container .search_container_selection_presets > .wrapper_section > .list_body.no_delete .section_record {
   grid-template-columns: 1.5rem 1.1rem 1fr;
@@ -10873,7 +10871,7 @@ body:has(.assistant_container.standalone.show) {
 }
 .service_upload > .content_data > form > label.hover {
   background-color: var(--color_orange_dedalo);
-  color: var(--color_white);
+  color: var(--fg_on_brand);
   cursor: move !important;
 }
 .service_upload > .content_data > form > label.loading_file {
@@ -13593,7 +13591,7 @@ dd-modal:has(.tool_header) {
   align-items: center;
   gap: 0.5rem;
   padding: 0.85rem 1rem;
-  color: var(--color_white);
+  color: var(--fg_on_brand);
   background-color: var(--color_orange_dedalo);
   font-weight: 600;
   letter-spacing: 0.01em;
@@ -14245,7 +14243,7 @@ dd-modal:has(.tool_header) {
   height: 1.1rem;
   display: grid;
   place-items: center;
-  color: var(--fg_on_brand);
+  color: var(--fg_on_warning);
   background-color: var(--color_warning);
   border-radius: 50%;
   font-size: 0.62rem;
@@ -16548,7 +16546,7 @@ dd-modal:has(.tool_header) {
   font-size: 1.35rem;
   line-height: 1;
 }
-@media (max-width: 520px) {
+@media screen and (max-width: 600px) {
   .wrapper_widget.update_ontology .version_change {
     grid-template-columns: 1fr;
   }
@@ -19387,7 +19385,7 @@ body.inspector_resizing {
   border: 0px;
   padding-left: 3px;
   padding-right: 3px;
-  color: var(--color_white);
+  color: var(--fg_on_brand);
   border-radius: 3px;
   margin: 0px;
   margin-right: 5px;
@@ -20554,6 +20552,24 @@ body.inspector_resizing {
 * cataloguer deciding whether to trust what is on screen needs to tell them
 * apart without hovering. They are given different colours AND different
 * borders, so the difference survives a monochrome print and colour-blindness.
+*
+* THE COLOURS ARE LITERALS, PAIRED PER RULE, PER THEME. Each state paints its own
+* ink AND its own fill in one rule, so the pair is judged as a pair by
+* `contrast_ratio_tripwire` and no palette inversion can split it (the bug the
+* mosaic chips had: a fixed fill under a flipping ink). The cost of that choice
+* is that a literal cannot follow the theme by itself: the light chips below
+* were born (2026-08-06) without a dark half and rendered as 14–15:1 pastel slabs
+* on the dark card — legible, but the loudest thing on the page, for a marker
+* whose whole design is "visible without shouting". The `:root[data-theme="dark"]`
+* block at the end carries one twin per state: a dark tint of the same hue
+* under a light ink, the same border STYLE (the style is the colour-blind
+* channel and does not change), and a border lifted so the edge still reads on
+* the dark ground. Every dark pair was measured, not eyeballed (WCAG 2.1):
+*   ink on chip ≥ 6.27:1, border on chip ≥ 3.21:1, border on --bg_surface
+*   #1b1d20 ≥ 4.02:1. The palette's semantic tokens are not consumed here on
+* purpose: no role token carries "stale amber" or "outage red", and pointing
+* a state at `--color_hilite` / `--color_mandatory` would tie its meaning to
+* whatever those are retuned for next.
 */
 .external_source_status {
   display: inline-block;
@@ -20625,6 +20641,39 @@ body.inspector_resizing {
   background-color: #ededed;
   border-color: #9a9a9a;
   border-style: dashed;
+}
+:root[data-theme="dark"] .external_source_status.state_stale {
+  color: #f6c95a;
+  background-color: #3b2f0e;
+  border-color: #c99a1e;
+}
+:root[data-theme="dark"] .external_source_status.state_unavailable,
+:root[data-theme="dark"] .external_source_status.state_timeout,
+:root[data-theme="dark"] .external_source_status.state_circuit_open {
+  color: #ffab9e;
+  background-color: #3f1a15;
+  border-color: #d65a48;
+}
+:root[data-theme="dark"] .external_source_status.state_not_found,
+:root[data-theme="dark"] .external_source_status.state_unknown {
+  color: #cfd4dc;
+  background-color: #2e3238;
+  border-color: #7c838e;
+}
+:root[data-theme="dark"] .external_source_status.state_disabled {
+  color: #aab0b8;
+  background-color: #25282d;
+  border-color: #767c86;
+}
+:root[data-theme="dark"] .external_source_status.state_misconfigured {
+  color: #ffffff;
+  background-color: #7c1fa2;
+  border-color: #c98ae6;
+}
+:root[data-theme="dark"] .external_source_status.state_ok {
+  color: #b0c8f5;
+  background-color: #1f2d4c;
+  border-color: #5b83c4;
 }
 /**
 * component_filter
@@ -23522,7 +23571,7 @@ body.inspector_resizing {
   border: 0px;
   padding-left: 3px;
   padding-right: 2.5px;
-  color: var(--color_white);
+  color: var(--fg_on_brand);
   border-radius: 3px;
   margin: 0px;
   height: 17px;
@@ -23809,7 +23858,7 @@ body.inspector_resizing {
 .component_radio_button.edit > .content_data > .content_value > .label:has(input:checked) {
   font-weight: 500;
   background-color: var(--color_orange_dedalo);
-  color: var(--color_white);
+  color: var(--fg_on_brand);
 }
 .component_radio_button.edit > .content_data > .content_value > .label:has(input:focus-visible) {
   outline: 2px solid var(--focus_ring);
@@ -23882,7 +23931,7 @@ body.inspector_resizing {
 .component_radio_button.search > .content_data > .content_value > .label:has(input:checked) {
   font-weight: 500;
   background-color: var(--color_orange_dedalo);
-  color: var(--color_white);
+  color: var(--fg_on_brand);
 }
 .component_radio_button.search > .content_data > .content_value > .label:has(input:focus-visible) {
   outline: 2px solid var(--focus_ring);
@@ -24637,7 +24686,7 @@ body.inspector_resizing {
 }
 .component_text_area.edit .layer_selector > .layer_ul > li:hover {
   background-color: var(--color_orange_dedalo);
-  color: var(--color_white);
+  color: var(--fg_on_brand);
 }
 .component_text_area.edit .layer_selector > .layer_ul > li:active {
   background-color: var(--color_white);
@@ -25099,7 +25148,7 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   opacity: 1 !important;
   cursor: pointer;
   background-color: var(--color_orange_dedalo);
-  color: var(--color_white);
+  color: var(--fg_on_brand);
 }
 /**
 * widget tags
@@ -25799,8 +25848,34 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
 * base `:root`; classic stays byte-for-byte untouched.
 *
 * Palette source of truth: the validated 2026-06-15 mockup
-* (dev/mockups/dedalo_redesign_mockup.html). Warm paper/ink neutrals, surfaces
-* over borders, one accent (Dédalo orange) split into fill + legible text.
+* (dev/mockups/dedalo_redesign_mockup.html — not in this tree; reachable on the
+* `v7_php_frozen` branch tip). Warm paper/ink neutrals, surfaces over borders,
+* one accent (Dédalo orange) split into fill + legible text.
+*
+* TWO LAWS THIS FILE OBEYS (CSS coherence audit 2026-09, clauses 2.b + 2.c):
+*
+* 1. THE LINE OWNS EVERY COLOUR IT PAINTS. `redesign.less` is imported LAST
+*    from main.less, so `:root[data-design="redesign"]` (0,2,0) beats
+*    `:root[data-theme="dark"]` (0,2,0) by source order. A token declared in the
+*    light block below and NOT in the dark twin therefore leaks its LIGHT value
+*    into redesign+dark — that is how `button.light:hover` shipped at 1.17:1
+*    (near-white ink on the light hover fill). Every colour the light block
+*    declares is declared again in the twin. Conversely, a base token this line
+*    consumes but never declares moves whenever the base retunes it: the accent
+*    fill inherited the P1-18 retune of `--color_orange_dedalo` and its
+*    hard-coded dark ink fell to 3.46:1 without a line here changing. So the
+*    accent is declared HERE, per theme, and the ink that lands on it too.
+*
+* 2. EVERY PAIR IS AT AA. The base contrast gate excludes this design line by
+*    name, so nothing judged it: 35 declared pairs failed in light, 13 in dark.
+*    Values below are chosen against the surfaces the ink actually lands on
+*    (surface, surface_alt, the selected-row tint, the orange tint) — ≥ 4.5:1
+*    for text, ≥ 3:1 for a ring or an edge that IS the mark. The ratio a value
+*    was chosen for is noted beside it. The split of the accent is preserved:
+*    `--color_orange_dedalo` / `--accent` is a FILL (bright, under dark ink),
+*    `--accent-text` is the deepened variant for text, rings and edges on a
+*    light surface — the bright fill is 2.42:1 on paper and can never be a
+*    legible line there.
 */
 :root[data-design="redesign"] {
   --color_white: #fffefc;
@@ -25812,8 +25887,8 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   --color_grey_11: #cfcabf;
   --color_grey_10: #b4afa5;
   --color_grey_9: #a39d91;
-  --color_grey_8: #8a857c;
-  --color_grey_7: #6f6a60;
+  --color_grey_8: #6f6b64;
+  --color_grey_7: #6a655b;
   --color_grey_6: #565149;
   --color_grey_5: #46423b;
   --color_grey_4: #23211e;
@@ -25829,34 +25904,39 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   --bg_elevated: #fffefc;
   --bg_input: #f1efea;
   --bg_header: #f1efea;
+  --bg_menu: #fffefc;
   --fg_default: #23211e;
-  --fg_muted: #8a857c;
+  --fg_muted: #6a655b;
   --fg_inverse: #fffefc;
+  --bg_fill_inverse: #6a655b;
   --border_default: #e7e4df;
   --border_strong: #cfcabf;
   --shadow_default: rgba(35, 33, 30, 0.1);
   --focus_ring: #4c7fb5;
   --focus_ring_weak: rgba(76, 127, 181, 0.38);
+  --color_orange_dedalo: #f78a1c;
   --accent: var(--color_orange_dedalo);
-  --accent-text: #b5610c;
+  --fg_on_brand: #181715;
+  --accent-text: #98510a;
   --accent-hover: #e07d12;
   --accent-soft: #fbe7cf;
-  --color_success: #4f8a5b;
-  --color_green_success: #4f8a5b;
+  --color_success: #467d52;
+  --color_green_success: #467d52;
   --color_danger: #b25c50;
-  --color_warning: #b08a2e;
-  --color_primary: #4c7fb5;
+  --color_warning: #8a6b22;
+  --fg_on_warning: #fffefc;
+  --color_primary: #4574a8;
   --color_info: #56789c;
   --color_input_focus: #4c7fb5;
   --color_tag_indexation_normal: #cf8a3e;
-  --color_tag_indexation_removed: #5a7fa8;
-  --color_tag_indexation_to_review: #bd5a4a;
+  --color_tag_indexation_removed: #52759d;
+  --color_tag_indexation_to_review: #b85341;
   --radius-sm: 5px;
   --radius-md: 8px;
   --radius-lg: 10px;
   --checkbox_bg: #f1efea;
-  --checkbox_border: #b4afa5;
-  --checkbox_checked_bg: var(--color_orange_dedalo);
+  --checkbox_border: #857e6f;
+  --checkbox_checked_bg: var(--accent-text);
   --input_bg: #f1efea;
   --input_fg: #23211e;
   --field_rest_bg: var(--input_bg);
@@ -25864,24 +25944,26 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   --select_fg: #23211e;
   --toolbar_btn_hover_bg: #ddd9d1;
   --debug_info_bar_bg: #ecebe7;
-  --debug_info_bar_text: #6f6a60;
+  --debug_info_bar_text: #6a655b;
   --menu_dropdown_text: #23211e;
   --menu_dropdown_bg: #fffefc;
   --menu_dropdown_border: #cfcabf;
+  --menu_link_fg: #23211e;
+  --menu_selector_fg: #23211e;
   --modal_header_bg: #fffefc;
   --modal_header_color: #23211e;
-  --modal_btn_color: #6f6a60;
+  --modal_btn_color: #6a655b;
   --modal_btn_hover_color: #23211e;
   --modal_mini_header_bg: #fffefc;
-  --color_primary_border: #4677aa;
-  --color_primary_hover_bg: #44729f;
-  --color_primary_hover_border: #406b96;
+  --color_primary_border: #3f6b9b;
+  --color_primary_hover_bg: #3f6b9b;
+  --color_primary_hover_border: #396290;
   --color_secondary_border: #605149;
   --color_secondary_hover_bg: #4f4a42;
   --color_secondary_hover_border: #47433c;
-  --color_success_border: #488154;
-  --color_success_hover_bg: #4a865d;
-  --color_success_hover_border: #437d55;
+  --color_success_border: #3f7049;
+  --color_success_hover_bg: #3f7049;
+  --color_success_hover_border: #3a6843;
   --color_danger_border: #a4544a;
   --color_danger_hover_bg: #9c4f46;
   --color_danger_hover_border: #944a42;
@@ -25889,7 +25971,7 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   --color_orange_border: #ef8312;
   --color_orange_hover_bg: #e57d10;
   --color_orange_hover_border: #d8760f;
-  --color_orange_dark: #b5620a;
+  --color_orange_dark: var(--accent-text);
   --color_orange_light: #fdf6ee;
   --color_info_border: #4f6e8f;
   --color_info_hover_bg: #4a6788;
@@ -25911,8 +25993,8 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   --color_grey_11: #47443c;
   --color_grey_10: #5a564d;
   --color_grey_9: #6a655c;
-  --color_grey_8: #837e73;
-  --color_grey_7: #989183;
+  --color_grey_8: #948f84;
+  --color_grey_7: #a29c8f;
   --color_grey_6: #b0a99b;
   --color_grey_5: #c7bfae;
   --color_grey_4: #e8e5df;
@@ -25928,10 +26010,11 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   --bg_elevated: #2c2a24;
   --bg_input: #211f1b;
   --bg_header: #211f1b;
-  --bg_menu: #141310;
+  --bg_menu: #26241f;
   --fg_default: #e8e5df;
-  --fg_muted: #989183;
+  --fg_muted: #a29c8f;
   --fg_inverse: #ffffff;
+  --bg_fill_inverse: #5a564d;
   --border_default: #34322c;
   --border_strong: #47443c;
   --shadow_default: rgba(0, 0, 0, 0.55);
@@ -25939,50 +26022,66 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   --focus_ring_weak: rgba(111, 156, 201, 0.45);
   --color_orange_dedalo: #ffa54a;
   --accent: var(--color_orange_dedalo);
+  --fg_on_brand: #181715;
   --accent-text: #ffb968;
   --accent-hover: #ffb968;
   --accent-soft: #3a2c18;
   --color_success: #5aa06e;
-  --color_green_success: #5aa06e;
+  --color_green_success: #457b56;
   --color_danger: #cf7a70;
   --color_warning: #d0a24e;
-  --color_primary: #7d9cbd;
+  --fg_on_warning: #181715;
+  --color_primary: #4f76a0;
   --color_info: #7d9cbd;
   --color_input_focus: #6f9cc9;
   --color_tag_indexation_normal: #d69a52;
-  --color_tag_indexation_removed: #6f96c8;
-  --color_tag_indexation_to_review: #d16a5a;
+  --color_tag_indexation_removed: #4373b2;
+  --color_tag_indexation_to_review: #c44a37;
   --checkbox_bg: #34322c;
-  --checkbox_border: #47443c;
+  --checkbox_border: #7a7568;
+  --checkbox_checked_bg: var(--accent-text);
   --input_bg: #211f1b;
   --input_fg: #e8e5df;
+  --field_rest_bg: var(--input_bg);
   --select_bg: #211f1b;
   --select_fg: #e8e5df;
   --toolbar_btn_hover_bg: #47443c;
   --debug_info_bar_bg: #201e1b;
-  --debug_info_bar_text: #837e73;
+  --debug_info_bar_text: #948f84;
   --menu_dropdown_text: #e8e5df;
   --menu_dropdown_bg: #2c2a24;
   --menu_dropdown_border: #47443c;
+  --menu_link_fg: #e8e5df;
+  --menu_selector_fg: #e8e5df;
   --modal_header_bg: #26241f;
   --modal_header_color: #e8e5df;
-  --modal_btn_color: #989183;
+  --modal_btn_color: #a29c8f;
   --modal_btn_hover_color: #e8e5df;
   --modal_mini_header_bg: #26241f;
-  --color_primary_border: #6f8db0;
-  --color_primary_hover_bg: #8aa6c6;
-  --color_primary_hover_border: #6f8db0;
+  --color_primary_border: #46699a;
+  --color_primary_hover_bg: #476c93;
+  --color_primary_hover_border: #3f6088;
+  --color_secondary_border: #9d968a;
+  --color_secondary_hover_bg: #bfb8aa;
+  --color_secondary_hover_border: #ada699;
   --color_success_border: #4f8f60;
   --color_success_hover_bg: #6aad7c;
   --color_success_hover_border: #4f8f60;
   --color_danger_border: #bd6d63;
   --color_danger_hover_bg: #da8479;
   --color_danger_hover_border: #bd6d63;
+  --color_danger_dark: #8c4a41;
   --color_orange_border: #ee9740;
   --color_orange_hover_bg: #ffb35f;
   --color_orange_hover_border: #ee9740;
-  --color_orange_dark: #d68a30;
+  --color_orange_dark: var(--accent-text);
   --color_orange_light: #2a2218;
+  --color_info_border: #6f8db0;
+  --color_info_hover_bg: #8fabc9;
+  --color_info_hover_border: #7d9cbd;
+  --color_light_border: #34322c;
+  --color_light_hover_bg: #34322c;
+  --color_light_hover_border: #3d3a33;
   --color_dark_border: #d0cdc7;
   --color_dark_hover_bg: #e0ddd7;
   --color_dark_hover_border: #d8d5cf;
@@ -25990,6 +26089,8 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
 :root[data-design="redesign"][data-accent="pine"] {
   --color_orange_dedalo: #2f6b63;
   --accent: #2f6b63;
+  --fg_on_brand: #fffefc;
+  --ut_on_accent: var(--fg_on_brand);
   --accent-text: #2f6b63;
   --accent-hover: #28594f;
   --accent-soft: #e3ece9;
@@ -25997,11 +26098,14 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   --color_orange_border: #2a6058;
   --color_orange_hover_bg: #28594f;
   --color_orange_hover_border: #235049;
-  --color_orange_dark: #1f463f;
+  --color_orange_dark: #2f6b63;
+  --color_orange_light: #e3ece9;
 }
 :root[data-design="redesign"][data-accent="pine"][data-theme="dark"] {
   --color_orange_dedalo: #5aa399;
   --accent: #5aa399;
+  --fg_on_brand: #181715;
+  --ut_on_accent: var(--fg_on_brand);
   --accent-text: #6fb3a9;
   --accent-hover: #6fb3a9;
   --accent-soft: #21302d;
@@ -26009,7 +26113,8 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   --color_orange_border: #4f9089;
   --color_orange_hover_bg: #6fb3a9;
   --color_orange_hover_border: #4f9089;
-  --color_orange_dark: #3f7d74;
+  --color_orange_dark: #6fb3a9;
+  --color_orange_light: #21302d;
 }
 /**
 * redesign / _structure
@@ -26024,6 +26129,15 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
 *   - list header as small muted uppercase labels, calm hover, accent selection
 *   - section headers as quiet letterspaced labels (not ink-dark shouting)
 *   - editable fields read as gently sunken on the surface card
+*
+* ACCENT INK LAW (CSS coherence audit 2026-09, C5). No rule here paints a colour
+* literal on the accent: text on the accent FILL is `var(--fg_on_brand)`, and a
+* mark that sits ON a surface — a ring, a dot, an edge, a hover word — is
+* `var(--accent-text)`, the deepened orange. Both are declared per theme (and per
+* accent) in _tokens.less, so a base retune cannot reach a pair painted here:
+* the last one did, and the hard-coded dark ink fell to 3.46:1 on every primary
+* button. The bright fill stays for the two decorative top-edges (modal, tool
+* header) — an identity stripe nothing has to read.
 */
 :root[data-design="redesign"] button.warning,
 :root[data-design="redesign"] .button.warning {
@@ -26041,8 +26155,8 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
 :root[data-design="redesign"] .button.warning.new {
   background-color: var(--color_orange_dedalo);
   border-color: var(--color_orange_border);
-  color: #2a1c05;
-  --button-bg-color: #2a1c05;
+  color: var(--fg_on_brand);
+  --button-bg-color: var(--fg_on_brand);
 }
 :root[data-design="redesign"] button.warning.new:hover,
 :root[data-design="redesign"] .button.warning.new:hover {
@@ -26066,7 +26180,7 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
 :root[data-design="redesign"] .content_data.list .section_record.selected,
 :root[data-design="redesign"] .content_data.list .section_record.active {
   background-color: var(--accent-soft);
-  box-shadow: inset 3px 0 0 var(--color_orange_dedalo);
+  box-shadow: inset 3px 0 0 var(--accent-text);
 }
 :root[data-design="redesign"] .wrapper_grouper.section_group > .label {
   color: var(--fg_muted);
@@ -26104,18 +26218,20 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
 :root[data-design="redesign"] .search_global_container .search_container_selection .search_group_container .search_buttons_container .button.submit {
   background-color: var(--color_orange_dedalo);
   border-color: var(--color_orange_border);
-  color: #2a1c05;
+  color: var(--fg_on_brand);
 }
 :root[data-design="redesign"] .search_global_container .search_container_selection .search_group_container .search_buttons_container .button.submit:hover {
   background-color: var(--color_orange_hover_bg);
 }
-:root[data-design="redesign"] .search_global_container .search_container_selection .operator.and {
-  background-color: var(--color_grey_10);
+:root[data-design="redesign"] .wrapper_search > .search_global_container > .search_container_selection .search_group_container .search_group > .operator.and,
+:root[data-design="redesign"] .wrapper_search > .search_global_container > .search_container_selection .search_group_container .search_group > .operator.or {
+  background-color: var(--bg_fill_inverse);
   color: var(--fg_inverse);
+  opacity: 1;
 }
-:root[data-design="redesign"] .search_global_container .search_container_selection .operator.or {
-  background-color: var(--color_grey_9);
-  color: var(--fg_inverse);
+:root[data-design="redesign"] .wrapper_search > .search_global_container > .search_container_selection .search_group_container .search_group > .operator.and:hover,
+:root[data-design="redesign"] .wrapper_search > .search_global_container > .search_container_selection .search_group_container .search_group > .operator.or:hover {
+  opacity: 1;
 }
 :root[data-design="redesign"] input[type='radio'] {
   -webkit-appearance: none;
@@ -26137,15 +26253,15 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   width: 0.5em;
   height: 0.5em;
   border-radius: 50%;
-  background-color: var(--color_orange_dedalo);
+  background-color: var(--accent-text);
   transform: scale(0);
   transition: transform var(--transition-fast, 120ms ease);
 }
 :root[data-design="redesign"] input[type='radio']:hover {
-  border-color: var(--color_orange_dedalo);
+  border-color: var(--accent-text);
 }
 :root[data-design="redesign"] input[type='radio']:checked {
-  border-color: var(--color_orange_dedalo);
+  border-color: var(--accent-text);
 }
 :root[data-design="redesign"] input[type='radio']:checked::before {
   transform: scale(1);
@@ -26159,18 +26275,26 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   cursor: default;
 }
 :root[data-design="redesign"] input[type='checkbox'] {
-  accent-color: var(--color_orange_dedalo);
+  accent-color: var(--accent-text);
 }
 :root[data-design="redesign"] .wrapper_component > .label,
 :root[data-design="redesign"] .wrapper_component > .content_data > .label {
   color: var(--fg_muted);
   font-weight: 500;
 }
+:root[data-design="redesign"] .component_portal.view_line > .content_data > .component_placeholder,
+:root[data-design="redesign"] .portal.view_line > .content_data > .component_placeholder {
+  color: var(--fg_muted);
+}
 :root[data-design="redesign"] .wrapper_inspector .selection_info_label {
   font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
   color: var(--accent-text);
   font-size: 1rem;
   letter-spacing: 0.01em;
+}
+:root[data-design="redesign"] .wrapper_inspector > .inspector_content_data > .selection_info {
+  color: var(--accent-text);
+  background-color: var(--color_orange_light);
 }
 :root[data-design="redesign"] .wrapper_inspector [class*="_head"] {
   color: var(--fg_muted);
@@ -26195,7 +26319,6 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   margin-bottom: var(--space-4, 0.75rem);
 }
 :root[data-design="redesign"] .menu {
-  background-color: var(--bg_surface);
   box-shadow: inset 0 -1px 0 var(--border_default);
 }
 :root[data-design="redesign"] .menu > .content_data {
@@ -26207,7 +26330,14 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
 :root[data-design="redesign"] .menu > .content_data .menu_hierarchy .menu_li_active > a {
   background: transparent !important;
   color: var(--fg_default) !important;
-  box-shadow: inset 0 -2px 0 var(--color_orange_dedalo);
+  box-shadow: inset 0 -2px 0 var(--accent-text);
+}
+:root[data-design="redesign"] .menu > .content_data > .logged_user_name.is_root {
+  color: var(--accent-text);
+}
+:root[data-design="redesign"] .menu > .content_data > .dedalo_aplication_langs_selector {
+  background-image: var(--select_icon_url);
+  background-size: 0.8rem;
 }
 :root[data-design="redesign"] dd-modal .header {
   border-top: 2px solid var(--color_orange_dedalo);
@@ -26259,18 +26389,18 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
 :root[data-design="redesign"] .wrapper_tool .buttons_container > button.button_replace,
 :root[data-design="redesign"] .wrapper_tool .buttons_container > .button.button_replace {
   background-color: var(--color_orange_dedalo) !important;
-  color: #2a1c05 !important;
+  color: var(--fg_on_brand) !important;
   border-color: var(--color_orange_border);
-  --button-bg-color: #2a1c05;
+  --button-bg-color: var(--fg_on_brand);
 }
 :root[data-design="redesign"] .wrapper_tool .buttons_container > button.button_delete,
 :root[data-design="redesign"] .wrapper_tool .buttons_container > .button.button_delete,
 :root[data-design="redesign"] .wrapper_tool .buttons_container > button.delete,
 :root[data-design="redesign"] .wrapper_tool .buttons_container > .button.delete {
   background-color: var(--color_danger) !important;
-  color: var(--fg_inverse) !important;
+  color: var(--color_white) !important;
   border-color: var(--color_danger);
-  --button-bg-color: var(--fg_inverse);
+  --button-bg-color: var(--color_white);
 }
 :root[data-design="redesign"] .wrapper_tool .search_selection,
 :root[data-design="redesign"] .wrapper_tool .selection_search,
@@ -26287,18 +26417,18 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
 }
 :root[data-design="redesign"] .elements_container .button_show_indexations:hover,
 :root[data-design="redesign"] .elements_container .default:hover {
-  border-color: var(--color_orange_dedalo) !important;
-  color: var(--color_orange_dedalo) !important;
+  border-color: var(--accent-text) !important;
+  color: var(--accent-text) !important;
 }
 :root[data-design="redesign"] .elements_container .link_children {
   border-left-color: var(--color_grey_9) !important;
 }
 :root[data-design="redesign"] .elements_container .link_children:hover {
-  border-left-color: var(--color_orange_dedalo) !important;
+  border-left-color: var(--accent-text) !important;
 }
 :root[data-design="redesign"] .elements_container .link_children.open {
   border-left-color: transparent !important;
-  border-top-color: var(--color_orange_dedalo) !important;
+  border-top-color: var(--accent-text) !important;
 }
 :root[data-design="redesign"] .indexation .tag_id,
 :root[data-design="redesign"] .column.indexation .tag_id {

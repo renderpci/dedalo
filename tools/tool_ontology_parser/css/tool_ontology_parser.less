@@ -152,9 +152,20 @@
 				.filter_toggle.active {
 					background-color: @tool_color;
 					border-color: @tool_color;
-					color: white;
+					// THE INK FLIPS WITH THE FILL, and the fill flips with the
+					// theme (CSS coherence audit 2026-09-06, DESIGN clause 2.c).
+					// The ontology green is DARK in light (#276f67) and BRIGHT in
+					// dark (theme_dark lifts it to #409890), so a literal `white`
+					// was right on one axis and 3.44:1 on the other — under the
+					// 4.5:1 floor in all three dark palettes. --ut_on_green is the
+					// palette's ink for exactly this fill: white in light, near
+					// black (#16181b) in dark, the same shape as --fg_on_brand for
+					// the orange. Measured 5.91:1 light / 5.18:1 dark. (The --ut_
+					// prefix is historical — see vars_tokens.less; what matters is
+					// that it is the ink tuned for a green fill on every axis.)
+					color: var(--ut_on_green);
 
-					&:hover:not(:disabled) { color: white; }
+					&:hover:not(:disabled) { color: var(--ut_on_green); }
 				}
 
 				>.filter_no_matches {
@@ -335,6 +346,16 @@
 			button.gear {
 				background-color: @tool_color;
 				border-color: @tool_color;
+				// The ink belongs with the fill. These are
+				// `class="warning gear"` buttons, so they carried the core .warning
+				// ink — `--fg_on_brand`, the near-black tuned for the BRAND ORANGE
+				// fill this rule replaces with the ontology green: 3.01:1 in light,
+				// 3.03:1 on the redesign line, under the 4.5:1 floor. The static
+				// gate cannot see that pair (fill here, ink in buttons.less), which
+				// is why it survived. --ut_on_green is the ink for a green fill on
+				// every axis — 5.91:1 light / 5.18:1 dark — the same token the
+				// filter toggle above takes.
+				color: var(--ut_on_green);
 			}
 
 			.checkbox-label {
@@ -369,7 +390,13 @@
 				max-height: 15rem;
 				width: 49%;
 				// background-color: transparent !important;
-				color: @color_danger;
+				// --color_danger is the button FILL red (#dc3545): as INK on this
+				// grey canvas it is 4.19:1 in light and 4.37:1 in dark, under the
+				// 4.5:1 floor on both axes (CSS coherence audit 2026-09-06, DESIGN
+				// clause 2.c). --ut_red is the palette's danger INK, tuned per axis
+				// for that job — deep #b8121f in light, lifted #ff7b72 in dark —
+				// and measures 6.18:1 / 5.94:1 on this same canvas.
+				color: var(--ut_red);
 				display: inline-block;
 			}
 		}

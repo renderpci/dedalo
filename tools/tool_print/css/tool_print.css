@@ -9,6 +9,8 @@
   --tool_print: #2a7d6f;
   --tool_print_lighten_40: #d6ece8;
   --tool_print_border: #1f5d53;
+  --tool_print_fill: #2a7d6f;
+  --tool_print_danger_ink: var(--color_danger_dark);
   --print_grid_color: rgba(0, 0, 0, 0.06);
   --print_page_bg: #ffffff;
   --print_page_shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
@@ -18,6 +20,8 @@
   --tool_print: #3da89a;
   --tool_print_lighten_40: #1f3a35;
   --tool_print_border: #2a7d6f;
+  --tool_print_fill: #236a5e;
+  --tool_print_danger_ink: var(--color_danger);
   --print_page_shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
   --tp_desk_bg: #2a2d31;
 }
@@ -84,8 +88,8 @@
   border-color: var(--color_green_success);
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .tool_button.flash_error {
-  background: var(--color_danger);
-  color: #fff;
+  background: var(--color_danger_dark);
+  color: var(--fg_inverse);
   border-color: var(--color_danger);
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .toolbar_group {
@@ -142,8 +146,8 @@
   background-color: currentColor;
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .tool_button.btn_print {
-  color: #fff;
-  background: var(--tool_print);
+  color: var(--fg_inverse);
+  background: var(--tool_print_fill);
   border-color: var(--tool_print_border);
   font-weight: 600;
 }
@@ -156,10 +160,10 @@
   mask-image: url('../img/icon_print.svg');
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .tool_button.btn_delete {
-  color: var(--color_danger);
+  color: var(--tool_print_danger_ink);
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .tool_button.btn_delete:hover {
-  border-color: var(--color_danger);
+  border-color: var(--tool_print_danger_ink);
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .tool_button.btn_delete .tp_icon {
   -webkit-mask-image: url('../img/icon_remove.svg');
@@ -694,8 +698,8 @@
   font-size: 0.65rem;
   font-weight: 600;
   line-height: 1.4;
-  color: var(--fg_inverse);
-  background: var(--border_strong);
+  color: var(--bg_surface);
+  background: var(--fg_default);
   border-radius: 3px;
   pointer-events: none;
   white-space: nowrap;
@@ -778,8 +782,8 @@
   gap: 0.3rem;
   padding: 0 0.2rem;
   font-size: 0.65rem;
-  background: var(--tool_print);
-  color: #fff;
+  background: var(--tool_print_fill);
+  color: var(--fg_inverse);
   cursor: move;
   white-space: nowrap;
   overflow: hidden;
@@ -1411,13 +1415,13 @@ body.tp_col_resizing * {
   cursor: pointer;
   font-size: 0.8rem;
   padding: 0.2rem 0.6rem;
-  color: var(--color_danger, #c0392b);
+  color: var(--tool_print_danger_ink);
   background: var(--bg_input, #fff);
   border: 1px solid var(--border_default, #cfd3d7);
   border-radius: 4px;
 }
 .wrapper_tool.tool_print .print_progress .print_progress_cancel:hover {
-  border-color: var(--color_danger, #c0392b);
+  border-color: var(--tool_print_danger_ink);
 }
 .wrapper_tool.tool_print .print_progress .print_progress_cancel:disabled {
   opacity: 0.5;

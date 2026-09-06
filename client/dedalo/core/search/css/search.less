@@ -188,10 +188,17 @@
 							grid-template-columns: 1fr;
 						}
 
-						@media screen and (max-width: @width_break_point_0) {
-							grid-template-columns: 1fr 1fr;
-						}
-
+						// Below the desktop-small tier the group is ONE column.
+						// There were two byte-identical `@media` blocks here
+						// (`1fr 1fr` then `1fr`) since the v6 tree: same
+						// condition, same specificity, so the first could never
+						// apply and the second is what has always shipped. The
+						// dead one is removed, not resurrected as a tier — the
+						// GRADED collapse it looks like it was reaching for
+						// already exists in JS, which measures the group's own
+						// width (not the viewport) in render_search.js and adds
+						// `.column_2` / `.column_1` at a higher specificity than
+						// this rule.
 						@media screen and (max-width: @width_break_point_0) {
 							grid-template-columns: 1fr;
 						}
@@ -480,7 +487,7 @@
 									background-color: @color_white ;
 								}
 								.wrapper_component {
-									color: @color_white ;
+									color: var(--fg_on_brand) ;
 								}
 							}
 						}

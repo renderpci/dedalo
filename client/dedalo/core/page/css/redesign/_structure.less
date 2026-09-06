@@ -11,6 +11,15 @@
 *   - list header as small muted uppercase labels, calm hover, accent selection
 *   - section headers as quiet letterspaced labels (not ink-dark shouting)
 *   - editable fields read as gently sunken on the surface card
+*
+* ACCENT INK LAW (CSS coherence audit 2026-09, C5). No rule here paints a colour
+* literal on the accent: text on the accent FILL is `var(--fg_on_brand)`, and a
+* mark that sits ON a surface — a ring, a dot, an edge, a hover word — is
+* `var(--accent-text)`, the deepened orange. Both are declared per theme (and per
+* accent) in _tokens.less, so a base retune cannot reach a pair painted here:
+* the last one did, and the hard-coded dark ink fell to 3.46:1 on every primary
+* button. The bright fill stays for the two decorative top-edges (modal, tool
+* header) — an identity stripe nothing has to read.
 */
 
 :root[data-design="redesign"] {
@@ -38,8 +47,8 @@
 	.button.warning.new {
 		background-color: var(--color_orange_dedalo);
 		border-color: var(--color_orange_border);
-		color: #2a1c05; // dark-on-orange: AA in both themes
-		--button-bg-color: #2a1c05; // dark icon on orange (spinner-safe)
+		color: var(--fg_on_brand); // 7.3:1 on the fill, 6.2:1 on the hover fill (dark: 9.2 / 10.1)
+		--button-bg-color: var(--fg_on_brand); // icon in the same ink (spinner-safe)
 
 		&:hover { background-color: var(--color_orange_hover_bg); }
 	}
@@ -67,7 +76,9 @@
 		&.selected,
 		&.active {
 			background-color: var(--accent-soft);
-			box-shadow: inset 3px 0 0 var(--color_orange_dedalo);
+			// the edge is a mark on the tint, so it is the legible accent (the
+			// bright fill is 2.0:1 on the tint — an edge nobody would see)
+			box-shadow: inset 3px 0 0 var(--accent-text);
 		}
 	}
 
@@ -132,15 +143,28 @@
 		.button.submit {
 			background-color: var(--color_orange_dedalo);
 			border-color: var(--color_orange_border);
-			color: #2a1c05; // dark-on-orange: AA in both themes
+			color: var(--fg_on_brand);
 
 			&:hover { background-color: var(--color_orange_hover_bg); }
 		}
 	}
-	// AND / OR operator rails: neutral, not saturated green/blue
-	.search_global_container .search_container_selection .operator {
-		&.and { background-color: var(--color_grey_10); color: var(--fg_inverse); }
-		&.or  { background-color: var(--color_grey_9);  color: var(--fg_inverse); }
+	// AND / OR operator rails: neutral, not saturated green/blue. The rail is a
+	// word on a fill, so the fill is the one neutral that carries the inverse
+	// ink at AA in both themes (--bg_fill_inverse, 5.8:1 light / 7.3:1 dark);
+	// the WORD tells AND from OR. The classic rule paints the rail at
+	// `opacity: 0.6` — composited over the surface that is 2.2:1 whatever the
+	// colours — and is one class deeper than the chain above, so this one
+	// repeats the whole chain (.wrapper_search > … > .operator) to win, and
+	// restores full opacity at rest and on hover.
+	.wrapper_search > .search_global_container > .search_container_selection .search_group_container .search_group > .operator {
+		&.and,
+		&.or {
+			background-color: var(--bg_fill_inverse);
+			color: var(--fg_inverse);
+			opacity: 1;
+
+			&:hover { opacity: 1; }
+		}
 	}
 
 	// ---------------------------------------------------------------
@@ -149,7 +173,9 @@
 
 	// Radios: mockup style — an accent RING with an accent inner dot (a gap
 	// between them), not a solid disc. Grey ring at rest; on selection the ring
-	// turns Dédalo orange and the centre dot scales in.
+	// turns the legible accent and the centre dot scales in. Ring and dot sit
+	// ON the surface, so they are --accent-text, not the fill: the bright fill
+	// is 2.4:1 on paper and a 1.5px ring at that ratio is not a boundary.
 	input[type='radio'] {
 		-webkit-appearance: none;
 		appearance: none;
@@ -170,15 +196,15 @@
 			width: 0.5em;
 			height: 0.5em;
 			border-radius: 50%;
-			background-color: var(--color_orange_dedalo);
+			background-color: var(--accent-text);
 			transform: scale(0);
 			transition: transform var(--transition-fast, 120ms ease);
 		}
 
-		&:hover { border-color: var(--color_orange_dedalo); }
+		&:hover { border-color: var(--accent-text); }
 
 		&:checked {
-			border-color: var(--color_orange_dedalo);
+			border-color: var(--accent-text);
 
 			&::before { transform: scale(1); }
 		}
@@ -192,9 +218,11 @@
 	}
 
 	// Native checkboxes (inspector project tree, image-rights, etc.) follow the
-	// accent too. Custom-drawn checkboxes already track --checkbox_checked_bg.
+	// accent too — the legible one, since the browser draws the box ON the
+	// surface. Custom-drawn checkboxes already track --checkbox_checked_bg,
+	// which the token layer points at the same variant.
 	input[type='checkbox'] {
-		accent-color: var(--color_orange_dedalo);
+		accent-color: var(--accent-text);
 	}
 
 	// Label / value hierarchy: the classic field label is a very thin weight
@@ -204,6 +232,14 @@
 	.wrapper_component > .content_data > .label {
 		color: var(--fg_muted);
 		font-weight: 500;
+	}
+
+	// The portal's empty-value hint is a ramp grey (grey_10) in classic, where
+	// it sits on a transparent field and no static gate sees it; this line's
+	// field is a SUNKEN fill, and grey_10 on it is 1.9:1. A hint is muted ink.
+	.component_portal.view_line > .content_data > .component_placeholder,
+	.portal.view_line > .content_data > .component_placeholder {
+		color: var(--fg_muted);
 	}
 
 	// ---------------------------------------------------------------
@@ -219,6 +255,13 @@
 			color: var(--accent-text);
 			font-size: 1rem;
 			letter-spacing: 0.01em;
+		}
+		// the band the label sits in: the classic rule inks it with the accent
+		// FILL on the orange tint (2.3:1 here — a fill is not an ink). Both halves
+		// declared so the pair is explicit: 5.6:1 light, 9.2:1 dark.
+		> .inspector_content_data > .selection_info {
+			color: var(--accent-text);
+			background-color: var(--color_orange_light);
 		}
 
 		// every card header (Information, Project, Relations, Últimos cambios,
@@ -255,12 +298,16 @@
 	// ---------------------------------------------------------------
 	// Stage 5 — menu bar. The dark band becomes a light surface with a bottom
 	// hairline; text goes dark; the active top item gets an orange underline
-	// instead of an orange fill. Background/text use theme tokens, so in DARK
-	// theme the menu stays a dark surface automatically. (The white toolbar
-	// icons are flipped to dark in a LIGHT-THEME-ONLY block below.)
+	// instead of an orange fill. The SURFACE is not painted here: `.menu` reads
+	// --bg_menu, and _tokens.less sets that per theme (paper in light, the dark
+	// surface in dark), so the token layer and this file cannot disagree about
+	// what colour the bar is — they did once, and the bar's classic inks
+	// (--menu_link_fg / --menu_selector_fg, surface-relative whites for a dark
+	// band) shipped at 1.14:1 and 1.62:1 on paper. Those inks are redeclared in
+	// the token layer too; what is left here is what tokens cannot say. (The
+	// white toolbar icons are flipped to dark in a LIGHT-THEME-ONLY block below.)
 	// ---------------------------------------------------------------
 	.menu {
-		background-color: var(--bg_surface);
 		box-shadow: inset 0 -1px 0 var(--border_default); // quiet bottom hairline
 
 		> .content_data {
@@ -271,11 +318,27 @@
 				color: var(--fg_default);
 			}
 
-			// active top-level item: orange underline, not an orange slab
+			// active top-level item: an underline, not an orange slab. The
+			// underline is the ONLY thing marking the active item, so it is the
+			// legible accent (3:1 as a mark; the bright fill is 2.4:1 on paper).
 			.menu_hierarchy .menu_li_active > a {
 				background: transparent !important;
 				color: var(--fg_default) !important;
-				box-shadow: inset 0 -2px 0 var(--color_orange_dedalo);
+				box-shadow: inset 0 -2px 0 var(--accent-text);
+			}
+
+			// the root user's name is inked with the accent FILL in classic
+			// (2.4:1 on paper) → the legible accent
+			> .logged_user_name.is_root {
+				color: var(--accent-text);
+			}
+
+			// the language <select> arrow: classic hard-codes a white glyph
+			// built for its dark band (1.01:1 on paper). The themed arrow the
+			// page's every other <select> uses already flips per theme.
+			> .dedalo_aplication_langs_selector {
+				background-image: var(--select_icon_url);
+				background-size: 0.8rem;
 			}
 		}
 	}
@@ -286,6 +349,8 @@
 	// thin accent line across the top of the modal, so identity reads without
 	// a shouting header. Destructive-tool modals swap it to desaturated danger.
 	// ---------------------------------------------------------------
+	// (the bright FILL, on purpose: a decorative identity stripe that nothing
+	// has to read — not a boundary, not a state — so 1.4.11 does not apply)
 	dd-modal .header {
 		border-top: 2px solid var(--color_orange_dedalo);
 	}
@@ -352,16 +417,19 @@
 
 		&.button_replace {
 			background-color: var(--color_orange_dedalo) !important;
-			color: #2a1c05 !important;
+			color: var(--fg_on_brand) !important;
 			border-color: var(--color_orange_border);
-			--button-bg-color: #2a1c05;
+			--button-bg-color: var(--fg_on_brand);
 		}
+		// the danger fill is deep in light and bright in dark, so its ink is
+		// the ramp-inverting --color_white — exactly as classic's button.danger
+		// (--fg_inverse is white in BOTH themes: 3.2:1 on the dark danger)
 		&.button_delete,
 		&.delete {
 			background-color: var(--color_danger) !important;
-			color: var(--fg_inverse) !important;
+			color: var(--color_white) !important;
 			border-color: var(--color_danger);
-			--button-bg-color: var(--fg_inverse);
+			--button-bg-color: var(--color_white);
 		}
 	}
 
@@ -390,19 +458,20 @@
 			color: var(--fg_muted) !important;
 			opacity: 1 !important;
 
+			// the hover word and its outline are ON the surface → legible accent
 			&:hover {
-				border-color: var(--color_orange_dedalo) !important;
-				color: var(--color_orange_dedalo) !important;
+				border-color: var(--accent-text) !important;
+				color: var(--accent-text) !important;
 			}
 		}
 
 		.link_children {
 			border-left-color: var(--color_grey_9) !important;
 
-			&:hover { border-left-color: var(--color_orange_dedalo) !important; }
+			&:hover { border-left-color: var(--accent-text) !important; }
 			&.open {
 				border-left-color: transparent !important;
-				border-top-color: var(--color_orange_dedalo) !important;
+				border-top-color: var(--accent-text) !important;
 			}
 		}
 	}

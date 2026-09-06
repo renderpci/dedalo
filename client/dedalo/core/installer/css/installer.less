@@ -167,7 +167,7 @@
 				box-shadow: 0 0 0 4px var(--ut_accent_soft);
 			}
 			&.completed {
-				color: var(--ut_on_accent); // AA on the success fill in BOTH themes (audit P1-18)
+				color: var(--ut_on_green); // ink on the GREEN success fill, which flips lightness per theme
 				background: var(--ut_green);
 				border-color: var(--ut_green);
 			}
@@ -320,7 +320,7 @@
 			}
 		}
 		&.success {
-			color: var(--ut_on_accent); // AA on the success fill in BOTH themes (audit P1-18)
+			color: var(--ut_on_green); // ink on the GREEN success fill, which flips lightness per theme
 			background: var(--ut_green);
 			box-shadow: 0 2px 12px -3px var(--ut_green_glow);
 		}
@@ -941,7 +941,17 @@
 	}
 
 	// ---- RESPONSIVE ----
-	@media (max-width: 48rem) {
+	// Was a private `48rem` literal. Inside an `@media` condition `rem` is the
+	// BROWSER's initial font size (16px), never this app's 13px root, so that
+	// threshold fired at 768px while its author — writing every other length in
+	// this sheet against the 13px root — was computing ~624px. Snapped to the
+	// phone tier (600px, vars.less), which is both on the scale and the nearest
+	// thing to the intended width. What is inside the block is narrow-viewport
+	// refinement, not structure: the diagnostics grid is `auto-fill
+	// minmax(15rem, 1fr)` and already collapses on its own, so the 600-768 band
+	// this move gives back keeps the wizard's roomier padding instead of losing
+	// anything.
+	@media screen and (max-width: @width_break_point_phone) {
 		>.content_data {
 			padding: 1.25rem 1rem 4rem;
 		}

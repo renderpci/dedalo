@@ -11,15 +11,46 @@
 * base `:root`; classic stays byte-for-byte untouched.
 *
 * Palette source of truth: the validated 2026-06-15 mockup
-* (dev/mockups/dedalo_redesign_mockup.html). Warm paper/ink neutrals, surfaces
-* over borders, one accent (Dédalo orange) split into fill + legible text.
+* (dev/mockups/dedalo_redesign_mockup.html — not in this tree; reachable on the
+* `v7_php_frozen` branch tip). Warm paper/ink neutrals, surfaces over borders,
+* one accent (Dédalo orange) split into fill + legible text.
+*
+* TWO LAWS THIS FILE OBEYS (CSS coherence audit 2026-09, clauses 2.b + 2.c):
+*
+* 1. THE LINE OWNS EVERY COLOUR IT PAINTS. `redesign.less` is imported LAST
+*    from main.less, so `:root[data-design="redesign"]` (0,2,0) beats
+*    `:root[data-theme="dark"]` (0,2,0) by source order. A token declared in the
+*    light block below and NOT in the dark twin therefore leaks its LIGHT value
+*    into redesign+dark — that is how `button.light:hover` shipped at 1.17:1
+*    (near-white ink on the light hover fill). Every colour the light block
+*    declares is declared again in the twin. Conversely, a base token this line
+*    consumes but never declares moves whenever the base retunes it: the accent
+*    fill inherited the P1-18 retune of `--color_orange_dedalo` and its
+*    hard-coded dark ink fell to 3.46:1 without a line here changing. So the
+*    accent is declared HERE, per theme, and the ink that lands on it too.
+*
+* 2. EVERY PAIR IS AT AA. The base contrast gate excludes this design line by
+*    name, so nothing judged it: 35 declared pairs failed in light, 13 in dark.
+*    Values below are chosen against the surfaces the ink actually lands on
+*    (surface, surface_alt, the selected-row tint, the orange tint) — ≥ 4.5:1
+*    for text, ≥ 3:1 for a ring or an edge that IS the mark. The ratio a value
+*    was chosen for is noted beside it. The split of the accent is preserved:
+*    `--color_orange_dedalo` / `--accent` is a FILL (bright, under dark ink),
+*    `--accent-text` is the deepened variant for text, rings and edges on a
+*    light surface — the bright fill is 2.42:1 on paper and can never be a
+*    legible line there.
 */
 
 :root[data-design="redesign"] {
 
 	// ---- WARM PAPER-GREY RAMP (light) ----
 	// Anchored to the mockup neutrals: surface #fffefc, app #f7f6f4,
-	// panel #f1efea, hairline #e7e4df, faint #b4afa5, muted #8a857c, ink #23211e.
+	// panel #f1efea, hairline #e7e4df, faint #b4afa5, muted #6a655b, ink #23211e.
+	// grey_8 / grey_7 are the ramp's TEXT slots (component labels, the
+	// logged-user name, muted captions): like the classic ramp since P1-18 they
+	// sit at AA on every light surface of the ramp (4.6 / 5.0 on surface_alt,
+	// 5.3 / 5.8 on the surface), which flattens 7/8 the same way classic's are
+	// flattened — deliberately.
 	--color_white:    #fffefc;
 	--color_grey_16:  #fffefc;
 	--color_grey_15:  #f7f6f4;
@@ -29,8 +60,8 @@
 	--color_grey_11:  #cfcabf;
 	--color_grey_10:  #b4afa5;
 	--color_grey_9:   #a39d91;
-	--color_grey_8:   #8a857c;
-	--color_grey_7:   #6f6a60;
+	--color_grey_8:   #6f6b64; // text slot — 4.6:1 on surface_alt (was #8a857c, 3.19)
+	--color_grey_7:   #6a655b; // text slot — 4.8:1 on the selected-row tint (was #6f6a60)
 	--color_grey_6:   #565149;
 	--color_grey_5:   #46423b;
 	--color_grey_4:   #23211e;
@@ -50,39 +81,63 @@
 	--bg_elevated:    #fffefc;
 	--bg_input:       #f1efea; // fields read as gently sunken on the surface
 	--bg_header:      #f1efea; // list header is no longer a dark band
-	// --bg_menu stays dark for now (menu restyle is a later stage): it resolves
-	// to var(--color_grey_1) = #181715 via the ramp above.
+	// The menu bar is a light surface with a bottom hairline (stage 5), said
+	// through the token that paints it — `.menu` reads --bg_menu and nothing
+	// else does — so the token layer and _structure.less agree. The bar's inks
+	// are the --menu_* family further down.
+	--bg_menu:        #fffefc;
 	--fg_default:     #23211e;
-	--fg_muted:       #8a857c;
+	// Muted ink lands on FOUR grounds: surface, surface_alt, the app canvas and
+	// the selected-row tint (--accent-soft). 4.8:1 on the tint, the worst of
+	// them; the 0.66rem uppercase card heads need every bit of it. Was #8a857c,
+	// 3.0–3.6:1 on the same grounds — ten of the audit's 35 light failures.
+	--fg_muted:       #6a655b;
 	--fg_inverse:     #fffefc;
+	// A neutral fill that carries the inverse ink (search operator rails,
+	// column chips). Dark in BOTH themes because the ink on it is light in both.
+	--bg_fill_inverse: #6a655b; // 5.8:1 under --fg_inverse
 	--border_default: #e7e4df; // rare hairline — surfaces do the grouping
 	--border_strong:  #cfcabf;
 	--shadow_default: rgba(35, 33, 30, 0.10);
-	--focus_ring:     #4c7fb5; // keyboard focus stays a calm blue (≠ selection)
+	--focus_ring:     #4c7fb5; // keyboard focus stays a calm blue (≠ selection); 4.2:1 as a ring on paper
 	--focus_ring_weak: rgba(76, 127, 181, 0.38);
 
 	// ---- ACCENT (split: fill vs legible text) ----
-	// The identity orange is the fill; pure orange is too light for text on
-	// near-white, so links/icons use the deepened burnt variant.
-	--accent:         var(--color_orange_dedalo); // #f78a1c
-	--accent-text:    #b5610c;
+	// The identity orange is the FILL, declared here so a base retune cannot
+	// move it under the line (law 1). It is bright, so the ink on it is dark:
+	// --fg_on_brand is the base's own name for "the ink on the brand fill", and
+	// every rule that paints on the accent consumes it, never a literal.
+	// Pure orange is 2.42:1 on paper, so links, icons, rings and edges on a
+	// surface use the deepened burnt variant.
+	--color_orange_dedalo: #f78a1c;
+	--accent:         var(--color_orange_dedalo);
+	--fg_on_brand:    #181715; // 7.3:1 on the fill, 6.1:1 on --accent-hover, 6.2:1 on the hover fill
+	--accent-text:    #98510a; // 4.9:1 on the selected-row tint, 5.1:1 on surface_alt, 5.8:1 on surface (was #b5610c, 3.9–4.5)
 	--accent-hover:   #e07d12;
 	--accent-soft:    #fbe7cf;
 
 	// ---- STATUS (desaturated to sit in the neutral field) ----
-	--color_success:       #4f8a5b;
-	--color_green_success: #4f8a5b;
-	--color_danger:        #b25c50;
-	--color_warning:       #b08a2e;
-	--color_primary:       #4c7fb5;
-	--color_info:          #56789c;
+	// Each status hue is a FILL under --fg_inverse somewhere (button.primary,
+	// .alert.success, the login warning, the tag counters), so each is deep
+	// enough for near-white ink: ≥ 4.6:1 under #fffefc.
+	--color_success:       #467d52; // 4.8:1 under white (was #4f8a5b, 4.07)
+	--color_green_success: #467d52;
+	--color_danger:        #b25c50; // 4.6:1
+	// Warning is a DARK fill in light (white ink, --fg_on_warning) and a BRIGHT
+	// one in dark (dark ink) — the opposite lightness to the brand fill in the
+	// same theme, which is why it cannot share --fg_on_brand (base convention).
+	--color_warning:       #8a6b22; // 4.95:1 under --fg_on_warning (was #b08a2e, 3.20)
+	--fg_on_warning:       #fffefc;
+	--color_primary:       #4574a8; // 4.8:1 under white (was #4c7fb5, 4.16)
+	--color_info:          #56789c; // 4.6:1
 	--color_input_focus:   #4c7fb5;
 
 	// tag / counter badges (transcription "Info" stats, indexation tags) —
 	// keep their MEANING but drop the neon so a column of them stays calm.
-	--color_tag_indexation_normal:    #cf8a3e; // index count  (was neon #ffa43d)
-	--color_tag_indexation_removed:   #5a7fa8; // deleted tags (was neon #2f8fff)
-	--color_tag_indexation_to_review: #bd5a4a; // to review    (was neon #fc461a)
+	// normal carries dark ink (--fg_on_accent); removed / to_review carry white.
+	--color_tag_indexation_normal:    #cf8a3e; // index count  (was neon #ffa43d) — 6.3:1 under dark ink
+	--color_tag_indexation_removed:   #52759d; // deleted tags (was neon #2f8fff) — 4.7:1 under white
+	--color_tag_indexation_to_review: #b85341; // to review    (was neon #fc461a) — 4.7:1 under white
 
 	// ---- SHAPE ----
 	--radius-sm: 5px;
@@ -91,8 +146,13 @@
 
 	// ---- COMPONENT SEMANTIC ----
 	--checkbox_bg:         #f1efea;
-	--checkbox_border:     #b4afa5;
-	--checkbox_checked_bg: var(--color_orange_dedalo); // selection = accent
+	// The ring IS the control's boundary (1.4.11, 3:1): on the sunken field
+	// fill it sits at 3.4:1, on the surface at 3.9:1 (was #b4afa5, 1.9 / 2.2).
+	--checkbox_border:     #857e6f;
+	// The checked fill takes a white tick (--checkbox_checkmark) and must read
+	// as a box against the surface, so it is the LEGIBLE accent, not the bright
+	// fill (which would put the tick at 2.4:1).
+	--checkbox_checked_bg: var(--accent-text);
 	--input_bg:            #f1efea;
 	--input_fg:            #23211e;
 	// this design line reads an editable field as gently SUNKEN — surfaces, not
@@ -105,39 +165,49 @@
 	--select_fg:           #23211e;
 	--toolbar_btn_hover_bg: #ddd9d1;
 	--debug_info_bar_bg:    #ecebe7;
-	--debug_info_bar_text:  #6f6a60;
+	--debug_info_bar_text:  #6a655b; // 4.9:1 on --debug_info_bar_bg (was #6f6a60, 4.51 — no margin)
 	--menu_dropdown_text:   #23211e;
 	--menu_dropdown_bg:     #fffefc;
 	--menu_dropdown_border: #cfcabf;
+	// menu bar inks. Classic's are surface-relative WHITES for its dark band
+	// (--menu_link_fg → grey_14, --menu_selector_fg → grey_11), which on this
+	// line's light bar read 1.14:1 and 1.62:1 — the language <select> and the
+	// user-name hover vanished. On paper the bar's ink is the page ink.
+	--menu_link_fg:         #23211e; // 15.9:1 on --bg_menu
+	--menu_selector_fg:     #23211e;
 
 	// ---- MODAL (orange bar retired; accent lives on a top-edge, added in _structure) ----
 	--modal_header_bg:      #fffefc;
 	--modal_header_color:   #23211e;
-	--modal_btn_color:      #6f6a60;
+	--modal_btn_color:      #6a655b;
 	--modal_btn_hover_color: #23211e;
 	--modal_mini_header_bg: #fffefc;
 
 	// ---- DERIVED BUTTON RAMPS (retuned to the desaturated hues) ----
-	--color_primary_border:         #4677aa;
-	--color_primary_hover_bg:       #44729f;
-	--color_primary_hover_border:   #406b96;
+	// A hover fill stays at least as deep as its rest fill: the ink is white on
+	// every one of these, so a lighter hover would lose contrast on hover.
+	--color_primary_border:         #3f6b9b;
+	--color_primary_hover_bg:       #3f6b9b; // 5.5:1 under white
+	--color_primary_hover_border:   #396290;
 	--color_secondary_border:       #605149;
 	--color_secondary_hover_bg:     #4f4a42;
 	--color_secondary_hover_border: #47433c;
-	--color_success_border:         #488154; // slightly darker green edge
-	--color_success_hover_bg:       #4a865d;
-	--color_success_hover_border:   #437d55;
+	--color_success_border:         #3f7049;
+	--color_success_hover_bg:       #3f7049; // 5.8:1 under white
+	--color_success_hover_border:   #3a6843;
 	--color_danger_border:          #a4544a;
 	--color_danger_hover_bg:        #9c4f46;
 	--color_danger_hover_border:    #944a42;
-	--color_danger_dark:            #7d4038;
+	--color_danger_dark:            #7d4038; // 7.8:1 under --fg_inverse
 	--color_orange_border:          #ef8312;
-	--color_orange_hover_bg:        #e57d10;
+	--color_orange_hover_bg:        #e57d10; // 6.2:1 under --fg_on_brand
 	--color_orange_hover_border:    #d8760f;
-	--color_orange_dark:            #b5620a;
+	// the ink on the orange TINT (paginator id, pinned chips, the inspector's
+	// selection band) is the legible accent — one deep orange, not two
+	--color_orange_dark:            var(--accent-text); // 5.6:1 on --color_orange_light
 	--color_orange_light:           #fdf6ee;
 	--color_info_border:            #4f6e8f;
-	--color_info_hover_bg:          #4a6788;
+	--color_info_hover_bg:          #4a6788; // 5.8:1 under white
 	--color_info_hover_border:      #456080;
 	--color_light_border:           #eeece7;
 	--color_light_hover_bg:         #e7e4de;
@@ -147,11 +217,12 @@
 	--color_dark_hover_border:      #181715;
 
 	// ========================================================================
-	// DARK TWIN
+	// DARK TWIN — declares EVERY colour the light block declares (law 1).
 	// ========================================================================
 	&[data-theme="dark"] {
 		// mockup dark neutrals: app #1c1b19, surface #26241f, panel #211f1b,
-		// sunken #181715, ink #e8e5df, muted #989183, hairline #34322c.
+		// sunken #181715, ink #e8e5df, muted #a29c8f, hairline #34322c.
+		// grey_8 / grey_7 are the text slots here too: 4.7 / 5.5:1 on the surface.
 		--color_white:    #26241f;
 		--color_grey_16:  #211f1b;
 		--color_grey_15:  #26241f;
@@ -161,8 +232,8 @@
 		--color_grey_11:  #47443c;
 		--color_grey_10:  #5a564d;
 		--color_grey_9:   #6a655c;
-		--color_grey_8:   #837e73;
-		--color_grey_7:   #989183;
+		--color_grey_8:   #948f84; // text slot — 4.7:1 on surface (was #837e73, 3.8)
+		--color_grey_7:   #a29c8f; // text slot — 4.8:1 on the selected-row tint (was #989183)
 		--color_grey_6:   #b0a99b;
 		--color_grey_5:   #c7bfae;
 		--color_grey_4:   #e8e5df;
@@ -180,68 +251,94 @@
 		--bg_elevated:    #2c2a24;
 		--bg_input:       #211f1b;
 		--bg_header:      #211f1b;
-		--bg_menu:        #141310;
+		--bg_menu:        #26241f; // the bar is the surface in dark, as it has painted since stage 5
 		--fg_default:     #e8e5df;
-		--fg_muted:       #989183;
+		--fg_muted:       #a29c8f; // 4.8:1 on the selected-row tint (was #989183, 4.32)
 		--fg_inverse:     #ffffff;
+		--bg_fill_inverse: #5a564d; // 7.3:1 under --fg_inverse
 		--border_default: #34322c;
 		--border_strong:  #47443c;
 		--shadow_default: rgba(0, 0, 0, 0.55);
 		--focus_ring:     #6f9cc9;
 		--focus_ring_weak: rgba(111, 156, 201, 0.45);
 
-		--color_orange_dedalo: #ffa54a; // brightened for dark surfaces
+		// the fill is brightened for dark surfaces and STILL light, so the ink on
+		// it is the same deep neutral as in light: 9.2:1
+		--color_orange_dedalo: #ffa54a;
 		--accent:         var(--color_orange_dedalo);
-		--accent-text:    #ffb968;
+		--fg_on_brand:    #181715;
+		--accent-text:    #ffb968; // 9.2:1 on surface
 		--accent-hover:   #ffb968;
 		--accent-soft:    #3a2c18;
 
-		--color_success:       #5aa06e;
-		--color_green_success: #5aa06e;
-		--color_danger:        #cf7a70;
-		--color_warning:       #d0a24e;
-		--color_primary:       #7d9cbd;
-		--color_info:          #7d9cbd;
+		// primary / green_success / the two tag counters carry WHITE ink in
+		// dark too (--fg_inverse is white in both themes), so they are deep:
+		// ≥ 4.6:1 under #ffffff. success / danger / warning carry --color_white,
+		// which this ramp inverts to the surface tone, so they stay bright.
+		--color_success:       #5aa06e; // 4.9:1 under the inverted --color_white
+		--color_green_success: #457b56; // 5.0:1 under white (was #5aa06e, 3.14)
+		--color_danger:        #cf7a70; // 4.9:1 under the inverted --color_white
+		--color_warning:       #d0a24e; // bright in dark: dark ink
+		--fg_on_warning:       #181715; // 7.6:1
+		--color_primary:       #4f76a0; // 4.7:1 under white (was #7d9cbd, 2.85)
+		--color_info:          #7d9cbd; // 5.4:1 under the inverted --color_white
 		--color_input_focus:   #6f9cc9;
 
 		// tag / counter badges (dark)
-		--color_tag_indexation_normal:    #d69a52;
-		--color_tag_indexation_removed:   #6f96c8;
-		--color_tag_indexation_to_review: #d16a5a;
+		--color_tag_indexation_normal:    #d69a52; // 7.3:1 under --fg_on_accent
+		--color_tag_indexation_removed:   #4373b2; // 4.9:1 under white (was #6f96c8, 3.06)
+		--color_tag_indexation_to_review: #c44a37; // 4.8:1 under white (was #d16a5a, 3.55)
 
 		--checkbox_bg:         #34322c;
-		--checkbox_border:     #47443c;
+		--checkbox_border:     #7a7568; // 3.5:1 on the field fill, 3.3:1 on surface (was #47443c, 1.6)
+		--checkbox_checked_bg: var(--accent-text);
 		--input_bg:            #211f1b;
 		--input_fg:            #e8e5df;
+		--field_rest_bg:       var(--input_bg);
 		--select_bg:           #211f1b;
 		--select_fg:           #e8e5df;
 		--toolbar_btn_hover_bg: #47443c;
 		--debug_info_bar_bg:    #201e1b;
-		--debug_info_bar_text:  #837e73;
+		--debug_info_bar_text:  #948f84; // 5.0:1 (was #837e73, 4.11)
 		--menu_dropdown_text:   #e8e5df;
 		--menu_dropdown_bg:     #2c2a24;
 		--menu_dropdown_border: #47443c;
+		--menu_link_fg:         #e8e5df; // 12.3:1 on --bg_menu
+		--menu_selector_fg:     #e8e5df;
 
 		--modal_header_bg:      #26241f;
 		--modal_header_color:   #e8e5df;
-		--modal_btn_color:      #989183;
+		--modal_btn_color:      #a29c8f;
 		--modal_btn_hover_color: #e8e5df;
 		--modal_mini_header_bg: #26241f;
 
-		--color_primary_border:       #6f8db0;
-		--color_primary_hover_bg:     #8aa6c6;
-		--color_primary_hover_border: #6f8db0;
+		// button ramps. White-ink fills (primary, danger_dark) deepen on hover;
+		// dark-ink fills (secondary, info, light's inverse) lighten on hover —
+		// in both cases the hover keeps the ink's contrast.
+		--color_primary_border:       #46699a;
+		--color_primary_hover_bg:     #476c93; // 5.5:1 under white
+		--color_primary_hover_border: #3f6088;
+		--color_secondary_border:     #9d968a;
+		--color_secondary_hover_bg:   #bfb8aa; // 7.9:1 under the inverted --color_white
+		--color_secondary_hover_border: #ada699;
 		--color_success_border:       #4f8f60;
 		--color_success_hover_bg:     #6aad7c;
 		--color_success_hover_border: #4f8f60;
 		--color_danger_border:        #bd6d63;
 		--color_danger_hover_bg:      #da8479;
 		--color_danger_hover_border:  #bd6d63;
+		--color_danger_dark:          #8c4a41; // 6.6:1 under --fg_inverse
 		--color_orange_border:        #ee9740;
-		--color_orange_hover_bg:      #ffb35f;
+		--color_orange_hover_bg:      #ffb35f; // 10.1:1 under --fg_on_brand
 		--color_orange_hover_border:  #ee9740;
-		--color_orange_dark:          #d68a30;
+		--color_orange_dark:          var(--accent-text); // 9.2:1 on --color_orange_light
 		--color_orange_light:         #2a2218;
+		--color_info_border:          #6f8db0;
+		--color_info_hover_bg:        #8fabc9; // 6.5:1 under the inverted --color_white
+		--color_info_hover_border:    #7d9cbd;
+		--color_light_border:         #34322c;
+		--color_light_hover_bg:       #34322c; // 11.8:1 under the light button ink (was leaking #e7e4de, 1.17)
+		--color_light_hover_border:   #3d3a33;
 		--color_dark_border:          #d0cdc7;
 		--color_dark_hover_bg:        #e0ddd7;
 		--color_dark_hover_border:    #d8d5cf;
@@ -249,30 +346,41 @@
 
 	// ========================================================================
 	// PINE — alternate accent (opt-in via data-accent="pine"; orange is default)
+	// NOTE: no runtime sets data-accent today (audit C5); the block is kept
+	// coherent so that the day it is wired it does not ship at 2.69:1. The
+	// pine fill is DARK in light, so — unlike orange — its ink is white there.
 	// ========================================================================
 	&[data-accent="pine"] {
 		--color_orange_dedalo: #2f6b63;
 		--accent:      #2f6b63;
-		--accent-text: #2f6b63;
+		--fg_on_brand: #fffefc; // 6.1:1 on the fill, 7.9:1 on hover (dark ink was 2.69 / 2.08)
+		// the installer's --ut_accent aliases the brand fill, so its ink follows
+		// the fill's ink here too (the base's fixed dark ink was 2.88:1 on pine)
+		--ut_on_accent: var(--fg_on_brand);
+		--accent-text: #2f6b63; // 6.1:1 on surface, 5.4:1 on surface_alt
 		--accent-hover: #28594f;
 		--accent-soft: #e3ece9;
 		--color_hilite: #e3ece9;
 		--color_orange_border:      #2a6058;
 		--color_orange_hover_bg:    #28594f;
 		--color_orange_hover_border: #235049;
-		--color_orange_dark:        #1f463f;
+		--color_orange_dark:        #2f6b63; // 5.1:1 on the pine tint
+		--color_orange_light:       #e3ece9; // the tint follows the accent, not orange
 
 		&[data-theme="dark"] {
 			--color_orange_dedalo: #5aa399;
 			--accent:      #5aa399;
-			--accent-text: #6fb3a9;
+			--fg_on_brand: #181715; // 6.1:1 on the fill, 7.4:1 on hover
+			--ut_on_accent: var(--fg_on_brand);
+			--accent-text: #6fb3a9; // 6.4:1 on surface
 			--accent-hover: #6fb3a9;
 			--accent-soft: #21302d;
 			--color_hilite: #21302d;
 			--color_orange_border:      #4f9089;
 			--color_orange_hover_bg:    #6fb3a9;
 			--color_orange_hover_border: #4f9089;
-			--color_orange_dark:        #3f7d74;
+			--color_orange_dark:        #6fb3a9; // 5.7:1 on the pine tint
+			--color_orange_light:       #21302d;
 		}
 	}
 }

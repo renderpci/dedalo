@@ -10,8 +10,35 @@
 :root {
 	--tool_pdf_extractor: #794960;
 	--tool_pdf_extractor_border: #6f4358;
+
+	// THE IDENTITY HUE IS AN EDGE; THE BUTTON FILL IS ITS OWN TOKEN.
+	// The buttons below carry text on the tool's plum, and the ink they carry is
+	// `--color_white` — which is the THEME's ink, not a literal white
+	// (#ffffff in light, #1b1d20 in dark; the ramp flips, vars.less:19-22).
+	// A single hue therefore cannot serve both themes: in light the fill must be
+	// deep enough for white ink, in dark light enough for near-black ink, and the
+	// dark twin `theme_dark.less` declares for the EDGE (#986080, chosen so a 4px
+	// header strip reads against the dark surface) lands at 3.47:1 under the dark
+	// theme's own ink — 3.19:1 under the redesign palette, whose ink is the
+	// lighter #26241f. So the fill gets its own token per axis and the identity
+	// hue keeps its job: the header edge, the spinner, the border of the panels.
+	// This is the `--accent` / `--accent-text` split the redesign line uses.
+	// Light: the hue itself, because #ffffff on #794960 is already 7.16:1.
+	--tool_pdf_extractor_fill: var(--tool_pdf_extractor);
+	--tool_pdf_extractor_fill_border: var(--tool_pdf_extractor_border);
+}
+// Dark twin, self-contained (nothing in layout/theme_dark.less names these two).
+// The fill is the same plum LIFTED until the theme's near-black ink reads on it:
+// #1b1d20 on #c894b0 = 6.69:1, and 6.14:1 under the redesign palette's #26241f,
+// the worse of the two dark inks. The rim is a deeper plum so the button still
+// has an edge against the dark surface (#b07f9e, 5.13:1 on the theme ink —
+// a border needs no text floor, but it must not vanish into the fill).
+:root[data-theme="dark"] {
+	--tool_pdf_extractor_fill: #c894b0;
+	--tool_pdf_extractor_fill_border: #b07f9e;
 }
 @tool_color: var(--tool_pdf_extractor);
+@tool_fill: var(--tool_pdf_extractor_fill);
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
@@ -54,8 +81,15 @@
 		}
 
 		>.button_submit {
-			background-color: @tool_color;
-			border-color: var(--tool_pdf_extractor_border);
+			// The fill token, and the ink stated rather than inherited: a bare
+			// `button` inherits `color: @color_grey_1` (buttons.less), which is
+			// #212529 in light — 2.14:1 on this plum, and invisible to the
+			// contrast gate because the pair was split across two rules. Stating
+			// the theme ink here both fixes the paint and makes the pair
+			// judgeable, which is the whole point of declaring it.
+			background-color: @tool_fill;
+			border-color: var(--tool_pdf_extractor_fill_border);
+			color: @color_white;
 
 			.icon {
 				margin-right: 0.5rem;
@@ -85,8 +119,11 @@
 
 
 		>.button_select {
-			background-color: @tool_color;
-			border-color: var(--tool_pdf_extractor_border);
+			// Same fill/ink pair as .button_submit above: white on the deep plum
+			// in light (7.16:1), the theme's near-black on the lifted plum in
+			// dark (6.69:1, 6.14:1 under the redesign palette).
+			background-color: @tool_fill;
+			border-color: var(--tool_pdf_extractor_fill_border);
 			color: @color_white;
 			margin-left: calc(50% - 5rem);
 			margin-top: 1.5rem;

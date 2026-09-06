@@ -48,7 +48,7 @@
   flex-wrap: wrap;
   margin: 1rem;
   margin-top: 1.5rem;
-  color: var(--color_grey_9);
+  color: var(--fg_muted);
   width: 100%;
   margin-left: auto;
   margin-right: auto;

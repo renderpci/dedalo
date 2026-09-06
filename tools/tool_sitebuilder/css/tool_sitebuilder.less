@@ -11,9 +11,36 @@
 * as the regression it exists to catch, and one declaring itself TOTAL over
 * tools while seeing 36 of 37 and flooring at `> 30`.
 *
-* Plain CSS is valid Less, so this is the existing bytes verbatim: recording the
-* source, not restyling the tool. Edit HERE; the .css is built output.
+* Plain CSS is valid Less, so the STRUCTURE here is the existing bytes verbatim:
+* recording the source, not restyling the tool. The COLOUR layer is no longer
+* verbatim — see the note below. Edit HERE; the .css is built output.
 */
+
+// THE COLOUR LAYER IS NOT THE CAPTURE ANY MORE (2026-09-05, CSS coherence audit
+// C17 / DESIGN clause 2.d). What was recorded here was theme-BLIND: 25 hardcoded
+// literals, four `var(--x, #lit)` names declared nowhere (so the literal was
+// what painted, in every theme), and one `@media (prefers-color-scheme: dark)`
+// block. The app's theme axis is `data-theme` on `<html>`, set from storage by
+// `theme-init.js` — it is NOT the OS preference (see
+// client/dedalo/test/client/css/unit_test.less:28). So that block did the
+// OPPOSITE of theme support: it left the panes white while the app was in DARK,
+// and it fired its dark tints while the app was in LIGHT.
+//
+// Every surface below resolves per theme now, and the OS block's own dark values
+// were not thrown away — they moved onto the `data-theme` axis, composited over
+// `--bg_surface` so the ratios can be computed. Every ratio stated below was
+// measured (relative luminance, WCAG 2.x) against the ink that actually lands on
+// the surface: the inherited document ink `--fg_default` (#353535 light /
+// #e5e7ea dark, general.less) unless the line says otherwise.
+//
+// (!) These notes are `//`, not a docblock: LESS copies block comments into the
+// output and this sheet is served to the browser (see vars.less's header).
+
+// imports
+// vars emits NOTHING (compile-time aliases + the breakpoint record). Added
+// 2026-09-05: this sheet had no import at all, so its one `@media` carried a
+// raw `1100px` that belonged to no tier (audit M5).
+@import (once) '../../../client/dedalo/core/page/css/layout/vars';
 
 /* tool_sitebuilder — the three-pane workspace: sites | chat | preview. */
 
@@ -25,13 +52,56 @@
 //
 // background-COLOR, never the `background` shorthand: the shorthand resets the
 // gradient tool_common paints the header surface with.
+//
+// The edge is a NON-TEXT identifier, so its floor is 3:1 against the surface it
+// sits on (`--bg_surface_alt`, tool_common.less). The light teal cleared it
+// (4.96:1 on #f6f6f6) and the dark surface did not: #0e7490 on #1f2227 is
+// 2.98:1 — below the floor by a hair, which is exactly how an unpaired identity
+// hue fails. The dark twin lifts the same teal to 4.29:1 and stays deep enough
+// not to read as tool_import_dedalo_csv's brighter cyan.
 @sitebuilder_color: #0e7490;
 
 :root {
 	--tool_sitebuilder: @sitebuilder_color;
 }
+:root[data-theme="dark"] {
+	--tool_sitebuilder: #1590b0;
+}
 .tool_header.tool_sitebuilder {
 	background-color: var(--tool_sitebuilder);
+}
+
+// ---- TOOL SURFACES ----
+// Two tints the core palette has no name for: a chat/list row hover step and
+// the "this one is picked" accent used by BOTH the selected site row and the
+// user's own chat bubble. Light values are the captured originals; the dark
+// twins are the OS block's own rgba tints composited over `--bg_surface`
+// (#1b1d20), so the recorded intent survives on the axis that actually runs:
+//   rgba(255,255,255,.06) over #1b1d20 -> #292b2d
+//   rgba(90,150,240,.18)  over #1b1d20 -> #263345
+// Ink on them (worst case, both themes): `--fg_default` >= 10.3:1,
+// `--fg_muted` >= 4.86:1, the running dot >= 5.71:1.
+:root {
+	--sitebuilder_row_hover_bg: #f0f0f0;
+	--sitebuilder_selected_bg:  #e3edfa;
+	// The session-running dot. `--color_success` is a FILL token: as INK it has
+	// only 4.58:1 on white and drops to 3.87:1 on the selected row tint, so the
+	// sites list needs a darker green of its own in light (6.79:1 on the pane,
+	// 5.74:1 on the selected row). In dark the palette's own green is already
+	// far clear of the floor (5.71:1 on the selected row), so it is reused.
+	--sitebuilder_running_fg:   #17692c;
+	// Ink on the publish fill. `--color_success` is a dark fill in light and a
+	// LIGHT one in dark, so no single ink works on it: white is 4.58:1 on
+	// #208738 and 2.24:1 on #46c46c. One token, one value per theme — and in
+	// dark the value is the palette's own ink FOR a light accent fill
+	// (`--fg_on_accent`, #16181b), 7.94:1.
+	--sitebuilder_publish_fg:   var(--fg_inverse);
+}
+:root[data-theme="dark"] {
+	--sitebuilder_row_hover_bg: #292b2d;
+	--sitebuilder_selected_bg:  #263345;
+	--sitebuilder_running_fg:   var(--color_success);
+	--sitebuilder_publish_fg:   var(--fg_on_accent);
 }
 
 
@@ -41,11 +111,14 @@
 	gap: 1px;
 	height: 100%;
 	min-height: 70vh;
-	background: var(--border_color, #d0d0d0);
+	// The `gap` shows this background through as the seam between panes:
+	// `--border_strong` is the ramp step the captured #d0d0d0 was reaching for,
+	// and it is the one that stays visible against the pane surface in dark.
+	background: var(--border_strong);
 }
 
 .tool_sitebuilder .sb_pane {
-	background: var(--background_color, #fff);
+	background: var(--bg_surface);
 	overflow: auto;
 	display: flex;
 	flex-direction: column;
@@ -64,49 +137,73 @@
 	display: flex; justify-content: space-between; align-items: center;
 	padding: 6px 8px; cursor: pointer; border-radius: 4px;
 }
-.sb_site:hover { background: var(--hover_color, #f0f0f0); }
-.sb_site.is_selected { background: var(--selected_color, #e3edfa); font-weight: 600; }
-.sb_site_state { color: #2e9e4f; }
+.sb_site:hover { background: var(--sitebuilder_row_hover_bg); }
+.sb_site.is_selected { background: var(--sitebuilder_selected_bg); font-weight: 600; }
+// A dot ('●', sitebuilder_controller.js), the only mark saying a build session
+// is running — held to the 4.5:1 text floor rather than the 3:1 graphic one,
+// because nothing else on the row carries that state.
+.sb_site_state { color: var(--sitebuilder_running_fg); }
 
 /* --- chat pane --- */
+// The transcript inks. Each was a literal chosen for a white pane; each is now
+// the palette token of the same meaning, verified as INK on `--bg_surface` in
+// both themes (light / dark):
+//   tool, turn, history, empty  --fg_muted        5.74 / 8.09
+//   files, turn_end             --color_success   4.58 / 7.54
+//   error, delete               --color_danger    4.53 / 4.94
+//   notice                      --color_warning   4.62 / 6.42
+//   build_status                --color_info      4.58 / 7.79
+// build_status was #37c (blue). `--color_primary` is the blue of that meaning
+// and it is unreadable as ink on the dark pane (3.49:1) — it is a fill token,
+// AA under white ink, not on it. `--color_info` is the nearest hue that is ink
+// in both themes, so the line changes hue rather than legibility.
 .sb_pane_chat { }
 .sb_chat_log { flex: 1 1 auto; overflow: auto; padding: 12px; font-size: 0.9rem; }
 .sb_line { margin: 4px 0; white-space: pre-wrap; word-break: break-word; }
-.sb_user { background: var(--selected_color, #e3edfa); padding: 6px 8px; border-radius: 6px; }
+.sb_user { background: var(--sitebuilder_selected_bg); padding: 6px 8px; border-radius: 6px; }
 .sb_agent { }
-.sb_tool { color: #666; font-family: monospace; font-size: 0.82rem; }
-.sb_files { color: #4a6; font-size: 0.82rem; }
-.sb_turn { color: #999; text-align: center; font-size: 0.78rem; }
-.sb_turn_end { color: #2e9e4f; font-size: 0.82rem; }
-.sb_error { color: #c33; }
-.sb_notice { color: #a70; font-size: 0.82rem; }
-.sb_build_status { color: #37c; font-size: 0.82rem; }
-.sb_history_note { color: #999; font-style: italic; font-size: 0.8rem; }
+.sb_tool { color: var(--fg_muted); font-family: monospace; font-size: 0.82rem; }
+.sb_files { color: var(--color_success); font-size: 0.82rem; }
+.sb_turn { color: var(--fg_muted); text-align: center; font-size: 0.78rem; }
+.sb_turn_end { color: var(--color_success); font-size: 0.82rem; }
+.sb_error { color: var(--color_danger); }
+.sb_notice { color: var(--color_warning); font-size: 0.82rem; }
+.sb_build_status { color: var(--color_info); font-size: 0.82rem; }
+.sb_history_note { color: var(--fg_muted); font-style: italic; font-size: 0.8rem; }
 
-.sb_composer { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; border-top: 1px solid var(--border_color, #ddd); }
+.sb_composer { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; border-top: 1px solid var(--border_default); }
 .sb_prompt { flex: 1 1 100%; min-height: 54px; resize: vertical; padding: 6px; }
 .sb_composer button { padding: 6px 12px; cursor: pointer; }
-.sb_send { background: #2f6fdb; color: #fff; border: none; border-radius: 4px; }
+// White ink on `--color_primary` is 4.60:1 in light and 4.83:1 in dark — the
+// one fill in this sheet that carries the same ink on both axes.
+.sb_send { background: var(--color_primary); color: var(--fg_inverse); border: none; border-radius: 4px; }
 .sb_stop:disabled { opacity: 0.4; cursor: default; }
-.sb_delete { margin-left: auto; color: #c33; }
+.sb_delete { margin-left: auto; color: var(--color_danger); }
 
 /* --- preview pane --- */
 .sb_pane_preview { }
-.sb_preview_bar { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border-bottom: 1px solid var(--border_color, #ddd); }
+.sb_preview_bar { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border-bottom: 1px solid var(--border_default); }
 .sb_preview_bar button, .sb_preview_bar a { padding: 4px 10px; cursor: pointer; text-decoration: none; }
-.sb_publish { margin-left: auto; background: #2e9e4f; color: #fff; border: none; border-radius: 4px; }
-.sb_preview_frame { flex: 1 1 auto; width: 100%; border: 0; min-height: 60vh; background: #fff; }
+.sb_publish { margin-left: auto; background: var(--color_success); color: var(--sitebuilder_publish_fg); border: none; border-radius: 4px; }
+// THEME-INVARIANT ON PURPOSE, like tool_print's paper preview. The frame holds
+// the PUBLISHED SITE — another document, with its own palette, which this
+// app's theme cannot and must not reach into. White is the paper the site is
+// authored against, so it is what the preview must show; the ink on it belongs
+// to the site, not to Dédalo. (The retired OS-keyed block agreed: it re-stated
+// #ffffff for dark.)
+.sb_preview_frame { flex: 1 1 auto; width: 100%; border: 0; min-height: 60vh; background: #ffffff; }
 
 /* --- empty state --- */
-.sb_empty { padding: 40px; text-align: center; color: #888; }
+.sb_empty { padding: 40px; text-align: center; color: var(--fg_muted); }
 
-@media (prefers-color-scheme: dark) {
-	.sb_preview_frame { background: #fff; }
-	.sb_site:hover { background: rgba(255,255,255,0.06); }
-	.sb_site.is_selected { background: rgba(90,150,240,0.18); }
-	.sb_user { background: rgba(90,150,240,0.18); }
-}
-
-@media (max-width: 1100px) {
+// Three panes stop fitting side by side, so they stack. Was a raw `1100px` — a
+// width belonging to no tier, in a sheet that imported nothing (audit M5).
+// `@width_break_point_0` is the app's own "stop being a multi-column desktop"
+// tier, which is exactly what this rule means, so the threshold moves 1100 ->
+// 1024: between those two widths the workspace now stays three-column, at ~390px
+// per pane instead of stacking. That is the same call the rest of the app makes
+// at that width, and it is the reason to snap rather than to keep a private
+// number 76px away from a tier.
+@media screen and (max-width: @width_break_point_0) {
 	.tool_sitebuilder { grid-template-columns: 1fr; grid-template-rows: auto auto auto; }
 }

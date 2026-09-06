@@ -253,7 +253,17 @@
 							grid-template-rows: minmax(3rem, auto) 2fr minmax(3rem, auto);
 							overflow: hidden;
 
-							@bg_color_buttons: rgb(255 255 255 / 80%);
+							// Theme-aware scrim, NOT a white one. This was a verbatim
+							// copy of the core mosaic block from before its fix
+							// (`view_mosaic_portal.less:57` reads the token now):
+							// `rgb(255 255 255 / 80%)` composites to #d1d2d2 over the
+							// dark card and the ink on it inverts to #ecedf0 — the
+							// id, the edit and the remove affordance at 1.29:1
+							// (light 11.5:1). The core token is the same scrim on
+							// both axes (light white 80% / dark #181a1e 82%), and it
+							// resolves here because a tool sheet is injected into
+							// the main.css document. CSS coherence audit C11.
+							@bg_color_buttons: var(--mosaic_chip_bg);
 
 							>.column {
 								z-index: 2;
@@ -334,8 +344,17 @@
 								&:hover {
 									background-color: @color_orange_dedalo;
 
+									// The glyph on the brand fill is --fg_on_brand,
+									// never --color_white: the orange is a LIGHT fill
+									// in BOTH themes, so white on it is 2.44:1 in
+									// light — under the 3:1 floor a non-text
+									// affordance carries (it is 8.63:1 in dark, which
+									// is how a light-only failure hides). The palette
+									// states the rule on the token itself
+									// (vars_tokens.less, --fg_on_brand): 7.29:1 light,
+									// 9.09:1 dark, one value for both.
 									>.button.info {
-										background-color: @color_white;
+										background-color: var(--fg_on_brand);
 									}
 								}
 
@@ -385,11 +404,6 @@
 							margin: 0.33rem;
 							z-index: 1;
 							opacity: 1;
-
-							// smartphones, touchscreens
-							@media (hover: none) and (pointer: coarse) {
-								opacity: 1;
-							}
 						}
 						&:hover {
 							.button {
