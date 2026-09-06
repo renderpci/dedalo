@@ -4867,6 +4867,20 @@ button.button_spinner.success::before {
 :root[data-theme="dark"] .button.grey {
   background-color: var(--color_grey_6);
 }
+.buttons_container .search_buttons_container button.warning:not(.new),
+.buttons_container .other_buttons_block button.warning:not(.new) {
+  background-color: transparent;
+  border-color: var(--border_strong);
+  color: var(--fg_default);
+  --button-bg-color: var(--fg_muted);
+}
+.buttons_container .search_buttons_container button.warning:not(.new):hover,
+.buttons_container .other_buttons_block button.warning:not(.new):hover {
+  background-color: var(--color_orange_dedalo);
+  border-color: var(--color_orange_border);
+  color: var(--fg_on_brand);
+  --button-bg-color: var(--fg_on_brand);
+}
 /**
 * layout
 *

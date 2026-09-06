@@ -731,3 +731,39 @@ button.button_spinner {
 :root[data-theme="dark"] .button.grey {
 	background-color: @color_grey_6;
 }
+
+// ---------------------------------------------------------------------------
+// SECTION TOOLBAR — flat at rest, accent on hover.
+//
+// The toolbar used to be a wall of Dédalo orange: ten equally loud fills, so
+// nothing was primary and the row shouted over the data it sits above. Here the
+// resting button takes NO fill of its own — it is the page plus a hairline
+// around the hit area, in both themes — and the accent moves to the hover,
+// where it means "this one is about to act". `New` keeps the fill at rest: it
+// is the one primary action of the row (its `.warning.new` rule below/above
+// still applies, because this block deliberately does not match `.new`).
+//
+// Scoped to the two toolbar containers (search strip + the other-buttons
+// block), NOT to `.warning` at large: the same class paints inspector, portal
+// and maintenance-widget buttons that are not part of this row.
+//
+// Ink on the hover fill is `--fg_on_brand` (per-theme), never a literal, and
+// the icon takes it through `--button-bg-color` rather than a ::before override
+// so a busy button's spinner still wins the pseudo-element.
+// ---------------------------------------------------------------------------
+.buttons_container .search_buttons_container button.warning,
+.buttons_container .other_buttons_block button.warning {
+	&:not(.new) {
+		background-color: transparent;
+		border-color: var(--border_strong);
+		color: var(--fg_default);
+		--button-bg-color: var(--fg_muted);
+
+		&:hover {
+			background-color: @color_orange_dedalo;
+			border-color: @color_orange_border;
+			color: var(--fg_on_brand);
+			--button-bg-color: var(--fg_on_brand);
+		}
+	}
+}
