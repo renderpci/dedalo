@@ -165,6 +165,69 @@ export function authMarkerDir(): string | null {
 }
 
 /**
+ * Is the media tree actually THERE? Returns the reason it is not, or null when it is.
+ *
+ * A MEDIA ROOT THAT CANNOT BE REACHED IS NOT AN UNPROTECTED MEDIA ROOT. The fail-loud
+ * posture of this module rests on one premise: if the gate artifacts cannot be written,
+ * the web server serves the tree WITHOUT them. That premise holds only while there is a
+ * tree to serve. When the root itself is missing — an external volume that is not
+ * mounted (`/Volumes/…`), a network share that dropped, a path typed wrong — the web
+ * server resolves every media URL to nothing and answers 404. There is no exposure to
+ * fail loud about, and refusing to mint a media credential must never become refusing
+ * to LOG IN: media availability is not an authorization input for the archive's records.
+ *
+ * The distinction drawn here is EXISTENCE, never writability. A root that exists but
+ * whose `.publication` store cannot be created (read-only mount, wrong owner) IS being
+ * served unprotected, so that failure still throws exactly as before.
+ *
+ * WHICH IS WHY THE ERRNO LIST IS CLOSED AND SHORT. "Any stat failure" would be exactly
+ * the conflation this function exists to prevent: `MEDIA_PATH=/srv/media` under a `/srv`
+ * this process may not traverse answers EACCES — while the web server's own user
+ * traverses it perfectly well and serves every file in the tree. Degrading there hides a
+ * world-readable media tree behind a console line. Only ENOENT (nothing at that path),
+ * ENOTDIR (a path component is a file) and ESTALE (an NFS handle whose export went away)
+ * mean ABSENT; every other errno falls through to the writer, which throws as it always
+ * did.
+ *
+ * (!) NOT A CURE FOR EVERY UNMOUNTED VOLUME. macOS removes `/Volumes/<name>` when the
+ * disk goes, so the probe sees ENOENT — the reported case. A Linux mount point is a
+ * directory that SURVIVES the unmount, usually root-owned: the probe correctly says
+ * "reachable" (the web server serves that empty directory), and a login on such a box
+ * still throws on the unwritable root. That is the right answer for the wrong-feeling
+ * case: the tree IS being served, it is merely empty.
+ */
+export function mediaTreeUnreachableReason(): string | null {
+	// The RAW root, deliberately not `mediaRoot()`: this is a read-only existence probe,
+	// not a write door, and it has to be answerable while the test-media guard is armed
+	// (a root that is gone cannot carry the `.dedalo_test_media` marker, so asking the
+	// guard first would turn "the disk is unplugged" into a refusal — the very confusion
+	// this function exists to separate). Every caller still goes through `mediaRoot()`
+	// for the paths it actually writes.
+	const root =
+		pathOverridesForTests !== null ? pathOverridesForTests.mediaRoot : config.media.rootPath;
+	if (root === null) return null; // unset is a different condition, handled by callers
+	try {
+		if (!statSync(root).isDirectory()) return `${root} exists but is not a directory`;
+	} catch (error) {
+		const code = (error as NodeJS.ErrnoException).code;
+		if (code !== undefined && ABSENT_ROOT_ERRNOS.has(code)) {
+			return `${root} cannot be reached (${code})`;
+		}
+		// EACCES, EPERM, ELOOP, EIO… — the path may well be there and served. Say
+		// nothing: the caller's write will throw, which is the correct, loud outcome.
+		return null;
+	}
+	return null;
+}
+
+/**
+ * The errnos that mean THERE IS NOTHING AT THAT PATH — see the closed-list paragraph in
+ * `mediaTreeUnreachableReason`. Anything not listed is a root that may exist and be
+ * served, and must reach the throwing path.
+ */
+const ABSENT_ROOT_ERRNOS = new Set(['ENOENT', 'ENOTDIR', 'ESTALE']);
+
+/**
  * The RETIRED day-global auth store, kept addressable for exactly one reason: a
  * migrating install has one on disk and it must be got rid of.
  *
@@ -890,9 +953,10 @@ export function ruleFilePaths(): { htaccess: string; nginx: string; nginxMap: st
  * misconfiguration the operator MUST see (CONVENTIONS §1 — the default is fail-loud).
  */
 export function writeRuleFiles(modeOverride?: RuleMode): boolean {
-	const paths = ruleFilePaths();
-	if (paths === null) return false; // media root unset — feature off
-
+	// THE MODE FIRST, then the tree, then the paths. Order matters twice over: an install
+	// that turned protection OFF must not get a boot-time error line about an absent tree
+	// whose files it never wanted written (`true` there means "nothing to do"), and the
+	// tree has to be judged before `ruleFilePaths()` resolves anything under it.
 	let mode: RuleMode;
 	if (modeOverride !== undefined) {
 		mode = modeOverride;
@@ -901,6 +965,17 @@ export function writeRuleFiles(modeOverride?: RuleMode): boolean {
 		if (resolved === false) return true; // protection off: leave existing files alone
 		mode = resolved;
 	}
+
+	// Nothing to write into — and nothing being served out of it either, so the absent
+	// rules gate nothing. Reported as "not written", never as a throw.
+	const unreachable = mediaTreeUnreachableReason();
+	if (unreachable !== null) {
+		console.error(`[media_protection] media rule files not written: ${unreachable}.`);
+		return false;
+	}
+
+	const paths = ruleFilePaths();
+	if (paths === null) return false; // media root unset — feature off
 
 	const qualities = mode === 'publication' ? getPublicQualities() : [];
 	const addons = getAddonLines();
@@ -1043,6 +1118,14 @@ export function retireLegacyAuthStore(): void {
  * validated as strict sha512 hex before they can reach the disk (path traversal).
  */
 export function syncAuthMarkers(values: string[], reapGraceMs = 0): void {
+	// Same as layAuthMarker: an absent tree is not an unprotected tree, and this runs from
+	// the hourly session sweeper — which must not start throwing because a disk was
+	// unplugged.
+	const unreachable = mediaTreeUnreachableReason();
+	if (unreachable !== null) {
+		console.error(`[media_protection] auth markers not reconciled: ${unreachable}.`);
+		return;
+	}
 	const dir = authMarkerDir();
 	if (dir === null) return; // media root unset — feature off
 
@@ -1140,6 +1223,17 @@ export const MARKER_REAP_GRACE_MS = 60_000;
  * guard, not a formality.
  */
 export function layAuthMarker(value: string): void {
+	// The tree is GONE (unmounted volume, dropped share): nothing is served out of it, so
+	// no marker can be missing from a gate no request ever reaches. Degrade — a throw here
+	// takes down the login door, and this also runs per session on the authenticated hot
+	// path (server.ts sessionMediaKeyFor). FIRST, before any path is resolved.
+	const unreachable = mediaTreeUnreachableReason();
+	if (unreachable !== null) {
+		console.error(
+			`[media_protection] no media auth marker laid: ${unreachable}. The media tree is not being served, so nothing is exposed; media files 404 until it is back.`,
+		);
+		return;
+	}
 	const dir = authMarkerDir();
 	if (dir === null) return; // media root unset — feature off
 	if (!COOKIE_VALUE_REGEX.test(value)) {
@@ -1188,6 +1282,18 @@ export function dropAuthMarker(value: string): void {
 export function issueSessionMediaKey(): string | null {
 	const { mode, source } = resolveMediaAccessModeDetail();
 	if (mode === false) return null;
+	// AN ABSENT TREE IS NOT AN UNPROTECTED TREE (mediaTreeUnreachableReason). Return no
+	// cookie instead of throwing, because the caller is login() and a media volume that is
+	// not mounted must not lock the archive's editors out of their DATA. Loud, so the
+	// operator learns the volume is down. Before the `mediaRoot() === null` branch: this
+	// is a CONFIGURED root that is merely not there, a different fault from an unset one.
+	const treeGone = mediaTreeUnreachableReason();
+	if (treeGone !== null) {
+		console.error(
+			`[media_protection] media protection is '${mode}' but ${treeGone}. No media cookie is issued and no rule files are written: the web server resolves this tree to nothing, so nothing is exposed. LOGIN PROCEEDS — media files 404 until the tree is back.`,
+		);
+		return null;
+	}
 	if (mediaRoot() === null) {
 		if (source === 'default') {
 			console.error(

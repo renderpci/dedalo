@@ -46,6 +46,32 @@ cookie, non-grammar filename, absent store) denies, and denies without disclosin
 file exists. Rule A markers are independent of publication state, so a diffusion failure
 can never lock editors out.
 
+**An UNREACHABLE media tree is not an unprotected one.** Fail-loud (a configured mode
+whose gate artifacts cannot be written throws, rather than degrading into silently
+unprotected media) rests on the premise that the web server is serving the tree. That
+premise dies when the root itself is absent — an unmounted volume, a dropped share, a
+mistyped path: every media URL then 404s at the web server, so there is nothing to
+protect. `mediaTreeUnreachableReason()` (protection.ts) draws that line, on EXISTENCE
+only, and the four writers behind it — `issueSessionMediaKey`, `layAuthMarker`,
+`syncAuthMarkers`, `writeRuleFiles` — log loudly and do nothing instead of throwing.
+**Media availability is never an authorization input for records**: before 2026-09-06 an
+unmounted media disk took the exception out of `login()` and nobody could sign in to read
+a text record. A root that EXISTS but cannot be written (read-only mount, wrong owner) is
+being served, and still throws. So is a root this process merely cannot STAT: the errno
+list is closed — `ENOENT`, `ENOTDIR`, `ESTALE` — because `MEDIA_PATH=/srv/media` under a
+`/srv` this process may not traverse answers `EACCES` while the web server's own user
+traverses it and serves every file in the tree. And the mode is resolved BEFORE the tree
+is probed, so an install with protection off and an unplugged disk gets no error line
+about files it never wanted. `writeRuleFiles` answers `false` rather than throwing when
+the tree is absent, and the `media_control` widget FAILS the action on that `false` — a
+mode change that wrote no rules must never report success. Gates: the five
+`media_protection.test.ts` cases in the login-hook block named for this behaviour.
+
+Not every unmounted volume is this shape. macOS removes `/Volumes/<name>` with the disk,
+so the probe sees `ENOENT`. A Linux mount point SURVIVES the unmount as an empty,
+usually root-owned directory: the probe correctly reads it as reachable — the web server
+is serving that empty tree — and a login there still fails loud on the unwritable root.
+
 ## 3. The marker store, and who owns what
 
 ```

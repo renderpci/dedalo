@@ -229,8 +229,16 @@ async function mediaControlSetAccessMode(
 	// (!) 'off' WRITES the hardening-only template — it must never unlink the files. The
 	// media root is full of user-uploaded files, and an .htaccess-less media dir is one
 	// where Apache will happily execute an uploaded .php (SEC-088).
+	//
+	// (!) The RETURN VALUE is load-bearing too, since 2026-09-06: writeRuleFiles no
+	// longer throws when the media tree is ABSENT (an unmounted volume — the web server
+	// serves nothing from it, so there is nothing to fail loud about and login must not
+	// break). It answers `false` instead. Ignoring that answer would make this widget
+	// report "mode applied" over a gate that was never written, and the operator would
+	// discover it when the volume came back carrying the PREVIOUS mode's rules.
+	let written: boolean;
 	try {
-		protection.writeRuleFiles(effective === false ? 'off' : effective);
+		written = protection.writeRuleFiles(effective === false ? 'off' : effective);
 	} catch (error) {
 		// The mode IS saved, but the gate on disk still carries the old rules. Surface the
 		// mismatch rather than rolling back — a rollback would leave rules for a mode the
@@ -241,6 +249,19 @@ async function mediaControlSetAccessMode(
 				'gate on disk still enforces the PREVIOUS mode. Check write permissions on the ' +
 				'media root, then re-apply.',
 			{ cause: error },
+		);
+	}
+
+	// A root that is UNSET is not this failure: the widget refused that above for every
+	// value that needs a gate, and 'off'/'config' on an install with no MEDIA_PATH have
+	// nothing to write by definition.
+	if (written === false && protection.mediaRoot() !== null) {
+		failAction(
+			'Error. The mode was saved, but the media rule files were NOT written: the media ' +
+				'root is not reachable (an unmounted volume, a dropped share, or MEDIA_PATH ' +
+				'pointing at a path that does not exist). Nothing is served from it while it is ' +
+				'gone — but re-apply the mode once it is back, or the gate will carry the ' +
+				'PREVIOUS rules. See the server log for the exact path.',
 		);
 	}
 
