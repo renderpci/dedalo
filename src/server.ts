@@ -1315,6 +1315,13 @@ export async function handleRequest(request: Request, context: RequestContext): 
 			// WC-2026-08-19-rqo-body-csrf-token.
 			csrfCandidate:
 				request.headers.get('x-dedalo-csrf-token') ?? parsedRqo.data.csrf_token ?? null,
+			// The same precedence, recorded — see ApiRequestContext.csrfSource.
+			csrfSource:
+				request.headers.get('x-dedalo-csrf-token') !== null
+					? 'header'
+					: parsedRqo.data.csrf_token !== undefined && parsedRqo.data.csrf_token !== null
+						? 'body'
+						: null,
 			reportTokenCandidate: request.headers.get('x-dedalo-report-token'),
 			bodyByteLength: parseContentLength(request.headers.get('content-length')),
 			startedAt: context.startedAt,
