@@ -488,6 +488,85 @@ export function buildCropArgv(source: string, target: string, box: CropBox): str
 	];
 }
 
+/**
+ * Crop THEN pad to a fixed canvas with a white background, gravity-centered
+ * (PHP tool_import_files crop_50 :101-115 — used to bring a shorter crop up
+ * to match the taller one's height so two split images read as a matched
+ * pair). `extentWidth`/`extentHeight` are the FINAL canvas size; passing the
+ * box's own width and a taller `extentHeight` pads vertically only, which is
+ * the crop_50 use — a general caller may pad on both axes.
+ */
+export function buildCropAndPadArgv(
+	source: string,
+	target: string,
+	box: CropBox,
+	extentWidth: number,
+	extentHeight: number,
+): string[] {
+	return [
+		resolveMagick(),
+		source,
+		'-crop',
+		`${box.width}x${box.height}+${box.x}+${box.y}`,
+		'+repage',
+		'-background',
+		'white',
+		'-gravity',
+		'center',
+		'-extent',
+		`${extentWidth}x${extentHeight}`,
+		coderToken(target),
+	];
+}
+
+/**
+ * Bilevel foreground/background mask recipe (PHP tool_import_files crop_50
+ * :53 — the numisdata "split obverse/reverse" script). Grayscale, negate,
+ * threshold at 5%, collapse to 1-bit: a near-white background lands at
+ * gray(0), anything else (the subject) lands at gray(255). Feeds
+ * `buildConnectedComponentsArgv` — this recipe alone never claims a subject
+ * was found, it only prepares the mask.
+ */
+export function buildBilevelMaskArgv(source: string, target: string): string[] {
+	return [
+		resolveMagick(),
+		source,
+		'-colorspace',
+		'gray',
+		'-negate',
+		'-threshold',
+		'5%',
+		'-type',
+		'bilevel',
+		coderToken(target),
+	];
+}
+
+/**
+ * Connected-components analysis recipe (PHP tool_import_files crop_50 :63 —
+ * the numisdata script). Writes NO image (`null:` sink) — the verbose report
+ * is what's wanted, on stdout, one line per labelled blob:
+ *   `  <id>: <w>x<h>+<x>+<y> <cx>,<cy> <area> gray(<mean>)`
+ * `areaThreshold` merges/drops components smaller than that many pixels
+ * (ImageMagick's own noise floor, BEFORE this module's own dimension filter).
+ * Run this one through `runBinary` directly (not `runMagickTo` — there is no
+ * output file to verify) and parse the result with
+ * `parseConnectedComponentsReport` (`../region_split.ts`).
+ */
+export function buildConnectedComponentsArgv(source: string, areaThreshold: number): string[] {
+	return [
+		resolveMagick(),
+		source,
+		'-define',
+		'connected-components:verbose=true',
+		'-define',
+		`connected-components:area-threshold=${areaThreshold}`,
+		'-connected-components',
+		'8',
+		'null:',
+	];
+}
+
 // -------- runners --------
 
 /**
@@ -653,6 +732,50 @@ export async function cropImage(source: string, target: string, box: CropBox): P
 	// The out-of-bounds geometry check keeps its own message and runs FIRST: an
 	// impossible crop box is a caller error, not a missing-output mystery.
 	await runMagickTo(buildCropArgv(source, target, box), target, /geometry does not contain image/i);
+}
+
+/** Crop-and-pad-to-canvas (see {@link buildCropAndPadArgv}). Same geometry guard as `cropImage`. */
+export async function cropAndPadImage(
+	source: string,
+	target: string,
+	box: CropBox,
+	extentWidth: number,
+	extentHeight: number,
+): Promise<void> {
+	await runMagickTo(
+		buildCropAndPadArgv(source, target, box, extentWidth, extentHeight),
+		target,
+		/geometry does not contain image/i,
+	);
+}
+
+/** Bilevel mask (see {@link buildBilevelMaskArgv}) — a real single-image output, runs through `runMagickTo`. */
+export async function buildBilevelMask(source: string, target: string): Promise<void> {
+	await runMagickTo(buildBilevelMaskArgv(source, target), target);
+}
+
+/**
+ * Run the connected-components analysis (see {@link buildConnectedComponentsArgv})
+ * and return the RAW verbose report text. `null:` writes no file, so this goes
+ * through `runBinary` directly rather than `runMagickTo` — there is nothing for
+ * that runner's existence/scene-count postcondition to check. A non-zero exit or
+ * a kill is always fatal here: unlike an encode, there is no "sound output despite
+ * a warning exit" case for a text report — either the report is trustworthy or it
+ * is not used.
+ */
+export async function runConnectedComponents(
+	source: string,
+	areaThreshold: number,
+): Promise<string> {
+	const result = await runBinary(buildConnectedComponentsArgv(source, areaThreshold), {
+		env: magickPolicyEnv(),
+	});
+	if (!result.ok) {
+		throw new Error(
+			`ImageMagick connected-components analysis failed: ${describeSpawnFailure(result)}`,
+		);
+	}
+	return result.stdout;
 }
 
 /**
