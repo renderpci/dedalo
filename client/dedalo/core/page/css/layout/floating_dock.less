@@ -1,9 +1,11 @@
 /**
 * floating_dock
 *
-* The ONE bottom-right corner where global floating buttons live. Its only
-* tenant today is the error-report launcher, installed on every page —
-* menu-less ones included — from common/js/error_report_launcher.js.
+* The ONE bottom-right corner where global floating buttons live. Its tenants
+* today: the error-report launcher (installed on every page — menu-less ones
+* included — from common/js/error_report_launcher.js), the job tray
+* (core/page/js/job_tray.js) and the media fullscreen viewers' download disc
+* (component_image / component_av viewer popups append it to the dock).
 *
 * Why a dock instead of per-button inline coordinates: that corner is
 * CONTESTED. The right rail is fixed to the very same spot — `.inspector_container`
@@ -19,7 +21,9 @@
 *
 * Adding a floating button: give it .floating_dock_button and append it to
 * #floating_dock — the column stacks upwards from the corner. Never position a
-* global button with its own fixed coordinates, or this bug comes back.
+* global button with its own fixed coordinates, or this bug comes back. (The
+* media viewers' download disc used to hand-roll `right:10px; bottom:10px` and
+* landed under the launcher disc — it is a tenant now.)
 *
 * Included from main.less file
 */
@@ -87,6 +91,22 @@
 
 #error_report_floating_launcher {
 	background-color: rgba(90, 65, 131, 0.92); // purple disc
+}
+
+// media fullscreen viewers (component_image / component_av popups) tenant: the
+// download disc. `.download` supplies the masked glyph (buttons.less, colored
+// white by `.primary`); only the dock-level geometry lives here. The mixin it
+// replaced (media_viewer_download_mixin) hand-rolled `position:fixed;
+// right:10px; bottom:10px` and sat UNDER this launcher disc.
+.floating_dock_button.download {
+	padding: unset; // the generic `button` chrome (0.275rem/0.65rem) distorts the disc
+	border: unset;
+
+	&:before {
+		width: 1.2rem; // half the disc, like the launcher icon's proportion
+		height: 1.2rem;
+		margin: unset; // the glyph's 0.25rem right margin would offset the centering
+	}
 }
 
 // ---- corner claims ----------------------------------------------------------

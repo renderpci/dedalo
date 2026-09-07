@@ -6857,9 +6857,11 @@ body.is_ontology_server .menu > .content_data {
 /**
 * floating_dock
 *
-* The ONE bottom-right corner where global floating buttons live. Its only
-* tenant today is the error-report launcher, installed on every page —
-* menu-less ones included — from common/js/error_report_launcher.js.
+* The ONE bottom-right corner where global floating buttons live. Its tenants
+* today: the error-report launcher (installed on every page — menu-less ones
+* included — from common/js/error_report_launcher.js), the job tray
+* (core/page/js/job_tray.js) and the media fullscreen viewers' download disc
+* (component_image / component_av viewer popups append it to the dock).
 *
 * Why a dock instead of per-button inline coordinates: that corner is
 * CONTESTED. The right rail is fixed to the very same spot — `.inspector_container`
@@ -6875,7 +6877,9 @@ body.is_ontology_server .menu > .content_data {
 *
 * Adding a floating button: give it .floating_dock_button and append it to
 * #floating_dock — the column stacks upwards from the corner. Never position a
-* global button with its own fixed coordinates, or this bug comes back.
+* global button with its own fixed coordinates, or this bug comes back. (The
+* media viewers' download disc used to hand-roll `right:10px; bottom:10px` and
+* landed under the launcher disc — it is a tenant now.)
 *
 * Included from main.less file
 */
@@ -6929,6 +6933,15 @@ body.is_ontology_server .menu > .content_data {
 }
 #error_report_floating_launcher {
   background-color: rgba(90, 65, 131, 0.92);
+}
+.floating_dock_button.download {
+  padding: unset;
+  border: unset;
+}
+.floating_dock_button.download:before {
+  width: 1.2rem;
+  height: 1.2rem;
+  margin: unset;
 }
 body:has(.assistant_container.standalone.show) {
   --floating_dock_right: calc(var(--inspector_width, 19rem) + 1.5rem);
@@ -19976,21 +19989,6 @@ body.inspector_resizing {
   width: 100%;
   max-height: 82vh;
 }
-.component_av.view_viewer .download {
-  position: fixed;
-  right: 10px;
-  bottom: 10px;
-  z-index: 2;
-  width: 3em;
-  height: 3em;
-  padding: unset;
-  margin: unset;
-}
-.component_av.view_viewer .download:before {
-  height: 1.5em;
-  width: 1.5em;
-  margin: unset;
-}
 .component_av_mini {
   display: inline-block;
   vertical-align: middle;
@@ -21228,21 +21226,6 @@ body.inspector_resizing {
   width: 100%;
   height: 100%;
   object-fit: contain;
-}
-.component_image.view_viewer .download {
-  position: fixed;
-  right: 10px;
-  bottom: 10px;
-  z-index: 2;
-  width: 3em;
-  height: 3em;
-  padding: unset;
-  margin: unset;
-}
-.component_image.view_viewer .download:before {
-  height: 1.5em;
-  width: 1.5em;
-  margin: unset;
 }
 .component_image.view_mosaic.list > .content_data {
   display: block;

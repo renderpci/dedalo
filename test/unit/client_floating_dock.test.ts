@@ -21,6 +21,12 @@
  *   3. the stylesheet is reachable (main.less imports it), it positions the dock
  *      from the two dock variables, and BOTH corner-owning rails claim the
  *      corner. Add a third full-height right rail and this fires: give it a claim.
+ *   4. the media fullscreen viewers' download disc is a dock tenant too — the
+ *      real 2026-09 overlap (screenshot): the image/AV viewer popups hand-rolled
+ *      `position:fixed; right:10px; bottom:10px` via the retired
+ *      media_viewer_download_mixin and the launcher disc covered the download
+ *      button. Its geometry now lives in floating_dock.less
+ *      (.floating_dock_button.download); this gate refuses the mixin's return.
  *
  * Honest limit: it proves the launcher cannot re-acquire its own coordinates and
  * that the claims exist — not that the resulting offset looks right (no visual
@@ -72,6 +78,48 @@ describe('floating dock ownership', () => {
 		}
 	});
 
+	test('the media fullscreen viewers hand their download disc to the dock', () => {
+		// the 2026-09 real overlap: the viewer popups (image / av) fixed their
+		// download button at right:10px; bottom:10px — the launcher disc's corner.
+		// Tenant law, same as the launcher's: append to #floating_dock, carry the
+		// shared class, own no coordinates.
+		const VIEWERS = [
+			'client/dedalo/core/component_image/js/view_viewer_image.js',
+			'client/dedalo/core/component_av/js/view_viewer_edit_av.js',
+		];
+		for (const viewer of VIEWERS) {
+			const src = read(viewer);
+			expect(src, `${viewer}: the download button must be appended to the dock`).toContain(
+				'get_floating_dock()',
+			);
+			expect(
+				src,
+				`${viewer}: the download button must carry the shared dock-tenant class`,
+			).toContain("'primary download floating_dock_button hidden'");
+		}
+
+		// the mixin that hand-rolled the corner is retired; its geometry lives in
+		// floating_dock.less (.floating_dock_button.download). If a consumer
+		// reappears, add a TENANT there instead of resuscitating the mixin.
+		const FUNCTIONS = 'client/dedalo/core/page/css/layout/functions.less';
+		expect(
+			read(FUNCTIONS).includes('media_viewer_download_mixin'),
+			`${FUNCTIONS}: ` +
+				'media_viewer_download_mixin fixed the download disc to the launcher corner — ' +
+				'make the button a #floating_dock tenant instead (floating_dock.less)',
+		).toBe(false);
+		for (const less of [
+			'client/dedalo/core/component_image/css/component_image.less',
+			'client/dedalo/core/component_av/css/component_av.less',
+		]) {
+			expect(
+				read(less).includes('.media_viewer_download_mixin'),
+				`${less}: ` +
+					'do not call media_viewer_download_mixin — the download disc is a dock tenant',
+			).toBe(false);
+		}
+	});
+
 	test('the stylesheet is reachable, variable-driven, and every corner-owning rail claims it', () => {
 		expect(
 			read('client/dedalo/core/page/css/main.less'),
@@ -83,6 +131,10 @@ describe('floating dock ownership', () => {
 			'right: var(--floating_dock_right)',
 		);
 		expect(less).toContain('bottom: var(--floating_dock_bottom)');
+		expect(
+			less,
+			'the media viewers download-disc tenant must be styled by the dock stylesheet',
+		).toContain('.floating_dock_button.download');
 
 		// One claim per element that is fixed to the same corner (section.less).
 		for (const rail of [

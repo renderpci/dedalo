@@ -135,25 +135,6 @@
 		}
 	}//end .media_control_buttons_mixin
 
-	// media_viewer_download_mixin. Shared floating download button in media
-	// fullscreen viewer (component_image, component_av, component_3d).
-	.media_viewer_download_mixin() {
-		position: fixed;
-		right: 10px;
-		bottom: 10px;
-		z-index: 2;
-		width: 3em;
-		height: 3em;
-		padding: unset;
-		margin: unset;
-
-		&:before {
-			height: 1.5em;
-			width: 1.5em;
-			margin: unset;
-		}
-	}//end .media_viewer_download_mixin
-
 	// media_posterframe_mixin. Shared poster image rendering for media with a
 	// preview frame (component_av, component_3d). Sizing differs per component
 	// and is set by the caller; this covers only the common fit/focus behavior.

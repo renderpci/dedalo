@@ -146,7 +146,7 @@ client/dedalo/core/page/
         ├── functions.less  fonts.less
         ├── general.less   # html/body/#main, .loading/.hide, maintenance/recovery/notification containers
         ├── progress_bar.less  buttons.less  layout.less  list.less
-        ├── floating_dock.less  job_tray.less   # the one bottom-right corner and its tray tenant
+        ├── floating_dock.less  job_tray.less   # the one bottom-right corner and its tenants
         └── page.less      # the `.page` wrapper rules (content_data, bubbles_notification_container)
 ```
 

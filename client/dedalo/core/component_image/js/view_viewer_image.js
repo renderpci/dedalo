@@ -7,6 +7,7 @@
 // imports
 	import {download_file} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
+	import {get_floating_dock} from '../../common/js/floating_dock.js'
 
 
 
@@ -27,10 +28,12 @@
 * - After the image loads, calls resize_window_to_image_size() to snap the
 *   pop-up dimensions to the actual image dimensions, clipped to the available
 *   screen area.
-* - Reveals a Download button (only when self.permissions > 1) that fetches
-*   the 'original' quality file and names it using the original upload filename,
-*   falling back to a tipo/section composite name.
-* - Closes the pop-up window on mousedown (intended for single-click inspection).
+ * - Reveals a Download button (only when self.permissions > 1) that fetches
+ *   the 'original' quality file and names it using the original upload filename,
+ *   falling back to a tipo/section composite name. The button is a TENANT of
+ *   #floating_dock (core/common/js/floating_dock.js) — the pop-up also hosts the
+ *   error-report launcher at the same corner, and the dock column stacks them.
+ * - Closes the pop-up window on mousedown (intended for single-click inspection).
 *
 * Expected self shape (component_image instance):
 *   self.data.entries[0].files_info  — Array<FileInfo>
@@ -160,12 +163,16 @@ view_viewer_image.render = function(self, options) {
 			image.src = url
 
 	// button download
+		// A TENANT of #floating_dock, never self-positioned. The pop-up window also
+		// hosts the error-report launcher, and both buttons once hand-rolled the
+		// same corner (the launcher disc covered this one). The dock column stacks
+		// them; all geometry lives in core/page/css/layout/floating_dock.less.
 		const download_image_button = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'primary download hidden',
+			class_name		: 'primary download floating_dock_button hidden',
 			title			: get_label.download || 'Download',
 			// value		: ' ok ',
-			parent			: wrapper
+			parent			: get_floating_dock()
 		})
 		download_image_button.addEventListener('click', function(e) {
 			e.stopPropagation()
