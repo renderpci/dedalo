@@ -70,14 +70,14 @@
 	},
 	"devDependencies": {
 		"@babel/parser": "8.0.4",
-		"@biomejs/biome": "2.5.11",
-		"@types/bun": "^1.4.0",
+		"@biomejs/biome": "2.5.12",
+		"@types/bun": "^1.4.1",
 		"@types/less": "3.0.8",
 		"@types/nodemailer": "^8.0.1",
 		"chai": "6.2.2",
-		"less": "4.9.0",
-		"mocha": "11.8.0",
-		"puppeteer": "^25.9.0"
+		"less": "4.9.1",
+		"mocha": "12.0.0",
+		"puppeteer": "^25.10.0"
 	},
 	"peerDependencies": {
 		"typescript": "^7.0.2"
