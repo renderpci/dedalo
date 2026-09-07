@@ -7,7 +7,7 @@
       "dependencies": {
         "@modelcontextprotocol/sdk": "^1.30.0",
         "@scalar/api-reference": "^1.66.1",
-        "swagger-ui-dist": "^5.32.14",
+        "swagger-ui-dist": "^5.32.15",
         "zod": "^4.4.3",
       },
       "devDependencies": {
@@ -696,7 +696,7 @@
 
     "super-regex": ["super-regex@1.1.0", "", { "dependencies": { "function-timeout": "^1.0.1", "make-asynchronous": "^1.0.1", "time-span": "^5.1.0" } }, "sha512-WHkws2ZflZe41zj6AolvvmaTrWds/VuyeYr9iPVv/oQeaIoVxMKaushfFWpOGDT+GuBrM/sVqF8KUCYQlSSTdQ=="],
 
-    "swagger-ui-dist": ["swagger-ui-dist@5.32.14", "", { "dependencies": { "@scarf/scarf": "=1.4.0" } }, "sha512-nOA2pSQhcmODMUQZpJHYKNuwniDUqcOWGNaSCOoZv12FdOSJ9JxV95HtyRGNMqEBj6h6lCNTy20TgZDYTSuUIg=="],
+    "swagger-ui-dist": ["swagger-ui-dist@5.32.15", "", { "dependencies": { "@scarf/scarf": "=1.4.0" } }, "sha512-TSFER+rFQlf1nzk6WvKkMaHTxAPQ3eAAxigFThnxQedSREanfZgSbJFayZVs/ULnSbNdrJOb99vLD6xpb3R3eg=="],
 
     "swrv": ["swrv@1.2.0", "", { "peerDependencies": { "vue": ">=3.2.26 < 4" } }, "sha512-lH/g4UcNyj+7lzK4eRGT4C68Q4EhQ6JtM9otPRIASfhhzfLWtbZPHcMuhuba7S9YVYuxkMUGImwMyGpfbkH07A=="],
 
