@@ -88,6 +88,7 @@ describe('seeded register.json corpus', () => {
 	const TS_AUTHORED = new Set([
 		'tool_error_report',
 		'tool_identify',
+		'tool_numisdata_acquisition',
 		'tool_rag',
 		'tool_sitebuilder',
 	]);
