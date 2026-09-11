@@ -663,7 +663,7 @@ was deleted with the PHP engine.
 
 ## Server-module coverage (2026-07-28)
 
-**25 of the 37 tool packages ship a `server/index.ts`; 12 do not.** The 12 have
+**26 of the 38 tool packages ship a `server/index.ts`; 12 do not.** The 12 have
 client code only: registration warns (`no server module: tool_request will refuse
 this tool`) and dispatch refuses at gate 5 (`tool has no server module`,
 `unauthorized_method`).
@@ -680,11 +680,11 @@ framework action `dd_tools_api::user_tools`; `tool_qr` never leaves the browser.
 So do NOT "finish" one by scaffolding a server module — adding an unreachable
 `apiActions` map is new attack surface, not coverage.
 
-WITH a server module (25): `tool_dev_template`, `tool_error_report`,
+WITH a server module (26): `tool_dev_template`, `tool_error_report`,
 `tool_export`, `tool_hierarchy`, `tool_identify`, `tool_image_rotation`,
 `tool_import_dedalo_csv`, `tool_import_files`, `tool_import_marc21`,
 `tool_import_rdf`, `tool_import_zotero`, `tool_lang`, `tool_lang_multi`,
-`tool_media_versions`, `tool_ontology`, `tool_ontology_parser`,
+`tool_media_versions`, `tool_numisdata_acquisition`, `tool_ontology`, `tool_ontology_parser`,
 `tool_pdf_extractor`, `tool_posterframe`, `tool_propagate_component_data`,
 `tool_sitebuilder`, `tool_tc`, `tool_time_machine`, `tool_transcription`,
 `tool_update_cache`, `tool_upload`.

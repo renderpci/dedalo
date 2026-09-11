@@ -1,0 +1,16 @@
+{
+	"$schema": "../../src/core/tools/register.schema.json",
+	"name": "tool_numisdata_acquisition",
+	"version": "1.0.0",
+	"label": {
+		"lg-eng": "Import from auction URL"
+	},
+	"affected_models": [
+		"section"
+	],
+	"show_in_component": true,
+	"active": true,
+	"properties": {
+		"open_as": "modal"
+	}
+}
