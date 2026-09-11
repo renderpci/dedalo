@@ -1,0 +1,28 @@
+/**
+* TOOL_DEV_TEMPLATE
+*
+* Loaded on tool init
+*/
+:root {
+  --tool_numisdata_acquisition: #f78a1c;
+}
+.wrapper_tool.tool_numisdata_acquisition .spinner {
+  background-color: var(--tool_numisdata_acquisition);
+}
+.wrapper_tool.tool_numisdata_acquisition > .content_data > .info_container {
+  padding: 2rem;
+  padding-left: 0px;
+  line-height: 1.5rem;
+  font-size: 1.1rem;
+}
+.wrapper_tool.tool_numisdata_acquisition > .content_data > .footer_buttons_container {
+  padding-top: 2rem;
+}
+.wrapper_tool.tool_numisdata_acquisition > .content_data > .value_container {
+  margin: 1rem;
+  min-height: 7rem;
+}
+.tool_header.tool_numisdata_acquisition {
+  background-color: var(--tool_numisdata_acquisition);
+}
+/*# sourceMappingURL=tool_numisdata_acquisition.css.map */

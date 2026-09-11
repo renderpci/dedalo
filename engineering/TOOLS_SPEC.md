@@ -763,7 +763,7 @@ WITH a server module: `tool_dev_template`, `tool_error_report`,
 `tool_export`, `tool_hierarchy`, `tool_identify`, `tool_image_rotation`,
 `tool_import_dedalo_csv`, `tool_import_files`, `tool_import_marc21`,
 `tool_import_rdf`, `tool_import_zotero`, `tool_lang`, `tool_lang_multi`,
-`tool_media_versions`, `tool_ontology`, `tool_ontology_parser`,
+`tool_media_versions`, `tool_numisdata_acquisition`, `tool_ontology`, `tool_ontology_parser`,
 `tool_pdf_extractor`, `tool_posterframe`, `tool_propagate_component_data`,
 `tool_sitebuilder`, `tool_tc`, `tool_time_machine`, `tool_transcription`,
 `tool_update_cache`, `tool_upload`.
