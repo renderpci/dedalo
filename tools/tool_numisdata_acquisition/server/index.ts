@@ -1,19 +1,25 @@
 /**
  * tool_numisdata_acquisition — pastes a public auction URL, fetches it
- * (conservative, robots.txt-respecting, rate-limited — see lib/acquisition/),
- * and returns the parsed auction + lots as structured JSON. This is the
- * acquisition half only: nothing is written to Dédalo's own DB yet, no
- * images are downloaded, no numisdata4 record is created. Those are later
- * slices — this proves the pipe end to end first (see
- * docs/ — v7_autoimport_data branch — for the staged plan).
+ * (conservative, rate-limited — see lib/acquisition/), and lets the operator
+ * review every lot found before committing: preview_url returns the parsed
+ * auction + lots as structured JSON (nothing written yet); commit_lots then
+ * creates one real numisdata4 record per kept lot, resolves/links its
+ * Auction (numisdata224, found-or-created per source auction), and imports
+ * the lot's image via tool_import_files' crop_50 processor.
  *
  * lib/ is a verbatim-as-possible port of the standalone `coins` archive
  * tool's acquisition engine (src/acquisition/, src/domain/, src/extraction/,
  * src/sources/) — see that repo's ARCHITECTURE.md "Alternative: direct
- * integration" section, which is exactly this. Only one source adapter
- * (jesusvico.com — fully robots.txt-permissive, simplest of the five) is
- * ported so far; the other four (Biddr, sixbid, numisbids, aureo) get added
- * the same way once this slice is proven.
+ * integration" section, which is exactly this. All five sources are ported
+ * (jesusvico, biddr, aureo, numisbids, sixbid) — each source's own adapter.ts
+ * documents what's deliberately NOT ported yet (headless-browser rendering,
+ * cross-auction search/historical-archive URL shapes) and, for numisbids/
+ * sixbid, the explicit user authorization to bypass robots.txt (numisbids'
+ * own robots.txt names and blocks ClaudeBot; sixbid's is a blanket Disallow
+ * for every agent) — see each adapter's own comment for the full disclosure.
+ * NONE of the four newer sources (biddr, aureo, numisbids, sixbid) have been
+ * tested against a real live page yet — only jesusvico has been verified
+ * end-to-end against real data.
  */
 
 import { join } from 'node:path';
@@ -43,8 +49,13 @@ import {
 	toolRequestId,
 } from '../../../src/core/tools/module.ts';
 import { cropCoinPair } from '../../tool_import_files/server/script_files/numisdata/crop_50.ts';
+import type { RawSource } from './lib/acquisition/http.ts';
 import { downloadImageBytes, extensionFromUrl } from './lib/acquisition/image_fetch.ts';
+import { aureoAdapter } from './lib/sources/aureo/adapter.ts';
+import { biddrAdapter } from './lib/sources/biddr/adapter.ts';
 import { jesusvicoAdapter } from './lib/sources/jesusvico/adapter.ts';
+import { numisbidsAdapter } from './lib/sources/numisbids/adapter.ts';
+import { sixbidAdapter } from './lib/sources/sixbid/adapter.ts';
 
 const NUMISDATA_OBJECT_TIPO = 'numisdata4';
 /** numisdata4's component tipos this v1 slice writes. material/mint/ruler/
@@ -70,7 +81,15 @@ const PUBLIC_REMARK_TIPO = 'numisdata150';
 // against yet.
 const AUCTION_SECTION_TIPO = 'numisdata224';
 const AUCTION_COMPANY_TIPO = 'numisdata228'; // component_autocomplete, no source config -> free text
+// Confirmed label (dd_ontology): "Number & title" — a genuinely COMBINED
+// field, not a bare number. Writing the raw auctionNumber here ("178") was
+// wrong; formatAuctionNumberTitle uses the source's own auction title
+// ("Subasta Presencial 178") instead, which already reads as both. Because
+// that text is no longer a stable dedup key on its own, the bare
+// auctionNumber is ALSO written to AUCTION_CODE_TIPO purely so
+// findExistingAuction has something exact and stable to match on.
 const AUCTION_NUMBER_TITLE_TIPO = 'numisdata230'; // component_input_text
+const AUCTION_CODE_TIPO = 'numisdata231'; // component_input_text, "Code" (otherwise unused) — the dedup key
 // The generic link relation type used everywhere else in this codebase for
 // an ordinary (non-reciprocal) relation — numisdata147 declares no
 // config_relation.relation_type override, unlike e.g. numisdata55's
@@ -85,8 +104,7 @@ const IMAGE_SECTION_TIPO = 'rsc170'; // the shared "resource" image record type
 const IMAGE_COMPONENT_TIPO = 'rsc29'; // component_image on rsc170
 const IMPORT_KEY_DIR = 'numisdata_acquisition';
 
-/** The only adapter wired up so far. Becomes a registry lookup (by URL) once more sources land. */
-const ADAPTERS = [jesusvicoAdapter];
+const ADAPTERS = [jesusvicoAdapter, biddrAdapter, aureoAdapter, numisbidsAdapter, sixbidAdapter];
 
 function assertUrlOption(options: Record<string, unknown>): string {
 	const url = options.url;
@@ -97,6 +115,18 @@ function assertUrlOption(options: Record<string, unknown>): string {
 		});
 	}
 	return url;
+}
+
+function findAdapterOrThrow(url: string) {
+	const adapter = ADAPTERS.find((candidate) => candidate.matchesUrl(url));
+	if (!adapter) {
+		throw new DedaloError('tool.action_failed', {
+			message: `No supported source adapter matches this URL: ${url}`,
+			publicMessage:
+				'Only jesusvico.com, biddr.com, aureo.com, numisbids.com, and sixbid.com URLs are supported.',
+		});
+	}
+	return adapter;
 }
 
 /**
@@ -122,14 +152,7 @@ function assertUrlOption(options: Record<string, unknown>): string {
  */
 async function previewUrl(context: ToolActionContext): Promise<ToolResponse> {
 	const url = assertUrlOption(context.options);
-
-	const adapter = ADAPTERS.find((candidate) => candidate.matchesUrl(url));
-	if (!adapter) {
-		throw new DedaloError('tool.action_failed', {
-			message: `No supported source adapter matches this URL: ${url}`,
-			publicMessage: 'Only jesusvico.com URLs are supported right now — more sources are coming.',
-		});
-	}
+	const adapter = findAdapterOrThrow(url);
 
 	const acquisition = await adapter.acquire(url, (currentPage, totalPages) => {
 		context.publishProgress?.({
@@ -147,6 +170,64 @@ async function previewUrl(context: ToolActionContext): Promise<ToolResponse> {
 
 	const auction = adapter.parseAuction(firstPage, url);
 	const lots = acquisition.pages.flatMap((page) => adapter.parseLots(page, url));
+
+	const auctionHouse = auction.auctionHouse?.trim() ?? '';
+	const auctionNumber = auction.auctionNumber?.trim() ?? '';
+	const existingAuctionSectionId =
+		auctionHouse !== '' && auctionNumber !== ''
+			? await findExistingAuction(auctionHouse, auctionNumber)
+			: null;
+
+	return ok(
+		{
+			auction,
+			lots,
+			auction_status: {
+				exists: existingAuctionSectionId !== null,
+				section_id: existingAuctionSectionId,
+			},
+		},
+		{ requestId: toolRequestId(context) },
+	);
+}
+
+/**
+ * Parses a page the OPERATOR's own browser already fetched, instead of this
+ * tool live-fetching the URL — the fallback for a source whose own active
+ * defenses block automated retrieval outright (confirmed live for
+ * numisbids.com: HTTP 403 from multiple independent network origins, both
+ * before and after removing this tool's own robots.txt check, consistent
+ * with its robots.txt explicitly naming and blocking crawlers like
+ * ClaudeBot). A real browser visiting the page isn't automated retrieval, so
+ * there's nothing here to detect or bypass — the operator saves the page,
+ * this just parses the HTML they already legitimately have.
+ *
+ * The pasted HTML is parsed in memory only — never written to disk, nothing
+ * to clean up, nothing persists past this one request/response.
+ *
+ * Single-page only: there's no live fetch here to drive a pagination walk,
+ * so a multi-page sale needs one preview_html call per page (or the site's
+ * own single-lot URLs pasted individually).
+ */
+async function previewHtml(context: ToolActionContext): Promise<ToolResponse> {
+	const url = assertUrlOption(context.options);
+	const html = context.options.html;
+	if (typeof html !== 'string' || html.trim() === '') {
+		throw new DedaloError('tool.action_failed', {
+			message: 'preview_html requires a non-empty "html" string option.',
+			publicMessage: "Paste or upload the saved page's HTML first.",
+		});
+	}
+
+	const adapter = findAdapterOrThrow(url);
+	// SSRF/host-allowlist guard still applies even though nothing is fetched here — this URL
+	// drives relative-link resolution and the Auction dedup search below, so it must still be a
+	// real, safe URL for this source rather than an attacker-supplied one paired with forged HTML.
+	adapter.assertSafeUrl(url);
+
+	const page: RawSource = { html, finalUrl: url, httpStatus: 200, contentType: 'text/html' };
+	const auction = adapter.parseAuction(page, url);
+	const lots = adapter.parseLots(page, url);
 
 	const auctionHouse = auction.auctionHouse?.trim() ?? '';
 	const auctionNumber = auction.auctionNumber?.trim() ?? '';
@@ -220,19 +301,40 @@ function splitJesusvicoDesign(description: string | null): {
 	return { obverse: obverse || null, reverse: reverse || null };
 }
 
+/** numisdata230 ("Number & title") gets the source's own auction title
+ * (jesusvico's h1: "Subasta Presencial 178", "Online Auction 178", ...) —
+ * it already reads as the number and title together, so no need to append
+ * the bare number again. Falls back to the bare number only when a page has
+ * no title at all (title is nullable on ExtractedAuction; shouldn't happen
+ * on a real listing page, but not a reason to throw). */
+function formatAuctionNumberTitle(auctionNumber: string, title: string | null): string {
+	const cleanTitle = title?.trim();
+	return cleanTitle ? cleanTitle : auctionNumber;
+}
+
 /** Writes one field as a fresh 'set_data' — the shape confirmed by reading
  * save_component.ts's set_data branch: a bare {id, value} item, no lang (a
  * non-translatable model is auto-stamped 'lg-nolan' regardless of what's
- * passed here). */
+ * passed here).
+ *
+ * `sectionTipo` MUST be the tipo of the record `sectionId` actually belongs
+ * to — this was hard-coded to NUMISDATA_OBJECT_TIPO ('numisdata4') until a
+ * live commit exposed the bug: findOrCreateAuction's two calls pass a
+ * numisdata224 (Auction) sectionId, and with the lot's tipo pinned here
+ * saveComponentData silently wrote nothing (no throw, no error surfaced —
+ * confirmed by querying the DB directly: the freshly created Auction record's
+ * own numisdata228/numisdata230 fields were empty even though commit_lots
+ * reported auction_created: true with no auction_error). */
 async function writeField(
 	sectionId: number,
+	sectionTipo: string,
 	componentTipo: string,
 	value: string | number,
 	userId: number,
 ): Promise<void> {
 	await saveComponentData({
 		componentTipo,
-		sectionTipo: NUMISDATA_OBJECT_TIPO,
+		sectionTipo,
 		sectionId,
 		lang: NO_LANG,
 		userId,
@@ -273,7 +375,19 @@ async function importImagesForLot(
 		});
 	}
 
-	const { bytes, contentType } = await downloadImageBytes(sourceUrl);
+	// The image host isn't always the same as the auction page's host (e.g. sixbid's
+	// image-cdn.sixbid.com, biddr's media.biddr.com), so the safety check is resolved from the
+	// image URL itself via the same adapter registry preview_url/commit_lots already use, rather
+	// than assuming whichever adapter matched the pasted auction URL also owns this image host.
+	const imageAdapter = ADAPTERS.find((candidate) => candidate.matchesUrl(sourceUrl));
+	if (!imageAdapter) {
+		throw new DedaloError('tool.action_failed', {
+			message: `No source adapter recognizes this image's host: ${sourceUrl}`,
+			publicMessage: 'This image is hosted somewhere this tool does not recognize.',
+		});
+	}
+
+	const { bytes, contentType } = await downloadImageBytes(sourceUrl, imageAdapter.assertSafeUrl);
 	const extension = extensionFromUrl(sourceUrl, contentType);
 	const fileName = `numisdata4_${sectionId}.${extension}`;
 
@@ -388,7 +502,7 @@ async function findExistingAuction(
 		`SELECT section_id FROM "${table}"
 		 WHERE section_tipo = $1
 		   AND string->'${AUCTION_COMPANY_TIPO}'->0->>'value' = $2
-		   AND string->'${AUCTION_NUMBER_TITLE_TIPO}'->0->>'value' = $3
+		   AND string->'${AUCTION_CODE_TIPO}'->0->>'value' = $3
 		 LIMIT 1`,
 		[AUCTION_SECTION_TIPO, auctionHouse, auctionNumber],
 	)) as { section_id: number }[];
@@ -403,13 +517,33 @@ async function findOrCreateAuction(
 	context: ToolActionContext,
 	auctionHouse: string,
 	auctionNumber: string,
+	title: string | null,
 ): Promise<{ sectionId: number; created: boolean }> {
 	const found = await findExistingAuction(auctionHouse, auctionNumber);
 	if (found !== null) return { sectionId: found, created: false };
 
 	const sectionId = await createSectionRecord(AUCTION_SECTION_TIPO, context.userId);
-	await writeField(sectionId, AUCTION_COMPANY_TIPO, auctionHouse, context.userId);
-	await writeField(sectionId, AUCTION_NUMBER_TITLE_TIPO, auctionNumber, context.userId);
+	await writeField(
+		sectionId,
+		AUCTION_SECTION_TIPO,
+		AUCTION_COMPANY_TIPO,
+		auctionHouse,
+		context.userId,
+	);
+	await writeField(
+		sectionId,
+		AUCTION_SECTION_TIPO,
+		AUCTION_NUMBER_TITLE_TIPO,
+		formatAuctionNumberTitle(auctionNumber, title),
+		context.userId,
+	);
+	await writeField(
+		sectionId,
+		AUCTION_SECTION_TIPO,
+		AUCTION_CODE_TIPO,
+		auctionNumber,
+		context.userId,
+	);
 	return { sectionId, created: true };
 }
 
@@ -489,13 +623,39 @@ async function resolveAuctionCached(
 	cache: Map<string, ResolvedAuction>,
 	auctionHouse: string,
 	auctionNumber: string,
+	title: string | null,
 ): Promise<ResolvedAuction> {
 	const key = `${auctionHouse} ${auctionNumber}`;
 	const cached = cache.get(key);
 	if (cached !== undefined) return cached;
-	const resolved = await findOrCreateAuction(context, auctionHouse, auctionNumber);
+	const resolved = await findOrCreateAuction(context, auctionHouse, auctionNumber, title);
 	cache.set(key, resolved);
 	return resolved;
+}
+
+/**
+ * Both Biddr's and sixbid's search results label each lot's real originating auction as
+ * "<House>, <Auction title>" — confirmed independently against real live data for each (Biddr:
+ * "Heritage Auctions, Auction 61650", "Stack's Bowers Galleries, September 2026 World Premier CC
+ * Auction"; sixbid: built from the API's own separate companyName/auctionName fields into the
+ * identical "House, Title" shape in parser.ts's parseSixbidSearchLots specifically so this one
+ * splitter covers both). Splits it into a per-lot Company + Number&title override so a search
+ * batch (which spans several real auctions) resolves/links each lot to ITS OWN auction rather than
+ * the batch-level pseudo-auction ("Multiple auction houses") preview_url returns for the search
+ * itself.
+ *
+ * The "number" half here is really the whole title after the comma, not always a bare digit (the
+ * Stack's Bowers example has none) — used as both the dedup key and the display text, same as any
+ * other source's auctionNumber/title pair; splitting further into a true numeric id isn't reliable
+ * (a bare \d+ match would misread "2026" as an auction number).
+ */
+function splitSearchAuctionCategory(category: string): { house: string; label: string } | null {
+	const idx = category.indexOf(', ');
+	if (idx === -1) return null;
+	const house = category.slice(0, idx).trim();
+	const label = category.slice(idx + 2).trim();
+	if (house === '' || label === '') return null;
+	return { house, label };
 }
 
 /**
@@ -508,18 +668,22 @@ async function resolveAuctionCached(
  * failure there must not read as "nothing happened" — it's surfaced in the
  * result, not thrown.
  *
- * TODAY every lot in a batch carries the SAME auctionHouse/auctionNumber
- * (jesusvico has no cross-auction listing) — but this reads them per-call
- * rather than assuming a batch-wide constant, so a future source whose lots
- * each name their own real auction (via ExtractedLot.category, per the
- * README) only needs its per-lot house/number threaded in here, not a
- * different resolution strategy.
+ * For a normal single-auction batch every lot shares the same batch-level
+ * auctionHouse/auctionNumber/auctionTitle (passed in as-is). For a Biddr or
+ * sixbid search batch, each lot's own `category` (see
+ * splitSearchAuctionCategory) overrides those three so it resolves against
+ * ITS real auction instead of the batch's pseudo-auction — only these two
+ * sources' search formats are verified so far; the same override point is
+ * where numisbids'/aureo's own search formats would plug in once each is
+ * verified against real data.
  */
 async function commitOneLot(
 	context: ToolActionContext,
 	lot: Record<string, unknown>,
 	auctionHouse: string,
 	auctionNumber: string,
+	auctionTitle: string | null,
+	auctionSourceDomain: string,
 	auctionCache: Map<string, ResolvedAuction>,
 ): Promise<CommitOneLotResult> {
 	const l = lot;
@@ -528,30 +692,54 @@ async function commitOneLot(
 	const fieldsWritten: string[] = [];
 	const weight = parseLeadingNumber(l.weight);
 	if (weight !== null) {
-		await writeField(sectionId, WEIGHT_TIPO, weight, context.userId);
+		await writeField(sectionId, NUMISDATA_OBJECT_TIPO, WEIGHT_TIPO, weight, context.userId);
 		fieldsWritten.push(WEIGHT_TIPO);
 	}
 	const diameter = parseLeadingNumber(l.diameter);
 	if (diameter !== null) {
-		await writeField(sectionId, DIAMETER_TIPO, diameter, context.userId);
+		await writeField(sectionId, NUMISDATA_OBJECT_TIPO, DIAMETER_TIPO, diameter, context.userId);
 		fieldsWritten.push(DIAMETER_TIPO);
 	}
 	if (typeof l.lotNumber === 'string' && l.lotNumber.trim() !== '') {
-		await writeField(sectionId, INVENTORY_NUMBER_TIPO, l.lotNumber, context.userId);
+		await writeField(
+			sectionId,
+			NUMISDATA_OBJECT_TIPO,
+			INVENTORY_NUMBER_TIPO,
+			l.lotNumber,
+			context.userId,
+		);
 		fieldsWritten.push(INVENTORY_NUMBER_TIPO);
 	}
 	if (typeof l.datePeriod === 'string' && l.datePeriod.trim() !== '') {
-		await writeField(sectionId, DATE_TEXT_TIPO, l.datePeriod, context.userId);
+		await writeField(
+			sectionId,
+			NUMISDATA_OBJECT_TIPO,
+			DATE_TEXT_TIPO,
+			l.datePeriod,
+			context.userId,
+		);
 		fieldsWritten.push(DATE_TEXT_TIPO);
 	}
 	const description = typeof l.description === 'string' ? l.description : null;
 	const { obverse: obverseDesign, reverse: reverseDesign } = splitJesusvicoDesign(description);
 	if (obverseDesign !== null) {
-		await writeField(sectionId, OBVERSE_DESIGN_TIPO, obverseDesign, context.userId);
+		await writeField(
+			sectionId,
+			NUMISDATA_OBJECT_TIPO,
+			OBVERSE_DESIGN_TIPO,
+			obverseDesign,
+			context.userId,
+		);
 		fieldsWritten.push(OBVERSE_DESIGN_TIPO);
 	}
 	if (reverseDesign !== null) {
-		await writeField(sectionId, REVERSE_DESIGN_TIPO, reverseDesign, context.userId);
+		await writeField(
+			sectionId,
+			NUMISDATA_OBJECT_TIPO,
+			REVERSE_DESIGN_TIPO,
+			reverseDesign,
+			context.userId,
+		);
 		fieldsWritten.push(REVERSE_DESIGN_TIPO);
 	}
 	if (
@@ -560,20 +748,41 @@ async function commitOneLot(
 		description !== null &&
 		description.trim() !== ''
 	) {
-		await writeField(sectionId, PUBLIC_REMARK_TIPO, description, context.userId);
+		await writeField(
+			sectionId,
+			NUMISDATA_OBJECT_TIPO,
+			PUBLIC_REMARK_TIPO,
+			description,
+			context.userId,
+		);
 		fieldsWritten.push(PUBLIC_REMARK_TIPO);
+	}
+
+	let effectiveAuctionHouse = auctionHouse;
+	let effectiveAuctionNumber = auctionNumber;
+	let effectiveAuctionTitle = auctionTitle;
+	const isSearchCategorySource =
+		auctionSourceDomain === 'biddr.com' || auctionSourceDomain === 'sixbid.com';
+	if (isSearchCategorySource && typeof l.category === 'string' && l.category !== '') {
+		const split = splitSearchAuctionCategory(l.category);
+		if (split !== null) {
+			effectiveAuctionHouse = split.house;
+			effectiveAuctionNumber = split.label;
+			effectiveAuctionTitle = split.label;
+		}
 	}
 
 	let auctionSectionId: number | null = null;
 	let auctionCreated: boolean | null = null;
 	let auctionError: string | null = null;
-	if (auctionHouse !== '' && auctionNumber !== '') {
+	if (effectiveAuctionHouse !== '' && effectiveAuctionNumber !== '') {
 		try {
 			const resolved = await resolveAuctionCached(
 				context,
 				auctionCache,
-				auctionHouse,
-				auctionNumber,
+				effectiveAuctionHouse,
+				effectiveAuctionNumber,
+				effectiveAuctionTitle,
 			);
 			auctionSectionId = resolved.sectionId;
 			auctionCreated = resolved.created;
@@ -613,10 +822,12 @@ async function commitOneLot(
  * either way). One button, one round trip, for however many lots the
  * operator kept.
  *
- * TODAY every lot shares the same batch-level `auction` option (jesusvico
- * has no cross-auction listing), so in practice this still resolves exactly
- * one Auction per batch — the cache just makes that the OUTCOME of the
- * per-lot logic instead of an assumption baked into the caller.
+ * For most sources every lot shares the same batch-level `auction` option
+ * (a single real auction has no cross-auction listing) — the cache just
+ * makes that the OUTCOME of the per-lot logic instead of an assumption baked
+ * into the caller. A Biddr or sixbid search batch is the exception verified
+ * so far: each lot's own `category` overrides the batch-level auction (see
+ * commitOneLot/splitSearchAuctionCategory).
  *
  * BACKGROUND JOB: each lot is a record create + several field writes + an
  * image download/crop/link — for a real review batch (dozens to hundreds of
@@ -638,7 +849,24 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 	const a =
 		auction !== null && typeof auction === 'object' ? (auction as Record<string, unknown>) : null;
 	const auctionHouse = typeof a?.auctionHouse === 'string' ? a.auctionHouse.trim() : '';
-	const auctionNumber = typeof a?.auctionNumber === 'string' ? a.auctionNumber.trim() : '';
+	// Falls back to the adapter's own auctionIdentifier when auctionNumber is empty — numisbids'
+	// sale page exposes no separate human-facing "number" (parseNumisbidsAuction sets it null,
+	// confirmed against a real saved sale page: the page has a house name and an "Auction 389"
+	// title, but nothing numisbids itself labels as a number), which was silently skipping Auction
+	// resolution entirely for every numisbids lot (the guard below requires a non-empty number).
+	// auctionIdentifier is always non-empty for a real auction (every adapter sets it from the
+	// URL/API), so this recovers a usable dedup key without guessing at page content that isn't
+	// there.
+	const rawAuctionNumber = typeof a?.auctionNumber === 'string' ? a.auctionNumber.trim() : '';
+	const auctionNumber =
+		rawAuctionNumber !== ''
+			? rawAuctionNumber
+			: typeof a?.auctionIdentifier === 'string'
+				? a.auctionIdentifier.trim()
+				: '';
+	const auctionTitle =
+		typeof a?.title === 'string' && a.title.trim() !== '' ? a.title.trim() : null;
+	const auctionSourceDomain = typeof a?.sourceDomain === 'string' ? a.sourceDomain : '';
 
 	const auctionCache = new Map<string, ResolvedAuction>();
 	const results: CommitOneLotResult[] = [];
@@ -653,7 +881,15 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 			total: lots.length,
 		});
 		results.push(
-			await commitOneLot(context, l, auctionHouse, auctionNumber, auctionCache),
+			await commitOneLot(
+				context,
+				l,
+				auctionHouse,
+				auctionNumber,
+				auctionTitle,
+				auctionSourceDomain,
+				auctionCache,
+			),
 		);
 	}
 
@@ -671,6 +907,14 @@ export const tool: ToolServerModule = {
 			permission: 'section',
 			minLevel: 1,
 			handler: previewUrl,
+		},
+		// Same read gate as preview_url — parses a page the operator's own
+		// browser already fetched (see previewHtml's own comment) instead of
+		// live-fetching the URL. No network request happens here at all.
+		preview_html: {
+			permission: 'section',
+			minLevel: 1,
+			handler: previewHtml,
 		},
 		// minLevel 2 (write): resolves the Auction once, then creates one
 		// record per kept lot, writes fields, AND imports images.
