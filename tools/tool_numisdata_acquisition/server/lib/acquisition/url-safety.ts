@@ -27,10 +27,7 @@ const NUMISBIDS_ALLOWED_HOSTS = [
 const AUREO_ALLOWED_HOSTS = [/^www\.aureo\.com$/i, /^aureo\.com$/i, /^media\.aureo\.com$/i];
 
 /**
- * This is a personal archive tool for a small, known set of auction sites, not a general-purpose
- * fetcher, so we allowlist each source's own hostnames rather than trying to blocklist everything
- * unsafe. Combined with an https-only + private-IP check, this closes off SSRF via crafted or
- * redirected URLs.
+ * Combined with an https-only + private-IP check.
  */
 function assertSafeKnownHost(
 	rawUrl: string,

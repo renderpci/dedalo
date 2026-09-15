@@ -39,13 +39,9 @@ export interface FetchPageOptions {
 }
 
 /**
- * Performs a conservative, identifiable HTTP GET against a public URL: https-only, SSRF-checked
+ * Performs a conservative HTTP GET against a public URL https-only, SSRF-checked
  * (including on every redirect hop), robots.txt-respecting, rate-limited to the site's own
- * Crawl-delay, size- and time-bounded. Throws AcquisitionBlockedError if the response looks like a
- * CAPTCHA/bot-block/access wall rather than a normal page - callers must not retry around that,
- * only report it and offer the manual-import fallback. Parameterized by source (assertSafeUrl /
- * allowRedirectHost) so Biddr and jesusvico.com - both robots-respecting sources - share this one
- * implementation rather than each having their own copy.
+ * Crawl-delay, size- and time-bounded. 
  */
 export async function fetchPublicPage(
 	rawUrl: string,
@@ -89,8 +85,9 @@ export async function fetchPublicPage(
 		}
 
 		if (response.status === 401 || response.status === 403 || response.status === 429) {
+			// The status is embedded in the message (not left on the httpStatus field
 			throw new AcquisitionBlockedError(
-				'Automatic retrieval could not safely access this page.',
+				`Automatic retrieval could not safely access this page (HTTP ${response.status}).`,
 				response.status,
 			);
 		}

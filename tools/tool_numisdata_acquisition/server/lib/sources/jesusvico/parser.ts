@@ -154,23 +154,26 @@ function deriveStatus(dataClosed: string | undefined, startDate: string | null):
 }
 
 /**
- * Builds a pseudo-auction for a single-lot URL. Unlike Biddr's/sixbid's equivalent, a jesusvico
- * lot detail page carries no reusable auction-level header (confirmed live: no breadcrumb, no
- * `data-closed`, no auction title anywhere on the page) - honestly left unknown/null rather than
- * guessed, matching the same discipline used elsewhere in this app for genuinely unavailable
- * fields. Fetching the real parent auction's own page just for this metadata would double the
- * request count for what's meant to be a lightweight single-lot retrieval, so it isn't done.
+ * Builds a pseudo-auction for a single-lot URL. A prior version of this claimed the lot detail
+ * page "carries no reusable auction-level header" and synthesized a "Auction N, Lot M" title
+ * instead — WRONG, confirmed live against the real page (a user-supplied lot URL, 2026-09): the
+ * page's own breadcrumb (`<p class="h1 pb-1 lot-ficha-title">Previous auctions |
+ * <b><a href="…">1ª Sesión - Subasta Extraordinaria 179</a></b> | …`) carries the real auction
+ * title server-rendered in the raw HTML, no browser/JS execution needed. Reads it directly instead
+ * of guessing; only falls back to null (never a synthesized lot-specific string) if that markup is
+ * ever absent on some other page shape.
  */
-export function parseJesusvicoSingleLotAuction(sourceUrl: string): ExtractedAuction {
+export function parseJesusvicoSingleLotAuction(html: string, sourceUrl: string): ExtractedAuction {
+	const $ = cheerio.load(html);
 	const auctionNumber = parseJesusvicoAuctionNumber(sourceUrl);
-	const lotNumber = parseJesusvicoLotNumber(sourceUrl);
+	const title = cleanText($('.lot-ficha-title b a').first().text());
 
 	return {
 		sourceUrl,
 		sourceDomain: 'jesusvico.com',
 		auctionIdentifier: jesusvicoLotIdentifier(sourceUrl) ?? '',
 		auctionHouse: 'Jesús Vico',
-		title: auctionNumber ? `Auction ${auctionNumber}, Lot ${lotNumber ?? '?'}` : null,
+		title,
 		auctionNumber,
 		description: null,
 		location: null,

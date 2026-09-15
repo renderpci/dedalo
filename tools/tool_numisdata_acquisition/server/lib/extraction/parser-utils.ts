@@ -109,10 +109,7 @@ function parseAmount(raw: string): number | null {
 
 /**
  * Parses a price in the European convention (e.g. jesusvico.com's "6.000 €", "1.234,56 €") -
- * "." as thousands separator, "," as decimal, symbol after the amount. Kept separate from
- * parsePrice (Biddr/sixbid's "1,234.56 EUR" convention) deliberately: a round amount like "6.000"
- * means 6000 in this convention and 6.0 in the other, so a single merged parser would silently
- * misparse one source or the other depending on which won a shared regex.
+ * "." as thousands separator.
  */
 export function parseEuropeanPrice(text: string | null | undefined): ParsedPrice | null {
 	if (!text) return null;

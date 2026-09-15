@@ -1,17 +1,15 @@
 /**
  * Image byte download — the same conservative-fetch discipline as page
- * acquisition (https + host allowlist, rate limiting, size limit), adapted
- * from `coins`' `image-downloader.ts` to return bytes in memory instead of
- * writing to that standalone app's own `data/images/` folder: here the bytes
- * go straight into Dédalo's own upload-staging path (see server/index.ts).
+ * acquisition (https + host allowlist, rate limiting, size limit).
  *
- * Only jesusvico.com is wired up so far, matching the one source adapter
- * this tool ports.
+ * Source-agnostic - the caller passes the SourceAdapter's own `assertSafeUrl`
+ * (index.ts's importImagesForLot resolves it via ADAPTERS.find(matchesUrl)) —
+ * each source's url-safety.ts allowlist already covers its own image/CDN
+ * hosts.
  */
 
 import { waitForTurn } from './rate-limit.ts';
 import { getCrawlDelayMs } from './robots.ts';
-import { assertSafeJesusvicoUrl } from './url-safety.ts';
 import { USER_AGENT } from './user-agent.ts';
 
 export class ImageDownloadError extends Error {}
@@ -24,8 +22,11 @@ export interface DownloadedImage {
 	contentType: string;
 }
 
-export async function downloadImageBytes(sourceUrl: string): Promise<DownloadedImage> {
-	const url = assertSafeJesusvicoUrl(sourceUrl);
+export async function downloadImageBytes(
+	sourceUrl: string,
+	assertSafeUrl: (rawUrl: string) => URL,
+): Promise<DownloadedImage> {
+	const url = assertSafeUrl(sourceUrl);
 	const crawlDelay = await getCrawlDelayMs(url);
 	await waitForTurn(url.hostname, crawlDelay ?? undefined);
 

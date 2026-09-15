@@ -47,7 +47,7 @@ export const jesusvicoAdapter: SourceAdapter = {
 
 	parseAuction: (firstPage, sourceUrl) =>
 		jesusvicoLotIdentifier(sourceUrl)
-			? parseJesusvicoSingleLotAuction(sourceUrl)
+			? parseJesusvicoSingleLotAuction(firstPage.html, sourceUrl)
 			: parseJesusvicoAuction(firstPage.html, sourceUrl),
 
 	parseLots: (page, sourceUrl) => {

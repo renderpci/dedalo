@@ -13,9 +13,10 @@
  * relation (found-or-created once for the whole batch), and the split
  * obverse/reverse image via tool_import_files' crop_50 processor.
  *
- * Not yet built: the other four auction sources (only jesusvico.com is
- * wired up server-side so far), and a background-job path for very large
- * multi-page auctions (preview_url is still a single synchronous request).
+ * All five auction sources (jesusvico.com, biddr.com, aureo.com,
+ * numisbids.com, sixbid.com) are wired up server-side. Only jesusvico has
+ * been tested against a real live page so far — the other four are
+ * unverified against real data (see server/index.ts's top comment).
  */
 
 
@@ -139,6 +140,50 @@ tool_numisdata_acquisition.prototype.preview_url = async function(url) {
 
 	return response
 }//end preview_url
+
+
+
+/**
+* PREVIEW_HTML
+* Dispatches action 'preview_html' to the tool's server module — a plain
+* (non-background) request: unlike preview_url, nothing gets fetched over
+* the network here, just cheerio parsing of HTML the operator's own browser
+* already retrieved, so it's fast enough not to need the job-streaming path.
+*
+* The fallback for a source whose own defenses block this tool's automated
+* fetch outright (confirmed for numisbids.com) — visiting the page in a
+* real browser isn't automated retrieval, so there's nothing to bypass; this
+* just parses HTML the operator legitimately already has. Never written to
+* disk anywhere in this pipeline — read into memory client-side (FileReader,
+* see render_tool_numisdata_acquisition.js), sent as a plain string, parsed
+* and discarded server-side once the response is built.
+*
+* @param {string} url - the page's original URL (still required: picks the
+*   right adapter/parser and resolves relative links/the Auction dedup key)
+* @param {string} html - the saved page's HTML content
+* @returns {Promise<Object>} API response envelope — same shape as
+*   preview_url's (data.auction / data.lots / data.auction_status), just
+*   not backgrounded.
+*/
+tool_numisdata_acquisition.prototype.preview_html = async function(url, html) {
+
+	const self = this
+
+	const response = await self.tool_request({
+		action		: 'preview_html',
+		options		: {
+			url				: url,
+			html			: html,
+			section_tipo	: self.section_tipo
+		}
+	})
+
+	if(SHOW_DEVELOPER===true) {
+		dd_console("-> preview_html API response:",'DEBUG',response);
+	}
+
+	return response
+}//end preview_html
 
 
 
