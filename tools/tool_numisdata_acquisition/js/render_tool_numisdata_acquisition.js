@@ -169,16 +169,27 @@ const get_content_data = function(self) {
 
 	const fragment = new DocumentFragment()
 
-	// url_input
+	// url_row: the URL input + Preview button, the primary path
+		const url_row = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'url_row',
+			parent			: fragment
+		})
 		const url_input = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'url_input',
 			placeholder		: self.get_tool_label('url_placeholder') || 'Paste an auction URL (jesusvico.com, biddr.com, aureo.com, numisbids.com, or sixbid.com)',
-			parent			: fragment
+			parent			: url_row
+		})
+		const preview_button = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'primary',
+			inner_html		: self.get_tool_label('preview') || 'Preview',
+			parent			: url_row
 		})
 
-	// html_file_input: manual-fetch fallback for a source whose own defenses
+	// html_upload_row: manual-fetch fallback for a source whose own defenses
 	// block this tool's automated fetch outright (server/index.ts's
 	// previewHtml — confirmed live for numisbids.com: HTTP 403 from multiple
 	// independent networks). The operator saves the page from their own
@@ -186,20 +197,26 @@ const get_content_data = function(self) {
 	// picks the saved file here instead of pasting a URL alone; read
 	// client-side via FileReader and sent as a plain string in the request
 	// body — never written to any disk anywhere in this pipeline, only the
-	// file the operator already saved themselves on their own machine.
+	// file the operator already saved themselves on their own machine. Its
+	// own row, styled as a secondary/fallback path — not the golden path.
+		const html_upload_row = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'html_upload_row',
+			parent			: fragment
+		})
 		const html_file_label = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'html_file_label',
 			text_content	: self.get_tool_label('html_file_label') ||
 				'Or upload a saved HTML page (for sources that block automated fetching) — URL above still required:',
-			parent			: fragment
+			parent			: html_upload_row
 		})
 		const html_file_input = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'file',
 			accept			: '.html,.htm,text/html',
 			class_name		: 'html_file_input',
-			parent			: fragment
+			parent			: html_upload_row
 		})
 		let selected_html = null
 		html_file_input.addEventListener('change', function() {
@@ -228,14 +245,6 @@ const get_content_data = function(self) {
 				console.error('[tool_numisdata_acquisition] could not read the selected file.')
 			}
 			reader.readAsText(file)
-		})
-
-	// preview_button
-		const preview_button = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'primary',
-			inner_html		: self.get_tool_label('preview') || 'Preview',
-			parent			: fragment
 		})
 
 	// result_container
@@ -411,55 +420,70 @@ const get_content_data = function(self) {
 					parent			: review_container
 				})
 
+				const bulk_group = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'toolbar_group bulk_group',
+					parent			: selection_toolbar
+				})
 				const select_all_button = ui.create_dom_element({
 					element_type	: 'button',
 					inner_html		: self.get_tool_label('select_all') || 'Select all',
-					parent			: selection_toolbar
+					parent			: bulk_group
 				})
 				const deselect_all_button = ui.create_dom_element({
 					element_type	: 'button',
 					inner_html		: self.get_tool_label('deselect_all') || 'Deselect all',
-					parent			: selection_toolbar
+					parent			: bulk_group
 				})
 
+				const keyword_group = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'toolbar_group keyword_group',
+					parent			: selection_toolbar
+				})
 				const keyword_input = ui.create_dom_element({
 					element_type	: 'input',
 					type			: 'text',
 					placeholder		: self.get_tool_label('keyword_placeholder') || 'Keyword…',
-					parent			: selection_toolbar
+					parent			: keyword_group
 				})
 				const include_keyword_button = ui.create_dom_element({
 					element_type	: 'button',
 					inner_html		: self.get_tool_label('include_matching') || 'Include matching',
-					parent			: selection_toolbar
+					parent			: keyword_group
 				})
 				const exclude_keyword_button = ui.create_dom_element({
 					element_type	: 'button',
 					inner_html		: self.get_tool_label('exclude_matching') || 'Exclude matching',
-					parent			: selection_toolbar
+					parent			: keyword_group
 				})
 
+				const range_group = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'toolbar_group range_group',
+					parent			: selection_toolbar
+				})
 				const range_from_input = ui.create_dom_element({
 					element_type	: 'input',
 					type			: 'number',
 					placeholder		: self.get_tool_label('lot_from') || 'Lot # from',
-					parent			: selection_toolbar
+					parent			: range_group
 				})
 				const range_to_input = ui.create_dom_element({
 					element_type	: 'input',
 					type			: 'number',
 					placeholder		: self.get_tool_label('lot_to') || 'to (excluded)',
-					parent			: selection_toolbar
+					parent			: range_group
 				})
 				const include_range_button = ui.create_dom_element({
 					element_type	: 'button',
 					inner_html		: self.get_tool_label('include_range') || 'Include range',
-					parent			: selection_toolbar
+					parent			: range_group
 				})
 				const exclude_range_button = ui.create_dom_element({
 					element_type	: 'button',
 					inner_html		: self.get_tool_label('exclude_range') || 'Exclude range',
-					parent			: selection_toolbar
+					parent			: range_group
 				})
 
 				const selection_count_node = ui.create_dom_element({
