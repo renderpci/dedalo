@@ -118,6 +118,45 @@ const build_lot_row = function(lot) {
 
 
 /**
+* DETECT_URL_FROM_HTML
+* Best-effort extraction of a saved page's own URL, so picking a file for
+* preview_html (the manual-fetch fallback — see get_content_data's
+* html_file_input) can skip retyping the URL the operator just navigated to
+* save it from. Tries, in order: <link rel="canonical">, <meta
+* property="og:url">, <base href> — all commonly preserved by a browser's
+* "Save As… Webpage, HTML only". Returns null (not a guess) when none are
+* present; the caller falls back to asking the operator to type the URL,
+* same as before this existed.
+* @param {string} html
+* @returns {string|null}
+*/
+const detect_url_from_html = function(html) {
+
+	let doc
+	try {
+		doc = new DOMParser().parseFromString(html, 'text/html')
+	} catch (error) {
+		return null
+	}
+
+	const canonical = doc.querySelector('link[rel="canonical"]')
+	const canonical_href = canonical ? canonical.getAttribute('href') : null
+	if (canonical_href) return canonical_href
+
+	const og_url = doc.querySelector('meta[property="og:url"]')
+	const og_url_content = og_url ? og_url.getAttribute('content') : null
+	if (og_url_content) return og_url_content
+
+	const base = doc.querySelector('base[href]')
+	const base_href = base ? base.getAttribute('href') : null
+	if (base_href) return base_href
+
+	return null
+}//end detect_url_from_html
+
+
+
+/**
 * GET_CONTENT_DATA
 * Builds the tool body: a URL input, a Preview button, and a result container
 * the Preview click handler fills with the review list (or an error message,
@@ -135,8 +174,60 @@ const get_content_data = function(self) {
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'url_input',
-			placeholder		: self.get_tool_label('url_placeholder') || 'Paste an auction URL (jesusvico.com for now)',
+			placeholder		: self.get_tool_label('url_placeholder') || 'Paste an auction URL (jesusvico.com, biddr.com, aureo.com, numisbids.com, or sixbid.com)',
 			parent			: fragment
+		})
+
+	// html_file_input: manual-fetch fallback for a source whose own defenses
+	// block this tool's automated fetch outright (server/index.ts's
+	// previewHtml — confirmed live for numisbids.com: HTTP 403 from multiple
+	// independent networks). The operator saves the page from their own
+	// browser (not automated retrieval, so nothing to detect or bypass) and
+	// picks the saved file here instead of pasting a URL alone; read
+	// client-side via FileReader and sent as a plain string in the request
+	// body — never written to any disk anywhere in this pipeline, only the
+	// file the operator already saved themselves on their own machine.
+		const html_file_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'html_file_label',
+			text_content	: self.get_tool_label('html_file_label') ||
+				'Or upload a saved HTML page (for sources that block automated fetching) — URL above still required:',
+			parent			: fragment
+		})
+		const html_file_input = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'file',
+			accept			: '.html,.htm,text/html',
+			class_name		: 'html_file_input',
+			parent			: fragment
+		})
+		let selected_html = null
+		html_file_input.addEventListener('change', function() {
+			const file = html_file_input.files && html_file_input.files[0]
+			if (!file) {
+				selected_html = null
+				return
+			}
+			const reader = new FileReader()
+			reader.onload = () => {
+				selected_html = typeof reader.result==='string' ? reader.result : null
+				// Auto-fill the URL box from the saved page itself (canonical link,
+				// og:url, or a <base href>, in that order — a browser's "Save As…
+				// Webpage, HTML only" preserves these) so the operator isn't asked
+				// to retype the URL they just navigated to save the file from.
+				// Only fills an EMPTY box — never overwrites a URL already typed.
+				if (selected_html && url_input.value.trim()==='') {
+					const detected_url = detect_url_from_html(selected_html)
+					if (detected_url) {
+						url_input.value = detected_url
+					}
+				}
+			}
+			reader.onerror = () => {
+				selected_html = null
+				console.error('[tool_numisdata_acquisition] could not read the selected file.')
+			}
+			reader.readAsText(file)
 		})
 
 	// preview_button
@@ -568,11 +659,44 @@ const get_content_data = function(self) {
 				while (result_container.firstChild) {
 					result_container.removeChild(result_container.firstChild)
 				}
-				result_container.appendChild(document.createTextNode('Paste a URL first.'))
+				// A selected file couldn't auto-fill the URL box (detect_url_from_html
+				// found no canonical/og:url/base tag in the saved page) — say so
+				// specifically rather than the generic message, since "paste a URL"
+				// alone reads as ignoring the file that was already picked.
+				result_container.appendChild(document.createTextNode(
+					selected_html
+						? "Could not detect this page's URL from the saved file — paste it above manually."
+						: 'Paste a URL first.'
+				))
 				return
 			}
 
 			preview_button.classList.add('loading')
+
+			// preview_html is a plain request (no network fetch to background —
+			// see tool_numisdata_acquisition.js's own comment), so a selected
+			// file skips stream_background_job entirely and handles its response
+			// directly, the same request_failed/response_data accessors the
+			// streamed path uses on its own terminal frame.
+			if (selected_html) {
+				self.preview_html(url, selected_html).then(function(response) {
+					preview_button.classList.remove('loading')
+					while (result_container.firstChild) {
+						result_container.removeChild(result_container.firstChild)
+					}
+					if (request_failed(response)) {
+						result_container.appendChild(render_error(response, 'The request failed.'))
+						return
+					}
+					const data = response_data(response)
+					const lots = Array.isArray(data.lots) ? data.lots : []
+					result_container.appendChild(build_review(data.auction || null, data.auction_status || null, lots))
+				}).catch(function(error) {
+					preview_button.classList.remove('loading')
+					console.error('[tool_numisdata_acquisition] preview_html failed:', error)
+				})
+				return
+			}
 
 			stream_background_job({
 				dispatch_promise	: self.preview_url(url),

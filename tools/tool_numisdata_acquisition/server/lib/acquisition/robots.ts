@@ -12,10 +12,7 @@ const CACHE_TTL_MS = 60 * 60 * 1000;
 
 /**
  * Fetches and caches robots.txt for a host, returning the Disallow rules that apply to a
- * generic/unnamed user-agent ("*"). We only ever act on the "*" group - Biddr's robots.txt also
- * lists named-bot blocks (AhrefsBot,
- * SemrushBot, ...) which don't apply to an identifiable,
- * conservative client like this one.
+ * generic/unnamed user-agent ("*"). 
  */
 async function getRobotsRules(origin: string): Promise<RobotsRules> {
 	const cached = cache.get(origin);
@@ -33,7 +30,7 @@ async function getRobotsRules(origin: string): Promise<RobotsRules> {
 			rules = parseRobotsTxt(await response.text());
 		}
 	} catch {
-		// Unreachable robots.txt does not imply permission to skip caution; default to no extra
+		
 		// disallow rules (empty), the caller still applies conservative rate limiting regardless.
 	}
 
