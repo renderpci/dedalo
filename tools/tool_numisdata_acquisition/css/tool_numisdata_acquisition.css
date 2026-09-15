@@ -1,5 +1,5 @@
 /**
-* TOOL_DEV_TEMPLATE
+* TOOL_NUMISDATA_ACQUISITION
 *
 * Loaded on tool init
 */
@@ -24,5 +24,187 @@
 }
 .tool_header.tool_numisdata_acquisition {
   background-color: var(--tool_numisdata_acquisition);
+}
+
+/* ---- overall body ---- */
+.wrapper_tool.tool_numisdata_acquisition > .content_data {
+  padding: 1.5rem;
+}
+
+/* ---- url row: the primary path (URL + Preview) ---- */
+.wrapper_tool.tool_numisdata_acquisition > .content_data > .url_row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.75rem;
+}
+.wrapper_tool.tool_numisdata_acquisition > .content_data > .url_row > .url_input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.wrapper_tool.tool_numisdata_acquisition > .content_data > .url_row > .url_input:focus {
+  outline-color: var(--tool_numisdata_acquisition);
+}
+.wrapper_tool.tool_numisdata_acquisition > .content_data > .url_row > button.primary {
+  flex: 0 0 auto;
+  background-color: var(--tool_numisdata_acquisition);
+  border-color: var(--tool_numisdata_acquisition);
+}
+
+/* ---- html upload row: the manual-fetch fallback, deliberately secondary ---- */
+.wrapper_tool.tool_numisdata_acquisition > .content_data > .html_upload_row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--color_grey_15);
+  border-radius: var(--radius-md);
+}
+.wrapper_tool.tool_numisdata_acquisition > .content_data > .html_upload_row > .html_file_label {
+  flex: 1 1 auto;
+  color: var(--color_grey_7);
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+.wrapper_tool.tool_numisdata_acquisition > .content_data > .html_upload_row > .html_file_input {
+  flex: 0 0 auto;
+  font-size: 0.8rem;
+  color: var(--color_grey_7);
+}
+
+/* ---- result container: preview/commit outcome ---- */
+.wrapper_tool.tool_numisdata_acquisition > .content_data > .result_container {
+  margin-top: 1.5rem;
+}
+.wrapper_tool.tool_numisdata_acquisition .error_message {
+  padding: 0.75rem 1rem;
+  background-color: var(--color_red_light);
+  border-radius: var(--radius-md);
+  color: var(--color_grey_1);
+}
+
+/* ---- streamed job progress panel (render_stream's own markup) ---- */
+.wrapper_tool.tool_numisdata_acquisition .msg_node {
+  padding: 0.5rem 0;
+  font-size: 0.9rem;
+  color: var(--color_grey_7);
+}
+.wrapper_tool.tool_numisdata_acquisition .msg_node.done {
+  color: var(--color_green_success);
+  font-weight: 500;
+}
+
+/* ---- review: auction status line ---- */
+.wrapper_tool.tool_numisdata_acquisition .review_container {
+  margin-top: 0.5rem;
+}
+.wrapper_tool.tool_numisdata_acquisition .review_container > .auction_status {
+  padding: 0.6rem 0.9rem;
+  margin-bottom: 0.75rem;
+  background-color: var(--color_grey_15);
+  border-left: 3px solid var(--tool_numisdata_acquisition);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+}
+
+/* ---- review: bulk-selection toolbar ---- */
+.wrapper_tool.tool_numisdata_acquisition .selection_toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.75rem;
+  background-color: var(--color_grey_15);
+  border-radius: var(--radius-md);
+}
+.wrapper_tool.tool_numisdata_acquisition .selection_toolbar .toolbar_group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding-right: 1rem;
+  border-right: 1px solid var(--color_grey_12);
+}
+.wrapper_tool.tool_numisdata_acquisition .selection_toolbar .toolbar_group:last-of-type {
+  border-right: none;
+  padding-right: 0;
+}
+.wrapper_tool.tool_numisdata_acquisition .selection_toolbar input[type='text'],
+.wrapper_tool.tool_numisdata_acquisition .selection_toolbar input[type='number'] {
+  width: auto;
+  font-size: 0.85rem;
+}
+.wrapper_tool.tool_numisdata_acquisition .selection_toolbar .keyword_group input[type='text'] {
+  width: 9rem;
+}
+.wrapper_tool.tool_numisdata_acquisition .selection_toolbar .range_group input[type='number'] {
+  width: 5.5rem;
+}
+.wrapper_tool.tool_numisdata_acquisition .selection_toolbar button {
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.wrapper_tool.tool_numisdata_acquisition .selection_toolbar .selection_count {
+  margin-left: auto;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color_grey_7);
+  white-space: nowrap;
+}
+
+/* ---- review: the lot list itself ---- */
+.wrapper_tool.tool_numisdata_acquisition .lot_list {
+  max-height: 22rem;
+  overflow-y: auto;
+  border: 1px solid var(--color_grey_12);
+  border-radius: var(--radius-md);
+}
+.wrapper_tool.tool_numisdata_acquisition .lot_row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.75rem;
+  border-bottom: 1px solid var(--color_grey_13);
+  font-size: 0.85rem;
+}
+.wrapper_tool.tool_numisdata_acquisition .lot_row:last-child {
+  border-bottom: none;
+}
+.wrapper_tool.tool_numisdata_acquisition .lot_row:hover {
+  background-color: var(--color_grey_15);
+}
+.wrapper_tool.tool_numisdata_acquisition .lot_row input[type='checkbox'] {
+  flex: 0 0 auto;
+  margin: 0;
+  transform: scale(1.1);
+}
+.wrapper_tool.tool_numisdata_acquisition .lot_row label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- review: confirm import + its result summary ---- */
+.wrapper_tool.tool_numisdata_acquisition .review_container > button.primary {
+  display: block;
+  margin: 1.25rem auto 0;
+  padding-left: 2rem;
+  padding-right: 2rem;
+  background-color: var(--tool_numisdata_acquisition);
+  border-color: var(--tool_numisdata_acquisition);
+}
+.wrapper_tool.tool_numisdata_acquisition .commit_result_container {
+  margin-top: 1rem;
+}
+.wrapper_tool.tool_numisdata_acquisition .success_message {
+  max-height: 20rem;
+  overflow-y: auto;
+  padding: 0.75rem 1rem;
+  background-color: var(--color_grey_15);
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  line-height: 1.6;
 }
 /*# sourceMappingURL=tool_numisdata_acquisition.css.map */
