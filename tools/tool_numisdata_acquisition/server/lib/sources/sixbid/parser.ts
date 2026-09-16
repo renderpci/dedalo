@@ -44,8 +44,8 @@ interface SixbidApiPage {
 }
 
 /** One group in a site-wide search response - every lot in `lots` belongs to this real auction.
- * Confirmed live (2026-09): a search lot ITEM does not itself carry `auctionName` the way a normal
- * listing/single-lot item does - only the group does - so parseSixbidSearchLots threads it down. */
+ * Confirmed live: a search lot item doesn't itself carry `auctionName` - only the group does - so
+ * parseSixbidSearchLots threads it down. */
 interface SixbidSearchGroup {
 	auctionId: number;
 	auctionName: string | null;
@@ -149,9 +149,8 @@ export function parseSixbidAuction(rawJson: string, sourceUrl: string): Extracte
 
 /**
  * Builds a pseudo-auction for a single-lot URL - reuses parseSixbidAuction's field extraction
- * wholesale (the single-lot endpoint denormalizes the same auction fields onto its one lot, same
- * as a listing page does), overriding auctionIdentifier to the lot-scoped one (see
- * sixbidLotIdentifier) and lotCount to 1, since this auction row will only ever hold this one lot.
+ * wholesale (the single-lot endpoint denormalizes the same auction fields onto its one lot),
+ * overriding auctionIdentifier to the lot-scoped one and lotCount to 1.
  */
 export function parseSixbidSingleLotAuction(rawJson: string, sourceUrl: string): ExtractedAuction {
 	const base = parseSixbidAuction(rawJson, sourceUrl);
@@ -200,10 +199,8 @@ export function parseSixbidSearchAuction(rawJson: string, sourceUrl: string): Ex
 }
 
 /** Maps one raw lot item (from either the listing or single-lot endpoint) into our domain shape.
- * `categoryOverride` lets a search response attach the lot's real originating auction (rather than
- * its coin category) into `category` - the same "free per-auction filter across a mixed search"
- * trick Biddr's parseSearchResultLots already uses - null for a normal listing/single-lot lot,
- * which has no such cross-auction grouping to surface. */
+ * `categoryOverride` lets a search response attach the lot's real originating auction into
+ * `category` instead of its coin category - null for a normal listing/single-lot lot. */
 function mapSixbidLotItem(
 	item: SixbidLotItem,
 	categoryOverride: string | null = null,
@@ -226,10 +223,9 @@ function mapSixbidLotItem(
 	// estimate range) rather than a literal $0 estimate.
 	const estimate = item.lotEstimate && item.lotEstimate > 0 ? item.lotEstimate : null;
 
-	// Confirmed live: https://www.sixbid.com/en/{companySlug}/{auctionId}/{categorySlug}/{lotId}/
-	// {lotSlug} is a real, working per-lot page - built directly from fields the API already
-	// denormalizes onto every item, no separate lookup needed. Left null only if a category slug
-	// isn't present, rather than guessing at a URL shape without one confirmed to work.
+	// Confirmed live: .../en/{companySlug}/{auctionId}/{categorySlug}/{lotId}/{lotSlug} is a real,
+	// working per-lot page, built from fields the API already denormalizes onto every item. Left
+	// null only if categorySlug is missing, rather than guessing at an unconfirmed URL shape.
 	const sourceUrl =
 		item.categorySlug && item.lotSlug
 			? `https://www.sixbid.com/en/${item.companySlug}/${item.auctionId}/${item.categorySlug}/${item.lotId}/${item.lotSlug}`
@@ -279,12 +275,9 @@ export function parseSixbidLots(rawJson: string): ExtractedLot[] {
 
 /**
  * Extracts every lot from one page of a sixbid site-wide search - unlike a normal listing page's
- * flat `items[]` of lots, a search response groups lots under the real auction each one belongs
- * to (`items: [{auctionId, auctionName, companyName, lots: [...]}]`, confirmed live 2026-09), so
- * this flattens that grouping back out. `category` is formatted "<Company>, <Auction title>" -
- * the SAME "House, Title" convention Biddr's own search-divider text happens to use (confirmed
- * live for both independently) - so index.ts's per-lot Auction-resolution override for a search
- * batch reads it identically regardless of which of the two sources produced it.
+ * flat `items[]`, a search response groups lots under the real auction each belongs to, so this
+ * flattens that grouping back out. `category` is formatted "<Company>, <Auction title>" - the same
+ * convention Biddr's own search-divider text uses, confirmed live for both independently.
  */
 export function parseSixbidSearchLots(rawJson: string): ExtractedLot[] {
 	const page = JSON.parse(rawJson) as SixbidSearchResponse;

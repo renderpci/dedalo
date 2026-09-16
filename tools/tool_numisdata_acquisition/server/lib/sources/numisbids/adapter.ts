@@ -19,17 +19,15 @@ const NUMISBIDS_HOST_PATTERN = /(^|\.)numisbids\.com$/i;
 
 /**
  * Adapter for numisbids.com - a normal sale URL (`/sale/{id}`) and a single-lot URL
- * (`/sale/{id}/lot/{n}`) are both handled by this one adapter (same domain, same discipline). The
- * single-lot check must come before the sale-id fallback, since a single-lot URL also matches the
- * plain `/^\/sale\/(\d+)/` sale-id regex.
+ * (`/sale/{id}/lot/{n}`) are both handled here. The single-lot check must come before the sale-id
+ * fallback, since a single-lot URL also matches the plain `/^\/sale\/(\d+)/` regex.
  *
  * Does NOT respect robots.txt - numisbids.com's robots.txt explicitly blocks ClaudeBot by name.
- * See acquisition.ts's fetchNumisbidsPage for the full disclosure; this was raised to and
- * explicitly authorized by the user for this Dédalo integration.
+ * See acquisition.ts's fetchNumisbidsPage for the full disclosure; explicitly authorized by the
+ * user for this Dédalo integration.
  *
- * NOT ported yet: the `/searchall?searchall=...` cross-auction search URL (spans however many real
- * auctions matched) - add it once the single-sale path is proven against real data, same reasoning
- * as Biddr's search URL.
+ * NOT ported yet: the `/searchall?searchall=...` cross-auction search URL - add it once the
+ * single-sale path is proven against real data, same reasoning as Biddr's search URL.
  */
 export const numisbidsAdapter: SourceAdapter = {
 	id: 'numisbids',
@@ -64,8 +62,6 @@ export const numisbidsAdapter: SourceAdapter = {
 		return parseNumisbidsLots(page.html, sourceUrl);
 	},
 
-	// A real sale's numeric identifier and a single-lot's "lot-<sale>-<lot>" identifier both get
-	// the same flat "numisbids-" prefix - neither could ever collide with another source's.
 	storageKey: (auctionIdentifier) => `numisbids-${auctionIdentifier}`,
 
 	async fetchLotDetail(lotSourceUrl) {

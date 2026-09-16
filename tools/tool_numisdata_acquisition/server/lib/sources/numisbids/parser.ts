@@ -26,18 +26,17 @@ function absoluteUrl(href: string | undefined | null, base: string): string | nu
 
 /**
  * cheerio's plain `.text()` concatenates text nodes with nothing between them, so markup like
- * `Lot 3001<br><a>Bid on this lot...</a>` (confirmed live in numisbids' own detail-page markup,
- * with no whitespace around the `<br>`) collapses into "Lot 3001Bid on this lot..." - corrupting
- * both lot-number extraction and the full description. Converting `<br>` to a real newline before
- * extracting text avoids that.
+ * `Lot 3001<br><a>Bid on this lot...</a>` (confirmed live, no whitespace around the `<br>`)
+ * collapses into "Lot 3001Bid on this lot...", corrupting both lot-number and description
+ * extraction. Converting `<br>` to a real newline first avoids that.
  */
 function textWithLineBreaks(el: cheerio.Cheerio<AnyNode>): string {
 	const withBreaks = (el.html() ?? '').replace(/<br\s*\/?>/gi, '\n');
 	return cheerio.load(withBreaks).root().text();
 }
 
-/** "Page 1 of 21" - a direct text scan rather than a selector, since the exact wrapping markup
- * isn't load-bearing here and this is confirmed stable across both an open and a closed sale. */
+/** "Page 1 of 21" - a direct text scan rather than a selector, confirmed stable across both an
+ * open and a closed sale. */
 export function parseNumisbidsTotalPages(html: string): number {
 	const match = html.match(/Page\s+\d+\s+of\s+(\d+)/i);
 	return match ? Number.parseInt(match[1]!, 10) : 1;
@@ -51,11 +50,9 @@ interface PriceInfo {
 }
 
 /**
- * numisbids.com always shows "Starting price: N CUR" for a lot regardless of sale state - the
- * closed/open signal lives in a separate, independently-present piece of text: "Price realized:
- * N CUR" or literally "Lot unsold" once a sale has closed. Large amounts use a narrow-no-break-
- * space thousands separator (e.g. "250 000 USD", confirmed live) - normalized up front so the
- * "N CUR" extraction regexes below don't stop at the first digit group.
+ * numisbids.com always shows "Starting price: N CUR" regardless of sale state - the closed/open
+ * signal is a separate "Price realized: N CUR" or literal "Lot unsold" once closed. Large amounts
+ * use a narrow-no-break-space thousands separator (e.g. "250 000 USD"), normalized up front.
  */
 function extractPriceInfo(rawContainerText: string): PriceInfo {
 	const containerText = stripDigitGroupingSpaces(rawContainerText);
@@ -86,13 +83,10 @@ function extractPriceInfo(rawContainerText: string): PriceInfo {
 
 /**
  * numisbids' own stable, sale-independent lot id - more reliable than the sale-scoped lot number,
- * which (like jesusvico's) resets per sale. Confirmed against a real saved sale page (2026-09):
- * the watchlist control is `<button class="watchlot" data-lotid="NNN">` - a data attribute on a
- * button, not the `<a href="...?lid=NNN">` link the original scraper was built against (site
- * markup drifted since that was last verified - this is why every lot was silently dropped rather
- * than erroring: extractLid quietly returned null for every card). Tries the current data-lotid
- * attribute first, falls back to the old href-embedded ?lid= pattern in case a differently-marked-up
- * page (e.g. the lot detail page, unverified) still uses it.
+ * which resets per sale. Confirmed against a real page (2026-09): the watchlist control is now
+ * `<button class="watchlot" data-lotid="NNN">`, not the `<a href="...?lid=NNN">` link the original
+ * scraper targeted (site markup drifted - every lot was silently dropped as a result). Tries
+ * data-lotid first, falls back to the old href pattern for pages that might still use it.
  */
 function extractLid(watchEl: cheerio.Cheerio<AnyNode>): string | null {
 	const dataLotId = watchEl.attr('data-lotid');
@@ -104,9 +98,8 @@ function extractLid(watchEl: cheerio.Cheerio<AnyNode>): string | null {
 
 /**
  * Extracts auction-level metadata from a numisbids.com sale page. Status has no explicit flag -
- * instead, the whole countdown/"Session N begins closing in" block is present on an open sale and
- * absent on a closed one (confirmed live against both), cross-checked against parsed dates the
- * same defensive way jesusvico's status derivation already is.
+ * the countdown/"Session N begins closing in" block is present on an open sale and absent on a
+ * closed one (confirmed live against both), cross-checked against parsed dates.
  */
 export function parseNumisbidsAuction(html: string, sourceUrl: string): ExtractedAuction {
 	const $ = cheerio.load(html);
@@ -146,11 +139,10 @@ export function parseNumisbidsAuction(html: string, sourceUrl: string): Extracte
 }
 
 /**
- * Builds a pseudo-auction for a single-lot URL (`/sale/{id}/lot/{n}`). Confirmed live that a lot's
- * own detail page renders the identical `.salestatus` header block a sale listing page does (same
- * house name, sale title, dates, countdown-or-not) - reuses parseNumisbidsAuction's extraction
- * wholesale, only overriding the identifier (to the lot-scoped one, see numisbidsLotIdentifier)
- * and lotCount (always 1 - the detail page has no `.browse` cards for the real count to come from).
+ * Builds a pseudo-auction for a single-lot URL (`/sale/{id}/lot/{n}`). A lot's own detail page
+ * renders the identical `.salestatus` header a sale listing page does, so this reuses
+ * parseNumisbidsAuction's extraction wholesale, only overriding the identifier and lotCount
+ * (always 1).
  */
 export function parseNumisbidsSingleLotAuction(html: string, sourceUrl: string): ExtractedAuction {
 	const base = parseNumisbidsAuction(html, sourceUrl);
@@ -190,13 +182,11 @@ function parseNumisbidsDates(text: string | null): {
 }
 
 /**
- * The printed date range (e.g. "31 Aug - 5 Sep 2026") turns out to describe when each bidding
- * session *closes*, not when the sale itself starts - confirmed live: a sale with an active
- * countdown ("Session 1 begins closing in 12 days") had a start date still in the future by that
- * same margin, meaning bidding is already open despite the printed date. So the countdown block's
- * presence is treated as authoritative for "currently open" (never downgraded to "upcoming" off
- * the start date alone); the end date is only used as a cross-check against a stale/cached
- * countdown that's already past.
+ * The printed date range (e.g. "31 Aug - 5 Sep 2026") describes when each bidding session
+ * *closes*, not when the sale starts - confirmed live: a sale with an active "closing in 12 days"
+ * countdown had a start date still 12 days out, meaning bidding was already open despite the
+ * printed date. So the countdown's presence is authoritative for "currently open"; the end date is
+ * only a cross-check against a stale countdown.
  */
 function deriveStatus(hasCountdown: boolean, endDate: string | null): AuctionStatus {
 	if (!hasCountdown) return 'closed';
@@ -220,9 +210,8 @@ function parseNumisbidsLotCard(
 
 	const rawTitle = cleanMultilineText(card.find('.browsetext .summary a').first().text());
 
-	// Starting price lives under .browsetext-top .right; the closed/open signal (Price
-	// realized / Lot unsold) lives separately under .browsetext .bottom .right - combined so
-	// extractPriceInfo can match either or both regardless of sale state.
+	// Starting price and the closed/open signal (Price realized / Lot unsold) live in separate
+	// blocks - combined so extractPriceInfo can match either regardless of sale state.
 	const topPriceText = cleanText(card.find('.browsetext-top .right').first().text()) ?? '';
 	const bottomPriceText = cleanText(card.find('.browsetext .bottom .right').first().text()) ?? '';
 	const priceInfo = extractPriceInfo(`${topPriceText} ${bottomPriceText}`);
@@ -279,8 +268,7 @@ export function parseNumisbidsLots(html: string, sourceUrl: string): ExtractedLo
 
 /**
  * Parses a numisbids.com lot detail page - adds the full untruncated description and the real
- * multi-image gallery (confirmed live: the listing's description is truncated with "...", and its
- * one image is a thumbnail; the detail page has both in full).
+ * multi-image gallery (the listing's own description is truncated with "..." and has one thumbnail).
  */
 export function parseNumisbidsLotDetail(html: string, sourceUrl: string): ExtractedLot | null {
 	const $ = cheerio.load(html);

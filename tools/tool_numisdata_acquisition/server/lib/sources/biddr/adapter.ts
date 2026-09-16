@@ -19,10 +19,9 @@ const BIDDR_HOST_PATTERN = /(^|\.)biddr\.com$/i;
 /**
  * Adapter wrapping Biddr's acquisition/extraction pipeline - a normal per-auction catalogue URL, a
  * `biddr.com/search?...` URL, and a single-lot `?a=...&l=...` URL are all handled by this one
- * adapter (same domain, same robots.txt/rate-limit discipline). Each method checks search, then
- * single-lot, then falls back to the full-auction path - single-lot URLs also carry an `a` param,
- * so that check must come before the full-auction fallback or every single-lot URL would be
- * misread as a request for the entire auction.
+ * adapter. Each method checks search, then single-lot, then falls back to the full-auction path:
+ * single-lot URLs also carry an `a` param, so that check must come first or every single-lot URL
+ * would be misread as a full-auction request.
  */
 export const biddrAdapter: SourceAdapter = {
 	id: 'biddr',
@@ -65,8 +64,8 @@ export const biddrAdapter: SourceAdapter = {
 		return parseLotListing(page.html, sourceUrl);
 	},
 
-	// A real auction's numeric identifier stays unprefixed, an independent space from jesusvico's -
-	// prefix so the two sources can never collide under data/sources/auctions/<key>/. A single-lot
+	// A real auction's numeric identifier stays unprefixed; single-lot and search identifiers get
+	// a "biddr-"/"biddr-search-" prefix so they can't collide with another source's key.
 	storageKey: (auctionIdentifier) => {
 		if (/^\d+$/.test(auctionIdentifier)) return auctionIdentifier;
 		if (auctionIdentifier.startsWith('lot-')) return `biddr-${auctionIdentifier}`;

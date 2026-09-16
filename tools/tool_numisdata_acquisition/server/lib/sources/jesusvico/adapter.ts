@@ -20,10 +20,9 @@ const JESUSVICO_HOST_PATTERN = /(^|\.)jesusvico\.com$/i;
 
 /**
  * Adapter for jesusvico.com - server-rendered listing + lazy per-lot detail fetch, the same
- * two-tier shape as Biddr. Fully respects robots.txt (no exception needed here, unlike sixbid).
- * Also handles a single-lot URL (`/lot/` or its Spanish-locale `/lote/`) as its own lightweight
- * retrieval - unambiguous to detect, since a normal auction-listing URL (`/subasta/...`) never has
- * a lot-number segment for jesusvicoLotIdentifier to find.
+ * two-tier shape as Biddr. Fully respects robots.txt, unlike sixbid. Also handles a single-lot
+ * URL (`/lot/` or Spanish `/lote/`) as its own lightweight retrieval, unambiguous since a normal
+ * `/subasta/...` listing URL never has a lot-number segment.
  */
 export const jesusvicoAdapter: SourceAdapter = {
 	id: 'jesusvico',
@@ -58,9 +57,8 @@ export const jesusvicoAdapter: SourceAdapter = {
 		return parseJesusvicoLots(page.html, sourceUrl);
 	},
 
-	// jesusvico's own auction numbers are plain small integers, an independent space from Biddr's -
-	// prefix so the two sources can never collide under data/sources/auctions/<key>/. A single-lot
-	// identifier (`lot-<auction>-<lot>`) gets the same prefix, already distinct on its own.
+	// Prefixed so jesusvico's auction numbers can't collide with another source's under
+	// data/sources/auctions/<key>/.
 	storageKey: (auctionIdentifier) => `jesusvico-${auctionIdentifier}`,
 
 	async fetchLotDetail(lotSourceUrl) {

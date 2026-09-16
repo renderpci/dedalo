@@ -1,25 +1,18 @@
 /**
- * tool_numisdata_acquisition — pastes a public auction URL, fetches it
- * (conservative, rate-limited — see lib/acquisition/), and lets the operator
- * review every lot found before committing: preview_url returns the parsed
- * auction + lots as structured JSON (nothing written yet); commit_lots then
- * creates one real numisdata4 record per kept lot, resolves/links its
- * Auction (numisdata224, found-or-created per source auction), and imports
- * the lot's image via tool_import_files' crop_50 processor.
+ * tool_numisdata_acquisition — pastes a public auction URL, fetches it, and
+ * lets the operator review every lot before committing: preview_url returns
+ * the parsed auction + lots (nothing written yet); commit_lots creates one
+ * numisdata4 record per kept lot, resolves/links its Auction and Type, and
+ * imports the lot's image via tool_import_files' crop_50 processor.
  *
  * lib/ is a verbatim-as-possible port of the standalone `coins` archive
- * tool's acquisition engine (src/acquisition/, src/domain/, src/extraction/,
- * src/sources/) — see that repo's ARCHITECTURE.md "Alternative: direct
- * integration" section, which is exactly this. All five sources are ported
- * (jesusvico, biddr, aureo, numisbids, sixbid) — each source's own adapter.ts
- * documents what's deliberately NOT ported yet (headless-browser rendering,
- * cross-auction search/historical-archive URL shapes) and, for numisbids/
- * sixbid, the explicit user authorization to bypass robots.txt (numisbids'
- * own robots.txt names and blocks ClaudeBot; sixbid's is a blanket Disallow
- * for every agent) — see each adapter's own comment for the full disclosure.
- * NONE of the four newer sources (biddr, aureo, numisbids, sixbid) have been
- * tested against a real live page yet — only jesusvico has been verified
- * end-to-end against real data.
+ * tool's acquisition engine. All five sources are ported (jesusvico, biddr,
+ * aureo, numisbids, sixbid) — each adapter.ts documents what's deliberately
+ * NOT ported (headless-browser rendering, cross-auction search URL shapes)
+ * and, for numisbids/sixbid, the explicit user authorization to bypass
+ * robots.txt (numisbids blocks ClaudeBot by name; sixbid is a blanket
+ * Disallow). Only jesusvico and biddr have been verified end-to-end against
+ * real data so far.
  */
 
 import { join } from 'node:path';
@@ -58,46 +51,47 @@ import { numisbidsAdapter } from './lib/sources/numisbids/adapter.ts';
 import { sixbidAdapter } from './lib/sources/sixbid/adapter.ts';
 
 const NUMISDATA_OBJECT_TIPO = 'numisdata4';
-/** numisdata4's component tipos this v1 slice writes. material/mint/ruler/
- * denomination/condition (thesaurus-linked) and sourceUrl (component_iri,
- * value shape unverified) are still deliberately deferred. */
+// material/mint/ruler/denomination/condition (thesaurus-linked) and sourceUrl
+// (component_iri, value shape unverified) are still deliberately deferred.
 const WEIGHT_TIPO = 'numisdata133'; // component_number
 const DIAMETER_TIPO = 'numisdata135'; // component_number
-const INVENTORY_NUMBER_TIPO = 'numisdata151'; // component_input_text, "Inventory number" (sibling of numisdata146 under numisdata145)
+const INVENTORY_NUMBER_TIPO = 'numisdata151'; // component_input_text, "Inventory number"
 const DATE_TEXT_TIPO = 'numisdata1372'; // component_input_text
-const AUCTION_RELATION_TIPO = 'numisdata147'; // component_autocomplete -> numisdata224 (a real relation)
+const AUCTION_RELATION_TIPO = 'numisdata147'; // component_autocomplete -> numisdata224
 const OBVERSE_DESIGN_TIPO = 'numisdata763'; // component_text_area, "Specific obverse design"
 const REVERSE_DESIGN_TIPO = 'numisdata1029'; // component_text_area, "Specific reverse design"
-// Fallback ONLY: when a description doesn't follow the "A/...R/..." split
-// (confirmed so far on one jesusvico convention; English-locale/other-style
-// lots don't use it), the whole description lands here rather than being
-// lost. component_text_area, "Public remark".
+// Fallback ONLY, when a description doesn't follow jesusvico's "A/...R/..."
+// split: component_text_area, "Public remark".
 const PUBLIC_REMARK_TIPO = 'numisdata150';
 
-// numisdata224's own fields (confirmed via dd_ontology this session — see
-// numisdata225's children). numisdata229 "Date" (component_date) is NOT
-// written: every source we've tested so far (single-lot fetches) reports
-// startDate: null, so there's no real data to verify that write shape
-// against yet.
+// numisdata224's own fields (confirmed via dd_ontology this session).
 const AUCTION_SECTION_TIPO = 'numisdata224';
 const AUCTION_COMPANY_TIPO = 'numisdata228'; // component_autocomplete, no source config -> free text
-// Confirmed label (dd_ontology): "Number & title" — a genuinely COMBINED
-// field, not a bare number. Writing the raw auctionNumber here ("178") was
-// wrong; formatAuctionNumberTitle uses the source's own auction title
-// ("Subasta Presencial 178") instead, which already reads as both. Because
-// that text is no longer a stable dedup key on its own, the bare
-// auctionNumber is ALSO written to AUCTION_CODE_TIPO purely so
-// findExistingAuction has something exact and stable to match on.
+// "Number & title" is a genuinely COMBINED field — formatAuctionNumberTitle
+// uses the source's own title text, not the bare number. Since that's no
+// longer a stable dedup key on its own, the bare number is ALSO written to
+// AUCTION_CODE_TIPO purely for findExistingAuction to match on.
 const AUCTION_NUMBER_TITLE_TIPO = 'numisdata230'; // component_input_text
-const AUCTION_CODE_TIPO = 'numisdata231'; // component_input_text, "Code" (otherwise unused) — the dedup key
-// The generic link relation type used everywhere else in this codebase for
-// an ordinary (non-reciprocal) relation — numisdata147 declares no
-// config_relation.relation_type override, unlike e.g. numisdata55's
-// "Equivalents" (dd47), so it takes this default.
+const AUCTION_CODE_TIPO = 'numisdata231'; // component_input_text, "Code" (otherwise unused) — dedup key
+// The generic non-reciprocal link relation type used everywhere else in this
+// codebase; numisdata147 declares no config_relation.relation_type override.
 const RELATION_TYPE_LINK = 'dd151';
 
-// Confirmed directly from the live numisdata256 ("Add images") ontology config
-// read earlier this session — not a generic resolution, the real values.
+// numisdata3 ("Type") — a shared scholarly catalog-classification record
+// (Catalog system + Number, e.g. "ACIP" 1781). Read-only: findExistingType
+// only ever LINKS to an existing Type, never creates one — it's a shared
+// taxonomy entry (Mint/Denomination cross-links, weight/diameter averages
+// computed across every linked object), and auto-fabricating one from
+// scraped auction-house text risks polluting it in a way that's much harder
+// to notice than an extra Auction record. No match -> left unlinked, reported.
+const TYPE_RELATION_TIPO = 'numisdata161'; // component_autocomplete -> numisdata3
+const TYPE_SECTION_TIPO = 'numisdata3';
+const TYPE_CODE_TIPO = 'numisdata27'; // component_input_text, "Code"/"Number"
+const TYPE_CATALOGUE_RELATION_TIPO = 'numisdata309'; // component_select -> numisdata300
+const CATALOGUE_SECTION_TIPO = 'numisdata300';
+const CATALOGUE_NAME_TIPO = 'numisdata303'; // component_input_text, e.g. "ACIP", "MIB", "RPC"
+
+// Confirmed directly from the live numisdata256 ("Add images") ontology config.
 const OBVERSE_PORTAL_TIPO = 'numisdata164';
 const REVERSE_PORTAL_TIPO = 'numisdata165';
 const IMAGE_SECTION_TIPO = 'rsc170'; // the shared "resource" image record type
@@ -130,25 +124,13 @@ function findAdapterOrThrow(url: string) {
 }
 
 /**
- * Fetches and parses one auction URL, returning everything found — no
- * curation, no persistence. The caller (client UI) lets the user drop
- * unwanted lots before anything is created in Dédalo (commit_lots).
+ * Fetches and parses one auction URL — no curation, no persistence. Also
+ * runs a read-only Auction existence check so the review screen can show
+ * "will link" vs "will create" before the operator commits to anything.
  *
- * Also runs a READ-ONLY existence check for the Auction record, so the
- * review screen can show "will link to an existing auction" vs "will
- * create a new one" before the operator commits to anything — the same
- * dedup key commit_lots uses to actually resolve it (see
- * findExistingAuction), just without the create-if-missing half.
- *
- * BACKGROUND JOB: a full multi-page auction listing acquires every page
- * sequentially, each rate-limited (adapter.acquire's own onProgress
- * callback — already part of the SourceAdapter contract, just unused until
- * now) — for a large auction that's easily 30s+, long enough that a
- * synchronous round trip hit the client's own retry timeout and collided
- * with the idempotency lock on the still-running first attempt (observed
- * live: two overlapping preview_url calls, one at ~10s one at ~34s). Progress
- * is published per page so the client can show real status instead of
- * guessing when to give up.
+ * Runs as a background job (multi-page listings can take 30s+, long enough
+ * to hit the client's own retry timeout and collide with the idempotency
+ * lock on the still-running attempt) — progress is published per page.
  */
 async function previewUrl(context: ToolActionContext): Promise<ToolResponse> {
 	const url = assertUrlOption(context.options);
@@ -193,21 +175,15 @@ async function previewUrl(context: ToolActionContext): Promise<ToolResponse> {
 
 /**
  * Parses a page the OPERATOR's own browser already fetched, instead of this
- * tool live-fetching the URL — the fallback for a source whose own active
- * defenses block automated retrieval outright (confirmed live for
- * numisbids.com: HTTP 403 from multiple independent network origins, both
- * before and after removing this tool's own robots.txt check, consistent
- * with its robots.txt explicitly naming and blocking crawlers like
- * ClaudeBot). A real browser visiting the page isn't automated retrieval, so
- * there's nothing here to detect or bypass — the operator saves the page,
- * this just parses the HTML they already legitimately have.
+ * tool fetching it live — the fallback for a source whose own defenses block
+ * automated retrieval outright (confirmed live for numisbids.com: HTTP 403
+ * from multiple independent networks). A human visiting a page isn't
+ * automated retrieval, so there's nothing here to detect or bypass — this
+ * just parses HTML the operator already legitimately has, in memory only,
+ * never written to disk.
  *
- * The pasted HTML is parsed in memory only — never written to disk, nothing
- * to clean up, nothing persists past this one request/response.
- *
- * Single-page only: there's no live fetch here to drive a pagination walk,
- * so a multi-page sale needs one preview_html call per page (or the site's
- * own single-lot URLs pasted individually).
+ * Single-page only — no live fetch here to drive a pagination walk, so a
+ * multi-page sale needs one preview_html call per page.
  */
 async function previewHtml(context: ToolActionContext): Promise<ToolResponse> {
 	const url = assertUrlOption(context.options);
@@ -220,9 +196,8 @@ async function previewHtml(context: ToolActionContext): Promise<ToolResponse> {
 	}
 
 	const adapter = findAdapterOrThrow(url);
-	// SSRF/host-allowlist guard still applies even though nothing is fetched here — this URL
-	// drives relative-link resolution and the Auction dedup search below, so it must still be a
-	// real, safe URL for this source rather than an attacker-supplied one paired with forged HTML.
+	// Host-allowlist guard still applies even though nothing is fetched — this
+	// URL drives relative-link resolution and the Auction dedup search below.
 	adapter.assertSafeUrl(url);
 
 	const page: RawSource = { html, finalUrl: url, httpStatus: 200, contentType: 'text/html' };
@@ -249,8 +224,7 @@ async function previewHtml(context: ToolActionContext): Promise<ToolResponse> {
 	);
 }
 
-/** Parses "6.75g" / "29.6mm" style values (weight/diameter's stored shape —
- * see lib/domain/lot.ts) into the plain float component_number expects. */
+/** Parses "6.75g" / "29.6mm" style values into the plain float component_number expects. */
 function parseLeadingNumber(value: unknown): number | null {
 	if (typeof value !== 'string') return null;
 	const match = value.match(/^-?\d+(\.\d+)?/);
@@ -259,25 +233,10 @@ function parseLeadingNumber(value: unknown): number | null {
 
 /**
  * Splits a jesusvico.com description on its "A/" (Anverso) / "R/" (Reverso)
- * markers — confirmed live: "... CELSA. As. A/ Busto de Victoria a der., ...
- * R/ Yunta fundacional a der.; PR QVIN/ M FVL COTAC. AE 13,8 g. 28,5 mm.
- * I-796; ...". The reverse run is cut where the metrology block starts (a
- * composition code — AE/AR/AV/AU/BI — or a bare weight figure), the exact
- * boundary extractJesusvicoWeight/Diameter already read from in
- * lib/sources/jesusvico/parser.ts — this and those are reading adjacent
- * parts of the same sentence, just for a different field.
- *
- * ONE confirmed sample, not a guaranteed convention — this is an
- * ancient/Iberian-style Spanish-locale catalogue description; the
- * English-locale "CATHOLIC MONARCHS (1475-1504)..." style tested earlier
- * this session carries no "A/"/"R/" markers at all. Returns nulls (not a
- * guess) when they're absent — the caller falls back to storing the whole
- * description in a general remark field instead of losing it.
- *
- * Deliberately NOT in lib/sources/jesusvico/parser.ts: this is OUR field
- * mapping onto numisdata4's design fields, not a fact about the source
- * itself the way weight/diameter/datePeriod are — jesusvico's own
- * ExtractedLot.description already carries the full text either way.
+ * markers, cutting the reverse run where the metrology block starts. One
+ * confirmed sample, not a guaranteed convention — English-locale
+ * descriptions carry no such markers. Returns nulls (not a guess) when
+ * absent; the caller falls back to a general remark field.
  */
 function splitJesusvicoDesign(description: string | null): {
 	obverse: string | null;
@@ -301,30 +260,19 @@ function splitJesusvicoDesign(description: string | null): {
 	return { obverse: obverse || null, reverse: reverse || null };
 }
 
-/** numisdata230 ("Number & title") gets the source's own auction title
- * (jesusvico's h1: "Subasta Presencial 178", "Online Auction 178", ...) —
- * it already reads as the number and title together, so no need to append
- * the bare number again. Falls back to the bare number only when a page has
- * no title at all (title is nullable on ExtractedAuction; shouldn't happen
- * on a real listing page, but not a reason to throw). */
+/** numisdata230 ("Number & title") gets the source's own auction title, which
+ * already reads as both — falls back to the bare number only when a page has
+ * no title at all. */
 function formatAuctionNumberTitle(auctionNumber: string, title: string | null): string {
 	const cleanTitle = title?.trim();
 	return cleanTitle ? cleanTitle : auctionNumber;
 }
 
-/** Writes one field as a fresh 'set_data' — the shape confirmed by reading
- * save_component.ts's set_data branch: a bare {id, value} item, no lang (a
- * non-translatable model is auto-stamped 'lg-nolan' regardless of what's
- * passed here).
- *
- * `sectionTipo` MUST be the tipo of the record `sectionId` actually belongs
- * to — this was hard-coded to NUMISDATA_OBJECT_TIPO ('numisdata4') until a
- * live commit exposed the bug: findOrCreateAuction's two calls pass a
- * numisdata224 (Auction) sectionId, and with the lot's tipo pinned here
- * saveComponentData silently wrote nothing (no throw, no error surfaced —
- * confirmed by querying the DB directly: the freshly created Auction record's
- * own numisdata228/numisdata230 fields were empty even though commit_lots
- * reported auction_created: true with no auction_error). */
+/** Writes one field as a fresh 'set_data' (a bare {id, value} item).
+ * `sectionTipo` MUST be the tipo `sectionId` actually belongs to — a prior
+ * version hard-coded NUMISDATA_OBJECT_TIPO here, which silently no-opped
+ * every Auction-record write (findOrCreateAuction targets numisdata224, not
+ * numisdata4) with no error surfaced at all. */
 async function writeField(
 	sectionId: number,
 	sectionTipo: string,
@@ -343,19 +291,10 @@ async function writeField(
 }
 
 /**
- * Downloads the lot's first image, stages it through Dédalo's own upload
- * pipeline (receiveUpload — the same magic-byte-sniffing, size-bounded path a
- * real browser upload takes), splits it with `crop_50` (called directly —
- * we're invoking a known function server-side, not dispatching an
- * untrusted client-named processor, so the SEC-053 registry lookup doesn't
- * apply here), then links each half through its portal exactly like
- * `tool_import_files`'s `importIntoPortal` does — same public primitives,
- * no import of that tool's private functions.
- *
- * A plain helper, not its own apiAction: `commitLot` calls this in the same
- * request, since the operator always wants both — one button, one round
- * trip. Throws on failure; the caller decides whether that sinks the whole
- * response or is reported alongside a record that was already created.
+ * Downloads the lot's first image, stages it through Dédalo's upload
+ * pipeline, splits it with `crop_50` (called directly — trusted server code,
+ * not an untrusted client-named processor), then links each half through its
+ * portal the same way tool_import_files' importIntoPortal does.
  */
 async function importImagesForLot(
 	context: ToolActionContext,
@@ -375,10 +314,9 @@ async function importImagesForLot(
 		});
 	}
 
-	// The image host isn't always the same as the auction page's host (e.g. sixbid's
-	// image-cdn.sixbid.com, biddr's media.biddr.com), so the safety check is resolved from the
-	// image URL itself via the same adapter registry preview_url/commit_lots already use, rather
-	// than assuming whichever adapter matched the pasted auction URL also owns this image host.
+	// The image host isn't always the page's own host (sixbid's
+	// image-cdn.sixbid.com, biddr's media.biddr.com), so the safety check is
+	// resolved from the image URL itself via the same adapter registry.
 	const imageAdapter = ADAPTERS.find((candidate) => candidate.matchesUrl(sourceUrl));
 	if (!imageAdapter) {
 		throw new DedaloError('tool.action_failed', {
@@ -481,12 +419,9 @@ async function importImagesForLot(
 }
 
 /**
- * READ-ONLY half of the Auction dedup: an EXACT match on (Company, Number &
- * title), the same narrow key findOrCreateAuction commits with — a wrong
- * match would silently attach a lot to someone else's auction, which is
- * worse than an occasional duplicate record. Used by both previewUrl (check
- * only, before anything is written) and findOrCreateAuction (check, then
- * create if missing).
+ * Exact match on (Company, Number & title) — a wrong match would silently
+ * attach a lot to someone else's auction, worse than an occasional
+ * duplicate. Used by previewUrl (check only) and findOrCreateAuction.
  */
 async function findExistingAuction(
 	auctionHouse: string,
@@ -509,10 +444,7 @@ async function findExistingAuction(
 	return existing[0]?.section_id ?? null;
 }
 
-/**
- * Finds an existing numisdata224 Auction record (findExistingAuction), or
- * creates one when none matches.
- */
+/** Finds an existing numisdata224 Auction record, or creates one when none matches. */
 async function findOrCreateAuction(
 	context: ToolActionContext,
 	auctionHouse: string,
@@ -547,13 +479,9 @@ async function findOrCreateAuction(
 	return { sectionId, created: true };
 }
 
-/**
- * Links numisdata4's Auction field to an EXISTING numisdata224 record.
- * Unlike every other write in this tool, numisdata147 carries a real
- * `source` config (confirmed against the live ontology) — it's a genuine
- * relation, not a plain literal, so this goes through save_component.ts's
- * validateRelationInsert path. The least-verified write here so far.
- */
+/** Links numisdata4's Auction field to an EXISTING numisdata224 record — a
+ * real relation (numisdata147 carries a `source` config), so this goes
+ * through save_component.ts's validateRelationInsert path. */
 async function linkAuction(
 	context: ToolActionContext,
 	lotSectionId: number,
@@ -587,8 +515,114 @@ async function linkAuction(
 	}
 }
 
-/** One lot's outcome from commitLots — plain data, not a wire envelope
- * (commitLots wraps the whole array in the ONE response envelope). */
+/** Real Catalogue (numisdata300) name -> section_id, loaded once per commit
+ * batch — small, stable reference data. */
+type CatalogueIndex = Map<string, number>;
+
+/** Loads every real, currently-curated Catalogue name, so a scraped citation
+ * is matched against what this Dédalo instance actually curates, never a
+ * hardcoded/guessed abbreviation list. */
+async function loadCatalogueIndex(): Promise<CatalogueIndex> {
+	const table = await getMatrixTableFromTipo(CATALOGUE_SECTION_TIPO);
+	const index: CatalogueIndex = new Map();
+	if (table === null) return index;
+	const rows = (await sql.unsafe(
+		`SELECT section_id, string->'${CATALOGUE_NAME_TIPO}'->0->>'value' AS name
+		 FROM "${table}"
+		 WHERE section_tipo = $1`,
+		[CATALOGUE_SECTION_TIPO],
+	)) as { section_id: number; name: string | null }[];
+	for (const row of rows) {
+		if (row.name) index.set(row.name, row.section_id);
+	}
+	return index;
+}
+
+/**
+ * Best-effort extraction of a catalog citation ("ACIP-1759") from a lot's
+ * description — matched ONLY against real, currently-curated Catalogue
+ * names. Confirmed live: jesusvico descriptions also carry citations from
+ * catalogs this instance does NOT curate (e.g. "I-109" — jesusvico's own
+ * house numbering) alongside real ones ("ACIP-1759"); non-matches are
+ * silently skipped rather than guessed at. Longest name checked first so
+ * e.g. "RIC I" can't shadow "RIC I (second edition)".
+ */
+function extractCatalogueCitation(
+	text: string | null,
+	catalogueIndex: CatalogueIndex,
+): { catalogueName: string; catalogueSectionId: number; code: string } | null {
+	if (!text) return null;
+	const names = [...catalogueIndex.keys()].sort((a, b) => b.length - a.length);
+	for (const name of names) {
+		const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+		const match = text.match(new RegExp(`\\b${escapedName}[\\s-]+(\\d+(?:[./]\\d+)?)`));
+		if (match) {
+			const catalogueSectionId = catalogueIndex.get(name);
+			if (catalogueSectionId !== undefined) {
+				return { catalogueName: name, catalogueSectionId, code: match[1]! };
+			}
+		}
+	}
+	return null;
+}
+
+/** Finds an EXISTING numisdata3 Type record matching a catalog citation —
+ * deliberately never creates one (see TYPE_* constants for why). Matches on
+ * the exact Catalogue relation + exact Code text. */
+async function findExistingType(catalogueSectionId: number, code: string): Promise<number | null> {
+	const table = await getMatrixTableFromTipo(TYPE_SECTION_TIPO);
+	if (table === null) {
+		throw new DedaloError('tool.action_failed', {
+			message: `No matrix table for section '${TYPE_SECTION_TIPO}'.`,
+		});
+	}
+	const existing = (await sql.unsafe(
+		`SELECT section_id FROM "${table}"
+		 WHERE section_tipo = $1
+		   AND relation->'${TYPE_CATALOGUE_RELATION_TIPO}'->0->>'section_id' = $2
+		   AND string->'${TYPE_CODE_TIPO}'->0->>'value' = $3
+		 LIMIT 1`,
+		[TYPE_SECTION_TIPO, String(catalogueSectionId), code],
+	)) as { section_id: number }[];
+	return existing[0]?.section_id ?? null;
+}
+
+/** Links numisdata4's Type field to an EXISTING numisdata3 record — same
+ * relation-write shape as linkAuction. */
+async function linkType(
+	context: ToolActionContext,
+	lotSectionId: number,
+	typeSectionId: number,
+): Promise<void> {
+	const save = await saveComponentData({
+		componentTipo: TYPE_RELATION_TIPO,
+		sectionTipo: NUMISDATA_OBJECT_TIPO,
+		sectionId: lotSectionId,
+		lang: NO_LANG,
+		userId: context.userId,
+		changedData: [
+			{
+				action: 'set_data',
+				value: [
+					{
+						id: 1,
+						type: RELATION_TYPE_LINK,
+						section_id: typeSectionId,
+						section_tipo: TYPE_SECTION_TIPO,
+						from_component_tipo: TYPE_RELATION_TIPO,
+					},
+				],
+			},
+		],
+	});
+	if (!save.ok) {
+		throw new DedaloError('record.save_failed', {
+			message: `Could not link the Type relation: ${save.message}`,
+		});
+	}
+}
+
+/** One lot's outcome from commitLots. */
 interface CommitOneLotResult {
 	lot_identifier: unknown;
 	section_tipo: string;
@@ -597,6 +631,11 @@ interface CommitOneLotResult {
 	auction_section_id: number | null;
 	auction_created: boolean | null;
 	auction_error: string | null;
+	// null section_id covers both "no citation found" and "citation found but
+	// no Type matched it" — type_citation distinguishes the two.
+	type_section_id: number | null;
+	type_citation: string | null;
+	type_error: string | null;
 	images_created: string[] | null;
 	images_error: string | null;
 }
@@ -607,17 +646,9 @@ interface ResolvedAuction {
 	created: boolean;
 }
 
-/**
- * Resolves the Auction for ONE lot against a batch-shared cache, keyed on
- * (house, number) — a DISTINCT auction resolves (and possibly creates) once
- * no matter how many lots in the batch share it; a batch mixing lots from
- * several real auctions (a source with cross-auction filtering — numisbids'
- * searchall, aureo's historical archive, both documented in coins' own
- * README as producing exactly this shape; not wired up here yet, since
- * jesusvico — the only source this tool supports today — has no such
- * listing) still resolves each one correctly instead of forcing every lot
- * onto whichever auction happened to be resolved first.
- */
+/** Resolves the Auction for ONE lot against a batch-shared cache, keyed on
+ * (house, number) — a distinct auction resolves once no matter how many
+ * lots in the batch share it. */
 async function resolveAuctionCached(
 	context: ToolActionContext,
 	cache: Map<string, ResolvedAuction>,
@@ -634,20 +665,12 @@ async function resolveAuctionCached(
 }
 
 /**
- * Both Biddr's and sixbid's search results label each lot's real originating auction as
- * "<House>, <Auction title>" — confirmed independently against real live data for each (Biddr:
- * "Heritage Auctions, Auction 61650", "Stack's Bowers Galleries, September 2026 World Premier CC
- * Auction"; sixbid: built from the API's own separate companyName/auctionName fields into the
- * identical "House, Title" shape in parser.ts's parseSixbidSearchLots specifically so this one
- * splitter covers both). Splits it into a per-lot Company + Number&title override so a search
- * batch (which spans several real auctions) resolves/links each lot to ITS OWN auction rather than
- * the batch-level pseudo-auction ("Multiple auction houses") preview_url returns for the search
- * itself.
- *
- * The "number" half here is really the whole title after the comma, not always a bare digit (the
- * Stack's Bowers example has none) — used as both the dedup key and the display text, same as any
- * other source's auctionNumber/title pair; splitting further into a true numeric id isn't reliable
- * (a bare \d+ match would misread "2026" as an auction number).
+ * Biddr's and sixbid's search results label each lot's real auction as
+ * "<House>, <Auction title>" (confirmed live for both). Splits it into a
+ * per-lot Company + Number&title override so a search batch resolves each
+ * lot against ITS OWN auction rather than the batch-level pseudo-auction.
+ * The "number" half is really the title text (not always a bare digit), used
+ * as both dedup key and display text.
  */
 function splitSearchAuctionCategory(category: string): { house: string; label: string } | null {
 	const idx = category.indexOf(', ');
@@ -659,23 +682,14 @@ function splitSearchAuctionCategory(category: string): { house: string; label: s
 }
 
 /**
- * Creates a real numisdata4 record from one previously-previewed lot, writes
- * the mapped fields, resolves (finds-or-creates, via the batch cache) and
- * links its Auction, and imports the image.
+ * Creates a numisdata4 record from one previewed lot, writes its fields, and
+ * resolves/links Auction, Type, and image. The Auction/Type/image steps are
+ * best-effort — a failure there is surfaced in the result, not thrown, since
+ * the record itself already exists with real fields on it.
  *
- * The Auction and image steps are best-effort and reported, not fatal: by
- * the time they run the record already exists with real fields on it, so a
- * failure there must not read as "nothing happened" — it's surfaced in the
- * result, not thrown.
- *
- * For a normal single-auction batch every lot shares the same batch-level
- * auctionHouse/auctionNumber/auctionTitle (passed in as-is). For a Biddr or
- * sixbid search batch, each lot's own `category` (see
- * splitSearchAuctionCategory) overrides those three so it resolves against
- * ITS real auction instead of the batch's pseudo-auction — only these two
- * sources' search formats are verified so far; the same override point is
- * where numisbids'/aureo's own search formats would plug in once each is
- * verified against real data.
+ * For most batches every lot shares the same batch-level auction info; for a
+ * Biddr/sixbid search batch, each lot's own `category` overrides it (see
+ * splitSearchAuctionCategory) so it resolves against its real auction.
  */
 async function commitOneLot(
 	context: ToolActionContext,
@@ -685,6 +699,7 @@ async function commitOneLot(
 	auctionTitle: string | null,
 	auctionSourceDomain: string,
 	auctionCache: Map<string, ResolvedAuction>,
+	catalogueIndex: CatalogueIndex,
 ): Promise<CommitOneLotResult> {
 	const l = lot;
 	const sectionId = await createSectionRecord(NUMISDATA_OBJECT_TIPO, context.userId);
@@ -793,6 +808,23 @@ async function commitOneLot(
 		}
 	}
 
+	let typeSectionId: number | null = null;
+	let typeCitation: string | null = null;
+	let typeError: string | null = null;
+	try {
+		const citation = extractCatalogueCitation(description, catalogueIndex);
+		if (citation !== null) {
+			typeCitation = `${citation.catalogueName}-${citation.code}`;
+			typeSectionId = await findExistingType(citation.catalogueSectionId, citation.code);
+			if (typeSectionId !== null) {
+				await linkType(context, sectionId, typeSectionId);
+				fieldsWritten.push(TYPE_RELATION_TIPO);
+			}
+		}
+	} catch (error) {
+		typeError = (error as Error).message;
+	}
+
 	let imagesCreated: string[] | null = null;
 	let imagesError: string | null = null;
 	try {
@@ -809,32 +841,20 @@ async function commitOneLot(
 		auction_section_id: auctionSectionId,
 		auction_created: auctionCreated,
 		auction_error: auctionError,
+		type_section_id: typeSectionId,
+		type_citation: typeCitation,
+		type_error: typeError,
 		images_created: imagesCreated,
 		images_error: imagesError,
 	};
 }
 
 /**
- * Commits a CURATED batch of lots from the review screen — creates one
- * numisdata4 record per lot, each resolving its OWN Auction against a
- * batch-shared cache (see resolveAuctionCached: correct for a future batch
- * spanning several real auctions, one DB round-trip per distinct one
- * either way). One button, one round trip, for however many lots the
- * operator kept.
- *
- * For most sources every lot shares the same batch-level `auction` option
- * (a single real auction has no cross-auction listing) — the cache just
- * makes that the OUTCOME of the per-lot logic instead of an assumption baked
- * into the caller. A Biddr or sixbid search batch is the exception verified
- * so far: each lot's own `category` overrides the batch-level auction (see
- * commitOneLot/splitSearchAuctionCategory).
- *
- * BACKGROUND JOB: each lot is a record create + several field writes + an
- * image download/crop/link — for a real review batch (dozens to hundreds of
- * lots) that's easily minutes, the same class of problem preview_url's own
- * multi-page fetch had (observed live: a 190-lot batch blew past the
- * client's ~10s retry window and collided with the idempotency lock on the
- * still-running first attempt). Progress is published per lot.
+ * Commits a curated batch of lots from the review screen. Runs as a
+ * background job — a real batch (dozens to hundreds of lots, each a record
+ * create + several field writes + an image download/crop/link) is easily
+ * minutes, long enough to hit the client's retry window. Progress is
+ * published per lot.
  */
 async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 	const lots = context.options.lots;
@@ -849,14 +869,9 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 	const a =
 		auction !== null && typeof auction === 'object' ? (auction as Record<string, unknown>) : null;
 	const auctionHouse = typeof a?.auctionHouse === 'string' ? a.auctionHouse.trim() : '';
-	// Falls back to the adapter's own auctionIdentifier when auctionNumber is empty — numisbids'
-	// sale page exposes no separate human-facing "number" (parseNumisbidsAuction sets it null,
-	// confirmed against a real saved sale page: the page has a house name and an "Auction 389"
-	// title, but nothing numisbids itself labels as a number), which was silently skipping Auction
-	// resolution entirely for every numisbids lot (the guard below requires a non-empty number).
-	// auctionIdentifier is always non-empty for a real auction (every adapter sets it from the
-	// URL/API), so this recovers a usable dedup key without guessing at page content that isn't
-	// there.
+	// Falls back to the adapter's own auctionIdentifier when auctionNumber is
+	// empty — numisbids' sale page exposes no separate human-facing number,
+	// which was silently skipping Auction resolution for every numisbids lot.
 	const rawAuctionNumber = typeof a?.auctionNumber === 'string' ? a.auctionNumber.trim() : '';
 	const auctionNumber =
 		rawAuctionNumber !== ''
@@ -869,6 +884,7 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 	const auctionSourceDomain = typeof a?.sourceDomain === 'string' ? a.sourceDomain : '';
 
 	const auctionCache = new Map<string, ResolvedAuction>();
+	const catalogueIndex = await loadCatalogueIndex();
 	const results: CommitOneLotResult[] = [];
 	let counter = 0;
 	for (const lot of lots) {
@@ -889,6 +905,7 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 				auctionTitle,
 				auctionSourceDomain,
 				auctionCache,
+				catalogueIndex,
 			),
 		);
 	}
@@ -899,38 +916,29 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 export const tool: ToolServerModule = {
 	name: 'tool_numisdata_acquisition',
 	apiActions: {
-		// 'section' + minLevel 1 (read): this action fetches external data and
-		// returns it for preview (including a read-only Auction existence
-		// check) — it writes nothing to Dédalo's own DB, so a read gate on the
-		// numisdata4 caller is enough.
+		// Read-only: fetches external data + a read-only Auction check, writes nothing.
 		preview_url: {
 			permission: 'section',
 			minLevel: 1,
 			handler: previewUrl,
 		},
-		// Same read gate as preview_url — parses a page the operator's own
-		// browser already fetched (see previewHtml's own comment) instead of
-		// live-fetching the URL. No network request happens here at all.
+		// Same read gate — parses HTML the operator already fetched, no network request.
 		preview_html: {
 			permission: 'section',
 			minLevel: 1,
 			handler: previewHtml,
 		},
-		// minLevel 2 (write): resolves the Auction once, then creates one
-		// record per kept lot, writes fields, AND imports images.
+		// Write: resolves Auction/Type, creates one record per kept lot, imports images.
 		commit_lots: {
 			permission: 'section',
 			minLevel: 2,
 			handler: commitLots,
 		},
 	},
-	// Both run in the background: a multi-page listing fetch (preview_url) and
-	// a multi-lot commit (commit_lots — record create + fields + image per
-	// lot) are both slow enough that the client drives them as jobs with live
-	// progress rather than one synchronous request each.
+	// Both run in the background — each is slow enough that the client drives
+	// them as jobs with live progress rather than one synchronous request.
 	backgroundRunnable: ['preview_url', 'commit_lots'],
-	// Scopes the toolbar button to numisdata4 only — without this it was
-	// surfacing on every section generically (affected_models:["section"] in
-	// register.json has no narrower scope of its own).
+	// Scopes the toolbar button to numisdata4 only (register.json's
+	// affected_models:["section"] has no narrower scope of its own).
 	isAvailable: (availabilityContext) => availabilityContext.sectionTipo === NUMISDATA_OBJECT_TIPO,
 };

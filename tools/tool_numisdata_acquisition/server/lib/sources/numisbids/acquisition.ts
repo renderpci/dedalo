@@ -34,12 +34,10 @@ export function parseNumisbidsSaleId(rawUrl: string): string | null {
 
 /**
  * Fetches a numisbids.com page. Deliberately does not consult robots.txt - numisbids.com's
- * robots.txt explicitly names and blocks ClaudeBot (Anthropic's own crawler), alongside Bytespider.
- * Explicitly raised to (and authorized by) the user for this Dédalo integration before porting -
- * not an assumption carried over from the standalone coins archive tool's own history. Never
- * identifies as ClaudeBot or any spoofed identity (USER_AGENT is the same honest, distinct string
- * every source uses), never bypasses a CAPTCHA, and stops immediately on any block signal rather
- * than retrying around it.
+ * robots.txt explicitly names and blocks ClaudeBot (Anthropic's own crawler), alongside
+ * Bytespider. Explicitly raised to and authorized by the user for this Dédalo integration. Never
+ * identifies as ClaudeBot or spoofs identity, never bypasses a CAPTCHA, and stops immediately on
+ * any block signal rather than retrying around it.
  */
 export async function fetchNumisbidsPage(url: URL): Promise<RawSource> {
 	assertSafeNumisbidsUrl(url.toString());

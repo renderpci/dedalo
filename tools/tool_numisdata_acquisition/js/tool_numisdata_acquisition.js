@@ -8,24 +8,19 @@
  * TOOL_NUMISDATA_ACQUISITION
  *
  * Paste a public auction URL, fetch + parse it server-side (preview_url),
- * review every lot found (exclude any before committing), then commit_lots
- * creates one real numisdata4 record per kept lot — fields, the Auction
- * relation (found-or-created once for the whole batch), and the split
- * obverse/reverse image via tool_import_files' crop_50 processor.
+ * review every lot found, then commit_lots creates one numisdata4 record per
+ * kept lot — fields, Auction/Type relations, and the split obverse/reverse
+ * image via tool_import_files' crop_50 processor.
  *
- * All five auction sources (jesusvico.com, biddr.com, aureo.com,
- * numisbids.com, sixbid.com) are wired up server-side. Only jesusvico has
- * been tested against a real live page so far — the other four are
- * unverified against real data (see server/index.ts's top comment).
+ * All five sources (jesusvico, biddr, aureo, numisbids, sixbid) are wired up
+ * server-side; only jesusvico and biddr are verified against real data.
  */
 
 
 
 // imports
 	import {dd_console} from '../../../core/common/js/utils/index.js'
-// tool_common: base lifecycle (init/build/render), tool_request, wire_tool
 	import {tool_common, wire_tool} from '../../../core/tools_common/js/tool_common.js'
-// specific render of the tool
 	import {render_tool_numisdata_acquisition} from './render_tool_numisdata_acquisition.js'
 
 
@@ -51,12 +46,9 @@ export const tool_numisdata_acquisition = function () {
 
 
 
-// wire_tool performs the standard prototype assignments (render/destroy/refresh
-// from tool_common, edit from render_tool_numisdata_acquisition). It does NOT
-// wire tool_request (confirmed against tool_export.js, a real server-backed
-// tool — the tool_dev_template exemplar omits this line, a gap in the
-// scaffold itself) — every tool that talks to its own server module needs
-// this explicitly.
+// wire_tool does NOT wire tool_request (confirmed against tool_export.js — a
+// gap in the tool_dev_template scaffold itself), so every server-backed tool
+// needs this explicitly.
 wire_tool(tool_numisdata_acquisition, render_tool_numisdata_acquisition)
 tool_numisdata_acquisition.prototype.tool_request = tool_common.prototype.tool_request
 
@@ -64,7 +56,6 @@ tool_numisdata_acquisition.prototype.tool_request = tool_common.prototype.tool_r
 
 /**
 * INIT
-* Mirrors the Dédalo tool lifecycle contract (step 1 of 3): init → build → render.
 * @param {Object} options - options.lang {string} active UI language code
 * @returns {Promise<boolean>}
 */
@@ -89,11 +80,9 @@ tool_numisdata_acquisition.prototype.init = async function(options) {
 
 /**
 * BUILD
-* Mirrors the Dédalo tool lifecycle contract (step 2 of 3): init → build → render.
-* No ddo_map is registered for this tool (register.json carries none), so the
-* base build resolves self.ar_instances to a single synthetic entry pointing at
-* the caller (the numisdata4 section) — this tool doesn't render that instance,
-* it only needs self.section_tipo for the server call, already set by init.
+* No ddo_map is registered (register.json carries none), so the base build
+* resolves self.ar_instances to a single synthetic entry — this tool only
+* needs self.section_tipo, already set by init.
 * @param {boolean} [autoload=false]
 * @returns {Promise<boolean>}
 */
@@ -106,17 +95,10 @@ tool_numisdata_acquisition.prototype.build = async function(autoload=false) {
 
 /**
 * PREVIEW_URL
-* Dispatches action 'preview_url' to the tool's server module, IN THE
-* BACKGROUND (server/index.ts declares it backgroundRunnable): a multi-page
-* auction listing is fetched one rate-limited page at a time and can easily
-* run 30s+, long enough that a synchronous call hit the client's own retry
-* timeout and collided with the idempotency lock on the still-running first
-* attempt (observed live). The HTTP call answers immediately with
-* {job_id, background_job_id, pid, pfile}; the caller (render layer) drives
-* the actual progress/result via data_manager.request_stream +
-* render_common's render_stream, the same mechanism tool_import_files uses
-* for its own background import job.
-*
+* Dispatches 'preview_url' in the background (server/index.ts declares it
+* backgroundRunnable — a multi-page listing can run 30s+, long enough to hit
+* the client's own retry timeout). The caller streams progress/result via
+* data_manager.request_stream + render_stream.
 * @param {string} url - the pasted auction URL
 * @returns {Promise<Object>} API response envelope; on success carries
 *   pid/pfile as extension keys (NOT under .data) for the caller to stream.
@@ -145,25 +127,17 @@ tool_numisdata_acquisition.prototype.preview_url = async function(url) {
 
 /**
 * PREVIEW_HTML
-* Dispatches action 'preview_html' to the tool's server module — a plain
-* (non-background) request: unlike preview_url, nothing gets fetched over
-* the network here, just cheerio parsing of HTML the operator's own browser
-* already retrieved, so it's fast enough not to need the job-streaming path.
-*
+* Dispatches 'preview_html' as a plain (non-background) request — nothing is
+* fetched over the network, just cheerio parsing of HTML the operator's own
+* browser already retrieved, so it's fast enough not to need job-streaming.
 * The fallback for a source whose own defenses block this tool's automated
-* fetch outright (confirmed for numisbids.com) — visiting the page in a
-* real browser isn't automated retrieval, so there's nothing to bypass; this
-* just parses HTML the operator legitimately already has. Never written to
-* disk anywhere in this pipeline — read into memory client-side (FileReader,
-* see render_tool_numisdata_acquisition.js), sent as a plain string, parsed
-* and discarded server-side once the response is built.
-*
-* @param {string} url - the page's original URL (still required: picks the
+* fetch (e.g. numisbids.com) — a real browser visiting the page isn't
+* automated retrieval, so there's nothing to bypass. Never written to disk.
+* @param {string} url - the page's original URL (still needed: picks the
 *   right adapter/parser and resolves relative links/the Auction dedup key)
 * @param {string} html - the saved page's HTML content
 * @returns {Promise<Object>} API response envelope — same shape as
-*   preview_url's (data.auction / data.lots / data.auction_status), just
-*   not backgrounded.
+*   preview_url's, just not backgrounded.
 */
 tool_numisdata_acquisition.prototype.preview_html = async function(url, html) {
 
@@ -189,24 +163,21 @@ tool_numisdata_acquisition.prototype.preview_html = async function(url, html) {
 
 /**
 * COMMIT_LOTS
-* Dispatches action 'commit_lots' to the tool's server module, IN THE
-* BACKGROUND (server/index.ts declares it backgroundRunnable): creates one
-* numisdata4 record per lot — weight/diameter/lot-number/date-text/obverse-
-* reverse-design fields, its own Auction resolution (cached per distinct
-* auction across the batch), and the image (download, crop_50 split, link
-* through Obverse/Reverse) — easily minutes for a real review batch, so this
-* streams the same way preview_url does rather than one synchronous call
-* (observed live: a 190-lot batch blew the client's retry window).
-*
+* Dispatches 'commit_lots' in the background — creates one numisdata4 record
+* per lot (fields, Auction/Type resolution, image split via crop_50), easily
+* minutes for a real batch.
 * @param {Object[]} lots - the curated ExtractedLot[] (excluded ones dropped)
 * @param {Object} auction - the ExtractedAuction JSON preview_url returned (unmodified)
 * @returns {Promise<Object>} API response envelope; on success carries
 *   pid/pfile as extension keys (NOT under .data) for the caller to stream.
 *   The terminal frame's data is { results: [{ lot_identifier, section_tipo,
 *   section_id, fields_written, auction_section_id, auction_created,
-*   auction_error, images_created, images_error }, ...] } — the *_error
-*   fields are non-null when that step failed without rolling back what
-*   already succeeded.
+*   auction_error, type_section_id, type_citation, type_error,
+*   images_created, images_error }, ...] } — the *_error fields are non-null
+*   when that step failed without rolling back what already succeeded.
+*   type_section_id links only to an EXISTING numisdata3 record (never
+*   created); a non-null type_citation with a null type_section_id means "a
+*   citation was found but nothing in the catalog matched it."
 */
 tool_numisdata_acquisition.prototype.commit_lots = async function(lots, auction) {
 
