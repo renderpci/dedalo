@@ -31,17 +31,15 @@ export interface SourceAdapter {
 	parseAuction(firstPage: RawSource, sourceUrl: string): ExtractedAuction;
 	parseLots(page: RawSource, sourceUrl: string): ExtractedLot[];
 	/**
-	 * Key used for the on-disk raw-source directory (data/sources/auctions/<key>/), passed to
-	 * source-storage.ts. Must be unique across sources - source-storage.ts keys purely off this
-	 * string, not the source domain, so two sources' own auction-identifier numbering spaces could
-	 * otherwise collide on disk.
+	 * Key for the on-disk raw-source directory (data/sources/auctions/<key>/). Must be unique
+	 * across sources - it's keyed purely off this string, not the source domain, so two sources'
+	 * own auction-identifier numbering spaces could otherwise collide on disk.
 	 */
 	storageKey(auctionIdentifier: string): string;
 
 	/**
-	 * Fetches and parses a single lot's own detail page, for sources whose listing already carries
-	 * everything (detailFetched: true, e.g. sixbid) this is omitted entirely - lot-detail-service.ts
-	 * only calls it when present. Returns null if the detail page couldn't be parsed.
+	 * Fetches and parses a single lot's own detail page. Omitted for sources whose listing already
+	 * carries everything (detailFetched: true, e.g. sixbid). Returns null if unparseable.
 	 */
 	fetchLotDetail?(lotSourceUrl: string): Promise<ExtractedLot | null>;
 }

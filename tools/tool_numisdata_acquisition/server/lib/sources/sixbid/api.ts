@@ -19,11 +19,10 @@ export class SixbidArchivedError extends Error {
 }
 
 /**
- * Parses a sixbid.com browser URL like
- * https://www.sixbid.com/en/heritage-auctions-inc/13977/page/1/perPage/100?... into the
- * companySlug + numeric auctionId the backing JSON API needs. Tolerates an optional 2-letter
- * locale prefix and ignores any trailing /page/N/perPage/N segments - pagination is driven by
- * our own loop against the API's own total_pages, not whatever page the user happened to be on.
+ * Parses a sixbid.com browser URL like .../en/heritage-auctions-inc/13977/page/1/perPage/100 into
+ * the companySlug + numeric auctionId the backing JSON API needs. Tolerates an optional 2-letter
+ * locale prefix and ignores trailing /page/N/perPage/N segments - pagination is driven by our own
+ * loop against the API's own total_pages, not whatever page the user happened to be on.
  */
 export function parseSixbidUrl(rawUrl: string): { companySlug: string; auctionId: string } | null {
 	let url: URL;
@@ -55,10 +54,9 @@ interface SixbidApiResponse {
 /**
  * Fetches one page of a sixbid auction's lots from the backing JSON API. Deliberately does not
  * consult robots.txt - lots.sixbid.com's robots.txt is a blanket "Disallow: /" for all agents
- * (confirmed live). Explicitly raised to (and authorized by) the user for this Dédalo integration
- * before porting - not an assumption carried over from the standalone coins archive tool's own
- * history. Every other conservative discipline still applies: https-only host allowlist, SSRF
- * checks, rate limiting, size/time bounds.
+ * (confirmed live). Explicitly raised to and authorized by the user for this Dédalo integration.
+ * Every other conservative discipline still applies: https-only allowlist, SSRF checks, rate
+ * limiting, size/time bounds.
  */
 async function fetchSixbidLotsPage(
 	companySlug: string,
@@ -147,12 +145,10 @@ export interface SixbidSearchParams {
 }
 
 /**
- * Detects a sixbid.com site-wide search URL, e.g.
- * https://www.sixbid.com/en/lots/page/1/perPage/100?term=madrid&currency=EUR - the browser route
- * for "search every company's lots", distinct from a single auction's own /{company}/{auctionId}
- * listing. Tolerates the optional 2-letter locale prefix like parseSixbidUrl. The `/lots` segment
- * (rather than a company slug) is the unambiguous signal - a real companySlug is never literally
- * "lots".
+ * Detects a sixbid.com site-wide search URL, e.g. .../en/lots/page/1/perPage/100?term=madrid -
+ * the browser route for "search every company's lots", distinct from a single auction's own
+ * /{company}/{auctionId} listing. The `/lots` segment is the unambiguous signal - a real
+ * companySlug is never literally "lots".
  */
 export function parseSixbidSearchUrl(rawUrl: string): SixbidSearchParams | null {
 	let url: URL;
@@ -175,8 +171,8 @@ export function parseSixbidSearchUrl(rawUrl: string): SixbidSearchParams | null 
 
 /**
  * A stable, deterministic identifier for a search (dedupe + on-disk storage key) - a hash of the
- * normalized, sorted query string rather than the raw term, since search terms can contain
- * arbitrary/unicode text unsafe to use as a directory name.
+ * normalized, sorted query string, since search terms can contain unicode unsafe for a directory
+ * name.
  */
 export function sixbidSearchIdentifier(rawUrl: string): string | null {
 	const params = parseSixbidSearchUrl(rawUrl);
@@ -190,20 +186,17 @@ export function sixbidSearchIdentifier(rawUrl: string): string | null {
 	return createHash('sha256').update(normalized, 'utf-8').digest('hex').slice(0, 16);
 }
 
-// sixbid's own fixed page size for search pagination (independent of whatever /perPage/N the
-// pasted browser URL happened to carry - we drive our own pagination loop, same "ignore the
-// user's own page position" precedent as Biddr's acquireBiddrSearch). Matches the 100-lots/page
-// default already confirmed live for sixbid's per-auction listing endpoint.
+// Fixed page size for search pagination, independent of whatever /perPage/N the pasted browser
+// URL carried - we drive our own pagination loop. Matches the 100-lots/page default confirmed
+// live for sixbid's per-auction listing endpoint.
 const SEARCH_PAGE_LIMIT = 100;
 
 /**
- * Fetches one page of a site-wide sixbid search from the same JSON API as fetchSixbidLotsPage, but
- * hit bare (no companySlug/auctionId path segments) with `term`/`currency` query params instead -
- * confirmed live (2026-09) against the real API URL, returning `{terms, total_pages, total_items,
- * items: [{auctionId, auctionName, companyName, ..., lots: [...]}]}` - results come back grouped
- * by the real auction each lot belongs to, unlike the per-auction endpoint's flat `items[]` - see
- * parser.ts's parseSixbidSearchLots, which flattens it back out. Same robots.txt exception and
- * conservative discipline as fetchSixbidLotsPage above.
+ * Fetches one page of a site-wide sixbid search from the same JSON API as fetchSixbidLotsPage,
+ * but hit bare (no companySlug/auctionId) with `term`/`currency` query params instead - confirmed
+ * live (2026-09), returning results grouped by the real auction each lot belongs to (unlike the
+ * per-auction endpoint's flat `items[]`); see parser.ts's parseSixbidSearchLots, which flattens it
+ * back out. Same robots.txt exception as fetchSixbidLotsPage above.
  */
 async function fetchSixbidSearchPage(
 	term: string,
@@ -289,13 +282,10 @@ export async function acquireSixbidSearch(
 
 /**
  * Extracts a single-lot URL's companySlug/auctionId/lotId, e.g.
- * https://www.sixbid.com/en/heritage-auctions-inc/13977/argentina-la-rioja/12399926/la-rioja-... .
- * The lot id is found as the first purely-numeric path segment after the auction id (rather than
- * assuming a fixed position) - confirmed live the browser URL includes a category-slug segment
- * between them, which is never all-digits, so this stays correct even if sixbid ever changes
- * whether/where that segment appears. Bails out immediately if the very next segment is the
- * literal pagination marker "page" (`.../13977/page/1/perPage/100`, a full-auction listing URL) -
- * without that check, the "1" in "/page/1/" would itself look like a numeric lot id.
+ * .../en/heritage-auctions-inc/13977/argentina-la-rioja/12399926/la-rioja-... . The lot id is the
+ * first purely-numeric path segment after the auction id (the category-slug between them is never
+ * all-digits). Bails out if the next segment is literally "page" (a full-auction listing URL like
+ * `.../13977/page/1/perPage/100`) - otherwise the "1" in "/page/1/" would look like a lot id.
  */
 export function parseSixbidLotUrl(
 	rawUrl: string,
@@ -327,10 +317,9 @@ export function sixbidLotIdentifier(rawUrl: string): string | null {
 }
 
 /**
- * Fetches one lot directly from sixbid's own single-lot endpoint (`/v2/{company}/{auction}/
- * {lotId}/`, confirmed live - it returns the lot's full fields unwrapped, the same fields a
- * listing page's `items[]` entry has). Same robots.txt exception and conservative discipline as
- * fetchSixbidLotsPage above.
+ * Fetches one lot directly from sixbid's single-lot endpoint (`/v2/{company}/{auction}/{lotId}/`),
+ * confirmed live to return the lot's full fields unwrapped, same as a listing page's `items[]`
+ * entry. Same robots.txt exception as fetchSixbidLotsPage above.
  */
 async function fetchSixbidSingleLot(
 	companySlug: string,

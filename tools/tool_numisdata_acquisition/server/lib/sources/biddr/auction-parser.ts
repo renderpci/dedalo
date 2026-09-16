@@ -9,13 +9,10 @@ export interface AuctionParseInput {
 }
 
 /**
- * Extracts auction-level metadata from a Biddr auction catalogue page.
- *
- * Biddr does not expose auction/lot data as JSON-LD or embedded application state (verified
- * against live fixtures) - it is server-rendered semantic HTML with stable class names shared
- * across auction houses (`.catalog-title`, `.catalog-timetable`, `.all-lots`, ...). We rely on
- * those classes rather than brittle positional selectors, and fall back to OpenGraph metadata
- * for title/image when present.
+ * Extracts auction-level metadata from a Biddr auction catalogue page. Biddr does not expose
+ * auction/lot data as JSON-LD or embedded state - it's server-rendered HTML with stable class
+ * names shared across auction houses, so we rely on those rather than positional selectors, and
+ * fall back to OpenGraph metadata for title/image when present.
  */
 export function parseAuction({ html, sourceUrl }: AuctionParseInput): ExtractedAuction {
 	const $ = cheerio.load(html);
@@ -71,9 +68,8 @@ export function parseAuction({ html, sourceUrl }: AuctionParseInput): ExtractedA
 
 /**
  * Builds the pseudo-auction representing one Biddr search. Deliberately not framed as a single
- * real auction (auctionHouse/dates don't apply to a search spanning many of Biddr's own auctions)
- * - a search is a saved search, not a complete auction, and each lot still shows which real
- * auction it came from (in `category`, see lot-parser.ts's parseSearchResultLots).
+ * real auction (auctionHouse/dates don't apply to a search spanning many auctions) - each lot
+ * still shows which real auction it came from, in `category` (see parseSearchResultLots).
  */
 export function parseSearchAuction(html: string, sourceUrl: string): ExtractedAuction {
 	const $ = cheerio.load(html);
@@ -105,12 +101,9 @@ export function parseSearchAuction(html: string, sourceUrl: string): ExtractedAu
 }
 
 /**
- * Builds a pseudo-auction for a single-lot URL (`?a=...&l=...`). Confirmed live that a lot's own
- * page renders the identical `.catalog-title`/`.catalog-timetable` header block a full listing
- * page does (same house name, auction title, dates, status) - so this reuses parseAuction's header
- * extraction wholesale, only overriding the identifier (to the lot-scoped one, see
- * biddrSingleLotIdentifier) and lotCount (always 1, since this auction row will only ever hold this
- * one lot - the page has no `.all-lots` count to read anyway).
+ * Builds a pseudo-auction for a single-lot URL (`?a=...&l=...`). A lot's own page renders the
+ * identical `.catalog-title`/`.catalog-timetable` header a full listing page does, so this reuses
+ * parseAuction's extraction wholesale, only overriding the identifier and lotCount (always 1).
  */
 export function parseSingleLotAuction(html: string, sourceUrl: string): ExtractedAuction {
 	const base = parseAuction({ html, sourceUrl });

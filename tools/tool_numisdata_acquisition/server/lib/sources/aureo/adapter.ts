@@ -8,10 +8,9 @@ const AUREO_HOST_PATTERN = /(^|\.)aureo\.com$/i;
 
 /**
  * Adapter for aureo.com's normal auction URL (`/en/subasta/{id}`). Fully respects robots.txt
- * (permissive here, `Allow: /`) - no exception needed, unlike sixbid/numisbids. No fetchLotDetail -
- * aureo's listing card already carries the full untruncated description and a directly-
- * constructible full-resolution image URL, confirmed live, so there's nothing a separate detail
- * fetch would add URL.
+ * (permissive, `Allow: /`), unlike sixbid/numisbids. No fetchLotDetail - aureo's listing card
+ * already carries the full untruncated description and a directly-constructible full-resolution
+ * image URL, confirmed live, so a separate detail fetch would add nothing.
  */
 export const aureoAdapter: SourceAdapter = {
 	id: 'aureo',
@@ -34,8 +33,7 @@ export const aureoAdapter: SourceAdapter = {
 
 	parseLots: (page, sourceUrl) => parseAureoLots(page.html, sourceUrl),
 
-	// aureo's own auction ids are usually a plain integer, but a multi-session auction's id has a
-	// hyphenated session suffix ("0200-1", confirmed live) - both are still a real auction id, an
-	// independent space from every other source's, so both get the plain "aureo-" prefix.
+	// aureo auction ids are usually a plain integer, but a multi-session auction's id has a
+	// hyphenated session suffix ("0200-1", confirmed live) - both get the same "aureo-" prefix.
 	storageKey: (auctionIdentifier) => `aureo-${auctionIdentifier}`,
 };
