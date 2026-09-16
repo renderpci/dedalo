@@ -22,8 +22,8 @@ function absoluteUrl(href: string | undefined | null, base: string): string | nu
 	}
 }
 
-/** A listing card's title starts "Lot N. ..." - the marker is searched for anywhere in the leading
- * text (not anchored to position 0) so this still degrades gracefully if that ever changes. */
+/** A listing card's title starts "Lot N. ..." - matched anywhere in the leading text rather than
+ * anchored to position 0. */
 function parseLotNumberAndTitle(rawTitle: string | null): {
 	lotNumber: string | null;
 	title: string | null;
@@ -37,9 +37,8 @@ function parseLotNumberAndTitle(rawTitle: string | null): {
 
 /**
  * A listing card's `.lot-image` block carries both a thumbnail (`<img>`, the `.l.jpg` downsized
- * variant) and, separately, a full-resolution PhotoSwipe lightbox link (`<a data-pswp-width>`,
- * the plain `.jpg` - no `.l.`). Prefer the full-resolution link (with its known dimensions) so an
- * image is never downgraded just because a lot was never individually opened.
+ * variant) and a full-resolution PhotoSwipe lightbox link (`<a data-pswp-width>`, plain `.jpg`).
+ * Prefers the full-resolution link so an image is never downgraded needlessly.
  */
 function extractCardImage(
 	$card: cheerio.Cheerio<AnyNode>,
@@ -63,11 +62,9 @@ function extractCardImage(
 }
 
 /**
- * Per-card extraction for one `.catalog-lot` block - shared between a normal auction listing
- * (parseLotListing) and Biddr's own search results (parseSearchResultLots), same card markup.
- * `categoryOverride` lets search results attach the lot's real originating auction (from its
- * `.search-divider` header) into `category` - null for a normal listing, which has no such
- * grouping.
+ * Per-card extraction for one `.catalog-lot` block - shared between a normal listing
+ * (parseLotListing) and search results (parseSearchResultLots). `categoryOverride` lets search
+ * results attach the lot's real originating auction into `category`; null for a normal listing.
  */
 function parseLotCard(
 	container: cheerio.Cheerio<AnyNode>,
@@ -154,12 +151,10 @@ export function parseLotListing(html: string, sourceUrl: string): ExtractedLot[]
 }
 
 /**
- * Extracts lot cards from a Biddr search-results page (`biddr.com/search?...`). Same card markup
- * as a normal listing, but results are grouped by their real originating auction via sibling
- * `.search-divider` blocks - walks `.catalog-grid`'s children in document order, tracking the most
- * recent divider's auction-house/number text (its nested "Ends on / To the auction" sub-block is
- * clone-removed first so only the group label remains) and attaching it to every lot card that
- * follows until the next divider.
+ * Extracts lot cards from a Biddr search-results page. Same card markup as a normal listing, but
+ * results are grouped by originating auction via sibling `.search-divider` blocks - walks
+ * `.catalog-grid`'s children in order, tracking the most recent divider's label and attaching it
+ * to every lot card until the next divider.
  */
 export function parseSearchResultLots(html: string, sourceUrl: string): ExtractedLot[] {
 	const $ = cheerio.load(html);
@@ -189,9 +184,9 @@ export function parseSearchResultLots(html: string, sourceUrl: string): Extracte
 }
 
 /**
- * Extracts full detail for a single lot from its dedicated page (`?a=...&l=...`). This page
- * carries the untruncated description (including weight/composition lines) and the full image
- * carousel, so we re-run the numismatic-field heuristics against the untruncated text.
+ * Extracts full detail for a single lot from its dedicated page (`?a=...&l=...`) - the untruncated
+ * description and full image carousel, so the numismatic-field heuristics re-run against complete
+ * text.
  */
 export function parseLotDetail(html: string, sourceUrl: string): ExtractedLot | null {
 	const $ = cheerio.load(html);
@@ -227,11 +222,9 @@ export function parseLotDetail(html: string, sourceUrl: string): ExtractedLot | 
 		}
 	});
 
-	// A price value is normally wrapped in a nested <b><span class="highlight-u">...</span></b>, but
-	// a lot that hasn't gone live yet ("pre-bidding") renders it as a plain <b>15 EUR</b> with no
-	// .highlight-u at all - matching either finds the right text either way: when .highlight-u
-	// exists, .find() still returns the outer <b> first (encountered before its own descendant in
-	// document order), and that <b>'s .text() already includes everything the nested span would.
+	// A price is normally <b><span class="highlight-u">...</span></b>, but a "pre-bidding" lot
+	// renders a plain <b>15 EUR</b> with no .highlight-u - matching either selector finds the right
+	// text either way, since .find() returns the outer <b> first regardless.
 	const startingPriceText = cleanText(
 		$('.lot-bidding-info-starting-price').find('.highlight-u, b').first().text(),
 	);

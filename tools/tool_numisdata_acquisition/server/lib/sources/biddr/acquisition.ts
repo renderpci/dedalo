@@ -37,12 +37,10 @@ function looksLikeAuctionPage(html: string): boolean {
 }
 
 /**
- * Runs the acquisition against a public Biddr auction URL: plain HTTP only (the original coins
- * scraper also had a headless-browser fallback for client-rendered pages — deliberately NOT ported
- * yet, see AGENTS/session notes: add it only once a real Biddr page is confirmed to need it, rather
- * than pulling in Playwright as a dependency upfront). Once page 1 is acquired, walks the listing's
- * own pagination to collect every page belonging to the auction, honoring the same rate limiting as
- * the first request.
+ * Runs the acquisition against a public Biddr auction URL: plain HTTP only - the original coins
+ * scraper's headless-browser fallback for client-rendered pages is deliberately NOT ported yet;
+ * add it only once a real Biddr page is confirmed to need it. Once page 1 is acquired, walks the
+ * listing's own pagination to collect every page belonging to the auction.
  */
 export async function acquireAuction(
 	rawUrl: string,
@@ -75,10 +73,8 @@ export async function acquireAuction(
 }
 
 /**
- * Validates a Biddr single-lot URL (`biddr.com/{house}/auction?a=...&l=...`) - the same page Biddr
- * itself links to for one specific lot, and the same shape already used internally for the lazy
- * per-lot detail fetch (see adapter.ts's fetchLotDetail). Requires BOTH `a` and `l` - a plain
- * `?a=...` with no `l` is a full auction listing, not this.
+ * Validates a Biddr single-lot URL (`biddr.com/{house}/auction?a=...&l=...`). Requires BOTH `a`
+ * and `l` - a plain `?a=...` with no `l` is a full auction listing, not this.
  */
 export function parseBiddrSingleLotUrl(
 	rawUrl: string,
@@ -98,19 +94,15 @@ export function parseBiddrSingleLotUrl(
 
 /**
  * A stable identifier for a single-lot retrieval, distinct from the full auction's own numeric id
- * so pasting `?a=7359&l=8996598` and later pasting the plain `?a=7359` auction URL are dedupe'd as
- * two separate archive entries rather than the single-lot fetch silently "claiming" the full
- * auction's identifier (which would make a later full retrieval look like it already exists).
+ * - otherwise pasting a single-lot URL would make a later full-auction retrieval look like it
+ * already exists.
  */
 export function biddrSingleLotIdentifier(rawUrl: string): string | null {
 	const parsed = parseBiddrSingleLotUrl(rawUrl);
 	return parsed ? `lot-${parsed.lotId}` : null;
 }
 
-/**
- * Acquires a single Biddr lot page - one request, no pagination. Reuses the exact same fetch as
- * the full-auction path (BIDDR_FETCH_OPTIONS: robots.txt + crawl-delay-aware).
- */
+/** Acquires a single Biddr lot page - one request, no pagination. */
 export async function acquireBiddrSingleLot(
 	rawUrl: string,
 	onProgress?: AcquisitionProgress,
@@ -132,7 +124,7 @@ export async function acquireBiddrSingleLot(
 /**
  * Validates a Biddr search-results URL (`biddr.com/search?s=...&c=...&pf=...&pt=...&pc=...`) and
  * returns its query params, or null if this isn't a search URL. The unit of retrieval here is a
- * search (spanning however many of Biddr's own auctions matched), not one complete auction.
+ * search spanning however many auctions matched, not one complete auction.
  */
 export function parseBiddrSearchUrl(rawUrl: string): URLSearchParams | null {
 	let url: URL;
@@ -147,9 +139,9 @@ export function parseBiddrSearchUrl(rawUrl: string): URLSearchParams | null {
 }
 
 /**
- * A stable, deterministic identifier for a search (used for dedupe and on-disk storage keys) - a
- * hash of the normalized, sorted query string rather than the raw term, since search terms can
- * contain arbitrary/unicode text unsafe to use directly as a directory name.
+ * A stable, deterministic identifier for a search (dedupe + on-disk storage key) - a hash of the
+ * normalized, sorted query string, since search terms can contain unicode unsafe for a directory
+ * name.
  */
 export function biddrSearchIdentifier(rawUrl: string): string | null {
 	const params = parseBiddrSearchUrl(rawUrl);
@@ -160,23 +152,19 @@ export function biddrSearchIdentifier(rawUrl: string): string | null {
 }
 
 /**
- * Search-results pages have no `.catalog-title` block (confirmed live - there's no single auction
- * to title, results span many) so looksLikeAuctionPage would always reject a real search page.
- * Checks for `.catalog-lot` instead of `.catalog-grid`: the grid wrapper's actual class attribute
- * is `class="row catalog-grid ..."` (catalog-grid is never first), so a naive `class="catalog-grid`
- * substring match never fires - confirmed live, this was caught by testing against the real page,
- * not just a downloaded fixture. `.catalog-lot`'s own class attribute reliably starts with it.
- * Also accepts a zero-result search (no `.catalog-lot` at all) as long as the search form itself
- * (`name="s"`) is present, rather than treating "no matches" the same as "not a real page".
+ * Search-results pages have no `.catalog-title` block, so looksLikeAuctionPage would reject them.
+ * Checks `.catalog-lot` instead of `.catalog-grid`: the grid wrapper's class attribute is actually
+ * `class="row catalog-grid ..."`, so a naive `class="catalog-grid` prefix match never fires
+ * (confirmed live against the real page, not a fixture). Also accepts a zero-result search (no
+ * `.catalog-lot`) as long as the search form (`name="s"`) is present.
  */
 function looksLikeSearchResultsPage(html: string): boolean {
 	return /class="catalog-lot/.test(html) || /name="s"/.test(html);
 }
 
 /**
- * Runs the acquisition against a public Biddr search-results URL. Confirmed live that search pages
- * are server-rendered plain HTML (same as auction listings) - no browser fallback needed. Reuses
- * the same pagination convention (`?p=N`, `.pagination-1`) as a normal auction listing.
+ * Runs the acquisition against a public Biddr search-results URL - server-rendered plain HTML,
+ * same as auction listings, reusing the same `?p=N`/`.pagination-1` pagination convention.
  */
 export async function acquireBiddrSearch(
 	rawUrl: string,

@@ -25,11 +25,9 @@ const MAX_PAGES = 50;
 const LOTS_PER_PAGE = 96;
 
 /**
- * aureo.com auction URLs are `/en/subasta/{id}` (locale prefix aside, only "en" is used here).
- * Most auction ids are a plain 4-digit number ("0466"), but a multi-session auction's own id
- * includes a hyphenated session suffix ("0200-1", confirmed live: `data-auction="0200-1"` is what
- * the site's own AJAX calls use verbatim) - both shapes are accepted rather than assuming every id
- * is plain digits.
+ * aureo.com auction URLs are `/en/subasta/{id}`. Most ids are a plain 4-digit number ("0466"), but
+ * a multi-session auction's id has a hyphenated session suffix ("0200-1", confirmed live via
+ * `data-auction="0200-1"` in the site's own AJAX calls) - both shapes are accepted.
  */
 export function parseAureoAuctionId(rawUrl: string): string | null {
 	try {
@@ -44,9 +42,8 @@ export function parseAureoAuctionId(rawUrl: string): string | null {
 
 /**
  * GET against a public aureo.com page. robots.txt is fully permissive here (`Allow: /`, confirmed
- * live) - no exception needed, unlike sixbid/numisbids - so this fully respects robots.txt and any
- * crawl-delay, the same discipline as the shared fetchPublicPage (not reused directly because aureo
- * also needs a POST path below, for the same host, sharing the same rate-limit/block-check logic).
+ * live), so this fully respects it and any crawl-delay - not reusing the shared fetchPublicPage
+ * directly since aureo also needs a POST path below, sharing this same rate-limit/block logic.
  */
 async function fetchAureoPage(url: URL): Promise<RawSource> {
 	assertSafeAureoUrl(url.toString());
@@ -90,10 +87,8 @@ async function fetchAureoPage(url: URL): Promise<RawSource> {
 
 /**
  * aureo.com's lot listing isn't in the auction page's own HTML - the page ships an empty
- * `#auction-content` div and a small inline script that immediately POSTs to this endpoint to fill
- * it in (confirmed live by reading the site's own script.js). Same conservative discipline as
- * fetchAureoPage above (robots.txt + crawl-delay + rate limit + block-signal check), just over POST
- * with a form body instead of a plain GET.
+ * `#auction-content` div and an inline script that POSTs to this endpoint to fill it in (confirmed
+ * live by reading the site's own script.js). Same discipline as fetchAureoPage, just via POST.
  */
 async function postAureoItems(params: Record<string, string>): Promise<RawSource> {
 	const url = assertSafeAureoUrl('https://www.aureo.com/modules/loaditems.php');
@@ -227,9 +222,8 @@ async function acquireAureoAuctionPages(
 
 /**
  * Acquires a single aureo.com auction (`/en/subasta/{id}`). The historical-archive `/en/precios/
- * {brand}/{year}` search (aggregates every auction a house ran in a year — up to MAX_AUCTIONS_PER_
- * SEARCH full re-acquisitions) is deliberately NOT ported yet, same reasoning as Biddr's search URL
- * — add it once the single-auction path is proven against real data.
+ * {brand}/{year}` search is deliberately NOT ported yet, same reasoning as Biddr's search URL -
+ * add it once the single-auction path is proven against real data.
  */
 export async function acquireAureoAuction(
 	rawUrl: string,

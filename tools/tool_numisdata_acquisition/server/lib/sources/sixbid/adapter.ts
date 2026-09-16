@@ -24,12 +24,11 @@ const SIXBID_HOST_PATTERN = /(^|\.)sixbid\.com$/i;
  * a single-lot URL (`/{company}/{auction}/{category}/{lotId}/{slug}`), and a site-wide search URL
  * (`/lots/page/{p}/perPage/{n}?term=...&currency=...`) are all handled here. Search must be
  * checked before single-lot, which must be checked before the full-auction fallback (see api.ts's
- * parseSixbidLotUrl for why the category-slug segment makes single-lot vs full-auction
- * unambiguous; search's own `/lots` path segment can never collide with a real companySlug).
+ * parseSixbidLotUrl for why that's unambiguous).
  *
  * Does NOT consult robots.txt - lots.sixbid.com's robots.txt is a blanket "Disallow: /" for every
- * agent. See api.ts's fetchSixbidLotsPage for the full disclosure; this was raised to and
- * explicitly authorized by the user for this Dédalo integration.
+ * agent. See api.ts's fetchSixbidLotsPage for the full disclosure; explicitly authorized by the
+ * user for this Dédalo integration.
  */
 export const sixbidAdapter: SourceAdapter = {
 	id: 'sixbid',
@@ -70,9 +69,8 @@ export const sixbidAdapter: SourceAdapter = {
 			? parseSixbidSearchLots(page.html)
 			: parseSixbidLots(page.html),
 
-	// sixbid's own auctionId numbers and single-lot "lot-<id>" identifiers keep the flat "sixbid-"
-	// prefix; a search's hash-shaped identifier (neither all-digit nor "lot-"-prefixed) gets its
-	// own distinct prefix so it can never collide with either.
+	// A search's hash-shaped identifier (neither all-digit nor "lot-"-prefixed) gets its own
+	// distinct prefix so it can't collide with an auctionId or single-lot key.
 	storageKey: (auctionIdentifier) => {
 		if (/^\d+$/.test(auctionIdentifier) || auctionIdentifier.startsWith('lot-')) {
 			return `sixbid-${auctionIdentifier}`;

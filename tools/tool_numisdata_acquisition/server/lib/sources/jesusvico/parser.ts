@@ -25,18 +25,16 @@ function absoluteUrl(href: string | undefined | null, base: string): string | nu
 }
 
 /**
- * jesusvico serves every lot photo through a "/thumbs/838/" bucket by default (838px wide) - but
- * that's still just a thumbnail. The real, full-resolution original lives at the exact same path
- * with "thumbs/838/" removed (confirmed live: 838x425px/~84KB thumbnail vs. 2659x1350px/~1.3MB
- * original for the same photo, byte-identical aside from resolution). Previously stored the
- * thumbnail directly - this strips the bucket segment so every jesusvico image is the original.
+ * jesusvico serves lot photos through a "/thumbs/838/" bucket by default; the full-resolution
+ * original lives at the same path with that segment removed (confirmed live: 838x425px thumbnail
+ * vs. 2659x1350px original for the same photo).
  */
 function toFullResolutionUrl(url: string): string {
 	return url.replace(/\/thumbs\/838\//, '/');
 }
 
-/** Total pagination pages, found by scanning ?page=N links present in the page (no dedicated
- * "last page" control was found live - the max page number linked anywhere is a safe proxy). */
+/** Total pagination pages: the max page number found among ?page=N links (no dedicated "last
+ * page" control exists). */
 export function parseJesusvicoTotalPages(html: string): number {
 	const $ = cheerio.load(html);
 	let max = 1;
@@ -57,14 +55,11 @@ export function parseJesusvicoTotalPages(html: string): number {
 }
 
 /**
- * jesusvico.com weight/diameter appear as bare "26.92 g. 36.7 mm." right after the grade, with no
- * "weight:"/"diameter:" label the shared parser-utils.ts heuristics require - confirmed across
- * multiple live samples, so these are jesusvico-scoped rather than guessed, and kept local to this
- * file rather than loosening the shared heuristics other sources rely on. The English-locale
- * listing uses a period decimal ("26.92 g."), but the Spanish locale ("/es/lote/...", confirmed
- * live) uses a comma ("6,75 g.") - a period-only pattern doesn't just fail to match a comma value,
- * it silently matches the WRONG number (e.g. "75g" out of "6,75 g.", skipping the "6,"), so both
- * separators are matched and normalized to a period for storage.
+ * jesusvico.com weight/diameter appear as bare "26.92 g. 36.7 mm." with no "weight:"/"diameter:"
+ * label the shared parser-utils.ts heuristics require, so these stay jesusvico-scoped rather than
+ * loosening the shared ones. Matches both a period decimal (English locale, "26.92 g.") and a
+ * comma decimal (Spanish locale, "6,75 g.") - a period-only pattern would silently match the wrong
+ * number out of a comma value (e.g. "75g" out of "6,75 g.").
  */
 function extractJesusvicoWeight(text: string | null | undefined): string | null {
 	if (!text) return null;
@@ -79,16 +74,10 @@ function extractJesusvicoDiameter(text: string | null | undefined): string | nul
 }
 
 /**
- * jesusvico.com's lot-detail description opens with "<Ruler/issuer> (<date
- * range>)." - a PARENTHESIZED date directly after the name, with no comma -
- * confirmed live ("CATHOLIC MONARCHS (1475-1504). 2 reales. ..."). This is a
- * different convention from the shared extractRulerAndDate in
- * parser-utils.ts (Biddr's "Ruler, 1475-1603" comma form), which is why that
- * one silently returned null against this text rather than mismatching it -
- * kept local to this file for the same reason as the weight/diameter
- * extractors above, rather than loosening the shared heuristic other sources
- * rely on. Scoped to the FIRST period-delimited segment only, matching where
- * this fact actually appears in the observed samples.
+ * jesusvico.com's lot-detail description opens with "<Ruler/issuer> (<date range>)." - a
+ * parenthesized date, not the comma form the shared extractRulerAndDate expects (Biddr's
+ * "Ruler, 1475-1603"), so this stays local rather than loosening that heuristic. Scoped to the
+ * first period-delimited segment only.
  */
 function extractJesusvicoRulerAndDate(text: string | null | undefined): {
 	ruler: string | null;
@@ -101,11 +90,8 @@ function extractJesusvicoRulerAndDate(text: string | null | undefined): {
 	return { ruler: match[1]!.trim(), datePeriod: match[2]!.trim() };
 }
 
-/**
- * Extracts auction-level metadata from a jesusvico.com auction listing page. Single auction-house
- * site (unlike sixbid or the aggregator model coinarchives would have been) - auctionHouse is
- * simply fixed.
- */
+/** Extracts auction-level metadata from a jesusvico.com auction listing page. Single auction-house
+ * site (unlike sixbid), so auctionHouse is fixed. */
 export function parseJesusvicoAuction(html: string, sourceUrl: string): ExtractedAuction {
 	const $ = cheerio.load(html);
 
@@ -140,9 +126,9 @@ export function parseJesusvicoAuction(html: string, sourceUrl: string): Extracte
 
 /**
  * data-closed is the primary signal, but its exact semantics weren't fully confirmed live (a
- * "data-closed=0" was observed on an auction where every sampled lot was already marked SOLD) -
- * cross-checked against the parsed start date so a stale/ambiguous flag can't produce "upcoming"
- * for an auction that has clearly already happened.
+ * "data-closed=0" was observed on an auction where every sampled lot was already SOLD) - cross-
+ * checked against the parsed start date so a stale flag can't produce "upcoming" for an auction
+ * that has clearly already happened.
  */
 function deriveStatus(dataClosed: string | undefined, startDate: string | null): AuctionStatus {
 	const startMs = startDate ? new Date(startDate).getTime() : NaN;
@@ -154,14 +140,10 @@ function deriveStatus(dataClosed: string | undefined, startDate: string | null):
 }
 
 /**
- * Builds a pseudo-auction for a single-lot URL. A prior version of this claimed the lot detail
- * page "carries no reusable auction-level header" and synthesized a "Auction N, Lot M" title
- * instead — WRONG, confirmed live against the real page (a user-supplied lot URL, 2026-09): the
- * page's own breadcrumb (`<p class="h1 pb-1 lot-ficha-title">Previous auctions |
- * <b><a href="…">1ª Sesión - Subasta Extraordinaria 179</a></b> | …`) carries the real auction
- * title server-rendered in the raw HTML, no browser/JS execution needed. Reads it directly instead
- * of guessing; only falls back to null (never a synthesized lot-specific string) if that markup is
- * ever absent on some other page shape.
+ * Builds a pseudo-auction for a single-lot URL. A prior version assumed the lot detail page had
+ * no reusable auction header and synthesized a "Auction N, Lot M" title - WRONG, confirmed live:
+ * the page's own breadcrumb (`.lot-ficha-title`) carries the real auction title server-rendered
+ * in the raw HTML. Reads it directly; falls back to null (never a synthesized title) if absent.
  */
 export function parseJesusvicoSingleLotAuction(html: string, sourceUrl: string): ExtractedAuction {
 	const $ = cheerio.load(html);
@@ -187,10 +169,9 @@ export function parseJesusvicoSingleLotAuction(html: string, sourceUrl: string):
 }
 
 /**
- * Extracts every lot card from a jesusvico.com listing page. Confirmed live that card text is not
- * truncated relative to the lot's own detail page (unlike the description text truncation the
- * removed coinarchives integration had) - detailFetched is still false, because the detail page
- * adds a real multi-image gallery the listing doesn't have (confirmed 4 images vs. 1 thumbnail).
+ * Extracts every lot card from a jesusvico.com listing page. detailFetched is still false: the
+ * card text itself isn't truncated, but the detail page adds a real multi-image gallery the
+ * listing doesn't have (confirmed 4 images vs. 1 thumbnail).
  */
 export function parseJesusvicoLots(html: string, sourceUrl: string): ExtractedLot[] {
 	const $ = cheerio.load(html);
@@ -202,8 +183,7 @@ export function parseJesusvicoLots(html: string, sourceUrl: string): ExtractedLo
 		const lotUrl = absoluteUrl(card.find('a.stretched-link').first().attr('href'), sourceUrl);
 
 		const lotNumberText = cleanText(card.find('.card-lot-title').first().text());
-		// "Lot 215" on the English locale, "Lote 215" on the Spanish one (confirmed live) - matched
-		// literally rather than assuming "Lot" is a language-agnostic prefix.
+		// "Lot 215" (English) or "Lote 215" (Spanish) - both matched literally.
 		const lotNumberMatch = lotNumberText?.match(/Lote?\s+(\S+)/i);
 		const lotNumber = lotNumberMatch ? lotNumberMatch[1]! : null;
 		if (!lotNumber) return;
@@ -257,10 +237,9 @@ export function parseJesusvicoLots(html: string, sourceUrl: string): ExtractedLo
 
 /**
  * Parses a jesusvico.com lot detail page - adds the full image gallery (the listing only has one
- * thumbnail). Description/price fields are left null/absent here rather than re-derived: confirmed
- * the listing's own text is already complete, and LotRepository.upsert's mergeLot already keeps
- * the listing's richer price values whenever a merge input is null, so there's nothing to gain
- * (and a real risk of drift) from re-parsing them from a page structure that wasn't built for it.
+ * thumbnail). Price fields are left null: LotRepository.upsert's mergeLot already keeps the
+ * listing's own values whenever a merge input is null, so re-parsing them here would only risk
+ * drift for no gain.
  */
 export function parseJesusvicoLotDetail(html: string, sourceUrl: string): ExtractedLot | null {
 	const $ = cheerio.load(html);
@@ -275,9 +254,7 @@ export function parseJesusvicoLotDetail(html: string, sourceUrl: string): Extrac
 
 	const images: ExtractedImage[] = [];
 	const seen = new Set<string>();
-	// Matched by the "/thumbs/838/" bucket (still the reliable way to find just the gallery photos
-	// among the page's other images), then upgraded to the full-resolution original - see
-	// toFullResolutionUrl's comment above.
+	// The "/thumbs/838/" bucket reliably marks just the gallery photos; upgraded to full-res below.
 	$("img[src*='/thumbs/838/']").each((i, el) => {
 		const rawSrc = absoluteUrl($(el).attr('src'), sourceUrl);
 		const src = rawSrc ? toFullResolutionUrl(rawSrc) : null;

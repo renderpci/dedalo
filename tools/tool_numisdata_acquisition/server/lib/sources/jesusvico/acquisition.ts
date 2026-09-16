@@ -17,9 +17,8 @@ export const JESUSVICO_FETCH_OPTIONS: FetchPageOptions = {
 
 /**
  * jesusvico.com auction URLs embed the auction number as "I{n}" in the path (e.g.
- * ".../subasta-180-coleccion-segarra-vol-iii_I180-001" -> "180"). Confirmed live that the same
- * "I{n}" prefix also appears on every lot's own detail-page URL, but there it's shared across all
- * lots on that auction, not a per-lot id - only useful here for the auction number.
+ * ".../subasta-180-coleccion-segarra-vol-iii_I180-001" -> "180"). The same prefix also appears on
+ * every lot's own detail-page URL, but shared across all lots on that auction, not per-lot.
  */
 export function parseJesusvicoAuctionNumber(rawUrl: string): string | null {
 	try {
@@ -32,10 +31,9 @@ export function parseJesusvicoAuctionNumber(rawUrl: string): string | null {
 }
 
 /**
- * jesusvico.com lot detail URLs are "/{locale}/lot(e)?/I{auction}-X-X/{lotNumber}-Y-slug" -
- * confirmed live in both the English ("lot") and Spanish ("lote") locale path segments, so both
- * are matched rather than assuming "lot" alone. The lot number is the leading digits of the final
- * path segment.
+ * jesusvico.com lot detail URLs are "/{locale}/lot(e)?/I{auction}-X-X/{lotNumber}-Y-slug" - both
+ * the English ("lot") and Spanish ("lote") segments are matched. The lot number is the leading
+ * digits of the final path segment.
  */
 export function parseJesusvicoLotNumber(rawUrl: string): string | null {
 	try {
@@ -57,8 +55,7 @@ export function jesusvicoLotIdentifier(rawUrl: string): string | null {
 
 /**
  * jesusvico.com is fully permissive in robots.txt and server-renders plain HTML - no SPA/JSON API
- * to reverse-engineer, no robots.txt exception needed (unlike sixbid). Reuses http.ts's
- * fetchPublicPage, the same robots-respecting/rate-limited/block-signal-checked path Biddr uses.
+ * to reverse-engineer, no exception needed (unlike sixbid). Reuses http.ts's fetchPublicPage.
  */
 export async function acquireJesusvicoAuction(
 	rawUrl: string,

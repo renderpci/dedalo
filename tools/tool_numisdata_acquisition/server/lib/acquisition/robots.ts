@@ -12,7 +12,7 @@ const CACHE_TTL_MS = 60 * 60 * 1000;
 
 /**
  * Fetches and caches robots.txt for a host, returning the Disallow rules that apply to a
- * generic/unnamed user-agent ("*"). 
+ * generic/unnamed user-agent ("*").
  */
 async function getRobotsRules(origin: string): Promise<RobotsRules> {
 	const cached = cache.get(origin);
@@ -30,8 +30,8 @@ async function getRobotsRules(origin: string): Promise<RobotsRules> {
 			rules = parseRobotsTxt(await response.text());
 		}
 	} catch {
-		
-		// disallow rules (empty), the caller still applies conservative rate limiting regardless.
+		// robots.txt unreachable - fail open with no disallow rules; the caller still applies
+		// conservative rate limiting regardless.
 	}
 
 	cache.set(origin, { rules, fetchedAt: Date.now() });

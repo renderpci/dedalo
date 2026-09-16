@@ -24,9 +24,8 @@ function absoluteUrl(href: string | undefined | null, base: string): string | nu
 }
 
 /**
- * aureo.com's own descriptions use "7,14 g." (comma decimal, no "weight:" label) - the same bare-
- * pattern gap jesusvico's descriptions have, but with a comma rather than jesusvico's period, so
- * kept as its own extractor rather than reusing jesusvico's (which would misparse the decimal).
+ * aureo.com's descriptions use "7,14 g." (comma decimal, no "weight:" label) - same bare-pattern
+ * gap jesusvico has, but with a comma instead of a period, so kept as its own extractor.
  */
 function extractAureoWeight(text: string | null): string | null {
 	if (!text) return null;
@@ -36,14 +35,13 @@ function extractAureoWeight(text: string | null): string | null {
 
 /**
  * Spanish numismatic grading scale (worst to best: RC, BC, MBC, EBC, SC/FDC), confirmed live in
- * lot descriptions right after the weight - kept as its own field (`condition`) rather than mapped
- * onto an English equivalent, so the original grading vocabulary isn't lost or guessed at.
+ * lot descriptions right after the weight - kept as its own `condition` field rather than mapped
+ * onto an English equivalent.
  */
 function extractAureoCondition(text: string | null): string | null {
 	if (!text) return null;
-	// A trailing \b doesn't work here - "-"/"+" aren't word characters, so \b fails right after a
-	// grade like "MBC-" (neither side of "- " is a word char). A negative lookahead for another
-	// letter/digit achieves the same "don't match mid-word" guard without that failure mode.
+	// A trailing \b fails right after "MBC-" (neither side of "-" is a word char); a negative
+	// lookahead for another letter/digit gives the same "don't match mid-word" guard instead.
 	const match = text.match(
 		/\b(FDC|SC\+|SC-|SC|EBC\+|EBC-|EBC|MBC\+|MBC-|MBC|BC\+|BC-|BC|RC)(?![A-Za-z0-9])/,
 	);
@@ -57,9 +55,8 @@ interface AureoPriceInfo {
 }
 
 /**
- * A card always shows "Start: N€"; "Hammer price: N€" is only present once a lot has sold (its
- * container is replaced by a live bid form otherwise, confirmed by reading the site's own
- * script.js) - so presence/absence of "Hammer price" is itself the sold/still-open signal.
+ * A card always shows "Start: N€"; "Hammer price: N€" only appears once a lot has sold (confirmed
+ * by reading the site's own script.js) - its presence/absence is itself the sold/open signal.
  */
 function extractAureoPriceInfo(priceText: string): AureoPriceInfo {
 	const startSegment = priceText.match(/Start:\s*([^\n]*)/i)?.[1] ?? null;
@@ -105,8 +102,8 @@ function parseAureoLotCard(card: cheerio.Cheerio<AnyNode>, pageUrl: string): Ext
 	const { ruler, datePeriod } = extractRulerAndDate(description);
 	const lotIdentifierAuction = auctionIdPadded ?? auctionNumber ?? '';
 
-	// aureo.com has no bookmarkable per-lot URL (pure client-side AJAX navigation, confirmed live -
-	// every lot link is a plain "#") - the most useful honest link is that lot's own auction page.
+	// aureo.com has no bookmarkable per-lot URL (pure client-side AJAX nav, every lot link is "#"),
+	// so the most useful honest link is that lot's own auction page.
 	const lotSourceUrl = auctionIdPadded
 		? `https://www.aureo.com/en/subasta/${auctionIdPadded}`
 		: pageUrl;
@@ -152,9 +149,8 @@ export function parseAureoLots(html: string, sourceUrl: string): ExtractedLot[] 
 
 /**
  * Builds auction-level metadata for a single aureo.com auction from its first loaditems.php page.
- * The shell page at `/en/subasta/{id}` carries no title/date itself (confirmed live - lots are
- * loaded entirely via AJAX) so this reads the auction number from the breadcrumb and the closing
- * date from the first lot card, both already present on the page being parsed.
+ * The shell page at `/en/subasta/{id}` carries no title/date itself (lots load entirely via AJAX),
+ * so this reads the auction number from the breadcrumb and the closing date from the first card.
  */
 export function parseAureoAuction(html: string, sourceUrl: string): ExtractedAuction {
 	const $ = cheerio.load(html);
@@ -192,10 +188,9 @@ export function parseAureoAuction(html: string, sourceUrl: string): ExtractedAuc
 }
 
 /**
- * No explicit open/closed flag is exposed - a "Hammer price" only ever appears once a lot has sold
- * (see extractAureoPriceInfo's comment), so its presence anywhere on the page is a reliable closed
- * signal; its absence falls back to comparing the closing date against now, since a genuinely live
- * auction wasn't available to confirm this against directly during development.
+ * No explicit open/closed flag is exposed - a "Hammer price" only appears once a lot has sold (see
+ * extractAureoPriceInfo), so its presence anywhere on the page is a reliable closed signal; its
+ * absence falls back to comparing the closing date against now.
  */
 function deriveAureoStatus(hasAnyHammerPrice: boolean, closingDate: string | null): AuctionStatus {
 	if (hasAnyHammerPrice) return 'closed';

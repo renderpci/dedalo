@@ -1,11 +1,8 @@
 /**
  * Image byte download — the same conservative-fetch discipline as page
- * acquisition (https + host allowlist, rate limiting, size limit).
- *
- * Source-agnostic - the caller passes the SourceAdapter's own `assertSafeUrl`
- * (index.ts's importImagesForLot resolves it via ADAPTERS.find(matchesUrl)) —
- * each source's url-safety.ts allowlist already covers its own image/CDN
- * hosts.
+ * acquisition (https + host allowlist, rate limiting, size limit). Source-
+ * agnostic: the caller passes the SourceAdapter's own `assertSafeUrl`, whose
+ * allowlist already covers that source's image/CDN hosts.
  */
 
 import { waitForTurn } from './rate-limit.ts';

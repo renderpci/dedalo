@@ -33,12 +33,10 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
 };
 
 /**
- * Some sources (numisbids' large-amount display, e.g. "250 000 USD") use a narrow no-break space
- * (U+202F, which JS's `\s` already matches, same as a plain space or U+00A0) as a thousands
- * separator rather than "," - confirmed live on a six-figure lot, where the digit-matching regexes
- * below would otherwise only capture the last group ("000"), silently turning 250000 into 0.
- * Strips whitespace specifically *between two digits* (never elsewhere, so the required space
- * before a currency code, or the " - " in a range, is untouched) before any amount regex runs.
+ * Some sources (e.g. numisbids' "250 000 USD") use a narrow no-break space as a thousands
+ * separator - confirmed live, without stripping it the amount regexes below only capture the
+ * last digit group, silently turning 250000 into 0. Only strips whitespace *between two digits*,
+ * so a required space before a currency code or a range's " - " stays untouched.
  */
 export function stripDigitGroupingSpaces(text: string): string {
 	return text.replace(/(\d)\s+(?=\d)/g, '$1');
