@@ -94,12 +94,13 @@ class search {
 		public $ar_sql_joins;
 
 		// join_counter. Monotonic per-query counter used to give each multi-step filter clause
-		// a unique join alias namespace, so two clauses sharing the same path get INDEPENDENT
-		// joins (cross-record AND) instead of collapsing onto one joined record.
-		// NOTE: inside an $or group, operands sharing the same path signature REUSE one join_id
-		// (see filter_parser). Independent traversal is only meaningful under $and; under $or it
-		// changes nothing semantically and multiplies rows (cartesian product of N identical
-		// LEFT JOIN pairs), which produced 30+ stuck Postgres backends on a remote install.
+		// a unique alias namespace.
+		// NOTE: under $or, operands sharing the same path signature REUSE one join_id (see
+		// filter_parser) and are emitted as a shared LEFT JOIN relations/matrix pair. Under $and,
+		// each multi-step clause is emitted as a correlated EXISTS subquery, so clauses keep
+		// independent join_ids (cross-record AND) without adding N identical LEFT JOIN pairs to
+		// the main query: N identical pairs produced a K^N cartesian product plus a DISTINCT ON
+		// sort that hung the Postgres server.
 		public $join_counter = 0;
 
 		// MAX_SQL_JOINS_WARN. Above this number of relation joins in one search SQL,
@@ -1136,7 +1137,9 @@ class search {
 							}else{
 								if($this->allow_sub_select_by_id===true) {
 									$default_order = ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) ? 'DESC' : 'ASC';
-									$order_query .= PHP_EOL . 'ORDER BY ' . $this->main_section_tipo_alias . '.section_id ' . $default_order;
+									// DISTINCT ON(section_id, section_tipo) requires the leading ORDER BY
+									// expressions to match, so section_tipo must follow section_id.
+									$order_query .= PHP_EOL . 'ORDER BY ' . $this->main_section_tipo_alias . '.section_id ' . $default_order . ', ' . $this->main_section_tipo_alias . '.section_tipo ' . $default_order;
 									if(SHOW_DEBUG===true) {
 										$order_query .= ' -- allow_sub_select_by_id=true (1-a) main_section_tipo_alias: '. $this->main_section_tipo_alias;
 									}
@@ -1222,7 +1225,9 @@ class search {
 							}else{
 								if($this->allow_sub_select_by_id===true) {
 									$default_order = ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) ? 'DESC' : 'ASC';
-									$order_query .= PHP_EOL . 'ORDER BY ' . $this->main_section_tipo_alias.'.section_id '.$default_order;
+									// DISTINCT ON(section_id, section_tipo) requires the leading ORDER BY
+									// expressions to match, so section_tipo must follow section_id.
+									$order_query .= PHP_EOL . 'ORDER BY ' . $this->main_section_tipo_alias.'.section_id '.$default_order . ', ' . $this->main_section_tipo_alias.'.section_tipo '.$default_order;
 									if(SHOW_DEBUG===true) {
 										$order_query .= ' -- allow_sub_select_by_id=true ';
 									}
@@ -1455,8 +1460,11 @@ class search {
 				}
 
 				// copy source and replace table and alias names
+				// NOTE: replace only 'FROM <matrix_table> AS <alias>' occurrences (main table
+				// and inner window subselect), never 'FROM relations AS r_jN_...' (the correlated
+				// EXISTS subquery tables; relations is a global table shared by all union members).
 				$current_query	= $sql_query;
-				$current_query	= preg_replace('/(FROM [a-zA-z]+ AS [a-zA-z]+)/i', 'FROM '.$current_matrix_table.' AS mix_'.$current_matrix_table, $current_query);
+				$current_query	= preg_replace('/(FROM (?!relations)[a-zA-z]+ AS [a-zA-z]+)/i', 'FROM '.$current_matrix_table.' AS mix_'.$current_matrix_table, $current_query);
 				$current_query	= str_replace('mix.', 'mix_'.$current_matrix_table.'.', $current_query);
 
 				// Add the modified query to the list
@@ -2254,9 +2262,15 @@ class search {
 	*  reference so a $or nested directly inside a $or (e.g. the per-language expansion
 	*  that component_common::search_query_conform wraps around every translatable operand)
 	*  inherits the namespace of its parent group. Any non-$or group starts a new one.
+	* @param bool $as_subquery = false
+	*  True when the current group is (a child of) a non-$or group. In that context every
+	*  multi-step leaf is emitted as a correlated EXISTS subquery (its relations/matrix joins
+	*  live inside the subquery) instead of adding a LEFT JOIN pair to the main query, so N
+	*  ANDed clauses on the same path stay independent (cross-record AND) without producing a
+	*  cartesian product. A top-level $or keeps the main-query join behaviour unchanged.
 	* @return string $string_query
 	*/
-	public function filter_parser(string $op, array $ar_value, ?array &$or_join_ids=null) : string {
+	public function filter_parser(string $op, array $ar_value, ?array &$or_join_ids=null, bool $as_subquery=false) : string {
 
 		$string_query = '';
 
@@ -2315,13 +2329,15 @@ class search {
 				// 	$string_query .= ' '.$operator2.'** ';
 				// }
 
-				// recursion filter_parser. A $or directly inside a $or shares the parent's
-				// join namespace; anything else opens its own.
-				if ($op==='$or' && $op2==='$or') {
-					$parsed_string = $this->filter_parser($op2, $ar_value2, $or_join_ids);
+				// recursion filter_parser. A $or directly inside a $or (not in subquery context) shares the
+				// parent's join namespace; anything else opens its own. Any group under a non-$or
+				// group inherits the subquery context, so its leaves are emitted as EXISTS subqueries.
+				$child_as_subquery = ($op!=='$or') || $as_subquery;
+				if ($op==='$or' && $op2==='$or' && !$as_subquery) {
+					$parsed_string = $this->filter_parser($op2, $ar_value2, $or_join_ids, $child_as_subquery);
 				}else{
 					$child_join_ids = null;
-					$parsed_string = $this->filter_parser($op2, $ar_value2, $child_join_ids);
+					$parsed_string = $this->filter_parser($op2, $ar_value2, $child_join_ids, $child_as_subquery);
 				}
 				if (!empty($parsed_string)) {
 					$string_query .= ' (' . $parsed_string . ' )';
@@ -2338,14 +2354,15 @@ class search {
 				#if (!empty($search_object->q)) {
 					$n_levels = count($search_object->path);
 					// Multi-step paths (value lives inside a related record reached through a
-					// relation/portal) get a join_id so each clause traverses the relation
-					// INDEPENDENTLY. This makes "value A AND value B" match across different linked
-					// records, not within a single one. Single-step paths keep join_id null (legacy).
-					// Under $or, operands with the same path signature SHARE one join_id: independent
-					// traversal adds nothing to an OR (any linked record matching any value already
-					// matches) but each extra join_id adds an identical LEFT JOIN relations/matrix pair,
-					// and the autocomplete pushes one operand per leaf field (10+ fields -> 10+ identical
-					// join pairs -> cartesian explosion, 30+ stuck Postgres backends).
+					// relation/portal) get a join_id per clause so each clause traverses the relation
+					// INDEPENDENTLY: "value A AND value B" matches across different linked records.
+					// Under a top-level $or, operands with the same path signature SHARE one join_id and
+					// are emitted as a single LEFT JOIN relations/matrix pair in the main query
+					// (independent traversal adds nothing to an OR and N identical pairs explode into
+					// a cartesian product).
+					// Under $and (subquery context), each clause is emitted as a correlated EXISTS
+					// subquery instead of a main-query join, keeping the cross-record semantics with
+					// no row multiplication. Single-step paths keep join_id null (legacy, no joins).
 					$join_id = null;
 					if ($n_levels>1) {
 						if ($op==='$or') {
@@ -2359,12 +2376,30 @@ class search {
 						}
 					}
 					$search_object->join_id = $join_id;
-					if ($n_levels>1) {
-						// $this->join_group[] = $this->build_sql_join($search_object->path);
+					if ($n_levels>1 && $op==='$or' && !$as_subquery) {
+						// top-level $or: one shared LEFT JOIN relations/matrix pair in the main query
 						$this->build_sql_join($search_object->path, $join_id);
+						$string_query .= $this->get_sql_where($search_object);
+					}elseif ($n_levels>1) {
+						// $and (subquery context): correlated EXISTS subquery. The relations/matrix
+						// joins live INSIDE the subquery instead of the main query, so clauses on the
+						// same path stay independent (cross-record AND) but never multiply rows:
+						// N identical LEFT JOIN pairs caused a K^N cartesian product plus a
+						// DISTINCT ON sort that hung the Postgres server.
+						// NOTE: because the clause now runs as EXISTS, empty-value (!*) conditions
+						// require the related record to EXIST (its field empty). The old LEFT JOIN
+						// version also matched sections with NO related records (all joined cols
+						// NULL). Kept the EXISTS semantics by decision.
+						$ar_subquery_joins = [];
+						$subquery_correlation = null;
+						$this->build_sql_join($search_object->path, $join_id, $ar_subquery_joins, $subquery_correlation);
+						$subquery_where = trim($this->get_sql_where($search_object));
+						if (!empty($subquery_where) && !empty($subquery_correlation)) {
+							$string_query .= 'EXISTS (SELECT 1 ' . implode(' ', $ar_subquery_joins) . ' WHERE (' . $subquery_correlation . ' AND ' . $subquery_where . '))';
+						}
+					}else{
+						$string_query .= $this->get_sql_where($search_object);
 					}
-
-					$string_query .= $this->get_sql_where($search_object);
 
 					// if the where get empty value don' add operator
 					if ($key+1 !== $total && !empty($string_query)) {
@@ -2414,14 +2449,30 @@ class search {
 	            "component_tipo": "dd62"
 	        }
 		]
+	* @param int|null $join_id = null
+	* @param array|null &$ar_joins = null. Output storage for the built joins. When null the
+	*  joins are stored in the instance property ar_sql_joins (main query); pass a local array
+	*  to collect the joins of a correlated EXISTS subquery instead.
+	* @param string|null &$subquery_correlation = null. When $ar_joins is provided, the first
+	*  relations join is emitted as the subquery FROM (no ON) and its correlation conditions are
+	*  collected here to be ANDed in the subquery WHERE.
 	* @return bool true
 	*/
-	public function build_sql_join(array $path, ?int $join_id=null) : bool {
+	public function build_sql_join(array $path, ?int $join_id=null, ?array &$ar_joins=null, ?string &$subquery_correlation=null) : bool {
 
 		$rel_table		= self::$relations_table;
 		$ar_key_join	= [];
 		$base_key		= '';
 		$total_paths	= count($path);
+
+		// Output storage: caller-provided array (subquery joins) or the instance property
+		$target_joins = &$ar_joins;
+		if ($target_joins===null) {
+			$target_joins = &$this->ar_sql_joins;
+		}
+		// Subquery mode: the first relations table becomes the subquery FROM and its
+		// correlation to the outer main table is collected separately (see below).
+		$as_subquery	= ($ar_joins!==null);
 
 		// Per-clause discriminator prefix. Keeps two clauses with the same path from collapsing
 		// onto one joined row (see get_table_alias_from_path). Empty when join_id is null →
@@ -2458,34 +2509,39 @@ class search {
 			$t_name				= $prefix . implode('_', $ar_key_join);
 			$t_relation			= 'r_'.$t_name ;
 
-			if (!isset($this->ar_sql_joins[$t_name])) {
+			// correlation between the current table and the relations row
+			$correlation	= $current_key. '.section_id=' .$t_relation. '.section_id';
+			$correlation	.= ' AND ' . $current_key.'.section_tipo=' . $t_relation.'.section_tipo';
+			// join_from_component_tipo
+			if (isset($path[$key-1])) {
+				$from_component_tipo = $path[$key-1]->component_tipo;
+				$correlation .= ' AND ' . $t_relation .'.from_component_tipo=\'' .$from_component_tipo. '\'';
+			}else{
+				$correlation .= ' AND ' .$t_relation. '.target_section_tipo=\'' .$last_section_tipo. '\'';
+			}
+
+			if (!isset($target_joins[$t_name])) {
 
 				$sql_join  = "\n";
 				if(SHOW_DEBUG===true) {
 					$section_name = RecordObj_dd::get_termino_by_tipo($step_object->section_tipo, null, true, false);
 					$sql_join  .= "-- JOIN GROUP $matrix_table - $t_name - $section_name\n";
 				}
-				# Join relation table
-				$sql_join .= ' LEFT JOIN ' .$rel_table. ' AS ' .$t_relation. ' ON (';
-				$sql_join .= $current_key. '.section_id=' .$t_relation. '.section_id';
-				$sql_join .= ' AND ' . $current_key.'.section_tipo=' . $t_relation.'.section_tipo';
-				#$sql_join .= ' AND ' .$t_relation. '.target_section_tipo=\'' .$last_section_tipo. '\'';
-
-				# join_from_component_tipo
-				if (isset($path[$key-1])) {
-					$from_component_tipo = $path[$key-1]->component_tipo;
-					$sql_join .= ' AND ' . $t_relation .'.from_component_tipo=\'' .$from_component_tipo. '\'';
+				if ($as_subquery && $key===1) {
+					// Subquery FROM (first relations table). The correlation above is collected
+					// in $subquery_correlation and applied in the subquery WHERE.
+					$sql_join .= ' FROM ' .$rel_table. ' AS ' .$t_relation;
+					$subquery_correlation = $correlation;
 				}else{
-					$sql_join .= ' AND ' .$t_relation. '.target_section_tipo=\'' .$last_section_tipo. '\'';
+					# Join relation table
+					$sql_join .= ' LEFT JOIN ' .$rel_table. ' AS ' .$t_relation. ' ON (' . $correlation . ')'.PHP_EOL;
 				}
-
-				$sql_join .= ')'.PHP_EOL;
 
 				# Join next table
 				$sql_join .= ' LEFT JOIN '.$matrix_table.' AS '.$t_name .' ON ('. $t_relation.'.target_section_id='.$t_name.'.section_id AND '.$t_relation.'.target_section_tipo='.$t_name.'.section_tipo)';
 
 				// Add to joins
-				$this->ar_sql_joins[$t_name] = $sql_join;
+				$target_joins[$t_name] = $sql_join;
 			}
 		}//end foreach ($path as $key => $step_object)
 

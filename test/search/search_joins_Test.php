@@ -13,15 +13,19 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 *
 * Background: since d4124b0005 (v6.9.1) every multi-step LEAF operand gets its own
 * join_id (++join_counter) and thus its own 'jN_' aliased LEFT JOIN pair on relations/matrix.
-* That is what makes "value A AND value B" match across DIFFERENT linked records and must be
-* kept under $and. Under $or an independent traversal per operand changes nothing in the
-* result set and only multiplies rows (the client autocomplete pushes the same q into one
-* operand per leaf field under a single $or -> 10 identical join pairs -> cartesian explosion).
+* That is what makes "value A AND value B" match across DIFFERENT linked records. But N
+* ANDed operands on the SAME path each added an identical LEFT JOIN pair to the main query,
+* producing a K^N cartesian product plus a DISTINCT ON sort that hung Postgres. Multi-step
+* operands under $and are therefore emitted as correlated EXISTS subqueries (joins live inside
+* the subquery), keeping the cross-record AND semantics with no row multiplication. Under $or
+* an independent traversal per operand changes nothing in the result set and only multiplies
+* rows (the client autocomplete pushes the same q into one operand per leaf field under a single
+* $or -> 10 identical join pairs -> cartesian explosion).
 *
 * Expected contract:
-* 	- $or  : operands sharing the same path signature share ONE jN_ join.
-* 	- $and : every operand keeps its own jN_ join (d4124b0005 semantics).
-* 	- nested groups: each group gets its own join namespace.
+* 	- $or  : operands sharing the same path signature share ONE jN_ LEFT JOIN pair in the main query.
+* 	- $and : every operand becomes its own correlated EXISTS subquery (no main-query joins).
+* 	- nested groups: each $or group gets its own join namespace.
 *
 * The SQL is only BUILT here, never executed. What matters is that the tipos resolve to
 * models: the 'test' ontology section 'test3' (matrix_test) contains the component_portal
@@ -142,13 +146,15 @@ final class search_joins_test extends TestCase {
 
 
 	/**
-	* TEST_AND_OPERANDS_KEEP_INDEPENDENT_JOINS
-	* Same operands under $and: r_j1_, r_j2_ and r_j3_ each present exactly once.
-	* Protects the d4124b0005 semantics (value A AND value B may live in different
-	* linked records).
+	* TEST_AND_OPERANDS_EMIT_EXISTS_SUBQUERIES
+	* Same operands under $and: no relations joins are emitted to the main query; each $or
+	* operand group (one per ANDed field, expanded per language by the conform step) becomes
+	* correlated EXISTS subqueries (their joins live inside the subqueries). Preserves the
+	* cross-record AND semantics (each clause may match a different linked record) without the
+	* K^N cartesian product that N identical LEFT JOIN pairs produced.
 	* @return void
 	*/
-	public function test_and_operands_keep_independent_joins() : void {
+	public function test_and_operands_emit_exists_subqueries() : void {
 
 		$sqo	= self::build_sqo('$and', [
 			self::operand('a', self::$tipo_string, 'component_input_text'),
@@ -158,33 +164,85 @@ final class search_joins_test extends TestCase {
 		$built	= self::build($sqo);
 		$sig	= $built['signature'];
 
-		foreach ([1,2,3] as $id) {
-			$this->assertSame(1, self::count_relations_join($built['joins'], $id, $sig),
-				'$and: expected exactly one LEFT JOIN relations AS r_j'.$id.'_'.$sig . PHP_EOL . $built['joins']
-			);
-		}
-		$this->assertSame(0, self::count_relations_join($built['joins'], 4, $sig),
-			'$and: r_j4_ must not exist' . PHP_EOL . $built['joins']
+		$this->assertSame(0, self::count_relations_join_any($built['joins']),
+			'$and: no relations joins must be emitted to the main query' . PHP_EOL . $built['joins']
 		);
-		$this->assertSame(3, self::count_relations_join_any($built['joins']),
-			'$and: expected three relations joins overall' . PHP_EOL . $built['joins']
-		);
+		$this->assertNotEmpty($built['where'], 'expected EXISTS subqueries in the WHERE');
 
-		// WHERE references j1_, j2_ and j3_ (one per operand)
+		// at least one EXISTS subquery per ANDed operand (the conform step expands each field
+		// into a per-language $or, and every language leaf is emitted as its own EXISTS)
+		$this->assertGreaterThanOrEqual(3, substr_count($built['where'], 'EXISTS (SELECT 1'),
+			'$and: expected at least three EXISTS subqueries (one per operand)' . PHP_EOL . $built['where']
+		);
 		$this->assertSame([1,2,3], self::join_ids_in($built['where'], $sig),
 			'$and: the WHERE must reference j1_, j2_ and j3_ aliases' . PHP_EOL . $built['where']
 		);
-	}//end test_and_operands_keep_independent_joins
+	}//end test_and_operands_emit_exists_subqueries
 
 
 
 	/**
-	* TEST_NESTED_GROUPS_GET_OWN_NAMESPACE
-	* {"$and":[{"$or":[op1,op2]}, {"$or":[op3]}]}
-	* The inner $or shares one join (j1), the second group gets j2, and no j3 exists.
+	* TEST_AND_MULTI_SECTION_UNION_PRESERVES_EXISTS_SUBQUERIES
+	* Multi-section search (section_tipo across two matrix tables) triggers build_union_query,
+	* which rewrites the main 'FROM <table> AS <alias>' per union member. It must NOT rewrite
+	* the EXISTS subqueries' own 'FROM relations AS r_jN_...' (relations is a global table shared
+	* by all members). Regression: the union regex replaced every 'FROM ... AS ...', mangling the
+	* subquery alias -> "missing FROM-clause entry for table r_jN_...".
 	* @return void
 	*/
-	public function test_nested_groups_get_own_namespace() : void {
+	public function test_and_multi_section_union_preserves_exists_subqueries() : void {
+
+		$sqo	= self::build_sqo('$and', [
+			self::operand('a', self::$tipo_string, 'component_input_text'),
+			self::operand('b', self::$tipo_text,   'component_text_area')
+		]);
+		// 'test3' (matrix_test) + 'oh1' (matrix): two matrix tables -> UNION ALL
+		$sqo->section_tipo = ['test3','oh1'];
+
+		$search	= search::get_instance($sqo);
+		$sql	= $search->parse_search_query_object();
+
+		$this->assertIsString($sql);
+		$this->assertStringContainsString('UNION ALL', $sql,
+			'multi-section search must build a UNION' . PHP_EOL . $sql
+		);
+		// every union member must keep its own intact EXISTS subquery FROM (relations).
+		// The conform step expands one EXISTS per language leaf, so the count is identical
+		// per member; a union rewrite that mangles the subquery FROM zeroes it out for that member.
+		$members			= explode('UNION ALL', $sql);
+		$n_relations_from	= array_map(function(string $member){
+			return substr_count($member, 'FROM relations AS r_j');
+		}, $members);
+		$this->assertNotEmpty($n_relations_from);
+		$this->assertGreaterThan(0, $n_relations_from[0],
+			'first union member must contain its EXISTS subqueries' . PHP_EOL . $sql
+		);
+		foreach ($n_relations_from as $key => $count) {
+			$this->assertSame($n_relations_from[0], $count,
+				'union member '.$key.' must keep the same number of FROM relations AS r_jN_ subqueries' . PHP_EOL . $sql
+			);
+		}
+		// members 2+ must have every matrix FROM (main + inner window subselect) renamed to
+		// 'mix_<table>' — an unrenamed 'AS mix ' alias would leave the renamed mix_<table>.*
+		// references without a matching FROM.
+		foreach (array_slice($members, 1) as $key => $member) {
+			$this->assertDoesNotMatchRegularExpression('/AS mix\b/', $member,
+				'union member '.($key+1).' must not keep an unrenamed mix alias' . PHP_EOL . $sql
+			);
+		}
+	}//end test_and_multi_section_union_preserves_exists_subqueries
+
+
+
+	/**
+	* TEST_NESTED_GROUPS_EMIT_EXISTS_SUBQUERIES
+	* {"$and":[{"$or":[op1,op2]}, {"$or":[op3]}]}
+	* Every operand under the $and group is expanded per language by the conform step into its
+	* own inner $or group, and each language leaf is emitted as a correlated EXISTS subquery:
+	* no main-query joins, join ids j1_, j2_ and j3_ (one per operand).
+	* @return void
+	*/
+	public function test_nested_groups_emit_exists_subqueries() : void {
 
 		$sqo = json_decode(json_encode([
 			'section_tipo'	=> [self::$section_tipo],
@@ -206,22 +264,16 @@ final class search_joins_test extends TestCase {
 		$built	= self::build($sqo);
 		$sig	= $built['signature'];
 
-		$this->assertSame(1, self::count_relations_join($built['joins'], 1, $sig),
-			'nested: expected exactly one LEFT JOIN relations AS r_j1_'.$sig . PHP_EOL . $built['joins']
+		$this->assertSame(0, self::count_relations_join_any($built['joins']),
+			'nested: no relations joins must be emitted to the main query' . PHP_EOL . $built['joins']
 		);
-		$this->assertSame(1, self::count_relations_join($built['joins'], 2, $sig),
-			'nested: expected exactly one LEFT JOIN relations AS r_j2_'.$sig . PHP_EOL . $built['joins']
+		$this->assertGreaterThanOrEqual(3, substr_count($built['where'], 'EXISTS (SELECT 1'),
+			'nested: expected at least three EXISTS subqueries (one per operand)' . PHP_EOL . $built['where']
 		);
-		$this->assertSame(0, self::count_relations_join($built['joins'], 3, $sig),
-			'nested: r_j3_ must not exist' . PHP_EOL . $built['joins']
+		$this->assertSame([1,2,3], self::join_ids_in($built['where'], $sig),
+			'nested: the WHERE must reference j1_, j2_ and j3_ aliases only' . PHP_EOL . $built['where']
 		);
-		$this->assertSame(2, self::count_relations_join_any($built['joins']),
-			'nested: expected two relations joins overall' . PHP_EOL . $built['joins']
-		);
-		$this->assertSame([1,2], self::join_ids_in($built['where'], $sig),
-			'nested: the WHERE must reference j1_ and j2_ only' . PHP_EOL . $built['where']
-		);
-	}//end test_nested_groups_get_own_namespace
+	}//end test_nested_groups_emit_exists_subqueries
 
 
 
