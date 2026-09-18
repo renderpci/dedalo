@@ -5028,8 +5028,22 @@ class diffusion_sql extends diffusion  {
 				, logger::ERROR
 			);
 		}
-		$target_component_tipo	= $process_dato_arguments->target_component_tipo;
-		$model_name				= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
+
+		// target_component_tipo (could be empty)
+		$target_component_tipo = $process_dato_arguments->target_component_tipo ?? '';
+		if(!is_string($target_component_tipo)) {
+
+			debug_log(__METHOD__
+				. " ERROR: Invalid target_component_tipo. Expected string " . PHP_EOL
+				. ' type: ' . gettype($target_component_tipo) . PHP_EOL
+				. ' target_component_tipo: ' . to_string($target_component_tipo) . PHP_EOL
+				. ' process_dato_arguments: ' . to_string($process_dato_arguments) . PHP_EOL
+				, logger::ERROR
+			);
+		}
+		$model_name = !empty($target_component_tipo)
+			? RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo, true)
+			: '';
 
 		$ar_value = [];
 		foreach ($ar_locator as $locator) {
