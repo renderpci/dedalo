@@ -278,6 +278,143 @@ final class search_joins_test extends TestCase {
 
 
 	/**
+	* TEST_AND_LANG_LEAVES_MERGE_INTO_ONE_EXISTS
+	* One operand on a translatable leaf through a portal expands (conform step) into one
+	* $or group per language. Those language leaves share one join_id, so they must be merged
+	* into a SINGLE correlated EXISTS: ∃r:P(r) ∨ ∃r:Q(r) ≡ ∃r:(P(r)∨Q(r)). Count/search
+	* performance guard: without the merge each language leaf was evaluated as its own
+	* correlated EXISTS subquery.
+	* @return void
+	*/
+	public function test_and_lang_leaves_merge_into_one_exists() : void {
+
+		$sqo	= self::build_sqo('$and', [
+			self::operand('a', self::$tipo_string, 'component_input_text')
+		]);
+		$built	= self::build($sqo);
+
+		$this->assertSame(1, substr_count($built['where'], 'EXISTS (SELECT 1'),
+			'$and: all language leaves of one operand must merge into a single EXISTS' . PHP_EOL . $built['where']
+		);
+		$this->assertSame([1], self::join_ids_in($built['where'], $built['signature']),
+			'$and: the merged EXISTS must reference the shared j1_ alias' . PHP_EOL . $built['where']
+		);
+	}//end test_and_lang_leaves_merge_into_one_exists
+
+
+
+	/**
+	* TEST_EMPTY_OPERATOR_MERGES_PER_LANG_CHECKS_INTO_ONE_EXISTS
+	* The '!*' (empty) operator expands each lang into a $or of [IS NULL, = '[]'] leaves.
+	* Every per-lang pair shares one join_id, so each lang must end up as ONE correlated EXISTS
+	* (the two checks ORed inside): one EXISTS per lang, NOT two. Regression guard: previously
+	* each leaf (IS NULL and = '[]') was emitted as its own EXISTS, doubling the subqueries.
+	* @return void
+	*/
+	public function test_empty_operator_merges_per_lang_checks_into_one_exists() : void {
+
+		$operand	= self::operand('', self::$tipo_string, 'component_input_text');
+			$operand['q_operator']	= '!*';
+			$operand['q']			= '';
+
+		$sqo	= self::build_sqo('$and', [$operand]);
+		$built	= self::build($sqo);
+
+		$n_exists	= substr_count($built['where'], 'EXISTS (SELECT 1');
+		$n_is_null	= substr_count($built['where'], ' IS NULL');
+		$n_empty	= substr_count($built['where'], "= '[]'");
+
+		// every lang has exactly one merged EXISTS holding BOTH the null and the empty-array check
+		$this->assertGreaterThan(0, $n_exists, 'expected at least one EXISTS subquery' . PHP_EOL . $built['where']);
+		$this->assertSame($n_is_null, $n_exists,
+			'!*: the null check must be merged into the same EXISTS as the empty-array check (one per lang)' . PHP_EOL . $built['where']
+		);
+		$this->assertSame($n_empty, $n_exists,
+			'!*: the empty-array check must be merged into the same EXISTS as the null check (one per lang)' . PHP_EOL . $built['where']
+		);
+	}//end test_empty_operator_merges_per_lang_checks_into_one_exists
+
+
+
+	/**
+	* TEST_SINGLE_STEP_POSITIVE_REGEX_ADDS_WHOLE_BLOB_PREFILTER
+	* A single-step positive regex search (as 'contains') ANDs a redundant whole-blob regex
+	* (datos#>>'{components,<tipo>,dato}') before the per-language $or group
+	* (component_common::resolve_query_object_langs_behavior) ONLY when a whole-blob trigram
+	* GIN index (matrix_<tipo>_gin) exists for the component, so the planner can use it
+	* (matrix_rsc86_gin here). The pre-filter is a superset of the per-language OR (a lang
+	* value that matches is contained in the blob), so it never removes a true match: results
+	* are unchanged, only the count()/search() scan is cheaper. Components without such an
+	* index must NOT get the extra predicate (no overhead).
+	* @return void
+	*/
+	public function test_single_step_positive_regex_adds_whole_blob_prefilter() : void {
+
+		// component with a whole-blob trigram index (matrix_rsc86_gin): pre-filter must appear
+			$sqo = json_decode(json_encode([
+				'section_tipo'	=> ['rsc197'],
+				'filter'		=> ['$and' => [[
+					'q'		=> 'garcia',
+					'path'	=> [[
+						'section_tipo'		=> 'rsc197',
+						'component_tipo'	=> 'rsc86',
+						'model'				=> 'component_input_text',
+						'name'				=> 'Cognoms'
+					]]
+				]]],
+				'limit'			=> 10,
+				'offset'		=> 0,
+				'full_count'	=> false
+			]));
+			$search = search::get_instance($sqo);
+			$search->pre_parse_search_query_object();
+			$where = $search->build_sql_filter();
+
+			$this->assertStringContainsString(
+				"datos#>>'{components,rsc86,dato}'",
+				$where,
+				'expected a whole-blob pre-filter regex (no lang)' . PHP_EOL . $where
+			);
+			$langs = component_common::get_search_langs('all', RecordObj_dd::get_translatable('rsc86'));
+			$this->assertNotEmpty($langs);
+			foreach ($langs as $lang) {
+				$this->assertStringContainsString(
+					"datos#>>'{components,rsc86,dato,".$lang."}'",
+					$where,
+					'expected per-lang regex for '.$lang . PHP_EOL . $where
+				);
+			}
+
+		// component WITHOUT a whole-blob trigram index: no extra predicate
+			$sqo2 = json_decode(json_encode([
+				'section_tipo'	=> [self::$section_tipo],
+				'filter'		=> ['$and' => [[
+					'q'		=> 'garcia',
+					'path'	=> [[
+						'section_tipo'		=> self::$section_tipo,
+						'component_tipo'	=> self::$tipo_string,
+						'model'				=> 'component_input_text',
+						'name'				=> 'leaf'
+					]]
+				]]],
+				'limit'			=> 10,
+				'offset'		=> 0,
+				'full_count'	=> false
+			]));
+			$search2 = search::get_instance($sqo2);
+			$search2->pre_parse_search_query_object();
+			$where2 = $search2->build_sql_filter();
+
+			$this->assertStringNotContainsString(
+				"datos#>>'{components,".self::$tipo_string.",dato}'",
+				$where2,
+				'no whole-blob pre-filter without a matrix_<tipo>_gin index' . PHP_EOL . $where2
+			);
+	}//end test_single_step_positive_regex_adds_whole_blob_prefilter
+
+
+
+	/**
 	* TEST_SINGLE_STEP_PATH_IS_NEVER_PREFIXED
 	* A leaf operand on the main section (1-step path) must not create joins nor jN_ aliases.
 	* @return void

@@ -2274,7 +2274,12 @@ class search {
 
 		$string_query = '';
 
-		$total		= count($ar_value);
+		// Per-group accumulation. Sibling leaves of one $or group in subquery context share their
+		// join_id and are merged into a SINGLE correlated EXISTS (see the elseif below), so the
+		// emitted fragments are collected here and joined with the group operator after the loop.
+			$ar_group_elements	= [];	// strings emitted for this group
+			$ar_subquery_merge	= [];	// join_id => ['joins','correlation','where'=>[]] of merged EXISTS
+
 		$operator	= strtoupper( substr($op, 1) );
 
 		// or_join_ids. Path signature => join_id shared by the operands of THIS $or group
@@ -2340,11 +2345,7 @@ class search {
 					$parsed_string = $this->filter_parser($op2, $ar_value2, $child_join_ids, $child_as_subquery);
 				}
 				if (!empty($parsed_string)) {
-					$string_query .= ' (' . $parsed_string . ' )';
-
-					if ($key+1 < $total) {
-						$string_query .= ' '.$operator.' ';
-					}
+					$ar_group_elements[] = ' (' . $parsed_string . ' )';
 				}
 
 			}else{
@@ -2379,7 +2380,7 @@ class search {
 					if ($n_levels>1 && $op==='$or' && !$as_subquery) {
 						// top-level $or: one shared LEFT JOIN relations/matrix pair in the main query
 						$this->build_sql_join($search_object->path, $join_id);
-						$string_query .= $this->get_sql_where($search_object);
+						$ar_group_elements[] = $this->get_sql_where($search_object);
 					}elseif ($n_levels>1) {
 						// $and (subquery context): correlated EXISTS subquery. The relations/matrix
 						// joins live INSIDE the subquery instead of the main query, so clauses on the
@@ -2395,22 +2396,46 @@ class search {
 						$this->build_sql_join($search_object->path, $join_id, $ar_subquery_joins, $subquery_correlation);
 						$subquery_where = trim($this->get_sql_where($search_object));
 						if (!empty($subquery_where) && !empty($subquery_correlation)) {
-							$string_query .= 'EXISTS (SELECT 1 ' . implode(' ', $ar_subquery_joins) . ' WHERE (' . $subquery_correlation . ' AND ' . $subquery_where . '))';
+							if ($op==='$or' && $join_id!==null) {
+								// Sibling leaves sharing one join_id inside the SAME $or group are merged
+								// into a SINGLE correlated EXISTS: for an identical correlation
+								// ∃r:P(r) ∨ ∃r:Q(r) ≡ ∃r:(P(r)∨Q(r)). The per-language leaves of a
+								// component (and the per null/empty-check leaves of the empty operator)
+								// therefore collapse into one EXISTS, halving the correlated subqueries
+								// evaluated by count()/search() with no change to the result set:
+								// under $and each lang still matches a possibly different linked record.
+								if (!isset($ar_subquery_merge[$join_id])) {
+									$ar_subquery_merge[$join_id] = [
+										'joins'			=> $ar_subquery_joins,
+										'correlation'	=> $subquery_correlation,
+										'where'			=> []
+									];
+								}
+								$ar_subquery_merge[$join_id]['where'][] = $subquery_where;
+							}else{
+								$ar_group_elements[] = 'EXISTS (SELECT 1 ' . implode(' ', $ar_subquery_joins) . ' WHERE (' . $subquery_correlation . ' AND ' . $subquery_where . '))';
+							}
 						}
 					}else{
-						$string_query .= $this->get_sql_where($search_object);
-					}
-
-					// if the where get empty value don' add operator
-					if ($key+1 !== $total && !empty($string_query)) {
-						#$operator = strtoupper( substr($op, 1) );
-						#$string_query .= ") ".$operator." (";
-						$string_query .= ' '.$operator.' ';
+						$ar_group_elements[] = $this->get_sql_where($search_object);
 					}
 				#}
 			}
 
 		}//end foreach ($ar_value as $key => $search_object)
+
+		// flush merged correlated EXISTS subqueries. One EXISTS per join_id, its sibling leaves
+		// ORed inside: (corr AND w1) OR (corr AND w2) ≡ corr AND (w1 OR w2), the correlation is
+		// ANDed once and the OR of the two leaves keeps the exact same set of witnesses.
+			foreach ($ar_subquery_merge as $merge) {
+				$ar_group_elements[] = 'EXISTS (SELECT 1 ' . implode(' ', $merge['joins']) . ' WHERE (' . $merge['correlation'] . ' AND (' . implode(' OR ', $merge['where']) . ')))';
+			}
+
+		// join the group elements with the group operator. Empty fragments (get_sql_where can
+		// return '') are skipped, so no dangling operator is ever emitted.
+			$string_query = implode(' '.$operator.' ', array_filter($ar_group_elements, function(string $element) : bool {
+				return !empty($element);
+			}));
 
 		return $string_query;
 	}//end filter_parser

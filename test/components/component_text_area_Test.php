@@ -1186,7 +1186,9 @@ final class component_text_area_test extends TestCase {
 		// dump($tree, ' tree ++ '.to_string());
 
 		// (!) regex cases are wrapped in one leaf per lang, so the regex runs against the
-		// values of a single lang and never against the whole multi-language blob
+		// values of a single lang and never against the whole multi-language blob.
+		// (component_common::resolve_query_object_langs_behavior ANDs a redundant whole-blob
+		// pre-filter before this group ONLY when a matrix_<tipo>_gin trigram index exists)
 		$this->assertTrue(
 			property_exists($tree, '$or'),
 			'expected the regex case wrapped in an $or group per lang'

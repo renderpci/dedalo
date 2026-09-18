@@ -3867,9 +3867,104 @@ abstract class component_common extends common {
 		$final_query_object = new stdClass();
 			$final_query_object->{$langs_operator} = $ar_langs_query_object;
 
+		// Redundant whole-blob pre-filter. Text regex searches (as 'contains') emit one
+		// non-sargable regex per language over the extracted per-language value
+		// (datos#>>'{components,<tipo>,dato,<lang>}'), so count()/search must evaluate all of
+		// them on every row. The whole blob (datos#>>'{components,<tipo>,dato}') is a strict
+		// superset of the per-language OR (a lang value that matches is contained in the blob),
+		// so ANDing a same-pattern regex on the whole blob never removes a true match. It lets
+		// the planner use the existing whole-blob trigram GIN indexes (matrix_rsc85_gin /
+		// matrix_rsc86_gin) and short-circuits the per-language regexes on non-matching rows.
+		// Only for single-step (main section) paths: a multi-step path would traverse the
+		// relation per added clause. Negative operators ('!=', '-') and the empty/not-empty
+		// operators are built elsewhere and are not affected.
+			$is_single_step = isset($query_object->path) && count($query_object->path)===1;
+			if ($negative===false && $is_single_step && self::has_whole_blob_trigram_index($query_object)) {
+
+				// one whole-blob leaf per alternative regex
+					$ar_blob_leaves = [];
+					foreach ($ar_q_parsed as $blob_q_parsed) {
+						$blob_leaf = clone($query_object);
+							$blob_leaf->lang		= 'all';	// no lang appended to component_path
+							$blob_leaf->q_parsed	= $blob_q_parsed;
+						unset($blob_leaf->q_parsed_ar);
+						$ar_blob_leaves[] = $blob_leaf;
+					}
+					$blob_query_object = (count($ar_blob_leaves)===1)
+						? $ar_blob_leaves[0]
+						: (object)['$or' => $ar_blob_leaves];
+
+				// $and [ whole-blob pre-filter, per-language group ]
+					$final_query_object = (object)[
+						'$and' => [
+							$blob_query_object,
+							$final_query_object
+						]
+					];
+			}
+
 
 		return $final_query_object;
 	}//end resolve_query_object_langs_behavior
+
+
+
+	/**
+	* HAS_WHOLE_BLOB_TRIGRAM_INDEX
+	* True when the single-step regex leaf can be accelerated by an existing whole-blob trigram
+	* GIN index on matrix (as 'matrix_<tipo>_gin' on f_unaccent(datos#>>'{components,<tipo>,dato}')).
+	* The redundant whole-blob pre-filter (see resolve_query_object_langs_behavior) is only
+	* useful in that case; elsewhere it would add a regex evaluation without any index benefit.
+	* Requirements to be usable by the planner:
+	* 	- the index exists (checked once per tipo and cached)
+	* 	- the search term has at least 3 chars (pg_trgm cannot extract a trigram below that)
+	* 	- unaccent is on (the index expression is f_unaccent wrapped)
+	* @param object $query_object
+	* @return bool
+	*/
+	protected static function has_whole_blob_trigram_index( object $query_object ) : bool {
+
+		// single-step path. The component tipo is the last path element
+			if (!isset($query_object->path) || count($query_object->path)!==1) {
+				return false;
+			}
+			$component_tipo = (string)(end($query_object->path)->component_tipo ?? '');
+			if (!preg_match('/^[a-zA-Z0-9]+$/', $component_tipo)) {
+				return false;
+			}
+
+		// unaccent must be on to match the f_unaccent(...) index expression
+			if (($query_object->unaccent ?? false)!==true) {
+				return false;
+			}
+
+		// term length. pg_trgm needs at least 3 consecutive literal chars
+			$q_raw = is_array($query_object->q)
+				? ($query_object->q[0] ?? '')
+				: ($query_object->q ?? '');
+			$q_clean = trim(str_replace(['*', "'", '"'], '', (string)$q_raw));
+			if (mb_strlen($q_clean) < 3) {
+				return false;
+			}
+
+		// index existence. Cached per request (static)
+			static $ar_index_cache = [];
+			if (!array_key_exists($component_tipo, $ar_index_cache)) {
+				$ar_index_cache[$component_tipo] = false;
+				$pg_conn = DBi::_getConnection();
+				if ($pg_conn!==false) {
+					$sql = "SELECT to_regclass('matrix_" . $component_tipo . "_gin') IS NOT NULL";
+					$result = pg_query($pg_conn, $sql);
+					if ($result!==false) {
+						$row = pg_fetch_result($result, 0, 0);
+						$ar_index_cache[$component_tipo] = ($row==='t');
+					}
+				}
+			}
+
+
+		return $ar_index_cache[$component_tipo];
+	}//end has_whole_blob_trigram_index
 
 
 
