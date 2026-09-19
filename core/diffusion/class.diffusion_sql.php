@@ -258,7 +258,7 @@ class diffusion_sql extends diffusion  {
 								.' save_response: ' . json_encode($save_response, JSON_PRETTY_PRINT)
 								, logger::ERROR
 							);
-							$response->errors[] = 'failed save record: '. $save_response->msg ?? 'Unknown error';
+							$response->errors[] = 'failed save record: '. ($save_response->msg ?? 'Unknown error');
 						}
 
 					// global_search (LEGACY ONLY) (disabled 31-03-2025)
@@ -2699,7 +2699,7 @@ class diffusion_sql extends diffusion  {
 	/**
 	* GET_DIFFUSION_ELEMENT_TABLES_MAP
 	* Build map of section->table of all tables of current diffusion domain
-	* @param string $diffusion_domain_name . Like 'aup'
+	* @param string $diffusion_element_tipo . Like 'aup32'
 	* @return object $diffusion_element_tables
 	*/
 	public static function get_diffusion_element_tables_map(string $diffusion_element_tipo) {
@@ -2948,14 +2948,15 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* GET_THESAURUS_DATA
+	* Resolves the thesaurus table and database name from the diffusion map.
+	* Note that the target database is read from the table map property 'database_name'
+	* (built in get_diffusion_element_tables_map), not from the legacy 'database' property.
+	* @deprecated No callers in v6. Retained for compatibility with external/legacy consumers.
 	* @return object $thesaurus_data
 	*/
 	public function get_thesaurus_data() : object {
 
 		$thesaurus_data = new stdClass();
-
-		$diffusion_map = self::get_diffusion_map(DEDALO_DIFFUSION_DOMAIN);
-			#dump($ar_diffusion_map, ' ar_diffusion_map ++ '.to_string($options->section_tipo));
 
 		$ar_diffusion_map_elements = self::get_ar_diffusion_map_elements();
 			#dump($ar_diffusion_map_elements, ' ar_diffusion_map_elements ++ '.to_string()); die();
@@ -2968,7 +2969,7 @@ class diffusion_sql extends diffusion  {
 				#dump($tables_obj, ' tables_obj ++ '.to_string( $diffusion_element_tipo ));
 
 			if (isset($tables_obj->$section_tipo)) {
-				$thesaurus_data->database_name	= $tables_obj->$section_tipo->database;
+				$thesaurus_data->database_name	= $tables_obj->$section_tipo->database_name;
 				$thesaurus_data->table			= $tables_obj->$section_tipo->table;
 				break;
 			}
@@ -3022,7 +3023,10 @@ class diffusion_sql extends diffusion  {
 					'diffusion_element_tipo'	=> $diffusion_element_tipo
 				]);
 
-				$response->msg .= isset($result->msg) ? "<br>".$result->msg : '';
+				$result_msg		= $result->msg ?? '';
+				$response->msg .= !empty($result_msg)
+					? "<br>".(is_array($result_msg) ? implode(', ', $result_msg) : $result_msg)
+					: '';
 			}//end foreach ((array)$ar_all_records as $current_record_section_id) {
 
 			// let GC do the memory job
