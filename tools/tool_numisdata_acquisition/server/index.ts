@@ -5,14 +5,6 @@
  * numisdata4 record per kept lot, resolves/links its Auction and Type, and
  * imports the lot's image via tool_import_files' crop_50 processor.
  *
- * lib/ is a verbatim-as-possible port of the standalone `coins` archive
- * tool's acquisition engine. All five sources are ported (jesusvico, biddr,
- * aureo, numisbids, sixbid) — each adapter.ts documents what's deliberately
- * NOT ported (headless-browser rendering, cross-auction search URL shapes)
- * and, for numisbids/sixbid, the explicit user authorization to bypass
- * robots.txt (numisbids blocks ClaudeBot by name; sixbid is a blanket
- * Disallow). Only jesusvico and biddr have been verified end-to-end against
- * real data so far.
  */
 
 import { join } from 'node:path';
