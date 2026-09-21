@@ -66,6 +66,19 @@ DEDALO_DOCS_SSH_PORT=22572
 Use key authentication (`ssh-copy-id -p <port> user@host`) rather than a password, so a
 publish never stops to prompt.
 
+An optional third key mirrors the published tree into a local docs root, for previewing
+the site as served — both versions side by side, with the switcher working:
+
+```bash
+DEDALO_DOCS_STAGE_DIR="/path/to/website/checkout/docs"
+```
+
+Both paths are the docs **root**; the command appends `v7/` itself, so it can never
+overwrite another version's tree. The mirror is refreshed from the same build that was
+just uploaded, which is the point — a copy maintained by hand goes stale without saying so.
+The routing `.htaccess` is deliberately *not* mirrored: its rules are absolute (`/docs/v7/`)
+and would misdirect a preview served under a different path prefix.
+
 The enabled Markdown extensions you may rely on:
 
 | Feature | Extension | Use |

@@ -22,6 +22,9 @@
  *                      publish instead of shipping a 404.
  *   3. UPLOAD        — rsync --delete, scoped INSIDE the version prefix, plus
  *                      versions.json and the routing .htaccess at the docs root.
+ *                      Then, if DEDALO_DOCS_STAGE_DIR is set, mirror the same
+ *                      tree into that local docs root so a preview copy cannot
+ *                      fall behind the site.
  *   4. RECORD        — rewrite docs/published_paths.json with what was actually
  *                      served, which is what makes step 1's rename check real.
  *
@@ -38,7 +41,7 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { $, Glob } from 'bun';
 import { readEnv } from '../src/config/env.ts';
 
@@ -77,6 +80,22 @@ const TARGET_KEY = 'DEDALO_DOCS_RSYNC_TARGET';
  * about quoting.
  */
 const PORT_KEY = 'DEDALO_DOCS_SSH_PORT';
+
+/**
+ * Optional LOCAL docs root to mirror the published tree into — the website
+ * checkout's `docs/` folder, say, so a local preview shows what is actually
+ * live.
+ *
+ * Unset is the normal case and mirrors nothing. It exists because the moment a
+ * second copy of the manual exists, it starts drifting: `docs:publish` goes
+ * repo → server and would leave a hand-copied preview stale and silently so.
+ * Refreshing it from the same tree in the same command is the only way the two
+ * stay honest.
+ *
+ * Like the remote target, this is the ROOT — the script appends the version
+ * directory itself, so it can never write over another version's copy.
+ */
+const STAGE_KEY = 'DEDALO_DOCS_STAGE_DIR';
 
 function die(message: string, detail?: string): never {
 	console.error(`\n✗ REFUSED: ${message}`);
@@ -152,6 +171,39 @@ const DEST: string = target.trim();
 const port = readEnv(PORT_KEY)?.trim();
 if (port && !/^\d+$/.test(port)) {
 	die(`${PORT_KEY} must be a bare number.`, `Got: ${port}`);
+}
+
+/**
+ * Validated HERE, at step 0, and used at the very end. A misconfigured mirror
+ * must stop the run before it uploads — discovering the typo after the site is
+ * live would mean either a failed command that already published, or a silent
+ * skip that leaves the preview stale, and both are worse than refusing early.
+ */
+const STAGE_DIR = readEnv(STAGE_KEY)?.trim();
+if (STAGE_DIR) {
+	if (!STAGE_DIR.startsWith('/')) {
+		die(`${STAGE_KEY} must be an absolute path.`, `Got: ${STAGE_DIR}`);
+	}
+	if (!existsSync(STAGE_DIR)) {
+		die(
+			`${STAGE_KEY} points at a directory that does not exist.`,
+			`Got: ${STAGE_DIR}\n\nCreate it first, or remove the key. The script will not create a\n` +
+				`docs root on its own: a typo would silently build a tree nobody serves.`,
+		);
+	}
+	if (STAGE_DIR.endsWith(`/${VERSION}`)) {
+		die(
+			`${STAGE_KEY} must be the docs ROOT, not the version directory.`,
+			`Got: ${STAGE_DIR}\nThe script appends /${VERSION} itself.`,
+		);
+	}
+	// Mirroring onto the build output would have rsync --delete eat its own source.
+	if (resolve(STAGE_DIR) === resolve(SITE_DIR) || resolve(STAGE_DIR) === resolve(DOCS_DIR)) {
+		die(
+			`${STAGE_KEY} may not point inside this repo's own docs or build tree.`,
+			`Got: ${STAGE_DIR}`,
+		);
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -241,6 +293,31 @@ async function rsync(args: string[], what: string): Promise<void> {
 	}
 }
 
+/**
+ * Copy into the optional local mirror. Same rsync, no SSH transport.
+ *
+ * `--delete` is used for the version TREE (dest must end up an exact copy, with
+ * files deleted upstream disappearing here too) and not for single files.
+ */
+async function localMirror(dest: string, src: string, tree = true): Promise<void> {
+	const args = tree ? ['-a', '--delete', src, `${dest}/`] : ['-a', src, dest];
+	const proc = Bun.spawn(['rsync', ...args], {
+		stdin: 'inherit',
+		stdout: 'inherit',
+		stderr: 'inherit',
+	});
+	const code = await proc.exited;
+	if (code !== 0) {
+		// The site is already live at this point; say so, so nobody reads this as
+		// a failed publish and re-runs it thinking nothing shipped.
+		die(
+			`the upload SUCCEEDED but mirroring to ${STAGE_KEY} failed (rsync exit ${code}).`,
+			`https://dedalo.dev/docs/${VERSION}/ is live and correct. Only the local copy at\n` +
+				`${STAGE_DIR} is stale. Fix the path or unset ${STAGE_KEY}; re-running is safe.`,
+		);
+	}
+}
+
 // Trailing slash on the source: copy the CONTENTS of docs_site, not the
 // directory itself. --delete is scoped to this version's prefix, so no other
 // version's tree is reachable from here.
@@ -261,7 +338,23 @@ await rsync(
 	[join(REPO_ROOT, 'deploy/docs/htaccess'), `${DEST}/.htaccess`],
 	'uploading the routing .htaccess',
 );
-console.log('      ✓ v7 tree, versions.json and routing uploaded\n');
+console.log('      ✓ v7 tree, versions.json and routing uploaded');
+
+// Optional local mirror, refreshed from the SAME tree that just went up, so a
+// preview folder cannot quietly fall behind production. Last, and only after
+// the upload succeeded: the server is what matters, and a local copy that is
+// newer than the site is the exact drift this exists to prevent.
+if (STAGE_DIR) {
+	await localMirror(join(STAGE_DIR, VERSION), `${SITE_DIR}/`);
+	await localMirror(join(STAGE_DIR, 'versions.json'), join(DOCS_DIR, 'versions.json'), false);
+	// NOTE: deploy/docs/htaccess is deliberately NOT staged. Its rules are
+	// absolute (/docs/v6/, /docs/v7/), which is right on dedalo.dev and WRONG
+	// under a local prefix like /web_dedalo/docs/ — there it would 301 previews
+	// out of the staging tree and into 404s. A local preview needs no routing:
+	// the switcher and the banner use relative links and work at any prefix.
+	console.log(`      ✓ mirrored to ${STAGE_DIR} (no .htaccess — see the note in this script)`);
+}
+console.log('');
 
 // ---------------------------------------------------------------------------
 // 4. RECORD what is now served
