@@ -36,6 +36,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {activate_edit_in_list} from '../../component_common/js/component_common.js'
 
 
@@ -102,10 +103,10 @@ view_default_list_iri.render = async function(self, options) {
 			// Prefer the legacy inline title over a bare IRI; both are appended
 			// when present so the cell shows "My Site | https://example.com".
 			if (entries[i].title) {
-				ar_line.push(entries[i].title)
+				ar_line.push(render_value(entries[i].title, 'text'))
 			}
 			if (entries[i].iri) {
-				ar_line.push(entries[i].iri)
+				ar_line.push(render_value(entries[i].iri, self.context.render_class))
 			}
 
 			// Only add a row when at least one field carries data.
@@ -116,7 +117,7 @@ view_default_list_iri.render = async function(self, options) {
 		// Join entries with <br> so each IRI appears on its own line in the cell.
 		// Null signals an empty component to build_wrapper_list (no <span> is injected).
 		const value_string = (ar_value_string && ar_value_string.length)
-			? ar_value_string.join('<br>')
+			? ar_value_string.join('<br>') // lines rendered above (title text, iri url)
 			: null
 
 	// wrapper

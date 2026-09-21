@@ -5,7 +5,7 @@
 
 
 // imports
-	import {get_fallback_value} from '../../common/js/common.js'
+	import {escape_html, render_fallback_value} from '../../common/js/utils/render_escape.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -70,10 +70,10 @@ view_text_input_text.render = async function(self, options) {
 		const fallback_value	= data.fallback_value || []
 		// resolve per-slot values: primary language entries take precedence;
 		// missing slots fall back to the fallback_value item wrapped in <mark>
-		const fallback			= get_fallback_value(entries, fallback_value)
+		const fallback			= render_fallback_value(entries, fallback_value, self.context.render_class)
 		// join all resolved slot strings into a single display string using the
 		// separator configured in the component's ontology properties (e.g. ' | ')
-		const value_string		= fallback.join(self.context.fields_separator)
+		const value_string		= fallback.join(escape_html(self.context.fields_separator))
 
 	// wrapper. Set as span
 	// CSS class encodes model/mode/view so host layouts can target this node

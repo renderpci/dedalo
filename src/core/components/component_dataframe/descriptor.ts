@@ -10,6 +10,7 @@ import type { ComponentModel } from '../types.ts';
 export const component_dataframe: ComponentModel = {
 	model: 'component_dataframe',
 	column: 'relation',
+	render: 'text',
 	// dd490 (DEDALO_RELATION_TYPE_DATAFRAME) — NOT the dd151 link type this
 	// model inherits from component_portal in PHP. A frame locator's type IS
 	// its pairing marker: isDataframeEntry recognises dd490 and nothing else,

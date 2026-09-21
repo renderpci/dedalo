@@ -13,6 +13,7 @@
 import { incrementCounter } from '../../api/counters.ts';
 import { sql } from '../../db/postgres.ts';
 import { getMatrixTableFromTipo, getNode } from '../../ontology/resolver.ts';
+import type { ReconcileDefinition } from '../../reconcile/registry.ts';
 import {
 	entryServerBlock,
 	getSubscriptionRegistry,
@@ -562,3 +563,53 @@ export async function reconcileObserverMirrors(
 	}
 	return summary;
 }
+
+/**
+ * The registry shape of this sweep (core/reconcile/registry.ts, S-10): drift =
+ * records whose stored mirror disagrees with the full law, apply = the same
+ * row-locked recompute with `write:true`. `scope` = host section tipos (the
+ * `--section` narrowing of the CLI shell, scripts/observer_reconcile.ts).
+ */
+export const OBSERVER_MIRRORS_RECONCILE: ReconcileDefinition = {
+	name: 'observer_mirrors',
+	stores: [
+		'matrix_relation_index (referencing records)',
+		'observer mirror slots (set_dato_external)',
+	],
+	description:
+		'Recompute every observer mirror from the records that reference it — heals mirrors left stale by writes that bypassed the save cascade (v6→v7 update, portalize, propagate).',
+	scopeLabel: 'host section tipo',
+	// A whole-corpus recompute; refused tuples (unported sub-laws) are reported, never swept.
+	schedule: 'operator',
+	sources: ['src/core/section/record/observer_reconcile.ts', 'scripts/observer_reconcile.ts'],
+	async run({ apply, scope }) {
+		const summary: ReconcileSummary = {
+			tuples: 0,
+			candidates: 0,
+			drifted: 0,
+			repaired: 0,
+			shrinksSkipped: 0,
+			sublawRefused: 0,
+			bigResultRefused: 0,
+			droppedRecords: 0,
+			droppedLocators: 0,
+			degradedSeedRecords: 0,
+		};
+		const records: ReconcileRecord[] = [];
+		// One sweep per scoped section (the kernel narrows by ONE section), or one
+		// unscoped sweep — summed field by field.
+		for (const onlySection of scope === undefined ? [null] : scope) {
+			const part = await reconcileObserverMirrors({
+				apply,
+				onlySection,
+				onRecord: (record) => {
+					records.push(record);
+				},
+			});
+			for (const key of Object.keys(summary) as (keyof ReconcileSummary)[]) {
+				summary[key] += part[key];
+			}
+		}
+		return { drift: summary.drifted, applied: summary.repaired, detail: { ...summary, records } };
+	},
+};

@@ -11,12 +11,13 @@
  * section_map::get_element_tipo).
  *
  * Virtual sections (ontology aliases) resolve through their real section
- * (relations[0].tipo).
+ * (getSectionRealTipo).
  */
 
 import { sql } from '../db/postgres.ts';
 import { createOntologyCache } from './cache_factory.ts';
 import { registerOntologyCacheClearer } from './cache_invalidation.ts';
+import { getSectionRealTipo } from './resolver.ts';
 
 /** PHP section_map::SCOPE_FALLBACK chain. */
 export const SCOPE_FALLBACK = ['main', 'thesaurus', 'relation_list'];
@@ -40,12 +41,10 @@ export async function getSectionMap(sectionTipo: string): Promise<Record<string,
 		)) as { properties: Record<string, unknown> | null }[];
 	let rows = await read(sectionTipo);
 	if (rows.length === 0) {
-		// virtual section: its node's relations[0].tipo points at the real section
-		const nodeRows = (await sql.unsafe('SELECT relations FROM dd_ontology WHERE tipo = $1', [
-			sectionTipo,
-		])) as { relations: { tipo?: unknown }[] | null }[];
-		const real = nodeRows[0]?.relations?.[0]?.tipo;
-		if (typeof real === 'string') rows = await read(real);
+		// virtual section: borrow the REAL section's map (the one law,
+		// getSectionRealTipo — a matrix_table at relations[0] is NOT a real section)
+		const real = await getSectionRealTipo(sectionTipo);
+		if (real !== sectionTipo) rows = await read(real);
 	}
 	const map = rows[0]?.properties ?? null;
 	sectionMapCache.set(sectionTipo, map);

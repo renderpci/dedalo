@@ -611,18 +611,33 @@ function identityActions(layout: InstanceLayout, host: HostState): Action[] {
     });
   }
 
-  if (!host.users.includes(user)) {
+  // THE AGENT'S OWN UID — a second identity, created exactly like the first and for the
+  // reason stated in layout.ts's recorded decision: an agent turn must not be the daemon,
+  // because nothing separates a process from itself. Its PRIMARY GROUP is this instance's
+  // own group, which is what lets the daemon and its agent share a workspace (the 2770 rows
+  // of §3) while the daemon's credentials (root:root 0600, `secretsDir`/`secret`) and its
+  // audit trail (0600, `auditFile` — group bits zero PRECISELY because the agent is in this
+  // group) stay out of the agent's reach.
+  for (const [name, purpose] of [
+    [user, `instance '${layout.instance}' runs as its own uid`],
+    [
+      layout.identity.agentUser,
+      `an agent turn on instance '${layout.instance}' must run as a uid that is not the daemon's`,
+    ],
+  ] as const) {
+    if (host.users.includes(name)) continue;
     const shell = host.nologinShell ?? DEFAULT_NOLOGIN_SHELL;
     actions.push({
       kind: 'user',
       phase: 'identity',
-      name: user,
+      name,
       group,
       home: layout.roots.home,
       shell,
       // `--no-create-home` on purpose: the agent HOME is created by the tree phase with
-      // MODES.home (0700, the museum's own group), not by useradd with a umask-derived
-      // mode and a copy of /etc/skel dropped into the directory a coding agent works in.
+      // MODES.home (2770 setgid, the museum's own group — the shared pair of
+      // `util/shared_tree.ts`), not by useradd with a umask-derived mode and a copy of
+      // /etc/skel dropped into the directory a coding agent works in.
       argv: [
         'useradd',
         '--system',
@@ -635,9 +650,9 @@ function identityActions(layout: InstanceLayout, host: HostState): Action[] {
         shell,
         '--comment',
         `Dedalo site builder instance ${layout.instance}`,
-        user,
+        name,
       ],
-      reason: `instance '${layout.instance}' runs as its own uid, and '${user}' does not exist yet`,
+      reason: `${purpose}, and '${name}' does not exist yet`,
     });
   }
 

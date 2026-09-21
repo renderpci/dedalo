@@ -18,8 +18,9 @@
  * audit write must never fail the user action — PHP posture).
  */
 
+import { serializedSizeExceeds } from '../../concepts/scalar_bounds.ts';
 import { canonicalizeStoredSectionId } from '../../concepts/section_id.ts';
-import { sql } from '../../db/postgres.ts';
+import { insertMatrixRowSequenceId } from '../../db/matrix_write.ts';
 import { virtualDateNow } from '../../section/record/create_record.ts';
 
 /**
@@ -108,6 +109,67 @@ export interface ActivityEntry {
 	data: Record<string, unknown>;
 }
 
+/**
+ * THE CEILING ON ONE AUDIT ROW (audit 2026-08-26 SEC-21).
+ *
+ * An activity row is a NOTE ABOUT an action, never a copy of its payload. Before
+ * this it was whatever the emitter handed over: the login emitter passes the
+ * attempted username straight through, and a single unauthenticated POST with a
+ * 32 MiB username measured 67,109,061 bytes durably written here in 3.16 s —
+ * inside the database every backup copies.
+ *
+ * The schema now refuses an oversize request at the parse door
+ * (concepts/scalar_bounds.ts), so this is the SECOND wall, and it belongs here
+ * rather than at each emitter: it is the property of the STORE, and it must hold
+ * for an emitter written next year by someone who never read SEC-21.
+ *
+ * TRUNCATE, DO NOT DROP. Unlike a request — which is refused whole, so nothing
+ * is silently shortened — an audit row that fails to write is an action nobody
+ * can see afterwards. So an oversize field is stored SHORTENED AND MARKED: the
+ * row keeps its who/what/when, and the marker says the value was cut and by how
+ * much, which is itself the fact an operator wants.
+ */
+export const ACTIVITY_FIELD_MAX_CHARS = 512;
+export const ACTIVITY_DATA_MAX_BYTES = 8 * 1024;
+
+/** Shorten one over-long string, saying what was done. */
+function truncateField(value: string): string {
+	if (value.length <= ACTIVITY_FIELD_MAX_CHARS) return value;
+	return `${value.slice(0, ACTIVITY_FIELD_MAX_CHARS)}…[truncated, ${value.length} chars]`;
+}
+
+/**
+ * Bound a dd551 payload: every string shortened to ACTIVITY_FIELD_MAX_CHARS,
+ * and — if the result is STILL over ACTIVITY_DATA_MAX_BYTES, which only a
+ * pathological structure can manage — replaced by a note naming its keys.
+ */
+export function boundActivityData(data: Record<string, unknown>): Record<string, unknown> {
+	const bounded = shortenValue(data, 0) as Record<string, unknown>;
+	if (!serializedSizeExceeds(bounded, ACTIVITY_DATA_MAX_BYTES)) return bounded;
+	return {
+		msg: typeof bounded.msg === 'string' ? bounded.msg : 'activity payload dropped (too large)',
+		truncated: true,
+		keys: Object.keys(bounded).slice(0, 64),
+	};
+}
+
+/** Every string in `value` shortened, to a bounded depth and breadth. */
+function shortenValue(value: unknown, depth: number): unknown {
+	if (typeof value === 'string') return truncateField(value);
+	if (depth >= 6 || value === null || typeof value !== 'object') return value;
+	if (Array.isArray(value)) return value.slice(0, 256).map((item) => shortenValue(item, depth + 1));
+	return shortenEntries(value as Record<string, unknown>, depth);
+}
+
+/** One object level: bounded keys, bounded values. */
+function shortenEntries(value: Record<string, unknown>, depth: number): Record<string, unknown> {
+	const out: Record<string, unknown> = {};
+	for (const [key, item] of Object.entries(value)) {
+		out[truncateField(key)] = shortenValue(item, depth + 1);
+	}
+	return out;
+}
+
 /** Append one activity row. Never throws (audit must not break the action). */
 export async function logActivity(entry: ActivityEntry, now: Date = new Date()): Promise<void> {
 	try {
@@ -117,7 +179,6 @@ export async function logActivity(entry: ActivityEntry, now: Date = new Date()):
 		// that every current and future emitter inherits them:
 		if (entry.tipo.length === 0) return; // no WHERE → the row would be meaningless
 		if (ACTIVITY_OWN_TIPOS.has(entry.tipo)) return; // audit-of-the-audit loop
-		const { encodeForJsonb } = await import('../../db/json_codec.ts');
 		const relation = {
 			dd543: [
 				{
@@ -140,22 +201,23 @@ export async function logActivity(entry: ActivityEntry, now: Date = new Date()):
 				},
 			],
 		};
+		// EVERY stored string is bounded, not only the dd551 payload: dd544 is the
+		// client host, which comes from a proxy header hop, and dd546 is a tipo.
+		// A field a caller can influence at all is a field that carries a ceiling.
 		const stringColumn = {
-			dd544: [{ lang: 'lg-nolan', value: entry.host }],
-			dd546: [{ lang: 'lg-nolan', value: entry.tipo }],
+			dd544: [{ lang: 'lg-nolan', value: truncateField(entry.host) }],
+			dd546: [{ lang: 'lg-nolan', value: truncateField(entry.tipo) }],
 		};
 		const dateColumn = { dd547: [{ start: virtualDateNow(now) }] };
-		const miscColumn = { dd551: [{ lang: 'lg-nolan', value: entry.data }] };
-		await sql.unsafe(
-			`INSERT INTO matrix_activity (section_tipo, relation, string, date, misc)
-			 VALUES ('dd542', $1::text::jsonb, $2::text::jsonb, $3::text::jsonb, $4::text::jsonb)`,
-			[
-				encodeForJsonb(relation),
-				encodeForJsonb(stringColumn),
-				encodeForJsonb(dateColumn),
-				encodeForJsonb(miscColumn),
-			],
-		);
+		const miscColumn = { dd551: [{ lang: 'lg-nolan', value: boundActivityData(entry.data) }] };
+		// The table allocates section_id from its own sequence; the INSERT lives in
+		// matrix_write.ts (T2) — this handler issues no DML of its own.
+		await insertMatrixRowSequenceId('matrix_activity', 'dd542', {
+			relation,
+			string: stringColumn,
+			date: dateColumn,
+			misc: miscColumn,
+		});
 	} catch (error) {
 		console.error('activity log write failed (swallowed):', error);
 	}

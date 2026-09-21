@@ -24,10 +24,10 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { Glob } from 'bun';
 import { contributorComponentTipos } from '../../src/ai/rag/retrieval.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { scopeInverseReferenceHits } from '../../src/core/security/record_scope.ts';
+import { WRITE_PATH_CORPUS_FLOOR, writePathSourceFiles } from '../helpers/write_path_corpus.ts';
 
 /** Seed-shipped tipo, spelled so the census sees a reference, not a binding. */
 const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
@@ -84,7 +84,40 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 		expect(recordScope).toContain('export async function scopeInverseReferenceHits');
 		// The non-admin branch checks BOTH the section read grant and the projects filter.
 		expect(recordScope).toContain('getPermissions(principal, hit.section_tipo, hit.section_tipo)');
-		expect(recordScope).toContain('isRecordInScope(hit.section_tipo, hit.section_id, principal)');
+		// The projects half — pinned as the SHARED PREDICATE, not as a call
+		// spelling. The old pin was the literal `isRecordInScope(hit.section_tipo,
+		// hit.section_id, principal)`, which said nothing about the rule and broke
+		// the day the door stopped asking per hit (PERF-01: one statement per
+		// section-chunk instead of one per candidate). What must hold is the
+		// invariant the module's own docblock states — the boundary is decided in
+		// ONE place — so that is what is measured: exactly one buildSearchSql call
+		// site in this file, inside one helper, and BOTH doors (the single-record
+		// one and the hit-list one) route through that helper.
+		const predicateSites = recordScope.match(/buildSearchSql\(/g) ?? [];
+		expect(
+			predicateSites,
+			'record_scope.ts must state the scope predicate exactly once: 0 = the projects leg left the module, >1 = a second ACL free to drift from the list path',
+		).toHaveLength(1);
+		const beforePredicate = recordScope.slice(0, recordScope.indexOf('buildSearchSql('));
+		const enclosing = [...beforePredicate.matchAll(/function (\w+)\(/g)].pop();
+		const predicateName = enclosing?.[1];
+		expect(predicateName, 'the buildSearchSql call must sit inside a named function').toBeDefined();
+		/** A top-level function body: from its declaration to the next column-0 `}`. */
+		const bodyOf = (name: string): string => {
+			// No trailing `(`: a generic door declares its type parameter first.
+			const start = recordScope.indexOf(`function ${name}`);
+			expect(start, `record_scope.ts must still declare ${name}`).toBeGreaterThan(-1);
+			const end = recordScope.indexOf('\n}', start);
+			return recordScope.slice(start, end === -1 ? undefined : end);
+		};
+		expect(
+			bodyOf('isRecordInScope'),
+			'the single-record door must ask the one predicate',
+		).toContain(`${predicateName}(`);
+		expect(
+			bodyOf('scopeInverseReferenceHits'),
+			'the hit-list door must ask the SAME predicate — a private copy of the projects rule is the drift this module refuses',
+		).toContain(`${predicateName}(`);
 
 		// The panel data path passes the principal into buildRelationList.
 		const readFacade = read('src/core/section/read_facade.ts');
@@ -168,6 +201,13 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 			why: 'get_ar_identifying_image: descriptors of the records referencing the target (TOOLS-08, 2026-07-28 audit)',
 		},
 
+		// NOT LISTED, and deliberately: src/core/search/builders/builder_relation_index.ts
+		// was a 'system' row here while it materialised the dd96 inverse scan in
+		// JS. It no longer calls the scan at all — it emits ONE uncorrelated
+		// semi-join over matrix_relation_index (audit PERF-05) — so a row for it
+		// would be exactly the stale entry the census below refuses. The predicate
+		// is still unscoped by design; that reasoning now lives in the builder's
+		// own header, where the code is.
 		// ── system paths: must NOT scope ────────────────────────────────────────
 		'src/core/section/record/delete_record.ts': {
 			kind: 'system',
@@ -180,10 +220,6 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 		'src/diffusion/resolve/resolver.ts': {
 			kind: 'system',
 			why: 'diffusion publishes with no request principal; its own gate is the publication config, not the operator’s grants',
-		},
-		'src/core/search/builders/builder_relation_index.ts': {
-			kind: 'system',
-			why: 'builds a section_id IN (…) PREDICATE, not a result set: the fragment is ANDed into the caller’s own already-scoped search (buildSearchSql applies the projects filter around it)',
 		},
 		'src/core/relations/children.ts': {
 			kind: 'system',
@@ -203,13 +239,17 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 	};
 
 	test('every caller of the unscoped inverse scan is classified (door registry)', () => {
+		// The corpus is the shared write-path lister (src/ + tools/ + scripts/) —
+		// the roots are registered in census_derivation_tripwire, not chosen here.
+		const corpus = writePathSourceFiles();
+		expect(corpus.length).toBeGreaterThan(WRITE_PATH_CORPUS_FLOOR);
 		const found = new Set<string>();
-		for (const dir of ['src', 'tools']) {
-			for (const rel of new Glob('**/*.ts').scanSync(join(ROOT, dir))) {
-				const path = `${dir}/${rel}`;
-				if (read(path).includes('findInverseReference')) found.add(path);
-			}
+		for (const path of corpus) {
+			if (read(path).includes('findInverseReference')) found.add(path);
 		}
+		// The registry is the walk's own result, floored: an emptied corpus finds
+		// no caller and would otherwise pass with every entry 'stale'.
+		expect(found.size).toBeGreaterThan(10);
 
 		const unclassified = [...found].filter((p) => INVERSE_SCAN_CALLERS[p] === undefined).sort();
 		expect(

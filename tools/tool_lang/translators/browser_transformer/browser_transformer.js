@@ -29,14 +29,18 @@
  *   conversation to start with a user turn.
  */
 
-//import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0';
-import { pipeline, env } from './lib/transformers.js';
+// The ONE in-browser AI runtime this install serves: the digest-pinned
+// transformers.js bundle (vendor/transformers) through the client-lib registry — the same
+// module browser_whisper and remove_background load, so one page never runs two
+// copies of the runtime. (Until P2-5-residue / CLI-12 this imported a committed
+// copy under ./lib/, byte-identical to the 4.2.0 dist but outside every
+// integrity mechanism; before RC-01 it imported straight from a CDN.)
+import { pipeline, env } from '/dedalo/lib/transformers/dist/transformers.js';
 
 /**
  * ONNX-optimised 4B instruction-tuned translation model.
  * Uses q4 quantisation for memory-efficient local inference.
  */
-//const MODEL_ID			= 'onnx-community/translategemma-text-4b-it-ONNX';
 
 // RC-01 (2026-07-28 audit): PIN the onnxruntime-web runtime to THIS install.
 // Without wasmPaths, transformers.js loads its WASM glue (.mjs + .wasm) from
@@ -51,10 +55,20 @@ if (env.backends && env.backends.onnx && env.backends.onnx.wasm) {
 }
 env.allowLocalModels	= false;
 env.allowRemoteModels	= true;	// "remote" here means our OWN origin (below)
-// Self-hosted model: serve from same origin instead of HuggingFace CDN.
-env.remoteHost			= new URL('./models/', self.location.href).href;
+// Model weights from THIS INSTALL'S MODEL STORE only (/dedalo/ai_models/ —
+// src/core/ai/model_store.ts: session-gated, digest-checked against
+// model_pins.json, seeded by the operator with scripts/fetch_ai_models.ts or
+// rsync). The same door browser_whisper and remove_background use. Until
+// P2-5-residue (2026-09-04) this worker pointed at a `./models/` directory of
+// the tools tree, where 20 MB of the TranslateGemma tokenizer sat COMMITTED
+// (third-party bytes under Google's terms, outside every manifest axis) and
+// the multi-GB weights could not be obtained at all — the translator was a
+// half-materialised feature. Model files never live in the code tree.
+env.remoteHost			= new URL('/dedalo/ai_models/', self.location.origin).href;
 env.remotePathTemplate	= '{model}/';
-const MODEL_ID			= 'translategemma-text-4b-it-ONNX';
+env.useBrowserCache		= true;	// a second translation must not re-download
+/** The hub id, which is also the model's directory under the store. */
+const MODEL_ID			= 'onnx-community/translategemma-text-4b-it-ONNX';
 
 /**
  * Maximum tokens the model may generate per call.

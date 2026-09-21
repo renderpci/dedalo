@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {object_to_url_vars, open_window, same_section_id} from '../../common/js/utils/index.js'
 	import {view_default_edit_radio_button} from './view_default_edit_radio_button.js'
 	import {view_line_edit_radio_button} from './view_line_edit_radio_button.js'
@@ -262,7 +263,7 @@ const get_content_value = (i, datalist_item, self) => {
 		const input_label = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'label',
-			inner_html		: label,
+			inner_html		: render_value(label, self.context.render_class),
 			parent			: content_value
 		})
 
@@ -355,7 +356,7 @@ const get_content_value_read = (i, current_value, self) => {
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_value read_only',
-			inner_html		: current_value
+			inner_html		: render_value(current_value, self.context.render_class)
 		})
 
 	return content_value

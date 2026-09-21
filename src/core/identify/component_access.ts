@@ -31,14 +31,25 @@ export type ComponentGrant = (
 ) => Promise<number>;
 
 /**
- * May this principal read the components this criterion actually touches on this
- * record?
+ * May this principal read the components this criterion DECLARES on this
+ * record? — the PRE-CHECK that mints the `restricted` outcome marker.
  *
  * TWO checks, because a criterion path LEAVES the record: the ENTRY component
- * (the one stored on the record itself — the hop out) and the LEAF component
- * (the one whose value would be quoted). A single-step path is both, and is
- * checked once. Intermediate hops are not re-checked: reaching them is the
- * entry component's own disclosure, and the value that travels is the leaf's.
+ * (the one stored on the record itself — the hop out) and the DECLARED LEAF
+ * component (the one whose value would be quoted). A single-step path is both,
+ * and is checked once. Intermediate hops are not checked here.
+ *
+ * WHAT THIS IS NOT (P1-3 / SEC-12, 2026-09-03): the authorization of the
+ * records the path actually LANDS on. A multi-target portal's locator may
+ * point at a section other than the declared step's (a sibling sharing the
+ * matrix table), and the declared leaf's grant says nothing about THAT
+ * section. That check lives inside the reader — `path_read.ts` authorizes
+ * every landed record on its OWN section, hop and leaf, under the caller's
+ * scope — so a memo keyed on the declared path (match.ts) is honest again.
+ * This pre-check stays because it answers a question the reader cannot: "you
+ * may not see this field" (restricted) versus "there is nothing to see"
+ * (absent) must remain distinguishable to the curator, and a reader that
+ * silently dropped a landed record can only ever say the second.
  *
  * An empty path is a refusal, not a pass — fail closed.
  */

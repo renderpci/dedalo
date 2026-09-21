@@ -157,6 +157,16 @@ describe('admin counters endpoint (S2-37, fail-closed)', () => {
 			expect(payload.counters).toBeDefined();
 			expect(payload.requests).toBeDefined();
 			expect(payload.media_jobs).toBeDefined();
+			// PER-LANE DEPTH (PERF-11): the endpoint must carry {active, queued, max}
+			// per job lane, not just the legacy has_headroom boolean — a boolean
+			// cannot say WHICH class of work is backed up.
+			const mediaJobsGauge = payload.media_jobs as { lanes?: Record<string, unknown> };
+			expect(Object.keys(mediaJobsGauge.lanes ?? {}).sort()).toEqual([
+				'maintenance',
+				'media',
+				'rag',
+				'transcription',
+			]);
 			expect(payload.background_jobs).toBeDefined();
 		} finally {
 			destroySession(adminToken);

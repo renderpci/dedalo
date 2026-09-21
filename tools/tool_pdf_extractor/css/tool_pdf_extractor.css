@@ -6,6 +6,12 @@
 :root {
   --tool_pdf_extractor: #794960;
   --tool_pdf_extractor_border: #6f4358;
+  --tool_pdf_extractor_fill: var(--tool_pdf_extractor);
+  --tool_pdf_extractor_fill_border: var(--tool_pdf_extractor_border);
+}
+:root[data-theme="dark"] {
+  --tool_pdf_extractor_fill: #c894b0;
+  --tool_pdf_extractor_fill_border: #b07f9e;
 }
 .wrapper_tool.tool_pdf_extractor .spinner {
   background-color: var(--tool_pdf_extractor);
@@ -30,8 +36,9 @@
   margin-right: 0.5rem;
 }
 .wrapper_tool.tool_pdf_extractor > .content_data > .button_submit {
-  background-color: var(--tool_pdf_extractor);
-  border-color: var(--tool_pdf_extractor_border);
+  background-color: var(--tool_pdf_extractor_fill);
+  border-color: var(--tool_pdf_extractor_fill_border);
+  color: var(--color_white);
 }
 .wrapper_tool.tool_pdf_extractor > .content_data > .button_submit .icon {
   margin-right: 0.5rem;
@@ -54,8 +61,8 @@
   border: 1px solid var(--color_grey_13);
 }
 .wrapper_tool.tool_pdf_extractor > .content_data > .button_select {
-  background-color: var(--tool_pdf_extractor);
-  border-color: var(--tool_pdf_extractor_border);
+  background-color: var(--tool_pdf_extractor_fill);
+  border-color: var(--tool_pdf_extractor_fill_border);
   color: var(--color_white);
   margin-left: calc(50% - 5rem);
   margin-top: 1.5rem;

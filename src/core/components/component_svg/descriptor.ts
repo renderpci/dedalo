@@ -8,6 +8,8 @@ export const component_svg: ComponentModel = {
 	model: 'component_svg',
 	flatValue: 'media',
 	column: 'media',
+	render: 'text',
+	monovalue: true,
 	emitHook: 'media',
 	sortable: false, // PHP component_media_common::get_sortable() → false
 };

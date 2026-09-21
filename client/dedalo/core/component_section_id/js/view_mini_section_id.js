@@ -28,6 +28,7 @@
 
 // import
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -79,7 +80,7 @@ view_mini_section_id.render = function(self, options) {
 		// entries[0] may be a plain scalar (the raw section id integer) or an object
 		// with a .value property when the API has already formatted the entry.
 		const entries		= data.entries || []
-		const value_string	= (entries[0] && typeof entries[0]==='object') ? entries[0].value : entries[0]
+		const value_string	= render_value((entries[0] && typeof entries[0]==='object') ? entries[0].value : entries[0], self.context.render_class)
 
 	// wrapper
 		// build_wrapper_mini produces a <span class="mini component_section_id_mini">

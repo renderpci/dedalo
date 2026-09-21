@@ -118,6 +118,97 @@ export function splitSearchTerms(q: string): string[] {
 	return compacted.split(/\s/).filter((token) => token.length > 0);
 }
 
+/**
+ * Regex metacharacters — THE DECLARED CLASS.
+ *
+ * A curator's search term is TEXT, never a program. Every `~*` operand in this
+ * family is a bound parameter that Postgres compiles as a POSIX regex, so a
+ * term like `Denarius [sic]` used to become a character class and match
+ * `Denariuss`, `Denariusi`, `Denariusc` — and `sar(de` used to be a SYNTAX
+ * ERROR reaching the curator as an internal failure.
+ *
+ * The class is DECLARATIVE: it names what a metacharacter IS, for the corpus
+ * distribution and for the gates. It is NOT the escaper — see
+ * `regexOperand` below for why the escape cannot happen in TypeScript.
+ */
+export const REGEX_META = /[.*+?[\]{}()|\\^$]/;
+
+/**
+ * The SQL function that makes a term literal: `f_regex_literal(text)`,
+ * declared in `src/core/db/db_pg_definitions.json` (ar_function) and applied
+ * to existing installs by `install/db/migrations/0009_search_literal_escape.sql`.
+ */
+export const REGEX_LITERAL_FN = 'f_regex_literal';
+
+/** The LIKE twin: `f_like_literal(text)` escapes `\\`, `%` and `_`. */
+export const LIKE_LITERAL_FN = 'f_like_literal';
+
+/**
+ * THE OPERAND of every `~*` in this family — escape on the SQL side of
+ * `f_unaccent`, never before it (DATA-34, corrected 2026-09-05).
+ *
+ * WHY NOT IN TYPESCRIPT. Every operand is normalized with `f_unaccent`, i.e.
+ * Postgres's own `unaccent` dictionary, and that dictionary EXPANDS characters
+ * INTO metacharacters: `×`→`*`, `©`→`(C)`, `…`→`...`, `∖`→`\\`, `¿`→`?`,
+ * `±`→`+/-`, `⁅`→`[`, `‖`→`||`, `⑴`→`(1)` … (170 such rules in the shipped
+ * unaccent.rules). A TypeScript escape runs BEFORE that expansion, so it
+ * neutralises metacharacters that do not exist yet: `Museo © 1998` still
+ * compiled as `Museo (C) 1998` and matched `Museo C 1998` while NOT matching
+ * the record that literally says `Museo © 1998`, and `12 × 8` raised
+ * `invalid regular expression: quantifier operand invalid`. Escaping AFTER
+ * `f_unaccent` is the only order under which the pattern Postgres compiles is
+ * the text the curator typed.
+ *
+ * BOUNDARY: this wraps only the OPERANDS of `~*`. The equality shapes
+ * (`=`, `==`, quoted literal) compare with `=` and MUST keep the plain
+ * `f_unaccent(_Qn_)`, or an exact search would stop finding the value the
+ * curator typed. Anchors compose OUTSIDE the escaped operand
+ * (`'^' || regexOperand(...)`), and Dedalo's own wildcard `*` is stripped from
+ * `q` before binding — it is a Dedalo wildcard, not a regex one.
+ */
+export function regexOperand(token: string): string {
+	return `${REGEX_LITERAL_FN}(f_unaccent(${token}))`;
+}
+
+/**
+ * SQL's text concatenation operator, as a named constant.
+ *
+ * NOT tidiness: a literal `|| ${…}` is the shape GATE-18 (ws_a_tripwires) reads
+ * as a VALUE bound into a jsonb concat — a write-path question it must keep
+ * answering strictly. These read-path fragments concatenate SQL TEXT, never a
+ * bind, so they name the operator instead of spelling a hole behind it.
+ */
+const SQL_CONCAT = ' || ';
+
+/**
+ * The same operand ANCHORED — `begins` for a trailing Dedalo wildcard, `ends`
+ * for a leading one. The anchor composes OUTSIDE the escape (it is the
+ * builder's own regex syntax, not the curator's text), and the composition
+ * lives HERE rather than in each builder so no emitted literal ever spells
+ * `|| ${…}` — a jsonb-concat-shaped hole the write-path scanner (GATE-18) must
+ * read as a bind.
+ */
+export function anchoredRegexOperand(token: string, anchor: 'begins' | 'ends'): string {
+	return anchor === 'begins'
+		? `('^'${SQL_CONCAT}${regexOperand(token)})`
+		: `(${regexOperand(token)}${SQL_CONCAT}'$')`;
+}
+
+/**
+ * The trigram pre-filter's LIKE operand — the SAME order, for the same reason:
+ * `%`, `_` and `\\` are LIKE's own class, and `unaccent` expands `％`→`%`,
+ * `﹪`→`%` and `＿`→`_`, so a TypeScript-side LIKE escape leaves the superset
+ * disagreeing with the (literal) exact predicate on exactly those terms.
+ */
+export function likeOperand(token: string): string {
+	return `${LIKE_LITERAL_FN}(lower(f_unaccent(${token})))`;
+}
+
+/** The trigram pre-filter's whole LIKE pattern: a literal CONTAINS of the term. */
+export function likeContainsPattern(token: string): string {
+	return `'%'${SQL_CONCAT}${likeOperand(token)}${SQL_CONCAT}'%'`;
+}
+
 /** PHP search::is_literal — q wrapped in single quotes means exact match. */
 export function isLiteralQ(q: string): boolean {
 	return q.length >= 2 && q.startsWith("'") && q.endsWith("'");

@@ -35,8 +35,9 @@ import { getFlatValueFamily } from '../components/registry.ts';
 import { mediaTypeOf } from '../concepts/media.ts';
 import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import { dataframeEntryMatches } from '../concepts/subdatum.ts';
-import { type MatrixRecord, readMatrixRecord, readMatrixRecordBatch } from '../db/matrix.ts';
+import { type MatrixRecord, readMatrixRecordBatch } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
+import { memoizedReadMatrixRecord } from '../db/record_memo.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
 import { termByTipo } from '../ontology/labels.ts';
@@ -90,9 +91,15 @@ export async function getRelationListColumns(sectionTipo: string): Promise<strin
 
 /**
  * Optional per-run seams for the cell-value resolvers. `loadRecord` replaces
- * the default uncached `readMatrixRecord` — the export run passes a loader
- * backed by its per-run record cache, collapsing the per-row/per-target
- * single-record SELECTs (the classic N+1) to one read per distinct record.
+ * the DEFAULT reader, which is `memoizedReadMatrixRecord` (db/record_memo.ts):
+ * inside a section read every cell of every show-column that lands on the same
+ * row is answered from the read-scoped memo instead of re-fetching the whole
+ * row per column (K columns × R references = R×K identical reads — the
+ * labelOfReference path in relations/related.ts passes no loader at all).
+ * Outside a read scope it degrades to a bare read, which is what the export run
+ * replaces with a loader backed by its own per-run record cache, collapsing the
+ * per-row/per-target single-record SELECTs (the classic N+1) to one read per
+ * distinct record.
  * A loader function (not a bare Map) keeps eviction policy on the caller's
  * side and this module free of any diffusion import.
  */
@@ -139,7 +146,11 @@ export async function resolveRelationTargetValues(
 	if (table === null) return [];
 	// The loader seam consults AFTER the null-table early-return (parity
 	// keystone: a cached loader must never resolve what the default can't).
-	const record = await (opts?.loadRecord ?? readMatrixRecord)(table, sectionTipo, sectionId);
+	const record = await (opts?.loadRecord ?? memoizedReadMatrixRecord)(
+		table,
+		sectionTipo,
+		sectionId,
+	);
 	if (record === null) return [];
 
 	const column = getColumnNameByModel(model) ?? 'relation';
@@ -343,7 +354,11 @@ export async function resolveCellValue(
 	if (table === null) return null;
 	// The loader seam consults AFTER the null-table early-return (parity
 	// keystone: a cached loader must never resolve what the default can't).
-	const record = await (opts?.loadRecord ?? readMatrixRecord)(table, sectionTipo, sectionId);
+	const record = await (opts?.loadRecord ?? memoizedReadMatrixRecord)(
+		table,
+		sectionTipo,
+		sectionId,
+	);
 	if (record === null) return null;
 
 	// Per-model dispatch by the DESCRIPTOR's flatValue family (WS-B facet
@@ -586,7 +601,7 @@ export async function buildRelationList(
 		const key = `${sectionTipo}/${sectionId}`;
 		const hit = recordCache.get(key);
 		if (hit !== undefined) return hit;
-		const record = await readMatrixRecord(tableName, sectionTipo, sectionId);
+		const record = await memoizedReadMatrixRecord(tableName, sectionTipo, sectionId);
 		if (recordCache.size > 8000) recordCache.clear();
 		recordCache.set(key, record); // null too: a miss must not re-query
 		return record;

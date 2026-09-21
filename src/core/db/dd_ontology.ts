@@ -410,9 +410,29 @@ export async function deleteTldNodes(tld: string): Promise<boolean> {
 	if (safe === null || safe !== tld) {
 		return false;
 	}
-	await sql`DELETE FROM dd_ontology WHERE tld = ${safe}`;
-	await clearOntologyDerivedCaches();
+	await deleteTldNodesReturningTipos(safe);
 	return true;
+}
+
+/**
+ * The ONE dd_ontology tld-delete statement (T2): every row of the tld goes, the
+ * removed tipos come back so a cascade (ontology_delete.ts) can count and report
+ * them. `tld` MUST already be safeTld-validated by the caller; a mismatch is
+ * refused loudly rather than turned into a wider delete. Fans out cache
+ * invalidation.
+ */
+export async function deleteTldNodesReturningTipos(tld: string): Promise<string[]> {
+	if (safeTld(tld) !== tld) {
+		throw new DedaloError('internal.invariant', {
+			message: `deleteTldNodesReturningTipos: '${tld}' is not a safe tld`,
+			coordinates: { tld },
+		});
+	}
+	const removed = (await sql.unsafe('DELETE FROM dd_ontology WHERE tld = $1 RETURNING tipo', [
+		tld,
+	])) as { tipo: string }[];
+	await clearOntologyDerivedCaches();
+	return removed.map((row) => row.tipo);
 }
 
 // --- Backup table protocol (PHP ontology_utils create/restore/delete_bk_table) -

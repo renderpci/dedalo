@@ -28,6 +28,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {view_default_edit_geolocation} from './view_default_edit_geolocation.js'
 	import {view_mini_geolocation} from './view_mini_geolocation.js'
 
@@ -132,7 +133,7 @@ export const render_popup_text = function(ar_text_obj) {
 		// text_node
 			ui.create_dom_element({
 				element_type	: 'span',
-				inner_html		: label + ' ' + messure,
+				inner_html		: render_value(label + ' ' + messure, 'text'),
 				parent			: text_container
 			})
 

@@ -177,6 +177,21 @@ export async function getSectionDiffusionTargets(
 }
 
 /**
+ * The WHOLE per-section target map (every section that publishes, every
+ * element/target it publishes to — sql AND file types). The public_tier
+ * reconcile walks it to ask, per target, what the matrix says should be
+ * there (2026-09-03, P1-12). Read-only view of the process cache.
+ */
+export async function getAllSectionDiffusionTargets(): Promise<
+	ReadonlyMap<string, readonly DiffusionSqlTarget[]>
+> {
+	if (targetsCache === null) {
+		targetsCache = await buildDiffusionTargets();
+	}
+	return targetsCache;
+}
+
+/**
  * EVERY sql/socrata publication target of the diffusion map, deduped by
  * (database, table, section) — PHP dd_diffusion_api::resolve_media_index_targets.
  * The selection rule itself is pure: ./diffusion_graph.ts selectMediaIndexTargets.

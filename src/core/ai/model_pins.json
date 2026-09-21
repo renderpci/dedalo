@@ -1,0 +1,222 @@
+{
+	"models": {
+		"Xenova/whisper-small": {
+			"revision": "2d67713f236afa48a18992566e7647f6ca848e13",
+			"pinned_at": "2026-09-03",
+			"reason": "initial pin of every catalog model at the hub revision current at pin time (P1-25 / CARRY-06: fetch by immutable revision, verify by sha256)",
+			"files": {
+				"generation_config.json": {
+					"sha256": "0b7407a4e53a677f826e03c75d409e6f830663932bf43dda3b08c5efa2223279",
+					"size": 3837
+				},
+				"preprocessor_config.json": {
+					"sha256": "a6a76d28c93edb273669eb9e0b0636a2bddbb1272c3261e47b7ca6dfdbac1b8d",
+					"size": 339
+				},
+				"tokenizer.json": {
+					"sha256": "27fc476bfe7f17299480be2273fc0608e4d5a99aba2ab5dec5374b4482d1a566",
+					"size": 2480466
+				},
+				"tokenizer_config.json": {
+					"sha256": "2a4c4281cf9f51ac6ccc406fdc711a087afe6530f671fa7b80953edc498275ce",
+					"size": 282683
+				},
+				"config.json": {
+					"sha256": "5a6429d21d7a3379dd0861b74510f9f7076f32b563bffc9fcb072482d55ab3be",
+					"size": 2232
+				},
+				"onnx/encoder_model.onnx": {
+					"sha256": "31a05a14d514440e43746fdaaa8d4e8102c9543e53c5ae1111910af142041406",
+					"size": 352839389
+				},
+				"onnx/decoder_model_merged.onnx": {
+					"sha256": "16c197b4c4702c51c767d1931a5673a10fa528bd1e79963891c97d69e0258584",
+					"size": 615405212
+				}
+			}
+		},
+		"onnx-community/pyannote-segmentation-3.0": {
+			"revision": "733a93b6473d019a773298e08cefa686894b1854",
+			"pinned_at": "2026-09-03",
+			"reason": "initial pin of every catalog model at the hub revision current at pin time (P1-25 / CARRY-06: fetch by immutable revision, verify by sha256)",
+			"files": {
+				"preprocessor_config.json": {
+					"sha256": "dfc7d35a3895f8997eb94521e28b1921c03480a34fa9bcbb6bef1f1934f81480",
+					"size": 158
+				},
+				"config.json": {
+					"sha256": "5a4c6bb4f49f1b47c9bd398aac78b8cd4a9f30a0ff91b5c2dc68d05e13e160cf",
+					"size": 408
+				},
+				"onnx/model.onnx": {
+					"sha256": "057ee564753071c0b09b5b611648b50ac188d50846bff5f01e9f7bbf1591ea25",
+					"size": 5986908
+				}
+			}
+		},
+		"onnx-community/wespeaker-voxceleb-resnet34-LM": {
+			"revision": "6a61a1833ff2583aabeba044f5c8221f00b67ceb",
+			"pinned_at": "2026-09-03",
+			"reason": "initial pin of every catalog model at the hub revision current at pin time (P1-25 / CARRY-06: fetch by immutable revision, verify by sha256)",
+			"files": {
+				"preprocessor_config.json": {
+					"sha256": "a81bbded0530b1bf5c3d395d2c5c7c266686e348be5989171290ace960f24ec2",
+					"size": 371
+				},
+				"config.json": {
+					"sha256": "4a65a1544d2085d7819632f130583d83f6815f49ef6c8ba6c8eb460bd4085041",
+					"size": 38
+				},
+				"onnx/model.onnx": {
+					"sha256": "3955447b0499dc9e0a4541a895df08b03c69098eba4e56c02b5603e9f7f4fcbb",
+					"size": 26535549
+				}
+			}
+		},
+		"onnx-community/whisper-base-ONNX": {
+			"revision": "e2227b9835949f10a62424b0a84b5ed5b62e1267",
+			"pinned_at": "2026-09-03",
+			"reason": "initial pin of every catalog model at the hub revision current at pin time (P1-25 / CARRY-06: fetch by immutable revision, verify by sha256)",
+			"files": {
+				"generation_config.json": {
+					"sha256": "113dd787d1016204e0bc2dd2576eb922220a915b4dc21ebc075e268087c918d2",
+					"size": 3832
+				},
+				"preprocessor_config.json": {
+					"sha256": "a6a76d28c93edb273669eb9e0b0636a2bddbb1272c3261e47b7ca6dfdbac1b8d",
+					"size": 339
+				},
+				"tokenizer.json": {
+					"sha256": "7b469ff15eb7816315aa45eec391f5943d639b9d73d110f5c003df5192fd54e3",
+					"size": 3930494
+				},
+				"tokenizer_config.json": {
+					"sha256": "21a4fc0483c14b87f4e0bbc177a9a357479bfa7c95aaf21ad53d71e9c5afafb9",
+					"size": 282713
+				},
+				"config.json": {
+					"sha256": "b76adf479fb1bdd6d35cb9350b6bf221722451b4f524d64afc079a90136884e2",
+					"size": 1409
+				},
+				"onnx/encoder_model.onnx": {
+					"sha256": "de357478548ae6dc05c5b2d9359be1ad60919a8bda9eefe746f97babb23167c0",
+					"size": 82435426
+				},
+				"onnx/decoder_model_merged.onnx": {
+					"sha256": "77cba5a124b62dfbf49a343b522e15fba860675fda7983056e01fa914f038ea9",
+					"size": 208446495
+				}
+			}
+		},
+		"onnx-community/whisper-large-v3-ONNX": {
+			"revision": "3b6257ad5e67aa523c7c07f4fea04d445eecc4a6",
+			"pinned_at": "2026-09-03",
+			"reason": "initial pin of every catalog model at the hub revision current at pin time (P1-25 / CARRY-06: fetch by immutable revision, verify by sha256)",
+			"files": {
+				"generation_config.json": {
+					"sha256": "33ff6901e35fd6ff9d7ac219a7c88118d383dac59f4a48c1bca46b86a11e20c9",
+					"size": 3896
+				},
+				"preprocessor_config.json": {
+					"sha256": "7ccc62c6f2765af1f3b46c00c9b5894426835a05021c8b9c01eecb6dfb542711",
+					"size": 340
+				},
+				"tokenizer.json": {
+					"sha256": "5c1bf30c9e716e1477bedef846b01be0013daecb89e9e3ef7ab89b23c178df1b",
+					"size": 3930645
+				},
+				"tokenizer_config.json": {
+					"sha256": "3c75940dfce3a294fca7041a5faff011677f1b68fa85e47511bb8cf6dccaded6",
+					"size": 282873
+				},
+				"config.json": {
+					"sha256": "a306bdf86d5f79595082755649214d8ba2b4e2cb2a7c124c6325c3acb7abf303",
+					"size": 1288
+				},
+				"onnx/encoder_model_fp16.onnx": {
+					"sha256": "0dd32090292abfb3494506ea2d956f46ae999555df4bbd7a7ef50b26d0c8caa1",
+					"size": 1274316249
+				},
+				"onnx/decoder_model_merged_q4f16.onnx": {
+					"sha256": "d33414bdd855ac19f45f3515e281b3fedbc648ab958c0c70bc2940b0bb52ca40",
+					"size": 609555323
+				}
+			}
+		},
+		"onnx-community/whisper-large-v3-turbo": {
+			"revision": "360ebcde2559d60bb474678be3c1de9ef347d01a",
+			"pinned_at": "2026-09-03",
+			"reason": "initial pin of every catalog model at the hub revision current at pin time (P1-25 / CARRY-06: fetch by immutable revision, verify by sha256)",
+			"files": {
+				"generation_config.json": {
+					"sha256": "16f95291d2f47c944d3c2b19390bba7965666555c1ea2a0bdc850d1fab45612f",
+					"size": 3897
+				},
+				"preprocessor_config.json": {
+					"sha256": "7ccc62c6f2765af1f3b46c00c9b5894426835a05021c8b9c01eecb6dfb542711",
+					"size": 340
+				},
+				"tokenizer.json": {
+					"sha256": "6d8cbd7cd0d8d5815e478dac67b85a26bbe77c1f5e0c6d76d1ce2abc0e5f21ca",
+					"size": 2480617
+				},
+				"tokenizer_config.json": {
+					"sha256": "844b642c73a91359722f47b35705f7174686df33d252695d8572cf9ac03a6389",
+					"size": 282843
+				},
+				"config.json": {
+					"sha256": "35cd83669f75bc2867f3b3a4461850392d5e308cd6ea951c3700539883c28df1",
+					"size": 1332
+				},
+				"onnx/encoder_model_fp16.onnx": {
+					"sha256": "fdadc70836e6b028fd5e580417c312208dad073d2d01e509e2d127c1373399d8",
+					"size": 1274342603
+				},
+				"onnx/decoder_model_merged_q4f16.onnx": {
+					"sha256": "45981cdd958a4c8e1447839850d2e6e27e30974ccbe31b4a1e5ebe9ad8965a5f",
+					"size": 193505017
+				}
+			}
+		},
+		"onnx-community/whisper-medium-ONNX": {
+			"revision": "d3978248a6b5de6df7ec29ddfbde3993845fa806",
+			"pinned_at": "2026-09-03",
+			"reason": "initial pin of every catalog model at the hub revision current at pin time (P1-25 / CARRY-06: fetch by immutable revision, verify by sha256)",
+			"files": {
+				"generation_config.json": {
+					"sha256": "060a0ba092ee90ee7124d00c00376ded564e6e4edf3f2c4a19a1a35076a1b91c",
+					"size": 3780
+				},
+				"preprocessor_config.json": {
+					"sha256": "a6a76d28c93edb273669eb9e0b0636a2bddbb1272c3261e47b7ca6dfdbac1b8d",
+					"size": 339
+				},
+				"tokenizer.json": {
+					"sha256": "7b469ff15eb7816315aa45eec391f5943d639b9d73d110f5c003df5192fd54e3",
+					"size": 3930494
+				},
+				"tokenizer_config.json": {
+					"sha256": "21a4fc0483c14b87f4e0bbc177a9a357479bfa7c95aaf21ad53d71e9c5afafb9",
+					"size": 282713
+				},
+				"config.json": {
+					"sha256": "6f05735b8279a8eaadf51b276909151687cb94dc6d1eb2a32e6e9bfd36ea1c49",
+					"size": 1389
+				},
+				"onnx/encoder_model_fp16.onnx": {
+					"sha256": "484945b595277c996a752ede76f7c46af79c701757692120521e3f46bc6d94e4",
+					"size": 614716372
+				},
+				"onnx/decoder_model_merged_q4f16.onnx": {
+					"sha256": "0d854c7a66b914ed05376ccdb8125f213ed68389710e2b0c21106a8491352acc",
+					"size": 336281436
+				}
+			}
+		}
+	},
+	"unpinned": {
+		"onnx-community/parakeet-tdt-0.6b-v3-ONNX": {
+			"reason": "the hub has no repository at this id (revision API answered 404/401 on 2026-09-03); initial pin of every catalog model at the hub revision current at pin time (P1-25 / CARRY-06: fetch by immutable revision, verify by sha256)"
+		}
+	}
+}

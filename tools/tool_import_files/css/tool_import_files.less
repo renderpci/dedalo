@@ -11,6 +11,23 @@
 :root {
 	--tool_import_files: #2b77c7;
 	--tool_import_files_border: #286fba;
+	// THE FILL IS A DEEPENED TWIN OF THE IDENTITY HUE (AA pass, 2026-09-06).
+	// The identity hue is an EDGE, NOT A SLAB (tool_common.less .tool_header), and
+	// the primary action button below is the one place it carried text: it painted
+	// --fg_default on the raw hue, which is 2.67:1 in light and 2.22:1 in dark —
+	// the SAME failure as a white-on-hue button, arriving from the other side (the
+	// theme ink follows the SURFACE, not the fill under it). The fix is the split
+	// the brand fill already uses: a fill token of the same hue (211 deg, deepened
+	// ~8%) plus the palette ink for a fill of this lightness profile, with the
+	// bright hue kept for the header edge and the button border.
+	--tool_import_files_fill: #286eb7; // 5.24:1 under --fg_on_warning (#ffffff)
+}
+:root[data-theme="dark"] {
+	// In dark the identity hue is ALREADY the brightened #4a9eff (theme_dark.less),
+	// i.e. a light fill, and --fg_on_warning resolves to near-black there — 6.46:1.
+	// So in dark the fill IS the hue, stated by reference and not as a copied
+	// literal that would silently stop tracking a retune of the hue itself.
+	--tool_import_files_fill: var(--tool_import_files);
 }
 @tool_color: var(--tool_import_files);
 
@@ -333,11 +350,17 @@
 			// button_process_import
 			>.button_process_import {
 				// font-size: 1.3rem;
-				color: var(--fg_default);
+				// --fg_default is the ink for the SURFACE, and this button is not the
+				// surface: it is a filled control. On the raw identity hue that pairing
+				// is 2.67:1 in light and 2.22:1 in dark. Deepened fill + the palette's
+				// ink for a fill that is dark in light and bright in dark (the profile
+				// --fg_on_warning exists for; --fg_on_brand is the opposite profile).
+				// 5.24:1 light, 5.20:1 redesign, 6.46:1 dark, 6.51:1 redesign-dark.
+				color: var(--fg_on_warning);
 				margin: 2rem;
 				padding-left: 1.5em;
 				padding-right: 1.5em;
-				background-color: @tool_color;
+				background-color: var(--tool_import_files_fill);
 				border-color: var(--tool_import_files_border);
 			}
 		}

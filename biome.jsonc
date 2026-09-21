@@ -106,7 +106,6 @@
 			// repo can act on, and formatting them would fight their upstream.
 			"!**/node_modules",
 			"!**/vendor",
-			"!**/tools/tool_qr/lib",
 			"!**/tools/tool_lang/translators/browser_transformer",
 			"!**/tools/tool_transcription/transcribers/browser_whisper",
 			"!**/tools/**/*/transcribers/lib/**/*.js",

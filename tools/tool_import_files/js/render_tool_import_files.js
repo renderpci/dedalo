@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_ROOT_WEB, event_manager, console, document, window, alert, setTimeout, Option */
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_ROOT_WEB, console, document, window, alert, setTimeout, Option */
 /*eslint no-undef: "error"*/
 
 
@@ -8,6 +8,7 @@
 	import {ui} from '../../../core/common/js/ui.js'
 	import {time_unit_auto, append_text_lines} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
 	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
 	import {error_text} from '../../../core/common/js/render_api_error.js'
@@ -62,10 +63,16 @@
 *  - render_matching_options
 *  - render_configuration_options
 *
-* NOTE: `event_manager` is accessed as a browser global (window.event_manager).
-* It is not imported in this module.  This is intentional — tools run in iframes
-* and reach the singleton via the parent window.  Do not add an import here; it
-* is declared in the `/*global …*\/` directive at the top instead.
+* FIXED 2026-09-04 (P2-25 / DEAD-07). This note used to read "`event_manager` is
+* accessed as a browser global (window.event_manager) … tools run in iframes and
+* reach the singleton via the parent window. Do not add an import here". The
+* reason was wrong, so the instruction was too: a BARE `event_manager` resolves
+* against the module's OWN realm's window, never the parent's — code that really
+* needs the parent bus must say `parent.window.event_manager`, as
+* render_list_section.js does. All this file was doing was reading a global that
+* event_manager.js happens to publish as a side effect, i.e. depending on another
+* module's load order. It imports the singleton now, which in every realm is the
+* same object the global names.
 */
 export const render_tool_import_files = function() {
 

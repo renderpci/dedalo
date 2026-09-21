@@ -370,6 +370,16 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 			(await import('../helpers/acl_identity_fixture.ts')).removeAclIdentityFixture(),
 	},
 	{
+		name: 'installReadDoorIdentityFixture',
+		run: async () =>
+			(await import('../helpers/read_door_identity_fixture.ts')).installReadDoorIdentityFixture(),
+	},
+	{
+		name: 'removeReadDoorIdentityFixture',
+		run: async () =>
+			(await import('../helpers/read_door_identity_fixture.ts')).removeReadDoorIdentityFixture(),
+	},
+	{
 		name: 'installHierarchyPruningFixture',
 		run: async () =>
 			(await import('../helpers/hierarchy_pruning_fixture.ts')).installHierarchyPruningFixture(),
@@ -378,6 +388,23 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 		name: 'removeHierarchyPruningFixture',
 		run: async () =>
 			(await import('../helpers/hierarchy_pruning_fixture.ts')).removeHierarchyPruningFixture(),
+	},
+	{
+		name: 'ensureZzarc',
+		run: async () => {
+			const module = await import('../helpers/zzarc_archive_situation.ts');
+			return module.ensureZzarc(module.zzarcSituation());
+		},
+	},
+	{
+		name: 'installScopeBindingFixture',
+		run: async () =>
+			(await import('../helpers/scope_binding_fixture.ts')).installScopeBindingFixture(),
+	},
+	{
+		name: 'removeScopeBindingFixture',
+		run: async () =>
+			(await import('../helpers/scope_binding_fixture.ts')).removeScopeBindingFixture(),
 	},
 	// NOT LISTED, deliberately: `test/helpers/observer_term_seed.ts`. Until
 	// 2026-08-20 it wrote an install thesaurus (`on1`) with its own
@@ -638,9 +665,32 @@ describe('rule 6 — the client run cannot drive a server on the app database', 
 		]) {
 			expect(runner, `scripts/client_test_runner.ts must call ${call}`).toContain(call);
 		}
-		// No unverified door to a target: the ONLY place a URL becomes the page
-		// the browser opens is establishTarget, which does both checks above.
-		expect(runner.match(/page\.goto\(/g) ?? []).toHaveLength(1);
+		// NO UNVERIFIED DOOR TO A TARGET. The rule is a PROVENANCE rule, not a
+		// count: every URL the browser is sent to must derive from the target
+		// openTarget verified (it resolves the suite database and probes the
+		// server's fingerprint). Counting `page.goto(` sites would say the same
+		// thing only while there is exactly one — and the a11y phase legitimately
+		// opens a second page ON THE SAME verified origin.
+		const gotoArguments = [...runner.matchAll(/page\.goto\(\s*([^,)]+)/g)].map((m) =>
+			(m[1] ?? '').trim(),
+		);
+		expect(gotoArguments.length, 'the scan must find the navigations').toBeGreaterThan(0);
+		for (const argument of gotoArguments) {
+			// An identifier, never a literal or a concatenation assembled at the call.
+			expect(argument, `page.goto(${argument}) — navigate to a named, verified URL`).toMatch(
+				/^[A-Za-z_$][\w$]*$/,
+			);
+			// …and that name is assigned from the VERIFIED target: its url, or a
+			// path on the origin derived from it.
+			const fromTarget = new RegExp(`const ${argument} = target\\.url;`).test(runner);
+			const fromOrigin = new RegExp(`const ${argument} = \`\\$\\{origin\\}`).test(runner);
+			expect(
+				fromTarget || fromOrigin,
+				`${argument} must be assigned from the verified target (target.url, or a path on its origin)`,
+			).toBe(true);
+		}
+		// The only origin the a11y phase can be given is the verified target's.
+		expect(runner).toContain('runAxePhase(page, originOf(testUrl))');
 		expect(runner).toContain('const suite = await prepareSuiteDatabase();');
 		expect(runner).toContain('const target = await openTarget(suite);');
 	});

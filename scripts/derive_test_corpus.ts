@@ -76,6 +76,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { getComponentModel } from '../src/core/components/registry.ts';
+import { compareLocators, type Locator } from '../src/core/concepts/locator.ts';
 import { MATRIX_JSONB_COLUMNS, type MatrixJsonbColumn } from '../src/core/db/matrix.ts';
 
 const REPO = dirname(import.meta.dir);
@@ -1913,13 +1914,31 @@ for (const entry of [...collected.values()].sort((a, b) =>
 
 		const slot = (columns[column as MatrixJsonbColumn] ?? {}) as Record<string, Json>;
 		const held = Array.isArray(slot[componentTipo]) ? (slot[componentTipo] as Json[]) : [];
+		// The locator law (concepts/locator.ts, DEC-21): section_id compares
+		// loose-numerically, the other properties strictly. The held item's
+		// absent `type` / `from_component_tipo` are normalized to the defaults
+		// the engine would write BEFORE the comparison, so the law sees two
+		// complete quads. Migrated off an inline String()=== match 2026-09-02
+		// when scripts/ entered the write-path census (P2-20/S-3).
+		const wanted = {
+			section_tipo: target.section_tipo,
+			section_id: target.section_id,
+			type,
+			from_component_tipo: componentTipo,
+		} as Locator;
 		const already = held.some(
 			(one: Json) =>
 				isObject(one) &&
-				String(one.section_tipo) === target.section_tipo &&
-				String(one.section_id) === String(target.section_id) &&
-				(one.type ?? null) === type &&
-				(one.from_component_tipo ?? componentTipo) === componentTipo,
+				compareLocators(
+					{
+						section_tipo: String(one.section_tipo),
+						section_id: one.section_id,
+						type: one.type ?? null,
+						from_component_tipo: one.from_component_tipo ?? componentTipo,
+					} as Locator,
+					wanted,
+					['section_tipo', 'section_id', 'type', 'from_component_tipo'],
+				),
 		);
 		if (already) continue;
 		// THE ENGINE'S OWN RULE, not an invented number: `nextObserverItemId`

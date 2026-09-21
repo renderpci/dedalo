@@ -772,4 +772,6 @@ export const tool: ToolServerModule = {
 		},
 	},
 	backgroundRunnable: ['import_files'],
+	// A bulk import — operator work (PERF-11 lane declaration).
+	backgroundLanes: { import_files: 'maintenance' },
 };

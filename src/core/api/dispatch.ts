@@ -1169,6 +1169,17 @@ async function runAuthGates(
 	}
 	await refuseUnderMaintenance(context.session.userId);
 	if (!CSRF_EXEMPT_ACTIONS.has(actionKey) && !verifyCsrf(context.session, context.csrfCandidate)) {
+		// ONE diagnostic line, in the LOG only (the wire body is unchanged — envelope
+		// keys are contract). `auth.csrf_failed` alone cannot be acted on: a token that
+		// was NEVER SENT is a client that has not obtained one yet (the bootstrap race
+		// the client's single transparent retry exists for), while a token that was sent
+		// and did not match is a STALE one — a page whose session was replaced by a
+		// login elsewhere, or the beforeunload lock beacon carrying the previous
+		// session's value. The channel separates them: 'header' is an XHR that will
+		// retry, 'body' is sendBeacon, which cannot. NEVER the token bytes.
+		console.warn(
+			`[csrf] refused ${actionKey}: token ${context.csrfCandidate === null || context.csrfCandidate.length === 0 ? 'ABSENT' : 'MISMATCHED'} (channel: ${context.csrfSource ?? 'none'}, user: ${context.session.username})`,
+		);
 		throw new DedaloError('auth.csrf_failed', { extend: { action } });
 	}
 }

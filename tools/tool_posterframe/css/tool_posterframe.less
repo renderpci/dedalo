@@ -67,7 +67,11 @@
 				flex-wrap: wrap;
 				margin: 1rem;
 				margin-top: 1.5rem;
-				color: @color_grey_9;
+				// --color_grey_9 was the ink here: the grey ramp is STRUCTURAL, not for
+				// text (vars_tokens.less), and #aaaaaa on the @color_grey_16 canvas above
+				// is 2.26:1 in light. --fg_muted is the ramp-free muted ink, tuned per
+				// axis: 5.60:1 light, 7.64:1 dark, 5.75:1 redesign, 6.02:1 redesign-dark.
+				color: var(--fg_muted);
 				width: 100%;
 				margin-left: auto;
 				margin-right: auto;

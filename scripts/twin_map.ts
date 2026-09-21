@@ -49,6 +49,14 @@ const NOT_A_TWIN: ReadonlyMap<string, string> = new Map([
 		"names test/parity/oracle_canary.test.ts to assert that the CANARY censuses the permanently-unreachable parity gates from the tree — it gates the canary's honesty about what a run does not verify, and replaces no parity contract of its own",
 	],
 	[
+		'test/unit/census_derivation_tripwire.test.ts',
+		'names test/parity/oracle_canary.test.ts as an ENTRY of its floorless-walk and root-walker baselines (the canary walks the parity directory) and test/parity as a walk ROOT — census data about how gates derive their corpora, not a twin of the canary or of any parity gate',
+	],
+	[
+		'test/unit/suite_assertion_floor_tripwire.test.ts',
+		'names test/parity/ as the DIRECTORY the parity per-file records must cover and a SYNTHETIC test/parity/zz_planted_new.test.ts in a planted drift fixture — it is the per-file assertion-floor census over both tiers and replaces no parity contract',
+	],
+	[
 		'test/unit/tier_assignment_tripwire.test.ts',
 		"names test/parity as a DIRECTORY a CI tier claims — it censuses which tier executes each test file, so it necessarily spells every tier root including the parity one. It asserts nothing about any parity gate's contract and replaces none of them",
 	],

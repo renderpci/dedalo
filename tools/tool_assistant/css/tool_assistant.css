@@ -1,5 +1,41 @@
 :root {
   --tool_assistant: #6366f1;
+  --assistant_fill: #4f46e5;
+  --assistant_fill_hover: #4338ca;
+  --assistant_on_fill: #ffffff;
+  --assistant_text: #4f46e5;
+  --assistant_progress_bg: #eef2ff;
+  --assistant_progress_border: #c7d2fe;
+  --assistant_progress_text: var(--assistant_text);
+  --assistant_ok_bg: #f0fdf4;
+  --assistant_ok_text: #166534;
+  --assistant_ok_border: #bbf7d0;
+  --assistant_warn_bg: #fefce8;
+  --assistant_warn_text: #854d0e;
+  --assistant_warn_border: #fde68a;
+  --assistant_err_bg: #fef2f2;
+  --assistant_err_text: #991b1b;
+  --assistant_err_border: #fecaca;
+  --assistant_pre_bg: rgba(0, 0, 0, 0.05);
+}
+:root[data-theme="dark"] {
+  --assistant_fill: #818cf8;
+  --assistant_fill_hover: #a5b4fc;
+  --assistant_on_fill: #16181b;
+  --assistant_text: #a5b4fc;
+  --assistant_progress_bg: #1e1f3a;
+  --assistant_progress_border: #2f3360;
+  --assistant_progress_text: #b8bcf0;
+  --assistant_ok_bg: #16271c;
+  --assistant_ok_text: #7ee2a8;
+  --assistant_ok_border: #2c5038;
+  --assistant_warn_bg: #2a2410;
+  --assistant_warn_text: #e8c97a;
+  --assistant_warn_border: #4a4020;
+  --assistant_err_bg: #2a1818;
+  --assistant_err_text: #f08a8a;
+  --assistant_err_border: #5a3030;
+  --assistant_pre_bg: rgba(255, 255, 255, 0.06);
 }
 .tool_header.tool_assistant {
   background-color: var(--tool_assistant);
@@ -164,8 +200,8 @@
 }
 .assistant_settings_apply {
   align-self: flex-end;
-  background-color: #6366f1;
-  color: #fff;
+  background-color: var(--assistant_fill);
+  color: var(--assistant_on_fill);
   border: none;
   border-radius: var(--radius-md);
   padding: 0.35rem 0.85rem;
@@ -173,31 +209,31 @@
   cursor: pointer;
 }
 .assistant_settings_apply:hover {
-  background-color: #4f46e5;
+  background-color: var(--assistant_fill_hover);
 }
 .assistant_progress_bar {
   display: flex;
   align-items: center;
   padding: 0.35rem 1rem;
-  background-color: var(--assistant_progress_bg, #eef2ff);
-  border-bottom: 1px solid var(--assistant_progress_border, #c7d2fe);
+  background-color: var(--assistant_progress_bg);
+  border-bottom: 1px solid var(--assistant_progress_border);
   position: relative;
   height: 1.5rem;
   flex-shrink: 0;
 }
 .assistant_progress_fill {
-  height: 100%;
-  background-color: #6366f1;
+  height: 3px;
+  background-color: var(--tool_assistant);
   border-radius: 2px;
   transition: width var(--transition-slow);
   position: absolute;
-  top: 0;
+  bottom: 0;
   left: 0;
 }
 .assistant_progress_text {
   position: relative;
   z-index: 1;
-  color: var(--assistant_progress_text, #4f46e5);
+  color: var(--assistant_progress_text);
   font-size: 0.75rem;
   font-weight: 600;
 }
@@ -223,8 +259,8 @@
 }
 .assistant_user_message {
   align-self: flex-end;
-  background-color: #6366f1;
-  color: #fff;
+  background-color: var(--assistant_fill);
+  color: var(--assistant_on_fill);
   border-bottom-right-radius: 0.2rem;
   white-space: pre-wrap;
 }
@@ -252,7 +288,7 @@
 .assistant_assistant_message .md_blockquote {
   margin: 0.4rem 0;
   padding: 0.25rem 0.6rem;
-  border-left: 3px solid #818cf8;
+  border-left: 3px solid var(--tool_assistant);
   color: var(--fg_muted);
 }
 .assistant_assistant_message .md_code_inline {
@@ -278,7 +314,7 @@
   color: inherit;
 }
 .assistant_assistant_message a {
-  color: #4f46e5;
+  color: var(--assistant_text);
   text-decoration: underline;
 }
 .assistant_system_message {
@@ -367,18 +403,18 @@
   justify-content: center;
 }
 .assistant_copy_button.copied {
-  color: var(--assistant_ok_text, #166534);
-  background-color: var(--assistant_ok_bg, #dcfce7);
-  border-color: var(--assistant_ok_border, #86efac);
+  color: var(--assistant_ok_text);
+  background-color: var(--assistant_ok_bg);
+  border-color: var(--assistant_ok_border);
 }
 .assistant_assistant_message:hover .assistant_copy_button {
   opacity: 1;
 }
 .assistant_tool_call {
   align-self: flex-start;
-  background-color: var(--assistant_ok_bg, #f0fdf4);
-  color: var(--assistant_ok_text, #166534);
-  border: 1px solid var(--assistant_ok_border, #bbf7d0);
+  background-color: var(--assistant_ok_bg);
+  color: var(--assistant_ok_text);
+  border: 1px solid var(--assistant_ok_border);
   border-radius: 0.5rem;
   padding: 0.3rem 0.6rem;
   font-size: 0.75rem;
@@ -397,14 +433,14 @@
   margin-bottom: 0.4rem;
 }
 .assistant_tool_call_calling {
-  background-color: var(--assistant_warn_bg, #fefce8);
-  color: var(--assistant_warn_text, #854d0e);
-  border-color: var(--assistant_warn_border, #fde68a);
+  background-color: var(--assistant_warn_bg);
+  color: var(--assistant_warn_text);
+  border-color: var(--assistant_warn_border);
 }
 .assistant_tool_call_error {
-  background-color: var(--assistant_err_bg, #fef2f2);
-  color: var(--assistant_err_text, #991b1b);
-  border-color: var(--assistant_err_border, #fecaca);
+  background-color: var(--assistant_err_bg);
+  color: var(--assistant_err_text);
+  border-color: var(--assistant_err_border);
 }
 .assistant_tool_call_denied {
   background-color: var(--bg_surface);
@@ -421,7 +457,7 @@
 .assistant_tool_call_pre {
   margin: 0.15rem 0 0.25rem;
   padding: 0.4rem 0.5rem;
-  background-color: var(--assistant_pre_bg, rgba(0, 0, 0, 0.04));
+  background-color: var(--assistant_pre_bg);
   border-radius: var(--radius-md);
   max-height: 240px;
   overflow: auto;
@@ -467,8 +503,8 @@
 }
 .assistant_send_button,
 .assistant_stop_button {
-  background-color: #6366f1;
-  color: #fff;
+  background-color: var(--assistant_fill);
+  color: var(--assistant_on_fill);
   border: none;
   border-radius: 0.5rem;
   width: 2.2rem;
@@ -483,15 +519,17 @@
 }
 .assistant_send_button:hover,
 .assistant_stop_button:hover {
-  background-color: #4f46e5;
+  background-color: var(--assistant_fill_hover);
 }
 .assistant_send_button:disabled,
 .assistant_stop_button:disabled {
-  background-color: var(--assistant_disabled_bg, #c7d2fe);
+  background-color: var(--bg_surface_alt);
+  color: var(--fg_muted);
   cursor: not-allowed;
 }
 .assistant_stop_button {
   background-color: var(--color_danger);
+  color: var(--fg_on_warning);
 }
 .assistant_stop_button:hover {
   background-color: var(--color_danger_hover_bg);
@@ -515,17 +553,17 @@
 }
 .ai_assistant_button.active {
   opacity: 1;
-  border-bottom: 2px solid #6366f1;
+  border-bottom: 2px solid var(--tool_assistant);
 }
 .assistant_model_badge.assistant_egress_badge_local {
-  background-color: var(--assistant_ok_bg, #e8f7ee);
-  color: var(--assistant_ok_text, #1a7f43);
-  border: 1px solid var(--assistant_ok_border, #bfe5cd);
+  background-color: var(--assistant_ok_bg);
+  color: var(--assistant_ok_text);
+  border: 1px solid var(--assistant_ok_border);
 }
 .assistant_model_badge.assistant_egress_badge_external {
-  background-color: var(--assistant_warn_bg, #fdf6e3);
-  color: var(--assistant_warn_text, #8a6d1a);
-  border: 1px solid var(--assistant_warn_border, #ecd9a0);
+  background-color: var(--assistant_warn_bg);
+  color: var(--assistant_warn_text);
+  border: 1px solid var(--assistant_warn_border);
 }
 .assistant_write_toggle {
   display: flex;
@@ -538,9 +576,9 @@
 .assistant_plan_card {
   margin: 8px 0;
   padding: 10px 12px;
-  border: 1px solid var(--assistant_warn_border, #ecd9a0);
+  border: 1px solid var(--assistant_warn_border);
   border-radius: 8px;
-  background-color: var(--assistant_warn_bg, #fdf6e3);
+  background-color: var(--assistant_warn_bg);
   font-size: 0.92em;
 }
 .assistant_plan_card .assistant_plan_title {
@@ -559,7 +597,7 @@
   font-size: 0.85em;
   padding: 1px 4px;
   border-radius: 4px;
-  background-color: var(--assistant_pre_bg, rgba(0, 0, 0, 0.05));
+  background-color: var(--assistant_pre_bg);
 }
 .assistant_plan_card .assistant_plan_args {
   margin: 4px 0 6px 0;
@@ -570,22 +608,22 @@
   max-height: 12em;
   overflow: auto;
   border-radius: 4px;
-  background-color: var(--assistant_pre_bg, rgba(0, 0, 0, 0.05));
+  background-color: var(--assistant_pre_bg);
 }
 .assistant_plan_card .assistant_plan_actions {
   display: flex;
   gap: 8px;
 }
 .assistant_plan_card .assistant_plan_apply {
-  background-color: #6366f1;
-  color: #fff;
+  background-color: var(--assistant_fill);
+  color: var(--assistant_on_fill);
   border: none;
   border-radius: 6px;
   padding: 4px 14px;
   cursor: pointer;
 }
 .assistant_plan_card .assistant_plan_apply:hover {
-  background-color: #4f46e5;
+  background-color: var(--assistant_fill_hover);
 }
 .assistant_plan_card .assistant_plan_apply:disabled {
   opacity: 0.5;
@@ -593,7 +631,7 @@
 }
 .assistant_plan_card .assistant_plan_cancel {
   background: transparent;
-  border: 1px solid var(--assistant_warn_border, #ecd9a0);
+  border: 1px solid var(--assistant_warn_border);
   border-radius: 6px;
   padding: 4px 14px;
   cursor: pointer;
@@ -609,15 +647,15 @@
   margin: 8px 0;
   padding: 8px 12px;
   border-radius: 8px;
-  border: 1px solid var(--assistant_ok_border, #bfe5cd);
-  background-color: var(--assistant_ok_bg, #e8f7ee);
+  border: 1px solid var(--assistant_ok_border);
+  background-color: var(--assistant_ok_bg);
   font-size: 0.92em;
 }
 .assistant_apply_report .assistant_apply_row {
   margin: 2px 0;
 }
 .assistant_apply_report .assistant_apply_row.is_failed {
-  color: var(--assistant_err_text, #b03030);
+  color: var(--assistant_err_text);
 }
 .assistant_apply_report .assistant_apply_row.is_skipped {
   opacity: 0.7;
@@ -646,22 +684,6 @@
   font-size: 0.85em;
   padding: 2px 8px;
   border-radius: 10px;
-  background-color: var(--assistant_pre_bg, rgba(0, 0, 0, 0.05));
-}
-:root[data-theme="dark"] {
-  --assistant_progress_bg: #1e1f3a;
-  --assistant_progress_border: #2f3360;
-  --assistant_progress_text: #b8bcf0;
-  --assistant_ok_bg: #16271c;
-  --assistant_ok_text: #7ee2a8;
-  --assistant_ok_border: #2c5038;
-  --assistant_warn_bg: #2a2410;
-  --assistant_warn_text: #e8c97a;
-  --assistant_warn_border: #4a4020;
-  --assistant_err_bg: #2a1818;
-  --assistant_err_text: #f08a8a;
-  --assistant_err_border: #5a3030;
-  --assistant_pre_bg: rgba(255, 255, 255, 0.06);
-  --assistant_disabled_bg: #2f3360;
+  background-color: var(--assistant_pre_bg);
 }
 /*# sourceMappingURL=tool_assistant.css.map */

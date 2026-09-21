@@ -17,7 +17,8 @@
  * derivation happens to produce on the day the two sides disagree.
  */
 
-import { mkdir, rm, readdir, stat } from 'node:fs/promises';
+import { rm, readdir, stat } from 'node:fs/promises';
+import { applySharedModes, mkdirPrivate, mkdirShared } from '../util/shared_tree';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { confinedPath } from '../util/paths';
@@ -51,7 +52,7 @@ function workspaceDir(slug: string): string {
 }
 
 export function siteExists(slug: string): boolean {
-  return isValidSlug(slug) && existsSync(join(config.SITES_ROOT, slug, 'site.json'));
+  return isValidSlug(slug) && existsSync(confinedPath(config.SITES_ROOT, slug, 'site.json'));
 }
 
 /** Lists slugs of existing sites (directories under SITES_ROOT that hold a site.json). */
@@ -62,7 +63,7 @@ export async function listSlugs(): Promise<string[]> {
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
     if (entry.name.startsWith('.')) continue; // .audit and friends
-    if (existsSync(join(config.SITES_ROOT, entry.name, 'site.json'))) {
+    if (existsSync(confinedPath(config.SITES_ROOT, entry.name, 'site.json'))) {
       slugs.push(entry.name);
     }
   }
@@ -153,7 +154,11 @@ export async function createSite(input: CreateSiteInput): Promise<SiteManifest> 
   }
 
   const dir = workspaceDir(input.slug);
-  await mkdir(dir, { recursive: true });
+  // 2770 setgid, stated rather than requested: an agent turn is a SECOND unix identity in
+  // this museum's group (drivers/confinement.ts), and a workspace created with the daemon's
+  // own umask is a site the agent can read and never write — a turn that starts, is
+  // authorized, and fails on its first Write.
+  await mkdirShared(config.SITES_ROOT, input.slug);
 
   try {
     await scaffold(input.slug, templateId);
@@ -171,8 +176,13 @@ export async function createSite(input: CreateSiteInput): Promise<SiteManifest> 
     });
     await writeManifest(manifest);
     await writeAgentsFile(manifest);
-    await mkdir(join(dir, '.builder'), { recursive: true });
+    // The one exception in the tree: the daemon's own per-site state, 0700.
+    await mkdirPrivate(config.SITES_ROOT, join(input.slug, '.builder'));
     await initRepo(input.slug);
+    // LAST, over everything: `git init` and `cp` both create entries with modes of their
+    // own, and the shared pair has to hold over the whole workspace, not only over what
+    // this module wrote itself. (`.builder` is skipped — see shared_tree.ts.)
+    await applySharedModes(dir);
 
     return manifest;
   } catch (error) {

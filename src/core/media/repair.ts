@@ -357,7 +357,7 @@ export async function regenerateMissingDerivatives(
 				source !== null &&
 				options.rawExtension !== null
 			) {
-				regenerate3d(spec, identity, pathOpts, options.rawExtension);
+				await regenerate3d(spec, identity, pathOpts, options.rawExtension);
 			}
 			break;
 		// component_av: async transcode — deliberately not enqueued here.

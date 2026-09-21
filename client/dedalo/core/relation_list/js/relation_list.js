@@ -127,6 +127,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {clone, open_records_in_window} from '../../common/js/utils/index.js'
 	import {response_data, request_failed} from '../../common/js/api_error.js'
+	import {request_complete} from '../../common/js/sqo_limit.js'
 
 
 
@@ -382,8 +383,10 @@ relation_list.prototype.build = async function(autoload=true){
 * that are related to the current host record.
 *
 * Clones the existing `self.rqo` so the shared state is not mutated, then
-* overrides `sqo.section_tipo` to target only the requested section and sets
-* `sqo.limit = 0` to bypass pagination and retrieve all matching records.
+* overrides `sqo.section_tipo` to target only the requested section and walks
+* the result page by page at the server's client ceiling (request_complete,
+* common/js/sqo_limit.js) — never one request with `limit: 0`, which the
+* server read as the same ceiling and truncated in silence (audit P2-31).
 *
 * The returned array contains the numeric section_ids extracted from data
 * entries whose `component_tipo` is `'id'` — those entries act as row-start
@@ -407,17 +410,15 @@ relation_list.prototype.get_related_records = async function(section_tipo) {
 
 	// change some custom properties
 		rqo.sqo.section_tipo	= [section_tipo]
-		rqo.sqo.limit			= 0
 
-	// call API
-		const api_response = await data_manager.request({
-			body : rqo
+	// call API. A completeness read: every page, at the ceiling
+		const datum = await request_complete(rqo, {
+			count_rows : (page) => page.data.filter(el => el.component_tipo==='id').length
 		})
 
 	// check response
-		const datum = response_data(api_response)
 		if (!datum) {
-			console.error('invalid response from API:', api_response);
+			console.error('invalid response from API (get_related_records)');
 			return false
 		}
 

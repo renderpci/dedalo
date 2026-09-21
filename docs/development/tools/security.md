@@ -29,6 +29,19 @@ For **out-of-repo roots** (`config.tools.additionalRoots` / `DEDALO_ADDITIONAL_T
    ```
    Use `'record'` whenever the action targets one caller-supplied `section_id`: it adds the project-scope check on top of the section/tipo permission, so users cannot reach records outside their projects.
 
+   **Bind the gate to what the action writes.** If the handler's targets come from `options.sqo`, from a nested client map (a `tool_config.ddo_map`) or from a section it pins by constant, declare `permission: 'targets'` with a `targets(options)` extractor that derives every `(section_tipo, tipo?, section_id?)` the handler will mutate — off the same keys the handler reads:
+   ```ts
+   update_cache: {
+     permission: 'targets', minLevel: 2,
+     targets: (options) => sqoSections(options.sqo).flatMap((section_tipo) =>
+       selection(options).map((item) => ({ section_tipo, tipo: item.tipo }))),
+     handler: updateCache,
+   }
+   ```
+   A `section`/`tipo` gate on a sibling field (`options.section_tipo` while the SQO names another section) authorizes something the action never touches. `test/unit/action_scope_binding_tripwire.test.ts` refuses that shape.
+
+   **The extractor cannot see a record the handler derives.** When the destination record is bound at run time — `tool_import_files` takes it from a filename's numeric prefix (`enumerate`), from a matcher hit (`match` / `match_freename`), or routes a role write to the caller/target record — prove it in the handler at the point it is bound and before the first write, with the save door's own rule (`assertRecordWriteTarget` from `src/core/security/record_scope.ts`); a record the run itself created is admitted as a create is. A gate that stops at the extractor refuses the record when the client spells its id and writes it when the client spells a filename.
+
 2. **Keep imperative gates inside long-running/background handlers.** The background executor (`scheduleBackground`) does not re-run the per-action gate a second time when the handler actually executes — the declarative gate already ran once, before scheduling — but if a handler is SQO-wide (no single record to gate on, e.g. `tool_propagate_component_data`) it should still assert its own scope defensively. See `tools/tool_dev_template/server/index.ts` for the map-form pattern and `tools/tool_propagate_component_data/server/*.ts` for an SQO-wide handler.
 
 3. **Never list lifecycle hooks** (`isAvailable`, `onRegister`, `onRemove`) inside `apiActions` — the loader throws and refuses to load the whole module if you do.

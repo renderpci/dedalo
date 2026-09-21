@@ -270,9 +270,14 @@ Marks the component as required; the UI informs the user that a value must be en
 
 ### `multi_value`
 
-Options: `true` | `false`
-
-Allows more than one date record in the same component (the stored value becomes an array with several entries). Seen in the component sample context.
+!!! warning "`multi_value` is INERT"
+    48 ontology nodes carry it and **nothing reads it**. Whether a component
+    may hold more than one value has a single home: the model's `monovalue` facet in its
+    descriptor, plus `properties.show_interface.button_add` for the add
+    control. Setting `multi_value` has no effect; remove it. The engine names
+    the node and the replacement on first read, and
+    `bun scripts/ontology_property_report.ts` lists every node still carrying
+    it (see [Ontology authoring](../ontology/authoring.md#retired-property-keys)).
 
 ### `has_dataframe`
 

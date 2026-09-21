@@ -7,7 +7,7 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {attach_item_dataframe} from '../../component_common/js/component_common.js'
-	import {get_fallback_value} from '../../common/js/common.js'
+	import {render_fallback_value, escape_html} from '../../common/js/utils/render_escape.js'
 	import {activate_edit_in_list} from '../../component_common/js/component_common.js'
 
 
@@ -80,8 +80,8 @@ view_default_list_text_area.render = async function(self, options) {
 		const data				= self.data
 		const entries			= data.entries || []
 		const fallback_value	= data.fallback_value || []
-		const fallback			= get_fallback_value(entries, fallback_value)
-		const value_string		= fallback.join(self.context.fields_separator)
+		const fallback			= render_fallback_value(entries, fallback_value, self.context.render_class)
+		const value_string		= fallback.join(escape_html(self.context.fields_separator))
 
 	// wrapper
 	// (!) value_string is intentionally NOT passed here — the span is added manually

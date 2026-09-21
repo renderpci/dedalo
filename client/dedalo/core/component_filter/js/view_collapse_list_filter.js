@@ -38,6 +38,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_join, render_value} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -94,8 +95,8 @@ view_collapse_list_filter.render = async function(self, options) {
 		// Activity log (dd542) uses line-break separation; all other sections
 		// use pipe-separation for a compact, scannable single line.
 		const value_string	= (self.section_tipo==='dd542')
-			? entries.join('<br>') // activity case
-			: entries.join(' | ')
+			? render_value(entries, self.context.render_class).join('<br>') // activity case
+			: render_join(entries, ' | ', self.context.render_class)
 
 	// wrapper
 		// build_wrapper_list adds the `view_collapse` CSS class automatically

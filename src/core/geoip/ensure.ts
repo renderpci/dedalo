@@ -22,7 +22,12 @@
 import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { config } from '../../config/config.ts';
-import { DB_BASENAME, downloadCountryDb } from './download.ts';
+import {
+	DB_BASENAME,
+	downloadCountryDb,
+	quarantineCountryDb,
+	verifyCountryDb,
+} from './download.ts';
 import { loadReader } from './reader.ts';
 
 /** Refresh the database when the cached file is older than this (DB-IP publishes monthly). */
@@ -76,6 +81,36 @@ export function decideGeoipAction(input: {
 }
 
 /**
+ * What the cache holds, AFTER its rest-integrity check (P1-25): a database whose
+ * bytes no longer hash to the sidecar written at download is quarantined and
+ * reported ABSENT, so the policy re-downloads instead of loading it. A cache
+ * with no sidecar (pre-2026-09-04) loads as-is and is pinned by its next
+ * refresh — stated, not hidden. Exported for its gate; pure but for the disk.
+ */
+export async function verifiedCacheState(
+	dbPath: string,
+): Promise<{ present: boolean; mtimeMs: number | null; verdict: string }> {
+	const verdict = await verifyCountryDb(dbPath);
+	if (verdict === 'mismatch') {
+		console.error(
+			`[geoip] INTEGRITY: ${dbPath} does not hash to its sidecar — quarantined, will re-download`,
+		);
+		quarantineCountryDb(dbPath);
+		return { present: false, mtimeMs: null, verdict };
+	}
+	const present = verdict !== 'absent' && existsSync(dbPath);
+	let mtimeMs: number | null = null;
+	if (present) {
+		try {
+			mtimeMs = statSync(dbPath).mtimeMs;
+		} catch {
+			mtimeMs = null;
+		}
+	}
+	return { present, mtimeMs, verdict };
+}
+
+/**
  * Ensure the country database is downloaded (if auto-update is on and the cache
  * is absent or stale) and loaded. Safe to await; never throws.
  */
@@ -89,15 +124,7 @@ export async function ensureGeoipDb(): Promise<void> {
 	const dir = config.geoip.dir;
 	const dbPath = join(dir, DB_BASENAME);
 
-	const present = existsSync(dbPath);
-	let mtimeMs: number | null = null;
-	if (present) {
-		try {
-			mtimeMs = statSync(dbPath).mtimeMs;
-		} catch {
-			mtimeMs = null;
-		}
-	}
+	const { present, mtimeMs } = await verifiedCacheState(dbPath);
 
 	const action = decideGeoipAction({
 		enabled: config.geoip.enabled,

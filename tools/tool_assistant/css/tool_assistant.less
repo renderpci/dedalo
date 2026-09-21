@@ -1,20 +1,100 @@
-// Indigo accent (brand color, reads well on both themes)
+// Indigo identity hue. ONE value for both themes (registered THEME_INVARIANT in
+// palette_axis_parity_tripwire): it is an EDGE and an ACCENT — the header's 4px
+// top strip (3.78:1 on the dark surface, above the 3:1 non-text floor), the
+// progress edge, the blockquote rule, the menu button's active underline —
+// and it NEVER carries text. #6366f1 is a mid-tone in the dead zone the tool
+// header doctrine describes (tool_common.less): white on it is 4.47:1 and
+// near-black 3.98:1, so NO ink clears AA on it. Text-bearing fills use the
+// deepened/lifted --assistant_fill split below (CSS coherence audit 2026-09,
+// DESIGN clause 2.c: the contrast gate now judges every tool sheet under every
+// palette, and the four indigo fills of this sheet were its 24 reds).
 @assistant_color: #6366f1;
 
 // The tool's identity hue, exposed the way every other tool exposes it.
 // tool_common.less demotes it to the header's top 4px edge, which is the ONLY
 // thing naming the tool you are in — without this the assistant's header edge
 // is the generic Dédalo orange while its own UI below is indigo.
+//
+// EVERY token below is declared for BOTH axes here, in the tool's own sheet
+// (css_token_duplication_tripwire: a tool token never moves into the core
+// palette; palette_axis_parity_tripwire leg 2: a dark-only token leaves light
+// resolving NOTHING, and this sheet used to paint three different greens for
+// one state from scattered `var(--x, #literal)` fallbacks — finding C15).
+// The fallbacks are gone: a token that exists on every axis needs none, and a
+// fallback that stays becomes a second, unreviewed value the moment the token
+// is retuned.
+//
+// Ratios are WCAG 2.x, measured (scratch script), not eyeballed.
 :root {
 	--tool_assistant: @assistant_color;
+
+	// --- the indigo that CARRIES TEXT: the same hue, deepened enough for
+	// white. Same split the brand fix made (--color_orange_dedalo fill /
+	// --fg_on_brand ink) and the redesign line uses (--accent / --accent-text).
+	--assistant_fill:       #4f46e5; // indigo-600: --assistant_on_fill on it 6.29:1 (was #6366f1, 4.47:1)
+	--assistant_fill_hover: #4338ca; // indigo-700: 7.90:1 under the same ink — hover deepens, never lightens toward the dead zone
+	--assistant_on_fill:    #ffffff; // ink on --assistant_fill. Flips per theme like --fg_on_brand (see the dark block)
+	--assistant_text:       #4f46e5; // the indigo as INK (links in a reply, the progress label): 6.29:1 on --bg_elevated #ffffff
+
+	// --- the progress strip: a faint indigo tint under indigo ink
+	--assistant_progress_bg:     #eef2ff;
+	--assistant_progress_border: #c7d2fe;
+	--assistant_progress_text:   var(--assistant_text); // 5.62:1 on --assistant_progress_bg
+
+	// --- status tints: ONE light triple per state (bg / ink / edge), Tailwind
+	// 50 / 800 / 200 steps so the three states are siblings. Each ink is AA on
+	// its own tint; --fg_default (#353535) inherited into these tints (plan
+	// card, apply report) sits above 12:1; the failed-row red is AA on the
+	// ok tint too (7.94:1) because the apply report mixes them.
+	--assistant_ok_bg:     #f0fdf4;
+	--assistant_ok_text:   #166534; // 6.81:1 on --assistant_ok_bg
+	--assistant_ok_border: #bbf7d0;
+	--assistant_warn_bg:     #fefce8;
+	--assistant_warn_text:   #854d0e; // 6.62:1 on --assistant_warn_bg
+	--assistant_warn_border: #fde68a;
+	--assistant_err_bg:     #fef2f2;
+	--assistant_err_text:   #991b1b; // 7.60:1 on --assistant_err_bg
+	--assistant_err_border: #fecaca;
+
+	// --- inline code / args / attachment chips: a translucent darkening of
+	// whatever sits under it (inherits the surface's ink; not a judged pair)
+	--assistant_pre_bg: rgba(0, 0, 0, 0.05);
+}
+
+// Dark twins. Self-contained, like tool_print / tool_identify: nothing in
+// layout/theme_dark.less names this tool. `:root[data-theme="dark"]` (0,2,0)
+// outranks the bare `:root` above from any sheet, so these win under every
+// dark palette combination (dark, redesign-dark, redesign-pine-dark).
+//
+// The text-bearing fill follows the brand's dark-theme rule: the fill goes
+// LIGHT and its ink goes DARK (theme_dark.less --color_orange_dedalo #ffa54a /
+// --fg_on_brand #16181b). A deep indigo kept from light would sit at 2.69:1 on
+// --bg_surface #1b1d20 — a button that does not separate from its ground —
+// while indigo-400 clears 5.66:1 there and carries the dark ink at 5.96:1.
+:root[data-theme="dark"] {
+	--assistant_fill:       #818cf8; // indigo-400: --assistant_on_fill on it 5.96:1; 5.66:1 against --bg_surface
+	--assistant_fill_hover: #a5b4fc; // indigo-300: 8.92:1 under the same ink — hover LIFTS in dark, mirroring light's deepen
+	--assistant_on_fill:    #16181b; // = --fg_on_brand's dark value, same reason
+	--assistant_text:       #a5b4fc; // 7.51:1 on --bg_elevated #24272d (indigo-600 as ink was 2.38:1 here)
+
+	--assistant_progress_bg:     #1e1f3a;
+	--assistant_progress_border: #2f3360;
+	--assistant_progress_text:   #b8bcf0; // 8.76:1 on --assistant_progress_bg
+	--assistant_ok_bg:           #16271c;
+	--assistant_ok_text:         #7ee2a8; // 9.94:1
+	--assistant_ok_border:       #2c5038;
+	--assistant_warn_bg:         #2a2410;
+	--assistant_warn_text:       #e8c97a; // 9.62:1
+	--assistant_warn_border:     #4a4020;
+	--assistant_err_bg:          #2a1818;
+	--assistant_err_text:        #f08a8a; // 7.01:1; 6.49:1 on the ok tint (apply report's failed row)
+	--assistant_err_border:      #5a3030;
+	--assistant_pre_bg:          rgba(255, 255, 255, 0.06);
 }
 .tool_header.tool_assistant {
 	background-color: var(--tool_assistant);
 }
-@assistant_color_light: #818cf8;
-@assistant_color_dark: #4f46e5;
 // Structural colors mapped to semantic tokens so they follow the active theme.
-// Dark overrides for the status-tinted surfaces live in the block at the end.
 @border_color: var(--border_default);
 @text_muted: var(--fg_muted);
 
@@ -203,8 +283,8 @@
 
 .assistant_settings_apply {
 	align-self: flex-end;
-	background-color: @assistant_color;
-	color: #fff;
+	background-color: var(--assistant_fill);
+	color: var(--assistant_on_fill);
 	border: none;
 	border-radius: var(--radius-md);
 	padding: 0.35rem 0.85rem;
@@ -212,7 +292,7 @@
 	cursor: pointer;
 
 	&:hover {
-		background-color: @assistant_color_dark;
+		background-color: var(--assistant_fill_hover);
 	}
 }
 
@@ -221,27 +301,33 @@
 	display: flex;
 	align-items: center;
 	padding: 0.35rem 1rem;
-	background-color: var(--assistant_progress_bg, #eef2ff);
-	border-bottom: 1px solid var(--assistant_progress_border, #c7d2fe);
+	background-color: var(--assistant_progress_bg);
+	border-bottom: 1px solid var(--assistant_progress_border);
 	position: relative;
 	height: 1.5rem;
 	flex-shrink: 0;
 }
 
+// The advancing fill is an EDGE along the bottom of the strip, not a slab
+// behind the label: as a full-height slab it slid under the percentage and
+// painted indigo ink on the indigo identity hue — 1.41:1 in light, 2.44:1 in
+// dark, the same dead-zone the tool header doctrine retired. The label now
+// always sits on --assistant_progress_bg; the identity hue still shows the
+// progress, the way the header's 4px strip shows the tool.
 .assistant_progress_fill {
-	height: 100%;
-	background-color: @assistant_color;
+	height: 3px;
+	background-color: var(--tool_assistant);
 	border-radius: 2px;
 	transition: width var(--transition-slow);
 	position: absolute;
-	top: 0;
+	bottom: 0;
 	left: 0;
 }
 
 .assistant_progress_text {
 	position: relative;
 	z-index: 1;
-	color: var(--assistant_progress_text, @assistant_color_dark);
+	color: var(--assistant_progress_text);
 	font-size: 0.75rem;
 	font-weight: 600;
 }
@@ -272,8 +358,8 @@
 
 .assistant_user_message {
 	align-self: flex-end;
-	background-color: @assistant_color;
-	color: #fff;
+	background-color: var(--assistant_fill);
+	color: var(--assistant_on_fill);
 	border-bottom-right-radius: 0.2rem;
 	white-space: pre-wrap;
 }
@@ -300,7 +386,7 @@
 	.md_blockquote {
 		margin: 0.4rem 0;
 		padding: 0.25rem 0.6rem;
-		border-left: 3px solid @assistant_color_light;
+		border-left: 3px solid var(--tool_assistant); // a 3px rule: the identity hue's job
 		color: @text_muted;
 	}
 	.md_code_inline {
@@ -327,7 +413,7 @@
 		}
 	}
 	a {
-		color: @assistant_color_dark;
+		color: var(--assistant_text); // 6.29:1 / 7.51:1 on --bg_elevated per theme
 		text-decoration: underline;
 	}
 }
@@ -422,9 +508,9 @@
 	justify-content: center;
 
 	&.copied {
-		color: var(--assistant_ok_text, #166534);
-		background-color: var(--assistant_ok_bg, #dcfce7);
-		border-color: var(--assistant_ok_border, #86efac);
+		color: var(--assistant_ok_text);
+		background-color: var(--assistant_ok_bg);
+		border-color: var(--assistant_ok_border);
 	}
 }
 
@@ -435,9 +521,9 @@
 // tool call (now <details>)
 .assistant_tool_call {
 	align-self: flex-start;
-	background-color: var(--assistant_ok_bg, #f0fdf4);
-	color: var(--assistant_ok_text, #166534);
-	border: 1px solid var(--assistant_ok_border, #bbf7d0);
+	background-color: var(--assistant_ok_bg);
+	color: var(--assistant_ok_text);
+	border: 1px solid var(--assistant_ok_border);
 	border-radius: 0.5rem;
 	padding: 0.3rem 0.6rem;
 	font-size: 0.75rem;
@@ -458,15 +544,15 @@
 }
 
 .assistant_tool_call_calling {
-	background-color: var(--assistant_warn_bg, #fefce8);
-	color: var(--assistant_warn_text, #854d0e);
-	border-color: var(--assistant_warn_border, #fde68a);
+	background-color: var(--assistant_warn_bg);
+	color: var(--assistant_warn_text);
+	border-color: var(--assistant_warn_border);
 }
 
 .assistant_tool_call_error {
-	background-color: var(--assistant_err_bg, #fef2f2);
-	color: var(--assistant_err_text, #991b1b);
-	border-color: var(--assistant_err_border, #fecaca);
+	background-color: var(--assistant_err_bg);
+	color: var(--assistant_err_text);
+	border-color: var(--assistant_err_border);
 }
 
 .assistant_tool_call_denied {
@@ -486,7 +572,7 @@
 .assistant_tool_call_pre {
 	margin: 0.15rem 0 0.25rem;
 	padding: 0.4rem 0.5rem;
-	background-color: var(--assistant_pre_bg, rgba(0,0,0,0.04));
+	background-color: var(--assistant_pre_bg);
 	border-radius: var(--radius-md);
 	max-height: 240px;
 	overflow: auto;
@@ -538,8 +624,8 @@
 
 .assistant_send_button,
 .assistant_stop_button {
-	background-color: @assistant_color;
-	color: #fff;
+	background-color: var(--assistant_fill);
+	color: var(--assistant_on_fill);
 	border: none;
 	border-radius: 0.5rem;
 	width: 2.2rem;
@@ -553,20 +639,32 @@
 	transition: background-color var(--transition-fast);
 
 	&:hover {
-		background-color: @assistant_color_dark;
+		background-color: var(--assistant_fill_hover);
 	}
 
+	// Nothing to send: the button steps out of the identity hue onto the
+	// recessed surface, the same pair the disabled input above uses. The old
+	// indigo-200 tint (a tool-private --assistant_disabled_bg) left the arrow
+	// at 1.5:1 in light under the inherited white; --fg_muted on
+	// --bg_surface_alt is the core pair tuned AA on every palette axis
+	// (audit P1-18), so the tool declares nothing of its own for this state.
 	&:disabled {
-		background-color: var(--assistant_disabled_bg, #c7d2fe);
+		background-color: var(--bg_surface_alt);
+		color: var(--fg_muted);
 		cursor: not-allowed;
 	}
 }
 
 .assistant_stop_button {
+	// The danger fill flips lightness per theme exactly as the warning fill
+	// does (#dc3545 → #ef5560), so it borrows the warning fill's ink: white in
+	// light (4.53:1), near-black in dark (5.20:1). --assistant_on_fill would be
+	// 3.42:1 here in dark; --color_white is not an ink (vars_tokens.less).
 	background-color: var(--color_danger);
+	color: var(--fg_on_warning);
 
 	&:hover {
-		background-color: var(--color_danger_hover_bg);
+		background-color: var(--color_danger_hover_bg); // 5.14:1 light; 4.25:1 dark — transient, the resting state is the judged one
 	}
 }
 
@@ -592,7 +690,7 @@
 
 	&.active {
 		opacity: 1;
-		border-bottom: 2px solid @assistant_color;
+		border-bottom: 2px solid var(--tool_assistant);
 	}
 }
 
@@ -601,14 +699,14 @@
 // egress badge variants on the toolbar model badge
 .assistant_model_badge {
 	&.assistant_egress_badge_local {
-		background-color: var(--assistant_ok_bg, #e8f7ee);
-		color: var(--assistant_ok_text, #1a7f43);
-		border: 1px solid var(--assistant_ok_border, #bfe5cd);
+		background-color: var(--assistant_ok_bg);
+		color: var(--assistant_ok_text);
+		border: 1px solid var(--assistant_ok_border);
 	}
 	&.assistant_egress_badge_external {
-		background-color: var(--assistant_warn_bg, #fdf6e3);
-		color: var(--assistant_warn_text, #8a6d1a);
-		border: 1px solid var(--assistant_warn_border, #ecd9a0);
+		background-color: var(--assistant_warn_bg);
+		color: var(--assistant_warn_text);
+		border: 1px solid var(--assistant_warn_border);
 	}
 }
 
@@ -626,9 +724,9 @@
 .assistant_plan_card {
 	margin: 8px 0;
 	padding: 10px 12px;
-	border: 1px solid var(--assistant_warn_border, #ecd9a0);
+	border: 1px solid var(--assistant_warn_border);
 	border-radius: 8px;
-	background-color: var(--assistant_warn_bg, #fdf6e3);
+	background-color: var(--assistant_warn_bg);
 	font-size: 0.92em;
 
 	.assistant_plan_title {
@@ -647,7 +745,7 @@
 		font-size: 0.85em;
 		padding: 1px 4px;
 		border-radius: 4px;
-		background-color: var(--assistant_pre_bg, rgba(0, 0, 0, 0.05));
+		background-color: var(--assistant_pre_bg);
 	}
 	// the ACTUAL args that will execute (never just the model's summary)
 	.assistant_plan_args {
@@ -659,25 +757,25 @@
 		max-height: 12em;
 		overflow: auto;
 		border-radius: 4px;
-		background-color: var(--assistant_pre_bg, rgba(0, 0, 0, 0.05));
+		background-color: var(--assistant_pre_bg);
 	}
 	.assistant_plan_actions {
 		display: flex;
 		gap: 8px;
 	}
 	.assistant_plan_apply {
-		background-color: @assistant_color;
-		color: #fff;
+		background-color: var(--assistant_fill);
+		color: var(--assistant_on_fill);
 		border: none;
 		border-radius: 6px;
 		padding: 4px 14px;
 		cursor: pointer;
-		&:hover { background-color: @assistant_color_dark; }
+		&:hover { background-color: var(--assistant_fill_hover); }
 		&:disabled { opacity: 0.5; cursor: default; }
 	}
 	.assistant_plan_cancel {
 		background: transparent;
-		border: 1px solid var(--assistant_warn_border, #ecd9a0);
+		border: 1px solid var(--assistant_warn_border);
 		border-radius: 6px;
 		padding: 4px 14px;
 		cursor: pointer;
@@ -691,13 +789,13 @@
 	margin: 8px 0;
 	padding: 8px 12px;
 	border-radius: 8px;
-	border: 1px solid var(--assistant_ok_border, #bfe5cd);
-	background-color: var(--assistant_ok_bg, #e8f7ee);
+	border: 1px solid var(--assistant_ok_border);
+	background-color: var(--assistant_ok_bg);
 	font-size: 0.92em;
 
 	.assistant_apply_row {
 		margin: 2px 0;
-		&.is_failed { color: var(--assistant_err_text, #b03030); }
+		&.is_failed { color: var(--assistant_err_text); }
 		&.is_skipped { opacity: 0.7; }
 	}
 }
@@ -724,27 +822,6 @@
 		font-size: 0.85em;
 		padding: 2px 8px;
 		border-radius: 10px;
-		background-color: var(--assistant_pre_bg, rgba(0, 0, 0, 0.05));
+		background-color: var(--assistant_pre_bg);
 	}
-}
-
-// ---- DARK THEME OVERRIDES ----
-// Structural surfaces/text already follow semantic tokens above. Only the
-// status-tinted chips (success/warning/error), the indigo progress strip, and
-// a couple of fixed light tints need dark-optimized values here.
-:root[data-theme="dark"] {
-	--assistant_progress_bg:     #1e1f3a;
-	--assistant_progress_border: #2f3360;
-	--assistant_progress_text:   #b8bcf0;
-	--assistant_ok_bg:           #16271c;
-	--assistant_ok_text:         #7ee2a8;
-	--assistant_ok_border:       #2c5038;
-	--assistant_warn_bg:         #2a2410;
-	--assistant_warn_text:       #e8c97a;
-	--assistant_warn_border:     #4a4020;
-	--assistant_err_bg:          #2a1818;
-	--assistant_err_text:        #f08a8a;
-	--assistant_err_border:      #5a3030;
-	--assistant_pre_bg:          rgba(255, 255, 255, 0.06);
-	--assistant_disabled_bg:     #2f3360;
 }

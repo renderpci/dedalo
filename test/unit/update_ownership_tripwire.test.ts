@@ -96,6 +96,8 @@ const ENGINE_NATIVE: Record<string, string> = {
 		'matrix_counter repair through the TS write path (PHP-parity action)',
 	'counters_status.reconcile_media_counters':
 		'matrix_counter repair through the TS write path — the restore-day reconcile against the MEDIA tree (P0-14/LIFE-01); raise-only and dry by default',
+	'reconcile_status.run_reconcile':
+		'the reconcile REGISTRY door (core/reconcile, S-10): runs one registered cross-store reconcile through the TS write paths it wraps — dry by default, apply only on the explicit flag',
 	'counters_status.repair_all_counters':
 		'matrix_counter repair through the TS write path — the bulk form of modify_counter fix (P0-14); raise-only',
 	'dataframe_control.get_value': 'read-only dataframe panel',
@@ -143,6 +145,15 @@ function allActions(): ActionEntry[] {
 }
 
 describe('ownership classification is TOTAL over the widget registry', () => {
+	test('the registry census is populated (a classification over nothing classifies nothing)', () => {
+		// 33 modules / 60+ actions on 2026-09-02. ALL_WIDGET_MODULES is the live
+		// registry, not a hand list, but an emptied registry — a refactor that
+		// left CORE_WIDGET_MODULES behind — would make every TOTAL assertion below
+		// pass vacuously (census_derivation_tripwire, P2-20).
+		expect(ALL_WIDGET_MODULES.length).toBeGreaterThanOrEqual(30);
+		expect(allActions().length).toBeGreaterThan(30);
+	});
+
 	test('every apiActions entry is gated, denied, or a named ENGINE_NATIVE exemption', () => {
 		const unclassified: string[] = [];
 		const doubleClassified: string[] = [];
@@ -235,9 +246,11 @@ describe('TLS peer verification stays ON (WC-023 D1)', () => {
 	test("no 'rejectUnauthorized: false' in src/ or tools/ runtime code", () => {
 		const banned = /rejectUnauthorized['"]?\s*:\s*false/;
 		const offenders: string[] = [];
+		let scanned = 0;
 		const glob = new Glob('{src,tools}/**/*.ts');
 		for (const rel of glob.scanSync({ cwd: REPO_ROOT })) {
 			if (rel.endsWith('.test.ts')) continue;
+			scanned += 1;
 			const raw = readFileSync(join(REPO_ROOT, rel), 'utf8');
 			const stripped = raw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 			if (banned.test(stripped)) offenders.push(rel);
@@ -246,6 +259,7 @@ describe('TLS peer verification stays ON (WC-023 D1)', () => {
 			offenders,
 			'TLS peer verification must never be disabled (PHP ssl_verifypeer=false is the weakness this port rejects; pin private CAs via NODE_EXTRA_CA_CERTS):',
 		).toEqual([]);
+		expect(scanned).toBeGreaterThan(600); // anti-vacuity: the walk saw the engine
 	});
 });
 
@@ -275,10 +289,12 @@ describe('engine-version single source (core/update/version.ts)', () => {
 		// have gone red the moment a release was cut — and nothing said so,
 		// because the scan stopped at src/ and tools/. A version literal is the
 		// same defect wherever it lives; the derived rung belongs to the catalog.
+		let scanned = 0;
 		const glob = new Glob('{src,tools,scripts}/**/*.ts');
 		for (const rel of glob.scanSync({ cwd: REPO_ROOT })) {
 			if (rel === join('src', 'core', 'update', 'version.ts')) continue;
 			if (rel.endsWith('.test.ts')) continue;
+			scanned += 1;
 			const raw = readFileSync(join(REPO_ROOT, rel), 'utf8');
 			// strip block comments, then line-comment tails
 			const stripped = raw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
@@ -290,5 +306,6 @@ describe('engine-version single source (core/update/version.ts)', () => {
 			offenders,
 			'engine/data version literals belong in src/core/update/version.ts ONLY (import the exported shapes):',
 		).toEqual([]);
+		expect(scanned).toBeGreaterThan(700); // anti-vacuity: src/ + tools/ + scripts/ were walked
 	});
 });

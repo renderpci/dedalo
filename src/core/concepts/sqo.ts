@@ -23,6 +23,12 @@
 import { z } from 'zod';
 import { config } from '../../config/config.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
+import {
+	boundedFreeText,
+	boundedIdentifier,
+	boundedLang,
+	boundedShortName,
+} from './scalar_bounds.ts';
 
 /** Max rows an untrusted (client) SQO may request. PHP: DEDALO_SEARCH_CLIENT_MAX_LIMIT. */
 export const CLIENT_MAX_LIMIT = config.features.searchClientMaxLimit;
@@ -49,14 +55,14 @@ export const SERVER_ONLY_SQO_KEYS: readonly string[] = [
 /** One step of a filter path: which component of which section to match on. */
 export const sqoPathStepSchema = z
 	.object({
-		section_tipo: z.string().optional(),
-		component_tipo: z.string().optional(),
-		name: z.string().optional(), // human label, ontology-authored; ignored by SQL build
+		section_tipo: boundedIdentifier().optional(),
+		component_tipo: boundedIdentifier().optional(),
+		name: boundedFreeText().optional(), // human label, ontology-authored; ignored by SQL build
 		// ORDER paths only: name an exact DB column to sort by (id/section_id/…),
 		// as an alternative to `component_tipo` (a component value). `component_tipo`
 		// wins when both are present. Validated against VALID_DATA_COLUMNS at SQL
 		// build (buildOrderClauses); NOT a server-only key, so it survives sanitize.
-		column: z.string().optional(),
+		column: boundedIdentifier().optional(),
 	})
 	.passthrough();
 export type SqoPathStep = z.infer<typeof sqoPathStepSchema>;
@@ -72,14 +78,14 @@ export const sqoFilterLeafSchema = z
 		q: z.unknown().optional(),
 		// The REAL client sends explicit null for an unset operator (verified in
 		// the browser E2E); accept + treat as absent (see conform.ts `?? null`).
-		q_operator: z.string().nullish(),
+		q_operator: boundedShortName().nullish(),
 		path: z.array(sqoPathStepSchema).optional(),
-		format: z.string().optional(), // direct | array_elements | typeof | column | in_column | relation | function (deprecated)
-		use_function: z.string().optional(), // DEPRECATED (format:'function' only): legacy flat-variant name, e.g. relations_flat_fct_st_si — wire vocabulary, no DB function exists
+		format: boundedShortName().optional(), // direct | array_elements | typeof | column | in_column | relation | function (deprecated)
+		use_function: boundedIdentifier().optional(), // DEPRECATED (format:'function' only): legacy flat-variant name, e.g. relations_flat_fct_st_si — wire vocabulary, no DB function exists
 		q_split: z.boolean().optional(),
 		unaccent: z.boolean().optional(),
-		type: z.string().optional(), // jsonb | string
-		lang: z.string().optional(),
+		type: boundedShortName().optional(), // jsonb | string
+		lang: boundedLang().optional(),
 	})
 	.passthrough();
 export type SqoFilterLeaf = z.infer<typeof sqoFilterLeafSchema>;
@@ -110,8 +116,8 @@ export const sqoOrderSchema = z
 /** Locator-shaped record pin used by filter_by_locators. */
 export const sqoLocatorPinSchema = z
 	.object({
-		section_tipo: z.string(),
-		section_id: z.union([z.number(), z.string()]),
+		section_tipo: boundedIdentifier(),
+		section_id: z.union([z.number(), boundedIdentifier()]),
 	})
 	.passthrough();
 
@@ -123,16 +129,16 @@ export const sqoLocatorPinSchema = z
 export const sqoSchema = z
 	.object({
 		/** Optional identifier, e.g. 'oh1_list'. */
-		id: z.string().nullish(),
+		id: boundedIdentifier().nullish(),
 		/** MANDATORY target section(s). Single string accepted, normalized to array. */
-		section_tipo: z.union([z.string(), z.array(z.string())]),
+		section_tipo: z.union([boundedIdentifier(), z.array(boundedIdentifier())]),
 		/** Which matrix table model to target: edit | list | tm | related. */
-		mode: z.string().nullish(),
+		mode: boundedShortName().nullish(),
 		filter: sqoFilterNodeSchema.optional().nullable(),
 		select: z.array(sqoPathStepSchema).nullish(),
 		// The REAL client sends explicit nulls for unset limit/offset (verified in
 		// the browser E2E); accept + treat as absent ('all' allowed server-side only).
-		limit: z.union([z.number(), z.string()]).nullish(),
+		limit: z.union([z.number(), boundedShortName()]).nullish(),
 		offset: z.number().nullish(),
 		total: z.number().nullable().optional(),
 		full_count: z.boolean().nullish(),
@@ -207,6 +213,45 @@ function stripServerOnlyKeysRecursive(
 }
 
 /**
+ * THE client limit clamp (DEC-07, audit P2-31 / CLI-29 / CLI-30). Every limit an
+ * untrusted client sends — an SQO `limit`, the tree children door's
+ * `pagination.limit` — goes through here and comes out a positive integer no
+ * larger than CLIENT_MAX_LIMIT:
+ *
+ * - 0, negative, 'all', non-numeric, > ceiling → CLIENT_MAX_LIMIT (an EXPLICIT
+ *   ask beyond the ceiling gets a loud server-log line: the response is
+ *   truncated and a completeness consumer must be able to see that);
+ * - an absent limit (undefined/null) → CLIENT_MAX_LIMIT silently (the shape
+ *   default; callers that want another default resolve it BEFORE calling).
+ *
+ * The client mirrors the bound (client/dedalo/core/common/js/sqo_limit.js reads
+ * `page_globals.dedalo_search_client_max_limit`) so it never sends 0 at all;
+ * this is the server's own refusal to treat 0 as "unbounded", whatever arrives.
+ *
+ * @param rawLimit the client value, any type
+ * @param scope a label for the log line (the section_tipo, or the door)
+ */
+/** The client's raw limit as an integer: a number truncated, anything else parsed. */
+function parsedClientLimit(rawLimit: unknown): number {
+	return typeof rawLimit === 'number'
+		? Math.trunc(rawLimit)
+		: Number.parseInt(String(rawLimit ?? ''), 10);
+}
+
+export function clampClientLimit(rawLimit: unknown, scope: string): number {
+	const limit = parsedClientLimit(rawLimit);
+	if (Number.isFinite(limit) && limit > 0 && limit <= CLIENT_MAX_LIMIT) {
+		return limit;
+	}
+	if (rawLimit !== undefined && rawLimit !== null) {
+		console.warn(
+			`[sqo] client limit ${JSON.stringify(rawLimit)} (section_tipo ${scope}) clamped to CLIENT_MAX_LIMIT=${CLIENT_MAX_LIMIT} — response may be truncated (DEC-07)`,
+		);
+	}
+	return CLIENT_MAX_LIMIT;
+}
+
+/**
  * §7.5 SECURITY GATE — scrub an untrusted client SQO before it may enter the
  * search pipeline. PHP: search_query_object::sanitize_client_sqo (:834).
  *
@@ -224,27 +269,12 @@ export function sanitizeClientSqo(untrustedSqo: Record<string, unknown>): Sqo {
 		unknown
 	>;
 
-	// limit: clamp to the client ceiling
-	const rawLimit = stripped.limit;
-	let limit =
-		typeof rawLimit === 'number'
-			? Math.trunc(rawLimit)
-			: Number.parseInt(String(rawLimit ?? ''), 10);
-	if (!Number.isFinite(limit) || limit <= 0 || limit > CLIENT_MAX_LIMIT) {
-		// DEC-07: the ceiling stays; the SILENCE was the defect. An EXPLICIT ask
-		// beyond it ("show all" sends 0/'all', exports send big numbers) gets a
-		// loud line — the caller's response is truncated at the ceiling and data-
-		// completeness consumers (exports, scripts) must be able to see that in
-		// the server log. An ABSENT limit is just the shape default: stay quiet.
-		if (rawLimit !== undefined && rawLimit !== null) {
-			const sectionTipo = typeof stripped.section_tipo === 'string' ? stripped.section_tipo : '?';
-			console.warn(
-				`[sqo] client limit ${JSON.stringify(rawLimit)} (section_tipo ${sectionTipo}) clamped to CLIENT_MAX_LIMIT=${CLIENT_MAX_LIMIT} — response may be truncated (DEC-07)`,
-			);
-		}
-		limit = CLIENT_MAX_LIMIT;
-	}
-	stripped.limit = limit;
+	// limit: clamp to the client ceiling (the ONE clamp — the tree children door
+	// applies the same function to its pagination.limit, ts_api.ts).
+	stripped.limit = clampClientLimit(
+		stripped.limit,
+		typeof stripped.section_tipo === 'string' ? stripped.section_tipo : '?',
+	);
 
 	// offset / total: integer coercion; clamp offset to >= 0 (INJ-06 — a negative
 	// offset is meaningless and must never reach the assembler as a raw value).

@@ -27,8 +27,27 @@ import { join, resolve, sep } from 'node:path';
 /** The per-model manifest file, inside the model's own directory. */
 export const MANIFEST_FILE = '.dedalo_model.json';
 
+/**
+ * One file's completion claim. `size` is what every writer records; `sha256` +
+ * `revision` are what the DOWNLOADER records after verifying the bytes against
+ * `model_pins.json` (2026-09-04, P1-25) — a claim the serving door and
+ * `verify_model` re-check. A size-only entry is a pre-pin claim (or the hub-HEAD
+ * claim `verify_model` makes for an unpinned file) and is served `unverified`.
+ */
+export interface ManifestFileEntry {
+	size: number;
+	sha256?: string;
+	revision?: string;
+}
+
 export interface ModelManifest {
-	files: Record<string, { size: number }>;
+	files: Record<string, ManifestFileEntry>;
+}
+
+/** The integrity half of a completion claim — recorded only after a digest MATCH. */
+export interface FileIntegrity {
+	sha256: string;
+	revision: string;
 }
 
 /** Same segment law as model_fetch.resolveFetchTarget: no traversal, no URL breakers. */
@@ -70,21 +89,34 @@ export function expectedSize(store: string, modelId: string, file: string): numb
 	return typeof entry?.size === 'number' ? entry.size : null;
 }
 
+/** The recorded sha256 of one file, or null when it was never verified. */
+export function expectedDigest(store: string, modelId: string, file: string): string | null {
+	if (!isSafe(file)) return null;
+	const entry = readManifest(store, modelId).files[file];
+	return typeof entry?.sha256 === 'string' ? entry.sha256 : null;
+}
+
 /**
- * Record that one file completed at `size` bytes. Read-modify-write: a model's
+ * Record that one file completed at `size` bytes — and, when the caller VERIFIED
+ * the bytes, at which digest and hub revision. Read-modify-write: a model's
  * files are fetched sequentially by downloadModel, so there is no concurrent
- * writer to lose.
+ * writer to lose. A size-only record REPLACES any earlier digest claim: the
+ * entry describes the file as it is now, and "verified" is never inherited.
  */
 export function recordFileComplete(
 	store: string,
 	modelId: string,
 	file: string,
 	size: number,
+	integrity?: FileIntegrity,
 ): void {
 	const path = manifestPath(store, modelId);
 	if (path === null || !isSafe(file)) return;
 	const manifest = readManifest(store, modelId);
-	manifest.files[file] = { size };
+	manifest.files[file] =
+		integrity === undefined
+			? { size }
+			: { size, sha256: integrity.sha256, revision: integrity.revision };
 	try {
 		writeFileSync(path, JSON.stringify(manifest, null, '\t'));
 	} catch (error) {

@@ -45,15 +45,10 @@
 
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
-import { Glob } from 'bun';
+import { join } from 'node:path';
 import { MATRIX_TABLE_ALLOWLIST } from '../../src/core/db/matrix.ts';
 import { counterFloorExpression } from '../../src/core/db/matrix_write.ts';
-
-const REPO_ROOT = join(import.meta.dir, '..', '..');
-
-/** Roots of the census. `test/` is excluded: it is not the engine. */
-const CENSUS_ROOTS = ['src', 'tools', 'scripts'] as const;
+import { REPO_ROOT, writePathSourceFiles } from '../helpers/write_path_corpus.ts';
 
 /**
  * Hard cap on how far past the DML verb the shape classifier reads, when the
@@ -110,18 +105,14 @@ const EXEMPT_COUNTER_WRITERS: Readonly<Record<string, { writes: number; reason: 
 	},
 };
 
-/** All non-test TS sources under the census roots, repo-relative. */
-function censusFiles(): string[] {
-	const files: string[] = [];
-	for (const dir of CENSUS_ROOTS) {
-		const glob = new Glob('**/*.ts');
-		for (const match of glob.scanSync({ cwd: join(REPO_ROOT, dir) })) {
-			if (match.endsWith('.test.ts')) continue;
-			files.push(relative(REPO_ROOT, join(REPO_ROOT, dir, match)));
-		}
-	}
-	return files.sort();
-}
+/**
+ * The census corpus — src/, tools/ and scripts/; `test/` is excluded: it is not
+ * the engine. ONE lister shared with the other write-path gates
+ * (test/helpers/write_path_corpus.ts, 2026-09-02): this gate was the only one
+ * of the four that already scanned scripts/, which is exactly the drift a
+ * shared root list makes impossible.
+ */
+const censusFiles = writePathSourceFiles;
 
 interface CounterWrite {
 	file: string;

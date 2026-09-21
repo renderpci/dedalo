@@ -29,6 +29,7 @@ import { resolveRelations, resolveInverseRelations, normalizeResolveRelations, n
 import { assertTableExists, tableHasColumn } from './schema.service';
 import type { TextFragment, AvFragment, MediaInfo } from '../db/types';
 import type { DbRow } from '../db/types';
+import { clampLimit, clampOffset } from '../validators';
 
 export interface FulltextOptions {
   q: string;
@@ -82,7 +83,13 @@ export async function fulltextSearch(
   table: string,
   options: FulltextOptions,
 ): Promise<{ rows: Record<string, unknown>[]; total?: number }> {
-  const { q, column, limit, offset, withTotal = false } = options;
+  // Clamped, not trusted — this statement writes its own LIMIT rather than going through
+  // db/query-builder.ts, so it needs the same backstop the builder has (validators.ts
+  // clampLimit): the page bound must hold for every door and every caller, not only for
+  // requests that arrived through an entry schema.
+  const { q, column, withTotal = false } = options;
+  const limit = clampLimit(options.limit);
+  const offset = clampOffset(options.offset);
 
   await assertTableExists(db, table);
   await assertSearchableColumn(db, table, column);

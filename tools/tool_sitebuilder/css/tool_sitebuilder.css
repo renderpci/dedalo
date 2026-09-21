@@ -11,15 +11,31 @@
 * as the regression it exists to catch, and one declaring itself TOTAL over
 * tools while seeing 36 of 37 and flooring at `> 30`.
 *
-* Plain CSS is valid Less, so this is the existing bytes verbatim: recording the
-* source, not restyling the tool. Edit HERE; the .css is built output.
+* Plain CSS is valid Less, so the STRUCTURE here is the existing bytes verbatim:
+* recording the source, not restyling the tool. The COLOUR layer is no longer
+* verbatim — see the note below. Edit HERE; the .css is built output.
 */
 /* tool_sitebuilder — the three-pane workspace: sites | chat | preview. */
 :root {
   --tool_sitebuilder: #0e7490;
 }
+:root[data-theme="dark"] {
+  --tool_sitebuilder: #1590b0;
+}
 .tool_header.tool_sitebuilder {
   background-color: var(--tool_sitebuilder);
+}
+:root {
+  --sitebuilder_row_hover_bg: #f0f0f0;
+  --sitebuilder_selected_bg: #e3edfa;
+  --sitebuilder_running_fg: #17692c;
+  --sitebuilder_publish_fg: var(--fg_inverse);
+}
+:root[data-theme="dark"] {
+  --sitebuilder_row_hover_bg: #292b2d;
+  --sitebuilder_selected_bg: #263345;
+  --sitebuilder_running_fg: var(--color_success);
+  --sitebuilder_publish_fg: var(--fg_on_accent);
 }
 .tool_sitebuilder {
   display: grid;
@@ -27,10 +43,10 @@
   gap: 1px;
   height: 100%;
   min-height: 70vh;
-  background: var(--border_color, #d0d0d0);
+  background: var(--border_strong);
 }
 .tool_sitebuilder .sb_pane {
-  background: var(--background_color, #fff);
+  background: var(--bg_surface);
   overflow: auto;
   display: flex;
   flex-direction: column;
@@ -74,14 +90,14 @@
   border-radius: 4px;
 }
 .sb_site:hover {
-  background: var(--hover_color, #f0f0f0);
+  background: var(--sitebuilder_row_hover_bg);
 }
 .sb_site.is_selected {
-  background: var(--selected_color, #e3edfa);
+  background: var(--sitebuilder_selected_bg);
   font-weight: 600;
 }
 .sb_site_state {
-  color: #2e9e4f;
+  color: var(--sitebuilder_running_fg);
 }
 /* --- chat pane --- */
 .sb_chat_log {
@@ -96,41 +112,41 @@
   word-break: break-word;
 }
 .sb_user {
-  background: var(--selected_color, #e3edfa);
+  background: var(--sitebuilder_selected_bg);
   padding: 6px 8px;
   border-radius: 6px;
 }
 .sb_tool {
-  color: #666;
+  color: var(--fg_muted);
   font-family: monospace;
   font-size: 0.82rem;
 }
 .sb_files {
-  color: #4a6;
+  color: var(--color_success);
   font-size: 0.82rem;
 }
 .sb_turn {
-  color: #999;
+  color: var(--fg_muted);
   text-align: center;
   font-size: 0.78rem;
 }
 .sb_turn_end {
-  color: #2e9e4f;
+  color: var(--color_success);
   font-size: 0.82rem;
 }
 .sb_error {
-  color: #c33;
+  color: var(--color_danger);
 }
 .sb_notice {
-  color: #a70;
+  color: var(--color_warning);
   font-size: 0.82rem;
 }
 .sb_build_status {
-  color: #37c;
+  color: var(--color_info);
   font-size: 0.82rem;
 }
 .sb_history_note {
-  color: #999;
+  color: var(--fg_muted);
   font-style: italic;
   font-size: 0.8rem;
 }
@@ -139,7 +155,7 @@
   flex-wrap: wrap;
   gap: 6px;
   padding: 8px;
-  border-top: 1px solid var(--border_color, #ddd);
+  border-top: 1px solid var(--border_default);
 }
 .sb_prompt {
   flex: 1 1 100%;
@@ -152,8 +168,8 @@
   cursor: pointer;
 }
 .sb_send {
-  background: #2f6fdb;
-  color: #fff;
+  background: var(--color_primary);
+  color: var(--fg_inverse);
   border: none;
   border-radius: 4px;
 }
@@ -163,7 +179,7 @@
 }
 .sb_delete {
   margin-left: auto;
-  color: #c33;
+  color: var(--color_danger);
 }
 /* --- preview pane --- */
 .sb_preview_bar {
@@ -171,7 +187,7 @@
   gap: 8px;
   align-items: center;
   padding: 6px 8px;
-  border-bottom: 1px solid var(--border_color, #ddd);
+  border-bottom: 1px solid var(--border_default);
 }
 .sb_preview_bar button,
 .sb_preview_bar a {
@@ -181,8 +197,8 @@
 }
 .sb_publish {
   margin-left: auto;
-  background: #2e9e4f;
-  color: #fff;
+  background: var(--color_success);
+  color: var(--sitebuilder_publish_fg);
   border: none;
   border-radius: 4px;
 }
@@ -191,29 +207,15 @@
   width: 100%;
   border: 0;
   min-height: 60vh;
-  background: #fff;
+  background: #ffffff;
 }
 /* --- empty state --- */
 .sb_empty {
   padding: 40px;
   text-align: center;
-  color: #888;
+  color: var(--fg_muted);
 }
-@media (prefers-color-scheme: dark) {
-  .sb_preview_frame {
-    background: #fff;
-  }
-  .sb_site:hover {
-    background: rgba(255, 255, 255, 0.06);
-  }
-  .sb_site.is_selected {
-    background: rgba(90, 150, 240, 0.18);
-  }
-  .sb_user {
-    background: rgba(90, 150, 240, 0.18);
-  }
-}
-@media (max-width: 1100px) {
+@media screen and (max-width: 1024px) {
   .tool_sitebuilder {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto;

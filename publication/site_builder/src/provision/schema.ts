@@ -426,6 +426,13 @@ const pathsSchema = z.strictObject({
    * (RHEL's `conf.d/`), which is how such a host says "writing the file enables it".
    */
   vhost_enabled_dir: absolutePathSchema('paths.vhost_enabled_dir').optional(),
+  /**
+   * Where polkit reads its rules. `/etc/polkit-1/rules.d` everywhere polkit ships; stated
+   * here for the same reason `unit_dir` is, and it is not decoration — the agent
+   * authorization is a real file on a real host, and a host that keeps it elsewhere would
+   * otherwise be the one host this provisioner writes outside the tree it was pointed at.
+   */
+  polkit_rules_dir: absolutePathSchema('paths.polkit_rules_dir').optional(),
 });
 
 /**

@@ -52,10 +52,20 @@ import { stripComments } from '../../test/helpers/strip_comments.ts';
 /** Repo root (this file lives at scripts/lib/client_compat_census.ts). */
 export const REPO_ROOT = join(import.meta.dir, '..', '..');
 
-/** The scanned trees, repo-relative: `{root, glob}` pairs. */
+/**
+ * The scanned trees, repo-relative: `{root, glob}` pairs. Both globs are the
+ * WHOLE tree: browser JS is client code BY DESTINATION, wherever a tool keeps
+ * it — `tools/<tool>/js/` is the common shape, but a web worker under
+ * `transcribers/lib/`, a browser transformer under `translators/` are served
+ * to the browser too (a vendored QR library under `lib/` was, until it became
+ * a package pin on 2026-09-04). The old `*\/js/**`
+ * shape left nine tracked files outside both this census and the tripwire's
+ * fourth-wrapper scan (GATE-31, 2026-08-26); the tripwire now proves every
+ * tracked `.js` under these roots is reached (`git ls-files` ⊆ the scan).
+ */
 export const SCAN_ROOTS = [
 	{ root: 'client/dedalo', glob: '**/*.js' },
-	{ root: 'tools', glob: '*/js/**/*.js' },
+	{ root: 'tools', glob: '**/*.js' },
 ] as const;
 
 /** Excluded PATH PREFIXES (repo-relative) — the browser test suite fakes envelopes on purpose. */
@@ -279,7 +289,7 @@ export const NON_ENVELOPE_READS: readonly NonEnvelopeRead[] = [
 		pattern: /\bfiles\.errors\b/g,
 		reason: 'The dropped_files diagnostics above, read by the drop handler.',
 	},
-	// ── tools tree (tools/*/js) — literal expressions ──────────────────────────
+	// ── tools tree (tools/**, not only tools/*/js) — literal expressions ───────
 	// ── browser APIs ──────────────────────────────────────────────────────────
 	{
 		file: 'tools/tool_assistant/js/assistant_controller.js',

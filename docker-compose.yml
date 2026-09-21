@@ -136,7 +136,31 @@ services:
       # too, into the same directory. Same volume the `backup` service writes.
       - backups:/backups
     healthcheck:
-      test: ["CMD", "curl", "--fail", "--unix-socket", "/run/dedalo/dedalo_ts.sock", "http://localhost/health"]
+      # THE 503 GETS A CONSUMER (P2-33 / OPS-09).
+      #
+      # This used to be a bare `curl /health`, and under Compose a healthcheck
+      # has exactly two consumers: start ordering, and the `(unhealthy)` string
+      # in `docker ps`. Docker Engine never restarts an unhealthy container (only
+      # Swarm does) and `restart: unless-stopped` above fires on process EXIT —
+      # which a POISONED or WEDGED process never does, that being the whole point
+      # of the poison latch. So the three failure modes the engine is hardened to
+      # survive (poisoned process, wedged pool, database down) were permanent
+      # here, while the engine's own log said "the watchdog must recycle this
+      # process".
+      #
+      # scripts/ops/container_watchdog.sh runs the SAME probe and still exits
+      # non-zero on red (so `docker ps` reads exactly as before), but it also
+      # counts consecutive reds and, on the 3rd — matching `retries` below, which
+      # a gate holds equal to the script's threshold — SIGTERMs PID 1: the engine
+      # itself, which drains and exits, and `restart: unless-stopped` recycles
+      # the container. No docker.sock handed to a container, no extra image.
+      #
+      # It escalates only AFTER a first green probe, so it is inert while the
+      # browser wizard is open (no database yet ⇒ /health is red for as long as
+      # the operator takes) and during a slow boot.
+      #
+      # CADENCE: 3 x 30s ≈ 90 s to a recycle here — NOT systemd's 30 s.
+      test: ["CMD", "/opt/dedalo/master_dedalo/scripts/ops/container_watchdog.sh", "--socket", "/run/dedalo/dedalo_ts.sock"]
       interval: 30s
       timeout: 10s
       retries: 3

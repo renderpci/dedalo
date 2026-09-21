@@ -158,6 +158,32 @@ export type FlatValueFamily =
 	| 'external';
 
 /**
+ * RENDER CLASS (audit P2-6 / CARRY-01 — XSS-03): what the client may DO with
+ * this model's value at the DOM boundary. The client renders every component
+ * value through ONE escaper (client/dedalo/core/common/js/utils/render_escape.js
+ * `render_value(value, render_class)`), keyed on the `render_class` the
+ * structure context stamps from this facet — never on a local per-view escape.
+ *
+ * - 'text':   plain text — HTML-escaped before it reaches innerHTML. The
+ *             default for every literal AND for the relation family (a
+ *             datalist label is another record's text).
+ * - 'html':   TRUSTED markup — the write engine ran the ONE HTML sanitizer
+ *             on it (security/html_sanitize.ts, keyed on THIS facet in
+ *             save_component.ts), so the client passes it through. Only the
+ *             rich-text model declares it; declaring it elsewhere is the
+ *             decision to sanitize that model on save too.
+ * - 'url':    a link — the client runs the scheme allowlist (util.js
+ *             safe_url, url_sink_allowlist_tripwire) and THEN escapes.
+ * - 'number': a numeral — rendered as String(Number(value)); anything
+ *             non-numeric is escaped as text.
+ *
+ * REQUIRED on every column-bearing (canonical) descriptor; alias stubs inherit
+ * through the canonical hop. Pinned by descriptor_completeness_tripwire;
+ * the client half by render_escape_tripwire.
+ */
+export type RenderClass = 'text' | 'html' | 'url' | 'number';
+
+/**
  * One component model's declarative descriptor. Only the fields the engines
  * actually READ live here; heavier per-model behavior is linked out via file
  * comments (see the DISCIPLINE note above).
@@ -279,4 +305,25 @@ export interface ComponentModel {
 	 * buildCore. Pinned by list_column_sortable_tripwire.
 	 */
 	readonly sortable?: boolean;
+	/**
+	 * MONOVALUE (PHP component_common::$components_monovalue, class.component_common
+	 * .php:180-196): the data is an array but ONLY ELEMENT 0 IS EVER READ. The one
+	 * value law every writer consults through registry.ts isMonovalueModel — an
+	 * `insert` on such a model REPLACES the (lang-)slice instead of appending
+	 * (PHP :4128-4131), an id-less `update` of the one stored item replaces it
+	 * (WC-2026-08-08), and the propagate tool refuses `add`. Alias models
+	 * (html_text → text_area) inherit through the canonical hop. Declared as
+	 * `true` only; omitted = multi-value. Pinned against the frozen PHP list by
+	 * value_law_agreement_tripwire.
+	 */
+	readonly monovalue?: true;
+	/**
+	 * The value's RENDER CLASS at the client DOM boundary (see RenderClass).
+	 * Consumed by registry.ts getRenderClass → save_component.ts (the sanitizer
+	 * runs iff 'html'), resolve/structure_context.ts (stamped on the wire as
+	 * `render_class`, WC-2026-09-04-context-render-class) and
+	 * section/indexation_grid.ts (the same key on every grid cell). Required on
+	 * canonical descriptors; getRenderClass throws on a model without one.
+	 */
+	readonly render?: RenderClass;
 }

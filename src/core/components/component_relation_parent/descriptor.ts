@@ -18,6 +18,7 @@ import type { ComponentModel } from '../types.ts';
 export const component_relation_parent: ComponentModel = {
 	model: 'component_relation_parent',
 	column: 'relation',
+	render: 'text',
 	defaultRelationType: 'dd47',
 	resolveData: 'portal',
 	search: { status: 'ported' },

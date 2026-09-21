@@ -70,6 +70,15 @@ import {
 } from '../targets/mariadb/lang_sweep.ts';
 
 /**
+ * THE JOB-ROW RETENTION DOOR, on the facade for the same reason the audit above
+ * is: the core RETENTION REGISTRY (src/core/retention/) states a rule for every
+ * append-only store the engine writes, and the diffusion jobs table is one of
+ * them — but core may reach diffusion only through here, never into
+ * jobs/queue.ts. The window itself (terminal rows at 7 days) stays owned by the
+ * diffusion scheduler; this exports the ABILITY TO RUN it on demand.
+ */
+export { purgeTerminalJobs } from '../jobs/queue.ts';
+/**
  * The published-lang coherence audit, re-exported through the FACADE — ONE
  * definition, in targets/mariadb/lang_sweep.ts. src/core/ may read it (the
  * check_config maintenance widget's coherence row does) and

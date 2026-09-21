@@ -23,7 +23,11 @@ client/dedalo/**/*.css      linguist-generated=true
 tools/**/*.css              linguist-generated=true
 
 # Third-party bundles we vendor verbatim — not our source, never reviewed as ours.
+# Every root here is a vendor/vendor_manifest.json row (digest-pinned): vendor/<id>
+# by default, or the row's explicit `root` for a tree that must live inside a
+# self-contained subsystem (the swagger-ui under the v1 PHP publication API).
 vendor/**  linguist-vendored=true
+publication/server_api/v1/docu/ui/swagger-ui/**  linguist-vendored=true
 
 # The .less files ARE source: always diff them normally, never collapse.
 *.less  linguist-generated=false

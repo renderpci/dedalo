@@ -22,6 +22,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_join} from '../../common/js/utils/render_escape.js'
 	import {activate_edit_in_list} from '../../component_common/js/component_common.js'
 
 
@@ -83,7 +84,7 @@ view_default_list_radio_button.render = async function(self, options) {
 		const entries		= data.entries || []
 		// collapse all entries into one display string; radio buttons have at most
 		// one entry, so this join is effectively a no-op except for the empty case
-		const value_string	= entries.join(' | ')
+		const value_string	= render_join(entries, ' | ', self.context.render_class)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {

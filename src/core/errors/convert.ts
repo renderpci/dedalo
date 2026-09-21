@@ -106,8 +106,15 @@ function wireDetails(error: DedaloError): Record<string, ErrorDetailScalar> | un
 	return Object.keys(out).length === 0 ? undefined : out;
 }
 
-/** Registry English, or the vetted publicMessage when the code's disclosure allows it. */
-function wireMessage(error: DedaloError): string {
+/**
+ * The text a DedaloError may put ON THE WIRE: registry English, or the vetted
+ * publicMessage when the code's disclosure allows it. Exported for the
+ * ok:true surfaces (an identify source's `declined.detail`, a vision model
+ * decline) that speak a DedaloError's sentence OUTSIDE an error envelope —
+ * `.message` is the LOG-ONLY field (dedalo_error.ts) and is never theirs to
+ * forward: a provider constructor names the api_key_env it could not read there.
+ */
+export function wireMessage(error: DedaloError): string {
 	const spec = error.spec;
 	return spec.disclosure === 'public' && error.publicMessage !== undefined
 		? error.publicMessage

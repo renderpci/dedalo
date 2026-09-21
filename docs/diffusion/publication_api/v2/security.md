@@ -71,7 +71,33 @@ Several independent caps keep a single request (or a flood of them) from monopol
 | Fragment excerpt length | `max_characters` 10–5000, default `320` | request param |
 | Fragment occurrences | `max_occurrences` 1–10, default `1` | request param |
 | Batch size | `20` queries (`MAX_BATCH_QUERIES`) | — |
+| Relation depth | `3` nested levels (`MAX_RESOLVE_DEPTH`) | — |
+| Related rows per cell | `50` ids (`MAX_RESOLVE_ROWS`, silently truncated) | — |
+| Resolve-map keys | `10` columns per request (`MAX_RESOLVE_KEYS`) | request `resolve_*` param |
+| Database statements per request | `500` (`MAX_QUERIES_PER_REQUEST`) → `429` | — |
 | Request timeout | `REQUEST_TIMEOUT_MS`, default `10000` | env var |
+
+Every one of these is declared **once**, in `src/validators.ts` / `src/constants.ts`, and parsed by
+**both** entry layers — the REST routes and the MCP tools — then clamped again at the SQL boundary.
+A bound that only one door imports is not a bound: until the 2026-08-26 audit the MCP tools declared
+their own unbounded `limit`, so an agent could request an entire table.
+
+Over a bound is a `400`, never a silent clamp (the one deliberate exception is the per-cell id list,
+which is data the caller did not write). Asking for more work than one request may buy — page size ×
+resolve keys × related rows × depth — is a `429` from the per-request query budget, which is counted
+where statements are actually issued:
+
+```json
+{
+  "type": "https://dedalo.dev/api/problems/request-budget-exceeded",
+  "title": "Request Budget Exceeded",
+  "status": 429,
+  "detail": "This request exceeded its query budget of 500 database statements. Reduce the page size (limit), the number of resolve_relations keys, or split the work across requests."
+}
+```
+
+A `POST /batch` envelope shares ONE budget with its sub-queries — re-entering the router does not
+buy a fresh one.
 
 `REQUEST_TIMEOUT_MS` races the whole handler: if a request is still running after the deadline it returns `504`. Every query runs inside a request, so this is the bound that caps a slow statement's blast radius. Setting `REQUEST_TIMEOUT_MS=0` disables the race (the MCP streaming endpoint is always exempt so long-lived agent sessions are not cut off).
 
@@ -124,8 +150,10 @@ RATE_LIMIT_RPM=100   # requests per minute per IP
     fan-out the batch is rejected as a unit with `429` and nothing is run — so batching is a way to
     save round trips, never a way to multiply your quota.
 
-The client IP is taken from the forwarding headers when `TRUST_PROXY` is enabled, and otherwise from
-the connection's own peer address — so the limiter buckets per caller in `standalone` mode too.
+The client IP is taken from `X-Forwarded-For` only when a proxy is DECLARED (`TRUST_PROXY`), and
+otherwise from the connection's own peer address — so the limiter buckets per caller in
+`standalone` mode too. Behind a proxy the header is read from the RIGHT (see below), so a rotating
+`X-Forwarded-For` cannot buy a fresh bucket in either mode.
 
 ```json
 {
@@ -137,10 +165,35 @@ the connection's own peer address — so the limiter buckets per caller in `stan
 }
 ```
 
-Client IP resolution depends on `TRUST_PROXY` (default `true`). When enabled, the limiter reads the first address in `X-Forwarded-For`, falling back to `X-Real-IP`, so the real client is metered behind a reverse proxy.
+Client IP resolution depends on `TRUST_PROXY`, which is **derived from `DEPLOYMENT_MODE` when it is
+not set**: `apache` and `nginx` put a proxy in front, so the forwarding headers are believed;
+`standalone` is directly exposed, so they are not. When it is on, the limiter reads
+`X-Forwarded-For` **from the right**: both shipped proxy configs APPEND
+(nginx `$proxy_add_x_forwarded_for`, Apache `mod_proxy_http`), so the header arrives as
+`<whatever the client typed>, <the address your proxy actually saw>` and only the trailing entries
+were written by your own chain. The caller is the entry at `length - TRUSTED_PROXY_HOPS`
+(default 1 = a single Apache/nginx in front); a header shorter than that chain is not believed at
+all, and the socket peer answers instead. `X-Real-IP` is never consulted: nginx sets it safely, but
+Apache does not set it at all, so a client-supplied one would pass straight through.
 
-!!! warning
-    Only enable `TRUST_PROXY` when the API really sits behind a proxy you control (the Apache/Nginx modes set this for you). If it is `true` while the API is directly exposed, a client can spoof `X-Forwarded-For` to dodge the per-IP limit. In `standalone` mode with no proxy, set `TRUST_PROXY=false`.
+!!! danger "Reading the FIRST hop is the bypass, not the fix"
+    `X-Forwarded-For.split(',')[0]` is correct only under a proxy that OVERWRITES the header.
+    Neither shipped config does, so the leftmost entry is attacker text: a caller that rotates it
+    gets a fresh rate-limit bucket per request while honest callers are throttled — over an API that
+    is unauthenticated by default, and where the rate limiter is the only meter. Set
+    `TRUSTED_PROXY_HOPS` to the exact number of proxies **you operate**.
+
+!!! warning "`standalone` + `TRUST_PROXY=true` does not boot"
+    A directly exposed server that believes a client-supplied header has no rate limit at all — every
+    request forges its own bucket. That combination is therefore refused at startup unless you also
+    set `TRUST_PROXY_IN_STANDALONE=true`, which states that a proxy you control terminates every
+    request (a standalone process behind someone else's load balancer). Leaving `TRUST_PROXY` unset
+    is the right answer in every other case.
+
+!!! note "`TRUST_PROXY=false` really means false"
+    Both booleans (`TRUST_PROXY`, `MCP_ENABLED`) accept `true/1/yes/on` and `false/0/no/off`;
+    anything else fails the boot. Until the 2026-08-26 audit they were coerced with
+    `Boolean(<string>)`, which made every non-empty value — `false` included — true.
 
 ## Optional API key
 
@@ -215,7 +268,7 @@ A reasonable production posture for a public deployment:
 
 - Use a `SELECT`-only MariaDB user (`DB_USER`) scoped to exactly the databases in `DB_NAMES`.
 - Keep `REQUEST_TIMEOUT_MS` at a sane non-zero value.
-- Tune `RATE_LIMIT_RPM` to your traffic; set `TRUST_PROXY` to match your topology.
+- Tune `RATE_LIMIT_RPM` to your traffic; leave `TRUST_PROXY` unset unless your topology is not what `DEPLOYMENT_MODE` says it is.
 - Set `API_KEYS` if the data must be gated, and pin `CORS_ORIGIN` to your front-end origin if you rely on credentialed/keyed browser requests.
 - Terminate TLS at the reverse proxy (see the Apache/Nginx deployment modes).
 

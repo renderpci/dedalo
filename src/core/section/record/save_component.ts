@@ -42,21 +42,31 @@
  */
 
 import { INSTALLED_DATA_LANGS } from '../../../config/config.ts';
-import { getComponentModel } from '../../components/registry.ts';
+import { getComponentModel, getRenderClass, isMonovalueModel } from '../../components/registry.ts';
 import { dataframePairingOf } from '../../concepts/rqo.ts';
 import { isConsultationOnlySection } from '../../concepts/section.ts';
 import type { DataframePairing } from '../../concepts/subdatum.ts';
 import { dbTimestamp } from '../../db/db_timestamp.ts';
 import { MATRIX_JSONB_COLUMNS, type MatrixJsonbColumn } from '../../db/matrix.ts';
-import { absorbComponentItemIds, allocateComponentItemId } from '../../db/matrix_write.ts';
+import {
+	absorbComponentItemIds,
+	allocateComponentItemId,
+	appendMatrixKeyItems,
+} from '../../db/matrix_write.ts';
 import { deferPostTransaction, sql, withTransaction } from '../../db/postgres.ts';
 import { recordTimeMachine } from '../../db/time_machine.ts';
+import {
+	applyDataframeDeletePolicy,
+	dataframeDeletePolicyOf,
+	dataframeTargetsOf,
+} from '../../relations/dataframe.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { ONTOLOGY_TLD } from '../../ontology/ontology_tipos.ts';
 import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
 	getModelByTipo,
+	getNode,
 	getTranslatableByTipo,
 } from '../../ontology/resolver.ts';
 import { requiredOntologyTld } from '../../ontology/tld.ts';
@@ -69,7 +79,11 @@ import {
 	type SortByColumnChange,
 	type SortDataChange,
 } from '../../relations/save.ts';
-import { persistModifiedStamp, persistRecordKeys } from '../../section_record/index.ts';
+import {
+	afterRecordWrite,
+	persistModifiedStamp,
+	persistRecordKeys,
+} from '../../section_record/index.ts';
 import type { Principal } from '../../security/permissions.ts';
 
 /** One change from the client (PHP changed_data item). */
@@ -607,41 +621,17 @@ export function isLangSlicedModel(model: string): boolean {
 	return descriptor?.classSupportsTranslation === true && descriptor.resolveData === undefined;
 }
 
-/**
+/*
  * MONOVALUE models — data is an array but only element 0 is ever read (PHP
- * component_common::$components_monovalue, class.component_common.php:180-196,
- * ported verbatim). PHP consults it on the INSERT branch only ("For monovalue
- * components, replace the existing value instead of appending", :4128-4131);
- * its UPDATE branch appends an id-less change with a debug_log warning
- * ("no id provided. Adding as new entry.", :4209-4213) — an acknowledged
- * degenerate fallback, and the source of the recurring value-doubling bug
- * class (component_publication, and now geolocation).
- *
- * Kept as a list here rather than a descriptor facet because it is a literal
- * port of one PHP static array and this is its only consumer; the durable home
- * is a `monovalue` facet on each descriptor.
+ * component_common::$components_monovalue). THE law is the `monovalue`
+ * descriptor facet, read through registry.ts isMonovalueModel (imported
+ * above); this file used to carry a verbatim copy of the PHP list, and the
+ * propagate tool a second one (DATA-14). PHP consults the registry on the
+ * INSERT branch ("For monovalue components, replace the existing value instead
+ * of appending", :4128-4131) — mirrored in the insert branch below; the
+ * UPDATE branch (applyUpdate `monovalue`) is the deliberate TS extension
+ * (WC-2026-08-08) that closes PHP's append-and-warn fallback (:4209-4213).
  */
-export const MONOVALUE_MODELS: ReadonlySet<string> = new Set([
-	'component_3d',
-	'component_av',
-	'component_geolocation',
-	'component_image',
-	'component_json',
-	'component_model',
-	'component_password',
-	'component_pdf',
-	'component_publication',
-	'component_section_id',
-	'component_security_access',
-	'component_select',
-	'component_select_lang',
-	'component_svg',
-	'component_text_area',
-]);
-
-export function isMonovalueModel(model: string): boolean {
-	return MONOVALUE_MODELS.has(model);
-}
 
 /** COMP-02: numeric-string ids normalize to int, else strict matching
  * appends duplicates instead of updating. */
@@ -691,7 +681,7 @@ export function getIdFromKey(
  * matches (PHP breaks after the first hit — translated items share ids by
  * design, so replacing every match destroys the sibling languages);
  * id-less/no-match appends (PHP fallback) — EXCEPT for a populated monovalue
- * model, which replaces (see MONOVALUE_MODELS).
+ * model, which replaces (the `monovalue` descriptor facet, isMonovalueModel).
  *
  * `sliceLang` non-null = the PHP lang-slice semantics for translation-
  * supporting literal components (supports_translation && !is_relation):
@@ -737,6 +727,79 @@ function resolveRemoveTargetId(
  * the PHP cross-language removal for translatable literals: one id, every language.
  * Numeric-string ids are compared as numbers, matching `resolveRemoveTargetId`.
  */
+/** One `remove` the change loop applied — its dataframe consequence runs AFTER the batch. */
+interface AppliedRemove {
+	targetId: number | string;
+	/** The entries the remove dropped (a slot's frame entries; ignored for a main). */
+	removedEntries: unknown[];
+}
+
+/**
+ * THE DATAFRAME CONSEQUENCE OF THE BATCH'S REMOVES — run ONLY after every
+ * change of the batch applied and the component was written. Until 2026-09-21
+ * each remove cascaded inside the change loop, and a LATER change of the same
+ * batch answering `ok:false` (an unknown id, a malformed sort, a set_data that
+ * rebinds the items) left that cascade committed — the DEC-01 posture commits
+ * a non-throwing result — so a save the curator saw REFUSED had stripped a
+ * slot and queued a frame target's deletion. Deferred here, a refused batch
+ * has run no cascade at all.
+ *
+ * - Any MAIN: the cascade (PHP update_data_value 'remove' :4325-4352, S1-05):
+ *   the removed item's paired frame entries are stripped from every dataframe
+ *   slot the main declares (remove_dataframe_data_by_id), each slot applying
+ *   its own delete policy. For translatable-literal mains PHP guards on the
+ *   removed id no longer existing in any OTHER language (frames are
+ *   lang-agnostic); the TS remove strips ALL languages at once, so the
+ *   unconditional cascade is exactly that occurrences<=1 case.
+ * - A `component_dataframe` SLOT — DIRECT FRAME REMOVAL (the dataframe modal's
+ *   Delete button → unlink_record → `remove` on the slot itself): the cascade
+ *   is not this door (a slot declares no slots); the slot's own policy is
+ *   resolved first and, unless it is `unlink`, applied to the targets the
+ *   dropped entries addressed (WC-2026-09-06-dataframe-delete-policy-on-slot).
+ *   The applier queues the deletes on the COMMIT lane of this save's
+ *   transaction: they run only after the unlink is committed (never before —
+ *   a target is not deleted while a locator still points at it), each in its
+ *   own transaction; a refused delete is logged and leaves a survivable
+ *   orphan, never a dangling locator.
+ */
+async function cascadeAppliedRemoves(input: {
+	model: string;
+	table: string;
+	sectionTipo: string;
+	sectionId: number;
+	componentTipo: string;
+	userId: number;
+	removes: readonly AppliedRemove[];
+}): Promise<void> {
+	if (input.removes.length === 0) return;
+	if (input.model === 'component_dataframe') {
+		const policy = dataframeDeletePolicyOf((await getNode(input.componentTipo))?.properties);
+		if (policy === 'unlink') return;
+		const entries = input.removes.flatMap((remove) => remove.removedEntries);
+		await applyDataframeDeletePolicy(policy, dataframeTargetsOf(entries), input.userId);
+		return;
+	}
+	for (const remove of input.removes) {
+		await removeDataframeDataById(
+			input.table,
+			input.sectionTipo,
+			input.sectionId,
+			input.componentTipo,
+			Number(remove.targetId),
+			input.userId,
+		);
+	}
+}
+
+/**
+ * The pre-save snapshot the observer removed-set diff compares against: the
+ * full slot for a relation column (a shallow copy suffices — every mutation
+ * path REBINDS `items`), nothing for a literal (no locators to remove).
+ */
+function observerDiffSnapshot(column: string, items: unknown[]): unknown[] {
+	return column === 'relation' ? [...items] : [];
+}
+
 function withoutItemId(items: unknown[], targetId: number | string): unknown[] {
 	return items.filter((item) => {
 		const itemId = (item as { id?: number | string } | null)?.id;
@@ -777,7 +840,8 @@ export function applyUpdate(
 		// Non-sliced (relations & non-translatable classes): positional replace
 		// on the full array, first-match stop.
 		if (targetId === null) {
-			// MONOVALUE law (DELIBERATE PHP DIVERGENCE, see MONOVALUE_MODELS):
+			// MONOVALUE law (DELIBERATE PHP DIVERGENCE, WC-2026-08-08; the law is
+			// the `monovalue` descriptor facet, isMonovalueModel):
 			// only element 0 is ever read, so an id-less update of an
 			// already-populated single-value component REPLACES it. PHP appends
 			// and warns instead, which grows the array on every save: the map
@@ -999,6 +1063,43 @@ export async function saveComponentData(request: SaveRequest): Promise<SaveResul
 }
 
 /** The transactional body of saveComponentData (see the wrapper above). */
+/**
+ * The write engine's two VALUE gates, each keyed on what the model itself
+ * declares — extracted from `applySaveComponentData` so the save path does not
+ * carry their branches (the complexity ratchet is the reason, and the shape is
+ * better: both read the changed data and nothing else of the request).
+ *
+ * SEC — component_password is an ordinary string component to the write engine,
+ * so an unhashed value would be stored VERBATIM: the client's plaintext password
+ * straight into matrix_users.string.dd133 (and it would then fail every login,
+ * since auth.ts accepts only Argon2id). PHP hashed on the way in
+ * (component_password::Save → hash_password); this is that gate.
+ *
+ * XSS-01 (2026-07-28 audit) / P2-6 (2026-08-26) — a value whose descriptor
+ * declares the `html` render class is the ONE class the client passes through
+ * unescaped, so it is the ONE class sanitized here (strip script/style/on*=/js:
+ * URLs, keep formatting). Keyed on the descriptor facet, never on the model
+ * string: a model that declares 'html' opts into this sanitizer in that line.
+ * A model WITHOUT a descriptor (component_ip, component_layout, …) is not asked
+ * for a class — it has no matrix column either, so the graceful `no matrix
+ * column` refusal downstream stays the answer, as it was before.
+ *
+ * Both sit at the write engine precisely so EVERY door funnels through them —
+ * the client API, the MCP tools, the agent change-plan and import alike.
+ */
+async function applyWriteValueGates(
+	model: string,
+	changedData: SaveRequest['changedData'],
+): Promise<SaveRequest['changedData']> {
+	if (model === 'component_password') {
+		return await (await import('../../security/password_hash.ts')).hashPasswordChanges(changedData);
+	}
+	if (getComponentModel(model) !== undefined && getRenderClass(model) === 'html') {
+		return (await import('../../security/html_sanitize.ts')).sanitizeRichTextChanges(changedData);
+	}
+	return changedData;
+}
+
 async function applySaveComponentData(request: SaveRequest): Promise<SaveResult> {
 	const { componentTipo, sectionTipo, sectionId, lang, userId } = request;
 	const callerDataframe = request.callerDataframe ?? null;
@@ -1021,16 +1122,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 	// behind the enforcing CSP; sits here at the write engine so EVERY door
 	// (client API, MCP, change-plan, import) funnels through it, exactly like the
 	// password hash gate below.
-	let changedData = request.changedData;
-	if (model === 'component_password') {
-		changedData = await (await import('../../security/password_hash.ts')).hashPasswordChanges(
-			request.changedData,
-		);
-	} else if (model === 'component_text_area') {
-		changedData = (await import('../../security/html_sanitize.ts')).sanitizeRichTextChanges(
-			request.changedData,
-		);
-	}
+	const changedData = await applyWriteValueGates(model, request.changedData);
 	const mappedColumn = getColumnNameByModel(model);
 	if (mappedColumn === null || !MATRIX_JSONB_COLUMNS.includes(mappedColumn as MatrixJsonbColumn)) {
 		return { ok: false, message: `no matrix column for model '${model}'` };
@@ -1095,7 +1187,10 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 	// writes touch `id` and dates — never locator identity.
 	// Relation slots only: a literal save has no locators to remove, so it pays
 	// nothing.
-	const preSaveItems: unknown[] = column === 'relation' ? [...items] : [];
+	const preSaveItems = observerDiffSnapshot(column, items);
+	// The removes the loop applied — their dataframe consequence runs after the
+	// whole batch applied and the component was written (cascadeAppliedRemoves).
+	const appliedRemoves: AppliedRemove[] = [];
 
 	// DATAFRAME saves (PHP component_dataframe get_data/set_data): the change
 	// loop operates on the CALLER's frame subset; the full slot is kept for
@@ -1156,6 +1251,8 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 	const atomicInserts: unknown[] = [];
 	let hasRemovals = false;
 	let hasReorders = false;
+	let hasReplacingInserts = false;
+	const monovalue = isMonovalueModel(model);
 	let createdSectionId: number | null = null;
 	for (const change of changedData) {
 		if (
@@ -1331,27 +1428,18 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 			// Remove EVERY item with the id — translated items share ids, so this
 			// is the PHP cross-language removal for translatable literals.
 			const before = items.length;
+			const itemsBeforeRemove = items;
 			items = withoutItemId(items, targetId);
 			if (items.length === before) {
 				// PHP fails the save when the id does not exist.
 				return { ok: false, message: `remove: no item with id ${targetId}` };
 			}
-			// DATAFRAME cascade (PHP update_data_value 'remove' :4325-4352,
-			// S1-05): the removed item's paired frame entries are stripped from
-			// every dataframe slot (remove_dataframe_data_by_id). For
-			// translatable-literal mains PHP guards on the removed id no longer
-			// existing in any OTHER language (frames are lang-agnostic); the TS
-			// remove above strips ALL languages at once, so the unconditional
-			// cascade here is exactly that occurrences<=1 case. The `clear`
-			// branch above does NOT cascade — PHP doesn't either (:4235-4243).
-			await removeDataframeDataById(
-				table,
-				sectionTipo,
-				sectionId,
-				componentTipo,
-				Number(targetId),
-				userId,
-			);
+			// The dataframe consequence is DEFERRED to cascadeAppliedRemoves, after
+			// the whole batch applied — a later refused change runs no cascade.
+			appliedRemoves.push({
+				targetId,
+				removedEntries: itemsBeforeRemove.filter((item) => !items.includes(item)),
+			});
 			continue;
 		}
 		// Lang stamp. Sliced components force the EFFECTIVE lang onto the changed
@@ -1440,6 +1528,30 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 					componentTipo,
 				);
 			}
+			if (monovalue) {
+				// MONOVALUE INSERT REPLACES (PHP update_data_value 'insert' :4128-4131:
+				// `$data_lang = [$changed_data->value]` — the current-lang slice for
+				// the translation-supporting literal classes, the whole array
+				// otherwise; DATA-14, WC-2026-09-03-monovalue-insert-replaces). Only
+				// element 0 is ever read, so an append here would store a value no
+				// reader serves while the record keeps the stale one. The replaced
+				// slot is a read-modify-write under the row lock, so it takes the
+				// full-array persist below, never the atomic concatenation.
+				items = langSliced
+					? [
+							...items.filter((item) => {
+								if (item === null || typeof item !== 'object') return false;
+								const itemLang = (item as { lang?: string }).lang;
+								return (
+									typeof itemLang === 'string' && itemLang !== '' && itemLang !== effectiveLang
+								);
+							}),
+							value,
+						]
+					: [value];
+				hasReplacingInserts = true;
+				continue;
+			}
 			atomicInserts.push(value);
 			items = [...items, value]; // reflected in the returned data + TM snapshot
 			continue;
@@ -1481,12 +1593,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 			if (validated === null) continue;
 			effectiveChange = { ...change, value: validated };
 		}
-		items = applyUpdate(
-			items,
-			effectiveChange,
-			langSliced ? effectiveLang : null,
-			isMonovalueModel(model),
-		);
+		items = applyUpdate(items, effectiveChange, langSliced ? effectiveLang : null, monovalue);
 	}
 
 	// component_date SAVE override (PHP component_date::save → add_time): the
@@ -1500,7 +1607,10 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 	}
 
 	const hasUpdates =
-		changedData.some((change) => change.action === 'update') || hasRemovals || hasReorders;
+		changedData.some((change) => change.action === 'update') ||
+		hasRemovals ||
+		hasReorders ||
+		hasReplacingInserts;
 	// The write chokepoint (section_record/record_write.ts) merges the record's
 	// modified-audit stamps (dd197/dd201) into the SAME update as the value —
 	// the PHP save_component_data contract — and prunes empty columns.
@@ -1572,39 +1682,40 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 		// Pure inserts: atomic concatenation — concurrent inserts both survive.
 		// (Deliberate divergence from the read-modify-write chokepoint shape;
 		// the modified stamps are refreshed right after, like every PHP save.)
-		const { encodeForJsonb } = await import('../../db/json_codec.ts');
-		await sql.unsafe(
-			`UPDATE "${table}"
-			 SET "${column}" = jsonb_set(
-				COALESCE("${column}", '{}'::jsonb),
-				'{${componentTipo}}',
-				COALESCE("${column}"->'${componentTipo}', '[]'::jsonb) || $3::text::jsonb
-			 )
-			 WHERE section_tipo = $1 AND section_id = $2`,
-			[sectionTipo, sectionId, encodeForJsonb(atomicInserts)],
-		);
+		// The statement lives in matrix_write.ts (T2): this file issues no DML.
+		await appendMatrixKeyItems(table, sectionTipo, sectionId, column, componentTipo, atomicInserts);
 		if (auditStamp !== false) await persistModifiedStamp(writeTarget, auditStamp);
-		// THE SECURITY REACTION for the one branch that does NOT go through
-		// persistRecordKeys (P1-4, 2026-08-28). This path writes the component key with
-		// a raw atomic concatenation, so it reaches neither the chokepoint's cache
-		// invalidation nor the revocation seam — and it is the branch a FIRST dd244
-		// grant takes (an `insert` onto a record that carried no flag yet), i.e. exactly
-		// a promotion. Gated by the section inside reactToRecordComponentWrite; a no-op
-		// for every ordinary component.
-		{
-			const { reactToRecordComponentWrite } = await import('../../security/revocation.ts');
-			await reactToRecordComponentWrite(
-				sectionTipo,
-				Number(sectionId),
-				[componentTipo],
-				'saveComponentData atomic insert',
-			);
-		}
+		// THE OBLIGATIONS of the one branch that does NOT go through persistRecordKeys
+		// (P1-4, 2026-08-28; unified on the chokepoint's own hook P1-8, 2026-09-03).
+		// This path writes the component key with a raw atomic concatenation, so it
+		// reaches neither the chokepoint's cache invalidation, nor the revocation
+		// seam (the branch a FIRST dd244 grant takes — an `insert` onto a record
+		// that carried no flag yet, i.e. exactly a promotion), nor the RAG index
+		// event. It declares all three through the SAME hook every chokepoint
+		// writer ends in, instead of remembering them one by one; persistModifiedStamp
+		// above is stamp-only (rag: null), so the content write fires the index here.
+		await afterRecordWrite(writeTarget, {
+			door: 'saveComponentData atomic insert',
+			touchedKeys: [componentTipo],
+			rag: 'index',
+		});
 	}
 
 	// Post-write absorb (PHP raises the counter at EVERY set_data): explicit
 	// ids in the just-written array are locked out of future allocations.
 	await absorbComponentItemIds(table, sectionTipo, sectionId, componentTipo, items);
+
+	// The batch's removes cascade now — after every change applied and the
+	// component was written (see cascadeAppliedRemoves).
+	await cascadeAppliedRemoves({
+		model,
+		table,
+		sectionTipo,
+		sectionId,
+		componentTipo,
+		userId,
+		removes: appliedRemoves,
+	});
 
 	// relation_search ancestor index (PHP save_component_dato: for LEGACY
 	// component_autocomplete_hi, the save ALSO writes relation_search[tipo] =
@@ -1649,16 +1760,14 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 	}
 
 	// RAG re-index event (S2-13): PHP save() enqueues the record for re-indexing
-	// on every component save (class.section_record.php:988) — the TS per-key
-	// save path fired NO event before this, so edited content stayed stale in
-	// the vector store. The enqueue joins this transaction (the queue writes
-	// through the ambient sql handle), so a rolled-back save never leaves a
-	// marker; hook failures are logged and swallowed (best-effort posture), and
-	// with RAG disabled the hook is null — zero cost.
-	if (isDataframeSave || hasUpdates || atomicInserts.length > 0) {
-		const { fireRagRecordEvent } = await import('../../section_record/save_event.ts');
-		await fireRagRecordEvent({ kind: 'index', sectionTipo, sectionId: Number(sectionId) });
-	}
+	// on every component save (class.section_record.php:988). Since P1-8
+	// (2026-09-03) it is an obligation of the write chokepoint itself — the two
+	// persistRecordKeys branches above fire it from afterRecordWrite, and the
+	// atomic-insert branch fires the same hook explicitly — so no branch of this
+	// save, and no other caller of the chokepoint, can forget it. The enqueue
+	// joins this transaction (the queue writes through the ambient sql handle),
+	// so a rolled-back save never leaves a marker; with RAG disabled the hook is
+	// null — zero cost.
 
 	const result: SaveResult = { ok: true, message: 'ok', data: items };
 	if (createdSectionId !== null) {

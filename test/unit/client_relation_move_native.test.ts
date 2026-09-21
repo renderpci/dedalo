@@ -94,7 +94,9 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { plugin } from 'bun';
+import { CLIENT_LIB_URL_PREFIX, resolveClientLibPath } from '../../src/core/client_libs/serving.ts';
 import { unnamedRemoveRefusal } from '../../src/core/section/record/save_component.ts';
+import { resolveClientModuleOverride } from '../helpers/client_module_overrides.ts';
 
 const REPO_ROOT = resolve(import.meta.dir, '..', '..');
 const CLIENT_ROOT = join(REPO_ROOT, 'client');
@@ -122,7 +124,28 @@ const SERVE_ALIAS: ReadonlyArray<readonly [RegExp, string]> = [
 plugin({
 	name: 'dedalo-client-serve-alias',
 	setup(build) {
+		// A ROOT-RELATIVE lib URL (`/dedalo/lib/<id>/<subpath>` — the spelling the
+		// client uses since WC-2026-09-04 moved lz-string out of the client tree)
+		// resolves through the SERVER'S OWN resolver, so the module the test loads
+		// is the file the engine would serve, allowlist and confinement included.
+		build.onResolve({ filter: /^\/dedalo\/lib\// }, (args) => {
+			// A deliberate substitution another gate registered wins over this
+			// plugin's own resolution: Bun plugins are global and first-match-wins,
+			// so without this the answer would depend on which file ran first.
+			const overridden = resolveClientModuleOverride(args.path);
+			if (overridden !== null) return { path: overridden };
+			const importer = args.importer ?? '';
+			if (!importer.startsWith(CLIENT_ROOT) && !importer.startsWith(TOOLS_ROOT)) return undefined;
+			const rest = args.path.slice(CLIENT_LIB_URL_PREFIX.length);
+			const slash = rest.indexOf('/');
+			if (slash < 0) return undefined;
+			const path = resolveClientLibPath(rest.slice(0, slash), rest.slice(slash + 1));
+			return path === null ? undefined : { path };
+		});
 		build.onResolve({ filter: /^\.\.?\// }, (args) => {
+			// See the sibling hook: the shared registry answers first.
+			const overridden = resolveClientModuleOverride(args.path);
+			if (overridden !== null) return { path: overridden };
 			const importer = args.importer ?? '';
 			if (!importer.startsWith(CLIENT_ROOT) && !importer.startsWith(TOOLS_ROOT)) return undefined;
 			const direct = resolve(dirname(importer), args.path);
@@ -576,28 +599,7 @@ describe('the server premise the client id-guards rest on', () => {
  * not own. A file whose count DROPS is red too — fix it and delete its row.
  */
 const DISCARDED_ANSWER_EXEMPTIONS: ReadonlyArray<{ path: string; count: number; reason: string }> =
-	[
-		{
-			path: 'client/dedalo/core/component_text_area/js/render_reference.js',
-			count: 1,
-			reason:
-				'Apply-reference awaits component_tags_reference.link_record(new_locator) and drops the answer. ' +
-				'A `false` there means the locator did not land (duplicate, data_limit, or a server refusal), yet the ' +
-				'code continues and stamps the reference attribute onto the text span regardless — the text then ' +
-				'points at a relation the record does not hold. Not destructive, so not P0-11, but the same ' +
-				'discarded-answer shape. Owned by the component_text_area reference flow, not by this change.',
-		},
-		{
-			path: 'client/dedalo/core/services/service_autocomplete/js/view_default_autocomplete.js',
-			count: 1,
-			reason:
-				'The default autocomplete click does `self.caller?.link_record(value)` with an explicit ' +
-				'"Don\'t wait here" comment: not awaited, answer discarded, and the service then clears the input ' +
-				'and hides itself. A refused pick (data_limit, duplicate, server refusal) is therefore reported to ' +
-				'nobody and the operator sees the picker close as if it had worked. Owned by the autocomplete ' +
-				'service, not by this change.',
-		},
-	];
+	[];
 
 /** Every .js file under client/, plus tools/ ** /js/. Derived by walking the tree. */
 function census_files(): string[] {

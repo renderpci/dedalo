@@ -6,6 +6,7 @@
 
 // import
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {set_element_css} from '../../page/js/css.js'
 
 
@@ -161,7 +162,7 @@ const get_content_data_edit = function(self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_value section_id',
-			inner_html		: value,
+			inner_html		: render_value(value, self.context.render_class),
 			parent			: content_data
 		})
 

@@ -148,7 +148,7 @@ Binaries `DEDALO_AV_FFMPEG_PATH` / `_FFPROBE_PATH` / `_FASTSTART_PATH` (§3). Se
 ### 4.3 PDF (`core/component_pdf/class.component_pdf.php`)
 - **Text/HTML extraction** (`get_text_from_pdf :743`): `source = get_media_filepath(get_default_quality())` (`:757`); resolve engine binary `shell_exec('type -P '.$engine)` (`:773`) → TS boot-probe equivalent; flags `-f <page_in> -l <page_out>`, html mode adds `-i -p -noframes -layout` and `.html` ext (text → `.txt`) (`:806-821`); command `<engine> -enc UTF-8<config> <src> <text_filename>` (`:831`), `exec` synchronous (`:838`); output containing `error` → fail. Read → `valid_utf8` → `utf8_clean` (iconv IGNORE + control-char strip) → JSON round-trip validation (`:863-892`).
 - **OCR** (`PDF_OCR_ENGINE = ocrmypdf`): `ocrmypdf --pdfa-image-compression lossless -l <lang> --force-ocr <src> <src>` (in-place, `:1003-1006`).
-- **pdfinfo** (Poppler) for page count; PDF→jpg cover via `ImageMagick::convert` with density (`create_alternative_version :1422`). **PDF thumb** (`create_thumb :279`) also goes through `convert`, not `dd_thumb`: it selects the **first page only** (`ar_layers=[0]` → `<pdf>[0]`) at density 72 / quality 75 with `pdf:use-cropbox=true`, resized to the thumb box. TS `buildThumbVersion()` branches on `component_pdf` for exactly this (`processing.ts`); the `[0]` selector is mandatory — the scene-less `dd_thumb` recipe splits a multi-page PDF into `<stem>-0.jpg`/`-1.jpg`/… and never the bare temp the rename targets (→ `ENOENT`). Regression-gated in `test/unit/media_processing.test.ts` (multi-page fixture).
+- **pdfinfo** (Poppler) for page count; PDF→jpg cover via `ImageMagick::convert` with density (`create_alternative_version :1422`). **PDF thumb** (`create_thumb :279`) also goes through `convert`, not `dd_thumb`: it selects the **first page only** (`ar_layers=[0]` → `<pdf>[0]`) at density 72 / quality 75 with `pdf:use-cropbox=true`, resized to the thumb box. **AS BUILT (2026-09-05) NO IMAGEMAGICK RECIPE ASKS FOR A PDF**: `buildThumbVersion()` still branches on `component_pdf`, but the branch renders page 1 with `engine/ghostscript.ts` into a PNG intermediate and hands THAT to the shared thumb recipe (same box, background, blank guard and atomic write as every other thumb) — the `-density/-antialias/pdf:use-cropbox` prefix is gone from `buildConvertArgv` and the policy denies the `gs` delegate. FIDELITY CHANGE, stated rather than hidden: `buildGhostscriptArgv` passes no `-dUseCropBox`, so a PDF whose CropBox is smaller than its MediaBox now renders WITH its trim margins where the retired ImageMagick recipe cropped them away. The PHP note below is the oracle's shape, not this engine's; the `[0]` selector is mandatory — the scene-less `dd_thumb` recipe splits a multi-page PDF into `<stem>-0.jpg`/`-1.jpg`/… and never the bare temp the rename targets (→ `ENOENT`). Regression-gated in `test/unit/media_processing.test.ts` (multi-page fixture).
 
 ### 4.4 SVG / 3D
 - SVG thumb: rasterized via `ImageMagick::convert` (`component_svg:395`).
@@ -340,11 +340,60 @@ directory away. Until then, treat `ActivityRow` as scaffolding: it is a third
 vocabulary over two wires plus the legacy `get_process_status` poll, and every
 surface built on it is one more thing the promotion must preserve.
 
+### 5.5c Job LANES and DEADLINES (PERF-11)
+
+§5.5's concurrency cap was ONE semaphore for everything. `av_transcode`,
+`update_code`/`restore_code`, `update_data`, the dev long-process probe and every
+backgroundable tool action drew from the same slots, so an ingest queue starved
+the code update an operator was waiting on.
+
+**The class is declared, never inferred.** `submit`'s `meta.lane` is REQUIRED and
+typed (`JobLane` = `media | transcription | rag | maintenance`); a tool declares
+one per `backgroundRunnable` action in `backgroundLanes`, and `scheduleBackground`
+refuses an undeclared one (`tool.background_lane_undeclared`). A `kind`-prefix rule
+was rejected on purpose: it files a new job into whatever lane its name happens to
+resemble, and the starvation returns with nobody having edited a budget. There is
+no `publication` lane — publication work runs on the durable diffusion queue, and a
+lane no call site can reach would publish a permanently-zero counters row.
+
+**Budgets** are per lane, one operator key each (`DEDALO_MEDIA_JOB_CONCURRENCY` is
+unchanged and IS the media budget; `DEDALO_JOB_LANE_*_CONCURRENCY` for the rest).
+`acquire`/`release` are per lane, so a full lane can only queue its own class.
+
+**Deadlines** are per lane (`DEDALO_JOB_DEADLINE_*_S`, seconds; `0` = none, which is
+`media`'s default because a master transcode is legitimately hours long), with a
+per-submit override. The clock starts at RUN START, after the slot is acquired: a
+job starved behind a full lane must not be killed for having waited. On expiry the
+job's existing `AbortController` is fired and the record goes terminal `stopped` —
+but the LANE SLOT IS NOT RELEASED until the worker actually settles, because
+releasing it while ffmpeg still holds the CPU over-subscribes the box. A worker
+still unsettled after the grace bumps `job_deadline_lane_held`, so a wedged lane is
+observable rather than silent.
+
+**The abort now REACHES an awaited outbound call.** The job's signal is the ambient
+`media/job_scope.ts` AsyncLocalStorage value for the whole dynamic extent of the
+worker, and `security/ssrf_guard.ts::fetchBoundedText` composes it with its own
+timeout (`AbortSignal.any`). Before this, an abort stopped at the worker's first
+await and the socket stayed open. **Out of scope, named rather than absent:**
+`Bun.spawn` children (ffmpeg, pg_dump, the transcriber) do not subscribe to the
+signal; their cancellation is their own subprocess handle, a separate change with
+its own gate — and the held-lane counter is precisely what measures the gap.
+
+**Published depth.** `/api/v1/counters` carries `media_jobs.lanes[class] =
+{active, queued, max}` beside the legacy `has_headroom` boolean — the in-process
+twin of the diffusion queue depth. A boolean cannot say WHICH class is backed up,
+which is the only question worth asking of a saturated box.
+
+Gates: `test/unit/job_lane_budget_native.test.ts` (budgets hold under load, a job
+past its deadline is cancelled, the signal reaches an awaited outbound call),
+`test/unit/job_lane_census_tripwire.test.ts` (every submit site and every
+backgroundRunnable action declares a lane).
+
 ### 5.6 File ops (`media/file_ops.ts`)
 ```ts
 export function moveToDeleted(absolutePath: string, opts?: { bulkProcessId?: string; now?: Date; mediaRoot?: string }): string | null;
 export function renameOldFiles(absolutePath: string, now?: Date, mediaRoot?: string): string | null;
-export function duplicateMediaFiles(spec, source: MediaIdentity, target: MediaIdentity, opts): string[]; // (:1999)
+export async function duplicateMediaFiles(spec, source: MediaIdentity, target: MediaIdentity, opts): Promise<string[]>; // (:1999) — the byte copy is async: whole media files on the request path
 export function listDeletedVersions(spec, id: MediaIdentity, quality: string, extension: string, opts): string[]; // TM natsort scan
 // THE RECORD-LEVEL PAIR — one file, written against each other (§8):
 export function removeSectionMediaFiles(sectionTipo, sectionId, mediaColumn, opts?): Promise<SectionMediaFilesOutcome>;
@@ -767,6 +816,8 @@ All register as actions in the tool's `register.json`, dispatched by `src/core/t
 | Serving | reverse proxy + media_protection | production: the reverse proxy enforces the **TS-GENERATED** rules (rule A auth-cookie marker / rule B pub marker, fail-closed 404); the engine never serves a media byte. Dev route stays session-gated fail-closed 404 (no existence leak) and OFF by default |
 | Media auth cookie | fixed-name daily sha512 marker (PHP) | same, now TS-owned: 128-hex validated before ANY filesystem use (the value BECOMES a filename); HttpOnly + SameSite=Lax + Secure; the auth store lives OUTSIDE the media root (a served store is a universal anonymous bypass) |
 | Original integrity | convention | asserted invariant: rotate/crop/transcode refuse `quality === 'original'` targets |
+| Converter resources | none (PHP passed no `-limit` and shipped no policy) | **two halves, both required** (audit MEDIA-01): the shipped `engine/imagemagick-policy/policy.xml` `domain="resource"` block is the HARD CEILING (memory/map/area/disk/width/height/time — a process may lower a resource below a policy value, never raise it above), and `magickResourceLimitArgs()` splices the install's OPERATING limit (`DEDALO_MAGICK_LIMIT_*`) as `-limit` argv into BOTH ImageMagick spawn sites. The Dockerfile installs the same file at the system config path so a delegate child and any non-engine `convert` are bound too. memory/map/area/disk degrade to a disk-backed cache; width/height/time REFUSE, and the dimension ceilings refuse at header-parse time, before a pixel is allocated. NO DELEGATE RESIDUE: the one process neither half could reach was Ghostscript, reached as an ImageMagick DELEGATE on the PDF cover path — measured, a 441-byte PDF declaring a 200000x200000-point page kept a gs child growing an intermediate towards 120 TB, and after the request cap SIGKILLed the `magick` we spawned that child reparented to PID 1 and ran on unreaped. The policy now DENIES the `gs` delegate and the engine spawns Ghostscript itself (`engine/ghostscript.ts`, `DEDALO_GS_PATH`): poppler reads the page box first (`engine/pdf.ts readPdfPageSize`), a page above `DEDALO_MAGICK_LIMIT_WIDTH`/`_HEIGHT` at the render density is REFUSED before anything is drawn, the render runs under the spawn cap, and the process that cap kills is the one doing the work. ImageMagick only ever encodes the resulting PNG. Gates: `magick_policy_tripwire` + `magick_resource_limits_native` + `pdf_rasterizer_native` |
+| Converter admission | none (every conversion ran inline, unbounded in NUMBER) | **a permit, taken at the spawn door** (audit MEDIA-01, the plural half). A per-process resource bound multiplied by K concurrent uploads is not a bound: measured 2026-09-05 on the shipped defaults, one 2.4 MB 20000x20000 TIFF no longer takes the RAM — it spends the whole `-limit disk` budget instead (16 GiB apparent / 8.2 GiB real) over 22 s, and two concurrent uploads held 16 GiB of real disk at once, because `createStagedThumbnail` is awaited INLINE on the authenticated upload request. `engine/admission.ts` bounds how many pixel converters run at once (`DEDALO_MEDIA_CONVERT_CONCURRENCY`, default 2) and refuses a waiter that has queued past `DEDALO_MEDIA_CONVERT_QUEUE_SECONDS` with `rate.limited` (429, retryable) rather than holding a request lane forever. The permit is taken by the SPAWN DOORS — `runMagickTo`, `rasterizePdfPage`, `rasterizeSvg`, `runIdentify` — never by one caller, so every inline derivative build is bounded, including the ones written after it; EVERY ImageMagick spawn takes one, `runIdentify` included: the `-ping` exemption this table used to record was REFUTED by measurement 2026-09-05 — `-ping` skips the pixels but still enumerates every SCENE, so a hand-written 4.6 MB GIF89a of 200000 1x1 frames (0.2 % of the upload cap, a thumbnailable extension) cost the upload preview's own argv 26.3 s and 8.73 GB RSS with every pixel-cache limit armed, and four concurrent probes were four concurrent identify processes. The latency worry that motivated the exemption is answered by COST instead: `-limit list-length` (`DEDALO_MAGICK_LIMIT_LIST_LENGTH`, default 4096) refuses such a source at 180 MB before the enumeration completes, so a header read is genuinely cheap for EVERY input and its permit is held for milliseconds — measured through the real `probeImageSource`, 163 ms to refuse, and a legitimate 63-frame animation unaffected. A second permit around a `runIdentify` is forbidden (a permit held while waiting for a permit deadlocks at concurrency 1). The non-ImageMagick header reads (`pdfinfo`, `ffprobe`) stay ungated. THE AV PRODUCERS ARE ADMITTED TOO, by a SECOND pool: `media/jobs.ts` was recorded here as the AV path's admission, and that was FALSE for the two audiovisual API actions — `create_posterframe` and `download_fragment` are awaited INLINE in `api/handlers/dd_component_av_api.ts`, submit no job and appear in no lane, and `download_fragment` runs a full second re-encode when a watermark is asked for, with a client that waits an hour by contract; K authenticated readers were K unbounded ffmpeg processes. `engine/ffmpeg.ts:runProducer` and `tools/fragment.ts:runFfmpeg` now take `withAvSlot` (`DEDALO_MEDIA_AV_CONCURRENCY`, default `DEDALO_MEDIA_JOB_CONCURRENCY + 1`; `DEDALO_MEDIA_AV_QUEUE_SECONDS`, default 120). It is a separate pool from the image one on purpose: an image permit is held for seconds and an AV one for minutes, so a shared ceiling would queue every upload thumbnail behind a transcode, and a job lane must never wait on the pool an image conversion is waiting on. A media job takes BOTH (its lane says the work may run, the permit says an ffmpeg may start now) — a lane is not a permit, and nothing holding an AV permit ever waits for a lane. THE SPILL ALSO HAS A CHOSEN FILESYSTEM: `-limit disk` budgets the pixel cache, it does not prevent it, and ImageMagick picks the volume from `MAGICK_TMPDIR` — unset, the OS temp dir, which on both shipped compose stacks is the volume the DATABASE lives on. `magickPolicyEnv(scratchDir)` now requires the directory and every caller names one inside the media root, the twin of the `TMPDIR` the PDF rasterizer hands Ghostscript. Gates: `magick_policy_tripwire` (census of every spawn door, both pools, plus the leg that no API handler spawns a converter of its own) + `media_admission_native` (both pools bound the real binaries) |
 
 Also carry over: never reveal media existence to the unauthorized (fail-closed 404s), activity logging on upload/delete (the `'UPLOAD COMPLETE'` / `'DELETE FILE'` entries), and the record-scope gate on TM/filename-match paths that deliberately skip the projects filter.
 

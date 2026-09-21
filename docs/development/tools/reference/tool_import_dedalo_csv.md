@@ -1,6 +1,6 @@
 # tool_import_dedalo_csv
 
-Imports CSV files into Dédalo sections — notably the round-trip of `tool_export` `dedalo_raw` exports — conforming each cell per-component, with multi-language support and time-machine tracking.
+Imports CSV files into Dédalo sections — notably `tool_export` `dedalo_raw` exports loaded back after a spreadsheet edit — conforming each cell per-component (typed input, not a verbatim restore; the lossless copy is the [archive door](../../../core/exporting_data.md#the-archive-door)), with multi-language support and time-machine tracking.
 
 ## What it does / why & when to use it
 
@@ -116,7 +116,7 @@ const rqo = {
 
 ### The CSV being imported
 
-The `dedalo_raw` round-trip wraps each cell with `dedalo_data` (one column per component, [dataframes](../../../core/importing_data.md#dataframe-columns) included); the `section_id` column stays a plain int (the record key) and empty cells clear data:
+A `dedalo_raw` export wraps each cell with `dedalo_data` (one column per component, [dataframes](../../../core/importing_data.md#dataframe-columns) included); the `section_id` column stays a plain int (the record key) and empty cells clear data:
 
 ```text
 section_id;numisdata81;numisdata27

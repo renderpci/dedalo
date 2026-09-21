@@ -58,25 +58,23 @@ it directly.
 flowchart TB
     ONT["ontology node (component_info / component_calculation / component_state)<br/>properties.widgets = [ {widget_name, path, ipo}, … ]"]
     ONT --> EMIT["section read → component_info emit hook<br/>src/core/components/component_info/emit.ts"]
-    EMIT -->|"stored misc value present?"| STORED["serve the STORED value"]
-    EMIT -->|"empty row → live fallback"| REG["computeInfoWidgets(componentTipo, context)<br/>widgets/registry.ts"]
+    EMIT -->|"stored misc value present? → IGNORED + counted"| REG["computeInfoWidgets(componentTipo, context)<br/>widgets/registry.ts"]
     REG -->|"per widget: INFO_WIDGETS.get(widget_name)"| W["descriptor.computeData(ipo, context)<br/>widgets/&lt;tld&gt;/&lt;name&gt;.ts"]
     W -->|"reads via readWidgetComponentData"| COMP["other components of the record"]
     W -->|"[{widget, key, widget_id, id, value}]"| REG
     REG --> NORM["normalizeWidgetEntryKeys — WC-026 dual keys"]
-    STORED --> NORM
     NORM --> DDO["component_info datum {context, data.entries}"]
     DDO --> CL["client: component_info.js → per-widget render_&lt;name&gt;.js"]
 ```
 
 On a section read the info **emit hook**
 (`src/core/components/component_info/emit.ts`) is reached for every
-`component_info` instance. If the matrix row already holds a **stored** value it
-is served verbatim; otherwise the hook falls back to **live compute** through
+`component_info` instance. The value is **always** the **live compute** through
 `computeInfoWidgets()` (`widgets/registry.ts`), which reads the node's
 `properties.widgets` and, for each non-async widget, looks its `widget_name` up
-in the registry and runs the descriptor's `computeData()`. Both branches pass
-through `normalizeWidgetEntryKeys` (the WC-026 dual-key fix — see
+in the registry and runs the descriptor's `computeData()`. A stored `misc`
+value is never served (see [The derived-value rule](#the-derived-value-rule)).
+The entries pass through `normalizeWidgetEntryKeys` (the WC-026 dual-key fix — see
 [The wire contract](#the-wire-contract)). The client (`component_info.js`) then
 hands each widget its slice of `data.entries` and dynamically imports its
 render module.
@@ -201,14 +199,22 @@ carries a value, a single `detail` of 50% therefore yields a `total` of 25%.
     key keeps its value and its position, so a consumer that ignores it is
     unaffected. Live instances: **rsc19**, **oh28** (both `component_state`).
 
-### The stored-misc-wins / live-fallback rule
+### The derived-value rule
 
-The emit hook serves the **stored** misc value when the client save cycle has
-persisted one (`{id, key, value, widget}` items), and falls back to live widget
-compute only when the row holds nothing. In practice **stored misc values are
-legacy** — nothing writes them today, so the live compute path is the one that
-matters, and observer recomputes deliberately do **not** touch the live misc
-column either (see [Observers](#observers)).
+A `component_info` value is **derived**: what its widgets compute for this
+record, for this principal, at read time. The emit hook therefore **always**
+serves the live compute and **never** a stored `misc` array — whatever shape it
+has (v5 residue, a modern entry array, a Time Machine restore of an observer
+row). An ignored stored value is counted on `/api/v1/counters`
+(`component_info_stored_value_ignored`; the v5 blob additionally under
+`component_info_legacy_stored_value`), and the column is never rewritten.
+
+Why not "stored wins, live as fallback": nothing
+authors a `component_info` value — no client widget saves, and the server-side
+observer writes only history — so a stored array could only ever freeze a
+per-principal computation at somebody's stale snapshot, which a Time Machine
+restore of an observer-written row did, permanently. Ledgered in
+`WC-2026-09-03-info-stored-value-never-served`.
 
 ### Edit-mode datalist
 
@@ -373,9 +379,12 @@ own section and the filter path disagree is in
 
 !!! note "One TM row, never the live misc column"
     Per target the engine writes exactly one `matrix_time_machine` row per save
-    and — deliberate — does **not** write the live misc column (stored misc
-    values are legacy). Gated in
-    `test/parity/info_observer_differential.test.ts`.
+    and — deliberate — does **not** write the live misc column: the served
+    value is derived at read time, so the TM row is history only and restoring
+    it is inert for what is served (see
+    [The derived-value rule](#the-derived-value-rule)). Gated in
+    `test/parity/info_observer_differential.test.ts` and
+    `test/unit/write_obligations_native.test.ts`.
 
 ## Render views & modes (client)
 

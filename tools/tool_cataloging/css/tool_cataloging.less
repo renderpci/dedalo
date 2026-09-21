@@ -232,8 +232,16 @@
 
 								&:hover {
 									background-color: @color_orange_dedalo;
+									// The glyph on the brand fill is --fg_on_brand,
+									// never --color_white: the orange is a LIGHT fill
+									// in BOTH themes, so white on it is 2.44:1 in
+									// light — under the 3:1 floor a non-text
+									// affordance carries (8.63:1 in dark, which is how
+									// a light-only failure hides). The palette states
+									// the rule on the token itself (vars_tokens.less,
+									// --fg_on_brand): 7.29:1 light, 9.09:1 dark.
 									>.button.info {
-										background-color: @color_white;
+										background-color: var(--fg_on_brand);
 									}
 								}
 
@@ -277,11 +285,6 @@
 						margin: 0.33rem;
 						z-index: 1;
 						opacity: 1;
-
-						// smartphones, touchscreens
-						@media (hover: none) and (pointer: coarse) {
-							opacity: 1;
-						}
 					}
 					&:hover {
 						.button {

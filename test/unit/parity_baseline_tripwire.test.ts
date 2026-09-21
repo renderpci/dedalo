@@ -76,6 +76,7 @@ import {
 	runParityTier,
 	TIER_COMMAND,
 } from '../../scripts/lib/parity_census.ts';
+import { emptyDrift } from '../../scripts/lib/red_baseline.ts';
 import {
 	BASELINE_PATH,
 	computeDrift,
@@ -121,10 +122,22 @@ import { testMediaRootPath } from '../helpers/test_media_root.ts';
  * subprocess; `bun run scripts/parity_baseline.ts --check` remains the standalone
  * entry point and measures identically.
  */
-const LIVE_DRIFT = process.env.DEDALO_PARITY_DRIFT !== '0';
+/**
+ * AND NOT INSIDE A TIER CENSUS. The unit census (`bun run scripts/unit_baseline.ts`)
+ * runs this file with `DEDALO_TIER_CENSUS_RUNNING=1`, and `runTier` REFUSES a
+ * nested census under that flag (scripts/lib/parity_census.ts, the recursion
+ * guard). Until 2026-09-02 that refusal threw at MODULE SCOPE here, so under the
+ * census this file crashed at load and reported NO case at all — which the red
+ * baseline cannot see (a crashed file is not a failing testcase), and which left
+ * the file with no per-file assertion record (suite_assertion_floor_tripwire).
+ * Under the census the live legs are skipped with the reason in their name; the
+ * static legs report, and the census's own `--check` is the live comparison there.
+ */
+const LIVE_DRIFT =
+	process.env.DEDALO_PARITY_DRIFT !== '0' && process.env.DEDALO_TIER_CENSUS_RUNNING !== '1';
 if (!LIVE_DRIFT) {
 	console.warn(
-		'[parity_baseline_tripwire] live drift legs DISABLED by DEDALO_PARITY_DRIFT=0. Enforcement: `bun run scripts/parity_baseline.ts --check`.',
+		'[parity_baseline_tripwire] live drift legs DISABLED (DEDALO_PARITY_DRIFT=0, or running inside a tier census). Enforcement: `bun run scripts/parity_baseline.ts --check`.',
 	);
 }
 const RUN = LIVE_DRIFT ? runParityTier() : null;
@@ -151,6 +164,21 @@ describe('parity baseline ratchet — the tier’s red set may only shrink', () 
 				(DRIFT as NonNullable<typeof DRIFT>).stale,
 				`STALE ENTRIES in ${BASELINE_PATH} — a frozen red that is no longer red leaves a hole the ratchet stops watching, so that gate could break again unnoticed.\n${formatDrift({ ...(DRIFT as NonNullable<typeof DRIFT>), regressions: [], summary: [], vacuity: [] })}\n` +
 					`The one command that fixes this: \`${FIX_COMMAND}\` — then commit ${BASELINE_PATH} with the change that improved the tier.`,
+			).toEqual([]);
+		},
+	);
+
+	test.if(LIVE_DRIFT)(
+		'the per-file assertion floor holds (skips only shrink, assertions only rise)',
+		() => {
+			// The rule itself is owned and planted by suite_assertion_floor_tripwire; this
+			// leg is the LIVE comparison for the parity tier, so a differential that quietly
+			// returns before its first expect is red here and not only in `--check`.
+			const live = DRIFT as NonNullable<typeof DRIFT>;
+			expect(
+				[...live.floors, ...live.floorsStale],
+				`PER-FILE FLOOR DRIFT in ${BASELINE_PATH}.\n${formatDrift({ ...emptyDrift(), floors: live.floors, floorsStale: live.floorsStale })}\n` +
+					`A FALL in assertions/cases or a RISE in skips is a regression: fix it, or freeze it deliberately with \`${FIX_COMMAND} --allow-regression\` and say why in the commit. A stale line is a re-freeze: \`${FIX_COMMAND}\`.`,
 			).toEqual([]);
 		},
 	);
@@ -251,6 +279,10 @@ describe('parity baseline ratchet — anti-vacuity', () => {
 			cases: Object.entries(BASELINE.files).flatMap(([file, names]) =>
 				names.map((name) => ({ file, name, status: 'fail' as const })),
 			),
+			// The per-file floor is reproduced verbatim so it drifts in neither
+			// direction here; its OWN planted legs live in
+			// suite_assertion_floor_tripwire, the one owner of that rule.
+			perFile: BASELINE.per_file,
 		};
 		// The synthetic base reproduces the frozen debt exactly, so it drifts in
 		// neither direction — the control every plant below is measured against.

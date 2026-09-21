@@ -2,6 +2,7 @@
   "name": "dedalo-publication-api-v2",
   "version": "2.1.0",
   "description": "Dédalo Publication API v2 - Read-only REST API for published cultural heritage data",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "scripts": {
     "dev": "bun run --watch src/index.ts",

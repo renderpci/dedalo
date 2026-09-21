@@ -454,6 +454,17 @@ async function compileSourceChain(
  * directive it no longer reads at all: the field publishes with no transform and
  * nothing says the ontology asked for one.
  *
+ * TWO SHAPES, both retired (P1-13 / PUB-04 un-masked the second, 2026-09-03).
+ * The v5/v6 ontology wrote the directive as a STRING naming the PHP fn —
+ * `"process_dato": "diffusion_sql::resolve_value"`, arguments beside it in
+ * `process_dato_arguments` — and that is the shape every one of the 18 shipped
+ * nodes (the dd1101/dd1192 tables of dd1099) actually carries. The first
+ * version of this report looked only for `process_dato.parser`, an object
+ * shape no shipped node has, so it stayed SILENT on the exact rows it was
+ * written for; nobody saw it because those elements could not compile at all
+ * (PUB-04) until the seed spoke `diffusion.type`. Any non-empty `process_dato`
+ * is therefore the retired directive, whatever its shape.
+ *
  * Reported the way the engine already reports a retired property
  * (relations/request_config/build.ts::reportRetiredTargetMode): ONE loud line
  * naming the node and the replacement, then resolve by the ordinary rule.
@@ -461,6 +472,24 @@ async function compileSourceChain(
 const RETIRED_PARSER_SPELLINGS: Record<string, string> = {
 	process_dato: 'process',
 };
+
+/** The v6 fn a string-shaped `process_dato` names, for the report ('' when none). */
+function retiredDirectiveFn(block: unknown): string {
+	if (typeof block === 'string') return block;
+	if (block !== null && typeof block === 'object') {
+		const parser = (block as Record<string, unknown>).parser;
+		if (typeof parser === 'string') return parser;
+		if (Array.isArray(parser)) {
+			const first = parser[0] as Record<string, unknown> | undefined;
+			return typeof first?.fn === 'string' ? (first.fn as string) : '';
+		}
+		if (parser !== null && typeof parser === 'object') {
+			const fn = (parser as Record<string, unknown>).fn;
+			return typeof fn === 'string' ? fn : '';
+		}
+	}
+	return '';
+}
 
 function reportRetiredParserSpelling(
 	fieldProperties: Record<string, unknown> | null,
@@ -470,9 +499,14 @@ function reportRetiredParserSpelling(
 ): void {
 	if (fieldProperties === null) return;
 	for (const [retired, replacement] of Object.entries(RETIRED_PARSER_SPELLINGS)) {
-		const block = fieldProperties[retired] as Record<string, unknown> | undefined;
-		if (block === undefined || block === null) continue;
-		if (block.parser === undefined || block.parser === null) continue;
+		const block = fieldProperties[retired];
+		if (block === undefined || block === null || block === '') continue;
+		// An empty object carries no directive; anything else — the shipped
+		// string fn, or an object with a parser — asked for a transform.
+		if (typeof block === 'object' && !Array.isArray(block) && Object.keys(block).length === 0) {
+			continue;
+		}
+		const fn = retiredDirectiveFn(block);
 		// A DEGRADATION, not an error: the run proceeds (the field publishes
 		// untransformed, which is what already happens today) but it is now visible
 		// in the run report instead of being indistinguishable from "no parser
@@ -484,9 +518,10 @@ function reportRetiredParserSpelling(
 			ddoTipo: '',
 			disabledDdoTipos: [],
 			message:
-				`field '${fieldTipo}' (${fieldLabel}) carries RETIRED properties.${retired}.parser — ` +
-				'no longer read, so the field publishes with NO transform. Rename the block to ' +
-				`'${replacement}' in the ontology.`,
+				`field '${fieldTipo}' (${fieldLabel}) carries RETIRED properties.${retired}` +
+				`${fn !== '' ? ` ('${fn}')` : ''} — ` +
+				'no longer read, so the field publishes with NO transform. Port the directive to ' +
+				`'${replacement}' (ddo_map + parser) in the ontology.`,
 		});
 	}
 }

@@ -298,14 +298,37 @@ describe('identities', () => {
   });
 
   test('an existing identity is left alone — no usermod, no groupmod, no second useradd', () => {
+    // BOTH identities present: the daemon's and the agent's. A museum runs two uids now
+    // (layout.ts's recorded decision — an agent turn must not be the daemon), so a host that
+    // already has one of them is not a converged host, and this gate says so by naming both.
+    const decl = declare();
+    const host: HostState = {
+      ...bareHost(),
+      users: [decl.layout.identity.user, decl.layout.identity.agentUser],
+      groups: [decl.layout.identity.group],
+    };
+    const actions = planFor(decl, host);
+    expect(actions.some(action => action.kind === 'user' || action.kind === 'group')).toBe(false);
+  });
+
+  test('the AGENT uid is planned too, with the instance group and its own name', () => {
+    // The half that is easy to lose: a converged host whose daemon user exists would plan
+    // nothing, and every turn would then refuse (or, before the confinement existed, run as
+    // the daemon). So the agent's account is asserted as its own action, on a host that
+    // already carries the service user.
     const decl = declare();
     const host: HostState = {
       ...bareHost(),
       users: [decl.layout.identity.user],
       groups: [decl.layout.identity.group],
     };
-    const actions = planFor(decl, host);
-    expect(actions.some(action => action.kind === 'user' || action.kind === 'group')).toBe(false);
+    const users = planFor(decl, host).filter(action => action.kind === 'user');
+    expect(users.map(action => (action.kind === 'user' ? action.name : ''))).toEqual([
+      decl.layout.identity.agentUser,
+    ]);
+    const [agent] = users;
+    expect(agent?.kind === 'user' && agent.group).toBe(decl.layout.identity.group);
+    expect(decl.layout.identity.agentUser).not.toBe(decl.layout.identity.user);
   });
 
   test('an ADOPTED identity still gets its group when the host lacks one', () => {
@@ -313,7 +336,11 @@ describe('identities', () => {
     // shape a hand-built install arrives in, and the one where the unit's Group= is a boot
     // failure waiting to happen.
     const decl = declare(docWith({ identity: { user: 'legacy-builder', group: 'legacy-builder' } }));
-    const host: HostState = { ...bareHost(), users: ['legacy-builder'], groups: [] };
+    const host: HostState = {
+      ...bareHost(),
+      users: ['legacy-builder', decl.layout.identity.agentUser],
+      groups: [],
+    };
     const actions = planFor(decl, host);
     const group = actions.find(action => action.kind === 'group');
     expect(group?.kind === 'group' && group.name).toBe('legacy-builder');

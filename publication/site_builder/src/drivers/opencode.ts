@@ -11,9 +11,10 @@
  * child by the session manager's env builder.
  */
 
-import { writeFile } from 'node:fs/promises';
+import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { config } from '../config';
+import { relativeUnderRoot, writeFileAgentReadable } from '../util/shared_tree';
 import { runBinary } from '../util/spawn';
 import { spawnAgentProcess } from './process';
 import type { AgentDriver, AgentEvent, DriverInfo, SessionStartOptions, AgentProcess } from './types';
@@ -39,21 +40,42 @@ async function detect(): Promise<DriverInfo | null> {
  * driver it must live at the workspace root (not under .builder/); the agent is instructed
  * to leave it alone.
  */
-async function writeMcpConfig(opts: SessionStartOptions): Promise<void> {
-  const path = join(opts.workspace, 'opencode.json');
+export async function writeMcpConfig(opts: SessionStartOptions): Promise<string> {
   const server: Record<string, unknown> = { type: 'remote', url: opts.mcp.url };
   if (opts.mcp.headers && Object.keys(opts.mcp.headers).length > 0) {
     server.headers = opts.mcp.headers;
   }
-  await writeFile(path, JSON.stringify({ mcp: { [opts.mcp.name]: server } }, null, 2), 'utf8');
+  // The PERMISSION BLOCK is written by the daemon, in the daemon's own file, for the same
+  // reason the Claude Code driver states its tool set in the argv: an agent's default
+  // permissions are that project's decision and not this museum's. Bash and webfetch are
+  // denied — arbitrary execution and an outbound channel — and editing, which is the whole
+  // job, is allowed.
+  //
+  // 0640 and deleted when the turn ends: this file carries the Publication API key. And it
+  // goes through the FD-BASED writer (util/shared_tree.ts) for the same reason the Claude
+  // Code driver's does — at the workspace ROOT the plant is even cheaper, since the agent
+  // is told to leave this exact filename alone and can therefore replace it with a link to
+  // anywhere the daemon can reach.
+  return writeFileAgentReadable(
+    config.SITES_ROOT,
+    join(relativeUnderRoot(config.SITES_ROOT, opts.workspace), 'opencode.json'),
+    JSON.stringify({ mcp: { [opts.mcp.name]: server }, permission: DENIED_PERMISSIONS }, null, 2),
+  );
 }
+
+/** OpenCode's own vocabulary for the same closed statement the Claude Code driver makes. */
+export const DENIED_PERMISSIONS: Readonly<Record<string, string>> = Object.freeze({
+  bash: 'deny',
+  webfetch: 'deny',
+  edit: 'allow',
+});
 
 function startTurn(opts: SessionStartOptions): AgentProcess {
   return spawnAgentProcess(opts, async () => {
-    await writeMcpConfig(opts);
+    const configPath = await writeMcpConfig(opts);
     const argv = [config.OPENCODE_BIN, 'run', opts.prompt, '--format', 'json'];
     if (opts.resumeToken) argv.push('--session', opts.resumeToken);
-    return { argv, parseLine: parseJsonLine };
+    return { argv, parseLine: parseJsonLine, cleanup: () => rm(configPath, { force: true }) };
   });
 }
 

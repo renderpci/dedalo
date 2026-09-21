@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -187,12 +188,12 @@ const get_grid_nodes = function(data) {
 		const text_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'descriptors_item',
-			inner_html		: `${item.label}`
+			inner_html		: render_value(item.label, 'text')
 		})
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'descriptors_item_total',
-			inner_html		: `${item.total}`,
+			inner_html		: render_value(item.total, 'number'),
 			parent			: text_node
 		})
 

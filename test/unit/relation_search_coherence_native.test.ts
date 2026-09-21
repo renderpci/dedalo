@@ -31,7 +31,10 @@
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
 import { deletePortalLocator } from '../../src/core/relations/save.ts';
-import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
+import {
+	deleteSectionData,
+	deleteSectionRecord,
+} from '../../src/core/section/record/delete_record.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { SYNTHETIC_HIERARCHY_A_TLD } from '../../src/core/test_data/synthetic_hierarchy_constants.ts';
@@ -160,6 +163,23 @@ describe('relation_search coherence across every removal door', () => {
 			{ locator: stored },
 		);
 		expect((await columns(HOLDER_ID)).relation[HI_TIPO] ?? []).toEqual([]);
+		await assertCoherent();
+	}, 60000);
+
+	test('deleteSectionData (the record WIPE door) leaves no orphaned ancestors', async () => {
+		// THE FOURTH DOOR. Emptying a record's data drops every locator its
+		// relation components held, so the ancestor index must go with them.
+		// This door imported maintainRelationSearchIndex and never called it:
+		// the wipe left relation_search standing, and `conform.ts`'s
+		// `direct OR ancestor` kept answering for a component pointing at
+		// nothing — the same permanent disagreement the three doors above were
+		// fixed for. Found 2026-09-05 by an unused-import lint on the very
+		// symbol that was meant to be called.
+		await deleteSectionData(SECTION, HOLDER_ID, USER_ID, new Date());
+		expect(
+			((await columns(HOLDER_ID)).relation[HI_TIPO] ?? []).length,
+			'the wipe did not empty the relation component — re-read this gate',
+		).toBe(0);
 		await assertCoherent();
 	}, 60000);
 

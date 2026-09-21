@@ -60,6 +60,18 @@
  *     literal style) fails LOUDLY instead of turning C and D into a rubber
  *     stamp by making everything a violation… or, worse, by making the census
  *     look complete.
+ *  G. MEDIA RETENTION IS MECHANICAL (S-7 / LIFE-05). A `--delete` mirror is
+ *     ONE generation: a deletion in the media originals reached the only media
+ *     backup at the next nightly run, so the store PRODUCTION.md §6 calls "the
+ *     source of truth every derivative rebuilds from" had no recovery point.
+ *     TOTAL over deploy/** and the compose stacks: every rsync that deletes
+ *     must build a `--link-dest` generation under a stated retention (`--keep`
+ *     / `KEEP`), and every `dedalo-tree-backup.sh` invocation must carry
+ *     `--keep` (the script refuses without it, but a unit that forgot it is a
+ *     backup that fails every night). Positive control: the historical
+ *     `rsync -a --delete $MEDIA_PATH/ /backup/media/` line. ENUMERATED,
+ *     reason-bearing, shrink-only exemption for the one mirror that is not yet
+ *     a generation store (site-builder, store 5).
  *
  * ── CENSUS: TOTAL over deploy/, DERIVED on both sides ───────────────────────
  *
@@ -270,6 +282,109 @@ function unguardedUnprovided(scanned: {
 	return [...bad].sort();
 }
 
+// ── leg G: retention over deploy/** + the compose stacks ───────────────────
+
+/**
+ * Every file under deploy/ (recursively) plus docker-compose*.yml at the root
+ * — LISTED, never enumerated. Wider than DEPLOY_FILES on purpose: a compose
+ * stack's backup loop is a copy of the systemd job in another syntax, and a
+ * mirror hiding in a .tpl or a .ts helper would still be a mirror.
+ */
+function walk(dir: string): string[] {
+	return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+		const path = join(dir, entry.name);
+		return entry.isDirectory() ? walk(path) : [path];
+	});
+}
+const RETENTION_FILES: readonly string[] = [
+	...walk(DEPLOY),
+	...readdirSync(ROOT)
+		.filter((f) => /^docker-compose.*\.ya?ml$/.test(f))
+		.map((f) => join(ROOT, f)),
+]
+	.map((p) => p.slice(ROOT.length + 1))
+	.sort();
+
+/**
+ * Logical lines: comments dropped, backslash continuations joined — a compose
+ * `command:` spreads one invocation over several physical lines.
+ */
+function logicalLines(text: string): string[] {
+	const out: string[] = [];
+	let carry = '';
+	for (const raw of text.split('\n')) {
+		const line = carry + raw;
+		if (/\\\s*$/.test(line)) {
+			carry = `${line.replace(/\\\s*$/, '')} `;
+			continue;
+		}
+		carry = '';
+		if (/^\s*#/.test(line)) continue;
+		out.push(line);
+	}
+	return out;
+}
+
+interface RetentionScan {
+	/** rsync invocations that delete (on the line, or via the file's `set --` assembly). */
+	readonly deletingRsyncs: readonly { line: string; at: number }[];
+	/** dedalo-tree-backup.sh invocations (logical lines). */
+	readonly treeBackups: readonly { line: string; at: number }[];
+	/** Does the file build --link-dest generations under a stated retention? */
+	readonly generational: boolean;
+}
+
+function scanRetention(text: string): RetentionScan {
+	const lines = logicalLines(text);
+	const assemblesDelete = lines.some((l) => /\bset\s+--.*--delete\b/.test(l));
+	const deletingRsyncs: { line: string; at: number }[] = [];
+	const treeBackups: { line: string; at: number }[] = [];
+	lines.forEach((line, i) => {
+		// `rsync` as a command, not the word in a message or a `command -v` probe.
+		if (/(^|[\s=;|&(`/])rsync\s+(?!>)/.test(line) && !/command -v rsync|echo|fail "/.test(line)) {
+			if (/--delete\b/.test(line) || assemblesDelete) deletingRsyncs.push({ line, at: i + 1 });
+		}
+		if (
+			/dedalo-tree-backup\.sh/.test(line) &&
+			!/^\s*(ExecStart=)?[^ ]*dedalo-tree-backup\.sh\s*$/.test(line) &&
+			!/\bcp\b|\bchmod\b|\binstall\b/.test(line)
+		) {
+			treeBackups.push({ line, at: i + 1 });
+		}
+	});
+	// On CODE lines only: dedalo-tree-backup.sh's header explains --link-dest at
+	// length, and a scanner reading comments would call a script that lost the
+	// flag generational on the strength of its own documentation.
+	const code = lines.join('\n');
+	const generational = /--link-dest/.test(code) && (/--keep\b/.test(code) || /\bKEEP\b/.test(code));
+	return { deletingRsyncs, treeBackups, generational };
+}
+
+/** A deleting rsync in a file that is NOT a generation store. */
+function bareMirrors(scanned: RetentionScan): number[] {
+	return scanned.generational ? [] : scanned.deletingRsyncs.map((r) => r.at);
+}
+/** A tree-backup invocation without `--keep`. */
+function keeplessTreeBackups(scanned: RetentionScan): number[] {
+	return scanned.treeBackups.filter((t) => !/--keep\b/.test(t.line)).map((t) => t.at);
+}
+
+/**
+ * The mirrors that are NOT yet generation stores. ENUMERATED, one reason
+ * each, SHRINK-ONLY: leg G refuses a stale entry and caps the size.
+ */
+const BARE_MIRROR_EXEMPTIONS: ReadonlyMap<string, string> = new Map([
+	[
+		'deploy/dedalo-site-builder-backup.sh',
+		"store 5 (site-builder instances) copies each instance's config/workspaces/webspaces/audit as ONE mirror at a fixed layout that test/unit/operator_commands_tripwire.test.ts leg F pins path by path; turning it into dated --link-dest generations changes that layout and is a named follow-up of S-7 (LIFE-05 closed stores 3 and 4). Until then a deleted site reaches the only copy at the next nightly run — an operator wanting generations wraps the DEST in a filesystem snapshot",
+	],
+]);
+
+const RETENTION_SCANS = RETENTION_FILES.map((file) => ({
+	file,
+	...scanRetention(readFileSync(join(ROOT, file), 'utf8')),
+}));
+
 // ── legs ───────────────────────────────────────────────────────────────────
 
 describe('deploy_env_contract_tripwire', () => {
@@ -402,5 +517,78 @@ describe('deploy_env_contract_tripwire', () => {
 		expect(CATALOG_KEYS.size).toBeGreaterThanOrEqual(100);
 		expect(BOOTSTRAP_KEYS.has('DEDALO_PRIVATE_DIR')).toBe(true);
 		expect(UNIT_PROVIDED.has('DEDALO_BACKUP_STATE_DIR')).toBe(true);
+	});
+
+	test('G. the retention scan is not empty — floors on files, deleting rsyncs and tree-backup invocations', () => {
+		// MEASURED 2026-09-03: 23 files under deploy/ + 2 compose stacks; 2
+		// deleting rsync sites (the tree-backup script's generation build and the
+		// site-builder mirror); 6 tree-backup invocations (2 in the systemd unit,
+		// 2 per compose stack).
+		expect(RETENTION_FILES.length).toBeGreaterThanOrEqual(20);
+		expect(RETENTION_FILES.filter((f) => /^docker-compose/.test(f)).length).toBeGreaterThanOrEqual(
+			2,
+		);
+		expect(RETENTION_SCANS.flatMap((s) => s.deletingRsyncs).length).toBeGreaterThanOrEqual(2);
+		expect(RETENTION_SCANS.flatMap((s) => s.treeBackups).length).toBeGreaterThanOrEqual(5);
+		expect(RETENTION_SCANS.filter((s) => s.generational).map((s) => s.file)).toEqual([
+			'deploy/dedalo-tree-backup.sh',
+		]);
+	});
+
+	test('G. a deleting rsync builds a --link-dest generation under a retention, or is an enumerated exemption', () => {
+		const offenders = RETENTION_SCANS.flatMap((s) =>
+			BARE_MIRROR_EXEMPTIONS.has(s.file) ? [] : bareMirrors(s).map((at) => `${s.file}:${at}`),
+		);
+		expect(offenders).toEqual([]);
+	});
+
+	test('G. every dedalo-tree-backup.sh invocation states its retention (--keep)', () => {
+		const offenders = RETENTION_SCANS.flatMap((s) =>
+			keeplessTreeBackups(s).map((at) => `${s.file}:${at}`),
+		);
+		expect(offenders).toEqual([]);
+	});
+
+	test('G. positive control — the historical --delete mirror is a bare mirror, the generation build is not', () => {
+		// The media step deploy/dedalo-backup.service shipped before LIFE-05.
+		const historical = scanRetention(
+			[
+				'[Service]',
+				'ExecStart=/usr/bin/rsync -a --delete $MEDIA_PATH/ /backup/media/',
+				'ExecStart=/usr/bin/dedalo-tree-backup.sh --label media --source-key MEDIA_PATH --dest /backup/media',
+			].join('\n'),
+		);
+		expect(bareMirrors(historical)).toEqual([2]);
+		expect(keeplessTreeBackups(historical)).toEqual([3]);
+		// The generation shape: --delete assembled by `set --`, --link-dest, KEEP —
+		// and a continuation-split compose invocation that DOES carry --keep.
+		const generational = scanRetention(
+			[
+				'KEEP=14',
+				'set -- --archive --delete --delete-excluded',
+				'set -- "$@" --link-dest="$DEST/$previous"',
+				'rsync "$@" "$SOURCE/" "$WORK/"',
+				'"$$D/dedalo-tree-backup.sh" --label media --source-key MEDIA_PATH \\',
+				'  --dest /backups/media --keep "$$DEDALO_BACKUP_KEEP"',
+				'# rsync -a --delete in a comment is not a mirror',
+				'command -v rsync >/dev/null || fail "rsync is not installed"',
+			].join('\n'),
+		);
+		expect(generational.deletingRsyncs.map((r) => r.at)).toEqual([4]);
+		expect(generational.treeBackups.length).toBe(1);
+		expect(bareMirrors(generational)).toEqual([]);
+		expect(keeplessTreeBackups(generational)).toEqual([]);
+	});
+
+	test('G. the bare-mirror exemption list is reasoned, stale-free and small', () => {
+		for (const [file, reason] of BARE_MIRROR_EXEMPTIONS) {
+			const scanned = RETENTION_SCANS.find((s) => s.file === file);
+			// An exemption for a file that no longer mirrors is a licence left lying around.
+			expect(scanned !== undefined && bareMirrors(scanned).length > 0, `${file} is stale`).toBe(
+				true,
+			);
+			expect(reason.length, `${file} needs a substantive reason`).toBeGreaterThan(80);
+		}
+		expect(BARE_MIRROR_EXEMPTIONS.size).toBeLessThanOrEqual(1);
 	});
 });

@@ -476,7 +476,7 @@ export async function absorbComponentItemIds(
  * row that governs nothing.
  */
 export function counterTableFor(tableName: string | null): string {
-	return tableName !== null && tableName.endsWith('_dd') ? 'matrix_counter_dd' : 'matrix_counter';
+	return tableName?.endsWith('_dd') ? 'matrix_counter_dd' : 'matrix_counter';
 }
 
 /**
@@ -730,6 +730,164 @@ export async function insertMatrixRecordWithExplicitId(
 	// A rebirth is a COUNTER allocation landing on an id that was used before,
 	// which is insertMatrixRecordWithCounter's business, not this door's.
 	return Number(inserted);
+}
+
+/**
+ * Append items to ONE component key of a matrix row ATOMICALLY — the pure-insert
+ * fast path of save_component (PHP has no twin: it read-modify-writes and loses
+ * one of two concurrent inserts). `COALESCE(col->key, '[]') || $n` is evaluated
+ * inside the UPDATE, so two concurrent appends both survive without a row
+ * lock. Callers that need the merged shape (dedupe, id stamping) must take the
+ * read-modify-write chokepoint under readMatrixKeyForUpdate instead.
+ *
+ * T2: the statement lives HERE so save_component.ts carries no matrix DML of its
+ * own. Returns the affected row count (0 ⇒ the record vanished under the caller).
+ */
+export async function appendMatrixKeyItems(
+	tableName: string,
+	sectionTipo: string,
+	sectionId: number,
+	column: MatrixJsonbColumn,
+	key: string,
+	items: readonly unknown[],
+): Promise<number> {
+	assertMatrixTable(tableName);
+	if (!MATRIX_JSONB_COLUMNS.includes(column)) {
+		throw new DedaloError('internal.invariant', {
+			message: `appendMatrixKeyItems: column '${column}' is not allowlisted (spec §7.6)`,
+			coordinates: { table: tableName, column },
+		});
+	}
+	if (!/^[a-z]+[0-9]+$/.test(key)) {
+		throw new DedaloError('internal.invariant', {
+			message: `appendMatrixKeyItems: key '${key}' fails the tipo grammar (spec §7.6)`,
+			coordinates: { table: tableName, key },
+		});
+	}
+	if (items.length === 0) {
+		throw new DedaloError('internal.invariant', {
+			message: 'appendMatrixKeyItems: empty items payload',
+			coordinates: { table: tableName, section_tipo: sectionTipo, section_id: sectionId, key },
+		});
+	}
+	const updated = (await sql.unsafe(
+		`UPDATE "${tableName}"
+		 SET "${column}" = jsonb_set(
+			COALESCE("${column}", '{}'::jsonb),
+			'{${key}}',
+			COALESCE("${column}"->'${key}', '[]'::jsonb) || $3::text::jsonb
+		 )
+		 WHERE section_tipo = $1 AND section_id = $2
+		 RETURNING id`,
+		[sectionTipo, sectionId, encodeForJsonb(items)],
+	)) as unknown[];
+	return updated.length;
+}
+
+/**
+ * Insert a row whose section_id the TABLE allocates from its own sequence —
+ * the activity log shape (matrix_activity.section_id DEFAULT nextval(…)), where
+ * the row is an append-only event and no counter row exists for the tipo.
+ * Exactly the tables whose schema carries that default may use this door: a
+ * table without it inserts a NULL section_id, which is a record with no
+ * address, so the door refuses any other table by name.
+ *
+ * Returns the allocated section_id. Every jsonb value goes through json_codec.
+ */
+export const SEQUENCE_ID_MATRIX_TABLES: readonly string[] = ['matrix_activity'];
+
+export async function insertMatrixRowSequenceId(
+	tableName: string,
+	sectionTipo: string,
+	values: MatrixWriteValues,
+): Promise<number> {
+	assertMatrixTable(tableName);
+	if (!SEQUENCE_ID_MATRIX_TABLES.includes(tableName)) {
+		throw new DedaloError('internal.invariant', {
+			message: `insertMatrixRowSequenceId: '${tableName}' allocates no section_id sequence — use insertMatrixRecordWithCounter`,
+			coordinates: { table: tableName },
+		});
+	}
+	const columns = Object.keys(values) as MatrixJsonbColumn[];
+	if (columns.length === 0) {
+		throw new DedaloError('internal.invariant', {
+			message: 'insertMatrixRowSequenceId: empty values payload',
+			coordinates: { table: tableName, section_tipo: sectionTipo },
+		});
+	}
+	const parameters: (string | null)[] = [sectionTipo];
+	const placeholders: string[] = [];
+	for (const column of columns) {
+		if (!MATRIX_JSONB_COLUMNS.includes(column)) {
+			throw new DedaloError('internal.invariant', {
+				message: `insertMatrixRowSequenceId: column '${column}' is not allowlisted (spec §7.6)`,
+				coordinates: { table: tableName, column },
+			});
+		}
+		parameters.push(toBoundParameter(values[column], false));
+		placeholders.push(`$${parameters.length}::text::jsonb`);
+	}
+	const rows = (await sql.unsafe(
+		`INSERT INTO "${tableName}" (section_tipo, ${columns.map((column) => `"${column}"`).join(', ')})
+		 VALUES ($1, ${placeholders.join(', ')})
+		 RETURNING section_id`,
+		parameters,
+	)) as { section_id: number }[];
+	return Number(rows[0]?.section_id);
+}
+
+/**
+ * Append one row to matrix_updates — the (id, data) data-version / migration
+ * log (PHP update_dedalo_data_version). NOT a record table (no section
+ * address, so not on MATRIX_TABLE_ALLOWLIST); the ONLY writer is this door,
+ * used by the update engine's version row and a migration's marker row.
+ */
+export async function appendMatrixUpdateRow(data: Record<string, unknown>): Promise<void> {
+	await sql.unsafe('INSERT INTO "matrix_updates" ("data") VALUES ($1::text::jsonb)', [
+		encodeForJsonb(data),
+	]);
+}
+
+/**
+ * The APPEND-ONLY EVENT tables a retention window may prune by age
+ * (core/retention/prune.ts). Deliberately NOT the record tables: a heritage
+ * record is removed by a curator through the delete door, never by a clock, and
+ * this door exists so that rule is enforced by an allowlist rather than by
+ * everyone remembering it.
+ */
+export const AGE_PRUNABLE_MATRIX_TABLES: readonly string[] = ['matrix_activity'];
+
+/**
+ * Count (dry) or remove (apply) the event rows older than `cutoffIso`.
+ *
+ * The SAME predicate answers both, so what an operator is shown before they
+ * commit is exactly what the commit removes. Lives here because this file is the
+ * matrix DML writer home (sql_confinement T2): the retention registry decides
+ * WHETHER and WHEN, the writer owns the statement.
+ */
+export async function pruneMatrixEventRowsByAge(
+	tableName: string,
+	cutoffIso: string,
+	options: { apply: boolean },
+): Promise<{ candidates: number; deleted: number }> {
+	assertMatrixTable(tableName);
+	if (!AGE_PRUNABLE_MATRIX_TABLES.includes(tableName)) {
+		throw new DedaloError('internal.invariant', {
+			message: `pruneMatrixEventRowsByAge: '${tableName}' is not an append-only event table — records are deleted by a curator, not by a clock`,
+			coordinates: { table: tableName },
+		});
+	}
+	const counted = (await sql.unsafe(
+		`SELECT count(*)::int AS n FROM "${tableName}" WHERE "timestamp" < $1`,
+		[cutoffIso],
+	)) as { n: number }[];
+	const candidates = Number(counted[0]?.n ?? 0);
+	if (!options.apply || candidates === 0) return { candidates, deleted: 0 };
+	const deleted = (await sql.unsafe(
+		`DELETE FROM "${tableName}" WHERE "timestamp" < $1 RETURNING id`,
+		[cutoffIso],
+	)) as unknown[];
+	return { candidates, deleted: deleted.length };
 }
 
 /** Delete one record. Returns the number of rows removed (0 or 1). */

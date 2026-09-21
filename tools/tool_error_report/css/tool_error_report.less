@@ -10,10 +10,31 @@
 // local vars
 :root {
 	--tool_error_report: #7152a5;
-	--tool_error_report_lighten_40: #dfd8eb;
+	// the dropzone's hover / dragover tint. Its ink is the INHERITED page ink
+	// plus the `--fg_muted` hint (#666666 in light): the tint was #dfd8eb, on
+	// which that hint read at 4.14:1 — lifted so the hint clears AA (4.61:1,
+	// page ink 9.84:1, the hover border 4.88:1 on it).
+	--tool_error_report_lighten_40: #e9e4f2;
+	// declared with the tool, consumed by no rule (CSS coherence audit
+	// 2026-09-05, DESIGN 2.b leg 4). No dark twin is minted for a token nothing
+	// reads; whether they go is a separate decision, not a colour one.
 	--tool_error_report_lighten_5: #7e60b0;
 	--tool_error_report_border: #5a4183;
 	--tool_error_report_lighten_10: #8c71b9;
+}
+
+// dark theme twins (self-contained, like tool_print: theme_dark.less names the
+// export tool — whose hue this one shares — but not this one, so under dark
+// both tokens kept their light values). `--tool_error_report_lighten_40` is a
+// SURFACE whose ink is inherited: in dark that ink is #e5e7ea and the light
+// lavender under it read at 1.12:1, the muted hint at 1.51:1 (CSS coherence
+// audit 2026-09-05, finding C2 / DESIGN clause 2.b). The values are tool_export's
+// dark pair, so the two sheets that share a hue in light share it in dark too:
+// page ink 12.0:1 and hint 7.2:1 on the tint; the identity hue 4.1:1 as the
+// header edge on --bg_surface_alt and 3.8:1 as the hover border on the tint.
+:root[data-theme="dark"] {
+	--tool_error_report:            #9070c8;
+	--tool_error_report_lighten_40: #2a2438;
 }
 @tool_color : var(--tool_error_report);
 

@@ -40,6 +40,8 @@
 		render_term_pick_control,
 		term_selectability
 	} from '../../area_thesaurus/js/thesaurus_picker.js'
+	import {bound_sqo_limit} from '../../common/js/sqo_limit.js'
+	import {a11y} from '../../common/js/a11y.js'
 
 
 
@@ -183,10 +185,12 @@ export const render_id_column = function(self) {
 						// pagination. Built by value: never mutate the cached
 						// self.children_data.pagination object.
 						// When a pagination object is present (children were previously loaded
-						// with limit/offset) reset to 0/0 so the refreshed list starts from
-						// the beginning, revealing the newly added child.
+						// with limit/offset) restart at offset 0 with the SAME page size so
+						// the refreshed list starts from the beginning, revealing the newly
+						// added child (audit P2-31 / CLI-30: this sent `limit: 0` — the
+						// whole branch — exactly when the node was known to be paginated).
 							const pagination = self.children_data?.pagination
-								? { limit: 0, offset: 0 }
+								? { limit: bound_sqo_limit(self.children_data.pagination.limit), offset: 0 }
 								: null
 
 						// children_data - get_children_data from API
@@ -226,7 +230,10 @@ export const render_id_column = function(self) {
 								}
 							})
 					}
-					link_add.addEventListener('click', add_click_handler)
+					a11y.make_activable(link_add, {
+						on_activate	: add_click_handler,
+						label		: (typeof get_label!=='undefined' ? (get_label.new || 'New') : 'New')
+					})
 
 					// add_icon_link_add
 					ui.create_dom_element({
@@ -260,6 +267,10 @@ export const render_id_column = function(self) {
 						// activate draggable
 						wrapper.draggable = true
 					}
+					// a11y: the drag handle keeps its pointer semantics (the drag itself is
+					// pointer-driven); reordering by keyboard is the order-number control
+					// below, which is why this handle takes a NAME but no tab stop.
+					a11y.set_label(dragger, (typeof get_label!=='undefined' ? (get_label.order || 'Order') : 'Order'))
 					dragger.addEventListener('mousedown', mousedown_handler)
 					// mouseup event . Reverts mousedown wrapper draggable set
 					// Clearing draggable on mouseup prevents the row from remaining in
@@ -301,7 +312,10 @@ export const render_id_column = function(self) {
 							has_descriptor_children	: self.has_descriptor_children
 						})
 					}
-					link_delete.addEventListener('click', click_handler)
+					a11y.make_activable(link_delete, {
+						on_activate	: click_handler,
+						label		: (typeof get_label!=='undefined' ? (get_label.delete || 'Delete') : 'Delete')
+					})
 
 					// delete icon
 					ui.create_dom_element({
@@ -329,7 +343,10 @@ export const render_id_column = function(self) {
 							order_number_link	: order_number_link
 						})
 					}
-					order_number_link.addEventListener('click', click_handler)
+					a11y.make_activable(order_number_link, {
+						on_activate	: click_handler,
+						label		: (typeof get_label!=='undefined' ? (get_label.order || 'Order') : 'Order')
+					})
 				}
 
 			// EDIT . button edit element
@@ -370,7 +387,11 @@ export const render_id_column = function(self) {
 						self.section_tipo
 					)
 				}
-				link_edit.addEventListener('mousedown', mousedown_handler)
+				a11y.make_activable(link_edit, {
+					pointer_event	: 'mousedown',
+					on_activate		: mousedown_handler,
+					label			: (typeof get_label!=='undefined' ? (get_label.edit || 'Edit') : 'Edit')
+				})
 
 				// section_id number
 				ui.create_dom_element({

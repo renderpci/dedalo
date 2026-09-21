@@ -98,7 +98,11 @@ import {
 	type MatchReport,
 	normalizeText,
 } from '../../core/identify/match.ts';
-import { IDENTITY_LOCATOR_PROPERTIES, readPathValues } from '../../core/identify/path_read.ts';
+import {
+	createPathReadScope,
+	IDENTITY_LOCATOR_PROPERTIES,
+	readPathValues,
+} from '../../core/identify/path_read.ts';
 import { ProfileError } from '../../core/identify/profile.ts';
 import { loadProfileForSection } from '../../core/identify/profile_source.ts';
 import {
@@ -539,9 +543,17 @@ export async function clusterRecords(input: ClusterInput): Promise<ClusterReport
 	const ports = { ...defaultClusterPorts(), ...(input.ports ?? {}) };
 	const listRecords = input.listRecords ?? defaultRecordLister;
 	const filterAccessible = input.filterAccessible ?? defaultAccessFilter;
-	const readValues: ClusterValueReader =
-		input.readValues ?? ((record, path) => readPathValues(record, path, { lang: input.lang }));
 	const componentGrant = input.componentGrant;
+	// ONE path-reader scope per run: every landed record is authorized on its
+	// own section inside the reader (path_read.ts ACCESS, P1-3 / SEC-12).
+	const pathScope = createPathReadScope({
+		principal,
+		door: 'identify.cluster',
+		...(componentGrant === undefined ? {} : { componentGrant }),
+	});
+	const readValues: ClusterValueReader =
+		input.readValues ??
+		((record, path) => readPathValues(record, path, { lang: input.lang, scope: pathScope }));
 	const loadProfile = input.loadProfile ?? ((tipo: string) => loadProfileForSection(tipo));
 	const publish = input.onProgress ?? (() => {});
 	const notes: string[] = [];

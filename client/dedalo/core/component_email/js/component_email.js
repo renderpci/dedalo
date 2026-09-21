@@ -30,12 +30,11 @@
 
 // imports
 	import {common} from '../../common/js/common.js'
-	import {data_manager} from '../../common/js/data_manager.js'
+	import {request_complete} from '../../common/js/sqo_limit.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_email} from '../../component_email/js/render_edit_component_email.js'
 	import {render_list_component_email} from '../../component_email/js/render_list_component_email.js'
 	import {render_search_component_email} from '../../component_email/js/render_search_component_email.js'
-	import {response_data} from '../../common/js/api_error.js'
 
 
 
@@ -227,7 +226,7 @@ component_email.prototype.get_ar_emails = async function() {
 	// get the rqo of the builder, it will use to redo the search but only for the email
 	const rqo = structuredClone(builder.rqo)
 
-	// set the show with email component_data, and reset the limit to get all records searched
+	// set the show with email component_data: ONE item per searched record
 		rqo.show = {}
 		rqo.show.ddo_map =[{
 			tipo			: self.tipo,
@@ -235,15 +234,20 @@ component_email.prototype.get_ar_emails = async function() {
 			section_tipo	: self.section_tipo
 		}]
 
-		rqo.sqo.limit = 0
-
-	// load data
-		const api_response = await data_manager.request({
-			body : rqo
+	// load data. A COMPLETENESS read (every searched record's emails): walked
+	// page by page at the server's client ceiling through request_complete
+	// (common/js/sqo_limit.js) — never one request with `limit: 0`, which the
+	// server read as the same ceiling and truncated in silence (audit P2-31 /
+	// CLI-29). The builder's total, when it has one, bounds the walk.
+		const search_datum = await request_complete(rqo, {
+			total		: Number.isFinite(Number(builder.total)) ? Number(builder.total) : null,
+			count_rows	: (datum) => datum.data.filter(el => el.tipo === self.tipo).length
 		})
+		if (!search_datum) {
+			return false
+		}
 
 	// get the result of the datum
-		const search_datum	= response_data(api_response)
 		const data = search_datum.data.filter(el => el.tipo === self.tipo)
 
 	// check if the data is empty

@@ -234,14 +234,13 @@ describe('loadProfileForSection — malformed descriptors FAIL LOUDLY', () => {
 });
 
 describe('the ontology port', () => {
-	const node = (properties: unknown, relations: unknown = null): ProfileSourceNode => ({
-		properties,
-		relations,
-	});
+	const node = (properties: unknown): ProfileSourceNode => ({ properties });
+	const realSection = async (tipo: string): Promise<string> => tipo;
 
 	test('reads properties.identify off the section node', async () => {
-		const port = buildOntologyProfileSourcePort(async (tipo) =>
-			tipo === 'sec1' ? node({ identify: { id: 'p' }, rag: {} }) : null,
+		const port = buildOntologyProfileSourcePort(
+			async (tipo) => (tipo === 'sec1' ? node({ identify: { id: 'p' }, rag: {} }) : null),
+			realSection,
 		);
 		expect(await port.getIdentifyDescriptor('sec1')).toEqual({ id: 'p' });
 		expect(await port.getIdentifyDescriptor('missing')).toBeNull();
@@ -252,18 +251,24 @@ describe('the ontology port', () => {
 		// Same rule as every other per-section descriptor read (getSectionMap,
 		// RagConfig): without the fallback, every virtual view of a section would
 		// silently have no identification.
+		// The virtual→real answer is the injected resolver's (production: the ONE
+		// law, getSectionRealTipo — the port no longer reads relations[0] itself).
 		const nodes: Record<string, ProfileSourceNode> = {
 			real: node({ identify: { id: 'real' } }),
-			virtual: node(null, [{ tipo: 'real' }]),
-			overriding: node({ identify: { id: 'own' } }, [{ tipo: 'real' }]),
+			virtual: node(null),
+			overriding: node({ identify: { id: 'own' } }),
 		};
-		const port = buildOntologyProfileSourcePort(async (tipo) => nodes[tipo] ?? null);
+		const realOf: Record<string, string> = { virtual: 'real', overriding: 'real' };
+		const port = buildOntologyProfileSourcePort(
+			async (tipo) => nodes[tipo] ?? null,
+			async (tipo) => realOf[tipo] ?? tipo,
+		);
 		expect(await port.getIdentifyDescriptor('virtual')).toEqual({ id: 'real' });
 		expect(await port.getIdentifyDescriptor('overriding')).toEqual({ id: 'own' });
 	});
 
 	test('a node with no properties at all is simply absent', async () => {
-		const port = buildOntologyProfileSourcePort(async () => node(null));
+		const port = buildOntologyProfileSourcePort(async () => node(null), realSection);
 		expect(await port.getIdentifyDescriptor('sec1')).toBeNull();
 	});
 });

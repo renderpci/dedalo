@@ -178,6 +178,13 @@ upstream dedalo_ts {
 	server unix:/run/dedalo/dedalo_ts.sock;
 }
 
+# Request-rate ceiling for the API door, per source address. The engine bounds
+# what one request may carry; this bounds how many arrive, and it costs the
+# engine nothing because nginx refuses before the proxy hop. `nodelay` releases
+# the burst immediately — a page load fans out into a dozen parallel component
+# reads, so a burst is normal and only a flood is refused.
+limit_req_zone $binary_remote_addr zone=dedalo_api:10m rate=20r/s;
+
 server {
 	listen 80;
 	server_name dedalo.example.org;
@@ -186,7 +193,7 @@ server {
 
 server {
 	listen 443 ssl;
-	http2 on;                       # multiplexes the ~100-module client boot graph
+	http2 on;                       # multiplexes the 36-module client boot graph
 	server_name dedalo.example.org;
 
 	ssl_certificate     /etc/letsencrypt/live/dedalo.example.org/fullchain.pem;
@@ -219,6 +226,7 @@ server {
 	# API + dynamic routes. A regex location outranks every prefix location, so
 	# this keeps precedence over the /dedalo/ static alias below.
 	location ~ ^/(api/v1/|dedalo/core/api/) {
+		limit_req zone=dedalo_api burst=40 nodelay;
 		proxy_pass http://dedalo_ts;
 		proxy_http_version 1.1;
 		proxy_set_header Host              $host;
@@ -395,6 +403,7 @@ certbot renew --dry-run                    # the snap installs the renewal timer
 | --- | --- | --- |
 | proxy read timeout | **≥ `SERVER_IDLE_TIMEOUT_S`** (255 s; use 300 s) | a large export or a long tool action is killed by the proxy one hop before the engine would have finished it |
 | response buffering | **off** on the API location | the assistant chat (SSE), diffusion progress and NDJSON exports stall or die; the engine sends `X-Accel-Buffering: no` and 15-second heartbeats, but a buffering proxy defeats them |
+| request rate | **`limit_req` on the API location** (nginx `limit_req_zone` + `limit_req`; Apache: `mod_ratelimit`/`mod_evasive`) | nothing bounds how fast one source may call the API; the engine's login throttle is per-account, so a caller rotating usernames is unlimited (audit SEC-21) |
 | max request body | **≥ 256 MiB** (nginx `client_max_body_size`; Apache's default is unlimited) | every upload fails with `413` — nginx's default is **1 MB**, and the client uploads in ~4 MB chunks |
 | `TRUSTED_PROXY_HOPS` | **the number of proxies that append `X-Forwarded-For`** (default `1`) | the login throttle keys on the wrong address: too low and an attacker forges a fresh throttle bucket per request; too high and every user shares one bucket |
 | `open_file_cache` | **off** (or `_valid` ≤ 2 s) on the media locations | unpublishing a record does not take effect until the cache expires |

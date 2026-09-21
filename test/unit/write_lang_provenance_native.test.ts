@@ -408,6 +408,9 @@ describe('census — every save door declares its write language', () => {
 	const doors = censusSaveDoors();
 
 	test('the census is TOTAL: no undeclared caller of saveComponentData', () => {
+		// Anti-vacuity: 18 doors over src/ + tools/ on 2026-09-02. An emptied walk
+		// (wrong root, a grep that stopped matching) would leave nothing undeclared.
+		expect(doors.length).toBeGreaterThan(10);
 		const undeclared = doors.filter((path) => !SAVE_DOORS.has(path));
 		if (undeclared.length > 0) {
 			throw new Error(

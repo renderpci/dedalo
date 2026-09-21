@@ -116,10 +116,10 @@
 .wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .filter_bar .filter_toggle.active {
   background-color: var(--tool_ontology_parser);
   border-color: var(--tool_ontology_parser);
-  color: white;
+  color: var(--ut_on_green);
 }
 .wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .filter_bar .filter_toggle.active:hover:not(:disabled) {
-  color: white;
+  color: var(--ut_on_green);
 }
 .wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .filter_bar > .filter_no_matches {
   margin-top: 0.5rem;
@@ -279,6 +279,7 @@
 .wrapper_tool.tool_ontology_parser > .content_data > .buttons_container button.gear {
   background-color: var(--tool_ontology_parser);
   border-color: var(--tool_ontology_parser);
+  color: var(--ut_on_green);
 }
 .wrapper_tool.tool_ontology_parser > .content_data > .buttons_container .checkbox-label {
   padding-left: 1rem;
@@ -307,7 +308,7 @@
   overflow: auto;
   max-height: 15rem;
   width: 49%;
-  color: var(--color_danger);
+  color: var(--ut_red);
   display: inline-block;
 }
 .tool_header.tool_ontology_parser {

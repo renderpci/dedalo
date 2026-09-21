@@ -610,6 +610,22 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 	},
+	/**
+	 * A backgroundRunnable action whose module declares NO lane for it (PERF-11).
+	 * Distinct from `background_not_allowed`, which says the action may not run in
+	 * the background at all: this one says it may, but the module never said which
+	 * budget it spends — and a lane guessed from the action name is exactly how a
+	 * new job silently starves another class of work.
+	 */
+	'tool.background_lane_undeclared': {
+		category: 'internal',
+		status: 500,
+		label_key: 'error_tool_background_lane_undeclared',
+		message: 'Background action declares no job lane',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
 	'tool.job_not_found': {
 		category: 'not_found',
 		status: 404,
@@ -1247,6 +1263,20 @@ export const ERROR_REGISTRY = {
 		retryable: true,
 		details_keys: ['attempts'],
 	},
+	// A runner (or the scheduler acting for one) tried to write to a job row it
+	// no longer owns: the lease is (job_id, attempt) and the sweeper's requeue
+	// handed the row to a NEW attempt. The loser aborts without writing —
+	// engineering/wire_contract/WC-2026-09-05-diffusion-lease-epoch-fence.md.
+	// Never a caller-facing HTTP failure: it is a runner-process abort.
+	'diffusion.lease_revoked': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_diffusion_lease_revoked',
+		message: 'The diffusion job lease was revoked (the row belongs to a newer attempt)',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
 	'diffusion.runner_spawn_failed': {
 		category: 'unavailable',
 		status: 503,
@@ -1308,6 +1338,20 @@ export const ERROR_REGISTRY = {
 		severity: 'warn',
 		disclosure: 'public',
 		retryable: false,
+	},
+	// A model ARTIFACT refused on integrity grounds (P1-25): no revision pin, or
+	// downloaded/stored bytes that do not hash to the pinned sha256 (quarantined
+	// under <store>/.quarantine). Operator disclosure: the message names files
+	// and digests, which an administrator needs and a cataloguer does not.
+	'ai.model_integrity': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_ai_model_integrity',
+		message: 'The model artifact failed its integrity check and was refused',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+		hint: 'Pin the model (scripts/pin_ai_models.ts) or repair it from a clean source; see the server log.',
 	},
 	// A provider/transport failure during an agent run. Its text carries config
 	// internals (env key names, upstream bodies) — never echoed; log-only cause.
@@ -1585,6 +1629,25 @@ export const ERROR_REGISTRY = {
 		disclosure: 'public',
 		retryable: true,
 	},
+	// ── the archive door (core/archive/) ─────────────────────────────────────
+	'archive.refused': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_archive_refused',
+		message: 'The archive operation was refused before anything was written',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'archive.invalid': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_archive_invalid',
+		message: 'The archive is malformed or its digests do not match',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
 	'perm.superuser_required': {
 		category: 'permission',
 		status: 403,
@@ -1600,6 +1663,42 @@ export const ERROR_REGISTRY = {
 		label_key: 'error_maintenance_mode_required',
 		message: 'This action requires maintenance mode to be enabled',
 		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+
+	// ── the restore door (audit 2026-08-26 S-7, src/core/area_maintenance/restore_door.ts) ──
+	// A DATA restore the engine owns, CLI-only with the engine stopped. Each
+	// refusal names the phase it fired in: the artifact was disproved BEFORE any
+	// write, a foreign backend held the target so the swap could not be atomic,
+	// or pg_restore itself failed — in which case the sidecar was dropped and the
+	// target is untouched. None is retryable by a transport: the operator acts.
+	'recovery.artifact_unusable': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_recovery_artifact_unusable',
+		message: 'The backup artifact is not a usable restore point; nothing was written',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+		hint: 'Run `pg_restore -f /dev/null <artifact>` to read its own words; pick an artifact whose verdict is verified_deep.',
+	},
+	'recovery.writers_active': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_recovery_writers_active',
+		message: 'The target database still has connections; a restore needs zero',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+		hint: 'Stop the engine (and its watchdog timer) and every other client of the database, then run the door again.',
+	},
+	'recovery.restore_failed': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_recovery_restore_failed',
+		message: 'The restore failed; the sidecar was dropped and the target database is untouched',
+		severity: 'error',
 		disclosure: 'operator',
 		retryable: false,
 	},
@@ -2061,6 +2160,21 @@ export const ERROR_REGISTRY = {
 		disclosure: 'public',
 		retryable: false,
 		details_keys: ['constraint', 'section_tipo'],
+	},
+	'relation.subtree_too_large': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_relation_subtree_too_large',
+		// The recursive children walk hit its DEPTH or NODE cap
+		// (relations/children.ts CHILDREN_RECURSIVE_MAX_DEPTH / _MAX_NODES).
+		// Refused, never truncated: a narrowed subtree is a wrong answer that
+		// looks like a right one. `limit` says which cap, `cap` its value; the
+		// root coordinates stay off the wire (coordinates, not details).
+		message: 'The requested subtree is too large to expand',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+		details_keys: ['limit', 'cap'],
 	},
 	'section.no_matrix_table': {
 		category: 'caller',

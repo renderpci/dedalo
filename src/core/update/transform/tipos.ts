@@ -337,7 +337,7 @@ async function rewriteEmbeddedTipo(
 		return;
 	}
 	const rows = (await sql.unsafe(
-		`UPDATE "${table}" SET "${column}" = replace("${column}"::text, $1, $2)::jsonb
+		`UPDATE "${table}" SET "${column}" = replace("${column}"::text, $1::text, $2::text)::jsonb
 		 WHERE "${column}" IS NOT NULL AND "${column}"::text LIKE $3 RETURNING id`,
 		[needle, replacement, `%${needle}%`],
 	)) as unknown[];

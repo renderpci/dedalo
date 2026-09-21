@@ -6,6 +6,10 @@
 :root {
   --tool_import_files: #2b77c7;
   --tool_import_files_border: #286fba;
+  --tool_import_files_fill: #286eb7;
+}
+:root[data-theme="dark"] {
+  --tool_import_files_fill: var(--tool_import_files);
 }
 .wrapper_tool.tool_import_files .spinner {
   background-color: var(--tool_import_files);
@@ -244,11 +248,11 @@
   margin-bottom: 5rem;
 }
 .wrapper_tool.tool_import_files > .content_data > .buttons_bottom_container > .button_process_import {
-  color: var(--fg_default);
+  color: var(--fg_on_warning);
   margin: 2rem;
   padding-left: 1.5em;
   padding-right: 1.5em;
-  background-color: var(--tool_import_files);
+  background-color: var(--tool_import_files_fill);
   border-color: var(--tool_import_files_border);
 }
 .wrapper_tool.tool_import_files .msg_container {

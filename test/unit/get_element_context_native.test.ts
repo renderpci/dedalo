@@ -257,3 +257,59 @@ describe.if(DB_READY)('dd_core_api.get_element_context', () => {
 		expect(entriesOf(editMode.body)[0]?.mode).toBe('edit');
 	});
 });
+
+/**
+ * THE PRINCIPAL REACHES THE BUILDER (P1-3 / SEC-13). `get_element_context`
+ * built its section context WITHOUT the principal, so `buildSectionButtons`
+ * took the caller-cap path: any caller with level >= 2 on the section received
+ * EVERY button, including the ones whose own grant is 0 — a delete button in
+ * the list of a reader who may not delete. With the principal, each button is
+ * gated by its own `getPermissions(section, button) >= 2`.
+ *
+ * PAIRED on the read-door fixture: two non-admins at level 2 on `test3`, the
+ * READER at 0 on `test96` (button_delete) and 2 on `test126` (button_new), the
+ * CONTROL at 2 on both. EXACT button sets, so a builder that emits none (or
+ * all) reddens on one of the two.
+ */
+describe.if(DB_READY)('get_element_context — section buttons pass the per-button grant', () => {
+	let fixture: typeof import('../helpers/read_door_identity_fixture.ts');
+
+	beforeAll(async () => {
+		fixture = await import('../helpers/read_door_identity_fixture.ts');
+		await fixture.installReadDoorIdentityFixture();
+	});
+	afterAll(async () => {
+		await fixture.removeReadDoorIdentityFixture();
+	});
+
+	async function buttonsFor(userId: number): Promise<string[]> {
+		const principal = await resolvePrincipal(userId);
+		expect(principal.isGlobalAdmin).toBe(false);
+		const response = await dispatchRqo(
+			elementRqo({ tipo: fixture.DOOR_SECTION, model: 'section', mode: 'list' }) as never,
+			contextFor(userId, false, principal) as never,
+		);
+		expect(response.status).toBe(200);
+		const [entry] = entriesOf(response.body as Record<string, unknown>);
+		expect(entry).toBeDefined();
+		return ((entry as { buttons?: { tipo: string }[] }).buttons ?? []).map((b) => b.tipo);
+	}
+
+	test('the contrast is live: both hold the section at 2; only the control holds button_delete', async () => {
+		const reader = await resolvePrincipal(fixture.DOOR_READER_USER_ID);
+		const control = await resolvePrincipal(fixture.DOOR_CONTROL_USER_ID);
+		expect(await getPermissions(reader, fixture.DOOR_SECTION, fixture.DOOR_SECTION)).toBe(2);
+		expect(await getPermissions(control, fixture.DOOR_SECTION, fixture.DOOR_SECTION)).toBe(2);
+		expect(await getPermissions(reader, fixture.DOOR_SECTION, fixture.DOOR_BUTTON_DELETE)).toBe(0);
+		expect(await getPermissions(control, fixture.DOOR_SECTION, fixture.DOOR_BUTTON_DELETE)).toBe(2);
+	});
+
+	test('the reader gets EXACTLY the buttons its profile grants; the control gets both', async () => {
+		expect((await buttonsFor(fixture.DOOR_READER_USER_ID)).sort()).toEqual([
+			fixture.DOOR_BUTTON_NEW,
+		]);
+		expect((await buttonsFor(fixture.DOOR_CONTROL_USER_ID)).sort()).toEqual(
+			[fixture.DOOR_BUTTON_DELETE, fixture.DOOR_BUTTON_NEW].sort(),
+		);
+	});
+});

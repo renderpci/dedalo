@@ -135,10 +135,10 @@ describe('file ops — no-hard-delete + duplication + deleted-scan', () => {
 		expect(existsSync(`${ROOT}/image/100MB/test99_test3_5.jpg`)).toBe(false);
 	});
 
-	test('duplicateMediaFiles copies every quality/ext to the target id', () => {
+	test('duplicateMediaFiles copies every quality/ext to the target id', async () => {
 		const target: MediaIdentity = { ...identity, sectionId: 99 };
 		const targetOpts: MediaPathOptions = { ...pathOpts };
-		const created = duplicateMediaFiles(image, identity, target, {
+		const created = await duplicateMediaFiles(image, identity, target, {
 			source: pathOpts,
 			target: targetOpts,
 		});

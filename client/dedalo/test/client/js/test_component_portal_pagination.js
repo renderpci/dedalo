@@ -9,6 +9,7 @@ import {get_instance} from '../../../core/common/js/instances.js'
 import {event_manager} from '../../../core/common/js/event_manager.js'
 import {ui} from '../../../core/common/js/ui.js'
 import {clone, pause} from '../../../core/common/js/utils/util.js'
+import {max_page_limit} from '../../../core/common/js/sqo_limit.js'
 
 // vars
 
@@ -103,7 +104,7 @@ return
 			async function show_all() {
 				const limit	= self.rqo.sqo.limit
 				self.rqo.sqo.offset	= self.request_config_object.sqo.offset = 0
-				self.rqo.sqo.limit	= self.request_config_object.sqo.limit 	= 0 // (limit + 1) + 1000
+				self.rqo.sqo.limit	= self.request_config_object.sqo.limit 	= max_page_limit() // "all" is the server ceiling (P2-31)
 				await self.refresh()
 				assert.equal(
 					self.data.entries.length,

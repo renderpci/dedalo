@@ -56,6 +56,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_value, render_join} from '../../common/js/utils/render_escape.js'
 	import {clone} from '../../common/js/utils/index.js'
 
 
@@ -591,7 +592,7 @@ const render_header_column = function(self, current_data) {
 
 	const th_node = ui.create_dom_element({
 		element_type	: 'th',
-		inner_html		: labels.join(' | ')
+		inner_html		: render_join(labels, ' | ', 'text')
 	})
 
 	return th_node
@@ -626,13 +627,13 @@ const render_text_column = function(current_data) {
 		: ' | '
 
 	const value = current_data.value && Array.isArray(current_data.value)
-		? current_data.value.join(records_separator)
-		: (current_data.value)
+		? render_join(current_data.value, records_separator, current_data.render_class)
+		: render_value(current_data.value, current_data.render_class)
 
 
 	const fallback_value = current_data.fallback_value && Array.isArray(current_data.fallback_value)
-		? current_data.fallback_value.join(records_separator)
-		: (current_data.fallback_value || '')
+		? render_join(current_data.fallback_value, records_separator, current_data.render_class)
+		: render_value(current_data.fallback_value, current_data.render_class)
 
 	const final_value = value && value.length>0
 		? value
@@ -841,12 +842,10 @@ const render_json_column = function(current_data, data_format) {
 			: JSON.stringify(current_data.value)
 
 	// value
-	// if data_format is passed and is 'dedalo_raw', encode the HTML characters to prevent the browser from rendering it
-		const value = data_format && data_format==='dedalo_raw'
-			? string_value.replace(/[\u00A0-\u9999<>\&]/gim, (i) => {
-				return '&#' + i.charCodeAt(0) + ';';
-			  })
-			: string_value
+	// A JSON string is text in every format: the render-boundary escaper encodes
+	// the HTML characters so the browser never parses it ('dedalo_raw' used to
+	// carry its own entity encoder here — same outcome, one escaper).
+		const value = render_value(string_value, 'text')
 
 	const td_node = ui.create_dom_element({
 		element_type	: 'td',
@@ -877,7 +876,7 @@ const render_section_id_column = function(current_data) {
 	const td_node = ui.create_dom_element({
 		element_type	: 'td',
 		class_name		: class_list,
-		inner_html		: current_data.value
+		inner_html		: render_value(current_data.value, 'number')
 	})
 
 	return td_node
@@ -925,7 +924,7 @@ const render_iri_column = function(current_data) {
 			const node = ui.create_dom_element({
 				element_type	: 'a',
 				href			: item.iri,
-				inner_html		: item.title || item.iri,
+				inner_html		: render_value(item.title, 'text') || render_value(item.iri, 'url'),
 				parent			: td_node
 			})
 			node.target = '_blank'

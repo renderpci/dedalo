@@ -531,6 +531,43 @@ describe('find_matches — the pictures', () => {
 		]);
 	});
 
+	/**
+	 * P1-3 / SEC-10. The previewComponent is a media component of the record's
+	 * section, and its thumb URL is a read of it — `vision.ts` gates that exact
+	 * field. A caller with level 0 on it gets null, and the resolver is NEVER
+	 * handed the record (the resolver is a renderer's convenience, not a gate).
+	 */
+	test('a previewComponent the caller may not read: thumb_url null, and the resolver is never asked', async () => {
+		let asked = false;
+		const grantsAsked: string[] = [];
+		const res = await buildFindMatches(
+			fakeDeps({
+				loadProfile: async () => parseProfile({ ...textProfile(), previewComponent: 'test99' }),
+				runMatches: async () => oneResult(),
+				componentGrant: async (_principal, sectionTipo, componentTipo) => {
+					grantsAsked.push(`${sectionTipo}|${componentTipo}`);
+					return componentTipo === 'test99' ? 0 : 1;
+				},
+				resolveThumbs: async () => {
+					asked = true;
+					return new Map([['test3_42', '/media/image/thumb/0/test99_test3_42.jpg']]);
+				},
+			}),
+		)(rqo({ section_tipo: 'test3', section_id: 7 }), ctx(NO_ACCESS));
+		expect(res.body.ok).toBe(true);
+		const body = res.body.data as {
+			seed: { thumb_url: string | null };
+			results: Array<{ thumb_url: string | null }>;
+		};
+		expect(body.seed.thumb_url).toBeNull();
+		expect(body.results).toHaveLength(1);
+		expect(body.results[0]?.thumb_url).toBeNull();
+		expect(asked).toBe(false);
+		// The grant was asked ONCE per section (seed + candidate share test3):
+		// the door's pair — the section, then the preview component.
+		expect(grantsAsked).toEqual(['test3|test3', 'test3|test99']);
+	});
+
 	test('a profile with no previewComponent still answers, with null thumbs', async () => {
 		// The common case: most sections will never declare a picture component.
 		const res = await buildFindMatches({

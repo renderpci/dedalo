@@ -574,6 +574,42 @@ console.log(
 		.join(', ')} — data lang ${synthetic.dataLang}, activated through the installer's own door`,
 );
 
+// 5c'. THE BOOT MIGRATIONS — the same install/db/migrations/*.sql a real
+// server applies on its first start (startServer → runBootMigrations), in the
+// same position: before the derived-store heal, after the ontology is in.
+//
+// WHY (audit 2026-08-26, P1-13 / PUB-04). The suite database used to be "the
+// seed + fixtures" and NEVER a booted install: the numbered migrations only
+// reached it when something else started a server on it (`bun run
+// test:client`), so whether a gate saw a corrected or an uncorrected seed
+// depended on what had run before it. Migration 0008 is a SHARED-ROW SEED
+// CORRECTION of the diffusion vocabulary the shipped ontology speaks — the
+// exact state a fresh install boots into is now the state the suite measures,
+// and test/unit/diffusion_seed_compiles_native.test.ts asserts the version
+// row is present (a rebuild with this step missing is RED, by name).
+//
+// The marker is already written (2b), so this is a write to a database that
+// says it is disposable; the migration lane itself is the install's, not a
+// test-data writer, which is why it needs no assertTestDatabase of its own.
+const { runMigrations } = await import('../install/db/migrate.ts');
+const migrations = await runMigrations();
+console.log(
+	`[test-db] boot migrations applied: ${migrations.applied.length} (${migrations.applied.join(', ')}; ${migrations.skipped} already recorded) — the suite database is a BOOTED install`,
+);
+
+// 5d. THE DERIVED-STORE HEAL — the same self-provisioning a real boot runs
+// (db_assets.ts ensureSearchStores, startServer): the install seed carries the
+// sync trigger FUNCTIONS as they were when the dump was cut, and the declared
+// bodies in db_pg_definitions.json move on (the record-address predicate of
+// DATA-26 is one such move). A booted install re-creates a drifted function on
+// its first start; the suite database never boots, so it takes the same step
+// here. Read-only when nothing drifted; per-table refills otherwise.
+const { ensureSearchStores } = await import('../src/core/db/db_assets.ts');
+const stores = await ensureSearchStores();
+console.log(
+	`[test-db] derived search stores ensured (healthy: ${stores.healthy}, ddl applied: ${stores.ddlApplied}, refilled: ${JSON.stringify(stores.backfilled)}${stores.errors.length > 0 ? `, errors: ${JSON.stringify(stores.errors)}` : ''})`,
+);
+
 // 5b. THE READ-ONLY ROLE for the DB-free shard bands (see the header). Sits
 // HERE — after every guard and after the schema exists — never as a
 // convenience step that could run before a refusal. Everything is idempotent:

@@ -48,8 +48,9 @@
  *      becomes the expected condition and trains the regeneration reflex the
  *      ratchets exist to starve — and it was never load-bearing: rule 4's parser
  *      takes only the first column, and scripts/verify.ts has no allowlist.
- *  13. DB TIER NEEDS NO PRIVATE ENV (2026-08-25) — scripts/ci/db_tier.sh may
- *      contain NO command that requires ../private/.env. Its own header states
+ *  13. HOSTED TIERS NEED NO PRIVATE ENV (2026-08-25; generalized 2026-09-02 to
+ *      every script an executing workflow runs, following `source` lines) —
+ *      scripts/ci/db_tier.sh may contain NO command that requires ../private/.env. Its own header states
  *      the tier needs "no secrets, no ../private/.env, no sibling tree", but the
  *      script called env_guard.sh, whose check 2 hard-fails on a missing
  *      ../private/.env — so on every GitHub run the tier died BEFORE
@@ -186,6 +187,69 @@ function dbTierTripwires(): string[] {
 }
 
 /**
+ * THE HOSTED TIER SCRIPTS — DERIVED from the executing workflows, never a hand list.
+ *
+ * Rules 6, 6b and 13 used to iterate `['scripts/ci/hermetic.sh', 'scripts/ci/db_tier.sh']`.
+ * A third hosted tier (scripts/ci/instance_tier.sh, 2026-09-02) would then have been
+ * held to none of them until somebody remembered the list — the rot every derived
+ * census in this repo exists to prevent. So the set is read off the `run:` lines of
+ * .github/workflows/*.yml and the script lines of .gitlab-ci.yml: a script an
+ * executing workflow runs is a hosted tier, and inherits every rule below on the day
+ * it is wired. (test/unit/tier_wiring_tripwire.test.ts holds the converse — that every
+ * scripts/ci/*.sh IS reached from such a chain or carries a reason.)
+ */
+function hostedTierScripts(): string[] {
+	const roots = [...workflowFiles.map((f) => join('.github', 'workflows', f)), '.gitlab-ci.yml'];
+	const found = new Set<string>();
+	for (const rel of roots) {
+		for (const m of read(rel).matchAll(
+			/^\s*(?:-\s+|run:\s+)bash (scripts\/ci\/[a-z0-9_]+\.sh)\b/gm,
+		)) {
+			found.add(m[1] as string);
+		}
+	}
+	const scripts = [...found].sort();
+	// Anti-vacuity: the two tiers this file has always known must still be found, or
+	// the grammar drifted and every rule below is iterating an empty list.
+	for (const known of ['scripts/ci/hermetic.sh', 'scripts/ci/db_tier.sh']) {
+		if (!scripts.includes(known)) {
+			throw new Error(
+				`hostedTierScripts(): ${known} not found on any executing workflow's run: line — the derivation is blind`,
+			);
+		}
+	}
+	return scripts;
+}
+
+/**
+ * A tier script's EFFECTIVE text: itself plus every scripts/ci/*.sh it `source`s,
+ * transitively. The environment composition moved out of db_tier.sh into
+ * scripts/ci/hosted_env.sh (one copy for the db and instance tiers), so a rule that
+ * read db_tier.sh alone would now find no stub, no allowlist — and report the tier
+ * broken, or, with a laxer grammar, report nothing. Only a LINE-START `source` (or
+ * `.`) counts: a `# shellcheck source=` comment is not an inclusion.
+ */
+function effectiveSource(rel: string, seen: Set<string> = new Set()): string {
+	if (seen.has(rel)) return '';
+	seen.add(rel);
+	const src = read(rel);
+	let out = src;
+	for (const m of src.matchAll(
+		/^\s*(?:source|\.)\s+"?(?:\$REPO_ROOT\/)?(scripts\/ci\/[a-z0-9_]+\.sh)"?/gm,
+	)) {
+		out += `\n${effectiveSource(m[1] as string, seen)}`;
+	}
+	return out;
+}
+
+/** The hosted tier scripts that BUILD the suite database — the ones whose environment must be complete. */
+function suiteBuildingTiers(): string[] {
+	return hostedTierScripts().filter((rel) =>
+		/^\s*bun run test:db:setup\b/m.test(effectiveSource(rel)),
+	);
+}
+
+/**
  * Rule 13's matcher — the lines of a shell script that REQUIRE ../private/.env.
  *
  * Three shapes count, each one a way db_tier.sh could re-acquire the dependency
@@ -287,6 +351,42 @@ function ledgerTripwires(): string[] {
  */
 const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	[
+		'test/unit/restore_door_native.test.ts',
+		'It pg_dumps the whole suite database into a real custom-format archive and drives the door against a scratch Postgres database (CREATE/RENAME/DROP DATABASE, pg_restore, a held psql backend, the real reconcile plan through the pool), so without Postgres + pg_dump/pg_restore the describe.if skips 10 of 12 tests loudly and only the plan-totality and identifier-grammar legs run',
+	],
+	[
+		'test/unit/unpublish_debt_native.test.ts',
+		'Every leg drives the real dd1758 ledger, the zzd diffusion ontology and a real record delete on the suite Postgres (describe.if(DB_READY) skips all 5 cases on a closed port)',
+	],
+	[
+		'test/unit/diffusion_frontier_scope_native.test.ts',
+		'It runs the real resolver over the zzdif domain records and the ACL identity fixture on the suite Postgres (describe.if(DB_READY) skips both cases on a closed port)',
+	],
+	[
+		'test/unit/diffusion_seed_compiles_native.test.ts',
+		"It compiles the real dd_ontology of the suite database — the ontology index, every dd1190 domain's virtual tree and inspectOntology's drift all read matrix_ontology/dd_ontology, and the migration-recorded check reads dedalo_ts_schema_migrations",
+	],
+	[
+		'test/unit/raw_roundtrip_native.test.ts',
+		'Every case builds the zzarc situation on the suite database and restores into it after a real drop; with the port closed all 9 cases SKIP via describe.if(DB_READY)',
+	],
+	[
+		'test/unit/conform_locator_existence_native.test.ts',
+		'The gate extracts from and restores into the suite database (a second, outside-only situation plays the destination); with the port closed all 5 cases SKIP via describe.if(DB_READY)',
+	],
+	[
+		'test/unit/write_obligations_native.test.ts',
+		"Every case drives a real write door on the suite database (matrix_test rows, matrix_activity rows, matrix_time_machine, the observer recompute's SQL) and is describe.if(DB_READY)-gated, so without Postgres the file is 13 skips and asserts nothing",
+	],
+	[
+		'test/unit/value_law_agreement_native.test.ts',
+		'It builds a zzvl scratch ontology + records on the suite database and drives saveComponentData, dispatchRqo, the derived-store probes and the live relation-index trigger against Postgres',
+	],
+	[
+		'test/unit/reconcile_registry_native.test.ts',
+		'Every registered reconcile is run dry against the suite database and suite media root on situations the file builds (zzrc/zzro/zzrh scratch TLDs, the zzot observer seed, the suite RAG database, the .publication marker store), so it needs the suite Postgres and the vector database',
+	],
+	[
 		'test/unit/concurrency_interleave.test.ts',
 		'Four of its six layers are DB-backed by construction: the resolver reads a real section in two languages, the grid-columns and tools-registry caches are built from real ontology rows, and the ISO-02 core-cache regression (P2-35) resolves a real element through buildStructureContext at two permission levels. The whole file is about what a LONG-LIVED PROCESS holds between requests, and a mocked store holds nothing',
 	],
@@ -300,7 +400,7 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	],
 	[
 		'test/unit/account_revocation_native.test.ts',
-		'Every assertion is about what a REAL write did to real state: it inserts dd128 records through the counter-allocating writer, logs them in, applies each of the six account transitions through a real door, and then asks the session store and the media marker directory what survived — a revocation gate that mocked either surface would prove nothing about the property it exists to hold',
+		'Every assertion is about what a REAL write did to real state: it inserts dd128 records through the counter-allocating writer, logs them in, applies each of the five account transitions (and the record delete) through a real door, drives the two SEC-14 raw admin routes through handleRequest / handleCountersRequest against the live Principal, and then asks the session store and the media marker directory what survived — with the DB port closed 35 of its 40 legs are red, and a revocation gate that mocked either surface would prove nothing about the property it exists to hold',
 	],
 	[
 		'test/unit/dd128_write_census_tripwire.test.ts',
@@ -345,6 +445,10 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	[
 		'test/unit/duplicate_record_dataframe_native.test.ts',
 		'It builds a host record, its dataframe frame targets and a non-admin principal through the engine own write path and then duplicates them, asserting what the copied locators POINT AT across matrix tables; every assertion reads rows back out of the suite database, so the gate cannot run on the hosted tier',
+	],
+	[
+		'test/unit/dataframe_delete_policy_native.test.ts',
+		'It builds a scratch ontology situation (dd_ontology nodes) plus host, frame-target and portal-target records in the suite database, removes frames through the engine own write path on three doors and asserts what happened to the target ROWS and their Time Machine snapshots — including the commit-lane ordering inside a real outer transaction — so there is nothing to run without a live suite database',
 	],
 	[
 		'test/unit/tm_lang_slice_restore_native.test.ts',
@@ -431,8 +535,24 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		'Its final test’s dynamic import pulls the postgres pool module into the closure (no query is ever executed — pickReadSource only selects a function — so splitting that one test out or asserting the wiring from source would make the remainder hermetic), but as written the gate reaches the DB layer',
 	],
 	[
+		'test/unit/render_class_native.test.ts',
+		'Builds a zz scratch situation (dd_ontology rows + matrix_test records) on the SUITE database and saves through the real saveComponentData, which needs Postgres.',
+	],
+	[
 		'test/unit/tools_cache_invalidation.test.ts',
 		'Its reachability and registry-cache tests create, duplicate and delete real records in the suite database to observe cache invalidation end-to-end, so it requires the live matrix Postgres',
+	],
+	[
+		'test/unit/slow_query_scope_native.test.ts',
+		'It drives real statements (pg_sleep) on the pool, inside a transaction and on a reserved connection — in-process and in a spawned child carrying DEDALO_SLOW_QUERY_MS — and reads the resulting slow-query log, so it needs a live Postgres.',
+	],
+	[
+		'test/unit/zzscale_corpus_native.test.ts',
+		"Every leg builds 1,220 real matrix_test records through the engine's explicit-id write door and reads them back through getChildren / getChildrenRecursive / findInverseReferenceLocators / the ontology resolver and the trigger-derived matrix_string_search and matrix_relation_index tables, so the gate cannot run without a live suite Postgres carrying the dedalo_test_marker.",
+	],
+	[
+		'test/unit/dataframe_contract_tripwire.test.ts',
+		"Its normalizer and identity-predicate legs are pure, but the last describe drives the real dataframe doors against the generic test TLD's sections on the suite database — the frame is written and read back, and the deliberate test6100 target exemption is ASSERTED by asking the ontology what selectability contract that section declares — so with the port closed the behavioural half is red.",
 	],
 ]);
 
@@ -470,7 +590,7 @@ describe('CI workflow tripwire', () => {
 	 * hermetic script that reads a file it swears it does not read is not hermetic —
 	 * and only CI could tell us. Now the stub list cannot drift from the catalog.
 	 */
-	test('hermetic.sh and db_tier.sh stub every required-no-default config key', () => {
+	test('every hosted tier script stubs every required-no-default config key (following its source lines)', () => {
 		const required = new Set(
 			Object.entries(CONFIG_CATALOG)
 				.filter(([, entry]) => entry.required === true)
@@ -481,8 +601,18 @@ describe('CI workflow tripwire', () => {
 			'no required config keys in the catalog — src/config/catalog/ moved or lost its `required` flags',
 		).toBeGreaterThan(0);
 
-		for (const script of ['scripts/ci/hermetic.sh', 'scripts/ci/db_tier.sh']) {
-			const src = read(script);
+		// Control for the source-following: the db tier's stubs live in the file it
+		// sources, so a reader that does not follow `source` sees none of them.
+		expect(
+			/^\s*: "\$\{DB_HOST:=/m.test(read('scripts/ci/db_tier.sh')),
+			'db_tier.sh assigns DB_HOST inline again — the composition moved to hosted_env.sh; keep one copy',
+		).toBe(false);
+		expect(/^\s*: "\$\{DB_HOST:=/m.test(effectiveSource('scripts/ci/db_tier.sh'))).toBe(true);
+
+		const scripts = hostedTierScripts();
+		expect(scripts.length).toBeGreaterThanOrEqual(3);
+		for (const script of scripts) {
+			const src = effectiveSource(script);
 			// A key counts as stubbed iff it is ASSIGNED and EXPORTED. The old grammar
 			// (`${KEY:[=-]`) credited any `${KEY:-fallback}` READ anywhere in the file:
 			// the DEDALO_APPLICATION_LANGS if-block passed only through its guard's
@@ -511,7 +641,7 @@ describe('CI workflow tripwire', () => {
 				.sort();
 			expect(
 				unstubbed,
-				`Required config keys not assigned-and-exported in ${script}. On a bare CI runner there is no ../private/.env, so the config catalog THROWS at module init and the whole tier dies (with cascading "Cannot access 'config' before initialization" TDZ noise). Add a harmless stub — it only has to parse — and put the key on an export line:`,
+				`Required config keys not assigned-and-exported in ${script} (or the scripts it sources). On a bare CI runner there is no ../private/.env, so the config catalog THROWS at module init and the whole tier dies (with cascading "Cannot access 'config' before initialization" TDZ noise). Add a harmless stub — it only has to parse — and put the key on an export line:`,
 			).toEqual([]);
 		}
 	});
@@ -538,7 +668,7 @@ describe('CI workflow tripwire', () => {
 	 * without allowlisting its host reds THIS gate rather than a dozen unrelated ones on
 	 * a runner nobody can reproduce.
 	 */
-	test('db_tier.sh allowlists every api_config host the vendored seed ships', () => {
+	test('every suite-building hosted tier allowlists every api_config host the vendored seed ships', () => {
 		const sql = new TextDecoder().decode(
 			Bun.gunzipSync(readFileSync(join(repoRoot, 'install', 'db', 'dedalo_install.pgsql.gz'))),
 		);
@@ -556,18 +686,25 @@ describe('CI workflow tripwire', () => {
 			'no api_config host found in the install seed — the extraction broke, or the seed changed shape',
 		).toBeGreaterThan(0);
 
-		const declared = read('scripts/ci/db_tier.sh').match(
-			/^\s*: "\$\{DEDALO_EXTERNAL_ALLOWED_HOSTS:=([^}]*)\}"/m,
-		)?.[1];
+		const tiers = suiteBuildingTiers();
 		expect(
-			declared,
-			'scripts/ci/db_tier.sh must compose DEDALO_EXTERNAL_ALLOWED_HOSTS — the tier builds its whole environment, and the seed it installs names external hosts',
-		).toBeDefined();
-		const allowed = new Set((declared ?? '').split(',').map((host) => host.trim()));
-		expect(
-			seedHosts.filter((host) => !allowed.has(host)),
-			'api_config hosts the seed ships that the db tier does not allowlist. The refusal lands on the RESTORE path, not on anything external — add the host to db_tier.sh:',
-		).toEqual([]);
+			tiers,
+			'no hosted tier runs `bun run test:db:setup` — the derivation is blind',
+		).toContain('scripts/ci/db_tier.sh');
+		for (const tier of tiers) {
+			const declared = effectiveSource(tier).match(
+				/^\s*: "\$\{DEDALO_EXTERNAL_ALLOWED_HOSTS:=([^}]*)\}"/m,
+			)?.[1];
+			expect(
+				declared,
+				`${tier} must compose DEDALO_EXTERNAL_ALLOWED_HOSTS (itself or via scripts/ci/hosted_env.sh) — the tier builds its whole environment, and the seed it installs names external hosts`,
+			).toBeDefined();
+			const allowed = new Set((declared ?? '').split(',').map((host) => host.trim()));
+			expect(
+				seedHosts.filter((host) => !allowed.has(host)),
+				`api_config hosts the seed ships that ${tier} does not allowlist. The refusal lands on the RESTORE path, not on anything external — add the host to scripts/ci/hosted_env.sh:`,
+			).toEqual([]);
+		}
 	});
 
 	// The self-hosted tier must stay IN THE REPO. Gitignoring it would (a) never reach
@@ -967,11 +1104,10 @@ describe('CI workflow tripwire', () => {
 	});
 
 	test('the GitHub hermetic jobs and .gitlab-ci.yml invoke the shared hermetic.sh', () => {
-		for (const file of [
-			'.github/workflows/ci.yml',
-			'.github/workflows/main.yml',
-			'.gitlab-ci.yml',
-		]) {
+		// main.yml (push-to-master hermetic) was DELETED 2026-09-02: ci.yml fires on
+		// pull_request + push to every landing branch (tier_wiring leg G), so it was a
+		// second hermetic run on the same push carrying no information.
+		for (const file of ['.github/workflows/ci.yml', '.gitlab-ci.yml']) {
 			expect(read(file), `${file}: hermetic tier must run scripts/ci/hermetic.sh`).toContain(
 				'scripts/ci/hermetic.sh',
 			);
@@ -1052,7 +1188,7 @@ describe('CI workflow tripwire', () => {
 	 * the measured breakage: the tier's guard call hard-failed on the file every
 	 * GitHub run, so "wired" meant "never reached" from the day the tier landed.
 	 */
-	test('db_tier.sh contains no command that requires ../private/.env (rule 13)', () => {
+	test('no hosted tier script contains a command that requires ../private/.env (rule 13)', () => {
 		// Positive controls FIRST — a matcher that cannot catch the planted
 		// offender proves nothing about a clean scan. Each control is one of the
 		// three shapes the matcher claims to catch, plus the two shapes it must
@@ -1078,21 +1214,24 @@ describe('CI workflow tripwire', () => {
 			'matcher control: comments must stay free to discuss the file they forswear',
 		).toHaveLength(0);
 
-		const src = read('scripts/ci/db_tier.sh');
-		expect(
-			privateEnvOffenders(src),
-			'scripts/ci/db_tier.sh requires ../private/.env, which never exists on a hosted runner: the tier dies before test:db:setup and its tripwires run NOWHERE while reporting as wired — the exact never-reached state measured 2026-08-25. Compose the config in-process (the export block) or pass --no-private-env to env_guard.sh:',
-		).toEqual([]);
+		for (const tier of hostedTierScripts()) {
+			expect(
+				privateEnvOffenders(effectiveSource(tier)),
+				`${tier} (or a script it sources) requires ../private/.env, which never exists on a hosted runner: the tier dies before its gates and they run NOWHERE while reporting as wired — the exact never-reached state measured 2026-08-25. Compose the config in-process (scripts/ci/hosted_env.sh) or pass --no-private-env to env_guard.sh:`,
+			).toEqual([]);
+		}
 
 		// Guard the guard, both halves: the bun-pin check must still be reached
 		// (deleting the env_guard call would also pass the scan above), and
 		// env_guard.sh must still HAVE a private-env check for its self-hosted
 		// callers — if check 2 were deleted outright, --no-private-env would be
 		// skipping nothing and the flag's meaning silently rots.
-		expect(
-			src.includes('env_guard.sh --no-private-env'),
-			'db_tier.sh no longer calls env_guard.sh at all — the scan is happy but the bun-pin verification is gone; keep the call with --no-private-env',
-		).toBe(true);
+		for (const tier of suiteBuildingTiers()) {
+			expect(
+				effectiveSource(tier).includes('env_guard.sh --no-private-env'),
+				`${tier} no longer calls env_guard.sh at all — the scan is happy but the bun-pin verification is gone; keep the call with --no-private-env`,
+			).toBe(true);
+		}
 		const guard = read('scripts/ci/env_guard.sh');
 		expect(
 			guard.includes('REQUIRE_PRIVATE_ENV') && guard.includes('../private/.env'),
@@ -1312,15 +1451,39 @@ describe('CI workflow tripwire', () => {
 		// check .` cannot see the trees biome.jsonc excludes, so a green lint says
 		// nothing about them and the budget is a SEPARATE verdict that must survive
 		// alongside the other two.
-		expect(verify).toContain('await Promise.all([typecheck(), lint(), lintBrowserBudget()]);');
+		// DERIVED, not spelled: the functions the concurrent block awaits are read
+		// off the `Promise.all([...])` call, each resolved to the stage NAME its body
+		// pushes, and every one of those names must sit in STATIC_STAGE_ORDER (and
+		// nothing else may — a name in the order that no concurrent stage reports
+		// is a stale row). A pin on the literal line let a fourth stage be added
+		// only by rewriting the gate; the rule is about the pairing.
+		const concurrent = verify.match(/await Promise\.all\(\[([^\]]+)\]\);/)?.[1];
 		expect(
-			verify,
-			'every concurrently-run static stage must appear in STATIC_STAGE_ORDER, or the summary reshuffles',
-		).toContain("const STATIC_STAGE_ORDER = ['typecheck', 'lint', 'lint:browser'];");
+			concurrent,
+			'verify.ts no longer runs its static stages under Promise.all',
+		).toBeDefined();
+		const awaited = [...(concurrent as string).matchAll(/(\w+)\(\)/g)].map((m) => m[1] as string);
+		expect(awaited.length, 'the concurrent static block lost its stages').toBeGreaterThanOrEqual(3);
+		const stageNameOf = (fn: string): string => {
+			const body = verify.match(new RegExp(`async function ${fn}\\(\\)[\\s\\S]*?\\n}`))?.[0] ?? '';
+			const names = [...body.matchAll(/results\.push\(\{\s*name:\s*'([A-Za-z0-9_:]+)'/g)].map(
+				(m) => m[1] as string,
+			);
+			expect(new Set(names).size, `${fn}() must report exactly one stage name`).toBe(1);
+			return names[0] as string;
+		};
+		const reported = awaited.map(stageNameOf);
+		const order = verify.match(/const STATIC_STAGE_ORDER = \[([^\]]+)\];/)?.[1];
 		expect(
-			verify,
+			order,
 			'verify.ts runs its static stages concurrently, so it must pin their summary order — a verdict table that reshuffles is one people stop reading',
-		).toContain('STATIC_STAGE_ORDER');
+		).toBeDefined();
+		const pinned = [...(order as string).matchAll(/'([^']+)'/g)].map((m) => m[1] as string);
+		expect(
+			[...reported].sort(),
+			'every concurrently-run static stage must appear in STATIC_STAGE_ORDER, and nothing else may, or the summary reshuffles',
+		).toEqual([...pinned].sort());
+		expect(reported).toContain('lint:browser');
 	});
 
 	test('hermetic.sh tripwires are a subset of verify.ts TRIPWIRES', () => {

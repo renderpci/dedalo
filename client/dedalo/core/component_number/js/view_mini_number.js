@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_join} from '../../common/js/utils/render_escape.js'
 	import {attach_item_dataframe} from '../../component_common/js/component_common.js'
 
 
@@ -86,7 +87,7 @@ view_mini_number.render = async function(self, options) {
 	// Join all numeric values with the configured separator into a single display string.
 	// An empty entries array produces '' so the wrapper renders blank rather than 'undefined'.
 		const value_string	= (entries.length>0)
-			? entries.map(item => item.value).join(self.context.fields_separator)
+			? render_join(entries.map(item => item.value), self.context.fields_separator, self.context.render_class)
 			: ''
 
 	// wrapper

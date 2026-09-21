@@ -76,7 +76,7 @@
 	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {dd_request_idle_callback, when_in_viewport} from '../../../core/common/js/events.js'
-	import {downloadZip} from './lib/client-zip/index.js'
+	import {downloadZip} from '/dedalo/lib/client-zip/index.js'
 	import {
 		presets_section_tipo,
 		load_user_export_presets,
@@ -1801,7 +1801,8 @@ export const render_download_modal = (self) => {
  *   - Fetch errors (network) are logged when SHOW_DEBUG is true and silently skipped.
  *   - failed_files and downloaded_files are both listed in info.txt inside the ZIP.
  *
- * Uses the client-zip library (./lib/client-zip/index.js) to stream Response
+ * Uses the client-zip library (/dedalo/lib/client-zip/index.js, the pinned
+ * `client-zip` package served through the client-lib registry) to stream Response
  * objects directly into the ZIP without buffering all files in memory first.
  *
  * @param {Object} self - The tool_export instance (must have flat_table, media_components_in_data)

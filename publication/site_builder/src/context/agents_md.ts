@@ -13,7 +13,9 @@
  * schema at run time regardless.
  */
 
-import { symlink, writeFile, rm } from 'node:fs/promises';
+import { symlink, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { writeFileShared } from '../util/shared_tree';
 import { confinedPath } from '../util/paths';
 import { config } from '../config';
 import type { SiteManifest } from '../sites/manifest';
@@ -24,10 +26,12 @@ export async function writeAgentsFile(manifest: SiteManifest): Promise<void> {
   const schemaSummary = await fetchSchemaSummary();
   const body = renderAgentsMd(manifest, schemaSummary);
 
-  const agentsPath = confinedPath(config.SITES_ROOT, manifest.slug, 'AGENTS.md');
   const claudePath = confinedPath(config.SITES_ROOT, manifest.slug, 'CLAUDE.md');
 
-  await writeFile(agentsPath, body, 'utf8');
+  // Shared: the agent's own brief, in the tree the agent (a different uid) writes — so the
+  // write states the trusted root and goes through it component by component, O_NOFOLLOW.
+  // A regenerated AGENTS.md is the second-most obvious plant after `site.json.tmp`.
+  await writeFileShared(config.SITES_ROOT, join(manifest.slug, 'AGENTS.md'), body);
   // Re-point the symlink idempotently (regeneration overwrites AGENTS.md in place, but
   // the symlink may already exist).
   await rm(claudePath, { force: true }).catch(() => {});

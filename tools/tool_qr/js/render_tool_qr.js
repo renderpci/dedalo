@@ -36,7 +36,8 @@
 * Data shape expected on `self` (tool_qr instance after build):
 *   self.section               — section instance loaded by tool_qr.load_section()
 *   self.section.label         — {string} human-readable section label
-*   self.section.total         — {number} total record count (value.length, limit=0)
+*   self.section.total         — {number} the server's record count (tool_qr.load_section)
+*   self.section.truncated     — {boolean} total exceeds the rows one request returned
 *   self.section.data.value    — {Array<{section_id, section_tipo, ...}>} record list
 *   self.section.datum.context — {Array<Object>} component contexts (ddo_map entries)
 *   self.section.datum.data    — {Array<Object>} flat component data rows for all records
@@ -204,6 +205,19 @@ const render_info_container = (self) => {
 			inner_html		: totals_value,
 			parent			: fragment
 		})
+		// truncated. The selection exceeds what one request returns (the
+		// server's client ceiling): the sheet holds the first page ONLY and says
+		// so, loudly — a QR sheet silently missing records is the worst outcome
+		// (audit P2-31). The label is the shared limit-exceeded text + the bound.
+		if (self.section.truncated===true) {
+			const fetched = self.section.data?.value?.length || 0
+			const truncated_node = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'qr_truncated error',
+				parent			: fragment
+			})
+			truncated_node.textContent = `${get_label.exceeded_limit || 'Limit exceeded. Limit ='} ${fetched} / ${self.section.total}`
+		}
 
 	// canvas_direction
 		const canvas_direction = ui.create_dom_element({

@@ -44,7 +44,7 @@
 	// The ONE error model: a terminal frame's failure is read through
 	// normalize_stream_error and SHOWN through error_text. The dispatch (relogin,
 	// toast) is job_follow's — routing it twice would double every notice.
-	import {normalize_stream_error, response_data} from '../../common/js/api_error.js'
+	import {normalize_stream_error, request_failed, response_data} from '../../common/js/api_error.js'
 	import {error_text} from '../../common/js/render_api_error.js'
 
 
@@ -493,22 +493,35 @@ const is_live_status = function(status) {
 * what the server ACTUALLY did. Painting "cancelled" on request would be the
 * absence-means-done mistake in a new place — a request is not an outcome.
 *
+* The answer IS read, though: `data_manager.request` resolves a failure (it never
+* rejects on an envelope error), so a bare await told the operator nothing when
+* the server refused the stop — the job kept running and the click looked
+* accepted. A refused stop is toasted here; the row stays as the stream reports it.
+*
 * @param {Object} row - the activity row
-* @returns {Promise<void>}
+* @returns {Promise<boolean>} true when the server accepted the stop request
 */
 const stop_job = async function(row) {
 
-	try {
-		await data_manager.request({
-			body : {
-				dd_api	: 'dd_utils_api',
-				action	: 'stop_process',
-				options	: { id : row.job_id }
-			}
-		})
-	} catch (error) {
-		console.error(`stop_job failed for ${row.job_id}:`, error)
+	const api_response = await data_manager.request({
+		body : {
+			dd_api	: 'dd_utils_api',
+			action	: 'stop_process',
+			options	: { id : row.job_id }
+		}
+	})
+	if (request_failed(api_response)) {
+		// NO toast here. The transport already publishes the ApiError
+		// (data_manager.js 'api_error') and page.js hands it to
+		// error_dispatch, whose deduped_toast renders it ONCE — the client
+		// error contract's one-error-one-notice rule. A direct
+		// render_error_toast would bypass that dedupe and show the refusal
+		// twice. What this branch owes is the OUTCOME, and it returns it.
+		console.error(`stop_job refused for ${row.job_id}:`, api_response.error)
+		return false
 	}
+
+	return true
 }//end stop_job
 
 

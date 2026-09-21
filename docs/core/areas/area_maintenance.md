@@ -179,7 +179,7 @@ Every widget carries a `category`; the client groups and filters by it.
 | `data` | Backups, database version artifacts, the data-version upgrade, hierarchy import/export. |
 | `migration` | The bulk transforms — `move_tld`, `move_locator`, `move_to_portal`, `move_to_table`, `move_lang`. |
 | `config` | Configuration and code: `check_config`, `config_areas`, `menu_skip_tipos`, `update_ontology`, `register_tools`, `update_code`. |
-| `integrity` | `lock_components`, `sequences_status`, `media_control`, `counters_status`, `dataframe_control`. |
+| `integrity` | `lock_components`, `sequences_status`, `media_control`, `counters_status`, `reconcile_status`, `dataframe_control`. |
 | `system` | Environment, database info, system info, the runtime panel, error reports. |
 | `diffusion` | `publication_api`, `diffusion_server_control`. |
 | `dev` | The API and SQO test consoles, the unit-test runner. |
@@ -207,6 +207,7 @@ read-only panel: it reports state through `getValue` or an eager catalog value.
 | `sequences_status` | integrity | *(read-only panel)* |
 | `media_control` | integrity | `set_media_access_mode`, `rebuild_media_index` |
 | `counters_status` | integrity | `modify_counter` |
+| `reconcile_status` | integrity | `run_reconcile` — the one door onto the cross-store reconcile registry (`src/core/reconcile`): lists every registered reconcile with its last verdict and runs one, dry unless `apply:true` |
 | `dataframe_control` | integrity | `get_value`, `run_check`, `run_fix` — and NO module `getValue`, so the panel loads nothing (WC-071); `run_check` reports per-table `coverage` and can never claim a completeness it did not earn (WC-072) |
 | `database_info` | system | `analyze_db`, `analyze_statistics`, `optimize_tables`, `consolidate_tables`, `recreate_db_assets`, `backfill_search_stores`, `rebuild_db_indexes`, `rebuild_db_functions`, `rebuild_db_constraints`, `rebuild_user_stats`, `relation_integrity_report` |
 | `environment`, `system_info` | system | *(read-only panels)* |

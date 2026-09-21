@@ -8,12 +8,35 @@
 @import (once) '../../../client/dedalo/core/page/css/layout/vars';
 
 // local vars
+// The dark twins of the five ramp tokens live in layout/theme_dark.less (the
+// palette author brightens the whole ramp there: --tool_export #9070c8, the
+// lightens up to #b090e0), so this sheet declares only the light side of them.
 :root {
 	--tool_export: #7152a5;
 	--tool_export_lighten_40: #dfd8eb;
 	--tool_export_lighten_5: #7e60b0;
 	--tool_export_border: #5a4183;
 	--tool_export_lighten_10: #8c71b9;
+	// The identity hue as a TEXT-CARRYING fill (fill under --color_white, and
+	// the same pair reversed: hue as ink on --color_white). --tool_export itself
+	// is an EDGE: the header's top edge, the drag-over outline, the spinner, the
+	// progress bar's colour — none of them carry text. Under dark, theme_dark
+	// brightens the edge hue to #9070c8 and --color_white inverts to the near-
+	// black surface ink, and that pair is 4.29:1 (3.94:1 under redesign-dark):
+	// a hue tuned to be SEEN at 4px is not a hue tuned to be READ under. So the
+	// fill is its own token, twinned below — light keeps the edge's exact value
+	// (#ffffff on #7152a5 = 6.08:1), dark lifts it just enough to carry the
+	// inverted ink. Consumers: the presets header/toggles, the selected preset
+	// row, the flat-table header, the three text buttons (which take their
+	// --color_white ink from core `button.success`), the progress bar.
+	--tool_export_fill: #7152a5;
+}
+:root[data-theme="dark"] {
+	// #1b1d20 (dark --color_white) on it = 5.61:1; #26241f (redesign-dark) =
+	// 5.15:1; as ink on the dark surfaces #1b1d20 / #1f2227 = 5.61 / 5.30:1.
+	// Hue-matched to the ramp theme_dark declares (between the #9070c8 edge and
+	// the #a080d8 :active fill, so the states stay distinguishable).
+	--tool_export_fill: #a08ac9;
 }
 @tool_color : var(--tool_export);
 
@@ -251,7 +274,7 @@
 						align-items: center;
 						gap: 0.33rem;
 						padding: 0.5rem 0.66rem;
-						background-color: @tool_color;
+						background-color: var(--tool_export_fill); // carries text: the fill, not the edge hue
 						color: @color_white;
 						cursor: pointer;
 
@@ -275,7 +298,7 @@
 							align-items: center;
 							justify-content: center;
 							background-color: @color_white;
-							color: @tool_color;
+							color: var(--tool_export_fill); // the header pair reversed: same token, same ratio
 							width: 1.25rem;
 							height: 1.25rem;
 							border-radius: 2px;
@@ -298,8 +321,8 @@
 							content: "";
 							width: 0.4rem;
 							height: 0.4rem;
-							border-right: 2px solid @tool_color;
-							border-bottom: 2px solid @tool_color;
+							border-right: 2px solid var(--tool_export_fill); // the glyph IS the button's ink
+							border-bottom: 2px solid var(--tool_export_fill);
 							transform: translateY(-25%) rotate(45deg);
 						}
 					}//end .export_presets_header
@@ -321,7 +344,7 @@
 							display: block;
 							width: calc(100% - 1rem);
 							margin: 0.5rem;
-							background-color: @tool_color;
+							background-color: var(--tool_export_fill); // ink is core button.success's --color_white
 							border-color: var(--tool_export_border);
 
 							&:hover {
@@ -367,7 +390,7 @@
 
 										// applied / selected preset
 										&.selected {
-											background-color: @tool_color;
+											background-color: var(--tool_export_fill); // carries the row's text
 											color: @color_white;
 
 											.button.icon {
@@ -467,7 +490,7 @@
 				>.button_export {
 					width: 100%;
 					margin-left: 0;
-					background-color: @tool_color;
+					background-color: var(--tool_export_fill); // ink is core button.success's --color_white
 					border-color: var(--tool_export_border);
 					position: sticky;
 					top: 2rem;
@@ -525,7 +548,7 @@
 					.export_progress_bar {
 						height: 100%;
 						width: 0%;
-						background-color: @tool_color;
+						background-color: var(--tool_export_fill); // the .fg text is clipped to it
 						position: absolute;
 						left: 0;
 						top: 0;
@@ -572,7 +595,7 @@
 
 			// buttons
 			.processing_import {
-				background-color: @tool_color;
+				background-color: var(--tool_export_fill); // ink is core button.success's --color_white
 				border-color: var(--tool_export_border);
 				margin-bottom: 0.25rem;
 
@@ -615,7 +638,7 @@
 					position: sticky;
 					top: 0;
 					z-index: 2;
-					background-color: @tool_color;
+					background-color: var(--tool_export_fill); // carries the column labels
 					color: @color_white;
 					text-align: left;
 					font-weight: 600;

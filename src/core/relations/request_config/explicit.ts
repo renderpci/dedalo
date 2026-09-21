@@ -29,7 +29,7 @@ import { sql } from '../../db/postgres.ts';
 import { createOntologyCache } from '../../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../../ontology/cache_invalidation.ts';
 import { getModelSectionForSection } from '../../ontology/model_section.ts';
-import { getModelByTipo, getNode } from '../../ontology/resolver.ts';
+import { getModelByTipo, getNode, getSectionRealTipo } from '../../ontology/resolver.ts';
 import { contextLabelOf } from '../../resolve/structure_context.ts';
 import {
 	composeContains,
@@ -768,11 +768,9 @@ async function findSectionButtonTipo(
 		])) as { tipo: string }[];
 	let rows = await read(sectionTipo);
 	if (rows.length === 0) {
-		const nodeRows = (await sql.unsafe('SELECT relations FROM dd_ontology WHERE tipo = $1', [
-			sectionTipo,
-		])) as { relations: { tipo?: unknown }[] | null }[];
-		const real = nodeRows[0]?.relations?.[0]?.tipo;
-		if (typeof real === 'string') rows = await read(real);
+		// virtual section: borrow the REAL section's button (getSectionRealTipo)
+		const real = await getSectionRealTipo(sectionTipo);
+		if (real !== sectionTipo) rows = await read(real);
 	}
 	const found = rows[0]?.tipo ?? null;
 	sectionButtonCache.set(cacheKey, found);

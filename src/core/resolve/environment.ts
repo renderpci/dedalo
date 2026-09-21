@@ -179,6 +179,13 @@ export async function buildPageGlobals(
 		dedalo_image_quality_default: config.media.image.defaultQuality,
 		dedalo_av_quality_default: config.media.av.defaultQuality,
 		dedalo_quality_thumb: config.media.thumb.quality,
+		// WC-2026-09-04-client-limit-bound: TS-ONLY key (PHP get_page_globals has no
+		// twin). The SERVER's client ceiling (DEDALO_SEARCH_CLIENT_MAX_LIMIT, the
+		// DEC-07 clamp), published so the client bounds every limit it sends to
+		// the bound the server will apply — it never sends 0 ("unbounded") and
+		// never carries a constant of its own (client/dedalo/core/common/js/
+		// sqo_limit.js). Not session-gated: it is a shape of the API, not a secret.
+		dedalo_search_client_max_limit: config.features.searchClientMaxLimit,
 		tag_id: null,
 		// PHP: media_protection::get_mode()!==false ? 1 : 0. Resolved through the media
 		// protection module, NOT read straight off the frozen catalog: the root user can

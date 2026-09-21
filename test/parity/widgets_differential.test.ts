@@ -113,7 +113,16 @@ describe.if(hasPhpCredentials())('maintenance widget catalog differential', () =
 		// local AI model store it reports on has no PHP peer — the engine that owns it
 		// did not exist there. Its own shape is asserted natively by
 		// test/unit/ai_models_widget_native.test.ts.
-		const TS_ONLY_WIDGET_IDS = new Set(['error_reports', 'site_builder_status', 'ai_models']);
+		// reconcile_status (WC-2026-09-03-maintenance-reconcile-status-widget) is
+		// TS-ONLY as well: the reconcile REGISTRY it lists (src/core/reconcile, audit
+		// 2026-08-26 S-10) has no PHP peer. Its own shape is asserted natively by
+		// test/unit/reconcile_registry_native.test.ts (the widget door legs).
+		const TS_ONLY_WIDGET_IDS = new Set([
+			'error_reports',
+			'site_builder_status',
+			'ai_models',
+			'reconcile_status',
+		]);
 		const tsList = ((tsItem as { datalist?: Record<string, unknown>[] }).datalist ?? []).filter(
 			(item) => !TS_ONLY_WIDGET_IDS.has((item as { id?: string }).id ?? ''),
 		);

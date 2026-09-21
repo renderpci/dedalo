@@ -25,7 +25,13 @@
  */
 
 import type { BuilderContext, BuilderResult } from './types.ts';
-import { extractNormalizedQ, fragment, isLiteralQ } from './types.ts';
+import {
+	anchoredRegexOperand,
+	extractNormalizedQ,
+	fragment,
+	isLiteralQ,
+	regexOperand,
+} from './types.ts';
 
 /** `$.<tipo>[*]` — the array of {lang,value} entries for this component. */
 function entriesPath(context: BuilderContext): string {
@@ -85,18 +91,28 @@ export function buildJsonFragment(
 	}
 
 	// '!!' — DUPLICATED value text on ANOTHER record of the same section.
+	// ONE UNCORRELATED SELF-AGGREGATE (PERF-07) — the builder_string twin
+	// carries the full reasoning: the duplicate set does not depend on the
+	// outer row, so it is grouped ONCE instead of re-cross-joining the whole
+	// matrix table per row. Membership is asked by (section_tipo, section_id)
+	// so a duplicate pair in another tipo of the same table cannot match a
+	// same-numbered record here. component_json is not store-covered (the store
+	// holds `string`-column values), so there is no superset arm.
 	if (effective.startsWith('!!')) {
 		const path = entriesPath(context);
 		return fragment(
-			`(${context.alias}.${context.column} @? '${path}') AND EXISTS (
-  SELECT 1
-  FROM ${context.table} AS m2,
-       jsonb_path_query(m2.${context.column}, '${path}') AS m2_elem,
-       jsonb_path_query(${context.alias}.${context.column}, '${path}') AS m1_elem
-  WHERE m2.${context.column} @? '${path}'
-    AND m2.section_id != ${context.alias}.section_id
-    AND m2.section_tipo = ${context.alias}.section_tipo
-    AND f_unaccent(m2_elem->>'value') = f_unaccent(m1_elem->>'value')
+			`(${context.alias}.section_tipo, ${context.alias}.section_id) IN (
+  SELECT dup.section_tipo, dup_id
+  FROM (
+    SELECT dv.section_tipo AS section_tipo, array_agg(DISTINCT dv.section_id) AS ids
+    FROM (SELECT m2.section_tipo AS section_tipo, m2.section_id AS section_id,
+                 f_unaccent(m2_elem->>'value') AS val
+          FROM ${context.table} AS m2,
+               jsonb_path_query(m2.${context.column}, '${path}') AS m2_elem
+          WHERE m2_elem->>'value' IS NOT NULL) dv
+    GROUP BY dv.section_tipo, dv.val
+    HAVING count(DISTINCT dv.section_id) > 1
+  ) dup, unnest(dup.ids) AS dup_id
  )`,
 		);
 	}
@@ -109,7 +125,7 @@ export function buildJsonFragment(
 		).replaceAll('*', '');
 		const path = entriesPath(context);
 		return fragment(
-			`(${context.alias}.${context.column} @? '${path}') AND NOT EXISTS (SELECT 1 FROM jsonb_path_query(${context.alias}.${context.column}, '${path}') AS elem WHERE f_unaccent(elem->>'value') ~* f_unaccent(_Q1_))`,
+			`(${context.alias}.${context.column} @? '${path}') AND NOT EXISTS (SELECT 1 FROM jsonb_path_query(${context.alias}.${context.column}, '${path}') AS elem WHERE f_unaccent(elem->>'value') ~* ${regexOperand('_Q1_')})`,
 			{ _Q1_: qClean },
 		);
 	}
@@ -135,10 +151,10 @@ export function buildJsonFragment(
 		const qClean = effective.replaceAll('*', '').replaceAll("'", '');
 		const matchLogic =
 			hasLead && hasTrail
-				? `f_unaccent(elem->>'value') ~* f_unaccent(_Q1_)`
+				? `f_unaccent(elem->>'value') ~* ${regexOperand('_Q1_')}`
 				: hasLead
-					? `f_unaccent(elem->>'value') ~* (f_unaccent(_Q1_) || '$')`
-					: `f_unaccent(elem->>'value') ~* ('^' || f_unaccent(_Q1_))`;
+					? `f_unaccent(elem->>'value') ~* ${anchoredRegexOperand('_Q1_', 'ends')}`
+					: `f_unaccent(elem->>'value') ~* ${anchoredRegexOperand('_Q1_', 'begins')}`;
 		if (qClean === '') return false;
 		return fragment(existsEnvelope(context, matchLogic), { _Q1_: qClean });
 	}
@@ -148,7 +164,10 @@ export function buildJsonFragment(
 	if (qClean === '') {
 		return false;
 	}
-	return fragment(existsEnvelope(context, `f_unaccent(elem->>'value') ~* f_unaccent(_Q1_)`), {
-		_Q1_: qClean,
-	});
+	return fragment(
+		existsEnvelope(context, `f_unaccent(elem->>'value') ~* ${regexOperand('_Q1_')}`),
+		{
+			_Q1_: qClean,
+		},
+	);
 }

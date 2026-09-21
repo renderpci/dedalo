@@ -13,7 +13,10 @@
 
 import { describe, expect, test } from 'bun:test';
 import { readFileSync, utimesSync } from 'node:fs';
-import { buildDedaloFilesResponse } from '../../src/core/api/dedalo_files.ts';
+import {
+	buildDedaloFilesResponse,
+	resetDedaloFilesManifest,
+} from '../../src/core/api/dedalo_files.ts';
 
 /**
  * Source-level helpers. These gates read CLIENT js (excluded from the TS build and
@@ -90,18 +93,32 @@ const A_MANIFESTED_CLIENT_FILE = 'tools/tool_import_dedalo_csv/js/render_tool_im
 const SW = 'client/dedalo/core/sw.js';
 
 describe('the SW cache key tracks the served client code', () => {
-	test('editing a manifested client file MOVES the key (the file list does not)', () => {
-		const before = buildDedaloFilesResponse();
+	test('IN DEV MODE, editing a manifested client file MOVES the key (the file list does not)', () => {
+		// The manifest is a frozen boot-time answer on the production posture
+		// (audit PERF-13: the walk was thousands of sync syscalls on an
+		// authenticated request path). Client files only change under a RUNNING
+		// server in development, which is exactly where the recompute lives —
+		// so this contract is asserted where it is real.
+		const saved = process.env.DEDALO_DEV_MODE;
+		process.env.DEDALO_DEV_MODE = 'true';
+		try {
+			resetDedaloFilesManifest();
+			const before = buildDedaloFilesResponse();
 
-		// The edit a developer makes, or a deploy performs.
-		const now = new Date();
-		utimesSync(A_MANIFESTED_CLIENT_FILE, now, now);
+			// The edit a developer makes, or a deploy performs.
+			const now = new Date();
+			utimesSync(A_MANIFESTED_CLIENT_FILE, now, now);
 
-		const after = buildDedaloFilesResponse();
+			const after = buildDedaloFilesResponse();
 
-		expect(after.dedalo_version).not.toBe(before.dedalo_version);
-		// Only the KEY moved — the manifest is the same set of files.
-		expect(after.result.length).toBe(before.result.length);
+			expect(after.dedalo_version).not.toBe(before.dedalo_version);
+			// Only the KEY moved — the manifest is the same set of files.
+			expect(after.result.length).toBe(before.result.length);
+		} finally {
+			if (saved === undefined) delete process.env.DEDALO_DEV_MODE;
+			else process.env.DEDALO_DEV_MODE = saved;
+			resetDedaloFilesManifest();
+		}
 	});
 
 	test('the key is stable when nothing changed (no needless re-cache on every poll)', () => {

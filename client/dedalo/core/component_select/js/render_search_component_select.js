@@ -7,6 +7,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {same_section_id} from '../../common/js/utils/index.js'
 	import {build_changed_data_item} from './component_select.js'
 
@@ -275,7 +276,7 @@ const get_content_value = (i, current_value, self) => {
 			const option = ui.create_dom_element({
 				element_type	: 'option',
 				value			: JSON.stringify(datalist_value),
-				inner_html		: current_label,
+				inner_html		: render_value(current_label, self.context.render_class),
 				parent			: select
 			})
 			// selected options set on match

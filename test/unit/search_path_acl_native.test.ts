@@ -360,7 +360,12 @@ function threeHopSqo(q: string) {
 
 /** Every hop alias the builder emitted, in emission order. */
 function joinAliases(builtSql: string): string[] {
-	return [...builtSql.matchAll(/LEFT JOIN \S+ AS (j_[A-Za-z0-9_]+) ON /g)].map(
+	// BOTH chain namespaces: buildJoinChain emits `j_` for a FILTER chain and
+	// `o_` for an ORDER one (PERF-08 — the order twin collapses the locator
+	// fan-out, so it is a different join and must not dedup into the filter's).
+	// The SEC-02 census below is about the ORDER twin, so a helper blind to
+	// `o_` would report zero joins and pass its refusal legs vacuously.
+	return [...builtSql.matchAll(/LEFT JOIN \S+ AS ([jo]_[A-Za-z0-9_]+) ON /g)].map(
 		(match) => match[1] as string,
 	);
 }

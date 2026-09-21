@@ -55,6 +55,7 @@ import '../src/core/components/registry.ts';
 import { backfillSearchStores } from '../src/core/db/db_assets.ts';
 import { encodeForJsonb } from '../src/core/db/json_codec.ts';
 import { MATRIX_JSONB_COLUMNS, MATRIX_TABLE_ALLOWLIST } from '../src/core/db/matrix.ts';
+import { appendMatrixUpdateRow } from '../src/core/db/matrix_write.ts';
 import { sql, withTransaction } from '../src/core/db/postgres.ts';
 import {
 	type IntifyFinding,
@@ -411,19 +412,17 @@ async function main(): Promise<number> {
 		const findingsSummary = Object.fromEntries(
 			[...stats.findingsByClass].map(([cls, bucket]) => [cls, bucket.count]),
 		);
-		await sql.unsafe(`INSERT INTO "matrix_updates" ("data") VALUES ($1::text::jsonb)`, [
-			encodeForJsonb({
-				section_id_int_normalize: {
-					date: new Date().toISOString().slice(0, 19).replace('T', ' '),
-					converted: stats.converted,
-					changed_rows: stats.changedRows,
-					purged: stats.purged,
-					findings: findingsSummary,
-					origin: 'migrate_section_id_locators',
-					user_id: args.userId,
-				},
-			}),
-		]);
+		await appendMatrixUpdateRow({
+			section_id_int_normalize: {
+				date: new Date().toISOString().slice(0, 19).replace('T', ' '),
+				converted: stats.converted,
+				changed_rows: stats.changedRows,
+				purged: stats.purged,
+				findings: findingsSummary,
+				origin: 'migrate_section_id_locators',
+				user_id: args.userId,
+			},
+		});
 		console.log('marker row written to matrix_updates (section_id_int_normalize).');
 	} else {
 		console.log('(partial --table run: marker row NOT written — full --all run required)');

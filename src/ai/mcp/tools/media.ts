@@ -270,7 +270,17 @@ export async function uploadMedia(
 /**
  * Read the stored media variants of a media component: the files_info entries
  * (quality, existence, relative path) plus the server URL of each existing
- * variant. Scope-gated like every record read that bypasses a search.
+ * variant.
+ *
+ * TWO GATES, in order (P1-3 / SEC-06, 2026-09-03): the read door's COMPONENT
+ * key on (section_tipo, field) — the SECTION read grant AND the component's
+ * own, the pair the human read demands, the read twin of the level >= 2
+ * `uploadMedia` asserts — and THEN the record scope. Before, only the scope
+ * ran, so a caller holding the section but level 0 on the media component
+ * still received every variant's path and a fetch URL; and a caller granted
+ * the component WITHOUT its section (SEC-11's shape) was served here what the
+ * record page refused. The component key runs FIRST so a denied caller learns
+ * nothing about the record's scope.
  */
 export async function getMediaInfo(
 	principal: Principal,
@@ -286,6 +296,11 @@ export async function getMediaInfo(
 	const sectionTipo = assertValidTipo(input.section_tipo, 'mcp.media.section_tipo');
 	const sectionId = Math.floor(input.section_id);
 	const fieldTipo = await resolveFieldReference(sectionTipo, input.field);
+	const { authorizeComponentRead } = await import('../../../core/security/read_door.ts');
+	await authorizeComponentRead(
+		{ principal, door: 'mcp.dedalo_get_media_info' },
+		{ sectionTipo, componentTipo: fieldTipo, sectionId },
+	);
 	await assertRecordInScope(principal, sectionTipo, sectionId);
 
 	const model = (await getModelByTipo(fieldTipo)) ?? '';

@@ -21,6 +21,17 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MatrixRecord } from '../../src/core/db/matrix.ts';
+import {
+	type CompileOptions,
+	type ParserClassifier,
+	validateElementPlan,
+} from '../../src/diffusion/plan/compile.ts';
+import type {
+	OntologyIndex,
+	RawOntologyNode,
+	VirtualDiffusionTree,
+	VirtualTreeNode,
+} from '../../src/diffusion/plan/virtual_tree.ts';
 import { type RunContext, resolveGate } from '../../src/diffusion/resolve/resolver.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
@@ -123,21 +134,131 @@ describe('a publication decision is never silent', () => {
  *
  * The louder an engine is about a mistyped function name, the more misleading
  * its silence about a directive it no longer reads.
+ *
+ * BEHAVIOURAL, NOT SPELLED (P1-13 un-masked this, 2026-09-03). The first
+ * version of this leg asserted the compiler's SOURCE contained the right
+ * identifiers — and the report those identifiers implemented looked only for
+ * `process_dato.parser`, an object shape NO shipped node carries: every one of
+ * the 18 nodes spells the directive as a STRING fn
+ * (`"process_dato": "diffusion_sql::resolve_value"`). Green gate, silent
+ * engine, on exactly the rows it was written for. Both shapes are now
+ * compiled through the real compiler over an INJECTED tree (no database) and
+ * the degradation is asserted on the report, with the fieldId, for each.
+ * diffusion_seed_compiles_native measures the same report on the SHIPPED
+ * dd1099 element.
  */
 describe('a retired parser spelling is reported, not silently dropped', () => {
-	test('the compiler names the retired block and the replacement', () => {
-		const source = readFileSync(join(REPO_ROOT, 'src/diffusion/plan/compile.ts'), 'utf8');
-		// Follows the established retired-property idiom
-		// (relations/request_config/build.ts::reportRetiredTargetMode): name the
-		// node, name the replacement, then resolve by the ordinary rule.
-		expect(source).toContain('RETIRED_PARSER_SPELLINGS');
-		expect(source).toContain('process_dato');
-		expect(source).toContain('retired_parser_spelling');
-		expect(source).toContain('publishes with NO transform');
-		// It must be reached from the EXACT branch that used to return silently.
-		expect(source).toMatch(
-			/if \(rawParser === undefined \|\| rawParser === null\) \{[\s\S]{0,200}reportRetiredParserSpelling\(/,
+	// The smallest tree the compiler will walk: one sql element → database →
+	// table → the two field nodes under test (compile.ts CompileOptions.tree).
+	function treeWith(
+		fields: { tipo: string; properties: Record<string, unknown> }[],
+	): VirtualDiffusionTree {
+		const path: VirtualTreeNode['parents'] = [
+			{ tipo: 'el1', model: 'diffusion_element', label: 'el', realTipo: null, type: 'sql' },
+		];
+		const fieldNodes = new Map<string, RawOntologyNode>(
+			fields.map((field) => [
+				field.tipo,
+				{
+					tipo: field.tipo,
+					parent: 'tb1',
+					model: 'field_text',
+					term: { 'lg-spa': field.tipo },
+					properties: field.properties,
+					relations: null,
+				},
+			]),
 		);
+		const index: OntologyIndex = {
+			nodeOf: async (tipo) => fieldNodes.get(tipo) ?? null,
+			childTipos: async () => [],
+			relatedByModel: async () => [],
+			relationTipos: async () => [],
+			resolveAlias: async () => null,
+		};
+		const base = { realTipo: null, isAlias: false, childrenTipos: [], relatedSections: [] };
+		return {
+			domainName: 'test',
+			domainTipo: 'dom1',
+			index,
+			nodes: [
+				{
+					...base,
+					tipo: 'el1',
+					model: 'diffusion_element',
+					label: 'el',
+					properties: { diffusion: { type: 'sql' } },
+					parents: [],
+					directChildrenTipos: ['db1'],
+				},
+				{
+					...base,
+					tipo: 'db1',
+					model: 'database',
+					label: 'web_test',
+					properties: null,
+					parents: path,
+					directChildrenTipos: ['tb1'],
+				},
+				{
+					...base,
+					tipo: 'tb1',
+					model: 'table',
+					label: 'interview',
+					properties: null,
+					parents: path,
+					childrenTipos: fields.map((field) => field.tipo),
+					directChildrenTipos: fields.map((field) => field.tipo),
+					relatedSections: ['test6813'],
+				},
+			],
+		};
+	}
+
+	const options = (
+		fields: { tipo: string; properties: Record<string, unknown> }[],
+	): CompileOptions => ({
+		tree: treeWith(fields),
+		classifyParserFn: (() => 'unknown') as ParserClassifier,
+		resolveModelByTipo: async () => null,
+	});
+
+	test('the SHIPPED shape — a string fn — and the object shape both surface as retired_parser_spelling with the fieldId', async () => {
+		const report = await validateElementPlan(
+			'el1',
+			options([
+				// the shape every one of the 18 shipped nodes carries (dd1419…dd1509)
+				{
+					tipo: 'zzf1',
+					properties: {
+						process_dato: 'diffusion_sql::resolve_value',
+						process_dato_arguments: { target_component_tipo: 'zzf9' },
+					},
+				},
+				// the object shape the first report looked for
+				{
+					tipo: 'zzf2',
+					properties: { process_dato: { parser: [{ fn: 'diffusion_sql::map_to_terminoID' }] } },
+				},
+				// a v7 field with no directive: nothing to report
+				{ tipo: 'zzf3', properties: { exclude_column: false } },
+			]),
+		);
+		expect(report.errors).toEqual([]);
+		expect(report.result).not.toBeNull();
+		// The floor: two directives were planted, two reports must come back.
+		expect(report.degradations.length).toBe(2);
+		const degraded = report.degradations.map((item) => `${item.fieldId}:${item.reason}`).sort();
+		expect(degraded).toEqual(['zzf1:retired_parser_spelling', 'zzf2:retired_parser_spelling']);
+		// The report names the fn the ontology asked for and the replacement —
+		// what an operator needs to port the directive.
+		const shipped = report.degradations.find((item) => item.fieldId === 'zzf1');
+		expect(shipped?.message).toContain('diffusion_sql::resolve_value');
+		expect(shipped?.message).toContain("'process'");
+		expect(shipped?.message).toContain('NO transform');
+		// ...and the field still publishes (untransformed): it is in the plan.
+		const fieldIds = (report.result?.sections[0]?.fields ?? []).map((field) => field.id);
+		expect(fieldIds).toEqual(['zzf1', 'zzf2', 'zzf3']);
 	});
 
 	test('the degradation reason is a closed union the run report can switch on', () => {

@@ -189,11 +189,11 @@ Data exported with the tool export in `dedalo_raw` format is wrapped with the `d
 {"dedalo_data":[{"value":"Hello","lang":"lg-eng","id":1}]}
 ```
 
-The wrapper identifies externally that the content is Dédalo format data and not any other generic value. The import process detects and unwraps it transparently, so a raw exported CSV can be re-imported without any change (round-trip). Un-wrapped v7/v6 values remain fully accepted; the wrapper is only mandatory to disambiguate `component_json` data (see [JSON](#json)).
+The wrapper identifies externally that the content is Dédalo format data and not any other generic value. The import process detects and unwraps it transparently, then conforms the value like any typed input — it is **not** a verbatim round trip of the stored row (`component_text_area` markup and `component_geolocation` item ids change; empty cells become explicit clears; locators are checked for shape only). For a lossless copy of a section set use the archive door (see [The archive door](exporting_data.md#the-archive-door)). Un-wrapped v7/v6 values remain fully accepted; the wrapper is only mandatory to disambiguate `component_json` data (see [JSON](#json)).
 
 !!! note "What is not wrapped"
 
-    Two cases are exported **without** the wrapper, and both re-import correctly as-is: the `section_id` column (a plain int, used as the record key on import) and components without data (empty cells). The wrapper is detected only when `dedalo_data` is the **only** property of the cell object — a JSON value that merely contains a `dedalo_data` property among others is treated as a normal value.
+    Two cases are exported **without** the wrapper, and both import as intended: the `section_id` column (a plain int, used as the record key on import) and components without data (empty cells). The wrapper is detected only when `dedalo_data` is the **only** property of the cell object — a JSON value that merely contains a `dedalo_data` property among others is treated as a normal value.
 
 ### Dataframe columns
 
@@ -1151,7 +1151,7 @@ Row 1 will be saved as `[{"value":{"config":{"a":1}}}]`, row 4 as `[{"value":42}
     {"dedalo_data":[{"value":{"config":{"a":1}},"id":1}]}
     ```
 
-    The raw export produces this wrapper automatically, so export → import round-trips work without changes.
+    The raw export produces this wrapper automatically, so a raw-exported JSON column imports without editing (the `component_json` facet is the one that honours the wrapper verbatim).
 
 ---
 

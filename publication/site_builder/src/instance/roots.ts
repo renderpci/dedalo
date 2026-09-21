@@ -46,7 +46,15 @@
  * individually, at the moment it is used, by the marker law and the write probe.
  */
 
-import { closeSync, existsSync, openSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import {
+  closeSync,
+  constants as FS,
+  existsSync,
+  openSync,
+  readFileSync,
+  statSync,
+  unlinkSync,
+} from 'node:fs';
 import { join, resolve } from 'node:path';
 import { config, configSource, type Config, type ConfigSourceReport } from '../config';
 import { readSiteTable } from '../sites/site_table';
@@ -348,7 +356,14 @@ export function assertRootsWritable(instance: string, roots: readonly InstanceRo
 
     const probe = join(root.path, `.dedalo_site_write_probe.${process.pid}`);
     try {
-      writeFileSync(probe, '', { flag: 'w' });
+      // O_EXCL|O_CREAT|O_NOFOLLOW, not `writeFileSync`. `SITES_ROOT` and `AGENT_HOME` are
+      // 2770 and the AGENT uid is in that group, so this is a path inside a directory the
+      // other principal can write: a plain create FOLLOWS a link left at this name and
+      // truncates whatever it points at, as the daemon (`util/shared_tree.ts` — the same
+      // class, here in the one place that cannot use those async doors because the whole
+      // preflight is synchronous). `O_EXCL` refuses an existing name of ANY kind, symlink
+      // included, so the plant is an EEXIST refusal and never a redirect.
+      closeSync(openSync(probe, FS.O_WRONLY | FS.O_CREAT | FS.O_EXCL | FS.O_NOFOLLOW, 0o600));
     } catch (error) {
       refuse(
         'assertRootsWritable',

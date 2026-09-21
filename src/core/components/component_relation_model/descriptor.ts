@@ -8,6 +8,7 @@ import type { ComponentModel } from '../types.ts';
 export const component_relation_model: ComponentModel = {
 	model: 'component_relation_model',
 	column: 'relation',
+	render: 'text',
 	defaultRelationType: 'dd98',
 	resolveData: 'select_family',
 	flatValue: 'datalist',

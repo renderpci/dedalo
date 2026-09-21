@@ -1,12 +1,22 @@
 /**
  * Diffusion RUNNER — the data-plane process (DIFFUSION_SPEC §4.2).
  *
- * Spawned by the scheduler as `bun run src/diffusion/runner.ts --job <uuid>`
+ * Spawned by the scheduler as
+ * `bun run src/diffusion/runner.ts --job <uuid> --epoch <attempt>`
  * (or run by an out-of-machine runner daemon — it only needs Postgres + the
  * publication targets). One process per run: own memory ceiling, crash-
  * isolated from the interactive server, killable. Communicates EXCLUSIVELY
  * through the job row: heartbeat, progress totals, checkpoint, terminal
  * state. Zero runner↔server RPC by design.
+ *
+ * THE LEASE (PUB-13). The row can be re-claimed under this process — the
+ * sweeper requeues a run whose heartbeat went stale and a later claim hands it
+ * to a new runner while this one is merely slow, not dead. The claim's epoch
+ * (`attempt`) therefore arrives on the ARGV, is never re-read from the row, and
+ * fences every write: the first refused write throws `diffusion.lease_revoked`
+ * and this process exits WITHOUT writing anything — a terminal state written by
+ * the loser would overwrite the run the live attempt is still doing
+ * (engineering/wire_contract/WC-2026-09-05-diffusion-lease-epoch-fence.md).
  *
  * REAL PIPELINE (stages B→G, spec §4.1): compiled plan → resolvePublication
  * async generator (selection → resolution → transform → projection) → format
@@ -31,7 +41,7 @@ import { readString } from '../config/readers.ts';
 import { closeDatabasePool } from '../core/db/postgres.ts';
 import { logDiffusionActivity } from '../core/diffusion_bridge/diffusion_delete.ts';
 import { DedaloError, isDedaloError, logError, toErrorBody } from '../core/errors/index.ts';
-import type { DiffusionJobRow } from './jobs/queue.ts';
+import type { DiffusionJobRow, JobLease } from './jobs/queue.ts';
 import {
 	checkpointJob,
 	failedJobResult,
@@ -43,12 +53,12 @@ import {
 } from './jobs/queue.ts';
 import { RUNNER_HEARTBEAT_MS } from './jobs/scheduler.ts';
 
-/** Parse --job <uuid> (also tolerates --job=<uuid>). */
-function parseJobIdArgument(argv: string[]): string | null {
-	const flagIndex = argv.indexOf('--job');
+/** Parse `--<name> <value>` (also tolerates `--<name>=<value>`). */
+function parseArgument(argv: string[], name: string): string | null {
+	const flagIndex = argv.indexOf(`--${name}`);
 	if (flagIndex !== -1 && argv[flagIndex + 1] !== undefined) return argv[flagIndex + 1] ?? null;
-	const inline = argv.find((argument) => argument.startsWith('--job='));
-	return inline !== undefined ? inline.slice('--job='.length) : null;
+	const inline = argv.find((argument) => argument.startsWith(`--${name}=`));
+	return inline !== undefined ? inline.slice(`--${name}=`.length) : null;
 }
 
 /** The cancellation `msg` line (totals.msg + result.msg) the client renders. */
@@ -62,7 +72,7 @@ const MAX_PERSISTED_ERRORS = 50;
 const STUB_BATCH_DELAY_MS = Number(readString('DIFFUSION_RUNNER_STUB_DELAY_MS'));
 
 /** The P0 lifecycle stub (see module header). */
-async function runStubJob(job: DiffusionJobRow): Promise<void> {
+async function runStubJob(job: DiffusionJobRow, lease: JobLease): Promise<void> {
 	const jobId = job.job_id;
 	const startedAt = Date.now();
 	const total = Math.max(1, Math.min(job.spec.estimated_total || 10, 10000));
@@ -70,26 +80,26 @@ async function runStubJob(job: DiffusionJobRow): Promise<void> {
 	for (let counter = resumeFrom + 1; counter <= total; counter++) {
 		if (await isCancelRequested(jobId)) {
 			await finishJob(
-				jobId,
+				lease,
 				'cancelled',
 				failedJobResult(new DedaloError('diffusion.cancelled'), CANCELLED_MSG),
 			);
 			return;
 		}
 		await Bun.sleep(STUB_BATCH_DELAY_MS);
-		await updateJobProgress(jobId, {
+		await updateJobProgress(lease, {
 			counter,
 			msg: `Processing records ${counter} of ${total}...`,
 			current: { section_id: counter, time: STUB_BATCH_DELAY_MS },
 			total_ms: Date.now() - startedAt,
 		});
-		await checkpointJob(jobId, { counter });
+		await checkpointJob(lease, { counter });
 	}
-	await finishJob(jobId, 'completed', { ok: true, msg: 'OK. Request done', tables: [] });
+	await finishJob(lease, 'completed', { ok: true, msg: 'OK. Request done', tables: [] });
 }
 
 /** The real publication pipeline. */
-async function runPublicationJob(job: DiffusionJobRow): Promise<void> {
+async function runPublicationJob(job: DiffusionJobRow, lease: JobLease): Promise<void> {
 	const jobId = job.job_id;
 	const startedAt = Date.now();
 
@@ -179,7 +189,7 @@ async function runPublicationJob(job: DiffusionJobRow): Promise<void> {
 				// completes the rest); close() finalizes the partial summary.
 				const partial = await session.close();
 				await finishJob(
-					jobId,
+					lease,
 					'cancelled',
 					failedJobResult(new DedaloError('diffusion.cancelled'), CANCELLED_MSG, {
 						tables: partial.tables,
@@ -220,7 +230,7 @@ async function runPublicationJob(job: DiffusionJobRow): Promise<void> {
 			}
 
 			const lastRecord = batch.records[batch.records.length - 1];
-			await updateJobProgress(jobId, {
+			await updateJobProgress(lease, {
 				counter: processed,
 				msg: `Processing records ${processed}${job.spec.estimated_total > 0 ? ` of ${job.spec.estimated_total}` : ''}...`,
 				current: { section_id: lastRecord?.sectionId, time: Date.now() - startedAt },
@@ -228,7 +238,7 @@ async function runPublicationJob(job: DiffusionJobRow): Promise<void> {
 			});
 			// COMMITTED checkpoint — the resume point (batch writes are already
 			// durable in the target; re-running this batch is an idempotent upsert).
-			await checkpointJob(jobId, {
+			await checkpointJob(lease, {
 				cursor: batch.cursor,
 				run_started_at: runStartedAt,
 				processed,
@@ -274,7 +284,7 @@ async function runPublicationJob(job: DiffusionJobRow): Promise<void> {
 		// A completed job is a SUCCESS record even with per-record diagnostic
 		// lines: `ok:true` + `errors` (the report model reads `errors.length`
 		// for its "partial" verdict); a FAILURE record is `ok:false` + `error`.
-		await finishJob(jobId, 'completed', {
+		await finishJob(lease, 'completed', {
 			ok: true,
 			msg:
 				allErrors.length === 0
@@ -290,7 +300,8 @@ async function runPublicationJob(job: DiffusionJobRow): Promise<void> {
 	}
 }
 
-async function runJob(jobId: string): Promise<void> {
+async function runJob(jobId: string, epoch: number): Promise<void> {
+	const lease: JobLease = { job_id: jobId, attempt: epoch };
 	const job = await getJobById(jobId);
 	if (job === null) {
 		console.error(`[diffusion runner] job not found: ${jobId}`);
@@ -303,20 +314,36 @@ async function runJob(jobId: string): Promise<void> {
 		return;
 	}
 
+	// The row may already belong to a newer attempt (a re-spawn after a sweep):
+	// refuse before any work rather than publish under a revoked lease.
+	if (job.attempt !== epoch) {
+		console.error(
+			`[diffusion runner] job ${jobId} lease revoked (row attempt ${job.attempt}, argv epoch ${epoch})`,
+		);
+		return;
+	}
+
 	// A missed heartbeat is non-fatal (the sweeper heals on staleness) but a
 	// floating rejection kills the runner process outright (S1-15) — catch it.
+	// A REVOKED heartbeat is different: the row is gone to a newer attempt, so
+	// the interval stops beating instead of logging once per tick forever.
 	const heartbeat = setInterval(
 		() =>
-			void heartbeatJob(jobId).catch((error) =>
-				console.error('[diffusion runner] heartbeat failed:', error),
-			),
+			void heartbeatJob(lease).catch((error) => {
+				if (isDedaloError(error) && error.code === 'diffusion.lease_revoked') {
+					clearInterval(heartbeat);
+					console.error(`[diffusion runner] heartbeat stopped: ${error.code}`);
+					return;
+				}
+				console.error('[diffusion runner] heartbeat failed:', error);
+			}),
 		RUNNER_HEARTBEAT_MS,
 	);
 	try {
 		if ((job.spec.options as { stub_run?: unknown }).stub_run === true) {
-			await runStubJob(job);
+			await runStubJob(job, lease);
 		} else {
-			await runPublicationJob(job);
+			await runPublicationJob(job, lease);
 		}
 	} catch (error) {
 		// The persisted job `result` is a FAILURE RECORD (`{ok:false, error:{code,
@@ -330,29 +357,49 @@ async function runJob(jobId: string): Promise<void> {
 			? error
 			: new DedaloError('diffusion.run_failed', { cause: error, coordinates: { job: jobId } });
 		logError(typed, { subsystem: 'diffusion runner' });
+		// A REVOKED LEASE is not this run's outcome to record: the row belongs to
+		// a newer attempt that is publishing right now, and a terminal write here
+		// would overwrite it. Abort silently — the live epoch owns the ending.
+		if (typed.code === 'diffusion.lease_revoked') {
+			clearInterval(heartbeat);
+			return;
+		}
 		await finishJob(
-			jobId,
+			lease,
 			'failed',
 			failedJobResult(typed, `Error. Diffusion run failed: ${toErrorBody(typed).message}`),
-		);
+		).catch((finishError) => {
+			// The lease can be revoked between the failure and its record — the
+			// same law applies, and the abort must not become an unhandled throw.
+			if (isDedaloError(finishError) && finishError.code === 'diffusion.lease_revoked') return;
+			throw finishError;
+		});
 	} finally {
 		clearInterval(heartbeat);
 	}
 }
 
 if (import.meta.main) {
-	const jobId = parseJobIdArgument(process.argv);
-	if (jobId === null) {
-		console.error('Usage: bun run src/diffusion/runner.ts --job <uuid>');
+	const jobId = parseArgument(process.argv, 'job');
+	const epochArgument = parseArgument(process.argv, 'epoch');
+	const epoch = Number(epochArgument);
+	if (jobId === null || epochArgument === null || !Number.isInteger(epoch)) {
+		console.error('Usage: bun run src/diffusion/runner.ts --job <uuid> --epoch <attempt>');
 		process.exit(2);
 	}
 	// SIGTERM (cancel_process on this host / systemd stop): exit promptly; the
 	// job row keeps its checkpoint, and the sweeper or cancel flag settles state.
 	process.on('SIGTERM', () => process.exit(143));
-	await runJob(jobId);
+	await runJob(jobId, epoch);
 	await closeDatabasePool();
 	process.exit(0);
 }
 
-/** Exported for the end-to-end publish gate (drives a job in-process). */
+/**
+ * Exported for test/unit/diffusion_runner_native.test.ts, which drives a
+ * claimed job IN-PROCESS on the suite database (enqueue → claim → runJob →
+ * job row + published files) — the gate that executes this module's real
+ * pipeline rather than spawning it in stub mode. The second argument is the
+ * claim's EPOCH (the claimed row's `attempt`), exactly what the argv carries.
+ */
 export { runJob };

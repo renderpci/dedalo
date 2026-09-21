@@ -85,7 +85,6 @@ const NON_PRIMITIVE_EXPORTS: Record<string, string> = {
 	installedDataLangs: 'a language accessor; reads config, writes nothing.',
 	ontologyTldRefusal: 'builds a refusal message from an ontology node; writes nothing.',
 	isLangSlicedModel: 'a model-descriptor predicate; writes nothing.',
-	isMonovalueModel: 'a model-descriptor predicate; writes nothing.',
 	normalizeItemId: 'a value normalizer over an in-memory item; writes nothing.',
 	getIdFromKey: 'parses an id out of a key string; writes nothing.',
 	applyUpdate: 'the in-memory merge that PRODUCES the value a primitive then persists.',
@@ -98,6 +97,8 @@ const NON_PRIMITIVE_EXPORTS: Record<string, string> = {
 		'a PURE PREDICATE over a changed_data array (P0-8, 2026-08-30): it answers with a refusal message when a `remove` names no item, and writes nothing at all. It is exported so the in-memory temporal door can refuse exactly what the persisted door refuses — one law, two doors — which is the opposite of a second write path.',
 	persistModifiedStamp:
 		'DOES write the matrix, but only the modified-by/modified-date audit columns of a record a primitive is already writing. It can never carry a dd131/dd244/dd133 value, so it is not an account transition and adding it to the primitive list would widen the door set to every save path twice over.',
+	afterRecordWrite:
+		'writes NOTHING to the matrix: it is the post-write obligation hook (P1-8, 2026-09-03) every primitive ends in — save event, the security reaction, the RAG seam — and the two insert doors call it AFTER their own primitive. A caller of it is already a caller of a primitive; listing it would double-count every door.',
 };
 
 /**
@@ -177,6 +178,11 @@ const CENSUS: Record<string, CensusRow> = {
 	'src/core/section/record/duplicate_record.ts': {
 		verdict: 'engine',
 		reason: 'record duplication primitive; whole-record, no component tipo.',
+	},
+	'src/core/relations/dataframe.ts': {
+		verdict: 'engine',
+		reason:
+			'the dataframe slot delete-policy applier (applyDataframeDeletePolicy): empties or deletes the FRAME TARGET records an unlinked dd490 pairing addressed — an ontology-declared frame section, whole-record, no component tipo. It asks the write grant (level 2) on every target section ITSELF (assertFrameTargetWriteGrant, resolvePrincipal + getSectionPermissions) before queueing, because the calling door was authorized on the HOST only.',
 	},
 
 	// --- SECTION-LEVEL ----------------------------------------------------
@@ -574,13 +580,17 @@ describe('the revocation trigger set is stated ONCE', () => {
  * one it is decides what this gate has to check of the primitive's CALLERS.
  *
  *   chokepoint — the primitive itself fires the reaction. `persistRecordKeys` and
- *                `persistRecordColumns` host it (record_write.ts, beside fireSaveEvent),
- *                and `saveComponentData` funnels into them plus fires it itself on the
- *                one atomic-insert branch that bypasses them. Nothing is asked of the
- *                caller: this is the point of moving the seam here.
- *   callee     — a different function owns it. `deletePortalLocator` writes with a
- *                direct updateMatrixKeyData and then calls invalidatePermissionsForWrite
- *                post-commit itself, so its callers inherit the reach.
+ *                `persistRecordColumns` host it (record_write.ts, inside the one
+ *                post-write hook afterRecordWrite, beside the save event and the RAG
+ *                seam), `saveComponentData` funnels into them plus fires the same hook
+ *                itself on the one atomic-insert branch that bypasses them, and
+ *                `deletePortalLocator` persists its survivors through persistRecordKeys
+ *                (P1-8, 2026-09-03 — it used to write with a direct updateMatrixKeyData
+ *                and call invalidatePermissionsForWrite post-commit for itself). Nothing
+ *                is asked of the caller: this is the point of moving the seam here.
+ *   callee     — a different function owns it, so its callers inherit the reach. No
+ *                primitive is in this class today; the verdict stays defined so the
+ *                next door that reaches the seam through a callee has a name for it.
  *   n/a        — the primitive cannot BE an account transition. A create addresses no
  *                existing account; a duplicate writes a NEW record and leaves the source
  *                untouched.
@@ -596,7 +606,7 @@ const PRIMITIVE_REACH: Record<string, 'chokepoint' | 'callee' | 'n/a' | 'caller'
 	'persistRecordColumns(': 'chokepoint',
 	'createSectionRecord(': 'n/a',
 	'duplicateSectionRecord(': 'n/a',
-	'deletePortalLocator(': 'callee',
+	'deletePortalLocator(': 'chokepoint',
 	'deleteSectionRecord(': 'caller',
 	'deleteSectionData(': 'caller',
 };
@@ -612,6 +622,8 @@ const SEAM_SYMBOLS = [
 
 /** Doors that call a CALLER-owned primitive but can never address a dd128 record. */
 const REACH_EXEMPT: Record<string, string> = {
+	'src/core/relations/dataframe.ts':
+		'its only caller-owned deletes are applyDataframeDeletePolicy’s `delete_target` / `delete_target_record` policies, which empty or delete the dataframe FRAME TARGET records a dd490 pairing addresses (an ontology-declared frame section, never the users section), after asking the write grant on that section — the slot-policy applier every delete door calls (removeDataframeDataById in relations/save.ts, the direct frame remove in save_component.ts, both record-delete modes in delete_record.ts).',
 	'src/core/section/record/delete_record.ts':
 		'the delete ENGINE — it DEFINES both primitives, holds no principal and no component tipo, and its own docblock puts authorization on the caller. Putting the seam here would revoke on an ontology delete too.',
 	'src/core/test_data/synthetic_hierarchy_fixture.ts':
@@ -683,13 +695,30 @@ describe('every record-write door REACHES the revocation seam', () => {
 	test('the CHOKEPOINT really fires the reaction (or every "chokepoint" verdict is a lie)', () => {
 		const source = readFileSync(join(ROOT, 'src/core/section_record/record_write.ts'), 'utf8');
 		expect(source).toContain('reactToRecordComponentWrite');
-		// Both halves: the per-key door AND the whole-column door (the Time Machine's
-		// full-record restore, which was the one shape that reached nothing at all).
-		const calls = source.match(/reactToSecurityWrite\(/g) ?? [];
-		expect(
-			calls.length,
-			'reactToSecurityWrite is not called from both write doors',
-		).toBeGreaterThanOrEqual(3);
+		// The reaction lives inside the ONE post-write hook, and every writer of the
+		// module ends in that hook — the per-key door, the whole-column door (the Time
+		// Machine's full-record restore, which was the one shape that reached nothing
+		// at all) and the stamp-only door. Asserted on function BODIES, not on a call
+		// count: a hook nobody calls would still match a count.
+		const hookBody = /export async function afterRecordWrite\([\s\S]*?\n\}/.exec(source)?.[0] ?? '';
+		expect(hookBody, 'afterRecordWrite does not fire the security reaction').toContain(
+			'reactToSecurityWrite(',
+		);
+		for (const writer of ['persistRecordKeys', 'persistRecordColumns', 'persistModifiedStamp']) {
+			const body =
+				new RegExp(`export async function ${writer}\\([\\s\\S]*?\\n\\}`).exec(source)?.[0] ?? '';
+			expect(body, `${writer} does not end in afterRecordWrite`).toContain('afterRecordWrite(');
+		}
+		// And the reaction is fired from the hook ALONE — a second inline call would be
+		// a door remembering again.
+		expect((source.match(/reactToSecurityWrite\(/g) ?? []).length).toBe(2); // definition + hook
+		// deletePortalLocator's chokepoint verdict: its survivors are persisted through
+		// persistRecordKeys, not through the raw per-key primitive.
+		const relations = readFileSync(join(ROOT, 'src/core/relations/save.ts'), 'utf8');
+		const door =
+			/export async function deletePortalLocator\([\s\S]*?\n\}/.exec(relations)?.[0] ?? '';
+		expect(door).toContain('persistRecordKeys(');
+		expect(door).not.toContain('updateMatrixKeyData(');
 	});
 
 	test('the revocation is on the COMMIT-ONLY lane, and the cache clear is not', () => {

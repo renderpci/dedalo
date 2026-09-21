@@ -552,7 +552,15 @@ sitebuilder_controller.prototype.load_preview = async function(bust) {
 
 	const frame = document.createElement('iframe')
 	frame.className = 'sb_preview_frame'
-	frame.setAttribute('sandbox', 'allow-scripts allow-same-origin')
+	// SANDBOX: 'allow-scripts' AND NOTHING ELSE.
+	// The framed document is arbitrary agent-generated HTML/JS. Pairing 'allow-scripts'
+	// with 'allow-same-origin' is the one combination that is worth nothing when the frame
+	// is cross-origin and worth everything when it is not: on a preprod co-located with the
+	// engine the agent's script would run AT THE ENGINE ORIGIN — reading the operator's
+	// session cookie and driving the API as the logged-in operator. The preview needs only
+	// scripts to render, so the attribute states the guarantee instead of borrowing it from
+	// a deployment assumption. Gated by test/unit/sitebuilder_path_confinement_tripwire.
+	frame.setAttribute('sandbox', 'allow-scripts')
 	const src = preview.url || 'about:blank'
 	frame.src = bust ? (src + (src.indexOf('?') === -1 ? '?' : '&') + 'v=' + Date.now()) : src
 

@@ -684,14 +684,26 @@ describe('the mode matrix says who, not just how much', () => {
   });
 
   test('the daemon can create a workspace, and cannot replace the root holding its roots', () => {
-    expect(MODES.workspaces).toEqual({ owner: 'user', group: 'group', mode: 0o750 });
+    // 2770 and not 0750 since a turn stopped being the daemon: the DAEMON creates the
+    // workspace and reads it back to commit, the AGENT (a second uid, whose primary group is
+    // this instance's own) writes the files, and SETGID is what keeps an agent-created file
+    // in the museum's group instead of the agent's. The closed world bits are unchanged and
+    // are the half that must never move.
+    expect(MODES.workspaces).toEqual({ owner: 'user', group: 'group', mode: 0o2770 });
+    expect(MODES.workspaces.mode & 0o007).toBe(0);
+    expect(MODES.home).toEqual({ owner: 'user', group: 'group', mode: 0o2770 });
+    expect(MODES.home.mode & 0o007).toBe(0);
     expect(MODES.stateDir).toEqual({ owner: 'root', group: 'root', mode: 0o755 });
   });
 
-  test('the audit trail is append-only by OWNERSHIP: root directory, daemon file', () => {
+  test('the audit trail is append-only by OWNERSHIP, and unreadable to the agent uid', () => {
     expect(MODES.auditDir.owner).toBe('root');
     expect(MODES.auditFile.owner).toBe('user');
-    expect(MODES.auditFile.mode).toBe(0o640);
+    // 0600, not 0640: the agent uid's PRIMARY group is this instance's group (that is what
+    // makes a shared workspace possible), so any group bit here is an agent turn reading
+    // every actor row the instance ever wrote.
+    expect(MODES.auditFile.mode).toBe(0o600);
+    expect(MODES.auditFile.mode & 0o077).toBe(0);
   });
 
   test('the socket is group-owned by the ENGINE, so nothing has to join a group', () => {

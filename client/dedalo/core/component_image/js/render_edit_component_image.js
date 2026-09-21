@@ -5,6 +5,7 @@
 
 
 // imports
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {view_default_edit_image} from './view_default_edit_image.js'
 	import {view_mini_image} from './view_mini_image.js'
@@ -109,11 +110,6 @@ render_edit_component_image.prototype.edit = async function(options) {
 *
 * Cache-busting: each option's value URL carries a `?t=<timestamp>` suffix so
 * the browser does not serve a stale cached version when the user switches quality.
-*
-* (!) event_manager is used without an import — it is expected to be available as
-*     a module-scope global. Callers of this function must ensure event_manager is
-*     reachable in the execution context (currently it is imported in view modules
-*     that consume this helper).
 *
 * @param {Object} self - component_image instance
 * @returns {HTMLElement} the <select> quality selector element (appended to a DocumentFragment internally)

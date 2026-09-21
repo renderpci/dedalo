@@ -321,11 +321,19 @@ and no secrets. `scripts/ci/hermetic.sh` is the single source of truth for that 
 both the GitHub workflow and the GitLab mirror invoke this one script, so the two platforms
 cannot drift.
 
-It runs `bun install --frozen-lockfile`, `bunx tsc --noEmit`, `bun run lint`, and the
-**16** tripwires empirically proven to pass with no database (`DB_PORT` points at a
-deliberately closed port, so an accidental DB touch fails loudly rather than silently
-connecting). The 10 remaining tripwires — the ones needing the live Postgres, the client
-tree or the fixture store — run in the self-hosted tier via `scripts/verify.ts`.
+It runs `bun install --frozen-lockfile`, `bunx tsc --noEmit`, `bun run lint`,
+`bun run lint:browser`, the tripwires empirically proven to pass with no database
+(`DB_PORT` points at a deliberately closed port, so an accidental DB touch fails loudly
+rather than silently connecting — the current count is the array in the script itself),
+the dependency-audit ratchet and the two isolated publication packages. The tripwires that
+need a database run on the hosted `db` job of `.github/workflows/db.yml`
+(`scripts/ci/db_tier.sh`, against a throwaway service container), together with the whole
+unit and parity tiers; the gates that boot a real server — the browser client suite and the
+two code-update drills — run on its `instance` job (`scripts/ci/instance_tier.sh`). Every
+tripwire is assigned to exactly one of those tiers (`ci_workflow_tripwire` rule 3c), and
+`tier_wiring_tripwire` holds that each tier script is actually run by an executing workflow.
+`scripts/verify.ts` is the developer's pre-push gate, not a CI tier: every stage it reports
+has a hosted twin.
 
 The script stubs **every** required-no-default key in `src/config/config.ts`. That list is
 pinned by a rule of `ci_workflow_tripwire`, for a reason worth internalising: the first
@@ -373,7 +381,11 @@ Operator facts:
   you started yourself), `--timeout` (`TEST_TIMEOUT`, default `300000` ms), `--headless`
   (`HEADLESS`, default `true` — pass `--headless false` to watch it run), `--user` /
   `--password` (`DEDALO_TEST_USER` / `DEDALO_TEST_PASSWORD`), `--auth`
-  (`cookie` default, `form`, `mint`), `--strict` and `--no-reseed`.
+  (`cookie` default, `form`, `mint`), `--strict`, `--no-reseed`, `--update` (after a green
+  run, bank the observed inventory into `engineering/client_gate_inventory.json` — it refuses
+  to lower a floor or raise a budget) and `--replay <file>` (`TEST_REPLAY`: no browser, no
+  server — run the same interpret-conclude-exit tail over a scraped observation saved as
+  JSON, the subprocess leg `client_gate_inventory_tripwire` measures the exit code through).
 - **Credentials.** The test database is disposable, so the run supplies its own: it sets
   the login password on the seed's `root` user (which ships without one) and then performs
   a real, password-verified login. `--user` / `--password` override it; `--auth form` drives

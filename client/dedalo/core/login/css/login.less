@@ -102,7 +102,9 @@
 			}
 
 			>.dev_server_options {
-				color: @color_grey_10;
+				// a11y (audit P1-18 / CLI-23): @color_grey_10 (#bbb) read 1.77:1 on the
+				// login panel — measured by the axe leg over the login_form surface.
+				color: @color_grey_7;
 				padding-bottom: 0.5rem;
 				padding-top: 0.5rem;
 			}
@@ -258,7 +260,8 @@
 			margin-top: -0.25em;
 			margin-bottom: 1.25em;
 			cursor: pointer;
-			color: @color_grey_9;
+			// a11y (audit P1-18 / CLI-23): @color_grey_9 read 2.14:1 on the login panel
+			color: @color_grey_7;
 			text-decoration: none;
 			transition: color 0.15s ease;
 
@@ -400,7 +403,10 @@
 			display: grid;
 			grid-template-columns: 1.2fr 2fr;
 			font-size: 0.8em;
-			opacity: 0.5;
+			// a11y (audit P1-18 / CLI-23). `opacity: 0.5` blended the ink into the
+			// panel at 3.08:1 — an opacity is a contrast multiplier no static reading
+			// of a colour token can see. The muted ink is stated instead.
+			color: @color_grey_7;
 			line-height: 1.3em;
 		}
 
@@ -443,8 +449,11 @@
 			}
 			.dedalo_link {
 				font-size: 0.87rem;
-				text-decoration: none;
-				color: @color_orange_dedalo;
+				// a11y (audit P1-18 / CLI-23). The brand accent is AA on white (4.83:1)
+				// but only 4.43:1 on this panel, and a colour-only link is not
+				// distinguishable without colour either: muted ink + an underline.
+				text-decoration: underline;
+				color: @color_grey_7;
 			}
 		}
 

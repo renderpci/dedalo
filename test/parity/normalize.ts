@@ -117,6 +117,34 @@ const SECTION_ID_ADDRESS_KEYS: ReadonlySet<string> = new Set([
 ]);
 const STRICT_NUMERIC_ADDRESS = /^(-?[1-9][0-9]*|0)$/;
 
+/**
+ * Strip the ADDITIVE `render_class` key from every dd_grid CELL in a TS body
+ * (WC-2026-09-04-context-render-class: stamped on every cell with a component
+ * model, for the client escaper; the PHP-captured fixtures predate it). A cell
+ * is an object carrying `cell_type`. Returns how many keys it removed — the
+ * caller asserts the count wherever the case renders a grid, so the strip can
+ * never be vacuous. Mutates in place.
+ */
+export function stripRenderClass(value: unknown): number {
+	let stripped = 0;
+	const walk = (node: unknown): void => {
+		if (Array.isArray(node)) {
+			for (const item of node) walk(item);
+			return;
+		}
+		if (node === null || typeof node !== 'object') return;
+		const record = node as Record<string, unknown>;
+		if ('render_class' in record && 'cell_type' in record) {
+			stripped++;
+			// biome-ignore lint/performance/noDelete: removing the key IS the assertion
+			delete record.render_class;
+		}
+		for (const child of Object.values(record)) walk(child);
+	};
+	walk(value);
+	return stripped;
+}
+
 export function normalizeSectionIdTypes<T>(value: T): T {
 	const walk = (node: unknown): unknown => {
 		if (Array.isArray(node)) {

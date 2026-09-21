@@ -8,6 +8,7 @@ import type { ComponentModel } from '../types.ts';
 export const component_info: ComponentModel = {
 	model: 'component_info',
 	column: 'misc',
+	render: 'text',
 	importValueProperty: true,
 	emitHook: 'info',
 	sortable: false, // PHP component_info::get_sortable() → false (also covers state/calculation aliases)

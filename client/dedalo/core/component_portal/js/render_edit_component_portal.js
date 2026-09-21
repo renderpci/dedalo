@@ -58,11 +58,12 @@
 
 
 // imports
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {when_in_dom,dd_request_idle_callback} from '../../common/js/events.js'
-	import {delete_dataframe} from '../../component_common/js/component_common.js'
 	import {object_to_url_vars, open_window, get_caller_by_model, same_section_id} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {render_relation_list} from '../../section/js/render_common_section.js'
 	import {view_default_edit_portal} from './view_default_edit_portal.js'
 	import {view_line_edit_portal} from './view_line_edit_portal.js'
@@ -564,7 +565,7 @@ export const render_column_component_info = function(options) {
 				ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'ddinfo_value',
-					inner_html		: info_value,
+					inner_html		: render_value(info_value, 'text'),
 					parent			: fragment
 				})
 			}
@@ -594,9 +595,10 @@ export const render_column_component_info = function(options) {
 * 2. **Delete resource and all links** (`button_unlink_and_delete`) — only shown when
 *    `show_interface.button_delete_link_and_record === true` AND the target section's
 *    `button_delete.permissions > 1`.  Calls `self.delete_linked_record()` to remove
-*    the target record itself, then `delete_dataframe()` to clean up any paired dataframe
-*    rows on the client side (here the server does NOT auto-cascade, so the explicit call
-*    is required).  Requires two consecutive `confirm()` dialogs to prevent accidental
+*    the target record itself; the server's record delete strips this host's locator
+*    through the inverse-reference cleanup and cascades the paired dataframe rows with
+*    it (single-writer rule — no client `delete_dataframe()` call, since 2026-09-21).
+*    Requires two consecutive `confirm()` dialogs to prevent accidental
 *    deletion of shared authority records.  Optionally also deletes diffusion records when
 *    the `delete_diffusion_records` checkbox is checked (default: true).
 *
@@ -661,7 +663,7 @@ export const render_column_remove = function(options) {
 					ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'label',
-						inner_html		: (get_label.delete || 'Delete') + ` ID: ${section_id} <span class="note">[${section_tipo}]</span>`,
+						inner_html		: (get_label.delete || 'Delete') + ` ID: ${render_value(section_id, 'text')} <span class="note">[${render_value(section_tipo, 'text')}]</span>`,
 						parent			: header
 					})
 
@@ -723,17 +725,15 @@ export const render_column_remove = function(options) {
 									section_id		: section_id
 								})
 
-								// delete_dataframe_record. if it is not dataframe it will be ignored
-								// (explicit unlink: this flow removes the locator via inverse
-								// references, outside the server remove cascade)
-								// pairing key is the row item id, never the target section_id
-								await delete_dataframe({
-									self				: self,
-									section_id			: self.section_id,
-									section_tipo		: self.section_tipo,
-									id_key				: options.locator.id,
-									main_component_tipo	: self.tipo,
-								})
+								// The row's paired dataframe frames need NO client call: the
+								// server's record delete strips this host's locator through
+								// the inverse-reference cleanup and cascades the frames with
+								// it (removeDataframeDataById, each slot applying its own
+								// delete policy). Until 2026-09-21 delete_dataframe was called
+								// here on the STALE frame instance and sent a slot `remove`
+								// for an entry the server had already dropped — a refused
+								// save surfaced for a deletion that had fully succeeded. The
+								// refresh below re-reads the record.
 
 								// refresh the component. Don't wait here
 								self.refresh({
@@ -793,12 +793,21 @@ export const render_column_remove = function(options) {
 						// dataframe cleanup is server-authoritative: unlink_record sends
 						// update_data_value 'remove' and the server cascades the paired
 						// dataframe rows (single-writer rule). No client delete_dataframe.
-						await self.unlink_record(options.locator)
-
-						// close modal
-						modal.close()
+						const removed = await self.unlink_record(options.locator)
 
 						footer.classList.remove('loading')
+
+						// close modal ONLY after the unlink landed. A closing modal is the
+						// grammar of "the link is gone": closing over a refusal tells the
+						// curator the locator was removed while it is still stored.
+						// (!) No toast here. The refusal travelled through change_value ->
+						// data_manager.request, which already published its ApiError, and
+						// error_dispatch's deduped_toast rendered it ONCE. A direct
+						// render_error_toast would double-notice the same failure.
+						if (removed!==true) {
+							return
+						}
+						modal.close()
 					}
 					button_unlink_record.addEventListener('click', fn_click_unlink_record)
 
@@ -884,11 +893,6 @@ export const render_column_remove = function(options) {
 * - `tools`            — injects tool buttons (time-machine, propagate, etc.) via `ui.add_tools`.
 * - `button_fullscreen` — toggles the component node into fullscreen; publishes
 *                        `full_screen_<id>` on the event bus before and after.
-*
-* (!) `event_manager` is used inside the `button_fullscreen` click handler but is not
-* imported in this file.  It is expected to be available as a module-scope global via
-* the page environment.  See the global directive at the top of the file — `event_manager`
-* is not listed there, which may cause an eslint no-undef warning at runtime.
 *
 * @param {Object} self - The `component_portal` instance.
 * @returns {HTMLElement} The fully populated buttons_container node.
@@ -1245,7 +1249,7 @@ export const render_references = function(ar_references) {
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'label',
-				inner_html		: reference.label,
+				inner_html		: render_value(reference.label, 'text'),
 				parent			: li
 			})
 	}//end for (let i = 0; i < ref_length; i++)

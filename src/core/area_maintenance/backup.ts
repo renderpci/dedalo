@@ -263,6 +263,12 @@ export async function initBackupSequence(
 			const record: JobRecord = {
 				id: processId,
 				kind: 'backup',
+				// A pfile-only record: the dump runs as a CHILD PROCESS, so it spends no
+				// in-process lane slot and no deadline is armed for it. The stamps are
+				// still explicit — the reader of a pfile must never have to guess which
+				// budget a job was spending (PERF-11).
+				lane: 'maintenance',
+				deadline_ms: 0,
 				pid: childPid,
 				owner_pid: childPid,
 				status,

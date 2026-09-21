@@ -6,6 +6,7 @@
 
 // import
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {strip_tags, tool_base_url, same_section_id} from '../../common/js/utils/index.js'
 	import {get_buttons} from './render_edit_component_check_box.js'
 
@@ -325,7 +326,7 @@ const get_input_element = (i, current_value, self) => {
 		const option_label	= ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'input_label',
-			inner_html		: '<span>'+label+'</span>',
+			inner_html		: '<span>'+render_value(label, 'text')+'</span>',
 			parent			: content_value
 		})
 

@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_join} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -55,7 +56,7 @@ view_default_list_geolocation.render = async function(self, options) {
 		})
 		// Join multiple entries (rare for geolocation, which usually has one) with the
 		// ontology-configured separator (context.fields_separator, e.g. ' | ').
-		const value_string = string_values.join(self.context.fields_separator)
+		const value_string = render_join(string_values, self.context.fields_separator, 'text')
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {

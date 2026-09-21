@@ -27,10 +27,35 @@
  *        section_id catch sites key on `isErrorInDomain(e, 'section_id')` —
  *        SectionIdRefused, ERRORS_SPEC §2.1 — a builtin-class check is a
  *        vocabulary the registry does not own);
- *     A5 the 8 formerly raw-passthrough files carry no `error.message` /
- *        `String(error)` assigned to a WIRE key (`msg:` / `errors:` /
- *        `publicMessage:`) — the raw exception text is `cause` (log-only) or the
- *        `message` override of a DedaloError (Error.message, never the wire);
+ *     A5 no file in the WHOLE corpus assigns raw exception text (`error.message`
+ *        / `String(error)` / `(error as Error).message` / `err.message`) to a
+ *        WIRE key (`msg:` / `errors:` / `publicMessage:`) — the raw text is
+ *        `cause` (log-only) or the `message` override of a DedaloError
+ *        (Error.message, never the wire). TOTAL census (was the 8 files the P1
+ *        plan named — SEC-17 fell through that list); the sites that remain
+ *        are ENUMERATED in RAW_ON_WIRE_EXEMPTIONS, each with a count and a
+ *        reason, shrink-only (regression AND staleness are red). Anti-vacuity:
+ *        the dispatch handler modules (derived from dispatch.ts's
+ *        `./handlers/*` imports) and every `tools/*\/server/index.ts` (the
+ *        loader's contract) are asserted IN the corpus, so the surfaces the
+ *        wire actually goes through can never fall out of the scan;
+ *     A6 no raw exception text KEYED into a payload (`<key>: …error.message…`
+ *        / `${error}`, any key — `message:` / `cause:` are log-only ONLY inside
+ *        an Error constructor call, tracked across its lines; a `{ok:false,
+ *        message: raw}` RESULT object is a payload) or PUSHED into a list
+ *        (`.push(…error.message…)`) — the ok:true half of the ladder (SEC-18:
+ *        `toErrorBody` filters `error`, nothing filters `data`). Per LINE on
+ *        the code view, skipping `console.` / `throw` / `new <X>Error(` lines
+ *        (log, typed throw). A DedaloError's `.message` is its LOG field and
+ *        counts like any raw read (its wire sentence is `wireMessage()`); no
+ *        "deliberate arm" is blanked. The measured leak class is ENUMERATED
+ *        in RAW_KEYED_EXEMPTIONS with a closed reason vocabulary
+ *        (RAW_KEYED_REASONS), shrink-only: it is a RATCHET on a burn-down —
+ *        the admin-gated report surfaces (ontology import/export, the
+ *        maintenance widgets, the tool_import_* per-file reports, the update
+ *        engine) still carry raw text, and each entry says which class it is;
+ *        the two SEC-16/SEC-18 doors (bulk_revert.ts, vision.ts) are at 0 and
+ *        NOT exempt;
  *  B. SOURCE RATCHETS (shrink-only, frozen per file here, staleness = red):
  *     B1 hand-built failure literals: an `ok: false` object literal carrying
  *        `msg:` / `errors:` / `error:` within 3 lines. The tree still holds
@@ -172,21 +197,232 @@ const countBuiltinInstanceof = (tokens: string): number =>
 	(tokens.match(BUILTIN_INSTANCEOF) ?? []).length;
 const BUILTIN_INSTANCEOF_OWNERS = ['src/core/errors/convert.ts', 'src/core/api/process_health.ts'];
 
+/**
+ * A5/A6 — ONE spelling of "raw exception text": the message of a caught
+ * exception or its String() form. Deliberately NOT narrowed away from
+ * `parsed.error.message` (a zod validator's sentence about the caller's own
+ * input): the matcher stays one spelling of the invariant, and the entries
+ * below say why such a sentence is deliberate.
+ */
+const RAW_EXCEPTION_TEXT =
+	/\b(?:error|err)\.message\b|String\(\s*(?:error|err)\s*\)|\((?:error|err) as Error\)\.message|\$\{\s*(?:error|err)\s*\}/;
 /** A5 — a raw exception text assigned to a WIRE key. */
-const RAW_ON_WIRE_KEY =
-	/\b(msg|errors|publicMessage)\s*:\s*[^,\n]*?(\berror\.message\b|String\(\s*error\s*\)|\(error as Error\)\.message|\berr\.message\b)/g;
+const RAW_ON_WIRE_KEY = new RegExp(
+	`\\b(msg|errors|publicMessage)\\s*:\\s*[^,\\n]*?(?:${RAW_EXCEPTION_TEXT.source})`,
+	'g',
+);
 const countRawOnWire = (code: string): number => (code.match(RAW_ON_WIRE_KEY) ?? []).length;
-/** The 8 sites the plan named (raw `error.message` reached the wire before P1). */
-const FORMER_RAW_PASSTHROUGH_FILES = [
-	'src/core/api/handlers/dd_component_portal_api.ts',
-	'src/core/api/handlers/dd_core_api.ts',
-	'src/core/api/handlers/dd_component_text_area_api.ts',
-	'src/core/api/handlers/dd_mcp_api.ts',
-	'src/diffusion/runner.ts',
-	'src/diffusion/jobs/scheduler.ts',
-	'tools/tool_sitebuilder/server/index.ts',
-	'tools/tool_time_machine/server/tool_time_machine.ts',
+
+/**
+ * A5 — the sites that still put raw exception text on a wire key, ENUMERATED.
+ * Count per file + the reason the text is there. Shrink-only: a file above its
+ * count is a regression, a file below it is a stale entry (lower it in the same
+ * commit), a file absent here is capped at 0. Measured 2026-09-03.
+ */
+const RAW_ON_WIRE_EXEMPTIONS: Readonly<Record<string, { count: number; reason: string }>> = {
+	'src/ai/agent/change_plan.ts': {
+		count: 1,
+		reason:
+			"zod's `parsed.error.message` is the validator's sentence about the CALLER'S OWN plan document, not a caught exception; publicMessage under a public-disclosure code",
+	},
+	'src/ai/mcp/registry.ts': {
+		count: 1,
+		reason:
+			"zod's `parsed.error.message` describes the MCP caller's own tool input against the declared schema; publicMessage under a public-disclosure code",
+	},
+	'src/core/install/hierarchy_import.ts': {
+		count: 1,
+		reason:
+			'internal `{ok:false, msg}` outcome shape of the installer hierarchy import (B1-ratcheted), consumed by the install area, not a wire body',
+	},
+	'src/core/media/tools/versions.ts': {
+		count: 1,
+		reason:
+			'admin-only media rebuild report (`errors[]` of the maintenance widget); burn-down owned by the media tools pass',
+	},
+	'src/core/ontology/data_io_import.ts': {
+		count: 2,
+		reason:
+			'developer-only ontology import report (`msg` / `errors[]` of the ontology data_io widget); burn-down owned by the ontology pass',
+	},
+	'src/core/tools/import_csv_execute.ts': {
+		count: 1,
+		reason:
+			'per-row admin import report (`msg` of an IGNORED row): the importer is level-3 gated; burn-down owned by the import pass',
+	},
+	'src/core/tools/import_execute.ts': {
+		count: 1,
+		reason:
+			'per-record admin import report (`msg` of an IGNORED record): the importer is level-3 gated; burn-down owned by the import pass',
+	},
+	'src/core/tools/transcription_local_asr.ts': {
+		count: 2,
+		reason:
+			'internal `{ok:false, msg}` provider outcome shape of the local ASR runner (B1-ratcheted), mapped to a typed throw by its caller',
+	},
+	'src/diffusion/plan/compile.ts': {
+		count: 1,
+		reason:
+			'diffusion plan diagnostics (`errors[]` of a compile report) read by the admin diffusion area; burn-down owned by the diffusion pass',
+	},
+	'tools/tool_import_dedalo_csv/server/index.ts': {
+		count: 2,
+		reason:
+			'admin import tool per-file report (`errors[]`), level-3 gated; burn-down owned by the import pass',
+	},
+};
+
+/**
+ * A6 — raw exception text KEYED into a payload or PUSHED into a list, per line.
+ * `key` is the LAST line/`{`/`,`-anchored `<identifier>:` before the raw
+ * expression on that line — so prose like `bulk_revert: … failed:` inside a
+ * template is never a key, and `{ a: 1, message: error.message }` resolves to
+ * `message`. `message:` / `cause:` are log-only ONLY inside an Error
+ * constructor call (`new <X>Error(` / `super(`, tracked across its lines by
+ * paren depth): a `{ ok: false, message: raw }` RESULT object is a payload a
+ * caller forwards — vision.ts's model resolver did exactly that (SEC-18) and
+ * a blanket `message:` exemption made it invisible. There is NO "deliberate
+ * arm": `instanceof DedaloError ? error.message : …` reads the LOG-ONLY field
+ * of a DedaloError (dedalo_error.ts — `message` "never the wire"; a provider
+ * constructor names its api_key_env there), so it counts like any raw read;
+ * the wire sentence of a DedaloError is `wireMessage()`. Returns one hit per
+ * LINE (a line is a site).
+ */
+const RAW_KEYED_LOG_ONLY_KEYS = new Set(['message', 'cause']);
+const RAW_KEYED_SKIP_LINE = /console\.|\bthrow\b|new [A-Za-z_$][\w$]*Error\(/;
+/** Where an Error constructor's fields begin: its `message`/`cause` are the log's. */
+const RAW_KEYED_ERROR_CTOR = /new [A-Za-z_$][\w$]*Error\(|\bsuper\(/;
+const RAW_KEYED_ANCHORED_KEY = /(?:^|[{,])\s*([A-Za-z_$][\w$]*)\s*:/g;
+const parenBalance = (text: string): number =>
+	(text.match(/\(/g) ?? []).length - (text.match(/\)/g) ?? []).length;
+function rawKeyedLines(code: string): string[] {
+	const hits: string[] = [];
+	/** >0 while inside an Error constructor call opened on an earlier line. */
+	let ctorDepth = 0;
+	for (const raw of code.split('\n')) {
+		const inCtor = ctorDepth > 0;
+		const opened = RAW_KEYED_ERROR_CTOR.exec(raw);
+		if (inCtor) ctorDepth = Math.max(0, ctorDepth + parenBalance(raw));
+		else if (opened !== null) ctorDepth = Math.max(0, parenBalance(raw.slice(opened.index)));
+		const line = raw;
+		const at = RAW_EXCEPTION_TEXT.exec(line);
+		if (at === null || RAW_KEYED_SKIP_LINE.test(line)) continue;
+		const prefix = line.slice(0, at.index);
+		let key: string | null = null;
+		for (const anchored of prefix.matchAll(RAW_KEYED_ANCHORED_KEY)) key = anchored[1] ?? null;
+		if (key !== null) {
+			if (!(inCtor && RAW_KEYED_LOG_ONLY_KEYS.has(key))) hits.push(line.trim());
+		} else if (/\.push\(/.test(prefix)) {
+			hits.push(line.trim());
+		}
+	}
+	return hits;
+}
+const countRawKeyed = (code: string): number => rawKeyedLines(code).length;
+
+/** A6 — the closed reason vocabulary: every entry names exactly one class. */
+const RAW_KEYED_REASONS = {
+	/** an admin/developer-gated REPORT surface (maintenance widget, ontology
+	 *  data_io, install probe, import tool per-file report) — the burn-down */
+	admin_report: 'admin_report',
+	/** an INTERNAL outcome shape (`{ok:false,…}`, a job record, a worker
+	 *  message) consumed in-process, mapped by its consumer — not a wire body */
+	internal_outcome: 'internal_outcome',
+	/** a validator's (zod) sentence about the caller's OWN input */
+	validator_sentence: 'validator_sentence',
+	/** a CLI/operator-facing line (installer notes, update log) that a
+	 *  multi-line log statement keeps on the raw line */
+	multiline_log_line: 'multiline_log_line',
+} as const;
+type RawKeyedReason = (typeof RAW_KEYED_REASONS)[keyof typeof RAW_KEYED_REASONS];
+
+/**
+ * A6 — the measured leak class, ENUMERATED (2026-09-03), shrink-only. This is a
+ * RATCHET on a burn-down, not a closure: every `admin_report` entry is a
+ * surface where an admin still reads raw Postgres/fs text inside an ok:true
+ * payload. Lower an entry when you convert a site; never raise one. The reason
+ * classifies the SURFACE the file's hits ride. Two hits (hierarchy_import,
+ * tool_ontology_parser: `.map((error) => `${tld}: ${error}`)` over a list of
+ * SENTENCES) are the one-family `${error}` spelling meeting a string named
+ * `error`, not an exception — accepted rather than teaching the matcher to
+ * parse bindings; they ride the same surfaces as their files' other hits.
+ */
+const RAW_KEYED_EXEMPTIONS: Readonly<Record<string, { count: number; reason: RawKeyedReason }>> = {
+	'src/ai/agent/change_plan.ts': { count: 1, reason: 'validator_sentence' },
+	'src/ai/mcp/registry.ts': { count: 1, reason: 'validator_sentence' },
+	'src/ai/mcp/tools/search.ts': { count: 1, reason: 'validator_sentence' },
+	'src/core/api/counters.ts': { count: 3, reason: 'admin_report' },
+	'src/core/area_maintenance/backup.ts': { count: 2, reason: 'admin_report' },
+	'src/core/area_maintenance/widgets/database_info.ts': { count: 2, reason: 'admin_report' },
+	'src/core/area_maintenance/widgets/dataframe_control.ts': {
+		count: 1,
+		reason: 'admin_report',
+	},
+	'src/core/area_maintenance/widgets/system_info.ts': { count: 2, reason: 'admin_report' },
+	'src/core/db/db_assets.ts': { count: 4, reason: 'admin_report' },
+	'src/core/geoip/download.ts': { count: 3, reason: 'internal_outcome' },
+	'src/core/install/directories.ts': { count: 1, reason: 'multiline_log_line' },
+	'src/core/install/hierarchy_import.ts': { count: 2, reason: 'internal_outcome' },
+	'src/core/install/media_tree.ts': { count: 1, reason: 'admin_report' },
+	'src/core/media/file_ops.ts': { count: 1, reason: 'internal_outcome' },
+	'src/core/media/jobs.ts': { count: 1, reason: 'internal_outcome' },
+	'src/core/media/processing.ts': { count: 1, reason: 'internal_outcome' },
+	'src/core/media/repair.ts': { count: 2, reason: 'admin_report' },
+	'src/core/media/tools/rotation.ts': { count: 2, reason: 'internal_outcome' },
+	'src/core/media/tools/versions.ts': { count: 1, reason: 'admin_report' },
+	'src/core/ontology/data_io.ts': { count: 2, reason: 'admin_report' },
+	'src/core/ontology/data_io_import.ts': { count: 4, reason: 'admin_report' },
+	'src/core/ontology/hierarchy_provision.ts': { count: 2, reason: 'admin_report' },
+	'src/core/ontology/ontology_state.ts': { count: 1, reason: 'admin_report' },
+	'src/core/ontology/ontology_update.ts': { count: 1, reason: 'admin_report' },
+	'src/core/ontology/recovery_file.ts': { count: 3, reason: 'admin_report' },
+	'src/core/tools/import_csv_execute.ts': { count: 1, reason: 'admin_report' },
+	'src/core/tools/import_execute.ts': { count: 1, reason: 'admin_report' },
+	'src/core/tools/marc21.ts': { count: 1, reason: 'admin_report' },
+	'src/core/tools/register.ts': { count: 3, reason: 'admin_report' },
+	'src/core/tools/transcription_local_asr.ts': { count: 2, reason: 'internal_outcome' },
+	'src/core/update/engine.ts': { count: 1, reason: 'admin_report' },
+	'src/diffusion/plan/compile.ts': { count: 3, reason: 'admin_report' },
+	'src/diffusion/resolve/resolver.ts': { count: 1, reason: 'admin_report' },
+	'src/diffusion/targets/mariadb/delete_record.ts': { count: 1, reason: 'admin_report' },
+	'src/diffusion/targets/mediastore/media_index.ts': { count: 1, reason: 'admin_report' },
+	'tools/tool_import_dedalo_csv/server/csv_worker.ts': {
+		count: 1,
+		reason: 'internal_outcome',
+	},
+	'tools/tool_import_dedalo_csv/server/index.ts': { count: 3, reason: 'admin_report' },
+	'tools/tool_import_files/server/index.ts': { count: 1, reason: 'admin_report' },
+	'tools/tool_import_marc21/server/index.ts': { count: 1, reason: 'admin_report' },
+	'tools/tool_import_rdf/server/index.ts': { count: 1, reason: 'admin_report' },
+	'tools/tool_import_zotero/server/index.ts': { count: 1, reason: 'admin_report' },
+	'tools/tool_ontology_parser/server/tool_ontology_parser.ts': { count: 1, reason: 'admin_report' },
+	'tools/tool_propagate_component_data/server/index.ts': { count: 1, reason: 'admin_report' },
+};
+
+/** The two doors the SEC-16 / SEC-18 fix closed: at 0 by construction, never exempt. */
+const RAW_KEYED_CLOSED_DOORS = [
+	'tools/tool_time_machine/server/bulk_revert.ts',
+	'src/ai/identify/vision.ts',
 ];
+
+/**
+ * The surfaces the wire actually goes through — derived, so a new handler or
+ * tool cannot fall out of the A5/A6 census: every `./handlers/<x>.ts` import
+ * of dispatch.ts, and every `tools/<tool_*>/server/index.ts` (loader.ts loads
+ * exactly that file per tool directory).
+ */
+function wireSurfaceFiles(): string[] {
+	const dispatch = CORPUS.find((file) => file.path === 'src/core/api/dispatch.ts');
+	const handlers = [...(dispatch?.code ?? '').matchAll(/from '\.\/handlers\/([\w]+\.ts)'/g)].map(
+		(match) => `src/core/api/handlers/${match[1]}`,
+	);
+	const tools = CORPUS.filter((file) =>
+		/^tools\/tool_[a-z0-9_]+\/server\/index\.ts$/.test(file.path),
+	).map((file) => file.path);
+	return [...handlers, ...tools].sort();
+}
+/** Floors far below the measured 15 handlers + 25 tools: a broken derivation, not a smaller tree. */
+const WIRE_SURFACE_FLOOR = { handlers: 8, tools: 12 };
 
 // ---------------------------------------------------------------------------
 // B. Source ratchets — counters + the frozen per-file maps
@@ -463,12 +699,90 @@ describe('A. source laws (zero)', () => {
 		expect(sectionId?.tokens).toContain('new SectionIdRefused(');
 	});
 
-	test('A5 — the 8 formerly raw-passthrough files put no raw exception text on a wire key', () => {
-		for (const path of FORMER_RAW_PASSTHROUGH_FILES) {
-			const file = CORPUS.find((entry) => entry.path === path);
-			expect(file, `${path} must exist (the list pins the plan's 8 sites)`).toBeDefined();
-			expect(countRawOnWire(file?.code ?? ''), path).toBe(0);
+	test('A5 — TOTAL: no file puts raw exception text on a wire key, except the enumerated (reasoned, shrink-only) sites', () => {
+		const measured = measure((file) => countRawOnWire(file.code));
+		const baseline: Record<string, number> = {};
+		for (const [path, entry] of Object.entries(RAW_ON_WIRE_EXEMPTIONS))
+			baseline[path] = entry.count;
+		const drift = driftAgainst(measured, baseline);
+		expect(
+			drift.regressions,
+			`RAW EXCEPTION TEXT ON A WIRE KEY. The raw text is \`cause\` (log-only) or a DedaloError's \`message\` override; the wire carries a DELIBERATE sentence (SEC-17: fs messages embed absolute paths). Measured:\n${JSON.stringify(measured, null, 1)}`,
+		).toEqual([]);
+		expect(
+			drift.stale,
+			'STALE EXEMPTION: a file shrank — lower its entry in RAW_ON_WIRE_EXEMPTIONS in the same commit',
+		).toEqual([]);
+		// every exemption is a real sentence, and names a file the scan saw
+		for (const [path, entry] of Object.entries(RAW_ON_WIRE_EXEMPTIONS)) {
+			expect(entry.reason.length, path).toBeGreaterThan(40);
+			expect(entry.count, path).toBeGreaterThan(0);
+			expect(
+				CORPUS.some((file) => file.path === path),
+				`${path}: exemption names no file`,
+			).toBe(true);
 		}
+	});
+
+	test('A5/A6 anti-vacuity — the wire surfaces (dispatch handlers + tool entry modules) are IN the census', () => {
+		const surfaces = wireSurfaceFiles();
+		const handlers = surfaces.filter((path) => path.startsWith('src/core/api/handlers/'));
+		const tools = surfaces.filter((path) => path.startsWith('tools/'));
+		expect(handlers.length).toBeGreaterThanOrEqual(WIRE_SURFACE_FLOOR.handlers);
+		expect(tools.length).toBeGreaterThanOrEqual(WIRE_SURFACE_FLOOR.tools);
+		const paths = new Set(CORPUS.map((file) => file.path));
+		for (const path of surfaces)
+			expect(paths.has(path), `${path} fell out of the corpus`).toBe(true);
+		// the whole surface is measured by BOTH counters, and exempt only by an entry
+		for (const path of surfaces) {
+			const file = CORPUS.find((entry) => entry.path === path);
+			expect(
+				countRawOnWire(file?.code ?? '') <= (RAW_ON_WIRE_EXEMPTIONS[path]?.count ?? 0),
+				path,
+			).toBe(true);
+			expect(
+				countRawKeyed(file?.code ?? '') <= (RAW_KEYED_EXEMPTIONS[path]?.count ?? 0),
+				path,
+			).toBe(true);
+		}
+	});
+
+	test('A6 — no raw exception text KEYED into a payload or PUSHED into a list, except the enumerated (reasoned, shrink-only) sites', () => {
+		const measured = measure((file) => countRawKeyed(file.code));
+		const baseline: Record<string, number> = {};
+		for (const [path, entry] of Object.entries(RAW_KEYED_EXEMPTIONS)) baseline[path] = entry.count;
+		const drift = driftAgainst(measured, baseline);
+		const detail = (path: string): string =>
+			rawKeyedLines(CORPUS.find((file) => file.path === path)?.code ?? '').join('\n    ');
+		expect(
+			drift.regressions,
+			`RAW EXCEPTION TEXT IN A PAYLOAD (SEC-18: nothing filters \`data\` on an ok:true body). Put the text in the log (with the request id) and a CODE or a deliberate sentence on the wire.\n${drift.regressions.map((line) => `${line}\n    ${detail(line.slice(0, line.indexOf(':')))}`).join('\n')}`,
+		).toEqual([]);
+		expect(
+			drift.stale,
+			'STALE EXEMPTION: a file shrank — lower its entry in RAW_KEYED_EXEMPTIONS in the same commit',
+		).toEqual([]);
+		const vocabulary = new Set<string>(Object.values(RAW_KEYED_REASONS));
+		for (const [path, entry] of Object.entries(RAW_KEYED_EXEMPTIONS)) {
+			expect(vocabulary.has(entry.reason), `${path}: reason outside the closed vocabulary`).toBe(
+				true,
+			);
+			expect(entry.count, path).toBeGreaterThan(0);
+			expect(
+				CORPUS.some((file) => file.path === path),
+				`${path}: exemption names no file`,
+			).toBe(true);
+		}
+		// the two doors this rule was written for are closed, and stay unexempt
+		for (const path of RAW_KEYED_CLOSED_DOORS) {
+			expect(Object.hasOwn(RAW_KEYED_EXEMPTIONS, path), `${path} may not be exempted`).toBe(false);
+			expect(
+				CORPUS.some((file) => file.path === path),
+				path,
+			).toBe(true);
+		}
+		// the ratchet is non-vacuous: it holds a measured leak class
+		expect(Object.keys(RAW_KEYED_EXEMPTIONS).length).toBeGreaterThan(10);
 	});
 });
 
@@ -648,8 +962,92 @@ describe('E. anti-vacuity — every matcher fires on a synthetic offender', () =
 		expect(countRawOnWire('return { msg: error.message };')).toBe(1);
 		expect(countRawOnWire('errors: [String(error)],')).toBe(1);
 		expect(countRawOnWire('publicMessage: (error as Error).message,')).toBe(1);
+		expect(countRawOnWire('publicMessage: `upload failed: ${err.message}`,')).toBe(1);
 		// the DedaloError LOG-only override is not a wire key
 		expect(countRawOnWire('new DedaloError(code, { message: error.message })')).toBe(0);
+		// the TOTAL census: an offender planted in a file no list ever named is a regression
+		const planted = { 'src/zz/never_listed.ts': 1 };
+		expect(driftAgainst(planted, { 'src/zz/other.ts': 1 }).regressions).toEqual([
+			'src/zz/never_listed.ts: 1 > 0',
+		]);
+	});
+	test('A6 raw keyed / pushed', () => {
+		// the offenders: keyed under any payload key, or pushed into a list
+		expect(
+			countRawKeyed("detail: `model '${id}' did not answer: ${(error as Error).message}`,"),
+		).toBe(1);
+		expect(
+			countRawKeyed(
+				'errors.push(`${row.section_tipo}#${row.section_id}: ${(error as Error).message}`);',
+			),
+		).toBe(1);
+		expect(countRawKeyed('return { ok: false, error: String(error) };')).toBe(1);
+		expect(countRawKeyed('payload[name] = { error: err.message };')).toBe(1);
+		// there is no "deliberate arm": a DedaloError's `.message` is its LOG field
+		// (its wire sentence is `wireMessage()`), so both arms are raw reads
+		expect(
+			countRawKeyed('detail: error instanceof DedaloError ? error.message : String(error),'),
+		).toBe(1);
+		expect(countRawKeyed('detail: error instanceof DedaloError ? error.message : GENERIC,')).toBe(
+			1,
+		);
+		expect(
+			countRawKeyed('detail: error instanceof DedaloError ? wireMessage(error) : GENERIC,'),
+		).toBe(0);
+		// the template-coercion spelling is the same raw text
+		expect(countRawKeyed('detail: `model did not answer; the log records why: ${error}`,')).toBe(1);
+		// the four safe shapes: log line, typed throw, an Error CONSTRUCTOR's log-only fields, a local read
+		expect(countRawKeyed('console.warn(`[x] failed: ${error.message}`);')).toBe(0);
+		expect(countRawKeyed('throw new Error(`wrapped: ${error.message}`);')).toBe(0);
+		expect(countRawKeyed('new DedaloError(code, { message: error.message, cause: error })')).toBe(
+			0,
+		);
+		// …across the constructor's lines, by paren depth, and closed again after it
+		expect(
+			countRawKeyed(
+				[
+					"throw new DedaloError('x', {",
+					'\tmessage: `bulk_revert: createRevertBulkProcess failed: ${error.message}`,',
+					'\tcause: error,',
+					'});',
+					'const outcome = { ok: false, message: error.message };',
+				].join('\n'),
+			),
+		).toBe(1);
+		expect(
+			countRawKeyed(
+				[
+					'class X extends DedaloError { constructor(e: unknown) {',
+					"\tsuper('x', {",
+					'\t\tmessage: String(e) + String(error),',
+					'\t});',
+				].join('\n'),
+			),
+		).toBe(0);
+		expect(countRawKeyed('const text = error.message;')).toBe(0);
+		// `message:` OUTSIDE an Error constructor is a payload key like any other —
+		// the `{ ok:false, message: raw }` RESULT object vision.ts forwarded (SEC-18)
+		expect(
+			countRawKeyed(
+				'return { ok: false, message: `no usable vision model: ${(error as Error).message}` };',
+			),
+		).toBe(1);
+		expect(countRawKeyed('{ code, cause: error, message: String(error) }')).toBe(1);
+		expect(
+			countRawKeyed('\tmessage: `bulk_revert: createRevertBulkProcess failed: ${error.message}`,'),
+		).toBe(1);
+		// prose with a colon inside a template is not a key; the anchored key wins
+		expect(countRawKeyed('{ a: 1, message: `x: y: ${error.message}` }')).toBe(1);
+		expect(countRawKeyed('{ message: 1, detail: `x: ${error.message}` }')).toBe(1);
+		// one hit per LINE, even with two raw spellings on it
+		expect(
+			countRawKeyed(
+				'errors.push(`${key}: ${error instanceof Error ? error.message : String(error)}`);',
+			),
+		).toBe(1);
+		// the derivation of the wire surfaces is a real parse
+		expect(wireSurfaceFiles()).toContain('src/core/api/handlers/dd_tools_api.ts');
+		expect(wireSurfaceFiles()).toContain('tools/tool_time_machine/server/index.ts');
 	});
 	test('B1 failure literal window', () => {
 		expect(countFailureLiterals('return {\n\tok: false,\n\tmsg: "x",\n};')).toBe(1);

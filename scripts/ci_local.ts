@@ -30,14 +30,21 @@
  * themselves — which is exactly the property under test.
  *
  * Usage:
- *   bun run ci:local              # both tiers, as CI runs them
+ *   bun run ci:local              # every tier, as CI runs them
  *   bun run ci:local --hermetic   # typecheck + lint + static tripwires + daemon packages
  *   bun run ci:local --db         # suite DB build + DB tripwires + unit tier + parity
+ *   bun run ci:local --instance   # suite DB build + browser client suite + both update drills
  *   bun run ci:local --keep       # leave the scratch private dir on disk for inspection
  *
- * The db tier DROPS AND REBUILDS its own suite database (`dedalo_ci_test`, derived from
- * the tier's own DB_NAME). It is distinct from the one `bun run test:db:setup` builds for
- * you, so your suite database is not disturbed.
+ * The db and instance tiers each DROP AND REBUILD their own suite database
+ * (`dedalo_ci_test`, derived from the tiers' shared DB_NAME — sequentially, as two CI
+ * jobs each get a fresh service container). It is distinct from the one
+ * `bun run test:db:setup` builds for you, so your suite database is not disturbed.
+ *
+ * THE INSTANCE TIER ON macOS needs a short TMPDIR (`TMPDIR=/tmp/dd bun run ci:local
+ * --instance`): the update drills bind unix sockets under it and macOS caps that path at
+ * 104 bytes (AGENTS.md, test:update). The tier is also the long one — a suite build
+ * plus 133 browser suites plus two drills.
  */
 
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
@@ -50,6 +57,7 @@ const REPO_ROOT = join(import.meta.dir, '..');
 const TIERS = [
 	{ id: 'hermetic', script: 'scripts/ci/hermetic.sh', flag: '--hermetic' },
 	{ id: 'db', script: 'scripts/ci/db_tier.sh', flag: '--db' },
+	{ id: 'instance', script: 'scripts/ci/instance_tier.sh', flag: '--instance' },
 ] as const;
 
 /**
@@ -94,10 +102,11 @@ function main(): void {
 	const args = new Set(process.argv.slice(2));
 	if (args.has('--help') || args.has('-h')) {
 		console.log(
-			'bun run ci:local [--hermetic] [--db] [--keep]\n\n' +
+			'bun run ci:local [--hermetic] [--db] [--instance] [--keep]\n\n' +
 				'Runs the CI tiers with the environment a RUNNER has: no ../private/.env, every\n' +
 				'DEDALO_* key composed by the tier itself. Only the Postgres connection is taken\n' +
-				'from your machine. Default: both tiers.',
+				'from your machine. Default: every tier. On macOS run --instance under a short\n' +
+				'TMPDIR (TMPDIR=/tmp/dd): the drills bind unix sockets there.',
 		);
 		process.exit(0);
 	}

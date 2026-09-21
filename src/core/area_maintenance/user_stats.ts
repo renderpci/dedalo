@@ -807,15 +807,6 @@ export async function foldStatsRows(
 	};
 }
 
-/** The user record's name value (PHP DEDALO_USER_NAME_TIPO dd132 get_valor). */
-/*
- * COVERAGE-EXEMPT (coverage plan §5.1; reason registered in
- * engineering/crap_coverage_exempt.json): three dynamic imports and one component
- * read turning a dd128 id into a display name — every branch is null-vs-value on
- * its own read. Its callers INJECT it as a function into the gated fold
- * (`foldStatsRows`), which is where the label behaviour is actually asserted.
- */
-
 /**
  * PHP merge_raw_into_canonical: fold raw items into the canonical totals —
  * fresh empty structure when canonical is null; `when` re-densified to the

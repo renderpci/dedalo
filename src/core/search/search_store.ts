@@ -4,13 +4,15 @@
  * (`sv.component_tipo = <tipo> AND sv.string LIKE '%<q>%'`, trigram-served; see the ar_table entry in
  * db_pg_definitions.json for the store contract).
  *
- * The gate is the SYNC TRIGGER's existence on the searched table: a table
- * with `{table}_string_search_sync` has its rows maintained by every write
- * path, so the store is authoritative for it; a table without it (e.g.
- * matrix_time_machine, or an instance that has not yet run the maintenance
- * rebuild + backfill) keeps the classic exact-scan SQL, byte-identical.
- * Emitting the pre-filter against an unmaintained table would EXCLUDE rows
- * (empty store = no candidates), so this gate is correctness, not just perf.
+ * The gate is PER (store, table) — tableCoveredByStore: the SYNC TRIGGER's
+ * existence on the searched table (a table with `{table}_string_search_sync`
+ * has its rows maintained by every write path) AND the store actually holding
+ * that table's rows (or the table having none to hold). A table without it
+ * (e.g. matrix_time_machine, or an instance that has not yet run the
+ * maintenance rebuild + backfill) keeps the classic exact-scan SQL,
+ * byte-identical. Emitting the pre-filter against an unmaintained table would
+ * EXCLUDE rows (no store rows = no candidates), so this gate is correctness,
+ * not just perf.
  *
  * DDL presence changes only through the database_info maintenance widget
  * (recreate_db_assets / rebuild actions), which calls clearSearchStoreCache()
@@ -19,6 +21,7 @@
  * because record writes never change DDL.
  */
 
+import { SEARCH_STORE_BACKFILLS } from '../db/db_assets.ts';
 import { sql } from '../db/postgres.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
@@ -47,36 +50,50 @@ async function tableHasSyncTrigger(table: string, suffix: string): Promise<boole
 }
 
 /**
- * Backfill guard: triggers only cover writes AFTER they exist — an operator
- * who rebuilt assets but has not yet run the backfill would otherwise expose
- * an EMPTY store to exact/conjunctive predicates and silently lose results.
- * A store with zero rows is treated as NOT covering anything. (Residual
- * operator contract: adding a NEW table to an already-populated store still
- * requires its backfill — documented on the ar_table entries.)
+ * The ONE coverage predicate, PER (store, table) (DATA-32): the table carries
+ * its sync trigger AND EITHER the store already holds a row for one of the
+ * table's records OR the table's rows would produce none (a legitimately
+ * absent table — nothing to index). A store-wide "is non-empty" probe is not
+ * a coverage answer: a store populated for twenty tables said "covered" for
+ * a twenty-first it had never seen, and the pre-filter emitted against it
+ * EXCLUDED every record of that table from search. Both probes are the
+ * backfill contract's own (db_assets.ts SEARCH_STORE_BACKFILLS), so the boot
+ * self-heal and this gate cannot disagree on what "covered" means.
+ *
+ * A TRUE answer is cached per (store, table) — sticky until the maintenance
+ * widget clears it; a FALSE answer is re-probed (a backfill completing after
+ * this process started is then picked up without a restart).
  */
-async function storeIsNonEmpty(storeTable: string): Promise<boolean> {
-	const cacheKey = `nonempty|${storeTable}`;
-	const cached = triggerPresenceCache.get(cacheKey);
-	if (cached === true) return true; // sticky once seen non-empty (cleared by the widget)
-	const rows = (await sql.unsafe(`SELECT 1 AS present FROM "${storeTable}" LIMIT 1`, [])) as {
-		present: number;
-	}[];
-	const present = rows.length > 0;
-	if (present) triggerPresenceCache.set(cacheKey, true);
-	return present;
+export async function tableCoveredByStore(store: string, table: string): Promise<boolean> {
+	const contract = SEARCH_STORE_BACKFILLS.find((candidate) => candidate.store === store);
+	if (contract === undefined) return false;
+	const suffix = contract.triggerEntry.replace(/^all_matrix/, ''); // all_matrix_string_search_sync → _string_search_sync
+	if (!(await tableHasSyncTrigger(table, suffix))) return false;
+	const cacheKey = `covered|${store}|${table}`;
+	if (triggerPresenceCache.get(cacheKey) === true) return true;
+	// table names come from the assertMatrixTable-validated resolvers
+	const held = (await sql.unsafe(contract.holdsRowsFor(table), [])) as unknown[];
+	let covered = held.length > 0;
+	if (!covered) {
+		// Empty for this table is legitimate ONLY while the table holds nothing
+		// the store would index (a fresh install before its first write): the
+		// store answering "nothing" IS the truth there. With producible rows
+		// present, absence means trigger-without-backfill.
+		const producible = (await sql.unsafe(contract.probe(table), [])) as unknown[];
+		covered = producible.length === 0;
+	}
+	if (covered) triggerPresenceCache.set(cacheKey, true);
+	return covered;
 }
 
-/** True when `table` carries its `_string_search_sync` trigger AND the store is backfilled. */
+/** True when `table` is covered by the matrix_string_search store (tableCoveredByStore). */
 export async function searchStoreCovers(table: string): Promise<boolean> {
-	return (
-		(await tableHasSyncTrigger(table, '_string_search_sync')) &&
-		(await storeIsNonEmpty('matrix_string_search'))
-	);
+	return tableCoveredByStore('matrix_string_search', table);
 }
 
 /**
- * True when EVERY given table carries its `_relation_index_sync` trigger and
- * the index is backfilled — the gate for the matrix_relation_index consumers
+ * True when EVERY given table is covered by matrix_relation_index
+ * (tableCoveredByStore, per table) — the gate for the index consumers
  * (search_related, the WC-012 leaf translation). Against an unmaintained
  * table the index would be missing that table's locators and an EXACT
  * predicate driven from it would wrongly exclude rows. Since the flat-function
@@ -86,44 +103,9 @@ export async function searchStoreCovers(table: string): Promise<boolean> {
 export async function relationIndexCovers(tables: readonly string[]): Promise<boolean> {
 	if (tables.length === 0) return false;
 	for (const table of tables) {
-		if (!(await tableHasSyncTrigger(table, '_relation_index_sync'))) return false;
+		if (!(await tableCoveredByStore('matrix_relation_index', table))) return false;
 	}
-	if (await storeIsNonEmpty('matrix_relation_index')) return true;
-	// Empty store is legitimate ONLY while the source tables hold no
-	// index-producible locators at all (a fresh install before its first
-	// relation write): the index answering "nothing" IS the truth there.
-	// With producible locators present, empty means triggers-without-backfill.
-	return sourcesHoldNoIndexableLocators(tables);
-}
-
-/**
- * Would the relation-index backfill INSERT produce at least one row? Mirrors
- * matrix_relation_index_sync()'s row filter exactly (array-typed component
- * keys, non-null section_tipo, integer-shaped section_id) so a store that is
- * empty because there is nothing to index never blocks the gate. Runs only
- * when the store is empty (fresh installs — small tables); cached like the
- * other DDL probes, evicted by clearSearchStoreCache().
- */
-async function sourcesHoldNoIndexableLocators(tables: readonly string[]): Promise<boolean> {
-	const cacheKey = 'sources_empty|matrix_relation_index';
-	const cached = triggerPresenceCache.get(cacheKey);
-	if (cached !== undefined) return cached;
-	let empty = true;
-	for (const table of tables) {
-		// table names come from getRelationTables (assertMatrixTable-validated)
-		const rows = (await sql.unsafe(
-			`SELECT 1 AS present FROM "${table}" t, jsonb_each(t.relation) AS kv, jsonb_array_elements(kv.value) AS e
-			 WHERE jsonb_typeof(kv.value) = 'array' AND e->>'section_tipo' IS NOT NULL AND e->>'section_id' ~ '^-?[0-9]+$'
-			 LIMIT 1`,
-			[],
-		)) as { present: number }[];
-		if (rows.length > 0) {
-			empty = false;
-			break;
-		}
-	}
-	triggerPresenceCache.set(cacheKey, empty);
-	return empty;
+	return true;
 }
 
 /**

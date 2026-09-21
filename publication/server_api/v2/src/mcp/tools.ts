@@ -3,9 +3,17 @@
  *
  * Every tool is a thin adapter over the SAME services the REST routes call. Nothing here
  * queries a database: the security model (DB_NAMES allowlist, identifier validation, bound
- * parameters) and the DoS bounds (limit caps, resolution caps) hold because this layer
- * cannot bypass the layer that enforces them. There is no write tool, and there is no
- * place to add one.
+ * parameters) holds because this layer cannot bypass the layer that enforces them. There
+ * is no write tool, and there is no place to add one.
+ *
+ * The DoS BOUNDS used to be claimed here on the same grounds, and that claim was false
+ * (audit 2026-08-26, PUB-06): MAX_LIMIT lived in validators.ts, which is the HTTP
+ * boundary — the layer MCP does not go through — and every bounded parameter below was a
+ * bare `z.number()` handed straight to SQL. The bounds now live in ONE place both doors
+ * import (validators.ts `mcpBounded` / `BOUNDED_PARAMETERS`): the objects in the
+ * inputSchemas below ARE the objects the REST schemas parse, so the two doors cannot
+ * drift, and `parseToolArgs` runs them before any handler body. Never re-declare a bound
+ * here — a local copy would satisfy a reader and defeat the invariant.
  *
  * What changes for an agent is the SHAPE of a request. The REST surface is a URL DSL —
  * `filter[code][like]=OH-%`, brackets, percent-encoding, pipe-separated `in` lists — which
@@ -32,6 +40,7 @@ import { parseSort } from '../utils/query-params';
 import type { FilterCondition } from '../utils/query-params';
 import { ValidationError } from '../errors';
 import { DEFAULT_TABLE, DEFAULT_COLUMN, DEFAULT_LIMIT, DEFAULT_MAX_CHARACTERS, DEFAULT_MAX_OCCURRENCES, VALID_OPERATORS_HINT } from '../constants';
+import { mcpBounded } from '../validators';
 
 /**
  * A tool as this module defines it, before the MCP SDK sees it.
@@ -175,8 +184,8 @@ export const tools: ToolDefinition[] = [
       fields: z.string().optional().describe('Comma-separated list of fields to return'),
       filters: filtersParam,
       sort: z.string().optional().describe('Sort fields, comma-separated; prefix with "-" for descending (e.g., "title,-section_id")'),
-      limit: z.number().optional().describe('Maximum number of results (default: 100, max: 1000)'),
-      offset: z.number().optional().describe('Number of results to skip (default: 0)'),
+      limit: mcpBounded.limit,
+      offset: mcpBounded.offset,
       lang: z.string().optional().describe('Language filter (e.g., lg-eng, lg-spa)'),
       count: z.boolean().optional().describe('When true, also return the total count of matching rows'),
       resolve_relations: z.string().optional().describe('JSON object mapping column names to target tables for forward relation resolution (e.g., {"image":"image","informant":"informant"}). Supports dot notation for deep resolution (e.g., {"eventos.documentos":"image"}). Use "auto" for link columns.'),
@@ -204,7 +213,7 @@ export const tools: ToolDefinition[] = [
     inputSchema: {
       db: dbParam,
       table: z.string().describe('Target table name'),
-      section_id: z.number().describe('Record section_id'),
+      section_id: mcpBounded.section_id,
       lang: z.string().optional().describe('Language variant to return (e.g., lg-eng)'),
       fields: z.string().optional().describe('Comma-separated list of fields to return'),
       resolve_relations: z.string().optional().describe('JSON object mapping column names to target tables for forward relation resolution'),
@@ -229,7 +238,7 @@ export const tools: ToolDefinition[] = [
       table: z.string().describe('Target table name'),
       filters: filtersParam,
       lang: z.string().optional().describe('Language filter (e.g., lg-eng, lg-spa)'),
-      q: z.string().optional().describe('Fulltext search query to count matching rows instead of filters'),
+      q: mcpBounded.q.optional().describe('Fulltext search query to count matching rows instead of filters (max 512 characters)'),
       column: z.string().optional().describe(`Column for fulltext count (default: ${DEFAULT_COLUMN})`),
     },
     // Counting is not a third query path: it is the ordinary search with `limit: 0`, which
@@ -264,10 +273,10 @@ export const tools: ToolDefinition[] = [
     inputSchema: {
       db: dbParam,
       table: z.string().describe('Target table name'),
-      q: z.string().describe('Search query. Supports boolean operators (+, -, "", etc.)'),
+      q: mcpBounded.q,
       column: z.string().optional().describe(`Column to search in (default: ${DEFAULT_COLUMN})`),
-      limit: z.number().optional().describe('Maximum number of results (default: 100)'),
-      offset: z.number().optional().describe('Number of results to skip (default: 0)'),
+      limit: mcpBounded.limit,
+      offset: mcpBounded.offset,
       count: z.boolean().optional().describe('When true, also return the total count of matching rows'),
       resolve_relations: z.string().optional().describe('JSON object mapping column names to target tables for forward relation resolution'),
       resolve_inverse_relations: z.string().optional().describe('Resolve inverse relations. "true" for auto-load, or JSON mapping like {"rsc170":"images"}'),
@@ -292,12 +301,12 @@ export const tools: ToolDefinition[] = [
     inputSchema: {
       db: dbParam,
       table: z.string().describe('Table containing the text (e.g., publications)'),
-      section_id: z.number().describe('Section ID of the record'),
-      terms: z.string().describe('Search terms to find in the text'),
+      section_id: mcpBounded.section_id,
+      terms: mcpBounded.terms,
       column: z.string().optional().describe(`Column containing the text (default: ${DEFAULT_COLUMN})`),
       lang: z.string().optional().describe('Language variant to read (e.g., lg-eng)'),
-      max_characters: z.number().optional().describe(`Maximum characters per fragment (default: ${DEFAULT_MAX_CHARACTERS})`),
-      max_occurrences: z.number().optional().describe(`Maximum fragments per term (default: ${DEFAULT_MAX_OCCURRENCES})`),
+      max_characters: mcpBounded.max_characters,
+      max_occurrences: mcpBounded.max_occurrences,
     },
     handler: async (args) => {
       const db = resolveDb(args);
@@ -317,11 +326,11 @@ export const tools: ToolDefinition[] = [
     inputSchema: {
       db: dbParam,
       table: z.string().optional().describe(`Table name (default: ${DEFAULT_TABLE})`),
-      section_id: z.number().describe('Section ID of the interview'),
-      terms: z.string().describe('Search terms within the transcription'),
+      section_id: mcpBounded.section_id,
+      terms: mcpBounded.terms,
       lang: z.string().optional().describe('Language variant to read (e.g., lg-eng)'),
-      max_characters: z.number().optional().describe(`Maximum characters per fragment (default: ${DEFAULT_MAX_CHARACTERS})`),
-      max_occurrences: z.number().optional().describe(`Maximum fragments per term (default: ${DEFAULT_MAX_OCCURRENCES})`),
+      max_characters: mcpBounded.max_characters,
+      max_occurrences: mcpBounded.max_occurrences,
     },
     // The only tool with a default TABLE: the AV path is tied to the interview shape
     // anyway (see the AV_* config), so making an agent name the table would be ceremony.
@@ -341,7 +350,7 @@ export const tools: ToolDefinition[] = [
     description: 'Resolve an indexation locator (from thesaurus) to an audiovisual fragment. Returns video clip with timecodes, transcription, and associated thesaurus terms.',
     inputSchema: {
       db: dbParam,
-      section_id: z.number().describe('Section ID'),
+      section_id: mcpBounded.section_id,
       section_tipo: z.string().optional().describe('Section type identifier'),
       component_tipo: z.string().optional().describe('Component type identifier'),
       tag_id: z.number().optional().describe('Tag ID from indexation'),
@@ -377,8 +386,33 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
   }
 
   try {
-    return await tool.handler(args);
+    return await tool.handler(parseToolArgs(tool, args));
   } catch (error) {
     return errorContent(error);
   }
+}
+
+/**
+ * Parse a tool's arguments against ITS OWN declared shape, before the handler body runs.
+ *
+ * The MCP SDK validates the shape too, on the transport path — but only there. This
+ * module also exposes `handleToolCall` as the ONE invocation path (server.ts and the tests
+ * both go through it), and a bound that only holds when a particular transport is in front
+ * of it is exactly the layering mistake PUB-06 was. Parsing here makes the schema
+ * unbypassable: whatever calls a tool, an over-cap `limit` is refused before a query is
+ * built, and a coercible value ("100") arrives at the handler as the number it means.
+ *
+ * Unknown keys are dropped rather than rejected — an agent that adds a stray argument
+ * should get its answer, not a lecture; every argument a handler READS is declared here,
+ * so nothing that matters is lost.
+ */
+function parseToolArgs(tool: ToolDefinition, args: Record<string, unknown>): Record<string, unknown> {
+  const parsed = z.object(tool.inputSchema).safeParse(args ?? {});
+  if (!parsed.success) {
+    const detail = parsed.error.issues
+      .map(issue => `${issue.path.join('.') || '(argument)'}: ${issue.message}`)
+      .join('; ');
+    throw new ValidationError(`Invalid arguments for ${tool.name} — ${detail}`);
+  }
+  return parsed.data as Record<string, unknown>;
 }

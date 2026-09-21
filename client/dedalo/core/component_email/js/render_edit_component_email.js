@@ -51,6 +51,7 @@
 // imports
 	import { add_instance } from '../../common/js/instances.js'
 import {ui} from '../../common/js/ui.js'
+import {render_value} from '../../common/js/utils/render_escape.js'
 import {attach_item_dataframe} from '../../component_common/js/component_common.js'
 import {stop_page_shortcuts} from '../../common/js/utils/keyboard.js'
 	import {view_default_edit_email} from './view_default_edit_email.js'
@@ -336,7 +337,7 @@ const get_content_value_read = (i, current_value, self) => {
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_value read_only',
-			inner_html		: current_value?.value || ''
+			inner_html		: render_value(current_value?.value, self.context.render_class)
 		})
 
 
@@ -475,7 +476,7 @@ export const get_buttons = (self) => {
 						const buton_option = ui.create_dom_element({
 							element_type	: 'button',
 							class_name		: 'warning',
-							inner_html		: (get_label.email || 'email') + ': ' + number_of_email,
+							inner_html		: (get_label.email || 'email') + ': ' + render_value(number_of_email, 'number'),
 							parent			: body
 						})
 

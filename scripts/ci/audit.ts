@@ -4,7 +4,11 @@
  * WHY A RATCHET AND NOT A BARE `bun audit`. On 2026-08-03, the day this was written,
  * the tree already carried 7 advisories (5 high) — all transitive, most through
  * `@huggingface/transformers` (sharp/libvips, adm-zip) and the MCP SDK (fast-uri,
- * @hono/node-server). A blocking bare audit would have been RED on day one, which
+ * @hono/node-server). (Historical: the transformers package has been a vendored
+ * browser bundle since 2026-09-04 — P1-23/DEAD-12 — so its native closure is not in
+ * the lockfile at all, and the entries the baseline still accepts are mocha's,
+ * which test/unit/production_import_tripwire.test.ts proves are outside the
+ * production closure rather than trusting the reason text.) A blocking bare audit would have been RED on day one, which
  * teaches everyone to ignore the step; a non-blocking one proves nothing and rots
  * into decoration ("tripwire or delete", DEC-12). So: the KNOWN set is data, in
  * `engineering/dependency_audit_baseline.json`, and a NEW advisory is the failure.
@@ -85,14 +89,34 @@
  * that must not tolerate a degraded lookup at all (a release check), and DEGRADED
  * becomes RED there without weakening the hermetic tier that cannot guarantee egress.
  *
- * Usage: bun run scripts/ci/audit.ts [--update] [--require-network]
- *        --update          rewrites the baseline from the current audit (review the diff).
- *        --require-network turns a DEGRADED advisory lookup into a failure.
+ * THE ANTI-LAUNDERING GUARD (P2-18 / GATE-20). `--update` compares the audit
+ * against the committed baseline BY KEY and REFUSES to accept an advisory the
+ * baseline does not hold unless told `--allow-regression --reason "<text>"`;
+ * the reason is validated by the one shared validator
+ * (`scripts/lib/reason_validator.ts`) and written INTO each accepted entry,
+ * where the check path re-reads it. A count comparison was measured
+ * insufficient — a swap keeps the count flat — and a commit message is read by
+ * no gate. `test/unit/ratchet_integrity_tripwire.test.ts` proves both on
+ * constructed fixtures.
+ *
+ * Usage: bun run scripts/ci/audit.ts [--update [--allow-regression --reason "<text>"]] [--require-network]
+ *        --update            rewrites the baseline from the current audit (review the diff);
+ *                            REFUSES to accept an advisory the baseline does not hold.
+ *        --allow-regression  with --update: accept new advisories. Needs --reason.
+ *        --reason "<text>"   why the advisories accepted in THIS run are accepted rather
+ *                            than fixed. ONE per invocation, applied to every new entry of
+ *                            the run (one triage, one run); it is also taken by kept
+ *                            entries that have none yet. Written into the artifact.
+ *        --require-network   turns a DEGRADED advisory lookup into a failure.
+ *        --baseline <path>   read (and on --update, write) the artifact at <path> instead of
+ *                            the committed one. For the gate's subprocess probes over a
+ *                            scratch copy; CI never passes it.
  */
 
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { Glob } from 'bun';
+import { readFlagValue, readReasonArg, thinReasonProblem } from '../lib/reason_validator.ts';
 import {
 	checkVendorAdvisories,
 	readManifest,
@@ -136,30 +160,217 @@ export const PACKAGES: readonly string[] = discoverPackages();
 
 type Advisory = { id: number; url?: string; title?: string; severity?: string };
 type AuditReport = Record<string, Advisory[]>;
-type BaselineEntry = { id: number; severity: string; package: string; title: string };
-type Baseline = {
+/**
+ * One accepted advisory. `reason` is WHY it is accepted rather than fixed —
+ * written INTO the artifact, per entry, because a commit message is read by no
+ * gate (P2-18 / GATE-20). An accepted RCE and a triaged low were
+ * indistinguishable without it; and GATE-53 is what the field forces to the
+ * surface: none of the entries accepted before it existed could truthfully have
+ * written "no fix exists upstream".
+ */
+export type BaselineEntry = {
+	id: number;
+	severity: string;
+	package: string;
+	title: string;
+	reason?: string;
+};
+export type Baseline = {
 	generated: string;
 	note: string;
 	accepted: Record<string, BaselineEntry[]>;
 };
 
+/** A reason for accepting an advisory is a decision about shipped code: a full sentence. */
+export const ADVISORY_REASON_MIN_WORDS = 12;
+
 /**
- * How many advisories the CURRENT baseline accepts, or null when there is none
- * yet. Read separately from the main flow because `--update` runs BEFORE the
- * baseline is otherwise loaded (P2-18).
+ * The CURRENT committed baseline, in THREE states — never a null that means
+ * "compare against nothing" (P2-18 / GATE-20, second round). The first draft
+ * returned null on ANY read failure and `--update` then compared against the
+ * empty set: a merge-conflicted file (unparseable JSON) DISABLED the refusal,
+ * so "resolve the conflict by running the fix command" accepted every advisory
+ * flaglessly — the exact laundering path, one level down.
+ *   - `present`: the parsed artifact;
+ *   - `absent`: no file — a bootstrap, where EVERY advisory is new and the
+ *     refusal applies in full;
+ *   - `unparseable`: a file that is not the artifact (a conflict marker, a
+ *     truncated merge) — the generator REFUSES, it never guesses.
  */
-async function readBaselineCount(): Promise<number | null> {
+export type PreviousBaseline =
+	| { kind: 'present'; baseline: Baseline }
+	| { kind: 'absent' }
+	| { kind: 'unparseable'; error: string };
+
+export async function readPreviousBaseline(path = BASELINE_PATH): Promise<PreviousBaseline> {
+	const file = Bun.file(path);
+	if (!(await file.exists())) return { kind: 'absent' };
 	try {
-		const baseline = (await Bun.file(BASELINE_PATH).json()) as Baseline;
-		return Object.values(baseline.accepted).reduce((total, list) => total + list.length, 0);
-	} catch {
-		return null;
+		const parsed = (await file.json()) as Baseline;
+		if (parsed === null || typeof parsed !== 'object' || typeof parsed.accepted !== 'object')
+			return { kind: 'unparseable', error: 'no "accepted" map' };
+		return { kind: 'present', baseline: parsed };
+	} catch (error) {
+		return { kind: 'unparseable', error: String(error) };
 	}
 }
 
 /** `<package dir>::<npm package>::<advisory id>` — the identity a ratchet compares on. */
 function keyOf(dir: string, pkg: string, advisory: Advisory): string {
 	return `${dir}::${pkg}::${advisory.id}`;
+}
+
+/** Every accepted key of a baseline's `accepted` map, with its entry. */
+function acceptedByKey(accepted: Record<string, BaselineEntry[]>): Map<string, BaselineEntry> {
+	const byKey = new Map<string, BaselineEntry>();
+	for (const [dir, entries] of Object.entries(accepted)) {
+		for (const entry of entries ?? []) byKey.set(keyOf(dir, entry.package, entry), entry);
+	}
+	return byKey;
+}
+
+/**
+ * The advisories `current` accepts that `previous` did not — BY KEY, never by
+ * count. The first guard here compared totals (`after > before`), and a SWAP —
+ * one advisory withdrawn upstream the same week a NEW one is published — kept
+ * the count flat and laundered the new one flaglessly. A ratchet compares
+ * identities; a count is a summary of identities and hides exactly the
+ * exchange that matters. Exported: the gate proves it on a constructed swap.
+ */
+export function newlyAcceptedKeys(
+	previous: Record<string, BaselineEntry[]>,
+	current: Record<string, BaselineEntry[]>,
+): string[] {
+	const before = acceptedByKey(previous);
+	return [...acceptedByKey(current).keys()].filter((key) => !before.has(key)).sort();
+}
+
+/**
+ * Every accepted entry must carry a reason the shared validator accepts. This
+ * runs on the CHECK path too, so a hand-edited or merged baseline whose entry
+ * has no reason is RED, not merely un-regenerable. Exported: the gate proves it
+ * on a reason-less and on a thin entry.
+ */
+export function acceptedEntryProblems(baseline: Baseline): string[] {
+	const problems: string[] = [];
+	for (const [key, entry] of acceptedByKey(baseline.accepted)) {
+		const problem = thinReasonProblem(entry.reason, ADVISORY_REASON_MIN_WORDS);
+		if (problem !== null) problems.push(`${key}: ${problem}`);
+	}
+	return problems;
+}
+
+/** What `--update` decided: a refusal (message, exit 1) or the baseline to write. */
+export type UpdateDecision =
+	| { kind: 'refuse'; message: string }
+	| { kind: 'write'; next: Baseline };
+
+/**
+ * THE --update DECISION, pure and exported so the gate proves the OUTCOME on
+ * constructed fixtures (a swap, a conflicted file, a missing file) instead of
+ * grepping the block that calls it — a spelling check was measured to stay
+ * green with the condition neutered to `&& false`.
+ *
+ * ANTI-LAUNDERING (P2-18 / GATE-20). `--update` used to overwrite `accepted`
+ * with whatever `bun audit` reported this minute, unconditionally — and the
+ * RED message hands the developer that exact command. So the reflex path was
+ * the laundering path. A ratchet that records whatever it measured is not a
+ * ratchet, it is a diary. The rules:
+ *   1. the previous artifact must be READ: a conflicted or truncated file is a
+ *      refusal, never an empty comparison; a missing one means every advisory
+ *      is new;
+ *   2. the comparison is BY KEY (`newlyAcceptedKeys`), never by count — a swap
+ *      (one advisory vanished, one new, same total) is a regression;
+ *   3. accepting a new advisory takes --allow-regression AND --reason: the
+ *      reason is validated by the ONE shared validator and written INTO the
+ *      entry, where a gate can read it, not into a commit message, where none
+ *      can;
+ *   4. the reason of every entry that stays is PRESERVED across --update, so
+ *      regeneration never strips a triage; a kept entry that never had one
+ *      (pre-GATE-20 artifact) takes this run's;
+ *   5. the output is validated by the same predicate the check path applies,
+ *      so the generator cannot write a file the gate would refuse.
+ * ONE --reason per invocation applies to every new advisory accepted in that
+ * run (one triage, one run); per-advisory reasons are per-advisory runs.
+ */
+export function updateDecision(
+	previous: PreviousBaseline,
+	current: Record<string, BaselineEntry[]>,
+	argv: readonly string[],
+	today: string,
+): UpdateDecision {
+	if (previous.kind === 'unparseable') {
+		return {
+			kind: 'refuse',
+			message:
+				`== audit: REFUSED — ${BASELINE_PATH} exists but is not the artifact (${previous.error}).\n` +
+				'   A conflict marker or a truncated merge is not "no baseline": resolve the file to the\n' +
+				'   version you mean (git checkout --theirs/--ours, or the merge-base copy), then re-run.\n' +
+				'   The generator never compares against a baseline it could not read.\n',
+		};
+	}
+	const previousAccepted = previous.kind === 'present' ? previous.baseline.accepted : {};
+	const previousByKey = acceptedByKey(previousAccepted);
+	const added = newlyAcceptedKeys(previousAccepted, current);
+	const allowRegression = argv.includes('--allow-regression');
+	const reason = readReasonArg(argv);
+	const reasonProblem =
+		reason === null ? null : thinReasonProblem(reason, ADVISORY_REASON_MIN_WORDS);
+	if (added.length > 0 && !allowRegression) {
+		return {
+			kind: 'refuse',
+			message:
+				`== audit: REFUSED — this would accept ${added.length} advisor${added.length === 1 ? 'y' : 'ies'} the committed baseline does not hold` +
+				`${previous.kind === 'absent' ? ' (there is no committed baseline: every advisory is new)' : ''}:\n` +
+				`${added.map((key) => `   + ${key}`).join('\n')}\n` +
+				'   An advisory is accepted because someone TRIAGED it, never because the\n' +
+				'   regeneration command was the easiest way past a red build. Fix it, or\n' +
+				'   accept it deliberately — the reason goes INTO the baseline entry:\n' +
+				'      bun run scripts/ci/audit.ts --update --allow-regression --reason "<why it is accepted rather than fixed>"\n',
+		};
+	}
+	if (allowRegression && (reason === null || reasonProblem !== null)) {
+		return {
+			kind: 'refuse',
+			message:
+				`== audit: REFUSED — --allow-regression needs --reason "<text>": ${reasonProblem ?? 'none given'}.\n` +
+				`   A reason names why the advisory is accepted rather than fixed (at least ${ADVISORY_REASON_MIN_WORDS} words,\n` +
+				'   and "temporary" / "later" are not reasons). It is written into every entry this run accepts.\n',
+		};
+	}
+	const accepted: Record<string, BaselineEntry[]> = {};
+	for (const [dir, entries] of Object.entries(current)) {
+		accepted[dir] = entries.map((entry) => {
+			const key = keyOf(dir, entry.package, entry);
+			const kept = previousByKey.get(key)?.reason;
+			const isNew = !previousByKey.has(key);
+			// A kept entry keeps its reason — unless that reason would not pass the
+			// validator (a pre-GATE-20 leftover, a hand edit): then it takes this
+			// run's, so the refusal below ("re-run with --reason") is advice that
+			// can succeed. Measured: `kept ?? reason` preserved a THIN kept reason
+			// forever and the only exit was a hand edit of the artifact.
+			const keptIsValid =
+				kept !== undefined && thinReasonProblem(kept, ADVISORY_REASON_MIN_WORDS) === null;
+			const entryReason = isNew ? reason : keptIsValid ? kept : (reason ?? kept);
+			return entryReason === null ? entry : { ...entry, reason: entryReason };
+		});
+	}
+	const next: Baseline = {
+		generated: today,
+		note: 'Accepted (known, triaged) dependency advisories. Every entry carries the reason it is accepted rather than fixed (validated by scripts/lib/reason_validator.ts; a reason-less entry is RED). A NEW advisory fails CI; a vanished one only prints a nudge (see scripts/ci/audit.ts). Regenerate with `bun run scripts/ci/audit.ts --update`; accepting an advisory the baseline does not hold (compared by KEY, so a swap is a regression; a missing baseline makes every advisory new; a conflicted one is refused, never compared against nothing) REFUSES without `--allow-regression --reason "<text>"`, and the reason is written here, per entry.',
+		accepted,
+	};
+	const problems = acceptedEntryProblems(next);
+	if (problems.length > 0) {
+		return {
+			kind: 'refuse',
+			message:
+				'== audit: REFUSED — the baseline this would write carries entries without a valid reason:\n' +
+				`${problems.map((line) => `   ${line}`).join('\n')}\n` +
+				'   Re-run with --reason "<text>" to record the triage on them.\n',
+		};
+	}
+	return { kind: 'write', next };
 }
 
 /**
@@ -372,6 +583,28 @@ async function main(): Promise<void> {
 	// The hermetic tier cannot, which is why this is opt-in rather than the default —
 	// see the header: the default must never red a build for a rate limit.
 	const requireNetwork = process.argv.includes('--require-network');
+	const baselinePath = readFlagValue(process.argv, '--baseline') ?? BASELINE_PATH;
+	const runDate = new Date().toISOString().slice(0, 10);
+
+	// The artifact is read FIRST, through the three-state reader, before any
+	// vendored-tree or network work: a missing or conflicted baseline is a
+	// refusal (never "no constraints", never a bootstrap over a conflict
+	// marker), and it is decided before `bun audit` is ever spawned — so the
+	// gate proves this outcome by subprocess, offline, on a scratch copy.
+	const previous = await readPreviousBaseline(baselinePath);
+	if (update && previous.kind === 'unparseable') {
+		const decision = updateDecision(previous, {}, process.argv, runDate);
+		console.error(decision.kind === 'refuse' ? decision.message : 'unreachable');
+		process.exit(1);
+	}
+	if (!update && previous.kind !== 'present') {
+		console.error(
+			`== audit: RED — ${baselinePath} is ${previous.kind === 'absent' ? 'missing' : `not the artifact (${previous.error})`}.\n` +
+				'   The ratchet cannot run without its baseline. Restore the committed file (a conflict\n' +
+				'   marker is a merge left half-done, not an empty baseline).\n',
+		);
+		process.exit(1);
+	}
 
 	// --- vendored trees: integrity (hard) then staleness (nudge) ---------------
 	// Deliberately before the network audit: integrity must hold offline too.
@@ -503,46 +736,41 @@ async function main(): Promise<void> {
 	}
 
 	if (update) {
-		// ANTI-LAUNDERING (P2-18 / GATE-19). `--update` used to overwrite `accepted`
-		// with whatever `bun audit` reported this minute, unconditionally — and the
-		// RED message hands the developer that exact command. So the reflex path was
-		// the laundering path: a NEW advisory could be accepted by running the thing
-		// the failure told you to run, with no decision recorded anywhere.
-		//
-		// A ratchet that records whatever it measured is not a ratchet, it is a
-		// diary. Accepting MORE advisories than the baseline holds now takes
-		// --allow-regression, which is a deliberate act a reviewer can see in the
-		// diff of the command, not only in the artefact.
-		const before = await readBaselineCount();
-		const after = Object.values(current).reduce((total, list) => total + list.length, 0);
-		if (before !== null && after > before && !process.argv.includes('--allow-regression')) {
-			console.error(
-				`== audit: REFUSED — this would accept ${after} advisories, up from ${before}.\n` +
-					'   An advisory is accepted because someone TRIAGED it, never because the\n' +
-					'   regeneration command was the easiest way past a red build. Fix it, or\n' +
-					'   re-run with --allow-regression and say WHY in the commit message.\n',
-			);
+		// The decision is `updateDecision` — pure, exported, proved by the gate on a
+		// swap, a conflicted file and a missing file. This block only carries it out.
+		const decision = updateDecision(previous, current, process.argv, runDate);
+		if (decision.kind === 'refuse') {
+			console.error(decision.message);
 			process.exit(1);
 		}
-		const next: Baseline = {
-			generated: new Date().toISOString().slice(0, 10),
-			note: 'Accepted (known, triaged) dependency advisories. Regenerate with `bun run scripts/ci/audit.ts --update` and explain the delta in the commit message. A NEW advisory fails CI; a vanished one only prints a nudge (see scripts/ci/audit.ts). Accepting MORE than the current count REFUSES without --allow-regression.',
-			accepted: current,
-		};
-		await Bun.write(BASELINE_PATH, `${JSON.stringify(next, null, '\t')}\n`);
+		await Bun.write(baselinePath, `${JSON.stringify(decision.next, null, '\t')}\n`);
 		console.log(
-			`== audit: baseline REWRITTEN (${BASELINE_PATH}) — review the diff before committing.`,
+			`== audit: baseline REWRITTEN (${baselinePath}) — review the diff before committing.`,
 		);
 		process.exit(0);
 	}
 
-	const baseline = (await Bun.file(BASELINE_PATH).json()) as Baseline;
+	// The artifact was read at the top of main through the three-state reader:
+	// a missing or conflicted baseline exited RED there, before the network.
+	const committed = previous;
+	if (committed.kind !== 'present') process.exit(1);
+	const baseline = committed.baseline;
 
-	const baselineKeys = new Set(
-		Object.entries(baseline.accepted).flatMap(([dir, entries]) =>
-			entries.map((e) => keyOf(dir, e.package, e)),
-		),
-	);
+	// The artifact is checked, not trusted: an entry that reached the file with no
+	// reason — a hand edit, a merge resolution, a pre-GATE-20 leftover — is RED
+	// here, exactly where the generator cannot have run.
+	const entryProblems = acceptedEntryProblems(baseline);
+	if (entryProblems.length > 0) {
+		console.error('== audit: RED — accepted advisories without a valid reason in the baseline:\n');
+		for (const problem of entryProblems) console.error(`   ${problem}`);
+		console.error(
+			'\n   Every accepted advisory records WHY it is accepted rather than fixed, in the entry\n' +
+				'   itself. Record it: bun run scripts/ci/audit.ts --update --reason "<text>"\n',
+		);
+		process.exit(1);
+	}
+
+	const baselineKeys = new Set(acceptedByKey(baseline.accepted).keys());
 	const currentKeys = new Map<string, BaselineEntry & { dir: string }>();
 	for (const [dir, entries] of Object.entries(current)) {
 		for (const e of entries) currentKeys.set(keyOf(dir, e.package, e), { ...e, dir });
@@ -562,9 +790,10 @@ async function main(): Promise<void> {
 			console.error(`      https://github.com/advisories (advisory id ${e.id})`);
 		}
 		console.error(
-			'\nFix it (bun update / drop the dependency), or accept it deliberately:\n' +
-				'   bun run scripts/ci/audit.ts --update\n' +
-				'and say WHY in the commit message. An accepted advisory is a decision, not a default.\n',
+			'\nFix it (bun update / an override / drop the dependency), or accept it deliberately —\n' +
+				'the reason is validated and written INTO the baseline entry, where a gate reads it:\n' +
+				'   bun run scripts/ci/audit.ts --update --allow-regression --reason "<why it is accepted rather than fixed>"\n' +
+				'A plain --update REFUSES a new advisory. An accepted advisory is a decision, not a default.\n',
 		);
 		process.exit(1);
 	}

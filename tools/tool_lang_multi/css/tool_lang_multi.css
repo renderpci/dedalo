@@ -5,6 +5,10 @@
 */
 :root {
   --tool_lang_multi: #7859ae;
+  --tool_lang_multi_fill: var(--tool_lang_multi);
+}
+:root[data-theme="dark"] {
+  --tool_lang_multi_fill: #a186d6;
 }
 .wrapper_tool.tool_lang_multi .spinner {
   background-color: var(--tool_lang_multi);
@@ -30,8 +34,8 @@
   padding-right: 1rem;
 }
 .wrapper_tool.tool_lang_multi .top_container .button_automatic_translation {
-  background-color: var(--tool_lang_multi);
-  border-color: var(--tool_lang_multi);
+  background-color: var(--tool_lang_multi_fill);
+  border-color: var(--tool_lang_multi_fill);
   color: var(--color_white);
   min-height: 2.5em;
 }

@@ -11,6 +11,23 @@
 :root {
 	--tool_image_rotation: #587d8f;
 	--tool_image_rotation_border: #45616f;
+	// THE FILL IS A DEEPENED TWIN OF THE IDENTITY HUE (AA pass, 2026-09-06).
+	// The identity hue is an EDGE, NOT A SLAB (tool_common.less .tool_header) —
+	// and the arithmetic that demoted the header band applies verbatim to the two
+	// action buttons below, which paint the SAME mid-tone hue and put text on it:
+	// #ffffff on #587d8f is 4.43:1, a hair under AA. Swapping the ink alone does
+	// not fix it, it only moves the failure to the other theme (theme_dark
+	// BRIGHTENS this hue to #7a9db0, where a light ink is worse still). So the
+	// FILL gets its own token, the same hue (199 deg) deepened ~10%, and the bright
+	// hue keeps the jobs it is good at: the header edge and the button border.
+	--tool_image_rotation_fill: #4f7181; // 5.23:1 under --fg_on_warning (#ffffff)
+}
+:root[data-theme="dark"] {
+	// In dark the identity hue is ALREADY the brightened #7a9db0 (theme_dark.less),
+	// i.e. a light fill, and --fg_on_warning resolves to near-black there — 6.16:1.
+	// So in dark the fill IS the hue, stated by reference and not as a copied
+	// literal that would silently stop tracking a retune of the hue itself.
+	--tool_image_rotation_fill: var(--tool_image_rotation);
 }
 @tool_color: var(--tool_image_rotation);
 
@@ -138,7 +155,11 @@
 			z-index: unset;
 			background-color: @color_white;
 			display: flex;
-			color: @color_grey_9;
+			// --color_grey_9 was the ink here: the grey ramp is STRUCTURAL, not for
+			// text (vars_tokens.less), and #aaaaaa on the surface reads 2.32:1 in
+			// light. --fg_muted is the ramp-free muted ink, tuned per axis:
+			// 5.74:1 light, 8.09:1 dark, 5.75:1 redesign, 5.68:1 redesign-dark.
+			color: var(--fg_muted);
 			width: 100%;
 			margin-left: auto;
 			margin-right: auto;
@@ -266,9 +287,15 @@
 					background: @color_grey_15;
 
 					&:hover {
-						background-color: @tool_color;
+						// The hover state is the one place this button carries text ON the
+						// tool's hue, so it takes the DEEPENED fill and the palette's ink
+						// for a fill of this lightness profile (dark in light, bright in
+						// dark — the same profile as --color_warning, which is why
+						// --fg_on_warning is its ink and --fg_on_brand is not).
+						// 5.23:1 light, 5.19:1 redesign, 6.16:1 dark, 6.21:1 redesign-dark.
+						background-color: var(--tool_image_rotation_fill);
 						border-color: var(--tool_image_rotation_border);
-						color: @color_white;
+						color: var(--fg_on_warning);
 					}
 				}
 
@@ -290,9 +317,11 @@
 	  					background: @color_grey_15;
 
 						&:hover {
-							background-color: @tool_color;
+							// Same pair as .apply_rotation above: deepened fill, --fg_on_warning
+							// ink. 5.23:1 light, 5.19:1 redesign, 6.16:1 dark, 6.21:1 redesign-dark.
+							background-color: var(--tool_image_rotation_fill);
 							border-color: var(--tool_image_rotation_border);
-							color: @color_white;
+							color: var(--fg_on_warning);
 
 						}
 

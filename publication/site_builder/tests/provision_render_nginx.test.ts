@@ -971,3 +971,70 @@ describe('an unknown preprod auth mode is refused, never served open', () => {
     expect(text).toContain('auth_basic_user_file ');
   });
 });
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * The Content Security Policy — on every served surface (audit P2-6 / CARRY-01)
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+describe('the content security policy', () => {
+  const CSP = /add_header Content-Security-Policy "([^"]+)" always;/g;
+
+  /** The policy values of every `server {}` block that has a document root. */
+  function policies(text: string): string[] {
+    return [...text.matchAll(CSP)].map(m => m[1] as string);
+  }
+
+  test('every server that SERVES a tree carries it, `always`, on both surfaces and every TLS mode', () => {
+    for (const mode of ['none', 'files', 'letsencrypt'] as const) {
+      const tls =
+        mode === 'files'
+          ? { mode, certificate: '/etc/ssl/gate/one.pem', key: '/etc/ssl/gate/one.key' }
+          : mode === 'letsencrypt'
+            ? { mode, account_email: 'ops@example.org' }
+            : { mode };
+      const layout = layoutOf({ serving: { preprod: { enabled: true, auth: { mode: 'htpasswd', realm: 'Gate preprod' } }, prod: { tls } } });
+      for (const surface of ['preprod', 'prod'] as const) {
+        const text = vhost(layout, 'one', surface);
+        const roots = (text.match(/^\s*root /gm) ?? []).length;
+        expect(roots, `${mode}/${surface}: the fixture serves a tree`).toBeGreaterThan(0);
+        expect(policies(text).length, `${mode}/${surface}: one policy per served server`).toBe(
+          // letsencrypt's port-80 server has a root too (the ACME challenge) but serves no
+          // tree — it redirects; only the 443 server carries the policy.
+          mode === 'letsencrypt' && surface === 'prod' ? roots - 1 : roots,
+        );
+      }
+    }
+  });
+
+  test("script-src is 'self' alone — no inline, no eval, no remote host — and the bypass routes are closed", () => {
+    const layout = layoutOf();
+    for (const surface of ['preprod', 'prod'] as const) {
+      for (const policy of policies(vhost(layout, 'one', surface))) {
+        const directives = new Map(policy.split('; ').map(d => [d.split(' ')[0], d.split(' ').slice(1).join(' ')]));
+        expect(directives.get('script-src')).toBe("'self'");
+        expect(policy).not.toContain('unsafe-inline');
+        expect(policy).not.toContain('unsafe-eval');
+        expect(directives.get('object-src')).toBe("'none'");
+        expect(directives.get('base-uri')).toBe("'self'");
+        expect(directives.get('frame-ancestors')).toBe("'none'");
+        expect(directives.get('form-action')).toBe("'self'");
+        expect(directives.get('default-src')).toBe("'self'");
+      }
+    }
+  });
+
+  test('the data classes name the DECLARED Publication API origin, never the path', () => {
+    const layout = layoutOf({ publication_api: { url: 'https://api.museum.example:8443/publication/server_api/v2' } });
+    const [policy] = policies(vhost(layout, 'one', 'prod'));
+    expect(policy).toContain('connect-src \'self\' https://api.museum.example:8443 https:');
+    expect(policy).not.toContain('/publication/server_api');
+  });
+
+  test('a redirect-only server carries no policy (it serves nothing)', () => {
+    const layout = layoutOf({ serving: { preprod: { enabled: true, auth: { mode: 'htpasswd', realm: 'Gate preprod' } }, prod: { tls: { mode: 'files', certificate: '/etc/ssl/gate/one.pem', key: '/etc/ssl/gate/one.key' } } } });
+    const text = vhost(layout, 'one', 'prod');
+    const [redirectServer] = text.split(/^server \{$/m).slice(1);
+    expect(redirectServer).toContain('return 301');
+    expect(redirectServer).not.toContain('Content-Security-Policy');
+  });
+});

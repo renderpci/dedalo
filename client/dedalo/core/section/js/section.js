@@ -65,6 +65,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {check_unsaved_data} from '../../component_common/js/component_common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
+	import {create_row_window} from '../../common/js/row_window.js'
 	import {toggle_search_panel} from '../../search/js/render_search.js'
 	import {inspector} from '../../inspector/js/inspector.js'
 	import {render_edit_section} from './render_edit_section.js'
@@ -151,6 +152,11 @@ export const section = function() {
 	// the last one.
 	section.prototype.destroy = async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
 		const self = this
+		// the row window (window_section_rows) holds the list's viewport observer;
+		// its rows are dependencies, so any teardown that reaches them stops it
+		if (self.row_window && (delete_self || delete_dependencies)) {
+			self.row_window.destroy()
+		}
 		if (typeof self.release_graph==='function') {
 			try {
 				self.release_graph()
@@ -1193,6 +1199,9 @@ section.prototype.render = async function(options={}) {
 *   concatenating multi-component list values
 * @param {string} [options.lang] - Language tag; defaults to `caller.section_lang`
 *   or `caller.lang`
+* @param {number} [options.row_key_base=0] - Offset added to each entry's index
+*   for its `row_key`: a row window (window_section_rows) materializes one entry
+*   at a time and must hand it the row_key it has in the whole page
 * @returns {Promise<Array<Object>>} Array of successfully built section_record
 *   instances (nulls from failed builds are excluded)
 */
@@ -1221,6 +1230,7 @@ export const get_section_records = async function(options) {
 		const entries			= options.entries || ((self.data && self.data.entries)
 			? self.data.entries
 			: [])
+		const row_key_base		= Number.isInteger(options.row_key_base) ? options.row_key_base : 0
 
 	// iterate records
 		const ar_promises		= []
@@ -1244,7 +1254,7 @@ export const get_section_records = async function(options) {
 					fields_separator	: fields_separator
 				},
 				datum			: datum,
-				row_key 		: i,
+				row_key 		: row_key_base + i,
 				caller			: self,
 				paginated_key	: locator.paginated_key,
 				columns_map		: columns_map,
@@ -1284,6 +1294,135 @@ export const get_section_records = async function(options) {
 
 	return section_records
 }//end get_section_records
+
+
+
+/**
+* WINDOW_SECTION_ROWS
+* THE row-materialization door of every list view (audit P2-31 / CLI-29): the
+* rows of a page are handed to a row window (common/js/row_window.js) that
+* builds section_record instances and their DOM only for the rows the viewport
+* can reach — at most ROW_WINDOW_MAX_ROWS at once — and releases them again
+* past the window's far edge. A list view never loops its rows itself.
+*
+* Each row is either a raw locator entry (`{section_tipo, section_id, …}` from
+* `self.data.entries` — built through get_section_records ONE AT A TIME, with
+* its page-wide `row_key`, and destroyed when released) or an already-built
+* section_record instance (the TM inspector panels pre-build theirs; then only
+* the DOM is windowed and the instance survives a release).
+*
+* Materialized instances are pushed into `self.ar_instances` — so it holds only
+* the LIVE rows, never the page — and a released row leaves it through the
+* instance's own destroy (common.prototype.destroy step 8). Emptiness is a
+* question for the row list, not for ar_instances.
+*
+* The window is stored as `self.row_window` (the previous one is destroyed);
+* section.prototype.destroy and component_portal.prototype.destroy release it.
+*
+* A view whose row is MORE than one section_record (the mosaic edit portal
+* builds a tile, a hover overlay and an alternative table row per entry) hands
+* its own `materialize(row, index, build_row)` and `release(row, index, node)`:
+* `build_row(records_options)` builds ONE section_record for that row through
+* get_section_records (page-wide row_key, registered in ar_instances) — the
+* view never calls the factory itself, so the census still sees one door.
+*
+* @param {Object} options
+* @param {Object} options.caller - The section / portal instance that owns the rows.
+* @param {HTMLElement} options.container - The content_data node rows go into.
+* @param {Array} options.rows - Locator entries or section_record instances.
+* @param {Object} [options.render_options] - Passed to each row's render().
+* @param {Object} [options.records_options] - Passed to get_section_records
+*   (mode, view, columns_map, id_variant…).
+* @param {Function} [options.materialize] - async (row, index, build_row) → node|null.
+*   Replaces the default one-instance materialization; the caller then owns
+*   what it built and MUST tear it down in `options.release`.
+* @param {Function} [options.release] - async (row, index, node). Required with
+*   a custom materialize; ignored otherwise.
+* @param {number} [options.row_height] - Estimated px per row for the spacers.
+* @param {string} [options.spacer='grid'] - Spacer style, see row_window.
+* @returns {Promise<Object>} The row window handle (already filled).
+*/
+export const window_section_rows = async function(options) {
+
+	const self				= options.caller
+	const container			= options.container
+	const rows				= Array.isArray(options.rows) ? options.rows : []
+	const render_options	= options.render_options || {}
+	const records_options	= options.records_options || {}
+
+	if (!self || !container) {
+		console.error('Error: window_section_rows requires a caller and a container');
+		return null
+	}
+	self.ar_instances = self.ar_instances || []
+
+	// index → the instance behind a materialized row
+	const instances = new Map()
+
+	// build_row. ONE section_record for the row at `index`, registered in
+	// ar_instances. The default materialization and a custom one both build
+	// through here.
+	const build_row = async (row, index, override) => {
+		const built = await get_section_records({
+			...records_options,
+			...(override || {}),
+			caller			: self,
+			entries			: [row],
+			row_key_base	: index
+		})
+		const instance = built[0] || null
+		if (instance && !self.ar_instances.includes(instance)) {
+			self.ar_instances.push(instance)
+		}
+		return instance
+	}
+
+	const custom = typeof options.materialize==='function'
+	if (custom && typeof options.release!=='function') {
+		console.error('Error: window_section_rows: a custom materialize needs a release');
+		return null
+	}
+
+	const row_window = create_row_window({
+		owner		: self,
+		container	: container,
+		items		: rows,
+		spacer		: options.spacer || 'grid',
+		row_height	: options.row_height,
+		materialize	: custom
+			? (row, index) => options.materialize(row, index, (override) => build_row(row, index, override))
+			: async (row, index) => {
+				let instance = row
+				if (!instance || typeof instance.render!=='function') {
+					instance = await build_row(row, index)
+					if (!instance) {
+						return null
+					}
+				}
+				instances.set(index, instance)
+				return instance.render(render_options)
+			},
+		release		: custom
+			? (row, index, node) => options.release(row, index, node)
+			: async (row, index) => {
+				const instance = instances.get(index)
+				instances.delete(index)
+				// a pre-built instance is the caller's: only its DOM leaves the window
+				const owned = !row || typeof row.render!=='function'
+				if (owned && instance && instance.status!=='destroyed') {
+					await instance.destroy(
+						true, // delete_self
+						true, // delete_dependencies
+						true  // remove_dom
+					)
+				}
+			}
+	})
+	await row_window.fill()
+
+
+	return row_window
+}//end window_section_rows
 
 
 

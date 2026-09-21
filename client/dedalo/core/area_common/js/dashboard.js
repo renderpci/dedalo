@@ -4,13 +4,13 @@
 
 // imports
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {response_data} from '../../common/js/api_error.js'
-// (!) FLAG: `event_manager` is used in navigate_to_section (lines ~307, ~569) but is NOT
-// imported here and is NOT listed in the /*global*/ pragma. It is presumed to arrive in
-// scope from the caller module (area_common.js) at runtime.  This is fragile: if
-// dashboard.js is ever loaded independently the reference will throw ReferenceError.
-// Consider either importing event_manager from '../../common/js/event_manager.js'
-// or documenting the caller-injection contract explicitly.
+// FIXED 2026-09-04 (P2-25 / DEAD-07). `event_manager` used to be neither imported
+// nor declared: the calls only resolved because event_manager.js publishes the
+// singleton on `window` as a side effect of being loaded by SOMEBODY ELSE first.
+// A module that depends on another module's load order is broken, not fragile —
+// dashboard.js now imports the singleton like every other consumer.
 
 
 /**
@@ -68,8 +68,8 @@
 * and upgrades with charts once D3 is available, so it works without D3 too.
 *
 * Navigation contract: every chart element and card publishes 'user_navigation'
-* via `event_manager` (supplied by the caller scope) so the SPA router takes
-* over. Alt+click opens in a new tab instead.
+* via the imported `event_manager` singleton so the SPA router takes over.
+* Alt+click opens in a new tab instead.
 */
 
 
@@ -674,8 +674,6 @@ const render_section_chart = function(d3, host, dashboard_data) {
 *   publishes 'user_navigation' to the SPA event bus so the router
 *   transitions to the section's list view without a full page reload.
 *
-* (!) Relies on `event_manager` being available in scope (injected by caller
-* module); it is NOT imported in this file. See FLAG at the top of the file.
 * @param {Object}          section - Section descriptor; reads `section_tipo` and `model`.
 * @param {Event|undefined} ev      - The originating DOM event; checked for `altKey`.
 * @returns {void}

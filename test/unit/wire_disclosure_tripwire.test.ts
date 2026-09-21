@@ -1,10 +1,25 @@
 /**
- * TRIPWIRE — no raw exception text on the wire, and no SILENT debug switch
- * (P2-8 / SEC-16, SEC-17, SEC-19).
+ * TRIPWIRE — no raw exception text on the wire, no record coordinates the
+ * caller may not see, and no SILENT debug switch (P2-8 / SEC-16, SEC-17,
+ * SEC-18, SEC-19 — the register's numbering: SEC-16 bulk_revert, SEC-17
+ * upload, SEC-18 identify + vision, SEC-19 debug switch).
  *
- * The disclosure ladder is a property of `toErrorBody` and NOTHING ELSE. Three
+ * The disclosure ladder is a property of `toErrorBody` and NOTHING ELSE. Five
  * doors went around it:
  *
+ *  - `bulk_revert`'s `skipped[]` (SEC-16) echoed `permissions_denied:
+ *    <section_tipo>/<tipo>#<section_id>` for every batch row OUTSIDE the
+ *    caller's scope — the batch row set comes from a TM search with no
+ *    projects filter and the bulk id is a small enumerable integer, so a
+ *    level-2 holder on any section could enumerate other projects' records —
+ *    and pushed the raw `(error as Error).message` (Postgres/fs text) for any
+ *    row, from a catch that also wrapped the scope gate. Now: typed entries
+ *    `{reason, section_tipo?, tipo?, section_id?}`, coordinates only past the
+ *    gate (`inScope`), words to the log with the request id
+ *    (WC-2026-09-03-bulk-revert-skipped-typed-entries).
+ *  - `vision.ts` (SEC-18's third site) built `declined.detail` from the
+ *    provider exception; it reaches an ok:true payload verbatim through
+ *    dd_identify_api's `detail: report.declined.detail`, at read level 1.
  *  - `rejectedUpload()` assigned `error.message` to `publicMessage` — a wire
  *    field — under a public-disclosure code, while its own header said the
  *    intent was "the validator's own sentence … never a raw exception string".
@@ -21,9 +36,19 @@
  *    line from the same function. Worse, `toFailureRecord` shares the builder,
  *    so debug blocks are PERSISTED into job rows and survive turning it off.
  *
- * THE RULE. A DedaloError is the engine speaking DELIBERATELY: its message was
- * written to be read by a curator. Anything else is an exception that merely
- * happened — it travels as `cause`, to the log, never to the caller.
+ * THE RULE. A DedaloError is the engine speaking DELIBERATELY — through its
+ * WIRE sentence, `wireMessage()` (registry English, or the vetted
+ * `publicMessage` under a public code). Its `.message` is the LOG-ONLY field
+ * (dedalo_error.ts): a provider constructor names the api_key_env it could not
+ * read there, a path validator the rejected segment. Three doors read that
+ * field off a caught DedaloError and forwarded it — the SEC-18 leak in its
+ * second spelling (vision.ts's production model resolver, whose
+ * `{ok:false, message}` IS `declined.detail`; `declineDetail`; `rejectedUpload`)
+ * — and `error_taxonomy_tripwire` A6 could not see the first because it
+ * blanked every `message:` key. Anything else is an exception that merely
+ * happened — it travels as `cause`, to the log, never to the caller. Outcome
+ * legs: identify_vision (production resolver, hermetic), identify_proposals_api
+ * (declineDetail, hermetic), media_upload_endpoint (rejectedUpload, db).
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -33,7 +58,105 @@ import { join } from 'node:path';
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const read = (rel: string): string => readFileSync(join(REPO_ROOT, rel), 'utf8');
 
+/** The one raw-exception spelling family, shared with error_taxonomy_tripwire A5/A6. */
+const RAW_EXCEPTION_TEXT =
+	/\b(?:error|err)\.message\b|String\(\s*(?:error|err)\s*\)|\((?:error|err) as Error\)\.message|\$\{\s*(?:error|err)\s*\}/;
+/**
+ * A DedaloError's `.message` is its LOG field (dedalo_error.ts: "never the
+ * wire" — a provider constructor names its api_key_env there); the sentence a
+ * door may forward is `wireMessage(error)`. Reading `.message` off a caught
+ * DedaloError to put it anywhere but a log line is the SEC-18 leak in its
+ * second spelling (vision.ts's model resolver, `declineDetail`, `rejectedUpload`).
+ */
+const DEDALO_ERROR_LOG_FIELD =
+	/instanceof DedaloError\s*(?:\)\s*)?(?:\?|return)\s*(?:error|err)\.message/;
+
 describe('no raw exception text reaches the caller', () => {
+	test('bulk_revert: a denied row is COUNTED, never LOCATED; no refusal text rides skipped[] (SEC-16)', () => {
+		const source = read('tools/tool_time_machine/server/bulk_revert.ts');
+		const body = source.slice(source.indexOf('export async function toolTimeMachineBulkRevert'));
+		expect(body.length).toBeGreaterThan(2000);
+		// The defect, verbatim: coordinates interpolated on the denial entry.
+		expect(
+			body,
+			'permissions_denied: <coordinates> on the wire enumerates records outside the caller’s scope',
+		).not.toMatch(/permissions_denied/);
+		// No raw exception text is pushed into ANY list in this door.
+		for (const line of body.split('\n')) {
+			if (!/\.push\(/.test(line)) continue;
+			expect(RAW_EXCEPTION_TEXT.test(line), `raw text pushed: ${line.trim()}`).toBe(false);
+		}
+		// The channel is typed: a closed reason vocabulary, with the denial code in it…
+		expect(source).toMatch(/export type BulkRevertSkipReason\s*=/);
+		expect(source).toMatch(/'out_of_scope'/);
+		expect(source).toMatch(/'failed'/);
+		// …the entry carries `reason:`, and the coordinates are gated on the scope flag.
+		expect(body).toMatch(/inScope\s*\?\s*\{\s*reason,\s*section_tipo:/);
+		expect(body).toMatch(/:\s*\{\s*reason\s*\}/);
+		// The located entry names ONLY the four keys: no `detail` (the words the
+		// skip() closure receives are the log's — forwarding them onto the entry
+		// would re-route the raw text through the parameter the fix introduced).
+		const entry = /inScope\s*\?\s*\{([^}]*)\}/.exec(body);
+		expect(entry).not.toBeNull();
+		const entryKeys = [...(entry?.[1] ?? '').matchAll(/(?:^|,)\s*([a-z_]+)\s*(?=:|,|$)/g)].map(
+			(m) => m[1],
+		);
+		expect(entryKeys.sort()).toEqual(['reason', 'section_id', 'section_tipo', 'tipo']);
+		expect(entry?.[1]).not.toMatch(/detail|\.\.\./);
+		// The gate sets the flag AFTER both halves pass, and the denial passes `false`.
+		expect(body).toMatch(/skip\(row, 'out_of_scope', false, null\)/);
+		expect(body).toMatch(/inScope = true;/);
+		// The words go to the log, with the request id.
+		expect(body).toMatch(/console\.(warn|error)\(line\)/);
+		expect(body).toMatch(/request \$\{requestId\}/);
+		// …and the catch hands the exception text to the log path, never to an entry.
+		const catchBlock = body.slice(body.lastIndexOf('} catch (error) {'));
+		expect(catchBlock.slice(0, 600)).toMatch(/skip\(row, 'failed', inScope,/);
+		expect(catchBlock.slice(0, 600)).not.toMatch(/push\(/);
+	});
+
+	test('vision: a model that fails declines with a DELIBERATE sentence, the exception stays in the log (SEC-18)', () => {
+		const source = read('src/ai/identify/vision.ts');
+		const at = source.indexOf("reason: 'model_error'");
+		expect(at).toBeGreaterThan(0);
+		const block = source.slice(at, at + 400);
+		expect(
+			block,
+			'declined.detail reaches an ok:true payload verbatim (dd_identify_api) at read level 1',
+		).not.toMatch(RAW_EXCEPTION_TEXT);
+		expect(block).toMatch(/the server log records why/);
+		// the log line still carries the original
+		expect(source.slice(Math.max(0, at - 800), at)).toMatch(
+			/console\.warn\(`\[identify\/vision\] model '\$\{model\.id\}' failed: \$\{String\(error\)\}`\)/,
+		);
+		// THE PRODUCTION RESOLVER (dd_identify_api never injects resolveModel):
+		// its `{ok:false, message}` result IS `declined.detail`, so a catalog
+		// throw speaks through `wireMessage` and any other throw through a
+		// deliberate sentence — `.message` of a DedaloError is the log field
+		// naming the api_key_env `publicModelList` exists to hide.
+		const resolver = source.slice(source.indexOf('const defaultModelResolver'));
+		expect(resolver.length).toBeGreaterThan(300);
+		const resolverBody = resolver.slice(0, resolver.indexOf('\n};') + 3);
+		expect(resolverBody).toMatch(/catch \(error\)/);
+		expect(resolverBody).not.toMatch(DEDALO_ERROR_LOG_FIELD);
+		for (const line of resolverBody.split('\n')) {
+			if (/console\./.test(line)) continue;
+			expect(RAW_EXCEPTION_TEXT.test(line), `raw text in the resolver: ${line.trim()}`).toBe(false);
+		}
+		expect(resolverBody).toMatch(
+			/instanceof ModelCatalogError\) return \{ ok: false, message: wireMessage\(error\) \}/,
+		);
+		expect(resolverBody).toMatch(
+			/instanceof DedaloError \? wireMessage\(error\) : NO_USABLE_MODEL_DETAIL/,
+		);
+		expect(resolverBody).toMatch(
+			/console\.warn\(`\[identify\/vision\] no usable vision model: \$\{String\(error\)\}`\)/,
+		);
+		expect(source).toMatch(
+			/NO_USABLE_MODEL_DETAIL = 'no usable vision model; the server log records why'/,
+		);
+	});
+
 	test('the upload refusal puts only a DELIBERATE sentence on the wire', () => {
 		const source = read('src/core/media/ingest/upload_endpoint.ts');
 		const fn = source.slice(source.indexOf('function rejectedUpload'));
@@ -44,10 +167,16 @@ describe('no raw exception text reaches the caller', () => {
 			'publicMessage is a WIRE field — assigning error.message to it publishes ' +
 				"mkdirSync/writeFileSync paths to a consultation-only account's browser",
 		).not.toMatch(/publicMessage:\s*error instanceof Error \? error\.message/);
-		// The rule: only a typed refusal speaks.
-		expect(fn.slice(0, 1600)).toMatch(/error instanceof DedaloError/);
+		// The rule: only a typed refusal speaks — through its WIRE sentence.
+		expect(fn.slice(0, 1800)).toMatch(
+			/error instanceof DedaloError \? wireMessage\(error\) : null/,
+		);
+		expect(
+			fn.slice(0, 1800),
+			'a DedaloError’s .message is the log field (it may name a path); the wire sentence is wireMessage()',
+		).not.toMatch(DEDALO_ERROR_LOG_FIELD);
 		// The original still travels for the log.
-		expect(fn.slice(0, 1600)).toMatch(/cause: error/);
+		expect(fn.slice(0, 1800)).toMatch(/cause: error/);
 	});
 
 	test('a failed identify source does not echo what threw', () => {
@@ -60,7 +189,18 @@ describe('no raw exception text reaches the caller', () => {
 		).not.toMatch(/detail:\s*error instanceof Error \? error\.message/);
 		expect(source).toContain('function declineDetail');
 		const helper = source.slice(source.indexOf('function declineDetail'));
-		expect(helper.slice(0, 400)).toMatch(/error instanceof DedaloError/);
+		const helperBody = helper.slice(0, helper.indexOf('\n}') + 2);
+		expect(helperBody).toMatch(/if \(error instanceof DedaloError\) return wireMessage\(error\);/);
+		expect(
+			helperBody,
+			'declineDetail forwarded ANY DedaloError’s log-only .message into an ok:true payload',
+		).not.toMatch(DEDALO_ERROR_LOG_FIELD);
+		for (const line of helperBody.split('\n')) {
+			if (/console\./.test(line)) continue;
+			expect(RAW_EXCEPTION_TEXT.test(line), `raw text in declineDetail: ${line.trim()}`).toBe(
+				false,
+			);
+		}
 	});
 
 	test('the switch that collapses the ladder announces itself at boot', () => {
@@ -85,7 +225,24 @@ describe('no raw exception text reaches the caller', () => {
 		expect(server).toMatch(/\[security\] MEDIA_DEV_ROUTE_ENABLED=true/);
 	});
 
-	test('anti-vacuity: every slice found its target', () => {
+	test('anti-vacuity: every slice found its target, and the raw-text matcher fires', () => {
+		expect(read('tools/tool_time_machine/server/bulk_revert.ts')).toContain(
+			'export async function toolTimeMachineBulkRevert',
+		);
+		expect(read('src/ai/identify/vision.ts')).toContain("reason: 'model_error'");
+		expect(RAW_EXCEPTION_TEXT.test('errors.push(`${x}: ${(error as Error).message}`)')).toBe(true);
+		expect(RAW_EXCEPTION_TEXT.test('detail: `did not answer: ${String(error)}`')).toBe(true);
+		expect(RAW_EXCEPTION_TEXT.test('detail: `the server log records why: ${error}`')).toBe(true);
+		expect(RAW_EXCEPTION_TEXT.test('skipped.push({ reason })')).toBe(false);
+		expect(DEDALO_ERROR_LOG_FIELD.test('error instanceof DedaloError ? error.message : null')).toBe(
+			true,
+		);
+		expect(
+			DEDALO_ERROR_LOG_FIELD.test('if (error instanceof DedaloError) return error.message;'),
+		).toBe(true);
+		expect(
+			DEDALO_ERROR_LOG_FIELD.test('error instanceof DedaloError ? wireMessage(error) : null'),
+		).toBe(false);
 		expect(read('src/core/media/ingest/upload_endpoint.ts')).toContain('function rejectedUpload');
 		expect(read('src/core/api/handlers/dd_identify_api.ts')).toContain('declineDetail');
 		expect(read('src/server.ts')).toContain("readEnv('DEDALO_DEBUG_API_ERRORS')");

@@ -70,11 +70,16 @@
  * zipinfo/git on PATH, ~3 GB free in TMPDIR (the consumer copy). Runtime ≈
  * 2–5 min warm. `--keep` leaves the scratch dir for post-mortem.
  *
- * One more honest limit: the consumer copy is configured from a COPY of the
- * live `../private/.env` (0600, inside the scratch dir, swept in `finally`) —
- * a real install is configured by its own file and this is the only way the
- * required keys resolve. `--keep` therefore leaves the operator's real secrets
- * on disk in TMPDIR: delete the scratch dir when the post-mortem is done.
+ * One more honest limit: the consumer copy is configured from the OPERATOR
+ * CONFIG (scripts/lib/operator_config.ts — `../private/.env` if present,
+ * overlaid by the catalog keys of the process environment; never PATH, HOME or
+ * a runner's token), written as its own `.env` (0600, inside the scratch dir,
+ * swept in `finally`) — a real install is configured by its own file and this
+ * is the only way the required keys resolve. On a hosted runner there is no
+ * private file at all and the whole configuration is the environment
+ * scripts/ci/hosted_env.sh composes, which is what lets the drill run there
+ * (scripts/ci/instance_tier.sh). `--keep` therefore leaves the operator's real
+ * secrets on disk in TMPDIR: delete the scratch dir when the post-mortem is done.
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -91,6 +96,8 @@ import {
 	probeServedDatabase,
 	resolveSuiteDatabase,
 } from './client_test_server.ts';
+import { operatorConfig, renderEnvFile } from './lib/operator_config.ts';
+import { cloneForReleaseCommit } from './lib/release_clone.ts';
 
 // ---------------------------------------------------------------------------
 // Fixed drill facts
@@ -393,14 +400,6 @@ async function followJobStream(
 // Process helpers
 // ---------------------------------------------------------------------------
 
-async function runGit(args: string[], label: string): Promise<void> {
-	const child = Bun.spawn(['git', ...args], { stdout: 'ignore', stderr: 'pipe' });
-	const stderr = await new Response(child.stderr).text();
-	if ((await child.exited) !== 0) {
-		throw new Error(`git ${args.join(' ')} failed (${label}): ${stderr.trim()}`);
-	}
-}
-
 interface ManagedProcess {
 	stop: () => Promise<void>;
 }
@@ -467,10 +466,17 @@ function instanceEnvironment(options: {
 	mkdirSync(join(options.scratch, 'ontology_io'), { recursive: true });
 	mkdirSync(join(options.scratch, 'transform_definitions'), { recursive: true });
 	return {
+		// THE OPERATOR'S CONFIGURATION FIRST, as the base every surface below
+		// overrides. The spawn env REPLACES the parent environment, so without this
+		// a server booted here would resolve its config from its tree's private
+		// file alone — which on a hosted runner does not exist (the environment IS
+		// the configuration there, scripts/ci/hosted_env.sh). Catalog keys only:
+		// see scripts/lib/operator_config.ts for what never crosses.
+		...operatorConfig(),
 		DB_NAME: options.suiteDb,
 		DEDALO_DATABASE_CONN: options.suiteDb,
-		// The spawn env REPLACES the parent environment: without these the server
-		// cannot exec its own toolchain (git for the release build, magick probes).
+		// Without these the server cannot exec its own toolchain (git for the
+		// release build, magick probes).
 		PATH: process.env.PATH ?? '/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin',
 		HOME: process.env.HOME ?? tmpdir(),
 		SERVER_TCP_PORT: String(options.port),
@@ -643,57 +649,50 @@ async function main(): Promise<void> {
 		// ---------------------------------------------------------------
 		const cloneDir = join(scratch, 'release_clone');
 		console.log('[drill] cloning the checkout for the release commit…');
-		await runGit(['clone', '--shared', '--quiet', projectRoot, cloneDir], 'clone');
-		const versionTsPath = join(cloneDir, 'src', 'core', 'update', 'version.ts');
-		writeFileSync(
-			versionTsPath,
-			setVersionTriple(
-				readFileSync(versionTsPath, 'utf8'),
-				RELEASE_TRIPLE_LITERAL,
-				'release clone',
-			),
-		);
-		writeFileSync(join(cloneDir, '.bun-version'), Bun.version);
-		// The clone INHERITS the repo's export rules — it never repairs them.
-		// A drill that patched a missing `export-ignore` would go green on the
-		// very regression it exists to catch (the 2026-08-23 alias-symlink bug),
-		// so a clone whose archive still carries a symlink entry is a HARD STOP
-		// here, pointing at the gate that owns the invariant.
-		const exported = Bun.spawnSync(
-			['bash', '-c', `git -C '${cloneDir}' archive --format=tar HEAD | tar -tvf -`],
-			{ stdout: 'pipe', stderr: 'pipe' },
-		);
-		const symlinkEntries = exported.stdout
-			.toString()
-			.split('\n')
-			.filter((line) => /^l[rwxsStT-]{9}\s/.test(line));
-		must(
-			symlinkEntries.length === 0,
-			`the release clone's archive carries symlink entries, so the installer ` +
-				`would refuse it outright — add the missing \`export-ignore\` rules to ` +
-				`.gitattributes (gate: test/unit/release_archive_tripwire.test.ts):\n` +
-				symlinkEntries.join('\n'),
-		);
-		await runGit(['-C', cloneDir, 'add', '-A'], 'add');
-		await runGit(
-			[
-				'-C',
-				cloneDir,
-				'-c',
-				'user.name=update drill',
-				'-c',
-				'user.email=drill@localhost',
-				'commit',
-				'-m',
-				`release ${RELEASE_VERSION} (update drill)`,
-			],
-			'commit',
-		);
-		// Only a ref named `master` claims the published <v>.zip name
-		// (code_build_plan.ts). `--dev` deliberately renames to something else, so
-		// the build lands as `<v>-dev.zip` — a real developer build, not a release
-		// wearing a different name.
-		await runGit(['-C', cloneDir, 'branch', '-m', RELEASE_BRANCH], `branch -m ${RELEASE_BRANCH}`);
+		// scripts/lib/release_clone.ts: clone → `checkout -B` → edit → commit. The
+		// branch is taken with `checkout -B`, never `branch -m`: a PR checkout is a
+		// DETACHED HEAD (refs/remotes/pull/N/merge) and `branch -m` refuses it. Only a
+		// ref named `master` claims the published <v>.zip name (code_build_plan.ts);
+		// `--dev` deliberately uses another name, so the build lands as `<v>-dev.zip` —
+		// a real developer build, not a release wearing a different name.
+		await cloneForReleaseCommit({
+			source: projectRoot,
+			cloneDir,
+			releaseBranch: RELEASE_BRANCH,
+			message: `release ${RELEASE_VERSION} (update drill)`,
+			edit: (dir) => {
+				const versionTsPath = join(dir, 'src', 'core', 'update', 'version.ts');
+				writeFileSync(
+					versionTsPath,
+					setVersionTriple(
+						readFileSync(versionTsPath, 'utf8'),
+						RELEASE_TRIPLE_LITERAL,
+						'release clone',
+					),
+				);
+				writeFileSync(join(dir, '.bun-version'), Bun.version);
+				// The clone INHERITS the repo's export rules — it never repairs them.
+				// A drill that patched a missing `export-ignore` would go green on the
+				// very regression it exists to catch (the 2026-08-23 alias-symlink bug),
+				// so a clone whose archive still carries a symlink entry is a HARD STOP
+				// here, pointing at the gate that owns the invariant.
+				const exported = Bun.spawnSync(
+					['bash', '-c', `git -C '${dir}' archive --format=tar HEAD | tar -tvf -`],
+					{ stdout: 'pipe', stderr: 'pipe' },
+				);
+				const symlinkEntries = exported.stdout
+					.toString()
+					.split('\n')
+					.filter((line) => /^l[rwxsStT-]{9}\s/.test(line));
+				must(
+					symlinkEntries.length === 0,
+					`the release clone's archive carries symlink entries, so the installer ` +
+						`would refuse it outright — add the missing \`export-ignore\` rules to ` +
+						`.gitattributes (gate: test/unit/release_archive_tripwire.test.ts):\n` +
+						symlinkEntries.join('\n'),
+				);
+			},
+		});
 
 		// ---------------------------------------------------------------
 		// STEPS 2–4 — the MASTER: boot, build through the wire, serve
@@ -710,6 +709,11 @@ async function main(): Promise<void> {
 			scratch,
 			extra: {
 				DRILL_ROLE: 'master',
+				// The master IS this checkout as the operator configured it: its
+				// private dir is the drill's own (the DEDALO_PRIVATE_DIR override
+				// included — under `ci:local` that is the empty runner-condition dir,
+				// and the master must not fall back to the developer's real file).
+				DEDALO_PRIVATE_DIR: privateDir,
 				DEDALO_TEST_MEDIA_ROOT: testMediaRoot,
 				IS_A_CODE_SERVER: 'true',
 				// The master half of the dev channel's TWO switches: without it the
@@ -782,13 +786,17 @@ async function main(): Promise<void> {
 		console.log('[drill] copying the checkout as the consumer install…');
 		await materializeConsumer(projectRoot, consumerTree);
 		// A real install is configured by its own <private>/.env; give the copy
-		// one (the live operator keys, 0600), so the required keys resolve while
-		// EVERY runtime surface above stays pinned to the scratch dirs — process
-		// env outranks the file, exactly as in production.
+		// one — the OPERATOR CONFIG rendered as a file (0600): the private file if
+		// there is one, overlaid by the catalog keys of this process's environment,
+		// so the required keys resolve on a developer machine AND on a hosted
+		// runner that has no file, while EVERY runtime surface above stays pinned
+		// to the scratch dirs — process env outranks the file, exactly as in
+		// production. Never a byte copy of the live file, and never the runner's
+		// PATH or token: scripts/lib/operator_config.ts.
 		const consumerPrivateDir = join(scratch, 'private');
 		mkdirSync(consumerPrivateDir, { recursive: true });
 		const consumerEnvFile = join(consumerPrivateDir, '.env');
-		writeFileSync(consumerEnvFile, readFileSync(join(privateDir, '.env'), 'utf8'), { mode: 0o600 });
+		writeFileSync(consumerEnvFile, renderEnvFile(operatorConfig()), { mode: 0o600 });
 		const consumerBackupRoot = join(scratch, 'consumer_code_backups');
 		const consumerPort = await findFreePort(masterPort + 1);
 		const consumerOrigin = `http://127.0.0.1:${consumerPort}`;

@@ -129,7 +129,7 @@ describe('propagate_component_data — gates', () => {
 
 	test("'add' is refused on a mono-value model", async () => {
 		const run = await handler();
-		// component_select is in COMPONENTS_MONOVALUE; test2 has no select child,
+		// component_select declares the `monovalue` facet; test2 has no select child,
 		// so use the section's own dd-level select if present — otherwise assert
 		// the guard through a model that IS mono-value on this install.
 		const monoTipo = (await sql`

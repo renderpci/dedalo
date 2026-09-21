@@ -115,6 +115,11 @@ const CENSUS: readonly CensusEntry[] = [
 		why: 'builds the SQL timestamp literal an import row is written with',
 	},
 	{
+		file: 'src/core/ontology/property_census.ts',
+		role: 'documentation',
+		why: 'a REGISTRY of ontology property NAMES: `date_mode` appears as a string in the honoured-key list, and nothing here reads or renders a date',
+	},
+	{
 		file: 'src/core/geoip/download.ts',
 		role: 'machine-timestamp',
 		why: 'interpolates year/month into a DOWNLOAD URL, not into a date value',

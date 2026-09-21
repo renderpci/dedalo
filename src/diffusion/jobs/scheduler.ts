@@ -3,7 +3,10 @@
  *
  * Claims queued jobs (bounded by DEDALO_DIFFUSION_MAX_RUNNERS, default 2) and
  * spawns one RUNNER PROCESS per claim: `bun run src/diffusion/runner.ts --job
- * <uuid>` — same codebase, separate process, own memory ceiling, killable.
+ * <uuid> --epoch <attempt>` — same codebase, separate process, own memory
+ * ceiling, killable. The epoch is the claim's LEASE (PUB-13): it fences every
+ * write that process makes, so a runner whose row was requeued and re-claimed
+ * under it cannot write to the row it lost.
  * The runner talks only to Postgres (and later the publication targets), so a
  * runner daemon on another machine claiming from the same queue needs no code
  * change — this local spawner is just the default deployment.
@@ -21,6 +24,7 @@ import {
 	countRunningJobs,
 	failedJobResult,
 	finishJob,
+	type JobLease,
 	purgeTerminalJobs,
 	recordRunnerPid,
 	sweepStaleJobs,
@@ -158,6 +162,12 @@ let ticking = false;
 /**
  * Spawn the runner process for a claimed job and record its pid.
  *
+ * The claim's EPOCH travels on the argv (`--job <id> --epoch <attempt>`), never
+ * re-read by the runner: the row it would re-read may already belong to a newer
+ * attempt, which is the very race the lease exists to lose safely. Every write
+ * this function and that process make is fenced on the pair (PUB-13,
+ * engineering/wire_contract/WC-2026-09-05-diffusion-lease-epoch-fence.md).
+ *
  * The interpreter is `process.execPath` — the SAME bun binary running this
  * server — not a bare `bun` off PATH. A deployment pins an absolute interpreter
  * in its unit file (deploy/dedalo-ts.service) while systemd's PATH may not
@@ -166,15 +176,19 @@ let ticking = false;
  * correct semantic: the runner is this codebase, not whatever bun is first on
  * an operator's PATH.
  */
-function spawnRunner(jobId: string): void {
+function spawnRunner(lease: JobLease): void {
+	const jobId = lease.job_id;
 	let child: Bun.Subprocess;
 	try {
-		child = Bun.spawn([process.execPath, 'run', runnerModulePath, '--job', jobId], {
-			cwd: new URL('../../../', import.meta.url).pathname,
-			stdout: 'ignore',
-			stderr: 'inherit',
-			env: { ...process.env },
-		});
+		child = Bun.spawn(
+			[process.execPath, 'run', runnerModulePath, '--job', jobId, '--epoch', String(lease.attempt)],
+			{
+				cwd: new URL('../../../', import.meta.url).pathname,
+				stdout: 'ignore',
+				stderr: 'inherit',
+				env: { ...process.env },
+			},
+		);
 	} catch (error) {
 		// The claim already happened, so NOBODY owns this row: no runner exists to
 		// finish it and no heartbeat will ever go stale-then-heal for ~20 s of a
@@ -186,7 +200,7 @@ function spawnRunner(jobId: string): void {
 			coordinates: { job: jobId },
 		});
 		logError(typed, { subsystem: 'diffusion scheduler' });
-		finishJob(jobId, 'failed', failedJobResult(typed, toErrorBody(typed).message)).catch(
+		finishJob(lease, 'failed', failedJobResult(typed, toErrorBody(typed).message)).catch(
 			(failError) =>
 				console.error('[diffusion scheduler] releasing the unspawned job failed:', failError),
 		);
@@ -196,7 +210,7 @@ function spawnRunner(jobId: string): void {
 	// host); liveness truth is the HEARTBEAT, which also covers remote runners.
 	// Caught, not void'd: this runs OUTSIDE the tick's try/catch, and a floating
 	// rejection kills the whole Bun process (S1-15).
-	recordRunnerPid(jobId, child.pid).catch((error) =>
+	recordRunnerPid(lease, child.pid).catch((error) =>
 		console.error('[diffusion scheduler] recordRunnerPid failed:', error),
 	);
 	// Reap on exit so a finished runner never lingers as a zombie. The exit
@@ -222,7 +236,7 @@ export async function schedulerTick(): Promise<void> {
 		while (true) {
 			const claimed = await claimNextQueuedJob(hostname(), MAX_RUNNERS);
 			if (claimed === null) break;
-			spawnRunner(claimed.job_id);
+			spawnRunner({ job_id: claimed.job_id, attempt: claimed.attempt });
 		}
 	} catch (error) {
 		console.error('[diffusion scheduler] tick failed:', error);

@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_join} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -90,7 +91,7 @@ view_text_list_geolocation.render = async function(self, options) {
 			return JSON.stringify(el)
 		})
 		// Join using the context-configured separator (e.g. ' | ')
-		const value_string	= string_values.join(self.context.fields_separator)
+		const value_string	= render_join(string_values, self.context.fields_separator, 'text')
 
 	// wrapper. Set as span
 		const wrapper = ui.create_dom_element({

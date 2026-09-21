@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -26,7 +27,7 @@
 * Main exports:
 *   - view_collapse_list_json        – view namespace / constructor stub
 *   - view_collapse_list_json.render – async factory that returns the wrapper node
-*   - get_value_string               – pure helper for computing the display string
+*   - get_value_lines                – pure helper for computing the display lines
 *   - build_record_link              – Activity (dd542) "Go to record" button builder
 */
 export const view_collapse_list_json = function() {
@@ -58,7 +59,7 @@ export const view_collapse_list_json = function() {
 view_collapse_list_json.render = async function(self, options) {
 
 	// value_string
-		const value_string = get_value_string(self)
+		const value_string = render_value(get_value_lines(self), 'text').join('<br>')
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
@@ -128,7 +129,7 @@ view_collapse_list_json.render = async function(self, options) {
 *                        and `self.context.properties` {Object|undefined}.
 * @returns {string} value_string - HTML-safe display string (may contain <br>).
 */
-export const get_value_string = function(self) {
+export const get_value_lines = function(self) {
 
 	// short vars
 		const data	= self.data.entries
@@ -143,9 +144,8 @@ export const get_value_string = function(self) {
 			for (let [key, current_value] of Object.entries(value)) {
 				ar_values.push( key + ': ' + current_value )
 			}
-			const value_string = ar_values.join('<br>')
 
-			return value_string
+			return ar_values
 		}
 
 	// default cases
@@ -166,8 +166,8 @@ export const get_value_string = function(self) {
 				: ''
 
 
-	return value_string
-}//end get_value_string
+	return [value_string]
+}//end get_value_lines
 
 
 

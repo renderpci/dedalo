@@ -18,6 +18,7 @@
 import { SQL } from 'bun';
 import { config, dbNameSet } from '../config';
 import { NotFoundError } from '../errors';
+import { chargeQuery } from '../security/request-budget';
 import type { DbRow } from './types';
 
 /**
@@ -111,6 +112,11 @@ export async function dbExecute<T extends DbRow[] = DbRow[]>(
   // The allowlist runs FIRST and is never stubbed: it is the security boundary, so a test
   // double must not be able to reach a database name the operator did not publish.
   assertKnownDb(db);
+  // Charged BEFORE the statement runs, and here rather than in any service, because this
+  // is the one function every query in the API passes through — including the test seam
+  // below, so a gate can count exactly what production would spend. See
+  // security/request-budget.ts for why the budget is per REQUEST and not per service call.
+  chargeQuery();
   if (testExecute !== null) {
     // Normalized like the real path, so a fake cannot hand tests a shape production never
     // produces (a Date where every real caller sees an ISO string).

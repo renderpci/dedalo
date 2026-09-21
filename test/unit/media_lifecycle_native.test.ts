@@ -23,27 +23,29 @@
  *
  * SCRATCH ONLY: the media root is not test-overridable through config, so every
  * case here passes an explicit `mediaRoot` pointing at a temp tree and plants
- * its own files. No real record's files are ever touched. The two cases that
- * need REAL bytes (ImageMagick dimensions, an ffmpeg cut) copy a sample out of
- * the install's media tree and skip honestly when it or the binary is absent.
+ * its own files. No real record's files are ever touched. The cases that need
+ * REAL bytes (ImageMagick dimensions, an ffmpeg cut) SYNTHESIZE them into the
+ * scratch tree — `magick xc:` for the raster, `ffmpeg -f lavfi testsrc` for the
+ * clip, the tool_posterframe idiom — and are `test.if(<binary present>)` with
+ * the reason in the test NAME. They used to copy a sample out of the
+ * INSTALL's media tree and `return` when it was absent: under the suite's own
+ * marked media root that sample never exists, so five cases — including the
+ * annotated-envelope preservation guard — passed with `assertions="0"` on every
+ * run (GATE-09). A gate that can only execute against an installation's files
+ * is exactly what the media-root law forbids; a gate that builds its situation
+ * runs everywhere the binary does.
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import {
-	copyFileSync,
-	existsSync,
-	mkdirSync,
-	readdirSync,
-	readFileSync,
-	rmSync,
-	writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { componentAvApiActions } from '../../src/core/api/handlers/dd_component_av_api.ts';
 import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { resolveMagick } from '../../src/core/media/engine/imagemagick.ts';
+import { runBinary } from '../../src/core/media/engine/spawn.ts';
 import {
 	listDeletedVersions,
 	removeSectionMediaFiles,
@@ -94,6 +96,35 @@ const avIdentity = {
 	lang: null,
 };
 const pathOpts = { initialMediaPath: '', maxItemsFolder: 1000, mediaRoot: ROOT };
+
+/**
+ * The two binaries the real-bytes cases need. Gated with `test.if` and the
+ * reason in the NAME — never an in-body `return`, which bun reports as a PASS
+ * with zero assertions.
+ */
+const HAVE_FFMPEG = existsSync(config.media.binaries.ffmpeg);
+const HAVE_MAGICK = existsSync(resolveMagick());
+
+/**
+ * Synthesize the image record's default-quality raster into the scratch root
+ * (a 100×50 JPG — the size the annotated envelope below is drawn for) and
+ * return its path. Built, not copied: nothing outside ROOT is read.
+ */
+async function synthesizeRaster(): Promise<string> {
+	if (image === null) throw new Error('image spec unavailable');
+	resetMediaRoot(ROOT);
+	const raster = buildMediaLocation(
+		image,
+		imageIdentity,
+		image.defaultQuality,
+		image.defaultExtension,
+		pathOpts,
+	).absolutePath;
+	mkdirSync(dirname(raster), { recursive: true });
+	await runBinary([resolveMagick(), '-size', '100x50', 'xc:green', raster], { nice: false });
+	if (!existsSync(raster)) throw new Error(`magick wrote no raster at ${raster}`);
+	return raster;
+}
 
 /** Write `content` at an absolute path, creating the directory. */
 function plant(absolutePath: string, content: string): string {
@@ -315,16 +346,11 @@ describe('section media delete/restore round trip', () => {
 		// repo-wide scan, and it is a SUBSET assertion against a named list: a new
 		// offender fails it, while the workstream that owns a listed one can strike its
 		// entry without breaking this suite.
-		const known = new Set([
-			// Handed off, 2026-08-09: `resolvePublishedFilePath` returns null when the
-			// key is unset, so on a default install diffusion UNPUBLISH silently deletes
-			// no published file at all — the same defect class, in the diffusion bridge.
-			'src/core/diffusion_bridge/diffusion_delete.ts',
-			// Its publish-side twin. This one at least FAILS LOUD
-			// (MissingDiffusionFilesRootError) instead of no-op'ing, but it still means
-			// file diffusion is unusable on an install that never wrote the key.
-			'src/diffusion/writers/files.ts',
-		]);
+		// Struck 2026-09-03 (P1-12 / PUB-03): the two diffusion entries — the
+		// delete-side `resolvePublishedFilePath` and its publish-side twin
+		// writers/files.ts — now resolve through ONE producer that reads
+		// `config.media.rootPath` (src/core/diffusion_bridge/published_files.ts).
+		const known = new Set<string>([]);
 		const repo = join(import.meta.dir, '../..');
 		/** Files matching `pattern` under src/ + tools/, repo-relative. */
 		const scan = (pattern: string): string[] => {
@@ -553,14 +579,13 @@ describe('dd_component_av_api::download_fragment', () => {
 		).rejects.toThrow(/duration/i);
 	});
 
-	/** Copy the install's AV sample onto the scratch identity; '' when absent. */
-	function seedAvSource(): string {
-		if (av === null) return '';
-		const sample =
-			config.media.rootPath === null
-				? ''
-				: join(config.media.rootPath, `av/${av.defaultQuality}/0/test94_test3_1.mp4`);
-		if (sample === '' || !existsSync(sample)) return '';
+	/**
+	 * Synthesize a 3 s test-pattern clip at the scratch identity's default
+	 * quality (ffmpeg's lavfi `testsrc` + a sine tone, the tool_posterframe
+	 * idiom) and return its path. Nothing outside ROOT is read.
+	 */
+	async function synthesizeAvSource(): Promise<string> {
+		if (av === null) throw new Error('av spec unavailable');
 		resetMediaRoot(ROOT);
 		const target = buildMediaLocation(
 			av,
@@ -570,7 +595,24 @@ describe('dd_component_av_api::download_fragment', () => {
 			pathOpts,
 		).absolutePath;
 		mkdirSync(dirname(target), { recursive: true });
-		copyFileSync(sample, target);
+		await runBinary(
+			[
+				config.media.binaries.ffmpeg,
+				'-y',
+				'-f',
+				'lavfi',
+				'-i',
+				'testsrc=size=320x240:duration=3',
+				'-f',
+				'lavfi',
+				'-i',
+				'sine=frequency=440:duration=3',
+				'-shortest',
+				target,
+			],
+			{ nice: false },
+		);
+		if (!existsSync(target)) throw new Error(`ffmpeg wrote no clip at ${target}`);
 		return target;
 	}
 
@@ -581,18 +623,20 @@ describe('dd_component_av_api::download_fragment', () => {
 	);
 
 	for (const watermark of [false, true]) {
-		test(`a real ${watermark ? 'watermarked ' : ''}cut lands in fragments/ and leaves no debris`, async () => {
-			if (av === null) throw new Error('av spec unavailable');
-			if (seedAvSource() === '') return; // honest skip: no AV sample on this box
-			if (watermark) {
-				const mark = watermarkFilePath(ROOT);
-				mkdirSync(dirname(mark), { recursive: true });
-				writeFileSync(mark, ONE_PIXEL_PNG);
-			}
+		test.if(HAVE_FFMPEG)(
+			`a real ${watermark ? 'watermarked ' : ''}cut of a synthesized clip lands in fragments/ and leaves no debris (needs ffmpeg)`,
+			async () => {
+				if (av === null) throw new Error('av spec unavailable');
+				await synthesizeAvSource();
+				if (watermark) {
+					const mark = watermarkFilePath(ROOT);
+					mkdirSync(dirname(mark), { recursive: true });
+					writeFileSync(mark, ONE_PIXEL_PNG);
+				}
 
-			let outcome: { url: string; absolutePath: string };
-			try {
-				outcome = await buildAvFragment({
+				// ffmpeg is present (the gate above), so a spawn failure here is a
+				// failure of the port — it throws, never returns.
+				const outcome = await buildAvFragment({
 					spec: av,
 					identity: avIdentity,
 					pathOpts,
@@ -602,19 +646,15 @@ describe('dd_component_av_api::download_fragment', () => {
 					tcOutSeconds: 2,
 					watermark,
 				});
-			} catch (error) {
-				// No ffmpeg on this box: the port is still gated by every case above.
-				if (/ffmpeg|ENOENT|not found/i.test((error as Error).message)) return;
-				throw error;
-			}
-			expect(existsSync(outcome.absolutePath)).toBe(true);
-			expect(outcome.url.endsWith('/fragments/fragment_test94_test3_987654_17.mp4')).toBe(true);
-			// The two-pass watermark stages an intermediate cut; NOTHING of it may
-			// survive beside the fragment (the atomic writer's finally owns both).
-			expect(readdirSync(dirname(outcome.absolutePath))).toEqual([
-				'fragment_test94_test3_987654_17.mp4',
-			]);
-		});
+				expect(existsSync(outcome.absolutePath)).toBe(true);
+				expect(outcome.url.endsWith('/fragments/fragment_test94_test3_987654_17.mp4')).toBe(true);
+				// The two-pass watermark stages an intermediate cut; NOTHING of it may
+				// survive beside the fragment (the atomic writer's finally owns both).
+				expect(readdirSync(dirname(outcome.absolutePath))).toEqual([
+					'fragment_test94_test3_987654_17.mp4',
+				]);
+			},
+		);
 	}
 });
 
@@ -693,87 +733,58 @@ describe('component_image SVG envelope', () => {
 		}
 	});
 
-	test('regeneration PRESERVES an annotated envelope and re-points its raster', async () => {
-		if (image === null) throw new Error('image spec unavailable');
-		const sample =
-			config.media.rootPath === null
-				? ''
-				: join(config.media.rootPath, 'image/1.5MB/0/test99_test3_1.jpg');
-		if (sample === '' || !existsSync(sample)) return; // honest skip (needs real dimensions)
-		resetMediaRoot(ROOT);
-		const raster = buildMediaLocation(
-			image,
-			imageIdentity,
-			image.defaultQuality,
-			image.defaultExtension,
-			pathOpts,
-		).absolutePath;
-		mkdirSync(dirname(raster), { recursive: true });
-		copyFileSync(sample, raster);
+	test.if(HAVE_MAGICK)(
+		'regeneration PRESERVES an annotated envelope and re-points its raster (needs ImageMagick)',
+		async () => {
+			if (image === null) throw new Error('image spec unavailable');
+			await synthesizeRaster();
 
-		const location = svgOverlayLocation(image, imageIdentity, pathOpts);
-		// An envelope whose raster href points at a STALE host path, plus a drawing.
-		plant(location.absolutePath, annotatedEnvelope('/old/host/path/test99_test3_987654.jpg'));
+			const location = svgOverlayLocation(image, imageIdentity, pathOpts);
+			// An envelope whose raster href points at a STALE host path, plus a drawing.
+			plant(location.absolutePath, annotatedEnvelope('/old/host/path/test99_test3_987654.jpg'));
 
-		const result = await createDefaultSvgFile(image, imageIdentity, pathOpts);
-		expect(result).toBe(location.absolutePath);
-		const after = readFileSync(location.absolutePath, 'utf8');
-		// The scholarship survives…
-		expect(after).toContain('id="layer_1"');
-		expect(after).toContain('M10,10 L40,40');
-		// …and the raster is back in step with where the file actually is.
-		expect(after).not.toContain('/old/host/path/');
-		expect(after).toContain('/image/1.5MB/987000/test99_test3_987654.jpg');
-	});
+			const result = await createDefaultSvgFile(image, imageIdentity, pathOpts);
+			expect(result).toBe(location.absolutePath);
+			const after = readFileSync(location.absolutePath, 'utf8');
+			// The scholarship survives…
+			expect(after).toContain('id="layer_1"');
+			expect(after).toContain('M10,10 L40,40');
+			// …and the raster is back in step with where the file actually is.
+			expect(after).not.toContain('/old/host/path/');
+			expect(after).toContain('/image/1.5MB/987000/test99_test3_987654.jpg');
+		},
+	);
 
-	test('no envelope on disk still yields the default one', async () => {
-		if (image === null) throw new Error('image spec unavailable');
-		const sample =
-			config.media.rootPath === null
-				? ''
-				: join(config.media.rootPath, 'image/1.5MB/0/test99_test3_1.jpg');
-		if (sample === '' || !existsSync(sample)) return;
-		resetMediaRoot(ROOT);
-		const raster = buildMediaLocation(
-			image,
-			imageIdentity,
-			image.defaultQuality,
-			image.defaultExtension,
-			pathOpts,
-		).absolutePath;
-		mkdirSync(dirname(raster), { recursive: true });
-		copyFileSync(sample, raster);
+	test.if(HAVE_MAGICK)(
+		'no envelope on disk still yields the default one, sized from the raster (needs ImageMagick)',
+		async () => {
+			if (image === null) throw new Error('image spec unavailable');
+			await synthesizeRaster();
 
-		const written = await createDefaultSvgFile(image, imageIdentity, pathOpts);
-		expect(written).not.toBeNull();
-		const svg = readFileSync(written as string, 'utf8');
-		expect(svg).toContain('<g id="raster">');
-		expect(svg).toContain('/image/1.5MB/987000/test99_test3_987654.jpg');
-	});
+			const written = await createDefaultSvgFile(image, imageIdentity, pathOpts);
+			expect(written).not.toBeNull();
+			const svg = readFileSync(written as string, 'utf8');
+			expect(svg).toContain('<g id="raster">');
+			expect(svg).toContain('/image/1.5MB/987000/test99_test3_987654.jpg');
+			// The dimensions are READ from the raster, not defaulted: the synthesized
+			// file is 100×50, and a 0×0 envelope renders as a blank edit view.
+			expect(svg).toContain('width="100"');
+			expect(svg).toContain('height="50"');
+		},
+	);
 
-	test('an unusable envelope (empty / not an svg) is replaced, not preserved', async () => {
-		if (image === null) throw new Error('image spec unavailable');
-		const sample =
-			config.media.rootPath === null
-				? ''
-				: join(config.media.rootPath, 'image/1.5MB/0/test99_test3_1.jpg');
-		if (sample === '' || !existsSync(sample)) return;
-		resetMediaRoot(ROOT);
-		const raster = buildMediaLocation(
-			image,
-			imageIdentity,
-			image.defaultQuality,
-			image.defaultExtension,
-			pathOpts,
-		).absolutePath;
-		mkdirSync(dirname(raster), { recursive: true });
-		copyFileSync(sample, raster);
-		const location = svgOverlayLocation(image, imageIdentity, pathOpts);
-		plant(location.absolutePath, '');
+	test.if(HAVE_MAGICK)(
+		'an unusable envelope (empty / not an svg) is replaced, not preserved (needs ImageMagick)',
+		async () => {
+			if (image === null) throw new Error('image spec unavailable');
+			await synthesizeRaster();
+			const location = svgOverlayLocation(image, imageIdentity, pathOpts);
+			plant(location.absolutePath, '');
 
-		await createDefaultSvgFile(image, imageIdentity, pathOpts);
-		expect(readFileSync(location.absolutePath, 'utf8')).toContain('<g id="raster">');
-	});
+			await createDefaultSvgFile(image, imageIdentity, pathOpts);
+			expect(readFileSync(location.absolutePath, 'utf8')).toContain('<g id="raster">');
+		},
+	);
 });
 
 // ---------------------------------------------------------------------------

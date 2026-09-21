@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import { render_value } from '../../common/js/utils/render_escape.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {same_section_id} from '../../common/js/utils/index.js'
 
@@ -52,6 +53,22 @@
 * activate-button concept for inline/mini render contexts but omits click behaviour
 * (read-only display).  This module adds full interactive create/open/delete flows.
 */
+/**
+* NEEDS_DOUBLE_CONFIRM
+* Whether removing a frame from this slot also deletes the frame TARGET record
+* — read from the server-resolved `context.delete_policy` (the ONE reader,
+* dataframeDeletePolicyOf; never from the ontology properties). Under a hard
+* policy the modal's Delete asks twice, the portal's "delete resource and all
+* links" grammar. Exported for the client gate (test_component_dataframe_delete).
+* @param {Object} context - the slot's structure context
+* @returns {boolean}
+*/
+export const needs_double_confirm = function(context) {
+	return context?.delete_policy==='delete_target_record'
+}
+
+
+
 export const view_default_list_dataframe = function() {
 
 	return true
@@ -299,7 +316,7 @@ const render_content_value = function(options) {
 *
 * This is the primary interactive surface for editing dataframe content.  The modal
 * provides a full edit form for the linked frame section, including a footer Delete
-* button that soft-deletes the frame by calling `self.unlink_record()`.
+* button that removes the frame by calling `self.unlink_record()`.
 *
 * Flow:
 *   1. Reads the LAST entry from `self.data.entries` (the most-recently linked frame
@@ -310,9 +327,16 @@ const render_content_value = function(options) {
 *      comes from the ontology label of the frame section type resolved during
 *      `component_portal.build()` into `self.target_section`.
 *   4. Adds a Delete button in the modal footer.  On confirmation:
-*      - Calls `self.unlink_record(last_value)` — soft-deletes the frame locator from
-*        the matrix; the frame target section record is NOT hard-deleted (see
-*        `dataframe_common::get_dataframe_delete_policy()` for the hard-delete opt-in).
+*      - Calls `self.unlink_record(last_value)` — removes the frame locator from
+*        the slot. What happens to the frame TARGET record is the SERVER's
+*        decision, resolved from this slot node's ontology by the one reader
+*        (`dataframeDeletePolicyOf`, src/core/relations/dataframe.ts) and
+*        served as `context.delete_policy`: `delete_target_record` (the v6
+*        `hard_delete: true`, or the spelled value) deletes it after a Time
+*        Machine snapshot once the unlink has committed, `delete_target`
+*        empties it, `unlink` leaves it. The client never deletes the target.
+*      - Under `delete_target_record` the user confirms TWICE (the portal's
+*        "delete resource and all links" grammar), since the record goes.
 *      - Closes the modal immediately after the unlink.
 *   5. Opens the modal via `ui.attach_to_modal()`.  The `callback` is invoked once
 *      the modal DOM is attached; it uses `ui.load_item_with_spinner()` to show a
@@ -326,12 +350,6 @@ const render_content_value = function(options) {
 *   7. When the modal closes (`modal.on_close`), calls `self.refresh()` with
 *      `build_autoload: true` to re-fetch data from the server, ensuring the button's
 *      rating colour and label reflect any edits made inside the modal.
-*
-* Hard-delete commented-out block (lines inside button_delete handler):
-*   The `hard_delete` branch is intentionally left commented out.  It was the
-*   previous deletion mechanism; the current default is always soft-delete via
-*   `unlink_record`.  Do NOT remove the commented-out code without a deprecation
-*   decision in the issue tracker.
 *
 * @param {Object} self - The `component_dataframe` instance.
 *   self.data.entries must be non-empty (caller's responsibility; this function
@@ -355,7 +373,9 @@ const open_target_section = async function (self) {
 		})
 
 	// header
-		const header = self.target_section[0].label
+		// (!) The modal header is parsed as HTML by attach_to_modal: the section
+		// label is ontology data, it goes through the ONE escaper as text.
+		const header = render_value(self.target_section[0].label, 'text')
 
 	// footer
 		const footer_container = ui.create_dom_element({
@@ -377,27 +397,31 @@ const open_target_section = async function (self) {
 					return
 				}
 
+				// hard policy: the target RECORD goes with the locator (server
+				// side, from this slot's ontology). The server resolved the slot's
+				// policy into context.delete_policy (the ONE reader,
+				// dataframeDeletePolicyOf) — the client never re-reads the
+				// properties. Second confirm, as the portal's "delete resource
+				// and all links" does.
+					if (needs_double_confirm(self.context) && !confirm(get_label.sure)) {
+						return
+					}
+
 				footer_container.classList.add('loading')
 
-				// hard_delete
-					// const hard_delete = (self.context.properties.hard_delete)
-					// 	? self.context.properties.hard_delete
-					// 	: false
-
-					// if(hard_delete){
-					// 	self.delete_linked_record({
-					// 		section_id : section_id,
-					// 		section_tipo : section_tipo,
-					// 	})
-					// }
-
-				// soft delete (default)
-					self.unlink_record(last_value)
-
-				// close modal
-					modal.close()
+				// unlink. The server applies the slot's delete policy to the
+				// target AFTER the locator is gone. AWAITED and READ: the modal
+				// closing is the grammar of "deleted", and it must not play over
+				// a refused or cancelled unlink (false — the API failure itself
+				// is already surfaced by the save path's handle_api_error).
+					const removed = await self.unlink_record(last_value)
 
 				footer_container.classList.remove('loading')
+
+				// close modal only after the unlink landed
+					if (removed===true) {
+						modal.close()
+					}
 			})
 
 	// modal. Create a modal to attach the section node

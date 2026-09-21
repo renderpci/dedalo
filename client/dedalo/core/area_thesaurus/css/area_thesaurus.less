@@ -85,7 +85,7 @@
 
 					>.typology_name {
 						background-color: @color_tag_indexation_normal;
-						color: @color_white;
+						color: var(--fg_on_accent);
 
 						&::before {
 							content: " [M] ";
@@ -114,8 +114,8 @@
 					cursor: pointer;
 
 					&:active {
-						background-color: @color_grey_9;
-						color: @color_white;
+						background-color: var(--bg_fill_inverse); // AA under the white ink of :active (audit P1-18)
+						color: var(--fg_inverse);
 					}
 
 					&::after {

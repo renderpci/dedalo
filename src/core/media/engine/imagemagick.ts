@@ -26,11 +26,17 @@
 import { randomUUID } from 'node:crypto';
 import { existsSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { config } from '../../../config/config.ts';
 import { pixelAreaBudget } from '../../concepts/media.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
-import { magickPolicyEnv, resolveIdentify, resolveMagick } from './binaries.ts';
+import { withConverterSlot } from './admission.ts';
+import {
+	magickPolicyEnv,
+	magickResourceLimitArgs,
+	resolveIdentify,
+	resolveMagick,
+} from './binaries.ts';
 import { probeImageSource } from './probe.ts';
 import { type SceneSelection, sceneToken } from './scene.ts';
 import { describeSpawnFailure, runBinary, type SpawnResult } from './spawn.ts';
@@ -354,8 +360,6 @@ export interface ConvertOptions {
 	 * absent) and why — unlike v6 — it is applied for opaque targets too.
 	 */
 	applyMetaAlpha?: MetaAlphaOption;
-	/** PDF source: rasterization density (dpi) + cropbox. */
-	pdfDensity?: number;
 	/**
 	 * Explicit thumbnail box (WxH, shrink-only). When set it OVERRIDES the quality
 	 * pixel-area budget — for the fixed-size thumb tier whose dimensions come from
@@ -378,16 +382,15 @@ export function buildConvertArgv(
 	options: ConvertOptions,
 ): string[] {
 	const argv: string[] = [resolveMagick()];
-	// PDF source: density + antialias + cropbox BEFORE the input (PHP :342-351).
-	if (options.pdfDensity !== undefined) {
-		argv.push(
-			'-density',
-			String(options.pdfDensity),
-			'-antialias',
-			'-define',
-			'pdf:use-cropbox=true',
-		);
-	}
+	// NO PDF BRANCH, deliberately (audit MEDIA-01, 2026-09-05). This recipe used to
+	// begin with `-density N -antialias -define pdf:use-cropbox=true` so ImageMagick
+	// would rasterize a PDF page itself — which it cannot do: it forks Ghostscript as
+	// a DELEGATE, an unbounded process this engine never sees and cannot kill (the
+	// measurements are in engine/ghostscript.ts). PDF pages are now rendered by
+	// engine/ghostscript.ts and this recipe only ever sees the RASTER it produced, so
+	// there is no density to pass and no PDF option to get wrong. The shipped policy
+	// denies the `gs` delegate, so a PDF handed here fails loudly rather than
+	// silently forking one.
 	argv.push(sceneToken(source, options.selection));
 	// IMMEDIATELY after the source and BEFORE the profiles and the background:
 	// v6's ordering (a `$middle_flags` that precedes the background/merge). The
@@ -590,15 +593,72 @@ export function buildConnectedComponentsArgv(source: string, areaThreshold: numb
  * `fatalStderr` lets a caller keep its own, better diagnostic ahead of the
  * generic "produced no output" (crop's out-of-bounds geometry).
  */
+/**
+ * `expectedOutput` is the file the recipe writes, and the postcondition below is
+ * about that file. A REPORT recipe writes none — it asks ImageMagick a question
+ * and reads stdout (`buildConnectedComponentsArgv`, whose sink is `null:`) — and
+ * passes `{ report: <source path> }` instead: same single spawn door, same
+ * hardened policy, same `-limit` argv, same process cap and same admission slot,
+ * with the file checks skipped because there is no file to check and the scratch
+ * dir following the SOURCE (there is no output to sit beside).
+ */
+/**
+ * WRITE (a recipe that produces an image) or REPORT (a recipe that produces a
+ * text answer on stdout and writes nothing — `buildConnectedComponentsArgv`,
+ * whose sink is `null:`). Both go through the ONE runner: same hardened policy,
+ * same `-limit` argv, same process cap, same admission slot. They differ only
+ * afterwards — a report has no file to verify, and any failing exit is fatal for
+ * it, because unlike an encode there is no "sound output despite a warning exit"
+ * case for a text answer.
+ */
+type MagickRunKind = 'write' | 'report';
+
 async function runMagickTo(
 	argv: string[],
+	// WRITE: the file the recipe produces. REPORT: the file it READS — either way
+	// the path whose directory receives the pixel-cache spill (see below).
 	expectedOutput: string,
 	fatalStderr?: RegExp,
+	kind: MagickRunKind = 'write',
 ): Promise<SpawnResult> {
 	// `magickPolicyEnv()` (engine/binaries.ts) is the hardened policy.xml every
 	// ImageMagick process in this engine loads — see that module for why the
 	// identify spawns carry it too.
-	const result = await runBinary(argv, { env: magickPolicyEnv() });
+	//
+	// `magickResourceLimitArgs()` is the other half (audit MEDIA-01): the policy is
+	// the hard ceiling, these argv are the install's operating bound. They are
+	// spliced HERE, in the runner, and never into a `build*Argv` recipe — the recipes
+	// are the wire contract `tier1_media_argv_native` pins, and a resource bound is
+	// not part of a recipe. Position: directly after the binary (`argv[0]`), before
+	// the source path, because ImageMagick reads `-limit` as a setting that must
+	// precede the image it governs.
+	//
+	// `withConverterSlot` (engine/admission.ts) is the THIRD half, and the one the
+	// other two cannot supply: a bound on ONE process multiplied by K concurrent
+	// uploads is not a bound. Measured 2026-09-05 — under the limits above, a 2.4 MB
+	// 20000x20000 TIFF no longer takes the RAM, it spends the whole `-limit disk`
+	// budget instead (16 GiB apparent / 8.2 GiB real) over 22 s, and two of them ran
+	// at once because `createStagedThumbnail` is awaited inline on the upload
+	// request. The permit is taken around the SPAWN only, never around the probe
+	// below, so no permit is ever held while waiting for another.
+	//
+	// `magickPolicyEnv(dirname(expectedOutput))` also names WHERE that spill may
+	// land: the directory of the file being written, inside the media root, the twin
+	// of the `TMPDIR` the PDF rasterizer hands Ghostscript. Left unset it followed
+	// the OS temp dir, which on both shipped compose stacks is the database's volume.
+	const result = await withConverterSlot('magick', () =>
+		runBinary([argv[0] as string, ...magickResourceLimitArgs(), ...argv.slice(1)], {
+			env: magickPolicyEnv(dirname(expectedOutput)),
+			// THE SAME BUDGET THE ARGV ASKS FOR, as a real process cap. `-limit time`
+			// is ImageMagick's own promise to stop, and a converter that is thrashing a
+			// disk cache is precisely the one least able to keep it; the default spawn
+			// budget (10 minutes) was longer than the limit the recipe declares, so the
+			// runner would sit past the point the engine had already called too long.
+			// One key (`DEDALO_MAGICK_LIMIT_TIME`) now bounds a conversion whichever
+			// program is doing it — the twin of the cap engine/ghostscript.ts uses.
+			timeoutMs: config.media.magickLimits.time * 1000,
+		}),
+	);
 	// A KILLED magick, not merely a TIMED-OUT one (audit 2026-08 B2, corrected
 	// 2026-08-09). `timedOut` is `capExpired && signal !== null` — a strict SUBSET
 	// of the kills — so `if (result.timedOut)` let through every kill we did not
@@ -610,37 +670,52 @@ async function runMagickTo(
 	// over a good one. The two conditions that made B2 invisible, met by a check
 	// that only ever looked at our own cap.
 	//
-	// The NON-ZERO EXIT stays tolerated below (the `console.warn` path): that is a
-	// real ImageMagick behaviour on sound output — TIFF-tag noise, a truncated but
-	// decodable JPEG — and failing it would narrow a capability the oracle had.
-	// A kill is categorically different: nothing was tolerated, the process died.
-	if (result.signal !== null) {
-		throw new Error(
-			`ImageMagick was killed writing ${expectedOutput}: ${describeSpawnFailure(result)}`,
-		);
+	// The NON-ZERO EXIT stays tolerated in the write postcondition (the
+	// `console.warn` path): that is a real ImageMagick behaviour on sound output —
+	// TIFF-tag noise, a truncated but decodable JPEG — and failing it would narrow
+	// a capability the oracle had. A kill is categorically different: nothing was
+	// tolerated, the process died.
+	// A REPORT run widens this one check instead of adding a second: any failing
+	// exit is fatal for it (see MagickRunKind).
+	if (result.signal !== null || (kind === 'report' && result.exitCode !== 0)) {
+		const verb = result.signal !== null ? 'was killed' : 'failed';
+		const what = kind === 'report' ? `analysing ${expectedOutput}` : `writing ${expectedOutput}`;
+		throw new Error(`ImageMagick ${verb} ${what}: ${describeSpawnFailure(result)}`);
 	}
 	if (fatalStderr?.test(result.stderr) === true) {
 		throw new Error(`ImageMagick failed: ${result.stderr}`);
 	}
+	if (kind === 'report') return result;
+	await assertWroteOneImage(expectedOutput, result);
+	return result;
+}
+
+/**
+ * THE POSTCONDITION OF A WRITING RUN: exactly one non-empty image at
+ * `expectedOutput`. Split out of `runMagickTo` so the runner itself stays the
+ * spawn door and nothing else (the crap ratchet's reason, and the honest one:
+ * the spawn policy and the output contract are two subjects).
+ */
+async function assertWroteOneImage(expectedOutput: string, result: SpawnResult): Promise<void> {
 	if (nonEmptyFile(expectedOutput)) {
 		// A file exists: the only remaining question is whether it is ONE image.
 		// A probe failure here is itself fatal — an output we cannot verify is not
 		// an output we ship. The caller's atomic writer removes the temp.
 		const probe = await probeImageSource(expectedOutput);
-		if (probe.sceneCount === 1) {
-			if (result.exitCode !== 0 || /ERROR:/i.test(result.stderr) || /ERROR:/i.test(result.stdout)) {
-				console.warn(
-					`ImageMagick warning (exit ${String(result.exitCode)}) writing ${expectedOutput}, output is sound: ${(
-						result.stderr || result.stdout
-					).slice(0, 400)}`,
-				);
-			}
-			return result;
+		if (probe.sceneCount !== 1) {
+			rmSync(expectedOutput, { force: true });
+			throw new Error(
+				`ImageMagick wrote ${probe.sceneCount} images into ${expectedOutput} — the source sequence was not reduced to one image (scene selection missing from the recipe)`,
+			);
 		}
-		rmSync(expectedOutput, { force: true });
-		throw new Error(
-			`ImageMagick wrote ${probe.sceneCount} images into ${expectedOutput} — the source sequence was not reduced to one image (scene selection missing from the recipe)`,
-		);
+		if (result.exitCode !== 0 || /ERROR:/i.test(result.stderr) || /ERROR:/i.test(result.stdout)) {
+			console.warn(
+				`ImageMagick warning (exit ${String(result.exitCode)}) writing ${expectedOutput}, output is sound: ${(
+					result.stderr || result.stdout
+				).slice(0, 400)}`,
+			);
+		}
+		return;
 	}
 	const swept = sweepSequenceSiblings(expectedOutput);
 	throw new Error(
@@ -767,14 +842,17 @@ export async function runConnectedComponents(
 	source: string,
 	areaThreshold: number,
 ): Promise<string> {
-	const result = await runBinary(buildConnectedComponentsArgv(source, areaThreshold), {
-		env: magickPolicyEnv(),
-	});
-	if (!result.ok) {
-		throw new Error(
-			`ImageMagick connected-components analysis failed: ${describeSpawnFailure(result)}`,
-		);
-	}
+	// Through runMagickTo like every other magick run in this engine, as a REPORT
+	// run: a report reads the SAME untrusted pixels a conversion does, so the
+	// policy env, the `-limit` argv, the process cap and the admission slot are
+	// not optional just because nothing is written. `source` stands in for the
+	// written path — it is what the scratch directory follows here.
+	const result = await runMagickTo(
+		buildConnectedComponentsArgv(source, areaThreshold),
+		source,
+		undefined,
+		'report',
+	);
 	return result.stdout;
 }
 

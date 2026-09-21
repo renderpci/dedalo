@@ -1528,7 +1528,8 @@ const render_operator_selector = function(self) {
 *    If found, calls view_default_autocomplete[add_value.perform.function]()
 *    and opens the grid-choose panel; warns to console when the function is
 *    not defined on the view object.
-*  - Default (no custom event): calls self.caller.link_record(locator), clears
+*  - Default (no custom event): AWAITS `commit_selection` (the caller's
+*    `link_records` door, refusals surfaced as a notification), then clears
 *    the datalist and search input, and hides the service.
 *
 * (!) The commented-out `data` / `context` / `ar_search_sections` blocks
@@ -1714,8 +1715,11 @@ export const render_datalist = async function(self, result) {
 
 					// default click action
 
-					// add value. Don't wait here
-						self.caller?.link_record(value)
+					// add value. AWAITED, and its outcome READ: the pick is the
+					// cataloguer's commit, and the widget's own visual grammar
+					// (list cleared, input cleared, widget hidden) is the grammar
+					// of success — it must not play before the answer is known.
+						await commit_selection(self, value)
 
 					// clean the last list
 						while (datalist.firstChild) {
@@ -1783,6 +1787,66 @@ export const render_datalist = async function(self, result) {
 
 	return datalist
 }//end render_datalist
+
+
+
+/**
+* COMMIT_SELECTION
+* THE default pick action of the datalist: links ONE locator into the caller
+* through its `link_records` door and SURFACES every refusal.
+*
+* Until 2026-09-04 the selection handler fired `self.caller?.link_record(value)`
+* with the comment "Don't wait here" and immediately cleared the list, cleared
+* the input and hid the widget — the visual grammar of success — while the
+* door's own contract says NOTHING IS DROPPED SILENTLY: every locator that does
+* not land comes back in `refused` with a named reason. A pick of a record
+* already linked (but outside the loaded page, so the client-side duplicate scan
+* missed it) was refused by the server, logged to the console, and the screen
+* said nothing. Refusals now reach the cataloguer as a notification toast (not a
+* blocking alert: the datalist is a keyboard-driven surface and the refusal is
+* informational — the stored data already equals the intent in the dominant
+* duplicate case).
+*
+* Exported so the client suite can drive it against a fake caller.
+*
+* @param {Object} self    - The service_autocomplete instance (`self.caller` is
+*                           a relation component: component_portal or a model
+*                           inheriting its prototype).
+* @param {Object} locator - The picked locator.
+* @returns {Promise<Object>} the `link_records` outcome
+*                            `{linked:[locator], refused:[{locator, reason}], total}`.
+*/
+export const commit_selection = async function(self, locator) {
+
+	const caller = self.caller
+
+	// a caller without the door is a wiring defect: name it, never drop the pick
+		if (!caller || typeof caller.link_records!=='function') {
+			const reason = 'caller_without_link_records'
+			console.error('(!) [service_autocomplete.commit_selection] refused:', reason, 'caller:', caller);
+			return {linked: [], refused: [{locator: locator, reason: reason}], total: null}
+		}
+
+	// link. ONE save through the caller's door; the outcome is the whole point
+		const outcome = await caller.link_records([locator])
+
+	// refused. Every locator that did not land, with its reason, to the cataloguer
+		const refused = Array.isArray(outcome?.refused) ? outcome.refused : []
+		if (refused.length>0) {
+			const lines = refused.map(item => item.locator
+				? `${item.reason} — ${item.locator.section_tipo}_${item.locator.section_id} ${item.locator.label || ''}`.trim()
+				: String(item.reason)
+			)
+			event_manager.publish('notification', {
+				msg			: (get_label.error || 'Error') + ': ' + lines.join('\n'),
+				type		: 'warning',
+				remove_time	: 10000,
+				refused		: refused
+			})
+		}
+
+	return outcome
+}//end commit_selection
 
 
 

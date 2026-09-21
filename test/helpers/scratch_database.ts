@@ -70,6 +70,15 @@ export function pidIsAlive(pid: number): boolean {
 export async function sweepOrphanScratchDatabases(
 	admin: DbConnDescriptor,
 	prefix: string,
+	options: {
+		/**
+		 * A gate whose scratch database SPAWNS derived names (the restore door's
+		 * `<db>_restoring_<stamp>` / `<db>_pre_restore_<stamp>`) names the grammar
+		 * of what may follow the pid; the pid itself is still the ownership proof.
+		 * Absent, nothing may follow the pid (the historical grammar).
+		 */
+		derivedSuffix?: RegExp;
+	} = {},
 ): Promise<void> {
 	// In LIKE, `_` matches ANY single character: escape the literal underscores
 	// so the pattern cannot reach past the caller's own prefix.
@@ -85,15 +94,21 @@ export async function sweepOrphanScratchDatabases(
 		.filter((line) => line.length > 0);
 	for (const name of names) {
 		const suffix = name.slice(prefix.length);
-		if (!/^[1-9][0-9]*$/.test(suffix)) {
+		const parsed = /^([1-9][0-9]*)(.*)$/.exec(suffix);
+		const derived = parsed?.[2] ?? '';
+		if (
+			parsed === null ||
+			(derived !== '' &&
+				(options.derivedSuffix === undefined || !options.derivedSuffix.test(derived)))
+		) {
 			console.warn(
 				`[UNCOVERED] scratch sweep REFUSES "${name}": the part after "${prefix}" ` +
-					`("${suffix}") is not a bare pid, so this gate cannot know it made it. ` +
+					`("${suffix}") is not a bare pid${options.derivedSuffix ? ' (or a pid plus a declared derived suffix)' : ''}, so this gate cannot know it made it. ` +
 					'Nothing dropped — remove it by hand if it is yours.',
 			);
 			continue;
 		}
-		const pid = Number(suffix);
+		const pid = Number(parsed[1]);
 		if (pid === process.pid) continue; // our own database, not an orphan
 		if (pidIsAlive(pid)) continue; // a live sibling shard still owns it
 		// The name is identifier-quoted AND validated against ^prefix[1-9][0-9]*$

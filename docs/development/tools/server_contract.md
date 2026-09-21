@@ -29,10 +29,13 @@ Every entry in `apiActions` is a `ToolActionSpec`:
 
 ```ts
 interface ToolActionSpec {
-  permission: 'section' | 'tipo' | 'record' | 'developer' | null;
+  permission: 'section' | 'section_list' | 'targets' | 'tipo' | 'record' | 'record_tipo' | 'developer' | null;
   minLevel?: number;   // dd774 level: 1=read, 2=write (default), 3=admin
+  sectionTipos?: (options) => unknown[];   // REQUIRED for 'section_list'
+  targets?: (options) => WriteTarget[];    // REQUIRED for 'targets'
   handler: (context: ToolActionContext) => Promise<ToolResponse>;
 }
+interface WriteTarget { section_tipo: unknown; tipo?: unknown; section_id?: unknown }
 ```
 
 `handler` receives `{ principal, userId, options, background, publishProgress?, clientIp? }` and returns a `ToolResponse`, which **replaces the API envelope wholesale**. So a `ToolResponse` **is** the API envelope: build it with `ok(data, …)`, and add the extra top-level fields the client reads by name (a streaming body, a job id, a per-item report) as `extend`.
@@ -89,10 +92,15 @@ The client sends this (built by the JS helper `this.tool_request()`):
 | `section` | `section_tipo` | permission level ≥ `minLevel` on `(section_tipo, section_tipo)` |
 | `tipo` | `section_tipo` + `tipo` | permission level ≥ `minLevel` on `(section_tipo, tipo)` |
 | `record` | `section_tipo` + numeric `section_id` | the `tipo`-equivalent section-level check **plus** the record must be inside the caller's project scope (global admins skip this) |
+| `record_tipo` | `section_tipo` + `tipo` (alias `component_tipo`) + numeric `section_id` | the `(section_tipo, tipo)` PAIR **plus** the record scope — the gate for a component OF a record |
+| `section_list` | whatever `sectionTipos(options)` returns | level ≥ `minLevel` on every returned section; an empty list or an invalid entry is a denial |
+| `targets` | whatever `targets(options)` returns | level ≥ `minLevel` on every `(section_tipo, tipo?)` — the PAIR when `tipo` is named — and, when `section_id` is named, a positive record inside the caller's scope; an empty list, a malformed entry or a throwing extractor is a denial |
 | `developer` | — | `principal.isDeveloper` |
 | `null` | — | always passes here — the handler gates imperatively (defense in depth), e.g. `tool_export`'s `get_export_grid` (which must additionally assert read on every SQO target the grid touches, something the declarative gate cannot express) |
 
-`minLevel` defaults to `2` (write) when omitted. A missing or ill-typed required option field (e.g. no `section_tipo` for a `tipo` gate) is a **fail-closed denial**, never a pass — the request never reaches the handler. The dispatcher enforces the declarative spec before the handler runs; a handler needing a target shape none of the four kinds can express (e.g. an SQO-wide write with no single record) declares `permission: null` and gates itself imperatively as defense in depth.
+`minLevel` defaults to `2` (write) when omitted. A missing or ill-typed required option field (e.g. no `section_tipo` for a `tipo` gate) is a **fail-closed denial**, never a pass — the request never reaches the handler. The dispatcher enforces the declarative spec before the handler runs.
+
+**Declare the gate on the target the action WRITES.** When the effect target is not a top-level option — the scope rides in `options.sqo` (`tool_update_cache::update_cache` re-saves the selected components on every matched row), in a nested client map (`tool_import_files` writes into every `tool_config.ddo_map` destination), or the handler pins a section by constant (`tool_hierarchy` writes `hierarchy1/<section_id>` whatever `section_tipo` arrives) — use `targets` and derive the write targets **off the same keys the handler reads**. A `section`/`tipo` gate on a sibling field authorizes something the action never touches and leaves what it does touch ungated. A target the handler can only resolve at run time — an ontology-derived portal section, or a RECORD it binds while running (a filename prefix, a matcher hit, a role write's destination) — is authorized inside the handler at the point it is bound, before the first write into it, through the save door's own record-scope rule (`assertRecordWriteTarget`); a record created in the same run is admitted as a create is. `test/unit/action_scope_binding_tripwire.test.ts` binds every such handler to its extractor; `permission: null` remains the named exemption for an action no declarative kind can express, and it must say in `gatedInHandler` what the handler does instead.
 
 !!! warning "Never list lifecycle hooks"
     `isAvailable`, `onRegister` and `onRemove` are called by the framework, not remotely. `loader.ts` throws (refusing to load the tool) if any of them appears as a key of `apiActions`.

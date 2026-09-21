@@ -10,8 +10,34 @@
 @import (once) '../../../client/dedalo/core/page/css/layout/vars';
 
 // local vars
+//
+// THE IDENTITY HUE IS AN EDGE, NOT A BUTTON FILL (CSS coherence audit
+// 2026-09-06, DESIGN clause 2.c). `--tool_lang_multi` is what names this tool:
+// tool_common demotes it to the 4px top edge of the header, and the lang column
+// rule and the active-lang ink read it. The translate-all button painted the
+// theme ink on it and landed at 4.38:1 under the redesign line's dark surface
+// ink (#26241f), under the 4.5:1 floor — it clears the floor on the classic dark
+// surface (#1b1d20, 4.77:1) only because that ink is darker, which is a margin,
+// not a design. So the BUTTON FILL splits off from the hue — the same split the
+// brand made (--color_orange_dedalo fill / --fg_on_brand ink) and the redesign
+// line makes (--accent / --accent-text).
+//
+// The fill is declared PER AXIS because the ink this button carries is
+// `@color_white`, which a tool sheet reads as the THEME's surface ink — near
+// white in light, near black in dark — so the two axes need opposite lightness:
+//   light  the identity violet already carries #ffffff at 5.47:1 (5.43:1 under
+//          the redesign #fffefc), so the fill IS the hue and the light
+//          appearance is untouched.
+//   dark   #a186d6, one step brighter than theme_dark's #9878d0: 5.55:1 under
+//          the classic dark ink, 5.09:1 under redesign-dark's — headroom on both
+//          instead of a hairline on one.
 :root {
 	--tool_lang_multi: #7859ae;
+	--tool_lang_multi_fill: var(--tool_lang_multi);
+}
+// dark theme override (self-contained — the tool's own token, never a palette name)
+:root[data-theme="dark"] {
+	--tool_lang_multi_fill: #a186d6;
 }
 @tool_color : var(--tool_lang_multi);
 
@@ -49,8 +75,11 @@
 
 		// translate-all button (one click)
 		.button_automatic_translation {
-			background-color: @tool_color;
-			border-color: var(--tool_lang_multi);
+			// the fill, never the identity hue: this button carries text (see the
+			// :root header). Border and background are the same colour here, as
+			// they always were — the button is a solid, not an outline.
+			background-color: var(--tool_lang_multi_fill);
+			border-color: var(--tool_lang_multi_fill);
 			color: @color_white;
 			min-height: 2.5em;
 		}

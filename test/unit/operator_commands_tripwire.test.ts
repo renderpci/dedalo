@@ -408,6 +408,8 @@ describe('every daemon environment key an operator page names is one the daemon 
 		PREPROD_ROOT:
 			'RETIRED, and named on purpose: the adoption page has to tell an operator which keys their pre-instance .env carries. Held to the assignment rule below — history may be described, never assigned.',
 		PROD_ROOT: 'the same retired pair, and the same rule',
+		O_NOFOLLOW:
+			"the POSIX open(2) FLAG the daemon's shared writer passes on every descriptor, named in the internals page; it is a kernel constant, never an environment key",
 		AGENTS: 'the agent brief file AGENTS.md, named in a workspace listing',
 		CLAUDE: 'the symlink CLAUDE.md beside it, named in the same listing',
 	});

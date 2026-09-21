@@ -8,8 +8,8 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
+	import {render_value, render_fallback_value} from '../../common/js/utils/render_escape.js'
 	import {attach_item_dataframe} from '../../component_common/js/component_common.js'
-	import {get_fallback_value} from '../../common/js/common.js'
 
 
 
@@ -194,7 +194,7 @@ const get_content_value = (i, current_value, self) => {
 		const data					= self.data || {}
 		const entries				= data.entries || []
 		const ar_fallback_value		= data.fallback_value || []
-		const fallback				= get_fallback_value(entries, ar_fallback_value)
+		const fallback				= render_fallback_value(entries, ar_fallback_value, self.context.render_class)
 		const dirty_fallback_value	= fallback[i]
 	// clean fallback of any tag (deferred until needed)
 		let fallback_value = null
@@ -205,7 +205,7 @@ const get_content_value = (i, current_value, self) => {
 			const fallback_fragment = document.createDocumentFragment()
 			ui.create_dom_element({
 				element_type	: 'div',
-				inner_html		: dirty_fallback_value,
+				inner_html		: render_value(dirty_fallback_value, self.context.render_class),
 				parent			: fallback_fragment
 			})
 			fallback_value = fallback_fragment.firstChild.innerText
@@ -214,7 +214,7 @@ const get_content_value = (i, current_value, self) => {
 
 	// value_string is a raw html without parse into nodes (txt format)
 		const value_string = current_value?.value
-			? self.tags_to_html(current_value.value)
+			? render_value(self.tags_to_html(current_value.value), self.context.render_class)
 			: null
 
 	// content_value
@@ -242,7 +242,7 @@ const get_content_value = (i, current_value, self) => {
 			? ui.create_dom_element({
 				element_type	: 'p',
 				class_name		: 'placeholder ck-placeholder',
-				inner_html		: get_fallback_value_clean(),
+				inner_html		: render_value(get_fallback_value_clean(), 'text'),
 				parent			: value_container
 			  })
 			: null
@@ -408,7 +408,7 @@ const get_content_value = (i, current_value, self) => {
 const get_content_value_read = (i, current_value, self) => {
 
 	// value is a raw html without parse into nodes (txt format)
-		const value = self.tags_to_html(current_value?.value)
+		const value = render_value(self.tags_to_html(current_value?.value), self.context.render_class)
 
 	// content_value
 		const content_value = ui.create_dom_element({

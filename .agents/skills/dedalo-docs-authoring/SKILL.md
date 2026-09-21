@@ -96,10 +96,12 @@ psql -h /tmp -U render -d dedalo_mib_v7 -At -c \
 ## Document what is WIRED, and mark what is inert
 
 An ontology key that exists in real nodes is not proof it does anything.
-`hard_delete` sits on 59 nodes and **nothing reads it** (no `src/` reader; the
-client branch is commented out), while the implemented opt-in is
-`properties.dataframe.delete_policy`, used by **zero** nodes. Both facts belong
-in the page — a reader copying `hard_delete` gets silence.
+`hard_delete` sat on 59 dataframe slot nodes and **nothing read it** from v6
+until 2026-09-06 (its only reader was a commented-out client branch); the page
+had to say so, or a reader copying it got silence. It is wired now (the hard
+value of the slot's `dataframe.delete_policy`), and the page says THAT — with
+the date the meaning changed, because the same key on the same node was inert
+the day before.
 
 Before documenting a property as having an effect:
 

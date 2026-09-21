@@ -670,14 +670,21 @@ describe('processUploadedFile (ingest → derivatives → files_info)', () => {
 describe('job manager (supervised, capped, cancellable)', () => {
 	test('runs a job to completion with progress + status frame', async () => {
 		let tick = 0;
-		const mgr = new MediaJobManager(2, () => {
-			tick += 10;
-			return tick;
+		const mgr = new MediaJobManager({
+			budgets: { media: 2 },
+			clock: () => {
+				tick += 10;
+				return tick;
+			},
 		});
-		const rec = mgr.submit('probe', async ({ onProgress }) => {
-			onProgress(50);
-			return { ok: true };
-		});
+		const rec = mgr.submit(
+			'probe',
+			async ({ onProgress }) => {
+				onProgress(50);
+				return { ok: true };
+			},
+			{ lane: 'media' },
+		);
 		expect(rec.status).toBe('queued');
 		// let the microtask/worker run
 		await new Promise((r) => setTimeout(r, 20));
@@ -690,7 +697,7 @@ describe('job manager (supervised, capped, cancellable)', () => {
 	});
 
 	test('concurrency cap: only N run at once', async () => {
-		const mgr = new MediaJobManager(2, () => 0);
+		const mgr = new MediaJobManager({ budgets: { media: 2 }, clock: () => 0 });
 		let concurrent = 0;
 		let maxConcurrent = 0;
 		const gate = (): Promise<unknown> =>
@@ -702,14 +709,14 @@ describe('job manager (supervised, capped, cancellable)', () => {
 					resolve({ done: true });
 				}, 15);
 			});
-		const jobs = Array.from({ length: 5 }, () => mgr.submit('slow', gate));
+		const jobs = Array.from({ length: 5 }, () => mgr.submit('slow', gate, { lane: 'media' }));
 		await new Promise((r) => setTimeout(r, 120));
 		expect(maxConcurrent).toBeLessThanOrEqual(2);
 		for (const j of jobs) expect(mgr.status(j.id)!.status).toBe('done');
 	});
 
 	test('stop() cancels a running job', async () => {
-		const mgr = new MediaJobManager(1, () => 0);
+		const mgr = new MediaJobManager({ budgets: { media: 1 }, clock: () => 0 });
 		const rec = mgr.submit(
 			'cancellable',
 			({ signal }) =>
@@ -720,6 +727,7 @@ describe('job manager (supervised, capped, cancellable)', () => {
 						reject(new Error('aborted'));
 					});
 				}),
+			{ lane: 'media' },
 		);
 		await new Promise((r) => setTimeout(r, 10));
 		expect(mgr.stop(rec.id)).toBe(true);

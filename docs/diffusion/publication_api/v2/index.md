@@ -100,7 +100,8 @@ Edit `.env`. The most important variables (all read from the process environment
 | `PORT` | `3100` | Listen port |
 | `HOST` | `127.0.0.1` | Listen host |
 | `BASE_PATH` | `/publication/server_api/v2` | URL prefix the API is mounted under |
-| `TRUST_PROXY` | `true` | Honor proxy headers (client IP for rate limiting) |
+| `TRUST_PROXY` | *derived from `DEPLOYMENT_MODE`* | Honor `X-Forwarded-For` (client IP for rate limiting) — on behind apache/nginx, off standalone |
+| `TRUSTED_PROXY_HOPS` | `1` | How many `X-Forwarded-For` entries your own proxies append; the caller is read that many entries from the right |
 | `CACHE_MAX_AGE` | `60` | `Cache-Control: max-age` seconds (`0` → `no-cache`) |
 | `REQUEST_TIMEOUT_MS` | `10000` | Request-level timeout (`0` disables) |
 | `API_KEYS` | _(empty)_ | Comma-separated keys; empty = open access |

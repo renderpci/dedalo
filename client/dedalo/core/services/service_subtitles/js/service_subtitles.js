@@ -5,9 +5,6 @@
 
 
 // import
-	import {event_manager} from '../../../common/js/event_manager.js'
-	import {data_manager} from '../../../common/js/data_manager.js'
-	import {clone, dd_console} from '../../../common/js/utils/index.js'
 	import {common} from '../../../common/js/common.js'
 
 
@@ -22,18 +19,21 @@
 * tool_transcription and tool_subtitles — providing a lightweight, lazy-loaded service
 * that follows the same init → build → render lifecycle as all other Dédalo UI instances.
 *
-* The service currently acts as a thin scaffold: init delegates to common.prototype.init,
-* build is a no-op stub, and edit is forwarded to render_edit_service_subtitles.prototype.edit.
-* Full feature parity with the PHP layer (build_subtitles_text) is pending.
+* The service currently acts as a thin scaffold: init delegates to common.prototype.init
+* and build is a no-op stub. Full feature parity with the PHP layer
+* (build_subtitles_text) is pending.
 *
-* (!) render_edit_service_subtitles is referenced in the prototype-assignment block but is
-*     NOT imported in this file. The prototype.edit assignment will therefore throw a
-*     ReferenceError at parse/link time unless a matching render module is added to the
-*     import list. This appears to be a work-in-progress stub.
-*
-* (!) The imports for event_manager, data_manager, clone, and dd_console are declared but
-*     not used anywhere in the current implementation. They are likely placeholders for
-*     future functionality.
+* REPAIRED 2026-09-04 (P2-25 / DEAD-01). The prototype block used to end with
+* `service_subtitles.prototype.edit = render_edit_service_subtitles.prototype.edit`,
+* and the JSDoc here and there described the resulting ReferenceError as a
+* work-in-progress note. It was not a note, it was a fatal defect: there is no
+* `render_edit_service_subtitles` module anywhere in the tree, so the reference
+* threw WHILE THE MODULE EVALUATED, `get_instance('service_subtitles')` answered
+* null, and every caller (tool_subtitles, tool_tr_print) died on `.build()` of
+* null. A render mode this module cannot supply is not declared: the assignment
+* is gone and `edit` will be added the day a render module exists. The four
+* unused imports (event_manager, data_manager, clone, dd_console) went with it —
+* placeholders for an implementation that has to declare its own dependencies.
 *
 * Callers must call init(options) before build() and build() before any render cycle.
 *
@@ -84,18 +84,14 @@ export const service_subtitles = function () {
 * COMMON FUNCTIONS
 * extend functions from common
 *
-* Mixes lifecycle and render methods from common.prototype and (when the import exists)
-* render_edit_service_subtitles.prototype into service_subtitles.prototype.
+* Mixes lifecycle methods from common.prototype into service_subtitles.prototype.
 *
-* (!) The assignment `service_subtitles.prototype.edit = render_edit_service_subtitles.prototype.edit`
-*     references render_edit_service_subtitles, which is not imported in this file. This will
-*     cause a ReferenceError unless the missing import is added. Treat as a work-in-progress stub.
+* There is deliberately no `edit` here: see the DEAD-01 note in the module JSDoc.
 */
 // prototypes assign
 	service_subtitles.prototype.render	= common.prototype.render
 	service_subtitles.prototype.destroy	= common.prototype.destroy
 	service_subtitles.prototype.refresh	= common.prototype.refresh
-	service_subtitles.prototype.edit	= render_edit_service_subtitles.prototype.edit
 
 
 

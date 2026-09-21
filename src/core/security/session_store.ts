@@ -59,10 +59,44 @@ export const LOGIN_LOCKOUT_SECONDS = Number(readString('LOGIN_LOCKOUT_SECONDS'))
  */
 export const LOGIN_ACCOUNT_MAX_ATTEMPTS = Number(readString('LOGIN_ACCOUNT_MAX_ATTEMPTS'));
 
+/**
+ * SOURCE-GLOBAL lockout threshold: failed logins from ONE address, whatever
+ * username they name (audit 2026-08-26 SEC-21).
+ *
+ * The two older dimensions are keyed (username, ip) and (username). Both start
+ * from the username, so a caller who ROTATES the username gets a fresh bucket on
+ * both of them at every single request — the throttle stopped brute force
+ * against an account and did nothing at all about VOLUME from one source, which
+ * is how one unauthenticated client could keep writing denial rows for as long
+ * as it liked. This bucket is the missing dimension.
+ *
+ * Sized well above the other two on purpose. It must never refuse a shared
+ * address doing ordinary work — a museum behind one NAT, a reading room, a
+ * proxy — so it is a FLOOD ceiling, not a guessing ceiling: at this many failed
+ * logins from one address inside the window, that address is not a person
+ * mistyping a password. CONFIGURED like its two siblings (default 100), because
+ * the address behind a large institution's NAT is exactly the case that needs to
+ * raise it, and a code edit is not a knob.
+ */
+export const LOGIN_SOURCE_MAX_ATTEMPTS = Number(readString('LOGIN_SOURCE_MAX_ATTEMPTS'));
+
 /** One authenticated session as the dispatch layer consumes it. */
 export interface Session {
 	userId: number;
 	username: string;
+	/**
+	 * The login-time SNAPSHOT of the account's global-admin grant — DESCRIPTIVE ONLY,
+	 * NOT AN AUTHORIZATION INPUT. Nothing rewrites it after login, so any reader would
+	 * serve a demoted administrator the old authority for the session's whole TTL
+	 * (SEC-14). Every admin-only surface resolves the Principal per request instead:
+	 * dispatched actions via `dispatchRqo`, the raw routes via
+	 * `security/session_gate.ts`. Behavioural gate: account_revocation_native ("the
+	 * principal, not the snapshot, decides").
+	 *
+	 * FOLLOW-UP (named, not silent): the column and `createSession`'s third argument
+	 * are now reader-less; removing them changes the createSession arity across the
+	 * test helpers and scripts/client_test_runner.ts, which is a separate sweep.
+	 */
 	isGlobalAdmin: boolean;
 	csrfToken: string;
 	/**
@@ -602,9 +636,49 @@ export function verifyCsrf(session: Session, candidate: string | null): boolean 
 	return crypto.timingSafeEqual(expected, received);
 }
 
-/** Throttle key: namespace|lowercased-username|ip (PHP SEC-019 shape). */
+/**
+ * Longest UNTRUSTED identity kept verbatim inside a throttle key.
+ *
+ * THE DEFECT THIS CLOSES (audit 2026-08-26 SEC-21, second mechanism). A throttle
+ * key is an opaque bucket label, but it was built by concatenating the caller's
+ * raw username — and it is INSERTED into `login_attempts` on every failure, once
+ * per key, and a second time into `idx_attempts_key`. A 520 KB username (in
+ * bounds at the parse door, because the untyped `options` bag ceiling is 512 KiB
+ * and no real username needs a per-key declaration) therefore measured ~2 MB of
+ * durable sqlite per unauthenticated login denial — the same "stored twice"
+ * amplification SEC-21 named, in the session store instead of `matrix_activity`.
+ *
+ * WHY BOUND HERE AND NOT AT THE DOOR: the bucket must stay STABLE (the same
+ * identity must always hash to the same bucket) and DISTINCT (two identities must
+ * not share one), and both are properties of the KEY, not of the request. So the
+ * construction site owns it: short identities stay verbatim (a readable key an
+ * operator can grep), anything longer is replaced by a digest of the whole
+ * identity — bounded, stable and collision-free, with nothing of the caller's
+ * bytes reaching disk.
+ */
+export const THROTTLE_IDENTITY_MAX_CHARS = 128;
+
+/**
+ * The bounded, lowercased projection of an untrusted identity (username, email,
+ * reset id) for use inside a throttle key. Never the raw string.
+ */
+export function throttleIdentity(identity: string): string {
+	const lowered = identity.toLowerCase();
+	return lowered.length <= THROTTLE_IDENTITY_MAX_CHARS ? lowered : `#${sha256Hex(lowered)}`;
+}
+
+/**
+ * Throttle key: namespace|bounded-identity|bounded-source (PHP SEC-019 shape).
+ *
+ * BOTH axes go through `throttleIdentity`, not only the username. The `ip`
+ * argument is NOT a validated address: with `TRUSTED_PROXY_HOPS >= 2` (a
+ * supported configuration) the hop `server.ts` reads out of X-Forwarded-For is
+ * caller-written, so its LENGTH is the caller's too — up to Bun's ~16 KiB header
+ * cap — and it lands in `login_attempts.attempt_key` + `idx_attempts_key` on
+ * every denial: the same row+index amplification, on the other axis.
+ */
 export function buildThrottleKey(namespace: string, username: string, ip: string): string {
-	return `${namespace}|${username.toLowerCase()}|${ip}`;
+	return `${namespace}|${throttleIdentity(username)}|${throttleIdentity(ip)}`;
 }
 
 /**
@@ -614,7 +688,23 @@ export function buildThrottleKey(namespace: string, username: string, ip: string
  * buildThrottleKey so the two dimensions never collide.
  */
 export function buildAccountThrottleKey(namespace: string, username: string): string {
-	return `${namespace}|acct|${username.toLowerCase()}`;
+	return `${namespace}|acct|${throttleIdentity(username)}`;
+}
+
+/**
+ * SOURCE-GLOBAL throttle key: namespace|src|bounded-source (NO username). The
+ * third dimension: it caps failures from one source however the username is
+ * rotated. Distinct shape from the other two builders so the three can never
+ * collide. The source is bounded by `throttleIdentity` for the same reason
+ * `buildThrottleKey` bounds it — under a hop count >= 1 the address is read out
+ * of a caller-written header, so it is untrusted in BOTH value and length. (It
+ * is therefore NOT a dimension a caller can never rotate: with a trusted-hop
+ * count above the real proxy depth, a spoofed hop mints fresh buckets on all
+ * three. What this bound guarantees is that rotating it stays cheap for the
+ * ENGINE — a bounded key per attempt, self-pruned at the window + lockout.)
+ */
+export function buildSourceThrottleKey(namespace: string, ip: string): string {
+	return `${namespace}|src|${throttleIdentity(ip)}`;
 }
 
 /**
@@ -647,6 +737,63 @@ export function recordFailedAttempt(attemptKey: string): void {
 	database
 		.query('DELETE FROM login_attempts WHERE attempted_at < ?')
 		.run(nowSeconds() - (LOGIN_ATTEMPT_WINDOW_SECONDS + LOGIN_LOCKOUT_SECONDS));
+}
+
+/**
+ * Drop every session-store row that can no longer affect a decision: expired
+ * sessions, spent login-attempt buckets, expired password resets.
+ *
+ * Each writer already GCs its own table opportunistically on insert; this is the
+ * same work reachable by name, so the retention registry can state a rule for
+ * this store instead of it being an undocumented side effect of writing to it
+ * (core/retention/prune.ts, `session_store`).
+ *
+ * `apply:false` COUNTS with the same predicates and deletes nothing; `apply:true`
+ * removes. Sessions are expired by the store's real law (idle OR absolute — see
+ * pruneExpiredSessionsDetail), never by a second predicate written here.
+ */
+export function purgeExpiredSessionState(options: { apply: boolean } = { apply: true }): {
+	candidates: number;
+	deleted: number;
+} {
+	const now = nowSeconds();
+	const attemptCutoff = now - (LOGIN_ATTEMPT_WINDOW_SECONDS + LOGIN_LOCKOUT_SECONDS);
+	if (!options.apply) {
+		// A DRY RUN EXECUTES THE SAME PREDICATES, on purpose: a counted-but-never-run
+		// statement is exactly how a prune that cannot execute stayed green (the
+		// `sessions` table has no `expires` column — session expiry is idle OR
+		// absolute, see pruneExpiredSessionsDetail). The retention gate calls every
+		// registered prune dry, so the SQL has to run for it to prove anything.
+		const idleCutoff = now - SESSION_TTL_SECONDS;
+		const ageCutoff = SESSION_ABSOLUTE_TTL_SECONDS > 0 ? now - SESSION_ABSOLUTE_TTL_SECONDS : 0;
+		const candidates =
+			countRows('SELECT COUNT(*) AS n FROM sessions WHERE last_seen < ? OR created_at < ?', [
+				idleCutoff,
+				ageCutoff,
+			]) +
+			countRows('SELECT COUNT(*) AS n FROM login_attempts WHERE attempted_at < ?', [
+				attemptCutoff,
+			]) +
+			countRows('SELECT COUNT(*) AS n FROM password_resets WHERE expires < ?', [now]);
+		return { candidates, deleted: 0 };
+	}
+	// Sessions go through the ONE session-expiry door (both clocks, and it unlinks
+	// the media marker before the row) — never a second, divergent predicate here.
+	const sessions = pruneExpiredSessionsDetail().pruned;
+	const attempts = database
+		.query('DELETE FROM login_attempts WHERE attempted_at < ? RETURNING attempt_key')
+		.all(attemptCutoff) as unknown[];
+	const resets = database
+		.query('DELETE FROM password_resets WHERE expires < ? RETURNING reset_key')
+		.all(now) as unknown[];
+	const removed = sessions + attempts.length + resets.length;
+	return { candidates: removed, deleted: removed };
+}
+
+/** One COUNT(*) — the dry-run half of the purge, so the branch above stays one decision. */
+function countRows(statement: string, binds: (number | string)[]): number {
+	const row = database.query(statement).get(...binds) as { n: number } | null;
+	return row?.n ?? 0;
 }
 
 /** Successful login unlocks immediately (PHP behavior). */

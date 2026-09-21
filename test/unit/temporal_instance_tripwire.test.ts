@@ -424,8 +424,11 @@ describe('WC-059 — the flag has one reader and a frozen producer set', () => {
 			'deleteSectionRecord',
 			'deleteSectionData',
 		];
-		const writeDoors = [...bodies].filter(
-			([, body]) => body.includes('section_id') && WRITE_ENGINES.some((fn) => body.includes(fn)),
+		// Calling a write engine IS what makes a door a write door — not the
+		// presence of a `section_id` token, which the create door used to carry
+		// only inside its (since relocated, P1-8) activity-row payload.
+		const writeDoors = [...bodies].filter(([, body]) =>
+			WRITE_ENGINES.some((fn) => body.includes(fn)),
 		);
 		// Self-test: if the engine names are ever renamed, this scan would silently
 		// find nothing and pass. The four known write doors must be present.

@@ -9,10 +9,18 @@ import { createOntologyCache } from '../../../ontology/cache_factory.ts';
 import { getMatrixTableFromTipo, getModelByTipo, getNode } from '../../../ontology/resolver.ts';
 import { resolveComponentValue } from '../../../resolve/component_data.ts';
 import { currentApplicationLang } from '../../../resolve/request_lang.ts';
+import { getComponentModel, getRenderClass } from '../../registry.ts';
 import { readWidgetComponentData } from './widget_common.ts';
 
 /** dd_grid_cell_object serializes EVERY property, nulls included, in this order. */
 export function ddGridCell(overrides: Record<string, unknown>): Record<string, unknown> {
+	// render_class (P2-6 / CARRY-01, WC-2026-09-04-context-render-class):
+	// ADDITIVE, derived from the cell's model — the client escaper's key.
+	const model = typeof overrides.model === 'string' ? overrides.model : null;
+	const renderClass =
+		model !== null && getComponentModel(model) !== undefined
+			? { render_class: getRenderClass(model) }
+			: {};
 	return {
 		id: null,
 		class_list: null,
@@ -34,6 +42,7 @@ export function ddGridCell(overrides: Record<string, unknown>): Record<string, u
 		features: null,
 		model: null,
 		...overrides,
+		...renderClass,
 	};
 }
 

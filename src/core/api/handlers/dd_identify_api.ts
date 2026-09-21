@@ -99,7 +99,8 @@ import { envSnapshot } from '../../../config/env.ts';
 import { isValidTipo } from '../../concepts/ontology.ts';
 import type { Rqo } from '../../concepts/rqo.ts';
 import { readExistingSectionIds } from '../../db/matrix.ts';
-import { ok } from '../../errors/convert.ts';
+import { runWithRecordMemo } from '../../db/record_memo.ts';
+import { ok, wireMessage } from '../../errors/convert.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import type { ErrorCode } from '../../errors/registry.ts';
 import {
@@ -129,6 +130,7 @@ import {
 import { getSectionMapValue } from '../../ontology/section_map.ts';
 import { currentDataLang } from '../../resolve/request_lang.ts';
 import { getPermissions, type Principal } from '../../security/permissions.ts';
+import { doorComponentAllowed, readDoorNotices } from '../../security/read_door.ts';
 import { scopeRecordHits } from '../../security/record_scope.ts';
 import { type ActionHandler, requirePrincipal } from '../handler_context.ts';
 import type { ApiResult } from '../response.ts';
@@ -141,13 +143,17 @@ import type { ApiResult } from '../response.ts';
  * is an error envelope. The text is whatever threw: Postgres error output, a
  * filesystem message with an absolute path, an embedding-service URL.
  *
- * A DedaloError is the engine SPEAKING DELIBERATELY — its message was written to
- * be read. Anything else merely happened, so the caller is told the source
- * failed and the detail goes to the log, which is where a diagnosis belongs.
+ * A DedaloError is the engine SPEAKING DELIBERATELY — but only its WIRE
+ * sentence (`wireMessage`: registry English or the vetted publicMessage) was
+ * written to be read; `.message` is the log-only field. Anything else merely
+ * happened, so the caller is told the source failed and the detail goes to the
+ * log, which is where a diagnosis belongs.
  */
 function declineDetail(error: unknown): string {
-	if (error instanceof DedaloError) return error.message;
 	console.warn('[identify] source failed:', error);
+	// Deliberate — but only its WIRE sentence: `.message` is the log-only field
+	// (a provider constructor names its api_key_env there).
+	if (error instanceof DedaloError) return wireMessage(error);
 	return 'the source failed; the server log records why';
 }
 
@@ -170,10 +176,25 @@ export interface IdentifyApiDeps {
 	/** Whether this principal may read the section at all. */
 	canReadSection(principal: Principal, sectionTipo: string): Promise<boolean>;
 	/**
+	 * Per-(section, component) read level — `getPermissions` in production.
+	 * Optional so the existing fakes keep their shape: absent = the real grant.
+	 * It gates the PREVIEW THUMB (P1-3 / SEC-10): the profile's
+	 * `previewComponent` is a media component of the candidate's section, and a
+	 * thumb URL of it is a read of it — `vision.ts` gates that exact field, and
+	 * this door did not.
+	 */
+	componentGrant?(
+		principal: Principal,
+		sectionTipo: string,
+		componentTipo: string,
+	): Promise<number>;
+	/**
 	 * Thumb URLs for the records the answer names, keyed `${section_tipo}_${section_id}`.
 	 * Optional: production omits it and gets {@link resolvePreviewThumbs}. It takes
-	 * only records the engine has ALREADY gated (the seed, plus the scored
-	 * candidates) — it is a renderer's convenience, never a second access path.
+	 * only records the engine has ALREADY gated — the record scope by the engine,
+	 * the previewComponent's grant by this handler — so it is a renderer's
+	 * convenience, never a second access path: a record whose thumb the caller
+	 * may not read is NEVER handed to it.
 	 */
 	resolveThumbs?(
 		previewComponent: string | null,
@@ -187,13 +208,22 @@ export function defaultIdentifyApiDeps(): IdentifyApiDeps {
 		runMatches: findMatches,
 		canReadSection: async (principal, sectionTipo) =>
 			(await getPermissions(principal, sectionTipo, sectionTipo)) >= 1,
+		componentGrant: getPermissions,
 		resolveThumbs: resolvePreviewThumbs,
 	};
 }
 
-/** The one success door of this class (ERRORS_SPEC §4 — handlers return `ok`). */
+/**
+ * The one success door of this class (ERRORS_SPEC §4 — handlers return `ok`).
+ * A door that NARROWED (a thumb withheld, a hit dropped for a section grant)
+ * says so with ONE `perm.out_of_scope` notice — never a count (read_door.ts).
+ */
 function envelope(data: unknown, requestId: string): ApiResult {
-	return { status: 200, body: ok(data, { requestId }) };
+	const notices = readDoorNotices();
+	return {
+		status: 200,
+		body: ok(data, { requestId, ...(notices === undefined ? {} : { notices }) }),
+	};
 }
 
 /**
@@ -202,8 +232,11 @@ function envelope(data: unknown, requestId: string): ApiResult {
  * reaches the wire only for the public-disclosure `identify.*` codes (the
  * registry decides, not the call site).
  */
-function decline(code: ErrorCode, publicMessage?: string): never {
-	throw new DedaloError(code, publicMessage === undefined ? {} : { publicMessage });
+function decline(code: ErrorCode, publicMessage?: string, cause?: unknown): never {
+	throw new DedaloError(code, {
+		...(publicMessage === undefined ? {} : { publicMessage }),
+		...(cause === undefined ? {} : { cause }),
+	});
 }
 
 /** Clamp a client-supplied limit to [1, MAX_LIMIT]; anything unusable → the default. */
@@ -274,89 +307,125 @@ function shapeResult(result: MatchResult, thumbs: Map<string, string>): Record<s
 
 /** find_matches, over injectable seams (see {@link IdentifyApiDeps}). */
 export function buildFindMatches(deps: IdentifyApiDeps): ActionHandler {
-	return async (rqo: Rqo, context): Promise<ApiResult> => {
-		const principal = requirePrincipal(context);
-		const options = rqo.options as Record<string, unknown> | undefined;
+	// A READ SPAN, AND THE ROW MEMO IS OPENED FOR IT (PERF-01 / P2-11). Every
+	// action in this handler is a read door (security/read_door.ts) that walks
+	// criterion paths over the same records many times — the seed's row once per
+	// criterion, a Type's row once per candidate quoting it. `runWithRecordMemo`
+	// gives the whole action ONE fetch per row (`db/record_memo.ts`); it is never
+	// opened around a write, and nothing under these actions writes.
+	return (rqo: Rqo, context): Promise<ApiResult> =>
+		runWithRecordMemo(async (): Promise<ApiResult> => {
+			const principal = requirePrincipal(context);
+			const options = rqo.options as Record<string, unknown> | undefined;
 
-		const seed = readSeed(options);
-		if (seed === null) decline('identify.missing_seed');
+			const seed = readSeed(options);
+			if (seed === null) decline('identify.missing_seed');
 
-		// Section read grant FIRST: the decline codes below must not tell someone
-		// who cannot open this section whether it has a profile.
-		if (!(await deps.canReadSection(principal, seed.sectionTipo))) decline('perm.denied');
+			// Section read grant FIRST: the decline codes below must not tell someone
+			// who cannot open this section whether it has a profile.
+			if (!(await deps.canReadSection(principal, seed.sectionTipo))) decline('perm.denied');
 
-		let profile: IdentificationProfile | null;
-		try {
-			profile = await deps.loadProfile(seed.sectionTipo);
-		} catch (error) {
-			// A malformed descriptor is a curator-facing failure, so the parser's
-			// exact message travels: "criterion 'legend' hop 1 names component
-			// 'x', which does not exist" is the whole point of refusing loudly.
-			if (error instanceof ProfileError) decline('identify.invalid_profile', error.message);
-			throw error;
-		}
-		if (profile === null) decline('identify.no_profile');
+			let profile: IdentificationProfile | null;
+			try {
+				profile = await deps.loadProfile(seed.sectionTipo);
+			} catch (error) {
+				// A malformed descriptor is a curator-facing failure, so the parser's
+				// exact message travels: "criterion 'legend' hop 1 names component
+				// 'x', which does not exist" is the whole point of refusing loudly.
+				if (error instanceof ProfileError)
+					decline('identify.invalid_profile', error.message, error);
+				throw error;
+			}
+			if (profile === null) decline('identify.no_profile');
 
-		let report: MatchReport;
-		try {
-			report = await deps.runMatches({
-				profile,
-				seed,
-				principal,
-				poolCap: DEFAULT_POOL_CAP,
-				limit: clampLimit(options?.limit),
-			});
-		} catch (error) {
-			// The seed itself is not readable by this principal. Same envelope as the
-			// section denial above — a caller learns "not yours", never "it exists".
-			if (error instanceof IdentifyAccessError) decline('perm.denied');
-			throw error;
-		}
+			let report: MatchReport;
+			try {
+				report = await deps.runMatches({
+					profile,
+					seed,
+					principal,
+					poolCap: DEFAULT_POOL_CAP,
+					limit: clampLimit(options?.limit),
+				});
+			} catch (error) {
+				// The seed itself is not readable by this principal. Same envelope as the
+				// section denial above — a caller learns "not yours", never "it exists".
+				if (error instanceof IdentifyAccessError) decline('perm.denied');
+				throw error;
+			}
 
-		// Thumbnails for the seed and the scored candidates, resolved server-side
-		// because only the profile knows which media component stands for the
-		// object. Every record here has already passed the engine's ACL gate — the
-		// seed by findMatches raising on a denied read, the candidates by its
-		// per-record scope filter — so this adds a picture to what the caller may
-		// already read, and no access decision of its own.
-		const thumbs = await (deps.resolveThumbs ?? resolvePreviewThumbs)(profile.previewComponent, [
-			{ sectionTipo: seed.sectionTipo, sectionId: seed.sectionId },
-			...report.results.map((result) => ({
-				sectionTipo: result.sectionTipo,
-				sectionId: result.sectionId,
-			})),
-		]);
+			// Thumbnails for the seed and the scored candidates, resolved server-side
+			// because only the profile knows which media component stands for the
+			// object. Every record here has already passed the engine's RECORD gate —
+			// the seed by findMatches raising on a denied read, the candidates by its
+			// per-record scope filter. The COMPONENT gate is this door's own (P1-3 /
+			// SEC-10): the previewComponent is a component of each record's section,
+			// and only the records whose grant the caller holds are handed to the
+			// resolver at all — a denied one gets null, and is never asked about.
+			const previewComponent = profile.previewComponent;
+			const illustrated: PreviewRecord[] = [];
+			if (previewComponent !== null) {
+				const scope = {
+					principal,
+					door: 'dd_identify_api.find_matches',
+					...(deps.componentGrant === undefined ? {} : { grant: deps.componentGrant }),
+				};
+				const allowedBySection = new Map<string, boolean>();
+				const candidates: PreviewRecord[] = [
+					{ sectionTipo: seed.sectionTipo, sectionId: seed.sectionId },
+					...report.results.map((result) => ({
+						sectionTipo: result.sectionTipo,
+						sectionId: result.sectionId,
+					})),
+				];
+				for (const record of candidates) {
+					let allowed = allowedBySection.get(record.sectionTipo);
+					if (allowed === undefined) {
+						allowed = await doorComponentAllowed(scope, {
+							sectionTipo: record.sectionTipo,
+							componentTipo: previewComponent,
+						});
+						allowedBySection.set(record.sectionTipo, allowed);
+					}
+					if (allowed) illustrated.push(record);
+				}
+			}
+			const thumbs =
+				illustrated.length === 0
+					? new Map<string, string>()
+					: await (deps.resolveThumbs ?? resolvePreviewThumbs)(previewComponent, illustrated);
 
-		return envelope(
-			{
-				seed: {
-					section_tipo: seed.sectionTipo,
-					section_id: seed.sectionId,
-					thumb_url:
-						thumbs.get(previewKey({ sectionTipo: seed.sectionTipo, sectionId: seed.sectionId })) ??
-						null,
+			return envelope(
+				{
+					seed: {
+						section_tipo: seed.sectionTipo,
+						section_id: seed.sectionId,
+						thumb_url:
+							thumbs.get(
+								previewKey({ sectionTipo: seed.sectionTipo, sectionId: seed.sectionId }),
+							) ?? null,
+					},
+					profile: { id: profile.id, label: profile.label },
+					results: report.results.map((result) => shapeResult(result, thumbs)),
+					// The cap stopped us before the pool ran out — deliberately a flag, not
+					// a count (match.ts MatchReport.moreAvailable).
+					more_available: report.moreAvailable,
+					// Criteria the SEED records nothing for: they discriminated nothing, and
+					// a score computed without them must say so.
+					blind_criteria: report.blindCriteria,
+					// Criteria THIS CALLER has no grant on: neither compared nor quoted, so
+					// the scores in this answer are PARTIAL — computed over the rest. Sent
+					// separately from `blind_criteria` because the two are claims about
+					// different things ("you may not see this field" vs "nobody recorded
+					// it"), and a restricted caller who cannot tell them apart concludes
+					// their catalogue is empty where it is only closed to them. Not an
+					// existence oracle: it names the caller's own grants, which they can
+					// already read off their profile, and never anything a record holds.
+					restricted_criteria: report.restrictedCriteria,
 				},
-				profile: { id: profile.id, label: profile.label },
-				results: report.results.map((result) => shapeResult(result, thumbs)),
-				// The cap stopped us before the pool ran out — deliberately a flag, not
-				// a count (match.ts MatchReport.moreAvailable).
-				more_available: report.moreAvailable,
-				// Criteria the SEED records nothing for: they discriminated nothing, and
-				// a score computed without them must say so.
-				blind_criteria: report.blindCriteria,
-				// Criteria THIS CALLER has no grant on: neither compared nor quoted, so
-				// the scores in this answer are PARTIAL — computed over the rest. Sent
-				// separately from `blind_criteria` because the two are claims about
-				// different things ("you may not see this field" vs "nobody recorded
-				// it"), and a restricted caller who cannot tell them apart concludes
-				// their catalogue is empty where it is only closed to them. Not an
-				// existence oracle: it names the caller's own grants, which they can
-				// already read off their profile, and never anything a record holds.
-				restricted_criteria: report.restrictedCriteria,
-			},
-			context.requestId,
-		);
-	};
+				context.requestId,
+			);
+		});
 }
 
 /* ═══════════════════ identify_by_image — "what is this?" (P3) ═══════════════════ */
@@ -422,8 +491,13 @@ export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
  * The base64 length that could decode to more than {@link MAX_IMAGE_BYTES}, plus
  * slack for a `data:` prefix and whitespace. Checked BEFORE decoding: an
  * unbounded body must not be materialised as bytes just to measure it.
+ *
+ * EXPORTED because the request parse door must not be TIGHTER than this: the
+ * `options.image` budget in `core/concepts/scalar_bounds.ts` is sized above it,
+ * and `test/unit/rqo_scalar_bound_tripwire.test.ts` reads both so raising this
+ * cap without raising that budget is RED rather than a silent refusal.
  */
-const MAX_IMAGE_BASE64_CHARS = Math.ceil(MAX_IMAGE_BYTES / 3) * 4 + 1024;
+export const MAX_IMAGE_BASE64_CHARS = Math.ceil(MAX_IMAGE_BYTES / 3) * 4 + 1024;
 
 /**
  * Sniffed kinds (media/engine/mime.ts) an image encoder can actually be handed.
@@ -535,10 +609,15 @@ export interface IdentifyByImageDeps {
 	): Promise<{ section_tipo: string; section_id: number }[]>;
 	/** The section's label component (section_map `main.term`), or null. */
 	labelComponent(sectionTipo: string): Promise<string | null>;
-	/** Values at a path on a record (the identification path reader). */
+	/**
+	 * Values at a path on a record (the identification path reader), read AS
+	 * the principal: the reader authorizes every record the path lands on, on
+	 * that record's own section (path_read.ts, P1-3 / SEC-12).
+	 */
 	readValues(
 		record: { sectionTipo: string; sectionId: number },
 		path: CriterionPathStep[],
+		principal: Principal,
 	): Promise<CriterionValue | null>;
 	/** The section's identification profile. Null = none; throws ProfileError when malformed. */
 	loadProfile(sectionTipo: string): Promise<IdentificationProfile | null>;
@@ -562,8 +641,13 @@ export function defaultIdentifyByImageDeps(): IdentifyByImageDeps {
 			return typeof tipo === 'string' && tipo !== '' ? tipo : null;
 		},
 		// The data language is the REQUEST's (ALS-scoped), read at this boundary and
-		// passed down — path_read never reads request identity for itself.
-		readValues: (record, path) => readPathValues(record, path, { lang: currentDataLang() }),
+		// passed down — path_read never reads request identity for itself; the
+		// principal travels the same way.
+		readValues: (record, path, principal) =>
+			readPathValues(record, path, {
+				lang: currentDataLang(),
+				scope: { principal, surface: 'door', door: 'dd_identify_api.identify_by_image' },
+			}),
 		loadProfile: (sectionTipo) => loadProfileForSection(sectionTipo),
 	};
 }
@@ -680,211 +764,242 @@ export function typeLinkCandidates(
 
 /** identify_by_image, over injectable seams (see {@link IdentifyByImageDeps}). */
 export function buildIdentifyByImage(deps: IdentifyByImageDeps): ActionHandler {
-	return async (rqo: Rqo, context): Promise<ApiResult> => {
-		const principal = requirePrincipal(context);
-		const options = rqo.options as Record<string, unknown> | undefined;
+	// The row memo, for the same reason buildFindMatches opens one (PERF-01).
+	return (rqo: Rqo, context): Promise<ApiResult> =>
+		runWithRecordMemo(async (): Promise<ApiResult> => {
+			const principal = requirePrincipal(context);
+			const options = rqo.options as Record<string, unknown> | undefined;
 
-		// The feature switches first: they are installation facts, and answering
-		// them before anything is decoded keeps a disabled install from ever
-		// materialising an uploaded body.
-		if (!deps.ragEnabled()) decline('identify.rag_disabled');
-		if (!deps.mediaEnabled()) decline('identify.media_disabled');
+			// The feature switches first: they are installation facts, and answering
+			// them before anything is decoded keeps a disabled install from ever
+			// materialising an uploaded body.
+			if (!deps.ragEnabled()) decline('identify.rag_disabled');
+			if (!deps.mediaEnabled()) decline('identify.media_disabled');
 
-		const image = readImageInput(options?.image);
-		if (!image.ok) decline(image.code, image.msg);
+			const image = readImageInput(options?.image);
+			if (!image.ok) decline(image.code, image.msg);
 
-		const cfg = deps.config();
-		let provider: MultimodalEmbeddingProvider;
-		try {
-			provider = deps.buildProvider(cfg);
-		} catch (error) {
-			// buildMultimodalProvider refuses LOUDLY when the configured provider
-			// would send object images off this host under a 'local_only' policy.
-			// That message is written for an operator; it travels verbatim.
-			const message = error instanceof Error ? error.message : String(error);
-			decline(
-				cfg.imageEgressPolicy === 'local_only'
-					? 'identify.egress_forbidden'
-					: 'identify.provider_unavailable',
-				message,
-			);
-		}
-
-		const model = provider.model();
-		// embedImage returns [] on ANY failure and never a partial batch, so an
-		// empty answer here is "the encoder could not read this", not "no vector".
-		const [vector] = await provider.embedImage([image.bytes]);
-		if (vector === undefined || vector.length === 0) {
-			decline(
-				'identify.embed_failed',
-				`The multimodal provider ('${cfg.provider}', model '${model}') returned no embedding for this image`,
-			);
-		}
-
-		// A requested scope is narrowed to the sections this caller may open. When
-		// nothing survives, refuse — running the query unscoped instead would
-		// quietly answer a different question than the one that was asked.
-		const requested = readScope(options);
-		const scope: string[] = [];
-		for (const sectionTipo of requested) {
-			if ((await deps.componentGrant(principal, sectionTipo, sectionTipo)) >= 1) {
-				scope.push(sectionTipo);
-			}
-		}
-		if (requested.length > 0 && scope.length === 0) decline('perm.denied');
-
-		const limit = clampLimit(options?.limit);
-		// Over-fetch so the ACL filter cannot starve the answer (object_retrieval's
-		// own ratio — a hit dropped for permissions must not cost a result slot).
-		const hits = await deps.queryImagePartition({
-			model,
-			vector,
-			limit: Math.max(40, limit * 4),
-			sectionTipos: scope,
-		});
-		if (hits.length === 0) {
-			// DISTINCT from "no matches": the ANN returns the nearest rows whatever
-			// their distance, so an empty answer means the partition it searched holds
-			// no vectors at all. A curator must never read this as "nothing like it".
-			decline(
-				'identify.empty_index',
-				scope.length === 0
-					? `Nothing has been indexed to compare against: the image index holds no vectors for model '${model}'. Run the image indexer before identifying by photograph.`
-					: `Nothing has been indexed to compare against in ${scope.join(', ')}: those sections hold no image vectors for model '${model}'.`,
-			);
-		}
-
-		const accessible = await deps.filterAccessible(principal, tagScore(hits));
-		const records = collapseToRecords(accessible, 'score').slice(0, limit);
-
-		// Per-section lookups are memoised for THIS request only (no module state):
-		// a page of results is usually one or two sections.
-		const labelTipoBySection = new Map<string, string | null>();
-		const profileBySection = new Map<string, IdentificationProfile | null>();
-		const warnings: string[] = [];
-
-		const labelComponentOf = async (sectionTipo: string): Promise<string | null> => {
-			const cached = labelTipoBySection.get(sectionTipo);
-			if (cached !== undefined) return cached;
-			const tipo = await deps.labelComponent(sectionTipo);
-			labelTipoBySection.set(sectionTipo, tipo);
-			return tipo;
-		};
-
-		/** A record's label, gated per component (the record gate says nothing about it). */
-		const labelOf = async (sectionTipo: string, sectionId: number): Promise<string | null> => {
-			const labelTipo = await labelComponentOf(sectionTipo);
-			if (labelTipo === null) return null;
-			if ((await deps.componentGrant(principal, sectionTipo, labelTipo)) < 1) return null;
-			const value = await deps.readValues({ sectionTipo, sectionId }, [
-				{ section_tipo: sectionTipo, component_tipo: labelTipo },
-			]);
-			// A section whose main term is a relation (a thesaurus term rather than a
-			// literal) has no string to show here; null, never a locator rendered raw.
-			return value !== null && value.kind === 'text' ? (value.values[0] ?? null) : null;
-		};
-
-		const profileOf = async (sectionTipo: string): Promise<IdentificationProfile | null> => {
-			const cached = profileBySection.get(sectionTipo);
-			if (cached !== undefined) return cached;
-			let profile: IdentificationProfile | null = null;
+			const cfg = deps.config();
+			let provider: MultimodalEmbeddingProvider;
 			try {
-				profile = await deps.loadProfile(sectionTipo);
+				provider = deps.buildProvider(cfg);
 			} catch (error) {
-				// A malformed descriptor must not silently become "this section has no
-				// Types" — the whole answer would look complete while one section's
-				// typology quietly dropped out. The image answer still stands, so the
-				// failure rides along as a warning carrying the parser's own message.
-				if (!(error instanceof ProfileError)) throw error;
-				const message = `Section '${sectionTipo}' has a malformed identification profile, so no Type could be resolved for its results: ${error.message}`;
-				if (!warnings.includes(message)) warnings.push(message);
+				// buildMultimodalProvider refuses LOUDLY when the configured provider
+				// would send object images off this host under a 'local_only' policy.
+				// That message is written for an operator; it travels verbatim.
+				const message = error instanceof Error ? error.message : String(error);
+				decline(
+					cfg.imageEgressPolicy === 'local_only'
+						? 'identify.egress_forbidden'
+						: 'identify.provider_unavailable',
+					message,
+				);
 			}
-			profileBySection.set(sectionTipo, profile);
-			return profile;
-		};
 
-		/** The Types a candidate is linked to — the "…which are all Type X" half. */
-		const typesOf = async (sectionTipo: string, sectionId: number): Promise<TypeLink[]> => {
-			const profile = await profileOf(sectionTipo);
-			if (profile === null || profile.typeSectionTipo === null) return [];
-			const typeSection = profile.typeSectionTipo;
-			const seen = new Set<string>();
-			const found: { section_tipo: string; section_id: number }[] = [];
-			// The candidate's OWN section decides which criteria enter on it: this
-			// profile may cover several sections, and a sibling's entry component is
-			// not a component of this record.
-			for (const entryTipo of typeEntryComponents(profile, sectionTipo)) {
-				// The link component is a component of the CANDIDATE: re-gate it.
-				if ((await deps.componentGrant(principal, sectionTipo, entryTipo)) < 1) continue;
-				const value = await deps.readValues({ sectionTipo, sectionId }, [
-					{ section_tipo: sectionTipo, component_tipo: entryTipo },
-				]);
-				if (value === null || value.kind !== 'locators') continue;
-				for (const locator of value.locators) {
-					if (locator.section_tipo !== typeSection) continue;
-					const id = Number(locator.section_id);
-					if (!Number.isInteger(id)) continue;
-					const key = `${typeSection}_${id}`;
-					if (seen.has(key)) continue;
-					seen.add(key);
-					found.push({ section_tipo: typeSection, section_id: id });
+			const model = provider.model();
+			// embedImage returns [] on ANY failure and never a partial batch, so an
+			// empty answer here is "the encoder could not read this", not "no vector".
+			const [vector] = await provider.embedImage([image.bytes]);
+			if (vector === undefined || vector.length === 0) {
+				decline(
+					'identify.embed_failed',
+					`The multimodal provider ('${cfg.provider}', model '${model}') returned no embedding for this image`,
+				);
+			}
+
+			// A requested scope is narrowed to the sections this caller may open. When
+			// nothing survives, refuse — running the query unscoped instead would
+			// quietly answer a different question than the one that was asked.
+			const requested = readScope(options);
+			const scope: string[] = [];
+			for (const sectionTipo of requested) {
+				if ((await deps.componentGrant(principal, sectionTipo, sectionTipo)) >= 1) {
+					scope.push(sectionTipo);
 				}
 			}
-			if (found.length === 0) return [];
-			// The Type is ANOTHER record and its label is a quote of it: the same
-			// record-scope gate the candidates went through applies before it is read.
-			const readable = await deps.scopeRecords(found, principal);
-			const links: TypeLink[] = [];
-			for (const record of readable) {
-				links.push({
-					sectionTipo: record.section_tipo,
-					sectionId: record.section_id,
-					label: await labelOf(record.section_tipo, record.section_id),
+			if (requested.length > 0 && scope.length === 0) decline('perm.denied');
+
+			const limit = clampLimit(options?.limit);
+			// Over-fetch so the ACL filter cannot starve the answer (object_retrieval's
+			// own ratio — a hit dropped for permissions must not cost a result slot).
+			const hits = await deps.queryImagePartition({
+				model,
+				vector,
+				limit: Math.max(40, limit * 4),
+				sectionTipos: scope,
+			});
+			if (hits.length === 0) {
+				// DISTINCT from "no matches": the ANN returns the nearest rows whatever
+				// their distance, so an empty answer means the partition it searched holds
+				// no vectors at all. A curator must never read this as "nothing like it".
+				decline(
+					'identify.empty_index',
+					scope.length === 0
+						? `Nothing has been indexed to compare against: the image index holds no vectors for model '${model}'. Run the image indexer before identifying by photograph.`
+						: `Nothing has been indexed to compare against in ${scope.join(', ')}: those sections hold no image vectors for model '${model}'.`,
+				);
+			}
+
+			const accessible = await deps.filterAccessible(principal, tagScore(hits));
+			// THE SECTION GRANT ON EVERY SURVIVING HIT, named scope or not (P1-3 /
+			// SEC-11). A NAMED scope was narrowed to readable sections above; an
+			// OMITTED one meant "the whole image index", and a hit from a section
+			// this caller may not open reached the answer on its media component's
+			// grant alone. Same predicate as the scope narrowing, per hit, memoised
+			// per section; a refusal drops the hit (the ACL filter's own posture — a
+			// count would be an existence oracle) and is logged by the door.
+			const sectionAllowed = new Map<string, boolean>();
+			const sectionScope = {
+				principal,
+				door: 'dd_identify_api.identify_by_image',
+				grant: deps.componentGrant,
+			};
+			const inScope: Candidate[] = [];
+			for (const candidate of accessible) {
+				let allowed = sectionAllowed.get(candidate.sectionTipo);
+				if (allowed === undefined) {
+					allowed = await doorComponentAllowed(sectionScope, {
+						sectionTipo: candidate.sectionTipo,
+						componentTipo: candidate.sectionTipo,
+					});
+					sectionAllowed.set(candidate.sectionTipo, allowed);
+				}
+				if (allowed) inScope.push(candidate);
+			}
+			const records = collapseToRecords(inScope, 'score').slice(0, limit);
+
+			// Per-section lookups are memoised for THIS request only (no module state):
+			// a page of results is usually one or two sections.
+			const labelTipoBySection = new Map<string, string | null>();
+			const profileBySection = new Map<string, IdentificationProfile | null>();
+			const warnings: string[] = [];
+
+			const labelComponentOf = async (sectionTipo: string): Promise<string | null> => {
+				const cached = labelTipoBySection.get(sectionTipo);
+				if (cached !== undefined) return cached;
+				const tipo = await deps.labelComponent(sectionTipo);
+				labelTipoBySection.set(sectionTipo, tipo);
+				return tipo;
+			};
+
+			/** A record's label, gated per component (the record gate says nothing about it). */
+			const labelOf = async (sectionTipo: string, sectionId: number): Promise<string | null> => {
+				const labelTipo = await labelComponentOf(sectionTipo);
+				if (labelTipo === null) return null;
+				if ((await deps.componentGrant(principal, sectionTipo, labelTipo)) < 1) return null;
+				const value = await deps.readValues(
+					{ sectionTipo, sectionId },
+					[{ section_tipo: sectionTipo, component_tipo: labelTipo }],
+					principal,
+				);
+				// A section whose main term is a relation (a thesaurus term rather than a
+				// literal) has no string to show here; null, never a locator rendered raw.
+				return value !== null && value.kind === 'text' ? (value.values[0] ?? null) : null;
+			};
+
+			const profileOf = async (sectionTipo: string): Promise<IdentificationProfile | null> => {
+				const cached = profileBySection.get(sectionTipo);
+				if (cached !== undefined) return cached;
+				let profile: IdentificationProfile | null = null;
+				try {
+					profile = await deps.loadProfile(sectionTipo);
+				} catch (error) {
+					// A malformed descriptor must not silently become "this section has no
+					// Types" — the whole answer would look complete while one section's
+					// typology quietly dropped out. The image answer still stands, so the
+					// failure rides along as a warning carrying the parser's own message.
+					if (!(error instanceof ProfileError)) throw error;
+					const message = `Section '${sectionTipo}' has a malformed identification profile, so no Type could be resolved for its results: ${error.message}`;
+					if (!warnings.includes(message)) warnings.push(message);
+				}
+				profileBySection.set(sectionTipo, profile);
+				return profile;
+			};
+
+			/** The Types a candidate is linked to — the "…which are all Type X" half. */
+			const typesOf = async (sectionTipo: string, sectionId: number): Promise<TypeLink[]> => {
+				const profile = await profileOf(sectionTipo);
+				if (profile === null || profile.typeSectionTipo === null) return [];
+				const typeSection = profile.typeSectionTipo;
+				const seen = new Set<string>();
+				const found: { section_tipo: string; section_id: number }[] = [];
+				// The candidate's OWN section decides which criteria enter on it: this
+				// profile may cover several sections, and a sibling's entry component is
+				// not a component of this record.
+				for (const entryTipo of typeEntryComponents(profile, sectionTipo)) {
+					// The link component is a component of the CANDIDATE: re-gate it.
+					if ((await deps.componentGrant(principal, sectionTipo, entryTipo)) < 1) continue;
+					const value = await deps.readValues(
+						{ sectionTipo, sectionId },
+						[{ section_tipo: sectionTipo, component_tipo: entryTipo }],
+						principal,
+					);
+					if (value === null || value.kind !== 'locators') continue;
+					for (const locator of value.locators) {
+						if (locator.section_tipo !== typeSection) continue;
+						const id = Number(locator.section_id);
+						if (!Number.isInteger(id)) continue;
+						const key = `${typeSection}_${id}`;
+						if (seen.has(key)) continue;
+						seen.add(key);
+						found.push({ section_tipo: typeSection, section_id: id });
+					}
+				}
+				if (found.length === 0) return [];
+				// The Type is ANOTHER record and its label is a quote of it: the same
+				// record-scope gate the candidates went through applies before it is read.
+				const readable = await deps.scopeRecords(found, principal);
+				const links: TypeLink[] = [];
+				for (const record of readable) {
+					links.push({
+						sectionTipo: record.section_tipo,
+						sectionId: record.section_id,
+						label: await labelOf(record.section_tipo, record.section_id),
+					});
+				}
+				return links;
+			};
+
+			const results: Record<string, unknown>[] = [];
+			for (const candidate of records) {
+				const meta = candidate.chunkMeta ?? {};
+				const distance = candidate.distance;
+				results.push({
+					section_tipo: candidate.sectionTipo,
+					section_id: candidate.sectionId,
+					label: await labelOf(candidate.sectionTipo, candidate.sectionId),
+					// Cosine similarity, rounded like every other image answer (rag/api.ts
+					// shapeObject) so two views of the same number never disagree.
+					similarity: distance === undefined ? null : Math.round((1 - distance) * 10000) / 10000,
+					view: typeof meta.view === 'string' ? meta.view : null,
+					// The thumb the INDEXER stored for this vector — present only when the
+					// section declares a media component and its thumb derivative exists.
+					thumb_url: typeof meta.thumb_url === 'string' ? meta.thumb_url : null,
+					media_tipo: typeof meta.media_tipo === 'string' ? meta.media_tipo : null,
+					context: candidate.sourceText,
+					types: (await typesOf(candidate.sectionTipo, candidate.sectionId)).map((type) => ({
+						section_tipo: type.sectionTipo,
+						section_id: type.sectionId,
+						label: type.label,
+					})),
 				});
 			}
-			return links;
-		};
 
-		const results: Record<string, unknown>[] = [];
-		for (const candidate of records) {
-			const meta = candidate.chunkMeta ?? {};
-			const distance = candidate.distance;
-			results.push({
-				section_tipo: candidate.sectionTipo,
-				section_id: candidate.sectionId,
-				label: await labelOf(candidate.sectionTipo, candidate.sectionId),
-				// Cosine similarity, rounded like every other image answer (rag/api.ts
-				// shapeObject) so two views of the same number never disagree.
-				similarity: distance === undefined ? null : Math.round((1 - distance) * 10000) / 10000,
-				view: typeof meta.view === 'string' ? meta.view : null,
-				// The thumb the INDEXER stored for this vector — present only when the
-				// section declares a media component and its thumb derivative exists.
-				thumb_url: typeof meta.thumb_url === 'string' ? meta.thumb_url : null,
-				media_tipo: typeof meta.media_tipo === 'string' ? meta.media_tipo : null,
-				context: candidate.sourceText,
-				types: (await typesOf(candidate.sectionTipo, candidate.sectionId)).map((type) => ({
-					section_tipo: type.sectionTipo,
-					section_id: type.sectionId,
-					label: type.label,
-				})),
-			});
-		}
-
-		return envelope(
-			{
-				// The partition that was searched: two models are two indexes, and a
-				// curator comparing results across installs needs to know which one.
-				model,
-				// The sections actually searched ([] = the whole image index).
-				scope,
-				results,
-				// Legible reasons something could not be resolved. Empty on a clean run;
-				// never a substitute for a decline (the answer itself is valid).
-				warnings,
-			},
-			context.requestId,
-		);
-	};
+			return envelope(
+				{
+					// The partition that was searched: two models are two indexes, and a
+					// curator comparing results across installs needs to know which one.
+					model,
+					// The sections actually searched ([] = the whole image index).
+					scope,
+					results,
+					// Legible reasons something could not be resolved. Empty on a clean run;
+					// never a substitute for a decline (the answer itself is valid).
+					warnings,
+				},
+				context.requestId,
+			);
+		});
 }
 
 /* ══════════ get_proposals — the read half of "AI proposes, human confirms" ══════════ */
@@ -1036,10 +1151,11 @@ export interface IdentifyProposalsDeps {
 	componentGrant(principal: Principal, sectionTipo: string, componentTipo: string): Promise<number>;
 	/** The component's ontology model, so the client knows what it is writing into. */
 	componentModel(componentTipo: string): Promise<string | null>;
-	/** Values at a path on a record — used ONLY to resolve a multi-hop target. */
+	/** Values at a path on a record — used ONLY to resolve a multi-hop target. Read AS the principal (path_read.ts scope). */
 	readValues(
 		record: { sectionTipo: string; sectionId: number },
 		path: CriterionPathStep[],
+		principal: Principal,
 	): Promise<CriterionValue | null>;
 	/** Per-record scope gate, applied before a linked record is offered to open. */
 	scopeRecords(
@@ -1059,7 +1175,11 @@ export function defaultIdentifyProposalsDeps(): IdentifyProposalsDeps {
 		componentModel: getModelByTipo,
 		// The data language is the REQUEST's (ALS-scoped), read at this boundary and
 		// passed down — path_read never reads request identity for itself.
-		readValues: (record, path) => readPathValues(record, path, { lang: currentDataLang() }),
+		readValues: (record, path, principal) =>
+			readPathValues(record, path, {
+				lang: currentDataLang(),
+				scope: { principal, surface: 'door', door: 'dd_identify_api.get_proposals' },
+			}),
 		scopeRecords: scopeRecordHits,
 	};
 }
@@ -1129,7 +1249,7 @@ async function resolveAcceptTarget(input: {
 		// apply (component read, then record scope): this is a second read.
 		const openRecords: { section_tipo: string; section_id: number }[] = [];
 		if ((await deps.componentGrant(principal, seed.sectionTipo, entry.component_tipo)) >= 1) {
-			const value = await deps.readValues(seed, [entry]);
+			const value = await deps.readValues(seed, [entry], principal);
 			if (value !== null && value.kind === 'locators') {
 				const seen = new Set<string>();
 				const found: { section_tipo: string; section_id: number }[] = [];
@@ -1310,176 +1430,197 @@ function shapeSkipped(
 
 /** get_proposals, over injectable seams (see {@link IdentifyProposalsDeps}). */
 export function buildGetProposals(deps: IdentifyProposalsDeps): ActionHandler {
-	return async (rqo: Rqo, context): Promise<ApiResult> => {
-		const principal = requirePrincipal(context);
-		const options = rqo.options as Record<string, unknown> | undefined;
+	// The row memo, for the same reason buildFindMatches opens one (PERF-01).
+	return (rqo: Rqo, context): Promise<ApiResult> =>
+		runWithRecordMemo(async (): Promise<ApiResult> => {
+			const principal = requirePrincipal(context);
+			const options = rqo.options as Record<string, unknown> | undefined;
 
-		const seed = readSeed(options);
-		if (seed === null) decline('identify.missing_seed');
+			const seed = readSeed(options);
+			if (seed === null) decline('identify.missing_seed');
 
-		// Section read grant FIRST, exactly as find_matches: the decline codes must
-		// not tell someone who cannot open this section whether it has a profile.
-		if (!(await deps.canReadSection(principal, seed.sectionTipo))) decline('perm.denied');
+			// Section read grant FIRST, exactly as find_matches: the decline codes must
+			// not tell someone who cannot open this section whether it has a profile.
+			if (!(await deps.canReadSection(principal, seed.sectionTipo))) decline('perm.denied');
 
-		const requested = readProposalSources(options?.source);
-		if (!requested.ok) decline('identify.invalid_source', requested.msg);
+			const requested = readProposalSources(options?.source);
+			if (!requested.ok) decline('identify.invalid_source', requested.msg);
 
-		let profile: IdentificationProfile | null;
-		try {
-			profile = await deps.loadProfile(seed.sectionTipo);
-		} catch (error) {
-			if (error instanceof ProfileError) decline('identify.invalid_profile', error.message);
-			throw error;
-		}
-		if (profile === null) decline('identify.no_profile');
-
-		const lang = currentDataLang();
-		const topK = clampLimit(options?.limit);
-		const rawModelId = options?.model_id;
-		const modelId =
-			typeof rawModelId === 'string' && rawModelId.trim() !== '' ? rawModelId.trim() : undefined;
-
-		// Profile order is the CURATOR's ordering, and it is what both sources list
-		// in; the merged list keeps it, with the vote before the model when both
-		// answered the same criterion (a corpus consensus is the stronger claim).
-		const criterionById = new Map(profile.criteria.map((criterion) => [criterion.id, criterion]));
-		const criterionOrder = new Map(
-			profile.criteria.map((criterion, index) => [criterion.id, index]),
-		);
-
-		// One target per (criterion, kind): both sources land in the same place.
-		const targets = new Map<string, Record<string, unknown>>();
-		const targetFor = async (
-			criterionId: string,
-			kind: 'categorical' | 'date_range',
-		): Promise<Record<string, unknown>> => {
-			const key = `${criterionId}::${kind}`;
-			const cached = targets.get(key);
-			if (cached !== undefined) return cached;
-			const resolved = await resolveAcceptTarget({
-				criterion: criterionById.get(criterionId),
-				kind,
-				seed,
-				principal,
-				deps,
-			});
-			targets.set(key, resolved);
-			return resolved;
-		};
-
-		const sources: Record<string, unknown>[] = [];
-		const proposals: { order: number; rank: number; wire: Record<string, unknown> }[] = [];
-		const rankOf = (name: ProposalSourceName): number => (name === 'neighbour_vote' ? 0 : 1);
-
-		// ── the neighbour vote ───────────────────────────────────────────────────
-		if (requested.sources.includes('neighbour_vote')) {
+			let profile: IdentificationProfile | null;
 			try {
-				const report = await deps.runNeighbourVote({ profile, seed, principal, topK, lang });
-				for (const proposal of report.proposals) {
-					const target = await targetFor(proposal.criterionId, proposal.kind);
-					proposals.push({
-						order: criterionOrder.get(proposal.criterionId) ?? Number.MAX_SAFE_INTEGER,
-						rank: rankOf('neighbour_vote'),
-						wire: shapeVoteProposal(proposal, report, target),
+				profile = await deps.loadProfile(seed.sectionTipo);
+			} catch (error) {
+				if (error instanceof ProfileError)
+					decline('identify.invalid_profile', error.message, error);
+				throw error;
+			}
+			if (profile === null) decline('identify.no_profile');
+
+			const lang = currentDataLang();
+			const topK = clampLimit(options?.limit);
+			const rawModelId = options?.model_id;
+			const modelId =
+				typeof rawModelId === 'string' && rawModelId.trim() !== '' ? rawModelId.trim() : undefined;
+
+			// Profile order is the CURATOR's ordering, and it is what both sources list
+			// in; the merged list keeps it, with the vote before the model when both
+			// answered the same criterion (a corpus consensus is the stronger claim).
+			const criterionById = new Map(profile.criteria.map((criterion) => [criterion.id, criterion]));
+			const criterionOrder = new Map(
+				profile.criteria.map((criterion, index) => [criterion.id, index]),
+			);
+
+			// One target per (criterion, kind): both sources land in the same place.
+			const targets = new Map<string, Record<string, unknown>>();
+			const targetFor = async (
+				criterionId: string,
+				kind: 'categorical' | 'date_range',
+			): Promise<Record<string, unknown>> => {
+				const key = `${criterionId}::${kind}`;
+				const cached = targets.get(key);
+				if (cached !== undefined) return cached;
+				const resolved = await resolveAcceptTarget({
+					criterion: criterionById.get(criterionId),
+					kind,
+					seed,
+					principal,
+					deps,
+				});
+				targets.set(key, resolved);
+				return resolved;
+			};
+
+			const sources: Record<string, unknown>[] = [];
+			const proposals: { order: number; rank: number; wire: Record<string, unknown> }[] = [];
+			const rankOf = (name: ProposalSourceName): number => (name === 'neighbour_vote' ? 0 : 1);
+
+			// ── the neighbour vote ───────────────────────────────────────────────────
+			if (requested.sources.includes('neighbour_vote')) {
+				try {
+					const report = await deps.runNeighbourVote({ profile, seed, principal, topK, lang });
+					for (const proposal of report.proposals) {
+						const target = await targetFor(proposal.criterionId, proposal.kind);
+						proposals.push({
+							order: criterionOrder.get(proposal.criterionId) ?? Number.MAX_SAFE_INTEGER,
+							rank: rankOf('neighbour_vote'),
+							wire: shapeVoteProposal(proposal, report, target),
+						});
+					}
+					sources.push({
+						source: 'neighbour_vote',
+						requested: true,
+						ran: true,
+						declined: null,
+						neighbour_source: report.neighbourSource,
+						neighbour_source_reason: report.neighbourSourceReason,
+						neighbours_considered: report.neighboursConsidered,
+						skipped: shapeSkipped(report.skipped),
+					});
+				} catch (error) {
+					// A denied SEED is the whole request's answer, not one source's.
+					if (error instanceof IdentifyAccessError) decline('perm.denied');
+					// Anything else is THIS SOURCE being unavailable: the other source's
+					// proposals still stand, and the failure travels rather than vanishing.
+					sources.push({
+						source: 'neighbour_vote',
+						requested: true,
+						ran: false,
+						declined: {
+							reason: 'source_failed',
+							detail: declineDetail(error),
+						},
+						skipped: [],
 					});
 				}
+			} else {
 				sources.push({
 					source: 'neighbour_vote',
-					requested: true,
-					ran: true,
-					declined: null,
-					neighbour_source: report.neighbourSource,
-					neighbour_source_reason: report.neighbourSourceReason,
-					neighbours_considered: report.neighboursConsidered,
-					skipped: shapeSkipped(report.skipped),
-				});
-			} catch (error) {
-				// A denied SEED is the whole request's answer, not one source's.
-				if (error instanceof IdentifyAccessError) decline('perm.denied');
-				// Anything else is THIS SOURCE being unavailable: the other source's
-				// proposals still stand, and the failure travels rather than vanishing.
-				sources.push({
-					source: 'neighbour_vote',
-					requested: true,
+					requested: false,
 					ran: false,
 					declined: {
-						reason: 'source_failed',
-						detail: declineDetail(error),
+						reason: 'not_requested',
+						detail: "this request did not ask for the neighbour vote (source: 'neighbour_vote')",
 					},
 					skipped: [],
 				});
 			}
-		} else {
-			sources.push({
-				source: 'neighbour_vote',
-				requested: false,
-				ran: false,
-				declined: {
-					reason: 'not_requested',
-					detail: "this request did not ask for the neighbour vote (source: 'neighbour_vote')",
-				},
-				skipped: [],
-			});
-		}
 
-		// ── the vision model (opt-in) ────────────────────────────────────────────
-		if (requested.sources.includes('vision_model')) {
-			try {
-				const report = await deps.runVision({
-					profile,
-					seed,
-					principal,
-					lang,
-					...(modelId !== undefined ? { modelId } : {}),
-				});
-				if (report.declined === null) {
-					for (const proposal of report.proposals) {
-						const target = await targetFor(proposal.criterionId, 'categorical');
-						proposals.push({
-							order: criterionOrder.get(proposal.criterionId) ?? Number.MAX_SAFE_INTEGER,
-							rank: rankOf('vision_model'),
-							wire: shapeVisionProposal(proposal, target),
-						});
+			// ── the vision model (opt-in) ────────────────────────────────────────────
+			if (requested.sources.includes('vision_model')) {
+				try {
+					const report = await deps.runVision({
+						profile,
+						seed,
+						principal,
+						lang,
+						...(modelId !== undefined ? { modelId } : {}),
+					});
+					if (report.declined === null) {
+						for (const proposal of report.proposals) {
+							const target = await targetFor(proposal.criterionId, 'categorical');
+							proposals.push({
+								order: criterionOrder.get(proposal.criterionId) ?? Number.MAX_SAFE_INTEGER,
+								rank: rankOf('vision_model'),
+								wire: shapeVisionProposal(proposal, target),
+							});
+						}
 					}
+					sources.push({
+						source: 'vision_model',
+						requested: true,
+						ran: report.declined === null,
+						declined:
+							report.declined === null
+								? null
+								: { reason: report.declined.reason, detail: report.declined.detail },
+						model:
+							report.model === null
+								? null
+								: { id: report.model.id, label: report.model.label, egress: report.model.egress },
+						image:
+							report.image === null
+								? null
+								: {
+										component_tipo: report.image.componentTipo,
+										quality: report.image.quality,
+										thumb_url: report.image.thumbUrl,
+									},
+						skipped: shapeSkipped(report.skipped),
+						// Answers the model gave that were NOT in the vocabulary it was shown.
+						// Reported so hallucination is visible rather than invisible.
+						discarded: report.discarded.map((item) => ({
+							criterion_id: item.criterionId,
+							offered: item.offered,
+							detail: item.detail,
+						})),
+					});
+				} catch (error) {
+					if (error instanceof IdentifyAccessError) decline('perm.denied');
+					sources.push({
+						source: 'vision_model',
+						requested: true,
+						ran: false,
+						declined: {
+							reason: 'source_failed',
+							detail: declineDetail(error),
+						},
+						model: null,
+						image: null,
+						skipped: [],
+						discarded: [],
+					});
 				}
+			} else {
 				sources.push({
 					source: 'vision_model',
-					requested: true,
-					ran: report.declined === null,
-					declined:
-						report.declined === null
-							? null
-							: { reason: report.declined.reason, detail: report.declined.detail },
-					model:
-						report.model === null
-							? null
-							: { id: report.model.id, label: report.model.label, egress: report.model.egress },
-					image:
-						report.image === null
-							? null
-							: {
-									component_tipo: report.image.componentTipo,
-									quality: report.image.quality,
-									thumb_url: report.image.thumbUrl,
-								},
-					skipped: shapeSkipped(report.skipped),
-					// Answers the model gave that were NOT in the vocabulary it was shown.
-					// Reported so hallucination is visible rather than invisible.
-					discarded: report.discarded.map((item) => ({
-						criterion_id: item.criterionId,
-						offered: item.offered,
-						detail: item.detail,
-					})),
-				});
-			} catch (error) {
-				if (error instanceof IdentifyAccessError) decline('perm.denied');
-				sources.push({
-					source: 'vision_model',
-					requested: true,
+					requested: false,
 					ran: false,
+					// Said out loud: "no vision proposals" must never read as "the model
+					// looked and found nothing". It was never asked.
 					declined: {
-						reason: 'source_failed',
-						detail: declineDetail(error),
+						reason: 'not_requested',
+						detail:
+							"the vision source is opt-in — it calls a model and may send this record's photograph off this host. Ask for it with source: 'vision' (or 'all').",
 					},
 					model: null,
 					image: null,
@@ -1487,39 +1628,21 @@ export function buildGetProposals(deps: IdentifyProposalsDeps): ActionHandler {
 					discarded: [],
 				});
 			}
-		} else {
-			sources.push({
-				source: 'vision_model',
-				requested: false,
-				ran: false,
-				// Said out loud: "no vision proposals" must never read as "the model
-				// looked and found nothing". It was never asked.
-				declined: {
-					reason: 'not_requested',
-					detail:
-						"the vision source is opt-in — it calls a model and may send this record's photograph off this host. Ask for it with source: 'vision' (or 'all').",
+
+			proposals.sort((a, b) => a.order - b.order || a.rank - b.rank);
+
+			return envelope(
+				{
+					seed: { section_tipo: seed.sectionTipo, section_id: seed.sectionId },
+					profile: { id: profile.id, label: profile.label },
+					// Every source's own outcome, requested or not. The panel reads this to
+					// say WHY a source contributed nothing.
+					sources,
+					proposals: proposals.map((item) => item.wire),
 				},
-				model: null,
-				image: null,
-				skipped: [],
-				discarded: [],
-			});
-		}
-
-		proposals.sort((a, b) => a.order - b.order || a.rank - b.rank);
-
-		return envelope(
-			{
-				seed: { section_tipo: seed.sectionTipo, section_id: seed.sectionId },
-				profile: { id: profile.id, label: profile.label },
-				// Every source's own outcome, requested or not. The panel reads this to
-				// say WHY a source contributed nothing.
-				sources,
-				proposals: proposals.map((item) => item.wire),
-			},
-			context.requestId,
-		);
-	};
+				context.requestId,
+			);
+		});
 }
 
 /* ═══════ resolve_type_link — what a cluster may be PROMOTED into ═══════ */
@@ -1600,10 +1723,11 @@ export interface IdentifyTypeLinkDeps {
 	modelColumn(model: string): string | null;
 	/** The section's label component (section_map `main.term`), or null. */
 	labelComponent(sectionTipo: string): Promise<string | null>;
-	/** Values at a path on a record (the identification path reader). */
+	/** Values at a path on a record (the identification path reader), read AS the principal (path_read.ts scope). */
 	readValues(
 		record: { sectionTipo: string; sectionId: number },
 		path: CriterionPathStep[],
+		principal: Principal,
 	): Promise<CriterionValue | null>;
 	/** Per-record scope gate, applied before a record is named or its label quoted. */
 	scopeRecords(
@@ -1636,7 +1760,11 @@ export function defaultTypeLinkDeps(): IdentifyTypeLinkDeps {
 		},
 		// The data language is the REQUEST's (ALS-scoped), read at this boundary and
 		// passed down — path_read never reads request identity for itself.
-		readValues: (record, path) => readPathValues(record, path, { lang: currentDataLang() }),
+		readValues: (record, path, principal) =>
+			readPathValues(record, path, {
+				lang: currentDataLang(),
+				scope: { principal, surface: 'door', door: 'dd_identify_api.resolve_type_link' },
+			}),
 		scopeRecords: scopeRecordHits,
 		// Existence through the db layer's own batch primitive (no SQL here): the
 		// section's matrix table, then "is this id in it".
@@ -1756,9 +1884,11 @@ async function checkTypeRecord(input: {
 		typeLabelTipo !== null &&
 		(await deps.componentGrant(principal, typeSectionTipo, typeLabelTipo)) >= 1
 	) {
-		const value = await deps.readValues({ sectionTipo: typeSectionTipo, sectionId }, [
-			{ section_tipo: typeSectionTipo, component_tipo: typeLabelTipo },
-		]);
+		const value = await deps.readValues(
+			{ sectionTipo: typeSectionTipo, sectionId },
+			[{ section_tipo: typeSectionTipo, component_tipo: typeLabelTipo }],
+			principal,
+		);
 		label = value !== null && value.kind === 'text' ? (value.values[0] ?? null) : null;
 	}
 
@@ -1767,222 +1897,232 @@ async function checkTypeRecord(input: {
 
 /** resolve_type_link, over injectable seams (see {@link IdentifyTypeLinkDeps}). */
 export function buildResolveTypeLink(deps: IdentifyTypeLinkDeps): ActionHandler {
-	return async (rqo: Rqo, context): Promise<ApiResult> => {
-		const principal = requirePrincipal(context);
-		const options = rqo.options as Record<string, unknown> | undefined;
+	// The row memo, for the same reason buildFindMatches opens one (PERF-01).
+	return (rqo: Rqo, context): Promise<ApiResult> =>
+		runWithRecordMemo(async (): Promise<ApiResult> => {
+			const principal = requirePrincipal(context);
+			const options = rqo.options as Record<string, unknown> | undefined;
 
-		const raw = options?.section_tipo;
-		const sectionTipo = typeof raw === 'string' ? raw.trim() : '';
-		if (sectionTipo === '' || !isValidTipo(sectionTipo)) decline('identify.missing_section');
+			const raw = options?.section_tipo;
+			const sectionTipo = typeof raw === 'string' ? raw.trim() : '';
+			if (sectionTipo === '' || !isValidTipo(sectionTipo)) decline('identify.missing_section');
 
-		// Section read grant FIRST, exactly as find_matches: the decline codes below
-		// must not tell someone who cannot open this section whether it has a
-		// profile, or where its typology lives.
-		if (!(await deps.canReadSection(principal, sectionTipo))) decline('perm.denied');
+			// Section read grant FIRST, exactly as find_matches: the decline codes below
+			// must not tell someone who cannot open this section whether it has a
+			// profile, or where its typology lives.
+			if (!(await deps.canReadSection(principal, sectionTipo))) decline('perm.denied');
 
-		let profile: IdentificationProfile | null;
-		try {
-			profile = await deps.loadProfile(sectionTipo);
-		} catch (error) {
-			if (error instanceof ProfileError) decline('identify.invalid_profile', error.message);
-			throw error;
-		}
-		if (profile === null) decline('identify.no_profile');
-
-		// 1. IS THERE ANYWHERE TO PROMOTE INTO? Null is not a defect: a collection
-		//    with no published typology clusters perfectly well and simply has no
-		//    canonical Type to attach members to.
-		const typeSectionTipo = profile.typeSectionTipo;
-		if (typeSectionTipo === null) {
-			decline(
-				'identify.no_type_section',
-				`The identification profile '${profile.label || profile.id}' declares no Type section, so there is nothing to promote a group into. Clustering still works — this collection just keeps no canonical Type records.`,
-			);
-		}
-
-		// 2. WHICH COMPONENT HOLDS THE LINK? Derived from the profile's own criteria,
-		//    or refused. Never the portal that happens to point at the right section,
-		//    and never a component of a SIBLING section this profile also covers.
-		const candidates = typeLinkCandidates(profile, sectionTipo);
-		if (candidates.length === 0) {
-			decline(
-				'identify.no_link_component',
-				`No criterion in profile '${profile.label || profile.id}' starts on '${sectionTipo}' and reaches section '${typeSectionTipo}' in one hop, so the component that links a record to its Type cannot be derived. Add a criterion whose path starts on '${sectionTipo}' and hops into '${typeSectionTipo}', or link the records by hand — this refuses to guess which component is the Type link.`,
-			);
-		}
-
-		// 3. WHAT MAY THIS CALLER DO? Grants resolved here, never guessed client-side.
-		const links: Record<string, unknown>[] = [];
-		for (const candidate of candidates) {
-			const model = await deps.componentModel(candidate.componentTipo);
-			const holdsLocators = model !== null && deps.modelColumn(model) === 'relation';
-			const grant = await deps.componentGrant(principal, sectionTipo, candidate.componentTipo);
-			const reason: TypeLinkReason = !holdsLocators
-				? 'unsupported_component_model'
-				: grant < 2
-					? 'forbidden_component'
-					: 'ok';
-			links.push({
-				section_tipo: sectionTipo,
-				component_tipo: candidate.componentTipo,
-				component_model: model,
-				writable: reason === 'ok',
-				reason,
-				detail:
-					reason === 'ok'
-						? ''
-						: reason === 'forbidden_component'
-							? `you may read this section but not write '${candidate.componentTipo}', so members cannot be attached to a Type from here`
-							: `'${candidate.componentTipo}' is a '${model ?? 'unknown'}', which does not store record links, so a Type link cannot be written into it`,
-				revealed_by: candidate.revealedBy.map((entry) => ({
-					criterion_id: entry.criterionId,
-					label: entry.label,
-				})),
-			});
-		}
-
-		// The Type section itself: may this caller mint one, and what names it?
-		const typeLabelTipo = await deps.labelComponent(typeSectionTipo);
-		const typeLabelModel = typeLabelTipo === null ? null : await deps.componentModel(typeLabelTipo);
-		const typeLabelColumn = typeLabelModel === null ? null : deps.modelColumn(typeLabelModel);
-		const typeLabelGrant =
-			typeLabelTipo === null
-				? 0
-				: await deps.componentGrant(principal, typeSectionTipo, typeLabelTipo);
-		const typeSectionGrant = await deps.componentGrant(principal, typeSectionTipo, typeSectionTipo);
-
-		// 4. THE SURVEY. Which Types do these members already carry? Two gates per
-		//    value: the component grant on the member, then the record scope gate on
-		//    the Type before its label is quoted.
-		const members = readSurveyRecords(options?.records, sectionTipo);
-		const readableMembers =
-			members.length === 0
-				? []
-				: await deps.scopeRecords(
-						members.map((member) => ({
-							section_tipo: member.sectionTipo,
-							section_id: member.sectionId,
-						})),
-						principal,
-					);
-		const writableLinkTipos = links
-			.filter((link) => link.writable === true || link.reason === 'forbidden_component')
-			.map((link) => String(link.component_tipo));
-		const counts = new Map<number, number>();
-		for (const member of readableMembers) {
-			const seenForMember = new Set<number>();
-			for (const componentTipo of writableLinkTipos) {
-				if ((await deps.componentGrant(principal, member.section_tipo, componentTipo)) < 1) {
-					continue;
-				}
-				const value = await deps.readValues(
-					{ sectionTipo: member.section_tipo, sectionId: member.section_id },
-					[{ section_tipo: member.section_tipo, component_tipo: componentTipo }],
-				);
-				if (value === null || value.kind !== 'locators') continue;
-				for (const locator of value.locators) {
-					if (locator.section_tipo !== typeSectionTipo) continue;
-					const id = Number(locator.section_id);
-					if (!Number.isInteger(id)) continue;
-					// One member counts ONCE per Type however many components link it.
-					if (seenForMember.has(id)) continue;
-					seenForMember.add(id);
-					counts.set(id, (counts.get(id) ?? 0) + 1);
-				}
+			let profile: IdentificationProfile | null;
+			try {
+				profile = await deps.loadProfile(sectionTipo);
+			} catch (error) {
+				if (error instanceof ProfileError)
+					decline('identify.invalid_profile', error.message, error);
+				throw error;
 			}
-		}
-		const existingTypes: Record<string, unknown>[] = [];
-		if (counts.size > 0) {
-			// The Type is ANOTHER record and its label is a quote of it: the same
-			// record-scope gate the members went through applies before it is read.
-			const readableTypes = await deps.scopeRecords(
-				[...counts.keys()].map((id) => ({ section_tipo: typeSectionTipo, section_id: id })),
-				principal,
-			);
-			const labelReadable =
-				typeLabelTipo !== null &&
-				(await deps.componentGrant(principal, typeSectionTipo, typeLabelTipo)) >= 1;
-			for (const record of readableTypes) {
-				let label: string | null = null;
-				if (labelReadable && typeLabelTipo !== null) {
-					const value = await deps.readValues(
-						{ sectionTipo: record.section_tipo, sectionId: record.section_id },
-						[{ section_tipo: record.section_tipo, component_tipo: typeLabelTipo }],
-					);
-					// A section whose main term is a relation has no string to show here;
-					// null, never a locator rendered raw.
-					label = value !== null && value.kind === 'text' ? (value.values[0] ?? null) : null;
-				}
-				existingTypes.push({
-					section_tipo: record.section_tipo,
-					section_id: record.section_id,
-					label,
-					member_count: counts.get(record.section_id) ?? 0,
+			if (profile === null) decline('identify.no_profile');
+
+			// 1. IS THERE ANYWHERE TO PROMOTE INTO? Null is not a defect: a collection
+			//    with no published typology clusters perfectly well and simply has no
+			//    canonical Type to attach members to.
+			const typeSectionTipo = profile.typeSectionTipo;
+			if (typeSectionTipo === null) {
+				decline(
+					'identify.no_type_section',
+					`The identification profile '${profile.label || profile.id}' declares no Type section, so there is nothing to promote a group into. Clustering still works — this collection just keeps no canonical Type records.`,
+				);
+			}
+
+			// 2. WHICH COMPONENT HOLDS THE LINK? Derived from the profile's own criteria,
+			//    or refused. Never the portal that happens to point at the right section,
+			//    and never a component of a SIBLING section this profile also covers.
+			const candidates = typeLinkCandidates(profile, sectionTipo);
+			if (candidates.length === 0) {
+				decline(
+					'identify.no_link_component',
+					`No criterion in profile '${profile.label || profile.id}' starts on '${sectionTipo}' and reaches section '${typeSectionTipo}' in one hop, so the component that links a record to its Type cannot be derived. Add a criterion whose path starts on '${sectionTipo}' and hops into '${typeSectionTipo}', or link the records by hand — this refuses to guess which component is the Type link.`,
+				);
+			}
+
+			// 3. WHAT MAY THIS CALLER DO? Grants resolved here, never guessed client-side.
+			const links: Record<string, unknown>[] = [];
+			for (const candidate of candidates) {
+				const model = await deps.componentModel(candidate.componentTipo);
+				const holdsLocators = model !== null && deps.modelColumn(model) === 'relation';
+				const grant = await deps.componentGrant(principal, sectionTipo, candidate.componentTipo);
+				const reason: TypeLinkReason = !holdsLocators
+					? 'unsupported_component_model'
+					: grant < 2
+						? 'forbidden_component'
+						: 'ok';
+				links.push({
+					section_tipo: sectionTipo,
+					component_tipo: candidate.componentTipo,
+					component_model: model,
+					writable: reason === 'ok',
+					reason,
+					detail:
+						reason === 'ok'
+							? ''
+							: reason === 'forbidden_component'
+								? `you may read this section but not write '${candidate.componentTipo}', so members cannot be attached to a Type from here`
+								: `'${candidate.componentTipo}' is a '${model ?? 'unknown'}', which does not store record links, so a Type link cannot be written into it`,
+					revealed_by: candidate.revealedBy.map((entry) => ({
+						criterion_id: entry.criterionId,
+						label: entry.label,
+					})),
 				});
 			}
-			existingTypes.sort(
-				(a, b) =>
-					Number(b.member_count) - Number(a.member_count) ||
-					Number(a.section_id) - Number(b.section_id),
+
+			// The Type section itself: may this caller mint one, and what names it?
+			const typeLabelTipo = await deps.labelComponent(typeSectionTipo);
+			const typeLabelModel =
+				typeLabelTipo === null ? null : await deps.componentModel(typeLabelTipo);
+			const typeLabelColumn = typeLabelModel === null ? null : deps.modelColumn(typeLabelModel);
+			const typeLabelGrant =
+				typeLabelTipo === null
+					? 0
+					: await deps.componentGrant(principal, typeSectionTipo, typeLabelTipo);
+			const typeSectionGrant = await deps.componentGrant(
+				principal,
+				typeSectionTipo,
+				typeSectionTipo,
 			);
-		}
 
-		// 5. THE CHECK. "Attach to another existing Type, by record id" is a TYPED
-		//    id, and a typed id is a typo waiting to be confirmed: 4321 for 432
-		//    scatters thirty locators onto a record that does not exist, and no
-		//    later gate notices (portal inserts do not check target existence).
-		//    So the panel arms its confirm step on THIS answer and on nothing it
-		//    worked out itself — a title resolver cannot tell a miss from a hit
-		//    (it falls back to "tipo / id" for both).
-		const rawCheckId = options?.check_type_id;
-		const typeRecord =
-			rawCheckId === undefined || rawCheckId === null || rawCheckId === ''
-				? null
-				: await checkTypeRecord({
-						raw: rawCheckId,
-						typeSectionTipo,
-						typeLabelTipo,
+			// 4. THE SURVEY. Which Types do these members already carry? Two gates per
+			//    value: the component grant on the member, then the record scope gate on
+			//    the Type before its label is quoted.
+			const members = readSurveyRecords(options?.records, sectionTipo);
+			const readableMembers =
+				members.length === 0
+					? []
+					: await deps.scopeRecords(
+							members.map((member) => ({
+								section_tipo: member.sectionTipo,
+								section_id: member.sectionId,
+							})),
+							principal,
+						);
+			const writableLinkTipos = links
+				.filter((link) => link.writable === true || link.reason === 'forbidden_component')
+				.map((link) => String(link.component_tipo));
+			const counts = new Map<number, number>();
+			for (const member of readableMembers) {
+				const seenForMember = new Set<number>();
+				for (const componentTipo of writableLinkTipos) {
+					if ((await deps.componentGrant(principal, member.section_tipo, componentTipo)) < 1) {
+						continue;
+					}
+					const value = await deps.readValues(
+						{ sectionTipo: member.section_tipo, sectionId: member.section_id },
+						[{ section_tipo: member.section_tipo, component_tipo: componentTipo }],
 						principal,
-						deps,
+					);
+					if (value === null || value.kind !== 'locators') continue;
+					for (const locator of value.locators) {
+						if (locator.section_tipo !== typeSectionTipo) continue;
+						const id = Number(locator.section_id);
+						if (!Number.isInteger(id)) continue;
+						// One member counts ONCE per Type however many components link it.
+						if (seenForMember.has(id)) continue;
+						seenForMember.add(id);
+						counts.set(id, (counts.get(id) ?? 0) + 1);
+					}
+				}
+			}
+			const existingTypes: Record<string, unknown>[] = [];
+			if (counts.size > 0) {
+				// The Type is ANOTHER record and its label is a quote of it: the same
+				// record-scope gate the members went through applies before it is read.
+				const readableTypes = await deps.scopeRecords(
+					[...counts.keys()].map((id) => ({ section_tipo: typeSectionTipo, section_id: id })),
+					principal,
+				);
+				const labelReadable =
+					typeLabelTipo !== null &&
+					(await deps.componentGrant(principal, typeSectionTipo, typeLabelTipo)) >= 1;
+				for (const record of readableTypes) {
+					let label: string | null = null;
+					if (labelReadable && typeLabelTipo !== null) {
+						const value = await deps.readValues(
+							{ sectionTipo: record.section_tipo, sectionId: record.section_id },
+							[{ section_tipo: record.section_tipo, component_tipo: typeLabelTipo }],
+							principal,
+						);
+						// A section whose main term is a relation has no string to show here;
+						// null, never a locator rendered raw.
+						label = value !== null && value.kind === 'text' ? (value.values[0] ?? null) : null;
+					}
+					existingTypes.push({
+						section_tipo: record.section_tipo,
+						section_id: record.section_id,
+						label,
+						member_count: counts.get(record.section_id) ?? 0,
 					});
+				}
+				existingTypes.sort(
+					(a, b) =>
+						Number(b.member_count) - Number(a.member_count) ||
+						Number(a.section_id) - Number(b.section_id),
+				);
+			}
 
-		return envelope(
-			{
-				section_tipo: sectionTipo,
-				profile: { id: profile.id, label: profile.label },
-				type_section: {
-					section_tipo: typeSectionTipo,
-					// Minting a Type is an ordinary record creation, re-checked by the
-					// create handler itself; this only tells the panel whether to offer it.
-					can_create: typeSectionGrant >= 2,
-					label_component:
-						typeLabelTipo === null
-							? null
-							: {
-									section_tipo: typeSectionTipo,
-									component_tipo: typeLabelTipo,
-									component_model: typeLabelModel,
-									// A thesaurus-term main (a relation) cannot be filled with a
-									// typed string from here: the panel must say so and offer the
-									// record instead of composing a value it would get wrong.
-									kind: typeLabelColumn === 'relation' ? 'relation' : 'literal',
-									writable: typeLabelGrant >= 2 && typeLabelColumn !== 'relation',
-								},
+			// 5. THE CHECK. "Attach to another existing Type, by record id" is a TYPED
+			//    id, and a typed id is a typo waiting to be confirmed: 4321 for 432
+			//    scatters thirty locators onto a record that does not exist, and no
+			//    later gate notices (portal inserts do not check target existence).
+			//    So the panel arms its confirm step on THIS answer and on nothing it
+			//    worked out itself — a title resolver cannot tell a miss from a hit
+			//    (it falls back to "tipo / id" for both).
+			const rawCheckId = options?.check_type_id;
+			const typeRecord =
+				rawCheckId === undefined || rawCheckId === null || rawCheckId === ''
+					? null
+					: await checkTypeRecord({
+							raw: rawCheckId,
+							typeSectionTipo,
+							typeLabelTipo,
+							principal,
+							deps,
+						});
+
+			return envelope(
+				{
+					section_tipo: sectionTipo,
+					profile: { id: profile.id, label: profile.label },
+					type_section: {
+						section_tipo: typeSectionTipo,
+						// Minting a Type is an ordinary record creation, re-checked by the
+						// create handler itself; this only tells the panel whether to offer it.
+						can_create: typeSectionGrant >= 2,
+						label_component:
+							typeLabelTipo === null
+								? null
+								: {
+										section_tipo: typeSectionTipo,
+										component_tipo: typeLabelTipo,
+										component_model: typeLabelModel,
+										// A thesaurus-term main (a relation) cannot be filled with a
+										// typed string from here: the panel must say so and offer the
+										// record instead of composing a value it would get wrong.
+										kind: typeLabelColumn === 'relation' ? 'relation' : 'literal',
+										writable: typeLabelGrant >= 2 && typeLabelColumn !== 'relation',
+									},
+					},
+					// Usually one. More than one is a real answer (two criteria reaching the
+					// typology through different components) and the panel must ASK, not pick.
+					links,
+					// Types the surveyed members already carry, commonest first.
+					existing_types: existingTypes,
+					// How many of the named members could actually be read and surveyed.
+					members_surveyed: readableMembers.length,
+					// null unless the request asked (`check_type_id`). `exists:true` is the
+					// ONLY thing that may arm an attach to a hand-typed id.
+					type_record: typeRecord,
 				},
-				// Usually one. More than one is a real answer (two criteria reaching the
-				// typology through different components) and the panel must ASK, not pick.
-				links,
-				// Types the surveyed members already carry, commonest first.
-				existing_types: existingTypes,
-				// How many of the named members could actually be read and surveyed.
-				members_surveyed: readableMembers.length,
-				// null unless the request asked (`check_type_id`). `exists:true` is the
-				// ONLY thing that may arm an attach to a hand-typed id.
-				type_record: typeRecord,
-			},
-			context.requestId,
-		);
-	};
+				context.requestId,
+			);
+		});
 }
 
 /** The dd_identify_api action table (registered in dispatch.ts). */

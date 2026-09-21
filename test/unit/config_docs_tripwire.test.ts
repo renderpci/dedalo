@@ -39,6 +39,13 @@ const REPO_ROOT = join(import.meta.dir, '..', '..');
 const entries = (): [string, CatalogEntry][] => Object.entries(CONFIG_CATALOG);
 
 describe('config docs: the catalog is the single source of truth', () => {
+	test('the key census is populated (a scan over nothing documents nothing)', () => {
+		// 281 keys on 2026-09-02. The scanner walks src/ (test/helpers/env_key_scan.ts);
+		// a walk that finds a handful of keys is a broken walk, and both TOTAL
+		// assertions below would pass on it (census_derivation_tripwire, P2-20).
+		expect(envKeysReadInSrc().size).toBeGreaterThan(200);
+	});
+
 	test('every env key the engine READS is in the catalog', () => {
 		const undocumented = [...envKeysReadInSrc()].filter((k) => CONFIG_CATALOG[k] === undefined);
 

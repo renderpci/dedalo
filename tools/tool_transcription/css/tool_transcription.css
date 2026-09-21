@@ -6,6 +6,12 @@
 :root {
   --tool_transcription: #fd7f26;
   --tool_transcription_border: #ee6402;
+  --tool_transcription_fill: #ad5510;
+  --tool_transcription_fill_border: #8f4409;
+}
+:root[data-theme="dark"] {
+  --tool_transcription_fill: var(--tool_transcription);
+  --tool_transcription_fill_border: var(--tool_transcription_border);
 }
 .column_section_id > .button_edit.list_tool_transcription:hover {
   background-color: var(--tool_transcription);
@@ -293,8 +299,8 @@
   height: 3em;
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator > .btn_subtitles:hover {
-  background-color: var(--tool_transcription);
-  border-color: var(--tool_transcription_border);
+  background-color: var(--tool_transcription_fill);
+  border-color: var(--tool_transcription_fill_border);
   color: var(--color_white);
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator > input {
@@ -328,8 +334,8 @@
   color: var(--fg_default);
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .button_automatic_transcription:hover {
-  background-color: var(--tool_transcription);
-  border-color: var(--tool_transcription_border);
+  background-color: var(--tool_transcription_fill);
+  border-color: var(--tool_transcription_fill_border);
   color: var(--color_white);
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .button_automatic_transcription.button_spinner::before {

@@ -5,7 +5,7 @@
 /**
 * WORKER_QR
 * Dedicated Web Worker that generates a single QR code image using the
-* EasyQRCodeJS library (lib/qrcode/easy.qrcode.min.js) and signals
+* EasyQRCodeJS library (/dedalo/lib/qrcode/dist/easy.qrcode.min.js) and signals
 * completion to the main thread.
 *
 * This file is intended to be loaded as a classic Worker script (not a module)

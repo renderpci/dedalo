@@ -93,7 +93,9 @@ function isTsOnlyEntry(entry: ManifestEntry): boolean {
 		entry.url.startsWith('/dedalo/tools/tool_sitebuilder/') ||
 		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/site_builder_status/') ||
 		entry.url.startsWith('/dedalo/tools/tool_identify/') ||
-		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/ai_models/')
+		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/ai_models/') ||
+		// WC-2026-09-03-maintenance-reconcile-status-widget (audit S-10, TS-only registry)
+		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/reconcile_status/')
 	);
 }
 
@@ -228,6 +230,12 @@ const POST_HARVEST_CLIENT_ADDITIONS: readonly string[] = [
 	'/dedalo/core/page/js/job_tray.js',
 	// external record services client render (WC-2026-08-06-external-client-render)
 	'/dedalo/core/component_external/js/external_render.js',
+	// the ONE render-boundary escaper (WC-2026-09-04-context-render-class)
+	'/dedalo/core/common/js/utils/render_escape.js',
+	// the client limit bound + the row window (WC-2026-09-04-client-limit-bound,
+	// audit P2-31 / CLI-29 / CLI-30)
+	'/dedalo/core/common/js/sqo_limit.js',
+	'/dedalo/core/common/js/row_window.js',
 	// inverse search render — census-adopted post-harvest addition
 	'/dedalo/core/component_inverse/js/render_search_component_inverse.js',
 	// TM list view replacing the service_time_machine package
@@ -255,6 +263,23 @@ function isTimeMachineServiceRemovalEntry(entry: ManifestEntry): boolean {
 		entry.url.startsWith('/dedalo/core/services/service_time_machine/') ||
 		entry.url === '/dedalo/core/common/js/worker_data.js'
 	);
+}
+
+/** Committed third-party bundles REMOVED from the client tree
+ * (WC-2026-09-04-committed-third-party-bundles-leave-the-client-tree, audit
+ * P2-5-residue / CLI-12): `utils/lzstring.js` (lz-string 1.4.5, now the
+ * digest-pinned `vendor/lz-string` row served as `/dedalo/lib/lz-string/`),
+ * `ui-search.js` (an unreferenced findAndReplaceDOMText 0.4.6 UMD — dead) and
+ * `tool_lang/js/tool_lang-min.js` (an unreferenced stale minified copy of
+ * tool_lang.js). The frozen oracle (2026-07-11) still censuses all three.
+ * EXACT URLs, by the service_upload-fold rule. */
+const THIRD_PARTY_BUNDLE_REMOVALS: readonly string[] = [
+	'/dedalo/core/common/js/utils/lzstring.js',
+	'/dedalo/core/common/js/ui-search.js',
+	'/dedalo/tools/tool_lang/js/tool_lang-min.js',
+];
+function isThirdPartyBundleRemovalEntry(entry: ManifestEntry): boolean {
+	return THIRD_PARTY_BUNDLE_REMOVALS.includes(entry.url);
 }
 
 describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', () => {
@@ -338,7 +363,8 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 			!isTranscriptionStatusAdditionEntry(entry) &&
 			!isDropzoneServiceRemovalEntry(entry) &&
 			!isPostHarvestClientAdditionEntry(entry) &&
-			!isTimeMachineServiceRemovalEntry(entry);
+			!isTimeMachineServiceRemovalEntry(entry) &&
+			!isThirdPartyBundleRemovalEntry(entry);
 		const phpSet = phpBody.result.filter(keep).map(comparableLine).sort();
 		const tsSet = tsBody.data.filter(keep).map(comparableLine).sort();
 		expect(tsSet).toEqual(phpSet);
@@ -380,6 +406,13 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 		// TS side, all seven files still in the frozen oracle census.
 		expect(tsBody.data.filter(isTimeMachineServiceRemovalEntry)).toEqual([]);
 		expect(phpBody.result.filter(isTimeMachineServiceRemovalEntry).length).toBe(7);
+
+		// Mirror for the committed-bundle removals: none of the three serves on the
+		// TS side any more, all three are still in the frozen oracle census.
+		expect(tsBody.data.filter(isThirdPartyBundleRemovalEntry)).toEqual([]);
+		expect(phpBody.result.filter(isThirdPartyBundleRemovalEntry).length).toBe(
+			THIRD_PARTY_BUNDLE_REMOVALS.length,
+		);
 	});
 
 	test('WC-013: the TS tool_assistant census is the server-driven file set', () => {

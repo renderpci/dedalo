@@ -33,6 +33,7 @@
 */
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_join} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -105,7 +106,7 @@ view_text_list_select.render = async function(self) {
 		const data		= self.data || {}
 		const entries	= data.entries || []
 
-		const value_string = entries.join(self.context.fields_separator)
+		const value_string = render_join(entries, self.context.fields_separator, self.context.render_class)
 
 	// const text_node = document.createTextNode(value_string)
 

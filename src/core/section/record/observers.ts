@@ -675,7 +675,18 @@ export async function propagateToObservers(
 				cause: error,
 			});
 		}
-		console.error('observer propagation failed (swallowed):', error);
+		// The INTERACTIVE lane — the save calls this post-commit, so the swallow
+		// is the documented posture (a post-commit side effect must never fail
+		// the save). COUNTED (P1-8 / DATA-29, 2026-09-03): the mirror is STORED,
+		// SEARCHABLE relation data, and this file documents a residual deadlock
+		// window whose abort lands exactly here — every other swallow in this
+		// file is loud AND counted, and this was the one lane every user save
+		// takes that no operator could see on /api/v1/counters.
+		console.error(
+			`observer propagation failed (swallowed) — '${observedTipo}' @ ${sectionTipo}/${sectionId}; the mirrors are stale until observer_reconcile:`,
+			error,
+		);
+		incrementCounter('observers_propagation_failed');
 	}
 	return observersData;
 }
@@ -687,6 +698,14 @@ export async function propagateToObservers(
  * write ONE matrix_time_machine row each (lg-nolan, the computed live
  * shape), NEVER touch the live misc column, and return the response data
  * item for targets equal to the saved record.
+ *
+ * WHY WRITING ONLY HISTORY IS SOUND (P1-8 / DATA-15, 2026-09-03,
+ * WC-2026-09-03-info-stored-value-never-served): a component_info value is a
+ * DERIVED DISPLAY value, computed per principal at read time — the read path
+ * (components/component_info/emit.ts) never serves a stored `misc` array, so
+ * a Time Machine restore of one of the rows written here is INERT for what is
+ * served, and the served value can never freeze at a stale snapshot. The TM
+ * row remains what it is: a dated record of what the widgets computed then.
  */
 async function recomputeInfoObserver(
 	observerTipo: string,

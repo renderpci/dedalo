@@ -66,6 +66,10 @@ node test/client/puppeteer_runner.js [options]
 | `--user` / `DEDALO_TEST_USER` | — | Login user |
 | `--password` / `DEDALO_TEST_PASSWORD` | — | Login password |
 | `--headless` / `HEADLESS` | `true` | Headless Chrome |
+| `--strict` | off | Every failure is red, ignoring `KNOWN_FAILING` |
+| `--no-reseed` | off | Skip the canonical `test3` reseed before/after the run |
+| `--update` | off | After a GREEN run, bank the observed inventory (`engineering/client_gate_inventory.json`); refuses to lower a floor or raise a budget |
+| `--replay <file>` / `TEST_REPLAY` | — | No browser, no server: run the same interpret-conclude-exit tail over a scraped observation (`{cards, counters, groups}` JSON) |
 
 Exit code `0` when all suites pass with zero pending; `1` on failure, timeout, or incomplete run.
 

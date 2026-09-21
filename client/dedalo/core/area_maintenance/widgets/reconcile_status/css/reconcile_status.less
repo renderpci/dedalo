@@ -1,0 +1,42 @@
+/**
+* reconcile_status
+*
+* Included from area_maintenance.less file.
+* The registry listing is a shared .dd_table (kit); only the column template
+* and the report block are widget-specific.
+*/
+.wrapper_widget.reconcile_status {
+
+	.reconcile_total {
+		margin-bottom: 0.75rem;
+		font-size: 0.85rem;
+		color: var(--fg_muted);
+	}
+
+	// name · stores · schedule · last run · actions
+	// (`.dd_tr { display: contents }` — the track count must equal the renderer's cell count)
+	.dd_table {
+		grid-template-columns: minmax(9rem, 1.2fr) minmax(10rem, 1.6fr) 7rem minmax(10rem, 1.4fr) 9rem;
+
+		.description {
+			font-size: 0.8rem;
+			color: var(--fg_muted);
+		}
+		.actions {
+			display: flex;
+			gap: 0.35rem;
+		}
+	}
+
+	.body_response {
+		margin-top: 0.75rem;
+		white-space: pre-wrap;
+	}
+
+	.report_pre {
+		.dd_console();
+		margin-top: 0.5rem;
+		max-height: 24rem;
+		overflow: auto;
+	}
+}

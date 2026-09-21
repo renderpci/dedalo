@@ -138,6 +138,28 @@ export async function buildJoinChain(
 	path: { section_tipo?: string; component_tipo?: string }[],
 	mainAlias: string,
 	scope?: SqlFrontierScope,
+	/**
+	 * WHAT THE CHAIN IS FOR — the ONE thing the two twins may legitimately
+	 * differ on, declared here so they cannot drift anywhere else (PERF-08).
+	 *
+	 * A relation component holds an ARRAY of locators, and `jsonb_array_elements`
+	 * fans one record into one row per locator.
+	 *
+	 * - 'filter' (default) KEEPS the fan-out: a filter must match ANY locator,
+	 *   so every locator has to be visible as its own row.
+	 * - 'order' COLLAPSES it to exactly ONE row — `WITH ORDINALITY … ORDER BY
+	 *   ord LIMIT 1` inside the LATERAL. THE RULE: **a multi-locator component
+	 *   sorts by its FIRST STORED locator**, which is the record's own stored
+	 *   order and the same order the client renders the portal in. Without the
+	 *   collapse the sort key of a two-locator record is whichever fan-out row
+	 *   the DISTINCT ON happened to keep (arbitrary, and not stable between two
+	 *   identical paints), and the whole related section has to materialise
+	 *   before the LIMIT can apply.
+	 *
+	 * The LEFT semantics are identical either way: an empty/absent relation key
+	 * yields no lateral row and the LEFT JOIN still emits the outer row.
+	 */
+	purpose: 'filter' | 'order' = 'filter',
 ): Promise<{
 	joins: JoinFragment[];
 	lastAlias: string;
@@ -185,12 +207,18 @@ export async function buildJoinChain(
 			});
 		}
 		aliasChain.push(`${hopDataTipo}_${stepSection}`);
-		const joinAlias = `j_${aliasChain.join('_')}`;
+		// The two purposes emit DIFFERENT joins over the same path (fanned vs
+		// collapsed), so they must never dedup into each other in the assembler's
+		// alias-keyed join sink — one namespace each.
+		const joinAlias = `${purpose === 'order' ? 'o' : 'j'}_${aliasChain.join('_')}`;
 		const relationAlias = `rel_${joinAlias}`;
+		// The jsonb locator itself: the lateral's own row in the 'filter' shape, a
+		// single projected column in the collapsed 'order' one.
+		const locatorRef = purpose === 'order' ? `${relationAlias}.value` : relationAlias;
 		// ON-clause conjuncts: the locator identity, then the caller's record ACL.
 		const onParts = [
-			`${joinAlias}.section_id = NULLIF((${relationAlias}->>'section_id'), '')::bigint`,
-			`${joinAlias}.section_tipo = (${relationAlias}->>'section_tipo')::text`,
+			`${joinAlias}.section_id = NULLIF((${locatorRef}->>'section_id'), '')::bigint`,
+			`${joinAlias}.section_tipo = (${locatorRef}->>'section_tipo')::text`,
 		];
 		if (scope !== undefined) {
 			// This step's OWN component: the leaf component on the last step, the
@@ -221,7 +249,9 @@ export async function buildJoinChain(
 		joins.push({
 			alias: joinAlias,
 			sql:
-				`LEFT JOIN LATERAL jsonb_array_elements(${previousAlias}.relation->'${hopDataTipo}') AS ${relationAlias} ON true\n` +
+				(purpose === 'order'
+					? `LEFT JOIN LATERAL (SELECT locator.value FROM jsonb_array_elements(${previousAlias}.relation->'${hopDataTipo}') WITH ORDINALITY AS locator(value, ord) ORDER BY locator.ord LIMIT 1) AS ${relationAlias}(value) ON true\n`
+					: `LEFT JOIN LATERAL jsonb_array_elements(${previousAlias}.relation->'${hopDataTipo}') AS ${relationAlias} ON true\n`) +
 				`LEFT JOIN ${stepTable} AS ${joinAlias} ON ${onParts.join(' AND ')}`,
 		});
 		previousAlias = joinAlias;

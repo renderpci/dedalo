@@ -16,6 +16,7 @@
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import {
+	chmodSync,
 	existsSync,
 	mkdirSync,
 	mkdtempSync,
@@ -39,8 +40,10 @@ import {
 	getPublicQualities,
 	getRulesStatus,
 	issueSessionMediaKey,
+	layAuthMarker,
 	MARKER_REAP_GRACE_MS,
 	MEDIA_AUTH_COOKIE,
+	mediaTreeUnreachableReason,
 	mintAuthCookieValue,
 	overrideMediaProtectionPathsForTests,
 	reconcileAuthMarkers,
@@ -497,6 +500,84 @@ describe('the login hook (issueSessionMediaKey)', () => {
 		retireLegacyAuthStore();
 		expect(existsSync(authStore)).toBe(false);
 		expect(existsSync(`${authStore}.migrated`)).toBe(true);
+	});
+
+	test('an UNREACHABLE media tree does not block login — it degrades, loudly', () => {
+		// THE REPORT (2026-09-06): MEDIA_PATH pointed at an external volume that was not
+		// mounted, so laying the auth marker died with EACCES on mkdir '/Volumes/…' and
+		// the exception came out of login(). Nobody could sign in to read a TEXT record
+		// because a disk of images was unplugged.
+		//
+		// The fail-loud rule is right, and it is about a DIFFERENT fault: a tree the web
+		// server IS serving whose gate cannot be written would be served unprotected. A
+		// tree that is not there is served to nobody — every media URL 404s at the web
+		// server — so there is nothing to protect and no reason to refuse authentication.
+		setServerState({ media_access_mode: 'private' });
+		rmSync(mediaRoot, { recursive: true, force: true }); // the volume goes away
+		expect(mediaTreeUnreachableReason()).toMatch(/cannot be reached \(ENOENT\)/);
+		expect(issueSessionMediaKey()).toBeNull(); // no cookie, no throw
+		expect(existsSync(mediaRoot)).toBe(false); // and nothing was created behind it
+		// The other two writers degrade the same way, for the same reason: layAuthMarker
+		// also runs per session on the authenticated hot path (server.ts
+		// sessionMediaKeyFor) and syncAuthMarkers runs from the hourly session sweeper.
+		expect(() => {
+			layAuthMarker(HEX_A);
+		}).not.toThrow();
+		expect(() => {
+			syncAuthMarkers([HEX_A]);
+		}).not.toThrow();
+		expect(writeRuleFiles()).toBe(false);
+	});
+
+	test('a root this process cannot STAT is not "absent" — it still fails LOUD', () => {
+		// THE CONFLATION THE PROBE MUST NOT MAKE (found in adversarial review of the fix):
+		// `MEDIA_PATH=/srv/media` under a `/srv` this process may not traverse answers
+		// EACCES, not ENOENT — while the web server's own user traverses it perfectly well
+		// and serves every file in the tree. Reading "any stat failure" as "the tree is
+		// gone" would hide a world-readable media tree behind one console line. Only
+		// ENOENT/ENOTDIR/ESTALE mean absent.
+		setServerState({ media_access_mode: 'private' });
+		if (process.getuid?.() === 0) return; // root traverses anything
+		const parent = join(scratch, 'untraversable');
+		const buried = markMediaRoot(join(parent, 'media'));
+		overrideMediaProtectionPathsForTests({ mediaRoot: buried, authStorePath: authStore });
+		chmodSync(parent, 0o000);
+		try {
+			expect(mediaTreeUnreachableReason()).toBeNull(); // EACCES is NOT absence
+			expect(() => issueSessionMediaKey()).toThrow();
+		} finally {
+			chmodSync(parent, 0o700);
+		}
+	});
+
+	test('a NOT-A-DIRECTORY root reads as absent (nothing is served from it)', () => {
+		setServerState({ media_access_mode: 'private' });
+		rmSync(mediaRoot, { recursive: true, force: true });
+		writeFileSync(mediaRoot, 'a file where a tree should be');
+		expect(mediaTreeUnreachableReason()).toMatch(/not a directory/);
+		expect(issueSessionMediaKey()).toBeNull();
+	});
+
+	test('protection OFF + an absent tree writes nothing and says so QUIETLY', () => {
+		// writeRuleFiles resolves the mode BEFORE probing the tree: an install that turned
+		// protection off and unplugged its media disk must not get a boot-time error line
+		// about files it never asked for. `true` = "nothing to do", not "written".
+		setServerState({ media_access_mode: false });
+		rmSync(mediaRoot, { recursive: true, force: true });
+		expect(writeRuleFiles()).toBe(true);
+	});
+
+	test('a media root that EXISTS but cannot be written still fails LOUD', () => {
+		// The other half of the distinction: this tree IS being served, so a gate that
+		// cannot be written means unprotected media. Never degrade here.
+		setServerState({ media_access_mode: 'private' });
+		if (process.getuid?.() === 0) return; // root ignores the mode bits
+		chmodSync(mediaRoot, 0o500); // readable, not writable
+		try {
+			expect(() => issueSessionMediaKey()).toThrow();
+		} finally {
+			chmodSync(mediaRoot, 0o700);
+		}
 	});
 
 	test('a configured mode with no media root fails LOUD, never silently unprotected', () => {

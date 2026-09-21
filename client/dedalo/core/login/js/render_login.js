@@ -66,6 +66,8 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
+	import {a11y} from '../../common/js/a11y.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {strip_tags, url_vars_to_object} from '../../../core/common/js/utils/index.js'
 	import {request_failed, response_data, response_extension} from '../../common/js/api_error.js'
 	import {error_text} from '../../common/js/render_api_error.js'
@@ -231,7 +233,15 @@ const get_content_data = function(self) {
 					const lang = e.target.value || null
 					if (lang) {
 						// data_manager api call
-						await data_manager.request({
+						// The ANSWER IS READ: data_manager.request RESOLVES a refusal
+						// (the envelope carries `error`, it never rejects on one), so a
+						// bare await reloaded the page in the OLD language and presented
+						// it as the language the user picked.
+						// (!) No toast here: the transport already published the ApiError
+						// and error_dispatch's deduped_toast rendered it once. What this
+						// branch owes is to NOT reload — a reload would wipe that notice
+						// off the screen along with the selection that did not persist.
+						const api_response = await data_manager.request({
 							use_worker	: false,
 							body		: {
 								action	: 'change_lang',
@@ -241,6 +251,11 @@ const get_content_data = function(self) {
 								}
 							}
 						})
+						if (request_failed(api_response)) {
+							// restore the selector to the language still in force
+							e.target.value = page_globals.dedalo_application_lang
+							return
+						}
 						window.location.reload();
 					}
 				}
@@ -336,6 +351,11 @@ const get_content_data = function(self) {
 		})
 		// Hint to password managers / browser autofill to fill the username slot
 		user_input.autocomplete	= 'username'
+		// a11y (CLI-10). A placeholder is NOT a label: it disappears on the first
+		// keystroke and several screen readers never announce it at all. The login
+		// form is the first surface every curator meets, so it is named here — from
+		// the SAME ontology label the placeholder shows.
+		a11y.set_label(user_input, strip_tags(login_item_username.label))
 
 		// "Next" button advances to the password step (type=button: must NOT submit
 		// the form, otherwise the native submit would cascade into the login button)
@@ -378,6 +398,8 @@ const get_content_data = function(self) {
 		})
 		// Hint to password managers / browser autofill to fill the password slot
 		auth_input.autocomplete= 'current-password'
+		// a11y (CLI-10): named, not merely place-held. See the username input above.
+		a11y.set_label(auth_input, strip_tags(login_item_password.label))
 
 	// step navigation. saml_container / messages_container are declared later in this
 	// function; these closures run only after render, so the forward refs are safe.
@@ -446,6 +468,8 @@ const get_content_data = function(self) {
 				type			: 'checkbox',
 				parent			: use_service_worker_container
 			})
+			// a11y (CLI-10): an icon and a container title are not an accessible name
+			a11y.set_label(checkbox_use_service_worker, 'Use service worker')
 			checkbox_use_service_worker.addEventListener('change', (e) => {
 				self.use_service_worker = checkbox_use_service_worker.checked ?? false
 			})
@@ -488,7 +512,7 @@ const get_content_data = function(self) {
 			const button_enter_label = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button_enter_label',
-				inner_html		: strip_tags(login_item_enter.label || 'Enter'),
+				inner_html		: render_value(strip_tags(login_item_enter.label || 'Enter'), 'text'),
 				parent			: button_enter
 			})
 		// event click
@@ -667,6 +691,8 @@ const get_content_data = function(self) {
 			parent			: reset_request_form
 		})
 		reset_identifier.autocomplete = 'username'
+		// a11y (CLI-10): the recovery form is a login surface too.
+		a11y.set_label(reset_identifier, (get_label.username_or_email || 'Username or email'))
 		const reset_request_button = ui.create_dom_element({
 			element_type	: 'button',
 			type			: 'submit',
@@ -722,6 +748,8 @@ const get_content_data = function(self) {
 		reset_code.setAttribute('inputmode', 'numeric')
 		reset_code.setAttribute('maxlength', '8')
 		reset_code.autocomplete = 'one-time-code'
+		// a11y (CLI-10). Its placeholder is a row of bullets — a decoration, never a name.
+		a11y.set_label(reset_code, (get_label.recovery_code_title || 'Recovery code'))
 		const reset_new_password = ui.create_dom_element({
 			id				: 'reset_new_password',
 			element_type	: 'input',
@@ -730,6 +758,8 @@ const get_content_data = function(self) {
 			parent			: reset_confirm_form
 		})
 		reset_new_password.autocomplete = 'new-password'
+		// a11y (CLI-10)
+		a11y.set_label(reset_new_password, (get_label.new_password || 'New password'))
 		const reset_new_password_confirm = ui.create_dom_element({
 			id				: 'reset_new_password_confirm',
 			element_type	: 'input',
@@ -738,6 +768,8 @@ const get_content_data = function(self) {
 			parent			: reset_confirm_form
 		})
 		reset_new_password_confirm.autocomplete = 'new-password'
+		// a11y (CLI-10)
+		a11y.set_label(reset_new_password_confirm, (get_label.repeat_password || 'Repeat new password'))
 		const reset_confirm_button = ui.create_dom_element({
 			element_type	: 'button',
 			type			: 'submit',
@@ -918,7 +950,7 @@ const get_content_data = function(self) {
 			// label
 				ui.create_dom_element({
 					element_type	: 'span',
-					inner_html		: item.label,
+					inner_html		: render_value(item.label, 'text'),
 					parent			: info_container
 				})
 
@@ -949,18 +981,21 @@ const get_content_data = function(self) {
 						break;
 					}
 					default:
-						// Array values (e.g. list of warnings) are joined with <br>
-						// so they render as separate lines inside the info panel span.
-						if (Array.isArray(value)) {
-							value = value.join('<br>')
-						}
 						break;
 				}
+				// Every info value is text (CLI-21): the operator's entity label,
+				// version strings and the ontology-version array come from config
+				// and the DB — escaped here, never parsed. Array values (e.g. a
+				// list of warnings) render one per line: each element escaped,
+				// the <br> between them is the panel's own markup.
+				const value_html = Array.isArray(value)
+					? render_value(value, 'text').join('<br>')
+					: render_value(value, 'text')
 
 			// value
 				ui.create_dom_element({
 					element_type	: 'span',
-					inner_html		: value,
+					inner_html		: value_html,
 					class_name		: class_name,
 					parent			: info_container
 				})
@@ -996,6 +1031,10 @@ const get_content_data = function(self) {
 			element_type	: 'img',
 			class_name		: 'dedalo_logo',
 			src				: '../../core/themes/default/dedalo_logo.svg',
+			// a11y (CLI-10): DECORATIVE. The link right below it says "Dédalo" in
+			// text, so an alt would be a duplicate announcement; an <img> with no
+			// name at all, on the other hand, is read out as its file name.
+			role			: 'presentation',
 			parent			: powered_by
 		})
 		const link = ui.create_dom_element({

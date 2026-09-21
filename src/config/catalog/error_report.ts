@@ -79,6 +79,24 @@ recommended posture — shorten it if your institution's data-protection policy 
 DEDALO_ERROR_REPORT_RETENTION_DAYS=90
 \`\`\``,
 	},
+	DEDALO_ERROR_REPORT_MAX_ROWS: {
+		type: 'number',
+		scope: 'operator',
+		default: 100000,
+		heading: 'Error reports: stored row ceiling',
+		typeLabel: 'int',
+		doc: `Only meaningful on the **master** installation. The highest number of reports the
+store may hold. The age window (\`DEDALO_ERROR_REPORT_RETENTION_DAYS\`) cannot bound a burst:
+a flood arriving today is inside the window and stays for the whole of it, and since a
+report may carry an inline screenshot each one can be a few hundred kilobytes. When the
+store is over this ceiling the OLDEST reports are dropped until it is under it again —
+eviction, not refusal, because refusing would let a flood silence the genuine reports the
+intake exists for. Default \`100000\`; \`0\` removes the ceiling.
+
+\`\`\`bash
+DEDALO_ERROR_REPORT_MAX_ROWS=100000
+\`\`\``,
+	},
 	DEDALO_ERROR_REPORT_TIMEOUT_MS: {
 		type: 'number',
 		scope: 'operator',

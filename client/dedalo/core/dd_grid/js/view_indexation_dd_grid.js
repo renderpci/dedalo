@@ -54,9 +54,11 @@
 */
 
 // imports
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {paginator} from '../../paginator/js/paginator.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
+	import {render_value, render_join} from '../../common/js/utils/render_escape.js'
 	import {
 		get_av_column,
 		get_img_column,
@@ -556,7 +558,7 @@ export const get_button_column = function(current_data) {
 			parent			: button
 		})
 		if (value.value) {
-			icon.innerHTML = value.value
+			icon.innerHTML = render_join(value.value, ',', 'text')
 		}
 
 	// event
@@ -677,7 +679,7 @@ export const get_text_column = function(data_item, use_fallback) {
 		: ' | '
 
 	const value_string = value
-		? value.join(records_separator)
+		? render_join(value, records_separator, data_item.render_class)
 		: ''
 
 	// Mark empty cells with a CSS class so they can be visually distinguished.
@@ -759,7 +761,7 @@ export const get_record_link_column = function(current_data) {
 	ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'section_id',
-		inner_html		: section_id,
+		inner_html		: render_value(section_id, 'number'),
 		parent			: button_edit
 	})
 	ui.create_dom_element({
@@ -821,7 +823,7 @@ export const get_section_id_column = function(current_data) {
 			element_type	: 'span',
 			class_name		: 'link ' + (current_data.class_list || ''),
 			title			: get_label.open || 'Open',
-			inner_html		: current_data.value
+			inner_html		: render_value(current_data.value, 'number')
 		})
 
 
@@ -850,9 +852,6 @@ export const get_section_id_column = function(current_data) {
 * Paginator options are read from `self.paginator_options`:
 *   - `view`           (default: 'micro') → paginator display mode
 *   - `show_interface` (default: {})      → controls which paginator UI elements appear
-*
-* (!) `event_manager` is accessed as a module-scope global (not imported here);
-* the calling module must load event_manager before this view renders.
 *
 * @param {Object} self - dd_grid instance with `paginator_options`, `rqo`, and `events_tokens`.
 * @returns {Promise<boolean>} Resolves to true when the paginator is ready.
@@ -929,7 +928,6 @@ const init_paginator = async function(self){
 * checkbox before the current refresh finishes, which could corrupt the paginator
 * state when the new result set has fewer pages than expected.
 *
-* (!) `event_manager` is used as a module-scope global; see init_paginator note.
 * (!) `self.node.content_data` must already be set as a pointer on the wrapper
 *      node before this function's event handlers fire (guaranteed by render()).
 *
@@ -977,7 +975,7 @@ const get_filter_section = async function (self, filter_section_container) {
 				element_type	: 'label',
 				class_name		: 'label checkbox_label',
 				title			: current_section.key,
-				inner_html		: `${current_section.label}: ${current_section.value}`,
+				inner_html		: `${render_value(current_section.label, 'text')}: ${render_value(current_section.value, 'number')}`,
 				parent			: fragment
 			})
 

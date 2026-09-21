@@ -4,6 +4,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -88,7 +89,7 @@ view_text_inverse.render = async function(self, options) {
 	// short vars
 		const data			= self.data || {}
 		const value_string	= data.entries && data.entries[0] && data.entries[0].locator
-			? data.entries[0].locator.from_section_id
+			? render_value(data.entries[0].locator.from_section_id, 'text')
 			: ''
 
 	// wrapper. Set as span

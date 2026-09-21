@@ -188,7 +188,9 @@ described in full on the [data_manager](../client/data_manager.md) page.
   the client dispatches on `api_error.code` only. Failures the client itself produces (no
   answer reached it) use the `client.*` domain: `client.network`, `client.timeout`,
   `client.aborted`, `client.bad_response`, `client.http_status`, `client.worker`,
-  `client.offline`.
+  `client.offline` — and `client.render_failed`, minted by `ui.load_item_with_spinner`
+  when a render callback throws: the error panel takes the place the node would
+  have had, so a failed build is never an empty container.
 - **`request_failed(api_response)`** is THE test for a failure, and
   **`response_data(api_response)`** is the one payload accessor. A handler-owned top-level
   field is read through `response_extension(api_response, key)`, never as the error channel.

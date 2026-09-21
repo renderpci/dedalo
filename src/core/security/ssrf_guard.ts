@@ -22,6 +22,7 @@
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import { DedaloError } from '../errors/index.ts';
+import { currentJobSignal } from '../media/job_scope.ts';
 
 /**
  * The guard's refusals, as ONE registered code. `security.ssrf_blocked` is
@@ -291,11 +292,20 @@ export async function fetchBoundedText(
 	const timeoutMs = options.timeoutMs ?? 15_000;
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), timeoutMs);
+	// THE RUNNING JOB'S SIGNAL (media/job_scope.ts), composed with this call's own
+	// timeout. Without it a background job that was stopped — or that blew its
+	// lane deadline — went on holding this socket to its own timeout, because the
+	// abort could not reach past the worker's first await (PERF-11). Composed,
+	// never substituted: the transport's byte/time guarantees are the caller's,
+	// and the job's cancellation is additional to them.
+	const jobSignal = currentJobSignal();
+	const signal =
+		jobSignal === undefined ? controller.signal : AbortSignal.any([controller.signal, jobSignal]);
 	try {
 		const res = await fetch(url, {
 			...options.init,
 			redirect: 'error', // a redirect re-chooses the target — refuse it
-			signal: controller.signal,
+			signal,
 		});
 		if (!res.ok) {
 			throw new DedaloError('security.outbound_failed', {

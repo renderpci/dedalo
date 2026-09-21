@@ -6,7 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {get_fallback_value} from '../../common/js/common.js'
+	import {escape_html, render_value, render_fallback_value} from '../../common/js/utils/render_escape.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 
@@ -99,10 +99,10 @@ view_ip_list_input_text.render = async function(self, options) {
 		const data				= self.data
 		const entries			= data.entries || []
 		const fallback_value	= data.fallback_value || []
-		const fallback			= get_fallback_value(entries, fallback_value)
+		const fallback			= render_fallback_value(entries, fallback_value, self.context.render_class)
 		// Join multiple value strings with the ontology-defined separator (e.g. ', ').
 		// In practice, IP fields store a single entry; the separator handles edge cases.
-		const value_string		= fallback.join(self.context.fields_separator)
+		const value_string		= fallback.join(escape_html(self.context.fields_separator))
 
 	// wrapper
 		// Builds a <div> with standard Dédalo list CSS classes and inserts a <span>
@@ -229,7 +229,7 @@ export const render_link = function (href, label) {
 		element_type	: 'a',
 		href			: href,
 		class_name		: 'link',
-		inner_html		: label
+		inner_html		: render_value(label, 'text')
 	})
 	link_node.target = '_blank'
 	link_node.rel    = 'noopener noreferrer' // SEC-033

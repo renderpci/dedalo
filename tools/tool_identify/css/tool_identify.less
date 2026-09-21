@@ -31,6 +31,61 @@
 	--identify_vote_soft: #e9f3ee;
 	--identify_vision: #7a4fb0;
 	--identify_vision_soft: #f2ecfa;
+	// THE WEAK VERDICT'S FILL. The verdict badge is a slab that carries the
+	// theme ink (`--color_white`, #ffffff in light and #1b1d20 in dark — the
+	// ramp flips), and the two verdicts above it already have text-bearing
+	// fills: --color_success is tuned "AA under white text" and the brand orange
+	// carries the same ink at 4.9:1. The third one was painting
+	// `--color_grey_9`, and the grey ramp is STRUCTURAL — borders, dividers,
+	// canvases (vars_tokens.less, ACCESSIBILITY.md:156) — never a text slab:
+	// white on #aaaaaa is 2.32:1 in light, and every other palette lands
+	// between 2.67 and 3.49 (CSS coherence audit 2026-09-06, DESIGN clause 2.c).
+	// So the weak verdict gets its own fill, the text-bearing member of the same
+	// neutral family as --identify_unrecorded: DEEPER than that grey here so
+	// white reads on it (#ffffff on #5f6672 = 5.78:1, 5.74:1 on the redesign /
+	// pine #fffefc), and LIGHTER than it in dark for the same reason mirrored.
+	// It stays a neutral, because "weak" must not borrow a hue that means
+	// something else in this tool.
+	--identify_weak: #5f6672;
+}
+
+// dark theme twins (self-contained, like tool_print: nothing in
+// layout/theme_dark.less names this tool). This sheet is injected into the
+// main.css document AFTER it, and a bare `:root` (0,1,0) cannot outrank
+// main.css's `:root[data-theme="dark"]` (0,2,0) — but a token declared ONLY
+// on the bare root has nothing to lose to, so under dark it simply kept its
+// light value. The three `*_soft` tints are near-white slabs whose ink is the
+// INHERITED page ink (none of the rules that paint them sets `color`), and in
+// dark that ink is #e5e7ea: 1.07–1.09:1, a white band under white text
+// (CSS coherence audit 2026-09-05, finding C2 / DESIGN clause 2.b). The hues
+// that serve as INK (agreed / differed / restricted / vision / the gate's
+// border teal) sat at 2.8–3.2:1 on the dark surface for the same reason.
+//
+// Every value below is chosen against the ink or ground that actually lands on
+// it — measured, not eyeballed; a copied light value here would satisfy a
+// presence check and still be the same slab:
+//  - the `*_soft` tints keep their hue as a faint tint OVER the dark surface
+//    (page ink #e5e7ea 11.2–12.3:1, --fg_muted #aeb4bd 6.7–7.3:1);
+//  - the accent inks are lifted so they clear 4.5:1 on the surface AND on the
+//    soft tints they are drawn over (differed on vote_soft 5.6:1, agreed on
+//    vision_soft 7.5:1);
+//  - the vote / vision hues must ALSO carry the badge ink, which inside dark is
+//    `--color_white` = #1b1d20: a mid-tone cannot clear 4.5:1 under both white
+//    and near-black, so the badge and cluster-signal chips both read the theme
+//    ink (7.1:1 / 6.8:1), never a literal white.
+:root[data-theme="dark"] {
+	--tool_identify:          #5aa6b5; // 4px header edge 5.7:1 on --bg_surface_alt; score fill 4.1:1 on its track
+	--tool_identify_border:   #7cc2cf; // ink for the GATE weight 8.4:1 on surface, 6.9:1 on the soft tint
+	--tool_identify_soft:     #1e2f33;
+	--identify_agreed:        #5fcb7c;
+	--identify_differed:      #f0836f;
+	--identify_unrecorded:    #a9aeb6;
+	--identify_restricted:    #b3adc6;
+	--identify_vote:          #62b98a;
+	--identify_vote_soft:     #1c2d25;
+	--identify_vision:        #b596e3;
+	--identify_vision_soft:   #28223a;
+	--identify_weak:          #b6bcc4; // badge fill under the dark theme ink: 8.8:1 (#1b1d20), 8.1:1 under the redesign palette's lighter #26241f; a step lighter than --identify_unrecorded so the two neutrals stay apart
 }
 @tool_color : var(--tool_identify);
 
@@ -209,7 +264,7 @@
 		}
 		.identify_candidate.verdict_same_type	{ border-left-color : var(--color_success, #28a745); }
 		.identify_candidate.verdict_candidate	{ border-left-color : var(--color_orange_dedalo, #f78a1c); }
-		.identify_candidate.verdict_weak		{ border-left-color : var(--color_grey_9, #aaaaaa); }
+		.identify_candidate.verdict_weak		{ border-left-color : var(--identify_weak); }
 
 		.identify_candidate_head {
 			display		: flex;
@@ -229,12 +284,21 @@
 			text-transform	: uppercase;
 			letter-spacing	: 0.04em;
 			color			: var(--color_white, #ffffff);
-			background		: var(--color_grey_9, #aaaaaa);
+			// the neutral FILL, not the structural grey ramp (see --identify_weak)
+			background		: var(--identify_weak);
 			white-space		: nowrap;
 		}
 		.verdict_same_type	>.identify_candidate_head >.identify_verdict { background : var(--color_success, #28a745); }
-		.verdict_candidate	>.identify_candidate_head >.identify_verdict { background : var(--color_orange_dedalo, #f78a1c); }
-		.verdict_weak		>.identify_candidate_head >.identify_verdict { background : var(--color_grey_9, #aaaaaa); }
+		// The CANDIDATE badge is the one verdict whose fill is the BRAND orange,
+		// and the brand fill's ink is --fg_on_brand, never the theme's white:
+		// #ffffff on #f78a1c is 2.44:1 (the orange is a mid-tone and is never
+		// darkened — it is Dédalo's identity colour). The other two verdicts keep
+		// the badge's inherited ink because their fills already carry it
+		// (--color_success 4.6:1 in light, 7.5:1 in dark; --identify_weak 5.8/8.8).
+		// Stating the ink beside the fill also makes the pair judgeable by
+		// contrast_ratio_tripwire, which only sees a fg/bg pair inside ONE rule.
+		.verdict_candidate	>.identify_candidate_head >.identify_verdict { background : var(--color_orange_dedalo, #f78a1c); color : var(--fg_on_brand); }
+		.verdict_weak		>.identify_candidate_head >.identify_verdict { background : var(--identify_weak); }
 
 		.identify_candidate_title {
 			flex			: 1 1 auto;
@@ -750,7 +814,10 @@
 			font-size		: 0.78em;
 			text-transform	: uppercase;
 			letter-spacing	: 0.04em;
-			color			: #ffffff;
+			// the theme ink, like `.identify_source_badge`: under dark the vote /
+			// vision hues are lifted to carry `--color_white` (= #1b1d20 there) and
+			// a literal white would land on them at 2.4:1
+			color			: var(--color_white, #ffffff);
 			background		: var(--identify_vision);
 
 			&.criteria { background : var(--identify_vote); }

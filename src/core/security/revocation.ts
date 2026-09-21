@@ -93,19 +93,24 @@ export const PROFILES_SECTION_TIPO = 'dd234';
  *                           identity, and the old sessions still speak the old one.
  *  dd133 Password         — "this account is compromised, change its password" is the
  *                           standard operator reflex, and it revoked NOTHING.
- *  dd244 Security admin   — the ONLY authority a session SNAPSHOTS (session row
- *                           `is_global_admin`, read by two live routes: the thesaurus
- *                           dump download and /api/v1/counters). Nothing rewrites that
- *                           column, so a demotion cannot reach those routes any other
- *                           way than by ending the session.
+ *  dd244 Security admin   — the AUTHORITY transition. Since 2026-09-03 no route reads
+ *                           the session row's login-time `is_global_admin` stamp any
+ *                           more (the two that did — the thesaurus dump download and
+ *                           /api/v1/counters — resolve the Principal per request
+ *                           through security/session_gate.ts, SEC-14), so a demotion
+ *                           reaches every surface on the next request WITHOUT this
+ *                           row. It stays a transition on principle: losing global
+ *                           administration is the S-6 revocation event, and ending
+ *                           the session is the belt for the ONE request already in
+ *                           flight with the old authority (see the header) and for
+ *                           anything a future reader might snapshot again.
  *
  * DELIBERATELY NOT HERE — dd1725 (profile), dd515 (developer flag) and dd170
  * (projects). Those are re-resolved per request through `resolvePrincipal` /
  * `getPermissionsTable`, whose caches the same reaction drops, so the change takes
- * effect on the next request without logging the person out mid-edit. Only dd244 is
- * snapshotted, so only dd244 needs the session to end. Ending sessions for the other
- * three would be a mass logout every time an administrator adjusts a project
- * assignment — a real harm bought for no revocation.
+ * effect on the next request without logging the person out mid-edit. Ending
+ * sessions for those three would be a mass logout every time an administrator
+ * adjusts a project assignment — a real harm bought for no revocation.
  *
  * VALUE-BLIND, on purpose: the seam is reached with the coordinates of the write, never
  * its value. So ANY dd131 write revokes, including a flip back to Yes. A redundant

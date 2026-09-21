@@ -33,9 +33,16 @@
  * "A SUBSEQUENT LOGIN IS REFUSED" is stated per row rather than assumed, because it is
  * not true of every transition and pretending otherwise would be the vacuity this
  * programme exists to remove: a demotion does not revoke the password (it revokes the
- * SESSION, which is the only place `is_global_admin` is snapshotted — SEC-14), and a
- * password change lets the account back in with the NEW password. Each row declares the
- * outcome it means and the matrix asserts THAT.
+ * SESSION — the belt for the one request already in flight), and a password change lets
+ * the account back in with the NEW password. Each row declares the outcome it means and
+ * the matrix asserts THAT.
+ *
+ * SEC-14's residue is a separate block ("the principal, not the snapshot, decides"):
+ * the two raw routes that used to read the session row's login-time `is_global_admin`
+ * stamp — the hierarchy dump download and /api/v1/counters — now resolve the Principal
+ * per request (security/session_gate.ts). The legs apply the dd244 flip with the seam
+ * SUPPRESSED so the session SURVIVES (the exact stale-snapshot state), and assert the
+ * routes follow the record on the next request, in BOTH directions.
  */
 // Generic `test` TLD only (AGENTS.md): the situation is BUILT here — scratch dd128
 // records inserted through the counter-allocating writer and deleted in afterAll. The
@@ -55,8 +62,11 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { vendoredHierarchyTlds } from '../../scripts/lib/hierarchy_allowlist.ts';
 import { currentServicePrincipal } from '../../src/ai/mcp/server.ts';
+import { handleCountersRequest } from '../../src/core/api/counters.ts';
 import { coreApiActions } from '../../src/core/api/handlers/dd_core_api.ts';
+import { HIERARCHY_EXPORT_URL_PREFIX } from '../../src/core/area_maintenance/widgets/export_hierarchy.ts';
 import {
 	deleteMatrixRecord,
 	insertMatrixRecordWithCounter,
@@ -99,8 +109,10 @@ import {
 	loadPasswordReset,
 	pruneExpiredSessionsDetail,
 	resetSessionStoreForTests,
+	SESSION_COOKIE,
 	storePasswordReset,
 } from '../../src/core/security/session_store.ts';
+import { handleRequest } from '../../src/server.ts';
 import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const USERS_TABLE = 'matrix_users';
@@ -351,7 +363,7 @@ const TRANSITIONS: TransitionRow[] = [
 			await saveAsAdmin(userId, GLOBAL_ADMIN, [flagLocator(GLOBAL_ADMIN, NO)]);
 		},
 		loginAfter: 'allowed',
-		why: 'is_global_admin is SNAPSHOTTED on the session row (SEC-14); only ending the session can reach the two routes that read it',
+		why: 'losing global administration is the authority transition; the session ends as the belt for the request already in flight (no route reads the login-time stamp any more — see the SEC-14 block)',
 	},
 	{
 		id: 'delete the user record',
@@ -417,6 +429,96 @@ describe('transitions × survivals', () => {
 			expect(after.ok).toBe(row.loginAfter === 'allowed');
 		});
 	}
+});
+
+// ---------------------------------------------------------------------------
+// SEC-14 — THE PRINCIPAL, NOT THE SNAPSHOT, DECIDES ON THE TWO RAW ROUTES
+// ---------------------------------------------------------------------------
+
+/**
+ * A vendored seed dump under install/import/hierarchy — repo-owned and generic, so the
+ * hierarchy route has a real file to serve as its positive control. Read-only: the test
+ * NEVER writes into that directory.
+ */
+const VENDORED_HIERARCHY_TLDS: readonly string[] = vendoredHierarchyTlds();
+
+function vendoredHierarchyDumpName(): string {
+	// Listed through the registered shared lister (scripts/lib/hierarchy_allowlist.ts),
+	// never a walk of this test's own; the corpus floor is asserted in the SEC-14 block.
+	return `${VENDORED_HIERARCHY_TLDS[0]}1.copy.gz`;
+}
+
+/** Both snapshot-free routes, driven through the real server entry points. */
+async function adminRouteStatuses(token: string): Promise<{ hierarchy: number; counters: number }> {
+	const headers = { cookie: `${SESSION_COOKIE}=${token}` };
+	const hierarchy = await handleRequest(
+		new Request(`http://localhost${HIERARCHY_EXPORT_URL_PREFIX}${vendoredHierarchyDumpName()}`, {
+			headers,
+		}),
+		{ requestId: RUN_TAG, startedAt: 0 },
+	);
+	// Drain the body so a served gzip does not hold the file open across tests.
+	await hierarchy.arrayBuffer();
+	const counters = await handleCountersRequest(
+		new Request('http://localhost/api/v1/counters', { headers }),
+		RUN_TAG,
+	);
+	await counters.arrayBuffer();
+	return { hierarchy: hierarchy.status, counters: counters.status };
+}
+
+describe('the principal, not the snapshot, decides on the two raw admin routes (SEC-14)', () => {
+	test('corpus floor: a vendored seed dump exists (an empty seed dir would make every 200 unreachable and the 404s vacuous)', () => {
+		expect(VENDORED_HIERARCHY_TLDS.length).toBeGreaterThan(0);
+	});
+
+	test('a demotion the seam never saw closes both routes on the next request', async () => {
+		const username = nextUsername();
+		const userId = await insertUser({ username, globalAdmin: true });
+		const session = await loginAs(username);
+		// Positive control: the admin is served by both (or the 404s below prove nothing).
+		expect(await adminRouteStatuses(session.token)).toEqual({ hierarchy: 200, counters: 200 });
+		// The session row carries the login-time stamp — the value the routes used to trust.
+		expect(getSession(session.token)?.isGlobalAdmin).toBe(true);
+
+		// Demote with the revocation seam SUPPRESSED: the session SURVIVES, which is
+		// exactly the SEC-14 state (a dd244 write in another process, or one whose
+		// best-effort revocation failed). The permission caches still drop — they ride
+		// the other lane.
+		await runWithoutAccountRevocation('SEC-14 gate: keep the stale session alive', () =>
+			saveAsAdmin(userId, GLOBAL_ADMIN, [flagLocator(GLOBAL_ADMIN, NO)]),
+		);
+		expect(liveCredentials(session)).toEqual({ session: true, marker: true });
+		expect(getSession(session.token)?.isGlobalAdmin, 'the stamp itself never moves').toBe(true);
+
+		// The stamp still says admin; the record says not. The record wins.
+		expect(await adminRouteStatuses(session.token)).toEqual({ hierarchy: 404, counters: 404 });
+	});
+
+	test('the counterpart: a promotion the seam never saw opens both routes, stamp notwithstanding', async () => {
+		// Proves the routes read the Principal in BOTH directions — a route that simply
+		// 404ed everyone would pass the leg above.
+		const username = nextUsername();
+		const userId = await insertUser({ username });
+		const session = await loginAs(username);
+		expect(getSession(session.token)?.isGlobalAdmin).toBe(false);
+		expect(await adminRouteStatuses(session.token)).toEqual({ hierarchy: 404, counters: 404 });
+
+		await runWithoutAccountRevocation('SEC-14 gate: keep the stale session alive', () =>
+			saveAsAdmin(userId, GLOBAL_ADMIN, [flagLocator(GLOBAL_ADMIN, YES)]),
+		);
+		expect(liveCredentials(session)).toEqual({ session: true, marker: true });
+		expect(getSession(session.token)?.isGlobalAdmin).toBe(false);
+
+		expect(await adminRouteStatuses(session.token)).toEqual({ hierarchy: 200, counters: 200 });
+	});
+
+	test('no session at all is still 404 on both (the gate did not become a bypass)', async () => {
+		expect(await adminRouteStatuses('not_a_session_token')).toEqual({
+			hierarchy: 404,
+			counters: 404,
+		});
+	});
 });
 
 describe('the self password change keeps the acting session and kills every other', () => {

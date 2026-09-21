@@ -53,6 +53,7 @@
 	import {view_mini_date} from './view_mini_date.js'
 	import {view_line_edit_date} from './view_line_edit_date.js'
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {stop_page_shortcuts} from '../../common/js/utils/keyboard.js'
 	import {handle_api_error} from '../../common/js/error_dispatch.js'
@@ -154,7 +155,7 @@ export const get_content_value_read = (i, current_value, self) => {
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_value read_only',
-			inner_html		: string_value
+			inner_html		: render_value(string_value, 'text')
 		})
 
 	return content_value

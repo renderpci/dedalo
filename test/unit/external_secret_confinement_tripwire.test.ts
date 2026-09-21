@@ -305,6 +305,10 @@ describe('(d) the positive control drives BOTH publication paths', () => {
 			// query (`properties ? 'api_config'`) — a SQL predicate on the word,
 			// reads tipos only, never a config value, nothing reaches a wire object.
 			'src/core/db/dd_ontology.ts',
+			// The ontology PROPERTY-KEY registry: `api_config` appears as a string in
+			// the honoured-key list (the census of which keys the engine reads), never
+			// as a value read off a node or put on a wire object.
+			'src/core/ontology/property_census.ts',
 		]);
 		const root = join(import.meta.dir, '..', '..', 'src');
 		const offenders: string[] = [];

@@ -9,6 +9,7 @@
 	import {get_instance} from '../../common/js/instances.js'
 	import {object_to_url_vars, open_window, same_section_id} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {get_dataframe} from '../../component_common/js/component_common.js'
 	import {delete_dataframe} from '../../component_common/js/component_common.js'
 	import {handle_select_change} from './component_select.js'
@@ -226,6 +227,15 @@ const get_content_value = (i, current_value, self) => {
 				// does not fire the server remove cascade)
 				// read current entry values dynamically (they change after each save)
 				// pairing key is the data item id, never the target section_id
+				// NOT awaited, deliberately: handle_select_change below must set
+				// changed_data SYNCHRONOUSLY on the change event (the unsaved-data
+				// guard and the select gates read it right after dispatch), and
+				// an await ahead of it breaks that contract. Since 2026-09-21 this
+				// is a real slot `remove` (the server strips the frame and applies
+				// the slot's delete policy to its target), so the frame unlink and
+				// the value save are two requests on one record, issued in this
+				// order; a refused unlink is surfaced by the save path's own error
+				// handling. `false` is the ordinary answer of an item with no frame.
 					const current_entry = self.data.entries?.[0] || null
 					if(current_entry?.id){
 						delete_dataframe({
@@ -234,7 +244,7 @@ const get_content_value = (i, current_value, self) => {
 							section_tipo		: self.section_tipo,
 							id_key				: current_entry.id,
 							main_component_tipo	: self.tipo,
-							delete_instance		: true
+							delete_instace		: true
 						})
 					}
 
@@ -313,7 +323,7 @@ const get_content_value = (i, current_value, self) => {
 			const option_node = ui.create_dom_element({
 				element_type	: 'option',
 				value			: JSON.stringify(datalist_item.value),
-				inner_html		: current_label,
+				inner_html		: render_value(current_label, self.context.render_class),
 				parent			: select
 			})
 			// selected options set on match
@@ -448,7 +458,7 @@ const get_content_value_read = (i, current_value, self) => {
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_value read_only',
-			inner_html		: current_value
+			inner_html		: render_value(current_value, self.context.render_class)
 		})
 
 
@@ -561,7 +571,9 @@ const get_buttons = (self) => {
 							const section_node = await section.render()
 
 						// header
-							const header = (get_label.new || 'New section') + ' ' + target_sections[0].label
+							// (!) attach_to_modal parses a string header as HTML: the section
+							// label is ontology data and goes through the ONE escaper as text.
+							const header = (get_label.new || 'New section') + ' ' + render_value(target_sections[0].label, 'text')
 
 						// modal. Create a modal to attach the section node
 							const modal = ui.attach_to_modal({

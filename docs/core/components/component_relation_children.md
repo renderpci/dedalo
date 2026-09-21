@@ -323,14 +323,29 @@ for flat output. See [exporting data](../exporting_data.md).
   Si/No section `dd64`). `sortChildren()` / `recalculateSiblingOrders()`
   (`src/core/relations/parent.ts`) persist branch order by writing the section map's
   `thesaurus.order` component (a [component_number](component_number.md)) on each
-  child, as an **`id_key` dataframe** of the child's parent-link locator (resolved
-  via `resolveParentLinkIdKey()`, `src/core/relations/children.ts`); the read-side list
-  ordering is exposed by `getChildren()` / `getChildrenRecursive()` /
-  `countChildren()` in the same file, STRING-section-id, sibling-ordered. The `dd_ts_api`
-  save-order action is documented in the *dedalo-tree-ts* skill.
-- **Caching.** `getChildren()` (`src/core/relations/children.ts`) recomputes on every
-  call with no instance-level memoization — a coverage gap to watch if a very
-  wide/deep tree read shows up as a hot path.
+  child, as an **`id_key` dataframe** of the child's parent-link locator; the
+  read-side list ordering is exposed by `getChildren()` /
+  `getChildrenRecursive()` / `countChildren()` in the same file,
+  sibling-ordered. The `dd_ts_api` save-order action is documented in the
+  *dedalo-tree-ts* skill.
+- **One order rule, one batched read.** The per-parent order value is selected by
+  `pickOrderValueForParent()` (`src/core/ts_object/node_repository.ts`) — id-keyed
+  entry, then a legacy `section_tipo_key`/`section_id_key` entry, then a legacy
+  unkeyed (v6 positional) entry, else the first — and the SAME function serves
+  the thesaurus tree (`ts_object/node_repository.ts` `fetchNodeInfo`). The
+  children engine reads the order and parent-link arrays for a whole child set
+  in ONE statement per `section_tipo` group; it used to issue two full-row reads
+  per child. See `WC-2026-09-05-children-order-one-rule`.
+- **The recursive walk is bounded, and emits each node once.**
+  `getChildrenRecursive()` / `getChildrenRecursiveBatch()` share ONE visited set,
+  so a node reachable from several parents (a polyhierarchy) is emitted and
+  expanded exactly once. Past `CHILDREN_RECURSIVE_MAX_DEPTH` (64) or
+  `CHILDREN_RECURSIVE_MAX_NODES` (200,000) the walk REFUSES with
+  `relation.subtree_too_large` — it never truncates.
+- **Caching.** `getChildren()` (`src/core/relations/children.ts`) recomputes on
+  every call with no instance-level memoization. Its per-call cost is now
+  bounded — one inverse-index search plus one batched order read per section
+  group — and asserted by `test/unit/read_query_budget_native.test.ts`.
 - **Search.** The dedicated inverse-parent SQL builder (`src/core/search/builders/builder_relation_children.ts`)
   is a correlated `(NOT) EXISTS` scan over the child rows' `relation` column, keyed by
   the paired `component_relation_parent` tipo. Two documented gaps: a multi-locator `q`

@@ -14,6 +14,33 @@
 	--tool_print: #2a7d6f;
 	--tool_print_lighten_40: #d6ece8;
 	--tool_print_border: #1f5d53;
+	// The identity hue as a TEXT-CARRYING fill, under --fg_inverse (white on
+	// every axis). --tool_print itself is an EDGE — the header's top edge, the
+	// drop-target outline, the column-resize handle — and the dark block below
+	// BRIGHTENS it to #3da89a so the edge stays visible on a dark desk; white on
+	// that is 2.89:1, so the same token cannot be both the edge and the slab the
+	// print button and the box header write on. Light keeps the edge's value
+	// (#ffffff on #2a7d6f = 4.93:1); dark deepens instead of brightening, because
+	// the ink stays white. Hover for both is --tool_print_border (light #1f5d53
+	// = 7.64:1, dark #2a7d6f = 4.93:1) — deeper in light, lifted in dark, the
+	// direction each theme's hover naturally takes.
+	--tool_print_fill: #2a7d6f;
+	// Danger as INK on --bg_input (the Cancel and Delete buttons). --color_danger
+	// is tuned for the SURFACE: under redesign the input field is sunken
+	// (#f1efea) and #b25c50 on it is 4.03:1. The deep variant every light palette
+	// tunes "under --fg_inverse" is deep enough to be read as ink too — #bd2130
+	// on #ffffff = 6.13:1, #7d4038 on #f1efea = 6.86:1 — while the dark palettes
+	// (twinned below) already carry --color_danger on their inputs (#ef5560 on
+	// #1f2227 = 4.66:1, #cf7a70 on #211f1b = 5.23:1), where the deep variant
+	// would vanish.
+	--tool_print_danger_ink: var(--color_danger_dark);
+	// THEME-INVARIANT on purpose (the two names the dark block below does not
+	// repeat): the page is a paper preview of what the printer will put out, so
+	// it stays white with its own near-black ink under either theme: `.box_content`
+	// sets `color`, and every flow cell gets the inspector's text colour inline
+	// (canvas_tool_print.js apply_box_style, default #111111), so nothing on the
+	// page inherits the theme's ink. The desk around it (`--tp_desk_bg`) is what
+	// follows the theme. A dark "paper" would preview a page nobody prints.
 	--print_grid_color: rgba(0,0,0,.06);
 	--print_page_bg: #ffffff;
 	--print_page_shadow: 0 1px 6px rgba(0,0,0,.25);
@@ -25,6 +52,8 @@
 	--tool_print:            #3da89a;
 	--tool_print_lighten_40: #1f3a35;
 	--tool_print_border:     #2a7d6f;
+	--tool_print_fill:       #236a5e; // #ffffff on it = 6.37:1 (and 5.14:1 under --fg_default, should a consumer ever inherit that instead)
+	--tool_print_danger_ink: var(--color_danger); // see the light block: the dark palettes' danger is already ink-grade on --bg_input
 	--print_page_shadow:     0 2px 8px rgba(0,0,0,.5);
 	--tp_desk_bg:            #2a2d31;
 }
@@ -97,7 +126,12 @@
 				&:focus { border-color: var(--focus-ring); box-shadow: 0 0 0 2px var(--focus-ring_weak); outline: none; }
 			}
 			.tool_button.flash_ok { background: var(--color_green_success); color:#fff; border-color: var(--color_green_success); }
-			.tool_button.flash_error { background: var(--color_danger); color:#fff; border-color: var(--color_danger); }
+			// --color_danger is the SURFACE-tuned red (4.53:1 under white in light,
+			// 3.42:1 in dark, 3.15:1 redesign-dark): as a slab under white ink it is
+			// too bright in the dark palettes. --color_danger_dark is the one every
+			// palette tunes "under --fg_inverse" (6.13 / 8.24 / 7.89 / 6.62:1); the
+			// bright red stays on the border, where it is seen, not read.
+			.tool_button.flash_error { background: var(--color_danger_dark); color: var(--fg_inverse); border-color: var(--color_danger); }
 
 			.toolbar_group {
 				display: flex;
@@ -146,16 +180,16 @@
 				}
 			}
 			.tool_button.btn_print {
-				color: #fff;
-				background: @tool_color;
+				color: var(--fg_inverse);
+				background: var(--tool_print_fill); // the text-carrying variant, see :root
 				border-color: var(--tool_print_border);
 				font-weight: 600;
 				&:hover { background: var(--tool_print_border); box-shadow: var(--shadow-2); }
 				.tp_icon { -webkit-mask-image: url('../img/icon_print.svg'); mask-image: url('../img/icon_print.svg'); }
 			}
 			.tool_button.btn_delete {
-				color: var(--color_danger);
-				&:hover { border-color: var(--color_danger); }
+				color: var(--tool_print_danger_ink); // ink on --bg_input, see :root
+				&:hover { border-color: var(--tool_print_danger_ink); }
 				.tp_icon { -webkit-mask-image: url('../img/icon_remove.svg'); mask-image: url('../img/icon_remove.svg'); }
 			}
 
@@ -587,8 +621,15 @@
 				font-size: .65rem;
 				font-weight: 600;
 				line-height: 1.4;
-				color: var(--fg_inverse);
-				background: var(--border_strong);
+				// An inverted chip: the theme's ink as the FILL, its surface as the ink
+				// (light #ffffff on #444444 = 9.74:1; dark #1b1d20 on #e5e7ea = 13.6:1;
+				// redesign 15.9:1, redesign-dark 12.3:1). It used to borrow the dashed
+				// border's grey as a fill, but --border_strong is a LINE colour, tuned to
+				// separate surfaces, not to carry text: white on it is 1.66:1 in light.
+				// Inverting the theme pair keeps the chip legible on every axis and
+				// keeps it visibly chrome against the always-white paper it sits on.
+				color: var(--bg_surface);
+				background: var(--fg_default);
 				border-radius: 3px;
 				pointer-events: none;
 				white-space: nowrap;
@@ -663,8 +704,8 @@
 					gap: .3rem;
 					padding: 0 .2rem;
 					font-size: .65rem;
-					background: @tool_color;
-					color: #fff;
+					background: var(--tool_print_fill); // the text-carrying variant, see :root
+					color: var(--fg_inverse);
 					cursor: move;
 					white-space: nowrap;
 					overflow: hidden;
@@ -1119,15 +1160,18 @@ body.tp_col_resizing * { cursor: col-resize !important; user-select: none !impor
 
 
 // responsive ------------------------------------------------------------------
+// The tiers are the breakpoint RECORD in layout/vars.less, never a length of
+// this file's own: the two literals here (1024 / 960) had matched the record
+// by coincidence since 2026-07-11, and a coincidence is not a contract.
 .wrapper_tool.tool_print {
 
-	@media (max-width: 1024px) {
+	@media (max-width: @width_break_point_0) {
 		> .content_data.print_layout_editor {
 			grid-template-columns: 200px minmax(15rem, 1fr) 240px;
 		}
 	}
 
-	@media (max-width: 960px) {
+	@media (max-width: @width_break_point_1) {
 		> .content_data.print_layout_editor {
 			grid-template-columns: 100%;
 			grid-template-areas:
@@ -1247,11 +1291,11 @@ body.tp_col_resizing * { cursor: col-resize !important; user-select: none !impor
 		cursor: pointer;
 		font-size: .8rem;
 		padding: .2rem .6rem;
-		color: var(--color_danger, #c0392b);
+		color: var(--tool_print_danger_ink); // ink on --bg_input, see :root
 		background: var(--bg_input, #fff);
 		border: 1px solid var(--border_default, #cfd3d7);
 		border-radius: 4px;
-		&:hover { border-color: var(--color_danger, #c0392b); }
+		&:hover { border-color: var(--tool_print_danger_ink); }
 		&:disabled { opacity: .5; cursor: default; }
 	}
 }

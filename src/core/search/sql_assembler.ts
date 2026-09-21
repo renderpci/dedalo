@@ -33,7 +33,6 @@ import { readString } from '../../config/readers.ts';
 import type { Sqo } from '../concepts/sqo.ts';
 import { getSectionTipos } from '../concepts/sqo.ts';
 import { assertMatrixTable } from '../db/matrix.ts';
-import { policyForTable } from '../db/matrix_index_policy.ts';
 import { sql } from '../db/postgres.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
@@ -48,11 +47,13 @@ import { getUserFilterRecords } from '../security/filter_records.ts';
 import { FRONTIER_VISIBLE_TABLES, type SqlFrontierScope } from '../security/frontier_scope.ts';
 import {
 	getUserProjects,
+	PRESET_OWNER_COMPONENT,
 	PROFILES_SECTION,
 	type Principal,
+	TEMP_PRESET_SECTION,
 	FILTER_MASTER_COMPONENT as USERS_FILTER_MASTER_COMPONENT,
 } from '../security/permissions.ts';
-import { bareBrowseCount } from './bare_count.ts';
+import { bareBrowseCount, scopedBrowseCount } from './bare_count.ts';
 import type { BuilderResult } from './builders/types.ts';
 import type { ConformedFilter } from './conform.ts';
 import { conformFilter } from './conform.ts';
@@ -275,10 +276,17 @@ async function buildOrderClauses(
 		let orderAlias = alias;
 		if (path.length > 1) {
 			const { buildJoinChain } = await import('./conform.ts');
+			// 'order': the locator fan-out is COLLAPSED to the record's FIRST stored
+			// locator (PERF-08). A relation component holds an array, and sorting on
+			// the fanned shape both picked an ARBITRARY locator's value as the sort
+			// key and forced the whole related section to materialise before the
+			// LIMIT. The rule lives in buildJoinChain's docstring, next to the
+			// filter twin, so the two cannot drift.
 			const chain = await buildJoinChain(
 				path as { section_tipo?: string; component_tipo?: string }[],
 				alias,
 				scope,
+				'order',
 			);
 			// SEC-02, the SEARCH refusal law: a sort key the caller may not read is
 			// DROPPED, not emitted. The filter twin answers `1=0` because a leaf
@@ -620,6 +628,88 @@ async function buildUsersProjectsFilter(
 }
 
 /**
+ * THE EDITING-PRESET (dd655) OWNER RULE — audit CARRY-07 (TOOLS-03), and the
+ * ONLY statement of that rule in the engine:
+ *
+ *   section_id > 0 AND ( its dd654 owner locator IS me
+ *                        OR I created it   (data.created_by_user_id = me) )
+ *
+ * dd655 resolves to matrix_list, a PROJECTS_FILTER_EXEMPT table, and every
+ * principal holds level 2 on it by rule (permissions.ts TEMP_PRESET_SECTION —
+ * each user keeps ONE transient editing preset per section without an
+ * install-wide grant). Until this predicate the client built the owner
+ * condition INSIDE its own SQO and no server module re-imposed it, so any user
+ * could list, read, rewrite or delete any other user's preset by id. The rule
+ * lives HERE — like buildUsersProjectsFilter, and for the same reason — so the
+ * list, the count, every UNION branch, the frontier hop, and the per-record
+ * existence probe (isRecordInScope → the save/delete doors) inherit one
+ * predicate. Global admins and internal searches are exempt exactly as the
+ * projects filter is (the caller decides, see sectionIsOwnerBound's callers).
+ *
+ * The created_by arm covers the create→populate window: the client creates the
+ * bare record first and writes dd654 in a second request, and the creator must
+ * be able to make that second write. Both typed section_id forms are probed
+ * (WC-2026-08-10-section-id-int-canonical), as everywhere in this file.
+ */
+function buildPresetOwnerFilter(
+	alias: string,
+	principal: Principal,
+	params: ParamsCollector,
+): string {
+	const bind = (payload: string) => params.getPlaceholder(payload);
+	const owner = [
+		composeContains(
+			`${alias}.relation`,
+			relationProbeGroups(PRESET_OWNER_COMPONENT, [
+				{ section_tipo: config.usersSectionTipo, section_id: principal.userId },
+			]),
+			bind,
+		),
+		`${alias}.data @> ${bind(`{"created_by_user_id":${principal.userId}}`)}::text::jsonb`,
+		`${alias}.data @> ${bind(`{"created_by_user_id":"${principal.userId}"}`)}::text::jsonb`,
+	];
+	return `(${alias}.section_id > 0 AND (${owner.join(' OR ')}))`;
+}
+
+/**
+ * A section whose rows are bound to their OWNER regardless of the table they
+ * live in: consulted BEFORE the PROJECTS_FILTER_EXEMPT_TABLES exemption at
+ * both gating sites (the main alias and the frontier hop), because the
+ * exemption is about shared vocabulary tables and dd655 merely happens to
+ * live in one of them.
+ */
+function sectionIsOwnerBound(sectionTipo: string): boolean {
+	return sectionTipo === TEMP_PRESET_SECTION;
+}
+
+/**
+ * Does the per-record ACL predicate apply to this section for a non-admin?
+ * Owner-bound sections always; otherwise every section outside the shared
+ * vocabulary/infrastructure tables (PHP search::$ar_tables_skip_projects).
+ */
+async function sectionNeedsRecordAcl(sectionTipo: string): Promise<boolean> {
+	if (sectionIsOwnerBound(sectionTipo)) return true;
+	const sectionTable = (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix';
+	return !PROJECTS_FILTER_EXEMPT_TABLES.has(sectionTable);
+}
+
+/**
+ * The per-record ACL predicate for ONE section: the owner rule for an
+ * owner-bound section, the projects filter for everything else. The ONE entry
+ * every gating site calls (main alias, UNION branch, frontier hop), so the
+ * owner rule can never be reached by one door and skipped by another.
+ */
+async function buildRecordAclFilter(
+	sectionTipo: string,
+	alias: string,
+	principal: Principal,
+	params: ParamsCollector,
+): Promise<string> {
+	if (sectionIsOwnerBound(sectionTipo)) return buildPresetOwnerFilter(alias, principal, params);
+	return buildProjectsFilter(sectionTipo, alias, principal, params);
+}
+
+/**
  * Projects filter (PHP build_sql_projects_filter) for one section: restrict to
  * records whose component_filter relation references one of the user's
  * projects. Returns '' when the section is not project-gated. A gated section
@@ -689,7 +779,7 @@ async function buildMultiSectionProjectsFilter(
 		// PHP $ar_tables_skip_projects sections (thesaurus/vocabulary tables)
 		// pass with a bare guard — they are never project-gated.
 		const sectionPredicate = gateable.has(sectionTipo)
-			? await buildProjectsFilter(sectionTipo, alias, principal, params)
+			? await buildRecordAclFilter(sectionTipo, alias, principal, params)
 			: '';
 		const guard = `${alias}.section_tipo = ${params.getPlaceholder(sectionTipo)}::text`;
 		if (sectionPredicate === '') {
@@ -838,7 +928,45 @@ function multiSectionUserRecordsFilter(
  */
 const PROJECTS_DENSE_FRACTION = 0.05;
 const PROJECTS_PROBE_FLOOR = 2000;
-const projectsDensityCache = createDataCache<string, boolean>((cache, sectionTipo) => {
+/**
+ * BOTH verdict caches carry a TTL FLOOR as well as their save-event eviction
+ * (PERF-09, copied from bare_count.ts). The eviction is exact for writes THIS
+ * process sees, and blind to every other one: a sibling worker's save, an
+ * importer, a diffusion job, a psql session. Without a floor a stale verdict —
+ * "this user's matches are sparse", "this section holds 4 rows" — could be
+ * served for the whole life of the process and quietly pick the wrong plan or
+ * an undersized probe cap. `tmCountCacheTtlMs` is the same freshness backstop
+ * the browse counts use; TTL 0 means EXACT (measure every call), the
+ * parity-environment setting.
+ */
+type Timestamped<T> = { value: T; at: number };
+
+/**
+ * THE CACHE KEY of a scoped browse count — what makes two paints the same paint.
+ *
+ * BOTH halves are load-bearing, and the second one is the ACL. The rendered
+ * WHERE carries `$1`-style PLACEHOLDERS, not values, so two principals with
+ * different project grants render the SAME TEXT and differ only in what is
+ * bound: a key built from the text alone would serve one curator's total to
+ * another. Exported for its gate (list_count_budget_native).
+ */
+export function browseCountScopeSignature(whereAll: string[], boundValues: unknown[]): string {
+	return `${whereAll.join(' AND ')} :: ${JSON.stringify(boundValues)}`;
+}
+
+/**
+ * A stamped hit, or undefined when absent or past the floor.
+ *
+ * Exported for its gate (list_count_budget_native): the floor is a rule about
+ * TIME, and the only way to assert it is to hand it a stamp.
+ */
+export function freshValue<T>(hit: Timestamped<T> | undefined): T | undefined {
+	const ttl = config.ops.tmCountCacheTtlMs;
+	if (ttl <= 0 || hit === undefined) return undefined;
+	return Date.now() - hit.at < ttl ? hit.value : undefined;
+}
+
+const projectsDensityCache = createDataCache<string, Timestamped<boolean>>((cache, sectionTipo) => {
 	if (sectionTipo === config.usersSectionTipo) {
 		cache.clear();
 		return;
@@ -847,7 +975,7 @@ const projectsDensityCache = createDataCache<string, boolean>((cache, sectionTip
 		if (key.endsWith(`|${sectionTipo}`)) cache.delete(key);
 	}
 });
-const sectionTotalCache = createDataCache<string, number>((cache, sectionTipo) => {
+const sectionTotalCache = createDataCache<string, Timestamped<number>>((cache, sectionTipo) => {
 	cache.delete(sectionTipo);
 });
 // Schema property (data events never change an index definition) — keep entries.
@@ -890,14 +1018,14 @@ async function sectionRowTotal(
 	alias: string,
 	sectionTipo: string,
 ): Promise<number> {
-	const cached = sectionTotalCache.get(sectionTipo);
+	const cached = freshValue(sectionTotalCache.get(sectionTipo));
 	if (cached !== undefined) return cached;
 	const rows = (await sql.unsafe(
 		`SELECT count(*) AS n FROM ${fromClause} WHERE ${alias}.section_tipo = $1::text`,
 		[sectionTipo],
 	)) as { n: number | string }[];
 	const total = Number(rows[0]?.n ?? 0);
-	sectionTotalCache.set(sectionTipo, total);
+	sectionTotalCache.set(sectionTipo, { value: total, at: Date.now() });
 	return total;
 }
 
@@ -910,7 +1038,7 @@ async function projectsFilterIsSparse(
 	boundParams: unknown[],
 ): Promise<boolean> {
 	const cacheKey = `${userId}|${sectionTipo}`;
-	const cached = projectsDensityCache.get(cacheKey);
+	const cached = freshValue(projectsDensityCache.get(cacheKey));
 	if (cached !== undefined) return cached;
 	const total = await sectionRowTotal(fromClause, alias, sectionTipo);
 	const cap = Math.max(PROJECTS_PROBE_FLOOR, Math.ceil(total * PROJECTS_DENSE_FRACTION));
@@ -921,7 +1049,7 @@ async function projectsFilterIsSparse(
 		n: number | string;
 	}[];
 	const sparse = Number(rows[0]?.n ?? 0) < cap;
-	projectsDensityCache.set(cacheKey, sparse);
+	projectsDensityCache.set(cacheKey, { value: sparse, at: Date.now() });
 	return sparse;
 }
 
@@ -944,9 +1072,12 @@ function hopNeedsProjectsFilter(
 	principal: Principal | undefined,
 	skipProjectsFilter: boolean,
 	hopTable: string,
+	hopSection: string,
 ): principal is Principal {
 	if (principal === undefined || principal.isGlobalAdmin) return false;
 	if (skipProjectsFilter) return false;
+	// Owner-bound BEFORE the table exemption (dd655 lives in an exempt table).
+	if (sectionIsOwnerBound(hopSection)) return true;
 	return !PROJECTS_FILTER_EXEMPT_TABLES.has(hopTable);
 }
 
@@ -969,8 +1100,8 @@ function buildPathScope(
 		door: 'search.path',
 		recordPredicate: async ({ sectionTipo: hopSection, table: hopTable, alias: hopAlias }) => {
 			const parts: string[] = [];
-			if (hopNeedsProjectsFilter(principal, skipProjectsFilter, hopTable)) {
-				pushFragment(parts, await buildProjectsFilter(hopSection, hopAlias, principal, params));
+			if (hopNeedsProjectsFilter(principal, skipProjectsFilter, hopTable, hopSection)) {
+				pushFragment(parts, await buildRecordAclFilter(hopSection, hopAlias, principal, params));
 			}
 			pushFragment(parts, await buildHopUserRecordsFilter(hopAlias, principal, params));
 			return parts.join(' AND ');
@@ -978,7 +1109,142 @@ function buildPathScope(
 	};
 }
 
+/**
+ * `sqo.children_recursive` — the descendant-expanding search (PHP
+ * search::search + search_children_recursive + generate_children_recursive_search,
+ * core/search/class.search.php:445-711).
+ *
+ * A picker that hands the user a THESAURUS BRANCH means the branch's whole
+ * subtree, not the branch node: the epigraphy autocomplete's glyph grid
+ * (tool_numisdata_epigraphy) picks "Síl·labes" and must list every glyph under
+ * it. Without this the search answers with the single picked node — a grid with
+ * one empty cell, which is how the missing port surfaced.
+ *
+ * Two passes, exactly as PHP:
+ *  1. the SAME sqo with `children_recursive:false` and NO pagination — the
+ *     parent roots (pagination applies to the expanded set, never to the roots).
+ *  2. every descendant of every root (getChildrenRecursive), then a rebuilt SQO
+ *     whose filter is `(fixed_children_filter) AND (section_id IN parents+children)`,
+ *     with `filter_by_locators` dropped (the roots are already resolved) so the
+ *     locator pin cannot re-narrow the result back to the roots.
+ *
+ * WIRE: WC-2026-09-01-children-recursive-search — two deliberate divergences
+ * from PHP, both in the caller's favour —
+ * (a) the no-descendants case keeps the caller's limit/offset instead of
+ * returning PHP's unbounded parents result, and (b) `full_count` is preserved
+ * instead of forced false, so the count path counts the expanded set through
+ * the normal assembler rather than PHP's out-of-band `sqo->total`.
+ */
+/** The roots of a descendant-expanding search: the SAME query, unpaginated. */
+async function searchChildrenRecursiveRoots(
+	base: Record<string, unknown>,
+	options: SearchOptions,
+): Promise<{ section_id: number; section_tipo: string }[]> {
+	const rootsSqo = {
+		...base,
+		children_recursive: false,
+		limit: 'all',
+		offset: 0,
+		full_count: false,
+	} as unknown as Sqo;
+	const query = await buildSearchSql(rootsSqo, { ...options, idsOnly: true });
+	return (await sql.unsafe(query.sql, query.params as (string | number | null)[])) as {
+		section_id: number;
+		section_tipo: string;
+	}[];
+}
+
+/**
+ * Every descendant of every root, deduplicated by locator. The walk is the
+ * SHARED-visited batch (PHP search_children_recursive :604 calls
+ * get_children_recursive_batch, never the by-value get_children_recursive):
+ * the root set here comes straight from an unpaginated client search, so a node
+ * reachable from several roots — or from several parents, which a Dédalo
+ * polyhierarchy allows — must be expanded once per request, not once per path.
+ */
+async function collectRecursiveDescendants(
+	roots: readonly { section_id: number; section_tipo: string }[],
+): Promise<Map<string, { section_id: number; section_tipo: string }>> {
+	const { getChildrenRecursiveBatch } = await import('../relations/children.ts');
+	const byLocator = new Map<string, { section_id: number; section_tipo: string }>();
+	for (const child of await getChildrenRecursiveBatch(roots)) {
+		const id = Number(child.section_id);
+		if (Number.isInteger(id)) {
+			byLocator.set(`${child.section_tipo}_${id}`, {
+				section_id: id,
+				section_tipo: child.section_tipo,
+			});
+		}
+	}
+	return byLocator;
+}
+
+/**
+ * `(fixed_children_filter) AND (section_id IN roots+descendants)` — PHP
+ * generate_children_recursive_search:663-707 builds exactly one
+ * component_section_id filter over the merged id list, whose path[0] carries the
+ * first merged row's section (descendants first).
+ */
+function childrenRecursiveFilter(
+	rows: readonly { section_id: number; section_tipo: string }[],
+	fixedChildrenFilter: unknown,
+): Record<string, unknown> {
+	const idFilter = [
+		{
+			q: rows.map((row) => row.section_id).join(','),
+			q_operator: null,
+			path: [
+				{
+					section_tipo: rows[0]?.section_tipo ?? '',
+					component_tipo: 'section_id',
+					model: 'component_section_id',
+					name: 'Id',
+				},
+			],
+		},
+	];
+	return fixedChildrenFilter === undefined || fixedChildrenFilter === null
+		? { $or: idFilter }
+		: { $and: [fixedChildrenFilter, { $or: idFilter }] };
+}
+
+async function buildChildrenRecursiveSql(sqo: Sqo, options: SearchOptions): Promise<BuiltQuery> {
+	const base = sqo as unknown as Record<string, unknown>;
+	const roots = await searchChildrenRecursiveRoots(base, options);
+	const byLocator = await collectRecursiveDescendants(roots);
+
+	// No descendants: the roots ARE the answer — run the plain search so the
+	// caller's own limit/offset and full_count still apply.
+	if (byLocator.size === 0) {
+		return await buildSearchSql({ ...base, children_recursive: false } as unknown as Sqo, options);
+	}
+
+	// Descendants first, then the roots (PHP's [...children, ...parents] merge).
+	for (const root of roots) {
+		byLocator.set(`${root.section_tipo}_${root.section_id}`, root);
+	}
+	const { filter_by_locators: _droppedLocators, ...withoutLocators } = base;
+	const combinedSqo = {
+		...withoutLocators,
+		children_recursive: false,
+		filter: childrenRecursiveFilter([...byLocator.values()], base.fixed_children_filter),
+	} as unknown as Sqo;
+
+	return await buildSearchSql(combinedSqo, options);
+}
+
 export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Promise<BuiltQuery> {
+	// WHICH search, separately from HOW it is assembled (PHP search::search's
+	// dedicated children_recursive path, taken before parse_sql_query): the
+	// descendant-expanding search is a PRE-PASS that re-enters this same door
+	// with a rewritten SQO.
+	return (sqo as unknown as { children_recursive?: unknown }).children_recursive === true
+		? await buildChildrenRecursiveSql(sqo, options)
+		: await buildPlainSearchSql(sqo, options);
+}
+
+/** The SQO→SQL assembler proper: one section (or a UNION of them), no pre-pass. */
+async function buildPlainSearchSql(sqo: Sqo, options: SearchOptions): Promise<BuiltQuery> {
 	const sectionTipos = getSectionTipos(sqo).map((tipo) =>
 		assertValidTipo(tipo, 'sqo.section_tipo'),
 	);
@@ -1050,6 +1316,17 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 
 	// --- WHERE: user filter tree -------------------------------------------
 	const whereParts: string[] = [];
+	/**
+	 * How many of `whereParts` are NOT the caller's ACL (PERF-10).
+	 *
+	 * `whereParts` is pushed in a FIXED order — [0] the client filter tree,
+	 * then the projects predicate, then filter_records, then
+	 * filter_by_locators. The ACL span is the middle two; this counts the OTHER
+	 * two, so `nonAclWhereParts === 0` means "whereParts hold ONLY the ACL".
+	 * Counted at the push, never sniffed out of the rendered SQL: a string test
+	 * would be a spelling gate, and the spelling is not the invariant.
+	 */
+	let nonAclWhereParts = 0;
 	const joinFragments = new Map<string, string>();
 	if (sqo.filter !== undefined && sqo.filter !== null) {
 		const conformed = await conformFilter(
@@ -1060,7 +1337,10 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 		);
 		collectJoins(conformed, joinFragments);
 		const filterSql = parseConformedFilter(conformed, params);
-		if (filterSql !== '') whereParts.push(filterSql);
+		if (filterSql !== '') {
+			whereParts.push(filterSql);
+			nonAclWhereParts += 1;
+		}
 	}
 
 	// --- projects filter (per-record ACL, §7.4) — non-admins only -----------
@@ -1073,11 +1353,11 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 	if (principal !== undefined && !principal.isGlobalAdmin && sqo.skip_projects_filter !== true) {
 		// PHP auto-exemption (search::$ar_tables_skip_projects): shared
 		// vocabulary/infrastructure tables never carry project locators. Applies
-		// per SECTION so a mixed UNION only gates the gateable branches.
+		// per SECTION so a mixed UNION only gates the gateable branches — and an
+		// OWNER-BOUND section (dd655) is gated whatever table it lives in.
 		const gateableSections: string[] = [];
 		for (const sectionTipo of sectionTipos) {
-			const sectionTable = (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix';
-			if (!PROJECTS_FILTER_EXEMPT_TABLES.has(sectionTable)) gateableSections.push(sectionTipo);
+			if (await sectionNeedsRecordAcl(sectionTipo)) gateableSections.push(sectionTipo);
 		}
 		if (gateableSections.length > 0) {
 			const projectsFilter = multiSection
@@ -1088,7 +1368,7 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 						principal,
 						params,
 					)
-				: await buildProjectsFilter(mainSectionTipo, alias, principal, params);
+				: await buildRecordAclFilter(mainSectionTipo, alias, principal, params);
 			if (projectsFilter !== '') {
 				whereParts.push(projectsFilter);
 				projectsFilterActive = true;
@@ -1119,6 +1399,7 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 			return `( ${fields.join(' AND ')} )`;
 		});
 		whereParts.push(`(${locatorClauses.join(' OR ')})`);
+		nonAclWhereParts += 1;
 	}
 
 	// --- ORDER ---------------------------------------------------------------
@@ -1207,19 +1488,36 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 			// Each branch yields its own count row; caller sums (PHP trait.count).
 			return { sql: `${queryInside};`, params: params.toArray() };
 		}
-		// Cached bare-browse total for the big append-only logs. whereParts empty
-		// ⇒ the count is exactly `count(*) WHERE section_tipo = $` — no filter, no
-		// projects-ACL predicate (a non-admin's filter lands in whereParts) — so
-		// the save-event-wired bareBrowseCount is the exact value, served as a
-		// literal instead of a ~2.5 s parallel scan on every list paint. Scoped to
-		// policy-governed tables (matrix_activity/…); other sections keep the
-		// live count. This is the SAME bare-browse determination the flip uses.
-		if (
-			joinFragments.size === 0 &&
-			whereParts.length === 0 &&
-			policyForTable(matrixTable) !== undefined
-		) {
-			const total = await bareBrowseCount(matrixTable, mainSectionTipo);
+		// CACHED BROWSE TOTAL, served as a literal instead of re-counting the
+		// section on every list paint.
+		//
+		// THE SCOPE: no joins, one section, and `whereParts` holding NOTHING that
+		// is not the caller's own ACL (`nonAclWhereParts === 0`). That covers the
+		// bare browse AND — the whole point of PERF-10 — the NON-ADMIN's browse,
+		// whose projects predicate lands in `whereParts` and could therefore never
+		// reach the old `whereParts.length === 0` short-circuit. The old
+		// `policyForTable` gate is dropped too: it scoped the saving to the
+		// append-only logs, but a museum's ordinary section is counted on exactly
+		// the same paint and is exactly as cacheable.
+		//
+		// THE QUERY IS THE ASSEMBLER'S OWN, handed to the cache verbatim and keyed
+		// by its rendered WHERE plus its bound values. Never re-derived as
+		// `count(*) WHERE section_tipo`: `mainWhere` may carry more than the tipo
+		// pin (the users section's root-record exclusion), and a re-derived count
+		// would silently drop it. The key changes when the predicate does, so a
+		// grant change re-counts and no principal reads another's total.
+		//
+		// A client filter or a locator list makes the count request-specific:
+		// nonAclWhereParts is then > 0 and this does not fire.
+		if (joinFragments.size === 0 && !multiSection && nonAclWhereParts === 0) {
+			const boundValues = params.toArray();
+			const total = await scopedBrowseCount(
+				matrixTable,
+				mainSectionTipo,
+				browseCountScopeSignature(whereAll, boundValues),
+				queryInside,
+				boundValues,
+			);
 			return { sql: `SELECT ${Number(total)}::int AS full_count;`, params: [] };
 		}
 		return { sql: `${queryInside};`, params: params.toArray() };

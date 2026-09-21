@@ -2,7 +2,7 @@
 
 > See also: [Tools user guide](index.md) · [Developer reference](../development/tools/reference/tool_import_dedalo_csv.md)
 
-Import a CSV file into a section, creating or updating one record per row and conforming each cell to the target component. This is the tool that round-trips a `dedalo_raw` export back into Dédalo.
+Import a CSV file into a section, creating or updating one record per row and conforming each cell to the target component. This is the tool that loads a `dedalo_raw` export back into Dédalo — as typed input, conformed cell by cell; it is not a restore (see [The archive door](../core/exporting_data.md#the-archive-door) for that).
 
 ## What it's for
 
@@ -54,8 +54,8 @@ The filename can name the target section: a file called `types_clean-numisdata3.
 
 ## Tips and gotchas
 
-!!! tip "Round-trip is the safe path"
-    Exporting a section in `dedalo_raw` format and re-importing it unchanged reproduces the data exactly. Start from a raw export, edit only the cells you mean to change, and you cannot accidentally reshape a value.
+!!! tip "Start from a raw export"
+    Exporting a section in `dedalo_raw` format keeps each cell's structure through a spreadsheet edit: start from a raw export, edit only the cells you mean to change, and a value is far harder to reshape by accident. It is still an import, not a restore — every cell is re-conformed as typed input (`component_text_area` markup is rewritten, `component_geolocation` item ids are dropped, empty cells clear values, relation `section_id`s are checked for shape only). A lossless copy of a section is the [archive door](../core/exporting_data.md#the-archive-door).
 
 !!! warning "An empty cell clears data"
     An empty cell is imported as `null` and **clears** the existing value of that component for the record (and for the current data language, when the component is translatable). To leave a component untouched, omit its column entirely rather than leaving it blank.
@@ -71,11 +71,11 @@ The filename can name the target section: a file called `types_clean-numisdata3.
 
 ## Related
 
-- **[Data export](using_export.md)** — the export counterpart; its `dedalo_raw` format produces the CSV this tool round-trips.
+- **[Data export](using_export.md)** — the export counterpart; its `dedalo_raw` format produces the CSV this tool loads back.
 - **[Media file import](using_import_files.md)** — ingest media files and their records, not CSV record data.
 - **[MARC21 import](using_import_marc21.md)**, **[RDF import](using_import_rdf.md)**, **[Zotero import](using_import_zotero.md)** — format-specific importers.
 - **[Bulk component edit](using_propagate_component_data.md)** — search-driven bulk edits with the same bulk-process and time-machine reversion model.
 - **[Time machine](using_time_machine.md)** — how the reversible snapshots this tool writes are reviewed and rolled back.
 - **[Importing data](../core/importing_data.md)** — the per-component CSV format catalogue, the `dedalo_data` wrapper, and empty-cell semantics.
-- **[Exporting data](../core/exporting_data.md)** — the export side of the round-trip.
+- **[Exporting data](../core/exporting_data.md)** — the export side, and the archive door for a lossless copy.
 - **[Developer reference](../development/tools/reference/tool_import_dedalo_csv.md)** — actions, options and the import engine.

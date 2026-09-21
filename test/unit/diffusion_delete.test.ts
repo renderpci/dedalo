@@ -23,6 +23,7 @@ import {
 	resetNativeDiffusionSqlDeleteForTests,
 } from '../../src/core/diffusion_bridge/diffusion_delete.ts';
 import { getSectionDiffusionTargets } from '../../src/core/diffusion_bridge/diffusion_map.ts';
+import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 import {
 	countZzdOntology,
 	dropZzdOntology,
@@ -210,19 +211,22 @@ describe('diffusion pending retry queue (dd1758)', () => {
 // legacy '{base}_*.rdf' variants unlink too; a missing service_name (the
 // fixture's zzd7 rdf element) is unresolvable → pending.
 describe('diffusion published-file unlinks', () => {
-	const FILE_ROOT = `${tmpdir()}/dedalo_ts_diffusion_files_${process.pid}`;
+	// A MARKED scratch root: the producer both sides use (published_files.ts)
+	// resolves a root that gets written under, so it asks the test-media guard.
+	const FILE_ROOT = markMediaRoot(`${tmpdir()}/dedalo_ts_diffusion_files_${process.pid}`);
 
 	afterAll(() => {
 		rmSync(FILE_ROOT, { recursive: true, force: true });
 	});
 
-	test('rdf element without service_name resolves to pending', async () => {
+	test('rdf element without service_name resolves to TERMINAL (never published — PUB-02)', async () => {
 		const { resolvePublishedFilePath, unlinkPublishedFiles } = await import(
 			'../../src/core/diffusion_bridge/diffusion_delete.ts'
 		);
 		// zzd7 (the fixture's rdf element) declares NO service_name.
 		expect(await resolvePublishedFilePath('zzd7', 'rdf', FILE_SECTION, 1, FILE_ROOT)).toBe(null);
-		expect(await unlinkPublishedFiles('zzd7', 'rdf', FILE_SECTION, 1, FILE_ROOT)).toBe(false);
+		const unlinked = await unlinkPublishedFiles('zzd7', 'rdf', FILE_SECTION, 1, FILE_ROOT);
+		expect(unlinked.kind).toBe('terminal');
 	});
 
 	test('sanitize + unlink flow (canonical + legacy variants, idempotent)', async () => {
@@ -253,16 +257,22 @@ describe('diffusion published-file unlinks', () => {
 			writeFileSync(`${dir}/nmotestclass-test3-7_2024.rdf`, 'x'); // legacy
 			writeFileSync(`${dir}/nmotestclass-test3-8.rdf`, 'x'); // OTHER record
 
-			expect(await unlinkPublishedFiles('zzr1', 'rdf', 'test3', 7, FILE_ROOT)).toBe(true);
+			expect(await unlinkPublishedFiles('zzr1', 'rdf', 'test3', 7, FILE_ROOT)).toEqual({
+				kind: 'unpublished',
+			});
 			expect(existsSync(`${dir}/nmotestclass-test3-7.rdf`)).toBe(false);
 			expect(existsSync(`${dir}/nmotestclass-test3-7_2024.rdf`)).toBe(false);
 			expect(existsSync(`${dir}/nmotestclass-test3-8.rdf`)).toBe(true); // untouched
 			// idempotent second run
-			expect(await unlinkPublishedFiles('zzr1', 'rdf', 'test3', 7, FILE_ROOT)).toBe(true);
+			expect(await unlinkPublishedFiles('zzr1', 'rdf', 'test3', 7, FILE_ROOT)).toEqual({
+				kind: 'unpublished',
+			});
 			// xml/markdown scheme
 			mkdirSync(`${FILE_ROOT}/markdown/testsvc`, { recursive: true });
 			writeFileSync(`${FILE_ROOT}/markdown/testsvc/test3_7.md`, 'x');
-			expect(await unlinkPublishedFiles('zzr1', 'markdown', 'test3', 7, FILE_ROOT)).toBe(true);
+			expect(await unlinkPublishedFiles('zzr1', 'markdown', 'test3', 7, FILE_ROOT)).toEqual({
+				kind: 'unpublished',
+			});
 			expect(existsSync(`${FILE_ROOT}/markdown/testsvc/test3_7.md`)).toBe(false);
 		} finally {
 			await sql.unsafe(`DELETE FROM dd_ontology WHERE tld = 'zzr'`);

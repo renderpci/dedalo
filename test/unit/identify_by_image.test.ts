@@ -544,7 +544,9 @@ describe('identify_by_image — a vector hit is not permission', () => {
 		let read = false;
 		const res = await buildIdentifyByImage(
 			fakeDeps({
-				componentGrant: async () => 0,
+				// The SECTION is readable (the hit survives), the LABEL component is not.
+				componentGrant: async (_principal, sectionTipo, componentTipo) =>
+					componentTipo === sectionTipo ? 1 : 0,
 				readValues: async () => {
 					read = true;
 					return { kind: 'text', values: ['secret inventory number'] };
@@ -555,6 +557,43 @@ describe('identify_by_image — a vector hit is not permission', () => {
 		expect(answer.results[0]!.label).toBeNull();
 		// The gate must stop us BEFORE the read, not filter its output.
 		expect(read).toBe(false);
+	});
+
+	/**
+	 * P1-3 / SEC-11. A NAMED scope the caller may not open is refused (above).
+	 * An OMITTED scope used to mean "the whole image index": a hit from a section
+	 * the caller may not open reached the answer on its media component's grant
+	 * alone. The omitted scope must be no wider than the named one.
+	 */
+	test('an OMITTED scope is not wider than a named one: a hit from a section the caller may not open is dropped', async () => {
+		const asked: string[] = [];
+		const deps = fakeDeps({
+			queryImagePartition: async () => [fakeCandidate(1, 0.1), fakeCandidate(2, 0.2)],
+			// No SECTION grant on test3; the media component itself is granted —
+			// the exact shape that leaked through the media-component gate alone.
+			componentGrant: async (_principal, sectionTipo, componentTipo) => {
+				asked.push(`${sectionTipo}|${componentTipo}`);
+				return componentTipo === sectionTipo ? 0 : 1;
+			},
+		});
+		const res = await buildIdentifyByImage(deps)(rqo({ image }), ctx(NO_ACCESS));
+		expect(res.status).toBe(200);
+		const answer = res.body.data as ImageAnswer;
+		expect(answer.scope).toEqual([]);
+		// EXACT: nothing, and no "hidden" count.
+		expect(answer.results).toEqual([]);
+		expect(JSON.stringify(answer)).not.toContain('hidden');
+		// The section grant WAS asked (once per section), so the emptiness is a
+		// refusal, not a missing corpus.
+		expect(asked.filter((entry) => entry === 'test3|test3')).toEqual(['test3|test3']);
+
+		// POSITIVE CONTROL: the same two hits with the section granted are served.
+		const served = await buildIdentifyByImage(
+			fakeDeps({
+				queryImagePartition: async () => [fakeCandidate(1, 0.1), fakeCandidate(2, 0.2)],
+			}),
+		)(rqo({ image }), ctx(NO_ACCESS));
+		expect((served.body.data as ImageAnswer).results.map((hit) => hit.section_id)).toEqual([1, 2]);
 	});
 
 	test('a Type record outside the caller scope is never quoted', async () => {

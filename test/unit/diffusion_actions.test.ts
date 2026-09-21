@@ -278,10 +278,15 @@ describe('dd_diffusion_api end-to-end (stub runner)', () => {
 			await Bun.sleep(100);
 		}
 		createdJobIds.push(jobId);
-		const checkpointBefore = (await getJobByClientProcessId(label, null))?.checkpoint;
 
 		process.kill(pid, 'SIGKILL');
 		await Bun.sleep(200);
+		// Read the checkpoint AFTER the kill: a live runner commits checkpoints
+		// between any earlier read and the signal, so a before-the-kill snapshot
+		// raced the runner and flapped this case under full-suite load. A dead
+		// process writes nothing more, and the sweep does not touch the
+		// checkpoint — so this IS the value that must survive.
+		const checkpointBefore = (await getJobByClientProcessId(label, null))?.checkpoint;
 
 		// Sweep with a zero-tolerance staleness window: the dead runner's last
 		// heartbeat is now "stale", the job re-queues (attempt 1 < 3).

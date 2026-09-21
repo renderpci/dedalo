@@ -100,7 +100,11 @@ must be a reused pre-existing key and its codes must agree on category. Label
 `{param}` placeholders ≡ `details_keys`, both ways. Labels ship in
 `src/core/labels/master.json` in the same commit as the code (labels_tripwire).
 Client-side transport codes have their own keys (`error_client_network|timeout|
-aborted|bad_response|http_status|worker|offline`, `awaiting_busy_server`).
+aborted|bad_response|http_status|worker|offline|render_failed`, `awaiting_busy_server`).
+`client.render_failed` is the one non-transport client code: a render callback
+threw inside `ui.load_item_with_spinner`, and the engine's own panel
+(`render_error_panel`) takes the place the node would have had — never an
+empty container (client_action_outcome_tripwire).
 
 ## 3. Envelope v2 (normative)
 
@@ -176,7 +180,10 @@ optional passthrough. The stated removal condition — the
 `client_error_contract_tripwire` census of client reads of `.result` / `.msg` /
 `.errors` reaches 0 — was met on 2026-08-16: **0 compat reads across 648
 scanned files** (`client/dedalo/**/*.js` minus the browser test harness +
-`tools/*/js/**/*.js`; one counter, `scripts/lib/client_compat_census.ts`,
+`tools/*/js/**/*.js`; widened on 2026-09-02 to the WHOLE `tools/**/*.js` tree —
+the sub-path shape left nine tracked browser files outside the census, GATE-31 —
+and the tripwire now proves `git ls-files` under both roots ⊆ the scan; one
+counter, `scripts/lib/client_compat_census.ts`,
 comments and strings blanked, the named non-envelope shapes excused one
 expression at a time in `NON_ENVELOPE_READS` with a reason; the core sweep
 `2f8ad44f03`, the tools sweep `505ad279de`). The block, the schema

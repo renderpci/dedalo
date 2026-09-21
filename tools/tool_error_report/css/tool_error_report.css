@@ -5,10 +5,14 @@
 */
 :root {
   --tool_error_report: #7152a5;
-  --tool_error_report_lighten_40: #dfd8eb;
+  --tool_error_report_lighten_40: #e9e4f2;
   --tool_error_report_lighten_5: #7e60b0;
   --tool_error_report_border: #5a4183;
   --tool_error_report_lighten_10: #8c71b9;
+}
+:root[data-theme="dark"] {
+  --tool_error_report: #9070c8;
+  --tool_error_report_lighten_40: #2a2438;
 }
 .tool_error_report .error_report_intro {
   margin: 0 0 1em 0;

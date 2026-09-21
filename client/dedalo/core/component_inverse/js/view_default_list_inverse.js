@@ -3,6 +3,7 @@
 
 // import
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -54,7 +55,7 @@ view_default_list_inverse.render = async function(self, options) {
 	// relations exist for this record) or its locator may be missing (malformed data).
 	// `from_section_id` is the numeric section ID of the record that points back to self.
 		const value_string = entries && entries[0] && entries[0].locator
-			? entries[0].locator.from_section_id
+			? render_value(entries[0].locator.from_section_id, 'text')
 			: null
 
 	// wrapper

@@ -1,6 +1,6 @@
 {
 	"generated_by": "bun run scripts/parity_baseline.ts (runs `bun test test/parity --timeout=30000` under bun's JUnit reporter and parses it via scripts/lib/parity_census.ts — never a hand-edited list)",
-	"rule": "SHRINK-ONLY red baseline for the test/parity tier, keyed per FILE and per TEST NAME (the name is the full describe chain + test name, ' > '-joined, exactly as bun prints it). A failing test that is not listed here is a REGRESSION and fails the gate — that is the whole point: the known reds must never hide the next real one. A LISTED test that now PASSES is ALSO a gate failure. A stale entry is the ratchet quietly stopping; re-freeze so the win is locked in. Likewise a listed test that no longer exists (renamed, deleted, moved file) or is now SKIPPED: it is no longer the red it was frozen as, so the entry is stale. Keying per NAME and not per count is deliberate: a file that stops failing test A and starts failing test B has an unchanged count, and that is exactly the regression a count-only ratchet would miss. The generator REFUSES to add a failing test without --allow-regression, and the commit message MUST then say why the new red is acceptable. `measured` is the frozen debt AND the size: this tier does not grow, so tier_files/tier_tests/tier_pass/tier_skip are all asserted exactly — which is what makes silencing a GREEN gate with `.skip` arithmetic (pass falls by one, skip rises by one) instead of invisible. DO NOT hand-edit. Regenerate with: bun run scripts/parity_baseline.ts Why the reds are permanent (AGENTS.md 'THE VERIFICATION STORY'): the 76 harvested gates were recorded against ONE installation's records and the PHP oracle is decommissioned, so a re-harvest is impossible. The corpus-bound gates are being replaced by generic-`test`-TLD twins — retirement map in engineering/ORACLE_HARVEST.md. Every retirement should LOWER the numbers here.",
+	"rule": "SHRINK-ONLY red baseline for the test/parity tier, keyed per FILE and per TEST NAME (the name is the full describe chain + test name, ' > '-joined, exactly as bun prints it). A failing test that is not listed here is a REGRESSION and fails the gate — that is the whole point: the known reds must never hide the next real one. A LISTED test that now PASSES is ALSO a gate failure. A stale entry is the ratchet quietly stopping; re-freeze so the win is locked in. Likewise a listed test that no longer exists (renamed, deleted, moved file) or is now SKIPPED: it is no longer the red it was frozen as, so the entry is stale. Keying per NAME and not per count is deliberate: a file that stops failing test A and starts failing test B has an unchanged count, and that is exactly the regression a count-only ratchet would miss. The generator REFUSES to add a failing test without --allow-regression, and the commit message MUST then say why the new red is acceptable. `measured` is the frozen debt AND the size: this tier does not grow, so tier_files/tier_tests/tier_pass/tier_skip are all asserted exactly — which is what makes silencing a GREEN gate with `.skip` arithmetic (pass falls by one, skip rises by one) instead of invisible. `per_file` is the PER-FILE FLOOR: for every file of the tier, the cases it ran, the cases it skipped and the `expect` calls that EXECUTED (bun's own file-level JUnit attributes). Skips may only shrink; cases and assertions may only rise — a drop, or a skip that appears, is a regression the generator refuses without --allow-regression, because a test that returns before its first assertion is a PASS with assertions=0 and this count is the only thing that notices. An unrecorded file, or a recorded file that no longer reports, is stale: re-freeze. DO NOT hand-edit. Regenerate with: bun run scripts/parity_baseline.ts Why the reds are permanent (AGENTS.md 'THE VERIFICATION STORY'): the 76 harvested gates were recorded against ONE installation's records and the PHP oracle is decommissioned, so a re-harvest is impossible. The corpus-bound gates are being replaced by generic-`test`-TLD twins — retirement map in engineering/ORACLE_HARVEST.md. Every retirement should LOWER the numbers here.",
 	"measured": {
 		"tier_files": 78,
 		"tier_tests": 382,
@@ -170,5 +170,397 @@
 		"test/parity/ts_search_differential.test.ts": [
 			"area_thesaurus ts_search injection differential > keyword search embeds a matching ts_search tree"
 		]
+	},
+	"per_file": {
+		"test/parity/activity_read_differential.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 3
+		},
+		"test/parity/area_dashboard_differential.test.ts": {
+			"tests": 4,
+			"skipped": 0,
+			"assertions": 24
+		},
+		"test/parity/area_hierarchy_differential.test.ts": {
+			"tests": 4,
+			"skipped": 0,
+			"assertions": 28
+		},
+		"test/parity/area_security_differential.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 5
+		},
+		"test/parity/areas_differential.test.ts": {
+			"tests": 1,
+			"skipped": 0,
+			"assertions": 13
+		},
+		"test/parity/autocomplete_hi_search_differential.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 4
+		},
+		"test/parity/autocomplete_search_differential.test.ts": {
+			"tests": 4,
+			"skipped": 0,
+			"assertions": 33
+		},
+		"test/parity/buttons_differential.test.ts": {
+			"tests": 4,
+			"skipped": 0,
+			"assertions": 14
+		},
+		"test/parity/complex_relation_sweep.test.ts": {
+			"tests": 11,
+			"skipped": 0,
+			"assertions": 59
+		},
+		"test/parity/component_datalist_lifecycle_differential.test.ts": {
+			"tests": 12,
+			"skipped": 0,
+			"assertions": 72
+		},
+		"test/parity/component_edit_context_differential.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 8
+		},
+		"test/parity/component_geolocation_features_differential.test.ts": {
+			"tests": 1,
+			"skipped": 0,
+			"assertions": 5
+		},
+		"test/parity/component_image_context_differential.test.ts": {
+			"tests": 5,
+			"skipped": 0,
+			"assertions": 11
+		},
+		"test/parity/component_list_css_strip_differential.test.ts": {
+			"tests": 15,
+			"skipped": 0,
+			"assertions": 69
+		},
+		"test/parity/component_publication_search_differential.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 19
+		},
+		"test/parity/component_section_id_differential.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 10
+		},
+		"test/parity/component_tools_differential.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 11
+		},
+		"test/parity/context_differential.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 9
+		},
+		"test/parity/count_differential.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 8
+		},
+		"test/parity/datalist_differential.test.ts": {
+			"tests": 1,
+			"skipped": 0,
+			"assertions": 3
+		},
+		"test/parity/dedalo_files_differential.test.ts": {
+			"tests": 7,
+			"skipped": 0,
+			"assertions": 2055
+		},
+		"test/parity/default_ddo_map_differential.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 6
+		},
+		"test/parity/delete_children_guard_differential.test.ts": {
+			"tests": 2,
+			"skipped": 2,
+			"assertions": 0
+		},
+		"test/parity/duplicated_operator_differential.test.ts": {
+			"tests": 1,
+			"skipped": 0,
+			"assertions": 2
+		},
+		"test/parity/edit_ddo_map_differential.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 5
+		},
+		"test/parity/environment_differential.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 57
+		},
+		"test/parity/error_envelope_transform.test.ts": {
+			"tests": 9,
+			"skipped": 0,
+			"assertions": 71
+		},
+		"test/parity/get_data_differential.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 44
+		},
+		"test/parity/get_element_context_differential.test.ts": {
+			"tests": 1,
+			"skipped": 0,
+			"assertions": 12
+		},
+		"test/parity/get_ontologies_differential.test.ts": {
+			"tests": 5,
+			"skipped": 0,
+			"assertions": 7
+		},
+		"test/parity/get_widget_data_differential.test.ts": {
+			"tests": 5,
+			"skipped": 5,
+			"assertions": 0
+		},
+		"test/parity/grouper_context_differential.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 20
+		},
+		"test/parity/import_files_filename_differential.test.ts": {
+			"tests": 12,
+			"skipped": 0,
+			"assertions": 60
+		},
+		"test/parity/indexation_grid_differential.test.ts": {
+			"tests": 11,
+			"skipped": 0,
+			"assertions": 37
+		},
+		"test/parity/info_observer_differential.test.ts": {
+			"tests": 2,
+			"skipped": 2,
+			"assertions": 0
+		},
+		"test/parity/list_column_sortable_differential.test.ts": {
+			"tests": 5,
+			"skipped": 0,
+			"assertions": 122
+		},
+		"test/parity/media_files_info_differential.test.ts": {
+			"tests": 1,
+			"skipped": 0,
+			"assertions": 98
+		},
+		"test/parity/menu_differential.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 3
+		},
+		"test/parity/model_coverage_sweep.test.ts": {
+			"tests": 1,
+			"skipped": 0,
+			"assertions": 39
+		},
+		"test/parity/multihop_order_differential.test.ts": {
+			"tests": 1,
+			"skipped": 0,
+			"assertions": 2
+		},
+		"test/parity/multihop_search_differential.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 7
+		},
+		"test/parity/oracle_canary.test.ts": {
+			"tests": 3,
+			"skipped": 2,
+			"assertions": 1
+		},
+		"test/parity/permissions_differential.test.ts": {
+			"tests": 6,
+			"skipped": 0,
+			"assertions": 82
+		},
+		"test/parity/projects_filter_differential.test.ts": {
+			"tests": 13,
+			"skipped": 0,
+			"assertions": 30
+		},
+		"test/parity/publication_toggle_doubling_differential.test.ts": {
+			"tests": 1,
+			"skipped": 0,
+			"assertions": 17
+		},
+		"test/parity/read_differential.test.ts": {
+			"tests": 4,
+			"skipped": 0,
+			"assertions": 30
+		},
+		"test/parity/read_raw_differential.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 20
+		},
+		"test/parity/regenerate_differential.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 4
+		},
+		"test/parity/related_count_differential.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 9
+		},
+		"test/parity/relation_corpus_config.test.ts": {
+			"tests": 21,
+			"skipped": 0,
+			"assertions": 230
+		},
+		"test/parity/relation_index_get_data_differential.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 10
+		},
+		"test/parity/relation_inverse_differential.test.ts": {
+			"tests": 4,
+			"skipped": 0,
+			"assertions": 19
+		},
+		"test/parity/relation_search_pipelines_differential.test.ts": {
+			"tests": 4,
+			"skipped": 0,
+			"assertions": 6
+		},
+		"test/parity/replay.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 7
+		},
+		"test/parity/request_config_differential.test.ts": {
+			"tests": 4,
+			"skipped": 1,
+			"assertions": 15
+		},
+		"test/parity/request_config_presets_differential.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 9
+		},
+		"test/parity/resolve_data_differential.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 6
+		},
+		"test/parity/root_user_hidden_differential.test.ts": {
+			"tests": 5,
+			"skipped": 0,
+			"assertions": 15
+		},
+		"test/parity/section_context_extras_differential.test.ts": {
+			"tests": 7,
+			"skipped": 0,
+			"assertions": 35
+		},
+		"test/parity/section_list_css_differential.test.ts": {
+			"tests": 4,
+			"skipped": 0,
+			"assertions": 18
+		},
+		"test/parity/section_terms_differential.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 14
+		},
+		"test/parity/section_tool_start_differential.test.ts": {
+			"tests": 10,
+			"skipped": 0,
+			"assertions": 90
+		},
+		"test/parity/section_tools_differential.test.ts": {
+			"tests": 6,
+			"skipped": 0,
+			"assertions": 80
+		},
+		"test/parity/sqo_differential.test.ts": {
+			"tests": 13,
+			"skipped": 0,
+			"assertions": 58
+		},
+		"test/parity/start_differential.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 3
+		},
+		"test/parity/tipo_map_transform.test.ts": {
+			"tests": 28,
+			"skipped": 0,
+			"assertions": 617
+		},
+		"test/parity/tool_component_read_differential.test.ts": {
+			"tests": 6,
+			"skipped": 0,
+			"assertions": 35
+		},
+		"test/parity/tool_element_context_differential.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 16
+		},
+		"test/parity/tool_export_breakdown_differential.test.ts": {
+			"tests": 21,
+			"skipped": 0,
+			"assertions": 127
+		},
+		"test/parity/tool_export_differential.test.ts": {
+			"tests": 15,
+			"skipped": 0,
+			"assertions": 67
+		},
+		"test/parity/tools_register_differential.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 6
+		},
+		"test/parity/ts_mutations_differential.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 11
+		},
+		"test/parity/ts_mutations_hardening.test.ts": {
+			"tests": 1,
+			"skipped": 0,
+			"assertions": 14
+		},
+		"test/parity/ts_node_read_differential.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 14
+		},
+		"test/parity/ts_search_differential.test.ts": {
+			"tests": 1,
+			"skipped": 0,
+			"assertions": 6
+		},
+		"test/parity/user_tools_differential.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 436
+		},
+		"test/parity/virtual_section_edit_differential.test.ts": {
+			"tests": 1,
+			"skipped": 0,
+			"assertions": 2
+		},
+		"test/parity/widgets_differential.test.ts": {
+			"tests": 5,
+			"skipped": 1,
+			"assertions": 75
+		}
 	}
 }

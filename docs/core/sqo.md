@@ -96,7 +96,8 @@ The SQO is the query language, but not every SQO is equally trusted. **A client-
   - **column_values** : `array` array that defines the order of the values **optional**
 - **filter_by_locators** : `array of objects` pins the search to an explicit locator set; every object is a [locator](locator.md). The array ORDER is preserved in the result only when the SQO also carries the `{"mode":"locator_position"}` order entry (see [order](#order)) — without it rows come back in the default `section_id ASC`. Client lists are clamped to 1000 pins (loud server log on truncation). **optional** ex : `[{"section_tipo":"oh1", "section_id":8},{"section_tipo":"oh1", "section_id":3}]`
 - **allow_sub_select_by_id** : `bool` (true || false) create a sub-select in the SQL query that passes the filter and gets the id to select the main section. Default : true **optional** .
-- **children_recursive** : `bool` (true || false) filter the hierarchy term and get all children nodes that depend on the searched term. Default : false  **optional**
+- **children_recursive** : `bool` (true || false) filter the hierarchy term and get all children nodes that depend on the searched term. Default : false  **optional** — see [Recursive children](#recursive-children).
+- **fixed_children_filter** : `object` a filter clause ANDed over the expanded set when `children_recursive` is true; it narrows the descendants without touching the filter that selected the roots. Ignored when `children_recursive` is false. **optional** ex : `{"q":{...}, "path":[{...}], "q_operator":null}`
 - **remove_distinct** : `bool` (true || false) remove duplicate records when the SQL query has a sub-select with multiple criteria that can return duplicate records. Default : false **optional**
 - **skip_projects_filter** : `bool` (true || false) remove the mandatory component_filter applied to all users except root and global admin users. Default : false **optional**
 - **breakdown** : `bool` (true || false) split the data of the matching section (a database row) into a row for every match. Used to locate specific locators and count the values that match the locator being searched. Applied in `related` mode to search the indexations that call specific interviews, persons, etc. Default false  **optional**
@@ -146,6 +147,11 @@ filter_by_locators      : [{
                             }]
 allow_sub_select_by_id  : (true || false) // default true
 children_recursive      : (true || false) // default false
+fixed_children_filter   : {          // optional, only read when children_recursive is true
+                                q
+                                q_operator
+                                path
+                            }
 remove_distinct         : (true || false) // default false
 skip_projects_filter    : (true || false) // default false
 breakdown               : (true || false) // default false
@@ -1549,6 +1555,91 @@ WHERE nu4.id in (
 )
 ORDER BY nu4.section_id ASC
 LIMIT 5;
+```
+
+### children_recursive
+
+Expands a hierarchy search from the terms that match to their **whole subtree**. It is what a thesaurus picker means when the curator chooses a branch: "Syllables" stands for every glyph filed under it, not for the branch node.
+
+Definition : `bool` (true || false) filter the hierarchy term and get all children nodes that depend on the searched term. Default : false **optional**
+
+The search runs in two passes:
+
+1. the SQO as written, **unpaginated**, resolves the ROOTS (`limit` and `offset` apply to the expanded set, never to the roots);
+2. every descendant of every root, at every depth, is resolved through the parent/children relations, and the search re-runs with `section_id IN (roots + descendants)`.
+
+`filter_by_locators` is dropped in the second pass — the pins already selected the roots, and keeping them would narrow the answer back to those roots. The `filter` that selected the roots is replaced by the id set for the same reason.
+
+Example: give me the term [hierarchy25](https://dedalo.dev/ontology/hierarchy25) 'Benimamet' in the Spain hierarchy es1 **and every term below it**:
+
+```json
+{
+  "section_tipo": ["es1"],
+  "children_recursive": true,
+  "filter": {
+    "$and": [
+      {
+        "q": "Benimamet",
+        "path": [
+          {
+            "section_tipo": "es1",
+            "component_tipo": "hierarchy25"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Without `children_recursive` the same SQO answers with the matching term alone.
+
+!!! note "Cost"
+    The root pass is unpaginated by construction, and the descendant walk reads the children relations of every node it reaches. Pin the roots as tightly as you can — a `children_recursive` search whose filter matches most of a large thesaurus walks most of that thesaurus.
+
+### fixed_children_filter
+
+A filter clause ANDed over the **expanded** set of a `children_recursive` search. It narrows which descendants come back without touching the filter that selected the roots, so a picker can say "this branch, but only the terms usable in indexing".
+
+Definition : `object` a filter clause (`q`, `q_operator`, `path`), read only when `children_recursive` is true. **optional**
+
+The combined filter of the second pass is `(fixed_children_filter) AND (section_id IN roots + descendants)`.
+
+Example: the subtree of 'Benimamet', restricted to terms whose 'Usable in indexing' flag is set:
+
+```json
+{
+  "section_tipo": ["es1"],
+  "children_recursive": true,
+  "fixed_children_filter": {
+    "q": {
+      "type": "dd151",
+      "section_id": 2,
+      "section_tipo": "dd64",
+      "from_component_tipo": "hierarchy24"
+    },
+    "q_operator": null,
+    "path": [
+      {
+        "section_tipo": "hierarchy20",
+        "component_tipo": "hierarchy24"
+      }
+    ]
+  },
+  "filter": {
+    "$and": [
+      {
+        "q": "Benimamet",
+        "path": [
+          {
+            "section_tipo": "es1",
+            "component_tipo": "hierarchy25"
+          }
+        ]
+      }
+    ]
+  }
+}
 ```
 
 ### remove_distinct

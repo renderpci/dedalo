@@ -92,7 +92,11 @@ import {
 	normalizeText,
 	type ValueReader,
 } from '../../core/identify/match.ts';
-import { IDENTITY_LOCATOR_PROPERTIES, readPathValues } from '../../core/identify/path_read.ts';
+import {
+	createPathReadScope,
+	IDENTITY_LOCATOR_PROPERTIES,
+	readPathValues,
+} from '../../core/identify/path_read.ts';
 import type {
 	Criterion,
 	CriterionValue,
@@ -280,10 +284,18 @@ export interface ProposeInput {
 export async function proposeElements(input: ProposeInput): Promise<ProposeReport> {
 	const { profile, seed, principal } = input;
 	const topK = input.topK ?? DEFAULT_CHARACTERIZE_TOP_K;
-	const readValues: ValueReader =
-		input.readValues ?? ((record, path) => readPathValues(record, path, { lang: input.lang }));
-	const filterAccessible = input.filterAccessible ?? defaultAccessFilter;
 	const componentGrant = input.componentGrant ?? getPermissions;
+	// ONE path-reader scope per run: every landed record is authorized on its
+	// own section inside the reader (path_read.ts ACCESS, P1-3 / SEC-12).
+	const pathScope = createPathReadScope({
+		principal,
+		door: 'identify.propose',
+		componentGrant,
+	});
+	const readValues: ValueReader =
+		input.readValues ??
+		((record, path) => readPathValues(record, path, { lang: input.lang, scope: pathScope }));
+	const filterAccessible = input.filterAccessible ?? defaultAccessFilter;
 	const findNeighbours = input.findNeighbours ?? buildNeighbourFinder(defaultNeighbourPorts());
 
 	// The seed is read below, so it is gated before anything else happens.

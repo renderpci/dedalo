@@ -36,6 +36,7 @@ import { SQL } from 'bun';
 import { config } from '../../config/config.ts';
 import { recordPoolWait } from '../api/counters.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
+import { observeStatement } from './query_tap.ts';
 
 /**
  * Operations posture (audit S2-32/S2-37, config catalog `config.ops` — all
@@ -48,12 +49,13 @@ import { DedaloError } from '../errors/dedalo_error.ts';
  *    DISABLED by default (0): a pool-wide ceiling would also abort
  *    legitimately long operations (REINDEX/VACUUM, large exports), so set it
  *    ABOVE the slowest legitimate query;
- *  - DEDALO_SLOW_QUERY_MS: statements slower than this log a warn line, 0=off.
+ *  - DEDALO_SLOW_QUERY_MS: statements slower than this log a warn line, 0=off
+ *    — read and applied by db/query_tap.ts, which times EVERY lane (pooled,
+ *    in-transaction and reserved), not just the pooled one (OPS-13).
  */
 const POOL_MAX = config.ops.dbPoolMax;
 const ACQUIRE_TIMEOUT_MS = config.ops.dbAcquireTimeoutMs;
 const DB_STATEMENT_TIMEOUT_MS = config.ops.dbStatementTimeoutMs;
-const SLOW_QUERY_MS = config.ops.slowQueryMs;
 
 /**
  * PostgreSQL's own `sslmode` vocabulary, which Bun.sql accepts verbatim for
@@ -175,25 +177,19 @@ export function getPoolStats(): { max: number; inUse: number; waiters: number } 
 }
 
 /**
- * Run one pool-executed statement through the acquire gate, with the
- * slow-query log (DEDALO_SLOW_QUERY_MS, S2-37). `describeQuery` is lazy — the
- * text is only built when a warn line actually fires.
+ * Run one pool-executed statement: the acquire gate, then the query tap
+ * (timing + the DEDALO_SLOW_QUERY_MS log + the statement count, S2-37/OPS-13).
+ * The gate is the ONLY thing this adds over `observeStatement` — the other two
+ * lanes (an ambient transaction, a reserved connection) hold no gate slot and
+ * call `observeStatement` directly, which is what makes the measurement whole.
+ * `describeQuery` is lazy — the text is only built when a warn line fires.
  */
 async function runOnPool<T>(execute: () => Promise<T>, describeQuery: () => string): Promise<T> {
 	await acquirePoolSlot();
-	const startedAt = performance.now();
 	try {
-		return await execute();
+		return await observeStatement('pooled', describeQuery, execute);
 	} finally {
 		releasePoolSlot();
-		if (SLOW_QUERY_MS > 0) {
-			const elapsedMs = performance.now() - startedAt;
-			if (elapsedMs >= SLOW_QUERY_MS) {
-				console.warn(
-					`[db] slow query ${Math.round(elapsedMs)}ms (threshold ${SLOW_QUERY_MS}ms): ${describeQuery()}`,
-				);
-			}
-		}
 	}
 }
 
@@ -385,31 +381,107 @@ export const sql: SQL = new Proxy(pool, {
 	apply(_target, _thisArg, argumentsList) {
 		// Tagged-template call: sql`SELECT ... ${value}`.
 		const executor = activeExecutor();
+		const describe = describeTemplate(argumentsList);
 		if (executor !== pool) {
-			// Ambient tx connection: already holds its pool slot — no gate.
-			return (executor as unknown as (...args: unknown[]) => unknown)(...argumentsList);
+			// Ambient tx connection: already holds its pool slot — no gate. It IS
+			// measured though (OPS-13): before the tap this branch returned the
+			// executor's lazy query object raw and untimed, which is why the whole
+			// write path was invisible to DEDALO_SLOW_QUERY_MS. Awaiting the query
+			// here changes nothing for callers — every call site awaits the result
+			// and none chains a lazy-query method (.simple()/.values()/.execute()/
+			// .raw()) on it, pinned by query_tap_tripwire.
+			return observeStatement('transaction', describe, async () =>
+				(executor as unknown as (...args: unknown[]) => Promise<unknown>)(...argumentsList),
+			);
 		}
 		return runOnPool(
 			async () => (pool as unknown as (...args: unknown[]) => Promise<unknown>)(...argumentsList),
-			() =>
-				String((argumentsList[0] as { raw?: readonly string[] } | undefined)?.raw?.join('?') ?? '')
-					.replace(/\s+/g, ' ')
-					.slice(0, 300),
+			describe,
 		);
 	},
 	get(_target, property, _receiver) {
 		const executor = activeExecutor();
-		if (executor === pool && property === 'unsafe') {
+		if (property === 'unsafe') {
+			if (executor === pool) {
+				return (query: string, params?: unknown[]) =>
+					runOnPool(async () => pool.unsafe(query, params as never), describeText(query));
+			}
 			return (query: string, params?: unknown[]) =>
-				runOnPool(
-					async () => pool.unsafe(query, params as never),
-					() => query.replace(/\s+/g, ' ').slice(0, 300),
+				observeStatement('transaction', describeText(query), async () =>
+					executor.unsafe(query, params as never),
 				);
 		}
+		if (property === 'reserve') return reserveObserved;
 		const value = (executor as unknown as Record<PropertyKey, unknown>)[property];
 		return typeof value === 'function' ? value.bind(executor) : value;
 	},
 }) as unknown as SQL;
+
+/** Lazy one-line description of a tagged-template call, for the slow-query log. */
+function describeTemplate(argumentsList: unknown[]): () => string {
+	return () =>
+		String((argumentsList[0] as { raw?: readonly string[] } | undefined)?.raw?.join('?') ?? '')
+			.replace(/\s+/g, ' ')
+			.slice(0, 300);
+}
+
+/** Lazy one-line description of an `.unsafe` statement, for the slow-query log. */
+function describeText(query: string): () => string {
+	return () => query.replace(/\s+/g, ' ').slice(0, 300);
+}
+
+/**
+ * `sql.reserve()` — a connection held for a caller-owned span (a session-level
+ * advisory lock, a GUC that must not ride the pool, a long maintenance
+ * statement). It is ungated by the acquire semaphore BY DESIGN (see the POOL
+ * ACQUIRE GATE note) but it is NOT unmeasured: the handle comes back wrapped in
+ * the same proxy shape as `sql`, so every statement issued on it goes through
+ * the query tap. `release` and everything else pass straight through.
+ *
+ * Reserving INSIDE an ambient transaction is refused: a second connection sees
+ * none of the transaction's uncommitted writes, so the caller would silently
+ * read a pre-transaction world (and could deadlock against its own row locks).
+ * No caller does it today; this makes sure none starts by accident.
+ */
+async function reserveObserved(): Promise<SQL> {
+	if (transactionStore.getStore() !== undefined) {
+		throw new DedaloError('internal.invariant', {
+			message:
+				'postgres: sql.reserve() was called inside an ambient transaction. A reserved ' +
+				"connection is a SECOND connection: it sees none of the transaction's uncommitted " +
+				'writes and can block on its row locks. Issue the statement through `sql` (it is ' +
+				'already pinned to the transaction), or move the reserved work outside the ' +
+				'transaction with runDetachedFromTransaction.',
+		});
+	}
+	const reserved = (await pool.reserve()) as unknown as SQL;
+	return wrapReservedForTap(reserved);
+}
+
+/**
+ * The reserved handle, wrapped so its statements are timed and tapped. Timing
+ * ONLY: a reservation holds no acquire-gate slot (that is the point of it), so
+ * this must never route through runOnPool.
+ */
+function wrapReservedForTap(reserved: SQL): SQL {
+	return new Proxy(reserved, {
+		apply(_target, _thisArg, argumentsList) {
+			return observeStatement('reserved', describeTemplate(argumentsList), async () =>
+				(reserved as unknown as (...args: unknown[]) => Promise<unknown>)(...argumentsList),
+			);
+		},
+		get(_target, property, _receiver) {
+			if (property === 'unsafe') {
+				return (query: string, params?: unknown[]) =>
+					observeStatement('reserved', describeText(query), async () =>
+						reserved.unsafe(query, params as never),
+					);
+			}
+			const value = (reserved as unknown as Record<PropertyKey, unknown>)[property];
+			return typeof value === 'function' ? value.bind(reserved) : value;
+		},
+	}) as unknown as SQL;
+}
 
 /**
  * Run `work` inside a single database transaction (BEGIN … COMMIT/ROLLBACK on

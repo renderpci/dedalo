@@ -3,32 +3,29 @@
  * section/read.ts). Also serves component_calculation / component_state at
  * runtime (their descriptors alias to component_info).
  *
- * The STORED misc value wins (use_db_data — the client save cycle persists the
- * widget output as {id,key,value,widget} items); an empty row falls back to
- * LIVE widget compute (PHP get_db_data → get_data), which emits the
- * insertion-ordered {widget,key,widget_id,value} shape. Gated in
+ * THE VALUE IS DERIVED, NEVER STORED (P1-8 / DATA-15, 2026-09-03,
+ * WC-2026-09-03-info-stored-value-never-served — repeals the stored-wins rule
+ * of WC-2026-08-09-info-legacy-stored-value-fallthrough). A component_info
+ * value is what its widgets compute for THIS record for THIS principal at read
+ * time (the media_icons tool columns are user-scoped); the engine has no door
+ * that authors it — no client widget saves, and the server-side observer
+ * (section/record/observers.ts recomputeInfoObserver) writes only a Time
+ * Machine row. What CAN land in the `misc` column is v5 residue, a Time Machine
+ * restore of one of those observer rows, or a PHP-era client save — and under
+ * PHP's `use_db_data` rule (get_db_data: any non-empty stored array wins) each
+ * of those FROZE the served value at a snapshot the observer could never again
+ * correct, while it kept writing correct TM rows nobody read. So the read
+ * ALWAYS emits the live compute (the insertion-ordered {widget,key,widget_id,
+ * value} shape), and a non-empty stored array is ignored and COUNTED
+ * (`component_info_stored_value_ignored`; the v5 blob additionally under
+ * `component_info_legacy_stored_value`, so the residue corpus stays visible
+ * to ops). NO data migration: nothing is rewritten, and a stored value is
+ * never at risk — it is simply not what is served. Gated in
  * test/unit/info_widget_native.test.ts (the DEC-14b twin of the retired
- * differential) + test/unit/component_info_legacy_state_native.test.ts.
+ * differential) + test/unit/component_info_legacy_state_native.test.ts +
+ * test/unit/write_obligations_native.test.ts.
  *
- * PHP's `empty($data)` is preserved verbatim for null and [] — the ONE
- * divergence (WC-2026-08-09-info-legacy-stored-value-fallthrough) is that a
- * stored array which is ENTIRELY v5 residue also falls through. "Residue" is
- * isLegacyStateResidue: a POSITIVE identification of the v5-era
- * `{id,state:{lg-…:{…}},value:null,section_id,section_tipo,component_tipo}`
- * blob — still on ~690 records of the reference install — which reached a
- * client that selects widget items by `widget`/`key`/`widget_id` and therefore
- * drew nothing. It is deliberately NOT the negative test "no entry carries a
- * widget tag": that would also discard every stored shape we have not
- * enumerated, and an unclassifiable stored array must keep PHP's generic
- * behaviour instead. The live compute the residue falls through to is correct,
- * cheap, and self-heals the row on its next save. The discarded value is
- * COUNTED (component_info_legacy_stored_value) so the remaining corpus stays
- * visible to ops instead of vanishing quietly. NO data migration: nothing is
- * rewritten, and a curator's stored values are never at risk. When the ddo
- * declares no widgets the live compute returns null, so such a record serves
- * null where PHP served the (unrenderable) blob.
- *
- * WC-026 (deliberate divergence): both branches then pass through
+ * WC-026 (deliberate divergence): the computed entries pass through
  * normalizeWidgetEntryKeys — every top-level widget item carries BOTH `id`
  * and `widget_id` so the client renders (widget_id) AND the grid/export
  * matchers (id) resolve. PHP serves one key per widget class and its own
@@ -56,11 +53,11 @@ export const infoEmitHook: ComponentEmitHook = {
 			'./widgets/widget_common.ts'
 		);
 		if (value !== null && value.length > 0) {
-			// PHP: any non-empty stored array wins. It still does — UNLESS every
-			// entry is a positively identified v5 state blob, which no renderer
-			// can read. Then fall through to the live compute and publish the fact.
-			if (!isLegacyStateResidue(value)) return normalizeWidgetEntryKeys(value);
-			incrementCounter('component_info_legacy_stored_value');
+			// A stored value is never served (module header). Counted, so the
+			// corpus that still carries one stays visible to ops instead of
+			// vanishing quietly; the v5 blob keeps its own sub-count.
+			incrementCounter('component_info_stored_value_ignored');
+			if (isLegacyStateResidue(value)) incrementCounter('component_info_legacy_stored_value');
 		}
 		const { computeInfoWidgets } = await import('./widgets/registry.ts');
 		const principal = currentPrincipal();

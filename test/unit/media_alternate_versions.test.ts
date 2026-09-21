@@ -1023,7 +1023,7 @@ describe.if(HAVE_MAGICK)(
 			writeFileSync(pdfPathOf(source, pdf.defaultQuality, 'pdf'), 'a document');
 			await makeImage(pdfPathOf(source, pdf.defaultQuality, 'jpg'), 'red');
 
-			const created = duplicateMediaFiles(emptied, source, target, {
+			const created = await duplicateMediaFiles(emptied, source, target, {
 				source: pathOpts,
 				target: pathOpts,
 			});

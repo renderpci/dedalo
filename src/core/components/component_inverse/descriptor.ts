@@ -9,4 +9,5 @@ import type { ComponentModel } from '../types.ts';
 export const component_inverse: ComponentModel = {
 	model: 'component_inverse',
 	column: 'misc',
+	render: 'text',
 };

@@ -73,6 +73,20 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// process-lifecycle latch of the same family as `shuttingDown` below: it holds a
 	// Timeout, is set once at boot and cleared once at shutdown, and no user, session
 	// or language can reach it. It exists so a second start() call cannot stack timers.
+	// The process-wide converter admission pool (audit MEDIA-01, 2026-09-05):
+	// ONE lazily built ConverterAdmission holding the permit count for heavy image /
+	// PDF / SVG conversions. Config-derived and boot-stable — it holds a COUNT and a
+	// FIFO of pending continuations, never a user, a session, a language or a record,
+	// and it is deliberately process-wide because the resource it bounds (this box's
+	// RAM, disk and cores) is process-wide: a request-scoped pool would bound each
+	// request against itself and nothing against K of them, which is the defect.
+	'core/media/engine/admission.ts:processAdmission',
+	// The AV twin of the same pool (audit MEDIA-01, the ffmpeg half): a second
+	// process-wide permit count, for the ffmpeg producers rather than the image
+	// converters. Same contents (a count + a FIFO of continuations, never a
+	// principal, a language or a record) and the same reason for being
+	// process-wide: it bounds this box's cores, which no request owns.
+	'core/media/engine/admission.ts:processAvAdmission',
 	'core/security/session_media.ts:sweepTimer',
 	// Warn-once latch for the reconcile refusal (SEC-09, 2026-08-28). The hourly sweeper
 	// skips the marker half when this process holds a throwaway session store against an
@@ -121,6 +135,20 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// Pool-saturation gauge (WS-E observability): process-wide slot accounting
 	// decremented/incremented around every pool acquire — ops state, never
 	// request identity; read by the counters endpoint.
+	// The relation-CLOSURE gauge (audit PERF-04): a high-water mark of the biggest
+	// equivalence class this process has walked, plus how many walks were refused
+	// at the bounds. Ops accounting, published on GET /api/v1/counters — it holds
+	// two integers and can hold nothing else: no principal, no language, no
+	// section, no record. A stale value only ages a number on an ops page.
+	'core/relations/related.ts:closureStats',
+	// The frozen client-asset MANIFEST (audit PERF-13): the service-worker
+	// pre-cache list plus its cache key, computed ONCE at boot because building it
+	// is a recursive readdir of the client tree plus a stat per file — thousands of
+	// synchronous syscalls that used to run on an authenticated request path and
+	// stall the whole event loop. Derived from FILES ON DISK, which cannot change
+	// under a running server without a deploy (and a deploy restarts it); dev mode
+	// recomputes per call instead of reading this. Carries no request identity.
+	'core/api/dedalo_files.ts:manifestState',
 	'core/db/postgres.ts:availablePoolSlots',
 	'core/tools/loader.ts:loadedTools',
 	'core/tools/loader.ts:collisions',
@@ -216,6 +244,18 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// idempotent across two admins and lets resumeScheduler abort an in-flight
 	// wait. Process-wide operational state, no request identity.
 	'diffusion/jobs/scheduler.ts:draining',
+	// Reconcile registry + scheduler (audit 2026-08-26 S-10): the gauge
+	// registration latch, the scheduler's armed latch and its interval handles —
+	// process-wide wiring like diffusion/jobs/scheduler.ts above; no request
+	// identity (a run is keyed by reconcile NAME, actor-less by design).
+	'core/reconcile/registry.ts:gaugeRegistered',
+	'core/reconcile/scheduler.ts:started',
+	// Retention scheduler (audit 2026-08-26 P2-9): the armed latch and the daily
+	// interval handle. Same class as the reconcile scheduler above — process-wide
+	// wiring, no request identity (a retention pass is keyed by STORE name and has
+	// no actor at all).
+	'core/retention/scheduler.ts:started',
+	'core/retention/scheduler.ts:timer',
 	// Login-timing decoy hash (foundation audit AUTHZ-03): a memoized Argon2id
 	// hash of a random string, verified against on the no-user / legacy-hash
 	// failure paths so login timing never reveals whether an account exists.
@@ -268,6 +308,13 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
  * list.
  */
 const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
+	// Model-artifact digest VERDICT cache (2026-09-04, P1-25): absolute path →
+	// {size, mtimeMs, ino, sha256}, so the serving door hashes a gigabyte weight
+	// once per process and re-hashes only when the stat identity moves. A digest
+	// is the same fact for every user, session and language — boot-stable, no
+	// request identity. Cleared per entry by `forgetVerdict` (quarantine, repair);
+	// a stale entry cannot mask a changed file because the identity check fails.
+	'core/ai/model_integrity.ts:verdicts',
 	// FOUND 2026-08-31 by widening this census to tools/ (P2-20 / GATE-34).
 	// PROCESS-level job liveness, not request state: it maps a model name to the
 	// download/repair claim currently running, so a second request refuses instead
@@ -323,6 +370,21 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// nothing request-derived is stored, so there is nothing to leak between
 	// requests and nothing to invalidate.
 	'core/api/activity.ts:activityProviders',
+	// Reconcile registry (S-10): `definitions` is the same registration-only
+	// inversion as gaugeProviders (written at boot, holds definitions, never
+	// request-derived data); `lastRuns` is the per-name last-outcome record the
+	// `reconcile` gauge publishes — ops visibility state with the counters'
+	// lifecycle (process restart; resetReconcileRunsForTests for gates).
+	'core/reconcile/registry.ts:definitions',
+	'core/reconcile/registry.ts:lastRuns',
+	// Reconcile scheduler interval handles: armed by startReconcileScheduler,
+	// cleared by stopReconcileScheduler (SIGTERM drain). Timers, not data.
+	'core/reconcile/scheduler.ts:timers',
+	// The retention registry's definition table (audit 2026-08-26 P2-9): one entry
+	// per append-only store, filled once at import by core/retention/prune.ts and
+	// never per request. A closed set — registerRetention refuses a name outside
+	// REGISTERED_NAMES — so it cannot grow at runtime.
+	'core/retention/registry.ts:definitions',
 	// Diffusion MariaDB pool cache: one pool per DSN for the process lifetime;
 	// closed on shutdown by the graceful-drain path.
 	'diffusion/targets/mariadb/db.ts:poolCache',
@@ -460,8 +522,11 @@ function scanSrc(): {
 	configLangCapture: string[];
 	moduleMapSet: string[];
 	moduleConstMutated: string[];
+	/** Files the walk actually read — floored below so an emptied walk cannot pass. */
+	scannedFiles: number;
 } {
 	const glob = new Glob('**/*.ts');
+	let scannedFiles = 0;
 	const moduleLet: string[] = [];
 	const accessorCapture: string[] = [];
 	const configLangCapture: string[] = [];
@@ -497,6 +562,7 @@ function scanSrc(): {
 	for (const [root, prefix] of roots)
 		for (const relRaw of glob.scanSync(root)) {
 			const rel = `${prefix}${relRaw}`;
+			scannedFiles++;
 			const content = readFileSync(join(root, relRaw), 'utf8');
 			const lines = content.split('\n');
 			for (const line of lines) {
@@ -512,12 +578,33 @@ function scanSrc(): {
 				}
 			}
 		}
-	return { moduleLet, accessorCapture, configLangCapture, moduleMapSet, moduleConstMutated };
+	return {
+		moduleLet,
+		accessorCapture,
+		configLangCapture,
+		moduleMapSet,
+		moduleConstMutated,
+		scannedFiles,
+	};
 }
 
 describe('module-state tripwire (§4 request isolation)', () => {
-	const { moduleLet, accessorCapture, configLangCapture, moduleMapSet, moduleConstMutated } =
-		scanSrc();
+	const {
+		moduleLet,
+		accessorCapture,
+		configLangCapture,
+		moduleMapSet,
+		moduleConstMutated,
+		scannedFiles,
+	} = scanSrc();
+
+	test('the src/ + tools/ walk read a populated tree (anti-vacuity floor)', () => {
+		// 600+ .ts files under src/ and tools/ on 2026-09-02. A walk that returns
+		// fewer is a broken walk (wrong root, a glob that stopped matching), not a
+		// smaller engine — and every allowlist below would pass vacuously on it.
+		expect(scannedFiles).toBeGreaterThan(600);
+		expect(moduleLet.length).toBeGreaterThan(10);
+	});
 
 	test('no NEW module-level let/var carrying request state (allowlist known-safe caches)', () => {
 		const unexpected = moduleLet.filter((entry) => !ALLOWLISTED_MODULE_LET.has(entry));

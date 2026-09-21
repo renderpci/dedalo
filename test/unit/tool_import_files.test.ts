@@ -62,6 +62,8 @@ const INPUT_COMPONENT = 'test162'; // non-translatable
 const DATE_SECTION = 'test3';
 const DATE_COMPONENT = 'test145'; // component_date (non-translatable → lg-nolan)
 const USER = -1;
+/** The superuser: unscoped, so these drives test the ROUTING, not the scope (that is action_scope_binding_native's job). */
+const ROOT = await resolvePrincipal(USER);
 const DATA_LANG = 'lg-eng'; // the request data lang threaded into the role writes
 
 // DB reachability is probed INDEPENDENTLY of the scratch-twin creates: only a
@@ -288,32 +290,39 @@ describe('tool_import_files module', () => {
 		// get_media_section_match: the handler only ever receives the target inside
 		// `target_filename`. A gate on options.section_tipo saw nothing and denied
 		// every call ("invalid section target") — the action was dead over the wire.
+		// The gate names the PAIR the handler reads: the target section × the
+		// filename component whose stored values the match scans ('targets', 1).
 		const free = mustGet(actions.get_media_section_match, 'get_media_section_match');
-		expect(free.permission).toBe('section_list');
+		expect(free.permission).toBe('targets');
 		expect(free.minLevel).toBe(1);
 		expect(
-			free.sectionTipos?.({
+			free.targets?.({
 				full_name: 'x.jpg',
 				target_filename: { tipo: FILENAME_COMPONENT, section_tipo: FILENAME_SECTION },
 			}),
-		).toEqual([FILENAME_SECTION]);
-		expect(free.sectionTipos?.({ full_name: 'x.jpg' })).toEqual([]); // fail-closed
+		).toEqual([{ section_tipo: FILENAME_SECTION, tipo: FILENAME_COMPONENT }]);
+		expect(free.targets?.({ full_name: 'x.jpg' })).toEqual([]); // fail-closed
 
 		// ..._from_souce reads filename values out of the TARGET section too, so
 		// gating only the SOURCE left the section whose data it reads unchecked.
+		// The source RECORD is scope-checked (section_id), the target as the pair.
 		const fromSource = mustGet(
 			actions.get_media_section_match_from_souce,
 			'get_media_section_match_from_souce',
 		);
-		expect(fromSource.permission).toBe('section_list');
+		expect(fromSource.permission).toBe('targets');
 		expect(
-			fromSource.sectionTipos?.({
+			fromSource.targets?.({
 				section_tipo: 'test2',
 				section_id: 1,
 				target_section_tipo: FILENAME_SECTION,
+				target_filename: { tipo: FILENAME_COMPONENT },
 				full_name: 'x.jpg',
 			}),
-		).toEqual(['test2', FILENAME_SECTION]);
+		).toEqual([
+			{ section_tipo: 'test2', section_id: 1 },
+			{ section_tipo: FILENAME_SECTION, tipo: FILENAME_COMPONENT },
+		]);
 	});
 
 	test('file_processor fails closed for an unregistered name', async () => {
@@ -511,12 +520,14 @@ describe.if(hasDb)('setComponentsData drive (scratch-twin, real DB)', () => {
 			],
 			sectionTipo: 'test2', // caller differs → destination = targetSectionId
 			sectionId: 0,
+			targetSectionTipo: 'test3', // the one section a role write may land in beside the caller's
 			targetSectionId: filenameScratchId as number,
 			currentFileName: 'photo.jpg',
 			mediaFilePath: null,
 			targetComponentModel: '',
 			componentsTempData: [],
 			userId: USER,
+			principal: ROOT,
 			dataLang: DATA_LANG,
 		});
 		const stored = await readItems(
@@ -538,12 +549,14 @@ describe.if(hasDb)('setComponentsData drive (scratch-twin, real DB)', () => {
 			],
 			sectionTipo: 'test2',
 			sectionId: 0,
+			targetSectionTipo: 'test3', // the one section a role write may land in beside the caller's
 			targetSectionId: filenameScratchId as number,
 			currentFileName: 'OTHER.jpg',
 			mediaFilePath: null,
 			targetComponentModel: '',
 			componentsTempData: [],
 			userId: USER,
+			principal: ROOT,
 			dataLang: DATA_LANG,
 		});
 		const stored = await readItems(
@@ -568,12 +581,14 @@ describe.if(hasDb)('setComponentsData drive (scratch-twin, real DB)', () => {
 			],
 			sectionTipo: 'test2',
 			sectionId: 0,
+			targetSectionTipo: 'test3', // the one section a role write may land in beside the caller's
 			targetSectionId: basenameScratchId as number,
 			currentFileName: '73-portrait-A.jpg',
 			mediaFilePath: null,
 			targetComponentModel: '',
 			componentsTempData: [],
 			userId: USER,
+			principal: ROOT,
 			dataLang: DATA_LANG,
 		});
 		const stored = await readItems(
@@ -591,6 +606,7 @@ describe.if(hasDb)('setComponentsData drive (scratch-twin, real DB)', () => {
 			ddoMap: [{ role: 'input_component', tipo: INPUT_COMPONENT, section_tipo: INPUT_SECTION }],
 			sectionTipo: INPUT_SECTION,
 			sectionId: inputScratchId as number,
+			targetSectionTipo: 'test3', // the one section a role write may land in beside the caller's
 			targetSectionId: 999999, // must NOT be used by the routing
 			currentFileName: 'a.jpg',
 			mediaFilePath: null,
@@ -603,6 +619,7 @@ describe.if(hasDb)('setComponentsData drive (scratch-twin, real DB)', () => {
 				},
 			],
 			userId: USER,
+			principal: ROOT,
 			dataLang: DATA_LANG,
 		});
 		const stored = await readItems(
@@ -627,6 +644,7 @@ describe.if(hasDb)('setComponentsData drive (scratch-twin, real DB)', () => {
 			ddoMap: [{ role: 'input_component', tipo: INPUT_COMPONENT, section_tipo: INPUT_SECTION }],
 			sectionTipo: INPUT_SECTION,
 			sectionId: inputScratchId as number,
+			targetSectionTipo: 'test3', // the one section a role write may land in beside the caller's
 			targetSectionId: 999999,
 			currentFileName: 'a.jpg',
 			mediaFilePath: null,
@@ -637,6 +655,7 @@ describe.if(hasDb)('setComponentsData drive (scratch-twin, real DB)', () => {
 				{ tipo: 'unrelated', section_tipo: INPUT_SECTION, value: [null] },
 			],
 			userId: USER,
+			principal: ROOT,
 			dataLang: DATA_LANG,
 		});
 		const after = await readItems(
@@ -665,12 +684,14 @@ describe.if(hasDb)('setComponentsData drive (scratch-twin, real DB)', () => {
 			],
 			sectionTipo: 'test2',
 			sectionId: 0,
+			targetSectionTipo: 'test3', // the one section a role write may land in beside the caller's
 			targetSectionId: filenameScratchId as number,
 			currentFileName: 'a.jpg',
 			mediaFilePath: null,
 			targetComponentModel: '',
 			componentsTempData: [],
 			userId: USER,
+			principal: ROOT,
 			dataLang: DATA_LANG,
 		});
 		const after = await readItems(
@@ -689,6 +710,7 @@ describe.if(hasDb)('setComponentsData drive (scratch-twin, real DB)', () => {
 			],
 			sectionTipo: 'test2',
 			sectionId: 0,
+			targetSectionTipo: 'test3', // the one section a role write may land in beside the caller's
 			targetSectionId: filenameScratchId as number,
 			currentFileName: 'a.jpg',
 			mediaFilePath: null,
@@ -702,6 +724,7 @@ describe.if(hasDb)('setComponentsData drive (scratch-twin, real DB)', () => {
 				},
 			],
 			userId: USER,
+			principal: ROOT,
 			dataLang: DATA_LANG,
 		});
 		const stored = await readItems(
@@ -727,12 +750,14 @@ describe.if(hasDb)('setComponentsData drive (scratch-twin, real DB)', () => {
 					ddoMap: [{ role: 'target_date', tipo: DATE_COMPONENT, section_tipo: DATE_SECTION }],
 					sectionTipo: 'test2', // caller differs → destination = targetSectionId
 					sectionId: 0,
+					targetSectionTipo: 'test3', // the one section a role write may land in beside the caller's
 					targetSectionId: dateScratchId,
 					currentFileName: 'dated.pdf',
 					mediaFilePath,
 					targetComponentModel: 'component_pdf',
 					componentsTempData: [],
 					userId: USER,
+					principal: ROOT,
 					dataLang: DATA_LANG,
 				});
 			await write(pdfPath);
@@ -771,12 +796,14 @@ describe.if(hasDb)('setComponentsData drive (scratch-twin, real DB)', () => {
 				ddoMap: [{ role: 'target_date', tipo: DATE_COMPONENT, section_tipo: DATE_SECTION }],
 				sectionTipo: 'test2',
 				sectionId: 0,
+				targetSectionTipo: 'test3', // the one section a role write may land in beside the caller's
 				targetSectionId: dateScratchId,
 				currentFileName: 'a.bin',
 				mediaFilePath,
 				targetComponentModel: model,
 				componentsTempData: [],
 				userId: USER,
+				principal: ROOT,
 				dataLang: DATA_LANG,
 			});
 		await write(null, 'component_pdf'); // no staged file
@@ -804,12 +831,14 @@ describe.if(hasDb)('setComponentsData drive (scratch-twin, real DB)', () => {
 			],
 			sectionTipo: 'test2',
 			sectionId: 0,
+			targetSectionTipo: 'test3', // the one section a role write may land in beside the caller's
 			targetSectionId: basenameScratchId as number,
 			currentFileName: 'never-written.jpg',
 			mediaFilePath: null,
 			targetComponentModel: '',
 			componentsTempData: [],
 			userId: USER,
+			principal: ROOT,
 			dataLang: DATA_LANG,
 		});
 		const after = await readItems(

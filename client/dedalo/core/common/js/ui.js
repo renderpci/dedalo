@@ -19,6 +19,15 @@
 	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
 	import {open_tool} from '../../../core/tools_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
+	// a11y. THE shared operability/naming helper (audit P1-18 / CLI-10, CLI-11, CLI-22):
+	// every non-native control and every component label is named and keyboard-
+	// activated through this one module, never ad hoc at the call site.
+	import {a11y} from '../../common/js/a11y.js'
+	// error system. The cycle ui ↔ render_api_error (it builds its nodes through
+	// ui.create_dom_element) is resolved at call time, as in common.js: nothing
+	// here is used while the modules evaluate.
+	import {ApiError, CLIENT_ERROR, is_api_error} from '../../common/js/api_error.js'
+	import {render_error_panel} from '../../common/js/render_api_error.js'
 	import '../../../lib/codex-tooltip/dist/tooltip.js';
 
 
@@ -86,7 +95,12 @@ const CREATE_DOM_ELEMENT_OPTIONS = new Set([
 	'title_label', 'title', 'dataset', 'data_set', 'value',
 	'inner_html', 'text_node', 'text_content',
 	'draggable', 'contenteditable', 'name', 'placeholder', 'pattern',
-	'disabled', 'selected', 'checked', 'parent'
+	'disabled', 'selected', 'checked', 'parent',
+	// accessibility (audit P1-18). Declared HERE so a surface can name and expose a
+	// node at the same call that builds it, instead of a setAttribute afterthought
+	// at 200 call sites. Operability (tab stop + activation keys) is NOT one of
+	// these: it needs the callback too, so it goes through a11y.make_activable.
+	'role', 'tabindex', 'aria'
 ])
 
 export const ui = {
@@ -301,10 +315,22 @@ export const ui = {
 
 				// Label handling
 				if (options.label === null || show_label === false) {
-					// Skip label
+					// No label NODE is rendered — the line views (view_line_edit_*, the
+					// shipped default of every column of a portal row and of every
+					// section_record line) and any component whose ontology sets
+					// show_interface.label = false. The GROUP is real all the same, and
+					// its controls are this component's, so the a11y chokepoint still
+					// runs: the name is carried as TEXT (CLI-10). Without this, the
+					// nearest labelled ancestor of a column input was the PORTAL, so
+					// every field in a row announced the portal's name — present and
+					// wrong — and a line control outside a portal had no name at all.
+					a11y.label_group_text(wrapper, label)
 				} else if (options.label) {
 					fragment.appendChild(options.label)
 					wrapper.label = options.label // Pointer reference
+
+					// a caller-supplied label node is a label node: same association
+					a11y.label_group(wrapper, options.label)
 				} else {
 					const component_label = ui.create_dom_element({
 						element_type	: 'div',
@@ -313,6 +339,12 @@ export const ui = {
 					})
 					fragment.appendChild(component_label)
 					wrapper.label = component_label
+
+					// a11y (CLI-10). THE association: the label node gets an id, the
+					// wrapper is announced as a group named by it, and every control
+					// inside — including the ones this component appends later, when its
+					// own request resolves — is pointed at that label.
+					a11y.label_group(wrapper, component_label)
 
 					// State indicators (e.g., deprecated)
 					if (state_of_component) {
@@ -643,6 +675,10 @@ export const ui = {
 			// DocumentFragment
 				const fragment = new DocumentFragment()
 
+			// a11y (CLI-10). Holds the default label node until the wrapper exists,
+			// so the same group association the edit wrapper gets is made here too.
+				let search_component_label = null
+
 			// label. If node label received, it is placed at first. Else a new one will be built from scratch (default)
 				if (label===null || items.label===null) {
 					// no label add
@@ -684,6 +720,10 @@ export const ui = {
 						const label_structure_css = typeof element_css.label!=="undefined" ? element_css.label : []
 						const ar_css = ['label', ...label_structure_css]
 						component_label.className = ar_css.join(' ')
+
+					// a11y (CLI-10). Same association as the edit wrapper; the search
+					// wrapper is built below, so the group is bound once it exists.
+						search_component_label = component_label
 				}
 
 			// content_data
@@ -747,6 +787,11 @@ export const ui = {
 					})
 
 				wrapper.appendChild(fragment)
+
+				// a11y (CLI-10). Bind the group once both nodes exist.
+					if (search_component_label) {
+						a11y.label_group(wrapper, search_component_label)
+					}
 
 
 			return wrapper
@@ -1899,6 +1944,23 @@ export const ui = {
 				}
 			}
 
+		// role / tabindex / aria-*. Accessibility attributes (audit P1-18).
+		// `aria` is a plain map of aria-* names WITHOUT the prefix:
+		// {label:'Delete', expanded:false, hidden:true}.
+			if (options.role) {
+				element.setAttribute('role', options.role)
+			}
+			if (options.tabindex!==undefined && options.tabindex!==null) {
+				element.setAttribute('tabindex', String(options.tabindex))
+			}
+			if (options.aria) {
+				for (const key in options.aria) {
+					const aria_value = options.aria[key]
+					if (aria_value===undefined || aria_value===null) continue
+					element.setAttribute(`aria-${key}`, String(aria_value))
+				}
+			}
+
 		// class_name. Add CSS classes property to element
 			if(options.class_name) {
 				element.className = options.class_name
@@ -2069,6 +2131,16 @@ export const ui = {
 			title_label		: options.title_label || undefined,
 			parent			: options.parent || undefined
 		})
+
+		// accessible name (audit P1-18 / CLI-10). An ICON-ONLY button announces as
+		// "button" and nothing else — the icon is a ::before, invisible to the
+		// accessibility tree. The title the button already carries is the name the
+		// operator reads on hover, so it is the name to expose; `aria_label` wins
+		// when the caller has a better one.
+		const accessible_name = options.aria_label || options.title_label
+		if (!options.label && accessible_name) {
+			a11y.set_label(button, accessible_name)
+		}
 
 		if (typeof options.on_click === 'function') {
 			button.addEventListener('click', options.on_click)
@@ -2593,10 +2665,17 @@ export const ui = {
 	* 1. Creates a <dd-modal> element and appends it to modal_parent
 	* 2. Slots header/body/footer into the shadow DOM (blank hidden divs fill empty slots)
 	* 3. Sets data-size attribute which triggers attributeChangedCallback → _showModal*()
-	* 4. On close: publish_close fires the 'modal_close' event, then on_close runs, then the
-	*    element dispatches 'dd-modal-close' and removes ITSELF from the DOM. The framework
-	*    teardown (options.on_close callback + previous-selection restore) is bound to that
-	*    event, not to the on_close property, because callers overwrite on_close wholesale.
+	* 4. On close: on_close runs, then the element dispatches 'dd-modal-close' and removes
+	*    ITSELF from the DOM. The framework teardown (options.on_close callback, the
+	*    previous-selection restore, and for size 'big' the scroll-offset restore) is bound
+	*    to that ELEMENT event, not to the on_close property, because callers overwrite
+	*    on_close wholesale — and never to a global channel: dd-modal keeps a real modal
+	*    stack (a confirm opened from inside a big modal is routine), and the former
+	*    global one-shot 'modal_close' subscription was consumed by whichever modal
+	*    closed FIRST, so a nested confirm's Cancel scrolled the page back under the
+	*    still-open big modal and nothing restored when it finally closed. No publisher
+	*    is installed on the element's optional `publish_close` hook any more (its doc
+	*    step 4 is inert from this caller): the 'modal_close' channel has no subscribers.
 	*
 	* Drag: the modal header is draggable. On first mousedown the CSS-centered position
 	* is pinned to inline styles (position:absolute, margin:0) so the modal stays under
@@ -2610,6 +2689,13 @@ export const ui = {
 	* @param {HTMLElement} [options.modal_parent] - Container for the <dd-modal> element
 	*   (default: .wrapper.page or document.body).
 	* @param {boolean} [options.remove_overlay=false] - When true, weakens the overlay background.
+	*   It also declares the dialog NON-MODAL by default: such a panel is documented as
+	*   letting the user keep working on the surface behind it (find-and-replace over the
+	*   text editor, the diffusion panel), so it must not be announced as `aria-modal`,
+	*   must not inert the page and must not trap Tab.
+	* @param {string} [options.modality] - 'modal' | 'non_modal'. Explicit override of the
+	*   modality derived from remove_overlay; set on the element BEFORE it is connected,
+	*   because connectedCallback applies the isolation.
 	* @param {boolean} [options.minimizable=true] - Shows or hides the minimize button.
 	* @param {boolean} [options.transient=false] - When true the modal skips the page-wide
 	*   unsaved-data guard on close. For transient dialogs that own no editable data
@@ -2668,8 +2754,12 @@ export const ui = {
 		// modal container build new DOM on each call and remove on close
 			const modal_container = document.createElement('dd-modal')
 			// (!) set BEFORE the element is connected: connectedCallback and the
-			// first close path must already see the flag.
+			// first close path must already see the flags. `modality` is the one
+			// the accessibility contract reads — a dialog that isolates the page is
+			// a decision the CALLER makes, never something the element infers.
 			modal_container.transient = transient
+			modal_container.modality = options.modality
+				?? ((remove_overlay===true) ? 'non_modal' : 'modal')
 			modal_parent.appendChild(modal_container)
 
 		// modal_node
@@ -2678,11 +2768,6 @@ export const ui = {
 		// remove_overlay
 			if (remove_overlay===true) {
 				modal_node.classList.add("remove_overlay")
-			}
-
-		// publish close event
-			modal_container.publish_close = function(e) {
-				event_manager.publish('modal_close', e)
 			}
 
 		// header. Add node header to modal header and insert it into slot
@@ -2750,33 +2835,13 @@ export const ui = {
 			//		dd_modal.modal_content.style.width = '20rem'
 			// }
 			switch(size) {
-				case 'big' : {
-					// hide contents to avoid double scrollbars
-					const content_data_page	= document.querySelector('.content_data.page')
-					const debug_div			= document.getElementById('debug')
-
-					// show hidden elements again on close
-					const modal_close_handler = () => {
-
-						if(content_data_page) {
-							content_data_page.classList.remove('hide')
-						}
-
-						if(debug_div) {
-							debug_div.classList.remove('hide')
-						}
-
-						// scroll window to previous scroll position
-						window.scrollTo({
-							top			: page_y_offset,
-							behavior	: 'auto'
-						})
-					}
-					event_manager.subscribe_once('modal_close', modal_close_handler)
-
+				case 'big' :
+					// the scroll offset is restored by THIS modal's own teardown
+					// below (element-scoped), never by a global subscription. The
+					// former handler also removed 'hide' from `.content_data.page`
+					// and `#debug`, which nothing adds any more: dead, dropped.
 					modal_container.dataset.size = 'big';
 					break;
-				}
 				case 'small' :
 					modal_container.dataset.size = 'small';
 					break;
@@ -2812,6 +2877,16 @@ export const ui = {
 				// re-activate previous component selection
 				if (previous_component_selection) {
 					ui.component.activate(previous_component_selection)
+				}
+
+				// big modal: scroll window back to where it was when THIS modal
+				// opened — keyed to this element's close, so a nested dialog's
+				// close cannot fire it early
+				if (size==='big') {
+					window.scrollTo({
+						top			: page_y_offset,
+						behavior	: 'auto'
+					})
 				}
 			}
 			modal_container.addEventListener('dd-modal-close', teardown)
@@ -2973,7 +3048,7 @@ export const ui = {
 			// close_with. Commits the value BEFORE closing so the value is already
 			// final when the 'dd-modal-close' listener below runs.
 			// (!) modal.close() and not modal.on_close(): close() is the symmetric
-			// sequence (publish_close fires, autocomplete is destroyed, the element
+			// sequence (autocomplete is destroyed, the element
 			// removes itself), and with transient:true it contains no await, so it
 			// runs to completion synchronously.
 				const close_with = (value) => {
@@ -4082,7 +4157,18 @@ export const ui = {
 	* @param {string} [options.model] - Optional model name for specific CSS targeting.
 	* @param {Function} options.callback - Async function that must return an HTMLElement or DocumentFragment.
 	* @param {Object} [options.style] - Optional inline styles for the placeholder.
-	* @returns {Promise<HTMLElement|DocumentFragment|null>} result_node
+	*
+	* A THROWING callback is not swallowed into an empty container. The container
+	* was already emptied (preserve_content is false by default) when the callback
+	* ran, so "log and return null" left the user a blank pane with no message —
+	* the documented "blank render on contract drift" failure, inside the helper
+	* that renders the page's top-level elements. The catch now mints
+	* `client.render_failed` (or keeps the ApiError it was thrown) and puts the
+	* engine's own `render_error_panel` where the result node would have gone,
+	* returning that node.
+	* @returns {Promise<HTMLElement|DocumentFragment|null>} result_node — the
+	*   callback's node, the error panel when it threw, null on invalid options
+	*   or a callback that returned no node.
 	*/
 	load_item_with_spinner : async function(options) {
 
@@ -4171,10 +4257,29 @@ export const ui = {
 
 			} catch (error) {
 				console.error('Error during callback execution:', error);
-				if (container_placeholder.parentNode) {
-					container_placeholder.remove();
-				}
-				return null;
+
+				// the failure, typed: an ApiError travels as it is (its code drives
+				// the panel's affordance), anything else is the client's own
+				// render failure
+					const api_error = is_api_error(error)
+						? error
+						: new ApiError({
+							code	: CLIENT_ERROR.RENDER_FAILED,
+							source	: 'client',
+							raw		: error
+						})
+
+				// the panel takes the place the result node would have taken
+					const error_node = render_error_panel(api_error)
+					if (replace_container) {
+						container.replaceWith(error_node)
+					} else if (container_placeholder.parentNode) {
+						container_placeholder.replaceWith(error_node)
+					} else {
+						container.appendChild(error_node)
+					}
+
+				return error_node
 			}
 	},//end load_item_with_spinner
 

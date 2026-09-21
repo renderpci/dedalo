@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {activate_edit_in_list} from '../../component_common/js/component_common.js'
 
 
@@ -64,7 +65,7 @@ view_default_list_filter.render = async function(self, options) {
 		// fall back to an empty array when no values are selected yet.
 		const entries		= data.entries || []
 		// Join with <br> so each entry appears on its own line inside the span.
-		const value_string	= entries.join('<br>')
+		const value_string	= render_value(entries, self.context.render_class).join('<br>')
 
 	// wrapper
 		// build_wrapper_list creates the standard <div> with model/tipo CSS classes

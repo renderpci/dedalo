@@ -35,6 +35,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {view_default_edit_publication} from './view_default_edit_publication.js'
 	import {view_line_edit_publication} from './view_line_edit_publication.js'
 
@@ -266,9 +267,7 @@ const get_content_value_read = (i, current_value, self) => {
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_value read_only',
-			inner_html 		: datalist_item && datalist_item.label
-				? datalist_item.label
-				: ''
+			inner_html 		: render_value(datalist_item?.label, self.context.render_class)
 		})
 
 	return content_value

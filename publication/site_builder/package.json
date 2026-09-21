@@ -2,6 +2,7 @@
   "name": "dedalo-site-builder",
   "version": "0.1.0",
   "description": "Dédalo Site Builder - agent-built public websites over the Publication API v2",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "scripts": {
     "dev": "bun run --watch src/index.ts",

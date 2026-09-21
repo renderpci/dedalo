@@ -26,6 +26,7 @@ import { isInTransaction, sql } from '../db/postgres.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { createOntologyCache } from './cache_factory.ts';
 import { registerOntologyCacheClearer } from './cache_invalidation.ts';
+import { formatRetiredPropertyLine, retiredKeysOf } from './property_census.ts';
 import { getSectionIdFromTipo } from './tld.ts';
 
 /**
@@ -125,6 +126,8 @@ export function clearOntologyCaches(): void {
 	componentFilterTipoCache.clear();
 	descendantByModelCache.clear();
 	relatedTipoByModelCache.clear();
+	relatedTipoByExactModelCache.clear();
+	sectionRealTipoCache.clear();
 	ancestorSectionCache.clear();
 }
 registerOntologyCacheClearer(clearOntologyCaches);
@@ -174,8 +177,32 @@ export async function getNode(tipo: string): Promise<ResolvedNode | null> {
 					properties: row.properties,
 					relations: row.relations,
 				};
+	if (node !== null && !isInTransaction()) reportRetiredProperties(node);
 	cacheSet(tipo, node);
 	return node;
+}
+
+/**
+ * RETIRED-PROPERTY TRIPLINE (DEAD-08 / P2-27). `properties` is a free-form bag:
+ * a key the engine stopped reading looks exactly like one it honours, so an
+ * author's configuration silently does nothing. Every node in the process
+ * passes through this cache miss exactly once, which makes it THE chokepoint —
+ * one loud, greppable line per (node, retired key), then resolve by the
+ * ordinary rule (CONVENTIONS §1: degraded, reported, defined).
+ *
+ * The node cache is the dedupe (no new module-level state); a read inside a
+ * transaction is not memoized, so it is not reported either — the same node is
+ * reported on its first uncached read outside one. Keys marked `reportedAtUse`
+ * are skipped: their consumer already reports them with context this site
+ * cannot have (the concrete replacement sqo, the named v6 fn).
+ *
+ * The registry, the reasons and the wording live in one place —
+ * ./property_census.ts.
+ */
+function reportRetiredProperties(node: ResolvedNode): void {
+	for (const key of retiredKeysOf(node.properties, { skipReportedAtUse: true })) {
+		console.error(`[ontology/resolver] ${formatRetiredPropertyLine(node.tipo, key)}`);
+	}
 }
 
 /**
@@ -501,6 +528,25 @@ export async function getNodesWithProperty(propertyKey: string): Promise<NodeWit
 }
 
 /**
+ * EVERY node whose `properties` is a JSON object, with those properties — the
+ * whole-table scan the ontology property census needs
+ * (`scripts/ontology_property_report.ts`, DEAD-08). Lives here because
+ * src/core/ontology/ is the exempt canonical home for `FROM dd_ontology`
+ * (sql_confinement T3): a script must never grow its own direct read.
+ *
+ * UNCACHED and unbounded by design: it is a maintenance report over the live
+ * table, not a runtime read path.
+ */
+export async function listNodesWithProperties(): Promise<NodeWithProperties[]> {
+	return (await sql`
+		SELECT tipo, properties
+		FROM dd_ontology
+		WHERE properties IS NOT NULL AND jsonb_typeof(properties) = 'object'
+		ORDER BY tipo
+	`) as NodeWithProperties[];
+}
+
+/**
  * FIRST DESCENDANT BY MODEL: the classic
  * `get_ar_children_tipo_by_model_name_in_section(...) → first hit` shape that
  * children.ts / ts_object.ts / area/tree.ts / section_id_component.ts each
@@ -511,7 +557,7 @@ export async function getNodesWithProperty(propertyKey: string): Promise<NodeWit
  * matters for pathological duplicate declarations).
  *
  * `virtualFallback` (default true): when the walk finds nothing, resolve a
- * VIRTUAL section through its real section (relations[0].tipo) and walk that
+ * VIRTUAL section through its real section (getSectionRealTipo) and walk that
  * — the shared fallback every migrated caller implemented separately. Pass
  * false to preserve strict own-subtree semantics (component_section_id).
  * component_filter MUST use the fallback: a virtual section's records are
@@ -550,11 +596,8 @@ export async function findFirstDescendantTipoByModel(
 	let found = await walk(rootTipo);
 	if (found === null && virtualFallback) {
 		// Virtual section: its relations point at the REAL section — walk that.
-		const relations = (await getNode(rootTipo))?.relations;
-		const realTipo = Array.isArray(relations)
-			? (relations[0] as { tipo?: unknown } | undefined)?.tipo
-			: undefined;
-		if (typeof realTipo === 'string' && realTipo !== rootTipo) {
+		const realTipo = await getSectionRealTipo(rootTipo);
+		if (realTipo !== rootTipo) {
 			found = await walk(realTipo);
 		}
 	}
@@ -590,6 +633,70 @@ export async function getComponentFilterTipo(sectionTipo: string): Promise<strin
 }
 
 /**
+ * THE virtual→real section law (PHP section::get_section_real_tipo_static —
+ * common::get_ar_related_by_model('section', tipo)[0]): the FIRST node named in
+ * the section's `relations` whose MODEL is exactly 'section'; the input tipo
+ * itself when there is none (a real section, or a non-section node). A
+ * `matrix_table` relation does NOT make a section virtual, and index 0 is not
+ * privileged: `rsc170 → rsc2` resolves the same whether the section link is
+ * first or last in the array.
+ *
+ * ONE home (DATA-33). Every consumer that borrows a real section's children
+ * (list definitions, section_map, buttons, thesaurus ddo_map, relation_index,
+ * the subtree walks, the identify profile, the diffusion resolver, the MCP
+ * discovery, the record wipe) resolves through this function — the
+ * `relations[0].tipo` copies each of them carried answered differently from
+ * this law for every real section whose first relation is its matrix_table
+ * (40+ on the reference install), and value_law_agreement_tripwire refuses a
+ * new copy. resolve/security_access_datalist.ts re-exports it for its eleven
+ * importers.
+ *
+ * Cached per tipo (pure ontology; hub-cleared like the sibling caches; the
+ * in-transaction write skip applies — see cacheWrite).
+ */
+const sectionRealTipoCache = createOntologyCache<string, string>();
+
+export async function getSectionRealTipo(sectionTipo: string): Promise<string> {
+	const cached = sectionRealTipoCache.get(sectionTipo);
+	if (cached !== undefined) return cached;
+	let real = sectionTipo;
+	const relations = (await getNode(sectionTipo))?.relations;
+	if (Array.isArray(relations)) {
+		for (const relation of relations) {
+			const relatedTipo = (relation as { tipo?: unknown } | null)?.tipo;
+			if (typeof relatedTipo !== 'string' || relatedTipo === '') continue;
+			if ((await getModelByTipo(relatedTipo)) === 'section') {
+				real = relatedTipo;
+				break;
+			}
+		}
+	}
+	cacheWrite(sectionRealTipoCache, sectionTipo, real);
+	return real;
+}
+
+/**
+ * THE WALK, STATED ONCE: the first tipo in a node's `relations` JSON whose
+ * MODEL satisfies `matches`. Both related-tipo accessors below are this walk
+ * plus their own cache and their own predicate — a second copy of the walk
+ * would be a second answer to "which relation comes first", the one thing they
+ * must agree on.
+ */
+async function firstRelatedTipoMatching(
+	tipo: string,
+	matches: (relatedModel: string | null) => boolean,
+): Promise<string | null> {
+	const relations = (await getNode(tipo))?.relations;
+	if (!Array.isArray(relations)) return null;
+	for (const relation of relations) {
+		const relatedTipo = (relation as { tipo?: unknown } | null)?.tipo;
+		if (typeof relatedTipo !== 'string' || relatedTipo === '') continue;
+		if (matches(await getModelByTipo(relatedTipo))) return relatedTipo;
+	}
+	return null;
+}
+
+/**
  * The first tipo in a node's `relations` JSON whose model CONTAINS `model`
  * (PHP ontology_node::get_ar_tipo_by_model_and_relation(tipo, model, 'related')
  * first hit — substring match, search_exact=false, so 'component_av' also
@@ -608,20 +715,37 @@ export async function relatedTipoByModel(tipo: string, model: string): Promise<s
 	const cached = relatedTipoByModelCache.get(cacheKey);
 	if (cached !== undefined) return cached;
 
-	let resolved: string | null = null;
-	const relations = (await getNode(tipo))?.relations;
-	if (Array.isArray(relations)) {
-		for (const relation of relations) {
-			const relatedTipo = (relation as { tipo?: unknown } | null)?.tipo;
-			if (typeof relatedTipo !== 'string' || relatedTipo === '') continue;
-			const relatedModel = await getModelByTipo(relatedTipo);
-			if (relatedModel?.includes(model)) {
-				resolved = relatedTipo;
-				break;
-			}
-		}
-	}
+	const resolved = await firstRelatedTipoMatching(
+		tipo,
+		(relatedModel) => relatedModel?.includes(model) === true,
+	);
 	cacheWrite(relatedTipoByModelCache, cacheKey, resolved);
+	return resolved;
+}
+
+/**
+ * The first tipo in a node's `relations` JSON whose model is EXACTLY `model`
+ * (PHP get_ar_tipo_by_model_and_relation with search_exact — the law
+ * getSectionRealTipo applies to a section, applied to any node). Null when
+ * nothing matches.
+ *
+ * SEPARATE FROM relatedTipoByModel BY NECESSITY, not by taste: that one matches
+ * with `relatedModel.includes(model)`, so asking it for 'section' also answers
+ * 'section_list' and 'section_group' — silently the wrong node. A caller that
+ * means "the related SECTION" must ask this one.
+ *
+ * Cached per (tipo, model): pure ontology, no lang/principal dimension, cleared
+ * by the hub on any dd_ontology write.
+ */
+const relatedTipoByExactModelCache = createOntologyCache<string, string | null>();
+
+export async function relatedTipoByExactModel(tipo: string, model: string): Promise<string | null> {
+	const cacheKey = `${tipo}|${model}`;
+	const cached = relatedTipoByExactModelCache.get(cacheKey);
+	if (cached !== undefined) return cached;
+
+	const resolved = await firstRelatedTipoMatching(tipo, (relatedModel) => relatedModel === model);
+	cacheWrite(relatedTipoByExactModelCache, cacheKey, resolved);
 	return resolved;
 }
 
@@ -664,18 +788,10 @@ export async function getMatrixTableFromTipo(sectionTipo: string): Promise<strin
 			if (table === null) {
 				// VIRTUAL SECTION fallback (PHP get_section_real_tipo_static): a
 				// virtual section's relations point at its REAL section — resolve
-				// the real tipo and read ITS matrix_table relation instead.
-				const realRows = (await sql`
-					SELECT t.tipo
-					FROM dd_ontology s,
-					     jsonb_array_elements(s.relations) AS rel(link)
-					JOIN dd_ontology t ON t.tipo = rel.link->>'tipo' AND t.model = 'section'
-					WHERE s.tipo = ${sectionTipo}
-					  AND jsonb_typeof(s.relations) = 'array'
-					LIMIT 1
-				`) as { tipo: string }[];
-				const realTipo = realRows[0]?.tipo;
-				if (realTipo !== undefined && realTipo !== sectionTipo) {
+				// the real tipo (the ONE law, getSectionRealTipo) and read ITS
+				// matrix_table relation instead.
+				const realTipo = await getSectionRealTipo(sectionTipo);
+				if (realTipo !== sectionTipo) {
 					table = await relatedMatrixTable(realTipo);
 				}
 			}

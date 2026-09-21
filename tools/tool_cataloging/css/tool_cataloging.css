@@ -188,7 +188,7 @@
   background-color: var(--color_orange_dedalo);
 }
 .wrapper_tool.tool_cataloging > .content_data .left_container > .wrapper_section.view_tool_cataloging_mosaic > .list_body > .content_data .sr_mosaic_hover > .button_alt_container:hover > .button.info {
-  background-color: var(--color_white);
+  background-color: var(--fg_on_brand);
 }
 .wrapper_tool.tool_cataloging > .content_data .left_container > .wrapper_section.view_tool_cataloging_mosaic > .list_body > .content_data .sr_mosaic_hover > .button_alt_container > .button.info {
   pointer-events: none;
@@ -220,11 +220,6 @@
   margin: 0.33rem;
   z-index: 1;
   opacity: 1;
-}
-@media (hover: none) and (pointer: coarse) {
-  .wrapper_tool.tool_cataloging > .content_data .left_container > .wrapper_section.view_tool_cataloging_mosaic > .list_body > .content_data > .section_record .button.info {
-    opacity: 1;
-  }
 }
 .wrapper_tool.tool_cataloging > .content_data .left_container > .wrapper_section.view_tool_cataloging_mosaic > .list_body > .content_data > .section_record:hover .button {
   opacity: 1;

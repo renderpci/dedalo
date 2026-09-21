@@ -11,7 +11,8 @@
  * not authorization.
  */
 
-import { rename, writeFile, readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { readFileShared, writeFileSharedAtomic } from '../util/shared_tree';
 import { z } from 'zod';
 import { confinedPath } from '../util/paths';
 import { config } from '../config';
@@ -65,15 +66,44 @@ function manifestPath(slug: string): string {
   return confinedPath(config.SITES_ROOT, slug, 'site.json');
 }
 
+/**
+ * READ THROUGH THE SAME O_NOFOLLOW DOOR AS IT IS WRITTEN.
+ *
+ * `manifestPath` is lexical and `<slug>/` is the agent's own workspace, so a turn that
+ * replaced `site.json` with a link had this daemon read whatever it pointed at as ITSELF —
+ * and the manifest is parsed into the domain a publish then writes to, so the confused
+ * deputy is a read AND a redirect. `readFileShared` walks every component `O_NOFOLLOW` and
+ * refuses a second name on the inode. SHARED, not private: the agent may legitimately
+ * rewrite `site.json` (it is 0660 and the directory around it is its own), which is why the
+ * schema — not the owner — is what this file trusts.
+ */
 export async function readManifest(slug: string): Promise<SiteManifest> {
-  const raw = await readFile(manifestPath(slug), 'utf8');
+  const raw = await readFileShared(config.SITES_ROOT, join(slug, 'site.json'));
+  if (raw === null) {
+    const error = new Error(
+      `ENOENT: no manifest for site '${slug}' at '${manifestPath(slug)}'`,
+    ) as NodeJS.ErrnoException;
+    error.code = 'ENOENT';
+    throw error;
+  }
   return manifestSchema.parse(JSON.parse(raw));
 }
 
-/** Atomic write: serialize to a sibling tmp file, then rename over the target. */
+/**
+ * Atomic write: serialize to a sibling tmp file, then rename over the target.
+ *
+ * SHARED, because `site.json` sits inside the workspace the AGENT works in and the agent
+ * is a different uid than this daemon (`util/shared_tree.ts`). A 0640 manifest would be a
+ * file the turn can read and not edit — and, since the directory around it is group
+ * writable, one it would replace by unlinking instead, which is worse than letting it write.
+ */
 export async function writeManifest(manifest: SiteManifest): Promise<void> {
-  const target = manifestPath(manifest.slug);
-  const tmp = target + '.tmp';
-  await writeFile(tmp, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
-  await rename(tmp, target);
+  // The ROOT is the provisioned prefix and the rest is untrusted: `manifestPath` is
+  // lexical (`util/paths.ts`), and the tmp file it implies sits in a directory the agent
+  // writes. The writer opens every component O_NOFOLLOW (`util/shared_tree.ts`).
+  await writeFileSharedAtomic(
+    config.SITES_ROOT,
+    join(manifest.slug, 'site.json'),
+    JSON.stringify(manifest, null, 2) + '\n',
+  );
 }

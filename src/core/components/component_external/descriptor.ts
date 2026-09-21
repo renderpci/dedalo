@@ -52,6 +52,7 @@ import type { ComponentModel } from '../types.ts';
 export const component_external: ComponentModel = {
 	model: 'component_external',
 	column: 'relation', // INERT — column-map parity only (see the header)
+	render: 'text',
 	search: {
 		status: 'unported',
 		reason:

@@ -18,7 +18,12 @@
 
 import { getComponentModel } from '../components/registry.ts';
 import { mediaTypeOf } from '../concepts/media.ts';
-import { getModelByTipo, getNode, getRecursiveChildrenTipos } from '../ontology/resolver.ts';
+import {
+	getModelByTipo,
+	getNode,
+	getRecursiveChildrenTipos,
+	getSectionRealTipo,
+} from '../ontology/resolver.ts';
 import { MAX_PATH_HOPS } from './path_read.ts';
 import type {
 	Criterion,
@@ -56,8 +61,15 @@ const MODES_NEEDING_TOLERANCE: ReadonlySet<string> = new Set<MatchMode>([
 export { MAX_PATH_HOPS } from './path_read.ts';
 
 export class ProfileError extends Error {
-	constructor(message: string) {
-		super(`identification profile: ${message}`);
+	/**
+	 * `message` is the sentence the WIRE may carry (`identify.invalid_profile` is a
+	 * public-disclosure code, so every caller forwards it as the publicMessage): it must
+	 * be authored — a parser verdict, a deliberate "could not read" sentence — never an
+	 * interpolated exception. What actually threw (a transport error naming a relation
+	 * or a host) travels as `cause` to the log only.
+	 */
+	constructor(message: string, options?: { cause?: unknown }) {
+		super(`identification profile: ${message}`, options);
 		this.name = 'ProfileError';
 	}
 }
@@ -328,11 +340,9 @@ async function sectionHoldsComponent(
 	if (components === undefined) {
 		components = new Set(await getRecursiveChildrenTipos(sectionTipo));
 		if (components.size === 0) {
-			const relations = (await getNode(sectionTipo))?.relations;
-			const realTipo = Array.isArray(relations)
-				? (relations[0] as { tipo?: unknown } | undefined)?.tipo
-				: undefined;
-			if (typeof realTipo === 'string' && realTipo !== sectionTipo) {
+			// virtual section: the REAL section's components (getSectionRealTipo)
+			const realTipo = await getSectionRealTipo(sectionTipo);
+			if (realTipo !== sectionTipo) {
 				components = new Set(await getRecursiveChildrenTipos(realTipo));
 			}
 		}

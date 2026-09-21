@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {strip_tags, safe_url} from '../../../core/common/js/utils/index.js'
 	import {view_default_edit_iri} from './view_default_edit_iri.js'
 	import {view_line_edit_iri} from './view_line_edit_iri.js'
@@ -576,7 +577,7 @@ export const render_transliterate_value = function (transliterate_value) {
 		const transliterate_title = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'title',
-			inner_html		: transliterate_value.title
+			inner_html		: render_value(transliterate_value.title, 'text')
 		})
 		transliterate_elements.push(transliterate_title)
 	}
@@ -586,7 +587,7 @@ export const render_transliterate_value = function (transliterate_value) {
 		const transliterate_iri = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'iri',
-			inner_html		: transliterate_value.iri
+			inner_html		: render_value(transliterate_value.iri, self.context.render_class)
 		})
 		transliterate_elements.push(transliterate_iri)
 	}
@@ -682,7 +683,7 @@ const get_content_value_read = (i, current_value, self) => {
 				ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'title',
-					inner_html		: title,
+					inner_html		: render_value(title, 'text'),
 					parent			: content_value
 				})
 
@@ -691,7 +692,7 @@ const get_content_value_read = (i, current_value, self) => {
 					element_type	: 'a',
 					href			: iri,
 					class_name		: 'iri',
-					inner_html		: iri,
+					inner_html		: render_value(iri, self.context.render_class),
 					parent			: content_value
 				})
 				// safe open

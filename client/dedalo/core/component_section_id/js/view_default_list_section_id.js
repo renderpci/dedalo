@@ -6,6 +6,7 @@
 
 // import
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -58,7 +59,7 @@ view_default_list_section_id.render = function(self, options) {
 	// entries[0] is normally an integer (the section_id), but enriched data shapes
 	// wrap it in an object {value: <id>, ...}. Both cases are collapsed to a string.
 		const entries		= self.data.entries || []
-		const value_string	= (entries[0] && typeof entries[0]==='object') ? entries[0].value : entries[0]
+		const value_string	= render_value((entries[0] && typeof entries[0]==='object') ? entries[0].value : entries[0], self.context.render_class)
 
 	// wrapper
 	// build_wrapper_list applies ontology CSS classes to the div and, when

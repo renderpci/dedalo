@@ -8,6 +8,8 @@ export const component_av: ComponentModel = {
 	model: 'component_av',
 	flatValue: 'media',
 	column: 'media',
+	render: 'text',
+	monovalue: true,
 	emitHook: 'media',
 	sortable: false, // PHP component_media_common::get_sortable() → false
 };

@@ -22,8 +22,9 @@
 *       with a native confirm dialog (simpler than the full modal used by the default view).
 *
 * Private helpers (module-local, not exported):
-*   - `get_content_data(self, ar_section_record)` — renders section records into a
-*       `content_data` container, appending references and server-side error nodes.
+*   - `get_content_data(self, rows, children_view, id_variant)` — hands the page's rows
+*       to a row window inside a `content_data` container, appending references and
+*       server-side error nodes.
 *   - `rebuild_columns_map(self)` — prepends the `section_id` column and appends the
 *       `remove` column around the ontology-provided base columns; memoised via
 *       `self.fixed_columns_map`.
@@ -53,8 +54,8 @@
 *   - `self.data.pagination`       {Object}  — `{ offset, limit }` adjusted on record removal.
 *   - `self.total`                 {number}  — total matched records (pagination denominator).
 *   - `self.permissions`           {number}  — `1` read-only, `≥2` full edit.
-*   - `self.ar_instances`          {Array}   — accumulator for child instances; pushed to so
-*       they can be destroyed when the component is torn down.
+*   - `self.ar_instances`          {Array}   — accumulator for child instances; the row
+*       window pushes the MATERIALIZED rows so they can be destroyed on teardown.
 *   - `self.caller`                {Object|null} — parent instance; checked for `model` when
 *       rendering a placeholder in the empty-and-inside-IRI case.
 *   - `self.section_tipo`          {string}  — used to detect whether `self` lives in the
@@ -73,9 +74,10 @@
 // imports
 	import {get_section_id_from_tipo} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {render_error} from '../../common/js/render_common.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
-	import {get_section_records} from '../../section/js/section.js'
+	import {window_section_rows} from '../../section/js/section.js'
 	import {
 		render_column_component_info,
 		add_wrapper_events,
@@ -113,7 +115,7 @@ export const view_line_edit_portal = function() {
 *
 * Execution order:
 *   1. Rebuild `self.columns_map` (adds `section_id` and `remove` sentinel columns).
-*   2. Fetch and instantiate child section records via `get_section_records`.
+*   2. Hand the page rows to a row window (`window_section_rows`) that builds them on demand.
 *   3. Build the `content_data` container (rows + references + errors).
 *   4. If `render_level === 'content'`, return only the inner container (used during
 *      partial refresh — e.g. after an add/remove — without rebuilding the full wrapper).
@@ -145,18 +147,12 @@ view_line_edit_portal.render = async function(self, options) {
 	// view
 		const children_view	= self.context.children_view || self.context.view || 'default'
 
-	// ar_section_record
-		const ar_section_record	= await get_section_records({
-			caller		: self,
-			mode		: 'list',
-			view		: children_view,
-			id_variant	: self.id + '_' + (new Date()).getTime()
-		})
-		// store to allow destroy later
-		self.ar_instances.push(...ar_section_record)
+	// rows. The page's locator entries; instances are built by the row window
+		const rows = self.data?.entries || []
+		self.ar_instances = self.ar_instances || []
 
 	// content_data
-		const content_data = await get_content_data(self, ar_section_record)
+		const content_data = await get_content_data(self, rows, children_view, self.id + '_' + (new Date()).getTime())
 		if (render_level==='content') {
 			return content_data
 		}
@@ -217,114 +213,123 @@ view_line_edit_portal.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* Render all received section records and place it into a new div 'content_data'
+* Build the `content_data` container and hand the page's rows to a ROW WINDOW
+* (section.js window_section_rows → common/js/row_window.js): a `section_record`
+* is built and rendered only for the rows the viewport can reach — at most
+* ROW_WINDOW_MAX_ROWS at once — and released past the far edge (audit P2-31 /
+* CLI-29). The first window is filled before this resolves.
 *
-* Iterates over the `ar_section_record` array sequentially (each `render()` call is
-* awaited in order to preserve DOM insertion order) and appends the rendered nodes to a
-* DocumentFragment.
+* The view materializes its rows itself (custom materialize/release) because
+* every row node is decorated after render: drag-to-reorder
+* (`add_section_record_drag_and_drop`, keyed by the row's page index) and the
+* `mosaic_over` hover highlight, both only when `self.permissions >= 2`.
 *
 * Special cases handled:
 * - **Empty list + IRI caller:** When there are no records AND `self.caller` is a
 *   `component_iri`, a placeholder `<span>` showing `self.label` is injected instead of
 *   an empty container.  This lets the IRI component display a meaningful fallback text
 *   in its inline widget.
-* - **Drag-and-drop:** For each rendered row, when `self.permissions >= 2`, the row node
-*   is wired for drag-to-reorder (`add_section_record_drag_and_drop`) and receives
-*   `mouseenter`/`mouseleave` handlers that toggle the `mosaic_over` CSS class for
-*   hover-highlight feedback.
 * - **References:** `self.data.references` is appended at the bottom when non-empty
 *   (used by `component_relation_related` to show back-references).
 * - **Server errors:** `self.data.errors` is appended when present (e.g. infinite-loop
 *   detection reported by the server).
 *
 * @param {Object} self - The `component_portal` instance.
-* @param {Array} ar_section_record - Array of initialised section_record instances
-*   returned by `get_section_records`.
+* @param {Array} rows - The page's locator entries (`self.data.entries`).
+* @param {string} children_view - The view each row is rendered with.
+* @param {string} id_variant - Instance id variant for the rows of this render.
 * @returns {Promise<HTMLElement>} The populated `content_data` container element.
 */
-const get_content_data = async function(self, ar_section_record) {
+const get_content_data = async function(self, rows, children_view, id_variant) {
 
-	// build_values
-		const fragment = new DocumentFragment()
+	// content_data
+		const content_data = ui.component.build_content_data(self)
 
-	// button_exit_edit
-		// const button_exit_edit = ui.component.build_button_exit_edit(self)
-		// fragment.appendChild(button_exit_edit)
-
-	// add all section_record rendered nodes
-		const ar_section_record_length = ar_section_record.length
-		if (ar_section_record_length===0) {
+	// rows
+		if (rows.length===0) {
 
 			// no records found case
-			// const row_item = no_records_node()
-			// fragment.appendChild(row_item)
 			if (self.caller?.model==='component_iri') {
 				ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'component_placeholder',
-					inner_html		: self.label,
-					parent			: fragment
+					inner_html		: render_value(self.label, 'text'),
+					parent			: content_data
 				})
 			}
 		}else{
-			// The portal has data. We render the section_record instances
-			for (let i = 0; i < ar_section_record_length; i++) {
+			// index → the row's instance, for release
+			const instances = new Map()
 
-				const section_record = ar_section_record[i]
+			await window_section_rows({
+				caller			: self,
+				container		: content_data,
+				rows			: rows,
+				records_options	: {
+					mode		: 'list',
+					view		: children_view,
+					id_variant	: id_variant
+				},
+				materialize		: async (row, i, build_row) => {
 
-				// render section_record and await to preserve the order
-				const section_record_node = await section_record.render()
-
-				// drag and drop
-					// permissions control
-					// with read only permissions, remove drag and drop
-					if(self.permissions >= 2){
-						add_section_record_drag_and_drop({
-							section_record_node	: section_record_node,
-							paginated_key		: i,
-							total_records		: self.total,
-							locator 			: section_record.locator,
-							caller 				: self
-						})
-
-						// mouseenter event
-						const mouseenter_handler = (e) => {
-							e.stopPropagation()
-							// event_manager.publish(event_id, this)
-							section_record_node.classList.add('mosaic_over')
-						}
-						section_record_node.addEventListener('mouseenter', mouseenter_handler)
-
-						// mouseleave event
-						const mouseleave_handler = (e) => {
-							e.stopPropagation()
-							// const event_id = `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
-							// event_manager.publish(event_id, this)
-							section_record_node.classList.remove('mosaic_over')
-						}
-						section_record_node.addEventListener('mouseleave', mouseleave_handler)
+					const section_record = await build_row()
+					if (!section_record) {
+						return null
 					}
+					instances.set(i, section_record)
 
-				// add in synchronous sequential order
-				fragment.appendChild(section_record_node)
-			}//end for (let i = 0; i < ar_section_record_length; i++)
-		}//end if (ar_section_record_length===0)
+					const section_record_node = await section_record.render()
+
+					// drag and drop
+						// permissions control
+						// with read only permissions, remove drag and drop
+						if(self.permissions >= 2){
+							add_section_record_drag_and_drop({
+								section_record_node	: section_record_node,
+								paginated_key		: i,
+								total_records		: self.total,
+								locator 			: section_record.locator,
+								caller 				: self
+							})
+
+							// mouseenter event
+							const mouseenter_handler = (e) => {
+								e.stopPropagation()
+								section_record_node.classList.add('mosaic_over')
+							}
+							section_record_node.addEventListener('mouseenter', mouseenter_handler)
+
+							// mouseleave event
+							const mouseleave_handler = (e) => {
+								e.stopPropagation()
+								section_record_node.classList.remove('mosaic_over')
+							}
+							section_record_node.addEventListener('mouseleave', mouseleave_handler)
+						}
+
+					return section_record_node
+				},
+				release			: async (row, i) => {
+					const section_record = instances.get(i)
+					instances.delete(i)
+					if (section_record && section_record.status!=='destroyed') {
+						await section_record.destroy(true, true, true)
+					}
+				}
+			})
+		}//end if (rows.length===0)
 
 	// build references
 		if(self.data.references && self.data.references.length > 0){
 			const references_node = render_references(self.data.references)
-			fragment.appendChild(references_node)
+			content_data.appendChild(references_node)
 		}
 
 	// errors (server side detected errors like infinite loops, etc.)
 		if (self.data.errors?.length ) {
 			const error_node = render_error(self.data.errors)
-			fragment.appendChild(error_node)
+			content_data.appendChild(error_node)
 		}
-
-	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  content_data.appendChild(fragment)
 
 
 	return content_data
@@ -569,7 +574,8 @@ view_line_edit_portal.render_column_remove = function(options) {
 				}
 
 			// data pagination offset. Check and update self data to allow save API request return the proper paginated data
-				const key = parseInt(row_key)
+				const key				= parseInt(row_key)
+				const previous_offset	= self.data.pagination.offset
 				if (key===0 && self.data.pagination.offset>0) {
 					const next_offset = (self.data.pagination.offset - self.data.pagination.limit)
 					// set before exec API request on Save
@@ -579,8 +585,15 @@ view_line_edit_portal.render_column_remove = function(options) {
 				}
 
 			// fire the unlink_record method
-			// Note that this function refresh current instance
-				await self.unlink_record(options.locator)
+			// Note that this function refresh current instance. Its answer is READ:
+			// a refused unlink (already surfaced by the save path) leaves the row
+			// in place, so the offset moved above must be put back or the next
+			// save would page the portal to a slot the row never left.
+				const removed = await self.unlink_record(options.locator)
+				if (removed!==true) {
+					self.data.pagination.offset = previous_offset
+					return
+				}
 
 			// remove the tooltip
 				dd_request_idle_callback(

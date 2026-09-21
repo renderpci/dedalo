@@ -49,6 +49,7 @@ import { assertValidQuality, type MediaTypeSpec } from '../../concepts/media.ts'
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { secondsToTc } from '../../resolve/tr_marks.ts';
 import { withTempSibling, writeAtomically } from '../atomic.ts';
+import { withAvSlot } from '../engine/admission.ts';
 import { buildFragmentArgv, producerSpawnOptions } from '../engine/ffmpeg.ts';
 import { assertSpawnOk, runBinary } from '../engine/spawn.ts';
 import {
@@ -272,9 +273,13 @@ export async function buildAvFragment(request: FragmentRequest): Promise<Fragmen
  * finished download.
  */
 async function runFfmpeg(argv: readonly string[], context: string): Promise<void> {
-	const result = await runBinary(
-		[argv[0] as string, '-progress', 'pipe:1', ...argv.slice(1)],
-		producerSpawnOptions(),
+	// ADMITTED like every other ffmpeg (audit MEDIA-01, the ffmpeg half). The
+	// fragment cutter is the clearest case: `download_fragment` is a level-1 READ
+	// action awaited INLINE on the request, its client waits an hour by contract,
+	// and with `watermark:true` it runs a SECOND full re-encode — so K readers
+	// pressing the button were K unbounded transcodes, in no job lane at all.
+	const result = await withAvSlot('ffmpeg fragment', () =>
+		runBinary([argv[0] as string, '-progress', 'pipe:1', ...argv.slice(1)], producerSpawnOptions()),
 	);
 	assertSpawnOk(result, context);
 }

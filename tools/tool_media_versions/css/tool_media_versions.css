@@ -117,7 +117,7 @@
   display: grid;
   margin: 0px;
   margin-top: 1rem;
-  color: var(--color_grey_9);
+  color: var(--fg_muted);
   background-color: var(--color_white);
   width: 100%;
   max-width: 1600px;

@@ -168,8 +168,13 @@ HERMETIC_TRIPWIRES=(
 	test/unit/verify_selector_selftest.test.ts
 	test/unit/build_context_secret_tripwire.test.ts
 	test/unit/vendor_advisory_tripwire.test.ts
-	test/unit/theme_token_parity.test.ts
+	test/unit/palette_axis_parity_tripwire.test.ts
+	test/unit/css_corpus_tripwire.test.ts
+	test/unit/colour_literal_ratchet_tripwire.test.ts
+	test/unit/breakpoint_record_tripwire.test.ts
 	test/unit/crap_complexity_ratchet.test.ts
+	test/unit/read_door_acl_tripwire.test.ts
+	test/unit/action_scope_binding_tripwire.test.ts
 	# --- security tier, added 2026-08-03 (see the coverage-hole note above) ---
 	test/unit/xss_csp_tripwire.test.ts
 	test/unit/error_report_xss_tripwire.test.ts
@@ -272,6 +277,56 @@ HERMETIC_TRIPWIRES=(
 	#     backup script over a mkdtemp host it removes again. Needs rsync, which the
 	#     hermetic image already has (store 3 of the backup set uses it too).
 	test/unit/operator_commands_tripwire.test.ts
+	# --- 2026-09-02 (audit 2026-08-26 closure, batch 1). DB-free: they read the tree,
+	#     the workflows, package.json and the two red baselines, build scratch git
+	#     repos / scratch baselines / planted corpora under mkdtemp, and spawn only
+	#     `bun` over those. rag_drain_cli_native is here ON PURPOSE: its order leg
+	#     (usage error exits BEFORE ensureRagQueueTable) is observable only where no
+	#     database answers, so the unit tier alone would let that mutation stay green.
+	test/unit/tier_wiring_tripwire.test.ts
+	test/unit/update_drill_config_tripwire.test.ts
+	test/unit/production_entrypoint_coverage_tripwire.test.ts
+	test/unit/rag_drain_cli_native.test.ts
+	test/unit/suite_assertion_floor_tripwire.test.ts
+	test/unit/client_gate_inventory_tripwire.test.ts
+	test/unit/authz_substring_gate_tripwire.test.ts
+	test/unit/census_derivation_tripwire.test.ts
+	test/unit/write_obligations_tripwire.test.ts
+	test/unit/value_law_agreement_tripwire.test.ts
+	test/unit/reconcile_registry_tripwire.test.ts
+	test/unit/diffusion_seed_vocabulary_tripwire.test.ts
+	test/unit/archive_docs_claim_tripwire.test.ts
+	test/unit/production_import_tripwire.test.ts
+	test/unit/render_escape_tripwire.test.ts
+	test/unit/site_builder_csp_tripwire.test.ts
+	test/unit/client_limit_zero_tripwire.test.ts
+	test/unit/client_render_budget_native.test.ts
+	test/unit/client_prototype_contract_tripwire.test.ts
+	test/unit/client_dead_reference_tripwire.test.ts
+	test/unit/client_control_naming_tripwire.test.ts
+	test/unit/client_a11y_budget_tripwire.test.ts
+	test/unit/client_keyboard_activation_tripwire.test.ts
+	test/unit/contrast_ratio_tripwire.test.ts
+	test/unit/publication_bounds_tripwire.test.ts
+	test/unit/sitebuilder_path_confinement_tripwire.test.ts
+	test/unit/agent_confinement_tripwire.test.ts
+	test/unit/rqo_scalar_bound_tripwire.test.ts
+	test/unit/store_retention_tripwire.test.ts
+	test/unit/magick_policy_tripwire.test.ts
+	test/unit/job_lane_census_tripwire.test.ts
+	test/unit/sync_io_on_request_path_tripwire.test.ts
+	test/unit/queue_fence_tripwire.test.ts
+	test/unit/query_tap_tripwire.test.ts
+	test/unit/read_path_record_reuse_tripwire.test.ts
+	test/unit/search_pattern_escape_tripwire.test.ts
+	test/unit/closure_openquestions_tripwire.test.ts
+	test/unit/client_dashboard_sink_tripwire.test.ts
+	test/unit/client_event_manager_dispatch_tripwire.test.ts
+	test/unit/client_instances_inflight_tripwire.test.ts
+	test/unit/client_local_db_singleton_tripwire.test.ts
+	test/unit/client_read_stream_release_tripwire.test.ts
+	test/unit/client_request_coalescing_tripwire.test.ts
+	test/unit/ontology_property_census_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"
@@ -315,6 +370,34 @@ echo "== hermetic: static tripwires (${#HERMETIC_TRIPWIRES[@]})"
 tw_rc=0
 bun test --timeout=30000 "${HERMETIC_TRIPWIRES[@]}" || tw_rc=$?
 [ "$tw_rc" -eq 0 ] || { echo "== hermetic: RED in static tripwires (exit $tw_rc)"; tier_status=1; }
+
+# THE DEBT LEDGER, APPEND-ONLY AGAINST HISTORY (P2-18 / GATE-22). The crap
+# ratchet's artifact carries its own ledger and the static tripwires above hold
+# every line to its rule; a REWRITTEN line, or a per-file entry raised with the
+# counters flat, shows only against the artifact as it stood at a reference
+# commit. This checkout is shallow, so the reference is FETCHED, never assumed:
+# on a pull request the base branch's tip (the checkout IS the merge of the PR
+# onto that tip, so the tip is the merge-base); on a push, the first parent.
+# A reference that cannot be resolved yields an EMPTY argument, which
+# crap_baseline.ts refuses (proved in ratchet_integrity_tripwire) — red, never
+# a comparison against the index. scripts/verify.ts's `crap:ledger` stage is
+# the developer-desk twin (merge-base of HEAD and --base).
+crap_ledger_reference() {
+	local target="${GITHUB_BASE_REF:-${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-}}"
+	if [ -n "$target" ]; then
+		git fetch --quiet --depth=1 origin "$target" >&2 || return 1
+		git rev-parse --verify --quiet FETCH_HEAD || return 1
+	else
+		if ! git rev-parse --verify --quiet 'HEAD^' >/dev/null 2>&1; then
+			git fetch --quiet --deepen=1 >&2 || return 1
+		fi
+		git rev-parse --verify --quiet 'HEAD^' || return 1
+	fi
+}
+echo "== hermetic: crap ledger (append-only vs the reference)"
+cl_rc=0
+bun run scripts/crap_baseline.ts --check --reference "$(crap_ledger_reference)" || cl_rc=$?
+[ "$cl_rc" -eq 0 ] || { echo "== hermetic: RED in crap ledger (exit $cl_rc)"; tier_status=1; }
 
 # Dependency advisories, as a RATCHET against engineering/dependency_audit_baseline.json:
 # a NEW advisory is red, a known one is not (the tree already carried 7 on the day this

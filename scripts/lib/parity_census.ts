@@ -52,11 +52,31 @@ export interface ParityCase {
 	status: CaseStatus;
 }
 
+/**
+ * What one FILE reported, from the attributes bun stamps on its outermost
+ * `<testsuite>`: how many cases, how many were skipped, and how many `expect`
+ * calls actually executed. The third is the one no pass/fail count can see — a
+ * test that `return`s before its first assertion is a PASS with
+ * `assertions="0"` (GATE-09/GATE-26), and only this number notices.
+ */
+export interface FileCounts {
+	tests: number;
+	skipped: number;
+	assertions: number;
+}
+
 export interface ParityRun {
 	cases: ParityCase[];
 	/** Distinct files that reported at least one case. */
 	files: string[];
 	totals: { tests: number; pass: number; fail: number; skip: number };
+	/**
+	 * Per-FILE counts (see {@link FileCounts}), keyed by repo-relative path — the
+	 * substrate of the shrink-only assertion floor (suite_assertion_floor_tripwire).
+	 * Taken from the file-level `<testsuite>` attributes, never summed from cases,
+	 * so it is exactly what bun measured.
+	 */
+	perFile: Record<string, FileCounts>;
 	/**
 	 * The tail of what the child RUNNER said, kept for the vacuity path only.
 	 *
@@ -93,6 +113,20 @@ function attr(raw: string, key: string): string | undefined {
 		.replaceAll('&amp;', '&');
 }
 
+/** The three file-level counts, or null when any of them is absent / not a number. */
+function fileCounts(raw: string): FileCounts | null {
+	const read = (key: string): number | null => {
+		const value = attr(raw, key);
+		if (value === undefined || !/^\d+$/.test(value)) return null;
+		return Number(value);
+	};
+	const tests = read('tests');
+	const skipped = read('skipped');
+	const assertions = read('assertions');
+	if (tests === null || skipped === null || assertions === null) return null;
+	return { tests, skipped, assertions };
+}
+
 /**
  * Parse a bun JUnit report into cases. Exported so the gate can prove the
  * measure SEES a failure (anti-vacuity), without running the tier twice.
@@ -104,6 +138,7 @@ export function parseJunit(xml: string): ParityRun {
 	const suites: string[] = [];
 	let currentFile = '';
 	let open: ParityCase | null = null;
+	const perFile: Record<string, FileCounts> = {};
 
 	TAG.lastIndex = 0;
 	for (let m = TAG.exec(xml); m !== null; m = TAG.exec(xml)) {
@@ -122,7 +157,15 @@ export function parseJunit(xml: string): ParityRun {
 				continue;
 			}
 			const name = attr(raw, 'name') ?? '';
-			if (suites.length === 0) currentFile = attr(raw, 'file') ?? name;
+			if (suites.length === 0) {
+				currentFile = attr(raw, 'file') ?? name;
+				// The file-level wrapper carries the counts. A missing or non-numeric
+				// attribute is NOT zero: zero would read as "asserted nothing" and
+				// satisfy a floor of 0, so such a file is simply not recorded — the
+				// floor gate then reports it as UNRECORDED, which is the honest state.
+				const counts = fileCounts(raw);
+				if (counts !== null) perFile[currentFile] = counts;
+			}
 			suites.push(name);
 			continue;
 		}
@@ -155,6 +198,7 @@ export function parseJunit(xml: string): ParityRun {
 	return {
 		cases,
 		files,
+		perFile,
 		totals: {
 			tests: cases.length,
 			pass: cases.filter((c) => c.status === 'pass').length,

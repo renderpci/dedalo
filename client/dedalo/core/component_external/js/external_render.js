@@ -63,6 +63,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -117,12 +118,14 @@ export const build_entry_node = function(data, i, options={}) {
 		const value		= (raw===null || raw===undefined) ? '' : String(raw)
 		const kind		= entry_kind(data, i)
 
-	// (!) the ONE branch: 'markup' is server-sanitised, everything else is text.
+	// (!) the ONE branch: 'markup' is server-sanitised (src/external/fields_map.ts
+	// sanitizeMarkup) — it enters the render-boundary escaper as trusted 'html';
+	// everything else is text.
 		return ui.create_dom_element({
 			element_type	: options.element_type || 'span',
 			class_name		: options.class_name || 'external_entry',
 			...(kind==='markup'
-				? {inner_html : value}
+				? {inner_html : render_value(value, 'html')}
 				: {text_content : value})
 		})
 }//end build_entry_node

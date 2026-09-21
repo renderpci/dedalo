@@ -39,7 +39,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {get_fallback_value} from '../../common/js/common.js'
+	import {render_fallback_value} from '../../common/js/utils/render_escape.js'
 	import {change_handler} from './render_edit_component_input_text.js'
 
 
@@ -308,7 +308,7 @@ const get_content_value_read = (i, current_value, self) => {
 	const fallback_value	= data.fallback_value || []
 	// get_fallback_value returns an Array of resolved strings (with <mark> wrapping for
 	// fallback entries); index [0] is the resolved value for this single slot.
-	const final_value		= get_fallback_value([current_value], fallback_value)
+	const final_value		= render_fallback_value([current_value], fallback_value, self.context.render_class)
 
 
 	// content_value node

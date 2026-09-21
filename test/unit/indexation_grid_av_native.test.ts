@@ -344,14 +344,26 @@ function normalizeSelfScope(json: string): string {
 	);
 }
 
-/** Strip the clone label suffix, reporting how many it removed. */
-function stripCloneLabels(json: string): { json: string; stripped: number } {
+/**
+ * Strip the clone label suffix AND the ADDITIVE `render_class` cell key
+ * (WC-2026-09-04-context-render-class — the client escaper's key, stamped on
+ * every cell with a component model; the PHP-captured golden predates it),
+ * reporting how many of each it removed. Only the TS side carries the key, so
+ * the count on the received side is the proof the strip is not vacuous.
+ */
+function stripCloneLabels(json: string): { json: string; stripped: number; renderClasses: number } {
 	let stripped = 0;
-	const out = json.replace(CLONE_LABEL_SUFFIX, () => {
-		stripped++;
-		return '';
-	});
-	return { json: out, stripped };
+	let renderClasses = 0;
+	const out = json
+		.replace(CLONE_LABEL_SUFFIX, () => {
+			stripped++;
+			return '';
+		})
+		.replace(/,"render_class":"(text|html|url|number)"/g, () => {
+			renderClasses++;
+			return '';
+		});
+	return { json: out, stripped, renderClasses };
 }
 
 describe('indexation grid av + media branches (TS-native, oracle-captured goldens)', () => {
@@ -394,9 +406,52 @@ describe('indexation grid av + media branches (TS-native, oracle-captured golden
 		// clone label suffix removed from both sides — and PROVED present.
 		const received = stripCloneLabels(JSON.stringify(data));
 		expect(received.stripped).toBeGreaterThan(0);
+		expect(received.renderClasses).toBeGreaterThan(0); // the additive key WAS there
 		expect(JSON.parse(normalizeSelfScope(received.json))).toEqual(
 			JSON.parse(normalizeSelfScope(stripCloneLabels(goldenJson).json)) as never,
 		);
+	});
+
+	test("the text_fragment cell is MARKUP: stamped render_class 'html' and run through the ONE sanitizer", async () => {
+		// The fragment decodes the stored entities back to markup (PHP injected
+		// it raw). Inline formatting must survive as markup — the client parses
+		// the cell as HTML by its class — and an executable payload must not:
+		// the decode re-creates `<` from `&lt;`, so a pre-XSS-01 or migrated
+		// value is exactly what reaches this cell.
+		const payload =
+			'<p>[index-n-77-fragmento av-data::data]con &lt;i&gt;cursiva&lt;/i&gt; y ' +
+			'&lt;img src=x onerror=alert(1)&gt;&lt;script&gt;steal()&lt;/script&gt; fin' +
+			'[/index-n-77-fragmento av-data::data]</p>';
+		const hostString = { [seed('rsc', 36)]: [{ id: 1, lang: 'lg-spa', value: payload }] };
+		await sql`
+			UPDATE matrix_test SET string = ${JSON.stringify(hostString)}::text::jsonb
+			WHERE section_tipo = 'test3' AND section_id = ${SCRATCH_ID}`;
+
+		const { status, data } = await tsGrid(gridRqo(['test3']));
+		expect(status).toBe(200);
+		const cells: Array<Record<string, unknown>> = [];
+		const collect = (node: unknown): void => {
+			if (Array.isArray(node)) {
+				for (const n of node) collect(n);
+			} else if (node !== null && typeof node === 'object') {
+				const record = node as Record<string, unknown>;
+				if (record.class_list === 'text_fragment') cells.push(record);
+				for (const v of Object.values(record)) collect(v);
+			}
+		};
+		collect(data);
+		expect(cells.length).toBe(1);
+		const [fragment] = cells as [Record<string, unknown>];
+		expect(fragment.render_class).toBe('html');
+		const [text] = fragment.value as [string];
+		expect(text).toContain('<i>cursiva</i>'); // markup kept (the 'html' class parses it)
+		expect(text).toContain(' fin');
+		expect(text).not.toMatch(/onerror/i); // the handler is gone
+		expect(text).not.toMatch(/<script/i); // the script is gone, body included
+		expect(text).not.toContain('steal()');
+		// the inert element survives AS MARKUP (an escaper would have shown the
+		// tag as text): the sanitizer, not the escaper, is what ran here
+		expect(text).toContain('<img src=x>');
 	});
 
 	test('media: seeded test6101/test2 chain renders the image thumb URL DEEP-EQUAL to the golden', async () => {
@@ -413,6 +468,7 @@ describe('indexation grid av + media branches (TS-native, oracle-captured golden
 
 		const received = stripCloneLabels(JSON.stringify(data));
 		expect(received.stripped).toBeGreaterThan(0);
+		expect(received.renderClasses).toBeGreaterThan(0); // the additive key WAS there
 		expect(JSON.parse(normalizeSelfScope(received.json))).toEqual(
 			JSON.parse(normalizeSelfScope(stripCloneLabels(goldenJson).json)) as never,
 		);

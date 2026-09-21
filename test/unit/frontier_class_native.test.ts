@@ -545,10 +545,10 @@ describe.if(DB_READY)('THE FRONTIER CLASS — a hidden value is invisible on eve
  * identification subsystem, not to search/export/diffusion).
  */
 const OPEN_FRONTIER_DOORS: readonly { file: string; why: string }[] = [
-	{
-		file: 'src/core/identify/path_read.ts',
-		why: 'a line-by-line mirror of search/conform.ts buildJoinChain that takes no scope: the same multi-hop LATERAL join, the same missing hop ACL. It must call buildJoinChain instead of copying it.',
-	},
+	// CLOSED 2026-09-03 (P1-3 / SEC-12): src/core/identify/path_read.ts now takes
+	// a FrontierScope (`options.scope`, surface 'door') and authorizes every
+	// landed record on its own section with the frontier's two keys — gated by
+	// identify_path_read.test.ts "the LANDED section is authorized".
 	{
 		file: 'src/core/search/search_related.ts',
 		why: 'the inverse/related scan takes no principal anywhere. Its user-facing doors scope its OUTPUT through record_scope.ts scopeInverseReferenceHits, so the leak is bounded to callers that forget to; the scan itself is unscoped by design and needs the scope threaded.',
@@ -666,8 +666,9 @@ describe('the frontier class census is SHRINK-ONLY', () => {
 	});
 
 	test('the census may only shrink', () => {
-		// Measured 2026-08-28. Lower this number when a door closes; raising it
-		// means a NEW frontier door shipped unfixed, which this gate refuses.
-		expect(OPEN_FRONTIER_DOORS.length).toBeLessThanOrEqual(4);
+		// Measured 2026-08-28 at 4; path_read.ts closed 2026-09-03 (P1-3). Lower
+		// this number when a door closes; raising it means a NEW frontier door
+		// shipped unfixed, which this gate refuses.
+		expect(OPEN_FRONTIER_DOORS.length).toBeLessThanOrEqual(3);
 	});
 });

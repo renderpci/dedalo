@@ -138,10 +138,29 @@ describe('root user record is hidden from every search door', () => {
 		expect(sql).toContain('section_id > 0');
 	});
 
-	test('the full_count query carries the same exclusion (root never counted)', async () => {
-		const { sql } = await buildSearchSql({ section_tipo: [USERS], full_count: true });
-		expect(sql).toContain('full_count');
-		expect(sql).toContain('section_id > 0');
+	// The unfiltered browse total is served from the browse-count cache as a
+	// literal (PERF-10), so the exclusion is no longer VISIBLE in the returned
+	// SQL — it is in the query that produced the number. Asserted on the NUMBER
+	// instead, which is the thing that must never include root: the counted
+	// total equals the count of users ABOVE zero, and is strictly below the
+	// count that includes the root row.
+	test('the full_count NUMBER excludes root (root never counted)', async () => {
+		const { sql: builtSql, params } = await buildSearchSql({
+			section_tipo: [USERS],
+			full_count: true,
+		});
+		const rows = (await sql.unsafe(builtSql, params as (string | number | null)[])) as {
+			full_count: number | string;
+		}[];
+		const counted = rows.reduce((sum, row) => sum + Number(row.full_count), 0);
+		const truth = (await sql.unsafe(
+			`SELECT count(*) FILTER (WHERE section_id > 0)::int AS visible, count(*)::int AS all_rows
+			 FROM matrix_users WHERE section_tipo = $1`,
+			[USERS],
+		)) as { visible: number; all_rows: number }[];
+		expect(counted).toBe(Number(truth[0]?.visible));
+		// and the root row really is there, so this is a discrimination
+		expect(Number(truth[0]?.all_rows)).toBeGreaterThan(Number(truth[0]?.visible));
 	});
 
 	test('a sanitized client SQO pinning (dd128,-1) via filter_by_locators is ANDed empty', async () => {

@@ -8,6 +8,7 @@ import type { ComponentModel } from '../types.ts';
 export const component_radio_button: ComponentModel = {
 	model: 'component_radio_button',
 	column: 'relation',
+	render: 'text',
 	defaultRelationType: 'dd151',
 	resolveData: 'select_family',
 	flatValue: 'datalist',

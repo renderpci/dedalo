@@ -24,6 +24,7 @@
 import { sql } from '../db/postgres.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
+import { getSectionRealTipo } from '../ontology/resolver.ts';
 import type { InverseReferenceLocatorHit } from '../search/search_related.ts';
 
 /** PHP parse_data: raw breakdown hit → client locator entry. */
@@ -82,12 +83,9 @@ export async function getRelatedListChildTipos(sectionTipo: string): Promise<str
 
 	let relations = await readRelationList(sectionTipo);
 	if (relations === null) {
-		// Virtual section: its node's relations[0] points at the real section.
-		const nodeRows = (await sql.unsafe('SELECT relations FROM dd_ontology WHERE tipo = $1', [
-			sectionTipo,
-		])) as { relations: { tipo?: unknown }[] | null }[];
-		const realTipo = nodeRows[0]?.relations?.[0]?.tipo;
-		if (typeof realTipo === 'string') {
+		// Virtual section: borrow the REAL section's relation_list (getSectionRealTipo).
+		const realTipo = await getSectionRealTipo(sectionTipo);
+		if (realTipo !== sectionTipo) {
 			relations = await readRelationList(realTipo);
 		}
 	}

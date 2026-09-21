@@ -88,6 +88,7 @@ import {
 } from '../db/dd_ontology.ts';
 import { sql, withTransaction } from '../db/postgres.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
+import type { ReconcileDefinition } from '../reconcile/registry.ts';
 import { ONTOLOGY_TLD } from './ontology_tipos.ts';
 import {
 	addMainSection,
@@ -559,3 +560,72 @@ export async function rebuildOntologies(
 	for (const tld of tlds) out.push(await rebuildOntology(tld, userId));
 	return out;
 }
+
+/* --------------------------------------------------------------- registry */
+
+/**
+ * The TLDs a whole-install run inspects: every tld with a stored projection
+ * (dd_ontology) or a registered hierarchy (hierarchy1's `hierarchy6`). A tld
+ * with neither has nothing on either side and is not a pair to reconcile.
+ */
+export async function listProjectedTlds(): Promise<string[]> {
+	const stored = (await sql.unsafe('SELECT DISTINCT tld FROM dd_ontology ORDER BY tld')) as {
+		tld: string;
+	}[];
+	const registered = (await sql.unsafe(
+		`SELECT DISTINCT lower(trim(item->>'value')) AS tld
+		   FROM matrix_hierarchy_main, jsonb_array_elements(string->'hierarchy6') AS item
+		  WHERE section_tipo = 'hierarchy1'`,
+	)) as { tld: string | null }[];
+	const out = new Set<string>();
+	for (const row of [...stored, ...registered]) {
+		const tld = row.tld === null ? null : safeTld(row.tld);
+		if (tld !== null) out.add(tld);
+	}
+	return [...out].sort();
+}
+
+/**
+ * Drift units of ONE inspected state: every drift item, plus the missing main
+ * node WHEN the tld is provisioned on either side (a registered-but-never-
+ * activated hierarchy has no main node and no records — nothing disagrees).
+ */
+export function ontologyDriftUnits(state: OntologyState): number {
+	const provisioned = state.matrixNodes > 0 || state.storedNodes > 0;
+	return state.drift.length + (provisioned && !state.mainNodeOk ? 1 : 0);
+}
+
+/**
+ * The registry shape (core/reconcile/registry.ts, S-10): dd_ontology versus
+ * the source records it is derived from. Apply = `rebuildOntology` of each
+ * drifted tld (the destructive re-projection the ontology parser tool runs)
+ * — which is why it never auto-applies. `scope` = tlds.
+ */
+export const ONTOLOGY_RECONCILE: ReconcileDefinition = {
+	name: 'ontology',
+	stores: ['ontology source records (<tld>0 sections)', 'dd_ontology (the parsed projection)'],
+	description:
+		"Compare each TLD's dd_ontology projection with the records it is parsed from (missing / stale / orphaned / misfiled nodes); apply re-derives every drifted TLD from its source.",
+	scopeLabel: 'tld',
+	schedule: 'operator',
+	sources: ['src/core/ontology/ontology_state.ts'],
+	async run({ apply, scope }) {
+		const tlds = scope === undefined ? await listProjectedTlds() : [...scope];
+		const states: Record<string, OntologyState> = {};
+		const rebuilt: Record<string, OntologyWriteResult> = {};
+		let drift = 0;
+		let applied = 0;
+		for (const tld of tlds) {
+			const state = await inspectOntology(tld);
+			states[tld] = state;
+			const units = ontologyDriftUnits(state);
+			drift += units;
+			if (apply && units > 0) {
+				const outcome = await rebuildOntology(tld);
+				rebuilt[tld] = outcome;
+				if (outcome.ok) applied += units;
+			}
+		}
+		return { drift, applied, detail: { tlds, states, rebuilt } };
+	},
+};

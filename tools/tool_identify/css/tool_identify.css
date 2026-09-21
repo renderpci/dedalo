@@ -20,6 +20,21 @@
   --identify_vote_soft: #e9f3ee;
   --identify_vision: #7a4fb0;
   --identify_vision_soft: #f2ecfa;
+  --identify_weak: #5f6672;
+}
+:root[data-theme="dark"] {
+  --tool_identify: #5aa6b5;
+  --tool_identify_border: #7cc2cf;
+  --tool_identify_soft: #1e2f33;
+  --identify_agreed: #5fcb7c;
+  --identify_differed: #f0836f;
+  --identify_unrecorded: #a9aeb6;
+  --identify_restricted: #b3adc6;
+  --identify_vote: #62b98a;
+  --identify_vote_soft: #1c2d25;
+  --identify_vision: #b596e3;
+  --identify_vision_soft: #28223a;
+  --identify_weak: #b6bcc4;
 }
 .wrapper_tool.tool_identify .spinner {
   background-color: var(--tool_identify);
@@ -165,7 +180,7 @@
   border-left-color: var(--color_orange_dedalo, #f78a1c);
 }
 .wrapper_tool.tool_identify > .content_data .identify_candidate.verdict_weak {
-  border-left-color: var(--color_grey_9, #aaaaaa);
+  border-left-color: var(--identify_weak);
 }
 .wrapper_tool.tool_identify > .content_data .identify_candidate_head {
   display: flex;
@@ -183,7 +198,7 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--color_white, #ffffff);
-  background: var(--color_grey_9, #aaaaaa);
+  background: var(--identify_weak);
   white-space: nowrap;
 }
 .wrapper_tool.tool_identify > .content_data .verdict_same_type > .identify_candidate_head > .identify_verdict {
@@ -191,9 +206,10 @@
 }
 .wrapper_tool.tool_identify > .content_data .verdict_candidate > .identify_candidate_head > .identify_verdict {
   background: var(--color_orange_dedalo, #f78a1c);
+  color: var(--fg_on_brand);
 }
 .wrapper_tool.tool_identify > .content_data .verdict_weak > .identify_candidate_head > .identify_verdict {
-  background: var(--color_grey_9, #aaaaaa);
+  background: var(--identify_weak);
 }
 .wrapper_tool.tool_identify > .content_data .identify_candidate_title {
   flex: 1 1 auto;
@@ -694,7 +710,7 @@
   font-size: 0.78em;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #ffffff;
+  color: var(--color_white, #ffffff);
   background: var(--identify_vision);
 }
 .wrapper_tool.tool_identify > .content_data .identify_cluster_signal.criteria {

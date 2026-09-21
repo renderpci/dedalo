@@ -31,6 +31,7 @@
 import { existsSync } from 'node:fs';
 import { config } from '../../../config/config.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
+import { withConverterSlot } from './admission.ts';
 import { runBinary } from './spawn.ts';
 
 /** True when librsvg's CLI is installed where the config says (boot/gear probe). */
@@ -87,7 +88,13 @@ export async function rasterizeSvg(
 			coordinates: { binary: config.media.binaries.rsvgConvert },
 		});
 	}
-	const result = await runBinary(buildRsvgArgv(source, target, dpi), { nice: true });
+	// A CONVERTER PERMIT (engine/admission.ts): a vector render is a decode like any
+	// other, and the derivative builds that reach it — a thumb on the upload request
+	// — are the K this bounds. rsvg's own memory is bounded by the DPI the engine
+	// chooses, never by one the file declares; what was unbounded was HOW MANY.
+	const result = await withConverterSlot('rsvg-convert', () =>
+		runBinary(buildRsvgArgv(source, target, dpi), { nice: true }),
+	);
 	if (result.exitCode !== 0) {
 		throw new Error(
 			`rasterizeSvg: rsvg-convert failed for ${source} (exit ${result.exitCode}): ${result.stderr.trim()}`,

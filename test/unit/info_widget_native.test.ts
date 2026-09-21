@@ -14,11 +14,14 @@
  * migration below translates them at COMPARISON time instead (adoptGolden).
  *
  * Coverage (the differential's per-widget map, natively re-seeded):
- *  - get_archive_weights : STORED misc value (scratch — the differential's
- *    stored case rode a mutable production archive record; a synthetic stored
- *    bag pins the same use_db_data branch), live fallback compute over
- *    scratch coins (used/duplicated skips + mean/max/min/count math), and the
- *    empty-portal early [].
+ *  - get_archive_weights : a STORED misc value is IGNORED and the live
+ *    compute served (P1-8 / DATA-15, 2026-09-03,
+ *    WC-2026-09-03-info-stored-value-never-served — the oracle's use_db_data
+ *    branch, which the `archive_stored` golden captured, is REPEALED: the
+ *    golden stays in the fixture as the oracle record and the case now asserts
+ *    the read serves the empty-source live result and none of the stored
+ *    bytes), live fallback compute over scratch coins (used/duplicated skips +
+ *    mean/max/min/count math), and the empty-portal early [].
  *  - test_info           : canonical test3/1 (full-array get_data quirk —
  *    lg-eng-only record, widget reads item[0] regardless of lang) + test3/27
  *    + the TRUE placeholder fallback on an EMPTY scratch test3 record (the
@@ -105,6 +108,7 @@ import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
 import cloneMapJson from '../../src/core/test_data/test_tld_tipo_map.json';
 import { ensureCanonicalTest3 } from '../helpers/test_data.ts';
+import { stripRenderClass } from '../parity/normalize.ts';
 import golden from './fixtures/info_widget_native/entries.golden.json';
 
 /** Seed-shipped tipo, spelled so the census sees a reference, not a binding. */
@@ -646,18 +650,29 @@ async function expectCaseGolden(
 	sectionTipo: string,
 	sectionId: number | string,
 	componentTipo: string,
-	options: { expectStateItems?: boolean; expectPreservedToolScope?: boolean } = {},
+	options: {
+		expectStateItems?: boolean;
+		expectPreservedToolScope?: boolean;
+		expectGridCells?: boolean;
+	} = {},
 ): Promise<void> {
+	let renderClasses = 0;
 	for (const mode of ['list', 'edit'] as const) {
 		const entries = await tsEntries(readRqo(sectionTipo, sectionId, componentTipo, mode));
 		const stripped = stripStateTotalItems(entries);
 		if (options.expectStateItems === true) {
 			expect(stripped).toBeGreaterThan(0);
 		}
+		renderClasses += stripRenderClass(entries);
 		expect(entries).toEqual(
 			adoptedGolden(golden.cases[caseName][mode], {
 				expectPreserved: options.expectPreservedToolScope,
 			}) as never,
+		);
+	}
+	if (options.expectGridCells === true) {
+		expect(renderClasses, `${caseName}: the additive render_class key was there`).toBeGreaterThan(
+			0,
 		);
 	}
 }
@@ -736,8 +751,24 @@ describe('component_info widget read-time compute (TS-native, oracle-captured go
 		expect((golden.state_edit_datalist[0] as unknown[]).length).toBeGreaterThan(0);
 	});
 
-	test('get_archive_weights: STORED misc value serves the use_db_data branch', async () => {
-		await expectCaseGolden('archive_stored', ARCHIVE, IW.archiveStored, ARCHIVE_INFO);
+	test('get_archive_weights: a STORED misc value is IGNORED — the live compute is served', async () => {
+		// WC-2026-09-03-info-stored-value-never-served: the record carries a
+		// full, well-formed stored bag (STORED_ARCHIVE_VALUE) and NO coins, so
+		// the two branches disagree loudly — the oracle served the stored bag
+		// (golden `archive_stored`, kept as the record of what PHP did), this
+		// engine serves the live compute over the empty source, i.e. exactly what
+		// the `archive_empty` case serves. Both halves asserted: the served value
+		// equals the live one AND the stored bytes are absent from the wire.
+		for (const mode of ['list', 'edit'] as const) {
+			const entries = await tsEntries(readRqo(ARCHIVE, IW.archiveStored, ARCHIVE_INFO, mode));
+			expect(entries).toEqual(adoptedGolden(golden.cases.archive_empty[mode]) as never);
+			expect(JSON.stringify(entries)).not.toContain('"media_weight"');
+		}
+		// The oracle's stored-branch golden is what was REPEALED — it must differ
+		// from what is served now, or this test pins nothing.
+		expect(adoptedGolden(golden.cases.archive_stored.list)).not.toEqual(
+			adoptedGolden(golden.cases.archive_empty.list) as never,
+		);
 	}, 30000);
 
 	test('get_archive_weights: live fallback compute over the scratch coins', async () => {
@@ -770,6 +801,8 @@ describe('component_info widget read-time compute (TS-native, oracle-captured go
 		await expectCaseGolden(MEDIA_ICONS_CASE, INTERVIEW, IW.interview, MEDIA_ICONS, {
 			// the declared tool_config carve-out is REAL here (see adoptedGolden)
 			expectPreservedToolScope: true,
+			// the descriptors term grid carries the additive render_class per cell
+			expectGridCells: true,
 		});
 	}, 60000);
 

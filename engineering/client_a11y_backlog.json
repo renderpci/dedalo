@@ -1,0 +1,421 @@
+{
+	"rule": "SHRINK-ONLY per-file backlog of pointer-only activation sites in the tracked browser JS (client/ + tools/, vendored lib/ excluded). A site is an element the file CREATES and then wires to click/mousedown without going through a11y.make_activable — i.e. an element a keyboard cannot activate (or, on a native control, a mousedown-only listener, which Enter/Space never fire). Read and enforced by test/unit/client_keyboard_activation_tripwire.test.ts: a file above its number is RED, and so is a file BELOW it that was not re-banked. Lowering a number is the only edit that needs no argument; raising one needs a new one.",
+	"files": {
+		"client/dedalo/core/area_common/js/dashboard.js": {
+			"pointer_only_sites": 2,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/area_graph/js/render_area_graph.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/area_maintenance/js/render_area_maintenance.js": {
+			"pointer_only_sites": 5,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/area_maintenance/widgets/config_areas/js/render_config_areas.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/area_maintenance/widgets/counters_status/js/render_counters_status.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/area_maintenance/widgets/error_reports/js/render_error_reports.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/area_maintenance/widgets/make_backup/js/render_make_backup.js": {
+			"pointer_only_sites": 2,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/area_maintenance/widgets/menu_skip_tipos/js/render_menu_skip_tipos.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/area_thesaurus/js/render_area_thesaurus.js": {
+			"pointer_only_sites": 2,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/common/js/error_report_launcher.js": {
+			"pointer_only_sites": 2,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/common/js/render_common.js": {
+			"pointer_only_sites": 3,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/common/js/ui.js": {
+			"pointer_only_sites": 6,
+			"reason": "Six sites in the shared UI factory (component wrapper activation, message and warning chrome, collapse togglers). The wrapper listeners are AMBIENT — they activate a component on any pointer press inside it, not a control the user targets — and the labelled group they build is what a screen reader reads; the chrome togglers are next in line. Converted in batch 7: the label association, build_button's accessible name, and the modal's dialog semantics."
+		},
+		"client/dedalo/core/common/js/utils/notifications.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_3d/js/view_default_edit_3d.js": {
+			"pointer_only_sites": 2,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_3d/js/view_default_list_3d.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_av/js/view_default_edit_av.js": {
+			"pointer_only_sites": 2,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_av/js/view_default_list_av.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_check_box/js/render_edit_component_check_box.js": {
+			"pointer_only_sites": 2,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_dataframe/js/view_default_list_dataframe.js": {
+			"pointer_only_sites": 2,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_date/js/render_edit_component_date.js": {
+			"pointer_only_sites": 2,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_email/js/render_edit_component_email.js": {
+			"pointer_only_sites": 2,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_external/js/render_edit_component_external.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_filter/js/render_edit_component_filter.js": {
+			"pointer_only_sites": 4,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_filter_records/js/view_default_edit_filter_records.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_geolocation/js/view_default_edit_geolocation.js": {
+			"pointer_only_sites": 4,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_image/js/vector_editor.js": {
+			"pointer_only_sites": 6,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_image/js/view_default_edit_image.js": {
+			"pointer_only_sites": 3,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_image/js/view_default_list_image.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_image/js/view_mosaic_list_image.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_image/js/view_viewer_image.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_input_text/js/view_default_edit_input_text.js": {
+			"pointer_only_sites": 5,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_input_text/js/view_line_edit_input_text.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_iri/js/render_edit_component_iri.js": {
+			"pointer_only_sites": 3,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_json/js/view_default_edit_json.js": {
+			"pointer_only_sites": 3,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_number/js/render_edit_component_number.js": {
+			"pointer_only_sites": 2,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_pdf/js/view_default_edit_pdf.js": {
+			"pointer_only_sites": 2,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_pdf/js/view_default_list_pdf.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_portal/js/buttons.js": {
+			"pointer_only_sites": 6,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_portal/js/component_portal.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_portal/js/render_edit_component_portal.js": {
+			"pointer_only_sites": 3,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_portal/js/view_indexation_edit_portal.js": {
+			"pointer_only_sites": 2,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_portal/js/view_line_edit_portal.js": {
+			"pointer_only_sites": 2,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_portal/js/view_mosaic_edit_portal.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_publication/js/render_search_component_publication.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_radio_button/js/render_edit_component_radio_button.js": {
+			"pointer_only_sites": 2,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_radio_button/js/render_search_component_radio_button.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_select/js/view_default_edit_select.js": {
+			"pointer_only_sites": 3,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_select/js/view_line_edit_select.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_svg/js/view_default_edit_svg.js": {
+			"pointer_only_sites": 2,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_svg/js/view_default_list_svg.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_text_area/js/render_edit_component_text_area.js": {
+			"pointer_only_sites": 3,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_text_area/js/view_default_edit_text_area.js": {
+			"pointer_only_sites": 6,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_text_area/js/view_line_edit_text_area.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/component_text_area/js/view_note_text_area.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/dd_grid/js/view_indexation_dd_grid.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/inspector/js/render_inspector.js": {
+			"pointer_only_sites": 26,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/login/js/render_login.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/menu/js/render_menu_mobile.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/menu/js/view_default_edit_menu.js": {
+			"pointer_only_sites": 10,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/page/js/job_tray.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/paginator/js/render_paginator.js": {
+			"pointer_only_sites": 5,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/paginator/js/render_paginator_micro.js": {
+			"pointer_only_sites": 8,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/paginator/js/render_paginator_mini.js": {
+			"pointer_only_sites": 6,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/relation_list/js/render_relation_list.js": {
+			"pointer_only_sites": 3,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/search/js/render_search.js": {
+			"pointer_only_sites": 11,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/search/js/render_semantic.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/section/js/view_export_user_presets.js": {
+			"pointer_only_sites": 3,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/section/js/view_graph_list_section.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/section/js/view_graph_solved_section.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/section/js/view_search_user_presets.js": {
+			"pointer_only_sites": 4,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/section/js/view_thesaurus_list_section.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/section/js/view_tm_list_section.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/section_record/js/view_default_edit_section_record.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/section_record/js/view_default_list_section_record.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/section_record/js/view_mini_section_record.js": {
+			"pointer_only_sites": 2,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/section_tab/js/render_section_tab.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/services/service_autocomplete/js/view_default_autocomplete.js": {
+			"pointer_only_sites": 5,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/services/service_ckeditor/js/render_text_editor.js": {
+			"pointer_only_sites": 3,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/services/service_upload/js/render_edit_service_upload.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/core/ts_object/js/render_ts_id_column.js": {
+			"pointer_only_sites": 1,
+			"reason": "One site: the drag HANDLE, whose mousedown arms HTML drag-and-drop. Dragging is a pointer gesture; the keyboard equivalent is the order-number control next to it, which IS activable. The handle carries an accessible name so a screen reader announces what it is."
+		},
+		"client/dedalo/core/ts_object/js/render_ts_line.js": {
+			"pointer_only_sites": 2,
+			"reason": "Two sites, both deliberate and neither an activation: the read-only [id] badge takes a mousedown/click guard so a click on it does not select the term (it is information, not a control), and the SHOW_DEBUG inspector branch rides the same handler. The row's real controls — term text, expand arrow, indexation badges, thumbnail, component buttons — were converted to a11y.make_activable in batch 7."
+		},
+		"client/dedalo/core/widgets/oh/media_icons/js/render_media_icons.js": {
+			"pointer_only_sites": 5,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"client/dedalo/test/client/js/list.js": {
+			"pointer_only_sites": 2,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"tools/tool_cataloging/js/view_tool_cataloging_mosaic.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"tools/tool_dd_label/js/render_tool_dd_label.js": {
+			"pointer_only_sites": 2,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"tools/tool_diffusion/js/render_tool_diffusion.js": {
+			"pointer_only_sites": 4,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"tools/tool_error_report/js/render_tool_error_report.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"tools/tool_export/js/render_tool_export.js": {
+			"pointer_only_sites": 5,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"tools/tool_identify/js/render_tool_identify.js": {
+			"pointer_only_sites": 3,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"tools/tool_identify/js/render_tool_identify_clusters.js": {
+			"pointer_only_sites": 2,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"tools/tool_image_rotation/js/render_tool_image_crop.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"tools/tool_import_dedalo_csv/js/render_tool_import_dedalo_csv.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"tools/tool_indexation/js/render_tool_indexation.js": {
+			"pointer_only_sites": 4,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"tools/tool_lang/js/render_tool_lang.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"tools/tool_lang_multi/js/render_tool_lang_multi.js": {
+			"pointer_only_sites": 2,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"tools/tool_media_versions/js/render_tool_media_versions.js": {
+			"pointer_only_sites": 12,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"tools/tool_ontology_parser/js/render_tool_ontology_parser.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"tools/tool_print/js/canvas_tool_print.js": {
+			"pointer_only_sites": 3,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"tools/tool_print/js/render_box_tool_print.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"tools/tool_print/js/render_tool_print.js": {
+			"pointer_only_sites": 4,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"tools/tool_qr/js/render_tool_qr.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"tools/tool_sitebuilder/js/sitebuilder_controller.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"tools/tool_subtitles/js/render_tool_subtitles.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		},
+		"tools/tool_transcription/js/render_tool_transcription.js": {
+			"pointer_only_sites": 1,
+			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
+		}
+	}
+}

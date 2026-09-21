@@ -11,6 +11,7 @@ import {
 	flatten_read_raw_result,
 	render_open_list_with_direct_relations
 } from '../../../core/section/js/render_open_list_with_direct_relations.js'
+import {max_page_limit} from '../../../core/common/js/sqo_limit.js'
 
 
 
@@ -30,7 +31,7 @@ import {
 * The two scopes must therefore DERIVE their SQO, on a clone (the portal caller
 * hands over its parent section's live object):
 *   current → keep the pin, limit:1 / offset:0
-*   found   → drop the pin, limit:0 / offset:0, keep the user's own sqo.filter
+*   found   → drop the pin, limit:<server ceiling> / offset:0, keep the user's own sqo.filter
 *
 * The dialog also has to READ the answer, and read_raw replies in a different
 * shape per options.type: 'target_section' gives one flat locator array, while
@@ -269,7 +270,8 @@ describe(`OPEN_RELATED_DATA`, async () => {
 
 		assert.deepEqual(scoped.filter_by_locators, [],
 			'the auto single-record pin would silently reduce "all found" to "current"')
-		assert.strictEqual(scoped.limit, 0)
+		assert.strictEqual(scoped.limit, max_page_limit(),
+			'"all found" is the server ceiling — the client never sends 0 (P2-31)')
 		assert.strictEqual(scoped.offset, 0)
 		assert.deepEqual(scoped.filter, sqo.filter,
 			'the user\'s own search must decide the found set')
@@ -284,7 +286,7 @@ describe(`OPEN_RELATED_DATA`, async () => {
 
 		assert.strictEqual(scoped.filter_by_locators.length, 3,
 			'a semantic result set is the found set, not an auto pin')
-		assert.strictEqual(scoped.limit, 0)
+		assert.strictEqual(scoped.limit, max_page_limit())
 	})
 
 	// The zero-hit sentinel (section_id:-1) means "honestly empty". It is a

@@ -3,17 +3,20 @@
  * (DIFFUSION_SPEC §4.3 rdf/xml/markdown/csv/json; this slice serves the
  * tabular trio csv/json/markdown).
  *
- * Layout contract (kept in LOCKSTEP with the delete side,
- * src/core/diffusion_bridge/diffusion_delete.ts resolvePublishedFilePath, and PHP
- * diffusion/class.diffusion_markdown.php get_record_file_path):
+ * Layout contract — NOT restated here (PUB-03, 2026-09-03): the root, the
+ * per-target directory and the per-record file names come from the ONE
+ * producer both sides import, src/core/diffusion_bridge/published_files.ts
+ * (the delete side, diffusion_delete.ts resolvePublishedFilePath, reads the
+ * same functions). This module re-exports the root resolver and wraps the
+ * grammar for the writers; `diffusion_scope_tripwire` proves per writer that
+ * the file the producer names is the file the writer's removeRecords unlinks.
  *
  *   <root>/<format>/<dirLabel>/            one directory per format × target
  *   <root>/markdown/<service>/<st>_<id>.md per-record files (delete grammar)
  *
- * Root resolution: DEDALO_DIFFUSION_FILES_ROOT (test/ops override, documented
- * here — tests point it at a temp dir so the real media tree is never
- * touched) falling back to MEDIA_PATH (the same env key diffusion_delete.ts
- * reads — PHP DEDALO_MEDIA_PATH). Missing both = loud typed error at open(),
+ * Root resolution: DEDALO_DIFFUSION_FILES_ROOT (ops override; tests point it
+ * at a MARKED scratch dir so the real media tree is never touched) falling
+ * back to `config.media.rootPath`. Missing both = loud typed error at open(),
  * never a silent write to a guessed path.
  *
  * All finalization is temp+rename on the SAME filesystem (atomicWriteFile);
@@ -24,37 +27,18 @@
 
 import { existsSync, mkdirSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { basename, dirname } from 'node:path';
-import { readEnv } from '../../config/env.ts';
+import {
+	diffusionFilesRoot,
+	MissingDiffusionFilesRootError,
+	publishedRecordFileName,
+	publishedTargetDir,
+} from '../../core/diffusion_bridge/published_files.ts';
 import { DedaloError } from '../../core/errors/index.ts';
 import type { PublicationPlan, SectionPlan } from '../plan/types.ts';
 
-/**
- * Thrown at open() when no file root is configured (loud config gate). A thin
- * DedaloError family with a fixed code; the sentence stays log-only.
- */
-export class MissingDiffusionFilesRootError extends DedaloError {
-	constructor() {
-		super('diffusion.files_root_missing', {
-			message:
-				'No diffusion files root configured: set MEDIA_PATH (PHP DEDALO_MEDIA_PATH) ' +
-				'or the DEDALO_DIFFUSION_FILES_ROOT override.',
-		});
-		this.name = 'MissingDiffusionFilesRootError';
-	}
-}
-
-/**
- * The published-files root. DEDALO_DIFFUSION_FILES_ROOT overrides (tests/ops);
- * default is MEDIA_PATH — the SAME key diffusion_delete.ts unlinks under, so
- * publish and delete stay in lockstep.
- */
-export function diffusionFilesRoot(): string {
-	const override = readEnv('DEDALO_DIFFUSION_FILES_ROOT');
-	if (override !== undefined && override !== '') return override;
-	const mediaPath = readEnv('MEDIA_PATH');
-	if (mediaPath !== undefined && mediaPath !== '') return mediaPath;
-	throw new MissingDiffusionFilesRootError();
-}
+// The root resolver and its error are the core producer's; writers and their
+// tests keep importing them from here.
+export { diffusionFilesRoot, MissingDiffusionFilesRootError };
 
 /**
  * The per-target directory label: serviceName for 'files' targets (PHP
@@ -65,22 +49,33 @@ export function fileTargetDirLabel(plan: PublicationPlan): string {
 	return plan.target.kind === 'files' ? plan.target.serviceName : plan.target.database;
 }
 
-/** `<root>/<format>/<dirLabel>` — the run's output directory. */
+/** `<root>/<format>/<dirLabel>` — the run's output directory (the producer's grammar). */
 export function formatTargetDir(format: string, dirLabel: string): string {
-	return `${diffusionFilesRoot()}/${format}/${dirLabel}`;
+	return publishedTargetDir(diffusionFilesRoot(), format, dirLabel);
 }
 
 /**
- * Per-record file name — the EXACT delete-side grammar
- * (diffusion_delete.ts:299 `${sectionTipo}_${sectionId}.${extension}`; PHP
- * get_record_file_path `$section_tipo .'_'. $section_id .'.md'`).
+ * Per-record file name of the xml / markdown writers — THE producer's grammar
+ * (published_files.ts publishedRecordFileName; PHP get_record_file_path
+ * `$section_tipo .'_'. $section_id .'.md'`). `extension` is the writer's file
+ * extension ('xml' | 'md'); a format with no per-record file is a caller bug.
  */
 export function recordFileName(
 	sectionTipo: string,
 	sectionId: number | string,
-	extension: string,
+	extension: 'xml' | 'md',
 ): string {
-	return `${sectionTipo}_${sectionId}.${extension}`;
+	const name = publishedRecordFileName(
+		extension === 'md' ? 'markdown' : 'xml',
+		sectionTipo,
+		sectionId,
+	);
+	if (name === null) {
+		throw new DedaloError('internal.invariant', {
+			message: `recordFileName: no per-record file grammar for extension '${extension}'`,
+		});
+	}
+	return name;
 }
 
 /**

@@ -49,6 +49,11 @@ have to be copied too, or a restore will bring back records that point at files 
 exist. This key is distinct from \`DEDALO_BACKUP_PATH\`, which is where a code update stages the
 previous code tree.
 
+The engine's restore door (\`bun scripts/restore.ts <artifact>\`, run with the engine stopped) is
+the way back: it proves the artifact by a full read, restores it in one transaction beside the
+current database and swaps the two by name. Each run writes its report to a \`restores/\`
+directory inside this one.
+
 \`\`\`bash
 DEDALO_BACKUP_DIR="/srv/backups/dedalo/db"
 \`\`\``,
@@ -162,6 +167,233 @@ without editing anything:
 
 \`\`\`bash
 DEDALO_DEV_MODE=true bun run dev
+\`\`\``,
+	},
+	DEDALO_JOB_DEADLINE_MAINTENANCE_S: {
+		type: 'number',
+		scope: 'operator',
+		default: 21600,
+		heading: 'Defining the maintenance job deadline',
+		typeLabel: 'int',
+		doc: `This parameter defines how long, in seconds, a maintenance job may run before Dédalo cancels it.
+
+Maintenance jobs are the work an administrator starts: a code or data update, a cache rebuild, a
+bulk import, a value propagated across records. Six hours by default, which is generous for a
+full cache rebuild of a large collection and far more than any update needs. A job that passes
+its deadline is asked to stop and its record is marked stopped, so the lane is not held for ever
+by work that will never finish.
+
+Set it to \`0\` to switch the deadline off, on an installation whose imports legitimately run
+longer than the default. Raise it rather than switching it off if you can name the ceiling: a
+deadline is what turns a wedged job into a reported one.
+
+\`\`\`bash
+DEDALO_JOB_DEADLINE_MAINTENANCE_S=21600
+\`\`\``,
+	},
+	DEDALO_JOB_DEADLINE_MEDIA_S: {
+		type: 'number',
+		scope: 'operator',
+		default: 0,
+		heading: 'Defining the media job deadline',
+		typeLabel: 'int',
+		doc: `This parameter defines how long, in seconds, a media job may run before Dédalo cancels it.
+
+There is NO deadline by default (\`0\`), and that is deliberate: transcoding a master video is
+legitimately hours of work, and a deadline that killed it would be the fault, not the guard.
+
+Set it on an installation that knows its own ceiling — if nothing you hold should ever take more
+than two hours to convert, \`7200\` turns a stuck conversion into a reported one instead of a lane
+that stays busy for ever. Note that the cancellation reaches the job itself; a conversion program
+already running as a separate process finishes its own work, and the fact that it is still
+holding its lane is reported in the counters.
+
+\`\`\`bash
+DEDALO_JOB_DEADLINE_MEDIA_S=0
+\`\`\``,
+	},
+	DEDALO_JOB_DEADLINE_RAG_S: {
+		type: 'number',
+		scope: 'operator',
+		default: 3600,
+		heading: 'Defining the index job deadline',
+		typeLabel: 'int',
+		doc: `This parameter defines how long, in seconds, an index-building job may run before Dédalo
+cancels it.
+
+These are the jobs that compute the semantic index used by assisted search and by object
+identification. One hour by default, which comfortably covers a pass over a single group of
+records. A job that passes its deadline is asked to stop and its record is marked stopped.
+
+Set it to \`0\` to switch the deadline off, or raise it when you index very large groups in one
+go.
+
+\`\`\`bash
+DEDALO_JOB_DEADLINE_RAG_S=3600
+\`\`\``,
+	},
+	DEDALO_JOB_DEADLINE_TRANSCRIPTION_S: {
+		type: 'number',
+		scope: 'operator',
+		default: 14400,
+		heading: 'Defining the transcription job deadline',
+		typeLabel: 'int',
+		doc: `This parameter defines how long, in seconds, a transcription job may run before Dédalo
+cancels it.
+
+Transcription jobs wait on the speech-to-text service, so they are mostly idle time; four hours
+by default, which covers a long interview with room to spare. A batch that runs longer than this
+is almost always a service that has stopped answering rather than work still in progress, and
+the deadline turns that into a stopped job with a reason instead of a lane held for ever.
+
+Set it to \`0\` to switch the deadline off.
+
+\`\`\`bash
+DEDALO_JOB_DEADLINE_TRANSCRIPTION_S=14400
+\`\`\``,
+	},
+	DEDALO_JOB_LANE_MAINTENANCE_CONCURRENCY: {
+		type: 'number',
+		scope: 'operator',
+		default: 2,
+		heading: 'Defining maintenance job concurrency',
+		typeLabel: 'int',
+		doc: `This parameter defines how many maintenance jobs Dédalo will run at the same time.
+
+Background work in Dédalo runs in lanes, and each class of work has its own budget of
+simultaneous jobs: media derivatives, transcription, index building and the maintenance work an
+administrator starts by hand. The lanes are independent on purpose — a queue of video
+transcodes must never be able to hold up the code update you are waiting for.
+
+Maintenance is the administrator's own lane: code and data updates, cache rebuilds, imports,
+propagations. Two by default, so that starting an import does not have to wait for a cache
+rebuild to finish. Values below 1 are raised to 1.
+
+\`\`\`bash
+DEDALO_JOB_LANE_MAINTENANCE_CONCURRENCY=2
+\`\`\``,
+	},
+	DEDALO_JOB_LANE_RAG_CONCURRENCY: {
+		type: 'number',
+		scope: 'operator',
+		default: 2,
+		heading: 'Defining index job concurrency',
+		typeLabel: 'int',
+		doc: `This parameter defines how many index-building jobs Dédalo will run at the same time.
+
+Background work in Dédalo runs in lanes, and each class of work has its own budget of
+simultaneous jobs: media derivatives, transcription, index building and the maintenance work an
+administrator starts by hand. The lanes are independent on purpose — a queue of video
+transcodes must never be able to hold up the code update you are waiting for.
+
+This lane builds the semantic index used by assisted search and object identification. Two by
+default. Raise it if you index frequently and the machine has cores to spare; lower it to 1 to
+keep the index work out of the way of everything else. Values below 1 are raised to 1.
+
+\`\`\`bash
+DEDALO_JOB_LANE_RAG_CONCURRENCY=2
+\`\`\``,
+	},
+	DEDALO_JOB_LANE_TRANSCRIPTION_CONCURRENCY: {
+		type: 'number',
+		scope: 'operator',
+		default: 2,
+		heading: 'Defining transcription job concurrency',
+		typeLabel: 'int',
+		doc: `This parameter defines how many transcription jobs Dédalo will run at the same time.
+
+Background work in Dédalo runs in lanes, and each class of work has its own budget of
+simultaneous jobs: media derivatives, transcription, index building and the maintenance work an
+administrator starts by hand. The lanes are independent on purpose — a queue of video
+transcodes must never be able to hold up the code update you are waiting for.
+
+Transcription jobs spend nearly all their time waiting on the speech-to-text service rather than
+using this machine, so their slots are cheap to hold: two by default, which keeps a short
+recording from queueing behind a long interview. Raise it if your transcription service handles
+several requests at once. Values below 1 are raised to 1.
+
+\`\`\`bash
+DEDALO_JOB_LANE_TRANSCRIPTION_CONCURRENCY=2
+\`\`\``,
+	},
+	DEDALO_RECONCILE_SCHEDULER_ENABLED: {
+		type: 'boolean',
+		scope: 'operator',
+		default: true,
+		heading: 'Reconcile scheduler',
+		typeLabel: 'bool',
+		doc: `Whether **this** server runs the scheduled cross-store reconciles by itself: the
+boot-class ones once after it starts listening (today: the publication-marker index, which
+re-derives the web server's \`pub/\` markers from the per-target truth) and the interval-class
+ones on their period. Every outcome is published under \`reconcile\` on \`/api/v1/counters\`
+and listed by the **Reconcile** maintenance widget, which — like \`bun scripts/reconcile.ts\` —
+keeps working with the scheduler off; only the automatic runs stop.
+
+Enabled by default. Set it to \`false\` on an instance that must not touch a shared store — a
+maintenance or smoke-test copy that shares the database or the media tree with the live
+installation, where a boot-time repair from the wrong root would do harm.
+
+\`\`\`bash
+DEDALO_RECONCILE_SCHEDULER_ENABLED=false
+\`\`\``,
+	},
+	DEDALO_ACTIVITY_RETENTION_DAYS: {
+		type: 'number',
+		scope: 'operator',
+		default: 0,
+		heading: 'Activity log retention',
+		typeLabel: 'int',
+		doc: `How many days of \`matrix_activity\` rows this installation keeps. Every
+state-changing action appends one row — and so does every DENIED login, which nobody has to
+be authenticated to cause — so the table grows with use and with abuse alike, inside the
+database every backup copies.
+
+The default is \`0\`: **keep everything**. That is the right default for a heritage archive,
+because the activity log is the record of who changed what. The key exists so an institution
+that has decided otherwise can say so, and so that the deletion is performed by the engine
+(the retention scheduler, or \`bun scripts/reconcile.ts\`-style operator surfaces) rather than
+by hand-written SQL against the matrix.
+
+\`\`\`bash
+DEDALO_ACTIVITY_RETENTION_DAYS=1095
+\`\`\``,
+	},
+	DEDALO_DIFFUSION_LEDGER_RETENTION_DAYS: {
+		type: 'number',
+		scope: 'operator',
+		default: 0,
+		heading: 'Publication ledger retention',
+		typeLabel: 'int',
+		doc: `How many days of SETTLED rows the \`dd1758\` publication ledger keeps. The ledger
+appends one row per record per publish run — republishing the same catalogue writes them all
+again — so it grows linearly with how often you publish, not with how much you hold.
+
+PENDING rows (an unpublish still owed to a public target) are NEVER pruned, whatever this is
+set to: they are outstanding debt, not history.
+
+The default is \`0\`: keep everything. Set a window if your publication history does not need
+to be permanent.
+
+\`\`\`bash
+DEDALO_DIFFUSION_LEDGER_RETENTION_DAYS=365
+\`\`\``,
+	},
+	DEDALO_RETENTION_SCHEDULER_ENABLED: {
+		type: 'boolean',
+		scope: 'operator',
+		default: true,
+		heading: 'Retention scheduler',
+		typeLabel: 'bool',
+		doc: `Whether **this** server applies the configured retention windows by itself, once
+after boot and then daily. With every window at its default (\`0\` = keep everything) it has
+nothing to do, so leaving it on costs nothing and means that the day an operator sets a
+window, it takes effect.
+
+Set it to \`false\` on an instance that shares a database with the live installation — a
+maintenance or smoke-test copy — where a scheduled delete would act on data it does not own.
+
+\`\`\`bash
+DEDALO_RETENTION_SCHEDULER_ENABLED=false
 \`\`\``,
 	},
 	DEDALO_SLOW_REQUEST_MS: {

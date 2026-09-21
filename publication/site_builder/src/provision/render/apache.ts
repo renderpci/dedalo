@@ -79,6 +79,7 @@ import {
 import { SLUG_PATTERN } from '../../util/slug';
 import type { Renderer } from './types';
 import { artifact } from './types';
+import { CSP_HEADER_NAME, contentSecurityPolicy } from './csp';
 
 /* ────────────────────────────────────────────────────────────────────────────────────
  * The grammars of everything this module writes into a directive
@@ -357,6 +358,17 @@ function servingVhost(
       '',
     );
   }
+
+  // THE CONTENT SECURITY POLICY, on every served surface and `always` (401/404 included).
+  // Stated once for both web servers in ./csp.ts: script never runs from a record value,
+  // whatever an agent-authored page did with it (audit P2-6 / CARRY-01). Unguarded by
+  // <IfModule> for the same reason as the robots header above — a host without
+  // mod_headers must fail configtest, not silently serve a public site without it.
+  inner.push(
+    comment('Script never runs from a record value, whatever the page did with it (csp.ts).'),
+    `Header always set ${CSP_HEADER_NAME} ${quoted(contentSecurityPolicy(layout))}`,
+    '',
+  );
 
   inner.push(...accessPolicy(layout, site, surface), '', ...dotfileGuards());
 

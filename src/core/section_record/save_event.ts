@@ -94,6 +94,11 @@ export function registerSectionDataListener(listener: SectionDataListener): void
 	sectionDataListeners.add(listener);
 }
 
+/** Remove a listener — for a gate that registers one for its own run only. */
+export function unregisterSectionDataListener(listener: SectionDataListener): void {
+	sectionDataListeners.delete(listener);
+}
+
 function notifySectionDataListeners(sectionTipo: string): void {
 	for (const listener of sectionDataListeners) {
 		try {
@@ -121,11 +126,21 @@ export async function fireSaveEvent(sectionTipo: string): Promise<void> {
 		case TOOLS_REGISTER_SECTION_TIPO:
 		case TOOLS_CONFIG_SECTION_TIPO:
 		case PROFILE_SECTION_TIPO: {
+			// DEFERRED like the two other branches (P1-8 / DATA-28, 2026-09-03). This
+			// call used to be bare, so an edit-form save on dd1324/dd996/dd234 —
+			// reached INSIDE the save transaction via persistRecordKeys — dropped the
+			// registry/config/paths/loader caches BEFORE its own COMMIT, and a
+			// concurrent request repopulated them from pre-commit state; with no TTL
+			// since the cutover that is a tool stuck in (or vanished from) every menu
+			// until restart. The import is awaited HERE (deferPostTransaction takes a
+			// synchronous action); outside a transaction the clear runs inline.
 			const { invalidateAllToolCaches } = await import('../tools/cache.ts');
-			invalidateAllToolCaches();
+			if (!deferPostTransaction(invalidateAllToolCaches)) invalidateAllToolCaches();
 			break;
 		}
 		case ONTOLOGY_SECTION_TIPO: {
+			// clearOntologyDerivedCaches self-defers under an ambient transaction
+			// (cache_invalidation.ts) — the same lane as the tools branch above.
 			const { clearOntologyDerivedCaches } = await import('../ontology/cache_invalidation.ts');
 			await clearOntologyDerivedCaches();
 			break;

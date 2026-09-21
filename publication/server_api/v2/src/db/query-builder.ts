@@ -26,6 +26,7 @@ import { ValidationError } from '../errors';
 import { buildWhere, buildOrder } from '../utils/query-params';
 import type { FilterCondition, OrderClause } from '../utils/query-params';
 import { parseJsonStrings } from '../utils/parse-json';
+import { clampLimit, clampOffset } from '../validators';
 import type { TableRow } from './types';
 import type { DbRow } from './types';
 
@@ -108,21 +109,28 @@ export async function executeQuery<T extends TableRow = TableRow>(
     sql += ` ORDER BY ${orderSql}`;
   }
 
-  if (limit !== undefined) {
+  // The page bounds are CLAMPED here, at the one place a LIMIT is written, and not only
+  // refused at the entry schemas — see clampLimit in validators.ts. A caller that reached
+  // this function without passing an entry schema (a new service, an internal call) still
+  // cannot commission an unbounded page.
+  const boundedLimitValue = limit === undefined ? undefined : clampLimit(limit);
+  const boundedOffsetValue = offset === undefined ? undefined : clampOffset(offset);
+
+  if (boundedLimitValue !== undefined) {
     sql += ` LIMIT ?`;
-    params.push(limit);
+    params.push(boundedLimitValue);
   }
 
-  if (offset !== undefined) {
+  if (boundedOffsetValue !== undefined) {
     sql += ` OFFSET ?`;
-    params.push(offset);
+    params.push(boundedOffsetValue);
   }
 
   // limit=0 is a count-only request: skip the data query entirely
   // (`LIMIT 0` would still cost a round trip to fetch nothing). The statement
   // built above is simply discarded — pair this with withTotal to get just the
   // `pagination.total`.
-  const rows = limit === 0
+  const rows = boundedLimitValue === 0
     ? []
     : await dbExecute<DbRow[]>(db, sql, params);
 

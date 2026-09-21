@@ -9,6 +9,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, sep } from 'node:path';
@@ -23,9 +24,48 @@ import {
 	plainFetch,
 	resolveFetchTarget,
 } from '../../src/core/ai/model_fetch.ts';
-import { expectedSize } from '../../src/core/ai/model_manifest.ts';
+import { expectedDigest, expectedSize } from '../../src/core/ai/model_manifest.ts';
+import type { PinTable } from '../../src/core/ai/model_pins.ts';
 
 let scratch = '';
+
+/** A pinned revision for the fixture models (any 40-hex; the hub is never reached). */
+const REVISION = 'a'.repeat(40);
+
+const sha256 = (bytes: string): string => createHash('sha256').update(bytes).digest('hex');
+
+/**
+ * A pin table for one fixture model covering EVERY file the download may ask
+ * for (P1-25: an unpinned model is refused before a byte, a required file with
+ * no pin is refused too). The digest is that of `bytes` — the stubs below that
+ * write a file write exactly that — so the orchestration's post-fetch verdict
+ * stays green here, and its refusal is proved in
+ * model_artifact_integrity_native.test.ts.
+ */
+function pinsFor(modelId: string, files: readonly string[], bytes = 'BYTES'): PinTable {
+	const pin = { sha256: sha256(bytes), size: Buffer.byteLength(bytes) };
+	return {
+		models: {
+			[modelId]: {
+				revision: REVISION,
+				pinned_at: '2026-09-04',
+				reason: 'test fixture',
+				files: Object.fromEntries(files.map((file) => [file, pin])),
+			},
+		},
+		unpinned: {},
+	};
+}
+
+/** Every file the default ASR plan can ask for, plus the quantised variants used below. */
+const ASR_FILES = [
+	...COMMON_FILES,
+	'config.json',
+	'onnx/encoder_model.onnx',
+	'onnx/decoder_model_merged.onnx',
+	'onnx/decoder_model_merged_quantized.onnx',
+];
+const DIARIZATION_FILES = [...DIARIZATION_COMMON_FILES, 'config.json', 'onnx/model.onnx'];
 
 beforeAll(() => {
 	scratch = mkdtempSync(join(tmpdir(), 'dd_model_fetch_'));
@@ -40,51 +80,70 @@ describe('resolveFetchTarget — refusals', () => {
 	// gated, so a loosened regex cannot hide behind the later path-confinement
 	// check (join() keeps '?', '#', '%2e%2e' and 'http://…' inside the store).
 	const store = () => join(scratch, 'refusals');
+	const at = { revision: REVISION };
 
 	test('empty model id', () => {
-		expect(resolveFetchTarget('', 'config.json', store())).toBeNull();
+		expect(resolveFetchTarget('', 'config.json', store(), at)).toBeNull();
 	});
 
 	test('space in model id', () => {
-		expect(resolveFetchTarget('a b', 'config.json', store())).toBeNull();
+		expect(resolveFetchTarget('a b', 'config.json', store(), at)).toBeNull();
 	});
 
 	test('query string in model id', () => {
-		expect(resolveFetchTarget('model?x=1', 'config.json', store())).toBeNull();
+		expect(resolveFetchTarget('model?x=1', 'config.json', store(), at)).toBeNull();
 	});
 
 	test('fragment in model id', () => {
-		expect(resolveFetchTarget('model#frag', 'config.json', store())).toBeNull();
+		expect(resolveFetchTarget('model#frag', 'config.json', store(), at)).toBeNull();
 	});
 
 	test('percent-encoded traversal in model id', () => {
-		expect(resolveFetchTarget('model%2e%2e', 'config.json', store())).toBeNull();
+		expect(resolveFetchTarget('model%2e%2e', 'config.json', store(), at)).toBeNull();
 	});
 
 	test('absolute URL as model id', () => {
-		expect(resolveFetchTarget('http://evil.test/x', 'config.json', store())).toBeNull();
+		expect(resolveFetchTarget('http://evil.test/x', 'config.json', store(), at)).toBeNull();
 	});
 
 	test('literal .. segment in model id', () => {
-		expect(resolveFetchTarget('a/../../etc', 'config.json', store())).toBeNull();
+		expect(resolveFetchTarget('a/../../etc', 'config.json', store(), at)).toBeNull();
 	});
 
 	test('the file segment is guarded by the same charset rule', () => {
-		expect(resolveFetchTarget('org/model', '../escape.json', store())).toBeNull();
-		expect(resolveFetchTarget('org/model', 'a b.json', store())).toBeNull();
-		expect(resolveFetchTarget('org/model', '', store())).toBeNull();
+		expect(resolveFetchTarget('org/model', '../escape.json', store(), at)).toBeNull();
+		expect(resolveFetchTarget('org/model', 'a b.json', store(), at)).toBeNull();
+		expect(resolveFetchTarget('org/model', '', store(), at)).toBeNull();
 	});
 });
 
 describe('resolveFetchTarget — accepted', () => {
-	test('a real catalog id resolves target + url, pinning /resolve/main/', () => {
+	test('a real catalog id resolves target + url at the IMMUTABLE revision, never a branch', () => {
 		const store = join(scratch, 'ok');
-		const got = resolveFetchTarget('onnx-community/whisper-tiny.en', 'config.json', store);
+		const got = resolveFetchTarget('onnx-community/whisper-tiny.en', 'config.json', store, {
+			revision: REVISION,
+		});
 		expect(got).not.toBeNull();
 		expect(got?.target).toBe(join(store, 'onnx-community/whisper-tiny.en', 'config.json'));
-		expect(got?.url).toBe(`${HUB_BASE}/onnx-community/whisper-tiny.en/resolve/main/config.json`);
-		expect(got?.url).toContain('/resolve/main/');
+		expect(got?.url).toBe(
+			`${HUB_BASE}/onnx-community/whisper-tiny.en/resolve/${REVISION}/config.json`,
+		);
+		expect(got?.url).not.toContain('/resolve/main/');
 		expect(got?.url.startsWith('https://')).toBe(true);
+	});
+
+	test('a branch name is not a revision: `main` is refused (CARRY-06)', () => {
+		const store = join(scratch, 'ok');
+		expect(
+			resolveFetchTarget('onnx-community/whisper-tiny.en', 'config.json', store, {
+				revision: 'main',
+			}),
+		).toBeNull();
+		expect(
+			resolveFetchTarget('onnx-community/whisper-tiny.en', 'config.json', store, {
+				revision: REVISION.slice(0, 39),
+			}),
+		).toBeNull();
 	});
 
 	test('a nested weights path stays under the store root', () => {
@@ -93,6 +152,7 @@ describe('resolveFetchTarget — accepted', () => {
 			'onnx-community/whisper-tiny.en',
 			'onnx/encoder_model.onnx',
 			store,
+			{ revision: REVISION },
 		);
 		expect(got?.target.startsWith(store + sep)).toBe(true);
 	});
@@ -157,6 +217,7 @@ describe('downloadModel — orchestration through the injected fetchFile', () =>
 		const seen: string[] = [];
 		const report = await downloadModel('org/model', undefined, {
 			store: join(scratch, 'dl1'),
+			pins: pinsFor('org/model', ASR_FILES),
 			fetchFile: stub(['generation_config.json'], seen),
 		});
 		expect(report.skipped).toEqual(['generation_config.json']);
@@ -174,6 +235,7 @@ describe('downloadModel — orchestration through the injected fetchFile', () =>
 		const seen: string[] = [];
 		const report = await downloadModel('org/model', undefined, {
 			store: join(scratch, 'dl2'),
+			pins: pinsFor('org/model', ASR_FILES),
 			fetchFile: stub(['onnx/encoder_model.onnx', 'onnx/decoder_model_merged.onnx'], seen),
 		});
 		expect(report.ok).toBe(false);
@@ -186,7 +248,11 @@ describe('downloadModel — orchestration through the injected fetchFile', () =>
 		const report = await downloadModel(
 			'org/model',
 			{ encoder_model: 'fp32', decoder_model_merged: 'q8' },
-			{ store: join(scratch, 'dl3'), fetchFile: stub([], seen) },
+			{
+				store: join(scratch, 'dl3'),
+				pins: pinsFor('org/model', ASR_FILES),
+				fetchFile: stub([], seen),
+			},
 		);
 		expect(seen).toContain('onnx/decoder_model_merged_quantized.onnx');
 		expect(report.ok).toBe(true);
@@ -196,6 +262,7 @@ describe('downloadModel — orchestration through the injected fetchFile', () =>
 		const seen: string[] = [];
 		const report = await downloadModel('org/segmentation', undefined, {
 			store: join(scratch, 'dl4'),
+			pins: pinsFor('org/segmentation', DIARIZATION_FILES),
 			commonFiles: DIARIZATION_COMMON_FILES,
 			optionalFiles: [],
 			fetchFile: stub(['preprocessor_config.json'], seen),
@@ -216,6 +283,7 @@ describe('downloadModel — orchestration through the injected fetchFile', () =>
 		const announced: string[] = [];
 		await downloadModel('org/model', undefined, {
 			store: join(scratch, 'dl5'),
+			pins: pinsFor('org/model', ASR_FILES),
 			onFile: (f) => announced.push(f),
 			fetchFile: stub([], seen),
 		});
@@ -227,6 +295,7 @@ describe('downloadModel — orchestration through the injected fetchFile', () =>
 		const seen: string[] = [];
 		const report = await downloadModel('org/model', undefined, {
 			store,
+			pins: pinsFor('org/model', ASR_FILES),
 			fetchFile: stub(
 				[
 					...COMMON_FILES,
@@ -285,6 +354,7 @@ describe('downloadModel records completion in the manifest', () => {
 			{ encoder_model: 'fp32' },
 			{
 				store,
+				pins: pinsFor(model, ASR_FILES),
 				fetchFile: async (modelId, file, target) => {
 					const path = join(target, modelId, file);
 					mkdirSync(dirname(path), { recursive: true });
@@ -295,6 +365,13 @@ describe('downloadModel records completion in the manifest', () => {
 		);
 		expect(report.ok).toBe(true);
 		expect(expectedSize(store, model, 'config.json')).toBe(5);
+		// …and, since the bytes matched the pin, the DIGEST and REVISION too.
+		expect(expectedDigest(store, model, 'config.json')).toBe(sha256('BYTES'));
+		expect(
+			JSON.parse(readFileSync(join(store, model, '.dedalo_model.json'), 'utf8')).files[
+				'config.json'
+			].revision,
+		).toBe(REVISION);
 	});
 });
 
@@ -303,7 +380,10 @@ describe('the inline duplicates are GONE from the production file', () => {
 		const source = await Bun.file(
 			new URL('../../src/core/ai/model_fetch.ts', import.meta.url),
 		).text();
-		// URL policy: the template literal now lives only in resolveFetchTarget.
+		// URL policy: the template literal now lives only in resolveFetchTarget —
+		// and it names the pinned REVISION; `/resolve/main/` appears only in the
+		// prose that explains why it was retired.
+		expect(source.split('/resolve/${source.revision}/').length - 1).toBe(1);
 		expect(source.split('/resolve/main/').length - 1).toBe(1);
 		// The argv array literal was replaced by the curlArgv call.
 		expect(source).not.toContain('const argv = [');
@@ -333,6 +413,7 @@ describe('downloadModel — an explicit file list is the whole plan', () => {
 		const report = await downloadModel('acme/model', undefined, {
 			store,
 			files: ['tokenizer.json'],
+			pins: pinsFor('acme/model', ['tokenizer.json'], '{}'),
 			fetchFile: async (_modelId, file, target) => {
 				asked.push(file);
 				mkdirSync(dirname(join(target, 'acme/model', file)), { recursive: true });

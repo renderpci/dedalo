@@ -233,3 +233,21 @@ export async function readMatrixRecordBatch(
 	}
 	return byId;
 }
+
+/**
+ * EVERY section_id a section holds, ascending — the enumeration the archive
+ * extraction (core/archive/extract.ts) walks. It answers ids only: the rows
+ * themselves are read in batches through readMatrixRecordBatch, so a section of
+ * a million records never has to be held in memory as parsed jsonb twice.
+ */
+export async function readSectionIdsOfSection(
+	tableName: string,
+	sectionTipo: string,
+): Promise<number[]> {
+	assertMatrixTable(tableName);
+	const rows = (await sql.unsafe(
+		`SELECT section_id FROM "${tableName}" WHERE section_tipo = $1 ORDER BY section_id`,
+		[sectionTipo],
+	)) as { section_id: number }[];
+	return rows.map((row) => Number(row.section_id));
+}

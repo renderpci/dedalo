@@ -11,14 +11,25 @@
 #   sudo cp deploy/dedalo-ts.service /etc/systemd/system/
 #   sudo systemctl daemon-reload && sudo systemctl enable --now dedalo-ts
 #
-# Pair with dedalo-ts-watchdog.timer (health-checks /health over the unix
-# socket and restarts on failure) — systemd's native WatchdogSec requires
-# sd_notify, which Bun does not speak; the curl timer is the equivalent.
+# The health watchdog (dedalo-ts-watchdog.timer: curls /health over the unix
+# socket and restarts/rolls back on failure) comes WITH this unit — Wants= and
+# [Install] Also= below — so the two commands above enable it too. systemd's
+# native WatchdogSec requires sd_notify, which Bun does not speak; the curl timer
+# is the equivalent.
 
 [Unit]
 Description=Dedalo TS server (Bun)
 After=network.target postgresql.service
 Wants=postgresql.service
+# THE HEALTH CONSUMER IS PART OF THE UNIT, NOT OF THE RUNBOOK (P2-33 / OPS-09).
+# systemd's native WatchdogSec needs sd_notify, which Bun does not speak; the
+# equivalent here is the curl timer, which polls /health every 30 s and escalates
+# to dedalo-ts-restart.service or dedalo-ts-rollback.service. It used to be
+# enabled only by a hand-typed `systemctl enable --now dedalo-ts-watchdog.timer`,
+# so an operator who followed the two-line install at the top of this file got a
+# server with NO consumer for its own 503 — the same hole the compose stacks had.
+# Wants= pulls the timer in with the server; [Install] Also= enables it with it.
+Wants=dedalo-ts-watchdog.timer
 
 # Crash-loop budget. systemd's DEFAULT is 5 starts per 10 s, after which the unit
 # is left in `failed` and NOTHING restarts it — with RestartSec=3 that ceiling sits
@@ -118,3 +129,5 @@ LimitNOFILE=65536
 
 [Install]
 WantedBy=multi-user.target
+# `systemctl enable dedalo-ts` enables the health watchdog too — see Wants= above.
+Also=dedalo-ts-watchdog.timer

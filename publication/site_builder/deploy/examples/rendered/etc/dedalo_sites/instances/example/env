@@ -1,4 +1,4 @@
-# dedalo-provision: example env 305f284bf2dc02150dc58e89f23c6345b8e7d01f8a62af556b3a5af9018bc61f
+# dedalo-provision: example env c080446ac177bc014ef007603d1a9ae4861c33bccf809ec57f744bafabec34ec
 # GENERATED FILE — do not edit.
 #
 # The environment of the Dédalo site-builder daemon for instance 'example'.
@@ -27,8 +27,11 @@
 # Writing today's default here would freeze it on this host, so that the day the daemon
 # changed the number, nothing would move. State a limit in instance.json to override it.
 
+AGENT_CONFINEMENT="systemd_scope"
 AGENT_DRIVER="claude_code"
 AGENT_HOME="/var/lib/dedalo_sites/example/home"
+AGENT_UNIT_PREFIX="dedalo-site-example-agent-"
+AGENT_USER="dedalo-agent-example"
 AUDIT_DIR="/srv/dedalo_audit/example"
 CLAUDE_CODE_BIN="/usr/local/bin/claude"
 DEDALO_SITE_INSTANCE="example"

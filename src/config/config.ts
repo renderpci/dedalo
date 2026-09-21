@@ -310,6 +310,13 @@ export interface MediaBinariesConfig {
 	readonly pdftohtml: string;
 	readonly pdfinfo: string;
 	readonly ocrmypdf: string; // PDF_OCR_ENGINE
+	/**
+	 * Ghostscript's CLI (DEDALO_GS_PATH) — the ONLY PDF rasterizer in the engine.
+	 * ImageMagick is not used for this: it can only read a PDF by spawning gs as a
+	 * DELEGATE, a process the engine never sees and therefore cannot bound or kill
+	 * (engine/ghostscript.ts). The hardened policy denies that delegate.
+	 */
+	readonly ghostscript: string;
 	readonly file: string; // libmagic CLI fallback for ambiguous MIME sniffs
 	/**
 	 * librsvg's CLI (DEDALO_RSVG_CONVERT_PATH) — the ONLY SVG rasterizer in the
@@ -402,6 +409,55 @@ export interface MediaConfig {
 	readonly imagePrintDpi: number;
 	/** Rasterization resolution for the SVG thumb (DEDALO_SVG_THUMB_DPI). */
 	readonly svgThumbDpi: number;
+	/**
+	 * The resource bound every ImageMagick process runs under (DEDALO_MAGICK_LIMIT_*,
+	 * audit MEDIA-01). Spliced as `-limit` argv by `magickResourceLimitArgs()`
+	 * (core/media/engine/binaries.ts); the shipped `imagemagick-policy/policy.xml`
+	 * carries the hard ceiling these values may not exceed. memory/map/area/disk
+	 * degrade to a slower cache; width/height/time REFUSE, which is what stops a
+	 * decode bomb on the upload request path.
+	 */
+	readonly magickLimits: {
+		readonly memory: string;
+		readonly map: string;
+		readonly area: string;
+		readonly disk: string;
+		readonly width: number;
+		readonly height: number;
+		readonly time: number;
+		/**
+		 * How many IMAGES one source may contain (`-limit list-length`). The only one
+		 * of these that bounds a `-ping` HEADER read: `-ping` skips the pixels but
+		 * still enumerates every scene, so a 200000-frame GIF cost a header read
+		 * 8.73 GB RSS with every pixel-cache limit armed (measured 2026-09-05).
+		 */
+		readonly listLength: number;
+	};
+	/**
+	 * CONVERTER ADMISSION (audit MEDIA-01, the plural half): how many heavy
+	 * conversions run at once, and how long one may wait for a lane before it is
+	 * refused with `rate.limited`. `magickLimits` bounds ONE conversion; this
+	 * bounds K of them, which is what an upload request path multiplies.
+	 */
+	readonly convert: {
+		readonly concurrency: number;
+		readonly queueSeconds: number;
+	};
+	/**
+	 * AV ADMISSION (audit MEDIA-01, the ffmpeg half): how many ffmpeg PRODUCER
+	 * processes this engine runs at once, and how long one may wait for a lane.
+	 * A separate pool from `convert` on purpose — an image conversion holds a
+	 * permit for seconds, an AV producer for minutes, and a shared pool would let
+	 * an upload preview starve a transcode (and a job lane deadlock behind an
+	 * image). The doors are `engine/ffmpeg.ts:runProducer` and
+	 * `tools/fragment.ts:runFfmpeg`, which is what makes the two AV API actions
+	 * (`create_posterframe`, `download_fragment`) bounded even though they are
+	 * awaited INLINE on the request and belong to no job lane.
+	 */
+	readonly convertAv: {
+		readonly concurrency: number;
+		readonly queueSeconds: number;
+	};
 	/** Retouched-image twin quality (PHP DEDALO_IMAGE_QUALITY_RETOUCHED, default 'modified'). */
 	readonly imageQualityRetouched: string;
 	/**
@@ -607,6 +663,15 @@ export interface ErrorReportConfig {
 	/** Days received reports are retained before the opportunistic prune deletes
 	 * older rows (DEDALO_ERROR_REPORT_RETENTION_DAYS, 0 = keep forever). */
 	readonly retentionDays: number;
+	/**
+	 * Highest number of reports the store may hold (DEDALO_ERROR_REPORT_MAX_ROWS,
+	 * 0 = no ceiling). The AGE window cannot bound a burst — a flood arriving today
+	 * is inside the window for the whole of it, and a report may carry an inline
+	 * screenshot — so the store also needs a row ceiling (audit SEC-20). Over the
+	 * ceiling the OLDEST rows are evicted, never the incoming one refused: refusing
+	 * would let a flood silence the genuine reports the intake exists for.
+	 */
+	readonly maxRows: number;
 }
 
 /**
@@ -819,6 +884,24 @@ function buildMediaConfig(): MediaConfig {
 		}),
 		imagePrintDpi: readNumber('DEDALO_IMAGE_PRINT_DPI'),
 		svgThumbDpi: readNumber('DEDALO_SVG_THUMB_DPI'),
+		magickLimits: Object.freeze({
+			memory: readString('DEDALO_MAGICK_LIMIT_MEMORY'),
+			map: readString('DEDALO_MAGICK_LIMIT_MAP'),
+			area: readString('DEDALO_MAGICK_LIMIT_AREA'),
+			disk: readString('DEDALO_MAGICK_LIMIT_DISK'),
+			width: readNumber('DEDALO_MAGICK_LIMIT_WIDTH'),
+			height: readNumber('DEDALO_MAGICK_LIMIT_HEIGHT'),
+			time: readNumber('DEDALO_MAGICK_LIMIT_TIME'),
+			listLength: readNumber('DEDALO_MAGICK_LIMIT_LIST_LENGTH'),
+		}),
+		convert: Object.freeze({
+			concurrency: readNumber('DEDALO_MEDIA_CONVERT_CONCURRENCY'),
+			queueSeconds: readNumber('DEDALO_MEDIA_CONVERT_QUEUE_SECONDS'),
+		}),
+		convertAv: Object.freeze({
+			concurrency: readNumber('DEDALO_MEDIA_AV_CONCURRENCY'),
+			queueSeconds: readNumber('DEDALO_MEDIA_AV_QUEUE_SECONDS'),
+		}),
 		imageQualityRetouched: readString('DEDALO_IMAGE_QUALITY_RETOUCHED'),
 		// null (unset) is MEANINGFUL: it means "derive the defaults from this install's
 		// quality catalog", which is not the same as an explicitly EMPTY list (= no folder
@@ -842,6 +925,7 @@ function buildMediaConfig(): MediaConfig {
 			pdftohtml: readString('DEDALO_PDFTOHTML_PATH'),
 			pdfinfo: readString('DEDALO_PDFINFO_PATH'),
 			ocrmypdf: readString('PDF_OCR_ENGINE'),
+			ghostscript: readString('DEDALO_GS_PATH'),
 			file: readString('DEDALO_FILE_BIN_PATH'),
 			rsvgConvert: readString('DEDALO_RSVG_CONVERT_PATH'),
 		}),
@@ -1206,5 +1290,6 @@ export const config: DedaloConfig = Object.freeze({
 		allowedIps: readEnv('DEDALO_ERROR_REPORT_ALLOWED_IPS'),
 		relayTimeoutMs: Math.max(1000, readNumber('DEDALO_ERROR_REPORT_TIMEOUT_MS')),
 		retentionDays: Math.max(0, readNumber('DEDALO_ERROR_REPORT_RETENTION_DAYS')),
+		maxRows: Math.max(0, readNumber('DEDALO_ERROR_REPORT_MAX_ROWS')),
 	}),
 });

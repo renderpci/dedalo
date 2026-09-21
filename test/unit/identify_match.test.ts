@@ -10,7 +10,7 @@
  * mostly measure cataloguing effort.
  */
 
-import { describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import type { ComponentGrant } from '../../src/core/identify/component_access.ts';
 import {
 	type AccessFilter,
@@ -27,6 +27,7 @@ import type {
 	IdentificationProfile,
 } from '../../src/core/identify/types.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import { DB_READY } from '../helpers/db_ready.ts';
 
 /**
  * The scoring cases are about scoring, so they run as an unscoped admin — the
@@ -859,3 +860,138 @@ describe('findMatches — per-component grants', () => {
 		expect(asked).toEqual(['test3|deity', 'test3|symbol']);
 	});
 });
+
+/**
+ * THE MEMO IS HONEST (P1-3 / SEC-12). `memoizeReadability` keys on the
+ * DECLARED path and the candidate's section; it is the pre-check that mints
+ * `restricted`. The LANDED-section authorization is INSIDE the production
+ * reader — `findMatches` binds `readPathValues` to ONE scope carrying the
+ * injected `componentGrant`, so a locator that lands on a sibling section is
+ * refused there, per record, where the memo cannot reach. This block runs the
+ * REAL reader (no `readValues` injected) over scratch rows: a seed whose hop
+ * lands on a `test2` sibling in the same table, under a declared `test3` path.
+ *
+ * SCRATCH: three matrix_test rows (ids 9990121-9990123), swept with a
+ * throw-if-nothing-deleted.
+ */
+describe.if(DB_READY)(
+	'findMatches — the landed-section check runs inside the reader, under the injected grant',
+	() => {
+		const SEED_ID = 9990121;
+		const CANDIDATE_ID = 9990122;
+		const SIBLING_ID = 9990123;
+		const seed = { sectionTipo: 'test3', sectionId: SEED_ID };
+		const LEGEND = 'the sibling legend both records share';
+		const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
+		const allowAll: AccessFilter = async (_principal, records) => [...records];
+		const onePool = async () => [{ sectionTipo: 'test3', sectionId: CANDIDATE_ID }];
+		/** Declared test3 → test3, but the stored locator points at test2. */
+		const legend = {
+			id: 'legend',
+			label: 'Legend',
+			path: [
+				{ section_tipo: 'test3', component_tipo: 'test54' },
+				{ section_tipo: 'test3', component_tipo: 'test52' },
+			],
+			role: 'identifying',
+			weight: 1,
+			mode: 'normalized_text',
+		};
+		const profile = () =>
+			parseProfile({ id: 'p', label: 'P', sectionTipos: ['test3'], criteria: [legend] });
+
+		async function insertRow(
+			sectionTipo: string,
+			sectionId: number,
+			columns: Record<string, unknown>,
+		) {
+			const { sql } = await import('../../src/core/db/postgres.ts');
+			await sql.unsafe(
+				`INSERT INTO matrix_test (section_id, section_tipo, relation, string)
+				 VALUES ($1, $2, $3::text::jsonb, $4::text::jsonb)`,
+				[
+					sectionId,
+					sectionTipo,
+					JSON.stringify(columns.relation ?? {}),
+					JSON.stringify(columns.string ?? {}),
+				],
+			);
+		}
+		const toSibling = {
+			test54: [
+				{
+					id: 1,
+					type: 'dd151',
+					section_id: SIBLING_ID,
+					section_tipo: 'test2',
+					from_component_tipo: 'test54',
+				},
+			],
+		};
+
+		beforeAll(async () => {
+			await insertRow('test3', SEED_ID, { relation: toSibling });
+			await insertRow('test3', CANDIDATE_ID, { relation: toSibling });
+			await insertRow('test2', SIBLING_ID, {
+				string: { test52: [{ id: 1, lang: 'lg-eng', value: LEGEND }] },
+			});
+		});
+		afterAll(async () => {
+			const { sql } = await import('../../src/core/db/postgres.ts');
+			const removed = (await sql.unsafe(
+				'DELETE FROM matrix_test WHERE section_id BETWEEN $1 AND $2 RETURNING section_id',
+				[SEED_ID, SIBLING_ID],
+			)) as unknown[];
+			if (removed.length !== 3) {
+				throw new Error(`match landed sweep removed ${removed.length}, expected 3`);
+			}
+		});
+
+		test('POSITIVE CONTROL: with test2 granted the real reader lands on the sibling and the pair agrees', async () => {
+			const report = await findMatches({
+				profile: profile(),
+				seed,
+				principal: SUPERUSER,
+				findPool: onePool,
+				filterAccessible: allowAll,
+				componentGrant: async () => 1,
+			});
+			// ONE verdict shape, not three emptiness checks: the agreeing candidate
+			// is the positive that proves the landed value was actually read.
+			expect({
+				blind: report.blindCriteria,
+				restricted: report.restrictedCriteria,
+				results: report.results.map((r) => [r.sectionId, r.outcomes[0]?.agreed]),
+			}).toEqual({ blind: [], restricted: [], results: [[CANDIDATE_ID, true]] });
+			expect(JSON.stringify(report)).toContain(LEGEND);
+		});
+
+		test('with test2 DENIED the declared pre-check passes (memo: test3 path), the reader refuses the LANDED record, and the value is never quoted', async () => {
+			const asked: string[] = [];
+			const report = await findMatches({
+				profile: profile(),
+				seed,
+				principal: SUPERUSER,
+				findPool: onePool,
+				filterAccessible: allowAll,
+				componentGrant: async (_principal, sectionTipo, componentTipo) => {
+					asked.push(`${sectionTipo}|${componentTipo}`);
+					return sectionTipo === 'test2' ? 0 : 1;
+				},
+			});
+			// The DECLARED check saw only test3 and passed (NOT restricted); the
+			// reader, refusing the landed test2 record, read nothing: the seed is
+			// BLIND on this criterion (the positive) and no candidate can agree.
+			expect({
+				blind: report.blindCriteria,
+				restricted: report.restrictedCriteria,
+				results: report.results,
+			}).toEqual({ blind: ['legend'], restricted: [], results: [] });
+			expect(JSON.stringify(report)).not.toContain(LEGEND);
+			// The grant was asked — the floor: an unasked grant is a reader that
+			// never ran — and about the LANDED section, inside the reader.
+			expect(asked.length).toBeGreaterThan(0);
+			expect(asked).toContain('test2|test52');
+		});
+	},
+);

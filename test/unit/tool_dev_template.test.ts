@@ -92,6 +92,25 @@ describe('tool_dev_template exemplar — contract coverage', () => {
 		}
 	});
 
+	test("every 'targets' action carries its REQUIRED targets extractor", () => {
+		const scoped = Object.entries(tool.apiActions).filter(
+			([, spec]) => spec.permission === 'targets',
+		);
+		expect(scoped.length).toBeGreaterThan(0);
+		for (const [name, spec] of scoped) {
+			expect(typeof spec.targets, `${name} must declare targets`).toBe('function');
+			// The exemplar's extractor derives the (sqo section × selected component)
+			// pairs — the shape a scaffolded batch tool copies.
+			expect(
+				spec.targets!({
+					sqo: { section_tipo: ['test3'] },
+					components_selection: [{ tipo: 'test52' }],
+				}),
+			).toEqual([{ section_tipo: 'test3', tipo: 'test52' }]);
+			expect(spec.targets!({})).toEqual([]);
+		}
+	});
+
 	test('backgroundRunnable is a non-empty subset of apiActions', () => {
 		const background = tool.backgroundRunnable ?? [];
 		expect(background.length).toBeGreaterThan(0);

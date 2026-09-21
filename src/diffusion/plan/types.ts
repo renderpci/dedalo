@@ -250,10 +250,12 @@ export interface PlanDegradation {
 	 * Machine-readable cause (one per known degradation kind).
 	 *
 	 * `retired_parser_spelling` (P2-13 / PUB-08): the field carries the v6
-	 * `process_dato.parser` block, which nothing reads — so it publishes with no
-	 * transform at all, where the v7 spelling naming an unknown fn would have been
-	 * a hard compile error. Silence about a directive the engine no longer reads
-	 * is worse than loudness about a misspelt one.
+	 * `process_dato` directive — the shipped STRING fn shape
+	 * (`"diffusion_sql::resolve_value"`) or an object with a `parser` — which
+	 * nothing reads, so it publishes with no transform at all, where the v7
+	 * spelling naming an unknown fn would have been a hard compile error.
+	 * Silence about a directive the engine no longer reads is worse than
+	 * loudness about a misspelt one.
 	 */
 	reason: 'dangling_ddo_tipo' | 'retired_parser_spelling';
 	/** The offending ddo tipo (empty for a degradation that is not about a ddo). */

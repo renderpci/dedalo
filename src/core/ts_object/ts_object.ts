@@ -17,9 +17,13 @@
  *   portal/autocomplete_hi (locators → term strings, cached), the 'M' icon's
  *   model_value badge (get_value via the component's request_config ddo_map).
  *   DEFERRED (ledgered): component_relation_related inverse-reference merge (tree
- *   term rarely a related component), component_svg URL/file-exists resolution
- *   (needs media machinery), get_indexation_grid (tag-indexation grid — counts
- *   only, per plan scope decision 3), the legacy component_relation_struct skip.
+ *   term rarely a related component) and the legacy component_relation_struct
+ *   skip (PHP drops a relation_index tagged legacy component_relation_struct;
+ *   TS emits it, so a v6-legacy install renders one extra count badge).
+ *   CLOSED SINCE: component_svg URL/file-exists resolution (2026-09-01,
+ *   WC-2026-09-01-ts-object-svg-url) and get_indexation_grid, which is served
+ *   by src/core/section/indexation_grid.ts and differential-gated — the line
+ *   claiming otherwise was stale.
  *
  * PHP anchors: get_ar_elements (:212), parse_child_data (:329), get_data (:488),
  * get_children_data (:594), has_children_of_type (:714), is_indexable (:827),
@@ -27,6 +31,7 @@
  * process_element_details/format_component_data/resolve_element_value (:1320-1604).
  */
 
+import { statSync } from 'node:fs';
 import { config } from '../../config/config.ts';
 import { canonicalizeStoredSectionId, isSectionId } from '../concepts/section_id.ts';
 import { type MatrixRecord, readMatrixRecord } from '../db/matrix.ts';
@@ -47,6 +52,7 @@ import {
 	getMatrixTableFromTipo,
 	getModelByTipo,
 	getNode,
+	getSectionRealTipo,
 	getTranslatableByTipo,
 } from '../ontology/resolver.ts';
 import { getSectionMap } from '../ontology/section_map.ts';
@@ -166,12 +172,9 @@ async function readDdoMap(sectionTipo: string): Promise<DdoMapEntry[] | null> {
 	let rows = await read(sectionTipo);
 	let props = rows[0]?.properties ?? null;
 	if (props?.show?.ddo_map === undefined) {
-		// virtual section → real section fallback (relations[0].tipo).
-		const nodeRows = (await sql.unsafe('SELECT relations FROM dd_ontology WHERE tipo = $1', [
-			sectionTipo,
-		])) as { relations: { tipo?: unknown }[] | null }[];
-		const real = nodeRows[0]?.relations?.[0]?.tipo;
-		if (typeof real === 'string' && real !== sectionTipo) {
+		// virtual section → real section fallback (the one law, getSectionRealTipo).
+		const real = await getSectionRealTipo(sectionTipo);
+		if (real !== sectionTipo) {
 			rows = await read(real);
 			props = rows[0]?.properties ?? null;
 		}
@@ -390,7 +393,7 @@ async function getComponentDataLang(
 	tipo: string,
 	model: string,
 	lang: string,
-): Promise<unknown[]> {
+): Promise<unknown[] | string> {
 	if (model === 'component_relation_index') return [];
 	if (model === 'component_relation_children') {
 		return getChildren(sectionId, sectionTipo, tipo);
@@ -420,6 +423,18 @@ async function getComponentDataLang(
 		items = items.filter((item) => (item.lang ?? 'lg-nolan') === elementLang);
 	}
 
+	// format_component_data: component_svg → the URL of the file ON DISK, as a
+	// STRING, replacing the stored media-item array outright (PHP :1349). The
+	// client renders the tree's `img` element straight from this value
+	// (render_ts_line.js `src: current_element.value`), so an array reaches its
+	// DOM builder as a non-URL and is refused — the thesaurus term thumbnails
+	// (tool_cataloging's glyph illustrations) simply never appeared. '' when
+	// there is no file: the client's own `if(current_element.value)` is then the
+	// suppression, exactly as in PHP.
+	if (model === 'component_svg') {
+		return await svgElementUrl(tipo, sectionTipo, sectionId);
+	}
+
 	// format_component_data: portal/autocomplete_hi → resolve locators to strings.
 	if (model === 'component_portal' || model === 'component_autocomplete_hi') {
 		const values: unknown[] = [];
@@ -429,6 +444,64 @@ async function getComponentDataLang(
 		return values;
 	}
 	return items;
+}
+
+/**
+ * The web URL of a component_svg's default-quality file, or '' when nothing is
+ * on disk (PHP format_component_data's component_svg case: get_media_filepath →
+ * file_exists → get_url, else '').
+ *
+ * WIRE (WC-2026-09-01-ts-object-svg-url): PHP appended the REQUEST's start time
+ * as the cache-buster (`?<start_time()>`), a value that changes on every read
+ * and therefore re-downloads every thumbnail of every tree paint. The bust here
+ * is the file's own mtime, so a browser re-fetches exactly when the file
+ * changed — which is what a cache-buster is for. The path itself is byte-identical.
+ *
+ * Fail-soft, like every other media URL emitter here: an unresolvable path
+ * (an id that is not a record address, a component whose ontology path cannot be
+ * built) yields '' rather than failing the whole tree node.
+ */
+async function svgElementUrl(
+	tipo: string,
+	sectionTipo: string,
+	sectionId: number,
+): Promise<string> {
+	try {
+		const { mediaTypeOf } = await import('../concepts/media.ts');
+		const spec = mediaTypeOf('component_svg');
+		if (spec === null) return '';
+		// Namespace form on purpose: a destructured binding reads as a BARE
+		// reference to the section-scoped seam, and the shrink-only census that
+		// guards it (media_ingest_properties_native) counts such a binding as one.
+		// This call is the RECORD-scoped three-argument form.
+		const ontologyPath = await import('../media/ontology_path.ts');
+		const { buildMediaLocation } = await import('../media/path.ts');
+		// RECORD-scoped, not section-scoped: only this form resolves
+		// `properties.additional_path` — the sibling component's value on THIS
+		// record, which is the folder the WRITER used. Asking the two-argument
+		// form leaves it undefined and the numeric max_items_folder bucket wins,
+		// so on an install that names its buckets the thumbnail is stat-ed at a
+		// path nothing was ever written to and disappears for good.
+		const pathOptions = await ontologyPath.resolveMediaPathOptions(tipo, sectionTipo, sectionId);
+		// The identifier's lang follows the NODE's translatable flag, exactly as
+		// the writer's own resolver does (media/tool_support.ts) and as PHP's
+		// get_id does — `component_svg` is not class-translatable, but the flag
+		// lives on the dd_ontology node, and a node that carries it stores
+		// `<id>_<lang>.svg`.
+		const lang = (await getTranslatableByTipo(tipo)) ? currentDataLang() : null;
+		const location = buildMediaLocation(
+			spec,
+			{ componentTipo: tipo, sectionTipo, sectionId, lang },
+			spec.defaultQuality,
+			spec.defaultExtension,
+			pathOptions,
+		);
+		const stats = statSync(location.absolutePath, { throwIfNoEntry: false });
+		if (stats === undefined) return '';
+		return `${config.media.webBase}${location.relativePath}?${Math.trunc(stats.mtimeMs)}`;
+	} catch {
+		return '';
+	}
 }
 
 /** get_component_data_fallback: main-lang → nolan → any non-empty (PHP :310). */
@@ -583,10 +656,42 @@ export async function buildNodeData(
 			sectionId,
 			options,
 		);
-		if (valid) data.ar_elements.push(elementObj);
+		if (valid) {
+			assertImgElementIsRenderable(elementObj, sectionTipo);
+			data.ar_elements.push(elementObj);
+		}
 	}
 
 	return data;
+}
+
+/**
+ * An `img` element's value is a URL STRING or nothing — the CHOKEPOINT for the
+ * class of bug that made this element ship an array (see
+ * WC-2026-09-01-ts-object-svg-url).
+ *
+ * The client assigns the value straight to an `<img>` src
+ * (render_ts_line.js), where the scheme allowlist refuses anything that is not
+ * an http(s) URL — silently, one console warning per node. Only
+ * `component_svg` resolves to a URL here (PHP's format_component_data converts
+ * that model and no other), so an ontology that declares `type:'img'` over
+ * ANY other media model — `component_image` is the live case, `test213`'s
+ * `test99` — hands the client the raw stored items.
+ *
+ * So the engine says so, once, where an operator can act on it: a
+ * configuration failure gets `console.error` (engineering/CONVENTIONS.md), and
+ * the value is emptied so the client renders NOTHING rather than an empty
+ * `<img>` shell. Never a throw: a mis-declared column must not take down the
+ * whole tree of a heritage install.
+ */
+function assertImgElementIsRenderable(element: TsElement, sectionTipo: string): void {
+	if (element.type !== 'img' || typeof element.value === 'string') return;
+	console.error(
+		`[ts_object] ddo_map declares type:'img' over '${element.tipo}' (section '${sectionTipo}'), ` +
+			`whose model resolves to no URL — only component_svg does. The client cannot render it; ` +
+			'emitting nothing. Fix the section_list_thesaurus ddo_map or the component model.',
+	);
+	element.value = '';
 }
 
 /** PHP process_element_details (:1320): resolve each tipo, populate elementObj. */
@@ -793,7 +898,9 @@ async function resolveElementValue(
 	elementObj: TsElement,
 	elementTipo: string,
 	model: string,
-	componentData: unknown[],
+	// `mixed` in PHP: format_component_data replaces a component_svg's data with
+	// its URL STRING, everything else stays an item array.
+	componentData: unknown[] | string,
 	data: TsNodeData,
 	record: MatrixRecord | null,
 	sectionTipo: string,
@@ -950,8 +1057,8 @@ export interface ChildrenDataResult {
 
 /**
  * Load, paginate and format the direct children of a node (PHP get_children_data).
- * countChildrenOrNull → load-and-count fallback when null. Paginate only when
- * limit>0 && total>limit. default limit 300.
+ * countChildrenOrNull → load-and-count fallback when null. Paginate whenever
+ * limit>0 (a client-supplied total never switches paging off). default limit 300.
  */
 export async function getChildrenData(
 	sectionTipo: string,
@@ -990,10 +1097,16 @@ export async function getChildrenData(
 		currentPagination.total = total;
 	}
 
+	// The read is PAGED whenever the limit is positive (audit P2-31 / CLI-30).
+	// PHP paged only when `total > limit`, and `total` here may be the CLIENT's
+	// own cached count — so a client total at or below its limit switched
+	// paging OFF and the whole branch came back through a request that named a
+	// limit. The total still drives nothing but the echo; the limit itself is
+	// clamped at the door (ts_api clampChildrenPagination), so it is never 0
+	// from a client. A non-positive limit can only be server-internal.
 	const limit = Number(currentPagination.limit ?? defaultLimit);
 	const offset = Number(currentPagination.offset ?? 0);
-	const total = Number(currentPagination.total ?? 0);
-	const usePagination = limit > 0 && total > limit;
+	const usePagination = limit > 0;
 	const children = usePagination
 		? await getChildren(sectionId, sectionTipo, childrenTipo, limit, offset)
 		: await getChildren(sectionId, sectionTipo, childrenTipo);

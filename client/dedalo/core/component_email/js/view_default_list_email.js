@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_join} from '../../common/js/utils/render_escape.js'
 	import {attach_item_dataframe} from '../../component_common/js/component_common.js'
 	import {activate_edit_in_list} from '../../component_common/js/component_common.js'
 
@@ -67,7 +68,7 @@ view_default_list_email.render = async function(self, options) {
 		const entries		= data.entries || []
 		// Join all email values with the configured separator (e.g. ', ').
 		// An empty entries array produces an empty string, giving the cell a blank appearance.
-		const value_string	= entries.map(item => item.value).join(self.context.fields_separator)
+		const value_string	= render_join(entries.map(item => item.value), self.context.fields_separator, self.context.render_class)
 
 	// wrapper
 		// build_wrapper_list sets the standard CSS classes and inserts value_string as

@@ -8,7 +8,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {attach_item_dataframe} from '../../component_common/js/component_common.js'
 	import {tr} from '../../common/js/tr.js'
-	import {get_fallback_value} from '../../common/js/common.js'
+	import {render_fallback_value, render_value, escape_html} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -74,14 +74,14 @@ view_mini_text_area.render = async function(self, options) {
 	// get_fallback_value returns one string per field position: the current-language
 	// entry value if it exists, or the default-language value wrapped in <mark>.
 		const fallback_value	= data.fallback_value || []
-		const fallback			= get_fallback_value(entries, fallback_value)
+		const fallback			= render_fallback_value(entries, fallback_value, self.context.render_class)
 
 
 	// Value as string
 	// Join multi-field values and convert any embedded Dédalo markup tags
 	// (timecodes, index-in, index-out, etc.) to inline <img> thumbnails so they
 	// render correctly in contexts that do not load the full tag stylesheet.
-		const value_string = tr.add_tag_img_on_the_fly( fallback.join(self.context.fields_separator) )
+		const value_string = render_value(tr.add_tag_img_on_the_fly( fallback.join(escape_html(self.context.fields_separator)) ), self.context.render_class)
 
 	// wrapper
 	// build_wrapper_mini creates a <span class="mini <model>_mini"> and injects

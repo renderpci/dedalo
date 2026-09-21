@@ -11,8 +11,37 @@
 :root {
 	--tool_transcription: #fd7f26;
 	--tool_transcription_border: #ee6402;
+
+	// THE IDENTITY HUE IS AN EDGE, THE BUTTON FILL IS ITS OWN TOKEN.
+	// The two hover fills below carry text, and the ink they carry is
+	// `--color_white` — the THEME's ink, not a literal white (#ffffff in light,
+	// #1b1d20 in dark; the ramp flips, vars.less:19-22). The identity orange is
+	// a MID-TONE, so it cannot carry both: white on #fd7f26 is 2.55:1 in light
+	// (2.53:1 under the redesign and pine palettes, whose ink is #fffefc) while
+	// the dark twin `theme_dark.less` declares for the edge (#ff9040) carries the
+	// dark theme's near-black ink at 7.49:1. Hence one token per axis, exactly the
+	// `--accent` (fill) / `--accent-text` (ink-bearing) split the redesign line
+	// uses — and the identity hue keeps the jobs it is good at: the 4px header
+	// edge, the spinner, the splitter's dashes, the icon masks.
+	//
+	// Light: the same orange DEEPENED until white reads on it — #ffffff on
+	// #ad5510 = 5.14:1 (5.10:1 on the redesign/pine #fffefc). Same hue (26°),
+	// so the hover still reads as this tool; deep enough to be text-bearing.
+	--tool_transcription_fill: #ad5510;
+	// The rim stays one step deeper than the fill, as #ee6402 was to #fd7f26.
+	--tool_transcription_fill_border: #8f4409;
+}
+// Dark twin. In dark the identity hue is ALREADY the light-toned member of the
+// pair (theme_dark brightens it to #ff9040) and the theme ink is near-black, so
+// the fill IS the hue: #1b1d20 on #ff9040 = 7.49:1, and 6.88:1 under the
+// redesign palette's lighter #26241f ink. Aliased rather than copied so a retune
+// of the dark hue cannot leave this sheet painting a stale literal.
+:root[data-theme="dark"] {
+	--tool_transcription_fill: var(--tool_transcription);
+	--tool_transcription_fill_border: var(--tool_transcription_border);
 }
 @tool_color: var(--tool_transcription);
+@tool_fill: var(--tool_transcription_fill);
 
 // column_id (section_tool list)
 .column_section_id > .button_edit.list_tool_transcription {
@@ -474,9 +503,12 @@
 					margin: 1rem;
 					height: 3em;
 
+					// the hover fill is the text-bearing twin of the hue (see the
+					// :root block): deepened in light so the theme ink reads on it,
+					// the hue itself in dark, where the hue is already the light one
 					&:hover{
-						background-color: @tool_color;
-						border-color: var(--tool_transcription_border);
+						background-color: @tool_fill;
+						border-color: var(--tool_transcription_fill_border);
 						color: @color_white;
 					}
 				}
@@ -526,9 +558,10 @@
 						background: var(--bg_surface_alt);
 						color: var(--fg_default);
 
+						// same text-bearing fill twin as .btn_subtitles above
 						&:hover {
-							background-color: @tool_color;
-							border-color: var(--tool_transcription_border);
+							background-color: @tool_fill;
+							border-color: var(--tool_transcription_fill_border);
 							color: @color_white;
 						}
 

@@ -97,9 +97,15 @@ describe('the model store resolves what the browser needs', () => {
 		expect(config.status).toBe(200);
 	});
 
-	test('model files are immutable-cached (a second transcription re-downloads nothing)', async () => {
+	test('model files are immutable-cached (a second transcription re-downloads nothing) — PRIVATELY', async () => {
 		const response = await get(`${AI_MODEL_URL_PREFIX}${MODEL}/onnx/encoder_model.onnx`);
-		expect(response.headers.get('Cache-Control')).toContain('immutable');
+		const cacheControl = response.headers.get('Cache-Control') ?? '';
+		expect(cacheControl).toContain('immutable');
+		// ROUTE-01 residual (P1-25): `public` would let a shared/proxy cache hand
+		// the weights to the next caller with NO session — re-opening the
+		// anonymous door the session gate closed. Only the browser may keep a copy.
+		expect(cacheControl.split(',').map((part) => part.trim())).toContain('private');
+		expect(cacheControl).not.toMatch(/\bpublic\b/);
 	});
 });
 

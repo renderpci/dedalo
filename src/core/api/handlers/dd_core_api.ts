@@ -622,6 +622,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			}
 		}
 		const { readRaw } = await import('./read_raw.ts');
+		const { readDoorNotices } = await import('../../security/read_door.ts');
 		const outcome = await readRaw(
 			{
 				sectionTipo: options.section_tipo,
@@ -632,11 +633,18 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			},
 			principal,
 		);
+		// P1-3: the per-component key inside readRaw may have NARROWED the rows
+		// (a refused key is absent / null). Never silently: one notice per request.
+		const notices = readDoorNotices();
 		return {
 			status: 200,
 			// `table` is an owned top-level extension key (the client + the raw view
 			// read it by name); the raw rows are the payload.
-			body: ok(outcome.result, { requestId: context.requestId, extend: { table: outcome.table } }),
+			body: ok(outcome.result, {
+				requestId: context.requestId,
+				extend: { table: outcome.table },
+				...(notices === undefined ? {} : { notices }),
+			}),
 		};
 	},
 	create: async (rqo, context) => {
@@ -673,29 +681,13 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		const { createSectionRecord } = await import('../../section/record/create_record.ts');
 		const sectionId = await createSectionRecord(sectionTipo, principal.userId);
 
-		// Activity audit (PHP logger 'NEW' code 3, section::create_record :1159) —
-		// never fails the create. Logged at this DOOR, not inside
-		// createSectionRecord, which is also reached by duplicate/import and has no
-		// client host of its own.
-		{
-			const { logActivity, hostFromClientIp } = await import('./activity_log.ts');
-			const { getMatrixTableFromTipo } = await import('../../ontology/resolver.ts');
-			await logActivity({
-				what: 'NEW',
-				tipo: sectionTipo,
-				userId: principal.userId,
-				host: hostFromClientIp(context.clientIp),
-				data: {
-					msg: 'Created section record',
-					// int, repealing the String() minting: a record address is emitted
-					// in canonical form (WC-2026-08-10-section-id-int-canonical).
-					section_id: sectionId,
-					section_tipo: sectionTipo,
-					tipo: sectionTipo,
-					table: (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix',
-				},
-			});
-		}
+		// The 'NEW' activity row is appended by createSectionRecord itself (P1-8 /
+		// DATA-19, 2026-09-03): it used to live at this door "because the engine has
+		// no client host of its own", which left the duplicate door, the MCP create
+		// and the portal "+" each to remember it (duplicate never did). The engine
+		// reads the host from the request scope (currentRequestContext) — the same
+		// clientIp this handler holds. SAVE and DELETE rows stay at their doors:
+		// their payloads are the door's own (the oracle's per-component shape).
 		return { status: 200, body: ok(sectionId, { requestId: context.requestId }) };
 	},
 	duplicate: async (rqo, context) => {
@@ -1488,6 +1480,10 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			mode,
 			lang,
 			permissions,
+			// P1-3 / SEC-13: WITH the principal, so a section context's buttons pass
+			// the per-button grant (buildSectionButtons) — without it the builder
+			// takes the caller-cap path and emits every button, level 0 included.
+			principal,
 		});
 		return {
 			status: 200,

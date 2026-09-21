@@ -72,6 +72,7 @@ import { DedaloError } from './core/errors/dedalo_error.ts';
 import { describeInstallAllowPolicy, installInProgress } from './core/install/gate.ts';
 import { HIERARCHY_IMPORT_DIR } from './core/install/paths.ts';
 import { corsPreflightResponse, corsResponseHeaders } from './core/security/cors.ts';
+import { globalAdminSessionFromCookie } from './core/security/session_gate.ts';
 import {
 	getSession,
 	SESSION_COOKIE,
@@ -643,9 +644,11 @@ async function serveClientAsset(
  *
  * Unlike its ontology-snapshot sibling below, this is NOT a public master
  * surface: a hierarchy dump is the complete contents of a thesaurus, so the
- * route is gated on an authenticated GLOBAL-ADMIN session — the same principal
- * the maintenance area requires — and answers 404 (never 403) to everyone else,
- * so an anonymous probe cannot even confirm a file exists.
+ * route is gated on an authenticated session whose Principal is a GLOBAL ADMIN
+ * AS OF THIS REQUEST (security/session_gate.ts — the same resolver the maintenance
+ * area's dispatch uses, never the session row's login-time stamp) and answers 404
+ * (never 403) to everyone else, so an anonymous probe cannot even confirm a file
+ * exists.
  *
  * Basenames are allowlisted to exactly the two shapes the exporter produces
  * (`<tipo>.copy.gz` with safeExportTipo's tipo grammar, and the timestamped
@@ -655,9 +658,10 @@ async function serveClientAsset(
  */
 async function serveHierarchyExportFile(pathname: string, request: Request, requestId: string) {
 	const notFound = () => notFoundResponse(requestId);
-	const sessionToken = readCookie(request.headers.get('cookie') ?? '', SESSION_COOKIE);
-	const session = sessionToken !== undefined ? getSession(sessionToken) : null;
-	if (session === null || session.isGlobalAdmin !== true) return notFound();
+	// The Principal, resolved for THIS request — never the login-time session stamp
+	// (SEC-14: a demoted admin kept this download for the session TTL).
+	const session = await globalAdminSessionFromCookie(request.headers.get('cookie'));
+	if (session === null) return notFound();
 	const fileName = pathname.slice(HIERARCHY_EXPORT_URL_PREFIX.length);
 	if (!/^[a-z]{2,}[0-9]+\.copy\.gz$/.test(fileName) && !/^all_[0-9_-]+\.copy\.gz$/.test(fileName)) {
 		return notFound();
@@ -1311,6 +1315,13 @@ export async function handleRequest(request: Request, context: RequestContext): 
 			// WC-2026-08-19-rqo-body-csrf-token.
 			csrfCandidate:
 				request.headers.get('x-dedalo-csrf-token') ?? parsedRqo.data.csrf_token ?? null,
+			// The same precedence, recorded — see ApiRequestContext.csrfSource.
+			csrfSource:
+				request.headers.get('x-dedalo-csrf-token') !== null
+					? 'header'
+					: parsedRqo.data.csrf_token !== undefined && parsedRqo.data.csrf_token !== null
+						? 'body'
+						: null,
 			reportTokenCandidate: request.headers.get('x-dedalo-report-token'),
 			bodyByteLength: parseContentLength(request.headers.get('content-length')),
 			startedAt: context.startedAt,
@@ -1568,6 +1579,18 @@ async function shutdownGracefully(
 		stopDiffusionScheduler();
 	} catch (error) {
 		console.error('[shutdown] stopping diffusion scheduler failed:', error);
+	}
+	try {
+		const { stopReconcileScheduler } = await import('./core/reconcile/scheduler.ts');
+		stopReconcileScheduler();
+	} catch (error) {
+		console.error('[shutdown] stopping reconcile scheduler failed:', error);
+	}
+	try {
+		const { stopRetentionScheduler } = await import('./core/retention/scheduler.ts');
+		stopRetentionScheduler();
+	} catch (error) {
+		console.error('[shutdown] stopping retention scheduler failed:', error);
 	}
 	// Stop ACCEPTING; in-flight requests keep running until the drain deadline.
 	for (const server of servers) server.stop();
@@ -1899,15 +1922,9 @@ export async function startServer() {
 				getStatus: getMediaIndexStatus,
 				reconcile: reconcileMediaIndex,
 			});
-			void reconcileMediaIndex()
-				.then((healed) => {
-					if (healed !== null && (healed.added > 0 || healed.removed > 0)) {
-						console.warn(
-							`[media_index] boot reconcile: pub/ healed (+${healed.added} / -${healed.removed} marker(s))`,
-						);
-					}
-				})
-				.catch((error) => console.error('[media_index] boot reconcile failed:', error));
+			// The boot reconcile itself now runs through the RECONCILE REGISTRY
+			// (core/reconcile — audit S-10): `media_index` is its one boot-class,
+			// auto-apply definition, so the scheduler below fires it.
 		} catch (error) {
 			console.error(
 				'[media_index] DEC-19: native media-index NOT registered — publication markers ' +
@@ -1915,6 +1932,47 @@ export async function startServer() {
 					'Fix and restart. Cause:',
 				error,
 			);
+		}
+
+		// RECONCILE REGISTRY (audit 2026-08-26 S-10): every cross-store reconcile
+		// in ONE shape — listed and run by the reconcile_status widget,
+		// scripts/reconcile.ts and the `reconcile` gauge on /api/v1/counters.
+		// Registration is pure in-memory wiring; the scheduler runs the
+		// boot-class reconciles (media_index heals pub/ from dbs/) and any
+		// interval-class ones, fire-and-forget and non-fatal. Gated like the
+		// diffusion scheduler: an ephemeral/smoke instance must not heal a shared
+		// store from the wrong media root.
+		try {
+			const { registerAllReconciles } = await import('./core/reconcile/catalog.ts');
+			await registerAllReconciles();
+			if (readString('DEDALO_RECONCILE_SCHEDULER_ENABLED') !== 'false') {
+				const { startReconcileScheduler } = await import('./core/reconcile/scheduler.ts');
+				startReconcileScheduler();
+			} else {
+				console.warn(
+					'[reconcile] scheduler disabled (DEDALO_RECONCILE_SCHEDULER_ENABLED=false) — boot/interval reconciles will not run',
+				);
+			}
+		} catch (error) {
+			console.error(
+				'[reconcile] registry boot failed — the maintenance reconcile panel is empty until restart:',
+				error,
+			);
+		}
+
+		// RETENTION (audit 2026-08-26 P2-9): apply the configured retention
+		// windows — matrix_activity, the dd1758 publication ledger, the error
+		// report store — once shortly after boot and daily thereafter. With every
+		// window at its default (0 = keep everything) this is a no-op; the point
+		// is that a window an operator SETS takes effect without anyone having to
+		// remember a command. Same gate shape as the reconcile scheduler.
+		try {
+			if (readString('DEDALO_RETENTION_SCHEDULER_ENABLED') !== 'false') {
+				const { startRetentionScheduler } = await import('./core/retention/scheduler.ts');
+				startRetentionScheduler();
+			}
+		} catch (error) {
+			console.error('[retention] scheduler boot failed — retention windows will not run:', error);
 		}
 
 		// MEDIA TREE (audit 2026-08_oh1_beta §5.2). PHP provisioned the whole tree
@@ -2004,6 +2062,22 @@ export async function startServer() {
 			await getSubscriptionRegistry(); // warm + loud-validate the real ontology
 		})().catch((error) =>
 			console.error('[observers] subscription registry boot probe failed:', error),
+		);
+
+		// RELATION-CLOSURE gauge (audit PERF-04) + the client-asset MANIFEST
+		// (audit PERF-13), both registered here for the registerOpsGauge reason:
+		// core/relations and core/api must not import the process root, and the
+		// manifest walk must happen at BOOT rather than on an authenticated
+		// request. The manifest prewarm is fire-and-forget: a failure only means
+		// the first get_dedalo_files pays the walk it used to pay every time.
+		void (async () => {
+			const { registerOpsGauge } = await import('./core/api/counters.ts');
+			const { relatedClosureStats } = await import('./core/relations/related.ts');
+			registerOpsGauge('relation_closure', async () => relatedClosureStats());
+			const { prewarmDedaloFilesManifest } = await import('./core/api/dedalo_files.ts');
+			prewarmDedaloFilesManifest();
+		})().catch((error) =>
+			console.error('[boot] relation-closure gauge / client manifest prewarm failed:', error),
 		);
 
 		void import('./diffusion/jobs/schema.ts')

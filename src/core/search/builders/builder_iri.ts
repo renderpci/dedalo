@@ -12,7 +12,13 @@
 
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import type { BuilderContext, BuilderResult } from './types.ts';
-import { extractNormalizedQ, fragment, isLiteralQ } from './types.ts';
+import {
+	anchoredRegexOperand,
+	extractNormalizedQ,
+	fragment,
+	isLiteralQ,
+	regexOperand,
+} from './types.ts';
 
 function buildJsonPath(context: BuilderContext): string {
 	return context.lang === 'all'
@@ -93,7 +99,7 @@ export function buildIriFragment(
 			context.lang !== 'all' ? { _Q1_: qClean, _Q2_: context.lang } : { _Q1_: qClean };
 		return fragment(
 			`NOT EXISTS (SELECT 1 FROM jsonb_path_query(${context.alias}.${context.column}, '$.${context.tipo}[*]') AS elem ` +
-				`WHERE elem->>'iri' IS NOT NULL AND f_unaccent(elem->>'iri') ~* f_unaccent(_Q1_)${langFilter})`,
+				`WHERE elem->>'iri' IS NOT NULL AND f_unaccent(elem->>'iri') ~* ${regexOperand('_Q1_')}${langFilter})`,
 			tokenValues,
 		);
 	}
@@ -110,16 +116,18 @@ export function buildIriFragment(
 		const qClean = effective.replaceAll('*', '').replaceAll("'", '');
 		const matchLogic =
 			hasLead && hasTrail
-				? `f_unaccent(elem->>'iri') ~* f_unaccent(_Q1_)`
+				? `f_unaccent(elem->>'iri') ~* ${regexOperand('_Q1_')}`
 				: hasLead
-					? `f_unaccent(elem->>'iri') ~* (f_unaccent(_Q1_) || '$')`
-					: `f_unaccent(elem->>'iri') ~* ('^' || f_unaccent(_Q1_))`;
+					? `f_unaccent(elem->>'iri') ~* ${anchoredRegexOperand('_Q1_', 'ends')}`
+					: `f_unaccent(elem->>'iri') ~* ${anchoredRegexOperand('_Q1_', 'begins')}`;
 		return fragment(existsEnvelope(context, matchLogic), { _Q1_: qClean });
 	}
-	// default contains — escape dots for literal URL matching (PHP :547)
-	const qClean = effective.replace(/[+*=]/g, '').replaceAll('.', '\\.');
+	// default contains. PHP escaped only the dot (:547) for literal URL
+	// matching; `regexOperand` makes the WHOLE term literal in SQL (DATA-34)
+	// — a URL carries '?', '+' and '(' as often as it carries '.'.
+	const qClean = effective.replace(/[+*=]/g, '');
 	if (qClean === '') return false;
-	return fragment(existsEnvelope(context, `f_unaccent(elem->>'iri') ~* f_unaccent(_Q1_)`), {
+	return fragment(existsEnvelope(context, `f_unaccent(elem->>'iri') ~* ${regexOperand('_Q1_')}`), {
 		_Q1_: qClean,
 	});
 }

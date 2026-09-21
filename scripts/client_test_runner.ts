@@ -29,9 +29,12 @@
  *        `mint` has NOT exercised authentication.
  *   3. Click "run all" (`#test_run_all`), poll until the button re-enables, then
  *      scrape `window.global_stats` + per-group DOM stats.
- *   4. Exit 0 iff no pending suites AND no failure outside KNOWN_FAILING (the
- *      disclosed, shrink-only baseline below) — a suite in that list that now
- *      PASSES is also red, so the list can never outlive the bug it names.
+ *   4. Exit on the verdict of scripts/lib/client_gate_verdict.ts (`conclude`
+ *      below is the ONE exit, shared with `--replay`): 0 iff the inventory
+ *      floor is met, no card was loaded twice or ran nothing, no pending
+ *      suites, and no failure outside KNOWN_FAILING (the disclosed, shrink-only
+ *      baseline below) — a suite in that list that now PASSES is also red, so
+ *      the list can never outlive the bug it names.
  *
  * This is deliberately NOT a `bun test` file: it needs a live server + a real
  * browser, so it stays out of the `bunfig.toml` (root=test) discovery and is run
@@ -62,14 +65,28 @@
  *   --password <pwd>   Login password            (DEDALO_TEST_PASSWORD, else PHP_API_PASSWORD)
  *   --no-reseed        Skip the canonical test3 reseed before/after the run
  *   --strict           Treat EVERY failure as red, ignoring KNOWN_FAILING
+ *   --update           After a GREEN run, bank the observed inventory (suites,
+ *                      mocha tests RAN, static assertion-free it() count, static
+ *                      switched-off registration count) into
+ *                      engineering/client_gate_inventory.json. REFUSES to lower
+ *                      a floor or raise a budget (scripts/lib/client_gate_verdict.ts).
+ *   --replay <file>    NO browser, NO server: read a scraped observation
+ *                      (a ScrapedRun — {cards: [{status, dataset}], counters,
+ *                      groups}, exactly what the page scrape returns) from a
+ *                      JSON file and run the SAME interpret-conclude-exit tail — the
+ *                      subprocess leg client_gate_inventory_tripwire uses to
+ *                      prove this process exits on the verdict, not around it.
  *
  * Credentials are read via the project env loader (src/config/env.ts), so they
  * resolve from ../private/.env exactly like the rest of the config — no secret
  * ever needs to be passed on the command line.
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import puppeteer, { type Browser, type Page } from 'puppeteer';
 import { readEnv } from '../src/config/env.ts';
+import { staticCensusTotals } from '../test/helpers/client_suite_census.ts';
 import {
 	assertServedDatabase,
 	type ClientTestServer,
@@ -83,6 +100,20 @@ import {
 	startClientTestServer,
 	suiteServerPaths,
 } from './client_test_server.ts';
+import {
+	type AxeObservation,
+	type AxeViolation,
+	computeVerdict,
+	concludeRun,
+	loadA11yBudget,
+	loadInventory,
+	observeRun,
+	type RunResults,
+	type ScrapedCard,
+	type ScrapedRun,
+	type Verdict,
+	writeInventory,
+} from './lib/client_gate_verdict.ts';
 
 /** The install seed's own user, and the credential the suite database gets. */
 const SUITE_LOGIN_USER = 'root';
@@ -144,6 +175,8 @@ const password = getArg('--password', 'DEDALO_TEST_PASSWORD') ?? SUITE_LOGIN_PAS
 
 const reseedEnabled = !args.includes('--no-reseed');
 const strict = args.includes('--strict');
+const updateInventory = args.includes('--update');
+const replayFile = getArg('--replay', 'TEST_REPLAY');
 /** How the run authenticates: an in-process real login + cookie, or the form. */
 const authMode = (getArg('--auth', 'TEST_AUTH', 'cookie') as string).toLowerCase();
 if (authMode !== 'cookie' && authMode !== 'form' && authMode !== 'mint') {
@@ -307,27 +340,15 @@ async function ensureSuiteLogin(): Promise<void> {
  */
 /**
  * THE INVENTORY FLOOR — what this run must OBSERVE before its verdict means
- * anything (P0-2, the green-by-absence class).
- *
- * The verdict below is "no pending suite, and no failure outside KNOWN_FAILING".
- * Every term of that is about suites the run FOUND. A run that discovers three
- * cards instead of all of them — a renamed registry, a page that half-rendered,
- * a selector that stopped matching — passes all three, exits 0, and reports a
- * green client tier over almost nothing. The count is the only thing that
- * notices.
- *
- * A FLOOR, not an equality: adding suites raises it (update it in the same
- * change), and a DROP is a deliberate edit that has to say which suites went and
- * why. Measured 2026-08-31: 132 suites. Set just under, so one legitimately
- * deferred card does not red the tier while a discovery collapse does.
- *
- * (!) SUITES ONLY. `global_stats.total` is the CARD count, not a mocha-test
- * count — the page exposes no per-suite test total, so this floor cannot see a
- * suite that rendered and ran zero `it()`. Closing that needs a
- * `data-test-count` on the card; until then it is stated here rather than
- * implied by a number that does not mean what its name suggests.
+ * anything (P0-2, the green-by-absence class) — lives in
+ * engineering/client_gate_inventory.json, read and enforced by
+ * scripts/lib/client_gate_verdict.ts (the pure verdict, proved by
+ * test/unit/client_gate_inventory_tripwire.test.ts). It floors the SUITE count
+ * AND the RAN mocha TEST count (each card's `data-test-count` minus its
+ * `data-pending-count`), reds any card the page loaded more than once
+ * (`data-run-count`), and reds a suite that ran zero tests. It used to be a
+ * `SUITE_FLOOR = 128` constant here, which could see cards and nothing else.
  */
-const SUITE_FLOOR = 128;
 
 const KNOWN_FAILING: ReadonlyMap<string, string> = new Map([]);
 
@@ -349,32 +370,11 @@ const KNOWN_FAILING: ReadonlyMap<string, string> = new Map([]);
 // Stats shape scraped from the runner page.
 // ---------------------------------------------------------------------------
 
-interface GroupStats {
-	pass: number;
-	fail: number;
-	pending: number;
-}
-/** One failing mocha test, as the frame reported it (client/.../frame_runner.js). */
-interface SuiteFailure {
-	title: string;
-	message: string;
-	stack?: string;
-}
-interface SuiteResult {
-	name: string;
-	group: string;
-	status: string;
-	/** Why it is red. Empty on a failing suite = no mocha failure at all. */
-	failures: SuiteFailure[];
-}
-interface RunResults {
-	total: number;
-	pass: number;
-	fail: number;
-	pending: number;
-	groups: Record<string, GroupStats>;
-	suites: SuiteResult[];
-}
+// The shapes are the verdict module's: `ScrapedRun` is what `page.evaluate`
+// returns (cards as `{status, dataset: {...card.dataset}}`, VERBATIM — the
+// browser side knows no attribute name and applies no default), `observeRun`
+// interprets it, `RunResults` is what the tail prints. `--replay` reads a
+// ScrapedRun, so the subprocess leg exercises the interpretation too.
 
 /**
  * STEP ZERO, BEFORE ANY ENGINE IMPORT — point this process at the suite
@@ -477,10 +477,218 @@ function sweepOnSignal(): void {
 	}
 }
 
-async function main(): Promise<void> {
+/**
+ * THE TAIL OF EVERY RUN — print the results, decide, bank, and hand back the
+ * exit code. Shared by the browser run and by `--replay`, so the subprocess leg
+ * of client_gate_inventory_tripwire exercises the exact code the browser run
+ * exits through. The DECISION is `concludeRun` (scripts/lib/client_gate_verdict.ts);
+ * nothing here looks at the verdict except to print it.
+ */
+function report(results: RunResults): 0 | 1 {
+	const verdict: Verdict = computeVerdict({
+		axe: results.axe,
+		a11yBudget: results.axe === undefined ? undefined : loadA11yBudget(),
+		suites: results.suites,
+		pending: results.pending,
+		strict,
+		knownFailing: KNOWN_FAILING,
+		inventory: loadInventory(),
+	});
+
+	log('\n=== Test Results ===');
+	// SUITES and mocha TESTS, both, labelled: `Total` is the CARD count, and a
+	// card count cannot see a suite that registered nothing.
+	log(
+		`Suites:      ${results.total} cards — ${results.pass} pass / ${results.fail} fail / ${results.pending} pending`,
+	);
+	log(
+		`Mocha tests: ${verdict.mochaTests} ran across ${verdict.observedSuites} gated suites (${verdict.mochaPending} pending)`,
+	);
+	log(`Total:   ${results.total}`);
+	log(`Pass:    ${results.pass}`);
+	log(`Fail:    ${results.fail}`);
+	log(`Pending: ${results.pending}`);
+	if (Object.keys(results.groups).length > 0) {
+		log('\n--- Per Group ---');
+		for (const [group, stats] of Object.entries(results.groups)) {
+			log(`${group}: ${stats.pass} pass, ${stats.fail} fail, ${stats.pending} pending`);
+		}
+	}
+	if (results.suites.length > 0) {
+		log('\n--- Per Suite (for the coverage ledger) ---');
+		for (const suite of results.suites) {
+			const count = suite.testCount === null ? '?' : String(suite.testCount);
+			const pending = suite.pendingCount ? `, ${suite.pendingCount} pending` : '';
+			const loads =
+				suite.runCount !== null && suite.runCount > 1 ? ` LOADED ${suite.runCount}x` : '';
+			log(
+				`  [${suite.status.toUpperCase().padEnd(7)}] ${suite.group}/${suite.name} (${count} tests${pending})${loads}`,
+			);
+		}
+	}
+	log('');
+
+	// WHY EACH RED SUITE IS RED — printed for EVERY failing suite, including one
+	// listed in KNOWN_FAILING: a known failure with an unknown reason is still
+	// unknown. A failing suite with no listed failure never reached mocha
+	// (import/setup error, watchdog) — said explicitly, because that is itself a
+	// diagnosis.
+	const failing = results.suites.filter((s) => s.status === 'fail');
+	if (failing.length > 0) {
+		log('--- Failure detail ---');
+		for (const suite of failing) {
+			log(`  ${suite.group}/${suite.name}`);
+			if (suite.failures.length === 0) {
+				log('    (no mocha failure reported — the suite did not run to completion)');
+				continue;
+			}
+			for (const failure of suite.failures) {
+				log(`    ✗ ${failure.title}`);
+				for (const line of String(failure.message).split('\n')) {
+					log(`        ${line}`);
+				}
+				if (failure.stack) {
+					for (const line of failure.stack.split('\n')) {
+						log(`        ${line.trim()}`);
+					}
+				}
+			}
+		}
+		log('');
+	}
+
+	const annotated = failing.filter((s) => KNOWN_FAILING.has(s.name));
+	if (!strict && annotated.length > 0) {
+		log('--- Known-failing suites (engineering ledger; see KNOWN_FAILING) ---');
+		for (const suite of annotated) {
+			log(`  [KNOWN  ] ${suite.name} — ${KNOWN_FAILING.get(suite.name)}`);
+		}
+	}
+
+	// VERDICT + `--update` banking, one pure decision.
+	let current = null;
+	try {
+		current = loadInventory();
+	} catch {
+		current = null;
+	}
+	const conclusion = concludeRun(verdict, {
+		update: updateInventory,
+		current,
+		census: staticCensusTotals(),
+	});
+	for (const line of conclusion.lines) {
+		if (line.level === 'error') error(line.text);
+		else log(line.text);
+	}
+	if (conclusion.banked !== null) writeInventory(conclusion.banked);
+	return conclusion.exitCode;
+}
+
+/**
+ * THE ONE EXIT OF EVERY RUN. The browser run (`main`, once its cleanup ran) and
+ * `--replay` both end HERE and nowhere else: interpret the scrape, print,
+ * decide, exit on the verdict. There is no exit-code variable for a mutation
+ * to pin — client_gate_inventory_tripwire measures this function's exit code as
+ * a subprocess over planted scrapes, and that measurement is the browser run's
+ * exit code too, by construction.
+ */
+function conclude(scraped: ScrapedRun): never {
+	process.exit(report(observeRun(scraped)));
+}
+
+/** The browser run: everything up to and including the scrape, then its cleanup. Returns the RAW scrape; `conclude` exits on it. */
+/**
+ * THE ACCESSIBILITY PHASE (audit 2026-08-26 row P1-18).
+ *
+ * After the suites have run, the SAME browser mounts the named cataloguing
+ * surfaces (client/dedalo/test/client/js/a11y_surfaces.js — built by the
+ * client's own builders, from repo-owned inputs, so they are identical on every
+ * machine) and runs axe-core over each one. The result rides the ordinary
+ * ScrapedRun, so `--replay` can carry it and the ONE exit judges it.
+ *
+ * No new CI runtime: axe-core is a devDependency, read off disk and injected
+ * into the page this run already has open.
+ *
+ * @param page the run's page, already authenticated
+ * @param origin the run's own server origin
+ * @returns what axe saw, per surface
+ */
+async function runAxePhase(page: Page, origin: string): Promise<AxeObservation> {
+	const axeSource = readFileSync(
+		join(import.meta.dir, '..', 'node_modules', 'axe-core', 'axe.min.js'),
+		'utf8',
+	);
+	const framePage = `${origin}/dedalo/test/client/frame.html?area=a11y_surfaces`;
+	log(`a11y: mounting the named surfaces (${framePage})`);
+	const response = await page.goto(framePage, { waitUntil: 'networkidle0', timeout: 30000 });
+	if (!response?.ok()) {
+		throw new Error(`a11y phase: the surfaces page did not load (${response?.status()})`);
+	}
+	await page.waitForFunction('window.dd_a11y_surfaces !== undefined', { timeout: 20000 });
+	await page.evaluate(axeSource);
+
+	const observed: { surfaces: string[]; violations: AxeViolation[] } = await page.evaluate(
+		async () => {
+			const w = window as unknown as {
+				dd_a11y_surfaces: { SURFACE_BUILDERS: Record<string, () => unknown | Promise<unknown>> };
+				axe: {
+					run: (
+						ctx: unknown,
+						options: unknown,
+					) => Promise<{
+						violations: Array<{ id: string; impact: string | null; nodes: unknown[] }>;
+					}>;
+				};
+			};
+			const surfaces: string[] = [];
+			const violations: Array<{
+				surface: string;
+				id: string;
+				impact: string | null;
+				nodes: number;
+			}> = [];
+			for (const name of Object.keys(w.dd_a11y_surfaces.SURFACE_BUILDERS)) {
+				const builder = w.dd_a11y_surfaces.SURFACE_BUILDERS[name];
+				if (builder === undefined) continue;
+				// AWAITED: a builder may be async (the login form asks the server for
+				// its own context). Reading the host before it resolved would run axe
+				// over an empty div and call the surface clean.
+				await builder();
+				const host = document.getElementById(`a11y_surface_${name}`);
+				// EMPTY IS NOT MOUNTED. The host is created before the surface is
+				// filled, so a builder that threw — or an async one whose promise was
+				// not awaited — would leave an empty div here and axe would call it
+				// clean. Such a surface is reported as NOT mounted, which is red for
+				// every required one.
+				if (host === null || host.children.length === 0) continue;
+				surfaces.push(name);
+				const result = await w.axe.run(host, {
+					runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] },
+				});
+				for (const violation of result.violations) {
+					violations.push({
+						surface: name,
+						id: violation.id,
+						impact: violation.impact ?? null,
+						nodes: violation.nodes.length,
+					});
+				}
+			}
+			return { surfaces, violations };
+		},
+	);
+
+	const sorted: AxeViolation[] = observed.violations.sort((a, b) =>
+		`${a.surface}:${a.id}` < `${b.surface}:${b.id}` ? -1 : 1,
+	);
+	log(`a11y: ${observed.surfaces.length} surface(s), ${sorted.length} violation kind(s)`);
+	return { surfaces: observed.surfaces, violations: sorted };
+}
+
+async function main(): Promise<ScrapedRun> {
 	let browser: Browser | undefined;
 	let server: ClientTestServer | undefined;
-	let exitCode = 1;
 
 	sweepOnSignal();
 	try {
@@ -596,10 +804,11 @@ async function main(): Promise<void> {
 		}
 		log('Tests completed. Collecting results...');
 
-		const results: RunResults = await page.evaluate(() => {
+		const scraped: ScrapedRun = await page.evaluate(() => {
 			const stats =
-				(window as unknown as { global_stats?: Partial<RunResults> }).global_stats ?? {};
-			const groups: Record<string, GroupStats> = {};
+				(window as unknown as { global_stats?: Partial<ScrapedRun['counters']> }).global_stats ??
+				{};
+			const groups: ScrapedRun['groups'] = {};
 			for (const el of document.querySelectorAll('.test_group')) {
 				const groupKey = (el as HTMLElement).dataset.group;
 				const statsBar = el.querySelector('.test_group_stats');
@@ -613,8 +822,12 @@ async function main(): Promise<void> {
 					};
 				}
 			}
-			// Per-suite outcome from each card's status dot — feeds the coverage ledger.
-			const suites: SuiteResult[] = [];
+			// Per-suite outcome: the dot's status class and the card's dataset,
+			// VERBATIM. Nothing is interpreted here — `observeCard`
+			// (scripts/lib/client_gate_verdict.ts) reads the attributes, and the
+			// hermetic gate drives it over a dataset the page's own card_state.js
+			// produced. A default applied in this closure would run in no gate.
+			const cards: ScrapedCard[] = [];
 			for (const card of document.querySelectorAll('.test_card')) {
 				const dot = card.querySelector('.test_card_status');
 				// 'deferred' FIRST: a deferred card is excluded from run-all and from
@@ -624,140 +837,25 @@ async function main(): Promise<void> {
 					['deferred', 'pass', 'fail', 'running', 'pending'].find((s) =>
 						dot?.classList.contains(s),
 					) ?? 'pending';
-				// The failure reasons the frame reported, parked on the card by
-				// client/dedalo/test/client/js/index.js. Scraped alongside the dot so
-				// a red suite is never opaque in the terminal.
-				let failures: SuiteFailure[] = [];
-				const raw = (card as HTMLElement).dataset.testFailures;
-				if (raw) {
-					try {
-						failures = JSON.parse(raw) as SuiteFailure[];
-					} catch {
-						failures = [{ title: '(unparseable failure payload)', message: raw }];
-					}
-				}
-				suites.push({
-					name: (card as HTMLElement).dataset.testName || '',
-					group: (card as HTMLElement).dataset.group || '',
-					status,
-					failures,
-				});
+				cards.push({ status, dataset: { ...(card as HTMLElement).dataset } });
 			}
 			return {
-				total: stats.total || 0,
-				pass: stats.pass || 0,
-				fail: stats.fail || 0,
-				pending: stats.pending || 0,
+				cards,
+				counters: {
+					total: stats.total || 0,
+					pass: stats.pass || 0,
+					fail: stats.fail || 0,
+					pending: stats.pending || 0,
+				},
 				groups,
-				suites,
 			};
 		});
 
-		log('\n=== Test Results ===');
-		log(`Total:   ${results.total}`);
-		log(`Pass:    ${results.pass}`);
-		log(`Fail:    ${results.fail}`);
-		log(`Pending: ${results.pending}`);
-		if (Object.keys(results.groups).length > 0) {
-			log('\n--- Per Group ---');
-			for (const [group, stats] of Object.entries(results.groups)) {
-				log(`${group}: ${stats.pass} pass, ${stats.fail} fail, ${stats.pending} pending`);
-			}
-		}
-		if (results.suites.length > 0) {
-			log('\n--- Per Suite (for the coverage ledger) ---');
-			for (const suite of results.suites) {
-				log(`  [${suite.status.toUpperCase().padEnd(7)}] ${suite.group}/${suite.name}`);
-			}
-		}
-		log('');
+		// The accessibility phase runs LAST: it navigates the page away from the
+		// runner, so nothing after it may read the runner's DOM.
+		scraped.axe = await runAxePhase(page, originOf(testUrl));
 
-		// WHY EACH RED SUITE IS RED — printed for EVERY failing suite, including one
-		// listed in KNOWN_FAILING: a known failure with an unknown reason is still
-		// unknown. A failing suite with no listed failure never reached mocha
-		// (import/setup error, watchdog) — said explicitly, because that is itself a
-		// diagnosis.
-		const failing = results.suites.filter((s) => s.status === 'fail');
-		if (failing.length > 0) {
-			log('--- Failure detail ---');
-			for (const suite of failing) {
-				log(`  ${suite.group}/${suite.name}`);
-				if (suite.failures.length === 0) {
-					log('    (no mocha failure reported — the suite did not run to completion)');
-					continue;
-				}
-				for (const failure of suite.failures) {
-					log(`    ✗ ${failure.title}`);
-					for (const line of String(failure.message).split('\n')) {
-						log(`        ${line}`);
-					}
-					if (failure.stack) {
-						for (const line of failure.stack.split('\n')) {
-							log(`        ${line.trim()}`);
-						}
-					}
-				}
-			}
-			log('');
-		}
-
-		// VERDICT — measured against the disclosed baseline, in both directions.
-		const failed = results.suites.filter((s) => s.status === 'fail').map((s) => s.name);
-		const unexpectedFailures = strict ? failed : failed.filter((name) => !KNOWN_FAILING.has(name));
-		const unexpectedPasses = strict
-			? []
-			: [...KNOWN_FAILING.keys()].filter(
-					(name) => results.suites.find((s) => s.name === name)?.status === 'pass',
-				);
-		// Annotate only when there IS an annotation: an empty header under a red run
-		// reads as "these were expected", which is the opposite of the truth.
-		const annotated = failed.filter((n) => KNOWN_FAILING.has(n));
-		if (!strict && annotated.length > 0) {
-			log('--- Known-failing suites (engineering ledger; see KNOWN_FAILING) ---');
-			for (const name of annotated) {
-				log(`  [KNOWN  ] ${name} — ${KNOWN_FAILING.get(name)}`);
-			}
-		}
-		// THE INVENTORY FLOOR, before the pass/fail verdict — a run that observed
-		// almost nothing must not be able to report success (P0-2).
-		const observedSuites = results.suites.length;
-		const inventoryShort: string[] = [];
-		if (observedSuites < SUITE_FLOOR) {
-			inventoryShort.push(
-				`observed ${observedSuites} suites, floor is ${SUITE_FLOOR} — the page did not render the registry this run is supposed to check`,
-			);
-		}
-		// NOT COVERED, and said rather than stubbed: a card with zero `it()` renders
-		// a green dot and asserts nothing. See SUITE_FLOOR's note — it needs a
-		// per-suite test count the page does not expose.
-		for (const line of inventoryShort) {
-			error(`INVENTORY: ${line}`);
-		}
-
-		if (results.pending > 0) {
-			error(`${results.pending} test suite(s) did not complete.`);
-		}
-		for (const name of unexpectedFailures) {
-			error(`NEW failing suite (not in KNOWN_FAILING): ${name}`);
-		}
-		for (const name of unexpectedPasses) {
-			error(
-				`${name} is listed in KNOWN_FAILING but PASSED — delete its row in the same change that fixed it (a stale excuse becomes a blanket).`,
-			);
-		}
-		exitCode =
-			results.pending > 0 ||
-			unexpectedFailures.length > 0 ||
-			unexpectedPasses.length > 0 ||
-			inventoryShort.length > 0
-				? 1
-				: 0;
-	} catch (err) {
-		error(`Unexpected error: ${(err as Error).message}`);
-		if ((err as Error).stack) {
-			error((err as Error).stack as string);
-		}
-		exitCode = 1;
+		return scraped;
 	} finally {
 		if (browser) {
 			await browser.close();
@@ -791,7 +889,6 @@ async function main(): Promise<void> {
 				error(`stopping the client-test server failed: ${(err as Error).message}`);
 			}
 		}
-		process.exit(exitCode);
 	}
 }
 
@@ -992,4 +1089,13 @@ async function handleLogin(page: Page, user: string, pass: string): Promise<void
 	}
 }
 
-main();
+if (replayFile !== undefined) {
+	log(`--replay: ${replayFile} (no browser, no server)`);
+	conclude(JSON.parse(readFileSync(replayFile, 'utf8')) as ScrapedRun);
+} else {
+	main().then(conclude, (err: Error) => {
+		error(`Unexpected error: ${err.message}`);
+		if (err.stack) error(err.stack);
+		process.exit(1);
+	});
+}

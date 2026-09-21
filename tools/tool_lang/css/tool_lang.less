@@ -8,9 +8,38 @@
 @import (once) '../../../client/dedalo/core/page/css/layout/vars';
 
 // local vars
+//
+// THE IDENTITY HUE IS AN EDGE, NOT A BUTTON FILL (CSS coherence audit
+// 2026-09-06, DESIGN clause 2.c). `--tool_lang` is what names this tool:
+// tool_common demotes it to the 4px top edge of the header, and the gutter grip
+// and the list-row hover read it. #7f75e0 is a MID-TONE violet, so it cannot
+// carry text — the action-row buttons painted the theme ink on it at 3.80:1 in
+// light (3.77:1 on the redesign line), under the 4.5:1 floor. Muting the
+// identity to buy that contrast would take the tool's colour off the edge that
+// is its only name, so the BUTTON FILL splits off from the hue instead — the
+// same split the brand made (--color_orange_dedalo fill / --fg_on_brand ink) and
+// the redesign line makes (--accent / --accent-text).
+//
+// The fill is declared PER AXIS because the ink these buttons carry is
+// `@color_white`, which a tool sheet reads as the THEME's surface ink — #ffffff
+// in light, #1b1d20 in dark — so the two axes need opposite lightness:
+//   light  #6459d4 under #ffffff = 5.36:1 (5.31:1 under the redesign #fffefc)
+//   dark   theme_dark already lifts the identity violet to #a098f0, a light fill
+//          that carries the dark ink at 6.63:1 (6.09:1 redesign-dark) — so in
+//          dark the fill IS the identity hue and the theme's own inversion
+//          stands untouched. Nothing about the dark appearance changes here.
 :root {
 	--tool_lang: #7f75e0;
-	--tool_lang_border: #584bd7;
+	// The button's edge, one step under the fill. Deepened with it (#4639bb on
+	// #6459d4 = 1.53:1) so the border stays visible: against the new fill the old
+	// #584bd7 was 1.15:1, i.e. gone. Dark keeps theme_dark's #8070e0 (1.55:1 on
+	// the dark fill), which is the separation this pair was designed with.
+	--tool_lang_border: #4639bb;
+	--tool_lang_fill: #6459d4;
+}
+// dark theme override (self-contained — the tool's own token, never a palette name)
+:root[data-theme="dark"] {
+	--tool_lang_fill: var(--tool_lang);
 }
 @tool_color : var(--tool_lang);
 
@@ -258,9 +287,22 @@
 					min-height: 1.2em;
 				}
 
+				// same control, same pair as >.secondary below: the fill, never
+				// the identity hue.
+				// (!) The ink is STATED here, and that is not decoration. The
+				// button is `class="warning button_automatic_translation"`, so it
+				// inherited the core .warning ink — `--fg_on_brand`, the near-black
+				// tuned for the BRAND ORANGE fill this rule replaces with the tool
+				// violet. On the identity hue that was already thin (4.68:1 light)
+				// and on the deepened fill it would be 3.32:1, i.e. this fix would
+				// have broken the button it was fixing. Naming the ink pairs it
+				// with the fill it actually sits on (5.36:1 light, 6.63:1 dark) and
+				// puts the pair where the contrast gate can read it — it judges one
+				// rule at a time and cannot follow an ink across files.
 				.button_automatic_translation {
-					background-color: @tool_color;
+					background-color: var(--tool_lang_fill);
 					border-color: var(--tool_lang_border);
+					color: @color_white;
 				}
 
 				>select {
@@ -329,7 +371,9 @@
 
 			// copy_to_target button
 			>.secondary {
-				background-color: @tool_color;
+				// the deepened fill, never the identity hue: this button carries
+				// text (see the :root header)
+				background-color: var(--tool_lang_fill);
 				border-color: var(--tool_lang_border);
 				color: @color_white;
 				min-height: 2.75em;

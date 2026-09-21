@@ -41,6 +41,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_join} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -93,7 +94,7 @@ view_default_list_filter_records.render = async function(self, options) {
 			return JSON.stringify(el)
 		})
 		// Join all serialised entries with the ontology-configured separator (e.g. ' | ').
-		const value_string = string_values.join(self.context.fields_separator)
+		const value_string = render_join(string_values, self.context.fields_separator, 'text')
 
 	// wrapper
 		// build_wrapper_list produces a <div> with standard CSS classes and appends

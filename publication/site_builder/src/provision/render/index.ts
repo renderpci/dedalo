@@ -11,7 +11,7 @@
  * end (an installer, a unit and a vhost each stating the same facts, none of them able to
  * notice the others).
  *
- * ONE LINE PER RENDERER, AND NOTHING ELSE. The six modules are written independently and
+ * ONE LINE PER RENDERER, AND NOTHING ELSE. The modules are written independently and
  * must stay that way: each is imported from its own file and named once below. There is no
  * shared base class, no per-kind branch in this file, and no second list of kinds — a
  * renderer that applies only to some hosts says so itself (`appliesTo`, which is how the
@@ -28,6 +28,7 @@ import type { Artifact, ArtifactKind, Renderer } from './types';
 import { ARTIFACT_KINDS } from './types';
 
 import { unitRenderer } from './unit';
+import { agentAuthorizationRenderer } from './agent_authorization';
 import { envRenderer } from './env';
 import { nginxRenderer } from './nginx';
 import { apacheRenderer } from './apache';
@@ -40,6 +41,7 @@ export { ARTIFACT_KINDS, artifact } from './types';
 /** THE REGISTRY. Order is irrelevant — `renderAll` sorts by path — so add lines, not care. */
 export const RENDERERS: readonly Renderer[] = Object.freeze([
   unitRenderer,
+  agentAuthorizationRenderer,
   envRenderer,
   sitesRenderer,
   nginxRenderer,

@@ -48,6 +48,39 @@ export type SectionId = number & { readonly __brand: 'SectionId' };
  */
 const STRICT_NUMERIC_STRING = /^(-?[1-9][0-9]*|0)$/;
 
+/**
+ * THE SAME RULE AS POSIX REGEX TEXT — for the SQL side of the law (the
+ * matrix_relation_index sync trigger in db_pg_definitions.json, its backfill
+ * twin in db_assets.ts, the search_store coverage probe, the database_info
+ * integrity report). Those used to filter with `^-?[0-9]+$`, which admits a
+ * zero-padded external id ('001338683') and CASTS it to a different record
+ * address (DATA-26) — the exact class this module keeps verbatim.
+ */
+export const SECTION_ID_ADDRESS_SQL_PATTERN = '^(-?[1-9][0-9]*|0)$';
+
+/**
+ * The SQL predicate "this text IS a record address the index may cast" over a
+ * text expression: the strict shape above AND the int4 range (the store
+ * columns are `integer`; a numeric string past int4 would make `::int` ABORT
+ * the whole matrix write inside the trigger — a loud loss of a heritage write
+ * for the sake of one index row, so such a value is SKIPPED and surfaces in
+ * the integrity report instead). The CASE guarantees the cast is evaluated
+ * only on shape-checked text (SQL `AND` has no evaluation order); the length
+ * bound keeps the `::bigint` cast itself total. JS-side twin:
+ * isConvertibleSectionIdString ∧ int4 range — value_law_agreement_native
+ * measures the two agree over a value corpus.
+ */
+export function sectionIdAddressSqlPredicate(textExpression: string): string {
+	return (
+		`(CASE WHEN ${textExpression} ~ '${SECTION_ID_ADDRESS_SQL_PATTERN}' AND length(${textExpression}) <= 11` +
+		` THEN (${textExpression})::bigint BETWEEN -2147483648 AND 2147483647 ELSE false END)`
+	);
+}
+
+/** The int4 range the matrix `section_id` columns hold — the SQL side's bound. */
+export const INT4_MIN = -2147483648;
+export const INT4_MAX = 2147483647;
+
 /** True when the value already IS a record address (safe integer). */
 export function isSectionId(value: unknown): value is SectionId {
 	return typeof value === 'number' && Number.isSafeInteger(value);

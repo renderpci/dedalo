@@ -174,7 +174,11 @@
 			display: grid;
 			margin: 0px;
 			margin-top: 1rem;
-			color: @color_grey_9;
+			// --color_grey_9 was the ink here: the grey ramp is STRUCTURAL, not for
+			// text (vars_tokens.less), and #aaaaaa on the surface below is 2.32:1 in
+			// light. --fg_muted is the ramp-free muted ink, tuned per axis:
+			// 5.74:1 light, 8.09:1 dark, 5.75:1 redesign, 5.68:1 redesign-dark.
+			color: var(--fg_muted);
 			background-color: @color_white;
 			width: 100%;
 			max-width: 1600px;

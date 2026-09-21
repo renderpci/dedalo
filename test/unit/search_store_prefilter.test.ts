@@ -81,10 +81,25 @@ describe('search-store pre-filter SQL shape', () => {
 		}
 	});
 
-	test('regex metacharacters in q suppress the pre-filter (LIKE is literal-only)', () => {
+	// DATA-34 (2026-09-05) INVERTED this leg. A metacharacter term used to
+	// suppress the pre-filter, because the exact predicate compiled q as a
+	// REGEX while the pre-filter matched it literally — they could only agree
+	// on plain text. Now both sides are made literal IN SQL, on the far side of
+	// f_unaccent (`f_regex_literal` / `f_like_literal`), so the exact predicate
+	// is literal for EVERY term and the pre-filter is exactly as sound on
+	// `sar(de` as on `sarde`. The class that used to fall back to the 1.4 s
+	// classic scan is now trigram-served.
+	test('regex metacharacters KEEP the pre-filter (the exact predicate is literal now)', () => {
 		for (const q of ['^sarde', 'sarde$', 'sa.de', 'sar(de)', 'sa|de', 'sar\\de']) {
-			const sentence = sentenceOf(buildStringFragment(q, null, false, ctx()));
-			expect(sentence).not.toContain(PREFILTER);
+			const result = buildStringFragment(q, null, false, ctx()) as Fragment;
+			expect(result.sentence).toContain(PREFILTER);
+			// BOTH operands travel RAW; the escape is applied in SQL, after
+			// normalization — the only order under which an unaccent-expanded
+			// metacharacter (`×` → `*`) is escaped at all.
+			expect(result.tokenValues._Q0_).toBe(q);
+			expect(result.tokenValues._Q1_).toBe(q);
+			expect(result.sentence).toContain("LIKE '%' || f_like_literal(lower(f_unaccent(_Q0_)))");
+			expect(result.sentence).toContain('~* f_regex_literal(f_unaccent(_Q1_))');
 		}
 	});
 
@@ -99,12 +114,21 @@ describe('search-store pre-filter SQL shape', () => {
 		expect(sentence).toContain(PREFILTER);
 	});
 
-	test('LIKE wildcards in a regex-plain q are escaped to literals', () => {
+	test('LIKE wildcards in a regex-plain q are escaped to literals — in SQL', async () => {
 		const result = buildStringFragment('100%_x', null, false, ctx()) as Fragment;
 		expect(result.sentence).toContain(PREFILTER);
 		expect(result.tokenValues._Qt_).toBe(STORE_COMPONENT);
-		expect(result.tokenValues._Q0_).toBe('100\\%\\_x');
-		expect(result.tokenValues._Q1_).toBe('100%_x'); // exact predicate keeps raw q
+		expect(result.tokenValues._Q0_).toBe('100%_x'); // raw on the wire
+		expect(result.tokenValues._Q1_).toBe('100%_x');
+		// and the escape really happens, measured on the database: `%` and `_`
+		// are literal characters of the term, not LIKE wildcards.
+		const rows = (await sql.unsafe(
+			`SELECT '100xyzx' LIKE '%' || f_like_literal(lower(f_unaccent($1))) || '%' AS wildcarded,
+			        '100%_x' LIKE '%' || f_like_literal(lower(f_unaccent($1))) || '%' AS literal`,
+			['100%_x'],
+		)) as { wildcarded: boolean; literal: boolean }[];
+		expect(rows[0]?.wildcarded).toBe(false);
+		expect(rows[0]?.literal).toBe(true);
 	});
 });
 

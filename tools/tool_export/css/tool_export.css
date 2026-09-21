@@ -9,6 +9,10 @@
   --tool_export_lighten_5: #7e60b0;
   --tool_export_border: #5a4183;
   --tool_export_lighten_10: #8c71b9;
+  --tool_export_fill: #7152a5;
+}
+:root[data-theme="dark"] {
+  --tool_export_fill: #a08ac9;
 }
 .wrapper_tool.tool_export .spinner {
   background-color: var(--tool_export);
@@ -207,7 +211,7 @@
   align-items: center;
   gap: 0.33rem;
   padding: 0.5rem 0.66rem;
-  background-color: var(--tool_export);
+  background-color: var(--tool_export_fill);
   color: var(--color_white);
   cursor: pointer;
 }
@@ -229,7 +233,7 @@
   align-items: center;
   justify-content: center;
   background-color: var(--color_white);
-  color: var(--tool_export);
+  color: var(--tool_export_fill);
   width: 1.25rem;
   height: 1.25rem;
   border-radius: 2px;
@@ -248,8 +252,8 @@
   content: "";
   width: 0.4rem;
   height: 0.4rem;
-  border-right: 2px solid var(--tool_export);
-  border-bottom: 2px solid var(--tool_export);
+  border-right: 2px solid var(--tool_export_fill);
+  border-bottom: 2px solid var(--tool_export_fill);
   transform: translateY(-25%) rotate(45deg);
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets.open > .export_presets_header > .export_presets_toggle:after {
@@ -262,7 +266,7 @@
   display: block;
   width: calc(100% - 1rem);
   margin: 0.5rem;
-  background-color: var(--tool_export);
+  background-color: var(--tool_export_fill);
   border-color: var(--tool_export_border);
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_save:hover {
@@ -298,7 +302,7 @@
   background-color: var(--tool_export_lighten_40);
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record.selected {
-  background-color: var(--tool_export);
+  background-color: var(--tool_export_fill);
   color: var(--color_white);
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record.selected .button.icon {
@@ -375,7 +379,7 @@
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .button_export {
   width: 100%;
   margin-left: 0;
-  background-color: var(--tool_export);
+  background-color: var(--tool_export_fill);
   border-color: var(--tool_export_border);
   position: sticky;
   top: 2rem;
@@ -423,7 +427,7 @@
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config .export_progress_container .export_progress_bar {
   height: 100%;
   width: 0%;
-  background-color: var(--tool_export);
+  background-color: var(--tool_export_fill);
   position: absolute;
   left: 0;
   top: 0;
@@ -461,7 +465,7 @@
   z-index: 1;
 }
 .wrapper_tool.tool_export > .content_data > .export_buttons_options .processing_import {
-  background-color: var(--tool_export);
+  background-color: var(--tool_export_fill);
   border-color: var(--tool_export_border);
   margin-bottom: 0.25rem;
 }
@@ -498,7 +502,7 @@
   position: sticky;
   top: 0;
   z-index: 2;
-  background-color: var(--tool_export);
+  background-color: var(--tool_export_fill);
   color: var(--color_white);
   text-align: left;
   font-weight: 600;

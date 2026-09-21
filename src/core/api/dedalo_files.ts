@@ -27,6 +27,7 @@
 
 import { readdirSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { readEnv } from '../../config/env.ts';
 import { getRoots, TOOL_COMMON_CLIENT_DIR, TOOLS_URL_BASE } from '../tools/paths.ts';
 import { DEDALO_ENGINE_VERSION } from '../update/build_stamp.ts';
 
@@ -116,15 +117,47 @@ function toolFileRelIsIncluded(rel: string): boolean {
 	return segments[2] === 'js' || segments[2] === 'css';
 }
 
-/**
- * The full manifest response body: result ({type,url}[], main.css first),
- * dedalo_version (SW cache key), msg — the PHP wire shape verbatim.
- */
-export function buildDedaloFilesResponse(): {
-	result: DedaloFileEntry[];
+/** The manifest response body (frozen once built — it is shared by every caller). */
+export interface DedaloFilesManifest {
+	result: readonly DedaloFileEntry[];
 	dedalo_version: string;
 	msg: string;
-} {
+}
+
+/**
+ * THE MANIFEST IS COMPUTED ONCE, AT BOOT (audit PERF-13).
+ *
+ * Building it means a recursive `readdirSync` walk of the whole client tree
+ * plus a `statSync` per manifested file — thousands of synchronous syscalls,
+ * and every one of them stops the single event loop that serves the entire
+ * installation. That was happening on an AUTHENTICATED REQUEST PATH
+ * (`get_dedalo_files`, which the service worker calls on install and on every
+ * version change), so N logged-in browsers arriving after a deploy each bought
+ * the whole walk, serialized.
+ *
+ * The finding's own remedy — "memoise on the mtime signature" — is circular:
+ * computing that signature IS the walk. So the walk happens ONCE, at boot
+ * (`prewarmDedaloFilesManifest`, called from server.ts), and the served answer
+ * is the frozen result. The client bytes cannot change under a running server
+ * without a deploy, and a deploy restarts it.
+ *
+ * DEV MODE RECOMPUTES, EVERY TIME. In development the client files DO change
+ * under the running server, and the manifest's `dedalo_version` is the
+ * service-worker cache key — a frozen key there would keep a developer's
+ * browser on stale JS until restart. `DEDALO_DEV_MODE` is read per call (not
+ * captured at module load) so the posture is the one the server is running
+ * under, and never a value baked in at import time.
+ */
+let manifestState: { manifest: DedaloFilesManifest | null; builds: number } = {
+	manifest: null,
+	builds: 0,
+};
+
+/**
+ * Build the manifest by WALKING THE DISK. Never called per request outside dev
+ * mode — see the note above.
+ */
+function walkDedaloFilesManifest(): DedaloFilesManifest {
 	const files: DedaloFileEntry[] = [];
 
 	// CORE — css: main.css first to preserve coherence (its /page/css/ path
@@ -159,8 +192,8 @@ export function buildDedaloFilesResponse(): {
 		}
 	}
 
-	return {
-		result: files,
+	return Object.freeze({
+		result: Object.freeze(files),
 		// dedalo_version: THE SERVICE-WORKER CACHE KEY (sw.js names its cache after
 		// it and purges every other one). PHP sent DEDALO_VERSION, which only moves
 		// on a release — so a client file edited between releases stayed cached
@@ -174,7 +207,46 @@ export function buildDedaloFilesResponse(): {
 		// cache and re-fetches. No flag to remember, no login required.
 		dedalo_version: `${DEDALO_ENGINE_VERSION}-${clientAssetsSignature(files)}`,
 		msg: 'OK. Request done successfully',
-	};
+	});
+}
+
+/**
+ * The served manifest: the frozen boot-time answer, or a fresh walk in dev
+ * mode. The request path never walks the disk on the production posture.
+ */
+export function buildDedaloFilesResponse(): DedaloFilesManifest {
+	if (readEnv('DEDALO_DEV_MODE') === 'true') {
+		const manifest = walkDedaloFilesManifest();
+		manifestState = { manifest: null, builds: manifestState.builds + 1 };
+		return manifest;
+	}
+	const cached = manifestState.manifest;
+	if (cached !== null) return cached;
+	const manifest = walkDedaloFilesManifest();
+	manifestState = { manifest, builds: manifestState.builds + 1 };
+	return manifest;
+}
+
+/**
+ * Compute the manifest at BOOT so no served request ever pays the walk
+ * (server.ts). Idempotent; a no-op once the manifest is frozen.
+ */
+export function prewarmDedaloFilesManifest(): void {
+	if (manifestState.manifest === null) buildDedaloFilesResponse();
+}
+
+/**
+ * How many times the DISK WALK has run in this process — the number the PERF-13
+ * gate measures, because "the walk happens once" is a claim about work done,
+ * not about how the code is spelled.
+ */
+export function dedaloFilesManifestBuilds(): number {
+	return manifestState.builds;
+}
+
+/** Drop the frozen manifest (gates only — boot state is otherwise permanent). */
+export function resetDedaloFilesManifest(): void {
+	manifestState = { manifest: null, builds: 0 };
 }
 
 /**

@@ -79,7 +79,7 @@
 import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import type { DdOntologyNode } from '../db/dd_ontology.ts';
 import type { MatrixJsonbColumn } from '../db/matrix.ts';
-import { insertMatrixRecordWithExplicitId } from '../db/matrix_write.ts';
+import { deleteMatrixRecord, insertMatrixRecordWithExplicitId } from '../db/matrix_write.ts';
 import { sql, withTransaction } from '../db/postgres.ts';
 import { DedaloError } from '../errors/index.ts';
 import { clearOntologyDerivedCaches } from '../ontology/cache_invalidation.ts';
@@ -475,10 +475,7 @@ async function writeOntologyRecords(
 ): Promise<void> {
 	await withTransaction(async () => {
 		for (const [sectionId, node] of wanted) {
-			await sql.unsafe(
-				`DELETE FROM "${ONTOLOGY_TABLE}" WHERE section_tipo = $1 AND section_id = $2`,
-				[sectionTipo, sectionId],
-			);
+			await deleteMatrixRecord(ONTOLOGY_TABLE, sectionTipo, sectionId);
 			// Explicit-id insert: the id IS the node's identity, and the door
 			// raises the tld's counter to GREATEST(value, id) on every row, so a
 			// later auto-allocated node can never reuse one of these ids.

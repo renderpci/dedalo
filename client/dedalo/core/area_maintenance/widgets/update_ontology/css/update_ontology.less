@@ -336,7 +336,12 @@
 		}
 	}
 
-	@media (max-width: 520px) {
+	// Was a private `520px` literal — one author's guess at "narrow", on no
+	// scale. Snapped to the phone tier (600px, vars.less). The only band that
+	// changes is 520-600px, where the three-part `1fr auto 1fr` version row was
+	// already down to ~250px per card; stacking it there is the same reflow one
+	// step earlier, not a different design.
+	@media screen and (max-width: @width_break_point_phone) {
 		.version_change {
 			grid-template-columns: 1fr;
 

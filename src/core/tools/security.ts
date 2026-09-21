@@ -15,7 +15,12 @@
 import { assertValidTipo } from '../search/identifier_gate.ts';
 import { getPermissions, type Principal } from '../security/permissions.ts';
 import { isRecordInScope } from '../security/record_scope.ts';
-import type { ToolActionSpec, ToolServerModule } from './module.ts';
+import type {
+	GatedToolActionSpec,
+	ToolActionSpec,
+	ToolServerModule,
+	WriteTarget,
+} from './module.ts';
 
 /** Look up an action spec by method name (PHP resolve_action). Null when absent. */
 export function resolveAction(module: ToolServerModule, method: string): ToolActionSpec | null {
@@ -77,24 +82,11 @@ export async function assertActionPermission(
 			return scopeIfRecordTargeted(sectionTipo, options, principal);
 		}
 
-		case 'section_list': {
-			// Batch action whose targets ride INSIDE the payload, one per item (PHP
-			// tool_import_dedalo_csv::import_files — SEC-024 §9.2: assert write on
-			// every file's section_tipo before importing any of them). Gating here
-			// rather than in the handler keeps the PHP invariant that the check runs
-			// before the background fork, where its denial is still observable.
-			const targets = spec.sectionTipos?.(options) ?? [];
-			if (targets.length === 0) return fail('invalid section target', ['invalid_request']);
-			for (const target of targets) {
-				const sectionTipo = validTipo(target);
-				if (sectionTipo === null) return fail('invalid section target', ['invalid_request']);
-				const level = await getPermissions(principal, sectionTipo, sectionTipo);
-				if (level < minLevel) {
-					return fail('insufficient permissions on target', ['unauthorized']);
-				}
-			}
-			return { ok: true };
-		}
+		case 'section_list':
+			return assertSectionList(spec, options, principal, minLevel);
+
+		case 'targets':
+			return assertWriteTargets(spec, options, principal, minLevel);
 
 		case 'tipo': {
 			const sectionTipo = validTipo(options.section_tipo);
@@ -170,6 +162,119 @@ export async function assertActionPermission(
 }
 
 /**
+ * 'section_list': a batch action whose targets ride INSIDE the payload, one per
+ * item (PHP tool_import_dedalo_csv::import_files — SEC-024 §9.2: assert write on
+ * every file's section_tipo before importing any of them). Gating here rather
+ * than in the handler keeps the PHP invariant that the check runs before the
+ * background fork, where its denial is still observable.
+ */
+async function assertSectionList(
+	spec: GatedToolActionSpec,
+	options: Record<string, unknown>,
+	principal: Principal,
+	minLevel: number,
+): Promise<PermissionCheck> {
+	const targets = extractorTargets(spec.sectionTipos, options);
+	if (targets === null || targets.length === 0) {
+		return fail('invalid section target', ['invalid_request']);
+	}
+	for (const target of targets) {
+		const sectionTipo = validTipo(target);
+		if (sectionTipo === null) return fail('invalid section target', ['invalid_request']);
+		const level = await getPermissions(principal, sectionTipo, sectionTipo);
+		if (level < minLevel) {
+			return fail('insufficient permissions on target', ['unauthorized']);
+		}
+	}
+	return { ok: true };
+}
+
+/**
+ * 'targets': the gate bound to the EFFECT TARGET (audit CARRY-08 / TOOLS-04).
+ * The spec's `targets(options)` extractor names every (section, component?,
+ * record?) the handler will write, read off the same keys the handler reads;
+ * each is gated here, before the handler and before any background fork:
+ *
+ *  - the level is asserted on the PAIR when a `tipo` is named (a section grant
+ *    is not authority over a component the profile denies), on the section
+ *    when not;
+ *  - a `section_id`, when named, must be a POSITIVE integer and inside the
+ *    caller's scope (isRecordInScope — the projects filter and every assembler
+ *    rule, the dd655 owner predicate included); global admins are unscoped,
+ *    exactly as the 'record' kinds;
+ *  - an empty target list, a malformed entry, or an extractor that throws is a
+ *    DENIAL — a payload that cannot name what it will touch is not authorized
+ *    to touch anything.
+ */
+async function assertWriteTargets(
+	spec: GatedToolActionSpec,
+	options: Record<string, unknown>,
+	principal: Principal,
+	minLevel: number,
+): Promise<PermissionCheck> {
+	const targets = extractorTargets(spec.targets, options);
+	if (targets === null || targets.length === 0) {
+		return fail('invalid permission target', ['invalid_request']);
+	}
+	for (const target of targets) {
+		const check = await assertOneWriteTarget(target, principal, minLevel);
+		if (!check.ok) return check;
+	}
+	return { ok: true };
+}
+
+/** One entry of a 'targets' list: the pair (or section) level, then the record scope. */
+async function assertOneWriteTarget(
+	target: WriteTarget,
+	principal: Principal,
+	minLevel: number,
+): Promise<PermissionCheck> {
+	const pair = writeTargetPair(target);
+	if (pair === null) return fail('invalid permission target', ['invalid_request']);
+	const level = await getPermissions(principal, pair.sectionTipo, pair.tipo);
+	if (level < minLevel) return fail('insufficient permissions on target', ['unauthorized']);
+	if (target.section_id === undefined) return { ok: true };
+	const sectionId = Number(target.section_id);
+	if (!Number.isInteger(sectionId) || sectionId < 1) {
+		return fail('invalid record target', ['invalid_request']);
+	}
+	return assertRecordScope(pair.sectionTipo, sectionId, principal);
+}
+
+/**
+ * The (section, tipo) pair a write target is gated as — the section itself when
+ * no component is named — or null when either half is not a valid tipo.
+ */
+function writeTargetPair(target: WriteTarget): { sectionTipo: string; tipo: string } | null {
+	if (target === null || typeof target !== 'object') return null;
+	const sectionTipo = validTipo(target.section_tipo);
+	if (sectionTipo === null) return null;
+	const tipo = target.tipo === undefined ? sectionTipo : validTipo(target.tipo);
+	return tipo === null ? null : { sectionTipo, tipo };
+}
+
+/**
+ * Run a spec's target extractor over the options. A missing extractor, a
+ * non-array result, or a THROW (the extractor reads a client payload of any
+ * shape) all yield null — which every caller treats as a denial. A throw must
+ * not escape: it would surface as an internal error instead of the refusal it
+ * is, and on a background request it would do so after the gate's ORDER
+ * invariant had already been judged.
+ */
+function extractorTargets<T>(
+	extractor: ((options: Record<string, unknown>) => T[]) | undefined,
+	options: Record<string, unknown>,
+): T[] | null {
+	if (extractor === undefined) return null;
+	try {
+		const targets = extractor(options);
+		return Array.isArray(targets) ? targets : null;
+	} catch {
+		return null;
+	}
+}
+
+/**
  * TOOLS-05 (2026-07-28 audit): a section/tipo-level grant is NOT authority to
  * touch a specific record outside the caller's projects filter. When a
  * section/tipo-gated action ALSO names a concrete existing record (a positive
@@ -185,6 +290,20 @@ async function scopeIfRecordTargeted(
 ): Promise<PermissionCheck> {
 	const sectionId = Number(options.section_id);
 	if (!Number.isInteger(sectionId) || sectionId < 1) return { ok: true };
+	return assertRecordScope(sectionTipo, sectionId, principal);
+}
+
+/**
+ * The record-scope half every record-addressed kind shares: the record must be
+ * visible under the caller's projects filter (PHP assert_record_in_user_scope,
+ * isRecordInScope — the assembler's rules, the dd655 owner predicate included);
+ * global admins are unscoped.
+ */
+async function assertRecordScope(
+	sectionTipo: string,
+	sectionId: number,
+	principal: Principal,
+): Promise<PermissionCheck> {
 	if (!principal.isGlobalAdmin && !(await isRecordInScope(sectionTipo, sectionId, principal))) {
 		return fail('record is out of the user scope', ['unauthorized']);
 	}

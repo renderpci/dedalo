@@ -23,14 +23,18 @@ export interface SvgTagLocator {
 }
 
 /**
- * The published svg file URL for a tag locator — PHP component_svg::
- * get_url_from_locator (:426-462) + get_url (:233-250): DEDALO_MEDIA_URL +
- * folder + '/' + default quality + '/' + `${component_tipo}_${section_tipo}_
- * ${section_id}.svg`. PURE twin: the PHP ontology-model guards (component_tipo
- * must be a component, section_tipo a section) become shape checks — a
- * malformed locator yields null exactly like the PHP guard path.
+ * The MEDIA-ROOT-RELATIVE tail of a tag locator's svg file, leading slash —
+ * `${folder}/${default quality}/${component_tipo}_${section_tipo}_${section_id}.svg`
+ * (PHP component_svg::get_url_from_locator :426-462 + get_url :233-250). PURE
+ * twin: the PHP ontology-model guards (component_tipo must be a component,
+ * section_tipo a section) become shape checks — a malformed locator yields null
+ * exactly like the PHP guard path.
+ *
+ * Split out from the two URL builders below because they differ ONLY in the
+ * base. Keeping one tail is what makes "same file, two audiences" true by
+ * construction instead of by two copies staying in step.
  */
-export function svgUrlFromTagLocator(locator: SvgTagLocator): string | null {
+function svgTagRelativePath(locator: SvgTagLocator): string | null {
 	const { component_tipo, section_tipo, section_id } = locator;
 	if (typeof component_tipo !== 'string' || component_tipo === '') return null;
 	if (typeof section_tipo !== 'string' || section_tipo === '') return null;
@@ -38,7 +42,50 @@ export function svgUrlFromTagLocator(locator: SvgTagLocator): string | null {
 	const spec = mediaTypeOf('component_svg');
 	if (spec === null) return null;
 	const imageId = `${component_tipo}_${section_tipo}_${section_id}`;
-	return `/dedalo/${config.mediaDir}${spec.folder}/${spec.defaultQuality}/${imageId}.${spec.defaultExtension}`;
+	return `${spec.folder}/${spec.defaultQuality}/${imageId}.${spec.defaultExtension}`;
+}
+
+/**
+ * The svg URL for a PUBLISHED cell — the same-origin relative form
+ * `/dedalo/<mediaDir>/…`, deliberately NOT rooted on `config.media.webBase`
+ * (WC-042: published data must not embed the application's origin, which on a
+ * dev machine is a localhost port).
+ *
+ * This is the DEFAULT resolver, so anything that renders a tag without saying
+ * which audience it is for gets the publication shape. See
+ * {@link appServedSvgUrlFromTagLocator} for the other audience and why the
+ * distinction is load-bearing.
+ */
+export function svgUrlFromTagLocator(locator: SvgTagLocator): string | null {
+	const tail = svgTagRelativePath(locator);
+	return tail === null ? null : `/dedalo/${config.mediaDir}${tail}`;
+}
+
+/**
+ * The svg URL for a cell THIS ENGINE SERVES TO ITS OWN BROWSER — rooted on
+ * `config.media.webBase`, exactly like every other media URL the client
+ * receives (`media/path.ts` mediaThumbUrl/subtitlesUrl, `tag_endpoint.ts`,
+ * the DEDALO_MEDIA_URL global).
+ *
+ * WHY THE TWO DIFFER, since one function served both for six weeks and the
+ * asymmetry is the whole bug (2026-09-01, tool_numisdata_epigraphy): an install
+ * may serve media from a DIFFERENT ORIGIN than the application
+ * (`DEDALO_MEDIA_WEB_BASE`, e.g. app on :3500, Apache media on :8080). A
+ * root-relative src then resolves against the APP origin, which in
+ * `publication` access mode does not serve media at all — so every glyph in
+ * every text_area list cell 404s, silently, with a broken-image placeholder
+ * and nothing in the log. The published audience must keep the relative form;
+ * the served audience must not.
+ *
+ * NO-OP where the two audiences coincide: with the key unset `webBase` IS
+ * `/dedalo/<mediaDir>` (src/config/config.ts), so a same-origin install — and
+ * the whole test suite, which pins the key — gets byte-identical output. That
+ * is also why this needs a SPLIT-ORIGIN gate: an assertion phrased in terms of
+ * webBase passes with the defect intact.
+ */
+export function appServedSvgUrlFromTagLocator(locator: SvgTagLocator): string | null {
+	const tail = svgTagRelativePath(locator);
+	return tail === null ? null : `${config.media.webBase}${tail}`;
 }
 
 /** htmlspecialchars(ENT_QUOTES) twin — the SEC-028 attribute escaping. */

@@ -20,11 +20,13 @@
  * (:1375), component_av build_version (:1437, async transcode via jobs).
  */
 
-import { copyFileSync, existsSync } from 'node:fs';
+import { existsSync } from 'node:fs';
+import { copyFile } from 'node:fs/promises';
 import { config } from '../../config/config.ts';
 import { canonicalCoverExtension, type MediaTypeSpec } from '../concepts/media.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
-import { withTempSibling, writeAtomically, writeAtomicallySync } from './atomic.ts';
+import { withTempSibling, writeAtomically } from './atomic.ts';
+import { rasterizePdfPage } from './engine/ghostscript.ts';
 import {
 	assertWritableTargetExtension,
 	backgroundForTarget,
@@ -483,20 +485,34 @@ export async function buildThumbVersion(
 		});
 	}
 	if (spec.model === 'component_pdf') {
-		// PHP component_pdf::create_thumb — rasterize ONLY the first page via the
-		// PDF-aware convert recipe (density/antialias/cropbox), fit to the thumb box.
-		// Page 1 is declared by the MODEL here, not discovered by a probe: a pdf is a
-		// paged source by definition and page 1 is its cover. The selection is built
-		// in exactly one place (sceneToken), so the inline scene-index suffix that
-		// used to be concatenated onto the source path here is gone.
-		return writeAtomically(target, async (temp) => {
-			await convertImage(source, temp, {
-				quality: thumbQuality,
-				selection: 'representative',
-				background: backgroundForTarget(target),
-				pdfDensity: PDF_THUMB_DENSITY,
-				thumbBox: { width: config.media.thumb.width, height: config.media.thumb.height },
-				compression: PDF_THUMB_QUALITY,
+		// PHP component_pdf::create_thumb — rasterize ONLY the first page, fit to the
+		// thumb box. Page 1 is declared by the MODEL here, not discovered by a probe:
+		// a pdf is a paged source by definition and page 1 is its cover.
+		//
+		// THE RENDER IS NOT IMAGEMAGICK'S (engine/ghostscript.ts owns the why, and it
+		// is the same shape as the SVG branch above): ImageMagick can only read a PDF
+		// by forking Ghostscript as a DELEGATE — a process the engine never sees, and
+		// therefore neither bounds nor kills. Measured (MEDIA-01): a 441-byte PDF
+		// declaring a 200000x200000-point page kept a gs child running, growing an
+		// intermediate towards 120 TB, AFTER the magick we spawned had been killed by
+		// the request cap; it reparented to PID 1 and nothing here ever reaped it. The
+		// engine spawns gs itself, refuses a page above the configured dimension
+		// ceiling before rendering anything, and the shipped policy denies the
+		// delegate so this route cannot be bypassed.
+		//
+		// The PNG is an INTERMEDIATE, exactly like the SVG one: the thumb itself is
+		// still produced by the shared ImageMagick recipe, so a pdf thumb keeps the
+		// same box, background, blank-guard and atomic write as every other thumb.
+		return withTempSibling(target, '.render.png', async (raster) => {
+			await rasterizePdfPage(source, raster, PDF_THUMB_DENSITY);
+			return writeAtomically(target, async (temp) => {
+				await convertImage(raster, temp, {
+					quality: thumbQuality,
+					selection: 'representative',
+					background: backgroundForTarget(target),
+					thumbBox: { width: config.media.thumb.width, height: config.media.thumb.height },
+					compression: PDF_THUMB_QUALITY,
+				});
 			});
 		});
 	}
@@ -539,71 +555,144 @@ export async function buildPdfCovers(
 	const created: string[] = [];
 	const errors: string[] = [];
 	const canonical = canonicalCoverExtension(spec);
-	for (const extension of spec.coverExtensions) {
-		const target = buildMediaLocation(
-			spec,
-			identity,
-			spec.defaultQuality,
-			extension,
-			pathOpts,
-		).absolutePath;
+	// ONE RASTERIZATION FOR EVERY COVER EXTENSION, and it is Ghostscript's, not
+	// ImageMagick's — see buildThumbVersion's pdf branch and engine/ghostscript.ts
+	// for the measured reason (an ImageMagick delegate child is unbounded and
+	// survives the kill that ends the request). Rendering page 1 once and encoding
+	// the intermediate N times is also what the previous shape did NOT do: it
+	// re-rasterized the PDF for every configured extension.
+	//
+	// A FAILED RENDER IS ONE ERROR, NOT N: with no raster there is no cover in any
+	// format, and the failure that matters — "this PDF declares a page above the
+	// ceiling" — is a property of the document, not of the extension. The pdf build
+	// keeps its copy and its (separately built) thumb, which is the non-fatal
+	// contract this function has always had.
+	// Nothing to render for a type that declares no cover (every type but pdf):
+	// the loop below would be empty anyway, and this keeps the render off a path
+	// that has no output to justify it.
+	if (spec.coverExtensions.length === 0) return { created, errors };
+	const canonicalTarget = buildMediaLocation(
+		spec,
+		identity,
+		spec.defaultQuality,
+		canonical ?? (spec.coverExtensions[0] as string),
+		pathOpts,
+	).absolutePath;
+	return withTempSibling(canonicalTarget, '.render.png', async (raster) => {
 		try {
-			// Refuse a format this host cannot write BEFORE anything is produced: with
-			// the coder token an unwritable target fails loudly, but the operator needs
-			// to read the config key, not an ImageMagick sentence (see
-			// assertWritableTargetExtension).
-			//
-			// THE CANONICAL COVER IS NEVER PROBED. It is not a configured alternate —
-			// it is the type's own output, built since v6 — so gating it on a probe
-			// makes a derivative that has no config behind it fail with a sentence
-			// naming a config key that does not control it. The probe is also memoized
-			// per process, so one transient failure (a full or unwritable tmpdir at the
-			// moment of the first probe) would take the jpg cover out for the lifetime
-			// of the server. If this host truly cannot write it, the encoder says so
-			// loudly through the coder token, which is where that belongs.
-			if (extension !== canonical) {
-				await assertWritableTargetExtension(
-					extension,
-					`${spec.alternateExtensionsConfigKey} (the ${spec.model} cover of ${buildMediaIdentifier(identity)})`,
+			await rasterizePdfPage(source, raster, config.media.imagePrintDpi);
+		} catch (error) {
+			// THE RAW SENTENCE STAYS IN THE LOG (SEC-18 / error_taxonomy A6). This list
+			// travels to the operator panel on an `ok:true` body, and nothing filters
+			// `data`: the rasterizer's own message names an absolute media-root path and
+			// this install's DEDALO_MAGICK_LIMIT_* ceilings, which is operator
+			// disclosure, not a payload sentence. The panel gets the vetted half.
+			console.error(
+				`buildPdfCovers: cover render failed for ${buildMediaIdentifier(identity)}`,
+				error,
+			);
+			errors.push(
+				`cover render of ${buildMediaIdentifier(identity)}: ${coverRenderFailure(error)}`,
+			);
+			return { created, errors };
+		}
+		for (const extension of spec.coverExtensions) {
+			const target = buildMediaLocation(
+				spec,
+				identity,
+				spec.defaultQuality,
+				extension,
+				pathOpts,
+			).absolutePath;
+			try {
+				// Refuse a format this host cannot write BEFORE anything is produced: with
+				// the coder token an unwritable target fails loudly, but the operator needs
+				// to read the config key, not an ImageMagick sentence (see
+				// assertWritableTargetExtension).
+				//
+				// THE CANONICAL COVER IS NEVER PROBED. It is not a configured alternate —
+				// it is the type's own output, built since v6 — so gating it on a probe
+				// makes a derivative that has no config behind it fail with a sentence
+				// naming a config key that does not control it. The probe is also memoized
+				// per process, so one transient failure (a full or unwritable tmpdir at the
+				// moment of the first probe) would take the jpg cover out for the lifetime
+				// of the server. If this host truly cannot write it, the encoder says so
+				// loudly through the coder token, which is where that belongs.
+				if (extension !== canonical) {
+					await assertWritableTargetExtension(
+						extension,
+						`${spec.alternateExtensionsConfigKey} (the ${spec.model} cover of ${buildMediaIdentifier(identity)})`,
+					);
+				}
+				// Page 1 by model declaration (see buildThumbVersion's pdf branch); the
+				// source here is the gs-rendered intermediate, so this is an ordinary
+				// raster encode under the hardened policy and the resource bound.
+				created.push(
+					await writeAtomically(target, async (temp) => {
+						await convertImage(raster, temp, {
+							quality: spec.defaultQuality,
+							selection: 'representative',
+							// ALWAYS opaque — see the header. Never backgroundForTarget(target).
+							background: '#ffffff',
+						});
+					}),
+				);
+			} catch (error) {
+				errors.push(
+					`${spec.defaultQuality}.${extension} cover of ${buildMediaIdentifier(identity)}: ${(error as Error).message}`,
 				);
 			}
-			// Page 1 by model declaration (see buildThumbVersion's pdf branch).
-			created.push(
-				await writeAtomically(target, async (temp) => {
-					await convertImage(source, temp, {
-						quality: spec.defaultQuality,
-						selection: 'representative',
-						// ALWAYS opaque — see the header. Never backgroundForTarget(target).
-						background: '#ffffff',
-						pdfDensity: config.media.imagePrintDpi,
-					});
-				}),
-			);
-		} catch (error) {
-			errors.push(
-				`${spec.defaultQuality}.${extension} cover of ${buildMediaIdentifier(identity)}: ${(error as Error).message}`,
-			);
 		}
-	}
-	return { created, errors };
+		return { created, errors };
+	});
 }
 
-/** Copy the original to a target quality with the same extension (PHP base build_version copy). */
-export function copyToQuality(
+/**
+ * The sentence a failed cover render may show the operator panel.
+ *
+ * A DedaloError's `publicMessage` is the vetted half of the disclosure ladder —
+ * "This PDF declares a page too large to be rendered on this server." — and its
+ * `.message` is the log half. Anything else is an engine failure with no vetted
+ * sentence at all, and the code is what the panel can act on: the detail is one
+ * `console.error` away in the server log, keyed by the same media identifier.
+ */
+function coverRenderFailure(error: unknown): string {
+	if (error instanceof DedaloError) {
+		return error.publicMessage ?? error.code;
+	}
+	return 'the page could not be rendered (see the server log)';
+}
+
+/**
+ * Copy the original to a target quality with the same extension (PHP base
+ * build_version copy).
+ *
+ * ASYNCHRONOUS, and that is load-bearing. The bytes here are a WHOLE MEDIA FILE
+ * — a heritage mesh or scanned PDF is routinely hundreds of MB — and this runs on
+ * the REQUEST PATH (tool_upload → processUploadedFile). A `copyFileSync` blocks
+ * the single Bun event loop for the whole copy, so every other request on the
+ * install waits for it (measured: 0 ms on APFS, where the copy is a
+ * copy-on-write clone, but 232 ms for a 1 GB file on NVMe — and the shipped path
+ * is Linux/ext4, which has no clone).
+ *
+ * The sync twin it used to use was defended in-comment as avoiding a floating
+ * rejection from an unawaited `regenerate3d` at the ingest call site. That
+ * defence was stale: every call site already sits inside an async function that
+ * awaits its siblings inside a try/catch. The remedy for an unawaited promise is
+ * an explicit handler at the call site, never a blocked event loop
+ * (gate: test/unit/sync_io_on_request_path_tripwire.test.ts).
+ */
+export async function copyToQuality(
 	spec: MediaTypeSpec,
 	identity: MediaIdentity,
 	quality: string,
 	source: string,
 	extension: string,
 	pathOpts: MediaPathOptions,
-): string {
+): Promise<string> {
 	const target = buildMediaLocation(spec, identity, quality, extension, pathOpts).absolutePath;
-	// SYNCHRONOUS on purpose (writeAtomicallySync, not writeAtomically): this is
-	// called by regenerate3d, which is itself sync and is called UNAWAITED from
-	// ingest/process_uploaded_file.ts. Returning a promise from here would turn a
-	// copy failure into an unhandled rejection three call sites away.
-	return writeAtomicallySync(target, (temp) => {
-		copyFileSync(source, temp);
+	return await writeAtomically(target, async (temp) => {
+		await copyFile(source, temp);
 	});
 }
 
@@ -1207,7 +1296,7 @@ export async function regeneratePdf(
 	const source = resolveMasterSource(spec, identity, pathOpts, 'pdf');
 	if (source === null) return { created: [], errors: [] };
 	const created: string[] = [];
-	created.push(copyToQuality(spec, identity, spec.defaultQuality, source, 'pdf', pathOpts));
+	created.push(await copyToQuality(spec, identity, spec.defaultQuality, source, 'pdf', pathOpts));
 	const errors: string[] = [];
 	// NON-FATAL (2026-08-08): an unwrapped throw here took the COVERS with it — the
 	// jpg cover is the only visual a pdf record has in a list view, so a thumb
@@ -1265,7 +1354,7 @@ export async function regenerateSvg(
 	const source = resolveMasterSource(spec, identity, pathOpts, 'svg');
 	if (source === null) return { created: [], errors: [] };
 	const created: string[] = [];
-	created.push(copyToQuality(spec, identity, spec.defaultQuality, source, 'svg', pathOpts));
+	created.push(await copyToQuality(spec, identity, spec.defaultQuality, source, 'svg', pathOpts));
 	try {
 		created.push(await buildThumbVersion(spec, identity, created[0] as string, pathOpts));
 	} catch (error) {
@@ -1277,15 +1366,22 @@ export async function regenerateSvg(
 }
 
 /** Regenerate a 3D record: web copy (converters are ledgered PHP-dead — naive copy). */
-export function regenerate3d(
+export async function regenerate3d(
 	spec: MediaTypeSpec,
 	identity: MediaIdentity,
 	pathOpts: MediaPathOptions,
 	rawExtension: string,
-): string[] {
+): Promise<string[]> {
 	const source = resolveMasterSource(spec, identity, pathOpts, rawExtension);
 	if (source === null) return [];
 	return [
-		copyToQuality(spec, identity, spec.defaultQuality, source, spec.defaultExtension, pathOpts),
+		await copyToQuality(
+			spec,
+			identity,
+			spec.defaultQuality,
+			source,
+			spec.defaultExtension,
+			pathOpts,
+		),
 	];
 }

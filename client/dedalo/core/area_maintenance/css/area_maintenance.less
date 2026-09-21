@@ -299,7 +299,7 @@
 				align-items: center;
 				gap: 0.5rem;
 				padding: 0.85rem 1rem;
-				color: var(--color_white);
+				color: var(--fg_on_brand);
 				background-color: var(--color_orange_dedalo);
 				font-weight: 600;
 				letter-spacing: 0.01em;
@@ -643,7 +643,7 @@
 				transition: background-color 140ms ease, color 140ms ease;
 
 				&.active {
-					color: @map_orange_text;
+					color: var(--fg_on_brand); // AA on the brand fill in both themes (audit P1-18)
 					background-color: var(--color_orange_dedalo);
 				}
 			}
@@ -848,7 +848,7 @@
 				height: 1.1rem;
 				display: grid;
 				place-items: center;
-				color: #fff;
+				color: var(--fg_on_warning); // the warning fill is dark in light and bright in dark; this ink flips with IT, not with the brand
 				background-color: var(--color_warning);
 				border-radius: 50%;
 				font-size: 0.62rem;
@@ -1071,6 +1071,7 @@
 	@import (once) '../widgets/check_config/css/check_config';
 	@import (once) '../widgets/config_areas/css/config_areas';
 	@import (once) '../widgets/counters_status/css/counters_status';
+	@import (once) '../widgets/reconcile_status/css/reconcile_status';
 	@import (once) '../widgets/database_info/css/database_info';
 	@import (once) '../widgets/dedalo_api_test_environment/css/dedalo_api_test_environment';
 	@import (once) '../widgets/diffusion_server_control/css/diffusion_server_control';

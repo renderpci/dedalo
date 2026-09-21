@@ -12,9 +12,28 @@
 	--tool_tc: #000000;
 	--tool_tc_border: #000000;
 	--tool_tc_border_strong: #000000;
+	// the terminal pair the Apply control is drawn in: phosphor green on a black
+	// slab, 12.5:1. It is its OWN pair, not the identity hue: `--tool_tc` is
+	// re-tuned to #ffffff by theme_dark.less so the header edge stays visible on
+	// a near-black bar, and a button that borrowed it put the green on white at
+	// 1.67:1 (CSS coherence audit 2026-09-05, finding C1 / DESIGN clause 2.b).
+	--tool_tc_terminal_bg: #000000;
+	--tool_tc_terminal_fg: #00e801;
+}
+
+// dark theme twins (self-contained, like tool_print). The pair is DELIBERATELY
+// the same in both themes — a terminal is black under green whatever the page
+// around it is — and it is declared here rather than left to inherit so the
+// intent is on record beside the light half: an omitted twin is what a token
+// that "happened to" keep its light value looks like. The #cccccc border
+// theme_dark.less gives `--tool_tc_border` lifts the black slab off the dark
+// surface (13.1:1 against the slab).
+:root[data-theme="dark"] {
+	--tool_tc_terminal_bg: #000000;
+	--tool_tc_terminal_fg: #00e801;
 }
 @tool_color : var(--tool_tc);
-@text_color : #00e801;
+@text_color : var(--tool_tc_terminal_fg);
 
 // wrapper_tool
 .wrapper_tool.tool_tc {
@@ -54,7 +73,7 @@
 			.button_apply {
 				color: @text_color;
 				text-transform: capitalize;
-				background-color: @tool_color;
+				background-color: var(--tool_tc_terminal_bg);
 				border-color: var(--tool_tc_border);
 
 				&:focus {

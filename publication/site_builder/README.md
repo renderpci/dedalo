@@ -126,13 +126,60 @@ pure function of it:**
 `src/provision/schema.ts` is that file's grammar, `src/provision/layout.ts` derives every
 name, path, owner, group and mode from it, and `src/provision/render/` turns the result
 into the exact bytes of each artifact — the systemd unit, the daemon's environment file,
-one vhost per site per surface, and the pairing fragment the paired engine's `.env`
-receives. Each rendered file carries a hash of its own body on the first line, so a hand
+one vhost per site per surface, the polkit rule that lets this museum's daemon start an agent
+turn under the AGENT's uid, and the pairing fragment the paired engine's `.env` receives. Each rendered file carries a hash of its own body on the first line, so a hand
 edit is drift the next run reports by name rather than a change that survives until
 someone re-runs the provisioner and silently loses it.
 
 Read `engineering/SITE_BUILDER_INSTANCES.md` for what an instance IS — the uid/gid/mode
 matrix, the marker law, the credential path, and the isolation boundary between museums.
+
+**A museum has TWO uids.** The daemon's, which holds the shared bearer, the provider keys and
+the audit handle; and the AGENT's (`identity.agentUser`), which every turn runs as, in its own
+transient systemd unit with its own memory/CPU/task/wall-clock caps and its own egress policy
+(`src/drivers/confinement.ts`). Nothing separates a process from itself, so a turn that ran as
+the daemon could read all three whatever the unit's `Protect*` directives said. Where a host
+cannot do this — a laptop, a container — the daemon REFUSES the session unless
+`AGENT_CONFINEMENT=none` is declared, and then every turn announces itself into its own
+durable log. All sites of one museum share the agent uid; the reasoning, and what would end
+that acceptance, is recorded beside the derivation in `src/provision/layout.ts`.
+
+The same uid runs the SITE BUILD and the daemon's own `git` commands: an install script, a
+build command and a git filter are all agent-authored text inside the workspace, and
+`src/util/spawn.ts` refuses a spawn whose cwd is inside `SITES_ROOT` unless it came through
+the confinement. The shared tree states its modes explicitly (`src/util/shared_tree.ts`) so
+the second uid can actually write it, and the audit trail is `0600` so it cannot read that.
+
+Opening that tree also makes a plant possible, so the same module is the ONE way the daemon
+writes into it: paths here are built by `confinedPath`, which is lexical — it proves a
+spelling, not an inode — so every daemon-side write creates its directories one level at a
+time and opens each of them, and the file, with `O_NOFOLLOW`, setting the mode on the
+descriptor. A symlink where the daemon writes (`site.json.tmp`, `AGENTS.md`, `.builder/`,
+`.git/info/exclude`, either driver's MCP config, the session log) is refused, loudly, with
+nothing written; so is a HARD link, which `O_NOFOLLOW` cannot see and which the link count
+on the open handle answers instead — the file is emptied after that question, never as a
+side effect of the open. Without it, a turn could have had the daemon truncate the
+instance's own audit trail, refill it and re-mode it readable. A directory's mode belongs to
+the call that CREATED it: a nested private path never re-modes the private directory above
+it, which is how the first version of this handed `.builder/` back to the agent on every
+build. The census that keeps every writer here is TOTAL over `src/`, keyed by DESTINATION
+and matched by BASE NAME (every `*Sync` spelling, `Bun.write`, `createWriteStream` and
+`openSync` included — the version that required the bare name was answered by a
+`writeFileSync`), and an exemption must state either that its destination is outside
+`SITES_ROOT` and every workspace or that the call refuses a planted name by construction.
+
+AND THE READS GO THROUGH THE SAME DOOR, because a confused deputy has two directions. A
+`readFile` on a lexical path follows a planted link exactly as a write did, and the daemon
+then serves the bytes over the museum's API: a link at `.builder/builds/<id>.log` was
+measured being returned by `GET /sites/<slug>/builds/<id>` as the build's own output, with
+the daemon's `SERVICE_TOKEN` in it. The build record, the build log, `site.json`, the
+session transcript, the meta sidecar and the session index are read through
+`readFileShared`/`readFilePrivate`/`readdirShared`, an absent file answers `null` and a
+planted one throws — and a second census, in the same gate and with the same scope, holds
+every path-based content read in `src/`. The daemon's own state additionally asks WHO OWNS
+the inode, in both directions: `O_NOFOLLOW` proves the name and the link count proves there
+is no second one, but neither says whose file it is, and an agent-authored file in the
+daemon's place would take the museum's key with the mode the agent chose.
 
 ### What lands on the host, byte for byte
 

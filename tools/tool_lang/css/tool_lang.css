@@ -5,7 +5,11 @@
 */
 :root {
   --tool_lang: #7f75e0;
-  --tool_lang_border: #584bd7;
+  --tool_lang_border: #4639bb;
+  --tool_lang_fill: #6459d4;
+}
+:root[data-theme="dark"] {
+  --tool_lang_fill: var(--tool_lang);
 }
 .column_section_id > .button_edit.list_tool_lang:hover {
   background-color: var(--tool_lang);
@@ -178,8 +182,9 @@
   min-height: 1.2em;
 }
 .wrapper_tool.tool_lang > .content_data > .buttons_container > .automatic_translation_container .button_automatic_translation {
-  background-color: var(--tool_lang);
+  background-color: var(--tool_lang_fill);
   border-color: var(--tool_lang_border);
+  color: var(--color_white);
 }
 .wrapper_tool.tool_lang > .content_data > .buttons_container > .automatic_translation_container > select {
   margin-left: 0.75em;
@@ -234,7 +239,7 @@
   margin-right: 0.33rem;
 }
 .wrapper_tool.tool_lang > .content_data > .buttons_container > .secondary {
-  background-color: var(--tool_lang);
+  background-color: var(--tool_lang_fill);
   border-color: var(--tool_lang_border);
   color: var(--color_white);
   min-height: 2.75em;

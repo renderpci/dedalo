@@ -32,7 +32,7 @@
  * state).
  */
 
-import { existsSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { config } from '../../../src/config/config.ts';
 import {
@@ -46,11 +46,12 @@ import {
 	DIARIZATION_COMMON_FILES,
 	type DownloadReport,
 	downloadModel,
-	headContentLength,
 	OPTIONAL_FILES,
-	resolveFetchTarget,
+	resolveStoreTarget,
 } from '../../../src/core/ai/model_fetch.ts';
+import { quarantineFile, verifiedDigest } from '../../../src/core/ai/model_integrity.ts';
 import { forgetFile, recordFileComplete } from '../../../src/core/ai/model_manifest.ts';
+import { pinFor, pinnedRevision } from '../../../src/core/ai/model_pins.ts';
 import {
 	AI_MODEL_URL_PREFIX,
 	fileEvidence,
@@ -1096,6 +1097,14 @@ async function runModelDownload(
 	console.error(`[tool_transcription] model download FAILED for '${model}':`, report.errors);
 	// BACKGROUND job: the throw IS the job's terminal state (background.ts keeps
 	// `error` on the record, which get_background_job_status serves).
+	// An INTEGRITY refusal (no pin, or bytes that did not hash to it — quarantined)
+	// names its own cause: the remedy is a pin or a clean source, never a retry.
+	if (report.refused.length > 0) {
+		throw new DedaloError('ai.model_integrity', {
+			coordinates: { model, action: 'download_model' },
+			message: report.refused.join('; '),
+		});
+	}
 	throw new DedaloError('tool.action_failed', {
 		coordinates: { model, action: 'download_model' },
 		message: report.errors.join('; '),
@@ -1116,13 +1125,46 @@ function modelKindOf(raw: unknown): ModelKind {
 const BACKGROUND_REPAIR_ACTION = 'background_repair_model';
 
 /**
- * verify_model — resolve an `unverified` model into `ready` or `incomplete`.
+ * The LOCAL verdict on one present file of a PINNED model: hash it against the
+ * repo's pin (no network — an air-gapped install can now verify), record the
+ * digest on a match, QUARANTINE on a mismatch. Returns what happened so the
+ * action can count it. Null = this file has no pin (fall back to the hub HEAD).
+ */
+async function verifyPinnedFile(
+	store: string,
+	model: string,
+	file: string,
+	revision: string,
+): Promise<'verified' | 'quarantined' | null> {
+	const pin = pinFor(model, file);
+	if (pin === null) return null;
+	const target = resolveStoreTarget(model, file, store);
+	if (target === null) return 'quarantined'; // an unsafe name cannot be verified, so it cannot be served
+	const actual = await verifiedDigest(target);
+	if (actual === pin.sha256 && statSync(target).size === pin.size) {
+		recordFileComplete(store, model, file, pin.size, { sha256: pin.sha256, revision });
+		return 'verified';
+	}
+	quarantineFile(store, `${model}/${file}`);
+	forgetFile(store, model, file);
+	return 'quarantined';
+}
+
+/**
+ * verify_model — resolve an `unverified` model into `ready`, `incomplete` or
+ * `damaged`.
  *
- * Asks the hub for each file's length and records the ones that match, so the
- * store can answer from disk afterwards. Same two gates as download_model: this
- * makes the server talk to a public host, an operator act. An install with no
- * outbound internet gets a clean "could not be verified", never a false verdict —
- * an air-gapped archive must be able to say "I cannot check", not "it is broken".
+ * A PINNED model (src/core/ai/model_pins.json) is verified LOCALLY: every
+ * present file is sha256-hashed against its pin — no hub, so an air-gapped
+ * install gets a real verdict — and a file whose bytes disagree is quarantined
+ * and reported `damaged` (the remedy is `repair_model`, which re-fetches it at
+ * the pinned revision). An UNPINNED file (an operator's own model, a variant
+ * outside the pin) cannot be verified by anyone and is NAMED as such — the
+ * engine does not vouch for bytes it cannot check, and it no longer asks the
+ * hub for a length either: a length from a mutable head is not a verdict, and
+ * the probe made this action need the network (2026-09-04 removed
+ * `headContentLength`). Same admin gate as download_model. NO NETWORK: an
+ * air-gapped archive gets the same verdict as a connected one.
  */
 async function verifyModelAction(ctx: ToolActionContext): Promise<ToolResponse> {
 	if (ctx.principal?.isGlobalAdmin !== true) {
@@ -1141,55 +1183,48 @@ async function verifyModelAction(ctx: ToolActionContext): Promise<ToolResponse> 
 
 	const store = modelStoreRoot();
 	const report = modelState(entry.name, entry.dtype, entry.kind);
+	const revision = pinnedRevision(entry.name);
 	let checked = 0;
-	let unreachable = 0;
+	const unverifiable: string[] = [];
+	const quarantined: string[] = [];
 	for (const file of report.files) {
-		if (!file.present || file.expected !== null) continue;
-		// Through the SAME confinement helper the downloader uses. On the
-		// dtype-less path these names come from readdirSync, so they are disk
-		// content rather than catalog content: hand-assembling a hub URL from them
-		// is the one place this module would invent a URL from something it did not
-		// validate. Hardening, not a live hole — resolveModelPath already refuses a
-		// traversing name at the serving door.
-		const resolved = resolveFetchTarget(entry.name, file.file, store);
-		if (resolved === null) {
-			console.error(
-				`[tool_transcription] verify '${model}': refusing the unsafe file name '${file.file}'`,
-			);
-			unreachable++;
-			continue;
-		}
-		const length = await headContentLength(resolved.url);
-		if (length === null) {
-			unreachable++;
-			continue;
-		}
-		recordFileComplete(store, entry.name, file.file, length);
-		checked++;
+		if (!file.present) continue;
+		const verdict =
+			revision === null ? null : await verifyPinnedFile(store, entry.name, file.file, revision);
+		if (verdict === 'verified') checked++;
+		else if (verdict === 'quarantined') quarantined.push(file.file);
+		// null: no pin for this model or file. The engine does not vouch for bytes
+		// it cannot verify — the file stays `unverified`, and is NAMED, never
+		// silently counted as fine (CONVENTIONS §1).
+		else unverifiable.push(file.file);
 	}
 
 	const after = modelState(entry.name, entry.dtype, entry.kind);
-	if (unreachable > 0 && checked === 0) {
-		throw new DedaloError('tool.dependency_unavailable', {
-			coordinates: { model },
-			message: `Could not reach the model hub to verify '${model}'`,
-		});
-	}
-	// Partial unreachability must be VISIBLE, not swallowed into a plain "OK": an
-	// admin who reads only "ready" cannot tell a flaky hub (some files unchecked,
-	// try again) from a store that predates the manifest entirely (CONVENTIONS §1
-	// — nothing is silently dropped).
-	// Partial unreachability is part of the PAYLOAD (CONVENTIONS §1: never
-	// swallowed into a plain OK), so it travels in `data`, not in a msg string.
-	if (unreachable > 0) {
-		const note = `${unreachable} file(s) could not be reached and remain unchecked`;
-		console.warn(`[tool_transcription] verify '${model}': ${note}`);
+	// A quarantined file is now ABSENT from the store, so the disk verdict reads
+	// `incomplete`; the truth is stronger and names the remedy (repair): the
+	// bytes were the WRONG bytes. Same state the header-plausibility check uses —
+	// identical remedy, no new enum member, no client change.
+	if (quarantined.length > 0) {
+		console.error(
+			`[tool_transcription] verify '${model}': ${quarantined.length} file(s) failed the pinned sha256 and were quarantined: ${quarantined.join(', ')}`,
+		);
 		return ok(
-			{ state: after.state, checked, unreachable, note },
+			{ state: 'damaged' satisfies ModelState, checked, unverifiable, quarantined },
 			{ requestId: toolRequestId(ctx) },
 		);
 	}
-	return ok({ state: after.state, checked, unreachable: 0 }, { requestId: toolRequestId(ctx) });
+	if (unverifiable.length > 0) {
+		const note = `${unverifiable.length} file(s) have no digest pin and remain unverified`;
+		console.warn(`[tool_transcription] verify '${model}': ${note}`);
+		return ok(
+			{ state: after.state, checked, unverifiable, quarantined, note },
+			{ requestId: toolRequestId(ctx) },
+		);
+	}
+	return ok(
+		{ state: after.state, checked, unverifiable, quarantined },
+		{ requestId: toolRequestId(ctx) },
+	);
 }
 
 /**
@@ -1673,4 +1708,12 @@ export const tool: ToolServerModule = {
 		BACKGROUND_DOWNLOAD_ACTION,
 		BACKGROUND_REPAIR_ACTION,
 	],
+	// All three wait on the ASR sidecar, so they spend the transcription budget
+	// and never the media one — a poll loop must not cost a transcode a slot
+	// (PERF-11 lane declaration).
+	backgroundLanes: {
+		[BACKGROUND_POLL_ACTION]: 'transcription',
+		[BACKGROUND_DOWNLOAD_ACTION]: 'transcription',
+		[BACKGROUND_REPAIR_ACTION]: 'transcription',
+	},
 };

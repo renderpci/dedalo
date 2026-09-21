@@ -18,7 +18,10 @@
  *     a denied seed raises, a denied component never reaches the media tree.
  *  4. EVERY DEGRADATION PATH. No model, a non-vision model, a policy that
  *     forbids egress, no photograph, an unusable answer: each is a clean "no
- *     proposals from this source", never a crash and never a fabrication.
+ *     proposals from this source", never a crash and never a fabrication —
+ *     and the PRODUCTION model resolver (the one seam the wire goes through,
+ *     driven here through the real catalog env) declines with a DedaloError's
+ *     WIRE sentence, never its log-only `.message` (SEC-18).
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -774,12 +777,68 @@ describe('proposeFromVision — degrading honestly', () => {
 		expect(requests).toHaveLength(0);
 	});
 
-	test('a model that fails is a decline, not a crash', async () => {
+	test('a model that fails is a decline, not a crash — and its text stays OFF the report (SEC-18)', async () => {
+		// `declined.detail` reaches an ok:true payload verbatim (dd_identify_api),
+		// at read level 1: the provider's message (an endpoint, a media path)
+		// belongs to the log, and the report carries a deliberate sentence.
+		const sentinel = 'connection refused SENTINEL-/srv/secret/endpoint';
 		const { report } = await run(() => {
-			throw new Error('connection refused');
+			throw new Error(sentinel);
 		});
 		expect(report.declined?.reason).toBe('model_error');
-		expect(report.declined?.detail).toContain('connection refused');
+		expect(report.declined?.detail).toMatch(/did not answer; the server log records why/);
+		expect(JSON.stringify(report)).not.toContain('SENTINEL-');
+		expect(JSON.stringify(report)).not.toContain('connection refused');
+	});
+
+	test('THE PRODUCTION RESOLVER: a provider that fails to construct declines with the REGISTRY sentence, never the api_key_env it names (SEC-18)', async () => {
+		// dd_identify_api never injects resolveModel, so this is the seam the
+		// wire actually goes through: `AnthropicProvider` throws a DedaloError
+		// whose `.message` (the LOG field) names the configured api_key_env —
+		// the field `publicModelList` exists to hide — and `declined.detail`
+		// is copied verbatim into an ok:true `sources[]` at read level 1.
+		const saved = {
+			models: process.env.DEDALO_AGENT_MODELS,
+			key: process.env.MUSEUM_SECRET_VISION_KEY,
+		};
+		process.env.DEDALO_AGENT_MODELS = JSON.stringify([
+			{
+				id: 'v',
+				label: 'v',
+				provider: 'anthropic',
+				model: 'claude-x',
+				api_key_env: 'MUSEUM_SECRET_VISION_KEY',
+			},
+		]);
+		delete process.env.MUSEUM_SECRET_VISION_KEY;
+		const warned: string[] = [];
+		const quiet = console.warn;
+		console.warn = (...args: unknown[]) => {
+			warned.push(args.map(String).join(' '));
+		};
+		try {
+			const { report } = await run('[]', { resolveModel: undefined });
+			expect(report.declined?.reason).toBe('no_vision_model');
+			expect(report.declined?.detail).toBe(
+				'The assistant is not available right now (see server logs)',
+			);
+			const wire = JSON.stringify(report);
+			expect(wire).not.toContain('MUSEUM_SECRET_VISION_KEY');
+			expect(wire).not.toContain('AnthropicProvider requires');
+			// …and the log DOES record why
+			expect(warned.join('\n')).toContain('MUSEUM_SECRET_VISION_KEY');
+			// A CATALOG problem speaks its own vetted sentence (a public code).
+			const unknown = await run('[]', { resolveModel: undefined, modelId: 'no-such-model' });
+			expect(unknown.report.declined).toEqual({
+				reason: 'no_vision_model',
+				detail: 'Unknown model "no-such-model" — pick one from agent_models',
+			});
+		} finally {
+			console.warn = quiet;
+			if (saved.models === undefined) delete process.env.DEDALO_AGENT_MODELS;
+			else process.env.DEDALO_AGENT_MODELS = saved.models;
+			if (saved.key !== undefined) process.env.MUSEUM_SECRET_VISION_KEY = saved.key;
+		}
 	});
 
 	test('an unparsable answer yields nothing usable, and says so', async () => {

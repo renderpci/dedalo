@@ -20,7 +20,7 @@
 			"reason": "Spawns ffmpeg against the real media tree and writes a derivative into it. Same class as the 3D move action: the decidable part is the argv builder, which is gated; the shell is not runnable in a suite that shares the media root."
 		},
 		{
-			"file": "src/core/area_maintenance/user_stats.ts",
+			"file": "src/core/security/user_identity.ts",
 			"symbol": "resolveUserName",
 			"class": "vacuous-projection",
 			"reason": "Three dynamic imports and one component read to turn a dd128 id into a display name; every branch is null-vs-value on its own read. Its callers inject it as a function in the gated fold (foldStatsRows), which is where the label behaviour is actually asserted."

@@ -42,7 +42,6 @@ const EXPECTED_EXCLUSIONS = [
 	// Not ours, not edited here.
 	'!**/node_modules',
 	'!**/vendor',
-	'!**/tools/tool_qr/lib',
 	'!**/tools/tool_lang/translators/browser_transformer',
 	'!**/tools/tool_transcription/transcribers/browser_whisper',
 	'!**/tools/**/*/transcribers/lib/**/*.js',

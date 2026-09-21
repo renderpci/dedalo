@@ -437,10 +437,10 @@ export const attach_item_dataframe = async function(options) {
 * trait.dataframe_common::remove_dataframe_data_by_id() (the single-writer
 * rule). Do not call this from cascade handlers.
 *
-* (!) Soft-unlink only: the target frame record is NOT hard-deleted. It is
-* preserved for the time machine to render previous states. Orphaned target
-* records are reclaimed by the dataframe GC maintenance task, or by the
-* 'delete_target' policy if configured on the slot node.
+* The client removes the LOCATOR only. What happens to the frame TARGET record
+* is the server's decision, from the slot node's delete policy (unlink /
+* delete_target / delete_target_record, or the v6 `hard_delete: true`) —
+* applied after the unlink has committed.
 *
 * Steps:
 *  1. Validate pairing keys (id_key, main_component_tipo); return false
@@ -449,7 +449,8 @@ export const attach_item_dataframe = async function(options) {
 *     return false if absent.
 *  3. Find the matching live instance in the global instance registry using the
 *     id_key pairing predicate.
-*  4. Call instance.unlink_record() to remove the locator from the relation bag.
+*  4. Select the STORED frame entries paired to (id_key, main_component_tipo)
+*     — those carrying an `id` — and call instance.unlink_record(entries).
 *  5. If delete_instace===true, call instance.destroy() to remove it from the
 *     registry and DOM.
 *
@@ -457,12 +458,10 @@ export const attach_item_dataframe = async function(options) {
 * is intentional preservation of the existing API; do NOT rename it.
 * @param {Object} options - delete options
 * @param {Object} options.self - main component instance (must have request_config_object)
-* @param {number|string} options.section_id - section_id of the frame record
-* @param {string} options.section_tipo - section_tipo of the frame record
+* @param {number|string} options.section_id - section_id of the HOST record the frame instance renders on
+* @param {string} options.section_tipo - section_tipo of the HOST record
 * @param {number|string} options.id_key - pairing key; the stable server-minted main item id
 * @param {string} options.main_component_tipo - main component's tipo
-* @param {*} [options.paginated_key=false] - passed to unlink_record (pagination context)
-* @param {*} [options.row_key=false] - passed to unlink_record as both paginated_key and row_key
 * @param {boolean} [options.delete_instace=false] - if true, destroy the frame instance after unlink
 * @returns {Promise<boolean>} true on success, false on any pre-condition failure
 */
@@ -475,8 +474,6 @@ export const delete_dataframe = async function(options) {
 		const section_tipo			= options.section_tipo
 		const id_key				= options.id_key
 		const main_component_tipo	= options.main_component_tipo
-		const paginated_key			= options.paginated_key || false
-		const row_key				= options.row_key || false
 		const delete_instace		= options.delete_instace || false
 
 	// pairing key sanity
@@ -516,16 +513,36 @@ export const delete_dataframe = async function(options) {
 		return false
 	}
 
-	// soft delete (default)
-	// unlink the section, delete the locator from his data, but don't delete the target section
-	// (!) the target section record is never hard-deleted here: time machine
-	// needs to render previous states. Orphan records are reclaimed by the
-	// dataframe GC maintenance task.
-		await component_dataframe.unlink_record({
-			paginated_key	: row_key,
-			row_key			: row_key,
-			section_id		: section_id
-		})
+	// unlink the frame(s): remove their locators from the slot. The target
+	// record's fate is the SERVER's, from the slot node's delete policy
+	// (unlink / delete_target / delete_target_record —
+	// src/core/relations/dataframe.ts). The stored entries are selected by
+	// their PAIRING (id_key + main_component_tipo — `section_id` here is the
+	// HOST record's, the frame target's id is unknown to the caller), and
+	// unlink_record builds each `remove` from `el.id`, so only entries WITH an
+	// id can be removed — a locator without one removes nothing (see
+	// drag_and_drop.js "NEVER UNLINK WITHOUT AN id").
+		const frame_locators = (component_dataframe.data?.entries || []).filter(el =>
+			parseInt(el.id_key)===parseInt(id_key)
+			&& el.main_component_tipo===main_component_tipo
+			&& typeof el.id!=='undefined' && el.id!==null
+		)
+		if (frame_locators.length===0) {
+			const entries = component_dataframe.data?.entries
+			if (Array.isArray(entries) && entries.length>0) {
+				// entries exist but none paired carries an id — a real defect
+				console.error('delete_dataframe: no stored frame entry with an id is paired to', {id_key, main_component_tipo}, component_dataframe.data)
+			}
+			// else: a frame-less item (nothing attached yet) — nothing to unlink, not an error
+			return false
+		}
+		const removed = await component_dataframe.unlink_record(frame_locators)
+		// READ: a refused unlink (already surfaced by the save path) keeps the
+		// frame on the record — destroying its instance would leave the screen
+		// asserting a deletion that did not happen
+		if (removed!==true) {
+			return false
+		}
 
 	// remove the instance
 		if(delete_instace===true){

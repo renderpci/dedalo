@@ -105,13 +105,13 @@
 						margin-left: 0.25rem;
 						margin-right: 0px;
 						&.index{
-							.fn_build_tag_indexation(@color_tag_indexation_normal, @color_white);
+							.fn_build_tag_indexation(@color_tag_indexation_normal, var(--fg_on_accent));
 						}
 						&.reference {
-							.fn_build_tag_reference(@color_tag_indexation_normal, @color_white);
+							.fn_build_tag_reference(@color_tag_indexation_normal, var(--fg_on_accent));
 						}
 						&.draw{
-							.fn_build_tag_draw(@color_tag_indexation_normal, @color_white);
+							.fn_build_tag_draw(@color_tag_indexation_normal, var(--fg_on_accent));
 						}
 
 					}
@@ -119,7 +119,7 @@
 
 				>.no_tag {
 					background-color: @color_blue_2;
-					color: @color_white;
+					color: var(--fg_inverse); // white in BOTH themes (--color_white is the theme's SURFACE ink, dark in dark) — audit P1-18
 					margin-left: 0.25rem;
 					border-radius: 3px;
 					padding: 0.25rem;
@@ -149,13 +149,13 @@
 					margin-left: 0.25rem;
 					margin-right: 0px;
 					&.index{
-						.fn_build_tag_indexation(@color_tag_indexation_normal, @color_white);
+						.fn_build_tag_indexation(@color_tag_indexation_normal, var(--fg_on_accent));
 					}
 					&.reference {
-						.fn_build_tag_reference(@color_tag_indexation_normal, @color_white);
+						.fn_build_tag_reference(@color_tag_indexation_normal, var(--fg_on_accent));
 					}
 					&.draw{
-						.fn_build_tag_draw(@color_tag_indexation_normal, @color_white);
+						.fn_build_tag_draw(@color_tag_indexation_normal, var(--fg_on_accent));
 					}
 				}
 
@@ -195,7 +195,7 @@
 
 				>.no_tag {
 					background-color: @color_blue_2;
-					color: @color_white;
+					color: var(--fg_inverse); // white in BOTH themes (--color_white is the theme's SURFACE ink, dark in dark) — audit P1-18
 					margin-left: 0.25rem;
 					border-radius: 3px;
 					padding: 0.25rem;
@@ -236,7 +236,7 @@
 			border: 0px;
 			padding-left: 3px;
 			padding-right: 2.5px;
-			color: @color_white;
+			color: var(--fg_on_brand);
 			border-radius: 3px;
 			margin: 0px;
 			height: 17px;
@@ -278,19 +278,19 @@
 		>.tags {
 			margin: 0px;
 			&.index {
-				.fn_build_tag_indexation(@color_tag_indexation_normal, @color_white);
+				.fn_build_tag_indexation(@color_tag_indexation_normal, var(--fg_on_accent));
 			}
 			&.reference {
-				.fn_build_tag_reference(@color_tag_indexation_normal, @color_white);
+				.fn_build_tag_reference(@color_tag_indexation_normal, var(--fg_on_accent));
 			}
 			&.draw {
-				.fn_build_tag_draw(@color_tag_indexation_normal, @color_white);
+				.fn_build_tag_draw(@color_tag_indexation_normal, var(--fg_on_accent));
 			}
 		}
 
 		>.no_tag {
 			background-color: @color_blue_2;
-			color: @color_white;
+			color: var(--fg_inverse); // white in BOTH themes (--color_white is the theme's SURFACE ink, dark in dark) — audit P1-18
 			border-radius: 3px;
 			padding: 0.1rem 0.25rem;
 			font-size: 0.8rem;

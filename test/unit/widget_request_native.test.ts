@@ -182,32 +182,45 @@ describe('counters_status.get_value (datalist shape + audit consistency)', () =>
 			expect(body.msg).toBeUndefined();
 			const result = body.data as { datalist?: Record<string, unknown>[]; errors?: string[] };
 
-			// every item carries EXACTLY the differential-pinned key set
+			// every item carries EXACTLY the differential-pinned key set.
+			//
+			// FOLDED, NOT PER-ROW: this list is the INSTALLATION's counters, so a
+			// per-row `expect` makes the file's assertion COUNT a function of how
+			// many sections the suite database happens to hold — and the count is
+			// the per-file floor the assertion ratchet reads. It moved three times
+			// during this audit's closure (3603 → 3579 → 3571 → 3515) with nothing
+			// wrong, which is a ratchet measuring the fixture instead of the code.
+			// The rule below is the same rule, asserted once over every row, and
+			// names the first offender when it breaks.
 			expect((result.datalist?.length ?? 0) > 0).toBe(true);
-			for (const item of result.datalist ?? []) {
-				// `floor_value` is ADDED to the differential-pinned key set
-				// (WC-2026-08-30-section-id-counter-is-a-high-water-mark): the client
-				// measures drift against the section's high-water mark, not against
-				// MAX(live section_id), which reports an already-damaged install as
-				// healthy.
-				expect(Object.keys(item).sort()).toEqual([
-					'bulk_repair_excluded',
-					'counter_value',
-					'floor_value',
-					'label',
-					'last_section_id',
-					'section_tipo',
-				]);
-				expect(typeof item.section_tipo).toBe('string');
-				expect(typeof item.counter_value).toBe('number');
-				expect(typeof item.last_section_id).toBe('number');
-				expect(typeof item.floor_value).toBe('number');
-				expect(typeof item.bulk_repair_excluded).toBe('boolean');
-				// The floor is never below live MAX — it is live MAX widened by the
-				// time-machine witness of deleted records.
-				expect(Number(item.floor_value)).toBeGreaterThanOrEqual(Number(item.last_section_id));
-				expect(item.label === null || typeof item.label === 'string').toBe(true);
-			}
+			const EXPECTED_KEYS = [
+				'bulk_repair_excluded',
+				'counter_value',
+				'floor_value',
+				'label',
+				'last_section_id',
+				'section_tipo',
+			];
+			// `floor_value` is ADDED to the differential-pinned key set
+			// (WC-2026-08-30-section-id-counter-is-a-high-water-mark): the client
+			// measures drift against the section's high-water mark, not against
+			// MAX(live section_id), which reports an already-damaged install as
+			// healthy. The floor is never below live MAX — it is live MAX widened
+			// by the time-machine witness of deleted records.
+			const badRow = (result.datalist ?? []).find(
+				(item) =>
+					JSON.stringify(Object.keys(item).sort()) !== JSON.stringify(EXPECTED_KEYS) ||
+					typeof item.section_tipo !== 'string' ||
+					typeof item.counter_value !== 'number' ||
+					typeof item.last_section_id !== 'number' ||
+					typeof item.floor_value !== 'number' ||
+					typeof item.bulk_repair_excluded !== 'boolean' ||
+					Number(item.floor_value) < Number(item.last_section_id) ||
+					!(item.label === null || typeof item.label === 'string'),
+			);
+			expect(badRow, `counter audit row breaks the pinned shape: ${JSON.stringify(badRow)}`).toBe(
+				undefined,
+			);
 
 			// the test3 audit row agrees with the live counter + MAX(section_id)
 			const test3 = (result.datalist ?? []).find((item) => item.section_tipo === 'test3');
@@ -289,27 +302,36 @@ describe('database_info compute (get_widget_value catalog read)', () => {
 		const indexes = result.indexes ?? {};
 		expect(Object.keys(indexes).length > 0).toBe(true);
 		expect(indexes.matrix_test).toBeDefined();
-		for (const [table, rows] of Object.entries(indexes)) {
-			expect(result.tables).toContain(table);
-			expect(rows.length > 0).toBe(true);
-			let previousBytes = Number.POSITIVE_INFINITY;
-			for (const row of rows) {
-				expect(Object.keys(row).sort()).toEqual([
-					'index_size',
-					'indexdef',
-					'indexname',
-					'schemaname',
-					'tablename',
-				]);
-				expect(row.schemaname).toBe('public');
-				expect(row.tablename).toBe(table);
-				expect(typeof row.indexname).toBe('string');
-				expect(String(row.indexdef).startsWith('CREATE ')).toBe(true);
-				const bytes = prettyToBytes(String(row.index_size));
-				expect(bytes).toBeLessThanOrEqual(previousBytes);
-				previousBytes = bytes;
+		// FOLDED, NOT PER-ROW — same reason as the counter audit above: this walks
+		// every index of every table the INSTALLATION has, so a per-row `expect`
+		// makes this file's assertion count a property of the database rather than
+		// of the code, and the assertion ratchet then measures the fixture. The
+		// rule is unchanged and reported with the offending row.
+		const indexFault = (() => {
+			for (const [table, rows] of Object.entries(indexes)) {
+				if (!(result.tables as string[]).includes(table)) return `table not listed: ${table}`;
+				if (rows.length === 0) return `no index rows for ${table}`;
+				let previousBytes = Number.POSITIVE_INFINITY;
+				for (const row of rows) {
+					const keys = JSON.stringify(Object.keys(row).sort());
+					if (keys !== '["index_size","indexdef","indexname","schemaname","tablename"]') {
+						return `row shape ${keys} on ${table}`;
+					}
+					if (row.schemaname !== 'public') return `schema ${row.schemaname} on ${table}`;
+					if (row.tablename !== table) return `row names ${row.tablename} under ${table}`;
+					if (typeof row.indexname !== 'string') return `indexname not a string on ${table}`;
+					if (!String(row.indexdef).startsWith('CREATE ')) {
+						return `indexdef does not CREATE on ${table}: ${row.indexdef}`;
+					}
+					const bytes = prettyToBytes(String(row.index_size));
+					// size-DESC within the table
+					if (bytes > previousBytes) return `size order broken on ${table} at ${row.indexname}`;
+					previousBytes = bytes;
+				}
 			}
-		}
+			return null;
+		})();
+		expect(indexFault).toBeNull();
 
 		// engine-native by design (differential-pinned assertion, verbatim)
 		expect(String(result.info?.server ?? '')).toContain('PostgreSQL');

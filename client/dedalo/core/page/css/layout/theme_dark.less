@@ -69,17 +69,17 @@
 	--color_red_light:                #6a3030;
 	--color_danger:                   #ef5560;
 	--color_green_light:              #1f3a2c;
-	--color_green_success:            #4f8a5b;
+	--color_green_success:            #3f7150; // AA under white ink (audit P1-18)
 	--color_success:                  #46c46c;
 	--color_green_ontology_hover:     #5a9a90;
-	--color_green_ontology:           #4a8a80;
+	--color_green_ontology:           #3a6d65; // AA under white ink (audit P1-18)
 	--color_blue_light:               #243352;
 	--color_blue_light_2:             #243a4a;
 	--color_cyan:                     #2a5a55;
 	--color_info:                     #38c0d6;
-	--color_primary:                  #4a9eff;
+	--color_primary:                  #3673bd; // AA under white ink (audit P1-18)
 	--color_blue:                     #5a9aff;
-	--color_blue_2:                   #4a8ae8;
+	--color_blue_2:                   #35659f; // AA under white ink (audit P1-18)
 	--color_blue_3:                   #3a7ad8;
 	--color_input_focus:              var(--color_orange_dedalo); // Dédalo-orange hi-lite base on inputs, checkbox, radio buttons, etc (was blue #4a9eff)
 	--color_purple_light:             #2a2040;
@@ -88,14 +88,14 @@
 
 	// Ontology
 	--color_ontology_css:             #a080a5;
-	--color_ontology_rqo:             #c06060;
+	--color_ontology_rqo:             #9d4e4e; // AA under white ink (audit P1-18)
 	--color_ontology_properties:      #30a038;
 	--color_ontology_properties_v5:   #4a4520;
 
 	// Tags
 	--color_tag_indexation_normal:    #ffa54a;
-	--color_tag_indexation_removed:   #5aa0ff;
-	--color_tag_indexation_to_review: #ff6040;
+	--color_tag_indexation_removed:   #4475b5; // AA under white ink (audit P1-18)
+	--color_tag_indexation_to_review: #c94a30; // AA under white ink (audit P1-18)
 
 	// Libs
 	--color_php:                      #9090c0;
@@ -111,6 +111,12 @@
 	--fg_default:     #e5e7ea;
 	--fg_muted:       #aeb4bd; // lifted from #a3a8b0 for WCAG AA on elevated surfaces
 	--fg_inverse:     #ffffff;
+	// The ink on a light accent fill (the indexation amber and its siblings stay
+	// colour-coded in dark too, so the ink is dark here as well — audit P1-18).
+	--fg_on_accent:   #16181b;
+	--fg_on_brand:    #16181b; // the brand fill is LIGHT in dark, so its ink is dark (audit P1-18)
+	--fg_on_warning:  #16181b; // the warning fill is BRIGHT in dark (#f08245), so its ink is dark too
+	--bg_fill_inverse: #4a5059; // neutral fill under white ink, AA in dark too (audit P1-18)
 	--border_default: #353a42;
 	--border_strong:  #4a5059;
 	--shadow_default: rgba(0, 0, 0, 0.55);
@@ -147,12 +153,12 @@
 	--color_danger_border:           #e04050;
 	--color_danger_hover_bg:         #e04050;
 	--color_danger_hover_border:     #d03040;
-	--color_danger_dark:             #410e0e;
+	--color_danger_dark:             #8f2b2b; // AA under the dark theme's inverse ink (was #410e0e, unreadable)
 	// button: orange / warning
 	--color_orange_border:           #ff9a40;
 	--color_orange_hover_bg:         #ff9a40;
 	--color_orange_hover_border:     #ee8a30;
-	--color_orange_dark:             #dd7a20;
+	--color_orange_dark:             #f0a355; // AA as ink on the dark --color_orange_light (audit P1-18)
 	--color_orange_light:            #2a2218;
 	// button: info
 	--color_info_border:             #30b8cc;
@@ -196,7 +202,7 @@
 	// instead of light's solid #ffa54a slab. _fg is a LITERAL — --color_white is
 	// #1b1d20 here, and the fly-out arrow glyph borrows this token too.
 	--menu_item_active_bg:      #454b56; // 8.8:1 under white ink; a 1.4:1 raise over the dropdown
-	--menu_item_active_fg:      #ffffff;
+	--menu_item_active_fg:      #ffffff; // dark's active fill is a NEUTRAL raise (#454b56), not the amber — white ink, 8.8:1
 	--menu_item_active_accent:  var(--color_orange_dedalo);
 	--debug_info_bar_bg:        #522525;
 	--debug_info_bar_text:      var(--fg_muted); // #aeb4bd — 6.1:1 on --debug_info_bar_bg (was 4.0:1)
@@ -249,22 +255,45 @@
 	--ut_accent: @color_orange_dedalo;
 	--ut_accent_hi: #fca340;
 	--ut_accent_soft: rgba(247,138,28,.16);
-	--ut_on_accent: #2a1c05;
-	--ut_green: #3fb950;
+	--ut_on_accent: #16181b; // ink on the dark --ut_accent fill (audit P1-18)
+	--ut_on_green: #16181b; // ink on the BRIGHT dark-theme green fill (see light palette)
+	--ut_green: #56d364; // AA as ink on its own 15% tint over the dark canvas (audit P1-18)
 	--ut_green_soft: rgba(63,185,80,.15);
 	--ut_green_glow: rgba(63,185,80,.4);
-	--ut_red: #f85149;
+	--ut_red: #ff7b72; // AA as ink on its own 15% tint over the dark canvas (audit P1-18)
 	--ut_red_soft: rgba(248,81,73,.15);
 	--ut_red_glow: rgba(248,81,73,.45);
 	--ut_run: #d29922;
+	--ut_blue_ink: #79b8ff; // ink for the informational tint on the dark canvas (audit P1-18)
 	--ut_run_soft: rgba(210,153,34,.15);
 	--ut_pending: #586273;
 	--ut_shadow: 0 1px 0 rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
 	--ut_grain: .03;
 
 	// ---- TOOL COLORS (dark variants) ----
-	// Tools that alias existing vars inherit their dark values automatically.
-	// Tools with hardcoded hex get dark-optimized variants here.
+	// A tool declares the LIGHT half of its colour tokens in its own sheet's bare
+	// `:root`; the dark half is declared here for the 46 names below. This block
+	// is ONE of three ways a tool colour is correct on the dark axis, not the
+	// rule for all of them (CSS coherence audit 2026-09-05, finding C2 / DESIGN
+	// clause 2.b):
+	//   1. a dark twin HERE — a tool sheet is injected into the main.css document,
+	//      so `:root[data-theme="dark"]` from this file outranks the tool's `:root`;
+	//   2. a dark twin in the tool's OWN `:root[data-theme="dark"]` block
+	//      (tool_print does this for its paper-preview tokens) — equivalent, and
+	//      the only door for a sheet that is loaded into a document WITHOUT
+	//      main.css;
+	//   3. an alias of a palette token (`--tool_cataloging: var(--color_orange_dedalo)`)
+	//      or a DECLARED theme-invariant hue with its reason stated in the tool's
+	//      sheet (tool_diffusion below) — no twin needed.
+	// A token in none of the three keeps its light value under dark, where the
+	// inherited document ink is near-white: that is how a tint meant as a soft
+	// panel becomes a 1.07:1 slab (tool_identify, tool_error_report, measured
+	// 2026-09-05). NOTHING MECHANICAL READS THIS COMMENT TODAY: `theme_token_parity`
+	// pairs four core prefixes only, and the contrast gate judges `main.css`,
+	// not the tool sheets. Until the palette-axis gate the audit prescribes
+	// lands, a twin's PRESENCE is checked by the author and a twin's LEGIBILITY
+	// by nobody — a copied light value here would pass such a gate and still be
+	// unreadable, so choose the value against the ink that lands on it.
 	--tool_dd_label:                  #b0b0b0;
 	--tool_dd_label_border:           #808080;
 	--tool_dev_template:              #ffa040;

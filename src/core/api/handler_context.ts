@@ -38,6 +38,16 @@ export interface ApiRequestContext {
 	preauthLang?: string | null;
 	/** Raw CSRF token from header/body, if any. */
 	csrfCandidate: string | null;
+	/**
+	 * WHICH CHANNEL carried the token — `'header'` (every XHR the client makes),
+	 * `'body'` (the rqo field, the ONE door sendBeacon can use: beforeunload cannot
+	 * set headers) or null (nothing was sent). Diagnostic only, never authorization:
+	 * the refusal in `runAuthGates` prints it, because "the lock beacon at tab close
+	 * is sending a stale token" and "a live page never obtained one" are different
+	 * faults with the same error code, and a log line that cannot tell them apart is
+	 * a log line nobody can act on.
+	 */
+	csrfSource?: 'header' | 'body' | null;
 	/** Raw X-Dedalo-Report-Token header (error-report intake spam filter,
 	 * WC-017) — checked constant-time by dd_error_report_api only. */
 	reportTokenCandidate?: string | null;

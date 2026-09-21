@@ -5,10 +5,11 @@
 
 
 // imports
-	import {get_section_records} from '../../section/js/section.js'
+	import {window_section_rows} from '../../section/js/section.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {clone, get_font_fit_size} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
+	import {a11y} from '../../common/js/a11y.js'
 	import {open_tool} from '../../../core/tools_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {no_records_node} from './render_common_section.js'
@@ -36,7 +37,8 @@
 *     column header row, and content rows.
 *   - Builds (or reuses) the columns_map — the ordered descriptor array that
 *     drives both the CSS grid layout and the per-column render callbacks.
-*   - Delegates per-row rendering to section_record instances (ar_instances).
+*   - Delegates per-row rendering to section_record instances built on demand
+*     by the row window (section.js window_section_rows).
 *   - Adapts the section-id column width and font size dynamically so that
 *     long numeric IDs do not overflow the fixed-width id cell.
 *
@@ -102,17 +104,17 @@ view_default_list_section.render = async function(self, options) {
 		const columns_map	= await this.rebuild_columns_map(self)
 		self.columns_map	= columns_map
 
-	// ar_section_record. section_record instances (initialized and built)
-		self.ar_instances = self.ar_instances && self.ar_instances.length>0
-			? self.ar_instances
-			: await get_section_records({caller: self})
+	// rows. The page's locator entries; instances are built by the row window
+	// (section.js window_section_rows) only for the rows the viewport reaches
+		const rows = self.data?.entries || []
+		self.ar_instances = self.ar_instances || []
 
 	// content_data
-		const content_data = await this.get_content_data(self, self.ar_instances)
+		const content_data = await this.get_content_data(self, rows)
 		if (render_level==='content') {
 
 			// list_header_node. Remove possible style 'hide' if not empty
-				if (self.ar_instances.length>0) {
+				if (rows.length>0) {
 					const wrapper = self.node
 					if (wrapper.list_header_node && wrapper.list_header_node.classList.contains('hide')) {
 						wrapper.list_header_node.classList.remove('hide')
@@ -214,10 +216,10 @@ view_default_list_section.render = async function(self, options) {
 		// Adapt section_id column width/font to the longest ID on this page (first render)
 		view_default_list_section.adapt_section_id_column(list_body, self)
 
-	// list_header_node. Create and append if ar_instances is not empty
+	// list_header_node. Create and append if the page is not empty
 		const list_header_node = ui.render_list_header(columns_map, self)
 		list_body.appendChild(list_header_node)
-		if (self.ar_instances.length<1) {
+		if (rows.length<1) {
 			list_header_node.classList.add('hide')
 		}
 
@@ -244,14 +246,15 @@ view_default_list_section.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* Renders all section_record rows for the current page into a single
-* <div class="content_data"> element.
+* Builds the <div class="content_data"> element for the current page and hands
+* its rows to a ROW WINDOW (section.js window_section_rows → common/js/
+* row_window.js): only the rows the viewport can reach are built — at most
+* ROW_WINDOW_MAX_ROWS at once — and rows past the far edge are released. The
+* first window is filled before this resolves, so the returned node already
+* holds the first rows (audit P2-31 / CLI-29: the page DEC-07 permits is 1000
+* rows, and every one used to be built synchronously).
 *
-* Rendering is parallelised: all section_record.render() calls are fired
-* concurrently via Promise.all, then the resolved nodes are appended in their
-* original order to preserve stable row ordering.
-*
-* When the records array is empty a "no records found" placeholder is shown
+* When the rows array is empty a "no records found" placeholder is shown
 * instead of an empty grid (via no_records_node from render_common_section).
 *
 * After building the content node, re-runs adapt_section_id_column so that
@@ -259,41 +262,34 @@ view_default_list_section.render = async function(self, options) {
 * on pagination, where self.node_body already exists from the first render).
 *
 * @param {Object} self - The section instance. Must expose: mode, type, node_body.
-* @param {Array} ar_section_record - Array of section_record instances that
-*   each implement render({add_hilite_row}) → Promise<HTMLElement>.
+* @param {Array} rows - The page's locator entries (`self.data.entries`), or
+*   already-built section_record instances (the TM inspector panels).
 * @returns {Promise<HTMLElement>} The populated <div class="content_data"> node.
 */
-view_default_list_section.get_content_data = async function(self, ar_section_record) {
-
-	const fragment = new DocumentFragment()
-
-	// add all section_record rendered nodes
-		const ar_section_record_length = ar_section_record.length
-		if (ar_section_record_length===0) {
-
-			// no records found case
-			const row_item = no_records_node()
-			fragment.appendChild(row_item)
-
-		}else{
-
-			// rows
-			// parallel mode
-				const ar_promises = ar_section_record.map(el => el.render({
-					add_hilite_row : true
-				}))
-
-			// once rendered, append it preserving the order
-				const ar_nodes = await Promise.all(ar_promises)
-				for (const section_record_node of ar_nodes) {
-					fragment.appendChild(section_record_node)
-				}
-		}
+view_default_list_section.get_content_data = async function(self, rows) {
 
 	// content_data
 		const content_data = document.createElement('div')
 			  content_data.classList.add('content_data', self.mode, self.type)
-			  content_data.appendChild(fragment)
+
+	// rows
+		if (!rows || rows.length===0) {
+
+			// no records found case
+			content_data.appendChild(no_records_node())
+
+		}else{
+
+			// row window: builds and renders section_record rows on demand
+			await window_section_rows({
+				caller			: self,
+				container		: content_data,
+				rows			: rows,
+				render_options	: {
+					add_hilite_row : true
+				}
+			})
+		}
 
 	// Re-adapt section_id column on every content refresh (pagination).
 	// self.node_body is set on first render; on pagination it is the existing list_body.
@@ -528,7 +524,11 @@ const get_buttons = function(self) {
 			// Note that self section is who is observing this event (init)
 			event_manager.publish('toggle_search_panel_'+self.id)
 		}
-		filter_button.addEventListener('mousedown', mousedown_handler)
+		// a11y (audit P1-18 / CLI-11): a mousedown-only <button> is keyboard-dead.
+		a11y.make_activable(filter_button, {
+			pointer_event	: 'mousedown',
+			on_activate		: mousedown_handler
+		})
 
 	// show_all_button. Show all records button
 		const show_all_button	= ui.create_dom_element({
@@ -543,7 +543,10 @@ const get_buttons = function(self) {
 			// Trigger section filter (search.js instance) method 'show_all' like search form do.
 			self.filter.show_all(show_all_button)
 		}
-		show_all_button.addEventListener('mousedown', show_all_mousedown_handler)
+		a11y.make_activable(show_all_button, {
+			pointer_event	: 'mousedown',
+			on_activate		: show_all_mousedown_handler
+		})
 
 	// semantic quick input (RAG, 2026-07-22). Hidden unless the searched
 	// section declares embed groups; Enter fires the search instance's
@@ -671,6 +674,9 @@ const get_buttons = function(self) {
 			},
 			parent			: buttons_container
 		})
+		// a11y: icon-only toggle — the title is the name the operator reads on
+		// hover, so it is the name the accessibility tree gets too.
+		a11y.set_label(show_other_buttons_button, show_other_buttons_label)
 		show_other_buttons_button.addEventListener('click', function(e) {
 			e.stopPropagation()
 		})

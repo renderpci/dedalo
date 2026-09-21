@@ -6,6 +6,10 @@
 :root {
   --tool_image_rotation: #587d8f;
   --tool_image_rotation_border: #45616f;
+  --tool_image_rotation_fill: #4f7181;
+}
+:root[data-theme="dark"] {
+  --tool_image_rotation_fill: var(--tool_image_rotation);
 }
 .wrapper_tool.tool_image_rotation {
   --media_max_height: 30vh;
@@ -142,7 +146,7 @@
   z-index: unset;
   background-color: var(--color_white);
   display: flex;
-  color: var(--color_grey_9);
+  color: var(--fg_muted);
   width: 100%;
   margin-left: auto;
   margin-right: auto;
@@ -257,9 +261,9 @@
   background: var(--color_grey_15);
 }
 .wrapper_tool.tool_image_rotation > .content_data > .buttons_container .options_container .apply_rotation:hover {
-  background-color: var(--tool_image_rotation);
+  background-color: var(--tool_image_rotation_fill);
   border-color: var(--tool_image_rotation_border);
-  color: var(--color_white);
+  color: var(--fg_on_warning);
 }
 .wrapper_tool.tool_image_rotation > .content_data > .buttons_container .options_container .remove_background_button_container {
   display: flex;
@@ -279,9 +283,9 @@
   background: var(--color_grey_15);
 }
 .wrapper_tool.tool_image_rotation > .content_data > .buttons_container .options_container .remove_background_button_container > .button_remove_background:hover {
-  background-color: var(--tool_image_rotation);
+  background-color: var(--tool_image_rotation_fill);
   border-color: var(--tool_image_rotation_border);
-  color: var(--color_white);
+  color: var(--fg_on_warning);
 }
 .wrapper_tool.tool_image_rotation > .content_data > .buttons_container .options_container .remove_background_button_container > .button_remove_background.disable {
   pointer-events: none;

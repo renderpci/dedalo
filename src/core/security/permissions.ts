@@ -77,7 +77,24 @@ const GLOBAL_ADMIN_COMPONENT = 'dd244';
 const DEVELOPER_COMPONENT = 'dd515';
 const AREA_MAINTENANCE = 'dd88';
 const TOOLS_REGISTER_SECTION = 'dd1324';
-const TEMP_PRESET_SECTION = 'dd655';
+/**
+ * dd655 — the per-user EDITING preset section (one transient "current search"
+ * record per user and section, client search_user_presets.js). Every principal
+ * resolves level 2 on it (getPermissions below): that is the RULE that lets any
+ * profile keep its own editing preset without an install-wide dd655 grant. It
+ * is NOT authority over other users' rows: the rule is bounded by the OWNER
+ * predicate the search assembler applies to this section
+ * (sql_assembler.ts buildPresetOwnerFilter — `dd654` owner locator or
+ * `created_by_user_id`), which the list, the count, the UNION branches,
+ * `isRecordInScope` and therefore the save/delete doors all inherit. Exported
+ * so the assembler binds the predicate to the same tipo this rule names.
+ * Audit CARRY-07 (TOOLS-03): before the predicate, 80 preset rows owned by
+ * three users were each readable and writable by any of them by id.
+ * Gate: test/unit/preset_ownership_native.test.ts.
+ */
+export const TEMP_PRESET_SECTION = 'dd655';
+/** dd654 — the owner locator (→ dd128) on a dd655/dd623 preset record. */
+export const PRESET_OWNER_COMPONENT = 'dd654';
 const INVERSE_RELATIONS_COMPONENT = 'dd1596';
 /**
  * Sections whose list values are publicly readable when the matrix says 0.
@@ -263,22 +280,24 @@ export function invalidatePermissionsForWrite(
 	sectionId: number,
 ): void {
 	clearSecurityCachesForWrite(sectionTipo, componentTipo, sectionId);
-	// THE REVOCATION SEAM — the SECOND reach, for the ONE door that writes a dd128
+	// THE REVOCATION SEAM — the SECOND reach, for a door that writes a dd128
 	// relation key without going through the record-write chokepoint.
 	//
-	// The PRIMARY reach is `section_record/record_write.ts` (persistRecordKeys /
-	// persistRecordColumns → revocation.reactToRecordComponentWrite): that is where
-	// every save door, both importers, the MCP tools, the agent change-plan,
-	// tool_propagate_component_data and both time-machine restore doors land.
-	// `relations/save.ts deletePortalLocator` does NOT — it removes a locator with a
-	// direct `updateMatrixKeyData` and then calls THIS function post-commit — so without
-	// this line a portal-unlink of a dd244 (security administrator) or dd131 locator
-	// would revoke nothing. Enumerated as such in
-	// test/unit/dd128_write_census_tripwire.test.ts.
+	// The PRIMARY reach is `section_record/record_write.ts` (afterRecordWrite, the
+	// post-write hook of persistRecordKeys / persistRecordColumns →
+	// revocation.reactToRecordComponentWrite): that is where every save door, both
+	// importers, the MCP tools, the agent change-plan, tool_propagate_component_data,
+	// both time-machine restore doors AND — since P1-8 (2026-09-03) — the portal
+	// unlink door `relations/save.ts deletePortalLocator` land (it used to remove the
+	// locator with a direct `updateMatrixKeyData` and call THIS function post-commit).
+	// No engine door reaches the seam through this function today; it stays because
+	// its contract (clear + revoke, commit-only) is the right shape for the next door
+	// that legitimately cannot use the chokepoint, and because the census gate
+	// (test/unit/dd128_write_census_tripwire.test.ts) names it as a seam symbol.
 	//
-	// COMMIT-ONLY LANE. When this function is already post-commit (deletePortalLocator)
-	// there is no ambient transaction, `registerCommitAction` returns false and the
-	// revocation runs inline — the same answer, reached honestly.
+	// COMMIT-ONLY LANE. Called post-commit, there is no ambient transaction,
+	// `registerCommitAction` returns false and the revocation runs inline — the same
+	// answer, reached honestly.
 	//
 	// (!) A CALLER ON THE DEFERRED LANE MUST NOT USE THIS FUNCTION. `deferPostTransaction`
 	// replays on ROLLBACK, and a replay happens after the commit queue has closed, so
@@ -480,6 +499,8 @@ export async function getPermissions(
 	// Core resolver order.
 	if (principal.userId === SUPERUSER_ID) return 3;
 	if (parentTipo === TOOLS_REGISTER_SECTION) return 1;
+	// The blanket editing-preset grant — bounded to the caller's OWN rows by the
+	// assembler's owner predicate (see TEMP_PRESET_SECTION).
 	if (parentTipo === TEMP_PRESET_SECTION) return 2;
 	// Inverse-relations / 'all' read wildcard (the related "who-calls-me" path).
 	// AUTHZ-05 guard: the wildcard grant requires a CONCRETE parent section tipo,

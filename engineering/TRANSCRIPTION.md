@@ -48,8 +48,10 @@ a public hub.
 - **Escape hatch**: `DEDALO_AI_MODEL_ALLOW_HUB=true` lets the browser fall back to
   a public hub. Off by default, and wrong for any collection holding personal
   data.
-- The runtime itself (`@huggingface/transformers`, `onnxruntime-web`) is a pinned
-  dependency served through the client-lib registry, NOT a CDN. The
+- The runtime itself is served through the client-lib registry, NOT a CDN: the
+  transformers.js bundle is a digest-pinned vendored tree (`vendor/transformers`,
+  since 2026-09-04 — the npm package shipped 567 MB of Node-side native code the
+  engine never ran) and its WASM glue is the `onnxruntime-web` npm pin. The
   `no_remote_code_tripwire` gate keeps it that way.
 
 ## The on-premise ASR sidecar (`local_whisper`)

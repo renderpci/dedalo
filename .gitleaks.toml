@@ -18,7 +18,6 @@ useDefault = true
 [[allowlists]]
 description = "Vendored third-party bundles we ship verbatim — minified base64 blobs read as high-entropy keys, and we do not edit these bytes."
 paths = [
-  '''tools/tool_lang/translators/browser_transformer/lib/''',
   '''client/dedalo/lib/''',
   '''publication/.*/docu/ui/''',
 ]

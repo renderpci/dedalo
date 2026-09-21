@@ -25,7 +25,7 @@
 			padding: 0.5rem 1.1rem;
 			font-size: 1em;
 			font-weight: 600;
-			color: #ffffff;
+			color: var(--fg_on_brand); // the brand fill flips per theme; so does its ink (audit P1-18)
 			background-color: var(--color_orange_dedalo);
 			border: 1px solid color-mix(in srgb, var(--color_orange_dedalo) 75%, #000);
 			border-radius: 4px;
@@ -153,7 +153,7 @@
 						// kit's fill lost to the secondary styling below, leaving the
 						// primary action looking exactly like everything else.
 						&.primary {
-							color: var(--color_white);
+							color: var(--fg_inverse); // white in BOTH themes (audit P1-18)
 							background-color: var(--color_primary);
 							border: 1px solid var(--color_primary);
 

@@ -14,10 +14,10 @@
  */
 
 import { existsSync } from 'node:fs';
-import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { confinedPath } from '../util/paths';
-import { runBinary } from '../util/spawn';
+import { mkdirShared, writeFileSharedAtomic } from '../util/shared_tree';
+import { runConfined } from '../drivers/confinement';
 import { config } from '../config';
 
 const GIT_TIMEOUT_MS = 30_000;
@@ -121,13 +121,24 @@ export async function excludeDaemonState(slug: string): Promise<void> {
   // that holds no repository — manufacturing the very evidence the caller's guard looks
   // for, and leaving a `.git` that is not one.
   assertIsRepository(cwd, 'exclude daemon state');
-  const exclude = join(cwd, '.git', 'info', 'exclude');
-  await mkdir(dirname(exclude), { recursive: true });
-  await writeFile(exclude, EXCLUDE_BODY, 'utf8');
-  await runBinary(['git', 'rm', '-r', '--cached', '--quiet', '--ignore-unmatch', DAEMON_STATE_DIR], {
+  // THROUGH THE FD-BASED WRITERS, like every other daemon-side write into a workspace.
+  //
+  // `.git` is created by the AGENT (git runs confined), so this is the one file this daemon
+  // writes into a directory the agent owns outright — and `confinedPath` is lexical: a
+  // `.git/info/exclude -> <the instance's audit trail>` planted by a turn had the daemon
+  // truncate the trail and refill it with this body. `mkdirShared` creates only what is
+  // missing and modes only what it creates (`.git` and `info`, when git made them, keep
+  // their own modes), and the atomic writer renames a tmp sibling this daemon owns over the
+  // target instead of writing through it — which is also what makes an agent-owned
+  // `exclude` replaceable at all.
+  await mkdirShared(config.SITES_ROOT, join(slug, '.git', 'info'));
+  await writeFileSharedAtomic(config.SITES_ROOT, join(slug, '.git', 'info', 'exclude'), EXCLUDE_BODY);
+  await runConfined({
+    argv: ['git', 'rm', '-r', '--cached', '--quiet', '--ignore-unmatch', DAEMON_STATE_DIR],
     cwd,
     env: gitEnv(cwd),
     timeoutMs: GIT_TIMEOUT_MS,
+    label: 'git command',
   });
 }
 
@@ -137,7 +148,13 @@ async function git(slug: string, ...args: string[]): Promise<void> {
   // a missing `.git` is not an error — it is a silent promotion to whatever repository
   // encloses the workspace.
   if (args[0] !== 'init') assertIsRepository(cwd, `git ${args[0]}`);
-  const result = await runBinary(['git', ...args], { cwd, env: gitEnv(cwd), timeoutMs: GIT_TIMEOUT_MS });
+  const result = await runConfined({
+    argv: ['git', ...args],
+    cwd,
+    env: gitEnv(cwd),
+    timeoutMs: GIT_TIMEOUT_MS,
+    label: 'git command',
+  });
   if (result.exitCode !== 0) {
     throw new Error(`git ${args[0]} failed (exit ${result.exitCode}): ${result.stderr.trim()}`);
   }
@@ -165,10 +182,12 @@ export async function commitAll(slug: string, message: string): Promise<boolean>
   await git(slug, 'add', '-A');
   const cwd = confinedPath(config.SITES_ROOT, slug);
   // `git diff --cached --quiet` exits 1 when there IS something staged.
-  const staged = await runBinary(['git', 'diff', '--cached', '--quiet'], {
+  const staged = await runConfined({
+    argv: ['git', 'diff', '--cached', '--quiet'],
     cwd,
     env: gitEnv(cwd),
     timeoutMs: GIT_TIMEOUT_MS,
+    label: 'git command',
   });
   if (staged.exitCode === 0) {
     return false; // nothing staged
@@ -180,10 +199,12 @@ export async function commitAll(slug: string, message: string): Promise<boolean>
 /** The porcelain status — used to derive a turn's file-change list for all drivers. */
 export async function changedFiles(slug: string): Promise<string[]> {
   const cwd = confinedPath(config.SITES_ROOT, slug);
-  const result = await runBinary(['git', 'status', '--porcelain'], {
+  const result = await runConfined({
+    argv: ['git', 'status', '--porcelain'],
     cwd,
     env: gitEnv(cwd),
     timeoutMs: GIT_TIMEOUT_MS,
+    label: 'git command',
   });
   if (result.exitCode !== 0) return [];
   return result.stdout

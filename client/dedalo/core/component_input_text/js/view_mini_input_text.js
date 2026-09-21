@@ -6,7 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {get_fallback_value} from '../../common/js/common.js'
+	import {render_fallback_value, render_value} from '../../common/js/utils/render_escape.js'
 	import {attach_item_dataframe} from '../../component_common/js/component_common.js'
 
 
@@ -89,17 +89,15 @@ view_mini_input_text.render = async function(self, options) {
 		const data					= self.data
 		const entries				= data.entries || []
 		const fallback_value		= data.fallback_value || []
-		const fallback				= get_fallback_value(entries, fallback_value)
+		const fallback				= render_fallback_value(entries, fallback_value, self.context.render_class)
 		const with_lang_versions	= self.context.properties.with_lang_versions ?? false
 
 	// transliterate components
 	// add the translation of the data
-		// (!) Bug flag: `self.data.transliterate_value` is an Array<{id,value,lang}> per the server
-		// contract, but it is used here directly as a string (implicit Array→string coercion).
-		// Sibling views access `transliterate_value[0]?.value` instead. When with_lang_versions
-		// is true and the array is non-empty, this produces "[object Object]" in the suffix.
-		const transliterate_value = (with_lang_versions && self.data.transliterate_value && entries.length)
-			? ' (' + self.data.transliterate_value + ')'
+		// `self.data.transliterate_value` is an Array<{id,value,lang}> per the server
+		// contract; the first item's value is rendered (escaped) as the suffix.
+		const transliterate_value = (with_lang_versions && self.data.transliterate_value?.[0]?.value && entries.length)
+			? ' (' + render_value(self.data.transliterate_value[0].value, self.context.render_class) + ')'
 			: ''
 
 	// wrapper — <span class="mini component_input_text_mini">
@@ -130,7 +128,7 @@ view_mini_input_text.render = async function(self, options) {
 			if( i < entries.length -1 ){
 				ui.create_dom_element({
 					element_type	: 'span',
-					inner_html		: self.context.fields_separator,
+					inner_html		: render_value(self.context.fields_separator, 'text'),
 					parent			: content_value
 				})
 			}

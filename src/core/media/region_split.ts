@@ -71,11 +71,16 @@ export function parseConnectedComponentsReport(report: string, minDimension: num
  *     error at all. This is the failure mode that actually corrupts data,
  *     as opposed to just rejecting a bad photo.
  */
-export function assertPlausibleObjectPair(
-	regions: Region[],
-	minSimilarity: number,
-): [Region, Region] {
-	if (regions.length !== 2) {
+/**
+ * Gate 1 alone: exactly two regions, returned as a typed pair. Its own function
+ * because the diagnostic it builds is the long half of the check and belongs
+ * next to it, not inside the pair validator.
+ */
+function assertExactlyTwoRegions(regions: Region[]): [Region, Region] {
+	// Length is checked, then the two indexes are NAMED: noUncheckedIndexedAccess
+	// types an index read as possibly-undefined whatever the length test proved.
+	const [a, b] = regions;
+	if (regions.length !== 2 || a === undefined || b === undefined) {
 		const summary = regions
 			.map((r) => `${r.width}x${r.height}+${r.x}+${r.y} (area ${r.area})`)
 			.join(', ');
@@ -89,15 +94,14 @@ export function assertPlausibleObjectPair(
 			coordinates: { region_count: regions.length },
 		});
 	}
-	// Length is proven === 2 above; noUncheckedIndexedAccess still types a
-	// destructure as possibly-undefined, so name the invariant explicitly.
-	const a = regions[0];
-	const b = regions[1];
-	if (a === undefined || b === undefined) {
-		throw new DedaloError('internal.invariant', {
-			message: 'assertPlausibleObjectPair: length was 2 but an index was undefined',
-		});
-	}
+	return [a, b];
+}
+
+export function assertPlausibleObjectPair(
+	regions: Region[],
+	minSimilarity: number,
+): [Region, Region] {
+	const [a, b] = assertExactlyTwoRegions(regions);
 	const ratio = Math.min(a.area, b.area) / Math.max(a.area, b.area);
 	if (ratio < minSimilarity) {
 		const message =

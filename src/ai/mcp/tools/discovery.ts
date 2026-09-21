@@ -19,9 +19,9 @@ import { labelByTipo, resolveLabel } from '../../../core/ontology/labels.ts';
 import {
 	getMatrixTableFromTipo,
 	getModelByTipo,
-	getNode,
 	getOrderedSubtree,
 	getPropertiesByTipo,
+	getSectionRealTipo,
 	listSectionNodes,
 	type OntologySubtreeNode,
 } from '../../../core/ontology/resolver.ts';
@@ -173,8 +173,8 @@ export async function resolveSectionReference(reference: string): Promise<string
 
 /**
  * The component subtree of a section, filtered to agent-visible fields.
- * VIRTUAL sections carry no children of their own — their relations[0].tipo
- * points at the REAL section whose components they render (the same fallback
+ * VIRTUAL sections carry no children of their own — their 'section'-model
+ * relation names the REAL section whose components they render (the same fallback
  * findFirstDescendantTipoByModel / getMatrixTableFromTipo apply).
  */
 export async function sectionFieldNodes(sectionTipo: string): Promise<OntologySubtreeNode[]> {
@@ -187,14 +187,9 @@ export async function sectionFieldNodes(sectionTipo: string): Promise<OntologySu
 		);
 	const own = visible(await getOrderedSubtree(sectionTipo));
 	if (own.length > 0) return own;
-	const relations = (await getNode(sectionTipo))?.relations;
-	const realTipo = Array.isArray(relations)
-		? (relations[0] as { tipo?: unknown } | undefined)?.tipo
-		: undefined;
-	if (typeof realTipo === 'string' && realTipo !== sectionTipo) {
-		if ((await getModelByTipo(realTipo)) === 'section') {
-			return visible(await getOrderedSubtree(realTipo));
-		}
+	const realTipo = await getSectionRealTipo(sectionTipo);
+	if (realTipo !== sectionTipo) {
+		return visible(await getOrderedSubtree(realTipo));
 	}
 	return own;
 }

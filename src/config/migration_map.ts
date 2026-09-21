@@ -613,6 +613,7 @@ export const NEW_IN_V7: readonly string[] = [
 	'LOGIN_ATTEMPT_WINDOW',
 	'LOGIN_LOCKOUT_SECONDS',
 	'LOGIN_ACCOUNT_MAX_ATTEMPTS',
+	'LOGIN_SOURCE_MAX_ATTEMPTS',
 	'PERMISSIONS_CACHE_TTL_SECONDS',
 	// mailer + password recovery (no v6 mailer existed)
 	'DEDALO_SMTP_HOST',
@@ -660,8 +661,43 @@ export const NEW_IN_V7: readonly string[] = [
 	// disables the MVG coder ImageMagick's SVG renderer emits, so the renderer is a
 	// separate program (src/core/media/engine/svg.ts) and therefore a new key.
 	'DEDALO_RSVG_CONVERT_PATH',
+	// The PDF rasterizer. NEW_IN_V7 by construction: v6 rasterized a PDF cover
+	// through ImageMagick, which spawned Ghostscript as an unbounded, unkillable
+	// DELEGATE. v7 spawns gs itself (src/core/media/engine/ghostscript.ts) and the
+	// hardened policy denies the delegate, so there is no v6 constant for this.
+	'DEDALO_GS_PATH',
 	'DEDALO_SVG_THUMB_DPI',
+	// The ImageMagick resource bound (audit MEDIA-01). NEW_IN_V7 by construction:
+	// v6 passed no `-limit` and shipped no policy at all, so there is no v6
+	// constant these could be a rename of.
+	'DEDALO_MAGICK_LIMIT_MEMORY',
+	'DEDALO_MAGICK_LIMIT_MAP',
+	'DEDALO_MAGICK_LIMIT_AREA',
+	'DEDALO_MAGICK_LIMIT_DISK',
+	'DEDALO_MAGICK_LIMIT_WIDTH',
+	'DEDALO_MAGICK_LIMIT_HEIGHT',
+	'DEDALO_MAGICK_LIMIT_TIME',
+	'DEDALO_MAGICK_LIMIT_LIST_LENGTH',
+	// Converter admission (audit MEDIA-01, the plural half). NEW_IN_V7 by
+	// construction: v6 ran every conversion inline with no cap on how many, so
+	// there is no v6 constant these could be a rename of.
+	'DEDALO_MEDIA_CONVERT_CONCURRENCY',
+	'DEDALO_MEDIA_CONVERT_QUEUE_SECONDS',
+	'DEDALO_MEDIA_AV_CONCURRENCY',
+	'DEDALO_MEDIA_AV_QUEUE_SECONDS',
 	'DEDALO_MEDIA_JOB_CONCURRENCY',
+	// THE OTHER LANE BUDGETS AND THE LANE DEADLINES (PERF-11). NEW_IN_V7 by
+	// construction: v6 had one media-job cap and no notion of a work class or of a
+	// per-job deadline at all, so there is no v6 constant any of these could be a
+	// rename of. DEDALO_MEDIA_JOB_CONCURRENCY above IS the media lane's budget and
+	// is neither renamed nor retired.
+	'DEDALO_JOB_LANE_TRANSCRIPTION_CONCURRENCY',
+	'DEDALO_JOB_LANE_RAG_CONCURRENCY',
+	'DEDALO_JOB_LANE_MAINTENANCE_CONCURRENCY',
+	'DEDALO_JOB_DEADLINE_MEDIA_S',
+	'DEDALO_JOB_DEADLINE_TRANSCRIPTION_S',
+	'DEDALO_JOB_DEADLINE_RAG_S',
+	'DEDALO_JOB_DEADLINE_MAINTENANCE_S',
 	'DEDALO_MEDIA_PROCESSES_DIR',
 	// The test-media seam: repoints the media root AND arms the marker guard
 	// (src/core/media/test_media_root.ts). NEW_IN_V7 by construction — v6 had no
@@ -732,6 +768,12 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_DIFFUSION_SCHEDULER_ENABLED',
 	'DEDALO_DIFFUSION_BATCH_ROWS',
 	'DEDALO_DIFFUSION_BATCH_RECORDS',
+	// reconcile registry scheduler (audit 2026-08-26 S-10)
+	'DEDALO_RECONCILE_SCHEDULER_ENABLED',
+	// retention registry + scheduler (audit 2026-08-26 P2-9)
+	'DEDALO_ACTIVITY_RETENTION_DAYS',
+	'DEDALO_DIFFUSION_LEDGER_RETENTION_DAYS',
+	'DEDALO_RETENTION_SCHEDULER_ENABLED',
 	// error report (WC-017/018/019)
 	'DEDALO_ERROR_REPORT_MASTER_URL',
 	'DEDALO_ERROR_REPORT_RECEIVER',
@@ -739,6 +781,7 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_ERROR_REPORT_ALLOWED_IPS',
 	'DEDALO_ERROR_REPORT_TIMEOUT_MS',
 	'DEDALO_ERROR_REPORT_RETENTION_DAYS',
+	'DEDALO_ERROR_REPORT_MAX_ROWS',
 	// RAG / AI / MCP — wholly new subsystems
 	'DEDALO_RAG_ENABLED',
 	'DEDALO_RAG_DB_HOSTNAME_CONN',

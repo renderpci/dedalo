@@ -99,7 +99,7 @@
 
 			>.button {
 				background-color: @color_orange_dedalo;
-				color: @color_white;
+				color: var(--fg_on_brand);
 				display: flex;
 				width: auto;
 				padding: 1em;
@@ -553,10 +553,6 @@
 					flex-flow: unset;
 				}
 			}//end >.content_data
-
-			@media screen and (max-width: 1280px) {
-
-			}
 		}//end .section_record &, .wrapper_tool &
 	}//end .wrapper_component
 
@@ -1189,9 +1185,13 @@
 				}//end section_bar_label
 
 				// section_group_label
+				// Group bar (IDENTIFICATION, DOCUMENTATION…): panel chrome, like
+				// the FIELDS/PRESETS tabs — the grey RAMP, not an inverse fill,
+				// so it stops out-darkening the rows it groups and stays
+				// legible in both themes from ONE pair (see search.less).
 				&.section_group_label {
 					background-color: @color_grey_10;
-					color: @color_white;
+					color: @color_grey_4;
 					cursor: pointer;
 
 					&:active {
@@ -1233,7 +1233,7 @@
 
 					&:hover {
 						background-color: @color_orange_dedalo !important;
-						color: @color_white;
+						color: var(--fg_on_brand);
 					}
 					&:active {
 						opacity: 0.6;
@@ -1623,7 +1623,7 @@
 		padding: 0.75rem;
 		padding-left: 1.25rem;
 		padding-right: 2rem;
-		color: @color_white;
+		color: var(--fg_on_brand); // the bg above is @service_bg_color, which IS the brand fill (service_autocomplete.less:7)
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;

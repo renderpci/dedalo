@@ -21,6 +21,13 @@
 
 import { z } from 'zod';
 import { ddoMapSchema } from './ddo.ts';
+import {
+	boundedIdentifier,
+	boundedLabel,
+	boundedLang,
+	boundedOptionsBag,
+	boundedShortName,
+} from './scalar_bounds.ts';
 import { sqoSchema } from './sqo.ts';
 
 /**
@@ -34,22 +41,22 @@ export const rqoSourceSchema = z
 		 * add_component_history_note builds its Code-save source with
 		 * model:null); the server resolves the model from `tipo` (PHP parity —
 		 * dd_core_api resolves via get_model_by_tipo when absent). */
-		model: z.string().nullish(),
+		model: boundedIdentifier().nullish(),
 		/** Ontology tipo of the element to resolve. */
-		tipo: z.string().optional(),
+		tipo: boundedIdentifier().optional(),
 		/** Section the element lives in. */
-		section_tipo: z.string().optional(),
+		section_tipo: boundedIdentifier().optional(),
 		/** Record id (string or number in the wild). */
-		section_id: z.union([z.number(), z.string()]).nullable().optional(),
+		section_id: z.union([z.number(), boundedIdentifier()]).nullable().optional(),
 		/** Render mode: edit | list | search | tm | ... */
-		mode: z.string().optional(),
+		mode: boundedShortName().optional(),
 		/** Request language ('lg-*'). */
-		lang: z.string().optional(),
+		lang: boundedLang().optional(),
 		/** Sub-action discriminator used by some api methods (e.g. read → 'search').
 		 * The real client sends explicit null when unset (browser E2E). */
-		action: z.string().nullish(),
+		action: boundedIdentifier().nullish(),
 		/** Custom view name. */
-		view: z.string().nullable().optional(),
+		view: boundedShortName().nullable().optional(),
 		/**
 		 * Element properties OVERRIDE (PHP dd_core_api read :2305-2308,
 		 * `$element->set_properties($properties)`): the client ships the
@@ -60,7 +67,7 @@ export const rqoSourceSchema = z
 		 * sqo_config.limit 1 beats the ontology's 9). Nullish-tolerant like PHP
 		 * (`?? null`) — an explicit null is NOT an override.
 		 */
-		properties: z.record(z.string(), z.unknown()).nullish(),
+		properties: z.record(boundedIdentifier(), z.unknown()).nullish(),
 		/**
 		 * Time Machine read overrides (PHP dd_core_api :2372-2383,
 		 * `$element->matrix_id` / `$element->data_source`): when `data_source` is
@@ -68,8 +75,8 @@ export const rqoSourceSchema = z
 		 * identified by `matrix_id` instead of the live record — the
 		 * tool_time_machine preview pane. Both must be present to take effect.
 		 */
-		matrix_id: z.union([z.number(), z.string()]).nullish(),
-		data_source: z.string().nullish(),
+		matrix_id: z.union([z.number(), boundedIdentifier()]).nullish(),
+		data_source: boundedShortName().nullish(),
 		/**
 		 * TEMPORAL instance (WC-059): a tool's throwaway editable clone — the
 		 * propagate tool's value widget, service_tmp_section's staging form, the
@@ -125,10 +132,10 @@ export const rqoSourceSchema = z
 		 */
 		caller_dataframe: z
 			.object({
-				main_component_tipo: z.string().nullish(),
-				section_tipo: z.string().nullish(),
-				section_id: z.union([z.number(), z.string()]).nullish(),
-				id_key: z.union([z.number(), z.string()]).nullish(),
+				main_component_tipo: boundedIdentifier().nullish(),
+				section_tipo: boundedIdentifier().nullish(),
+				section_id: z.union([z.number(), boundedIdentifier()]).nullish(),
+				id_key: z.union([z.number(), boundedIdentifier()]).nullish(),
 			})
 			.passthrough()
 			.nullish(),
@@ -224,7 +231,7 @@ export function isTemporalSource(source: RqoSource | undefined | null): boolean 
 export const rqoDdoBlockSchema = z
 	.object({
 		ddo_map: ddoMapSchema.optional(),
-		sqo_config: z.record(z.string(), z.unknown()).optional(),
+		sqo_config: z.record(boundedIdentifier(), z.unknown()).optional(),
 	})
 	.passthrough();
 
@@ -235,13 +242,13 @@ export const rqoDdoBlockSchema = z
 export const rqoSchema = z
 	.object({
 		/** Optional request identifier (client correlation). */
-		id: z.union([z.string(), z.number()]).optional(),
+		id: z.union([boundedLabel(), z.number()]).optional(),
 		/** Resolution engine; 'dedalo' unless an external engine is configured. */
-		api_engine: z.string().optional(),
+		api_engine: boundedIdentifier().optional(),
 		/** API class to dispatch to, e.g. 'dd_core_api'. Allowlisted (§7.1). */
-		dd_api: z.string().optional(),
+		dd_api: boundedIdentifier().optional(),
 		/** Action (method) to run, e.g. 'read', 'save', 'search'. Allowlisted (§7.1). */
-		action: z.string(),
+		action: boundedIdentifier(),
 		source: rqoSourceSchema.optional(),
 		/** Search query for read/search actions. Sanitized at the boundary (§7.5). */
 		sqo: sqoSchema.optional(),
@@ -275,6 +282,11 @@ export const rqoSchema = z
 		 */
 		idempotency_key: z
 			.string()
+			// The regex quantifier already bounds this to 128 characters; the
+			// explicit `.max` states it DECLARATIVELY so the schema census
+			// (test/unit/rqo_scalar_bound_tripwire.test.ts) can read it as a bound
+			// rather than having to interpret a regular expression.
+			.max(128)
 			.regex(/^[A-Za-z0-9_-]{16,128}$/)
 			.optional(),
 		/**
@@ -300,7 +312,7 @@ export const rqoSchema = z
 		 */
 		prevent_lock: z.boolean().optional(),
 		/** Action-specific options bag (file uploads, etc.). May carry a nested sqo. */
-		options: z.record(z.string(), z.unknown()).optional(),
+		options: boundedOptionsBag().optional(),
 		/** Pretty-print the JSON response (dev aid). */
 		pretty_print: z.boolean().optional(),
 		/**
@@ -313,7 +325,7 @@ export const rqoSchema = z
 		 * turn that beacon into a 400 `request.invalid_rqo` — a WORSE failure than
 		 * the csrf refusal this fallback exists to cure.
 		 */
-		csrf_token: z.string().nullable().optional(),
+		csrf_token: boundedLabel().nullable().optional(),
 	})
 	.passthrough();
 

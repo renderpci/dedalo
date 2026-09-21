@@ -9,6 +9,8 @@ export const component_section_id: ComponentModel = {
 	model: 'component_section_id',
 	flatValue: 'section_id',
 	column: 'section_id',
+	render: 'text',
+	monovalue: true,
 	searchBuilder: 'section_id',
 	emitHook: 'section_id',
 };

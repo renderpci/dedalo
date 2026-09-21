@@ -31,6 +31,7 @@ import {
 	type ToolResponse,
 	type ToolServerModule,
 	toolRequestId,
+	type WriteTarget,
 } from '../../../src/core/tools/module.ts';
 
 /**
@@ -101,7 +102,6 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 		'../../../src/core/ontology/resolver.ts'
 	);
 	const { saveComponentData } = await import('../../../src/core/section/record/save_component.ts');
-	const { config } = await import('../../../src/config/config.ts');
 	const { groupItemsByLang } = await import('../../../src/core/tools/import_data.ts');
 	const { refreshMediaItems } = await import('../../../src/core/media/repair.ts');
 	const { updateMatrixKeyData } = await import('../../../src/core/db/matrix_write.ts');
@@ -378,6 +378,34 @@ function componentListSectionTipos(options: Record<string, unknown>): unknown[] 
 	return raw != null && raw !== '' ? [raw] : [];
 }
 
+/**
+ * The WRITE TARGETS of an update_cache request — what the 'targets' gate
+ * authorizes (audit CARRY-08 / TOOLS-04). The handler above re-saves
+ * `components_selection[].tipo` on EVERY row `options.sqo` matches, so the
+ * grant that matters is level 2 on each (sqo section, selected component) PAIR
+ * — never on `options.section_tipo`, which only labels the dd800 bulk record.
+ * A gate declared on that sibling field was satisfied by any section the caller
+ * held write on (dd655 — which everyone holds) while the SQO named `es1` and
+ * 69,148 rows were re-saved. Read off the SAME keys the handler reads; an SQO
+ * naming no section, or an empty selection, yields [] and the gate refuses.
+ */
+export function updateCacheTargets(options: Record<string, unknown>): WriteTarget[] {
+	const sqo = options.sqo as { section_tipo?: unknown } | null | undefined;
+	const raw = sqo !== null && typeof sqo === 'object' ? sqo.section_tipo : undefined;
+	const sectionTipos = Array.isArray(raw) ? raw : raw === undefined ? [] : [raw];
+	const selection = Array.isArray(options.components_selection) ? options.components_selection : [];
+	const targets: WriteTarget[] = [];
+	for (const sectionTipo of sectionTipos) {
+		for (const selected of selection) {
+			targets.push({
+				section_tipo: sectionTipo,
+				tipo: (selected as { tipo?: unknown } | null)?.tipo,
+			});
+		}
+	}
+	return targets;
+}
+
 export const tool: ToolServerModule = {
 	name: 'tool_update_cache',
 	apiActions: {
@@ -387,7 +415,14 @@ export const tool: ToolServerModule = {
 			sectionTipos: componentListSectionTipos,
 			handler: getComponentList,
 		},
-		update_cache: { permission: 'section', minLevel: 2, handler: updateCache },
+		update_cache: {
+			permission: 'targets',
+			minLevel: 2,
+			targets: updateCacheTargets,
+			handler: updateCache,
+		},
 	},
 	backgroundRunnable: ['update_cache'],
+	// A stored-data rebuild — operator work (PERF-11 lane declaration).
+	backgroundLanes: { update_cache: 'maintenance' },
 };

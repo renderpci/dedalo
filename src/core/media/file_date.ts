@@ -32,6 +32,7 @@
  */
 
 import { existsSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { config } from '../../config/config.ts';
 import { identifyAvailable, runIdentify } from './engine/binaries.ts';
 import { probeFormat } from './engine/ffmpeg.ts';
@@ -236,11 +237,14 @@ async function imageDate(filePath: string): Promise<DdDate | null> {
 	// user just uploaded, and ImageMagick picks its coder from the CONTENT, so the
 	// hardened policy.xml has to be loaded here exactly as it is for a conversion.
 	const exif = (
-		await runIdentify(['-quiet', '-format', '%[EXIF:DateTimeOriginal]', filePath])
+		await runIdentify(
+			['-quiet', '-format', '%[EXIF:DateTimeOriginal]', filePath],
+			dirname(filePath),
+		)
 	).stdout.trim();
 	if (exif !== '') return parseIdentifyDateTimeOriginal(exif);
 	const modify = (
-		await runIdentify(['-quiet', '-format', '%[date:modify]', filePath])
+		await runIdentify(['-quiet', '-format', '%[date:modify]', filePath], dirname(filePath))
 	).stdout.trim();
 	if (modify !== '') return parseIdentifyDateModify(modify);
 	return null;

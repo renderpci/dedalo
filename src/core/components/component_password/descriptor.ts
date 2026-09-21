@@ -7,6 +7,8 @@ import type { ComponentModel } from '../types.ts';
 export const component_password: ComponentModel = {
 	model: 'component_password',
 	column: 'string',
+	render: 'text',
+	monovalue: true,
 	classSupportsTranslation: true,
 	importValueProperty: true,
 };

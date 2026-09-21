@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_join} from '../../common/js/utils/render_escape.js'
 
 
 
@@ -91,7 +92,7 @@ view_mini_info.render = async function(self, options) {
 	// Value as string
 		// (!) fields_separator has no fallback; a null/undefined value will produce the
 		// literal string "undefined" as the join separator — consistent with sibling mini views.
-		const value_string = value.join(self.context.fields_separator)
+		const value_string = render_join(value, self.context.fields_separator, self.context.render_class)
 
 	// Set value
 		// insertAdjacentHTML is used (rather than textContent) to preserve any HTML markup

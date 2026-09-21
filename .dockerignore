@@ -155,7 +155,6 @@ server_config_api.php
 **/*/*.tsbuildinfo
 *.css.map
 **/*/*.css.map
-!publication/server_api/v1/docu/ui/*.map
 *.log
 **/*/*.log
 CHANGELOG.md

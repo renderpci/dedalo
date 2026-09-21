@@ -34,6 +34,7 @@
  * lives in ./README.md — follow it, do not trust this header alone.
  */
 
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { registerComponentModelFieldsLookup } from '../ontology/resolver.ts';
 // --- data-entry / scalar / special (non-relation) models -------------------
 import { component_3d } from './component_3d/descriptor.ts';
@@ -78,7 +79,7 @@ import { component_select_lang } from './component_select_lang/descriptor.ts';
 import { component_state } from './component_state/descriptor.ts';
 import { component_svg } from './component_svg/descriptor.ts';
 import { component_text_area } from './component_text_area/descriptor.ts';
-import type { ComponentModel } from './types.ts';
+import type { ComponentModel, RenderClass } from './types.ts';
 
 /** Every registered descriptor. One entry per `component_<model>/descriptor.ts`. */
 const ALL_DESCRIPTORS: readonly ComponentModel[] = [
@@ -187,6 +188,54 @@ export function getSearchBuilderFamily(model: string): ComponentModel['searchBui
 /** Flat display-value family (relation_list grid cells). Alias-following. */
 export function getFlatValueFamily(model: string): ComponentModel['flatValue'] {
 	return resolveCanonical(model)?.flatValue;
+}
+
+/**
+ * PHP component_common::$components_monovalue membership — THE value law
+ * (`monovalue` facet, alias-following): only element 0 of the data array is
+ * ever read. Consulted by save_component.ts (insert REPLACES, id-less update
+ * of the one item replaces) and tool_propagate_component_data (`add` refused).
+ */
+export function isMonovalueModel(model: string): boolean {
+	return resolveCanonical(model)?.monovalue === true;
+}
+
+/**
+ * The value's RENDER CLASS at the client DOM boundary (`render` facet,
+ * alias-following — see types.ts RenderClass). THE key the render-boundary
+ * escaper switches on: 'html' is the ONLY class whose value is stored as
+ * markup, so it is ALSO the class save_component.ts sanitizes on the way in.
+ * A canonical model without the facet throws: an undeclared class would have
+ * to be guessed, and a guess of 'html' is stored XSS while a guess of 'text'
+ * silently defaces a rich-text model — neither is a default this engine takes.
+ */
+export function getRenderClass(model: string): RenderClass {
+	return renderClassOfDescriptor(resolveCanonical(model), model);
+}
+
+/**
+ * The pure half of getRenderClass: the class of an already-resolved CANONICAL
+ * descriptor (undefined = unregistered). Exported so the class-less refusal
+ * can be gated with a fabricated descriptor — every live canonical model
+ * declares the facet, so no registered name exercises that branch.
+ */
+export function renderClassOfDescriptor(
+	canonical: ComponentModel | undefined,
+	model: string,
+): RenderClass {
+	if (canonical === undefined) {
+		throw new DedaloError('internal.invariant', {
+			message: `component registry: no descriptor for model '${model}' (render class)`,
+			coordinates: { module: 'components/registry', model },
+		});
+	}
+	if (canonical.render === undefined) {
+		throw new DedaloError('internal.invariant', {
+			message: `component registry: '${canonical.model}' declares no render class (descriptor \`render\` facet)`,
+			coordinates: { module: 'components/registry', model: canonical.model },
+		});
+	}
+	return canonical.render;
 }
 
 /** PHP $components_using_value_property membership (CSV import). */

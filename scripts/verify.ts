@@ -129,10 +129,14 @@ const TRIPWIRES = [
 	'test/unit/docs_locator_shape_tripwire.test.ts',
 	'test/unit/css_build_tripwire.test.ts',
 	'test/unit/css_token_duplication_tripwire.test.ts',
+	'test/unit/css_corpus_tripwire.test.ts',
+	'test/unit/colour_literal_ratchet_tripwire.test.ts',
+	'test/unit/breakpoint_record_tripwire.test.ts',
 	'test/unit/wire_contract_tripwire.test.ts',
 	'test/unit/verify_selector_selftest.test.ts',
 	'test/unit/delete_inverse_lost_update_native.test.ts',
 	'test/unit/duplicate_record_dataframe_native.test.ts',
+	'test/unit/dataframe_delete_policy_native.test.ts',
 	'test/unit/tm_lang_slice_restore_native.test.ts',
 	'test/unit/csv_parser_conformance_native.test.ts',
 	'test/unit/ingest_encoding_tripwire.test.ts',
@@ -144,7 +148,7 @@ const TRIPWIRES = [
 	'test/unit/build_context_secret_tripwire.test.ts',
 	'test/unit/vendor_advisory_tripwire.test.ts',
 	'test/unit/client_idempotency_tripwire.test.ts',
-	'test/unit/theme_token_parity.test.ts',
+	'test/unit/palette_axis_parity_tripwire.test.ts',
 	'test/unit/hierarchy_single_writer_tripwire.test.ts',
 	'test/unit/ontology_single_writer_tripwire.test.ts',
 	'test/unit/rag_index_scope_tripwire.test.ts',
@@ -212,6 +216,65 @@ const TRIPWIRES = [
 	'test/unit/catalog_behaviour_tripwire.test.ts',
 	'test/unit/marc_identity_native.test.ts',
 	'test/parity/oracle_canary.test.ts',
+	'test/unit/tier_wiring_tripwire.test.ts',
+	'test/unit/update_drill_config_tripwire.test.ts',
+	'test/unit/production_entrypoint_coverage_tripwire.test.ts',
+	'test/unit/rag_drain_cli_native.test.ts',
+	'test/unit/suite_assertion_floor_tripwire.test.ts',
+	'test/unit/client_gate_inventory_tripwire.test.ts',
+	'test/unit/authz_substring_gate_tripwire.test.ts',
+	'test/unit/census_derivation_tripwire.test.ts',
+	'test/unit/read_door_acl_tripwire.test.ts',
+	'test/unit/action_scope_binding_tripwire.test.ts',
+	'test/unit/write_obligations_tripwire.test.ts',
+	'test/unit/value_law_agreement_tripwire.test.ts',
+	'test/unit/reconcile_registry_tripwire.test.ts',
+	'test/unit/write_obligations_native.test.ts',
+	'test/unit/value_law_agreement_native.test.ts',
+	'test/unit/reconcile_registry_native.test.ts',
+	'test/unit/restore_door_native.test.ts',
+	'test/unit/unpublish_debt_native.test.ts',
+	'test/unit/diffusion_frontier_scope_native.test.ts',
+	'test/unit/diffusion_seed_compiles_native.test.ts',
+	'test/unit/diffusion_seed_vocabulary_tripwire.test.ts',
+	'test/unit/raw_roundtrip_native.test.ts',
+	'test/unit/conform_locator_existence_native.test.ts',
+	'test/unit/archive_docs_claim_tripwire.test.ts',
+	'test/unit/production_import_tripwire.test.ts',
+	'test/unit/render_escape_tripwire.test.ts',
+	'test/unit/render_class_native.test.ts',
+	'test/unit/site_builder_csp_tripwire.test.ts',
+	'test/unit/client_limit_zero_tripwire.test.ts',
+	'test/unit/client_render_budget_native.test.ts',
+	'test/unit/client_prototype_contract_tripwire.test.ts',
+	'test/unit/client_dead_reference_tripwire.test.ts',
+	'test/unit/client_control_naming_tripwire.test.ts',
+	'test/unit/client_a11y_budget_tripwire.test.ts',
+	'test/unit/client_keyboard_activation_tripwire.test.ts',
+	'test/unit/contrast_ratio_tripwire.test.ts',
+	'test/unit/publication_bounds_tripwire.test.ts',
+	'test/unit/sitebuilder_path_confinement_tripwire.test.ts',
+	'test/unit/agent_confinement_tripwire.test.ts',
+	'test/unit/rqo_scalar_bound_tripwire.test.ts',
+	'test/unit/store_retention_tripwire.test.ts',
+	'test/unit/magick_policy_tripwire.test.ts',
+	'test/unit/job_lane_census_tripwire.test.ts',
+	'test/unit/sync_io_on_request_path_tripwire.test.ts',
+	'test/unit/queue_fence_tripwire.test.ts',
+	'test/unit/slow_query_scope_native.test.ts',
+	'test/unit/query_tap_tripwire.test.ts',
+	'test/unit/zzscale_corpus_native.test.ts',
+	'test/unit/read_path_record_reuse_tripwire.test.ts',
+	'test/unit/search_pattern_escape_tripwire.test.ts',
+	'test/unit/closure_openquestions_tripwire.test.ts',
+	'test/unit/client_dashboard_sink_tripwire.test.ts',
+	'test/unit/client_event_manager_dispatch_tripwire.test.ts',
+	'test/unit/client_instances_inflight_tripwire.test.ts',
+	'test/unit/client_local_db_singleton_tripwire.test.ts',
+	'test/unit/client_read_stream_release_tripwire.test.ts',
+	'test/unit/client_request_coalescing_tripwire.test.ts',
+	'test/unit/dataframe_contract_tripwire.test.ts',
+	'test/unit/ontology_property_census_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------
@@ -292,8 +355,10 @@ async function lintBrowserBudget(): Promise<void> {
 }
 
 /**
- * Failing test names this run is allowed to see WITHOUT going red — the parity
- * tier's frozen corpus-bound reds (engineering/parity_baseline.json).
+ * Failing test names this run is allowed to see WITHOUT going red — the two
+ * frozen, SHRINK-ONLY red baselines: the parity tier's corpus-bound reds
+ * (engineering/parity_baseline.json) and the unit tier's frozen debt
+ * (engineering/unit_baseline.json).
  *
  * WHY THIS EXISTS. The parity tier is red BY CONSTRUCTION: 100 of its cases are
  * frozen because they were harvested against one installation's records, which
@@ -303,26 +368,32 @@ async function lintBrowserBudget(): Promise<void> {
  * widely-imported module reported VERIFY RED for failures that are not the
  * developer's and cannot be fixed here. A gate that is red for reasons the
  * reader cannot act on is a gate the reader learns to ignore — which is exactly
- * how this repo's verify went unread for 45 commits.
+ * how this repo's verify went unread for 45 commits. The unit tier's frozen
+ * reds are the same shape seen from the other tier: a golden that has been red
+ * since 2026-08-30 turns every change touching its module's imports RED here
+ * while `unit_baseline --check` on the db tier says "no drift".
  *
  * So a frozen failure is FORGIVEN and COUNTED, never hidden; a failure that is
- * NOT in the baseline still reddens the stage. The baseline itself is
- * shrink-only and is guarded by parity_baseline_tripwire, so this cannot become
- * a way to silence a real regression.
+ * NOT in a baseline still reddens the stage. Both baselines are shrink-only —
+ * the generators refuse a new red without --allow-regression, a listed test
+ * that PASSES is itself a drift — and are guarded by parity_baseline_tripwire /
+ * the db tier's `unit_baseline.ts --check`, so this cannot become a way to
+ * silence a real regression.
  */
-function frozenParityFailures(): Set<string> {
-	try {
-		const json = JSON.parse(readFileSync('engineering/parity_baseline.json', 'utf8')) as {
-			files?: Record<string, string[]>;
-		};
-		const out = new Set<string>();
-		for (const names of Object.values(json.files ?? {})) for (const n of names) out.add(n);
-		return out;
-	} catch {
-		// No baseline, or unreadable: forgive NOTHING. Fail-closed by design —
-		// a missing baseline must never become a blanket amnesty.
-		return new Set<string>();
+function frozenBaselineFailures(): Set<string> {
+	const out = new Set<string>();
+	for (const path of ['engineering/parity_baseline.json', 'engineering/unit_baseline.json']) {
+		try {
+			const json = JSON.parse(readFileSync(path, 'utf8')) as {
+				files?: Record<string, string[]>;
+			};
+			for (const names of Object.values(json.files ?? {})) for (const n of names) out.add(n);
+		} catch {
+			// No baseline, or unreadable: forgive NOTHING from it. Fail-closed by
+			// design — a missing baseline must never become a blanket amnesty.
+		}
 	}
+	return out;
 }
 
 async function runTestFiles(name: string, files: string[], forgiven?: Set<string>): Promise<void> {
@@ -374,6 +445,47 @@ async function runTestFiles(name: string, files: string[], forgiven?: Set<string
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
+/**
+ * THE DEBT LEDGER IS APPEND-ONLY AGAINST HISTORY (P2-18 / GATE-22).
+ *
+ * `engineering/crap_complexity_baseline.json` carries its own ledger, and the
+ * hermetic predicate (crap_complexity_ratchet + ratchet_integrity_tripwire)
+ * holds every line to its rule — but a REWRITTEN line, or a per-file entry
+ * raised with the counters flat, is visible only against the artifact as it
+ * stood at a reference commit. The reference is the merge-base of HEAD and
+ * `--base` (HEAD itself by default: the working tree against the committed
+ * artifact, which is where a hand edit lives before it is committed). An
+ * empty merge-base is a RED stage, never a comparison against nothing —
+ * crap_baseline.ts refuses an empty `--reference` on its own as well. CI's
+ * twin is the `crap ledger` stage of scripts/ci/hermetic.sh (leg C of
+ * tier_wiring_tripwire holds the pairing).
+ */
+async function crapLedger(): Promise<void> {
+	banner('crap ledger (append-only vs the merge-base)');
+	const mb = await $`git merge-base HEAD ${base}`.nothrow().quiet();
+	const reference = mb.stdout.toString().trim();
+	if (mb.exitCode !== 0 || reference === '') {
+		console.log(mb.stderr.toString().trim());
+		results.push({
+			name: 'crap:ledger',
+			ok: false,
+			detail: `no merge-base between HEAD and ${base} — the reference is unresolvable, which is red, not skipped`,
+		});
+		return;
+	}
+	const r = await $`bun run scripts/crap_baseline.ts --check --reference ${reference}`
+		.nothrow()
+		.quiet();
+	const out = (r.stdout.toString() + r.stderr.toString()).trim();
+	const ok = r.exitCode === 0;
+	if (!ok) console.log(out.split('\n').slice(-12).join('\n'));
+	results.push({
+		name: 'crap:ledger',
+		ok,
+		detail: ok ? `append-only vs ${reference.slice(0, 12)}` : 'ledger inconsistent (see above)',
+	});
+}
+
 const changed = await changedFiles();
 
 if (changedOnly) {
@@ -388,12 +500,12 @@ console.log(`\x1b[1mVERIFY\x1b[0m — ${changed.length} changed file(s) vs ${bas
 // verdicts are always recorded, so a red lint cannot mask a red typecheck.
 // Their console output is buffered inside each stage and printed on completion,
 // so a concurrent run still reads top-to-bottom rather than interleaving.
-await Promise.all([typecheck(), lint(), lintBrowserBudget()]);
+await Promise.all([typecheck(), lint(), lintBrowserBudget(), crapLedger()]);
 // Concurrency made the PUSH order a race, which made the summary's row order
 // vary between runs — a verdict table that reshuffles is a verdict table people
 // stop reading. Pin the two static stages to their declared order; the test
 // stages below append after them, as they always did.
-const STATIC_STAGE_ORDER = ['typecheck', 'lint', 'lint:browser'];
+const STATIC_STAGE_ORDER = ['typecheck', 'lint', 'lint:browser', 'crap:ledger'];
 results.sort((a, b) => STATIC_STAGE_ORDER.indexOf(a.name) - STATIC_STAGE_ORDER.indexOf(b.name));
 
 if (runTests) {
@@ -401,7 +513,7 @@ if (runTests) {
 	const neighbours = await neighbourTests(changed);
 	// Do not re-run a tripwire as a "neighbour".
 	const only = neighbours.filter((f) => !TRIPWIRES.includes(f));
-	await runTestFiles('neighbours', only, frozenParityFailures());
+	await runTestFiles('neighbours', only, frozenBaselineFailures());
 
 	// The site-builder daemon is its own package (publication/site_builder) — outside the
 	// src/+test/ trees the neighbour scan covers — so its suite runs as a targeted stage

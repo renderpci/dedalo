@@ -29,6 +29,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
@@ -239,7 +240,7 @@ view_note_text_area.render = async function(self, options) {
 				// The on_close callback triggers a full section_time_machine refresh so that the
 				// note icon colour (green/grey) reflects the latest saved state.
 				const modal_container = ui.attach_to_modal({
-					header		: `Note ${parent_section_tipo}-${parent_section_id} TM: ${matrix_id}`,
+					header		: render_value(`Note ${parent_section_tipo}-${parent_section_id} TM: ${matrix_id}`, 'text'), // a string header is parsed as HTML
 					body		: content,
 					footer		: footer,
 					on_close	: () => {

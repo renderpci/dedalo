@@ -60,6 +60,7 @@ import { DESCRIPTION_PATTERN, DOMAIN_PATTERN, EMAIL_PATTERN, REALM_PATTERN, SURF
 import type { InstanceLayout, SiteLayout, Surface } from '../layout';
 import type { Artifact, Renderer } from './types';
 import { artifact } from './types';
+import { CSP_HEADER_NAME, contentSecurityPolicy } from './csp';
 
 /* ────────────────────────────────────────────────────────────────────────────────────
  * The grammars this renderer refuses on its own account
@@ -206,6 +207,22 @@ const DENY_DOTFILES = [
  */
 const SYMLINK_POLICY = '    disable_symlinks if_not_owner from=$document_root;';
 
+/**
+ * THE CONTENT SECURITY POLICY, on every served surface — drafts and public alike — and
+ * `always`, so it rides the 401 and the 404 as well as the 200. What it permits and why
+ * is stated once, in ./csp.ts, for both web servers. A vhost that serves a generated tree
+ * without it is exactly the surface the audit named (P2-6 / CARRY-01): an agent-authored
+ * page rendering a record value as HTML to an anonymous visitor with no control between
+ * the two. Refusing that shape here means a redirect-only server (no document root) is the
+ * only server this file renders without it.
+ */
+function contentSecurityPolicyHeader(layout: InstanceLayout): string[] {
+  return [
+    '    # Script never runs from a record value, whatever the page did with it (csp.ts).',
+    `    add_header ${CSP_HEADER_NAME} "${contentSecurityPolicy(layout)}" always;`,
+  ];
+}
+
 /** The static-site body: serve the file, then the directory index, then 404. */
 const SERVE_STATIC = [
   '    location / {',
@@ -284,6 +301,7 @@ function preprodVhost(layout: InstanceLayout, site: SiteLayout): string[] {
     ``,
     '    # Drafts stay out of every index, on every response — 401 and 404 included.',
     '    add_header X-Robots-Tag "noindex, nofollow" always;',
+    ...contentSecurityPolicyHeader(layout),
     ``,
   ];
 
@@ -377,7 +395,7 @@ function prodVhost(layout: InstanceLayout, site: SiteLayout): string[] {
         `# server answers on port 80 and does not redirect: the redirect target would be a`,
         `# port this host was never told to listen on.`,
         ``,
-        ...servedServer(domain, docRoot, ['    listen 80;', '    listen [::]:80;']),
+        ...servedServer(layout, domain, docRoot, ['    listen 80;', '    listen [::]:80;']),
       );
       break;
     }
@@ -422,6 +440,7 @@ function prodVhost(layout: InstanceLayout, site: SiteLayout): string[] {
         '}',
         ``,
         ...servedServer(
+          layout,
           domain,
           docRoot,
           ['    listen 443 ssl;', '    listen [::]:443 ssl;'],
@@ -459,6 +478,7 @@ function prodVhost(layout: InstanceLayout, site: SiteLayout): string[] {
  * mode that could drop one.
  */
 function servedServer(
+  layout: InstanceLayout,
   domain: string,
   docRoot: string,
   listeners: readonly string[],
@@ -472,6 +492,8 @@ function servedServer(
     ``,
     `    root ${docRoot};`,
     '    index index.html;',
+    ``,
+    ...contentSecurityPolicyHeader(layout),
     ``,
     SYMLINK_POLICY,
     ``,
