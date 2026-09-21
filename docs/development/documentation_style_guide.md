@@ -39,8 +39,34 @@ consistent terminology, accurate examples, and clear, native English.
 
 ## Toolchain
 
-The site is **MkDocs + Material for MkDocs** (`mkdocs.yml`). Build locally with `mkdocs build -v`
-or `mkdocs serve`. The enabled Markdown extensions you may rely on:
+The site is **MkDocs + Material for MkDocs** (`mkdocs.yml`). Four commands are the whole
+workflow — a first-time set-up, then the loop:
+
+```bash
+bun run docs:setup      # once per clone: virtualenv + the pinned toolchain
+bun run docs:serve      # live preview on :8000 while you write
+bun run docs:build      # mkdocs build --strict — the same build the publish runs
+bun run docs:publish    # gates, then upload to dedalo.dev/docs/v7/
+```
+
+`docs:publish` **is** the gate, not a wrapper around it. It runs the content checks and the
+strict build first and refuses to upload if either is red, writing nothing. There is no
+override flag: a broken link never reaches a reader, and you never have to remember to run
+anything beforehand.
+
+Publishing needs two entries in `../private/.env` — the destination, and the SSH port if it
+is not 22. Keep them separate; a port folded into the target reaches `rsync` as part of one
+argument and fails:
+
+```bash
+DEDALO_DOCS_RSYNC_TARGET="user@host:/home/www/vhosts/dedalo.dev/httpdocs/docs"
+DEDALO_DOCS_SSH_PORT=22572
+```
+
+Use key authentication (`ssh-copy-id -p <port> user@host`) rather than a password, so a
+publish never stops to prompt.
+
+The enabled Markdown extensions you may rely on:
 
 | Feature | Extension | Use |
 | --- | --- | --- |
@@ -55,6 +81,24 @@ or `mkdocs serve`. The enabled Markdown extensions you may rely on:
 There is no `nav:` block — navigation is the curated `index.md` reading paths plus per-directory
 `index.md` hubs. When you add a page, link it from the relevant hub and, if cross-cutting, from the
 root [`index.md`](../index.md) section index.
+
+### Renaming or deleting a page
+
+The manual is published one prefix per major version (`dedalo.dev/docs/v7/`, with the frozen
+v6 manual at `/docs/v6/`), so **every published page path is a public URL that other sites
+link to**. Adding a page is free. Removing one is not: rename or delete a page and you must
+add an entry to the `redirect_maps` block in `mkdocs.yml` pointing the old path at its
+replacement, or at the nearest surviving hub.
+
+This is enforced, not remembered. The publish records what it served, and the versioning
+gate fails on any page that vanished without a redirect — so the redirect lands in the same
+commit as the rename, or nothing publishes.
+
+!!! warning "Write links to this version"
+    A link to `dedalo.dev/docs/<path>` with no `v7/` in it only works through a server-side
+    redirect whose target changes when the next major ships. Always write the version:
+    `https://dedalo.dev/docs/v7/install/`. Inside the manual, use relative `.md` links as
+    usual — they need no prefix.
 
 ## Page structure
 

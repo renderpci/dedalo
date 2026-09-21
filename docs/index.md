@@ -1,5 +1,10 @@
 # Dédalo v7 Documentation
 
+!!! info "This is the manual for Dédalo v7"
+    Running **v6**? Its manual is kept, unchanged, at
+    [dedalo.dev/docs/v6/](https://dedalo.dev/docs/v6/). Use the version selector in the
+    header to move between them.
+
 Dédalo is a Free and Open Source Cultural Heritage Management System for archives, censuses, inventories and catalogs — archaeology, ethnology, oral memory, numismatics and more. Unlike a generic CMS, it is built to **produce good data** and publish it.
 
 Its defining trait is an **active ontology**: the data schema, the relations between data, the components and tools, and even much of the program behavior are defined as nodes in a thesaurus-like hierarchy and resolved at execution time. Change the ontology and Dédalo's behavior changes — usually without touching the database or the code.
