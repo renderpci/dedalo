@@ -281,7 +281,8 @@ const LIGHT_DEAD_TOKENS: ReadonlyArray<{ token: string; consumer: string }> = [
 		// nothing to paint. A contrived light consumer would be worse than the
 		// asymmetry: the two axes genuinely build the button differently.
 		token: '--tool_transcription_border',
-		consumer: "tool_transcription.less's own dark block (light builds the fill from a deepened hue instead)",
+		consumer:
+			"tool_transcription.less's own dark block (light builds the fill from a deepened hue instead)",
 	},
 ];
 

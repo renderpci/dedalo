@@ -1010,6 +1010,21 @@ export function writeRuleFiles(modeOverride?: RuleMode): boolean {
 		{ path: paths.nginxMap, text: buildNginxMap(), hash: getNginxMapConfigHash() },
 	];
 
+	writeRuleArtifacts(artifacts);
+
+	return true;
+}
+
+/**
+ * Write each generated artifact unless the one on disk already carries its hash.
+ *
+ * Split out of writeRuleFiles (2026-09-21) for the complexity ratchet, and it is
+ * the right seam anyway: this is the only part of the generator that touches the
+ * filesystem, and it holds ONE rule — the idempotency guard below.
+ */
+function writeRuleArtifacts(
+	artifacts: ReadonlyArray<{ path: string; text: string; hash: string }>,
+): void {
 	for (const artifact of artifacts) {
 		// Idempotency guard: compare the EMBEDDED hash comment rather than the whole body,
 		// so incidental whitespace drift never forces a rewrite.
@@ -1019,8 +1034,6 @@ export function writeRuleFiles(modeOverride?: RuleMode): boolean {
 		}
 		writeFileSync(artifact.path, artifact.text);
 	}
-
-	return true;
 }
 
 /** Read-only inspection of the generated files against the current config, for the
@@ -1132,6 +1145,25 @@ export function syncAuthMarkers(values: string[], reapGraceMs = 0): void {
 	mkdirSync(dir, { recursive: true, mode: AUTH_MARKER_DIR_MODE });
 	const youngerThan = Date.now() - reapGraceMs;
 
+	const keep = layValidMarkers(dir, values);
+
+	// Rotation: drop markers for values that are no longer valid.
+	for (const entry of readdirSync(dir)) {
+		if (keep.has(entry)) continue;
+		dropRotatedMarker(join(dir, entry), youngerThan, reapGraceMs);
+	}
+}
+
+/**
+ * Lay a marker for every VALID value and answer the set that must survive the
+ * rotation below.
+ *
+ * Split out of syncAuthMarkers (2026-09-21) for the complexity ratchet. It is also
+ * where the shape check belongs: a value that is not sha512 hex never becomes a
+ * filename, and it never enters `keep` either — so a malformed value cannot
+ * protect a marker from rotation by being passed in.
+ */
+function layValidMarkers(dir: string, values: string[]): Set<string> {
 	const keep = new Set<string>();
 	for (const value of values) {
 		if (typeof value !== 'string' || !COOKIE_VALUE_REGEX.test(value)) {
@@ -1142,12 +1174,7 @@ export function syncAuthMarkers(values: string[], reapGraceMs = 0): void {
 		const marker = join(dir, value);
 		if (!existsSync(marker)) writeFileSync(marker, '');
 	}
-
-	// Rotation: drop markers for values that are no longer valid.
-	for (const entry of readdirSync(dir)) {
-		if (keep.has(entry)) continue;
-		dropRotatedMarker(join(dir, entry), youngerThan, reapGraceMs);
-	}
+	return keep;
 }
 
 /**

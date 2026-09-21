@@ -1486,6 +1486,167 @@ describe('CI workflow tripwire', () => {
 		expect(reported).toContain('lint:browser');
 	});
 
+	/**
+	 * Rule 16 — NO STAGE MAY ABORT THE TIER. Every stage command in
+	 * `scripts/ci/hermetic.sh` records its own verdict; none runs bare under
+	 * `set -e`.
+	 *
+	 * WHY THIS IS A SEPARATE RULE FROM 15 (2026-09-21). Rule 15 pins a SPELLING —
+	 * that `bun run --parallel` carries `--no-exit-on-error` — and the script's
+	 * header narrates the hazard twice more in prose ("a red lint silently
+	 * disarmed all 101 invariant gates"). Both were satisfied while the
+	 * dependency-audit stage sat there as a bare `bun run scripts/ci/audit.ts`:
+	 * under `set -e` a red ratchet exited the tier at that line, and the two
+	 * daemon-package gates below it — the ONLY mechanical run
+	 * publication/site_builder and publication/server_api/v2 ever get, install +
+	 * tsc + suite + coverageThreshold — executed nothing at all. Measured on
+	 * master 625249c9 and on the run before it: 15 unaccepted advisories, zero
+	 * daemon output in either log, tier red for a reason that named neither
+	 * package.
+	 *
+	 * A rule that pins one stage's flag cannot see the stage that has no flag. So
+	 * this one measures the OUTCOME over every stage: an invocation that can fail
+	 * must either capture its status (`|| rc=$?`, consulted afterwards) or be an
+	 * ENUMERATED exemption with a written reason.
+	 */
+	test('no hermetic.sh stage aborts the tier — every stage records its verdict (rule 16)', () => {
+		const raw = readFileSync(join(repoRoot, 'scripts/ci/hermetic.sh'), 'utf8');
+
+		// The ONE stage that may abort, and why: nothing downstream can run
+		// without its dependencies, and it fails before any verdict exists to
+		// report. Shrink-only — an entry added here needs its reason.
+		const MAY_ABORT: ReadonlyArray<{ fragment: string; reason: string }> = [
+			{
+				fragment: 'bun install --frozen-lockfile',
+				reason:
+					'the tier has nothing to run without its dependencies; a failed install is reported by the step itself, and continuing would only produce cascading module-resolution noise',
+			},
+		];
+
+		/**
+		 * Top-level `bun …` invocations: comments stripped, and function bodies
+		 * skipped (daemon_gate() runs its own `bun install`/`bun test` inside a
+		 * subshell whose status the caller already captures by pid — rule 15).
+		 *
+		 * A stage is GUARDED in either of the two shapes the script actually uses:
+		 * `… || rc=$?` on the line itself, or `… || {` opening a block that
+		 * assigns `$?` before it closes. The one-line form alone was not enough —
+		 * the typecheck∥lint stage uses the block form, and a matcher that knows
+		 * only one spelling would report the tier's best-documented stage as the
+		 * offender while still missing a genuinely bare one.
+		 */
+		const topLevelBunLines = (text: string): { line: string; guarded: boolean }[] => {
+			const found: { line: string; guarded: boolean }[] = [];
+			const lines = text.split('\n');
+			let depth = 0;
+			for (let i = 0; i < lines.length; i++) {
+				const code = (lines[i] as string).replace(/\s+#.*$/, '');
+				if (code.trimStart().startsWith('#')) continue;
+				const atTopLevel = depth === 0;
+				// Track function bodies by brace balance; good enough for a shell
+				// script whose functions are all `name() {` … `}`.
+				depth += (code.match(/\{/g) ?? []).length - (code.match(/\}/g) ?? []).length;
+				if (depth < 0) depth = 0;
+				if (!atTopLevel) continue;
+				if (!/^[ \t]*bun (run|test) /.test(code)) continue;
+				let guarded = /\|\|\s*\w+=\$\?/.test(code);
+				if (!guarded && /\|\|\s*\{\s*$/.test(code)) {
+					// Walk the `|| { … }` block and accept an assignment of $? in it.
+					for (let j = i + 1; j < lines.length; j++) {
+						const body = lines[j] as string;
+						if (/^[ \t]*\}/.test(body)) break;
+						if (/\w+=\$\?/.test(body)) {
+							guarded = true;
+							break;
+						}
+					}
+				}
+				found.push({ line: code.trim(), guarded });
+			}
+			return found;
+		};
+		const unguardedIn = (text: string): string[] =>
+			topLevelBunLines(text)
+				.filter((s) => !s.guarded)
+				.map((s) => s.line);
+
+		// Positive controls FIRST — a matcher that cannot catch the planted
+		// offender proves nothing about a clean scan. The planted shape is the
+		// exact one that shipped: a bare stage invocation at top level.
+		const planted = 'echo "== stage"\nbun run scripts/ci/audit.ts\n';
+		expect(
+			unguardedIn(planted),
+			'matcher control: a bare top-level `bun run` stage must be flagged, or this rule is vacuous',
+		).toEqual(['bun run scripts/ci/audit.ts']);
+		expect(unguardedIn('bun run scripts/ci/audit.ts || da_rc=$?')).toEqual([]);
+		// The BLOCK form records the verdict just as well, and must not be flagged.
+		expect(
+			unguardedIn('bun run --parallel --no-exit-on-error typecheck lint || {\n\ttier_status=$?\n}\n'),
+			'the `|| { rc=$? … }` form records the verdict too — flagging it would make the rule unsatisfiable',
+		).toEqual([]);
+		// ...but a block that records NOTHING is still an abort.
+		expect(
+			unguardedIn('bun run x || {\n\techo "red"\n}\n'),
+			'a `|| { … }` block that never captures $? leaves no verdict behind',
+		).toEqual(['bun run x || {']);
+		// ...and neither prose nor a body inside a function is an unguarded stage.
+		expect(unguardedIn('# bun run scripts/ci/audit.ts explains the ratchet')).toEqual([]);
+		expect(
+			unguardedIn('daemon_gate() {\n\tbun test\n}\n'),
+			'a `bun test` inside a function body is not a tier stage — its caller captures the status',
+		).toEqual([]);
+
+		const exempt = (line: string): boolean =>
+			MAY_ABORT.some((entry) => line.includes(entry.fragment));
+		for (const entry of MAY_ABORT) {
+			expect(
+				raw.includes(entry.fragment),
+				`MAY_ABORT names \`${entry.fragment}\`, which scripts/ci/hermetic.sh no longer runs — a stale exemption is red, so the list cannot rot`,
+			).toBe(true);
+			expect(
+				entry.reason.trim().length,
+				`the MAY_ABORT entry for \`${entry.fragment}\` needs a written reason`,
+			).toBeGreaterThan(40);
+		}
+
+		const stages = topLevelBunLines(raw).map((s) => s.line);
+		// Anti-vacuity floor: the tier really does run several stages this way, so
+		// a scan that suddenly sees none has stopped reading the script.
+		expect(
+			stages.length,
+			'rule 16 found no top-level `bun` stage in hermetic.sh — the scan, not the script, is what changed',
+		).toBeGreaterThanOrEqual(4);
+
+		const unguarded = unguardedIn(raw).filter((line) => !exempt(line));
+		expect(
+			unguarded,
+			'scripts/ci/hermetic.sh stage(s) run bare under `set -e`: a red one EXITS the tier and every stage below it — the daemon package gates included — reports nothing. Capture the status (`|| rc=$?`) and fold it into tier_status, or add a reasoned MAY_ABORT entry',
+		).toEqual([]);
+
+		// The captured statuses must actually be CONSULTED. A `|| rc=$?` whose
+		// variable nobody reads is a verdict recorded and thrown away.
+		//
+		// COMMENTS ARE NOT CODE — the same trap rule 15 records, and this scan walked
+		// straight into it: hermetic.sh's own comment explaining the pattern ("`||
+		// rc=$?` keeps `set -e` from aborting") made the rule demand a `$rc` test for
+		// a variable no line ever assigns. Strip comment lines first.
+		const codeOnly = raw
+			.split('\n')
+			.filter((line) => !line.trimStart().startsWith('#'))
+			.join('\n');
+		const captured = [...codeOnly.matchAll(/\|\|\s*(\w+)=\$\?/g)].map((m) => m[1] as string);
+		expect(
+			new Set(captured).size,
+			'rule 16 found no captured stage statuses — the scan has stopped reading the script',
+		).toBeGreaterThanOrEqual(4);
+		for (const name of new Set(captured)) {
+			expect(
+				new RegExp(`\\[ "\\$${name}" -(eq|ne) 0 \\]`).test(codeOnly),
+				`hermetic.sh captures \`${name}\` but never tests it — a recorded verdict nobody reads is the same silence as no verdict`,
+			).toBe(true);
+		}
+	});
+
 	test('hermetic.sh tripwires are a subset of verify.ts TRIPWIRES', () => {
 		const verify = new Set(verifyTripwires());
 		for (const t of hermeticTripwires()) {

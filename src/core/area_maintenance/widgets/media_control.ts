@@ -14,6 +14,9 @@
  */
 
 import { DedaloError } from '../../errors/dedalo_error.ts';
+// TYPE-only: the module itself stays a dynamic import (the widget is loaded on a
+// request path and protection.ts pulls the rule generators in with it).
+import type { MediaAccessMode } from '../../media/protection.ts';
 import type { Principal } from '../../security/permissions.ts';
 import { failAction, refuseAction, type WidgetModule, type WidgetResponse } from './support.ts';
 
@@ -179,10 +182,22 @@ function accessModeNotes(
 	return notes;
 }
 
-async function mediaControlSetAccessMode(
+/** The four tokens the widget accepts; `config` means "clear the override". */
+type MediaAccessToken = 'config' | 'off' | 'private' | 'publication';
+
+/**
+ * EVERY REFUSAL A MODE CHANGE CAN CARRY, before anything is written. Split out of
+ * mediaControlSetAccessMode (2026-09-21) because that function crossed the
+ * complexity ratchet's cap for this file; the guards are one phase and they
+ * answer one question — may this change proceed, and with which token.
+ *
+ * Each `refuseAction`/`throw` below returns `never`, so a caller that gets a
+ * value back has passed all four.
+ */
+async function assertAccessModeChangeAllowed(
 	options: Record<string, unknown>,
 	principal: Principal,
-): Promise<WidgetResponse> {
+): Promise<MediaAccessToken> {
 	// GATE: ROOT, not merely global-admin. dispatchWidgetRequest's gate 1 only checks
 	// isGlobalAdmin, and a profile-admin who can set the mode to 'off' can open the entire
 	// media tree to the world. PHP gated this on DEDALO_SUPERUSER inside set_config_core.
@@ -197,7 +212,7 @@ async function mediaControlSetAccessMode(
 		refuseAction('Error. Invalid value. Allowed: config | off | private | publication');
 	}
 
-	const { isStateWritable, setServerState } = await import('../../resolve/server_state.ts');
+	const { isStateWritable } = await import('../../resolve/server_state.ts');
 	if (!isStateWritable()) {
 		refuseAction('Error. Request failed. The TS state file is not writable');
 	}
@@ -209,14 +224,16 @@ async function mediaControlSetAccessMode(
 		);
 	}
 
-	// UI token → stored override. 'config' clears it (null = "no override").
-	const override = value === 'config' ? null : value === 'off' ? false : value;
-	setServerState({ media_access_mode: override });
+	return value;
+}
 
-	// The EFFECTIVE mode after the change. resolveMediaAccessMode() would also be correct
-	// here (getServerState re-reads the file on every call), but the mode is resolved and
-	// threaded EXPLICITLY on purpose — see the writeRuleFiles() call below.
-	const effective = override !== null ? override : protection.resolveMediaAccessMode();
+/**
+ * The RULE-FILE half of a mode change, and the two ways it can go wrong. Split
+ * out for the same reason as the guards above; the comments that were load-bearing
+ * at the call site travel WITH the code they explain.
+ */
+async function writeModeRuleFiles(effective: MediaAccessMode): Promise<void> {
+	const protection = await import('../../media/protection.ts');
 
 	// Regenerate BOTH rule files with the EXPLICIT mode.
 	//
@@ -264,6 +281,27 @@ async function mediaControlSetAccessMode(
 				'PREVIOUS rules. See the server log for the exact path.',
 		);
 	}
+}
+
+async function mediaControlSetAccessMode(
+	options: Record<string, unknown>,
+	principal: Principal,
+): Promise<WidgetResponse> {
+	const value = await assertAccessModeChangeAllowed(options, principal);
+
+	const { setServerState } = await import('../../resolve/server_state.ts');
+	const protection = await import('../../media/protection.ts');
+
+	// UI token → stored override. 'config' clears it (null = "no override").
+	const override = value === 'config' ? null : value === 'off' ? false : value;
+	setServerState({ media_access_mode: override });
+
+	// The EFFECTIVE mode after the change. resolveMediaAccessMode() would also be correct
+	// here (getServerState re-reads the file on every call), but the mode is resolved and
+	// threaded EXPLICITLY on purpose — see writeModeRuleFiles().
+	const effective = override !== null ? override : protection.resolveMediaAccessMode();
+
+	await writeModeRuleFiles(effective);
 
 	// Re-enabling: re-lay the auth markers for every LIVE SESSION, so editors who are
 	// already logged in keep media access instead of 404ing until their next login. This

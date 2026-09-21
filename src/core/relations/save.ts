@@ -45,17 +45,17 @@ import {
 	normalizeDataframeEntry,
 } from '../concepts/subdatum.ts';
 import { dbTimestamp } from '../db/db_timestamp.ts';
-import {
-	applyDataframeDeletePolicy,
-	dataframeDeletePolicyOf,
-	type DataframeTarget,
-	dataframeTargetsOf,
-} from './dataframe.ts';
 import type { MatrixJsonbColumn } from '../db/matrix.ts';
 import { sql, withTransaction } from '../db/postgres.ts';
 import { recordTimeMachine } from '../db/time_machine.ts';
 import { DedaloError } from '../errors/index.ts';
 import type { Principal } from '../security/permissions.ts';
+import {
+	applyDataframeDeletePolicy,
+	type DataframeTarget,
+	dataframeDeletePolicyOf,
+	dataframeTargetsOf,
+} from './dataframe.ts';
 import {
 	inCapScope,
 	isTargetAllowed,

@@ -44,6 +44,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { $, Glob } from 'bun';
 import { readEnv } from '../src/config/env.ts';
+import { TEST_TIMEOUT_FLAG } from './lib/test_flags.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..');
 const DOCS_DIR = join(REPO_ROOT, 'docs');
@@ -210,8 +211,12 @@ if (STAGE_DIR) {
 // 1. CONTENT GATE
 // ---------------------------------------------------------------------------
 console.log('[1/4] Content gates…');
+// TEST_TIMEOUT_FLAG, not a bare `bun test`: Bun 1.4.0 silently ignores bunfig's
+// [test] timeout, so a flagless run reverts to the built-in 5000 ms cap — and
+// these two gates walk the whole manual. Imported from the one source of truth
+// (scripts/lib/test_flags.ts), which test_timeout_tripwire holds every site to.
 const content =
-	await $`bun test test/unit/docs_current_engine_tripwire.test.ts test/unit/docs_versioning_tripwire.test.ts`
+	await $`bun test ${TEST_TIMEOUT_FLAG} test/unit/docs_current_engine_tripwire.test.ts test/unit/docs_versioning_tripwire.test.ts`
 		.cwd(REPO_ROOT)
 		.nothrow()
 		.quiet();
