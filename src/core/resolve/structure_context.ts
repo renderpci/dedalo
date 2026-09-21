@@ -40,6 +40,7 @@ import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
 import { labelByTipo } from '../ontology/labels.ts';
 import { ONTOLOGY_TLD } from '../ontology/ontology_tipos.ts';
+import { type DataframeDeletePolicy, dataframeDeletePolicyOf } from '../relations/dataframe.ts';
 import {
 	getColumnNameByModel,
 	getModelByTipo,
@@ -73,6 +74,15 @@ export interface StructureContextCore {
 	 * client's ONE escaper (render_escape.js render_value) switches on it.
 	 */
 	render_class?: RenderClass;
+	/**
+	 * The slot's resolved delete policy (dataframeDeletePolicyOf, ONE reader —
+	 * WC-2026-09-06-dataframe-delete-policy-on-slot) — ADDITIVE wire key,
+	 * present on `component_dataframe` entries only. The client's Delete
+	 * button switches its confirmation grammar on it and never re-reads the
+	 * ontology properties, so the two sides cannot disagree on what a spelling
+	 * means.
+	 */
+	delete_policy?: DataframeDeletePolicy;
 }
 
 /**
@@ -431,6 +441,11 @@ async function buildCore(
 		// request-invariant function of model+tipo+section (the cache key carries
 		// section_tipo), so it lives in the cached core.
 		sortable: resolveSortable(model, tipo, sectionTipo),
+		// dataframe delete policy: the slot's ONE resolved answer, stamped on
+		// every component_dataframe entry (request-invariant — cached core).
+		...(model === 'component_dataframe'
+			? { delete_policy: dataframeDeletePolicyOf(node.properties) }
+			: {}),
 		// render class (P2-6 / CARRY-01): the client escapes every component
 		// value by THIS key, so it is stamped from the descriptor on every
 		// component entry — request-invariant, so it lives in the cached core.

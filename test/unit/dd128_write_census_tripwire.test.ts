@@ -179,6 +179,11 @@ const CENSUS: Record<string, CensusRow> = {
 		verdict: 'engine',
 		reason: 'record duplication primitive; whole-record, no component tipo.',
 	},
+	'src/core/relations/dataframe.ts': {
+		verdict: 'engine',
+		reason:
+			'the dataframe slot delete-policy applier (applyDataframeDeletePolicy): empties or deletes the FRAME TARGET records an unlinked dd490 pairing addressed — an ontology-declared frame section, whole-record, no component tipo. It asks the write grant (level 2) on every target section ITSELF (assertFrameTargetWriteGrant, resolvePrincipal + getSectionPermissions) before queueing, because the calling door was authorized on the HOST only.',
+	},
 
 	// --- SECTION-LEVEL ----------------------------------------------------
 	'src/core/ts_object/ts_api.ts': {
@@ -617,8 +622,8 @@ const SEAM_SYMBOLS = [
 
 /** Doors that call a CALLER-owned primitive but can never address a dd128 record. */
 const REACH_EXEMPT: Record<string, string> = {
-	'src/core/relations/save.ts':
-		'its only caller-owned delete is removeDataframeDataById’s `delete_target` policy, which soft-deletes the dataframe FRAME TARGET records a dd490 pairing addresses (an ontology-declared frame section, never the users section). Its own record write, deletePortalLocator, reaches the seam through persistRecordKeys (chokepoint class above).',
+	'src/core/relations/dataframe.ts':
+		'its only caller-owned deletes are applyDataframeDeletePolicy’s `delete_target` / `delete_target_record` policies, which empty or delete the dataframe FRAME TARGET records a dd490 pairing addresses (an ontology-declared frame section, never the users section), after asking the write grant on that section — the slot-policy applier every delete door calls (removeDataframeDataById in relations/save.ts, the direct frame remove in save_component.ts, both record-delete modes in delete_record.ts).',
 	'src/core/section/record/delete_record.ts':
 		'the delete ENGINE — it DEFINES both primitives, holds no principal and no component tipo, and its own docblock puts authorization on the caller. Putting the seam here would revoke on an ontology delete too.',
 	'src/core/test_data/synthetic_hierarchy_fixture.ts':

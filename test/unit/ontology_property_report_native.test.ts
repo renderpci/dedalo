@@ -43,7 +43,7 @@ import {
 
 /** The scratch section every component below hangs from. */
 const SECTION = 'zzprp1';
-/** Carries a RETIRED key (hard_delete) beside an honoured one (css). */
+/** Carries a RETIRED key (image_tag) beside an honoured one (css). */
 const RETIRED_NODE = 'zzprp2';
 /** Carries a key this repo has never heard of, plus an author-parked one. */
 const UNKNOWN_NODE = 'zzprp3';
@@ -59,7 +59,7 @@ const SITUATION = situation({
 			tipo: RETIRED_NODE,
 			model: 'component_input_text',
 			parent: SECTION,
-			properties: { css: { width: '100%' }, hard_delete: true, multi_value: true },
+			properties: { css: { width: '100%' }, image_tag: true, multi_value: true },
 		},
 		{
 			tipo: UNKNOWN_NODE,
@@ -101,21 +101,23 @@ describe('the install report over a real dd_ontology', () => {
 			UNKNOWN_NODE,
 			REPORTED_AT_USE_NODE,
 		]);
-		expect((scratch[0]?.properties as Record<string, unknown>).hard_delete).toBe(true);
+		expect((scratch[0]?.properties as Record<string, unknown>).image_tag).toBe(true);
 	});
 
 	test('every inert key is reported with its node, verdict and replacement — and nothing else is', async () => {
 		const entries = scratchEntries(buildPropertyCensusReport(await listNodesWithProperties()));
 		expect(entries.map((entry) => `${entry.verdict}:${entry.tipo}:${entry.key}`)).toEqual([
-			`retired:${RETIRED_NODE}:hard_delete`,
+			`retired:${RETIRED_NODE}:image_tag`,
 			`retired:${RETIRED_NODE}:multi_value`,
 			`retired:${REPORTED_AT_USE_NODE}:target_mode`,
 			`retired:${REPORTED_AT_USE_NODE}:target_values`,
 			`unknown:${UNKNOWN_NODE}:zz_planted_dead_key`,
 		]);
-		const hardDelete = entries.find((entry) => entry.key === 'hard_delete');
-		expect(hardDelete?.replacement).toBe('properties.dataframe.delete_policy');
-		expect(hardDelete?.reason.length).toBeGreaterThan(40);
+		const imageTag = entries.find((entry) => entry.key === 'image_tag');
+		expect(imageTag?.replacement).toBeNull();
+		expect(imageTag?.reason.length).toBeGreaterThan(40);
+		const multiValue = entries.find((entry) => entry.key === 'multi_value');
+		expect(multiValue?.replacement).toContain('single-value facet');
 	});
 
 	test('the script’s flags split the two verdicts, and the human report names node + key', async () => {
@@ -124,7 +126,7 @@ describe('the install report over a real dd_ontology', () => {
 			selectVerdicts(entries, { retired: true, unknown: false })
 				.map((entry) => entry.key)
 				.sort(),
-		).toEqual(['hard_delete', 'multi_value', 'target_mode', 'target_values']);
+		).toEqual(['image_tag', 'multi_value', 'target_mode', 'target_values']);
 		expect(
 			selectVerdicts(entries, { retired: false, unknown: true }).map((entry) => entry.key),
 		).toEqual(['zz_planted_dead_key']);
@@ -132,8 +134,8 @@ describe('the install report over a real dd_ontology', () => {
 
 		const report = formatReport(entries);
 		expect(report).toContain(`RETIRED  ${RETIRED_NODE}`);
-		expect(report).toContain('properties.hard_delete');
-		expect(report).toContain('properties.dataframe.delete_policy');
+		expect(report).toContain('properties.image_tag');
+		expect(report).toContain('single-value facet');
 		expect(report).toContain(`UNKNOWN  ${UNKNOWN_NODE}`);
 		expect(report).toContain('TOTAL: 5 (node, key) pair(s) nothing reads');
 		expect(formatReport([])).toContain('no retired or unknown property keys');
@@ -154,9 +156,9 @@ describe('the resolver tripline', () => {
 			errors.mockRestore();
 		}
 		const lines = captured.filter((line) => line.includes(RETIRED_NODE));
-		expect(lines.length).toBe(2); // hard_delete + multi_value, once each
-		expect(lines.join('\n')).toContain('properties.hard_delete');
-		expect(lines.join('\n')).toContain('properties.dataframe.delete_policy');
+		expect(lines.length).toBe(2); // image_tag + multi_value, once each
+		expect(lines.join('\n')).toContain('properties.image_tag');
+		expect(lines.join('\n')).toContain('no v7 replacement');
 		expect(lines.join('\n')).toContain('single-value facet');
 		expect(lines.every((line) => line.startsWith('[ontology/resolver]'))).toBe(true);
 	});

@@ -55,6 +55,8 @@ probe_*.ts
 # symlink, so these must name the REAL path — `.claude/...` rules would be dead.
 .agents/settings.local.json
 .agents/scheduled_tasks.lock
+# Tool-synced third-party skill bucket (docx/pdf/pptx…): machine-local, never the project's.
+.agents/skills/synced/
 .clinerules
 
 # Local-only foundation audits (security analysis etc.) — not version-controlled

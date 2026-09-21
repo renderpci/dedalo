@@ -94,6 +94,11 @@ export function registerSectionDataListener(listener: SectionDataListener): void
 	sectionDataListeners.add(listener);
 }
 
+/** Remove a listener — for a gate that registers one for its own run only. */
+export function unregisterSectionDataListener(listener: SectionDataListener): void {
+	sectionDataListeners.delete(listener);
+}
+
 function notifySectionDataListeners(sectionTipo: string): void {
 	for (const listener of sectionDataListeners) {
 		try {

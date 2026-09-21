@@ -61,7 +61,6 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {when_in_dom,dd_request_idle_callback} from '../../common/js/events.js'
-	import {delete_dataframe} from '../../component_common/js/component_common.js'
 	import {object_to_url_vars, open_window, get_caller_by_model, same_section_id} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {render_value} from '../../common/js/utils/render_escape.js'
@@ -596,9 +595,10 @@ export const render_column_component_info = function(options) {
 * 2. **Delete resource and all links** (`button_unlink_and_delete`) — only shown when
 *    `show_interface.button_delete_link_and_record === true` AND the target section's
 *    `button_delete.permissions > 1`.  Calls `self.delete_linked_record()` to remove
-*    the target record itself, then `delete_dataframe()` to clean up any paired dataframe
-*    rows on the client side (here the server does NOT auto-cascade, so the explicit call
-*    is required).  Requires two consecutive `confirm()` dialogs to prevent accidental
+*    the target record itself; the server's record delete strips this host's locator
+*    through the inverse-reference cleanup and cascades the paired dataframe rows with
+*    it (single-writer rule — no client `delete_dataframe()` call, since 2026-09-21).
+*    Requires two consecutive `confirm()` dialogs to prevent accidental
 *    deletion of shared authority records.  Optionally also deletes diffusion records when
 *    the `delete_diffusion_records` checkbox is checked (default: true).
 *
@@ -725,17 +725,15 @@ export const render_column_remove = function(options) {
 									section_id		: section_id
 								})
 
-								// delete_dataframe_record. if it is not dataframe it will be ignored
-								// (explicit unlink: this flow removes the locator via inverse
-								// references, outside the server remove cascade)
-								// pairing key is the row item id, never the target section_id
-								await delete_dataframe({
-									self				: self,
-									section_id			: self.section_id,
-									section_tipo		: self.section_tipo,
-									id_key				: options.locator.id,
-									main_component_tipo	: self.tipo,
-								})
+								// The row's paired dataframe frames need NO client call: the
+								// server's record delete strips this host's locator through
+								// the inverse-reference cleanup and cascades the frames with
+								// it (removeDataframeDataById, each slot applying its own
+								// delete policy). Until 2026-09-21 delete_dataframe was called
+								// here on the STALE frame instance and sent a slot `remove`
+								// for an entry the server had already dropped — a refused
+								// save surfaced for a deletion that had fully succeeded. The
+								// refresh below re-reads the record.
 
 								// refresh the component. Don't wait here
 								self.refresh({

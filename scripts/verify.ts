@@ -136,6 +136,7 @@ const TRIPWIRES = [
 	'test/unit/verify_selector_selftest.test.ts',
 	'test/unit/delete_inverse_lost_update_native.test.ts',
 	'test/unit/duplicate_record_dataframe_native.test.ts',
+	'test/unit/dataframe_delete_policy_native.test.ts',
 	'test/unit/tm_lang_slice_restore_native.test.ts',
 	'test/unit/csv_parser_conformance_native.test.ts',
 	'test/unit/ingest_encoding_tripwire.test.ts',

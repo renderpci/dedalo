@@ -372,7 +372,7 @@ property-injection hook. If a node needs different behaviour, edit its
 exactly like one it honours: the node saves and nothing happens. The keys that
 are inert today are enumerated, each with the reason and the replacement, in
 `src/core/ontology/property_census.ts` — 35 of them across the shipped
-ontology, `portal_link_open` on 90 nodes, `hard_delete` on 58, `multi_value`
+ontology, `portal_link_open` on 90 nodes, `image_tag` on 48, `multi_value`
 on 48. Three things follow from that one registry:
 
 - **The engine says so.** The first time a node is read, every retired key it

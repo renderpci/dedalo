@@ -6,7 +6,7 @@
  * hand: a key nothing reads looks exactly like one the engine honours. The
  * audit measured 404 distinct top-level keys across the shipped ontology and
  * 17+ of them read by NEITHER the server nor the browser, on ~250 nodes —
- * `portal_link_open` on 90, `hard_delete` on 58, `multi_value` on 48. Nothing
+ * `portal_link_open` on 90, `image_tag` on 48, `multi_value` on 48. Nothing
  * told anyone.
  *
  * THE CENSUS IS TOTAL over what an install SHIPS: every dd_ontology row of
@@ -34,8 +34,9 @@
  * HONEST LIMIT. "Read" is a word scan, so readership is OVER-approximated: the
  * unread set is a LOWER bound (everything it names is truly dead; a key spelled
  * like an ordinary word — `name`, `row`, `key` — may be dead and counted
- * honoured). Comments are stripped, which is what makes `hard_delete`'s
- * commented-out client branch count as dead. The gate reads no database.
+ * honoured). Comments are stripped, so a commented-out reader counts as no
+ * reader (that is how `hard_delete` stayed dead until it was wired on
+ * 2026-09-06). The gate reads no database.
  *
  * Hermetic: repo files only.
  */
@@ -230,20 +231,20 @@ describe('ontology property census — the classifier is proven on planted offen
 	});
 
 	test('the tripline wording names the node, the key and the replacement', () => {
-		const line = formatRetiredPropertyLine('zzpcens1', 'hard_delete');
+		const line = formatRetiredPropertyLine('zzpcens1', 'multi_value');
 		expect(line).toContain('zzpcens1');
-		expect(line).toContain('properties.hard_delete');
-		expect(line).toContain('dataframe.delete_policy');
+		expect(line).toContain('properties.multi_value');
+		expect(line).toContain('single-value facet');
 		expect(formatRetiredPropertyLine('zzpcens1', 'portal_link_open')).toContain(
 			'no v7 replacement',
 		);
 	});
 
 	test('retiredKeysOf finds the retired keys of a node and can skip the reported-at-use ones', () => {
-		const properties = { css: 'x', hard_delete: true, target_mode: 'free', multi_value: true };
-		expect(retiredKeysOf(properties).sort()).toEqual(['hard_delete', 'multi_value', 'target_mode']);
+		const properties = { css: 'x', image_tag: true, target_mode: 'free', multi_value: true };
+		expect(retiredKeysOf(properties).sort()).toEqual(['image_tag', 'multi_value', 'target_mode']);
 		expect(retiredKeysOf(properties, { skipReportedAtUse: true }).sort()).toEqual([
-			'hard_delete',
+			'image_tag',
 			'multi_value',
 		]);
 		expect(retiredKeysOf(null)).toEqual([]);

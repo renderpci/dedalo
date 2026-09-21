@@ -55,12 +55,18 @@ import {
 } from '../../db/matrix_write.ts';
 import { deferPostTransaction, sql, withTransaction } from '../../db/postgres.ts';
 import { recordTimeMachine } from '../../db/time_machine.ts';
+import {
+	applyDataframeDeletePolicy,
+	dataframeDeletePolicyOf,
+	dataframeTargetsOf,
+} from '../../relations/dataframe.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { ONTOLOGY_TLD } from '../../ontology/ontology_tipos.ts';
 import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
 	getModelByTipo,
+	getNode,
 	getTranslatableByTipo,
 } from '../../ontology/resolver.ts';
 import { requiredOntologyTld } from '../../ontology/tld.ts';
@@ -721,6 +727,79 @@ function resolveRemoveTargetId(
  * the PHP cross-language removal for translatable literals: one id, every language.
  * Numeric-string ids are compared as numbers, matching `resolveRemoveTargetId`.
  */
+/** One `remove` the change loop applied — its dataframe consequence runs AFTER the batch. */
+interface AppliedRemove {
+	targetId: number | string;
+	/** The entries the remove dropped (a slot's frame entries; ignored for a main). */
+	removedEntries: unknown[];
+}
+
+/**
+ * THE DATAFRAME CONSEQUENCE OF THE BATCH'S REMOVES — run ONLY after every
+ * change of the batch applied and the component was written. Until 2026-09-21
+ * each remove cascaded inside the change loop, and a LATER change of the same
+ * batch answering `ok:false` (an unknown id, a malformed sort, a set_data that
+ * rebinds the items) left that cascade committed — the DEC-01 posture commits
+ * a non-throwing result — so a save the curator saw REFUSED had stripped a
+ * slot and queued a frame target's deletion. Deferred here, a refused batch
+ * has run no cascade at all.
+ *
+ * - Any MAIN: the cascade (PHP update_data_value 'remove' :4325-4352, S1-05):
+ *   the removed item's paired frame entries are stripped from every dataframe
+ *   slot the main declares (remove_dataframe_data_by_id), each slot applying
+ *   its own delete policy. For translatable-literal mains PHP guards on the
+ *   removed id no longer existing in any OTHER language (frames are
+ *   lang-agnostic); the TS remove strips ALL languages at once, so the
+ *   unconditional cascade is exactly that occurrences<=1 case.
+ * - A `component_dataframe` SLOT — DIRECT FRAME REMOVAL (the dataframe modal's
+ *   Delete button → unlink_record → `remove` on the slot itself): the cascade
+ *   is not this door (a slot declares no slots); the slot's own policy is
+ *   resolved first and, unless it is `unlink`, applied to the targets the
+ *   dropped entries addressed (WC-2026-09-06-dataframe-delete-policy-on-slot).
+ *   The applier queues the deletes on the COMMIT lane of this save's
+ *   transaction: they run only after the unlink is committed (never before —
+ *   a target is not deleted while a locator still points at it), each in its
+ *   own transaction; a refused delete is logged and leaves a survivable
+ *   orphan, never a dangling locator.
+ */
+async function cascadeAppliedRemoves(input: {
+	model: string;
+	table: string;
+	sectionTipo: string;
+	sectionId: number;
+	componentTipo: string;
+	userId: number;
+	removes: readonly AppliedRemove[];
+}): Promise<void> {
+	if (input.removes.length === 0) return;
+	if (input.model === 'component_dataframe') {
+		const policy = dataframeDeletePolicyOf((await getNode(input.componentTipo))?.properties);
+		if (policy === 'unlink') return;
+		const entries = input.removes.flatMap((remove) => remove.removedEntries);
+		await applyDataframeDeletePolicy(policy, dataframeTargetsOf(entries), input.userId);
+		return;
+	}
+	for (const remove of input.removes) {
+		await removeDataframeDataById(
+			input.table,
+			input.sectionTipo,
+			input.sectionId,
+			input.componentTipo,
+			Number(remove.targetId),
+			input.userId,
+		);
+	}
+}
+
+/**
+ * The pre-save snapshot the observer removed-set diff compares against: the
+ * full slot for a relation column (a shallow copy suffices — every mutation
+ * path REBINDS `items`), nothing for a literal (no locators to remove).
+ */
+function observerDiffSnapshot(column: string, items: unknown[]): unknown[] {
+	return column === 'relation' ? [...items] : [];
+}
+
 function withoutItemId(items: unknown[], targetId: number | string): unknown[] {
 	return items.filter((item) => {
 		const itemId = (item as { id?: number | string } | null)?.id;
@@ -1108,7 +1187,10 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 	// writes touch `id` and dates — never locator identity.
 	// Relation slots only: a literal save has no locators to remove, so it pays
 	// nothing.
-	const preSaveItems: unknown[] = column === 'relation' ? [...items] : [];
+	const preSaveItems = observerDiffSnapshot(column, items);
+	// The removes the loop applied — their dataframe consequence runs after the
+	// whole batch applied and the component was written (cascadeAppliedRemoves).
+	const appliedRemoves: AppliedRemove[] = [];
 
 	// DATAFRAME saves (PHP component_dataframe get_data/set_data): the change
 	// loop operates on the CALLER's frame subset; the full slot is kept for
@@ -1346,27 +1428,18 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 			// Remove EVERY item with the id — translated items share ids, so this
 			// is the PHP cross-language removal for translatable literals.
 			const before = items.length;
+			const itemsBeforeRemove = items;
 			items = withoutItemId(items, targetId);
 			if (items.length === before) {
 				// PHP fails the save when the id does not exist.
 				return { ok: false, message: `remove: no item with id ${targetId}` };
 			}
-			// DATAFRAME cascade (PHP update_data_value 'remove' :4325-4352,
-			// S1-05): the removed item's paired frame entries are stripped from
-			// every dataframe slot (remove_dataframe_data_by_id). For
-			// translatable-literal mains PHP guards on the removed id no longer
-			// existing in any OTHER language (frames are lang-agnostic); the TS
-			// remove above strips ALL languages at once, so the unconditional
-			// cascade here is exactly that occurrences<=1 case. The `clear`
-			// branch above does NOT cascade — PHP doesn't either (:4235-4243).
-			await removeDataframeDataById(
-				table,
-				sectionTipo,
-				sectionId,
-				componentTipo,
-				Number(targetId),
-				userId,
-			);
+			// The dataframe consequence is DEFERRED to cascadeAppliedRemoves, after
+			// the whole batch applied — a later refused change runs no cascade.
+			appliedRemoves.push({
+				targetId,
+				removedEntries: itemsBeforeRemove.filter((item) => !items.includes(item)),
+			});
 			continue;
 		}
 		// Lang stamp. Sliced components force the EFFECTIVE lang onto the changed
@@ -1631,6 +1704,18 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 	// Post-write absorb (PHP raises the counter at EVERY set_data): explicit
 	// ids in the just-written array are locked out of future allocations.
 	await absorbComponentItemIds(table, sectionTipo, sectionId, componentTipo, items);
+
+	// The batch's removes cascade now — after every change applied and the
+	// component was written (see cascadeAppliedRemoves).
+	await cascadeAppliedRemoves({
+		model,
+		table,
+		sectionTipo,
+		sectionId,
+		componentTipo,
+		userId,
+		removes: appliedRemoves,
+	});
 
 	// relation_search ancestor index (PHP save_component_dato: for LEGACY
 	// component_autocomplete_hi, the save ALSO writes relation_search[tipo] =

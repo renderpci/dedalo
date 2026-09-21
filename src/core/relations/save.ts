@@ -45,6 +45,12 @@ import {
 	normalizeDataframeEntry,
 } from '../concepts/subdatum.ts';
 import { dbTimestamp } from '../db/db_timestamp.ts';
+import {
+	applyDataframeDeletePolicy,
+	dataframeDeletePolicyOf,
+	type DataframeTarget,
+	dataframeTargetsOf,
+} from './dataframe.ts';
 import type { MatrixJsonbColumn } from '../db/matrix.ts';
 import { sql, withTransaction } from '../db/postgres.ts';
 import { recordTimeMachine } from '../db/time_machine.ts';
@@ -1188,10 +1194,12 @@ export async function getRelationTypeByTipo(tipo: string): Promise<string> {
  *   TM row captures the full state; a separate slot row would break TM
  *   restore ordering. The modified stamps are the caller's responsibility
  *   too (the main save/delete path refreshes them).
- * - get_dataframe_delete_policy(): default 'unlink' clears slot entries
- *   only; 'delete_target' additionally soft-deletes the unlinked frame
- *   TARGET records (collected BEFORE clearing, delete_data mode —
- *   recoverable from time machine; per-target failures log and continue).
+ * - The delete policy is the SLOT's (dataframeDeletePolicyOf, relations/
+ *   dataframe.ts — PHP read it from the main, which no shipped node carried):
+ *   'unlink' clears slot entries only; 'delete_target' soft-deletes the
+ *   unlinked frame TARGET records; 'delete_target_record' (= the v6
+ *   `hard_delete: true`) deletes them (targets collected BEFORE clearing,
+ *   deleted AFTER every slot write; per-target failures log and continue).
  */
 export async function removeDataframeDataById(
 	table: string,
@@ -1223,14 +1231,16 @@ export async function removeDataframeDataById(
 	}
 	if (slotTipos.length === 0) return;
 
-	// delete policy from the MAIN component's ontology properties
-	// (properties->dataframe->delete_policy; anything else is 'unlink').
-	const policy = (node.properties as { dataframe?: { delete_policy?: unknown } } | null)?.dataframe
-		?.delete_policy;
-	const deleteTarget = policy === 'delete_target';
-	// KEPT UNION: targets are lifted from the RAW stored dataframe slot entries
-	// (unswept legacy string ids), so the collected id keeps the stored form.
-	const unlinkedTargets: { section_tipo: string; section_id: number | string }[] = [];
+	// Delete policy PER SLOT, read from the SLOT node (dataframeDeletePolicyOf:
+	// `hard_delete: true` = hard, `dataframe.delete_policy` = soft/hard, else
+	// unlink). The targets are lifted from the RAW stored entries BEFORE the
+	// strip and handed to the applier only AFTER every slot write; the applier
+	// queues the deletes on the commit lane — a target is never deleted while a
+	// locator still addresses it (see applyDataframeDeletePolicy).
+	const pendingDeletes: {
+		policy: 'delete_target' | 'delete_target_record';
+		targets: DataframeTarget[];
+	}[] = [];
 
 	const { updateMatrixKeyData } = await import('../db/matrix_write.ts');
 	for (const slotTipo of slotTipos) {
@@ -1252,17 +1262,8 @@ export async function removeDataframeDataById(
 		}
 		if (removed.length === 0) continue; // nothing paired with this item
 
-		if (deleteTarget) {
-			for (const entry of removed) {
-				const target = entry as { section_tipo?: unknown; section_id?: unknown };
-				if (typeof target.section_tipo === 'string' && target.section_id !== undefined) {
-					unlinkedTargets.push({
-						section_tipo: target.section_tipo,
-						section_id: target.section_id as number | string,
-					});
-				}
-			}
-		}
+		const policy = dataframeDeletePolicyOf((await getNode(slotTipo))?.properties);
+		if (policy !== 'unlink') pendingDeletes.push({ policy, targets: dataframeTargetsOf(removed) });
 		// Slot write with NO TM row (see the contract note above): null value
 		// removes the key, like PHP set_data(null)+save on an emptied slot.
 		await updateMatrixKeyData(
@@ -1275,21 +1276,8 @@ export async function removeDataframeDataById(
 		);
 	}
 
-	// delete_target policy: soft-delete the unlinked frame target records
-	// (PHP sections::delete delete_mode 'delete_data' — recoverable).
-	if (deleteTarget && unlinkedTargets.length > 0) {
-		const { deleteSectionData } = await import('../section/record/delete_record.ts');
-		for (const target of unlinkedTargets) {
-			try {
-				await deleteSectionData(target.section_tipo, Number(target.section_id), userId);
-			} catch (error) {
-				// PHP logs per-target soft-delete failures and continues.
-				console.error(
-					`removeDataframeDataById: delete_target soft-delete failed for ${target.section_tipo}/${String(target.section_id)}:`,
-					error,
-				);
-			}
-		}
+	for (const pending of pendingDeletes) {
+		await applyDataframeDeletePolicy(pending.policy, pending.targets, userId);
 	}
 }
 

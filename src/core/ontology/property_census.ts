@@ -73,11 +73,6 @@ export const RETIRED_PROPERTY_KEYS: Readonly<Record<string, RetiredPropertyKey>>
 			"v6 portal link-target hint (90 nodes). No reader in this engine and none in the PHP oracle either — how a portal opens a linked record is the client renderer's decision.",
 		replacement: null,
 	},
-	hard_delete: {
-		reason:
-			'v6 dataframe delete opt-in (58 nodes). The only surviving reader is a COMMENTED-OUT client branch (component_dataframe/js/view_default_list_dataframe.js).',
-		replacement: 'properties.dataframe.delete_policy',
-	},
 	image_tag: {
 		reason:
 			'v6 rich-text image-tag hint (48 nodes). The image-tag plugin ships inside the vendored CKEditor build and takes no ontology configuration.',
@@ -295,6 +290,7 @@ export const HONOURED_PROPERTY_KEYS: readonly string[] = [
 	'external_source',
 	'fields_map',
 	'fields_separator',
+	'hard_delete',
 	'head',
 	'host',
 	'identifying_image',

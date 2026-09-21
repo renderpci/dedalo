@@ -227,6 +227,15 @@ const get_content_value = (i, current_value, self) => {
 				// does not fire the server remove cascade)
 				// read current entry values dynamically (they change after each save)
 				// pairing key is the data item id, never the target section_id
+				// NOT awaited, deliberately: handle_select_change below must set
+				// changed_data SYNCHRONOUSLY on the change event (the unsaved-data
+				// guard and the select gates read it right after dispatch), and
+				// an await ahead of it breaks that contract. Since 2026-09-21 this
+				// is a real slot `remove` (the server strips the frame and applies
+				// the slot's delete policy to its target), so the frame unlink and
+				// the value save are two requests on one record, issued in this
+				// order; a refused unlink is surfaced by the save path's own error
+				// handling. `false` is the ordinary answer of an item with no frame.
 					const current_entry = self.data.entries?.[0] || null
 					if(current_entry?.id){
 						delete_dataframe({
@@ -235,7 +244,7 @@ const get_content_value = (i, current_value, self) => {
 							section_tipo		: self.section_tipo,
 							id_key				: current_entry.id,
 							main_component_tipo	: self.tipo,
-							delete_instance		: true
+							delete_instace		: true
 						})
 					}
 

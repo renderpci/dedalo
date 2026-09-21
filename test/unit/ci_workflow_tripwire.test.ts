@@ -447,6 +447,10 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		'It builds a host record, its dataframe frame targets and a non-admin principal through the engine own write path and then duplicates them, asserting what the copied locators POINT AT across matrix tables; every assertion reads rows back out of the suite database, so the gate cannot run on the hosted tier',
 	],
 	[
+		'test/unit/dataframe_delete_policy_native.test.ts',
+		'It builds a scratch ontology situation (dd_ontology nodes) plus host, frame-target and portal-target records in the suite database, removes frames through the engine own write path on three doors and asserts what happened to the target ROWS and their Time Machine snapshots — including the commit-lane ordering inside a real outer transaction — so there is nothing to run without a live suite database',
+	],
+	[
 		'test/unit/tm_lang_slice_restore_native.test.ts',
 		'It materializes a scratch ontology (zztmlang) and multilingual records through saveComponentData, drives both Time-Machine restore doors and reads matrix_time_machine rows back as stored jsonb text to prove untouched languages survive byte-identical — all of it database state, none of it reachable without the suite Postgres',
 	],
