@@ -88,6 +88,7 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import {
+	allowlistCensusConflicts,
 	COPY_BLOCK_BEGIN,
 	COPY_BLOCK_END,
 	censusPatterns,
@@ -347,6 +348,78 @@ describe('B. the artifacts are DERIVED from the tracked tree + the census', () =
 				`FROM scratch\n${COPY_BLOCK_BEGIN}\n${COPY_BLOCK_END}\n`,
 			);
 			expect(check(scratch).exitCode).toBe(1);
+		} finally {
+			rmSync(scratch, { recursive: true, force: true });
+		}
+	});
+
+	/**
+	 * THE PAIR THAT CANNOT BOTH BE TRUE (2026-09-21). Rule 1 allowlists a
+	 * top-level entry that holds TRACKED files; rule 2 denies it when a
+	 * `.gitignore` names it — and the census is applied after the allowlist, last
+	 * match wins. Emitted together, `.dockerignore` drops the whole tree while
+	 * the Dockerfile still COPYs it: not a narrower image, a build that FAILS on
+	 * that COPY.
+	 *
+	 * It shipped: dev/prompts/ui_redesign_calm_scholarly.md was tracked
+	 * 2026-07-28, `dev/` was gitignored 2026-09-21, and the generator wrote `!dev`
+	 * and `dev` without a word. Resolved by untracking the file; the generator now
+	 * REFUSES the shape, because only the repository can say which of the two
+	 * it means.
+	 */
+	test('a top-level entry that is BOTH allowlisted and denied is REFUSED, not rendered', () => {
+		const generator = join(ROOT, 'deploy/build_context.ts');
+
+		// This tree is clean — the real assertion, stated over the real repo.
+		expect(
+			allowlistCensusConflicts(ROOT),
+			'a tracked tree is gitignored at top level: .dockerignore would drop it while the Dockerfile COPYs it',
+		).toEqual([]);
+
+		// POSITIVE CONTROL, driven end to end: a synthetic checkout that plants
+		// exactly that shape must make the generator exit non-zero and SAY which
+		// entry and which tracked file. A refusal never observed refusing is not
+		// a refusal.
+		const scratch = join(
+			tmpdir(),
+			`dedalo_ops01_conflict_${process.pid}_${Math.random().toString(36).slice(2)}`,
+		);
+		try {
+			const write = (path: string, body: string) => {
+				mkdirSync(join(scratch, dirname(path)), { recursive: true });
+				writeFileSync(join(scratch, path), body);
+			};
+			write('.gitignore', 'dev/\n');
+			write('dev/prompt.md', '# tracked under an ignored tree\n');
+			write('src/server.ts', 'export const y = 2;\n');
+			write('Dockerfile', `FROM scratch\n${COPY_BLOCK_BEGIN}\n${COPY_BLOCK_END}\n`);
+			for (const args of [
+				['init', '-q'],
+				['add', '-A', '-f'],
+				['-c', 'user.email=gate@dedalo.test', '-c', 'user.name=gate', 'commit', '-qm', 'x'],
+			]) {
+				expect(
+					Bun.spawnSync(['git', '-C', scratch, ...args], { stdout: 'pipe', stderr: 'pipe' })
+						.exitCode,
+				).toBe(0);
+			}
+			expect(
+				allowlistCensusConflicts(scratch),
+				'matcher control: a tracked file under a gitignored top-level tree must be reported',
+			).toEqual([{ entry: 'dev', trackedFiles: ['dev/prompt.md'] }]);
+
+			const run = Bun.spawnSync(['bun', 'run', generator, '--root', scratch], {
+				stdout: 'pipe',
+				stderr: 'pipe',
+			});
+			expect(run.exitCode, 'the generator must REFUSE the contradiction, not render it').not.toBe(
+				0,
+			);
+			const said = run.stderr.toString();
+			expect(said).toContain('dev');
+			expect(said, 'the refusal must name the tracked file that causes it').toContain(
+				'dev/prompt.md',
+			);
 		} finally {
 			rmSync(scratch, { recursive: true, force: true });
 		}

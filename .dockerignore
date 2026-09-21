@@ -59,7 +59,6 @@
 !bunfig.toml
 !client
 !cliff.toml
-!dev
 !docker-compose.simple.yml
 !docker-compose.yml
 !docs
@@ -67,6 +66,7 @@
 !install
 !install.sh
 !mkdocs.yml
+!overrides
 !package.json
 !presentation
 !publication
@@ -141,6 +141,7 @@ media
 .vendor_fetch_tmp
 .agents/settings.local.json
 .agents/scheduled_tasks.lock
+.agents/skills/synced
 .clinerules
 **/*/.clinerules
 audits
@@ -164,6 +165,10 @@ code
 src/core/update/install_stamp.json
 .scratch_*
 **/*/.scratch_*
+dev
+**/*/dev
+dev_tools
+**/*/dev_tools
 publication/server_api/v2/node_modules
 publication/server_api/v2/**/*/node_modules
 publication/server_api/v2/.env
