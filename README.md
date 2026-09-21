@@ -142,7 +142,7 @@ bun run lint                # biome
 
 ### Installation
 
-For full installation instructions, see the [installation guide](https://dedalo.dev/docs/install/).
+For full installation instructions, see the [installation guide](https://dedalo.dev/docs/v7/install/).
 
 The TS server reads its configuration from `../private/.env` (a sibling directory, *not* the PHP tree's private dir). Every key is declared once in **`src/config/catalog/`**, which GENERATES the copy-paste census `install/sample.env` and the [settings reference](docs/config/config.md); the installer drops a copy of the census at `../private/sample.env`. Regenerate with `bun run config:gen` — `config_docs_tripwire` fails if you forget.
 

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{#
+  THE "OLDER VERSION" BANNER — dormant today, load-bearing later.
+
+  Material renders this banner on every page of a version that is NOT aliased
+  `latest` in docs/versions.json, and fills it from this block. The block is
+  EMPTY by default, so a version without an override paints a bare strip that
+  tells the reader nothing — which is exactly what v6 did until it got the same
+  file (v6/master_dedalo/docs/assets/overrides/main.html).
+
+  v7 is currently `latest`, so nothing here is shown. It exists so that the day
+  v8 ships and v7 stops being latest, this manual already says so by itself,
+  with no scramble and no empty yellow bar. Wiring it now costs one file;
+  discovering it missing costs every v7 reader between the release and the fix.
+
+  `'../' ~ base_url` is Material's idiom for "the latest version of this site":
+  it resolves to /docs/, which the server redirects to the current major
+  (deploy/docs/htaccess).
+
+  This directory sits at the REPO ROOT, not under docs/: MkDocs warns when
+  custom_dir is inside docs_dir, and this site builds with --strict, where a
+  warning is an error.
+#}
+{% block outdated %}
+  You are reading the documentation for an <strong>older version</strong> of Dédalo.
+  <a href="{{ '../' ~ base_url }}">
+    <strong>Go to the latest version</strong>
+  </a>
+{% endblock %}

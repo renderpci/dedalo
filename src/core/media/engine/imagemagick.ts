@@ -491,6 +491,85 @@ export function buildCropArgv(source: string, target: string, box: CropBox): str
 	];
 }
 
+/**
+ * Crop THEN pad to a fixed canvas with a white background, gravity-centered
+ * (PHP tool_import_files crop_50 :101-115 — used to bring a shorter crop up
+ * to match the taller one's height so two split images read as a matched
+ * pair). `extentWidth`/`extentHeight` are the FINAL canvas size; passing the
+ * box's own width and a taller `extentHeight` pads vertically only, which is
+ * the crop_50 use — a general caller may pad on both axes.
+ */
+export function buildCropAndPadArgv(
+	source: string,
+	target: string,
+	box: CropBox,
+	extentWidth: number,
+	extentHeight: number,
+): string[] {
+	return [
+		resolveMagick(),
+		source,
+		'-crop',
+		`${box.width}x${box.height}+${box.x}+${box.y}`,
+		'+repage',
+		'-background',
+		'white',
+		'-gravity',
+		'center',
+		'-extent',
+		`${extentWidth}x${extentHeight}`,
+		coderToken(target),
+	];
+}
+
+/**
+ * Bilevel foreground/background mask recipe (PHP tool_import_files crop_50
+ * :53 — the numisdata "split obverse/reverse" script). Grayscale, negate,
+ * threshold at 5%, collapse to 1-bit: a near-white background lands at
+ * gray(0), anything else (the subject) lands at gray(255). Feeds
+ * `buildConnectedComponentsArgv` — this recipe alone never claims a subject
+ * was found, it only prepares the mask.
+ */
+export function buildBilevelMaskArgv(source: string, target: string): string[] {
+	return [
+		resolveMagick(),
+		source,
+		'-colorspace',
+		'gray',
+		'-negate',
+		'-threshold',
+		'5%',
+		'-type',
+		'bilevel',
+		coderToken(target),
+	];
+}
+
+/**
+ * Connected-components analysis recipe (PHP tool_import_files crop_50 :63 —
+ * the numisdata script). Writes NO image (`null:` sink) — the verbose report
+ * is what's wanted, on stdout, one line per labelled blob:
+ *   `  <id>: <w>x<h>+<x>+<y> <cx>,<cy> <area> gray(<mean>)`
+ * `areaThreshold` merges/drops components smaller than that many pixels
+ * (ImageMagick's own noise floor, BEFORE this module's own dimension filter).
+ * Run this one through `runBinary` directly (not `runMagickTo` — there is no
+ * output file to verify) and parse the result with
+ * `parseConnectedComponentsReport` (`../region_split.ts`).
+ */
+export function buildConnectedComponentsArgv(source: string, areaThreshold: number): string[] {
+	return [
+		resolveMagick(),
+		source,
+		'-define',
+		'connected-components:verbose=true',
+		'-define',
+		`connected-components:area-threshold=${areaThreshold}`,
+		'-connected-components',
+		'8',
+		'null:',
+	];
+}
+
 // -------- runners --------
 
 /**
@@ -514,10 +593,33 @@ export function buildCropArgv(source: string, target: string, box: CropBox): str
  * `fatalStderr` lets a caller keep its own, better diagnostic ahead of the
  * generic "produced no output" (crop's out-of-bounds geometry).
  */
+/**
+ * `expectedOutput` is the file the recipe writes, and the postcondition below is
+ * about that file. A REPORT recipe writes none — it asks ImageMagick a question
+ * and reads stdout (`buildConnectedComponentsArgv`, whose sink is `null:`) — and
+ * passes `{ report: <source path> }` instead: same single spawn door, same
+ * hardened policy, same `-limit` argv, same process cap and same admission slot,
+ * with the file checks skipped because there is no file to check and the scratch
+ * dir following the SOURCE (there is no output to sit beside).
+ */
+/**
+ * WRITE (a recipe that produces an image) or REPORT (a recipe that produces a
+ * text answer on stdout and writes nothing — `buildConnectedComponentsArgv`,
+ * whose sink is `null:`). Both go through the ONE runner: same hardened policy,
+ * same `-limit` argv, same process cap, same admission slot. They differ only
+ * afterwards — a report has no file to verify, and any failing exit is fatal for
+ * it, because unlike an encode there is no "sound output despite a warning exit"
+ * case for a text answer.
+ */
+type MagickRunKind = 'write' | 'report';
+
 async function runMagickTo(
 	argv: string[],
+	// WRITE: the file the recipe produces. REPORT: the file it READS — either way
+	// the path whose directory receives the pixel-cache spill (see below).
 	expectedOutput: string,
 	fatalStderr?: RegExp,
+	kind: MagickRunKind = 'write',
 ): Promise<SpawnResult> {
 	// `magickPolicyEnv()` (engine/binaries.ts) is the hardened policy.xml every
 	// ImageMagick process in this engine loads — see that module for why the
@@ -568,37 +670,52 @@ async function runMagickTo(
 	// over a good one. The two conditions that made B2 invisible, met by a check
 	// that only ever looked at our own cap.
 	//
-	// The NON-ZERO EXIT stays tolerated below (the `console.warn` path): that is a
-	// real ImageMagick behaviour on sound output — TIFF-tag noise, a truncated but
-	// decodable JPEG — and failing it would narrow a capability the oracle had.
-	// A kill is categorically different: nothing was tolerated, the process died.
-	if (result.signal !== null) {
-		throw new Error(
-			`ImageMagick was killed writing ${expectedOutput}: ${describeSpawnFailure(result)}`,
-		);
+	// The NON-ZERO EXIT stays tolerated in the write postcondition (the
+	// `console.warn` path): that is a real ImageMagick behaviour on sound output —
+	// TIFF-tag noise, a truncated but decodable JPEG — and failing it would narrow
+	// a capability the oracle had. A kill is categorically different: nothing was
+	// tolerated, the process died.
+	// A REPORT run widens this one check instead of adding a second: any failing
+	// exit is fatal for it (see MagickRunKind).
+	if (result.signal !== null || (kind === 'report' && result.exitCode !== 0)) {
+		const verb = result.signal !== null ? 'was killed' : 'failed';
+		const what = kind === 'report' ? `analysing ${expectedOutput}` : `writing ${expectedOutput}`;
+		throw new Error(`ImageMagick ${verb} ${what}: ${describeSpawnFailure(result)}`);
 	}
 	if (fatalStderr?.test(result.stderr) === true) {
 		throw new Error(`ImageMagick failed: ${result.stderr}`);
 	}
+	if (kind === 'report') return result;
+	await assertWroteOneImage(expectedOutput, result);
+	return result;
+}
+
+/**
+ * THE POSTCONDITION OF A WRITING RUN: exactly one non-empty image at
+ * `expectedOutput`. Split out of `runMagickTo` so the runner itself stays the
+ * spawn door and nothing else (the crap ratchet's reason, and the honest one:
+ * the spawn policy and the output contract are two subjects).
+ */
+async function assertWroteOneImage(expectedOutput: string, result: SpawnResult): Promise<void> {
 	if (nonEmptyFile(expectedOutput)) {
 		// A file exists: the only remaining question is whether it is ONE image.
 		// A probe failure here is itself fatal — an output we cannot verify is not
 		// an output we ship. The caller's atomic writer removes the temp.
 		const probe = await probeImageSource(expectedOutput);
-		if (probe.sceneCount === 1) {
-			if (result.exitCode !== 0 || /ERROR:/i.test(result.stderr) || /ERROR:/i.test(result.stdout)) {
-				console.warn(
-					`ImageMagick warning (exit ${String(result.exitCode)}) writing ${expectedOutput}, output is sound: ${(
-						result.stderr || result.stdout
-					).slice(0, 400)}`,
-				);
-			}
-			return result;
+		if (probe.sceneCount !== 1) {
+			rmSync(expectedOutput, { force: true });
+			throw new Error(
+				`ImageMagick wrote ${probe.sceneCount} images into ${expectedOutput} — the source sequence was not reduced to one image (scene selection missing from the recipe)`,
+			);
 		}
-		rmSync(expectedOutput, { force: true });
-		throw new Error(
-			`ImageMagick wrote ${probe.sceneCount} images into ${expectedOutput} — the source sequence was not reduced to one image (scene selection missing from the recipe)`,
-		);
+		if (result.exitCode !== 0 || /ERROR:/i.test(result.stderr) || /ERROR:/i.test(result.stdout)) {
+			console.warn(
+				`ImageMagick warning (exit ${String(result.exitCode)}) writing ${expectedOutput}, output is sound: ${(
+					result.stderr || result.stdout
+				).slice(0, 400)}`,
+			);
+		}
+		return;
 	}
 	const swept = sweepSequenceSiblings(expectedOutput);
 	throw new Error(
@@ -690,6 +807,53 @@ export async function cropImage(source: string, target: string, box: CropBox): P
 	// The out-of-bounds geometry check keeps its own message and runs FIRST: an
 	// impossible crop box is a caller error, not a missing-output mystery.
 	await runMagickTo(buildCropArgv(source, target, box), target, /geometry does not contain image/i);
+}
+
+/** Crop-and-pad-to-canvas (see {@link buildCropAndPadArgv}). Same geometry guard as `cropImage`. */
+export async function cropAndPadImage(
+	source: string,
+	target: string,
+	box: CropBox,
+	extentWidth: number,
+	extentHeight: number,
+): Promise<void> {
+	await runMagickTo(
+		buildCropAndPadArgv(source, target, box, extentWidth, extentHeight),
+		target,
+		/geometry does not contain image/i,
+	);
+}
+
+/** Bilevel mask (see {@link buildBilevelMaskArgv}) — a real single-image output, runs through `runMagickTo`. */
+export async function buildBilevelMask(source: string, target: string): Promise<void> {
+	await runMagickTo(buildBilevelMaskArgv(source, target), target);
+}
+
+/**
+ * Run the connected-components analysis (see {@link buildConnectedComponentsArgv})
+ * and return the RAW verbose report text. `null:` writes no file, so this goes
+ * through `runBinary` directly rather than `runMagickTo` — there is nothing for
+ * that runner's existence/scene-count postcondition to check. A non-zero exit or
+ * a kill is always fatal here: unlike an encode, there is no "sound output despite
+ * a warning exit" case for a text report — either the report is trustworthy or it
+ * is not used.
+ */
+export async function runConnectedComponents(
+	source: string,
+	areaThreshold: number,
+): Promise<string> {
+	// Through runMagickTo like every other magick run in this engine, as a REPORT
+	// run: a report reads the SAME untrusted pixels a conversion does, so the
+	// policy env, the `-limit` argv, the process cap and the admission slot are
+	// not optional just because nothing is written. `source` stands in for the
+	// written path — it is what the scratch directory follows here.
+	const result = await runMagickTo(
+		buildConnectedComponentsArgv(source, areaThreshold),
+		source,
+		undefined,
+		'report',
+	);
+	return result.stdout;
 }
 
 /**

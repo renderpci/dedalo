@@ -893,8 +893,8 @@ const render_help_block = function(self) {
 		const link_install = ui.create_dom_element({
 			element_type	: 'a',
 			class_name		: 'link',
-			href			: 'https://dedalo.dev/docs/install/install/',
-			inner_html		: 'https://dedalo.dev/docs/install/install/',
+			href			: 'https://dedalo.dev/docs/v7/install/',
+			inner_html		: 'https://dedalo.dev/docs/v7/install/',
 			parent			: installer_info_node
 		})
 		link_install.target	= '_blank'
@@ -916,8 +916,8 @@ const render_help_block = function(self) {
 		const link_configuration = ui.create_dom_element({
 			element_type	: 'a',
 			class_name		: 'link',
-			href			: 'https://dedalo.dev/docs/config/configuration/',
-			inner_html		: 'https://dedalo.dev/docs/config/configuration/',
+			href			: 'https://dedalo.dev/docs/v7/config/config/',
+			inner_html		: 'https://dedalo.dev/docs/v7/config/config/',
 			target			: '_blank',
 			parent			: installer_config_node
 		})

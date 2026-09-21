@@ -1,0 +1,53 @@
+##
+## dedalo.dev/docs/ — VERSION ROUTING.
+##
+## Uploaded to the docs root as `.htaccess` by `bun run docs:publish`. It is
+## versioned HERE so the routing is reviewable and reproducible; editing it on
+## the server means the next publish overwrites your change.
+##
+## Layout (one permanent prefix per major, so a version's URLs never move):
+##
+##   /docs/            -> the latest manual
+##   /docs/v7/...      -> v7
+##   /docs/v6/...      -> v6, frozen
+##   /docs/<flat>/...  -> legacy URLs published before versioning existed
+##
+## WHY LEGACY FLAT URLS GO TO v7, not v6. Measured 2026-09-21: 46 of the v6
+## manual's 52 pages exist at the IDENTICAL path in v7 — the v7 manual is a
+## path-compatible superset. And the shipping v7 client emits flat /docs/ links
+## itself (client/dedalo/core/installer/js/render_installer.js), so sending them
+## to v6 would point v7's own installer at the retired manual.
+##
+## The exceptions below are the ONLY v6 pages with no v7 counterpart. The list
+## is closed: v6 is frozen and gains no further pages.
+##
+<IfModule mod_rewrite.c>
+	RewriteEngine on
+	RewriteBase /docs/
+
+	# The latest pointer. 302, NOT 301 — this one must stay re-pointable, because
+	# its meaning changes on the day v8 ships. A cached 301 here is unfixable.
+	RewriteRule ^$ /docs/v7/ [R=302,L]
+
+	# Pages that exist in v6 and NOT in v7. 301: permanent by construction, and
+	# the list is closed — v6 is frozen and gains no further pages.
+	#
+	# THESE MUST BE RewriteRule, NEVER RedirectMatch. mod_rewrite runs in an
+	# EARLIER phase than mod_alias, so a RedirectMatch here is dead code behind
+	# the catch-all below no matter what order the two appear in this file. That
+	# is not theory: the first published version of this file used RedirectMatch
+	# and all three URLs 301'd to /docs/v7/… and 404'd (verified live 2026-09-21).
+	# Within mod_rewrite, source order DOES decide, so these sit above the
+	# catch-all and each ends the round with [L].
+	# Gate: test/unit/docs_versioning_tripwire.test.ts.
+	RewriteRule ^diffusion/diffusion_config_properties/?$  /docs/v6/diffusion/diffusion_config_properties/ [R=301,L]
+	RewriteRule ^diffusion/diffusion_multiple_databases/?$ /docs/v6/diffusion/diffusion_multiple_databases/ [R=301,L]
+	RewriteRule ^update_v5/(.*)$                           /docs/v6/update_v5/$1 [R=301,L]
+
+	# Never touch the version trees themselves, nor the switcher index. This also
+	# stops a redirect loop: every target above already lives under /docs/v6/.
+	RewriteCond %{REQUEST_URI} !^/docs/(v6|v7)/
+	RewriteCond %{REQUEST_URI} !^/docs/versions\.json$
+	# Everything else that was published flat: v7 has the page.
+	RewriteRule ^(.+)$ /docs/v7/$1 [R=301,L]
+</IfModule>

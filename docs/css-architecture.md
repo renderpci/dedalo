@@ -217,8 +217,8 @@ Example (current pattern from `component_av.less` and `component_image.less`):
     - Hides `.label` and ensures `.content_data` fills available height with grid.
   - `&.view_viewer`:
     - Fullscreen-style view (absolute positioning, black background, centered
-      content); the `.download` button calls the shared
-      `.media_viewer_download_mixin()` for its fixed-position geometry.
+      content); the `.download` button is a `#floating_dock` tenant — its disc
+      geometry lives in `layout/floating_dock.less` (`.floating_dock_button.download`).
   - `&_mini`:
     - Calls the shared `.media_mini_mixin()` (`img` height `2rem` by default).
 
@@ -232,8 +232,9 @@ Example (current pattern from `component_av.less` and `component_image.less`):
   - In edit mode:
     - Respects the same wrapper structure (`>.content_data > .content_value`).
   - Fullscreen viewer:
-    - `&.view_viewer` uses fixed positioning; the `.download` button calls the
-      same shared `.media_viewer_download_mixin()` `component_av` uses.
+    - `&.view_viewer` uses fixed positioning; the `.download` button is a
+      `#floating_dock` tenant, styled by the shared `.floating_dock_button.download`
+      rule in `layout/floating_dock.less` (the same geometry `component_av` uses).
   - `&_mini`:
     - Calls the shared `.media_mini_mixin()`, same as `component_av`.
 
@@ -241,11 +242,12 @@ Example (current pattern from `component_av.less` and `component_image.less`):
 
 - Media components are **consistent** and rely on centralized `layout/functions.less`
   mixins for every pattern this section used to flag as duplicated: the
-  fullscreen download-button geometry (`.media_viewer_download_mixin()`), the
   inline `_mini` image height (`.media_mini_mixin()`), the shared control-bar
   layout (`.media_control_buttons_mixin()`), and posterframe sizing/focus
   behavior (`.media_posterframe_mixin()`). This is the §7 refactor below,
-  **already landed** in this checkout — see the note there.
+  **already landed** in this checkout — see the note there. The fullscreen
+  download-button geometry is no longer a mixin: the button is a `#floating_dock`
+  tenant (see §7.3).
 
 ---
 
@@ -380,11 +382,16 @@ shared media pattern that shows up.
   not a new `layout/media.less` — no need to split further while the mixin
   count stays small.
 
-**7.3 Align media viewer download buttons — done**
+**7.3 Align media viewer download buttons — done, then re-homed to the dock**
 
-- `layout/functions.less` defines `.media_viewer_download_mixin()` — the fixed
-  positioning/sizing every fullscreen `.download` button now calls
-  (`component_av`, `component_image`, `component_3d`).
+- The shared `.media_viewer_download_mixin()` (fixed `right:10px; bottom:10px`
+  positioning for every fullscreen `.download` button) is RETIRED: it
+  hand-rolled the corner the error-report launcher's `#floating_dock` occupies,
+  so the launcher disc covered the download button in the image/AV viewer
+  popups. The download discs are dock tenants now — appended to `#floating_dock`
+  and styled by the shared `.floating_dock_button.download` rule in
+  `layout/floating_dock.less`. Never position a global floating button with its
+  own fixed coordinates; see `core/common/js/floating_dock.js`.
 
 **7.4 Normalize mini media representations — done**
 

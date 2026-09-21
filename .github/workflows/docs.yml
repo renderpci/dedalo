@@ -1,4 +1,14 @@
-# Documentation site gate — HOSTED TIER ONLY (engineering/CI.md).
+# Documentation site build — ADVISORY, HOSTED TIER ONLY (engineering/CI.md).
+#
+# NOT LOAD-BEARING, and deliberately so. The authoritative gate is
+# `bun run docs:publish` (scripts/docs_publish.ts), which runs these same checks
+# locally and REFUSES to upload if they are red. That gate sits on the only route
+# the manual has to production, so it cannot be bypassed, forgotten, or lost with
+# a vendor — publishing does not depend on this file, on GitHub, or on any
+# external service. This job survives only as a second opinion for pull requests
+# on a public repository, where an outside contributor gets feedback before a
+# maintainer looks. If GitHub disappears tomorrow, nothing about how the manual
+# ships changes.
 #
 # Builds the MkDocs site (mkdocs.yml) with --strict, which promotes MkDocs warnings to
 # ERRORS. That is the whole point: a renamed or deleted page that leaves a dangling link

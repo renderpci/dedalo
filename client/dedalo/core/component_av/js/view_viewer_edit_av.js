@@ -7,6 +7,7 @@
 // imports
 	import {url_vars_to_object, download_file} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
+	import {get_floating_dock} from '../../common/js/floating_dock.js'
 	import {
 		get_content_data_player
 	} from './view_player_edit_av.js'
@@ -78,11 +79,13 @@ export const view_viewer_edit_av = function() {
 *  5. Delegates actual video/audio DOM construction to get_content_data_player
 *     (imported from view_player_edit_av) with `with_control_buttons: false` —
 *     the viewer intentionally omits the frame-stepping and timecode controls.
-*  6. Appends a download button that, on click, resolves the 'original'-quality
-*     file URL from files_info and triggers download_original_av. Falls back to the
-*     default-quality URL if no original file is recorded. The button starts hidden
-*     and is revealed by the posterframe 'load' handler (step 3) for users with
-*     write permissions.
+ *  6. Appends a download button that, on click, resolves the 'original'-quality
+ *     file URL from files_info and triggers download_original_av. Falls back to the
+ *     default-quality URL if no original file is recorded. The button starts hidden
+ *     and is revealed by the posterframe 'load' handler (step 3) for users with
+ *     write permissions. It is a TENANT of #floating_dock
+ *     (core/common/js/floating_dock.js), so the dock column stacks it under/over
+ *     the error-report launcher instead of both claiming the same corner.
 *
 * Data shape expected on `self` (populated by component_common.init):
 *   self.data.entries[0].files_info  — Array of file-descriptor objects:
@@ -189,11 +192,15 @@ view_viewer_edit_av.render = async function(self, options) {
 	// button download
 		// Starts hidden; revealed by the posterframe 'load' handler above once
 		// the media is confirmed to exist and the user has write permissions.
+		// A TENANT of #floating_dock, never self-positioned: when this view is
+		// mounted as a standalone window the error-report launcher occupies the
+		// same corner, and both buttons once hand-rolled it. The dock column
+		// stacks them; all geometry lives in core/page/css/layout/floating_dock.less.
 		const download_image_button = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'primary download hidden',
+			class_name		: 'primary download floating_dock_button hidden',
 			title			: get_label.download || 'Download',
-			parent			: content_data
+			parent			: get_floating_dock()
 		})
 		download_image_button.addEventListener('click', function(e) {
 			e.stopPropagation()

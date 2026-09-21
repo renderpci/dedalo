@@ -6,9 +6,13 @@
 ##   .venv/bin/mkdocs build --strict     # --strict: broken internal links FAIL
 ##   .venv/bin/mkdocs serve              # live preview on :8000
 ##
-## CI runs exactly `mkdocs build --strict` (.github/workflows/docs.yml). --strict is
-## load-bearing: it promotes MkDocs warnings to errors, so a renamed or deleted page
-## that leaves a dangling link turns the build red instead of shipping a 404.
+## THE GATE IS `bun run docs:publish` (scripts/docs_publish.ts), which runs the content
+## tripwires and this same --strict build and REFUSES to upload if either is red. It sits
+## on the only route to production, so it needs no CI and no external service.
+## --strict is load-bearing: it promotes MkDocs warnings to errors, so a renamed or
+## deleted page that leaves a dangling link turns the build red instead of shipping a 404.
+## (.github/workflows/docs.yml runs the same build on pull requests, but is ADVISORY —
+## nothing about publishing depends on it.)
 ##
 ## NO `nav:` BLOCK — deliberate. Navigation is auto-generated from the docs/ tree plus
 ## each directory's index.md, which is the rule docs/development/documentation_style_guide.md
@@ -17,8 +21,25 @@
 ##
 site_name: Dédalo Documentation
 site_dir: docs_site      # gitignored build output
+
+## VERSIONED PUBLICATION. Each major serves from its own PERMANENT prefix —
+## dedalo.dev/docs/v7/ here, /docs/v6/ for the frozen v6 manual — and /docs/
+## redirects to the latest. A version's URLs never move again, so v8 is an
+## ADDITION (build into /docs/v8/, add a versions.json row, flip one redirect)
+## rather than a migration of everything that came before.
+##
+## site_url is LOAD-BEARING, not decoration: it sets the canonical tags and
+## sitemap.xml, and Material derives the version switcher's index from its
+## PARENT — https://dedalo.dev/docs/versions.json. Change the prefix here and
+## the switcher follows; get it wrong and the switcher silently 404s.
+## Gate: test/unit/docs_versioning_tripwire.test.ts.
+site_url: https://dedalo.dev/docs/v7/
 theme:
   name: material
+  # Supplies the "older version" banner text (overrides/main.html). Outside
+  # docs/ deliberately — custom_dir inside docs_dir is a MkDocs warning, and
+  # --strict makes warnings errors.
+  custom_dir: overrides
   logo: assets/images/dedalo_logo_white.svg
   favicon: assets/favicon.ico
   font: false
@@ -69,11 +90,38 @@ markdown_extensions:
 extra:
   generator: false
 
+  ## The header version dropdown, and the "you are reading an older version"
+  ## banner that Material paints on any version not aliased `latest`.
+  ##
+  ## `provider: mike` names the JSON CONTRACT, not the tool: mike is a gh-pages
+  ## deployer and this site is plain files behind a web server, so docs/versions.json
+  ## is hand-written and uploaded beside the version trees. Material only ever
+  ## fetches it — it never needs mike present.
+  version:
+    provider: mike
+    alias: true
+    default: latest
+
 plugins:
   - search
   - redirects:
-      # Published URLs that moved. Keep an entry for every page this repo has ever
-      # served at a public URL — dedalo.dev/docs/<path>/ is linked from the wild.
+      # Pages that MOVED, so an inbound link still lands on the right content.
+      #
+      # This map does two distinct jobs, and it is worth knowing which is which
+      # (measured 2026-09-21):
+      #
+      #   1. v6 PUBLISHED URL → current v7 page. Only THREE entries are this —
+      #      install/install_help, management/maintenace_status and
+      #      config/thesaurus_dependeces are the paths that exist in the v6
+      #      manual and not here, and they are linked from the wild.
+      #   2. v7-internal churn. The other entries are pages this repo renamed
+      #      before it had ever been published, so nothing outside could link
+      #      them. They cost nothing and start mattering the day v7 goes live.
+      #
+      # FROM PUBLICATION DAY, every rename or deletion needs an entry here, or
+      # it is a 404 for a real reader. That is not a convention to remember:
+      # docs_versioning_tripwire compares docs/published_paths.json against the
+      # tree and fails on any page that vanished without a redirect.
       redirect_maps:
         # The install set, rebuilt 2026-07-12.
         install/ts_native_install.md: install/production.md
