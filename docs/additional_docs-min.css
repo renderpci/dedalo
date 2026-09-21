@@ -1,8 +1,8 @@
 
-[data-md-color-primary=orange] {
-	--md-primary-fg-color: #f78a1c;
+[data-md-color-primary=blue-grey] {
+	--md-primary-fg-color: #546e7a;
 	--md-primary-bg-color: #ffffff;
-	--md-accent-fg-color: #e27d19;
+	--md-accent-fg-color: #455a64;
 
 }
 

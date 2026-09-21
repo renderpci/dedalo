@@ -11,8 +11,25 @@
 ##
 ##
 site_name: Dédalo Documentation
-# site_dir: use a git ignored directory, symlink of local Dédalo website doc folder
-site_dir: docs_site
+
+## THIS MANUAL IS FROZEN. v6 is superseded by v7; this tree is kept so existing v6
+## installations keep their documentation, and it gains no new pages.
+##
+## It publishes to its OWN permanent prefix, dedalo.dev/docs/v6/, beside the v7
+## manual at /docs/v7/. Corrections are rare; when one is needed:
+##
+##   mkdocs build
+##   rsync -az --delete docs_site/ <user>@<host>:<docs root>/v6/
+##
+## site_dir used to be a SYMLINK into the website checkout's docs/ folder, so a
+## build deployed itself as a side effect. That directory is now shared with the
+## v7 manual, and the two builds would overwrite each other — hence a plain local
+## directory plus an explicit upload.
+site_dir: docs_site_v6
+
+## Load-bearing: sets the canonical URLs and sitemap, and is where Material
+## derives the version switcher's index from (its parent, /docs/versions.json).
+site_url: https://dedalo.dev/docs/v6/
 theme:
   name: material
   custom_dir: docs/assets/overrides
@@ -29,17 +46,25 @@ theme:
     - content.code.copy
 
   palette:
+    ## SLATE BLUE-GREY, deliberately NOT the Dédalo orange that v7 wears.
+    ## The two manuals live side by side (dedalo.dev/docs/v6/ and /docs/v7/) and
+    ## share a layout, a logo and a table of contents, so colour is the fastest
+    ## signal a reader has that they are on the OLDER one — faster than reading
+    ## the version chip, and visible in a browser tab or a screenshot. Muted on
+    ## purpose: this manual is archived, not the one to start from.
+    ## The matching custom properties are in docs/additional_docs.css, keyed on
+    ## [data-md-color-primary=blue-grey] — change one and you must change both.
     # Palette toggle for light mode
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: orange
+      primary: blue grey
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     # Palette toggle for dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: orange
+      primary: blue grey
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
@@ -71,6 +96,15 @@ markdown_extensions:
 
 extra:
   generator: false
+
+  ## The version dropdown, and the "you are reading an older version" banner that
+  ## Material paints on any version not aliased `latest` — which is this one, by
+  ## design. `provider: mike` names the JSON contract, not the tool: versions.json
+  ## is hand-written and uploaded beside the version trees.
+  version:
+    provider: mike
+    alias: true
+    default: latest
 
 # force to pack external libs like mermaid into a local js files (directory /assets/external)
 plugins:

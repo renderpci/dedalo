@@ -159,6 +159,7 @@ node_modules
 
 # generated html documentation files
 docs_site
+docs_site_v6
 
 #count data
 /.VSCodeCounter/*

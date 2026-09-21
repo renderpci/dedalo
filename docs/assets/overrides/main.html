@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{#
+  THE "OLDER VERSION" BANNER.
+
+  Material renders the banner element on every page of a version that is not
+  aliased `latest` in versions.json — but the block it fills is EMPTY by
+  default, so without this override the strip renders with no text at all and
+  the reader is told nothing.
+
+  v6 is frozen and superseded by v7. A reader arriving from a search engine or
+  an old link has no other way to know that, so say it plainly and give them
+  one click to the current manual. `'../' ~ base_url` is Material's own idiom
+  for "the latest version of this site": it resolves to /docs/ , which the
+  server redirects to the current major.
+#}
+{% block outdated %}
+  You are reading the documentation for <strong>Dédalo v6</strong>, which is no longer developed.
+  <a href="{{ '../' ~ base_url }}">
+    <strong>Go to the latest version</strong>
+  </a>
+{% endblock %}
