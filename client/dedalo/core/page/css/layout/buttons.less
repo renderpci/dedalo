@@ -751,8 +751,15 @@ button.button_spinner {
 // the icon takes it through `--button-bg-color` rather than a ::before override
 // so a busy button's spinner still wins the pseudo-element.
 // ---------------------------------------------------------------------------
+// (!) the thesaurus / graph / base list views put the Search button DIRECTLY in
+// `.buttons_container`, with no `.search_buttons_container` wrapper — area_thesaurus
+// kept the old orange fill until that shape was named here too. It is matched as
+// `> button.warning.search` (not any `.warning` child) so the component tool strips
+// and tool bodies, which share the container class, are untouched.
 .buttons_container .search_buttons_container button.warning,
-.buttons_container .other_buttons_block button.warning {
+.buttons_container .other_buttons_block button.warning,
+.buttons_container > button.warning.search,
+.buttons_container > button.warning.show_all {
 	&:not(.new) {
 		background-color: transparent;
 		border-color: var(--border_strong);

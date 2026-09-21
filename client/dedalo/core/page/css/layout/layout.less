@@ -1185,9 +1185,13 @@
 				}//end section_bar_label
 
 				// section_group_label
+				// Group bar (IDENTIFICATION, DOCUMENTATION…): panel chrome, like
+				// the FIELDS/PRESETS tabs — the grey RAMP, not an inverse fill,
+				// so it stops out-darkening the rows it groups and stays
+				// legible in both themes from ONE pair (see search.less).
 				&.section_group_label {
-					background-color: var(--bg_fill_inverse);
-					color: var(--fg_inverse);
+					background-color: @color_grey_10;
+					color: @color_grey_4;
 					cursor: pointer;
 
 					&:active {

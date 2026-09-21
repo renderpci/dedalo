@@ -4868,14 +4868,18 @@ button.button_spinner.success::before {
   background-color: var(--color_grey_6);
 }
 .buttons_container .search_buttons_container button.warning:not(.new),
-.buttons_container .other_buttons_block button.warning:not(.new) {
+.buttons_container .other_buttons_block button.warning:not(.new),
+.buttons_container > button.warning.search:not(.new),
+.buttons_container > button.warning.show_all:not(.new) {
   background-color: transparent;
   border-color: var(--border_strong);
   color: var(--fg_default);
   --button-bg-color: var(--fg_muted);
 }
 .buttons_container .search_buttons_container button.warning:not(.new):hover,
-.buttons_container .other_buttons_block button.warning:not(.new):hover {
+.buttons_container .other_buttons_block button.warning:not(.new):hover,
+.buttons_container > button.warning.search:not(.new):hover,
+.buttons_container > button.warning.show_all:not(.new):hover {
   background-color: var(--color_orange_dedalo);
   border-color: var(--color_orange_border);
   color: var(--fg_on_brand);
@@ -5842,8 +5846,8 @@ dd-modal.dd_confirm .body.content {
   display: none;
 }
 .components_list_container ul li.section_group_label {
-  background-color: var(--bg_fill_inverse);
-  color: var(--fg_inverse);
+  background-color: var(--color_grey_10);
+  color: var(--color_grey_4);
   cursor: pointer;
 }
 .components_list_container ul li.section_group_label:active {
@@ -9048,7 +9052,7 @@ body:has(.assistant_container.standalone.show) {
   margin: 0px;
 }
 .wrapper_search > .search_global_container > .toggle_container_selector.sections {
-  background-color: var(--color_grey_10);
+  border-right: 2px solid var(--color_grey_13);
 }
 .wrapper_search > .search_global_container > .search_container_selector {
   position: relative;
@@ -9350,11 +9354,11 @@ body:has(.assistant_container.standalone.show) {
 }
 .toggle_container_selector,
 .toggle_container_selection_presets {
-  background-color: var(--bg_fill_inverse);
+  background-color: var(--color_grey_10);
   writing-mode: vertical-lr;
   text-transform: uppercase;
   cursor: pointer;
-  color: var(--fg_inverse);
+  color: var(--color_grey_4);
   padding: 0.25rem;
   padding-top: 0.75rem;
   letter-spacing: 1px;
@@ -9362,10 +9366,6 @@ body:has(.assistant_container.standalone.show) {
 .toggle_container_selector:active,
 .toggle_container_selection_presets:active {
   opacity: 0.7;
-}
-:root[data-theme="dark"] .toggle_container_selector,
-:root[data-theme="dark"] .toggle_container_selection_presets {
-  color: var(--color_grey_7);
 }
 .thesaurus_search_selector {
   margin-top: 7px;

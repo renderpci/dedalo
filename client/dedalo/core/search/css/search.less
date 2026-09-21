@@ -135,8 +135,12 @@
 			>.toggle_container_selector {
 				margin: 0px;
 
+				// TYPE is a DIFFERENT axis from FIELDS (which typology to search in,
+				// not which field): closed, the two vertical tabs sit side by side
+				// and were indistinguishable. A seam says they are two things —
+				// grey_13 inverts with the ramp, so it reads in both themes.
 				&.sections {
-					background-color: @color_grey_10;
+					border-right: 2px solid @color_grey_13;
 				}
 			}
 
@@ -546,21 +550,27 @@
 	}//end .wrapper_search
 
 // button toggle container_selector (list of fields) and button toggle presets
+	// The TYPE / FIELDS / PRESETS tabs are panel CHROME, not an inverse fill: at
+	// --bg_fill_inverse (#666 in light) they were the darkest thing on the page
+	// and read as its most important control rather than as the panel's edge.
+	// They take the grey RAMP instead (grey_10 fill, grey_4 ink) — the ramp
+	// inverts per theme, so ONE pair is legible in both (light #bbbbbb under
+	// #353535, 6.4:1; dark #5a606a under #e5e7ea, 5.1:1) with no theme-scoped
+	// override to keep in sync. The old dark override painted #666 ink on
+	// #4a5059 (2.2:1) and is gone with it. Dark ink, not white: white on this
+	// fill is 1.92:1 and contrast_ratio_tripwire refuses it.
 	.toggle_container_selector, .toggle_container_selection_presets {
-		background-color: var(--bg_fill_inverse);
+		background-color: @color_grey_10;
 		writing-mode: vertical-lr;
 		text-transform: uppercase;
 		cursor: pointer;
-		color: var(--fg_inverse);
+		color: @color_grey_4;
 		padding: 0.25rem;
 		padding-top: 0.75rem;
 		letter-spacing: 1px;
 
 		&:active {
 			opacity: 0.7;
-		}
-		:root[data-theme="dark"] & {
-			color: @color_grey_7;
 		}
 	}
 
