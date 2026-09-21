@@ -1,0 +1,27 @@
+{
+    "name": "single_step_absent_term",
+    "notes": "term with no match: worst case without the pre-filter",
+    "sqo": {
+        "section_tipo": [
+            "rsc197"
+        ],
+        "filter": {
+            "$and": [
+                {
+                    "q": "Txapelaurdin",
+                    "path": [
+                        {
+                            "section_tipo": "rsc197",
+                            "component_tipo": "rsc86",
+                            "model": "component_input_text",
+                            "name": "Cognoms"
+                        }
+                    ]
+                }
+            ]
+        },
+        "limit": 10,
+        "offset": 0,
+        "full_count": false
+    }
+}

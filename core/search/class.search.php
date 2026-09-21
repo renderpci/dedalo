@@ -115,6 +115,28 @@ class search {
 		// get_sql_joins() logs a warning (log only, no behaviour change).
 		const MAX_SQL_JOINS_WARN = 24;
 
+		// BLOB_PREFILTER. Test seam for the whole-blob pre-filter
+		// (component_common::resolve_query_object_langs_behavior). null (the default) means
+		// enabled; the tests and test/search/tools/search_corpus_diff.php set it to false to
+		// build the very same query object WITHOUT the redundant predicate and prove that the
+		// result set is identical. It is deliberately NOT configurable: see the note below.
+		//
+		// WHY IT IS ALWAYS ON. The pre-filter is not a uniform win, its effect inverts with how
+		// common the searched term is. Measured on entity 'mdcat', paginated first page:
+		//	term          matches   single-step        through a relation
+		//	garcia         20.104   10,7 -> 278 ms      51 -> 689 ms	(slower)
+		//	Rovira          1.698   27,1 ->  34 ms
+		//	'perez gomez'      22                     2.098 -> 579 ms	(faster)
+		//	Zabaleta           67  2.281 -> 1,9 ms    2.120 -> 563 ms	(faster)
+		//	Txapelaurdin        0  4.567 -> 0,3 ms    2.086 -> 594 ms	(faster)
+		// and on the count shape, which has no LIMIT to short-circuit, it is always a win
+		// (4.848 -> 271 ms). A very common term therefore gets slower, by a BOUNDED amount
+		// (worst case measured ~0,7 s), while every rare or unmatched term gets faster by an
+		// amount that GROWS WITH THE TABLE (already seconds here). Rare and zero-result
+		// searches are what users actually run, so the pre-filter is applied always, for
+		// single-step and multi-step paths alike.
+		public static ?bool $blob_prefilter = null;
+
 		// control for duplicated operator to include itself in the where ( operator !! )
 		public $skip_duplicated = false;
 
@@ -2309,7 +2331,7 @@ class search {
 	*  cartesian product. A top-level $or keeps the main-query join behaviour unchanged.
 	* @return string $string_query
 	*/
-	public function filter_parser(string $op, array $ar_value, ?array &$or_join_ids=null, bool $as_subquery=false) : string {
+	public function filter_parser(string $op, array $ar_value, ?array &$or_join_ids=null, bool $as_subquery=false, ?array $group_prefilter=null) : string {
 
 		$string_query = '';
 
@@ -2377,11 +2399,21 @@ class search {
 				// parent's join namespace; anything else opens its own. Any group under a non-$or
 				// group inherits the subquery context, so its leaves are emitted as EXISTS subqueries.
 				$child_as_subquery = ($op!=='$or') || $as_subquery;
+
+				// whole-blob pre-filter carried by this group (multi-step case, see
+				// component_common::resolve_query_object_langs_behavior). It is consumed by the
+				// merged EXISTS of the group that declares it; a directly nested $or (the
+				// q_parsed_ar alternatives) inherits it, an $and child never does, because under
+				// $and each operand is a separate EXISTS on a possibly different related record.
+					$child_prefilter = (isset($search_object->prefilter) && is_array($search_object->prefilter))
+						? $search_object->prefilter
+						: (($op2==='$or') ? $group_prefilter : null);
+
 				if ($op==='$or' && $op2==='$or' && !$as_subquery) {
-					$parsed_string = $this->filter_parser($op2, $ar_value2, $or_join_ids, $child_as_subquery);
+					$parsed_string = $this->filter_parser($op2, $ar_value2, $or_join_ids, $child_as_subquery, $child_prefilter);
 				}else{
 					$child_join_ids = null;
-					$parsed_string = $this->filter_parser($op2, $ar_value2, $child_join_ids, $child_as_subquery);
+					$parsed_string = $this->filter_parser($op2, $ar_value2, $child_join_ids, $child_as_subquery, $child_prefilter);
 				}
 				if (!empty($parsed_string)) {
 					$ar_group_elements[] = ' (' . $parsed_string . ' )';
@@ -2473,8 +2505,21 @@ class search {
 		// flush merged correlated EXISTS subqueries. One EXISTS per join_id, its sibling leaves
 		// ORed inside: (corr AND w1) OR (corr AND w2) ≡ corr AND (w1 OR w2), the correlation is
 		// ANDed once and the OR of the two leaves keeps the exact same set of witnesses.
-			foreach ($ar_subquery_merge as $merge) {
-				$ar_group_elements[] = 'EXISTS (SELECT 1 ' . implode(' ', $merge['joins']) . ' WHERE (' . $merge['correlation'] . ' AND (' . implode(' OR ', $merge['where']) . ')))';
+			foreach ($ar_subquery_merge as $join_id => $merge) {
+
+				$where = '(' . implode(' OR ', $merge['where']) . ')';
+
+				// whole-blob pre-filter. A redundant predicate ANDed INSIDE this EXISTS, on the
+				// very same joined record the per-language group tests, so it can only make the
+				// subquery cheaper: it never changes which records satisfy the EXISTS
+					if ($group_prefilter!==null) {
+						$prefilter_sql = $this->build_group_prefilter_sql($group_prefilter, $join_id);
+						if ($prefilter_sql!=='') {
+							$where = '(' . $prefilter_sql . ') AND ' . $where;
+						}
+					}
+
+				$ar_group_elements[] = 'EXISTS (SELECT 1 ' . implode(' ', $merge['joins']) . ' WHERE (' . $merge['correlation'] . ' AND ' . $where . '))';
 			}
 
 		// join the group elements with the group operator. Empty fragments (get_sql_where can
@@ -2485,6 +2530,49 @@ class search {
 
 		return $string_query;
 	}//end filter_parser
+
+
+
+	/**
+	* BUILD_GROUP_PREFILTER_SQL
+	* Renders the whole-blob pre-filter leaves a group carries (see filter_parser) against the
+	* table alias of the merged EXISTS that consumes them.
+	* (!) The leaves are CLONED before the join_id is set: the same query_object tree is parsed
+	* twice (once for the count query and once for the paginated one), and mutating the stored
+	* leaf would leak the first build's alias into the second.
+	* An empty string means 'nothing to add' (the shape does not want the pre-filter, see
+	* prefilter_applies), and the caller then emits the legacy EXISTS unchanged.
+	* @param array $ar_leaves
+	* @param int|null $join_id
+	* @return string $sql
+	*/
+	private function build_group_prefilter_sql(array $ar_leaves, ?int $join_id) : string {
+
+		$ar_sql = [];
+		foreach ($ar_leaves as $leaf) {
+
+			if (!is_object($leaf)) {
+				continue;
+			}
+
+			$clone			= clone($leaf);
+			$clone->join_id	= $join_id;
+
+			$sql = trim($this->get_sql_where($clone));
+			if ($sql!=='') {
+				$ar_sql[] = $sql;
+			}
+		}
+
+		if (empty($ar_sql)) {
+			return '';
+		}
+
+
+		return (count($ar_sql)===1)
+			? $ar_sql[0]
+			: '(' . implode(' OR ', $ar_sql) . ')';
+	}//end build_group_prefilter_sql
 
 
 

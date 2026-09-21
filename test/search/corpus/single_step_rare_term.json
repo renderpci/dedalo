@@ -1,0 +1,27 @@
+{
+    "name": "single_step_rare_term",
+    "notes": "rare term (67 matches): the pre-filter is worth ~1000x here",
+    "sqo": {
+        "section_tipo": [
+            "rsc197"
+        ],
+        "filter": {
+            "$and": [
+                {
+                    "q": "Zabaleta",
+                    "path": [
+                        {
+                            "section_tipo": "rsc197",
+                            "component_tipo": "rsc86",
+                            "model": "component_input_text",
+                            "name": "Cognoms"
+                        }
+                    ]
+                }
+            ]
+        },
+        "limit": 10,
+        "offset": 0,
+        "full_count": false
+    }
+}

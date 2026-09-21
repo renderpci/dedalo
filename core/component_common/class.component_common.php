@@ -3794,6 +3794,9 @@ abstract class component_common extends common {
 	*	lang			: string $lang;			// as 'all' or 'lg-spa'
 	*	translatable	: bool $translatable;
 	*	negative		: bool $negative;		// true for '!=' and '-'
+	*	blob_q_parsed	: string|null $blob_q_parsed;	// optional TERM-ONLY regex, as '\'.*garcia.*\''
+	*											// built by build_whole_blob_q_parsed(). When null
+	*											// (or unsafe) no whole-blob pre-filter is added
 	* }
 	* @return object $query_object
 	*/
@@ -3870,37 +3873,63 @@ abstract class component_common extends common {
 		// Redundant whole-blob pre-filter. Text regex searches (as 'contains') emit one
 		// non-sargable regex per language over the extracted per-language value
 		// (datos#>>'{components,<tipo>,dato,<lang>}'), so count()/search must evaluate all of
-		// them on every row. The whole blob (datos#>>'{components,<tipo>,dato}') is a strict
-		// superset of the per-language OR (a lang value that matches is contained in the blob),
-		// so ANDing a same-pattern regex on the whole blob never removes a true match. It lets
-		// the planner use the existing whole-blob trigram GIN indexes (matrix_rsc85_gin /
-		// matrix_rsc86_gin) and short-circuits the per-language regexes on non-matching rows.
+		// them on every row. ANDing a TERM-ONLY regex on the whole blob
+		// (datos#>>'{components,<tipo>,dato}') never removes a true match, so it lets the
+		// planner use the whole-blob trigram GIN indexes (matrix_<tipo>_gin) and short-circuits
+		// the per-language regexes on non-matching rows.
+		// (!) SOUNDNESS. The pre-filter pattern must be the bare search term, NEVER the
+		// per-language pattern: the per-language patterns are anchored on the JSON rendering
+		// of the value ('\["', '"', '[,[] ?"', '["<]'), and those anchors do NOT survive in the
+		// blob when the per-language value is a JSON STRING SCALAR instead of an array. In that
+		// case '#>>' UNQUOTES and unescapes the scalar, while inside the blob the same value
+		// stays quoted and escaped, so the per-language text is not a substring of the blob
+		// text and an anchored pre-filter would DROP a true match (measured: 45 such rows on
+		// entity 'inm', component dmm534). A bare term carries no anchor and is contained in
+		// both renderings, for array AND scalar values. The term itself is only safe when it
+		// cannot be re-escaped by the blob rendering, hence build_whole_blob_q_parsed() returns
+		// null for terms holding '"', '\' or control chars.
 		// Only for single-step (main section) paths: a multi-step path would traverse the
 		// relation per added clause. Negative operators ('!=', '-') and the empty/not-empty
 		// operators are built elsewhere and are not affected.
-			$is_single_step = isset($query_object->path) && count($query_object->path)===1;
-			if ($negative===false && $is_single_step && self::has_whole_blob_trigram_index($query_object)) {
+			$blob_q_parsed	= $options->blob_q_parsed ?? null;
+			$n_steps		= isset($query_object->path) ? count($query_object->path) : 0;
+			$is_single_step	= ($n_steps===1);
+			// multi-step: the component is reached THROUGH a relation, so the pre-filter has to
+			// travel INSIDE the correlated EXISTS of the per-language group (see below)
+			$is_multi_step	= ($n_steps>1);
+			$prefilter_on	= (search::$blob_prefilter!==false);	// test seam, see search::$blob_prefilter
+			if ($prefilter_on===true && $negative===false && ($is_single_step || $is_multi_step) && $blob_q_parsed!==null && self::has_whole_blob_trigram_index($query_object)) {
 
-				// one whole-blob leaf per alternative regex
-					$ar_blob_leaves = [];
-					foreach ($ar_q_parsed as $blob_q_parsed) {
-						$blob_leaf = clone($query_object);
-							$blob_leaf->lang		= 'all';	// no lang appended to component_path
-							$blob_leaf->q_parsed	= $blob_q_parsed;
-						unset($blob_leaf->q_parsed_ar);
-						$ar_blob_leaves[] = $blob_leaf;
-					}
-					$blob_query_object = (count($ar_blob_leaves)===1)
-						? $ar_blob_leaves[0]
-						: (object)['$or' => $ar_blob_leaves];
+				// one whole-blob leaf. Every alternative in q_parsed_ar shares the same term,
+				// so a single term-only leaf covers them all.
+					$blob_leaf = clone($query_object);
+						$blob_leaf->lang				= 'all';	// no lang appended to component_path
+						$blob_leaf->q_parsed			= $blob_q_parsed;
+					unset($blob_leaf->q_parsed_ar);
 
-				// $and [ whole-blob pre-filter, per-language group ]
-					$final_query_object = (object)[
-						'$and' => [
-							$blob_query_object,
-							$final_query_object
-						]
-					];
+				if ($is_single_step===true) {
+
+					// $and [ whole-blob pre-filter, per-language group ]. Both are plain
+					// predicates of the main WHERE, so a sibling is all it takes
+						$final_query_object = (object)[
+							'$and' => [
+								$blob_leaf,
+								$final_query_object
+							]
+						];
+
+				}else{
+
+					// multi-step. (!) A sibling under $and would NOT do: filter_parser emits one
+					// correlated EXISTS per $and operand, each with its own join_id, so the
+					// pre-filter would match a DIFFERENT related record than the per-language
+					// group (cross-record AND) and would change the result set, besides adding a
+					// second traversal of the relation instead of removing work.
+					// The pre-filter is attached to the per-language group instead, and
+					// search::filter_parser ANDs it INSIDE that group's merged EXISTS.
+					// (!) added AFTER the operator key, so array_key_first() still returns '$or'
+						$final_query_object->prefilter = [$blob_leaf];
+				}
 			}
 
 
@@ -3922,10 +3951,53 @@ abstract class component_common extends common {
 	* @param object $query_object
 	* @return bool
 	*/
+	/**
+	* BUILD_WHOLE_BLOB_Q_PARSED
+	* Builds the TERM-ONLY regex used by the redundant whole-blob pre-filter
+	* (see resolve_query_object_langs_behavior), as '\'.*garcia.*\''.
+	* The term carries NO json anchor ('["', '"', '[,[] ?"', '["<]') on purpose: the anchors of
+	* the per-language patterns do not survive in the whole blob when the per-language value is
+	* a json string scalar (#>> unquotes the scalar, the blob keeps it quoted and escaped), and
+	* an anchored pre-filter would then drop a true match.
+	* Returns null when the term cannot be guaranteed to appear VERBATIM in the blob rendering:
+	*	- '"' and '\' are re-escaped by json inside the blob (as '\"' / '\\')
+	*	- control chars are rendered as escape sequences (as '\n', '\u0001')
+	* so a pre-filter built from them could produce a false negative.
+	* @param string $q_clean
+	*	The search term as each component resolved it (wildcards/quotes already stripped),
+	*	NOT the raw q and NOT an already built regex
+	* @return string|null $q_parsed
+	*	Quoted regex ready for the sql builder, or null when no safe pre-filter is possible
+	*/
+	public static function build_whole_blob_q_parsed(string $q_clean) : ?string {
+
+		// empty case. Nothing to pre-filter with
+			if ($q_clean==='') {
+				return null;
+			}
+
+		// json re-escaping. The blob renders these differently than '#>>' does
+			if (strpbrk($q_clean, "\"\\")!==false) {
+				return null;
+			}
+
+		// control chars. Rendered as escape sequences inside the blob
+			if (preg_match('/[\x00-\x1F\x7F]/', $q_clean)===1) {
+				return null;
+			}
+
+
+		return '\'.*' . self::escape_search_regex($q_clean) . '.*\'';
+	}//end build_whole_blob_q_parsed
+
+
+
 	protected static function has_whole_blob_trigram_index( object $query_object ) : bool {
 
-		// single-step path. The component tipo is the last path element
-			if (!isset($query_object->path) || count($query_object->path)!==1) {
+		// the searched component is the LAST path element, whatever the path length: a
+		// multi-step path reaches the same component through a relation, so the same
+		// matrix_<tipo>_gin index applies to it
+			if (!isset($query_object->path) || count($query_object->path)<1) {
 				return false;
 			}
 			$component_tipo = (string)(end($query_object->path)->component_tipo ?? '');

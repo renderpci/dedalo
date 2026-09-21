@@ -1,0 +1,27 @@
+{
+    "name": "single_step_common_term",
+    "notes": "very common term (20.104 matches): the shape where the pre-filter costs",
+    "sqo": {
+        "section_tipo": [
+            "rsc197"
+        ],
+        "filter": {
+            "$and": [
+                {
+                    "q": "garcia",
+                    "path": [
+                        {
+                            "section_tipo": "rsc197",
+                            "component_tipo": "rsc86",
+                            "model": "component_input_text",
+                            "name": "Cognoms"
+                        }
+                    ]
+                }
+            ]
+        },
+        "limit": 10,
+        "offset": 0,
+        "full_count": false
+    }
+}

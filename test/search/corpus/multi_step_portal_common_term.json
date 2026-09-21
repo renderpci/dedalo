@@ -1,0 +1,38 @@
+{
+    "name": "multi_step_portal_common_term",
+    "notes": "multi-step with ONE very common term: the shape where the multi-step pre-filter costs (51ms -> 689ms). Keep it in the corpus so the trade stays visible.",
+    "sqo": {
+        "section_tipo": [
+            "mdcat2949"
+        ],
+        "limit": 10,
+        "offset": 0,
+        "filter": {
+            "$and": [
+                {
+                    "q": [
+                        "garcia"
+                    ],
+                    "q_operator": null,
+                    "q_split": true,
+                    "type": "jsonb",
+                    "path": [
+                        {
+                            "name": "Persona afectada",
+                            "model": "component_portal",
+                            "section_tipo": "mdcat2949",
+                            "component_tipo": "mdcat2961"
+                        },
+                        {
+                            "name": "Cognoms",
+                            "model": "component_input_text",
+                            "section_tipo": "rsc197",
+                            "component_tipo": "rsc86"
+                        }
+                    ]
+                }
+            ]
+        },
+        "order": []
+    }
+}
