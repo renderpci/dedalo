@@ -291,6 +291,38 @@ describe('docs versioning: the published layout stays coherent', () => {
 		).toBeGreaterThan(0);
 	});
 
+	test('the manual ships no runtime third-party asset', () => {
+		// Material lazy-loads Mermaid from unpkg.com AT RUNTIME. dedalo.dev sends a
+		// Content-Security-Policy whose script-src names 'self', analytics.render.es
+		// and cdn.jsdelivr.net — not unpkg.com — so the browser blocked it and all
+		// 83 diagrams across 53 pages rendered as plain grey code blocks.
+		//
+		// Nothing failed loudly. The build was green, the HTML was correct, the page
+		// looked fine unless you knew a diagram belonged there. That is the whole
+		// reason this is a gate and not a note: the failure mode is silent, remote,
+		// and invisible to every local check.
+		//
+		// The `privacy` plugin downloads external assets into assets/external/ at
+		// build time, so they are served from 'self'. Removing it re-breaks the
+		// diagrams the moment the site is published, not when the build runs.
+		const plugins = mkdocsYml.match(/^plugins:\s*\n((?:[ \t]+.*\n|\s*\n)*)/m)?.[1] ?? '';
+		const enabled = plugins
+			.split('\n')
+			.map((l) => l.trim())
+			.filter((l) => l.startsWith('- '))
+			.map((l) => l.slice(2).replace(/:.*$/, '').trim());
+
+		expect(
+			enabled,
+			'mkdocs.yml must enable the `privacy` plugin. Without it Material fetches Mermaid ' +
+				'from unpkg.com at runtime, which the site CSP blocks — every diagram in the manual ' +
+				'silently degrades to a grey code block once published.',
+		).toContain('privacy');
+
+		// Anti-vacuity: prove the plugin list was actually parsed.
+		expect(enabled).toContain('search');
+	});
+
 	test('the routing file states the v6-only exceptions in mod_rewrite, above the catch-all', () => {
 		// APACHE PHASE ORDER, learned the hard way. mod_rewrite runs BEFORE
 		// mod_alias, so a `RedirectMatch` in this file is dead code behind the
