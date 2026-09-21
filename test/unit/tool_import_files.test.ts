@@ -350,6 +350,34 @@ describe('tool_import_files module', () => {
 		expect(refusal.message).toContain('missing file_path/file_name/user_id/key_dir');
 	});
 
+	test('file_processor action refuses a processor that REPORTS outputs (import_files only)', async () => {
+		// A splitter (crop_50) produces staged output files that only the
+		// import_files per-file loop ingests. The standalone action cannot consume
+		// them, so reporting ok:true here would silently leave records-less files
+		// behind. Refused, and the produced files are removed.
+		registerFileProcessor('test_splitter', async () => ({
+			ok: true,
+			message: 'split',
+			outputs: [{ tmpName: 'x_crop-0.jpg', fileName: 'x_crop-0.jpg' }],
+		}));
+		const loaded = await getLoadedTool('tool_import_files');
+		const principal = await resolvePrincipal(-1);
+		const refusal = await refusalOf(
+			mustGet(loaded!.module.apiActions.file_processor, 'file_processor').handler({
+				principal,
+				userId: -1,
+				background: false,
+				options: {
+					file_processor: 'test_splitter',
+					user_id: -1,
+					key_dir: 'kd_splitter_refusal',
+				},
+			}),
+		);
+		expect(refusal.code).toBe('tool.unsupported_target');
+		expect(refusal.publicMessage).toContain('import_files per-file processor flow');
+	});
+
 	test('import_files rejects missing required params (no run without a media component)', async () => {
 		const loaded = await getLoadedTool('tool_import_files');
 		const principal = await resolvePrincipal(-1);
@@ -371,17 +399,26 @@ describe('tool_import_files module', () => {
 		expect(refusal.publicMessage).toContain('Missing');
 	});
 
-	testIfDb('import_files refuses a MISSING section_id rather than defaulting it to 0', async () => {
-		// Regression: `Number(o.section_id ?? 0)` used to silently address "record
-		// 0" for a request that never carried a caller section_id at all — 0 is a
-		// structurally valid SectionId elsewhere in the engine (concepts/
-		// section_id.ts allows negatives too), so nothing downstream caught it,
-		// and a portal write against that bogus address left an undeletable
-		// orphan record. Absent must refuse loudly, never coerce to 0.
-		const loaded = await getLoadedTool('tool_import_files');
-		const principal = await resolvePrincipal(-1);
-		const refusal = await refusalOf(
-			mustGet(loaded!.module.apiActions.import_files, 'import_files').handler({
+	testIfDb(
+		'a MISSING section_id in default import mode never coerces to 0 — fails per file',
+		async () => {
+			// Regression: `Number(o.section_id ?? 0)` used to silently address "record
+			// 0" for a request that never carried a caller section_id at all — 0 is a
+			// structurally valid SectionId elsewhere in the engine (concepts/
+			// section_id.ts allows negatives too), so nothing downstream caught it,
+			// and a portal write against that bogus address left an undeletable
+			// orphan record.
+			//
+			// The contract (index.ts resolveHostSectionId): import_mode 'default' +
+			// a ddo_map targets the CALLING record's own portal (PHP :1132-1141) and
+			// has NO fresh-record fallback, so a missing caller is a real PER-FILE
+			// error — reported in `errors[]` like every other per-file failure (the
+			// batch never aborts on one file), never coerced to 0 and never creating
+			// a record. The record-less list-button flow rides import_mode 'section'
+			// instead, which creates a fresh host per file.
+			const loaded = await getLoadedTool('tool_import_files');
+			const principal = await resolvePrincipal(-1);
+			const res = await mustGet(loaded!.module.apiActions.import_files, 'import_files').handler({
 				principal,
 				userId: -1,
 				background: true,
@@ -390,13 +427,17 @@ describe('tool_import_files module', () => {
 					section_tipo: 'test2',
 					tipo: 'test99',
 					// section_id deliberately omitted.
+					key_dir: 'kd_missing_section_id',
 					files_data: [{ name: 'a.jpg' }],
 				},
-			}),
-		);
-		expect(refusal.code).toBe('request.invalid_options');
-		expect(refusal.publicMessage).toContain('section_id');
-	});
+			});
+			expect(res.ok).toBe(true);
+			const report = res.data as { summary: string; errors: string[]; imported: number };
+			expect(report.imported).toBe(0);
+			expect(report.errors.join(' ')).toContain('no caller section_id was provided');
+			expect(report.summary).toContain('Imported 0 of 1');
+		},
+	);
 
 	testIfDb('import_files with a ddo_map requires the target_component role', async () => {
 		const loaded = await getLoadedTool('tool_import_files');

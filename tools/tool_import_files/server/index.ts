@@ -8,8 +8,9 @@
  *   target_filename component path (sanitizeClientSqo + buildSearchSql — the
  *   PHP :1490 search), confirmed by the exact basename comparison.
  * file_processor: run a REGISTERED named processor on a staged file (SEC-053 →
- *   allowlist: only registered names run; crop_50 is LEDGERED not ported —
- *   rewrite/LEDGER.md — so the registry stays fail-closed and EMPTY).
+ *   allowlist: only registered names run. crop_50 — the numisdata coin-split
+ *   splitter — is the first ported entry, registered at module load below; the
+ *   per-file import_files flow is what consumes a splitter's outputs).
  * import_files (backgroundRunnable): media import across all name-modes —
  *   default (create) / enumerate (filename numeric prefix → section_id) / named
  *   (base_name grouping) / match + match_freename (matcher-driven, with the
@@ -35,7 +36,7 @@
  * the portal link reuses the add_new_element relation hook (relations/save.ts).
  */
 
-import { copyFileSync } from 'node:fs';
+import { copyFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MediaTypeSpec } from '../../../src/core/concepts/media.ts';
 import { sanitizeClientSqo } from '../../../src/core/concepts/sqo.ts';
@@ -66,6 +67,7 @@ import { createSectionRecord } from '../../../src/core/section/record/create_rec
 import { saveComponentData } from '../../../src/core/section/record/save_component.ts';
 import {
 	basenamesMatch,
+	type FileProcessorOutput,
 	fileBasename,
 	getFileProcessor,
 	registerFileProcessor,
@@ -353,14 +355,39 @@ async function getMediaSectionMatch(ctx: ToolActionContext): Promise<ToolRespons
 	return ok(matches, { requestId: toolRequestId(ctx) });
 }
 
-/** file_processor: run a REGISTERED named processor (allowlist; none ported — crop_50 ledgered). */
+/**
+ * Best-effort removal of the files a splitter processor just staged, used when
+ * the standalone `file_processor` action refuses an output-producing processor
+ * (see `fileProcessor`). The action cannot ingest `outputs` — the import_files
+ * per-file loop is the only consumer — so without removal the refusal would
+ * leave records-less files behind in the caller's staging dir. Anything we
+ * cannot remove is left for the staging sweeper; the refusal is the point.
+ */
+function removeStagedProcessorOutputs(
+	options: Record<string, unknown>,
+	outputs: FileProcessorOutput[],
+): void {
+	const userId = Number(options.user_id);
+	const keyDir = String(options.key_dir ?? '');
+	if (!Number.isInteger(userId) || keyDir === '') return;
+	try {
+		const dir = stagingDir(userId, keyDir);
+		for (const output of outputs) {
+			rmSync(join(dir, sanitizeSegment(output.tmpName)), { force: true });
+		}
+	} catch {
+		// A staging dir/file we could not reach is the sweeper's job, not this
+		// refusal's.
+	}
+}
+
+/** file_processor: run a REGISTERED named processor (SEC-053 allowlist — crop_50 is the first ported entry, registered at module load). */
 async function fileProcessor(ctx: ToolActionContext): Promise<ToolResponse> {
 	const name = String(ctx.options.file_processor ?? '');
 	const processor = getFileProcessor(name);
 	if (processor === null) {
-		// SEC-053 collapse: only registered names run. No processors are ported
-		// (crop_50 is ledgered on-demand), so any request fails closed rather
-		// than executing arbitrary code.
+		// SEC-053 collapse: only registered names run, so any unregistered
+		// request fails closed rather than executing arbitrary code.
 		throw new DedaloError('tool.unsupported_target', {
 			publicMessage: `file_processor '${name}' is not a registered processor`,
 			coordinates: { file_processor: name },
@@ -373,6 +400,21 @@ async function fileProcessor(ctx: ToolActionContext): Promise<ToolResponse> {
 		throw new DedaloError('tool.action_failed', {
 			coordinates: { tool: 'tool_import_files', file_processor: name },
 			message: outcome.message,
+		});
+	}
+	// A processor that SPLITS one upload into several new files (crop_50) reports
+	// them as `outputs` — staged files only the import_files per-file loop consumes.
+	// This standalone action has no destination-resolution/portal machinery to
+	// ingest them, so an `ok:true` here would silently report a split that left
+	// nothing behind but two records-less staged files. Refuse, after removing
+	// what the processor just produced.
+	if (outcome.outputs !== undefined && outcome.outputs.length > 0) {
+		removeStagedProcessorOutputs(ctx.options, outcome.outputs);
+		throw new DedaloError('tool.unsupported_target', {
+			publicMessage:
+				`file_processor '${name}' splits one upload into output files; run it through the ` +
+				'import_files per-file processor flow, not the file_processor action',
+			coordinates: { file_processor: name, output_count: outcome.outputs.length },
 		});
 	}
 	return ok(outcome.ok, { requestId: toolRequestId(ctx) });
@@ -670,7 +712,7 @@ interface ImportFileData {
 	section_id?: number | string;
 	/** The component_option ddo tipo chosen per file in the UI (portal routing). */
 	component_option?: string;
-	/** Per-file named-processor selection (fail-closed: none ported). */
+	/** Per-file named-processor selection (SEC-053 allowlist — crop_50 is registered at module load). */
 	file_processor?: string;
 }
 
@@ -774,11 +816,12 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 
 	const namedGroups = new Map<string, number>();
 	// `imported` = total RECORDS created (a file_processor can turn one upload
-	// into several — crop_50: 1 photo -> 2 records). `filesProcessed` = how many
-	// of `filesData` actually produced something, which is what "N of TOTAL"
-	// in the summary must count — using `imported` there read as "Imported 2 of
-	// 1", nonsensical for a single split upload. Both are reported; they only
-	// diverge when a processor's output count isn't 1:1.
+	// into several — crop_50: 1 photo -> 2 portal-CHILD records on ONE host
+	// record). `filesProcessed` = how many of `filesData` actually produced
+	// something, which is what "N of TOTAL" in the summary must count — using
+	// `imported` there read as "Imported 2 of 1", nonsensical for a single split
+	// upload. Both are reported; they only diverge when a processor's output
+	// count isn't 1:1.
 	let imported = 0;
 	let filesProcessed = 0;
 	const errors: string[] = [];
@@ -1058,8 +1101,8 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 	 * record — never a fresh top-level record of its own. This is the exact PHP
 	 * crop_50 behaviour (:139-171): `component_portal->add_new_element` called
 	 * with a real `section_id`, once per `custom_arguments` destination — which
-	 * is why "splitting a photo" reads as filling two fields on ONE record, not
-	 * creating new rows.
+	 * is why "splitting a photo" reads as filling two portals on ONE record: two
+	 * new portal-CHILD records, never new top-level rows.
 	 *
 	 * `hostSectionId` is NOT always the caller's own `section_id` — resolved by
 	 * `resolveHostSectionId` before this is called: opening an existing record's
@@ -1069,6 +1112,15 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 	 * attach to that new record. Passing `callerSectionId` straight through here
 	 * — the earlier version of this function — is what produced an unaddressable
 	 * `section_id: 0` record: a portal write with no real host to write onto.
+	 *
+	 * ROLE-WRITE SOURCING (PHP crop_50 parity): `sourceFileName`/`sourceFilePath`
+	 * are the ORIGINAL upload's name and staged path, not the output file's —
+	 * PHP fed `$file_name`/`$file_data` into set_components_data for every crop
+	 * child (crop_50.php :255-272), so the target_filename role records the name
+	 * the OPERATOR uploaded (which is what the matchers match on) and the
+	 * target_date role reads the capture date from the original bytes. The crop
+	 * output's own name (`resolvedFileName`) is used ONLY for the media file's
+	 * recorded human name, exactly like PHP's set_media_file `name`.
 	 *
 	 * Deliberately NOT `importResolvedFile`: that function's whole job is
 	 * choosing/creating a DESTINATION record (enumerate/named/default,
@@ -1083,6 +1135,8 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 		resolvedKeyDir: string,
 		portalComponentTipo: string,
 		hostSectionId: number,
+		sourceFileName: string,
+		sourceFilePath: string,
 	): Promise<'imported' | 'skipped'> => {
 		const portalTarget = await portalTargetSectionTipo(portalComponentTipo, sectionTipo);
 		if (portalTarget == null || portalTarget === '') {
@@ -1113,11 +1167,8 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				sectionTipo,
 				sectionId: hostSectionId,
 				targetSectionId: created,
-				currentFileName: resolvedFileName,
-				mediaFilePath: join(
-					stagingDir(ctx.userId, resolvedKeyDir),
-					sanitizeSegment(resolvedTmpName),
-				),
+				currentFileName: sourceFileName,
+				mediaFilePath: sourceFilePath,
 				targetComponentModel: targetComponentModel ?? '',
 				componentsTempData,
 				userId: ctx.userId,
@@ -1261,6 +1312,11 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 									keyDir,
 									output.portalComponentTipo,
 									hostSectionId,
+									// Role writes read the ORIGINAL upload (PHP crop_50
+									// parity): target_filename records the operator's name,
+									// target_date reads the source bytes' capture date.
+									fileName,
+									join(stagingDir(ctx.userId, keyDir), sanitizeSegment(tmpName)),
 								)
 							: await importResolvedFile(
 									output.fileName,

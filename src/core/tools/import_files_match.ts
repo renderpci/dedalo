@@ -32,7 +32,13 @@ export function basenamesMatch(storedValue: string, uploadedFullName: string): b
 export interface FileProcessorOutput {
 	/** The processor's own staged output file name, in the SAME staging dir as its source. */
 	tmpName: string;
-	/** The display/target_filename name to record for this output (e.g. `<stem>_crop-0.<ext>`). */
+	/**
+	 * The display name recorded for this output's media file (e.g.
+	 * `<stem>_crop-0.<ext>`) — the human name the ingest stores, like PHP's
+	 * set_media_file `name`. NOT what the target_filename role writes: that role
+	 * records the ORIGINAL upload name (PHP crop_50 parity — see importIntoPortal
+	 * in tool_import_files' index.ts).
+	 */
 	fileName: string;
 	/**
 	 * The PORTAL component tipo this output must be added through, on the

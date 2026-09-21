@@ -28,7 +28,10 @@ import {
 } from '../../src/core/media/engine/ffmpeg_profiles.ts';
 import {
 	backgroundForTarget,
+	buildBilevelMaskArgv,
+	buildConnectedComponentsArgv,
 	buildConvertArgv,
+	buildCropAndPadArgv,
 	buildCropArgv,
 	buildRotateArgv,
 	buildThumbArgv,
@@ -417,6 +420,33 @@ describe('imagemagick argv recipes (PHP class.ImageMagick.php)', () => {
 		expect(s).toContain('-crop 100x50+10+20 +repage');
 	});
 
+	test('crop-and-pad: -crop then -background white -gravity center -extent (PHP crop_50)', () => {
+		const s = buildCropAndPadArgv(
+			'/s.jpg',
+			'/t.jpg',
+			{ x: 10, y: 20, width: 100, height: 50 },
+			100,
+			220,
+		).join(' ');
+		expect(s).toContain('-crop 100x50+10+20 +repage');
+		expect(s).toContain('-background white -gravity center -extent 100x220');
+	});
+
+	test('bilevel mask: -colorspace gray -negate -threshold 5% -type bilevel (PHP crop_50)', () => {
+		const s = buildBilevelMaskArgv('/s.jpg', '/t.jpg').join(' ');
+		expect(s).toContain('-colorspace gray -negate -threshold 5% -type bilevel');
+	});
+
+	test('connected-components: verbose + area-threshold, writing to the null: sink (PHP crop_50)', () => {
+		const argv = buildConnectedComponentsArgv('/s.jpg', 30000);
+		const s = argv.join(' ');
+		expect(s).toContain('-define connected-components:verbose=true');
+		expect(s).toContain('-define connected-components:area-threshold=30000');
+		expect(s).toContain('-connected-components 8');
+		expect(argv[argv.length - 1]).toBe('null:'); // no output file — the report is stdout
+		expect(s).not.toContain('-crop');
+	});
+
 	/**
 	 * THE OUTPUT TOKEN (2026-08-07, the alternate-extension twin builder).
 	 *
@@ -433,7 +463,10 @@ describe('imagemagick argv recipes (PHP class.ImageMagick.php)', () => {
 	 * configured to write, including the ones this box has no delegate for.
 	 */
 	describe('every recipe states its output CODER', () => {
-		test('all four recipes end in <CODER>:<abs path>, never a bare path', () => {
+		test('every image-writing recipe ends in <CODER>:<abs path>, never a bare path', () => {
+			// The connected-components recipe is NOT here: it writes no image (its
+			// `null:` sink is asserted separately), so the coder rule cannot apply
+			// to it.
 			const recipes: [string, string[]][] = [
 				[
 					'thumb',
@@ -452,6 +485,11 @@ describe('imagemagick argv recipes (PHP class.ImageMagick.php)', () => {
 				],
 				['rotate', buildRotateArgv('/s.jpg', '/t.jpg', 90, 'expanded', '#ffffff')],
 				['crop', buildCropArgv('/s.jpg', '/t.jpg', { x: 1, y: 2, width: 3, height: 4 })],
+				[
+					'crop_and_pad',
+					buildCropAndPadArgv('/s.jpg', '/t.jpg', { x: 1, y: 2, width: 3, height: 4 }, 3, 9),
+				],
+				['bilevel_mask', buildBilevelMaskArgv('/s.jpg', '/t.jpg')],
 			];
 			for (const [label, argv] of recipes) {
 				expect([label, argv[argv.length - 1]]).toEqual([label, 'JPEG:/t.jpg']);
