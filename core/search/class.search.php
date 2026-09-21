@@ -103,6 +103,14 @@ class search {
 		// sort that hung the Postgres server.
 		public $join_counter = 0;
 
+		// UNRESOLVABLE_PATH_SQL. Never-matching predicate emitted in place of a filter clause
+		// whose path could not be resolved to a table alias (see build_sql_join). Dropping the
+		// clause instead would silently RELAX the filter (under $and, every remaining record
+		// would be returned as if the clause did not exist) and, in the main-query $or case,
+		// would leave the WHERE referencing an alias that was never joined ("missing FROM-clause
+		// entry"). Returning no record for a broken path is visible and safe.
+		const UNRESOLVABLE_PATH_SQL = ' FALSE ';
+
 		// MAX_SQL_JOINS_WARN. Above this number of relation joins in one search SQL,
 		// get_sql_joins() logs a warning (log only, no behaviour change).
 		const MAX_SQL_JOINS_WARN = 24;
@@ -1529,6 +1537,22 @@ class search {
 						? str_replace('valor_list', 'dato', $select_object->component_path) // In activity section, data container is always 'dato'
 						: implode(',', $select_object->component_path);
 
+					// joins. Built BEFORE the column sentence: when a step of the path cannot be
+					// resolved (see build_sql_join) the table alias is never joined, and a column
+					// referencing it would break the whole query ("missing FROM-clause entry").
+					// A NULL placeholder keeps the row shape (same column, same alias, same
+					// position) so the caller still finds the expected columns.
+						if ($this->build_sql_join($select_object->path)!==true) {
+							debug_log(__METHOD__
+								. " Ignored select column of an unresolvable path. NULL is returned instead " . PHP_EOL
+								. ' component_tipo: ' . to_string($component_tipo) . PHP_EOL
+								. ' component_path: ' . to_string($component_path)
+								, logger::ERROR
+							);
+							$ar_sql_select[] = 'NULL as '.$column_alias;
+							continue;
+						}
+
 					$sql_select = '';
 
 					if ($model_name==='component_section_id' || $model_name==='section_id') {
@@ -1594,12 +1618,7 @@ class search {
 						$ar_sql_select[] = $sql_select;
 					}
 
-					#if ($n_levels>1) {
-					#	$this->join_group[] = $this->build_sql_join($select_object->path);
-					#}
-
-					// $this->join_group[] = $this->build_sql_join($select_object->path);
-					$this->build_sql_join($select_object->path);
+					// (!) the joins of this path are built at the TOP of the loop (see above)
 				}
 			}
 
@@ -1980,8 +1999,19 @@ class search {
 
 						// default case
 
-						// Add join if not exists
-							$this->build_sql_join($path);
+						// Add join if not exists. When a step of the path cannot be resolved the
+						// table alias is never joined, so the order column would break the query.
+						// Skip the item: ordering is presentational, dropping it only changes the
+						// row order (the remaining items, or the default order, still apply),
+						// never the result set.
+							if ($this->build_sql_join($path)!==true) {
+								debug_log(__METHOD__
+									. " Ignored order by an unresolvable path " . PHP_EOL
+									. ' component_tipo: ' . to_string($component_tipo)
+									, logger::ERROR
+								);
+								continue;
+							}
 
 						// add sentence to line
 							$alias	= $component_tipo . '_order';
@@ -2000,6 +2030,15 @@ class search {
 					// line add
 					$ar_order[] = $line;
 				}
+
+				// every order item was dropped (unresolvable paths, see build_sql_join). The
+				// caller wraps the query as 'SELECT * FROM (...) main_select ORDER BY <this>',
+				// where the main table alias is NOT visible, so the default order cannot be used
+				// here: order by the plain output column instead.
+					if (empty($ar_order)) {
+						$ar_order[] = 'section_id ' . (($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) ? 'DESC' : 'ASC');
+					}
+
 				// flat SQL sentences array
 				$sql_query_order = implode(',', $ar_order);
 		}
@@ -2379,8 +2418,10 @@ class search {
 					$search_object->join_id = $join_id;
 					if ($n_levels>1 && $op==='$or' && !$as_subquery) {
 						// top-level $or: one shared LEFT JOIN relations/matrix pair in the main query
-						$this->build_sql_join($search_object->path, $join_id);
-						$ar_group_elements[] = $this->get_sql_where($search_object);
+						$joins_built = $this->build_sql_join($search_object->path, $join_id);
+						$ar_group_elements[] = ($joins_built===true)
+							? $this->get_sql_where($search_object)
+							: self::UNRESOLVABLE_PATH_SQL; // the alias the WHERE needs was never joined
 					}elseif ($n_levels>1) {
 						// $and (subquery context): correlated EXISTS subquery. The relations/matrix
 						// joins live INSIDE the subquery instead of the main query, so clauses on the
@@ -2393,9 +2434,14 @@ class search {
 						// NULL). Kept the EXISTS semantics by decision.
 						$ar_subquery_joins = [];
 						$subquery_correlation = null;
-						$this->build_sql_join($search_object->path, $join_id, $ar_subquery_joins, $subquery_correlation);
+						$joins_built = $this->build_sql_join($search_object->path, $join_id, $ar_subquery_joins, $subquery_correlation);
 						$subquery_where = trim($this->get_sql_where($search_object));
-						if (!empty($subquery_where) && !empty($subquery_correlation)) {
+						if ($joins_built!==true || empty($subquery_correlation)) {
+							// unresolvable path (see build_sql_join). Emitting nothing would silently
+							// DROP the clause, and a dropped clause under $and widens the result set:
+							// the search would return records that do not match the filter. Fail closed.
+							$ar_group_elements[] = self::UNRESOLVABLE_PATH_SQL;
+						}elseif (!empty($subquery_where)) {
 							if ($op==='$or' && $join_id!==null) {
 								// Sibling leaves sharing one join_id inside the SAME $or group are merged
 								// into a SINGLE correlated EXISTS: for an identical correlation
@@ -2481,10 +2527,15 @@ class search {
 	* @param string|null &$subquery_correlation = null. When $ar_joins is provided, the first
 	*  relations join is emitted as the subquery FROM (no ON) and its correlation conditions are
 	*  collected here to be ANDed in the subquery WHERE.
-	* @return bool true
+	* @return bool $success
+	*  false when any step of the path could not be resolved (empty matrix table): the joins of
+	*  that step, and therefore its table alias, are missing. The caller MUST NOT emit the
+	*  clause's WHERE in that case (see filter_parser: it emits a never-matching predicate
+	*  instead, so an unresolvable path never widens the result set nor breaks the SQL).
 	*/
 	public function build_sql_join(array $path, ?int $join_id=null, ?array &$ar_joins=null, ?string &$subquery_correlation=null) : bool {
 
+		$success		= true;
 		$rel_table		= self::$relations_table;
 		$ar_key_join	= [];
 		$base_key		= '';
@@ -2528,6 +2579,7 @@ class search {
 					. ' step_object->section_tipo: ' . $step_object->section_tipo
 					, logger::ERROR
 				);
+				$success = false;
 				continue;
 			}
 			$last_section_tipo	= $step_object->section_tipo;
@@ -2571,7 +2623,7 @@ class search {
 		}//end foreach ($path as $key => $step_object)
 
 
-		return true;
+		return $success;
 	}//end build_sql_join
 
 
