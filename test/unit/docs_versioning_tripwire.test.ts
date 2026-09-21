@@ -3,9 +3,14 @@
  *
  * The manual is published per MAJOR, each at a permanent prefix —
  * dedalo.dev/docs/v7/ for this repo, /docs/v6/ for the frozen v6 manual — with
- * /docs/ redirecting to the latest. That layout only works while four separate
+ * /docs/ redirecting to the latest. That layout only works while SEVEN separate
  * pieces agree, and nothing about them is self-evident from reading any one
  * file. This gate is what makes them agree.
+ *
+ * Every one of them is here because it FAILED IN PRODUCTION, not because it
+ * seemed prudent. They share a shape worth naming: each breaks silently. The
+ * build stays green, the HTML is correct, and the page looks deliberate — so
+ * the only thing standing between a wrong config and a reader is this file.
  *
  * WHAT IT GUARDS, and what goes wrong without it:
  *
@@ -42,10 +47,37 @@
  *     in the same shape as generic_tld_tripwire: additions are free, only
  *     disappearances are gated.
  *
+ *  5. NOTHING GITIGNORED UNDER docs/ IS BUILT. `docs_dir` means every file in
+ *     the tree; MkDocs has never heard of .gitignore. docs/superpowers/ is a
+ *     local scratch area for internal design specs and was LIVE at dedalo.dev,
+ *     indexed in the public sitemap. The ignored set is derived from git, so
+ *     the next scratch folder is covered the day it appears.
+ *
+ *  6. THE `privacy` PLUGIN IS ENABLED. Material lazy-loads Mermaid from
+ *     unpkg.com at RUNTIME; the site CSP allows jsdelivr but not unpkg, so all
+ *     83 diagrams across 53 pages rendered as grey code blocks. Vendoring
+ *     serves it from 'self' and needs no CSP change.
+ *
+ *  7. THE v6-ONLY REDIRECTS ARE RewriteRules ABOVE THE CATCH-ALL. mod_alias
+ *     (RedirectMatch) runs AFTER mod_rewrite, so a RedirectMatch in that file
+ *     is dead code whatever the source order — all three such URLs 301'd to
+ *     /docs/v7/… and 404'd in production until this was found.
+ *
  * The manifest is EMPTY until the first publish, and that is a real state, not
- * a stub: no v7 URL is public yet, so no v7 rename can break anything yet. The
- * other three assertions are non-vacuous from today, and assertion 4 states its
- * own emptiness rather than passing silently.
+ * a stub: no v7 URL is public yet, so no v7 rename can break anything yet.
+ * Assertion 4 states that emptiness rather than passing silently; the
+ * redirect_maps scan, the flat-link census and the plugin list each carry an
+ * anti-vacuity floor or a positive control.
+ *
+ * The page-path scan is SHARED with the publish script
+ * (scripts/lib/docs_paths.ts). It was duplicated once, and the two copies
+ * diverged the moment `exclude_docs` appeared — the script recorded a page as
+ * published that the build had excluded.
+ *
+ * HONEST LIMIT: this proves the WIRING and the CONFIG, never the rendered page.
+ * The privacy plugin rewrites assets to absolute URLs under site_url, so a
+ * local build loads them from dedalo.dev — diagrams can only be checked on the
+ * published site.
  */
 
 import { describe, expect, test } from 'bun:test';

@@ -217,6 +217,19 @@ Use `(!)` inline only inside code comments, not in prose — in prose use a `!!!
 
 - Prefer **Mermaid** (`flowchart`, `erDiagram`, `sequenceDiagram`) over screenshots for anything
   structural — it stays correct and themes with the site.
+
+!!! warning "A diagram cannot be checked on a local preview"
+    Mermaid is vendored into the site at build time by the `privacy` plugin, and the plugin
+    rewrites the asset to an **absolute** URL under `site_url`. A local preview therefore
+    loads it from `dedalo.dev`, not from the copy you just built — so a diagram can look
+    broken locally and be perfectly fine published, or the reverse. Check diagrams on the
+    published site after `docs:publish`.
+
+    This matters because the failure is silent: an unrenderable diagram degrades to a grey
+    code block, the build stays green and the page looks deliberate. 83 diagrams sat broken
+    that way until 2026-09-21, when the site's `Content-Security-Policy` turned out to be
+    blocking the CDN the renderer came from. Do not remove the `privacy` plugin — the
+    versioning gate refuses without it.
 - Screenshots live under the nearest `assets/` directory; size with `{width="…"}` when needed and
   always give descriptive alt text: `![Dédalo ontology view](assets/…png)`.
 
