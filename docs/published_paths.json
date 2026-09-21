@@ -276,7 +276,6 @@
     "management/updates/updating_ontology",
     "management/users_and_permissions",
     "rewrite",
-    "superpowers/specs/2026-08-21-qnap-dev-instance-design",
     "tools/",
     "tools/using_assistant",
     "tools/using_cataloging",

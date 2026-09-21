@@ -34,6 +34,21 @@ site_dir: docs_site      # gitignored build output
 ## the switcher follows; get it wrong and the switcher silently 404s.
 ## Gate: test/unit/docs_versioning_tripwire.test.ts.
 site_url: https://dedalo.dev/docs/v7/
+
+## NEVER BUILD, NEVER PUBLISH. These paths are gitignored: they exist only in a
+## working copy, so they are not part of the manual and must not reach the site.
+##
+## This is not hypothetical. `docs/superpowers/` is a local scratch area for
+## internal design specs, and until 2026-09-21 MkDocs happily built it — an
+## internal spec was live at dedalo.dev/docs/v7/superpowers/specs/… and listed
+## in the public sitemap, because `docs_dir` means "every file here" and nothing
+## consulted .gitignore.
+##
+## A path gitignored under docs/ must appear here. Gate:
+## test/unit/docs_versioning_tripwire.test.ts derives the ignored set from git
+## itself, so a new scratch folder cannot be published by being forgotten.
+exclude_docs: |
+  superpowers/
 theme:
   name: material
   # Supplies the "older version" banner text (overrides/main.html). Outside

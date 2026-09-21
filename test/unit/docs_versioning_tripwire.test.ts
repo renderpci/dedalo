@@ -52,6 +52,11 @@ import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Glob } from 'bun';
+import {
+	excludedDocsPatterns,
+	isExcluded,
+	publishedPagePaths,
+} from '../../scripts/lib/docs_paths.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const DOCS_DIR = join(REPO_ROOT, 'docs');
@@ -107,16 +112,6 @@ function redirectMapKeys(): Set<string> {
 		keys.add(entry[1]);
 	}
 	return keys;
-}
-
-/** Page paths as the site serves them: `core/index.md` -> `core/`, `a/b.md` -> `a/b`. */
-function currentPagePaths(): Set<string> {
-	const out = new Set<string>();
-	for (const file of new Glob('**/*.md').scanSync({ cwd: DOCS_DIR })) {
-		const noExt = file.replace(/\.md$/, '');
-		out.add(noExt === 'index' ? '' : noExt.replace(/(^|\/)index$/, '$1'));
-	}
-	return out;
 }
 
 describe('docs versioning: the published layout stays coherent', () => {
@@ -221,7 +216,7 @@ describe('docs versioning: the published layout stays coherent', () => {
 		const prePublication = manifest.published_at === null;
 		expect(prePublication ? manifest.paths : []).toEqual([]);
 
-		const current = currentPagePaths();
+		const current = new Set(publishedPagePaths(REPO_ROOT));
 		const redirects = redirectMapKeys();
 		const orphaned = manifest.paths.filter((p) => {
 			if (current.has(p)) return false;
@@ -244,6 +239,56 @@ describe('docs versioning: the published layout stays coherent', () => {
 		const keys = redirectMapKeys();
 		expect(keys.size).toBeGreaterThan(10);
 		expect(keys.has('install/install_help.md')).toBe(true);
+	});
+
+	test('nothing gitignored under docs/ can be built or published', () => {
+		// `docs_dir` means EVERY file in the tree; MkDocs has never heard of
+		// .gitignore. So a local scratch folder under docs/ is published by
+		// default, and nobody notices because it builds cleanly and looks like
+		// any other page.
+		//
+		// It happened: docs/superpowers/ holds internal design specs, is
+		// gitignored, exists only in a working copy — and one of its specs was
+		// live at dedalo.dev/docs/v7/superpowers/specs/… and indexed in the
+		// public sitemap until 2026-09-21.
+		//
+		// The ignored set is derived from GIT rather than listed here, so the
+		// next scratch folder is covered the day it appears instead of the day
+		// someone remembers this gate exists.
+		const ignored = Bun.spawnSync(['git', 'check-ignore', '--stdin'], {
+			cwd: REPO_ROOT,
+			stdin: Buffer.from(
+				[...new Glob('**/*').scanSync({ cwd: DOCS_DIR, onlyFiles: true })]
+					.map((f) => `docs/${f}`)
+					.join('\n'),
+			),
+		});
+		const ignoredDocs = ignored.stdout
+			.toString()
+			.split('\n')
+			.map((l) => l.trim())
+			.filter((l) => l.startsWith('docs/'))
+			.map((l) => l.slice('docs/'.length))
+			// .DS_Store and friends are ignored everywhere and are not pages; MkDocs
+			// copies them but they carry nothing. Only real content matters here.
+			.filter((f) => !f.split('/').some((seg) => seg === '.DS_Store'));
+
+		const patterns = excludedDocsPatterns(mkdocsYml);
+		const leaking = ignoredDocs.filter((f) => !isExcluded(f, patterns));
+
+		expect(
+			leaking,
+			'These files are gitignored — they exist only in a working copy — but nothing in ' +
+				"mkdocs.yml's `exclude_docs` stops the build from publishing them to dedalo.dev. " +
+				'Add the directory (with a trailing slash) to exclude_docs.',
+		).toEqual([]);
+
+		// Anti-vacuity: if the ignored-set derivation breaks, this gate would pass
+		// by seeing nothing. There is at least one excluded pattern today.
+		expect(
+			patterns.length,
+			'exclude_docs is empty — has the block moved or changed shape?',
+		).toBeGreaterThan(0);
 	});
 
 	test('the routing file states the v6-only exceptions in mod_rewrite, above the catch-all', () => {
