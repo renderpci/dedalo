@@ -205,8 +205,13 @@ class free_node extends stdClass {
 		$raw_text	= preg_replace("/ {0,3}$pattern_br {0,3}($pattern_br|)/", '<br />', $raw_text);
 			#dump($raw_text, ' raw_text ++ '.to_string());
 
+		// Mask transcription tags (note, person, index, tc, etc.) char by char to avoid false
+		// positives from tag payloads like [note-b-1-1-data:{'section_id':1649}:data].
+		// Char offsets are preserved, so positions are valid against $raw_text
+		$search_text = self::mask_tags($raw_text);
+
 		// Use special multibyte configuration of preg_match_all
-		$match_capture = self::pregMatchCapture($matchAll=true, $word_pattern, $raw_text, $offset=0);
+		$match_capture = self::pregMatchCapture($matchAll=true, $word_pattern, $search_text, $offset=0);
 		#preg_match_all($word_pattern, $raw_text, $match_capture, PREG_OFFSET_CAPTURE, $offset=0);
 			#dump($match_capture, ' match_capture ++ '.to_string());
 		$mathches = $match_capture;
@@ -465,6 +470,33 @@ class free_node extends stdClass {
 
 		return $ar_termns;
 	}//end get_fragment_terms
+
+
+
+	/**
+	* MASK_TAGS
+	* Replace every transcription tag ([note-..-data:..:data], [index-n-1], [TC_..._TC], etc.)
+	* by the same number of spaces (mb chars), so text offsets remain unchanged
+	* but tag content is not searchable.
+	* @param string $text
+	* @return string
+	*/
+	public static function mask_tags( string $text ) : string {
+
+		// 1. tags with data payload (open/close): [note-b-1-name-data:{..}:data], [/index-a-1-name-data:{..}:data]
+		// 2. TC marks: [TC_00:01:02.123_TC]
+		// 3. standalone tags (open/close): [index-n-1], [/index-n-1], [svg-n-2], ...
+		// Payload is bounded to avoid swallowing real text when a tag was truncated by remove_restricted_text
+		$pattern = '/\[\/?[a-zA-Z]+-[a-z]-[^\]]*?-data:.{0,2000}?:data\]'
+				 . '|\[TC_[0-9:.]+_TC\]'
+				 . '|\[\/?(?:index|reference|svg|draw|geo|page|person|note|lang)-[a-z]-[0-9]{1,6}\]/su';
+
+		$masked = preg_replace_callback($pattern, function($m) {
+			return str_repeat(' ', mb_strlen($m[0]));
+		}, $text);
+
+		return $masked ?? $text;
+	}//end mask_tags
 
 
 
