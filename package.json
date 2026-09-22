@@ -54,8 +54,8 @@
 		"format": "biome format --write ."
 	},
 	"dependencies": {
-		"@anthropic-ai/sdk": "^0.120.0",
-		"@geoman-io/leaflet-geoman-free": "2.20.0",
+		"@anthropic-ai/sdk": "^0.127.0",
+		"@geoman-io/leaflet-geoman-free": "2.20.1",
 		"@highlightjs/cdn-assets": "11.12.0",
 		"@jaames/iro": "5.5.2",
 		"@modelcontextprotocol/sdk": "^1.30.0",
@@ -68,24 +68,23 @@
 		"flatpickr": "4.6.13",
 		"leaflet": "1.9.4",
 		"mmdb-lib": "3.0.3",
-		"nodemailer": "^9.0.6",
+		"nodemailer": "^10.0.10",
 		"onnxruntime-web": "1.29.0",
 		"split.js": "1.6.5",
 		"three": "0.185.1",
 		"vanilla-jsoneditor": "3.13.0",
-		"zod": "^4.4.3"
+		"zod": "^4.6.5"
 	},
 	"devDependencies": {
-		"@babel/parser": "8.0.4",
-		"@biomejs/biome": "2.5.11",
-		"@types/bun": "^1.4.0",
+		"@babel/parser": "8.0.6",
+		"@biomejs/biome": "2.5.14",
+		"@types/bun": "^1.4.2",
 		"@types/less": "3.0.8",
-		"@types/nodemailer": "^8.0.1",
 		"axe-core": "^4.13.0",
 		"chai": "6.2.2",
-		"less": "4.9.0",
-		"mocha": "11.8.0",
-		"puppeteer": "^25.9.0"
+		"less": "4.9.1",
+		"mocha": "12.0.2",
+		"puppeteer": "^25.11.0"
 	},
 	"peerDependencies": {
 		"typescript": "^7.0.2"

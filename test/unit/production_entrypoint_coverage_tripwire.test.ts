@@ -258,6 +258,15 @@ const TOOLING_SCRIPT_PREFIXES = new Set([
 	'config',
 	'context',
 	'dev',
+	// `docs:publish` (2026-09-21) ships THIS REPOSITORY's manual to dedalo.dev.
+	// The dichotomy below is developer tooling vs an OPERATOR-run entrypoint, and
+	// "operator" here means the person running a Dédalo INSTALLATION — what
+	// `start`/`dedalo:*` are. Nothing under `docs:` touches an installation, its
+	// database or its media; its three siblings (serve/build/setup) are plainly
+	// tooling. Noted honestly: the script does `rsync --delete` against a live
+	// site, so if the reading ever changes to PRODUCTION it needs the coverage
+	// test that classification demands, not an exemption.
+	'docs',
 	'probe',
 	'publication',
 	'sitebuilder',

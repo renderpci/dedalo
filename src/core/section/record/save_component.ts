@@ -55,11 +55,6 @@ import {
 } from '../../db/matrix_write.ts';
 import { deferPostTransaction, sql, withTransaction } from '../../db/postgres.ts';
 import { recordTimeMachine } from '../../db/time_machine.ts';
-import {
-	applyDataframeDeletePolicy,
-	dataframeDeletePolicyOf,
-	dataframeTargetsOf,
-} from '../../relations/dataframe.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { ONTOLOGY_TLD } from '../../ontology/ontology_tipos.ts';
 import {
@@ -70,6 +65,11 @@ import {
 	getTranslatableByTipo,
 } from '../../ontology/resolver.ts';
 import { requiredOntologyTld } from '../../ontology/tld.ts';
+import {
+	applyDataframeDeletePolicy,
+	dataframeDeletePolicyOf,
+	dataframeTargetsOf,
+} from '../../relations/dataframe.ts';
 import {
 	applyAddNewElement,
 	applySortByColumn,

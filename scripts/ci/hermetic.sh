@@ -404,8 +404,21 @@ bun run scripts/crap_baseline.ts --check --reference "$(crap_ledger_reference)" 
 # Dependency advisories, as a RATCHET against engineering/dependency_audit_baseline.json:
 # a NEW advisory is red, a known one is not (the tree already carried 7 on the day this
 # was wired). Offline → skips loudly. Rationale in scripts/ci/audit.ts.
+#
+# THE STAGE THAT DISARMED THE TWO DAEMON GATES (2026-09-21). This line was
+# `bun run scripts/ci/audit.ts` bare, so under `set -e` a red ratchet EXITED the
+# tier right here — and the site_builder / server_api v2 block below, the only
+# mechanical run those two packages get, executed NOTHING. Measured on master
+# 625249c9 and on the run before it: 15 unaccepted advisories, and neither
+# daemon's install/tsc/suite/coverageThreshold ran in either. That is the exact
+# failure this script already narrates twice above (a red lint hiding a red
+# typecheck; a red lint disarming 101 invariant gates), at the one stage that had
+# not been given the treatment. Record the verdict, keep going, report it at the
+# end with every other stage.
 echo "== hermetic: dependency audit ratchet"
-bun run scripts/ci/audit.ts
+da_rc=0
+bun run scripts/ci/audit.ts || da_rc=$?
+[ "$da_rc" -eq 0 ] || { echo "== hermetic: RED in the dependency audit ratchet (exit $da_rc)"; tier_status=1; }
 
 # The site-builder daemon (publication/site_builder) is its own package with a fully
 # hermetic suite: no DB, no oracle, no ../private — its tests run against a repo-local
@@ -504,7 +517,12 @@ cat /tmp/dedalo_daemon_pa.$$ ; rm -f /tmp/dedalo_daemon_pa.$$
 
 [ "$sb_rc" -eq 0 ] || { echo "== hermetic: RED in publication/site_builder (exit $sb_rc)"; daemon_status=1; }
 [ "$pa_rc" -eq 0 ] || { echo "== hermetic: RED in publication/server_api/v2 (exit $pa_rc)"; daemon_status=1; }
-[ "$daemon_status" -eq 0 ] || exit 1
-[ "$tier_status" -eq 0 ] || { echo "== hermetic: RED — typecheck, lint or the static tripwires failed above"; exit 1; }
+# ONE exit, after EVERY verdict is in. `[ "$daemon_status" -eq 0 ] || exit 1`
+# used to stand here on its own line, which meant a red daemon left the tier
+# without its summary — the same hide-the-other-verdict shape the stages above
+# are built to avoid. Fold it into the accumulator instead, and let the single
+# exit below name every stage that can be red.
+[ "$daemon_status" -eq 0 ] || tier_status=1
+[ "$tier_status" -eq 0 ] || { echo "== hermetic: RED — see the stage verdicts above (typecheck/lint, static tripwires, crap ledger, dependency audit ratchet, daemon packages)"; exit 1; }
 
 echo "== hermetic: GREEN"

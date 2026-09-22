@@ -155,6 +155,18 @@ export const cropCoinPair: FileProcessor = async (input) => {
 		return { ok: true, message: `Split '${fileName}' into ${outputs.length} faces`, outputs };
 	} catch (error) {
 		rmSync(maskPath, { force: true });
-		return { ok: false, message: (error as Error).message };
+		// SEC-18: nothing filters an ok:false `message` on its way to the browser,
+		// so the EXCEPTION's own text never rides the wire — an ImageMagick
+		// failure or an fs error carries staging paths and argv in it. The reason
+		// goes to the log (with the file it was working on); the operator gets a
+		// deliberate sentence that names the two things they can actually act on.
+		console.error(`[crop_50] '${fileName}' failed:`, (error as Error).message ?? error);
+		return {
+			ok: false,
+			message:
+				`crop_50: could not split '${fileName}' into two faces. Either the photo ` +
+				'does not show exactly two coin-sized objects on a white background, or ' +
+				'an ImageMagick step failed — the server log has the reason.',
+		};
 	}
 };

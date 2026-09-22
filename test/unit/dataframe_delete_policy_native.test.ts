@@ -45,11 +45,12 @@
  */
 
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
-import { MATRIX_JSONB_COLUMNS } from '../../src/core/db/matrix.ts';
 import { encodeForJsonb } from '../../src/core/db/json_codec.ts';
+import { MATRIX_JSONB_COLUMNS } from '../../src/core/db/matrix.ts';
 import { deleteMatrixRecord, updateMatrixKeyData } from '../../src/core/db/matrix_write.ts';
-import * as REAL_TIME_MACHINE from '../../src/core/db/time_machine.ts';
 import { sql, withTransaction } from '../../src/core/db/postgres.ts';
+import * as REAL_TIME_MACHINE from '../../src/core/db/time_machine.ts';
+import { isDedaloError } from '../../src/core/errors/dedalo_error.ts';
 import {
 	clearOntologyCaches,
 	getMatrixTableFromTipo,
@@ -57,18 +58,17 @@ import {
 } from '../../src/core/ontology/resolver.ts';
 import { dataframeDeletePolicyOf, dataframeTargetsOf } from '../../src/core/relations/dataframe.ts';
 import { deletePortalLocator } from '../../src/core/relations/save.ts';
-import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { buildStructureContext } from '../../src/core/resolve/structure_context.ts';
+import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import {
 	deleteSectionData,
 	deleteSectionRecord,
 } from '../../src/core/section/record/delete_record.ts';
+import { saveComponentData } from '../../src/core/section/record/save_component.ts';
 import {
 	registerSectionDataListener,
 	unregisterSectionDataListener,
 } from '../../src/core/section_record/save_event.ts';
-import { saveComponentData } from '../../src/core/section/record/save_component.ts';
-import { isDedaloError } from '../../src/core/errors/dedalo_error.ts';
 import {
 	clearPermissionsCache,
 	clearPrincipalCache,
@@ -77,13 +77,13 @@ import {
 	resolvePrincipal,
 	SUPERUSER_ID,
 } from '../../src/core/security/permissions.ts';
-import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import {
 	dropSituation,
 	ensureSituation,
 	type Situation,
 	situation,
 } from '../../src/core/test_data/situations/situation.ts';
+import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 
 /**
  * FAILURE INJECTION for the atomicity case: when set, the Time Machine write

@@ -40,7 +40,6 @@ import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
 import { labelByTipo } from '../ontology/labels.ts';
 import { ONTOLOGY_TLD } from '../ontology/ontology_tipos.ts';
-import { type DataframeDeletePolicy, dataframeDeletePolicyOf } from '../relations/dataframe.ts';
 import {
 	getColumnNameByModel,
 	getModelByTipo,
@@ -48,6 +47,7 @@ import {
 	getTranslatableByTipo,
 } from '../ontology/resolver.ts';
 import { requiredOntologyTld } from '../ontology/tld.ts';
+import { type DataframeDeletePolicy, dataframeDeletePolicyOf } from '../relations/dataframe.ts';
 import { stampSectionContext } from '../section/context.ts';
 import type { Principal } from '../security/permissions.ts';
 import { currentApplicationLang } from './request_lang.ts';
