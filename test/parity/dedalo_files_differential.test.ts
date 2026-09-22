@@ -223,6 +223,9 @@ const POST_HARVEST_CLIENT_ADDITIONS: readonly string[] = [
 	'/dedalo/core/common/js/api_transport.js',
 	'/dedalo/core/common/js/error_dispatch.js',
 	'/dedalo/core/common/js/error_policy.js',
+	// the page-wide error SIGNAL the error-report launcher tab listens to
+	// (same family; the launcher unfolds when the user is shown a failure)
+	'/dedalo/core/common/js/error_signal.js',
 	'/dedalo/core/common/js/render_api_error.js',
 	// media-job visibility surface (WC-2026-08-12-media-job-visibility)
 	'/dedalo/core/common/js/floating_dock.js',

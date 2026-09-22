@@ -16,8 +16,9 @@
  *   1. no global boot module (client/dedalo/core/common/js/) positions an element
  *      with inline fixed geometry — that is the regression, and the allowlist is
  *      EMPTY;
- *   2. the launcher is a dock TENANT (appends to #floating_dock, carries the
- *      shared class) and declares none of its own coordinates;
+ *   2. the launcher (a right-edge TAB since 2026-09-22, no longer a dock tenant)
+ *      declares none of its own coordinates: its geometry lives in
+ *      error_report_tab.less, at ONE constant position in every mode;
  *   3. the stylesheet is reachable (main.less imports it), it positions the dock
  *      from the two dock variables, and BOTH corner-owning rails claim the
  *      corner. Add a third full-height right rail and this fires: give it a claim.
@@ -61,15 +62,33 @@ describe('floating dock ownership', () => {
 		).toEqual([]);
 	});
 
-	test('the error-report launcher is a dock tenant, not a self-positioning button', () => {
+	test('the error-report launcher is a CSS-placed edge tab, not a self-positioning button', () => {
+		// 2026-09-22: the launcher left the dock — it is a lateral tab on the right
+		// edge now (unobtrusive: a rarely used tool must not hold a corner). The
+		// tenant law it obeyed still binds in the part that matters: it declares NO
+		// geometry of its own, so it can follow the right rail through CSS alone.
 		const src = readFileSync(join(COMMON_JS, LAUNCHER), 'utf8');
 
-		expect(src, `${LAUNCHER}: the button must be appended to the dock`).toContain(
-			'get_floating_dock().appendChild(button)',
+		expect(src, `${LAUNCHER}: the tab must carry its stylesheet's class`).toContain(
+			"'error_report_edge_tab'",
 		);
-		expect(src, `${LAUNCHER}: the button must carry the shared dock-tenant class`).toContain(
-			"'floating_dock_button'",
+		const tab = read('client/dedalo/core/page/css/layout/error_report_tab.less');
+		expect(tab, 'the edge tab must be styled by error_report_tab.less').toContain(
+			'.error_report_edge_tab {',
 		);
+		// ONE constant position in every mode: the tab must NOT take a corner claim
+		// (that is the dock's job). A rarely used launcher that jumps 19rem sideways
+		// when the inspector opens is a launcher nobody can find twice.
+		expect(tab, 'the edge tab is glued to the right edge').toContain('right: 0;');
+		expect(
+			tab.includes('--floating_dock_right') || tab.includes('--inspector_width'),
+			'error_report_tab.less: the tab keeps one constant position — it must not ' +
+				'follow the right rail like the dock does',
+		).toBe(false);
+		expect(
+			read('client/dedalo/core/page/css/main.less'),
+			'main.less must import the edge-tab stylesheet or none of it ships',
+		).toContain("@import './layout/error_report_tab'");
 		// the geometry the regression shipped, in any of its inline forms
 		for (const banned of ['zIndex', 'borderRadius', "right\t\t\t: '", "bottom\t\t\t: '"]) {
 			expect(src.includes(banned), `${LAUNCHER}: ${banned} belongs in floating_dock.less`).toBe(
