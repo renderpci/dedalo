@@ -981,6 +981,17 @@ const get_content_data = function(self) {
 
 			const item = info_data[j]
 
+			// empty values are not information: an install that has no build
+			// stamp ('Code Build') would otherwise render a label with nothing
+			// beside it. Skip the whole row, label included.
+				const raw_value = item.value
+				const is_empty = Array.isArray(raw_value)
+					? raw_value.filter(el => el!==null && el!==undefined && String(el).trim()!=='').length===0
+					: (raw_value===null || raw_value===undefined || String(raw_value).trim()==='')
+				if (is_empty) {
+					continue
+				}
+
 			// label
 				ui.create_dom_element({
 					element_type	: 'span',
