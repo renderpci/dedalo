@@ -1,0 +1,28 @@
+{
+    "name": "single_step_negative_indexed",
+    "notes": "negative operator: prefilter must never be added",
+    "sqo": {
+        "section_tipo": [
+            "rsc197"
+        ],
+        "filter": {
+            "$and": [
+                {
+                    "q": "garcia",
+                    "path": [
+                        {
+                            "section_tipo": "rsc197",
+                            "component_tipo": "rsc86",
+                            "model": "component_input_text",
+                            "name": "Cognoms"
+                        }
+                    ],
+                    "q_operator": "!="
+                }
+            ]
+        },
+        "limit": 10,
+        "offset": 0,
+        "full_count": false
+    }
+}

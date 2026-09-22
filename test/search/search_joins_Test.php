@@ -415,6 +415,145 @@ final class search_joins_test extends TestCase {
 
 
 	/**
+	* MULTI_STEP_INDEXED_SQO
+	* Two-step path reaching an INDEXED component (rsc86 -> matrix_rsc86_gin) through a portal,
+	* which is the shape of the production search this optimisation targets.
+	* @param string $q
+	* @return object
+	*/
+	private function multi_step_indexed_sqo(string $q) : object {
+
+		return json_decode(json_encode([
+			'section_tipo'	=> [self::$section_tipo],
+			'filter'		=> ['$and' => [[
+				'q'		=> $q,
+				'path'	=> [
+					[
+						'section_tipo'		=> self::$section_tipo,
+						'component_tipo'	=> self::$tipo_portal,
+						'model'				=> 'component_portal',
+						'name'				=> 'portal'
+					],
+					[
+						'section_tipo'		=> 'rsc197',
+						'component_tipo'	=> 'rsc86',
+						'model'				=> 'component_input_text',
+						'name'				=> 'Cognoms'
+					]
+				]
+			]]],
+			'limit'			=> 10,
+			'offset'		=> 0,
+			'full_count'	=> false
+		]));
+	}//end multi_step_indexed_sqo
+
+
+
+	/**
+	* TEST_MULTI_STEP_PREFILTER_RIDES_INSIDE_THE_SAME_EXISTS
+	* The whole-blob pre-filter of a multi-step clause must be ANDed INSIDE the correlated
+	* EXISTS of the per-language group, on the same alias.
+	* (!) Emitting it as an $and sibling instead would create a SECOND EXISTS with its own
+	* join_id: the pre-filter would then be satisfied by a different related record than the
+	* per-language group (cross-record AND), which changes the result set, and it would add a
+	* traversal of the relation instead of removing work.
+	* @return void
+	*/
+	public function test_multi_step_prefilter_rides_inside_the_same_exists() : void {
+
+		{
+			$search = search::get_instance($this->multi_step_indexed_sqo('garcia'));
+			$search->pre_parse_search_query_object();
+			$where = $search->build_sql_filter();
+
+			// the number of correlated subqueries must not grow
+				$this->assertSame(
+					1,
+					substr_count($where, 'EXISTS (SELECT 1'),
+					'the pre-filter must not add a second EXISTS' . PHP_EOL . $where
+				);
+
+			// exactly one pre-filter predicate, carrying the bare term
+				$this->assertSame(
+					1,
+					substr_count($where, "datos#>>'{components,rsc86,dato}')"),
+					'expected exactly one whole-blob pre-filter' . PHP_EOL . $where
+				);
+				$this->assertStringContainsString(
+					"datos#>>'{components,rsc86,dato}') ~* f_unaccent('.*garcia.*')",
+					$where,
+					'the pre-filter must use the bare term' . PHP_EOL . $where
+				);
+
+			// on the SAME joined alias the per-language predicates use
+				preg_match("/f_unaccent\((j\d+_[a-z0-9_]+)\.datos#>>'\{components,rsc86,dato\}'\)/", $where, $ar_match);
+				$this->assertNotEmpty($ar_match, 'the pre-filter must run on a joined alias' . PHP_EOL . $where);
+				$this->assertStringContainsString(
+					$ar_match[1] . ".datos#>>'{components,rsc86,dato,",
+					$where,
+					'the pre-filter alias must be the one of the per-language group' . PHP_EOL . $where
+				);
+		}
+	}//end test_multi_step_prefilter_rides_inside_the_same_exists
+
+
+
+	/**
+	* TEST_MULTI_STEP_PREFILTER_IS_ON_BY_DEFAULT
+	* The pre-filter is not configurable: a path reaching an indexed component through a
+	* relation gets it out of the box, which is the shape of the production searches it was
+	* measured on (2.098 -> 579 ms, same records).
+	* @return void
+	*/
+	public function test_multi_step_prefilter_is_on_by_default() : void {
+
+		$search = search::get_instance($this->multi_step_indexed_sqo('garcia'));
+		$search->pre_parse_search_query_object();
+		$where = $search->build_sql_filter();
+
+		$this->assertStringContainsString(
+			"datos#>>'{components,rsc86,dato}')",
+			$where,
+			'the multi-step pre-filter must be emitted by default' . PHP_EOL . $where
+		);
+		$this->assertStringContainsString(
+			"datos#>>'{components,rsc86,dato,",
+			$where,
+			'the per-language predicates must still be there' . PHP_EOL . $where
+		);
+	}//end test_multi_step_prefilter_is_on_by_default
+
+
+
+	/**
+	* TEST_MULTI_STEP_PREFILTER_IS_NOT_ADDED_FOR_NEGATIVE_OPERATORS
+	* A negative clause ('!=') is an $and of per-language NOT-match/IS NULL pairs. A blob
+	* pre-filter cannot be implied by it (the blob matching says nothing about every language
+	* NOT matching), so it must never be added.
+	* @return void
+	*/
+	public function test_multi_step_prefilter_is_not_added_for_negative_operators() : void {
+
+		{
+			$sqo = $this->multi_step_indexed_sqo('garcia');
+			$sqo->filter->{'$and'}[0]->q_operator = '!=';
+
+			$search = search::get_instance($sqo);
+			$search->pre_parse_search_query_object();
+			$where = $search->build_sql_filter();
+
+			$this->assertStringNotContainsString(
+				"datos#>>'{components,rsc86,dato}')",
+				$where,
+				'a negative clause must never get a whole-blob pre-filter' . PHP_EOL . $where
+			);
+		}
+	}//end test_multi_step_prefilter_is_not_added_for_negative_operators
+
+
+
+	/**
 	* TEST_SINGLE_STEP_PATH_IS_NEVER_PREFIXED
 	* A leaf operand on the main section (1-step path) must not create joins nor jN_ aliases.
 	* @return void

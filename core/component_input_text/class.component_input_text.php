@@ -676,11 +676,18 @@ class component_input_text extends component_common {
 					? $query_object->lang
 					: 'all';
 
+				// whole-blob pre-filter term. The resolved term of the branch that built
+				// q_parsed, never the anchored q_parsed itself (see build_whole_blob_q_parsed)
+					$blob_q_parsed = isset($q_clean)
+						? component_common::build_whole_blob_q_parsed((string)$q_clean)
+						: null;
+
 				$query_object = component_common::resolve_query_object_langs_behavior( (object)[
 					'query_object'	=> $query_object,
 					'lang'			=> $lang,
 					'translatable'	=> $translatable,
-					'negative'		=> $regex_negative
+					'negative'		=> $regex_negative,
+					'blob_q_parsed'	=> $blob_q_parsed
 				]);
 			}
 

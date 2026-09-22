@@ -169,17 +169,32 @@ FROM matrix AS rs197
 WHERE rs197.id in (
     SELECT DISTINCT ON(rs197.section_id,rs197.section_tipo) rs197.id
     FROM matrix AS rs197
-    WHERE (
-            rs197.section_tipo='rsc197') AND
-            rs197.section_id>0  AND
-            (f_unaccent(rs197.datos#>>'{components,rsc86,dato}') ~* f_unaccent('.*\[".*Ana.*'))
-    ORDER BY rs197.section_id ASC
+    WHERE (rs197.section_tipo = 'rsc197') AND rs197.section_id>0 AND ( (
+        f_unaccent(rs197.datos#>>'{components,rsc85,dato}') ~* f_unaccent('.*Ana.*') AND (
+        f_unaccent(rs197.datos#>>'{components,rsc85,dato,lg-cat}') ~* f_unaccent('.*\[".*Ana.*') OR
+        f_unaccent(rs197.datos#>>'{components,rsc85,dato,lg-spa}') ~* f_unaccent('.*\[".*Ana.*') OR
+        f_unaccent(rs197.datos#>>'{components,rsc85,dato,lg-eng}') ~* f_unaccent('.*\[".*Ana.*') OR
+        f_unaccent(rs197.datos#>>'{components,rsc85,dato,lg-nolan}') ~* f_unaccent('.*\[".*Ana.*') ) ))
+    ORDER BY rs197.section_id ASC, rs197.section_tipo ASC
     LIMIT 10
 )
 ORDER BY rs197.section_id ASC
 LIMIT 10;
 
 ```
+
+Two details of that WHERE are worth reading carefully, because they are what makes a text search both correct and fast:
+
+- **One regex per language, not one over the whole component.** `dato` is an object keyed by language, as
+  `{"lg-cat": ["Ana"], "lg-spa": ["Ana Maria"]}`. Running the regex over the whole object would also match the
+  language KEYS, so searching `spa` or `lg-` would return every record. Each language is therefore extracted and
+  tested on its own, and the group is an `OR`: the record matches when SOME language matches. A negative search
+  (`!=`, `-`) inverts this into an `AND` of per-language non-matches, each with an `IS NULL` companion so that a
+  language with no value does not contradict the search.
+- **The leading whole-component predicate is redundant.** `f_unaccent(...'{components,rsc85,dato}') ~* '.*Ana.*'`
+  does not decide anything: the per-language group next to it already does. It is added because it is the only
+  form the trigram index can use, and it short-circuits the per-language regexes on the records it rejects.
+  See [Text search indexes](#text-search-indexes).
 
 ## Definitions
 
@@ -1735,3 +1750,89 @@ The result can be counted or used to be paginated directly in a simple way.
 Defines if the SQO has been parsed by the components and has his own operators.
 
 Definition: `bool` (true || false) state of the sqo, it indicates if the filter was parsed by the components to add operators to the q. It's used as internal property, but is possible parse it manually and indicate this state. Default false  **optional**
+
+## Text search indexes
+
+A text filter is resolved with the POSIX regex operators (`~`, `~*`), one regex per project language
+(see [Using SQO](#using-sqo)). A regex is not sargable: without help PostgreSQL has to extract and test every
+language of every record of the section, which grows linearly with the archive.
+
+Dédalo makes those searches indexable with a **trigram GIN index on the whole component value**, and with a
+redundant predicate that the planner can push into it.
+
+### The index
+
+```sql
+CREATE INDEX matrix_rsc86_gin ON matrix
+    USING gin (f_unaccent(datos#>>'{components,rsc86,dato}') gin_trgm_ops);
+```
+
+Three things have to line up or the index is never used:
+
+- the expression is indexed **without the language**, on the whole `dato` object
+- it is wrapped in `f_unaccent()`, so only filters with `unaccent: true` match it
+- it needs `pg_trgm` and an `IMMUTABLE` `f_unaccent()`
+
+The index name encodes the component (`matrix_<component_tipo>_gin`); that is how Dédalo detects at query build
+time whether the optimisation can be applied (`component_common::has_whole_blob_trigram_index()`).
+
+### The whole-component pre-filter
+
+When such an index exists, the search adds one extra predicate in front of the per-language group:
+
+```sql
+f_unaccent(<alias>.datos#>>'{components,rsc86,dato}') ~* f_unaccent('.*perez.*')
+AND ( <one regex per language, unchanged> )
+```
+
+It is **redundant by construction**: if some language matches, the whole component text contains the term, so the
+predicate is implied and can never remove a true match. The per-language group still decides the result set. What
+it buys is that the planner can now reject most records through the index, and that the five or six per-language
+regexes are only evaluated on what survives.
+
+Two rules keep the implication true, and both matter:
+
+- **The pattern is the bare term** (`.*perez.*`), never the anchored per-language pattern (`.*\[".*perez.*`).
+  The anchors describe the JSON rendering of an array value. When a language holds a plain JSON string instead,
+  `#>>` unquotes and unescapes it while the whole-component text keeps it quoted and escaped, so an anchored
+  pre-filter would fail on a record that genuinely matches and the record would be lost.
+- **Terms containing `"`, `\` or control characters get no pre-filter at all**, since JSON re-escapes them and the
+  term cannot be guaranteed to appear verbatim.
+
+It is applied to negative operators never (`!=` and `-` are an `AND` of non-matches; a match on the whole
+component implies nothing about them), and to paths of any length. When the component is reached **through a
+relation**, the predicate travels inside the correlated `EXISTS` of that clause, on the same joined record as the
+per-language group — not as a sibling condition, which would test a different related record and change the
+result set.
+
+### What it costs
+
+The pre-filter is not a uniform win: its effect depends on how common the searched term is. Measured on an
+archive of ~500.000 people, first page of results:
+
+| term | matching records | without | with |
+| --- | --- | --- | --- |
+| a very common surname | 20.104 | 10 ms | 278 ms |
+| a mid-range surname | 1.698 | 27 ms | 34 ms |
+| a rare surname | 67 | 2.281 ms | 1,9 ms |
+| a surname with no match | 0 | 4.567 ms | 0,3 ms |
+
+A very common term gets slower by a bounded amount; a rare or unmatched term gets faster by an amount that grows
+with the table. Counting (`full_count`, which has no `LIMIT` to stop early) is always faster with it. Since rare
+and zero-result searches are what users actually run, the pre-filter is always applied and is not configurable.
+
+### Adding the index to another component
+
+Any `component_input_text` or `component_text_area` that users search often is a candidate:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX matrix_<component_tipo>_gin ON <matrix_table>
+    USING gin (f_unaccent(datos#>>'{components,<component_tipo>,dato}') gin_trgm_ops);
+```
+
+Nothing else has to be declared: the next search on that component detects the index and starts using it. The
+result set does not change, so the index can be created and dropped at will.
+
+> Use `test/search/tools/search_corpus_diff.php` to check a change on real searches: it runs the same SQO with and
+> without the pre-filter and diffs the returned records and the timings.

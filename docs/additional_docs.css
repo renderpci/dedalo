@@ -1,8 +1,23 @@
 
-[data-md-color-primary=orange] {
-	--md-primary-fg-color: #f78a1c;
+/*
+ * v6 wears SLATE BLUE-GREY; v7 wears the Dédalo orange (#f78a1c).
+ *
+ * The two manuals are served side by side at dedalo.dev/docs/v6/ and /docs/v7/
+ * and are otherwise identical in layout, so the header colour is what tells a
+ * reader at a glance which one they landed on — including from a browser tab or
+ * a screenshot in a support thread. Muted on purpose: v6 is archived.
+ *
+ * The selector must match `primary:` in mkdocs.yml (Material writes the value
+ * as the data attribute, spaces becoming hyphens). Change one, change both, or
+ * this block silently stops applying and the stock palette shows through.
+ *
+ * #546e7a carries white header text at 5.0:1, above the 4.5:1 AA threshold for
+ * normal text — worth preserving if these values are ever retuned.
+ */
+[data-md-color-primary=blue-grey] {
+	--md-primary-fg-color: #546e7a;
 	--md-primary-bg-color: #ffffff;
-	--md-accent-fg-color: #e27d19;
+	--md-accent-fg-color: #455a64;
 	--md-mermaid-node-bg-color: #dedede1a;
 }
 
