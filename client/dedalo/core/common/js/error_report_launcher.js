@@ -18,15 +18,32 @@
 * open_tool is imported LAZILY (on click) so this global boot module does not
 * pull the tool machinery into every page load.
 *
-* POSITION IS NOT SET HERE. The button is a tenant of #floating_dock and all its
-* geometry lives in core/page/css/layout/floating_dock.less, because the corner
-* it occupies is shared with the fixed right rail (inspector / standalone
-* assistant) and only CSS can see that rail open, close and resize.
+* SHAPE: a LATERAL TAB on the right edge (since 2026-09-22), not a floating
+* corner disc. The tool is used very rarely, so the launcher must be present
+* everywhere while taking almost no screen and overlapping nothing: at rest the
+* tab is a ~12px sliver flush to the edge and reveals its icon on hover/focus.
+* It keeps ONE constant position in every mode — list, edit, thesaurus,
+* menu-less — because a once-a-month launcher lives on habit.
+*
+* ALERTED STATE: the tab listens to the page-wide error signal
+* (common/js/error_signal.js — an uncaught JS error, or an ApiError the user was
+* actually shown) and UNFOLDS, icon out, so the launcher is obvious exactly when
+* it is needed. It folds back on the FIRST HOVER OR FOCUS — the cue has been
+* seen, and an unfolded tab sits over the inspector rail's scrollbar gutter, so
+* a state the user cannot dismiss would turn the fix into a click trap. No
+* timer: a cue that expires while the user is still reading the toast that
+* caused it has told nobody anything.
+*
+* The COUNT is not the cue. It rides in the title and survives the fold, so a
+* hover still says how many failures are unreported; only a successful open of
+* the tool resets it.
+*
+* POSITION IS NOT SET HERE. All geometry lives in
+* core/page/css/layout/error_report_tab.less — the alerted state too
+* (.error_report_edge_tab.alerted), never an inline style.
 */
 
-// The dock itself lives in ./floating_dock.js — it is a SHARED facility with
-// more than one tenant now (the job tray), not this launcher's property.
-import {get_floating_dock} from './floating_dock.js'
+import {ERROR_SIGNAL} from './error_signal.js'
 
 const BUTTON_ID = 'error_report_floating_launcher'
 
@@ -44,19 +61,31 @@ export function install_error_report_launcher() {
 				return
 			}
 
-		// floating button. Purple disc + white tool icon; placed by the dock.
+		// edge tab. Purple sliver + white tool icon; placed by the stylesheet.
 			const button = document.createElement('div')
 			button.id = BUTTON_ID
-			button.className = 'floating_dock_button'
+			button.className = 'error_report_edge_tab'
 			button.setAttribute('role', 'button')
 			button.tabIndex = 0
-			button.title = (typeof get_label!=='undefined' && get_label.error_report) || 'Report a problem'
+			const base_title = (typeof get_label!=='undefined' && get_label.error_report) || 'Report a problem'
+			button.title = base_title
+
+		// alerted state. Two levels, deliberately: the UNFOLDING is the attention
+		// cue (folded by the first hover/focus, below) and the COUNT is the
+		// pending-report state, reset only by a successful open (clear_alert).
+			let pending = 0
+			const fold_alert = () => button.classList.remove('alerted')
+			const clear_alert = () => {
+				pending = 0
+				fold_alert()
+				button.title = base_title
+			}
 
 		// inner icon element so the white filter applies to the ICON only,
-		// not the purple disc behind it. Only the image is set here (it is
-		// tool-specific); the box is styled by .floating_dock_button_icon.
+		// not the purple tab behind it. Only the image is set here (it is
+		// tool-specific); the box is styled by .error_report_tab_icon.
 			const icon = document.createElement('div')
-			icon.className = 'floating_dock_button_icon'
+			icon.className = 'error_report_tab_icon'
 			icon.style.backgroundImage = "url('/dedalo/tools/tool_error_report/img/icon.svg')"
 			button.appendChild(icon)
 
@@ -78,9 +107,13 @@ export function install_error_report_launcher() {
 							tipo	: tipo,
 							lang	: (typeof page_globals!=='undefined' && page_globals.dedalo_data_lang) || 'lg-eng',
 							id_base	: 'error_report_launcher',
-							label	: button.title
+							label	: base_title
 						}
 					})
+					// only NOW: an alert cleared by a click that opened nothing would
+					// lose the one cue pointing at an unreported failure (the import
+					// can 404, and menu-less pages are this launcher's habitat).
+					clear_alert()
 				} catch (error) {
 					console.error('error_report_launcher: failed to open the tool', error)
 				}
@@ -89,7 +122,38 @@ export function install_error_report_launcher() {
 			button.addEventListener('click', open_handler)
 			button.addEventListener('keydown', (e) => { if (e.key==='Enter' || e.key===' ') open_handler(e) })
 
-			get_floating_dock().appendChild(button)
+			document.body.appendChild(button)
+
+		// SEED from the buffer before listening. error_capture.js installs its window
+		// handlers before any application module evaluates; this launcher installs at
+		// the END of page build (page/js/index.js), so every boot-time failure — the
+		// very case this feature exists for — raised the signal into a void. The
+		// buffer already holds those entries, so the state is recoverable.
+			const captured = Array.isArray(window.dedalo_js_errors) ? window.dedalo_js_errors.length : 0
+			if (captured > 0) {
+				pending = captured
+				button.classList.add('alerted')
+				button.title = base_title + ' (' + pending + ')'
+			}
+
+		// the cue has been seen: fold. `once` is wrong here — the tab must unfold
+		// again for the NEXT failure, so it re-arms with every signal.
+			button.addEventListener('mouseenter', fold_alert)
+			button.addEventListener('focus', fold_alert)
+
+		// One listener for the page's life: the signal is raised by error_capture.js
+		// (uncaught JS) and error_dispatch.js (a SHOWN ApiError). Opening the tool
+		// clears it — the user has been taken to the report form, which is the
+		// whole point of the unfolding.
+			window.addEventListener(ERROR_SIGNAL, () => {
+				try {
+					pending += 1
+					button.classList.add('alerted')
+					button.title = base_title + ' (' + pending + ')'
+				} catch (error) {
+					// an observer must never break the page it observes
+				}
+			})
 
 	} catch (error) {
 		// a launcher defect must never break the page it is meant to help report on

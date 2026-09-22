@@ -26,6 +26,7 @@
 	import {event_manager} from './event_manager.js'
 	import {ApiError, is_api_error} from './api_error.js'
 	import {resolve_error_policy} from './error_policy.js'
+	import {signal_error} from './error_signal.js'
 	import {
 		error_text,
 		render_error_toast,
@@ -35,6 +36,10 @@
 	} from './render_api_error.js'
 
 
+
+// The policy actions that mean "a defect the user could usefully report" — the
+// ONLY ones that raise the page-wide error signal. See handle_api_error.
+const REPORTABLE_ACTIONS = new Set(['page_panel', 'toast'])
 
 // relogin_pending: the ONE in-flight relogin recovery (null when none)
 let relogin_pending = null
@@ -149,6 +154,21 @@ export const handle_api_error = async (api_error, ctx = {}) => {
 
 	const entry		= resolve_error_policy(api_error)
 	const action	= ctx.silent===true ? 'silent' : entry.action
+
+	// page-wide error signal (error_signal.js): it unfolds the error-report
+	// launcher, so it must mean "a DEFECT worth reporting", not merely "the user
+	// saw something". An allowlist, because the wrong half is the dangerous one:
+	// 'inline' is a validation message about the user's own typing, and
+	// 'no_access_page' a routine permission refusal — unfolding for those trains
+	// the user to ignore the tab by the time a real crash raises it. Excluded by
+	// construction: silent/csrf_retry (nothing shown), relogin (a session expiry
+	// the user resolves in place), modal ('record.in_use' — a conflict with
+	// another editor, not a fault), and every 'warning' severity (a dropped
+	// network is transient). What remains is the page-panel and toast band: the
+	// unexpected internal failures the default '*' policy lands on.
+	if (REPORTABLE_ACTIONS.has(action) && entry.severity!=='warning') {
+		signal_error({origin:'api', code: api_error.code || null})
+	}
 
 	if (typeof SHOW_DEBUG!=='undefined' && SHOW_DEBUG===true) {
 		console.warn(`handle_api_error [${api_error.code}] → ${action}`, api_error, ctx)

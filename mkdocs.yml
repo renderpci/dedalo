@@ -34,6 +34,21 @@ site_dir: docs_site      # gitignored build output
 ## the switcher follows; get it wrong and the switcher silently 404s.
 ## Gate: test/unit/docs_versioning_tripwire.test.ts.
 site_url: https://dedalo.dev/docs/v7/
+
+## NEVER BUILD, NEVER PUBLISH. These paths are gitignored: they exist only in a
+## working copy, so they are not part of the manual and must not reach the site.
+##
+## This is not hypothetical. `docs/superpowers/` is a local scratch area for
+## internal design specs, and until 2026-09-21 MkDocs happily built it — an
+## internal spec was live at dedalo.dev/docs/v7/superpowers/specs/… and listed
+## in the public sitemap, because `docs_dir` means "every file here" and nothing
+## consulted .gitignore.
+##
+## A path gitignored under docs/ must appear here. Gate:
+## test/unit/docs_versioning_tripwire.test.ts derives the ignored set from git
+## itself, so a new scratch folder cannot be published by being forgotten.
+exclude_docs: |
+  superpowers/
 theme:
   name: material
   # Supplies the "older version" banner text (overrides/main.html). Outside
@@ -104,6 +119,21 @@ extra:
 
 plugins:
   - search
+  ## VENDOR EVERY EXTERNAL ASSET AT BUILD TIME, into assets/external/.
+  ##
+  ## Material lazy-loads Mermaid from unpkg.com at RUNTIME. dedalo.dev sends a
+  ## Content-Security-Policy whose script-src allows 'self', analytics.render.es
+  ## and cdn.jsdelivr.net — not unpkg.com — so the browser blocked the script and
+  ## every ```mermaid diagram in the manual rendered as a plain grey code block.
+  ## Nothing failed loudly: the build was green, the HTML was correct, and the
+  ## page looked fine unless you knew a diagram belonged there.
+  ##
+  ## Vendoring is the fix rather than widening the CSP: the asset is then served
+  ## from 'self', so no policy has to name a third party, the manual has no
+  ## runtime dependency on a CDN staying up, and readers are not disclosed to
+  ## one — which matters for the institutions this project serves. It is also
+  ## what the v6 manual has always done.
+  - privacy
   - redirects:
       # Pages that MOVED, so an inbound link still lands on the right content.
       #

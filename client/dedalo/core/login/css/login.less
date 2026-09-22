@@ -166,7 +166,10 @@
 
 			// two-step (identifier-first) login: step panels (username / password)
 			>.login_step {
+				// min-width:0 — the step is itself a flex item: without it its
+				// min-content width (a long entity label) widens the whole panel
 				flex: 1 1 100%;
+				min-width: 0;
 				display: flex;
 				flex-wrap: wrap;
 
@@ -214,21 +217,45 @@
 			}
 
 			// step 2: username confirmation chip with a "change user" link
-			>.login_step_password >.login_user_chip {
+			>.login_step >.login_user_chip {
+				// min-width:0 — without it the flex item's automatic min-content
+				// width lets a long entity label push the chip past the panel
 				flex: 1 1 100%;
+				min-width: 0;
 				display: flex;
 				align-items: center;
 				justify-content: space-between;
 				gap: 0.5em;
 				margin-bottom: 1em;
-				padding: 0.5em 0.85em;
+				// no lateral padding: both chips run flush with the panel's form
+				// column, so name and host sit on the same edges as the inputs
+				padding: 0.5em 0;
 				border-radius: 3px;
-				background-color: @color_grey_16;
-				border: 1px solid @color_grey_13;
+				background-color: transparent;
+				border: 1px solid transparent;
 
 				>.login_user_chip_name {
+					// shrinks (min-width:0) instead of pushing the host out of the
+					// panel when an entity label is long — it ellipsises
+					flex: 0 1 auto;
+					min-width: 0;
 					font-weight: 600;
 					color: @color_grey_5;
+					overflow: hidden;
+					text-overflow: ellipsis;
+					white-space: nowrap;
+				}
+
+				&.login_install_chip {
+					// identity, not an input — same bare row as the user chip, only
+					// a wider gap so a truncated entity label never touches the host
+					gap: 1em;
+				}
+
+				>.login_install_host {
+					flex: 0 0 auto;
+					font-size: 0.8em;
+					color: @color_grey_9;
 					overflow: hidden;
 					text-overflow: ellipsis;
 					white-space: nowrap;

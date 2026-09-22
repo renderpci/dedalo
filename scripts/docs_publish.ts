@@ -42,8 +42,9 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { $, Glob } from 'bun';
+import { $ } from 'bun';
 import { readEnv } from '../src/config/env.ts';
+import { publishedPagePaths } from './lib/docs_paths.ts';
 import { TEST_TIMEOUT_FLAG } from './lib/test_flags.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..');
@@ -103,16 +104,6 @@ function die(message: string, detail?: string): never {
 	if (detail) console.error(`\n${detail}`);
 	console.error('\nNothing was uploaded.\n');
 	process.exit(1);
-}
-
-/** Page paths as the site serves them: `core/index.md` -> `core/`. */
-function pagePaths(): string[] {
-	const out: string[] = [];
-	for (const file of new Glob('**/*.md').scanSync({ cwd: DOCS_DIR })) {
-		const noExt = file.replace(/\.md$/, '');
-		out.push(noExt === 'index' ? '' : noExt.replace(/(^|\/)index$/, '$1'));
-	}
-	return out.sort();
 }
 
 console.log('Publishing the Dédalo v7 manual.\n');
@@ -367,7 +358,7 @@ console.log('');
 const manifest = {
 	_comment: JSON.parse(readFileSync(MANIFEST, 'utf8'))._comment,
 	published_at: new Date().toISOString().slice(0, 10),
-	paths: pagePaths(),
+	paths: publishedPagePaths(REPO_ROOT),
 };
 writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2) + '\n');
 console.log(`[4/4] Recorded ${manifest.paths.length} published paths in docs/published_paths.json`);

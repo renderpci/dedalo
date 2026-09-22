@@ -20,8 +20,15 @@
 *     existing entry's `count` so an error storm cannot evict distinct errors;
 *   - per-field truncation: msg 2000, source 1024, stack 6000 chars.
 *
+* It also RAISES THE PAGE-WIDE ERROR SIGNAL (window event
+* 'dedalo_error_signal', common/js/error_signal.js) so the error-report
+* launcher tab can unfold itself the moment something breaks. The signal
+* carries no payload beyond a coarse origin: the buffer stays local.
+*
 * No exports, no imports, and never throws: every handler body is wrapped so
-* a defect here can never break the page it is meant to observe.
+* a defect here can never break the page it is meant to observe. That is why
+* the event name is a LITERAL here instead of the imported ERROR_SIGNAL
+* constant — test/unit/client_error_signal.test.ts refuses the two to drift.
 */
 
 const MAX_ENTRIES	= 50
@@ -59,6 +66,15 @@ if (!window.dedalo_js_errors) {
 	* @return void
 	*/
 	const push_error = function(entry) {
+		// raise the page-wide signal (see the header: literal by necessity).
+		// Repeats signal too: a storm the user is watching is still news.
+		try {
+			window.dispatchEvent(new CustomEvent('dedalo_error_signal', {
+				detail: {origin:'js', code: entry.type || null}
+			}))
+		} catch (e) {
+			// never throw from the observer
+		}
 		const buffer	= window.dedalo_js_errors
 		const existing	= buffer.find(el =>
 			el.msg===entry.msg && el.source===entry.source && el.line===entry.line

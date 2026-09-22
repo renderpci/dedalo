@@ -2,16 +2,16 @@
 * floating_dock
 *
 * The ONE bottom-right corner where global floating buttons live. Its tenants
-* today: the error-report launcher (installed on every page — menu-less ones
-* included — from common/js/error_report_launcher.js), the job tray
-* (core/page/js/job_tray.js) and the media fullscreen viewers' download disc
+* today: the job tray (core/page/js/job_tray.js) and the media fullscreen viewers' download disc
 * (component_image / component_av viewer popups append it to the dock).
 *
 * Why a dock instead of per-button inline coordinates: that corner is
 * CONTESTED. The right rail is fixed to the very same spot — `.inspector_container`
 * in edit mode (section.less) and `.assistant_container.standalone` in list mode —
 * and the assistant composer (input + send/stop) sits exactly under a
-* `bottom:1rem` button, so the launcher covered it.
+* `bottom:1rem` button, so the error-report launcher (a tenant until 2026-09-22,
+* now a right-edge tab at a CONSTANT position, above this column —
+* error_report_tab.less) covered it.
 *
 * So the dock reads its offset from --floating_dock_right / --floating_dock_bottom,
 * and whoever OWNS the corner overrides them (the "corner claims" block at the
@@ -87,10 +87,6 @@
 		background-position: center;
 		filter: brightness(0) invert(1);
 	}
-}
-
-#error_report_floating_launcher {
-	background-color: rgba(90, 65, 131, 0.92); // purple disc
 }
 
 // media fullscreen viewers (component_image / component_av popups) tenant: the
