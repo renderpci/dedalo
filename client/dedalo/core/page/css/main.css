@@ -11943,10 +11943,10 @@ dd-modal:has(.tool_header) {
   justify-content: space-between;
   gap: 0.5em;
   margin-bottom: 1em;
-  padding: 0.5em 0.85em;
+  padding: 0.5em 0;
   border-radius: 3px;
-  background-color: var(--color_grey_16);
-  border: 1px solid var(--color_grey_13);
+  background-color: transparent;
+  border: 1px solid transparent;
 }
 .login > .content_data > .login_form > .login_step > .login_user_chip > .login_user_chip_name {
   flex: 0 1 auto;
@@ -11958,8 +11958,6 @@ dd-modal:has(.tool_header) {
   white-space: nowrap;
 }
 .login > .content_data > .login_form > .login_step > .login_user_chip.login_install_chip {
-  background-color: transparent;
-  border-color: transparent;
   gap: 1em;
 }
 .login > .content_data > .login_form > .login_step > .login_user_chip > .login_install_host {

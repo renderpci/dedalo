@@ -227,10 +227,12 @@
 				justify-content: space-between;
 				gap: 0.5em;
 				margin-bottom: 1em;
-				padding: 0.5em 0.85em;
+				// no lateral padding: both chips run flush with the panel's form
+				// column, so name and host sit on the same edges as the inputs
+				padding: 0.5em 0;
 				border-radius: 3px;
-				background-color: @color_grey_16;
-				border: 1px solid @color_grey_13;
+				background-color: transparent;
+				border: 1px solid transparent;
 
 				>.login_user_chip_name {
 					// shrinks (min-width:0) instead of pushing the host out of the
@@ -245,11 +247,8 @@
 				}
 
 				&.login_install_chip {
-					// identity, not an input: no box. The transparent border and the
-					// shared padding stay so the row keeps the user chip's exact
-					// height and the primary button does not move between steps.
-					background-color: transparent;
-					border-color: transparent;
+					// identity, not an input — same bare row as the user chip, only
+					// a wider gap so a truncated entity label never touches the host
 					gap: 1em;
 				}
 
