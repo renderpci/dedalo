@@ -2991,13 +2991,24 @@ class component_relation_common extends component_common {
 
 						}else{
 							// if the component is other than section_id, create a q and path with every compnent_data.
-							foreach ($component_data as $search_data) {
+							foreach ($component_data as $current_data_item) {
 
-								if( is_object( $search_data ) &&
-									isset($current_value->use_from_component_tipo) &&
-									$current_value->use_from_component_tipo === false ){
-									unset($search_data->from_component_tipo);
+								if( is_object( $current_data_item ) ) {
+									// IMPORTANT, clone the component data, if not the changes will be set into the original data
+									$search_data = clone $current_data_item;
+
+									if( isset($current_value->use_from_component_tipo) &&
+										$current_value->use_from_component_tipo === false ){
+										unset($search_data->from_component_tipo);
+									}
+									if( isset($search_data->paginated_key) ){
+										// remove transient property paginated_key, never part of the stored relation
+										unset($search_data->paginated_key);
+									}
+								}else{
+									$search_data = $current_data_item;
 								}
+
 								$filter_item = new stdClass();
 									$filter_item->q		= $search_data;
 									$filter_item->path	= $current_value->path;
