@@ -11895,6 +11895,7 @@ dd-modal:has(.tool_header) {
 }
 .login > .content_data > .login_form > .login_step {
   flex: 1 1 100%;
+  min-width: 0;
   display: flex;
   flex-wrap: wrap;
 }
@@ -11934,8 +11935,9 @@ dd-modal:has(.tool_header) {
 .login > .content_data > .login_form > .login_step > .button_enter > .button_enter_loading.spinner {
   border-width: 3px;
 }
-.login > .content_data > .login_form > .login_step_password > .login_user_chip {
+.login > .content_data > .login_form > .login_step > .login_user_chip {
   flex: 1 1 100%;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -11946,14 +11948,29 @@ dd-modal:has(.tool_header) {
   background-color: var(--color_grey_16);
   border: 1px solid var(--color_grey_13);
 }
-.login > .content_data > .login_form > .login_step_password > .login_user_chip > .login_user_chip_name {
+.login > .content_data > .login_form > .login_step > .login_user_chip > .login_user_chip_name {
+  flex: 0 1 auto;
+  min-width: 0;
   font-weight: 600;
   color: var(--color_grey_5);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.login > .content_data > .login_form > .login_step_password > .login_user_chip > .login_change_user {
+.login > .content_data > .login_form > .login_step > .login_user_chip.login_install_chip {
+  background-color: transparent;
+  border-color: transparent;
+  gap: 1em;
+}
+.login > .content_data > .login_form > .login_step > .login_user_chip > .login_install_host {
+  flex: 0 0 auto;
+  font-size: 0.8em;
+  color: var(--color_grey_9);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.login > .content_data > .login_form > .login_step > .login_user_chip > .login_change_user {
   flex: 0 0 auto;
   font-size: 0.8em;
   cursor: pointer;
@@ -11961,7 +11978,7 @@ dd-modal:has(.tool_header) {
   text-decoration: none;
   transition: color 0.15s ease;
 }
-.login > .content_data > .login_form > .login_step_password > .login_user_chip > .login_change_user:hover {
+.login > .content_data > .login_form > .login_step > .login_user_chip > .login_change_user:hover {
   color: var(--color_orange_dedalo);
   text-decoration: underline;
 }

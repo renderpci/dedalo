@@ -339,6 +339,40 @@ const get_content_data = function(self) {
 			parent			: form
 		})
 
+	// Installation chip (step 1). It is the exact counterpart of the step 2 user
+	// chip: step 1 says WHICH INSTALLATION you are about to enter, step 2 WHICH
+	// USER. It also keeps the primary button on the same vertical position across
+	// both steps (same markup, same height — a hand-tuned padding would drift).
+	// Useful, not decorative: master/consumer/docker/dev instances of the same
+	// Dedalo look identical at the login panel, and entering the wrong one is a
+	// real and frequent mistake.
+		const install_chip = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'login_user_chip login_install_chip',
+			parent			: step_username
+		})
+		// entity label as the server declares it (info item 'dedalo_entity');
+		// falls back to the host so the chip is never empty
+		const install_entity = info_data.find(el => el.type === 'dedalo_entity')
+		const install_name = (install_entity && install_entity.value)
+			? String(install_entity.value)
+			: window.location.hostname
+		const install_name_node = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'login_user_chip_name',
+			inner_html		: strip_tags(install_name),
+			parent			: install_chip
+		})
+		// a long entity label ellipsises in the row: keep the full text reachable
+		install_name_node.title = strip_tags(install_name)
+		// origin (host[:port]) — what actually tells two instances apart
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'login_install_host',
+			inner_html		: strip_tags(window.location.host),
+			parent			: install_chip
+		})
+
 	// User name input (step 1)
 		// dd255 — ontology tipo for the username field label
 		const login_item_username = login_items.find(el => el.tipo==='dd255')
