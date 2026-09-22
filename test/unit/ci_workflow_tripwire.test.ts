@@ -1581,7 +1581,9 @@ describe('CI workflow tripwire', () => {
 		expect(unguardedIn('bun run scripts/ci/audit.ts || da_rc=$?')).toEqual([]);
 		// The BLOCK form records the verdict just as well, and must not be flagged.
 		expect(
-			unguardedIn('bun run --parallel --no-exit-on-error typecheck lint || {\n\ttier_status=$?\n}\n'),
+			unguardedIn(
+				'bun run --parallel --no-exit-on-error typecheck lint || {\n\ttier_status=$?\n}\n',
+			),
 			'the `|| { rc=$? … }` form records the verdict too — flagging it would make the rule unsatisfiable',
 		).toEqual([]);
 		// ...but a block that records NOTHING is still an abort.

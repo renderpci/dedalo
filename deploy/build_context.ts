@@ -158,6 +158,70 @@ export function contextAllowlist(root: string = buildContextRoot): string[] {
 }
 
 /**
+ * THE CONTRADICTION THE TWO RULES CAN STATE TOGETHER, and the reason this
+ * function exists (2026-09-21).
+ *
+ * Rule 1 allowlists a top-level entry because the tree holds a TRACKED file;
+ * rule 2 denies it because a `.gitignore` names it — and the census is applied
+ * AFTER the allowlist, last match wins. Emit both for the SAME top-level entry
+ * and the artifacts disagree with each other: `.dockerignore` drops the whole
+ * tree while the Dockerfile still carries `COPY <entry> ./<entry>`, which is not
+ * a narrower image, it is a build that FAILS on that COPY — the source matches
+ * nothing in the context.
+ *
+ * MEASURED: `dev/prompts/ui_redesign_calm_scholarly.md` was tracked on
+ * 2026-07-28; `dev/` was added to .gitignore on 2026-09-21. The generator wrote
+ * `!dev` and `dev`, and nothing noticed. The contradiction is not resolvable
+ * HERE — only the repository can say which of the two it means — so this
+ * refuses and names the tracked files, rather than silently picking one.
+ *
+ * The nested case is NOT this: a gitignored path INSIDE an allowlisted tree
+ * (`.agents/settings.local.json`) is the census doing exactly its job.
+ */
+export function allowlistCensusConflicts(
+	root: string = buildContextRoot,
+): { entry: string; trackedFiles: string[] }[] {
+	const denied = new Set<string>();
+	for (const pattern of censusPatterns(root)) {
+		if (pattern.startsWith('!') || pattern.includes('/') || pattern.includes('*')) continue;
+		denied.add(pattern);
+	}
+	const conflicts: { entry: string; trackedFiles: string[] }[] = [];
+	for (const entry of contextAllowlist(root)) {
+		if (!denied.has(entry)) continue;
+		const listed = Bun.spawnSync(['git', '-C', root, 'ls-files', '-z', '--', entry], {
+			stdout: 'pipe',
+			stderr: 'pipe',
+		});
+		const trackedFiles = listed.stdout
+			.toString()
+			.split('\0')
+			.filter((one) => one.length > 0);
+		conflicts.push({ entry, trackedFiles });
+	}
+	return conflicts;
+}
+
+/** Refuse rather than render a pair that cannot both be true. */
+export function assertNoAllowlistCensusConflict(root: string = buildContextRoot): void {
+	const conflicts = allowlistCensusConflicts(root);
+	if (conflicts.length === 0) return;
+	const detail = conflicts
+		.map(
+			({ entry, trackedFiles }) =>
+				`  ${entry}/ — a .gitignore rule denies it, and these tracked files allowlist it:\n` +
+				trackedFiles.map((one) => `      ${one}`).join('\n'),
+		)
+		.join('\n');
+	throw new Error(
+		'build_context: a top-level entry is BOTH allowlisted (it holds tracked files) and denied ' +
+			'(a .gitignore names it). The census is applied after the allowlist, so the tree would be ' +
+			'excluded from the context while the Dockerfile still COPYs it — an image build that fails ' +
+			`on that COPY. Untrack the files, or drop the .gitignore rule; the generator cannot choose:\n${detail}`,
+	);
+}
+
+/**
  * Translate ONE `.gitignore` rule into the `.dockerignore` spelling(s) of the
  * same intent. The two formats look alike and are not:
  *
@@ -503,6 +567,7 @@ function main(): void {
 	const rootFlag = Bun.argv.indexOf('--root');
 	const root = rootFlag < 0 ? buildContextRoot : resolve(Bun.argv[rootFlag + 1] as string);
 	const dockerfilePath = join(root, 'Dockerfile');
+	assertNoAllowlistCensusConflict(root);
 	const dockerignore = renderDockerignore(root);
 	const dockerfile = withCopyBlock(readFileSync(dockerfilePath, 'utf-8'), renderCopyBlock(root));
 	if (Bun.argv.includes('--check')) {

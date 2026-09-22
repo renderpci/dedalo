@@ -61,7 +61,7 @@
 		"@modelcontextprotocol/sdk": "^1.30.0",
 		"@svgedit/svgcanvas": "7.4.2",
 		"@turf/turf": "7.4.0",
-		"client-zip": "2.5.0",
+		"client-zip": "2.5.1",
 		"codex-tooltip": "1.0.6",
 		"easyqrcodejs": "4.6.2",
 		"d3": "7.9.0",
@@ -71,7 +71,7 @@
 		"nodemailer": "^10.0.10",
 		"onnxruntime-web": "1.29.0",
 		"split.js": "1.6.5",
-		"three": "0.185.1",
+		"three": "0.186.0",
 		"vanilla-jsoneditor": "3.13.0",
 		"zod": "^4.6.5"
 	},
