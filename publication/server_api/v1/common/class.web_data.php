@@ -1826,7 +1826,7 @@ class web_data {
 				die("Error. Illegal table: ".$table);
 			}
 
-			$strQuery = "SHOW COLUMNS FROM $table";
+			$strQuery = "SHOW COLUMNS FROM `" . str_replace("`", "``", $table) . "`";
 
 			$dbh	= web_data::get_PDO_connection();
 			$stmt	= $dbh->prepare($strQuery);
