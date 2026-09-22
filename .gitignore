@@ -192,5 +192,14 @@ cline_mcp_settings.json
 .continue/rules/new-rule.md
 .tmp
 .continue
-.agent
 diffusion/api/v1/.env
+
+# Agent tooling. `.agents/` is the real home (skills + workflows ARE versioned);
+# `.claude` is a committed symlink alias to it, so Claude Code keeps working.
+# Machine-local state below is never versioned. Git does not descend into the
+# symlink, so these must name the REAL path — `.claude/...` rules would be dead.
+.agents/settings.local.json
+.agents/scheduled_tasks.lock
+# Tool-synced third-party skill bucket (docx/pdf/pptx…): machine-local, never the project's.
+.agents/skills/synced/
+.clinerules
