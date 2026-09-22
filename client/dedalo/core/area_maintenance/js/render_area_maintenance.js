@@ -852,9 +852,12 @@ const build_map_view = function(self, widgets, opts={}) {
 			})
 			el.style.left	= n.x + '%'
 			el.style.top	= n.y + '%'
+			// the identifying icon is CSS-owned (masked svg, one rule per node id
+			// in area_maintenance.less) — the id is the only thing the JS states
+			el.dataset.node	= n.id
 			el.innerHTML =
 				'<div class="n_top"><span class="map_dot"></span>' +
-				'<span class="n_title"></span></div>' +
+				'<span class="n_title"></span><span class="n_icon"></span></div>' +
 				'<div class="n_state"></div><div class="n_sub"></div>'
 			el.querySelector('.n_title').textContent = n.title
 			el.addEventListener('click', () => select_node(n.id))

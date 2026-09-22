@@ -14,12 +14,12 @@
 @import (once) './widget_kit';
 
 // masked svg helper used by group headers and card headers
-.fn_maintenance_icon(@icon_name) {
+.fn_maintenance_icon(@icon_name, @size: 1.1em) {
 	content: ' ';
 	display: inline-block;
 	flex: 0 0 auto;
-	width: 1.1em;
-	height: 1.1em;
+	width: @size;
+	height: @size;
 	.fn_add_mask(@icon_name);
 }
 
@@ -817,6 +817,25 @@
 				overflow: hidden;
 				text-overflow: ellipsis;
 			}
+			// identifying icon, top-right of the title row (the `!` badge sits
+			// OUTSIDE the card corner, so the two never collide)
+			.n_icon {
+				.fn_maintenance_icon('gear.svg', 1.25em);
+				align-self: center;
+				background-color: var(--fg_muted);
+				opacity: .75;
+			}
+			&[data-node="clients"]	.n_icon { .fn_add_mask('person.svg'); }
+			&[data-node="web"]		.n_icon { .fn_add_mask('link.svg'); }
+			&[data-node="core"]		.n_icon { .fn_add_mask('dedalo_icon.svg'); }
+			&[data-node="tools"]	.n_icon { .fn_add_mask('gears.svg'); }
+			&[data-node="dev"]		.n_icon { .fn_add_mask('bug.svg'); }
+			&[data-node="pg"]		.n_icon { .fn_add_mask('table.svg'); }
+			&[data-node="bak"]		.n_icon { .fn_add_mask('save.svg'); }
+			&[data-node="pub"]		.n_icon { .fn_add_mask('diffusion.svg'); }
+			&[data-node="media"]	.n_icon { .fn_add_mask('media.svg'); }
+			&[data-node="onto"]		.n_icon { .fn_add_mask('tree.svg'); }
+
 			.n_state {
 				margin-top: 6px;
 				font-size: 13.5px;
