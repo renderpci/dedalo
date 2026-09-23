@@ -1094,7 +1094,7 @@ class web_data {
 					$dbh = null;
 				} catch (PDOException $e) {
 					// print "Error!: " . $e->getMessage() . "<br/>";
-					error_log(__METHOD__ ." ".PHP_EOL." ". $e->getMessage() );
+					error_log(__METHOD__ ." ".PHP_EOL." ". $e->getMessage() .PHP_EOL." strQuery: ". $strQuery );
 					// die();
 					$response->msg .= ' Check server log for details';
 					return $response;
