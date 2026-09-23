@@ -109,6 +109,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { entrypoints, SEARCH_DIRS } from '../../scripts/build_css.ts';
 import { thirdPartyCensus } from '../../scripts/lib/third_party_census.ts';
+import { cssReferenceFiles, trackedRepoFiles } from '../helpers/css_reference_corpus.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 
@@ -121,21 +122,7 @@ const REPO_ROOT = join(import.meta.dir, '..', '..');
  * Tracked, not on-disk: the question is about COMMITTED bytes, because a deploy
  * is a checkout (.gitattributes) and untracked build output ships nowhere.
  */
-const trackedFiles: string[] = (() => {
-	const run = Bun.spawnSync(['git', 'ls-files'], {
-		cwd: REPO_ROOT,
-		stdout: 'pipe',
-		stderr: 'pipe',
-	});
-	if (run.exitCode !== 0) {
-		throw new Error(`css_corpus: git ls-files failed: ${run.stderr.toString()}`);
-	}
-	return run.stdout
-		.toString()
-		.split('\n')
-		.filter((line) => line.trim() !== '')
-		.sort();
-})();
+const trackedFiles: string[] = trackedRepoFiles();
 
 /** True when `file` lies inside one of the given repo-relative trees. */
 const under = (file: string, trees: readonly string[]): boolean =>
@@ -410,12 +397,12 @@ const registeredTools = trackedFiles
 const toolEntrypoint = (tool: string) => `tools/${tool}/css/${tool}.less`;
 
 /** Tracked text the client could name a stylesheet from. `.css` itself is excluded:
- *  a sheet mentioning its own name proves nothing about who loads it. */
-const REFERENCE_TREES = [...SEARCH_DIRS, 'src', 'install', 'deploy'] as const;
-const referenceCorpus = trackedFiles
-	.filter((file) => /\.(js|mjs|cjs|ts|html|php|json)$/.test(file))
-	.filter((file) => under(file, REFERENCE_TREES))
-	.filter((file) => existsSync(join(REPO_ROOT, file)));
+ *  a sheet mentioning its own name proves nothing about who loads it. The trees
+ *  are named in test/helpers/css_reference_corpus.ts, not here: a root set
+ *  written into one gate is a root set no other gate can be held to. */
+const referenceCorpus = cssReferenceFiles(trackedFiles).filter((file) =>
+	existsSync(join(REPO_ROOT, file)),
+);
 
 const referenceText = referenceCorpus.map((file) => ({
 	file,

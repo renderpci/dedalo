@@ -1,6 +1,7 @@
 /**
  * THE PAGE-WIDE ERROR SIGNAL has one name and one consumer contract
- * (DEC-12 gate for client/dedalo/core/common/js/error_signal.js).
+ * (DEC-12 gate for ERROR_SIGNAL, declared in
+ * client/dedalo/core/common/js/error_dispatch.js).
  *
  * WHY THIS GATE EXISTS: the signal is a window CustomEvent, which is a
  * string-matched channel with no compiler behind it — and one of its two
@@ -40,9 +41,16 @@ const REPO_ROOT = join(import.meta.dir, '..', '..');
 const read = (rel: string) => readFileSync(join(REPO_ROOT, rel), 'utf8');
 
 const COMMON = 'client/dedalo/core/common/js/';
-const SIGNAL = `${COMMON}error_signal.js`;
 const CAPTURE = `${COMMON}error_capture.js`;
+/**
+ * The dispatcher DECLARES the signal and is one of its two producers. It had a
+ * module of its own until 2026-09-23 — 48 lines on the cold-boot critical path
+ * for one CustomEvent, which broke the shrink-only boot budget
+ * (page_load_budget_native). The declaration moved to the boot module that was
+ * already importing it; the lazy launcher imports the constant from there.
+ */
 const DISPATCH = `${COMMON}error_dispatch.js`;
+const SIGNAL = DISPATCH;
 const LAUNCHER = `${COMMON}error_report_launcher.js`;
 const TAB_LESS = 'client/dedalo/core/page/css/layout/error_report_tab.less';
 
@@ -52,7 +60,7 @@ function declaredSignalName(): string {
 	expect(match, `${SIGNAL}: ERROR_SIGNAL must be declared as a single-quoted literal`).not.toBe(
 		null,
 	);
-	return (match as RegExpMatchArray)[1];
+	return (match as RegExpMatchArray)[1] as string;
 }
 
 describe('page-wide error signal', () => {
@@ -67,8 +75,11 @@ describe('page-wide error signal', () => {
 
 	test('the dispatcher raises the signal only for DEFECT-shaped failures', () => {
 		const src = read(DISPATCH);
-		expect(src, `${DISPATCH}: must import the signal raiser`).toContain(
-			"import {signal_error} from './error_signal.js'",
+		expect(src, `${DISPATCH}: must DECLARE the signal raiser`).toContain(
+			'export const signal_error =',
+		);
+		expect(src, `${DISPATCH}: the raiser must dispatch the declared name`).toContain(
+			'new CustomEvent(ERROR_SIGNAL',
 		);
 		expect(src, `${DISPATCH}: must raise the signal`).toContain("signal_error({origin:'api'");
 
@@ -78,7 +89,7 @@ describe('page-wide error signal', () => {
 		expect(allow, `${DISPATCH}: REPORTABLE_ACTIONS must be a literal Set of actions`).not.toBe(
 			null,
 		);
-		const actions = (allow as RegExpMatchArray)[1]
+		const actions = ((allow as RegExpMatchArray)[1] as string)
 			.split(',')
 			.map((a) => a.trim().replace(/^'|'$/g, ''))
 			.filter(Boolean);
@@ -86,14 +97,7 @@ describe('page-wide error signal', () => {
 			'REPORTABLE_ACTIONS.has(action)',
 		);
 		// the actions that are NOT a defect the user could report
-		for (const action of [
-			'silent',
-			'csrf_retry',
-			'relogin',
-			'inline',
-			'no_access_page',
-			'modal',
-		]) {
+		for (const action of ['silent', 'csrf_retry', 'relogin', 'inline', 'no_access_page', 'modal']) {
 			expect(
 				actions,
 				`${DISPATCH}: '${action}' is not a defect worth unfolding the launcher for`,
@@ -109,14 +113,12 @@ describe('page-wide error signal', () => {
 	test('the launcher listens through the constant and alerts through CSS', () => {
 		const src = read(LAUNCHER);
 		expect(src, `${LAUNCHER}: must import the signal name, never repeat it`).toContain(
-			"import {ERROR_SIGNAL} from './error_signal.js'",
+			"import {ERROR_SIGNAL} from './error_dispatch.js'",
 		);
 		expect(src, `${LAUNCHER}: must listen for the signal`).toContain(
 			'window.addEventListener(ERROR_SIGNAL',
 		);
-		expect(src, `${LAUNCHER}: the alerted state is a class`).toContain(
-			"classList.add('alerted')",
-		);
+		expect(src, `${LAUNCHER}: the alerted state is a class`).toContain("classList.add('alerted')");
 		expect(src, `${LAUNCHER}: opening the tool must clear the alerted state`).toContain(
 			"classList.remove('alerted')",
 		);

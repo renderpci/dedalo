@@ -360,7 +360,7 @@ const get_content_data = function(self) {
 		const install_name_node = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'login_user_chip_name',
-			inner_html		: strip_tags(install_name),
+			inner_html		: render_value(strip_tags(install_name), 'text'),
 			parent			: install_chip
 		})
 		// a long entity label ellipsises in the row: keep the full text reachable
@@ -369,7 +369,7 @@ const get_content_data = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'login_install_host',
-			inner_html		: strip_tags(window.location.host),
+			inner_html		: render_value(strip_tags(window.location.host), 'text'),
 			parent			: install_chip
 		})
 

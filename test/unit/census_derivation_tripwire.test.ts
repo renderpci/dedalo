@@ -533,6 +533,21 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		scope:
 			'config keys read by call literal. KNOWN SUBSET: scripts/ and tools/ read keys through readEnv too (PUPPETEER_EXECUTABLE_PATH is read only under scripts/) — widening to the write-path roots is the open item, recorded here so the gap lives where the roots do',
 	},
+	'scripts/lib/docs_paths.ts': {
+		roots: [['docs']],
+		scope:
+			'the doc pages the SITE serves — every `**/*.md` under docs/ minus the mkdocs.yml `exclude_docs` globs. The ONE implementation of that rule, imported by scripts/docs_publish.ts and by docs_versioning_tripwire (a second scan is how the two once disagreed).',
+	},
+	'test/helpers/css_reference_corpus.ts': {
+		roots: [['.']],
+		scope:
+			"the tracked text that could NAME a served stylesheet — `git ls-files` over the whole index (ROOT narrows nothing), narrowed by CSS_REFERENCE_TREES — the build's own SEARCH_DIRS (client/, tools/) plus the three server-side trees that emit or install markup (src/, install/, deploy/).",
+	},
+	'test/helpers/shipped_text_corpus.ts': {
+		roots: [['client', 'deploy', 'publication', 'scripts', 'src', 'tools']],
+		scope:
+			'the shipped first-party TEXT trees — every .ts/.js/.mjs/.json/.md a user or operator can be shown, installed dependencies excluded. docs/ is deliberately out: the manual may quote as example data a spelling a gate forbids elsewhere.',
+	},
 	'test/helpers/browser_corpus.ts': {
 		roots: [
 			['client', 'tools'],
@@ -604,8 +619,9 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 			'authorization symbol reads across the engine and the tool servers (deriveAuthzSymbols), and the unit gates that assert on them (authzSubstringCensus)',
 	},
 	'scripts/lib/vacuity_census.ts': {
-		roots: [['test'], ['test']],
-		scope: 'every *.test.ts gate — the silent-return vacuity census',
+		roots: [['test'], ['test'], ['test']],
+		scope:
+			'every *.test.ts gate — the silent-return census, the unfloored-emptiness census, and the corpus size both are witnessed by',
 	},
 	'scripts/lib/complexity.ts': {
 		roots: [['src/core']],
@@ -682,7 +698,7 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		scope: 'NOT a corpus: `readdirSync` lists the suite media base for marked shard twins to sweep',
 	},
 	'test/helpers/docs_corpus.ts': {
-		roots: [['docs']],
+		roots: [['docs'], ['docs']],
 		scope: 'the manual — every docs/**/*.md page, the one lister a docs-censusing gate imports',
 	},
 	'test/helpers/zzarc_media_digests.ts': {

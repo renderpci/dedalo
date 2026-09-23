@@ -122,6 +122,11 @@
 	--shadow_default: rgba(0, 0, 0, 0.55);
 	--focus_ring:     var(--color_input_focus);
 	--focus_ring_weak: rgba(255, 165, 74, 0.45); // = dark color_input_focus (orange #ffa54a) @ 45%
+	// error-report edge tab — the light purple (#5a4183) sinks into a dark
+	// canvas, so the dark axis carries a lifted twin (#8a6ac4) at the same two
+	// alphas. See vars_tokens.less.
+	--error_tab_bg:        rgba(138, 106, 196, 0.5);
+	--error_tab_bg_active: rgba(138, 106, 196, 0.92);
 
 	// ---- FIELD TOKENS (dark, "quiet grid" — section edit view) ----
 	--field_label_fg: #9aa3ae;                    // ~7:1 on the #1b1d20 card

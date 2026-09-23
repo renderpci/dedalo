@@ -2,8 +2,12 @@
  * Pure-logic gate for `tools/tool_import_files/server/script_files/numisdata/crop_50.ts`'s
  * `custom_arguments` extraction — the piece that maps a crop's left/right
  * output to the Obverse/Reverse PORTAL tipos declared on the ontology's
- * `button_import` node (production numisdata4: `numisdata256`). No
- * ImageMagick spawn, no DB, credless.
+ * `button_import` node. No ImageMagick spawn, no DB, credless.
+ *
+ * The fixtures are generic `test` TLD tipos, never an install's: the mapping
+ * under test is a pure object walk over `custom_arguments`, so naming one
+ * install's nodes would tie a gate about SHAPE to records only that machine
+ * holds (AGENTS.md, generic_tld ratchet).
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -16,13 +20,14 @@ describe('destinationPortalTipos', () => {
 				name: 'Split image 50%',
 				script_file: '/script_files/numisdata/crop_50.php',
 				function_name: 'crop_50',
-				custom_arguments: { destination_1: 'numisdata164', destination_2: 'numisdata165' },
+				custom_arguments: { destination_1: 'test164', destination_2: 'test165' },
 			},
 		];
-		expect(destinationPortalTipos(fileProcessorProperties)).toEqual([
-			'numisdata164',
-			'numisdata165',
-		]);
+		const destinations = destinationPortalTipos(fileProcessorProperties);
+		// The floor the empty-case assertions below are read against: a mapper that
+		// returned nothing would satisfy every `toEqual([])` in this file.
+		expect(destinations.length).toBe(2);
+		expect(destinations).toEqual(['test164', 'test165']);
 	});
 
 	test('other processors in the same array are ignored', () => {

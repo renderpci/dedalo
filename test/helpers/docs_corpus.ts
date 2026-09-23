@@ -25,3 +25,26 @@ export function docsPages(): string[] {
 		.map((p) => `${DOCS_ROOT}/${p}`)
 		.sort();
 }
+
+/**
+ * Every FILE of the manual tree (not only pages): the gate that asks which of
+ * them git ignores needs the whole listing, and asking it here keeps the root
+ * in the one reviewable place this module exists to be.
+ */
+export function docsFiles(): string[] {
+	const glob = new Glob('**/*');
+	// Same walk options as docsPages — the header's claim about symlinks and
+	// dot-files is a property of this MODULE, and half a module honouring it is
+	// a false claim. It also happens to be the right answer for the caller that
+	// asks git which of these files are ignored: a dot-file can be ignored too.
+	return [
+		...glob.scanSync({
+			cwd: join(REPO_ROOT, DOCS_ROOT),
+			onlyFiles: true,
+			followSymlinks: true,
+			dot: true,
+		}),
+	]
+		.map((p) => `${DOCS_ROOT}/${p}`)
+		.sort();
+}

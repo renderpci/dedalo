@@ -27,6 +27,24 @@ import {pause} from '../../../core/common/js/utils/util.js'
 
 	let pause_time = 300
 
+	// wait_for_editor. The CKEditor service is created through
+	// dd_request_idle_callback (requestIdleCallback, timeout 1000 ms): on a
+	// loaded hosted runner the idle slot comes AFTER a fixed 300 ms pause and
+	// `component.text_editor[0]` was read as undefined — red on CI since
+	// 2026-09-21 while green on every developer machine. Readiness is polled,
+	// bounded: a missing editor is still a failure, just not a timing one.
+	const wait_for_editor = async function(component, max_ms = 8000) {
+		const started = Date.now()
+		while (Date.now() - started < max_ms) {
+			const service = component.text_editor?.[0]
+			if (service?.editor) {
+				return service
+			}
+			await pause(50)
+		}
+		throw new Error(`text editor not initialised after ${max_ms} ms (text_editor: ${JSON.stringify(component.text_editor?.length)})`)
+	}
+
 	// suite database guard. The map-of-grapes ontology (test480/test506/test507)
 	// is materialized ONLY into the suite database ('bun run test:db:setup');
 	// on any other database every build below dies in request.invalid_tipo and
@@ -112,12 +130,9 @@ describe(`COMPONENT_TEXT_AREA WITH COMPONENT_GEOLOCATION TEST`,  function() {
 	});
 
 	it(`key F2`, async function() {
+		this.timeout(10000)
 
-		const text_editor = component.text_editor
-
-		await pause(pause_time)
-
-		const service = text_editor[0]
+		const service = await wait_for_editor(component)
 		const editor = service.editor // ckeditor instance
 		console.log('editor:', editor);
 
@@ -184,12 +199,9 @@ describe(`COMPONENT_TEXT_AREA WITH COMPONENT_GEOLOCATION TEST`,  function() {
 	});
 
 	it(`key F2 again`, async function() {
+		this.timeout(10000)
 
-		const text_editor = component.text_editor
-
-		await pause(pause_time)
-
-		const service = text_editor[0]
+		const service = await wait_for_editor(component)
 		const editor = service.editor // ckeditor instance
 
 		editor.editing.view.document.fire(
@@ -336,12 +348,9 @@ describe(`COMPONENT_TEXT_AREA WITH COMPONENT_IMAGE TEST`,  function() {
 	});
 
 	it(`Set value: This is a text string `, async function() {
+		this.timeout(10000)
 
-		const text_editor = component.text_editor
-
-		await pause(pause_time)
-
-		const service = text_editor[0]
+		const service = await wait_for_editor(component)
 		const editor = service.editor // ckeditor instance
 
 		const str = 'This is a text string'
@@ -353,12 +362,9 @@ describe(`COMPONENT_TEXT_AREA WITH COMPONENT_IMAGE TEST`,  function() {
 	});
 
 	it(`key F2 again`, async function() {
+		this.timeout(10000)
 
-		const text_editor = component.text_editor
-
-		await pause(pause_time)
-
-		const service = text_editor[0]
+		const service = await wait_for_editor(component)
 		const editor = service.editor // ckeditor instance
 
 		editor.editing.view.document.fire(

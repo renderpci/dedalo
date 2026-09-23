@@ -329,18 +329,39 @@ describe('diffusion end-to-end publish (real plan → real matrix → scratch Ma
 			if (databaseName === null) throw new Error('availability probe did not set databaseName');
 			const plan = await getCompiledPlan(ELEMENT);
 			const realTable = plan.sections.find((s) => s.sectionTipo === SECTION)?.tableName;
-			if (realTable === undefined) return;
+			if (realTable === undefined) {
+				// Nothing to compare against — say so, and assert what WAS learned.
+				// A bare `return` here is a PASS that checked nothing (the vacuity
+				// census counts exactly this shape).
+				expect(
+					plan.sections.length,
+					'a plan with no sections cannot be spot-checked',
+				).toBeGreaterThan(0);
+				console.warn(
+					`oracle spot-check: the compiled plan names no table for ${SECTION} — not run`,
+				);
+				return;
+			}
 			const pool = getTargetPool(databaseName);
 			const scratch = await tableRows(SCRATCH_FRESH);
 			const ids = [...new Set(scratch.map((row) => String(row.section_id)))];
-			if (ids.length === 0) return;
+			if (ids.length === 0) {
+				expect(scratch, 'no scratch rows AND no ids is a publish that wrote nothing').toEqual([]);
+				console.warn('oracle spot-check: the scratch table published no section_id — not run');
+				return;
+			}
 			const placeholders = ids.map(() => '?').join(', ');
 			const real = (await pool.unsafe(
 				`SELECT * FROM \`${realTable}\` WHERE section_id IN (${placeholders}) ORDER BY section_id, lang`,
 				ids,
 			)) as Record<string, unknown>[];
 			if (real.length === 0) {
-				console.warn(`oracle spot-check: no old-engine rows for ids ${ids.join(',')} — skipped`);
+				// The old engine never published these ids. Assert the question was
+				// actually asked (the ids exist) before saying the answer is empty.
+				expect(ids.length, 'the spot-check must have asked about at least one id').toBeGreaterThan(
+					0,
+				);
+				console.warn(`oracle spot-check: no old-engine rows for ids ${ids.join(',')} — not run`);
 				return;
 			}
 			// Same (section_id, lang) key set for the ids both engines published.

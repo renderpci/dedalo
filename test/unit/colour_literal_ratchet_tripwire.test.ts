@@ -62,15 +62,18 @@
  * (drift + coherent + unmatched) is banked too. A retune cannot move a site out of that
  * one, and a shrink in either bank must be recorded by lowering it.
  *
- * THE SEED, MEASURED ON THIS TREE 2026-09-06, and recomputed on every run — no number
- * below is read from a file, so the derivation IS the gate:
- *   corpus   43 served documents (`entrypoints()`, compiled by `buildOne()`), 6028 rules,
- *            271 root-declared colour tokens carrying 393 distinct values, 1071 colour
- *            literals in all positions — of which 700 are the palette declaring itself
+ * THE SEED, RE-MEASURED ON THIS TREE 2026-09-23, and recomputed on every run — no number
+ * below is read from a file, so the derivation IS the gate. (The 2026-09-06 seed had
+ * drifted: nothing ASSERTS this prose, so its class breakdown had stopped summing to its
+ * own total — 27+38+5+71+141 = 282, never 274. Every figure here was printed by the
+ * gate's own classifier.)
+ *   corpus   43 served documents (`entrypoints()`, compiled by `buildOne()`), 6057 rules,
+ *            273 root-declared colour tokens carrying 397 distinct values, 1051 colour
+ *            literals in all positions — of which 738 are the palette declaring itself
  *            and 40 are grammar-exempt (url()/gradient/mask/filter);
- *   CSS      274 literals in a paint position = 27 HAS_TOKEN + 38 STALE_FB
- *            + 5 UNDECL_FB (drift: 119) + 71 coherent fallbacks + 141 unmatched;
- *   JS       775 files under client/ + tools/ minus lib/, 21 of them carrying a colour;
+ *   CSS      273 literals in a paint position = 27 HAS_TOKEN + 38 STALE_FB
+ *            + 5 UNDECL_FB (drift: 70) + 68 coherent fallbacks + 135 unmatched;
+ *   JS       776 files under client/ + tools/ minus lib/, 21 of them carrying a colour;
  *            74 literals in strings = 27 HAS_TOKEN + 6 STALE_FB + 0 UNDECL_FB (drift: 33)
  *            + 8 coherent + 33 unmatched.
  *   INCLUDES named colours (`white`, `black`, `green` — 16 CSS paint sites the audit's
@@ -131,8 +134,8 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { Glob } from 'bun';
 import { buildOne, entrypoints } from '../../scripts/build_css.ts';
+import { browserSources } from '../helpers/browser_corpus.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 
@@ -168,7 +171,7 @@ const BANK = {
 		/** `var(--undeclared, literal)` — the literal paints in every axis */
 		undeclared_fallback: 5,
 		/** OUTER budget: every literal in a paint position, drift or not (retune-stable) */
-		paint_literals: 274,
+		paint_literals: 273,
 	},
 	js: {
 		has_token: 27,
@@ -186,17 +189,17 @@ const BANK = {
 const FLOOR = {
 	/** served documents compiled — 43 today, and asserted equal to entrypoints() */
 	documents: 43,
-	/** CSS rules parsed across the corpus — 6028 today */
+	/** CSS rules parsed across the corpus — 6057 today */
 	rules: 5900,
-	/** root-declared custom properties resolving to a colour, in main.css — 271 today */
+	/** root-declared custom properties resolving to a colour, in main.css — 273 today */
 	token_names: 260,
-	/** distinct 8-bit RGBA values those tokens carry — 393 today */
+	/** distinct 8-bit RGBA values those tokens carry — 397 today */
 	token_values: 380,
-	/** literals on the right of a `--x:` — the palette defining itself — 700 today */
+	/** literals on the right of a `--x:` — the palette defining itself — 738 today */
 	token_declaration_literals: 650,
-	/** colour literals seen anywhere in the compiled corpus, any position — 1071 today */
+	/** colour literals seen anywhere in the compiled corpus, any position — 1051 today */
 	css_literals_seen: 1040,
-	/** JS files scanned under client/ + tools/, minus lib/ — 775 today */
+	/** JS files scanned under client/ + tools/, minus lib/ — 776 today */
 	js_files: 760,
 	/** of those, files carrying at least one colour literal — 21 today */
 	js_files_with_colour: 20,
@@ -867,14 +870,13 @@ for (const entry of SERVED) {
 }
 
 const jsCensus = emptyJsCensus();
-for (const dir of ['client', 'tools']) {
-	for (const file of new Glob(`${dir}/**/*.js`).scanSync({ cwd: REPO_ROOT })) {
-		// `lib/` is vendored third-party code: it is not ours to tokenize, and the audit
-		// excludes it. Everything else under client/ and tools/ ships to the browser.
-		if (file.includes('/lib/') || file.includes('node_modules')) continue;
-		jsCensus.files += 1;
-		classifyJsSource(readFileSync(join(REPO_ROOT, file), 'utf8'), file, mainPalette, jsCensus);
-	}
+// The served first-party browser trees, from the ONE place their roots are named
+// (test/helpers/browser_corpus.ts). Vendored `lib/` is not ours to tokenize, and
+// the helper already drops it along with vendor/ and minified bundles.
+const jsSources = browserSources();
+for (const file of jsSources) {
+	jsCensus.files += 1;
+	classifyJsSource(readFileSync(join(REPO_ROOT, file), 'utf8'), file, mainPalette, jsCensus);
 }
 
 const cssPaintLiterals =
@@ -930,6 +932,9 @@ describe('colour_literal_ratchet_tripwire', () => {
 	});
 
 	test('the JS corpus is the shipped client, and it is not empty', () => {
+		// the walk itself, floored where it is bound: an empty corpus is RED, not a
+		// green census over nothing
+		expect(jsSources.length).toBeGreaterThan(760);
 		expect(jsCensus.files).toBeGreaterThanOrEqual(FLOOR.js_files);
 		expect(jsCensus.files_with_colour).toBeGreaterThanOrEqual(FLOOR.js_files_with_colour);
 	});

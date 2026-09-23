@@ -239,7 +239,6 @@ describe.if(hasPhpCredentials())('maintenance widget catalog differential', () =
 	// keep bumping the live sequences the TS side reads — a guaranteed red that
 	// verifies nothing. The rest of this gate replays from fixtures fine.
 	test.if(hasLivePhpOracle())('the sequences_status eager value matches PHP byte-for-byte', () => {
-		if (!hasLivePhpOracle()) return;
 		const phpWidget = ((phpItem as { datalist?: Record<string, unknown>[] }).datalist ?? []).find(
 			(widget) => widget.id === 'sequences_status',
 		);

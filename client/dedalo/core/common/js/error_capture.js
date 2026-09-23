@@ -21,7 +21,7 @@
 *   - per-field truncation: msg 2000, source 1024, stack 6000 chars.
 *
 * It also RAISES THE PAGE-WIDE ERROR SIGNAL (window event
-* 'dedalo_error_signal', common/js/error_signal.js) so the error-report
+* 'dedalo_error_signal', declared in common/js/error_dispatch.js) so the error-report
 * launcher tab can unfold itself the moment something breaks. The signal
 * carries no payload beyond a coarse origin: the buffer stays local.
 *

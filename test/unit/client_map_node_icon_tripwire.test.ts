@@ -60,7 +60,10 @@ describe('system map node icons', () => {
 
 	test('every map node has an icon rule', () => {
 		const missing = nodes.filter((id) => !icons.includes(id));
-		expect(missing, `map node(s) with no .n_icon rule in ${LESS_PATH} (they would fall back to gear.svg)`).toEqual([]);
+		expect(
+			missing,
+			`map node(s) with no .n_icon rule in ${LESS_PATH} (they would fall back to gear.svg)`,
+		).toEqual([]);
 	});
 
 	test('every icon rule names a real map node', () => {
@@ -70,7 +73,9 @@ describe('system map node icons', () => {
 
 	test('each icon rule masks an svg that exists', () => {
 		const less = read(LESS_PATH);
-		const rules = [...less.matchAll(/\[data-node="([^"]+)"\]\s*\.n_icon\s*\{[^}]*?\.fn_add_mask\('([^']+)'\)/g)];
+		const rules = [
+			...less.matchAll(/\[data-node="([^"]+)"\]\s*\.n_icon\s*\{[^}]*?\.fn_add_mask\('([^']+)'\)/g),
+		];
 		expect(rules.length).toBe(icons.length);
 		for (const [, id, icon] of rules) {
 			const file = join(REPO_ROOT, 'client/dedalo/core/themes/default/icons', icon as string);
