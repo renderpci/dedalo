@@ -52,7 +52,7 @@ function declaredSignalName(): string {
 	expect(match, `${SIGNAL}: ERROR_SIGNAL must be declared as a single-quoted literal`).not.toBe(
 		null,
 	);
-	return (match as RegExpMatchArray)[1];
+	return (match as RegExpMatchArray)[1] as string;
 }
 
 describe('page-wide error signal', () => {
@@ -78,7 +78,7 @@ describe('page-wide error signal', () => {
 		expect(allow, `${DISPATCH}: REPORTABLE_ACTIONS must be a literal Set of actions`).not.toBe(
 			null,
 		);
-		const actions = (allow as RegExpMatchArray)[1]
+		const actions = ((allow as RegExpMatchArray)[1] as string)
 			.split(',')
 			.map((a) => a.trim().replace(/^'|'$/g, ''))
 			.filter(Boolean);
@@ -86,14 +86,7 @@ describe('page-wide error signal', () => {
 			'REPORTABLE_ACTIONS.has(action)',
 		);
 		// the actions that are NOT a defect the user could report
-		for (const action of [
-			'silent',
-			'csrf_retry',
-			'relogin',
-			'inline',
-			'no_access_page',
-			'modal',
-		]) {
+		for (const action of ['silent', 'csrf_retry', 'relogin', 'inline', 'no_access_page', 'modal']) {
 			expect(
 				actions,
 				`${DISPATCH}: '${action}' is not a defect worth unfolding the launcher for`,
@@ -114,9 +107,7 @@ describe('page-wide error signal', () => {
 		expect(src, `${LAUNCHER}: must listen for the signal`).toContain(
 			'window.addEventListener(ERROR_SIGNAL',
 		);
-		expect(src, `${LAUNCHER}: the alerted state is a class`).toContain(
-			"classList.add('alerted')",
-		);
+		expect(src, `${LAUNCHER}: the alerted state is a class`).toContain("classList.add('alerted')");
 		expect(src, `${LAUNCHER}: opening the tool must clear the alerted state`).toContain(
 			"classList.remove('alerted')",
 		);
