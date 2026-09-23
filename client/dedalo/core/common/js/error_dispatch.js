@@ -20,13 +20,22 @@
 * envelope's `notices[]` go through `handle_api_notice` / `handle_api_notices`,
 * the same policy table at severity 'warning' and never a page-level action —
 * the request succeeded, so nothing may take the page away from the user.
+*
+* And it DECLARES the page-wide error signal (ERROR_SIGNAL / signal_error,
+* below). That name lived in a module of its own until 2026-09-23, which put a
+* 48-line file on the cold-boot critical path for one CustomEvent and broke the
+* shrink-only boot budget (page_load_budget_native: 37 modules against 36). It
+* belongs here: this file is already on that path and is already one of the two
+* producers. The other, error_capture.js, cannot import anything by design and
+* repeats the name as a literal — client_error_signal.test.ts refuses the two
+* to drift. The only other consumer, the error-report launcher, is lazy and
+* imports the constant from here.
 */
 
 // imports
 	import {event_manager} from './event_manager.js'
 	import {ApiError, is_api_error} from './api_error.js'
 	import {resolve_error_policy} from './error_policy.js'
-	import {signal_error} from './error_signal.js'
 	import {
 		error_text,
 		render_error_toast,
@@ -36,6 +45,44 @@
 	} from './render_api_error.js'
 
 
+
+/**
+* ERROR_SIGNAL
+* The ONE page-wide "something went wrong" signal: a window CustomEvent any
+* observer may listen to. Its single consumer today is the error-report
+* launcher tab (common/js/error_report_launcher.js), which unfolds itself so a
+* user who just saw a failure can report it without hunting for the launcher.
+*
+* Two producers, both of which the user actually experiences:
+*   - common/js/error_capture.js — an uncaught JS error / unhandled rejection.
+*     It is a side-effect-only module that installs its listeners before any
+*     other application module evaluates and declares no imports ON PURPOSE, so
+*     it repeats this name as a literal (gated).
+*   - this file — an ApiError that was SHOWN (toast, page panel). Silent
+*     policies and a recovered relogin are not failures the user can describe,
+*     so they never raise the signal.
+*
+* It is a SIGNAL, not a channel: it carries no error payload beyond a coarse
+* origin and code. The error data itself stays where it already lives — the
+* bounded window.dedalo_js_errors buffer that tool_error_report reads when the
+* user explicitly asks to report a problem. Nothing here transmits or stores.
+*/
+export const ERROR_SIGNAL = 'dedalo_error_signal'
+
+/**
+* SIGNAL_ERROR
+* Raise the signal. Never throws: a page that is already failing must not fail
+* twice because the observer machinery did.
+* @param {object} detail {origin:'js'|'api', code:string|null}
+* @return {void}
+*/
+export const signal_error = (detail) => {
+	try {
+		window.dispatchEvent(new CustomEvent(ERROR_SIGNAL, {detail: detail || {}}))
+	} catch (e) {
+		// an observer must never break the page it observes
+	}
+}//end signal_error
 
 // The policy actions that mean "a defect the user could usefully report" — the
 // ONLY ones that raise the page-wide error signal. See handle_api_error.
@@ -155,7 +202,7 @@ export const handle_api_error = async (api_error, ctx = {}) => {
 	const entry		= resolve_error_policy(api_error)
 	const action	= ctx.silent===true ? 'silent' : entry.action
 
-	// page-wide error signal (error_signal.js): it unfolds the error-report
+	// page-wide error signal (declared above): it unfolds the error-report
 	// launcher, so it must mean "a DEFECT worth reporting", not merely "the user
 	// saw something". An allowlist, because the wrong half is the dangerous one:
 	// 'inline' is a validation message about the user's own typing, and

@@ -26,7 +26,8 @@
 * menu-less — because a once-a-month launcher lives on habit.
 *
 * ALERTED STATE: the tab listens to the page-wide error signal
-* (common/js/error_signal.js — an uncaught JS error, or an ApiError the user was
+* (ERROR_SIGNAL, declared in common/js/error_dispatch.js — an uncaught JS
+* error, or an ApiError the user was
 * actually shown) and UNFOLDS, icon out, so the launcher is obvious exactly when
 * it is needed. It folds back on the FIRST HOVER OR FOCUS — the cue has been
 * seen, and an unfolded tab sits over the inspector rail's scrollbar gutter, so
@@ -43,7 +44,7 @@
 * (.error_report_edge_tab.alerted), never an inline style.
 */
 
-import {ERROR_SIGNAL} from './error_signal.js'
+import {ERROR_SIGNAL} from './error_dispatch.js'
 
 const BUTTON_ID = 'error_report_floating_launcher'
 
