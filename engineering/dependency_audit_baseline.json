@@ -1,30 +1,8 @@
 {
-	"generated": "2026-09-01",
+	"generated": "2026-09-23",
 	"note": "Accepted (known, triaged) dependency advisories. Every entry carries the reason it is accepted rather than fixed (validated by scripts/lib/reason_validator.ts; a reason-less entry is RED). A NEW advisory fails CI; a vanished one only prints a nudge (see scripts/ci/audit.ts). Regenerate with `bun run scripts/ci/audit.ts --update`; accepting an advisory the baseline does not hold (compared by KEY, so a swap is a regression; a missing baseline makes every advisory new; a conflicted one is refused, never compared against nothing) REFUSES without `--allow-regression --reason \"<text>\"`, and the reason is written here, per entry.",
 	"accepted": {
-		".": [
-			{
-				"id": 1112706,
-				"severity": "low",
-				"package": "diff",
-				"title": "jsdiff has a Denial of Service vulnerability in parsePatch and applyPatch",
-				"reason": "Transitive only, through mocha, a devDependency: the diff library is loaded by the browser-client test runner and never by the engine, and devDependencies are excluded from the production image and from the update quarantine. A fixed release is published upstream and the mocha bump is tracked under P1-23 (GATE-53). That this package is OUTSIDE the production closure is not prose: test/unit/production_import_tripwire.test.ts walks bun.lock from every `dependencies` entry and reds if a package this baseline accepts is ever reachable."
-			},
-			{
-				"id": 1113686,
-				"severity": "high",
-				"package": "serialize-javascript",
-				"title": "Serialize JavaScript is Vulnerable to RCE via RegExp.flags and Date.prototype.toISOString()",
-				"reason": "Transitive only, through mocha, a devDependency: serialize-javascript is loaded by the browser-client test runner and never by the engine, and devDependencies are excluded from the production image and from the update quarantine. A fixed release is published upstream and the mocha bump is tracked under P1-23 (GATE-53). That this package is OUTSIDE the production closure is not prose: test/unit/production_import_tripwire.test.ts walks bun.lock from every `dependencies` entry and reds if a package this baseline accepts is ever reachable."
-			},
-			{
-				"id": 1119440,
-				"severity": "moderate",
-				"package": "serialize-javascript",
-				"title": "Serialize JavaScript has CPU Exhaustion Denial of Service via crafted array-like objects",
-				"reason": "Transitive only, through mocha, a devDependency: serialize-javascript is loaded by the browser-client test runner and never by the engine, and devDependencies are excluded from the production image and from the update quarantine. A fixed release is published upstream and the mocha bump is tracked under P1-23 (GATE-53). That this package is OUTSIDE the production closure is not prose: test/unit/production_import_tripwire.test.ts walks bun.lock from every `dependencies` entry and reds if a package this baseline accepts is ever reachable."
-			}
-		],
+		".": [],
 		"publication/server_api/v2": [],
 		"publication/site_builder": [],
 		"publication/site_builder/templates/basic": []
