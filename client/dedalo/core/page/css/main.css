@@ -11967,7 +11967,7 @@ dd-modal:has(.tool_header) {
 .login > .content_data > .login_form > .login_step > .login_user_chip > .login_install_host {
   flex: 0 0 auto;
   font-size: 0.8em;
-  color: var(--color_grey_9);
+  color: var(--color_grey_8);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

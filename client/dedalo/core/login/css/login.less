@@ -255,7 +255,13 @@
 				>.login_install_host {
 					flex: 0 0 auto;
 					font-size: 0.8em;
-					color: @color_grey_9;
+					// a11y: @color_grey_9 (#aaa) read 2.2:1 on the panel's #f6f6f6 —
+					// a serious axe color-contrast violation on the FIRST surface a
+					// curator meets. @color_grey_8 is the repo's secondary ink and
+					// the token whose header already states it is AA on every light
+					// grey (4.86:1 here); the host stays quieter than the name
+					// (@color_grey_5) without becoming unreadable.
+					color: @color_grey_8;
 					overflow: hidden;
 					text-overflow: ellipsis;
 					white-space: nowrap;
