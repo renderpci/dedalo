@@ -25,8 +25,18 @@ export interface VacuitySite {
 /** Anything that makes a test body actually assert something. */
 const ASSERTION = /\bexpect\s*\(|\bexpectTypeOf\s*\(|\.toThrow\b|assert[A-Z]\w*\s*\(/;
 
-/** The opening of a test body we care about. `test.skip`/`todo` are the honest forms. */
-const TEST_OPEN = /\b(?:test|it)\s*(?:\.(?:only|each\([^)]*\)))?\s*\(/;
+/**
+ * The opening of a test body we care about. `test.skip`/`todo` are the honest
+ * forms.
+ *
+ * NOT a method call: `\b` alone matched `regex.test(value)` and `node.it(...)`,
+ * which opened a phantom body over whatever followed — every guard clause in
+ * the parsing helpers underneath a `.test(` call was then counted as a test
+ * returning before it asserted. A leading `.` (or an identifier character)
+ * disqualifies the match; a bare `test(`, `it(`, `test.only(`, `test.each(…)(`
+ * at the start of an expression still opens one.
+ */
+const TEST_OPEN = /(?:^|[^.\w$])(?:test|it)\s*(?:\.(?:only|each\([^)]*\)))?\s*\(/;
 
 /**
  * Bare `return;` (or `return` with nothing but whitespace/comment after) — the
@@ -48,7 +58,23 @@ export function vacuitySites(repoRoot: string): VacuitySite[] {
 		let depth = 0;
 		let inBody = false;
 		let asserted = false;
+		let inComment = false;
 		for (const [index, raw] of lines.entries()) {
+			// PROSE IS NOT CODE. A header sentence like "a rule knows it (leg 5)"
+			// matched TEST_OPEN and opened a phantom body over the parsing helpers
+			// below it, whose guard clauses were then counted as tests returning
+			// before they asserted. Comment lines are skipped outright — a `test(`
+			// inside a comment opens nothing and a `return;` inside one is not code.
+			const trimmed = raw.trim();
+			const wasInComment = inComment;
+			if (inComment) {
+				if (trimmed.includes('*/')) inComment = false;
+			} else if (/^\/\*/.test(trimmed) && !trimmed.includes('*/')) {
+				inComment = true;
+			}
+			if (wasInComment || inComment || trimmed.startsWith('//') || trimmed.startsWith('*')) {
+				continue;
+			}
 			if (!inBody && TEST_OPEN.test(raw)) {
 				inBody = true;
 				asserted = false;
@@ -81,10 +107,14 @@ export function emptinessAssertions(repoRoot: string): VacuitySite[] {
 	for (const match of new Glob('**/*.test.ts').scanSync({ cwd: join(repoRoot, 'test') })) {
 		const file = relative(repoRoot, join(repoRoot, 'test', match));
 		const source = readFileSync(join(repoRoot, file), 'utf8');
-		// A floor is any assertion that something was actually counted.
-		const hasFloor = /toBeGreaterThan(?:OrEqual)?\s*\(|\.length\s*\)\s*\.toBe\s*\(\s*[1-9]/.test(
-			source,
-		);
+		// A floor is any assertion that something was actually counted —
+		// INCLUDING `toHaveLength(n)` with n > 0, which is the same statement in
+		// bun's own vocabulary and was being missed, so a gate that proves its
+		// corpus with `expect(regions).toHaveLength(2)` counted as floorless.
+		const hasFloor =
+			/toBeGreaterThan(?:OrEqual)?\s*\(|\.length\s*\)\s*\.toBe\s*\(\s*[1-9]|toHaveLength\s*\(\s*[1-9]/.test(
+				source,
+			);
 		if (hasFloor) continue;
 		for (const [index, raw] of source.split('\n').entries()) {
 			if (/\.toEqual\(\s*\[\s*\]\s*\)/.test(raw)) {
@@ -93,4 +123,16 @@ export function emptinessAssertions(repoRoot: string): VacuitySite[] {
 		}
 	}
 	return found.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
+}
+
+/**
+ * How many `*.test.ts` files the two censuses above walk.
+ *
+ * The anti-vacuity probe used to floor the number of OFFENDING files, which is
+ * a ratchet read backwards: both counts are meant to fall to zero, so the day
+ * the suite gets clean the probe that proves the walk happened goes red. The
+ * corpus size is the honest witness — it only grows.
+ */
+export function testFilesScanned(repoRoot: string): number {
+	return [...new Glob('**/*.test.ts').scanSync({ cwd: join(repoRoot, 'test') })].length;
 }

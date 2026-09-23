@@ -28,7 +28,11 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { emptinessAssertions, vacuitySites } from '../../scripts/lib/vacuity_census.ts';
+import {
+	emptinessAssertions,
+	testFilesScanned,
+	vacuitySites,
+} from '../../scripts/lib/vacuity_census.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const BUDGET_PATH = join(REPO_ROOT, 'engineering', 'gate_vacuity_budget.json');
@@ -52,9 +56,12 @@ describe('a gate must be able to fail', () => {
 		// This file asserts emptiness-shaped things itself. If the walker returned
 		// nothing, every rule below would pass while reading zero bytes — the exact
 		// defect being gated. So the scan must prove it saw the tree.
+		// The CORPUS is the witness, not the offender set: both counts above are
+		// meant to fall to zero, so flooring the offenders would turn a clean
+		// suite into a red gate. The number of test files only grows.
+		expect(testFilesScanned(REPO_ROOT)).toBeGreaterThan(400);
 		const scanned = new Set(sites.map((site) => site.file));
-		expect(scanned.size).toBeGreaterThan(50);
-		expect(sites.length).toBeGreaterThan(100);
+		expect(scanned.size).toBeGreaterThan(20);
 	});
 
 	test('silent early returns may only SHRINK', () => {

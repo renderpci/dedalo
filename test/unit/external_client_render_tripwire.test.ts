@@ -180,20 +180,33 @@ describe('external client render — a degraded source is visible', () => {
 // Rule 2, the visual half — every state, and no two that look the same
 // ---------------------------------------------------------------------------
 
-/** `&.state_x, &.state_y { … }` → declarations, per state. */
+/**
+ * `&.state_x, &.state_y { … }` → declarations, per state.
+ *
+ * ACCUMULATED across blocks, never overwritten. The sheet declares each state
+ * TWICE: once in the light body and once in the `:root[data-theme="dark"]`
+ * twin, where three alarm states deliberately share one colour family and are
+ * told apart by the border style the light body already gave them. A parser
+ * that let the last block win read only the dark half and reported those
+ * states as identical — a look the user never sees, since the border styles
+ * cascade through untouched.
+ */
 function parseStateRules(less: string): Map<string, string> {
-	const rules = new Map<string, string>();
+	const collected = new Map<string, string[]>();
 	const blocks = less.matchAll(/((?:\s*&\.state_[a-z_]+\s*,?)+)\{([^}]*)\}/g);
 	for (const block of blocks) {
 		const declarations = (block[2] ?? '')
 			.split(';')
 			.map((line) => line.replace(/\/\/.*$/, '').trim())
-			.filter((line) => line.length > 0)
-			.sort()
-			.join(';');
+			.filter((line) => line.length > 0);
 		for (const selector of (block[1] ?? '').matchAll(/&\.state_([a-z_]+)/g)) {
-			rules.set(selector[1] as string, declarations);
+			const state = selector[1] as string;
+			collected.set(state, [...(collected.get(state) ?? []), ...declarations]);
 		}
+	}
+	const rules = new Map<string, string>();
+	for (const [state, declarations] of collected) {
+		rules.set(state, [...declarations].sort().join(';'));
 	}
 	return rules;
 }
