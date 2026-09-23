@@ -23,8 +23,10 @@
 					max-height: 100%;
 					// reserve space while the lazy-loaded image is still loading, so the
 					// wrapper does not collapse and then jump on load (prevents layout
-					// shift). Matches component_svg / component_pdf behavior.
-					min-height: var(--media_min_height);
+					// shift). Capped at the content_value height (100%): a section css
+					// height or a user resize below --media_min_height must shrink the
+					// image, not clip it. Matches component_svg.
+					min-height: min(var(--media_min_height), 100%);
 					width: 100%;
 					position: relative;
 					display: flex;
@@ -130,3 +132,18 @@
 }//end .component_image
 
 @import (once) './vector_editor_tools';
+
+// layout.less unsets the media content_value height below break_point_1; the
+// image needs a definite height so .image_container's 100% sizes resolve (else
+// the image lays out at its intrinsic size and the 404px cap clips it).
+// Specificity (0,5,0): beats layout (0,4,0), loses to a section css height
+// (0,6,0) and to an inline user resize. Applies in fullscreen too: below
+// break_point_1 the wrapper is display:block, so fullscreen gives content_value
+// no stretched height to fill. Matches component_svg.
+.component_image.edit.media_wrapper {
+	>.content_data >.content_value {
+		@media screen and (max-width: @width_break_point_1) {
+			height: var(--media_min_height);
+		}
+	}
+}
