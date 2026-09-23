@@ -4069,7 +4069,8 @@ class web_data {
 				return $response;
 			}
 
-			$ar_free_nodes = array();
+			$ar_free_nodes	= array();
+			$skipped		= 0; // rows discarded as false positives (match only inside tags)
 			foreach ($rows_data->result as $key => $obj_value) {
 
 				$av_section_id = $obj_value['section_id'];
@@ -4095,6 +4096,12 @@ class web_data {
 				$FIELD_TRANSCRIPTION = FIELD_TRANSCRIPTION;
 				unset($free_node->{$FIELD_TRANSCRIPTION});
 
+				# Skip false positives: SQL FULLTEXT matched only inside tags (masked in fragments search)
+				if (empty($free_node->fragments)) {
+					$skipped++;
+					continue;
+				}
+
 				if(SHOW_DEBUG===true) {
 					#dump($free_node, ' free_node ++ '.to_string());
 				}
@@ -4105,7 +4112,9 @@ class web_data {
 			# Add vars for pagination
 			$response->page_number 	 = $options->page_number;
 			$response->rows_per_page = $options->rows_per_page;
-			$response->total 		 = $rows_data->total;
+			// total: SQL FULLTEXT count minus rows skipped in this page, to keep coherence with result
+			$response->total 		 = max(0, (int)$rows_data->total - $skipped);
+			$response->skipped 		 = $skipped;
 
 			$response->result 	= $ar_free_nodes;
 			$response->msg 		= 'Ok. Request free_search done successfully';
