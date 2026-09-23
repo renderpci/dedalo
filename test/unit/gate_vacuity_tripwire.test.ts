@@ -60,8 +60,24 @@ describe('a gate must be able to fail', () => {
 		// meant to fall to zero, so flooring the offenders would turn a clean
 		// suite into a red gate. The number of test files only grows.
 		expect(testFilesScanned(REPO_ROOT)).toBeGreaterThan(400);
-		const scanned = new Set(sites.map((site) => site.file));
-		expect(scanned.size).toBeGreaterThan(20);
+		// NO floor on the offender set. `scanned.size > 20` was left here in an
+		// earlier pass and is the same backwards ratchet in miniature: the
+		// burn-down is meant to take the offenders to zero, and this gate would
+		// go red on that success. A walker that degrades PARTIALLY is caught by
+		// the banking test below, which requires the count to EQUAL the banked
+		// number — 165 collapsing to 30 fails there, shrink-only or not.
+
+		// What IS asserted about the sites: every one is REAL. Each names a file
+		// that exists and a line that still holds the text it reports, so a census
+		// that invented a row, or drifted by a line after an edit, is red here.
+		// An empty suite asserts nothing in this loop and that is correct — the
+		// corpus floor above is what proves the walk happened.
+		for (const site of sites) {
+			const line = readFileSync(join(REPO_ROOT, site.file), 'utf8').split('\n')[site.line - 1];
+			expect(line?.trim(), `${site.file}:${site.line} is not where the census says`).toBe(
+				site.text,
+			);
+		}
 	});
 
 	test('silent early returns may only SHRINK', () => {

@@ -35,8 +35,19 @@ const ASSERTION = /\bexpect\s*\(|\bexpectTypeOf\s*\(|\.toThrow\b|assert[A-Z]\w*\
  * returning before it asserted. A leading `.` (or an identifier character)
  * disqualifies the match; a bare `test(`, `it(`, `test.only(`, `test.each(…)(`
  * at the start of an expression still opens one.
+ *
+ * CONDITIONAL REGISTRATIONS COUNT. `test.if(cond)(…)` and its siblings were in
+ * no version of this pattern, so 212 registrations across test/ could not open
+ * a body at all — a bare `return;` in any of them was invisible to this census
+ * and a PASS to bun. One such body (widgets_differential's sequences_status,
+ * which guards on hasLivePhpOracle() twice) was only ever counted because a
+ * PROSE comment above it opened a phantom body by accident; fixing the prose
+ * bug exposed the real hole rather than creating it.
  */
-const TEST_OPEN = /(?:^|[^.\w$])(?:test|it)\s*(?:\.(?:only|each\([^)]*\)))?\s*\(/;
+const MODIFIER_ARGUMENT = '\\((?:[^()]|\\([^()]*\\))*\\)';
+const TEST_OPEN = new RegExp(
+	`(?:^|[^.\\w$])(?:test|it)\\s*(?:\\.(?:only|skip|todo|failing|(?:each|if|skipIf|todoIf|failingIf)${MODIFIER_ARGUMENT}))?\\s*\\(`,
+);
 
 /**
  * Bare `return;` (or `return` with nothing but whitespace/comment after) — the
