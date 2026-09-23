@@ -218,7 +218,14 @@ beforeAll(async () => {
 	data_manager = ((await import(DATA_MANAGER_PATH)) as { data_manager: DataManager }).data_manager;
 });
 
-afterAll(() => {
+afterAll(async () => {
+	// FORGET THE FAKE CONNECTION FIRST. `local_db_promise` is module state of a
+	// module every test file shares; left memoized, the fake store below (whose
+	// get() answers `{ok:true}` for ANY key) serves the next file's reads as
+	// cache hits — client_request_coalescing_tripwire went red on the hosted
+	// tier that way (2026-09-23). Closed while the fake indexedDB is still
+	// installed, so the close reaches the fake and nothing dangles.
+	await data_manager.delete_whole_local_db().catch(() => {});
 	for (const key of Object.keys(saved)) {
 		if (saved[key] === undefined) delete globals[key];
 		else globals[key] = saved[key];

@@ -50,7 +50,10 @@ const DATA_MANAGER_PATH = join(CLIENT_COMMON, 'data_manager.js');
 type Envelope = { ok: boolean; result?: unknown; error?: unknown };
 type DataManager = {
 	request: (options: Record<string, unknown>) => Promise<Envelope>;
+	get_local_db_data: (id: string, table: string) => Promise<unknown>;
 };
+/** The real localdb reader, put back in afterAll. */
+let saved_get_local_db_data: DataManager['get_local_db_data'] | null = null;
 
 const globals = globalThis as unknown as Record<string, unknown>;
 const saved: Record<string, unknown> = {};
@@ -184,6 +187,18 @@ beforeAll(async () => {
 	}));
 
 	data_manager = ((await import(DATA_MANAGER_PATH)) as { data_manager: DataManager }).data_manager;
+	// THE LOCALDB LAYER IS OUT OF SCOPE — and out of reach. `data_manager` memoizes
+	// its IndexedDB connection at module level (`local_db_promise`), and the module
+	// is shared by every test file of the process: a file that installed a FAKE
+	// indexedDB (client_local_db_singleton_tripwire's answers `{ok:true}` for any
+	// key) and ran before this one can leave that connection memoized past its own
+	// teardown, after which every read here is a cache HIT and never reaches the
+	// stubbed fetch — measured on the hosted hermetic tier 2026-09-23: six of seven
+	// cases red with `fetch_calls.length` 0, green locally in every order tried.
+	// This gate is about the in-flight registry, so the reader is stubbed to a
+	// MISS for the file's lifetime, whatever the process carried in.
+	saved_get_local_db_data = data_manager.get_local_db_data;
+	data_manager.get_local_db_data = async () => false;
 
 	const api_error_module = (await import(join(CLIENT_COMMON, 'api_error.js'))) as {
 		ApiError: new (...args: unknown[]) => Error;
@@ -198,6 +213,7 @@ afterAll(() => {
 	// below are removed throws into a stranger's test (see pending_timers).
 	// clearTimeout on an already-fired handle is a no-op, so this is total.
 	for (const handle of pending_timers.splice(0)) clearTimeout(handle);
+	if (saved_get_local_db_data !== null) data_manager.get_local_db_data = saved_get_local_db_data;
 	for (const key of Object.keys(saved)) {
 		if (saved[key] === undefined) delete globals[key];
 		else globals[key] = saved[key];
