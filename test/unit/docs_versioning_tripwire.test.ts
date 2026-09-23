@@ -83,12 +83,13 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { Glob } from 'bun';
 import {
 	excludedDocsPatterns,
 	isExcluded,
 	publishedPagePaths,
 } from '../../scripts/lib/docs_paths.ts';
+import { docsFiles } from '../helpers/docs_corpus.ts';
+import { shippedTextFiles } from '../helpers/shipped_text_corpus.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const DOCS_DIR = join(REPO_ROOT, 'docs');
@@ -190,25 +191,19 @@ describe('docs versioning: the published layout stays coherent', () => {
 		// docs/ itself is exempt: a page may quote the published URL as example
 		// data (docs/core/importing_data.md uses it as a sample IRI), and internal
 		// navigation is relative anyway.
-		const roots = ['client', 'tools', 'src', 'scripts', 'publication', 'deploy'];
+		const shipped = shippedTextFiles();
 		const offenders: string[] = [];
 		let scanned = 0;
-		for (const root of roots) {
-			const dir = join(REPO_ROOT, root);
-			if (!existsSync(dir)) continue;
-			for (const file of new Glob('**/*.{ts,js,mjs,json,md}').scanSync({ cwd: dir })) {
-				if (file.includes('node_modules/')) continue;
-				scanned++;
-				const rel = join(root, file);
-				const text = readFileSync(join(dir, file), 'utf8');
-				// A flat link is one whose next segment is not a version directory.
-				for (const m of text.matchAll(/dedalo\.dev\/docs\/(?!v\d+\/)([A-Za-z0-9_\-/#.]*)/g)) {
-					// Bare `…/docs/` or `…/docs` with no path is the site root, which
-					// the latest-pointer redirect handles for ever. Only a deep flat
-					// path is version-ambiguous.
-					if (m[1] === '' || m[1] === '"') continue;
-					offenders.push(`${rel}: dedalo.dev/docs/${m[1]}`);
-				}
+		for (const rel of shipped) {
+			scanned++;
+			const text = readFileSync(join(REPO_ROOT, rel), 'utf8');
+			// A flat link is one whose next segment is not a version directory.
+			for (const m of text.matchAll(/dedalo\.dev\/docs\/(?!v\d+\/)([A-Za-z0-9_\-/#.]*)/g)) {
+				// Bare `…/docs/` or `…/docs` with no path is the site root, which
+				// the latest-pointer redirect handles for ever. Only a deep flat
+				// path is version-ambiguous.
+				if (m[1] === '' || m[1] === '"') continue;
+				offenders.push(`${rel}: dedalo.dev/docs/${m[1]}`);
 			}
 		}
 		// Corpus floor: a verdict of "no offenders" is worthless if the scan read
@@ -289,11 +284,7 @@ describe('docs versioning: the published layout stays coherent', () => {
 		// someone remembers this gate exists.
 		const ignored = Bun.spawnSync(['git', 'check-ignore', '--stdin'], {
 			cwd: REPO_ROOT,
-			stdin: Buffer.from(
-				[...new Glob('**/*').scanSync({ cwd: DOCS_DIR, onlyFiles: true })]
-					.map((f) => `docs/${f}`)
-					.join('\n'),
-			),
+			stdin: Buffer.from(docsFiles().join('\n')),
 		});
 		const ignoredDocs = ignored.stdout
 			.toString()

@@ -102,9 +102,9 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { Glob } from 'bun';
 import { buildOne, entrypoints } from '../../scripts/build_css.ts';
 import { libRoot } from '../../src/core/client_libs/registry.ts';
+import { browserSources } from '../helpers/browser_corpus.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 
@@ -741,10 +741,12 @@ const sheets: Sheet[] = await Promise.all(
 	ordered.map(async (file) => ({ file, css: (await buildOne(file)).css })),
 );
 
-/** Served JS: a token read from `getComputedStyle` or a shadow-DOM sheet is a consumer too. */
-const jsFiles = [...new Glob('{client,tools}/**/*.js').scanSync({ cwd: REPO_ROOT })].filter(
-	(f) => !f.includes('/lib/') && !f.includes('node_modules'),
-);
+/**
+ * Served JS: a token read from `getComputedStyle` or a shadow-DOM sheet is a
+ * consumer too. The roots come from the ONE place that names them
+ * (test/helpers/browser_corpus.ts), which already drops vendored `lib/`.
+ */
+const jsFiles = browserSources();
 const jsText = jsFiles.map((f) => readFileSync(join(REPO_ROOT, f), 'utf8')).join('\n');
 
 const corpus = new Corpus(sheets, jsText);

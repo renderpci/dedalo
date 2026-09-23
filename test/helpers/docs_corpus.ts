@@ -25,3 +25,15 @@ export function docsPages(): string[] {
 		.map((p) => `${DOCS_ROOT}/${p}`)
 		.sort();
 }
+
+/**
+ * Every FILE of the manual tree (not only pages): the gate that asks which of
+ * them git ignores needs the whole listing, and asking it here keeps the root
+ * in the one reviewable place this module exists to be.
+ */
+export function docsFiles(): string[] {
+	const glob = new Glob('**/*');
+	return [...glob.scanSync({ cwd: join(REPO_ROOT, DOCS_ROOT), onlyFiles: true })]
+		.map((p) => `${DOCS_ROOT}/${p}`)
+		.sort();
+}
