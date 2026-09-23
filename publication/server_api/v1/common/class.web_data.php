@@ -7,6 +7,7 @@ $root_dir = dirname(__FILE__, 2);
 // includes server api
 include(dirname(__FILE__).'/class.ts_term.php');
 include(dirname(__FILE__).'/class.indexation_node.php');
+include_once(dirname(__FILE__).'/class.tags_mask.php');
 include(dirname(__FILE__).'/class.free_node.php');
 include(dirname(__FILE__).'/class.full_node.php');
 include(dirname(__FILE__).'/class.video_view_data.php');
@@ -419,6 +420,7 @@ class web_data {
 					$sql_options->sql_fullselect			= false; // default false
 					$sql_options->section_id				= false;
 					$sql_options->sql_filter				= ''; 	// publicacion = 'si'
+					$sql_options->ignore_tags				= true; // bool. If true, LIKE filters on tagged text columns ignore tag contents
 					$sql_options->is_literal				= false; // default is false
 					$sql_options->lang						= null;	// WEB_CURRENT_LANG_CODE;
 					$sql_options->order						= '`id` ASC';
@@ -634,7 +636,7 @@ class web_data {
 					$strQuery .= PHP_EOL . $sql_options->sql_fullselect;
 
 					# WHERE
-					$strQuery .= PHP_EOL . self::build_sql_where($sql_options->lang, $sql_options->sql_filter);
+					$strQuery .= PHP_EOL . self::build_sql_where($sql_options->lang, $sql_options->sql_filter, $sql_options->ignore_tags);
 
 				}else{
 
@@ -651,7 +653,7 @@ class web_data {
 						$strQuery .= PHP_EOL . self::build_sql_from($table);
 
 						# WHERE
-						$strQuery .= PHP_EOL . self::build_sql_where($sql_options->lang, $sql_options->sql_filter);
+						$strQuery .= PHP_EOL . self::build_sql_where($sql_options->lang, $sql_options->sql_filter, $sql_options->ignore_tags);
 
 						# GROUP
 						if(!empty($sql_options->group)) {
@@ -1403,9 +1405,13 @@ class web_data {
 
 		/**
 		* BUILD_SQL_WHERE
+		* @param string|null $lang
+		* @param string|null $sql_filter
+		* @param bool $ignore_tags
+		*	If true, LIKE sentences on tagged text columns ignore tag contents. See mask_tags_sql_filter
 		* @return string $sql
 		*/
-		private static function build_sql_where($lang, $sql_filter) {
+		private static function build_sql_where(?string $lang, ?string $sql_filter, bool $ignore_tags=true) : string {
 
 			// $sql  = '';
 			// $sql .= 'WHERE section_id IS NOT NULL';
@@ -1434,6 +1440,11 @@ class web_data {
 					if($sql_filter===PUBLICATION_FILTER_SQL) {
 						$ar_parts[] = $sql_filter;
 					}else{
+						// Tagged text columns (transcriptions): LIKE operands are masked to
+						// avoid false positives from tag payloads. See mask_tags_sql_filter
+						if ($ignore_tags===true) {
+							$sql_filter = self::mask_tags_sql_filter($sql_filter);
+						}
 						$sql_filter_clean = ( substr($sql_filter, 0, 1)==='(' && substr($sql_filter, -1)===')' )
 							? trim($sql_filter)
 							: '('.trim($sql_filter).')';
@@ -1458,6 +1469,202 @@ class web_data {
 
 			return $sql;
 		}//end build_sql_where
+
+
+
+		/**
+		* GET_TAGGED_TEXT_FIELDS
+		* Columns whose stored text contains transcription tags. Defined by the publication
+		* config constant TAGGED_TEXT_FIELDS when present, else the transcription field alone
+		* @return array
+		*/
+		private static function get_tagged_text_fields() : array {
+
+			if (defined('TAGGED_TEXT_FIELDS')) {
+				// a comma separated string is accepted as well as an array
+				$ar_fields = is_string(TAGGED_TEXT_FIELDS)
+					? explode(',', TAGGED_TEXT_FIELDS)
+					: (array)TAGGED_TEXT_FIELDS;
+			}else{
+				$ar_fields = defined('FIELD_TRANSCRIPTION')
+					? [FIELD_TRANSCRIPTION]
+					: [];
+			}
+
+			// normalize. SQL column names are case insensitive
+			return array_map(function($field){
+				return strtolower(trim((string)$field));
+			}, $ar_fields);
+		}//end get_tagged_text_fields
+
+
+
+		/**
+		* GET_SQL_LITERAL_SPANS
+		* Scan a SQL fragment and return the byte ranges [start, end) occupied by string
+		* literals, so that rewrites can skip them.
+		* Back quoted identifiers are consumed by the scanner (to keep it in sync when they
+		* contain quotes) but not returned, as they are code and not data.
+		* Doubled quotes ('') and backslash escapes are honored (default sql_mode).
+		* @param string $sql
+		* @return array|null Array of [start, end] ranges, or null if a quote is not closed
+		*/
+		private static function get_sql_literal_spans( string $sql ) : ?array {
+
+			$ar_spans	= [];
+			$len		= strlen($sql);
+			$i			= 0;
+
+			while ($i < $len) {
+
+				$quote = $sql[$i];
+				if ($quote!=="'" && $quote!=='"' && $quote!=='`') {
+					$i++;
+					continue;
+				}
+
+				$start	= $i;
+				$closed	= false;
+				$i++;
+				while ($i < $len) {
+					$current = $sql[$i];
+					// backslash escape (not applicable to back quoted identifiers)
+					if ($current==='\\' && $quote!=='`') {
+						$i += 2;
+						continue;
+					}
+					if ($current===$quote) {
+						// doubled quote inside the literal ('' or "" or ``)
+						if (($i+1) < $len && $sql[$i+1]===$quote) {
+							$i += 2;
+							continue;
+						}
+						$i++;
+						$closed = true;
+						break;
+					}
+					$i++;
+				}
+
+				if ($closed===false) {
+					return null; // unbalanced quotes: caller must not rewrite
+				}
+
+				// back quoted identifiers are consumed, but are not literals
+				if ($quote!=='`') {
+					$ar_spans[] = [$start, $i];
+				}
+			}
+
+			return $ar_spans;
+		}//end get_sql_literal_spans
+
+
+
+		/**
+		* MASK_TAGS_SQL_FILTER
+		* Rewrite LIKE / NOT LIKE operands of tagged text columns (transcriptions) so that
+		* tag payloads are not searchable. Without this, a filter like "rsc36 LIKE '%1649%'"
+		* matches values inside tags as [note-b-1-1-data:{'section_id':1649}:data],
+		* returning false positives.
+		* Tags are replaced by one space (not by an empty string) to avoid joining
+		* the words around the tag, which would create new false positives.
+		* Columns not in TAGGED_TEXT_FIELDS are left untouched, as are LIKE sentences
+		* found inside string literals.
+		* Note: relies on default sql_mode. With NO_BACKSLASH_ESCAPES the regex literal
+		* loses its escapes and masking silently becomes a no-op.
+		*
+		* Ex. "rsc36 LIKE '%1649%'" is converted to
+		*	  "(REGEXP_REPLACE(rsc36, '<tags>', ' ') LIKE '%1649%')"
+		*
+		* @param string $sql_filter
+		* @return string
+		*/
+		private static function mask_tags_sql_filter( string $sql_filter ) : string {
+
+			$ar_fields = self::get_tagged_text_fields();
+			if (empty($ar_fields)) {
+				return $sql_filter;
+			}
+
+			// literal ranges. LIKE sentences inside them are data, not SQL
+			$ar_spans = self::get_sql_literal_spans($sql_filter);
+			if ($ar_spans===null) {
+				debug_log(__METHOD__." Unbalanced quotes in sql_filter. Tags masking skipped: ".$sql_filter, logger::ERROR);
+				return $sql_filter;
+			}
+
+			// Blank the contents of every literal, keeping its quotes and its length, and
+			// search on this copy. This way a LIKE sentence written inside a literal is not
+			// matched, and it can not swallow the real sentences that follow it either.
+			// Offsets are preserved, so matches are sliced from the original filter
+			$scan = $sql_filter;
+			foreach ($ar_spans as $span) {
+				$inner_len = $span[1] - $span[0] - 2;
+				if ($inner_len>0) {
+					$scan = substr_replace($scan, str_repeat(' ', $inner_len), $span[0]+1, $inner_len);
+				}
+			}
+
+			// column (optionally back quoted, up to two qualifier levels) + [NOT] LIKE
+			// + string literal + optional ESCAPE clause. Both quote styles are accepted,
+			// as MySQL takes "..." as a string literal too (default sql_mode)
+			$literal = '(?:\'(?:[^\'\\\\]|\\\\.|\'\')*\'|"(?:[^"\\\\]|\\\\.|"")*")';
+			$pattern = '/((?:`?\w+`?\.){0,2}`?(\w+)`?)\s+(NOT\s+)?LIKE\s+('. $literal .')(\s+ESCAPE\s+'. $literal .')?/i';
+
+			$found = preg_match_all($pattern, $scan, $matches, PREG_OFFSET_CAPTURE|PREG_SET_ORDER);
+			if ($found===false) {
+				debug_log(__METHOD__." preg_match_all failed (".preg_last_error_msg()."). Tags masking skipped", logger::ERROR);
+				return $sql_filter;
+			}
+
+			$tags_pattern = tags_mask::get_tags_sql_pattern();
+
+			// replace backwards to keep offsets valid
+			$ar_matches = array_reverse($matches);
+			foreach ($ar_matches as $match) {
+
+				$offset	= $match[0][1];
+				$name	= strtolower(trim($match[2][0], '`'));
+				$not	= !empty($match[3][0]);
+
+				// only tagged text columns are masked (column names are case insensitive)
+				if (!in_array($name, $ar_fields, true)) {
+					continue;
+				}
+
+				// values are sliced from the original filter, as the searched copy is blanked
+				$whole	= substr($sql_filter, $offset, strlen($match[0][0]));
+				$column	= substr($sql_filter, $match[1][1], strlen($match[1][0]));
+				$value	= substr($sql_filter, $match[4][1], strlen($match[4][0]));
+				$escape	= isset($match[5]) && $match[5][1]!==-1
+					? substr($sql_filter, $match[5][1], strlen($match[5][0]))
+					: '';
+
+				$masked_column	= 'REGEXP_REPLACE('. $column .", '". $tags_pattern ."', ' ')";
+				$operator		= $not===true ? ' NOT LIKE ' : ' LIKE ';
+
+				// Cheap pre-filter. The masked text is the raw one with every tag replaced by
+				// a single space, so a searched value without spaces (nor '_', that could match
+				// that very space) can only match the masked text if it is present in the raw
+				// column too. When that holds, the raw LIKE is added as first condition and
+				// REGEXP_REPLACE is evaluated only on the rows that already matched, which is
+				// much cheaper on big transcriptions.
+				// Values with spaces can span a tag ('palabra[index-n-1]junta' matches
+				// '%palabra junta%'), and NOT LIKE inverts the sentence, so both are excluded
+				$can_prefilter = $not===false
+					&& $escape===''
+					&& strpbrk(substr($value, 1, -1), " \t\r\n_")===false;
+
+				$replacement = $can_prefilter===true
+					? '('. $column .' LIKE '. $value .' AND '. $masked_column .' LIKE '. $value .')'
+					: '('. $masked_column . $operator . $value . $escape .')';
+
+				$sql_filter = substr_replace($sql_filter, $replacement, $offset, strlen($whole));
+			}
+
+			return $sql_filter;
+		}//end mask_tags_sql_filter
 
 
 
