@@ -266,6 +266,14 @@
 	--focus_ring:      var(--color_input_focus);
 	--focus_ring_weak: rgba(247, 138, 28, 0.4); // = color_input_focus (orange #f78a1c) @ 40% for the focus glow
 
+	// ---- ERROR-REPORT EDGE TAB ----
+	// The launcher slab on the page edge (error_report_tab.less). Two alphas of
+	// the error-report tool's purple (#5a4183): muted at rest so it never
+	// competes with content, near-solid once it is asking to be used. Dark
+	// twins in theme_dark.less lift the hue off a dark canvas.
+	--error_tab_bg:        rgba(90, 65, 131, 0.55);
+	--error_tab_bg_active: rgba(90, 65, 131, 0.95);
+
 	// ---- FIELD TOKENS ("quiet grid" — section edit view) ----
 	// Consumed by layout.less / general.less / section_group.less /
 	// inspector.less. Dark counterparts live in theme_dark.less. The rule and
