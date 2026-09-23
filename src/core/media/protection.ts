@@ -225,7 +225,7 @@ export function mediaTreeUnreachableReason(): string | null {
  * `mediaTreeUnreachableReason`. Anything not listed is a root that may exist and be
  * served, and must reach the throwing path.
  */
-const ABSENT_ROOT_ERRNOS = new Set(['ENOENT', 'ENOTDIR', 'ESTALE']);
+const ABSENT_ROOT_ERRNOS: ReadonlySet<string> = new Set(['ENOENT', 'ENOTDIR', 'ESTALE']);
 
 /**
  * The RETIRED day-global auth store, kept addressable for exactly one reason: a
