@@ -180,63 +180,144 @@ describe('external client render — a degraded source is visible', () => {
 // Rule 2, the visual half — every state, and no two that look the same
 // ---------------------------------------------------------------------------
 
+/** A state's resolved paint, per theme axis: `prop` -> `value`. */
+type StateLook = Map<string, string>;
+
+/** The dark axis is attribute-driven on the root, never prefers-color-scheme. */
+const DARK_SCOPE = ':root[data-theme="dark"] &';
+
 /**
- * `&.state_x, &.state_y { … }` → declarations, per state.
- *
- * ACCUMULATED across blocks, never overwritten. The sheet declares each state
- * TWICE: once in the light body and once in the `:root[data-theme="dark"]`
- * twin, where three alarm states deliberately share one colour family and are
- * told apart by the border style the light body already gave them. A parser
- * that let the last block win read only the dark half and reported those
- * states as identical — a look the user never sees, since the border styles
- * cascade through untouched.
+ * The extent of the dark block, so a rule can be attributed to the axis it
+ * paints on. Brace-matched from the scope selector.
  */
-function parseStateRules(less: string): Map<string, string> {
-	const collected = new Map<string, string[]>();
-	const blocks = less.matchAll(/((?:\s*&\.state_[a-z_]+\s*,?)+)\{([^}]*)\}/g);
-	for (const block of blocks) {
+function darkBlockSpan(less: string): { start: number; end: number } | null {
+	const open = less.indexOf(DARK_SCOPE);
+	if (open === -1) return null;
+	let depth = 0;
+	for (let i = open; i < less.length; i++) {
+		const char = less[i];
+		if (char === '{') depth += 1;
+		else if (char === '}') {
+			depth -= 1;
+			if (depth === 0) return { start: open, end: i };
+		}
+	}
+	return null;
+}
+
+/**
+ * `&.state_x, &.state_y { … }` → the resolved paint of every state, ONE MAP PER
+ * THEME AXIS.
+ *
+ * Two things this must get right, both of which a previous shape got wrong:
+ *
+ *   1. COMMENTS ARE NOT DECLARATIONS. Every dark twin in the sheet ends its
+ *      block with a distinct contrast-ratio note (`// 8.39:1`, `// 3.95:1 ·
+ *      4.36:1`). Stripping `//…` per `;`-split segment leaves the note that
+ *      follows the LAST `;` intact — a non-multiline `$` cannot reach past the
+ *      newline — so it survived into the key and uniquified states by PROSE.
+ *      Two states painted identically then passed. Comments go before the split.
+ *   2. A LOOK IS PER AXIS. Merging both blocks into one key hides a collision
+ *      that exists in only one theme: two states can share a dark twin, differ
+ *      in light, and be indistinguishable to a dark-theme reader while the
+ *      union key says they differ. Each axis is resolved (dark = the light
+ *      declarations with the dark block's properties overriding, which is what
+ *      the cascade does) and compared on its own.
+ */
+function parseStateLooks(less: string): {
+	light: Map<string, StateLook>;
+	dark: Map<string, StateLook>;
+} {
+	const light = new Map<string, StateLook>();
+	const darkOverrides = new Map<string, StateLook>();
+	const dark = darkBlockSpan(less);
+
+	for (const block of less.matchAll(/((?:\s*&\.state_[a-z_]+\s*,?)+)\{([^}]*)\}/g)) {
+		const isDark =
+			dark !== null && (block.index ?? 0) > dark.start && (block.index ?? 0) < dark.end;
+		// comments FIRST, then the split — a note after the final `;` is prose
 		const declarations = (block[2] ?? '')
+			.replace(/\/\/[^\n]*/g, '')
 			.split(';')
-			.map((line) => line.replace(/\/\/.*$/, '').trim())
+			.map((line) => line.trim())
 			.filter((line) => line.length > 0);
 		for (const selector of (block[1] ?? '').matchAll(/&\.state_([a-z_]+)/g)) {
 			const state = selector[1] as string;
-			collected.set(state, [...(collected.get(state) ?? []), ...declarations]);
+			const into = isDark ? darkOverrides : light;
+			const look = into.get(state) ?? new Map<string, string>();
+			for (const declaration of declarations) {
+				const idx = declaration.indexOf(':');
+				if (idx === -1) continue;
+				look.set(declaration.slice(0, idx).trim(), declaration.slice(idx + 1).trim());
+			}
+			into.set(state, look);
 		}
 	}
-	const rules = new Map<string, string>();
-	for (const [state, declarations] of collected) {
-		rules.set(state, [...declarations].sort().join(';'));
+
+	// dark RESOLVES against light: the twin only restates colours, and the
+	// border styles cascade through untouched.
+	const resolvedDark = new Map<string, StateLook>();
+	for (const [state, lightLook] of light) {
+		const resolved = new Map(lightLook);
+		for (const [prop, value] of darkOverrides.get(state) ?? []) resolved.set(prop, value);
+		resolvedDark.set(state, resolved);
 	}
-	return rules;
+	for (const [state, darkLook] of darkOverrides) {
+		if (!resolvedDark.has(state)) resolvedDark.set(state, new Map(darkLook));
+	}
+	return { light, dark: resolvedDark };
 }
 
+/** A look as a comparable key: every declaration, sorted. */
+const lookKey = (look: StateLook): string =>
+	[...look]
+		.map(([prop, value]) => `${prop}:${value}`)
+		.sort()
+		.join(';');
+
 describe('external client render — each source state looks different', () => {
-	const stateRules = parseStateRules(readFileSync(LESS_FILE, 'utf-8'));
+	const looks = parseStateLooks(readFileSync(LESS_FILE, 'utf-8'));
 
 	test('every server-emittable state has a rule', () => {
 		// Totality against the SERVER's closed set, imported rather than copied:
 		// a state added to value.ts with no style renders as unstyled text that
 		// reads as part of the value.
-		const missing = Object.keys(EXTERNAL_STATE_LABEL_KEY).filter((state) => !stateRules.has(state));
+		const missing = Object.keys(EXTERNAL_STATE_LABEL_KEY).filter(
+			(state) => !looks.light.has(state),
+		);
 		expect(
 			missing,
 			`component_external.less needs a .state_<state> rule for each: ${missing.join(', ')}`,
 		).toEqual([]);
 		// Plus the client-only fallback for a state a NEWER server may emit —
 		// rendered anyway, because dropping it restores the silent blank.
-		expect(stateRules.has('unknown')).toBe(true);
+		expect(looks.light.has('unknown')).toBe(true);
 	});
 
-	test('no two states share a look', () => {
-		const byDeclarations = new Map<string, string[]>();
-		for (const [state, declarations] of stateRules) {
-			byDeclarations.set(declarations, [...(byDeclarations.get(declarations) ?? []), state]);
+	test('no two states share a look — in EITHER theme', () => {
+		// Per axis: a collision that exists only in dark is invisible to a union
+		// key, and a dark-theme reader sees two states as one just the same.
+		const collisions: string[] = [];
+		let compared = 0;
+		for (const [axis, byState] of [
+			['light', looks.light],
+			['dark', looks.dark],
+		] as const) {
+			const byLook = new Map<string, string[]>();
+			for (const [state, look] of byState) {
+				const key = lookKey(look);
+				byLook.set(key, [...(byLook.get(key) ?? []), state]);
+				compared += 1;
+			}
+			for (const states of byLook.values()) {
+				if (states.length > 1) collisions.push(`${axis}: ${states.join('/')}`);
+			}
 		}
-		const collisions = [...byDeclarations.values()].filter((states) => states.length > 1);
+		// the comparison actually read both axes (9 states × 2)
+		expect(compared, 'the axis walk read almost nothing').toBeGreaterThan(15);
 		expect(
 			collisions,
-			`states that render identically are one state to the user: ${collisions.map((s) => s.join('/')).join(', ')}`,
+			`states that render identically are one state to the user: ${collisions.join(', ')}`,
 		).toEqual([]);
 	});
 
@@ -244,11 +325,7 @@ describe('external client render — each source state looks different', () => {
 		// The pair the whole marker exists for: stale shows data that may be out of
 		// date, unavailable shows none at all. Asserting the border differs keeps
 		// the distinction alive in monochrome and for a colour-blind reader.
-		const border = (state: string) =>
-			(stateRules.get(state) ?? '')
-				.split(';')
-				.filter((declaration) => declaration.startsWith('border-style'))
-				.join('');
+		const border = (state: string) => looks.light.get(state)?.get('border-style') ?? '';
 		expect(border('stale')).not.toBe(border('unavailable'));
 		expect(border('stale').length).toBeGreaterThan(0);
 	});
