@@ -1356,7 +1356,7 @@
 		"test/unit/external_client_render_tripwire.test.ts": {
 			"tests": 32,
 			"skipped": 0,
-			"assertions": 74
+			"assertions": 75
 		},
 		"test/unit/external_config_narrowing_census.test.ts": {
 			"tests": 10,
@@ -1486,7 +1486,7 @@
 		"test/unit/gate_vacuity_tripwire.test.ts": {
 			"tests": 5,
 			"skipped": 0,
-			"assertions": 8
+			"assertions": 172
 		},
 		"test/unit/generic_tld_tripwire.test.ts": {
 			"tests": 12,
