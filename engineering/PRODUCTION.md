@@ -7,7 +7,7 @@ concern; the reference systemd units live in `deploy/`.
 ## 1. Runtime (S2-36)
 
 The Bun runtime is **pinned**: `.bun-version` + `package.json` `engines.bun`
-(currently `1.4.0`). The code is coupled to version-specific Bun behavior —
+(currently `1.4.2`). The code is coupled to version-specific Bun behavior —
 `Bun.sql` jsonb parameter inference (a drift here is the realized S1-07/S1-08
 corruption class), the Bun.sql MariaDB adapter (diffusion), `Bun.serve`
 defaults. The server echoes its runtime at boot and **warns loudly** when it
@@ -34,6 +34,13 @@ both unset unless you mean them.
 remains load-bearing; the MariaDB adapter now decodes `DATETIME`/`TIMESTAMP` as
 UTC (1.3.9 shifted them to local) and `JSON` columns as objects; `Bun.serve`
 unix-socket options are unchanged. Full evidence: the bump's findings log.
+
+**Re-verified on 1.4.2 (2026-09-23, 1.4.0 -> 1.4.2):** same probes, same
+answers — a JS string bound as `$1::jsonb` still lands as a jsonb *string*
+(`$1::text::jsonb` → object), MariaDB `DATETIME` still decodes as UTC and `JSON`
+as objects, and bunfig's `[test] timeout` is still ignored (an 8 s test under a
+30000 key died at 5001 ms), so `TEST_TIMEOUT_FLAG` stays load-bearing. Operator
+order is unchanged: install 1.4.2, restart onto it, then apply the update.
 
 ## 2. Process supervision (S2-38, S2-17)
 

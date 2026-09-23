@@ -56,7 +56,7 @@ curl -fsSL https://bun.sh/install | BUN_INSTALL=/opt/dedalo/.bun bash -s "bun-v$
     the pin. Read that line after every restart:
 
     ```text
-    Dédalo TS server starting on Bun 1.4.0 (pinned: 1.4.0)
+    Dédalo TS server starting on Bun 1.4.2 (pinned: 1.4.2)
     ```
 
 Because `ExecStart` points at `/opt/dedalo/.bun/bin/bun` — an absolute path, not
