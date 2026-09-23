@@ -498,6 +498,8 @@ Example: find whether the component has no value
 }
 ```
 
+For relation components (select, check box, radio button, portal, autocomplete…) the operator travels **only** in `q_operator`, and `q` is either empty (`null`, `""` or the client's `"only_operator"` placeholder) or a locator / array of locators (an object or its JSON string). An operator written into `q` (`"q":"!*"`) or any other text is refused with a `request.invalid` error. It is not ignored, because an ignored clause turns the search into "every record of the section" (`engineering/wire_contract/WC-2026-09-23-relation-q-is-a-locator.md`).
+
 ##### path
 
 Defines the path to the search component from the current section. Sometimes the component to be searched is linked through a portal (with a locator), so the component is not inside the current section but in another section; in this case the SQO must follow the path to find the component. The path defines how deep to go into the linked data sections.

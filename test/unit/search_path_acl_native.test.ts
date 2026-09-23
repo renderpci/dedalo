@@ -97,6 +97,9 @@ const HOP_COMPONENT = 'test54';
 const LEAF_COMPONENT = 'test52';
 /** A component of the same section the profile grants NOTHING on. */
 const DENIED_LEAF_COMPONENT = 'test91';
+/** test91 is a component_select: its q is a LOCATOR (a text q is refused,
+ * request.invalid — the builder no longer drops it quietly). */
+const DENIED_LEAF_Q = JSON.stringify({ section_tipo: 'test3', section_id: 1 });
 /** lg1 / hierarchy25 — component_select_lang's engine-minted sort target. */
 const LANGS_SECTION = 'lg1';
 const THESAURUS_TERM = 'hierarchy25';
@@ -594,7 +597,7 @@ describe.if(DB_READY)('SEC-02 — the ACL holds at EVERY hop of a search path', 
 	// --- the component half -------------------------------------------------
 
 	test('a hop leaf the principal holds 0 on answers 1=0, and the granted twin does not', async () => {
-		const denied = await buildSearchSql(twoHopSqo('zzhop02*', DENIED_LEAF_COMPONENT), {
+		const denied = await buildSearchSql(twoHopSqo(DENIED_LEAF_Q, DENIED_LEAF_COMPONENT), {
 			principal: SCOPED,
 		});
 		expect(denied.sql).toContain('1=0');
@@ -607,7 +610,7 @@ describe.if(DB_READY)('SEC-02 — the ACL holds at EVERY hop of a search path', 
 	});
 
 	test('the component gate does not fire for an internal search', async () => {
-		const built = await buildSearchSql(twoHopSqo('zzhop02*', DENIED_LEAF_COMPONENT), {});
+		const built = await buildSearchSql(twoHopSqo(DENIED_LEAF_Q, DENIED_LEAF_COMPONENT), {});
 		expect(built.sql).not.toContain('1=0');
 	});
 
@@ -751,7 +754,7 @@ describe.if(DB_READY)('SEC-02 — the ACL holds at EVERY hop of a search path', 
 				expect(currentFrontierRefusals()).toEqual([]);
 				expect(frontierRefusalNotice()).toBeUndefined();
 
-				await buildSearchSql(twoHopSqo('zzhop02*', DENIED_LEAF_COMPONENT), {
+				await buildSearchSql(twoHopSqo(DENIED_LEAF_Q, DENIED_LEAF_COMPONENT), {
 					principal: SCOPED,
 				});
 

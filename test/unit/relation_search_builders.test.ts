@@ -283,6 +283,51 @@ describe('_tm twin (matrix_time_machine scalar user_id column)', () => {
 	});
 });
 
+/** A plain relation-column context (the containment builder, not the _tm twin). */
+const relationContext: BuilderContext = {
+	alias: 'te3',
+	column: 'relation',
+	tipo: 'test80',
+	sectionTipo: 'test3',
+	table: 'matrix_test',
+	lang: 'lg-nolan',
+	translatable: false,
+	model: 'component_portal',
+};
+
+describe('relation q contract — operators in q_operator, a bad q is REFUSED', () => {
+	// A non-locator q used to be dropped quietly: the clause vanished and the
+	// search widened to the whole section (`q:'!*'` counted every record for
+	// both '!*' and '*').
+	test('a non-locator q throws request.invalid (glued operators included)', () => {
+		for (const q of ['!*', '*', 'garbage', '{not json', 42, true, [1], [{ section_id: 1 }, 'x']]) {
+			for (const operator of [null, '!=', '!==']) {
+				expect(() => buildRelationFragment(q, operator, relationContext)).toThrow(
+					expect.objectContaining({ code: 'request.invalid' }),
+				);
+			}
+		}
+	});
+
+	test("no q ('', null, 'only_operator') is operator-only, not an error", () => {
+		for (const q of [null, undefined, '', 'only_operator']) {
+			expect(render(buildRelationFragment(q, '!*', relationContext)).sql).toBe(
+				'NOT (te3.relation ? $1)',
+			);
+			expect(render(buildRelationFragment(q, '*', relationContext)).sql).toBe(
+				'(te3.relation ? $1)',
+			);
+		}
+	});
+
+	test('a JSON-string locator (the PHP wire shape) decodes like the object', () => {
+		const locator = { section_tipo: 'test3', section_id: 1 };
+		expect(render(buildRelationFragment(JSON.stringify(locator), null, relationContext))).toEqual(
+			render(buildRelationFragment(locator, null, relationContext)),
+		);
+	});
+});
+
 describe('registry search face', () => {
 	test('the relation family shares the containment builder', async () => {
 		for (const model of ['component_portal', 'component_select', 'component_relation_related']) {
@@ -350,10 +395,16 @@ describe('relation_children builder (PHP trait.search_component_relation_childre
 		expect(strict.sql).not.toContain(') AND NOT EXISTS (');
 	});
 
-	test("invalid q becomes '[]' — the clause RUNS and matches nothing (never dropped)", async () => {
-		const result = await buildRelationChildrenFragment('garbage', null, childrenContext);
-		const { params } = render(result as never);
-		expect(params).toEqual(['test71', '[]']);
+	test('invalid q THROWS request.invalid — never a silent substitute', async () => {
+		for (const q of ['garbage', '!*', 'only_operator']) {
+			await expect(buildRelationChildrenFragment(q, null, childrenContext)).rejects.toMatchObject({
+				code: 'request.invalid',
+			});
+		}
+		// operator-only searches never read q
+		expect(await buildRelationChildrenFragment('only_operator', '!*', childrenContext)).not.toBe(
+			false,
+		);
 	});
 
 	test('multi-locator arrays throw cleanly (PHP emits invalid jsonb)', async () => {
