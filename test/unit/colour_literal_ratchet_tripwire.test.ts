@@ -62,15 +62,18 @@
  * (drift + coherent + unmatched) is banked too. A retune cannot move a site out of that
  * one, and a shrink in either bank must be recorded by lowering it.
  *
- * THE SEED, MEASURED ON THIS TREE 2026-09-06, and recomputed on every run — no number
- * below is read from a file, so the derivation IS the gate:
- *   corpus   43 served documents (`entrypoints()`, compiled by `buildOne()`), 6028 rules,
- *            271 root-declared colour tokens carrying 393 distinct values, 1071 colour
- *            literals in all positions — of which 700 are the palette declaring itself
+ * THE SEED, RE-MEASURED ON THIS TREE 2026-09-23, and recomputed on every run — no number
+ * below is read from a file, so the derivation IS the gate. (The 2026-09-06 seed had
+ * drifted: nothing ASSERTS this prose, so its class breakdown had stopped summing to its
+ * own total — 27+38+5+71+141 = 282, never 274. Every figure here was printed by the
+ * gate's own classifier.)
+ *   corpus   43 served documents (`entrypoints()`, compiled by `buildOne()`), 6057 rules,
+ *            273 root-declared colour tokens carrying 397 distinct values, 1051 colour
+ *            literals in all positions — of which 738 are the palette declaring itself
  *            and 40 are grammar-exempt (url()/gradient/mask/filter);
  *   CSS      273 literals in a paint position = 27 HAS_TOKEN + 38 STALE_FB
- *            + 5 UNDECL_FB (drift: 119) + 71 coherent fallbacks + 138 unmatched;
- *   JS       775 files under client/ + tools/ minus lib/, 21 of them carrying a colour;
+ *            + 5 UNDECL_FB (drift: 70) + 68 coherent fallbacks + 135 unmatched;
+ *   JS       776 files under client/ + tools/ minus lib/, 21 of them carrying a colour;
  *            74 literals in strings = 27 HAS_TOKEN + 6 STALE_FB + 0 UNDECL_FB (drift: 33)
  *            + 8 coherent + 33 unmatched.
  *   INCLUDES named colours (`white`, `black`, `green` — 16 CSS paint sites the audit's
@@ -186,17 +189,17 @@ const BANK = {
 const FLOOR = {
 	/** served documents compiled — 43 today, and asserted equal to entrypoints() */
 	documents: 43,
-	/** CSS rules parsed across the corpus — 6028 today */
+	/** CSS rules parsed across the corpus — 6057 today */
 	rules: 5900,
-	/** root-declared custom properties resolving to a colour, in main.css — 271 today */
+	/** root-declared custom properties resolving to a colour, in main.css — 273 today */
 	token_names: 260,
-	/** distinct 8-bit RGBA values those tokens carry — 393 today */
+	/** distinct 8-bit RGBA values those tokens carry — 397 today */
 	token_values: 380,
-	/** literals on the right of a `--x:` — the palette defining itself — 700 today */
+	/** literals on the right of a `--x:` — the palette defining itself — 738 today */
 	token_declaration_literals: 650,
-	/** colour literals seen anywhere in the compiled corpus, any position — 1071 today */
+	/** colour literals seen anywhere in the compiled corpus, any position — 1051 today */
 	css_literals_seen: 1040,
-	/** JS files scanned under client/ + tools/, minus lib/ — 775 today */
+	/** JS files scanned under client/ + tools/, minus lib/ — 776 today */
 	js_files: 760,
 	/** of those, files carrying at least one colour literal — 21 today */
 	js_files_with_colour: 20,

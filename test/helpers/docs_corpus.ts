@@ -33,7 +33,18 @@ export function docsPages(): string[] {
  */
 export function docsFiles(): string[] {
 	const glob = new Glob('**/*');
-	return [...glob.scanSync({ cwd: join(REPO_ROOT, DOCS_ROOT), onlyFiles: true })]
+	// Same walk options as docsPages — the header's claim about symlinks and
+	// dot-files is a property of this MODULE, and half a module honouring it is
+	// a false claim. It also happens to be the right answer for the caller that
+	// asks git which of these files are ignored: a dot-file can be ignored too.
+	return [
+		...glob.scanSync({
+			cwd: join(REPO_ROOT, DOCS_ROOT),
+			onlyFiles: true,
+			followSymlinks: true,
+			dot: true,
+		}),
+	]
 		.map((p) => `${DOCS_ROOT}/${p}`)
 		.sort();
 }
