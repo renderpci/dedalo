@@ -86,6 +86,9 @@
 	// options_hidden (section selectors and check-boxes)
 	>.options_hidden {
 		display: none;
+		// (!) own ink: the wrapper's --fg_on_brand is for the orange bar; inherited
+		// here it paints the operators/max labels dark on dark
+		color: var(--fg_default);
 
 		&.visible {
 			display: block;
@@ -102,7 +105,8 @@
 				padding: 0.5em;
 			}
 
-			select {
+			// class-qualified: ties (0,4,1) the edit-grid value-ink rule in general.less, and wins by order
+			select.select_source_selector {
 				-webkit-appearance: caret;
 				appearance: caret;
 				background-color: transparent;
@@ -110,6 +114,12 @@
 				background: none;
 				appearance: auto;
 				height: auto;
+				color: inherit; // the edit-grid value ink (--field_value_fg) is dark on this fill
+
+				option {
+					color: var(--fg_default);
+					background-color: var(--bg_elevated);
+				}
 			}
 		}
 
@@ -127,7 +137,7 @@
 
 			>li {
 				display: inline-block;
-				color: @color_white ;
+				color: var(--fg_default); // was white: 1.9:1 on the light #bbb fill
 				margin-top: 1px;
 				overflow: hidden;
 				padding: 0.25em;
@@ -164,6 +174,7 @@
 
 			>.input_group {
 				position: relative;
+				height: 1.7rem;
 
 				>input {
 					margin: 0px;
@@ -175,7 +186,7 @@
 					position: absolute;
 					right: 1rem;
 					top: 0.5rem;
-					opacity: 0.5;
+					color: var(--fg_muted);
 					z-index: 2;
 				}
 			}
@@ -233,7 +244,7 @@
 
 	// input autocomplete
 	>.autocomplete_input {
-		background: @color_white url('../../themes/default/icons/search.svg');
+		background: @color_white var(--search_icon_url);
 		background-position: bottom 6px right 8px;
 		background-repeat: no-repeat;
 		background-size: auto 60%;
@@ -262,12 +273,21 @@
 		background-color: @color_white ;
 	}
 
+	// options open: the gear sits over the .source_selector fill, so it takes
+	// that bar's ink (@color_white is near-black in dark: invisible there)
+	&:has(>.options_hidden.visible) >.button_options {
+		background-color: var(--fg_inverse);
+	}
+
 	// ul autocomplete_data : datalist;
 	>.autocomplete_data {
 		z-index: 5;
 		width: max-content;
 		min-width: 100%;
 		background-color: @color_grey_14;
+		// (!) own ink: the wrapper's --fg_on_brand is for the orange bar; inherited
+		// here it paints un-styled row text (.ddinfo_value) dark on dark
+		color: var(--fg_default);
 		border-left: 1px solid @color_orange_dedalo;
 		border-right: 1px solid @color_orange_dedalo;
 		max-width: 100%;
@@ -334,6 +354,16 @@
 
 				.column {
 					outline: none;
+				}
+
+				// ddinfo_value: parents path (secondary). Gap keeps it apart
+				// from a following column (e.g. the relation_model label)
+				.ddinfo_value {
+					color: var(--fg_muted);
+
+					&:not(:last-child) {
+						margin-right: 0.5em;
+					}
 				}
 			}
 

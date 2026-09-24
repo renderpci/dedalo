@@ -669,6 +669,7 @@ template {
   --select_fg: var(--color_grey_4);
   --select_outline: none;
   --select_icon_url: url('../../themes/default/icons/select_arrows.svg');
+  --search_icon_url: url('../../themes/default/icons/search.svg');
   --toolbar_btn_hover_bg: var(--color_grey_11);
   --toolbar_btn_icon_filter: none;
   --mosaic_chip_bg: rgba(255, 255, 255, 0.8);
@@ -913,6 +914,7 @@ template {
   --select_fg: #ffffff;
   --select_outline: none;
   --select_icon_url: url('../../themes/default/icons/select_arrows_light.svg');
+  --search_icon_url: url('../../themes/default/icons/search_white.svg');
   --toolbar_btn_hover_bg: #9c9c9c;
   --toolbar_btn_icon_filter: invert(0.85);
   --mosaic_chip_bg: rgba(24, 26, 30, 0.82);
@@ -10808,6 +10810,7 @@ body:has(.assistant_container.standalone.show) {
 }
 .wrapper_service_autocomplete > .options_hidden {
   display: none;
+  color: var(--fg_default);
 }
 .wrapper_service_autocomplete > .options_hidden.visible {
   display: block;
@@ -10822,7 +10825,7 @@ body:has(.assistant_container.standalone.show) {
   margin: 0.25em;
   padding: 0.5em;
 }
-.wrapper_service_autocomplete > .options_hidden > .source_selector select {
+.wrapper_service_autocomplete > .options_hidden > .source_selector select.select_source_selector {
   -webkit-appearance: caret;
   appearance: caret;
   background-color: transparent;
@@ -10830,6 +10833,11 @@ body:has(.assistant_container.standalone.show) {
   background: none;
   appearance: auto;
   height: auto;
+  color: inherit;
+}
+.wrapper_service_autocomplete > .options_hidden > .source_selector select.select_source_selector option {
+  color: var(--fg_default);
+  background-color: var(--bg_elevated);
 }
 .wrapper_service_autocomplete > .options_hidden > .filters_container {
   overflow: hidden;
@@ -10843,7 +10851,7 @@ body:has(.assistant_container.standalone.show) {
 }
 .wrapper_service_autocomplete > .options_hidden ul.filter_node > li {
   display: inline-block;
-  color: var(--color_white);
+  color: var(--fg_default);
   margin-top: 1px;
   overflow: hidden;
   padding: 0.25em;
@@ -10874,6 +10882,7 @@ body:has(.assistant_container.standalone.show) {
 }
 .wrapper_service_autocomplete > .options_hidden > .inputs_list > .input_group {
   position: relative;
+  height: 1.7rem;
 }
 .wrapper_service_autocomplete > .options_hidden > .inputs_list > .input_group > input {
   margin: 0px;
@@ -10883,7 +10892,7 @@ body:has(.assistant_container.standalone.show) {
   position: absolute;
   right: 1rem;
   top: 0.5rem;
-  opacity: 0.5;
+  color: var(--fg_muted);
   z-index: 2;
 }
 .wrapper_service_autocomplete > .options_hidden > .search_operators_div {
@@ -10921,7 +10930,7 @@ body:has(.assistant_container.standalone.show) {
   width: 3.8rem;
 }
 .wrapper_service_autocomplete > .autocomplete_input {
-  background: var(--color_white) url('../../themes/default/icons/search.svg');
+  background: var(--color_white) var(--search_icon_url);
   background-position: bottom 6px right 8px;
   background-repeat: no-repeat;
   background-size: auto 60%;
@@ -10944,11 +10953,15 @@ body:has(.assistant_container.standalone.show) {
   top: 0px;
   background-color: var(--color_white);
 }
+.wrapper_service_autocomplete:has(>.options_hidden.visible) > .button_options {
+  background-color: var(--fg_inverse);
+}
 .wrapper_service_autocomplete > .autocomplete_data {
   z-index: 5;
   width: max-content;
   min-width: 100%;
   background-color: var(--color_grey_14);
+  color: var(--fg_default);
   border-left: 1px solid var(--color_orange_dedalo);
   border-right: 1px solid var(--color_orange_dedalo);
   max-width: 100%;
@@ -11000,6 +11013,12 @@ body:has(.assistant_container.standalone.show) {
 }
 .wrapper_service_autocomplete > .autocomplete_data > .autocomplete_data_li > .section_record .column {
   outline: none;
+}
+.wrapper_service_autocomplete > .autocomplete_data > .autocomplete_data_li > .section_record .ddinfo_value {
+  color: var(--fg_muted);
+}
+.wrapper_service_autocomplete > .autocomplete_data > .autocomplete_data_li > .section_record .ddinfo_value:not(:last-child) {
+  margin-right: 0.5em;
 }
 .wrapper_service_autocomplete > .autocomplete_data > .autocomplete_data_li:last-child {
   border-bottom: 1px solid var(--color_orange_dedalo);
