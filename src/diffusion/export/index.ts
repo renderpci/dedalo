@@ -7,7 +7,9 @@
  * - atoms.ts — shared-walk atom events → export atoms (value joins,
  *   grid_value per-target atoms) — export's OWN projection;
  * - grid.ts — the pinned meta/col/row/end NDJSON protocol + the three data
- *   formats + breakdown placement — export's OWN writer.
+ *   formats + breakdown placement — export's OWN writer. `openExportGrid` is
+ *   the ONE line producer (usable outside a request, cancellable at batch
+ *   boundaries); `exportGridUnified` is its thin tool-envelope user.
  *
  * tools/tool_export/server/tool_export.ts is a thin facade over this module —
  * the SINGLE implementation since the ledgered legacy-walker deletion landed
@@ -16,5 +18,11 @@
 
 export type { ExportDdoInput } from './compile_columns.ts';
 export { compileExportPlan } from './compile_columns.ts';
-export { exportGridUnified } from './grid.ts';
+export type {
+	ExportDeclarationGateOptions,
+	ExportGridContext,
+	ExportGridRunOptions,
+	OpenedExportGrid,
+} from './grid.ts';
+export { assertExportDeclarationReadable, exportGridUnified, openExportGrid } from './grid.ts';
 export { ndjsonStream } from './ndjson_stream.ts';

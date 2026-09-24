@@ -66,17 +66,31 @@ describe('TOOLS-02 — export applies the read ACL before it reads records', () 
 		// The tool gate only checks the DECLARED section; the export reads whatever
 		// options.sqo targets and emits whatever ddo paths ask for. Without this,
 		// dd133 password hashes / dd996 API keys (not projects-gated) leak.
-		const gateAt = src.indexOf('getPermissions(context.principal, targetSectionTipo');
-		const readAt = src.indexOf('buildSearchSql(sqo');
-		expect(gateAt, 'per-SQO-section getPermissions must exist').toBeGreaterThan(-1);
-		expect(readAt, 'buildSearchSql read must exist').toBeGreaterThan(-1);
-		expect(gateAt).toBeLessThan(readAt);
+		// The gates live in ONE function (assertExportDeclarationReadable), shared
+		// with every re-check of a finished export. THE ORDER — gate before the
+		// selection is built or read — is NOT a substring claim (a source-order pin
+		// is exactly what authz_substring_gate_tripwire forbids): it is DRIVEN in
+		// export_gate_b_native by TWO legs, one per half of the gate, each poisoning
+		// the selection so whichever runs first answers: 'THE ORDER: the
+		// declaration gate refuses BEFORE the selection is built or read' (the
+		// ddo-SEGMENT half — a denied column) and 'THE ORDER, section half: the
+		// in-walk per-SQO-section gate refuses BEFORE the selection is built or
+		// read' (the SQO-SECTION half — readable columns, an unreadable SQO
+		// section). Mutation-verified 2026-09-24: the per-SQO-section loop moved
+		// after the selection query reds the section-half leg while the segment
+		// leg stays green — which is why both exist. Only the decisions' location
+		// is pinned here.
+		expect(src.includes('buildSearchSql(sqo'), 'buildSearchSql read must exist').toBe(true);
+		expect(
+			src.includes('getPermissions(principal, targetSectionTipo, targetSectionTipo)'),
+			'per-SQO-section getPermissions must exist',
+		).toBe(true);
 	});
 
 	test('every exported ddo-path component is permission-checked', () => {
-		expect(
-			src.includes('getPermissions(context.principal, seg.section_tipo, seg.component_tipo)'),
-		).toBe(true);
+		expect(src.includes('getPermissions(principal, seg.section_tipo, seg.component_tipo)')).toBe(
+			true,
+		);
 	});
 });
 

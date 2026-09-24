@@ -262,6 +262,50 @@ export interface RunContext {
 /** Bound above which the record cache is dropped whole (O(1) eviction). */
 const RECORD_CACHE_LIMIT = 8000;
 
+/**
+ * The default bound of EVERY per-run memo of the export walk (the atom run's
+ * record + frontier caches, the export projection's own-children + parents
+ * chains in export/atoms.ts). One number, the record cache's: a run is one
+ * export, and an export of hundreds of thousands of records fans out over as
+ * many distinct targets — an unbounded memo is a memory leak whose size is
+ * the archive's. Every one of these maps is a pure memo (a cleared entry is
+ * recomputed from the same inputs), so eviction costs re-reads, never output.
+ */
+export const EXPORT_RUN_CACHE_LIMIT = RECORD_CACHE_LIMIT;
+
+/**
+ * Insert into a bounded per-run memo — LEAST-RECENTLY-USED eviction: a NEW key
+ * arriving at a full map evicts the OLDEST entry (Map insertion order, O(1)),
+ * never the whole map. Clearing the whole map (the earlier posture) made a
+ * working set larger than `limit` — one relation column citing 20k thesaurus
+ * terms in random order across a 300k-record export — miss ~80% of the time
+ * and re-issue a scope SQL probe / an ancestor walk per miss, the hot keys
+ * shared by thousands of records included. Re-setting a present key refreshes
+ * it (moves it to the young end); read with getBoundedRunMemo so a HIT
+ * refreshes it too. The map never holds more than `limit` entries.
+ */
+export function setBoundedRunMemo<K, V>(map: Map<K, V>, key: K, value: V, limit: number): void {
+	if (map.has(key)) map.delete(key);
+	else if (map.size >= limit) {
+		const oldest = map.keys().next();
+		if (oldest.done !== true) map.delete(oldest.value);
+	}
+	map.set(key, value);
+}
+
+/**
+ * Read a bounded per-run memo (setBoundedRunMemo): a HIT moves the key to the
+ * young end, so what the walk keeps using survives eviction. `undefined` =
+ * absent (a stored `null` is a hit).
+ */
+export function getBoundedRunMemo<K, V>(map: Map<K, V>, key: K): V | undefined {
+	if (!map.has(key)) return undefined;
+	const value = map.get(key) as V;
+	map.delete(key);
+	map.set(key, value);
+	return value;
+}
+
 const RECORD_KEY = (sectionTipo: string, sectionId: number | string): string =>
 	`${sectionTipo}:${sectionId}`;
 
@@ -2422,11 +2466,45 @@ export interface ExportAtomRun {
 	 * per crossed record per run: the probe is a real principal-scoped search
 	 * (record_scope.ts), and an export fans out over the same targets endlessly. */
 	frontierRecordCache: Map<string, boolean>;
+	/**
+	 * Every RUNTIME (section, component) pair whose COMPONENT key the frontier
+	 * ALLOWED on this run, keyed `${section_tipo}\u0000${component_tipo}` —
+	 * the grants the emitted values were read under that no DECLARED segment
+	 * names (a locator may land in a section the ddo path never declares). A
+	 * finished export records them (tool_export manifest `frontier_grants`) and
+	 * every later read of it re-asks each one (access.ts exportStillReadable):
+	 * a grant revoked on a runtime-reached section closes the export exactly as
+	 * a revoked declared column does. Bounded by the ontology (distinct pairs),
+	 * not by the selection, so it is not capped.
+	 */
+	frontierGrants: Map<string, ExportFrontierGrant>;
+	/** Bound of this run's growing memos (record + frontier caches here, the
+	 * projection's caches in export/atoms.ts). Defaults to
+	 * {@link EXPORT_RUN_CACHE_LIMIT}; a gate injects a small one to prove the
+	 * bound holds and the output does not move. `tableCache` is keyed by section
+	 * tipo (bounded by the ontology), so it is not capped. */
+	cacheLimit: number;
+}
+
+/** One runtime (section, component) grant the export frontier allowed. */
+export interface ExportFrontierGrant {
+	section_tipo: string;
+	component_tipo: string;
 }
 
 /** Fresh per-request run state (never module-scoped — request isolation). */
-export function createExportAtomRun(): ExportAtomRun {
-	return { tableCache: new Map(), recordCache: new Map(), frontierRecordCache: new Map() };
+export function createExportAtomRun(options: { cacheLimit?: number } = {}): ExportAtomRun {
+	// Floor at 1: a zero/negative/NaN bound would clear on every insert (a
+	// memo that remembers nothing), never an unbounded one.
+	const requested = Math.floor(options.cacheLimit ?? EXPORT_RUN_CACHE_LIMIT);
+	const cacheLimit = requested >= 1 ? requested : 1;
+	return {
+		tableCache: new Map(),
+		recordCache: new Map(),
+		frontierRecordCache: new Map(),
+		frontierGrants: new Map(),
+		cacheLimit,
+	};
 }
 
 /**
@@ -2478,8 +2556,20 @@ async function assertExportCrossing(
 	) {
 		refuse('component');
 	}
+	// ALLOWED: remember the pair, so a later read of the finished export can
+	// re-ask it (ExportAtomRun.frontierGrants). A crossing with no component
+	// consulted no component grant, so there is nothing to re-ask.
+	if (componentTipo !== undefined && componentTipo !== '') {
+		const grantKey = `${sectionTipo}\u0000${componentTipo}`;
+		if (!run.frontierGrants.has(grantKey)) {
+			run.frontierGrants.set(grantKey, {
+				section_tipo: sectionTipo,
+				component_tipo: componentTipo,
+			});
+		}
+	}
 	const key = RECORD_KEY(sectionTipo, sectionId);
-	let allowed = run.frontierRecordCache.get(key);
+	let allowed = getBoundedRunMemo(run.frontierRecordCache, key);
 	if (allowed === undefined) {
 		allowed = await frontierRecordAllowed(scope, sectionTipo, sectionId);
 		if (!allowed) {
@@ -2491,7 +2581,7 @@ async function assertExportCrossing(
 			// this costs nothing the walk was not about to spend anyway.
 			allowed = (await loadExportRecord(run, sectionTipo, sectionId)) === null;
 		}
-		run.frontierRecordCache.set(key, allowed);
+		setBoundedRunMemo(run.frontierRecordCache, key, allowed, run.cacheLimit);
 	}
 	if (!allowed) refuse('record');
 }
@@ -2508,7 +2598,7 @@ export async function loadExportRecord(
 ): Promise<MatrixRecord | null> {
 	const numeric = Number(sectionId);
 	if (!Number.isInteger(numeric)) {
-		run.recordCache.set(RECORD_KEY(sectionTipo, sectionId), null);
+		setBoundedRunMemo(run.recordCache, RECORD_KEY(sectionTipo, sectionId), null, run.cacheLimit);
 		return null;
 	}
 	const table = (await matrixTableOf(run, sectionTipo)) ?? 'matrix';
@@ -2530,12 +2620,11 @@ export async function loadExportRecordFromTable(
 	sectionId: number,
 ): Promise<MatrixRecord | null> {
 	const key = RECORD_KEY(sectionTipo, sectionId);
-	const cached = run.recordCache.get(key);
+	const cached = getBoundedRunMemo(run.recordCache, key);
 	if (cached !== undefined) return cached;
-	if (run.recordCache.size > RECORD_CACHE_LIMIT) run.recordCache.clear();
 	const loaded = await readMatrixRecords(tableName, sectionTipo, [sectionId]);
 	const record = loaded[0] ?? null;
-	run.recordCache.set(key, record);
+	setBoundedRunMemo(run.recordCache, key, record, run.cacheLimit);
 	return record;
 }
 
@@ -2555,8 +2644,23 @@ export async function prefetchExportRecords(
 		.filter((id) => Number.isInteger(id) && !run.recordCache.has(RECORD_KEY(sectionTipo, id)));
 	if (wanted.length === 0) return;
 	const table = (await matrixTableOf(run, sectionTipo)) ?? 'matrix';
-	// Evict BEFORE seeding so a whole freshly-read chunk is never dropped.
-	if (run.recordCache.size > RECORD_CACHE_LIMIT) run.recordCache.clear();
+	// Evict BEFORE seeding so a whole freshly-read chunk is never dropped — and
+	// evict when the chunk would not FIT, so the map stays <= cacheLimit for
+	// any chunk no larger than the bound (a larger chunk is kept whole: it is
+	// about to be read, and dropping it would re-query every record). Eviction
+	// is LRU like setBoundedRunMemo: only the OLDEST entries make room, the
+	// recently used targets stay.
+	const overflow = run.recordCache.size + wanted.length - run.cacheLimit;
+	if (overflow > 0) {
+		if (wanted.length >= run.cacheLimit) run.recordCache.clear();
+		else {
+			let evict = overflow;
+			for (const key of run.recordCache.keys()) {
+				if (evict-- <= 0) break;
+				run.recordCache.delete(key);
+			}
+		}
+	}
 	const loaded = await readMatrixRecords(table, sectionTipo, wanted);
 	const bySectionId = new Map(loaded.map((record) => [Number(record.section_id), record]));
 	for (const id of wanted) {

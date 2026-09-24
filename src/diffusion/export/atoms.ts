@@ -54,6 +54,7 @@ import {
 	resolveCellValue,
 	resolveRelationTargetValues,
 } from '../../core/resolve/relation_list.ts';
+import { runWithRequestLangs } from '../../core/resolve/request_lang.ts';
 import type { RawConfigDdo } from '../../core/section/list_definitions/section_list.ts';
 import { resolveOwnConfigMap } from '../../core/section/list_definitions/section_list.ts';
 import { getTermByLocator } from '../../core/ts_object/term_resolver.ts';
@@ -61,9 +62,11 @@ import type { FieldPlan } from '../plan/types.ts';
 import type { ExportAtomRun, ExportLeafAtom } from '../resolve/resolver.ts';
 import {
 	createExportAtomRun,
+	getBoundedRunMemo,
 	loadExportRecord,
 	loadExportRecordFromTable,
 	resolveRecordAtoms,
+	setBoundedRunMemo,
 } from '../resolve/resolver.ts';
 
 /** PHP export_value records_separator (join_atoms depth-0 default). */
@@ -77,23 +80,54 @@ const PARENTS_SEPARATOR = ' > ';
 /** PHP get_export_value recursion depth backstop (fail LOUD, never spin). */
 const MAX_FANOUT_DEPTH = 12;
 
-/** Per-request export run state: the shared atom run + projection caches. */
+/**
+ * Per-request export run state: the shared atom run + projection caches.
+ *
+ * EVERY growing map here is RUN-SCOPED (one ExportRun per export — grid.ts
+ * builds it per call, never at module scope) AND BOUNDED by
+ * `atoms.cacheLimit` (resolver.ts EXPORT_RUN_CACHE_LIMIT by default): each is
+ * a pure memo, so an overflow clears it whole and the next lookup recomputes
+ * the same value — memory stays flat over a 300k-record export, output does
+ * not move. Gate: test/unit/export_run_bounds_identity_native.test.ts.
+ */
 export interface ExportRun {
 	atoms: ExportAtomRun;
-	/** relation component tipo → its OWN request_config child ddos. */
+	/** relation component tipo → its OWN request_config child ddos (bounded). */
 	ownChildren: Map<string, RawConfigDdo[]>;
 	/** `${section_tipo}:${section_id}:${lang}` → resolved ' > ' ancestor chain
-	 * (null = target has no hierarchy). Shared targets resolve ONCE per run. */
+	 * (null = target has no hierarchy). Shared targets resolve ONCE per run
+	 * while the bounded memo holds them. */
 	parentsChains: Map<string, string | null>;
 	/** Threads the run's record cache into the shared flat-value resolvers —
 	 * without it every relation-target label re-reads its record per row (N+1). */
 	cellOpts: CellValueResolveOptions;
+	/**
+	 * THE RUN'S INTERFACE LANGUAGE, for a DIRECT caller of `resolveValueCell` /
+	 * `collectGridAtoms` (Rule 6 — outside a request the ALS backstop answers
+	 * the INSTALLATION default, silently). Set → every cell resolves inside
+	 * `runWithRequestLangs({applicationLang: this, dataLang: <the cell's lang>})`
+	 * — covering the two LANG backstops the walk reads (a component_date 'period'
+	 * cell's unit labels via `currentApplicationLang()`, a component_external
+	 * cell's remote row via `currentDataLang()`). Unset → the ambient scope.
+	 *
+	 * It covers the langs ONLY. The walk also reads the PRINCIPAL ambiently (a
+	 * relation cell's implicit label request_config, implicit.ts
+	 * filterAuthorizedRelated → `currentPrincipal()`), and frontier refusals are
+	 * noted on the ambient request context. The COMPLETE scope — both langs,
+	 * the principal, the refusal collector — is grid.ts `openExportGrid`'s
+	 * export scope, which is what every export goes through; grid.ts therefore
+	 * leaves this unset (the scope already carries it).
+	 */
+	applicationLang?: string;
 }
 
 /** Fresh per-request run (never module-scoped — request isolation). */
-export function createExportRun(): ExportRun {
-	const atoms = createExportAtomRun();
+export function createExportRun(
+	options: { cacheLimit?: number; applicationLang?: string } = {},
+): ExportRun {
+	const atoms = createExportAtomRun({ cacheLimit: options.cacheLimit });
 	return {
+		...(options.applicationLang === undefined ? {} : { applicationLang: options.applicationLang }),
 		atoms,
 		ownChildren: new Map(),
 		parentsChains: new Map(),
@@ -120,7 +154,7 @@ async function resolveParentsChain(
 	lang: string,
 ): Promise<string | null> {
 	const cacheKey = `${sectionTipo}:${sectionId}:${lang}`;
-	const cached = run.parentsChains.get(cacheKey);
+	const cached = getBoundedRunMemo(run.parentsChains, cacheKey);
 	if (cached !== undefined) return cached;
 
 	const { ancestors, errors } = await getParentsRecursive(sectionId, sectionTipo);
@@ -137,7 +171,7 @@ async function resolveParentsChain(
 		if (term !== null && term !== '') parts.push(term);
 	}
 	const chain = parts.length > 0 ? parts.join(PARENTS_SEPARATOR) : null;
-	run.parentsChains.set(cacheKey, chain);
+	setBoundedRunMemo(run.parentsChains, cacheKey, chain, run.atoms.cacheLimit);
 	return chain;
 }
 
@@ -200,7 +234,7 @@ type RawPathStep = Record<string, unknown>;
  * list, no ddo_map) normalize to flat self-parented component children.
  */
 async function ownChildrenOf(run: ExportRun, componentTipo: string): Promise<RawConfigDdo[]> {
-	const cached = run.ownChildren.get(componentTipo);
+	const cached = getBoundedRunMemo(run.ownChildren, componentTipo);
 	if (cached !== undefined) return cached;
 	const map = await resolveOwnConfigMap(componentTipo);
 	let children: RawConfigDdo[];
@@ -215,7 +249,7 @@ async function ownChildrenOf(run: ExportRun, componentTipo: string): Promise<Raw
 			}
 		}
 	}
-	run.ownChildren.set(componentTipo, children);
+	setBoundedRunMemo(run.ownChildren, componentTipo, children, run.atoms.cacheLimit);
 	return children;
 }
 
@@ -249,7 +283,39 @@ function directChildrenOf(
  * vectors (level 0 = ' | ', deeper levels = the level component's declared
  * fields_separator), empty parts dropped at every level.
  */
-export async function resolveValueCell(
+export function resolveValueCell(
+	run: ExportRun,
+	field: FieldPlan,
+	sectionTipo: string,
+	sectionId: number | string,
+	lang: string,
+	unresolved: string[],
+): Promise<string | null> {
+	return inRunLangs(run, lang, () =>
+		resolveValueCellInScope(run, field, sectionTipo, sectionId, lang, unresolved),
+	);
+}
+
+/**
+ * Run one cell resolution under the run's EXPLICIT languages when it carries
+ * them ({@link ExportRun.applicationLang}), else in the ambient scope.
+ */
+function inRunLangs<T>(run: ExportRun, lang: string, work: () => Promise<T>): Promise<T> {
+	if (run.applicationLang === undefined) return work();
+	return runWithRequestLangs({ applicationLang: run.applicationLang, dataLang: lang }, work);
+}
+
+/**
+ * Record a non-fatal note ONCE. `unresolved` is a set of DISTINCT notes, never a
+ * per-record log: the notes are raised per record × field, and a walk of 300k
+ * records would otherwise hold (and persist into the export manifest and the
+ * lane job's result) one string per record.
+ */
+function noteUnresolved(unresolved: string[], note: string): void {
+	if (!unresolved.includes(note)) unresolved.push(note);
+}
+
+async function resolveValueCellInScope(
 	run: ExportRun,
 	field: FieldPlan,
 	sectionTipo: string,
@@ -263,7 +329,7 @@ export async function resolveValueCell(
 		// A DECLARED path step of model component_dataframe is not producible
 		// from the tool UI (frames belong to the SOURCE record, the drill-down
 		// lists the target's elements) and would mis-walk silently — loud instead.
-		unresolved.push('component_dataframe:declared-path');
+		noteUnresolved(unresolved, 'component_dataframe:declared-path');
 		return null;
 	}
 	const events = await resolveRecordAtoms(run.atoms, field, sectionTipo, sectionId);
@@ -323,7 +389,7 @@ export async function resolveValueCell(
  * owner); relation leaves FAN OUT into their own request_config children per
  * stored locator, appending one segment per fan-out hop.
  */
-export async function collectGridAtoms(
+export function collectGridAtoms(
 	run: ExportRun,
 	field: FieldPlan,
 	sectionTipo: string,
@@ -334,6 +400,28 @@ export async function collectGridAtoms(
 	 * derivation passes false so a parents atom can never become atoms[0]). */
 	withParentsOverride?: boolean,
 ): Promise<GridAtom[]> {
+	return inRunLangs(run, lang, () =>
+		collectGridAtomsInScope(
+			run,
+			field,
+			sectionTipo,
+			sectionId,
+			lang,
+			unresolved,
+			withParentsOverride,
+		),
+	);
+}
+
+async function collectGridAtomsInScope(
+	run: ExportRun,
+	field: FieldPlan,
+	sectionTipo: string,
+	sectionId: number | string,
+	lang: string,
+	unresolved: string[],
+	withParentsOverride: boolean | undefined,
+): Promise<GridAtom[]> {
 	// WC-049: per-locator ancestor-chain sibling '#parents' column (the export
 	// tool's per-column parents checkbox — per-ddo flag only, grid_value only).
 	const withParents = withParentsOverride ?? field.exportColumn?.valueWithParents === true;
@@ -341,7 +429,7 @@ export async function collectGridAtoms(
 	if (hasDeclaredDataframeStep(field)) {
 		// See resolveValueCell — declared dataframe steps stay loud, never a
 		// silent empty walk (frames live on the SOURCE record, not the target).
-		unresolved.push('component_dataframe:declared-path');
+		noteUnresolved(unresolved, 'component_dataframe:declared-path');
 		return [];
 	}
 	const events = await resolveRecordAtoms(run.atoms, field, sectionTipo, sectionId);

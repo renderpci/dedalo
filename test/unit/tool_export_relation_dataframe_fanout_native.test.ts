@@ -576,9 +576,9 @@ describe('dedalo_raw: the frame slot is its OWN column (WC-2026-08-09)', () => {
 describe('a DECLARED dataframe path step stays LOUD', () => {
 	test("unresolved carries 'component_dataframe:declared-path' and no atoms are invented", async () => {
 		const grid = await exportGrid('grid_value', 'default', true);
-		expect(
-			(grid.unresolved ?? []).some((note) => note.includes('component_dataframe:declared-path')),
-		).toBe(true);
+		// ONCE, not once per record (two records raise it): a set of distinct
+		// notes, never a per-record log that grows with the selection.
+		expect(grid.unresolved).toEqual(['component_dataframe:declared-path']);
 		// Loud, and EMPTY: never a silent mis-walk of the frames.
 		expect(grid.columns ?? []).toEqual([]);
 		expect((grid.rows ?? []).map(rowProjection)).toEqual([
@@ -592,9 +592,9 @@ describe('a DECLARED dataframe path step stays LOUD', () => {
 		// grid_value walks collectGridAtoms, value walks resolveValueCell: the
 		// loudness is a contract of BOTH, so both are gated.
 		const grid = await exportGrid('value', 'default', true);
-		expect(
-			(grid.unresolved ?? []).some((note) => note.includes('component_dataframe:declared-path')),
-		).toBe(true);
+		// ONCE, not once per record (two records raise it): a set of distinct
+		// notes, never a per-record log that grows with the selection.
+		expect(grid.unresolved).toEqual(['component_dataframe:declared-path']);
 		// The header still describes the declared path (the column is minted from
 		// the ddo, not from the data) but EVERY cell is empty: refusing to walk a
 		// declared frame step may never degrade into inventing a value.
