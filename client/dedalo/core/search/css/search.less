@@ -4,37 +4,373 @@
 * Included from main.less file
 */
 
+// SPACING SCALE — one rhythm for the whole panel: @space between and around
+// elements (group padding, grid gaps, card insets, action column), @space_s
+// inside compact controls (label↔option, chip insets), @card_inset for the
+// field card's own padding (mockup: ~10px around and between label and value).
+@space:      0.5rem;
+@space_s:    0.25rem;
+@card_inset: 0.75rem;
+
 // search_component (shared at least by unit_test preview)
+	// A search field is ONE card: white surface on the grey group, one border,
+	// one radius. Its grid track (not a flex basis) sets its width — see
+	// .search_group. Anatomy (mockup parity): a HEADER row — the field label,
+	// then the reorder + close controls top-right, quiet until the card is in
+	// use — and a compact BODY: [q_operator] [value input] [lang switch].
+	// A field WITH a value is marked by ui.hilite (`.hilite_element` on the
+	// wrapper): the whole card takes the tint and an orange edge.
 	.search_component {
-		background-color: @color_grey_15;
+		@control_size: 1.05rem;
+
+		background-color: @color_white;
+		border: 1px solid @color_grey_13;
+		border-radius: var(--radius-lg);
 		display: flex;
 		position: relative;
-		margin: 2px;
-		min-height: 55px;
-		border-radius: 2px;
-		// flex: 1 1 32.4%;
-		flex: 0 1 32.8%;
-		flex-wrap: wrap;
+		margin: 0;
+		min-width: 0;
+		// Reserve the settled one-line card height BEFORE the component
+		// renders (cards are created empty and filled async), so the grid
+		// does not jump while the page loads. Built from the same parts the
+		// card is made of — label (inset + line + inset), value line (2rem)
+		// + bottom inset, borders — so it tracks them if they change.
+		min-height: calc(3 * @card_inset + 0.85rem * 1.3 + 2rem + 2px);
+		transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 
 		// allow to view tooltip / open autocomplete over other components.
 		// Must beat the sibling components' buttons (z-index 3) below.
 		&:hover {
 			z-index: 4;
+			border-color: @color_grey_10;
+		}
+		&:focus-within {
+			border-color: @color_orange_dedalo;
 		}
 
-		>.wrapper_component {
-			flex-grow: 1;
-			display: grid;
-			padding-bottom: 0.8rem;
+		// an open autocomplete floats its result list over the cards below:
+		// lift this card above its neighbours (their controls sit at 3,
+		// hover at 4) so no sibling overlay paints on top of it
+		&:has(.wrapper_service_autocomplete.search),
+		&:has(.filter_picker.open) { // component_filter's project dropdown
+			z-index: 5;
+		}
 
+		&:has(>.wrapper_component.hilite_element) {
+			background-color: @color_hilite;
+			border-color: @color_orange_dedalo;
+
+			>.wrapper_component.hilite_element {
+				background-color: transparent;
+			}
+		}
+
+		// `.search` on the wrapper: one class above the per-component search
+		// rules (e.g. component_radio_button.less `.search >.content_data
+		// >.content_value` margins), which load later at equal specificity
+		>.wrapper_component.search {
+			flex: 1 1 auto;
+			display: grid;
+			grid-template-rows: auto 1fr !important; // beats the fixed label-height row
+			// one column that never grows past the card: an `auto` track sizes
+			// to its content's min-content width, so a long unbreakable value
+			// (filter summary, a long select option) widened the body past the
+			// card edge
+			grid-template-columns: minmax(0, 1fr);
+			min-width: 0;
+			padding: 0;
+			border-radius: inherit;
+
+			// header: the field name, strong and dark (it is what the user
+			// scans for), with room on the right for the three controls
 			>.label {
-				padding: 0.5em;
+				grid-row: 1;
+				grid-column: 1;
+				padding: @card_inset 4.25rem @card_inset @card_inset; // same step above, around and below the label
+				line-height: 1.3; // global label line-height is 1em: too tight
+				// the global label has a FIXED height (--component_label_height)
+				// that would let this padding spill over the value below
+				height: auto;
+				min-height: 0;
+				font-size: 0.85em;
+				font-weight: 600;
+				color: @color_grey_4;
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+
+				// parent grouper suffix, "[Identification]" (ui.js label_info,
+				// from context.config.parent_grouper_label): secondary, so the
+				// field name stays the thing the eye lands on
+				>.label_info {
+					margin-left: @space_s;
+					font-size: 0.95em;
+					font-weight: 400;
+					color: @color_grey_6;
+				}
 			}
 
+			// body: operator, value, extras on one line. Pinned to row 2: the
+			// active autocomplete overlay shares this cell (see below), and an
+			// explicitly placed sibling would otherwise push it to row 3.
 			>.content_data {
-				padding: 0.5em !important;
+				grid-row: 2;
+				grid-column: 1;
+				min-width: 0;
+				padding: 0 @card_inset @card_inset !important;
 				max-height: 22rem;
+				// the body is as tall as its content: component rules set their
+				// own floors (component_portal.less search: 3.15rem) that made
+				// portal-type cards 5px taller than the rest
+				min-height: 0 !important;
+				display: flex;
+				flex-wrap: wrap;
+				// TOP-aligned: a tall value (filter tree, autocomplete, text
+				// area) must not drag the operator box down to its middle
+				align-items: flex-start;
+				gap: @space;
 				// overflow: auto; // Removed becuse breaks component_date icon calendar
+
+				// value inputs: one field look (checkbox/radio keep their own)
+				input:not([type="checkbox"]):not([type="radio"]):not(.lang_behavior_check) {
+					height: 2rem;
+					padding: 0 0.5rem;
+					color: @color_grey_4;
+					background-color: @color_grey_16;
+					border: 1px solid @color_grey_13;
+					border-radius: var(--radius-sm);
+					opacity: 1;
+					outline: none;
+
+					&:focus {
+						border-color: @color_orange_dedalo;
+						background-color: @color_white;
+					}
+
+					// the search operator (=, >=, !*…): a small mono chip before
+					// the value, dashed so it reads as optional
+					&.q_operator {
+						border-color: @color_grey_10;
+						flex: 0 0 2.5rem;
+						width: 2.5rem;
+						padding: 0 0.25rem;
+						text-align: center;
+						font-family: var(--font-mono, ui-monospace, monospace);
+						font-size: 0.85em;
+						border-style: dashed;
+						background-color: transparent;
+
+						&:focus {
+							border-style: solid;
+						}
+					}
+				}
+
+				// a value input placed DIRECTLY in the body (text_area, portal —
+				// no .content_value row) grows like input_text's does, so the
+				// lang switch stays on its line instead of wrapping below
+				>input.input_value {
+					flex: 1 1 auto;
+					width: auto !important; // component rules set 100% / calc()
+					min-width: 0;
+
+					// portal.no_operator reserved an operator gap by margin
+					// (component_portal.less); the card has no gap to reserve
+					&.no_operator {
+						margin-left: 0;
+					}
+				}
+
+				// only a text-value box grows; option lists (check_box, radio)
+				// keep their items together
+				>.content_value {
+					display: flex;
+					align-items: center;
+					gap: @space;
+					flex: 0 1 auto;
+					min-width: 0;
+					min-height: 2rem; // same line box as the operator input
+
+					&:has(>input.input_value), &:has(.input-group) {
+						flex: 1 1 auto;
+					}
+
+					input.input_date {
+						min-width: 7.5rem;
+						width: 100%;
+					}
+
+					// date: its input group is one input line, like every value
+					.input-group {
+						height: 2rem;
+						align-items: center;
+					}
+
+					>input.input_value {
+						flex: 1 1 auto;
+						min-width: 0;
+						width: 100%;
+					}
+				}
+
+
+				// language switch: a small inline icon, not a second row
+				// one input line tall, icon centred in it: level with the value
+				// box whether it sits in a centring row (input_text) or straight
+				// in the top-aligned body (text_area)
+				.switcher_translatable {
+					flex: none;
+					display: inline-flex;
+					align-items: center;
+					height: 2rem;
+
+					&::after {
+						height: 1.1em;
+						width: 1.1em;
+						margin: 0;
+					}
+				}
+
+				// option lists (check_box, radio): the component's own chip
+				// padding stays (a checked radio is a pill); its per-option
+				// margins go — the flex gap is the only spacing
+				>.content_value {
+					margin: 0;
+
+					>label.label {
+						display: inline-flex;
+						align-items: center;
+						gap: @space_s;
+					}
+				}
+
+				// Option lists (check_box, radio_button, publication). Each option
+				// row IS a 2rem line box — the operator input's own height — with
+				// the pill/checkbox centred in it, and no row gap: the first row
+				// shares the operator box's centre exactly (no offset maths) and
+				// the pitch stays 2rem. Horizontal gap: the small step (pills
+				// carry their own padding; check_box widens it below).
+				&:has(>.content_value >label.label) {
+					row-gap: 0;
+					column-gap: @space_s;
+
+					>.content_value {
+						height: 2rem;
+						min-height: 0;
+						align-items: center;
+					}
+				}
+
+				// With an operator box, the box owns a fixed left column and
+				// the value(s) wrap in the column to its right, so a second row
+				// of options lines up under the first option, not under the box.
+				&:has(>input.q_operator) {
+					position: relative;
+					padding-left: calc(@card_inset + 2.5rem + @space) !important;
+
+					>input.q_operator {
+						position: absolute;
+						left: @card_inset;
+						top: 0;
+					}
+				}
+			}
+
+			// Active portal/autocomplete: the service overlay (a sibling of
+			// .content_data, absolutely placed by service_autocomplete.less at
+			// fixed offsets) is re-seated in the SAME grid cell as the body,
+			// with the body's insets — its search box lands exactly where the
+			// hidden portal input was. Transparent to clicks except its own
+			// controls, so the operator box under it stays usable.
+			>.wrapper_service_autocomplete.search {
+				grid-row: 2;
+				grid-column: 1;
+				position: relative;
+				top: auto;
+				left: auto;
+				right: auto;
+				width: auto;
+				min-width: 0;
+				border: none;
+				background-color: transparent;
+				pointer-events: none;
+				display: flex;
+				flex-wrap: wrap; // input + gear share line 1; the options panel takes line 2
+				align-items: flex-start;
+				gap: @space;
+				padding: 0 @card_inset @card_inset @card_inset;
+
+				>* {
+					pointer-events: auto;
+				}
+
+				>.autocomplete_input {
+					flex: 1 1 0;
+					width: auto;
+					min-width: 0;
+					height: 2rem;
+					margin: 0;
+					outline: none;
+					border: 1px solid @color_orange_dedalo;
+					border-radius: var(--radius-sm);
+				}
+
+				>.button_options {
+					position: static;
+					flex: none;
+					margin: 0.5rem 0 0;
+					background-color: @color_grey_6;
+				}
+
+				// options panel (gear): IN FLOW on its own line under the input,
+				// so the card grows to hold it. Floated, it spilled over the next
+				// card and past the card's right edge.
+				>.options_hidden {
+					order: 3;
+					flex: 1 1 100%;
+					min-width: 0;
+					max-width: 100%;
+					overflow: hidden;
+					border-radius: var(--radius-sm);
+
+					// the source dropdown shrinks with an ellipsis instead of
+					// being cut at the panel edge
+					.source_selector {
+						display: flex;
+						align-items: center;
+						min-width: 0;
+
+						>.select_source_selector {
+							flex: 1 1 auto;
+							min-width: 0;
+							max-width: 100%;
+							text-overflow: ellipsis;
+						}
+					}
+				}
+				>.autocomplete_data {
+					position: absolute;
+					top: calc(2rem + @space_s);
+					left: var(--ac_inset_left, @card_inset);
+					right: @card_inset;
+					width: auto;
+				}
+			}
+			// with an operator box, the overlay skips the operator column
+			&:has(>.content_data >input.q_operator) >.wrapper_service_autocomplete.search {
+				--ac_inset_left: calc(@card_inset + 2.5rem + @space);
+				padding-left: var(--ac_inset_left);
+			}
+
+			// check_box labels are plain (no pill): their own right padding
+			// (component_check_box.less) goes, and a wider column gap separates
+			// the options instead — "Para revisar ☐Validada" ran together
+			&.component_check_box >.content_data:has(>.content_value >label.label) { // same weight as the option-list rule
+				column-gap: @card_inset;
+
+				>.content_value >label.label {
+					padding-right: 0;
+				}
 			}
 
 			// disable column edit change mode (portals)
@@ -43,45 +379,55 @@
 			}
 		}
 
-		>.button.close {
+		// header controls: [◂][▸][✕] top-right, quiet until the card is in use
+		>.button.close,
+		>.button.up,
+		>.button.down {
 			position: absolute;
-			right: 0px;
-			top: 3px;
+			top: @card_inset;
 			z-index: 3;
+			width: @control_size;
+			height: @control_size;
+			margin: 0;
+			opacity: 0;
+			transition: opacity var(--transition-fast);
 
-			&:active {
-				opacity: 0.5;
+			&:hover {
+				opacity: 1 !important;
 			}
+			&:active {
+				opacity: 0.5 !important;
+			}
+		}
+		&:hover, &:focus-within {
+			>.button.close { opacity: 0.55; }
+			>.button.up, >.button.down { opacity: 0.45; }
+			>.button.up.disabled, >.button.down.disabled { opacity: 0.15; }
+		}
+
+		>.button.close {
+			right: @card_inset;
 		}
 
 		>.button.up,
 		>.button.down {
-			position: absolute;
-			bottom: 0.1rem;
-			z-index: 3;
-			opacity: 0.4;
 			background-image: url(../../themes/default/icons/sort_up.svg);
 			background-color: transparent;
 			background-repeat: no-repeat;
+			background-position: center;
+			background-size: contain;
 
-			&:hover {
-				opacity: 1;
-			}
-			&:active {
-				opacity: 0.5;
-			}
 			&.disabled {
-				opacity: 0.15;
 				pointer-events: none;
 			}
 		}
 		>.button.down {
-			right: -0.2rem;
-			transform: rotate(90deg) scale(0.90);
+			right: calc(@card_inset + @control_size + 0.25rem);
+			transform: rotate(90deg);
 		}
 		>.button.up {
-			right: 0.75rem;
-			transform: rotate(-90deg) scale(0.90);
+			right: calc(@card_inset + 2 * (@control_size + 0.25rem));
+			transform: rotate(-90deg);
 		}
 	}//end .search_component
 
@@ -170,54 +516,34 @@
 						flex-wrap: wrap;
 					}
 
+					// The group is an auto-fill grid: as many ≥16rem tracks as fit,
+					// sharing the width, so two fields never leave an empty third
+					// track and a narrow group collapses on its own.
 					.search_group {
 						position: relative;
 						min-height: 5.8rem;
 						min-width: 165px;
 						margin: 0px;
-						padding: 1px;
-						padding-right: 17px;
-						padding-left: 23px;
-						background-color: @color_grey_16;
-						outline: 1px solid var(--color_grey_13);
+						padding: @space;
+						padding-left: calc(28px + @space); // operator bar
+						background-color: @color_grey_15;
+						outline: 1px solid @color_grey_13;
 						width: 100%;
 						display: grid;
-						grid-template-columns: 1fr 1fr 1fr;
+						grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+						gap: @space;
+						align-content: start;
+						align-items: start; // each card keeps its own height
 
-						&.column_2 {
-							grid-template-columns: 1fr 1fr;
-						}
-
-						&.column_1 {
-							grid-template-columns: 1fr;
-						}
-
-						// Below the desktop-small tier the group is ONE column.
-						// There were two byte-identical `@media` blocks here
-						// (`1fr 1fr` then `1fr`) since the v6 tree: same
-						// condition, same specificity, so the first could never
-						// apply and the second is what has always shipped. The
-						// dead one is removed, not resurrected as a tier — the
-						// GRADED collapse it looks like it was reaching for
-						// already exists in JS, which measures the group's own
-						// width (not the viewport) in render_search.js and adds
-						// `.column_2` / `.column_1` at a higher specificity than
-						// this rule.
-						@media screen and (max-width: @width_break_point_0) {
-							grid-template-columns: 1fr;
-						}
-
-						&.root_search_group {
-							margin: 0px;
-							margin-left: 5px;
-							margin-right: 5px;
-							justify-content: flex-start;
+						// grid order: fields (0) → add_field slot (1) → nested
+						// groups (2) → add_group (3). Fields dropped later are
+						// appended at the DOM end; order keeps them first.
+						// A nested group takes a whole row of its parent.
+						>.search_group {
+							grid-column: 1 / -1;
+							order: 2;
 							border-radius: var(--radius-lg);
-						}
-
-						// search_component
-						>.search_component {
-							// defined at top to share css
+							padding-right: 1.75rem; // close button column (nested groups only)
 						}
 
 						.invalid_component{
@@ -234,153 +560,251 @@
 							left: 0px;
 							top: 0px;
 							margin: 0px;
-							padding: 0.27rem;
+							padding: @space 0;
 							text-align: center;
-							max-width: 32px;
+							width: 28px;
 							writing-mode: vertical-lr;
 							text-transform: uppercase;
 							cursor: pointer;
 							user-select: none;
 							-moz-user-select: none;
 							-webkit-user-select: none;
-							letter-spacing: 1px;
-							color: @color_grey_14;
-							opacity: 0.6;
+							letter-spacing: 1.5px;
+							font-size: 0.85em;
+							font-weight: 600;
+							color: @color_grey_1;
+							border-right: 3px solid transparent;
+							border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+							transition: filter var(--transition-fast);
 
+							// Legible operator: a light tint with dark ink plus a
+							// solid edge in the operator colour (was a saturated
+							// fill at opacity .6 under grey_14 ink).
 							&:hover {
-								opacity: 0.7;
+								filter: brightness(0.96);
+							}
+
+							display: flex;
+							align-items: center;
+							justify-content: flex-start;
+							gap: @space;
+
+							// group number chip
+							.group_counter {
+								display: inline-block;
+								padding: @space_s 0.1rem;
+								border-radius: var(--radius-pill);
+								background-color: @color_white;
+								color: @color_grey_4;
+								font-weight: 500;
+								letter-spacing: 0;
 							}
 
 							&.and {
-								background-color: @color_green_success;
+								background-color: @color_green_light;
+								border-right-color: @color_green_success;
 							}
 							&.or {
-								background-color: @color_primary;
+								background-color: @color_blue_light;
+								border-right-color: @color_primary;
 							}
 						}//end >.operator
 
 						>.button.close {
 							position: absolute;
-							right: 0px;
-							top: 0px;
+							right: 4px;
+							top: 4px;
+							opacity: 0.55;
+
+							&:hover { opacity: 1; }
 						}
 
-						>.button.add {
-							position: absolute;
-							right: 0px;
-							top: 1.4em;
-							color: @color_black;
+						// add_group: a quiet dashed slot, always the LAST grid
+						// item (fields are appended after it in the DOM). Sized
+						// to its label, it never claims a whole field track.
+						// add_field: the dashed drop target from the mockup, one
+						// field track wide, the height of an empty card. Lit
+						// while a field is dragged over THIS group (innermost
+						// only: a parent whose nested group is lit stays quiet).
+						>.add_field {
+							order: 1;
+							width: 100%; // global button is max-content: fill the track like a card
+							min-height: 4.5rem; // an empty card's height
+							display: flex;
+							align-items: center;
+							justify-content: center;
+							gap: @space;
+							padding: @space;
+							font-size: 0.9em;
+							color: @color_grey_6;
+							background-color: transparent;
+							border: 1.5px dashed @color_grey_10;
+							border-radius: var(--radius-lg);
+							cursor: pointer;
+							transition: color var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast);
+
+							&:before {
+								content: '';
+								flex: none;
+								width: 1em;
+								height: 1em;
+								background-color: currentColor;
+								-webkit-mask: url(../../themes/default/icons/add.svg) center / contain no-repeat;
+										mask: url(../../themes/default/icons/add.svg) center / contain no-repeat;
+							}
+
+							&:hover, &:focus-visible {
+								color: @color_grey_4;
+								border-color: @color_orange_dedalo;
+							}
+						}
+						&.drag_over:not(:has(.search_group.drag_over)) >.add_field {
+							color: @color_grey_4;
+							border-color: @color_orange_dedalo;
+							border-style: solid;
+							background-color: @color_hilite;
+						}
+
+						>.add_group {
+							order: 3;
+							grid-column: 1 / -1;
+							justify-self: start;
+							display: inline-flex;
+							align-items: center;
+							gap: @space_s;
+							height: 1.9rem;
+							padding: 0 @space;
+							font-size: 0.9em;
+							color: @color_grey_6;
+							background-color: transparent;
+							border: 1px dashed @color_grey_10;
+							border-radius: var(--radius-pill);
+							cursor: pointer;
+							transition: color var(--transition-fast), border-color var(--transition-fast);
+
+							&:before {
+								content: '';
+								width: 1em;
+								height: 1em;
+								background-color: currentColor;
+								-webkit-mask: url(../../themes/default/icons/add.svg) center / contain no-repeat;
+										mask: url(../../themes/default/icons/add.svg) center / contain no-repeat;
+							}
+
+							&:hover, &:focus-visible {
+								color: @color_grey_4;
+								border-color: @color_orange_dedalo;
+								border-style: solid;
+							}
 						}
 
 					}//end .search_group
 
 					// search_buttons_container
+					// One column, one radius, one hierarchy: Records (max) as a
+					// labelled inline field, Reset + Show all as secondary outline
+					// buttons, Apply as the ONLY solid button. Orange stays with
+					// the toolbar's New.
 					>.search_buttons_container {
-						min-height: 5em;
-						min-width: 12rem;
-						display: flex;
-						flex: 0 1 auto;
-						padding: 0px;
+						width: 17rem; // fits "↻ Restablecer | Mostrar todos" side by side
+						flex: 0 0 auto;
+						display: grid;
+						grid-template-columns: 1fr;
+						gap: @space;
+						align-content: start;
 						margin: 0px;
-						padding: 0.25em;
-
-						>* {
-							height: 100%;
-							width: 100%;
-							margin: 0px;
-							display: flex;
-							flex-direction: column;
-						}
+						padding: @space;
 
 						.button {
-							height: 100%;
-							width: 100%;
+							width: 100%; // generic button is max-content / 1em tall
+							height: auto;
 							margin: 0px;
-							padding: 0px;
-							padding-left: 0.25rem;
-							padding-right: 0.25rem;
+							padding: 0 @space;
+							min-height: 2.25rem;
 							font-size: 1em;
-							background-color: @color_tag_indexation_normal;
+							font-weight: 500;
 							opacity: 1;
-							color: var(--fg_on_accent); // dark ink on the amber fill, 8.5:1 (audit P1-18)
-							border: none; // quiet grid: no white outlines between buttons
+							color: @color_grey_4;
+							background-color: @color_white;
+							border: 1px solid @color_grey_10;
 							border-radius: var(--radius-md);
-							word-break: break-word;
-							transition: background-color var(--transition-fast);
+							word-break: normal;
+							cursor: pointer;
+							transition: border-color var(--transition-fast), background-color var(--transition-fast);
 
 							&:hover {
-								background-color: @color_tag_indexation_normal_dark;
+								border-color: @color_orange_dedalo;
 							}
 						}
 
 						// max_group
 						>.max_group {
+							display: flex;
+							flex-wrap: wrap;
 							align-items: center;
-							background-color: var(--color_white);
-							position: relative;
-							border-radius: 4px;
-							overflow: hidden;
-							min-width: 4.7rem;
+							gap: @space_s @space;
+							background-color: @color_white;
+							border: 1px solid @color_grey_13;
+							border-radius: var(--radius-md);
+							padding: @space_s @space_s @space_s @space;
 
 							.max_input_label {
-								display: block;
-								width: 100%;
-								text-align: center;
-								padding: 1em;
-								position: absolute;
+								flex: 1 1 auto;
+								color: @color_grey_6;
+								font-size: 0.9em;
 								pointer-events: none;
 							}
 
 							input.max_input {
-								background-color: transparent;
-								color: var(--color_black);
-								border: none;
-								width: 100%;
+								flex: 0 0 4rem;
+								width: 4rem;
+								height: 1.9rem;
+								background-color: @color_grey_16;
+								color: @color_grey_4;
+								border: 1px solid @color_grey_13;
+								border-radius: var(--radius-sm);
 								text-align: center;
-								font-size: 1.1em;
-								padding-top: 2em;
-								padding-bottom: 0.33rem;
-								// flex: 1 1 auto;
-								flex: 0;
-								min-height: 5.4rem;
-							}
-
-							.children_recursive_label {
-								flex: 1 1 auto;
-								cursor: pointer;
-								padding: 0.5rem;
-								padding-left: 0.25rem;
-								padding-right: 0.25rem;
-								word-break: break-all;
-								font-size: 10px;
-
-								// input
-								.children_recursive {
-									margin-right: 0.25rem;
-									vertical-align: text-bottom;
-								}
+								font-size: 1em;
+								font-variant-numeric: tabular-nums;
+								padding: 0;
 							}
 						}
 
-						// reset group
+						// reset group: [↻ Reset] [Show all], two equal secondary
+						// buttons (mockup parity)
+						// Wrapping flex, not a fixed-track grid: each button is at
+						// least as wide as its OWN label (nowrap + min-width:auto),
+						// so a long translation ("Zurücksetzen") stacks the pair
+						// instead of overflowing its box.
 						>.reset_group {
-							padding-left: 0.25em;
-							padding-right: 0.25em;
+							display: flex;
+							flex-wrap: wrap;
+							gap: @space;
 
-							// fn_add_mask sets mask-size:contain; the box here is the
-							// full column height (see .search_buttons_container .button),
-							// so cap the glyph or it scales to the whole button.
-							.button.reload {
-								flex-grow: 1;
-								-webkit-mask-size: 1.9em;
-										mask-size: 1.9em;
+							.button {
+								flex: 1 1 auto;
+								width: auto;
+								white-space: nowrap;
+							}
+
+							.button.reset_search {
+								gap: @space_s;
+
+								&:before {
+									content: '';
+									flex: none;
+									width: 1em;
+									height: 1em;
+									background-color: currentColor;
+									-webkit-mask: url(../../themes/default/icons/reload.svg) center / contain no-repeat;
+											mask: url(../../themes/default/icons/reload.svg) center / contain no-repeat;
+								}
 							}
 
 							// v6 parity: text-only "Show all". The generic .show_all icon
 							// class masks the box (.button&) and prepends a glyph (button&);
 							// both are dropped here so the label is what renders.
 							.button.show_all {
-								flex-grow: 1;
 								-webkit-mask-image: none;
 										mask-image: none;
 
@@ -390,14 +814,33 @@
 							}
 						}
 
-						// submit
+						// submit: the one primary action
 						>.button.submit {
-							background-color: @color_green_success;
-							color: @color_white;
-							font-weight: 500;
+							min-height: 2.75rem;
+							// muted green with white ink in both themes (mockup)
+							background-color: var(--search_apply_bg);
+							border-color: var(--search_apply_bg);
+							color: var(--search_apply_fg);
+							font-size: 1.05em;
+							font-weight: 600;
 
 							&:hover {
-								background-color: @color_green_success_dark;
+								filter: brightness(1.1);
+							}
+						}
+
+						// "Children" option, under Apply
+						>.children_recursive_label {
+							display: flex;
+							align-items: center;
+							gap: @space;
+							padding: 0 @space_s;
+							font-size: 0.9em;
+							color: @color_grey_6;
+							cursor: pointer;
+
+							.children_recursive {
+								margin: 0;
 							}
 						}
 
@@ -405,12 +848,6 @@
 
 				}//end .search_group_container
 
-				// root search_group
-				>.search_group_container:first-of-type >.search_group {
-					>.button.add {
-						top: 3px;
-					}
-				}
 			}//end search_container_selection
 
 
@@ -451,24 +888,27 @@
 				// component_presets_label at top
 				>.component_presets_label {
 					display: inline-flex;
+					align-items: center;
 					width: 100%;
-					background-color: @color_grey_5;
-					color: @color_white;
-					text-align: center;
-					padding: 4px;
+					// same grey-ramp chrome as the PRESET tab and the field levels
+					background-color: @color_grey_10;
+					color: @color_grey_4;
+					font-weight: 500;
+					text-align: left;
+					padding: @space_s @space_s @space_s @space;
 
 					mark {
-						color: @color_white;
+						color: @color_grey_4;
 						background-color: initial;
 						opacity: initial;
 					}
 
 					>.button.add {
-						color: @color_grey_5;
-						background-color: @color_grey_15;
+						background-color: @color_grey_4; // mask glyph: the fill IS the icon
+						flex: none;
 						cursor: pointer;
 						z-index: 9;
-						margin-left: 0.33rem;
+						margin-left: @space;
 					}
 				}//end .component_presets_label
 
@@ -519,6 +959,11 @@
 								width: 1rem;
 							}
 						}
+						// apply / edit / delete icons are always visible
+						.section_record:hover:not(.selected) {
+							background-color: @color_hilite;
+						}
+
 						.column_apply_preset {
 
 							.button_apply_preset {
@@ -575,46 +1020,6 @@
 		&:active {
 			opacity: 0.7;
 		}
-	}
-
-// thesaurus_search_selector
-	.thesaurus_search_selector {
-		margin-top: 7px;
-		width: 100%;
-
-		> ul {
-			display: flex;
-			flex-flow: wrap;
-			justify-content: flex-start;
-
-			> li {
-				padding-right: 10px;
-				padding:5px;
-				white-space: nowrap;
-				cursor: pointer;
-
-				> input {
-					cursor: pointer;
-				}
-
-				> label {
-					margin-left: 3px;
-					cursor: pointer;
-				}
-			}
-		}
-	}//end thesaurus_search_selector
-
-// search_global_container
-// Prevent interactions with the text contents of draggable elements from being select able.
-	.search_global_container[draggable] {
-		-moz-user-select: none;
-		-khtml-user-select: none;
-		-webkit-user-select: none;
-		user-select: none;
-		// Required to make elements draggable in old WebKit
-		-khtml-user-drag: element;
-		-webkit-user-drag: element;
 	}
 
 // semantic (RAG) search UI — 2026-07-22 (single input since 2026-07-23)

@@ -40,6 +40,15 @@
 		}
 	}
 
+// native checkbox / radio: Dédalo orange everywhere (was the browser's blue
+// outside the inspector, which set it for its own area only). The custom-drawn
+// dark-mode boxes (component_check_box/filter/radio) take the same colour via
+// --checkbox_checked_bg.
+	input[type="checkbox"],
+	input[type="radio"] {
+		accent-color: var(--color_input_focus);
+	}
+
 // generic html inputs appearance. Used by search, tools, etc.
 	.dd_input {
 		font-size: 1em;
@@ -1149,29 +1158,45 @@
 			li {
 				position: relative;
 				line-height: 1em;
-				padding: 0.307rem;
+				// same inset as the search panel's spacing scale (0.5rem sides)
+				padding: 0.4rem 1.33rem 0.4rem 0.5rem;
 				display: block;
 				user-select: none;
-				padding-right: 1.33rem;
 
 				// Section label bar
+				// Level header (People, Family unit…): the same grey-ramp chrome
+				// as the FIELDS/PRESET tabs (grey_10 / grey_4, legible in both
+				// themes from one pair), sticky so the level's name stays in
+				// view while its column scrolls.
+				// Three levels, three looks (search-panel mockup): the LEVEL
+				// header is chrome (small caps-style uppercase on grey_10), the
+				// GROUP header a light band with bold ink, the FIELD rows white
+				// and indented under it. They used to share grey_10 and read as
+				// one block.
 				&.section_bar_label {
 					display: block;
-					background-color: @color_grey_5;
-					color: @color_white;
+					background-color: @color_grey_10;
+					color: @color_grey_4;
+					font-size: 0.85em;
+					font-weight: 600;
+					text-transform: uppercase;
+					letter-spacing: 0.06em;
+					padding-top: 0.55rem;
+					padding-bottom: 0.55rem;
+					position: sticky;
+					top: 0;
+					z-index: 2;
 					// Avoid click events affect here (received with :after)
 					pointer-events: none;
-					padding-right: 0.33rem;
-
-					:root[data-theme="dark"] & {
-						background-color: @color_grey_8;
-					}
+					padding-right: 0.5rem;
 
 					&:after {
-						content: 'X';
+						content: '×';
 						display: block;
 						float: right;
 						width: 1em;
+						font-size: 1.2em;
+						line-height: 0.85;
 						text-align: center;
 						cursor: pointer;
 						// Allow receive here the click button of real DOM element
@@ -1190,8 +1215,10 @@
 				// so it stops out-darkening the rows it groups and stays
 				// legible in both themes from ONE pair (see search.less).
 				&.section_group_label {
-					background-color: @color_grey_10;
+					background-color: @color_grey_15;
 					color: @color_grey_4;
+					font-weight: 600;
+					border-bottom: 1px solid @color_grey_13;
 					cursor: pointer;
 
 					&:active {
@@ -1216,14 +1243,13 @@
 				}
 
 				// component_label
+				// field row: quiet separators (grey_13 inverts per theme), a
+				// light tint on hover; full orange is kept for the OPEN level
+				// row (.has_subquery.active) so it marks the path.
 				&.component_label {
 					background-color: @color_white;
-					border-bottom: 0.5px solid @color_grey_5;
-
-					:root[data-theme="dark"] & {
-						// border-bottom: none;
-						border-bottom: 0.5px solid @color_grey_11;
-					}
+					border-bottom: 1px solid @color_grey_13;
+					padding-left: 1.25rem; // indented under its group header
 
 					// truncate text
 					padding-right: 2.0em;
@@ -1232,19 +1258,23 @@
 					text-overflow: ellipsis;
 
 					&:hover {
-						background-color: @color_orange_dedalo !important;
-						color: var(--fg_on_brand);
+						background-color: @color_hilite !important;
 					}
 					&:active {
 						opacity: 0.6;
 					}
 
-					@background-top: 5px;
+					@background-top: 7px;
 
 					// Drag-gable background svg
+					// drag handle: shown on row hover only (was on every row)
 					&.element_draggable {
 						cursor: move;
-						background-image: url('../../themes/default/draggable.svg');
+						background-image: none;
+
+						&:hover {
+							background-image: url('../../themes/default/draggable.svg');
+						}
 						background-color: @color_white;
 						background-position-x: 0%;
 						background-position-y: 0%;
@@ -1271,6 +1301,10 @@
 								mask-image: url('../../themes/default/draggable.svg');
 								mask-size: 12px;
 								mask-repeat: no-repeat;
+								opacity: 0;
+							}
+							&:hover:before {
+								opacity: 1;
 							}
 
 							&.has_subquery:before {
@@ -1313,6 +1347,7 @@
 
 						&.active {
 							background-color: @color_orange_dedalo !important;
+							color: var(--fg_on_brand);
 						}
 					}
 

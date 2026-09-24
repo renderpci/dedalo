@@ -84,6 +84,9 @@
 		event.preventDefault();
 		event.stopPropagation();
 
+		// hilite the group the field would land in (its .add_field slot)
+		obj.classList.add('drag_over')
+
 		return false;
 	}//end on_dragover
 
@@ -91,18 +94,19 @@
 
 	/**
 	* ON_DRAGLEAVE
-	* Placeholder handler for the dragleave event.
+	* Removes the 'drag_over' hilite added by on_dragover. dragleave also fires
+	* when the cursor moves onto a CHILD of the group, so the class is kept
+	* while the pointer is still inside it (relatedTarget contained).
 	*
-	* The 'dragleave' listener is registered on every search_group element in
-	* render_search_group.  This stub ensures the binding does not throw even
-	* though no visual state change is currently implemented for dragleave.
-	* Future implementations could remove a hover/highlight class added in
-	* on_dragover here.
-	*
-	* @param {HTMLElement} obj - The element that the drag cursor has left.
+	* @param {HTMLElement} obj   - The element that the drag cursor has left.
+	* @param {DragEvent}   event - The native dragleave event.
 	* @returns {boolean} Always returns false.
 	*/
-	export const on_dragleave = function(obj) {
+	export const on_dragleave = function(obj, event) {
+
+		if (!event?.relatedTarget || !obj.contains(event.relatedTarget)) {
+			obj.classList.remove('drag_over')
+		}
 
 		return false;
 	}//end on_dragleave
@@ -143,6 +147,8 @@
 		event.stopPropagation();
 
 		const self = this // reference to 'search' (non instance)
+
+		obj.classList.remove('drag_over')
 
 		const data 		  = event.dataTransfer.getData('text/plain') // element thats move
 		const wrap_target = obj // element on user leaves source wrap
