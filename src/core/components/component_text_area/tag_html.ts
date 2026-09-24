@@ -13,6 +13,7 @@
 
 import { config } from '../../../config/config.ts';
 import { mediaTypeOf } from '../../concepts/media.ts';
+import { escapeHtml } from '../../security/html_escape.ts';
 
 /** A tag-embedded svg locator ({'section_tipo':…} with single quotes). */
 export interface SvgTagLocator {
@@ -88,16 +89,6 @@ export function appServedSvgUrlFromTagLocator(locator: SvgTagLocator): string | 
 	return tail === null ? null : `${config.media.webBase}${tail}`;
 }
 
-/** htmlspecialchars(ENT_QUOTES) twin — the SEC-028 attribute escaping. */
-function esc(value: string | undefined): string {
-	return (value ?? '')
-		.replace(/&/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/"/g, '&quot;')
-		.replace(/'/g, '&#039;');
-}
-
 export interface TagRenderOptions {
 	/** PHP $options->tag_url default '../component_text_area/tag'. */
 	tagUrl?: string;
@@ -122,7 +113,13 @@ export function addTagImgOnTheFly(text: string, options: TagRenderOptions = {}):
 	out = out.replace(
 		/(\[(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])/g,
 		(_m, _g1, g2: string, g3: string, g4: string, _g5, g6?: string, g7?: string) => {
-			const [e2, e3, e4, e6, e7] = [esc(g2), esc(g3), esc(g4), esc(g6), esc(g7)];
+			const [e2, e3, e4, e6, e7] = [
+				escapeHtml(g2),
+				escapeHtml(g3),
+				escapeHtml(g4),
+				escapeHtml(g6),
+				escapeHtml(g7),
+			];
 			const id = `[${e2}-${e3}-${e4}-${e6}]`;
 			return `<img id="${id}" src="${tagUrl}${id}" class="index" data-type="indexIn" data-tag_id="${e4}" data-state="${e3}" data-label="${e6}" data-data="${e7}">`;
 		},
@@ -132,7 +129,13 @@ export function addTagImgOnTheFly(text: string, options: TagRenderOptions = {}):
 	out = out.replace(
 		/(\[\/(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])/g,
 		(_m, _g1, g2: string, g3: string, g4: string, _g5, g6?: string, g7?: string) => {
-			const [e2, e3, e4, e6, e7] = [esc(g2), esc(g3), esc(g4), esc(g6), esc(g7)];
+			const [e2, e3, e4, e6, e7] = [
+				escapeHtml(g2),
+				escapeHtml(g3),
+				escapeHtml(g4),
+				escapeHtml(g6),
+				escapeHtml(g7),
+			];
 			const id = `[/${e2}-${e3}-${e4}-${e6}]`;
 			return `<img id="${id}" src="${tagUrl}${id}" class="index" data-type="indexOut" data-tag_id="${e4}" data-state="${e3}" data-label="${e6}" data-data="${e7}">`;
 		},
@@ -142,7 +145,7 @@ export function addTagImgOnTheFly(text: string, options: TagRenderOptions = {}):
 	out = out.replace(
 		/(\[(reference)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])/g,
 		(_m, _g1, _g2, g3: string, g4: string, _g5, g6?: string, g7?: string) => {
-			const [e3, e4, e6, e7] = [esc(g3), esc(g4), esc(g6), esc(g7)];
+			const [e3, e4, e6, e7] = [escapeHtml(g3), escapeHtml(g4), escapeHtml(g6), escapeHtml(g7)];
 			return `<reference id="reference_${e4}" class="reference" data-type="reference" data-tag_id="${e4}" data-state="${e3}" data-label="${e6}" data-data="${e7}">`;
 		},
 	);
@@ -157,7 +160,7 @@ export function addTagImgOnTheFly(text: string, options: TagRenderOptions = {}):
 	out = out.replace(
 		/(\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}(\.[0-9]{1,3})?)_TC\])/g,
 		(_m, g1: string, g2: string) => {
-			const [e1, e2] = [esc(g1), esc(g2)];
+			const [e1, e2] = [escapeHtml(g1), escapeHtml(g2)];
 			return `<img id="${e1}" src="${tagUrl}${e1}" class="tc" data-type="tc" data-tag_id="${e1}" data-state="n" data-label="${e2}" data-data="${e2}">`;
 		},
 	);
@@ -180,8 +183,8 @@ export function addTagImgOnTheFly(text: string, options: TagRenderOptions = {}):
 			const url = svgUrl(locator);
 			// PHP: $data = str_replace('"','\'',$_7) — safe single-quote form.
 			const data = g7.replace(/"/g, "'");
-			const [e2, e3, e4, e6] = [esc(g2), esc(g3), esc(g4), esc(g6)];
-			return `<img id="[${e2}-${e3}-${e4}-${e6}]" src="${esc(url ?? '')}" class="svg" data-type="svg" data-tag_id="${e4}" data-state="${e3}" data-label="${e6}" data-data="${esc(data)}">`;
+			const [e2, e3, e4, e6] = [escapeHtml(g2), escapeHtml(g3), escapeHtml(g4), escapeHtml(g6)];
+			return `<img id="[${e2}-${e3}-${e4}-${e6}]" src="${escapeHtml(url ?? '')}" class="svg" data-type="svg" data-tag_id="${e4}" data-state="${e3}" data-label="${e6}" data-data="${escapeHtml(data)}">`;
 		},
 	);
 
@@ -199,7 +202,13 @@ export function addTagImgOnTheFly(text: string, options: TagRenderOptions = {}):
 			g6: string | undefined,
 			g7: string,
 		): string => {
-			const [e2, e3, e4, e6, e7] = [esc(g2), esc(g3), esc(g4), esc(g6), esc(g7)];
+			const [e2, e3, e4, e6, e7] = [
+				escapeHtml(g2),
+				escapeHtml(g3),
+				escapeHtml(g4),
+				escapeHtml(g6),
+				escapeHtml(g7),
+			];
 			const id = `[${e2}-${e3}-${e4}-${e6}]`;
 			return `<img id="${id}" src="${tagUrl}${id}" class="${kind}" data-type="${kind}" data-tag_id="${e4}" data-state="${e3}" data-label="${e6}" data-data="${e7}">`;
 		};
@@ -216,7 +225,13 @@ export function addTagImgOnTheFly(text: string, options: TagRenderOptions = {}):
 	out = out.replace(
 		/(\[(page)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])/g,
 		(_m, _g1, g2: string, g3: string, g4: string, _g5, g6?: string, g7?: string) => {
-			const [e2, e3, e4, e6, e7] = [esc(g2), esc(g3), esc(g4), esc(g6), esc(g7)];
+			const [e2, e3, e4, e6, e7] = [
+				escapeHtml(g2),
+				escapeHtml(g3),
+				escapeHtml(g4),
+				escapeHtml(g6),
+				escapeHtml(g7),
+			];
 			const id = `[${e2}-${e3}-${e4}-${e6}]`;
 			return `<img id="${id}" src="${tagUrl}${id}" class="page" data-type="page" data-tag_id="${e4}" data-state="${e3}" data-label="${e6}" data-data="${e7}">`;
 		},
@@ -226,7 +241,13 @@ export function addTagImgOnTheFly(text: string, options: TagRenderOptions = {}):
 	out = out.replace(
 		/(\[(person)-([a-z])-([0-9]{0,6})-([^-]{0,22})-data:(.*?):data\])/g,
 		(_m, _g1, g2: string, g3: string, g4: string, g5: string, g6: string) => {
-			const [e2, e3, e4, e5, e6] = [esc(g2), esc(g3), esc(g4), esc(g5), esc(g6)];
+			const [e2, e3, e4, e5, e6] = [
+				escapeHtml(g2),
+				escapeHtml(g3),
+				escapeHtml(g4),
+				escapeHtml(g5),
+				escapeHtml(g6),
+			];
 			const id = `[${e2}-${e3}-${e4}-${e5}]`;
 			return `<img id="${id}" src="${tagUrl}${id}" class="person" data-type="person" data-tag_id="${e4}" data-state="${e3}" data-label="${e5}" data-data="${e6}">`;
 		},
