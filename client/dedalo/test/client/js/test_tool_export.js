@@ -940,6 +940,7 @@ describe('TOOL_EXPORT SERVER-BUILT EXPORT', function() {
 				col_page, col_page_size: 100, first_col: first, total_cols: 150,
 				// the media column lives in the window NOT drawn first
 				col_models: ['component_input_text', 'component_image'],
+				media_models: ['component_image'],
 				rows: [{t: 'row', rec: 1, sub: 0, c}], elided: [],
 				page: 0, page_size: PAGE_SIZE, first_record: 0, records: 1, has_more: false,
 				total_records: 1, written_records: 1
@@ -964,12 +965,56 @@ describe('TOOL_EXPORT SERVER-BUILT EXPORT', function() {
 		const pager = container.querySelector('.export_column_pager')
 		assert.ok(pager, 'the column pager is shown')
 		assert.ok(/1–100/.test(pager.textContent) && /150/.test(pager.textContent), 'the range is told: ' + pager.textContent)
-		assert.equal(tool.export_ui.download_buttons.get('media_zip').disabled, false, 'media offered from col_models, not the window')
+		assert.equal(tool.export_ui.download_buttons.get('media_zip').disabled, false, 'media offered from media_models, not the window')
 		pager.querySelector('.column_next').click()
 		await wait_for(() => tool.export_state.col_page===1 && settled_preview(tool, 0), 'the next column window')
 		assert.equal(asked[asked.length - 1], 1, 'the next window was asked for')
 		assert.equal(header_cells(), 50, 'the second window drawn')
 		assert.equal(container.querySelector('.export_column_pager .column_next').disabled, true, 'no window after the last')
+	})
+
+	it('a PORTAL column whose targets hold images offers the media ZIP from media_models, never from the column models', async function() {
+		// The server's answer for a value-format portal export: the one column is
+		// a component_portal (text cells mixing image URLs and a name), and the
+		// walk READ component_image through it — media_models says so.
+		const preview_of = (media_models, col_models, media_rerun_required=false) => ({ok: true, request_id: 'test', data: {
+			job_id: 'fake_portal', status: 'ended', final_order: true,
+			cols: [{t: 'col', i: 0, key: 'zzmz1_zzmz2', label: 'Photos', cell_type: 'text',
+				model: 'component_portal', path: [{section_tipo: 'zzmz1', component_tipo: 'zzmz2'}], after: null}],
+			col_page: 0, col_page_size: 100, first_col: 0, total_cols: 1,
+			col_models, media_models, media_rerun_required,
+			rows: [{t: 'row', rec: 1, sub: 0, c: {'0': 'http://media.example.test/image/1.5MB/0/test99_test3_1.jpg, Photographer One'}}],
+			elided: [], page: 0, page_size: PAGE_SIZE, first_record: 0, records: 1, has_more: false,
+			total_records: 1, written_records: 1
+		}})
+		const open_portal = async (media_models, col_models, media_rerun_required=false) => {
+			await tool.destroy(true, true, true)
+			tool = await open_tool((instance) => {
+				instance.list_export_jobs	= async () => jobs_response([{
+					job_id: 'fake_portal', status: 'ended', section_tipo: SECTION,
+					created_at: new Date().toISOString(), total: 1, records: 1, rows: 1,
+					files: [], narrowed: false, error: null
+				}])
+				instance.get_export_preview	= async () => preview_of(media_models, col_models, media_rerun_required)
+			})
+			await wait_for(() => tool.export_state && tool.export_state.job_id==='fake_portal' && settled_preview(tool, 0), 'the portal export painted')
+		}
+
+		// related media: offered, and the quality modal lists the image model
+		await open_portal(['component_image', 'component_pdf'], ['component_portal'])
+		assert.equal(tool.export_ui.download_buttons.get('media_zip').disabled, false, 'the portal export offers the media ZIP')
+		assert.deepEqual(tool.media_components_in_data, ['component_image', 'component_pdf'], 'the modal lists the models the export READ')
+
+		// the column models alone never enable it: media_models is the signal
+		await open_portal([], ['component_image'])
+		assert.equal(tool.export_ui.download_buttons.get('media_zip').disabled, true, 'no media_models, no media ZIP')
+		assert.deepEqual(tool.media_components_in_data, [], 'nothing to choose a quality for')
+
+		// an export made BEFORE capture with a portal column: still offered, so
+		// its info.txt can say rerun_required (a disabled button hid the reason)
+		await open_portal([], ['component_portal'], true)
+		assert.equal(tool.export_ui.download_buttons.get('media_zip').disabled, false, 'media_rerun_required offers the media ZIP')
+		assert.deepEqual(tool.media_components_in_data, [], 'no quality to choose: nothing will be archived')
 	})
 
 	it('reconnect: a lane job arms Stop only once its frame names this export; the poll survives a failed page', async function() {

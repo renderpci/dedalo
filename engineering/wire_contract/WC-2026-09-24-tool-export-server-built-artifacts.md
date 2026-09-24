@@ -18,7 +18,10 @@
 - **Scope:** `tools/tool_export/server/{index,export_job,preview,download,access,artifact_store,spool_reader}.ts`,
   `tools/tool_export/server/writers/`, the route (registered through `ToolServerModule.httpRoutes`, dispatched by `src/server.ts` via `loader.ts toolHttpRouteFor`), the
   `export.*` block of `src/core/errors/registry.ts`, and `JobStatusFrame.error`
-  in `src/core/media/jobs.ts`.
+  in `src/core/media/jobs.ts`; since the "related media" addendum also
+  `src/diffusion/export/{row_media,atoms,grid}.ts`, the media-read hook of
+  `src/core/resolve/relation_list.ts` and `tools/tool_export/js/render_tool_export.js`
+  `get_media_models_in_data`.
 
 ## Shape before (PHP, and TS until this change)
 
@@ -209,15 +212,17 @@ Request `options`: `{section_tipo, job_id, page, page_size?, col_page?}`. `page`
 window (default 0; clamped to the last window).
 
 Answer `data`:
-`{job_id, status, cols, col_page, col_page_size, first_col, total_cols, col_models, final_order, rows, elided, page, page_size, first_record, records, has_more, total_records, written_records}`.
+`{job_id, status, cols, col_page, col_page_size, first_col, total_cols, col_models, media_models, final_order, rows, elided, page, page_size, first_record, records, has_more, total_records, written_records}`
+(`media_models`: addendum "related media" below).
 
 - `cols` are the spool's `col` lines of ONE column window of the display order:
   at most `col_page_size` (= `PREVIEW_COLUMN_BUDGET`, 100) columns, starting at
   display index `first_col`, of `total_cols`. Every served row carries only
   that window's cells, so a page is bounded in cells (rows budget × column
   budget) however wide the export (`breakdown: 'columns'` can reach thousands
-  of columns). `col_models` = the distinct leaf models of EVERY column (what the
-  client offers the media download from). The downloads carry every column.
+  of columns). `col_models` = the distinct leaf models of EVERY column. (The
+  client offered the media download from it until the "related media"
+  addendum below; it now reads `media_models`.) The downloads carry every column.
   (Amended 2026-09-24, review: a page served every column, so a 4,000-column
   export drew millions of cells per page and re-sent every descriptor on each
   refresh.)
@@ -655,3 +660,120 @@ was the model name in `unresolved` — the files looked complete. Now:
 Gates: `test/unit/export_external_prefetch_degradation_native.test.ts` (P, D, F, J),
 client suite `test_tool_export.js` ("an export an EXTERNAL source left
 INCOMPLETE says so…"). No parity fixture covers these keys; no re-harvest.
+
+## Addendum 2026-09-24 — related media: the media ZIP archives what the export READ, at any depth
+
+Measured on real spools: a portal column whose targets hold images was never in
+the media ZIP. The writer and the client identified media columns by the
+column's OWN model, and a portal column's model is `component_portal` — in
+value format its cell is text mixing the image URLs with the other children
+(`url | name, url`), in dedalo_raw it is the portal's locators, in grid_value
+with a bare portal it is compact text. The thumbnails rendered (the client reads
+`cell_type`) while the ZIP button stayed disabled (it read `col_models`). A
+grid_value portal → image column worked only through the file-name grammar, so
+a `properties.image_id` rename was refused `unidentified`.
+
+- **The walk records what it reads** (`src/diffusion/export/row_media.ts`,
+  `relation_list.ts CellValueResolveOptions.onMediaRead`, `atoms.ts`,
+  `grid.ts ExportGridRunOptions.captureMedia`): every media component read on a
+  record whose stored items name a file — a literal leaf, a portal's own-config
+  child, a frame's, a nested relation's; for dedalo_raw, the SAME derivation
+  from the stored locators (`collectRawMediaAddresses`). Invariant: the same ddo
+  gives the same archive in value, grid_value and dedalo_raw.
+- **Out of band — the wire does not change.** The addresses ride the record's
+  first row line under a SYMBOL key: no serialization carries it, so the
+  `get_export_grid` stream, the buffered envelope, the spool's `grid.ndjson` and
+  the `export.ndjson` download are byte-identical. Only the background build
+  (`runExportArtifact`) captures.
+- **Spool-internal file `media.ndjson`** (`SPOOL_FILES.media`): one line per
+  record that read media, `{rec, a: [[column, section_tipo, section_id,
+  component_tipo], …]}`; created lazily, metered by the quota with the spool,
+  deleted with it, never served. **Manifest `media_models`**: the distinct media
+  models it names, sorted, at every checkpoint and at the end. Its PRESENCE marks
+  a captured spool; absent on a manifest written before this addendum.
+- **`get_export_preview` gains `media_models`** (sorted): every column's own
+  media model plus the manifest's `media_models`. `col_models` keeps its
+  meaning. The client's media download (`render_tool_export.js
+  get_media_models_in_data`) — whether it is offered, and one quality selector
+  per model — reads `media_models`.
+- **`media_zip` coverage** (`writers/media_zip.ts`):
+  - a DIRECT media column (top level, own model a media model) is read from its
+    cells exactly as before — its archive and `info.txt` are unchanged, with or
+    without the sidecar (gate R7);
+  - every other address comes from `media.ndjson`. No URL text is parsed for
+    it: a URL typed into a text field is never a candidate (gate R1 plants two
+    forged URLs — another record's master, a path out of the root — and asserts
+    neither reaches the archive). Each address is re-authorized as the OWNER —
+    the model is a media model with a chosen quality, then
+    `getRecordComponentPermission >= 1` on (section, component, record), then
+    `principalCanAccessRecord` — the same checks as a cell candidate, and the
+    only gate on those bytes (the walk crosses into relation targets asserting
+    the record key only, never the image component's grant). Then EVERY item the
+    record holds now for that component goes through the unchanged step 4 (target
+    quality, own quality folder, denied names, realpath, regular file, dedupe).
+  - `info.txt` names a sidecar refusal `section_tipo/section_id/component_tipo`
+    (reasons `not_media`, `not_authorized`, `not_in_record` — the record holds no
+    item for it now — plus the per-item ones).
+  - New closed reason **`rerun_required`**: on a spool WITHOUT capture the old
+    reading is kept (every media-model column from its cells), and every other
+    column that may hold related media (an img/av cell, a path through a media
+    component, a relation whose own config has a media child) is listed once —
+    loud, never guessed from URL text.
+
+Gates: `tool_export_media_zip_native` R1–R8 (a built `zzmz` host section with a
+portal into test3 whose own config shows image + text + pdf; value, grid_value
+default / rows / columns and dedalo_raw, bare and declared portal → image; a
+target moved out of the owner's projects after the walk and the ungranted pdf
+child refused `not_authorized`; the forged URLs; the uncaptured fallback; a
+record emptied after the walk; the direct-export identity), mutation-verified;
+client suite `test_tool_export.js` ("a PORTAL column whose targets hold images
+offers the media ZIP from media_models…"). No parity fixture covers these
+surfaces; no re-harvest.
+
+### Amended 2026-09-24 (review) — one derivation, every format; the rerun notice reachable
+
+Four defects found by review, each now gated:
+
+- **grid_value kept only the media of NON-EMPTY atoms.** A target whose value
+  is empty (only the `original` file exists yet, or the export base is unset)
+  dropped its atom, and its media with it, while value still archived it. The
+  walk now keeps the media of every dropped value (`atoms.ts
+  ExportRun.droppedMedia`). Such media — and a value / dedalo_raw cell that
+  shows nothing — is recorded with a **null column**: `media.ndjson` entries
+  are `[column | null, section_tipo, section_id, component_tipo]`. The writer
+  skips a sidecar address only when its column is a DIRECT media column (read
+  from its cells); a null one has no cell to read, so a direct image column
+  whose record holds only the master is archived in every format too.
+- **dedalo_raw walked the relation's own config and ignored the declared
+  path.** It now follows the DECLARED path (`resolveRecordAtoms`, the value
+  format's own walk) and, at each leaf, mirrors `resolveCellValue`'s reads —
+  the children come from the SAME helpers the value resolvers use
+  (`relation_list.ts relationTargetChildren`, `dataframeFrameChildTipos`). A
+  portal → text ddo reads no media; a portal → image ddo reads the image even
+  when the portal's config does not show it. The raw frame columns
+  (WC-2026-08-09) carry no capture: value has no frame column, and the frames
+  the relation's config shows are read through the top column.
+- **The raw media walk could fail an export.** Capture runs on every build
+  (the spool is written once, before anyone asks for a media ZIP), and the walk
+  threw `internal.invariant` past 12 hops — a self-referencing portal chain made
+  a CSV build fail. The walk is now an explicit worklist that expands each
+  (section, id, component) once: it ends on any finite record graph, with no
+  depth ceiling. A field whose ontology can reach no media component reads no
+  record for it.
+- **`rerun_required` was unreachable from the tool.** An export built before
+  capture whose related media sits behind a portal got `media_models: []`, so
+  the button stayed disabled. **`get_export_preview` gains
+  `media_rerun_required`** (boolean): true only for an ended export whose
+  manifest has no `media_models` and that has a non-media column which may hold
+  related media (the writer's own predicate, `legacyColumnMayHoldMedia`). The
+  client enables the media ZIP when `media_models` is non-empty OR this is
+  true; the modal then lists no quality, and the ZIP's `info.txt` lists those
+  columns as `rerun_required`.
+
+Gates: `tool_export_media_zip_native` R9 (master-only target: bare, declared and
+direct, every format), R10 (declared path in raw: portal → text reads nothing,
+a portal → image its config does not show is read), R11 (a 16-record
+self-referencing chain builds in dedalo_raw / value / grid_value, CSV included),
+R5/R6 (`media_rerun_required`), each mutation-verified; client suite
+`test_tool_export.js` (the same "PORTAL column" case, third leg). No parity
+fixture covers these surfaces; no re-harvest.

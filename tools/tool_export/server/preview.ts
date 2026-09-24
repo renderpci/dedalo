@@ -40,6 +40,7 @@
  * `export.artifact_not_found`.
  */
 
+import { isMediaModel } from '../../../src/core/concepts/media.ts';
 import { ok } from '../../../src/core/errors/index.ts';
 import type { Principal } from '../../../src/core/security/permissions.ts';
 import {
@@ -58,6 +59,7 @@ import {
 	type SpoolColLine,
 	type SpoolRowLine,
 } from './spool_reader.ts';
+import { legacyColumnMayHoldMedia } from './writers/media_zip.ts';
 
 /** The preview wire (data of get_export_preview). */
 export interface ExportPreview {
@@ -75,6 +77,26 @@ export interface ExportPreview {
 	total_cols: number;
 	/** The distinct leaf models of EVERY column (not only the window's). */
 	col_models: string[];
+	/**
+	 * THE MEDIA MODELS THE MEDIA ZIP CAN ARCHIVE (2026-09-24) — what the
+	 * client's media download reads (offered at all, and which quality
+	 * selectors its modal lists): every column's own media model (`col_models`
+	 * filtered) PLUS, for an export built with media capture, the models the
+	 * walk READ at any path depth (manifest `media_models` — a portal's image
+	 * child, a portal→image path, a dedalo_raw portal's targets). Sorted.
+	 * `col_models` keeps its meaning (leaf column models) and is no longer the
+	 * media signal: a portal column's model is component_portal.
+	 */
+	media_models: string[];
+	/**
+	 * TRUE ONLY for an ended export built WITHOUT media capture (manifest
+	 * `media_models` absent — made before 2026-09-24) that has a column which
+	 * may hold related media (writers/media_zip.ts legacyColumnMayHoldMedia):
+	 * the client offers the media ZIP anyway, and its info.txt lists those
+	 * columns as `rerun_required` — else a portal-only legacy export would show
+	 * a disabled button and never the reason. False otherwise.
+	 */
+	media_rerun_required: boolean;
 	/** True once the order is the export's final ('end') order. */
 	final_order: boolean;
 	/** The page's rows, each carrying only the window's cells. */
@@ -192,6 +214,36 @@ export function columnWindow(
 	return { ...window, rows: rows.map((row) => windowRow(row, window.cols)) };
 }
 
+/**
+ * The preview's `media_models`: the column models that are media models, plus
+ * the models the capturing walk recorded (manifest `media_models`, absent on
+ * an export built without capture), deduplicated and sorted.
+ */
+export function previewMediaModels(
+	colModels: Iterable<string>,
+	captured: readonly unknown[] | undefined,
+): string[] {
+	const media = new Set<string>();
+	for (const model of colModels) if (isMediaModel(model)) media.add(model);
+	for (const model of captured ?? []) {
+		if (typeof model === 'string' && isMediaModel(model)) media.add(model);
+	}
+	return [...media].sort();
+}
+
+/**
+ * Does an UNCAPTURED spool hold a column the media ZIP would list as
+ * `rerun_required`? The same columns the writer checks: every one whose own
+ * model is not a media model (those are read from their cells).
+ */
+async function uncapturedColumnsMayHoldMedia(cols: readonly SpoolColLine[]): Promise<boolean> {
+	for (const col of cols) {
+		if (typeof col.model === 'string' && isMediaModel(col.model)) continue;
+		if (await legacyColumnMayHoldMedia(col)) return true;
+	}
+	return false;
+}
+
 /** Read one page of an export the caller owns. */
 export async function readExportPreview(request: ExportPreviewRequest): Promise<ExportPreview> {
 	const { job, manifest } = await resolveOwnedJob(
@@ -231,6 +283,11 @@ export async function readExportPreview(request: ExportPreviewRequest): Promise<
 	const models = new Set<string>();
 	for (const col of ordered)
 		if (typeof col.model === 'string' && col.model !== '') models.add(col.model);
+	const mediaModels = previewMediaModels(models, manifest.media_models);
+	const mediaRerunRequired =
+		manifest.status === 'ended' &&
+		!Array.isArray(manifest.media_models) &&
+		(await uncapturedColumnsMayHoldMedia(ordered));
 	return {
 		job_id: job.jobId,
 		status,
@@ -240,6 +297,8 @@ export async function readExportPreview(request: ExportPreviewRequest): Promise<
 		first_col: windowed.firstCol,
 		total_cols: ordered.length,
 		col_models: [...models],
+		media_models: mediaModels,
+		media_rerun_required: mediaRerunRequired,
 		final_order: final,
 		rows: page.rows,
 		elided: page.elided,

@@ -13,10 +13,15 @@ export type {
 	ExportExternalDegradedState,
 	ExportGridContext,
 	ExportGridRunOptions,
+	ExportRowMediaAddress,
 	OpenedExportGrid,
+	RowLineWithMedia,
 } from '../export/index.ts';
 export {
 	assertExportDeclarationReadable,
+	EXPORT_ROW_MEDIA,
 	exportGridUnified,
 	openExportGrid,
+	parseRowMediaAddress,
+	rowMediaOf,
 } from '../export/index.ts';

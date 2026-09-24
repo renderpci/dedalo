@@ -10,6 +10,8 @@
  *   formats + breakdown placement — export's OWN writer. `openExportGrid` is
  *   the ONE line producer (usable outside a request, cancellable at batch
  *   boundaries); `exportGridUnified` is its thin tool-envelope user.
+ * - row_media.ts — the out-of-band media-address channel (a capturing walk's
+ *   row lines → the tool_export spool's media.ndjson → the media ZIP).
  *
  * tools/tool_export/server/tool_export.ts is a thin facade over this module —
  * the SINGLE implementation since the ledgered legacy-walker deletion landed
@@ -31,3 +33,5 @@ export type {
 } from './grid.ts';
 export { assertExportDeclarationReadable, exportGridUnified, openExportGrid } from './grid.ts';
 export { ndjsonStream } from './ndjson_stream.ts';
+export type { ExportRowMediaAddress, RowLineWithMedia } from './row_media.ts';
+export { EXPORT_ROW_MEDIA, parseRowMediaAddress, rowMediaOf } from './row_media.ts';

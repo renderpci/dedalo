@@ -52,6 +52,7 @@ import { DedaloError, ok } from '../../core/errors/index.ts';
 import { termByTipo } from '../../core/ontology/labels.ts';
 import { getColumnNameByModel, getModelByTipo } from '../../core/ontology/resolver.ts';
 import { EmissionContext } from '../../core/resolve/component_data.ts';
+import type { MediaReadAddress } from '../../core/resolve/relation_list.ts';
 import { currentApplicationLang, runWithRequestLangs } from '../../core/resolve/request_lang.ts';
 import { buildSearchSql } from '../../core/search/sql_assembler.ts';
 import { getDataframeChildTipos } from '../../core/section/list_definitions/section_list.ts';
@@ -77,8 +78,10 @@ import type { ExportRun, ExportSegment, GridAtom } from './atoms.ts';
 import {
 	cellTypeOfModel,
 	collectGridAtoms,
+	collectRawMediaAddresses,
 	createExportRun,
 	resolveValueCell,
+	resolveValueCellWithMedia,
 	segmentIdentityKey,
 } from './atoms.ts';
 import type { ExportDdoInput } from './compile_columns.ts';
@@ -91,6 +94,7 @@ import {
 	prefetchExternalRowsForBatch,
 } from './external_prefetch.ts';
 import { ndjsonStream } from './ndjson_stream.ts';
+import { EXPORT_ROW_MEDIA, type ExportRowMediaAddress } from './row_media.ts';
 
 /** Records bulk-hydrated per chunk (matches the diffusion selection default). */
 const HYDRATE_BATCH = 500;
@@ -137,7 +141,14 @@ interface ItemNode {
 
 /** Per-record entry, one per export ddo (PHP get_record_atoms ar_entries). */
 type RecordEntry =
-	| { kind: 'grid'; ddoIndex: number; atoms: GridAtom[] }
+	| {
+			kind: 'grid';
+			ddoIndex: number;
+			atoms: GridAtom[];
+			/** Media of values the walk dropped for being empty (capturing runs
+			 * only): read, but shown in no cell — noted without a column. */
+			droppedMedia?: MediaReadAddress[];
+	  }
 	| {
 			kind: 'value';
 			ddoIndex: number;
@@ -149,6 +160,8 @@ type RecordEntry =
 			flat: string | null;
 			leafModel: string;
 			topModel: string;
+			/** Media read for the cell (capturing runs only — row_media.ts). */
+			media?: MediaReadAddress[];
 	  }
 	| {
 			kind: 'raw';
@@ -158,6 +171,8 @@ type RecordEntry =
 			raw: string | number | null;
 			cellType: string;
 			topModel: string;
+			/** Media the raw cell addresses (capturing runs only — row_media.ts). */
+			media?: MediaReadAddress[];
 	  };
 
 /**
@@ -448,6 +463,23 @@ function createTabulator(options: {
 		const cellGroups = new Map<number, Map<number, string[]>>();
 		const rawCells: Record<string, string | number> = {};
 		let recordHeight = 1;
+		// The record's captured media addresses, per placed column (row_media.ts).
+		const media: ExportRowMediaAddress[] = [];
+		const mediaSeen = new Set<string>();
+		// `ordinal` null: media READ for a cell that shows nothing (an empty
+		// value — only the 'original' quality exists yet, or the export base is
+		// unset); the same media in every format, placed in no column.
+		const noteMedia = (
+			ordinal: number | null,
+			reads: readonly MediaReadAddress[] | undefined,
+		): void => {
+			for (const read of reads ?? []) {
+				const key = `${ordinal ?? ''}\u0000${read.sectionTipo}\u0000${read.sectionId}\u0000${read.componentTipo}`;
+				if (mediaSeen.has(key)) continue;
+				mediaSeen.add(key);
+				media.push([ordinal, read.sectionTipo, read.sectionId, read.componentTipo]);
+			}
+		};
 
 		const itemTree =
 			dataFormat === 'grid_value' && breakdown !== 'columns'
@@ -495,17 +527,25 @@ function createTabulator(options: {
 					entry.topModel,
 					newColLines,
 				);
+				let shown = false;
 				if (isRaw) {
-					if (entry.raw !== null) rawCells[String(column.i)] = entry.raw;
+					if (entry.raw !== null) {
+						rawCells[String(column.i)] = entry.raw;
+						shown = true;
+					}
 				} else if (entry.flat !== null && entry.flat !== '') {
 					rawCells[String(column.i)] = entry.flat;
+					shown = true;
 				}
+				noteMedia(shown ? column.i : null, entry.media);
 				continue;
 			}
 
 			// grid_value: place every atom
+			noteMedia(null, entry.droppedMedia);
 			for (const atom of entry.atoms) {
 				const placement = await placeAtom(atom, entry.ddoIndex, itemTree, newColLines);
+				noteMedia(placement.column.i, atom.media);
 				for (const rowIndex of placement.rows) {
 					let rowCells = cellGroups.get(rowIndex);
 					if (rowCells === undefined) {
@@ -520,6 +560,7 @@ function createTabulator(options: {
 		}
 
 		const lines = newColLines;
+		const firstRow = lines.length;
 		if (dataFormat === 'value' || dataFormat === 'dedalo_raw') {
 			lines.push({ t: 'row', rec: recId, sub: 0, c: rawCells });
 			rowsEmitted++;
@@ -533,6 +574,11 @@ function createTabulator(options: {
 				lines.push({ t: 'row', rec: recId, sub: rowIndex, c: cells });
 				rowsEmitted++;
 			}
+		}
+		// Out of band, on the record's FIRST row: a symbol key, which no
+		// serialization of the line carries (row_media.ts).
+		if (media.length > 0) {
+			(lines[firstRow] as Record<PropertyKey, unknown>)[EXPORT_ROW_MEDIA] = media;
 		}
 		return lines;
 	};
@@ -612,6 +658,16 @@ export interface ExportGridRunOptions {
 	 * grid's own `frontierRefusals`.
 	 */
 	enclosingRequest?: RequestContext;
+	/**
+	 * CAPTURE MEDIA ADDRESSES (row_media.ts): each record's first row line
+	 * carries, under the `EXPORT_ROW_MEDIA` symbol, every (section, id,
+	 * component) its cells READ media from — at any path depth, in every data
+	 * format. Serialized output is byte-identical either way (a symbol key is
+	 * never serialized). The tool_export background build sets it (its spool
+	 * writes the addresses to `media.ndjson` for the media ZIP); a stream or a
+	 * buffered envelope has no reader for them and leaves it off.
+	 */
+	captureMedia?: boolean;
 }
 
 /** An opened export: the meta line, the line producer, and its notes. */
@@ -971,6 +1027,7 @@ async function openExportGridInScope(
 	const plan = await compileExportPlan(exportDdos, sectionTipo);
 	const fields = plan.sections[0]?.fields ?? [];
 	const run = createExportRun();
+	if (runOptions.captureMedia === true) run.captureMedia = true;
 	// THE EXPORT FRONTIER (SEC-01's larger half). Gate B below authorizes the
 	// DECLARED ddo path segments; this scope authorizes the RUNTIME records the
 	// walk actually reaches through stored locators — a locator may name another
@@ -1059,17 +1116,23 @@ async function openExportGridInScope(
 			const topKey = `${firstSection}_${topComponent}`;
 
 			if (dataFormat === 'grid_value') {
+				const droppedMedia: MediaReadAddress[] | undefined =
+					run.captureMedia === true ? [] : undefined;
+				const atoms = await collectGridAtoms(
+					run,
+					field,
+					record.section_tipo,
+					Number(record.section_id),
+					lang,
+					unresolved,
+					undefined,
+					droppedMedia,
+				);
 				entries.push({
 					kind: 'grid',
 					ddoIndex,
-					atoms: await collectGridAtoms(
-						run,
-						field,
-						record.section_tipo,
-						Number(record.section_id),
-						lang,
-						unresolved,
-					),
+					atoms,
+					...(droppedMedia !== undefined && droppedMedia.length > 0 ? { droppedMedia } : {}),
 				});
 				continue;
 			}
@@ -1089,6 +1152,17 @@ async function openExportGridInScope(
 					},
 					...(await buildRawCell(run, record, topComponent, topModel)),
 					topModel,
+					...(run.captureMedia === true
+						? {
+								// the DECLARED ddo's reads, as the value format makes them
+								media: await collectRawMediaAddresses(
+									run,
+									field,
+									record.section_tipo,
+									record.section_id,
+								),
+							}
+						: {}),
 				});
 				// The component's dataframe slots ride along as their OWN columns
 				// (WC-2026-08-09-export-raw-dataframe-own-column): separate
@@ -1114,6 +1188,10 @@ async function openExportGridInScope(
 						},
 						...(await buildRawCell(run, record, frameTipo, 'component_dataframe')),
 						topModel: 'component_dataframe',
+						// No media capture here: the value format has no frame column,
+						// and the frames the top relation's config shows are already
+						// read through it (collectRawMediaAddresses) — capturing the
+						// slot too would archive what the same ddo in value never reads.
 					});
 				}
 				continue;
@@ -1122,14 +1200,27 @@ async function openExportGridInScope(
 			const lastStep = path[path.length - 1] ?? {};
 			const leafTipo = String(lastStep.component_tipo ?? '');
 			const leafModel = (await getModelByTipo(leafTipo)) ?? String(lastStep.model ?? '');
-			const flat = await resolveValueCell(
-				run,
-				field,
-				record.section_tipo,
-				Number(record.section_id),
-				lang,
-				unresolved,
-			);
+			let flat: string | null;
+			let media: MediaReadAddress[] | undefined;
+			if (run.captureMedia === true) {
+				({ flat, media } = await resolveValueCellWithMedia(
+					run,
+					field,
+					record.section_tipo,
+					Number(record.section_id),
+					lang,
+					unresolved,
+				));
+			} else {
+				flat = await resolveValueCell(
+					run,
+					field,
+					record.section_tipo,
+					Number(record.section_id),
+					lang,
+					unresolved,
+				);
+			}
 			// Column LABEL segments (PHP export_tabulator :295-302: with atoms the
 			// value column's path is atoms[0]->path — the declared chain EXTENDED by
 			// the fan-out segments, e.g. 'Denominación | Término'). TS's value cells
@@ -1157,6 +1248,7 @@ async function openExportGridInScope(
 				flat,
 				leafModel,
 				topModel,
+				...(media !== undefined && media.length > 0 ? { media } : {}),
 			});
 		}
 		return entries;

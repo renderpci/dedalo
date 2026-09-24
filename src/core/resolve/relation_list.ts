@@ -129,6 +129,68 @@ export interface CellValueResolveOptions {
 	 * apply) and a clean success never call it.
 	 */
 	onExternalDegraded?: (event: ExternalCellDegradation) => void;
+	/**
+	 * Told of every MEDIA component this resolution READ on a record whose
+	 * stored items name at least one file (mediaItemsHoldAFile) — at any depth:
+	 * a portal's own-config media child, a frame's, a nested relation's. The
+	 * tool_export build records these ADDRESSES (tools/tool_export media ZIP):
+	 * the archive is resolved from where the walk read media, never from the
+	 * URL text a cell happens to hold. Called whether or not the export base is
+	 * configured (the address is data; the URL is presentation). Absent = no
+	 * capture — every other reader of this module.
+	 */
+	onMediaRead?: (address: MediaReadAddress) => void;
+}
+
+/** One media component read on one record (CellValueResolveOptions.onMediaRead). */
+export interface MediaReadAddress {
+	readonly sectionTipo: string;
+	/** A matrix record address (positive integer) — never an external remote id. */
+	readonly sectionId: number;
+	readonly componentTipo: string;
+}
+
+/**
+ * Do these stored media items name at least one file? (any files_info entry
+ * with a non-empty file_path, any quality) — the data-exact test for "this
+ * component holds media on this record".
+ */
+export function mediaItemsHoldAFile(items: unknown): boolean {
+	if (!Array.isArray(items)) return false;
+	return items.some((item) => {
+		const filesInfo = (item as { files_info?: unknown } | null)?.files_info;
+		return (
+			Array.isArray(filesInfo) &&
+			filesInfo.some(
+				(info) =>
+					typeof (info as { file_path?: unknown } | null)?.file_path === 'string' &&
+					(info as { file_path: string }).file_path !== '',
+			)
+		);
+	});
+}
+
+/** Tell the caller's onMediaRead of `address` when the stored items name a file. */
+function reportMediaRead(
+	opts: CellValueResolveOptions | undefined,
+	items: unknown,
+	address: MediaReadAddress,
+): void {
+	if (opts?.onMediaRead !== undefined && mediaItemsHoldAFile(items)) opts.onMediaRead(address);
+}
+
+/** Append `address` to `list` unless an equal address is already there. */
+export function addMediaReadAddress(list: MediaReadAddress[], address: MediaReadAddress): void {
+	for (const known of list) {
+		if (
+			known.sectionTipo === address.sectionTipo &&
+			known.sectionId === address.sectionId &&
+			known.componentTipo === address.componentTipo
+		) {
+			return;
+		}
+	}
+	list.push(address);
 }
 
 /** One degraded component_external cell (CellValueResolveOptions.onExternalDegraded). */
@@ -171,6 +233,63 @@ export interface RelationTargetValue {
 	/** The target's flat display parts (config children joined per field, or
 	 * the datalist label) — empty when the target resolves to nothing. */
 	parts: string[];
+	/**
+	 * The media components read while resolving THIS target (at any depth
+	 * below it) — present only when the caller captures
+	 * (CellValueResolveOptions.onMediaRead); every address is ALSO forwarded
+	 * to the caller's own onMediaRead.
+	 */
+	media?: MediaReadAddress[];
+}
+
+/**
+ * The children a relation's flat value resolves per locator target, in map
+ * order (PHP field-dimension order = ddo order): the own config's ddo_map
+ * direct children, then the implicit legacy map (section_list node relations,
+ * components only). Dataframe children are FLAGGED — they resolve as frame
+ * fields folded into the flat cell. ONE derivation for resolveRelationTargetValues
+ * and the export's dedalo_raw media walk (src/diffusion/export/atoms.ts), so
+ * both read the same components.
+ */
+export async function relationTargetChildren(
+	componentTipo: string,
+): Promise<{ tipo: string; isDataframe: boolean }[]> {
+	const children: { tipo: string; isDataframe: boolean }[] = [];
+	for (const tipo of await ownConfigChildTipos(componentTipo)) {
+		children.push({ tipo, isDataframe: (await getModelByTipo(tipo)) === 'component_dataframe' });
+	}
+	return children;
+}
+
+/**
+ * The components a dataframe's frames resolve at each FRAME TARGET record
+ * (the frame's own config ddo_map direct children, then its implicit map) —
+ * ONE derivation for resolveDataframeFlatValue and the export's dedalo_raw
+ * media walk.
+ */
+export function dataframeFrameChildTipos(frameTipo: string): Promise<string[]> {
+	return ownConfigChildTipos(frameTipo);
+}
+
+/**
+ * A component's own-config children, in map order: the ddo_map entries whose
+ * parent is the component ('self', its tipo, or unset), then the implicit
+ * legacy map's COMPONENTS.
+ */
+async function ownConfigChildTipos(ownerTipo: string): Promise<string[]> {
+	const cell = await resolveOwnConfigMap(ownerTipo);
+	const tipos = (cell.rawDdos ?? [])
+		.filter((child) => typeof child?.tipo === 'string' && isOwnMapChild(child.parent, ownerTipo))
+		.map((child) => child.tipo as string);
+	for (const relTipo of cell.implicitRelations ?? []) {
+		if ((await getModelByTipo(relTipo))?.startsWith('component_') === true) tipos.push(relTipo);
+	}
+	return tipos;
+}
+
+/** Is a ddo_map entry with this `parent` a direct child of `ownerTipo`? */
+function isOwnMapChild(parent: unknown, ownerTipo: string): boolean {
+	return parent === undefined || parent === 'self' || parent === ownerTipo;
 }
 
 /**
@@ -216,25 +335,7 @@ export async function resolveRelationTargetValues(
 	}[];
 	if (locators.length === 0) return [];
 
-	const cell = await resolveOwnConfigMap(componentTipo);
-	// Map-ordered children, dataframe children FLAGGED (they resolve as frame
-	// fields folded into the flat cell — PHP field-dimension order = ddo order).
-	const children: { tipo: string; isDataframe: boolean }[] = [];
-	for (const child of cell.rawDdos ?? []) {
-		if (typeof child?.tipo !== 'string') continue;
-		if (child.parent !== undefined && child.parent !== 'self' && child.parent !== componentTipo)
-			continue;
-		children.push({
-			tipo: child.tipo,
-			isDataframe: (await getModelByTipo(child.tipo)) === 'component_dataframe',
-		});
-	}
-	// Implicit legacy map (section_list node relations): components only.
-	for (const relTipo of cell.implicitRelations ?? []) {
-		const relModel = await getModelByTipo(relTipo);
-		if (relModel === null || !relModel.startsWith('component_')) continue;
-		children.push({ tipo: relTipo, isDataframe: relModel === 'component_dataframe' });
-	}
+	const children = await relationTargetChildren(componentTipo);
 
 	const targets: RelationTargetValue[] = [];
 	if (children.length > 0) {
@@ -246,6 +347,21 @@ export async function resolveRelationTargetValues(
 			const targetSection = locator?.section_tipo;
 			const targetId = locator?.section_id;
 			if (typeof targetSection !== 'string' || targetId === undefined) continue;
+			// Media capture per TARGET (onMediaRead): the addresses read below this
+			// target land on target.media AND reach the caller's own sink.
+			const outerOnMedia = opts?.onMediaRead;
+			const targetMedia: MediaReadAddress[] | undefined =
+				outerOnMedia === undefined ? undefined : [];
+			const childOpts: CellValueResolveOptions | undefined =
+				outerOnMedia === undefined || targetMedia === undefined
+					? opts
+					: {
+							...opts,
+							onMediaRead: (read) => {
+								addMediaReadAddress(targetMedia, read);
+								outerOnMedia(read);
+							},
+						};
 			const fieldParts: string[] = [];
 			for (const child of children) {
 				if (child.isDataframe) {
@@ -259,7 +375,7 @@ export async function resolveRelationTargetValues(
 						locator?.id,
 						lang,
 						unresolved,
-						opts,
+						childOpts,
 					);
 					if (frameFlat !== null && frameFlat !== '') fieldParts.push(frameFlat);
 					continue;
@@ -280,7 +396,7 @@ export async function resolveRelationTargetValues(
 					lang,
 					unresolved,
 					await componentFieldsSeparator(child.tipo),
-					opts,
+					childOpts,
 				);
 				if (childValue !== null && childValue !== '') fieldParts.push(childValue);
 			}
@@ -289,6 +405,7 @@ export async function resolveRelationTargetValues(
 				sectionTipo: targetSection,
 				sectionId: targetId as number | string,
 				parts: fieldParts.length > 0 ? [fieldParts.join(fieldsSeparator)] : [],
+				...(targetMedia === undefined ? {} : { media: targetMedia }),
 			});
 		}
 	} else {
@@ -335,19 +452,7 @@ export async function resolveDataframeFlatValue(
 	);
 	if (paired.length === 0) return null;
 
-	const frameCell = await resolveOwnConfigMap(frameTipo);
-	const frameChildTipos: string[] = [];
-	for (const child of frameCell.rawDdos ?? []) {
-		if (typeof child?.tipo !== 'string') continue;
-		if (child.parent !== undefined && child.parent !== 'self' && child.parent !== frameTipo)
-			continue;
-		frameChildTipos.push(child.tipo);
-	}
-	for (const relTipo of frameCell.implicitRelations ?? []) {
-		const relModel = await getModelByTipo(relTipo);
-		if (relModel === null || !relModel.startsWith('component_')) continue;
-		frameChildTipos.push(relTipo);
-	}
+	const frameChildTipos = await dataframeFrameChildTipos(frameTipo);
 	if (frameChildTipos.length === 0) return null;
 
 	const frameSeparator = await componentFieldsSeparator(frameTipo);
@@ -582,16 +687,19 @@ export async function resolveCellValue(
 		// config.media.exportBase (DEDALO_MEDIA_EXPORT_BASE) — the EXPORT base,
 		// distinct from webBase: unset means the cell is reported unresolved, never
 		// guessed. Already trailing-slash-normalized by the config builder.
+		const column = getColumnNameByModel(model) ?? 'media';
+		const items = ((
+			record.columns[column as keyof typeof record.columns] as Record<string, unknown[]> | null
+		)?.[componentTipo] ?? []) as { files_info?: { quality?: string; file_path?: string }[] }[];
+		// The ADDRESS is reported before the URL is formatted (onMediaRead): a
+		// capture must not depend on the export base being configured.
+		reportMediaRead(opts, items, { sectionTipo, sectionId: address, componentTipo });
 		const mediaBase = config.media.exportBase;
 		const defaultQuality = mediaTypeOf(model)?.defaultQuality;
 		if (mediaBase === undefined || mediaBase === '' || defaultQuality === undefined) {
 			if (!unresolved.includes(model)) unresolved.push(model);
 			return null;
 		}
-		const column = getColumnNameByModel(model) ?? 'media';
-		const items = ((
-			record.columns[column as keyof typeof record.columns] as Record<string, unknown[]> | null
-		)?.[componentTipo] ?? []) as { files_info?: { quality?: string; file_path?: string }[] }[];
 		const parts: string[] = [];
 		for (const item of items) {
 			const entry = (item?.files_info ?? []).find((info) => info?.quality === defaultQuality);

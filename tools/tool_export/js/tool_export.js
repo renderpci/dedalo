@@ -288,7 +288,9 @@ tool_export.prototype.get_section_id = function() {
 *       rows, …}}, or errors:[…] on a failure / stop.
 *   get_export_preview {section_tipo, job_id, page, page_size}
 *       → {job_id, status, cols, final_order, rows, page, page_size,
-*          first_record, records, has_more, total_records, written_records}
+*          first_record, records, has_more, total_records, written_records,
+*          media_models (what the media ZIP can archive — the media button
+*          and its quality modal read it, never the column models)}
 *   build_export_file {section_tipo, job_id, format, origin,
 *       show_tipo_in_label, media_qualities?, background_running:true}
 *       → lane job; terminal data = {ok, data:{job_id, format, basename, url,
@@ -445,7 +447,8 @@ tool_export.prototype.start_export_job = function(options) {
 * One page of an export (records, never split).
 * @param {Object} options - {job_id, page, page_size?, col_page?, signal?}
 * @returns {Promise<Object>} envelope; data = the preview page (one column
-*   window: cols, col_page, col_page_size, first_col, total_cols, col_models)
+*   window: cols, col_page, col_page_size, first_col, total_cols, col_models,
+*   media_models — the media the media ZIP can archive, at any path depth)
 */
 tool_export.prototype.get_export_preview = function(options) {
 

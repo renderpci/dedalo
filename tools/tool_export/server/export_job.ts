@@ -55,6 +55,7 @@
  */
 
 import { config } from '../../../src/config/config.ts';
+import { isMediaModel } from '../../../src/core/concepts/media.ts';
 import {
 	DedaloError,
 	type ErrorDetailScalar,
@@ -66,6 +67,7 @@ import {
 	toErrorBody,
 } from '../../../src/core/errors/index.ts';
 import { jobAbortInfo, mediaJobs } from '../../../src/core/media/jobs.ts';
+import { getModelByTipo } from '../../../src/core/ontology/resolver.ts';
 import {
 	getPermissions,
 	type Principal,
@@ -468,7 +470,8 @@ export async function runExportArtifact(run: ExportArtifactRun): Promise<ExportA
 	// and the selection run here, so a refusal leaves no job directory behind.
 	const grid = await openExportGrid(
 		{ principal, options, applicationLang: run.applicationLang },
-		{ signal: run.signal, hydrateBatch: run.hydrateBatch },
+		// captureMedia: the spool's media.ndjson — the media ZIP's input (row_media.ts)
+		{ signal: run.signal, hydrateBatch: run.hydrateBatch, captureMedia: true },
 	);
 	let created: { job: ArtifactJobRef; manifest: ExportManifest };
 	try {
@@ -567,6 +570,7 @@ async function checkpoint(
 		frontier_grants: recordedFrontierGrants(grid.frontierGrants),
 		// LIVE: a running export's list/preview already warn while it walks
 		external_degraded: grid.externalDegradation(),
+		media_models: await recordedMediaModels(stats.mediaComponentTipos),
 		records: written,
 		rows: stats.rows,
 		spool_bytes: stats.bytes,
@@ -591,6 +595,21 @@ type ExportFrontierGrants = ReadonlyMap<string, { section_tipo: string; componen
 interface ExportLiveNotes {
 	frontierGrants: ExportFrontierGrants;
 	externalDegradation: () => ExportExternalDegradation | null;
+}
+
+/**
+ * The manifest's `media_models`: the distinct MEDIA models of the components
+ * the spool's media.ndjson names (the walk captured them — row_media.ts),
+ * sorted. Data-exact: an export whose relations reach no stored file records
+ * [] and offers no media ZIP.
+ */
+export async function recordedMediaModels(componentTipos: readonly string[]): Promise<string[]> {
+	const models = new Set<string>();
+	for (const tipo of componentTipos) {
+		const model = await getModelByTipo(tipo);
+		if (typeof model === 'string' && isMediaModel(model)) models.add(model);
+	}
+	return [...models].sort();
 }
 
 /** The manifest form of the runtime grants: a sorted, detached copy. */
@@ -675,6 +694,7 @@ async function closeAndRecordEnded(
 		columns: summary.columns,
 		unresolved: summary.unresolved,
 		external_degraded: summary.external_degraded,
+		media_models: await recordedMediaModels(stats.mediaComponentTipos),
 		// server-side only (never served): the coordinates of every narrowing
 		frontier_refusals: structuredClone([...grid.frontierRefusals]),
 		// the complete runtime grant set, re-asked by every later read

@@ -15,6 +15,12 @@
  *                                           without scanning the grid)
  *                           grid.idx        fixed-width byte offsets: line k = offset in
  *                                           grid.ndjson of the first row of record k*R
+ *                           media.ndjson    the MEDIA ADDRESSES the walk read, one line per
+ *                                           record that read any ({rec, a:[[col, section_tipo,
+ *                                           section_id, component_tipo], …]} —
+ *                                           src/diffusion/export/row_media.ts); created only
+ *                                           when the first one arrives, never served; the
+ *                                           media ZIP's input (manifest `media_models`)
  *                           export[_v].<ext> built files (temp+rename, never partial);
  *                                           v = a hash of the options that change the bytes
  *                           media[_v].zip   the media archive (v = the quality choice)
@@ -130,7 +136,7 @@ import { isTempSibling, tempPathFor } from '../../../src/core/files/temp_path.ts
 import { mediaRootIsMarked } from '../../../src/core/media/test_media_root.ts';
 import { getBackgroundJob } from '../../../src/core/tools/background.ts';
 import { getRoots as getToolRoots } from '../../../src/core/tools/paths.ts';
-import type { ExportExternalDegradation } from '../../../src/diffusion/api/export.ts';
+import { type ExportExternalDegradation, rowMediaOf } from '../../../src/diffusion/api/export.ts';
 
 // ---------------------------------------------------------------------------
 // Names, formats, grammar
@@ -155,10 +161,20 @@ export const SPOOL_FILES = {
 	grid: 'grid.ndjson',
 	cols: 'cols.ndjson',
 	index: 'grid.idx',
+	/** The media-address sidecar (row_media.ts) — created lazily, only when a record read media. */
+	media: 'media.ndjson',
 	manifest: 'manifest.json',
 	/** The immutable request (options + read set), written once — see MANIFEST in the module doc. */
 	request: 'request.json',
 } as const;
+
+/** The spool's DATA files — what a failed/aborted run deletes (the manifest stays). */
+const SPOOL_DATA_FILES: readonly string[] = [
+	SPOOL_FILES.grid,
+	SPOOL_FILES.cols,
+	SPOOL_FILES.index,
+	SPOOL_FILES.media,
+];
 
 /** The ExportManifest keys that live in request.json (immutable, caller-sized). */
 export const MANIFEST_REQUEST_KEYS = ['options', 'sections'] as const;
@@ -379,6 +395,17 @@ export interface ExportManifest {
 	 * written before 2026-09-24 (read as null).
 	 */
 	external_degraded?: ExportExternalDegradation | null;
+	/**
+	 * THE MEDIA MODELS the export READ (row_media.ts): the distinct media models
+	 * of every component the walk captured into `media.ndjson`, at any path
+	 * depth, recorded at every checkpoint and at the end — data-exact (a portal
+	 * whose targets hold no file offers nothing). Its PRESENCE marks a spool
+	 * built with media capture: the media ZIP then resolves related media from
+	 * the sidecar. Absent on a manifest written before 2026-09-24 (or a spool
+	 * written outside runExportArtifact): the ZIP reads only columns whose own
+	 * model is a media model, as before, and says so in info.txt.
+	 */
+	media_models?: string[];
 	frontier_refusals: unknown[];
 	/**
 	 * The RUNTIME (section, component) grants the walk's frontier allowed so
@@ -1334,6 +1361,10 @@ export interface SpoolStats {
 	/** end.columns once the 'end' line was written, else null. */
 	columns: number[] | null;
 	ended: boolean;
+	/** Bytes of media.ndjson appended (the media-address sidecar; 0 = none). */
+	mediaBytes: number;
+	/** The distinct component tipos the sidecar names, in first-seen order. */
+	mediaComponentTipos: string[];
 }
 
 export interface SpoolWriter {
@@ -1344,7 +1375,7 @@ export interface SpoolWriter {
 	readonly stats: Readonly<SpoolStats>;
 	/** Flush everything and close. Idempotent. */
 	close(): Promise<SpoolStats>;
-	/** Close and delete the spool files (grid, cols, idx). Idempotent. */
+	/** Close and delete the spool files (grid, cols, idx, media). Idempotent. */
 	abort(): Promise<void>;
 }
 
@@ -1381,6 +1412,9 @@ async function openSpoolWriterAt(
 		throw error;
 	}
 	const [grid, cols, index] = opened as [AppendFile, AppendFile, AppendFile];
+	/** The media-address sidecar — opened on the first record that read media. */
+	let media: AppendFile | null = null;
+	const mediaTipos = new Set<string>();
 	const stats: SpoolStats = {
 		bytes: 0,
 		gridBytes: 0,
@@ -1392,12 +1426,17 @@ async function openSpoolWriterAt(
 		meta: null,
 		columns: null,
 		ended: false,
+		mediaBytes: 0,
+		mediaComponentTipos: [],
 	};
 	let closed = false;
 
-	const all = [cols, grid, index];
+	const all = (): AppendFile[] =>
+		media === null ? [cols, grid, index] : [cols, grid, index, media];
 	/** cols first (a reader must know every column a visible row uses), then grid, then idx (an offset never leads its bytes). */
 	const flushAll = async (toBoundary: boolean): Promise<void> => {
+		// the sidecar is read only once the export ENDED: whole, whatever the boundary
+		if (media !== null) await media.flush(false);
 		await cols.flush(false);
 		await grid.flush(toBoundary);
 		stats.committedGridBytes = grid.writtenBytes;
@@ -1408,7 +1447,7 @@ async function openSpoolWriterAt(
 	/** Own bytes not on disk yet after pushing whole records (the open record stays buffered). */
 	const settle = async (): Promise<number> => {
 		await flushAll(true);
-		return cols.pendingBytes + grid.pendingBytes + index.pendingBytes;
+		return cols.pendingBytes + grid.pendingBytes + index.pendingBytes + (media?.pendingBytes ?? 0);
 	};
 
 	return {
@@ -1437,8 +1476,26 @@ async function openSpoolWriterAt(
 				extra += INDEX_LINE_BYTES;
 			}
 			if (kind === 'col') extra += bytes;
+			// the record's media addresses (a symbol key: never in `text`)
+			const addresses = recordStart ? rowMediaOf(line) : [];
+			let mediaText = '';
+			if (addresses.length > 0) {
+				mediaText = `${JSON.stringify({ rec: line.rec, a: addresses })}\n`;
+				extra += Buffer.byteLength(mediaText);
+			}
 			await meter.admit(bytes + extra, settle);
 			stats.bytes += bytes + extra;
+			if (mediaText !== '') {
+				if (media === null) media = await AppendFile.create(join(job.dir, SPOOL_FILES.media));
+				const mediaBytes = Buffer.byteLength(mediaText);
+				media.append(mediaText, mediaBytes);
+				stats.mediaBytes += mediaBytes;
+				for (const address of addresses) {
+					if (mediaTipos.has(address[3])) continue;
+					mediaTipos.add(address[3]);
+					stats.mediaComponentTipos.push(address[3]);
+				}
+			}
 			if (idx !== '') index.append(idx, INDEX_LINE_BYTES);
 			grid.append(text, bytes);
 			stats.gridBytes += bytes;
@@ -1471,12 +1528,13 @@ async function openSpoolWriterAt(
 			// On a failure (the final flush can hit ENOSPC) nothing further is
 			// flushed and ALL three are discarded, so no handle outlives the writer.
 			try {
+				if (media !== null) await media.close();
 				await cols.close();
 				await grid.close();
 				stats.committedGridBytes = grid.writtenBytes;
 				await index.close();
 			} catch (error) {
-				for (const file of all) await file.discard().catch(() => undefined);
+				for (const file of all()) await file.discard().catch(() => undefined);
 				throw error;
 			}
 			return stats;
@@ -1484,9 +1542,9 @@ async function openSpoolWriterAt(
 		async abort() {
 			if (!closed) {
 				closed = true;
-				for (const file of all) await file.discard();
+				for (const file of all()) await file.discard();
 			}
-			for (const name of [SPOOL_FILES.grid, SPOOL_FILES.cols, SPOOL_FILES.index]) {
+			for (const name of SPOOL_DATA_FILES) {
 				await rm(join(job.dir, name), { force: true });
 			}
 		},
@@ -1983,7 +2041,7 @@ export function openArtifactStore(options: ArtifactStoreOptions = {}): ArtifactS
 
 	const deleteSpool = async (job: ArtifactJobRef): Promise<void> => {
 		await writableRoot('ArtifactStore.deleteSpool');
-		for (const name of [SPOOL_FILES.grid, SPOOL_FILES.cols, SPOOL_FILES.index]) {
+		for (const name of SPOOL_DATA_FILES) {
 			await rm(join(job.dir, name), { force: true });
 		}
 		let entries: string[] = [];

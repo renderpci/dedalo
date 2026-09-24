@@ -46,12 +46,20 @@
  */
 
 import { getFlatValueFamily } from '../../core/components/registry.ts';
+import { isMediaModel } from '../../core/concepts/media.ts';
 import { dataframeEntryMatches } from '../../core/concepts/subdatum.ts';
 import { getColumnNameByModel, getModelByTipo, getNode } from '../../core/ontology/resolver.ts';
 import { getParentsRecursive } from '../../core/relations/parent.ts';
-import type { CellValueResolveOptions } from '../../core/resolve/relation_list.ts';
+import type {
+	CellValueResolveOptions,
+	MediaReadAddress,
+} from '../../core/resolve/relation_list.ts';
 import {
+	addMediaReadAddress,
 	componentFieldsSeparator,
+	dataframeFrameChildTipos,
+	mediaItemsHoldAFile,
+	relationTargetChildren,
 	resolveCellValue,
 	resolveRelationTargetValues,
 } from '../../core/resolve/relation_list.ts';
@@ -99,6 +107,8 @@ export interface ExportRun {
 	 * (null = target has no hierarchy). Shared targets resolve ONCE per run
 	 * while the bounded memo holds them. */
 	parentsChains: Map<string, string | null>;
+	/** component tipo → can a read of it reach a media component? (raw media walk, bounded) */
+	mediaReach: Map<string, boolean>;
 	/** Threads the run's record cache into the shared flat-value resolvers —
 	 * without it every relation-target label re-reads its record per row (N+1). */
 	cellOpts: CellValueResolveOptions;
@@ -120,6 +130,50 @@ export interface ExportRun {
 	 * leaves this unset (the scope already carries it).
 	 */
 	applicationLang?: string;
+	/**
+	 * CAPTURE MEDIA ADDRESSES (row_media.ts): when true, every grid atom carries
+	 * the media components its value was read from (`GridAtom.media`), and
+	 * `resolveValueCellWithMedia` / `collectRawMediaAddresses` answer them for
+	 * the value and dedalo_raw formats. Set by grid.ts only for a capturing
+	 * walk (ExportGridRunOptions.captureMedia); off, nothing changes.
+	 */
+	captureMedia?: boolean;
+	/**
+	 * A capturing grid_value walk's sink for the media of values it DROPS
+	 * (empty display value — e.g. only the 'original' quality exists yet, or
+	 * the export base is unset — so no atom, and no cell, carries them). The
+	 * value format still reads that media (its capture fires before the URL is
+	 * formatted), so grid_value must too, or the same ddo archives different
+	 * files per format. Set per collectGridAtoms call, never on the run itself.
+	 */
+	droppedMedia?: MediaReadAddress[];
+}
+
+/** Keep the media of a dropped (empty-valued) atom on the walk's sink. */
+function noteDroppedMedia(run: ExportRun, media: readonly MediaReadAddress[] | undefined): void {
+	if (run.droppedMedia === undefined || media === undefined) return;
+	for (const read of media) addMediaReadAddress(run.droppedMedia, read);
+}
+
+/**
+ * A capturing twin of the run's cell options — or null when the run does not
+ * capture. Each call gets its OWN list, so a capture is scoped to exactly the
+ * resolution it wraps (one atom, one value cell).
+ */
+function mediaCapture(
+	run: ExportRun,
+): { opts: CellValueResolveOptions; media: MediaReadAddress[] } | null {
+	if (run.captureMedia !== true) return null;
+	const media: MediaReadAddress[] = [];
+	return {
+		media,
+		opts: { ...run.cellOpts, onMediaRead: (read) => addMediaReadAddress(media, read) },
+	};
+}
+
+/** The `media` field of an atom: present only when something was read. */
+function mediaField(media: MediaReadAddress[] | undefined): { media?: MediaReadAddress[] } {
+	return media !== undefined && media.length > 0 ? { media } : {};
 }
 
 /** Fresh per-request run (never module-scoped — request isolation). */
@@ -132,6 +186,7 @@ export function createExportRun(
 		atoms,
 		ownChildren: new Map(),
 		parentsChains: new Map(),
+		mediaReach: new Map(),
 		cellOpts: {
 			loadRecord: (tableName, sectionTipo, sectionId) =>
 				loadExportRecordFromTable(atoms, tableName, sectionTipo, sectionId),
@@ -206,6 +261,13 @@ export interface GridAtom {
 	/** The leaf component's model (PHP column model = leaf segment model). */
 	model: string;
 	segments: ExportSegment[];
+	/**
+	 * The media components this atom's value was READ from (a literal media
+	 * leaf: its owner record; a compact portal: the target's media children at
+	 * any depth; a fan-out media child: the locator target) — only on a
+	 * capturing run (ExportRun.captureMedia), only when non-empty.
+	 */
+	media?: MediaReadAddress[];
 }
 
 /** PHP export atom cell_type by leaf model (export_atom defaults). */
@@ -295,6 +357,32 @@ export function resolveValueCell(
 	return inRunLangs(run, lang, () =>
 		resolveValueCellInScope(run, field, sectionTipo, sectionId, lang, unresolved),
 	);
+}
+
+/**
+ * `resolveValueCell` plus the media components the cell was read from — the
+ * value-format capture (row_media.ts). The flat string is the SAME bytes
+ * (the capture only observes the reads); `media` is empty when the run does
+ * not capture.
+ */
+export async function resolveValueCellWithMedia(
+	run: ExportRun,
+	field: FieldPlan,
+	sectionTipo: string,
+	sectionId: number | string,
+	lang: string,
+	unresolved: string[],
+): Promise<{ flat: string | null; media: MediaReadAddress[] }> {
+	const capture = mediaCapture(run);
+	if (capture === null) {
+		return {
+			flat: await resolveValueCell(run, field, sectionTipo, sectionId, lang, unresolved),
+			media: [],
+		};
+	}
+	const capturing: ExportRun = { ...run, cellOpts: capture.opts };
+	const flat = await resolveValueCell(capturing, field, sectionTipo, sectionId, lang, unresolved);
+	return { flat, media: capture.media };
 }
 
 /**
@@ -400,10 +488,14 @@ export function collectGridAtoms(
 	/** Override the field's value_with_parents flag (the value-format label
 	 * derivation passes false so a parents atom can never become atoms[0]). */
 	withParentsOverride?: boolean,
+	/** Receives the media of values the walk DROPS for being empty (capturing
+	 * runs only — see ExportRun.droppedMedia). */
+	droppedMedia?: MediaReadAddress[],
 ): Promise<GridAtom[]> {
+	const scoped: ExportRun = droppedMedia === undefined ? run : { ...run, droppedMedia };
 	return inRunLangs(run, lang, () =>
 		collectGridAtomsInScope(
-			run,
+			scoped,
 			field,
 			sectionTipo,
 			sectionId,
@@ -465,17 +557,19 @@ async function collectGridAtomsInScope(
 			if (path.length === 1) {
 				const storedModel = (await getNode(event.step.tipo))?.model ?? null;
 				if (storedModel === 'component_portal') {
+					// capture per TARGET: target.media (the outer list is unused)
 					const targets = await resolveRelationTargetValues(
 						event.ownerSectionTipo,
 						event.ownerSectionId,
 						event.step.tipo,
 						lang,
 						unresolved,
-						run.cellOpts,
+						mediaCapture(run)?.opts ?? run.cellOpts,
 					);
 					const leafSegment = segments[0] as ExportSegment;
 					for (const target of targets) {
 						const value = target.parts.join(RECORDS_SEPARATOR);
+						if (value === '') noteDroppedMedia(run, target.media);
 						if (value !== '') {
 							atoms.push({
 								value,
@@ -488,6 +582,7 @@ async function collectGridAtomsInScope(
 										section_id: target.sectionId,
 									},
 								],
+								...mediaField(target.media),
 							});
 						}
 						// WC-049 parents: sibling '#parents' atom per target. The
@@ -548,6 +643,7 @@ async function collectGridAtomsInScope(
 		}
 
 		// Literal leaf: the component's flat value at the owner record.
+		const leafCapture = mediaCapture(run);
 		const value = await resolveCellValue(
 			event.ownerSectionTipo,
 			event.ownerSectionId,
@@ -555,14 +651,18 @@ async function collectGridAtomsInScope(
 			lang,
 			unresolved,
 			RECORDS_SEPARATOR,
-			run.cellOpts,
+			leafCapture?.opts ?? run.cellOpts,
 		);
-		if (value === null || value === '') continue;
+		if (value === null || value === '') {
+			noteDroppedMedia(run, leafCapture?.media);
+			continue;
+		}
 		atoms.push({
 			value,
 			cellType: cellTypeOfModel(event.step.model),
 			model: event.step.model,
 			segments,
+			...mediaField(leafCapture?.media),
 		});
 	}
 
@@ -771,6 +871,7 @@ async function fanOutRelation(
 			// The target id VERBATIM — an external target's remote id is zero-padded
 			// ('000065686'), and Number() asked the service for a different record.
 			// resolveCellValue reads a matrix address only for the stored families.
+			const childCapture = mediaCapture(run);
 			const value = await resolveCellValue(
 				locator.sectionTipo,
 				locator.sectionId,
@@ -778,14 +879,18 @@ async function fanOutRelation(
 				lang,
 				unresolved,
 				RECORDS_SEPARATOR,
-				run.cellOpts,
+				childCapture?.opts ?? run.cellOpts,
 			);
-			if (value === null || value === '') continue;
+			if (value === null || value === '') {
+				noteDroppedMedia(run, childCapture?.media);
+				continue;
+			}
 			atoms.push({
 				value,
 				cellType: cellTypeOfModel(childModel),
 				model: childModel,
 				segments,
+				...mediaField(childCapture?.media),
 			});
 		}
 
@@ -815,5 +920,193 @@ async function fanOutRelation(
 				});
 			}
 		}
+	}
+}
+
+/**
+ * THE dedalo_raw MEDIA ADDRESSES of one export field on one record
+ * (row_media.ts). A raw cell carries the top component's OWN stored slice —
+ * for a relation, the locators — and never recurses, so the addresses the
+ * SAME ddo reads in the value format are derived here, structurally, the way
+ * the value format reads them (invariant: the same ddo gives the same archive
+ * in value, grid_value and dedalo_raw):
+ *
+ *  - the DECLARED path is followed first (resolveRecordAtoms — the value
+ *    format's own walk), so a portal → title ddo reads no media even when the
+ *    portal's config shows an image, and a portal → image ddo reads the image
+ *    even when the portal's config does not show it;
+ *  - at each leaf owner, resolveCellValue's reads are mirrored: a media leaf is
+ *    an address when its stored items name a file (mediaItemsHoldAFile — any
+ *    quality, whatever the export base); a datalist-family relation reads, per
+ *    stored locator, relationTargetChildren (the SAME derivation
+ *    resolveRelationTargetValues uses), a dataframe child through its frames
+ *    paired on the record HOLDING the relation (dd490, main, id_key) and
+ *    dataframeFrameChildTipos; nested relations recurse.
+ *
+ * TERMINATION WITHOUT A DEPTH CEILING. The walk is an explicit worklist and
+ * each (section, id, component) is expanded once per call, so it ends on any
+ * finite record graph — cycles included — and a long chain of DISTINCT
+ * records (a self-referencing persons portal) is walked, not refused: this
+ * runs on EVERY artifact build (CSV included), and a media side channel must
+ * never fail an export that streams fine. A field that can reach no media
+ * component (pure ontology, memoized) costs no record read at all.
+ *
+ * Nothing here authorizes: the media ZIP writer re-checks every address as the
+ * owner.
+ */
+export async function collectRawMediaAddresses(
+	run: ExportRun,
+	field: FieldPlan,
+	sectionTipo: string,
+	sectionId: number | string,
+): Promise<MediaReadAddress[]> {
+	const out: MediaReadAddress[] = [];
+	// the value format refuses declared dataframe steps (resolveValueCell)
+	if (hasDeclaredDataframeStep(field)) return out;
+	const path = field.exportColumn?.path ?? [];
+	const leafTipo = String((path[path.length - 1] as RawPathStep | undefined)?.component_tipo ?? '');
+	if (leafTipo === '' || !(await componentReachesMedia(run, leafTipo))) return out;
+	const events = await resolveRecordAtoms(run.atoms, field, sectionTipo, sectionId);
+	const visited = new Set<string>();
+	for (const event of events) {
+		await walkMediaReads(
+			run,
+			event.ownerSectionTipo,
+			event.ownerSectionId,
+			event.step.tipo,
+			out,
+			visited,
+		);
+	}
+	return out;
+}
+
+/**
+ * Can a read of this component reach a media component — it IS one, or it is
+ * a datalist-family relation whose target children (or their frames' children,
+ * or nested relations) can? Pure ontology, memoized per run (top-level answers
+ * only: an answer computed inside a cycle is partial, so inner results are
+ * never cached).
+ */
+async function componentReachesMedia(run: ExportRun, componentTipo: string): Promise<boolean> {
+	const cached = getBoundedRunMemo(run.mediaReach, componentTipo);
+	if (cached !== undefined) return cached;
+	const reaches = await reachesMediaFrom(componentTipo, new Set());
+	setBoundedRunMemo(run.mediaReach, componentTipo, reaches, run.atoms.cacheLimit);
+	return reaches;
+}
+
+async function reachesMediaFrom(componentTipo: string, seen: Set<string>): Promise<boolean> {
+	if (seen.has(componentTipo)) return false;
+	seen.add(componentTipo);
+	const model = await getModelByTipo(componentTipo);
+	if (model === null) return false;
+	if (isMediaModel(model)) return true;
+	if (getFlatValueFamily(model) !== 'datalist') return false;
+	for (const child of await relationTargetChildren(componentTipo)) {
+		const tipos = child.isDataframe ? await dataframeFrameChildTipos(child.tipo) : [child.tipo];
+		for (const tipo of tipos) {
+			if (await reachesMediaFrom(tipo, seen)) return true;
+		}
+	}
+	return false;
+}
+
+type RawLocator = {
+	section_tipo?: unknown;
+	section_id?: unknown;
+	id?: number | string;
+	main_component_tipo?: string;
+};
+
+/**
+ * resolveCellValue's MEDIA reads for one (record, component), without
+ * resolving a single display value (no external call, no URL formatting):
+ * see collectRawMediaAddresses. Iterative, each (section, id, component)
+ * expanded once.
+ */
+async function walkMediaReads(
+	run: ExportRun,
+	startSection: string,
+	startId: number | string,
+	startComponent: string,
+	out: MediaReadAddress[],
+	visited: Set<string>,
+): Promise<void> {
+	// LIFO worklist, children pushed in reverse: the reads come out in the
+	// value format's depth-first order (the archive's entry order).
+	const stack: { sectionTipo: string; sectionId: number | string; componentTipo: string }[] = [
+		{ sectionTipo: startSection, sectionId: startId, componentTipo: startComponent },
+	];
+	while (stack.length > 0) {
+		const { sectionTipo, sectionId, componentTipo } = stack.pop() as (typeof stack)[number];
+		const visitKey = `${sectionTipo}\u0000${sectionId}\u0000${componentTipo}`;
+		if (visited.has(visitKey)) continue;
+		visited.add(visitKey);
+		if (!(await componentReachesMedia(run, componentTipo))) continue;
+		const model = (await getModelByTipo(componentTipo)) as string;
+		const record = await loadExportRecord(run.atoms, sectionTipo, sectionId);
+		if (record === null) continue;
+		const column = getColumnNameByModel(model) ?? (isMediaModel(model) ? 'media' : 'relation');
+		const slot = ((record.columns[column as never] as unknown as Record<
+			string,
+			unknown[]
+		> | null) ?? null)?.[componentTipo];
+		if (isMediaModel(model)) {
+			if (mediaItemsHoldAFile(slot)) {
+				addMediaReadAddress(out, {
+					sectionTipo,
+					sectionId: Number(record.section_id),
+					componentTipo,
+				});
+			}
+			continue;
+		}
+		const locators = (Array.isArray(slot) ? slot : []) as RawLocator[];
+		if (locators.length === 0) continue;
+		const children = await relationTargetChildren(componentTipo);
+		const next: typeof stack = [];
+		for (const locator of locators) {
+			if (typeof locator?.section_tipo !== 'string' || locator.section_id === undefined) continue;
+			for (const child of children) {
+				if (!child.isDataframe) {
+					next.push({
+						sectionTipo: locator.section_tipo,
+						sectionId: locator.section_id as number | string,
+						componentTipo: child.tipo,
+					});
+					continue;
+				}
+				// Frames live on the record HOLDING the relation, paired to this
+				// locator (resolveDataframeFlatValue); null id → no frames.
+				if (locator.id === undefined || locator.id === null) continue;
+				const frames = (
+					((record.columns.relation as Record<string, unknown[]> | null)?.[child.tipo] ??
+						[]) as Record<string, unknown>[]
+				).filter((entry) =>
+					dataframeEntryMatches(
+						entry as never,
+						locator.main_component_tipo ?? componentTipo,
+						locator.id as number | string,
+						child.tipo,
+					),
+				);
+				if (frames.length === 0) continue;
+				const frameChildren = await dataframeFrameChildTipos(child.tipo);
+				for (const frame of frames) {
+					const frameSection = (frame as RawLocator).section_tipo;
+					const frameId = (frame as RawLocator).section_id;
+					if (typeof frameSection !== 'string' || frameId === undefined) continue;
+					for (const frameChild of frameChildren) {
+						next.push({
+							sectionTipo: frameSection,
+							sectionId: frameId as number | string,
+							componentTipo: frameChild,
+						});
+					}
+				}
+			}
+		}
+		for (let k = next.length - 1; k >= 0; k--) stack.push(next[k] as (typeof stack)[number]);
 	}
 }

@@ -1,8 +1,37 @@
 /**
  * MEDIA ZIP WRITER — the server twin of render_tool_export.js `download_media`:
- * every media file the export's media columns point at, at the quality the
- * user chose per model, in ONE store-only ZIP64 archive with an `info.txt`
- * that lists what was archived and what was not (and why).
+ * every media file the export READ, at the quality the user chose per model,
+ * in ONE store-only ZIP64 archive with an `info.txt` that lists what was
+ * archived and what was not (and why).
+ *
+ * TWO INPUTS, ONE SET OF CHECKS (2026-09-24 — related media):
+ *
+ *  - DIRECT media columns (a top-level column whose own model is a media
+ *    model — `col.path` one step long) are read from their CELLS, exactly as
+ *    before (below): their archive is byte-identical to what it was — except
+ *    that media the walk read for a cell that SHOWS NOTHING (a sidecar
+ *    address with a null column: e.g. a record holding only the master) is
+ *    archived from the sidecar, since no cell names it.
+ *  - EVERYTHING ELSE the walk read media from — a portal's image child in a
+ *    value cell (model component_portal, text mixing URLs and names), a
+ *    grid_value portal→image column, a dedalo_raw portal's locators, at any
+ *    depth — comes from the spool's MEDIA-ADDRESS SIDECAR (`media.ndjson`,
+ *    src/diffusion/export/row_media.ts): the (section_tipo, section_id,
+ *    component_tipo) of every media component the walk read with a stored
+ *    file. No URL is parsed for them — separators are per component and
+ *    `properties.image_id` names are arbitrary — and no cell text is trusted:
+ *    a URL typed into a text field is never a candidate. Each address runs
+ *    checks 1-2 below as the owner (the walk crossed into those records
+ *    asserting only the record key, never the image component's grant, so
+ *    this is the ONE gate on those bytes), then EVERY item the record holds
+ *    NOW for that component goes through step 4 (target quality, own folder,
+ *    denied names, realpath, regular file, dedupe). The address granularity
+ *    (record, component) is exactly what the cell showed.
+ *  - A spool without capture (manifest `media_models` absent: built before
+ *    2026-09-24, or outside runExportArtifact) keeps the old reading — every
+ *    column whose own model is a media model, from its cells — and every
+ *    other column that may hold related media is listed in info.txt as
+ *    'rerun_required' (loud, never guessed from URL text).
  *
  * WHAT A CELL IS TRUSTED FOR — only to NAME a record, never to name a file.
  * A candidate (a URL of a standard/value/grid cell, or a files_info file_path
@@ -113,6 +142,7 @@ import {
 	storedMediaItemsOf,
 } from '../../../../src/core/media/tool_support.ts';
 import { getModelByTipo } from '../../../../src/core/ontology/resolver.ts';
+import { resolveOwnConfigMap } from '../../../../src/core/section/list_definitions/section_list.ts';
 import {
 	getRecordComponentPermission,
 	type Principal,
@@ -153,7 +183,15 @@ export type MediaZipFailureReason =
 	 */
 	| 'invalid_path'
 	/** The stored path names no regular file on disk. */
-	| 'missing_file';
+	| 'missing_file'
+	/**
+	 * A column of an export built WITHOUT media capture (manifest
+	 * `media_models` absent) that may hold related media (a portal whose own
+	 * children include a media component, a path through a media component,
+	 * an img/av cell): its files cannot be addressed without guessing from
+	 * URL text, so they are not archived — run the export again.
+	 */
+	| 'rerun_required';
 
 export interface MediaZipFailure {
 	file: string;
@@ -487,6 +525,48 @@ function addressKey(address: MediaRecordAddress): string {
 	return `${address.sectionTipo}/${address.sectionId}/${address.componentTipo}`;
 }
 
+/** Is `col` a DIRECT media column — top-level, its own model a media model? */
+export function isDirectMediaColumn(col: SpoolColLine): boolean {
+	return (
+		typeof col.model === 'string' &&
+		isMediaModel(col.model) &&
+		Array.isArray(col.path) &&
+		col.path.length === 1
+	);
+}
+
+/**
+ * May a column of an export built WITHOUT capture hold related media its
+ * cells cannot address? (an img/av cell, a path step through a media
+ * component, a relation whose OWN config children include one.) Read only to
+ * report the gap ('rerun_required') — never to archive anything. Shared with
+ * the preview (`media_rerun_required`), so the client offers the build that
+ * reports it.
+ */
+export async function legacyColumnMayHoldMedia(col: SpoolColLine): Promise<boolean> {
+	if (col.cell_type === 'img' || col.cell_type === 'av') return true;
+	const path = Array.isArray(col.path) ? col.path : [];
+	for (const step of path) {
+		const tipo = step?.component_tipo;
+		if (typeof tipo !== 'string' || tipo === '') continue;
+		const model = await getModelByTipo(tipo);
+		if (typeof model === 'string' && isMediaModel(model)) return true;
+	}
+	const leaf = path[path.length - 1]?.component_tipo;
+	if (typeof leaf !== 'string' || leaf === '') return false;
+	const map = await resolveOwnConfigMap(leaf);
+	const children = [
+		...(map.rawDdos ?? []).map((ddo) => ddo?.tipo),
+		...(map.implicitRelations ?? []),
+	];
+	for (const tipo of children) {
+		if (typeof tipo !== 'string') continue;
+		const model = await getModelByTipo(tipo);
+		if (typeof model === 'string' && isMediaModel(model)) return true;
+	}
+	return false;
+}
+
 /** The media root, realpath'd (the symlink check compares real paths). */
 async function realMediaRoot(): Promise<string> {
 	const root = requireMediaRoot();
@@ -557,11 +637,23 @@ export const mediaZipWriter: ExportWriter = async (input, sink, signal) => {
 	throwIfCancelled(signal);
 
 	const cols = await spool.readCols();
-	const mediaCols: SpoolColLine[] = [...cols.values()]
+	// Captured spool: the manifest records what the walk READ (row_media.ts).
+	const capturedModels = Array.isArray(manifest.media_models)
+		? manifest.media_models.filter(
+				(model): model is string => typeof model === 'string' && isMediaModel(model),
+			)
+		: null;
+	const allMediaCols = [...cols.values()]
 		.filter((col) => typeof col.model === 'string' && isMediaModel(col.model))
 		.sort((a, b) => a.i - b.i);
+	// The columns read from their CELLS: every media-model column of an
+	// uncaptured spool (the old reading); only the DIRECT ones of a captured one
+	// — the rest of its media comes from the sidecar.
+	const mediaCols: SpoolColLine[] =
+		capturedModels === null ? allMediaCols : allMediaCols.filter(isDirectMediaColumn);
+	const directOrdinals = new Set(mediaCols.map((col) => col.i));
 	const qualities = resolveMediaZipQualities(
-		mediaCols.map((col) => col.model as string),
+		[...mediaCols.map((col) => col.model as string), ...(capturedModels ?? [])],
 		options,
 	);
 	const principal: Principal = await resolvePrincipal(Number(manifest.user_id));
@@ -572,7 +664,8 @@ export const mediaZipWriter: ExportWriter = async (input, sink, signal) => {
 	);
 	const isRaw = dataFormat === 'dedalo_raw';
 	const singleSection = singleSelectionSection(manifest);
-	const rootReal = mediaCols.length > 0 ? await realMediaRoot() : '';
+	const readsSidecar = capturedModels !== null && capturedModels.length > 0;
+	const rootReal = mediaCols.length > 0 || readsSidecar ? await realMediaRoot() : '';
 
 	// the ZIP64 gate seam (options.zip64Limits) is the spreadsheets' one reader,
 	// imported rather than copied; production passes nothing
@@ -618,9 +711,35 @@ export const mediaZipWriter: ExportWriter = async (input, sink, signal) => {
 		model: string,
 		paths: string[],
 	): Promise<{ item: unknown } | { refusal: AddressRefusal }> => {
+		if ((await getModelByTipo(address.componentTipo)) !== model) return { refusal: 'not_media' };
+		const read = await authorizedItems(address);
+		if ('refusal' in read) return read;
+		const item = read.items.find((stored) => {
+			const filesInfo = (stored as { files_info?: unknown }).files_info;
+			return (
+				Array.isArray(filesInfo) &&
+				filesInfo.some((entry: StoredFileInfo) => {
+					const stored = entry?.file_path;
+					return (
+						typeof stored === 'string' &&
+						stored.startsWith('/') &&
+						paths.some((path) => path.endsWith(stored))
+					);
+				})
+			);
+		});
+		return item === undefined ? { refusal: 'not_in_record' } : { item };
+	};
+
+	/**
+	 * CHECK 2 — AUTHORIZATION, as the owner, BEFORE any read of the record or
+	 * the disk — then the record's stored items of that component. The ONE
+	 * check both inputs (cells and sidecar addresses) pass through.
+	 */
+	const authorizedItems = async (
+		address: MediaRecordAddress,
+	): Promise<{ items: unknown[] } | { refusal: 'not_authorized' }> => {
 		const { componentTipo, sectionTipo, sectionId } = address;
-		if ((await getModelByTipo(componentTipo)) !== model) return { refusal: 'not_media' };
-		// authorization BEFORE any read of the record or the disk
 		const level = await getRecordComponentPermission(
 			principal,
 			sectionTipo,
@@ -640,22 +759,7 @@ export const mediaZipWriter: ExportWriter = async (input, sink, signal) => {
 			mediaColumn = await readStoredMediaColumn(sectionTipo, sectionId);
 			rememberBounded(recordMedia, recordKey, mediaColumn, MEDIA_ZIP_RECORD_MEMO_MAX);
 		}
-		const items = storedMediaItemsOf(mediaColumn, componentTipo);
-		const item = items.find((stored) => {
-			const filesInfo = (stored as { files_info?: unknown }).files_info;
-			return (
-				Array.isArray(filesInfo) &&
-				filesInfo.some((entry: StoredFileInfo) => {
-					const stored = entry?.file_path;
-					return (
-						typeof stored === 'string' &&
-						stored.startsWith('/') &&
-						paths.some((path) => path.endsWith(stored))
-					);
-				})
-			);
-		});
-		return item === undefined ? { refusal: 'not_in_record' } : { item };
+		return { items: storedMediaItemsOf(mediaColumn, componentTipo) };
 	};
 
 	/** Path options per (section, component) — ontology reads, once each. */
@@ -782,7 +886,22 @@ export const mediaZipWriter: ExportWriter = async (input, sink, signal) => {
 			await fail(candidate, refusal ?? 'unidentified');
 			return;
 		}
-		const entry = ((item as { files_info: StoredFileInfo[] }).files_info ?? []).find(
+		await archiveItem(authorized, target, item, candidate);
+	};
+
+	/**
+	 * STEP 4 — one AUTHORIZED record item's file at the target quality: the
+	 * stored path is read, then trusted only as a name inside the record's OWN
+	 * quality folder (see the module doc). `label` names the item in info.txt
+	 * for the refusals that precede a path (the candidate, or the address).
+	 */
+	const archiveItem = async (
+		authorized: MediaRecordAddress,
+		target: { spec: MediaTypeSpec; quality: string },
+		item: unknown,
+		label: string,
+	): Promise<void> => {
+		const entry = ((item as { files_info?: StoredFileInfo[] }).files_info ?? []).find(
 			(info) =>
 				info?.quality === target.quality &&
 				typeof info.file_path === 'string' &&
@@ -790,12 +909,12 @@ export const mediaZipWriter: ExportWriter = async (input, sink, signal) => {
 				info.file_exist !== false,
 		);
 		if (entry === undefined) {
-			await fail(candidate, 'quality_unavailable');
+			await fail(label, 'quality_unavailable');
 			return;
 		}
 		const relative = entry.file_path as string;
 		if (entry.external === true || !relative.startsWith('/')) {
-			await fail(candidate, 'external');
+			await fail(label, 'external');
 			return;
 		}
 
@@ -861,7 +980,52 @@ export const mediaZipWriter: ExportWriter = async (input, sink, signal) => {
 		files++;
 	};
 
+	/** The distinct sidecar addresses seen — a bounded window (see MEMORY). */
+	const seenAddresses = new Set<string>();
+
+	/**
+	 * One SIDECAR address (row_media.ts): checks 1-2, then EVERY item the
+	 * record holds now for that component through step 4. info.txt names it
+	 * `section_tipo/section_id/component_tipo` — what the export itself showed.
+	 */
+	const archiveAddress = async (address: MediaRecordAddress): Promise<void> => {
+		const key = addressKey(address);
+		if (seenAddresses.has(key)) return;
+		if (seenAddresses.size >= MEDIA_ZIP_MEMO_MAX) seenAddresses.clear();
+		seenAddresses.add(key);
+		// CHECK 1 — the component is (still) a media model with a chosen quality
+		const model = await getModelByTipo(address.componentTipo);
+		const target =
+			typeof model === 'string' && isMediaModel(model) ? qualities.get(model) : undefined;
+		if (target === undefined) {
+			await fail(key, 'not_media');
+			return;
+		}
+		const read = await authorizedItems(address);
+		if ('refusal' in read) {
+			await fail(key, read.refusal);
+			return;
+		}
+		if (read.items.length === 0) {
+			await fail(key, 'not_in_record');
+			return;
+		}
+		for (const item of read.items) {
+			throwIfCancelled(signal);
+			await archiveItem(address, target, item, key);
+		}
+	};
+
 	try {
+		if (capturedModels === null) {
+			// The gap of an uncaptured spool, said once per column — never guessed.
+			for (const col of [...cols.values()].sort((a, b) => a.i - b.i)) {
+				if (directOrdinals.has(col.i)) continue;
+				if (await legacyColumnMayHoldMedia(col)) {
+					await fail(String(col.label ?? col.key ?? col.i), 'rerun_required');
+				}
+			}
+		}
 		if (mediaCols.length > 0) {
 			for await (const row of spool.rows({ signal })) {
 				throwIfCancelled(signal);
@@ -872,6 +1036,18 @@ export const mediaZipWriter: ExportWriter = async (input, sink, signal) => {
 						throwIfCancelled(signal);
 						await archiveCandidate(col, row.rec, candidate);
 					}
+				}
+			}
+		}
+		if (readsSidecar) {
+			for await (const line of spool.mediaLines({ signal })) {
+				throwIfCancelled(signal);
+				for (const [ordinal, sectionTipo, sectionId, componentTipo] of line.a) {
+					// a DIRECT column's media was read from its cells above; a null
+					// ordinal (a cell that showed nothing) has no cell to read it from
+					if (ordinal !== null && directOrdinals.has(ordinal)) continue;
+					throwIfCancelled(signal);
+					await archiveAddress({ componentTipo, sectionTipo, sectionId });
 				}
 			}
 		}

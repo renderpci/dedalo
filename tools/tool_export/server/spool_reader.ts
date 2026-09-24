@@ -32,6 +32,10 @@
 import { join } from 'node:path';
 import { config } from '../../../src/config/config.ts';
 import { DedaloError } from '../../../src/core/errors/index.ts';
+import {
+	type ExportRowMediaAddress,
+	parseRowMediaAddress,
+} from '../../../src/diffusion/api/export.ts';
 import { INDEX_LINE_BYTES, SPOOL_FILES } from './artifact_store.ts';
 
 /** The preview's hard ceiling IN RECORDS (row_window.js ROW_WINDOW_MAX_ROWS). */
@@ -92,6 +96,12 @@ export interface SpoolRowLine {
 	c: Record<string, unknown>;
 }
 
+/** One media.ndjson line: a record and the media addresses its cells read. */
+export interface SpoolMediaLine {
+	rec: number | string;
+	a: ExportRowMediaAddress[];
+}
+
 export interface SpoolEndLine {
 	t: 'end';
 	columns: number[];
@@ -140,6 +150,12 @@ export interface SpoolReader {
 	}): AsyncGenerator<SpoolLine>;
 	/** Every row line, in spool order. */
 	rows(options?: { signal?: AbortSignal }): AsyncGenerator<SpoolRowLine>;
+	/**
+	 * Every media-address sidecar line (media.ndjson — row_media.ts), in record
+	 * order, each address VALIDATED (parseRowMediaAddress; a malformed one is
+	 * dropped). No sidecar = nothing. Read only from an ENDED spool.
+	 */
+	mediaLines(options?: { signal?: AbortSignal }): AsyncGenerator<SpoolMediaLine>;
 	/** Column descriptors by ordinal (cols.ndjson). */
 	readCols(): Promise<Map<number, SpoolColLine>>;
 	/** The 'end' line, or null while the export has not ended. */
@@ -345,6 +361,7 @@ export function openSpoolReader(
 	const gridPath = join(dir, SPOOL_FILES.grid);
 	const colsPath = join(dir, SPOOL_FILES.cols);
 	const indexPath = join(dir, SPOOL_FILES.index);
+	const mediaPath = join(dir, SPOOL_FILES.media);
 	const indexEvery = options.indexEvery;
 	const gridBound =
 		Number.isSafeInteger(options.gridBytes) && (options.gridBytes as number) >= 0
@@ -407,6 +424,20 @@ export function openSpoolReader(
 		async *rows(opts = {}) {
 			for await (const line of reader.lines({ signal: opts.signal })) {
 				if (line.t === 'row') yield line as SpoolRowLine;
+			}
+		},
+
+		async *mediaLines(opts = {}) {
+			for await (const text of streamLines(mediaPath, 0, opts.signal)) {
+				const parsed = JSON.parse(text) as { rec?: unknown; a?: unknown };
+				const addresses: ExportRowMediaAddress[] = [];
+				for (const entry of Array.isArray(parsed?.a) ? parsed.a : []) {
+					const address = parseRowMediaAddress(entry);
+					if (address !== null) addresses.push(address);
+				}
+				const rec =
+					typeof parsed?.rec === 'number' || typeof parsed?.rec === 'string' ? parsed.rec : '';
+				yield { rec, a: addresses };
 			}
 		},
 

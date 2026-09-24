@@ -58,7 +58,7 @@
  * Exports
  * -------
  * render_tool_export  — constructor (assigned to tool_export.prototype.edit etc.)
- * get_media_models_in_data — unique media models among the export's columns (preview col_models)
+ * get_media_models_in_data — the media models the export's media ZIP can archive (preview media_models)
  * render_download_modal   — the quality-selection modal for the media ZIP
  *
  * Related files
@@ -2174,10 +2174,15 @@ const paint_export = function(self) {
 	// downloads
 		const media_models = ended ? get_media_models_in_data(self) : []
 		self.media_components_in_data = media_models
+		// an export made before related media were recorded, with a column
+		// that may hold some: the ZIP is still offered, and its info.txt lists
+		// those columns as rerun_required (the reason is never hidden behind a
+		// disabled button)
+		const media_rerun_required = ended && state?.preview?.media_rerun_required===true
 		for (const [format, button] of ui_refs.download_buttons) {
 			// a button whose file is being built stays busy
 			button.disabled = !ended
-				|| (format==='media_zip' && !media_models.length)
+				|| (format==='media_zip' && !media_models.length && !media_rerun_required)
 				|| button.classList.contains('loading')
 		}
 		// the files stay downloadable, and say they are incomplete
@@ -3191,10 +3196,13 @@ const do_sortable = function(element, self) {
 
 /**
  * GET_MEDIA_MODELS_IN_DATA
- * The unique media models among the export's columns — which quality
+ * The media models the export's media ZIP can archive — which quality
  * selectors the download modal renders, and whether the media download is
- * offered at all. Read from the preview's `col_models`: the leaf models of
- * EVERY column of the export (the page's `cols` are only one column window).
+ * offered at all. Read from the preview's `media_models` (the SERVER's answer
+ * over EVERY column, not only the drawn window): each column's own media
+ * model PLUS the media the export READ through relations at any depth — a
+ * portal column's model is component_portal while its targets hold images, so
+ * the column models (`col_models`) are not the media signal.
  *
  * @param {Object} self - The tool_export instance
  * @returns {Array<string>} e.g. ['component_image', 'component_av']; empty
@@ -3202,7 +3210,7 @@ const do_sortable = function(element, self) {
  */
 export const get_media_models_in_data = (self) => {
 
-	const models = self.export_state?.preview?.col_models
+	const models = self.export_state?.preview?.media_models
 	if (!Array.isArray(models)) {
 		return []
 	}

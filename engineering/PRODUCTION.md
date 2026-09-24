@@ -1310,7 +1310,8 @@ size, and the job lane.
 `<private dir>/export_artifacts`). Layout: `<dir>/<userId>/<jobId>/`, which holds
 `request.json` (the recorded options, written once), `manifest.json` (the small
 mutable state every checkpoint rewrites), the spool (`grid.ndjson`,
-`cols.ndjson`, `grid.idx`) and the built files (`export.<ext>`,
+`cols.ndjson`, `grid.idx`, and `media.ndjson` — the media addresses the walk
+read, present only when a record read media) and the built files (`export.<ext>`,
 `media[_<variant>].zip`).
 
 - The directory must be writable by the engine's user.
