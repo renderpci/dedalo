@@ -203,11 +203,18 @@ export function listCensusFiles(): string[] {
 	if (result.exitCode !== 0) {
 		throw new Error(`third_party_census: git ls-files failed: ${result.stderr.toString()}`);
 	}
+	// THE SUBJECT IS THE WORKING TREE, consistently: a tracked file's bytes are read
+	// from disk (a local edit is judged as edited, not as committed), so a tracked
+	// path deleted from disk is judged as deleted — skipped, not crashed on. The
+	// COMMITTED answer is the one CI gives: it runs on a clean checkout, where the
+	// working tree IS the commit, so a deletion that never reaches the commit
+	// cannot hide there (nor can an edit that never reaches it).
 	return result.stdout
 		.toString()
 		.split('\n')
 		.filter((line) => line.trim() !== '')
 		.filter((line) => isScannedPath(line))
+		.filter((line) => existsSync(join(REPO_ROOT, line)))
 		.sort();
 }
 

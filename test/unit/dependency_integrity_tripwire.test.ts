@@ -12,7 +12,8 @@
  * One CDN compromise, or one MITM on an installation's network, and the next update
  * writes attacker JavaScript into every export the museum performs.
  *
- * xlsx is now VENDORED (`vendor/xlsx/`). This gate is what stops the shape coming
+ * xlsx was then VENDORED (2026-08-24), and removed with its tree (2026-09-24) once
+ * tool_export wrote spreadsheets server-side. This gate is what stops the shape coming
  * back — anywhere, in any of the three packages that have their own lockfile.
  *
  * THE TWO HALVES, because closing one alone is a false floor:
@@ -222,7 +223,7 @@ describe('dependency integrity — installed', () => {
 				if (FORBIDDEN_SPECIFIER.test(value)) {
 					offenders.push(
 						`${where} = "${value}" — a URL/git/file dependency is installed with no integrity. ` +
-							'Vendor it under vendor/ (see src/core/client_libs/registry.ts xlsx) or use a registry version.',
+							'Vendor it under vendor/ with a vendor/vendor_manifest.json row (see scripts/vendor_fetch.ts) or use a registry version.',
 					);
 				}
 			}
@@ -384,7 +385,7 @@ describe('dependency integrity — committed under vendor/', () => {
 /** A synthetic manifest around the REAL rows, so a control can bend one field. */
 function withRow(id: string, patch: Partial<VendorManifestEntry>): VendorManifest {
 	const manifest = readManifest();
-	const base = manifest.libs.xlsx as VendorManifestEntry;
+	const base = manifest.libs.pdfjs as VendorManifestEntry;
 	return { ...manifest, libs: { ...manifest.libs, [id]: { ...base, ...patch } } };
 }
 
@@ -548,8 +549,8 @@ describe('dependency integrity — committed third-party bytes, DERIVED from the
 				libRootRelative(id, entry),
 			);
 			expect(roots.some((root) => isUnderRoot(planted, root))).toBe(false);
-			expect(isUnderRoot('vendor/xlsx/xlsx.mjs', 'vendor/xlsx')).toBe(true);
-			expect(isUnderRoot('vendor/xlsx2/x.js', 'vendor/xlsx')).toBe(false);
+			expect(isUnderRoot('vendor/pdfjs/web/viewer.mjs', 'vendor/pdfjs')).toBe(true);
+			expect(isUnderRoot('vendor/pdfjs2/x.js', 'vendor/pdfjs')).toBe(false);
 		} finally {
 			rmSync(dir, { recursive: true, force: true });
 		}
@@ -561,34 +562,34 @@ describe('dependency integrity — committed third-party bytes, DERIVED from the
 		const real = readManifest();
 		expect(checkVendorLicencesIn(real)).toEqual([]);
 
-		const noLicence = withRow('xlsx', {
+		const noLicence = withRow('pdfjs', {
 			licence: undefined as unknown as VendorManifestEntry['licence'],
 		});
 		expect(checkVendorLicencesIn(noLicence).join('\n')).toContain('no "licence" block');
 
-		const outsideSet = withRow('xlsx', {
+		const outsideSet = withRow('pdfjs', {
 			licence: { spdx: 'WTFPL' as unknown as 'MIT', file: 'LICENSE' },
 		});
 		expect(checkVendorLicencesIn(outsideSet).join('\n')).toContain('is not one of');
 
-		const missingFile = withRow('xlsx', { licence: { spdx: 'Apache-2.0', file: 'COPYING' } });
+		const missingFile = withRow('pdfjs', { licence: { spdx: 'Apache-2.0', file: 'COPYING' } });
 		expect(checkVendorLicencesIn(missingFile).join('\n')).toContain('does not exist under');
 
-		// xlsx ships the Apache text; declaring it MIT must be refused by the bytes.
-		const disagrees = withRow('xlsx', { licence: { spdx: 'MIT', file: 'LICENSE' } });
+		// pdfjs ships the Apache text; declaring it MIT must be refused by the bytes.
+		const disagrees = withRow('pdfjs', { licence: { spdx: 'MIT', file: 'LICENSE' } });
 		expect(checkVendorLicencesIn(disagrees).join('\n')).toContain('does not read as MIT');
 
-		const escapes = withRow('xlsx', { licence: { spdx: 'MIT', file: '../ckeditor/LICENSE.md' } });
+		const escapes = withRow('pdfjs', { licence: { spdx: 'MIT', file: '../ckeditor/LICENSE.md' } });
 		expect(checkVendorLicencesIn(escapes).join('\n')).toContain('reaches outside the tree');
 
 		// Roots: under vendor/ (use the default), under node_modules, absent, untracked,
 		// overlapping another row, and a note that does not explain itself.
 		expect(checkVendorRootsIn(real)).toEqual([]);
-		expect(checkVendorRootsIn(withRow('r1', { root: 'vendor/xlsx' })).join('\n')).toContain(
+		expect(checkVendorRootsIn(withRow('r1', { root: 'vendor/pdfjs' })).join('\n')).toContain(
 			'is under vendor/',
 		);
 		expect(
-			checkVendorRootsIn(withRow('r2', { root: 'node_modules/client-zip' })).join('\n'),
+			checkVendorRootsIn(withRow('r2', { root: 'node_modules/easyqrcodejs' })).join('\n'),
 		).toContain('is under node_modules');
 		expect(
 			checkVendorRootsIn(withRow('r3', { root: 'tools/does_not_exist' })).join('\n'),

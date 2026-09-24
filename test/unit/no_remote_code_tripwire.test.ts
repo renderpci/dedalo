@@ -989,7 +989,7 @@ describe('no remote code: the client and tools load code only from this install'
 			"const base = (typeof DEDALO_ROOT_WEB !== 'undefined' && DEDALO_ROOT_WEB) ? DEDALO_ROOT_WEB : ''\nconst url = base + '/lib/d3/dist/d3.min.js'\nimport(url)",
 			"new Worker(new URL('./csv_worker.ts', import.meta.url))",
 			'import(join(coreDir, relPath))',
-			'import(DEDALO_ROOT_WEB+"/lib/xlsx/xlsx.mjs")',
+			'import(DEDALO_ROOT_WEB+"/lib/lz-string/lz-string.js")',
 			'const module_path = `../../../tools/${model}/js/${model}.js`\nimport(module_path)',
 			"const path = render_view.path || ('./' + render_view.render +'.js')",
 			// A wasm stream from this module, a same-origin setAttribute.
