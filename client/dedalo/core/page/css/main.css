@@ -8750,6 +8750,27 @@ body:has(.assistant_container.standalone.show) {
   padding-left: 0.5em;
   row-gap: 0.5rem;
 }
+.paginator > .content_data.stale {
+  pointer-events: none;
+}
+.paginator > .content_data.stale > .nav_buttons,
+.paginator > .content_data.stale > .paginator_info {
+  opacity: 0.35;
+  transition: opacity 0.15s linear;
+}
+.paginator > .content_data.stale::after {
+  content: '';
+  flex: none;
+  align-self: center;
+  width: 0.8em;
+  height: 0.8em;
+  margin-left: 0.5em;
+  opacity: 0.6;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: paginator_stale_spin 0.8s linear infinite;
+}
 .paginator > .content_data .show_all_button,
 .paginator > .content_data .reset_paginator_button {
   cursor: pointer;
@@ -9057,6 +9078,11 @@ body:has(.assistant_container.standalone.show) {
 }
 .paginator.micro > .content_data .page_info {
   padding-left: 0.1rem;
+}
+@keyframes paginator_stale_spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 /**
 * search
