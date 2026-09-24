@@ -240,10 +240,12 @@ describe('the shipped stacks keep the rules the engine states', () => {
 	test('the proxy reads media through the engine group, in every stack', () => {
 		const entry = read('Dockerfile').match(/^ENTRYPOINT .*umask (\d{4})/m);
 		expect(entry, 'Dockerfile: no umask on the ENTRYPOINT line').not.toBeNull();
-		const groupDigit = Number((entry as RegExpMatchArray)[1][2]);
+		// the regex guarantees 4 digits in group 1 once the match is non-null
+		const umask = (entry as RegExpMatchArray)[1] ?? '';
+		const groupDigit = Number(umask.charAt(2));
 		expect(
 			groupDigit & 0o4,
-			`Dockerfile umask ${(entry as RegExpMatchArray)[1]} strips GROUP read — the proxy reads media ` +
+			`Dockerfile umask ${umask} strips GROUP read — the proxy reads media ` +
 				'through the engine group, so every media file would be a 403',
 		).toBe(0);
 		let proxies = 0;
@@ -267,9 +269,10 @@ describe('the shipped stacks keep the rules the engine states', () => {
 				text,
 				`${stack}: nginx's command does not put the worker user into the engine group`,
 			).toContain(`addgroup nginx ${(group as RegExpMatchArray)[2]}`);
-			expect(text.indexOf('addgroup'), `${stack}: the group must be set up BEFORE nginx starts`).toBeLessThan(
-				text.indexOf("nginx -g 'daemon off;'"),
-			);
+			expect(
+				text.indexOf('addgroup'),
+				`${stack}: the group must be set up BEFORE nginx starts`,
+			).toBeLessThan(text.indexOf("nginx -g 'daemon off;'"));
 		}
 		expect(proxies, 'anti-vacuity: no stack proxy mounting media was found').toBeGreaterThan(1);
 	});
