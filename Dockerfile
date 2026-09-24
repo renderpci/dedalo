@@ -33,6 +33,9 @@ FROM oven/bun:1.4.0-debian AS runtime
 #             so without this line a container built PDF covers through a
 #             delegate that was not even installed
 #   ocrmypdf → optional automatic OCR
+#   librsvg2-bin → rsvg-convert, the ONLY SVG rasterizer (component_svg thumbs /
+#             web derivatives): ImageMagick's SVG path emits MVG, which the
+#             shipped policy denies (engine rasterizeSvg)
 #   git, unzip, gzip, file → used by the code-update subsystem and MIME sniffing
 #   rsync   → the `backup` service of both compose stacks: it is what copies the
 #             media originals and /private into dated generations
@@ -49,7 +52,7 @@ RUN apt-get update \
  && apt-get update \
  && apt-get install -y --no-install-recommends \
       postgresql-client-18 \
-      ffmpeg imagemagick poppler-utils ocrmypdf ghostscript \
+      ffmpeg imagemagick librsvg2-bin poppler-utils ocrmypdf ghostscript \
       git unzip gzip file rsync \
  && rm -rf /var/lib/apt/lists/*
 

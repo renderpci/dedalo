@@ -10,7 +10,7 @@ A working Dédalo on your laptop in about ten minutes. This is a **development**
 | --- | --- | --- |
 | Bun (**the pinned version**) | `curl -fsSL https://bun.sh/install \| bash -s "bun-v$(cat .bun-version)"` | same |
 | PostgreSQL 18 + `psql` | `brew install postgresql@18` | `apt install postgresql-18 postgresql-client-18` |
-| Media tools | `brew install ffmpeg imagemagick poppler ocrmypdf` | `apt install ffmpeg imagemagick poppler-utils ocrmypdf` |
+| Media tools | `brew install ffmpeg imagemagick poppler ocrmypdf librsvg` | `apt install ffmpeg imagemagick poppler-utils ocrmypdf librsvg2-bin` |
 
 !!! note "macOS binary base"
     Media binaries are looked up under `/opt/homebrew/bin` on macOS and `/usr/bin` on Linux, automatically. Override the base with `DEDALO_BINARY_BASE`, or any single binary with its own key (`DEDALO_AV_FFMPEG_PATH`, `DEDALO_MAGICK_PATH`, …). On an Intel Mac, Homebrew installs to `/usr/local/bin` — set `DEDALO_BINARY_BASE=/usr/local/bin`.

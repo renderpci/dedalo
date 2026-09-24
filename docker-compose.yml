@@ -177,6 +177,21 @@ services:
     restart: unless-stopped
     depends_on:
       - dedalo
+    # READS MEDIA THROUGH THE ENGINE'S GROUP. The engine runs as `bun` (uid/gid
+    # 1000) under umask 0027 (Dockerfile ENTRYPOINT), so everything it writes into
+    # the media volume is 640/750: owner + GROUP read, the world nothing. nginx's
+    # workers are uid 101; without the group every media file written since the
+    # umask was narrowed is a 403. Same model as systemd (UMask=0007 + the proxy
+    # user in the `dedalo` group).
+    # The membership goes into the container's /etc/group, NOT `group_add`:
+    # group_add reaches only PID 1 (the root master, which opens no files), and
+    # each worker's initgroups("nginx") REPLACES its supplementary groups with
+    # /etc/group's (measured 2026-09-24: workers `Groups: 101`, a 640 file 403s).
+    # Never "fix" it with chmod o+r: media turns world-readable and the next
+    # upload is 403 again. Gate: test/unit/stack_ops_policy_tripwire.test.ts.
+    # The image's own entrypoint (conf templates) still runs: exec'd after.
+    command: >
+      sh -c "addgroup -g 1000 dedalo 2>/dev/null; addgroup nginx dedalo 2>/dev/null; exec /docker-entrypoint.sh nginx -g 'daemon off;'"
     ports:
       - "80:80"
       - "443:443"

@@ -148,9 +148,10 @@ volumes:
 !!! warning "Socket permissions are the number-one cause of a 502"
     Connecting to a unix socket requires **write** permission on the socket file.
     With the default umask the engine creates it owner-writable only, and the
-    proxy container runs as a different user. The image's entrypoint therefore
-    starts the server under `umask 0000`; the socket volume is shared with the
-    proxy and with nothing else.
+    proxy container runs as a different user. The engine therefore grants the
+    socket its `0666` itself, right after it starts listening; the rest of the
+    process runs under the image's `umask 0027`. The socket volume is shared
+    with the proxy and with nothing else.
 
 ??? tip "The escape hatch: `SERVER_TCP_PORT`"
     You can set `SERVER_TCP_PORT` and have the proxy talk to `dedalo:3600` over
@@ -188,6 +189,21 @@ nginx:
     A media mode of *unset* means "no gate": the engine writes no rules, the
     includes stay commented forever, and you are serving your media tree to the
     world by decision rather than by accident.
+
+!!! warning "The proxy reads media through the engine's GROUP"
+    The engine runs as `bun` (uid/gid `1000`) under `umask 0027`, so every media
+    file it writes is `640` inside `750` directories: owner and group may read,
+    the world may not. nginx's workers run as `nginx` (uid `101`), so the shipped
+    stacks put that user into a gid-`1000` group **inside the nginx container,
+    before nginx starts** — the `addgroup` calls at the head of the service's
+    `command:`. Keep them if you replace the command.
+
+    `group_add: ["1000"]` does **not** do this: it reaches only the root master
+    process, and each worker rebuilds its groups from `/etc/group` when it drops
+    to `nginx`. And never "fix" a `403` with `chmod o+r`: it makes media
+    world-readable and the next upload is `403` again. This is the same model as
+    the bare-metal unit (`UMask=0007` plus the web-server user in the `dedalo`
+    group).
 
 ### 4. Installing: one shot, or the wizard
 
@@ -743,11 +759,12 @@ Container-specific symptoms; everything else is in
 | Symptom | Cause | Fix |
 | --- | --- | --- |
 | `POSTGRES_PASSWORD` error before anything starts | the variable is not exported | [step 2](#step-2-choose-the-database-credentials) |
-| Every request is a **502** | the proxy cannot write to the socket | the socket volume must be shared, and the engine started under `umask 0000` — [problem 2](#2-the-socket-is-invisible-across-containers) |
+| Every request is a **502** | the proxy cannot write to the socket | the socket volume must be shared, and the engine must grant the socket `0666` itself — [problem 2](#2-the-socket-is-invisible-across-containers) |
 | `nginx` restarts forever | missing certificate, or one `include` uncommented without the other | [step 4](#step-4-provide-a-tls-certificate), [step 10](#step-10-turn-the-media-gate-on) |
 | `nginx -t`: `pcre2_compile() failed` | the unquoted rule-B regex | quote it — [step 10](#step-10-turn-the-media-gate-on) |
 | The wizard appears after a successful install | `/private` is not on a volume, so `.env` was lost | [problem 1](#1-private-has-no-parent-to-live-in) |
 | The wizard never appears — normal login instead | `/private/.env` already exists, so the engine is not in install mode | [B2](#b2-bring-the-stack-up-on-an-empty-private-volume) |
+| Newly uploaded media is a **403**, older media serves | nginx's workers are not in the engine's group | keep the `addgroup` calls in nginx's `command:` — [problem 3](#3-the-engine-writes-the-media-rules-the-proxy-reads-them) |
 | The install surface 403s from your browser | the key is unset (the default is the local machine only), your address is not in `DEDALO_INSTALL_ALLOWED_IPS`, or you named `loopback` behind the proxy | [B1](#b1-name-the-address-you-will-install-from) |
 | The wizard hangs at *Save config*, engine down | no restart policy — the engine exits there by design | [B4](#b4-survive-the-restart-at-save-config) |
 | Every media file 404s, gate looks healthy | proxy `root` and `MEDIA_PATH` disagree | the root rule at the top of `deploy/nginx.conf` |
