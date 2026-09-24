@@ -147,7 +147,9 @@ export interface StructureContextEntry extends StructureContextCore {
 	columns_map?: unknown[];
 	/** Section-only extras (PHP :2056-2100). */
 	matrix_table?: string | null;
-	config?: { relation_list_tipo: string | null };
+	/** Section-only relation_list_tipo (PHP :2056-2100); search-mode
+	 * parent_grouper_label on any element with a parent grouper (PHP :1700). */
+	config?: { relation_list_tipo?: string | null; parent_grouper_label?: string | null };
 	/** Section-only: the section_map node's properties (PHP :2075). */
 	section_map?: unknown;
 	/** Section-only: the session-stored navigation SQO (PHP :1695-98, stamped
@@ -892,6 +894,18 @@ export async function buildStructureContext(options: {
 	if (core.model === 'component_section_id' && options.addRequestConfig !== false) {
 		const sectionNode = await getNode(core.section_tipo);
 		entry.color = (sectionNode?.properties as { color?: string } | null)?.color ?? '#b9b9b9';
+	}
+
+	// Search mode: the parent grouper's term, so the search panel can say WHICH
+	// "Id" / "Name" a field is when several groupers carry one (the client
+	// renders it as the `[Identification]` suffix — ui.js label_info). PHP
+	// class.common.php:1700-1707 stamps it on a CLONE of config (the core
+	// config is shared with the cache entry); `entry` is already per-call here.
+	if (options.mode === 'search' && entry.parent_grouper) {
+		entry.config = {
+			...(entry.config ?? {}),
+			parent_grouper_label: await labelByTipo(entry.parent_grouper),
+		};
 	}
 
 	// Section-only context extras (PHP class.common.php :2056-2100) — the
