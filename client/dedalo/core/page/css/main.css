@@ -662,6 +662,8 @@ template {
   --checkbox_border: var(--color_grey_8);
   --checkbox_checked_bg: var(--color_primary);
   --checkbox_checkmark: var(--color_white);
+  --option_chip_checked_bg: #fbb266;
+  --option_chip_checked_fg: var(--fg_on_brand);
   --input_bg: var(--color_grey_16);
   --input_fg: var(--color_grey_4);
   --input_outline: none;
@@ -669,6 +671,7 @@ template {
   --select_fg: var(--color_grey_4);
   --select_outline: none;
   --select_icon_url: url('../../themes/default/icons/select_arrows.svg');
+  --search_icon_url: url('../../themes/default/icons/search.svg');
   --toolbar_btn_hover_bg: var(--color_grey_11);
   --toolbar_btn_icon_filter: none;
   --mosaic_chip_bg: rgba(255, 255, 255, 0.8);
@@ -906,6 +909,8 @@ template {
   --checkbox_border: #4a5059;
   --checkbox_checked_bg: var(--color_primary);
   --checkbox_checkmark: var(--color_white);
+  --option_chip_checked_bg: var(--color_orange_dedalo);
+  --option_chip_checked_fg: var(--fg_on_brand);
   --input_bg: #1f2227;
   --input_fg: #ffffff;
   --input_outline: none;
@@ -913,6 +918,7 @@ template {
   --select_fg: #ffffff;
   --select_outline: none;
   --select_icon_url: url('../../themes/default/icons/select_arrows_light.svg');
+  --search_icon_url: url('../../themes/default/icons/search_white.svg');
   --toolbar_btn_hover_bg: #9c9c9c;
   --toolbar_btn_icon_filter: invert(0.85);
   --mosaic_chip_bg: rgba(24, 26, 30, 0.82);
@@ -8750,6 +8756,27 @@ body:has(.assistant_container.standalone.show) {
   padding-left: 0.5em;
   row-gap: 0.5rem;
 }
+.paginator > .content_data.stale {
+  pointer-events: none;
+}
+.paginator > .content_data.stale > .nav_buttons,
+.paginator > .content_data.stale > .paginator_info {
+  opacity: 0.35;
+  transition: opacity 0.15s linear;
+}
+.paginator > .content_data.stale::after {
+  content: '';
+  flex: none;
+  align-self: center;
+  width: 0.8em;
+  height: 0.8em;
+  margin-left: 0.5em;
+  opacity: 0.6;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: paginator_stale_spin 0.8s linear infinite;
+}
 .paginator > .content_data .show_all_button,
 .paginator > .content_data .reset_paginator_button {
   cursor: pointer;
@@ -9057,6 +9084,11 @@ body:has(.assistant_container.standalone.show) {
 }
 .paginator.micro > .content_data .page_info {
   padding-left: 0.1rem;
+}
+@keyframes paginator_stale_spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 /**
 * search
@@ -9369,6 +9401,8 @@ body:has(.assistant_container.standalone.show) {
 }
 .wrapper_search > .search_global_container > .search_container_selection .search_group_container > .search_buttons_container > .button.submit {
   background-color: var(--color_green_success);
+  color: var(--color_white);
+  font-weight: 500;
 }
 .wrapper_search > .search_global_container > .search_container_selection .search_group_container > .search_buttons_container > .button.submit:hover {
   background-color: var(--color_green_success_dark);
@@ -10780,6 +10814,7 @@ body:has(.assistant_container.standalone.show) {
 }
 .wrapper_service_autocomplete > .options_hidden {
   display: none;
+  color: var(--fg_default);
 }
 .wrapper_service_autocomplete > .options_hidden.visible {
   display: block;
@@ -10794,7 +10829,7 @@ body:has(.assistant_container.standalone.show) {
   margin: 0.25em;
   padding: 0.5em;
 }
-.wrapper_service_autocomplete > .options_hidden > .source_selector select {
+.wrapper_service_autocomplete > .options_hidden > .source_selector select.select_source_selector {
   -webkit-appearance: caret;
   appearance: caret;
   background-color: transparent;
@@ -10802,6 +10837,11 @@ body:has(.assistant_container.standalone.show) {
   background: none;
   appearance: auto;
   height: auto;
+  color: inherit;
+}
+.wrapper_service_autocomplete > .options_hidden > .source_selector select.select_source_selector option {
+  color: var(--fg_default);
+  background-color: var(--bg_elevated);
 }
 .wrapper_service_autocomplete > .options_hidden > .filters_container {
   overflow: hidden;
@@ -10815,7 +10855,7 @@ body:has(.assistant_container.standalone.show) {
 }
 .wrapper_service_autocomplete > .options_hidden ul.filter_node > li {
   display: inline-block;
-  color: var(--color_white);
+  color: var(--fg_default);
   margin-top: 1px;
   overflow: hidden;
   padding: 0.25em;
@@ -10846,6 +10886,7 @@ body:has(.assistant_container.standalone.show) {
 }
 .wrapper_service_autocomplete > .options_hidden > .inputs_list > .input_group {
   position: relative;
+  height: 1.7rem;
 }
 .wrapper_service_autocomplete > .options_hidden > .inputs_list > .input_group > input {
   margin: 0px;
@@ -10855,7 +10896,7 @@ body:has(.assistant_container.standalone.show) {
   position: absolute;
   right: 1rem;
   top: 0.5rem;
-  opacity: 0.5;
+  color: var(--fg_muted);
   z-index: 2;
 }
 .wrapper_service_autocomplete > .options_hidden > .search_operators_div {
@@ -10893,7 +10934,7 @@ body:has(.assistant_container.standalone.show) {
   width: 3.8rem;
 }
 .wrapper_service_autocomplete > .autocomplete_input {
-  background: var(--color_white) url('../../themes/default/icons/search.svg');
+  background: var(--color_white) var(--search_icon_url);
   background-position: bottom 6px right 8px;
   background-repeat: no-repeat;
   background-size: auto 60%;
@@ -10916,11 +10957,15 @@ body:has(.assistant_container.standalone.show) {
   top: 0px;
   background-color: var(--color_white);
 }
+.wrapper_service_autocomplete:has(>.options_hidden.visible) > .button_options {
+  background-color: var(--fg_inverse);
+}
 .wrapper_service_autocomplete > .autocomplete_data {
   z-index: 5;
   width: max-content;
   min-width: 100%;
   background-color: var(--color_grey_14);
+  color: var(--fg_default);
   border-left: 1px solid var(--color_orange_dedalo);
   border-right: 1px solid var(--color_orange_dedalo);
   max-width: 100%;
@@ -10972,6 +11017,12 @@ body:has(.assistant_container.standalone.show) {
 }
 .wrapper_service_autocomplete > .autocomplete_data > .autocomplete_data_li > .section_record .column {
   outline: none;
+}
+.wrapper_service_autocomplete > .autocomplete_data > .autocomplete_data_li > .section_record .ddinfo_value {
+  color: var(--fg_muted);
+}
+.wrapper_service_autocomplete > .autocomplete_data > .autocomplete_data_li > .section_record .ddinfo_value:not(:last-child) {
+  margin-right: 0.5em;
 }
 .wrapper_service_autocomplete > .autocomplete_data > .autocomplete_data_li:last-child {
   border-bottom: 1px solid var(--color_orange_dedalo);
@@ -11957,7 +12008,7 @@ dd-modal:has(.tool_header) {
   flex: 0 1 auto;
   min-width: 0;
   font-weight: 600;
-  color: var(--color_grey_5);
+  color: var(--color_grey_8);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -24097,9 +24148,8 @@ body.inspector_resizing {
 }
 .component_radio_button.edit > .content_data > .content_value > .label.checked,
 .component_radio_button.edit > .content_data > .content_value > .label:has(input:checked) {
-  font-weight: 500;
-  background-color: var(--color_orange_dedalo);
-  color: var(--fg_on_brand);
+  background-color: var(--option_chip_checked_bg);
+  color: var(--option_chip_checked_fg);
 }
 .component_radio_button.edit > .content_data > .content_value > .label:has(input:focus-visible) {
   outline: 2px solid var(--focus_ring);
@@ -24170,9 +24220,8 @@ body.inspector_resizing {
   background-color: var(--field_hover_bg);
 }
 .component_radio_button.search > .content_data > .content_value > .label:has(input:checked) {
-  font-weight: 500;
-  background-color: var(--color_orange_dedalo);
-  color: var(--fg_on_brand);
+  background-color: var(--option_chip_checked_bg);
+  color: var(--option_chip_checked_fg);
 }
 .component_radio_button.search > .content_data > .content_value > .label:has(input:focus-visible) {
   outline: 2px solid var(--focus_ring);
@@ -26354,6 +26403,8 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   --color_orange_hover_border: #235049;
   --color_orange_dark: #2f6b63;
   --color_orange_light: #e3ece9;
+  --option_chip_checked_bg: var(--color_orange_dedalo);
+  --option_chip_checked_fg: var(--fg_on_brand);
 }
 :root[data-design="redesign"][data-accent="pine"][data-theme="dark"] {
   --color_orange_dedalo: #5aa399;

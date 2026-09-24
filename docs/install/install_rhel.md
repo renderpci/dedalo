@@ -55,7 +55,7 @@ crb enable          # CodeReady Builder (on RHEL: subscription-manager repos --e
 #   https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm \
 #   https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
 
-dnf install -y ffmpeg ImageMagick poppler-utils ocrmypdf
+dnf install -y ffmpeg ImageMagick poppler-utils ocrmypdf librsvg2-tools
 ```
 
 !!! warning "The package is `ImageMagick`, with capitals"

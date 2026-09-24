@@ -20,7 +20,9 @@
 - [x] Documentation: Build entire flow to publish v7 doc + v6 doc. (2026-09-21: one permanent prefix per major — dedalo.dev/docs/v7/ and /docs/v6/ — with /docs/ redirecting to the latest and legacy flat URLs 301'd to v7, which is a path-compatible superset of v6 (46 of its 52 pages exist at the identical path; the 3 that do not are a closed exception list). `bun run docs:publish` IS the gate: content tripwires + `mkdocs build --strict`, then a --delete rsync scoped inside the version prefix; hard refusal, no --force, no CI and no vendor in the path (.github/workflows/docs.yml is advisory only). v6 is off the shared site_dir symlink, wears slate blue-grey instead of the Dédalo orange so readers can tell the manuals apart, and carries the version switcher plus an 'older version' banner. v8 = build into /docs/v8/, add a versions.json row, flip one redirect. Gate test/unit/docs_versioning_tripwire.test.ts, including the rename gate that refuses to publish a page deleted without a redirect_maps entry; routing in deploy/docs/htaccess.)
 - [ ] Master: Ontology and Code client update v6 compatibility from v7 (paths, etc.)
 - [ ] MHT: Deploy and migrate to v7
-- [ ] Search: verify count empty values (MDCAT case)
+- [x] Search: verify count empty values (MDCAT case)
 - [ ] Search: verify multiple left join issues (MDCAT case)
+- [ ] Search: improve search panel design (see 'CSS search panel design' session)
+- [x] Search: The UI count panel has a delay when calculating and returning, which creates a moment of confusion for the user (who views the old value as the new one).
 - [ ] Ontology: Default lang will be english. Review the entire workflow to ensure it works correctly, especially publication (current definition is only in spanish).
 

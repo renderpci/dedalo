@@ -25,6 +25,7 @@
  * never read — a broader-term search silently under-returned.
  */
 
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { composeContains, composeNotContains, relationProbeGroups } from '../containment.ts';
 import type { BuilderContext, BuilderResult } from './types.ts';
 import { compound, fragment } from './types.ts';
@@ -38,24 +39,53 @@ import { compound, fragment } from './types.ts';
  * Returns objects, not JSON text: dual-form probing (containment.ts) needs to
  * re-type each locator's section_id, and the per-element decomposition needs
  * the element boundaries — a pre-joined JSON string loses both.
+ *
+ * No q (null / '' / the client's 'only_operator' sentinel, search.js) → null.
+ * A JSON string of a locator or locator array (the PHP wire shape) decodes.
+ * ANYTHING ELSE THROWS (request.invalid). It used to be refused QUIETLY → the
+ * clause dropped → the search widened to the whole section: `q:'!*'` counted
+ * every record of mdcat1003 (222,434) for both '!*' and '*'. Operators travel
+ * in q_operator only — a glued '!*' in q is not a relation spelling.
  */
 function normalizeRelationQ(rawQ: unknown): Record<string, unknown>[] | null {
-	if (rawQ === undefined || rawQ === null || rawQ === '') {
-		return null;
-	}
-	const locators = Array.isArray(rawQ) ? rawQ : [rawQ];
-	const cleaned = locators.map((locator) => {
-		if (locator === null || typeof locator !== 'object') {
-			// Safety gate (PHP coerces non-object content to '[]'): refuse quietly.
-			return null;
-		}
-		const { id: _transientId, ...rest } = locator as Record<string, unknown>;
+	if (isAbsentRelationQ(rawQ)) return null;
+	const decoded = typeof rawQ === 'string' ? decodeRelationQString(rawQ) : rawQ;
+	const locators = Array.isArray(decoded) ? decoded : [decoded];
+	if (locators.length === 0) return null;
+	return locators.map((locator) => {
+		if (!isLocatorObject(locator)) throw invalidRelationQ(rawQ);
+		const { id: _transientId, ...rest } = locator;
 		return rest;
 	});
-	if (cleaned.some((entry) => entry === null)) {
-		return null;
+}
+
+function isAbsentRelationQ(rawQ: unknown): boolean {
+	return rawQ === undefined || rawQ === null || rawQ === '' || rawQ === 'only_operator';
+}
+
+function isLocatorObject(value: unknown): value is Record<string, unknown> {
+	return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function decodeRelationQString(text: string): unknown {
+	const trimmed = text.trim();
+	if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+		try {
+			return JSON.parse(trimmed);
+		} catch {
+			throw invalidRelationQ(text);
+		}
 	}
-	return cleaned as Record<string, unknown>[];
+	throw invalidRelationQ(text);
+}
+
+function invalidRelationQ(rawQ: unknown): DedaloError {
+	const publicMessage =
+		'Relation search q must be a locator or locator array; operators (*, !*, !=, !==) go in q_operator';
+	return new DedaloError('request.invalid', {
+		message: `relation search: invalid q ${JSON.stringify(rawQ)?.slice(0, 200)} — ${publicMessage}`,
+		publicMessage,
+	});
 }
 
 /**

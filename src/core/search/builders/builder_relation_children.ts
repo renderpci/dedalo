@@ -39,9 +39,11 @@ const SPECIFIC_CHILD =
 /**
  * PHP extract_normalized_relation_q (:111-142): strip the client-side `id`
  * from a locator object, JSON-encode non-strings, unwrap a single-element
- * array's brackets; anything without '{' that is not 'only_operator' becomes
- * '[]' (the clause still RUNS and matches nothing — dropping it would return
- * every row instead of none).
+ * array's brackets. Anything without '{' THROWS (request.invalid) — PHP
+ * swapped it for '[]', which ran but answered a search nobody asked ('!='
+ * over '[]' matched every parent with children). Only reached for the value
+ * operators: '*'/'!*' return before q is read, so 'only_operator' is refused
+ * here too (a value operator with no value).
  */
 function normalizeRelationQ(rawQ: unknown): string {
 	let source = rawQ;
@@ -59,9 +61,12 @@ function normalizeRelationQ(rawQ: unknown): string {
 		return JSON.stringify(locator);
 	}
 	const text = typeof source === 'string' ? source : JSON.stringify(source);
-	if (!text?.includes('{') && text !== 'only_operator') {
-		console.warn(`[search/relation_children] ignored invalid unsafe q: ${text}`);
-		return '[]';
+	if (!text?.includes('{')) {
+		throw new DedaloError('request.invalid', {
+			message: `relation_children search: invalid q ${JSON.stringify(text)?.slice(0, 200)} — q must be a locator; operators go in q_operator`,
+			publicMessage:
+				'Relation search q must be a locator; operators (*, !*, !=, !==) go in q_operator',
+		});
 	}
 	return text;
 }

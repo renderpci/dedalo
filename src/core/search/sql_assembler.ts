@@ -1243,6 +1243,59 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 		: await buildPlainSearchSql(sqo, options);
 }
 
+/**
+ * ONE ROW PER RECORD IDENTITY (WC-2026-09-24-multi-section-search-identity-dedup):
+ * the leading SELECT column, the full_count expression and the default inner
+ * ORDER BY of a search, all decided from one place so they cannot drift.
+ *
+ * Record identity is (section_tipo, section_id), never section_id alone. A
+ * filter join chain fans a record into one row per stored locator. A single-section
+ * search folds that with DISTINCT ON (section_id), because the tipo is pinned.
+ * A multi-section search folds it on the FULL identity: two sections in one
+ * table may legitimately share an id, which is why PHP (:397-401) forced
+ * remove_distinct there, and then served the fan-out as duplicate rows.
+ * Without joins a matrix table already yields one row per identity, so no
+ * DISTINCT is paid there. The ORDER BY must lead with the DISTINCT ON keys:
+ * section_id stays the page order's primary key, and section_tipo only breaks ties.
+ *
+ * The count: UNIQUE (section_id, section_tipo) + a single section_tipo
+ * predicate makes section_id unique across the scanned rows unless a join
+ * chain multiplies them, so count(*) (a parallel index-only scan on the big
+ * tables) is exact there. Multi-section counts IDENTITIES: PHP's
+ * count(DISTINCT section_id) merged records that merely share an id, so the
+ * total disagreed with the rows served.
+ */
+function identityShape(
+	alias: string,
+	multiSection: boolean,
+	hasJoins: boolean,
+	/** A shape where section_id is already unique (flattened) or the caller opted out. */
+	skipSectionIdDistinct: boolean,
+): { firstColumn: string; countColumn: string; orderDefault: string[] } {
+	if (multiSection) {
+		return hasJoins
+			? {
+					firstColumn: `DISTINCT ON (${alias}.section_id, ${alias}.section_tipo) ${alias}.section_id`,
+					countColumn: `count(DISTINCT (${alias}.section_tipo, ${alias}.section_id)) as full_count`,
+					orderDefault: [`${alias}.section_id ASC`, `${alias}.section_tipo ASC`],
+				}
+			: {
+					firstColumn: `${alias}.section_id`,
+					countColumn: `count(DISTINCT (${alias}.section_tipo, ${alias}.section_id)) as full_count`,
+					orderDefault: [`${alias}.section_id ASC`],
+				};
+	}
+	return {
+		firstColumn: skipSectionIdDistinct
+			? `${alias}.section_id`
+			: `DISTINCT ON (${alias}.section_id) ${alias}.section_id`,
+		countColumn: hasJoins
+			? `count(DISTINCT ${alias}.section_id) as full_count`
+			: 'count(*) as full_count',
+		orderDefault: [`${alias}.section_id ASC`],
+	};
+}
+
 /** The SQO→SQL assembler proper: one section (or a UNION of them), no pre-pass. */
 async function buildPlainSearchSql(sqo: Sqo, options: SearchOptions): Promise<BuiltQuery> {
 	const sectionTipos = getSectionTipos(sqo).map((tipo) =>
@@ -1270,9 +1323,6 @@ async function buildPlainSearchSql(sqo: Sqo, options: SearchOptions): Promise<Bu
 			message: 'search assembler: no resolvable matrix table for the SQO section_tipo',
 		});
 	}
-	// Multi-section forces remove_distinct (PHP :397-401).
-	const removeDistinct = sqo.remove_distinct === true || multiSection;
-
 	const params = new ParamsCollector();
 
 	// --- WHERE: main (section_tipo) ---------------------------------------
@@ -1405,7 +1455,6 @@ async function buildPlainSearchSql(sqo: Sqo, options: SearchOptions): Promise<Bu
 	// --- ORDER ---------------------------------------------------------------
 	const selectExtra: string[] = [];
 	let orderClauses = await buildOrderClauses(sqo, alias, selectExtra, joinFragments, pathScope);
-	const orderDefault = [`${alias}.section_id ASC`];
 
 	// Flatten the explicit-order shape when DISTINCT ON is provably a no-op:
 	// single-section + no join fragments + the table's UNIQUE (section_id,
@@ -1435,26 +1484,19 @@ async function buildPlainSearchSql(sqo: Sqo, options: SearchOptions): Promise<Bu
 	if (timeOrder !== null) orderClauses = timeOrder.clauses;
 
 	const flattenOrder = orderClauses.length > 0 && flattenable;
+	const { firstColumn, countColumn, orderDefault } = identityShape(
+		alias,
+		multiSection,
+		joinFragments.size > 0,
+		sqo.remove_distinct === true || flattenOrder,
+	);
 
 	// --- SELECT ----------------------------------------------------------------
 	const select: string[] = [];
 	if (sqo.full_count === true) {
-		// UNIQUE (section_id, section_tipo) + a single section_tipo predicate
-		// (section_id NOT NULL as a unique-key member) means section_id is unique
-		// across the scanned rows unless a multi-hop join chain multiplies them —
-		// DISTINCT is only needed then, and for multi-section, where PHP's
-		// cross-tipo collapse semantics must be preserved. count(*) unlocks a
-		// parallel index-only scan on the big tables.
-		const plainCount = !multiSection && joinFragments.size === 0;
-		select.push(
-			plainCount ? 'count(*) as full_count' : `count(DISTINCT ${alias}.section_id) as full_count`,
-		);
+		select.push(countColumn);
 	} else {
-		select.push(
-			removeDistinct || flattenOrder
-				? `${alias}.section_id`
-				: `DISTINCT ON (${alias}.section_id) ${alias}.section_id`,
-		);
+		select.push(firstColumn);
 		select.push(`${alias}.section_tipo`);
 		if (options.idsOnly !== true) {
 			for (const column of DEFAULT_SELECT_COLUMNS) {

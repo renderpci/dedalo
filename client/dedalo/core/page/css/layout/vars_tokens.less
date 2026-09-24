@@ -350,6 +350,12 @@
 	--checkbox_border:          var(--color_grey_8);
 	--checkbox_checked_bg:      var(--color_primary);
 	--checkbox_checkmark:       var(--color_white);
+	// Checked option chip (component_radio_button). Light: the full brand
+	// fill shouts on a white surface, so the pill is a softer brand orange
+	// with the same dark brand ink (#16181b on #fbb266 = 10.2:1). Dark keeps
+	// the solid brand pill (theme_dark.less).
+	--option_chip_checked_bg:     #fbb266;
+	--option_chip_checked_fg:     var(--fg_on_brand);
 	--input_bg:                 var(--color_grey_16);
 	--input_fg:                 var(--color_grey_4);
 	--input_outline:            none;
@@ -357,6 +363,7 @@
 	--select_fg:                var(--color_grey_4);
 	--select_outline:           none;
 	--select_icon_url:          url('../../themes/default/icons/select_arrows.svg');
+	--search_icon_url:          url('../../themes/default/icons/search.svg');
 	--toolbar_btn_hover_bg:     var(--color_grey_11);
 	--toolbar_btn_icon_filter:  none;
 	// mosaic (portal card grid) hover chips — the corner scrims that carry the

@@ -19,6 +19,32 @@
 		padding-left: 0.5em;
 		row-gap: 0.5rem;
 
+		// stale: a new search invalidated the total and the COUNT is pending.
+		// The old strip stays mounted until the new one swaps in (render_paginator
+		// edit()); dim + disable it so its numbers never read as the new result.
+		&.stale {
+			pointer-events: none;
+			>.nav_buttons, >.paginator_info {
+				opacity: 0.35;
+				transition: opacity 0.15s linear;
+			}
+			// spinner as a flex item of content_data (align-items:center), not
+			// inline text: vertical-align:middle sat it on the x-height, too low
+			&::after {
+				content: '';
+				flex: none;
+				align-self: center;
+				width: 0.8em;
+				height: 0.8em;
+				margin-left: 0.5em;
+				opacity: 0.6;
+				border: 2px solid currentColor;
+				border-right-color: transparent;
+				border-radius: 50%;
+				animation: paginator_stale_spin 0.8s linear infinite;
+			}
+		}
+
 		.show_all_button, .reset_paginator_button {
 			// margin-right: 0.5rem;
 			cursor: pointer;
@@ -211,3 +237,7 @@
 	}//end .content_data
 
 }//end .wrapper_paginator
+
+@keyframes paginator_stale_spin {
+	to { transform: rotate(360deg); }
+}

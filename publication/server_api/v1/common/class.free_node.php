@@ -1,4 +1,6 @@
 <?php
+include_once dirname(__FILE__).'/class.tags_mask.php';
+
 /**
 * FREE_NODE
 * Object like free node results
@@ -131,22 +133,9 @@ class free_node extends stdClass {
 
 		$q 			= trim($q);
 		$q 			= stripslashes($q);
-		$first_char = substr($q, 0, 1);
-		$last_char  = substr($q, -1);
 			#dump($q, ' q ++ '.to_string());
-			#dump($first_char, ' first_char ++ '.to_string());
-			#dump($last_char, ' last_char ++ '.to_string());
-		switch (true) {
-			case ( ($first_char==='\'' && $last_char==='\'') || ($first_char==='"' && $last_char==='"') ) :
-				$ar_word = array( substr($q, 1, -1) );
-				break;
-			case ( strpos($q, " ")!==false ) :
-				$ar_word = explode(" ", $q);
-				break;
-			default:
-				$ar_word = array( $q );
-				break;
-		}
+
+		$ar_word = self::q_to_words($q);
 
 		# REMOVE_RESTRICTED_TEXT
 		$raw_text_sure = web_data::remove_restricted_text( $raw_text, $this->av_section_id );
@@ -181,6 +170,58 @@ class free_node extends stdClass {
 
 
 	/**
+	* Q_TO_WORDS
+	* Split a search query into the words to be highlighted in the transcription.
+	* Query is the same string sent to MySQL FULLTEXT 'IN BOOLEAN MODE', so:
+	* - a quoted phrase ("la casa") is one single word, quotes apart
+	* - excluded terms (-guerra) are not highlighted, as rows containing them are not returned
+	* - remaining operators are left to word_to_pattern, that removes them
+	* Ex. '"la casa" +poble -guerra' returns ['la casa', '+poble']
+	* @param string $q
+	* @return array
+	*/
+	public static function q_to_words( string $q ) : array {
+
+		$q = trim($q);
+		if ($q==='') {
+			return [];
+		}
+
+		// sign + quoted phrase ("..", '..') | sign + plain word
+		$pattern = '/(?<sign>[+\-])?(?:"(?<dq>[^"]*)"|\'(?<sq>[^\']*)\'|(?<w>\S+))/u';
+
+		if (!preg_match_all($pattern, $q, $matches, PREG_SET_ORDER)) {
+			return [$q]; // unexpected query shape: keep previous behavior
+		}
+
+		$ar_word = [];
+		foreach ($matches as $match) {
+
+			// excluded terms are not present in the results, so they are not highlighted
+			if (($match['sign'] ?? '')==='-') {
+				continue;
+			}
+
+			$word = '';
+			foreach (['dq','sq','w'] as $key) {
+				if (isset($match[$key]) && $match[$key]!=='') {
+					$word = $match[$key];
+					break;
+				}
+			}
+
+			$word = trim($word);
+			if ($word!=='') {
+				$ar_word[] = $word;
+			}
+		}
+
+		return $ar_word;
+	}//end q_to_words
+
+
+
+	/**
 	* FIND_WORD_IN_TEXT
 	* Find word in text and return array witch highlighted fragment and associated thesaurus
 	* @param string $word
@@ -199,6 +240,11 @@ class free_node extends stdClass {
 		# We make it an insensitive pattern to accents
 		$word_pattern = self::word_to_pattern($word);
 			#dump($word_pattern, ' word_pattern ++ '.to_string());
+
+		// word with no searchable text left (ex. only operators). Nothing to highlight
+		if ($word_pattern===false) {
+			return $ar_word_fragment;
+		}
 
 		// Remove double returns (<br>)
 		$pattern_br	= TR::get_mark_pattern('br',false);
@@ -483,19 +529,7 @@ class free_node extends stdClass {
 	*/
 	public static function mask_tags( string $text ) : string {
 
-		// 1. tags with data payload (open/close): [note-b-1-name-data:{..}:data], [/index-a-1-name-data:{..}:data]
-		// 2. TC marks: [TC_00:01:02.123_TC]
-		// 3. standalone tags (open/close): [index-n-1], [/index-n-1], [svg-n-2], ...
-		// Payload is bounded to avoid swallowing real text when a tag was truncated by remove_restricted_text
-		$pattern = '/\[\/?[a-zA-Z]+-[a-z]-[^\]]*?-data:.{0,2000}?:data\]'
-				 . '|\[TC_[0-9:.]+_TC\]'
-				 . '|\[\/?(?:index|reference|svg|draw|geo|page|person|note|lang)-[a-z]-[0-9]{1,6}\]/su';
-
-		$masked = preg_replace_callback($pattern, function($m) {
-			return str_repeat(' ', mb_strlen($m[0]));
-		}, $text);
-
-		return $masked ?? $text;
+		return tags_mask::mask_tags($text);
 	}//end mask_tags
 
 
@@ -556,8 +590,24 @@ class free_node extends stdClass {
 
 		$result = false;
 
-		// change * (zero or more) by + (one or more)
-		$word = str_replace('*', '+', $word);
+		$word = trim((string)$word);
+
+		// Remove FULLTEXT boolean operators (+ - ~ < > ( ) " ') wrapping the word. They are
+		// search modifiers, not part of the text, and they reach the regex as metacharacters
+		// (ex. '+casa' compiles to '/(+casa)/i', an invalid pattern that matches nothing)
+		// note preg_replace returns null on malformed UTF-8: keep the word in that case
+		$word = preg_replace('/^[+\-~<>("\']+|[)"\']+$/u', '', $word) ?? $word;
+
+		// trailing * means prefix search (MySQL FULLTEXT wildcard)
+		$wildcard = substr($word, -1)==='*';
+		$word	  = trim(rtrim($word, '*'));
+
+		if ($word==='') {
+			return false;
+		}
+
+		// escape regex metacharacters of the remaining literal text
+		$word = preg_quote($word, '/');
 
 		$search	= array("/a|á|à|ä/i",
 						"/e|é|è|ë/i",
@@ -575,6 +625,11 @@ class free_node extends stdClass {
 						) ;
 
 		$pattern = preg_replace($search, $repace, $word);
+
+		// prefix search: allow any word chars after the searched text
+		if ($wildcard===true && !empty($pattern)) {
+			$pattern .= '\w*';
+		}
 
 		if($pattern) $result = '/('. $pattern .')/i' ;
 

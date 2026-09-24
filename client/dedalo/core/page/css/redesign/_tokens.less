@@ -366,6 +366,10 @@
 		--color_orange_hover_border: #235049;
 		--color_orange_dark:        #2f6b63; // 5.1:1 on the pine tint
 		--color_orange_light:       #e3ece9; // the tint follows the accent, not orange
+		// the checked option chip is the pine fill + its ink (the base's softened
+		// orange is an orange-only choice)
+		--option_chip_checked_bg: var(--color_orange_dedalo);
+		--option_chip_checked_fg: var(--fg_on_brand);
 
 		&[data-theme="dark"] {
 			--color_orange_dedalo: #5aa399;

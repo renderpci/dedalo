@@ -642,6 +642,32 @@ stale cached copy of the client (a hard reload settles it).
 
 ## Media
 
+### Docker: newly uploaded media is `403`, older media serves
+
+The nginx error log says `open() "/srv/dedalo/media/…" failed (13: Permission
+denied)`. The engine runs under `umask 0027`, so new media files are `640` —
+readable only by the engine's group (gid `1000`) — and nginx's workers are not in
+it. The shipped compose files add the `nginx` user to that group in the nginx
+service's `command:`; a stack whose command was replaced, or one relying on
+`group_add` (which never reaches the workers), loses it. Restore the two
+`addgroup` calls and recreate the service:
+
+```bash
+docker compose up -d --no-deps --force-recreate nginx
+docker compose exec nginx sh -c 'grep Groups /proc/$(pgrep -f "worker process" | head -1)/status'   # must list 1000
+```
+
+Do not `chmod -R o+r` the media tree: it makes media world-readable, and the next
+upload is `403` again. See [Running Dédalo in containers](docker.md#3-the-engine-writes-the-media-rules-the-proxy-reads-them).
+
+### An SVG uploads but gets no thumbnail
+
+The log says `rasterizeSvg: SVG rasterization needs librsvg's 'rsvg-convert'`.
+SVG is rendered by librsvg only — ImageMagick's own SVG path is refused by the
+hardened policy. Install it (`apt install librsvg2-bin`, `dnf install
+librsvg2-tools`, `brew install librsvg`) or point `DEDALO_RSVG_CONVERT_PATH` at
+the binary. The Docker image ships it; an older image needs a rebuild.
+
 ### A logged-in user gets `404` for every media file
 
 The giveaway is that **the application itself works perfectly** — records load,

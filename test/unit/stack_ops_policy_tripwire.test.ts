@@ -30,6 +30,17 @@
  * /var/lib/docker — the same volume as the database — so an access-logged
  * install fills the host disk and takes Postgres down with it.
  *
+ * MEDIA-READ (2026-09-24). The Dockerfile narrowed the engine's umask to 0027
+ * (P2-15), so every media file it writes is 640 in 750 directories: owner and
+ * GROUP read, the world nothing. The proxy container's worker is a different
+ * uid, and no stack gave it the engine's group — so every upload after the
+ * narrowing was a 403 while older, 0666 media kept serving and hid it. The
+ * systemd deployment already reads media through the group (UMask=0007 + the
+ * proxy user in `dedalo`); every stack whose proxy mounts the media volume must
+ * do the same by writing the membership into the proxy's /etc/group before nginx
+ * starts — `group_add` reaches only the root master, never the workers (measured:
+ * workers `Groups: 101`, a 640 file 403s) — and the umask must keep group read.
+ *
  * THE LIMIT OF THIS GATE, stated rather than implied: it reads the shipped
  * compose files and the catalog, exactly as the audit did. Nothing here was
  * measured against a running stack.
@@ -60,6 +71,23 @@ function dedaloService(stack: string): string {
 	}
 	void next;
 	return source.slice(start, end);
+}
+
+/**
+ * The engine's gid inside the image: `bun` from the oven/bun base (measured
+ * 2026-09-24, `id` in the container: gid=1000(bun)). Pinned, not derived — the
+ * base image is not readable from the repo.
+ */
+const ENGINE_GID = '1000';
+
+/** A top-level service block of a compose file, or null. */
+function serviceBlock(stack: string, name: string): string | null {
+	const source = read(stack);
+	const start = source.indexOf(`\n  ${name}:`);
+	if (start === -1) return null;
+	const rest = source.slice(start + 3);
+	const next = rest.match(/\n {2}[a-z_]+:/);
+	return source.slice(start, next ? start + 3 + (next.index as number) : source.length);
 }
 
 /** Seconds in a compose duration like `30s` / `1m30s`. */
@@ -207,6 +235,43 @@ describe('the shipped stacks keep the rules the engine states', () => {
 		for (const file of ['deploy/dedalo-ts-watchdog.timer', 'deploy/dedalo-ts-watchdog.service']) {
 			expect(read(file).length, `${file}: empty`).toBeGreaterThan(100);
 		}
+	});
+
+	test('the proxy reads media through the engine group, in every stack', () => {
+		const entry = read('Dockerfile').match(/^ENTRYPOINT .*umask (\d{4})/m);
+		expect(entry, 'Dockerfile: no umask on the ENTRYPOINT line').not.toBeNull();
+		const groupDigit = Number((entry as RegExpMatchArray)[1][2]);
+		expect(
+			groupDigit & 0o4,
+			`Dockerfile umask ${(entry as RegExpMatchArray)[1]} strips GROUP read — the proxy reads media ` +
+				'through the engine group, so every media file would be a 403',
+		).toBe(0);
+		let proxies = 0;
+		for (const stack of STACKS) {
+			const nginx = serviceBlock(stack, 'nginx');
+			if (!nginx || !/^\s*- media:\/srv\/dedalo\/media/m.test(nginx)) continue;
+			proxies++;
+			// group_add is NOT enough and is not accepted as proof: it reaches only
+			// the root master; each worker's initgroups("nginx") rebuilds its
+			// groups from /etc/group (measured 2026-09-24, workers `Groups: 101`).
+			// The stack must write the membership into /etc/group before nginx starts.
+			const command = nginx.match(/^\s*command:[^\n]*\n?((?:\s{6,}[^\n]*\n?)*)/m);
+			const text = command ? command[0] : '';
+			const group = text.match(/addgroup -g (\d+) (\w+)/);
+			expect(
+				group?.[1],
+				`${stack}: nginx mounts the media volume but its command creates no gid-${ENGINE_GID} group — ` +
+					'under umask 0027 every newly written media file is a 403 (group_add alone does not reach the workers)',
+			).toBe(ENGINE_GID);
+			expect(
+				text,
+				`${stack}: nginx's command does not put the worker user into the engine group`,
+			).toContain(`addgroup nginx ${(group as RegExpMatchArray)[2]}`);
+			expect(text.indexOf('addgroup'), `${stack}: the group must be set up BEFORE nginx starts`).toBeLessThan(
+				text.indexOf("nginx -g 'daemon off;'"),
+			);
+		}
+		expect(proxies, 'anti-vacuity: no stack proxy mounting media was found').toBeGreaterThan(1);
 	});
 
 	test('census floor: the walk really found the shipped stacks', () => {

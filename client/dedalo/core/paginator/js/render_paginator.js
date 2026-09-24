@@ -71,6 +71,16 @@ render_paginator.prototype.edit = async function(options) {
 			// the icons dying and coming back on EVERY pagination click. Waiting here
 			// keeps the OLD strip live and clickable until the new one is complete,
 			// so the swap is a text change, never a dead-arrows flash.
+			// But when the caller's total was INVALIDATED (a new search sets
+			// caller.total=null) the wait is a real COUNT round-trip, and the old
+			// strip would read as the new result. Mark it 'stale' (dimmed, inert)
+			// until the swap removes it. Pagination clicks keep a cached total and
+			// are untouched.
+			const counting	= self.caller && self.caller.total==null
+			const old_node	= self.node?.content_data
+			if (counting && old_node) {
+				old_node.classList.add('stale')
+			}
 			await content_data.ready
 			return content_data
 		}
