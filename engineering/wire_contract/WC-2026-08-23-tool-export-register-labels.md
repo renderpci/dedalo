@@ -67,3 +67,26 @@ RED there, listing the 22 names as missing. That red is the correct answer —
 the registered tool is stale — and it clears when the tools are registered
 again from the new `register.json` (`bun run test:db:setup` does it for the
 suite database).
+
+## Addendum 2026-09-24 (b) — six more names: external sources
+
+`tools/tool_export/register.json` gains, 7 langs each: `export_rerun`,
+`export_file_incomplete`, `export_external_incomplete`,
+`export_external_rerun_advice`, `export_external_admin_advice`,
+`export_external_stale` — the status line, the downloads note and the "Run the
+export again" button of an export an external source left incomplete
+(`WC-2026-09-24-tool-export-server-built-artifacts`, addendum "external
+sources"). Strictly additive; the gate's `ADDED` set grows by exactly these six.
+Same registration rule as above: red on a suite database whose tools were
+registered before this addendum until `bun run test:db:setup` registers them
+again.
+
+## Addendum 2026-09-24 (c) — one more name: `export_external_truncated`
+
+`tools/tool_export/register.json` gains `export_external_truncated` (7 langs):
+the status line's sentence for external values the export's size limits CUT
+(partly in the files), which the "could not be read" sentence used to count and
+answer with "contact the administrator"
+(`WC-2026-09-24-tool-export-server-built-artifacts`, addendum (c)). Strictly
+additive; the gate's `ADDED` set grows by exactly this one. Same registration
+rule as above.

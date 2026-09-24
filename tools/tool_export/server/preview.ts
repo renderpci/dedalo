@@ -47,6 +47,7 @@ import {
 	type ToolResponse,
 	toolRequestId,
 } from '../../../src/core/tools/module.ts';
+import type { ExportExternalDegradation } from '../../../src/diffusion/api/export.ts';
 import { type ArtifactStore, type ExportJobStatus, openArtifactStore } from './artifact_store.ts';
 import { effectiveStatus, resolveOwnedJob } from './export_job.ts';
 import {
@@ -96,6 +97,12 @@ export interface ExportPreview {
 	has_more: boolean;
 	total_records: number | null;
 	written_records: number;
+	/**
+	 * The export's external-source summary so far (the manifest's, LIVE at each
+	 * checkpoint while it runs — export_job.ts ExportArtifactSummary
+	 * .external_degraded); null when nothing degraded.
+	 */
+	external_degraded: ExportExternalDegradation | null;
 }
 
 /** A 0-based page index from the wire (anything else is page 0). */
@@ -243,6 +250,7 @@ export async function readExportPreview(request: ExportPreviewRequest): Promise<
 		has_more: page.has_more,
 		total_records: manifest.total ?? null,
 		written_records: manifest.records,
+		external_degraded: manifest.external_degraded ?? null,
 	};
 }
 

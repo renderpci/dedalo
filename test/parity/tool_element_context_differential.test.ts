@@ -58,7 +58,7 @@ describe.if(hasPhpCredentials())(
 					// Addendum 2026-09-24 (same entry, and
 					// WC-2026-09-24-tool-export-server-built-artifacts): 22 more names,
 					// the server-built export UI (status line, pager, downloads, Stop,
-					// Delete).
+					// Delete). Addendum (b), same day: six more (external sources).
 					const ADDED = new Set([
 						'activate_all_columns',
 						'disable_all_columns',
@@ -89,6 +89,16 @@ describe.if(hasPhpCredentials())(
 						'records_per_page',
 						'stop',
 						'waiting_file',
+						// 2026-09-24 addendum (b): external sources — the incomplete
+						// export's status line, downloads note and Run again
+						'export_rerun',
+						'export_file_incomplete',
+						'export_external_incomplete',
+						'export_external_rerun_advice',
+						'export_external_admin_advice',
+						'export_external_stale',
+						// 2026-09-24 addendum (c): a truncated-only export is not "unread"
+						'export_external_truncated',
 					]);
 					type LabelRow = { name?: unknown };
 					const tsLabels = tsContext.labels as LabelRow[];

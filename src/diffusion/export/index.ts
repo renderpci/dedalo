@@ -19,6 +19,11 @@
 export type { ExportDdoInput } from './compile_columns.ts';
 export { compileExportPlan } from './compile_columns.ts';
 export type {
+	ExportExternalDegradation,
+	ExportExternalDegradedCell,
+	ExportExternalDegradedState,
+} from './external_prefetch.ts';
+export type {
 	ExportDeclarationGateOptions,
 	ExportGridContext,
 	ExportGridRunOptions,

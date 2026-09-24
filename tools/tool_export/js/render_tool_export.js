@@ -548,6 +548,26 @@ const get_content_data_edit = async function(self) {
 				delete_export(self)
 			})
 
+		// button_rerun. Visible only when the shown export ENDED INCOMPLETE because
+		// an external source could not answer and a re-run can plausibly fix it
+		// (list_export_jobs `external_degraded.retryable`). It runs the SAME
+		// export again — the server re-reads the recorded options of that export
+		// (build_export_artifact `rerun_of`), whatever this form shows now.
+			const button_rerun = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'button_rerun_export light hide',
+				text_content	: self.get_tool_label('export_rerun') || 'Run the export again',
+				parent			: export_buttons_config
+			})
+			button_rerun.addEventListener('click', function(e) {
+				e.stopPropagation()
+				const state = self.export_state
+				if (!state || !state.job_id) {
+					return
+				}
+				run_export(self, {rerun_of: state.job_id})
+			})
+
 		// response container (the export status line + its reason)
 			const response_container = ui.create_dom_element({
 				element_type	: 'div',
@@ -683,6 +703,16 @@ const get_content_data_edit = async function(self) {
 				parent			: export_buttons_options
 			})
 
+		// incomplete note: the downloads stay available, and say what they lack
+		// (an external source could not answer — list_export_jobs `external_degraded`)
+			const download_incomplete_note = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'download_incomplete_note hide',
+				text_content	: self.get_tool_label('export_file_incomplete')
+					|| 'These files are incomplete: some values from external sources are missing.',
+				parent			: export_buttons_options
+			})
+
 		// download status line (a file being built, or why it failed)
 			const download_status = ui.create_dom_element({
 				element_type	: 'div',
@@ -705,6 +735,8 @@ const get_content_data_edit = async function(self) {
 			button_export			: button_export,
 			button_stop				: button_stop,
 			button_delete			: button_delete,
+			button_rerun			: button_rerun,
+			download_incomplete_note: download_incomplete_note,
 			response_container		: response_container,
 			download_buttons		: download_buttons,
 			button_print			: button_export_print,
@@ -840,6 +872,10 @@ const new_export_state = function(init={}) {
 		// the ACL frontier narrowed the selection (list_export_jobs `narrowed`):
 		// the files hold fewer records than asked for — said on the status line
 		narrowed		: false,
+		// the external-source summary (list_export_jobs / get_export_preview
+		// `external_degraded`): null, or {incomplete, retryable, cells, records,
+		// counts, sample} — said on the status line, the downloads say it too
+		external_degraded	: null,
 		following		: false,
 		// reconnect: cancels of the lane-job candidates still unconfirmed
 		candidates		: new Set(),
@@ -894,7 +930,8 @@ const run_export = async function(self, options) {
 	ui_refs.export_data_container.replaceChildren()
 	paint_export(self)
 
-	if (!Array.isArray(options.ar_ddo_to_export) || !options.ar_ddo_to_export.length) {
+	// a re-run takes its columns from the recorded export (server side)
+	if (!options.rerun_of && (!Array.isArray(options.ar_ddo_to_export) || !options.ar_ddo_to_export.length)) {
 		set_export_failed(self, null, self.get_tool_label('no_columns_selected') || 'Select at least one column to export')
 		return false
 	}
@@ -1235,6 +1272,7 @@ const apply_job_summary = function(state, job) {
 	state.error_code	= job.error?.code || null
 	state.error			= job.error || null
 	state.narrowed		= job.narrowed===true
+	state.external_degraded	= degraded_summary(job.external_degraded)
 	// a transient page failure is not the export's outcome
 	state.error_text	= null
 	if (state.status!=='running') {
@@ -1579,6 +1617,10 @@ const load_preview = async function(self, page) {
 	state.col_page	= Number.isInteger(preview.col_page) ? preview.col_page : 0
 	state.written	= Math.max(state.written, preview.written_records || 0)
 	state.total		= typeof preview.total_records==='number' ? preview.total_records : state.total
+	if (preview.external_degraded!==undefined) {
+		// LIVE while the export runs (the manifest's, at each checkpoint)
+		state.external_degraded = degraded_summary(preview.external_degraded)
+	}
 	const was_running = state.status==='running'
 	if (preview.status && preview.status!=='running' && was_running) {
 		// the job left 'running' between two frames: the manifest decides
@@ -1933,6 +1975,7 @@ const status_text = function(self, state) {
 			return (self.get_tool_label('export_starting') || 'Starting export') + '…'
 		case 'running': {
 			const line = (self.get_tool_label('export_running') || 'Exporting') + ' ' + written + ' / ' + total
+				+ external_suffix(self, state)
 			// a failed page request while running (the poll retries it)
 			return state.error_text ? line + ' — ' + state.error_text : line
 		}
@@ -1940,9 +1983,9 @@ const status_text = function(self, state) {
 			const line = (self.get_tool_label('export_ended') || 'Export finished') + ': ' + written
 			// narrowed by the user's own access: one notice, no coordinates (the
 			// same perm.out_of_scope label the request envelope's notice renders)
-			return state.narrowed
+			return (state.narrowed
 				? line + ' — ' + (get_label.error_perm_out_of_scope || 'Some records are outside your scope')
-				: line
+				: line) + external_suffix(self, state)
 		}
 		case 'cancelled':
 			return get_label.error_export_cancelled || 'The export was stopped before it finished'
@@ -1958,6 +2001,92 @@ const status_text = function(self, state) {
 		}
 	}
 }//end status_text
+
+
+
+/**
+ * DEGRADED_SUMMARY
+ * The wire's `external_degraded` as the state keeps it: the object when it
+ * names at least one degraded cell, else null.
+ * @param {Object|null|undefined} value
+ * @returns {Object|null}
+ */
+const degraded_summary = function(value) {
+
+	return value && typeof value==='object' && Number(value.cells) > 0
+		? value
+		: null
+}//end degraded_summary
+
+
+
+/**
+ * EXTERNAL_SUFFIX
+ * The status line's external-source warning (' — …'), or ''. Each kind of
+ * degraded cell is said for what it is, counted from the exact per-(service,
+ * state) `counts`:
+ * - MISSING (the source could not be read: the value is not in the files) —
+ *   the cells, the records (`missing_cells` / `missing_records`), the services,
+ *   and what to do: run it again once the source is back (retryable) or ask the
+ *   administrator (disabled / misconfigured);
+ * - TRUNCATED (the export's size limits cut a value: part of it IS in the
+ *   files) — said alone, with no advice: neither a re-run nor an administrator
+ *   changes it;
+ * - STALE (the last saved copy was used: the value IS in the files) — a softer
+ *   note.
+ * Labels come from register.json; {cells} {records} {services} are filled here.
+ * @param {Object} self
+ * @param {Object} state
+ * @returns {string}
+ */
+const external_suffix = function(self, state) {
+
+	const degraded = state.external_degraded
+	if (!degraded) {
+		return ''
+	}
+	const counts = Array.isArray(degraded.counts) ? degraded.counts : []
+	const group = (states) => {
+		const items = counts.filter(item => states.includes(item.state))
+		return {
+			cells		: items.reduce((sum, item) => sum + (Number(item.cells) || 0), 0),
+			services	: [...new Set(items.map(item => item.service))].join(', ')
+		}
+	}
+	const missing	= group(['unavailable','timeout','circuit_open','disabled','misconfigured'])
+	const truncated	= group(['truncated'])
+	const stale		= group(['stale'])
+	// the server's own missing counts (a manifest written before they existed
+	// has none: the per-state sum, and every degraded record)
+	const missing_cells		= typeof degraded.missing_cells==='number' ? degraded.missing_cells : missing.cells
+	const missing_records	= typeof degraded.missing_records==='number' ? degraded.missing_records : degraded.records
+	const fill = (label, cells, records, services) => label
+		.replace('{cells}', format_number(cells))
+		.replace('{records}', format_number(records))
+		.replace('{services}', services)
+
+	const parts = []
+	if (missing_cells > 0) {
+		parts.push(fill(self.get_tool_label('export_external_incomplete')
+			|| 'Incomplete: {cells} values from external sources ({services}) could not be read, in {records} records.',
+			missing_cells, missing_records, missing.services))
+		parts.push(degraded.retryable
+			? (self.get_tool_label('export_external_rerun_advice') || 'Run the export again once the source is available.')
+			: (self.get_tool_label('export_external_admin_advice') || 'The external source is disabled or misconfigured: contact the administrator.'))
+	}
+	if (truncated.cells > 0) {
+		parts.push(fill(self.get_tool_label('export_external_truncated')
+			|| 'Incomplete: {cells} values from external sources ({services}) were cut to the export\'s size limits.',
+			truncated.cells, 0, truncated.services))
+	}
+	if (stale.cells > 0) {
+		parts.push(fill(self.get_tool_label('export_external_stale')
+			|| '{cells} values from external sources ({services}) come from a saved copy and may be out of date.',
+			stale.cells, 0, stale.services))
+	}
+
+	return parts.length ? ' — ' + parts.join(' ') : ''
+}//end external_suffix
 
 
 
@@ -2016,6 +2145,8 @@ const paint_export = function(self) {
 		const response_container = ui_refs.response_container
 		response_container.textContent = state ? status_text(self, state) : ''
 		response_container.classList.toggle('error', !!state && ['failed','cancelled','interrupted'].includes(state.status))
+		const incomplete = !!state && !!state.external_degraded && state.external_degraded.incomplete===true
+		response_container.classList.toggle('external_incomplete', incomplete && (running || ended))
 
 	// progress bar
 		const progress = self.progress_ui
@@ -2038,6 +2169,7 @@ const paint_export = function(self) {
 		ui_refs.button_stop.classList.toggle('hide', !can_stop)
 		ui_refs.button_export.disabled = can_stop || (!!state && state.status==='starting')
 		ui_refs.button_delete.classList.toggle('hide', !can_delete_export(state))
+		ui_refs.button_rerun.classList.toggle('hide', !(ended && incomplete && state.external_degraded.retryable===true))
 
 	// downloads
 		const media_models = ended ? get_media_models_in_data(self) : []
@@ -2048,6 +2180,8 @@ const paint_export = function(self) {
 				|| (format==='media_zip' && !media_models.length)
 				|| button.classList.contains('loading')
 		}
+		// the files stay downloadable, and say they are incomplete
+		ui_refs.download_incomplete_note.classList.toggle('hide', !(ended && incomplete))
 		ui_refs.button_print.disabled = !(state && state.preview)
 		if (!ended) {
 			ui_refs.download_status.textContent = ''

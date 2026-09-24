@@ -78,7 +78,10 @@ import {
 	type ToolResponse,
 	toolRequestId,
 } from '../../../src/core/tools/module.ts';
-import { openExportGrid } from '../../../src/diffusion/api/export.ts';
+import {
+	type ExportExternalDegradation,
+	openExportGrid,
+} from '../../../src/diffusion/api/export.ts';
 import { type ExportReadCheckMemo, exportRecordScope, exportStillReadable } from './access.ts';
 import {
 	type ArtifactJobRef,
@@ -396,6 +399,16 @@ export interface ExportArtifactSummary {
 	 * The coordinates stay in the manifest (server-side) and the operator log.
 	 */
 	narrowed: boolean;
+	/**
+	 * The export's EXTERNAL-SOURCE summary (grid.ts
+	 * OpenedExportGrid.externalDegradation): null when every component_external
+	 * cell resolved cleanly; else counts per (service, state), the records
+	 * affected, a capped sample, and whether the files are `incomplete` (a value
+	 * the source could not give is missing) and a re-run can plausibly fix it
+	 * (`retryable`). Served to the OWNER only (the sample names the owner's own
+	 * exported records and the remote ids they reference).
+	 */
+	external_degraded: ExportExternalDegradation | null;
 }
 
 /**
@@ -486,7 +499,7 @@ export async function runExportArtifact(run: ExportArtifactRun): Promise<ExportA
 	}
 
 	try {
-		await pumpLines(run, job, grid.lines, writer, grid.frontierGrants);
+		await pumpLines(run, job, grid.lines, writer, grid);
 	} catch (error) {
 		await grid.lines.return(undefined).catch(() => undefined);
 		await failJob(store, job, writer, error, run.signal);
@@ -508,7 +521,7 @@ async function pumpLines(
 	job: ArtifactJobRef,
 	lines: AsyncGenerator<Record<string, unknown>>,
 	writer: SpoolWriter,
-	grants: ExportFrontierGrants,
+	grid: ExportLiveNotes,
 ): Promise<void> {
 	const everyRecords = run.checkpointRecords ?? CHECKPOINT_RECORDS;
 	const everyMs = run.checkpointMs ?? CHECKPOINT_MS;
@@ -517,7 +530,7 @@ async function pumpLines(
 	for await (const line of lines) {
 		await writer.write(line);
 		if (line.t === 'meta') {
-			await checkpoint(run, job, writer, 0, grants);
+			await checkpoint(run, job, writer, 0, grid);
 			continue;
 		}
 		if (line.t !== 'row' || Number(line.sub ?? 0) !== 0) continue;
@@ -527,7 +540,7 @@ async function pumpLines(
 			complete - lastRecords >= everyRecords ||
 			(complete > lastRecords && Date.now() - lastAt >= everyMs);
 		if (!due) continue;
-		await checkpoint(run, job, writer, complete, grants);
+		await checkpoint(run, job, writer, complete, grid);
 		lastRecords = complete;
 		lastAt = Date.now();
 	}
@@ -543,7 +556,7 @@ async function checkpoint(
 	job: ArtifactJobRef,
 	writer: SpoolWriter,
 	written: number,
-	grants: ExportFrontierGrants,
+	grid: ExportLiveNotes,
 ): Promise<void> {
 	await writer.flush();
 	const stats = writer.stats;
@@ -551,7 +564,9 @@ async function checkpoint(
 	await run.store.updateManifest(job, {
 		// Every grant the committed spool was read under (a superset is fine: a
 		// pair allowed for a record not yet committed is still one the walk read).
-		frontier_grants: recordedFrontierGrants(grants),
+		frontier_grants: recordedFrontierGrants(grid.frontierGrants),
+		// LIVE: a running export's list/preview already warn while it walks
+		external_degraded: grid.externalDegradation(),
 		records: written,
 		rows: stats.rows,
 		spool_bytes: stats.bytes,
@@ -571,6 +586,12 @@ async function checkpoint(
 
 /** The producer's live runtime-grant set (grid.ts OpenedExportGrid.frontierGrants). */
 type ExportFrontierGrants = ReadonlyMap<string, { section_tipo: string; component_tipo: string }>;
+
+/** The producer's LIVE notes a checkpoint records (grid.ts OpenedExportGrid). */
+interface ExportLiveNotes {
+	frontierGrants: ExportFrontierGrants;
+	externalDegradation: () => ExportExternalDegradation | null;
+}
 
 /** The manifest form of the runtime grants: a sorted, detached copy. */
 function recordedFrontierGrants(
@@ -594,10 +615,9 @@ async function finishJob(
 	run: ExportArtifactRun,
 	job: ArtifactJobRef,
 	writer: SpoolWriter,
-	grid: {
+	grid: ExportLiveNotes & {
 		unresolved: readonly string[];
 		frontierRefusals: readonly unknown[];
-		frontierGrants: ExportFrontierGrants;
 	},
 ): Promise<ExportArtifactSummary> {
 	let summary: ExportArtifactSummary;
@@ -625,10 +645,9 @@ async function closeAndRecordEnded(
 	run: ExportArtifactRun,
 	job: ArtifactJobRef,
 	writer: SpoolWriter,
-	grid: {
+	grid: ExportLiveNotes & {
 		unresolved: readonly string[];
 		frontierRefusals: readonly unknown[];
-		frontierGrants: ExportFrontierGrants;
 	},
 ): Promise<ExportArtifactSummary> {
 	const stats = await writer.close();
@@ -642,6 +661,7 @@ async function closeAndRecordEnded(
 		columns: stats.columns ?? [],
 		unresolved: [...grid.unresolved],
 		narrowed: grid.frontierRefusals.length > 0,
+		external_degraded: grid.externalDegradation(),
 	};
 	await run.store.updateManifest(job, {
 		status: 'ended',
@@ -654,6 +674,7 @@ async function closeAndRecordEnded(
 		grid_bytes: stats.committedGridBytes,
 		columns: summary.columns,
 		unresolved: summary.unresolved,
+		external_degraded: summary.external_degraded,
 		// server-side only (never served): the coordinates of every narrowing
 		frontier_refusals: structuredClone([...grid.frontierRefusals]),
 		// the complete runtime grant set, re-asked by every later read
@@ -796,12 +817,14 @@ export async function currentExportPrincipal(context: ToolActionContext): Promis
 /** tool_export.build_export_artifact — background (lane 'export'). */
 export async function toolExportBuildArtifact(context: ToolActionContext): Promise<ToolResponse> {
 	assertBackground(context, 'build_export_artifact');
+	const store = openArtifactStore();
+	// as of NOW, not of submit (currentExportPrincipal)
+	const principal = await currentExportPrincipal(context);
 	const summary = await runExportArtifact({
-		store: openArtifactStore(),
-		// as of NOW, not of submit (currentExportPrincipal)
-		principal: await currentExportPrincipal(context),
+		store,
+		principal,
 		userId: context.userId,
-		options: context.options,
+		options: await buildOptionsOf(store, principal, context),
 		// Captured at SUBMIT by the executor (ToolActionContext.applicationLang),
 		// never read from the ambient scope here: a queued job's handler starts
 		// from another job's release.
@@ -814,6 +837,35 @@ export async function toolExportBuildArtifact(context: ToolActionContext): Promi
 		backgroundJobId: context.backgroundJobId ?? null,
 	});
 	return ok(summary, { requestId: toolRequestId(context) });
+}
+
+/**
+ * THE OPTIONS A BUILD RUNS ON. Normally the request's own. With
+ * `options.rerun_of` (an artifact id — the client's "Run again" on an export an
+ * external source left INCOMPLETE, ExportArtifactSummary.external_degraded):
+ * the RECORDED options of that export — the same selection, columns, format,
+ * breakdown and lang, whatever the reopened tool's form now shows. The source
+ * export is opened through the owner's READ door (resolveOwnedJob: the caller's
+ * own, of the gated section, still readable — anything else is
+ * `export.artifact_not_found`), and the recorded options then pass every gate
+ * of a fresh build (runExportArtifact → openExportGrid): a re-run is a NEW
+ * export, never a privilege the old one carried.
+ */
+async function buildOptionsOf(
+	store: ArtifactStore,
+	principal: Principal,
+	context: ToolActionContext,
+): Promise<Record<string, unknown>> {
+	const rerunOf = context.options.rerun_of;
+	if (rerunOf === undefined || rerunOf === null) return context.options;
+	const { manifest } = await resolveOwnedJob(
+		store,
+		principal,
+		context.userId,
+		String(context.options.section_tipo ?? ''),
+		rerunOf,
+	);
+	return structuredClone(manifest.options);
 }
 
 // ---------------------------------------------------------------------------
@@ -951,6 +1003,8 @@ export interface ExportJobSummary {
 	background_job_id: string | null;
 	/** See ExportArtifactSummary.narrowed (known once the export ended). */
 	narrowed: boolean;
+	/** See ExportArtifactSummary.external_degraded — LIVE while running (checkpoints). */
+	external_degraded: ExportExternalDegradation | null;
 	error: ExportJobError | null;
 }
 
@@ -1015,6 +1069,8 @@ export function summarizeJob(
 		// another boot's lane id may repeat in this one: served as null (thisBootLaneJobId)
 		background_job_id: thisBootLaneJobId(manifest),
 		narrowed: Array.isArray(manifest.frontier_refusals) && manifest.frontier_refusals.length > 0,
+		// a manifest written before 2026-09-24 has no key: nothing was recorded
+		external_degraded: manifest.external_degraded ?? null,
 		error: summarizeJobError(manifest.error),
 	};
 }

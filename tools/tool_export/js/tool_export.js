@@ -405,6 +405,7 @@ const export_command = function(self, action, options) {
 * Submit build_export_artifact as a background job with the tool's current
 * export options (the same options the old NDJSON stream sent).
 * @param {Object} options - {data_format, breakdown, ar_ddo_to_export, fill_the_gaps}
+*   or {rerun_of} (an artifact id: run that recorded export again)
 * @returns {Promise<Object>} envelope; on success the extension keys `job_id`
 *   (lane job, followable) and `pfile` (stop_process handle)
 */
@@ -416,6 +417,15 @@ tool_export.prototype.start_export_job = function(options) {
 	// grid forces the internal 'ALL' sentinel server-side (grid.ts, after
 	// sanitizeClientSqo), so the export always covers the whole filtered selection.
 	const sqo = clone(self.sqo)
+
+	// A RE-RUN (options.rerun_of = the artifact id): the server runs the
+	// RECORDED options of that export again — only the gated section travels.
+	if (options.rerun_of) {
+		return export_submit(self, 'build_export_artifact', {
+			section_tipo	: self.caller.section_tipo,
+			rerun_of		: options.rerun_of
+		})
+	}
 
 	return export_submit(self, 'build_export_artifact', {
 		section_tipo		: self.caller.section_tipo,

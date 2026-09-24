@@ -1411,6 +1411,251 @@
             "lang": "lg-por",
             "name": "quality_for",
             "value": "Qualidade para"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "export_rerun",
+            "value": "Run the export again"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "export_rerun",
+            "value": "Volver a ejecutar la exportación"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "export_rerun",
+            "value": "Tornar a executar l'exportació"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "export_rerun",
+            "value": "Relancer l'export"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "export_rerun",
+            "value": "Eseguire di nuovo l'esportazione"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "export_rerun",
+            "value": "Export erneut ausführen"
+          },
+          {
+            "lang": "lg-por",
+            "name": "export_rerun",
+            "value": "Executar novamente a exportação"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "export_file_incomplete",
+            "value": "These files are incomplete: some values from external sources are missing."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "export_file_incomplete",
+            "value": "Estos archivos están incompletos: faltan algunos valores de fuentes externas."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "export_file_incomplete",
+            "value": "Aquests fitxers són incomplets: hi falten alguns valors de fonts externes."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "export_file_incomplete",
+            "value": "Ces fichiers sont incomplets : certaines valeurs de sources externes manquent."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "export_file_incomplete",
+            "value": "Questi file sono incompleti: mancano alcuni valori di fonti esterne."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "export_file_incomplete",
+            "value": "Diese Dateien sind unvollständig: Einige Werte aus externen Quellen fehlen."
+          },
+          {
+            "lang": "lg-por",
+            "name": "export_file_incomplete",
+            "value": "Estes ficheiros estão incompletos: faltam alguns valores de fontes externas."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "export_external_incomplete",
+            "value": "Incomplete: {cells} values from external sources ({services}) could not be read, in {records} records."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "export_external_incomplete",
+            "value": "Incompleta: no se pudieron leer {cells} valores de fuentes externas ({services}), en {records} registros."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "export_external_incomplete",
+            "value": "Incompleta: no s'han pogut llegir {cells} valors de fonts externes ({services}), en {records} registres."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "export_external_incomplete",
+            "value": "Incomplet : {cells} valeurs de sources externes ({services}) n'ont pas pu être lues, dans {records} enregistrements."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "export_external_incomplete",
+            "value": "Incompleta: non è stato possibile leggere {cells} valori da fonti esterne ({services}), in {records} record."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "export_external_incomplete",
+            "value": "Unvollständig: {cells} Werte aus externen Quellen ({services}) konnten nicht gelesen werden, in {records} Datensätzen."
+          },
+          {
+            "lang": "lg-por",
+            "name": "export_external_incomplete",
+            "value": "Incompleta: não foi possível ler {cells} valores de fontes externas ({services}), em {records} registos."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "export_external_rerun_advice",
+            "value": "Run the export again once the source is available."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "export_external_rerun_advice",
+            "value": "Vuelva a ejecutar la exportación cuando la fuente esté disponible."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "export_external_rerun_advice",
+            "value": "Torneu a executar l'exportació quan la font estigui disponible."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "export_external_rerun_advice",
+            "value": "Relancez l'export lorsque la source sera disponible."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "export_external_rerun_advice",
+            "value": "Eseguire di nuovo l'esportazione quando la fonte sarà disponibile."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "export_external_rerun_advice",
+            "value": "Führen Sie den Export erneut aus, sobald die Quelle verfügbar ist."
+          },
+          {
+            "lang": "lg-por",
+            "name": "export_external_rerun_advice",
+            "value": "Execute novamente a exportação quando a fonte estiver disponível."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "export_external_admin_advice",
+            "value": "The external source is disabled or misconfigured: contact the administrator."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "export_external_admin_advice",
+            "value": "La fuente externa está desactivada o mal configurada: contacte con el administrador."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "export_external_admin_advice",
+            "value": "La font externa està desactivada o mal configurada: contacteu amb l'administrador."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "export_external_admin_advice",
+            "value": "La source externe est désactivée ou mal configurée : contactez l'administrateur."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "export_external_admin_advice",
+            "value": "La fonte esterna è disattivata o configurata male: contattare l'amministratore."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "export_external_admin_advice",
+            "value": "Die externe Quelle ist deaktiviert oder falsch konfiguriert: Wenden Sie sich an den Administrator."
+          },
+          {
+            "lang": "lg-por",
+            "name": "export_external_admin_advice",
+            "value": "A fonte externa está desativada ou mal configurada: contacte o administrador."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "export_external_stale",
+            "value": "{cells} values from external sources ({services}) come from a saved copy and may be out of date."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "export_external_stale",
+            "value": "{cells} valores de fuentes externas ({services}) proceden de una copia guardada y pueden no estar actualizados."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "export_external_stale",
+            "value": "{cells} valors de fonts externes ({services}) provenen d'una còpia desada i poden no estar actualitzats."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "export_external_stale",
+            "value": "{cells} valeurs de sources externes ({services}) proviennent d'une copie enregistrée et peuvent être obsolètes."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "export_external_stale",
+            "value": "{cells} valori da fonti esterne ({services}) provengono da una copia salvata e potrebbero non essere aggiornati."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "export_external_stale",
+            "value": "{cells} Werte aus externen Quellen ({services}) stammen aus einer gespeicherten Kopie und sind möglicherweise veraltet."
+          },
+          {
+            "lang": "lg-por",
+            "name": "export_external_stale",
+            "value": "{cells} valores de fontes externas ({services}) provêm de uma cópia guardada e podem estar desatualizados."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "export_external_truncated",
+            "value": "Incomplete: {cells} values from external sources ({services}) were cut to the export's size limits."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "export_external_truncated",
+            "value": "Incompleta: {cells} valores de fuentes externas ({services}) se recortaron a los límites de tamaño de la exportación."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "export_external_truncated",
+            "value": "Incompleta: {cells} valors de fonts externes ({services}) s'han retallat als límits de mida de l'exportació."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "export_external_truncated",
+            "value": "Incomplet : {cells} valeurs de sources externes ({services}) ont été tronquées aux limites de taille de l'export."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "export_external_truncated",
+            "value": "Incompleta: {cells} valori da fonti esterne ({services}) sono stati tagliati ai limiti di dimensione dell'esportazione."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "export_external_truncated",
+            "value": "Unvollständig: {cells} Werte aus externen Quellen ({services}) wurden auf die Größengrenzen des Exports gekürzt."
+          },
+          {
+            "lang": "lg-por",
+            "name": "export_external_truncated",
+            "value": "Incompleta: {cells} valores de fontes externas ({services}) foram cortados aos limites de tamanho da exportação."
           }
         ]
       }

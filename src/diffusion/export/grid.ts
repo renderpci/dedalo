@@ -51,6 +51,7 @@ import { sql } from '../../core/db/postgres.ts';
 import { DedaloError, ok } from '../../core/errors/index.ts';
 import { termByTipo } from '../../core/ontology/labels.ts';
 import { getColumnNameByModel, getModelByTipo } from '../../core/ontology/resolver.ts';
+import { EmissionContext } from '../../core/resolve/component_data.ts';
 import { currentApplicationLang, runWithRequestLangs } from '../../core/resolve/request_lang.ts';
 import { buildSearchSql } from '../../core/search/sql_assembler.ts';
 import { getDataframeChildTipos } from '../../core/section/list_definitions/section_list.ts';
@@ -82,6 +83,13 @@ import {
 } from './atoms.ts';
 import type { ExportDdoInput } from './compile_columns.ts';
 import { compileExportPlan } from './compile_columns.ts';
+import {
+	createExternalDegradationLog,
+	type ExportExternalDegradation,
+	type ExternalPrefetchPlan,
+	planExternalPrefetch,
+	prefetchExternalRowsForBatch,
+} from './external_prefetch.ts';
 import { ndjsonStream } from './ndjson_stream.ts';
 
 /** Records bulk-hydrated per chunk (matches the diffusion selection default). */
@@ -651,6 +659,19 @@ export interface OpenedExportGrid {
 	 * complete only once `lines` is exhausted.
 	 */
 	frontierGrants: ReadonlyMap<string, { section_tipo: string; component_tipo: string }>;
+	/**
+	 * THE EXTERNAL-SOURCE SUMMARY (FIX 4, 2026-09-24 — external_prefetch.ts):
+	 * every component_external cell the walk resolved DEGRADED (the source could
+	 * not answer, the circuit was open, a stale copy was served, the service is
+	 * disabled or misconfigured, values were cut) — counts per (service, state),
+	 * the exported records affected and a capped sample; null while nothing
+	 * degraded. An export must never be SILENTLY incomplete: tool_export copies
+	 * this into its manifest and serves it, and the 'end' line carries it
+	 * (`external_degraded`, only when non-null — a clean export's bytes are
+	 * unchanged). LIVE, like `unresolved`: complete once `lines` is exhausted;
+	 * each call returns a detached, bounded copy.
+	 */
+	externalDegradation: () => ExportExternalDegradation | null;
 }
 
 /** The export data lang (`options.lang`, PHP default 'lg-spa'). */
@@ -990,6 +1011,19 @@ async function openExportGridInScope(
 
 	const unresolved: string[] = [];
 
+	// External sources (external_prefetch.ts): the degradation log every
+	// component_external cell reports to, and the per-batch prefetch that parks
+	// the batch's remote rows on the run's own emission scratch. The prediction
+	// is plan-static (compiled once); dedalo_raw reads no external value.
+	const degradation = createExternalDegradationLog();
+	const externalEmission = new EmissionContext();
+	run.cellOpts.externalEmission = externalEmission;
+	run.cellOpts.onExternalDegraded = (event) => degradation.note(event);
+	const externalPlan: ExternalPrefetchPlan =
+		dataFormat === 'dedalo_raw'
+			? { demands: [], fieldsOf: new Map() }
+			: await planExternalPrefetch(fields);
+
 	const meta: Record<string, unknown> = {
 		t: 'meta',
 		v: 1,
@@ -1008,6 +1042,7 @@ async function openExportGridInScope(
 		section_tipo: string;
 	}): Promise<RecordEntry[]> => {
 		const entries: RecordEntry[] = [];
+		degradation.beginRecord(record.section_tipo, record.section_id);
 		for (const field of fields) {
 			const ddoIndex = field.exportColumn?.ordinal ?? 0;
 			const path = (field.exportColumn?.path ?? []) as RawPathStep[];
@@ -1157,6 +1192,16 @@ async function openExportGridInScope(
 				for (const [chunkSectionTipo, ids] of idsBySection) {
 					await prefetchExportRecords(run.atoms, chunkSectionTipo, ids);
 				}
+				// ... and the chunk's REMOTE rows, in one bounded fan-out, so no
+				// external cell of the chunk fetches live per record.
+				await prefetchExternalRowsForBatch(
+					run.atoms,
+					externalPlan,
+					chunk,
+					lang,
+					externalEmission,
+					signal,
+				);
 			});
 			for (const record of chunk) {
 				// ... and at EVERY record boundary: a chunk of heavy records (deep
@@ -1177,10 +1222,24 @@ async function openExportGridInScope(
 				}
 			}
 		}
-		yield await scoped(async () => tabulator.endLine());
+		yield await scoped(async () => {
+			const end = tabulator.endLine();
+			// The marker travels ONLY when something degraded: a clean export's
+			// 'end' line (and so the stream, the spool and the NDJSON file) is
+			// byte-identical to before.
+			const degraded = degradation.snapshot();
+			if (degraded !== null) end.external_degraded = degraded;
+			return end;
+		});
 	}
 
-	return { meta, lines: protocolLines(), unresolved, frontierGrants: run.atoms.frontierGrants };
+	return {
+		meta,
+		lines: protocolLines(),
+		unresolved,
+		frontierGrants: run.atoms.frontierGrants,
+		externalDegradation: () => degradation.snapshot(),
+	};
 }
 
 /** Whether `signal` has fired — read fresh at each call (see protocolLines). */

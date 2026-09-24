@@ -577,3 +577,81 @@ becomes a link, in the preview and in the HTML download alike. The CSV/TSV
 GRAMMAR the browser used to write (the deleted `to_delimited` + BOM) is frozen
 verbatim inside `tool_export_delimited_html_writers_native` as its byte oracle,
 because its client source no longer exists.
+
+## Addendum 2026-09-24 — external sources: an export is never silently incomplete; batched remote rows; `rerun_of`
+
+A `component_external` cell (Zenon) has no stored value: the export reads the
+remote record. When the source could not answer (down, circuit open, timeout,
+disabled, misconfigured, values cut), the cell came out EMPTY and the only trace
+was the model name in `unresolved` — the files looked complete. Now:
+
+- **`'end'` line gains `external_degraded`, ONLY when some external cell
+  degraded** (`src/diffusion/export/external_prefetch.ts`
+  `ExportExternalDegradation`):
+  `{incomplete, retryable, cells, records, missing_cells, missing_records, counts: [{service, state, cells}], sample: [{section_tipo, section_id, component_tipo, remote_section_tipo, remote_id, service, state}], sample_limit}`.
+  `missing_cells` / `missing_records` (addendum (c) below) count only the cells
+  whose value is NOT in the files (every incomplete state but `truncated`).
+  `state` ∈ `unavailable | timeout | circuit_open | disabled | misconfigured |
+  truncated` (incomplete) or `stale` (recorded; the value is there, from the
+  last good copy). `not_found` is an answer and is not recorded; a foreign
+  target (the column does not apply) neither. `cells` counts distinct
+  (exported record, component, remote id); `counts` is exact and bounded by
+  services × states; `sample` holds at most `sample_limit` (20) entries.
+  - Where it shows: the `get_export_grid` NDJSON stream's `end` line and the
+    buffered `data.end`; the spool, so the `export.ndjson` download carries it.
+  - **Byte-identity:** a clean export (and one whose remote records answered
+    `not_found`) emits no key — its stream, spool and NDJSON file are
+    byte-identical to before. No envelope notice was added.
+- **Manifest / wire of the tool:** the manifest records `external_degraded` at
+  every checkpoint (LIVE while running) and at the end; it is served as
+  `external_degraded` (null when nothing degraded) on the `build_export_artifact`
+  terminal frame `data`, every `list_export_jobs` `ExportJobSummary`, and the
+  `get_export_preview` answer. A manifest written before this change has no
+  key and is served `null`. Owner-only like everything on these actions: the
+  sample names the owner's own exported records and the remote ids they
+  reference.
+- **In-band marker in the tabular files — deliberately NONE.** CSV/TSV/XLSX/ODS
+  get no note row or extra sheet: every row of those files is read as a record
+  by the consumers they exist for (spreadsheets, scripts, a re-import), so a
+  marker row would be imported as data — a worse corruption than the one being
+  reported. HTML stays a table of the records for the same reason (it has no
+  server-side localized prose to carry). The warning lives where the user
+  decides: the tool's status line, a note under the download buttons
+  (`export_file_incomplete`), and the NDJSON `end` line for machine consumers.
+- **`build_export_artifact` accepts `options.rerun_of`** (an artifact id): the
+  build runs the RECORDED options of that export (opened through the owner's
+  read door — the caller's own, of the gated section, still readable; else
+  `export.artifact_not_found`), then every gate of a fresh build. The client's
+  "Run the export again" button (shown for an ended, incomplete, retryable
+  export) sends only `{section_tipo, rerun_of}`.
+- **Batched remote rows (byte-neutral):** before each hydrate batch the walk
+  fetches the batch's external targets in one bounded fan-out and serves the
+  cells from it; the request count drops to one per distinct remote record
+  (the union of the predicted fields), the values do not change.
+- **Labels:** `register.json` gains `export_rerun`, `export_file_incomplete`,
+  `export_external_incomplete`, `export_external_rerun_advice`,
+  `export_external_admin_advice`, `export_external_stale`, and (addendum (c))
+  `export_external_truncated` (7 langs each; `{cells}` `{records}` `{services}`
+  are filled by the client).
+- **Addendum (c), same day — the status line says each kind for what it is.**
+  `external_degraded` gains `missing_cells` / `missing_records`. The status line
+  counts as "could not be read" ONLY the missing cells (with their records), with
+  the re-run / administrator advice; `truncated` cells (values cut by the
+  export's size limits — partly IN the files) get their own
+  `export_external_truncated` sentence and no advice (neither a re-run nor an
+  administrator changes a size limit); `stale` cells keep the softer note. Before
+  it, 1 unavailable + 300 stale cells read "301 values could not be read", and a
+  truncated-only export told the user to contact the administrator. A manifest
+  written before (c) has no `missing_*` keys: the client sums the missing states
+  from `counts` and falls back to `records`.
+- **Addendum (c) — the prefetch obeys the export frontier and the Stop.** The
+  batch prefetch applies the walk's own crossing answer before following a hop
+  or asking for a relation-leaf target (no remote id behind a refused crossing
+  reaches the service), starts its remote records a few at a time under the
+  breaker's current verdict, and passes the export's Stop signal
+  (engineering/EXTERNAL_SPEC.md §3 addendum (b) rules 4–5). Byte-neutral for
+  every export the frontier allows.
+
+Gates: `test/unit/export_external_prefetch_degradation_native.test.ts` (P, D, F, J),
+client suite `test_tool_export.js` ("an export an EXTERNAL source left
+INCOMPLETE says so…"). No parity fixture covers these keys; no re-harvest.

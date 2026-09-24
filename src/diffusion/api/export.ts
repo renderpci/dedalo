@@ -8,6 +8,9 @@
 
 export type {
 	ExportDeclarationGateOptions,
+	ExportExternalDegradation,
+	ExportExternalDegradedCell,
+	ExportExternalDegradedState,
 	ExportGridContext,
 	ExportGridRunOptions,
 	OpenedExportGrid,

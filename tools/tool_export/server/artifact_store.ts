@@ -130,6 +130,7 @@ import { isTempSibling, tempPathFor } from '../../../src/core/files/temp_path.ts
 import { mediaRootIsMarked } from '../../../src/core/media/test_media_root.ts';
 import { getBackgroundJob } from '../../../src/core/tools/background.ts';
 import { getRoots as getToolRoots } from '../../../src/core/tools/paths.ts';
+import type { ExportExternalDegradation } from '../../../src/diffusion/api/export.ts';
 
 // ---------------------------------------------------------------------------
 // Names, formats, grammar
@@ -371,6 +372,13 @@ export interface ExportManifest {
 	columns: number[] | null;
 	index_every: number;
 	unresolved: string[];
+	/**
+	 * The export's external-source summary (grid.ts
+	 * OpenedExportGrid.externalDegradation), recorded at every checkpoint and
+	 * at the end; null = nothing degraded. Optional: absent on a manifest
+	 * written before 2026-09-24 (read as null).
+	 */
+	external_degraded?: ExportExternalDegradation | null;
 	frontier_refusals: unknown[];
 	/**
 	 * The RUNTIME (section, component) grants the walk's frontier allowed so
@@ -2034,6 +2042,7 @@ export function openArtifactStore(options: ArtifactStoreOptions = {}): ArtifactS
 						? (init.indexEvery as number)
 						: DEFAULT_INDEX_EVERY,
 				unresolved: [],
+				external_degraded: null,
 				frontier_refusals: [],
 				frontier_grants: [],
 				files: {},

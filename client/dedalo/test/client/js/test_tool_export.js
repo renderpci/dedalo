@@ -819,6 +819,109 @@ describe('TOOL_EXPORT SERVER-BUILT EXPORT', function() {
 		assert.equal(whole.includes(notice), false, 'a whole export says nothing: ' + whole)
 	})
 
+	it('an export an EXTERNAL source left INCOMPLETE says so: status line, downloads note, Run again re-runs the recorded export', async function() {
+		const ended_page = (job_id) => ({ok: true, request_id: 'test', data: {
+			job_id, status: 'ended', cols: [], final_order: true, rows: [], elided: [],
+			page: 0, page_size: PAGE_SIZE, first_record: 0, records: 0, has_more: false,
+			total_records: 3, written_records: 3
+		}})
+		const degraded_of = (retryable) => ({
+			incomplete: true, retryable, cells: 5, records: 2,
+			counts: [{service: 'zenon', state: retryable ? 'circuit_open' : 'disabled', cells: 5}],
+			sample: [], sample_limit: 20
+		})
+		const submitted = []
+		const open_with = async function(external_degraded, tag) {
+			const job_id = 'fake_external_' + (tag || String(external_degraded ? external_degraded.retryable : 'clean'))
+			await tool.destroy(true, true, true)
+			tool = await open_tool((instance) => {
+				instance.list_export_jobs	= async () => jobs_response([{
+					job_id		: job_id,
+					status		: 'ended',
+					section_tipo: SECTION,
+					created_at	: new Date().toISOString(),
+					total		: 3,
+					records		: 3,
+					rows		: 3,
+					files		: [],
+					narrowed	: false,
+					external_degraded	: external_degraded,
+					error		: null
+				}])
+				instance.get_export_preview	= async () => ended_page(job_id)
+				instance.start_export_job	= async (options) => {
+					submitted.push(options)
+					return {ok: false, request_id: 'test', error: {code: 'export.too_many_jobs', details: {limit: 2}}}
+				}
+			})
+			await wait_for(() => tool.export_state && tool.export_state.job_id===job_id && settled_preview(tool, 0), 'the ended export painted')
+			return job_id
+		}
+		const ui_refs = () => tool.export_ui
+
+		// retryable: the counts + the service + "run it again", the note, the button
+		const job_id = await open_with(degraded_of(true))
+		let text = ui_refs().response_container.textContent
+		assert.ok(text.includes('5'), 'the missing cells are counted: ' + text)
+		assert.ok(text.includes('zenon'), 'the source is named: ' + text)
+		const rerun_advice = tool.get_tool_label('export_external_rerun_advice') || 'Run the export again once the source is available.'
+		assert.ok(text.includes(rerun_advice), 'it says to run it again: ' + text)
+		assert.equal(ui_refs().response_container.classList.contains('error'), false, 'an ended export, not a failure')
+		assert.equal(ui_refs().download_incomplete_note.classList.contains('hide'), false, 'the downloads say they are incomplete')
+		for (const [format, button] of ui_refs().download_buttons) {
+			if (format==='media_zip') continue
+			assert.equal(button.disabled, false, 'the files stay downloadable: ' + format)
+		}
+		assert.equal(ui_refs().button_rerun.classList.contains('hide'), false, 'Run again is offered')
+		ui_refs().button_rerun.click()
+		await wait_for(() => submitted.length===1, 'the re-run submitted')
+		assert.deepEqual(submitted[0], {rerun_of: job_id}, 'the RECORDED export is re-run, not the form')
+
+		// not retryable (disabled): the administrator advice, no Run again
+		await open_with(degraded_of(false))
+		text = ui_refs().response_container.textContent
+		const admin_advice = tool.get_tool_label('export_external_admin_advice') || 'The external source is disabled or misconfigured: contact the administrator.'
+		assert.ok(text.includes(admin_advice), 'it says who can fix it: ' + text)
+		assert.equal(ui_refs().button_rerun.classList.contains('hide'), true, 'no Run again for a disabled source')
+
+		// TRUNCATED only (the size limits cut values that ARE partly in the files):
+		// said for what it is — not "could not be read", no administrator, no Run again
+		await open_with({
+			incomplete: true, retryable: false, cells: 4, records: 2, missing_cells: 0, missing_records: 0,
+			counts: [{service: 'zenon', state: 'truncated', cells: 4}],
+			sample: [], sample_limit: 20
+		}, 'truncated')
+		text = ui_refs().response_container.textContent
+		const truncated_label = (tool.get_tool_label('export_external_truncated')
+			|| 'Incomplete: {cells} values from external sources ({services}) were cut to the export\'s size limits.')
+			.replace('{cells}', '4').replace('{services}', 'zenon')
+		assert.ok(text.includes(truncated_label), 'the cut values are named as cut: ' + text)
+		assert.equal(text.includes(admin_advice), false, 'no administrator for a size limit: ' + text)
+		assert.equal(text.includes(rerun_advice), false, 'no re-run advice for a size limit: ' + text)
+		assert.equal(ui_refs().button_rerun.classList.contains('hide'), true, 'no Run again for a size limit')
+
+		// 1 MISSING + 300 STALE: the missing count is 1 (the stale values are in the files)
+		await open_with({
+			incomplete: true, retryable: true, cells: 301, records: 150, missing_cells: 1, missing_records: 1,
+			counts: [{service: 'zenon', state: 'stale', cells: 300}, {service: 'zenon', state: 'unavailable', cells: 1}],
+			sample: [], sample_limit: 20
+		}, 'mixed')
+		text = ui_refs().response_container.textContent
+		const missing_line = (tool.get_tool_label('export_external_incomplete')
+			|| 'Incomplete: {cells} values from external sources ({services}) could not be read, in {records} records.')
+			.replace('{cells}', '1').replace('{services}', 'zenon').replace('{records}', '1')
+		assert.ok(text.includes(missing_line), 'one value could not be read, in one record: ' + text)
+		assert.equal(text.includes('301'), false, 'stale values are not counted as unread: ' + text)
+		assert.ok(text.includes(rerun_advice), 'the missing one can be re-read: ' + text)
+
+		// clean: nothing said
+		await open_with(null)
+		text = ui_refs().response_container.textContent
+		assert.equal(text.includes(rerun_advice) || text.includes(admin_advice), false, 'a whole export says nothing: ' + text)
+		assert.equal(ui_refs().download_incomplete_note.classList.contains('hide'), true, 'no incomplete note')
+		assert.equal(ui_refs().button_rerun.classList.contains('hide'), true, 'no Run again')
+	})
+
 	it('a WIDE export pages its columns: one window drawn, the pager asks for the next, media offered from every column', async function() {
 		const asked = []
 		const window_of = (col_page) => {
