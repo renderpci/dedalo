@@ -290,6 +290,12 @@ Example with multiple sections: search 'Benimamet' in the Term field [hierarchy2
 
 In the previous example, the section_tipo is an array, `["es1", "fr1"]`, with multiple sections to search. This kind of search is useful in many situations, and it can be used with mixed fields; the sections do not have to be equal (in these cases Dédalo does not create a UNION SQL, it resolves it as a normal WHERE statement).
 
+#### Record identity in multi-section searches
+
+A record is identified by its `section_tipo` and its `section_id` together, never by `section_id` alone. Two sections can hold records with the same id: `es1` 5 and `fr1` 5 are two different records, and a multi-section search returns and counts both.
+
+Each record is returned once, even when the filter follows a multi-step `path` through a portal holding several matching locators. `full_count` counts records the same way, so the total always equals the number of rows the search can page through. Rows are ordered by `section_id` by default; when two sections share an id, `section_tipo` breaks the tie.
+
 #### all
 
 In some cases it is not possible to define the section_tipo to search, because you want any result in any place that matches your query. For these situations the section_tipo can be defined as `all`. The result is all sections found by the query. Note that the result is not consistent: every section has its own components (fields).

@@ -10,8 +10,10 @@
  *
  *  1. multi-hop join chains (LEFT JOIN LATERAL unnest) — a record with N
  *     matching locators becomes N joined rows;
- *  2. multi-section UNION — PHP's cross-tipo collapse semantics (two tipos in
- *     one table may share a section_id) must be preserved per branch.
+ *  2. multi-section — two tipos in one table may share a section_id, so the
+ *     count is DISTINCT over the IDENTITY (section_tipo, section_id). PHP's
+ *     count(DISTINCT section_id) collapsed them; that was a bug, not parity
+ *     (WC-2026-09-24-multi-section-search-identity-dedup).
  */
 // Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
 // install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
@@ -90,12 +92,12 @@ describe('full_count SELECT shape', () => {
 		expect(builtSql).not.toContain('LEFT JOIN LATERAL');
 	});
 
-	test('multi-section UNION keeps count(DISTINCT (cross-tipo collapse parity)', async () => {
+	test('multi-section counts DISTINCT identities (section_tipo, section_id)', async () => {
 		const { sql: builtSql } = await buildSearchSql({
 			section_tipo: [SECTION, SECTION_TWIN],
 			full_count: true,
 		} as never);
-		expect(builtSql).toContain('count(DISTINCT');
+		expect(builtSql).toContain('count(DISTINCT (mix.section_tipo, mix.section_id))');
 		expect(builtSql).not.toContain('count(*) as full_count');
 	});
 
