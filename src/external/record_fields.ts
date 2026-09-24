@@ -54,7 +54,8 @@
 import { createOntologyCache } from '../core/ontology/cache_factory.ts';
 import { getOrderedSubtree, getSectionRealTipo } from '../core/ontology/resolver.ts';
 import { getExternalServiceForSection } from './config.ts';
-import type { ExternalServiceModel } from './descriptor_types.ts';
+import type { ExternalServiceModel, FieldsMapEntry } from './descriptor_types.ts';
+import { ExternalServiceError, logExternalError } from './errors.ts';
 import {
 	parseFieldsMap,
 	refusedRemoteFields,
@@ -112,6 +113,36 @@ export async function sectionMappedRemoteFields(
 	return fields;
 }
 
+/**
+ * THE REFUSED-NAME REPORT — the remote field names of ONE component's
+ * `fieldsMap` the adapter refuses (`acceptsRemoteField`), in declaration order,
+ * each such component logged as ONE `external.bad_config` line naming the tipo
+ * and the names (the door dedups by content, so the record path —
+ * component_external/value.ts — and the search path — dd_external_api.ts —
+ * reporting the same component share one line per window). Empty = every name
+ * accepted, nothing logged. Every door that leaves a refused name out of a
+ * shared request asks THIS, so the name is never dropped silently.
+ */
+export function reportRefusedRemoteFields(
+	model: ExternalServiceModel,
+	componentTipo: string,
+	sectionTipo: string,
+	fieldsMap: readonly FieldsMapEntry[],
+): string[] {
+	const refused = refusedRemoteFields(model, remoteFieldsOf(fieldsMap));
+	if (refused.length > 0) {
+		logExternalError(
+			new ExternalServiceError({
+				service: model.service,
+				kind: 'bad_config',
+				sectionTipo,
+				detail: `fields_map of ${componentTipo} names remote field(s) ${refused.map((f) => `'${f}'`).join(', ')} that ${model.service} refuses`,
+			}),
+		);
+	}
+	return refused;
+}
+
 /** Section tipo → whether its subtree (virtual-aware) holds a component_external. */
 const ownsExternalBySection = createOntologyCache<string, boolean>();
 
@@ -127,7 +158,11 @@ const ownsExternalBySection = createOntologyCache<string, boolean>();
  * non-address id there is junk, not a reference (2026-09-24 — the frontier
  * record key had passed `'abc'` on such a section as "external").
  *
- * THROWS on a binding that does not parse (like `isExternalSectionTipo`): a
+ * THE ONE externality predicate: every "is this section external?" decision
+ * asks it (the wire classifier, the section_id restore set, the frontier, the
+ * export prefetch). There is no api_config-only boolean left to drift back to.
+ *
+ * THROWS on a binding that does not parse (getExternalServiceForSection): a
  * configuration error must not classify as anything; the caller decides.
  */
 export async function isExternalReferenceSection(sectionTipo: string): Promise<boolean> {

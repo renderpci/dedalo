@@ -206,9 +206,15 @@ export type WireSectionId =
  *                opaque) — that invariant, not the tipo, is what protects
  *                them here; the external spec's derived-children rule keeps
  *                new services that way.
- *   external-ref a NON-convertible string on an external-service tipo,
- *                verbatim (leading zeros and opaque tokens are the remote
- *                id's own bytes).
+ *   external-ref a NON-convertible string on an EXTERNAL section, verbatim
+ *                (leading zeros and opaque tokens are the remote id's own
+ *                bytes). "External" is the ONE externality predicate,
+ *                `isExternalReferenceSection` (the section binds a service
+ *                AND owns a component_external) — never `api_config` alone:
+ *                rsc205 carries api_config residue over only local rows, so
+ *                a non-address there is junk (synthetic, or refused when
+ *                numeric-shaped), not a remote id (2026-09-24,
+ *                WC-2026-08-10-section-id-int-canonical addendum).
  *   synthetic    any other non-numeric string ('search_1', 'tmp_export_2',
  *                'self') — NaN-branch parity: these took the "not a number"
  *                branch before and must keep doing so.
@@ -259,8 +265,8 @@ async function classifyNonConvertibleString(
 	source: string,
 ): Promise<WireSectionId> {
 	// facade import (S3-02 boundary-seam rule: core→external goes through external/api/)
-	const { isExternalSectionTipo } = await import('../../external/api/index.ts');
-	if (await isExternalSectionTipo(sectionTipo)) {
+	const { isExternalReferenceSection } = await import('../../external/api/index.ts');
+	if (await isExternalReferenceSection(sectionTipo)) {
 		return { kind: 'external-ref', remoteId: raw };
 	}
 	// Numeric-SHAPED but not convertible = padded or out-of-range digits on a

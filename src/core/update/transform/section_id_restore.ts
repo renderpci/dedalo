@@ -9,10 +9,12 @@
  * in the sweep (same kernel, same rule, same vector file).
  *
  * Resolution of the external tipo set is per call — restores are rare and the
- * set is small; a stale cache that mis-classed a newly-configured external
- * section as convertible would corrupt remote ids, which is the one
- * unacceptable failure. A THROW from a malformed api_config propagates: a
- * restore must not proceed with an unclassifiable externality set.
+ * set is small. The predicate's own memo (the binding and the owned-component
+ * walk) is `createOntologyCache`, so an ontology write drops it; and a
+ * mis-classification can never corrupt a remote id anyway — the kernel converts
+ * only CONVERTIBLE strings, on any tipo, and true remote ids never are. A THROW
+ * from a malformed api_config propagates: a restore must not proceed with an
+ * unclassifiable externality set.
  */
 
 import { listTiposWithApiConfig } from '../../db/dd_ontology.ts';
@@ -21,6 +23,12 @@ import { intifySectionIdsInValue } from './section_id_intify.ts';
 
 /**
  * The COMPLETE external-service tipo set, resolved and validated (D15).
+ * Candidates are the tipos carrying an `api_config`; the set keeps only those
+ * the ONE externality predicate (`isExternalReferenceSection`: the binding AND
+ * an owned component_external) calls external — api_config RESIDUE (rsc205:
+ * the binding, no component_external, only local rows) is a LOCAL section here,
+ * so its non-address junk is classed (and purgeable) like any local section's
+ * instead of passing as `external-skip` (2026-09-24).
  * Consumers that must never cast an external remote id (the repair driver,
  * the TM restore normalization below) prefetch this set BEFORE writing
  * anything. Lives HERE, not in src/external — the candidate query is db-layer
@@ -33,11 +41,11 @@ import { intifySectionIdsInValue } from './section_id_intify.ts';
 export async function listExternalSectionTipos(): Promise<Set<string>> {
 	const candidates = await listTiposWithApiConfig();
 	// facade import (S3-02 boundary-seam rule: core→external goes through external/api/)
-	const { isExternalSectionTipo } = await import('../../../external/api/index.ts');
+	const { isExternalReferenceSection } = await import('../../../external/api/index.ts');
 	const externalTipos = new Set<string>();
 	for (const tipo of candidates) {
 		try {
-			if (await isExternalSectionTipo(tipo)) externalTipos.add(tipo);
+			if (await isExternalReferenceSection(tipo)) externalTipos.add(tipo);
 		} catch (error) {
 			throw new DedaloError('update.refused', {
 				message: `external-service config for tipo '${tipo}' is malformed — fix the ontology first: ${(error as Error).message}`,

@@ -246,3 +246,59 @@ for the STORED hierarchy-registry relation locators it seeds — i.e. the suite
 corpus carried the repealed shape. Flipped to int (`locatorItem`'s `sectionId`
 param narrowed to `number`). Rows already seeded keep the string form until
 `bun run test:db:setup` re-runs.
+
+## Addendum 2026-09-24 — "external tipo" is the ONE externality predicate, never `api_config` alone
+
+The law table's row "`external-ref` classification applies only to
+non-convertible strings on external tipos", divergence 4, and the sweep's
+`external-skip` class all leaned on "external tipo" without defining it. The
+engine defined it as `isExternalSectionTipo` — `api_config` present — which is
+the tipo-keyed rule this entry already refused for CONVERTIBLE values, left
+standing for non-convertible ones. `rsc205` carries a stale `api_config` over
+~21k real local records and owns no component_external.
+
+### The definition (now)
+
+An **external tipo** is one `isExternalReferenceSection` (src/external/
+record_fields.ts) answers true for: the section BINDS a service (`api_config`)
+AND owns a component_external (its own subtree or its real section's). It is
+the ONE externality predicate; `isExternalSectionTipo` is DELETED from
+`src/external/config.ts` and the facade, so no door can decide on the binding
+alone. Doors moved: `classifyWireSectionId` (concepts/section_id.ts),
+`listExternalSectionTipos` (update/transform/section_id_restore.ts — the TM
+restore / bulk revert normalization and `scripts/migrate_section_id_locators.ts`),
+the export prefetch (same answer there: its caller already proved ownership).
+The frontier record key moved earlier the same day
+(WC-2026-09-24-external-foreign-target-and-verbatim-id addendum (c)).
+
+### Shape before → after, on an api_config RESIDUE section (rsc205-like)
+
+| door / input | before | after |
+|---|---|---|
+| save (`dd_core_api`) `'abc'` | `external-ref`: resolve+echo, nothing written | `synthetic`: the same no-write branch |
+| save `'007'` / beyond-safe digits | `external-ref`: echoed, nothing written | 400 `section_id.not_an_address` (the save door wraps every classifier refusal; the classifier's `section_id.numeric_shaped` rides as the log-only `cause`) |
+| read (`section/read.ts`) `'007'` | `external-ref` no-record widget | refusal caught → `absent` (+ a `console.warn`); same no-record widget, the emitted `section_id` is the verbatim input either way |
+| permissions (search mode) `'abc'` | grant 2 | grant 2 (synthetic) |
+| permissions (search mode) `'007'` / `'001338683'` | grant 2 | refusal → `absent` → the matrix walk |
+| import_conform locator `'abc'` / `'007'` | stored verbatim as the locator's section_id | cell fails `IGNORED: Trying to import invalid section_id in locator` |
+| TM restore / bulk revert | — | bytes unchanged (convertible converts and non-convertible stays, on any tipo; restore passes no purge class) |
+| sweep script findings | `external-skip` | `empty` / `null-literal` / `token` / `leading-zero` / `out-of-range` — so `--purge-class=empty,null-literal` now reaches residue junk |
+
+A TRUE external section (zenon1, test3, a virtual of one) is unchanged.
+
+### Reason
+
+A non-address id on a section whose records are all local addresses nothing;
+calling it a remote id echoed it, stored it and granted on it. The value
+invariant protects real remote ids; the owned component_external is what makes
+a section's non-address ids remote at all (the read path's law —
+relations/relation_core.ts, record absence + a derived model).
+
+### Gate reconciliation
+
+No parity fixture classifies a residue tipo; no re-harvest. Behaviour:
+`test/unit/external_reference_section_native.test.ts` (the `zzxr` situation:
+residue / owner / virtual-of-owner), mutation-verified — the api_config-only
+rule swapped back into the classifier, or into the restore set, reddens two
+cases each. `section_id_concept` and `section_id_intify_apply` stay green
+(`test3` owns `test215`).

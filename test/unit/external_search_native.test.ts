@@ -818,6 +818,129 @@ describe('the target section and the field list are resolved from the ontology',
 });
 
 // ---------------------------------------------------------------------------
+// One refused field name — the rest of the search still answers (2026-09-24)
+// ---------------------------------------------------------------------------
+
+/**
+ * BUILT, end to end minus the socket: an external section whose `title` column
+ * maps a name the zenon adapter REFUSES (`dc:title` — not a bare identifier).
+ * Before 2026-09-24 the union carried it, `buildSearchRequest` refused the whole
+ * request, and the curator saw an empty "misconfigured" search box. Now the
+ * target resolves, the request goes out WITHOUT the name, the hits come back,
+ * and only the misconfigured column says so.
+ */
+const PARTIAL = {
+	section: 'zzxt1',
+	id: 'zzxt2',
+	bad: 'zzxt3',
+	authors: 'zzxt4',
+	callerSection: 'zzxt9',
+	caller: 'zzxt10',
+};
+const PARTIAL_SITUATION = situation({
+	tld: 'zzxt',
+	name: 'external search with one refused field name',
+	nodes: [
+		{
+			tipo: PARTIAL.section,
+			model: 'section',
+			parent: 'dd14',
+			properties: { api_config: EXTERNAL_API_CONFIG },
+		},
+		{
+			tipo: PARTIAL.id,
+			model: 'component_external',
+			parent: PARTIAL.section,
+			properties: { fields_map: [{ local: 'dato', remote: 'id' }] },
+		},
+		{
+			tipo: PARTIAL.bad,
+			model: 'component_external',
+			parent: PARTIAL.section,
+			properties: { fields_map: [{ local: 'dato', remote: 'dc:title' }] },
+		},
+		{
+			tipo: PARTIAL.authors,
+			model: 'component_external',
+			parent: PARTIAL.section,
+			properties: {
+				fields_map: [{ local: 'dato', remote: 'authors', format: 'zenon_authors' }],
+			},
+		},
+		{ tipo: PARTIAL.callerSection, model: 'section', parent: 'dd14' },
+		{
+			tipo: PARTIAL.caller,
+			model: 'component_autocomplete',
+			parent: PARTIAL.callerSection,
+			properties: {
+				source: {
+					request_config: [
+						{
+							api_engine: 'zenon',
+							sqo: { section_tipo: [{ value: [PARTIAL.section], source: 'section' }] },
+							show: {
+								ddo_map: [PARTIAL.id, PARTIAL.bad, PARTIAL.authors].map((tipo) => ({
+									tipo,
+									parent: PARTIAL.section,
+									section_tipo: PARTIAL.section,
+								})),
+							},
+						},
+					],
+				},
+			},
+		},
+	],
+});
+
+describe('one refused remote field name does not blank the search', () => {
+	beforeAll(async () => {
+		await ensureSituation(PARTIAL_SITUATION);
+	});
+	afterAll(async () => {
+		expect(await dropSituation(PARTIAL_SITUATION)).toBe(0);
+	});
+
+	test('the request omits the refused name, the hits return, only that column is misconfigured', async () => {
+		overrideExternalSettingsForTests({ allowedHosts: ['external.invalid'] });
+		resetBreakerForOrigin('zenon', 'https://external.invalid');
+		const { formatExternalSearchData, resolveExternalSearchTarget } = await import(
+			'../../src/core/api/handlers/dd_external_api.ts'
+		);
+		const target = await resolveExternalSearchTarget(PARTIAL.caller, PARTIAL.callerSection);
+		expect(target.remoteFields).toEqual(['id', 'authors']);
+
+		const fetcher = recordingFetch();
+		const vetting = vettingStub();
+		const result = await searchExternalService({
+			sectionTipo: target.targetSectionTipo,
+			terms: ['burnett'],
+			remoteFields: target.remoteFields,
+			deps: { fetchImpl: fetcher.impl, assertPublicUrlImpl: vetting.impl },
+		});
+		expect(fetcher.urls).toHaveLength(1);
+		const asked = new URL(fetcher.urls[0] as string).searchParams.getAll('field[]');
+		expect(asked).toEqual(['id', 'authors']);
+		expect(result.hits.map((hit) => hit.remoteId)).toEqual(['000848571', '001338683']);
+
+		const data = await formatExternalSearchData(result, target);
+		// 1 sections entry + 2 hits × 3 columns — the refused column keeps its place.
+		expect(data).toHaveLength(7);
+		const byTipo = (tipo: string) =>
+			data.filter((row) => (row as { tipo?: string }).tipo === tipo) as Record<string, unknown>[];
+		expect(byTipo(PARTIAL.id).map((row) => row.entries)).toEqual([['000848571'], ['001338683']]);
+		expect(byTipo(PARTIAL.authors)[1]?.entries).toEqual(['primary: Burnett, Andrew']);
+		for (const row of byTipo(PARTIAL.bad)) {
+			expect(row.entries).toEqual([]);
+			expect((row.source_status as { state?: string } | undefined)?.state).toBe('misconfigured');
+		}
+		for (const row of [...byTipo(PARTIAL.id), ...byTipo(PARTIAL.authors)]) {
+			expect(row.source_status).toBeUndefined();
+		}
+	});
+});
+
+// ---------------------------------------------------------------------------
 // The failure envelope — what a search box can act on
 // ---------------------------------------------------------------------------
 

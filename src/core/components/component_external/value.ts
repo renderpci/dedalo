@@ -305,21 +305,16 @@ export async function deriveExternalValue(
 			// v6 rendered an empty component; this says why.
 			return misconfigured(service);
 		}
-		const refused = api.refusedRemoteFields(resolved.model, api.remoteFieldsOf(fieldsMap));
-		if (refused.length > 0) {
-			// A remote field name the ADAPTER refuses (Zenon: bare identifiers only —
-			// 'dc:title'). The section's shared record request leaves it out
-			// (record_fields.ts), so the rest of the record still renders; THIS
-			// component is the one misconfigured, and says so — logged (deduped by
-			// the door) so the operator sees WHICH name, never fetched.
-			api.logExternalError(
-				new api.ExternalServiceError({
-					service,
-					kind: 'bad_config',
-					sectionTipo,
-					detail: `fields_map of ${componentTipo} names remote field(s) ${refused.map((f) => `'${f}'`).join(', ')} that ${service} refuses`,
-				}),
-			);
+		// A remote field name the ADAPTER refuses (Zenon: bare identifiers only —
+		// 'dc:title'). The section's shared record request leaves it out
+		// (record_fields.ts), so the rest of the record still renders; THIS
+		// component is the one misconfigured, and says so — logged (deduped by
+		// the door, the same line the search path logs) so the operator sees
+		// WHICH name, never fetched.
+		if (
+			api.reportRefusedRemoteFields(resolved.model, componentTipo, sectionTipo, fieldsMap).length >
+			0
+		) {
 			return misconfigured(service);
 		}
 

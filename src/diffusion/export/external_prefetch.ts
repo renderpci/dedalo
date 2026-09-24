@@ -586,7 +586,9 @@ export async function prefetchExternalRowsForBatch(
 		const isExternalSection = async (sectionTipo: string): Promise<boolean> => {
 			let known = externalSections.get(sectionTipo);
 			if (known === undefined) {
-				known = await api.isExternalSectionTipo(sectionTipo);
+				// The ONE externality predicate (binding + an owned component_external).
+				// The caller already proved ownership, so this is the binding half.
+				known = await api.isExternalReferenceSection(sectionTipo);
 				externalSections.set(sectionTipo, known);
 			}
 			return known;

@@ -28,7 +28,7 @@
 // and generic `test` nodes for the portal caller and its own ddo
 // (src/core/test_data/test_tld_tipo_map.json).
 
-import { describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import type { ApiRequestContext } from '../../src/core/api/handler_context.ts';
 import {
 	type ExternalSearchDdoRef,
@@ -39,6 +39,8 @@ import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { toErrorEnvelope } from '../../src/core/errors/convert.ts';
 import { SUPERUSER_ID } from '../../src/core/security/permissions.ts';
 import type { FieldsMapEntry } from '../../src/external/api/index.ts';
+import { resetExternalLogDedupForTests } from '../../src/external/errors.ts';
+import { zenon } from '../../src/external/services/zenon.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
 // ---------------------------------------------------------------------------
@@ -83,6 +85,7 @@ describe('hydrateExternalSearchDdos — which ddos render and which fields go ou
 			'test7342',
 			[ddoRef('test6231', 'test6100'), ddoRef('test7344', 'test7342'), ddoRef('other9', 'other1')],
 			load,
+			zenon,
 		);
 		expect(ddos.map((entry) => entry.tipo)).toEqual(['test7344']);
 		// The off-section ddos are not even READ: hydration must never fetch a
@@ -116,6 +119,7 @@ describe('hydrateExternalSearchDdos — which ddos render and which fields go ou
 				ddoRef('test7346', 'test7342'),
 			],
 			load,
+			zenon,
 		);
 		expect(remoteFields).toEqual(['id', 'title', 'authors']);
 		// The dedup is on the FIELD list only — every ddo still renders, including
@@ -132,6 +136,7 @@ describe('hydrateExternalSearchDdos — which ddos render and which fields go ou
 				test7344: dato('authors[0].name', 'publicationDates'),
 				test7345: dato('authors.primary'),
 			}),
+			zenon,
 		);
 		expect(remoteFields).toEqual(['authors', 'publicationDates']);
 	});
@@ -145,6 +150,7 @@ describe('hydrateExternalSearchDdos — which ddos render and which fields go ou
 				test7344: [{ local: 'label', remote: 'title' }],
 				test7345: dato('id'),
 			}),
+			zenon,
 		);
 		// The ddo still RENDERS (its map is non-empty) — it just adds no field.
 		expect(ddos.map((entry) => entry.tipo)).toEqual(['test7344', 'test7345']);
@@ -166,6 +172,7 @@ describe('hydrateExternalSearchDdos — which ddos render and which fields go ou
 				ddoRef('test7346', 'test7342'),
 			],
 			loaderFrom({ test7344: dato('id'), test7343: [], test7346: dato('authors') }),
+			zenon,
 		);
 		expect(ddos.map((entry) => entry.tipo)).toEqual(['test7344', 'test7346']);
 		expect(context).toHaveLength(ddos.length);
@@ -188,6 +195,7 @@ describe('hydrateExternalSearchDdos — which ddos render and which fields go ou
 			'test7342',
 			[ddoRef('test7344', 'test7342')],
 			loaderFrom({ test7344: map }),
+			zenon,
 		);
 		expect(ddos[0]?.fieldsMap).toBe(map);
 	});
@@ -199,6 +207,7 @@ describe('hydrateExternalSearchDdos — which ddos render and which fields go ou
 				'test7342',
 				[ddoRef('test7344', 'test7342'), ddoRef('test7345', 'test7342')],
 				loaderFrom({}),
+				zenon,
 			),
 		);
 		expect(refusal.code).toBe('external.bad_config');
@@ -212,6 +221,7 @@ describe('hydrateExternalSearchDdos — which ddos render and which fields go ou
 				'test7342',
 				[ddoRef('test6231', 'test6100')],
 				loaderFrom({ test6231: dato('title') }),
+				zenon,
 			),
 		);
 		expect(refusal.code).toBe('external.bad_config');
@@ -222,10 +232,126 @@ describe('hydrateExternalSearchDdos — which ddos render and which fields go ou
 
 	test('an empty ddo list refuses rather than searching for nothing', async () => {
 		const refusal = await refusalOf(
-			hydrateExternalSearchDdos('test61', 'test7342', [], loaderFrom({})),
+			hydrateExternalSearchDdos('test61', 'test7342', [], loaderFrom({}), zenon),
 		);
 		expect(refusal.code).toBe('external.bad_config');
 		expect(refusal.message).toMatch(/no external field with a fields_map/);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// hydrateExternalSearchDdos — a name the ADAPTER refuses (rule 4, 2026-09-24)
+// ---------------------------------------------------------------------------
+
+/** Every log line the three console sinks received while `run` ran. */
+async function capturedLog(run: () => Promise<unknown>): Promise<string[]> {
+	const lines: string[] = [];
+	const collect = (...args: unknown[]) => {
+		lines.push(args.map((arg) => (arg instanceof Error ? arg.message : String(arg))).join(' '));
+	};
+	const spies = [
+		spyOn(console, 'error').mockImplementation(collect),
+		spyOn(console, 'warn').mockImplementation(collect),
+		spyOn(console, 'info').mockImplementation(collect),
+	];
+	try {
+		await run();
+	} finally {
+		for (const spy of spies) spy.mockRestore();
+	}
+	return lines;
+}
+
+describe('hydrateExternalSearchDdos — a remote field name the adapter refuses', () => {
+	beforeEach(() => {
+		resetExternalLogDedupForTests();
+	});
+
+	/**
+	 * THE PARTIAL-SEARCH RULE. Zenon splices field names into the URL and takes
+	 * bare identifiers only; `buildSearchRequest` refuses the WHOLE request on one
+	 * `dc:title`. So the refused name must never reach `remoteFields`, and every
+	 * other column must still be asked for — in declaration order, unchanged.
+	 */
+	test('the refused name is left out of the wire; the rest keep declaration order', async () => {
+		const { remoteFields, ddos, context } = await hydrateExternalSearchDdos(
+			'test61',
+			'test7342',
+			[
+				ddoRef('test7344', 'test7342'),
+				ddoRef('test7345', 'test7342'),
+				ddoRef('test7346', 'test7342'),
+			],
+			loaderFrom({
+				test7344: dato('id'),
+				test7345: dato('dc:title', 'title'),
+				test7346: dato('authors'),
+			}),
+			zenon,
+		);
+		// 'title' (the flagged ddo's ACCEPTED name) still travels — the record path's
+		// rule: a name is left out, never a component's whole map.
+		expect(remoteFields).toEqual(['id', 'title', 'authors']);
+		// The flagged ddo still RENDERS (its column says misconfigured) and the
+		// context stays index-paired.
+		expect(ddos.map((ddo) => ddo.tipo)).toEqual(['test7344', 'test7345', 'test7346']);
+		expect(context.map((entry) => (entry as { tipo: string }).tipo)).toEqual([
+			'test7344',
+			'test7345',
+			'test7346',
+		]);
+		expect(ddos.map((ddo) => ddo.refusedFields ?? null)).toEqual([null, ['dc:title'], null]);
+	});
+
+	test('the refused component is logged ONCE, naming its tipo and the name (deduped)', async () => {
+		const run = () =>
+			hydrateExternalSearchDdos(
+				'test61',
+				'test7342',
+				[ddoRef('test7344', 'test7342'), ddoRef('test7345', 'test7342')],
+				loaderFrom({ test7344: dato('id'), test7345: dato('dc:title') }),
+				zenon,
+			);
+		const lines = await capturedLog(async () => {
+			await run();
+			await run(); // a second keystroke: the door dedups, no second line
+		});
+		const reported = lines.filter((line) => line.includes("'dc:title'"));
+		expect(reported).toHaveLength(1);
+		expect(reported[0]).toContain('test7345');
+		expect(reported[0]).toContain('bad_config');
+	});
+
+	test('with no refused name nothing is flagged and nothing is logged (byte-stable)', async () => {
+		let result: Awaited<ReturnType<typeof hydrateExternalSearchDdos>> | undefined;
+		const lines = await capturedLog(async () => {
+			result = await hydrateExternalSearchDdos(
+				'test61',
+				'test7342',
+				[ddoRef('test7344', 'test7342'), ddoRef('test7345', 'test7342')],
+				loaderFrom({ test7344: dato('id', 'title'), test7345: dato('authors') }),
+				zenon,
+			);
+		});
+		expect(result?.remoteFields).toEqual(['id', 'title', 'authors']);
+		expect(result?.ddos.every((ddo) => ddo.refusedFields === undefined)).toBe(true);
+		expect(lines.filter((line) => line.includes('refuses'))).toEqual([]);
+	});
+
+	test('every ddo refused → a loud refusal naming the caller, never a search for nothing', async () => {
+		const refusal = await refusalOf(
+			hydrateExternalSearchDdos(
+				'test61',
+				'test7342',
+				[ddoRef('test7344', 'test7342'), ddoRef('test7345', 'test7342')],
+				loaderFrom({ test7344: dato('dc:title'), test7345: dato('publication-dates') }),
+				zenon,
+			),
+		);
+		expect(refusal.code).toBe('external.bad_config');
+		expect(refusal.message).toMatch(
+			/component test61 .*no external field the zenon service accepts/,
+		);
 	});
 });
 

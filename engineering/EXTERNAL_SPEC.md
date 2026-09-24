@@ -39,7 +39,10 @@ Three facts define everything else:
     > a tipo-keyed rule silently routed their saves into the never-write echo
     > branch (S0, fixed same day). A convertible numeric value is a record
     > address on ANY tipo; the `external-ref` classification applies only to
-    > NON-convertible strings on external tipos. Consequence for §4: an adapter
+    > NON-convertible strings on external tipos — and since 2026-09-24 "external
+    > tipo" is `isExternalReferenceSection` (the binding AND an owned
+    > component_external, §2.2), so a non-address on `rsc205` is junk
+    > (`synthetic`, or `section_id.numeric_shaped`), never a remote id. Consequence for §4: an adapter
     > must never mint a bare convertible integer as a remote id — that value is
     > indistinguishable from a matrix record address and will be treated as one.
     > Law: `engineering/wire_contract/WC-2026-08-10-section-id-int-canonical.md`.
@@ -127,6 +130,22 @@ a stale 2024 duplicate. It is INERT only because no component_external is OWNED
 by `rsc205` (§3 addendum 2026-09-24): until that rule, a flat/export path that
 applied a zenon column to a local `rsc205` target bound this copy and sent the
 LOCAL id to Zenon.
+
+**A binding is not externality (2026-09-24).** `api_config` answers "which
+service does this section point at" (`getExternalServiceForSection` — a lookup,
+never a test). "Is this section EXTERNAL — are its non-address ids remote
+records?" has ONE predicate, `isExternalReferenceSection`
+(`src/external/record_fields.ts`): the binding AND a component_external in the
+section's own or real section's subtree. Every decision site asks it — the wire
+classifier (`classifyWireSectionId`), the section_id restore/sweep set
+(`listExternalSectionTipos`), the frontier record key, the export prefetch. The
+api_config-only boolean `isExternalSectionTipo` was DELETED (not redefined), so
+no caller can decide on `api_config` alone again. `rsc205` is therefore LOCAL at
+every door: `'abc'` classifies `synthetic`, `'007'` is refused
+`section_id.numeric_shaped`, and its junk locator ids are classed (and
+purgeable) by the sweep like any local section's. Ledger:
+`WC-2026-08-10-section-id-int-canonical` addendum 2026-09-24. Gate:
+`test/unit/external_reference_section_native.test.ts`.
 `zenon1` and `test3` also carry `properties.search_engine: 'search_zenon'`,
 which nothing reads: **DEAD**.
 
@@ -786,6 +805,17 @@ Six things that are contract, not detail:
    the catalogue?" with nothing to mark. Identical IN-FLIGHT queries are still
    coalesced. `searchExternalService` also THROWS rather than degrading — a
    search has no other content to protect, and `[]` is a lie a user acts on.
+7. **A field name the adapter refuses is ONE column's error, not the search's
+   (2026-09-24).** The search's `field[]` union is filtered through the bound
+   adapter's `acceptsRemoteField` exactly like the record request
+   (`record_fields.ts`), reporting through the same door
+   (`reportRefusedRemoteFields`: one deduped `external.bad_config` line naming
+   the tipo and the name). The component that maps it keeps its column (index
+   pairing) and emits `entries: []` + `source_status.state: 'misconfigured'` on
+   every hit; every other column renders. Only when NO column is left
+   renderable is the whole search refused (`external.bad_config`). With no
+   refused name the `field[]` bytes are unchanged. Ledger:
+   `WC-2026-08-06-external-search-request` addendum 2026-09-24.
 
 ### 10.1 The client half (same day)
 
@@ -832,7 +862,7 @@ autocomplete path), and `client/dedalo/test/client/js/test_service_autocomplete.
 | `external_config_narrowing_census` | §3.5 — TRANSITIONAL RATCHET; delete when `deferred` is empty |
 
 Behaviour twins (`test/unit/external_*_native.test.ts`): `breaker_evidence`, `cache`, `degradation`,
-`emit`, `fields_map`, `multi_source`, `record_field_set`, `request_config`, `search`,
+`emit`, `fields_map`, `multi_source`, `record_field_set`, `reference_section`, `request_config`, `search`, `search_action`,
 `section_id_verbatim`, `transport`, `zenon`; the export walk's batch prefetch
 and degradation record: `test/unit/export_external_prefetch_degradation_native.test.ts`.
 Census source: the FROZEN `test/fixtures/external/ontology_census.json`,

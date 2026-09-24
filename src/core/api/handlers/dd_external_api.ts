@@ -80,6 +80,13 @@ export interface SearchDdo {
 	readonly tipo: string;
 	/** Read from the NODE, never from the request (see resolveExternalSearchTarget). */
 	readonly fieldsMap: readonly FieldsMapEntry[];
+	/**
+	 * The remote field names of `fieldsMap` the bound adapter REFUSES
+	 * (`acceptsRemoteField`), present only when non-empty: this column renders
+	 * `misconfigured` (formatExternalSearchData), and the names never reach the
+	 * wire (hydrateExternalSearchDdos).
+	 */
+	readonly refusedFields?: readonly string[];
 }
 
 /** What the request resolved to, once nothing came from the client but ids. */
@@ -425,6 +432,17 @@ export async function selectExternalSearchTarget(
  *  3. A ddo with an EMPTY fields_map is skipped (it has nothing to ask the
  *     service for), and all-empty is a loud refusal naming the caller — never
  *     a silent empty search.
+ *  4. A remote field name the bound ADAPTER refuses (`acceptsRemoteField` —
+ *     Zenon splices names into the URL, bare identifiers only: `dc:title`) is
+ *     left out of `remoteFields`, exactly as the record path leaves it out of
+ *     the section's record request (src/external/record_fields.ts): carried, it
+ *     would make `buildSearchRequest` refuse the WHOLE search, blanking every
+ *     valid column as "misconfigured". The ddo that maps it still RENDERS (its
+ *     column stays index-paired) but is flagged `refusedFields`, so its cells
+ *     say `misconfigured`; the component is logged once (deduped) naming its
+ *     tipo and the names. If NO ddo is left unflagged, nothing can render: the
+ *     same loud refusal as rule 3. With no refused name the output is exactly
+ *     what it was before the filter (the `field[]=` bytes are unchanged).
  *
  * The fields_map itself is NOT read here: `loadFieldsMap` is the injected
  * reader, and its one production implementation reads the ddo's own ontology
@@ -435,26 +453,38 @@ export async function hydrateExternalSearchDdos(
 	targetSectionTipo: string,
 	externalDdos: readonly ExternalSearchDdoRef[],
 	loadFieldsMap: (tipo: string) => Promise<readonly FieldsMapEntry[]>,
+	/** The target section's bound adapter — whose `acceptsRemoteField` decides rule 4. */
+	model: ExternalServiceModel,
 ): Promise<{
 	ddos: SearchDdo[];
 	context: Record<string, unknown>[];
 	remoteFields: string[];
 }> {
-	const { remoteFieldsOf } = await import('../../../external/api/index.ts');
+	const { remoteFieldsOf, reportRefusedRemoteFields } = await import(
+		'../../../external/api/index.ts'
+	);
 	const ddos: SearchDdo[] = [];
 	const context: Record<string, unknown>[] = [];
 	const seen = new Set<string>();
 	const remoteFields: string[] = [];
+	let renderable = 0;
 	for (const entry of externalDdos) {
 		if (entry.section !== targetSectionTipo) continue;
 		const fieldsMap = await loadFieldsMap(entry.tipo);
 		if (fieldsMap.length === 0) continue;
-		ddos.push({ tipo: entry.tipo, fieldsMap });
+		// Rule 4: the record path's own report (one deduped bad_config line).
+		const refused = reportRefusedRemoteFields(model, entry.tipo, targetSectionTipo, fieldsMap);
+		ddos.push(
+			refused.length === 0
+				? { tipo: entry.tipo, fieldsMap }
+				: { tipo: entry.tipo, fieldsMap, refusedFields: refused },
+		);
 		context.push(entry.ddo as Record<string, unknown>);
+		if (refused.length === 0) renderable++;
 		// Declaration order is the `field[]=` order on the wire — the same order
 		// the browser engine sent, and part of the byte form gated by the tests.
 		for (const field of remoteFieldsOf(fieldsMap)) {
-			if (seen.has(field)) continue;
+			if (seen.has(field) || refused.includes(field)) continue;
 			seen.add(field);
 			remoteFields.push(field);
 		}
@@ -462,6 +492,12 @@ export async function hydrateExternalSearchDdos(
 	if (ddos.length === 0) {
 		throw new DedaloError('external.bad_config', {
 			message: `component ${callerTipo} external config shows no external field with a fields_map`,
+			coordinates: { tipo: callerTipo },
+		});
+	}
+	if (renderable === 0) {
+		throw new DedaloError('external.bad_config', {
+			message: `component ${callerTipo} external config shows no external field the ${model.service} service accepts (every fields_map names a refused remote field)`,
 			coordinates: { tipo: callerTipo },
 		});
 	}
@@ -512,7 +548,18 @@ export async function resolveExternalSearchTarget(
 		isExternalDdo,
 	);
 
-	const { parseFieldsMap } = await import('../../../external/api/index.ts');
+	const { getExternalServiceForSection, parseFieldsMap } = await import(
+		'../../../external/api/index.ts'
+	);
+	// The binding FIRST: its adapter decides which remote field names may go on
+	// the wire at all (hydration rule 4).
+	const resolved = await getExternalServiceForSection(targetSectionTipo);
+	if (resolved === null) {
+		throw new DedaloError('external.bad_config', {
+			message: `target section ${targetSectionTipo} carries no api_config`,
+			coordinates: { section_tipo: targetSectionTipo },
+		});
+	}
 	// The ONE reader of a ddo's fields_map: the ddo's OWN ONTOLOGY NODE. Passed
 	// as the hydration loader so the ordering/dedup/pairing decision above can be
 	// gated without a database, while the source of truth stays right here.
@@ -526,16 +573,9 @@ export async function resolveExternalSearchTarget(
 			} | null;
 			return parseFieldsMap(nodeProperties?.fields_map, { tipo });
 		},
+		resolved.model,
 	);
 
-	const { getExternalServiceForSection } = await import('../../../external/api/index.ts');
-	const resolved = await getExternalServiceForSection(targetSectionTipo);
-	if (resolved === null) {
-		throw new DedaloError('external.bad_config', {
-			message: `target section ${targetSectionTipo} carries no api_config`,
-			coordinates: { section_tipo: targetSectionTipo },
-		});
-	}
 	return { targetSectionTipo, ddos, remoteFields, context, callerTipo, model: resolved.model };
 }
 
@@ -579,16 +619,34 @@ export async function formatExternalSearchData(
 	// path uses (engineering/CONVENTIONS.md) — src/core/api must not join
 	// src/external's static graph for a leaf call.
 	const { mapRowToEntries } = await import('../../../external/api/index.ts');
+	const { externalSourceStatus, stateForKind } = await import(
+		'../../components/component_external/value.ts'
+	);
 	const fetchedAt = Date.now();
 	const rows: Record<string, unknown>[] = [];
 	for (const hit of result.hits as readonly ExternalSearchHit[]) {
 		for (const ddo of target.ddos) {
-			rows.push({
+			const base = {
 				section_tipo: sectionTipo,
 				section_id: hit.remoteId,
 				type: EXTERNAL_RECORD_DATA_TYPE,
 				tipo: ddo.tipo,
 				mode: EXTERNAL_RECORD_DATA_MODE,
+			};
+			if ((ddo.refusedFields?.length ?? 0) > 0) {
+				// A column whose fields_map names a name the adapter refuses was never
+				// asked for (hydration rule 4): it is THIS component's configuration
+				// error — the record path's own `misconfigured` value, never a blank
+				// cell under `status: 'ok'`.
+				rows.push({
+					...base,
+					entries: [],
+					source_status: externalSourceStatus(result.service, stateForKind('bad_config')),
+				});
+				continue;
+			}
+			rows.push({
+				...base,
 				// `status: 'ok'` is a FACT here, not an assumption: these rows came
 				// back from a live answer in this same request. A degraded search
 				// never reaches this function — it threw.
