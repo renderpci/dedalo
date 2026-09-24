@@ -13,7 +13,9 @@
  *      external service is a SOURCE: Dédalo never writes to one
  *      (WC-2026-08-06-external-write-refusal, external_write_refusal_tripwire).
  *   1. enabled + per-service kill switch  → `disabled`      (NO socket)
- *   2. circuit breaker for (service,origin) → `circuit_open` (NO socket)
+ *   2. circuit breaker for (service,origin) → `circuit_open` (NO socket) —
+ *      checked on arrival AND again once a queued call gets its concurrency
+ *      slot; a retry is also abandoned once the circuit has opened
  *   3. HOST ALLOWLIST, before any DNS lookup → `blocked_host` (NO socket, NO
  *      resolver traffic). The URL is assembled from the ontology, which is
  *      editable data; the operator's allowlist — not the ontology — decides
@@ -30,10 +32,15 @@
  *      AbortSignal at the timeout, Accept: application/json, a STREAMED byte
  *      ceiling, and the ADAPTER'S method (v6 sent a bodyless POST at a
  *      query-string URL and got away with it by accident).
- *   7. retry only on timeout / transport / 429 / 5xx — NEVER on a 4xx, which is
- *      an answer. Full jitter: random(0, base·2^attempt); Retry-After honoured.
- *   8. breaker update: 3 consecutive failed CALLS open it for the cooldown;
- *      half-open admits exactly one probe (which never retries); success closes.
+ *   7. retry only on a SERVICE failure (breaker.ts isServiceFailure: timeout /
+ *      transport / 408 / 429 / 5xx) — NEVER on another 4xx, which is an answer.
+ *      Full jitter: random(0, base·2^attempt); Retry-After honoured.
+ *   8. breaker update: 3 consecutive SERVICE-failed calls open it for the
+ *      cooldown; half-open admits exactly one probe (which never retries, and
+ *      which only the probe itself settles);
+ *      success closes. A call that ended in an ANSWER ABOUT THE REQUEST (a 4xx,
+ *      too_large) or a local verdict is NEUTRAL — neither counted nor reset, and
+ *      a probe that ended so is released, not judged (breaker.ts header).
  *   9. a JSON parse failure is `protocol`, not `transport` — the connection
  *      worked, the contract did not.
  *
@@ -53,7 +60,14 @@ import { catalogEntry } from '../config/catalog/index.ts';
 import { readOptionalString } from '../config/readers.ts';
 import type { SafeUrlResult } from '../core/security/ssrf_guard.ts';
 import { assertPublicUrl } from '../core/security/ssrf_guard.ts';
-import { checkBreaker, recordFailure, recordSuccess, releaseProbe } from './breaker.ts';
+import {
+	checkBreaker,
+	isCircuitOpen,
+	isServiceFailure,
+	recordFailure,
+	recordSuccess,
+	releaseProbe,
+} from './breaker.ts';
 import type { ExternalRequestSpec, ExternalServiceModel } from './descriptor_types.ts';
 import { type ExternalErrorFields, ExternalServiceError, originOf } from './errors.ts';
 import { externalSettings } from './settings.ts';
@@ -364,13 +378,12 @@ function retryAfterMs(response: Response, now: number): number | null {
 	return Math.min(Math.max(0, at - now), MAX_RETRY_AFTER_MS);
 }
 
-/** Only these can be fixed by trying again. A 4xx is an ANSWER, never retried. */
-function isRetryable(error: ExternalServiceError): boolean {
-	if (error.kind === 'timeout' || error.kind === 'transport') return true;
-	if (error.kind !== 'http_status') return false;
-	const status = error.status ?? 0;
-	return status === 429 || status >= 500;
-}
+/**
+ * Only these can be fixed by trying again — the SAME law that moves the breaker
+ * (a retry and a breaker count both mean "the remote may be better next time").
+ * A 4xx other than 408/429 is an ANSWER, never retried.
+ */
+const isRetryable = isServiceFailure;
 
 /** ONE attempt: pin, credential, fetch, cap. Throws a classified error. */
 async function attempt(
@@ -504,34 +517,44 @@ export async function fetchExternalJson(options: ExternalFetchOptions): Promise<
 	const origin = originOf(url);
 
 	// Step 2 — the circuit, now that we know which origin it guards.
-	const verdict = checkBreaker(model.service, origin, deps.now());
-	if (verdict === 'open') {
-		throw new ExternalServiceError({
+	const refuse = (): ExternalServiceError =>
+		new ExternalServiceError({
 			service: model.service,
 			kind: 'circuit_open',
 			origin,
 			...(sectionTipo === undefined ? {} : { sectionTipo }),
 			...(remoteId === undefined ? {} : { remoteId }),
 		});
-	}
+	const admitted = checkBreaker(model.service, origin, deps.now());
+	if (admitted === 'open') throw refuse();
 
 	// Steps 6-8, inside one concurrency slot so retries never widen the fan-out.
 	return withConcurrencySlot(`${model.service}|${origin}`, async () => {
+		// STEP 2 AGAIN, for a call that WAITED for its slot (2026-09-24). A batch
+		// caller hands this door thousands of calls at once; each passed the check
+		// above while the circuit was still closed, then queued. Without this
+		// re-check every queued call ran its full timeout × (1 + retries) against a
+		// service the breaker had judged sick minutes earlier. A call that got its
+		// slot at once re-checks a closed circuit and changes nothing; the probe is
+		// never re-checked (its admission IS the probe).
+		const verdict =
+			admitted === 'probe' ? 'probe' : checkBreaker(model.service, origin, deps.now());
+		if (verdict === 'open') throw refuse();
+		const isProbe = verdict === 'probe';
 		// A half-open probe is ONE attempt: retrying it would defeat the breaker.
-		const maxAttempts =
-			verdict === 'probe' ? 1 : 1 + (model.retry ?? externalSettings().retryAttempts);
+		const maxAttempts = isProbe ? 1 : 1 + (model.retry ?? externalSettings().retryAttempts);
 		let lastError: ExternalServiceError | undefined;
 		// A probe MUST be settled on every exit path (breaker.ts:checkBreaker). The
 		// two verdict-bearing exits set this; the `finally` below covers the rest —
 		// an unclassified throw out of `attempt`, and the `protocol` throw that
 		// deliberately does not touch the breaker. Without it, one such escape wedges
 		// probeInFlight true FOREVER and the origin answers `open` until a restart.
-		let probeSettled = verdict !== 'probe';
+		let probeSettled = !isProbe;
 		try {
 			for (let index = 0; index < maxAttempts; index++) {
 				try {
 					const text = await attempt(options, url, deps);
-					recordSuccess(model.service, origin); // step 8: first success closes
+					recordSuccess(model.service, origin, deps.now()); // step 8: first success closes
 					probeSettled = true;
 					try {
 						return JSON.parse(text) as unknown;
@@ -555,6 +578,10 @@ export async function fetchExternalJson(options: ExternalFetchOptions): Promise<
 					lastError = error;
 					// Step 7 — a 4xx is an answer; only the retryable kinds go round again.
 					if (index + 1 >= maxAttempts || !isRetryable(error)) break;
+					// …and never into a circuit that opened while this call was failing:
+					// the breaker has judged the service sick; one more attempt from here
+					// is load on a failing service, not a chance of an answer.
+					if (isCircuitOpen(model.service, origin)) break;
 					// Full jitter: uniform in [0, base·2^attempt). A fixed backoff makes
 					// every waiting client retry in the same instant.
 					const jitterCeiling = RETRY_BASE_MS * 2 ** index;
@@ -562,9 +589,23 @@ export async function fetchExternalJson(options: ExternalFetchOptions): Promise<
 					const waitMs = error.retryAfterMs ?? Math.floor(random() * jitterCeiling);
 					const sleep = deps.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
 					await sleep(waitMs);
+					// The backoff is where time passes: re-ask after it too.
+					if (isCircuitOpen(model.service, origin)) break;
 				}
 			}
-			recordFailure(model.service, origin, deps.now()); // step 8
+			// Step 8 — only evidence about the remote's HEALTH moves the breaker. An
+			// answer about the request (400 for a bad id, 404, 401…) or a local
+			// verdict (SSRF guard, credential declaration, byte ceiling) is neutral:
+			// it neither counts nor resets, and a PROBE that ended so is released so
+			// the next call probes (three 400s for one record opened the circuit for
+			// every Zenon lookup on the install — 2026-09-24). Only the probe settles
+			// the probe: a queued non-probe call that clears the flag lets a second
+			// probe through.
+			if (lastError !== undefined && !isServiceFailure(lastError)) {
+				if (isProbe) releaseProbe(model.service, origin, deps.now());
+			} else {
+				recordFailure(model.service, origin, deps.now(), lastError, isProbe);
+			}
 			probeSettled = true;
 			throw (
 				lastError ?? new ExternalServiceError({ service: model.service, kind: 'transport', origin })

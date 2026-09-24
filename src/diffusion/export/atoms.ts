@@ -45,6 +45,7 @@
  *   module state).
  */
 
+import { getFlatValueFamily } from '../../core/components/registry.ts';
 import { dataframeEntryMatches } from '../../core/concepts/subdatum.ts';
 import { getColumnNameByModel, getModelByTipo, getNode } from '../../core/ontology/resolver.ts';
 import { getParentsRecursive } from '../../core/relations/parent.ts';
@@ -355,7 +356,7 @@ async function resolveValueCellInScope(
 			const event = group[0] as ExportLeafAtom;
 			return resolveCellValue(
 				event.ownerSectionTipo,
-				Number(event.ownerSectionId),
+				event.ownerSectionId,
 				leafTipo,
 				lang,
 				unresolved,
@@ -452,7 +453,7 @@ async function collectGridAtomsInScope(
 			});
 		}
 
-		if (event.locators !== undefined) {
+		if (event.locators !== undefined && isStoredRelationModel(event.step.model)) {
 			// COMPACT portal cells (WC-008, user-approved 2026-07-08): a
 			// SINGLE-step ddo whose leaf is a REAL portal (stored ontology model
 			// component_portal — the runtime alias also covers autocompletes,
@@ -466,7 +467,7 @@ async function collectGridAtomsInScope(
 				if (storedModel === 'component_portal') {
 					const targets = await resolveRelationTargetValues(
 						event.ownerSectionTipo,
-						Number(event.ownerSectionId),
+						event.ownerSectionId,
 						event.step.tipo,
 						lang,
 						unresolved,
@@ -549,7 +550,7 @@ async function collectGridAtomsInScope(
 		// Literal leaf: the component's flat value at the owner record.
 		const value = await resolveCellValue(
 			event.ownerSectionTipo,
-			Number(event.ownerSectionId),
+			event.ownerSectionId,
 			event.step.tipo,
 			lang,
 			unresolved,
@@ -566,6 +567,18 @@ async function collectGridAtomsInScope(
 	}
 
 	return atoms;
+}
+
+/**
+ * Whether a model's value is a STORED locator bag the walk can fan out through.
+ * component_external sits on the relation column for column-map parity only
+ * (its descriptor calls the column INERT): its value is DERIVED from the remote
+ * record, so it is a plain leaf — fanning it out read a bag no record holds and
+ * emitted nothing, which blanked every grid_value Zenon column (rsc368 → zenon*).
+ */
+function isStoredRelationModel(model: string | null | undefined): boolean {
+	if (typeof model !== 'string' || model === '') return false;
+	return getColumnNameByModel(model) === 'relation' && getFlatValueFamily(model) !== 'external';
 }
 
 /** One fan-out locator: target identity + raw slot position + (for dataframe
@@ -711,7 +724,7 @@ async function fanOutRelation(
 			// Relation-model child: recurse into ITS stored locators. The bag is
 			// RAW jsonb, so section_id stays union-typed (unswept string form /
 			// external remote id) — WC-2026-08-10-section-id-int-canonical.
-			if (getColumnNameByModel(childModel) === 'relation') {
+			if (isStoredRelationModel(childModel)) {
 				const target = await loadExportRecord(run.atoms, locator.sectionTipo, locator.sectionId);
 				const bag =
 					((target?.columns.relation as Record<string, unknown[]> | null)?.[child.tipo] as
@@ -755,9 +768,12 @@ async function fanOutRelation(
 			}
 
 			// Plain child: one atom, the child's flat value at the target record.
+			// The target id VERBATIM — an external target's remote id is zero-padded
+			// ('000065686'), and Number() asked the service for a different record.
+			// resolveCellValue reads a matrix address only for the stored families.
 			const value = await resolveCellValue(
 				locator.sectionTipo,
-				Number(locator.sectionId),
+				locator.sectionId,
 				child.tipo,
 				lang,
 				unresolved,

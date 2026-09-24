@@ -22,7 +22,12 @@
  *         containment + the dd478 allow-list). In SQL that is the assembler's
  *         own predicate emitted into the hop's ON clause; out of SQL it is
  *         {@link frontierRecordAllowed}, which runs the same assembler through
- *         security/record_scope.ts. ONE rule, never a second copy.
+ *         security/record_scope.ts. ONE rule, never a second copy. An
+ *         EXTERNAL REFERENCE (a remote id on a section that binds an
+ *         external service and owns a component_external — zenon1
+ *         '000012281') has no local record and so no record key: it
+ *         passes it, and is governed by the component key alone (2026-09-24,
+ *         engineering/EXTERNAL_SPEC.md §3 addendum).
  *       • the COMPONENT key: may the caller read THIS component of THAT
  *         section? — {@link frontierComponentAllowed}, whose one predicate is
  *         `ddoIsAuthorized`, under the exemptions declared below.
@@ -113,6 +118,11 @@
  */
 
 import { config } from '../../config/config.ts';
+import {
+	canonicalizeStoredSectionId,
+	isSectionId,
+	type SectionId,
+} from '../concepts/section_id.ts';
 import { ddoIsAuthorized, type Principal } from './permissions.ts';
 import { currentRequestContext } from './request_context.ts';
 
@@ -341,8 +351,17 @@ export async function frontierRecordAllowed(
 ): Promise<boolean> {
 	if (scope.principal === undefined) return true; // internal resolution
 	if (scope.principal.isGlobalAdmin) return true;
-	const numeric = Number(sectionId);
-	if (!Number.isInteger(numeric)) return false; // no addressable record — fail closed
+	const reference = await frontierRecordReference(sectionTipo, sectionId);
+	// THE EXTERNAL-REFERENCE RULE (2026-09-24): a remote record has no LOCAL
+	// record, so the record key has nothing to evaluate — projects containment
+	// and the dd478 allow-list are properties of matrix rows. The crossing is
+	// governed by the COMPONENT key alone (the grant on the component read
+	// through it — frontierComponentAllowed, asked by the same surface), exactly
+	// as the component_external value itself is. Never Number()-ed: '000012281'
+	// would have been scoped as LOCAL record 12281 — an unrelated row's answer.
+	if (reference === 'external') return true;
+	if (reference === null) return false; // no addressable record — fail closed
+	const numeric: number = reference;
 	// THROUGH filterLocatorsInScope, not principalCanAccessRecord directly: a
 	// crossing arrives as a stored LOCATOR, and that door already carries the two
 	// carve-outs a locator needs and a bare record probe does not —
@@ -361,6 +380,40 @@ export async function frontierRecordAllowed(
 		config.usersSectionTipo,
 	);
 	return kept.length > 0;
+}
+
+/**
+ * What a crossing's id addresses, for the RECORD key:
+ *   a SectionId  a matrix record address (int, or its canonical string form);
+ *   'external'   an EXTERNAL REFERENCE — a non-address string on a section that
+ *                binds an external service AND owns a component_external
+ *                (zenon1 '000012281'): the remote record's own id, verbatim,
+ *                with no local row behind it. The read path's law (record
+ *                absence + a derived model — relation_core.ts), asked through
+ *                the facade's isExternalReferenceSection; NEVER `api_config`
+ *                alone, which rsc205 carries as residue over only local rows
+ *                (2026-09-24: that shortcut passed 'abc' / '010' there);
+ *   null         nothing addressable (padded digits on a local section, a
+ *                synthetic token, junk) — the caller fails closed.
+ *
+ * 'external' says only "no LOCAL record answers here"; a consumer after the
+ * frontier must still never Number() the id into one (diffusion's processBatch
+ * drops a non-address before any matrix read — resolver.ts).
+ */
+async function frontierRecordReference(
+	sectionTipo: string,
+	sectionId: number | string,
+): Promise<SectionId | 'external' | null> {
+	const address = canonicalizeStoredSectionId(sectionId);
+	if (isSectionId(address)) return address;
+	if (typeof address !== 'string' || address === '') return null;
+	// facade import (S3-02 boundary-seam rule: core→external goes through external/api/)
+	const { isExternalReferenceSection } = await import('../../external/api/index.ts');
+	try {
+		return (await isExternalReferenceSection(sectionTipo)) ? 'external' : null;
+	} catch {
+		return null; // a binding that does not parse classifies as nothing — fail closed
+	}
 }
 
 /** One recorded refusal — the operator-facing fact behind a narrowed answer. */

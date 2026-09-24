@@ -30,7 +30,7 @@
 // external section named in the refused import cell is the generic clone `test7342`
 // (src/core/test_data/test_tld_tipo_map.json).
 
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Glob } from 'bun';
@@ -50,8 +50,14 @@ import type { MatrixRecord } from '../../src/core/db/matrix.ts';
 import labelsMaster from '../../src/core/labels/master.json';
 import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
 import { type DataItem, EmissionContext } from '../../src/core/resolve/component_data.ts';
+import { dropSituation, ensureSituation } from '../../src/core/test_data/situations/situation.ts';
 import type { ExternalErrorKind, ExternalRowView } from '../../src/external/api/types.ts';
 import { overrideExternalSettingsForTests } from '../../src/external/settings.ts';
+import {
+	UNBOUND_COMPONENT,
+	UNBOUND_EXTERNAL_SITUATION,
+	UNBOUND_SECTION,
+} from '../helpers/external_unbound_situation.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const SECTION = 'test3';
@@ -105,6 +111,13 @@ const ALL_ERROR_KINDS: readonly ExternalErrorKind[] = [
  * ever consulted — a gate that passes because it never reached the code it
  * claims to cover. Each scenario additionally asserts its EXPECTED state.
  */
+// The `misconfigured` case needs a component OWNED by an unbound section (the
+// ownership rule makes any other section's record FOREIGN, not misconfigured).
+beforeAll(() => ensureSituation(UNBOUND_EXTERNAL_SITUATION));
+afterAll(async () => {
+	expect(await dropSituation(UNBOUND_EXTERNAL_SITUATION)).toBe(0);
+});
+
 beforeEach(async () => {
 	overrideExternalSettingsForTests({
 		enabled: true,
@@ -215,8 +228,8 @@ describe('no path emits a silent blank', () => {
 	}
 
 	test('a MISCONFIGURED section emits the item too (never nothing)', async () => {
-		// test2 is a real, ordinary (non-external) section: nothing to fetch.
-		const derived = await deriveExternalValue(COMPONENT, 'test2', REMOTE_ID);
+		// The component's OWN section names no service: nothing to fetch.
+		const derived = await deriveExternalValue(UNBOUND_COMPONENT, UNBOUND_SECTION, REMOTE_ID);
 		expect(derived.entries).toEqual([]);
 		expect(derived.source_status?.state).toBe('misconfigured');
 	});

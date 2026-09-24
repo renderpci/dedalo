@@ -20,7 +20,7 @@
 // section" coordinate is now `test2` — test3 itself IS external here (it carries the
 // component_external test215).
 
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 import {
 	setExternalTransportDepsForTests,
 	setPrefetchedExternalRows,
@@ -30,11 +30,17 @@ import type { Ddo } from '../../src/core/concepts/ddo.ts';
 import type { MatrixRecord } from '../../src/core/db/matrix.ts';
 import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
 import { type DataItem, EmissionContext } from '../../src/core/resolve/component_data.ts';
+import { dropSituation, ensureSituation } from '../../src/core/test_data/situations/situation.ts';
 import type { ExternalRowView } from '../../src/external/api/types.ts';
 import { resetBreakerForOrigin } from '../../src/external/breaker.ts';
 import { drainInFlightExternalFetches, externalRowViewKey } from '../../src/external/cache.ts';
 import { overrideExternalSettingsForTests } from '../../src/external/settings.ts';
 import type { ExternalFetchImpl } from '../../src/external/transport.ts';
+import {
+	UNBOUND_COMPONENT,
+	UNBOUND_EXTERNAL_SITUATION,
+	UNBOUND_SECTION,
+} from '../helpers/external_unbound_situation.ts';
 
 const HOST = 'zenon.dainst.org';
 const ORIGIN = `https://${HOST}`;
@@ -114,6 +120,13 @@ function parkRow(status: ExternalRowView['status'], row: unknown, fetchedAt = 1_
 		);
 	};
 }
+
+// The `misconfigured` case needs a component OWNED by an unbound section (the
+// ownership rule makes any other section's record FOREIGN, not misconfigured).
+beforeAll(() => ensureSituation(UNBOUND_EXTERNAL_SITUATION));
+afterAll(async () => {
+	expect(await dropSituation(UNBOUND_EXTERNAL_SITUATION)).toBe(0);
+});
 
 beforeEach(async () => {
 	overrideExternalSettingsForTests({
@@ -244,16 +257,16 @@ describe("'misconfigured' rather than a bare []", () => {
 		const emission = new EmissionContext();
 		const hook = getEmitHook('component_external');
 		await hook?.emitItem?.({
-			ddo: { tipo: COMPONENT, section_tipo: 'test3' } as Ddo,
+			ddo: { tipo: UNBOUND_COMPONENT, section_tipo: UNBOUND_SECTION } as Ddo,
 			record: emptyRecord(),
-			// test2 is a REAL, ordinary (non-external) section.
-			row: { section_tipo: 'test2', section_id: 1 },
+			// The component's OWN section, which names no service.
+			row: { section_tipo: UNBOUND_SECTION, section_id: 1 },
 			model: 'component_external',
 			ddoMode: 'edit',
 			ddoLang: 'lg-nolan',
 			defaultMode: 'edit',
 			defaultLang: 'lg-eng',
-			callerTipo: 'test2',
+			callerTipo: UNBOUND_SECTION,
 			emission,
 		});
 		const item = emission.items[0] as DataItem;

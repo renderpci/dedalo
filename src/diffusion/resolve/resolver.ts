@@ -40,6 +40,7 @@
  */
 
 import { resolveIriTitles } from '../../core/components/component_iri/resolve_title.ts';
+import { canonicalizeStoredSectionId, isSectionId } from '../../core/concepts/section_id.ts';
 import type { Sqo } from '../../core/concepts/sqo.ts';
 import type { MatrixRecord } from '../../core/db/matrix.ts';
 import { sql } from '../../core/db/postgres.ts';
@@ -395,8 +396,10 @@ async function loadRecords(
 		if (ctx.recordCache.has(key)) {
 			out.set(key, ctx.recordCache.get(key) ?? null);
 		} else {
-			const numeric = Number(id);
-			if (Number.isInteger(numeric)) missing.push(numeric);
+			// A matrix ADDRESS only: Number('010') would load LOCAL record 10 for a
+			// padded external remote id (the shared conversion rule).
+			const address = canonicalizeStoredSectionId(id);
+			if (isSectionId(address)) missing.push(address);
 			else out.set(key, null);
 		}
 	}
@@ -2217,7 +2220,27 @@ async function processBatch(
 	// very same predicate inside the assembler, so re-probing it would be a
 	// second answer to a question already answered (and the drift such a second
 	// copy invites is exactly WC-2026-08-09-users-section-record-scope).
-	let visibleIds = sectionIds;
+	// MATRIX ADDRESSES ONLY. A publication run reads and publishes LOCAL rows;
+	// a non-address id (a padded external remote id '000012281' queued from a
+	// locator, or junk) has none. It is DROPPED here, before the frontier and
+	// before any read, with a ledger line — never Number()-ed into another
+	// record's row (readMatrixRecords once read '010' as record 10), never
+	// pushed to unpublishIds (that removed a public record the run never read,
+	// and a caller the frontier had passed as "external" could trigger it), and
+	// never allowed to throw the run down (the run must finish). 2026-09-24.
+	const addressedIds: (number | string)[] = [];
+	for (const rawId of sectionIds) {
+		const address = canonicalizeStoredSectionId(rawId);
+		if (isSectionId(address)) {
+			addressedIds.push(address);
+			continue;
+		}
+		console.warn(
+			`[diffusion] ${sectionPlan.sectionTipo} id '${String(rawId)}' is not a record address — dropped: no local record to publish, never read, never unpublished`,
+		);
+		ctx.usedRecords.add(RECORD_KEY(sectionPlan.sectionTipo, rawId));
+	}
+	let visibleIds = addressedIds;
 	const runPrincipal = ctx.options.principal;
 	if (viaFrontier && runPrincipal !== undefined && !runPrincipal.isGlobalAdmin) {
 		const scope: FrontierScope = {
@@ -2234,7 +2257,7 @@ async function processBatch(
 			componentTipo: sectionPlan.sectionTipo,
 			table,
 		});
-		for (const sectionId of sectionIds) {
+		for (const sectionId of addressedIds) {
 			const recordReadable =
 				sectionReadable && (await frontierRecordAllowed(scope, sectionPlan.sectionTipo, sectionId));
 			if (recordReadable) {
@@ -2527,17 +2550,18 @@ async function assertExportCrossing(
 ): Promise<void> {
 	const scope = run.frontier;
 	if (scope === undefined || scope.principal === undefined) return;
-	const refuse = (key: 'component' | 'record'): never => {
+	const refused = await exportCrossingRefusal(run, sectionTipo, sectionId, componentTipo);
+	if (refused !== null) {
 		noteFrontierRefusal(scope, {
 			surface: scope.surface,
 			door: scope.door,
 			sectionTipo,
 			...(componentTipo === undefined ? {} : { componentTipo }),
 			sectionId,
-			key,
+			key: refused,
 		});
 		throw new DedaloError('perm.denied', {
-			message: `export frontier: no ${key} access to ${sectionTipo}${componentTipo === undefined ? '' : `.${componentTipo}`} (record ${sectionId}) — the export would have emitted a value the caller cannot read`,
+			message: `export frontier: no ${refused} access to ${sectionTipo}${componentTipo === undefined ? '' : `.${componentTipo}`} (record ${sectionId}) — the export would have emitted a value the caller cannot read`,
 			coordinates: {
 				tool: scope.door,
 				section_tipo: sectionTipo,
@@ -2547,14 +2571,6 @@ async function assertExportCrossing(
 				section_id: sectionId,
 			},
 		});
-	};
-	if (
-		!(await frontierComponentAllowed(scope, {
-			sectionTipo,
-			...(componentTipo === undefined ? {} : { componentTipo }),
-		}))
-	) {
-		refuse('component');
 	}
 	// ALLOWED: remember the pair, so a later read of the finished export can
 	// re-ask it (ExportAtomRun.frontierGrants). A crossing with no component
@@ -2567,6 +2583,31 @@ async function assertExportCrossing(
 				component_tipo: componentTipo,
 			});
 		}
+	}
+}
+
+/**
+ * The frontier's ANSWER for one crossing — which key refuses it, or null when
+ * the caller may cross — with NO side effect beyond the run's record-answer memo:
+ * no refusal logged, no grant recorded, nothing thrown. The one predicate behind
+ * {@link assertExportCrossing} (the walk's law) and {@link exportCrossingAllowed}
+ * (a look-ahead that must not act on what the walk would refuse).
+ */
+async function exportCrossingRefusal(
+	run: ExportAtomRun,
+	sectionTipo: string,
+	sectionId: number | string,
+	componentTipo: string | undefined,
+): Promise<'component' | 'record' | null> {
+	const scope = run.frontier;
+	if (scope === undefined || scope.principal === undefined) return null;
+	if (
+		!(await frontierComponentAllowed(scope, {
+			sectionTipo,
+			...(componentTipo === undefined ? {} : { componentTipo }),
+		}))
+	) {
+		return 'component';
 	}
 	const key = RECORD_KEY(sectionTipo, sectionId);
 	let allowed = getBoundedRunMemo(run.frontierRecordCache, key);
@@ -2583,7 +2624,24 @@ async function assertExportCrossing(
 		}
 		setBoundedRunMemo(run.frontierRecordCache, key, allowed, run.cacheLimit);
 	}
-	if (!allowed) refuse('record');
+	return allowed ? null : 'record';
+}
+
+/**
+ * May the export walk cross into (section, record) reading `componentTipo`? The
+ * SAME answer {@link assertExportCrossing} acts on, without acting: for code
+ * that looks AHEAD of the walk (the external-row prefetch,
+ * export/external_prefetch.ts) and must not read or send anything behind a
+ * crossing the walk will refuse. A refusal here is not reported — the walk
+ * reaches the same crossing and applies the law itself.
+ */
+export async function exportCrossingAllowed(
+	run: ExportAtomRun,
+	sectionTipo: string,
+	sectionId: number | string,
+	componentTipo: string | undefined,
+): Promise<boolean> {
+	return (await exportCrossingRefusal(run, sectionTipo, sectionId, componentTipo)) === null;
 }
 
 /**
@@ -2596,8 +2654,10 @@ export async function loadExportRecord(
 	sectionTipo: string,
 	sectionId: number | string,
 ): Promise<MatrixRecord | null> {
-	const numeric = Number(sectionId);
-	if (!Number.isInteger(numeric)) {
+	// A matrix ADDRESS only (the shared conversion rule): Number() would read a
+	// zero-padded external remote id ('000065686') as record 65686.
+	const numeric = canonicalizeStoredSectionId(sectionId);
+	if (!isSectionId(numeric)) {
 		setBoundedRunMemo(run.recordCache, RECORD_KEY(sectionTipo, sectionId), null, run.cacheLimit);
 		return null;
 	}
@@ -2639,9 +2699,12 @@ export async function prefetchExportRecords(
 	sectionTipo: string,
 	sectionIds: (number | string)[],
 ): Promise<void> {
+	// Matrix ADDRESSES only — a zero-padded external remote id is not one.
 	const wanted = sectionIds
-		.map((id) => Number(id))
-		.filter((id) => Number.isInteger(id) && !run.recordCache.has(RECORD_KEY(sectionTipo, id)));
+		.map((id) => canonicalizeStoredSectionId(id))
+		.filter(
+			(id): id is number => isSectionId(id) && !run.recordCache.has(RECORD_KEY(sectionTipo, id)),
+		);
 	if (wanted.length === 0) return;
 	const table = (await matrixTableOf(run, sectionTipo)) ?? 'matrix';
 	// Evict BEFORE seeding so a whole freshly-read chunk is never dropped — and
@@ -2739,16 +2802,21 @@ export async function resolveRecordAtoms(
 				// THE FRONTIER: this locator leaves the record the caller selected.
 				// Authorized on the RUNTIME identity (the locator's own section) and
 				// on the component the NEXT step will read through it.
+				// The NEXT owner's id in its canonical stored form: a matrix address
+				// becomes the int, an EXTERNAL remote id stays VERBATIM ('000065686' —
+				// Number() made it 65686, and the leaf then asked the service for a
+				// different record). WC-2026-08-10-section-id-int-canonical.
+				const nextOwnerId = canonicalizeStoredSectionId(locator.section_id) as number | string;
 				await assertExportCrossing(
 					run,
 					locator.section_tipo,
-					Number(locator.section_id),
+					nextOwnerId,
 					(chain[position + 1] as ExportChainStep | undefined)?.tipo,
 				);
 				await walk(
 					position + 1,
 					locator.section_tipo,
-					Number(locator.section_id),
+					nextOwnerId,
 					[...indexVector, index],
 					hopOwners,
 				);

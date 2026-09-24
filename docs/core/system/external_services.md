@@ -220,10 +220,10 @@ is wrong, so it must never appear on the healthy path:
 | Marker | What it means | Worth retrying |
 | --- | --- | --- |
 | stale | A refresh of these values FAILED, so the last known good copy is shown | yes |
-| unavailable | The service answered badly or not at all, and there is no cached copy | yes |
+| unavailable | The service answered badly or not at all, and there is no cached copy. Also shown when the service rejects or cannot find EVERY record it is asked for (a wrong address or a changed identifier format): past twenty such answers in a row, a "not found" is no longer believed, and the operator log names the address to check | yes |
 | timeout | The service took too long | yes |
-| not found | The service answered, and the record is not in it (deleted upstream, or a wrong identifier) | no |
-| circuit open | The service failed repeatedly and is being left alone for a cooldown | yes |
+| not found | The service answered, and the record is not in it (deleted upstream, or a wrong identifier the service rejected) | no |
+| circuit open | The service stopped answering (timeouts, server errors) repeatedly and is being left alone for a cooldown. A rejected or missing record never causes this | yes |
 | disabled | An operator has turned this service, or all of them, off | no |
 | misconfigured | The connection, the mapping or the allowlist is wrong | no — fix the configuration |
 

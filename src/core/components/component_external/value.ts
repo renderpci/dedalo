@@ -136,6 +136,23 @@ export const EXTERNAL_STATE_RETRYABLE: Readonly<Record<ExternalSourceState, bool
 const PREFETCHED_ROW_VIEWS = Symbol('external.prefetched_row_views');
 
 /**
+ * The remote FIELDS each parked section's rows were fetched with, when the
+ * parker declared them (`setPrefetchedExternalRows`'s third argument). A parked
+ * row is served to a component ONLY if it was fetched with every field that
+ * component's fields_map reads — a row fetched for {title} handed to a
+ * component reading {author} would render a SILENT BLANK (the v6 defect the
+ * cache key's field signature exists to prevent). A parker that PREDICTS its
+ * consumers (the export walk's batch prefetch, diffusion/export/
+ * external_prefetch.ts) declares the fields, so a wrong prediction costs one
+ * fallback fetch, never a wrong value. Absent = the parker fetched for exactly
+ * the components it expands (the portal prepass) and the rows are served as is.
+ * A view that names its own `remoteFields` (every view the row layer builds,
+ * since 2026-09-24 the section's whole record field set) is checked against
+ * THOSE instead — the declaration is only the fallback for hand-built views.
+ */
+const PREFETCHED_ROW_FIELDS = Symbol('external.prefetched_row_fields');
+
+/**
  * Transport seams for THIS read. TEST-ONLY: the setter is exported for tests
  * that must drive the whole hook without a socket, and
  * `external_degradation_tripwire` asserts nothing under `src/` or `tools/`
@@ -144,12 +161,21 @@ const PREFETCHED_ROW_VIEWS = Symbol('external.prefetched_row_views');
  */
 const TRANSPORT_DEPS = Symbol('external.transport_deps');
 
-/** Park a batch of already-fetched rows for this read (the wiring stage's door). */
+/**
+ * Park a batch of already-fetched rows for this read (the wiring stage's door).
+ * REPLACES whatever was parked (a batch-scoped parker keeps the scratch bounded
+ * to one batch). `fieldsBySection` — section tipo → the remote fields its rows
+ * were fetched with — arms the coverage check (PREFETCHED_ROW_FIELDS); omitted,
+ * any previously declared coverage is cleared with the rows it described.
+ */
 export function setPrefetchedExternalRows(
 	emission: EmissionContext,
 	views: ReadonlyMap<string, ExternalRowView>,
+	fieldsBySection?: ReadonlyMap<string, ReadonlySet<string>>,
 ): void {
 	emission.scratch.set(PREFETCHED_ROW_VIEWS, views);
+	if (fieldsBySection === undefined) emission.scratch.delete(PREFETCHED_ROW_FIELDS);
+	else emission.scratch.set(PREFETCHED_ROW_FIELDS, fieldsBySection);
 }
 
 /**
@@ -220,6 +246,17 @@ export interface DeriveExternalOptions {
 /**
  * Derive one component_external's entries for one record.
  *
+ * A FOREIGN TARGET IS NOT A FAILURE. A component_external belongs to ONE
+ * section — its ontology owner (see externalComponentAppliesTo). A target in any
+ * other section (a local rsc205 publication sharing the rsc368 portal with its
+ * zenon1 locators) answers `{ entries: [] }` with NO remote call and NO
+ * `source_status`: the column does not apply to that record, exactly as a stored
+ * component resolves to nothing on a record that does not carry it. The TARGET
+ * section's own `api_config` is never consulted for that decision — rsc205
+ * carries a stale 2024 copy, and consulting it sent the LOCAL id to Zenon (a
+ * 400 per target, three of which opened the breaker for every Zenon lookup; a
+ * padded local id would have fetched an UNRELATED remote record).
+ *
  * NEVER THROWS. Every failure — a section with no api_config, a service no
  * adapter implements, a malformed fields_map, a blocked host, a dead remote —
  * becomes an empty `entries` plus a `source_status` naming the state. Throwing
@@ -237,6 +274,13 @@ export async function deriveExternalValue(
 	const api = await import('../../../external/api/index.ts');
 	let service = 'unknown';
 	try {
+		const applies = await externalComponentAppliesTo(componentTipo, sectionTipo);
+		if (applies === 'foreign') return { entries: [] };
+		if (applies === 'orphan') {
+			// A component_external whose parent chain reaches no section: nothing
+			// says which records it describes. A configuration error, named.
+			return misconfigured(service);
+		}
 		if (!/^[^|]+$/.test(remoteId) || remoteId.length === 0) {
 			// An id carrying the row-view key separator (or none at all) addresses no
 			// remote record. Refusing here keeps the key grammar unambiguous.
@@ -261,10 +305,31 @@ export async function deriveExternalValue(
 			// v6 rendered an empty component; this says why.
 			return misconfigured(service);
 		}
+		const refused = api.refusedRemoteFields(resolved.model, api.remoteFieldsOf(fieldsMap));
+		if (refused.length > 0) {
+			// A remote field name the ADAPTER refuses (Zenon: bare identifiers only —
+			// 'dc:title'). The section's shared record request leaves it out
+			// (record_fields.ts), so the rest of the record still renders; THIS
+			// component is the one misconfigured, and says so — logged (deduped by
+			// the door) so the operator sees WHICH name, never fetched.
+			api.logExternalError(
+				new api.ExternalServiceError({
+					service,
+					kind: 'bad_config',
+					sectionTipo,
+					detail: `fields_map of ${componentTipo} names remote field(s) ${refused.map((f) => `'${f}'`).join(', ')} that ${service} refuses`,
+				}),
+			);
+			return misconfigured(service);
+		}
 
 		const rowView =
-			prefetchedRow(options.emission, api.externalRowViewKey(sectionTipo, remoteId)) ??
-			(await fetchOwnRow(api, sectionTipo, remoteId, fieldsMap, options.emission));
+			prefetchedRow(
+				options.emission,
+				api.externalRowViewKey(sectionTipo, remoteId),
+				sectionTipo,
+				api.remoteFieldsOf(fieldsMap),
+			) ?? (await fetchOwnRow(api, sectionTipo, remoteId, fieldsMap, options.emission));
 
 		return toDerived(service, api.mapRowToEntries(resolved.model, rowView, fieldsMap), rowView);
 	} catch (error) {
@@ -282,14 +347,70 @@ export async function deriveExternalValue(
 	}
 }
 
+/**
+ * THE OWNERSHIP RULE — whether a component_external resolves at all for a record
+ * of `targetSectionTipo`. Decided from the ONTOLOGY, never from the target's
+ * `api_config`:
+ *
+ *   'owner'   the target IS the component's owning section (the first `section`
+ *             on its dd_ontology parent chain — zenon3 → zenon1, test215 →
+ *             test3), or a VIRTUAL section whose real section is that owner
+ *             (getSectionRealTipo — a virtual section borrows its real
+ *             section's children, so their records carry the same components);
+ *   'foreign' any other section — the column does not apply to the record;
+ *   'orphan'  the component's chain reaches no section at all.
+ *
+ * Cached underneath (both accessors are hub-cleared ontology caches), so the
+ * per-cell cost on a hot export is two map hits.
+ */
+export async function externalComponentAppliesTo(
+	componentTipo: string,
+	targetSectionTipo: string,
+): Promise<'owner' | 'foreign' | 'orphan'> {
+	const { getAncestorSectionTipo, getSectionRealTipo } = await import('../../ontology/resolver.ts');
+	const owner = await getAncestorSectionTipo(componentTipo);
+	if (owner === null) return 'orphan';
+	if (owner === targetSectionTipo) return 'owner';
+	return (await getSectionRealTipo(targetSectionTipo)) === owner ? 'owner' : 'foreign';
+}
+
 function prefetchedRow(
 	emission: EmissionContext | undefined,
 	viewKey: string,
+	sectionTipo: string,
+	neededFields: readonly string[],
 ): ExternalRowView | null {
 	const parked = emission?.scratch.get(PREFETCHED_ROW_VIEWS) as
 		| ReadonlyMap<string, ExternalRowView>
 		| undefined;
-	return parked?.get(viewKey) ?? null;
+	const view = parked?.get(viewKey);
+	if (view === undefined) return null;
+	const fetchedWith = parkedViewFields(emission, view, sectionTipo);
+	// Undefined = nothing says what it was fetched with (the old portal-prepass
+	// shape): served as parked.
+	if (fetchedWith === undefined) return view;
+	return neededFields.every((field) => fetchedWith.has(field)) ? view : null;
+}
+
+/**
+ * The fields a parked view is KNOWN to cover. A SELF-DESCRIBING view (every
+ * view the row layer builds names the fields it was requested with — the
+ * section's record field set) answers for itself: the truth beats a parker's
+ * prediction. Otherwise the parker's declared coverage for the section (an
+ * empty set when it declared coverage but not for this section — never
+ * served), or undefined when nothing was declared at all.
+ */
+function parkedViewFields(
+	emission: EmissionContext | undefined,
+	view: ExternalRowView,
+	sectionTipo: string,
+): ReadonlySet<string> | undefined {
+	if (view.remoteFields !== undefined) return new Set(view.remoteFields);
+	const coverage = emission?.scratch.get(PREFETCHED_ROW_FIELDS) as
+		| ReadonlyMap<string, ReadonlySet<string>>
+		| undefined;
+	if (coverage === undefined) return undefined;
+	return coverage.get(sectionTipo) ?? new Set<string>();
 }
 
 /** The FALLBACK: no caller prefetched this row, so fetch it (coalesced + cached). */

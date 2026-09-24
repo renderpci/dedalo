@@ -226,6 +226,11 @@ export function parseFieldsMap(raw: unknown, context: { tipo: string }): FieldsM
 	});
 }
 
+/** The remote FIELD a path reads — its head (`labels.en.value` → `labels`, `items[0]` → `items`). */
+export function remoteFieldHead(remotePath: string): string {
+	return (remotePath.replace(/\[(\d+)\]/g, '.$1').split('.')[0] ?? '').trim();
+}
+
 /**
  * The remote FIELD NAMES a fields_map needs — the head of each path, because a
  * service selects whole fields (`field[]=authors`), not paths inside them.
@@ -236,12 +241,27 @@ export function remoteFieldsOf(entries: readonly FieldsMapEntry[]): string[] {
 	const fields: string[] = [];
 	for (const entry of entries) {
 		if (entry.local !== 'dato') continue;
-		const head = (entry.remote.replace(/\[(\d+)\]/g, '.$1').split('.')[0] ?? '').trim();
+		const head = remoteFieldHead(entry.remote);
 		if (head.length === 0 || seen.has(head)) continue;
 		seen.add(head);
 		fields.push(head);
 	}
 	return fields;
+}
+
+/**
+ * The remote field names of `fields` the adapter REFUSES (`acceptsRemoteField`;
+ * absent = accepts every name). Order preserved. Empty = all accepted.
+ */
+export function refusedRemoteFields(
+	model: ExternalServiceModel,
+	fields: Iterable<string>,
+): string[] {
+	const accepts = model.acceptsRemoteField;
+	if (accepts === undefined) return [];
+	const refused: string[] = [];
+	for (const field of fields) if (!accepts(field)) refused.push(field);
+	return refused;
 }
 
 // ---------------------------------------------------------------------------

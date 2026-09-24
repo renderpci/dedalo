@@ -123,7 +123,10 @@ of truth: no engine path reads a CALLER's copy.
   array.
 
 Carriers in this installation: `zenon1`, `test3`, and `rsc205` — whose copy is
-a stale 2024 duplicate, INERT because only the target section's copy binds.
+a stale 2024 duplicate. It is INERT only because no component_external is OWNED
+by `rsc205` (§3 addendum 2026-09-24): until that rule, a flat/export path that
+applied a zenon column to a local `rsc205` target bound this copy and sent the
+LOCAL id to Zenon.
 `zenon1` and `test3` also carry `properties.search_engine: 'search_zenon'`,
 which nothing reads: **DEAD**.
 
@@ -141,6 +144,10 @@ component's entries.
 
 - Only `local: 'dato'` rows carry a value; other locals are ignored by the
   emission and by the requested-field union.
+- The REQUEST is section-wide, not per component (§3 addendum 2026-09-24 (c)):
+  a record is asked for ONCE with the id field plus every field any
+  component_external of the section maps; each component projects its own
+  fields from that one row.
 - `remote` is a **dotted/indexed PATH** resolved against the row
   (`labels.en.value`, `items[0].body.value`); a flat top-level key is that
   path's degenerate case. The retired engine read one top-level key only.
@@ -221,6 +228,152 @@ breath:
    `test/unit/external_config_narrowing_census.test.ts` (DELETE IT when its
    `deferred` list is empty — it is migration scaffolding, not an invariant).
 
+> **ADDENDUM 2026-09-24 — ownership + verbatim ids on the FLAT/EXPORT paths.**
+> Measured on the install DB: `rsc368` stores 12,557 zenon1 locators as
+> zero-padded strings, mixed with local `rsc205` publications.
+>
+> 1. **Ownership.** A component_external resolves ONLY for records of its OWNING
+>    section: the first `section` on its ontology parent chain
+>    (`getAncestorSectionTipo`: `zenon3` → `zenon1`, `test215` → `test3`), or a
+>    virtual section whose real section is that owner (`getSectionRealTipo`).
+>    Any other target is FOREIGN: `deriveExternalValue` answers `{entries: []}`
+>    with no remote call, no `source_status`, and the flat cell reports nothing
+>    `unresolved` — the column does not apply, exactly as a stored column yields
+>    nothing on a record that does not hold it. The rule reads the ONTOLOGY,
+>    never the target's `api_config` (rsc205's residue is what bound the local id
+>    before). An orphan component (no section on its chain) is `misconfigured`.
+>    One predicate: `component_external/value.ts externalComponentAppliesTo`.
+>    Why here and not only in the portal expansion: the flat resolvers
+>    (`resolve/relation_list.ts`, `diffusion/export/atoms.ts`) apply EVERY child
+>    of the component's config to EVERY target; §3.2's per-locator filter is the
+>    portal expansion's alone.
+> 2. **Verbatim ids.** The flat resolvers take the RAW stored id
+>    (`number | string`). The external family consumes it as the remote id; every
+>    stored family reads the matrix ADDRESS (`canonicalizeStoredSectionId` +
+>    `isSectionId`) and resolves null for a non-address — `"000012281"` is never
+>    record 12281. The export walk carries the next owner id in its canonical
+>    stored form (int for an address, the remote id verbatim otherwise).
+> 3. **grid_value leaves.** The model's inert `relation` column is not a locator
+>    bag: the export fan-out treats component_external as a PLAIN leaf
+>    (`atoms.ts isStoredRelationModel`), so grid_value Zenon columns emit values.
+>
+> Ledger: `WC-2026-09-24-external-foreign-target-and-verbatim-id`. Gate:
+> `test/unit/external_section_id_verbatim_native.test.ts`.
+
+> **ADDENDUM 2026-09-24 (b) — the EXPORT walk: batched rows, and never silently
+> incomplete** (`src/diffusion/export/external_prefetch.ts`).
+>
+> 1. **Batch prefetch.** §3.3's batching was the portal expansion's alone; the
+>    export walk resolved one record at a time, so every external cell fetched
+>    its row LIVE, in series (the §3.4 fallback). Now, before each hydrate
+>    batch (grid.ts `HYDRATE_BATCH`) is walked, the batch's external targets are
+>    collected from the plan — a leaf component_external (at the root record or
+>    through any number of relation hops) and the component_external children
+>    of a relation leaf's own config — over the batch's stored locators, only
+>    for targets the component OWNS (§3 addendum rule 1), and fetched in ONE
+>    `fetchExternalRows` call with the per-section UNION of the predicted
+>    fields: merged, coalesced, cached, and parallel only up to
+>    `DEDALO_EXTERNAL_MAX_CONCURRENCY` at the §5 door. The rows are parked on
+>    the run's own emission scratch (replaced per batch — bounded to one
+>    batch; at most `EXTERNAL_PREFETCH_MAX_TARGETS` targets, the rest fall back).
+>    Deeper fan-out is not predicted and takes the per-cell fallback.
+> 2. **Declared coverage.** A parker that PREDICTS its consumers declares the
+>    fields each section's rows were fetched with
+>    (`setPrefetchedExternalRows(emission, views, fieldsBySection)`); a parked row
+>    is then served only to a component whose `fields_map` fields it covers,
+>    anything else fetches its own. A wrong prediction costs one request, never
+>    a blank (the §8.1 field-signature law, applied to the scratch). The portal
+>    prepass declares nothing and is served as before.
+> 3. **Degradation record.** Every degraded external cell the walk resolves is
+>    reported (`relation_list.ts CellValueResolveOptions.onExternalDegraded`)
+>    into a run-scoped, bounded log: counts per (service, state), exported
+>    records affected, a capped sample (`EXTERNAL_DEGRADATION_SAMPLE_LIMIT`) of
+>    (exported record, component, remote section, verbatim remote id).
+>    INCOMPLETE = `unavailable`, `timeout`, `circuit_open`, `disabled`,
+>    `misconfigured`, and `truncated` (an `ok` status with dropped values);
+>    `stale` is recorded but the value IS there; `not_found` (an answer) and a
+>    foreign target are not recorded. `retryable` = some incomplete state is
+>    §8.2-retryable. `missing_cells` / `missing_records` count only the cells
+>    with NO value from the source (incomplete minus `truncated`) — what the
+>    tool calls "could not be read". The export's `'end'` line carries it as
+>    `external_degraded` ONLY when something degraded; tool_export records and
+>    serves it (`WC-2026-09-24-tool-export-server-built-artifacts`, addendum
+>    "external sources").
+> 4. **Under the export frontier.** The prefetch runs AHEAD of the walk, so it
+>    applies the walk's own crossing answer (`resolver.ts
+>    exportCrossingAllowed`, the predicate behind `assertExportCrossing`) at
+>    every crossing the walk will make — each hop into a record with the
+>    component the next step reads, and each relation-leaf target. A refused
+>    crossing is not followed and no remote id behind it is sent; the walk then
+>    reaches the same crossing and applies the refusal law. Without it the
+>    service learned which remote records a record the caller cannot read
+>    cites, before the export aborted.
+> 5. **Bounded against a sick service, stoppable.** The batch is fetched through
+>    `fetchExternalRows`' bounded start (§5 "A queued call meets the CURRENT
+>    verdict") with the export's Stop `signal`.
+>
+> Gate: `test/unit/export_external_prefetch_degradation_native.test.ts`.
+
+> **ADDENDUM 2026-09-24 (c) — one request per record, the section's whole field
+> set; and no external id is ever a local address** (`src/external/record_fields.ts`).
+>
+> 1. **The record field set.** Measured live: each component asked Zenon for
+>    ITS OWN field (`field[]=title`); Zenon answers only what it is asked for, so
+>    the row had no `id`, the identity check (`defaultPickRow`) refused it and
+>    every non-id column was `not_found` — and one record cost one GET per
+>    component. Now `fetchExternalRows` requests every record with
+>    `recordRequestFields`: the id field (head of `remoteIdPath`, default `id`)
+>    FIRST, then every field mapped by any component_external of the section's
+>    own subtree and its REAL section's (virtual-aware; a malformed `fields_map`
+>    contributes nothing — its component reports `misconfigured`), in ontology
+>    order, then any caller field the section does not map. A field name the
+>    ADAPTER refuses (`acceptsRemoteField`, §4 — Zenon: bare identifiers) is
+>    left out of the set and out of a caller's fields: carried, it failed every
+>    record request of the section (`bad_config` → every column `unavailable`).
+>    Only the component mapping it is `misconfigured` (value.ts checks the same
+>    predicate before any fetch, and logs the name). The v6 / frozen-PHP
+>    shape (`field[]=id&field[]=title&field[]=authors…`), restored. The identity
+>    check is KEPT. One request and ONE cache entry per record (§8.1), shared by
+>    a cell's own fetch, the portal prepass (§3.3) and the export prefetch
+>    (addendum (b)) whatever each predicted. Cached with the ontology lifecycle.
+> 2. **Self-describing views.** Every `ExternalRowView` the row layer builds
+>    names its `remoteFields`; a parked view is served to a component only when
+>    they cover its fields (the declared coverage of addendum (b) item 2 is now
+>    the fallback for a hand-built view). An unpredicted export cell is a cache
+>    hit, not a second GET.
+> 3. **The portal prepass obeys ownership.** A ddo with NO `section_tipo`
+>    matches every target by declaration (§3.2), so `relation_core.ts`
+>    `targetChildShapes` / `collectRemoteFields` also ask
+>    `externalComponentAppliesTo`: a FOREIGN component_external neither makes a
+>    target "derived" nor contributes fields, so a local target (with api_config
+>    residue) is never sent to the service. An orphan still counts as derived (it
+>    renders `misconfigured` instead of vanishing).
+> 4. **No `Number()` on a target id.** The portal expansion and the dataframe
+>    frame targets read a stored row only for a matrix ADDRESS
+>    (`isSectionId`); a remote id (`'000012281'`) gets the identity-only
+>    placeholder, never local record 12281.
+> 5. **The frontier's record key** (`security/frontier_scope.ts
+>    frontierRecordAllowed`). An EXTERNAL REFERENCE — a non-address string on a
+>    section that binds an external service AND owns a component_external
+>    (`isExternalReferenceSection`: record absence + a derived model, the read
+>    path's law — NEVER `api_config` alone, which `rsc205` carries as residue
+>    over only local rows) — has no local record, so the
+>    record key (projects containment, the dd478 allow-list: properties of
+>    matrix rows) has nothing to evaluate: it PASSES, and the crossing is
+>    governed by the component key alone (the grant on the component read
+>    through it), exactly like the component_external value. A non-address on a
+>    LOCAL section (`'-000001'`, `'007'`) addresses nothing and fails closed —
+>    it is never `Number()`-ed into another record's answer. Nor downstream:
+>    diffusion's `processBatch` drops a non-address id before any matrix read
+>    (ledger line; never read, never unpublished, never fatal) and
+>    `readMatrixRecords` refuses one.
+>
+> Ledger: `WC-2026-09-24-external-record-field-set` (items 1-2; its addendum
+> (b) the refused field name), `WC-2026-09-24-external-foreign-target-and-verbatim-id`
+> addenda (b) (items 3-5) and (c) (the derived-model test, the diffusion drop).
+> Gates: `test/unit/external_record_field_set_native.test.ts`,
+> `test/unit/diffusion_frontier_scope_native.test.ts` (LAW 3).
+
 ---
 
 ## 4. `ExternalServiceModel` — the adapter contract
@@ -243,7 +396,9 @@ Required:
 Optional, each with a DEFAULT in `fields_map.ts` — the defaults are the general
 case, so a nested-payload/opaque-id service (Wikidata `Q42`, `labels.en.value`)
 is mappable by a cataloguer with no code: `unwrapRows`, `pickRow`,
-`remoteIdPath` (default `'id'`), `extract`, `formats`, `encodeRemoteId` /
+`remoteIdPath` (default `'id'`), `acceptsRemoteField` (default: every name;
+the grammar of a remote field NAME, so the section-wide record field set can
+leave a refused one out — §3 addendum (c)), `extract`, `formats`, `encodeRemoteId` /
 `decodeRemoteId`, `uiRecordUrl`, `credentialCatalogKey` / `credentialScheme` /
 `credentialParam`, and the per-service overrides `timeoutMs` / `retry` /
 `softTtlMs`.
@@ -273,8 +428,8 @@ leak something:
 | 4 | `assertPublicUrl` → vet every address, PIN the socket to a vetted one, SNI kept at the real host | `blocked_host` | — |
 | 5 | attach the credential — ONLY NOW | `bad_config` | — |
 | 6 | fetch: `redirect:'error'`, AbortSignal at the timeout, STREAMED byte ceiling | `timeout`/`transport`/`http_status`/`too_large` | yes |
-| 7 | retry ONLY on timeout/transport/429/5xx, full jitter, `Retry-After` honoured | — | maybe |
-| 8 | breaker update: 3 consecutive failures open; half-open admits ONE probe, which MUST be settled | — | — |
+| 7 | retry ONLY on a SERVICE failure (timeout/transport/408/429/5xx), full jitter, `Retry-After` honoured | — | maybe |
+| 8 | breaker update: 3 consecutive SERVICE failures open; any other outcome is NEUTRAL; half-open admits ONE probe, which MUST be settled | — | — |
 | 9 | JSON parse failure is `protocol`, not `transport` | `protocol` | — |
 
 Two orderings carry the whole security argument and are asserted:
@@ -312,6 +467,86 @@ process restarts — a permanent outage of a healthy service, wearing the mask o
 a remote one. `releaseProbe` counts NO failure on purpose: a local defect is hit
 on every request, so counting it would open the circuit by itself and hide the
 real error behind `circuit_open`.
+
+**The evidence law (2026-09-24).** The breaker answers "is the REMOTE
+healthy?", so only evidence about the remote's health moves it —
+`breaker.ts:isServiceFailure`, which is ALSO the retry predicate (a retry and a
+count both mean "the remote may be better next time"):
+
+| outcome | breaker | why |
+|---|---|---|
+| `timeout`, `transport` | counts | the remote did not answer |
+| `http_status` 5xx / 429 / 408 | counts | the remote says IT is failing, overloaded, or timed out waiting |
+| `http_status` any other 4xx (400, 401, 403, 404, 410, 422…) | NEUTRAL | an answer about the REQUEST; counting 401/403 would also hide a credential error behind `circuit_open` |
+| `too_large` | NEUTRAL | a 2xx body past OUR ceiling — one record |
+| `protocol` | success | the socket delivered; recorded before decoding |
+| `blocked_host`, `bad_config` (and the no-socket kinds) | NEUTRAL | local verdicts — nothing was learned about the remote |
+
+NEUTRAL means neither counted NOR reset: a 4xx proves the front door answered,
+not that the service can serve records (a sick backend behind a validating proxy
+answers 400 instantly and 503 for everything else), so only a delivered 2xx
+resets the streak. A half-open probe that ends NEUTRAL is released
+(`releaseProbe`) — the circuit stays half-open and the next call probes. The
+measured defect this fixes: a portal sent unpadded / LOCAL ids to Zenon, Zenon
+answered `400 Error loading record` three times, and the circuit opened for
+every Zenon lookup on the install.
+
+**Only the probe settles the probe.** `releaseProbe` and a probe-verdict
+`recordFailure` are called only by the call `checkBreaker` admitted as the
+probe (`recordFailure(…, asProbe)`). A call admitted while the circuit was
+closed that ends after the probe was admitted — neutral or failed — neither
+clears `probeInFlight` (a second probe would pass) nor logs a re-open line.
+
+**A queued call meets the CURRENT verdict.** Step 2 runs on arrival AND again
+when a call that waited gets its concurrency slot; a retry is abandoned once the
+circuit is open (checked before and after the backoff). Before this, a batch
+caller (the export prefetch: up to 5 000 targets) passed every call through the
+breaker while it was still closed and parked them behind
+`DEDALO_EXTERNAL_MAX_CONCURRENCY`: against a slow or hanging service each one
+then ran its full timeout × (1 + retries) after the circuit had opened
+(measured: 40 targets → 120 sockets; now at most
+(3 + concurrency − 1) × (1 + retries)). `fetchExternalRows` additionally STARTS
+its records a few at a time (at most `DEDALO_EXTERNAL_MAX_CONCURRENCY` workers)
+and takes the caller's `signal`: once aborted, no further record starts.
+
+**Logging: transitions once, refusals counted.** Opening, and a failed probe's
+re-opening (so at most one line per cooldown), logs ONE `external.circuit_open`
+line through the one door, naming the failure that tripped it and the cooldown;
+closing logs one info line, `[external:<service>] circuit_closed origin=…
+open_for_ms=… refused=…`. `refused` is PER OPEN PERIOD: a re-open line reports
+the period that just ended and the count restarts, so the closing line's
+`refused`, like its `open_for_ms`, is the last period's. A refused call logs NOTHING — it bumps the circuit's
+`refused` (`breakerSnapshot()`) and the process counter
+`external_circuit_refusals` (`GET /api/v1/counters`); `logExternalError` drops
+`circuit_open` refusals by contract. Every other failure is logged once per
+distinct CLASS (service, kind, origin, status, section, detail — the remote id
+is deliberately NOT in it, `errors.ts logDedupKey`) per 10-minute window; the
+logged line names the first id as its example, and repeats bump
+`external_log_suppressed` (so `error_external_<kind>` counts LOGGED lines, and
+the two counters together count occurrences). Keyed per id, an API-wide failure
+the breaker does not count (every id answered 400) logged one stack per record.
+The dedup ledger `errors.ts:loggedLines` is time-pruned and size-capped
+(module_state_tripwire).
+
+**Record-path 4xx degrade ONE record** (`cache.ts`, WC-2026-09-24-external-record-4xx-is-not-found):
+404/410 and 400/422 on a RECORD request become that record's `not_found`
+(negative-cached for a soft TTL; 400/422 are logged, since they can mean OUR
+request is wrong); 401/403 and the rest stay a named `unavailable` with reason
+`http_status`. A search endpoint's 4xx never comes through here.
+
+**…unless the ENDPOINT answers 4xx for every id** (`record_answers.ts`). Per
+(service, record endpoint = scheme + host + PATH of the api_url), the record-path
+4xx answers since the endpoint last DELIVERED a record answer (any 2xx) are
+counted. At `SUSPECT_STREAK` (20) the endpoint is SUSPECT: one
+`external.http_status` line names the streak, the statuses and the api_url PATH
+(a wrong path, a moved route or a changed id format is the likely cause), at most
+once per 10 minutes while it lasts, and bumps `external_record_endpoint_suspect`;
+every further 4xx there reads as the SOURCE failing — `unavailable`, reason
+`http_status`, not negative-cached — so cells, lists and exports say "could not
+be read" and an export is marked incomplete. One delivered answer ends the
+episode. It never moves the breaker (a configuration error must not hide behind
+`circuit_open`). The map `record_answers.ts:recordAnswerStreaks` is deleted on
+delivery and pruned after an hour untouched (module_state_tripwire).
 
 ---
 
@@ -388,7 +623,11 @@ service | originAndPath(api_url) | sectionTipo | remoteId | dataLang | fieldSign
 
 `fieldSignature` is the SORTED requested field set: v6's static cache omitted
 it, so a component asking for `{id,title}` was served a row fetched for `{id}`
-and silently rendered nothing. `dataLang` is read AT CALL TIME through
+and silently rendered nothing. Since 2026-09-24 that set is the SECTION's record
+field set (§3 addendum (c)), not the requesting component's — the signature does
+not fragment by caller: one entry per record. It stays in the key because the
+set is ontology-derived (a fields_map edit must never be served a row fetched
+for the old set). `dataLang` is read AT CALL TIME through
 `currentDataLang()`, never module-captured. The PATH is keyed but never the
 QUERY — the query holds the id, the fields and (for a `query`-scheme
 credential) the secret.
@@ -400,7 +639,7 @@ illegal — the day an adapter needs one, the principal joins the key, or that
 service opts out of the shared cache.
 
 Rows are coalesced in flight (a portal row with four external children issues
-ONE call) and served past their soft TTL as `stale` while a refresh runs behind
+ONE call — and, with the section-wide field set, so do four sequential cells) and served past their soft TTL as `stale` while a refresh runs behind
 the request. Lifecycle is `createOntologyCache`, which is RIGHT here: the
 content derives from `api_config` and the field set, both ontology-derived.
 Dropping the map is not the whole of that lifecycle: a fetch already in the air
@@ -422,7 +661,7 @@ screen, and a cataloguer will act on the difference.
 | `stale` | served past the soft TTL; carries `stale_since` | true | `external_source_stale` |
 | `unavailable` | transport / http_status / too_large / protocol, no cached row | true | `external_source_unavailable` |
 | `timeout` | the request exceeded the timeout | true | `external_source_timeout` |
-| `not_found` | the service answered; the record is not in the answer | false | `external_source_not_found` |
+| `not_found` | the service answered; the record is not in the answer — including a record-path 400/404/410/422, unless the endpoint is SUSPECT (§5: then `unavailable`) | false | `external_source_not_found` |
 | `circuit_open` | the breaker is open for (service, origin) | true | `external_source_circuit_open` |
 | `disabled` | master switch or per-service kill switch | false | `external_source_disabled` |
 | `misconfigured` | `not_registered` / `bad_config` / `blocked_host`, a section with no `api_config`, an empty `fields_map` | false | `external_source_misconfigured` |
@@ -443,7 +682,8 @@ is REFUSED. All three are counted in `source_status`.
 | Surface | Degraded behaviour |
 |---|---|
 | edit / list / tm item | `entries: []` + `source_status`; the item still emits |
-| section_list column, export flat cell | the joined entries; empty + the model reported unresolved when the source is unreachable |
+| section_list column, export flat cell | the joined entries; empty + the model reported unresolved when the source is unreachable; a FOREIGN target (§3 addendum 2026-09-24) is empty and NOT unresolved — nothing was asked |
+| export (the whole deliverable) | every degraded cell is counted into the export's `external_degraded` summary ('end' line, tool_export manifest / list / preview); the files stay downloadable and are marked incomplete in the tool (§3 addendum 2026-09-24 (b)) |
 | portal / autocomplete expansion | the external locators resolve to derived items; a non-`component_external` model at an external target is REFUSED loudly in the child loop |
 | import | refused per cell, every shape (§9) |
 | save / delete_data | refused / skipped (§9) |
@@ -591,9 +831,10 @@ autocomplete path), and `client/dedalo/test/client/js/test_service_autocomplete.
 | `external_search_target_tripwire` | §10.1 — the target section is derived from the EXTERNAL ddos (not `ddo_map[0]`), across EVERY render mode, and two targets are refused by name |
 | `external_config_narrowing_census` | §3.5 — TRANSITIONAL RATCHET; delete when `deferred` is empty |
 
-Behaviour twins (`test/unit/external_*_native.test.ts`): `cache`, `degradation`,
-`emit`, `fields_map`, `multi_source`, `request_config`, `search`, `transport`,
-`zenon`.
+Behaviour twins (`test/unit/external_*_native.test.ts`): `breaker_evidence`, `cache`, `degradation`,
+`emit`, `fields_map`, `multi_source`, `record_field_set`, `request_config`, `search`,
+`section_id_verbatim`, `transport`, `zenon`; the export walk's batch prefetch
+and degradation record: `test/unit/export_external_prefetch_degradation_native.test.ts`.
 Census source: the FROZEN `test/fixtures/external/ontology_census.json`,
 harvested from the application DB, because the gates must be credless and the
 test DB holds a smaller ontology that would quietly assert less.

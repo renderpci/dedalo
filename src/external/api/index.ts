@@ -15,6 +15,7 @@
  *
  *   getExternalServiceForSection  is this section external, and where does it point?
  *   isExternalSectionTipo         the boolean form, for callers that only branch
+ *   isExternalReferenceSection    may a NON-ADDRESS id here be a remote record's id?
  *   fetchExternalRows             remote records for a set of locators
  *   searchExternalService         ask the service which records MATCH some terms
  *   mapRowToEntries               one row + one fields_map → the values a component emits
@@ -42,7 +43,13 @@ export {
 	ExternalServiceNotRegisteredError,
 	logExternalError,
 } from '../errors.ts';
-export { mapRowToEntries, parseFieldsMap, remoteFieldsOf } from '../fields_map.ts';
+export {
+	mapRowToEntries,
+	parseFieldsMap,
+	refusedRemoteFields,
+	remoteFieldsOf,
+} from '../fields_map.ts';
+export { isExternalReferenceSection } from '../record_fields.ts';
 export {
 	externalServiceCapabilities,
 	hasExternalService,

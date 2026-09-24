@@ -55,6 +55,17 @@ const ALLOWED_MODULE_MAPS: Readonly<Record<string, string>> = {
 	// Keys are a service, a section, a method and a URL — never request identity.
 	'search.ts:inFlightSearches':
 		'in-flight search coalescing; deleted in the finally of its own fetch',
+	// TIME-CLEARED + SIZE-BOUNDED. The log dedup ledger (2026-09-24): a distinct
+	// failure line → when it was logged, pruned past the window, capped. Keys are
+	// the disclosure-safe log line (service/kind/origin/status/section/id) —
+	// never session/user/lang. Losing an entry costs one repeated line.
+	'errors.ts:loggedLines': 'log dedup per distinct failure line; pruned by window, size-capped',
+	// DELETED BY A DELIVERED ANSWER + TIME-PRUNED. The record-endpoint watch
+	// (2026-09-24): service + endpoint (scheme/host/path) → the streak of
+	// record-path 4xx since it last delivered a record. Never request identity;
+	// NOT factory-built (an ontology write says nothing about an endpoint).
+	'record_answers.ts:recordAnswerStreaks':
+		'record-endpoint 4xx streak per (service, endpoint); deleted on delivery, pruned by age',
 };
 
 /** THE CLOSED SET of module-level `let` bindings in src/external. */

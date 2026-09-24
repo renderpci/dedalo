@@ -30,10 +30,11 @@ import {
 	dateModeOf,
 	resolvePeriodLabels,
 } from '../components/component_date/date_value.ts';
+import type { ExternalSourceStatus } from '../components/component_external/value.ts';
 import { resolveIriTitles } from '../components/component_iri/resolve_title.ts';
 import { getFlatValueFamily } from '../components/registry.ts';
 import { mediaTypeOf } from '../concepts/media.ts';
-import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
+import { canonicalizeStoredSectionId, isSectionId } from '../concepts/section_id.ts';
 import { dataframeEntryMatches } from '../concepts/subdatum.ts';
 import { type MatrixRecord, readMatrixRecordBatch } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
@@ -52,7 +53,7 @@ import { resolveLocatorLabels } from '../relations/datalist.ts';
 import { findInverseReferences } from '../search/search_related.ts';
 import { resolveOwnConfigMap } from '../section/list_definitions/section_list.ts';
 import type { Principal } from '../security/permissions.ts';
-import { resolveComponentValue } from './component_data.ts';
+import { type EmissionContext, resolveComponentValue } from './component_data.ts';
 import { currentDataLang } from './request_lang.ts';
 
 /** PHP export_value records_separator (join_atoms depth-0 default). */
@@ -109,6 +110,56 @@ export interface CellValueResolveOptions {
 		sectionTipo: string,
 		sectionId: number,
 	) => Promise<MatrixRecord | null>;
+	/**
+	 * The emission scratch a component_external cell reads its PREFETCHED remote
+	 * row from (component_external/value.ts PREFETCHED_ROW_VIEWS). The export
+	 * walk parks each hydrate batch's remote rows there
+	 * (diffusion/export/external_prefetch.ts), so a cell derives from the batch
+	 * instead of fetching live per record. Absent = every external cell fetches
+	 * its own row (coalesced + cached) — the per-record fallback every other
+	 * reader keeps.
+	 */
+	externalEmission?: EmissionContext;
+	/**
+	 * Told of every component_external cell whose value is DEGRADED (a
+	 * `source_status` came back: the source could not answer, answered from a
+	 * stale copy, is disabled/misconfigured, or values were cut). The export
+	 * walk records these (grid.ts OpenedExportGrid.externalDegradation) so an
+	 * export is never silently incomplete. A foreign target (the column does not
+	 * apply) and a clean success never call it.
+	 */
+	onExternalDegraded?: (event: ExternalCellDegradation) => void;
+}
+
+/** One degraded component_external cell (CellValueResolveOptions.onExternalDegraded). */
+export interface ExternalCellDegradation {
+	/** The component_external tipo. */
+	readonly componentTipo: string;
+	/** The EXTERNAL section the remote record belongs to (zenon1). */
+	readonly sectionTipo: string;
+	/** The remote id, verbatim ('000065686'). */
+	readonly remoteId: string;
+	/** The wire provenance the derivation produced. */
+	readonly status: ExternalSourceStatus;
+	/** Whether the cell ended up with no value at all. */
+	readonly empty: boolean;
+}
+
+/**
+ * The MATRIX record address a flat-value resolver may read, or null when the
+ * id addresses no matrix record.
+ *
+ * The resolvers below take `number | string` because their input is RAW stored
+ * jsonb: a locator's `section_id` is an int (canonical), an unswept convertible
+ * string ('7'), or an EXTERNAL remote id ('000065686', 'Q42') that is the value
+ * itself (WC-2026-08-10-section-id-int-canonical). Only the first two are record
+ * addresses; the conversion rule is the shared one (`canonicalizeStoredSectionId`).
+ * A zero-padded id is NEVER Number()-ed into an address: '000065686' → 65686 is
+ * a different record (locally) and a different remote record (at the service).
+ */
+function matrixRecordAddress(sectionId: number | string): number | null {
+	const canonical = canonicalizeStoredSectionId(sectionId);
+	return isSectionId(canonical) ? canonical : null;
 }
 
 /** One resolved relation target: its RAW stored position + flat value parts. */
@@ -134,7 +185,8 @@ export interface RelationTargetValue {
  */
 export async function resolveRelationTargetValues(
 	sectionTipo: string,
-	sectionId: number,
+	/** The HOST record's id, raw (see matrixRecordAddress) — only an address reads. */
+	sectionId: number | string,
 	componentTipo: string,
 	lang: string,
 	unresolved: string[],
@@ -142,15 +194,13 @@ export async function resolveRelationTargetValues(
 ): Promise<RelationTargetValue[]> {
 	const model = await getModelByTipo(componentTipo);
 	if (model === null) return [];
+	const address = matrixRecordAddress(sectionId);
+	if (address === null) return [];
 	const table = await getMatrixTableFromTipo(sectionTipo);
 	if (table === null) return [];
 	// The loader seam consults AFTER the null-table early-return (parity
 	// keystone: a cached loader must never resolve what the default can't).
-	const record = await (opts?.loadRecord ?? memoizedReadMatrixRecord)(
-		table,
-		sectionTipo,
-		sectionId,
-	);
+	const record = await (opts?.loadRecord ?? memoizedReadMatrixRecord)(table, sectionTipo, address);
 	if (record === null) return [];
 
 	const column = getColumnNameByModel(model) ?? 'relation';
@@ -214,9 +264,18 @@ export async function resolveRelationTargetValues(
 					if (frameFlat !== null && frameFlat !== '') fieldParts.push(frameFlat);
 					continue;
 				}
+				// The target id VERBATIM: a mixed portal (rsc368) holds local ints
+				// AND zero-padded external remote ids ('000065686'), and Number()
+				// here asked the external service for record 65686 — a 400, or a
+				// DIFFERENT record. resolveCellValue decides per family: the external
+				// family keeps the string, every matrix family reads the address.
+				// A child ddo that does not belong to this target (a zenon1 column on
+				// a local rsc205 target) resolves to nothing — by data absence for
+				// the stored families, by ontology ownership for the external one
+				// (component_external/value.ts externalComponentAppliesTo).
 				const childValue = await resolveCellValue(
 					targetSection,
-					Number(targetId),
+					targetId as number | string,
 					child.tipo,
 					lang,
 					unresolved,
@@ -302,7 +361,7 @@ export async function resolveDataframeFlatValue(
 		for (const childTipo of frameChildTipos) {
 			const value = await resolveCellValue(
 				frameTarget.section_tipo,
-				Number(frameTarget.section_id),
+				frameTarget.section_id as number | string,
 				childTipo,
 				lang,
 				unresolved,
@@ -316,10 +375,62 @@ export async function resolveDataframeFlatValue(
 	return frameParts.length > 0 ? frameParts.join(frameSeparator) : null;
 }
 
+/**
+ * The EXTERNAL family's flat value (resolveCellValue's derived branch): the
+ * component_external's entries for the remote record, joined. The id travels
+ * VERBATIM (String, never Number: the remote id is zero-padded). A target
+ * section the component does not belong to (a local record in a mixed portal)
+ * derives nothing, with no remote call and no status.
+ */
+async function resolveExternalCellValue(
+	model: string,
+	sectionTipo: string,
+	sectionId: number | string,
+	componentTipo: string,
+	unresolved: string[],
+	itemSeparator: string,
+	opts: CellValueResolveOptions | undefined,
+): Promise<string | null> {
+	const { deriveExternalValue } = await import('../components/component_external/value.ts');
+	const remoteId = String(sectionId);
+	const derived = await deriveExternalValue(
+		componentTipo,
+		sectionTipo,
+		remoteId,
+		opts?.externalEmission === undefined ? {} : { emission: opts.externalEmission },
+	);
+	const status = derived.source_status;
+	if (status === undefined) {
+		return derived.entries.length > 0 ? derived.entries.join(itemSeparator) : null;
+	}
+	opts?.onExternalDegraded?.({
+		componentTipo,
+		sectionTipo,
+		remoteId,
+		status,
+		empty: derived.entries.length === 0,
+	});
+	if (derived.entries.length === 0) {
+		// An EMPTY degraded cell is reported unresolved: an export that silently
+		// ships blank bibliography columns is worse than one that says the
+		// source was unreachable. A degraded cell that still HAS values (stale,
+		// truncated) is a value, not a gap.
+		if (!unresolved.includes(model)) unresolved.push(model);
+		return null;
+	}
+	return derived.entries.join(itemSeparator);
+}
+
 /** One component's flat display string on one record (PHP get_value). */
 export async function resolveCellValue(
 	sectionTipo: string,
-	sectionId: number,
+	/**
+	 * The record's id, RAW: a matrix address (int, or its unswept convertible
+	 * string form) or an EXTERNAL remote id kept VERBATIM ('000065686'). The
+	 * external family consumes it as the remote id; every other family reads
+	 * the matrix address and resolves null for a non-address.
+	 */
+	sectionId: number | string,
 	componentTipo: string,
 	lang: string,
 	unresolved: string[],
@@ -337,28 +448,26 @@ export async function resolveCellValue(
 	// lookup would return null for every cell of a live section_list (zenon8
 	// lists zenon3..zenon6), which is a silent blank, not an absence.
 	if (getFlatValueFamily(model) === 'external') {
-		const { deriveExternalValue } = await import('../components/component_external/value.ts');
-		// section_id VERBATIM (String, not Number): the remote id is zero-padded.
-		const derived = await deriveExternalValue(componentTipo, sectionTipo, String(sectionId));
-		if (derived.entries.length === 0 && derived.source_status !== undefined) {
-			// An EMPTY degraded cell is reported unresolved: an export that silently
-			// ships blank bibliography columns is worse than one that says the
-			// source was unreachable. A degraded cell that still HAS values (stale,
-			// truncated) is a value, not a gap.
-			if (!unresolved.includes(model)) unresolved.push(model);
-		}
-		return derived.entries.length > 0 ? derived.entries.join(itemSeparator) : null;
+		return resolveExternalCellValue(
+			model,
+			sectionTipo,
+			sectionId,
+			componentTipo,
+			unresolved,
+			itemSeparator,
+			opts,
+		);
 	}
 
+	// Every other family reads the MATRIX record: a non-address (an external
+	// remote id reaching a stored-family column) addresses no row.
+	const address = matrixRecordAddress(sectionId);
+	if (address === null) return null;
 	const table = await getMatrixTableFromTipo(sectionTipo);
 	if (table === null) return null;
 	// The loader seam consults AFTER the null-table early-return (parity
 	// keystone: a cached loader must never resolve what the default can't).
-	const record = await (opts?.loadRecord ?? memoizedReadMatrixRecord)(
-		table,
-		sectionTipo,
-		sectionId,
-	);
+	const record = await (opts?.loadRecord ?? memoizedReadMatrixRecord)(table, sectionTipo, address);
 	if (record === null) return null;
 
 	// Per-model dispatch by the DESCRIPTOR's flatValue family (WS-B facet
@@ -369,7 +478,7 @@ export async function resolveCellValue(
 	if (family === 'section_id') {
 		// The record's own section_id (PHP component_section_id::get_value): the
 		// numeric id as a flat string. Used as an rsc424 relation_list column (rsc559).
-		return String(sectionId);
+		return String(address);
 	}
 
 	if (family === 'string') {
@@ -429,7 +538,7 @@ export async function resolveCellValue(
 			for (const labelTipo of frame.labelTipos) {
 				const label = await resolveCellValue(
 					frame.sectionTipo,
-					Number(frame.sectionId),
+					frame.sectionId,
 					labelTipo,
 					lang,
 					unresolved,
@@ -454,7 +563,7 @@ export async function resolveCellValue(
 	if (family === 'datalist') {
 		const targets = await resolveRelationTargetValues(
 			sectionTipo,
-			sectionId,
+			address,
 			componentTipo,
 			lang,
 			unresolved,

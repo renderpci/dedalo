@@ -21,7 +21,7 @@
  */
 
 import type { Ddo } from '../concepts/ddo.ts';
-import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
+import { canonicalizeStoredSectionId, isSectionId } from '../concepts/section_id.ts';
 import { dataframeEntryMatches } from '../concepts/subdatum.ts';
 import type { MatrixRecord } from '../db/matrix.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from '../ontology/resolver.ts';
@@ -112,7 +112,17 @@ async function targetChildShapes(
 			if (!ddoTargetsSection(childDdo, sectionTipo)) continue;
 			const childModel = await getModelByTipo(childDdo.tipo);
 			if (childModel === 'component_external') {
-				hasDerived = true;
+				// THE OWNERSHIP RULE (value.ts externalComponentAppliesTo), not the
+				// ddo's declaration: a ddo with NO section_tipo passes
+				// ddoTargetsSection for every target, and a component_external owned
+				// by zenon1 says nothing about a local rsc205 target — it resolves to
+				// nothing there, so it neither derives nor reads the stored row.
+				// Counting it as derived would send the LOCAL id to the service.
+				// An 'orphan' still counts: its own derivation renders it
+				// 'misconfigured' instead of letting the target vanish.
+				if ((await externalComponentApplies(childDdo.tipo, sectionTipo)) !== 'foreign') {
+					hasDerived = true;
+				}
 			} else if (childModel !== 'component_dataframe') {
 				// A dataframe pairs with the CALLER's record, never the locator
 				// target, so it says nothing about where the target is stored.
@@ -125,14 +135,41 @@ async function targetChildShapes(
 }
 
 /**
+ * The stored row a target id ADDRESSES, or null. Only a matrix address
+ * (`isSectionId`) has one; an external remote id ('000012281', verbatim) is
+ * never Number()-ed into a different local record (12281).
+ */
+async function loadAddressedRecord(
+	emission: EmissionContext,
+	table: string,
+	sectionTipo: string,
+	sectionId: number | string,
+): Promise<MatrixRecord | null> {
+	return isSectionId(sectionId) ? loadRecordCached(emission, table, sectionTipo, sectionId) : null;
+}
+
+/** value.ts externalComponentAppliesTo, reached lazily (core → component module, no static edge). */
+async function externalComponentApplies(
+	componentTipo: string,
+	targetSectionTipo: string,
+): Promise<'owner' | 'foreign' | 'orphan'> {
+	const { externalComponentAppliesTo } = await import('../components/component_external/value.ts');
+	return externalComponentAppliesTo(componentTipo, targetSectionTipo);
+}
+
+/**
  * The remote FIELD NAMES one external target section needs: the union of
  * `fields_map[].remote` over THE DDOS ACTUALLY IN THIS MAP that are compatible
  * with that section and are component_external.
  *
- * Deliberately NOT "every component_external descendant of the section", which
- * is what v6 did: it asked the service for fields nobody had asked to see, and
- * coupled the request (and therefore the row cache key) to unrelated ontology
- * edits elsewhere in the section.
+ * This is only what THIS map needs (it decides whether the target is worth
+ * prefetching at all). The REQUEST is wider: the row layer asks for the
+ * section's whole record field set (src/external/record_fields.ts — the id
+ * field + every field any of the section's component_external nodes maps), so
+ * a record is ONE request and ONE cache entry whichever map, cell or export
+ * asks first (2026-09-24, WC-2026-09-24-external-record-field-set — the v6
+ * shape, restored: asking per map dropped the row's own `id` and the identity
+ * check then refused every row).
  */
 async function collectRemoteFields(
 	childDdos: readonly Ddo[],
@@ -145,6 +182,9 @@ async function collectRemoteFields(
 	for (const childDdo of childDdos) {
 		if (!ddoTargetsSection(childDdo, targetSectionTipo)) continue;
 		if ((await getModelByTipo(childDdo.tipo)) !== 'component_external') continue;
+		// Only a component the target section OWNS asks the service anything
+		// (a foreign one resolves to nothing; an orphan has no service to ask).
+		if ((await externalComponentApplies(childDdo.tipo, targetSectionTipo)) !== 'owner') continue;
 		const properties = (await getPropertiesByTipo(childDdo.tipo)) as {
 			fields_map?: unknown;
 		} | null;
@@ -468,11 +508,14 @@ export async function expandPortal(
 			// Per-read cached read (targets repeat across a page's rows and nested
 			// expansions) — consulted AFTER the null-table early-return, same
 			// contract as the bare read it replaces.
-			targetRecord = await loadRecordCached(
+			// Only a matrix ADDRESS has a stored row. A non-address id (an external
+			// remote id '000012281', verbatim) is never Number()-ed into one — that
+			// read local record 12281 and rendered it as the remote record.
+			targetRecord = await loadAddressedRecord(
 				emission,
 				targetTable,
 				targetSectionTipo,
-				Number(targetSectionId),
+				targetSectionId,
 			);
 			if (targetRecord === null) {
 				// NO STORED ROW. v6 dispatches purely by component MODEL —
@@ -532,10 +575,6 @@ export async function expandPortal(
 			) {
 				continue;
 			}
-			// THIS filter is what makes a multi-engine child map safe, and why no
-			// api_engine branch is needed anywhere in the read path: a zenon1
-			// locator only ever sees the ddos declared at zenon1, an rsc205
-			// locator only the dedalo ones. Dispatch stays model-polymorphic.
 			// THIS filter is what makes a multi-engine child map safe, and why no
 			// api_engine branch is needed anywhere in the read path: a zenon1
 			// locator only ever sees the ddos declared at zenon1, an rsc205
@@ -796,9 +835,18 @@ export async function emitDataframeItem(
 		if (typeof targetSection !== 'string' || targetId === undefined) continue;
 		const table = await getMatrixTableFromTipo(targetSection);
 		if (table === null) continue;
-		const targetRecord = await loadRecordCached(emission, table, targetSection, Number(targetId));
+		// A matrix ADDRESS reads its stored row; anything else (an external remote
+		// id, verbatim — never Number()-ed into a different local record) has none,
+		// and only a DERIVED child (component_external) can render there, on the
+		// identity-only placeholder — the portal expansion's rule.
+		const frameTargetId = canonicalizeStoredSectionId(targetId) as number | string;
+		const isAddress = isSectionId(frameTargetId);
+		const targetRecord = isAddress
+			? await loadRecordCached(emission, table, targetSection, frameTargetId)
+			: externalTargetRecord(targetSection, frameTargetId);
 		if (targetRecord === null) continue;
 		for (const child of frame.ddos) {
+			if (!isAddress && (await getModelByTipo(child.tipo)) !== 'component_external') continue;
 			// Frame config children default to LIST mode (dd1715); declared modes
 			// pass through (rsc1246 edit).
 			const childMode = child.mode ?? 'list';
@@ -813,7 +861,7 @@ export async function emitDataframeItem(
 				} as Ddo,
 				[],
 				targetRecord,
-				{ section_tipo: targetSection, section_id: Number(targetId) },
+				{ section_tipo: targetSection, section_id: frameTargetId as number },
 				childMode,
 				requestLang,
 				callerTipo,
