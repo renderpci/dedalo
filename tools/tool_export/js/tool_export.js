@@ -11,40 +11,28 @@
 *
 * Responsibilities:
 * - Owns the instance state: the user's selected columns (`ar_ddo_to_export`),
-*   the active SQO (filter), streaming progress UI, and the accumulated
-*   `flat_table` result.
-* - Delegates rendering to `render_tool_export` (edit/build_export_component/
-*   sync_ar_ddo_to_export), drag-and-drop column reordering to `drag_tool_export`,
-*   and generic lifecycle (render/destroy/refresh) to `common`/`tool_common`.
-* - Exposes `get_export_grid()`, the streaming fetch entry point that posts an
-*   NDJSON export request to `dd_tools_api` and feeds the `flat_table`
-*   accumulator; also `get_export_xsl()` and `export_table_with_xlsx_lib()` for
-*   client-side format conversion.
+*   the active SQO (filter), and the CURRENT EXPORT (a server job — see the
+*   "SERVER-BUILT EXPORT" block below: the browser never holds the export).
+* - Delegates rendering to `render_tool_export` (edit / pager / downloads /
+*   build_export_component / sync_ar_ddo_to_export), drag-and-drop to
+*   `drag_tool_export`, and generic lifecycle to `common`/`tool_common`.
+* - Owns the export runtime's LIFETIME: `job_followers` (every job stream this
+*   tool opens), `export_timers`, `export_raf` and `export_abort` (in-flight
+*   preview requests) — all released by `reset_export_runtime()` on destroy and
+*   on every new Export click.
 * - Persists the user's column selection per `target_section_tipo` to IndexedDB
 *   (`update_local_db_data`) so it survives page reloads.
-*
-* Architecture (export pipeline):
-*   1. User picks columns → DOM = source of truth → `sync_ar_ddo_to_export()`
-*      rebuilds `ar_ddo_to_export` from DOM order.
-*   2. `get_export_grid()` posts to `dd_tools_api::tool_request →
-*      tool_export::get_export_grid()` (server forces sqo.limit='ALL').
-*   3. Server streams NDJSON (meta / col / row / end lines); each line is
-*      dispatched to `flat_table.process_line()`.
-*   4. `flat_table` renders the live HTML preview and supplies the data for
-*      CSV/TSV/ODS/XLSX/HTML/media downloads — single source of truth.
 *
 * Key state:
 *   - `self.ar_ddo_to_export`   – ordered array of DDO objects for selected columns
 *   - `self.sqo`                – the caller section's search query object (cloned for export)
 *   - `self.target_section_tipo`– the section being exported (may differ from caller)
-*   - `self.flat_table`         – the live `flat_table` instance (set after streaming starts)
-*   - `self.progress_ui`        – optional { container, bar, text_bg, text_fg } node refs
-*   - `self.total_records`      – record count from the server `meta` line
+*   - `self.export_state`       – the current export {job_id, status, pfile, …} (render_tool_export)
 *
 * Main exports: `tool_export` (constructor).
-* See: tools/tool_export/class.tool_export.php (server side),
+* See: tools/tool_export/server/ (index.ts actions, export_job.ts, preview.ts),
 *      tools/tool_export/js/render_tool_export.js,
-*      tools/tool_export/js/flat_table.js.
+*      tools/tool_export/js/flat_table.js (page renderer).
 */
 
 // import
@@ -52,8 +40,8 @@
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../../core/tools_common/js/tool_common.js'
+	import {create_job_follower_group} from '../../../core/common/js/job_follow.js'
 	import {render_tool_export} from './render_tool_export.js'
-	import {flat_table} from './flat_table.js'
 	import {
 		on_dragstart,
 		// on_dragend,
@@ -101,6 +89,19 @@ export const tool_export = function () {
 	// section elements. Left list of available section components to export
 	this.section_elements = []
 	this.section_elements_components_exclude = ['component_password']
+
+	// export runtime. THE LIFETIME of everything the current export view keeps
+	// open (see reset_export_runtime): job streams hold an HTTP connection each
+	// (job_follow.js), so they must be released, not merely muted.
+	this.job_followers	= create_job_follower_group()
+	this.export_timers	= new Set()
+	this.export_raf		= null
+	this.export_abort	= new AbortController()
+	// settle callbacks of file builds still waiting on their job: a reset
+	// cancels their follow (no on_done), so it must settle them itself
+	this.export_pending	= new Set()
+	// the current export (set by render_tool_export: run / reconnect)
+	this.export_state	= null
 }//end tool_export
 
 
@@ -111,7 +112,6 @@ export const tool_export = function () {
 */
 // prototypes assign
 	tool_export.prototype.render						= tool_common.prototype.render
-	tool_export.prototype.destroy						= common.prototype.destroy
 	tool_export.prototype.refresh						= common.prototype.refresh
 	tool_export.prototype.edit							= render_tool_export.prototype.edit
 	tool_export.prototype.build_export_component		= render_tool_export.prototype.build_export_component
@@ -188,9 +188,6 @@ tool_export.prototype.init = async function(options) {
 			self.target_section_tipo	= self.sqo.section_tipo // can be different to section_tipo
 			self.limit					= self.sqo.limit ?? 10
 			self.ar_ddo_to_export		= []
-
-			// const load_promise = import('../../../lib/sheetjs/dist/xlsx.full.min.js')
-			// await common.prototype.load_script(DEDALO_ROOT_WEB + '/lib/sheetjs/dist/xlsx.full.min.js')
 	} catch (error) {
 		self.error = error
 		console.error(error)
@@ -269,313 +266,376 @@ tool_export.prototype.get_section_id = function() {
 
 
 /**
- * GET_EXPORT_GRID
- * High-performance data fetcher using Fetch ReadableStreams and NDJSON.
- *
- * Consumes the flat-table export protocol (see flat_table.js and
- * tools/tool_export/class.export_tabulator.php): every line is a JSON
- * object discriminated by 't' (meta | col | row | end). Lines are
- * dispatched to a flat_table accumulator that also drives the live
- * HTML preview; CSV/TSV/XLSX downloads read the same flat data.
- *
- * Request shape:
- *   dd_api: 'dd_tools_api', action: 'tool_request', source: create_source(self, 'get_export_grid')
- *   options.section_tipo  – the caller's section_tipo (determines which records to fetch)
- *   options.sqo           – cloned from self.sqo, pagination untouched (server forces 'ALL')
- *   options.ar_ddo_to_export – the ordered column DDO array
- *   options.ndjson_stream = true
- *
- * Streaming flow:
- *   1. `data_manager.request_fetch_stream` opens the response body as a
- *      ReadableStream; chunks are decoded and split on '\n'.
- *   2. Each parsed line is dispatched via `flat_table.process_line()`.
- *   3. On 'meta': resolve the outer Promise with the flat_table instance
- *      so the caller can mount the preview while rows keep streaming.
- *   4. On 'row' with sub===0: advance the progress bar (one record per
- *      primary row; sub-rows share a record_id and are skipped for counting).
- *   5. On stream end: hide the progress bar (500 ms delay for 100 % visibility),
- *      remove 'loading' CSS class from action buttons.
- *
- * (!) The Promise is resolved on 'meta', NOT on stream end. Callers must NOT
- * await the returned promise as a "done" signal — attach follow-up work to
- * `flat_table.on_end` or poll/await `flat_table.end` instead.
- *
- * @param {Object} options - Export configuration.
- * @param {string} options.data_format - Export format: 'value' | 'grid_value' | 'dedalo_raw'.
- * @param {string} [options.breakdown='default'] - Breakdown mode: 'default' | 'rows' | 'columns'.
- * @param {Array}  options.ar_ddo_to_export - Ordered array of DDO objects defining export columns.
- * @param {boolean} [options.show_tipo_in_label] - Client-only: append ontology tipo to column headers.
- * @param {boolean} [options.fill_the_gaps] - Server-side: repeat spanning values on exploded rows.
- * @returns {Promise<flat_table|null>} Resolves with the live `flat_table` instance once
- *   the 'meta' protocol line arrives; resolves null if the stream fails to start or if
- *   the stream ends before 'meta' is received.
- */
-tool_export.prototype.get_export_grid = async function(options) {
+* THE SERVER-BUILT EXPORT — client half (tool_export at scale)
+*
+* The browser no longer receives the export. `build_export_artifact` runs as a
+* background job on the 'export' lane and writes every line of the export into
+* a SPOOL on the server; the preview reads ONE page of it
+* (`get_export_preview`), and every download is a file the server builds from
+* the whole spool (`build_export_file`, a background job on its own
+* 'export_file' lane, never queued behind a walk) and serves from
+* an owner-only GET route. Browser memory therefore does not depend on the
+* number of exported records.
+*
+* Wire (dd_tools_api::tool_request, source.action = the tool action;
+* server: tools/tool_export/server/{index,export_job,preview}.ts):
+*   build_export_artifact {section_tipo, model, data_format, breakdown,
+*       fill_the_gaps, ar_ddo_to_export, sqo, background_running:true}
+*       → ok(true) + extension keys {job_id (lane job), pfile, pid}.
+*       Frames (dd_utils_api::get_job_events): data = {msg, job_id (ARTIFACT
+*       id), written, total, is_running}; the terminal frame's data is the
+*       handler's envelope {ok, data:{job_id, status:'ended', total, records,
+*       rows, …}}, or errors:[…] on a failure / stop.
+*   get_export_preview {section_tipo, job_id, page, page_size}
+*       → {job_id, status, cols, final_order, rows, page, page_size,
+*          first_record, records, has_more, total_records, written_records}
+*   build_export_file {section_tipo, job_id, format, origin,
+*       show_tipo_in_label, media_qualities?, background_running:true}
+*       → lane job; terminal data = {ok, data:{job_id, format, basename, url,
+*         bytes, rows}}
+*   list_export_jobs {section_tipo} → {jobs:[{job_id, status, total, records,
+*       rows, data_format, breakdown, files,
+*       error:{code, label_key, message, retryable, details?}|null — only
+*       {code} for a code the registry no longer knows, …}],
+*       pending:[{background_job_id, submitted_at}]}
+*       newest first; `pending` = submitted walks with no manifest yet
+*       (queued in the lane) — reconnect follows the newest one
+*   delete_export_job {section_tipo, job_id} → {job_id, deleted:true,
+*       freed_bytes} — owner-only; refused with export.artifact_busy (409)
+*       while the export runs or a file is being built from it (Stop first)
+*   get_background_jobs {action} (framework) → [{id, action, status, …}]
+*   dd_utils_api::stop_process {pfile} — stops a lane job.
+*
+* Errors ride the envelope v2 contract: a refused call resolves with
+* `error` (an ApiError — request_failed / error_text), which data_manager has
+* already published to the page policy. Submissions are sent with retries:0 so
+* a retryable refusal (export.too_many_jobs, 429) reaches the user at once
+* instead of being retried silently behind a spinner.
+*/
+
+
+
+/**
+* EXPORT_RQO
+* The dd_tools_api::tool_request body of one tool_export action.
+* @param {Object} self - tool_export instance
+* @param {string} action - tool action name
+* @param {Object} options - action options
+* @returns {Object} rqo
+*/
+const export_rqo = function(self, action, options) {
+
+	return {
+		dd_api			: 'dd_tools_api',
+		action			: 'tool_request',
+		prevent_lock	: true,
+		source			: create_source(self, action),
+		options			: options
+	}
+}//end export_rqo
+
+
+
+/**
+* EXPORT_READ
+* A READ of the export (preview page, job list, lane jobs): retried by the
+* transport (retries:2) — a resent read changes nothing.
+* @param {Object} self - tool_export instance
+* @param {string} action - tool action name
+* @param {Object} options - action options
+* @param {AbortSignal|null} [signal]
+* @returns {Promise<Object>} the API envelope (test with request_failed)
+*/
+const export_read = function(self, action, options, signal=null) {
+
+	return data_manager.request({
+		body	: export_rqo(self, action, options),
+		signal	: signal || null,
+		retries	: 2,
+		timeout	: 30000
+	})
+}//end export_read
+
+
+
+/**
+* EXPORT_SUBMIT
+* A BACKGROUND submission (build_export_artifact / build_export_file). Never
+* retried (retries:0): a retryable refusal (export.too_many_jobs, 429) must
+* reach the user, and a resend could queue a second job.
+* @param {Object} self - tool_export instance
+* @param {string} action - tool action name
+* @param {Object} options - action options
+* @returns {Promise<Object>} the API envelope; extension keys job_id / pfile
+*/
+const export_submit = function(self, action, options) {
+
+	return data_manager.request({
+		body	: export_rqo(self, action, {...options, background_running: true}),
+		retries	: 0,
+		timeout	: 30000
+	})
+}//end export_submit
+
+
+
+/**
+* EXPORT_COMMAND
+* A foreground command that changes the caller's exports (delete_export_job).
+* Sent once (retries:0): the user sees the answer, and a lost answer is
+* settled by re-reading the job list, never by resending.
+* @param {Object} self - tool_export instance
+* @param {string} action - tool action name
+* @param {Object} options - action options
+* @returns {Promise<Object>} the API envelope
+*/
+const export_command = function(self, action, options) {
+
+	return data_manager.request({
+		body	: export_rqo(self, action, options),
+		retries	: 0,
+		timeout	: 30000
+	})
+}//end export_command
+
+
+
+/**
+* START_EXPORT_JOB
+* Submit build_export_artifact as a background job with the tool's current
+* export options (the same options the old NDJSON stream sent).
+* @param {Object} options - {data_format, breakdown, ar_ddo_to_export, fill_the_gaps}
+* @returns {Promise<Object>} envelope; on success the extension keys `job_id`
+*   (lane job, followable) and `pfile` (stop_process handle)
+*/
+tool_export.prototype.start_export_job = function(options) {
 
 	const self = this
-
-	// options
-		const data_format			= options.data_format
-		const breakdown				= options.breakdown || 'default'
-		const ar_ddo_to_export		= options.ar_ddo_to_export
-		const show_tipo_in_label	= options.show_tipo_in_label
-		const fill_the_gaps			= options.fill_the_gaps
 
 	// sqo. The caller's filter, cloned. No limit/offset override: the export
-	// grid forces the internal 'ALL' sentinel server-side (src/diffusion/export/
-	// grid.ts, after sanitizeClientSqo) so the export always serialises the whole
-	// filtered selection — a client `limit: 0` here was an undeclared ask the
-	// server clamped and then overrode (audit P2-31).
-		const sqo = clone(self.sqo)
+	// grid forces the internal 'ALL' sentinel server-side (grid.ts, after
+	// sanitizeClientSqo), so the export always covers the whole filtered selection.
+	const sqo = clone(self.sqo)
 
-	// source. Note that second argument is the name of the function to manage the tool request like 'get_export_grid'
-	// this generates a call as my_tool_name::my_function_name(options)
-		const source = create_source(self, 'get_export_grid')
-
-	// API request options
-		const rqo = {
-			dd_api			: 'dd_tools_api',
-			action			: 'tool_request',
-			source			: source,
-			prevent_lock	: true, // close session to unlock the browser and allow to abort
-			options			: {
-				section_tipo		: self.caller.section_tipo, // section that call to the tool, it will be used to get the records from db
-				model				: self.caller.model,
-				data_format			: data_format, // format selected by the user to get data
-				breakdown			: breakdown, // relation explosion mode: default | rows | columns
-				fill_the_gaps		: fill_the_gaps, // server-side fill of spanning values
-				ar_ddo_to_export	: ar_ddo_to_export, // array with the ddo map and paths to get the info (per-ddo value_with_parents rides here — WC-049)
-				sqo					: sqo,
-				ndjson_stream		: true
-			}
-		}
-
-	// STREAMING REQUEST (Fetch Stream / NDJSON)
-	const stream = await data_manager.request_fetch_stream({ body: rqo });
-
-	if (!stream) {
-		console.error("Failed to start stream");
-		return null;
-	}
-
-	// flat_table accumulator (also the live preview renderer)
-		const table = new flat_table()
-		table.config.show_tipo_in_label = show_tipo_in_label
-		self.flat_table = table
-
-	const reader	= stream.getReader();
-	const decoder	= new TextDecoder();
-	let buffer		= '';
-	let resolved	= false;
-	let records_processed = 0;
-	if (self.progress_ui) {
-		self.progress_ui.container.classList.remove('no_visible');
-		self.progress_ui.bar.style.width = '0%';
-		const initial_text = `0 / ${self.total_records || '?'}`;
-		self.progress_ui.text_bg.innerText = initial_text;
-		self.progress_ui.text_fg.innerText = initial_text;
-		// clipPath 'inset(0 100% 0 0)' hides the foreground text entirely at 0 %
-		self.progress_ui.text_fg.style.clipPath = 'inset(0 100% 0 0)';
-	}
-
-	// Use a promise to resolve with the flat_table as soon as the meta line arrives
-	return new Promise(async (resolve, reject) => {
-		try {
-			while (true) {
-				const { value, done } = await reader.read();
-
-				if (done) {
-					if (SHOW_DEBUG) console.log("Stream: Finished reading");
-					if (self.progress_ui) {
-						// Small delay before hiding to show 100%
-						setTimeout(() => {
-							self.progress_ui.container.classList.add('no_visible');
-							self.progress_ui.bar.style.width = '0%';
-							const initial_text = `0 / ${self.total_records || '?'}`;
-							self.progress_ui.text_bg.innerText = initial_text;
-							self.progress_ui.text_fg.innerText = initial_text;
-
-							// Activates the download buttons
-							if (self.export_buttons_options) {
-								self.export_buttons_options.classList.remove('loading');
-								self.export_buttons_options.scrollIntoView({ behavior: 'smooth', block: 'start' })
-							}
-						}, 500);
-					}
-
-					// Activates the button export
-					if (self.button_export) {
-						self.button_export.classList.remove('loading');
-					}
-					if (!resolved) {
-						resolve(null);
-					}
-					break;
-				}
-
-				if (SHOW_DEBUG) console.log("Stream: Received chunk", { length: value.length, time: performance.now() });
-
-				buffer += decoder.decode(value, { stream: true });
-				const lines = buffer.split('\n');
-				buffer = lines.pop(); // Keep partial line for next chunk
-
-				for (const line of lines) {
-					if (!line.trim()) continue; // skip padding / blank lines
-					const line_data = JSON.parse(line);
-
-					// dispatch to the accumulator (renders the preview too)
-					table.process_line(line_data);
-
-					switch (line_data.t) {
-						case 'meta':
-							// total from the server when available
-							if (line_data.total) {
-								self.total_records = line_data.total;
-							}
-							if (!resolved) {
-								resolved = true;
-								resolve(table);
-							}
-							break;
-
-						case 'row':
-							// progress per record (sub rows belong to the same record)
-							if (line_data.sub===0) {
-								records_processed++;
-								if (self.progress_ui && self.total_records) {
-									const percent = Math.min(100, Math.round((records_processed / self.total_records) * 100));
-									self.progress_ui.bar.style.width = percent + '%';
-									const current_text = `${records_processed} / ${self.total_records}`;
-									self.progress_ui.text_bg.innerText = current_text;
-									self.progress_ui.text_fg.innerText = current_text;
-									// clipPath reveals the coloured fg text proportionally to percent
-									self.progress_ui.text_fg.style.clipPath = `inset(0 ${100 - percent}% 0 0)`;
-								}
-							}
-							break;
-
-						default:
-							break;
-					}
-				}
-			}
-		} catch (error) {
-			console.error("Error reading stream:", error);
-			// Activates the download buttons even on error to allow retry
-			if (self.export_buttons_options) {
-				self.export_buttons_options.classList.remove('loading');
-			}
-			reject(error);
-		}
-	});
-}//end get_export_grid
+	return export_submit(self, 'build_export_artifact', {
+		section_tipo		: self.caller.section_tipo,
+		model				: self.caller.model,
+		data_format			: options.data_format,
+		breakdown			: options.breakdown || 'default',
+		fill_the_gaps		: options.fill_the_gaps,
+		ar_ddo_to_export	: options.ar_ddo_to_export,
+		sqo					: sqo
+	})
+}//end start_export_job
 
 
 
 /**
-* GET_EXPORT_XSL
-* Converts an HTML `<table>` node to a legacy Excel-compatible `.xls` file
-* and triggers a browser download via a synthetic `<a>` click.
-*
-* Uses the old Microsoft Office XML Spreadsheet format (MIME
-* `application/vnd.ms-excel`) encoded as a base-64 data URI; this avoids
-* any server round-trip and works in all modern browsers.  The method is
-* kept for backward compatibility — new export paths prefer `export_table_with_xlsx_lib`
-* (SheetJS) which produces a genuine `.xlsx` binary.
-*
-* (!) The `table` parameter is `options.table.firstChild`, NOT the outer
-* wrapper element; callers must ensure `options.table` has a `<table>` as
-* its first child. If `options.table` is already the `<table>` element itself,
-* `.firstChild` will resolve to the first `<thead>` or `<tbody>` and the output
-* will be malformed.
-*
-* @param {Object} options - Conversion options.
-* @param {HTMLElement} options.table - Container whose `firstChild` is the
-*   `<table>` element to serialise.
-* @param {string} options.filename - The suggested download filename (e.g. `"export.xls"`).
-* @returns {Promise<boolean>} Resolves `true` after the synthetic link is clicked.
+* GET_EXPORT_PREVIEW
+* One page of an export (records, never split).
+* @param {Object} options - {job_id, page, page_size?, col_page?, signal?}
+* @returns {Promise<Object>} envelope; data = the preview page (one column
+*   window: cols, col_page, col_page_size, first_col, total_cols, col_models)
 */
-tool_export.prototype.get_export_xsl = async function (options) {
+tool_export.prototype.get_export_preview = function(options) {
 
 	const self = this
 
-	// const workbook = XLSX.utils.book_new();
-	// const ws1 = XLSX.utils.table_to_book(table);
-	// console.log("ws1:",ws1);
-	// XLSX.utils.book_append_sheet(workbook, ws1, "Sheet1");
- 	// 	// const workbook = XLSX.read(table, {type:'string'});
-	// XLSX.writeFile(workbook, 'out.csv' );
-
-	const table		= options.table.firstChild //.outerHTML
-	const name		= self.caller.section_tipo
-	const filename	= options.filename
-
-	// function tableToExcel(table, name, filename) {
-	const uri = 'data:application/vnd.ms-excel;base64,',
-	template = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><meta charset="UTF-8"/><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>{worksheet}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table>{table}</table></body></html>',
-	base64 = function(head_nodes) {
-		return window.btoa(decodeURIComponent(encodeURIComponent(head_nodes)))
-	},
-	format = function(template, ctx) {
-		return template.replace(/{(\w+)}/g,
-			function(m, p) {
-				return ctx[p];
-			})
+	const fn_options = {
+		section_tipo	: self.caller.section_tipo,
+		job_id			: options.job_id,
+		page			: options.page || 0,
+		col_page		: options.col_page || 0
+	}
+	if (options.page_size) {
+		fn_options.page_size = options.page_size
 	}
 
-	// if (!table.nodeType) table = document.getElementById(table)
-	const ctx = {
-		worksheet	: name || 'Worksheet',
-		table		: table.innerHTML
-	}
-
-	const link = document.createElement('a');
-	link.download = filename;
-	link.href = uri + base64(format(template, ctx));
-	link.click();
-
-	return true
-}//end get_export_xsl
+	return export_read(self, 'get_export_preview', fn_options, options.signal)
+}//end get_export_preview
 
 
 
 /**
-* EXPORT_TABLE_WITH_XLSX_LIB
-* Converts an HTML `<table>` node to a binary `.xlsx` file and triggers
-* a browser download using the SheetJS (`xlsx.js`) library.
-*
-* The library is **dynamically imported** on first call (lazy-load), so it is
-* only downloaded by the browser when the user actually requests an XLSX export.
-* The import path resolves to a local copy at `DEDALO_ROOT_WEB/lib/xlsx/xlsx.mjs`
-* (downloaded from https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs).
-*
-* The `{"raw":true}` option tells SheetJS to keep cell values as-is without
-* attempting type inference; this preserves leading zeros and long numeric strings
-* that would otherwise be coerced.
-*
-* See: https://docs.sheetjs.com/docs/getting-started/installation/standalone#ecmascript-module-imports
-*
-* @param {Object} options - Conversion options.
-* @param {HTMLElement} options.table - The `<table>` DOM element to export.
-*   Must be mounted in the document (SheetJS reads computed layout).
-* @param {string} options.filename - Suggested download filename including
-*   the `.xlsx` extension (e.g. `"records_rsc167.xlsx"`).
-* @returns {Promise<void>} Resolves once `XLSX.writeFile` triggers the download.
+* LIST_EXPORT_JOBS
+* The caller's exports of this section, newest first (the reconnect wire).
+* @param {Object} [options] - {signal?}
+* @returns {Promise<Object>} envelope; data = {jobs:[…]}, each job's `error`
+*   = {code, label_key, message, retryable, details?} | null (only {code} for a
+*   code the registry no longer knows)
 */
-tool_export.prototype.export_table_with_xlsx_lib = async function( options ) {
+tool_export.prototype.list_export_jobs = function(options={}) {
 
-	// dynamically import the library when is fired this function with the event listener
-	// downloaded library from https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs
-  	const XLSX = await import( DEDALO_ROOT_WEB+"/lib/xlsx/xlsx.mjs" );
+	const self = this
 
-	const table		= options.table
-	const filename	= options.filename
+	return export_read(self, 'list_export_jobs', {
+		section_tipo : self.caller.section_tipo
+	}, options.signal)
+}//end list_export_jobs
 
-	const workbook = XLSX.utils.table_to_book(table, {"raw":true})
 
-	// Export the workbook to Excel file
-	XLSX.writeFile(workbook, filename);
-}// end export_table_with_xlsx_lib
+
+/**
+* DELETE_EXPORT_JOB
+* Delete one of the caller's exports of this section with all its files (the
+* spool and every built download), freeing its bytes of the user's quota. The
+* server refuses a running export or one a file is being built from
+* (export.artifact_busy): stop it first.
+* @param {string} job_id - the artifact id
+* @returns {Promise<Object>} envelope; data = {job_id, deleted, freed_bytes}
+*/
+tool_export.prototype.delete_export_job = function(job_id) {
+
+	const self = this
+
+	return export_command(self, 'delete_export_job', {
+		section_tipo	: self.caller.section_tipo,
+		job_id			: job_id
+	})
+}//end delete_export_job
+
+
+
+/**
+* GET_BACKGROUND_JOBS
+* The caller's lane jobs of this tool (framework action), newest first — how a
+* reopened tool finds the lane job (follow + stop handle) of a running export.
+* @param {string} action - e.g. 'build_export_artifact'
+* @param {Object} [options] - {signal?}
+* @returns {Promise<Object>} envelope; data = [{id, action, status, started_at, …}]
+*/
+tool_export.prototype.get_background_jobs = function(action, options={}) {
+
+	const self = this
+
+	return export_read(self, 'get_background_jobs', {action: action}, options.signal)
+}//end get_background_jobs
+
+
+
+/**
+* START_EXPORT_FILE
+* Submit build_export_file (background): one downloadable file of an ENDED
+* export. `origin` lets the server write the same absolute media links the
+* browser would have.
+* @param {Object} options - {job_id, format, show_tipo_in_label, media_qualities?}
+* @returns {Promise<Object>} envelope; extension keys job_id / pfile as above
+*/
+tool_export.prototype.start_export_file = function(options) {
+
+	const self = this
+
+	const fn_options = {
+		section_tipo		: self.caller.section_tipo,
+		job_id				: options.job_id,
+		format				: options.format,
+		origin				: window.location.origin,
+		show_tipo_in_label	: options.show_tipo_in_label===true
+	}
+	if (options.media_qualities && typeof options.media_qualities==='object') {
+		fn_options.media_qualities = options.media_qualities
+	}
+
+	return export_submit(self, 'build_export_file', fn_options)
+}//end start_export_file
+
+
+
+/**
+* STOP_EXPORT_PROCESS
+* Stop a lane job (the export or a file build) by its pfile handle. The server
+* aborts the job at its next batch boundary and deletes the partial spool.
+* @param {string} pfile - '<lane job id>.json'
+* @returns {Promise<Object>} envelope
+*/
+tool_export.prototype.stop_export_process = function(pfile) {
+
+	return data_manager.request({
+		body : {
+			dd_api	: 'dd_utils_api',
+			action	: 'stop_process',
+			options	: {
+				pfile : pfile
+			}
+		},
+		retries : 0
+	})
+}//end stop_export_process
+
+
+
+/**
+* RESET_EXPORT_RUNTIME
+* Release EVERYTHING the current export view holds open: every job stream
+* (the connection, not just the callback — job_follow.js) and whatever waits
+* on one (pending file builds are settled as abandoned), the preview timer,
+* the pending rAF of the progress bar, and every in-flight preview / list
+* request (their shared AbortController). Called on destroy and on every new
+* Export click. It never stops a server job (stop_export_process does that).
+* @returns {AbortSignal} a fresh signal for the next run's requests
+*/
+tool_export.prototype.reset_export_runtime = function() {
+
+	const self = this
+
+	if (self.job_followers) {
+		self.job_followers.cancel_all()
+	}
+	// a cancelled follow never reports its end: release what waits on it (the
+	// download button's busy state, the media modal's awaited promise)
+	if (self.export_pending) {
+		const pending = [...self.export_pending]
+		self.export_pending.clear()
+		for (const settle of pending) {
+			settle()
+		}
+	}
+	if (self.export_timers) {
+		for (const timer of self.export_timers) {
+			clearTimeout(timer)
+		}
+		self.export_timers.clear()
+	}
+	if (self.export_raf) {
+		cancelAnimationFrame(self.export_raf)
+		self.export_raf = null
+	}
+	if (self.export_abort) {
+		self.export_abort.abort()
+	}
+	self.export_abort = new AbortController()
+
+	return self.export_abort.signal
+}//end reset_export_runtime
+
+
+
+/**
+* DESTROY
+* On an instance destroy (delete_self) release the export runtime (streams,
+* timers, requests), then the generic common destroy. The server-side job keeps running: reopening the tool
+* reconnects to it (list_export_jobs).
+* @param {boolean} [delete_self=true]
+* @param {boolean} [delete_dependencies=false]
+* @param {boolean} [remove_dom=false]
+* @returns {Promise<Object>}
+*/
+tool_export.prototype.destroy = async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
+
+	const self = this
+
+	// Only a destroy of the INSTANCE releases the runtime. A refresh destroys
+	// with delete_self=false and re-renders: the current export must keep being
+	// followed, and the new DOM repaints it (get_content_data_edit).
+	if (delete_self===true) {
+		self.reset_export_runtime()
+		// no request may start after the tool is gone
+		self.export_abort.abort()
+		self.export_state = null
+	}
+
+	return common.prototype.destroy.call(this, delete_self, delete_dependencies, remove_dom)
+}//end destroy
 
 
 

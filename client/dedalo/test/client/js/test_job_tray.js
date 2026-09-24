@@ -36,6 +36,7 @@ import {create_job_follower_group, follow_job, format_elapsed} from '../../../co
 import {data_manager, release_stream_reader} from '../../../core/common/js/data_manager.js'
 import {get_floating_dock} from '../../../core/common/js/floating_dock.js'
 import {render_job_tray} from '../../../core/page/js/job_tray.js'
+import {ERROR_SIGNAL, reset_error_dispatch_state} from '../../../core/common/js/error_dispatch.js'
 
 
 
@@ -280,6 +281,71 @@ describe('JOB TRAY / LONG-PROCESS MONITORING CLIENT TEST', function() {
 			assert.equal(registry.length, before, 'expected every reader dropped from the shared registry')
 		})
 	})
+
+	// ── A JOB'S FAILURE IS THE JOB'S, NOT THE PAGE'S ──────────────────────────
+	// Measured defect (2026-09-24): job frames began carrying a typed `error`, and
+	// follow_job sent every one through the PAGE policy. A background export
+	// refused with 'perm.denied' (one locator into a record outside the user's
+	// projects) ran 'no_access_page' → page_globals.page_error, and every render
+	// on the page drew the no-access panel until a reload. An untyped worker
+	// failure ('internal.unexpected') added a toast + the defect-report signal on
+	// top of the row the caller already paints. Only the session class
+	// ('relogin') may leave follow_job; the rest reaches the caller in the frame.
+	const follow_terminal_frame = async (frame) => {
+		const original = data_manager.request_stream
+		data_manager.request_stream = async () => {
+			return new ReadableStream({
+				start : (controller) => {
+					controller.enqueue(new TextEncoder().encode(`data:\n${JSON.stringify(frame)}\n\n`))
+					controller.close()
+				}
+			})
+		}
+		try {
+			return await new Promise((resolve, reject) => {
+				const timer = setTimeout(() => reject(new Error('follow_job never finished')), 3000)
+				follow_job('test_job_failed', {
+					on_done : (done_frame) => {
+						clearTimeout(timer)
+						// let a (non-awaited) dispatch run before the caller asserts
+						setTimeout(() => resolve(done_frame), 50)
+					}
+				})
+			})
+		} finally {
+			data_manager.request_stream = original
+		}
+	}
+
+	for (const code of ['perm.denied', 'perm.out_of_scope', 'internal.unexpected']) {
+		it(`a terminal job frame with error '${code}' stays JOB-scoped (no page error, no signal)`, async () => {
+			const had_page_error	= Object.hasOwn(page_globals, 'page_error')
+			const saved_page_error	= page_globals.page_error
+			page_globals.page_error = undefined
+			reset_error_dispatch_state()
+			let signals = 0
+			const on_signal = () => { signals++ }
+			window.addEventListener(ERROR_SIGNAL, on_signal)
+			try {
+				const frame = {
+					id			: 'test_job_failed',
+					is_running	: false,
+					status		: 'error',
+					errors		: ['refused'],
+					error		: {code, message:'refused'}
+				}
+				const done_frame = await follow_terminal_frame(frame)
+				assert.ok(done_frame?.error?.code===code, 'expected the caller handed the terminal frame with its error')
+				assert.ok(!page_globals.page_error, `expected no page_globals.page_error from a job's '${code}' — it blanks every later render`)
+				assert.equal(signals, 0, `expected no page-wide error signal from a job's '${code}'`)
+			} finally {
+				window.removeEventListener(ERROR_SIGNAL, on_signal)
+				reset_error_dispatch_state()
+				// restore the slot as found (an absent slot and an undefined one read the same)
+				page_globals.page_error = had_page_error ? saved_page_error : undefined
+			}
+		})
+	}
 })
 
 // @license-end

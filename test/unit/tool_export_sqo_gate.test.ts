@@ -9,12 +9,20 @@
  * boundary from the dd774 section grant. So without the handler assertion, a
  * caller who passes the first gate on a section they can read could name a
  * section they cannot read inside `sqo.section_tipo` and export it.
+ *
+ * The background artifact job (build_export_artifact, export_job.ts) runs the
+ * same producer, so it runs the SAME gate — asserted here too, and it refuses
+ * before any job directory exists.
  */
 
 import { describe, expect, test } from 'bun:test';
+import { existsSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import type { ToolActionContext } from '../../src/core/tools/module.ts';
+import { openArtifactStore } from '../../tools/tool_export/server/artifact_store.ts';
+import { toolExportBuildArtifact } from '../../tools/tool_export/server/export_job.ts';
 import { toolExportGetExportGrid } from '../../tools/tool_export/server/tool_export.ts';
 import { mustGet } from '../helpers/assert.ts';
 import { refusalOf } from '../helpers/refusal.ts';
@@ -26,7 +34,13 @@ const contextOf = (
 	options: Record<string, unknown>,
 	principal: Principal = SUPERUSER,
 ): ToolActionContext =>
-	({ principal, userId: principal.userId, options, background: false }) as ToolActionContext;
+	({
+		principal,
+		userId: principal.userId,
+		options,
+		background: false,
+		applicationLang: 'lg-spa',
+	}) as ToolActionContext;
 
 const baseOptions = (sqo: Record<string, unknown> | undefined): Record<string, unknown> => ({
 	section_tipo: 'test3',
@@ -39,18 +53,87 @@ const baseOptions = (sqo: Record<string, unknown> | undefined): Record<string, u
 	...(sqo === undefined ? {} : { sqo }),
 });
 
+/** Every action of the module and the lane each background one runs on. */
+const ACTIONS = [
+	'build_export_artifact',
+	'build_export_file',
+	'components_with_parent',
+	'delete_export_job',
+	'get_export_grid',
+	'get_export_preview',
+	'list_export_jobs',
+];
+const BACKGROUND_LANES = {
+	build_export_artifact: 'export',
+	build_export_file: 'export_file',
+} as const;
+
 describe('tool_export module surface', () => {
-	test('both actions are READ-gated on the section', async () => {
+	// CONTRACT EDIT (tool_export at scale): the module gained the server-built
+	// export — two BACKGROUND actions on the 'export' lane and two reads of the
+	// caller's own jobs; then (2026-09-24) the owner's delete_export_job,
+	// foreground. What this pin still guards: every action is READ-gated
+	// on the section (none may widen to a write level or a null gate), and
+	// get_export_grid stays the synchronous stream — never backgroundable.
+	test('every action is READ-gated on the section', async () => {
 		const loaded = await getLoadedTool('tool_export');
 		const actions = loaded?.module.apiActions ?? {};
-		expect(Object.keys(actions).sort()).toEqual(['components_with_parent', 'get_export_grid']);
-		for (const name of ['get_export_grid', 'components_with_parent']) {
+		expect(Object.keys(actions).sort()).toEqual(ACTIONS);
+		for (const name of ACTIONS) {
 			const spec = mustGet(actions[name], name);
 			expect(spec.permission).toBe('section');
 			expect(spec.minLevel).toBe(1);
 		}
-		// An export is a synchronous stream/buffer, never a background job.
-		expect(loaded?.module.backgroundRunnable).toBeUndefined();
+	});
+
+	test('only the two job actions run in the background, on the export lane', async () => {
+		const loaded = await getLoadedTool('tool_export');
+		expect([...(loaded?.module.backgroundRunnable ?? [])].sort()).toEqual(
+			Object.keys(BACKGROUND_LANES).sort(),
+		);
+		expect(loaded?.module.backgroundLanes).toEqual(BACKGROUND_LANES);
+		// The stream is never a background job (it answers the request itself).
+		expect(loaded?.module.backgroundRunnable).not.toContain('get_export_grid');
+	});
+});
+
+describe('build_export_artifact — the same sqo section gate, before anything is written', () => {
+	/** The caller's job directories under the (suite-derived) default export root. */
+	const ownerJobs = (userId: number): string[] => {
+		const dir = join(openArtifactStore().root, String(userId));
+		return existsSync(dir) ? readdirSync(dir).sort() : [];
+	};
+
+	test('an sqo naming a section the caller cannot read is refused', async () => {
+		const before = ownerJobs(NO_ACCESS.userId);
+		const refusal = await refusalOf(
+			toolExportBuildArtifact({
+				...contextOf(baseOptions({ section_tipo: ['test3'], limit: 1, offset: 0 }), NO_ACCESS),
+				background: true,
+			}),
+		);
+		expect(refusal.code).toBe('perm.denied');
+		// Refused BEFORE the job exists: no job directory was created.
+		expect(ownerJobs(NO_ACCESS.userId)).toEqual(before);
+	});
+
+	test('a non-string sqo section entry is refused (fail closed)', async () => {
+		const before = ownerJobs(SUPERUSER.userId);
+		const refusal = await refusalOf(
+			toolExportBuildArtifact({
+				...contextOf(baseOptions({ section_tipo: [{ evil: true }], limit: 1, offset: 0 })),
+				background: true,
+			}),
+		);
+		expect(refusal.code).toBe('perm.denied');
+		expect(ownerJobs(SUPERUSER.userId)).toEqual(before);
+	});
+
+	test('a foreground call is refused (the export lane is the concurrency budget)', async () => {
+		const refusal = await refusalOf(
+			toolExportBuildArtifact(contextOf(baseOptions({ section_tipo: ['test3'] }))),
+		);
+		expect(refusal.code).toBe('request.invalid_options');
 	});
 });
 

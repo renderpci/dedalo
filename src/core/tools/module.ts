@@ -18,6 +18,7 @@
 import type { ApiEnvelope } from '../errors/schema.ts';
 import type { JobLane } from '../media/jobs.ts';
 import type { Principal } from '../security/permissions.ts';
+import type { ReadDoorPosture } from '../security/read_door.ts';
 import { currentRequestContext } from '../security/request_context.ts';
 
 /**
@@ -70,6 +71,24 @@ export interface ToolActionContext {
 	 * running under the executor degrades to '' instead of crashing.
 	 */
 	requestId?: string;
+	/**
+	 * The lane job's id (the job manager's record — the id job_follow streams
+	 * and stop_process stops), present ONLY under the background executor. A
+	 * handler whose work outlives the request stores it beside its product
+	 * (tool_export's manifest.background_job_id), so a reopened client can tie
+	 * the product to the job that is writing it without guessing.
+	 */
+	backgroundJobId?: string;
+	/**
+	 * The submitter's INTERFACE lang, captured at SUBMIT time by the background
+	 * executor (scheduleBackground runs in the request's synchronous flow) and
+	 * present ONLY under it. A handler whose output carries the interface lang
+	 * (tool_export's manifest + period labels) reads THIS, never the ambient
+	 * currentApplicationLang(): a queued job starts when another job's release
+	 * grants its lane slot, and which request-lang scope that continuation runs
+	 * in is the job manager's implementation detail, not a contract.
+	 */
+	applicationLang?: string;
 }
 
 /**
@@ -154,7 +173,33 @@ export interface GatedToolActionSpec {
 	 * that reads a scope off a nested key to this extractor.
 	 */
 	targets?: (options: Record<string, unknown>) => WriteTarget[];
+	/**
+	 * OPTIONAL ADMISSION: the tool's own policy on whether this request may run
+	 * NOW (a per-user cap on queued background jobs, say). Called AFTER the
+	 * permission gate and BEFORE the handler or the background fork, so a
+	 * refusal is synchronous and nothing is queued; it refuses by throwing a
+	 * typed DedaloError. The policy is the tool's — the framework only
+	 * guarantees WHEN it runs.
+	 *
+	 * SYNCHRONOUS BY CONTRACT. For a background request the hook runs INSIDE
+	 * scheduleBackground, in the same synchronous step that registers the job:
+	 * a policy that counts the job registry is then a check-and-act no other
+	 * request can interleave with (an `await` between the count and the
+	 * registration let concurrent submissions of one user all pass a cap).
+	 * A hook returning a promise is refused as `internal.invariant` — its
+	 * refusal would arrive after the job was already queued.
+	 */
+	admit?: (context: ToolAdmissionContext) => void;
 	handler: (context: ToolActionContext) => Promise<ToolResponse>;
+}
+
+/** What an action's `admit` hook sees: the caller and the request, before any work. */
+export interface ToolAdmissionContext {
+	principal: Principal;
+	userId: number;
+	options: Record<string, unknown>;
+	/** True when the request asks for the background executor (`options.background_running`). */
+	background: boolean;
 }
 
 /**
@@ -207,6 +252,8 @@ export interface ExemptToolActionSpec {
 	minLevel?: never;
 	sectionTipos?: never;
 	targets?: never;
+	/** See GatedToolActionSpec.admit (synchronous by contract). */
+	admit?: (context: ToolAdmissionContext) => void;
 	handler: (context: ToolActionContext) => Promise<ToolResponse>;
 }
 
@@ -260,7 +307,79 @@ export interface ToolServerModule {
 	onRegister?: () => Promise<void>;
 	/** Removal hook (PHP on_remove) — framework-called, failures logged not fatal. */
 	onRemove?: () => Promise<void>;
+	/**
+	 * HTTP GET routes the tool serves OUTSIDE `dd_tools_api` (a file download —
+	 * tool_export's built artifacts). This is how a tool gets a route WITHOUT
+	 * src/ naming the tool: server.ts asks the loaded registry
+	 * (`loader.ts toolHttpRouteFor`), never a tool path.
+	 *
+	 * Safety by construction (validated by the loader, a bad route fails only its
+	 * tool): the prefix grammar is `/dedalo/<seg>[/<seg>…]/`; its first segment
+	 * may not be one the client tree or the engine's tool assets own
+	 * (`TOOL_ROUTE_RESERVED_SEGMENTS`); two tools may not claim overlapping
+	 * prefixes (first root/name wins, the other tool is refused). The router
+	 * consults tool routes AFTER every engine route and just before the client
+	 * static tree, so no tool route can shadow an engine one. The handler does
+	 * its own authentication — the router passes the raw request.
+	 */
+	httpRoutes?: readonly ToolHttpRoute[];
+	/**
+	 * Boot hook — framework-called ONCE per serving boot (not in install mode or
+	 * a smoke boot), after the registry loads (`loader.ts startToolBootHooks`).
+	 * For timers the tool owns (tool_export's TTL sweeper). MUST NOT block: arm
+	 * and return. The returned handle is stopped on shutdown. A throw is logged,
+	 * never fatal — a tool never stops the archive from serving.
+	 */
+	onBoot?: () => ToolBootHandle | undefined;
 }
 
+/** One tool-served HTTP GET route (see `ToolServerModule.httpRoutes`). */
+export interface ToolHttpRoute {
+	/** `/dedalo/<seg>[/<seg>…]/` — lowercase [a-z0-9_] segments, trailing slash. */
+	pathPrefix: string;
+	/** Answer the request, or null for the engine's 404. */
+	handle: (request: Request, pathname: string) => Promise<Response | null>;
+	/**
+	 * The route's READ POSTURE against the component read grant — the same
+	 * classification every other read door carries (security/read_door.ts
+	 * READ_DOOR_POSTURE). A tool route lives outside both registries the
+	 * read-door census is derived from, so it CLASSIFIES ITSELF here: the loader
+	 * refuses a route without one, and refuses `open` outright (a tool may not
+	 * add an ungated read door); read_door_acl_tripwire lists every loaded
+	 * route's posture. REQUIRED.
+	 */
+	readPosture: ReadDoorPosture;
+}
+
+/** What `onBoot` hands back: the stop the shutdown drain calls. */
+export interface ToolBootHandle {
+	stop(): void;
+}
+
+/**
+ * First path segments (after `/dedalo/`) a tool route may never claim: the
+ * client tree's own directories and every segment an ENGINE route lives under.
+ * The router order already makes every engine route win; this keeps a tool
+ * from answering the rest of an engine namespace or shadowing the client's
+ * static files. The media directory (`config.mediaDir`) is refused by the
+ * loader too. Kept complete by tool_http_routes_native.test.ts (every engine
+ * route prefix and every client top-level directory must be covered).
+ */
+export const TOOL_ROUTE_RESERVED_SEGMENTS: readonly string[] = [
+	'core',
+	'tools',
+	'test',
+	'lib',
+	'install',
+	'upload_tmp',
+	'ai_models',
+];
+
 /** The reserved lifecycle keys that must never appear inside apiActions. */
-export const LIFECYCLE_KEYS: readonly string[] = ['isAvailable', 'onRegister', 'onRemove'];
+export const LIFECYCLE_KEYS: readonly string[] = [
+	'isAvailable',
+	'onRegister',
+	'onRemove',
+	'onBoot',
+	'httpRoutes',
+];

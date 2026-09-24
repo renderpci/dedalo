@@ -111,6 +111,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/diffusion_boundaries.test.ts
 	test/unit/diffusion_dispatch_gate.test.ts
 	test/unit/boundary_seam_tripwire.test.ts
+	test/unit/core_tool_edge_tripwire.test.ts
 	test/unit/coex_tag_tripwire.test.ts
 	test/unit/descriptor_completeness_tripwire.test.ts
 	test/unit/import_scc_tripwire.test.ts
@@ -329,6 +330,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/client_read_stream_release_tripwire.test.ts
 	test/unit/client_request_coalescing_tripwire.test.ts
 	test/unit/ontology_property_census_tripwire.test.ts
+	test/unit/zip_encoder_census_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

@@ -197,6 +197,7 @@ const TRIPWIRES = [
 	'test/unit/test_tld_ontology_gate.test.ts',
 	'test/unit/test_db_marker_tripwire.test.ts',
 	'test/unit/test_media_root_tripwire.test.ts',
+	'test/unit/core_tool_edge_tripwire.test.ts',
 	'test/unit/test_rag_db_tripwire.test.ts',
 	'test/unit/test_timeout_tripwire.test.ts',
 	'test/unit/test_baseline_tripwire.test.ts',
@@ -277,6 +278,7 @@ const TRIPWIRES = [
 	'test/unit/client_request_coalescing_tripwire.test.ts',
 	'test/unit/dataframe_contract_tripwire.test.ts',
 	'test/unit/ontology_property_census_tripwire.test.ts',
+	'test/unit/zip_encoder_census_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

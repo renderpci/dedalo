@@ -17,6 +17,7 @@ import { afterAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { markProcessesDir } from '../helpers/test_media_root.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 const scratch = mkdtempSync(join(tmpdir(), 'dedalo_ops_smoke_'));
@@ -27,7 +28,7 @@ const childEnv: Record<string, string | undefined> = {
 	SERVER_UNIX_SOCKET: SOCKET,
 	SERVER_TCP_PORT: '', // no dev listener — the smoke test is socket-only
 	DEDALO_DIFFUSION_SCHEDULER_ENABLED: 'false',
-	DEDALO_MEDIA_PROCESSES_DIR: join(scratch, 'processes'),
+	DEDALO_MEDIA_PROCESSES_DIR: markProcessesDir(join(scratch, 'processes')),
 	DEDALO_ACCESS_LOG: 'true',
 };
 

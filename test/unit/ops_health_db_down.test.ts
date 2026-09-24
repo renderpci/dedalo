@@ -41,6 +41,7 @@ import { afterAll, describe, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { markProcessesDir } from '../helpers/test_media_root.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 const scratch = mkdtempSync(join(tmpdir(), 'dedalo_ops_db_down_'));
@@ -57,7 +58,7 @@ const childEnv: Record<string, string | undefined> = {
 	// or add boot noise on top of the dead DB.
 	DEDALO_DIFFUSION_SCHEDULER_ENABLED: 'false',
 	DEDALO_RAG_ENABLED: 'false',
-	DEDALO_MEDIA_PROCESSES_DIR: join(scratch, 'processes'),
+	DEDALO_MEDIA_PROCESSES_DIR: markProcessesDir(join(scratch, 'processes')),
 };
 
 /**

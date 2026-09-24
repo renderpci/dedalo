@@ -29,6 +29,16 @@
  *     generic domain instead; this gate is the same assertion the runner makes
  *     pre-flight, minus the browser.
  *
+ *  3. THE RUN-CREATED SWEEP IS WIRED (`src/core/test_data/run_created_records.ts`).
+ *     The module's behaviour is gated by run_created_records_native; what only
+ *     the RUNNER can get wrong is the wiring, and a browser run is the only
+ *     outcome measure of it — so it is pinned here on the runner's structure:
+ *     armed AFTER `reseedCanonicalTest3('pre-run')` (which may raise the counter)
+ *     and before any suite runs, swept in `main`'s `finally` and in the signal
+ *     handler, and never measured/swept around the armed sweeper. A mark taken
+ *     before the reseed, or a deleted sweep call, would let every run grow the
+ *     suite database again (~80 TM snapshots per run from the export suite).
+ *
  * WHY THE SECTION TIPO IS SPELLED `install('rsc', 170)`: the install-TLD census
  * (scripts/lib/tld_census.ts) reads a literal `rsc170` in a test file as this
  * gate BINDING an install. It is not — it is a pin on what the run's own pinned
@@ -37,6 +47,8 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { SUITE_DIFFUSION_DOMAIN } from '../../scripts/client_test_server.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import {
@@ -44,6 +56,7 @@ import {
 	removeSuiteProjectsFixture,
 	SUITE_SECOND_PROJECT_ID,
 } from '../../src/core/test_data/projects_fixture.ts';
+import { stripComments } from '../helpers/strip_comments.ts';
 
 const install = (tld: string, id: number): string => `${tld}${id}`;
 
@@ -185,5 +198,124 @@ describe('client run pre-flight — the pinned diffusion domain', () => {
 		process.env.DEDALO_DIFFUSION_DOMAIN = 'zz_no_such_diffusion_domain';
 		expect([...(await diffusionMap())]).toEqual([]);
 		process.env.DEDALO_DIFFUSION_DOMAIN = SUITE_DIFFUSION_DOMAIN;
+	});
+});
+
+// ---------------------------------------------------------------------------
+// 3. The run-created sweep is wired into the runner
+// ---------------------------------------------------------------------------
+
+/**
+ * The runner's source, comments stripped, plus a same-length twin with every
+ * string blanked (so a `{` inside a literal cannot unbalance a body).
+ */
+function runnerSource(source?: string): { code: string; blank: string } {
+	const raw =
+		source ??
+		readFileSync(join(import.meta.dir, '..', '..', 'scripts', 'client_test_runner.ts'), 'utf-8');
+	const code = stripComments(raw);
+	const blank = stripComments(raw, { blankStrings: true });
+	expect(blank.length).toBe(code.length);
+	return { code, blank };
+}
+
+/** The body (between its outer braces) of the first block opening at/after `from`. */
+function blockAt(src: { code: string; blank: string }, from: number): string {
+	const open = src.blank.indexOf('{', from);
+	expect(open).toBeGreaterThan(-1);
+	let depth = 0;
+	for (let index = open; index < src.blank.length; index++) {
+		const char = src.blank[index];
+		if (char === '{') depth++;
+		else if (char === '}' && --depth === 0) return src.code.slice(open + 1, index);
+	}
+	throw new Error('unbalanced block');
+}
+
+function functionBody(src: { code: string; blank: string }, name: string): string {
+	const at = src.blank.search(new RegExp(`function\\s+${name}\\s*\\(`));
+	expect(at, `function ${name} exists in the runner`).toBeGreaterThan(-1);
+	// skip the parameter list and return type up to the body's brace
+	const signatureEnd = src.blank.indexOf(')', at);
+	return blockAt(src, signatureEnd);
+}
+
+/** Every wiring defect the runner can carry, [] when wired. */
+function runCreatedWiringDefects(source?: string): string[] {
+	const src = runnerSource(source);
+	const defects: string[] = [];
+	if (/\b(runCounterMark|sweepRecordsCreatedSince)\s*\(/.test(src.code)) {
+		defects.push('the runner measures or sweeps around the armed sweeper');
+	}
+	const main = functionBody(src, 'main');
+	const reseed = main.indexOf("reseedCanonicalTest3('pre-run')");
+	const armed = main.indexOf('armRunCreatedSweep()');
+	const firstSuite = main.indexOf('openTarget(');
+	if (reseed === -1) defects.push('main has no pre-run reseed');
+	if (armed === -1) defects.push('main never arms the run-created sweep');
+	if (armed !== -1 && reseed !== -1 && armed < reseed) {
+		defects.push('the sweep is armed BEFORE the pre-run reseed (the reseed may raise the counter)');
+	}
+	if (armed !== -1 && (firstSuite === -1 || armed > firstSuite)) {
+		defects.push(
+			'the sweep is armed after the target opens (a suite may already have created records)',
+		);
+	}
+	const finallyAt = main.lastIndexOf('finally');
+	const finallyBody = finallyAt === -1 ? '' : main.slice(finallyAt);
+	if (!/await\s+sweepRunCreatedRecords\s*\(\s*\)/.test(finallyBody)) {
+		defects.push("main's finally does not sweep the run-created records");
+	}
+	if (!/await\s+sweepRunCreatedRecords\s*\(\s*\)/.test(functionBody(src, 'sweepOnSignal'))) {
+		defects.push('the signal handler does not sweep the run-created records');
+	}
+	if (
+		!/runCreatedSweeper\s*\.\s*sweep\s*\(\s*\)/.test(functionBody(src, 'sweepRunCreatedRecords'))
+	) {
+		defects.push('sweepRunCreatedRecords does not call the armed sweeper');
+	}
+	return defects;
+}
+
+describe('client run — the run-created sweep is wired', () => {
+	test('armed after the pre-run reseed, swept in finally and on a signal', () => {
+		expect(runCreatedWiringDefects()).toEqual([]);
+	});
+
+	test('positive control: each miswiring the gate names is detected', () => {
+		const real = readFileSync(
+			join(import.meta.dir, '..', '..', 'scripts', 'client_test_runner.ts'),
+			'utf-8',
+		);
+		const mutate = (from: string | RegExp, to: string): string => {
+			const next = real.replace(from, to);
+			expect(next).not.toBe(real);
+			return next;
+		};
+		// the mark moved BEFORE the reseed
+		const early = mutate("await reseedCanonicalTest3('pre-run');", '').replace(
+			'sweepOnSignal();',
+			"sweepOnSignal();\n\tawait reseedCanonicalTest3('pre-run');",
+		);
+		const earlyArmed = early.replace(
+			"await reseedCanonicalTest3('pre-run');",
+			"runCreatedSweeper = await armRunCreatedSweep();\n\tawait reseedCanonicalTest3('pre-run');",
+		);
+		expect(runCreatedWiringDefects(earlyArmed).join('\n')).toMatch(/BEFORE the pre-run reseed/);
+		// the finally sweep deleted
+		const finallyGone = mutate(/try \{\n\t\t\tawait sweepRunCreatedRecords\(\);/, 'try {');
+		expect(runCreatedWiringDefects(finallyGone).join('\n')).toMatch(/finally does not sweep/);
+		// the signal sweep deleted
+		const signalGone = mutate(/try \{\n\t\t\t\t\tawait sweepRunCreatedRecords\(\);/, 'try {');
+		expect(runCreatedWiringDefects(signalGone).join('\n')).toMatch(/signal handler/);
+		// never armed
+		const neverArmed = mutate('await armRunCreatedSweep()', 'null');
+		expect(runCreatedWiringDefects(neverArmed).join('\n')).toMatch(/never arms/);
+		// measured around the sweeper
+		const bypass = mutate(
+			'const swept = await runCreatedSweeper.sweep();',
+			'const swept = await sweepRecordsCreatedSince(runCreatedSweeper.mark);',
+		);
+		expect(runCreatedWiringDefects(bypass).join('\n')).toMatch(/around the armed sweeper/);
 	});
 });

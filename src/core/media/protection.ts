@@ -116,6 +116,16 @@ export const MEDIA_FILENAME_GRAMMAR =
 	'[^/]*_([a-z0-9]+)_([0-9]+)(?:_lg-[a-zA-Z0-9-]{2,12})?\\.[A-Za-z0-9]+$';
 
 /**
+ * WORKING-FILE suffixes under the media root — soft-deleted, temp, import and CSV
+ * files the Apache hardening block denies to EVERYONE, logged in or not
+ * (`<FilesMatch "\\.(deleted|temp|tmp|import|csv)$">`). ONE definition: the
+ * generated rule interpolates it, and any engine door that hands out a media file
+ * without the web server in the byte path (tool_export's media ZIP) refuses the
+ * same names.
+ */
+export const MEDIA_WORKING_FILE_EXTENSIONS = ['deleted', 'temp', 'tmp', 'import', 'csv'] as const;
+
+/**
  * Test seam. Redirects BOTH filesystem homes (the media root and the auth store) at a
  * scratch dir. Guarded to temp paths exactly like `overrideMediaIndexBaseForTests` —
  * a test must never be able to point these writers at a real media tree or at the real
@@ -618,7 +628,7 @@ function htaccessHardeningBlock(): string {
 		'\t</If>',
 		'</IfModule>',
 		'# Protect working files from prying eyes.',
-		'<FilesMatch "\\.(deleted|temp|tmp|import|csv)$">',
+		`<FilesMatch "\\.(${MEDIA_WORKING_FILE_EXTENSIONS.join('|')})$">`,
 		'\tRequire all denied',
 		'</FilesMatch>',
 		'# The marker store is NEVER served, in any mode: auth/ filenames are live media',

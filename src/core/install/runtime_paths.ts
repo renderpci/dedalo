@@ -50,6 +50,7 @@ import { join, resolve, sep } from 'node:path';
 import { legacyAwareDefaultDir } from '../../config/catalog/media.ts';
 import { privateDir, projectRoot, readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
+import { deriveProcessesDir } from '../media/processes_dir.ts';
 
 /** One runtime-writable path the engine (or its operator) can aim somewhere. */
 export interface RuntimePathEntry {
@@ -194,7 +195,15 @@ export const RUNTIME_PATH_CENSUS: readonly RuntimePathEntry[] = Object.freeze([
 		id: 'media_processes_dir',
 		envKey: 'DEDALO_MEDIA_PROCESSES_DIR',
 		consumer: 'src/core/media/jobs.ts (media job process files)',
-		resolve: () => optional('DEDALO_MEDIA_PROCESSES_DIR') ?? join(privateDir, 'processes'),
+		// THE SAME FUNCTION jobs.ts processesDir uses (processes_dir.ts
+		// deriveProcessesDir), fed from env, not config (design rule): under the
+		// test-media seam the default is the suite sibling `<test media root>.processes`.
+		resolve: () =>
+			deriveProcessesDir(
+				optional('DEDALO_MEDIA_PROCESSES_DIR'),
+				optional('DEDALO_TEST_MEDIA_ROOT'),
+				join(privateDir, 'processes'),
+			),
 	},
 	{
 		id: 'geoip_dir',

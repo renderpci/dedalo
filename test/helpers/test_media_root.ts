@@ -140,6 +140,10 @@ export function ensureTestMediaRoot(suiteDb?: string): string {
 			].join('\n'),
 		);
 	}
+	// Its job-registry sibling, declared in the same breath: under the seam the
+	// job manager writes pfiles only into a marked dir and never plants the
+	// marker itself (src/core/media/jobs.ts assertProcessesDirDeclared).
+	markProcessesDir(testProcessesDirPath(root));
 	return root;
 }
 
@@ -148,4 +152,91 @@ export function rebuildTestMediaRoot(suiteDb?: string): string {
 	const root = assertDistinctFromInstallMediaRoot(testMediaRootPath(suiteDb));
 	rmSync(root, { recursive: true, force: true });
 	return ensureTestMediaRoot(suiteDb);
+}
+
+/**
+ * The suite's EXPORT ARTIFACTS root — tool_export's artifact store derives it
+ * from the suite media root as its sibling `<root>.export_artifacts`
+ * (tools/tool_export/server/artifact_store.ts defaultExportArtifactsRoot, which
+ * tool_export_artifact_store_native pins equal to this).
+ */
+export function testExportArtifactsRootPath(mediaRoot: string): string {
+	return `${resolve(mediaRoot)}.export_artifacts`;
+}
+
+/**
+ * Sweep and recreate the suite's export artifacts root — `test:db:setup`,
+ * beside the media tree it is derived from. It is marked
+ * `.dedalo_test_export_artifacts` on creation (the store refuses an unmarked
+ * root under the seam). A directory at that path WITHOUT the marker is never
+ * swept: it did not come from the suite, and the refusal says so.
+ */
+export async function rebuildTestExportArtifactsRoot(mediaRoot: string): Promise<string> {
+	// Lazy: the store module reads the engine config, which a caller of the
+	// path helpers above (the preload) must not evaluate early.
+	const { EXPORT_ARTIFACTS_DIR_MODE, EXPORT_ARTIFACTS_TEST_MARKER } = await import(
+		'../../tools/tool_export/server/artifact_store.ts'
+	);
+	const dir = testExportArtifactsRootPath(mediaRoot);
+	const marker = join(dir, EXPORT_ARTIFACTS_TEST_MARKER);
+	if (existsSync(dir) && !existsSync(marker)) {
+		throw new Error(
+			`[test media] REFUSED to sweep '${dir}': it carries no '${EXPORT_ARTIFACTS_TEST_MARKER}' marker, so it is not the suite's export artifacts root. NOTHING WAS DELETED.`,
+		);
+	}
+	rmSync(dir, { recursive: true, force: true });
+	mkdirSync(dir, { recursive: true, mode: EXPORT_ARTIFACTS_DIR_MODE });
+	writeFileSync(marker, 'suite export artifacts root — test:db:setup created this\n');
+	return dir;
+}
+
+/**
+ * The job-registry marker — repeated under the same protest as
+ * {@link TEST_MEDIA_MARKER} (the canonical constant,
+ * src/core/media/test_media_root.ts TEST_PROCESSES_MARKER, imports config);
+ * test_media_root_tripwire asserts the two literals are identical.
+ */
+export const TEST_PROCESSES_MARKER = '.dedalo_test_processes';
+
+/**
+ * Declare a JOB-REGISTRY scratch dir (src/core/media/jobs.ts pfiles, the
+ * DEDALO_MEDIA_PROCESSES_DIR a gate points at its own tree): plant its
+ * `.dedalo_test_processes` marker (created if missing). Under the test seam
+ * the job manager refuses every processes dir without it. Returns the dir, so
+ * `process.env.DEDALO_MEDIA_PROCESSES_DIR = markProcessesDir(x)` is one step.
+ */
+export function markProcessesDir(dir: string): string {
+	mkdirSync(dir, { recursive: true });
+	const marker = join(dir, TEST_PROCESSES_MARKER);
+	if (!existsSync(marker))
+		writeFileSync(marker, 'scratch job-registry dir — a test gate created this\n');
+	return dir;
+}
+
+/**
+ * The suite's JOB-REGISTRY directory — src/core/media/jobs.ts derives it under
+ * the seam as the media root's sibling `<root>.processes`
+ * (src/core/media/test_media_root.ts testProcessesDirFor; the tripwire pins the
+ * two equal).
+ */
+export function testProcessesDirPath(mediaRoot: string): string {
+	return `${resolve(mediaRoot)}.processes`;
+}
+
+/**
+ * Sweep and recreate the suite's job-registry directory — `test:db:setup`,
+ * beside the media tree it is derived from, re-marked
+ * `.dedalo_test_processes`. A directory at that path WITHOUT the marker is never
+ * swept: it did not come from the suite.
+ */
+export function rebuildTestProcessesDir(mediaRoot: string): string {
+	const dir = testProcessesDirPath(mediaRoot);
+	const marker = join(dir, TEST_PROCESSES_MARKER);
+	if (existsSync(dir) && !existsSync(marker)) {
+		throw new Error(
+			`[test media] REFUSED to sweep '${dir}': it carries no '${TEST_PROCESSES_MARKER}' marker, so it is not the suite's job-registry directory. NOTHING WAS DELETED.`,
+		);
+	}
+	rmSync(dir, { recursive: true, force: true });
+	return markProcessesDir(dir);
 }

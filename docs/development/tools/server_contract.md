@@ -17,11 +17,13 @@ interface ToolServerModule {
   isAvailable?: (context) => boolean | Promise<boolean>;  // toolbar availability
   onRegister?: () => Promise<void>;             // lifecycle hook — NEVER inside apiActions
   onRemove?: () => Promise<void>;               // lifecycle hook — NEVER inside apiActions
+  httpRoutes?: readonly ToolHttpRoute[];        // GET routes outside dd_tools_api (file downloads)
+  onBoot?: () => ToolBootHandle | undefined;    // boot timer; the handle is stopped on shutdown
 }
 ```
 
-- The loader validates this contract at scan time (`loader.ts::validateModule`): `tool.name` must equal the directory name and match the tool-name pattern; `apiActions` must be an object; none of the reserved lifecycle keys (`isAvailable`/`onRegister`/`onRemove`) may appear inside it; every action's `handler` must be a function. A tool that fails validation logs a warning and is simply absent from the registry — it never aborts the whole scan.
-- Server logic imports `src/core/**` via relative paths. Core never statically imports a tool (the dependency points tool → core, never the reverse).
+- The loader validates this contract at scan time (`loader.ts::validateToolModule`): `tool.name` must equal the directory name and match the tool-name pattern; `apiActions` must be an object; none of the reserved lifecycle keys (`isAvailable`/`onRegister`/`onRemove`/`onBoot`/`httpRoutes`) may appear inside it; every action's `handler` must be a function; `onBoot` must be a function and every `httpRoutes` entry must pass the route rules below. A tool that fails validation logs a warning and is simply absent from the registry — it never aborts the whole scan.
+- Server logic imports `src/core/**` via relative paths. The dependency points tool → core: everything a tool offers the engine (actions, lanes, routes, boot timers) is registered through this module, and new engine code must not import a tool or name one. This is a ratchet, not yet an absolute rule: `test/unit/core_tool_edge_tripwire.test.ts` derives every `src/` → `tools/tool_*` import (static, re-export or dynamic) and every tool name that appears in `src/` code or string literals, and holds both to shrink-only ledgers. One import edge remains today: `src/core/tools/transcription_asr.ts` uses the transcription tool's shared paragraph builder. A small number of files also still name a specific tool, for example the export grid's gate coordinates. A new edge, or a new name occurrence, fails the gate.
 
 ## Remotely callable methods (API actions)
 
@@ -103,7 +105,7 @@ The client sends this (built by the JS helper `this.tool_request()`):
 **Declare the gate on the target the action WRITES.** When the effect target is not a top-level option — the scope rides in `options.sqo` (`tool_update_cache::update_cache` re-saves the selected components on every matched row), in a nested client map (`tool_import_files` writes into every `tool_config.ddo_map` destination), or the handler pins a section by constant (`tool_hierarchy` writes `hierarchy1/<section_id>` whatever `section_tipo` arrives) — use `targets` and derive the write targets **off the same keys the handler reads**. A `section`/`tipo` gate on a sibling field authorizes something the action never touches and leaves what it does touch ungated. A target the handler can only resolve at run time — an ontology-derived portal section, or a RECORD it binds while running (a filename prefix, a matcher hit, a role write's destination) — is authorized inside the handler at the point it is bound, before the first write into it, through the save door's own record-scope rule (`assertRecordWriteTarget`); a record created in the same run is admitted as a create is. `test/unit/action_scope_binding_tripwire.test.ts` binds every such handler to its extractor; `permission: null` remains the named exemption for an action no declarative kind can express, and it must say in `gatedInHandler` what the handler does instead.
 
 !!! warning "Never list lifecycle hooks"
-    `isAvailable`, `onRegister` and `onRemove` are called by the framework, not remotely. `loader.ts` throws (refusing to load the tool) if any of them appears as a key of `apiActions`.
+    `isAvailable`, `onRegister`, `onRemove`, `onBoot` and `httpRoutes` are called by the framework, not remotely. `loader.ts` throws (refusing to load the tool) if any of them appears as a key of `apiActions`.
 
 ## Background execution
 
@@ -145,6 +147,26 @@ Resolution helpers:
 | `isAvailable` | `(context: ToolAvailabilityContext) => boolean \| Promise<boolean>` | by the section/component tool filter (`getElementTools` in `registry.ts`) after the `affected_models`/`affected_tipos` match, with `{callerModel, tipo, sectionTipo, isComponent, mode}`. Return `false` to hide the tool for that element. Must be fast and side-effect-free — results are cached per user/tipo/section. Tools without a loaded module fall back to a small set of core rules (`tool_diffusion`'s section-only + diffusion-map check is the one still resolved in `registry.ts` today). |
 | `onRegister` | `() => Promise<void>` | after the registry record is reconciled during `importTools()`. Sanctioned place for setup (e.g. seeding a dd996 config record). A throw is logged, never fails the import. |
 | `onRemove` | `() => Promise<void>` | best-effort, before the registry record of a removed tool is deleted. |
+| `onBoot` | `() => ToolBootHandle \| undefined` | once per serving boot (not in install mode or a smoke boot), after the tool registry loads (`loader.ts::startToolBootHooks`). For timers the tool owns — tool_export's TTL sweeper. Must not block: arm and return. The returned `{stop()}` runs on shutdown. A throw is logged (`[tools] <name>.onBoot failed`), never fatal. |
+
+## HTTP routes (`httpRoutes`)
+
+A tool that must answer a plain GET outside `dd_tools_api` — a file download the browser saves directly — declares it on the module:
+
+```ts
+httpRoutes: [
+  {
+    pathPrefix: EXPORT_ARTIFACT_URL_PREFIX, // '/dedalo/export/artifact/'
+    handle: (request, pathname) => serveExportArtifact(pathname, request.headers.get('cookie')),
+  },
+],
+```
+
+- The router (`src/server.ts`) asks `loader.ts::toolHttpRouteFor(pathname)` AFTER every engine route and just before the client static tree, so no tool route can shadow an engine one. `handle` answers a `Response`, or `null` for the engine's 404.
+- The handler does its own authentication; the router passes the raw request.
+- The loader refuses (the tool fails to load, loudly): a prefix that is not `/dedalo/<segment>[/<segment>…]/` in lowercase `[a-z0-9_]`; a first segment the client tree or an engine route owns (`TOOL_ROUTE_RESERVED_SEGMENTS`, plus the media directory); a prefix that overlaps, in either direction, one an already-loaded tool serves.
+- Declare the prefix as an exported `*_URL_PREFIX` constant in the tool's server module, and add it to the reverse-proxy configurations: `install_restart_supervisor_tripwire` derives tool route constants too and requires every loaded tool route to be proxied.
+- Gate: `test/unit/tool_http_routes_native.test.ts`.
 
 ## Registration-time validation (`src/core/tools/register.ts`, `register_schema.ts`)
 

@@ -2,15 +2,19 @@
 
 > See also: [Importing data](importing_data.md) · [Component dataframe](components/component_dataframe.md) · [Glossary](glossary.md)
 
-Take a section's records and turn them into a flat downloadable table (CSV, TSV, ODS, XLSX, HTML or print), or a machine-readable raw CSV for the import tool. This page covers the export tool's UI and, for developers, the export pipeline and component contract. For a complete, verified copy of a section set — the backup, the move between installations, the preservation copy — see [The archive door](#the-archive-door): the export tool is not that.
+Take a section's records and turn them into a flat downloadable table (CSV, TSV, ODS, XLSX, HTML or NDJSON), or a machine-readable raw CSV for the import tool. This page covers the export tool's UI and, for developers, the export pipeline and component contract. For a complete, verified copy of a section set — the backup, the move between installations, the preservation copy — see [The archive door](#the-archive-door): the export tool is not that.
 
 ## Introduction
 
 Exporting is the counterpart of [importing](importing_data.md): it takes the data
 of a section and turns it into a flat table (rows and columns) that you can
-download as CSV, TSV, ODS (LibreOffice), XLSX (Excel), HTML, or print. You can
+download as CSV, TSV, ODS (LibreOffice), XLSX (Excel), HTML or NDJSON. You can
 also download the media files (images, audiovisuals, PDFs, 3D, SVG) referenced by
 the exported records.
+
+The export runs **on the server**, as a background job. The browser shows one page
+of it at a time and receives each download as a finished file, so an export of
+hundreds of thousands of records works the same way as an export of ten.
 
 Because Dédalo stores **highly structured** data — values in several languages,
 relations to lists and thesauri, hierarchies, dataframes — exporting is not a
@@ -44,7 +48,7 @@ The export tool opens in its own window with three areas:
   components can be expanded to reach the components of the related section.
 - **Center** — *Active elements*: the columns you have chosen, in order.
 - **Right** — the configuration panel: presets, format and options, the **Export**
-  button, the download buttons, and the live preview.
+  and **Stop** buttons, the download buttons, and the paged preview.
 
 ## Choosing the columns
 
@@ -70,9 +74,11 @@ list in the center. Each dropped component becomes one column of the export.
 ### Per-component "parents" (ancestor chain)
 
 Hierarchical components (thesaurus terms) have a chain of ancestors. When you add
-such a component you get a small **parents** checkbox on its item: enable it to add
-a sibling column with the term's ancestor chain (joined with ` > `). See
-[Export parents](#export-parents) for the global option.
+a portal or autocomplete column whose target section is hierarchical, you get a small
+**parents** checkbox on its item: enable it to add a sibling column with the term's
+ancestor chain (nearest parent first, joined with ` > `). The option is per column
+only; there is no global switch. It applies to the **Breakdown** format and is off by
+default.
 
 ## Export options
 
@@ -123,45 +129,123 @@ spanning cells empty except on the first row.
 
 ### Show ontology tipo
 
-Adds the component **ontology tipo** to the column headers in the preview (useful
-to identify exactly which component a column maps to). This only changes the
-header text shown in the tool.
+Adds the component **ontology tipo** to the column headers (useful to identify
+exactly which component a column maps to), in the preview and in the downloaded
+files built while it is on.
 
-### Export parents
+## Running an export
 
-(Default **off**, not available for the *Dédalo raw* format.) The global version of
-the [per-component parents](#per-component-parents-ancestor-chain) option: for every
-relation/hierarchical column, add a sibling column with the ancestor chain of each
-linked term (joined with ` > `). You can instead enable it column by column with the
-per-item **parents** checkbox.
+Press **Export**. The export is submitted to the server as a **background job** and
+the tool follows it: a status line counts the records written so far against the
+total (*Exporting 12,000 / 48,213*), then says when the export has finished.
+**Stop** cancels it; a stopped export keeps nothing.
+
+The job does not depend on the window. Close the tool and the export keeps running;
+open **Export** again on the same section and the tool reconnects to your latest
+export there, with its progress, its preview and its downloads.
+
+Exports wait in one queue shared by every user of the installation, and the
+server runs a limited number at a time (one by default), so yours may wait for
+another user's to finish before it starts. Building a download file from a
+finished export has a queue of its own (two at a time by default), so a download
+never waits behind someone else's export. Each user may have only a few export jobs waiting or running
+at once (two by default: exports being built plus files being built from them); a
+request over that limit is refused with a message and nothing is queued.
 
 ## The preview
 
-Press **Export** to run it. A table preview is rendered and **fills in live** as the
-records stream from the server, with a progress bar. The preview is *what you see is
-what you get*: every download is built from the same data shown in the preview.
+The preview shows **one page** of the export at a time. Use the pager (first,
+previous, next, last) to move through it, and the page-size selector to show 25, 50,
+100 or 200 records per page. A page is counted in **records**: in the **Rows**
+breakdown, all the rows of one record stay on the same page. While the export is
+still running the pages fill as records are written, and the columns appear in the
+order they are discovered; once it has finished they take their final order.
+
+The preview is a **sample** to check that the columns, formats and breakdown are
+what you want. It is never the export itself: a download always contains every
+record of the selection, whichever page is on screen. A very long cell (a full
+transcription, for example) is cut in the preview and ends in `…`; the downloads
+always carry the whole value.
 
 The preview has a sticky header, a frozen first (id) column, zebra rows, image and
 audiovisual thumbnails, and clickable links — so even wide exports stay readable.
 
 ## Downloading the data
 
-Once the export has run, the download bar offers:
+The download buttons are enabled when the export has finished. Each one asks the
+server to build that file from the **whole** export; the tool shows *Preparing file*
+while it is built and then your browser saves it directly. A file already built for
+the same options is reused.
 
 | Button | File | Notes |
 | --- | --- | --- |
-| **CSV** | `.csv` | `;`-separated, RFC-4180 quoted. Re-importable (see below). |
-| **TSV** | `.tsv` | Tab-separated, unquoted. |
-| **ODS** | `.ods` | LibreOffice Calc. |
-| **XLSX** | `.xlsx` | Microsoft Excel. |
-| **HTML** | `.html` | The table as a standalone HTML page. |
-| **Media** | `.zip` | Downloads the media files (image, audiovisual, PDF, 3D, SVG) referenced by the exported records. A dialog lets you pick the **quality** per media type. |
-| **Print** | — | Opens the browser print dialog for the preview. |
+| **CSV** | `.csv` | `;`-separated, every field double-quoted, UTF-8 with a byte-order mark. Re-importable (see below). |
+| **TSV** | `.tsv` | Tab-separated, unquoted; tabs and line breaks inside a value become spaces. |
+| **ODS** | `.ods` | LibreOffice Calc. Every cell is a text cell. |
+| **XLSX** | `.xlsx` | Microsoft Excel. Every cell is a text cell. |
+| **HTML** | `.html` | The whole export as one standalone HTML table, with thumbnails and links. |
+| **NDJSON** | `.ndjson` | The lossless export: every line of the [flat-table protocol](#the-flat-table-ndjson-protocol), exactly as the server produced it. For programs, not people. |
+| **Media** | `.zip` | The media files (image, audiovisual, PDF, 3D, SVG) referenced by the exported records. A dialog asks for the **quality** of each media type present in the export. |
+| **Print** | — | Prints the **current preview page only**, and the window says so. To print the whole export, download the HTML and print that. |
 
 !!! note "Encoding"
 
     Text downloads are UTF-8. CSV uses `;` as the field separator and escapes inner
     quotes by doubling them, matching the [import](importing_data.md#format) format.
+
+!!! warning "Values that look like formulas"
+
+    In CSV and TSV, a value beginning with `=`, `+`, `-`, `@`, a tab or a carriage
+    return is written with a leading `'`, so a spreadsheet program shows it as text
+    instead of evaluating it. A negative number such as `-5` therefore appears as
+    `'-5`. ODS and XLSX are not affected: their cells are typed as text.
+
+### Large spreadsheets
+
+A sheet of ODS or XLSX holds 1,048,576 rows: one header row and 1,048,575 data rows.
+A longer export **continues on further sheets** (`Sheet2`, `Sheet3`…), each starting
+with the header again, so nothing is truncated. Two limits cannot be split around,
+and the file is refused with a message instead of being cut: more than **16,384
+columns** (both formats), and, in XLSX only, a cell longer than **32,767 characters**
+(Excel's own cell limit). CSV, TSV and NDJSON have neither limit.
+
+### The media ZIP
+
+The dialog shows one quality selector per media type found in the export (for
+example one for images and one for PDFs): images offer their quality ladder,
+audiovisuals their default quality or `original`, and PDF, 3D and SVG `web` or
+`original`. The ZIP stores the files uncompressed (media is already compressed) and
+uses ZIP64 when a size needs it, so an archive of many gigabytes is valid. A file goes into the archive only if you can read that media
+component on that very record; everything else is left out. An `info.txt` inside
+the ZIP lists what was archived and what was not, and why. Each quality choice is
+built as its own ZIP.
+
+### How long the files are kept
+
+Export files are **temporary copies** of your records, kept on the server only so
+you can download them:
+
+- An export and all its files are deleted a set time after the export **finished**.
+  Building or downloading a file from it does not extend that time: a file built shortly
+  before the limit goes with the export. The default is 24 hours; your administrator
+  sets it.
+- Each user has a **storage quota** for export files (10 GiB by default). An export
+  or a file that would go over it stops with a message that says so. The space comes
+  back when you delete an export (**Delete export** in the tool removes the export on
+  screen with all its files) or as your older exports expire. An export cannot be
+  deleted while it runs (stop it first) or while a file is being built from it.
+- An export that was running when the server restarted is marked **interrupted** and
+  its partial files are removed. Run it again; there is no resume.
+- Each export keeps a few built files per format (four); building a fifth with other
+  options replaces the oldest of that format. The media ZIP is built again every time
+  it is requested, so it always reflects the media files as they are now.
+
+!!! info "Who can download"
+
+    Only the user who ran an export can see it or download its files, and the server
+    checks your access again on every download. If your access to the section or to
+    one of the exported columns is removed after the export was built, its files can
+    no longer be downloaded.
 
 ## Saving export configurations (presets)
 
@@ -284,9 +368,13 @@ byte equality on every column.
 > engine (`compileExportPlan` turns `ar_ddo_to_export` into a
 > `PublicationPlan`; the diffusion resolver's atom entry point walks
 > relation hops and stored locators), and the tool handler delegates to it
-> in a single call. The client (`flat_table.js` and friends) is vanilla
-> JavaScript with an exact wire contract: one request shape, one NDJSON
-> protocol, three data formats and a fixed set of options.
+> in a single call. The same producer (`openExportGrid`,
+> `src/diffusion/export/grid.ts`) also feeds the background job that the tool's
+> UI runs (`build_export_artifact`), which writes the protocol into a spool on
+> disk; the preview and every download are read from that spool. The client
+> (`render_tool_export.js`, `flat_table.js` and friends) is vanilla JavaScript
+> with an exact wire contract, recorded in
+> `WC-2026-09-24-tool-export-server-built-artifacts`.
 >
 > The stream/buffered duality and the protocol shape (`meta` first, every
 > row cell referencing an already-emitted column ordinal, `end` last, its
@@ -300,19 +388,26 @@ byte equality on every column.
 
 ```text
 ar_ddo_to_export (chosen columns, user order)
-        │  POST dd_api:'dd_tools_api', action:'tool_request', source.action:'get_export_grid'
+        │  POST dd_api:'dd_tools_api', action:'tool_request'
         ▼
 src/core/tools/dispatch.ts   dispatchToolRequest() — permission-gated per-tool registry
         ▼
-tools/tool_export/server/tool_export.ts   toolExportGetExportGrid()
+src/diffusion/export/grid.ts   openExportGrid() — THE producer
         │   resolves the SQO (search/sql_assembler.ts) then, per data_format,
         │   walks each export ddo's path to atoms and mints columns/rows —
-        │   there is no separate per-component override class: the SAME
-        │   leaf-value resolver the relation_list panel uses
-        │   (resolve/relation_list.ts resolveCellValue/resolvePathValue) is
-        │   reused so both surfaces stay byte-identical.
-        ▼  NDJSON (ndjson_stream:true) or a whole {meta,columns,rows} object
-flat_table.js       accumulate lines → preview + CSV/TSV/ODS/XLSX/HTML/media
+        │   the SAME leaf-value resolver the relation_list panel uses
+        │   (resolve/relation_list.ts resolveCellValue/resolvePathValue)
+        │
+        ├─ get_export_grid ──────────▶ NDJSON stream or whole grid, to the caller (API / MCP)
+        │
+        └─ build_export_artifact ───▶ spool on disk (export_job.ts, artifact_store.ts)
+             (background, lane 'export')     │
+                                             ├─ get_export_preview ─▶ ONE page (preview.ts)
+                                             └─ build_export_file ──▶ writers/ → export.<ext> | media*.zip
+                                                  (background, 'export_file')  │
+                                                                               ▼
+                                            GET /dedalo/export/artifact/<jobId>/<basename>
+                                            (download.ts — owner only, 404 otherwise)
 ```
 
 The server forces the SQO to the full filtered selection (`sqo.limit = null`
@@ -320,6 +415,26 @@ The server forces the SQO to the full filtered selection (`sqo.limit = null`
 covers the whole search result rather than the client's clamped page limit.
 
 ### API
+
+The tool's actions, all dispatched through `dd_tools_api::tool_request` and gated
+`permission: 'section', minLevel: 1` on `section_tipo`:
+
+| Action | Background | Purpose |
+| --- | --- | --- |
+| `get_export_grid` | no | The whole export inline (NDJSON or buffered). For API and MCP callers; unchanged. |
+| `build_export_artifact` | yes, lane `export` | Run the export into a spool. Same options as `get_export_grid`. |
+| `build_export_file` | yes, lane `export_file` | Build one file (`csv`, `tsv`, `html`, `xlsx`, `ods`, `ndjson`, `media_zip`) from an ended spool; answers its download URL. |
+| `get_export_preview` | no | One page of a spool, counted in records, at most 200. |
+| `list_export_jobs` | no | The caller's exports of the section, newest first. |
+| `delete_export_job` | no | Delete one of the caller's exports with all its files, freeing its quota. |
+| `components_with_parent` | no | Which relation columns can offer the parents checkbox (WC-049). |
+
+`build_export_file`, `get_export_preview`, `list_export_jobs` and `delete_export_job` only ever open the
+**caller's own** exports. The first three also ask the build's read gates again over the recorded
+options on every call; `delete_export_job` does not, so an owner can always delete an export of their
+own. Anything else is `export.artifact_not_found`. The request and answer shapes, the error codes and the
+download route's 404 policy are in the
+[developer reference](../development/tools/reference/tool_export.md).
 
 `tool_export.get_export_grid(options)` — dispatched through
 `dd_tools_api::tool_request` (the RQO wire shape is unchanged). The TS module
@@ -339,10 +454,10 @@ permission gate before running it. Request fields:
 | `data_format` | `'value'` \| `'grid_value'` \| `'dedalo_raw'`. |
 | `breakdown` | `'default'` \| `'rows'` \| `'columns'` (used with `grid_value`). |
 | `fill_the_gaps` | bool — repeat spanning values on exploded rows. |
-| `value_with_parents` | bool — add ancestor-chain sibling columns (n/a for `dedalo_raw`). |
+| `value_with_parents` | bool, **per entry of `ar_ddo_to_export`** — add that column's ancestor-chain sibling column (`grid_value` only; a request-level value is ignored, WC-049). |
 | `ar_ddo_to_export` | the columns, **in output order**. |
 | `sqo` | the search query object (the selection to export). |
-| `ndjson_stream` | bool — stream the flat-table protocol vs return it whole. |
+| `ndjson_stream` | bool — stream the flat-table protocol vs return it whole (`get_export_grid` only; the background job always writes the protocol to its spool). |
 
 ### The flat-table NDJSON protocol
 
@@ -390,10 +505,15 @@ added to the walkers rather than an override method.
 
 ### Files
 
-- `tools/tool_export/server/tool_export.ts` — request handling + the P6 routing seam (`toolExportGetExportGrid`); the legacy in-file build stays behind `DEDALO_EXPORT_UNIFIED=false` until its ledgered deletion.
-- `src/diffusion/export/{compile_columns,atoms,grid,index}.ts` — the unified build: column-set plan compile, shared-walk atoms, NDJSON grid emission (`exportGridUnified`).
-- `tools/tool_export/server/index.ts` — the tool's `ToolServerModule` registration.
+- `tools/tool_export/server/tool_export.ts` — the `get_export_grid` facade and the shared SQO section gate (`assertExportSqoSections`).
+- `src/diffusion/export/{compile_columns,atoms,grid,index}.ts` — the unified build: column-set plan compile, shared-walk atoms, the producer `openExportGrid` and the NDJSON emission (`exportGridUnified`).
+- `tools/tool_export/server/index.ts` — the tool's `ToolServerModule` registration (actions, background lanes, admission).
+- `tools/tool_export/server/export_job.ts` — `build_export_artifact`, `build_export_file`, `list_export_jobs`, per-user admission, the owned-job door.
+- `tools/tool_export/server/{preview,spool_reader}.ts` — the paged preview over the spool.
+- `tools/tool_export/server/artifact_store.ts` — the on-disk store: layout, confinement, quota, TTL sweep.
+- `tools/tool_export/server/{access,download}.ts` — the read re-check and the owner-only download route.
+- `tools/tool_export/server/writers/` — one streaming writer per format, plus the text semantics (`cells.ts`) and the spreadsheet plumbing (`spreadsheet.ts`).
 - `src/core/resolve/relation_list.ts` — the shared leaf-value resolvers (`resolvePathValue`, `resolveCellValue`) reused from the relation_list panel.
-- `tools/tool_export/js/flat_table.js` — client accumulator, preview, downloads (copied as-is).
-- `tools/tool_export/js/{render_tool_export,drag_tool_export}.js` — UI and drag-and-drop column model (copied as-is).
+- `tools/tool_export/js/flat_table.js` — draws one preview page (no accumulator, no file building).
+- `tools/tool_export/js/{tool_export,render_tool_export,drag_tool_export}.js` — the wire, the UI and export runtime (job follow, pager, downloads, reconnect), the drag-and-drop column model.
 - `tools/tool_export/js/export_user_presets.js`, `client/dedalo/core/section/js/view_export_user_presets.js` — per-user presets (section `dd1781`; ordinary ontology data, no dedicated TS engine needed).

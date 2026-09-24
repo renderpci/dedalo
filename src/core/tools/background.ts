@@ -15,8 +15,9 @@
  * Bun Worker executor is a drop-in follow-up behind this same signature.
  */
 
-import { DedaloError, ok } from '../errors/index.ts';
-import { mediaJobs } from '../media/jobs.ts';
+import { DedaloError, ok, toDedaloError, wireMessage } from '../errors/index.ts';
+import { type JobRecord, jobAbortInfo, mediaJobs } from '../media/jobs.ts';
+import { currentApplicationLang } from '../resolve/request_lang.ts';
 import type { Principal } from '../security/permissions.ts';
 import { currentRequestContext } from '../security/request_context.ts';
 import type { LoadedTool } from './loader.ts';
@@ -27,13 +28,30 @@ export interface BackgroundJob {
 	id: string;
 	tool: string;
 	action: string;
-	status: 'running' | 'done' | 'error';
+	/**
+	 * `stopped` = the USER's Stop (stop_process) ended it: while still queued
+	 * for its lane slot (the handler never ran), or while its handler ran and
+	 * surfaced the stop by throwing (a cooperative handler's abort — e.g.
+	 * `export.cancelled`). A stop is not a failure: it is journaled at info
+	 * level and never counted in the `error` gauge, and it agrees with the lane
+	 * record (media/jobs.ts: 'stopped', no `error` body). Any OTHER throw is
+	 * `error`; a handler that returns is `done` — its own outcome.
+	 */
+	status: 'running' | 'done' | 'error' | 'stopped';
 	result?: ToolResponse;
 	error?: string;
 	/** The requesting user (terminal-state journal identity, audit S2-16). */
 	userId?: number;
 	/** Date.now() at schedule time (duration for the journal). */
 	startedAt?: number;
+	/**
+	 * The section the job was submitted for (`options.section_tipo` when a
+	 * string), captured at submit. In-process only, NOT served by the framework
+	 * wires: a tool reads it to tell which of the user's QUEUED jobs belong to a
+	 * section before the handler has written anything (tool_export's
+	 * list_export_jobs `pending` — a queued walk has no manifest yet).
+	 */
+	sectionTipo?: string;
 }
 
 /** The current RQO's id (the tool dispatcher opens the scope), or '' outside a request. */
@@ -122,23 +140,70 @@ function jobRefused(response: ToolResponse | undefined): boolean {
 	return response?.ok === false;
 }
 
+/** The journal line's tail and its channel for one terminal state. */
+function terminalOutcome(job: BackgroundJob): { text: string; failed: boolean } {
+	if (job.status === 'error') {
+		return { text: `FAILED: ${job.error ?? 'unknown error'}`, failed: true };
+	}
+	if (job.status === 'stopped') {
+		return { text: `stopped: ${job.error ?? 'never ran'}`, failed: false };
+	}
+	const failed = jobRefused(job.result);
+	const outcome = failed ? `refused — ${String(job.result?.msg ?? '')}` : 'ok';
+	return { text: `finished: ${outcome}`, failed };
+}
+
 /** Journal one terminal transition (audit S2-16: terminal states must be observable). */
-function logTerminalState(job: BackgroundJob): void {
+function logTerminalState(job: BackgroundJob, logDetail?: string): void {
 	const duration = job.startedAt !== undefined ? `${Date.now() - job.startedAt}ms` : '?ms';
 	const identity = `${job.tool}::${job.action} (job ${job.id}, user ${job.userId ?? '?'}, ${duration})`;
-	if (job.status === 'error') {
-		console.error(`[background jobs] ${identity} FAILED: ${job.error ?? 'unknown error'}`);
-	} else {
-		const failed = jobRefused(job.result);
-		const outcome = failed ? `refused — ${String(job.result?.msg ?? '')}` : 'ok';
-		const log = failed ? console.error : console.log;
-		log(`[background jobs] ${identity} finished: ${outcome}`);
-	}
+	const { text, failed } = terminalOutcome(
+		logDetail === undefined ? job : { ...job, error: logDetail },
+	);
+	(failed ? console.error : console.log)(`[background jobs] ${identity} ${text}`);
 	// Bounded map (S3-62): evict the terminal record (with its full ToolResponse
 	// payload) after the polling grace period.
 	const evictionTimer = setTimeout(() => jobs.delete(job.id), TERMINAL_EVICT_AFTER_MS);
 	if (typeof (evictionTimer as { unref?: () => void }).unref === 'function') {
 		(evictionTimer as unknown as { unref: () => void }).unref();
+	}
+}
+
+/**
+ * Run an action's `admit` hook (ToolActionSpec.admit) — synchronously. The
+ * caller relies on NOTHING yielding between this call and what it does next
+ * (scheduleBackground registers the job), so a hook that returns a thenable is
+ * a contract violation, refused loudly rather than awaited: awaiting it would
+ * reopen the check-then-act gap the synchronous contract closes.
+ */
+export function runAdmission(
+	spec: ToolActionSpec,
+	principal: Principal,
+	userId: number,
+	options: Record<string, unknown>,
+	coordinates: { tool: string; method: string },
+): void {
+	if (spec.admit === undefined) return;
+	const returned: unknown = spec.admit({
+		principal,
+		userId,
+		options,
+		background: options.background_running === true,
+	});
+	if (
+		returned !== undefined &&
+		returned !== null &&
+		typeof (returned as { then?: unknown }).then === 'function'
+	) {
+		// Never leave the hook's own rejection unhandled.
+		(returned as Promise<unknown>).then(
+			() => undefined,
+			() => undefined,
+		);
+		throw new DedaloError('internal.invariant', {
+			message: 'admit hook returned a promise — admission is synchronous by contract',
+			coordinates,
+		});
 	}
 }
 
@@ -176,6 +241,17 @@ export function scheduleBackground(
 		});
 	}
 
+	// ADMISSION, in the SAME synchronous step as the registration below: nothing
+	// between this count and `jobs.set` yields, so two concurrent submissions of
+	// one user cannot both pass a per-user cap (check-then-act, closed).
+	runAdmission(spec, principal, userId, options, { tool: loaded.module.name, method });
+
+	// The submitter's interface lang, read NOW — still the request's synchronous
+	// flow — and handed to the handler explicitly (ToolActionContext.applicationLang):
+	// a QUEUED job's handler runs from another job's release, never trusted to
+	// inherit this request's lang scope.
+	const applicationLang = currentApplicationLang();
+
 	const job: BackgroundJob = {
 		id: '',
 		tool: loaded.module.name,
@@ -183,6 +259,7 @@ export function scheduleBackground(
 		status: 'running',
 		userId,
 		startedAt: Date.now(),
+		...(typeof options.section_tipo === 'string' ? { sectionTipo: options.section_tipo } : {}),
 	};
 
 	// The work runs INSIDE the process-job registry (the same one the AV transcodes
@@ -194,9 +271,17 @@ export function scheduleBackground(
 	// Errors are captured on the job record, never thrown into the void, and every
 	// terminal transition is journaled (audit S2-16: a failed 10k-row import must
 	// not be invisible).
+	// Whether the HANDLER was entered. A job the manager ends before its worker
+	// runs (stopped while queued, interrupted before its turn) has no handler
+	// outcome to record — the onTerminal callback below ends it instead; a job
+	// whose handler ran records its own outcome, and the callback leaves it be
+	// (a deadline 'stopped' the manager reports while the handler is still
+	// running must not end a record whose work — and lane slot — is still live).
+	let handlerStarted = false;
 	const record = mediaJobs.submit(
 		`${loaded.module.name}_${method}`,
-		async ({ onData, signal }) => {
+		async ({ onData, signal, jobId }) => {
+			handlerStarted = true;
 			// Publish a truthful first payload: the client's progress line reads
 			// frame.data.msg on every tick, and a null data renders "undefined".
 			onData({ msg: `Running ${loaded.module.name}::${method}`, is_running: true });
@@ -216,6 +301,10 @@ export function scheduleBackground(
 					// (stop_process / graceful shutdown abort it). Handlers check it at
 					// loop boundaries and return a partial summary.
 					signal,
+					// The lane job's own id, so work that outlives the request can
+					// record which job produced it (tool_export's manifest).
+					backgroundJobId: jobId,
+					applicationLang,
 				});
 				job.status = 'done';
 				job.result = result;
@@ -225,15 +314,53 @@ export function scheduleBackground(
 				return result;
 			} catch (error) {
 				job.status = 'error';
-				job.error = error instanceof Error ? error.message : String(error);
-				logTerminalState(job);
-				throw error;
+				// (a STOP is re-labelled 'stopped' below.) `job.error` is SERVED (get_background_job_status /
+				// get_background_jobs, to the owner and every global admin), and so
+				// is the lane record's errors[] (media/jobs.ts recordFailure, the
+				// pfile + every job frame). A handler's throw reaches BOTH as the
+				// CONVERTER'S wire sentence, typed or not: an untyped throw is most
+				// often a raw fs/driver error whose text names an absolute server
+				// path ("ENOENT: …, open '/srv/…/media/…'"), and `.message` is
+				// LOG-ONLY (ERRORS_SPEC §2.2). Rethrowing the CONVERTED error keeps
+				// recordFailure's raw-text arm (error_taxonomy A6) for the AV workers
+				// it exists for — no handler of this executor reaches it. The log
+				// lines (here and the lane's) keep the full original message.
+				const typed = toDedaloError(error);
+				const logMessage = error instanceof Error ? error.message : String(error);
+				job.error = wireMessage(typed);
+				// The user's STOP surfaced as a throw (the handler's cooperative
+				// abort) is the same event the lane records as 'stopped' — not a
+				// failure: no error-level line, no `error` gauge (counters), and
+				// the two job wires agree. A deadline / shutdown abort stays 'error'
+				// (an operator limit or a dying process is not the user's choice).
+				if (jobAbortInfo(signal)?.cause === 'stop') job.status = 'stopped';
+				logTerminalState(job, logMessage);
+				throw typed;
 			}
 		},
 		// The owner: these ids are derived (guessable), so the status stream must be
 		// able to refuse a poll from another user (api/process_status.ts). The lane
 		// is the module's own declaration (see above).
-		{ lane, userId },
+		{
+			lane,
+			userId,
+			onTerminal: (settled: JobRecord) => {
+				if (handlerStarted || job.status !== 'running') return;
+				// NEVER STARTED: a terminal transition with no handler outcome. Without
+				// this the record reads 'running' until restart — listed as live by
+				// get_background_jobs and counted by every admission hook that counts
+				// this registry (tool_export's per-user cap would lose a slot for good).
+				job.status = settled.status === 'stopped' ? 'stopped' : 'error';
+				// A queued stop leaves the lane frame's errors[] empty (media/jobs.ts
+				// endNeverStarted); an interruption carries its 'interrupted: …' line.
+				job.error =
+					settled.errors.at(-1) ??
+					(settled.status === 'stopped'
+						? 'stopped before it started (was queued)'
+						: `ended '${settled.status}' before it started`);
+				logTerminalState(job);
+			},
+		},
 	);
 
 	job.id = record.id;

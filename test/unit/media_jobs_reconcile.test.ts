@@ -17,9 +17,10 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { markProcessesDir } from '../helpers/test_media_root.ts';
 
 const scratchDir = mkdtempSync(join(tmpdir(), 'dedalo_media_pfiles_'));
-process.env.DEDALO_MEDIA_PROCESSES_DIR = scratchDir;
+process.env.DEDALO_MEDIA_PROCESSES_DIR = markProcessesDir(scratchDir);
 
 // Import AFTER the env override so every processesDir() call lands in scratch.
 const { MediaJobManager, jobFilePath, reconcileProcessFiles } = await import(

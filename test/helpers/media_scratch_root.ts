@@ -21,6 +21,7 @@
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { EXPORT_ARTIFACTS_TEST_MARKER } from '../../tools/tool_export/server/artifact_store.ts';
 import { TEST_MEDIA_MARKER } from './test_media_root.ts';
 
 /** Plant the marker in an existing directory (created if missing). Returns it. */
@@ -44,3 +45,26 @@ export function resetMediaRoot(dir: string): string {
 	rmSync(dir, { recursive: true, force: true });
 	return markMediaRoot(dir);
 }
+
+/**
+ * Declare an EXPORT ARTIFACTS scratch root (tool_export's store,
+ * tools/tool_export/server/artifact_store.ts): plant its
+ * `.dedalo_test_export_artifacts` marker (created if missing). Under the test
+ * seam the store refuses every root without it — the same law as a media root.
+ */
+export function markExportArtifactsRoot(dir: string): string {
+	mkdirSync(dir, { recursive: true });
+	const marker = join(dir, EXPORT_ARTIFACTS_TEST_MARKER);
+	if (!existsSync(marker)) {
+		writeFileSync(marker, 'scratch export artifacts root — a test gate created this\n');
+	}
+	return dir;
+}
+
+/**
+ * Declare a JOB-REGISTRY scratch dir (src/core/media/jobs.ts pfiles) — defined
+ * in the config-free helper so a gate that must not evaluate the engine's
+ * config (one that spawns a server child) can import it directly; re-exported
+ * here beside its siblings.
+ */
+export { markProcessesDir } from './test_media_root.ts';

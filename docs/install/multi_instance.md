@@ -32,6 +32,7 @@ instances collide.
 | `SERVER_UNIX_SOCKET` | the engine **refuses to boot** if a live instance already answers on the socket; the default `/tmp/dedalo_ts.sock` collides | that instance's `.env` |
 | PostgreSQL database + role | the system of record; the installer refuses a non-empty database | `DB_NAME` / `DB_USER` |
 | `MEDIA_PATH` | the media tree, and the generated web-server rule files that gate it | that instance's `.env` |
+| `DEDALO_EXPORT_ARTIFACTS_DIR` (when set) | the users' server-built exports — copies of records. The default lives inside `private/`, so it is unique with it; a directory set outside it must differ per instance (the engine refuses a directory another install's marker names) | that instance's `.env` |
 | Linux user + group | the ownership boundary that keeps one instance out of another's secrets and media | you create it |
 | `ACTIVE_ONTOLOGY_TLDS` | the ontology domains active in this install | that instance's `.env` |
 | systemd service + proxy vhost | one service and one `server{}` + `upstream` per domain | see below |
@@ -304,6 +305,7 @@ server {
     location /dedalo/install/import/hierarchy/       { proxy_pass http://dedalo_site1; }
     location /dedalo/ai_models/                      { proxy_pass http://dedalo_site1; }
     location /dedalo/upload_tmp/                     { proxy_pass http://dedalo_site1; }
+    location /dedalo/export/artifact/                { proxy_buffering off; proxy_pass http://dedalo_site1; }
 
     location /dedalo/ {
         alias /home/ded_site1/dedalo/client/dedalo/;
@@ -354,6 +356,7 @@ first match wins. Every path points at **this instance's** socket, media and clo
     ProxyPass /dedalo/install/import/hierarchy/     unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/install/import/hierarchy/
     ProxyPass /dedalo/ai_models/                    unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/ai_models/
     ProxyPass /dedalo/upload_tmp/                   unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/upload_tmp/
+    ProxyPass /dedalo/export/artifact/              unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/export/artifact/
 
     # --- Media: the generated .htaccess lives inside THIS instance's MEDIA_PATH -
     Alias /dedalo/media /srv/dedalo/site1/media

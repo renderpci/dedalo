@@ -53,7 +53,9 @@ import {
 
 /**
  * A caller fault. `message` AND `publicMessage`: import_files is
- * backgroundRunnable, and the executor records `error.message` on the job.
+ * backgroundRunnable, and the executor records the converter's wire sentence
+ * on the job (background.ts `wireMessage`: this `publicMessage`, the code's
+ * disclosure being public) — `message` is the log line only.
  */
 function invalidRequest(message: string): DedaloError {
 	return new DedaloError('request.invalid_options', { message, publicMessage: message });

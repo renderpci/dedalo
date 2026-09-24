@@ -14,11 +14,14 @@
 
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
+import { DedaloError, ok } from '../../src/core/errors/index.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import * as realRecordScope from '../../src/core/security/record_scope.ts';
 import { dispatchToolRequest } from '../../src/core/tools/dispatch.ts';
+import { getLoadedTool, type LoadedTool } from '../../src/core/tools/loader.ts';
+import type { ToolActionSpec } from '../../src/core/tools/module.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
 
@@ -120,6 +123,58 @@ describe('dd_tools_api.tool_request (Phase 6 gate)', () => {
 			dispatchToolRequest(SUPERUSER, -1, APPLY_SOURCE, 'not-an-object'),
 		);
 		expect(badOptions.code).toBe('request.invalid_options');
+	});
+
+	test('a FOREGROUND action that declares admit is admitted before its handler runs (gate 7b)', async () => {
+		// A scratch action on a REAL active tool's loaded module (gates 3-6 pass
+		// for real), removed in finally. No in-tree action reaches this branch
+		// today: the only admit-bearing actions (tool_export's builds) refuse a
+		// foreground call — so without this leg the foreground admission call in
+		// dispatch.ts could vanish with every gate green.
+		const loaded = await getLoadedTool('tool_export');
+		expect(loaded).toBeDefined();
+		const actions = (loaded as LoadedTool).module.apiActions;
+		const ACTION = 'zz_admit_probe';
+		let ran = 0;
+		const withAdmit = (admit: ToolActionSpec['admit']): void => {
+			actions[ACTION] = {
+				permission: 'section',
+				minLevel: 1,
+				admit,
+				handler: async () => {
+					ran++;
+					return ok({ ran: true }, { requestId: 'zz-admit' });
+				},
+			};
+		};
+		const call = () =>
+			dispatchToolRequest(
+				SUPERUSER,
+				-1,
+				{ model: 'tool_export', action: ACTION },
+				{ section_tipo: SECTION_TIPO },
+			);
+		try {
+			// (a) a synchronous refusal: its own code, the handler never runs
+			withAdmit(() => {
+				throw new DedaloError('export.too_many_jobs', { details: { limit: 0 } });
+			});
+			expect((await refusalOf(call())).code).toBe('export.too_many_jobs');
+			expect(ran).toBe(0);
+
+			// (b) an async hook breaks the synchronous contract: refused, not run
+			withAdmit((async () => undefined) as unknown as ToolActionSpec['admit']);
+			expect((await refusalOf(call())).code).toBe('internal.invariant');
+			expect(ran).toBe(0);
+
+			// (c) admitted: the handler runs
+			withAdmit(() => undefined);
+			const response = (await call()) as { ok: boolean };
+			expect(response.ok).toBe(true);
+			expect(ran).toBe(1);
+		} finally {
+			Reflect.deleteProperty(actions, ACTION);
+		}
 	});
 
 	test('apply_value rejects a TM row that does not match the target', async () => {

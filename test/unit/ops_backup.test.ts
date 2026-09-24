@@ -47,6 +47,7 @@ import {
 	resolvePgRestore,
 	verifyBackupArtifact,
 } from '../../src/core/area_maintenance/backup.ts';
+import { markProcessesDir } from '../helpers/test_media_root.ts';
 
 const scratch = mkdtempSync(join(tmpdir(), 'dedalo_backup_'));
 const backupDir = join(scratch, 'backups');
@@ -55,7 +56,7 @@ const backupDir = join(scratch, 'backups');
 // (S2-35/DEC-22a) — point the processes dir at scratch so the live
 // ../private/processes tree is never touched (read per call via readEnv).
 const previousProcessesDir = process.env.DEDALO_MEDIA_PROCESSES_DIR;
-process.env.DEDALO_MEDIA_PROCESSES_DIR = join(scratch, 'processes');
+process.env.DEDALO_MEDIA_PROCESSES_DIR = markProcessesDir(join(scratch, 'processes'));
 
 /** A fake pg_dump: scans argv for -f <file>, then behaves per the mode file. */
 const fakePgDump = join(scratch, 'fake_pg_dump.sh');

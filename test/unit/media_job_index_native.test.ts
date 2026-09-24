@@ -24,6 +24,7 @@ import {
 	jobTargetKey,
 	MediaJobManager,
 } from '../../src/core/media/jobs.ts';
+import { markProcessesDir } from '../helpers/test_media_root.ts';
 
 let scratchDir = '';
 let previous: string | undefined;
@@ -31,7 +32,7 @@ let previous: string | undefined;
 beforeEach(() => {
 	scratchDir = mkdtempSync(join(tmpdir(), 'dd-jobs-'));
 	previous = process.env.DEDALO_MEDIA_PROCESSES_DIR;
-	process.env.DEDALO_MEDIA_PROCESSES_DIR = scratchDir;
+	process.env.DEDALO_MEDIA_PROCESSES_DIR = markProcessesDir(scratchDir);
 });
 
 afterEach(() => {

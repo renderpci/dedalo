@@ -641,6 +641,776 @@
             "lang": "lg-nep",
             "name": "value_with_parents",
             "value": "अभिभावकहरू निर्यात गर्नुहोस्"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "stop",
+            "value": "Stop"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "stop",
+            "value": "Detener"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "stop",
+            "value": "Aturar"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "stop",
+            "value": "Arrêter"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "stop",
+            "value": "Ferma"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "stop",
+            "value": "Anhalten"
+          },
+          {
+            "lang": "lg-por",
+            "name": "stop",
+            "value": "Parar"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "delete_export",
+            "value": "Delete export"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "delete_export",
+            "value": "Eliminar exportación"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "delete_export",
+            "value": "Elimina l'exportació"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "delete_export",
+            "value": "Supprimer l'export"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "delete_export",
+            "value": "Elimina esportazione"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "delete_export",
+            "value": "Export löschen"
+          },
+          {
+            "lang": "lg-por",
+            "name": "delete_export",
+            "value": "Eliminar exportação"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "delete_export_confirm",
+            "value": "Delete this export and all its files from the server? This cannot be undone."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "delete_export_confirm",
+            "value": "¿Eliminar esta exportación y todos sus archivos del servidor? No se puede deshacer."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "delete_export_confirm",
+            "value": "Voleu eliminar aquesta exportació i tots els seus fitxers del servidor? No es pot desfer."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "delete_export_confirm",
+            "value": "Supprimer cet export et tous ses fichiers du serveur ? Cette action est irréversible."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "delete_export_confirm",
+            "value": "Eliminare questa esportazione e tutti i suoi file dal server? L'operazione non può essere annullata."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "delete_export_confirm",
+            "value": "Diesen Export und alle seine Dateien vom Server löschen? Dies kann nicht rückgängig gemacht werden."
+          },
+          {
+            "lang": "lg-por",
+            "name": "delete_export_confirm",
+            "value": "Eliminar esta exportação e todos os seus ficheiros do servidor? Não é possível desfazer."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "export_deleted",
+            "value": "Export deleted"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "export_deleted",
+            "value": "Exportación eliminada"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "export_deleted",
+            "value": "Exportació eliminada"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "export_deleted",
+            "value": "Export supprimé"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "export_deleted",
+            "value": "Esportazione eliminata"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "export_deleted",
+            "value": "Export gelöscht"
+          },
+          {
+            "lang": "lg-por",
+            "name": "export_deleted",
+            "value": "Exportação eliminada"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "no_columns_selected",
+            "value": "Select at least one column to export"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "no_columns_selected",
+            "value": "Seleccione al menos una columna para exportar"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "no_columns_selected",
+            "value": "Seleccioneu almenys una columna per exportar"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "no_columns_selected",
+            "value": "Sélectionnez au moins une colonne à exporter"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "no_columns_selected",
+            "value": "Selezionare almeno una colonna da esportare"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "no_columns_selected",
+            "value": "Wählen Sie mindestens eine Spalte zum Exportieren aus"
+          },
+          {
+            "lang": "lg-por",
+            "name": "no_columns_selected",
+            "value": "Selecione pelo menos uma coluna para exportar"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "export_starting",
+            "value": "Starting export"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "export_starting",
+            "value": "Iniciando la exportación"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "export_starting",
+            "value": "Iniciant l'exportació"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "export_starting",
+            "value": "Démarrage de l'export"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "export_starting",
+            "value": "Avvio dell'esportazione"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "export_starting",
+            "value": "Export wird gestartet"
+          },
+          {
+            "lang": "lg-por",
+            "name": "export_starting",
+            "value": "A iniciar a exportação"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "export_running",
+            "value": "Exporting"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "export_running",
+            "value": "Exportando"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "export_running",
+            "value": "Exportant"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "export_running",
+            "value": "Export en cours"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "export_running",
+            "value": "Esportazione in corso"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "export_running",
+            "value": "Export läuft"
+          },
+          {
+            "lang": "lg-por",
+            "name": "export_running",
+            "value": "A exportar"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "export_ended",
+            "value": "Export finished"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "export_ended",
+            "value": "Exportación terminada"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "export_ended",
+            "value": "Exportació acabada"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "export_ended",
+            "value": "Export terminé"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "export_ended",
+            "value": "Esportazione completata"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "export_ended",
+            "value": "Export abgeschlossen"
+          },
+          {
+            "lang": "lg-por",
+            "name": "export_ended",
+            "value": "Exportação concluída"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "export_failed",
+            "value": "The export failed"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "export_failed",
+            "value": "La exportación ha fallado"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "export_failed",
+            "value": "L'exportació ha fallat"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "export_failed",
+            "value": "L'export a échoué"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "export_failed",
+            "value": "L'esportazione non è riuscita"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "export_failed",
+            "value": "Der Export ist fehlgeschlagen"
+          },
+          {
+            "lang": "lg-por",
+            "name": "export_failed",
+            "value": "A exportação falhou"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "export_interrupted",
+            "value": "The export was interrupted by a server restart. Run it again."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "export_interrupted",
+            "value": "La exportación se interrumpió por un reinicio del servidor. Vuelva a ejecutarla."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "export_interrupted",
+            "value": "L'exportació es va interrompre per un reinici del servidor. Torneu-la a executar."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "export_interrupted",
+            "value": "L'export a été interrompu par un redémarrage du serveur. Relancez-le."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "export_interrupted",
+            "value": "L'esportazione è stata interrotta da un riavvio del server. Eseguirla di nuovo."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "export_interrupted",
+            "value": "Der Export wurde durch einen Serverneustart unterbrochen. Starten Sie ihn erneut."
+          },
+          {
+            "lang": "lg-por",
+            "name": "export_interrupted",
+            "value": "A exportação foi interrompida por um reinício do servidor. Execute-a novamente."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "print_current_page_note",
+            "value": "Print prints the current preview page only. Download HTML for the whole export."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "print_current_page_note",
+            "value": "Imprimir solo imprime la página actual de la vista previa. Descargue HTML para la exportación completa."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "print_current_page_note",
+            "value": "Imprimir només imprimeix la pàgina actual de la previsualització. Descarregueu HTML per a l'exportació completa."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "print_current_page_note",
+            "value": "L'impression ne concerne que la page d'aperçu actuelle. Téléchargez le HTML pour l'export complet."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "print_current_page_note",
+            "value": "La stampa riguarda solo la pagina corrente dell'anteprima. Scaricare l'HTML per l'esportazione completa."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "print_current_page_note",
+            "value": "Drucken druckt nur die aktuelle Vorschauseite. Laden Sie HTML für den vollständigen Export herunter."
+          },
+          {
+            "lang": "lg-por",
+            "name": "print_current_page_note",
+            "value": "Imprimir imprime apenas a página atual da pré-visualização. Descarregue o HTML para a exportação completa."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "download_ndjson",
+            "value": "NDJSON (lossless)"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "download_ndjson",
+            "value": "NDJSON (sin pérdida)"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "download_ndjson",
+            "value": "NDJSON (sense pèrdua)"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "download_ndjson",
+            "value": "NDJSON (sans perte)"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "download_ndjson",
+            "value": "NDJSON (senza perdita)"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "download_ndjson",
+            "value": "NDJSON (verlustfrei)"
+          },
+          {
+            "lang": "lg-por",
+            "name": "download_ndjson",
+            "value": "NDJSON (sem perda)"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "media",
+            "value": "media"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "media",
+            "value": "multimedia"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "media",
+            "value": "multimèdia"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "media",
+            "value": "médias"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "media",
+            "value": "media"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "media",
+            "value": "Medien"
+          },
+          {
+            "lang": "lg-por",
+            "name": "media",
+            "value": "multimédia"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "download_media",
+            "value": "Download media"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "download_media",
+            "value": "Descargar multimedia"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "download_media",
+            "value": "Descarregar multimèdia"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "download_media",
+            "value": "Télécharger les médias"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "download_media",
+            "value": "Scarica i media"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "download_media",
+            "value": "Medien herunterladen"
+          },
+          {
+            "lang": "lg-por",
+            "name": "download_media",
+            "value": "Descarregar multimédia"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "first_page",
+            "value": "First page"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "first_page",
+            "value": "Primera página"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "first_page",
+            "value": "Primera pàgina"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "first_page",
+            "value": "Première page"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "first_page",
+            "value": "Prima pagina"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "first_page",
+            "value": "Erste Seite"
+          },
+          {
+            "lang": "lg-por",
+            "name": "first_page",
+            "value": "Primeira página"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "last_page",
+            "value": "Last page"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "last_page",
+            "value": "Última página"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "last_page",
+            "value": "Darrera pàgina"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "last_page",
+            "value": "Dernière page"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "last_page",
+            "value": "Ultima pagina"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "last_page",
+            "value": "Letzte Seite"
+          },
+          {
+            "lang": "lg-por",
+            "name": "last_page",
+            "value": "Última página"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "records_per_page",
+            "value": "Records per page"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "records_per_page",
+            "value": "Registros por página"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "records_per_page",
+            "value": "Registres per pàgina"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "records_per_page",
+            "value": "Enregistrements par page"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "records_per_page",
+            "value": "Record per pagina"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "records_per_page",
+            "value": "Datensätze pro Seite"
+          },
+          {
+            "lang": "lg-por",
+            "name": "records_per_page",
+            "value": "Registos por página"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "records",
+            "value": "records"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "records",
+            "value": "registros"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "records",
+            "value": "registres"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "records",
+            "value": "enregistrements"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "records",
+            "value": "record"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "records",
+            "value": "Datensätze"
+          },
+          {
+            "lang": "lg-por",
+            "name": "records",
+            "value": "registos"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "preparing_file",
+            "value": "Preparing file"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "preparing_file",
+            "value": "Preparando el archivo"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "preparing_file",
+            "value": "Preparant el fitxer"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "preparing_file",
+            "value": "Préparation du fichier"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "preparing_file",
+            "value": "Preparazione del file"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "preparing_file",
+            "value": "Datei wird vorbereitet"
+          },
+          {
+            "lang": "lg-por",
+            "name": "preparing_file",
+            "value": "A preparar o ficheiro"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "waiting_file",
+            "value": "Waiting for the file being prepared"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "waiting_file",
+            "value": "Esperando al archivo en preparación"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "waiting_file",
+            "value": "Esperant el fitxer en preparació"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "waiting_file",
+            "value": "En attente du fichier en préparation"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "waiting_file",
+            "value": "In attesa del file in preparazione"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "waiting_file",
+            "value": "Warten auf die Datei in Vorbereitung"
+          },
+          {
+            "lang": "lg-por",
+            "name": "waiting_file",
+            "value": "A aguardar o ficheiro em preparação"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "file_failed",
+            "value": "The file could not be built"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "file_failed",
+            "value": "No se pudo generar el archivo"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "file_failed",
+            "value": "No s'ha pogut generar el fitxer"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "file_failed",
+            "value": "Le fichier n'a pas pu être créé"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "file_failed",
+            "value": "Impossibile creare il file"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "file_failed",
+            "value": "Die Datei konnte nicht erstellt werden"
+          },
+          {
+            "lang": "lg-por",
+            "name": "file_failed",
+            "value": "Não foi possível gerar o ficheiro"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "quality_for",
+            "value": "Quality for"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "quality_for",
+            "value": "Calidad para"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "quality_for",
+            "value": "Qualitat per a"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "quality_for",
+            "value": "Qualité pour"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "quality_for",
+            "value": "Qualità per"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "quality_for",
+            "value": "Qualität für"
+          },
+          {
+            "lang": "lg-por",
+            "name": "quality_for",
+            "value": "Qualidade para"
           }
         ]
       }

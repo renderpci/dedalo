@@ -33,7 +33,7 @@
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { LEGACY_TOKEN_MAP } from '../errors/registry.ts';
 import type { Principal } from '../security/permissions.ts';
-import { scheduleBackground } from './background.ts';
+import { runAdmission, scheduleBackground } from './background.ts';
 import {
 	BACKGROUND_JOB_STATUS_ACTION,
 	BACKGROUND_JOBS_ACTION,
@@ -148,10 +148,15 @@ export async function dispatchToolRequest(
 		throw permissionRefusal(permission, toolName, toolMethod);
 	}
 
-	// Gate 8: execute. A background request runs through the executor (which
-	// enforces the BACKGROUND_RUNNABLE allowlist); otherwise run synchronously.
+	// Gates 7b + 8: the action's own admission policy (ToolActionSpec.admit),
+	// then execute. A background request runs through the executor, which
+	// enforces the BACKGROUND_RUNNABLE allowlist and runs the admission INSIDE
+	// the synchronous step that registers the job — admitting here, before an
+	// `await`, would let a concurrent submission count the same registry and
+	// pass a per-user cap twice. A foreground request is admitted, then runs.
 	if (optionRecord.background_running === true) {
 		return scheduleBackground(loaded, toolMethod, spec, optionRecord, principal, userId, clientIp);
 	}
+	runAdmission(spec, principal, userId, optionRecord, { tool: toolName, method: toolMethod });
 	return spec.handler({ principal, userId, options: optionRecord, background: false, clientIp });
 }

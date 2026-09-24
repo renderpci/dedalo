@@ -184,6 +184,12 @@ export const NON_ENVELOPE_READS: readonly NonEnvelopeRead[] = [
 			"`frame` is the server-owned job STATUS FRAME {pid, pfile, is_running, data, errors, total_time} (src/core/media/jobs.ts JobStatusFrame), not an envelope: `errors` there is the worker's collected failure lines. The envelope INSIDE it (`frame.data`) is read as `data`/`error.message`.",
 	},
 	{
+		file: 'tools/tool_export/js/render_tool_export.js',
+		pattern: /\bframe\.errors\b/g,
+		reason:
+			"`frame` is the server-owned job STATUS FRAME of an export lane job (build_export_artifact / build_export_file — src/core/media/jobs.ts JobStatusFrame {pid, pfile, is_running, data, errors, total_time}), not an envelope: `errors` there is the worker's collected failure lines. The envelope INSIDE it (`frame.data`) is read through response_data.",
+	},
+	{
 		file: 'client/dedalo/core/area_maintenance/widgets/diffusion_server_control/js/render_diffusion_server_control.js',
 		pattern: /\bjob\.msg\b/g,
 		reason:

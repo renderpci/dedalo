@@ -100,6 +100,42 @@ function postureOf(key: string): ReadDoorPosture {
 	return entry;
 }
 
+/**
+ * The THIRD source of read doors: the loaded tools' HTTP routes
+ * (ToolServerModule.httpRoutes — tool_export's artifact download serves record
+ * data outside both registries above). Each route classifies ITSELF
+ * (`readPosture`, required by the loader, never `open`); the census reads the
+ * loaded registry, so a route any tool root adds later is in it.
+ */
+const { loadToolModules } = await import('../../src/core/tools/loader.ts');
+const toolRoutes: { key: string; posture: unknown }[] = [];
+for (const loaded of (await loadToolModules()).values()) {
+	for (const route of loaded.module.httpRoutes ?? []) {
+		toolRoutes.push({ key: `http:GET ${route.pathPrefix}`, posture: route.readPosture });
+	}
+}
+
+describe('A0 — tool HTTP routes are in the census, each classified by its own declaration', () => {
+	test("anti-vacuity: tool_export's artifact download is a census door", () => {
+		expect(toolRoutes.map((route) => route.key)).toContain('http:GET /dedalo/export/artifact/');
+	});
+
+	test('every loaded tool route carries a closed, non-open posture (the loader refuses the rest)', async () => {
+		const { readPostureRefusal } = await import('../../src/core/tools/loader.ts');
+		for (const route of toolRoutes) {
+			expect(readPostureRefusal(route.posture), route.key).toBeNull();
+			expect((route.posture as { posture: string }).posture, route.key).not.toBe('open');
+		}
+		// positive control: the rule this relies on refuses the offenders
+		expect(readPostureRefusal(undefined)).not.toBeNull();
+		expect(readPostureRefusal({ posture: 'open', reason: 'ungated values' })).not.toBeNull();
+	});
+
+	test('a tool route never shadows a classified engine door', () => {
+		for (const route of toolRoutes) expect(READ_DOOR_POSTURE.has(route.key), route.key).toBe(false);
+	});
+});
+
 describe('A — the census is TOTAL and DERIVED', () => {
 	test('anti-vacuity floors: both registries are populous', () => {
 		// Measured 2026-09-03: 90 actions, 10 read tools, 1 extra door.

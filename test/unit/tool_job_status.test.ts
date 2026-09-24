@@ -19,7 +19,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const scratchDir = mkdtempSync(join(tmpdir(), 'dedalo_job_status_'));
-process.env.DEDALO_MEDIA_PROCESSES_DIR = scratchDir;
+process.env.DEDALO_MEDIA_PROCESSES_DIR = markProcessesDir(scratchDir);
 
 // Import AFTER the env override so the mediaJobs singleton persists to scratch.
 const { mediaJobs } = await import('../../src/core/media/jobs.ts');
@@ -39,6 +39,7 @@ import { isDedaloError } from '../../src/core/errors/index.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import type { LoadedTool } from '../../src/core/tools/loader.ts';
 import type { ToolServerModule } from '../../src/core/tools/module.ts';
+import { markProcessesDir } from '../helpers/test_media_root.ts';
 
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 

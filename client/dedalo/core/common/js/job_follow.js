@@ -9,6 +9,7 @@ import {dd_console} from './utils/index.js'
 // the same kind of thing here, and both must be able to raise the relogin overlay.
 import {is_api_error, normalize_stream_error, normalize_transport_error} from './api_error.js'
 import {handle_api_error} from './error_dispatch.js'
+import {resolve_error_policy} from './error_policy.js'
 
 /**
 * JOB_FOLLOW
@@ -27,13 +28,19 @@ import {handle_api_error} from './error_dispatch.js'
 * byte-for-byte against the old engine. The activity row names which stream it
 * belongs to, and this module serves the media one only.
 *
-* ERRORS ARE ROUTED HERE, ONCE. A job frame can now carry an `error` (envelope v2,
-* api_error.js), and the connect itself rejects with an ApiError. Both go through
+* ERRORS ARE ROUTED HERE, ONCE — AND ONLY THE SESSION CLASS. A job frame can
+* carry an `error` (envelope v2, api_error.js), and the connect itself rejects
+* with an ApiError. A failure whose policy is `relogin` goes through
 * `handle_api_error`, so a session that expires under a two-hour transcode raises
 * the relogin overlay instead of painting a row red and saying nothing actionable.
-* Doing it in THIS module rather than in each follower is what makes that true for
-* every surface that follows a job — a caller still gets the terminal frame and
-* decides what to paint.
+* EVERY OTHER failure is JOB-SCOPED and stays the caller's to paint (it gets the
+* terminal frame; job_failure_text / normalize_stream_error read it): the page
+* policy is for the PAGE. A background export refused with `perm.denied` (one
+* locator crossing into a record outside the user's projects) must not run the
+* `no_access_page` action — that sets page_globals.page_error, and from then on
+* every render on the page draws the no-access panel until a reload. Nor must an
+* untyped ffmpeg failure (`internal.unexpected`) add a toast and unfold the
+* defect-report launcher on top of the row the caller already painted red.
 *
 * The reader registers itself in page_globals.stream_readers (inside
 * data_manager.read_stream), so navigating away aborts it — a followed job never
@@ -91,9 +98,8 @@ export const follow_job = function(job_id, handlers) {
 	// could put a build button back while the job is still running.
 	//
 	// `api_error` is the failure that ENDED the run, when there was one: the
-	// terminal frame's own error, or the transport's. It is dispatched here and
-	// the caller is still handed the frame — the lifecycle is unchanged, the
-	// routing is new.
+	// terminal frame's own error, or the transport's. Only a `relogin`-policy
+	// failure is dispatched here; the caller is always handed the frame.
 	const finish = function(frame, api_error) {
 		if (finished || cancelled) {
 			return
@@ -101,7 +107,8 @@ export const follow_job = function(job_id, handlers) {
 		finished = true
 		release()
 		const error = is_api_error(api_error) ? api_error : normalize_stream_error(frame)
-		if (error) {
+		// job-scoped by default: only the session class leaves this module (module note)
+		if (error && resolve_error_policy(error).action==='relogin') {
 			// not awaited: the caller's on_done must not queue behind a relogin
 			// overlay the user may leave open for minutes
 			handle_api_error(error).catch(function(dispatch_error){
@@ -254,7 +261,14 @@ export const create_job_follower_group = function() {
 				}
 			}
 
-			cancel = follow_job(job_id, wrapped)
+			const raw_cancel = follow_job(job_id, wrapped)
+			// The cancel handed to the caller prunes too: a cancelled follower gets
+			// no on_done, so without this a caller-side cancel would leave a dead
+			// entry in the group until the next cancel_all().
+			cancel = function() {
+				followers.delete(cancel)
+				raw_cancel()
+			}
 			followers.add(cancel)
 
 			return cancel

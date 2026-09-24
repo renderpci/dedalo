@@ -79,6 +79,7 @@ import {
 	SESSION_IDLE_TTL_SECONDS,
 	setSessionMediaKey,
 } from './core/security/session_store.ts';
+import { startToolBootHooks, toolHttpRouteFor } from './core/tools/loader.ts';
 import { safeRealpath } from './core/tools/paths.ts';
 import { serveToolsRequest } from './core/tools/serving.ts';
 import { DEDALO_ENGINE_VERSION } from './core/update/build_stamp.ts';
@@ -1234,6 +1235,17 @@ export async function handleRequest(request: Request, context: RequestContext): 
 	}
 
 	// Copied-client static assets (Phase 7 seam).
+	// TOOL-SERVED ROUTES (ToolServerModule.httpRoutes — e.g. tool_export's
+	// built-file downloads). AFTER every engine route, so none can be shadowed;
+	// before the client static tree (a tool may not claim a client directory —
+	// the loader refuses reserved segments). The engine never names a tool here.
+	if (request.method === 'GET' && url.pathname.startsWith('/dedalo/') && !config.installMode) {
+		const toolRoute = await toolHttpRouteFor(url.pathname);
+		if (toolRoute !== undefined) {
+			return (await toolRoute.handle(request, url.pathname)) ?? notFoundResponse(context.requestId);
+		}
+	}
+
 	if (request.method === 'GET' && url.pathname.startsWith('/dedalo/')) {
 		return serveClientAsset(url.pathname, request, context.requestId);
 	}
@@ -1570,10 +1582,19 @@ async function shutdownGracefully(
 	servers: ReturnType<typeof Bun.serve>[],
 	socketPath: string,
 	exitCode = 0,
+	/** Boot-armed timers to stop (e.g. the export artifacts sweeper). */
+	stops: readonly (() => void)[] = [],
 ): Promise<void> {
 	if (shuttingDown) return;
 	shuttingDown = true;
 	console.log(`[shutdown] ${signal} received — draining (grace ${config.ops.shutdownGraceMs}ms)`);
+	for (const stop of stops) {
+		try {
+			stop();
+		} catch (error) {
+			console.error('[shutdown] stopping a boot timer failed:', error);
+		}
+	}
 	try {
 		const { stopDiffusionScheduler } = await import('./diffusion/jobs/scheduler.ts');
 		stopDiffusionScheduler();
@@ -1798,6 +1819,10 @@ export async function startServer() {
 		}
 	}
 
+	// Timers this boot armed that the shutdown drain stops (handles stay local
+	// to this boot, never module state).
+	const shutdownStops: (() => void)[] = [];
+
 	// Everything below through the diffusion control plane is DB-dependent —
 	// skipped in install mode (no database yet) and in a smoke boot (schedulers,
 	// watchers, media provisioning: all writers). The block restores on the
@@ -1973,6 +1998,16 @@ export async function startServer() {
 			}
 		} catch (error) {
 			console.error('[retention] scheduler boot failed — retention windows will not run:', error);
+		}
+
+		// TOOL BOOT HOOKS (ToolServerModule.onBoot — e.g. tool_export's TTL
+		// sweeper). Loads the tool registry now, so the first request never
+		// evaluates tool modules. Handles are this boot's; stopped on shutdown.
+		// Never fatal — a tool never stops the archive from serving.
+		try {
+			shutdownStops.push(...(await startToolBootHooks()));
+		} catch (error) {
+			console.error('[tools] boot hooks failed — tool timers will not run:', error);
 		}
 
 		// MEDIA TREE (audit 2026-08_oh1_beta §5.2). PHP provisioned the whole tree
@@ -2341,8 +2376,14 @@ export async function startServer() {
 	}
 
 	// Graceful shutdown (audit S2-17): supervisors send SIGTERM; operators ^C.
-	process.on('SIGTERM', () => void shutdownGracefully('SIGTERM', servers, socketPath));
-	process.on('SIGINT', () => void shutdownGracefully('SIGINT', servers, socketPath));
+	process.on(
+		'SIGTERM',
+		() => void shutdownGracefully('SIGTERM', servers, socketPath, 0, shutdownStops),
+	);
+	process.on(
+		'SIGINT',
+		() => void shutdownGracefully('SIGINT', servers, socketPath, 0, shutdownStops),
+	);
 
 	// A PLANNED restart (persist_config, code update) is a shutdown too, and gets
 	// the same drain. Registered rather than imported: core/install must not close
@@ -2350,7 +2391,7 @@ export async function startServer() {
 	{
 		const { registerGracefulShutdown } = await import('./core/install/restart.ts');
 		registerGracefulShutdown((exitCode, reason) => {
-			void shutdownGracefully(reason, servers, socketPath, exitCode);
+			void shutdownGracefully(reason, servers, socketPath, exitCode, shutdownStops);
 		});
 	}
 

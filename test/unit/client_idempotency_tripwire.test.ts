@@ -525,9 +525,15 @@ describe('C — the client census (TOTAL over client/ and tools/**/js)', () => {
 		// Measured 2026-08-28 on branch v7: 246 call sites, 228 through the
 		// RETRYING transport and 18 through the two streaming doors (raw fetch, no
 		// retry loop, no deadline — a `retries` option there is inert).
+		// 2026-09-24: 18 → 17 streaming sites. The ONE that left is
+		// tool_export.js's `data_manager.request_fetch_stream` (the browser-side
+		// NDJSON export): the export is now server-built (build_export_artifact,
+		// a background job followed through job_follow's request_stream, which
+		// was already counted), so the population genuinely shrank — the tool's
+		// remaining calls are data_manager.request sites with LITERAL retries.
 		expect(sites.length).toBeGreaterThanOrEqual(240);
 		expect(requests.length).toBeGreaterThanOrEqual(220);
-		expect(sites.length - requests.length).toBe(18);
+		expect(sites.length - requests.length).toBe(17);
 		// the finding's own headline sites are in the corpus, at the default
 		expect(
 			requests.some((s) => s.file.endsWith('section/js/section.js') && s.retries === null),

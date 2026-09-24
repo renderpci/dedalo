@@ -86,6 +86,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import puppeteer, { type Browser, type Page } from 'puppeteer';
 import { readEnv } from '../src/config/env.ts';
+import type { RunCreatedSweeper } from '../src/core/test_data/run_created_records.ts';
 import { staticCensusTotals } from '../test/helpers/client_suite_census.ts';
 import {
 	assertServedDatabase,
@@ -458,12 +459,40 @@ async function openTarget(options: {
  * that died in `prepareSuiteDatabase` reports a phantom "unaccounted for" row.
  */
 let projectsFixtureInstalled = false;
+/**
+ * The run-created sweep, armed at the test3 counter when the run started (after
+ * the pre-run reseed): every section_id above its mark is a record THIS run
+ * created. Null until armed. Its wiring (armed after the reseed, swept in
+ * `finally` and on a signal) is pinned by client_situations_native.
+ */
+let runCreatedSweeper: RunCreatedSweeper | null = null;
+
+/**
+ * Sweep the rows the engine wrote about the records this run CREATED
+ * (src/core/test_data/run_created_records.ts): a suite's own `delete` leaves
+ * the delete's time-machine snapshot and the create/delete activity behind by
+ * design, and the reseed keeps TM history — so without this every run grew
+ * the suite database (the export suite alone by ~80 snapshots).
+ */
+async function sweepRunCreatedRecords(): Promise<void> {
+	if (runCreatedSweeper === null) return;
+	const swept = await runCreatedSweeper.sweep();
+	if (swept === null) return; // already swept (signal and finally both ask)
+	log(
+		`Records created by the run (test3 > ${runCreatedSweeper.mark}): swept ${swept.records} rows, ${swept.timeMachine} time-machine rows, ${swept.activity} activity rows.`,
+	);
+}
 
 function sweepOnSignal(): void {
 	for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 		process.on(signal, () => {
 			void (async () => {
 				error(`${signal} — sweeping scratch fixtures before exit.`);
+				try {
+					await sweepRunCreatedRecords();
+				} catch (err) {
+					error(`run-created sweep on ${signal} failed: ${(err as Error).message}`);
+				}
 				if (projectsFixtureInstalled) {
 					try {
 						await removeSuiteProjectsFixture();
@@ -700,6 +729,11 @@ async function main(): Promise<ScrapedRun> {
 			await reseedCanonicalTest3('pre-run');
 			await ensureMapOfGrapesFixture();
 		}
+		// Measured AFTER the reseed (which may raise the counter), before any suite runs.
+		{
+			const { armRunCreatedSweep } = await import('../src/core/test_data/run_created_records.ts');
+			runCreatedSweeper = await armRunCreatedSweep();
+		}
 		// OUTSIDE the reseed block, deliberately. `--no-reseed` skips restoring the
 		// test3 playground to iterate faster; it must not also remove a SITUATION a
 		// suite asserts against. test_component_filter requires the projects
@@ -859,6 +893,12 @@ async function main(): Promise<ScrapedRun> {
 	} finally {
 		if (browser) {
 			await browser.close();
+		}
+		// Whatever the reseed flag says: these rows are the run's own.
+		try {
+			await sweepRunCreatedRecords();
+		} catch (err) {
+			error(`post-run sweep of run-created records failed: ${(err as Error).message}`);
 		}
 		if (reseedEnabled) {
 			// Never mask the test exit code with a reseed failure.

@@ -35,7 +35,35 @@ grew with the UI.
 ## Gate
 
 `test/parity/tool_element_context_differential.test.ts` filters exactly this
-name set out of the TS `labels` before the byte-compare, asserts every filtered
-row's name is IN the set, that the frozen side carries NONE of them (additive,
-never a rewording), and that the filter matched at least one row — so the
-exclusion can never quietly widen or go stale.
+name set out of the TS `labels` before the byte-compare, asserts that the
+frozen side carries NONE of them (additive, never a rewording), and — since
+the 2026-09-24 addendum — that EVERY name in the set is a TS label (the EXACT
+rule; it replaced the original "the filter matched at least one row" check) —
+so the exclusion can never quietly widen or go stale: a name dropped or renamed
+without editing the set and this entry turns the gate red.
+
+## Addendum 2026-09-24 — the server-built export UI
+
+`tools/tool_export/register.json` grew 22 more label names with the
+server-built export (`WC-2026-09-24-tool-export-server-built-artifacts`): the
+status line, the preview pager, the download buttons, Stop and Delete.
+
+`delete_export`, `delete_export_confirm`, `download_media`, `download_ndjson`,
+`export_deleted`, `export_ended`, `export_failed`, `export_interrupted`,
+`export_running`, `export_starting`, `file_failed`, `first_page`, `last_page`,
+`media`, `no_columns_selected`, `preparing_file`, `print_current_page_note`,
+`quality_for`, `records`, `records_per_page`, `stop`, `waiting_file`.
+
+Still strictly additive: no existing row was removed or reworded, and the
+frozen side carries none of these names. The gate's `ADDED` set grows by
+exactly these names, and its matched-rows check became EXACT: every name in
+`ADDED` must be a label of the served TS context.
+
+The served context reads the labels from the REGISTERED tool (`matrix_tools`,
+`buildToolElementContext`), not from `register.json`. A database whose tools
+were registered before this change (a suite database not rebuilt, an install
+not re-registered) therefore serves only the original six, and the gate is
+RED there, listing the 22 names as missing. That red is the correct answer —
+the registered tool is stale — and it clears when the tools are registered
+again from the new `register.json` (`bun run test:db:setup` does it for the
+suite database).

@@ -40,7 +40,7 @@ import { join } from 'node:path';
 
 const scratchDir = mkdtempSync(join(tmpdir(), 'dedalo_tools_dispatch_'));
 const previousProcessesDir = process.env.DEDALO_MEDIA_PROCESSES_DIR;
-process.env.DEDALO_MEDIA_PROCESSES_DIR = scratchDir;
+process.env.DEDALO_MEDIA_PROCESSES_DIR = markProcessesDir(scratchDir);
 
 // Import AFTER the env override so every processesDir() call lands in scratch.
 const { dispatchToolRequest } = await import('../../src/core/tools/dispatch.ts');
@@ -58,6 +58,7 @@ import {
 	TIPO,
 	TOOLS_REGISTER_SECTION_TIPO,
 } from '../../src/core/tools/ontology_map.ts';
+import { markProcessesDir } from '../helpers/test_media_root.ts';
 
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 /** A user with no profile: gates 3+4 grant only the always_active set. */

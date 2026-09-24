@@ -726,7 +726,10 @@ export const READ_DOOR_POSTURE: ReadonlyMap<string, ReadDoorPosture> = new Map<
 /**
  * Doors that exist OUTSIDE the two registries and must still be classified.
  * The tripwire asserts each key is in the map AND that the file it names
- * exists, so a removed door is removed here too.
+ * exists, so a removed door is removed here too. (A TOOL's HTTP route is the
+ * third source and classifies ITSELF — ToolHttpRoute.readPosture, required by
+ * the loader, never `open`; the tripwire reads the loaded registry — so src/
+ * never names a tool route here.)
  */
 export const READ_DOOR_EXTRA_DOORS: readonly { key: string; file: string }[] = [
 	{ key: 'http:GET /dedalo/core/api/v1/raw', file: 'src/core/api/raw_view.ts' },

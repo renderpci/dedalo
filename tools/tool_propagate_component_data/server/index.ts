@@ -63,9 +63,10 @@ const VALID_ACTIONS: ReadonlySet<string> = new Set(['replace', 'delete', 'add'])
 
 /**
  * A caller-fault refusal. `message` AND `publicMessage`: the action is
- * backgroundRunnable, so the executor records `error.message` on the job record
- * (the one place a curator reads why a detached batch stopped), while the wire
- * gets the same sentence through the code's public disclosure.
+ * backgroundRunnable, and the executor records the converter's wire sentence on
+ * the job record (background.ts `wireMessage`: this `publicMessage`, the code's
+ * disclosure being public — the one place a curator reads why a detached batch
+ * stopped); `message` is the log line only.
  */
 function invalidRequest(message: string): DedaloError {
 	return new DedaloError('request.invalid_options', { message, publicMessage: message });
