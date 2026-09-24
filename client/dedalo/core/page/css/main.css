@@ -662,6 +662,8 @@ template {
   --checkbox_border: var(--color_grey_8);
   --checkbox_checked_bg: var(--color_primary);
   --checkbox_checkmark: var(--color_white);
+  --option_chip_checked_bg: #fbb266;
+  --option_chip_checked_fg: var(--fg_on_brand);
   --input_bg: var(--color_grey_16);
   --input_fg: var(--color_grey_4);
   --input_outline: none;
@@ -907,6 +909,8 @@ template {
   --checkbox_border: #4a5059;
   --checkbox_checked_bg: var(--color_primary);
   --checkbox_checkmark: var(--color_white);
+  --option_chip_checked_bg: var(--color_orange_dedalo);
+  --option_chip_checked_fg: var(--fg_on_brand);
   --input_bg: #1f2227;
   --input_fg: #ffffff;
   --input_outline: none;
@@ -24139,9 +24143,8 @@ body.inspector_resizing {
 }
 .component_radio_button.edit > .content_data > .content_value > .label.checked,
 .component_radio_button.edit > .content_data > .content_value > .label:has(input:checked) {
-  font-weight: 500;
-  background-color: var(--color_orange_dedalo);
-  color: var(--fg_on_brand);
+  background-color: var(--option_chip_checked_bg);
+  color: var(--option_chip_checked_fg);
 }
 .component_radio_button.edit > .content_data > .content_value > .label:has(input:focus-visible) {
   outline: 2px solid var(--focus_ring);
@@ -24212,9 +24215,8 @@ body.inspector_resizing {
   background-color: var(--field_hover_bg);
 }
 .component_radio_button.search > .content_data > .content_value > .label:has(input:checked) {
-  font-weight: 500;
-  background-color: var(--color_orange_dedalo);
-  color: var(--fg_on_brand);
+  background-color: var(--option_chip_checked_bg);
+  color: var(--option_chip_checked_fg);
 }
 .component_radio_button.search > .content_data > .content_value > .label:has(input:focus-visible) {
   outline: 2px solid var(--focus_ring);
@@ -26383,6 +26385,8 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   --color_orange_hover_border: #235049;
   --color_orange_dark: #2f6b63;
   --color_orange_light: #e3ece9;
+  --option_chip_checked_bg: var(--color_orange_dedalo);
+  --option_chip_checked_fg: var(--fg_on_brand);
 }
 :root[data-design="redesign"][data-accent="pine"][data-theme="dark"] {
   --color_orange_dedalo: #5aa399;
