@@ -9369,6 +9369,8 @@ body:has(.assistant_container.standalone.show) {
 }
 .wrapper_search > .search_global_container > .search_container_selection .search_group_container > .search_buttons_container > .button.submit {
   background-color: var(--color_green_success);
+  color: var(--color_white);
+  font-weight: 500;
 }
 .wrapper_search > .search_global_container > .search_container_selection .search_group_container > .search_buttons_container > .button.submit:hover {
   background-color: var(--color_green_success_dark);
@@ -11957,7 +11959,7 @@ dd-modal:has(.tool_header) {
   flex: 0 1 auto;
   min-width: 0;
   font-weight: 600;
-  color: var(--color_grey_5);
+  color: var(--color_grey_8);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
