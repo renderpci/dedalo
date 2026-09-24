@@ -331,6 +331,8 @@ HERMETIC_TRIPWIRES=(
 	test/unit/client_request_coalescing_tripwire.test.ts
 	test/unit/ontology_property_census_tripwire.test.ts
 	test/unit/zip_encoder_census_tripwire.test.ts
+	# leg 1, the helper's DB outcome, SKIPS here via DB_READY; leg 2, the source scan, runs.
+	test/unit/diffusion_scratch_tables_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

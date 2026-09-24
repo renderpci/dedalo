@@ -279,6 +279,7 @@ const TRIPWIRES = [
 	'test/unit/dataframe_contract_tripwire.test.ts',
 	'test/unit/ontology_property_census_tripwire.test.ts',
 	'test/unit/zip_encoder_census_tripwire.test.ts',
+	'test/unit/diffusion_scratch_tables_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

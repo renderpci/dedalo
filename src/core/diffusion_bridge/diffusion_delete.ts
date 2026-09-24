@@ -134,8 +134,16 @@ const activityTableEnsured = new Map<string, Promise<void>>();
  * columns mirror the PHP DDL (the subset this module and the matrix codecs
  * use), section_id keeps its own sequence default ("sequence-allocated
  * section_id", same as the real table).
+ *
+ * EXPORTED (2026-09-24): a gate that runs raw SQL on the scratch table (a
+ * sweep DELETE, a row-shape SELECT) needs it to EXIST first, and the lazy
+ * creation here runs only on this module's own entry points. Unexported, the
+ * gates materialized it through a side effect (`retryPendingDiffusion(1)`) or
+ * not at all — and went 42P01 whenever no earlier file in the process had
+ * created it (the unit-census reds right after `test:db:setup`). Tests reach
+ * it through test/helpers/diffusion_scratch_tables.ts, never directly.
  */
-async function ensureActivityTable(): Promise<void> {
+export async function ensureDiffusionActivityTable(): Promise<void> {
 	const table = activityTable();
 	if (table === 'matrix_activity_diffusion') return; // PHP owns the real DDL
 	if (!activityTableEnsured.has(table)) {
@@ -649,7 +657,7 @@ export async function logDiffusionActivity(entry: {
 		}
 	}
 	const { encodeForJsonb } = await import('../db/json_codec.ts');
-	await ensureActivityTable();
+	await ensureDiffusionActivityTable();
 	const misc = entry.retry === undefined ? {} : { [RETRY_STAMP_KEY]: entry.retry };
 	const inserted = (await sql.unsafe(
 		`INSERT INTO "${activityTable()}" (section_tipo, relation, string, date, number, misc)
@@ -695,7 +703,7 @@ export async function pruneSettledLedgerRows(options: {
 	if (options.windowDays <= 0) {
 		return { candidates: 0, deleted: 0, detail: { ...detail, kept: 'no window set' } };
 	}
-	await ensureActivityTable();
+	await ensureDiffusionActivityTable();
 	const cutoff = new Date(
 		(options.now ?? new Date()).getTime() - options.windowDays * 24 * 60 * 60 * 1000,
 	).toISOString();
@@ -755,7 +763,7 @@ const PENDING_ROW_PROJECTION = `section_id,
 export async function retryPendingDiffusion(
 	limit = 100,
 ): Promise<{ total: number; retried: number; remaining: number }> {
-	await ensureActivityTable();
+	await ensureDiffusionActivityTable();
 	// `->>` yields text for a stored int as well as a stored string, so the
 	// projected target/element ids read identically in both typed forms; only
 	// the ACTION probe needs the shape tolerance (D16 + dual-form).

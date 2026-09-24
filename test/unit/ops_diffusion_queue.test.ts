@@ -11,7 +11,7 @@
  *   parking it in 'interrupted', the black-hole state S3-63 diagnosed.
  */
 
-import { afterAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
 import type { DiffusionJobSpec } from '../../src/diffusion/jobs/queue.ts';
 import {
@@ -22,6 +22,7 @@ import {
 	sweepStaleJobs,
 } from '../../src/diffusion/jobs/queue.ts';
 import { DIFFUSION_JOBS_TABLE } from '../../src/diffusion/jobs/schema.ts';
+import { ensureDiffusionScratchTables } from '../helpers/diffusion_scratch_tables.ts';
 
 const OWNER = 424401;
 const createdJobIds: string[] = [];
@@ -47,11 +48,18 @@ async function enqueue(element: string, section: string): Promise<string> {
 	return job.job_id;
 }
 
+// Each claim test's FIRST statement is a raw count on the jobs table: build it
+// here, never rely on an earlier file's queue call having created it (42P01
+// right after `test:db:setup` otherwise).
+beforeAll(async () => {
+	await ensureDiffusionScratchTables();
+});
+
 afterAll(async () => {
 	await deleteJobsForTests(createdJobIds);
 });
 
-/** Un-claim a job that belongs to the LIVE system (see the shared-table note). */
+/** Un-claim a job another gate of THIS run left queued (see the shared-table note). */
 async function restoreForeignClaim(jobId: string): Promise<void> {
 	await sql.unsafe(
 		`UPDATE "${DIFFUSION_JOBS_TABLE}"
@@ -62,8 +70,9 @@ async function restoreForeignClaim(jobId: string): Promise<void> {
 	);
 }
 
-/** Claim until one of OUR jobs comes back (restoring any live job we caught —
- * the queue is shared with the live scheduler until DEC-18's table seam lands). */
+/** Claim until one of OUR jobs comes back (restoring any foreign job we caught —
+ * the DEC-18 seam isolates the queue from the live system, but the per-run
+ * scratch table is still SHARED by every diffusion gate of the process). */
 async function claimMine(budget: number | undefined): Promise<string | null> {
 	for (let i = 0; i < 10; i++) {
 		const claimed = await claimNextQueuedJob('ops-test-host', budget);
@@ -76,8 +85,8 @@ async function claimMine(budget: number | undefined): Promise<string | null> {
 
 describe('claim-with-budget (S3-64)', () => {
 	test('claims stop at the budget even with queued work waiting', async () => {
-		// The table is SHARED with the live system (DEC-18 seam pending), so the
-		// budget is expressed relative to the ambient running count.
+		// The scratch table is SHARED by every gate of the run, so the budget is
+		// expressed relative to the ambient running count.
 		const ambientRows = (await sql.unsafe(
 			`SELECT count(*)::int AS n FROM "${DIFFUSION_JOBS_TABLE}" WHERE state = 'running'`,
 		)) as { n: number }[];

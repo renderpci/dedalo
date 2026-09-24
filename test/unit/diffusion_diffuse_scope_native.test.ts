@@ -57,6 +57,7 @@ import {
 	removeAclIdentityFixture,
 } from '../helpers/acl_identity_fixture.ts';
 import { DB_READY } from '../helpers/db_ready.ts';
+import { ensureDiffusionScratchTables } from '../helpers/diffusion_scratch_tables.ts';
 
 /** This file's OWN fake element prefix — never a compilable plan. */
 const ELEMENT_PREFIX = 'zzdifb';
@@ -157,6 +158,7 @@ describe.if(DB_READY)('DIFF-B — diffuse publication scope is server-authoritat
 
 	beforeAll(async () => {
 		await installAclIdentityFixture();
+		await ensureDiffusionScratchTables(); // purgeOwnRows is raw SQL on the jobs table
 		await purgeOwnRows();
 		reader = await resolvePrincipal(ACL_NON_ADMIN_USER_ID);
 		admin = await resolvePrincipal(ACL_ADMIN_USER_ID);

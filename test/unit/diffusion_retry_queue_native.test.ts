@@ -21,6 +21,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
 import { virtualDateNow } from '../../src/core/section/record/create_record.ts';
+import { ensureDiffusionScratchTables } from '../helpers/diffusion_scratch_tables.ts';
 import {
 	countZzdOntology,
 	dropZzdOntology,
@@ -98,8 +99,8 @@ beforeAll(async () => {
 	// The seam must be the one this file pinned, or every row assertion below
 	// would be measured against a table other files also write.
 	expect(activityTable()).toBe(SCRATCH_ACTIVITY_TABLE);
-	// materialize the private table through the module's own bootstrap
-	await retryPendingDiffusion(1);
+	// Build the private table before the raw purges touch it.
+	await ensureDiffusionScratchTables();
 	const { preCount } = await seedZzdOntology();
 	expect(preCount).toBe(0);
 });

@@ -84,7 +84,12 @@ export interface Situation {
 	readonly sectionTipos: readonly string[];
 }
 
-const RESERVED_TLD = /^zz[a-z]*$/;
+/**
+ * The reserved scratch TLD grammar every situation must use. EXPORTED so a gate
+ * that censuses the ontology can tell a leaked scratch situation from shipped
+ * definitions (diffusion_seed_compiles_native) instead of blaming the latter.
+ */
+export const RESERVED_TLD = /^zz[a-z]*$/;
 
 /** Every refusal in this module is a typed engine invariant, never a bare Error. */
 function refuse(message: string, coordinates: Record<string, string | number> = {}): never {

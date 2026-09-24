@@ -37,6 +37,7 @@ import {
 	updateJobProgress,
 } from '../../src/diffusion/jobs/queue.ts';
 import { DIFFUSION_JOBS_TABLE } from '../../src/diffusion/jobs/schema.ts';
+import { ensureDiffusionScratchTables } from '../helpers/diffusion_scratch_tables.ts';
 
 /**
  * Claim THIS row and return its LEASE (job_id + the attempt the claim stamped).
@@ -86,7 +87,10 @@ async function purgeSuiteRows(): Promise<void> {
 	);
 }
 
-beforeAll(purgeSuiteRows);
+beforeAll(async () => {
+	await ensureDiffusionScratchTables(); // purgeSuiteRows is raw SQL on the jobs table
+	await purgeSuiteRows();
+});
 afterAll(async () => {
 	await deleteJobsForTests(createdJobIds);
 	await purgeSuiteRows();

@@ -69,6 +69,7 @@ import { describe, expect, test } from 'bun:test';
 import { MIGRATIONS_VERSION_TABLE } from '../../install/db/migrate.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { inspectOntology } from '../../src/core/ontology/ontology_state.ts';
+import { RESERVED_TLD } from '../../src/core/test_data/situations/situation.ts';
 import {
 	coreClosure,
 	loadTestTldOntologyDoc,
@@ -124,38 +125,59 @@ interface ShippedElement {
 	tld: string;
 }
 
-/** The TOTAL census: every domain × every element, partitioned into shipped / suite-only. */
+/**
+ * The TOTAL census: every domain × every element, partitioned into shipped /
+ * suite-only / SCRATCH RESIDUE. A reserved-TLD (`zz*`, situation.ts) domain or
+ * element is a test situation, never shipped ontology: while one is present it
+ * is an earlier gate's teardown that leaked (measured 2026-09-24: a half-run
+ * diffusion_runner_native teardown left the zzdif domain behind, and this gate
+ * then reported zzdif's elements as SHIPPED compile faults and its TLD as a
+ * "source records" floor failure — red, but blaming the wrong thing). Residue
+ * is kept OUT of the shipped partition and reported by its own test.
+ */
 async function censusOfShippedElements(): Promise<{
 	domains: number;
 	elements: number;
 	shipped: ShippedElement[];
+	scratchResidue: string[];
 }> {
 	const doc = await loadTestTldOntologyDoc();
 	// The TLDs the source of record OWNS = the TLDs its nodes declare.
 	const testTlds = new Set(doc.nodes.map((node) => node.tld ?? ''));
 	const shippedTestTipos = new Set((await coreClosure(doc.nodes)).map((node) => node.tipo));
 
-	const domainRows = await sql<{ tipo: string; term: Record<string, string> | null }[]>`
-		SELECT tipo, term FROM dd_ontology WHERE model = 'diffusion_domain' ORDER BY tipo`;
+	const domainRows = await sql<
+		{ tipo: string; tld: string | null; term: Record<string, string> | null }[]
+	>`
+		SELECT tipo, tld, term FROM dd_ontology WHERE model = 'diffusion_domain' ORDER BY tipo`;
 	const tldRows = await sql<{ tipo: string; tld: string | null }[]>`
 		SELECT tipo, tld FROM dd_ontology WHERE model LIKE 'diffusion_element%'`;
 	const tldOf = new Map(tldRows.map((row) => [row.tipo, row.tld ?? '']));
 
 	let elements = 0;
 	const shipped: ShippedElement[] = [];
+	const scratchResidue: string[] = [];
 	for (const domain of domainRows) {
 		const domainName = termLabelOf(domain as never);
+		if (RESERVED_TLD.test(domain.tld ?? '')) {
+			scratchResidue.push(`domain ${domain.tipo} (tld '${domain.tld}', '${domainName}')`);
+			continue;
+		}
 		if (domainName === null) continue;
 		const tree = await buildVirtualDiffusionTree(domainName);
 		if (tree === null) continue;
 		for (const node of findElementNodes(tree)) {
 			elements += 1;
 			const tld = tldOf.get(node.tipo) ?? '';
+			if (RESERVED_TLD.test(tld)) {
+				scratchResidue.push(`element ${node.tipo} (tld '${tld}', domain '${domainName}')`);
+				continue;
+			}
 			const isShipped = !testTlds.has(tld) || shippedTestTipos.has(node.tipo);
 			if (isShipped) shipped.push({ domainTipo: domain.tipo, domainName, tree, node, tld });
 		}
 	}
-	return { domains: domainRows.length, elements, shipped };
+	return { domains: domainRows.length, elements, shipped, scratchResidue };
 }
 
 describe('the shipped diffusion ontology compiles in the shipped engine', () => {
@@ -168,6 +190,14 @@ describe('the shipped diffusion ontology compiles in the shipped engine', () => 
 			(rows as { version: string }[]).length,
 			`${MIGRATION} is not recorded in ${MIGRATIONS_VERSION_TABLE} — the suite database predates the migration; run \`bun run test:db:setup\``,
 		).toBe(1);
+	});
+
+	test('no reserved-TLD (zz*) scratch situation is left in the diffusion ontology', async () => {
+		const census = await censusOfShippedElements();
+		expect(
+			census.scratchResidue,
+			'reserved-TLD diffusion nodes in dd_ontology: an EARLIER gate built this situation and its teardown leaked it (not a shipped-ontology fault) — find the gate owning the TLD (test/helpers/zz*.ts) and make its teardown total',
+		).toEqual([]);
 	});
 
 	test('every SHIPPED element of every domain compiles: errors [] and degradations [], except the enumerated exemptions', async () => {

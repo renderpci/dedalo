@@ -595,6 +595,11 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		scope:
 			"the engine's own source roots for gates that census src/ — the whole tree, the API handler layer (every door a request reaches), the media subsystem (every converter spawn), the three read-path trees (relations/resolve/section) and the search fragment builders",
 	},
+	'test/helpers/test_tree_corpus.ts': {
+		roots: [['test']],
+		scope:
+			"the suite's own TypeScript sources — every .ts under test/ (gates, helpers, preloads), for gates that census what test code may do (diffusion_scratch_tables_tripwire); JSON fixtures are data and out",
+	},
 	'test/helpers/tool_directory_corpus.ts': {
 		roots: [['tools']],
 		scope:

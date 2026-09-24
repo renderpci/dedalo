@@ -24,6 +24,7 @@ import {
 	registerNativeDiffusionSqlDelete,
 	resetNativeDiffusionSqlDeleteForTests,
 } from '../../src/core/diffusion_bridge/diffusion_delete.ts';
+import { ensureDiffusionScratchTables } from '../helpers/diffusion_scratch_tables.ts';
 import {
 	countZzdOntology,
 	dropZzdOntology,
@@ -49,6 +50,8 @@ async function reclaimProbeRows(): Promise<void> {
 }
 
 beforeAll(async () => {
+	// reclaimProbeRows is raw SQL on the scratch dd1758 table: build it first.
+	await ensureDiffusionScratchTables();
 	const { preCount } = await seedZzdOntology();
 	expect(preCount).toBe(0);
 });

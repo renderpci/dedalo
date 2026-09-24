@@ -60,6 +60,7 @@ import {
 import { pauseScheduler, resumeScheduler } from '../../src/diffusion/jobs/scheduler.ts';
 import { bumpOntologyRevision } from '../../src/diffusion/plan/cache.ts';
 import { runJob } from '../../src/diffusion/runner.ts';
+import { ensureDiffusionScratchTables } from '../helpers/diffusion_scratch_tables.ts';
 import { scratchMediaRoot } from '../helpers/media_scratch_root.ts';
 import {
 	dropZzdifDomain,
@@ -162,7 +163,58 @@ async function enqueueAndClaim(
 	return claimed;
 }
 
+/**
+ * The file-level teardown, TOTAL: every step runs even when an earlier one
+ * throws, and the failures are rethrown together at the end. Before
+ * 2026-09-24 the raw activity DELETE ran first and unguarded; when it threw
+ * (42P01 — the scratch table not yet built) the scheduler stayed paused, the
+ * two env keys stayed repointed and the zzdif domain stayed in dd_ontology
+ * for the rest of the process — diffusion_seed_compiles_native then judged
+ * zzdif's elements as SHIPPED ontology and went red, blaming the wrong thing.
+ * Safe on a PARTIAL setup: bun runs afterAll even when the file's beforeAll
+ * threw (measured on bun 1.4.2), so every step below tolerates the state it
+ * undoes never having been set up.
+ */
+async function teardown(): Promise<void> {
+	const failures: unknown[] = [];
+	const step = async (run: () => unknown | Promise<unknown>): Promise<void> => {
+		try {
+			await run();
+		} catch (error) {
+			failures.push(error);
+		}
+	};
+	await step(() => deleteJobsForTests(createdJobIds));
+	await step(() =>
+		sql.unsafe(
+			`DELETE FROM "${activityTable()}" WHERE section_tipo = 'dd1758'
+			   AND relation->'dd1763'->0->>'section_tipo' = $1`,
+			[ZZDIF_SECTION],
+		),
+	);
+	await step(() => restoreEnv());
+	await step(() => bumpOntologyRevision());
+	await step(() => resumeScheduler());
+	await step(() => {
+		if (filesRoot !== undefined) rmSync(filesRoot, { recursive: true, force: true });
+	});
+	await step(async () => {
+		const residue = await dropZzdifDomain();
+		if (residue !== 0) throw new Error(`zzdif situation residue after drop: ${residue} rows`);
+	});
+	if (failures.length === 1) throw failures[0];
+	if (failures.length > 1) {
+		throw new AggregateError(
+			failures,
+			`diffusion_runner_native teardown: ${failures.length} steps failed`,
+		);
+	}
+}
+
 beforeAll(async () => {
+	// The raw activity SQL below needs the scratch tables to EXIST — build them
+	// here, never inherit them from an earlier file's engine call.
+	await ensureDiffusionScratchTables();
 	// No scheduler tick may claim our queued job between enqueue and claim.
 	pauseScheduler();
 	await ensureZzdifDomain();
@@ -181,19 +233,8 @@ beforeAll(async () => {
 	);
 });
 
-afterAll(async () => {
-	await deleteJobsForTests(createdJobIds);
-	await sql.unsafe(
-		`DELETE FROM "${activityTable()}" WHERE section_tipo = 'dd1758'
-		   AND relation->'dd1763'->0->>'section_tipo' = $1`,
-		[ZZDIF_SECTION],
-	);
-	restoreEnv();
-	bumpOntologyRevision();
-	resumeScheduler();
-	if (filesRoot !== undefined) rmSync(filesRoot, { recursive: true, force: true });
-	expect(await dropZzdifDomain()).toBe(0);
-});
+// A beforeAll that throws midway still reaches this (see teardown's note).
+afterAll(teardown);
 
 describe('runJob — the real publication pipeline on the file element', () => {
 	let job: DiffusionJobRow;

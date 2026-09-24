@@ -23,6 +23,7 @@ import {
 	resetNativeDiffusionSqlDeleteForTests,
 } from '../../src/core/diffusion_bridge/diffusion_delete.ts';
 import { getSectionDiffusionTargets } from '../../src/core/diffusion_bridge/diffusion_map.ts';
+import { ensureDiffusionScratchTables } from '../helpers/diffusion_scratch_tables.ts';
 import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 import {
 	countZzdOntology,
@@ -38,6 +39,8 @@ import {
 const NO_DIFFUSION_SECTION = 'test65';
 
 beforeAll(async () => {
+	// afterAll's reclaim is raw SQL on the scratch dd1758 table: build it here.
+	await ensureDiffusionScratchTables();
 	const { preCount } = await seedZzdOntology();
 	expect(preCount).toBe(0);
 });

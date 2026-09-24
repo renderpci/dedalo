@@ -58,6 +58,7 @@ import {
 } from '../../src/diffusion/jobs/queue.ts';
 import { DIFFUSION_JOBS_TABLE } from '../../src/diffusion/jobs/schema.ts';
 import { runJob } from '../../src/diffusion/runner.ts';
+import { ensureDiffusionScratchTables } from '../helpers/diffusion_scratch_tables.ts';
 
 /** Fake owner + tipos: nothing here can name a real diffusion target. */
 const OWNER = 424901;
@@ -133,6 +134,7 @@ let revoked: JobLease;
 let live: JobLease;
 
 beforeAll(async () => {
+	await ensureDiffusionScratchTables(); // the sweep below is raw SQL on the jobs table
 	// A leftover row from a crashed earlier run would take the enqueue's
 	// attach path instead of inserting — start from a clean target.
 	await sql.unsafe(

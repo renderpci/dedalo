@@ -29,11 +29,11 @@ import {
 	resetNativeDiffusionSqlDeleteForTests,
 	resolvePublishedFile,
 	resolvePublishedFilePath,
-	retryPendingDiffusion,
 	unlinkPublishedFiles,
 } from '../../src/core/diffusion_bridge/diffusion_delete.ts';
 import { getSectionDiffusionTargets } from '../../src/core/diffusion_bridge/diffusion_map.ts';
 import { diffusionFilesRoot } from '../../src/core/diffusion_bridge/published_files.ts';
+import { ensureDiffusionScratchTables } from '../helpers/diffusion_scratch_tables.ts';
 import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 import {
 	countZzdOntology,
@@ -90,10 +90,8 @@ beforeAll(async () => {
 	// The seam must be the one this file pinned, or every dd1758 count below is
 	// measured against a table other files also write.
 	expect(activityTable()).toBe(SCRATCH_ACTIVITY_TABLE);
-	// Materialize the private activity table through the module's own bootstrap
-	// (ensureActivityTable is internal; retryPendingDiffusion calls it and, on a
-	// table private to this file, selects nothing).
-	await retryPendingDiffusion(1);
+	// Build the private activity table before the raw purges touch it.
+	await ensureDiffusionScratchTables();
 	const { preCount } = await seedZzdOntology();
 	// Standing hygiene: the scratch tld must be EMPTY before the fixture lands.
 	expect(preCount).toBe(0);

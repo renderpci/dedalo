@@ -41,6 +41,7 @@ import { registerAllReconciles } from '../../src/core/reconcile/catalog.ts';
 import { runReconcile } from '../../src/core/reconcile/registry.ts';
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
 import { DB_READY } from '../helpers/db_ready.ts';
+import { ensureDiffusionScratchTables } from '../helpers/diffusion_scratch_tables.ts';
 import {
 	countZzdOntology,
 	dropZzdOntology,
@@ -136,7 +137,7 @@ const scratchRecords: number[] = [];
 describe.if(DB_READY)('unpublish debt — removed from the public tier, or REPORTED (P1-12)', () => {
 	beforeAll(async () => {
 		expect(activityTable()).toBe(SCRATCH_ACTIVITY_TABLE);
-		await retryPendingDiffusion(1); // materializes the private seam table
+		await ensureDiffusionScratchTables(); // builds the private seam table
 		const { preCount } = await seedZzdOntology();
 		expect(preCount).toBe(0);
 		await registerAllReconciles();

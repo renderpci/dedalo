@@ -43,6 +43,7 @@ import { activityTable } from '../../src/core/diffusion_bridge/diffusion_delete.
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { ensureDiffusionScratchTables } from '../helpers/diffusion_scratch_tables.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 
 registerSessionCleanup();
@@ -78,6 +79,8 @@ async function tmSnapshotCounts(candidates: number[]): Promise<Map<number, numbe
 }
 
 beforeAll(async () => {
+	// afterAll's dd1758 reclaim is raw SQL on the scratch table: build it here.
+	await ensureDiffusionScratchTables();
 	for (let i = 0; i < 3; i++) ids.push(await createSectionRecord(SECTION, USER_ID));
 
 	const token = createSession(USER_ID, 'root', true);
