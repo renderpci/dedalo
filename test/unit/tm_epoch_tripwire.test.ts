@@ -101,6 +101,11 @@ const EXEMPT_TM_READERS: Readonly<Record<string, { reads: number; reason: string
 		reads: 3,
 		reason: 'Same shape: the derived corpus drops its own generated tipos wholesale.',
 	},
+	'src/core/test_data/run_created_records.ts': {
+		reads: 1,
+		reason:
+			'Suite-only post-run sweep (assertTestDatabase first): DELETES every TM row of the records a client run created above its counter mark, every generation included — its job is to leave no history of them behind, so narrowing it to one generation would leak the others.',
+	},
 	'src/core/test_data/synthetic_hierarchy_fixture.ts': {
 		reads: 2,
 		reason: 'Same shape: the synthetic hierarchy fixture removes the tipos it generated.',

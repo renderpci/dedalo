@@ -13,8 +13,13 @@
  *
  * The surface is four functions:
  *
- *   getExternalServiceForSection  is this section external, and where does it point?
- *   isExternalSectionTipo         the boolean form, for callers that only branch
+ *   getExternalServiceForSection  which service does this section BIND (api_config)?
+ *                                 A binding lookup, never an externality test.
+ *   isExternalReferenceSection    THE externality predicate: is this section external
+ *                                 (binds a service AND owns a component_external), so a
+ *                                 NON-ADDRESS id here is a remote record's id? Every
+ *                                 "is this section external?" decision asks THIS —
+ *                                 api_config alone is residue on rsc205 (21k local rows).
  *   fetchExternalRows             remote records for a set of locators
  *   searchExternalService         ask the service which records MATCH some terms
  *   mapRowToEntries               one row + one fields_map → the values a component emits
@@ -30,7 +35,6 @@ export {
 } from '../cache.ts';
 export {
 	getExternalServiceForSection,
-	isExternalSectionTipo,
 	parseApiConfig,
 	publishApiConfig,
 } from '../config.ts';
@@ -42,7 +46,13 @@ export {
 	ExternalServiceNotRegisteredError,
 	logExternalError,
 } from '../errors.ts';
-export { mapRowToEntries, parseFieldsMap, remoteFieldsOf } from '../fields_map.ts';
+export {
+	mapRowToEntries,
+	parseFieldsMap,
+	refusedRemoteFields,
+	remoteFieldsOf,
+} from '../fields_map.ts';
+export { isExternalReferenceSection, reportRefusedRemoteFields } from '../record_fields.ts';
 export {
 	externalServiceCapabilities,
 	hasExternalService,

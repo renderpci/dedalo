@@ -63,6 +63,43 @@
 
 
 /**
+* STORAGE_GET
+* localStorage read of a per-viewer convenience (a remembered selector). The
+* accessor can throw (private window, blocked site data) or come back empty:
+* both mean "nothing remembered", never a broken tool.
+* @param {string} key
+* @returns {string|null}
+*/
+export const storage_get = function(key) {
+	try {
+		return window.localStorage.getItem(key)
+	} catch (error) {
+		return null
+	}
+}//end storage_get
+
+
+
+/**
+* STORAGE_SET
+* localStorage write of a per-viewer convenience; a refused write is ignored
+* (the value just is not remembered).
+* @param {string} key
+* @param {string} value
+* @returns {boolean} true when stored
+*/
+export const storage_set = function(key, value) {
+	try {
+		window.localStorage.setItem(key, value)
+		return true
+	} catch (error) {
+		return false
+	}
+}//end storage_set
+
+
+
+/**
 * GET_TARGET_SECTION_TIPO
 * Normalizes the tool's target_section_tipo (which can be an array) to the
 * scalar string used as the preset scope (stored in dd642 and matched by the
@@ -182,7 +219,7 @@ export const apply_export_preset = async function(options) {
 	// data_format
 		if (config.data_format && ['value','grid_value','dedalo_raw'].includes(config.data_format)) {
 			self.data_format = config.data_format
-			localStorage.setItem('selected_data_format_export', config.data_format)
+			storage_set('selected_data_format_export', config.data_format)
 			const select_format = node.querySelector('.select_data_format_export')
 			if (select_format) {
 				select_format.value = config.data_format
@@ -192,7 +229,7 @@ export const apply_export_preset = async function(options) {
 	// breakdown
 		if (config.breakdown && ['default','rows','columns'].includes(config.breakdown)) {
 			self.breakdown = config.breakdown
-			localStorage.setItem('selected_breakdown_export', config.breakdown)
+			storage_set('selected_breakdown_export', config.breakdown)
 			const select_breakdown = node.querySelector('.select_breakdown_export')
 			if (select_breakdown) {
 				select_breakdown.value = config.breakdown
@@ -202,8 +239,11 @@ export const apply_export_preset = async function(options) {
 	// option checkboxes (defaults match the render: fill_the_gaps on, others off)
 		const set_checked = (class_name, value) => {
 			const el = node.querySelector('.' + class_name)
-			if (el) {
+			if (el && el.checked!==!!value) {
 				el.checked = !!value
+				// a programmatic set fires no event: dispatch it, so a listener
+				// (show_tipo_in_label re-renders the preview page) sees the change
+				el.dispatchEvent(new Event('change'))
 			}
 		}
 		set_checked('fill_the_gaps_check', config.fill_the_gaps !== false)

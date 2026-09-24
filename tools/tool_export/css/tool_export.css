@@ -393,12 +393,31 @@
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .button_export.loading {
   opacity: 0.4 !important;
 }
+.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .button_stop_export {
+  width: 100%;
+  margin-left: 0;
+  margin-top: 0.5rem;
+}
+.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .button_stop_export.hide {
+  display: none;
+}
+.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .button_stop_export.loading {
+  opacity: 0.4 !important;
+}
+.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .button_export:disabled {
+  opacity: 0.4 !important;
+  cursor: not-allowed;
+}
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .response_container {
   padding: 0.3rem;
   color: var(--tool_export);
   text-align: center;
   padding-top: 1rem;
   padding-bottom: 0px;
+}
+.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .response_container.error {
+  color: var(--color_danger_dark);
+  font-weight: 600;
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .activation {
   width: 100%;
@@ -475,6 +494,71 @@
     width: calc(50% - 1rem);
   }
 }
+.wrapper_tool.tool_export > .content_data > .export_buttons_options .processing_import:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.wrapper_tool.tool_export > .content_data > .export_buttons_options .processing_import.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+.wrapper_tool.tool_export > .content_data > .export_buttons_options .print_note {
+  display: inline-block;
+  margin-left: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--color_grey_7);
+}
+.wrapper_tool.tool_export > .content_data > .export_buttons_options .download_status {
+  min-height: 1.2rem;
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--tool_export);
+}
+.wrapper_tool.tool_export > .content_data > .export_buttons_options .download_status:empty {
+  display: none;
+}
+.wrapper_tool.tool_export > .content_data > .export_buttons_options .download_status.error {
+  color: var(--color_danger_dark);
+  font-weight: 600;
+}
+.wrapper_tool.tool_export > .content_data > .export_pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+}
+.wrapper_tool.tool_export > .content_data > .export_pager.hide {
+  display: none;
+}
+.wrapper_tool.tool_export > .content_data > .export_pager.loading {
+  opacity: 0.6;
+}
+.wrapper_tool.tool_export > .content_data > .export_pager .pager_button {
+  min-width: 2.2rem;
+  padding: 0.2rem 0.6rem;
+}
+.wrapper_tool.tool_export > .content_data > .export_pager .pager_button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.wrapper_tool.tool_export > .content_data > .export_pager .pager_range {
+  font-variant-numeric: tabular-nums;
+  color: var(--color_grey_4);
+}
+.wrapper_tool.tool_export > .content_data > .export_pager .pager_progress {
+  font-variant-numeric: tabular-nums;
+  color: var(--tool_export);
+  font-size: 0.85rem;
+}
+.wrapper_tool.tool_export > .content_data > .export_pager .pager_size {
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: var(--color_grey_7);
+}
+.wrapper_tool.tool_export > .content_data > .export_pager .pager_size .pager_size_select {
+  margin-left: 0.3rem;
+}
 .wrapper_tool.tool_export > .content_data > .export_data_container {
   position: relative;
   width: 100%;
@@ -487,6 +571,27 @@
   border: 1px solid var(--color_grey_13);
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.wrapper_tool.tool_export > .content_data > .export_data_container .export_column_pager {
+  position: sticky;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+}
+.wrapper_tool.tool_export > .content_data > .export_data_container .export_column_pager .pager_button {
+  min-width: 2.2rem;
+  padding: 0.2rem 0.6rem;
+}
+.wrapper_tool.tool_export > .content_data > .export_data_container .export_column_pager .pager_button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.wrapper_tool.tool_export > .content_data > .export_data_container .export_column_pager .column_range {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+  color: var(--color_grey_4);
 }
 .wrapper_tool.tool_export > .content_data > .export_data_container .export_flat_table {
   border-collapse: separate;
@@ -588,6 +693,13 @@
 }
 .tool_export_modal .quality_selector {
   margin: 1rem;
+}
+.tool_export_modal .modal_status {
+  margin: 0 1rem;
+  color: var(--tool_export);
+}
+.tool_export_modal .modal_status:empty {
+  display: none;
 }
 .tool_export_modal .success {
   padding-left: 1rem;

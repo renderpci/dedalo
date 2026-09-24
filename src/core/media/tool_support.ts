@@ -49,11 +49,34 @@ export async function readStoredMediaItems(
 	sectionId: number,
 	componentTipo: string,
 ): Promise<Record<string, unknown>[]> {
+	return storedMediaItemsOf(await readStoredMediaColumn(sectionTipo, sectionId), componentTipo);
+}
+
+/**
+ * One record's WHOLE `media` column (every media component's stored items),
+ * in one read — for a caller that asks about several components of the same
+ * record (tool_export's media ZIP: an image, a pdf and an av column of one row
+ * are three candidates of ONE record). Empty when the record or table is absent.
+ */
+export async function readStoredMediaColumn(
+	sectionTipo: string,
+	sectionId: number,
+): Promise<Record<string, unknown>> {
 	const table = await getMatrixTableFromTipo(sectionTipo);
-	if (table === null) return [];
+	if (table === null) return {};
 	const record = await readMatrixRecord(table, sectionTipo, sectionId);
-	const mediaColumn = record?.columns.media as Record<string, unknown[]> | undefined;
-	const raw = mediaColumn?.[componentTipo];
+	const mediaColumn = record?.columns.media;
+	return mediaColumn !== null && typeof mediaColumn === 'object' && !Array.isArray(mediaColumn)
+		? (mediaColumn as Record<string, unknown>)
+		: {};
+}
+
+/** One component's stored items out of a record's media column (readStoredMediaColumn). */
+export function storedMediaItemsOf(
+	mediaColumn: Record<string, unknown>,
+	componentTipo: string,
+): Record<string, unknown>[] {
+	const raw = mediaColumn[componentTipo];
 	return Array.isArray(raw) ? (raw as Record<string, unknown>[]) : [];
 }
 

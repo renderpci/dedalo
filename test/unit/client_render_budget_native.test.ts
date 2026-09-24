@@ -37,12 +37,33 @@
  *      (component_teardown_tripwire's rule: an observer stored and disconnected).
  *   5. The browser suite is registered and drives ≥ 5,000 entries — for the
  *      section list, the portal edit views and the tree.
+ *   6. tool_export's preview is ONE PAGE, bounded by the same N (the tool used
+ *      to keep every NDJSON row and draw them all — 300k rows × 20 columns was
+ *      6M+ <td>). Measured, not read: the server's page clamp is ≤ N at every
+ *      input; a spool of 3N+ records (breakdown sub-rows included) read at a
+ *      requested page size of 10^9 yields ≤ N records, whole records only, and
+ *      the last page is reachable; flat_table (run under a counting DOM stub)
+ *      draws exactly the rows it is given (plus one counted marker per record
+ *      the server's row budget elided) and keeps NOTHING row-sized between
+ *      pages. The browser half (`test_tool_export`, registered) observes the
+ *      live preview container through a MutationObserver over an export larger
+ *      than one page and asserts the DOM never held more than the page size.
  */
-import { describe, expect, test } from 'bun:test';
-import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { afterAll, describe, expect, test } from 'bun:test';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import {
+	clampPageSize,
+	openSpoolReader,
+	PREVIEW_PAGE_SIZE_MAX,
+} from '../../tools/tool_export/server/spool_reader.ts';
 import { browserSources } from '../helpers/browser_corpus.ts';
+import {
+	type ExportProtocolLine,
+	endedExportJob,
+	scratchExportStore,
+} from '../helpers/export_writer_fixture.ts';
 import { stripComments } from '../helpers/strip_comments.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
@@ -51,6 +72,8 @@ const SECTION = 'client/dedalo/core/section/js/section.js';
 const TREE_VIEW = 'client/dedalo/core/ts_object/js/view_default_edit_ts_object.js';
 const SUITE = 'client/dedalo/test/client/js/test_render_budget.js';
 const REGISTRY = 'client/dedalo/test/client/js/test_registry.js';
+const EXPORT_FLAT_TABLE = 'tools/tool_export/js/flat_table.js';
+const EXPORT_SUITE = 'client/dedalo/test/client/js/test_tool_export.js';
 
 /** The recorded bound. SHRINK-ONLY: lower it here when the module lowers it. */
 const RECORDED_MAX_ROWS = 200;
@@ -363,5 +386,237 @@ describe('client_render_budget', () => {
 			registry,
 			'test_render_budget is not registered — an unregistered suite never runs',
 		).toMatch(/'test_render_budget'/);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// 6. tool_export: the preview is one page, bounded by the row window
+// ---------------------------------------------------------------------------
+
+/** ROW_WINDOW_MAX_ROWS as row_window.js exports it (leg 1 pins it as a bare literal). */
+const rowWindowMaxRows = (): number => {
+	const match = /^export const ROW_WINDOW_MAX_ROWS\s*=\s*(\d+)\s*;?\s*$/m.exec(code(ROW_WINDOW));
+	expect(match).not.toBeNull();
+	return Number(match?.[1]);
+};
+
+/** A DOM just big enough for flat_table, counting every element it creates. */
+class StubElement {
+	children: StubElement[] = [];
+	classes = new Set<string>();
+	textContent = '';
+	[key: string]: unknown;
+	constructor(readonly tagName: string) {}
+	classList = {
+		add: (...names: string[]) => {
+			for (const name of names) this.classes.add(name);
+		},
+	};
+	appendChild(child: StubElement): StubElement {
+		if (child.tagName === '#fragment') this.children.push(...child.children);
+		else this.children.push(child);
+		return child;
+	}
+	count(tag: string): number {
+		return this.children.reduce(
+			(sum, child) => sum + (child.tagName === tag ? 1 : 0) + child.count(tag),
+			0,
+		);
+	}
+}
+
+describe('client_render_budget: tool_export preview', () => {
+	const scratch = mkdtempSync(join(tmpdir(), 'dedalo_render_budget_export_'));
+	afterAll(() => {
+		rmSync(scratch, { recursive: true, force: true });
+	});
+
+	test('the server page clamp never exceeds the row window, whatever is asked', () => {
+		const bound = rowWindowMaxRows();
+		expect(
+			PREVIEW_PAGE_SIZE_MAX,
+			'the preview page may not exceed the row window',
+		).toBeLessThanOrEqual(bound);
+		for (const asked of [
+			undefined,
+			null,
+			0,
+			-1,
+			'abc',
+			bound + 1,
+			1e9,
+			Number.MAX_SAFE_INTEGER,
+			Infinity,
+		]) {
+			const size = clampPageSize(asked);
+			expect(size, `clampPageSize(${String(asked)})`).toBeGreaterThanOrEqual(1);
+			expect(size, `clampPageSize(${String(asked)})`).toBeLessThanOrEqual(bound);
+		}
+	});
+
+	test('a spool of 3N+ records read at page_size 10^9 yields at most N whole records per page', async () => {
+		const bound = rowWindowMaxRows();
+		const records = bound * 3 + 7;
+		const lines: ExportProtocolLine[] = [
+			{ t: 'meta', v: 1, data_format: 'standard', breakdown: 'rows', section_tipo: 'test3' },
+			{ t: 'col', i: 0, key: 'value', label: 'Value', cell_type: 'text', after: null },
+		];
+		let rows = 0;
+		for (let rec = 1; rec <= records; rec++) {
+			// every 5th record breaks down into 3 rows: a page must never split one
+			const subs = rec % 5 === 0 ? 3 : 1;
+			for (let sub = 0; sub < subs; sub++) {
+				lines.push({ t: 'row', rec, sub, c: { '0': `r${rec}.${sub}` } });
+				rows++;
+			}
+		}
+		lines.push({ t: 'end', columns: [0], rows, records });
+		const store = scratchExportStore(scratch);
+		const job = await endedExportJob(store, lines);
+		const reader = openSpoolReader(job.dir, { indexEvery: 4 });
+
+		const seen = new Set<number>();
+		let page = 0;
+		for (;;) {
+			const result = await reader.readPage({ page, pageSize: 1e9 });
+			const recs = new Set(result.rows.map((row) => Number(row.rec)));
+			expect(result.page_size, 'the served page size').toBeLessThanOrEqual(bound);
+			expect(recs.size, `page ${page}: records`).toBeLessThanOrEqual(bound);
+			expect(result.records).toBe(recs.size);
+			for (const rec of recs) {
+				expect(seen.has(rec), `record ${rec} split across pages`).toBe(false);
+				seen.add(rec);
+				// whole records only: every sub-row of the record is on this page
+				expect(result.rows.filter((row) => Number(row.rec) === rec).length).toBe(
+					rec % 5 === 0 ? 3 : 1,
+				);
+			}
+			if (!result.has_more) break;
+			page++;
+			expect(page, 'the pager never runs past the last page').toBeLessThan(10);
+		}
+		// the last page is reachable, and together the pages are the whole export
+		expect(page).toBe(Math.ceil(records / Math.min(bound, PREVIEW_PAGE_SIZE_MAX)) - 1);
+		expect(seen.size).toBe(records);
+	});
+
+	test('flat_table draws exactly one page and keeps nothing row-sized between pages', async () => {
+		const globals = globalThis as Record<string, unknown>;
+		const saved = { document: globals.document, window: globals.window };
+		const created = { count: 0 };
+		globals.window = { location: { origin: 'https://render-budget.example.test' } };
+		globals.document = {
+			createElement: (tag: string) => {
+				created.count++;
+				return new StubElement(tag);
+			},
+			createDocumentFragment: () => new StubElement('#fragment'),
+		};
+		try {
+			const module = (await import(join(REPO_ROOT, EXPORT_FLAT_TABLE))) as {
+				flat_table: new (
+					config?: object,
+				) => {
+					render_page(page: { cols: unknown[]; rows: unknown[] }): StubElement;
+				};
+			};
+			const cols = [0, 1, 2].map((i) => ({
+				t: 'col',
+				i,
+				key: `k${i}`,
+				label: `L${i}`,
+				cell_type: 'text',
+			}));
+			const page = (from: number, n: number) => ({
+				cols,
+				rows: Array.from({ length: n }, (_, k) => ({
+					t: 'row',
+					rec: from + k,
+					sub: 0,
+					c: { '0': 'a', '1': 'b', '2': 'c' },
+				})),
+			});
+			const bound = rowWindowMaxRows();
+			const table = new module.flat_table();
+
+			const first = table.render_page(page(1, bound));
+			expect(first.count('tr')).toBe(1 + bound);
+			expect(first.count('td')).toBe(bound * cols.length);
+
+			// the next page REPLACES: a fresh table holding the new page only
+			created.count = 0;
+			const second = table.render_page(page(bound + 1, 7));
+			expect(second).not.toBe(first);
+			expect(second.count('tr')).toBe(1 + 7);
+			// the DOM built for page 2 is page 2 (table + header row + 3 th + 7 × (tr + 3 td))
+			expect(created.count).toBe(1 + 1 + cols.length + 7 * (1 + cols.length));
+
+			// an ELIDED record (the server's row budget): one marker row right after
+			// the record's served rows, spanning every column, carrying the count
+			const withElided = table.render_page({
+				cols,
+				rows: [
+					{ t: 'row', rec: 1, sub: 0, c: {} },
+					{ t: 'row', rec: 1, sub: 1, c: {} },
+					{ t: 'row', rec: 2, sub: 0, c: {} },
+				],
+				elided: [{ rec: 1, rows: 1998, after: 1 }],
+			} as { cols: unknown[]; rows: unknown[] });
+			const bodyRows = withElided.children.slice(1);
+			expect(bodyRows.length).toBe(4);
+			const marker = bodyRows[2] as StubElement;
+			expect(marker.classes.has('rows_elided')).toBe(true);
+			expect(marker.children[0]?.colSpan).toBe(cols.length);
+			expect(marker.children[0]?.textContent).toContain('+');
+			expect(String(marker.children[0]?.textContent).replace(/\D/g, '')).toBe('1998');
+			expect((bodyRows[3] as StubElement).classes.has('rows_elided')).toBe(false);
+
+			// placed by POSITION: an export of two sections repeats a section_id on
+			// one page (rec is the bare id), so a marker keyed by rec would also land
+			// after the OTHER section's record 1, whose rows were all served
+			const twoSections = table.render_page({
+				cols,
+				rows: [
+					{ t: 'row', rec: 1, sub: 0, c: {} },
+					{ t: 'row', rec: 1, sub: 0, c: {} },
+					{ t: 'row', rec: 1, sub: 1, c: {} },
+				],
+				elided: [{ rec: 1, rows: 7, after: 2 }],
+			} as { cols: unknown[]; rows: unknown[] });
+			const twoSectionRows = twoSections.children.slice(1) as StubElement[];
+			expect(twoSectionRows.map((row) => row.classes.has('rows_elided'))).toEqual([
+				false,
+				false,
+				false,
+				true,
+			]);
+
+			// no accumulator: no own property of the instance grows with the rows seen
+			for (const [name, value] of Object.entries(table)) {
+				const size =
+					value instanceof Map || value instanceof Set
+						? value.size
+						: Array.isArray(value)
+							? value.length
+							: 0;
+				expect(size, `flat_table.${name} grows with the rows`).toBeLessThanOrEqual(cols.length);
+			}
+		} finally {
+			globals.document = saved.document;
+			globals.window = saved.window;
+		}
+	});
+
+	test('the browser half is registered and observes the DOM over more than one page', () => {
+		const suite = code(EXPORT_SUITE);
+		const records = Number(/const EXPORT_RECORDS\s*=\s*(\d+)/.exec(suite)?.[1]);
+		const pageSize = Number(/const PAGE_SIZE\s*=\s*(\d+)/.exec(suite)?.[1]);
+		expect(records, 'EXPORT_RECORDS not found').toBeGreaterThan(0);
+		expect(pageSize, 'PAGE_SIZE not found').toBeGreaterThan(0);
+		expect(records, 'the browser export must span more than one page').toBeGreaterThan(pageSize);
+		expect(pageSize).toBeLessThanOrEqual(rowWindowMaxRows());
+		expect(suite).toMatch(/new MutationObserver\(/);
+		expect(suite).toMatch(/max_rows\s*<=\s*PAGE_SIZE/);
+		expect(code(REGISTRY), 'test_tool_export is not registered').toMatch(/'test_tool_export'/);
 	});
 });

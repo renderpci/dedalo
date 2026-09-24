@@ -106,12 +106,12 @@ running Bun and this tree's pin, and the bytes free where the update stages.
 
     ```bash
     # the version the release pins is shown in the panel's readiness list
-    curl -fsSL https://bun.sh/install | BUN_INSTALL=$HOME/.bun bash -s bun-v1.4.0
+    curl -fsSL https://bun.sh/install | BUN_INSTALL=$HOME/.bun bash -s bun-v1.4.2
     ```
 
     Then point the service at that binary (`ExecStart`, see the production
     guide), restart, and confirm the boot line reads
-    `starting on Bun 1.4.0 (pinned: 1.4.0)` with no mismatch warning.
+    `starting on Bun 1.4.2 (pinned: 1.4.2)` with no mismatch warning.
 
 1. Close access to the work system.
 

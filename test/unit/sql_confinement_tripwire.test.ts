@@ -426,6 +426,11 @@ const T2_DML_OUTSIDE_WRITER: Readonly<Record<string, { writes: number; reason: s
 		reason:
 			'explicit-id matrix_projects fixture row (assertTestDatabase first); the sweep uses deleteMatrixRecord.',
 	},
+	'src/core/test_data/run_created_records.ts': {
+		writes: 3,
+		reason:
+			"client-run sweep: scoped DELETEs of the records a run CREATED (section_id above the run's own counter mark) + their TM and dd542 activity rows (marker-guarded).",
+	},
 	'src/core/test_data/seed.ts': {
 		writes: 2,
 		reason:

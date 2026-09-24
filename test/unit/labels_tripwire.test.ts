@@ -70,7 +70,6 @@ const UNCATALOGED_CLIENT_KEYS: ReadonlySet<string> = new Set([
 	'default',
 	'destructive',
 	'diffusion_unavailable',
-	'download_media',
 	'drag_component_column',
 	'languages',
 	'layout',

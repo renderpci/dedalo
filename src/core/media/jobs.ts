@@ -30,7 +30,8 @@
  * a job that waited behind a full lane must not be killed for having waited.
  * When it fires it aborts the job's controller (which is now also the AMBIENT
  * job signal, media/job_scope.ts, so an awaited outbound call is cancelled too)
- * and marks the record terminal. It does NOT release the lane slot: the slot is
+ * with the reason `deadline` (jobAbortReason — a worker tells it from a user's
+ * `stop` and a `shutdown` by jobAbortInfo) and marks the record terminal. It does NOT release the lane slot: the slot is
  * released when the worker actually settles, because releasing it while ffmpeg
  * still holds the CPU would over-subscribe the box. A worker that has not
  * settled `JOB_DEADLINE_SETTLE_GRACE_MS` after its abort bumps the
@@ -54,20 +55,71 @@ import {
 	unlinkSync,
 	writeFileSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { config } from '../../config/config.ts';
 import { privateDir, readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
 import { incrementCounter } from '../api/counters.ts';
 import { runDetachedFromTransaction } from '../db/postgres.ts';
+import { toDedaloError, toStructuredErr, wireMessage } from '../errors/convert.ts';
+import { DedaloError, isDedaloError } from '../errors/dedalo_error.ts';
+import type { ApiErrorBody } from '../errors/schema.ts';
 import { runWithJobSignal } from './job_scope.ts';
+import {
+	resolveProcessesDir,
+	TEST_PROCESSES_MARKER,
+	testProcessesDirFor,
+} from './test_media_root.ts';
 
 /** A job's lifecycle status. */
 export type JobStatus = 'queued' | 'running' | 'done' | 'error' | 'interrupted' | 'stopped';
 
 /**
+ * WHY A JOB'S SIGNAL FIRED. Three different events abort the same per-job
+ * controller — the user's stop (`stop`, stop_process), the lane deadline
+ * (`deadline`) and the graceful shutdown (`shutdown`, interruptLive) — and a
+ * worker that records its own outcome must tell them apart: a stop is the
+ * user's choice, a deadline is a limit the operator set, a shutdown is a
+ * restart the user did not cause. The cause rides on `signal.reason` (an
+ * `AbortError` DOMException, so anything that rejects with the reason still
+ * rejects with an AbortError); `jobAbortInfo` reads it back.
+ */
+export type JobAbortCause = 'stop' | 'deadline' | 'shutdown';
+
+export interface JobAbortInfo {
+	readonly cause: JobAbortCause;
+	/** The deadline that fired, for `deadline`. */
+	readonly limitMs?: number;
+}
+
+const JOB_ABORT_KEY = 'dedaloJobAbort';
+
+/** The abort reason carrying `info` (see JobAbortCause). */
+export function jobAbortReason(info: JobAbortInfo): DOMException {
+	const reason = new DOMException(`job aborted: ${info.cause}`, 'AbortError');
+	Object.defineProperty(reason, JOB_ABORT_KEY, { value: Object.freeze({ ...info }) });
+	return reason;
+}
+
+const JOB_ABORT_CAUSES: ReadonlySet<unknown> = new Set<JobAbortCause>([
+	'stop',
+	'deadline',
+	'shutdown',
+]);
+
+/** Why `signal` was aborted by the job manager; null when it was not (or by someone else). */
+export function jobAbortInfo(signal: AbortSignal | null | undefined): JobAbortInfo | null {
+	if (signal?.aborted !== true) return null;
+	const info = (signal.reason as Record<string, unknown> | null | undefined)?.[JOB_ABORT_KEY];
+	return JOB_ABORT_CAUSES.has((info as { cause?: unknown } | undefined)?.cause)
+		? (info as JobAbortInfo)
+		: null;
+}
+
+/**
  * THE WORK CLASS a job draws its slot from — its LANE.
  *
- * Four classes, because four kinds of work compete for genuinely different
+ * Five classes, because five kinds of work compete for genuinely different
  * resources and have genuinely different urgencies:
  *
  *  - `media`         ffmpeg/ImageMagick derivative building. CPU + IO heavy, and
@@ -79,6 +131,22 @@ export type JobStatus = 'queued' | 'running' | 'done' | 'error' | 'interrupted' 
  *                    rebuild, imports, the dev long-process probe. This is the
  *                    lane the single shared cap used to starve, which is the
  *                    whole reason lanes exist.
+ *  - `export`        a user's full export (tool_export `build_export_artifact`):
+ *                    the record walk + spool. Long, DB- and disk-bound, started
+ *                    by ANY reader of a section — which is exactly why it must
+ *                    not share the operator's budget: a curator exporting 300k
+ *                    records must never be able to hold up the update an
+ *                    administrator is waiting on, nor the reverse.
+ *  - `export_file`   a file built from a FINISHED export (tool_export
+ *                    `build_export_file`: CSV/TSV/HTML/XLSX/ODS/NDJSON/media
+ *                    ZIP). The delimited/HTML/spreadsheet/NDJSON formats read
+ *                    only the spool, never the database, and are short next
+ *                    to a walk; the media ZIP re-reads each record's access +
+ *                    stored media from the database and streams every master
+ *                    file, so it can run for hours with DB load on this lane.
+ *                    Its own lane, not `export`'s: with one shared slot, every
+ *                    user's download would queue FIFO behind another user's
+ *                    multi-hour walk.
  *
  * THERE IS DELIBERATELY NO `publication` LANE. Publication/diffusion work runs
  * on the DURABLE queue (src/diffusion/), which has its own depth, its own
@@ -87,7 +155,7 @@ export type JobStatus = 'queued' | 'running' | 'done' | 'error' | 'interrupted' 
  * does not exist. If in-process publication work is ever submitted here, the
  * lane is added WITH its call site, in the same change.
  */
-export type JobLane = 'media' | 'transcription' | 'rag' | 'maintenance';
+export type JobLane = 'media' | 'transcription' | 'rag' | 'maintenance' | 'export' | 'export_file';
 
 /** Every lane, in the order the counters payload publishes them. */
 export const JOB_LANES: readonly JobLane[] = [
@@ -95,6 +163,8 @@ export const JOB_LANES: readonly JobLane[] = [
 	'transcription',
 	'rag',
 	'maintenance',
+	'export',
+	'export_file',
 ] as const;
 
 /** Per-lane {active, queued, max} — the in-process twin of the diffusion depth. */
@@ -122,12 +192,26 @@ const JOB_DEADLINE_SETTLE_GRACE_MS = 60_000;
  *  maintenance 2   the operator's own work. Two, not one: an import must not be
  *                  unable to start because a cache rebuild is running — that is
  *                  the starvation, one lane deeper.
+ *  export 1        ONE. An export walks every selected record and writes a
+ *                  spool the size of the result; two at once halve each other's
+ *                  throughput and double the peak disk use for no gain, and the
+ *                  queue position is visible to the user (job_follow). An
+ *                  installation with cores and disk to spare raises it.
+ *  export_file 2   file builds from finished spools. Two, for maintenance's
+ *                  reason one lane over: a large media ZIP must not make the
+ *                  next user's CSV wait — ENFORCED at admission, not just
+ *                  hoped for: one user may hold every slot but one
+ *                  (tool_export export_job.ts admitExportFileJob). Never
+ *                  shares `export`'s slot (a finished export's download never
+ *                  waits behind a walk).
  */
 const DEFAULT_LANE_BUDGETS: Record<JobLane, number> = {
 	media: 3,
 	transcription: 2,
 	rag: 2,
 	maintenance: 2,
+	export: 1,
+	export_file: 2,
 };
 
 /**
@@ -140,12 +224,22 @@ const DEFAULT_LANE_BUDGETS: Record<JobLane, number> = {
  *  rag 1h          an embedding pass over one group.
  *  maintenance 6h  generous enough for a full cache rebuild or a large import;
  *                  a code update is minutes.
+ *  export 0        NO deadline by default, for the media lane's reason: a
+ *                  300k-record export with deep relations is legitimately long,
+ *                  its user can stop it (stop_process) and a deadline that killed
+ *                  it near the end would throw away hours of finished work. An
+ *                  installation that knows its ceiling sets one.
+ *  export_file 0   NO deadline by default: a media ZIP of a large selection
+ *                  streams every master file, which is legitimately long; its
+ *                  user can stop it.
  */
 const DEFAULT_LANE_DEADLINES_MS: Record<JobLane, number> = {
 	media: 0,
 	transcription: 4 * 60 * 60 * 1000,
 	rag: 60 * 60 * 1000,
 	maintenance: 6 * 60 * 60 * 1000,
+	export: 0,
+	export_file: 0,
 };
 
 /** Read a lane budget from its operator key, falling back to the shipped default. */
@@ -284,7 +378,27 @@ export interface JobRecord {
 	target?: JobTarget;
 	/** Arbitrary result payload (e.g. built file paths). */
 	data: unknown;
+	/**
+	 * Human-readable failure lines. A TYPED throw (DedaloError) contributes its
+	 * WIRE sentence (`wireMessage` — registry English or its vetted public
+	 * message), never `.message`, which is LOG-ONLY by the error contract
+	 * (ERRORS_SPEC §2.2) and may name a path, a key or an SQL fragment: these
+	 * lines reach the job's owner through every frame. An untyped throw (an
+	 * ffmpeg wrapper's Error) keeps its raw message, the legacy AV behaviour.
+	 */
 	errors: string[];
+	/**
+	 * THE TYPED TERMINAL ERROR — the envelope v2 error body (`toErrorBody`,
+	 * the same converter every surface uses, so the disclosure ladder applies:
+	 * registry message, details filtered to `details_keys`, debug only under
+	 * DEDALO_DEBUG_API_ERRORS). Set when the worker THREW, never on a STOPPED
+	 * job — not even when the abort surfaced typed (`export.cancelled`): a stop
+	 * is not a failure, and `error` is the client's failure signal. Rides on the frame as
+	 * `error` — the `{is_running:false, error}` stream-frame contract
+	 * (`toStreamFrame`) — so a client renders `label_key` + `details` in the
+	 * user's language instead of guessing from `errors`.
+	 */
+	error?: ApiErrorBody;
 	/**
 	 * MONOTONIC start/update marks (performance.now-based, injectable for tests).
 	 * They measure ELAPSED time and are not wall-clock instants — `total_time` is
@@ -319,6 +433,8 @@ export interface JobStatusFrame {
 	data: unknown;
 	errors: string[];
 	total_time: number;
+	/** The typed terminal error (JobRecord.error) — present only on a failed terminal frame. */
+	error?: ApiErrorBody;
 }
 
 /**
@@ -332,18 +448,48 @@ export type JobWorker = (ctx: {
 	onProgress: (percent: number) => void;
 	onData: (data: unknown) => void;
 	signal: AbortSignal;
+	/** This job's own id — so the work can record which job produced it. */
+	jobId: string;
 }) => Promise<unknown>;
 
 /**
  * Directory holding the TS process files (its own private tree, not PHP's).
- * DEDALO_MEDIA_PROCESSES_DIR override: the test seam (the session-store
- * DEDALO_SESSION_DB_PATH pattern) — suites must never sweep/mutate the live
- * ../private/processes tree. Read per call so it stays test-settable.
+ * DEDALO_MEDIA_PROCESSES_DIR moves it (read per call so it stays test-settable).
+ * UNDER THE TEST-MEDIA SEAM the default is the marked suite sibling
+ * `<test media root>.processes`, and whatever directory resolves must carry the
+ * `.dedalo_test_processes` marker — asked BEFORE the mkdir, so a refusal
+ * creates nothing (assertProcessesDirDeclared below; derivation in
+ * src/core/media/test_media_root.ts; gate:
+ * test_media_root_tripwire RULE 8). Suites never touch the live
+ * ../private/processes tree.
  */
 function processesDir(): string {
-	const dir = readEnv('DEDALO_MEDIA_PROCESSES_DIR') ?? join(privateDir, 'processes');
+	const dir = resolveProcessesDir(
+		readEnv('DEDALO_MEDIA_PROCESSES_DIR'),
+		join(privateDir, 'processes'),
+	);
+	assertProcessesDirDeclared(dir, 'media jobs processesDir');
 	if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o750 });
 	return dir;
+}
+
+/**
+ * THE ARMED door for the job registry. Inert unless the seam is armed; then
+ * `dir` must carry {@link TEST_PROCESSES_MARKER}, or it refuses BEFORE anything
+ * is created. The engine never plants the marker: the suite's derived dir is
+ * declared by whoever arms the seam (test/helpers/test_media_root.ts
+ * ensureTestMediaRoot — the preload, test:db:setup, the client-suite server),
+ * the media root's rule.
+ */
+function assertProcessesDirDeclared(dir: string, door: string): void {
+	const testRoot = config.media.testRoot;
+	if (testRoot === null) return;
+	const resolved = resolve(dir);
+	if (existsSync(join(resolved, TEST_PROCESSES_MARKER))) return;
+	throw new DedaloError('media.invalid_path', {
+		message: `${door} REFUSED: the job-registry directory '${resolved}' carries no '${TEST_PROCESSES_MARKER}' marker file while the test seam is armed, so it has not declared itself disposable — it may be an installation's live processes tree. NOTHING WAS WRITTEN. Leave DEDALO_MEDIA_PROCESSES_DIR unset (the suite derives '${testProcessesDirFor(testRoot)}', declared by ensureTestMediaRoot / 'bun run test:db:setup'), or declare a scratch dir with markProcessesDir() (test/helpers/test_media_root.ts) first.`,
+		coordinates: { root: resolved },
+	});
 }
 
 /** The pfile path for a job id. */
@@ -414,6 +560,58 @@ function isLiveStatus(status: JobStatus): boolean {
 	return status === 'queued' || status === 'running';
 }
 
+/**
+ * The error body a job record KEEPS: the envelope v2 error body the converter
+ * would build (same code, category, wire message, label_key, retryable, and
+ * details filtered to `details_keys`) but NEVER its debug block — which is why
+ * it is assembled from `toStructuredErr` (the converter's debug-free output)
+ * rather than taken from `toErrorBody`. The record is persisted to the pfile
+ * and served as long as the pfile lives, so a debug block captured while
+ * DEDALO_DEBUG_API_ERRORS was on would outlive the flag; the operator's copy
+ * of that detail is the log line.
+ */
+function persistableErrorBody(error: unknown): ApiErrorBody {
+	const typed = toDedaloError(error);
+	const wire = toStructuredErr(typed).error;
+	return {
+		code: wire.code,
+		category: typed.spec.category,
+		message: wire.message,
+		label_key: typed.spec.label_key,
+		retryable: typed.spec.retryable,
+		...(wire.details === undefined ? {} : { details: wire.details }),
+	};
+}
+
+/**
+ * Terminal visibility (audit S2-15/DEC-22 mandatory logging): a failed or
+ * interrupted job must never be memory-only news nobody polls. `logDetail` is
+ * the thrown message when there was one — the full, LOG-ONLY text the frame's
+ * `errors` may not carry.
+ */
+function logFailedTerminal(record: JobRecord, status: JobStatus, logDetail?: string): void {
+	if (status !== 'error' && status !== 'interrupted') return;
+	const detail = logDetail ?? (record.errors.join('; ') || 'no error detail');
+	console.error(`[media jobs] job ${record.id} (${record.kind}) finished '${status}': ${detail}`);
+}
+
+/**
+ * Record why a worker threw, on the FRAME side (the log line is the caller's):
+ * a TYPED throw gives its wire sentence and its converter body; an untyped one
+ * its raw text (the AV wrappers' Errors, as before — the one exempted raw push
+ * of this file, error_taxonomy A6) and, unless it is the plain abort of a
+ * stopped job (nothing typed to say), the `internal.*` body it converts to.
+ */
+function recordFailure(record: JobRecord, error: unknown, aborted: boolean): void {
+	if (isDedaloError(error)) record.errors.push(wireMessage(error));
+	else record.errors.push(error instanceof Error ? error.message : String(error));
+	// A STOPPED job carries no typed error, whatever shape the abort surfaced in
+	// (a stopped export throws the typed `export.cancelled`): the frame's `error`
+	// is the client's FAILURE signal (normalize_stream_error), and a user's own
+	// stop is not a failure.
+	if (!aborted) record.error = persistableErrorBody(error);
+}
+
 /** The client status frame for an already-resolved record (no reconcile read). */
 function frameOf(record: JobRecord): JobStatusFrame {
 	return {
@@ -423,6 +621,7 @@ function frameOf(record: JobRecord): JobStatusFrame {
 		data: record.data,
 		errors: record.errors,
 		total_time: record.updatedAt - record.startedAt,
+		...(record.error === undefined ? {} : { error: record.error }),
 	};
 }
 
@@ -540,6 +739,16 @@ export interface JobSubmitMeta {
 	target?: JobTarget;
 	/** Override the lane's default deadline for THIS job (ms; 0 = none). */
 	deadlineMs?: number;
+	/**
+	 * Called ONCE, on the record's FIRST terminal transition (done / error /
+	 * stopped / interrupted), after the terminal frame is committed. It is the
+	 * only signal a submitter gets for a job whose worker NEVER RAN — stopped
+	 * while still queued for a lane slot, or interrupted by a shutdown before
+	 * its turn — so a submitter keeping its own record (background.ts) can end
+	 * it instead of reporting it 'running' until the process dies. A throwing
+	 * callback is swallowed: it must never take down the job manager.
+	 */
+	onTerminal?: (record: JobRecord) => void;
 }
 
 export class MediaJobManager {
@@ -564,6 +773,8 @@ export class MediaJobManager {
 	private readonly clock: () => number;
 	/** Armed deadline timers by job id — cleared on every settle. */
 	private readonly deadlineTimers = new Map<string, ReturnType<typeof setTimeout>>();
+	/** Submit-site terminal callbacks by job id (JobSubmitMeta.onTerminal) — fired once, then dropped. */
+	private readonly terminalCallbacks = new Map<string, (record: JobRecord) => void>();
 
 	constructor(options: MediaJobManagerOptions = {}) {
 		this.budgets = resolveLaneMap(options.budgets, DEFAULT_LANE_BUDGETS, 1);
@@ -585,8 +796,12 @@ export class MediaJobManager {
 			// Our own write changes the listing: a memo that outlived it would hide
 			// a job this process just created for up to a second.
 			invalidateMirrorScan();
-		} catch {
-			/* pfile is a best-effort mirror; the in-memory registry is authoritative */
+		} catch (error) {
+			// The pfile is a best-effort mirror (the in-memory registry is
+			// authoritative) — EXCEPT the armed test seam's refusal: a job file
+			// aimed at an undeclared directory is a defect to surface, not an IO
+			// hiccup to swallow (assertProcessesDirDeclared; inert on a real install).
+			if (isDedaloError(error) && error.code === 'media.invalid_path') throw error;
 		}
 	}
 
@@ -730,14 +945,34 @@ export class MediaJobManager {
 		return this.allKnownRecords().filter((record) => record.user_id === userId);
 	}
 
-	/** Acquire a slot IN ONE LANE (resolves when that lane has a free one). */
-	private acquire(lane: JobLane): Promise<void> {
+	/**
+	 * Acquire a slot IN ONE LANE: resolves `true` when the slot is taken, or
+	 * `false` when `signal` aborts while the job is still WAITING — the waiter
+	 * leaves the queue at once. A stop of a queued job must end it NOW: left in
+	 * the queue it would stay 'queued' (and its submitter's record 'running')
+	 * until every job ahead of it finished, holding a place it will never use.
+	 */
+	private acquire(lane: JobLane, signal: AbortSignal): Promise<boolean> {
 		const state = this.lanes[lane];
+		if (signal.aborted) return Promise.resolve(false);
 		if (state.active < this.budgets[lane]) {
 			state.active += 1;
-			return Promise.resolve();
+			return Promise.resolve(true);
 		}
-		return new Promise<void>((resolve) => state.queue.push(resolve));
+		return new Promise<boolean>((resolve) => {
+			const onAbort = (): void => {
+				const at = state.queue.indexOf(grant);
+				if (at !== -1) state.queue.splice(at, 1);
+				resolve(false);
+			};
+			// `release` has ALREADY counted the slot as ours when it calls this.
+			const grant = (): void => {
+				signal.removeEventListener('abort', onAbort);
+				resolve(true);
+			};
+			state.queue.push(grant);
+			signal.addEventListener('abort', onAbort, { once: true });
+		});
 	}
 
 	/** Release a slot in one lane and start the next job WAITING ON THAT LANE. */
@@ -800,9 +1035,23 @@ export class MediaJobManager {
 		};
 		this.registry.set(id, record);
 		this.indexLive(record);
+		if (meta.onTerminal !== undefined) this.terminalCallbacks.set(id, meta.onTerminal);
 		const controller = new AbortController();
 		this.controllers.set(id, controller);
-		this.commit(record);
+		try {
+			this.commit(record);
+		} catch (error) {
+			// ATOMIC SUBMIT: the only throw here is the armed seam's processes-dir
+			// refusal (persist). The job never existed — undo EVERY registration, or
+			// a phantom 'queued' record would hold its target forever
+			// (hasLiveJobForTarget true, no worker to end it). No onTerminal: the
+			// caller gets the throw instead. Gate: test_media_root_tripwire RULE 8.
+			this.registry.delete(id);
+			this.unindexLive(record);
+			this.terminalCallbacks.delete(id);
+			this.controllers.delete(id);
+			throw error;
+		}
 
 		// DETACHED: submit() is called synchronously from a request handler, so the
 		// worker would otherwise inherit that request's AsyncLocalStorage stores —
@@ -818,10 +1067,9 @@ export class MediaJobManager {
 		worker: JobWorker,
 		controller: AbortController,
 	): Promise<void> {
-		await this.acquire(record.lane);
-		if (controller.signal.aborted) {
-			this.finish(record, 'stopped');
-			this.release(record.lane);
+		const acquired = await this.acquire(record.lane, controller.signal);
+		if (!acquired || controller.signal.aborted) {
+			this.endNeverStarted(record, acquired);
 			return;
 		}
 		record.status = 'running';
@@ -843,16 +1091,51 @@ export class MediaJobManager {
 					this.commit(record);
 				},
 				signal: controller.signal,
+				jobId: record.id,
 			});
 			record.data = result;
 			this.finish(record, controller.signal.aborted ? 'stopped' : 'done');
 		} catch (error) {
-			record.errors.push((error as Error).message);
-			this.finish(record, controller.signal.aborted ? 'stopped' : 'error');
+			this.failRun(record, error, controller.signal.aborted);
 		} finally {
 			this.clearDeadline(record.id);
 			this.release(record.lane);
 		}
+	}
+
+	/**
+	 * The worker THREW: the frame gets what the disclosure ladder allows
+	 * (recordFailure — see JobRecord.errors / .error), the log line the full
+	 * (log-only) message.
+	 */
+	private failRun(record: JobRecord, error: unknown, aborted: boolean): void {
+		if (isLiveStatus(record.status)) recordFailure(record, error, aborted);
+		this.finish(
+			record,
+			aborted ? 'stopped' : 'error',
+			error instanceof Error ? error.message : String(error),
+		);
+	}
+
+	/**
+	 * NEVER STARTED: stopped (or interrupted) while waiting for its slot. The
+	 * worker does not run; the terminal transition (and its onTerminal callback)
+	 * happens NOW, not when the lane would have freed. `acquired` = the slot was
+	 * granted in the same tick the stop landed, so it is handed straight on.
+	 *
+	 * The FRAME says nothing beyond `stopped`: no errors[] line. Nothing went
+	 * wrong, and every frame consumer reads a line as a failure
+	 * (update_code_phases resolve_final_frame; the pre-lane wire served
+	 * `errors: []` here too). The operator log gets the line instead.
+	 */
+	private endNeverStarted(record: JobRecord, acquired: boolean): void {
+		if (isLiveStatus(record.status)) {
+			console.log(
+				`[media jobs] job ${record.id} (${record.kind}, lane ${record.lane}) stopped before it started (was queued)`,
+			);
+		}
+		this.finish(record, 'stopped');
+		if (acquired) this.release(record.lane);
 	}
 
 	/**
@@ -885,7 +1168,7 @@ export class MediaJobManager {
 			record.errors.push(
 				`deadline: exceeded ${record.deadline_ms} ms in lane '${record.lane}' — aborted`,
 			);
-			controller.abort();
+			controller.abort(jobAbortReason({ cause: 'deadline', limitMs: record.deadline_ms }));
 			this.finish(record, 'stopped');
 			console.error(
 				`[media jobs] job ${record.id} (${record.kind}, lane ${record.lane}) exceeded its ${record.deadline_ms} ms deadline — aborted`,
@@ -915,7 +1198,7 @@ export class MediaJobManager {
 		}
 	}
 
-	private finish(record: JobRecord, status: JobStatus): void {
+	private finish(record: JobRecord, status: JobStatus, logDetail?: string): void {
 		// IDEMPOTENT. A deadline finishes the record the moment it fires; the worker
 		// settles afterwards and calls in again. The FIRST terminal transition is
 		// the true one — a second would overwrite 'stopped' with 'error' (the abort
@@ -937,17 +1220,26 @@ export class MediaJobManager {
 		this.controllers.delete(record.id);
 		// Terminal visibility (audit S2-15/DEC-22 mandatory logging): a failed or
 		// interrupted job must never be memory-only news nobody polls.
-		if (status === 'error' || status === 'interrupted') {
-			console.error(
-				`[media jobs] job ${record.id} (${record.kind}) finished '${status}': ${record.errors.join('; ') || 'no error detail'}`,
-			);
-		}
+		logFailedTerminal(record, status, logDetail);
+		this.notifyTerminal(record);
 		// Bounded registry (S3-62): evict terminal records after a grace period —
 		// status() falls back to the pfile mirror, so nothing observable changes.
 		// `unrefTimer` (the shared helper the deadline timers use) instead of an
 		// inlined `typeof … .unref` test: the same guard written twice is the same
 		// rule with two chances to drift.
 		unrefTimer(setTimeout(() => this.registry.delete(record.id), TERMINAL_EVICT_AFTER_MS));
+	}
+
+	/** Fire (once) and drop the submit site's onTerminal callback. */
+	private notifyTerminal(record: JobRecord): void {
+		const callback = this.terminalCallbacks.get(record.id);
+		if (callback === undefined) return;
+		this.terminalCallbacks.delete(record.id);
+		try {
+			callback(record);
+		} catch (error) {
+			console.error(`[media jobs] onTerminal callback of job ${record.id} threw`, error);
+		}
 	}
 
 	/** Current record, or null (in-memory first, then the pfile mirror). */
@@ -986,7 +1278,7 @@ export class MediaJobManager {
 		const interrupted: string[] = [];
 		for (const record of this.registry.values()) {
 			if (!isLiveStatus(record.status)) continue;
-			this.controllers.get(record.id)?.abort();
+			this.controllers.get(record.id)?.abort(jobAbortReason({ cause: 'shutdown' }));
 			this.clearDeadline(record.id);
 			record.status = 'interrupted';
 			record.errors.push(`interrupted: ${reason}`);
@@ -996,6 +1288,7 @@ export class MediaJobManager {
 			this.commit(record);
 			this.subscribers.delete(record.id);
 			this.controllers.delete(record.id);
+			this.notifyTerminal(record);
 			interrupted.push(record.id);
 		}
 		return interrupted;
@@ -1023,7 +1316,7 @@ export class MediaJobManager {
 	stop(id: string): boolean {
 		const controller = this.controllers.get(id);
 		if (controller === undefined) return false;
-		controller.abort();
+		controller.abort(jobAbortReason({ cause: 'stop' }));
 		return true;
 	}
 
@@ -1055,11 +1348,15 @@ export const mediaJobs = new MediaJobManager({
 		transcription: laneBudgetFromEnv('DEDALO_JOB_LANE_TRANSCRIPTION_CONCURRENCY', 'transcription'),
 		rag: laneBudgetFromEnv('DEDALO_JOB_LANE_RAG_CONCURRENCY', 'rag'),
 		maintenance: laneBudgetFromEnv('DEDALO_JOB_LANE_MAINTENANCE_CONCURRENCY', 'maintenance'),
+		export: laneBudgetFromEnv('DEDALO_JOB_LANE_EXPORT_CONCURRENCY', 'export'),
+		export_file: laneBudgetFromEnv('DEDALO_JOB_LANE_EXPORT_FILE_CONCURRENCY', 'export_file'),
 	},
 	deadlinesMs: {
 		media: laneDeadlineFromEnv('DEDALO_JOB_DEADLINE_MEDIA_S', 'media'),
 		transcription: laneDeadlineFromEnv('DEDALO_JOB_DEADLINE_TRANSCRIPTION_S', 'transcription'),
 		rag: laneDeadlineFromEnv('DEDALO_JOB_DEADLINE_RAG_S', 'rag'),
 		maintenance: laneDeadlineFromEnv('DEDALO_JOB_DEADLINE_MAINTENANCE_S', 'maintenance'),
+		export: laneDeadlineFromEnv('DEDALO_JOB_DEADLINE_EXPORT_S', 'export'),
+		export_file: laneDeadlineFromEnv('DEDALO_JOB_DEADLINE_EXPORT_FILE_S', 'export_file'),
 	},
 });

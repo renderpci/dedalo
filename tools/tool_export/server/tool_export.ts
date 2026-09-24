@@ -21,13 +21,13 @@ import { getNode } from '../../../src/core/ontology/resolver.ts';
 import { getParentTipo } from '../../../src/core/relations/children.ts';
 import { buildRequestConfigForElement } from '../../../src/core/relations/request_config/build.ts';
 import { extractSqoSectionTipos } from '../../../src/core/relations/request_config/explicit.ts';
-import { getPermissions } from '../../../src/core/security/permissions.ts';
+import { getPermissions, type Principal } from '../../../src/core/security/permissions.ts';
 import {
 	type ToolActionContext,
 	type ToolResponse,
 	toolRequestId,
 } from '../../../src/core/tools/module.ts';
-import { exportGridUnified } from '../../../src/diffusion/export/index.ts';
+import { exportGridUnified } from '../../../src/diffusion/api/export.ts';
 
 /**
  * Build the export grid through the unified engine (see module doc).
@@ -41,24 +41,39 @@ import { exportGridUnified } from '../../../src/diffusion/export/index.ts';
  * a different boundary from the dd774 section grant, so it does not cover this.
  */
 export async function toolExportGetExportGrid(context: ToolActionContext): Promise<ToolResponse> {
-	const sqoSections = (context.options.sqo as { section_tipo?: unknown } | undefined)?.section_tipo;
-	const targets = Array.isArray(sqoSections)
-		? sqoSections
-		: sqoSections === undefined || sqoSections === null
-			? []
-			: [sqoSections];
-	for (const target of targets) {
+	await assertExportSqoSections(context.principal, context.options);
+	return exportGridUnified(context);
+}
+
+/**
+ * THE SQO SECTION GATE, shared by every door that runs the export walk (the
+ * stream above and the background artifact job, export_job.ts): level >= 1 on
+ * EVERY `options.sqo.section_tipo` entry, a non-string entry refused (fail
+ * closed). An absent sqo asserts nothing here — the engine then defaults to
+ * `options.section_tipo`, which the declarative module gate already covered.
+ */
+export async function assertExportSqoSections(
+	principal: Principal,
+	options: Record<string, unknown>,
+): Promise<void> {
+	for (const target of exportSqoSectionTargets(options)) {
 		const sectionTipo = typeof target === 'string' ? target : '';
-		if (
-			sectionTipo === '' ||
-			(await getPermissions(context.principal, sectionTipo, sectionTipo)) < 1
-		) {
+		if (sectionTipo === '' || (await getPermissions(principal, sectionTipo, sectionTipo)) < 1) {
 			throw new DedaloError('perm.denied', {
 				coordinates: { tool: 'tool_export', sqo_section_tipo: sectionTipo },
 			});
 		}
 	}
-	return exportGridUnified(context);
+}
+
+/** The raw `options.sqo.section_tipo` entries (scalar → one entry; absent → none). */
+export function exportSqoSectionTargets(options: Record<string, unknown>): unknown[] {
+	const sqoSections = (options.sqo as { section_tipo?: unknown } | undefined)?.section_tipo;
+	return Array.isArray(sqoSections)
+		? sqoSections
+		: sqoSections === undefined || sqoSections === null
+			? []
+			: [sqoSections];
 }
 
 /**

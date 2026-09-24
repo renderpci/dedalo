@@ -115,7 +115,11 @@ import {
 	TEST_MARKER_TABLE,
 } from '../src/core/test_data/test_database_marker_constants.ts';
 import { testDatabaseName } from '../test/helpers/test_database.ts';
-import { rebuildTestMediaRoot } from '../test/helpers/test_media_root.ts';
+import {
+	rebuildTestExportArtifactsRoot,
+	rebuildTestMediaRoot,
+	rebuildTestProcessesDir,
+} from '../test/helpers/test_media_root.ts';
 import { ensureSuiteRagDatabase, suiteRagDatabaseName } from '../test/helpers/test_rag_database.ts';
 import { deriveHierarchyAllowlist } from './lib/hierarchy_allowlist.ts';
 
@@ -397,6 +401,14 @@ process.env.DEDALO_TEST_MEDIA_ROOT = mediaRoot;
 console.log(
 	`[test-db] test media root rebuilt: ${mediaRoot} (marked '.dedalo_test_media'; the installation's media tree is never touched)`,
 );
+// Its sibling, tool_export's export artifacts root (`<media root>.export_artifacts`,
+// the jobs and files the export gates build): swept and re-marked with it.
+const exportArtifactsRoot = await rebuildTestExportArtifactsRoot(mediaRoot);
+console.log(`[test-db] test export artifacts root rebuilt: ${exportArtifactsRoot}`);
+// And the job-registry sibling (`<media root>.processes`): under the seam the
+// job manager writes its pfiles there, never into ../private/processes.
+const processesDir = rebuildTestProcessesDir(mediaRoot);
+console.log(`[test-db] test job-registry dir rebuilt: ${processesDir}`);
 
 // AND THE VECTOR DATABASE, in the same breath and for the same reason (audit
 // 2026-08-26, P1-16). The matrix pool is not the only pool the suite opens:

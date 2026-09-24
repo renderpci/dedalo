@@ -486,10 +486,13 @@ describe('external resolution is BATCHED, not one blocking call per locator', ()
 		expect(calls).toHaveLength(2);
 		const requested = calls.map((url) => new URL(url).searchParams.get('id')).sort();
 		expect(requested).toEqual([REMOTE_ID_A, REMOTE_ID_B]);
-		// The union is in the request: one call asks for BOTH fields.
+		// The union is in the request: one call asks for BOTH fields — and, since
+		// 2026-09-24, the id field too, so the row carries its own identity
+		// (WC-2026-09-24-external-record-field-set; record_fields.ts).
 		for (const url of calls) {
-			const fields = [...new URL(url).searchParams.getAll('field[]')].sort();
-			expect(fields).toEqual(['authors', 'title']);
+			const fields = [...new URL(url).searchParams.getAll('field[]')];
+			expect(fields[0]).toBe('id');
+			expect([...fields].sort()).toEqual(['authors', 'id', 'title']);
 		}
 	});
 

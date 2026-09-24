@@ -320,6 +320,18 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 			(await import('../../src/core/test_data/projects_fixture.ts')).ensureSuiteProjectsFixture(),
 	},
 	{
+		name: 'runCounterMark',
+		run: async () =>
+			(await import('../../src/core/test_data/run_created_records.ts')).runCounterMark(),
+	},
+	{
+		name: 'sweepRecordsCreatedSince',
+		run: async () =>
+			(await import('../../src/core/test_data/run_created_records.ts')).sweepRecordsCreatedSince(
+				Number.MAX_SAFE_INTEGER,
+			),
+	},
+	{
 		name: 'removeSuiteProjectsFixture',
 		run: async () =>
 			(await import('../../src/core/test_data/projects_fixture.ts')).removeSuiteProjectsFixture(),

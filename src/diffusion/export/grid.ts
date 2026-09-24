@@ -51,14 +51,23 @@ import { sql } from '../../core/db/postgres.ts';
 import { DedaloError, ok } from '../../core/errors/index.ts';
 import { termByTipo } from '../../core/ontology/labels.ts';
 import { getColumnNameByModel, getModelByTipo } from '../../core/ontology/resolver.ts';
+import { EmissionContext } from '../../core/resolve/component_data.ts';
+import type { MediaReadAddress } from '../../core/resolve/relation_list.ts';
+import { currentApplicationLang, runWithRequestLangs } from '../../core/resolve/request_lang.ts';
 import { buildSearchSql } from '../../core/search/sql_assembler.ts';
 import { getDataframeChildTipos } from '../../core/section/list_definitions/section_list.ts';
 import {
+	type FrontierRefusal,
 	type FrontierScope,
 	noteFrontierRefusal,
 	resolveDeclaredTipo,
 } from '../../core/security/frontier_scope.ts';
-import { getPermissions } from '../../core/security/permissions.ts';
+import { getPermissions, type Principal } from '../../core/security/permissions.ts';
+import {
+	currentRequestContext,
+	type RequestContext,
+	runWithRequestContext,
+} from '../../core/security/request_context.ts';
 import {
 	type ToolActionContext,
 	type ToolResponse,
@@ -69,13 +78,23 @@ import type { ExportRun, ExportSegment, GridAtom } from './atoms.ts';
 import {
 	cellTypeOfModel,
 	collectGridAtoms,
+	collectRawMediaAddresses,
 	createExportRun,
 	resolveValueCell,
+	resolveValueCellWithMedia,
 	segmentIdentityKey,
 } from './atoms.ts';
 import type { ExportDdoInput } from './compile_columns.ts';
 import { compileExportPlan } from './compile_columns.ts';
+import {
+	createExternalDegradationLog,
+	type ExportExternalDegradation,
+	type ExternalPrefetchPlan,
+	planExternalPrefetch,
+	prefetchExternalRowsForBatch,
+} from './external_prefetch.ts';
 import { ndjsonStream } from './ndjson_stream.ts';
+import { EXPORT_ROW_MEDIA, type ExportRowMediaAddress } from './row_media.ts';
 
 /** Records bulk-hydrated per chunk (matches the diffusion selection default). */
 const HYDRATE_BATCH = 500;
@@ -122,7 +141,14 @@ interface ItemNode {
 
 /** Per-record entry, one per export ddo (PHP get_record_atoms ar_entries). */
 type RecordEntry =
-	| { kind: 'grid'; ddoIndex: number; atoms: GridAtom[] }
+	| {
+			kind: 'grid';
+			ddoIndex: number;
+			atoms: GridAtom[];
+			/** Media of values the walk dropped for being empty (capturing runs
+			 * only): read, but shown in no cell — noted without a column. */
+			droppedMedia?: MediaReadAddress[];
+	  }
 	| {
 			kind: 'value';
 			ddoIndex: number;
@@ -134,6 +160,8 @@ type RecordEntry =
 			flat: string | null;
 			leafModel: string;
 			topModel: string;
+			/** Media read for the cell (capturing runs only — row_media.ts). */
+			media?: MediaReadAddress[];
 	  }
 	| {
 			kind: 'raw';
@@ -143,6 +171,8 @@ type RecordEntry =
 			raw: string | number | null;
 			cellType: string;
 			topModel: string;
+			/** Media the raw cell addresses (capturing runs only — row_media.ts). */
+			media?: MediaReadAddress[];
 	  };
 
 /**
@@ -433,6 +463,23 @@ function createTabulator(options: {
 		const cellGroups = new Map<number, Map<number, string[]>>();
 		const rawCells: Record<string, string | number> = {};
 		let recordHeight = 1;
+		// The record's captured media addresses, per placed column (row_media.ts).
+		const media: ExportRowMediaAddress[] = [];
+		const mediaSeen = new Set<string>();
+		// `ordinal` null: media READ for a cell that shows nothing (an empty
+		// value — only the 'original' quality exists yet, or the export base is
+		// unset); the same media in every format, placed in no column.
+		const noteMedia = (
+			ordinal: number | null,
+			reads: readonly MediaReadAddress[] | undefined,
+		): void => {
+			for (const read of reads ?? []) {
+				const key = `${ordinal ?? ''}\u0000${read.sectionTipo}\u0000${read.sectionId}\u0000${read.componentTipo}`;
+				if (mediaSeen.has(key)) continue;
+				mediaSeen.add(key);
+				media.push([ordinal, read.sectionTipo, read.sectionId, read.componentTipo]);
+			}
+		};
 
 		const itemTree =
 			dataFormat === 'grid_value' && breakdown !== 'columns'
@@ -480,17 +527,25 @@ function createTabulator(options: {
 					entry.topModel,
 					newColLines,
 				);
+				let shown = false;
 				if (isRaw) {
-					if (entry.raw !== null) rawCells[String(column.i)] = entry.raw;
+					if (entry.raw !== null) {
+						rawCells[String(column.i)] = entry.raw;
+						shown = true;
+					}
 				} else if (entry.flat !== null && entry.flat !== '') {
 					rawCells[String(column.i)] = entry.flat;
+					shown = true;
 				}
+				noteMedia(shown ? column.i : null, entry.media);
 				continue;
 			}
 
 			// grid_value: place every atom
+			noteMedia(null, entry.droppedMedia);
 			for (const atom of entry.atoms) {
 				const placement = await placeAtom(atom, entry.ddoIndex, itemTree, newColLines);
+				noteMedia(placement.column.i, atom.media);
 				for (const rowIndex of placement.rows) {
 					let rowCells = cellGroups.get(rowIndex);
 					if (rowCells === undefined) {
@@ -505,6 +560,7 @@ function createTabulator(options: {
 		}
 
 		const lines = newColLines;
+		const firstRow = lines.length;
 		if (dataFormat === 'value' || dataFormat === 'dedalo_raw') {
 			lines.push({ t: 'row', rec: recId, sub: 0, c: rawCells });
 			rowsEmitted++;
@@ -518,6 +574,11 @@ function createTabulator(options: {
 				lines.push({ t: 'row', rec: recId, sub: rowIndex, c: cells });
 				rowsEmitted++;
 			}
+		}
+		// Out of band, on the record's FIRST row: a symbol key, which no
+		// serialization of the line carries (row_media.ts).
+		if (media.length > 0) {
+			(lines[firstRow] as Record<PropertyKey, unknown>)[EXPORT_ROW_MEDIA] = media;
 		}
 		return lines;
 	};
@@ -533,9 +594,411 @@ function createTabulator(options: {
 	return { recordLines, endLine };
 }
 
-/** Build the export grid through the unified engine (see module doc). */
-export async function exportGridUnified(context: ToolActionContext): Promise<ToolResponse> {
+/**
+ * What `openExportGrid` needs from its caller, ALL of it explicit: WHO exports
+ * (the principal every gate and the frontier answer to), WHAT (the tool_export
+ * options — `options.lang` is the export's DATA lang) and IN WHICH INTERFACE
+ * LANGUAGE (labels the walk mints, e.g. a component_date 'period' cell's unit
+ * words). A subset of `ToolActionContext` plus the interface lang — a
+ * background job builds it without a request (the lang comes from the job's
+ * submit-time snapshot, never from "whatever scope the worker happens to be
+ * in"), and nothing below reads the request id or the socket.
+ *
+ * WHY ALL THREE MUST BE HERE (Rule 6, engineering/REQUEST_ISOLATION.md). Leaf
+ * code on the walk still reads identity from the ALS backstops, and those
+ * reads reach the OUTPUT:
+ *   - interface lang: component_date/date_value.ts resolvePeriodLabels →
+ *     `currentApplicationLang()`;
+ *   - data lang: the component_external cell (relation_list.ts resolveCellValue
+ *     → deriveExternalValue → external/cache.ts fetchExternalRows) takes
+ *     `currentDataLang()` — the remote row is fetched per language;
+ *   - principal: the implicit request_config a relation cell's LABEL is picked
+ *     from (datalist.ts resolveLocatorLabels → implicit.ts
+ *     filterAuthorizedRelated) filters by `currentPrincipal()` — no principal,
+ *     NO filter.
+ * `openExportGrid` therefore runs every step of the walk inside ITS OWN scope
+ * built from these values (see `createExportScope`), so the bytes are the same
+ * in a request, in a detached job, and on a stream pulled after the request's
+ * scope is gone.
+ */
+export type ExportGridContext = Pick<ToolActionContext, 'principal' | 'options'> & {
+	/** The interface language the export's labels resolve in (required: a
+	 * missing value would silently mean the installation default). */
+	applicationLang: string;
+};
+
+/** Run controls for `openExportGrid`. */
+export interface ExportGridRunOptions {
+	/**
+	 * Cooperative cancellation. Checked at every hydrate-batch boundary (before a
+	 * chunk is hydrated) AND before every record inside a chunk; once aborted the
+	 * generator RETURNS — no further row and NO 'end' line. A missing 'end' is the protocol's one abort signal (the same
+	 * truncated-body reading ndjsonStream documents), so a consumer tells a
+	 * cancelled run from a finished one by whether it saw 'end'.
+	 */
+	signal?: AbortSignal;
+	/**
+	 * Records hydrated per chunk (default HYDRATE_BATCH). Only a gate needs to
+	 * move it — to put a batch boundary between two records of a small built
+	 * situation. Output bytes never depend on it; a non-positive-integer value
+	 * falls back to the default.
+	 */
+	hydrateBatch?: number;
+	/**
+	 * The REQUEST this export answers, passed EXPLICITLY by a caller that serves
+	 * one (`exportGridUnified`: its envelope's `perm.out_of_scope` notice reads
+	 * that request's frontier log). Two things are taken from it and from
+	 * nothing else: every frontier refusal of the walk is also copied onto it,
+	 * and its session / request id / client ip are carried into the export's
+	 * scope (leaf logging keeps the correlation id). Never read from the ambient
+	 * store: a detached job (runExportArtifact) inherits the SUBMITTING
+	 * request's context through the job manager, and a walk that forwarded into
+	 * it would write — for hours — into a request that ended long ago (and keep
+	 * that object alive). Absent = no request: the refusals stay on the opened
+	 * grid's own `frontierRefusals`.
+	 */
+	enclosingRequest?: RequestContext;
+	/**
+	 * CAPTURE MEDIA ADDRESSES (row_media.ts): each record's first row line
+	 * carries, under the `EXPORT_ROW_MEDIA` symbol, every (section, id,
+	 * component) its cells READ media from — at any path depth, in every data
+	 * format. Serialized output is byte-identical either way (a symbol key is
+	 * never serialized). The tool_export background build sets it (its spool
+	 * writes the addresses to `media.ndjson` for the media ZIP); a stream or a
+	 * buffered envelope has no reader for them and leaves it off.
+	 */
+	captureMedia?: boolean;
+}
+
+/** An opened export: the meta line, the line producer, and its notes. */
+export interface OpenedExportGrid {
+	/** The 'meta' line — also the FIRST line `lines` yields (same object). */
+	meta: Record<string, unknown>;
+	/**
+	 * THE protocol-line producer: meta, interleaved col/row lines, then 'end'.
+	 * Lazy and single-use; it retains no emitted line, so a consumer that writes
+	 * each line away holds at most one record's lines whatever the selection
+	 * size.
+	 */
+	lines: AsyncGenerator<Record<string, unknown>>;
+	/**
+	 * Non-fatal "no atom for this cell model" notes, DISTINCT (each note once,
+	 * however many records raise it — bounded by the plan, not the selection).
+	 * LIVE: it fills while `lines` runs, and is complete only once the generator
+	 * is exhausted.
+	 */
+	unresolved: readonly string[];
+	/**
+	 * Every ACL NARROWING this export suffered (the frontier's `[frontier]
+	 * REFUSED …` events) — e.g. an SQO filter hop through a component the
+	 * principal cannot read answers `1=0` and an order hop is dropped, never a
+	 * throw, so the SELECTION shrinks or reorders and this list is what every
+	 * disclosure is built from (the request envelope's `perm.out_of_scope`
+	 * notice; tool_export's `narrowed` flag on the job summary and the list —
+	 * a flag, never these coordinates). Collected on the export's own scope, so it survives outside a
+	 * request (a detached job must carry it into its manifest; the ambient
+	 * request-context notice alone would be dropped there). When the caller
+	 * names the request it serves (`ExportGridRunOptions.enclosingRequest`) the
+	 * same entries are ALSO forwarded to that request's context, so the
+	 * envelope's `perm.out_of_scope` notice is unchanged. LIVE, like `unresolved`: the
+	 * eager refusals (selection) are in it when the promise resolves; walk-time
+	 * ones land while `lines` runs.
+	 */
+	frontierRefusals: readonly FrontierRefusal[];
+	/**
+	 * Every RUNTIME (section, component) pair the export frontier ALLOWED — the
+	 * grants the emitted values were read under beyond the DECLARED path (a
+	 * stored locator may land in a section the ddo path never names). Empty for
+	 * a global admin (the walk carries no frontier). A finished export records
+	 * them (tool_export manifest `frontier_grants`) so every later read re-asks
+	 * each one (access.ts exportStillReadable). LIVE, like `unresolved`:
+	 * complete only once `lines` is exhausted.
+	 */
+	frontierGrants: ReadonlyMap<string, { section_tipo: string; component_tipo: string }>;
+	/**
+	 * THE EXTERNAL-SOURCE SUMMARY (FIX 4, 2026-09-24 — external_prefetch.ts):
+	 * every component_external cell the walk resolved DEGRADED (the source could
+	 * not answer, the circuit was open, a stale copy was served, the service is
+	 * disabled or misconfigured, values were cut) — counts per (service, state),
+	 * the exported records affected and a capped sample; null while nothing
+	 * degraded. An export must never be SILENTLY incomplete: tool_export copies
+	 * this into its manifest and serves it, and the 'end' line carries it
+	 * (`external_degraded`, only when non-null — a clean export's bytes are
+	 * unchanged). LIVE, like `unresolved`: complete once `lines` is exhausted;
+	 * each call returns a detached, bounded copy.
+	 */
+	externalDegradation: () => ExportExternalDegradation | null;
+}
+
+/** The export data lang (`options.lang`, PHP default 'lg-spa'). */
+function exportLangOf(options: Record<string, unknown>): string {
+	return String(options.lang ?? 'lg-spa');
+}
+
+/** Runs one step of the export walk inside the export's own identity scope. */
+type ExportScoped = <T>(work: () => Promise<T>) => Promise<T>;
+
+/**
+ * THE EXPORT'S OWN IDENTITY SCOPE — built ONCE per export from the explicit
+ * `ExportGridContext`, entered around EVERY async step of the walk (the eager
+ * gates + selection, each hydrate chunk, each record, the end line).
+ *
+ * Per step, not once: `lines` is an async generator, and a generator body runs
+ * in the async context of whoever calls `next()` — for the NDJSON stream that
+ * is the response pump, after dispatch's scope may be gone. Entering the scope
+ * per step makes the answer independent of the puller.
+ *
+ * The scope carries the three ambient backstops the walk reads (see
+ * `ExportGridContext`): both langs (`runWithRequestLangs`) and a request
+ * context whose principal is the EXPORT's. When the caller names the request
+ * it serves (`enclosingRequest`) that request's session/request id/client ip
+ * are copied over (nothing on the walk reads them for output, and leaf logging
+ * keeps its correlation id); otherwise they are empty, exactly what the
+ * backstops answer outside a request.
+ *
+ * Frontier refusals noted inside the scope land on the export's own context
+ * object; after each step the new ones are copied to `enclosingRequest` (when
+ * given), so the request envelope's notice is unchanged. The AMBIENT request
+ * context is never read here (see `ExportGridRunOptions.enclosingRequest`).
+ */
+function createExportScope(
+	context: ExportGridContext,
+	dataLang: string,
+	outer: RequestContext | undefined,
+): { scoped: ExportScoped; frontierRefusals: readonly FrontierRefusal[] } {
+	const refusals: FrontierRefusal[] = [];
+	const own: RequestContext = {
+		principal: context.principal,
+		session: outer?.session ?? null,
+		requestId: outer?.requestId ?? '',
+		clientIp: outer?.clientIp ?? '',
+		frontierRefusals: refusals,
+	};
+	const langs = { applicationLang: context.applicationLang, dataLang };
+	let forwarded = 0;
+	const forward = (): void => {
+		if (outer === undefined || forwarded >= refusals.length) {
+			forwarded = refusals.length;
+			return;
+		}
+		if (outer.frontierRefusals === undefined) outer.frontierRefusals = [];
+		outer.frontierRefusals.push(...refusals.slice(forwarded));
+		forwarded = refusals.length;
+	};
+	const scoped: ExportScoped = async (work) => {
+		try {
+			return await runWithRequestContext(own, () => runWithRequestLangs(langs, work));
+		} finally {
+			forward();
+		}
+	};
+	return { scoped, frontierRefusals: refusals };
+}
+
+/** How the declaration gate reports a refused column. */
+export interface ExportDeclarationGateOptions {
+	/**
+	 * Record each refusal in the export's frontier log (the BUILD does, so the
+	 * refusal travels with the run). A later RE-CHECK of a finished export
+	 * passes false: its refusal is an answer, not a narrowed walk.
+	 */
+	noteRefusals?: boolean;
+}
+
+/**
+ * THE EXPORT DECLARATION GATE — what an export ASKS FOR, authorized before a
+ * single record is read: Gate A (every SQO target section) + Gate B (every
+ * declared ddo path segment, on its (section, component) grant) + the
+ * `dedalo_raw` dataframe columns. Global admins are exempt. Throws
+ * `perm.denied`, fail closed.
+ *
+ * ONE function, called by `openExportGrid` (the build) AND by every later
+ * re-check of a finished export (tool_export's export_job.ts
+ * exportStillReadable — preview, file build, listing, download), so the
+ * re-check can never be stricter or looser than the gate that let the build
+ * through.
+ */
+export async function assertExportDeclarationReadable(
+	principal: Principal,
+	options: Record<string, unknown>,
+	gate: ExportDeclarationGateOptions = {},
+): Promise<void> {
+	if (principal.isGlobalAdmin) return;
+	const sectionTipo = String(options.section_tipo ?? options.tipo ?? '');
+	const rawFormat = String(options.data_format ?? 'value');
+	const dataFormat = ['value', 'grid_value', 'dedalo_raw'].includes(rawFormat)
+		? rawFormat
+		: 'value';
+	const exportDdos = Array.isArray(options.ar_ddo_to_export)
+		? (options.ar_ddo_to_export as ExportDdoInput[])
+		: [];
+	const sqoInput = (options.sqo ?? { section_tipo: [sectionTipo] }) as Record<string, unknown>;
+	const sqo = sanitizeClientSqo(structuredClone(sqoInput));
+	// TOOLS-02 (2026-07-28 audit): the tool gate checked read (>=1) on the
+	// DECLARED options.section_tipo only, but the export READS whatever
+	// options.sqo targets and emits whatever ddo PATHS are requested — sections
+	// and components the caller may not read (dd128 users → dd133 password
+	// hashes; dd996 API keys; neither is projects-gated, so buildSearchSql does
+	// not narrow them). Re-apply the read path's authorization (dd_core_api Gate
+	// A + Gate B): every SQO target section AND every exported ddo-path component
+	// must be readable by the principal. Fail CLOSED. Global admins are exempt.
+	//
+	// SEC-01 (2026-08-26 audit, which RE-OPENED TOOLS-02): the per-segment half
+	// below now NORMALIZES the declared shape through resolveDeclaredTipo and
+	// REFUSES a segment it cannot resolve. It used to run only inside
+	// `typeof seg.section_tipo === 'string' && typeof seg.component_tipo === 'string'`,
+	// so every other shape — absent, null, ARRAY — was silently SKIPPED past a
+	// gate the resolver then ignored.
+	const note = (refusal: FrontierRefusal): void => {
+		if (gate.noteRefusals !== false) noteFrontierRefusal(exportScope, refusal);
+	};
+	const exportScope: FrontierScope = {
+		principal,
+		surface: 'export',
+		door: 'tool_export',
+	};
+	for (const targetSectionTipo of getSectionTipos(
+		sqo as unknown as Parameters<typeof getSectionTipos>[0],
+	)) {
+		if ((await getPermissions(principal, targetSectionTipo, targetSectionTipo)) < 1) {
+			throw new DedaloError('perm.denied', {
+				coordinates: { tool: 'tool_export', section_tipo: targetSectionTipo },
+			});
+		}
+	}
+	for (const ddo of exportDdos) {
+		// A non-array `path` carries no segment — the same reading
+		// compileExportPlan takes, so the gate and the compiler agree on what
+		// a ddo declares (a path-less ddo compiles to an empty chain and the
+		// buildEntries record guard emits nothing for it).
+		const declaredPath = Array.isArray(ddo?.path) ? ddo.path : [];
+		for (const rawSegment of declaredPath) {
+			// The gate authorizes the segment's NORMALIZED twin — the pair the
+			// consumers below will resolve — never the raw declared fields.
+			const seg = {
+				section_tipo: resolveDeclaredTipo(rawSegment?.section_tipo),
+				component_tipo: resolveDeclaredTipo(rawSegment?.component_tipo),
+			};
+			// SEC-01. An UNRESOLVABLE segment is REFUSED, never skipped: the
+			// resolver below walks the declared path whatever the gate could
+			// read off it, so "I cannot tell which (section, component) this
+			// segment names" is the one answer that must not mean "emit it".
+			if (seg.section_tipo === null || seg.component_tipo === null) {
+				throw new DedaloError('perm.denied', {
+					message: `tool_export: a ddo path segment names no resolvable (section_tipo, component_tipo) pair — section_tipo=${JSON.stringify(rawSegment?.section_tipo ?? null)}, component_tipo=${JSON.stringify(rawSegment?.component_tipo ?? null)}`,
+					coordinates: {
+						tool: 'tool_export',
+						section_tipo: seg.section_tipo ?? '',
+						tipo: seg.component_tipo ?? '',
+					},
+				});
+			}
+			// GATE B IS THE DECLARATION GATE, and it is DELIBERATELY STRICTER
+			// than the frontier predicate (frontier_scope.ts): it answers "may
+			// this caller ASK for this column", not "may this walk cross into
+			// that record". The frontier's globally-visible exemptions exist for
+			// the hops the ENGINE mints (a component_filter's sort path into the
+			// projects section, which no profile grants and which the caller
+			// never typed); a COLUMN the user declared is refused on the bare
+			// grant, exactly as before. The distinction is stated in
+			// frontier_scope.ts and pinned by human_write_scope_tripwire's
+			// TOOLS-02 assertion, which names this call.
+			if ((await getPermissions(principal, seg.section_tipo, seg.component_tipo)) < 1) {
+				note({
+					surface: 'export',
+					door: 'tool_export',
+					sectionTipo: seg.section_tipo,
+					componentTipo: seg.component_tipo,
+					key: 'component',
+				});
+				throw new DedaloError('perm.denied', {
+					coordinates: {
+						tool: 'tool_export',
+						section_tipo: seg.section_tipo,
+						tipo: seg.component_tipo,
+					},
+				});
+			}
+		}
+		// THE dedalo_raw DATAFRAME COLUMNS (2026-08-28). In that format
+		// buildEntries mints and FILLS one raw cell per
+		// `getDataframeChildTipos(topComponent)` frame — real components, with
+		// their own stored data, that appear in NO ddo path and therefore never
+		// reached Gate B. They are authorized HERE, once per run, on the same
+		// key: a caller who may not read the frame component may not receive a
+		// column of its data because the main component happened to be
+		// exportable.
+		if (dataFormat === 'dedalo_raw') {
+			const firstSegment = declaredPath[0];
+			const topSection = resolveDeclaredTipo(firstSegment?.section_tipo);
+			const topComponent = resolveDeclaredTipo(firstSegment?.component_tipo);
+			if (topSection !== null && topComponent !== null) {
+				for (const frameTipo of await getDataframeChildTipos(topComponent)) {
+					// The SAME declaration gate as the segments above — a frame is
+					// a declared column of this export, just one the tool UI cannot
+					// spell, so it is authorized on the bare grant too.
+					if ((await getPermissions(principal, topSection, frameTipo)) >= 1) {
+						continue;
+					}
+					note({
+						surface: 'export',
+						door: 'tool_export',
+						sectionTipo: topSection,
+						componentTipo: frameTipo,
+						key: 'component',
+					});
+					throw new DedaloError('perm.denied', {
+						message: `tool_export: dedalo_raw would emit the dataframe column ${topSection}.${frameTipo} of ${topSection}.${topComponent}, which this caller holds no read grant on`,
+						coordinates: {
+							tool: 'tool_export',
+							section_tipo: topSection,
+							tipo: frameTipo,
+						},
+					});
+				}
+			}
+		}
+	}
+}
+
+/**
+ * Open the export grid through the unified engine (see module doc) — the ONE
+ * producer every export form consumes: the tool's NDJSON stream and buffered
+ * envelope (`exportGridUnified`) and, outside any request, a background job.
+ *
+ * Everything that can REFUSE runs here, eagerly, before the first line: option
+ * validation, the TOOLS-02/SEC-01 read gates (Gate A + Gate B + the dedalo_raw
+ * dataframe columns) and the record selection. A caller therefore sees a
+ * refusal as a rejected promise, never as a half-written stream.
+ *
+ * Identity comes ONLY from `context` — every step runs inside the export's
+ * own scope (`createExportScope`), never the caller's ambient one.
+ */
+export async function openExportGrid(
+	context: ExportGridContext,
+	runOptions: ExportGridRunOptions = {},
+): Promise<OpenedExportGrid> {
+	const { scoped, frontierRefusals } = createExportScope(
+		context,
+		exportLangOf(context.options),
+		runOptions.enclosingRequest,
+	);
+	const opened = await scoped(() => openExportGridInScope(context, runOptions, scoped));
+	return { ...opened, frontierRefusals };
+}
+
+/** `openExportGrid`'s body — runs inside the export scope (`scoped`). */
+async function openExportGridInScope(
+	context: ExportGridContext,
+	runOptions: ExportGridRunOptions,
+	scoped: ExportScoped,
+): Promise<Omit<OpenedExportGrid, 'frontierRefusals'>> {
 	const { options } = context;
+	const signal = runOptions.signal;
+	const hydrateBatch =
+		Number.isInteger(runOptions.hydrateBatch) && (runOptions.hydrateBatch as number) > 0
+			? (runOptions.hydrateBatch as number)
+			: HYDRATE_BATCH;
 	const sectionTipo = String(options.section_tipo ?? options.tipo ?? '');
 	if (sectionTipo === '') {
 		throw new DedaloError('request.invalid_options', {
@@ -552,11 +1015,10 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 		? rawBreakdown
 		: 'default';
 	const fillTheGaps = options.fill_the_gaps !== false; // PHP default true
-	const wantStream = options.ndjson_stream === true;
 	const exportDdos = Array.isArray(options.ar_ddo_to_export)
 		? (options.ar_ddo_to_export as ExportDdoInput[])
 		: [];
-	const lang = String(options.lang ?? 'lg-spa');
+	const lang = exportLangOf(options);
 
 	// Stage B: the export column set compiles through the SHARED plan compiler
 	// front-end (one FieldPlan per ddo, ordinals = user DOM order). WC-049: the
@@ -565,6 +1027,7 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 	const plan = await compileExportPlan(exportDdos, sectionTipo);
 	const fields = plan.sections[0]?.fields ?? [];
 	const run = createExportRun();
+	if (runOptions.captureMedia === true) run.captureMedia = true;
 	// THE EXPORT FRONTIER (SEC-01's larger half). Gate B below authorizes the
 	// DECLARED ddo path segments; this scope authorizes the RUNTIME records the
 	// walk actually reaches through stored locators — a locator may name another
@@ -588,130 +1051,9 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 	sqo.limit = null as unknown as number; // ALL
 	sqo.offset = 0;
 
-	// TOOLS-02 (2026-07-28 audit): the tool gate checked read (>=1) on the
-	// DECLARED options.section_tipo only, but the export READS whatever
-	// options.sqo targets and emits whatever ddo PATHS are requested — sections
-	// and components the caller may not read (dd128 users → dd133 password
-	// hashes; dd996 API keys; neither is projects-gated, so buildSearchSql does
-	// not narrow them). Re-apply the read path's authorization (dd_core_api Gate
-	// A + Gate B): every SQO target section AND every exported ddo-path component
-	// must be readable by the principal. Fail CLOSED. Global admins are exempt.
-	//
-	// SEC-01 (2026-08-26 audit, which RE-OPENED TOOLS-02): the per-segment half
-	// below now NORMALIZES the declared shape through resolveDeclaredTipo and
-	// REFUSES a segment it cannot resolve. It used to run only inside
-	// `typeof seg.section_tipo === 'string' && typeof seg.component_tipo === 'string'`,
-	// so every other shape — absent, null, ARRAY — was silently SKIPPED past a
-	// gate the resolver then ignored.
-	if (!context.principal.isGlobalAdmin) {
-		const exportScope: FrontierScope = {
-			principal: context.principal,
-			surface: 'export',
-			door: 'tool_export',
-		};
-		for (const targetSectionTipo of getSectionTipos(
-			sqo as unknown as Parameters<typeof getSectionTipos>[0],
-		)) {
-			if ((await getPermissions(context.principal, targetSectionTipo, targetSectionTipo)) < 1) {
-				throw new DedaloError('perm.denied', {
-					coordinates: { tool: 'tool_export', section_tipo: targetSectionTipo },
-				});
-			}
-		}
-		for (const ddo of exportDdos) {
-			// A non-array `path` carries no segment — the same reading
-			// compileExportPlan takes, so the gate and the compiler agree on what
-			// a ddo declares (a path-less ddo compiles to an empty chain and the
-			// buildEntries record guard emits nothing for it).
-			const declaredPath = Array.isArray(ddo?.path) ? ddo.path : [];
-			for (const rawSegment of declaredPath) {
-				// The gate authorizes the segment's NORMALIZED twin — the pair the
-				// consumers below will resolve — never the raw declared fields.
-				const seg = {
-					section_tipo: resolveDeclaredTipo(rawSegment?.section_tipo),
-					component_tipo: resolveDeclaredTipo(rawSegment?.component_tipo),
-				};
-				// SEC-01. An UNRESOLVABLE segment is REFUSED, never skipped: the
-				// resolver below walks the declared path whatever the gate could
-				// read off it, so "I cannot tell which (section, component) this
-				// segment names" is the one answer that must not mean "emit it".
-				if (seg.section_tipo === null || seg.component_tipo === null) {
-					throw new DedaloError('perm.denied', {
-						message: `tool_export: a ddo path segment names no resolvable (section_tipo, component_tipo) pair — section_tipo=${JSON.stringify(rawSegment?.section_tipo ?? null)}, component_tipo=${JSON.stringify(rawSegment?.component_tipo ?? null)}`,
-						coordinates: {
-							tool: 'tool_export',
-							section_tipo: seg.section_tipo ?? '',
-							tipo: seg.component_tipo ?? '',
-						},
-					});
-				}
-				// GATE B IS THE DECLARATION GATE, and it is DELIBERATELY STRICTER
-				// than the frontier predicate (frontier_scope.ts): it answers "may
-				// this caller ASK for this column", not "may this walk cross into
-				// that record". The frontier's globally-visible exemptions exist for
-				// the hops the ENGINE mints (a component_filter's sort path into the
-				// projects section, which no profile grants and which the caller
-				// never typed); a COLUMN the user declared is refused on the bare
-				// grant, exactly as before. The distinction is stated in
-				// frontier_scope.ts and pinned by human_write_scope_tripwire's
-				// TOOLS-02 assertion, which names this call.
-				if ((await getPermissions(context.principal, seg.section_tipo, seg.component_tipo)) < 1) {
-					noteFrontierRefusal(exportScope, {
-						surface: 'export',
-						door: 'tool_export',
-						sectionTipo: seg.section_tipo,
-						componentTipo: seg.component_tipo,
-						key: 'component',
-					});
-					throw new DedaloError('perm.denied', {
-						coordinates: {
-							tool: 'tool_export',
-							section_tipo: seg.section_tipo,
-							tipo: seg.component_tipo,
-						},
-					});
-				}
-			}
-			// THE dedalo_raw DATAFRAME COLUMNS (2026-08-28). In that format
-			// buildEntries mints and FILLS one raw cell per
-			// `getDataframeChildTipos(topComponent)` frame — real components, with
-			// their own stored data, that appear in NO ddo path and therefore never
-			// reached Gate B. They are authorized HERE, once per run, on the same
-			// key: a caller who may not read the frame component may not receive a
-			// column of its data because the main component happened to be
-			// exportable.
-			if (dataFormat === 'dedalo_raw') {
-				const firstSegment = declaredPath[0];
-				const topSection = resolveDeclaredTipo(firstSegment?.section_tipo);
-				const topComponent = resolveDeclaredTipo(firstSegment?.component_tipo);
-				if (topSection !== null && topComponent !== null) {
-					for (const frameTipo of await getDataframeChildTipos(topComponent)) {
-						// The SAME declaration gate as the segments above — a frame is
-						// a declared column of this export, just one the tool UI cannot
-						// spell, so it is authorized on the bare grant too.
-						if ((await getPermissions(context.principal, topSection, frameTipo)) >= 1) {
-							continue;
-						}
-						noteFrontierRefusal(exportScope, {
-							surface: 'export',
-							door: 'tool_export',
-							sectionTipo: topSection,
-							componentTipo: frameTipo,
-							key: 'component',
-						});
-						throw new DedaloError('perm.denied', {
-							message: `tool_export: dedalo_raw would emit the dataframe column ${topSection}.${frameTipo} of ${topSection}.${topComponent}, which this caller holds no read grant on`,
-							coordinates: {
-								tool: 'tool_export',
-								section_tipo: topSection,
-								tipo: frameTipo,
-							},
-						});
-					}
-				}
-			}
-		}
-	}
+	// The declaration gate (TOOLS-02 Gate A + Gate B + the dedalo_raw frames) —
+	// ONE function, shared with every re-check of a finished export.
+	await assertExportDeclarationReadable(context.principal, options);
 
 	const { sql: builtSql, params } = await buildSearchSql(sqo, {
 		principal: context.principal.isGlobalAdmin ? undefined : context.principal,
@@ -725,11 +1067,21 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 	}[];
 
 	const unresolved: string[] = [];
-	const columns: Record<string, unknown>[] = [];
-	const rows: Record<string, unknown>[] = [];
-	let endLineOut: Record<string, unknown> | null = null;
 
-	const meta = {
+	// External sources (external_prefetch.ts): the degradation log every
+	// component_external cell reports to, and the per-batch prefetch that parks
+	// the batch's remote rows on the run's own emission scratch. The prediction
+	// is plan-static (compiled once); dedalo_raw reads no external value.
+	const degradation = createExternalDegradationLog();
+	const externalEmission = new EmissionContext();
+	run.cellOpts.externalEmission = externalEmission;
+	run.cellOpts.onExternalDegraded = (event) => degradation.note(event);
+	const externalPlan: ExternalPrefetchPlan =
+		dataFormat === 'dedalo_raw'
+			? { demands: [], fieldsOf: new Map() }
+			: await planExternalPrefetch(fields);
+
+	const meta: Record<string, unknown> = {
 		t: 'meta',
 		v: 1,
 		data_format: dataFormat,
@@ -747,6 +1099,7 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 		section_tipo: string;
 	}): Promise<RecordEntry[]> => {
 		const entries: RecordEntry[] = [];
+		degradation.beginRecord(record.section_tipo, record.section_id);
 		for (const field of fields) {
 			const ddoIndex = field.exportColumn?.ordinal ?? 0;
 			const path = (field.exportColumn?.path ?? []) as RawPathStep[];
@@ -763,17 +1116,23 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 			const topKey = `${firstSection}_${topComponent}`;
 
 			if (dataFormat === 'grid_value') {
+				const droppedMedia: MediaReadAddress[] | undefined =
+					run.captureMedia === true ? [] : undefined;
+				const atoms = await collectGridAtoms(
+					run,
+					field,
+					record.section_tipo,
+					Number(record.section_id),
+					lang,
+					unresolved,
+					undefined,
+					droppedMedia,
+				);
 				entries.push({
 					kind: 'grid',
 					ddoIndex,
-					atoms: await collectGridAtoms(
-						run,
-						field,
-						record.section_tipo,
-						Number(record.section_id),
-						lang,
-						unresolved,
-					),
+					atoms,
+					...(droppedMedia !== undefined && droppedMedia.length > 0 ? { droppedMedia } : {}),
 				});
 				continue;
 			}
@@ -793,6 +1152,17 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 					},
 					...(await buildRawCell(run, record, topComponent, topModel)),
 					topModel,
+					...(run.captureMedia === true
+						? {
+								// the DECLARED ddo's reads, as the value format makes them
+								media: await collectRawMediaAddresses(
+									run,
+									field,
+									record.section_tipo,
+									record.section_id,
+								),
+							}
+						: {}),
 				});
 				// The component's dataframe slots ride along as their OWN columns
 				// (WC-2026-08-09-export-raw-dataframe-own-column): separate
@@ -818,6 +1188,10 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 						},
 						...(await buildRawCell(run, record, frameTipo, 'component_dataframe')),
 						topModel: 'component_dataframe',
+						// No media capture here: the value format has no frame column,
+						// and the frames the top relation's config shows are already
+						// read through it (collectRawMediaAddresses) — capturing the
+						// slot too would archive what the same ddo in value never reads.
 					});
 				}
 				continue;
@@ -826,14 +1200,27 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 			const lastStep = path[path.length - 1] ?? {};
 			const leafTipo = String(lastStep.component_tipo ?? '');
 			const leafModel = (await getModelByTipo(leafTipo)) ?? String(lastStep.model ?? '');
-			const flat = await resolveValueCell(
-				run,
-				field,
-				record.section_tipo,
-				Number(record.section_id),
-				lang,
-				unresolved,
-			);
+			let flat: string | null;
+			let media: MediaReadAddress[] | undefined;
+			if (run.captureMedia === true) {
+				({ flat, media } = await resolveValueCellWithMedia(
+					run,
+					field,
+					record.section_tipo,
+					Number(record.section_id),
+					lang,
+					unresolved,
+				));
+			} else {
+				flat = await resolveValueCell(
+					run,
+					field,
+					record.section_tipo,
+					Number(record.section_id),
+					lang,
+					unresolved,
+				);
+			}
 			// Column LABEL segments (PHP export_tabulator :295-302: with atoms the
 			// value column's path is atoms[0]->path — the declared chain EXTENDED by
 			// the fan-out segments, e.g. 'Denominación | Término'). TS's value cells
@@ -861,21 +1248,28 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 				flat,
 				leafModel,
 				topModel,
+				...(media !== undefined && media.length > 0 ? { media } : {}),
 			});
 		}
 		return entries;
 	};
 
 	/**
-	 * The single protocol-line producer BOTH forms consume: meta, interleaved
+	 * The single protocol-line producer EVERY form consumes: meta, interleaved
 	 * col/row lines (col lines precede the first row that uses them — new
 	 * columns can mint on ANY record), then the 'end' line (authoritative
-	 * display order).
+	 * display order). It retains nothing it yields: buffering, if any, is the
+	 * consumer's choice (exportGridUnified's buffered form), so a streaming or
+	 * spooling consumer holds at most one record's lines however large the
+	 * selection. Every async step runs in the export scope (`scoped`).
 	 */
 	async function* protocolLines(): AsyncGenerator<Record<string, unknown>> {
 		yield meta;
-		for (let chunkStart = 0; chunkStart < records.length; chunkStart += HYDRATE_BATCH) {
-			const chunk = records.slice(chunkStart, chunkStart + HYDRATE_BATCH);
+		for (let chunkStart = 0; chunkStart < records.length; chunkStart += hydrateBatch) {
+			// Cooperative cancellation at the batch boundary: stop BEFORE hydrating
+			// the next chunk, and emit no 'end' — its absence is the abort signal.
+			if (signal?.aborted === true) return;
+			const chunk = records.slice(chunkStart, chunkStart + hydrateBatch);
 			// Bulk-hydrate the chunk's OWN records (one ANY(int[]) query per
 			// section per chunk) so the per-record walk below hits the run cache
 			// instead of lazy-loading each exported row one SELECT at a time.
@@ -886,25 +1280,85 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 				if (ids === undefined) idsBySection.set(record.section_tipo, [record.section_id]);
 				else ids.push(record.section_id);
 			}
-			for (const [chunkSectionTipo, ids] of idsBySection) {
-				await prefetchExportRecords(run.atoms, chunkSectionTipo, ids);
-			}
+			await scoped(async () => {
+				for (const [chunkSectionTipo, ids] of idsBySection) {
+					await prefetchExportRecords(run.atoms, chunkSectionTipo, ids);
+				}
+				// ... and the chunk's REMOTE rows, in one bounded fan-out, so no
+				// external cell of the chunk fetches live per record.
+				await prefetchExternalRowsForBatch(
+					run.atoms,
+					externalPlan,
+					chunk,
+					lang,
+					externalEmission,
+					signal,
+				);
+			});
 			for (const record of chunk) {
-				const entries = await buildEntries(record);
-				for (const line of await tabulator.recordLines(entries, String(record.section_id))) {
-					// columns/rows feed ONLY the buffered response; streaming must not
-					// retain every emitted line or a large export grows the heap with it.
-					if (!wantStream) {
-						if (line.t === 'col') columns.push(line);
-						else rows.push(line);
-					}
+				// ... and at EVERY record boundary: a chunk of heavy records (deep
+				// relation columns) can take minutes, and a Stop / a shutdown must
+				// not wait for it — the export lane (budget 1) is held meanwhile.
+				// Same protocol: no 'end' line, so the consumer sees the abort; a
+				// record's lines are yielded whole or not at all. (Read through a
+				// call: the signal flips between yields, which TS's narrowing of
+				// the batch check above cannot know.)
+				if (abortedNow(signal)) return;
+				// One record = one scoped step (its lines are the tabulator's
+				// per-record array, so scoping here buffers nothing new).
+				const recordLines = await scoped(async () =>
+					tabulator.recordLines(await buildEntries(record), String(record.section_id)),
+				);
+				for (const line of recordLines) {
 					yield line;
 				}
 			}
 		}
-		endLineOut = tabulator.endLine();
-		yield endLineOut;
+		yield await scoped(async () => {
+			const end = tabulator.endLine();
+			// The marker travels ONLY when something degraded: a clean export's
+			// 'end' line (and so the stream, the spool and the NDJSON file) is
+			// byte-identical to before.
+			const degraded = degradation.snapshot();
+			if (degraded !== null) end.external_degraded = degraded;
+			return end;
+		});
 	}
+
+	return {
+		meta,
+		lines: protocolLines(),
+		unresolved,
+		frontierGrants: run.atoms.frontierGrants,
+		externalDegradation: () => degradation.snapshot(),
+	};
+}
+
+/** Whether `signal` has fired — read fresh at each call (see protocolLines). */
+function abortedNow(signal: AbortSignal | undefined): boolean {
+	return signal?.aborted === true;
+}
+
+/**
+ * tool_export's get_export_grid through the unified engine — a THIN user of
+ * `openExportGrid`: the NDJSON stream serializes its lines as they come; the
+ * buffered envelope drains the same generator into meta/columns/rows/end.
+ */
+export async function exportGridUnified(context: ToolActionContext): Promise<ToolResponse> {
+	const wantStream = context.options.ndjson_stream === true;
+	// The interface lang is SNAPSHOTTED here, at the request chokepoint (the
+	// tool handler runs inside dispatchRqo's lang scope), and handed over
+	// explicitly — the stream may be pulled after that scope is gone.
+	const grid = await openExportGrid(
+		{
+			principal: context.principal,
+			options: context.options,
+			applicationLang: currentApplicationLang(),
+		},
+		// THIS request's envelope carries the narrowing notice: named explicitly
+		// (the producer never forwards into an ambient context).
+		{ enclosingRequest: currentRequestContext() },
+	);
 
 	if (wantStream) {
 		// NDJSON protocol (PHP stream_export_grid) through the outcome.stream
@@ -915,22 +1369,31 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 		return ok(null, {
 			requestId: toolRequestId(context),
 			extend: {
-				stream: ndjsonStream(protocolLines(), 'diffusion/export'),
+				stream: ndjsonStream(grid.lines, 'diffusion/export'),
 				streamContentType: 'application/x-ndjson; charset=utf-8',
 			},
 		});
 	}
 
-	// Buffered form: drain the SAME generator; columns/rows fill as it runs.
-	for await (const line of protocolLines()) {
-		void line;
+	// Buffered form: drain the SAME generator, sorting its lines into the
+	// envelope's buckets (meta is `grid.meta`; the producer yields col/row lines
+	// between it and 'end').
+	const columns: Record<string, unknown>[] = [];
+	const rows: Record<string, unknown>[] = [];
+	let endLineOut: Record<string, unknown> | null = null;
+	for await (const line of grid.lines) {
+		if (line === grid.meta) continue;
+		if (line.t === 'end') endLineOut = line;
+		else if (line.t === 'col') columns.push(line);
+		else rows.push(line);
 	}
 	// `unresolved` (cell models the resolver had no atom for) is a NON-FATAL fact
 	// about the payload, so it travels INSIDE `data` — the legacy body smuggled it
 	// through `errors[]` on an otherwise successful response.
+	const unresolved = grid.unresolved;
 	return ok(
 		{
-			meta,
+			meta: grid.meta,
 			columns,
 			rows,
 			end: endLineOut,

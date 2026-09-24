@@ -26,6 +26,7 @@ import {
 	isLiveActivity,
 } from '../../src/core/api/activity.ts';
 import type { JobRecord } from '../../src/core/media/jobs.ts';
+import { markProcessesDir } from '../helpers/test_media_root.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 
@@ -153,7 +154,7 @@ describe('collectActivity: live PLUS recently finished', () => {
 		// green and faded. Absence is not an outcome; the server states it.
 		const scratch = mkdtempSync(join(tmpdir(), 'dd-activity-recent-'));
 		const previous = process.env.DEDALO_MEDIA_PROCESSES_DIR;
-		process.env.DEDALO_MEDIA_PROCESSES_DIR = scratch;
+		process.env.DEDALO_MEDIA_PROCESSES_DIR = markProcessesDir(scratch);
 		try {
 			writeFileSync(
 				join(scratch, 'av_transcode_999999_9.json'),
@@ -185,7 +186,7 @@ describe('collectActivity: live PLUS recently finished', () => {
 		// inverted, and no UI test would have caught it on a clean machine.
 		const scratch = mkdtempSync(join(tmpdir(), 'dd-activity-'));
 		const previous = process.env.DEDALO_MEDIA_PROCESSES_DIR;
-		process.env.DEDALO_MEDIA_PROCESSES_DIR = scratch;
+		process.env.DEDALO_MEDIA_PROCESSES_DIR = markProcessesDir(scratch);
 		try {
 			// One finished job and one still running, both the same user's.
 			for (const [id, status] of [

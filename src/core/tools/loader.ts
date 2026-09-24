@@ -17,8 +17,14 @@
 
 import { existsSync, readdirSync, realpathSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
+import { config } from '../../config/config.ts';
 import { DedaloError } from '../errors/index.ts';
-import { LIFECYCLE_KEYS, type ToolServerModule } from './module.ts';
+import {
+	LIFECYCLE_KEYS,
+	TOOL_ROUTE_RESERVED_SEGMENTS,
+	type ToolHttpRoute,
+	type ToolServerModule,
+} from './module.ts';
 import { getRoots } from './paths.ts';
 
 /** A successfully loaded tool: its module plus provenance for confinement/reporting. */
@@ -50,12 +56,20 @@ function invalidToolModule(message: string): DedaloError {
  * the typed module or throws with a precise reason (caught per-tool by the
  * scanner so one bad tool never aborts the whole load).
  */
-function validateModule(imported: unknown, expectedName: string): ToolServerModule {
+export function validateToolModule(imported: unknown, expectedName: string): ToolServerModule {
 	const tool = (imported as { tool?: unknown }).tool;
 	if (tool === undefined || tool === null || typeof tool !== 'object') {
 		throw invalidToolModule('server/index.ts must export a `tool` object');
 	}
 	const module = tool as ToolServerModule;
+	validateModuleName(module, expectedName);
+	validateApiActions(module);
+	validateBootAndRoutes(module);
+	return module;
+}
+
+/** `tool.name` equals the directory and matches the tool-name grammar. */
+function validateModuleName(module: ToolServerModule, expectedName: string): void {
 	if (module.name !== expectedName) {
 		throw invalidToolModule(
 			`tool.name '${module.name}' must equal directory name '${expectedName}'`,
@@ -64,20 +78,140 @@ function validateModule(imported: unknown, expectedName: string): ToolServerModu
 	if (!TOOL_NAME_PATTERN.test(module.name)) {
 		throw invalidToolModule(`tool.name '${module.name}' must match ^tool_[a-z0-9_]+$`);
 	}
+}
+
+/** `apiActions` is an object of handler specs, with no lifecycle hook inside it. */
+function validateApiActions(module: ToolServerModule): void {
 	if (typeof module.apiActions !== 'object' || module.apiActions === null) {
 		throw invalidToolModule('tool.apiActions must be an object');
 	}
-	for (const key of LIFECYCLE_KEYS) {
-		if (Object.hasOwn(module.apiActions, key)) {
-			throw invalidToolModule(`lifecycle hook '${key}' must not appear inside apiActions`);
-		}
+	const hook = LIFECYCLE_KEYS.find((key) => Object.hasOwn(module.apiActions, key));
+	if (hook !== undefined) {
+		throw invalidToolModule(`lifecycle hook '${hook}' must not appear inside apiActions`);
 	}
 	for (const [method, spec] of Object.entries(module.apiActions)) {
 		if (typeof spec?.handler !== 'function') {
 			throw invalidToolModule(`apiActions.${method}.handler must be a function`);
 		}
 	}
-	return module;
+}
+
+/** The optional `onBoot` hook and `httpRoutes` facet. */
+function validateBootAndRoutes(module: ToolServerModule): void {
+	if (module.onBoot !== undefined && typeof module.onBoot !== 'function') {
+		throw invalidToolModule('tool.onBoot must be a function');
+	}
+	if (module.httpRoutes === undefined) return;
+	if (!Array.isArray(module.httpRoutes)) {
+		throw invalidToolModule('tool.httpRoutes must be an array');
+	}
+	for (const route of module.httpRoutes) {
+		validateHttpRoute(route);
+		assertRoutePosture(route);
+	}
+}
+
+/** A route must classify its read posture (see readPostureRefusal). */
+function assertRoutePosture(route: ToolHttpRoute): void {
+	const posture = readPostureRefusal(route.readPosture);
+	if (posture !== null) {
+		throw invalidToolModule(`httpRoutes: '${route.pathPrefix}'.readPosture ${posture}`);
+	}
+}
+
+/** `/dedalo/<seg>[/<seg>…]/`, lowercase [a-z0-9_] segments. */
+const TOOL_ROUTE_PATTERN = /^\/dedalo\/([a-z0-9_]+)\/(?:[a-z0-9_]+\/)*$/;
+
+/** A route's prefix grammar + reserved-namespace check (see ToolServerModule.httpRoutes). */
+function validateHttpRoute(route: ToolHttpRoute): void {
+	const prefix = String(route?.pathPrefix ?? '');
+	const match = TOOL_ROUTE_PATTERN.exec(prefix);
+	if (match === null) {
+		throw invalidToolModule(
+			`httpRoutes: '${prefix}' must match /dedalo/<segment>[/<segment>…]/ (lowercase, trailing slash)`,
+		);
+	}
+	const first = match[1] as string;
+	if (TOOL_ROUTE_RESERVED_SEGMENTS.includes(first) || first === config.mediaDir) {
+		throw invalidToolModule(
+			`httpRoutes: '${prefix}' claims the reserved /dedalo/${first}/ namespace`,
+		);
+	}
+	if (typeof route.handle !== 'function') {
+		throw invalidToolModule(`httpRoutes: '${prefix}'.handle must be a function`);
+	}
+}
+
+/** The posture-specific field each read posture must name (security/read_door.ts ReadDoorPosture). */
+const ROUTE_POSTURE_FIELDS: Readonly<Record<string, string | null>> = {
+	component: 'gate',
+	chokepoint: 'via',
+	delegates: 'to',
+	record_identity: null,
+	structure_only: null,
+	mutating: null,
+};
+
+/**
+ * Why a tool route's read posture is not acceptable, or null. Required; one of
+ * the closed postures with its named field and a reason of substance — and
+ * never `open`: the read-door census may not grow an ungated door through a
+ * tool (read_door_acl_tripwire's OPEN ceiling is shrink-only).
+ */
+export function readPostureRefusal(posture: unknown): string | null {
+	if (posture === null || typeof posture !== 'object') return 'is required (a ReadDoorPosture)';
+	const fields = posture as Record<string, unknown>;
+	const kind = String(fields.posture);
+	return postureKindRefusal(kind) ?? postureFieldsRefusal(kind, fields);
+}
+
+/** `open` refused; an unknown kind refused. */
+function postureKindRefusal(kind: string): string | null {
+	if (kind === 'open') return "may not be 'open' (a tool may not add an ungated read door)";
+	return Object.hasOwn(ROUTE_POSTURE_FIELDS, kind) ? null : `has an unknown posture '${kind}'`;
+}
+
+/** The reason, and the kind's named field (gate / via / to). */
+function postureFieldsRefusal(kind: string, fields: Record<string, unknown>): string | null {
+	if (!substantial(fields.reason, 6)) return 'needs a reason of substance';
+	const field = ROUTE_POSTURE_FIELDS[kind] ?? null;
+	if (field === null) return null;
+	return substantial(fields[field], 0) ? null : `needs '${field}' for '${kind}'`;
+}
+
+/** A string whose trimmed length exceeds `floor`. */
+function substantial(value: unknown, floor: number): boolean {
+	return typeof value === 'string' && value.trim().length > floor;
+}
+
+/**
+ * Refuse a module whose route overlaps one an already-loaded tool serves
+ * (either prefix containing the other could answer the same path): the
+ * earlier tool keeps it, this one fails to load, loudly.
+ */
+export function assertNoRouteOverlap(
+	module: ToolServerModule,
+	registry: ReadonlyMap<string, LoadedTool>,
+): void {
+	for (const route of module.httpRoutes ?? []) {
+		for (const [claimant, loaded] of registry) assertRouteFree(route, claimant, loaded);
+	}
+}
+
+/** Refuse `route` when it overlaps any route `claimant` already serves. */
+function assertRouteFree(route: ToolHttpRoute, claimant: string, loaded: LoadedTool): void {
+	for (const claimed of loaded.module.httpRoutes ?? []) {
+		if (prefixesOverlap(route.pathPrefix, claimed.pathPrefix)) {
+			throw invalidToolModule(
+				`httpRoutes: '${route.pathPrefix}' overlaps '${claimed.pathPrefix}' already served by ${claimant}`,
+			);
+		}
+	}
+}
+
+/** True when one prefix contains the other (either could answer the same path). */
+function prefixesOverlap(a: string, b: string): boolean {
+	return a.startsWith(b) || b.startsWith(a);
 }
 
 /** Run the scan across all roots and build the registry (idempotent per call). */
@@ -118,7 +252,8 @@ async function scanRoots(): Promise<Map<string, LoadedTool>> {
 			}
 			try {
 				const imported = await import(canonical);
-				const module = validateModule(imported, name);
+				const module = validateToolModule(imported, name);
+				assertNoRouteOverlap(module, registry);
 				registry.set(name, {
 					module,
 					dir: resolve(root.path, name),
@@ -151,6 +286,82 @@ export async function loadToolModules(): Promise<Map<string, LoadedTool>> {
 export async function getLoadedTool(name: string): Promise<LoadedTool | undefined> {
 	const registry = await loadToolModules();
 	return registry.get(name);
+}
+
+/**
+ * The tool route answering `pathname`, or undefined — THE router seam
+ * (server.ts calls it just before the client static tree; see
+ * ToolServerModule.httpRoutes). Loads the registry on first use.
+ */
+export async function toolHttpRouteFor(pathname: string): Promise<ToolHttpRoute | undefined> {
+	const registry = await loadToolModules();
+	for (const loaded of registry.values()) {
+		for (const route of loaded.module.httpRoutes ?? []) {
+			if (pathname.startsWith(route.pathPrefix)) return route;
+		}
+	}
+	return undefined;
+}
+
+/**
+ * Run every loaded tool's `onBoot` (once per serving boot — server.ts). Returns
+ * the stops the shutdown drain calls. One tool's throw is logged and skipped:
+ * a tool never stops the archive from serving. The contract is SYNCHRONOUS
+ * (arm and return, module.ts onBoot): a hook that returns a thenable (an async
+ * onBoot — a JS tool module has no types to stop it) is a contract breach,
+ * logged and skipped — its rejection is caught and logged, never unhandled, and
+ * the promise is never taken for a handle (its `stop` does not exist). A return
+ * that is neither undefined nor `{ stop(): void }` is refused the same way.
+ */
+export async function startToolBootHooks(): Promise<(() => void)[]> {
+	const stops: (() => void)[] = [];
+	for (const [name, loaded] of await loadToolModules()) {
+		if (loaded.module.onBoot === undefined) continue;
+		try {
+			const stop = bootHandleStop(name, loaded.module.onBoot());
+			if (stop !== null) stops.push(stop);
+		} catch (error) {
+			console.error(`[tools] ${name}.onBoot failed (the tool's boot work will not run):`, error);
+		}
+	}
+	return stops;
+}
+
+/** True for a thenable (an async onBoot's promise). */
+function isThenable(value: unknown): value is Promise<unknown> {
+	return (
+		value !== null &&
+		typeof value === 'object' &&
+		typeof (value as { then?: unknown }).then === 'function'
+	);
+}
+
+/**
+ * The stop to register for what `onBoot` returned, or null: undefined (nothing
+ * armed); a thenable (contract breach — its rejection logged, never unhandled);
+ * anything without a `stop` function (refused).
+ */
+function bootHandleStop(name: string, handle: unknown): (() => void) | null {
+	if (handle === undefined) return null;
+	if (isThenable(handle)) {
+		handle.then(
+			() => undefined,
+			(error: unknown) =>
+				console.error(`[tools] ${name}.onBoot rejected (async onBoot, contract breach):`, error),
+		);
+		console.error(
+			`[tools] ${name}.onBoot returned a promise — onBoot is synchronous by contract (arm and return); its handle is NOT registered, nothing will stop it on shutdown`,
+		);
+		return null;
+	}
+	const stop = (handle as { stop?: unknown } | null)?.stop;
+	if (typeof stop !== 'function') {
+		console.error(
+			`[tools] ${name}.onBoot returned something that is neither undefined nor { stop(): void } — refused, nothing will stop it on shutdown`,
+		);
+		return null;
+	}
+	return () => (stop as () => void).call(handle);
 }
 
 /** Names that collided across roots on the last load (reporting). */

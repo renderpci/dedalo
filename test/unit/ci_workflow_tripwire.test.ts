@@ -652,7 +652,7 @@ describe('CI workflow tripwire', () => {
 	 * `src/external/config.ts` refuses an `api_config` whose `api_url` host is not in
 	 * DEDALO_EXTERNAL_ALLOWED_HOSTS AT PARSE TIME — `fetched` is a property of the FIELD,
 	 * not of the caller, so nothing has to be about to make a request. And
-	 * `isExternalSectionTipo` THROWS on a refused config by design ("is this external?"
+	 * `isExternalReferenceSection` THROWS on a refused config by design ("is this external?"
 	 * must not be where a configuration error becomes silence), which
 	 * `listExternalSectionTipos` turns into `update.refused` on the TIME MACHINE RESTORE
 	 * path.

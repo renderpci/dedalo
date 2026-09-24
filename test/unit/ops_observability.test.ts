@@ -162,6 +162,8 @@ describe('admin counters endpoint (S2-37, fail-closed)', () => {
 			// cannot say WHICH class of work is backed up.
 			const mediaJobsGauge = payload.media_jobs as { lanes?: Record<string, unknown> };
 			expect(Object.keys(mediaJobsGauge.lanes ?? {}).sort()).toEqual([
+				'export',
+				'export_file',
 				'maintenance',
 				'media',
 				'rag',

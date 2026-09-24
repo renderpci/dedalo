@@ -27,8 +27,8 @@
  * `scripts/vendor_verify.ts` on every `bun test` and in hermetic CI. A dependency
  * shape that gets NEITHER — a bare archive URL in package.json, which bun records
  * without integrity — is refused by
- * `test/unit/dependency_integrity_tripwire.test.ts`; that is why `xlsx` below is
- * vendored rather than installed.
+ * `test/unit/dependency_integrity_tripwire.test.ts`; a lib published only as an
+ * archive URL is vendored (with a manifest row), never installed.
  *
  * Adding a lib: add an entry here, add the dep to package.json (or drop it in
  * `vendor/` with a `reason` AND a vendor_manifest.json row), and point `probe` at a
@@ -130,14 +130,6 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 		source: 'npm',
 		probe: 'dist/easy.qrcode.min.js',
 	},
-	'client-zip': {
-		// Streaming ZIP writer for tool_export's media download. Same story as
-		// qrcode: a byte-identical copy of the 2.5.0 dist sat under
-		// tools/tool_export/js/lib/ outside every integrity mechanism.
-		base: 'node_modules/client-zip',
-		source: 'npm',
-		probe: 'index.js',
-	},
 	svgedit: {
 		// Was a vendored ~7.2.x-era build (2.0 MB) with no upstream package. 7.4.2 is a
 		// verified drop-in: same default export, all 29 methods + 3 properties
@@ -155,7 +147,7 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 	// specifiers), loaded through the harness import map. See client/dedalo/test/client/.
 	chai: { base: 'node_modules/chai', source: 'npm', probe: 'index.js', devOnly: true },
 
-	// --- COMMITTED under vendor/ (6 trees; digest-pinned, see the header) ---------
+	// --- COMMITTED under vendor/ (5 trees; digest-pinned, see the header) ---------
 	transformers: {
 		// The in-browser AI runtime (tool_transcription's speech recognition,
 		// tool_lang's translation, the remove_background processor). It USED to be
@@ -183,14 +175,6 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 		reason: 'pgrabovets/json-view is distributed via GitHub/jsDelivr only; never published to npm.',
 	},
 
-	xlsx: {
-		base: 'vendor/xlsx',
-		source: 'vendor',
-		probe: 'xlsx.mjs',
-		reason:
-			"SheetJS left the npm registry (npm's `xlsx` is abandoned at 0.18.5), so this was a bare CDN tarball URL in package.json — and a tarball-URL dependency is the ONE shape bun records with no integrity: bun.lock carried `sha512-` for all 581 other entries and nothing for this one. That is not a paperwork gap. These bytes are SERVED TO BROWSERS (tools/tool_export/js/tool_export.js imports /dedalo/lib/xlsx/xlsx.mjs), and every code update re-runs `bun install` in the quarantine, so each update re-fetched unverified third-party client code over the network — a supply-chain write into the page, once per update, forever. Committed 2026-08-24 from the installed 0.20.3 tree, byte-identical to a fresh download of the upstream .tgz (archive sha256 8dc73fc3…, recorded in vendor/vendor_manifest.json and hashed by scripts/vendor_verify.ts). Trimmed to xlsx.mjs — the only file the client loads — plus the Apache-2.0 LICENSE. Bump it with scripts/vendor_fetch.ts, which refuses a download whose sha256 is not the stated one.",
-	},
-
 	'lz-string': {
 		base: 'vendor/lz-string',
 		source: 'vendor',
@@ -204,7 +188,7 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 		source: 'vendor',
 		probe: 'web/viewer.html',
 		reason:
-			"npm's pdfjs-dist ships the pdf.js COMPONENT library (web/pdf_viewer.mjs), not the standalone viewer app — and component_pdf iframes web/viewer.html, the whole Mozilla app. That exists only in the pdfjs-<version>-dist.zip GitHub release, which bun cannot install (it takes a tarball URL, as xlsx does with the SheetJS .tgz, but not a .zip). Committed from the sha256-verified 6.2.108 release — archive digest 7bf642d5…e95ba, the full digest GitHub publishes for the asset, recorded in vendor/vendor_manifest.json. Bumped from 5.7.284 on 2026-08-28 for GHSA-hq66-cqwq-w95j / CVE-2026-16633 (HIGH, arbitrary JavaScript execution on opening a malicious PDF, >= 5.6.83 < 6.2.108); 6.2.108 is also the npm dist-tag latest, so the advisory fix and this project's latest-stable law were one move. The tree is the archive MINUS 5 files — 9.0 MB of sourcemaps and the 1.0 MB demo PDF that view_default_edit_pdf.js disables anyway by clearing defaultUrl — and byte-identical to it otherwise: 404 of 409 files, verified against a fresh download 2026-08-28. 3.5 MB gzipped. The mount also forces enableScripting:false (the advisory's own stated workaround) behind disablePreferences:true, so the mitigation survives a revert of the bump; gated by test/unit/vendor_advisory_tripwire.test.ts, which also refuses a row whose declared version is not in these bytes.",
+			"npm's pdfjs-dist ships the pdf.js COMPONENT library (web/pdf_viewer.mjs), not the standalone viewer app — and component_pdf iframes web/viewer.html, the whole Mozilla app. That exists only in the pdfjs-<version>-dist.zip GitHub release, which bun cannot install (it takes a tarball URL, but not a .zip). Committed from the sha256-verified 6.2.108 release — archive digest 7bf642d5…e95ba, the full digest GitHub publishes for the asset, recorded in vendor/vendor_manifest.json. Bumped from 5.7.284 on 2026-08-28 for GHSA-hq66-cqwq-w95j / CVE-2026-16633 (HIGH, arbitrary JavaScript execution on opening a malicious PDF, >= 5.6.83 < 6.2.108); 6.2.108 is also the npm dist-tag latest, so the advisory fix and this project's latest-stable law were one move. The tree is the archive MINUS 5 files — 9.0 MB of sourcemaps and the 1.0 MB demo PDF that view_default_edit_pdf.js disables anyway by clearing defaultUrl — and byte-identical to it otherwise: 404 of 409 files, verified against a fresh download 2026-08-28. 3.5 MB gzipped. The mount also forces enableScripting:false (the advisory's own stated workaround) behind disablePreferences:true, so the mitigation survives a revert of the bump; gated by test/unit/vendor_advisory_tripwire.test.ts, which also refuses a row whose declared version is not in these bytes.",
 	},
 } as const;
 

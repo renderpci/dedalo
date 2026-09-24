@@ -698,6 +698,21 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_JOB_DEADLINE_TRANSCRIPTION_S',
 	'DEDALO_JOB_DEADLINE_RAG_S',
 	'DEDALO_JOB_DEADLINE_MAINTENANCE_S',
+	// THE EXPORT LANE + tool_export's server-built files (2026-09 export-at-scale).
+	// NEW_IN_V7 by construction: v6 built every export file in the browser and ran
+	// no export job at all, so there is no v6 constant any of these could be a
+	// rename of.
+	'DEDALO_JOB_LANE_EXPORT_CONCURRENCY',
+	'DEDALO_JOB_DEADLINE_EXPORT_S',
+	'DEDALO_JOB_LANE_EXPORT_FILE_CONCURRENCY',
+	'DEDALO_JOB_DEADLINE_EXPORT_FILE_S',
+	'DEDALO_EXPORT_ARTIFACTS_DIR',
+	'DEDALO_EXPORT_ARTIFACTS_TTL_HOURS',
+	'DEDALO_EXPORT_ARTIFACTS_QUOTA_BYTES',
+	'DEDALO_EXPORT_ARTIFACTS_MAX_EXPORTS',
+	'DEDALO_EXPORT_ARTIFACTS_MIN_FREE_BYTES',
+	'DEDALO_EXPORT_PREVIEW_PAGE_SIZE',
+	'DEDALO_EXPORT_JOBS_PER_USER',
 	'DEDALO_MEDIA_PROCESSES_DIR',
 	// The test-media seam: repoints the media root AND arms the marker guard
 	// (src/core/media/test_media_root.ts). NEW_IN_V7 by construction — v6 had no

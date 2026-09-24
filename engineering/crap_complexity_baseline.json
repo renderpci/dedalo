@@ -4,9 +4,9 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 547,
-		"functions": 5249,
-		"functionsOverCap": 695,
+		"files": 553,
+		"functions": 5353,
+		"functionsOverCap": 694,
 		"filesOverCap": 272
 	},
 	"ledger": [
@@ -31,6 +31,11 @@
 			"functionsOverCap": 695,
 			"filesOverCap": 272,
 			"reason": "Re-freezing a counter that never matched its own tree, plus this pass's three splits. MEASURED: the commit that last wrote summary (4ca711b65c, 2026-09-05, ledger line 692/272) had 696 over-cap functions in src/core when it landed — the artifact was regenerated before that commit's own edits, so the DEBT CENSUS MISMATCH has been red ever since and no gate could attribute it. Nothing in this pass grew it: HEAD^ measures 696 too. This pass SPLIT three functions to clear the two real regressions CI reported (mediaControlSetAccessMode 19 -> 10 via assertAccessModeChangeAllowed + writeModeRuleFiles; writeRuleFiles and syncAuthMarkers via writeRuleArtifacts + layValidMarkers, protection.ts 5 over-cap functions -> 3), taking the census 697 -> 695. The remaining distance from 692 is the pre-existing drift, frozen here so it is visible and shrink-only, not accepted: the per-file entries for media_control.ts (17 -> 10), imagemagick.ts (12 -> 10) and protection.ts (8 -> 7) all tighten in the same write."
+		},
+		{
+			"generated": "2026-09-24",
+			"functionsOverCap": 694,
+			"filesOverCap": 272
 		}
 	],
 	"files": {
@@ -218,7 +223,7 @@
 		"src/core/resolve/optimize_tc.ts": 14,
 		"src/core/resolve/read_tm.ts": 17,
 		"src/core/resolve/related_sections.ts": 15,
-		"src/core/resolve/relation_list.ts": 43,
+		"src/core/resolve/relation_list.ts": 40,
 		"src/core/resolve/section_elements_context.ts": 22,
 		"src/core/resolve/security_access_datalist.ts": 20,
 		"src/core/resolve/structure_context.ts": 103,
@@ -269,7 +274,7 @@
 		"src/core/test_data/seed.ts": 9,
 		"src/core/tm_record/tm_record.ts": 14,
 		"src/core/tools/babel.ts": 11,
-		"src/core/tools/background.ts": 9,
+		"src/core/tools/background.ts": 7,
 		"src/core/tools/config.ts": 11,
 		"src/core/tools/dispatch.ts": 17,
 		"src/core/tools/import_conform.ts": 35,

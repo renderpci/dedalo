@@ -189,6 +189,13 @@ const BEHAVIOUR_CLAIMS: readonly BehaviourClaim[] = [
 		definedIn: 'src/core/retention/scheduler.ts',
 	},
 	{
+		key: 'DEDALO_EXPORT_ARTIFACTS_TTL_HOURS',
+		claim:
+			'the export directory is swept when the engine starts and every hour: expired exports deleted, orphaned running ones marked interrupted',
+		performedBy: 'startExportArtifactSweeper',
+		definedIn: 'tools/tool_export/server/artifact_store.ts',
+	},
+	{
 		key: 'DEDALO_UPLOAD_SERVICE_CHUNK_FILES',
 		claim: 'a file larger than this is segmented into chunks for upload',
 		performedBy: 'create_transfer',
@@ -203,9 +210,9 @@ const BEHAVIOUR_CLAIMS: readonly BehaviourClaim[] = [
  * better). It may only shrink when a key genuinely leaves the catalog or stops
  * claiming a behaviour — which means lowering this number in the same change,
  * with the reason in the diff. Measured 2026-08-30: 14 rows; 15 with the
- * reconcile scheduler (S-10).
+ * reconcile scheduler (S-10); 16 with the export artifacts sweeper (2026-09-23).
  */
-const COVERAGE_FLOOR = 15;
+const COVERAGE_FLOOR = 16;
 
 /**
  * LEG B trigger: prose that promises an action the engine takes BY ITSELF —

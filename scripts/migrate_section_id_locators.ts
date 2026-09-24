@@ -145,7 +145,10 @@ export function parseArgs(argv: string[]): Args {
 
 /**
  * D15 PREFLIGHT: resolve the COMPLETE external-service tipo set before any
- * write. `isExternalSectionTipo` throws on malformed api_config — here that is
+ * write (the ONE externality predicate, `isExternalReferenceSection`: an
+ * api_config AND an owned component_external — rsc205-style residue is LOCAL,
+ * so its junk is classed and purgeable). The predicate throws on malformed
+ * api_config — here that is
  * an ABORT with the tipo named (the operator fixes the ontology first; a
  * sweep must not run with an unclassifiable externality set).
  */

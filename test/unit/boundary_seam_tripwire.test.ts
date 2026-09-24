@@ -10,7 +10,10 @@
  * layout the diffusion subsystem is free to change.
  *
  * This gate freezes the seam at IMPORT-SPECIFIER granularity:
- *  - every reference from non-diffusion src/ into src/diffusion/** (static,
+ *  - every reference from non-diffusion src/ AND from tools/ (the tools'
+ *    server modules are peers of core: tool_export imported
+ *    diffusion/writers/files.ts + csv.ts internals before 2026-09-24, one
+ *    directory over from where this gate looked) into src/diffusion/** (static,
  *    type-only, and dynamic alike — type imports still couple core to the
  *    internal layout even if erased at runtime) must be a ledgered pair;
  *  - NEW pairs are legal only when they target the facade (src/diffusion/api/);
@@ -34,6 +37,8 @@ import { join } from 'node:path';
 import { Glob } from 'bun';
 
 const SRC_DIR = join(import.meta.dir, '..', '..', 'src');
+/** The tools tree: its server modules reach src/ by relative path (`../../../src/...`). */
+const TOOLS_DIR = join(import.meta.dir, '..', '..', 'tools');
 
 /**
  * The facade subtrees: the only legal targets for NEW core→subsystem imports.
@@ -81,23 +86,34 @@ interface SeamEdge {
 	target: string; // normalized 'diffusion/...' module path
 }
 
+/** The seam edges of ONE source text (`file` is its ledger key). */
+function seamEdgesOf(file: string, text: string): SeamEdge[] {
+	const edges: SeamEdge[] = [];
+	const specifierRoot = new RegExp(`^.*?((?:${GOVERNED_SUBSYSTEMS.join('|')})/)`);
+	const lines = text.split('\n');
+	for (let index = 0; index < lines.length; index++) {
+		const lineText = lines[index] as string;
+		for (const match of lineText.matchAll(SUBSYSTEM_SPECIFIER)) {
+			const specifier = match[1] as string;
+			const normalized = specifier.replace(/^(?:\.\.?\/)+/, '').replace(specifierRoot, '$1');
+			edges.push({ file, line: index + 1, target: normalized });
+		}
+	}
+	return edges;
+}
+
 function scanSeamEdges(): SeamEdge[] {
 	const edges: SeamEdge[] = [];
 	const glob = new Glob('**/*.ts');
 	const insideSubsystem = new RegExp(`^(?:${GOVERNED_SUBSYSTEMS.join('|')})/`);
-	const specifierRoot = new RegExp(`^.*?((?:${GOVERNED_SUBSYSTEMS.join('|')})/)`);
 	for (const relativePath of glob.scanSync({ cwd: SRC_DIR })) {
 		if (insideSubsystem.test(relativePath)) continue; // inside a governed subsystem
-		const text = readFileSync(join(SRC_DIR, relativePath), 'utf8');
-		const lines = text.split('\n');
-		for (let index = 0; index < lines.length; index++) {
-			const lineText = lines[index] as string;
-			for (const match of lineText.matchAll(SUBSYSTEM_SPECIFIER)) {
-				const specifier = match[1] as string;
-				const normalized = specifier.replace(/^(?:\.\.?\/)+/, '').replace(specifierRoot, '$1');
-				edges.push({ file: relativePath, line: index + 1, target: normalized });
-			}
-		}
+		edges.push(...seamEdgesOf(relativePath, readFileSync(join(SRC_DIR, relativePath), 'utf8')));
+	}
+	// tools/: keyed 'tools/<path>' (every tool file is outside the subsystems)
+	for (const relativePath of glob.scanSync({ cwd: TOOLS_DIR })) {
+		const key = `tools/${relativePath}`;
+		edges.push(...seamEdgesOf(key, readFileSync(join(TOOLS_DIR, relativePath), 'utf8')));
 	}
 	return edges;
 }
@@ -129,8 +145,26 @@ describe('core→subsystem seams are facade-only (S3-02 tripwire)', () => {
 		}
 	});
 
+	test('the tools/ tree is really scanned (non-vacuity) and a tool reaching an internal is red', () => {
+		// tool_export reaches the export engine — through the facade.
+		const toolEdges = edges.filter((edge) => edge.file.startsWith('tools/'));
+		expect(toolEdges.length).toBeGreaterThan(0);
+		expect(toolEdges.every((edge) => edge.target.startsWith('diffusion/api/'))).toBe(true);
+		// Positive control: the pre-2026-09-24 spelling of tool_export's zip import
+		// is an internal edge the rule refuses (not a facade, not grandfathered).
+		const planted = seamEdgesOf(
+			'tools/tool_export/server/writers/xlsx.ts',
+			"import { openZipStream } from '../../../../src/diffusion/writers/files.ts';",
+		);
+		expect(planted.map((edge) => edge.target)).toEqual(['diffusion/writers/files.ts']);
+		const plantedEdge = planted[0] as SeamEdge;
+		expect([...FACADE_PREFIX].some((prefix) => plantedEdge.target.startsWith(prefix))).toBe(false);
+		expect(GRANDFATHERED_INTERNAL[plantedEdge.file]).toBeUndefined();
+	});
+
 	test('every governed facade exists (rule sanity)', () => {
 		expect(() => readFileSync(join(SRC_DIR, 'diffusion/api/actions.ts'))).not.toThrow();
 		expect(() => readFileSync(join(SRC_DIR, 'external/api/index.ts'))).not.toThrow();
+		expect(() => readFileSync(join(SRC_DIR, 'diffusion/api/export.ts'))).not.toThrow();
 	});
 });

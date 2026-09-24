@@ -636,6 +636,153 @@ export const ERROR_REGISTRY = {
 		retryable: false,
 	},
 
+	// ── export (tool_export's server-built files) ───────────────────────────
+	// The export job writes a spool + files under the export store
+	// (tools/tool_export/server/artifact_store.ts); every refusal of that path
+	// is one of these. Throw sites: artifact_store.ts, spool_reader.ts,
+	// writers/types.ts (the shared limit + cancel helpers the writers call).
+	// The user stopped the export (stop_process); the partial spool is deleted.
+	// `conflict`, not `caller`: nothing in the request was wrong — the
+	// artifact's state is what refuses. A lane DEADLINE is not a stop:
+	// export.deadline_exceeded.
+	'export.cancelled': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_export_cancelled',
+		message: 'The export was stopped before it finished',
+		severity: 'info',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	// The export ran past its lane's deadline (DEDALO_JOB_DEADLINE_EXPORT_S — an
+	// operator limit, not the user's stop) and was aborted; the partial spool is
+	// deleted. `limit`: the same selection will hit it again — export fewer
+	// records or columns, or the operator raises the limit. `limit_s` = the
+	// deadline in seconds. Throw site: tools/tool_export/server/export_job.ts.
+	'export.deadline_exceeded': {
+		category: 'limit',
+		status: 429,
+		label_key: 'error_export_deadline_exceeded',
+		message: 'The export ran longer than this server allows and was stopped',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+		details_keys: ['limit_s'],
+	},
+	// A file format's hard ceiling the export exceeds and that cannot be split
+	// around (XLSX/ODS: 16,384 columns). Rows are NOT this code — they split into
+	// sheets. `caller`: the same selection can never fit, retrying is pointless.
+	'export.format_limit': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_export_format_limit',
+		message: 'The export exceeds a limit of the requested file format',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+		details_keys: ['format', 'limit'],
+	},
+	// The export exists but has not ended (still running, or it failed / was
+	// interrupted before its 'end' line): a file can only be built from a whole
+	// spool. Retryable — a running export finishes.
+	'export.artifact_not_ready': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_export_artifact_not_ready',
+		message: 'The export has not finished yet',
+		severity: 'info',
+		disclosure: 'operator',
+		retryable: true,
+	},
+	// The export is in use and cannot be deleted: it is still running, or a file
+	// is being built from it (tool_export.delete_export_job). `conflict`: the
+	// artifact's state refuses, not the request. Retryable — a stopped export or
+	// a finished build frees it (the owner stops a running export first).
+	'export.artifact_busy': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_export_artifact_busy',
+		message: 'The export is running or a file is being built from it',
+		severity: 'info',
+		disclosure: 'operator',
+		retryable: true,
+	},
+	// The user's export files would exceed DEDALO_EXPORT_ARTIFACTS_QUOTA_BYTES.
+	// `limit` (429): the user holds too much; deleting older exports
+	// (tool_export.delete_export_job) or the TTL sweep expiring them makes the
+	// same request succeed.
+	'export.artifact_quota': {
+		category: 'limit',
+		status: 429,
+		label_key: 'error_export_artifact_quota',
+		message: 'The export storage quota for this user is full',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+		details_keys: ['quota_bytes'],
+	},
+	// The user already keeps DEDALO_EXPORT_ARTIFACTS_MAX_EXPORTS exports (a count
+	// cap beside the byte quota: tiny exports cost almost no bytes, yet every
+	// list/reclaim reads each one). Deleting older exports or the TTL sweep
+	// makes the same request succeed.
+	'export.artifact_count': {
+		category: 'limit',
+		status: 429,
+		label_key: 'error_export_artifact_count',
+		message: 'This user already keeps the maximum number of exports',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+		details_keys: ['max_exports'],
+	},
+	// The export volume would fall below DEDALO_EXPORT_ARTIFACTS_MIN_FREE_BYTES
+	// free — an installation-wide floor, whatever the users' quotas (the default
+	// root shares the private volume with the session store and the settings).
+	// `unavailable` (503): nothing the caller did; space freed by the sweep, a
+	// delete or the operator makes the same request succeed.
+	'export.storage_low': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_export_storage_low',
+		message: 'The export volume is short of free space',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: true,
+	},
+	// Per-user admission on the shared export lane: refused at SUBMIT, nothing queued.
+	'export.too_many_jobs': {
+		category: 'limit',
+		status: 429,
+		label_key: 'error_export_too_many_jobs',
+		message: 'This user already has the maximum number of export jobs queued or running',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: true,
+		details_keys: ['limit'],
+	},
+	// Unknown / expired / not-yours / disallowed name — ONE answer for all of
+	// them, so the store never tells a caller which of the four it was.
+	'export.artifact_not_found': {
+		category: 'not_found',
+		status: 404,
+		label_key: 'error_export_artifact_not_found',
+		message: 'The export was not found or has expired',
+		severity: 'info',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	// The export directory cannot be used: not writable, or — under the test
+	// seam — a root that carries no test marker (nothing is written).
+	'export.store_unavailable': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_export_store_unavailable',
+		message: 'The export storage directory is not usable',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
+
 	// ── MCP / agent ─────────────────────────────────────────────────────────
 	// The `mcp.*` refusals are MODEL-FACING: the tool authors the sentence FOR
 	// the model (which record matched, which op is wrong) — disclosure public,

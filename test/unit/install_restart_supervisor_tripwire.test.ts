@@ -257,13 +257,26 @@ describe('install restart supervisor contract', () => {
 		return await Bun.file(fileURLToPath(new URL(`../../${rel}`, import.meta.url))).text();
 	}
 
-	/** Every `/dedalo/…` route prefix the engine exports as a constant. */
+	/**
+	 * Every `/dedalo/…` route prefix the engine exports as a constant — in src/
+	 * AND in the tools' server modules, whose routes the router dispatches
+	 * through `ToolServerModule.httpRoutes` (e.g. tool_export's
+	 * EXPORT_ARTIFACT_URL_PREFIX, unbuffered in nginx for multi-GB downloads).
+	 * The last test below proves every LOADED tool route is in this set.
+	 */
 	async function derivedRoutePrefixes(): Promise<Set<string>> {
 		const prefixes = new Set<string>();
-		const glob = new Bun.Glob('**/*.ts');
+		const files: string[] = [];
 		const srcDir = fileURLToPath(new URL('../../src/', import.meta.url));
-		for await (const rel of glob.scan({ cwd: srcDir })) {
-			const text = await Bun.file(`${srcDir}${rel}`).text();
+		for await (const rel of new Bun.Glob('**/*.ts').scan({ cwd: srcDir })) {
+			files.push(`${srcDir}${rel}`);
+		}
+		const toolsDir = fileURLToPath(new URL('../../tools/', import.meta.url));
+		for await (const rel of new Bun.Glob('tool_*/server/**/*.ts').scan({ cwd: toolsDir })) {
+			if (!rel.endsWith('.test.ts')) files.push(`${toolsDir}${rel}`);
+		}
+		for (const file of files) {
+			const text = await Bun.file(file).text();
 			// Both shapes the engine uses today: _URL_PREFIX and _URL_BASE. Naming
 			// alone is not trusted — the completeness test below cross-checks the
 			// result against the routing branches themselves.
@@ -287,6 +300,7 @@ describe('install restart supervisor contract', () => {
 		// this whole gate vacuous. Pinned to today's set, shrink-only by hand.
 		expect([...prefixes].sort()).toEqual([
 			'/dedalo/ai_models',
+			'/dedalo/export/artifact',
 			'/dedalo/install/code',
 			'/dedalo/install/import/hierarchy',
 			'/dedalo/lib',
@@ -395,6 +409,26 @@ describe('install restart supervisor contract', () => {
 			'A /dedalo/ path reached the router with no proxy classification. Add it to ' +
 				'the six proxy configs and let it be derived, or record it in ' +
 				'LITERAL_ROUTES / NEVER_PROXIED with a written reason.',
+		).toEqual([]);
+	});
+
+	// The router's THIRD source of routes: the loaded tools' httpRoutes
+	// (loader.ts toolHttpRouteFor). No literal in server.ts names them, so the
+	// scan above cannot see them — the registry itself is asked here.
+	test('every loaded tool route is a derived, proxied prefix', async () => {
+		const { loadToolModules } = await import('../../src/core/tools/loader.ts');
+		const prefixes = await derivedRoutePrefixes();
+		const toolRoutes: string[] = [];
+		for (const loaded of (await loadToolModules()).values()) {
+			for (const route of loaded.module.httpRoutes ?? []) toolRoutes.push(route.pathPrefix);
+		}
+		// anti-vacuity: tool_export's download route is one of them
+		expect(toolRoutes).toContain('/dedalo/export/artifact/');
+		const unproxied = toolRoutes.filter((prefix) => !prefixes.has(prefix.replace(/\/$/, '')));
+		expect(
+			unproxied,
+			'A tool serves a route the proxy census does not derive. Declare its prefix as an ' +
+				'exported `*_URL_PREFIX` constant in the tool server module and add it to the six proxy configs.',
 		).toEqual([]);
 	});
 

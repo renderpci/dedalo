@@ -630,7 +630,9 @@ async function main(): Promise<void> {
 	// engine's media-root refusal is armed and the LIVE media root is never
 	// resolved (the census's media entry would otherwise fall through to the
 	// master's <live private>/media default).
-	const { ensureTestMediaRoot } = await import('../test/helpers/test_media_root.ts');
+	const { ensureTestMediaRoot, markProcessesDir } = await import(
+		'../test/helpers/test_media_root.ts'
+	);
 	const testMediaRoot = ensureTestMediaRoot(suiteDb);
 	const { ensureSuiteLoginPassword, SUITE_LOGIN_PASSWORD } = await import(
 		'../src/core/test_data/suite_login.ts'
@@ -639,6 +641,12 @@ async function main(): Promise<void> {
 
 	const scratch = join(tmpdir(), `dedalo_update_drill_${process.pid}_${Date.now()}`);
 	mkdirSync(scratch, { recursive: true });
+	// Each instance's job registry (instanceEnvironment: `<role>_processes`),
+	// DECLARED: the instances run armed (DEDALO_TEST_MEDIA_ROOT), and an armed job
+	// manager refuses an unmarked processes dir (src/core/media/jobs.ts).
+	for (const role of ['master', 'consumer', 'instance']) {
+		markProcessesDir(join(scratch, `${role}_processes`));
+	}
 
 	let master: ManagedProcess | null = null;
 	let supervisor: ManagedProcess | null = null;

@@ -57,6 +57,13 @@
  * `rows:[{rec:'931501', c:{0:'Sí'}}]` — the restricted component's REAL value,
  * under a column keyed `test3_test91`. Not a theoretical bypass.
  *
+ * THE ORDER has TWO legs (2026-09-24), one per half of the declaration gate:
+ * the segment half (a denied column) and the SQO-section half (readable
+ * columns, an unreadable SQO section, driven on exportGridUnified so the tool
+ * door's own SQO gate does not shadow the in-walk one). MUTATION: the
+ * per-SQO-section loop moved after the selection query → the section leg
+ * reds (15 pass / 1 fail) while the segment leg stays green.
+ *
  * Scratch band 931500-931599 (this file's own), swept in afterAll.
  */
 
@@ -71,6 +78,7 @@ import {
 } from '../../src/core/security/permissions.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import type { ToolActionContext, ToolResponse } from '../../src/core/tools/module.ts';
+import { exportGridUnified } from '../../src/diffusion/export/grid.ts';
 import { toolExportGetExportGrid } from '../../tools/tool_export/server/tool_export.ts';
 import {
 	ACL_ADMIN_USER_ID,
@@ -385,6 +393,76 @@ describe.if(DB_READY)('export Gate B — an unauthorized ddo segment is REFUSED'
 		);
 		expect(refusal.code).toBe('perm.denied');
 		expect(refusal.message).toContain('no resolvable');
+	});
+
+	test('THE ORDER: the declaration gate refuses BEFORE the selection is built or read (TOOLS-02)', async () => {
+		// A selection that CANNOT be built: a locator_position order over a pin
+		// whose section_id is not an integer — the SQL assembler refuses it with
+		// search.invalid_sqo. Whichever runs first answers: the gate (perm.denied)
+		// or the selection (search.invalid_sqo). A gate moved after buildSearchSql,
+		// or after the selection query, answers the second and reds this.
+		const poisoned = (path: unknown[]): Record<string, unknown> => ({
+			...exportOf(path),
+			sqo: {
+				section_tipo: [SECTION],
+				limit: 10,
+				offset: 0,
+				filter_by_locators: [{ section_tipo: SECTION, section_id: 'not-an-integer' }],
+				order: [{ mode: 'locator_position' }],
+			},
+		});
+		const denied = [{ section_tipo: SECTION, component_tipo: ACL_DENIED_COMPONENT }];
+		// Non-degenerate: for a caller the gate lets through (the exempt admin),
+		// the poisoned selection really does fail — and fails as the selection.
+		const selectionFailure = await refusalOf(
+			toolExportGetExportGrid(contextOf(poisoned(denied), admin)),
+		);
+		expect(selectionFailure.code).toBe('search.invalid_sqo');
+		// The reader asking for the denied column: the GATE answers.
+		const refusal = await refusalOf(toolExportGetExportGrid(contextOf(poisoned(denied), reader)));
+		expect(refusal.code).toBe('perm.denied');
+	});
+
+	test('THE ORDER, section half: the in-walk per-SQO-section gate refuses BEFORE the selection is built or read (TOOLS-02)', async () => {
+		// The twin of the leg above for the OTHER half of the declaration gate.
+		// Above, the refusal comes from a SEGMENT (test91 denied) — so a refactor
+		// that moved only the per-SQO-section loop of assertExportDeclarationReadable
+		// after buildSearchSql / the selection query stays green there. Here every
+		// ddo path is READABLE and the only thing the reader may not read is a
+		// SECTION the SQO targets (`test2`, absent from the reader's profile):
+		// same poisoned selection, so whichever runs first answers — the section
+		// gate (perm.denied, coordinates.section_tipo) or the selection
+		// (search.invalid_sqo).
+		//
+		// DRIVEN ON THE ENGINE (exportGridUnified), not the tool door: the door's
+		// own assertExportSqoSections refuses the same section before the walk
+		// opens, which would shadow the in-walk gate this leg pins (and the door
+		// grants no global-admin exemption, so the admin control could not reach
+		// the selection through it). The in-walk gate is the one every door —
+		// stream, background job, re-check — shares.
+		const UNREADABLE_SECTION = 'test2';
+		// Non-degenerate: the reader really holds nothing on it (a fixture drift
+		// that granted test2 would turn this leg into the selection failure).
+		expect(await getPermissions(reader, UNREADABLE_SECTION, UNREADABLE_SECTION)).toBe(0);
+		const poisoned: Record<string, unknown> = {
+			...exportOf([{ section_tipo: SECTION, component_tipo: ACL_GRANTED_COMPONENT }]),
+			sqo: {
+				section_tipo: [SECTION, UNREADABLE_SECTION],
+				limit: 10,
+				offset: 0,
+				filter_by_locators: [{ section_tipo: SECTION, section_id: 'not-an-integer' }],
+				order: [{ mode: 'locator_position' }],
+			},
+		};
+		// The exempt admin passes the gate and reaches the selection, which fails.
+		const selectionFailure = await refusalOf(exportGridUnified(contextOf(poisoned, admin)));
+		expect(selectionFailure.code).toBe('search.invalid_sqo');
+		// The reader: the SECTION gate answers, naming the section it refused.
+		const refusal = await refusalOf(exportGridUnified(contextOf(poisoned, reader)));
+		expect(refusal.code).toBe('perm.denied');
+		expect(
+			(refusal as unknown as { coordinates?: Record<string, unknown> }).coordinates?.section_tipo,
+		).toBe(UNREADABLE_SECTION);
 	});
 
 	test('a GLOBAL ADMIN is exempt by design (the refusal is scoped, not universal)', async () => {

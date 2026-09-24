@@ -51,7 +51,14 @@ describe.if(hasPhpCredentials())(
 					// six label rows with the breakdown/columns export UI; the frozen
 					// side predates them. Additive only — filter EXACTLY that name set
 					// out of the TS labels, assert the frozen side has none of them,
-					// and require the filter to have matched (never quietly stale).
+					// and require EVERY exempted name to be a TS label (never quietly
+					// stale). The labels come from the REGISTERED tool (matrix_tools):
+					// a DB registered before the addendum is red here until its tools
+					// are registered again (bun run test:db:setup).
+					// Addendum 2026-09-24 (same entry, and
+					// WC-2026-09-24-tool-export-server-built-artifacts): 22 more names,
+					// the server-built export UI (status line, pager, downloads, Stop,
+					// Delete). Addendum (b), same day: six more (external sources).
 					const ADDED = new Set([
 						'activate_all_columns',
 						'disable_all_columns',
@@ -59,6 +66,39 @@ describe.if(hasPhpCredentials())(
 						'breakdown',
 						'tool_export',
 						'value_with_parents',
+						// 2026-09-24 addendum
+						'delete_export',
+						'delete_export_confirm',
+						'download_media',
+						'download_ndjson',
+						'export_deleted',
+						'export_ended',
+						'export_failed',
+						'export_interrupted',
+						'export_running',
+						'export_starting',
+						'file_failed',
+						'first_page',
+						'last_page',
+						'media',
+						'no_columns_selected',
+						'preparing_file',
+						'print_current_page_note',
+						'quality_for',
+						'records',
+						'records_per_page',
+						'stop',
+						'waiting_file',
+						// 2026-09-24 addendum (b): external sources — the incomplete
+						// export's status line, downloads note and Run again
+						'export_rerun',
+						'export_file_incomplete',
+						'export_external_incomplete',
+						'export_external_rerun_advice',
+						'export_external_admin_advice',
+						'export_external_stale',
+						// 2026-09-24 addendum (c): a truncated-only export is not "unread"
+						'export_external_truncated',
 					]);
 					type LabelRow = { name?: unknown };
 					const tsLabels = tsContext.labels as LabelRow[];
@@ -66,7 +106,11 @@ describe.if(hasPhpCredentials())(
 					expect(Array.isArray(tsLabels)).toBe(true);
 					expect(Array.isArray(phpLabels)).toBe(true);
 					const kept = tsLabels.filter((row) => !ADDED.has(String(row.name)));
-					expect(kept.length).toBeLessThan(tsLabels.length); // matched at least one
+					// EXACT, never "matched at least one": every exempted name must still
+					// be a TS label, so a label dropped or renamed without editing this
+					// set (and its WC entry) turns the gate red instead of staying exempt.
+					const tsNames = new Set(tsLabels.map((row) => String(row.name)));
+					expect([...ADDED].filter((name) => !tsNames.has(name))).toEqual([]);
 					for (const row of phpLabels) expect(ADDED.has(String(row.name))).toBe(false);
 					tsContext.labels = kept;
 				}

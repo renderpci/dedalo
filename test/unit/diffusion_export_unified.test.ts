@@ -504,7 +504,17 @@ describe('P6 export — facade seam tripwire', () => {
 	);
 
 	test('the handler imports the unified engine module', () => {
-		expect(source).toMatch(/from '..\/..\/..\/src\/diffusion\/export\/index.ts'/);
+		// through diffusion's export FACADE (boundary_seam_tripwire: tools reach
+		// src/diffusion only via src/diffusion/api/), which re-exports the engine
+		expect(source).toMatch(/from '..\/..\/..\/src\/diffusion\/api\/export.ts'/);
+	});
+
+	test('the facade IS the engine (same function objects, not a second build)', async () => {
+		const facade = await import('../../src/diffusion/api/export.ts');
+		const engine = await import('../../src/diffusion/export/index.ts');
+		expect(facade.exportGridUnified).toBe(engine.exportGridUnified);
+		expect(facade.openExportGrid).toBe(engine.openExportGrid);
+		expect(facade.assertExportDeclarationReadable).toBe(engine.assertExportDeclarationReadable);
 	});
 
 	test('the handler is a PURE facade — no legacy escape, no second build', () => {

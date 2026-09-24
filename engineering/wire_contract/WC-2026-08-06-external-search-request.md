@@ -248,3 +248,45 @@ WC-2026-08-12) is gone with it.
 The two label keys this entry introduced survive: `external_search_empty_query`
 (the one NEUTRAL state) and `external_search_failed`, now reachable as the
 `label_key` of the corresponding registry rows.
+
+## Addendum 2026-09-24 — a refused remote field name is one column's error, not the search's
+
+Cross-reference: `WC-2026-09-24-external-record-field-set` addendum (b), the
+record-path twin of this change.
+
+### Shape before (TS)
+
+`hydrateExternalSearchDdos` unioned every external ddo's `fields_map` names into
+the `field[]` list with no adapter filter. One name Zenon refuses (not a bare
+identifier: `dc:title`, `publication-dates`) made `buildSearchRequest` throw
+`bad_config` before any socket, and the action answered the degradation
+envelope: `ok:true`, `data: { context: [], data: [] }`, one `external.bad_config`
+notice, `source_status.state: 'misconfigured'` — the whole search box blank for
+one column's typo.
+
+### Shape after (TS)
+
+- The binding is resolved BEFORE hydration; its adapter's `acceptsRemoteField`
+  filters the union (`reportRefusedRemoteFields`, record_fields.ts — the record
+  path's own report). A refused name never reaches `field[]`; the accepted
+  names keep declaration order, so a config with no refused name sends the
+  same bytes as before.
+- The ddo that maps it keeps its place in `context` and in each hit's rows
+  (index pairing), and every row of it is
+  `{ …, entries: [], source_status: { state: 'misconfigured', … } }` —
+  the record path's misconfigured value. Every other column renders from the
+  live answer. One `external.bad_config` log line names the tipo and the
+  name(s), deduped by the log door (the same line the record path logs).
+- Only when EVERY hydrated ddo maps a refused name is the search refused
+  (`external.bad_config`, "no external field the <service> service accepts") —
+  the existing degradation envelope.
+
+### Gate reconciliation
+
+No parity fixture holds an external search; no re-harvest. Behaviour:
+`test/unit/external_search_action_native.test.ts` ("a remote field name the
+adapter refuses") and `test/unit/external_search_native.test.ts` ("one refused
+remote field name does not blank the search", the built `zzxt` situation,
+resolved end to end with a stub transport), mutation-verified — dropping the
+union filter, the misconfigured row, the all-refused refusal or the log each
+reddens a case.

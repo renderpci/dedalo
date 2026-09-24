@@ -14,6 +14,7 @@
  * projection and allowlist gates are identical to the core reader.
  */
 
+import { canonicalizeStoredSectionId, isSectionId } from '../../core/concepts/section_id.ts';
 import type { Sqo } from '../../core/concepts/sqo.ts';
 import type { MatrixRecord } from '../../core/db/matrix.ts';
 import { assertMatrixTable, MATRIX_JSONB_COLUMNS } from '../../core/db/matrix.ts';
@@ -34,14 +35,18 @@ export async function readMatrixRecords(
 	if (sectionIds.length === 0) return [];
 	assertMatrixTable(tableName);
 
-	// Numeric-only id list: matrix section ids are integers; a non-numeric id
-	// here is a data error worth failing loud on (never silently skipped).
+	// Matrix ADDRESSES only (the shared conversion rule, concepts/section_id.ts):
+	// an int, or its canonical string form ('10'). Never Number(): that read a
+	// padded external remote id '010' as LOCAL record 10 — another record's row,
+	// answered under an id the caller's frontier had cleared as "no local record"
+	// (2026-09-24). A non-address here is a caller bug worth failing loud on;
+	// callers that can meet one (processBatch, loadRecords) drop it first.
 	const numericIds = sectionIds.map((id) => {
-		const numeric = Number(id);
-		if (!Number.isInteger(numeric)) {
-			throw new Error(`readMatrixRecords: non-integer section_id '${String(id)}'`);
+		const address = canonicalizeStoredSectionId(id);
+		if (!isSectionId(address)) {
+			throw new Error(`readMatrixRecords: section_id '${String(id)}' is not a record address`);
 		}
-		return numeric;
+		return address;
 	});
 
 	const jsonbProjection = MATRIX_JSONB_COLUMNS.map(

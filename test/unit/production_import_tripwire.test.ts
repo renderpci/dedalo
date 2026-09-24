@@ -487,10 +487,18 @@ describe('production_import — LEG 3: no package the advisory baseline accepts 
 			expect(ROOTS, `baseline root ${root} not in the census`).toContain(root);
 		for (const root of ROOTS)
 			expect([...ACCEPTED.keys()], `census root ${root} not in the baseline`).toContain(root);
-		expect(
-			[...ACCEPTED.values()].reduce((n, set) => n + set.size, 0),
-			'accepted entries to prove',
-		).toBeGreaterThan(0);
+		// NO floor on the number of ACCEPTED entries. An acceptance is an advisory
+		// we tolerate, and the goal is zero of them: on 2026-09-23 the last four
+		// were fixed by taking the upstream bumps, and a `> 0` floor here turned
+		// that into a red build — a ratchet read backwards, exactly like flooring
+		// an offender set. What the corpus floor must witness is that the BASELINE
+		// WAS READ and its roots line up with the census (the two loops above),
+		// which is true whether it accepts four advisories or none. The detection
+		// logic itself is proved by the positive control below, over a constructed
+		// baseline, so an empty real one leaves nothing unproven.
+		expect(ACCEPTED.size, `${BASELINE_PATH} declares no roots — it was not read`).toBe(
+			ROOTS.length,
+		);
 	});
 
 	for (const m of MEASURED) {

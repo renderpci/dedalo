@@ -2,11 +2,16 @@
  * ONTOLOGY api_config → a typed, credential-stripped, allowlist-validated
  * binding.
  *
- * A section is "external" when its ontology node carries `properties.api_config`
- * (zenon1, test3 — plus rsc205, whose copy is a stale duplicate left by a 2024
- * edit). That property is CATALOGUING DATA: anyone who can edit the ontology can
- * change where the server points. Everything in this module follows from that
- * one fact:
+ * A section BINDS an external service when its ontology node carries
+ * `properties.api_config` (zenon1, test3 — plus rsc205, whose copy is a stale
+ * duplicate left by a 2024 edit). A binding is NOT externality: whether a
+ * section's non-address ids are remote records is `isExternalReferenceSection`
+ * (record_fields.ts — the binding AND an owned component_external), the ONE
+ * externality predicate; there is deliberately no boolean form of the binding
+ * here (2026-09-24 — `isExternalSectionTipo` answered "external" for rsc205's
+ * residue and was deleted, not redefined). That property is CATALOGUING DATA:
+ * anyone who can edit the ontology can change where the server points.
+ * Everything in this module follows from that one fact:
  *
  *  - the api_url's HOST must be in the operator's allowlist, or the binding is
  *    refused outright — the ontology proposes, the operator disposes;
@@ -305,13 +310,4 @@ export async function getExternalServiceForSection(
 	const resolved: ResolvedExternalService = { sectionTipo, model, apiConfig };
 	resolvedBySection.set(sectionTipo, resolved);
 	return resolved;
-}
-
-/**
- * True when the section's records live in an external service. A malformed or
- * refused api_config still THROWS — "is this external?" must not be the place a
- * configuration error becomes silence.
- */
-export async function isExternalSectionTipo(sectionTipo: string): Promise<boolean> {
-	return (await getExternalServiceForSection(sectionTipo)) !== null;
 }

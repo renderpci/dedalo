@@ -24,15 +24,11 @@
 
 import { existsSync, mkdirSync, renameSync, unlinkSync } from 'node:fs';
 import type { FileSink } from 'bun';
+import { neutralizeSpreadsheetFormula } from '../../core/files/spreadsheet_formula.ts';
+import { tempPathFor } from '../../core/files/temp_path.ts';
 import type { PublicationPlan, SectionPlan } from '../plan/types.ts';
 import type { ProjectedRow } from '../project/lang_ladder.ts';
-import {
-	createZip,
-	fileTargetDirLabel,
-	formatTargetDir,
-	planColumnNames,
-	tempPathFor,
-} from './files.ts';
+import { createZip, fileTargetDirLabel, formatTargetDir, planColumnNames } from './files.ts';
 import type {
 	DiffusionWriter,
 	WriteBatchResult,
@@ -42,12 +38,7 @@ import type {
 
 /** RFC4180 quoting + spreadsheet formula-injection neutralization. */
 export function csvField(value: string): string {
-	// DIFF-E / EXPORT-CSV-01 (2026-07-28 audit): a published CSV is opened in
-	// Excel/Sheets/LibreOffice, where a cell beginning =, +, -, @, TAB or CR is
-	// executed as a FORMULA (=HYPERLINK(...), the =cmd|... DDE form). A record
-	// value the archive published becomes code in the opener's session. Prefix
-	// such a value with a single quote so it stays literal text.
-	let out = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+	let out = neutralizeSpreadsheetFormula(value);
 	// RFC4180: quote when the field contains comma, quote, CR or LF.
 	if (/[",\r\n]/.test(out)) {
 		out = `"${out.replace(/"/g, '""')}"`;

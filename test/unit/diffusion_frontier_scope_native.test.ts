@@ -25,6 +25,13 @@
  *      public tier) — and a `[frontier] REFUSED` ledger line names the
  *      section. Non-degenerate: the same run as the admin emits the frontier.
  *
+ *   3. MATRIX ADDRESSES ONLY (2026-09-24). A stored locator whose id is NOT a
+ *      record address — a padded '0940101' (an external remote id's shape) or
+ *      junk 'abc' — is DROPPED by the run with a ledger line: never
+ *      Number()-ed into local record 940101, never emitted as 'unpublish'
+ *      (that removed a public record the run never read), never throwing the
+ *      run down. readMatrixRecords itself refuses a non-address.
+ *
  * The scoped identity is the shared ACL fixture's non-admin user with ONE
  * grant added on the primary section by this file (removed with the fixture).
  */
@@ -40,6 +47,7 @@ import {
 	type VirtualDiffusionTree,
 } from '../../src/diffusion/plan/virtual_tree.ts';
 import { resolvePublication } from '../../src/diffusion/resolve/resolver.ts';
+import { readMatrixRecords } from '../../src/diffusion/resolve/selection.ts';
 import {
 	ACL_ADMIN_USER_ID,
 	ACL_NON_ADMIN_PROFILE_ID,
@@ -260,6 +268,105 @@ describe.if(DB_READY)(
 			expect(refusals.length).toBeGreaterThan(0);
 			expect(refusals.some((line) => line.includes(ZZDIF_LINKED_SECTION))).toBe(true);
 			expect(refusals.some((line) => line.includes(`user ${ACL_NON_ADMIN_USER_ID}`))).toBe(true);
+		}, 60_000);
+
+		test('LAW 3 — a non-address locator id is dropped and ledgered: never read as another record, never unpublished, never fatal', async () => {
+			// The reader itself: '0940101' is not record 940101.
+			await expect(readMatrixRecords(TABLE, ZZDIF_LINKED_SECTION, ['0940101'])).rejects.toThrow(
+				/not a record address/,
+			);
+			// Non-degenerate control: the canonical string form IS an address.
+			expect(
+				(await readMatrixRecords(TABLE, ZZDIF_LINKED_SECTION, ['940101'])).map(
+					(record) => record.section_id,
+				),
+			).toEqual([940101]);
+
+			const baseline = await run(ADMIN);
+			const planted = [
+				{ section_tipo: ZZDIF_LINKED_SECTION, section_id: '0940101' },
+				{ section_tipo: ZZDIF_LINKED_SECTION, section_id: 'abc' },
+			];
+			await sql.unsafe(
+				`UPDATE "${TABLE}" SET relation = jsonb_set(relation, $3::text[], (relation->$4) || $5::text::jsonb)
+				 WHERE section_tipo = $1 AND section_id = $2`,
+				[
+					ZZDIF_SECTION,
+					ZZDIF_PUBLISHABLE_ID,
+					`{${ZZDIF_PORTAL}}`,
+					ZZDIF_PORTAL,
+					encodeForJsonb(planted),
+				],
+			);
+			const dropped: string[] = [];
+			const originalWarn = console.warn;
+			console.warn = (...args: unknown[]) => {
+				const line = args.map(String).join(' ');
+				if (line.includes('is not a record address')) dropped.push(line);
+				originalWarn(...args);
+			};
+			const raw: { sectionTipo: string; sectionId: unknown; status: string }[] = [];
+			const adminRun: typeof raw = [];
+			try {
+				for (const principal of [ADMIN, SCOPED]) {
+					for await (const batch of resolvePublication(plan, {
+						sectionTipo: ZZDIF_SECTION,
+						runStartedAt: 1_751_700_000,
+						tree,
+						principal,
+						maxLevels: 1,
+					})) {
+						for (const record of batch.records) {
+							const emitted = {
+								sectionTipo: record.sectionTipo,
+								sectionId: record.sectionId,
+								status: record.status,
+							};
+							raw.push(emitted);
+							if (principal === ADMIN) adminRun.push(emitted);
+						}
+						for (const id of batch.unpublishIds) {
+							expect(['0940101', 'abc']).not.toContain(String(id));
+						}
+					}
+				}
+			} finally {
+				console.warn = originalWarn;
+				await sql.unsafe(
+					`UPDATE "${TABLE}" SET relation = jsonb_set(relation, $3::text[], $4::text::jsonb)
+					 WHERE section_tipo = $1 AND section_id = $2`,
+					[
+						ZZDIF_SECTION,
+						ZZDIF_PUBLISHABLE_ID,
+						`{${ZZDIF_PORTAL}}`,
+						encodeForJsonb(
+							ZZDIF_LINKED_IDS.map((id) => ({
+								section_tipo: ZZDIF_LINKED_SECTION,
+								section_id: id,
+							})),
+						),
+					],
+				);
+			}
+			// Neither planted id is emitted — in particular not as 'unpublish'.
+			expect(
+				raw.filter((record) => record.sectionId === '0940101' || record.sectionId === 'abc'),
+			).toEqual([]);
+			// The admin run emitted exactly what it emits without them: the same
+			// records, 940101 once (through its own locator, never again through
+			// the padded one).
+			expect(
+				adminRun
+					.map((record) => `${record.sectionTipo}/${String(record.sectionId)}/${record.status}`)
+					.sort(),
+			).toEqual(
+				baseline
+					.map((record) => `${record.sectionTipo}/${record.sectionId}/${record.status}`)
+					.sort(),
+			);
+			// Loud: the drop names each id.
+			expect(dropped.some((line) => line.includes("'0940101'"))).toBe(true);
+			expect(dropped.some((line) => line.includes("'abc'"))).toBe(true);
 		}, 60_000);
 	},
 );

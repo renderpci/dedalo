@@ -3193,6 +3193,229 @@ DEDALO_DEV_MODE=true bun run dev
 
 ---
 
+### Defining the export files directory
+
+DEDALO_EXPORT_ARTIFACTS_DIR `string`
+
+This parameter defines where the export tool builds the files a user downloads.
+
+An export runs on the server as a background job: it walks every selected record, writes the
+result to a working copy in this directory, and builds each download (CSV, TSV, HTML, XLSX, ODS,
+the lossless NDJSON and the media ZIP) from that copy. Each user has a subdirectory of their own
+and each export one more below it; only the user who ran an export can download its files.
+
+Unset, the files go to `export_artifacts` inside the private directory. Point it at another
+volume when exports are large: a full export of a big collection with many columns can take
+gigabytes while it exists, and it is only ever temporary (see
+`DEDALO_EXPORT_ARTIFACTS_TTL_HOURS`). The directory must be writable by the user the engine
+runs as and must NEVER sit inside a tree the web server publishes — an export is a copy of your
+records, and it is served only through the engine, after the owner and their read access have
+been checked again. The engine enforces this: a directory that is, sits inside, or contains the
+media directory, the client files or a tool directory (the in-repo tools and every
+`DEDALO_ADDITIONAL_TOOLS` path — the engine serves those without a login) (symbolic links followed)
+is refused, and no export is written until it is moved; the refusal is logged at start-up.
+
+Give it a directory of its own, empty or not yet created. The engine deletes expired exports
+here every hour, so it only works in a directory it owns: on first use it leaves a
+`.dedalo_export_artifacts` marker file in an empty directory. A directory that already
+holds other files and has no marker is refused, and nothing in it is written or deleted.
+
+Each installation needs its OWN directory. The marker records which installation claimed it
+(a fingerprint of its database), and a directory another installation's marker names is
+refused by every door — listing, preview, download, sweep — so two instances that copied the
+same example path never see or delete each other's exports.
+
+```bash
+DEDALO_EXPORT_ARTIFACTS_DIR="/srv/dedalo_exports"
+```
+
+*Default: `<private dir>/export_artifacts`*
+
+---
+
+### Defining the export storage quota per user
+
+DEDALO_EXPORT_ARTIFACTS_QUOTA_BYTES `int`
+
+This parameter defines how many bytes of export files one user may hold at the same time.
+
+Every export a user runs keeps its working copy and its built files on the server until they
+expire. When a new export, or a new file of an existing one, would take the user past this
+amount, it is refused with a message that says so, and succeeds again once the user deletes an
+older export from the export tool (Delete export, which removes it with all its files) or older
+exports have expired. Ten gigabytes by default, which holds several complete exports of a large
+collection.
+
+The quota counts all of a user's exports together, including several running at the same time.
+
+Set `0` to switch the quota off. Size the volume of `DEDALO_EXPORT_ARTIFACTS_DIR` for this
+amount times the number of users who export at once.
+
+```bash
+DEDALO_EXPORT_ARTIFACTS_QUOTA_BYTES=10737418240
+```
+
+*Default: 10737418240*
+
+---
+
+### Defining how long export files are kept
+
+DEDALO_EXPORT_ARTIFACTS_TTL_HOURS `int`
+
+This parameter defines how many hours the files of a finished export are kept before they
+are deleted.
+
+An export expires this many hours after it FINISHED (ended, failed, was stopped or was
+interrupted). It is a hard limit: building a file from the export later (a spreadsheet, a media
+zip) does NOT extend it, so a file built an hour before the limit disappears with the export. From
+that moment the export and its files are gone for their owner (preview, list and downloads answer
+not-found at once), and the sweep — when the engine starts and every hour after that — deletes
+the directory; it only waits while a file is still being built from it. An export still running is never touched while the server running it is alive; one left behind
+by a server that stopped or restarted is marked interrupted and its partial files are removed
+(the user runs it again). Twenty-four hours by default: long enough to come back
+the next day for a download, short enough that copies of the collection do not pile up on the
+server. Values below 1 are raised to 1.
+
+```bash
+DEDALO_EXPORT_ARTIFACTS_TTL_HOURS=24
+```
+
+*Default: 24*
+
+---
+
+### Defining how many exports one user may keep
+
+DEDALO_EXPORT_ARTIFACTS_MAX_EXPORTS `int`
+
+This parameter defines how many exports one user may keep on the server at the same time.
+
+The storage quota (`DEDALO_EXPORT_ARTIFACTS_QUOTA_BYTES`) counts bytes, and a tiny export
+takes almost none: without this limit one user could keep a very large number of small exports,
+and every listing of their exports would have to read all of them. When a new export would go
+past this number it is refused with a message that says so, and succeeds again once the user
+deletes an older export from the export tool or older exports have expired. One hundred by
+default, far more than anyone needs within the lifetime of an export
+(`DEDALO_EXPORT_ARTIFACTS_TTL_HOURS`).
+
+Set `0` to switch the limit off.
+
+```bash
+DEDALO_EXPORT_ARTIFACTS_MAX_EXPORTS=100
+```
+
+*Default: 100*
+
+---
+
+### Defining the free space exports always leave on their volume
+
+DEDALO_EXPORT_ARTIFACTS_MIN_FREE_BYTES `int`
+
+This parameter defines how many bytes must always stay free on the volume that holds the export
+files (`DEDALO_EXPORT_ARTIFACTS_DIR`).
+
+The storage quota is per user, so several users together can hold far more than one quota. By
+default the export files live inside the private directory, next to the session store and the
+installation's settings: if that volume filled up, logins and saved settings would fail for
+everyone. So an export, or a file built from one, that would leave less than this amount free
+is refused (and one already writing stops) with a message saying the server is short of space,
+whatever the users' quotas. One gigabyte by default.
+
+Set `0` to switch the check off (only when the export directory is on a volume of its own).
+
+```bash
+DEDALO_EXPORT_ARTIFACTS_MIN_FREE_BYTES=1073741824
+```
+
+*Default: 1073741824*
+
+---
+
+### Defining the export preview page size
+
+DEDALO_EXPORT_PREVIEW_PAGE_SIZE `int`
+
+This parameter defines how many records the export tool shows per page in its preview when
+the user has not chosen a size.
+
+The preview shows one page of the export at a time, whatever the size of the export, so the
+browser stays responsive with hundreds of thousands of records; the downloads always contain
+every record. One hundred by default. The value is kept between 1 and 200, the most the preview
+will ever draw at once.
+
+```bash
+DEDALO_EXPORT_PREVIEW_PAGE_SIZE=100
+```
+
+*Default: 100*
+
+---
+
+### Defining how many export jobs one user may queue
+
+DEDALO_EXPORT_JOBS_PER_USER `int`
+
+This parameter defines how many export jobs one user may have waiting or running at the same
+time: exports being built plus files being built from them.
+
+Export jobs share two queues (see `DEDALO_JOB_LANE_EXPORT_CONCURRENCY` and
+`DEDALO_JOB_LANE_EXPORT_FILE_CONCURRENCY`), so without a limit one user could queue many complete
+exports of a large collection and make everybody else wait behind them.
+A request over the limit is refused at once with a message that says so, and nothing is queued;
+the user can start it again when one of their jobs has finished. Two by default: an export being
+built and a file being built from an earlier one. Exports still being built never block
+downloading a file of an export that has already finished: a file build is counted only against
+the user's other file builds.
+
+```bash
+DEDALO_EXPORT_JOBS_PER_USER=2
+```
+
+*Default: 2*
+
+---
+
+### Defining the export job deadline
+
+DEDALO_JOB_DEADLINE_EXPORT_S `int`
+
+This parameter defines how long, in seconds, an export job may run before Dédalo cancels it.
+
+There is NO deadline by default (`0`): a complete export of a large collection with deep
+relations is legitimately long work, the user who started it can stop it at any time, and a
+deadline that cancelled it near the end would throw that work away.
+
+Set it on an installation that knows its own ceiling, to turn an export that has stopped making
+progress into a reported one instead of a lane that stays busy.
+
+```bash
+DEDALO_JOB_DEADLINE_EXPORT_S=0
+```
+
+*Default: 0*
+
+---
+
+### Defining the export file job deadline
+
+DEDALO_JOB_DEADLINE_EXPORT_FILE_S `int`
+
+This parameter defines how long, in seconds, a job that builds a file from a finished export
+(a CSV, spreadsheet, HTML page or media ZIP) may run before Dédalo cancels it.
+
+There is NO deadline by default (`0`): a media ZIP of a large selection copies every media file
+into the archive, which is legitimately long, and the user who started it can stop it at any time.
+
+```bash
+DEDALO_JOB_DEADLINE_EXPORT_FILE_S=0
+```
+
+*Default: 0*
+
+---
+
 ### Defining the maintenance job deadline
 
 DEDALO_JOB_DEADLINE_MAINTENANCE_S `int`
@@ -3281,6 +3504,59 @@ DEDALO_JOB_DEADLINE_TRANSCRIPTION_S=14400
 ```
 
 *Default: 14400*
+
+---
+
+### Defining export job concurrency
+
+DEDALO_JOB_LANE_EXPORT_CONCURRENCY `int`
+
+This parameter defines how many export jobs Dédalo will run at the same time.
+
+Background work in Dédalo runs in lanes, and each class of work has its own budget of
+simultaneous jobs. Exports have a lane of their own because any user who can read a section can
+start one: a large export must never hold up the maintenance work an administrator is waiting
+on, nor the media conversions of an upload.
+
+One by default. An export reads every selected record and writes a working copy the size of the
+result, so two at once mostly share the same database and disk; the others wait their turn and
+their users see them queued. Raise it on a machine with cores and disk to spare. Values below 1
+are raised to 1.
+
+```bash
+DEDALO_JOB_LANE_EXPORT_CONCURRENCY=1
+```
+
+*Default: 1*
+
+---
+
+### Defining export file job concurrency
+
+DEDALO_JOB_LANE_EXPORT_FILE_CONCURRENCY `int`
+
+This parameter defines how many files Dédalo will build from finished exports at the same time
+(the CSV, TSV, HTML, spreadsheet, NDJSON and media ZIP downloads).
+
+These jobs have a lane of their own, separate from the exports themselves. If they shared one
+queue, every user's download would wait behind someone else's complete export of a large
+collection. The CSV, TSV, HTML, spreadsheet and NDJSON files read only the finished export, never
+the database, and usually take seconds where an export can take hours. The media ZIP is
+different: for every record it reads the database again (the record's access and its stored
+media) and it copies every media file, so on a large selection it can run for hours and keeps
+database connections busy all that time. Size this value, and the database pool, with that in
+mind.
+
+Two by default, so one large media ZIP does not make the next user's CSV wait. To keep that true
+whoever submits, one user may hold every slot of this lane but one (with the default two: one file
+at a time per user); a second file from the same user is refused until the first finishes. With
+the value 1 the single slot is shared first come, first served. Values below 1 are raised to 1.
+
+```bash
+DEDALO_JOB_LANE_EXPORT_FILE_CONCURRENCY=2
+```
+
+*Default: 2*
 
 ---
 

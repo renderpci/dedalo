@@ -64,7 +64,12 @@ export interface ExternalRowTarget {
 	readonly sectionTipo: string;
 	/** The remote record id, in STORAGE form (the section_id — zero padding intact). */
 	readonly remoteId: string;
-	/** Remote field NAMES, in declaration order. The union across a page's components. */
+	/**
+	 * Remote field NAMES this caller needs, in declaration order. The row layer
+	 * WIDENS them to the section's record field set (record_fields.ts — the id
+	 * field + every field the section's component_external nodes map), so what a
+	 * caller names here never fragments the request or the cache entry.
+	 */
 	readonly remoteFields: readonly string[];
 }
 
@@ -90,6 +95,13 @@ export interface ExternalRowView {
 	readonly reason?: ExternalErrorKind;
 	/** Epoch ms the underlying row was fetched (0 when there is no row). */
 	readonly fetchedAt: number;
+	/**
+	 * The remote fields the record was requested WITH (the section's record
+	 * field set — record_fields.ts). A parked view is self-describing: a reader
+	 * serves it to a component only when these cover the component's fields.
+	 * Set on every view the row layer builds; absent only on a hand-built view.
+	 */
+	readonly remoteFields?: readonly string[];
 }
 
 /** What one component_external emits for one record. */

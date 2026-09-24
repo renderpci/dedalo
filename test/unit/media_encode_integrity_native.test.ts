@@ -62,14 +62,17 @@ import * as REAL_CONFIG_MODULE from '../../src/config/config.ts';
 import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import type { MediaIdentity, MediaPathOptions } from '../../src/core/media/path.ts';
 import { mustGet } from '../helpers/assert.ts';
-import { markMediaRoot } from '../helpers/media_scratch_root.ts';
+import { markMediaRoot, markProcessesDir } from '../helpers/media_scratch_root.ts';
 
 const ROOT = `${tmpdir()}/dedalo_encode_integrity_${process.pid}`;
 const BIN = join(ROOT, 'bin');
 const FASTSTART_LOG = join(BIN, 'faststart.log');
 // The job-manager seam: without it the failing job below writes its pfile into
 // the LIVE ../private/processes tree.
-process.env.DEDALO_MEDIA_PROCESSES_DIR = join(ROOT, 'processes');
+// Restored in afterAll: this dir is deleted there, and a key left pointing at
+// it would aim the NEXT file's jobs at an unmarked directory (refused).
+const previousProcessesDir = process.env.DEDALO_MEDIA_PROCESSES_DIR;
+process.env.DEDALO_MEDIA_PROCESSES_DIR = markProcessesDir(join(ROOT, 'processes'));
 
 const REAL_CONFIG = REAL_CONFIG_MODULE.config;
 /**
@@ -285,6 +288,7 @@ beforeAll(() => {
 	// DECLARE the scratch root (the media doors refuse an unmarked one under the
 	// test-media seam — src/core/media/test_media_root.ts).
 	markMediaRoot(ROOT);
+	markProcessesDir(join(ROOT, 'processes')); // the job-registry scratch dir (same rmSync, same law)
 	mkdirSync(BIN, { recursive: true });
 	installFakeFfmpeg();
 	installFakeFaststart();
@@ -297,6 +301,9 @@ afterEach(() => {
 	installFakeFaststart(); // a case may have removed it ("not installed")
 });
 afterAll(() => {
+	if (previousProcessesDir === undefined)
+		Reflect.deleteProperty(process.env, 'DEDALO_MEDIA_PROCESSES_DIR');
+	else process.env.DEDALO_MEDIA_PROCESSES_DIR = previousProcessesDir;
 	// Put the REAL config module back: mock.module leaks across files. Restore
 	// from the import-time SNAPSHOT, never from the live namespace — see
 	// REAL_CONFIG_EXPORTS.

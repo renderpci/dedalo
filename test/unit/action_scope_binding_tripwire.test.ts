@@ -195,6 +195,26 @@ const EXEMPT: Record<string, string> = {
 		'A READ (R1). The handler reads sqo.section_tipo only to assert level >= 1 on every ' +
 		'section the export touches (export_gate_b_native) and writes nothing; the batch_scope_tripwire ' +
 		'carries the same read exemption, and this gate re-checks that no write verb has grown here.',
+	'tool_export.build_export_artifact':
+		'A READ (R1) run as a background job: the SAME producer and the SAME sqo section gate as ' +
+		'get_export_grid (assertExportSqoSections, level >= 1 on every sqo.section_tipo, pinned by ' +
+		'tool_export_sqo_gate) — its only writes are the export spool files under the caller-owned ' +
+		'export artifacts directory, never a matrix record; tool_export_job_native gates the refusal.',
+	'tool_export.build_export_file':
+		'A READ (R1) of the RECORDED sqo, not the request one: resolveOwnedJob/listOwnedExportJobs re-ask ' +
+		"the build gates (exportStillReadable) over the options the caller's own job manifest stored, " +
+		'so the sqo only ADDS level >= 1 checks; the scope acted on is the caller-owned job directory, ' +
+		'never a matrix record. tool_export_job_native H measures the re-check (a revoked grant closes it).',
+	'tool_export.get_export_preview':
+		'A READ (R1) of the RECORDED sqo, not the request one: resolveOwnedJob/listOwnedExportJobs re-ask ' +
+		"the build gates (exportStillReadable) over the options the caller's own job manifest stored, " +
+		'so the sqo only ADDS level >= 1 checks; the scope acted on is the caller-owned job directory, ' +
+		'never a matrix record. tool_export_job_native H measures the re-check (a revoked grant closes it).',
+	'tool_export.list_export_jobs':
+		'A READ (R1) of the RECORDED sqo, not the request one: resolveOwnedJob/listOwnedExportJobs re-ask ' +
+		"the build gates (exportStillReadable) over the options the caller's own job manifest stored, " +
+		'so the sqo only ADDS level >= 1 checks; the scope acted on is the caller-owned job directory, ' +
+		'never a matrix record. tool_export_job_native H measures the re-check (a revoked grant closes it).',
 	'tool_identify.cluster':
 		'A READ (R1/R2) already declared over its payload: section_list whose extractor is the ' +
 		'clustering pool sections, and record_pool.ts re-stamps the caller sectionTipos onto the ' +

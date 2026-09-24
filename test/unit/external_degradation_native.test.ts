@@ -17,7 +17,7 @@
 // section" coordinate is now `test2` — test3 itself IS external in this gate (it carries
 // the component_external test215).
 
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 import {
 	deriveExternalValue,
 	EXTERNAL_STATE_LABEL_KEY,
@@ -34,11 +34,17 @@ import type { Ddo } from '../../src/core/concepts/ddo.ts';
 import type { MatrixRecord } from '../../src/core/db/matrix.ts';
 import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
 import { type DataItem, EmissionContext } from '../../src/core/resolve/component_data.ts';
+import { dropSituation, ensureSituation } from '../../src/core/test_data/situations/situation.ts';
 import type { ExternalErrorKind, ExternalRowView } from '../../src/external/api/types.ts';
 import { resetBreakerForOrigin } from '../../src/external/breaker.ts';
 import { drainInFlightExternalFetches, externalRowViewKey } from '../../src/external/cache.ts';
 import { overrideExternalSettingsForTests } from '../../src/external/settings.ts';
 import type { ExternalFetchImpl } from '../../src/external/transport.ts';
+import {
+	UNBOUND_COMPONENT,
+	UNBOUND_EXTERNAL_SITUATION,
+	UNBOUND_SECTION,
+} from '../helpers/external_unbound_situation.ts';
 
 const HOST = 'zenon.dainst.org';
 const ORIGIN = `https://${HOST}`;
@@ -127,6 +133,13 @@ async function emitInMode(
 	});
 	return emission.items[0] as DataItem;
 }
+
+// The `misconfigured` case needs a component OWNED by an unbound section (the
+// ownership rule makes any other section's record FOREIGN, not misconfigured).
+beforeAll(() => ensureSituation(UNBOUND_EXTERNAL_SITUATION));
+afterAll(async () => {
+	expect(await dropSituation(UNBOUND_EXTERNAL_SITUATION)).toBe(0);
+});
 
 beforeEach(async () => {
 	overrideExternalSettingsForTests({
@@ -268,10 +281,16 @@ describe('each state, end to end through the derivation', () => {
 	});
 
 	test("'misconfigured' — a section that names no service at all", async () => {
-		// test2 is a real, ordinary section: no component_external, so no service.
-		const derived = await deriveExternalValue(COMPONENT, 'test2', REMOTE_ID);
+		// The component's OWN section carries no api_config: nothing can be fetched.
+		const derived = await deriveExternalValue(UNBOUND_COMPONENT, UNBOUND_SECTION, REMOTE_ID);
 		expect(derived.entries).toEqual([]);
 		expect(derived.source_status).toMatchObject({ state: 'misconfigured', retryable: false });
+	});
+
+	test('a FOREIGN section is not a state at all — the column does not apply', async () => {
+		// test2 is a real, ordinary section that does not own test215 (§3 addendum
+		// 2026-09-24): no status, because nothing failed and nothing was asked.
+		expect(await deriveExternalValue(COMPONENT, 'test2', REMOTE_ID)).toEqual({ entries: [] });
 	});
 
 	test("'misconfigured' — a component with no fields_map has no mapping to apply", async () => {

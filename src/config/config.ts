@@ -627,6 +627,25 @@ export interface OpsConfig {
 	 * only if explicitly blanked.
 	 */
 	readonly transformDefinitionsDir: string | undefined;
+	/**
+	 * tool_export's server-built files (DEDALO_EXPORT_ARTIFACTS_DIR, default
+	 * <privateDir>/export_artifacts). Consumed ONLY through
+	 * tools/tool_export/server/artifact_store.ts, which also applies the test
+	 * seam's marker refusal — never join a path onto this directly.
+	 */
+	readonly exportArtifactsDir: string;
+	/** Hours a finished export's files are kept before the sweep (DEDALO_EXPORT_ARTIFACTS_TTL_HOURS, >= 1). */
+	readonly exportArtifactsTtlHours: number;
+	/** Bytes of export files one user may hold, 0 = no quota (DEDALO_EXPORT_ARTIFACTS_QUOTA_BYTES). */
+	readonly exportArtifactsQuotaBytes: number;
+	/** Exports one user may keep at once, 0 = no limit (DEDALO_EXPORT_ARTIFACTS_MAX_EXPORTS). */
+	readonly exportArtifactsMaxExports: number;
+	/** Bytes that must stay free on the export volume, 0 = no floor (DEDALO_EXPORT_ARTIFACTS_MIN_FREE_BYTES). */
+	readonly exportArtifactsMinFreeBytes: number;
+	/** Default records per export-preview page, 1..200 (DEDALO_EXPORT_PREVIEW_PAGE_SIZE). */
+	readonly exportPreviewPageSize: number;
+	/** Export jobs one user may have queued or running at once, >= 1 (DEDALO_EXPORT_JOBS_PER_USER). */
+	readonly exportJobsPerUser: number;
 }
 
 /**
@@ -1282,6 +1301,13 @@ export const config: DedaloConfig = Object.freeze({
 		backupTimeRangeHours: Math.max(0, readNumber('DEDALO_BACKUP_TIME_RANGE')),
 		ontologyDataIoDir: readString('ONTOLOGY_DATA_IO_DIR'),
 		transformDefinitionsDir: readString('DEDALO_TRANSFORM_DEFINITIONS_DIR'),
+		exportArtifactsDir: readString('DEDALO_EXPORT_ARTIFACTS_DIR'),
+		exportArtifactsTtlHours: readNumber('DEDALO_EXPORT_ARTIFACTS_TTL_HOURS'),
+		exportArtifactsQuotaBytes: readNumber('DEDALO_EXPORT_ARTIFACTS_QUOTA_BYTES'),
+		exportArtifactsMaxExports: readNumber('DEDALO_EXPORT_ARTIFACTS_MAX_EXPORTS'),
+		exportArtifactsMinFreeBytes: readNumber('DEDALO_EXPORT_ARTIFACTS_MIN_FREE_BYTES'),
+		exportPreviewPageSize: readNumber('DEDALO_EXPORT_PREVIEW_PAGE_SIZE'),
+		exportJobsPerUser: readNumber('DEDALO_EXPORT_JOBS_PER_USER'),
 	}),
 	errorReport: Object.freeze({
 		masterApiUrl: readEnv('DEDALO_ERROR_REPORT_MASTER_URL'),

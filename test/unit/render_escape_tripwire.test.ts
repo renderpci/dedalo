@@ -78,7 +78,7 @@
 
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join } from 'node:path';
 import { firstPartyClientFiles } from '../helpers/browser_corpus.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
@@ -1116,7 +1116,6 @@ const REMAINDER_RATCHET: Readonly<Record<string, number>> = {
 	'tools/tool_dd_label/js/render_tool_dd_label.js': 2,
 	'tools/tool_dev_template/js/render_tool_dev_template.js': 4,
 	'tools/tool_diffusion/js/render_tool_diffusion.js': 2,
-	'tools/tool_export/js/render_tool_export.js': 12,
 	'tools/tool_hierarchy/js/render_tool_hierarchy.js': 5,
 	'tools/tool_image_rotation/js/render_tool_image_crop.js': 1,
 	'tools/tool_image_rotation/js/render_tool_image_rotation.js': 5,

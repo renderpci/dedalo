@@ -25,13 +25,14 @@ import type { Principal } from '../../src/core/security/permissions.ts';
 
 const scratchDir = mkdtempSync(join(tmpdir(), 'dedalo_pstatus_'));
 const previousProcessesDir = process.env.DEDALO_MEDIA_PROCESSES_DIR;
-process.env.DEDALO_MEDIA_PROCESSES_DIR = scratchDir;
+process.env.DEDALO_MEDIA_PROCESSES_DIR = markProcessesDir(scratchDir);
 
 // Import AFTER the env override so every processesDir() call lands in scratch.
 const { getUtilsProcessStatus } = await import('../../src/core/api/process_status.ts');
 const { mediaJobs } = await import('../../src/core/media/jobs.ts');
 
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
+import { markProcessesDir } from '../helpers/test_media_root.ts';
 
 afterAll(() => {
 	if (previousProcessesDir === undefined) {

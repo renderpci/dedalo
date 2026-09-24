@@ -7,7 +7,7 @@ concern; the reference systemd units live in `deploy/`.
 ## 1. Runtime (S2-36)
 
 The Bun runtime is **pinned**: `.bun-version` + `package.json` `engines.bun`
-(currently `1.4.0`). The code is coupled to version-specific Bun behavior —
+(currently `1.4.2`). The code is coupled to version-specific Bun behavior —
 `Bun.sql` jsonb parameter inference (a drift here is the realized S1-07/S1-08
 corruption class), the Bun.sql MariaDB adapter (diffusion), `Bun.serve`
 defaults. The server echoes its runtime at boot and **warns loudly** when it
@@ -34,6 +34,13 @@ both unset unless you mean them.
 remains load-bearing; the MariaDB adapter now decodes `DATETIME`/`TIMESTAMP` as
 UTC (1.3.9 shifted them to local) and `JSON` columns as objects; `Bun.serve`
 unix-socket options are unchanged. Full evidence: the bump's findings log.
+
+**Re-verified on 1.4.2 (2026-09-23, 1.4.0 -> 1.4.2):** same probes, same
+answers — a JS string bound as `$1::jsonb` still lands as a jsonb *string*
+(`$1::text::jsonb` → object), MariaDB `DATETIME` still decodes as UTC and `JSON`
+as objects, and bunfig's `[test] timeout` is still ignored (an 8 s test under a
+30000 key died at 5001 ms), so `TEST_TIMEOUT_FLAG` stays load-bearing. Operator
+order is unchanged: install 1.4.2, restart onto it, then apply the update.
 
 ## 2. Process supervision (S2-38, S2-17)
 
@@ -1286,3 +1293,230 @@ frozen PHP: it is the installation's recovery identity, and a mis-clicked radio 
 not lock an installation out of itself. Root's credentials are cut in step 1 like
 anyone else's — root may edit its own password, which is the only in-engine way to
 rotate it.
+
+## 15. Export artifacts (tool_export at scale)
+
+The export tool builds its exports **on the server**. `build_export_artifact`
+runs as a background job that writes the whole export into a spool on disk.
+Every download (CSV, TSV, HTML, XLSX, ODS, NDJSON, media ZIP) is a file built
+from that spool by a second background job (`build_export_file`), and it leaves
+the server only through the owner-checked route
+`GET /dedalo/export/artifact/<jobId>/<basename>`. The wire is recorded in
+`engineering/wire_contract/WC-2026-09-24-tool-export-server-built-artifacts.md`.
+This section covers what the operator owns: the directory, its lifetime, its
+size, and the job lane.
+
+**Directory.** `DEDALO_EXPORT_ARTIFACTS_DIR` (default
+`<private dir>/export_artifacts`). Layout: `<dir>/<userId>/<jobId>/`, which holds
+`request.json` (the recorded options, written once), `manifest.json` (the small
+mutable state every checkpoint rewrites), the spool (`grid.ndjson`,
+`cols.ndjson`, `grid.idx`, and `media.ndjson` — the media addresses the walk
+read, present only when a record read media) and the built files (`export.<ext>`,
+`media[_<variant>].zip`).
+
+- The directory must be writable by the engine's user.
+- It must **never** sit inside a tree served without an owner check — the media
+  root, the client tree, or a tool root (the engine serves `/dedalo/tools/`
+  without a session, `.json`/`.html` included): every export is
+  a copy of records, and the engine is the only reader that checks the owner,
+  their current grants and that their record scope (projects, the dd478
+  record allow-list, global admin) is still the one the export was taken under.
+- Built files are written to a temp name and renamed, so a partial file is never
+  visible.
+- A root that cannot be used refuses with `export.store_unavailable` (503) and
+  writes nothing.
+- **Ownership.** The store claims its root with a `.dedalo_export_artifacts`
+  marker, planted only in an empty (or just-created) directory; a non-empty
+  root without it is refused by every door, the hourly TTL sweep first, and
+  nothing in it is written or deleted — the root's name is no proof (a shared
+  mount's `<year>/<batch>` dirs match the `<userId>/<jobId>` shape). A
+  manifest-less job dir is removed only when every entry is a name the store
+  creates. Gate: `tool_export_artifact_store_native` E (OWNERSHIP).
+- **One install per root.** The marker names the install that claimed it (a
+  fingerprint of its database). A root another install's marker names is
+  refused by EVERY door — reads, downloads and the sweep included — so two
+  instances that set the same directory never serve one archive's exports to
+  the other's users, nor sweep each other's jobs. Gate:
+  `tool_export_artifact_store_native` E (INSTALL IDENTITY).
+- On a volume other than the private dir's, point the key at it — one
+  directory per instance (`/srv/dedalo_exports/<site>`).
+
+**Not part of the backup set.** Export files are temporary, owner-only copies
+of records that the owner can rebuild. The default location is INSIDE
+`../private/`, which §6 store 4 copies nightly with `--keep 14`, so every
+shipped private-tree backup excludes it (`--exclude /export_artifacts`): the
+systemd unit `deploy/dedalo-backup.service` and the `backup` service of both
+compose stacks (`docker-compose.yml`, `docker-compose.simple.yml`, where the
+private dir is `/private` and the root is `/private/export_artifacts`).
+Otherwise every user's exports (up to the quota each) would sit in the private
+backup 14 days past their TTL, outside the owner, read-access and record-scope re-check. Gate:
+`test/unit/export_artifacts_backup_exclusion_native.test.ts` finds EVERY
+`--label private` tree-backup invocation in `deploy/` and `docker-compose*.yml`
+and runs each one's own arguments over a scratch private tree. A root moved elsewhere with
+`DEDALO_EXPORT_ARTIFACTS_DIR` must not be put inside any backed-up tree either.
+
+**Lifetime (TTL sweep).** `DEDALO_EXPORT_ARTIFACTS_TTL_HOURS` (default 24, at
+least 1). The sweep runs once at boot and then hourly: tool_export's `onBoot` hook
+(`startExportArtifactSweeper`), started by the server's tool boot hooks. It is
+never fatal: a failed sweep logs `[export_artifacts] sweep failed` (a hook that
+cannot even start logs `[tools] tool_export.onBoot failed`), and the server
+keeps serving. What the
+sweep does:
+
+- It deletes a job directory TTL hours after the export's **end** (ended,
+  failed, cancelled or interrupted). This is a hard ceiling: a file built from
+  the export later never extends it, so no copy outlives end + TTL however
+  often its files are rebuilt. Past the ceiling every door already answers
+  not-found, before the sweep runs (`artifact_store.ts exportExpired`).
+- It never deletes a directory while a file build holds its lease.
+- It never touches a **running** export while the process that owns it is
+  alive.
+- It marks a running export whose owner is certainly gone as `interrupted` and
+  deletes its partial spool. "Certainly gone" means another boot of the server
+  wrote it and either its pid is dead, or its pid is this process's own (pid
+  reuse, e.g. PID 1 in a container), or it has sent no heartbeat for 1 h
+  (`DEAD_WRITER_SILENCE_MS` — a live walk heartbeats at every checkpoint, so
+  the bound follows the writer's cadence, never the TTL; a pid that answers
+  "alive" proves nothing on its own: a reused pid of another user does too).
+  There is no resume: the user runs the export again.
+- It removes stale temp files.
+- Each pass that removed something logs
+  `[export_artifacts] sweep: N expired, N interrupted, N temp file(s) removed`.
+
+**Quota.** `DEDALO_EXPORT_ARTIFACTS_QUOTA_BYTES` (default 10 GiB per user,
+`0` = off) bounds the bytes one user holds under `<dir>/<userId>/`: spools,
+built files and media ZIPs together, including several jobs of that user at
+once.
+
+- It is checked when a job is created and **enforced while bytes are written**.
+  Each writer measures the user's directory again at least every quota/64 bytes
+  (between 4 KiB and 16 MiB — each measure walks the user's whole export tree,
+  so the step follows the quota instead of re-walking every MiB).
+- The worst case is therefore quota plus one step per live writer of that user
+  (a few percent of the quota), never N × quota.
+- A hard-linked file counts once: the NDJSON download is the ended spool
+  itself, linked into place, and costs no second copy.
+- Each export keeps at most 4 built files per format
+  (`MAX_FILES_PER_FORMAT`); a fifth evicts that format's oldest, whose link
+  then answers 404 (asking again rebuilds it). The media ZIP is rebuilt on
+  every request (it reads the live media state), replacing the previous one.
+- An export that would overflow stops with `export.artifact_quota` (429), and
+  its partial spool is deleted.
+- Space comes back through the TTL sweep, or at once when the owner deletes an
+  export (`tool_export.delete_export_job`, the tool's **Delete export**). The
+  delete uses the sweep's lock and liveness rules: a running export of a live
+  process, or one a file build holds a lease on, is refused with
+  `export.artifact_busy` (409) and nothing is removed. The delete asks only for
+  ownership and the section, never the read gates: an export its owner may no
+  longer read is still theirs to delete.
+- Two more bounds sit beside the byte quota. `DEDALO_EXPORT_ARTIFACTS_MAX_EXPORTS`
+  (default 100 per user, `0` = off) caps how many exports one user keeps: a
+  tiny export costs almost no bytes, yet every listing reads each one; the
+  next export is refused with `export.artifact_count` (429).
+  `DEDALO_EXPORT_ARTIFACTS_MIN_FREE_BYTES` (default 1 GiB, `0` = off) is an
+  installation-wide floor on the export volume's free space, measured with
+  `statfs`: the quota is per user, so N users can hold N quotas, and the
+  default directory shares `../private` with the session store and `.env`.
+  A door at the floor refuses and a writer crossing it stops, with
+  `export.storage_low` (503). Keep it only as a safety net: size the volume,
+  or put `DEDALO_EXPORT_ARTIFACTS_DIR` on a volume of its own.
+- An export its owner may no longer read (a revoked grant, changed projects,
+  past end + TTL) is reclaimed at once when that owner next needs space: a new
+  export or a file build deletes it before writing, instead of refusing with
+  `export.artifact_quota` over bytes the owner cannot even list.
+
+**Disk sizing.** A spool is about the size of the `get_export_grid` NDJSON
+stream for the same options: every cell of every row, as JSON, plus about 17
+bytes of index per 100 records. Each built file then adds its own size:
+
+- CSV, TSV and HTML are of the same order as the spool;
+- XLSX and ODS are DEFLATE-compressed and usually much smaller;
+- the media ZIP is the sum of the archived media files at the chosen quality,
+  stored uncompressed, and is by far the largest.
+
+Size the volume as **quota × the number of users who hold exports within one TTL
+window**, plus headroom. The quota is the per-user cap. To size from real data,
+run one representative export: its spool size is `spool_bytes` in its
+`manifest.json`, and each built file's size is in `files`. A media ZIP of
+`original` masters can reach the quota on its own.
+
+**Job lanes and admission.** Two lanes of the job manager
+(`src/core/media/jobs.ts`), separate from `media`, `maintenance`, `rag` and
+`transcription`, so exports never spend their budget: `export` runs the record
+walks (`build_export_artifact`), `export_file` the file builds
+(`build_export_file`), so a file build never queues behind a walk — including
+another user's multi-hour export. CSV/TSV/HTML/XLSX/ODS/NDJSON read only the
+finished spool, never the database, and are short next to a walk. The media ZIP
+is NOT: per record it re-reads the database (`principalCanAccessRecord` — a
+principal-scoped search — plus the record's stored media item and a permission
+read) and streams every master file, so a large selection runs for hours and
+holds DB load on the `export_file` lane the whole time. Size
+`DB_POOL_MAX` and this lane's budget with that in mind.
+
+- `DEDALO_JOB_LANE_EXPORT_CONCURRENCY` (default 1, at least 1) is the walk
+  lane's budget. Raise it on a machine with the cores and disk to spare.
+- `DEDALO_JOB_LANE_EXPORT_FILE_CONCURRENCY` (default 2, at least 1) is the file
+  lane's: two, so one large media ZIP does not make the next user's CSV wait.
+- `DEDALO_JOB_DEADLINE_EXPORT_FILE_S` (default `0` = no deadline): a media ZIP
+  of a large selection is legitimately long, and the user can stop it.
+- `DEDALO_JOB_DEADLINE_EXPORT_S` (default `0` = no deadline): a full export of a
+  large collection is legitimately long, and the user can stop it. Set a
+  deadline only if the installation knows its own ceiling. A deadline ends the
+  export `failed` with `export.deadline_exceeded` (the user reads the limit in
+  seconds, never "stopped") and deletes its spool. A graceful shutdown or
+  restart ends a running export `interrupted`; only the user's Stop is
+  `cancelled`.
+- `DEDALO_EXPORT_JOBS_PER_USER` (default 2, at least 1) is per-user admission,
+  counted over both actions (both lanes). A submit over the cap is refused
+  synchronously with `export.too_many_jobs` (429) and nothing is queued. Without
+  this cap one user could fill a FIFO lane and everyone else would wait behind
+  them. The `export_file` lane has a second, per-lane rule: one user may hold
+  every slot of it but one (`max(1, budget − 1)`: one file at a time with the
+  default budget 2), because its jobs have no deadline and a media ZIP can
+  stream for hours — with the per-user total alone, one user's two ZIPs filled
+  the lane.
+- The count is the in-process job registry, so it resets with the process, as do
+  the jobs themselves.
+- `DEDALO_EXPORT_PREVIEW_PAGE_SIZE` (default 100, clamped 1..200) is the
+  preview's default page. The server clamps any requested size to 200, the rows
+  of a page to 1,000 and its columns to one window of 100 (a wide export is
+  paged sideways), so a page's cells are bounded however wide the export.
+- The record walk runs in the server process and yields at every hydrate batch.
+  Its memory is the selection's ID LIST (`{section_id, section_tipo}` per
+  record, read once when the walk opens and kept until it ends: O(records),
+  roughly a hundred bytes each, so ~1 GB for ten million records) plus one
+  hydrate batch and one row per writer. The id list is read in ONE statement on
+  purpose: it is the export's snapshot (the `meta` line's `total`, and every
+  record the walk visits, come from the same instant), and a cursor held open
+  for a multi-hour walk would pin a Postgres snapshot for as long. Size the
+  process for the largest selection you let users export.
+- A media ZIP holds O(files ARCHIVED) in memory (the ZIP central directory and
+  the archived-name list, written last by the format). Refused candidates never
+  stay in memory: they go to an unlinked scratch file in the job directory that
+  is metered against the user's quota and the free-space floor like the ZIP
+  itself.
+- Observability: `GET /api/v1/counters` → `media_jobs.lanes.export` and
+  `media_jobs.lanes.export_file` `{active, queued, max}` show a backed-up lane.
+
+**Proxy: stream the download route unbuffered.** Downloads can be many GB.
+
+- nginx: give `/dedalo/export/artifact/` its own location with
+  `proxy_buffering off`, as all the shipped nginx configs do. With buffering
+  on, nginx writes up to `proxy_max_temp_file_size` (1 GB by default) of every
+  download into its own temp directory. That is disk I/O the stream does not
+  need, and one more on-disk copy of the records, outside the engine's TTL and
+  owner checks.
+- Apache: needs the `ProxyPass /dedalo/export/artifact/` line of
+  `deploy/apache.conf`.
+- The engine sends `Content-Length`, `Content-Disposition: attachment`,
+  `Cache-Control: no-store` and `Content-Security-Policy: default-src 'none'; sandbox`.
+- Every refusal is a 404 `resource.not_found`, never a 403 (see the WC entry).
+
+```nginx
+location /dedalo/export/artifact/ {
+    proxy_pass http://dedalo_ts;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_buffering off;
+}
+```

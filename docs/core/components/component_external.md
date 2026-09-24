@@ -177,9 +177,11 @@ storage slot.
 1. Read the **section** ontology node properties (`api_config`) for `entity`,
    `api_url` and `response_map`.
 2. Collect the `remote` field names declared by sibling components
-   (`properties.fields_map` entries whose `local` is `dato`).
+   (`properties.fields_map` entries whose `local` is `dato`), plus the field
+   that carries the record's own identifier (`id` for Zenon).
 3. The service adapter for the configured `entity` (e.g. `zenon`) builds the
-   per-record request, asking for exactly those fields.
+   per-record request, asking for exactly those fields — ONE request per
+   record, shared by every component of the section (and cached as one row).
 4. The host is checked against the operator's allowlist **before** anything is
    resolved; the address is then vetted, pinned, and fetched with a short
    timeout and a hard response-size ceiling.
@@ -418,8 +420,11 @@ For the generic literal import/export contract and CSV formats, see
 - **No default tools.** The shipped ontology context exposes `tools: []` for
   this component (no `tool_time_machine`/`tool_lang`/add/replace data tools),
   consistent with its read-only, remote nature.
-- **Circuit breaker.** Repeated failures open a circuit per (service, remote
-  origin) so a dead host is not re-dialled on every page view. It is keyed by
+- **Circuit breaker.** Three consecutive SERVICE failures (no answer, a
+  timeout, a 5xx, 429 or 408) open a circuit per (service, remote origin) so a
+  dead host is not re-dialled on every page view. An answer about one record —
+  a 400 for an id the service rejects, a 404 — never counts: it degrades that
+  record to `not_found` and leaves every other lookup alone. It is keyed by
   origin and cleared only by TIME — never per session and never per user (the
   retired engine kept the flag in the session, so one bad response blanked the
   source for a whole login, for one user, across every entity at once).

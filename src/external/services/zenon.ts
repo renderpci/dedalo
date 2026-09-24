@@ -294,6 +294,9 @@ export const zenon: ExternalServiceModel = {
 		search: true, // /api/v1/search — and the engine uses it, since 2026-08-06
 	},
 	remoteIdPath: 'id',
+	// The same grammar buildRecordRequest/buildSearchRequest enforce, declared so
+	// the record field set leaves a refused name out (record_fields.ts).
+	acceptsRemoteField: (field) => FIELD_NAME.test(field),
 	buildRecordRequest,
 	buildSearchRequest,
 	unwrapSearch,

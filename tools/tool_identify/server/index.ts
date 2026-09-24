@@ -145,9 +145,10 @@ function toWire(report: ClusterReport): Record<string, unknown> {
 async function cluster(ctx: ToolActionContext): Promise<ToolResponse> {
 	const sectionTipos = clusterSectionTipos(ctx.options).map((tipo) => String(tipo));
 	if (sectionTipos.length === 0) {
-		// `message` as well as `publicMessage`: this action is backgroundRunnable,
-		// and the executor records `error.message` on the job record — the one
-		// place a curator reads why a detached run stopped.
+		// `publicMessage` as well as `message`: this action is backgroundRunnable,
+		// and the executor records the converter's wire sentence on the job record
+		// (background.ts `wireMessage`: the publicMessage of a public code) — the
+		// one place a curator reads why a detached run stopped. `message` is the log.
 		throw new DedaloError('request.invalid_options', {
 			message: 'section_tipo is required (the sections to cluster within)',
 			publicMessage: 'section_tipo is required (the sections to cluster within)',

@@ -27,8 +27,8 @@ the repo any more. **Two** sources back that URL, and that is the whole story:
 
 | Source | Count | Root | In git? |
 |---|---|---|---|
-| **npm** | 17 | `node_modules/` | no — `bun install` |
-| **vendor** | 6 | `vendor/` | **yes** — committed (ckeditor, json-view, lz-string, pdfjs, transformers, xlsx) |
+| **npm** | 16 | `node_modules/` | no — `bun install` |
+| **vendor** | 5 | `vendor/` | **yes** — committed (ckeditor, json-view, lz-string, pdfjs, transformers) |
 
 A sixth committed tree, `swagger-ui`, is not a client lib at all: it is the Swagger
 page of the v1 publication API and lives *inside* that self-contained folder
@@ -74,14 +74,12 @@ All 23, re-measured against `package.json` and `vendor/vendor_manifest.json` on
 | highlightjs | `@highlightjs/cdn-assets` | 11.11.1 | Not `highlight.js` — see below. |
 | svgedit | `@svgedit/svgcanvas` | 7.4.2 | **Upgraded 2026-07-12** from a vendored ~7.2.x build. See below. |
 | d3 | `d3` | 7.9.0 | The version no longer appears in the URL. |
-| xlsx | *(vendor)* | 0.20.3 | **Vendored 2026-08-24** — was a CDN tarball URL with no lockfile integrity. See below. |
 | flatpickr | `flatpickr` | 4.6.13 | |
 | split | `split.js` | 1.6.5 | Used by `tool_indexation`. |
 | iro | `@jaames/iro` | 5.5.2 | |
 | codex-tooltip | `codex-tooltip` | 1.0.6 | |
 | transformers | *(vendor)* | 4.2.0 | The in-browser AI runtime (`tool_transcription`, `tool_lang`, the remove-background processor). **Vendored 2026-09-04** — was the `@huggingface/transformers` npm pin, which no engine module imported and which shipped 567 MB of native Node code to every install. See below. |
 | qrcode | `easyqrcodejs` | 4.6.2 | `tool_qr`. **Pinned 2026-09-04** — was a 4.6.1 copy committed under `tools/tool_qr/lib/` with no digest. |
-| client-zip | `client-zip` | 2.5.0 | `tool_export`'s streaming ZIP download. **Pinned 2026-09-04** — was a byte-identical copy under `tools/tool_export/js/lib/`. |
 | lz-string | *(vendor)* | 1.5.0 | URL-state compression (`tool_common`, `component_text_area`). UMD-only upstream; committed with one declared patch. See below. |
 | onnxruntime | `onnxruntime-web` | 1.29.0 | Transformers.js's WASM runtime; since the bundle is vendored this is the only `onnxruntime-web` the lockfile holds — see the registry's `reason`. |
 | json-view | *(vendor)* | — | The bundle carries no version string at all. See below. |
@@ -163,7 +161,8 @@ Each carries its `reason` in the registry, next to the code, not only here.
   `component_pdf` iframes `web/viewer.html`, the whole Mozilla app. That exists only
   in the `pdfjs-<version>-dist.zip` GitHub release. Second, **bun installs a tarball
   URL but not a zip** (Mozilla publishes a `.zip`) — and the tarball-URL half of that
-  sentence is precisely what `xlsx` used to rely on, and why it is vendored now.
+  sentence is precisely what `xlsx` used to rely on, which is why it was vendored
+  until tool_export stopped loading it (removed 2026-09-24).
 
     So it is committed, taken from the sha256-verified **6.2.108** release
     (archive digest `7bf642d5…e95ba` — the full digest GitHub publishes for the
@@ -234,17 +233,12 @@ Each carries its `reason` in the registry, next to the code, not only here.
   `test/unit/production_import_tripwire.test.ts` is what keeps a never-imported
   production dependency from coming back.
 
-- **xlsx** — SheetJS **left the npm registry** (npm's `xlsx` is abandoned at
-  0.18.5), so the dep used to be pinned to *their* tarball URL,
-  `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`. That looked lockfile-pinned
-  and was not: **a tarball-URL dependency is the one shape bun records with no
-  integrity** — 581 entries in `bun.lock` carried `sha512-`, that one carried
-  nothing. And these bytes are *served to browsers* (`tool_export` imports
-  `/dedalo/lib/xlsx/xlsx.mjs`), while every code update re-runs `bun install` in the
-  quarantine, so each update re-fetched unverified third-party client code.
-  Committed 2026-08-24 from the installed 0.20.3 tree, byte-verified against a fresh
-  download of the upstream `.tgz` (archive sha256 `8dc73fc3…`), trimmed to
-  `xlsx.mjs` — the only file the client loads — plus the LICENSE.
+- **xlsx** and **client-zip** — both **removed 2026-09-24**. `tool_export` now builds
+  every file (CSV, XLSX, ODS, HTML, the media ZIP) on the server
+  (`tools/tool_export/server/writers/`), so no client code loads SheetJS or
+  client-zip any more. SheetJS had been vendored on 2026-08-24 because it left the
+  npm registry and its CDN tarball URL was the one dependency shape bun records with
+  no integrity; `dependency_integrity_tripwire` keeps that shape from returning.
 
 ## Every committed third-party byte: the derived census
 

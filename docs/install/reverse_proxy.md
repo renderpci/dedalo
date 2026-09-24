@@ -32,6 +32,7 @@ flowchart LR
 | `/dedalo/install/import/hierarchy/…` | **proxy → socket** | hierarchy export downloads (admin-session-gated) |
 | `/dedalo/ai_models/…` | **proxy → socket** | the local AI model store, fetched by the browser from the page origin; **session-gated** — an anonymous request gets a `404` |
 | `/dedalo/upload_tmp/…` | **proxy → socket** | staged-upload previews, before the record is saved |
+| `/dedalo/export/artifact/…` | **proxy → socket**, unbuffered | tool_export's built files (CSV, XLSX, ODS, HTML, NDJSON, media ZIP); owner-only, **session-gated** — anyone else gets a `404`. Files can be many gigabytes, so nginx must not buffer them |
 | `/dedalo/media/…` | **proxy, from `MEDIA_PATH`** | gated by the generated rules — see below |
 | everything else under `/dedalo/…` | **proxy, from `client/dedalo/`** | static files |
 
@@ -251,6 +252,7 @@ server {
 	location /dedalo/install/import/hierarchy/       { proxy_pass http://dedalo_ts; }
 	location /dedalo/ai_models/                      { proxy_pass http://dedalo_ts; }
 	location /dedalo/upload_tmp/                     { proxy_pass http://dedalo_ts; }
+	location /dedalo/export/artifact/                { proxy_buffering off; proxy_pass http://dedalo_ts; }
 
 	# Client static files. Served IN PLACE (not content-hashed) — they must
 	# revalidate, so they are NEVER immutable.
@@ -349,6 +351,7 @@ a2enmod ssl headers http2 rewrite proxy proxy_http
     ProxyPass /dedalo/install/import/hierarchy/     unix:/run/dedalo/dedalo_ts.sock|http://localhost/dedalo/install/import/hierarchy/
     ProxyPass /dedalo/ai_models/                    unix:/run/dedalo/dedalo_ts.sock|http://localhost/dedalo/ai_models/
     ProxyPass /dedalo/upload_tmp/                   unix:/run/dedalo/dedalo_ts.sock|http://localhost/dedalo/upload_tmp/
+    ProxyPass /dedalo/export/artifact/              unix:/run/dedalo/dedalo_ts.sock|http://localhost/dedalo/export/artifact/
 
     # --- Entry points: the client tree has no index.html above core/page/ --
     RedirectMatch 302 "^/dedalo/?$"      /dedalo/core/page/

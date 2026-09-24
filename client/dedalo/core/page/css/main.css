@@ -21975,7 +21975,7 @@ body.inspector_resizing {
 .component_image.edit > .content_data > .content_value .image_container {
   height: 100%;
   max-height: 100%;
-  min-height: var(--media_min_height);
+  min-height: min(var(--media_min_height), 100%);
   width: 100%;
   position: relative;
   display: flex;
@@ -22303,6 +22303,11 @@ body.inspector_resizing {
   display: block;
   position: absolute;
   right: 0px;
+}
+@media screen and (max-width: 960px) {
+  .component_image.edit.media_wrapper > .content_data > .content_value {
+    height: var(--media_min_height);
+  }
 }
 /**
 * component_info
@@ -25158,7 +25163,7 @@ body.inspector_resizing {
 .component_svg.edit > .content_data > .content_value > .image_container {
   height: 100%;
   max-height: 100%;
-  min-height: var(--media_min_height);
+  min-height: min(var(--media_min_height), 100%);
   width: 100%;
   position: relative;
   display: flex;
@@ -25171,6 +25176,19 @@ body.inspector_resizing {
   max-width: 100%;
   object-fit: contain;
   object-position: center;
+}
+.component_svg.edit.media_wrapper > .content_data > .content_value > .image_container > .image.svg_element {
+  padding: 0px;
+  height: 100%;
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+@media screen and (max-width: 960px) {
+  .component_svg.edit.media_wrapper > .content_data > .content_value {
+    height: var(--media_min_height);
+  }
 }
 .component_svg.list > .content_data > img {
   padding: 0.33rem !important;

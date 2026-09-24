@@ -1,5 +1,5 @@
 {
-	"note": "CENSUS OF COMMITTED THIRD-PARTY TREES. Every directory under vendor/ has exactly one row here and vice versa (exact complements — test/unit/dependency_integrity_tripwire.test.ts); a row may instead carry an explicit `root` (a tracked directory outside vendor/ and node_modules) for a tree that must live inside another self-contained subsystem, and scripts/lib/third_party_census.ts derives from the tree every committed file that looks third-party and requires it to lie under some row's root. FOUR AXES since 2026-09-04: the three below plus LICENCE — every row carries `licence: {spdx, file}`, an id from the closed set in scripts/vendor_verify.ts and a licence text INSIDE the tree that must read as that licence (OPS-08). A vendored lib has no lockfile line, no sha512- integrity, no registry and no Dependabot: tree_sha256 is the ONLY thing in this repo that hashes those bytes. Verify: bun run scripts/vendor_verify.ts. Bump: bun run scripts/vendor_fetch.ts --lib <id> --version <v> --url <archive> --sha256 <expected>. tree_sha256 = sha256 over the sorted concatenation of `<posix relpath>\\0<sha256(file bytes)>\\n` for every regular file under the lib root, so contents AND file set are covered. THREE AXES, and a row must satisfy all three. (1) INTEGRITY — tree_sha256/files, recomputed every run. (2) IDENTITY — version_evidence: the declared version must appear verbatim in a file of the lib's OWN tree, so the label cannot be moved without the bytes (a mislabelled row would otherwise satisfy the digest, the range check and the feed query at once). A tree that states no version anywhere says so in unprovable_reason. scripts/vendor_verify.ts --write REFUSES to bless a tree whose bytes do not state the declared version. (3) ADVISORIES + STALENESS — the `advisory` block: the coordinate a feed is keyed to, a per-row review window, and a LEDGER of the published advisories known to touch that version; `reviewed` is the ISO date a human last checked THIS lib's upstream release feed AND the advisory feed (Dependabot cannot watch a vendored tree). Since CLI-26 (2026-08-28) that date is GATED, not printed: test/unit/vendor_advisory_tripwire.test.ts hard-fails when the declared version is inside a ledgered range or when `reviewed` is past the window, and scripts/ci/audit.ts asks the GitHub advisory feed the same question when it can reach it, reds on anything this ledger does not already carry, and reports a lookup that did not complete as DEGRADED rather than as a finding. The rows added or re-blessed on 2026-09-04 (lz-string, swagger-ui, the licence files under ckeditor and json-view) carry that date; the four original rows were reviewed on 2026-08-28 and carry that date: ckeditor5@42.0.1 (two moderate XSS advisories in range, both ledgered and accepted on re-proved clauses), pdfjs-dist@6.2.108 and xlsx@0.20.3 (feed returns nothing), and json-view, which no feed can be keyed to at all and whose review window is therefore its only signal. Moving a `reviewed` date is a claim that a human read both feeds — which is the one thing this field exists to make expensive.",
+	"note": "CENSUS OF COMMITTED THIRD-PARTY TREES. Every directory under vendor/ has exactly one row here and vice versa (exact complements — test/unit/dependency_integrity_tripwire.test.ts); a row may instead carry an explicit `root` (a tracked directory outside vendor/ and node_modules) for a tree that must live inside another self-contained subsystem, and scripts/lib/third_party_census.ts derives from the tree every committed file that looks third-party and requires it to lie under some row's root. FOUR AXES since 2026-09-04: the three below plus LICENCE — every row carries `licence: {spdx, file}`, an id from the closed set in scripts/vendor_verify.ts and a licence text INSIDE the tree that must read as that licence (OPS-08). A vendored lib has no lockfile line, no sha512- integrity, no registry and no Dependabot: tree_sha256 is the ONLY thing in this repo that hashes those bytes. Verify: bun run scripts/vendor_verify.ts. Bump: bun run scripts/vendor_fetch.ts --lib <id> --version <v> --url <archive> --sha256 <expected>. tree_sha256 = sha256 over the sorted concatenation of `<posix relpath>\\0<sha256(file bytes)>\\n` for every regular file under the lib root, so contents AND file set are covered. THREE AXES, and a row must satisfy all three. (1) INTEGRITY — tree_sha256/files, recomputed every run. (2) IDENTITY — version_evidence: the declared version must appear verbatim in a file of the lib's OWN tree, so the label cannot be moved without the bytes (a mislabelled row would otherwise satisfy the digest, the range check and the feed query at once). A tree that states no version anywhere says so in unprovable_reason. scripts/vendor_verify.ts --write REFUSES to bless a tree whose bytes do not state the declared version. (3) ADVISORIES + STALENESS — the `advisory` block: the coordinate a feed is keyed to, a per-row review window, and a LEDGER of the published advisories known to touch that version; `reviewed` is the ISO date a human last checked THIS lib's upstream release feed AND the advisory feed (Dependabot cannot watch a vendored tree). Since CLI-26 (2026-08-28) that date is GATED, not printed: test/unit/vendor_advisory_tripwire.test.ts hard-fails when the declared version is inside a ledgered range or when `reviewed` is past the window, and scripts/ci/audit.ts asks the GitHub advisory feed the same question when it can reach it, reds on anything this ledger does not already carry, and reports a lookup that did not complete as DEGRADED rather than as a finding. The rows added or re-blessed on 2026-09-04 (lz-string, swagger-ui, the licence files under ckeditor and json-view) carry that date; the three remaining original rows were reviewed on 2026-08-28 and carry that date: ckeditor5@42.0.1 (two moderate XSS advisories in range, both ledgered and accepted on re-proved clauses), pdfjs-dist@6.2.108 (feed returns nothing), and json-view, which no feed can be keyed to at all and whose review window is therefore its only signal. Moving a `reviewed` date is a claim that a human read both feeds — which is the one thing this field exists to make expensive. The fourth original row, xlsx (SheetJS 0.20.3), was REMOVED 2026-09-24 with its tree: tool_export builds XLSX/ODS server-side (tools/tool_export/server/writers/) and no client code loads SheetJS any more.",
 	"libs": {
 		"ckeditor": {
 			"version": "CKEditor 5 42.0.1 (custom Dédalo build)",
@@ -150,36 +150,6 @@
 					{
 						"file": "vendor/pdfjs/web/viewer.mjs",
 						"must_contain": "const viewerVersion = \"6.2.108\";"
-					}
-				]
-			},
-			"licence": {
-				"spdx": "Apache-2.0",
-				"file": "LICENSE"
-			}
-		},
-		"xlsx": {
-			"version": "0.20.3",
-			"upstream": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
-			"archive_sha256": "8dc73fc3b00203e72d176e85b50938627c7b086e607c682e8d3c22c02bb99fe8",
-			"tree_sha256": "ecf869fdacb8fa2e7479461484974c1a2130c8d8ebd1f23b1a1287cef3c7ea5d",
-			"files": 2,
-			"reviewed": "2026-08-28",
-			"note": "SheetJS left the npm registry (npm's xlsx is abandoned at 0.18.5), so this used to be a bare tarball URL in package.json — and bun.lock recorded NO integrity for it while all 581 other entries carried sha512-, so every quarantine `bun install` during a code update re-fetched browser-served bytes unverified (P2-5). Vendored 2026-08-24 from the already-installed node_modules/xlsx, byte-verified against a fresh download of the upstream .tgz (both kept files hash identically). Trimmed to what is actually served: xlsx.mjs (the only file tools/tool_export/js/tool_export.js imports) plus LICENSE. Dropped: bin/, dist/, types/, xlsx.js (CJS — nothing imports it), xlsxworker.js, bower.json, CHANGELOG.md, README.md, package.json. Reviewed 2026-08-28 against the GitHub advisory feed (xlsx@0.20.3): none.",
-			"advisory": {
-				"ecosystem": "npm",
-				"package": "xlsx",
-				"version": "0.20.3",
-				"unkeyable_reason": null,
-				"review_window_days": 180,
-				"advisories": []
-			},
-			"version_evidence": {
-				"unprovable_reason": null,
-				"clauses": [
-					{
-						"file": "vendor/xlsx/xlsx.mjs",
-						"must_contain": "XLSX.version = '0.20.3';"
 					}
 				]
 			},

@@ -453,6 +453,25 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// this one on purpose: a search is user-typed and high-cardinality, so its
 	// results are deliberately NOT cached (src/external/search.ts header).
 	'external/search.ts:inFlightSearches',
+	// Log dedup ledger of the external subsystem's ONE logging door
+	// (logExternalError): distinct failure line → epoch ms it was logged, so a
+	// per-record failure repeated by every render/export row is COUNTED
+	// (external_log_suppressed), not re-logged with a stack. NOT factory-built:
+	// an ontology write says nothing about what the log already said. Lifecycle:
+	// TIME-CLEARED (pruned past the 10-minute window on every admission) and
+	// SIZE-BOUNDED (5 000 entries, oldest first). Keys are the disclosure-safe
+	// log line — never session/user/principal/lang.
+	'external/errors.ts:loggedLines',
+	// The external subsystem's record-endpoint watch: (service, record endpoint
+	// scheme/host/PATH) → consecutive record-path 4xx answers since the endpoint
+	// last delivered a record, so an endpoint that answers 4xx for EVERY id (a
+	// wrong api_url path, a moved route) is reported once and read as the source
+	// failing instead of N silent not_founds. NOT factory-built: an ontology
+	// write says nothing about whether an endpoint answers (a changed api_url is
+	// a new key). Lifecycle: an entry is DELETED by the endpoint's next delivered
+	// answer and PRUNED after an hour untouched. Keys are configuration — never
+	// session/user/principal/lang.
+	'external/record_answers.ts:recordAnswerStreaks',
 	// --- the idempotency ledger (CLI-01 / P0-10) -----------------------------
 	// GATE 4's ledger (WC-2026-08-28-idempotency-key): key -> the ONE outcome of
 	// the operation that key names, so a transport resend replays it instead of

@@ -19,15 +19,17 @@
 					// reserve space while the lazy-loaded svg is still loading, so the
 					// wrapper does not collapse to ~0 height and then jump on load. This
 					// prevents layout shift and keeps the restore-scroll on the selected
-					// component accurate. Matches component_pdf / component_json behavior.
-					min-height: var(--media_min_height);
+					// component accurate. Capped at the content_value height (100%): a
+					// section css height or a user resize below --media_min_height must
+					// shrink the image, not clip it (content_value is overflow:hidden).
+					min-height: min(var(--media_min_height), 100%);
 					width: 100%;
 					position: relative;
 					display: flex;
 					justify-content: center;
 				}
 
-				// img
+				// fallback img (direct child, no image_container)
 				>.image.svg_element {
 					padding: 0px;
 					height: 100%;
@@ -35,6 +37,35 @@
 					max-width: 100%;
 					object-fit: contain;
 					object-position: center;
+				}
+			}
+		}
+
+		// media views only (view_line has no media_wrapper and keeps its own
+		// 15rem img cap below)
+		&.media_wrapper {
+			>.content_data {
+				>.content_value {
+
+					// loaded svg img: fit inside the container, never overflow it
+					>.image_container >.image.svg_element {
+						padding: 0px;
+						height: 100%;
+						max-height: 100%;
+						max-width: 100%;
+						object-fit: contain;
+						object-position: center;
+					}
+
+					// layout.less unsets the media content_value height below
+					// break_point_1; the svg needs a definite height so the 100% above
+					// resolves. Specificity (0,5,0): beats layout (0,4,0), loses to a
+					// section css height (0,6,0) and to an inline user resize. Applies in
+					// fullscreen too: below break_point_1 the wrapper is display:block, so
+					// fullscreen gives content_value no stretched height to fill.
+					@media screen and (max-width: @width_break_point_1) {
+						height: var(--media_min_height);
+					}
 				}
 			}
 		}

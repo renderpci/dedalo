@@ -28,18 +28,26 @@
  *           source, because the defect they answer to was a composition one —
  *           the notice was pushed into `errors`, which the panel paints red.
  *
- * CENSUS: TOTAL, and DERIVED FROM THE TREE, not from a hand list — the door list
- * is every `Bun.file(...).text()` under `tools/` and `src/core/tools/`, and the
- * writer list is every delimited-download URI in the hand-written client/tool JS.
- * A new door or a new writer joins the census by existing. The two EXEMPTION maps
- * are shrink-only and each entry carries the finding it answers to; an exemption
- * for a file that no longer needs one FAILS, so they cannot rot.
+ * CENSUS: TOTAL, and DERIVED, not from a hand list. The door list is every
+ * `Bun.file(...).text()` under `tools/` and `src/core/tools/`. The WRITER list is
+ * the export writer REGISTRY (tools/tool_export/server/writers/index.ts
+ * EXPORT_WRITERS): every registered format whose served type is delimited text
+ * is BUILT through the real door (`buildArtifactFile`) and its first bytes are
+ * read (since 2026-09 the server builds every download; the browser builds
+ * none). A new door or a new writer joins the census by existing. The client
+ * half is the converse: no hand-written client/tool JS builds a delimited
+ * download itself (a data: URI or Blob of text/csv|tsv) — that census must stay
+ * EMPTY, because such a file would bypass the registry's BOM and formula rule.
+ * The two EXEMPTION maps are shrink-only and each entry carries the finding it
+ * answers to; an exemption for a file that no longer needs one FAILS, so they
+ * cannot rot.
  *
  * TIER: needs the suite DB (the CSV doors are driven for real, end to end).
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { Glob } from 'bun';
 import { config } from '../../src/config/config.ts';
@@ -49,7 +57,15 @@ import type { ImportFileReport } from '../../src/core/tools/import_wire.ts';
 import { decodeIngestBytes } from '../../src/core/tools/ingest_encoding.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import { parseMarc } from '../../src/core/tools/marc21.ts';
+import { type ExportFormat, FORMAT_SPECS } from '../../tools/tool_export/server/artifact_store.ts';
+import { EXPORT_WRITERS } from '../../tools/tool_export/server/writers/index.ts';
 import { mustGet } from '../helpers/assert.ts';
+import {
+	buildExportBytes,
+	endedExportJob,
+	scratchExportStore,
+	singleColumnExport,
+} from '../helpers/export_writer_fixture.ts';
 import { stripComments } from '../helpers/strip_comments.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
@@ -501,51 +517,133 @@ describe('the mapper preview shows what was done to the file it previews', () =>
 });
 
 // ---------------------------------------------------------------------------
-// 4. THE WRITE HALF — the census of delimited downloads, derived from the tree.
+// 4. THE WRITE HALF — the census of delimited writers IS the writer registry.
 // ---------------------------------------------------------------------------
 
-/** A download of delimited text: what a curator opens in Excel and saves back. */
-const DELIMITED_DOWNLOAD = /data:text\/(csv|tsv|tab-separated-values)/;
+/** A served type a curator opens in a spreadsheet and saves back as delimited text. */
+const DELIMITED_TYPE = /^text\/(csv|tab-separated-values)\b/;
 
-function delimitedDownloadSites(): { file: string; line: string }[] {
-	const sites: { file: string; line: string }[] = [];
-	for (const file of sourceFiles(['client', 'tools', 'src'], 'js').concat(
-		sourceFiles(['client', 'tools', 'src'], 'ts'),
-	)) {
-		// Vendored/minified third-party bundles are not our writers.
-		if (file.includes('/lib/') || file.includes('.min.')) continue;
+/** Registered formats whose served Content-Type is delimited text — derived, not listed. */
+function delimitedRegistryFormats(): ExportFormat[] {
+	return (Object.keys(EXPORT_WRITERS) as ExportFormat[])
+		.filter((format) => DELIMITED_TYPE.test(FORMAT_SPECS[format].contentType))
+		.sort();
+}
+
+/** `Ripollès;Moneda ibérica` — the audit's own repro value, exported and re-read. */
+const ROUND_TRIP_VALUE = 'Ripollès;Moneda ibérica';
+
+describe('export writers: every delimited writer in the registry emits the UTF-8 BOM', () => {
+	const scratch = mkdtempSync(join(tmpdir(), 'dedalo_ingest_bom_'));
+	afterAll(() => {
+		rmSync(scratch, { recursive: true, force: true });
+	});
+
+	test('the census is derived from the registry, non-empty, and is exactly CSV + TSV', () => {
+		const formats = delimitedRegistryFormats();
+		// If this is empty the derivation stopped matching, not the registry stopped
+		// having writers — a census that finds nothing proves nothing.
+		expect(formats.length).toBeGreaterThan(0);
+		// A NEW delimited format is not an error, but it must be seen: widen this
+		// list in the same change, with the file it builds proven below.
+		expect(formats).toEqual(['csv', 'tsv']);
+	});
+
+	test('every delimited writer: first bytes EF BB BF, and the file re-imports as UTF-8 unchanged', async () => {
+		const store = scratchExportStore(scratch);
+		const job = await endedExportJob(store, singleColumnExport([ROUND_TRIP_VALUE], 'Nombre'));
+		for (const format of delimitedRegistryFormats()) {
+			const bytes = await buildExportBytes(store, job, format);
+			expect([...bytes.subarray(0, 3)], `${format}: no UTF-8 BOM`).toEqual([0xef, 0xbb, 0xbf]);
+			// THE ROUND TRIP DATA-09 IS ABOUT: our download, fed back to our import
+			// door's decoder, is UTF-8 — no conversion, no notice, the BOM consumed,
+			// the accented value intact.
+			const decoded = decodeIngestBytes(new Uint8Array(bytes), `export.${format}`);
+			expect(decoded.encoding).toBe('utf-8');
+			expect(decoded.converted).toBe(false);
+			expect(decoded.notice).toBeNull();
+			expect(decoded.text.charCodeAt(0), `${format}: BOM left in the text`).not.toBe(0xfeff);
+			expect(decoded.text).toContain('Ripollès');
+			expect(decoded.text).not.toContain('\uFFFD');
+		}
+	});
+
+	test('positive control: the SAME checks, run on the writer output minus its BOM and on a legacy-encoded twin, fail', async () => {
+		// Both halves of the assertion above must be able to fail on a real file:
+		// (1) the writer's own bytes with the BOM cut off no longer start EF BB BF;
+		// (2) the same file re-encoded as Windows-1252 (what a BOM-less file
+		//     round-tripped through Excel becomes) is NOT read as unconverted
+		//     UTF-8 by the import decoder.
+		const store = scratchExportStore(scratch);
+		const job = await endedExportJob(store, singleColumnExport([ROUND_TRIP_VALUE], 'Nombre'));
+		for (const format of delimitedRegistryFormats()) {
+			const bytes = await buildExportBytes(store, job, format);
+			const stripped = bytes.subarray(3);
+			expect([...stripped.subarray(0, 3)]).not.toEqual([0xef, 0xbb, 0xbf]);
+			const text = new TextDecoder('utf-8').decode(stripped);
+			expect(text).toContain('Ripollès'); // the cut really was the BOM, nothing else
+			const legacy = Uint8Array.from([...text].map((char) => char.charCodeAt(0) & 0xff));
+			const decoded = decodeIngestBytes(legacy, `export.${format}`);
+			expect(decoded.encoding === 'utf-8' && decoded.converted === false).toBe(false);
+		}
+	});
+});
+
+/**
+ * A delimited download built OUTSIDE the export registry: a data: URI or a Blob
+ * typed as CSV/TSV, in the hand-written client/tool JS or anywhere in the TS
+ * tree. Every such file bypasses the registry (its BOM, its formula rule), so
+ * the census of them must be EMPTY — the server builds every download now.
+ */
+const DELIMITED_DOWNLOAD_URI =
+	/data:text\/(csv|tsv|tab-separated-values)|new\s+Blob\s*\([^)]*type\s*:\s*['"`]text\/(csv|tsv|tab-separated-values)/;
+
+/** The scanned corpus: every js + ts file under client/, tools/, src/ (tests excluded). */
+function delimitedUriCorpus(): string[] {
+	return sourceFiles(['client', 'tools', 'src'], 'js')
+		.concat(sourceFiles(['client', 'tools', 'src'], 'ts'))
+		.filter(
+			// Vendored/minified third-party bundles are not our writers; the browser
+			// suite builds fixtures, not downloads.
+			(file) =>
+				!file.includes('/lib/') && !file.includes('.min.') && !file.includes('/test/client/'),
+		);
+}
+
+function delimitedDownloadSites(): string[] {
+	const sites: string[] = [];
+	for (const file of delimitedUriCorpus()) {
 		for (const line of stripComments(read(file)).split('\n')) {
-			if (DELIMITED_DOWNLOAD.test(line)) sites.push({ file, line });
+			if (DELIMITED_DOWNLOAD_URI.test(line)) sites.push(`${file}: ${line.trim()}`);
 		}
 	}
 	return sites;
 }
 
+describe('no code outside the registry builds a delimited download', () => {
+	test('positive control: the classifier recognizes both shapes the old client used', () => {
+		expect(DELIMITED_DOWNLOAD_URI.test("'data:text/csv;charset=utf-8,' + x")).toBe(true);
+		expect(DELIMITED_DOWNLOAD_URI.test("new Blob([csv], {type: 'text/csv'})")).toBe(true);
+		expect(DELIMITED_DOWNLOAD_URI.test("new Blob([json], {type: 'octet/stream'})")).toBe(false);
+	});
+
+	test('the census is EMPTY (the corpus is not: it scanned the client, tool and engine trees)', () => {
+		const corpus = delimitedUriCorpus();
+		expect(corpus.length).toBeGreaterThan(1000);
+		expect(delimitedDownloadSites()).toEqual([]);
+	});
+});
+
 /**
- * SHRINK-ONLY, same contract as the door exemptions: a delimited writer that
- * deliberately emits NO BOM, with the reason.
+ * SHRINK-ONLY, same contract as the door exemptions: a delimited writer OUTSIDE
+ * the export registry that deliberately emits NO BOM, with the reason.
  */
 const BOM_EXEMPT: Readonly<Record<string, string>> = {
 	'src/diffusion/writers/csv.ts':
 		'DATA-09 names the DOWNLOAD half (the Excel round trip back into the import door). This is a PUBLISHED artifact whose byte contract is pinned by test/unit/diffusion_file_writers.test.ts ("no BOM"), consumed by harvesters rather than by a curator saving over it. OPEN: whether a published csv should carry a BOM is a diffusion-contract decision, not this fix.',
 };
 
-describe('export writers: a delimited download carries the UTF-8 BOM', () => {
-	test('the census is non-empty and every site emits the BOM', () => {
-		const sites = delimitedDownloadSites();
-		// If this is 0 the regex stopped matching the tree, not the tree stopped
-		// having writers — a census that finds nothing proves nothing.
-		expect(sites.length).toBeGreaterThan(0);
-		const missing = sites.filter((site) => !site.line.includes('\\uFEFF'));
-		expect(missing.map((site) => `${site.file}: ${site.line.trim()}`)).toEqual([]);
-	});
-
-	test('the delimited-download census is exactly the two tool_export buttons', () => {
-		const files = [...new Set(delimitedDownloadSites().map((site) => site.file))];
-		expect(files).toEqual(['tools/tool_export/js/render_tool_export.js']);
-		expect(delimitedDownloadSites()).toHaveLength(2);
-	});
-
+describe('BOM exemptions', () => {
 	test('every BOM exemption is real, reasoned, and still exempt', () => {
 		for (const [file, reason] of Object.entries(BOM_EXEMPT)) {
 			expect(reason).toMatch(/DATA-\d\d/);
@@ -553,6 +651,7 @@ describe('export writers: a delimited download carries the UTF-8 BOM', () => {
 			const source = stripComments(read(file));
 			expect(source).toMatch(/csv|delimit/i);
 			expect(source).not.toContain('\\uFEFF');
+			expect(source).not.toContain('0xfeff');
 		}
 	});
 });

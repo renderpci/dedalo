@@ -507,13 +507,37 @@
 					}
 				}
 
-				// response_container
+				// button_stop_export. Stops the running export (dd_utils_api stop_process)
+				>.button_stop_export {
+					width: 100%;
+					margin-left: 0;
+					margin-top: 0.5rem;
+
+					&.hide {
+						display: none;
+					}
+					&.loading {
+						opacity: 0.4 !important;
+					}
+				}
+
+				>.button_export:disabled {
+					opacity: 0.4 !important;
+					cursor: not-allowed;
+				}
+
+				// response_container. The export status line and its reason
 				>.response_container {
 					padding: 0.3rem;
 					color: @tool_color;
 					text-align: center;
 					padding-top: 1rem;
 					padding-bottom: 0px;
+
+					&.error {
+						color: var(--color_danger_dark);
+						font-weight: 600;
+					}
 				}
 
 				// button activation
@@ -603,6 +627,86 @@
 					margin: 0.5rem;
 					width: calc(50% - 1rem);
 				}
+
+				&:disabled {
+					opacity: 0.4;
+					cursor: not-allowed;
+				}
+				&.loading {
+					opacity: 0.6;
+					pointer-events: none;
+				}
+			}
+
+			// print_note. Print prints the CURRENT PAGE only
+			.print_note {
+				display: inline-block;
+				margin-left: 0.75rem;
+				font-size: 0.8rem;
+				color: @color_grey_7;
+			}
+
+			// download_status. A file being built, or why it failed
+			.download_status {
+				min-height: 1.2rem;
+				margin-top: 0.4rem;
+				font-size: 0.85rem;
+				color: @tool_color;
+
+				&:empty {
+					display: none;
+				}
+				&.error {
+					color: var(--color_danger_dark);
+					font-weight: 600;
+				}
+			}
+		}
+
+		// export_pager. One preview page at a time: first/prev/next/last, range, size
+		>.export_pager {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: 0.5rem;
+			padding: 0.5rem 0;
+
+			&.hide {
+				display: none;
+			}
+			&.loading {
+				opacity: 0.6;
+			}
+
+			.pager_button {
+				min-width: 2.2rem;
+				padding: 0.2rem 0.6rem;
+
+				&:disabled {
+					opacity: 0.35;
+					cursor: not-allowed;
+				}
+			}
+
+			.pager_range {
+				font-variant-numeric: tabular-nums;
+				color: @color_grey_4;
+			}
+
+			.pager_progress {
+				font-variant-numeric: tabular-nums;
+				color: @tool_color;
+				font-size: 0.85rem;
+			}
+
+			.pager_size {
+				margin-left: auto;
+				font-size: 0.85rem;
+				color: @color_grey_7;
+
+				.pager_size_select {
+					margin-left: 0.3rem;
+				}
 			}
 		}
 
@@ -619,6 +723,33 @@
 			border: 1px solid @color_grey_13;
 			border-radius: 8px;
 			box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+
+			// export_column_pager. A wide export's column window ('Columns 101–200
+			// of 4,000' + prev/next), above the table; sticks left while the
+			// table scrolls sideways
+			.export_column_pager {
+				position: sticky;
+				left: 0;
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+				padding: 0.35rem 0.5rem;
+
+				.pager_button {
+					min-width: 2.2rem;
+					padding: 0.2rem 0.6rem;
+
+					&:disabled {
+						opacity: 0.35;
+						cursor: not-allowed;
+					}
+				}
+				.column_range {
+					font-variant-numeric: tabular-nums;
+					font-size: 0.85rem;
+					color: @color_grey_4;
+				}
+			}
 
 			// export_flat_table. Modern result grid (sticky header, frozen id
 			// column, zebra rows, hover). Theme-aware: greys flip under
@@ -757,6 +888,15 @@
 
 	.quality_selector {
 		margin: 1rem;
+	}
+
+	.modal_status {
+		margin: 0 1rem;
+		color: @tool_color;
+
+		&:empty {
+			display: none;
+		}
 	}
 
 	.success {

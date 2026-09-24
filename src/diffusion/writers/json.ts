@@ -23,6 +23,7 @@
 
 import { existsSync, mkdirSync, renameSync, unlinkSync } from 'node:fs';
 import type { FileSink } from 'bun';
+import { tempPathFor } from '../../core/files/temp_path.ts';
 import type { PublicationPlan, SectionPlan } from '../plan/types.ts';
 import type { ProjectedRow } from '../project/lang_ladder.ts';
 import {
@@ -31,7 +32,6 @@ import {
 	fileTargetDirLabel,
 	formatTargetDir,
 	planColumnNames,
-	tempPathFor,
 } from './files.ts';
 import type {
 	DiffusionWriter,

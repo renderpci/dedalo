@@ -51,6 +51,7 @@ import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { config } from '../../config/config.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
+import { deriveProcessesDir, testProcessesDirFor } from './processes_dir.ts';
 
 /**
  * The marker file a directory must carry before the suite may write media into
@@ -100,4 +101,45 @@ export function requireTestMediaRoot(root: string, door: string): string {
 export function assertTestMediaRoot(root: string, door: string): string {
 	if (config.media.testRoot === null) return root;
 	return requireTestMediaRoot(root, door);
+}
+
+// ---------------------------------------------------------------------------
+// THE JOB-REGISTRY (processes) DIRECTORY — the same law for the pfile mirror.
+// ---------------------------------------------------------------------------
+//
+// src/core/media/jobs.ts mirrors every background job (media, export, tool
+// lanes) as `<processes dir>/<job id>.json`. Its default is the INSTALLATION's
+// `<privateDir>/processes`, and until 2026-09-24 nothing moved it for a test
+// run: every gate that forgot DEDALO_MEDIA_PROCESSES_DIR, and the client suite's
+// own server (which inherits DEDALO_TEST_MEDIA_ROOT, not that key), wrote into
+// the live registry — ~5.4k suite pfiles measured there, sharing a directory
+// with the dev server's real jobs and its boot reconcile.
+//
+// SO, UNDER THE SEAM: the default derives to the MARKED suite sibling
+// `<test media root>.processes` (the export store's `<root>.export_artifacts`
+// rule), an explicit DEDALO_MEDIA_PROCESSES_DIR still wins, and EITHER must
+// carry `.dedalo_test_processes` or the resolver refuses before it creates,
+// reads or writes anything (the door is jobs.ts assertProcessesDirDeclared).
+// The engine never plants the marker: the derived dir is declared beside the
+// media root by test/helpers/test_media_root.ts ensureTestMediaRoot (the
+// preload, test:db:setup, the client-suite server), and a gate's scratch dir
+// declares itself with markProcessesDir. Unarmed (every
+// real install) this is inert and the path grammar is unchanged.
+
+/** The marker a processes directory must carry before an armed run writes a job file into it. */
+export const TEST_PROCESSES_MARKER = '.dedalo_test_processes';
+
+// The suite sibling `<root>.processes` — re-exported from the ONE pure
+// derivation the runtime-path census shares (src/core/media/processes_dir.ts).
+export { testProcessesDirFor };
+
+/**
+ * The job-registry directory this process uses: explicit
+ * DEDALO_MEDIA_PROCESSES_DIR (empty = unset), else (armed) the suite sibling,
+ * else `<privateDir>/processes`. Pure — no IO. The inputs are passed in so the
+ * caller keeps reading the explicit key per call (it is test-settable). The
+ * rule itself is deriveProcessesDir — the census calls the same function.
+ */
+export function resolveProcessesDir(explicit: string | undefined, installDefault: string): string {
+	return deriveProcessesDir(explicit, config.media.testRoot, installDefault);
 }

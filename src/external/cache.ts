@@ -27,7 +27,14 @@
  *     different document.
  *   - fieldSignature: the SORTED field set. v6's static cache omitted it, so a
  *     component asking for {id,title} was served a row fetched for {id} and
- *     silently rendered nothing.
+ *     silently rendered nothing. Since 2026-09-24 the set is the SECTION's
+ *     record field set (record_fields.ts: the id field + every field any of the
+ *     section's component_external nodes maps), not the requesting component's
+ *     — so the signature does not fragment by caller: one entry per record, one
+ *     request per record, whichever component, prepass or export asked first.
+ *     It stays in the key because the set is ontology-derived: a fields_map edit
+ *     must never be served a row fetched for the old set (the ontology write
+ *     also drops this cache — the key makes it true even for a row in flight).
  *
  * NO PRINCIPAL is in the key, and that is a claim that must stay true: with
  * `record_identifiers` egress and ONE install-wide credential, the response
@@ -36,7 +43,9 @@
  * (or that service opts out of the shared cache).
  *
  * COALESCING was v6's one good idea, kept: a portal row with four
- * component_external children asking for the same record issues ONE call. The
+ * component_external children asking for the same record issues ONE call (and,
+ * with the section-wide field set, so do four SEQUENTIAL cells: the second one
+ * is a cache hit on the first one's entry). The
  * hard fan-out bound lives at the door (transport.ts) so it also holds for
  * callers that never come through here.
  */
@@ -48,6 +57,8 @@ import { getExternalServiceForSection } from './config.ts';
 import type { RemoteRow } from './descriptor_types.ts';
 import { ExternalServiceError, logExternalError } from './errors.ts';
 import { defaultPickRow, defaultUnwrapRows, encodeRemoteIdWith } from './fields_map.ts';
+import { noteRecordAnswer, noteRecordDelivered } from './record_answers.ts';
+import { recordRequestFields } from './record_fields.ts';
 import { externalSettings } from './settings.ts';
 import type { TransportDeps } from './transport.ts';
 import { fetchExternalJson } from './transport.ts';
@@ -82,7 +93,7 @@ const rowCache = createOntologyCache<string, CachedRow>();
 const inFlight = new Map<string, Promise<CachedRow>>();
 
 /** Scheme + host + path of an api_url. The QUERY is deliberately excluded. */
-function originAndPath(apiUrl: string): string {
+export function originAndPath(apiUrl: string): string {
 	try {
 		const url = new URL(apiUrl);
 		return `${url.protocol}//${url.host}${url.pathname}`;
@@ -133,13 +144,37 @@ async function fetchRow(
 		dataLang,
 		remoteFields,
 	});
-	const payload = await fetchExternalJson({
-		model,
-		request,
-		sectionTipo,
-		remoteId,
-		...(deps === undefined ? {} : { deps }),
-	});
+	let payload: unknown;
+	try {
+		payload = await fetchExternalJson({
+			model,
+			request,
+			sectionTipo,
+			remoteId,
+			...(deps === undefined ? {} : { deps }),
+		});
+	} catch (error) {
+		const answered = recordAnswerStatus(error);
+		if (answered === null) throw error;
+		// …unless the ENDPOINT is failing, not the record: a streak of 4xx with
+		// nothing delivered (a wrong api_url path, a moved route, a changed id
+		// format) is read as the SOURCE failing — thrown, so the view is a
+		// retryable `unavailable` that is logged, never negative-cached, and
+		// counted by an export as incomplete (record_answers.ts).
+		const endpoint = originAndPath(apiConfig.apiUrl);
+		if (noteRecordAnswer(model.service, endpoint, answered, now) === 'endpoint') throw error;
+		// THE SERVICE ANSWERED ABOUT THIS ONE RECORD: it degrades this record only
+		// (the breaker ignored it — breaker.ts evidence law). A 400/422 is logged
+		// (once per failure class per window — errors.ts logDedupKey): it can mean
+		// OUR request is wrong — an unpadded or local id sent to the service,
+		// 2026-09-24 — and the operator must be able to see that. A 404/410 is the
+		// same clean "not there" as a non-matching 200, which is not logged either.
+		if (answered === 400 || answered === 422) logExternalError(error as ExternalServiceError);
+		return { row: null, status: 'not_found', storedAt: now };
+	}
+	// The endpoint DELIVERED a record answer: whatever it holds, a 4xx from it is
+	// again about its record.
+	noteRecordDelivered(model.service, originAndPath(apiConfig.apiUrl));
 	const unwrap = model.unwrapRows ?? defaultUnwrapRows;
 	const rows = unwrap(payload, apiConfig.responseMap);
 	const pick = model.pickRow ?? ((r, id) => defaultPickRow(model, r, id));
@@ -150,6 +185,31 @@ async function fetchRow(
 	return row === null
 		? { row: null, status: 'not_found', storedAt: now }
 		: { row, status: 'ok', storedAt: now };
+}
+
+/**
+ * RECORD-PATH 4xx that mean "the service cannot give a record for this id":
+ *   404 / 410 — the record is not (or no longer) there;
+ *   400 / 422 — the service REJECTED the id (Zenon answers `400 Error loading
+ *               record` for an id it cannot parse, e.g. `65686` where it holds
+ *               `000065686`). NOT `unavailable`: that state is retryable and
+ *               says "the source could not answer", and both are false — the
+ *               source answered definitively, and the same request answers the
+ *               same way. `not_found` (retryable false, negative-cached for a
+ *               soft TTL) is the honest reading of the answer; the logged
+ *               `http_status status=400 … id=…` line keeps the cause visible.
+ * Anything else — 401/403 (our credential), 405/409/… — stays a thrown
+ * `http_status`, i.e. an `unavailable` view with its reason. Record path ONLY:
+ * on a search endpoint a 404 does not mean "no such record" (search.ts never
+ * comes through here).
+ */
+const RECORD_ANSWER_STATUSES: ReadonlySet<number> = new Set([400, 404, 410, 422]);
+
+/** The status when `error` is a record-path answer (RECORD_ANSWER_STATUSES), else null. */
+function recordAnswerStatus(error: unknown): number | null {
+	if (!(error instanceof ExternalServiceError) || error.kind !== 'http_status') return null;
+	const status = error.status;
+	return status !== undefined && RECORD_ANSWER_STATUSES.has(status) ? status : null;
 }
 
 /**
@@ -216,6 +276,13 @@ export interface FetchExternalRowsOptions {
 	readonly deps?: TransportDeps;
 	/** Override the request data lang (background jobs with no ALS scope). */
 	readonly dataLang?: string;
+	/**
+	 * The caller's stop (an export's Stop). Once aborted, no FURTHER target is
+	 * started; the ones in the air finish (a coalesced fetch may be shared with
+	 * another reader, so it is never cut). Targets never started are simply
+	 * absent from the result — the caller is stopping.
+	 */
+	readonly signal?: AbortSignal;
 }
 
 /** `${sectionTipo}|${remoteId}` — the result-map key callers index by. */
@@ -226,16 +293,28 @@ export function externalRowViewKey(sectionTipo: string, remoteId: string): strin
 /**
  * Fetch (or serve) the remote rows behind a set of targets.
  *
- * Targets naming the same record are MERGED and their field sets UNIONED before
- * anything is fetched — which is what makes the result map's
- * `${sectionTipo}|${remoteId}` key well-defined, and what collapses a portal
- * row's four components into one call.
+ * Targets naming the same record are MERGED before anything is fetched — which
+ * is what makes the result map's `${sectionTipo}|${remoteId}` key well-defined —
+ * and each record is requested with its SECTION's record field set
+ * (record_fields.ts), a superset of every target's `remoteFields`: one call per
+ * record, the row carries its own id (so the identity check can accept it), and
+ * every component of the section projects its fields from the same row.
  *
  * Never throws for a per-record failure: an unreachable service yields a
  * `stale` view (last good row) or an `unavailable` one, both carrying the
  * reason, so a record renders with its provenance instead of emptying out. A
  * genuine CONFIGURATION error still throws — that is an operator's problem, not
  * a degraded read.
+ *
+ * BOUNDED WORK, NOT BOUNDED SOCKETS ONLY (2026-09-24). The records are walked
+ * by at most DEDALO_EXTERNAL_MAX_CONCURRENCY workers, each starting its next
+ * record only when the previous one settled. Handing every target to the door at
+ * once (a Promise.all over 5 000 export targets) admitted them all through the
+ * breaker while it was still closed and parked them in the door's queue: a slow
+ * or hanging service then cost every one of them its full timeout × retries.
+ * Started one by one, each record meets the breaker's CURRENT verdict, so once
+ * the circuit opens the rest are refused without a socket — and a Stop
+ * (`signal`) takes effect at the next record.
  */
 export async function fetchExternalRows(
 	targets: readonly ExternalRowTarget[],
@@ -258,86 +337,106 @@ export async function fetchExternalRows(
 	}
 
 	const views = new Map<string, ExternalRowView>();
-	await Promise.all(
-		[...merged].map(async ([viewKey, entry]) => {
-			const resolved = await getExternalServiceForSection(entry.sectionTipo);
-			if (resolved === null) {
-				// Not an external section: a caller asking for one is a wiring bug,
-				// not a degraded read — say so instead of returning an empty row.
-				throw new ExternalServiceError({
-					service: 'unknown',
-					kind: 'bad_config',
-					sectionTipo: entry.sectionTipo,
-					detail: 'section has no api_config; it is not an external section',
-				});
-			}
-			const remoteFields = [...entry.fields];
-			const cacheKey = externalRowCacheKey({
-				service: resolved.model.service,
-				apiUrl: resolved.apiConfig.apiUrl,
+	const resolveOne = async (
+		viewKey: string,
+		entry: { sectionTipo: string; remoteId: string; fields: Set<string> },
+	): Promise<void> => {
+		const resolved = await getExternalServiceForSection(entry.sectionTipo);
+		if (resolved === null) {
+			// Not an external section: a caller asking for one is a wiring bug,
+			// not a degraded read — say so instead of returning an empty row.
+			throw new ExternalServiceError({
+				service: 'unknown',
+				kind: 'bad_config',
+				sectionTipo: entry.sectionTipo,
+				detail: 'section has no api_config; it is not an external section',
+			});
+		}
+		// THE RECORD FIELD SET (record_fields.ts): the id field + every field the
+		// section's component_external nodes map, whatever THIS caller asked for —
+		// one request and one cache entry per record, shared by every caller.
+		const remoteFields = await recordRequestFields(resolved.model, entry.sectionTipo, entry.fields);
+		const cacheKey = externalRowCacheKey({
+			service: resolved.model.service,
+			apiUrl: resolved.apiConfig.apiUrl,
+			sectionTipo: entry.sectionTipo,
+			remoteId: entry.remoteId,
+			dataLang,
+			remoteFields,
+		});
+		const cached = rowCache.get(cacheKey);
+		const fresh = cached !== undefined && now - cached.storedAt < softTtlMs(resolved);
+		const refresh = (): Promise<CachedRow> =>
+			coalesced(cacheKey, resolved, () =>
+				fetchRow(resolved, entry.remoteId, remoteFields, dataLang, options.deps, Date.now()),
+			);
+
+		const at = { sectionTipo: entry.sectionTipo, remoteId: entry.remoteId, remoteFields };
+		if (cached !== undefined && fresh) {
+			views.set(viewKey, toView(resolved, at, cached, cached.status));
+			return;
+		}
+		if (cached !== undefined) {
+			// SOFT-TTL REFRESH: serve the row NOW and refresh behind the
+			// request. The served row is reported with its OWN status — a
+			// routine refresh is not a degradation, so a healthy service
+			// never shows a marker. Only a FAILED refresh downgrades the row
+			// to 'stale', on this and every later serve, until one succeeds.
+			refresh().catch((error) => {
+				reportRowError(error);
+				const current = rowCache.get(cacheKey);
+				// Re-read: the entry may have been dropped by an ontology
+				// write, or already replaced by a later successful refresh.
+				if (current !== undefined && current.storedAt === cached.storedAt) {
+					rowCache.set(cacheKey, { ...current, refreshFailedAt: Date.now() });
+				}
+			});
+			views.set(
+				viewKey,
+				toView(
+					resolved,
+					at,
+					cached,
+					cached.refreshFailedAt === undefined ? cached.status : 'stale',
+				),
+			);
+			return;
+		}
+		try {
+			const entryRow = await refresh();
+			views.set(viewKey, toView(resolved, at, entryRow, entryRow.status));
+		} catch (error) {
+			const reported = reportRowError(error);
+			views.set(viewKey, {
 				sectionTipo: entry.sectionTipo,
 				remoteId: entry.remoteId,
-				dataLang,
+				service: resolved.model.service,
+				row: null,
+				status: 'unavailable',
+				...(reported === null ? {} : { reason: reported.kind }),
+				fetchedAt: 0,
 				remoteFields,
 			});
-			const cached = rowCache.get(cacheKey);
-			const fresh = cached !== undefined && now - cached.storedAt < softTtlMs(resolved);
-			const refresh = (): Promise<CachedRow> =>
-				coalesced(cacheKey, resolved, () =>
-					fetchRow(resolved, entry.remoteId, remoteFields, dataLang, options.deps, Date.now()),
-				);
-
-			if (cached !== undefined && fresh) {
-				views.set(viewKey, toView(resolved, entry, cached, cached.status));
-				return;
-			}
-			if (cached !== undefined) {
-				// SOFT-TTL REFRESH: serve the row NOW and refresh behind the
-				// request. The served row is reported with its OWN status — a
-				// routine refresh is not a degradation, so a healthy service
-				// never shows a marker. Only a FAILED refresh downgrades the row
-				// to 'stale', on this and every later serve, until one succeeds.
-				refresh().catch((error) => {
-					reportRowError(error);
-					const current = rowCache.get(cacheKey);
-					// Re-read: the entry may have been dropped by an ontology
-					// write, or already replaced by a later successful refresh.
-					if (current !== undefined && current.storedAt === cached.storedAt) {
-						rowCache.set(cacheKey, { ...current, refreshFailedAt: Date.now() });
-					}
-				});
-				views.set(
-					viewKey,
-					toView(
-						resolved,
-						entry,
-						cached,
-						cached.refreshFailedAt === undefined ? cached.status : 'stale',
-					),
-				);
-				return;
-			}
-			try {
-				const entryRow = await refresh();
-				views.set(viewKey, toView(resolved, entry, entryRow, entryRow.status));
-			} catch (error) {
-				const reported = reportRowError(error);
-				views.set(viewKey, {
-					sectionTipo: entry.sectionTipo,
-					remoteId: entry.remoteId,
-					service: resolved.model.service,
-					row: null,
-					status: 'unavailable',
-					...(reported === null ? {} : { reason: reported.kind }),
-					fetchedAt: 0,
-				});
-			}
-		}),
-	);
+		}
+	};
+	const queue = [...merged];
+	let next = 0;
+	const worker = async (): Promise<void> => {
+		while (next < queue.length && options.signal?.aborted !== true) {
+			const [viewKey, entry] = queue[next++] as (typeof queue)[number];
+			await resolveOne(viewKey, entry);
+		}
+	};
+	const width = Math.max(1, Math.min(externalSettings().maxConcurrency, queue.length));
+	await Promise.all(Array.from({ length: width }, worker));
 	return views;
 }
 
-/** Log a per-record failure and return it when it is one of ours. */
+/**
+ * Log a per-record failure and return it when it is one of ours. The door
+ * (logExternalError) keeps this bounded: a `circuit_open` refusal is counted by
+ * the breaker and never logged, and a repeated line is counted, not re-logged.
+ */
 function reportRowError(error: unknown): ExternalServiceError | null {
 	if (error instanceof ExternalServiceError) {
 		logExternalError(error);
@@ -350,7 +449,7 @@ function reportRowError(error: unknown): ExternalServiceError | null {
 
 function toView(
 	resolved: ResolvedExternalService,
-	entry: { sectionTipo: string; remoteId: string },
+	entry: { sectionTipo: string; remoteId: string; remoteFields: readonly string[] },
 	cached: CachedRow,
 	status: ExternalRowView['status'],
 ): ExternalRowView {
@@ -362,5 +461,6 @@ function toView(
 		status: cached.status === 'not_found' ? 'not_found' : status,
 		...(cached.status === 'not_found' ? { reason: 'not_found' as const } : {}),
 		fetchedAt: cached.storedAt,
+		remoteFields: entry.remoteFields,
 	};
 }

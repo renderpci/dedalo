@@ -39,13 +39,16 @@ import { buildVersionCore } from '../../src/core/media/tools/versions.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
 import { mustGet } from '../helpers/assert.ts';
-import { markMediaRoot } from '../helpers/media_scratch_root.ts';
+import { markMediaRoot, markProcessesDir } from '../helpers/media_scratch_root.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
 const ROOT = `${tmpdir()}/dedalo_av_build_version_${process.pid}`;
 // The job-manager test seam (jobs.ts processesDir): without it these real
 // transcode jobs write their pfiles into the LIVE ../private/processes tree.
-process.env.DEDALO_MEDIA_PROCESSES_DIR = join(ROOT, 'processes');
+// Restored in afterAll: this dir is deleted there, and a key left pointing at
+// it would aim the NEXT file's jobs at an unmarked directory (refused).
+const previousProcessesDir = process.env.DEDALO_MEDIA_PROCESSES_DIR;
+process.env.DEDALO_MEDIA_PROCESSES_DIR = markProcessesDir(join(ROOT, 'processes'));
 const av = mustGet(mediaTypeOf('component_av'), 'component_av spec');
 const HAVE_FFMPEG = Bun.which(config.media.binaries.ffmpeg) !== null;
 const pathOpts: MediaPathOptions = { initialMediaPath: '', maxItemsFolder: 1000, mediaRoot: ROOT };
@@ -117,8 +120,12 @@ beforeAll(() => {
 	// an unmarked root, and the rmSync above would take an earlier marker with it
 	// (src/core/media/test_media_root.ts, test/helpers/media_scratch_root.ts).
 	markMediaRoot(ROOT);
+	markProcessesDir(join(ROOT, 'processes')); // the job-registry scratch dir (same rmSync, same law)
 });
 afterAll(async () => {
+	if (previousProcessesDir === undefined)
+		Reflect.deleteProperty(process.env, 'DEDALO_MEDIA_PROCESSES_DIR');
+	else process.env.DEDALO_MEDIA_PROCESSES_DIR = previousProcessesDir;
 	rmSync(ROOT, { recursive: true, force: true });
 	const failures: string[] = [];
 	for (const id of scratchIds) {

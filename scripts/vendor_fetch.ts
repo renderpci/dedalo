@@ -18,8 +18,8 @@
  * `scripts/vendor_verify.ts`.
  *
  * WHAT IT DELIBERATELY DOES NOT DO: pick the trim set. Every vendored tree here is
- * trimmed (pdfjs drops 10 MB of sourcemaps and a demo PDF; xlsx keeps one .mjs and
- * a LICENSE), and which files are dead weight is a judgement about what the CLIENT
+ * trimmed (pdfjs drops 10 MB of sourcemaps and a demo PDF; swagger-ui keeps a few
+ * dist files and a LICENSE), and which files are dead weight is a judgement about what the CLIENT
  * loads — the `--keep` and `--drop` globs make it an explicit argument instead of a
  * silent default. `--keep` names subtrees to take; `--drop` names paths to remove
  * from what was taken, which is the only way to express pdfjs's trim ("everything
@@ -29,10 +29,6 @@
  * `reviewed`, run the gates.
  *
  * Usage:
- *   bun run scripts/vendor_fetch.ts --lib xlsx --version 0.20.4 \
- *       --url https://cdn.sheetjs.com/xlsx-0.20.4/xlsx-0.20.4.tgz \
- *       --sha256 <expected> [--keep 'xlsx.mjs' --keep 'LICENSE'] [--strip 1]
- *
  *   bun run scripts/vendor_fetch.ts --lib pdfjs --version 6.2.108 \
  *       --url https://github.com/mozilla/pdf.js/releases/download/v6.2.108/pdfjs-6.2.108-dist.zip \
  *       --sha256 <expected> --drop '**\/*.map' --drop 'web/compressed.tracemonkey-pldi-09.pdf'

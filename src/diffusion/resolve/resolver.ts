@@ -40,6 +40,7 @@
  */
 
 import { resolveIriTitles } from '../../core/components/component_iri/resolve_title.ts';
+import { canonicalizeStoredSectionId, isSectionId } from '../../core/concepts/section_id.ts';
 import type { Sqo } from '../../core/concepts/sqo.ts';
 import type { MatrixRecord } from '../../core/db/matrix.ts';
 import { sql } from '../../core/db/postgres.ts';
@@ -262,6 +263,50 @@ export interface RunContext {
 /** Bound above which the record cache is dropped whole (O(1) eviction). */
 const RECORD_CACHE_LIMIT = 8000;
 
+/**
+ * The default bound of EVERY per-run memo of the export walk (the atom run's
+ * record + frontier caches, the export projection's own-children + parents
+ * chains in export/atoms.ts). One number, the record cache's: a run is one
+ * export, and an export of hundreds of thousands of records fans out over as
+ * many distinct targets — an unbounded memo is a memory leak whose size is
+ * the archive's. Every one of these maps is a pure memo (a cleared entry is
+ * recomputed from the same inputs), so eviction costs re-reads, never output.
+ */
+export const EXPORT_RUN_CACHE_LIMIT = RECORD_CACHE_LIMIT;
+
+/**
+ * Insert into a bounded per-run memo — LEAST-RECENTLY-USED eviction: a NEW key
+ * arriving at a full map evicts the OLDEST entry (Map insertion order, O(1)),
+ * never the whole map. Clearing the whole map (the earlier posture) made a
+ * working set larger than `limit` — one relation column citing 20k thesaurus
+ * terms in random order across a 300k-record export — miss ~80% of the time
+ * and re-issue a scope SQL probe / an ancestor walk per miss, the hot keys
+ * shared by thousands of records included. Re-setting a present key refreshes
+ * it (moves it to the young end); read with getBoundedRunMemo so a HIT
+ * refreshes it too. The map never holds more than `limit` entries.
+ */
+export function setBoundedRunMemo<K, V>(map: Map<K, V>, key: K, value: V, limit: number): void {
+	if (map.has(key)) map.delete(key);
+	else if (map.size >= limit) {
+		const oldest = map.keys().next();
+		if (oldest.done !== true) map.delete(oldest.value);
+	}
+	map.set(key, value);
+}
+
+/**
+ * Read a bounded per-run memo (setBoundedRunMemo): a HIT moves the key to the
+ * young end, so what the walk keeps using survives eviction. `undefined` =
+ * absent (a stored `null` is a hit).
+ */
+export function getBoundedRunMemo<K, V>(map: Map<K, V>, key: K): V | undefined {
+	if (!map.has(key)) return undefined;
+	const value = map.get(key) as V;
+	map.delete(key);
+	map.set(key, value);
+	return value;
+}
+
 const RECORD_KEY = (sectionTipo: string, sectionId: number | string): string =>
 	`${sectionTipo}:${sectionId}`;
 
@@ -351,8 +396,10 @@ async function loadRecords(
 		if (ctx.recordCache.has(key)) {
 			out.set(key, ctx.recordCache.get(key) ?? null);
 		} else {
-			const numeric = Number(id);
-			if (Number.isInteger(numeric)) missing.push(numeric);
+			// A matrix ADDRESS only: Number('010') would load LOCAL record 10 for a
+			// padded external remote id (the shared conversion rule).
+			const address = canonicalizeStoredSectionId(id);
+			if (isSectionId(address)) missing.push(address);
 			else out.set(key, null);
 		}
 	}
@@ -2173,7 +2220,27 @@ async function processBatch(
 	// very same predicate inside the assembler, so re-probing it would be a
 	// second answer to a question already answered (and the drift such a second
 	// copy invites is exactly WC-2026-08-09-users-section-record-scope).
-	let visibleIds = sectionIds;
+	// MATRIX ADDRESSES ONLY. A publication run reads and publishes LOCAL rows;
+	// a non-address id (a padded external remote id '000012281' queued from a
+	// locator, or junk) has none. It is DROPPED here, before the frontier and
+	// before any read, with a ledger line — never Number()-ed into another
+	// record's row (readMatrixRecords once read '010' as record 10), never
+	// pushed to unpublishIds (that removed a public record the run never read,
+	// and a caller the frontier had passed as "external" could trigger it), and
+	// never allowed to throw the run down (the run must finish). 2026-09-24.
+	const addressedIds: (number | string)[] = [];
+	for (const rawId of sectionIds) {
+		const address = canonicalizeStoredSectionId(rawId);
+		if (isSectionId(address)) {
+			addressedIds.push(address);
+			continue;
+		}
+		console.warn(
+			`[diffusion] ${sectionPlan.sectionTipo} id '${String(rawId)}' is not a record address — dropped: no local record to publish, never read, never unpublished`,
+		);
+		ctx.usedRecords.add(RECORD_KEY(sectionPlan.sectionTipo, rawId));
+	}
+	let visibleIds = addressedIds;
 	const runPrincipal = ctx.options.principal;
 	if (viaFrontier && runPrincipal !== undefined && !runPrincipal.isGlobalAdmin) {
 		const scope: FrontierScope = {
@@ -2190,7 +2257,7 @@ async function processBatch(
 			componentTipo: sectionPlan.sectionTipo,
 			table,
 		});
-		for (const sectionId of sectionIds) {
+		for (const sectionId of addressedIds) {
 			const recordReadable =
 				sectionReadable && (await frontierRecordAllowed(scope, sectionPlan.sectionTipo, sectionId));
 			if (recordReadable) {
@@ -2422,11 +2489,45 @@ export interface ExportAtomRun {
 	 * per crossed record per run: the probe is a real principal-scoped search
 	 * (record_scope.ts), and an export fans out over the same targets endlessly. */
 	frontierRecordCache: Map<string, boolean>;
+	/**
+	 * Every RUNTIME (section, component) pair whose COMPONENT key the frontier
+	 * ALLOWED on this run, keyed `${section_tipo}\u0000${component_tipo}` —
+	 * the grants the emitted values were read under that no DECLARED segment
+	 * names (a locator may land in a section the ddo path never declares). A
+	 * finished export records them (tool_export manifest `frontier_grants`) and
+	 * every later read of it re-asks each one (access.ts exportStillReadable):
+	 * a grant revoked on a runtime-reached section closes the export exactly as
+	 * a revoked declared column does. Bounded by the ontology (distinct pairs),
+	 * not by the selection, so it is not capped.
+	 */
+	frontierGrants: Map<string, ExportFrontierGrant>;
+	/** Bound of this run's growing memos (record + frontier caches here, the
+	 * projection's caches in export/atoms.ts). Defaults to
+	 * {@link EXPORT_RUN_CACHE_LIMIT}; a gate injects a small one to prove the
+	 * bound holds and the output does not move. `tableCache` is keyed by section
+	 * tipo (bounded by the ontology), so it is not capped. */
+	cacheLimit: number;
+}
+
+/** One runtime (section, component) grant the export frontier allowed. */
+export interface ExportFrontierGrant {
+	section_tipo: string;
+	component_tipo: string;
 }
 
 /** Fresh per-request run state (never module-scoped — request isolation). */
-export function createExportAtomRun(): ExportAtomRun {
-	return { tableCache: new Map(), recordCache: new Map(), frontierRecordCache: new Map() };
+export function createExportAtomRun(options: { cacheLimit?: number } = {}): ExportAtomRun {
+	// Floor at 1: a zero/negative/NaN bound would clear on every insert (a
+	// memo that remembers nothing), never an unbounded one.
+	const requested = Math.floor(options.cacheLimit ?? EXPORT_RUN_CACHE_LIMIT);
+	const cacheLimit = requested >= 1 ? requested : 1;
+	return {
+		tableCache: new Map(),
+		recordCache: new Map(),
+		frontierRecordCache: new Map(),
+		frontierGrants: new Map(),
+		cacheLimit,
+	};
 }
 
 /**
@@ -2449,17 +2550,18 @@ async function assertExportCrossing(
 ): Promise<void> {
 	const scope = run.frontier;
 	if (scope === undefined || scope.principal === undefined) return;
-	const refuse = (key: 'component' | 'record'): never => {
+	const refused = await exportCrossingRefusal(run, sectionTipo, sectionId, componentTipo);
+	if (refused !== null) {
 		noteFrontierRefusal(scope, {
 			surface: scope.surface,
 			door: scope.door,
 			sectionTipo,
 			...(componentTipo === undefined ? {} : { componentTipo }),
 			sectionId,
-			key,
+			key: refused,
 		});
 		throw new DedaloError('perm.denied', {
-			message: `export frontier: no ${key} access to ${sectionTipo}${componentTipo === undefined ? '' : `.${componentTipo}`} (record ${sectionId}) — the export would have emitted a value the caller cannot read`,
+			message: `export frontier: no ${refused} access to ${sectionTipo}${componentTipo === undefined ? '' : `.${componentTipo}`} (record ${sectionId}) — the export would have emitted a value the caller cannot read`,
 			coordinates: {
 				tool: scope.door,
 				section_tipo: sectionTipo,
@@ -2469,17 +2571,46 @@ async function assertExportCrossing(
 				section_id: sectionId,
 			},
 		});
-	};
+	}
+	// ALLOWED: remember the pair, so a later read of the finished export can
+	// re-ask it (ExportAtomRun.frontierGrants). A crossing with no component
+	// consulted no component grant, so there is nothing to re-ask.
+	if (componentTipo !== undefined && componentTipo !== '') {
+		const grantKey = `${sectionTipo}\u0000${componentTipo}`;
+		if (!run.frontierGrants.has(grantKey)) {
+			run.frontierGrants.set(grantKey, {
+				section_tipo: sectionTipo,
+				component_tipo: componentTipo,
+			});
+		}
+	}
+}
+
+/**
+ * The frontier's ANSWER for one crossing — which key refuses it, or null when
+ * the caller may cross — with NO side effect beyond the run's record-answer memo:
+ * no refusal logged, no grant recorded, nothing thrown. The one predicate behind
+ * {@link assertExportCrossing} (the walk's law) and {@link exportCrossingAllowed}
+ * (a look-ahead that must not act on what the walk would refuse).
+ */
+async function exportCrossingRefusal(
+	run: ExportAtomRun,
+	sectionTipo: string,
+	sectionId: number | string,
+	componentTipo: string | undefined,
+): Promise<'component' | 'record' | null> {
+	const scope = run.frontier;
+	if (scope === undefined || scope.principal === undefined) return null;
 	if (
 		!(await frontierComponentAllowed(scope, {
 			sectionTipo,
 			...(componentTipo === undefined ? {} : { componentTipo }),
 		}))
 	) {
-		refuse('component');
+		return 'component';
 	}
 	const key = RECORD_KEY(sectionTipo, sectionId);
-	let allowed = run.frontierRecordCache.get(key);
+	let allowed = getBoundedRunMemo(run.frontierRecordCache, key);
 	if (allowed === undefined) {
 		allowed = await frontierRecordAllowed(scope, sectionTipo, sectionId);
 		if (!allowed) {
@@ -2491,9 +2622,26 @@ async function assertExportCrossing(
 			// this costs nothing the walk was not about to spend anyway.
 			allowed = (await loadExportRecord(run, sectionTipo, sectionId)) === null;
 		}
-		run.frontierRecordCache.set(key, allowed);
+		setBoundedRunMemo(run.frontierRecordCache, key, allowed, run.cacheLimit);
 	}
-	if (!allowed) refuse('record');
+	return allowed ? null : 'record';
+}
+
+/**
+ * May the export walk cross into (section, record) reading `componentTipo`? The
+ * SAME answer {@link assertExportCrossing} acts on, without acting: for code
+ * that looks AHEAD of the walk (the external-row prefetch,
+ * export/external_prefetch.ts) and must not read or send anything behind a
+ * crossing the walk will refuse. A refusal here is not reported — the walk
+ * reaches the same crossing and applies the law itself.
+ */
+export async function exportCrossingAllowed(
+	run: ExportAtomRun,
+	sectionTipo: string,
+	sectionId: number | string,
+	componentTipo: string | undefined,
+): Promise<boolean> {
+	return (await exportCrossingRefusal(run, sectionTipo, sectionId, componentTipo)) === null;
 }
 
 /**
@@ -2506,9 +2654,11 @@ export async function loadExportRecord(
 	sectionTipo: string,
 	sectionId: number | string,
 ): Promise<MatrixRecord | null> {
-	const numeric = Number(sectionId);
-	if (!Number.isInteger(numeric)) {
-		run.recordCache.set(RECORD_KEY(sectionTipo, sectionId), null);
+	// A matrix ADDRESS only (the shared conversion rule): Number() would read a
+	// zero-padded external remote id ('000065686') as record 65686.
+	const numeric = canonicalizeStoredSectionId(sectionId);
+	if (!isSectionId(numeric)) {
+		setBoundedRunMemo(run.recordCache, RECORD_KEY(sectionTipo, sectionId), null, run.cacheLimit);
 		return null;
 	}
 	const table = (await matrixTableOf(run, sectionTipo)) ?? 'matrix';
@@ -2530,12 +2680,11 @@ export async function loadExportRecordFromTable(
 	sectionId: number,
 ): Promise<MatrixRecord | null> {
 	const key = RECORD_KEY(sectionTipo, sectionId);
-	const cached = run.recordCache.get(key);
+	const cached = getBoundedRunMemo(run.recordCache, key);
 	if (cached !== undefined) return cached;
-	if (run.recordCache.size > RECORD_CACHE_LIMIT) run.recordCache.clear();
 	const loaded = await readMatrixRecords(tableName, sectionTipo, [sectionId]);
 	const record = loaded[0] ?? null;
-	run.recordCache.set(key, record);
+	setBoundedRunMemo(run.recordCache, key, record, run.cacheLimit);
 	return record;
 }
 
@@ -2550,13 +2699,31 @@ export async function prefetchExportRecords(
 	sectionTipo: string,
 	sectionIds: (number | string)[],
 ): Promise<void> {
+	// Matrix ADDRESSES only — a zero-padded external remote id is not one.
 	const wanted = sectionIds
-		.map((id) => Number(id))
-		.filter((id) => Number.isInteger(id) && !run.recordCache.has(RECORD_KEY(sectionTipo, id)));
+		.map((id) => canonicalizeStoredSectionId(id))
+		.filter(
+			(id): id is number => isSectionId(id) && !run.recordCache.has(RECORD_KEY(sectionTipo, id)),
+		);
 	if (wanted.length === 0) return;
 	const table = (await matrixTableOf(run, sectionTipo)) ?? 'matrix';
-	// Evict BEFORE seeding so a whole freshly-read chunk is never dropped.
-	if (run.recordCache.size > RECORD_CACHE_LIMIT) run.recordCache.clear();
+	// Evict BEFORE seeding so a whole freshly-read chunk is never dropped — and
+	// evict when the chunk would not FIT, so the map stays <= cacheLimit for
+	// any chunk no larger than the bound (a larger chunk is kept whole: it is
+	// about to be read, and dropping it would re-query every record). Eviction
+	// is LRU like setBoundedRunMemo: only the OLDEST entries make room, the
+	// recently used targets stay.
+	const overflow = run.recordCache.size + wanted.length - run.cacheLimit;
+	if (overflow > 0) {
+		if (wanted.length >= run.cacheLimit) run.recordCache.clear();
+		else {
+			let evict = overflow;
+			for (const key of run.recordCache.keys()) {
+				if (evict-- <= 0) break;
+				run.recordCache.delete(key);
+			}
+		}
+	}
 	const loaded = await readMatrixRecords(table, sectionTipo, wanted);
 	const bySectionId = new Map(loaded.map((record) => [Number(record.section_id), record]));
 	for (const id of wanted) {
@@ -2635,16 +2802,21 @@ export async function resolveRecordAtoms(
 				// THE FRONTIER: this locator leaves the record the caller selected.
 				// Authorized on the RUNTIME identity (the locator's own section) and
 				// on the component the NEXT step will read through it.
+				// The NEXT owner's id in its canonical stored form: a matrix address
+				// becomes the int, an EXTERNAL remote id stays VERBATIM ('000065686' —
+				// Number() made it 65686, and the leaf then asked the service for a
+				// different record). WC-2026-08-10-section-id-int-canonical.
+				const nextOwnerId = canonicalizeStoredSectionId(locator.section_id) as number | string;
 				await assertExportCrossing(
 					run,
 					locator.section_tipo,
-					Number(locator.section_id),
+					nextOwnerId,
 					(chain[position + 1] as ExportChainStep | undefined)?.tipo,
 				);
 				await walk(
 					position + 1,
 					locator.section_tipo,
-					Number(locator.section_id),
+					nextOwnerId,
 					[...indexVector, index],
 					hopOwners,
 				);

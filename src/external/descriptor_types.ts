@@ -200,6 +200,17 @@ export interface ExternalServiceModel {
 	/** Wire form → storage form. Must round-trip with `encodeRemoteId`. */
 	decodeRemoteId?(token: string): string;
 
+	/**
+	 * May a remote field NAME (a fields_map path head) appear in a request to this
+	 * service? Default: every name. An adapter that splices names into a URL
+	 * declares its grammar here, so the SECTION-WIDE record field set
+	 * (record_fields.ts) can leave a refused name out instead of carrying it into
+	 * every component's request — one component's cataloguing error then makes
+	 * THAT component `misconfigured` (value.ts), never the whole record
+	 * `unavailable`. `buildRecordRequest` keeps its own refusal as the last line.
+	 */
+	acceptsRemoteField?(field: string): boolean;
+
 	/** Pull a value out of a row. Default: the dotted/indexed path resolver. */
 	extract?(row: RemoteRow, remotePath: string): unknown;
 

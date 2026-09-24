@@ -16,7 +16,7 @@
  * root, nor repointed with the guard asleep (src/core/media/test_media_root.ts;
  * src/config/config.ts `buildMediaConfig`).
  *
- * SIX RULES, each with an anti-vacuity probe:
+ * SEVEN RULES, each with an anti-vacuity probe:
  *
  *  1. INVENTORY — DERIVED, not enumerated. Every file under `src/` and `tools/`
  *     that RESOLVES a media root (reads `config.media.rootPath`, comments
@@ -57,6 +57,20 @@
  *     template's, and the DEFAULT derivation follows `DEDALO_TEST_DATABASE`, which
  *     is what makes "the runner sets only the database" a mechanism rather than a
  *     hope.
+ *  7. THE EXPORT-ARTIFACTS ROOT (2026-09-24). tool_export's artifact store is a
+ *     second file-write root with its own marker. 7a: exactly one module (the
+ *     store) reads `config.ops.exportArtifactsDir` — derived by a scan. 7b: the
+ *     store's mutating doors are DERIVED from the `ArtifactStore` interface and
+ *     each is driven against an unmarked root holding a victim job: refusal
+ *     (`export.store_unavailable`) and a byte-identical tree; the read-only
+ *     methods are driven too and must leave the tree unchanged.
+ *  8. THE JOB-REGISTRY DIRECTORY (2026-09-24). jobs.ts pfiles: armed with no
+ *     explicit DEDALO_MEDIA_PROCESSES_DIR, a real job's file lands in the
+ *     marked sibling `<test media root>.processes` and NOT in
+ *     `<privateDir>/processes`; an explicit unmarked dir refuses
+ *     (`media.invalid_path`, nothing created); an explicit marked one wins; the
+ *     key's readers are a derived, closed set; the helper's marker copy equals
+ *     the canonical one.
  *
  * HONEST LIMIT. This proves that every door RESOLVING a root asks the marker,
  * and that the doors refuse. It does not prove a module cannot compose an
@@ -73,9 +87,18 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	statSync,
+	writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, relative, sep } from 'node:path';
+import { dirname, join, relative, sep } from 'node:path';
 import { Glob } from 'bun';
 import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
 import { config } from '../../src/config/config.ts';
@@ -122,6 +145,8 @@ const EXEMPT_RESOLVERS: Record<string, string> = {
 		'Reads it only as `!== null`, to decide whether media duplication runs; every path it then builds is produced by `media/path.ts`, which is guarded.',
 	'src/core/security/session_media.ts':
 		'Reads it ONLY to ask `mediaRootIsMarked` — the guard question itself, asked in the safe direction. Before the hourly sweeper reconciles markers it checks that this process is not holding a throwaway session store against an unmarked (i.e. production) root; a marked root is what makes the reconcile SAFE there, so calling the refusing guard would invert the test. It builds no path and writes nothing.',
+	'tools/tool_export/server/artifact_store.ts':
+		'Reads it ONLY as a path to stay AWAY from (`webServedTrees` — the placement rule refuses an export root that overlaps the web-served media tree). It never builds a path under it, never writes into it; its own writes go to the export root, which has its own marker guard (`assertExportArtifactsRoot`).',
 };
 
 /** Every `.ts` file under the scanned dirs, tests and node_modules excluded. */
@@ -619,5 +644,517 @@ describe('test media root — RULE 6b: the tree pairs with the database, by deri
 			if (saved === undefined) delete process.env.DEDALO_TEST_DATABASE;
 			else process.env.DEDALO_TEST_DATABASE = saved;
 		}
+	});
+});
+
+// ---------------------------------------------------------------------------
+// RULE 7 — the EXPORT-ARTIFACTS root (2026-09-24, server-built exports).
+// ---------------------------------------------------------------------------
+//
+// tool_export's artifact store is a second FILE-write root: spools, manifests
+// and built files, plus `rm -rf` of whole job directories (delete, sweep). It
+// has its own marker (`.dedalo_test_export_artifacts`), and under the seam its
+// default root is `<test media root>.export_artifacts`, never the install's
+// `DEDALO_EXPORT_ARTIFACTS_DIR`. Two ways that could silently stop holding,
+// each closed by DERIVATION, not a list someone must remember to extend:
+//
+//  7a. A second module reads the configured root directly. Under `bun test` it
+//      would get the INSTALLATION's `<private>/export_artifacts` (the seam
+//      redirects only `defaultExportArtifactsRoot()`), and a sweep from there is
+//      an `rm -rf` of real exports. So the key has exactly one reader.
+//  7b. A store door forgets `writableRoot(...)`. The mutating doors are derived
+//      from the `ArtifactStore` interface itself (every method not classified
+//      READ-ONLY below); each is driven against an UNMARKED root holding a
+//      victim job and must refuse with `export.store_unavailable`, leaving the
+//      tree byte-identical. A new method is unclassified → red. The READ-ONLY
+//      ones are driven too and must leave the tree unchanged, so the
+//      classification is proved, not trusted.
+
+const EXPORT_STORE_FILE = 'tools/tool_export/server/artifact_store.ts';
+
+/** The ONLY files that may name the configured key (the definition + the store). */
+const EXPORT_ROOT_KEY_OWNERS: Record<string, string> = {
+	'src/config/config.ts': 'DEFINES the key (readString of DEDALO_EXPORT_ARTIFACTS_DIR).',
+	[EXPORT_STORE_FILE]:
+		'THE store: resolves the root through defaultExportArtifactsRoot(), which the seam redirects, and every write door asks assertExportArtifactsRoot.',
+};
+
+describe('test media root — RULE 7a: one reader of the export-artifacts root key', () => {
+	const readers = scannedFiles().filter((file) =>
+		/\bexportArtifactsDir\b/.test(stripComments(read(file))),
+	);
+
+	test('the scan finds the owners (anti-vacuity)', () => {
+		for (const owner of Object.keys(EXPORT_ROOT_KEY_OWNERS)) expect(readers).toContain(owner);
+	});
+
+	test('nothing else reads the key', () => {
+		const strays = readers.filter((file) => EXPORT_ROOT_KEY_OWNERS[file] === undefined);
+		expect(
+			strays,
+			`These files read config.ops.exportArtifactsDir directly. Under bun test that is the INSTALLATION's export tree (only defaultExportArtifactsRoot() follows the seam). Go through openArtifactStore() instead: ${strays.join(', ')}`,
+		).toEqual([]);
+	});
+});
+
+/** `ArtifactStore`'s method names, parsed from the interface body. */
+function artifactStoreMethods(): string[] {
+	const source = stripComments(read(EXPORT_STORE_FILE));
+	const body = /export interface ArtifactStore \{([\s\S]*?)\n\}/.exec(source)?.[1] ?? '';
+	return [...body.matchAll(/^\s*(\w+)\s*\(/gm)].map((match) => match[1] as string).sort();
+}
+
+/**
+ * Methods that write NOTHING (reads, pure refs, path allocation). Each reason is
+ * what the method DOES; each is still driven below and must leave the tree as
+ * it was.
+ */
+const STORE_READ_ONLY: Record<string, string> = {
+	jobRef: 'Validates ids and composes a path; no IO at all.',
+	readManifest: 'Reads manifest.json + request.json and joins them; creates and deletes nothing.',
+	readJobState: 'Reads manifest.json (the mutable state half) only; writes nothing.',
+	listJobStates: 'Reads the user directory and each manifest.json; writes nothing.',
+	listJobs: 'Reads the user directory and its manifests; writes nothing.',
+	usedBytes: 'Sums file sizes under the user directory (lstat only).',
+	assertQuota: 'usedBytes() compared with the budget; throws or answers, writes nothing.',
+	resolveArtifactFile: 'Answers a confined path or null (lstat/realpath only).',
+	allocateFile: 'Composes the final + temp PATHS for a format; opens no file.',
+};
+
+type StoreModule = typeof import('../../tools/tool_export/server/artifact_store.ts');
+type Store = ReturnType<StoreModule['openArtifactStore']>;
+
+/** Snapshot of a tree: relative path → content (dirs as '<dir>'). */
+function snapshot(root: string): Record<string, string> {
+	const out: Record<string, string> = {};
+	const walk = (dir: string): void => {
+		for (const name of readdirSync(dir).sort()) {
+			const full = join(dir, name);
+			const rel = relative(root, full);
+			if (statSync(full).isDirectory()) {
+				out[rel] = '<dir>';
+				walk(full);
+			} else out[rel] = readFileSync(full, 'utf8');
+		}
+	};
+	walk(root);
+	return out;
+}
+
+const VICTIM_USER = 7;
+const VICTIM_JOB = 'exp_zzvictim_0123456789ab';
+
+/** Drivers of the MUTATING doors: each must hit the door's first write. */
+const STORE_WRITE_DRIVERS: Record<string, (store: Store, mod: StoreModule) => Promise<unknown>> = {
+	createJob: (store) =>
+		store.createJob({
+			userId: VICTIM_USER,
+			sectionTipo: 'test3',
+			sections: ['test3'],
+			options: {},
+			recordScope: 'tripwire',
+			applicationLang: 'lg-eng',
+		}),
+	writeManifest: (store) =>
+		store.writeManifest(store.jobRef(VICTIM_USER, VICTIM_JOB), { status: 'ended' } as never),
+	updateManifest: (store) =>
+		store.updateManifest(store.jobRef(VICTIM_USER, VICTIM_JOB), { status: 'failed' } as never),
+	deleteJob: (store) => store.deleteJob(store.jobRef(VICTIM_USER, VICTIM_JOB)),
+	deleteIdleJob: (store) => store.deleteIdleJob(store.jobRef(VICTIM_USER, VICTIM_JOB)),
+	deleteSpool: (store) => store.deleteSpool(store.jobRef(VICTIM_USER, VICTIM_JOB)),
+	openSpoolWriter: (store) => store.openSpoolWriter(store.jobRef(VICTIM_USER, VICTIM_JOB)),
+	openFileSink: (store) => {
+		const job = store.jobRef(VICTIM_USER, VICTIM_JOB);
+		return store.openFileSink(job, store.allocateFile(job, 'csv'));
+	},
+	linkSpoolAsFile: (store) => {
+		const job = store.jobRef(VICTIM_USER, VICTIM_JOB);
+		return store.linkSpoolAsFile(job, store.allocateFile(job, 'ndjson'), {
+			source: 'grid.ndjson',
+			rows: 1,
+		});
+	},
+	// far future: every job is past its TTL, so a sweep that ran would delete it
+	sweep: (store) => store.sweep({ now: Date.now() + 365 * 24 * 3600 * 1000 }),
+};
+
+const STORE_READ_DRIVERS: Record<string, (store: Store) => unknown> = {
+	jobRef: (store) => store.jobRef(VICTIM_USER, VICTIM_JOB),
+	readManifest: (store) => store.readManifest(store.jobRef(VICTIM_USER, VICTIM_JOB)),
+	readJobState: (store) => store.readJobState(store.jobRef(VICTIM_USER, VICTIM_JOB)),
+	listJobStates: (store) => store.listJobStates(VICTIM_USER),
+	listJobs: (store) => store.listJobs(VICTIM_USER),
+	usedBytes: (store) => store.usedBytes(VICTIM_USER),
+	assertQuota: (store) => store.assertQuota(VICTIM_USER, 1),
+	resolveArtifactFile: (store) => store.resolveArtifactFile(VICTIM_USER, VICTIM_JOB, 'export.csv'),
+	allocateFile: (store) => store.allocateFile(store.jobRef(VICTIM_USER, VICTIM_JOB), 'csv'),
+};
+
+/** An UNMARKED root holding one complete victim job (spool + manifest + a built file). */
+function victimRoot(): string {
+	const root = mkdtempSync(join(tmpdir(), 'dedalo_unmarked_export_'));
+	const jobDir = join(root, String(VICTIM_USER), VICTIM_JOB);
+	mkdirSync(jobDir, { recursive: true });
+	for (const [name, body] of Object.entries({
+		'grid.ndjson': '{"t":"meta"}\n',
+		'cols.ndjson': '',
+		'grid.idx': '',
+		'export.csv': 'a,b\n',
+		// the immutable request half (SPOOL_FILES.request): readManifest joins it with the state
+		'request.json': JSON.stringify({
+			v: 1,
+			user_id: VICTIM_USER,
+			job_id: VICTIM_JOB,
+			options: {},
+			sections: ['test3'],
+		}),
+		'manifest.json': JSON.stringify({
+			user_id: VICTIM_USER,
+			job_id: VICTIM_JOB,
+			status: 'ended',
+			created_at: '2000-01-01T00:00:00.000Z',
+			updated_at: '2000-01-01T00:00:00.000Z',
+			ended_at: '2000-01-01T00:00:00.000Z',
+			files: [],
+		}),
+	})) {
+		writeFileSync(join(jobDir, name), body);
+	}
+	return root;
+}
+
+describe('test media root — RULE 7b: every mutating ArtifactStore door refuses an unmarked root', () => {
+	const methods = artifactStoreMethods();
+
+	test('the interface parse is not vacuous', () => {
+		expect(methods.length).toBeGreaterThan(10);
+		for (const known of ['createJob', 'sweep', 'readManifest']) expect(methods).toContain(known);
+	});
+
+	test('every method is classified exactly once (a new door must be driven)', () => {
+		const classified = [...Object.keys(STORE_WRITE_DRIVERS), ...Object.keys(STORE_READ_ONLY)];
+		expect(
+			[...classified].sort(),
+			'ArtifactStore gained or lost a method. A door that can create, write or delete gets a STORE_WRITE_DRIVERS entry; one that provably writes nothing gets a STORE_READ_ONLY reason (+ a STORE_READ_DRIVERS entry)',
+		).toEqual(methods);
+		expect(Object.keys(STORE_READ_DRIVERS).sort()).toEqual(Object.keys(STORE_READ_ONLY).sort());
+		for (const [method, reason] of Object.entries(STORE_READ_ONLY)) {
+			expect(reason.length, `${method}: a read-only reason says what it does`).toBeGreaterThan(20);
+		}
+	});
+
+	test('the victim fixture is readable (the drivers reach real state)', async () => {
+		const mod = await import('../../tools/tool_export/server/artifact_store.ts');
+		expect(mod.exportArtifactsGuardArmed()).toBe(true);
+		const root = victimRoot();
+		try {
+			const store = mod.openArtifactStore({ root, quotaBytes: 0 });
+			const manifest = await store.readManifest(store.jobRef(VICTIM_USER, VICTIM_JOB));
+			expect(manifest.status).toBe('ended');
+			expect(await store.usedBytes(VICTIM_USER)).toBeGreaterThan(0);
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
+
+	for (const method of Object.keys(STORE_WRITE_DRIVERS)) {
+		test(`${method} refuses with export.store_unavailable and leaves the tree untouched`, async () => {
+			const mod = await import('../../tools/tool_export/server/artifact_store.ts');
+			const root = victimRoot();
+			try {
+				const before = snapshot(root);
+				const store = mod.openArtifactStore({ root, quotaBytes: 0, ttlHours: 1 });
+				let caught: unknown = null;
+				try {
+					const opened = await (
+						STORE_WRITE_DRIVERS[method] as (s: Store, m: StoreModule) => Promise<unknown>
+					)(store, mod);
+					// a door that wrongly OPENED something is closed before the assertion
+					const handle = opened as { abort?: () => Promise<void> } | null;
+					await handle?.abort?.();
+				} catch (error) {
+					caught = error;
+				}
+				expect((caught as { code?: string } | null)?.code, `${method} did not refuse`).toBe(
+					'export.store_unavailable',
+				);
+				expect(String((caught as Error).message)).toContain(`ArtifactStore.${method}`);
+				expect(String((caught as Error).message)).toContain('NOTHING WAS WRITTEN');
+				expect(snapshot(root)).toEqual(before);
+			} finally {
+				rmSync(root, { recursive: true, force: true });
+			}
+		});
+	}
+
+	for (const method of Object.keys(STORE_READ_DRIVERS)) {
+		test(`read-only ${method} leaves an unmarked tree untouched`, async () => {
+			const mod = await import('../../tools/tool_export/server/artifact_store.ts');
+			const root = victimRoot();
+			try {
+				const before = snapshot(root);
+				const store = mod.openArtifactStore({ root, quotaBytes: 0 });
+				try {
+					await (STORE_READ_DRIVERS[method] as (s: Store) => unknown)(store);
+				} catch {
+					// a read may refuse (e.g. quota); what matters is that it wrote nothing
+				}
+				expect(snapshot(root)).toEqual(before);
+			} finally {
+				rmSync(root, { recursive: true, force: true });
+			}
+		});
+	}
+});
+
+// ---------------------------------------------------------------------------
+// RULE 8 — the JOB-REGISTRY (processes) directory (2026-09-24).
+// ---------------------------------------------------------------------------
+//
+// src/core/media/jobs.ts mirrors every background job as a pfile. Its default
+// was the INSTALLATION's `<privateDir>/processes`, and nothing moved it for a
+// test run: ~5.4k suite pfiles were measured there (client-suite server, gates
+// without an override). Under the seam the default now derives to the marked
+// sibling `<test media root>.processes`; an explicit DEDALO_MEDIA_PROCESSES_DIR
+// still wins, and either must carry `.dedalo_test_processes` or the job manager
+// refuses before it creates, reads or writes. Driven through the REAL job
+// manager — the outcome (where the file lands), not a spelling.
+
+const PROCESSES_KEY = 'DEDALO_MEDIA_PROCESSES_DIR';
+
+/** Run `body` with the explicit processes key set (or unset), restored after. */
+async function withProcessesKey<T>(value: string | undefined, body: () => Promise<T>): Promise<T> {
+	const previous = process.env[PROCESSES_KEY];
+	if (value === undefined) Reflect.deleteProperty(process.env, PROCESSES_KEY);
+	else process.env[PROCESSES_KEY] = value;
+	try {
+		return await body();
+	} finally {
+		if (previous === undefined) Reflect.deleteProperty(process.env, PROCESSES_KEY);
+		else process.env[PROCESSES_KEY] = previous;
+	}
+}
+
+/** Submit one trivial job on a fresh manager and wait for its terminal state. */
+async function runProbeJob(): Promise<string> {
+	const { MediaJobManager } = await import('../../src/core/media/jobs.ts');
+	const manager = new MediaJobManager({});
+	let settle: () => void = () => {};
+	const settled = new Promise<void>((resolve) => {
+		settle = resolve;
+	});
+	const record = manager.submit('tripwire_processes_probe', async () => 'ok', {
+		lane: 'maintenance',
+		onTerminal: () => settle(),
+	});
+	await settled;
+	return record.id;
+}
+
+describe('test media root — RULE 8: the job registry never lands in the installation', () => {
+	test('one marker, two spellings (the config-free helper copy equals the canonical one)', async () => {
+		const src = await import('../../src/core/media/test_media_root.ts');
+		const helper = await import('../helpers/test_media_root.ts');
+		expect(helper.TEST_PROCESSES_MARKER).toBe(src.TEST_PROCESSES_MARKER);
+		expect(src.TEST_PROCESSES_MARKER).toBe('.dedalo_test_processes');
+		const testRoot = config.media.testRoot as string;
+		expect(helper.testProcessesDirPath(testRoot)).toBe(src.testProcessesDirFor(testRoot));
+	});
+
+	test('armed, no explicit key: the pfile lands in the MARKED suite sibling, never <privateDir>/processes', async () => {
+		const { privateDir } = await import('../../src/config/env.ts');
+		const { jobFilePath } = await import('../../src/core/media/jobs.ts');
+		const { testProcessesDirFor, TEST_PROCESSES_MARKER } = await import(
+			'../../src/core/media/test_media_root.ts'
+		);
+		const suiteDir = testProcessesDirFor(config.media.testRoot as string);
+		const installFile = (id: string): string => join(privateDir, 'processes', `${id}.json`);
+		await withProcessesKey(undefined, async () => {
+			const id = await runProbeJob();
+			const landed = jobFilePath(id);
+			try {
+				expect(landed).toBe(join(suiteDir, `${id}.json`));
+				expect(existsSync(landed), 'the job file was written').toBe(true);
+				expect(existsSync(join(suiteDir, TEST_PROCESSES_MARKER))).toBe(true);
+				expect(
+					existsSync(installFile(id)),
+					"an armed run wrote a job file into the INSTALLATION's processes tree",
+				).toBe(false);
+			} finally {
+				// ONLY this probe's own file, wherever a regression put it
+				rmSync(landed, { force: true });
+				rmSync(installFile(id), { force: true });
+			}
+		});
+	});
+
+	test('armed, explicit UNMARKED dir: submit refuses loudly and creates nothing', async () => {
+		const scratch = mkdtempSync(join(tmpdir(), 'dedalo_unmarked_processes_'));
+		const target = join(scratch, 'processes');
+		try {
+			await withProcessesKey(target, async () => {
+				let caught: unknown = null;
+				try {
+					await runProbeJob();
+				} catch (error) {
+					caught = error;
+				}
+				expect((caught as { code?: string } | null)?.code, 'submit did not refuse').toBe(
+					'media.invalid_path',
+				);
+				expect(String((caught as Error).message)).toContain('NOTHING WAS WRITTEN');
+				expect(String((caught as Error).message)).toContain('media jobs processesDir');
+				expect(existsSync(target), 'the refusal created the directory').toBe(false);
+			});
+		} finally {
+			rmSync(scratch, { recursive: true, force: true });
+		}
+	});
+
+	test('armed, explicit UNMARKED dir: the refused submit is ATOMIC — no phantom live job holds its target', async () => {
+		// A refusal raised AFTER registration left a 'queued' record with no worker:
+		// hasLiveJobForTarget true forever, so every later build of that target was
+		// refused as a duplicate. The outcome, on the real manager.
+		const { MediaJobManager } = await import('../../src/core/media/jobs.ts');
+		const manager = new MediaJobManager({});
+		const kind = 'tripwire_processes_atomic';
+		const target = {
+			section_tipo: 'test3',
+			section_id: 1,
+			component_tipo: 'test99',
+			lang: null,
+			quality: 'original',
+		};
+		let terminalCalls = 0;
+		const scratch = mkdtempSync(join(tmpdir(), 'dedalo_unmarked_processes_atomic_'));
+		try {
+			await withProcessesKey(join(scratch, 'processes'), async () => {
+				expect(() =>
+					manager.submit(kind, async () => 'ok', {
+						lane: 'maintenance',
+						target,
+						onTerminal: () => {
+							terminalCalls += 1;
+						},
+					}),
+				).toThrow(/NOTHING WAS WRITTEN/);
+				expect(
+					manager.hasLiveJobForTarget(target),
+					'the refused submit left a phantom live job on its target',
+				).toBe(false);
+				// nextId is kind_pid_counter; a fresh manager's first id
+				expect(manager.stop(`${kind}_${process.pid}_1`), 'a controller survived').toBe(false);
+			});
+			// back on the suite's marked dir: the registry has no record either
+			expect(manager.status(`${kind}_${process.pid}_1`)).toBeNull();
+			expect(terminalCalls, 'onTerminal fired for a job that never existed').toBe(0);
+		} finally {
+			rmSync(scratch, { recursive: true, force: true });
+		}
+	});
+
+	test('the runtime-path census and the job manager resolve the SAME processes dir', async () => {
+		const { RUNTIME_PATH_CENSUS } = await import('../../src/core/install/runtime_paths.ts');
+		const { jobFilePath } = await import('../../src/core/media/jobs.ts');
+		const { markProcessesDir } = await import('../helpers/test_media_root.ts');
+		const entry = RUNTIME_PATH_CENSUS.find((candidate) => candidate.id === 'media_processes_dir');
+		expect(entry, 'census entry media_processes_dir').toBeDefined();
+		const censusDir = (): string | null => entry?.resolve() ?? null;
+		const jobsDir = (): string => dirname(jobFilePath('probe'));
+		// seam armed, no explicit key (and empty = unset, the readers' rule)
+		for (const unset of [undefined, '']) {
+			await withProcessesKey(unset, async () => {
+				expect(censusDir()).toBe(jobsDir());
+				expect(censusDir()).toBe(
+					(await import('../../src/core/media/test_media_root.ts')).testProcessesDirFor(
+						config.media.testRoot as string,
+					),
+				);
+			});
+		}
+		// explicit key (marked, so the armed door lets the job manager answer)
+		const scratch = markProcessesDir(mkdtempSync(join(tmpdir(), 'dedalo_census_processes_')));
+		try {
+			await withProcessesKey(scratch, async () => {
+				expect(censusDir()).toBe(scratch);
+				expect(jobsDir()).toBe(scratch);
+			});
+		} finally {
+			rmSync(scratch, { recursive: true, force: true });
+		}
+		// no seam (census half: it reads env per call; the job manager's frozen
+		// config cannot be disarmed in-process, hence the pure checks below)
+		const { privateDir } = await import('../../src/config/env.ts');
+		const seamKey = 'DEDALO_TEST_MEDIA_ROOT';
+		const armed = process.env[seamKey];
+		await withProcessesKey(undefined, async () => {
+			Reflect.deleteProperty(process.env, seamKey);
+			try {
+				expect(censusDir()).toBe(join(privateDir, 'processes'));
+			} finally {
+				if (armed !== undefined) process.env[seamKey] = armed;
+			}
+		});
+		// the pure derivation both call
+		const { deriveProcessesDir } = await import('../../src/core/media/processes_dir.ts');
+		expect(deriveProcessesDir(undefined, null, '/install/processes')).toBe('/install/processes');
+		expect(deriveProcessesDir('', null, '/install/processes')).toBe('/install/processes');
+		expect(deriveProcessesDir('/x', '/root', '/install/processes')).toBe('/x');
+	});
+
+	test('armed, explicit MARKED dir: the explicit key wins and the pfile lands there', async () => {
+		const { markProcessesDir } = await import('../helpers/test_media_root.ts');
+		const scratch = markProcessesDir(mkdtempSync(join(tmpdir(), 'dedalo_marked_processes_')));
+		try {
+			await withProcessesKey(scratch, async () => {
+				const id = await runProbeJob();
+				expect(existsSync(join(scratch, `${id}.json`))).toBe(true);
+			});
+		} finally {
+			rmSync(scratch, { recursive: true, force: true });
+		}
+	});
+
+	test('test:db:setup sweeps a MARKED suite dir and refuses an unmarked one at that path', async () => {
+		const {
+			rebuildTestProcessesDir,
+			testProcessesDirPath,
+			TEST_PROCESSES_MARKER: MARKER,
+		} = await import('../helpers/test_media_root.ts');
+		const base = mkdtempSync(join(tmpdir(), 'dedalo_processes_rebuild_'));
+		const mediaRoot = join(base, 'suite_db');
+		const dir = testProcessesDirPath(mediaRoot);
+		try {
+			expect(rebuildTestProcessesDir(mediaRoot)).toBe(dir);
+			writeFileSync(join(dir, 'stale_job.json'), '{}');
+			rebuildTestProcessesDir(mediaRoot);
+			expect(existsSync(join(dir, 'stale_job.json')), 'the sweep kept a stale pfile').toBe(false);
+			expect(existsSync(join(dir, MARKER))).toBe(true);
+			rmSync(join(dir, MARKER));
+			writeFileSync(join(dir, 'not_ours.json'), '{}');
+			expect(() => rebuildTestProcessesDir(mediaRoot)).toThrow(/NOTHING WAS DELETED/);
+			expect(existsSync(join(dir, 'not_ours.json'))).toBe(true);
+		} finally {
+			rmSync(base, { recursive: true, force: true });
+		}
+	});
+
+	test('the key has exactly its known readers (a second resolver would skip the seam)', () => {
+		const owners: Record<string, string> = {
+			'src/core/media/jobs.ts':
+				'THE resolver: processesDir() → resolveProcessesDir + assertProcessesDirDeclared.',
+			'src/core/install/runtime_paths.ts':
+				'The runtime-path census: a pure question, mirrors the derivation, writes nothing.',
+			'src/config/catalog/media.ts': 'DEFINES the key.',
+			'src/config/migration_map.ts': 'Lists the key as new in v7.',
+		};
+		const readers = scannedFiles().filter((file) =>
+			stripComments(read(file)).includes(PROCESSES_KEY),
+		);
+		for (const owner of Object.keys(owners)) expect(readers).toContain(owner);
+		expect(
+			readers.filter((file) => owners[file] === undefined),
+			'A new file names DEDALO_MEDIA_PROCESSES_DIR. Resolve the job-registry directory through src/core/media/jobs.ts (jobFilePath), whose resolver follows the test seam.',
+		).toEqual([]);
 	});
 });

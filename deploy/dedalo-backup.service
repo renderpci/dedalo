@@ -115,13 +115,17 @@ ExecStart=-/opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh run media /opt
 # 4. The private dir itself (secrets, sessions, state) — small, always, and
 #    generational too: the .env is the file every other restore step reads first, so
 #    yesterday's copy is worth exactly as much as the media's. Its own backups/
-#    subtree is excluded (store 1 owns those artifacts).
+#    subtree is excluded (store 1 owns those artifacts), and so is export_artifacts/
+#    (the default DEDALO_EXPORT_ARTIFACTS_DIR): temporary, owner-only copies of
+#    records that the TTL sweep deletes — a 14-generation copy would keep them two
+#    weeks past their TTL and outside the owner/read-access re-check
+#    (engineering/PRODUCTION.md §15).
 #
 #    HONEST LIMIT: the session store is a live SQLite database, so its copy can be
 #    torn — a restore may lose logged-in sessions, which cost a re-login and nothing
 #    else. The files that matter here (.env, ts_state.json) are written atomically by
 #    the engine (tmp + rename), so they copy whole or not at all.
-ExecStart=-/opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh run private /opt/dedalo/master_dedalo/deploy/dedalo-tree-backup.sh --label private --source /opt/dedalo/private/ --dest /opt/dedalo/backups/private --keep 14 --exclude backups
+ExecStart=-/opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh run private /opt/dedalo/master_dedalo/deploy/dedalo-tree-backup.sh --label private --source /opt/dedalo/private/ --dest /opt/dedalo/backups/private --keep 14 --exclude backups --exclude /export_artifacts
 # 5. Every site-builder instance: its declaration + secrets, its workspaces root,
 #    each site's whole webspace (BOTH release stores and the two served symlinks),
 #    and its audit trail. Exits 0 with one line on a host that declares none.

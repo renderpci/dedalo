@@ -41,6 +41,7 @@ import type { AccessFilter } from '../../src/core/identify/match.ts';
 import { parseProfile } from '../../src/core/identify/profile.ts';
 import type { CriterionValue, IdentificationProfile } from '../../src/core/identify/types.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import { markProcessesDir } from '../helpers/test_media_root.ts';
 
 const ADMIN: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: false };
 
@@ -621,7 +622,7 @@ describe('clusterRecords — the consensus a curator reads', () => {
 
 const scratchDir = mkdtempSync(join(tmpdir(), 'dedalo_cluster_jobs_'));
 const previousProcessesDir = process.env.DEDALO_MEDIA_PROCESSES_DIR;
-process.env.DEDALO_MEDIA_PROCESSES_DIR = scratchDir;
+process.env.DEDALO_MEDIA_PROCESSES_DIR = markProcessesDir(scratchDir);
 
 const { getBackgroundJob, scheduleBackground } = await import('../../src/core/tools/background.ts');
 const { tool } = await import('../../tools/tool_identify/server/index.ts');

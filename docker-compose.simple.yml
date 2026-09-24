@@ -338,9 +338,12 @@ services:
           "$$D/dedalo-backup-step.sh" run media \
             "$$D/dedalo-tree-backup.sh" --label media --source-key MEDIA_PATH \
             --dest /backups/media --keep "$$DEDALO_BACKUP_KEEP"
+          # /export_artifacts: tool_export's temporary, owner-only files (TTL-swept,
+          # access re-checked on every download) — never kept in a generation.
           "$$D/dedalo-backup-step.sh" run --last private \
             "$$D/dedalo-tree-backup.sh" --label private --source /private/ \
-            --dest /backups/private --keep "$$DEDALO_BACKUP_KEEP"
+            --dest /backups/private --keep "$$DEDALO_BACKUP_KEEP" \
+            --exclude /export_artifacts
           sleep 86400 & wait $${!}
         done
     healthcheck:

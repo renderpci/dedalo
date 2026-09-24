@@ -44,7 +44,8 @@ import { toErrorEnvelope } from '../errors/convert.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { logError } from '../errors/log.ts';
 import { INSTALL_ACTION_KEYS, installIpAllowed, installSurfaceReachable } from '../install/gate.ts';
-import { resolvePrincipal, SUPERUSER_ID } from '../security/permissions.ts';
+import { resolvePrincipal } from '../security/permissions.ts';
+import { refusedUnderMaintenance } from '../security/session_gate.ts';
 import { verifyCsrf } from '../security/session_store.ts';
 import { logApiAccess } from './access_log.ts';
 import type { ActionHandler, ApiRequestContext } from './handler_context.ts';
@@ -1194,9 +1195,8 @@ function isNoLoginAction(actionKey: string): boolean {
 
 /** Gate 2b (see runAuthGates): every non-superuser session is refused while maintenance is on. */
 async function refuseUnderMaintenance(userId: number): Promise<void> {
-	if (userId === SUPERUSER_ID) return;
-	const { getServerState } = await import('../resolve/server_state.ts');
-	if (getServerState().maintenance_mode === true) throw new DedaloError('auth.maintenance');
+	// The ONE rule, shared with the non-dispatch routes (session_gate.ts).
+	if (refusedUnderMaintenance(userId)) throw new DedaloError('auth.maintenance');
 }
 
 /** Gates 1 → 4, then the handler inside the request-scoped identity + language contexts. */

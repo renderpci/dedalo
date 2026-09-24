@@ -23,7 +23,8 @@
  * session SURVIVES, closes / opens both routes on the very next request).
  */
 
-import { resolvePrincipal } from './permissions.ts';
+import { getServerState } from '../resolve/server_state.ts';
+import { type Principal, resolvePrincipal, SUPERUSER_ID } from './permissions.ts';
 import { getSession, SESSION_COOKIE, type Session } from './session_store.ts';
 
 /**
@@ -59,4 +60,37 @@ export async function globalAdminSessionFromCookie(
 	if (session === null) return null;
 	const principal = await resolvePrincipal(session.userId);
 	return principal.isGlobalAdmin ? session : null;
+}
+
+/**
+ * GATE 2b's ONE rule (maintenance): while `maintenance_mode` is on, every session
+ * but the superuser's is treated as unauthenticated — root is who lifts it. The
+ * dispatcher throws `auth.maintenance` on it (dispatch.ts runAuthGates); a
+ * non-dispatch route answers its null/404 on it. Read uncached per call
+ * (getServerState reads ts_state.json), so it bites the instant root sets it.
+ */
+export function refusedUnderMaintenance(userId: number): boolean {
+	return userId !== SUPERUSER_ID && getServerState().maintenance_mode === true;
+}
+
+/**
+ * The live session behind this request's cookie header AND its Principal resolved
+ * as of THIS request, for ANY authenticated account; null when there is no cookie or
+ * no live session, or while maintenance refuses it (refusedUnderMaintenance). The per-user sibling of {@link globalAdminSessionFromCookie}, for a
+ * non-dispatch route that authorizes by OWNERSHIP + the permission matrix rather than
+ * by admin-ness (the export artifact download, tools/tool_export/server/download.ts).
+ * The caller decides what the Principal may do — this only proves who is calling and
+ * what they are right now; it grants nothing.
+ */
+export async function sessionPrincipalFromCookie(
+	cookieHeader: string | null,
+): Promise<{ session: Session; principal: Principal } | null> {
+	const token = readCookie(cookieHeader ?? '', SESSION_COOKIE);
+	if (token === undefined || token === '') return null;
+	const session = getSession(token);
+	if (session === null) return null;
+	// Gate 2b, as the dispatcher applies it to every API action: under maintenance
+	// a non-root session is not authenticated here either.
+	if (refusedUnderMaintenance(session.userId)) return null;
+	return { session, principal: await resolvePrincipal(session.userId) };
 }

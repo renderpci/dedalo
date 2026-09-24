@@ -286,7 +286,6 @@ const FLOORLESS_WALK_BASELINE: Readonly<Record<string, string>> = {
 	'test/parity/oracle_canary.test.ts': 'DEBT: the parity-file glob is never floored by the canary.',
 	'test/unit/agent_alias_tripwire.test.ts':
 		'NOT-A-CENSUS: `git ls-files -s -- <path>` queries the index mode of ONE named symlink.',
-	'test/unit/boundary_seam_tripwire.test.ts': 'DEBT: the src/ seam glob is never floored.',
 	'test/unit/config_declaration_tripwire.test.ts':
 		'DEBT: `envKeysReadInSrc()` is consumed without a floor (the 264 floor is on the catalog, not the scan).',
 	'test/unit/bulk_process_id_tripwire.test.ts':
@@ -361,7 +360,8 @@ const PRIVATE_ROOT_WALKERS: Readonly<Record<string, string>> = {
 	'test/unit/backup_restorability_native.test.ts':
 		'ROOTS: `src` — the src/ caller walk; the artifact-state readdirSync reads scratch directories the gate builds, which resolve to no repo directory.',
 	'test/unit/batch_scope_tripwire.test.ts': 'ROOTS: `tools` — the tool servers, `*/server/**`.',
-	'test/unit/boundary_seam_tripwire.test.ts': 'ROOTS: `src`.',
+	'test/unit/boundary_seam_tripwire.test.ts':
+		'ROOTS: `src`; `tools` — the engine tree, and the tool servers that reach it by relative path.',
 	'test/unit/build_context_secret_tripwire.test.ts':
 		'ROOTS: `.` ×3; `deploy` — `git ls-files` over the whole index, the deploy/ tree, and a scratch build-context tree that resolves to no repo directory.',
 	'test/unit/bulk_process_id_tripwire.test.ts': 'ROOTS: `src` `tools`.',
@@ -428,7 +428,8 @@ const PRIVATE_ROOT_WALKERS: Readonly<Record<string, string>> = {
 	'test/unit/ingest_encoding_tripwire.test.ts':
 		'ROOTS: `client` `src` `src/core/tools` `tools` — src/core/tools is walked on its own beside src/.',
 	'test/unit/install_ip_gate_tripwire.test.ts': 'ROOTS: `docs/install`.',
-	'test/unit/install_restart_supervisor_tripwire.test.ts': 'ROOTS: `deploy`; `src`.',
+	'test/unit/install_restart_supervisor_tripwire.test.ts':
+		'ROOTS: `deploy`; `src`; `tools` — tool HTTP routes are engine routes too.',
 	'test/unit/install_seed_drift_tripwire.test.ts':
 		'ROOTS: `client/dedalo/core/installer`; `install/import/hierarchy`.',
 	'test/unit/install_table_write_tripwire.test.ts':
@@ -472,7 +473,7 @@ const PRIVATE_ROOT_WALKERS: Readonly<Record<string, string>> = {
 	'test/unit/test_db_marker_tripwire.test.ts':
 		'ROOTS: `install/db/migrations`; `scripts` `src` `tools`; `src`; `src/core/test_data` `test/helpers`.',
 	'test/unit/test_media_root_tripwire.test.ts':
-		'ROOTS: `scripts` ×2; `src` `tools`; `test/preload` [opaque: 1] — the opaque site is `readdirSync` over a scratch root the gate creates.',
+		'ROOTS: `scripts` ×2; `src` `tools` ×2; `test/preload` [opaque: 1] — the opaque site is `readdirSync` over a scratch root the gate creates.',
 	'test/unit/test_rag_db_tripwire.test.ts':
 		'ROOTS: `install/db`; `scripts` `src` `tools`; `test/helpers`; `test/preload`.',
 	'test/unit/test_timeout_tripwire.test.ts':
@@ -593,6 +594,11 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		],
 		scope:
 			"the engine's own source roots for gates that census src/ — the whole tree, the API handler layer (every door a request reaches), the media subsystem (every converter spawn), the three read-path trees (relations/resolve/section) and the search fragment builders",
+	},
+	'test/helpers/tool_directory_corpus.ts': {
+		roots: [['tools']],
+		scope:
+			'the tool NAMES of this checkout — every `tools/tool_<name>/` directory, for gates that census where src/ names a specific tool (core_tool_edge_tripwire)',
 	},
 	'test/helpers/migrations_corpus.ts': {
 		roots: [['install/db/migrations']],

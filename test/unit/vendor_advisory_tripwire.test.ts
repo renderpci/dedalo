@@ -71,8 +71,8 @@
  *     alone.
  *   - `version_evidence` binds a LABEL to a LITERAL, not to provenance. It refuses a
  *     mislabelled tree; it cannot refuse a tree whose upstream build was tampered
- *     with before we fetched it. That is `archive_sha256`'s job, and only pdfjs and
- *     xlsx have one.
+ *     with before we fetched it. That is `archive_sha256`'s job, and only the rows that
+ *     record one have it (pdfjs, lz-string, swagger-ui, transformers).
  *   - The executed `AppOptions` control proves the option machinery, not the browser:
  *     that the mount's handler runs before the viewer constructs is asserted
  *     structurally (no `await` before the `set()`), and was measured by hand in a
@@ -197,9 +197,9 @@ describe('vendor advisory tripwire — the declared version is the version the b
 		}
 		expect(shapes).toEqual([]);
 		// Anti-vacuity: if EVERY row declared itself unprovable the census above would be
-		// green over nothing. Measured 2026-08-28 — 3 of the 4 trees state their version
-		// (pdfjs, ckeditor, xlsx); json-view is the one that genuinely cannot.
-		expect(withClauses).toBeGreaterThanOrEqual(3);
+		// green over nothing. Measured 2026-09-24 — 5 of the 6 trees state their version
+		// (all but json-view, which genuinely cannot).
+		expect(withClauses).toBeGreaterThanOrEqual(5);
 	});
 
 	test('CONSTRUCTED RED — a row whose bytes do not carry the declared version', () => {
