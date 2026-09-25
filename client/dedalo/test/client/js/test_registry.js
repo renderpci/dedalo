@@ -143,7 +143,7 @@ export const lifecycle_suites = [...lifecycle_suites_green, ...lifecycle_suites_
  * repo `tools/` tree at /dedalo/tools/*.
  */
 export const tool_suites_green = [
-	'test_tool_qr',
+	'test_tool_qr',          // two layers: the locked tool template, plus THE RECORD-LIST CONTRACT on the real test3 section — load_section's fetched/total/truncated and one .qr_wrapper per record. The tool read the retired `data.value` key instead of the server's `entries`, so every sheet was empty with "Limit = 0 / N".
 	'test_tool_assistant',
 	'test_tool_cataloging',
 	'test_tool_dd_label',

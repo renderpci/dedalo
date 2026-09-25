@@ -38,7 +38,7 @@
 *   self.section.label         — {string} human-readable section label
 *   self.section.total         — {number} the server's record count (tool_qr.load_section)
 *   self.section.truncated     — {boolean} total exceeds the rows one request returned
-*   self.section.data.value    — {Array<{section_id, section_tipo, ...}>} record list
+*   self.section.data.entries  — {Array<{section_id, section_tipo, ...}>} record list
 *   self.section.datum.context — {Array<Object>} component contexts (ddo_map entries)
 *   self.section.datum.data    — {Array<Object>} flat component data rows for all records
 *   self.tool_config.ddo_map   — {Array<Object>} ddo entries with optional `role` property
@@ -210,7 +210,7 @@ const render_info_container = (self) => {
 		// so, loudly — a QR sheet silently missing records is the worst outcome
 		// (audit P2-31). The label is the shared limit-exceeded text + the bound.
 		if (self.section.truncated===true) {
-			const fetched = self.section.data?.value?.length || 0
+			const fetched = self.section.data?.entries?.length || 0
 			const truncated_node = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'qr_truncated error',
@@ -268,7 +268,7 @@ const render_info_container = (self) => {
 * Creates the print canvas A4 and add the QR items
 *
 * Builds a <div class="qr_canvas"> and populates it with one
-* <div class="qr_wrapper"> per record in self.section.data.value.
+* <div class="qr_wrapper"> per record in self.section.data.entries.
 *
 * Each qr_wrapper contains:
 *   - <div class="qr_code">   — target node for EasyQRCodeJS; clicking opens the
@@ -294,7 +294,7 @@ const render_info_container = (self) => {
 * self.section.datum.context is falsy, preventing a crash on missing config.
 *
 * @param {Object} self - tool_qr instance after build(); must expose
-*   self.tool_config.ddo_map, self.section.data.value,
+*   self.tool_config.ddo_map, self.section.data.entries,
 *   self.section.datum.context, and self.section.datum.data.
 * @returns {DocumentFragment} Fragment containing the populated qr_canvas div.
 */
@@ -336,7 +336,7 @@ const render_canvas = (self) => {
 	// items
 		const qr_promises = []
 
-		const value = self.section.data.value || []
+		const value = self.section.data.entries || []
 
 		const value_length = value.length
 		for (let i = 0; i < value_length; i++) {

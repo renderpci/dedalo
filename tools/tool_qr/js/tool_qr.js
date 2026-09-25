@@ -270,7 +270,7 @@ tool_qr.prototype.load_section = async function() {
 
 	// set total: the SERVER's count, so a selection above the ceiling is seen
 	// as truncated (rows fetched < total) rather than reported as whole
-		const fetched = section.data.value?.length || 0
+		const fetched = section.data.entries?.length || 0
 		let total = fetched
 		if (typeof section.get_total==='function') {
 			// the FILTERED count: the same sqo the rows were read with
