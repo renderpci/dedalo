@@ -1773,8 +1773,13 @@ Three things have to line up or the index is never used:
 - it is wrapped in `f_unaccent()`, so only filters with `unaccent: true` match it
 - it needs `pg_trgm` and an `IMMUTABLE` `f_unaccent()`
 
-The index name encodes the component (`matrix_<component_tipo>_gin`); that is how Dédalo detects at query build
-time whether the optimisation can be applied (`component_common::has_whole_blob_trigram_index()`).
+Dédalo detects at query build time whether the optimisation can be applied
+(`component_common::has_whole_blob_trigram_index()`) by reading the index **definition** from `pg_indexes`, once
+per process: any non partial trigram GIN index on exactly `f_unaccent(datos #>> '{components,<tipo>,dato}')`, in
+the matrix table of the searched section, qualifies. The index **name does not matter**: the shipped ones are
+`matrix_rsc85_gin` / `matrix_rsc86_gin` on `matrix` and `matrix_hierarchy_term`, `matrix_langs_term`,
+`matrix_ontology_term` for the thesaurus term (`hierarchy25`). An index with an explicit non default `COLLATE` or
+with storage parameters (`WITH (...)`) is not detected.
 
 ### The whole-component pre-filter
 
@@ -1800,10 +1805,14 @@ Two rules keep the implication true, and both matter:
   term cannot be guaranteed to appear verbatim.
 
 It is applied to negative operators never (`!=` and `-` are an `AND` of non-matches; a match on the whole
-component implies nothing about them), and to paths of any length. When the component is reached **through a
-relation**, the predicate travels inside the correlated `EXISTS` of that clause, on the same joined record as the
-per-language group — not as a sibling condition, which would test a different related record and change the
-result set.
+component implies nothing about them). When the component is reached **through a relation**, the predicate travels
+inside the correlated `EXISTS` of that clause, on the same joined record as the per-language group — not as a
+sibling condition, which would test a different related record and change the result set.
+
+Through a relation it is applied **only when the related section lives in `matrix`**. Inside the correlated
+`EXISTS` the planner does not use the index of other tables: a portal to a thesaurus term
+(`rsc197 > rsc91 > es1 hierarchy25`) with the pre-filter switched to a full scan of `matrix_hierarchy`, and the
+first page of a common term went from 5 ms to 2 s.
 
 ### What it costs
 
@@ -1816,6 +1825,10 @@ archive of ~500.000 people, first page of results:
 | a mid-range surname | 1.698 | 27 ms | 34 ms |
 | a rare surname | 67 | 2.281 ms | 1,9 ms |
 | a surname with no match | 0 | 4.567 ms | 0,3 ms |
+
+On the thesaurus term (`hierarchy25`, toponymy, ~850.000 records) the same shape holds: the first page of a very
+common 3 letter term gets 25–90 ms slower (worst measured 15 → 107 ms), while a rare term goes from 10 s to a few
+ms and counts from ~10 s to a few ms.
 
 A very common term gets slower by a bounded amount; a rare or unmatched term gets faster by an amount that grows
 with the table. Counting (`full_count`, which has no `LIMIT` to stop early) is always faster with it. Since rare
@@ -1831,7 +1844,8 @@ CREATE INDEX matrix_<component_tipo>_gin ON <matrix_table>
     USING gin (f_unaccent(datos#>>'{components,<component_tipo>,dato}') gin_trgm_ops);
 ```
 
-Nothing else has to be declared: the next search on that component detects the index and starts using it. The
+Nothing else has to be declared: the next search on that component detects the index and starts using it (a
+long running process, as a CLI task, keeps the index list it read first). The
 result set does not change, so the index can be created and dropped at will.
 
 > Use `test/search/tools/search_corpus_diff.php` to check a change on real searches: it runs the same SQO with and

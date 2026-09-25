@@ -363,7 +363,7 @@ final class component_input_text_test extends TestCase {
 
 		// positive regex cases are an $or of one leaf per lang
 		// (component_common::resolve_query_object_langs_behavior ANDs a redundant whole-blob
-		// pre-filter before this group ONLY when a matrix_<tipo>_gin trigram index exists)
+		// pre-filter before this group ONLY when a whole-blob trigram index exists)
 		$groups = $this->lang_groups($tree, '$or');
 		$this->assertCount(count($this->search_langs()), $groups, 'Expected one leaf per lang');
 		$this->assertSame(

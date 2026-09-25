@@ -134,7 +134,10 @@ class search {
 		// (worst case measured ~0,7 s), while every rare or unmatched term gets faster by an
 		// amount that GROWS WITH THE TABLE (already seconds here). Rare and zero-result
 		// searches are what users actually run, so the pre-filter is applied always, for
-		// single-step and multi-step paths alike.
+		// single-step paths and for multi-step paths into 'matrix'. Multi-step paths into other
+		// tables are excluded: inside the correlated EXISTS the planner does not use their
+		// index (as matrix_hierarchy_term) and the first page of a common term went 5 ms -> 2 s
+		// (mdcat rsc197 > rsc91 > es1 hierarchy25). See component_common::has_whole_blob_trigram_index
 		public static ?bool $blob_prefilter = null;
 
 		// control for duplicated operator to include itself in the where ( operator !! )
