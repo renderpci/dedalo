@@ -391,6 +391,61 @@ final class search_joins_test extends TestCase {
 
 
 	/**
+	* TEST_DATE_OPERAND_UNDER_AND_KEEPS_EXISTS_CLOSED
+	* A multi-step date search uses the 'array_elements' format. Its fragment used to end with a
+	* line comment (') -- end check_array_component'), and the EXISTS builders trim() it and
+	* append ')' , so the closing parentheses were commented out: SQL syntax error and 0 results
+	* for any date through a portal under $and. Checked as SQL parses it: line comments removed,
+	* parentheses must stay balanced.
+	* @return void
+	*/
+	public function test_date_operand_under_and_keeps_exists_closed() : void {
+
+		$operand		= self::operand('', 'test145', 'component_date');
+			$operand['q']	= [['mode' => 'start', 'start' => ['year' => 1920]]];
+
+		$sqo	= self::build_sqo('$and', [$operand]);
+		$built	= self::build($sqo);
+
+		$this->assertStringContainsString('check_array_component', $built['where'],
+			'expected the array_elements format for a date' . PHP_EOL . $built['where']
+		);
+		$this->assertSame(1, substr_count($built['where'], 'EXISTS (SELECT 1'),
+			'$and: expected one EXISTS' . PHP_EOL . $built['where']
+		);
+		$this->assertSame(0, self::paren_balance_without_line_comments($built['where']),
+			'parentheses must be balanced once SQL line comments are removed' . PHP_EOL . $built['where']
+		);
+	}//end test_date_operand_under_and_keeps_exists_closed
+
+
+
+	/**
+	* TEST_DUPLICATED_OPERAND_UNDER_AND_USES_MAIN_JOIN
+	* The duplicated operator ('!!') feeds the main-query window with the joined alias
+	* (search::ar_duplicated_fields), so a multi-step '!!' leaf must keep the main-query
+	* LEFT JOIN even under $and. As EXISTS the window referenced an alias that only existed
+	* inside the subquery: 'missing FROM-clause entry'.
+	* @return void
+	*/
+	public function test_duplicated_operand_under_and_uses_main_join() : void {
+
+		$sqo	= self::build_sqo('$and', [
+			self::operand('!!', self::$tipo_string, 'component_input_text')
+		]);
+		$built	= self::build($sqo);
+
+		$this->assertSame(0, substr_count($built['where'], 'EXISTS (SELECT 1'),
+			'!!: must not be emitted as EXISTS' . PHP_EOL . $built['where']
+		);
+		$this->assertSame(1, self::count_relations_join($built['joins'], 1, $built['signature']),
+			'!!: expected the main-query LEFT JOIN relations AS r_j1_' . PHP_EOL . $built['joins']
+		);
+	}//end test_duplicated_operand_under_and_uses_main_join
+
+
+
+	/**
 	* TEST_SINGLE_STEP_POSITIVE_REGEX_ADDS_WHOLE_BLOB_PREFILTER
 	* A single-step positive regex search (as 'contains') ANDs a redundant whole-blob regex
 	* (datos#>>'{components,<tipo>,dato}') before the per-language $or group
@@ -839,6 +894,23 @@ final class search_joins_test extends TestCase {
 			'signature'	=> $signature
 		];
 	}//end build
+
+
+
+	/**
+	* PAREN_BALANCE_WITHOUT_LINE_COMMENTS
+	* Removes SQL line comments ('-- ...' to end of line) as Postgres does and returns
+	* count('(') - count(')'). Escaped regex parentheses ('\\(' / '\\)') are ignored.
+	* @param string $sql
+	* @return int
+	*/
+	private static function paren_balance_without_line_comments(string $sql) : int {
+
+		$sql = preg_replace('/--[^\n]*/', '', $sql);
+		$sql = str_replace(['\\(', '\\)'], '', $sql);
+
+		return substr_count($sql, '(') - substr_count($sql, ')');
+	}//end paren_balance_without_line_comments
 
 
 

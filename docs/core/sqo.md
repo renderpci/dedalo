@@ -531,6 +531,11 @@ The `Oral History` section [rsc85](https://dedalo.dev/ontology/rsc85) is linked 
 !!! note "SQL equivalence"
     Path is equivalent to JOIN statement into SQL, the sections are equivalent to tables and the components are the columns that linked this tables.
 
+    Under `$or`, clauses with the same path share one `LEFT JOIN` in the main query. Under `$and`, every clause
+    with a path is a correlated `EXISTS` subquery, so each one can match a different linked record. The exception
+    is the duplicated operator (`!!`): its window needs the joined record in the main query, so it always uses the
+    main-query `LEFT JOIN`.
+
 To search interviews of informants born in 1928 the SQO should follow previous path to locate the date of birth component [rsc89](https://dedalo.dev/ontology/rsc89).
 
 ```json
