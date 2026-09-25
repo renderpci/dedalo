@@ -377,6 +377,90 @@ describe('a11y: the cataloguing surface is operable without a mouse', function (
 			opener.remove();
 		});
 
+		it('opening and closing NEVER scroll the page — focus lands on the first content control', async function () {
+			// (!) the host is an in-flow element appended at the END of the page and
+			// the trap arms at connect time, before anything is shown or slotted: its
+			// only candidate is the host, and a plain focus() on it scrolled the page
+			// to the bottom on every open (the user lost their place in the record list).
+			const spacer = document.createElement('div');
+			spacer.style.height = '400vh';
+			document.body.insertBefore(spacer, document.body.firstChild);
+			const scrolled_to = 200;
+			window.scrollTo(0, scrolled_to);
+			const before = window.scrollY;
+			assert.strictEqual(before, scrolled_to, 'the page is scrolled before the dialog opens');
+
+			const { modal, cancel_button } = build_modal();
+			try {
+				assert.strictEqual(window.scrollY, before, 'opening kept the page position');
+				assert.strictEqual(
+					a11y.deep_active_element(),
+					cancel_button,
+					'once shown, focus moved off the host onto the first content control',
+				);
+				const closed = await modal.close();
+				assert.strictEqual(closed, true, 'the transient dialog closed');
+				assert.strictEqual(window.scrollY, before, 'closing kept the page position');
+			} finally {
+				if (modal.isConnected) modal.remove();
+				spacer.remove();
+				window.scrollTo(0, 0);
+			}
+		});
+
+		it('initial focus NEVER lands on a destructive (.danger) control, even when it comes first', function () {
+			// Enter/Space fires the focused button: a confirm that lists Delete before
+			// Cancel (component_input_text's all-languages remove) must not arm it.
+			const { modal, cancel_button, confirm_button } = build_modal({
+				name: 'modal_destructive_first',
+				destructive_first: true,
+			});
+			try {
+				assert.strictEqual(
+					confirm_button.nextElementSibling,
+					cancel_button,
+					'the surface really puts the destructive action first',
+				);
+				assert.strictEqual(
+					a11y.deep_active_element(),
+					cancel_button,
+					'the first NON-destructive control takes focus',
+				);
+			} finally {
+				modal.remove();
+			}
+		});
+
+		it('closing brings an opener the user scrolled away from back into view', function () {
+			// the restore does not scroll implicitly (no jump on close), but focus
+			// must not be left on a control the user cannot see
+			const opener = document.createElement('button');
+			opener.textContent = 'Opener';
+			const spacer = document.createElement('div');
+			spacer.style.height = '400vh';
+			document.body.insertBefore(spacer, document.body.firstChild);
+			document.body.insertBefore(opener, spacer);
+			window.scrollTo(0, 0);
+			opener.focus();
+			const { modal } = build_modal();
+			try {
+				window.scrollTo(0, window.innerHeight * 2);
+				assert.ok(opener.getBoundingClientRect().bottom < 0, 'the opener scrolled out of view');
+				modal.remove();
+				assert.strictEqual(document.activeElement, opener, 'focus came back to the opener');
+				const rect = opener.getBoundingClientRect();
+				assert.ok(
+					rect.top >= 0 && rect.bottom <= window.innerHeight,
+					'and the opener is visible again',
+				);
+			} finally {
+				if (modal.isConnected) modal.remove();
+				opener.remove();
+				spacer.remove();
+				window.scrollTo(0, 0);
+			}
+		});
+
 		it('MINIMIZING gives the page back: the parked dialog isolates nothing, restoring re-arms it', function () {
 			const { modal, background_button, cancel_button } = build_modal_minimized();
 

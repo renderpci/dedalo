@@ -712,6 +712,7 @@ class DDModal extends HTMLElement {
 		if (this._modal.classList.contains("modal_big")) {
 			this._modal.classList.remove("modal_big");
 		}
+		this._focus_initial();
 	}
 
 	/**
@@ -725,6 +726,7 @@ class DDModal extends HTMLElement {
 		this._modalVisible = true;
 		this._modal.classList.add('modal_show');
 		this._modal.classList.add("modal_big");
+		this._focus_initial();
 	}
 
 	/**
@@ -741,6 +743,37 @@ class DDModal extends HTMLElement {
 		this._modal.classList.add('modal_small');
 		if (this._modal.classList.contains('modal_big')) {
 			this._modal.classList.remove('modal_big');
+		}
+		this._focus_initial();
+	}
+
+	/**
+	 * _FOCUS_INITIAL
+	 * Move focus onto the first real control once the dialog is SHOWN.
+	 *
+	 * (!) The trap arms at connect time, when `.modal` is still display:none and
+	 * `ui.attach_to_modal` has not slotted anything yet, so its only candidate is
+	 * the host itself: focus lands on `<dd-modal>` (an in-flow element at the END
+	 * of the page). Once shown, the content is laid out and focusable — hand focus
+	 * to the first content control (light DOM first: a confirm's own buttons, not
+	 * the '_' chrome). Only while focus is still parked on the host: a caller that
+	 * already focused something inside keeps it. Never scrolls
+	 * (a11y.focus_without_scroll).
+	 *
+	 * (!) NEVER A DESTRUCTIVE CONTROL. Focus on a button means Enter/Space fires
+	 * it, and several confirmations put their `.danger` action FIRST (the
+	 * all-languages remove in component_input_text: Delete, then Cancel). The
+	 * first NON-`.danger` content control wins; with only destructive ones, focus
+	 * goes to the close chrome '×', which is always safe.
+	 * @return {void}
+	 */
+	_focus_initial() {
+		if (this.mini || !this._release_focus) return; // not armed (parked / closed)
+		if (a11y.deep_active_element()!==this) return;
+		const safe_content	= a11y.list_focusables([this]).find(el => !el.classList.contains('danger'));
+		const target		= safe_content || this.shadowRoot.querySelector('.close_modal');
+		if (target) {
+			a11y.focus_without_scroll(target);
 		}
 	}
 

@@ -443,12 +443,14 @@ export const build_tree_row = function () {
  *   {boolean} [remove_overlay=false] - build the NON-BLOCKING panel shape instead
  *   {boolean} [minimized=false]    - park the dialog in the strip, through its own
  *                                    keyboard path, before handing it back
+ *   {boolean} [destructive_first=false] - put the `.danger` Delete BEFORE Cancel
  * @return {Object}
  */
 export const build_modal = function (options = {}) {
 	const name = options.name || 'modal';
 	const remove_overlay = options.remove_overlay === true;
 	const minimized = options.minimized === true;
+	const destructive_first = options.destructive_first === true;
 
 	const host = mount_host(name);
 
@@ -483,9 +485,15 @@ export const build_modal = function (options = {}) {
 	});
 	const confirm_button = ui.create_dom_element({
 		element_type: 'button',
+		class_name: 'danger remove',
 		text_content: 'Delete',
 		parent: footer,
 	});
+	// the destructive action FIRST, as the translatable-entry remove dialog of
+	// component_input_text builds it: initial focus must still avoid it
+	if (destructive_first) {
+		footer.insertBefore(confirm_button, cancel_button);
+	}
 
 	const modal = ui.attach_to_modal({
 		modal_parent: page_wrapper,

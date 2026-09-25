@@ -441,6 +441,51 @@ export const inert_background = function (el) {
 }; //end inert_background
 
 /**
+ * LIST_FOCUSABLES
+ * The visible focusable candidates of every root in `roots`, in root order then
+ * DOM order, without duplicates. A hidden candidate is not a tab stop.
+ * `getClientRects()` is the check, not `offsetParent`: slotted content lives in
+ * one tree and is laid out in another, and offsetParent's answer across a shadow
+ * boundary is not a visibility statement. The currently focused node counts even
+ * when the layout says it has no box.
+ * @param {Array} roots - elements / shadow roots to read from
+ * @return {Array<HTMLElement>}
+ */
+export const list_focusables = function (roots) {
+	const found = [];
+	const active = deep_active_element();
+	for (let i = 0; i < roots.length; i++) {
+		const root = roots[i];
+		if (!root || !root.querySelectorAll) continue;
+		const nodes = Array.from(root.querySelectorAll(FOCUSABLE));
+		for (let j = 0; j < nodes.length; j++) {
+			const node = nodes[j];
+			if (found.indexOf(node) !== -1) continue;
+			if (node.getClientRects && node.getClientRects().length === 0 && node !== active) continue;
+			found.push(node);
+		}
+	}
+	return found;
+}; //end list_focusables
+
+/**
+ * FOCUS_WITHOUT_SCROLL
+ * Move focus WITHOUT the implicit scroll `focus()` performs. Every focus move a
+ * dialog makes goes through here: the dialog is a fixed overlay, so nothing it
+ * focuses needs scrolling into view — but the `<dd-modal>` HOST is an in-flow
+ * element appended at the END of the page, and a plain `focus()` on it (the
+ * fallback when nothing inside is visible yet, which is always the case at
+ * connect time) scrolled the whole page to the bottom on every open.
+ * @param {HTMLElement} el
+ * @return {void}
+ */
+export const focus_without_scroll = function (el) {
+	if (el && typeof el.focus === 'function') {
+		el.focus({ preventScroll: true });
+	}
+}; //end focus_without_scroll
+
+/**
  * TRAP_FOCUS
  * Dialog focus management: move focus in, keep Tab inside, restore it on release.
  *
@@ -476,31 +521,7 @@ export const trap_focus = function (container, options = {}) {
 
 	const roots = options.roots ? options.roots : options.scope ? [options.scope] : [container];
 
-	const focusables = () => {
-		const found = [];
-		for (let i = 0; i < roots.length; i++) {
-			const root = roots[i];
-			if (!root || !root.querySelectorAll) continue;
-			const nodes = Array.from(root.querySelectorAll(FOCUSABLE));
-			for (let j = 0; j < nodes.length; j++) {
-				const node = nodes[j];
-				if (found.indexOf(node) !== -1) continue;
-				// a hidden candidate is not a tab stop. `getClientRects()` is the
-				// check, not `offsetParent`: slotted content lives in one tree and
-				// is laid out in another, and offsetParent's answer across a shadow
-				// boundary is not a visibility statement. The currently focused node
-				// counts even when the layout says it has no box.
-				if (
-					node.getClientRects &&
-					node.getClientRects().length === 0 &&
-					node !== deep_active_element()
-				)
-					continue;
-				found.push(node);
-			}
-		}
-		return found;
-	};
+	const focusables = () => list_focusables(roots);
 
 	const keydown_handler = (e) => {
 		if (e.key !== 'Tab') return;
@@ -516,15 +537,15 @@ export const trap_focus = function (container, options = {}) {
 		if (index === -1) {
 			// focus is somewhere the dialog does not own: pull it back in
 			e.preventDefault();
-			(e.shiftKey ? last : first).focus();
+			focus_without_scroll(e.shiftKey ? last : first);
 			return;
 		}
 		if (e.shiftKey && active === first) {
 			e.preventDefault();
-			last.focus();
+			focus_without_scroll(last);
 		} else if (!e.shiftKey && active === last) {
 			e.preventDefault();
-			first.focus();
+			focus_without_scroll(first);
 		}
 	};
 
@@ -539,7 +560,7 @@ export const trap_focus = function (container, options = {}) {
 		if (initial === container && !container.hasAttribute('tabindex')) {
 			container.setAttribute('tabindex', '-1');
 		}
-		initial.focus();
+		focus_without_scroll(initial);
 	}
 
 	let released = false;
@@ -551,7 +572,17 @@ export const trap_focus = function (container, options = {}) {
 		}
 		if (release_options.restore === false) return;
 		if (restore_to && typeof restore_to.focus === 'function' && restore_to.isConnected !== false) {
-			restore_to.focus();
+			// no implicit scroll (the page must not jump on close either), but an
+			// opener the user scrolled away from while the dialog was open is brought
+			// back just enough to show where focus went — never re-centred.
+			focus_without_scroll(restore_to);
+			if (typeof restore_to.getBoundingClientRect === 'function') {
+				const rect = restore_to.getBoundingClientRect();
+				const off_screen = rect.bottom < 0 || rect.top > window.innerHeight;
+				if (off_screen && typeof restore_to.scrollIntoView === 'function') {
+					restore_to.scrollIntoView({ block: 'nearest' });
+				}
+			}
 		}
 	};
 }; //end trap_focus
@@ -566,6 +597,8 @@ export const a11y = {
 	label_group,
 	label_group_text,
 	trap_focus,
+	list_focusables,
+	focus_without_scroll,
 	deep_active_element,
 	inert_background,
 	GROUP_ATTRIBUTE,
