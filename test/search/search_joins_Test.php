@@ -446,6 +446,61 @@ final class search_joins_test extends TestCase {
 
 
 	/**
+	* TEST_DUPLICATED_OPERANDS_SAME_PATH_SHARE_ONE_JOIN
+	* Two '!!' leaves on the same path under $and (also through a nested $and) must share ONE
+	* main-query join: the duplicated window compares their values as one tuple, so they must come
+	* from the same linked record. Independent joins paired values of different linked records
+	* and multiplied rows.
+	* @return void
+	*/
+	public function test_duplicated_operands_same_path_share_one_join() : void {
+
+		$sqo	= self::build_sqo('$and', [
+			self::operand('!!', self::$tipo_string, 'component_input_text'),
+			['$and' => [ self::operand('!!', self::$tipo_string, 'component_input_text') ]] // text_area has no '!!'
+		]);
+		$built	= self::build($sqo);
+
+		$this->assertSame(1, self::count_relations_join_any($built['joins']),
+			'!!: expected a single main-query relations join' . PHP_EOL . $built['joins']
+		);
+		$this->assertSame(1, self::count_relations_join($built['joins'], 1, $built['signature']),
+			'!!: the shared join must be r_j1_' . PHP_EOL . $built['joins']
+		);
+	}//end test_duplicated_operands_same_path_share_one_join
+
+
+
+	/**
+	* TEST_SQL_COMMENT_IS_SINGLE_LINE
+	* Debug comments carry client values (sqo path 'name', component tipos, q_info). A new line
+	* inside them ended the '--' comment and ran the rest as SQL (injection when SHOW_DEBUG).
+	* @return void
+	*/
+	public function test_sql_comment_is_single_line() : void {
+
+		$comment = search::sql_comment("x\ntrue OR --\r\n1=1");
+
+		$this->assertSame(1, substr_count($comment, "\n"), 'only the terminating new line is allowed');
+		$this->assertStringStartsWith('-- ', $comment);
+		$this->assertStringEndsWith("\n", $comment);
+
+		// through the builder: a path name with a new line must stay inside the comment
+		$operand = self::operand('zzz', self::$tipo_string, 'component_input_text');
+			$operand['path'][1]['name'] = "x\ntrue OR --";
+
+		$built = self::build(self::build_sqo('$and', [$operand]));
+
+		foreach (explode("\n", $built['where']) as $line) {
+			$this->assertStringStartsNotWith('true OR', ltrim($line),
+				'client path name escaped the SQL comment' . PHP_EOL . $built['where']
+			);
+		}
+	}//end test_sql_comment_is_single_line
+
+
+
+	/**
 	* TEST_SINGLE_STEP_POSITIVE_REGEX_ADDS_WHOLE_BLOB_PREFILTER
 	* A single-step positive regex search (as 'contains') ANDs a redundant whole-blob regex
 	* (datos#>>'{components,<tipo>,dato}') before the per-language $or group
