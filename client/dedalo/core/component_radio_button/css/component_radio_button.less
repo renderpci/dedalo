@@ -165,10 +165,9 @@
 
 			>.content_value {
 				display: inline-block;
-				margin-right: 0.5rem;
-				margin-top: 0.5rem;
-				margin-bottom: 0.25rem;
+				margin: 0px; // spacing is the grid gap below
 				width: auto;
+				min-width: 0;
 
 
 				// label wraps the input too. Same option-chip treatment as edit;
@@ -225,5 +224,28 @@
 			border-radius: 50%;
 			transform: translate(-50%, -50%);
 		}
+	}
+}
+
+// search: the options sit in aligned columns instead of flowing like words
+// (ragged rows, a lone last option, a tall card that leaves blank space under
+// its grid-row neighbours). The operator box is absolutely placed by
+// search.less, so the grid only lays out the options. Rooted at
+// .search_component to outrank the search body's display:flex (search.less).
+.search_component > .component_radio_button.search > .content_data {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr));
+	gap: 0.25rem 0.5rem;
+	align-items: center;
+
+	>.content_value >.label {
+		max-width: 100%;
+
+		// a long option keeps its column: cut with an ellipsis, full text on hover
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		display: block;
+		width: fit-content; // the checked pill hugs its text, not the column
 	}
 }

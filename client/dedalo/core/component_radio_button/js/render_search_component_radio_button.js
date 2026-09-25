@@ -197,6 +197,9 @@ const get_input_element = (i, datalist_item, self) => {
 			inner_html		: render_value(label, self.context.render_class),
 			parent			: content_value
 		})
+		// full text on hover: a long option is cut with an ellipsis in the
+		// search columns (component_radio_button.less)
+		input_label.title = input_label.textContent
 
 	// input radio button
 		const input = ui.create_dom_element({
