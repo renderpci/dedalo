@@ -2463,7 +2463,10 @@ class search {
 						}
 					}
 					$search_object->join_id = $join_id;
-					if ($n_levels>1 && $op==='$or' && !$as_subquery) {
+					// duplicated ('!!') leaves feed the main-query window (ar_duplicated_fields) with the
+					// joined alias, so they always need the main-query join, never an EXISTS
+					$is_duplicated_leaf = (($search_object->duplicated ?? false)===true);
+					if ($n_levels>1 && (($op==='$or' && !$as_subquery) || $is_duplicated_leaf)) {
 						// top-level $or: one shared LEFT JOIN relations/matrix pair in the main query
 						$joins_built = $this->build_sql_join($search_object->path, $join_id);
 						$ar_group_elements[] = ($joins_built===true)
@@ -3001,7 +3004,9 @@ class search {
 
 						$sql_where .= '-- Search duplicated value with !! (v3)';
 						$sql_where .= PHP_EOL . ' 1=1 ';
-						$sql_where .= PHP_EOL . '-- END Search duplicated value with !! (v3)' . PHP_EOL;
+						// block comment: a trailing line comment would swallow what callers append
+						// after trim(), as the ')' closing a correlated EXISTS
+						$sql_where .= PHP_EOL . '/* END Search duplicated value with !! (v3) */' . PHP_EOL;
 
 						$sql_where .= PHP_EOL;
 						break;
@@ -3061,7 +3066,7 @@ class search {
 					$sql_where .= 'as '.$component_tipo.'_array_elements'.PHP_EOL;
 					$sql_where .= 'WHERE'.PHP_EOL;
 					$sql_where .= self::resolve_array_elements( $search_object->array_elements, $component_tipo );
-					$sql_where .= PHP_EOL.') -- end check_array_component'.PHP_EOL;
+					$sql_where .= PHP_EOL.') /* end check_array_component */'.PHP_EOL; // block comment, see duplicated case
 					break;
 
 				case 'typeof':
