@@ -18,6 +18,8 @@
  *  - `updateDdOntologyColumns` = partial SET with INSERT fallback on 0 rows
  *    (PHP update()'s upsert fallback — the sync_order path);
  *  - the backup-table protocol (dd_ontology_bk) used by regenerate.
+ *  - every INSERT door first heals a lagging id sequence
+ *    (`alignDdOntologyIdSequence`): `ON CONFLICT (tipo)` does not cover the pkey.
  *
  * HARD RULE: this file is the ONLY dd_ontology SQL. Every WRITE ends by fanning
  * out `clearOntologyDerivedCaches()` (the single invalidation chokepoint) so no
@@ -37,7 +39,7 @@ import {
 } from '../ontology/cache_invalidation.ts';
 import { safeTld } from '../ontology/tld.ts';
 import { encodeForJsonb } from './json_codec.ts';
-import { sql } from './postgres.ts';
+import { sql, withTransaction } from './postgres.ts';
 
 /**
  * One dd_ontology node — the shape the parser produces and the writer persists.
@@ -167,6 +169,7 @@ export async function upsertDdOntologyNode(
 	const updateParts = COLUMNS.filter((column) => column !== 'tipo').map(
 		(column) => `"${column}" = EXCLUDED."${column}"`,
 	);
+	await alignDdOntologyIdSequence();
 	const rows = (await sql.unsafe(
 		`INSERT INTO dd_ontology (${columnIdents.join(', ')})
 		 VALUES (${placeholders.join(', ')})
@@ -253,6 +256,7 @@ export async function updateDdOntologyColumns(
 			'$1',
 			...validColumns.map((column, index) => placeholderFor(column, index + 2)),
 		];
+		await alignDdOntologyIdSequence();
 		await sql.unsafe(
 			`INSERT INTO dd_ontology (${insertColumns.join(', ')}) VALUES (${insertPlaceholders.join(', ')})`,
 			updateParams,
@@ -415,6 +419,53 @@ export async function deleteTldNodes(tld: string): Promise<boolean> {
 }
 
 /**
+ * True when the NEXT value the id sequence would hand out is already taken
+ * (effective next = last_value + 1, or last_value itself when is_called=false —
+ * a freshly restarted/reset sequence). NULL-safe: an empty table never lags.
+ */
+async function idSequenceLags(): Promise<boolean> {
+	const rows = (await sql.unsafe(
+		`SELECT COALESCE(
+		   (SELECT MAX(id) FROM dd_ontology) >=
+		   (SELECT last_value + CASE WHEN is_called THEN 1 ELSE 0 END FROM dd_ontology_id_seq),
+		   false) AS lags`,
+		[],
+	)) as { lags: boolean }[];
+	return rows[0]?.lags === true;
+}
+
+/**
+ * Raise the dd_ontology id sequence to MAX(id) when it lags behind the table.
+ *
+ * Every insert here takes `id` from the sequence, and `ON CONFLICT (tipo)` does
+ * not cover the primary key: a sequence below MAX(id) (rows brought in by a
+ * dump/COPY restore or hand SQL, which never advance it) makes the insert die on
+ * `dd_ontology_id_pkey`. Retrying then "works" only because nextval is not
+ * transactional — each failed attempt burned values past the taken ids.
+ *
+ * Healthy path = ONE lock-free read (MAX(id) is a pkey index probe), no write.
+ * Lagging path = LOCK TABLE … SHARE ROW EXCLUSIVE, re-check, setval. The lock
+ * conflicts with every inserter's ROW EXCLUSIVE, and this table is the
+ * sequence's only consumer, so no nextval is in flight while the check and the
+ * setval run: a value already handed out can never be reissued (a check-then-
+ * setval without it could LOWER the sequence under a concurrent writer). Inside
+ * an ambient transaction the lock is held to its end; otherwise it lives in its
+ * own short transaction. Call it BEFORE the caller's first dd_ontology write when
+ * possible (rebuildOntology does): upgrading a held ROW EXCLUSIVE to this lock can
+ * deadlock against a twin — Postgres then aborts one side, loudly.
+ * Returns true when the sequence was moved.
+ */
+export async function alignDdOntologyIdSequence(): Promise<boolean> {
+	if (!(await idSequenceLags())) return false;
+	return withTransaction(async () => {
+		await sql.unsafe('LOCK TABLE dd_ontology IN SHARE ROW EXCLUSIVE MODE', []);
+		if (!(await idSequenceLags())) return false; // a twin healed it while we waited
+		await sql.unsafe(`SELECT setval('dd_ontology_id_seq', (SELECT MAX(id) FROM dd_ontology))`, []);
+		return true;
+	});
+}
+
+/**
  * The ONE dd_ontology tld-delete statement (T2): every row of the tld goes, the
  * removed tipos come back so a cascade (ontology_delete.ts) can count and report
  * them. `tld` MUST already be safeTld-validated by the caller; a mismatch is
@@ -497,6 +548,8 @@ export async function restoreFromBackupTable(tlds: readonly string[]): Promise<b
 	}
 	const whereSql = safe.map((tld) => `"tld" = '${tld}'`).join(' OR ');
 	await sql.unsafe(`INSERT INTO dd_ontology SELECT * FROM "dd_ontology_bk" WHERE ${whereSql}`, []);
+	// Explicit ids in, sequence untouched — the exact lag alignDdOntologyIdSequence heals.
+	await alignDdOntologyIdSequence();
 	await clearOntologyDerivedCaches();
 	return true;
 }

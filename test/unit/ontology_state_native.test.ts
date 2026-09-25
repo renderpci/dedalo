@@ -16,7 +16,11 @@
  */
 
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
-import { deleteTldNodes, upsertDdOntologyNode } from '../../src/core/db/dd_ontology.ts';
+import {
+	alignDdOntologyIdSequence,
+	deleteTldNodes,
+	upsertDdOntologyNode,
+} from '../../src/core/db/dd_ontology.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
 import { inspectOntology, rebuildOntology } from '../../src/core/ontology/ontology_state.ts';
@@ -58,8 +62,12 @@ async function backupTableExists(): Promise<boolean> {
 	return rows[0]?.reg != null;
 }
 
+// A FOREIGN tld's row planted ahead of the id sequence (the sequence-lag gate).
+const AHEAD_TLD = 'zzp';
+
 async function sweep(): Promise<void> {
 	await deleteTldNodes(TLD);
+	await deleteTldNodes(AHEAD_TLD);
 	await sql.unsafe('DELETE FROM matrix_ontology WHERE section_tipo = $1', [SECTION]);
 	await sql.unsafe(
 		`DELETE FROM matrix_ontology_main WHERE section_tipo = 'ontology35' AND string @> $1::text::jsonb`,
@@ -193,5 +201,71 @@ describe('rebuildOntology', () => {
 		expect(await storedTerm('zzo1')).toBe('First');
 		// The new rebuild uses a transaction, NOT the old fragile dd_ontology_bk protocol.
 		expect(await backupTableExists()).toBe(false);
+	});
+});
+
+describe('dd_ontology id sequence — lag healing (alignDdOntologyIdSequence)', () => {
+	type SeqRow = { last_value: string; is_called: boolean };
+	const readSeq = async (): Promise<SeqRow> =>
+		(
+			(await sql.unsafe('SELECT last_value, is_called FROM dd_ontology_id_seq')) as SeqRow[]
+		)[0] as SeqRow;
+	const nextSeqValue = async (): Promise<number> => {
+		const seq = await readSeq();
+		return Number(seq.last_value) + (seq.is_called ? 1 : 0);
+	};
+	/** Explicit-id INSERT = what a dump/COPY restore does: the row lands, the sequence stays. */
+	const plantAhead = async (id: number, n = 1): Promise<void> => {
+		await sql.unsafe(
+			`INSERT INTO dd_ontology (id, tipo, tld, model) VALUES ($1, $2, $3, 'section')`,
+			[id, `${AHEAD_TLD}${n}`, AHEAD_TLD],
+		);
+		await clearOntologyDerivedCaches();
+	};
+
+	test('rebuild: a row planted at the next sequence id does not collide on the pkey', async () => {
+		const aheadId = await nextSeqValue();
+		await plantAhead(aheadId);
+
+		const result = await rebuildOntology(TLD, USER_ID);
+
+		expect(result.errors).toEqual([]);
+		expect(result.ok).toBe(true);
+		expect(await storedTerm('zzo1')).toBe('First');
+		expect(await nextSeqValue()).toBeGreaterThan(aheadId);
+	});
+
+	test('incremental door: upsertDdOntologyNode heals the lag too', async () => {
+		const aheadId = await nextSeqValue();
+		await plantAhead(aheadId);
+
+		const id = await upsertDdOntologyNode({
+			tipo: `${AHEAD_TLD}2`,
+			tld: AHEAD_TLD,
+			model: 'section',
+		});
+
+		expect(id).toBeGreaterThan(aheadId);
+	});
+
+	test('is_called=false at MAX(id): the next value is taken, so it IS lagging', async () => {
+		await plantAhead(await nextSeqValue());
+		const maxRows = (await sql.unsafe('SELECT MAX(id) AS m FROM dd_ontology')) as { m: string }[];
+		const maxId = Number(maxRows[0]?.m);
+		await sql.unsafe(`SELECT setval('dd_ontology_id_seq', $1, false)`, [maxId]);
+
+		expect(await alignDdOntologyIdSequence()).toBe(true);
+		expect(await nextSeqValue()).toBe(maxId + 1);
+		const result = await rebuildOntology(TLD, USER_ID);
+		expect(result.errors).toEqual([]);
+	});
+
+	test('RAISE-ONLY: a healthy sequence above MAX(id) is never moved', async () => {
+		// burn values so the sequence sits strictly above MAX(id)
+		await sql.unsafe(`SELECT nextval('dd_ontology_id_seq') FROM generate_series(1, 3)`);
+		const before = await readSeq();
+
+		expect(await alignDdOntologyIdSequence()).toBe(false);
+		expect(await readSeq()).toEqual(before);
 	});
 });

@@ -81,6 +81,7 @@
  */
 
 import {
+	alignDdOntologyIdSequence,
 	type DdOntologyNode,
 	type DdOntologyRow,
 	deleteTldNodes,
@@ -509,6 +510,10 @@ export async function rebuildOntology(rawTld: string, userId = -1): Promise<Onto
 	const errors: string[] = [];
 	try {
 		await withTransaction(async () => {
+			// Heal a lagging id sequence FIRST, before this tx holds any dd_ontology lock: the
+			// per-insert check in upsertDdOntologyNode is then a no-op, and two rebuilds never
+			// both upgrade a held ROW EXCLUSIVE into the alignment lock (deadlock).
+			await alignDdOntologyIdSequence();
 			// Parse BEFORE the wipe: a bad record aborts the tx with the live data intact.
 			const { own: parsed, foreign } = await parseMatrixNodes(tld);
 			// Misfiled records are reported, never rebuilt: `deleteTldNodes(tld)` below scopes
