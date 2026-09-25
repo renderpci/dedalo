@@ -1262,7 +1262,9 @@ class search {
 				// SELECT
 					$sql_query .= ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO || $this->matrix_table==='matrix_time_machine')
 						? 'SELECT '.$this->main_section_tipo_alias.'.section_id'
-						: 'SELECT DISTINCT '.$this->main_section_tipo_alias.'.section_id';
+						// section_id is unique only per section_tipo: multi-section counts must not merge
+						// records of different sections sharing the same section_id
+						: 'SELECT DISTINCT '.$this->main_section_tipo_alias.'.section_id, '.$this->main_section_tipo_alias.'.section_tipo';
 				// FROM
 					$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
 					# join virtual tables
@@ -1388,15 +1390,23 @@ class search {
 								// 	$order_query = str_replace('mix.', '', $order_query);
 								// }
 							$sql_query .= $order_query;
+						// multi table union case. Every table branch selects its own window, so the
+						// offset can only be applied once, over the merged rows: each branch takes the
+						// first limit+offset rows and the outer query skips the offset
+							$is_union = count($this->ar_section_tipo)>1 && count($this->get_union_matrix_tables())>1;
+							$has_offset = $this->search_query_object->offset>0;
 						// limit
 							$limit_query = '';
 							if ($this->search_query_object->limit>0) {
-								$limit_query = PHP_EOL . 'LIMIT ' . $sql_limit;
+								$branch_limit = ($is_union && $has_offset && $sql_limit!=='all')
+									? (int)$sql_limit + (int)$sql_offset
+									: $sql_limit;
+								$limit_query = PHP_EOL . 'LIMIT ' . $branch_limit;
 								$sql_query .= $limit_query;
 							}
 						// offset
 							$offset_query = '';
-							if ($this->search_query_object->offset>0) {
+							if ($has_offset && !$is_union) {
 								$offset_query = PHP_EOL . 'OFFSET ' . $sql_offset;
 								$sql_query .= $offset_query;
 							}
@@ -1411,11 +1421,18 @@ class search {
 							if (count($this->ar_section_tipo)>1) {
 								$sql_query = $this->build_union_query($sql_query);
 							}
-						// order/limit general for sub query
+						// order/limit general for sub query. In union case section_tipo breaks the
+						// section_id ties between tables (stable pages)
 							$sql_query .= PHP_EOL . 'ORDER BY ' . str_replace('mix.', '', $sql_query_order);
+							if ($is_union) {
+								$sql_query .= ', section_tipo';
+							}
 
 							if ($this->search_query_object->limit>0) {
 								$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
+							}
+							if ($is_union && $has_offset) {
+								$sql_query .= PHP_EOL . 'OFFSET ' . $sql_offset;
 							}
 
 				// disallow window selector
@@ -1595,7 +1612,7 @@ class search {
 			$sql_query .= PHP_EOL . ')';
 
 			if ($full_count) {
-				$sql_query .= PHP_EOL . 'SELECT COUNT(DISTINCT section_id) as full_count';
+				$sql_query .= PHP_EOL . 'SELECT COUNT(DISTINCT (section_id, section_tipo)) as full_count';
 				$sql_query .= PHP_EOL . 'FROM duplicate_check';
 				$sql_query .= PHP_EOL . 'WHERE pair_occurrence > 1';
 			} else {
@@ -1645,7 +1662,83 @@ class search {
 	public function build_union_query(string $sql_query) : string {
 
 		// Calculate matrix tables based on section tipos
-		$this->ar_matrix_tables = [];
+		$this->ar_matrix_tables = $this->get_union_matrix_tables();
+
+		// If there are multiple matrix tables, build UNION query
+		if (count($this->ar_matrix_tables)>1) {
+			$tables_query = [];
+
+			// Add current query
+			$tables_query[] = $sql_query;
+
+			foreach ($this->ar_matrix_tables as $key => $current_matrix_table) {
+
+				// Ignore the first table
+				if ($key===0) {
+					continue;
+				}
+
+				// copy source and replace table and alias names
+				// NOTE: replace only 'FROM <matrix_table> AS <alias>' occurrences (main table
+				// and inner window subselect), never 'FROM relations AS r_jN_...' (the correlated
+				// EXISTS subquery tables; relations is a global table shared by all union members).
+				// Replacements are applied outside SQL string literals only: the literals hold user
+				// search text (e.g. q 'from Roma as capital' or 'mix.x') that must never be rewritten.
+				$current_query = self::replace_outside_sql_literals($sql_query, function(string $sql) use($current_matrix_table) : string {
+					$sql = preg_replace('/(FROM (?!relations)[a-zA-Z_]+ AS [a-zA-Z_]+)/i', 'FROM '.$current_matrix_table.' AS mix_'.$current_matrix_table, $sql);
+					return str_replace('mix.', 'mix_'.$current_matrix_table.'.', $sql);
+				});
+
+				// Add the modified query to the list
+				$tables_query[] = $current_query;
+			}
+
+			// Replace the original query with UNION ALL clauses
+			$sql_query = implode(PHP_EOL . 'UNION ALL' . PHP_EOL, $tables_query);
+		}
+
+
+		return $sql_query;
+	}//end build_union_query
+
+
+
+	/**
+	* REPLACE_OUTSIDE_SQL_LITERALS
+	* Applies a string transformation to the SQL code only, leaving the single quoted
+	* string literals ('...' with '' as escaped quote) and the comments ('-- ...' and
+	* block comments) untouched. Comments are skipped too because they can hold an
+	* unpaired quote (e.g. a label as "l'obra"), that would shift the literals detection.
+	* @param string $sql
+	* @param callable $fn
+	*	Receives each SQL code chunk and returns it transformed
+	* @return string $sql
+	*/
+	public static function replace_outside_sql_literals(string $sql, callable $fn) : string {
+
+		// leftmost match wins: a quote inside a comment or '--' inside a literal are handled
+		$parts = preg_split("/('(?:[^']|'')*'|--[^\n]*|\/\*.*?\*\/)/s", $sql, -1, PREG_SPLIT_DELIM_CAPTURE);
+		foreach ($parts as $i => $part) {
+			// odd indexes are the captured literals and comments
+			if ($i % 2 === 0) {
+				$parts[$i] = $fn($part);
+			}
+		}
+
+		return implode('', $parts);
+	}//end replace_outside_sql_literals
+
+
+
+	/**
+	* GET_UNION_MATRIX_TABLES
+	* Resolves the unique matrix tables of the searched section tipos, in section tipo order.
+	* More than one table means the query is built as an UNION of one query per table.
+	* @return array $ar_matrix_tables
+	*/
+	public function get_union_matrix_tables() : array {
+
+		$ar_matrix_tables = [];
 		foreach ($this->ar_section_tipo as $key => $current_section_tipo) {
 
 			$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_section_tipo, true);
@@ -1673,44 +1766,14 @@ class search {
 			}
 
 			// Add unique matrix tables to the list
-			if (!in_array($current_matrix_table, $this->ar_matrix_tables)) {
-				$this->ar_matrix_tables[] = $current_matrix_table;
+			if (!in_array($current_matrix_table, $ar_matrix_tables)) {
+				$ar_matrix_tables[] = $current_matrix_table;
 			}
 		}
 
-		// If there are multiple matrix tables, build UNION query
-		if (count($this->ar_matrix_tables)>1) {
-			$tables_query = [];
 
-			// Add current query
-			$tables_query[] = $sql_query;
-
-			foreach ($this->ar_matrix_tables as $key => $current_matrix_table) {
-
-				// Ignore the first table
-				if ($key===0) {
-					continue;
-				}
-
-				// copy source and replace table and alias names
-				// NOTE: replace only 'FROM <matrix_table> AS <alias>' occurrences (main table
-				// and inner window subselect), never 'FROM relations AS r_jN_...' (the correlated
-				// EXISTS subquery tables; relations is a global table shared by all union members).
-				$current_query	= $sql_query;
-				$current_query	= preg_replace('/(FROM (?!relations)[a-zA-z]+ AS [a-zA-z]+)/i', 'FROM '.$current_matrix_table.' AS mix_'.$current_matrix_table, $current_query);
-				$current_query	= str_replace('mix.', 'mix_'.$current_matrix_table.'.', $current_query);
-
-				// Add the modified query to the list
-				$tables_query[] = $current_query;
-			}
-
-			// Replace the original query with UNION ALL clauses
-			$sql_query = implode(PHP_EOL . 'UNION ALL' . PHP_EOL, $tables_query);
-		}
-
-
-		return $sql_query;
-	}//end build_union_query
+		return $ar_matrix_tables;
+	}//end get_union_matrix_tables
 
 
 
@@ -3061,7 +3124,7 @@ class search {
 	*/
 	public function build_full_count_sql_query_select() : string {
 
-		$sql_query_select = 'count(DISTINCT '.$this->main_section_tipo_alias.'.section_id) as full_count';
+		$sql_query_select = 'count(DISTINCT ('.$this->main_section_tipo_alias.'.section_id, '.$this->main_section_tipo_alias.'.section_tipo)) as full_count';
 
 		return $sql_query_select;
 	}//end build_full_count_sql_query_select

@@ -1248,7 +1248,7 @@ final class search_test extends TestCase {
 				// dump($result, ' result ++ '.to_string());
 
 			// sample expected
-				// "count(DISTINCT rs170.section_id) as full_count"
+				// "count(DISTINCT (rs170.section_id, rs170.section_tipo)) as full_count"
 
 			$this->assertTrue(
 				empty($_ENV['DEDALO_LAST_ERROR']),
@@ -1262,10 +1262,11 @@ final class search_test extends TestCase {
 				'expected true (type===string) and received type: ' .$type
 			);
 
-			$eq		= trim($result)==='count(DISTINCT rs170.section_id) as full_count';
+			// section_id is unique only per section_tipo
+			$eq		= trim($result)==='count(DISTINCT (rs170.section_id, rs170.section_tipo)) as full_count';
 			$this->assertTrue(
 				$eq,
-				'expected true trim($result)===\'count(DISTINCT rs170.section_id) as full_count\' and received: ' . json_encode($result)
+				'expected true trim($result)===\'count(DISTINCT (rs170.section_id, rs170.section_tipo)) as full_count\' and received: ' . json_encode($result)
 			);
 
 		// multiple
@@ -1285,17 +1286,17 @@ final class search_test extends TestCase {
 				// dump($result, ' result ++ '.to_string());
 
 			// sample expected
-				// "count(DISTINCT mix.section_id) as full_count"
+				// "count(DISTINCT (mix.section_id, mix.section_tipo)) as full_count"
 
 			$this->assertTrue(
 				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors. DEDALO_LAST_ERROR: ' .$_ENV['DEDALO_LAST_ERROR']
 			);
 
-			$eq		= trim($result)==='count(DISTINCT mix.section_id) as full_count';
+			$eq		= trim($result)==='count(DISTINCT (mix.section_id, mix.section_tipo)) as full_count';
 			$this->assertTrue(
 				$eq,
-				'expected true trim($result)===\'count(DISTINCT mix.section_id) as full_count\' and received: ' . json_encode($result)
+				'expected true trim($result)===\'count(DISTINCT (mix.section_id, mix.section_tipo)) as full_count\' and received: ' . json_encode($result)
 			);
 	}//end test_build_full_count_sql_query_select
 
