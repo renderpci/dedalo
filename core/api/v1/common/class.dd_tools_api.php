@@ -121,6 +121,25 @@ final class dd_tools_api {
 				return $response;
 			}
 
+		// sqo sanitize. Tools (as tool_export, tool_propagate_component_data) search with the
+		// client options->sqo: same treatment as the rqo->sqo in dd_manager
+		// (see search::sanitize_client_sqo)
+			if (isset($options->sqo) && is_object($options->sqo)) {
+				$sqo_errors	= [];
+				$safe_sqo	= search::sanitize_client_sqo($options->sqo, $sqo_errors);
+				if ($safe_sqo===null) {
+					$response->msg		= 'Error. Invalid sqo';
+					$response->errors	= $sqo_errors;
+					debug_log(__METHOD__
+						. " $response->msg " . PHP_EOL
+						. ' errors: ' . to_string($sqo_errors)
+						, logger::ERROR
+					);
+					return $response;
+				}
+				$options->sqo = $safe_sqo;
+			}
+
 		// load tool class file
 			$class_file = DEDALO_TOOLS_PATH . '/' . $tool_name . '/class.' . $tool_name .'.php';
 			if (!file_exists($class_file)) {

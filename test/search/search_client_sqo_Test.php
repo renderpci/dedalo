@@ -338,4 +338,73 @@ final class search_client_sqo_test extends TestCase {
 
 
 
+	/**
+	* TEST_FUNCTION_FORMAT_ACCEPTS_CLIENT_FLAT_KEY
+	* service_autocomplete 'filter by list' sends the flat locator key JSON quoted and with
+	* negative section_id ('"dd543_dd128_-1"'): it must reach the SQL as a JSON array item
+	* @return void
+	*/
+	public function test_function_format_accepts_client_flat_key() : void {
+
+		$query_object = (object)[
+			'q'				=> '"test80_test3_-1"',
+			'format'		=> 'function',
+			'use_function'	=> 'relations_flat_fct_st_si',
+			'path'			=> [(object)['section_tipo' => self::$section_tipo, 'component_tipo' => 'test80']]
+		];
+		$result = component_relation_common::resolve_query_object_sql($query_object);
+		$this->assertSame("'[\"test80_test3_-1\"]'", $result->q_parsed);
+
+		// unquoted form too
+		$query_object->q = 'test80_test3_5';
+		$result = component_relation_common::resolve_query_object_sql($query_object);
+		$this->assertSame("'[\"test80_test3_5\"]'", $result->q_parsed);
+
+		// unsafe value never matches everything and never breaks the literal
+		$query_object->q = "x' OR '1'='1";
+		$result = component_relation_common::resolve_query_object_sql($query_object);
+		$this->assertStringStartsWith("'[\"invalid_", $result->q_parsed);
+		$this->assertStringNotContainsString("' OR", $result->q_parsed);
+	}//end test_function_format_accepts_client_flat_key
+
+
+
+	/**
+	* TEST_LIMIT_FALSE_MEANS_NO_LIMIT
+	* Server SQOs (relation_list inverse references, diffusion_rdf) use limit:false for 'all'
+	* @return void
+	*/
+	public function test_limit_false_means_no_limit() : void {
+
+		$sql = search::get_instance(json_decode('{"section_tipo":["'.self::$section_tipo.'"],"limit":false}'))->parse_search_query_object();
+		$this->assertDoesNotMatchRegularExpression('/\bLIMIT\b/', $sql);
+
+		// negative limit falls back to the default
+		$sql = search::get_instance(json_decode('{"section_tipo":["'.self::$section_tipo.'"],"limit":-1}'))->parse_search_query_object();
+		$this->assertMatchesRegularExpression('/\bLIMIT 10\b/', $sql);
+	}//end test_limit_false_means_no_limit
+
+
+
+	/**
+	* TEST_TOOLS_API_REJECTS_INVALID_CLIENT_SQO
+	* Tools search with the client options->sqo (tool_export...): sanitized as rqo->sqo
+	* @return void
+	*/
+	public function test_tools_api_rejects_invalid_client_sqo() : void {
+
+		$rqo = json_decode('{
+			"dd_api": "dd_tools_api",
+			"action": "tool_request",
+			"source": {"model":"tool_export","action":"export_grid"},
+			"options": {"sqo": {"section_tipo":["'.self::$section_tipo.'\' OR 1=1"]}}
+		}');
+		$response = dd_tools_api::tool_request($rqo);
+
+		$this->assertFalse($response->result);
+		$this->assertNotEmpty($response->errors);
+	}//end test_tools_api_rejects_invalid_client_sqo
+
+
+
 }//end class search_client_sqo_test

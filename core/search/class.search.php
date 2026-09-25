@@ -484,10 +484,12 @@ class search {
 			){
 			$this->search_query_object->limit = 10;
 		}
-		// limit is written as is into the SQL: only a non negative integer (0 = no limit) or 'all'
+		// limit is written as is into the SQL: only a non negative integer (0 = no limit), 'all'
+		// or false (no limit, used by server SQOs as relation_list and diffusion_rdf)
 		if (is_numeric($this->search_query_object->limit)) {
-			$this->search_query_object->limit = max(0, (int)$this->search_query_object->limit);
-		}else if ($this->search_query_object->limit!=='all') {
+			$limit = (int)$this->search_query_object->limit;
+			$this->search_query_object->limit = ($limit<0) ? 10 : $limit;
+		}else if ($this->search_query_object->limit!=='all' && $this->search_query_object->limit!==false) {
 			$this->search_query_object->limit = 10;
 		}
 

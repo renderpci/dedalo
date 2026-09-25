@@ -1508,15 +1508,21 @@ class component_relation_common extends component_common {
 			$q = '[]';
 		}
 
-		// flat locator (function format) is a plain key as 'numisdata309_numisdata300_55'
-		if ($format==='function' && preg_match('/^[a-z0-9_]*$/i', $q)!==1) {
-			debug_log(__METHOD__
-				. ' Ignored invalid unsafe function q ' . PHP_EOL
-				. ' q: ' . to_string($q)
-				, logger::ERROR
-			);
-			// never empty: '[]' would match every record
-			$q = '"invalid_' . preg_replace('/[^a-z0-9_]/i', '', $q) . '"';
+		// flat locator (function format) is a plain key as 'numisdata309_numisdata300_55'. The
+		// client sends it JSON quoted ('"dd543_dd128_-1"', see service_autocomplete
+		// view_default_autocomplete filter by list) and section_id can be negative
+		if ($format==='function') {
+			$flat_key = preg_replace('/^"(.*)"$/', '$1', $q);
+			if (preg_match('/^[a-z0-9_-]+$/i', $flat_key)!==1) {
+				debug_log(__METHOD__
+					. ' Ignored invalid unsafe function q ' . PHP_EOL
+					. ' q: ' . to_string($q)
+					, logger::ERROR
+				);
+				// never empty: '[]' would match every record
+				$flat_key = 'invalid_' . preg_replace('/[^a-z0-9_-]/i', '', $flat_key);
+			}
+			$q = json_encode($flat_key);
 		}
 
 		// SQL literal safe. q is written inside single quoted literals below and comes from
