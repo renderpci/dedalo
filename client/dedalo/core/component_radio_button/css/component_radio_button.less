@@ -3,6 +3,43 @@
 *
 * Included from main.less file
 */
+
+// SEARCH_OPTION_CHIP — a single-choice option in search mode, drawn as a pill
+// (checked = filled). Shared by component_radio_button and
+// component_publication so the two yes/no-style pickers look the same.
+.search_option_chip() {
+	display: flex;
+	align-items: center;
+	padding: 0.25rem 0.66rem;
+	border-radius: var(--radius-pill);
+	cursor: pointer;
+	transition: background-color var(--transition-fast), color var(--transition-fast);
+
+	&:hover:not(:has(input:checked)) {
+		background-color: var(--field_hover_bg);
+	}
+
+	&:has(input:checked) {
+		background-color: var(--option_chip_checked_bg);
+		color: var(--option_chip_checked_fg);
+	}
+
+	&:has(input:focus-visible) {
+		outline: 2px solid var(--focus_ring);
+		outline-offset: 1px;
+	}
+
+	>input {
+		position: absolute;
+		opacity: 0;
+		width: 0px;
+		height: 0px;
+		margin: 0px;
+		border: none;
+		pointer-events: none;
+	}
+}
+
 .component_radio_button {
 
 	// shared
@@ -138,36 +175,7 @@
 				// search JS keeps no 'checked' class on the label, so the chip
 				// state comes from :has(input:checked) alone here.
 				>.label {
-					display: flex;
-					align-items: center;
-					padding: 0.25rem 0.66rem;
-					border-radius: var(--radius-pill);
-					cursor: pointer;
-					transition: background-color var(--transition-fast), color var(--transition-fast);
-
-					&:hover:not(:has(input:checked)) {
-						background-color: var(--field_hover_bg);
-					}
-
-					&:has(input:checked) {
-						background-color: var(--option_chip_checked_bg);
-						color: var(--option_chip_checked_fg);
-					}
-
-					&:has(input:focus-visible) {
-						outline: 2px solid var(--focus_ring);
-						outline-offset: 1px;
-					}
-
-					>input {
-						position: absolute;
-						opacity: 0;
-						width: 0px;
-						height: 0px;
-						margin: 0px;
-						border: none;
-						pointer-events: none;
-					}
+					.search_option_chip();
 				}
 			}
 		}

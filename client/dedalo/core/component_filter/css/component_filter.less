@@ -85,20 +85,129 @@
 
 		>.content_data {
 			display: flex;
-			max-height: 16rem;
+			overflow: visible; // the picker panel floats below the card body
 
-			>.q_operator {
+			// One-line trigger + dropdown tree (render_search_component_filter.js):
+			// the card is the height of every other search field; the tree
+			// opens on demand, like a select's options.
+			>.filter_picker {
+				position: relative;
+				// zero basis: the picker takes the space LEFT beside the operator
+				// box. With `auto` its basis was the summary's one-line width,
+				// so a long selection pushed it out of the card.
+				flex: 1 1 0;
+				min-width: 0;
+				max-width: 100%;
 
-			}
+				>.filter_picker_toggle {
+					display: flex;
+					align-items: center;
+					justify-content: flex-start; // global button centres its content
+					gap: 0.375rem;
+					box-sizing: border-box; // 100% INCLUDING its padding, or it overhangs the card
+					width: 100%;
+					height: 2rem;
+					padding: 0 1.75rem 0 0.5rem;
+					font: inherit;
+					text-align: left;
+					color: var(--fg_muted);
+					background-color: @color_grey_16;
+					border: 1px solid @color_grey_13;
+					border-radius: var(--radius-sm);
+					white-space: nowrap;
+					overflow: hidden;
+					text-overflow: ellipsis;
+					cursor: pointer;
+					// chevron (same glyph as the tree's group arrows)
+					background-image: none;
+					position: relative;
 
-			// ul first level
-			>.branch {
-				width: calc(100% - 3.5rem);
-				font-size: 0.9rem;
-				line-height: 0.9rem;
+					&:after {
+						content: '';
+						position: absolute;
+						right: 0.5rem;
+						top: 50%;
+						width: 0.8rem;
+						height: 0.8rem;
+						margin-top: -0.4rem;
+						background-color: currentColor;
+						-webkit-mask: url(../../themes/default/icons/arrow_down.svg) center / contain no-repeat;
+								mask: url(../../themes/default/icons/arrow_down.svg) center / contain no-repeat;
+						transition: transform var(--transition-fast);
+					}
 
-				.item_li {
-					line-height: 1.2rem;
+					&:hover, &:focus-visible {
+						border-color: @color_orange_dedalo;
+						outline: none;
+					}
+
+					// names: shorten with an ellipsis
+					>.filter_picker_summary {
+						flex: 0 1 auto;
+						min-width: 0;
+						overflow: hidden;
+						text-overflow: ellipsis;
+						white-space: nowrap;
+					}
+
+					// "+N": never shortened
+					>.filter_picker_more {
+						flex: none;
+						padding: 0 0.4rem;
+						font-size: 0.85em;
+						font-weight: 500;
+						border-radius: var(--radius-pill);
+						background-color: var(--option_chip_checked_bg);
+						color: var(--option_chip_checked_fg);
+
+						&:empty {
+							display: none;
+						}
+					}
+				}
+
+				// a restriction is set: the summary reads as a value, not a hint
+				&.has_value >.filter_picker_toggle {
+					color: @color_grey_4;
+				}
+
+				>.filter_picker_panel {
+					display: none;
+					position: absolute;
+					z-index: 7; // over the next cards (their overlays sit at 6)
+					top: calc(100% + 0.25rem);
+					left: 0;
+					right: 0;
+					max-height: 16rem;
+					overflow: auto;
+					padding: 0.5rem;
+					background-color: @color_white;
+					border: 1px solid @color_grey_13;
+					border-radius: var(--radius-md);
+					box-shadow: var(--shadow-3);
+				}
+
+				&.open {
+					>.filter_picker_toggle {
+						border-color: @color_orange_dedalo;
+
+						&:after {
+							transform: rotate(180deg);
+						}
+					}
+					>.filter_picker_panel {
+						display: block;
+					}
+				}
+
+				// the tree
+				.branch {
+					font-size: 0.9rem;
+					line-height: 0.9rem;
+
+					.item_li {
+						line-height: 1.2rem;
+					}
 				}
 			}
 

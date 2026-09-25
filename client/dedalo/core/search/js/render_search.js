@@ -509,7 +509,7 @@ export const render_filter = function(options) {
 *    section has a `component_relation_children` and the section_map declares
 *    a 'thesaurus' scope. Stored as `self.search_children_recursive_node`.
 *
-*  - Reset button (.button.reload): calls `self.reset()` on mousedown, which
+*  - Reset button (.button.reset_search, labelled): calls `self.reset()` on mousedown, which
 *    clears the current filter and re-renders.
 *
 *  - Submit button (#button_submit): on mousedown it blurs the active element
@@ -576,17 +576,18 @@ render_search.prototype.render_search_buttons = function(){
 		// set node pointer
 		self.max_input = max_input
 
-	// recursive children
+	// recursive children. Appended to the column AFTER Apply (see below): an
+	// option of the search, not part of the Max field.
+		let recursive_label = null
 		if (get_scope(self.caller.context?.section_map, 'thesaurus', true)) {
 			// re-check if this section have really a component_relation_children before create the option
 			const section_components_list		= self.components_list[self.section_tipo]
 			const component_relation_children	= section_components_list.find(el => el.model==='component_relation_children')
 			if (component_relation_children) {
-				const recursive_label = ui.create_dom_element({
+				recursive_label = ui.create_dom_element({
 					element_type	: 'label',
 					text_content	: get_label['children_recursive'] || 'Children',
-					class_name		: 'children_recursive_label',
-					parent			: max_group
+					class_name		: 'children_recursive_label'
 				})
 				const search_children_recursive_node = ui.create_dom_element({
 					element_type	: 'input',
@@ -607,10 +608,12 @@ render_search.prototype.render_search_buttons = function(){
 			parent			: search_buttons_container
 		})
 
-	// Reset button
+	// Reset button: a labelled button (icon + "Reset"), paired with Show all
 		const reset_button = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button reload',
+			element_type	: 'button',
+			type			: 'button',
+			class_name		: 'button reset_search',
+			inner_html		: get_label.reset || 'Reset',
 			title			: get_label.reload || 'Reload',
 			parent			: reset_group
 		})
@@ -667,6 +670,11 @@ render_search.prototype.render_search_buttons = function(){
 		})
 		submit_button.addEventListener('mousedown', submit_fn)
 
+	// recursive children option, under Apply
+		if (recursive_label) {
+			search_buttons_container.appendChild(recursive_label)
+		}
+
 
 	return search_buttons_container
 }//end render_search_buttons
@@ -680,8 +688,6 @@ render_search.prototype.render_search_buttons = function(){
 * (search.js) when the preset contains nested groups.
 *
 * What this function builds inside the group:
-*  - A responsive-layout observer via `when_in_viewport` that adds
-*    `.column_2` / `.column_1` CSS classes based on actual rendered width.
 *  - A canonical group model node (`create_group_model_node`) linked to
 *    `parent_div.__node` (the parent group's model node). The root group sets
 *    `self.filter_model`; sub-groups are attached to their parent's children.
@@ -693,7 +699,10 @@ render_search.prototype.render_search_buttons = function(){
 *    new operator back to `search_group.__node.operator`.
 *  - A close button (non-root groups only) that calls `remove_model_node` then
 *    removes the DOM node.
-*  - A "+" button to add a nested sub-group by recursively calling this method.
+*  - A dashed "Drag a field here" slot (.add_field) marking the drop target;
+*    a click opens the FIELDS panel when it is closed.
+*  - An "Add group" button (.add_group) that adds a nested sub-group by
+*    recursively calling this method.
 *
 * (!) The `data_set.id` counter value is derived from the total number of
 * `.search_group` elements already in `self.search_group_container` at the
@@ -732,19 +741,6 @@ render_search.prototype.render_search_group = function(parent_div, options={}) {
 			parent			: parent_div
 		})
 
-		when_in_viewport(
-			search_group,
-			() => {
-				const search_group_size = search_group.getBoundingClientRect()
-
-				if(search_group_size.width < 1024){
-					search_group.classList.add('column_2')
-				}
-				if(search_group_size.width < 512){
-					search_group.classList.add('column_1')
-				}
-			}
-		)
 		// Check already created root_search_group and store if not
 		if(is_root===true){
 			self.root_search_group = search_group
@@ -770,9 +766,9 @@ render_search.prototype.render_search_group = function(parent_div, options={}) {
 		const search_group_operator = ui.create_dom_element({
 			element_type	: 'div',
 			parent			: search_group,
-			//inner_html	: operator.slice(1) + " "+counter,
-			inner_html		: localize_operator(operator)+ " ["+counter+"]",
-			data_set		: { value : operator },
+			// operator word + group number chip (see operator_inner_html)
+			inner_html		: operator_inner_html(operator, counter),
+			data_set		: { value : operator, counter : counter },
 			class_name		: "operator search_group_operator" + (operator==="$and" ? " and" : " or")
 		})
 		search_group_operator.addEventListener('click', function(e){
@@ -805,11 +801,30 @@ render_search.prototype.render_search_group = function(parent_div, options={}) {
 		})
 		}
 
-	// Add button + group
+	// Add field slot: the dashed drop target after the group's fields (kept
+	// there by CSS order — fields dropped later are appended after it in the
+	// DOM). Fields come from the FIELDS panel by drag, so a click opens it.
+		const search_group_add_field = ui.create_dom_element({
+			element_type	: 'button',
+			type			: 'button',
+			class_name		: 'add_field',
+			inner_html		: get_label.drop_field_here || 'Drag a field here',
+			parent			: search_group
+		})
+		search_group_add_field.addEventListener('click', function(e){
+			e.stopPropagation()
+			if (self.search_container_selector?.classList.contains('display_none')) {
+				toggle_fields(self)
+			}
+		})
+
+	// Add button + group. A labelled button, kept LAST in the group's grid by
+	// CSS order (fields dropped later are appended after it in the DOM).
 		const search_group_button_plus = ui.create_dom_element({
-			element_type	: 'span',
-			title			: get_label.new || 'New',
-			class_name		: 'button add',
+			element_type	: 'button',
+			type			: 'button',
+			class_name		: 'add_group',
+			inner_html		: get_label.add_group || 'Add group',
 			parent			: search_group
 		})
 		search_group_button_plus.addEventListener('click', function(e){
@@ -1575,15 +1590,28 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 
 
 	/**
+	* OPERATOR_INNER_HTML
+	* Label markup of a group's operator bar: the localized operator word plus
+	* the group number in a `.group_counter` chip (e.g. "AND" + chip "1").
+	*
+	* @param {string} operator - '$and' | '$or'
+	* @param {string|number} counter - the display-only group number
+	* @returns {string} HTML
+	*/
+	const operator_inner_html = (operator, counter) => {
+		return localize_operator(operator) + '<span class="group_counter">' + counter + '</span>'
+	}//end operator_inner_html
+
+
+
+	/**
 	* TOGGLE_OPERATOR_VALUE
 	* Flips the logical operator of a search group operator element between
 	* `$and` and `$or`, updating both its `data-value` attribute, its visible
-	* label (via `localize_operator`), and its CSS classes (`.and` / `.or`).
+	* label (via `operator_inner_html`), and its CSS classes (`.and` / `.or`).
 	*
-	* The group counter number displayed after the operator label (e.g. "AND [1]")
-	* is extracted from the element's current `innerHTML` by splitting on space and
-	* taking the second token. This relies on the exact format produced by
-	* `render_search_group`: `localize_operator(op) + " [" + counter + "]"`.
+	* The group number is read from `data-counter` (set by
+	* `render_search_group`), not parsed from the label markup.
 	*
 	* This is a pure DOM mutation helper. The caller in `render_search_group` is
 	* responsible for syncing the canonical model node's `operator` property after
@@ -1594,16 +1622,15 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 	*/
 	const toggle_operator_value = (element) => {
 
-		const text 	  = element.innerHTML
-		const ar_text = text.split(" ");
-		const number  = ar_text[1]
+		// group number lives in data-counter (the label is markup, not text)
+		const number = element.dataset.counter
 
 		if (element.dataset.value==="$and") {
 			// Replace dataset value
 			element.dataset.value = "$or";
 
 			// Inject new html value
-			element.innerHTML = localize_operator(element.dataset.value) + " " + number
+			element.innerHTML = operator_inner_html(element.dataset.value, number)
 
 			element.classList.remove("and")
 			element.classList.add("or")
@@ -1613,7 +1640,7 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 			element.dataset.value = "$and";
 
 			// Inject new html value
-			element.innerHTML = localize_operator(element.dataset.value) + " " + number
+			element.innerHTML = operator_inner_html(element.dataset.value, number)
 
 			element.classList.remove("or")
 			element.classList.add("and")

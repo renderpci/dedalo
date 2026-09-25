@@ -126,6 +126,12 @@ render_search_component_filter.prototype.search = async function(options) {
 * GET_CONTENT_DATA
 * Build the full search content area for a filter component.
 *
+* The tree sits in a `.filter_picker` dropdown: a one-line
+* `.filter_picker_toggle` button summarising the checked projects ("All" when
+* none) opens `.filter_picker_panel`, which holds the tree. Escape or a
+* mousedown outside closes it. This keeps the filter card the height of every
+* other search field.
+*
 * Produces two logical sections inside the standard `content_data` shell:
 *   1. A `q_operator` text input at the top that lets the user supply an
 *      explicit SQL comparison operator override.  On `change`, the operator
@@ -179,11 +185,96 @@ const get_content_data = function(self) {
 				event_manager.publish('change_search_element', self)
 		})
 
+	// picker. The project tree is the only search value that rendered inline
+	// (every other multi-value field — select, portal — is one line and opens
+	// its choices on demand), so it made its card several times taller than
+	// any other. It now sits in a dropdown behind a one-line trigger that
+	// summarises the current choice; the tree itself is unchanged.
+		const picker = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'filter_picker',
+			parent			: content_data
+		})
+		const picker_toggle = ui.create_dom_element({
+			element_type	: 'button',
+			type			: 'button',
+			class_name		: 'filter_picker_toggle',
+			parent			: picker
+		})
+		// summary text (shortens with an ellipsis) + a "+N" badge that never does
+		const picker_summary = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'filter_picker_summary',
+			parent			: picker_toggle
+		})
+		const picker_more = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'filter_picker_more',
+			parent			: picker_toggle
+		})
+		picker_toggle.setAttribute('aria-haspopup', 'true')
+		picker_toggle.setAttribute('aria-expanded', 'false')
+		const picker_panel = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'filter_picker_panel',
+			parent			: picker
+		})
+
 	// ul
 		const ul_branch = ui.create_dom_element({
 			element_type	: 'ul',
 			class_name		: 'branch',
-			parent			: content_data
+			parent			: picker_panel
+		})
+
+	// summary: the checked project names, or "All" (no project restriction)
+		const update_summary = () => {
+			const names = [...ul_branch.querySelectorAll('.item_input:checked')]
+				.map(input => input.nextElementSibling?.textContent?.trim())
+				.filter(Boolean)
+			// more than two: "first, second" + a "+N" badge (the tooltip lists all)
+			picker_summary.textContent = names.length===0
+				? (get_label.all || 'All')
+				: names.slice(0, 2).join(', ')
+			picker_more.textContent = names.length > 2
+				? '+' + (names.length - 2)
+				: ''
+			picker_toggle.title = names.length > 0
+				? names.join(', ')
+				: picker_summary.textContent
+			picker.classList.toggle('has_value', names.length > 0)
+		}
+		ul_branch.addEventListener('change', update_summary)
+
+	// open / close
+		const set_open = (open) => {
+			picker.classList.toggle('open', open)
+			picker_toggle.setAttribute('aria-expanded', open ? 'true' : 'false')
+			if (open) {
+				document.addEventListener('mousedown', outside_handler, true)
+				document.addEventListener('keydown', key_handler, true)
+			}else{
+				document.removeEventListener('mousedown', outside_handler, true)
+				document.removeEventListener('keydown', key_handler, true)
+			}
+		}
+		const outside_handler = (e) => {
+			if (!picker.contains(e.target)) {
+				set_open(false)
+			}
+		}
+		const key_handler = (e) => {
+			if (e.key==='Escape') {
+				set_open(false)
+				picker_toggle.focus()
+			}
+		}
+		picker_toggle.addEventListener('mousedown', (e) => {
+			e.stopPropagation() // keep the section from taking the mousedown
+		})
+		picker_toggle.addEventListener('click', (e) => {
+			e.stopPropagation()
+			set_open(!picker.classList.contains('open'))
 		})
 
 	// get_children_node. Get tree nodes with children recursively
@@ -230,6 +321,9 @@ const get_content_data = function(self) {
 			ul_branch.appendChild(element_node)
 
 		}
+
+	// initial summary (entries already checked by get_input_element)
+		update_summary()
 
 
 	return content_data
