@@ -2412,7 +2412,19 @@ class search {
 						? $search_object->prefilter
 						: (($op2==='$or') ? $group_prefilter : null);
 
-				if ($op==='$or' && $op2==='$or' && !$as_subquery) {
+				// same_record group (one component value split in lang/null/empty leaves, see
+				// component_common::resolve_query_object_empty_behavior). In subquery context it is
+				// emitted as ONE correlated EXISTS so all its leaves test the same related record.
+				// Also under a top-level $or: the '*' group ($or of per-lang $and) would otherwise
+				// emit one EXISTS per $and leaf (2 per lang). Safe there because its leaves never
+				// test IS NULL, the only case where the main-query LEFT JOIN semantics differ
+				$same_record_sql = !empty($search_object->same_record)
+					? $this->build_same_record_exists($op2, $ar_value2)
+					: null;
+
+				if ($same_record_sql!==null) {
+					$parsed_string = $same_record_sql;
+				}elseif ($op==='$or' && $op2==='$or' && !$as_subquery) {
 					$parsed_string = $this->filter_parser($op2, $ar_value2, $or_join_ids, $child_as_subquery, $child_prefilter);
 				}else{
 					$child_join_ids = null;
@@ -2533,6 +2545,100 @@ class search {
 
 		return $string_query;
 	}//end filter_parser
+
+
+
+	/**
+	* BUILD_SAME_RECORD_EXISTS
+	* Renders a same_record group (the lang/null/empty leaves of ONE component value, see
+	* component_common::resolve_query_object_empty_behavior) as a SINGLE correlated EXISTS,
+	* keeping the group logic inside it:
+	*	'!*' : EXISTS (... WHERE corr AND ((lg-spa IS NULL OR lg-spa = '[]') AND (lg-cat ...)))
+	* The generic subquery parse emits one EXISTS per $and operand (cross-record AND), which here
+	* is wrong and slow: 'empty in every lang' could be satisfied by different linked records
+	* (A without lg-cat value, B without lg-nolan value) and every lang re-joins relations/matrix.
+	* Returns null when the group is not a uniform multi-step group (mixed paths, single-step
+	* leaves, nested prefilter), the caller then uses the generic parse.
+	* @param string $op
+	*	Group operator as '$and'
+	* @param array $ar_value
+	*	Group operands (leaves and sub-groups)
+	* @return string|null $sql
+	*/
+	private function build_same_record_exists(string $op, array $ar_value) : ?string {
+
+		// collect the leaves of the group tree. All must share the same multi-step path
+			$ar_leaves	= [];
+			$collect	= function(array $ar_items) use (&$collect, &$ar_leaves) : bool {
+				foreach ($ar_items as $item) {
+					if (!is_object($item)) {
+						return false;
+					}
+					if (property_exists($item, 'path')) {
+						$ar_leaves[] = $item;
+						continue;
+					}
+					if (isset($item->prefilter)) {
+						return false;
+					}
+					$item_op = array_key_first(get_object_vars($item));
+					if (($item_op!=='$and' && $item_op!=='$or') || !is_array($item->{$item_op})) {
+						return false;
+					}
+					if ($collect($item->{$item_op})===false) {
+						return false;
+					}
+				}
+				return true;
+			};
+			if ($collect($ar_value)===false || empty($ar_leaves)) {
+				return null;
+			}
+			$first_path	= $ar_leaves[0]->path;
+			if (!is_array($first_path) || count($first_path)<2) {
+				return null;
+			}
+			$signature = $this->get_table_alias_from_path($first_path);
+			foreach ($ar_leaves as $leaf) {
+				if (!is_array($leaf->path) || count($leaf->path)<2 || $this->get_table_alias_from_path($leaf->path)!==$signature) {
+					return null;
+				}
+			}
+
+		// one join for the whole group
+			$join_id				= ++$this->join_counter;
+			$ar_subquery_joins		= [];
+			$subquery_correlation	= null;
+			$joins_built = $this->build_sql_join($first_path, $join_id, $ar_subquery_joins, $subquery_correlation);
+			if ($joins_built!==true || empty($subquery_correlation)) {
+				return self::UNRESOLVABLE_PATH_SQL; // fail closed, see filter_parser
+			}
+
+		// group WHERE, every leaf against the same joined record
+			$render = function(string $group_op, array $ar_items) use (&$render, $join_id) : string {
+				$ar_sql = [];
+				foreach ($ar_items as $item) {
+					if (property_exists($item, 'path')) {
+						$item->join_id	= $join_id;
+						$sql			= trim($this->get_sql_where($item));
+					}else{
+						$item_op	= array_key_first(get_object_vars($item));
+						$sql		= $render($item_op, $item->{$item_op});
+					}
+					if ($sql!=='') {
+						$ar_sql[] = '(' . $sql . ')';
+					}
+				}
+				return implode(' ' . strtoupper(substr($group_op, 1)) . ' ', $ar_sql);
+			};
+			$where = $render($op, $ar_value);
+			if ($where==='') {
+				return null;
+			}
+
+
+		return 'EXISTS (SELECT 1 ' . implode(' ', $ar_subquery_joins) . ' WHERE (' . $subquery_correlation . ' AND (' . $where . ')))';
+	}//end build_same_record_exists
 
 
 
