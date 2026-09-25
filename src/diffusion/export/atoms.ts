@@ -33,8 +33,11 @@
  * locator additionally emits its target's ancestor chain (getParentsRecursive
  * nearest-first × thesaurus term resolver, ' > ' joined, self excluded) as ONE
  * atom under a sibling `sub_id:'parents'` segment — the tabulator derives the
- * '#parents' column from the segment identity. grid_value format only; the
- * flag inherits down every fan-out level (PHP export_context::descend).
+ * '#parents' column from the segment identity; the flag inherits down every
+ * fan-out level (PHP export_context::descend). The VALUE format reads the SAME
+ * chains inside the term cell's own fold (`resolveValueCellWithMedia`
+ * withParents — the parents cell MIRRORS the term cell's structure; a sibling
+ * column minted by grid.ts); dedalo_raw never does.
  *
  * Byte-parity notes (pinned by test/parity/tool_export_breakdown_differential):
  * - empty/null leaf values are SKIPPED (no atom, no join part) — the PHP
@@ -231,6 +234,25 @@ async function resolveParentsChain(
 	return chain;
 }
 
+/** The sub_id of the WC-049 parents column (grid_value atoms + the value-format
+ * sibling column): column key ends `#parents`, label leaf is the verbatim word. */
+export const PARENTS_SUB_ID = 'parents';
+
+/**
+ * Does this export field grow a WC-049 parents column in the VALUE format?
+ * The per-ddo flag is set AND the declared leaf is a stored relation (the only
+ * leaves whose targets carry an ancestor chain — the same `isStoredRelationModel`
+ * test the grid_value walk applies before it emits a '#parents' atom). A
+ * declared dataframe step yields no cell at all (resolveValueCell refuses it).
+ */
+export function fieldHasValueParents(field: FieldPlan, leafModel: string): boolean {
+	return (
+		field.exportColumn?.valueWithParents === true &&
+		isStoredRelationModel(leafModel) &&
+		!hasDeclaredDataframeStep(field)
+	);
+}
+
 /** One PHP-shaped export path segment (wire shape of the col line's path). */
 export interface ExportSegment {
 	section_tipo: string;
@@ -346,7 +368,7 @@ function directChildrenOf(
  * vectors (level 0 = ' | ', deeper levels = the level component's declared
  * fields_separator), empty parts dropped at every level.
  */
-export function resolveValueCell(
+export async function resolveValueCell(
 	run: ExportRun,
 	field: FieldPlan,
 	sectionTipo: string,
@@ -354,9 +376,11 @@ export function resolveValueCell(
 	lang: string,
 	unresolved: string[],
 ): Promise<string | null> {
-	return inRunLangs(run, lang, () =>
-		resolveValueCellInScope(run, field, sectionTipo, sectionId, lang, unresolved),
-	);
+	return (
+		await inRunLangs(run, lang, () =>
+			resolveValueCellInScope(run, field, sectionTipo, sectionId, lang, unresolved, false),
+		)
+	).flat;
 }
 
 /**
@@ -372,17 +396,45 @@ export async function resolveValueCellWithMedia(
 	sectionId: number | string,
 	lang: string,
 	unresolved: string[],
-): Promise<{ flat: string | null; media: MediaReadAddress[] }> {
+	/** Also build the WC-049 parents cell ({@link fieldHasValueParents}). */
+	withParents = false,
+): Promise<ValueCells & { media: MediaReadAddress[] }> {
 	const capture = mediaCapture(run);
-	if (capture === null) {
-		return {
-			flat: await resolveValueCell(run, field, sectionTipo, sectionId, lang, unresolved),
-			media: [],
-		};
-	}
-	const capturing: ExportRun = { ...run, cellOpts: capture.opts };
-	const flat = await resolveValueCell(capturing, field, sectionTipo, sectionId, lang, unresolved);
-	return { flat, media: capture.media };
+	const scoped: ExportRun = capture === null ? run : { ...run, cellOpts: capture.opts };
+	const cells = await inRunLangs(scoped, lang, () =>
+		resolveValueCellInScope(scoped, field, sectionTipo, sectionId, lang, unresolved, withParents),
+	);
+	return { ...cells, media: capture?.media ?? [] };
+}
+
+/**
+ * One value-format field's cells on one record: the term cell (`flat`) and,
+ * only when asked, its WC-049 parents cell.
+ *
+ * THE PARENTS CELL MIRRORS THE TERM CELL (review 2026-09-25). It is built in
+ * the SAME fold, with the SAME separators at the SAME levels, and a bucket the
+ * term drops (empty) drops from both. At the leaf every target contributes
+ * its ancestor chain ONCE PER PIECE its term text splits into on the leaf's
+ * item separator, so a target whose text holds that separator (fields joined
+ * by a ' | ' fields_separator, or the separator inside a value) still lines
+ * up, and a target with no term contributes nothing. Split both cells the
+ * same way and parents piece n is the chain of the record term piece n was
+ * read from ('' when that record has no hierarchy). What text cannot carry: a
+ * separator INSIDE a chain term, exactly as for the term cell itself.
+ * `parents` is null when no piece has a chain (or the term cell is empty).
+ */
+export interface ValueCells {
+	flat: string | null;
+	parents: string | null;
+}
+
+/** One fold level of `resolveValueCellInScope`: the term text + its mirror. */
+interface FoldedValue {
+	term: string | null;
+	/** The parents mirror (same separators, one chain per term piece). */
+	parents: string;
+	/** Does any piece below carry a non-empty chain? */
+	hasChain: boolean;
 }
 
 /**
@@ -411,22 +463,24 @@ async function resolveValueCellInScope(
 	sectionId: number | string,
 	lang: string,
 	unresolved: string[],
-): Promise<string | null> {
+	withParents: boolean,
+): Promise<ValueCells> {
+	const none: ValueCells = { flat: null, parents: null };
 	const path = field.exportColumn?.path ?? [];
-	if (path.length === 0) return null;
+	if (path.length === 0) return none;
 	if (hasDeclaredDataframeStep(field)) {
 		// A DECLARED path step of model component_dataframe is not producible
 		// from the tool UI (frames belong to the SOURCE record, the drill-down
 		// lists the target's elements) and would mis-walk silently — loud instead.
 		noteUnresolved(unresolved, 'component_dataframe:declared-path');
-		return null;
+		return none;
 	}
 	const events = await resolveRecordAtoms(run.atoms, field, sectionTipo, sectionId);
-	if (events.length === 0) return null;
+	if (events.length === 0) return none;
 
 	const hops = path.length - 1;
 	const leafTipo = String((path[hops] as RawPathStep | undefined)?.component_tipo ?? '');
-	if (leafTipo === '') return null;
+	if (leafTipo === '') return none;
 
 	// Per-level separators (legacy levelSeparator): level 0 always ' | ';
 	// deeper levels use the level component's declared fields_separator (the
@@ -438,19 +492,24 @@ async function resolveValueCellInScope(
 		separators.push(level === 0 ? RECORDS_SEPARATOR : await componentFieldsSeparator(levelTipo));
 	}
 
-	const joinLevel = async (group: ExportLeafAtom[], depth: number): Promise<string | null> => {
+	const joinLevel = async (group: ExportLeafAtom[], depth: number): Promise<FoldedValue> => {
 		if (depth === hops) {
 			// All hops consumed: exactly one leaf event per locator path.
 			const event = group[0] as ExportLeafAtom;
-			return resolveCellValue(
+			const itemSeparator = separators[hops] as string;
+			if (withParents) {
+				return resolveLeafWithParents(run, event, leafTipo, lang, unresolved, itemSeparator);
+			}
+			const term = await resolveCellValue(
 				event.ownerSectionTipo,
 				event.ownerSectionId,
 				leafTipo,
 				lang,
 				unresolved,
-				separators[hops],
+				itemSeparator,
 				run.cellOpts,
 			);
+			return { term, parents: '', hasChain: false };
 		}
 		// Group by this hop's locator position (first-seen order = DFS order).
 		const buckets = new Map<number, ExportLeafAtom[]>();
@@ -460,15 +519,92 @@ async function resolveValueCellInScope(
 			if (bucket === undefined) buckets.set(position, [event]);
 			else bucket.push(event);
 		}
-		const parts: string[] = [];
+		const terms: string[] = [];
+		const parents: string[] = [];
+		let hasChain = false;
 		for (const [, bucket] of buckets) {
-			const value = await joinLevel(bucket, depth + 1);
-			if (value !== null && value !== '') parts.push(value);
+			const folded = await joinLevel(bucket, depth + 1);
+			// A bucket the term drops drops from the mirror too (alignment).
+			if (folded.term === null || folded.term === '') continue;
+			terms.push(folded.term);
+			parents.push(folded.parents);
+			hasChain ||= folded.hasChain;
 		}
-		return parts.length > 0 ? parts.join(separators[depth] as string) : null;
+		const separator = separators[depth] as string;
+		return {
+			term: terms.length > 0 ? terms.join(separator) : null,
+			parents: parents.join(separator),
+			hasChain,
+		};
 	};
 
-	return joinLevel(events, 0);
+	const folded = await joinLevel(events, 0);
+	return {
+		flat: folded.term,
+		parents: withParents && folded.term !== null && folded.hasChain ? folded.parents : null,
+	};
+}
+
+/**
+ * The leaf of a parents-carrying value cell: the term text AND its mirror from
+ * ONE per-target read. The term is byte-identical to resolveCellValue's
+ * datalist branch (the targets' parts, flattened, joined with the item
+ * separator; both reads share their early null-returns). A leaf of another
+ * family has no targets to pair, so it keeps resolveCellValue's term and ONE
+ * empty slot. The chain is the SAME resolveParentsChain the grid_value atoms
+ * use; the leaf's stored targets already crossed the export frontier in
+ * resolveRecordAtoms.
+ */
+async function resolveLeafWithParents(
+	run: ExportRun,
+	event: ExportLeafAtom,
+	leafTipo: string,
+	lang: string,
+	unresolved: string[],
+	itemSeparator: string,
+): Promise<FoldedValue> {
+	const model = await getModelByTipo(leafTipo);
+	if (model === null || getFlatValueFamily(model) !== 'datalist') {
+		const term = await resolveCellValue(
+			event.ownerSectionTipo,
+			event.ownerSectionId,
+			leafTipo,
+			lang,
+			unresolved,
+			itemSeparator,
+			run.cellOpts,
+		);
+		return { term, parents: '', hasChain: false };
+	}
+	const targets = await resolveRelationTargetValues(
+		event.ownerSectionTipo,
+		event.ownerSectionId,
+		leafTipo,
+		lang,
+		unresolved,
+		run.cellOpts,
+	);
+	const terms: string[] = [];
+	const slots: string[] = [];
+	let hasChain = false;
+	for (const target of targets) {
+		if (target.parts.length === 0) continue; // no term → no slot
+		const chain =
+			target.sectionTipo !== null && target.sectionId !== null
+				? ((await resolveParentsChain(run, target.sectionTipo, target.sectionId, lang)) ?? '')
+				: '';
+		if (chain !== '') hasChain = true;
+		for (const part of target.parts) {
+			terms.push(part);
+			// one chain per piece a consumer splits out of this part
+			for (const _piece of part.split(itemSeparator)) slots.push(chain);
+		}
+	}
+	return {
+		term: terms.length > 0 ? terms.join(itemSeparator) : null,
+		parents: slots.join(itemSeparator),
+		hasChain,
+	};
 }
 
 /**
@@ -612,7 +748,7 @@ async function collectGridAtomsInScope(
 											model: null,
 											item_index: null,
 											section_id: null,
-											sub_id: 'parents',
+											sub_id: PARENTS_SUB_ID,
 										},
 									],
 								});
@@ -914,7 +1050,7 @@ async function fanOutRelation(
 							model: null,
 							item_index: locator.index,
 							section_id: locator.sectionId,
-							sub_id: 'parents',
+							sub_id: PARENTS_SUB_ID,
 						},
 					],
 				});

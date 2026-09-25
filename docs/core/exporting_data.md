@@ -454,7 +454,7 @@ permission gate before running it. Request fields:
 | `data_format` | `'value'` \| `'grid_value'` \| `'dedalo_raw'`. |
 | `breakdown` | `'default'` \| `'rows'` \| `'columns'` (used with `grid_value`). |
 | `fill_the_gaps` | bool — repeat spanning values on exploded rows. |
-| `value_with_parents` | bool, **per entry of `ar_ddo_to_export`** — add that column's ancestor-chain sibling column (`grid_value` only; a request-level value is ignored, WC-049). |
+| `value_with_parents` | bool, **per entry of `ar_ddo_to_export`** — add that column's ancestor-chain sibling column (`value` and `grid_value`; ignored in `dedalo_raw`, which exports stored data only; a request-level value is ignored, WC-049). In `value`, the sibling column is `<column> \| parents` (key `<top>#parents`), placed right after the term column, whose cell mirrors the term cell: the same separators in the same places and one chain per term piece, so splitting both cells the same way pairs each term with its chain. An item without parents keeps an empty slot; an item with no term has no slot. |
 | `ar_ddo_to_export` | the columns, **in output order**. |
 | `sqo` | the search query object (the selection to export). |
 | `ndjson_stream` | bool — stream the flat-table protocol vs return it whole (`get_export_grid` only; the background job always writes the protocol to its spool). |

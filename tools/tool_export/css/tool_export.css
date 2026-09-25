@@ -178,6 +178,16 @@
   cursor: pointer;
   margin: 0;
 }
+.wrapper_tool.tool_export > .content_data > .grid_top > .selection_list_contaniner .user_selection_list > .export_component > .export_component_parents.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.wrapper_tool.tool_export > .content_data > .grid_top > .selection_list_contaniner .user_selection_list > .export_component > .export_component_parents.disabled > .option_check_box {
+  cursor: not-allowed;
+}
+.wrapper_tool.tool_export > .content_data > .grid_top > .selection_list_contaniner .user_selection_list > .export_component > .export_component_parents > .export_component_parents_note {
+  font-style: italic;
+}
 .wrapper_tool.tool_export > .content_data > .grid_top > .selection_list_contaniner .user_selection_list > .export_component.dragging {
   opacity: 0.2;
   width: auto;

@@ -16,6 +16,10 @@
  *    pages of test3 records through the engine's own create door, exports
  *    exactly those (filter_by_locators), and deletes them again. See the
  *    'TOOL_EXPORT SERVER-BUILT EXPORT' describe for what it asserts.
+ *
+ * 3. The per-column PARENTS checkbox per data format (WC-049 + addendum
+ *    2026-09-25): enabled in value / grid_value, disabled with a visible note in
+ *    dedalo_raw, re-evaluated on every format change and after a preset.
  */
 
 import {tool_export} from '../../../tools/tool_export/js/tool_export.js'
@@ -25,6 +29,7 @@ import {get_instance} from '../../../core/common/js/instances.js'
 import {request_failed, response_data, ApiError} from '../../../core/common/js/api_error.js'
 import {create_job_follower_group} from '../../../core/common/js/job_follow.js'
 import {ui} from '../../../core/common/js/ui.js'
+import {apply_export_preset} from '../../../tools/tool_export/js/export_user_presets.js'
 
 
 
@@ -1306,6 +1311,185 @@ describe('TOOL_EXPORT SERVER-BUILT EXPORT', function() {
 		} finally {
 			data_manager.request = original_request
 		}
+	})
+})
+
+describe('TOOL_EXPORT PARENTS CHECKBOX (per data format)', function() {
+
+	this.timeout(60000)
+
+	const SECTION		= 'test3'
+	const PORTAL		= 'test80' // component_portal → test3 (hierarchical: test3 owns test71)
+	const LANG			= 'lg-eng'
+	const FORMAT_KEY	= 'selected_data_format_export'
+	const BREAKDOWN_KEY	= 'selected_breakdown_export' // a preset apply sets it too
+
+	let tool			= null
+	const stored		= new Map()
+
+	const container = document.getElementById('content') || document.body
+	const test_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'container tool_export_parents_check',
+		parent			: container
+	})
+
+	const portal_ddo = function(value_with_parents) {
+		return {
+			id					: SECTION + '_' + PORTAL + '_list_' + LANG,
+			tipo				: PORTAL,
+			section_tipo		: SECTION,
+			model				: 'component_portal',
+			parent				: SECTION,
+			lang				: LANG,
+			mode				: 'list',
+			label				: PORTAL,
+			value_with_parents	: value_with_parents,
+			path				: [{
+				section_tipo	: SECTION,
+				component_tipo	: PORTAL,
+				model			: 'component_portal',
+				name			: PORTAL
+			}]
+		}
+	}
+
+	// the parents label/check/note of the ONE column this suite adds
+	const parents_nodes = function() {
+		const label = tool.user_selection_list.querySelector('.export_component_parents')
+		assert.ok(label, 'the portal column renders its parents checkbox (server-confirmed hierarchical target)')
+		return {
+			label	: label,
+			check	: label.querySelector('.export_component_parents_check'),
+			note	: label.querySelector('.export_component_parents_note')
+		}
+	}
+
+	const select_format = function(value) {
+		const select = tool.node.querySelector('.select_data_format_export')
+		select.value = value
+		select.dispatchEvent(new Event('change'))
+	}
+
+	const assert_state = function(format, enabled) {
+		const {label, check, note} = parents_nodes()
+		assert.equal(tool.data_format, format, 'the tool follows the select')
+		assert.equal(check.disabled, !enabled, `${format}: checkbox ${enabled ? 'enabled' : 'disabled'}`)
+		assert.equal(label.classList.contains('disabled'), !enabled, `${format}: label marked`)
+		assert.ok(note, 'the note node exists')
+		assert.equal(note.classList.contains('hide'), enabled, `${format}: the 'not in Raw' note ${enabled ? 'hidden' : 'visible'}`)
+	}
+
+	before(async function() {
+		for (const key of [FORMAT_KEY, BREAKDOWN_KEY]) {
+			try {
+				stored.set(key, localStorage.getItem(key))
+			} catch (error) {
+				stored.set(key, null)
+			}
+		}
+		const api_response = await data_manager.request({body: {
+			action			: 'get_element_context',
+			prevent_lock	: true,
+			source			: {model: 'tool_export'}
+		}})
+		if (request_failed(api_response)) {
+			throw new Error('get_element_context refused: ' + api_response.error.code)
+		}
+		const tool_context = response_data(api_response)[0]
+		assert.ok(tool_context, 'the tool_export context is served')
+		const caller = {
+			id			: 'test_tool_export_parents_caller',
+			id_base		: 'test_tool_export_parents_caller',
+			model		: 'section',
+			type		: 'section',
+			tipo		: SECTION,
+			section_tipo: SECTION,
+			section_id	: null,
+			mode		: 'list',
+			lang		: LANG,
+			label		: SECTION,
+			status		: 'built',
+			rqo			: {
+				source	: {typo: 'source', type: 'section', model: 'section', tipo: SECTION, section_tipo: SECTION, section_id: null, mode: 'list', lang: LANG},
+				sqo		: {section_tipo: [SECTION], filter_by_locators: [{section_tipo: SECTION, section_id: 1}], limit: 10, offset: 0}
+			},
+			build		: async function() { return true },
+			get_total	: async function() { return 1 }
+		}
+		tool = await get_instance(Object.assign(
+			{caller: caller, caller_options: null},
+			tool_context,
+			{lang: LANG, type: 'tool', id_variant: 'test_tool_export_parents'}
+		))
+		await tool.build(true)
+		// the IndexedDB selection must not change under this suite
+		tool.update_local_db_data = async function() { return true }
+		const wrapper = await tool.render()
+		test_container.replaceChildren(wrapper)
+		// only this suite's column in the list (a restored selection is dropped)
+		await new Promise(resolve => setTimeout(resolve, 300))
+		tool.user_selection_list.replaceChildren()
+	})
+
+	after(async function() {
+		if (tool && tool.status!=='destroyed') {
+			await tool.destroy(true, true, true)
+		}
+		test_container.remove()
+		for (const [key, value] of stored) {
+			try {
+				if (value===null) {
+					localStorage.removeItem(key)
+				}else{
+					localStorage.setItem(key, value)
+				}
+			} catch (error) {
+				// nothing to restore
+			}
+		}
+	})
+
+	it('enabled in value and grid_value, disabled with a visible note in dedalo_raw, re-evaluated on every format change', async function() {
+		select_format('value')
+		const node = await tool.build_export_component(portal_ddo(true))
+		tool.user_selection_list.appendChild(node)
+		assert_state('value', true)
+		assert.equal(parents_nodes().check.checked, true, 'the ddo flag is shown')
+
+		select_format('dedalo_raw')
+		assert_state('dedalo_raw', false)
+		assert.equal(parents_nodes().check.checked, true, 'the flag is kept (restored when the format comes back)')
+
+		select_format('grid_value')
+		assert_state('grid_value', true)
+
+		select_format('dedalo_raw')
+		select_format('value')
+		assert_state('value', true)
+	})
+
+	it('a column built while dedalo_raw is selected starts disabled', async function() {
+		select_format('dedalo_raw')
+		tool.user_selection_list.replaceChildren()
+		tool.user_selection_list.appendChild(await tool.build_export_component(portal_ddo(false)))
+		assert.equal(parents_nodes().check.checked, false, 'the ddo flag (off) is shown')
+		assert_state('dedalo_raw', false)
+		select_format('value')
+		assert_state('value', true)
+	})
+
+	it('a preset carrying the flag with dedalo_raw restores a DISABLED checkbox', async function() {
+		select_format('value')
+		await apply_export_preset({
+			self		: tool,
+			config		: {data_format: 'dedalo_raw', breakdown: 'default', ar_ddo_to_export: [portal_ddo(true)]},
+			section_id	: null
+		})
+		assert_state('dedalo_raw', false)
+		assert.equal(parents_nodes().check.checked, true, 'the preset flag is kept')
+		select_format('value')
+		assert_state('value', true)
 	})
 })
 

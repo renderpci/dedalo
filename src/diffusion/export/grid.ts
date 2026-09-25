@@ -80,6 +80,8 @@ import {
 	collectGridAtoms,
 	collectRawMediaAddresses,
 	createExportRun,
+	fieldHasValueParents,
+	PARENTS_SUB_ID,
 	resolveValueCell,
 	resolveValueCellWithMedia,
 	segmentIdentityKey,
@@ -162,6 +164,11 @@ type RecordEntry =
 			topModel: string;
 			/** Media read for the cell (capturing runs only — row_media.ts). */
 			media?: MediaReadAddress[];
+			/** WC-049 (addendum 2026-09-25): the sibling parents cell — present
+			 * ONLY when the ddo's flag is set on a relation leaf
+			 * (atoms.ts fieldHasValueParents); `flat` null = no chain on any
+			 * target (the column still mints). Absent → byte-identical output. */
+			parents?: { flat: string | null };
 	  }
 	| {
 			kind: 'raw';
@@ -174,6 +181,20 @@ type RecordEntry =
 			/** Media the raw cell addresses (capturing runs only — row_media.ts). */
 			media?: MediaReadAddress[];
 	  };
+
+/** The DECLARED chain of a ddo as unindexed segments (the value/raw column
+ * header source when no fan-out atom extends it). */
+function declaredSegmentsOf(declaredPath: RawPathStep[]): ExportSegment[] {
+	return declaredPath.map((step) => ({
+		section_tipo: String(
+			Array.isArray(step.section_tipo) ? (step.section_tipo[0] ?? '') : (step.section_tipo ?? ''),
+		),
+		component_tipo: String(step.component_tipo ?? ''),
+		model: String(step.model ?? ''),
+		item_index: null,
+		section_id: null,
+	}));
+}
 
 /**
  * The stateful tabulator of one export run (PHP export_tabulator instance):
@@ -496,18 +517,7 @@ function createTabulator(options: {
 					: // PHP :295-302 — with atoms the header chain is atoms[0]->path
 						// (fan-out-extended); the declared chain only covers the
 						// no-atoms case.
-						(entry.labelSegments ??
-						entry.declaredPath.map((step) => ({
-							section_tipo: String(
-								Array.isArray(step.section_tipo)
-									? (step.section_tipo[0] ?? '')
-									: (step.section_tipo ?? ''),
-							),
-							component_tipo: String(step.component_tipo ?? ''),
-							model: String(step.model ?? ''),
-							item_index: null,
-							section_id: null,
-						})));
+						(entry.labelSegments ?? declaredSegmentsOf(entry.declaredPath));
 				const cellType = isRaw
 					? entry.raw !== null
 						? entry.cellType
@@ -538,6 +548,43 @@ function createTabulator(options: {
 					shown = true;
 				}
 				noteMedia(shown ? column.i : null, entry.media);
+				if (!isRaw && entry.parents !== undefined) {
+					// WC-049 value format: the sibling parents column, minted right
+					// after its term column (sortKey [ddo, 0] sorts after [ddo] and
+					// before the next ddo) on EVERY record once the flag is set. Its
+					// identity/label reuse the grid_value parents segment: the
+					// declared chain + a `sub_id:'parents'` segment on the leaf →
+					// key `<top>#parents`, header '<column> | parents'. ONE column
+					// for all target sections (the cell is positional, per item).
+					const declared = declaredSegmentsOf(entry.declaredPath);
+					const leaf = declared[declared.length - 1] as ExportSegment;
+					const parentsSegments: ExportSegment[] = [
+						...declared,
+						{
+							section_tipo: leaf.section_tipo,
+							component_tipo: leaf.component_tipo,
+							model: null,
+							item_index: null,
+							section_id: null,
+							sub_id: PARENTS_SUB_ID,
+						},
+					];
+					const parentsColumn = await registerColumn(
+						`${entry.topKey}#${PARENTS_SUB_ID}`,
+						entry.topKey, // group: the term column's
+						parentsSegments,
+						parentsSegments,
+						new Map(),
+						entry.ddoIndex,
+						[0],
+						'text',
+						null, // model: the parents segment's (null), as in grid_value
+						newColLines,
+					);
+					if (entry.parents.flat !== null) {
+						rawCells[String(parentsColumn.i)] = entry.parents.flat;
+					}
+				}
 				continue;
 			}
 
@@ -1200,16 +1247,27 @@ async function openExportGridInScope(
 			const lastStep = path[path.length - 1] ?? {};
 			const leafTipo = String(lastStep.component_tipo ?? '');
 			const leafModel = (await getModelByTipo(leafTipo)) ?? String(lastStep.model ?? '');
+			// WC-049 value format (addendum 2026-09-25): the per-ddo parents flag
+			// grows a sibling chain cell, built IN the term cell's own fold so it
+			// mirrors the term cell's structure (atoms.ts ValueCells).
+			const withParents = fieldHasValueParents(field, leafModel);
 			let flat: string | null;
 			let media: MediaReadAddress[] | undefined;
-			if (run.captureMedia === true) {
-				({ flat, media } = await resolveValueCellWithMedia(
+			let parentsFlat: string | null = null;
+			if (run.captureMedia === true || withParents) {
+				// (a non-capturing run reads no media: `media` comes back empty)
+				({
+					flat,
+					media,
+					parents: parentsFlat,
+				} = await resolveValueCellWithMedia(
 					run,
 					field,
 					record.section_tipo,
 					Number(record.section_id),
 					lang,
 					unresolved,
+					withParents,
 				));
 			} else {
 				flat = await resolveValueCell(
@@ -1239,6 +1297,7 @@ async function openExportGridInScope(
 				);
 				labelSegments = labelAtoms[0]?.segments;
 			}
+			const parents = withParents ? { flat: parentsFlat } : undefined;
 			entries.push({
 				kind: 'value',
 				ddoIndex,
@@ -1249,6 +1308,7 @@ async function openExportGridInScope(
 				leafModel,
 				topModel,
 				...(media !== undefined && media.length > 0 ? { media } : {}),
+				...(parents !== undefined ? { parents } : {}),
 			});
 		}
 		return entries;

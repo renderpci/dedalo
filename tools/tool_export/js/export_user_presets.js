@@ -251,10 +251,15 @@ export const apply_export_preset = async function(options) {
 		// note: a legacy preset's global value_with_parents is IGNORED (WC-049 —
 		// per-column flags ride each restored ddo instead)
 
-	// re-sync disabled states (breakdown only on grid_value)
+	// re-sync disabled states (breakdown only on grid_value; the per-column
+	// parents checkboxes are disabled in dedalo_raw — a preset may carry
+	// value_with_parents flags with the raw format selected)
 		const select_breakdown = node.querySelector('.select_breakdown_export')
 		if (select_breakdown) {
 			select_breakdown.disabled = (self.data_format!=='grid_value')
+		}
+		if (typeof self.update_parents_checks_state==='function') {
+			self.update_parents_checks_state()
 		}
 
 	// persist the applied preset as the current working state

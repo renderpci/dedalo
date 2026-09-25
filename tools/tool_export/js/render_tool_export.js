@@ -108,7 +108,8 @@ export const render_tool_export = function() {
  * Component models eligible for the per-column "parents" checkbox
  * (build_export_component): relation components whose locator targets can be
  * traversed upward through an ancestor chain to produce a sibling 'parents'
- * column in the export output (WC-049, grid_value format).
+ * column in the export output (WC-049 — value and grid_value formats; see
+ * PARENTS_FORMATS).
  *
  * The model gate is only the FIRST filter: the checkbox renders only when the
  * server confirms the component's target section actually has a
@@ -120,6 +121,50 @@ const PARENTS_MODELS = new Set([
 	'component_autocomplete',
 	'component_autocomplete_hi'
 ])
+
+
+
+/**
+ * PARENTS_FORMATS
+ * Data formats whose export honours the per-column parents flag (WC-049 +
+ * addendum 2026-09-25): 'value' (a sibling '<column> | parents' column, one
+ * chain per item) and 'grid_value' (per-locator '#parents' atoms). NOT
+ * 'dedalo_raw': a raw export carries stored data only and parents are derived,
+ * so the checkbox is DISABLED there, with a visible note (the server ignores the
+ * flag in raw either way). The ddo keeps its flag, so switching back restores it.
+ */
+const PARENTS_FORMATS = new Set([
+	'value',
+	'grid_value'
+])
+
+
+
+/**
+ * SET_PARENTS_CHECK_STATE
+ * Enables/disables one column's parents checkbox for the current data format
+ * (PARENTS_FORMATS) and shows/hides its 'not in raw' note.
+ * @param {Object} self - The tool_export instance
+ * @param {HTMLElement} parents_label - The .export_component_parents label
+ * @returns {void}
+ */
+const set_parents_check_state = function(self, parents_label) {
+
+	const supported		= PARENTS_FORMATS.has(self.data_format || 'value')
+	const parents_check	= parents_label.querySelector('.export_component_parents_check')
+	const note			= parents_label.querySelector('.export_component_parents_note')
+
+	if (parents_check) {
+		parents_check.disabled = !supported
+	}
+	parents_label.classList.toggle('disabled', !supported)
+	if (note) {
+		note.classList.toggle('hide', supported)
+	}
+	parents_label.title = supported
+		? (self.get_tool_label('value_with_parents') || 'Export parents')
+		: (self.get_tool_label('parents_not_in_raw') || 'Parents are not exported in the Dédalo (Raw) format')
+}//end set_parents_check_state
 
 
 
@@ -378,6 +423,8 @@ const get_content_data_edit = async function(self) {
 					storage_set('selected_data_format_export', select_data_format_export.value)
 					// breakdown mode only applies to the breakdown format
 					update_breakdown_state()
+					// the per-column parents checkbox only applies to value/grid_value
+					self.update_parents_checks_state()
 				}
 				select_data_format_export.addEventListener('change', change_handler)
 
@@ -2889,8 +2936,9 @@ render_tool_export.prototype.build_export_component = async function(ddo) {
 	// parents check (WC-049). Rendered only for PARENTS_MODELS columns whose
 	// target section the server confirms hierarchical (has a
 	// component_relation_parent — tool_export.components_with_parent action).
-	// When checked, ddo.value_with_parents makes the grid_value export emit the
-	// targets' ancestor chain as a sibling 'parents' column. Persisted with
+	// When checked, ddo.value_with_parents makes the value and grid_value
+	// exports emit the targets' ancestor chain as a sibling 'parents' column;
+	// disabled (with a note) in dedalo_raw — see PARENTS_FORMATS. Persisted with
 	// the ddo in the local DB config (update_local_db_data saves whole ddos).
 		if (PARENTS_MODELS.has(ddo.model) && await self.component_has_parent_targets(ddo)) {
 			const parents_label = ui.create_dom_element({
@@ -2911,6 +2959,16 @@ render_tool_export.prototype.build_export_component = async function(ddo) {
 				text_content	: get_label.parents || 'parents',
 				parent			: parents_label
 			})
+			// the 'not in raw' note (visible only while dedalo_raw is selected)
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'export_component_parents_note hide',
+				text_content	: self.get_tool_label('parents_not_in_raw_short') || '(not in Raw)',
+				parent			: parents_label
+			})
+			// initial state for the CURRENT format (re-evaluated on format change
+			// by update_parents_checks_state)
+			set_parents_check_state(self, parents_label)
 			// prevent the click/drag of the checkbox from triggering the
 			// item sort drag handlers (the export_component is draggable)
 			parents_label.addEventListener('click', e => e.stopPropagation())
@@ -2945,6 +3003,29 @@ render_tool_export.prototype.build_export_component = async function(ddo) {
 
 	return export_component
 }//end build_export_component
+
+
+
+/**
+ * UPDATE_PARENTS_CHECKS_STATE
+ * Re-evaluates every selected column's parents checkbox against the current
+ * self.data_format (PARENTS_FORMATS): called by the format select's change
+ * handler and after a preset restores its format.
+ * @returns {void}
+ */
+render_tool_export.prototype.update_parents_checks_state = function() {
+
+	const self = this
+
+	const root = self.user_selection_list
+	if (!root) {
+		return
+	}
+	const labels = root.querySelectorAll('.export_component_parents')
+	for (let i = 0; i < labels.length; i++) {
+		set_parents_check_state(self, labels[i])
+	}
+}//end update_parents_checks_state
 
 
 

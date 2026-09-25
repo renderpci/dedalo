@@ -57,3 +57,61 @@ label/chain-order/cell bytes, per-ddo-only, grid_value-only, parent-less
 emits nothing, `components_with_parent` truth table + invalid_request) ·
 `diffusion_export_unified.test.ts` (protocol invariants with the flag on, both
 formats).
+
+## Addendum 2026-09-25 — the `value` format grows the parents column too; `dedalo_raw` disables the checkbox
+
+Point 2 ("grid_value format ONLY") is REVISED. Users ticked the per-column
+checkbox in the default `value` format and got the term alone: the flag
+travelled intact (`compile_columns.ts` → `exportColumn.valueWithParents`) and
+`value` silently ignored it. The PHP export did fold parents into `value`.
+
+Now:
+
+- **`value`** — when the ddo's flag is set AND its declared leaf is a stored
+  relation (`atoms.ts fieldHasValueParents`: the same `isStoredRelationModel`
+  test grid_value applies; a declared dataframe step never), grid.ts mints ONE
+  sibling column right after the term column (sortKey `[ddo, 0]`) on every
+  record: key `<top>#parents` (the `sub_id:'parents'` identity), path/label =
+  the declared chain + the `parents` segment on the leaf → header
+  `<column> | parents`, `cell_type` `text`, model `null` (as grid_value). The
+  term cell is unchanged (no chain folded in — a deliberate divergence from
+  PHP's flat join). The cell MIRRORS the term cell: it is built in the term
+  cell's own fold (`atoms.ts resolveValueCellInScope` withParents →
+  `ValueCells.parents`), with the SAME separators at the SAME levels (level 0
+  `' | '`, deeper levels and the leaf's items the component's
+  `fields_separator` — so a multi-hop path `portal → portal` gives term
+  `Leaf C, Parent A | Leaf C` and parents `chain27, chain2 | chain27`). Each
+  chain is the SAME `resolveParentsChain` grid_value uses, no second walk. At
+  the leaf, each target contributes its chain ONCE PER PIECE its term text
+  splits into on the leaf's item separator (a request_config
+  `fields_separator` `' | '` over several show children — `A | 1 | B | 2` —
+  gives `chainA | chainA | chainB | chainB`); a target whose term is EMPTY
+  drops from both cells; a target without hierarchy leaves an EMPTY slot.
+  Split both cells the same way and parents piece n is the chain of the record
+  term piece n came from. Not representable: a separator INSIDE a chain term
+  (same limit as the term cell). The cell is absent only when no piece has a
+  chain (the column still exists). Unlike
+  grid_value's fan-out, parents of nested request-config relations are not
+  included (the flag names its own column's leaf). The column's `ar_labels`
+  section label is the leaf's owner section (one column serves every target
+  section — grid_value keys one column per target section).
+- **`grid_value`** — unchanged.
+- **`dedalo_raw`** — unchanged: stored data only, parents are derived, the
+  server ignores the flag. The client now DISABLES the checkbox in that format
+  with a visible *(not in Raw)* note (labels `parents_not_in_raw[_short]`),
+  re-evaluated on every format change and after a preset restores its format;
+  the ddo keeps its flag.
+
+**Fixture impact: NONE.** No `get_export_grid` fixture carries the per-ddo
+flag; with the flag off (or on a literal leaf) the output is byte-identical.
+
+### Gate
+
+`test/unit/tool_export_parents_native.test.ts` — the old "`value` never grows
+parents" pin is REPLACED by: key/label/placement/cell per relation path
+(compact portal + autocomplete fan-out), multi-item alignment with an empty
+slot, the three alignment cases (multi-hop mirror at two and three steps, empty-term target dropped
+from both cells, one chain per `' | '` piece of a target's text), two ddos each with their own column, all-parent-less → column present and
+cell empty, flag-on vs flag-off identical modulo the parents columns, literal
+leaf and flag-off byte identity. The `dedalo_raw` pin stays. Client:
+`test_tool_export.js` 'TOOL_EXPORT PARENTS CHECKBOX (per data format)'.

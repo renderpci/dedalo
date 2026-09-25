@@ -8,8 +8,15 @@
  *    column whose key ends '#parents' and whose label leaf is 'parents';
  *  - both relation paths emit: the WC-008 compact portal cell AND the
  *    request-config fan-out (autocomplete family);
- *  - the flag is PER-DDO ONLY (the legacy request-global option is ignored)
- *    and grid_value ONLY (value / dedalo_raw never grow parents columns);
+ *  - the flag is PER-DDO ONLY (the legacy request-global option is ignored);
+ *  - the VALUE format (WC-049 addendum 2026-09-25) grows ONE sibling column
+ *    `<top>#parents` right after its term column. The cell MIRRORS the term
+ *    cell: same separators at the same levels (multi-hop paths too), one
+ *    chain per term piece (a target whose text splits into n pieces carries
+ *    its chain n times), a target with no term contributes nothing, a
+ *    parent-less target an EMPTY slot; absent only when every slot is empty;
+ *    flag off (or a literal leaf) → byte-identical output; dedalo_raw never
+ *    grows parents (derived data — the client disables the checkbox there);
  *  - targets without hierarchy emit NOTHING (no empty column);
  *  - tool_export.components_with_parent answers the client checkbox gate
  *    (relation component with a hierarchical target → true).
@@ -40,6 +47,7 @@ const PORTAL = 'test80'; // component_portal → test3 (compact WC-008 cell)
 const AUTOCOMPLETE = 'test9'; // component_autocomplete_hi (fan-out path)
 const PARENT_LINK = 'test71'; // test3's component_relation_parent
 const LITERAL = 'test52'; // component_input_text (never eligible)
+const HIERARCHY_TERM = 'hierarchy25'; // test9's show child (read on the target record)
 
 let principal!: Principal;
 
@@ -88,6 +96,12 @@ beforeAll(async () => {
 	// thesaurus term = test52) — what the chain resolves and joins.
 	await setColumnSlot('string', 2, LITERAL, [{ id: 1, lang: 'lg-spa', value: 'Parent A' }]);
 	await setColumnSlot('string', 1, LITERAL, [{ id: 1, lang: 'lg-spa', value: 'Root B' }]);
+	// test9's own request_config shows hierarchy25 (the thesaurus term) — give
+	// its target one, or the value-format term cell is empty and (by the
+	// alignment law) so is its parents mirror.
+	await setColumnSlot('string', 27, HIERARCHY_TERM, [
+		{ id: 1, lang: 'lg-spa', value: 'Autocomplete leaf' },
+	]);
 	// The export source row: record 1 already points test80 → test3/27
 	// (canonical); give the autocomplete the same target for the fan-out path.
 	await setRelationSlot(1, AUTOCOMPLETE, [
@@ -218,20 +232,303 @@ describe('WC-049 parents chain — grid_value emission', () => {
 	});
 });
 
-describe('WC-049 parents chain — format confinement', () => {
-	test("'value' format never grows parents columns", async () => {
-		const { columns, rows } = await runExport(
-			exportOptions('value', [ddo(PORTAL, { value_with_parents: true })]),
-		);
-		expect(parentsColumns(columns)).toHaveLength(0);
-		// and no chain leaks into the flat cell
-		for (const row of rows) {
-			for (const value of Object.values((row.c as Record<string, string>) ?? {})) {
-				expect(String(value)).not.toContain(EXPECTED_CHAIN);
-			}
+type ExportResult = { columns: ProtocolLine[]; rows: ProtocolLine[]; end?: ProtocolLine };
+
+/**
+ * An export as ordinal-FREE data: every col line keyed by its column key (the
+ * ordinal is dropped — it shifts when a column mints in between), the display
+ * order as keys, every row's cells re-keyed by column key. Two exports that
+ * normalize equal differ in nothing but ordinals.
+ */
+const normalizeExport = (result: ExportResult, dropKey: (key: string) => boolean = () => false) => {
+	const keyOf = new Map<number, string>();
+	const cols: Record<string, unknown>[] = [];
+	for (const column of result.columns) {
+		keyOf.set(column.i as number, String(column.key));
+		if (dropKey(String(column.key))) continue;
+		const { i: _i, after: _after, ...rest } = column;
+		cols.push(rest);
+	}
+	const order = ((result.end?.columns as number[] | undefined) ?? [])
+		.map((ordinal) => keyOf.get(ordinal) as string)
+		.filter((key) => !dropKey(key));
+	const rows = result.rows.map((row) => {
+		const cells: Record<string, string> = {};
+		for (const [ordinal, value] of Object.entries((row.c as Record<string, string>) ?? {})) {
+			const key = keyOf.get(Number(ordinal)) as string;
+			if (!dropKey(key)) cells[key] = value;
+		}
+		return { rec: row.rec, sub: row.sub, c: cells };
+	});
+	return { cols, order, rows };
+};
+
+const isParentsKey = (key: string): boolean => key.includes('#parents');
+
+/** The display order (end line) as column keys. */
+const displayOrder = (result: ExportResult): string[] => {
+	const keyOf = new Map(result.columns.map((column) => [column.i as number, String(column.key)]));
+	return ((result.end?.columns as number[] | undefined) ?? []).map(
+		(ordinal) => keyOf.get(ordinal) as string,
+	);
+};
+
+/** A test80 locator to a test3 record (the canonical portal locator shape). */
+const portalTarget = (id: number): Record<string, unknown> => ({
+	id,
+	type: 'dd151',
+	section_id: String(id),
+	section_tipo: SECTION,
+	from_component_tipo: PORTAL,
+});
+
+/** Snapshot the named slots, run `work`, then write every slot back verbatim. */
+const withSlotsRestored = async (
+	slots: ['relation' | 'string', number, string][],
+	work: () => Promise<void>,
+): Promise<void> => {
+	const saved: Record<string, unknown>[][] = [];
+	for (const [column, sectionId, componentTipo] of slots) {
+		const [row] = (await sql.unsafe(
+			`SELECT ${column}->$1 AS slot FROM matrix_test WHERE section_tipo = $2 AND section_id = $3`,
+			[componentTipo, SECTION, sectionId],
+		)) as { slot: Record<string, unknown>[] | null }[];
+		saved.push(row?.slot ?? []);
+	}
+	try {
+		await work();
+	} finally {
+		for (const [position, [column, sectionId, componentTipo]] of slots.entries()) {
+			await setColumnSlot(column, sectionId, componentTipo, saved[position] ?? []);
+		}
+	}
+};
+
+/** The term cell and the parents cell of one value-format export of `component`. */
+const termAndParents = async (
+	options: Record<string, unknown>,
+	component: string,
+): Promise<{ term: string | undefined; parents: string | undefined }> => {
+	const result = await runExport(options);
+	const term = result.columns.find((c) => c.key === `${SECTION}_${component}`) as ProtocolLine;
+	const parents = parentsColumns(result.columns);
+	expect(parents).toHaveLength(1);
+	return {
+		term: cellOf(result.rows, term.i as number),
+		parents: cellOf(result.rows, (parents[0] as ProtocolLine).i as number),
+	};
+};
+
+describe('WC-049 parents chain — value format (addendum 2026-09-25)', () => {
+	for (const component of [PORTAL, AUTOCOMPLETE]) {
+		test(`${component}: a sibling '<top>#parents' column right after the term column`, async () => {
+			const result = (await runExport(
+				exportOptions('value', [ddo(component, { value_with_parents: true })]),
+			)) as ExportResult;
+			const parents = parentsColumns(result.columns);
+			expect(parents).toHaveLength(1);
+			const column = parents[0] as ProtocolLine;
+			expect(column.key).toBe(`${SECTION}_${component}#parents`);
+			expect((column.ar_labels ?? []).at(-1)).toBe('parents');
+			expect(String(column.label)).toEndWith(' | parents');
+			expect(column.cell_type).toBe('text');
+			expect(cellOf(result.rows, column.i as number)).toBe(EXPECTED_CHAIN);
+			// placement: immediately after its own term column
+			expect(displayOrder(result)).toEqual([
+				`${SECTION}_${component}`,
+				`${SECTION}_${component}#parents`,
+			]);
+			// the term cell stays clean — no chain folded into it
+			const term = result.columns.find((c) => c.key === `${SECTION}_${component}`);
+			const termCell = cellOf(result.rows, term?.i as number);
+			// a chain pairs with a term piece — never with an empty term cell
+			expect(termCell ?? '').not.toBe('');
+			expect(termCell).not.toContain(EXPECTED_CHAIN);
+		});
+	}
+
+	test("multi-item: one chain per item, ' | '-aligned with the term cell, a parent-less item keeps an EMPTY slot", async () => {
+		const [stored] = (await sql.unsafe(
+			`SELECT relation->'${PORTAL}' AS slot FROM matrix_test WHERE section_tipo = $1 AND section_id = 1`,
+			[SECTION],
+		)) as { slot: Record<string, unknown>[] | null }[];
+		const [storedTerm] = (await sql.unsafe(
+			`SELECT string->'${LITERAL}' AS slot FROM matrix_test WHERE section_tipo = $1 AND section_id = 27`,
+			[SECTION],
+		)) as { slot: Record<string, unknown>[] | null }[];
+		const target = (id: number): Record<string, unknown> => ({
+			id,
+			type: 'dd151',
+			section_id: String(id),
+			section_tipo: SECTION,
+			from_component_tipo: PORTAL,
+		});
+		// items: 27 (chain 'Parent A > Root B'), 1 (no parents), 2 (chain 'Root B')
+		await setColumnSlot('string', 27, LITERAL, [{ id: 1, lang: 'lg-spa', value: 'Leaf C' }]);
+		await setRelationSlot(1, PORTAL, [target(27), target(1), target(2)]);
+		try {
+			const result = (await runExport(
+				exportOptions('value', [ddo(PORTAL, { value_with_parents: true })]),
+			)) as ExportResult;
+			const term = result.columns.find((c) => c.key === `${SECTION}_${PORTAL}`) as ProtocolLine;
+			const column = parentsColumns(result.columns)[0] as ProtocolLine;
+			expect(cellOf(result.rows, term.i as number)).toBe('Leaf C | Root B | Parent A');
+			expect(cellOf(result.rows, column.i as number)).toBe(`${EXPECTED_CHAIN} |  | Root B`);
+		} finally {
+			await setRelationSlot(1, PORTAL, stored?.slot ?? []);
+			await setColumnSlot('string', 27, LITERAL, storedTerm?.slot ?? []);
 		}
 	});
 
+	test('two ddos: each grows its OWN parents column after its own term column', async () => {
+		const result = (await runExport(
+			exportOptions('value', [
+				ddo(PORTAL, { value_with_parents: true }),
+				ddo(AUTOCOMPLETE, { value_with_parents: true }),
+			]),
+		)) as ExportResult;
+		expect(displayOrder(result)).toEqual([
+			`${SECTION}_${PORTAL}`,
+			`${SECTION}_${PORTAL}#parents`,
+			`${SECTION}_${AUTOCOMPLETE}`,
+			`${SECTION}_${AUTOCOMPLETE}#parents`,
+		]);
+	});
+
+	test('every target parent-less → the column still mints, the cell is EMPTY', async () => {
+		await setRelationSlot(27, PARENT_LINK, []);
+		try {
+			const result = (await runExport(
+				exportOptions('value', [ddo(PORTAL, { value_with_parents: true })]),
+			)) as ExportResult;
+			const parents = parentsColumns(result.columns);
+			expect(parents).toHaveLength(1);
+			expect(cellOf(result.rows, (parents[0] as ProtocolLine).i as number)).toBeUndefined();
+		} finally {
+			await setRelationSlot(27, PARENT_LINK, [parentLocator(2)]);
+		}
+	});
+
+	// ---- ALIGNMENT: the parents cell has the term cell's exact join structure
+	// (review 2026-09-25 — the three ways a flat per-locator list mis-paired).
+
+	test('multi-hop path: the parents cell mirrors the term cell level by level', async () => {
+		// [test3/test80 → test3/test80]: level 0 joins hops with ' | ', the leaf
+		// joins its items with test80's fields_separator (', ' — the default).
+		await withSlotsRestored(
+			[
+				['relation', 1, PORTAL],
+				['relation', 27, PORTAL],
+				['relation', 2, PORTAL],
+				['string', 27, LITERAL],
+			],
+			async () => {
+				await setColumnSlot('string', 27, LITERAL, [{ id: 1, lang: 'lg-spa', value: 'Leaf C' }]);
+				await setRelationSlot(1, PORTAL, [portalTarget(27), portalTarget(2)]);
+				await setRelationSlot(27, PORTAL, [portalTarget(27), portalTarget(2)]);
+				await setRelationSlot(2, PORTAL, [portalTarget(27)]);
+				const deep = {
+					path: [
+						{ section_tipo: SECTION, component_tipo: PORTAL, name: PORTAL },
+						{ section_tipo: SECTION, component_tipo: PORTAL, name: PORTAL },
+					],
+					value_with_parents: true,
+				};
+				const { term, parents } = await termAndParents(exportOptions('value', [deep]), PORTAL);
+				// hop 27 → leaf [27, 2]; hop 2 → leaf [27]
+				expect(term).toBe('Leaf C, Parent A | Leaf C');
+				expect(parents).toBe(`${EXPECTED_CHAIN}, Root B | ${EXPECTED_CHAIN}`);
+				// three steps: the INTERMEDIATE level joins with its own
+				// fields_separator (', '), never the records separator
+				const deeper = { ...deep, path: [...deep.path, deep.path[0]] };
+				const three = await termAndParents(exportOptions('value', [deeper]), PORTAL);
+				// hop 27 → [27 → leaf [27, 2], 2 → leaf [27]]; hop 2 → [27 → leaf [27, 2]]
+				expect(three.term).toBe('Leaf C, Parent A, Leaf C | Leaf C, Parent A');
+				expect(three.parents).toBe(
+					`${EXPECTED_CHAIN}, Root B, ${EXPECTED_CHAIN} | ${EXPECTED_CHAIN}, Root B`,
+				);
+			},
+		);
+	});
+
+	test('a target whose term is EMPTY drops from BOTH cells (no orphan chain slot)', async () => {
+		await withSlotsRestored(
+			[
+				['relation', 1, PORTAL],
+				['string', 27, LITERAL],
+			],
+			async () => {
+				// 27 has a chain but no term; 2 has term 'Parent A' and chain 'Root B'
+				await setColumnSlot('string', 27, LITERAL, []);
+				await setRelationSlot(1, PORTAL, [portalTarget(27), portalTarget(2)]);
+				const { term, parents } = await termAndParents(
+					exportOptions('value', [ddo(PORTAL, { value_with_parents: true })]),
+					PORTAL,
+				);
+				expect(term).toBe('Parent A');
+				expect(parents).toBe('Root B');
+			},
+		);
+	});
+
+	test("a target whose text holds the item separator gets one chain PER ' | ' piece", async () => {
+		// The same shape a request_config fields_separator ' | ' over two or more
+		// show children produces (rsc368-like 'A | 1 | B | 2'): the pieces a
+		// consumer splits out of ONE target all carry that target's chain.
+		await withSlotsRestored(
+			[
+				['relation', 1, PORTAL],
+				['string', 27, LITERAL],
+			],
+			async () => {
+				await setColumnSlot('string', 27, LITERAL, [{ id: 1, lang: 'lg-spa', value: 'A | 1' }]);
+				await setRelationSlot(1, PORTAL, [portalTarget(27), portalTarget(2)]);
+				const { term, parents } = await termAndParents(
+					exportOptions('value', [ddo(PORTAL, { value_with_parents: true })]),
+					PORTAL,
+				);
+				expect(term).toBe('A | 1 | Parent A');
+				expect(parents).toBe(`${EXPECTED_CHAIN} | ${EXPECTED_CHAIN} | Root B`);
+				expect((parents ?? '').split(' | ')).toHaveLength((term ?? '').split(' | ').length);
+			},
+		);
+	});
+
+	test('flag ON changes NOTHING but the added parents columns (term cells, labels, order)', async () => {
+		const ddos = (flag: boolean) => [
+			ddo(PORTAL, { value_with_parents: flag }),
+			ddo(AUTOCOMPLETE, { value_with_parents: flag }),
+			ddo(LITERAL),
+		];
+		const off = (await runExport(exportOptions('value', ddos(false)))) as ExportResult;
+		const on = (await runExport(exportOptions('value', ddos(true)))) as ExportResult;
+		expect(parentsColumns(off.columns)).toHaveLength(0);
+		expect(parentsColumns(on.columns)).toHaveLength(2);
+		expect(normalizeExport(on, isParentsKey)).toEqual(normalizeExport(off));
+	});
+
+	test('flag on a LITERAL leaf → byte-identical to flag off (no column, no cell)', async () => {
+		const off = await runExport(exportOptions('value', [ddo(LITERAL)]));
+		const on = await runExport(
+			exportOptions('value', [ddo(LITERAL, { value_with_parents: true })]),
+		);
+		expect(JSON.stringify(on)).toBe(JSON.stringify(off));
+	});
+
+	test('flag off → byte-identical to a ddo without the key at all', async () => {
+		const without = await runExport(exportOptions('value', [ddo(PORTAL), ddo(AUTOCOMPLETE)]));
+		const off = await runExport(
+			exportOptions('value', [
+				ddo(PORTAL, { value_with_parents: false }),
+				ddo(AUTOCOMPLETE, { value_with_parents: false }),
+			]),
+		);
+		expect(JSON.stringify(off)).toBe(JSON.stringify(without));
+		expect(parentsColumns(without.columns)).toHaveLength(0);
+	});
+});
+
+describe('WC-049 parents chain — format confinement', () => {
 	test("'dedalo_raw' format never grows parents columns", async () => {
 		const { columns } = await runExport(
 			exportOptions('dedalo_raw', [ddo(PORTAL, { value_with_parents: true })]),

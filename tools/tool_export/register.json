@@ -644,6 +644,106 @@
           },
           {
             "lang": "lg-eng",
+            "name": "parents_not_in_raw",
+            "value": "Parents are not exported in the Dédalo (Raw) format"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "parents_not_in_raw",
+            "value": "Los padres no se exportan en el formato Dédalo (Raw)"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "parents_not_in_raw",
+            "value": "Els pares no s'exporten en el format Dédalo (Raw)"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "parents_not_in_raw",
+            "value": "Les parents ne sont pas exportés au format Dédalo (Raw)"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "parents_not_in_raw",
+            "value": "I genitori non vengono esportati nel formato Dédalo (Raw)"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "parents_not_in_raw",
+            "value": "Eltern werden im Format Dédalo (Raw) nicht exportiert"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "parents_not_in_raw",
+            "value": "Οι γονείς δεν εξάγονται στη μορφή Dédalo (Raw)"
+          },
+          {
+            "lang": "lg-por",
+            "name": "parents_not_in_raw",
+            "value": "Os pais não são exportados no formato Dédalo (Raw)"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "parents_not_in_raw",
+            "value": "Gurasoak ez dira Dédalo (Raw) formatuan esportatzen"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "parents_not_in_raw",
+            "value": "Dédalo (Raw) ढाँचामा अभिभावकहरू निर्यात हुँदैनन्"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "parents_not_in_raw_short",
+            "value": "(not in Raw)"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "parents_not_in_raw_short",
+            "value": "(no en Raw)"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "parents_not_in_raw_short",
+            "value": "(no en Raw)"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "parents_not_in_raw_short",
+            "value": "(pas en Raw)"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "parents_not_in_raw_short",
+            "value": "(non in Raw)"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "parents_not_in_raw_short",
+            "value": "(nicht in Raw)"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "parents_not_in_raw_short",
+            "value": "(όχι σε Raw)"
+          },
+          {
+            "lang": "lg-por",
+            "name": "parents_not_in_raw_short",
+            "value": "(não em Raw)"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "parents_not_in_raw_short",
+            "value": "(ez Raw-en)"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "parents_not_in_raw_short",
+            "value": "(Raw मा होइन)"
+          },
+          {
+            "lang": "lg-eng",
             "name": "stop",
             "value": "Stop"
           },
