@@ -258,7 +258,7 @@
 			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
 		},
 		"client/dedalo/core/search/js/render_search.js": {
-			"pointer_only_sites": 11,
+			"pointer_only_sites": 10,
 			"reason": "Pre-existing pointer-only activation (audit P1-18 census, batch 7). Converted to a11y.make_activable as this surface is next reworked; the cataloguing surfaces the row names (thesaurus tree, component labels, modal, section tool bar) were converted in the same batch."
 		},
 		"client/dedalo/core/search/js/render_semantic.js": {

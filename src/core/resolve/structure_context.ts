@@ -667,6 +667,26 @@ async function resolveEntryColumnsMap(
 	return (await getElementColumnsMap(tipo, feed, mode)) ?? [];
 }
 
+/**
+ * Search mode: stamp the parent grouper's term as
+ * `config.parent_grouper_label`, so the search panel can say WHICH "Id" /
+ * "Name" a field is when several groupers carry one (the client renders it as
+ * the `[Identification]` suffix — ui.js label_info). PHP
+ * class.common.php:1700-1707 stamps it on a CLONE of config (the core config
+ * is shared with the cache entry); `entry` is already per-call here. Extracted
+ * from buildStructureContext to keep its cyclomatic count under the ratchet.
+ */
+async function stampSearchParentGrouperLabel(
+	entry: StructureContextEntry,
+	mode: string,
+): Promise<void> {
+	if (mode !== 'search' || !entry.parent_grouper) return;
+	entry.config = {
+		...(entry.config ?? {}),
+		parent_grouper_label: await labelByTipo(entry.parent_grouper),
+	};
+}
+
 export async function buildStructureContext(options: {
 	tipo: string;
 	sectionTipo: string;
@@ -896,17 +916,7 @@ export async function buildStructureContext(options: {
 		entry.color = (sectionNode?.properties as { color?: string } | null)?.color ?? '#b9b9b9';
 	}
 
-	// Search mode: the parent grouper's term, so the search panel can say WHICH
-	// "Id" / "Name" a field is when several groupers carry one (the client
-	// renders it as the `[Identification]` suffix — ui.js label_info). PHP
-	// class.common.php:1700-1707 stamps it on a CLONE of config (the core
-	// config is shared with the cache entry); `entry` is already per-call here.
-	if (options.mode === 'search' && entry.parent_grouper) {
-		entry.config = {
-			...(entry.config ?? {}),
-			parent_grouper_label: await labelByTipo(entry.parent_grouper),
-		};
-	}
+	await stampSearchParentGrouperLabel(entry, options.mode);
 
 	// Section-only context extras (PHP class.common.php :2056-2100) — the
 	// section module owns this stamping (matrix_table, relation_list_tipo,
