@@ -3637,7 +3637,7 @@ abstract class component_common extends common {
 	*	empty			: bool $empty;			// true for '!*', false for '*'
 	* }
 	* @return object $query_object
-	*	New group object as {"$and":[..]} | {"$or":[..]}
+	*	New group object as {"$and":[..],"same_record":true} | {"$or":[..],"same_record":true}
 	*/
 	public static function resolve_query_object_empty_behavior( object $options ) : object {
 
@@ -3681,8 +3681,11 @@ abstract class component_common extends common {
 			}
 
 		// final group with all langs
+		// same_record: all the leaves describe ONE component value, so in a multi-step path
+		// they must be tested against the same related record (see search::filter_parser)
 			$final_query_object = new stdClass();
 				$final_query_object->{$langs_operator} = $ar_langs_query_object;
+				$final_query_object->same_record = true;
 
 
 		return $final_query_object;

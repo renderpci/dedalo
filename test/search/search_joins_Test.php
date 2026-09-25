@@ -305,10 +305,12 @@ final class search_joins_test extends TestCase {
 
 	/**
 	* TEST_EMPTY_OPERATOR_MERGES_PER_LANG_CHECKS_INTO_ONE_EXISTS
-	* The '!*' (empty) operator expands each lang into a $or of [IS NULL, = '[]'] leaves.
-	* Every per-lang pair shares one join_id, so each lang must end up as ONE correlated EXISTS
-	* (the two checks ORed inside): one EXISTS per lang, NOT two. Regression guard: previously
-	* each leaf (IS NULL and = '[]') was emitted as its own EXISTS, doubling the subqueries.
+	* The '!*' (empty) operator expands each lang into a $or of [IS NULL, = '[]'] leaves, ANDed
+	* between langs (component_common::resolve_query_object_empty_behavior, same_record group).
+	* The whole group must end up as ONE correlated EXISTS: 'empty in every lang' is a property
+	* of the SAME related record. Regression guard: previously each lang was its own EXISTS, so
+	* different linked records could satisfy different langs, and every lang re-joined
+	* relations/matrix (2.7 s vs 1 s on mdcat2949 > mdcat2961 > rsc86).
 	* @return void
 	*/
 	public function test_empty_operator_merges_per_lang_checks_into_one_exists() : void {
@@ -320,19 +322,71 @@ final class search_joins_test extends TestCase {
 		$sqo	= self::build_sqo('$and', [$operand]);
 		$built	= self::build($sqo);
 
-		$n_exists	= substr_count($built['where'], 'EXISTS (SELECT 1');
 		$n_is_null	= substr_count($built['where'], ' IS NULL');
 		$n_empty	= substr_count($built['where'], "= '[]'");
 
-		// every lang has exactly one merged EXISTS holding BOTH the null and the empty-array check
-		$this->assertGreaterThan(0, $n_exists, 'expected at least one EXISTS subquery' . PHP_EOL . $built['where']);
-		$this->assertSame($n_is_null, $n_exists,
-			'!*: the null check must be merged into the same EXISTS as the empty-array check (one per lang)' . PHP_EOL . $built['where']
+		$this->assertSame(1, substr_count($built['where'], 'EXISTS (SELECT 1'),
+			'!*: all the lang checks must be merged into a single EXISTS' . PHP_EOL . $built['where']
 		);
-		$this->assertSame($n_empty, $n_exists,
-			'!*: the empty-array check must be merged into the same EXISTS as the null check (one per lang)' . PHP_EOL . $built['where']
+		$this->assertGreaterThan(1, $n_is_null, 'expected one null check per lang' . PHP_EOL . $built['where']);
+		$this->assertSame($n_is_null, $n_empty,
+			'!*: every lang must have both the null and the empty-array check' . PHP_EOL . $built['where']
+		);
+		$this->assertSame([1], self::join_ids_in($built['where'], $built['signature']),
+			'!*: every check must reference the same joined record (j1_ alias)' . PHP_EOL . $built['where']
 		);
 	}//end test_empty_operator_merges_per_lang_checks_into_one_exists
+
+
+
+	/**
+	* TEST_NOT_EMPTY_OPERATOR_MERGES_INTO_ONE_EXISTS
+	* The '*' (not empty) operator is the complement of '!*': $or of per-lang
+	* $and[IS NOT NULL, != '[]'] groups. Same same_record rule: ONE EXISTS for the whole operand,
+	* never an EXISTS per $and leaf.
+	* @return void
+	*/
+	public function test_not_empty_operator_merges_into_one_exists() : void {
+
+		$operand	= self::operand('', self::$tipo_string, 'component_input_text');
+			$operand['q_operator']	= '*';
+			$operand['q']			= '';
+
+		$sqo	= self::build_sqo('$and', [$operand]);
+		$built	= self::build($sqo);
+
+		$this->assertSame(1, substr_count($built['where'], 'EXISTS (SELECT 1'),
+			'*: all the lang checks must be merged into a single EXISTS' . PHP_EOL . $built['where']
+		);
+		$this->assertGreaterThan(1, substr_count($built['where'], ' IS NOT NULL'),
+			'expected one not null check per lang' . PHP_EOL . $built['where']
+		);
+		$this->assertSame([1], self::join_ids_in($built['where'], $built['signature']),
+			'*: every check must reference the same joined record (j1_ alias)' . PHP_EOL . $built['where']
+		);
+	}//end test_not_empty_operator_merges_into_one_exists
+
+
+
+	/**
+	* TEST_NOT_EMPTY_OPERATOR_UNDER_OR_MERGES_INTO_ONE_EXISTS
+	* '*' directly under a top-level $or (no subquery context). Without the same_record path
+	* each per-lang $and leaf became its own EXISTS (2 per lang).
+	* @return void
+	*/
+	public function test_not_empty_operator_under_or_merges_into_one_exists() : void {
+
+		$operand	= self::operand('', self::$tipo_string, 'component_input_text');
+			$operand['q_operator']	= '*';
+			$operand['q']			= '';
+
+		$sqo	= self::build_sqo('$or', [$operand]);
+		$built	= self::build($sqo);
+
+		$this->assertSame(1, substr_count($built['where'], 'EXISTS (SELECT 1'),
+			'*: under $or all the lang checks must be merged into a single EXISTS' . PHP_EOL . $built['where']
+		);
+	}//end test_not_empty_operator_under_or_merges_into_one_exists
 
 
 

@@ -490,6 +490,28 @@ Example: find if the component doesn't has any value
 }
 ```
 
+!!! note "Empty and not empty through a path"
+    A text component is **empty** (`!*`) only when it is empty in **every** language, including `lg-nolan`, and
+    it is **not empty** (`*`) when it has a value in **some** language. All languages are checked even for non
+    translatable components, because legacy data can still hold values in translated keys.
+
+    When the component is reached through a relation (a [path](#path) with more than one step), all of these
+    language checks are tested against **the same related record**, in a single correlated `EXISTS`:
+
+    ```sql
+    EXISTS (SELECT 1 FROM relations r LEFT JOIN matrix j ON (...)
+      WHERE <correlation> AND ((lg-cat IS NULL OR lg-cat = '[]') AND ... AND (lg-nolan IS NULL OR lg-nolan = '[]')))
+    ```
+
+    So `Persona afectada > Cognoms` `!*` finds the records that link at least one person with no surname at
+    all. A record linking person A (surname only in `lg-cat`) and person B (surname only in `lg-nolan`) does
+    **not** match, because neither person is empty. Records without any linked person do not match either (the
+    related record must exist).
+
+    Before, every language was its own `EXISTS`, so different linked records could satisfy different languages
+    and every language re-joined `relations`/`matrix`: the example above took 2.7 s and now takes 1 s with the
+    same results.
+
 ##### path
 
 Defines the path to the search component from current section. Sometimes the component to be searched could be linked by any portal (with a locator) so the component is not inside the current section, it's in other section and in this case SQO need follow the path to find the component. The path defines the deep into linked data sections.
