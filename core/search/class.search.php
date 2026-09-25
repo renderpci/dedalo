@@ -103,6 +103,12 @@ class search {
 		// sort that hung the Postgres server.
 		public $join_counter = 0;
 
+		// duplicated_join_ids. Path signature => join_id shared by the duplicated ('!!') leaves
+		// outside a $or. They all feed the same main-query window, so their values must come from
+		// the same joined record: independent joins would pair values of different linked records
+		// and multiply rows. Reset with join_counter.
+		public array $duplicated_join_ids = [];
+
 		// UNRESOLVABLE_PATH_SQL. Never-matching predicate emitted in place of a filter clause
 		// whose path could not be resolved to a table alias (see build_sql_join). Dropping the
 		// clause instead would silently RELAX the filter (under $and, every remaining record
@@ -2183,7 +2189,8 @@ class search {
 
 			// Reset the per-clause join discriminator before (re)building the filter, so
 			// alias generation is deterministic across repeated builds on the same instance.
-			$this->join_counter = 0;
+			$this->join_counter			= 0;
+			$this->duplicated_join_ids	= [];
 
 			$parsed_string = $this->filter_parser($operator, $ar_value);
 			if (!empty($parsed_string)) {
@@ -2450,9 +2457,16 @@ class search {
 					// Under $and (subquery context), each clause is emitted as a correlated EXISTS
 					// subquery instead of a main-query join, keeping the cross-record semantics with
 					// no row multiplication. Single-step paths keep join_id null (legacy, no joins).
-					$join_id = null;
+					$is_duplicated_leaf	= (($search_object->duplicated ?? false)===true);
+					$join_id			= null;
 					if ($n_levels>1) {
-						if ($op==='$or') {
+						if ($op!=='$or' && $is_duplicated_leaf) {
+							$signature = $this->get_table_alias_from_path($search_object->path);
+							if (!isset($this->duplicated_join_ids[$signature])) {
+								$this->duplicated_join_ids[$signature] = ++$this->join_counter;
+							}
+							$join_id = $this->duplicated_join_ids[$signature];
+						}elseif ($op==='$or') {
 							$signature = $this->get_table_alias_from_path($search_object->path);
 							if (!isset($or_join_ids[$signature])) {
 								$or_join_ids[$signature] = ++$this->join_counter;
@@ -2465,7 +2479,6 @@ class search {
 					$search_object->join_id = $join_id;
 					// duplicated ('!!') leaves feed the main-query window (ar_duplicated_fields) with the
 					// joined alias, so they always need the main-query join, never an EXISTS
-					$is_duplicated_leaf = (($search_object->duplicated ?? false)===true);
 					if ($n_levels>1 && (($op==='$or' && !$as_subquery) || $is_duplicated_leaf)) {
 						// top-level $or: one shared LEFT JOIN relations/matrix pair in the main query
 						$joins_built = $this->build_sql_join($search_object->path, $join_id);
@@ -2548,6 +2561,21 @@ class search {
 
 		return $string_query;
 	}//end filter_parser
+
+
+
+	/**
+	* SQL_COMMENT
+	* Renders a debug SQL line comment ('-- text' + new line). The text may carry client values
+	* (sqo path names, component tipos, q_info), so line breaks are replaced: a new line inside
+	* the text would end the comment and run the rest as SQL.
+	* @param string $text
+	* @return string $comment
+	*/
+	public static function sql_comment(string $text) : string {
+
+		return '-- ' . str_replace(["\r", "\n"], ' ', $text) . "\n";
+	}//end sql_comment
 
 
 
@@ -2802,7 +2830,7 @@ class search {
 				$sql_join  = "\n";
 				if(SHOW_DEBUG===true) {
 					$section_name = RecordObj_dd::get_termino_by_tipo($step_object->section_tipo, null, true, false);
-					$sql_join  .= "-- JOIN GROUP $matrix_table - $t_name - $section_name\n";
+					$sql_join  .= self::sql_comment("JOIN GROUP $matrix_table - $t_name - $section_name");
 				}
 				if ($as_subquery && $key===1) {
 					// Subquery FROM (first relations table). The correlation above is collected
@@ -2966,7 +2994,7 @@ class search {
 						$component_tipo			= $component_path_data->component_tipo;
 						$component_name			= $component_path_data->name ?? '';	//RecordObj_dd::get_termino_by_tipo($component_tipo, null, true, false);
 						$model_name				= $component_path_data->model; //RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
-						$sql_where .= "-- DIRECT FORMAT - table_alias:$table_alias - $component_tipo - $component_name - $component_path - ".strtoupper($model_name)."\n";
+						$sql_where .= self::sql_comment("DIRECT FORMAT - table_alias:$table_alias - $component_tipo - $component_name - $component_path - ".strtoupper($model_name));
 					}
 
 					$json_sql_component_path = "";
@@ -3058,7 +3086,7 @@ class search {
 						#dump($search_object, ' search_object ++ '.to_string());
 					if(SHOW_DEBUG===true) {
 						$object_info = isset($search_object->q_info) ? $search_object->q_info : '';
-						$sql_where .= "-- ARRAY ELEMENTS FORMAT - $component_tipo - $table_alias - info:$object_info \n";
+						$sql_where .= self::sql_comment("ARRAY ELEMENTS FORMAT - $component_tipo - $table_alias - info:" . to_string($object_info));
 					}
 
 					$sql_where .= $table_alias . '.id IN (SELECT '.$table_alias.'.id FROM '.PHP_EOL;
@@ -3076,7 +3104,7 @@ class search {
 						$component_tipo			= $component_path_data->component_tipo;
 						$component_name			= $component_path_data->name ?? '';	//RecordObj_dd::get_termino_by_tipo($component_tipo, null, true, false);
 						$model_name				= $component_path_data->model; //RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-						$sql_where .= "-- TYPEOF FORMAT - table_alias:$table_alias - $component_tipo - $component_name - $component_path - ".strtoupper($model_name)."\n";
+						$sql_where .= self::sql_comment("TYPEOF FORMAT - table_alias:$table_alias - $component_tipo - $component_name - $component_path - ".strtoupper($model_name));
 					}
 					$safe_operator = $search_object->operator;
 					$sql_where .= 'jsonb_typeof('.$table_alias.'.datos#>\'{'.$component_path.'}\')'.$safe_operator.$search_object->q_parsed;
@@ -3099,7 +3127,7 @@ class search {
 
 					$column_name = $search_object->column_name;
 					if(SHOW_DEBUG===true) {
-						$sql_where .= "-- COLUMN FORMAT - format: $search_object_format - $column_name - $table_alias \n";
+						$sql_where .= self::sql_comment("COLUMN FORMAT - format: " . to_string($search_object_format) . " - $column_name - $table_alias");
 					}
 
 					$sql_where .= $table_alias . '.'.$column_name;
