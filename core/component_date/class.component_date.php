@@ -705,7 +705,7 @@ class component_date extends component_common {
 				// Extract directly from calculated time in JAVASCRIPT
 				$dd_date	= isset($q_object->start) ? new dd_date($q_object->start) : null;
 				$q_clean	= !empty($q_object->start->time)
-					? $q_object->start->time
+					? (int)$q_object->start->time // client value, always integer seconds
 					: (isset($dd_date) ? dd_date::convert_date_to_seconds($dd_date) : 0);
 
 				// operator conditionals
@@ -839,14 +839,30 @@ class component_date extends component_common {
 					default:
 						// Value-based search: compare each provided period field
 						// against the array element's period sub-object.
-						$period = $q_object->period ?? null;
+						// field names, operator and values come from the client and are
+						// written into the SQL: accept only known fields, comparison
+						// operators and integer values
+						$period				= $q_object->period ?? null;
+						$period_fields		= ['year','month','day','hour','minute','second','time'];
+						$period_operator	= in_array($operator, ['=','!=','<','>','<=','>='], true)
+							? $operator
+							: '=';
 						if (is_object($period) || is_array($period)) {
 							$queries = [];
 							foreach ($period as $field => $value) {
+								if (!in_array($field, $period_fields, true) || !is_numeric($value)) {
+									debug_log(__METHOD__
+										. " Ignored invalid period search field " . PHP_EOL
+										. ' field: ' . to_string($field) . PHP_EOL
+										. ' value: ' . to_string($value)
+										, logger::WARNING
+									);
+									continue;
+								}
 								$query = new stdClass();
 									$query->component_path	= ['period', $field];
-									$query->operator		= $operator;
-									$query->q_parsed		= '\''.$value.'\'';
+									$query->operator		= $period_operator;
+									$query->q_parsed		= '\''.(int)$value.'\'';
 									$query->type			= 'jsonb';
 								$queries[] = $query;
 							}
@@ -873,7 +889,7 @@ class component_date extends component_common {
 				// Extract directly from calculated time in JAVASCRIPT
 				$dd_date	= isset($q_object->start) ? new dd_date($q_object->start) : null;
 				$q_clean	= !empty($q_object->start->time)
-					? $q_object->start->time
+					? (int)$q_object->start->time // client value, always integer seconds
 					: (isset($dd_date) ? dd_date::convert_date_to_seconds($dd_date) : 0);
 
 				// operator conditionals
@@ -943,7 +959,7 @@ class component_date extends component_common {
 				$dd_date		= isset($q_object->start) ? new dd_date($q_object->start) : null;
 				$final_range	= self::get_final_search_range_seconds($dd_date);
 				$q_clean		= !empty($q_object->start->time)
-					? $q_object->start->time
+					? (int)$q_object->start->time // client value, always integer seconds
 					: (isset($dd_date) ? dd_date::convert_date_to_seconds($dd_date) : 0);
 
 				// sample 'dd547' (Activity)

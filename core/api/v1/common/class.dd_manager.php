@@ -79,6 +79,29 @@ final class dd_manager {
 				return $response;
 			}
 
+		// sqo sanitize. Client SQO values reach the SQL builder: server computed SQL fragments
+		// are removed and identifiers validated (see search::sanitize_client_sqo)
+			if (isset($rqo->sqo) && is_object($rqo->sqo)) {
+				$sqo_errors	= [];
+				$safe_sqo	= search::sanitize_client_sqo($rqo->sqo, $sqo_errors);
+				if ($safe_sqo===null) {
+
+					debug_log(__METHOD__
+						. " Rejected invalid client sqo " . PHP_EOL
+						. ' action: ' . to_string($rqo->action) . PHP_EOL
+						. ' errors: ' . to_string($sqo_errors)
+						, logger::ERROR
+					);
+
+					$response = new stdClass();
+						$response->result	= false;
+						$response->msg		= 'Error. Invalid sqo [action:'.$rqo->action.']';
+						$response->errors	= $sqo_errors;
+					return $response;
+				}
+				$rqo->sqo = $safe_sqo;
+			}
+
 		// actions
 			$dd_api_type	= $rqo->dd_api ?? 'dd_core_api';
 			$dd_api			= $dd_api_type; // new $dd_api_type(); // class selected

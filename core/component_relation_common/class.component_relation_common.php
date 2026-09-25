@@ -1508,6 +1508,22 @@ class component_relation_common extends component_common {
 			$q = '[]';
 		}
 
+		// flat locator (function format) is a plain key as 'numisdata309_numisdata300_55'
+		if ($format==='function' && preg_match('/^[a-z0-9_]*$/i', $q)!==1) {
+			debug_log(__METHOD__
+				. ' Ignored invalid unsafe function q ' . PHP_EOL
+				. ' q: ' . to_string($q)
+				, logger::ERROR
+			);
+			// never empty: '[]' would match every record
+			$q = '"invalid_' . preg_replace('/[^a-z0-9_]/i', '', $q) . '"';
+		}
+
+		// SQL literal safe. q is written inside single quoted literals below and comes from
+		// the client: a quote inside a locator value (e.g. section_id "1' OR '1'='1") would
+		// end the literal (standard_conforming_strings: doubling the quote is enough)
+		$q = str_replace("'", "''", $q);
+
 		$q_operator		= $query_object->q_operator ?? null;
 		$path			= $query_object->path ?? [];
 		$last_path_item	= end($path);
@@ -1538,7 +1554,7 @@ class component_relation_common extends component_common {
 					$q_obj = new stdClass();
 						$q_obj->from_component_tipo = $component_tipo ;
 					$ar_q = array($q_obj);
-					$q_clean = '\''.json_encode($ar_q).'\'::jsonb IS DISTINCT FROM TRUE';
+					$q_clean = '\''.str_replace("'", "''", json_encode($ar_q)).'\'::jsonb IS DISTINCT FROM TRUE';
 				}
 				$query_object->operator = $operator;
 				$query_object->q_parsed	= $q_clean;
@@ -1549,7 +1565,7 @@ class component_relation_common extends component_common {
 				$q_obj = new stdClass();
 					$q_obj->from_component_tipo = $component_tipo ;
 				$ar_q = array($q_obj);
-				$q_clean = '\''.json_encode($ar_q).'\'';
+				$q_clean = '\''.str_replace("'", "''", json_encode($ar_q)).'\'';
 				$query_object->operator = $operator;
 				$query_object->q_parsed = $q_clean;
 				break;

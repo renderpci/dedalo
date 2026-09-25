@@ -429,14 +429,14 @@ class component_number extends component_common {
 				// @@ '$[*] >= 1'
 				$query_object_one = clone $query_object;
 					$query_object_one->operator = '@@';
-					$first_val  = str_replace(',', '.', (string)$first_val);
-					$query_object_one->q_parsed	= '\'$[*] >='.(string)$first_val.'\'';
+					$first_val  = self::safe_search_number((string)$first_val);
+					$query_object_one->q_parsed	= isset($first_val) ? '\'$[*] >='.$first_val.'\'' : '\'false\'';
 
 				// @@ '$[*] <= 1'
 				$query_object_two = clone $query_object;
 					$query_object_two->operator = '@@';
-					$second_val  = str_replace(',', '.', (string)$second_val);
-					$query_object_two->q_parsed	= '\'$[*] <='.(string)$second_val.'\'';
+					$second_val  = self::safe_search_number((string)$second_val);
+					$query_object_two->q_parsed	= isset($second_val) ? '\'$[*] <='.$second_val.'\'' : '\'false\'';
 
 				// Group in a new "AND"
 				$current_op = '$and';
@@ -475,8 +475,9 @@ class component_number extends component_common {
 				if ($q_clean==='' || $q_clean===$q_only_operator) {
 					$q_clean = 0;
 				}
+				$q_clean  = self::safe_search_number((string)$q_clean);
 				$query_object->operator = '@@';
-				$query_object->q_parsed	= '\'$[*] >='.$q_clean.'\'';
+				$query_object->q_parsed	= isset($q_clean) ? '\'$[*] >='.$q_clean.'\'' : '\'false\'';
 				break;
 
 			// SMALLER OR EQUAL THAN
@@ -487,8 +488,9 @@ class component_number extends component_common {
 				if ($q_clean==='' || $q_clean===$q_only_operator) {
 					$q_clean = 0;
 				}
+				$q_clean  = self::safe_search_number((string)$q_clean);
 				$query_object->operator = '@@';
-				$query_object->q_parsed	= '\'$[*] <='.$q_clean.'\'';
+				$query_object->q_parsed	= isset($q_clean) ? '\'$[*] <='.$q_clean.'\'' : '\'false\'';
 				break;
 
 			// BIGGER THAN
@@ -499,8 +501,9 @@ class component_number extends component_common {
 				if ($q_clean==='' || $q_clean===$q_only_operator) {
 					$q_clean = 0;
 				}
+				$q_clean  = self::safe_search_number((string)$q_clean);
 				$query_object->operator = '@@';
-				$query_object->q_parsed	= '\'$[*] >'.$q_clean.'\'';
+				$query_object->q_parsed	= isset($q_clean) ? '\'$[*] >'.$q_clean.'\'' : '\'false\'';
 				break;
 
 			// SMALLER THAN
@@ -511,8 +514,9 @@ class component_number extends component_common {
 				if ($q_clean==='' || $q_clean===$q_only_operator) {
 					$q_clean = 0;
 				}
+				$q_clean  = self::safe_search_number((string)$q_clean);
 				$query_object->operator = '@@';
-				$query_object->q_parsed	= '\'$[*] <'.$q_clean.'\'';
+				$query_object->q_parsed	= isset($q_clean) ? '\'$[*] <'.$q_clean.'\'' : '\'false\'';
 				break;
 
 			// EQUAL DEFAULT
@@ -520,8 +524,9 @@ class component_number extends component_common {
 				$operator = '=';
 				$q_clean  = str_replace('+', '', $q);
 				$q_clean  = str_replace(',', '.', $q_clean);
-				$query_object->operator = '@>';
-				$query_object->q_parsed	= '\''.$q_clean.'\'';
+				$q_clean  = self::safe_search_number($q_clean);
+				$query_object->operator = isset($q_clean) ? '@>' : '@@';
+				$query_object->q_parsed	= isset($q_clean) ? '\''.$q_clean.'\'' : '\'false\'';
 				// $query_object->operator = '@@';
 				// $query_object->q_parsed	= '\'$[*] =='.$q_clean.'\'';
 				break;
@@ -530,6 +535,31 @@ class component_number extends component_common {
 
 		return $query_object;
 	}//end resolve_query_object_sql
+
+
+
+	/**
+	* SAFE_SEARCH_NUMBER
+	* Normalizes a user search value to a numeric literal valid both as JSON and as
+	* jsonpath, safe to write into the SQL string ('1,5' -> '1.5', '.5' -> '0.5'). Returns null for any non numeric value,
+	* the caller then builds a condition that matches nothing (jsonpath 'false').
+	* @param string $value
+	* @return string|null
+	*/
+	public static function safe_search_number(string $value) : ?string {
+
+		$value = str_replace(',', '.', trim($value));
+		if (!is_numeric($value)) {
+			return null;
+		}
+		// keep the user literal when it is already a valid JSON/jsonpath number (no precision loss)
+		if (preg_match('/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/', $value)===1) {
+			return $value;
+		}
+
+		// other numeric forms like '.5' or '5.' (invalid JSON numbers)
+		return json_encode((float)$value);
+	}//end safe_search_number
 
 
 

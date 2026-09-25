@@ -564,7 +564,9 @@ class component_input_text extends component_common {
 			case ($q_operator==='=='):
 				$q_clean = $q;
 				$query_object->operator = '@>';
-				$query_object->q_parsed	= '\'["'.$q_clean.'"]\'';
+				// JSON encoded: quotes and backslashes inside q must not break the jsonb literal
+				// (single quotes are already doubled for SQL at this point)
+				$query_object->q_parsed	= '\''.json_encode([$q_clean], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).'\'';
 				$query_object->unaccent = false;
 				$query_object->type = 'object';
 				if (isset($query_object->lang) && $query_object->lang!=='all') {

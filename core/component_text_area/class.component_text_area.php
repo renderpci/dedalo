@@ -1962,11 +1962,13 @@ class component_text_area extends component_common {
 				$query_object->type = 'object';
 
 				// regular version
-				$query_object->q_parsed	= '\'["'.$q_clean.'"]\'';
+				// JSON encoded: quotes and backslashes inside q must not break the jsonb literal
+				// (single quotes are already doubled for SQL at this point)
+				$query_object->q_parsed	= '\''.json_encode([$q_clean], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).'\'';
 
 				// paragraph version
 				$p_query_object = clone($query_object);
-				$p_query_object->q_parsed = '\'["<p>'.$q_clean.'</p>"]\'';
+				$p_query_object->q_parsed = '\''.json_encode(['<p>'.$q_clean.'</p>'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).'\'';
 
 				if (isset($query_object->lang) && $query_object->lang==='all') {
 

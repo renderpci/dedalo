@@ -157,6 +157,188 @@ class search {
 		public array $ar_duplicated_fields = [];
 
 	/**
+	* SANITIZE_CLIENT_SQO
+	* Cleans a search_query_object received from the client (API rqo->sqo) before it
+	* reaches the SQL builder. Several SQO properties are SQL fragments computed by the
+	* server (q_parsed, operator, component_path, use_function...) and written as is into
+	* the query, so a client must never provide them:
+	* - server computed leaf properties are removed (components compute them again from q),
+	*   except for the pass-through formats 'column' and 'function', validated in get_sql_where
+	* - tipos (section_tipo, path tipos), group operators and lang must have a valid shape
+	* - path models are resolved from the ontology (the client model is a class name)
+	* - 'parsed' is reset, so the SQO is always conformed by the server
+	* - order direction is normalized and order path 'column' removed
+	* Returns null when the SQO has an invalid shape (the request must be rejected).
+	* Sample:
+	*	$sqo = search::sanitize_client_sqo($rqo->sqo, $errors);
+	* @param object $sqo
+	* @param array|null &$errors = []
+	*	Receives the rejection reasons
+	* @return object|null $sqo
+	*	A sanitized deep copy, or null when invalid
+	*/
+	public static function sanitize_client_sqo(object $sqo, ?array &$errors=[]) : ?object {
+
+		$errors = [];
+
+		// deep copy: the received object is never modified
+		$sqo = json_decode(json_encode($sqo));
+
+		$is_tipo = function($value) : bool {
+			return is_string($value) && preg_match('/^[a-z]+[0-9]+$/', $value)===1;
+		};
+
+		// path check and clean. Returns false when invalid
+		$sanitize_path = function($path) use($is_tipo, &$errors) : bool {
+			if (!is_array($path)) {
+				$errors[] = 'invalid path (not array)';
+				return false;
+			}
+			foreach ($path as $item) {
+				if (!is_object($item)) {
+					$errors[] = 'invalid path item (not object)';
+					return false;
+				}
+				if (isset($item->section_tipo) && !$is_tipo($item->section_tipo)) {
+					$errors[] = 'invalid path section_tipo: ' . to_string($item->section_tipo);
+					return false;
+				}
+				if (isset($item->component_tipo)) {
+					if (in_array($item->component_tipo, self::$ar_direct_columns, true)) {
+						// direct column: no model
+					}else if ($is_tipo($item->component_tipo)) {
+						// model is used as class name: always from ontology
+						$model = RecordObj_dd::get_modelo_name_by_tipo($item->component_tipo, true);
+						if (empty($model)) {
+							unset($item->model); // not installed tipo: ignored later by conform
+						}else{
+							$item->model = $model;
+						}
+					}else{
+						$errors[] = 'invalid path component_tipo: ' . to_string($item->component_tipo);
+						return false;
+					}
+				}else{
+					unset($item->model);
+				}
+				// full SQL column definition (server computed only)
+				unset($item->column);
+			}
+			return true;
+		};
+
+		// filter leaves and groups (recursive). Returns false when invalid
+		$leaf_server_properties = [
+			'q_parsed','q_parsed_ar','operator','format','use_function','component_path',
+			'array_elements','join_id','duplicated','same_record','prefilter','column_name',
+			'unaccent','q_info','langs','negative'
+		];
+		$sanitize_filter = function($node) use(&$sanitize_filter, $sanitize_path, $leaf_server_properties, &$errors) : bool {
+			if (!is_object($node)) {
+				$errors[] = 'invalid filter node (not object)';
+				return false;
+			}
+			if (!property_exists($node, 'path')) {
+				// group: every key must be a logical operator with an array of nodes
+				foreach (get_object_vars($node) as $op => $children) {
+					if (preg_match('/^\$?(and|or)$/i', (string)$op)!==1 || !is_array($children)) {
+						$errors[] = 'invalid filter group operator: ' . to_string($op);
+						return false;
+					}
+					foreach ($children as $child) {
+						if ($sanitize_filter($child)!==true) {
+							return false;
+						}
+					}
+				}
+				return true;
+			}
+			// leaf
+			if ($sanitize_path($node->path)!==true) {
+				return false;
+			}
+			$format = $node->format ?? null;
+			if ($format==='column') {
+				// pass-through direct column search (e.g. time machine 'state'). Validated in get_sql_where
+				unset($node->use_function, $node->array_elements, $node->component_path, $node->join_id);
+			}else if ($format==='function') {
+				// ontology defined function search (e.g. filter_by_list). use_function validated in get_sql_where
+				unset($node->q_parsed, $node->q_parsed_ar, $node->operator, $node->array_elements, $node->component_path, $node->join_id, $node->column_name);
+			}else{
+				foreach ($leaf_server_properties as $name) {
+					unset($node->{$name});
+				}
+			}
+			// lang is added to the component path as is
+			if (isset($node->lang) && (!is_string($node->lang) || preg_match('/^(all|lg-[a-z]{2,8})$/', $node->lang)!==1)) {
+				$errors[] = 'invalid filter lang: ' . to_string($node->lang);
+				return false;
+			}
+			if (isset($node->type) && !in_array($node->type, ['string','jsonb','number','object','array','date'], true)) {
+				unset($node->type);
+			}
+			if (isset($node->q_split)) {
+				$node->q_split = (bool)$node->q_split;
+			}
+			return true;
+		};
+
+		// parsed. Always conformed by the server
+			$sqo->parsed = false;
+			unset($sqo->generated_time);
+
+		// section_tipo
+			if (isset($sqo->section_tipo)) {
+				foreach ((array)$sqo->section_tipo as $item) {
+					$tipo = is_object($item) ? ($item->tipo ?? null) : $item;
+					if (!$is_tipo($tipo)) {
+						$errors[] = 'invalid section_tipo: ' . to_string($tipo);
+						return null;
+					}
+				}
+			}
+
+		// filter
+			if (!empty($sqo->filter)) {
+				if ($sanitize_filter($sqo->filter)!==true) {
+					return null;
+				}
+			}
+
+		// select / order (component_parser_select computes the column paths again)
+			foreach (['select','order'] as $name) {
+				if (empty($sqo->{$name})) {
+					continue;
+				}
+				if (!is_array($sqo->{$name})) {
+					$errors[] = 'invalid ' . $name . ' (not array)';
+					return null;
+				}
+				foreach ($sqo->{$name} as $item) {
+					if (!is_object($item) || $sanitize_path($item->path ?? null)!==true) {
+						$errors[] = 'invalid ' . $name . ' item';
+						return null;
+					}
+					unset($item->component_path);
+					if ($name==='order') {
+						$item->direction = self::safe_order_direction($item->direction ?? null);
+					}
+				}
+			}
+
+		// filter_by_locators (values are cast/quoted in build_sql_filter_by_locators)
+			if (isset($sqo->filter_by_locators) && !is_array($sqo->filter_by_locators)) {
+				$errors[] = 'invalid filter_by_locators (not array)';
+				return null;
+			}
+
+
+		return $sqo;
+	}//end sanitize_client_sqo
+
+
+
+	/**
 	* GET_INSTANCE
 	* @param object $search_query_object
 	* @return class instance
@@ -298,10 +480,22 @@ class search {
 			){
 			$this->search_query_object->limit = 10;
 		}
+		// limit is written as is into the SQL: only a non negative integer (0 = no limit) or 'all'
+		if (is_numeric($this->search_query_object->limit)) {
+			$this->search_query_object->limit = max(0, (int)$this->search_query_object->limit);
+		}else if ($this->search_query_object->limit!=='all') {
+			$this->search_query_object->limit = 10;
+		}
 
 		// offset default
 		if(!isset($this->search_query_object->offset)) {
 			$this->search_query_object->offset = false;
+		}
+		// offset is written as is into the SQL: only a non negative integer or false
+		if ($this->search_query_object->offset!==false) {
+			$this->search_query_object->offset = is_numeric($this->search_query_object->offset)
+				? max(0, (int)$this->search_query_object->offset)
+				: false;
 		}
 
 		// records count default
@@ -1698,11 +1892,25 @@ class search {
 				return $sql_projects_filter;
 			}
 
-		// cache
+		// cache. (!) The filter is applied through the side effect properties filter_join,
+		// filter_join_where and filter_by_user_records (the returned string is only used for the
+		// users section), so a cache hit must restore them in this instance too. Caching only the
+		// string made every other search instance of the same section and user in the request run
+		// WITHOUT projects filter.
 			static $sql_projects_filter_data;
-			$uid = $section_tipo.'_'.$user_id;
-			if (isset($sql_projects_filter_data[$uid])) {
-				return $sql_projects_filter_data[$uid];
+			$uid = implode('_', [
+				$section_tipo,
+				$user_id,
+				$section_alias,
+				$datos_container,
+				(property_exists($this->search_query_object, 'id') && $this->search_query_object->id!=='thesaurus') ? '1' : '0'
+			]);
+			if ($force_calculate!==true && isset($sql_projects_filter_data[$uid])) {
+				$cached = $sql_projects_filter_data[$uid];
+				$this->filter_join				= $cached->filter_join;
+				$this->filter_join_where		= $cached->filter_join_where;
+				$this->filter_by_user_records	= $cached->filter_by_user_records;
+				return $cached->sql_projects_filter;
 			}
 
 		// only for non global admins
@@ -1928,8 +2136,16 @@ class search {
 				}
 			}//end if ($is_global_admin!==true) {
 
-		// cache
-			$sql_projects_filter_data[$uid] = $sql_projects_filter;
+		// cache. Forced calculations (admin debug) are never cached: they would be served
+		// to the regular (not forced) calls of the same user
+			if ($force_calculate!==true) {
+				$sql_projects_filter_data[$uid] = (object)[
+					'sql_projects_filter'		=> $sql_projects_filter,
+					'filter_join'				=> $this->filter_join,
+					'filter_join_where'			=> $this->filter_join_where,
+					'filter_by_user_records'	=> $this->filter_by_user_records
+				];
+			}
 
 
 		return $sql_projects_filter;
@@ -1972,24 +2188,40 @@ class search {
 		if (!empty($this->search_query_object->order_custom)) {
 
 			// custom order
+				$conn					= DBi::_getConnection();
 				$ar_custom_query		= [];
 				$ar_custom_query_order	= [];
 				foreach ($this->search_query_object->order_custom as $item_key => $order_item) {
 
-					$column_section_tipo	= '\''.$order_item->section_tipo.'\''; // added 21-08-2019
-					$column_name			= $order_item->column_name;
-					$column_values			= $order_item->column_values;
-					$table					= ($item_key>0) ? 'x'.$item_key : 'x';
+					// column_name is an identifier: only plain column names are accepted
+					$column_name = (string)($order_item->column_name ?? '');
+					if (!self::is_safe_identifier($column_name)) {
+						debug_log(__METHOD__
+							. " Ignored order_custom item with invalid column_name " . PHP_EOL
+							. ' column_name: ' . to_string($order_item->column_name ?? null)
+							, logger::ERROR
+						);
+						continue;
+					}
+
+					$column_section_tipo	= pg_escape_literal($conn, (string)($order_item->section_tipo ?? '')); // added 21-08-2019
+					$column_values			= (array)($order_item->column_values ?? []);
+					$table					= ((int)$item_key>0) ? 'x'.(int)$item_key : 'x';
 
 					$pairs = [];
 					foreach ($column_values as $key => $value) {
-						$value		= is_string($value) ? "'" . $value . "'" : $value;
+						$value		= (is_int($value) || is_float($value))
+							? $value
+							: pg_escape_literal($conn, (string)$value);
 						$pair		= '('.$column_section_tipo.','.$value.','.($key+1).')';
 						$pairs[]	= $pair;
 					}
 					// Join like: LEFT JOIN (VALUES (7,1),(1,2)) as x(ordering_id, ordering) ON main_select.section_id = x.ordering_id ORDER BY x.ordering ASC
 					$ar_custom_query[]			= 'LEFT JOIN (VALUES '.implode(',', $pairs).') as '.$table.'(ordering_section_tipo, ordering_id, ordering) ON main_select.'.$column_name.'='.$table.'.ordering_id AND main_select.section_tipo='.$table.'.ordering_section_tipo'; // added 21-08-2019
 					$ar_custom_query_order[]	= 'ORDER BY '.$table.'.ordering ASC';
+				}
+				if (empty($ar_custom_query)) {
+					return $sql_query_order;
 				}
 
 			// flat and set. Note that no $sql_query_order value is filled and returned
@@ -2001,7 +2233,7 @@ class search {
 				$ar_order = [];
 				foreach ($this->search_query_object->order as $order_obj) {
 
-					$direction		= strtoupper($order_obj->direction);
+					$direction		= self::safe_order_direction($order_obj->direction ?? null);
 					$path			= $order_obj->path;
 					$end_path		= end($path);
 					$component_tipo	= $end_path->component_tipo;
@@ -2218,27 +2450,32 @@ class search {
 			return '';
 		}
 
-		$table = $this->main_section_tipo_alias;
+		$table	= $this->main_section_tipo_alias;
+		$conn	= DBi::_getConnection();
 
 		$ar_parts = [];
 		foreach ($this->filter_by_locators as $current_locator) {
+
+			if (!is_object($current_locator)) {
+				continue;
+			}
 
 			$ar_current = [];
 
 			// section_id (int)
 				if (property_exists($current_locator, 'section_id') && !empty($current_locator->section_id)) {
-					$ar_current[] = $table.'.section_id='.$current_locator->section_id;
+					$ar_current[] = $table.'.section_id='.(int)$current_locator->section_id;
 				}
 
 			// section_tipo (string)
 				if (property_exists($current_locator, 'section_tipo') && !empty($current_locator->section_tipo)) {
-					$ar_current[] = $table.'.section_tipo=\''.$current_locator->section_tipo.'\'';
+					$ar_current[] = $table.'.section_tipo='.pg_escape_literal($conn, (string)$current_locator->section_tipo);
 				}
 
 			// tipo (string). time machine case (column 'tipo' exists)
 				if (property_exists($current_locator, 'tipo') && !empty($current_locator->tipo)) {
 					if ($this->matrix_table==='matrix_time_machine') {
-						$ar_current[] = $table.'.tipo=\''.$current_locator->tipo.'\'';
+						$ar_current[] = $table.'.tipo='.pg_escape_literal($conn, (string)$current_locator->tipo);
 					}else{
 						debug_log(__METHOD__
 							." Ignored property 'tipo' in locator because is only allowed in time machine table."
@@ -2249,13 +2486,13 @@ class search {
 
 			// type (string)
 				if (property_exists($current_locator, 'type') && !empty($current_locator->type)) {
-					$ar_current[] = $table.'.type='.$current_locator->type;
+					$ar_current[] = $table.'.type='.pg_escape_literal($conn, (string)$current_locator->type);
 				}
 
 			// lang (string). time machine case (column 'lang' exists)
 				if (property_exists($current_locator, 'lang') && !empty($current_locator->lang)) {
 					if ($this->matrix_table==='matrix_time_machine') {
-						$ar_current[] = $table.'.lang=\''.$current_locator->lang.'\'';
+						$ar_current[] = $table.'.lang='.pg_escape_literal($conn, (string)$current_locator->lang);
 					}else{
 						debug_log(__METHOD__
 							." Ignored property 'lang' in locator because is only allowed in time machine table."
@@ -2267,7 +2504,7 @@ class search {
 			// matrix_id (int). time machine case (column 'id' exists and is used)
 				if (property_exists($current_locator, 'matrix_id') && !empty($current_locator->matrix_id)) {
 					if ($this->matrix_table==='matrix_time_machine') {
-						$ar_current[] = $table.'.id='.$current_locator->matrix_id;
+						$ar_current[] = $table.'.id='.(int)$current_locator->matrix_id;
 					}else{
 						debug_log(__METHOD__
 							." Ignored property 'matrix_id' in locator because is only allowed in time machine table."
@@ -2279,7 +2516,7 @@ class search {
 			// section_id_key (int). time machine case (column 'matrix_id' exists and is used)
 				if (property_exists($current_locator, 'section_id_key') && !empty($current_locator->section_id_key)) {
 					if ($this->matrix_table==='matrix_time_machine') {
-						$ar_current[] = $table.'.section_id_key='.$current_locator->section_id_key;
+						$ar_current[] = $table.'.section_id_key='.(int)$current_locator->section_id_key;
 					}else{
 						debug_log(__METHOD__
 							." Ignored property 'matrix_id' in locator because is only allowed in time machine table."
@@ -2288,11 +2525,15 @@ class search {
 					}
 				}
 
-			$ar_parts[] = '(' . implode(' AND ', $ar_current) . ')';
+			// empty locator (no usable property) must match nothing, never everything
+			$ar_parts[] = empty($ar_current)
+				? 'FALSE'
+				: '(' . implode(' AND ', $ar_current) . ')';
 		}
 
-		// sql_filter
-		$sql_filter = PHP_EOL . '-- filter_by_locators' . PHP_EOL . implode(' OR ', $ar_parts);
+		// sql_filter. Wrapped in parentheses: callers append it after other conditions
+		// ('WHERE main AND ' . $sql_filter) and a bare OR list would escape them
+		$sql_filter = PHP_EOL . '-- filter_by_locators' . PHP_EOL . '(' . (empty($ar_parts) ? 'FALSE' : implode(' OR ', $ar_parts)) . ')';
 
 
 		return $sql_filter;
@@ -2306,12 +2547,14 @@ class search {
 	*/
 	public function build_sql_filter_by_locators_order() : string {
 
+		$conn = DBi::_getConnection();
+
 		$ar_values = [];
 		foreach ($this->filter_by_locators as $key => $current_locator) {
 
-			$value  = '(\''.$current_locator->section_tipo.'\'';
-			$value .= ','.$current_locator->section_id;
-			$value .= ','.($key+1).')';
+			$value  = '('.pg_escape_literal($conn, (string)($current_locator->section_tipo ?? ''));
+			$value .= ','.(int)($current_locator->section_id ?? 0);
+			$value .= ','.((int)$key+1).')';
 
 			$ar_values[] = $value;
 		}
@@ -2576,6 +2819,102 @@ class search {
 
 		return '-- ' . str_replace(["\r", "\n"], ' ', $text) . "\n";
 	}//end sql_comment
+
+
+
+	/**
+	* WHERE_CAN_MATCH_NULL
+	* True when a (subquery) WHERE fragment could be satisfied by the NULL columns of a
+	* LEFT joined row that does not exist, as 'IS NULL', 'IS DISTINCT FROM', 'IS NOT TRUE',
+	* COALESCE, CASE or a negation. Plain comparisons, regex, containment and jsonpath
+	* operators are NULL for NULL input and never select such a row. Conservative: literals
+	* and comments are ignored, and any doubtful construct returns true (LEFT joins kept).
+	* @param string $where
+	* @return bool
+	*/
+	public static function where_can_match_null(string $where) : bool {
+
+		// SQL code only (the user search text in literals and the comments must not count)
+		$code = preg_replace("/'(?:[^']|'')*'|--[^\n]*|\/\*.*?\*\//s", ' ', $where);
+		// the 'langs_any' non-object guard 'CASE WHEN jsonb_typeof(x)='object' THEN x END' only
+		// turns a value into NULL (no rows for jsonb_each_text), never a NULL into a match
+		$code = preg_replace('/\bCASE WHEN jsonb_typeof\([\w.#>\s]*\)\s*=\s*THEN [\w.#>\s]*END\b/i', ' ', $code);
+
+		return preg_match('/\bIS\s+NULL\b|\bIS\s+NOT\s+TRUE\b|\bIS\s+FALSE\b|\bDISTINCT\s+FROM\b|\bCOALESCE\b|\bCASE\b|\bNOT\b(?!\s+NULL\b)|!~|=\s*FALSE\b/i', $code)===1;
+	}//end where_can_match_null
+
+
+
+	/**
+	* IS_SAFE_IDENTIFIER
+	* Checks that a value can be written as a bare SQL identifier (column or alias name)
+	* like 'section_id', 'state' or 'section_id_key'.
+	* @param mixed $value
+	* @return bool
+	*/
+	public static function is_safe_identifier(mixed $value) : bool {
+
+		return is_string($value) && preg_match('/^[a-z_][a-z0-9_]{0,62}$/i', $value)===1;
+	}//end is_safe_identifier
+
+
+
+	/**
+	* SAFE_ORDER_DIRECTION
+	* Normalizes an order direction to 'ASC' or 'DESC' (optionally followed by
+	* 'NULLS FIRST|LAST'). Any other value falls back to 'ASC'.
+	* @param mixed $direction
+	* @return string
+	*/
+	public static function safe_order_direction(mixed $direction) : string {
+
+		$direction = strtoupper(trim(preg_replace('/\s+/', ' ', (string)$direction)));
+
+		return preg_match('/^(ASC|DESC)( NULLS (FIRST|LAST))?$/', $direction)===1
+			? $direction
+			: 'ASC';
+	}//end safe_order_direction
+
+
+
+	/**
+	* IS_SAFE_COLUMN_OPERATOR
+	* Allowed comparison operators for 'column' format search objects (direct table
+	* column access like 'section_id' or 'state').
+	* @param mixed $operator
+	* @return bool
+	*/
+	public static function is_safe_column_operator(mixed $operator) : bool {
+
+		return is_string($operator)
+			&& in_array(strtoupper(trim($operator)), ['=','!=','<>','<','>','<=','>=','IN','NOT IN','IS','IS NOT'], true);
+	}//end is_safe_column_operator
+
+
+
+	/**
+	* IS_SAFE_COLUMN_VALUE
+	* Checks that a 'column' format q_parsed value is a single literal: a number, a
+	* single-quoted string with only doubled inner quotes, NULL, or a parenthesized list of
+	* numbers (IN operator).
+	* @param mixed $value
+	* @return bool
+	*/
+	public static function is_safe_column_value(mixed $value) : bool {
+
+		if (is_int($value) || is_float($value)) {
+			return true;
+		}
+		if (!is_string($value)) {
+			return false;
+		}
+		$value = trim($value);
+
+		return preg_match('/^-?\d+(\.\d+)?$/', $value)===1
+			|| preg_match("/^'(?:[^']|'')*'$/", $value)===1 // standard_conforming_strings: backslash is literal
+			|| preg_match('/^NULL$/i', $value)===1
+			|| preg_match('/^\(\s*-?\d+(\s*,\s*-?\d+)*\s*\)$/', $value)===1;
+	}//end is_safe_column_value
 
 
 
@@ -3125,7 +3464,22 @@ class search {
 							}
 						}
 
-					$column_name = $search_object->column_name;
+					$column_name = $search_object->column_name ?? null;
+
+					// column, operator and value are written as is: reject anything that is
+					// not a plain identifier / known operator / single literal (fail closed)
+						if (!self::is_safe_identifier($column_name)
+							|| !self::is_safe_column_operator($search_object->operator ?? null)
+							|| !self::is_safe_column_value($search_object->q_parsed ?? null)) {
+							debug_log(__METHOD__
+								. " Rejected unsafe column search object (matches nothing) " . PHP_EOL
+								. ' search_object: ' . to_string($search_object)
+								, logger::ERROR
+							);
+							$sql_where .= 'FALSE';
+							break;
+						}
+
 					if(SHOW_DEBUG===true) {
 						$sql_where .= self::sql_comment("COLUMN FORMAT - format: " . to_string($search_object_format) . " - $column_name - $table_alias");
 					}
@@ -3156,6 +3510,14 @@ class search {
 							.' search_object: ' . json_encode($search_object, JSON_PRETTY_PRINT)
 							, logger::ERROR
 						);
+					}else if (!self::is_safe_identifier($use_function)) {
+						// function name is written as is (it can come from a client sqo)
+						debug_log(__METHOD__
+							." Rejected unsafe sqo property 'use_function' (matches nothing) ". PHP_EOL
+							.' use_function: ' . to_string($use_function)
+							, logger::ERROR
+						);
+						$sql_where .= 'FALSE';
 					}else{
 						$sql_where .= $use_function;
 						$sql_where .= '('. $table_alias . '.datos)';
