@@ -3875,7 +3875,7 @@ abstract class component_common extends common {
 		// (datos#>>'{components,<tipo>,dato,<lang>}'), so count()/search must evaluate all of
 		// them on every row. ANDing a TERM-ONLY regex on the whole blob
 		// (datos#>>'{components,<tipo>,dato}') never removes a true match, so it lets the
-		// planner use the whole-blob trigram GIN indexes (matrix_<tipo>_gin) and short-circuits
+		// planner use the whole-blob trigram GIN indexes (see has_whole_blob_trigram_index) and short-circuits
 		// the per-language regexes on non-matching rows.
 		// (!) SOUNDNESS. The pre-filter pattern must be the bare search term, NEVER the
 		// per-language pattern: the per-language patterns are anchored on the JSON rendering
@@ -3888,8 +3888,8 @@ abstract class component_common extends common {
 		// both renderings, for array AND scalar values. The term itself is only safe when it
 		// cannot be re-escaped by the blob rendering, hence build_whole_blob_q_parsed() returns
 		// null for terms holding '"', '\' or control chars.
-		// Only for single-step (main section) paths: a multi-step path would traverse the
-		// relation per added clause. Negative operators ('!=', '-') and the empty/not-empty
+		// Multi-step paths only when the related section lives in 'matrix' (see
+		// has_whole_blob_trigram_index). Negative operators ('!=', '-') and the empty/not-empty
 		// operators are built elsewhere and are not affected.
 			$blob_q_parsed	= $options->blob_q_parsed ?? null;
 			$n_steps		= isset($query_object->path) ? count($query_object->path) : 0;
@@ -3940,12 +3940,17 @@ abstract class component_common extends common {
 
 	/**
 	* HAS_WHOLE_BLOB_TRIGRAM_INDEX
-	* True when the single-step regex leaf can be accelerated by an existing whole-blob trigram
-	* GIN index on matrix (as 'matrix_<tipo>_gin' on f_unaccent(datos#>>'{components,<tipo>,dato}')).
+	* True when the regex leaf can be accelerated by an existing whole-blob trigram
+	* GIN index on f_unaccent(datos#>>'{components,<tipo>,dato}') in the searched matrix table.
 	* The redundant whole-blob pre-filter (see resolve_query_object_langs_behavior) is only
 	* useful in that case; elsewhere it would add a regex evaluation without any index benefit.
+	* (!) The index is detected by its EXPRESSION, never by its name: the shipped indexes use
+	* different names (as 'matrix_rsc86_gin' on 'matrix' or 'matrix_hierarchy_term' on
+	* 'matrix_hierarchy' for the thesaurus term hierarchy25), see get_whole_blob_trigram_indexes.
 	* Requirements to be usable by the planner:
-	* 	- the index exists (checked once per tipo and cached)
+	* 	- the index exists in the table of the searched section (index list read once per process)
+	* 	- multi-step paths: the searched section lives in 'matrix' (elsewhere the planner does
+	* 	  not use the index inside the correlated EXISTS and the pre-filter slows it down)
 	* 	- the search term has at least 3 chars (pg_trgm cannot extract a trigram below that)
 	* 	- unaccent is on (the index expression is f_unaccent wrapped)
 	* @param object $query_object
@@ -3995,8 +4000,8 @@ abstract class component_common extends common {
 	protected static function has_whole_blob_trigram_index( object $query_object ) : bool {
 
 		// the searched component is the LAST path element, whatever the path length: a
-		// multi-step path reaches the same component through a relation, so the same
-		// matrix_<tipo>_gin index applies to it
+		// multi-step path reaches the same component through a relation, so the index of
+		// the table of that component applies to it
 			if (!isset($query_object->path) || count($query_object->path)<1) {
 				return false;
 			}
@@ -4019,24 +4024,91 @@ abstract class component_common extends common {
 				return false;
 			}
 
-		// index existence. Cached per request (static)
-			static $ar_index_cache = [];
-			if (!array_key_exists($component_tipo, $ar_index_cache)) {
-				$ar_index_cache[$component_tipo] = false;
-				$pg_conn = DBi::_getConnection();
-				if ($pg_conn!==false) {
-					$sql = "SELECT to_regclass('matrix_" . $component_tipo . "_gin') IS NOT NULL";
-					$result = pg_query($pg_conn, $sql);
-					if ($result!==false) {
-						$row = pg_fetch_result($result, 0, 0);
-						$ar_index_cache[$component_tipo] = ($row==='t');
-					}
+		// index existence. By expression, in the table of the searched section
+			$ar_indexes = self::get_whole_blob_trigram_indexes();
+			$section_tipo = end($query_object->path)->section_tipo ?? null;
+			if (is_array($section_tipo)) {
+				$section_tipo = $section_tipo[0] ?? null;
+			}
+			$table = (is_string($section_tipo) && $section_tipo!=='')
+				? common::get_matrix_table_from_tipo($section_tipo)
+				: null;
+			// multi-step. (!) Only for the 'matrix' table. Inside the correlated EXISTS the
+			// planner does not use the index of other tables (as 'matrix_hierarchy_term') and
+			// the added regex only switches the plan to a full scan of the related table:
+			// measured on mdcat rsc197 > rsc91 > es1 hierarchy25 'barcelona' first page
+			// 5 ms -> 2 s. The 'matrix' case (rsc85, rsc86) is the measured beneficial one
+			// (see search::$blob_prefilter)
+			if (count($query_object->path)>1 && $table!=='matrix') {
+				return false;
+			}
+			if (!empty($table)) {
+				return isset($ar_indexes[$table][$component_tipo]);
+			}
+
+		// unresolved table. Fallback to any table
+			foreach ($ar_indexes as $ar_tipos) {
+				if (isset($ar_tipos[$component_tipo])) {
+					return true;
 				}
 			}
 
 
-		return $ar_index_cache[$component_tipo];
+		return false;
 	}//end has_whole_blob_trigram_index
+
+
+
+	/**
+	* GET_WHOLE_BLOB_TRIGRAM_INDEXES
+	* Map of the existing whole-blob trigram GIN indexes, resolved from their definition
+	* (pg_indexes), as:
+	* 	[
+	* 		'matrix'			=> ['rsc85' => true, 'rsc86' => true],
+	* 		'matrix_hierarchy'	=> ['hierarchy25' => true]
+	* 	]
+	* Only non partial indexes whose expression is exactly
+	* f_unaccent(datos #>> '{components,<tipo>,dato}') with gin_trgm_ops are included,
+	* because only those match the expression of the whole-blob pre-filter.
+	* Resolved once per process (static cache).
+	* @return array $ar_indexes
+	*/
+	protected static function get_whole_blob_trigram_indexes() : array {
+
+		static $ar_indexes;
+		if (isset($ar_indexes)) {
+			return $ar_indexes;
+		}
+		$ar_indexes = [];
+
+		$pg_conn = DBi::_getConnection();
+		if ($pg_conn===false) {
+			return $ar_indexes;
+		}
+
+		$sql = "SELECT tablename, indexdef FROM pg_indexes WHERE schemaname = 'public' AND tablename LIKE 'matrix%' AND indexdef LIKE '%gin_trgm_ops%'";
+		$result = pg_query($pg_conn, $sql);
+		if ($result===false) {
+			debug_log(__METHOD__
+				. " Error reading trigram indexes. Whole-blob pre-filter disabled " . PHP_EOL
+				. ' error: ' . pg_last_error($pg_conn)
+				, logger::ERROR
+			);
+			return $ar_indexes;
+		}
+
+		// (!) No COLLATE is accepted: the default collation is omitted from indexdef, and an
+		// explicit (non default) one is not usable by the pre-filter expression
+		$pattern = '/USING gin \\(f_unaccent\\(\\(datos #>> \'\\{components,([a-zA-Z0-9]+),dato\\}\'::text\\[\\]\\)\\) gin_trgm_ops\\)$/';
+		while ($row = pg_fetch_assoc($result)) {
+			if (preg_match($pattern, $row['indexdef'], $matches)===1) {
+				$ar_indexes[$row['tablename']][$matches[1]] = true;
+			}
+		}
+
+
+		return $ar_indexes;
+	}//end get_whole_blob_trigram_indexes
 
 
 

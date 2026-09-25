@@ -341,8 +341,8 @@ final class search_joins_test extends TestCase {
 	* A single-step positive regex search (as 'contains') ANDs a redundant whole-blob regex
 	* (datos#>>'{components,<tipo>,dato}') before the per-language $or group
 	* (component_common::resolve_query_object_langs_behavior) ONLY when a whole-blob trigram
-	* GIN index (matrix_<tipo>_gin) exists for the component, so the planner can use it
-	* (matrix_rsc86_gin here). The pre-filter is a superset of the per-language OR (a lang
+	* GIN index exists for the component in the searched table, so the planner can use it
+	* (matrix_rsc86_gin here, detected by its expression). The pre-filter is a superset of the per-language OR (a lang
 	* value that matches is contained in the blob), so it never removes a true match: results
 	* are unchanged, only the count()/search() scan is cheaper. Components without such an
 	* index must NOT get the extra predicate (no overhead).
@@ -408,9 +408,110 @@ final class search_joins_test extends TestCase {
 			$this->assertStringNotContainsString(
 				"datos#>>'{components,".self::$tipo_string.",dato}'",
 				$where2,
-				'no whole-blob pre-filter without a matrix_<tipo>_gin index' . PHP_EOL . $where2
+				'no whole-blob pre-filter without a whole-blob trigram index' . PHP_EOL . $where2
 			);
 	}//end test_single_step_positive_regex_adds_whole_blob_prefilter
+
+
+
+	/**
+	* TEST_WHOLE_BLOB_PREFILTER_DETECTS_INDEX_BY_EXPRESSION
+	* The whole-blob trigram index must be detected by its expression, not by its name.
+	* The thesaurus term (hierarchy25) index in 'matrix_langs' is named 'matrix_langs_term'
+	* (not 'matrix_hierarchy25_gin'), and autocomplete searches over thesaurus sections
+	* (as 'lg1', 'es1') must still get the pre-filter, else they full scan the table.
+	* @return void
+	*/
+	public function test_whole_blob_prefilter_detects_index_by_expression() : void {
+
+		if (common::get_matrix_table_from_tipo('lg1')!=='matrix_langs') {
+			$this->markTestSkipped('lg1 is not resolved to matrix_langs in this install');
+		}
+		$result = pg_query(DBi::_getConnection(), "SELECT 1 FROM pg_indexes WHERE schemaname='public' AND tablename='matrix_langs' AND indexdef LIKE '%{components,hierarchy25,dato}%gin_trgm_ops%'");
+		if ($result===false || pg_num_rows($result)===0) {
+			$this->markTestSkipped('matrix_langs has no hierarchy25 trigram index in this install');
+		}
+
+		$sqo = json_decode(json_encode([
+			'section_tipo'	=> ['lg1'],
+			'filter'		=> ['$and' => [[
+				'q'		=> 'catalan',
+				'path'	=> [[
+					'section_tipo'		=> 'lg1',
+					'component_tipo'	=> 'hierarchy25',
+					'model'				=> 'component_input_text',
+					'name'				=> 'Term'
+				]]
+			]]],
+			'limit'			=> 10,
+			'offset'		=> 0,
+			'full_count'	=> false
+		]));
+		$search = search::get_instance($sqo);
+		$search->pre_parse_search_query_object();
+		$where = $search->build_sql_filter();
+
+		$this->assertStringContainsString(
+			"datos#>>'{components,hierarchy25,dato}'",
+			$where,
+			'expected a whole-blob pre-filter (hierarchy25 trigram index detected by expression)' . PHP_EOL . $where
+		);
+	}//end test_whole_blob_prefilter_detects_index_by_expression
+
+
+
+	/**
+	* TEST_MULTI_STEP_THESAURUS_PATH_HAS_NO_WHOLE_BLOB_PREFILTER
+	* A multi-step path reaching a thesaurus term (rsc197 > rsc91 > es1 hierarchy25) must NOT
+	* get the whole-blob pre-filter even though 'matrix_hierarchy_term' exists: inside the
+	* correlated EXISTS the planner does not use it and the added regex turns the fast plan
+	* into a full scan of matrix_hierarchy (common terms 5 ms -> 2 s).
+	* @return void
+	*/
+	public function test_multi_step_thesaurus_path_has_no_whole_blob_prefilter() : void {
+
+		if (common::get_matrix_table_from_tipo('es1')!=='matrix_hierarchy') {
+			$this->markTestSkipped('es1 is not resolved to matrix_hierarchy in this install');
+		}
+
+		$sqo = json_decode(json_encode([
+			'section_tipo'	=> ['rsc197'],
+			'filter'		=> ['$and' => [[
+				'q'		=> 'barcelona',
+				'path'	=> [
+					[
+						'section_tipo'		=> 'rsc197',
+						'component_tipo'	=> 'rsc91',
+						'model'				=> 'component_portal',
+						'name'				=> 'Birthplace'
+					],
+					[
+						'section_tipo'		=> 'es1',
+						'component_tipo'	=> 'hierarchy25',
+						'model'				=> 'component_input_text',
+						'name'				=> 'Term'
+					]
+				]
+			]]],
+			'limit'			=> 10,
+			'offset'		=> 0,
+			'full_count'	=> false
+		]));
+		$search = search::get_instance($sqo);
+		$search->pre_parse_search_query_object();
+		$where = $search->build_sql_filter();
+
+		$this->assertStringContainsString(
+			"datos#>>'{components,hierarchy25,dato,",
+			$where,
+			'expected per-lang regex' . PHP_EOL . $where
+		);
+		$this->assertStringNotContainsString(
+			"datos#>>'{components,hierarchy25,dato}'",
+			$where,
+			'no whole-blob pre-filter expected in a multi-step path out of matrix' . PHP_EOL . $where
+		);
+	}//end test_multi_step_thesaurus_path_has_no_whole_blob_prefilter
 
 
 
