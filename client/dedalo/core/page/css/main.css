@@ -9495,6 +9495,7 @@ body:has(.assistant_container.standalone.show) {
   width: 100%;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  container: search_group / inline-size;
   gap: 0.5rem;
   align-content: start;
   align-items: start;
@@ -21114,6 +21115,14 @@ body.inspector_resizing {
 }
 .component_date.view_line.edit > .content_data {
   padding: 0px;
+}
+@container search_group (min-width: 33rem) {
+  .search_component:has(>.component_date.search .dates_separator) {
+    grid-column: span 2;
+  }
+  .search_component:has(>.component_date.search .dates_separator) .content_value {
+    flex-wrap: nowrap;
+  }
 }
 /**
 * component_email

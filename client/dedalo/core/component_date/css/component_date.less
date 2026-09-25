@@ -205,3 +205,18 @@
 	}
 
 }//end .component_date
+
+// search range (date / time range): start <> end needs ~25rem, the filter
+// grid track is 16rem, so the pair wrapped to two lines. When the group has
+// room for two tracks the card spans both and keeps one line; a narrower
+// group keeps one track and wraps as before (spanning there would add an
+// implicit track and overflow the panel). Container: .search_group (search.less).
+@container search_group (min-width: 33rem) {
+	.search_component:has(>.component_date.search .dates_separator) {
+		grid-column: span 2;
+
+		.content_value {
+			flex-wrap: nowrap;
+		}
+	}
+}
