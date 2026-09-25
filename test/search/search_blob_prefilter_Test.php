@@ -186,11 +186,14 @@ final class search_blob_prefilter_test extends TestCase {
 			$where,
 			'a term holding a double quote must not produce a whole-blob pre-filter' . PHP_EOL . $where
 		);
+		// without pre-filter the langs are tested with the single extraction leaf
+		// (see component_common::resolve_query_object_langs_behavior)
 		$this->assertStringContainsString(
-			"datos#>>'{components,".self::$component.",dato,lg-eng}'",
+			"jsonb_each_text(CASE WHEN jsonb_typeof(",
 			$where,
-			'the per-language regexes must still be emitted' . PHP_EOL . $where
+			'the per-language test must still be emitted' . PHP_EOL . $where
 		);
+		$this->assertStringContainsString("'lg-eng'", $where, 'lg-eng must be tested' . PHP_EOL . $where);
 	}//end test_prefilter_is_skipped_for_unsafe_terms
 
 

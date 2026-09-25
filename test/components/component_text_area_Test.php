@@ -17,6 +17,22 @@ final class component_text_area_test extends TestCase {
 
 
 	/**
+	* SET_UP / TEAR_DOWN
+	* The resolve_query_object_sql tests below lock the per-lang leaves shape (one leaf per
+	* lang), used whenever the whole-blob pre-filter applies. The single extraction shape
+	* ('langs_any' leaf) is locked by test_resolve_query_object_sql_langs_any.
+	* @return void
+	*/
+	protected function setUp() : void {
+		search::$langs_single_extraction = false;
+	}
+	protected function tearDown() : void {
+		search::$langs_single_extraction = null;
+	}
+
+
+
+	/**
 	* TEST_USER_LOGIN
 	* @return void
 	*/

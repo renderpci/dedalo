@@ -119,6 +119,21 @@ final class search_operators_test extends TestCase {
 	*/
 	private function render_leaf(object $query_object) : string {
 
+		// langs_any format. Mirror of search::get_sql_where() 'langs_any' (one extraction of the
+		// lang object, every lang tested inside a jsonb_each_text)
+		if (($query_object->format ?? null)==='langs_any') {
+			$unaccent	= ($query_object->unaccent ?? false)===true;
+			$value		= $unaccent ? 'f_unaccent(lv.value)' : 'lv.value';
+			$ar_cond	= [];
+			foreach ($query_object->q_parsed_ar as $current_q_parsed) {
+				$current_q_parsed = str_replace(['(',')'], ['\(','\)'], (string)$current_q_parsed);
+				$ar_cond[] = $value.' '.$query_object->operator.' '.($unaccent ? 'f_unaccent('.$current_q_parsed.')' : $current_q_parsed);
+			}
+			$exists = "EXISTS (SELECT 1 FROM jsonb_each_text(CASE WHEN jsonb_typeof(b.j)='object' THEN b.j END) AS lv"
+				." WHERE lv.key IN ('".implode("','", $query_object->langs)."') AND (".implode(' OR ', $ar_cond).'))';
+			return (($query_object->negative ?? false)===true) ? 'NOT '.$exists : $exists;
+		}
+
 		$component_path = $query_object->component_path;
 		$lang			= $query_object->lang ?? 'all';
 		if ($lang!=='all') {

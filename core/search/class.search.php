@@ -146,6 +146,10 @@ class search {
 		// (mdcat rsc197 > rsc91 > es1 hierarchy25). See component_common::has_whole_blob_trigram_index
 		public static ?bool $blob_prefilter = null;
 
+		// langs_single_extraction. Test seam: false restores the legacy one leaf per lang
+		// text regex search (see component_common::resolve_query_object_langs_behavior)
+		public static ?bool $langs_single_extraction = null;
+
 		// control for duplicated operator to include itself in the where ( operator !! )
 		public $skip_duplicated = false;
 
@@ -2801,10 +2805,11 @@ class search {
 						// require the related record to EXIST (its field empty). The old LEFT JOIN
 						// version also matched sections with NO related records (all joined cols
 						// NULL). Kept the EXISTS semantics by decision.
-						$ar_subquery_joins = [];
+						$subquery_where		= trim($this->get_sql_where($search_object));
+						$where_nullable		= self::where_can_match_null($subquery_where);
+						$ar_subquery_joins	= [];
 						$subquery_correlation = null;
-						$joins_built = $this->build_sql_join($search_object->path, $join_id, $ar_subquery_joins, $subquery_correlation);
-						$subquery_where = trim($this->get_sql_where($search_object));
+						$joins_built = $this->build_sql_join($search_object->path, $join_id, $ar_subquery_joins, $subquery_correlation, !$where_nullable);
 						if ($joins_built!==true || empty($subquery_correlation)) {
 							// unresolvable path (see build_sql_join). Emitting nothing would silently
 							// DROP the clause, and a dropped clause under $and widens the result set:
@@ -2821,12 +2826,18 @@ class search {
 								// under $and each lang still matches a possibly different linked record.
 								if (!isset($ar_subquery_merge[$join_id])) {
 									$ar_subquery_merge[$join_id] = [
-										'joins'			=> $ar_subquery_joins,
+										'path'			=> $search_object->path,
 										'correlation'	=> $subquery_correlation,
+										'nullable'		=> false,
 										'where'			=> []
 									];
 								}
 								$ar_subquery_merge[$join_id]['where'][] = $subquery_where;
+								// the joins are built at flush time, once every sibling is known:
+								// a single NULL matching leaf needs the LEFT joins for all of them
+								if ($where_nullable) {
+									$ar_subquery_merge[$join_id]['nullable'] = true;
+								}
 							}else{
 								$ar_group_elements[] = 'EXISTS (SELECT 1 ' . implode(' ', $ar_subquery_joins) . ' WHERE (' . $subquery_correlation . ' AND ' . $subquery_where . '))';
 							}
@@ -2856,7 +2867,12 @@ class search {
 						}
 					}
 
-				$ar_group_elements[] = 'EXISTS (SELECT 1 ' . implode(' ', $merge['joins']) . ' WHERE (' . $merge['correlation'] . ' AND ' . $where . '))';
+				// joins (same path and join_id as when the correlation was collected)
+					$ar_merge_joins		= [];
+					$merge_correlation	= null;
+					$this->build_sql_join($merge['path'], $join_id, $ar_merge_joins, $merge_correlation, !$merge['nullable']);
+
+				$ar_group_elements[] = 'EXISTS (SELECT 1 ' . implode(' ', $ar_merge_joins) . ' WHERE (' . $merge['correlation'] . ' AND ' . $where . '))';
 			}
 
 		// join the group elements with the group operator. Empty fragments (get_sql_where can
@@ -3039,13 +3055,7 @@ class search {
 			}
 
 		// one join for the whole group
-			$join_id				= ++$this->join_counter;
-			$ar_subquery_joins		= [];
-			$subquery_correlation	= null;
-			$joins_built = $this->build_sql_join($first_path, $join_id, $ar_subquery_joins, $subquery_correlation);
-			if ($joins_built!==true || empty($subquery_correlation)) {
-				return self::UNRESOLVABLE_PATH_SQL; // fail closed, see filter_parser
-			}
+			$join_id = ++$this->join_counter;
 
 		// group WHERE, every leaf against the same joined record
 			$render = function(string $group_op, array $ar_items) use (&$render, $join_id) : string {
@@ -3067,6 +3077,14 @@ class search {
 			$where = $render($op, $ar_value);
 			if ($where==='') {
 				return null;
+			}
+
+		// joins. INNER when the group cannot match NULL (see build_sql_join)
+			$ar_subquery_joins		= [];
+			$subquery_correlation	= null;
+			$joins_built = $this->build_sql_join($first_path, $join_id, $ar_subquery_joins, $subquery_correlation, !self::where_can_match_null($where));
+			if ($joins_built!==true || empty($subquery_correlation)) {
+				return self::UNRESOLVABLE_PATH_SQL; // fail closed, see filter_parser
 			}
 
 
@@ -3157,13 +3175,20 @@ class search {
 	* @param string|null &$subquery_correlation = null. When $ar_joins is provided, the first
 	*  relations join is emitted as the subquery FROM (no ON) and its correlation conditions are
 	*  collected here to be ANDed in the subquery WHERE.
+	* @param bool $inner_join = false. Subquery mode only: emit INNER joins instead of LEFT joins.
+	*  Inside a correlated EXISTS a LEFT join only adds the NULL rows of dangling relations
+	*  (target record missing), that a condition matching no NULL can never select. With LEFT
+	*  joins the planner cannot start from the matched records (e.g. the trigram index of the
+	*  searched component) and walks every relation row of the outer record instead
+	*  (f_unaccent is not STRICT, so the join is never reduced to an inner one).
+	*  Callers pass true only when the subquery WHERE cannot match NULL (see where_can_match_null).
 	* @return bool $success
 	*  false when any step of the path could not be resolved (empty matrix table): the joins of
 	*  that step, and therefore its table alias, are missing. The caller MUST NOT emit the
 	*  clause's WHERE in that case (see filter_parser: it emits a never-matching predicate
 	*  instead, so an unresolvable path never widens the result set nor breaks the SQL).
 	*/
-	public function build_sql_join(array $path, ?int $join_id=null, ?array &$ar_joins=null, ?string &$subquery_correlation=null) : bool {
+	public function build_sql_join(array $path, ?int $join_id=null, ?array &$ar_joins=null, ?string &$subquery_correlation=null, bool $inner_join=false) : bool {
 
 		$success		= true;
 		$rel_table		= self::$relations_table;
@@ -3179,6 +3204,7 @@ class search {
 		// Subquery mode: the first relations table becomes the subquery FROM and its
 		// correlation to the outer main table is collected separately (see below).
 		$as_subquery	= ($ar_joins!==null);
+		$join_type		= ($as_subquery && $inner_join===true) ? 'JOIN' : 'LEFT JOIN';
 
 		// Per-clause discriminator prefix. Keeps two clauses with the same path from collapsing
 		// onto one joined row (see get_table_alias_from_path). Empty when join_id is null →
@@ -3241,11 +3267,11 @@ class search {
 					$subquery_correlation = $correlation;
 				}else{
 					# Join relation table
-					$sql_join .= ' LEFT JOIN ' .$rel_table. ' AS ' .$t_relation. ' ON (' . $correlation . ')'.PHP_EOL;
+					$sql_join .= ' ' . $join_type . ' ' .$rel_table. ' AS ' .$t_relation. ' ON (' . $correlation . ')'.PHP_EOL;
 				}
 
 				# Join next table
-				$sql_join .= ' LEFT JOIN '.$matrix_table.' AS '.$t_name .' ON ('. $t_relation.'.target_section_id='.$t_name.'.section_id AND '.$t_relation.'.target_section_tipo='.$t_name.'.section_tipo)';
+				$sql_join .= ' ' . $join_type . ' '.$matrix_table.' AS '.$t_name .' ON ('. $t_relation.'.target_section_id='.$t_name.'.section_id AND '.$t_relation.'.target_section_tipo='.$t_name.'.section_tipo)';
 
 				// Add to joins
 				$target_joins[$t_name] = $sql_join;
@@ -3556,12 +3582,60 @@ class search {
 					$sql_where .= $search_object->q_parsed;
 					break;
 
+				case 'langs_any':
+					// several langs of one component tested with a single extraction of its value
+					// object (see component_common::resolve_query_object_langs_behavior):
+					//	EXISTS (SELECT 1 FROM jsonb_each_text(<object>) lv WHERE lv.key IN (<langs>) AND lv.value ~* <regex>)
+					// 'negative' renders NOT EXISTS: the value matches in NO lang (a lang without
+					// value never contradicts it, as the legacy 'IS NULL' companion leaf)
+					$ar_langs = array_values(array_filter((array)($search_object->langs ?? []), function($el){
+						return is_string($el) && preg_match('/^lg-[a-z]{2,8}$/', $el)===1;
+					}));
+					$operator = $search_object->operator ?? null;
+					if (empty($ar_langs) || !in_array($operator, ['~*','~'], true) || empty($search_object->q_parsed_ar)) {
+						debug_log(__METHOD__
+							. " Invalid langs_any search object (matches nothing) " . PHP_EOL
+							. ' search_object: ' . to_string($search_object)
+							, logger::ERROR
+						);
+						$sql_where .= 'FALSE';
+						break;
+					}
+					if(SHOW_DEBUG===true) {
+						$sql_where .= self::sql_comment("LANGS ANY FORMAT - table_alias:$table_alias - $component_path - " . implode(',', $ar_langs));
+					}
+					$value_object	= $table_alias . '.datos#>\'{' . $component_path . '}\'';
+					$lv_value		= ($search_object_unaccent===true) ? 'f_unaccent(lv.value)' : 'lv.value';
+					$ar_conditions	= [];
+					foreach ((array)$search_object->q_parsed_ar as $current_q_parsed) {
+						// q. Escape parenthesis inside regex (as direct format)
+						$q_parsed_clean = str_replace(['(',')'], ['\(','\)'], (string)$current_q_parsed);
+						$ar_conditions[] = $lv_value . ' ' . $operator . ' ' . (($search_object_unaccent===true) ? 'f_unaccent(' . $q_parsed_clean . ')' : $q_parsed_clean);
+					}
+					$exists = 'EXISTS (SELECT 1 FROM jsonb_each_text(CASE WHEN jsonb_typeof(' . $value_object . ')=\'object\' THEN ' . $value_object . ' END) AS lv'
+						. ' WHERE lv.key IN (\'' . implode('\',\'', $ar_langs) . '\') AND (' . implode(' OR ', $ar_conditions) . '))';
+					$sql_where .= (($search_object->negative ?? false)===true)
+						? 'NOT ' . $exists
+						: $exists;
+					break;
+
 				case 'in_column':
 					// in_column case. Used by component_section_id to search faster number sequences like '1,2,4,8,9'
 					$pre = ($component_path==='section_id')
 						? $table_alias .'.'.$component_path
 						: $table_alias .'.datos#>>\'{' . $component_path . '}\'';
-					$operator = $search_object->operator ?? 'IN'; // IN|NOT IN
+					$operator = strtoupper(trim((string)($search_object->operator ?? 'IN'))); // IN|NOT IN
+					// only IN|NOT IN over a list of integers is valid here (fail closed)
+					if (!in_array($operator, ['IN','NOT IN'], true)
+						|| preg_match('/^\s*-?\d+(\s*,\s*-?\d+)*\s*$/', (string)($search_object->q_parsed ?? ''))!==1) {
+						debug_log(__METHOD__
+							. " Rejected unsafe in_column search object (matches nothing) " . PHP_EOL
+							. ' search_object: ' . to_string($search_object)
+							, logger::ERROR
+						);
+						$sql_where .= 'FALSE';
+						break;
+					}
 					$sql_where .= $pre . ' '.$operator.'(' . $search_object->q_parsed .') ';
 					break;
 

@@ -293,7 +293,9 @@ final class search_joins_test extends TestCase {
 		]);
 		$built	= self::build($sqo);
 
-		$this->assertSame(1, substr_count($built['where'], 'EXISTS (SELECT 1'),
+		// one relations traversal (the langs can be tested inside it by a single
+		// extraction jsonb_each_text EXISTS, that is not a relation subquery)
+		$this->assertSame(1, substr_count($built['where'], 'FROM relations AS'),
 			'$and: all language leaves of one operand must merge into a single EXISTS' . PHP_EOL . $built['where']
 		);
 		$this->assertSame([1], self::join_ids_in($built['where'], $built['signature']),
@@ -336,6 +338,46 @@ final class search_joins_test extends TestCase {
 			'!*: every check must reference the same joined record (j1_ alias)' . PHP_EOL . $built['where']
 		);
 	}//end test_empty_operator_merges_per_lang_checks_into_one_exists
+
+
+
+
+	/**
+	* TEST_EXISTS_JOIN_TYPE_FOLLOWS_NULL_MATCHING
+	* Inside the correlated EXISTS the matrix join is INNER when the condition cannot match the
+	* NULL columns of a missing joined row (planner can start from the searched component
+	* index), and LEFT when it can ('!*' IS NULL checks), keeping the result set unchanged.
+	* @return void
+	*/
+	public function test_exists_join_type_follows_null_matching() : void {
+
+		// positive text search: inner join
+			$built = self::build(self::build_sqo('$and', [
+				self::operand('a', self::$tipo_string, 'component_input_text')
+			]));
+			$this->assertMatchesRegularExpression('/(?<!LEFT) JOIN matrix\w* AS j1_/', $built['where'],
+				'positive: expected INNER join of the related matrix' . PHP_EOL . $built['where']
+			);
+			$this->assertStringNotContainsString('LEFT JOIN', $built['where']);
+
+		// empty operator: LEFT join kept
+			$operand = self::operand('', self::$tipo_string, 'component_input_text');
+				$operand['q_operator']	= '!*';
+				$operand['q']			= '';
+			$built = self::build(self::build_sqo('$and', [$operand]));
+			$this->assertStringContainsString('LEFT JOIN', $built['where'],
+				'!*: expected LEFT join (IS NULL can match a missing row)' . PHP_EOL . $built['where']
+			);
+
+		// helper
+			$this->assertFalse(search::where_can_match_null("f_unaccent(x) ~* f_unaccent('.*is null.*')"));
+			$this->assertFalse(search::where_can_match_null("x IS NOT NULL AND x != '[]'"));
+			$this->assertFalse(search::where_can_match_null("EXISTS (SELECT 1 FROM jsonb_each_text(CASE WHEN jsonb_typeof(a.datos#>'{components,t1,dato}')='object' THEN a.datos#>'{components,t1,dato}' END) AS lv WHERE lv.key IN ('lg-eng') AND (lv.value ~* 'x'))"));
+			$this->assertTrue(search::where_can_match_null('x IS NULL'));
+			$this->assertTrue(search::where_can_match_null("x !~* 'a'"));
+			$this->assertTrue(search::where_can_match_null('NOT EXISTS (SELECT 1)'));
+			$this->assertTrue(search::where_can_match_null("x::jsonb IS DISTINCT FROM TRUE"));
+	}//end test_exists_join_type_follows_null_matching
 
 
 
@@ -665,10 +707,9 @@ final class search_joins_test extends TestCase {
 		$search->pre_parse_search_query_object();
 		$where = $search->build_sql_filter();
 
-		$this->assertStringContainsString(
-			"datos#>>'{components,hierarchy25,dato,",
-			$where,
-			'expected per-lang regex' . PHP_EOL . $where
+		$this->assertTrue(
+			str_contains($where, "datos#>>'{components,hierarchy25,dato,") || str_contains($where, "jsonb_each_text(CASE WHEN jsonb_typeof("),
+			'expected per-lang regex (per-lang leaves or single extraction)' . PHP_EOL . $where
 		);
 		$this->assertStringNotContainsString(
 			"datos#>>'{components,hierarchy25,dato}'",

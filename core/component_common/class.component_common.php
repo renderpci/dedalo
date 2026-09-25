@@ -3823,7 +3823,50 @@ abstract class component_common extends common {
 				? $query_object->q_parsed_ar
 				: [$query_object->q_parsed ?? ''];
 
-		$ar_langs_query_object = [];
+		// whole-blob pre-filter applicability (see the pre-filter block below)
+			$blob_q_parsed	= $options->blob_q_parsed ?? null;
+			$n_steps		= isset($query_object->path) ? count($query_object->path) : 0;
+			$prefilter_on	= (search::$blob_prefilter!==false);	// test seam, see search::$blob_prefilter
+			$use_prefilter	= ($prefilter_on===true && $negative===false && $n_steps>0 && $blob_q_parsed!==null && self::has_whole_blob_trigram_index($query_object));
+
+		// single extraction. Several langs are tested with ONE leaf rendered by
+		// search::get_sql_where as a jsonb_each_text() over the component value object,
+		// restricted to the same langs, instead of one leaf (one datos extraction and one
+		// regex) per lang: same values tested (jsonb_each_text renders every lang value as
+		// '#>>' does) and same logic, 'matches in SOME lang' / 'matches in NO lang'.
+		// Measured (mdcat rsc197, 503K rows, 6 langs): 7.1 s -> 1.8 s contains, 12.1 s ->
+		// 2.7 s negative count. Negative operators through a relation (multi-step) keep the
+		// per-lang groups: there every lang is an independent EXISTS (a different linked
+		// record may satisfy each lang) and a single leaf would change that result set.
+		// Not used when the whole-blob pre-filter applies: the pre-filter already limits the
+		// per-lang regexes to the (few) index matches, and the single leaf raises the planner
+		// row estimate enough to switch the paginated query to an ordered scan that walks the
+		// whole section when nothing matches (measured rsc86 'zzqx' first page 0.3 ms -> 1.8 s).
+			$positive_operator = $negative
+				? (['!~*' => '~*', '!~' => '~'][$query_object->operator ?? ''] ?? null)
+				: (in_array($query_object->operator ?? null, ['~*','~'], true) ? $query_object->operator : null);
+			if (search::$langs_single_extraction!==false
+				&& $use_prefilter===false
+				&& count($ar_langs)>1
+				&& $positive_operator!==null
+				&& ($negative===false || $n_steps===1)) {
+
+				$langs_leaf = clone($query_object);
+					$langs_leaf->format			= 'langs_any';
+					$langs_leaf->lang			= 'all';	// no lang appended to component_path
+					$langs_leaf->langs			= array_values($ar_langs);
+					$langs_leaf->operator		= $positive_operator;
+					$langs_leaf->q_parsed_ar	= array_values($ar_q_parsed);
+					$langs_leaf->negative		= $negative;
+				unset($langs_leaf->q_parsed);
+
+				// group kept (same shape as the per-lang groups): the multi-step whole-blob
+				// pre-filter below is attached to it and consumed by its merged EXISTS
+				$ar_langs_query_object = [$langs_leaf];
+				$ar_langs = []; // skip the per-lang build
+			}
+
+		$ar_langs_query_object = $ar_langs_query_object ?? [];
 		foreach ($ar_langs as $current_lang) {
 
 			// one clone per alternative regex
@@ -3894,14 +3937,8 @@ abstract class component_common extends common {
 		// Multi-step paths only when the related section lives in 'matrix' (see
 		// has_whole_blob_trigram_index). Negative operators ('!=', '-') and the empty/not-empty
 		// operators are built elsewhere and are not affected.
-			$blob_q_parsed	= $options->blob_q_parsed ?? null;
-			$n_steps		= isset($query_object->path) ? count($query_object->path) : 0;
 			$is_single_step	= ($n_steps===1);
-			// multi-step: the component is reached THROUGH a relation, so the pre-filter has to
-			// travel INSIDE the correlated EXISTS of the per-language group (see below)
-			$is_multi_step	= ($n_steps>1);
-			$prefilter_on	= (search::$blob_prefilter!==false);	// test seam, see search::$blob_prefilter
-			if ($prefilter_on===true && $negative===false && ($is_single_step || $is_multi_step) && $blob_q_parsed!==null && self::has_whole_blob_trigram_index($query_object)) {
+			if ($use_prefilter===true) {
 
 				// one whole-blob leaf. Every alternative in q_parsed_ar shares the same term,
 				// so a single term-only leaf covers them all.

@@ -17,6 +17,22 @@ final class component_input_text_test extends TestCase {
 
 
 	/**
+	* SET_UP / TEAR_DOWN
+	* The resolve_query_object_sql tests below lock the per-lang leaves shape (one leaf per
+	* lang), used whenever the whole-blob pre-filter applies. The single extraction shape
+	* ('langs_any' leaf) is locked by test_resolve_query_object_sql_langs_any.
+	* @return void
+	*/
+	protected function setUp() : void {
+		search::$langs_single_extraction = false;
+	}
+	protected function tearDown() : void {
+		search::$langs_single_extraction = null;
+	}
+
+
+
+	/**
 	* TEST_USER_LOGIN
 	* @return void
 	*/
@@ -705,6 +721,52 @@ final class component_input_text_test extends TestCase {
 				'Expected duplicated true for the !! case'
 			);
 	}//end test_resolve_query_object_sql_operators
+
+
+
+
+	/**
+	* TEST_RESOLVE_QUERY_OBJECT_SQL_LANGS_ANY
+	* Without whole-blob pre-filter (test52 has no trigram index), a regex search over several
+	* langs is ONE 'langs_any' leaf (single extraction of the lang object, see
+	* component_common::resolve_query_object_langs_behavior), with the same langs and regex
+	* as the per-lang leaves, and 'negative' for the does-not-contain case
+	* @return void
+	*/
+	public function test_resolve_query_object_sql_langs_any() {
+
+		search::$langs_single_extraction = null; // default (enabled)
+
+		// contains
+			$tree = component_input_text::resolve_query_object_sql(
+				$this->build_search_query_object('as')
+			);
+			$this->assertTrue(property_exists($tree, '$or'), 'expected $or group');
+			$this->assertCount(1, $tree->{'$or'});
+			$leaf = $tree->{'$or'}[0];
+			$this->assertSame('langs_any', $leaf->format);
+			$this->assertSame($this->search_langs(), $leaf->langs);
+			$this->assertSame('~*', $leaf->operator);
+			$this->assertSame(["'.*\\[\".*as.*'"], $leaf->q_parsed_ar);
+			$this->assertFalse($leaf->negative);
+			$this->assertFalse(property_exists($leaf, 'q_parsed'));
+
+		// does not contain: same regex, negative flag (rendered as NOT EXISTS)
+			$tree = component_input_text::resolve_query_object_sql(
+				$this->build_search_query_object('as', '-')
+			);
+			$this->assertTrue(property_exists($tree, '$and'), 'expected $and group');
+			$leaf = $tree->{'$and'}[0];
+			$this->assertSame('langs_any', $leaf->format);
+			$this->assertSame('~*', $leaf->operator);
+			$this->assertTrue($leaf->negative);
+
+		// rendered SQL
+			$search	= search::get_instance(json_decode('{"section_tipo":["'.self::$section_tipo.'"]}'));
+			$sql	= $search->get_sql_where($leaf);
+			$this->assertStringContainsString('NOT EXISTS (SELECT 1 FROM jsonb_each_text(', $sql);
+			$this->assertStringContainsString("lv.key IN ('" . implode("','", $this->search_langs()) . "')", $sql);
+	}//end test_resolve_query_object_sql_langs_any
 
 
 
