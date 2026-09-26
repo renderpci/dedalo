@@ -90,3 +90,16 @@ answer with "contact the administrator"
 (`WC-2026-09-24-tool-export-server-built-artifacts`, addendum (c)). Strictly
 additive; the gate's `ADDED` set grows by exactly this one. Same registration
 rule as above.
+
+## Addendum 2026-09-26 — two more names: the `dedalo_raw` parents note
+
+`tools/tool_export/register.json` gained (commit 572574b, 10 langs each)
+`parents_not_in_raw` and `parents_not_in_raw_short`: the tooltip and the
+visible *(not in Raw)* note on the per-column "add parents" checkbox, which the
+client disables in the `dedalo_raw` format (`WC-049`, addendum 2026-09-25).
+That commit ledgered the UI but not this label growth, so
+`tool_element_context_differential` went red on a freshly registered suite
+database (parity `failing_tests` 100 → 101). Strictly additive: no existing row
+removed or reworded, the frozen side carries neither name. The gate's `ADDED`
+set grows by exactly these two. Same registration rule as above. No re-harvest
+(the gate transforms the TS side before diffing).

@@ -104,6 +104,10 @@ Now:
 
 **Fixture impact: NONE.** No `get_export_grid` fixture carries the per-ddo
 flag; with the flag off (or on a literal leaf) the output is byte-identical.
+*Corrected 2026-09-26:* the two new labels DO touch a fixture — the frozen
+`get_element_context` for `tool_export` — and are ledgered as an additive label
+growth in `WC-2026-08-23-tool-export-register-labels` (addendum 2026-09-26),
+absorbed by its `ADDED` set in `tool_element_context_differential`.
 
 ### Gate
 

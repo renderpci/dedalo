@@ -59,6 +59,7 @@ describe.if(hasPhpCredentials())(
 					// WC-2026-09-24-tool-export-server-built-artifacts): 22 more names,
 					// the server-built export UI (status line, pager, downloads, Stop,
 					// Delete). Addendum (b), same day: six more (external sources).
+					// Addendum 2026-09-26: two more (parents_not_in_raw[_short]).
 					const ADDED = new Set([
 						'activate_all_columns',
 						'disable_all_columns',
@@ -99,6 +100,10 @@ describe.if(hasPhpCredentials())(
 						'export_external_stale',
 						// 2026-09-24 addendum (c): a truncated-only export is not "unread"
 						'export_external_truncated',
+						// 2026-09-26 addendum (WC-049 addendum 2026-09-25): the
+						// dedalo_raw "parents not exported" note on the checkbox
+						'parents_not_in_raw',
+						'parents_not_in_raw_short',
 					]);
 					type LabelRow = { name?: unknown };
 					const tsLabels = tsContext.labels as LabelRow[];
