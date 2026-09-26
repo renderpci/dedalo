@@ -15,6 +15,11 @@
  * run while passing 12/12 alone — and, because the assertion floor reads the
  * same census, it blocked the whole ratchet from being re-frozen.
  *
+ * NOT THE WHOLE STORY (2026-09-26): the registry settles PLUGIN order only. A
+ * `mock.module` on the REAL ui.js path (four gates register one, never reverted)
+ * still beat that gate's plugin redirect; it now re-masks the real path too
+ * (see transcription_status_panel.test.ts).
+ *
  * THE RULE. A gate that needs a specific module replaced REGISTERS THAT FACT
  * here, and every resolver plugin asks this registry BEFORE its own logic. The
  * answer is then the same whichever plugin got there first, so the outcome no
