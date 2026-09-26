@@ -59,6 +59,7 @@ import {
 	SVG_QUARANTINE_CSP,
 	SVG_QUARANTINE_DISPOSITION,
 } from './core/media/svg_safety.ts';
+import { publicOrigin, publicOriginIsLocal } from './core/resolve/public_origin.ts';
 // S2-20 boot registration: loading the component registry registers the
 // ontology↔components model lookup (module-load side effect) BEFORE any request
 // resolves a component model. Keep this explicit even though other imports
@@ -1768,6 +1769,30 @@ export async function startServer() {
 	// at a key; the catalog doc for DEDALO_INSTALL_ALLOWED_IPS promises this line.
 	if (config.installMode || installInProgress()) {
 		console.warn(`[boot] ${describeInstallAllowPolicy()}`);
+	}
+
+	// A MASTER must know its own public name. Both manifests hand OTHER machines
+	// absolute urls built from `publicOrigin()` (DEDALO_PROTOCOL + DEDALO_HOST), and
+	// the consumer then ORIGIN-PINS every download to the url it was configured with
+	// (WC-023 D5). With DEDALO_HOST unset that origin falls back to `localhost`, so a
+	// remote install is told to fetch the ontology or the release archive FROM ITSELF:
+	// it finds its own files or nonsense, and the failure surfaces at the consumer, not
+	// here. The fallback itself stays (a same-machine dev master depends on it —
+	// src/core/resolve/public_origin.ts), so this is a loud line, not a refusal; without
+	// it the misconfiguration is invisible on the only box that could fix it.
+	// engineering/MASTER_SERVER.md §5. Gate: master_legacy_routing_tripwire.
+	if (config.ontologyIo.isOntologyServer || config.update.isCodeServer) {
+		if (publicOriginIsLocal()) {
+			const roles = [
+				config.ontologyIo.isOntologyServer ? 'IS_AN_ONTOLOGY_SERVER' : '',
+				config.update.isCodeServer ? 'IS_A_CODE_SERVER' : '',
+			]
+				.filter((role) => role !== '')
+				.join(' + ');
+			console.warn(
+				`[boot] ${roles} is on but this install has no public name — every manifest it serves will advertise ${publicOrigin()}, which a remote install resolves to ITSELF. Set DEDALO_HOST to this master's public name.`,
+			);
+		}
 	}
 
 	// Ordered TS-owned schema migrations (audit S2-39) — run BEFORE serving so a

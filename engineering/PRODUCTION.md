@@ -229,6 +229,22 @@ already covers it — a proxy that buffers or times out under ~30 s will stall
 or kill the chat. The non-streaming `agent_chat` twin has no heartbeat; the
 client prefers the stream action for exactly this reason.
 
+### 3.2 The official master: one host, two engines
+
+`master.dedalo.dev` is a special case of this section and has its own page:
+**`engineering/MASTER_SERVER.md`**. It runs this engine while the retired pre-7
+engine keeps serving every pre-7 installation in the world from
+`v6.master.dedalo.dev` on the SAME machine — so its vhost is
+`deploy/apache.conf` PLUS the overlay `deploy/apache.master_legacy_v6.conf`,
+which diverts exactly the legacy shapes (by path, Content-Type and Origin —
+never by body) and nothing else. v7 consumers use the `/api/v1/json` door there;
+`/dedalo/core/api/v1/json/` on that host is reserved for pre-7 installations and
+for the master's own same-origin client. Gates:
+`master_legacy_routing_tripwire`, `legacy_dialect_boundary_native`.
+
+Nothing in that overlay belongs on an ordinary install — do not include it on
+one.
+
 ## 4. Database pool + statement timeouts (S2-32)
 
 Config keys (all in `../private/.env`; catalog `src/config/config.ts` `ops`):

@@ -122,6 +122,8 @@ const TRIPWIRES = [
 	'test/unit/release_archive_tripwire.test.ts',
 	'test/unit/info_widget_registry_tripwire.test.ts',
 	'test/unit/maintenance_widget_get_value_tripwire.test.ts',
+	'test/unit/master_legacy_routing_tripwire.test.ts',
+	'test/unit/legacy_dialect_boundary_native.test.ts',
 	'test/unit/install_restart_supervisor_tripwire.test.ts',
 	'test/unit/ci_workflow_tripwire.test.ts',
 	'test/unit/local_db_stores_tripwire.test.ts',

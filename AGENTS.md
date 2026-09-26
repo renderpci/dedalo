@@ -132,6 +132,7 @@ The live-oracle era is over. The baselines of record are FROZEN:
 | `engineering/ERRORS_SPEC.md` | The error system: closed DedaloError registry, the ONE converter, envelope v2, client contract, gates. | 
 | `engineering/ORACLE_HARVEST.md` | The frozen fixture store: how it replays, why a re-harvest is impossible, the retired-differential twin map. | 
 | `engineering/PRODUCTION.md` | Ops: supervision, socket, backups, health. | 
+| `engineering/MASTER_SERVER.md` | The official master: the v7 door + the Apache overlay that keeps every PRE-7 install updating. | 
 | `engineering/STAGING_VALIDATION.md` | Exercise the ops hardening before production. | 
 | `engineering/CI.md` | CI/CD: pipeline map, hermetic vs self-hosted tiers, seam env, activation runbook. | 
 | *— internal, not in the repo —* | | 
