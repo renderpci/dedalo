@@ -21,6 +21,7 @@
 		"docs:build": "DISABLE_MKDOCS_2_WARNING=true ${npm_config_venv:-.venv}/bin/mkdocs build --strict",
 		"docs:setup": "python3 -m venv .venv && .venv/bin/pip install -r docs/requirements.txt",
 		"docs:publish": "bun run scripts/docs_publish.ts",
+		"changelog": "bun run scripts/changelog.ts",
 		"config:gen": "bun run scripts/gen_config_docs.ts",
 		"config:check": "bun run scripts/gen_config_docs.ts --check",
 		"context:gen": "bun run deploy/build_context.ts",

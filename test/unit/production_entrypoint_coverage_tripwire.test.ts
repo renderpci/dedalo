@@ -267,6 +267,10 @@ const TOOLING_SCRIPT_PREFIXES = new Set([
 	// site, so if the reading ever changes to PRODUCTION it needs the coverage
 	// test that classification demands, not an exemption.
 	'docs',
+	// `changelog` (2026-09-26) renders docs/change_log.md from changes/ and cuts a
+	// release's note snapshot — repository files only, like `docs:*`; it never
+	// touches an installation.
+	'changelog',
 	'probe',
 	'publication',
 	'sitebuilder',

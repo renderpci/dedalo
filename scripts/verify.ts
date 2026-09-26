@@ -136,6 +136,7 @@ const TRIPWIRES = [
 	'test/unit/colour_literal_ratchet_tripwire.test.ts',
 	'test/unit/breakpoint_record_tripwire.test.ts',
 	'test/unit/wire_contract_tripwire.test.ts',
+	'test/unit/change_log_tripwire.test.ts',
 	'test/unit/verify_selector_selftest.test.ts',
 	'test/unit/delete_inverse_lost_update_native.test.ts',
 	'test/unit/duplicate_record_dataframe_native.test.ts',

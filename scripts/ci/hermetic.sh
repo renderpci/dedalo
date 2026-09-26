@@ -169,6 +169,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/css_build_tripwire.test.ts
 	test/unit/css_token_duplication_tripwire.test.ts
 	test/unit/wire_contract_tripwire.test.ts
+	test/unit/change_log_tripwire.test.ts
 	test/unit/verify_selector_selftest.test.ts
 	test/unit/build_context_secret_tripwire.test.ts
 	test/unit/vendor_advisory_tripwire.test.ts
