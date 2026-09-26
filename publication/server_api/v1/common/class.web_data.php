@@ -1352,13 +1352,21 @@ class web_data {
 
 		/**
 		* BUILD_SQL_WHERE
+		* (!) Params are not typed on purpose: they come from the request as is (arrays, null...)
+		* and must not raise a TypeError, as an empty value is simply ignored
 		* @param string|null $lang
 		* @param string|null $sql_filter
-		* @param bool $ignore_tags
-		*	If true, LIKE sentences on tagged text columns ignore tag contents. See mask_tags_sql_filter
+		* @param mixed $ignore_tags = true
+		*	bool or boolean string ('false', '0'). If true, LIKE sentences on tagged text columns
+		*	ignore tag contents when TAGGED_TEXT_FIELDS is defined. See mask_tags_sql_filter
 		* @return string $sql
 		*/
-		private static function build_sql_where(?string $lang, ?string $sql_filter, bool $ignore_tags=true) : string {
+		private static function build_sql_where($lang, $sql_filter, $ignore_tags=true) : string {
+
+			// ignore_tags. Normalize request values ('false', '0', 1...). Invalid values keep the default
+			$ignore_tags = is_bool($ignore_tags)
+				? $ignore_tags
+				: ($ignore_tags===null ? true : (filter_var($ignore_tags, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? true));
 
 			// $sql  = '';
 			// $sql .= 'WHERE section_id IS NOT NULL';
@@ -1387,14 +1395,16 @@ class web_data {
 					if($sql_filter===PUBLICATION_FILTER_SQL) {
 						$ar_parts[] = $sql_filter;
 					}else{
-						// Tagged text columns (transcriptions): LIKE operands are masked to
-						// avoid false positives from tag payloads. See mask_tags_sql_filter
-						if ($ignore_tags===true) {
-							$sql_filter = self::mask_tags_sql_filter($sql_filter);
-						}
 						$sql_filter_clean = ( substr($sql_filter, 0, 1)==='(' && substr($sql_filter, -1)===')' )
 							? trim($sql_filter)
 							: '('.trim($sql_filter).')';
+						// Tagged text columns (transcriptions): LIKE operands are masked to
+						// avoid false positives from tag payloads. See mask_tags_sql_filter
+						// (!) Masked after the parentheses check: the rewrite wraps each LIKE in
+						// parentheses and would skip the outer ones, detaching the lang condition
+						if ($ignore_tags===true) {
+							$sql_filter_clean = self::mask_tags_sql_filter($sql_filter_clean);
+						}
 						$ar_parts[] = $sql_filter_clean;
 					}
 				}
@@ -1422,26 +1432,26 @@ class web_data {
 		/**
 		* GET_TAGGED_TEXT_FIELDS
 		* Columns whose stored text contains transcription tags. Defined by the publication
-		* config constant TAGGED_TEXT_FIELDS when present, else the transcription field alone
+		* config constant TAGGED_TEXT_FIELDS. Opt-in: when it is not defined, no column is
+		* masked and sql_filter is used as is (masking needs MariaDB >= 10.0.5 REGEXP_REPLACE
+		* and it is slower on common terms, see mask_tags_sql_filter)
 		* @return array
 		*/
 		private static function get_tagged_text_fields() : array {
 
-			if (defined('TAGGED_TEXT_FIELDS')) {
-				// a comma separated string is accepted as well as an array
-				$ar_fields = is_string(TAGGED_TEXT_FIELDS)
-					? explode(',', TAGGED_TEXT_FIELDS)
-					: (array)TAGGED_TEXT_FIELDS;
-			}else{
-				$ar_fields = defined('FIELD_TRANSCRIPTION')
-					? [FIELD_TRANSCRIPTION]
-					: [];
+			if (!defined('TAGGED_TEXT_FIELDS')) {
+				return [];
 			}
 
+			// a comma separated string is accepted as well as an array
+			$ar_fields = is_string(TAGGED_TEXT_FIELDS)
+				? explode(',', TAGGED_TEXT_FIELDS)
+				: (array)TAGGED_TEXT_FIELDS;
+
 			// normalize. SQL column names are case insensitive
-			return array_map(function($field){
+			return array_values(array_filter(array_map(function($field){
 				return strtolower(trim((string)$field));
-			}, $ar_fields);
+			}, $ar_fields)));
 		}//end get_tagged_text_fields
 
 
@@ -1517,9 +1527,13 @@ class web_data {
 		* Tags are replaced by one space (not by an empty string) to avoid joining
 		* the words around the tag, which would create new false positives.
 		* Columns not in TAGGED_TEXT_FIELDS are left untouched, as are LIKE sentences
-		* found inside string literals.
-		* Note: relies on default sql_mode. With NO_BACKSLASH_ESCAPES the regex literal
-		* loses its escapes and masking silently becomes a no-op.
+		* found inside string literals and sentences followed by COLLATE, ESCAPE or an
+		* adjacent literal that the rewrite could not keep attached.
+		* Opt-in (TAGGED_TEXT_FIELDS config). Requirements and costs:
+		* - MariaDB >= 10.0.5 (REGEXP_REPLACE). MySQL 5.x has no REGEXP_REPLACE and the
+		*   MySQL 8 ICU engine rejects the '[[]' class of the tags pattern: the query fails
+		* - REGEXP_REPLACE runs on every row matching the raw LIKE: common terms over big
+		*   transcriptions are much slower (measured '%casa%' 1.4 s -> 12.8 s on mdcat)
 		*
 		* Ex. "rsc36 LIKE '%1649%'" is converted to
 		*	  "(REGEXP_REPLACE(rsc36, '<tags>', ' ') LIKE '%1649%')"
@@ -1555,9 +1569,12 @@ class web_data {
 
 			// column (optionally back quoted, up to two qualifier levels) + [NOT] LIKE
 			// + string literal + optional ESCAPE clause. Both quote styles are accepted,
-			// as MySQL takes "..." as a string literal too (default sql_mode)
+			// as MySQL takes "..." as a string literal too (default sql_mode).
+			// Not rewritten when followed by COLLATE (it would apply to the wrapping
+			// parentheses, changing the comparison collation), by an ESCAPE clause not
+			// captured here or by an adjacent literal ('a' 'b' concatenation)
 			$literal = '(?:\'(?:[^\'\\\\]|\\\\.|\'\')*\'|"(?:[^"\\\\]|\\\\.|"")*")';
-			$pattern = '/((?:`?\w+`?\.){0,2}`?(\w+)`?)\s+(NOT\s+)?LIKE\s+('. $literal .')(\s+ESCAPE\s+'. $literal .')?/i';
+			$pattern = '/((?:`?\w+`?\.){0,2}`?(\w+)`?)\s+(NOT\s+)?LIKE\s+('. $literal .')(\s+ESCAPE\s+'. $literal .')?(?!\s*(?:COLLATE\b|ESCAPE\b|[\'"]))/i';
 
 			$found = preg_match_all($pattern, $scan, $matches, PREG_OFFSET_CAPTURE|PREG_SET_ORDER);
 			if ($found===false) {

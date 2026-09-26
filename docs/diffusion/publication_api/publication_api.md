@@ -482,6 +482,17 @@ https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&db_
 }
 ```
 
+!!! note "Transcription tags in LIKE filters (optional)"
+    Transcriptions store tags as `[index-n-1]` or `[note-b-1-1-data:{'section_tipo':'rsc326','section_id':1649}:data]`,
+    so `rsc36 LIKE '%1649%'` also matches the values inside the tags. When the constant
+    [TAGGED_TEXT_FIELDS](./server_config_api.md#defining-the-fields-with-transcription-tags) is defined, the
+    `[NOT] LIKE` sentences on those columns are matched against the text without tags
+    (`REGEXP_REPLACE(rsc36, <tags>, ' ') LIKE '%1649%'`). Sentences followed by `COLLATE`, by an `ESCAPE` clause
+    not attached to the literal, or by an adjacent literal are left as is.
+
+    The request parameter `ignore_tags` (`bool`, default `true`) disables it for one request
+    (`ignore_tags=false`). When `TAGGED_TEXT_FIELDS` is not defined (default) `sql_filter` is used as is.
+
 #### lang
 
 Defines the lang of the data.

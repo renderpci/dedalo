@@ -141,10 +141,11 @@
 
 	// Fields. Used to resolve fragments
 		define('FIELD_TRANSCRIPTION'	, TRANSCRIPTION_TIPO);
-		// TAGGED_TEXT_FIELDS: optional. Columns whose text contains transcription tags like
+		// TAGGED_TEXT_FIELDS: optional (opt-in). Columns whose text contains transcription tags like
 		// [note-b-1-1-data:{..}:data]. LIKE filters on them ignore tag contents to avoid
-		// false positives. If not defined, [FIELD_TRANSCRIPTION] is used
-		define('TAGGED_TEXT_FIELDS'		, [FIELD_TRANSCRIPTION]);
+		// false positives. If not defined, sql_filter is used as is.
+		// Requires MariaDB >= 10.0.5 (MySQL is not supported) and slows down common terms searches
+		// define('TAGGED_TEXT_FIELDS'	, [FIELD_TRANSCRIPTION]);
 		define('FIELD_DURATION'			, 'duration');
 		define('FIELD_TERM'				, 'term');
 		define('FIELD_TERM_ID'			, 'term_id');

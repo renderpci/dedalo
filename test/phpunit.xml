@@ -22,6 +22,10 @@
             <directory>../test/search</directory>
         </testsuite>
 
+        <testsuite name="unit publication">
+            <directory>../test/publication</directory>
+        </testsuite>
+
         <testsuite name="unit common">
             <directory>../test/common</directory>
         </testsuite>

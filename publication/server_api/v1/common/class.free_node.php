@@ -178,7 +178,7 @@ class free_node extends stdClass {
 	* - a quoted phrase ("la casa") is one single word, quotes apart
 	* - excluded terms (-guerra) are not highlighted, as rows containing them are not returned
 	* - remaining operators are left to word_to_pattern, that removes them
-	* Ex. '"la casa" +poble -guerra' returns ['la casa', '+poble']
+	* Ex. '"la casa" +poble -guerra' returns ['la casa', 'poble']
 	* @param string $q
 	* @return array
 	*/
@@ -187,6 +187,15 @@ class free_node extends stdClass {
 		$q = trim($q);
 		if ($q==='') {
 			return [];
+		}
+
+		// whole query wrapped in quotes is one single phrase (previous behavior). Keeps
+		// inner apostrophes as part of the phrase: 'l'home' is "l'home", not 'l' + 'home'
+		$first_char	= substr($q, 0, 1);
+		$last_char	= substr($q, -1);
+		if (strlen($q)>1 && ($first_char==='\'' || $first_char==='"') && $last_char===$first_char) {
+			$phrase = trim(substr($q, 1, -1));
+			return ($phrase==='') ? [] : [$phrase];
 		}
 
 		// sign + quoted phrase ("..", '..') | sign + plain word
@@ -601,8 +610,10 @@ class free_node extends stdClass {
 		// Remove FULLTEXT boolean operators (+ - ~ < > ( ) " ') wrapping the word. They are
 		// search modifiers, not part of the text, and they reach the regex as metacharacters
 		// (ex. '+casa' compiles to '/(+casa)/i', an invalid pattern that matches nothing)
+		// Punctuation around the word (. , ; : ! ? ¿ ¡) is removed too: FULLTEXT treats it as
+		// a word separator, so 'casa?' finds rows with 'casa' that must be highlighted
 		// note preg_replace returns null on malformed UTF-8: keep the word in that case
-		$word = preg_replace('/^[+\-~<>("\']+|[)"\']+$/u', '', $word) ?? $word;
+		$word = preg_replace('/^[+\-~<>("\'¿¡]+|[)"\'.,;:!?]+$/u', '', $word) ?? $word;
 
 		// trailing * means prefix search (MySQL FULLTEXT wildcard)
 		$wildcard = substr($word, -1)==='*';

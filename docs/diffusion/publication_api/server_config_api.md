@@ -688,6 +688,29 @@ define('FIELD_TRANSCRIPTION', TRANSCRIPTION_TIPO);
 
 ---
 
+### Defining the fields with transcription tags
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+TAGGED_TEXT_FIELDS `array` **optional**
+
+Columns whose text holds transcription tags as `[index-n-1]` or `[note-b-1-1-data:{..}:data]`. When it is defined,
+`sql_filter` `LIKE` sentences on these columns ignore the tag contents, avoiding false positives (see
+[sql_filter](./publication_api.md#sql_filter)). A comma separated string is accepted too. Not defined by default:
+`sql_filter` is used as is.
+
+```php
+define('TAGGED_TEXT_FIELDS', [FIELD_TRANSCRIPTION]);
+```
+
+!!! warning "Requirements and cost"
+    It needs MariaDB 10.0.5 or later (`REGEXP_REPLACE`). MySQL is not supported: MySQL 5.x has no
+    `REGEXP_REPLACE` and the MySQL 8 regex engine rejects the tags pattern, so the queries would fail.
+    The tags are removed on every row matched by the plain `LIKE`, so filters with common terms over big
+    transcriptions are much slower (measured `'%casa%'` 1.4 s → 12.8 s over 22.000 transcriptions).
+
+---
+
 ### Defining the audiovisual component_tipo
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
