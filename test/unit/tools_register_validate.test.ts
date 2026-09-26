@@ -86,6 +86,7 @@ describe('seeded register.json corpus', () => {
 	 * format, converted at registration (WC-019 precedent). A new tool adds its
 	 * name here. Sorted, one per line, so parallel additions merge by union. */
 	const TS_AUTHORED = new Set([
+		'tool_bibliography_acquisition',
 		'tool_error_report',
 		'tool_identify',
 		'tool_numisdata_acquisition',

@@ -759,8 +759,8 @@ framework action `dd_tools_api::user_tools`; `tool_qr` never leaves the browser.
 So do NOT "finish" one by scaffolding a server module — adding an unreachable
 `apiActions` map is new attack surface, not coverage.
 
-WITH a server module: `tool_dev_template`, `tool_error_report`,
-`tool_export`, `tool_hierarchy`, `tool_identify`, `tool_image_rotation`,
+WITH a server module: `tool_bibliography_acquisition`, `tool_dev_template`,
+`tool_error_report`, `tool_export`, `tool_hierarchy`, `tool_identify`, `tool_image_rotation`,
 `tool_import_dedalo_csv`, `tool_import_files`, `tool_import_marc21`,
 `tool_import_rdf`, `tool_import_zotero`, `tool_lang`, `tool_lang_multi`,
 `tool_media_versions`, `tool_numisdata_acquisition`, `tool_ontology`, `tool_ontology_parser`,
