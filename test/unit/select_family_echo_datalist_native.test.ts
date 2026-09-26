@@ -34,8 +34,8 @@ import { getSelectLangDatalist } from '../../src/core/relations/select_lang.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
-import { cleanScratchRecord } from '../helpers/test_data.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
+import { cleanScratchRecord } from '../helpers/test_data.ts';
 
 registerSessionCleanup();
 
@@ -158,9 +158,7 @@ describe('the door — getDatalist applies the model option source', () => {
 		// The language token, not a record id — the select_lang option shape.
 		for (const option of options) expect(String(option.section_id)).toMatch(/^lg-/);
 		// The probe and the build agree about what the options ARE.
-		expect(await probeDatalistSize(SELECT_LANG, null, SECTION, LANG, 100_000)).toBe(
-			options.length,
-		);
+		expect(await probeDatalistSize(SELECT_LANG, null, SECTION, LANG, 100_000)).toBe(options.length);
 	});
 });
 
