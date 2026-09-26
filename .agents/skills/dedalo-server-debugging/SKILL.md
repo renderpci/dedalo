@@ -57,7 +57,7 @@ The locator must contain:
 - `section_id`: The record identifier.
 
 ## API Workflow
-1. Request arrives at `core/api/get_json.php`.
+1. Request arrives at `core/api/v1/json/index.php`.
 2. Controller identifies the model and section.
 3. Model-specific JSON controller is included (e.g., `core/component_portal/component_portal_json.php`).
 4. Output is aggregated via `common::build_element_json_output()`.

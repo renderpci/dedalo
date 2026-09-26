@@ -39,7 +39,7 @@ A common bug in Dédalo is the failure of nested components (like portal childre
 - Verify if `get_component_data` is finding a match. If it returns "No data found", check for mode or ID mismatches.
 
 ### Stage 3: API Request/Response
-- Look for the `/core/api/get_json.php` call.
+- Look for the `core/api/v1/json/index.php` call.
 - Copy the response JSON and verify if the missing component's data/context is actually present.
 - If it's NOT in the response, the issue is server-side (`class.common.php` or model specific `json.php`).
 - If it IS in the response, the issue is client-side matching.
