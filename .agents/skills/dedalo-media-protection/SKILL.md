@@ -44,9 +44,9 @@ generation were PHP-owned and died with the cutover.
    renames, external sources) — document them, never loosen the regex to "fix" them.
 
 4. **The auth cookie NAME is fixed** (`dedalo_media_auth`); only the 128-hex sha512 VALUE
-   rotates daily (today + yesterday both valid). The fixed name is what keeps the generated
-   rules static and lets nginx survive rotation **without a reload**. Never reintroduce
-   rotating cookie names. The value is validated against `^[a-f0-9]{128}$` before it can
+   varies — one per SESSION (rule 7). The fixed name is what keeps the generated rules
+   static, so a new value never needs an nginx **reload**. Never reintroduce varying
+   cookie names. The value is validated against `^[a-f0-9]{128}$` before it can
    reach the disk — **it becomes a literal filename**, so that pattern is the traversal
    guard.
 
@@ -63,12 +63,17 @@ generation were PHP-owned and died with the cutover.
    served root.
 
 7. **The credential is per SESSION, and revocation is the point.** The marker set is a
-   PROJECTION of the sessions table, so every way a session ends must unlink its marker —
-   go through `src/core/security/session_media.ts` (`endSession` / `endUserSessions` /
-   `sweepExpiredSessions`), never a bare `destroySession`/`pruneExpiredSessions`.
-   This INVERTED an older rule that read "logout must never unlink the marker": the value
-   used to be install-global, so unlinking it would have locked out every other editor —
-   and the price was that a stolen cookie survived logout AND a password reset for up to
+   PROJECTION of the sessions table, so every way a session ends must unlink its marker.
+   Since 2026-08-28 the ORDER lives in `session_store.ts`
+   (`endSessionRows`: marker unlinked BEFORE the row is deleted, on every path), so a bare
+   `destroySession`/`pruneExpiredSessions` is safe; `src/core/security/session_media.ts`
+   (`endSession` / `endUserSessions` / `sweepExpiredSessions`) holds the NAMED doors plus
+   the orphan reconcile. Never add a session-row delete that bypasses `endSessionRows`.
+   The cookie's life is the session's life (WC-051): it is re-issued on any authenticated
+   request whose cookie is missing or is not this session's key, with `Max-Age` = the
+   session idle window. The per-session value INVERTED an older rule ("logout must never
+   unlink the marker"): the value used to be install-global and daily, so unlinking it
+   would have locked out every other editor — and the price was that a stolen cookie survived logout AND a password reset for up to
    ~48 h, outside the session store's reach entirely.
    **The orphan reconcile must NOT run at boot**: the update's smoke boot starts with an
    empty throwaway session store and the inherited `MEDIA_PATH`, so it would unlink every
@@ -85,8 +90,11 @@ generation were PHP-owned and died with the cutover.
    existing installs never regenerate (the config-hash guard would otherwise match).
 
 10. **Mode precedence**: `ts_state.json media_access_mode` (root-only, from the widget) →
-    `.env DEDALO_MEDIA_ACCESS_MODE` → legacy `DEDALO_PROTECT_MEDIA_FILES=true` → `false`.
-    `null` = no override; `false` = explicit OFF — the two are NOT the same. The override
+    `.env DEDALO_MEDIA_ACCESS_MODE` → legacy `DEDALO_PROTECT_MEDIA_FILES` → the fail-closed
+    default `publication` (`readMediaAccessMode` in `src/config/readers.ts`; an invalid
+    value also falls back to it). `false` only on an EXPLICIT opt-out (`false`/`off`/`0`,
+    legacy `=false`, or the widget). In `ts_state.json`, `null` = no override; `false` =
+    explicit OFF — the two are NOT the same. The override
     lives in `ts_state.json` because `../private/.env` is append-only *and* parsed once at
     import (this process lives for weeks). When changing the mode, thread it **explicitly**
     into `writeRuleFiles(mode)` — never let the writer re-derive it from a cached layer.
@@ -118,14 +126,15 @@ generation were PHP-owned and died with the cutover.
   world-open media). Never comma-fold Set-Cookie (RFC 6265 §3).
 - **`MEDIA_HTACCESS_ADDONS` is JSON-only.** A comma-list reader shreds
   `RewriteRule ^ - [R=404,L]` into two broken directives.
-- **nginx needs a RELOAD on a mode change**; Apache's `.htaccess` does not. The daily cookie
-  rotation needs no reload.
+- **nginx needs a RELOAD on a mode change**; Apache's `.htaccess` does not. A new per-session
+  cookie value needs no reload.
 
 ## Operational gotchas
 
 `open_file_cache` off (or `_valid ≤ 2s`) — it caches `stat()` and delays unpublish. NFS
 attribute cache lags unpublish across web farms. CDNs must purge on unpublish (especially
-`.vtt`). Users logged in *before* protection is enabled hold no cookie until they re-login.
+`.vtt`). Users logged in *before* protection is enabled get their cookie on their next authenticated
+request (WC-051 re-issue, the session is re-keyed) — no re-login.
 Existing publications need one `rebuild_media_index` run. The #1 misconfiguration is an
 unset `MEDIA_PATH`: publishes succeed, anonymous access stays 404 — the widget surfaces it.
 

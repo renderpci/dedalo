@@ -1,96 +1,85 @@
 ---
 name: dedalo-parity-debugging
-description: The reusable workflow for the Dédalo PHP→TypeScript/Bun rewrite where the live PHP server is the ORACLE — differential parity gates, in-process probe scripts diffing TS vs PHP, driving the real PHP client via Chrome DevTools MCP to find client-contract bugs, scratch-twin write hygiene (never mutate real records), and the dev-server/env setup. Use when verifying a TS port matches PHP, when a component renders wrong in the browser, when writing a *_differential.test.ts gate, or when a bug is reported against the running client (e.g. "X is not resolved in client").
+description: Post-cutover debugging workflow for the Dédalo v7 TS/Bun engine — triaging a red test/parity/*_differential.test.ts that replays the FROZEN 2026-07-11 fixture store (ORACLE_MODE, test/parity/oracle_fixtures.ts, oracle_canary, engineering/parity_baseline.json), deciding engine bug vs deliberate divergence vs corpus absence, editing a fixture only as a same-day engineering/wire_contract/ entry, finding a retired differential's TS-native twin (engineering/ORACLE_HARVEST.md, engineering/twin_map.json), in-process probe scripts against our own engine, and driving the vanilla-JS client via Chrome DevTools MCP against bun run test:client:server or the dev server with a minted session cookie. Use when a parity gate reds or parity_baseline_tripwire fails, when "fixture miss" / "no recorded interaction" throws, when a component renders wrong in the browser, when a bug is reported against the running client ("X is not resolved in client"), or when a write must be verified on scratch surfaces of the suite DB.
 ---
 
-# Dédalo TS rewrite — PHP-oracle parity debugging
+# Dédalo v7 — parity & client debugging (post-cutover)
 
-**Every path in this skill is RELATIVE to the repo root** — the directory holding `package.json`, `src/` and `test/`. Never hard-code an absolute path: other developers check this repo out somewhere else entirely, and a machine-specific path makes the whole workflow unrunnable for them. Run the commands below from the repo root.
+**Every path here is RELATIVE to the repo root** (the directory holding `package.json`, `src/`, `test/`). Never hard-code an absolute path or a credential.
 
-The PHP reference (`../../v7_php_frozen/master_dedalo`, resolved from the repo root) is READ-ONLY and was the ORACLE: when TS and PHP disagreed, PHP was right unless it was a pinned live defect. Master spec `engineering/REWRITE_SPEC.md`; per-subsystem specs in `engineering/*_SPEC.md`.
+There is no live oracle. The PHP engine was decommissioned 2026-07-11; `v7_php_frozen/master_dedalo` (outside the repo) is historical reference for *how a behaviour was ported*, never something to verify against. What remains:
 
-## Environment
+- **Read-path parity** — `test/parity/*_differential.test.ts` replaying the frozen fixture store `test/parity/fixtures/oracle_harvest/` (`ORACLE_MODE` defaults to `fixtures`).
+- **Write-path contracts** — TS-native `test/unit/*_native.test.ts` gates.
+- **The client** — vanilla JS under `client/`, TS-owned, with an exact wire contract.
 
-- **Live PHP + shared Postgres**: differential tests read `PHP_API_BASE_URL` / `PHP_API_USERNAME` / `PHP_API_PASSWORD` from `../private/.env`. **Never write a credential into this file, a probe, or a test** — read them from the environment. Both engines read the SAME database — reads are safe, writes are NOT (see scratch twins).
-  ```shell
-  # psql against the same DB the engine uses; values come from ../private/.env,
-  # never from a hard-coded host/user/db (those differ on every machine).
-  set -a; . ../private/.env; set +a
-  psql -h "${DB_HOST:-/tmp}" -U "$DB_USER" "$DB_NAME"
-  ```
-  If `psql` is not on `PATH`, set `DEDALO_PG_BIN_PATH` to the client `bin/` directory rather than hard-coding an installation path.
-- **TS dev server** (needs `dangerouslyDisableSandbox`):
-  ```
-  SCRATCH=<session scratchpad>
-  pkill -f "bun run src/server.ts"; sleep 1
-  SERVER_TCP_PORT=3500 nohup bun run src/server.ts > $SCRATCH/server.log 2>&1 &
-  ```
-  Serves `http://localhost:3500/dedalo/core/page/?tipo=<tipo>&section_id=<id>&mode=edit&menu=true`. Restart after every source edit (no hot reload for the resolvers).
-- **Full suite**: `bun test` (needs `dangerouslyDisableSandbox`; ~2-4 min). Typecheck: `bunx tsc --noEmit 2>&1 | grep "error TS"` (some pre-existing errors in tool_export/portal_drag/diffusion tests — filter them out).
+## 1. Triage a red parity gate
 
-## Three verification layers (use in order)
+The parity tier is red on the suite DB **by construction**: every harvested gate was recorded against one installation's records (`entity: monedaiberica`), which the suite DB does not hold. So "red" alone says nothing. Ask, in order:
 
-### 1. In-process probe script (fastest TS-vs-PHP diff)
-Import BOTH the TS resolver and the `PhpApiClient`, call the same RQO through each, diff the projections.
+1. **Is it a known red?** Permanent reds are frozen per file AND per test name in `engineering/parity_baseline.json` (`parity_baseline_tripwire`; standalone: `bun run scripts/parity_baseline.ts --check`). A red NOT listed there is a regression. A listed red that now passes is ALSO a gate failure — bank the improvement (`scripts/parity_baseline.ts`), never hand-edit the JSON.
+2. **Fixture miss?** A request with no recorded interaction THROWS naming the hashed (and, for a `test`-TLD gate, the `unmapRqo`-unmapped) request. The gate changed its RQO, or the mapping in `src/core/test_data/test_tld_tipo_map.json` does not cover a new term. A re-harvest is impossible — fix the gate's request or the map.
+3. **Corpus absence?** The record the frozen answer describes is not on the suite DB (or is in the derived corpus's `refused.json`). Not an engine bug. The cure is the generic-TLD twin, not restoring the harvest-day snapshot.
+4. **Deliberate divergence?** TS intentionally differs from the frozen PHP shape. It must already have an `engineering/wire_contract/` entry and a gate-side transform of the fixture side (e.g. WC-001 `entries: []`, applied in `test/parity/normalize.ts`). No entry → it is not deliberate yet.
+5. **Engine bug.** Everything else. Fix the engine; the frozen shape is the contract.
 
-**Put the probe INSIDE the repo, at the repo root** (`probe_<name>.ts` — gitignored). That is what lets every import be **relative**: a probe written to an out-of-tree scratchpad cannot reach `src/` with a relative specifier, which is why this skill once carried absolute paths. Do not reintroduce them.
+**Never edit a fixture to make a gate green.** A fixture change is a deliberate contract edit: it ships with its `engineering/wire_contract/` entry the same day (rules: `engineering/WIRE_CONTRACT.md`), stating what changed and why.
 
-```ts
-// probe_portal.ts — at the repo root. All specifiers relative; no machine paths.
-import { config } from './src/config/config.ts';
-import { PhpApiClient } from './test/parity/php_client.ts';
-import { readSection } from './src/core/section/read.ts'; // (was resolve/read_rows.ts — deleted in the section rebuild)
+## 2. Retired differentials and their twins
 
-const client = new PhpApiClient();
-await client.login(config.phpReference.username as string, config.phpReference.password as string);
-const { body } = await client.call(structuredClone(rqo) as Record<string, unknown>);
-const phpData = (body.result as any).data;
-const tsData = (await readSection(rqo)).data; // readSection returns {context, data}
-// diff by a STABLE key: locator string, item id, tipo|section_tipo|section_id
+Most write-path and many corpus-bound differentials are GONE; their contracts live in TS-native twins. Where a contract went:
+
+- `engineering/ORACLE_HARVEST.md` — the DEC-14b punch list and § Generic-TLD replacement map (prose, one row per retired gate).
+- `engineering/twin_map.json` — derived by `scripts/twin_map.ts` from each twin's `@twin-of` / `@twin-status` header directives (retired / frozen-record / supplement). Example: the portal edit write contracts live in `test/unit/portal_edit_writes_native.test.ts`.
+
+A NEW contract is a native gate in `test/unit/`, building its situation on the generic `test` TLD (`dedalo-ts-testing`). Never a new differential; never `test.if(hasLivePhpOracle())` (false forever — `oracle_canary` names such blocks as permanently unreachable).
+
+## 3. In-process probe script (fastest)
+
+Put a probe at the repo root (`probe_<name>.ts` — gitignored) so every import is relative. Two useful shapes:
+
+- **Engine vs frozen capture** — under fixture mode `PhpApiClient.call()` (`test/parity/php_client.ts`) serves the frozen interaction with no network; diff it against the TS read (`readSectionRows` / `readSection` in `src/core/section/read.ts`) on the same RQO, through the same normalizers the gate uses (`test/parity/normalize.ts`).
+- **Engine vs itself** — call the dispatcher (`dispatchRqo` in `src/core/api/dispatch.ts`) or the subsystem function directly to isolate a layer.
+
+Diff on SET membership by a stable key first (locator string, `tipo|section_tipo|section_id`) — `missing in TS` / `extra in TS` — and reconcile order/duplicates last. A probe reads whichever database `../private/.env` points at (the `bun test` preloads that repoint to the suite DB do not run for `bun probe_x.ts`). To probe the suite DB, set `DB_NAME=<app db>_test` in the probe's environment (process env outranks `.env`). Never probe-write the application database.
+
+## 4. Driving the client (Chrome DevTools MCP)
+
+When a bug is reported against the running app, the browser shows the WIRE contract a projection misses. Two servers to drive:
+
+- **`bun run test:client:server`** — the suite server on the suite DB, same login credential and fixtures as `bun run test:client`, kept alive for browsing. Preferred: nothing you do there touches application data.
+- **`bun run dev`** (`scripts/dev.ts`: `bun --watch` under a supervisor + the CSS watcher) — the port comes from `SERVER_TCP_PORT` in `../private/.env`. It reloads on TS edits; no manual restart. `.less` edits need `bun run css:build`; tool JS has no cache-bust (hard reload). Login is real: mint a session (`createSession` in `src/core/security/session_store.ts`) and inject it as the `dedalo_ts_session` cookie via the browser API (in-page `document.cookie` cannot set it); revoke it after.
+
 ```
-
-Run it from the repo root: `bun probe_portal.ts` (needs `dangerouslyDisableSandbox`). Credentials come from `../private/.env` via `config` — never inline them.
-
-Diff on SET membership by a stable key first (`missing in TS` / `extra in TS`), not deep-equal — ordering/duplicate mismatches are often separate (PHP-side) issues to isolate last. Keep probes around while iterating; they are the cheapest regression check.
-
-> If a probe must live in the session scratchpad instead, import via a path computed from the repo root rather than a literal — e.g. `const REPO = new URL('../', import.meta.url)` — but the repo-root probe is simpler and is the recommended form.
-
-### 2. Differential gate (`test/parity/*_differential.test.ts`)
-The durable form of a probe. Pattern (exemplar: `portal_edit_writes_differential.test.ts`):
-- Self-skip when creds absent: `if (!hasPhpCredentials()) return;` in EVERY test + `beforeAll`.
-- Drive the SAME RQO through `PhpApiClient.call()` and the TS `dispatchRqo`/`readSection`; compare a PROJECTION (define exactly which fields — the projection IS the contract; a field you exclude is a field you are not testing — see the client-bug lesson below).
-- Table-driven over a corpus where possible (one `test()` per row).
-
-### 3. Real client via Chrome DevTools MCP (finds CLIENT-CONTRACT bugs projections miss)
-When a bug is reported against the running app ("X is not resolved in client"), the browser is the oracle for the WIRE contract:
-```
-navigate_page  → http://localhost:3500/dedalo/core/page/?tipo=...&section_id=...&mode=edit&menu=true
-(wait ~4-5s for render)
+navigate_page  → <origin>/dedalo/core/page/?tipo=<tipo>&section_id=<id>&mode=edit&menu=true
 take_screenshot → confirm the visual symptom / fix
 list_console_messages {types:["error"]}
-list_network_requests {resourceTypes:["xhr","fetch"]}  → find non-200s
-get_network_request <reqid>  → read Request Body (the exact client RQO) + Response Body
+list_network_requests {resourceTypes:["xhr","fetch"]}  → find the failing call
+get_network_request <reqid>  → the exact client RQO + response body
 ```
-A Bun 500 response embeds the error + stack as base64 in `<script id="__bunfallback">`; a 400 is a schema rejection with the failing path (`{"path":["show","ddo_map",0,"section_tipo"],"message":"Expected string, received array"}`). Reproduce the failing Request Body verbatim in a probe/gate, fix, restart server, re-navigate, confirm screenshot + zero errors. The Chrome session persists login (root).
 
-## Scratch-twin write hygiene (MANDATORY for save/round-trip parity)
+Attach a dialog handler first: one `alert()`/`confirm()` freezes the renderer and every later call times out with a misleading protocol error. API failures are **envelope v2 JSON** — `{"ok": false, "request_id": …, "error": {"code", "category", "message", "label_key", "retryable", "details"?}}` (`engineering/ERRORS_SPEC.md`, `dedalo-errors-ts`); `DEDALO_DEBUG_API_ERRORS=true` echoes the exception text on a dev server, and `request_id` joins the response to the server log. Reproduce the failing request body verbatim in a probe or native gate, fix, re-navigate, confirm screenshot + zero console errors.
 
-NEVER mutate a real record to test writes — both engines share one DB. Seed disposable TWIN records by SQL, mutate the twins, compare, delete in `afterAll`. Pattern: read-only parity on the real record first → SQL-seed twin-A and twin-B → TS mutates twin-A while PHP reads it, PHP mutates twin-B while TS reads it → `data::text` byte-diff + counter parity → `afterAll` cleanup incl. `matrix_time_machine` rows. This is a locked user decision for the §15657 dataframe round-trip.
+When a widget renders blank, **fix the server payload first** — the client is vanilla JS with an exact wire contract (`dedalo-section-family-ts` for the section context fields it requires).
+
+## 5. Scratch-surface write hygiene
+
+Writes are verified on the **suite DB** (marker-guarded — every test-data writer calls `assertTestDatabase()`), never on the application database and never on a record you did not create. Build the surface through the engine's own write path (`ensureSituation` on a `zz*` TLD, `createScratchRecord`, explicit-id fixtures), mutate it through the real door (`save_component.ts`, `src/core/relations/save.ts`, the API), assert, and clean before AND after with a zero-residue check — including `matrix_time_machine` rows. There is no reserved `section_id` band.
 
 ## Isolating a diff (the discipline that converges fast)
 
 1. Get `missing in TS` / `extra in TS` by stable key — ignore order/dupes at first.
-2. For each MISSING item, find WHY PHP emits it: read the PHP class flow (`dedalo-server-debugging` skill), or probe PHP's raw output for that sub-item. Common causes seen: hide-block ddo not flattened, empty item not emitted, multi-target array flattened, self resolved to caller not targets, a whole model 500ing.
-3. For each EXTRA item, check for a PHP DUPLICATE emission (PHP often emits the same item twice; TS set-equal is correct) — these are PHP-side and get ledgered, not "fixed" in TS.
-4. Only AFTER the sets match, reconcile ordering/duplicates (usually the last, PHP-side, phase).
+2. For each MISSING item, find why the frozen capture has it: read the ported TS path, and — as history — the frozen PHP class it came from. Common causes seen: hide-block ddo not flattened, empty item not emitted, multi-target array flattened, self resolved to caller not targets.
+3. For each EXTRA item, check for a duplicate emission in the frozen capture (PHP often emitted the same item twice; TS set-equal is correct) — a divergence to ledger, not to replicate.
+4. Only AFTER the sets match, reconcile ordering/duplicates.
 
-## Pinned PHP LIVE DEFECTS — do NOT replicate; diverge and gate asymmetrically
+## Known PHP defects — do not replicate
 
-When PHP is provably wrong (crashes, ignores documented inputs, corrupts), TS does the CORRECT thing and the gate asserts the divergence on BOTH sides (an asymmetric/pin test), with a `(!)` note + reproduction in `rewrite/STATUS.md`. Never silently match a defect. Examples accumulated: TM read ignores `sqo.filter`; `component_calculation` READ crashes on unstored value (`array_sum`); counters double-unwrap kills `modify_counter`; the PHP install's backup cron produces ZERO-BYTE dumps (pg_dump 17 vs server 18); DROP…CASCADE footgun in `rebuild_db_functions`. If you find a new one, PIN it (assert both behaviors) and ledger it numbered.
+Where the frozen PHP behaviour was provably wrong (crashes, ignored documented inputs, corrupted data), TS does the CORRECT thing and the divergence is a `engineering/wire_contract/` entry with a gate that pins the TS side. Never silently match a defect.
 
 ## Discipline
 
-- Verify EVERY claim differentially before writing it as done — no "this should match".
-- Full suite green + zero fixture changes at each phase gate (a needed fixture change means behavior drifted — fix the code).
-- Commit per phase: Conventional Commits, backtick Dédalo identifiers, end with `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`. Never `git reset --hard` without double confirmation.
-- Update `rewrite/STATUS.md` in the same commit as the fix — the ledger is the source of truth for what is/isn't covered.
+- Verify every claim before writing it as done — no "this should match".
+- Judge regressions by diffing failing-test NAMES against a baseline (`engineering/parity_baseline.json`, `engineering/unit_baseline.json`), never by pass/fail counts.
+- Commit per logical change: Conventional Commits, concise. Never `git reset --hard` without explicit confirmation.
+- State that a gate or a skill must verify belongs in `engineering/` or next to the code; measured state goes to rewrite/LEDGER.md (gitignored, local-only).

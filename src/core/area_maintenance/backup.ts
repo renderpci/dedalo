@@ -1,10 +1,10 @@
 /**
  * Database backup (PHP core/backup/class.backup.php init_backup_sequence +
- * get_backup_files, behind the make_backup maintenance widget) — TS-NATIVE by
- * design: the TS server dumps the SHARED database with its own pg_dump into
- * its OWN backup directory (v7_ts/private/backups/db), never the PHP
- * install's DEDALO_BACKUP_PATH. File naming and the custom-format dump
- * command mirror PHP:
+ * get_backup_files, behind the make_backup maintenance widget) — TS-NATIVE:
+ * the server dumps the application database with its own pg_dump into its
+ * backup directory (`getBackupDir`: DEDALO_BACKUP_DIR, else
+ * <privateDir>/backups/db). File naming and the custom-format dump command
+ * keep the PHP-era shape, so existing backup sets stay readable:
  *
  *   <Y-m-d_His>.<db>.postgresql_<user>_forced_dbv<maj-min-patch>.custom.backup
  *   pg_dump -F c -b <db>  (spawned detached; nice'd like PHP's nohup wrapper)

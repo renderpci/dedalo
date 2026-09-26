@@ -27,10 +27,11 @@
  * server spawns and sweeps it after the run.
  *
  * SCRATCH-ID LAW (test/helpers/acl_identity_fixture.ts). `matrix_projects` is an
- * identity table: the id is EXPLICIT, in the reserved >= 900000 band, asserted
- * before any INSERT or DELETE, and never allocated through
- * `insertMatrixRecordWithCounter` (which would leave residue in the shared
- * counters). 930031 is distinct from that helper's 930021 so the two can coexist.
+ * identity table: the id is EXPLICIT, owned by this fixture, asserted before
+ * any INSERT or DELETE, and never allocated through
+ * `insertMatrixRecordWithCounter`. It is NOT a reserved band (see below):
+ * isolation is the suite database and its marker. 930031 is distinct from that
+ * helper's 930021 so the two can coexist.
  */
 
 import { encodeForJsonb } from '../db/json_codec.ts';

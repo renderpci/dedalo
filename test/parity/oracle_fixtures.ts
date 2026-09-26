@@ -316,7 +316,7 @@ export function lookupInteraction(
 		throw new Error(
 			`ORACLE_MODE=fixtures: no recorded oracle response for ${kind} request action='${String(
 				rqo.action,
-			)}' (hash ${hash}${mapped ? ', hashed after unmapRqo through src/core/test_data/test_tld_tipo_map.json' : ''}). Either the gate issues a request that was never harvested (re-run \`bun run scripts/oracle_harvest.ts\` while the PHP oracle is alive), or the request is non-deterministic / side-effecting and the gate belongs in FIXTURE_EXEMPT_GATES (test/parity/oracle_fixtures.ts). See engineering/ORACLE_HARVEST.md.${mapped ? `\nUnmapped request: ${canonicalJson(unmapped)}` : ''}`,
+			)}' (hash ${hash}${mapped ? ', hashed after unmapRqo through src/core/test_data/test_tld_tipo_map.json' : ''}). The gate issues a request that was never harvested — the store is FROZEN and a re-harvest is impossible (the PHP oracle is decommissioned), so either the request drifted (restore the harvested request, or change the fixture as a deliberate contract edit with a same-day engineering/wire_contract/ entry) or the gate's contract belongs in a TS-native test/unit/*_native.test.ts twin. See engineering/ORACLE_HARVEST.md.${mapped ? `\nUnmapped request: ${canonicalJson(unmapped)}` : ''}`,
 		);
 	}
 	return found;

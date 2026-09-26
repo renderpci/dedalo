@@ -9,7 +9,7 @@
  * ONE media tree serves two audiences at the same URLs, with no file duplication:
  *
  *  - Rule A (work system): a logged-in user carries the FIXED-NAME cookie
- *    `dedalo_media_auth`, whose daily-rotated value must exist as a zero-byte marker
+ *    `dedalo_media_auth`, whose per-session value must exist as a zero-byte marker
  *    in <media>/.publication/auth/{value}. Grants unrestricted media access.
  *  - Rule B (publication): an anonymous user may read only files of PUBLISHED records,
  *    and only inside the configured public quality folders. The web server stats
@@ -61,9 +61,10 @@ import {
 import { assertTestMediaRoot } from './test_media_root.ts';
 
 /**
- * The auth cookie NAME is fixed; only its VALUE rotates (daily). This is what lets the
- * generated rules stay static and lets nginx validate without a config reload — the
- * marker file is named by the value, so the rules never mention a value at all.
+ * The auth cookie NAME is fixed; only its VALUE changes (one per session, since
+ * 2026-08-24 — `session_media.ts`). This is what lets the generated rules stay static
+ * and lets nginx validate without a config reload — the marker file is named by the
+ * value, so the rules never mention a value at all.
  * NEVER reintroduce rotating cookie NAMES (the pre-v7 design; it forced a reload).
  */
 export const MEDIA_AUTH_COOKIE = 'dedalo_media_auth';
@@ -280,7 +281,8 @@ export interface RuleFileStatus {
  *  2. .env DEDALO_MEDIA_ACCESS_MODE (via the typed catalog).
  *  3. the legacy DEDALO_PROTECT_MEDIA_FILES=true, honored as 'private' (also step 2's job).
  *
- * Anything that is not exactly 'private'/'publication' resolves to false (protection off).
+ * Nothing set resolves to 'publication' (fail-closed default since 2026-08-24,
+ * `readMediaAccessMode`); only an explicit opt-out resolves to false (protection off).
  * getServerState() re-reads the state file per call, so a mode change from the widget
  * takes effect immediately — no restart.
  */
@@ -689,8 +691,8 @@ export function buildHtaccess(
 		'# 0. The marker store itself is never served.',
 		'RewriteRule (^|/)\\.publication(/|$) - [R=404,L]',
 		'',
-		'# 1. Rule A: logged-in Dédalo users. Fixed cookie name; the daily-rotated value',
-		'#    must exist as an auth marker (synced at login).',
+		'# 1. Rule A: logged-in Dédalo users. Fixed cookie name; the per-session value',
+		'#    must exist as an auth marker (laid at login, unlinked when the session ends).',
 		`RewriteCond %{HTTP_COOKIE} (?:^|;\\s*)${MEDIA_AUTH_COOKIE}=([a-f0-9]{128}) [NC]`,
 		`RewriteCond "${root}/.publication/auth/%1" -f`,
 		'RewriteRule ^ - [L]',
@@ -760,8 +762,8 @@ export function buildNginxConf(mode: RuleMode, qualities: string[] = []): string
 		'#',
 		'# (!) RELOAD REQUIRED. Unlike the Apache .htaccess (read per request), nginx reads',
 		'# this at reload: after a mode change, run `nginx -t && nginx -s reload` or the OLD',
-		'# rules keep serving. The daily cookie ROTATION needs no reload — that is exactly',
-		'# why the cookie NAME is fixed and only its value rotates.',
+		"# rules keep serving. A new session's cookie VALUE needs no reload — that is exactly",
+		'# why the cookie NAME is fixed and only its value changes.',
 		'#',
 		'# Operational notes:',
 		'#  - Do NOT enable open_file_cache on these locations (or keep open_file_cache_valid',
@@ -1130,12 +1132,12 @@ export function retireLegacyAuthStore(): void {
 }
 
 /**
- * Mirror the valid cookie values (today + yesterday) as zero-byte marker files: the web
- * server authorizes rule A with `-f auth/{cookie_value}`. Any OTHER file in the dir is
- * removed — that is the daily rotation, and it is what expires a stolen cookie.
+ * Mirror the valid cookie values (the live sessions' keys) as zero-byte marker files: the
+ * web server authorizes rule A with `-f auth/{cookie_value}`. Any OTHER file in the dir
+ * is removed — that is what expires the credential of a session that has ended.
  *
- * Called at EVERY login, so the store self-heals after a redeploy or a wiped media dir
- * without anyone having to notice.
+ * Called by `reconcileAuthMarkers` (login and the hourly session sweeper), so the store
+ * self-heals after a redeploy or a wiped media dir without anyone having to notice.
  *
  * The marker files hold no content: THE FILENAME IS THE CREDENTIAL. Values are therefore
  * validated as strict sha512 hex before they can reach the disk (path traversal).

@@ -1247,11 +1247,11 @@ export async function recomputeExternalRelation(
 	const table = await getMatrixTableFromTipo(targetSection);
 	if (table === null) return unchanged;
 
-	// The recompute law over one consistent snapshot, in PIECES so the caller's
-	// allowShrink decides what persists: `kept` = existing entries still
-	// referenced (stored order, the full law's keep half), `additions` = new
-	// references appended with the next item ids (PHP save id assignment).
-	// Full law = kept+additions; grow-only merge = existing+additions.
+	// The recompute law over one consistent snapshot, in PIECES so the
+	// degraded-seed rule below decides what persists: `kept` = existing entries
+	// still referenced (stored order, the full law's keep half), `additions` =
+	// new references appended with the next item ids (PHP save id assignment).
+	// Full law = kept+additions; degraded-seed merge = existing+additions.
 	const compute = async (
 		lock: boolean,
 	): Promise<{

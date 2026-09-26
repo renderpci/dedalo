@@ -14,7 +14,7 @@ is really closed before you expose media to the internet.
 One media tree serves two audiences at the same URLs, **with no file duplication**:
 
 * **Rule A — the work system.** A logged-in user carries the fixed-name cookie
-  `dedalo_media_auth`. Its daily-rotated value must exist as a zero-byte marker file in
+  `dedalo_media_auth`. Its per-session value must exist as a zero-byte marker file in
   `<media>/.publication/auth/{value}`. Rule A grants unrestricted media access: masters,
   unpublished records, everything.
 * **Rule B — publication.** An anonymous visitor may read only the files of **published**
@@ -273,7 +273,7 @@ nginx reads its include at **reload**, not per request.
     nginx keeps serving the **old** rules while the widget cheerfully reports the new mode.
     The widget's success message says so, and it reports `rules.nginx.reload_required`.
 
-    What does **not** need a reload: the **daily cookie rotation**. The cookie *name* is fixed
+    What does **not** need a reload: a **new session's cookie value**. The cookie *name* is fixed
     and the rules never mention a *value* — only the marker file whose name is the value. That
     is the entire reason the name is fixed.
 
