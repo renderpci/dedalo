@@ -5,10 +5,11 @@
  *
  *   1. Bun pin — every GitHub workflow using setup-bun pins via
  *      `bun-version-file: .bun-version` (never an inline version), and the
- *      .gitlab-ci.yml hermetic image is the CI image by digest, as uid 1001,
- *      whose `# fp-<fingerprint>` equals sha256(ci/Dockerfile ++ .bun-version).
- *      The pin is load-bearing: Bun.sql jsonb-inference drift is a
- *      data-corruption class.
+ *      tier job on both hosts runs the ONE locked CI image (ci/image.json) as
+ *      uid 1001, and a tier running IN the image runs one built from THIS
+ *      checkout's sha256(ci/Dockerfile ++ .bun-version) — the image installs
+ *      exactly .bun-version (rule 1b). The pin is load-bearing: Bun.sql
+ *      jsonb-inference drift is a data-corruption class.
  *   2. Oracle honesty — every self-hosted workflow that runs test/parity or
  *      scripts/verify.ts sets ORACLE_REQUIRED: "1", so an absent PHP oracle is
  *      a RED canary, never a silent green (the AGENTS.md "oracle trap").
@@ -120,6 +121,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Glob } from 'bun';
 import {
+	CI_IMAGE_NAME,
 	CI_IMAGE_REF,
 	CI_IMAGE_REFERENCES,
 	ciImageFingerprint,
@@ -605,10 +607,19 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 function runInterpolations(src: string): string[] {
 	const hits: string[] = [];
 	let inRun = false;
+	// The column of the `run` key: its script is every following line indented DEEPER. A
+	// line at or left of it (a sibling key, the next `- name:`, the next JOB) ends it —
+	// the key-name list alone let a run block run on into the next job's `outputs:`.
+	let runColumn = -1;
 	for (const [index, raw] of src.split('\n').entries()) {
-		if (/^\s*(?:-\s+)?run:\s*[|>]?[-+]?\s*$/.test(raw) || /^\s*(?:-\s+)?run:\s+\S/.test(raw))
+		const indent = raw.length - raw.trimStart().length;
+		if (/^\s*(?:-\s+)?run:\s*[|>]?[-+]?\s*$/.test(raw) || /^\s*(?:-\s+)?run:\s+\S/.test(raw)) {
 			inRun = true;
-		else if (/^\s*-?\s*(?:name|uses|with|env|if|id|shell|working-directory):/.test(raw)) {
+			runColumn = raw.indexOf('run:');
+		} else if (
+			/^\s*-?\s*(?:name|uses|with|env|if|id|shell|working-directory):/.test(raw) ||
+			(inRun && raw.trim() !== '' && indent <= runColumn)
+		) {
 			inRun = false;
 		}
 		if (!inRun) continue;
@@ -1418,21 +1429,31 @@ describe('CI workflow tripwire', () => {
 	// Rule 1b (2026-09-26) — ONE CI IMAGE on every host (scripts/lib/ci_image.ts). Until
 	// this date only ci:local ran the image: GitHub ran bare ubuntu-latest + setup-bun +
 	// apt at run time, GitLab bare oven/bun as root (no git; root defeats the uid gates),
-	// so a local green predicted neither and CI stayed the debugger. Now:
-	//   - ci/image.json's fingerprint is THIS checkout's sha256(ci/Dockerfile ++
-	//     .bun-version), recomputed from the bytes — a .bun-version bump (the load-bearing
-	//     Bun.sql pin) or a Dockerfile edit is red until `bun run ci:image:pin` moves it;
-	//   - every dedalo-ci digest literal on either host equals the lock's, and every file
-	//     holding one is in CI_IMAGE_REFERENCES (the updater's list — else it misses one);
-	//   - every GitHub job that runs a tier root runs IN the image as uid 1001, and
-	//     GitLab's hermetic job likewise.
-	test('every tier on every host runs the ONE locked CI image, of THIS definition, as uid 1001', () => {
+	// so a local green predicted neither and CI stayed the debugger.
+	//
+	// WHAT IS MEASURED, and why not "lock == checkout". The outcome that matters is that
+	// a tier runs in an image built from THIS checkout's definition — so, IN the image
+	// (DEDALO_CI_IMAGE=1), /etc/dedalo-ci-image must equal the checkout's fingerprint.
+	// That is green where ci:local builds a not-yet-published definition, and red on a
+	// host still running the locked older build: the "publish, then `bun run
+	// ci:image:pin`" signal. Asserting lock == checkout here instead DEADLOCKED (review
+	// 2026-09-26): a Dockerfile/.bun-version change was red in hermetic, so the pre-push
+	// gate refused the push that ci-image.yml needs in order to publish it. The lock's
+	// freshness is nightly's `ci:image:pin --check` (tier_wiring leg D credits it).
+	test('every tier on every host runs the ONE locked CI image, as uid 1001, built from THIS definition', () => {
 		const lock = readCiImageLock(repoRoot);
-		expect(
-			lock.fingerprint,
-			'ci/image.json pins a build of ANOTHER ci/Dockerfile/.bun-version. Once ci-image.yml has published this definition: bun run ci:image:pin',
-		).toBe(ciImageFingerprint(repoRoot));
+		expect(lock.image, 'ci/image.json names another repository').toBe(CI_IMAGE_NAME);
 
+		// (a) IN the image: the image IS this checkout's definition.
+		if (process.env.DEDALO_CI_IMAGE === '1') {
+			expect(
+				readFileSync('/etc/dedalo-ci-image', 'utf8').trim(),
+				'this tier runs in a CI image built from ANOTHER ci/Dockerfile/.bun-version. Once ci-image.yml has published this definition: bun run ci:image:pin (engineering/CI.md "The pin")',
+			).toBe(ciImageFingerprint(repoRoot));
+		}
+
+		// (b) Every digest literal on either host is the lock's, and the updater's file
+		//     list is exactly the files holding one (else ci:image:pin leaves one behind).
 		const hosts = [...allWorkflows, { rel: '.gitlab-ci.yml', src: read('.gitlab-ci.yml') }];
 		const holders: string[] = [];
 		for (const { rel, src } of hosts) {
@@ -1445,52 +1466,92 @@ describe('CI workflow tripwire', () => {
 		}
 		expect(
 			[...holders].sort(),
-			'CI_IMAGE_REFERENCES (scripts/lib/ci_image.ts) must list exactly the files holding a dedalo-ci digest, or ci:image:pin leaves one behind',
+			'CI_IMAGE_REFERENCES (scripts/lib/ci_image.ts) must list exactly the files holding a dedalo-ci digest',
 		).toEqual([...CI_IMAGE_REFERENCES].sort());
 
-		// Job blocks of a GitHub workflow: `  <name>:` under `jobs:` up to the next one.
-		const jobBlocks = (src: string): Array<{ name: string; body: string }> => {
-			const jobs = src.slice(src.search(/^jobs:\s*$/m));
-			return [...jobs.matchAll(/^ {2}([A-Za-z0-9_-]+):\s*\n((?:(?: {4}.*)?\n)*)/gm)].map((m) => ({
-				name: m[1] as string,
-				body: m[2] as string,
-			}));
-		};
-		const runsTierRoot = (body: string) =>
-			/run:\s*bash scripts\/ci\/(?:hermetic|db_tier|instance_tier)\.sh\b/.test(body);
-		const inImageAsRunner = (body: string) =>
-			/^ {4}container:\s*\n {6}image:\s*ghcr\.io\/renderpci\/dedalo-ci@sha256:[0-9a-f]{64}\s*\n {6}options:[^\n]*--user 1001\b/m.test(
-				body,
-			);
-		// Controls: the parser finds a tier job, and tells an in-image job from a bare one.
-		const control = `jobs:\n  a:\n    runs-on: x\n    container:\n      image: ghcr.io/renderpci/dedalo-ci@sha256:${'0'.repeat(64)}\n      options: --user 1001\n    steps:\n      - run: bash scripts/ci/db_tier.sh\n  b:\n    runs-on: x\n    steps:\n      - run: bash scripts/ci/hermetic.sh\n`;
-		const parsed = jobBlocks(control);
-		expect(parsed.map((j) => [j.name, runsTierRoot(j.body), inImageAsRunner(j.body)])).toEqual([
-			['a', true, true],
-			['b', true, false],
-		]);
-
-		const tierJobs: string[] = [];
-		const bare: string[] = [];
-		for (const { rel, src } of allWorkflows) {
-			if (!rel.startsWith('.github/workflows/')) continue;
-			for (const job of jobBlocks(src)) {
-				if (!runsTierRoot(job.body)) continue;
-				tierJobs.push(`${rel}#${job.name}`);
-				if (!inImageAsRunner(job.body)) bare.push(`${rel}#${job.name}`);
+		// (c) Every job that runs a tier root runs IN the image as uid 1001 — per job, on
+		//     both hosts. Jobs are found line by line (a trailing comment, a `run: |`
+		//     block, `./scripts/…` all count), and EVERY tier-root mention on a code line
+		//     must fall inside a found job, so the finder cannot go blind on one job.
+		const TIER_ROOT = /(?:^|[\s"'])(?:\.\/)?scripts\/ci\/(?:hermetic|db_tier|instance_tier)\.sh\b/;
+		const jobsOf = (src: string, indent: number) => {
+			const key = new RegExp(`^ {${indent}}([A-Za-z0-9_.-]+):\\s*(?:#.*)?$`);
+			const lines = src.split('\n');
+			let inJobs = indent === 0; // GitLab jobs are top-level keys
+			const jobs: Array<{ name: string; body: string[] }> = [];
+			let orphanMentions = 0;
+			for (const line of lines) {
+				if (indent > 0 && /^jobs:\s*(?:#.*)?$/.test(line)) {
+					inJobs = true;
+					continue;
+				}
+				if (indent > 0 && /^\S/.test(line) && !/^jobs:/.test(line)) inJobs = false;
+				const m = inJobs ? line.match(key) : null;
+				if (m) {
+					jobs.push({ name: m[1] as string, body: [] });
+					continue;
+				}
+				const code = line.trim().startsWith('#') ? '' : line;
+				const current = jobs.at(-1);
+				if (inJobs && current && (line.trim() === '' || /^\s/.test(line))) current.body.push(line);
+				else if (TIER_ROOT.test(code)) orphanMentions++;
 			}
+			return {
+				tierJobs: jobs
+					.filter((j) => j.body.some((l) => !l.trim().startsWith('#') && TIER_ROOT.test(l)))
+					.map((j) => ({ name: j.name, body: j.body.join('\n') })),
+				orphanMentions,
+			};
+		};
+		const IMAGE = String.raw`ghcr\.io\/renderpci\/dedalo-ci@sha256:[0-9a-f]{64}`;
+		const githubInImage = (body: string) =>
+			new RegExp(
+				String.raw`^ {4}container:\s*(?:#.*)?\n(?: {6}.*\n)*? {6}image:\s*${IMAGE}\s*$`,
+				'm',
+			).test(body) &&
+			/^ {4}container:\s*(?:#.*)?\n(?: {6}.*\n)*? {6}options:[^\n]*--user 1001\b/m.test(body);
+		const gitlabInImage = (body: string) =>
+			new RegExp(String.raw`^ {2}image:\s*\n(?: {4}.*\n)*? {4}name:\s*${IMAGE}\s*$`, 'm').test(
+				body,
+			) && /^ {2}image:\s*\n(?: {4}.*\n)*? {4}docker:\s*\n {6}user:\s*"1001"\s*$/m.test(body);
+
+		// Controls: a trailing comment, a `run: |` block and `./scripts/…` are all found;
+		// an in-image job is told from a bare one; a mention outside any job is counted.
+		const d = '0'.repeat(64);
+		const control = jobsOf(
+			`jobs:\n  a: # note\n    container:\n      image: ghcr.io/renderpci/dedalo-ci@sha256:${d}\n      options: --user 1001\n    steps:\n      - run: |\n          bash ./scripts/ci/db_tier.sh\n  b:\n    steps:\n      - run: bash scripts/ci/hermetic.sh\n`,
+			2,
+		);
+		expect(control.tierJobs.map((j) => [j.name, githubInImage(`${j.body}\n`)])).toEqual([
+			['a', true],
+			['b', false],
+		]);
+		const glControl = jobsOf(
+			`hermetic:\n  image:\n    name: ghcr.io/renderpci/dedalo-ci@sha256:${d}\n    docker:\n      user: "1001"\n  script:\n    - bash scripts/ci/hermetic.sh\n`,
+			0,
+		);
+		expect(glControl.tierJobs.map((j) => gitlabInImage(`${j.body}\n`))).toEqual([true]);
+
+		const bare: string[] = [];
+		let found = 0;
+		const scan = (rel: string, src: string, indent: number, inImage: (b: string) => boolean) => {
+			const { tierJobs, orphanMentions } = jobsOf(src, indent);
+			expect(orphanMentions, `${rel}: a tier root invoked outside any job the finder sees`).toBe(0);
+			for (const job of tierJobs) {
+				found++;
+				if (!inImage(`${job.body}\n`)) bare.push(`${rel}#${job.name}`);
+			}
+		};
+		for (const { rel, src } of allWorkflows) {
+			if (rel.startsWith(join('.github', 'workflows') + '/')) scan(rel, src, 2, githubInImage);
 		}
-		// Anti-vacuity: the three hosted tiers are found, or the parser went blind.
-		expect(tierJobs.length, `tier jobs found: ${tierJobs.join(', ')}`).toBeGreaterThanOrEqual(3);
+		scan('.gitlab-ci.yml', read('.gitlab-ci.yml'), 0, gitlabInImage);
+		// Anti-vacuity: GitHub's hermetic/db/instance + GitLab's hermetic.
+		expect(found, 'tier jobs found on both hosts').toBeGreaterThanOrEqual(4);
 		expect(
 			bare,
-			'a GitHub job running a tier root outside the CI image (container: image: <locked digest>, options: --user 1001):',
+			'a job running a tier root outside the locked CI image as uid 1001 (GitHub: container: image + options --user 1001; GitLab: image: name + docker: user "1001"):',
 		).toEqual([]);
-
-		expect(
-			read('.gitlab-ci.yml'),
-			'.gitlab-ci.yml: hermetic must run as the runner uid, never root',
-		).toMatch(/^\s*docker:\s*\n\s*user:\s*"1001"\s*$/m);
 	});
 
 	// Binds to BOTH tiers: the self-hosted jobs now live in workflows-selfhosted/, and the

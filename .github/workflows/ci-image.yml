@@ -3,10 +3,11 @@
 # WHAT IT IS FOR. The executing tiers (ci.yml, db.yml) and `bun run ci:local -- --docker`
 # run INSIDE this image, so a verdict is a property of the commit and not of whichever
 # runner or Mac judged it (ci/Dockerfile header: the unit tier measured 25 red files on
-# a bare runner against 3 on a developer box — missing media tools, not code). The
-# workflows pin the image by DIGEST (rule 12 of test/unit/ci_workflow_tripwire.test.ts);
-# this workflow produces the digests, and Dependabot's docker ecosystem proposes the pin
-# bumps. Exactness with an updater — the .bun-version rule.
+# a bare runner against 3 on a developer box — missing media tools, not code). Every
+# host runs the digest ci/image.json locks (rule 1b of test/unit/ci_workflow_tripwire.test.ts);
+# this workflow produces the digests and `bun run ci:image:pin` moves the lock to one
+# (Dependabot cannot: it does not see workflow `container:` images, dependabot-core#5819).
+# Exactness with an updater — the .bun-version rule.
 #
 # MULTI-ARCH, NATIVELY. linux/amd64 is what GitHub runs; linux/arm64 is what an
 # Apple-Silicon Mac runs `ci:local` on without emulation. Each arch builds on its OWN

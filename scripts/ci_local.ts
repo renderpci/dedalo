@@ -35,8 +35,8 @@
  *
  *   --docker. The tier scripts run INSIDE THE CI IMAGE (ci/Dockerfile — the image the
  *   workflows run in) through ci/compose.yml: the db/instance tiers against the SAME
- *   pgvector digest db.yml's service pins, reached at 127.0.0.1:5432 exactly as a hosted
- *   job reaches it; the hermetic tier with no database at all, as on its runner. Nothing
+ *   pgvector digest db.yml's service pins, reached by its name `postgres` exactly as a
+ *   hosted container job reaches it; the hermetic tier with no database at all, as on its runner. Nothing
  *   is read from ../private — not even the connection. Every CI-vs-Mac difference that
  *   made the runner the debugger (2026-09: 25 red unit files there against 3 here, all of
  *   them missing ffmpeg/magick/poppler/mariadb) is gone by construction. See
@@ -727,7 +727,7 @@ function docker(
 	};
 }
 
-/** sha256(ci/Dockerfile ++ .bun-version) — the image's identity, same bytes ci-image.yml hashes. */
+/** The image's `org.dedalo.ci.fingerprint` label, or undefined when it is not local. */
 function imageLabel(ref: string): string | undefined {
 	const inspect = docker([
 		'image',

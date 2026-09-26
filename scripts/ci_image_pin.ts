@@ -30,11 +30,30 @@ import {
 const REPO_ROOT = join(import.meta.dir, '..');
 const REPOSITORY = 'renderpci/dedalo-ci';
 
+/** The media types of a multi-arch INDEX — the only thing the pin may name. */
+const INDEX_TYPES = new Set([
+	'application/vnd.oci.image.index.v1+json',
+	'application/vnd.docker.distribution.manifest.list.v2+json',
+]);
+
+async function ghcr(url: string, init?: RequestInit): Promise<Response> {
+	try {
+		return await fetch(url, { ...init, signal: AbortSignal.timeout(30_000) });
+	} catch (error) {
+		throw new Error(
+			`ghcr.io unreachable (${(error as Error).message}) — the pin needs the registry; nothing was changed.`,
+		);
+	}
+}
+
 async function publishedDigest(tag: string): Promise<string> {
-	const tokenResponse = await fetch(`https://ghcr.io/token?scope=repository:${REPOSITORY}:pull`);
-	if (!tokenResponse.ok) throw new Error(`ghcr token: HTTP ${tokenResponse.status}`);
-	const { token } = (await tokenResponse.json()) as { token: string };
-	const manifest = await fetch(`https://ghcr.io/v2/${REPOSITORY}/manifests/${tag}`, {
+	const tokenResponse = await ghcr(`https://ghcr.io/token?scope=repository:${REPOSITORY}:pull`);
+	const tokenBody = (await tokenResponse.json().catch(() => null)) as { token?: string } | null;
+	if (!tokenResponse.ok || typeof tokenBody?.token !== 'string') {
+		throw new Error(`ghcr token: HTTP ${tokenResponse.status}, no token in the reply`);
+	}
+	const { token } = tokenBody;
+	const manifest = await ghcr(`https://ghcr.io/v2/${REPOSITORY}/manifests/${tag}`, {
 		method: 'HEAD',
 		headers: {
 			Authorization: `Bearer ${token}`,
@@ -55,13 +74,28 @@ async function publishedDigest(tag: string): Promise<string> {
 	if (!manifest.ok || digest === null || !/^sha256:[0-9a-f]{64}$/.test(digest)) {
 		throw new Error(`ghcr manifest ${tag}: HTTP ${manifest.status}, digest ${digest}`);
 	}
+	// ghcr IGNORES Accept for a single-arch tag (measured 2026-09-26: an index Accept on
+	// `…-amd64` still answers 200 with a plain manifest). Pinning one would make an
+	// Apple-Silicon ci:local run amd64 under emulation — refuse it.
+	const mediaType = (manifest.headers.get('content-type') ?? '').split(';')[0]?.trim() ?? '';
+	if (!INDEX_TYPES.has(mediaType)) {
+		throw new Error(
+			`${REPOSITORY}:${tag} is not a multi-arch index (content-type ${mediaType || 'none'}) — refusing to pin it.`,
+		);
+	}
 	return digest;
 }
 
 const check = process.argv.includes('--check');
 const current = readCiImageLock(REPO_ROOT);
 const fingerprint = ciImageFingerprint(REPO_ROOT);
-const digest = await publishedDigest(`fp-${fingerprint}`);
+let digest: string;
+try {
+	digest = await publishedDigest(`fp-${fingerprint}`);
+} catch (error) {
+	console.error(`ci:image:pin: ${(error as Error).message}`);
+	process.exit(1);
+}
 const next: CiImageLock = { image: current.image, digest, fingerprint };
 
 if (current.digest === next.digest && current.fingerprint === next.fingerprint) {

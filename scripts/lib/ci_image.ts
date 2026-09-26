@@ -27,6 +27,9 @@ export interface CiImageLock {
 
 export const CI_IMAGE_LOCK = join('ci', 'image.json');
 
+/** The one repository every host pulls; the lock may name no other. */
+export const CI_IMAGE_NAME = 'ghcr.io/renderpci/dedalo-ci';
+
 /** The files that reference the image by digest (the literals the lock must equal). */
 export const CI_IMAGE_REFERENCES = [
 	'.github/workflows/ci.yml',
@@ -48,12 +51,12 @@ export function ciImageFingerprint(repoRoot: string): string {
 export function readCiImageLock(repoRoot: string): CiImageLock {
 	const lock = JSON.parse(readFileSync(join(repoRoot, CI_IMAGE_LOCK), 'utf8')) as CiImageLock;
 	if (
-		typeof lock.image !== 'string' ||
+		lock.image !== CI_IMAGE_NAME ||
 		!/^sha256:[0-9a-f]{64}$/.test(lock.digest) ||
 		!/^[0-9a-f]{64}$/.test(lock.fingerprint)
 	) {
 		throw new Error(
-			`${CI_IMAGE_LOCK}: expected {image, digest: "sha256:<64 hex>", fingerprint: "<64 hex>"}`,
+			`${CI_IMAGE_LOCK}: expected {image: "${CI_IMAGE_NAME}", digest: "sha256:<64 hex>", fingerprint: "<64 hex>"}`,
 		);
 	}
 	return lock;

@@ -1055,3 +1055,66 @@ describe('scripts/push.ts', () => {
 		]);
 	});
 });
+
+// ─────────────────────────── bun is FOUND, never assumed on PATH (2026-09-26)
+// A GUI/IDE git client hands the hook a PATH without ~/.bun/bin; the hook tries the
+// installer's own location ($BUN_INSTALL/bin) and otherwise refuses by name — after the
+// ref scan, so a push with nothing to gate needs no bun at all.
+describe('pre-push gate: bun is found, never assumed on PATH', () => {
+	// PATH with the docker stub and the system tools, but no bun.
+	const noBunPath = () => `${fakeBin}:/usr/bin:/bin`;
+	const bunHome = () => {
+		const home = join(scratch, `bun_install_${repoCounter}`);
+		mkdirSync(join(home, 'bin'), { recursive: true });
+		const link = join(home, 'bin', 'bun');
+		if (!existsSync(link)) symlinkSync(process.execPath, link);
+		return home;
+	};
+
+	test('anti-vacuity: the bare PATH really has no bun', () => {
+		const probe = run(['/bin/sh', '-c', 'command -v bun'], scratch, { PATH: noBunPath() });
+		expect(
+			probe.code,
+			`bun resolved on the bare PATH at ${probe.out.trim()} — the cases below prove nothing`,
+		).not.toBe(0);
+	});
+
+	test('bun off PATH but at $BUN_INSTALL/bin: the gate runs', () => {
+		const repo = freshRepo();
+		write(repo, 'presentation/notes.md', 'found bun\n');
+		const sha = commitAll(repo, 'docs');
+		resetLog();
+		const r = run(['git', 'push', 'origin', 'v7'], repo, {
+			PATH: noBunPath(),
+			BUN_INSTALL: bunHome(),
+		});
+		expect(r.code, r.err).toBe(0);
+		expect(ciCalls()).toHaveLength(1);
+		expect(remoteTip(repo, 'origin', 'v7')).toBe(sha);
+	});
+
+	test('bun nowhere: REFUSED by name, nothing gated, nothing pushed', () => {
+		const repo = freshRepo();
+		const before = remoteTip(repo, 'origin', 'v7');
+		write(repo, 'presentation/notes.md', 'no bun\n');
+		commitAll(repo, 'docs');
+		resetLog();
+		const empty = join(scratch, `no_bun_${repoCounter}`);
+		mkdirSync(empty, { recursive: true });
+		const r = run(['git', 'push', 'origin', 'v7'], repo, { PATH: noBunPath(), BUN_INSTALL: empty });
+		expect(r.code).not.toBe(0);
+		expect(r.err).toContain('REFUSED — bun is not on PATH');
+		expect(stubLog()).toEqual([]);
+		expect(remoteTip(repo, 'origin', 'v7')).toBe(before);
+	});
+
+	test('nothing to gate needs no bun (an already-published ref)', () => {
+		const repo = freshRepo();
+		const empty = join(scratch, `no_bun_idle_${repoCounter}`);
+		mkdirSync(empty, { recursive: true });
+		resetLog();
+		const r = run(['git', 'push', 'origin', 'v7'], repo, { PATH: noBunPath(), BUN_INSTALL: empty });
+		expect(r.code, r.err).toBe(0);
+		expect(stubLog()).toEqual([]);
+	});
+});

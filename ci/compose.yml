@@ -23,12 +23,12 @@
 #                so a reachable Postgres would change what the tier measures. That is
 #                why this service has no depends_on and does not share postgres' network.
 #
-#   runner-db    the db and instance jobs. `network_mode: service:postgres` puts the
-#                runner in the service's network namespace, so 127.0.0.1:5432 IS the
-#                database — exactly what a hosted job sees through `ports: 5432:5432`,
-#                and exactly what scripts/ci/hosted_env.sh defaults DB_HOST to. Nothing
-#                is overridden to make the local run work; an override here would be a
-#                difference from CI that nobody wrote down.
+#   runner-db    the db and instance jobs. They reach the database by the service's
+#                NAME, `postgres`, on the project network (DB_HOST=postgres) — exactly
+#                as db.yml's container jobs reach their `postgres` service since those
+#                moved into this image (2026-09-26). It used to share the service's
+#                network namespace (127.0.0.1), which a hosted container job never
+#                sees: the local run then never exercised the path CI takes.
 #
 # THE RUNNER'S USER. The container starts as root only long enough to create `runner`
 # (uid 1001, the GitHub-hosted runner's uid) and then drops to it for every tier command
@@ -109,7 +109,9 @@ services:
   runner-db:
     <<: *runner
     profiles: ['db']
-    network_mode: service:postgres
+    environment:
+      <<: *github-env
+      DB_HOST: postgres
     depends_on:
       postgres:
         condition: service_healthy

@@ -24,9 +24,9 @@ not the commit, run nightly instead of on the push (`nightly.yml`).
 > **PART 2 PENDING** (not landed — do not describe it as done):
 > 1. **Blocking unit tier.** The unit tier stays ADVISORY in `db_tier.sh` (its one
 >    reasoned `ADVISORY_STAGES` row in `tier_wiring_tripwire` leg H) until
->    `engineering/unit_baseline.json` is re-recorded IN the image and the job runs in
->    it. Making it blocking before the pin would block on the runner's missing tools,
->    not on the code.
+>    `engineering/unit_baseline.json` is re-recorded IN the image. The jobs already run
+>    in it; the baseline was recorded outside it, so blocking now would block on the
+>    recording environment, not on the code.
 
 ## Pipeline map
 
@@ -140,7 +140,8 @@ compose themselves (`scripts/ci/hosted_env.sh`), which is the property under tes
   sockets and macOS caps the path at 104 bytes).
 - **`--docker`** runs the tiers inside the CI image (`ci/Dockerfile`) via
   `ci/compose.yml`: db/instance against the SAME pgvector digest `db.yml` pins, reached
-  at `127.0.0.1:5432` as a hosted job reaches it; hermetic with no database at all;
+  by its name `postgres` (`DB_HOST=postgres`) as a hosted container job reaches it;
+  hermetic with no database at all;
   every tier command as the unprivileged `runner` user (uid 1001, the hosted runner's).
   Nothing is read from `../private`. The tree judged is the working tree made into one
   commit on HEAD, or `--ref` exactly; the host repo is mounted read-only. It runs as a
@@ -329,11 +330,24 @@ ci/compose.yml's digest" turns that PR red until the workflow pins follow.
 **The pin** (`ci/image.json` + the literal digest in `ci.yml`, `db.yml`,
 `.gitlab-ci.yml`). `bun run ci:image:pin` is its updater: it resolves the digest
 `ci-image.yml` published for the checkout's fingerprint and rewrites the lock and every
-literal in one diff. Run it (1) after a `ci/Dockerfile`/`.bun-version` change has landed
-and been published — until then `ci_workflow_tripwire` is red, by design: the gates
-cannot run in an image that does not exist yet — and (2) when `nightly.yml`'s
-`image_pin` job is red, which means the weekly no-cache rebuild published distro
-security fixes the lock does not take yet.
+literal in one diff. What each place asserts (`ci_workflow_tripwire` rule 1b):
+
+- **IN the image** (every tier, every host): `/etc/dedalo-ci-image` = the checkout's
+  fingerprint — the tier runs in an image of THIS definition.
+- **Every host's literal** = the lock's digest, as uid 1001; the lock's freshness is
+  nightly's `image_pin` (`ci:image:pin --check`), which reports into the `ci-nightly`
+  issue.
+
+So a `ci/Dockerfile`/`.bun-version` change (a hand edit or Dependabot's `/ci` docker PR)
+flows: the local gate builds the new definition (`ci:local` sees the lock is behind and
+builds `dedalo-ci:local`) and is GREEN, so the push lands; `ci-image.yml` publishes it;
+the hosts, still on the locked older build, are RED on rule 1b until `bun run
+ci:image:pin` is committed — that red is the pin-me signal, not a failure of the change.
+(Merge a Dependabot `/ci` PR locally and push through the gate; on GitHub it is red by
+construction — its tiers run the locked, older image.) Run the updater also when the
+nightly `image_pin` is red: the weekly no-cache rebuild published distro security fixes
+the lock does not take yet. (Rule 1b asserted `lock == checkout` until review on
+2026-09-26 found it deadlocked the push that publishes a new definition.)
 
 ## Non-negotiables (each is tripwired)
 

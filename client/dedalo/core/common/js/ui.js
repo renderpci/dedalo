@@ -2961,7 +2961,7 @@ export const ui = {
 	* @param {string} [options.accept_label] - Accept button caption. Default: get_label.continue.
 	* @param {string} [options.cancel_label] - Cancel button caption. Default: get_label.cancel.
 	* @param {string|null} [options.accept_class='brand'] - Class list for the accept button.
-	*   Any button colour class plus any icon class, e.g. 'primary new', 'primary duplicate',
+	*   Any button colour class plus any icon class, e.g. 'brand new', 'brand duplicate',
 	*   'danger remove', 'warning'. Cancel is always 'ghost'. Each button carries
 	*   data-role="accept" / data-role="cancel": the stable hook for code and tests,
 	*   so a restyle (a colour class change) never breaks who finds the button.
