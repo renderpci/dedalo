@@ -361,24 +361,30 @@ function threeHopSqo(q: string) {
 	} as never);
 }
 
-/** Every hop alias the builder emitted, in emission order. */
+/**
+ * Every hop alias the builder emitted, in emission order — in EITHER shape.
+ * Forward (buildJoinChain): `LEFT JOIN <table> AS j_… ON <acl>`. Reversed
+ * (deep_path.ts): the leaf record enters as `FROM <table> AS j_… WHERE <acl>`,
+ * an intermediate record as `JOIN <table> AS j_… ON <acl>` (emitted only when
+ * it carries an ACL). The census is total over both, so a reversal that lost a
+ * hop's predicate is as red as a forward join that never had one.
+ */
 function joinAliases(builtSql: string): string[] {
 	// BOTH chain namespaces: buildJoinChain emits `j_` for a FILTER chain and
 	// `o_` for an ORDER one (PERF-08 — the order twin collapses the locator
 	// fan-out, so it is a different join and must not dedup into the filter's).
 	// The SEC-02 census below is about the ORDER twin, so a helper blind to
 	// `o_` would report zero joins and pass its refusal legs vacuously.
-	return [...builtSql.matchAll(/LEFT JOIN \S+ AS ([jo]_[A-Za-z0-9_]+) ON /g)].map(
+	return [...builtSql.matchAll(/(?:JOIN|FROM) \S+ AS ([jo]_[A-Za-z0-9_]+) (?:ON|WHERE) /g)].map(
 		(match) => match[1] as string,
 	);
 }
 
-/** The ON clause the builder gave one hop alias (one line, by construction). */
+/** The ON / WHERE clause the builder gave one hop alias (one line, by construction). */
 function onClauseOf(builtSql: string, alias: string): string {
-	const marker = ` AS ${alias} ON `;
-	const start = builtSql.indexOf(marker);
-	if (start === -1) throw new Error(`no join for alias ${alias}`);
-	const from = start + marker.length;
+	const found = new RegExp(` AS ${alias} (?:ON|WHERE) `).exec(builtSql);
+	if (found === null) throw new Error(`no join for alias ${alias}`);
+	const from = found.index + found[0].length;
 	const end = builtSql.indexOf('\n', from);
 	return builtSql.slice(from, end === -1 ? undefined : end);
 }
@@ -577,9 +583,16 @@ describe.if(DB_READY)('SEC-02 — the ACL holds at EVERY hop of a search path', 
 		for (const alias of aliases) {
 			const on = onClauseOf(built.sql, alias);
 			expect(on).not.toContain('@>');
-			expect(on).toBe(
-				`${alias}.section_id = NULLIF((rel_${alias}->>'section_id'), '')::bigint AND ${alias}.section_tipo = (rel_${alias}->>'section_tipo')::text`,
-			);
+			if (built.sql.includes(`FROM matrix_relation_index AS ri_${alias}`)) {
+				// Reversed (deep_path.ts): the leaf's WHERE opens straight on its
+				// predicate — no ACL conjunct in front of it.
+				expect(on.startsWith(`(${alias}.`) || on.startsWith(`((${alias}.`)).toBe(true);
+				expect(on).not.toContain(`${alias}.section_id > 0`);
+			} else {
+				expect(on).toBe(
+					`${alias}.section_id = NULLIF((rel_${alias}->>'section_id'), '')::bigint AND ${alias}.section_tipo = (rel_${alias}->>'section_tipo')::text`,
+				);
+			}
 		}
 		// It still finds the hidden record — an internal resolution is not scoped.
 		expect(await idsOf(await buildSearchSql(twoHopSqo('zzhop02 hidden*'), {}))).toContain(

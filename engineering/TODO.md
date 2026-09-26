@@ -26,3 +26,11 @@
 - [x] Search: The UI count panel has a delay when calculating and returning, which creates a moment of confusion for the user (who views the old value as the new one).
 - [ ] Ontology: Default lang will be english. Review the entire workflow to ensure it works correctly, especially publication (current definition is only in spanish).
 
+# Deep search found bugs
+- [x] Deep-path filters are slow (count and list): the join runs FORWARD from every main record (numisdata4: 184k records, 175k Tipo links unnested per search), and the trigram prefilter is disabled on joined leaves (src/core/search/conform.ts, searchStoreCovered). A valueless `@? '$.<tipo>[*]'` leaf is unindexable -> full matrix scan. Measured monedaiberica, 3-hop Tipo>Ceca>name 'ikalesken': 2906 ms now vs 33 ms reversed via matrix_relation_index + prefilter (same count). Fix must keep negation/empty semantics and group same-path conditions onto one related record (items below). DONE: src/core/search/deep_path.ts reverses only provably-exact units (3049 -> 14 ms, same ids); gate test/unit/search_deep_path_reverse_native.test.ts.
+- [ ] Negation over a deep path gives wrong results. On mdcat, "does not contain NIF" returned 38,749 records; the right answer is 18,635. Users can reach this from the search UI through -, != and !*. Because it returns rows instead of failing, nobody would notice.
+- [ ] Two conditions on the same deep path must match the same related record. Final PHP fixed this on 2026-06-15; TS lost the fix in the port.
+- [x] Searching several sections at once with a deep path returns duplicate rows (WC-2026-09-24-multi-section-search-identity-dedup).
+
+# style
+- [ ] Modal headers and buttons restyling (contrast limitation issues)

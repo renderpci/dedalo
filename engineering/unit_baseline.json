@@ -3246,6 +3246,11 @@
 			"skipped": 0,
 			"assertions": 31
 		},
+		"test/unit/search_deep_path_reverse_native.test.ts": {
+			"tests": 6,
+			"skipped": 0,
+			"assertions": 16
+		},
 		"test/unit/search_duplicated_uncorrelated_native.test.ts": {
 			"tests": 8,
 			"skipped": 0,
