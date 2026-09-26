@@ -146,8 +146,35 @@ const UI_STUB_VIRTUAL_PATH = '/virtual/tool_transcription_status__ui_stub.js';
 /** The seam this gate substitutes; shared with the override registry. */
 const UI_STUB_SPECIFIER = /core\/common\/js\/ui\.js$/;
 
+/** The REAL client ui.js — the path the other ui.js-masking gates register. */
+const UI_REAL_PATH = join(
+	import.meta.dir,
+	'..',
+	'..',
+	'client',
+	'dedalo',
+	'core',
+	'common',
+	'js',
+	'ui.js',
+);
+
 beforeAll(() => {
 	mock.module(UI_STUB_VIRTUAL_PATH, () => ({
+		ui: { create_dom_element: fake_create_dom_element },
+	}));
+	// AND the real path, with the same stub. Four gates (client_upload_queue,
+	// client_upload_queue_render, component_info_widget_client,
+	// client_data_model_guard) mask the REAL ui.js with their own stubs, and
+	// mock.module is process-global and never reverted. Run before this file, their
+	// stub — not the virtual one above — answered the panel's ui.js import (the
+	// plugin redirect did not win), so the panel built nodes from a foreign stub:
+	// 30 assertions down to 13, red in every full run, green alone. Measured
+	// 2026-09-26 pairwise: each of the four alone reproduced it. Re-registering the
+	// real path here makes the LAST registration this file's, whatever ran first;
+	// the leak it leaves is the same shape the four already leave (each masks
+	// ui.js itself before importing).
+	mock.module(UI_REAL_PATH, () => ({
 		ui: { create_dom_element: fake_create_dom_element },
 	}));
 	// DECLARE the substitution where every resolver plugin can see it. This

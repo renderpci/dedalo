@@ -1061,12 +1061,14 @@ export async function buildAlternateVersions(
  * That is not a size heuristic — it is the exact test for "could a human have put
  * this file here?". `assertNormalizedExtensionForTier` admits an upload into a
  * derived tier only for `[defaultExtension, ...alternateExtensions]`, and
- * `assertAllowedExtension` additionally requires the upload allowlist, so a `.png`
- * twin in the default tier may be an operator's file while an `.avif` one cannot
- * be — avif is not in image's `allowedExtensions`. The default tier is rebuilt on
- * EVERY master ingest, so backing up a machine-authored twin there would turn
- * every upload on the install into deleted/ churn for bytes nobody authored. On
- * this install (image alternates = ['avif']) that is zero new churn per upload.
+ * `assertAllowedExtension` additionally requires the upload allowlist, so a twin
+ * in the default tier may be an operator's file exactly when its format is in
+ * `allowedExtensions`. The default tier is rebuilt on EVERY master ingest, so
+ * backing up a machine-authored twin there would turn every upload on the install
+ * into deleted/ churn for bytes nobody authored. (!) The SHIPPED default of
+ * `DEDALO_IMAGE_EXTENSIONS_SUPPORTED` admits avif (as v6's did), so with the
+ * default allowlist an avif twin IS backed up on every ingest — correct by this
+ * rule, and removable only by the operator dropping avif from uploads.
  */
 function shouldBackUpTwin(spec: MediaTypeSpec, quality: string, extension: string): boolean {
 	if (quality !== spec.defaultQuality) return true;

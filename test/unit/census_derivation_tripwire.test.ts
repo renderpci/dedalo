@@ -497,7 +497,7 @@ const PRIVATE_ROOT_WALKERS: Readonly<Record<string, string>> = {
 		'ROOTS: `scripts` `src` `tools`; `src` `tools` — brace globs.',
 	'test/unit/vendor_advisory_tripwire.test.ts': 'ROOTS: `client/dedalo/core/component_pdf/js`.',
 	'test/unit/wire_contract_tripwire.test.ts':
-		'ROOTS: `.agents` `client` `deploy` `docs` `engineering` `scripts` `src` `test` `tools`; `engineering/wire_contract` — the ledger directory, and every tree that may cite an entry.',
+		'ROOTS: `.agents` `changes` `client` `deploy` `docs` `engineering` `scripts` `src` `test` `tools`; `engineering/wire_contract` — the ledger directory, and every tree that may cite an entry.',
 	'test/unit/wire_field_agreement_tripwire.test.ts': 'ROOTS: `client`; `src`.',
 	'test/unit/write_lang_provenance_native.test.ts': 'ROOTS: `src` `tools` ×2.',
 };
@@ -533,6 +533,11 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		roots: [['src']],
 		scope:
 			'config keys read by call literal. KNOWN SUBSET: scripts/ and tools/ read keys through readEnv too (PUPPETEER_EXECUTABLE_PATH is read only under scripts/) — widening to the write-path roots is the open item, recorded here so the gap lives where the roots do',
+	},
+	'scripts/lib/change_log.ts': {
+		roots: [['changes'], ['changes'], ['engineering/wire_contract']],
+		scope:
+			'the change log sources — changes/ and each release directory under it (two sites: the top level, then every fragment and release.json per directory), and the wire-contract ledger ids read from engineering/wire_contract/ (the release snapshot and the floor check). Read by scripts/changelog.ts and change_log_tripwire.',
 	},
 	'scripts/lib/docs_paths.ts': {
 		roots: [['docs']],

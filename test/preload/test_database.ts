@@ -28,6 +28,7 @@
  */
 
 import { readEnv } from '../../src/config/env.ts';
+import { SUITE_MEDIA_EXPORT_BASE } from '../helpers/suite_posture.ts';
 import { testDatabaseName } from '../helpers/test_database.ts';
 
 // Pin the media WEB base to the same-origin relative default for the WHOLE suite
@@ -44,6 +45,18 @@ process.env.DEDALO_MEDIA_WEB_BASE = '';
 // No mailbox. With a real DEDALO_SMTP_HOST the mailer skips its 'not configured'
 // branch and a unit run OPENS AN SMTP CONNECTION to the developer's mail server.
 process.env.DEDALO_SMTP_HOST = '';
+// Not a master. A developer machine that plays the official master (the code
+// server, the ontology server, the developer channel) keeps those keys in its
+// .env, and the suite inherited the ROLE: every "this install is neither
+// master" door then answered as one (utils_update_manifest_native, 2026-09-26).
+// A gate that needs a master builds it — an explicit config object or its own
+// env override — it never borrows the machine's.
+process.env.IS_A_CODE_SERVER = 'false';
+process.env.IS_AN_ONTOLOGY_SERVER = 'false';
+process.env.DEDALO_CODE_SERVER_DEV_CHANNEL = 'false';
+// The media export base CI runs with (test/helpers/suite_posture.ts). `??=`, like
+// hosted_env.sh's `:=`: a shell export still wins, the developer's .env does not.
+process.env.DEDALO_MEDIA_EXPORT_BASE ??= SUITE_MEDIA_EXPORT_BASE;
 // NOT PINNED HERE: DEDALO_DIFFUSION_SCHEDULER_ENABLED. Turning dispatch off for
 // the whole tier looks tempting (the unit suite does spawn real runner
 // subprocesses), but MEASURED it reds 5 gates that legitimately exercise

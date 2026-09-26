@@ -22,6 +22,8 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { SUITE_MEDIA_EXPORT_BASE } from '../helpers/suite_posture.ts';
 
 const ROOT = `${import.meta.dir}/../..`;
 const READ_EXPORT_BASE =
@@ -56,5 +58,22 @@ describe('media export base (DEDALO_MEDIA_EXPORT_BASE)', () => {
 
 	test('unset is undefined — unresolved, never a guessed origin', () => {
 		expect(exportBaseWith('')).toBe(null);
+	});
+});
+
+describe('the suite posture (test/helpers/suite_posture.ts)', () => {
+	test('the local suite and the hosted CI tier default to the SAME export base', () => {
+		const hosted = readFileSync(`${ROOT}/scripts/ci/hosted_env.sh`, 'utf8');
+		const match = /^: "\$\{DEDALO_MEDIA_EXPORT_BASE:=([^}]*)\}"$/m.exec(hosted);
+		expect(match?.[1], 'hosted_env.sh no longer defaults DEDALO_MEDIA_EXPORT_BASE').toBeDefined();
+		expect(match?.[1]).toBe(SUITE_MEDIA_EXPORT_BASE);
+	});
+
+	test('this run actually carries it (the preload pinned it, or the shell chose one)', async () => {
+		const { config } = await import('../../src/config/config.ts');
+		expect(config.media.exportBase).toBeDefined();
+		if (process.env.DEDALO_MEDIA_EXPORT_BASE === SUITE_MEDIA_EXPORT_BASE) {
+			expect(config.media.exportBase).toBe(SUITE_MEDIA_EXPORT_BASE);
+		}
 	});
 });

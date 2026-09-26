@@ -264,7 +264,7 @@ class DDModal extends HTMLElement {
 			}
 			.mini_modal:hover,
 			.mini_modal:focus {
-				color: var(--modal_btn_hover_color, #000);
+				color: var(--modal_btn_hover_color, #f78a1c);
 				text-decoration: none;
 				cursor: pointer;
 			}
@@ -280,7 +280,7 @@ class DDModal extends HTMLElement {
 			}
 			.close_modal:hover,
 			.close_modal:focus {
-				color: var(--modal_btn_hover_color, #000);
+				color: var(--modal_btn_hover_color, #f78a1c);
 				text-decoration: none;
 				cursor: pointer;
 			}
@@ -292,6 +292,8 @@ class DDModal extends HTMLElement {
 				background-color: var(--modal_header_bg, var(--color_orange_dedalo));
 				color: var(--modal_header_color, var(--color_white));
 				box-shadow: var(--modal_header_shadow, 0 2px 3px var(--color_grey_10));
+				/* brand accent stripe on top edge; painted, so height is unchanged */
+				background-image: linear-gradient(var(--modal_header_accent, transparent) 0 4px, transparent 4px);
 				height: 3.66rem;
 			}
 

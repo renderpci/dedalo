@@ -308,6 +308,80 @@ stack with `deploy/dedalo-image-update.sh --mode build --ref <tag>` and watch
 the compose healthcheck go healthy — then force a red build and watch it
 re-pin the previous image and report the failure honestly.
 
+## J. Official master: pre-7 transparency (MASTER_SERVER.md)
+
+Only for `master.dedalo.dev`. Run every probe **from an outside host** — the
+whole mechanism is header- and origin-shaped, so a loopback curl proves nothing.
+The gates prove the shipped rules; this proves the deployed Apache loaded them.
+
+**J1. The pre-7 server-to-server dialect reaches the pre-7 engine.**
+▢ `curl -X POST --data 'rqo={"dd_api":"dd_utils_api","action":"get_server_ready_status","prevent_lock":true,"options":{"check":"ontology_server"}}' https://master.dedalo.dev/dedalo/core/api/v1/json/`
+▢ Repeat with `"check":"code_server"`.
+✅ Both answer the pre-7 shape (a top-level `result`), not an envelope-v2 body.
+An `ok:false` here means the request reached THIS engine and rule 3 is not
+matching.
+
+**J2. The pre-7 browser legs, and their preflight.**
+▢ `curl -X OPTIONS -H 'Origin: https://scratch.museum' https://master.dedalo.dev/dedalo/core/api/v1/json/`
+▢ Then a JSON POST with the same Origin for `get_ontology_update_info`
+(`version: "6.9.6"`, the official code), and again for `get_code_update_info`.
+✅ The preflight is answered by the pre-7 engine with
+`Access-Control-Allow-Origin: *`; both manifests list files whose urls are on
+**`https://v6.master.dedalo.dev/…`** — its own host, which is the whole point of
+the TLS-to-the-name hop. A url naming `127.0.0.1` or `master.dedalo.dev` means
+`ProxyPreserveHost` or the hop target is wrong.
+
+**J3. The pre-7 file downloads.**
+▢ `GET https://master.dedalo.dev/dedalo/install/import/ontology/6.9/matrix_dd.copy.gz`
+▢ `POST --data 'data=null' https://master.dedalo.dev/dedalo/code/6/6.9/<the real zip name>`
+(the pre-7 downloader POSTs to the archive url — a GET-only rule would pass a
+browser test and fail every real update).
+✅ Both return the pre-7 bytes. A 404 from the client Alias means rule 2 or 5 is
+missing.
+
+**J4. The legacy structure server.**
+▢ `POST --data 'data={"code":"<code>","check_connection":true,"dedalo_version":"6.9.6"}' https://master.dedalo.dev/dedalo/core/extras/str_manager/`
+✅ 200 from the pre-7 engine.
+
+**J5. The v7 door, both legs.**
+▢ JSON `POST https://master.dedalo.dev/api/v1/json` `get_server_ready_status`
+for `ontology_server` and `code_server`, once with `Origin: https://x` and once
+without.
+▢ `get_ontology_update_info` (`version: "7.0"`) and `get_code_update_info`.
+✅ Envelope v2 (`ok:true`), `Access-Control-Allow-Origin: *`, and manifest urls
+on `https://master.dedalo.dev/dedalo/install/import/ontology/7.0/…` and
+`…/dedalo/install/code/<v>/<v>.zip` with a `sha256`. A `localhost` url here is
+the boot warning of MASTER_SERVER.md §6 come true — `DEDALO_HOST` is unset.
+▢ `GET` one of each artifact.
+
+**J6. The boundary — the master's own client still works.**
+▢ Log in at `https://master.dedalo.dev/dedalo/core/page/` and open a section.
+✅ It works: a same-origin POST to `/dedalo/core/api/v1/json` carries
+`Origin: https://master.dedalo.dev` and must NOT divert. This is the one probe
+no curl replaces — if rule 4's second condition is wrong, the master's whole UI
+is served by the retired engine.
+
+**J7. End to end, both audiences.**
+▢ A scratch pre-7 install runs its update_ontology AND update_code panels.
+▢ A scratch v7 install, with both server urls at `https://master.dedalo.dev/api/v1/json`,
+runs `updateOntology` and a code update.
+✅ Both complete. This is the only step that proves the whole chain.
+
+**J8. Preconditions and residue.**
+▢ `httpd -M` lists `ssl_module proxy_module proxy_http_module rewrite_module
+headers_module alias_module`.
+▢ `SSLProxyCACertificateFile` points at a bundle that EXISTS on this distro
+(the overlay ships the RHEL path; Debian/Ubuntu is
+`/etc/ssl/certs/ca-certificates.crt`) — a wrong path fails `configtest`.
+▢ The J1 probe is the one that catches a dead `RewriteCond`: a `{"ok":false}`
+envelope-v2 body there means the condition never matched and the request reached
+the v7 engine.
+▢ `v6.master.dedalo.dev` resolves **from the box itself** (hairpin or
+`/etc/hosts`).
+▢ `apachectl configtest` is clean; `LogLevel rewrite:trace3 proxy:info` once
+confirms the `[P]` rules pre-empt the `ProxyPass` prefixes.
+▢ Watch `error_log` for AH01630 for a week — an unrouted path is a missing rule.
+
 ## Sign-off
 
 A staging pass = every ▢ observed, every ✅ met, every ⚠ understood. Until then,

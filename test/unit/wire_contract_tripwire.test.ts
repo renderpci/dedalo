@@ -76,6 +76,7 @@ const SCANNED_DIRS = [
 	'tools',
 	'test',
 	'docs',
+	'changes',
 	'engineering',
 	'scripts',
 	'client',

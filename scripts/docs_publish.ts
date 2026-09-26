@@ -14,7 +14,8 @@
  *   1. CONTENT GATE  — docs_current_engine_tripwire (the manual documents the
  *                      current engine, links resolve, no gitignored paths) and
  *                      docs_versioning_tripwire (the version wiring agrees, and
- *                      no published page vanished without a redirect).
+ *                      no published page vanished without a redirect), and
+ *                      change_log_tripwire (the generated change log is current).
  *   2. BUILD GATE    — `mkdocs build --strict`, run HERE. It does not trust a
  *                      docs_site/ lying around from an earlier attempt; it
  *                      builds the tree it is about to ship. --strict promotes
@@ -204,10 +205,10 @@ if (STAGE_DIR) {
 console.log('[1/4] Content gates…');
 // TEST_TIMEOUT_FLAG, not a bare `bun test`: Bun 1.4.0 silently ignores bunfig's
 // [test] timeout, so a flagless run reverts to the built-in 5000 ms cap — and
-// these two gates walk the whole manual. Imported from the one source of truth
+// these gates walk the whole manual. Imported from the one source of truth
 // (scripts/lib/test_flags.ts), which test_timeout_tripwire holds every site to.
 const content =
-	await $`bun test ${TEST_TIMEOUT_FLAG} test/unit/docs_current_engine_tripwire.test.ts test/unit/docs_versioning_tripwire.test.ts`
+	await $`bun test ${TEST_TIMEOUT_FLAG} test/unit/docs_current_engine_tripwire.test.ts test/unit/docs_versioning_tripwire.test.ts test/unit/change_log_tripwire.test.ts`
 		.cwd(REPO_ROOT)
 		.nothrow()
 		.quiet();

@@ -171,6 +171,8 @@ HERMETIC_TRIPWIRES=(
 	test/unit/tool_lossless_writeback_tripwire.test.ts
 	test/unit/ws_a_tripwires.test.ts
 	test/unit/update_ownership_tripwire.test.ts
+	test/unit/master_legacy_routing_tripwire.test.ts
+	test/unit/legacy_dialect_boundary_native.test.ts
 	test/unit/install_restart_supervisor_tripwire.test.ts
 	test/unit/ci_workflow_tripwire.test.ts
 	test/unit/backup_restorability_native.test.ts
@@ -183,6 +185,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/css_build_tripwire.test.ts
 	test/unit/css_token_duplication_tripwire.test.ts
 	test/unit/wire_contract_tripwire.test.ts
+	test/unit/change_log_tripwire.test.ts
 	test/unit/verify_selector_selftest.test.ts
 	test/unit/build_context_secret_tripwire.test.ts
 	test/unit/vendor_advisory_tripwire.test.ts

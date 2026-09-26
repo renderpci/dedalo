@@ -163,21 +163,30 @@ describe.if(DB_READY)('dd_core_api.get_element_context', () => {
 		});
 
 		test('an uncovered model is a 400 that NAMES the model (never a 500)', async () => {
-			const result = await dispatchRqo(
-				elementRqo({ tipo: UNCOVERED_MODEL_TIPO }) as never,
-				adminContext as never,
-			);
-			expect(result.status).toBe(400);
 			// ENVELOPE v2: the CODE is the contract; the model name survives on the
-			// disclosure-gated `error.debug.exception` (DEDALO_DEBUG_API_ERRORS is on
-			// in the test posture — asserted, so the naming half of this test cannot
-			// go vacuous if the ladder ever closes here).
-			expect(errorCodeOf(result.body)).toBe('request.invalid_model');
-			const debug = (result.body.error as { debug?: { exception?: string } }).debug;
-			expect(debug?.exception).toBeDefined();
-			expect(debug?.exception).toContain(
-				`model '${UNCOVERED_MODEL}' not implemented (section/component/area only)`,
-			);
+			// disclosure-gated `error.debug.exception`. The gate OPENS the ladder
+			// itself (convert.ts reads the key live) — it used to borrow
+			// DEDALO_DEBUG_API_ERRORS from the developer's .env and went red on a
+			// machine without it. Asserted, so the naming half cannot go vacuous.
+			const previousDebug = process.env.DEDALO_DEBUG_API_ERRORS;
+			process.env.DEDALO_DEBUG_API_ERRORS = 'true';
+			try {
+				const result = await dispatchRqo(
+					elementRqo({ tipo: UNCOVERED_MODEL_TIPO }) as never,
+					adminContext as never,
+				);
+				expect(result.status).toBe(400);
+				expect(errorCodeOf(result.body)).toBe('request.invalid_model');
+				const debug = (result.body.error as { debug?: { exception?: string } }).debug;
+				expect(debug?.exception).toBeDefined();
+				expect(debug?.exception).toContain(
+					`model '${UNCOVERED_MODEL}' not implemented (section/component/area only)`,
+				);
+			} finally {
+				if (previousDebug === undefined)
+					Reflect.deleteProperty(process.env, 'DEDALO_DEBUG_API_ERRORS');
+				else process.env.DEDALO_DEBUG_API_ERRORS = previousDebug;
+			}
 		});
 	});
 

@@ -112,7 +112,8 @@ The live-oracle era is over. The baselines of record are FROZEN:
   macOS caps that path at 104 bytes: on a long default `TMPDIR` every run dies
   at `preflight`. Use `TMPDIR=/tmp/dd bun run test:update…`.
 - `bun run probe:update` — the MUSEUM-CYCLE probe against the REAL stacks (`scripts/update_probe.ts`): the docker simple stack plays a museum install (recreated with its code tree bind-mounted, so the channel is `tree_swap`), the local dev server plays master; prepares origin consistency (LAN-IP `DEDALO_HOST`), cuts the 7.0.1 release into `<repo>/code/`, materializes the museum tree + override, then verifies channel/serving/manifest — or drives the whole update with `--drive --user/--pass`. Touches the real docker install and appends to `../private/.env` when the advertised origin drifted. 
-- `bun run lint` — biome (burn-down owned by a dedicated pass). 
+- `bun run lint` — biome (burn-down owned by a dedicated pass).
+- `bun run changelog` — re-render `docs/change_log.md` (GENERATED — never edit it). A reader-visible change ships a fragment in the same commit: `bun run changelog new <slug>`, fill it, re-render. `bun run changelog release <version>` at a release cut. Rules: `changes/README.md`; gate: `change_log_tripwire`. 
 
 ## Docs index 
 
@@ -132,6 +133,7 @@ The live-oracle era is over. The baselines of record are FROZEN:
 | `engineering/ERRORS_SPEC.md` | The error system: closed DedaloError registry, the ONE converter, envelope v2, client contract, gates. | 
 | `engineering/ORACLE_HARVEST.md` | The frozen fixture store: how it replays, why a re-harvest is impossible, the retired-differential twin map. | 
 | `engineering/PRODUCTION.md` | Ops: supervision, socket, backups, health. | 
+| `engineering/MASTER_SERVER.md` | The official master: the v7 door + the Apache overlay that keeps every PRE-7 install updating. | 
 | `engineering/STAGING_VALIDATION.md` | Exercise the ops hardening before production. | 
 | `engineering/CI.md` | CI/CD: pipeline map, hermetic vs self-hosted tiers, seam env, activation runbook. | 
 | *— internal, not in the repo —* | | 

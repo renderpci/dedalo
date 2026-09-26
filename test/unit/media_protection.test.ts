@@ -14,7 +14,7 @@
  * media_protection_tripwire.test.ts.
  */
 
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import {
 	chmodSync,
 	existsSync,
@@ -29,6 +29,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import * as protection from '../../src/core/media/protection.ts';
 import {
 	buildHtaccess,
 	buildNginxConf,
@@ -309,7 +310,9 @@ describe('the config-hash idempotency guard', () => {
 		// "out of date" forever by the media_control widget. A permanent false
 		// alarm is how operators learn to ignore the widget.
 		setServerState({ media_access_mode: 'private' });
-		process.env.MEDIA_HTACCESS_ADDONS = JSON.stringify([
+		// The addons are INJECTED, not set in process.env: config.media is frozen at
+		// import (src/config/config.ts), so an env write here changes nothing.
+		const addons = spyOn(protection, 'getAddonLines').mockReturnValue([
 			'<IfModule mod_headers.c>',
 			'\tHeader always set Access-Control-Allow-Origin "http://app.example.org"',
 			'</IfModule>',
@@ -333,8 +336,7 @@ describe('the config-hash idempotency guard', () => {
 			writeRuleFiles();
 			expect(statSync(paths.nginx).mtimeMs).toBe(nginxWrite);
 		} finally {
-			// unsetting an env var is the point
-			delete process.env.MEDIA_HTACCESS_ADDONS;
+			addons.mockRestore();
 		}
 	});
 

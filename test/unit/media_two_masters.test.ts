@@ -56,6 +56,25 @@ const ROOT = `${tmpdir()}/dedalo_two_masters_${process.pid}`;
 const image = mediaTypeOf('component_image')!;
 const av = mediaTypeOf('component_av')!;
 const pdf = mediaTypeOf('component_pdf')!;
+
+/**
+ * The alternate the TWIN tests drive, and a spec that configures exactly that
+ * one machine-only twin — built by the engine, refused by the upload allowlist.
+ * BUILT, not borrowed: reading both off the install tied these gates to two
+ * operator keys (DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS defaults to [] — the gates
+ * then died on `undefined`; DEDALO_IMAGE_EXTENSIONS_SUPPORTED's shipped default
+ * admits avif — the default-tier churn assertion then went red). A clone keeps
+ * the folders/ladder/paths, so the code under test cannot tell it apart.
+ */
+const ALT = image.alternateExtensions[0] ?? 'avif';
+const twinImage = Object.freeze({
+	...image,
+	alternateExtensions: Object.freeze([ALT]),
+	allowedExtensions: Object.freeze(image.allowedExtensions.filter((e) => e !== ALT)),
+	managedExtensions: Object.freeze([
+		...new Set([image.defaultExtension, ...image.allowedExtensions, ALT]),
+	]),
+}) as typeof image;
 const HAVE_MAGICK = existsSync(resolveMagick());
 const pathOpts: MediaPathOptions = { initialMediaPath: '', maxItemsFolder: null, mediaRoot: ROOT };
 
@@ -353,15 +372,12 @@ describe.if(HAVE_MAGICK)('deleting a master re-sources the derived tiers', () =>
 		// The PIXEL is the other half: it proves the rebuild reached the twin at all
 		// (it must now depict the surviving ORIGINAL, not the deleted retouch), which
 		// is the twin-builder's claim rather than the ordering's.
-		const alternate = image.alternateExtensions[0] as string;
-		expect(
-			alternate,
-			'this gate needs a configured alternate extension (DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS)',
-		).toBeDefined();
+		const alternate = ALT;
+		expect(twinImage.alternateExtensions).toEqual([alternate]);
 		const identity = nextIdentity();
 		await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
 		await makeImage(pathOf(identity, MODIFIED, 'tif'), 'blue');
-		await regenerateImage(image, identity, pathOpts);
+		await regenerateImage(twinImage, identity, pathOpts);
 		const twin = pathOf(identity, DERIVED, alternate);
 		// The engine itself authored it, from the retouch — the state the delete is
 		// about to invalidate.
@@ -371,13 +387,13 @@ describe.if(HAVE_MAGICK)('deleting a master re-sources the derived tiers', () =>
 		utimesSync(twin, stale, stale);
 		const staleSize = statSync(twin).size;
 		// What a scan taken at the WRONG MOMENT reports — captured, not assumed.
-		const early = scanFilesInfo(image, identity, pathOpts, {}).find(
+		const early = scanFilesInfo(twinImage, identity, pathOpts, {}).find(
 			(info) => info.quality === DERIVED && info.extension === alternate,
 		);
 		expect(early?.file_exist).toBe(true);
 		expect(early?.file_time?.year).toBe(2020);
 
-		const outcome = await deleteAndResyncCore(image, identity, pathOpts, MODIFIED, 'tif');
+		const outcome = await deleteAndResyncCore(twinImage, identity, pathOpts, MODIFIED, 'tif');
 
 		expect(outcome.rebuilt.length).toBeGreaterThan(0);
 		// The twin is still indexed…
@@ -632,20 +648,17 @@ describe.if(HAVE_MAGICK)('what the re-encode pass replaces stays recoverable', (
 	 * format — which is why the three tests are kept together.
 	 */
 	test('a stale twin in the DEFAULT tier is REBUILT from the new master', async () => {
-		const alternate = image.alternateExtensions[0];
-		expect(
-			alternate,
-			'this gate needs a configured alternate extension (DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS)',
-		).toBeDefined();
+		const alternate = ALT;
+		expect(twinImage.alternateExtensions).toEqual([alternate]);
 		const identity = nextIdentity();
 		await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
-		await regenerateImage(image, identity, pathOpts, 'tif');
+		await regenerateImage(twinImage, identity, pathOpts, 'tif');
 		// A v6-era twin depicting the master that is about to be superseded.
-		const twin = pathOf(identity, DERIVED, alternate as string);
+		const twin = pathOf(identity, DERIVED, alternate);
 		await makeImage(twin, 'red');
 
 		await makeImage(pathOf(identity, MODIFIED, 'tif'), 'blue');
-		await regenerateImage(image, identity, pathOpts, 'tif');
+		await regenerateImage(twinImage, identity, pathOpts, 'tif');
 
 		// It depicts the CURRENT best master, in step with the tier it accompanies.
 		expect(existsSync(twin)).toBe(true);
@@ -653,7 +666,7 @@ describe.if(HAVE_MAGICK)('what the re-encode pass replaces stays recoverable', (
 		expect(await depicts(pathOf(identity, DERIVED, image.defaultExtension))).toBe('blue');
 		// …and it is indexed, so the panel's cell opens the picture the record has.
 		expect(
-			scanFilesInfo(image, identity, pathOpts, {}).some(
+			scanFilesInfo(twinImage, identity, pathOpts, {}).some(
 				(info) => info.quality === DERIVED && info.extension === alternate && info.file_exist,
 			),
 		).toBe(true);
@@ -661,11 +674,11 @@ describe.if(HAVE_MAGICK)('what the re-encode pass replaces stays recoverable', (
 		// exact test for "could a human have put this file here?":
 		// assertNormalizedExtensionForTier admits an upload into a derived tier only
 		// for [defaultExtension, ...alternateExtensions], and assertAllowedExtension
-		// additionally requires the UPLOAD allowlist — which admits .png and refuses
-		// .avif. The default tier is rebuilt on EVERY master ingest, so backing up a
+		// additionally requires the UPLOAD allowlist — which `twinImage` refuses for this
+		// format. The default tier is rebuilt on EVERY master ingest, so backing up a
 		// machine-authored twin there would turn every upload on the install into
 		// deleted/ churn for bytes nobody authored.
-		expect(image.allowedExtensions).not.toContain(alternate);
+		expect(twinImage.allowedExtensions).not.toContain(alternate);
 		const deletedDir = `${twin.slice(0, twin.lastIndexOf('/'))}/deleted`;
 		const churn = existsSync(deletedDir)
 			? readdirSync(deletedDir).filter(
@@ -681,19 +694,19 @@ describe.if(HAVE_MAGICK)('what the re-encode pass replaces stays recoverable', (
 		// Higher tiers are minted on demand and an operator may have curated or
 		// rotated them, so — unlike the default tier — every replacement is backed up
 		// first. Same rule, and the same reason, as their jpg (see regenerateImage).
-		const alternate = image.alternateExtensions[0] as string;
+		const alternate = ALT;
 		const identity = nextIdentity();
 		const higher = higherTier();
 		await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
 		// The tier exists, so the twin is a companion the engine keeps in step.
 		await makeImage(pathOf(identity, higher, image.defaultExtension), 'red');
-		await regenerateImage(image, identity, pathOpts, 'tif');
+		await regenerateImage(twinImage, identity, pathOpts, 'tif');
 		const twin = pathOf(identity, higher, alternate);
 		expect(existsSync(twin)).toBe(true);
 		expect(await depicts(twin)).toBe('red');
 
 		await makeImage(pathOf(identity, MODIFIED, 'tif'), 'blue');
-		await regenerateImage(image, identity, pathOpts, 'tif');
+		await regenerateImage(twinImage, identity, pathOpts, 'tif');
 
 		expect(await depicts(twin)).toBe('blue');
 		const deletedDir = `${twin.slice(0, twin.lastIndexOf('/'))}/deleted`;
@@ -712,7 +725,7 @@ describe.if(HAVE_MAGICK)('what the re-encode pass replaces stays recoverable', (
 		// delete_version('6MB','jpg') click leaves the twin behind, and nothing would
 		// ever touch it again — indexed, openable, depicting a master the tier no
 		// longer has.
-		const alternate = image.alternateExtensions[0] as string;
+		const alternate = ALT;
 		const identity = nextIdentity();
 		const higher = higherTier();
 		await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
@@ -721,7 +734,7 @@ describe.if(HAVE_MAGICK)('what the re-encode pass replaces stays recoverable', (
 		expect(existsSync(pathOf(identity, higher, image.defaultExtension))).toBe(false);
 
 		await makeImage(pathOf(identity, MODIFIED, 'tif'), 'blue');
-		await regenerateImage(image, identity, pathOpts, 'tif');
+		await regenerateImage(twinImage, identity, pathOpts, 'tif');
 
 		// Gone from the tier…
 		expect(existsSync(orphan)).toBe(false);
@@ -736,7 +749,7 @@ describe.if(HAVE_MAGICK)('what the re-encode pass replaces stays recoverable', (
 		expect(await depicts(`${deletedDir}/${retired[0]}`)).toBe('green');
 		// …and the scan stops reporting a file that depicts a master the record lost.
 		expect(
-			scanFilesInfo(image, identity, pathOpts, {}).some(
+			scanFilesInfo(twinImage, identity, pathOpts, {}).some(
 				(info) => info.quality === higher && info.extension === alternate && info.file_exist,
 			),
 		).toBe(false);
@@ -746,14 +759,14 @@ describe.if(HAVE_MAGICK)('what the re-encode pass replaces stays recoverable', (
 	});
 
 	test('a MASTER tier is never re-encoded or retired by the pass', async () => {
-		const alternate = image.alternateExtensions[0] as string;
+		const alternate = ALT;
 		const identity = nextIdentity();
 		await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
 		const masterTwin = pathOf(identity, image.originalQuality, alternate);
 		await makeImage(masterTwin, 'green'); // a twin IN a master tier
 		await makeImage(pathOf(identity, MODIFIED, 'tif'), 'blue');
 
-		await regenerateImage(image, identity, pathOpts, 'tif');
+		await regenerateImage(twinImage, identity, pathOpts, 'tif');
 
 		expect(await depicts(pathOf(identity, image.originalQuality, 'tif'))).toBe('red');
 		expect(existsSync(masterTwin)).toBe(true);

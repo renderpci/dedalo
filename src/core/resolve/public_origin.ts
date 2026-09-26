@@ -21,9 +21,21 @@
 
 import { readString } from '../../config/readers.ts';
 
-/** True when no DEDALO_HOST is configured and we are falling back to the local default. */
+/**
+ * True when this install's public origin is LOCAL — i.e. useless to hand to another
+ * machine, which is what `publicOrigin()` exists to produce.
+ *
+ * Two ways to be local, and the name has to cover both: DEDALO_HOST unset (the
+ * `localhost` fallback above), or DEDALO_HOST explicitly set to a loopback name. A
+ * master configured `DEDALO_HOST=localhost` advertises exactly the same broken urls
+ * as one that set nothing, so a predicate that only answered "unset" promised more
+ * than it checked.
+ */
 export function publicOriginIsLocal(): boolean {
-	return readString('DEDALO_HOST') === '';
+	const host = readString('DEDALO_HOST');
+	if (host === '') return true;
+	// Strip a port; `::1` may or may not arrive bracketed.
+	return /^(?:localhost|127(?:\.\d+){3}|\[?::1\]?)(?::\d+)?$/i.test(host);
 }
 
 /**

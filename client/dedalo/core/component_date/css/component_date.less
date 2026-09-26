@@ -161,6 +161,7 @@
 			.dates_separator {
 				font-size: 0.78rem;
 				padding: 0.2rem;
+				padding-right: 0px;
 				line-height: 0.78rem;
 			}
 
@@ -205,3 +206,35 @@
 	}
 
 }//end .component_date
+
+// search range (start <> end): the pair stays on ONE line inside a single
+// filter-grid track. A slimmer separator and tighter input padding buy most
+// of the room; the date size then follows the row width (.content_value is
+// an inline-size container, see above): DD/MM/YYYY is ~6.1em wide, so each
+// half fits when font = (row - separator - paddings) / ~12.4, capped at the
+// normal size and floored at 0.75rem. Rooted at .search_component so it
+// outranks the search panel's generic input padding (search.less) without
+// !important.
+.search_component > .component_date.search > .content_data > .content_value:has(>.dates_separator) {
+	flex-wrap: nowrap;
+	column-gap: 0;
+
+	>.input-group {
+		flex: 1 1 0;
+		min-width: 0;
+		width: auto;
+
+		input {
+			width: 100%;
+			min-width: 0;
+			padding-inline: 0.2rem;
+			font-size: clamp(0.75rem, calc((100cqi - 28px) / 12.4), 1rem);
+		}
+	}
+
+	>.dates_separator {
+		font-size: 0.65rem;
+		padding: 0 0.1rem;
+		opacity: 0.6;
+	}
+}
