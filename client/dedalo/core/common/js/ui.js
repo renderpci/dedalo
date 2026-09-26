@@ -2962,7 +2962,9 @@ export const ui = {
 	* @param {string} [options.cancel_label] - Cancel button caption. Default: get_label.cancel.
 	* @param {string|null} [options.accept_class='brand'] - Class list for the accept button.
 	*   Any button colour class plus any icon class, e.g. 'primary new', 'primary duplicate',
-	*   'danger remove', 'warning'. Cancel is always 'secondary'.
+	*   'danger remove', 'warning'. Cancel is always 'ghost'. Each button carries
+	*   data-role="accept" / data-role="cancel": the stable hook for code and tests,
+	*   so a restyle (a colour class change) never breaks who finds the button.
 	* @param {string} [options.size='small'] - Modal size variant passed through to attach_to_modal.
 	* @returns {Promise<boolean>} true on accept, false on every dismissal.
 	*/
@@ -3020,6 +3022,7 @@ export const ui = {
 			const button_cancel = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'ghost',
+				dataset			: { role : 'cancel' },
 				text_content	: cancel_label,
 				parent			: footer
 			})
@@ -3027,6 +3030,7 @@ export const ui = {
 			const button_accept = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: accept_class ? accept_class : null,
+				dataset			: { role : 'accept' },
 				text_content	: accept_label,
 				parent			: footer
 			})
