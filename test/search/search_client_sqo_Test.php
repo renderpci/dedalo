@@ -387,6 +387,24 @@ final class search_client_sqo_test extends TestCase {
 
 
 	/**
+	* TEST_SET_LIMIT_ZERO_MEANS_NO_LIMIT
+	* search_query_object::set_limit(0) sets 'ALL' (e.g. hierarchy::get_active_elements):
+	* must not fall back to the default 10
+	* @return void
+	*/
+	public function test_set_limit_zero_means_no_limit() : void {
+
+		$sqo = new search_query_object();
+			$sqo->set_section_tipo([self::$section_tipo]);
+			$sqo->set_limit(0);
+		$sql = search::get_instance($sqo)->parse_search_query_object();
+		$this->assertDoesNotMatchRegularExpression('/\bLIMIT 10\b/', $sql);
+		$this->assertMatchesRegularExpression('/\bLIMIT all\b/', $sql);
+	}//end test_set_limit_zero_means_no_limit
+
+
+
+	/**
 	* TEST_TOOLS_API_REJECTS_INVALID_CLIENT_SQO
 	* Tools search with the client options->sqo (tool_export...): sanitized as rqo->sqo
 	* @return void

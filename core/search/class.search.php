@@ -489,7 +489,10 @@ class search {
 		if (is_numeric($this->search_query_object->limit)) {
 			$limit = (int)$this->search_query_object->limit;
 			$this->search_query_object->limit = ($limit<0) ? 10 : $limit;
-		}else if ($this->search_query_object->limit!=='all' && $this->search_query_object->limit!==false) {
+		}else if (is_string($this->search_query_object->limit) && strtolower($this->search_query_object->limit)==='all') {
+			// search_query_object::set_limit(0) sets 'ALL'
+			$this->search_query_object->limit = 'all';
+		}else if ($this->search_query_object->limit!==false) {
 			$this->search_query_object->limit = 10;
 		}
 
