@@ -264,7 +264,7 @@ class DDModal extends HTMLElement {
 			}
 			.mini_modal:hover,
 			.mini_modal:focus {
-				color: var(--modal_btn_hover_color, #000);
+				color: var(--modal_btn_hover_color, #f78a1c);
 				text-decoration: none;
 				cursor: pointer;
 			}
@@ -280,7 +280,7 @@ class DDModal extends HTMLElement {
 			}
 			.close_modal:hover,
 			.close_modal:focus {
-				color: var(--modal_btn_hover_color, #000);
+				color: var(--modal_btn_hover_color, #f78a1c);
 				text-decoration: none;
 				cursor: pointer;
 			}

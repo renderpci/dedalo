@@ -34,7 +34,9 @@
  *      on the file's name — declares h2 (`http2 on;` / `Protocols … h2`). The
  *      one plain-HTTP conf is the single ENUMERATED entry, and it must carry
  *      the TRANSPORT markers, so the exemption is a written decision rather
- *      than a silence.
+ *      than a silence. An OVERLAY (a conf that opens no server context of its
+ *      own) chooses no transport: it must name the :443 front end that
+ *      includes it, and that front end must terminate TLS with h2.
  *   4. THE ESCAPE IS CODE. `install.sh` still offers the TLS modes the decision
  *      names: three that render the h2 template, and only `tls_none` selecting
  *      the plain conf.
@@ -56,7 +58,13 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { handleRequest } from '../../src/server.ts';
-import { deployProxyConfs, deployStackProse, REPO_ROOT } from '../helpers/deploy_stack_corpus.ts';
+import {
+	deployProxyConfs,
+	deployProxyOverlays,
+	deployStackProse,
+	opensServerContext,
+	REPO_ROOT,
+} from '../helpers/deploy_stack_corpus.ts';
 
 // ---------------------------------------------------------------------------
 // The recorded budget. SHRINK-ONLY: lower a number here when the client boots
@@ -289,6 +297,33 @@ describe('page load budget — TOTAL census of the shipped front ends', () => {
 			expect((PLAIN_HTTP_ENUMERATED[rel] as string).length).toBeGreaterThan(80);
 			expect(read(rel)).toContain('# TRANSPORT');
 		}
+	});
+
+	test('every OVERLAY names its including front end, and that front end terminates TLS with h2', () => {
+		// An overlay opens no server context, so it chooses no transport: it
+		// inherits the one of the vhost that includes it. That inheritance is
+		// only true if the includer it names is a shipped TLS + h2 front end.
+		const overlays = deployProxyOverlays();
+		for (const rel of overlays) {
+			const source = read(rel);
+			const includer = /<VirtualHost \*:443> of\s*(?:#\s*)?(deploy\/[^\s]+\.conf)/.exec(
+				source,
+			)?.[1];
+			expect(
+				includer,
+				`${rel} names no including <VirtualHost *:443> of deploy/<front end>.conf`,
+			).toBeDefined();
+			expect(confs).toContain(includer as string);
+			expect(terminatesTls(read(includer as string))).toBe(true);
+			expect(declaresHttp2(read(includer as string))).toBe(true);
+		}
+	});
+
+	test('positive control: an included fragment is an overlay, a vhost is a front end', () => {
+		expect(opensServerContext('SSLProxyEngine On\nRewriteEngine On\n')).toBe(false);
+		expect(opensServerContext('# <VirtualHost *:443>\nRewriteEngine On\n')).toBe(false);
+		expect(opensServerContext('<VirtualHost *:443>\n</VirtualHost>\n')).toBe(true);
+		expect(opensServerContext('server {\n\tlisten 80;\n}\n')).toBe(true);
 	});
 
 	test('positive control: a TLS conf without h2, and a plain conf without the block', () => {

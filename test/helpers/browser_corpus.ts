@@ -13,7 +13,11 @@
  *                               yet `git add`ed is still SERVED), never ignored.
  *   `firstPartyClientFiles()` — the on-disk walk of first-party code only: the
  *                               app client plus every tool client, with the
- *                               vendored, test and server subtrees skipped.
+ *                               vendored, test and server subtrees skipped —
+ *                               and, like git's view, never an IGNORED file
+ *                               (a developer's `client/dedalo/dev_tools/` is
+ *                               theirs, not the engine's: it made
+ *                               render_escape_tripwire red on one machine).
  */
 
 import { execFileSync } from 'node:child_process';
@@ -29,10 +33,11 @@ export const CLIENT_JS_ROOTS = ['client', 'tools'];
 const SKIP_DIRS = new Set(['lib', 'node_modules', 'test', 'server']);
 
 /**
- * Every .js under the browser trees, excluding vendored libraries — tracked AND
- * untracked (a module not yet `git add`ed is still served), never ignored.
+ * Every .js under the browser trees in git's view — tracked AND untracked (a
+ * module not yet `git add`ed is still served), never ignored. Unfiltered: the
+ * ONE git walk both shapes derive from.
  */
-export const browserSources = (): string[] =>
+const gitBrowserView = (): string[] =>
 	execFileSync(
 		'git',
 		[
@@ -49,8 +54,14 @@ export const browserSources = (): string[] =>
 		},
 	)
 		.split('\n')
-		.filter(Boolean)
-		.filter((f) => !/\/(lib|vendor|node_modules)\/|\.min\.js$/.test(f));
+		.filter(Boolean);
+
+/**
+ * Every .js under the browser trees, excluding vendored libraries — tracked AND
+ * untracked (a module not yet `git add`ed is still served), never ignored.
+ */
+export const browserSources = (): string[] =>
+	gitBrowserView().filter((f) => !/\/(lib|vendor|node_modules)\/|\.min\.js$/.test(f));
 
 function walk(dir: string, out: string[]): void {
 	for (const name of readdirSync(dir).sort()) {
@@ -68,5 +79,9 @@ export function firstPartyClientFiles(): string[] {
 	const out: string[] = [];
 	walk(join(REPO_ROOT, 'client/dedalo'), out);
 	walk(join(REPO_ROOT, 'tools'), out);
-	return out.map((p) => relative(REPO_ROOT, p)).sort();
+	const notIgnored = new Set(gitBrowserView());
+	return out
+		.map((p) => relative(REPO_ROOT, p))
+		.filter((f) => notIgnored.has(f))
+		.sort();
 }

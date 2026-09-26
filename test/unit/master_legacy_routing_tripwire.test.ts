@@ -39,6 +39,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { writePathSourceFiles } from '../helpers/write_path_corpus.ts';
 
 const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
 const overlayPath = join(repoRoot, 'deploy/apache.master_legacy_v6.conf');
@@ -398,7 +399,6 @@ describe('master legacy routing tripwire', () => {
 	});
 
 	test('COUPLING — the engine reads no Host header, which is what makes ProxyPreserveHost Off free', async () => {
-		const glob = new Bun.Glob('**/*.ts');
 		const offenders: string[] = [];
 		const scanned: string[] = [];
 		/**
@@ -423,26 +423,26 @@ describe('master legacy routing tripwire', () => {
 					'the download origin. Nothing here touches a request header.',
 			},
 		];
-		for (const dir of ['src', 'tools']) {
-			for await (const rel of glob.scan({ cwd: join(repoRoot, dir) })) {
-				const text = readFileSync(join(repoRoot, dir, rel), 'utf8');
-				scanned.push(`${dir}/${rel}`);
-				// Two shapes, because `ProxyPreserveHost Off` applies to the WHOLE
-				// vhost, not only the diverted hop: over the unix socket the engine
-				// now sees `Host: localhost` for every request. Reading the header
-				// directly is the obvious way to trip on that — and so is the
-				// non-obvious way, since Bun builds `request.url` FROM the Host
-				// header, so `new URL(request.url).origin` is a Host read wearing a
-				// different hat. No engine path does either today (CORS keys on the
-				// Origin HEADER, cors.ts; nothing builds an absolute url from
-				// request.url), which is exactly what makes the directive free —
-				// so both shapes are censused, not just the literal one.
-				const read = /\.get\(\s*['"`](?:host|x-forwarded-host)['"`]\s*\)/i.exec(text);
-				const fromUrl = /new URL\(\s*\w*[Rr]equest\.url\s*\)\s*\.\s*(?:origin|host|hostname)/.exec(
-					text,
-				);
-				if (read !== null || fromUrl !== null) offenders.push(`${dir}/${rel}`);
-			}
+		// The engine-process corpus (src/, tools/, scripts/) — the shared lister,
+		// so this census cannot pick a narrower root than the code that serves.
+		for (const rel of writePathSourceFiles()) {
+			const text = readFileSync(join(repoRoot, rel), 'utf8');
+			scanned.push(rel);
+			// Two shapes, because `ProxyPreserveHost Off` applies to the WHOLE
+			// vhost, not only the diverted hop: over the unix socket the engine
+			// now sees `Host: localhost` for every request. Reading the header
+			// directly is the obvious way to trip on that — and so is the
+			// non-obvious way, since Bun builds `request.url` FROM the Host
+			// header, so `new URL(request.url).origin` is a Host read wearing a
+			// different hat. No engine path does either today (CORS keys on the
+			// Origin HEADER, cors.ts; nothing builds an absolute url from
+			// request.url), which is exactly what makes the directive free —
+			// so both shapes are censused, not just the literal one.
+			const read = /\.get\(\s*['"`](?:host|x-forwarded-host)['"`]\s*\)/i.exec(text);
+			const fromUrl = /new URL\(\s*\w*[Rr]equest\.url\s*\)\s*\.\s*(?:origin|host|hostname)/.exec(
+				text,
+			);
+			if (read !== null || fromUrl !== null) offenders.push(rel);
 		}
 		// A corpus floor, because "no offenders" is also what a scan that read
 		// NOTHING reports — and this verdict licenses ProxyPreserveHost Off.

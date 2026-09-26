@@ -57,6 +57,7 @@
 !biome.jsonc
 !bun.lock
 !bunfig.toml
+!changes
 !client
 !cliff.toml
 !docker-compose.simple.yml

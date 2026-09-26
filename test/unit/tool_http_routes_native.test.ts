@@ -210,8 +210,15 @@ describe('B. the reserved list is complete by derivation', () => {
 
 	test('every top-level directory of the client tree is reserved', () => {
 		const clientDir = join(REPO_ROOT, 'client', 'dedalo');
-		const dirs = readdirSync(clientDir).filter((name) =>
-			statSync(join(clientDir, name)).isDirectory(),
+		// A git-IGNORED directory is a developer's own (.gitignore names
+		// `dev_tools/`), not an engine namespace: counting it made this gate pass
+		// or fail by what one machine keeps on disk.
+		const ignored = (name: string): boolean =>
+			Bun.spawnSync(['git', 'check-ignore', '-q', join('client', 'dedalo', name)], {
+				cwd: REPO_ROOT,
+			}).exitCode === 0;
+		const dirs = readdirSync(clientDir).filter(
+			(name) => statSync(join(clientDir, name)).isDirectory() && !ignored(name),
 		);
 		expect(dirs).toContain('core');
 		const open = dirs.filter((name) => !TOOL_ROUTE_RESERVED_SEGMENTS.includes(name));
