@@ -14,16 +14,15 @@ remote with the gate run once (`bun run push`); on GitHub each sha is verified o
 not once per branch (the `dedupe` job); and the checks whose input is the CALENDAR,
 not the commit, run nightly instead of on the push (`nightly.yml`).
 
+> **ONE IMAGE, EVERY HOST** (landed 2026-09-26): GitHub's hermetic/db/instance jobs
+> (`container:`), GitLab's hermetic job (`image:`) and `ci:local --docker` all run the
+> build `ci/image.json` locks, by digest, as uid 1001 (`scripts/lib/ci_image.ts`;
+> `ci_workflow_tripwire` rule 1b holds every copy equal to the lock and the lock's
+> fingerprint equal to the checkout's). Before it only `ci:local` used the image — and a
+> LOCAL build of it — so a desk verdict predicted neither host.
+>
 > **PART 2 PENDING** (not landed — do not describe it as done):
-> 1. **Container pin.** `ci.yml`/`db.yml` jobs still run on the bare `ubuntu-latest`
->    runner. They move to `container: ghcr.io/renderpci/dedalo-ci@sha256:<digest>`
->    only after `ci-image.yml` has run once on a push and PUBLISHED a digest to pin
->    (rule 12 digest-pins every `container:`; there is nothing to pin until then).
->    Until that lands, a GitHub verdict and a `ci:local --docker` verdict are made on
->    DIFFERENT machines — the image carries the media tools, MariaDB and chromium the
->    bare runner lacks, which is why the unit tier measured ~25 red files on the runner
->    against ~3 in the image.
-> 2. **Blocking unit tier.** The unit tier stays ADVISORY in `db_tier.sh` (its one
+> 1. **Blocking unit tier.** The unit tier stays ADVISORY in `db_tier.sh` (its one
 >    reasoned `ADVISORY_STAGES` row in `tier_wiring_tripwire` leg H) until
 >    `engineering/unit_baseline.json` is re-recorded IN the image and the job runs in
 >    it. Making it blocking before the pin would block on the runner's missing tools,
@@ -37,9 +36,9 @@ by a hosted one (`tier_wiring_tripwire` leg B).
 
 | Workflow | Trigger | Runner | Runs |
 |---|---|---|---|
-| `.github/workflows/ci.yml` | pull_request + push master/v7 | hosted ubuntu | `dedupe` → `hermetic` (`scripts/ci/hermetic.sh`) |
-| `.github/workflows/db.yml` | pull_request + push master/v7 + dispatch | hosted ubuntu + `pgvector` service (digest-pinned), one per tier job | `dedupe` → `db` (`scripts/ci/db_tier.sh`: builds the suite database from repo-vendored bytes, then the DB-backed tripwires, the unit tier (advisory — Part 2) and the parity tier) and `instance` (`scripts/ci/instance_tier.sh`: its OWN fresh suite database, then the browser client suite via `scripts/ci/client_gate.sh` and both update drills). Both source `scripts/ci/hosted_env.sh` |
-| `.github/workflows/nightly.yml` | cron 04:17 UTC daily + dispatch | hosted ubuntu | the TIME-BASED checks the push gate defers: `scripts/ci/audit.ts --force --require-network` with the vendor calendar ON; `report` keeps one `ci-nightly` issue open/updated/closed |
+| `.github/workflows/ci.yml` | pull_request + push master/v7 | hosted ubuntu, `hermetic` in the CI image (uid 1001) | `dedupe` → `hermetic` (`scripts/ci/hermetic.sh`) |
+| `.github/workflows/db.yml` | pull_request + push master/v7 + dispatch | hosted ubuntu, each tier job in the CI image (uid 1001) + a `pgvector` service (digest-pinned) reached as `postgres` | `dedupe` → `db` (`scripts/ci/db_tier.sh`: builds the suite database from repo-vendored bytes, then the DB-backed tripwires, the unit tier (advisory — Part 2) and the parity tier) and `instance` (`scripts/ci/instance_tier.sh`: its OWN fresh suite database, then the browser client suite via `scripts/ci/client_gate.sh` and both update drills). Both source `scripts/ci/hosted_env.sh` |
+| `.github/workflows/nightly.yml` | cron 04:17 UTC daily + dispatch | hosted ubuntu | the TIME-BASED checks the push gate defers: `scripts/ci/audit.ts --force --require-network` with the vendor calendar ON; `image_pin` (`bun run ci:image:pin --check`: the lock is the latest published build); `report` keeps one `ci-nightly` issue open/updated/closed |
 | `.github/workflows/ci-image.yml` | push master/v7 touching the image definition + weekly cron (cache OFF) + dispatch | hosted ubuntu-24.04 amd64 + arm64 (native, no QEMU) | builds `ci/Dockerfile`, smoke-tests the exact bytes, pushes `ghcr.io/renderpci/dedalo-ci` (`fp-<fingerprint>`, `<YYYYMMDD>`, `latest`) as a multi-arch manifest list |
 | `.github/workflows/security.yml` | PR + push master + weekly cron + dispatch | hosted ubuntu | secret scan (gitleaks, digest-pinned image): working tree every run, FULL HISTORY weekly |
 | `.github/workflows/codeql.yml` | PR + push master + weekly cron | hosted ubuntu | CodeQL dataflow SAST (javascript-typescript, `build-mode: none`) → Security tab |
@@ -123,7 +122,7 @@ re-recorded. The same verdict now happens on the desk.
     bun run ci:local --hermetic|--db|--instance
     bun run ci:local --docker [--hermetic|--db|--instance]   # IN THE CI IMAGE
         [--ref <rev>]        # that commit exactly (no working-tree overlay)
-        [--pull]             # the published ghcr image, not a local build
+        [--build]            # build ci/Dockerfile locally, not the locked image
         [--base <branch>]    # behave as a pull_request against <branch>
         [--audit-base <sha>] # the push's `before` (the audit's skip base)
     any mode: [--fail-fast]  # stop after the first red tier; the rest report `not_run`
@@ -147,10 +146,12 @@ compose themselves (`scripts/ci/hosted_env.sh`), which is the property under tes
   commit on HEAD, or `--ref` exactly; the host repo is mounted read-only. It runs as a
   push to the host's current branch (`GITHUB_REF`, the checkout's branch name), a
   detached HEAD as a push to `master`; `--base` makes it a `pull_request` instead.
-- **The image**: `dedalo-ci:local`, rebuilt from `ci/Dockerfile` when absent or STALE
-  (its `org.dedalo.ci.fingerprint` label ≠ sha256(`ci/Dockerfile` ++ `.bun-version`));
-  `--pull` takes `ghcr.io/renderpci/dedalo-ci:fp-<fp>` and runs it by digest. The label
-  is verified before a tier starts.
+- **The image**: the LOCKED build (`ci/image.json`), pulled once and run by digest —
+  the bytes GitHub and GitLab run (an Apple-Silicon Mac gets the arm64 half of the same
+  multi-arch build). Only while `ci/Dockerfile`/`.bun-version` differ from the lock's
+  fingerprint (a definition not yet published) is `dedalo-ci:local` built from
+  `ci/Dockerfile` instead, and the run says so; `--build` forces that. The label is
+  verified before a tier starts.
 - **The audit base** (`--docker`, push shape only): the push's `before`, which
   `hermetic.sh`'s dependency audit diffs against (`DEDALO_CI_AUDIT_BASE`). `--audit-base`
   wins — all zeros or a sha this clone never fetched passes through and the audit RUNS
@@ -311,7 +312,7 @@ nightly home that can fail and report is red. The ratchet itself (DEC-12) is unc
 
 ### The CI image (`ci/Dockerfile`, `ci-image.yml`)
 
-One definition for the desk and (after Part 2) the runner: bun at `.bun-version`,
+One definition for the desk and both hosts: bun at `.bun-version`,
 postgresql-client-18, the media tools (ffmpeg, ImageMagick 7, poppler, ghostscript,
 rsvg), MariaDB, chromium, git/zip/jq; the fingerprint (sha256 of `ci/Dockerfile` ++ `.bun-version`) in
 `/etc/dedalo-ci-image` and the `org.dedalo.ci.fingerprint` label. `ci-image.yml`
@@ -325,11 +326,20 @@ change (Dependabot does not see workflow services, so its `/ci` PR moves only th
 copy). Gate: `ci_workflow_tripwire` "every pgvector image in the workflows equals
 ci/compose.yml's digest" turns that PR red until the workflow pins follow.
 
+**The pin** (`ci/image.json` + the literal digest in `ci.yml`, `db.yml`,
+`.gitlab-ci.yml`). `bun run ci:image:pin` is its updater: it resolves the digest
+`ci-image.yml` published for the checkout's fingerprint and rewrites the lock and every
+literal in one diff. Run it (1) after a `ci/Dockerfile`/`.bun-version` change has landed
+and been published — until then `ci_workflow_tripwire` is red, by design: the gates
+cannot run in an image that does not exist yet — and (2) when `nightly.yml`'s
+`image_pin` job is red, which means the weekly no-cache rebuild published distro
+security fixes the lock does not take yet.
+
 ## Non-negotiables (each is tripwired)
 
-- **Bun pin**: `bun-version-file: .bun-version` (GitHub), the CI image by digest
-  whose `# fp-<fingerprint>` = sha256(`ci/Dockerfile` ++ `.bun-version`) (GitLab),
-  the image builds from the same file;
+- **Bun pin**: every tier runs the CI image `ci/image.json` locks, whose fingerprint
+  must equal sha256(`ci/Dockerfile` ++ `.bun-version`) — the image installs exactly
+  `.bun-version`; the remaining `setup-bun` steps pin `bun-version-file: .bun-version`;
   `scripts/ci/env_guard.sh` re-checks the actual binary. Never fix a mismatch by
   editing the pin in CI — fix the runner.
 - **Oracle flag (post-cutover, largely vestigial)**: PHP is decommissioned and
@@ -459,9 +469,10 @@ scanning + push protection** and **private vulnerability reporting** (`SECURITY.
    exactly those three contexts.
 5. **Timeouts**: the `instance` job's 60 min is a first pin from the db build plus the
    drills' documented runtimes — re-pin from the first green run's wall clock.
-6. **The image**: the first push touching `ci/Dockerfile` (or a dispatch of `ci-image`)
-   publishes the first digest. That digest is Part 2's input.
-7. **GitLab mirror**: the same `.gitlab-ci.yml` hermetic tier on shared runners.
+6. **The image**: `ci-image.yml` publishes; `bun run ci:image:pin` moves the lock and
+   every literal to it (see "The pin").
+7. **GitLab mirror**: the same `.gitlab-ci.yml` hermetic tier on shared runners, in the
+   locked image as uid 1001.
 
 ## Activation runbook — the self-hosted tier (PRIVATE mirror)
 

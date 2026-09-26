@@ -10,10 +10,11 @@
 # ci:local and the GitHub tiers use (ci/README.md), pinned by DIGEST, run as uid 1001
 # (the GitHub runner's, and ci:local's `runner`). It was bare oven/bun as root: no git
 # (site_builder publishes through git) and root defeats the uid/permission gates, so
-# hermetic here was red on master from 2026-08 while GitHub was green. The trailing
-# `# fp-<fingerprint>` must equal sha256(ci/Dockerfile ++ .bun-version) — that keeps
-# the load-bearing Bun.sql jsonb pin binding here: a .bun-version or Dockerfile edit
-# is red until the pin moves to the image ci-image.yml publishes for it.
+# hermetic here was red on master from 2026-08 while GitHub was green. The digest is
+# ci/image.json's (scripts/lib/ci_image.ts), whose fingerprint must equal
+# sha256(ci/Dockerfile ++ .bun-version) — that keeps the load-bearing Bun.sql jsonb pin
+# binding here: a .bun-version or Dockerfile edit is red until `bun run ci:image:pin`
+# moves every copy to the build ci-image.yml publishes for it.
 # test/unit/ci_workflow_tripwire.test.ts enforces both.
 #
 # SECURITY SCANNERS (added 2026-08-03). The two platforms are NOT symmetric here, and
@@ -39,7 +40,7 @@ include:
 
 hermetic:
   image:
-    name: ghcr.io/renderpci/dedalo-ci@sha256:ec014ba81eedffff31ea4827eb55c0d23d969e3dd5087ba84e349f703e60a1fe # fp-92f539dcd87e60c4989bb11502583edefab0a237cadcd58a53bac43cdfeadc9b
+    name: ghcr.io/renderpci/dedalo-ci@sha256:ec014ba81eedffff31ea4827eb55c0d23d969e3dd5087ba84e349f703e60a1fe
     docker:
       user: "1001"
   # uid 1001 has no passwd entry in the image, so HOME would be `/` (unwritable): bun's

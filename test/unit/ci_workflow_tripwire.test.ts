@@ -119,6 +119,12 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Glob } from 'bun';
+import {
+	CI_IMAGE_REF,
+	CI_IMAGE_REFERENCES,
+	ciImageFingerprint,
+	readCiImageLock,
+} from '../../scripts/lib/ci_image.ts';
 import { findStatusProse } from '../../scripts/lib/status_prose.ts';
 import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
 
@@ -1409,31 +1415,82 @@ describe('CI workflow tripwire', () => {
 		).toBe(true);
 	});
 
-	// Rule 1b (2026-09-26) — GitLab runs the CI IMAGE, for the CURRENT definition, as
-	// the runner uid. It was `oven/bun:<.bun-version>` as root: no git and root, so
-	// hermetic was red there from 2026-08 while GitHub was green. The fingerprint is the
-	// measured binding — recomputed here from the bytes, never read off a spelling — so
-	// a .bun-version bump (or any ci/Dockerfile edit) is red until the pin moves to the
-	// digest ci-image.yml publishes for it.
-	test('.gitlab-ci.yml hermetic runs the CI image of THIS definition, digest-pinned, as uid 1001', () => {
-		const src = read('.gitlab-ci.yml');
-		const m = src.match(
-			/^\s*name:\s*ghcr\.io\/renderpci\/dedalo-ci@sha256:[0-9a-f]{64}[ \t]+#[ \t]*fp-([0-9a-f]{64})\s*$/m,
-		);
+	// Rule 1b (2026-09-26) — ONE CI IMAGE on every host (scripts/lib/ci_image.ts). Until
+	// this date only ci:local ran the image: GitHub ran bare ubuntu-latest + setup-bun +
+	// apt at run time, GitLab bare oven/bun as root (no git; root defeats the uid gates),
+	// so a local green predicted neither and CI stayed the debugger. Now:
+	//   - ci/image.json's fingerprint is THIS checkout's sha256(ci/Dockerfile ++
+	//     .bun-version), recomputed from the bytes — a .bun-version bump (the load-bearing
+	//     Bun.sql pin) or a Dockerfile edit is red until `bun run ci:image:pin` moves it;
+	//   - every dedalo-ci digest literal on either host equals the lock's, and every file
+	//     holding one is in CI_IMAGE_REFERENCES (the updater's list — else it misses one);
+	//   - every GitHub job that runs a tier root runs IN the image as uid 1001, and
+	//     GitLab's hermetic job likewise.
+	test('every tier on every host runs the ONE locked CI image, of THIS definition, as uid 1001', () => {
+		const lock = readCiImageLock(repoRoot);
 		expect(
-			m,
-			'.gitlab-ci.yml: hermetic image must be `name: ghcr.io/renderpci/dedalo-ci@sha256:<digest> # fp-<fingerprint>`',
-		).not.toBeNull();
-		const hasher = new Bun.CryptoHasher('sha256');
-		hasher.update(readFileSync(join(repoRoot, 'ci', 'Dockerfile')));
-		hasher.update(readFileSync(join(repoRoot, '.bun-version')));
+			lock.fingerprint,
+			'ci/image.json pins a build of ANOTHER ci/Dockerfile/.bun-version. Once ci-image.yml has published this definition: bun run ci:image:pin',
+		).toBe(ciImageFingerprint(repoRoot));
+
+		const hosts = [...allWorkflows, { rel: '.gitlab-ci.yml', src: read('.gitlab-ci.yml') }];
+		const holders: string[] = [];
+		for (const { rel, src } of hosts) {
+			const digests = [...src.matchAll(CI_IMAGE_REF)].map((m) => m[1]);
+			if (digests.length === 0) continue;
+			holders.push(rel);
+			for (const digest of digests) {
+				expect(digest, `${rel}: a dedalo-ci digest that is not ci/image.json's`).toBe(lock.digest);
+			}
+		}
 		expect(
-			m?.[1],
-			'.gitlab-ci.yml pins a CI image built from ANOTHER ci/Dockerfile/.bun-version. Move it to the fp-<new> digest ci-image.yml published (ci/README.md).',
-		).toBe(hasher.digest('hex'));
-		expect(src, '.gitlab-ci.yml: hermetic must run as the runner uid, never root').toMatch(
-			/^\s*docker:\s*\n\s*user:\s*"1001"\s*$/m,
-		);
+			[...holders].sort(),
+			'CI_IMAGE_REFERENCES (scripts/lib/ci_image.ts) must list exactly the files holding a dedalo-ci digest, or ci:image:pin leaves one behind',
+		).toEqual([...CI_IMAGE_REFERENCES].sort());
+
+		// Job blocks of a GitHub workflow: `  <name>:` under `jobs:` up to the next one.
+		const jobBlocks = (src: string): Array<{ name: string; body: string }> => {
+			const jobs = src.slice(src.search(/^jobs:\s*$/m));
+			return [...jobs.matchAll(/^ {2}([A-Za-z0-9_-]+):\s*\n((?:(?: {4}.*)?\n)*)/gm)].map((m) => ({
+				name: m[1] as string,
+				body: m[2] as string,
+			}));
+		};
+		const runsTierRoot = (body: string) =>
+			/run:\s*bash scripts\/ci\/(?:hermetic|db_tier|instance_tier)\.sh\b/.test(body);
+		const inImageAsRunner = (body: string) =>
+			/^ {4}container:\s*\n {6}image:\s*ghcr\.io\/renderpci\/dedalo-ci@sha256:[0-9a-f]{64}\s*\n {6}options:[^\n]*--user 1001\b/m.test(
+				body,
+			);
+		// Controls: the parser finds a tier job, and tells an in-image job from a bare one.
+		const control = `jobs:\n  a:\n    runs-on: x\n    container:\n      image: ghcr.io/renderpci/dedalo-ci@sha256:${'0'.repeat(64)}\n      options: --user 1001\n    steps:\n      - run: bash scripts/ci/db_tier.sh\n  b:\n    runs-on: x\n    steps:\n      - run: bash scripts/ci/hermetic.sh\n`;
+		const parsed = jobBlocks(control);
+		expect(parsed.map((j) => [j.name, runsTierRoot(j.body), inImageAsRunner(j.body)])).toEqual([
+			['a', true, true],
+			['b', true, false],
+		]);
+
+		const tierJobs: string[] = [];
+		const bare: string[] = [];
+		for (const { rel, src } of allWorkflows) {
+			if (!rel.startsWith('.github/workflows/')) continue;
+			for (const job of jobBlocks(src)) {
+				if (!runsTierRoot(job.body)) continue;
+				tierJobs.push(`${rel}#${job.name}`);
+				if (!inImageAsRunner(job.body)) bare.push(`${rel}#${job.name}`);
+			}
+		}
+		// Anti-vacuity: the three hosted tiers are found, or the parser went blind.
+		expect(tierJobs.length, `tier jobs found: ${tierJobs.join(', ')}`).toBeGreaterThanOrEqual(3);
+		expect(
+			bare,
+			'a GitHub job running a tier root outside the CI image (container: image: <locked digest>, options: --user 1001):',
+		).toEqual([]);
+
+		expect(
+			read('.gitlab-ci.yml'),
+			'.gitlab-ci.yml: hermetic must run as the runner uid, never root',
+		).toMatch(/^\s*docker:\s*\n\s*user:\s*"1001"\s*$/m);
 	});
 
 	// Binds to BOTH tiers: the self-hosted jobs now live in workflows-selfhosted/, and the

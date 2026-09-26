@@ -202,3 +202,19 @@ jobs:
           else
             gh issue create --title "$title" --label "$label" --body-file "$body"
           fi
+
+  # THE CI IMAGE PIN'S UPDATER SIGNAL (scripts/lib/ci_image.ts). ci-image.yml rebuilds the
+  # image weekly with the layer cache OFF to take distro security fixes — under the SAME
+  # fingerprint, so nothing else notices a new digest was published. Red here means the
+  # lock still pins the older build: run `bun run ci:image:pin` and commit the diff.
+  image_pin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version # the load-bearing pin — never inline a version
+      - name: The CI image pin is the latest published build of this definition
+        run: |
+          bun run ci:image:pin --check

@@ -51,11 +51,13 @@
  * overlay) — the pre-push hook passes the sha being pushed, because a push sends
  * commits, not a working tree. The host repo is mounted read-only and never written.
  *
- * THE IMAGE. `dedalo-ci:local`, built from ci/Dockerfile when absent or STALE — stale
- * meaning its `org.dedalo.ci.fingerprint` label is not sha256(ci/Dockerfile ++
- * .bun-version) of this checkout. `--pull` takes `ghcr.io/renderpci/dedalo-ci:fp-<fp>`
- * instead (what ci-image.yml publishes for exactly this definition) and runs it by the
- * digest it resolved to. Either way the label is verified before a tier starts.
+ * THE IMAGE. The LOCKED build — ci/image.json, the same digest GitHub and GitLab run
+ * (scripts/lib/ci_image.ts) — pulled once and run by digest, so a local verdict is the
+ * runner's verdict on the same bytes (an Apple-Silicon Mac gets the arm64 half of the
+ * same multi-arch build). Only while ci/Dockerfile or .bun-version differ from the lock's
+ * fingerprint — a definition not yet published — is `dedalo-ci:local` built from
+ * ci/Dockerfile instead, and the run says so; `--build` forces that local build. Either
+ * way the fingerprint label is verified before a tier starts.
  *
  * THE VERDICTS. Every tier's output is streamed through and parsed into stages from the
  * tier scripts' own `== <tier>: …` lines (their "the stages are independent" law makes
@@ -73,7 +75,7 @@
  *   bun run ci:local --keep       # (host mode) leave the scratch private dir on disk
  *   bun run ci:local --docker [--hermetic|--db|--instance]   # the same, in the CI image
  *       [--ref <rev>]             # run that commit exactly, not the working tree
- *       [--pull]                  # use the published ghcr image, not a local build
+ *       [--build]                 # build ci/Dockerfile locally, not the locked image
  *       [--base <branch>]         # behave as a pull_request against <branch> (the base
  *                                 # is resolved from THIS repo's local branch of that name)
  *       [--audit-base <sha>]      # the push's `before`: what the remote had (the pre-push
@@ -104,6 +106,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
+import { ciImageFingerprint, lockedImageRef, readCiImageLock } from './lib/ci_image.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..');
 
@@ -146,7 +149,6 @@ export const TIERS = [
 type Tier = (typeof TIERS)[number];
 
 const LOCAL_IMAGE = 'dedalo-ci:local';
-const REGISTRY_IMAGE = 'ghcr.io/renderpci/dedalo-ci';
 const FINGERPRINT_LABEL = 'org.dedalo.ci.fingerprint';
 const BUN_CACHE_VOLUME = 'dedalo-ci-bun-cache';
 const COMPOSE_FILE = join(REPO_ROOT, 'ci', 'compose.yml');
@@ -164,7 +166,7 @@ const BOOLEAN_FLAGS = new Set([
 	'--instance',
 	'--keep',
 	'--docker',
-	'--pull',
+	'--build',
 	'--fail-fast',
 	'--help',
 	'-h',
@@ -726,13 +728,6 @@ function docker(
 }
 
 /** sha256(ci/Dockerfile ++ .bun-version) — the image's identity, same bytes ci-image.yml hashes. */
-function imageFingerprint(): string {
-	const hasher = new Bun.CryptoHasher('sha256');
-	hasher.update(readFileSync(join(REPO_ROOT, 'ci', 'Dockerfile')));
-	hasher.update(readFileSync(join(REPO_ROOT, '.bun-version')));
-	return hasher.digest('hex');
-}
-
 function imageLabel(ref: string): string | undefined {
 	const inspect = docker([
 		'image',
@@ -745,33 +740,31 @@ function imageLabel(ref: string): string | undefined {
 }
 
 /**
- * The image to run, current for THIS checkout's ci/Dockerfile + .bun-version, or exit 2.
- * Local: reuse dedalo-ci:local when its label matches, else build it (native arch — the
- * image is multi-arch, so Apple Silicon runs arm64 without emulation). --pull: the
- * published fp-<fp> tag, run by the digest it resolved to so the run names exactly what
- * it ran.
+ * The image to run, or exit 2. The locked build (ci/image.json) when the lock is of THIS
+ * checkout's definition — pulled by digest if absent, its label verified. Otherwise (or
+ * with --build) dedalo-ci:local, built from ci/Dockerfile when absent or stale.
  */
-function ensureImage(pull: boolean): string {
-	const fingerprint = imageFingerprint();
-	if (pull) {
-		const tag = `${REGISTRY_IMAGE}:fp-${fingerprint}`;
-		console.log(`== ci:local: pulling ${tag}`);
-		if (docker(['pull', tag], { quiet: false }).code !== 0) {
-			fail(
-				`could not pull ${tag}. ci-image.yml publishes it when ci/Dockerfile or .bun-version lands on master/v7;\n` +
-					'  for a definition not yet published, drop --pull and the image is built locally.',
-			);
+function ensureImage(build: boolean): string {
+	const fingerprint = ciImageFingerprint(REPO_ROOT);
+	const lock = readCiImageLock(REPO_ROOT);
+	if (!build && lock.fingerprint === fingerprint) {
+		const ref = lockedImageRef(lock);
+		if (imageLabel(ref) === undefined) {
+			console.log(`== ci:local: pulling the locked CI image ${ref}`);
+			if (docker(['pull', ref], { quiet: false }).code !== 0) {
+				fail(
+					`could not pull ${ref} (ci/image.json). Offline? --build runs a local build of ci/Dockerfile instead — not the bytes CI runs.`,
+				);
+			}
 		}
-		const digest = docker([
-			'image',
-			'inspect',
-			tag,
-			'--format',
-			'{{ index .RepoDigests 0 }}',
-		]).stdout;
-		if (imageLabel(tag) !== fingerprint)
-			fail(`${tag} carries the wrong ${FINGERPRINT_LABEL} label — refusing it.`);
-		return digest === '' ? tag : digest;
+		if (imageLabel(ref) !== fingerprint)
+			fail(`${ref} carries the wrong ${FINGERPRINT_LABEL} label — refusing it.`);
+		return ref;
+	}
+	if (!build) {
+		console.log(
+			`== ci:local: ci/Dockerfile or .bun-version differ from ci/image.json (fp ${lock.fingerprint.slice(0, 12)}, checkout ${fingerprint.slice(0, 12)}) — running a LOCAL build. CI stays red on ci_workflow_tripwire until ci-image.yml publishes this definition and \`bun run ci:image:pin\` moves the pin.`,
+		);
 	}
 	const label = imageLabel(LOCAL_IMAGE);
 	if (label === fingerprint) return LOCAL_IMAGE;
@@ -780,7 +773,7 @@ function ensureImage(pull: boolean): string {
 			? `== ci:local: ${LOCAL_IMAGE} absent — building it from ci/Dockerfile`
 			: `== ci:local: ${LOCAL_IMAGE} is STALE (label ${label.slice(0, 12)}, checkout ${fingerprint.slice(0, 12)}) — rebuilding`,
 	);
-	const build = docker(
+	const buildResult = docker(
 		[
 			'buildx',
 			'build',
@@ -795,7 +788,7 @@ function ensureImage(pull: boolean): string {
 		],
 		{ quiet: false },
 	);
-	if (build.code !== 0) fail('the CI image build failed (output above).');
+	if (buildResult.code !== 0) fail('the CI image build failed (output above).');
 	if (imageLabel(LOCAL_IMAGE) !== fingerprint)
 		fail(`the rebuilt ${LOCAL_IMAGE} does not carry fingerprint ${fingerprint}.`);
 	return LOCAL_IMAGE;
@@ -939,7 +932,7 @@ async function runInDocker(args: Args, tiers: readonly Tier[]): Promise<TierResu
 	if (args.flags.has('--keep'))
 		console.log('== ci:local: --keep applies to host mode; --docker always removes its containers');
 
-	const image = ensureImage(args.flags.has('--pull'));
+	const image = ensureImage(args.flags.has('--build'));
 	if (docker(['volume', 'create', BUN_CACHE_VOLUME]).code !== 0)
 		fail(`could not create volume ${BUN_CACHE_VOLUME}.`);
 
@@ -1116,7 +1109,7 @@ async function main(): Promise<void> {
 	if (args.flags.has('--help') || args.flags.has('-h')) {
 		console.log(
 			'bun run ci:local [--hermetic] [--db] [--instance] [--keep] [--fail-fast] [--summary <file>]\n' +
-				'bun run ci:local --docker [--hermetic] [--db] [--instance] [--ref <rev>] [--audit-base <sha>] [--pull] [--base <branch>] [--fail-fast] [--summary <file>]\n\n' +
+				'bun run ci:local --docker [--hermetic] [--db] [--instance] [--ref <rev>] [--audit-base <sha>] [--build] [--base <branch>] [--fail-fast] [--summary <file>]\n\n' +
 				'Runs the CI tiers with the environment a RUNNER has: no ../private/.env, every\n' +
 				'DEDALO_* key composed by the tier itself. Host mode takes only the Postgres\n' +
 				'connection from your machine; on macOS run --instance under a short TMPDIR\n' +
@@ -1132,7 +1125,7 @@ async function main(): Promise<void> {
 		for (const flag of ['--ref', '--base', '--audit-base'])
 			if (args.values.has(flag))
 				fail(`${flag} needs --docker (host mode runs this checkout in place)`);
-		if (args.flags.has('--pull')) fail('--pull needs --docker');
+		if (args.flags.has('--build')) fail('--build needs --docker');
 	}
 
 	const selected = TIERS.filter((tier) => args.flags.has(tier.flag));

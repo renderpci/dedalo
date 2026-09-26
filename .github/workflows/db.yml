@@ -117,6 +117,17 @@ jobs:
     # hosted runner is not faster than that Mac, so 20 would have been a coin
     # flip — 40 leaves real headroom while still catching a genuine hang.
     timeout-minutes: 40
+    # THE CI IMAGE (ci/image.json — scripts/lib/ci_image.ts), the one ci:local and GitLab
+    # run: bun = .bun-version, pg18 client, Chromium, media tools, git. As uid 1001, the
+    # runner user that owns the mounted workspace — never root, which defeats the
+    # uid/permission gates. ci_workflow_tripwire holds this digest equal to the lock.
+    container:
+      image: ghcr.io/renderpci/dedalo-ci@sha256:ec014ba81eedffff31ea4827eb55c0d23d969e3dd5087ba84e349f703e60a1fe
+      options: --user 1001 --shm-size 1g
+    # In a container job a service is reached by its NAME, not localhost (the tier
+    # scripts default DB_HOST to 127.0.0.1 — hosted_env.sh — and honour this).
+    env:
+      DB_HOST: postgres
 
     services:
       postgres:
@@ -144,8 +155,6 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
         # Without a health gate the first psql races the server's own init.
         options: >-
           --health-cmd "pg_isready -U postgres"
@@ -155,21 +164,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version-file: .bun-version # the load-bearing pin — never inline a version
-
-      # ubuntu-latest ships psql 16, and pg_dump/pg_restore/psql refuse a NEWER
-      # server than the client. The engine resolves the binary through
-      # DEDALO_PG_BIN_PATH (src/core/install/pg_bin.ts), which db_tier.sh points
-      # at this install.
-      - name: Install postgresql-client 18
-        run: |
-          sudo install -d /usr/share/postgresql-common/pgdg
-          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
-          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq postgresql-client-18
 
       - name: Install dependencies (frozen lockfile)
         run: bun install --frozen-lockfile
@@ -186,6 +180,17 @@ jobs:
     # job's measured build plus the drills' documented runtimes — MEASURE the first
     # green run and re-pin from that, never from a guess.
     timeout-minutes: 60
+    # THE CI IMAGE (ci/image.json — scripts/lib/ci_image.ts), the one ci:local and GitLab
+    # run: bun = .bun-version, pg18 client, Chromium, media tools, git. As uid 1001, the
+    # runner user that owns the mounted workspace — never root, which defeats the
+    # uid/permission gates. ci_workflow_tripwire holds this digest equal to the lock.
+    container:
+      image: ghcr.io/renderpci/dedalo-ci@sha256:ec014ba81eedffff31ea4827eb55c0d23d969e3dd5087ba84e349f703e60a1fe
+      options: --user 1001 --shm-size 1g
+    # In a container job a service is reached by its NAME, not localhost (the tier
+    # scripts default DB_HOST to 127.0.0.1 — hosted_env.sh — and honour this).
+    env:
+      DB_HOST: postgres
 
     services:
       postgres:
@@ -196,8 +201,6 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
         # Without a health gate the first psql races the server's own init.
         options: >-
           --health-cmd "pg_isready -U postgres"
@@ -211,31 +214,16 @@ jobs:
           # The update drills `git clone` THIS checkout as the release build's
           # source, and git refuses to clone a shallow repository.
           fetch-depth: 0
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version-file: .bun-version # the load-bearing pin — never inline a version
-
-      # Same client-18 install as `db`, for the same reason: the suite build runs
-      # pg_dump/pg_restore/psql, and a client older than the server is refused.
-      - name: Install postgresql-client 18
-        run: |
-          sudo install -d /usr/share/postgresql-common/pgdg
-          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
-          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq postgresql-client-18
 
       - name: Install dependencies (frozen lockfile)
         run: bun install --frozen-lockfile
 
-      # The client runner launches the SYSTEM Chrome (`channel: 'chrome'`,
-      # PUPPETEER_SKIP_DOWNLOAD=1) and already passes --no-sandbox; the drills
-      # need zip/unzip/zipinfo and git. This step only makes the absence of any
-      # of them a named failure instead of a mystery. (Part 2 moves this job into
-      # the dedalo-ci image, which ships chromium; this check moves with it.)
-      - name: Runner toolchain (Chrome, zip, git)
+      # The image's Chromium (PUPPETEER_EXECUTABLE_PATH) runs the client suite; the
+      # drills need zip/unzip/zipinfo and git. This step only makes the absence of
+      # any of them a named failure instead of a mystery.
+      - name: Image toolchain (Chromium, zip, git)
         run: |
-          google-chrome --version
+          "$PUPPETEER_EXECUTABLE_PATH" --version
           zip -v | head -1
           zipinfo -h >/dev/null 2>&1 || unzip -v | head -1
           git --version

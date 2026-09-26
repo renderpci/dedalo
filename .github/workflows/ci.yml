@@ -112,10 +112,14 @@ jobs:
     if: ${{ !cancelled() && (github.event_name != 'push' || needs.dedupe.result != 'success' || needs.dedupe.outputs.skip != 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # THE CI IMAGE (ci/image.json — scripts/lib/ci_image.ts), the one ci:local and GitLab
+    # run: bun = .bun-version, pg18 client, Chromium, media tools, git. As uid 1001, the
+    # runner user that owns the mounted workspace — never root, which defeats the
+    # uid/permission gates. ci_workflow_tripwire holds this digest equal to the lock.
+    container:
+      image: ghcr.io/renderpci/dedalo-ci@sha256:ec014ba81eedffff31ea4827eb55c0d23d969e3dd5087ba84e349f703e60a1fe
+      options: --user 1001 --shm-size 1g
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version-file: .bun-version # the load-bearing pin — never inline a version
       - name: Hermetic tier (install + tsc + biome + static tripwires)
         run: bash scripts/ci/hermetic.sh

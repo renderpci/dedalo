@@ -16,8 +16,9 @@
 # (load → run → push), then `merge` stitches the two into one manifest list.
 #
 # TAGS (all on the manifest list):
-#   fp-<fingerprint>  sha256(ci/Dockerfile ++ .bun-version) — what `ci:local` pulls to get
-#                     the image matching THIS checkout's definition (the same value as
+#   fp-<fingerprint>  sha256(ci/Dockerfile ++ .bun-version) — what `bun run ci:image:pin`
+#                     resolves to the digest every host then runs (ci/image.json), the image
+#                     matching THIS checkout's definition (the same value as
 #                     /etc/dedalo-ci-image and the org.dedalo.ci.fingerprint label).
 #   <YYYYMMDD>        the build day; a rebuild with an unchanged fingerprint still moves
 #                     distro packages, and this names which week's packages a digest holds.
@@ -33,7 +34,7 @@
 #   workflow_dispatch — a manual rebuild.
 # NO pull_request: publishing needs `packages: write`, and a fork PR must never reach a
 # job holding it. A Dockerfile change is proven BEFORE the push by the local gate —
-# `ci:local --docker` builds ci/Dockerfile whenever dedalo-ci:local's fingerprint does not
+# `ci:local --docker` builds ci/Dockerfile whenever ci/image.json's fingerprint does not
 # match the checkout — and here, on the branch, before any workflow pin moves to it.
 #
 # Invariants in this file are enforced by test/unit/ci_workflow_tripwire.test.ts

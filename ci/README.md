@@ -1,13 +1,15 @@
 # ci/ — the CI image
 
-One toolchain for every place the gates run: the GitHub tiers (`container:`, pinned by
-digest) and the local pre-push gate (`bun run ci:local -- --docker`). The rationale for
+One toolchain for every place the gates run: the GitHub tiers (`container:`), GitLab's
+hermetic job (`image:`) and the local pre-push gate (`bun run ci:local -- --docker`) — all
+the build `ci/image.json` locks, by digest, as uid 1001. The rationale for
 each package, the base choice and the layer order live in the header of
 [`Dockerfile`](Dockerfile); the pipeline map is `engineering/CI.md`.
 
 | | |
 |---|---|
-| Local tag | `dedalo-ci:local` |
+| Pin | `ci/image.json` (digest + fingerprint) — every host runs it; `bun run ci:image:pin` moves it |
+| Local tag | `dedalo-ci:local` (only while the definition is unpublished, or `ci:local --build`) |
 | Registry | `ghcr.io/renderpci/dedalo-ci` (published by `.github/workflows/ci-image.yml`) |
 | Arches | `linux/amd64`, `linux/arm64` (native builds; Apple Silicon runs it without emulation) |
 | Base | `debian:trixie-slim` by digest — the product image's distro |
