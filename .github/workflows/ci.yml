@@ -28,12 +28,13 @@ name: ci
 # actually lands ON, not only the ones it is merged INTO. (P0-1 of the
 # 2026-08-26 deep audit.)
 #
-# `scripts/verify.ts` — the command that sat RED for 45 commits — is the
-# DEVELOPER's gate and is run by no workflow; every stage it reports has a hosted
-# twin that executes (typecheck/lint/lint:browser/site_builder here, the
-# tripwires split hermetic ∪ db, the neighbours' directories claimed by the unit
-# and parity tiers), and test/unit/tier_wiring_tripwire.test.ts derives that
-# stage list from verify.ts itself and holds each twin.
+# `scripts/verify.ts` is the DEVELOPER's gate (their environment) and is run by no
+# workflow; every stage it reports has a hosted twin that executes
+# (typecheck/lint/lint:browser/site_builder here, the tripwires split hermetic ∪
+# db, the neighbours' directories claimed by the unit and parity tiers), and
+# test/unit/tier_wiring_tripwire.test.ts derives that stage list from verify.ts
+# itself and holds each twin. The CI-environment gate on the desk is the
+# pre-push hook (scripts/hooks/pre-push → `bun run ci:local --docker`).
 on:
   pull_request:
   push:
@@ -47,12 +48,68 @@ on:
 permissions:
   contents: read
 
+# CONCURRENCY + DEDUPE (2026-09-26). `bun run push` lands ONE sha on both landing
+# branches, so every push fired this workflow twice on identical bytes. A push run
+# is grouped by its SHA and never cancelled: the second run of a sha QUEUES behind
+# the first (a queued run costs no runner minutes; a sha has at most two push runs,
+# one per landing branch, so the one pending slot never evicts one). When it starts,
+# the `dedupe` job skips the tiers iff a push run of this workflow on ANOTHER branch
+# already CONCLUDED success for the sha — whichever of the two was admitted first,
+# the other defers to it; no run-id ordering is involved. Only success is deferred
+# to, never in-progress: a skip is a green check, and it may only ever stand next to
+# a green one. A red, cancelled or missing first run makes the second run in full.
+# Every other event is keyed apart — a PR by its ref (superseded runs cancelled), any
+# other event by its own run id, so it can never evict a queued push run — and can
+# never skip. The tier `if:` is `!cancelled() && (...)`, NOT the implicit success():
+# a FAILED or timed-out dedupe RUNS the tiers (its own red is still the run's red);
+# only a dedupe that concluded success AND said skip=true on a push skips. A skipped
+# job shows as skipped, not red. Held by rule 19 of ci_workflow_tripwire (the probe
+# EXECUTED against stubbed run listings) and leg F of tier_wiring_tripwire (the one
+# sanctioned tier `if:`, evaluated per event × dedupe result × output).
+# The dedupe job is byte-identical in db.yml — change both together.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.event_name == 'push' && github.sha || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Reads the run list of this workflow (actions: read, the only scope it holds); runs
+  # no repository code — no checkout. Fail-open: an API error means "run the tiers".
+  dedupe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+    outputs:
+      skip: ${{ steps.probe.outputs.skip }}
+    steps:
+      - name: Skip when another landing branch's push run already verified this sha
+        id: probe
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -o pipefail
+          skip=false
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            if wf=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq '.workflow_id') &&
+              runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/runs?head_sha=$GITHUB_SHA&event=push&status=success&per_page=100" \
+                --jq '.workflow_runs[] | [.id, .head_sha, .event, .conclusion, .head_branch] | @tsv'); then
+              while IFS=$'\t' read -r id sha event conclusion branch; do
+                if [ "$sha" = "$GITHUB_SHA" ] && [ "$event" = push ] && [ "$conclusion" = success ] &&
+                  [ "$branch" != "$GITHUB_REF_NAME" ]; then
+                  skip=true
+                  echo "::notice::run $id on $branch already verified $GITHUB_SHA; the tiers are skipped here"
+                  break
+                fi
+              done <<< "$runs"
+            else
+              echo "::warning::could not list the runs of $GITHUB_SHA; running the tiers (fail-open)"
+            fi
+          fi
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+
   hermetic:
+    needs: dedupe
+    if: ${{ !cancelled() && (github.event_name != 'push' || needs.dedupe.result != 'success' || needs.dedupe.outputs.skip != 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

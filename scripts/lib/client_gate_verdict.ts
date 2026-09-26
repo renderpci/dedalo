@@ -48,6 +48,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { classifyCount, type RatchetCheck } from './ratchet_check.ts';
 
 export const REPO_ROOT = join(import.meta.dir, '..', '..');
 export const INVENTORY_PATH = 'engineering/client_gate_inventory.json';
@@ -492,6 +493,60 @@ export function writeInventory(next: ClientGateInventory): void {
 export interface StaticCensus {
 	assertionFreeIt: number;
 	skippedRegistrations: number;
+}
+
+/**
+ * THE STATIC HALF OF THE RECORD, judged without a browser — the bank's verdict for
+ * `bun run scripts/client_test_runner.ts --check --json` (scripts/lib/ratchet_check.ts).
+ *
+ * Three of the four numbers are STATIC facts about the tree, and the hermetic tripwire
+ * (client_gate_inventory_tripwire) requires each to EQUAL its measure — so a burn-down
+ * (an assertion added to an empty it(), an it.skip deleted) or a newly registered suite
+ * reddens the hermetic tier until the record is re-banked, and the only writer was the
+ * five-minute browser run's `--update`. This is the same rule as {@link bankInventory},
+ * applied to the static numbers only:
+ *   assertion_free_it_budget / skipped_registration_budget — BUDGETS: lower is banked,
+ *     higher is refused;
+ *   suite_floor — a FLOOR equal to the registry's gated cards: higher is banked (a new
+ *     suite raises it), lower is refused (removing suites stays a hand edit whose
+ *     commit says which and why).
+ * `mocha_test_floor` is the one DYNAMIC number (what mocha actually RAN) and is carried
+ * through untouched: only a green browser run may move it.
+ */
+export function staticInventoryVerdict(
+	current: ClientGateInventory,
+	census: StaticCensus,
+	gatedCards: number,
+): { check: RatchetCheck; next: ClientGateInventory } {
+	const check: RatchetCheck = {
+		ratchet: 'client_gate_inventory',
+		baselines: [INVENTORY_PATH],
+		improvements: [],
+		regressions: [],
+	};
+	classifyCount(
+		check,
+		'assertion_free_it_budget',
+		current.assertion_free_it_budget,
+		census.assertionFreeIt,
+	);
+	classifyCount(
+		check,
+		'skipped_registration_budget',
+		current.skipped_registration_budget,
+		census.skippedRegistrations,
+	);
+	classifyCount(check, 'suite_floor', current.suite_floor, gatedCards, false);
+	return {
+		check,
+		next: {
+			rule: INVENTORY_RULE,
+			suite_floor: gatedCards,
+			mocha_test_floor: current.mocha_test_floor,
+			assertion_free_it_budget: census.assertionFreeIt,
+			skipped_registration_budget: census.skippedRegistrations,
+		},
+	};
 }
 
 export interface RunConclusion {

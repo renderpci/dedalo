@@ -96,8 +96,11 @@ bun test test/parity/read_differential.test.ts
 bun test test/unit
 ```
 
-CI runs these on every push and pull request (`.github/workflows/ci.yml`), split into
-a **hermetic** tier that needs no services and a self-hosted tier that has a database.
+CI runs these on every push and pull request, on hosted runners: a **hermetic** tier
+that needs no services (`.github/workflows/ci.yml`), and a **db** tier (unit and parity)
+plus an **instance** tier (browser client suite, update drills) that each build a
+throwaway suite database (`.github/workflows/db.yml`). The same tiers run on your machine,
+in CI's own image, with `bun run ci:local --docker` — the pre-push hook does it for you.
 The pipeline map and the activation runbook are defined in `engineering/CI.md`.
 
 ## Handling an intentional contract change

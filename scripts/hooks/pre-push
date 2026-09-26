@@ -1,0 +1,526 @@
+#!/bin/sh
+#
+# PRE-PUSH GATE — run what CI runs, in CI's image, BEFORE the push leaves.
+#
+# WHY THIS EXISTS. Until 2026-09 every check ran only AFTER the push, on the
+# GitHub runner, so CI was red on nearly every push and the runner was the
+# debugger: a ratchet that fails on IMPROVEMENT (a budget that fell and was not
+# banked), an ubuntu-vs-macOS difference, a baseline nobody re-recorded. Each
+# cost a round trip of ~10 minutes and a pasted log. This hook moves the same
+# verdict to the developer's desk, in the same image (ci/Dockerfile), so a red
+# is found before it is published.
+#
+# INSTALLED BY `bun install`: package.json "prepare" sets
+# `core.hooksPath=scripts/hooks` in a developer checkout (a no-op in CI, in the
+# CI image, and in a git-archive release tree that has no .git of its own).
+#
+# THE FLOW (git calls this with `<remote-name> <remote-url>` and one line per
+# pushed ref on stdin: `<local-ref> <local-sha> <remote-ref> <remote-sha>`):
+#
+#   0. Precondition: the gate tests the CHECKOUT, so what is pushed must BE the
+#      checkout — every pushed ref that carries commits new to the remote must
+#      point at HEAD, and no tracked file may differ from HEAD. Otherwise a
+#      green verdict would describe code that is not being pushed (and a
+#      dirty-but-green tree is exactly how a red reaches CI).
+#   1. `bun run baselines:bank -- --ephemeral`, in a throwaway worktree of the pushed commit
+#      (never this checkout: untracked files must not be measured). exit 0: no drift. exit 3: improvement-only
+#      drift was WRITTEN — the files are committed as
+#      "chore(baselines): bank improvements" ON EVERY BRANCH BEING PUSHED (and
+#      the checkout) and the push is stopped (exit 3):
+#      git cannot add a commit to a push already in progress, so re-run it.
+#      exit 1: a REGRESSION — nothing is written for it; the bank's per-ratchet
+#      line names that ratchet's own deliberate-record command — or an ERROR (a check that could not
+#      run), which the hook reports as such. Any other code is a bank failure.
+#      The re-push after a bank commit gates at the FULL level: the banked
+#      engineering/*.json files HAVE db/instance-tier readers (measured
+#      2026-09-26: scripts/client_test_runner.ts reads client_gate_inventory.json,
+#      and the unit tier runs every tripwire that reads the others), so treating
+#      them as hermetic-only would be exactly the hole the allow-list forbids.
+#   2. `bun run ci:local --docker --fail-fast --hermetic` — blocks on red; with
+#      --fail-fast a red tier ends the run (the later tiers are reported not_run).
+#   3. `--db --instance` too, UNLESS every file the pushed range touches is
+#      in HERMETIC_ONLY_PATHS below — or always, with DEDALO_PREPUSH=full. CI
+#      itself runs them on every push; skipping them here is a desk-time trade,
+#      and it is only taken where it is PROVABLY not a hole (see the list).
+#
+# THE GATED TREE IS THE PUSHED COMMIT. ci:local gets `--ref <HEAD sha>`: the
+# container checks out exactly that commit, no working-tree overlay; and the
+# bank runs in a `git worktree` of that commit — a push sends commits, so an
+# untracked file on this desk must not be able to turn a verdict green (or red)
+# that the runner will not reproduce, nor be measured into a banked floor.
+#
+# THE AUDIT BASE IS THE REMOTE'S SHA. hermetic.sh's dependency audit skips
+# unless the push's range carries one of its inputs (a bun.lock, a package.json,
+# vendor/…), so its base must be what THIS remote had — git hands it to the hook
+# per ref — never ci:local's fallback (merge-base with @{upstream}, which is a
+# different remote's state, or none). One gated remote sha this clone has: that
+# sha. A new branch (000…), an unfetched remote tip, or gated refs whose remote
+# tips differ: the audit is FORCED (`--audit-base 000…`), as GitHub runs it for
+# a new branch.
+#
+# RUNS ONCE PER SHA. `git push github master v7` hands both refs in one call
+# (usually the same sha) and the gate runs once over the union of their
+# ranges. Across calls (`bun run push` feeds three remotes; a manual second
+# `git push gitlab …`) a GREEN verdict is remembered per sha, tier level AND
+# audit base in `$(git rev-parse --git-path dedalo-prepush-green)`: a sha
+# already gated at the needed level with the same audit base (or a forced
+# audit) is not gated again. Only green is remembered — a red is re-measured
+# every time.
+#
+# THE REPOSITORY IS DISCOVERED, NEVER INHERITED: git's repository-local
+# variables (GIT_DIR, GIT_WORK_TREE, GIT_INDEX_FILE, … — `git rev-parse
+# --local-env-vars`) are unset once the pushing checkout is resolved, so the
+# bank worktree's git calls act on the bank worktree.
+#
+# DOCKER IS REQUIRED. There is no "skip the gate when Docker is down" branch on
+# purpose: a gate that silently disappears when its runtime is missing is the
+# failure mode this hook exists to end. Start Docker, or bypass visibly with
+# `git push --no-verify` (CI still runs, and the bypass is in your shell
+# history, not hidden in a hook).
+#
+# EXIT CODES: 0 push proceeds · 1 red / precondition failed · 3 improvements
+# banked into a new commit, re-run the push (`bun run push` retries by itself).
+#
+# Environment: DEDALO_PREPUSH=full forces the db + instance tiers.
+
+set -u
+
+remote_name="${1:-}"
+
+ZERO_SHA_RE='^0*$'
+
+# The paths whose change CANNOT alter a db- or instance-tier verdict. It is an
+# ALLOW-list for skipping, not a list of what the tiers read: anything not
+# named here selects the full gate, so a new directory, a moved file, or a
+# reader nobody knew about errs toward running MORE, never less. (It was the
+# other way round until 2026-09-26 — a hand-kept list of what the tiers read —
+# and measurement showed the unit tier reads docs/, engineering/, publication/,
+# deploy/, the root compose files and more that the list had missed.)
+#
+# The bar for an entry: no tracked file in what those tiers execute (test/,
+# src/, tools/, client/, install/, ci/, scripts/ — minus the static tripwires
+# the hermetic tier ALSO runs, whose verdict this gate delivers anyway) names
+# it as a path (`name/…` or a quoted 'name'). Held by
+# test/unit/pre_push_gate_native.test.ts, which re-measures every entry and
+# fails when one gains a reader; a mere WORD collision (the ARIA role
+# 'presentation', package.json's "overrides" key) is a named, line-scoped
+# exemption there. Measured 2026-09-26: .agents/ (build-context, census and
+# release-archive gates read it) and .gitlab/ (ci_workflow_tripwire) have
+# readers and are NOT here. A trailing `/` is a directory prefix; anything
+# else is one exact file. Plain words only — the list is split by awk, never
+# glob-expanded by the shell. An entry must also be PUSHABLE — a gitignored
+# path never appears in a pushed range, so it would be inert (CHANGELOG.md was,
+# until 2026-09-26); the test refuses one with `git check-ignore`.
+HERMETIC_ONLY_PATHS='presentation/ overrides/ .vscode/ License.md'
+
+say() { printf '%s\n' "pre-push: $*" >&2; }
+rule() { printf '%s\n' '────────────────────────────────────────────────────────────────────' >&2; }
+
+repo_root="$(git rev-parse --show-toplevel)" || exit 1
+git_dir="$(git rev-parse --absolute-git-dir)" || exit 1
+
+# ── the repository is FOUND, never inherited ─────────────────────────────────
+# git exports GIT_DIR into a hook run from a LINKED worktree (measured: a push
+# from `git worktree add`'s tree hands the hook GIT_DIR=<main>/.git/worktrees/<wt>),
+# and a caller can export GIT_DIR / GIT_WORK_TREE / GIT_INDEX_FILE of its own.
+# Every git call below that targets ANOTHER tree — the bank worktree's diff, add
+# and COMMIT — would then silently act on the inherited repository instead: the
+# bank commit landing on the pushing worktree's branch and index. So the two
+# facts are resolved once with what git handed us, and then every variable git
+# itself calls repository-local (`--local-env-vars`, git's own list, not ours)
+# is unset; each later call discovers its repository from its own directory.
+for var in $(git rev-parse --local-env-vars) $(env | grep -Eo '^GIT_CONFIG_(KEY|VALUE)_[0-9]+'); do
+	unset "$var"
+done
+cd "$repo_root" || exit 1
+if [ "$(git rev-parse --absolute-git-dir 2>/dev/null)" != "$git_dir" ]; then
+	printf '%s\n' "pre-push: REFUSED — $repo_root does not discover the pushing repository ($git_dir) by itself" \
+		'(a GIT_DIR with no .git link in its tree?). The gate needs a checkout it can find.' >&2
+	exit 1
+fi
+
+# The pre-push stdin is read ONCE, up front: every command below that might
+# read stdin (bun, docker) would otherwise swallow the remaining ref lines.
+tmp_dir="${TMPDIR:-/tmp}"
+tmp_dir="${tmp_dir%/}"
+refs_file="$(mktemp "$tmp_dir/dedalo-prepush-refs.XXXXXX")" || exit 1
+files_file="$(mktemp "$tmp_dir/dedalo-prepush-files.XXXXXX")" || exit 1
+summary_file="$(mktemp "$tmp_dir/dedalo-prepush-summary.XXXXXX")" || exit 1
+untracked_before="$(mktemp "$tmp_dir/dedalo-prepush-untracked.XXXXXX")" || exit 1
+trap 'rm -f "$refs_file" "$files_file" "$summary_file" "$untracked_before"' EXIT
+trap 'exit 130' HUP INT TERM
+cat >"$refs_file"
+
+head_sha="$(git rev-parse --verify -q HEAD)" || {
+	say 'no HEAD commit; nothing to gate.'
+	exit 1
+}
+
+# ── 0. what is being pushed ──────────────────────────────────────────────────
+# For each ref: the commits NEW to the remote and the files they touch. A known
+# remote sha gives an exact range (a force push included — the endpoint diff is
+# still the change); an unknown one (a new branch, or a remote sha this clone
+# never fetched) falls back to "not on any of this remote's tracking refs".
+# More than MAX_LISTED new commits (a remote that has nothing yet) is simply
+# treated as touching everything rather than listing a whole history.
+MAX_LISTED=500
+needs_full=0
+gated_any=0
+# The dependency audit's base — the push's `before` (see "THE AUDIT BASE" in the
+# header): the gated refs' remote sha when there is exactly one and this clone
+# has it; `forced` otherwise (a new branch, an unfetched remote tip, two gated
+# refs whose remote tips differ) — the audit then RUNS, as GitHub runs it for a
+# new branch (`before` = 000…). Never left to ci:local's upstream fallback.
+audit_key=''
+gated_refs=''
+while read -r local_ref local_sha _remote_ref remote_sha; do
+	[ -n "${local_sha:-}" ] || continue
+	# A deletion carries no code.
+	if printf '%s' "$local_sha" | grep -Eq "$ZERO_SHA_RE"; then continue; fi
+	# A tag at a blob/tree, or anything that is not a commit: nothing to test.
+	commit="$(git rev-parse --verify -q "${local_sha}^{commit}")" || continue
+
+	if ! printf '%s' "$remote_sha" | grep -Eq "$ZERO_SHA_RE" &&
+		git cat-file -e "${remote_sha}^{commit}" 2>/dev/null; then
+		new_count="$(git rev-list --count "$commit" "^$remote_sha")"
+		[ "$new_count" -gt 0 ] || continue
+		git diff --no-renames --name-only "$remote_sha" "$commit" >>"$files_file"
+		ref_audit="$(git rev-parse --verify -q "${remote_sha}^{commit}")" || ref_audit=forced
+	else
+		ref_audit=forced
+		# `--remotes=<name>` matches nothing when git was handed a URL, not a
+		# remote name: the whole history then counts as new, i.e. "full".
+		new_count="$(git rev-list --count "$commit" --not --remotes="${remote_name}" 2>/dev/null || echo "$((MAX_LISTED + 1))")"
+		[ "$new_count" -gt 0 ] || continue
+		if [ "$new_count" -gt "$MAX_LISTED" ]; then
+			needs_full=1
+		else
+			# --diff-merges=first-parent: without it `git log` shows NO files for a
+			# merge commit, so an evil merge (a change made in the merge itself)
+			# would be invisible and could select the hermetic-only level. Against
+			# the first parent a merge reports everything it brings in — its own
+			# resolution included — the conservative direction.
+			git log --no-renames --diff-merges=first-parent --format= --name-only "$commit" --not --remotes="${remote_name}" >>"$files_file"
+		fi
+	fi
+
+	if [ "$commit" != "$head_sha" ]; then
+		say "REFUSED — $local_ref ($commit) carries new commits but is not HEAD ($head_sha)."
+		say 'The gate tests the checkout, so it can only vouch for the commit that IS checked out.'
+		say "Check out $local_ref (or fast-forward it to HEAD) and push again — or bypass: git push --no-verify"
+		exit 1
+	fi
+	gated_any=1
+	# The local refs this push publishes at HEAD: a bank commit must land ON them
+	# (see step 1, exit 3), or the re-push still sends the pre-bank sha.
+	case " $gated_refs " in *" $local_ref "*) ;; *) gated_refs="$gated_refs $local_ref" ;; esac
+	if [ -z "$audit_key" ]; then
+		audit_key="$ref_audit"
+	elif [ "$audit_key" != "$ref_audit" ]; then
+		audit_key=forced
+	fi
+done <"$refs_file"
+
+if [ "$gated_any" -eq 0 ]; then
+	say 'no new commits in this push (deletions / already-published refs only); nothing to gate.'
+	exit 0
+fi
+
+if [ "${DEDALO_PREPUSH:-}" = full ]; then
+	needs_full=1
+elif [ "$needs_full" -eq 0 ]; then
+	# The first touched path that is NOT hermetic-only, or nothing. awk splits
+	# the list itself, so no pattern is ever glob-expanded against the checkout.
+	# `--no-renames` above made a rename report BOTH its paths (a deletion is a
+	# change to what the tiers read).
+	matched="$(awk -v list="$HERMETIC_ONLY_PATHS" '
+		BEGIN { n = split(list, entry, " ") }
+		NF == 0 { next }
+		{
+			for (i = 1; i <= n; i++) {
+				p = entry[i]
+				if (substr(p, length(p)) == "/") { if (index($0, p) == 1) next }
+				else if ($0 == p) next
+			}
+			print
+			exit
+		}
+	' "$files_file")"
+	if [ -n "$matched" ]; then
+		needs_full=1
+		say "db + instance tiers needed: the range touches $matched"
+	fi
+fi
+if [ "$needs_full" -eq 1 ]; then level=full; else level=hermetic; fi
+# What ci:local is told the remote had. `forced` becomes all zeros, which
+# ci:local passes through and hermetic.sh resolves to NOTHING → the audit runs.
+if [ "$audit_key" = forced ]; then
+	audit_base="$(printf '%s' "$head_sha" | tr '0-9a-f' '0')"
+else
+	audit_base="$audit_key"
+fi
+say "dependency audit base: $([ "$audit_key" = forced ] && echo '<none — the audit runs>' || echo "$audit_key")"
+
+# ── the green cache: this sha already passed at this level and audit base ───
+# A line is `<sha> <level> audit:<forced|base sha>`. The audit decision is a
+# function of (sha, base) — whether the pushed range carries a lockfile /
+# manifest / vendor change — so a verdict is reused only for the SAME base, or
+# from a `forced` run (the audit ran whatever the base). A verdict that skipped
+# the audit against base A never answers for a push whose range from base B
+# carries a lockfile bump. Lines without the audit field (older hook) never match.
+green_file="$(git rev-parse --git-path dedalo-prepush-green)"
+if [ "$level" = hermetic ]; then levels='(full|hermetic)'; else levels='full'; fi
+if [ -f "$green_file" ]; then
+	if grep -Eq "^$head_sha $levels audit:(forced|$audit_key)\$" "$green_file"; then
+		# Same sha, same content (the clean-tree check below ran when it was
+		# recorded) — a second remote or a second ref gets the same verdict.
+		if [ -z "$(git status --porcelain --untracked-files=no)" ]; then
+			say "$head_sha already gated green ($level) — not re-running."
+			exit 0
+		fi
+	fi
+fi
+
+# ── the checkout must BE the pushed commit ──────────────────────────────────
+dirty="$(git status --porcelain --untracked-files=no)"
+if [ -n "$dirty" ]; then
+	rule
+	say 'REFUSED — tracked files differ from HEAD:'
+	printf '%s\n' "$dirty" | sed 's/^/    /' >&2
+	say 'The gate runs on the working tree; with these changes its verdict would not describe'
+	say 'the commit being pushed. Commit or set them aside, then push again — or bypass:'
+	say '    git push --no-verify'
+	rule
+	exit 1
+fi
+untracked_count="$(git ls-files --others --exclude-standard | wc -l | tr -d ' ')"
+if [ "$untracked_count" -gt 0 ]; then
+	# Not a hole: the bank runs in a worktree of the commit and ci:local runs
+	# `--ref <sha>` (the commit, no overlay) — neither sees them.
+	say "note — $untracked_count untracked file(s) here; the bank and the CI tiers gate $head_sha exactly and do not see them."
+fi
+
+# ── Docker: required, never silently skipped ────────────────────────────────
+if ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then
+	rule
+	say 'REFUSED — Docker is not available, and the gate runs in the CI image.'
+	say '  Start Docker Desktop (or the docker daemon) and push again.'
+	say '  Bypass, visibly (CI still runs):  git push --no-verify'
+	rule
+	exit 1
+fi
+
+# ── 1. bank improvements — measured on the PUSHED COMMIT, not on this desk ──
+# The bank runs in a throwaway `git worktree` of $head_sha, never in this
+# checkout: the ratchets measure whatever files are on disk, so here an
+# UNTRACKED scratch file would be measured too — it could refuse the push of a
+# clean commit (a probe with an untyped throw "regresses" error_throw), or an
+# improvement measured over it could be banked into a commit CI then sees as
+# drift. The worktree holds exactly the commit's files; the only things lent to
+# it are the installed dependency trees (every ignored `node_modules` of this
+# checkout — a directory, or itself a symlink, as a linked worktree's often is —
+# symlinked in: `bun install` output, not source, and never measured).
+# A banked improvement is committed IN the worktree (same repository, same
+# identity and hooks) and this checkout is then fast-forwarded onto it with
+# `git merge --ff-only`, which refuses by itself rather than overwrite a local
+# untracked file at a banked path.
+say "gating $head_sha at level: $level"
+bank_tree="$(mktemp -d "$tmp_dir/dedalo-prepush-bank.XXXXXX")" || exit 1
+cleanup_bank() {
+	git worktree remove --force "$bank_tree" >/dev/null 2>&1
+	rm -rf "$bank_tree"
+	git worktree prune >/dev/null 2>&1
+}
+trap 'cleanup_bank; rm -f "$refs_file" "$files_file" "$summary_file" "$untracked_before"' EXIT
+trap 'exit 130' HUP INT TERM
+if ! git worktree add -q --detach "$bank_tree" "$head_sha" </dev/null; then
+	say "could not create the isolated bank worktree of $head_sha — not pushing."
+	exit 1
+fi
+# Every untracked path, ignored or not: a real `node_modules/` directory is
+# ignored by .gitignore's `node_modules/`, but a SYMLINKED one (a linked
+# worktree's, pointing at the main checkout's) is not a directory to git — that
+# pattern does not match it, and it is merely untracked. `--directory` prints a
+# directory as `name/` and a symlink as `name`: both are taken, when they
+# resolve to a directory. (Until 2026-09-26 only the ignored real directory was
+# lent; a symlinked one was not, and the bank reported ERROR — biome measured
+# 0 files — which the hook then misreported as a regression.)
+git ls-files --others --directory | grep -E '(^|/)node_modules/?$' |
+	while IFS= read -r deps; do
+		deps="${deps%/}"
+		# Only a directory (or a link to one), only where the commit has the owning
+		# directory, and never over a tracked path.
+		if [ -d "$repo_root/$deps" ] && [ -d "$bank_tree/$(dirname "$deps")" ] && [ ! -e "$bank_tree/$deps" ]; then
+			ln -s "$repo_root/$deps" "$bank_tree/$deps" || exit 1
+		fi
+	done || {
+		say 'could not lend node_modules to the bank worktree — not pushing.'
+		exit 1
+	}
+# Everything untracked in the worktree NOW is the lent dependency links; what
+# appears after the bank is a floor record it created.
+git -C "$bank_tree" ls-files --others --exclude-standard | sort >"$untracked_before"
+# --ephemeral: this tree is discarded after the run, so the bank must not tell the
+# human to "commit these files" from it (on exit 1 they are gone with the tree).
+# Its report (stdout) is kept to tell WHY an exit 1 happened: the bank exits 1
+# both for a REGRESSED ratchet and for an ERROR (a check that could not run —
+# a missing dependency, a broken census), and the two need different advice.
+bank_report="$(mktemp "$tmp_dir/dedalo-prepush-bankreport.XXXXXX")" || exit 1
+trap 'cleanup_bank; rm -f "$refs_file" "$files_file" "$summary_file" "$untracked_before" "$bank_report"' EXIT
+trap 'exit 130' HUP INT TERM
+(cd "$bank_tree" && bun run baselines:bank -- --ephemeral </dev/null) >"$bank_report"
+bank_code=$?
+cat "$bank_report"
+case "$bank_code" in
+	0) say 'baselines: no drift.' ;;
+	3)
+		# The worktree was the pristine commit, so every tracked change is the
+		# bank's, and every new untracked file is a record it created.
+		banked="$( {
+			git -C "$bank_tree" diff --name-only
+			git -C "$bank_tree" ls-files --others --exclude-standard | sort | comm -13 "$untracked_before" -
+		} | sort -u)"
+		if [ -z "$banked" ]; then
+			say 'baselines:bank exited 3 (improvements written) but no file changed — refusing to guess.'
+			exit 1
+		fi
+		printf '%s\n' "$banked" | while IFS= read -r path; do git -C "$bank_tree" add -- "$path" || exit 1; done || exit 1
+		if ! git -C "$bank_tree" commit -q -m 'chore(baselines): bank improvements' </dev/null; then
+			say 'the bank commit failed (in the isolated worktree) — nothing changed here; not pushing.'
+			exit 1
+		fi
+		bank_sha="$(git -C "$bank_tree" rev-parse HEAD)" || exit 1
+		# WHERE THE BANK COMMIT LANDS: on every BRANCH this push publishes, and on
+		# the checkout. The checkout first — `merge --ff-only` moves HEAD, and the
+		# branch with it when HEAD is attached, and is the step that can refuse (an
+		# untracked local file at a banked path), so nothing else has moved yet when
+		# it does. Then each other pushed branch by compare-and-swap (`update-ref
+		# <ref> <new> <old>`: refused if it no longer points at the gated sha).
+		# Until 2026-09-26 only HEAD moved: pushed from a DETACHED HEAD at the
+		# branch's sha, the bank commit advanced the detached HEAD alone, the branch
+		# stayed behind, the re-push was refused (branch ≠ HEAD) and the bank
+		# commit dangled on no branch. A tag is never moved — it names a commit.
+		if ! git merge -q --ff-only "$bank_sha" </dev/null; then
+			say "the bank commit $bank_sha could not be fast-forwarded into this checkout"
+			say '(an untracked local file at a banked path?). Nothing was moved. Inspect, then: git merge --ff-only '"$bank_sha"
+			exit 1
+		fi
+		head_branch="$(git symbolic-ref -q HEAD)" || head_branch=''
+		moved=''
+		stuck=''
+		for ref in $gated_refs; do
+			case "$ref" in
+				HEAD | "$head_branch") continue ;; # moved by the fast-forward above
+				refs/heads/*) ;;
+				*)
+					stuck="$stuck $ref"
+					say "NOT moved: $ref — not a branch (a tag names one commit). Re-point it deliberately to $bank_sha if it should carry the bank commit."
+					continue
+					;;
+			esac
+			if git worktree list --porcelain | grep -Fqx "branch $ref"; then
+				stuck="$stuck $ref"
+				say "NOT moved: $ref is checked out in another worktree (moving it would desync that tree)."
+				say "  There: git merge --ff-only $bank_sha"
+			elif git update-ref -m 'pre-push: bank improvements' "$ref" "$bank_sha" "$head_sha" </dev/null; then
+				moved="$moved $ref"
+			else
+				stuck="$stuck $ref"
+				say "NOT moved: $ref no longer points at $head_sha (it moved during the push). Inspect it."
+			fi
+		done
+		rule
+		if [ -n "$stuck" ]; then
+			say "improvements banked in $(git rev-parse --short "$bank_sha") — but NOT on every pushed branch:"
+		else
+			say "improvements banked — re-run the push. New commit $(git rev-parse --short "$bank_sha"):"
+		fi
+		printf '%s\n' "$banked" | sed 's/^/    /' >&2
+		if [ -z "$head_branch" ]; then
+			say "HEAD is DETACHED: it moved $(git rev-parse --short "$head_sha") → $(git rev-parse --short "$bank_sha");"
+			if [ -n "$moved" ]; then
+				say "the pushed branch(es) were advanced by compare-and-swap (git update-ref <ref> $bank_sha $head_sha):"
+				for ref in $moved; do say "    $ref  $(git rev-parse --short "$head_sha") → $(git rev-parse --short "$bank_sha")"; done
+				first="${moved# }"
+				first="${first%% *}"
+				say "To work on the branch instead of a detached HEAD: git switch ${first#refs/heads/}"
+			fi
+		elif [ -n "$moved" ]; then
+			say "also advanced by compare-and-swap:$moved"
+		fi
+		if [ -n "$stuck" ]; then
+			say "REFUSED — the bank commit could not land on:$stuck (see above). Fix that, then re-run the push."
+			rule
+			exit 1
+		fi
+		say 'git cannot add a commit to a push in progress; re-run the push — it carries the bank commit.'
+		rule
+		exit 3
+		;;
+	1)
+		# One line per ratchet: `<STATUS padded> <id>[ — note]` (baselines_bank.ts
+		# render). ERROR wins: a regression verdict next to a check that could not
+		# run is not the whole story, and the fix is the environment, not a floor.
+		errored="$(sed -n 's/^ERROR  *\([^ ]*\).*/\1/p' "$bank_report" | tr '\n' ' ')"
+		regressed="$(sed -n 's/^REGRESSED  *\([^ ]*\).*/\1/p' "$bank_report" | tr '\n' ' ')"
+		rule
+		if [ -n "$errored" ]; then
+			say "REFUSED — baselines:bank could not RUN a check on $head_sha: ${errored% }"
+			say '(ERROR, not a regression — nothing about the floor is known). See its line above:'
+			say 'usually the environment (dependencies not installed, a tool that measured nothing).'
+			[ -n "$regressed" ] && say "Also REGRESSED: ${regressed% }"
+		elif [ -n "$regressed" ]; then
+			say "REFUSED — a ratchet REGRESSED on $head_sha: ${regressed% }"
+			say "Fix the regression, or record it deliberately with the command the bank's"
+			say 'REGRESSED line above names for that ratchet (each ratchet has its own).'
+		else
+			say "REFUSED — baselines:bank exited 1 on $head_sha with no ERROR or REGRESSED line;"
+			say 'see its output above.'
+		fi
+		say 'Bypass (CI will still go red): git push --no-verify'
+		rule
+		exit 1
+		;;
+	*)
+		say "baselines:bank failed (exit $bank_code) — the bank itself is broken; not pushing."
+		exit 1
+		;;
+esac
+cleanup_bank
+
+# ── 2 + 3. the CI tiers, in the CI image ────────────────────────────────────
+# --fail-fast: the verdict is RED once one tier is red, so a red hermetic does
+# not wait ~11 more minutes for db + instance before the push is refused.
+if [ "$level" = full ]; then
+	set -- --docker --fail-fast --hermetic --db --instance
+else
+	set -- --docker --fail-fast --hermetic
+fi
+bun run ci:local "$@" --ref "$head_sha" --audit-base "$audit_base" --summary "$summary_file" </dev/null
+ci_code=$?
+if [ "$ci_code" -ne 0 ]; then
+	rule
+	say "REFUSED — ci:local $* is RED (exit $ci_code). This is what the runner would say."
+	if [ -s "$summary_file" ]; then
+		# shellcheck disable=SC2016 # the $/` are JavaScript, not shell
+		bun -e '
+			const s = await Bun.file(process.argv[1]).json();
+			for (const t of s.tiers ?? []) for (const st of t.stages ?? [])
+				// ci_local StageVerdict: green | red | skipped | advisory. Only
+				// red failed; advisory is shown (it carries a hint), never as ✗.
+				if (st.verdict === "red" || st.verdict === "advisory")
+					console.error(`    ${st.verdict === "red" ? "✗" : "! (advisory)"} ${t.tier} › ${st.name}${st.fix_hint ? ` — ${st.fix_hint}` : ""}`);
+		' "$summary_file" || true
+	fi
+	say 'Bypass (CI will still run): git push --no-verify'
+	rule
+	exit 1
+fi
+
+# Remember the verdict for the next remote/ref of this sha (last 50 kept).
+{
+	[ -f "$green_file" ] && tail -n 49 "$green_file"
+	printf '%s %s audit:%s\n' "$head_sha" "$level" "$audit_key"
+} >"$green_file.tmp" && mv "$green_file.tmp" "$green_file"
+say "GREEN ($level) — pushing $head_sha."
+exit 0

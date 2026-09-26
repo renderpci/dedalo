@@ -35,6 +35,9 @@
 #     suite media root, neither of which exists in a container). ~34 MB of fixtures.
 #     Excluded before this policy too.
 #   .github — CI workflows — never read at runtime. Excluded before this policy too.
+#   ci — The CI TOOLCHAIN image (ci/Dockerfile + its compose stack) — a separate image
+#     built from its own context (ci/Dockerfile.dockerignore replaces this file for that
+#     build). Never read by the engine at runtime.
 #   .gitlab — CI templates — never read at runtime.
 #   .gitlab-ci.yml — CI pipeline definition — never read at runtime.
 #   .vscode — Editor settings — a developer-machine artifact.

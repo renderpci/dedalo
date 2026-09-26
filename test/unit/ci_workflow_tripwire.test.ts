@@ -67,6 +67,41 @@
  *      schema.ts yet; adding one (diffusion_jobs_table_seam.test.ts statically
  *      imports it) would have killed the whole tier at import. The regex is
  *      EXTRACTED from the two engine sources, never re-typed here.
+ *  17. TIME-BASED CHECKS HAVE A NIGHTLY HOME (2026-09-26) — hermetic.sh may defer
+ *      the checks whose input is the CALENDAR (the dependency-audit stage runs only
+ *      on a lockfile/vendor change, `--changed-since`; vendor_advisory_tripwire's
+ *      window/expiry legs are dropped by DEDALO_VENDOR_DATED_CHECKS=0) only while
+ *      .github/workflows/nightly.yml runs them unconditionally: scheduled, forced,
+ *      network-required, its red carried to the run's verdict, reported by the ONE
+ *      job holding `issues: write` — a job that runs no repository code. Rule 7d
+ *      widened with it (job/step outputs, the `- run:` spelling), and rule 12 now
+ *      reads the inline `container:` spelling the tiers are moving to.
+ *  18. THE AUDIT'S SKIP BASE COVERS THE WHOLE PUSH (2026-09-26) — the deferral
+ *      in rule 17 is honest only if "the push changed no audit input" is judged
+ *      over EVERY commit the push carries. hermetic.sh's `audit_reference` is
+ *      EXECUTED in a scratch repository (a three-commit push, the lockfile bump in
+ *      the FIRST commit): it must name the pre-push tip, so the diff sees the
+ *      bump; a new branch (all-zero `before`), a missing payload, a non-sha and
+ *      an unfetchable sha must resolve to NOTHING (audit.ts runs). An outcome,
+ *      not a spelling: HEAD^ — the defect this replaced — fails the first leg.
+ *  19. ONE VERIFICATION PER SHA, NEVER LESS (2026-09-26) — `bun run push` lands one
+ *      sha on both landing branches, and ci.yml/db.yml ran every tier twice on it.
+ *      Each now opens with a `dedupe` job whose output lets the tier jobs skip; the
+ *      skip is a green check, so what may produce it is held here by OUTCOME: the
+ *      probe script is EXECUTED by bash against a stubbed `gh` and must say skip=true
+ *      ONLY on a push, ONLY when a push run of the same workflow on ANOTHER branch
+ *      CONCLUDED success for the SAME sha — whatever its run id (serialization, not id
+ *      order, decides which run defers) — never for a PR or a dispatch, the same
+ *      branch, a red run, a run still going, another sha — and must fail OPEN (skip=
+ *      false, exit 0) when the API does. Around it: the job exists in both files and
+ *      is byte-identical there, holds only `actions: read`, runs no action (no
+ *      checkout — it executes no repository code), is itself unconditioned, and every
+ *      other job of the file needs it; push runs are grouped by SHA and never
+ *      cancelled, so the second run of a sha waits for the first to CONCLUDE instead
+ *      of deferring to one still running, while a PR is keyed by ref and any other
+ *      event by its own run id (a dispatch sharing the sha group would EVICT the
+ *      queued push run). Which `if:` a tier job may carry — including that a FAILED
+ *      dedupe runs the tiers — is tier_wiring_tripwire leg F's (evaluated there).
  *
  * SCANNERS THAT ARE NOT GATED HERE, deliberately: CodeQL (.github/workflows/codeql.yml)
  * and the secret scan (.github/workflows/security.yml) are third-party analyses whose
@@ -79,7 +114,8 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Glob } from 'bun';
 import { findStatusProse } from '../../scripts/lib/status_prose.ts';
@@ -556,6 +592,215 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	],
 ]);
 
+/**
+ * Rule 7d's matcher: the `line  text` of every run: script line that interpolates an
+ * input, `github.event.*`, a secret, or a job/step output. A run: script is the
+ * `run:` line (bare or list-item `- run:`) and its block, until the next step key.
+ */
+function runInterpolations(src: string): string[] {
+	const hits: string[] = [];
+	let inRun = false;
+	for (const [index, raw] of src.split('\n').entries()) {
+		if (/^\s*(?:-\s+)?run:\s*[|>]?[-+]?\s*$/.test(raw) || /^\s*(?:-\s+)?run:\s+\S/.test(raw))
+			inRun = true;
+		else if (/^\s*-?\s*(?:name|uses|with|env|if|id|shell|working-directory):/.test(raw)) {
+			inRun = false;
+		}
+		if (!inRun) continue;
+		if (
+			/\$\{\{\s*(?:inputs|github\.event|secrets)\./.test(raw) ||
+			/\$\{\{\s*(?:needs\.[\w-]+|steps\.[\w-]+)\.outputs\b/.test(raw)
+		) {
+			hits.push(`${index + 1}  ${raw.trim().slice(0, 90)}`);
+		}
+	}
+	return hits;
+}
+
+/** A workflow's `jobs:` section split into `id → block` (2-space job keys). */
+function jobBlocks(src: string): Map<string, string> {
+	const blocks = new Map<string, string>();
+	const at = src.search(/^jobs:/m);
+	if (at === -1) return blocks;
+	for (const block of src
+		.slice(at)
+		.split(/\n(?= {2}[A-Za-z0-9_-]+:\s*$)/m)
+		.slice(1)) {
+		const id = block.match(/^\s*([A-Za-z0-9_-]+):/)?.[1];
+		if (id !== undefined) blocks.set(id, block);
+	}
+	return blocks;
+}
+
+/** The trigger names of a workflow's `on:` block (block form: 2-space keys). */
+function triggerNames(src: string): string[] {
+	const lines = src.split('\n');
+	const at = lines.findIndex((l) => /^on:/.test(l));
+	if (at === -1) return [];
+	const names: string[] = [];
+	for (let i = at + 1; i < lines.length; i++) {
+		const line = lines[i] as string;
+		if (line.trim() === '' || line.trim().startsWith('#')) continue;
+		if (/^\S/.test(line)) break;
+		const m = line.match(/^ {2}([A-Za-z_]+):/);
+		if (m) names.push(m[1] as string);
+	}
+	return names;
+}
+
+/**
+ * Rule 17's judge, PURE over the two texts it binds, so the controls can hand it
+ * mutated copies of the real files and watch each fault appear.
+ *
+ * The push gate (hermetic.sh) is allowed to defer the TIME-BASED checks — the
+ * dependency-audit stage runs `--changed-since <base>` and the vendor tripwire's
+ * calendar legs are dropped by DEDALO_VENDOR_DATED_CHECKS=0 — ONLY because
+ * .github/workflows/nightly.yml runs them unconditionally. So a deferral without
+ * that home is red, and so is a home that cannot fail, cannot report, or hands a
+ * write token to code it runs.
+ */
+function nightlyFaults(nightly: string | null, hermetic: string): string[] {
+	const faults: string[] = [];
+	const hermeticCode = hermetic
+		.split('\n')
+		.map((l) => l.trim())
+		.filter((l) => l !== '' && !l.startsWith('#'));
+	const auditStage = hermeticCode.find((l) => /^bun run scripts\/ci\/audit\.ts\b/.test(l));
+	const defersAudit = auditStage?.includes('--changed-since') === true;
+	const dropsDated = hermeticCode.some((l) => /^export DEDALO_VENDOR_DATED_CHECKS=/.test(l));
+	if (auditStage === undefined)
+		faults.push(
+			'hermetic.sh runs no `bun run scripts/ci/audit.ts` stage — the ratchet runs on no push',
+		);
+	if (dropsDated && !hermeticCode.includes('export DEDALO_VENDOR_DATED_CHECKS=0'))
+		faults.push('hermetic.sh sets DEDALO_VENDOR_DATED_CHECKS to something other than 0');
+	if (!defersAudit && !dropsDated) return faults; // nothing deferred, nothing owed
+	if (nightly === null) {
+		faults.push(
+			'hermetic.sh defers the time-based checks (--changed-since / DEDALO_VENDOR_DATED_CHECKS=0) but .github/workflows/nightly.yml does not exist — they run NOWHERE',
+		);
+		return faults;
+	}
+
+	// (a) triggers: a schedule and a manual dispatch; never a push or PR event.
+	const triggers = triggerNames(nightly);
+	if (
+		!triggers.includes('schedule') ||
+		!/^\s*-\s*cron:\s*["']?[^"'\s][^"']*["']?\s*$/m.test(nightly)
+	)
+		faults.push(
+			'nightly.yml: no `schedule` with a cron — the time-based checks never run by themselves',
+		);
+	if (!triggers.includes('workflow_dispatch'))
+		faults.push(
+			'nightly.yml: no `workflow_dispatch` — the issue path cannot be rehearsed on demand',
+		);
+	for (const banned of ['push', 'pull_request', 'pull_request_target', 'workflow_run'])
+		if (triggers.includes(banned))
+			faults.push(
+				`nightly.yml: triggered by \`${banned}\` — its report job holds issues: write, which fork or push code must never reach, and a push trigger would make it a push gate again`,
+			);
+
+	// (b) top-level token: read-only.
+	const top = nightly.match(/^permissions:([^\n]*)((?:\n[ \t]+[^\n]*)*)/m);
+	if (top === null) faults.push('nightly.yml: no top-level permissions block');
+	else if (/write/.test(`${top[1]}${top[2]}`))
+		faults.push(
+			'nightly.yml: the TOP-LEVEL permissions grant a write scope — widen only the report job',
+		);
+
+	const jobs = jobBlocks(nightly);
+	const codeOf = (block: string) =>
+		block
+			.split('\n')
+			.map((l) => l.trim())
+			.filter((l) => l !== '' && !l.startsWith('#'));
+
+	// (c) exactly one job widens, only to issues: write, and it runs no repository code.
+	const writers = [...jobs].filter(
+		([, block]) => /^\s{4}permissions:/m.test(block) && /:\s*write\b/.test(block),
+	);
+	if (writers.length !== 1)
+		faults.push(
+			`nightly.yml: ${writers.length} jobs declare a write scope — exactly one (the report) may`,
+		);
+	for (const [id, block] of writers) {
+		const scopes = [...block.matchAll(/^\s{6}([a-z-]+):\s*(read|write|none)\s*$/gm)].map(
+			(m) => `${m[1]}: ${m[2]}`,
+		);
+		const writes = scopes.filter((scope) => scope.endsWith('write'));
+		if (writes.join() !== 'issues: write')
+			faults.push(
+				`nightly.yml job '${id}': writes ${writes.join(', ') || 'nothing'} — only issues: write is needed`,
+			);
+		const code = codeOf(block);
+		if (code.some((l) => /uses:\s*actions\/checkout@/.test(l)))
+			faults.push(`nightly.yml job '${id}': holds a write token AND checks out the repository`);
+		if (
+			code.some((l) => /^(?:[A-Z0-9_]+=\S*\s+)*(?:bun|bunx|node|npm|npx)\b|^bash scripts\//.test(l))
+		)
+			faults.push(`nightly.yml job '${id}': holds a write token AND runs repository code`);
+		if (!code.some((l) => /^if:\s*(?:\$\{\{\s*)?always\(\)/.test(l)))
+			faults.push(
+				`nightly.yml job '${id}': not \`if: always()\` — a red check skips it, and the red night files no issue`,
+			);
+	}
+
+	// (d) the audit runs forced, network-required, summarised — and its verdict is the run's.
+	const auditJob = [...jobs].find(([, block]) =>
+		codeOf(block).some((l) => /^bun run scripts\/ci\/audit\.ts\b/.test(l)),
+	);
+	if (auditJob === undefined) {
+		faults.push('nightly.yml: no job runs `bun run scripts/ci/audit.ts`');
+		return faults;
+	}
+	const [auditJobId, auditBlock] = auditJob;
+	const auditCode = codeOf(auditBlock);
+	const invocation = auditCode.find((l) => /^bun run scripts\/ci\/audit\.ts\b/.test(l)) as string;
+	for (const flag of ['--force', '--require-network', '--summary'])
+		if (!invocation.includes(flag))
+			faults.push(`nightly.yml: the audit invocation lacks ${flag} — \`${invocation}\``);
+	if (invocation.includes('--changed-since'))
+		faults.push(
+			'nightly.yml: the audit invocation passes --changed-since — the nightly would skip too',
+		);
+	if (auditCode.some((l) => /^(?:-\s+)?continue-on-error:/.test(l)))
+		faults.push(
+			`nightly.yml job '${auditJobId}': continue-on-error — a red audit would be a green run`,
+		);
+	if (/\|\|/.test(invocation)) {
+		// Captured, so it must be CARRIED: written to the step's outputs and exited with.
+		const captured = invocation.match(/\|\|\s*([A-Za-z_]+)=\$\?\s*$/)?.[1];
+		const stepId = auditBlock
+			.split(/\n(?= {6}- )/)
+			.find((step) => step.includes('bun run scripts/ci/audit.ts'))
+			?.match(/^\s*id:\s*([\w-]+)\s*$/m)?.[1];
+		// Three links, each observable: the step writes `<v>=$<v>` to its outputs, some
+		// env key binds `steps.<id>.outputs.<v>`, and a later step's whole payload is
+		// `exit "$<that key>"`.
+		const text = auditCode.join('\n');
+		const envKey =
+			captured === undefined || stepId === undefined
+				? undefined
+				: text.match(
+						new RegExp(
+							`^([A-Z_]+):\\s*\\$\\{\\{\\s*steps\\.${stepId}\\.outputs\\.${captured}\\s*\\}\\}$`,
+							'm',
+						),
+					)?.[1];
+		const carried =
+			captured !== undefined &&
+			envKey !== undefined &&
+			auditCode.some((l) => l.includes(`${captured}=$${captured}`)) &&
+			auditCode.some((l) => new RegExp(`^(?:-\\s+)?run:\\s*exit "?\\$${envKey}"?$`).test(l));
+		if (!carried)
+			faults.push(
+				`nightly.yml job '${auditJobId}': the audit's status is captured (\`${invocation}\`) but never carried to an \`exit\` — a red audit would be a green run`,
+			);
+	}
+	return faults;
+}
+
 describe('CI workflow tripwire', () => {
 	test('every GitHub workflow using setup-bun pins via bun-version-file, never inline', () => {
 		for (const { rel, src } of allWorkflows) {
@@ -792,20 +1037,36 @@ describe('CI workflow tripwire', () => {
 	// substituted into the script TEXT before the shell ever sees it, so an
 	// attacker-chosen input becomes commands. Secrets and inputs reach a `run:`
 	// through `env:`, where the runner sets them as shell VARIABLES.
-	test('no run: line interpolates an input or secret', () => {
+	//
+	// WIDENED 2026-09-26, both ways the nightly workflow made visible:
+	//   - the job/step OUTPUT namespaces (`needs.<job>.outputs.*`, `steps.<id>.outputs.*`)
+	//     are substituted exactly like an input, and nightly.yml hands a JSON verdict
+	//     carrying advisory titles from a third-party feed from one job to the next —
+	//     text nobody in this repo wrote. It reaches the `report` script through `env:`.
+	//   - the LIST-ITEM spelling `- run: …` was invisible: the matcher anchored `run:`
+	//     at line start, so `      - run: echo ${{ inputs.x }}` passed. Controls below.
+	test('no run: line interpolates an input, a secret or a job/step output', () => {
+		const controls = [
+			'      - run: echo ${{ inputs.x }}',
+			'      - name: n\n        run: |\n          echo ${{ needs.check.outputs.summary }}',
+			'        run: echo "${{ steps.audit.outputs.rc }}"',
+			'        run: echo ${{ secrets.T }}',
+		];
+		for (const control of controls) {
+			expect(
+				runInterpolations(control),
+				`matcher control: \`${control}\` must be flagged, or this rule is vacuous`,
+			).toHaveLength(1);
+		}
+		// ...and the sanctioned shape — through env:, read as a shell variable — is not.
+		expect(
+			runInterpolations(
+				'      - name: n\n        env:\n          RC: ${{ steps.audit.outputs.rc }}\n        run: exit "$RC"',
+			),
+		).toEqual([]);
 		const offenders: string[] = [];
 		for (const { rel, src } of allWorkflows) {
-			let inRun = false;
-			for (const [index, raw] of src.split('\n').entries()) {
-				if (/^\s*run:\s*\|?\s*$/.test(raw) || /^\s*run:\s+\S/.test(raw)) inRun = true;
-				else if (/^\s*-?\s*(?:name|uses|with|env|if|id|shell|working-directory):/.test(raw)) {
-					inRun = false;
-				}
-				if (!inRun) continue;
-				if (/\$\{\{\s*(?:inputs|github\.event|secrets)\./.test(raw)) {
-					offenders.push(`${rel}:${index + 1}  ${raw.trim().slice(0, 90)}`);
-				}
-			}
+			for (const hit of runInterpolations(src)) offenders.push(`${rel}:${hit}`);
 		}
 		expect(
 			offenders,
@@ -938,7 +1199,9 @@ describe('CI workflow tripwire', () => {
 	test('every env key hermetic.sh CLAIMS to set is actually exported', () => {
 		const script = readFileSync(join(repoRoot, 'scripts/ci/hermetic.sh'), 'utf8');
 		// Keys the script's own prose names as gating a skip or a mode.
-		const promised = ['DEDALO_PARITY_DRIFT'];
+		// DEDALO_VENDOR_DATED_CHECKS (2026-09-26): drops the calendar legs of
+		// vendor_advisory_tripwire on the push gate — rule 17 holds its value and home.
+		const promised = ['DEDALO_PARITY_DRIFT', 'DEDALO_VENDOR_DATED_CHECKS'];
 		for (const key of promised) {
 			expect(script, `hermetic.sh names ${key} but never sets it`).toMatch(
 				new RegExp(`^\\s*(?:export\\s+)?${key}=`, 'm'),
@@ -954,6 +1217,14 @@ describe('CI workflow tripwire', () => {
 		expect(gate, 'the skip must be driven by the key, not by a constant').toMatch(
 			/process\.env\.DEDALO_PARITY_DRIFT/,
 		);
+		const vendor = readFileSync(
+			join(repoRoot, 'test/unit/vendor_advisory_tripwire.test.ts'),
+			'utf8',
+		);
+		expect(
+			vendor,
+			'hermetic.sh sets DEDALO_VENDOR_DATED_CHECKS=0 to drop the calendar legs; the gate must READ it, or the key changes nothing and the push gate stays date-dependent',
+		).toMatch(/process\.env\.DEDALO_VENDOR_DATED_CHECKS/);
 	});
 
 	test('anti-vacuity: the permissions matchers fire on the shapes they forbid', () => {
@@ -1034,17 +1305,76 @@ describe('CI workflow tripwire', () => {
 	// its publisher at any time. security.yml:42-44 already digest-pins the
 	// gitleaks image by hand for exactly this stated reason; this makes the
 	// convention a gate. Binds both tiers, like rule 8.
-	test('every workflow image: is pinned by digest, never a tag', () => {
+	//
+	// The INLINE `container: <ref>` spelling (2026-09-26) is the same image under the
+	// other key GitHub accepts, and the tiers are moving into the CI image: a
+	// `container: ghcr.io/renderpci/dedalo-ci:latest` would have passed a scan that
+	// only read `image:` lines. The mapping form (`container:` + `image:` below it) is
+	// already covered by the image: scan.
+	test('every workflow image: (and inline container:) is pinned by digest, never a tag', () => {
+		const imageRefs = (src: string): string[] => [
+			...[...src.matchAll(/^\s*image:\s*(\S+)/gm)].map((m) => m[1] as string),
+			...[...src.matchAll(/^\s*container:[ \t]*([^\s#]+)/gm)].map((m) => m[1] as string),
+		];
+		// Controls: the inline tag is seen, the mapping form defers to its image: line.
+		expect(imageRefs('    container: ghcr.io/x/y:latest\n')).toEqual(['ghcr.io/x/y:latest']);
+		expect(imageRefs(`    container:\n      image: a@sha256:${'0'.repeat(64)}\n`)).toHaveLength(1);
 		const offenders: string[] = [];
 		for (const { rel, src } of allWorkflows) {
-			for (const [, image] of src.matchAll(/^\s*image:\s*(\S+)/gm)) {
-				if (!/@sha256:[0-9a-f]{64}$/.test(image as string))
-					offenders.push(`${rel}: image: ${image}`);
+			for (const image of imageRefs(src)) {
+				if (!/@sha256:[0-9a-f]{64}$/.test(image)) offenders.push(`${rel}: image: ${image}`);
 			}
 		}
 		expect(
 			offenders,
 			'A workflow image referenced by tag runs whatever its publisher points that tag at TODAY, on the same runner as the checkout. Pin the digest and keep the human-readable version in a trailing comment — the security.yml gitleaks precedent:',
+		).toEqual([]);
+	});
+
+	// Rule 12b (2026-09-26) — ONE pgvector digest across the hosted tier and the
+	// local gate. .github/dependabot.yml's `docker-compose /ci` entry bumps ONLY
+	// ci/compose.yml (Dependabot does not update workflow `services:`/`container:`
+	// images, dependabot-core#5819), so without this gate its PR would silently make
+	// `ci:local --docker` judge against a different Postgres than db.yml's jobs. With
+	// it, that PR is red until the workflow pins move in the same PR. Measured on the
+	// digest (the bytes), never the tag spelling; binds both workflow tiers.
+	test('every pgvector image in the workflows equals ci/compose.yml’s digest (one Postgres, two tiers)', () => {
+		const PGVECTOR =
+			/^\s*(?:image|container):\s*pgvector\/pgvector[^\s@#]*@sha256:([0-9a-f]{64})/gm;
+		const digestsIn = (src: string) => [...src.matchAll(PGVECTOR)].map((m) => m[1] as string);
+		// Controls: both spellings (compose's `name:tag@digest`, the workflows' bare
+		// `name@digest`) yield the digest; an unrelated image yields nothing.
+		const d = 'a'.repeat(64);
+		expect(digestsIn(`    image: pgvector/pgvector:pg18@sha256:${d}\n`)).toEqual([d]);
+		expect(digestsIn(`    image: pgvector/pgvector@sha256:${d} # pg18\n`)).toEqual([d]);
+		expect(digestsIn(`    image: postgres@sha256:${d}\n`)).toEqual([]);
+
+		const composeDigests = digestsIn(read('ci/compose.yml'));
+		// Guards the guard: the compose service renamed or re-spelled would leave
+		// nothing to compare against and every workflow pin would "match" vacuously.
+		expect(
+			composeDigests,
+			'ci/compose.yml must pin exactly one pgvector image by digest',
+		).toHaveLength(1);
+		const [composeDigest] = composeDigests;
+
+		const workflowPins = allWorkflows.flatMap(({ rel, src }) =>
+			digestsIn(src).map((digest) => ({ rel, digest })),
+		);
+		// Guards the guard: db.yml's `db` and `instance` services are the copies this
+		// rule exists for — zero found means the scan went blind, not that all agree.
+		expect(
+			workflowPins.length,
+			'no pgvector image found under the workflows — the scan went blind (or the hosted jobs now start pgvector from ci/compose.yml: then retire this rule with its reason)',
+		).toBeGreaterThan(0);
+		const offenders = workflowPins
+			.filter(({ digest }) => digest !== composeDigest)
+			.map(
+				({ rel, digest }) => `${rel}: pgvector@sha256:${digest} ≠ ci/compose.yml ${composeDigest}`,
+			);
+		expect(
+			offenders,
+			'The hosted tier and the local gate must run the SAME Postgres bytes. A Dependabot bump of ci/compose.yml moves only that copy — move every workflow pin in the same PR:',
 		).toEqual([]);
 	});
 
@@ -1646,6 +1976,355 @@ describe('CI workflow tripwire', () => {
 				new RegExp(`\\[ "\\$${name}" -(eq|ne) 0 \\]`).test(codeOnly),
 				`hermetic.sh captures \`${name}\` but never tests it — a recorded verdict nobody reads is the same silence as no verdict`,
 			).toBe(true);
+		}
+	});
+
+	/**
+	 * Rule 17 — THE TIME-BASED CHECKS HAVE A NIGHTLY HOME (2026-09-26).
+	 *
+	 * The push gate went red on pushes that changed nothing it measured: a new
+	 * upstream advisory in `bun audit`, a vendored row's review window closing
+	 * overnight. hermetic.sh now DEFERS those — the audit stage runs only when a push
+	 * changes its inputs, and vendor_advisory_tripwire's calendar legs are dropped —
+	 * and a deferral is only honest while something runs them unconditionally. That
+	 * something is .github/workflows/nightly.yml; `nightlyFaults` is the judge, and
+	 * the controls feed it the real files with one fault planted at a time.
+	 */
+	test('the time-based checks the push gate defers have a nightly home that can fail and report (rule 17)', () => {
+		const hermetic = read('scripts/ci/hermetic.sh');
+		const nightlyPath = join(repoRoot, '.github', 'workflows', 'nightly.yml');
+		const nightly = existsSync(nightlyPath) ? readFileSync(nightlyPath, 'utf8') : null;
+
+		// The real pair is clean — and the deferral is really there (anti-vacuity: if
+		// hermetic.sh stopped deferring, the rule would pass by owing nothing).
+		expect(nightlyFaults(nightly, hermetic)).toEqual([]);
+		expect(hermetic).toMatch(/^bun run scripts\/ci\/audit\.ts --changed-since\b/m);
+		expect(hermetic).toMatch(/^export DEDALO_VENDOR_DATED_CHECKS=0$/m);
+		const real = nightly as string;
+
+		// Controls — each planted fault must be seen.
+		const plant = (
+			from: string | RegExp,
+			to: string,
+			where: 'nightly' | 'hermetic' = 'nightly',
+		) => {
+			const source = where === 'nightly' ? real : hermetic;
+			const mutated = source.replace(from, to);
+			expect(mutated, `control did not apply: ${String(from)}`).not.toBe(source);
+			return where === 'nightly' ? nightlyFaults(mutated, hermetic) : nightlyFaults(real, mutated);
+		};
+		expect(nightlyFaults(null, hermetic).join()).toContain('does not exist');
+		expect(plant(/^ {2}schedule:\n(?: {4}.*\n)+/m, '').join()).toContain('schedule');
+		expect(
+			plant(/^ {2}workflow_dispatch:/m, '  pull_request:\n  workflow_dispatch:').join(),
+		).toContain('`pull_request`');
+		expect(
+			plant(
+				/^permissions:\n {2}contents: read/m,
+				'permissions:\n  contents: read\n  issues: write',
+			).join(),
+		).toContain('TOP-LEVEL');
+		expect(
+			plant(
+				'    permissions:\n      issues: write',
+				'    permissions:\n      issues: write\n      contents: write',
+			).join(),
+		).toContain('only issues: write');
+		expect(plant(/^ {4}if: always\(\)$/m, '').join()).toContain('always()');
+		expect(
+			plant(
+				'      - name: Open, update or close the ci-nightly issue',
+				'      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n      - name: Open, update or close the ci-nightly issue',
+			).join(),
+		).toContain('checks out');
+		expect(plant(/(audit\.ts --force) --require-network/, '$1').join()).toContain(
+			'--require-network',
+		);
+		expect(plant(/(audit\.ts) --force/, '$1').join()).toContain('--force');
+		expect(plant(/run: exit "\$RC"/, 'run: echo "$RC"').join()).toContain('never carried');
+		expect(
+			plant(/^ {8}id: audit$/m, '        id: audit\n        continue-on-error: true').join(),
+		).toContain('continue-on-error');
+		// The hermetic side: deferral kept, key value changed → red.
+		expect(
+			plant(
+				/^export DEDALO_VENDOR_DATED_CHECKS=0$/m,
+				'export DEDALO_VENDOR_DATED_CHECKS=1',
+				'hermetic',
+			).join(),
+		).toContain('other than 0');
+		// ...and an undeferred hermetic.sh owes no nightly at all.
+		const undeferred = hermetic
+			.replace(/ --changed-since "\$AUDIT_REFERENCE"/, '')
+			.replace(/^export DEDALO_VENDOR_DATED_CHECKS=0$/m, '');
+		expect(nightlyFaults(null, undeferred)).toEqual([]);
+	});
+
+	/**
+	 * Rule 18 — THE AUDIT'S SKIP BASE IS THE WHOLE PUSH, measured by running it.
+	 *
+	 * The function is extracted from hermetic.sh verbatim and executed by bash in a
+	 * scratch repository, with only the CI environment a push event provides. What is
+	 * asserted is the OUTCOME the skip depends on — does `git diff <base>` see a
+	 * lockfile change made in a non-tip commit — not how the function is spelled.
+	 */
+	test('the dependency audit skips only on a base that covers every pushed commit (rule 18)', () => {
+		const hermetic = read('scripts/ci/hermetic.sh');
+		const fn = hermetic.match(/^audit_reference\(\) \{\n[\s\S]*?^\}$/m)?.[0];
+		expect(fn, 'hermetic.sh defines no audit_reference() function').toBeDefined();
+		expect(hermetic).toMatch(/^AUDIT_REFERENCE="\$\(audit_reference\)" \|\| AUDIT_REFERENCE=""$/m);
+		expect(hermetic).toMatch(
+			/^bun run scripts\/ci\/audit\.ts --changed-since "\$AUDIT_REFERENCE"( |$)/m,
+		);
+
+		const scratch = mkdtempSync(join(tmpdir(), 'dedalo-audit-base-'));
+		try {
+			const git = (...args: string[]) => {
+				const r = Bun.spawnSync(['git', '-C', scratch, ...args], {
+					stdout: 'pipe',
+					stderr: 'pipe',
+				});
+				expect(r.exitCode, `git ${args.join(' ')}: ${r.stderr.toString()}`).toBe(0);
+				return r.stdout.toString().trim();
+			};
+			const commit = (file: string, body: string, message: string) => {
+				writeFileSync(join(scratch, file), body);
+				git('add', file);
+				git('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '--quiet', '-m', message);
+				return git('rev-parse', 'HEAD');
+			};
+			git('init', '--quiet', '-b', 'master');
+			const before = commit('README', 'a\n', 'on the remote');
+			commit('bun.lock', 'bumped\n', 'push 1/3: the lockfile bump');
+			commit('src.ts', 'x\n', 'push 2/3');
+			const tip = commit('src.ts', 'y\n', 'push 3/3');
+			expect(tip).not.toBe(before);
+
+			const resolve = (env: Record<string, string>) => {
+				// Only what this leg's event hands the tier: the CI variables of the run
+				// executing THIS gate (a real push on GitHub) are unset first.
+				const exports = Object.entries(env)
+					.map(([k, v]) => `export ${k}='${v}'\n`)
+					.join('');
+				const script =
+					'set -euo pipefail\n' +
+					'unset GITHUB_BASE_REF CI_MERGE_REQUEST_TARGET_BRANCH_NAME DEDALO_CI_AUDIT_BASE ' +
+					'GITHUB_EVENT_NAME GITHUB_EVENT_PATH CI_COMMIT_BEFORE_SHA\n' +
+					`${exports}CI_REFERENCE=""\n${fn}\naudit_reference || true\n`;
+				const r = Bun.spawnSync(['bash', '-c', script], {
+					cwd: scratch,
+					stdout: 'pipe',
+					stderr: 'pipe',
+				});
+				return r.stdout.toString().trim();
+			};
+			const event = (payload: unknown) => {
+				const path = join(scratch, `.event-${Math.random().toString(36).slice(2)}.json`);
+				writeFileSync(path, JSON.stringify(payload));
+				return { GITHUB_EVENT_NAME: 'push', GITHUB_EVENT_PATH: path };
+			};
+			const diffSees = (base: string) =>
+				git('diff', '--name-only', base, '--').split('\n').includes('bun.lock');
+
+			// GitHub push: the payload's `before` — and the diff from it sees the bump.
+			const github = resolve(event({ before }));
+			expect(github).toBe(before);
+			expect(diffSees(github)).toBe(true);
+			// The defect this replaced, as a control: HEAD^ hides the bump.
+			expect(diffSees(git('rev-parse', 'HEAD^'))).toBe(false);
+			// GitLab push and an explicit base (pre-push hook / ci:local) likewise.
+			expect(resolve({ CI_COMMIT_BEFORE_SHA: before })).toBe(before);
+			expect(resolve({ DEDALO_CI_AUDIT_BASE: before })).toBe(before);
+			// Fail-safe: everything unconfident resolves to NOTHING — audit.ts runs.
+			expect(resolve(event({ before: '0'.repeat(40) }))).toBe(''); // a new branch
+			expect(resolve(event({}))).toBe(''); // no `before` in the payload
+			expect(resolve({ GITHUB_EVENT_NAME: 'push' })).toBe(''); // no payload, no upstream
+			expect(resolve({ DEDALO_CI_AUDIT_BASE: 'HEAD^' })).toBe(''); // not a sha
+			expect(resolve({ DEDALO_CI_AUDIT_BASE: 'f'.repeat(40) })).toBe(''); // unfetchable
+			// A pull request defers to the one fetched target tip; none → nothing.
+			expect(resolve({ GITHUB_BASE_REF: 'master' })).toBe('');
+		} finally {
+			rmSync(scratch, { recursive: true, force: true });
+		}
+	});
+
+	/**
+	 * Rule 19 — the duplicate-run dedupe may skip only a push whose sha an earlier run
+	 * on another branch already PROVED. Executed, not read: the probe step of the real
+	 * file runs under bash (`-e`, GitHub's default) with a stub `gh` on PATH that serves
+	 * a fixture run listing, and its GITHUB_OUTPUT is the verdict.
+	 */
+	test('the duplicate-run dedupe skips only a push another branch already verified (rule 19)', () => {
+		const files = ['.github/workflows/ci.yml', '.github/workflows/db.yml'] as const;
+		const dedupeBlocks = new Map<string, string>();
+		for (const rel of files) {
+			const src = read(rel);
+			const jobs = jobBlocks(src);
+			const dedupe = jobs.get('dedupe');
+			expect(
+				dedupe,
+				`${rel}: no \`dedupe\` job — every push of a sha to both landing branches runs the tiers twice`,
+			).toBeDefined();
+			const block = (dedupe as string).trimEnd();
+			dedupeBlocks.set(rel, block);
+			const code = block
+				.split('\n')
+				.map((l) => l.trim())
+				.filter((l) => l !== '' && !l.startsWith('#'));
+			// Shape: least privilege, no repository code, unconditioned, blocking.
+			const scopes = [...block.matchAll(/^ {6}([a-z-]+):\s*(read|write|none)\s*$/gm)].map(
+				(m) => `${m[1]}: ${m[2]}`,
+			);
+			expect(/^ {4}permissions:\s*$/m.test(block), `${rel} dedupe: no job-level permissions`).toBe(
+				true,
+			);
+			expect(scopes, `${rel} dedupe: holds exactly actions: read`).toEqual(['actions: read']);
+			for (const [pattern, why] of [
+				[
+					/^(?:-\s+)?uses:/,
+					'runs an action (a checkout would execute repository code with the actions token)',
+				],
+				[/^(?:-\s+)?if:/, 'is conditioned — a skipped dedupe skips every tier with it'],
+				[/^needs:/, 'needs another job'],
+				[/^(?:-\s+)?continue-on-error:/, 'tolerates its own failure'],
+			] as const) {
+				expect(
+					code.filter((l) => pattern.test(l)),
+					`${rel} dedupe ${why}`,
+				).toEqual([]);
+			}
+			expect(block).toMatch(/^ {6}skip:\s*\$\{\{\s*steps\.probe\.outputs\.skip\s*\}\}\s*$/m);
+			// Every other job waits for it (its if: is leg F's to evaluate).
+			for (const [id, other] of jobs) {
+				if (id === 'dedupe') continue;
+				const needs = other.match(/^ {4}needs:\s*(.*)$/m)?.[1] ?? '';
+				expect(
+					/(^|[\s[,])dedupe([\s\],]|$)/.test(needs),
+					`${rel} job '${id}' does not need dedupe — it runs on a sha another run already proved`,
+				).toBe(true);
+			}
+			// Push runs are grouped by sha and never cancelled (the second landing branch's
+			// run QUEUES, so the probe sees the first one's conclusion); PRs keep ref +
+			// cancel; every other event (a dispatch) is keyed by its OWN run id — sharing
+			// the sha group, a newly queued run would EVICT the pending push run, whatever
+			// cancel-in-progress says.
+			const prefix = rel.includes('ci.yml') ? 'ci' : 'db';
+			expect(
+				src,
+				`${rel}: the concurrency key must be ref for a PR, sha for a push and the run id for anything else`,
+			).toContain(
+				`concurrency:\n  group: ${prefix}-\${{ github.event_name == 'pull_request' && github.ref || github.event_name == 'push' && github.sha || github.run_id }}\n  cancel-in-progress: \${{ github.event_name == 'pull_request' }}\n`,
+			);
+		}
+		expect(
+			dedupeBlocks.get(files[1]),
+			'the dedupe job differs between ci.yml and db.yml — one decision, two copies (Actions has no anchors): change both together',
+		).toBe(dedupeBlocks.get(files[0]));
+
+		// The probe, executed. Extract the `run: |` body of the probe step, dedented.
+		const block = dedupeBlocks.get(files[0]) as string;
+		const lines = block.split('\n');
+		const at = lines.findIndex((l) => /^ {8}run: \|\s*$/.test(l));
+		expect(at, 'dedupe: the probe step has no `run: |` block').toBeGreaterThan(-1);
+		const body: string[] = [];
+		for (const l of lines.slice(at + 1)) {
+			if (l.trim() !== '' && !l.startsWith('          ')) break;
+			body.push(l.slice(10));
+		}
+		const script = body.join('\n');
+		// The stub serves `gh api … --jq <filter>` by EMULATING the probe's projection; a
+		// probe that changes its filter is red here until the stub learns it — loud, never
+		// a stub silently answering a question it was not asked.
+		const PROJECTION =
+			'.workflow_runs[] | [.id, .head_sha, .event, .conclusion, .head_branch] | @tsv';
+		expect(script, 'the probe projection changed — teach the stub below').toContain(
+			`--jq '${PROJECTION}'`,
+		);
+
+		const scratch = mkdtempSync(join(tmpdir(), 'dedalo-dedupe-'));
+		try {
+			const bin = join(scratch, 'bin');
+			Bun.spawnSync(['mkdir', '-p', bin]);
+			writeFileSync(
+				join(bin, 'gh'),
+				[
+					'#!/usr/bin/env bash',
+					'echo "$*" >> "$STUB_LOG"',
+					'[ -n "${STUB_FAIL:-}" ] && exit 1',
+					'[ "$1" = api ] || exit 9',
+					'case "$2" in',
+					'  "repos/o/r/actions/runs/500") [ "$3" = --jq ] && [ "$4" = .workflow_id ] || exit 9; echo 77 ;;',
+					'  "repos/o/r/actions/workflows/77/runs?head_sha=$GITHUB_SHA&"*)',
+					`    [ "$3" = --jq ] && [ "$4" = '${PROJECTION}' ] || exit 9; cat "$STUB_RUNS" ;;`,
+					'  *) exit 9 ;;',
+					'esac',
+					'',
+				].join('\n'),
+				{ mode: 0o755 },
+			);
+			const SHA = 'a'.repeat(40);
+			const run = (event: string, rows: string[][], fail = false) => {
+				const tag = Math.random().toString(36).slice(2);
+				const out = join(scratch, `out-${tag}`);
+				const log = join(scratch, `log-${tag}`);
+				const runs = join(scratch, `runs-${tag}`);
+				writeFileSync(out, '');
+				writeFileSync(log, '');
+				writeFileSync(runs, rows.map((r) => `${r.join('\t')}\n`).join(''));
+				const r = Bun.spawnSync(['bash', '-e', '-c', script], {
+					env: {
+						PATH: `${bin}:${process.env.PATH}`,
+						GITHUB_EVENT_NAME: event,
+						GITHUB_REPOSITORY: 'o/r',
+						GITHUB_RUN_ID: '500',
+						GITHUB_SHA: SHA,
+						GITHUB_REF_NAME: 'v7',
+						GITHUB_OUTPUT: out,
+						GH_TOKEN: 'x',
+						STUB_LOG: log,
+						STUB_RUNS: runs,
+						...(fail ? { STUB_FAIL: '1' } : {}),
+					},
+					stdout: 'pipe',
+					stderr: 'pipe',
+				});
+				expect(r.exitCode, `probe exited ${r.exitCode}: ${r.stderr.toString()}`).toBe(0);
+				return { output: readFileSync(out, 'utf8'), calls: readFileSync(log, 'utf8') };
+			};
+			const proved = ['400', SHA, 'push', 'success', 'master'];
+			const skip = (event: string, rows: string[][], fail = false) => run(event, rows, fail).output;
+
+			// The one skip: a push run on another branch concluded success.
+			expect(skip('push', [proved])).toBe('skip=true\n');
+			expect(skip('push', [['450', SHA, 'push', 'failure', 'master'], proved])).toBe('skip=true\n');
+			// ORDER-INDEPENDENT: runs of one sha are serialized, so whichever was admitted
+			// second defers to the first's success — a higher run id included. A run-id
+			// guard would make the dedupe depend on admission order (undocumented) and run
+			// the tiers twice whenever GitHub admitted the higher id first.
+			expect(skip('push', [['600', SHA, 'push', 'success', 'master']]), 'a later run id').toBe(
+				'skip=true\n',
+			);
+			// Never for another event — and the API is not even asked.
+			for (const event of ['pull_request', 'workflow_dispatch', 'schedule']) {
+				const r = run(event, [proved]);
+				expect(r.output, event).toBe('skip=false\n');
+				expect(r.calls, event).toBe('');
+			}
+			// Never on a run that proves nothing about THIS sha from ANOTHER branch.
+			for (const [why, row] of [
+				['the same branch', ['400', SHA, 'push', 'success', 'v7']],
+				['a red run', ['400', SHA, 'push', 'failure', 'master']],
+				['a run still going', ['400', SHA, 'push', '', 'master']],
+				['another sha', ['400', 'b'.repeat(40), 'push', 'success', 'master']],
+				['a pull-request run', ['400', SHA, 'pull_request', 'success', 'master']],
+			] as const) {
+				expect(skip('push', [[...row]]), why).toBe('skip=false\n');
+			}
+			expect(skip('push', [])).toBe('skip=false\n');
+			// Fail OPEN: an API error runs the tiers.
+			expect(skip('push', [proved], true)).toBe('skip=false\n');
+		} finally {
+			rmSync(scratch, { recursive: true, force: true });
 		}
 	});
 

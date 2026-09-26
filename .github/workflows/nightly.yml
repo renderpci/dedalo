@@ -1,0 +1,204 @@
+# NIGHTLY — the TIME-BASED checks, on the one event where time IS the input.
+#
+# WHY THIS EXISTS (2026-09-26). Three inputs of the dependency-audit ratchet change
+# with the CALENDAR, not with a commit: the `bun audit` registry, the GitHub
+# advisory feed, and the review windows / acceptance expiries of the vendored trees
+# (vendor/vendor_manifest.json). On the push gate they made the same sha green on
+# Monday and red on Tuesday, and the red landed on whoever pushed next — for code
+# they had not touched. That is a gate doing its job on the wrong event. So:
+#   - the PUSH gate (scripts/ci/hermetic.sh) runs scripts/ci/audit.ts only when the
+#     push changed what it reads (a bun.lock, a package.json, vendor/, a manifest
+#     root, the audit's own inputs) — `--changed-since <base>`, the base covering every
+#     commit the push carries (its `before`; hermetic.sh audit_reference); and runs the vendor
+#     tripwire's tree-only legs on every push (DEDALO_VENDOR_DATED_CHECKS=0);
+#   - THIS workflow runs the whole thing every night, calendar ON, `--force`, and
+#     keeps ONE open issue labelled `ci-nightly` saying what is red — or what is about
+#     to be: a review window or acceptance closing within 21 days is a WARNING here
+#     (VENDOR_WINDOW_WARNING_DAYS in scripts/vendor_verify.ts), never a red. Red is
+#     "already closed" / "a new advisory nobody triaged", and it makes this run red.
+#   - green with no warnings CLOSES the issue.
+# The DEC-12 ratchet itself (what is red, what `--update` refuses) is unchanged.
+#
+# The vendor advisory/expiry check IS scripts/ci/audit.ts here: it calls the same
+# checker test/unit/vendor_advisory_tripwire.test.ts asserts (checkVendorAdvisories,
+# calendar ON) plus the networked feed, so a second `bun test` would re-prove the
+# same function with a test preload that needs the whole config stubbed.
+#
+# LEAST PRIVILEGE, SPLIT BY JOB. `check` runs repository code (bun, the audit) with a
+# read-only token. `report` holds the only write scope in this file — `issues:
+# write` — and runs NO repository code: no checkout, no bun, only `gh` over the
+# JSON verdict `check` handed it. Everything it reads crosses through `env:`, never
+# through `${{ }}` inside a script (rule 7d of test/unit/ci_workflow_tripwire.test.ts,
+# which also pins this file's shape — rule 17).
+#
+# NOT a tier: this file runs no `bash scripts/ci/*.sh`, so the tier laws of
+# test/unit/tier_wiring_tripwire.test.ts (fire on every PR and push, no `if:`) do
+# not apply — a schedule is exactly the event a tier must never be limited to, and
+# exactly the one this job is for.
+#
+# PUBLIC-REPO POSTURE: ubuntu-latest, no secrets (the token is the run's own
+# `github.token`), no self-hosted runner. A fork gets no schedule and cannot
+# dispatch.
+name: nightly
+
+on:
+  schedule:
+    # Daily 04:17 UTC — off the top of the hour, when GitHub's scheduler is least
+    # congested. GitHub pauses schedules after ~60 days of repo inactivity.
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+    inputs:
+      warn_days:
+        description: "Warning lead time in days before a vendor window closes (blank = the script's default, 21). Raise it to rehearse the issue."
+        required: false
+        default: ""
+
+# The default for every job: read the tree, write nothing. `report` widens ONLY
+# itself, to issues: write. Enforced by rules 7 and 17 of ci_workflow_tripwire.
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      rc: ${{ steps.audit.outputs.rc }}
+      verdict: ${{ steps.audit.outputs.verdict }}
+      summary: ${{ steps.audit.outputs.summary }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version # the load-bearing pin — never inline a version
+      # No `bun install`: `bun audit` reads bun.lock, and audit.ts imports only repo
+      # modules and bun builtins (measured on a fresh clone with no node_modules).
+      #
+      # --force            run regardless of what changed (the push gate's skip does not apply);
+      # --require-network  a degraded feed lookup is RED here: this run IS the discovery the
+      #                    push gate defers to, so "the feed did not answer" must not pass;
+      # --summary          the verdict as JSON on every exit path, for `report`.
+      - name: Dependency + vendor advisory audit (calendar ON, forced)
+        id: audit
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          WARN_DAYS: ${{ inputs.warn_days }}
+        run: |
+          summary="$RUNNER_TEMP/audit.json"
+          extra=()
+          if [ -n "${WARN_DAYS:-}" ]; then extra+=(--warn-days "$WARN_DAYS"); fi
+          # The rc is CARRIED, not swallowed: written below, and the next step exits with it.
+          rc=0
+          bun run scripts/ci/audit.ts --force --require-network --summary "$summary" "${extra[@]}" || rc=$?
+          if [ ! -s "$summary" ]; then
+            jq -n --arg rc "$rc" '{tool: "scripts/ci/audit.ts", verdict: "red", problems: ["audit.ts exited \($rc) without writing its summary — read the log of this step"], warnings: [], notes: []}' > "$summary"
+          fi
+          {
+            echo "rc=$rc"
+            echo "verdict=$(jq -r '.verdict' "$summary")"
+            echo "summary=$(jq -c '.' "$summary")"
+          } >> "$GITHUB_OUTPUT"
+      - name: Fail the run when the audit is red
+        env:
+          RC: ${{ steps.audit.outputs.rc }}
+        run: exit "$RC"
+
+  report:
+    needs: check
+    # always(): a red `check` is exactly when the issue matters. A cancelled or
+    # skipped `check` reports nothing (handled in the script, not here, so the
+    # condition cannot silently drop a red).
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: Open, update or close the ci-nightly issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          CHECK_RESULT: ${{ needs.check.result }}
+          SUMMARY: ${{ needs.check.outputs.summary }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          label="ci-nightly"
+          case "$CHECK_RESULT" in
+            success|failure) ;;
+            *) echo "check was ${CHECK_RESULT}: nothing measured, nothing reported"; exit 0 ;;
+          esac
+          # NOT `${SUMMARY:-{...}}`: a `}` inside the default terminates the expansion
+          # (the trap scripts/ci/hermetic.sh documents for its JSON stubs).
+          if [ -z "${SUMMARY:-}" ]; then
+            SUMMARY='{"verdict":"red","problems":["the check job produced no summary (it died before the audit step) — read its log"],"warnings":[],"notes":[]}'
+          fi
+          verdict="$(jq -r '.verdict // "red"' <<<"$SUMMARY")"
+          problems="$(jq '.problems // [] | length' <<<"$SUMMARY")"
+          warnings="$(jq '.warnings // [] | length' <<<"$SUMMARY")"
+          if [ "$CHECK_RESULT" = "failure" ] || [ "$verdict" = "red" ] || [ "$problems" -gt 0 ]; then
+            state="RED"
+          elif [ "$warnings" -gt 0 ]; then
+            state="WARNING"
+          else
+            state="GREEN"
+          fi
+          echo "nightly state: $state (problems $problems, warnings $warnings)"
+
+          gh label create "$label" --color B60205 \
+            --description "Opened, updated and closed by .github/workflows/nightly.yml" --force >/dev/null
+          number="$(gh issue list --label "$label" --state open --limit 1 --json number --jq '.[0].number // empty')"
+
+          if [ "$state" = "GREEN" ]; then
+            if [ -n "$number" ]; then
+              gh issue close "$number" --comment "Nightly time-based checks are GREEN with no warnings: $RUN_URL"
+            fi
+            exit 0
+          fi
+
+          body="$RUNNER_TEMP/issue.md"
+          {
+            echo "## Nightly time-based checks: $state"
+            echo
+            echo "Run: $RUN_URL"
+            echo
+            echo "What runs here: \`bun run scripts/ci/audit.ts --force --require-network\` — the \`bun audit\` ratchet"
+            echo "against engineering/dependency_audit_baseline.json, the vendored trees' advisory ledger and review /"
+            echo "acceptance windows (calendar ON), and the GitHub advisory feed. The push gate skips these unless a push"
+            echo "changes a lockfile, a package.json or vendor/, so this issue is where they surface."
+            echo
+            if [ "$problems" -gt 0 ]; then
+              echo "### Red"
+              echo
+              jq -r '.problems[] | "~~~text\n" + . + "\n~~~\n"' <<<"$SUMMARY"
+            fi
+            if [ "$warnings" -gt 0 ]; then
+              echo "### Warnings — a window closes within $(jq -r '.warn_days // 21' <<<"$SUMMARY") days (not red until it has closed)"
+              echo
+              jq -r '.warnings[] | "- " + .' <<<"$SUMMARY"
+              echo
+            fi
+            if [ "$(jq '.notes // [] | length' <<<"$SUMMARY")" -gt 0 ]; then
+              echo "### Notes"
+              echo
+              jq -r '.notes[] | "- " + .' <<<"$SUMMARY"
+              echo
+            fi
+            echo "---"
+            echo "This issue is kept by .github/workflows/nightly.yml: updated while anything is red or close, closed on the first green night."
+          } > "$body"
+
+          title="ci-nightly: $state — time-based dependency/vendor checks"
+          if [ -n "$number" ]; then
+            previous="$(gh issue view "$number" --json title --jq '.title')"
+            gh issue edit "$number" --title "$title" --body-file "$body"
+            if [ "$previous" != "$title" ]; then
+              gh issue comment "$number" --body "State changed to $state: $RUN_URL"
+            fi
+          else
+            gh issue create --title "$title" --label "$label" --body-file "$body"
+          fi

@@ -7,6 +7,43 @@ import {
 } from './elements.js'
 import {get_instance} from '../../../core/common/js/instances.js'
 import {ui} from '../../../core/common/js/ui.js'
+import {pause} from '../../../core/common/js/utils/util.js'
+
+
+
+// SAVE SETTLE — why every case waits for the save its own deactivate launched.
+// ui.component.deactivate() saves pending changed_data FIRE-AND-FORGET: it calls
+// component.change_value() without awaiting it (deliberate — a curator leaving a
+// field must not block on the network). This suite sets changed_data on every
+// component and then deactivates it, so each it() used to END with its save
+// still in flight, and the NEXT it() paid for it: measured on the suite server,
+// component_check_box's module GETs and its get_data were held until
+// component_av's save answered (the whole check_box case lasted exactly as long
+// as that save), and the same bleed shows after security_access (→ select) and
+// select_lang (→ svg). On a loaded hosted runner a slow save landed inside the
+// following case's 5000 ms budget: 'component_check_box. Activation — Timeout of
+// 5000ms exceeded' (gh run 35843092386, instance tier), a red charged to a
+// component that did nothing wrong. The server log of that run shows a test3/1
+// save fired by this suite (select_lang, test89) taking 10.3 s.
+//
+// The real condition is polled, bounded: change_value() raises `changing`
+// synchronously, before its first await, and clears it in its `finally`; save()
+// holds `saving` for the request. Both false = the save settled (or was never
+// started: test_save:false, save_on_deactivate:false, a no-change skip). A save
+// that never settles is still a failure — named, with the component — just no
+// longer someone else's. Same shape as test_additional_text_area's editor wait.
+const SAVE_SETTLE_MS = 8000
+
+const wait_for_save_settled = async function(instance, max_ms = SAVE_SETTLE_MS) {
+	const started = Date.now()
+	while (Date.now() - started < max_ms) {
+		if (instance.changing!==true && instance.saving!==true) {
+			return Date.now() - started
+		}
+		await pause(25)
+	}
+	throw new Error(`${instance.model} (${instance.tipo}) save launched by deactivate did not settle after ${max_ms} ms (changing: ${instance.changing}, saving: ${instance.saving})`)
+}
 
 
 describe("COMPONENTS ACTIVATE", async function() {
@@ -104,6 +141,14 @@ describe("COMPONENTS ACTIVATE", async function() {
 					assert( !wrapper.classList.contains('active'), `wrapper activated styles are NOT removed`)
 					assert( instance.active===false, `instance property active is NOT set as false`)
 					assert( page_globals.component_active===null, `page_globals.component_active is NOT reset (expected null)`)
+
+					// the save deactivate launched belongs to THIS case (see SAVE
+					// SETTLE above). It gets its own window: mocha's timer is
+					// re-armed from now, so activation keeps its 5000 ms and the
+					// save phase is bounded by SAVE_SETTLE_MS — the poll throws its
+					// named error first, the extra second is only the margin.
+					this.timeout(SAVE_SETTLE_MS + 1000)
+					await wait_for_save_settled(instance)
 				});
 
 		})//end describe(element.model, function() {

@@ -4,6 +4,7 @@
  *
  *   bun run scripts/twin_map.ts --report   # human summary, writes nothing
  *   bun run scripts/twin_map.ts --check    # print drift, exit 1 if any
+ *   bun run scripts/twin_map.ts --check --json   # the bank's verdict (checkVerdict)
  *   bun run scripts/twin_map.ts            # regenerate (refuses growth)
  *
  * THE RATCHET is `unmapped_reds`: parity files that still carry frozen reds and
@@ -16,6 +17,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { emitRatchetCheck, type RatchetCheck, wantsCheckJson } from './lib/ratchet_check.ts';
 import {
 	derivedStatus,
 	filesNamingAParityGate,
@@ -168,6 +170,39 @@ export function drift(fresh: TwinMap, frozen: TwinMap): string[] {
 	return out;
 }
 
+/**
+ * THE BANK'S VERDICT (`--check --json`, scripts/lib/ratchet_check.ts): the lines of
+ * {@link drift}, classified by what regenerating the map cures.
+ *
+ * Only the RATCHET's shrink — an unmapped red file that is no longer one (a twin was
+ * written, or its parity reds were retired), or an unmapped file whose count fell — is
+ * an improvement. Growth of `unmapped_reds` is what the writer refuses; every other
+ * line (a header status that disagrees with the tree, a missing back-link, a stale or
+ * missing NOT_A_TWIN row, a twin naming a vanished gate) lives in SOURCE, so a
+ * regeneration cannot cure it and the bank must not pretend to: a regression.
+ *
+ * `drift()` compares the ratchet's growth only; a count that FELL inside a still-listed
+ * file is read here, straight off the two maps, because the writer banks it too.
+ */
+export function checkVerdict(fresh: TwinMap, frozen: TwinMap): RatchetCheck {
+	const verdict: RatchetCheck = {
+		ratchet: 'twin_map',
+		baselines: ['engineering/twin_map.json'],
+		improvements: [],
+		regressions: [],
+	};
+	for (const line of drift(fresh, frozen)) {
+		(line.startsWith('FIXED — ') ? verdict.improvements : verdict.regressions).push(line);
+	}
+	for (const [file, count] of Object.entries(fresh.unmapped_reds)) {
+		const before = frozen.unmapped_reds[file];
+		if (before !== undefined && count < before) {
+			verdict.improvements.push(`unmapped reds FELL in ${file}: ${before} -> ${count}`);
+		}
+	}
+	return verdict;
+}
+
 if (import.meta.main) {
 	const args = new Set(process.argv.slice(2));
 	const fresh = buildMap();
@@ -179,6 +214,7 @@ if (import.meta.main) {
 			console.log(`  ${String(n).padStart(3)}  ${f}`);
 		process.exit(0);
 	}
+	if (wantsCheckJson(process.argv)) process.exit(emitRatchetCheck(checkVerdict(fresh, loadMap())));
 	if (args.has('--check')) {
 		const d = drift(fresh, loadMap());
 		if (d.length === 0) {

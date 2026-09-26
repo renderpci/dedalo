@@ -1070,8 +1070,15 @@ script's own body: move the failed tree aside, move the backup back, start.
 
 | Channel | Layout | Update | Rollback |
 |---|---|---|---|
-| `tree_swap` | the repo is a checkout on a host (systemd or supervised loop) | quarantine → rename swap (above) | sentinel + `dedalo-code-rollback.sh` |
-| `image` | containerized; the code tree is INSIDE the image (`Dockerfile` copies the build-context allowlist, §13), only `/private`/media/socket are volumes | the swap is REFUSED — a tree swap would land in the container's writable layer and be discarded on the next recreation. Use `deploy/dedalo-image-update.sh` (pull a new tag, or rebuild from a ref) | re-pin the previous image tag + `up -d` — atomic and complete, dependencies included |
+| `tree_swap` | the repo is a checkout on a host (systemd or supervised loop) — or ANY tree without the product-image marker (the CI toolchain container), or a checkout bind-mounted into the product image | quarantine → rename swap (above) | sentinel + `dedalo-code-rollback.sh` |
+| `image` | the code tree is BAKED into the product image (`Dockerfile` copies the build-context allowlist, §13, and writes the positive marker `/etc/dedalo/image_tree`), and the tree is not on a mount; only `/private`/media/socket are volumes | the swap is REFUSED — a tree swap would land in the container's writable layer and be discarded on the next recreation. Use `deploy/dedalo-image-update.sh` (pull a new tag, or rebuild from a ref) | re-pin the previous image tag + `up -d` — atomic and complete, dependencies included |
+
+Detection (`src/core/update/channel.ts`, gate `test/unit/update_channel_native.test.ts`)
+asks WHERE THE TREE CAME FROM, never "am I in a container": the product
+`Dockerfile` writes `/etc/dedalo/image_tree` (outside the tree, so no export,
+bind mount or swap carries it); marker present AND the root on the container's
+root overlay ⇒ `image`. An unreadable mountinfo inside a marked image fails
+safe to `image`.
 
 **Offline-dependency caveat.** A release whose `bun.lock` changed needs
 registry access at install time (the quarantine `bun install`). On an

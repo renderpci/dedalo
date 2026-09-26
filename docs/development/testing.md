@@ -309,10 +309,13 @@ bun run scripts/verify.ts --no-tests    # typecheck + lint only
 bun run scripts/verify.ts --changed      # print the changed-file set and exit
 ```
 
-Four stages, in cost order — typecheck (`bunx tsc --noEmit`), lint (`bunx biome check .`),
-**all 26 tripwires**, then **neighbours**: the unit and parity test files that import any
-`src/` file you touched, discovered from the git diff. Exit 0 only if every enabled stage
-is green.
+The static stages run concurrently — typecheck (`bunx tsc --noEmit`), lint
+(`bunx biome check .`), `lint:browser` (the shrink-only budget over the trees biome
+excludes) and `crap:ledger` (the complexity ledger stays append-only) — then **every
+tripwire** in `engineering/TRIPWIRES.md`, then **neighbours**: the unit and parity test
+files that import any `src/` file you touched, discovered from the git diff, and — when the change touches it — the
+site-builder package's own suite. `--no-tests` skips the tripwires and neighbours. Exit 0
+only if every enabled stage is green.
 
 ## `scripts/ci/hermetic.sh` — the DB-less tier
 
@@ -332,8 +335,11 @@ unit and parity tiers; the gates that boot a real server — the browser client 
 two code-update drills — run on its `instance` job (`scripts/ci/instance_tier.sh`). Every
 tripwire is assigned to exactly one of those tiers (`ci_workflow_tripwire` rule 3c), and
 `tier_wiring_tripwire` holds that each tier script is actually run by an executing workflow.
-`scripts/verify.ts` is the developer's pre-push gate, not a CI tier: every stage it reports
-has a hosted twin.
+`scripts/verify.ts` is the developer-environment gate, not a CI tier and run by no
+workflow: every stage it reports has a hosted twin. The CI-environment gate on the desk is
+`bun run ci:local --docker` — the same tier scripts in CI's own image — and the
+`scripts/hooks/pre-push` hook runs it (after banking ratchet improvements) before every
+push; see `engineering/CI.md`, "The local gate".
 
 The script stubs **every** required-no-default key in `src/config/config.ts`. That list is
 pinned by a rule of `ci_workflow_tripwire`, for a reason worth internalising: the first

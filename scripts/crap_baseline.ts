@@ -4,6 +4,7 @@
  *   bun run scripts/crap_baseline.ts --check    # print drift, exit 1 if any
  *   bun run scripts/crap_baseline.ts --update   # rewrite the JSON baseline
  *   bun run scripts/crap_baseline.ts --report   # human view, never fails
+ *   bun run scripts/crap_baseline.ts --check --json   # the bank's verdict (checkVerdict)
  *
  * ── WHAT THIS IS ─────────────────────────────────────────────────────────────
  * CRAP(m) = comp² × (1 − cov)³ + comp, so at full coverage CRAP == comp and a
@@ -102,6 +103,12 @@ import {
 	summarize,
 	unmeasuredSourceFiles,
 } from './lib/complexity.ts';
+import {
+	classifyCount,
+	emitRatchetCheck,
+	type RatchetCheck,
+	wantsCheckJson,
+} from './lib/ratchet_check.ts';
 import { readFlagValue, readReasonArg, thinReasonProblem } from './lib/reason_validator.ts';
 
 /**
@@ -643,6 +650,50 @@ export function formatDrift(drift: Drift): string {
 	return lines.join('\n');
 }
 
+/**
+ * THE BANK'S VERDICT (`--check --json`, scripts/lib/ratchet_check.ts): the same
+ * drift `--check` prints, sorted by what `--update` would do with it.
+ *
+ *   regressions  — a file above its entry or a new over-cap file (computeDrift's
+ *                  own list), a debt counter that GREW, a vacuous scan, a ledger
+ *                  the gate refuses — and, as the last word, anything
+ *                  {@link updateDecision} itself would refuse flaglessly. The
+ *                  writer is asked, not paraphrased: a classification that
+ *                  disagreed with the writer is the one failure a bank must not have.
+ *   improvements — stale entries (lowered, gone, now at/under the cap) and a
+ *                  counter that FELL: exactly what a plain `--update` prunes.
+ */
+export function checkVerdict(
+	results: readonly FileComplexity[],
+	committed: ComplexityBaseline,
+	previous: PreviousBaseline,
+): RatchetCheck {
+	const verdict: RatchetCheck = {
+		ratchet: 'crap_complexity_baseline',
+		baselines: [BASELINE_PATH],
+		improvements: [],
+		regressions: [],
+	};
+	const drift = computeDrift(results, committed);
+	verdict.regressions.push(...drift.regressions, ...drift.vacuity.map((l) => `vacuity: ${l}`));
+	verdict.regressions.push(...ledgerProblems(committed).map((l) => `ledger: ${l}`));
+	verdict.improvements.push(...drift.stale);
+	const fresh = summarize(results);
+	for (const key of ['functionsOverCap', 'filesOverCap'] as const) {
+		classifyCount(verdict, `summary.${key}`, committed.summary?.[key] ?? 0, fresh[key]);
+	}
+	if (verdict.regressions.length === 0 && verdict.improvements.length > 0) {
+		const decision = updateDecision(previous, buildBaseline(results), {
+			allowRegression: false,
+			reason: null,
+			today: new Date().toISOString().slice(0, 10),
+		});
+		if (decision.kind === 'refuse')
+			verdict.regressions.push(`--update refuses: ${decision.message}`);
+	}
+	return verdict;
+}
+
 // ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
@@ -938,6 +989,9 @@ function main(): number {
 	}
 
 	const committed = loadBaseline(baselinePath);
+	if (wantsCheckJson(process.argv)) {
+		return emitRatchetCheck(checkVerdict(results, committed, readPreviousBaseline(baselinePath)));
+	}
 	const ledgerRed = ledgerProblems(committed);
 	if (referenceRev !== null) {
 		// Where history exists, prove append-only against it (verify.ts: the

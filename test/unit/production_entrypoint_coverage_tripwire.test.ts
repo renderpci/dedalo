@@ -272,6 +272,11 @@ const TOOLING_SCRIPT_PREFIXES = new Set([
 	'sitebuilder',
 	'typecheck',
 	'format',
+	// `baselines:bank` (ratchet banking) and `push` (the gated multi-remote
+	// push) are the 2026-09 pre-push gate: they act on THIS repository's
+	// baselines and remotes, never on an installation.
+	'baselines',
+	'push',
 ]);
 const PRODUCTION_SCRIPT_PREFIXES = new Set(['start', 'dedalo']);
 

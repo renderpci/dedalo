@@ -22,7 +22,8 @@
 # dedalo_test_marker row every test-data writer demands. Nothing here reads an
 # installation's data, because there is no installation on this runner.
 #
-# TWO JOBS, ONE SERVICE SHAPE (2026-09-02, P0-1 residual). `db` runs the in-process
+# TWO TIER JOBS, ONE SERVICE SHAPE (2026-09-02, P0-1 residual; plus the light `dedupe`
+# gate of 2026-09-26, see CONCURRENCY below). `db` runs the in-process
 # gates; `instance` runs the gates that BOOT A REAL SERVER over the wire — the
 # browser client suite and the two code-update drills (scripts/ci/instance_tier.sh).
 # Those three commands were invoked only from .github/workflows-selfhosted/, which
@@ -58,12 +59,57 @@ on:
 permissions:
   contents: read
 
+# CONCURRENCY + DEDUPE — the same design as ci.yml (read its block): a push run is
+# grouped by SHA and never cancelled, so the second landing branch's run of the same
+# sha queues, then `dedupe` skips `db` and `instance` iff a push run of this workflow
+# on another branch concluded success for it. A workflow_dispatch run is keyed by its
+# own run id (never grouped with, so never evicting, a queued push run) and never
+# skips: a human asked for it. Pull requests: grouped by ref, superseded runs
+# cancelled, never skipped. A failed dedupe runs the tiers (`!cancelled()`, not the
+# implicit success()). The dedupe job below is byte-identical to ci.yml's (rule 19).
 concurrency:
-  group: db-${{ github.ref }}
-  cancel-in-progress: true
+  group: db-${{ github.event_name == 'pull_request' && github.ref || github.event_name == 'push' && github.sha || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Reads the run list of this workflow (actions: read, the only scope it holds); runs
+  # no repository code — no checkout. Fail-open: an API error means "run the tiers".
+  dedupe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+    outputs:
+      skip: ${{ steps.probe.outputs.skip }}
+    steps:
+      - name: Skip when another landing branch's push run already verified this sha
+        id: probe
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -o pipefail
+          skip=false
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            if wf=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq '.workflow_id') &&
+              runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/runs?head_sha=$GITHUB_SHA&event=push&status=success&per_page=100" \
+                --jq '.workflow_runs[] | [.id, .head_sha, .event, .conclusion, .head_branch] | @tsv'); then
+              while IFS=$'\t' read -r id sha event conclusion branch; do
+                if [ "$sha" = "$GITHUB_SHA" ] && [ "$event" = push ] && [ "$conclusion" = success ] &&
+                  [ "$branch" != "$GITHUB_REF_NAME" ]; then
+                  skip=true
+                  echo "::notice::run $id on $branch already verified $GITHUB_SHA; the tiers are skipped here"
+                  break
+                fi
+              done <<< "$runs"
+            else
+              echo "::warning::could not list the runs of $GITHUB_SHA; running the tiers (fail-open)"
+            fi
+          fi
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+
   db:
+    needs: dedupe
+    if: ${{ !cancelled() && (github.event_name != 'push' || needs.dedupe.result != 'success' || needs.dedupe.outputs.skip != 'true') }}
     runs-on: ubuntu-latest
     # The suite build is the long pole by a wide margin: MEASURED end to end at
     # ~15 min on a warm developer Mac (2.27M hierarchy rows through two per-row
@@ -132,6 +178,8 @@ jobs:
         run: bash scripts/ci/db_tier.sh
 
   instance:
+    needs: dedupe
+    if: ${{ !cancelled() && (github.event_name != 'push' || needs.dedupe.result != 'success' || needs.dedupe.outputs.skip != 'true') }}
     runs-on: ubuntu-latest
     # The suite build (~15 min, see `db`) plus the browser suite (133 suites) and
     # two update drills (~3-5 min each warm). 60 is the first pin, from the db
@@ -182,8 +230,9 @@ jobs:
 
       # The client runner launches the SYSTEM Chrome (`channel: 'chrome'`,
       # PUPPETEER_SKIP_DOWNLOAD=1) and already passes --no-sandbox; the drills
-      # need zip/unzip/zipinfo and git. ubuntu-latest ships all of them — this
-      # step only makes their absence a named failure instead of a mystery.
+      # need zip/unzip/zipinfo and git. This step only makes the absence of any
+      # of them a named failure instead of a mystery. (Part 2 moves this job into
+      # the dedalo-ci image, which ships chromium; this check moves with it.)
       - name: Runner toolchain (Chrome, zip, git)
         run: |
           google-chrome --version

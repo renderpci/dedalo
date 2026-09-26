@@ -4,6 +4,7 @@
  *
  *   bun run scripts/site_builder_single_source_baseline.ts           # rewrite the artifact
  *   bun run scripts/site_builder_single_source_baseline.ts --check   # print drift, exit 1
+ *   bun run scripts/site_builder_single_source_baseline.ts --check --json   # the bank's verdict
  *
  * ── WHAT IT FREEZES ─────────────────────────────────────────────────────────────────────
  *
@@ -33,6 +34,7 @@
 import { Buffer } from 'node:buffer';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { emitRatchetCheck, type RatchetCheck, wantsCheckJson } from './lib/ratchet_check.ts';
 import { census, FACTS, REPO_ROOT, scannedFiles } from './lib/site_builder_census.ts';
 
 export const BASELINE_PATH = 'engineering/site_builder_single_source_baseline.json';
@@ -84,7 +86,7 @@ const REASONS: Record<string, Record<string, string>> = {
 	},
 };
 
-function build(): Baseline {
+export function build(): Baseline {
 	const measured = census();
 	const facts: Record<string, FactEntry> = {};
 	for (const fact of FACTS) {
@@ -116,15 +118,18 @@ export function readBaseline(): Baseline | null {
 	}
 }
 
-/** Drift lines — empty when the frozen artifact and the measure agree. */
-export function drift(): string[] {
-	const frozen = readBaseline();
+/**
+ * Drift lines — empty when the frozen artifact and the measure agree. Both sides are
+ * parameters (defaulting to the committed artifact and a fresh measure) so the bank's
+ * gate plants each direction without touching the tree.
+ */
+export function drift(frozen: Baseline | null = readBaseline(), current?: Baseline): string[] {
 	if (frozen === null) return [`MISSING ${BASELINE_PATH} — run the generator`];
-	const current = build();
+	const measured = current ?? build();
 	const lines: string[] = [];
 	for (const fact of FACTS) {
 		const was = new Set(frozen.facts[fact.id]?.owners ?? []);
-		const now = new Set(current.facts[fact.id]?.owners ?? []);
+		const now = new Set(measured.facts[fact.id]?.owners ?? []);
 		for (const path of [...now].sort()) {
 			if (!was.has(path)) lines.push(`GROWTH  ${fact.id}: ${path} now derives this fact`);
 		}
@@ -137,12 +142,84 @@ export function drift(): string[] {
 			}
 		}
 	}
-	if (frozen.scanned_files !== current.scanned_files) {
+	if (frozen.scanned_files !== measured.scanned_files) {
 		lines.push(
-			`SCOPE   the census now scans ${current.scanned_files} files, the baseline froze ${frozen.scanned_files}`,
+			`SCOPE   the census now scans ${measured.scanned_files} files, the baseline froze ${frozen.scanned_files}`,
 		);
 	}
 	return lines;
+}
+
+/**
+ * The scan floor the gate asserts ("the census really scans both deployables") — below
+ * it the census went blind, and a blind census reports every owner as STALE. ONE value:
+ * test/unit/site_builder_single_source_tripwire.test.ts imports it rather than
+ * repeating the number, so the gate and the bank's verdict cannot disagree.
+ */
+export const SCANNED_FILE_FLOOR = 60;
+
+/**
+ * THE BANK'S VERDICT (`--check --json`, scripts/lib/ratchet_check.ts): the lines of
+ * {@link drift} sorted by what the flagless regeneration does with them.
+ *
+ *   regressions  — GROWTH (the one kind the writer refuses), NOREASON / MISSING (a
+ *                  regeneration cures neither), a scan under the floor, and a STALE
+ *                  line that would leave a frozen-NON-EMPTY fact with no owner at all:
+ *                  the header freezes `daemon_transport` / `site_placement` non-empty
+ *                  precisely because an empty set is unfalsifiable, so losing the last
+ *                  owner reads as "the measure went blind" until a human says otherwise.
+ *   improvements — STALE lines (an owner stopped deriving the fact) and SCOPE (the
+ *                  scanned-file count moved above the floor — advisory, the writer
+ *                  records it).
+ */
+export function checkVerdict(
+	frozen: Baseline | null = readBaseline(),
+	current: Baseline = build(),
+	scanned: number = scannedFiles().length,
+): RatchetCheck {
+	const verdict: RatchetCheck = {
+		ratchet: 'site_builder_single_source_baseline',
+		baselines: [BASELINE_PATH],
+		improvements: [],
+		regressions: [],
+	};
+	if (scanned <= SCANNED_FILE_FLOOR) {
+		verdict.regressions.push(
+			`vacuity: the census scans ${scanned} files (floor ${SCANNED_FILE_FLOOR}) — fix the scan, never the baseline`,
+		);
+	}
+	for (const line of drift(frozen, current)) {
+		if (line.startsWith('STALE')) {
+			const fact = /^STALE\s+(\w+):/.exec(line)?.[1] ?? '';
+			const wasOwned = (frozen?.facts[fact]?.owners.length ?? 0) > 0;
+			const nowOwned = (current.facts[fact]?.owners.length ?? 0) > 0;
+			if (wasOwned && !nowOwned && fact !== '' && isFrozenNonEmpty(fact)) {
+				verdict.regressions.push(`${line} — and ${fact} would be left with NO owner`);
+			} else {
+				verdict.improvements.push(line);
+			}
+		} else if (line.startsWith('SCOPE')) {
+			verdict.improvements.push(line);
+		} else {
+			verdict.regressions.push(line);
+		}
+	}
+	return verdict;
+}
+
+/**
+ * The facts this file's header freezes NON-EMPTY: each has a legitimate owner (the
+ * resolver, the layout, the two paired fingerprint halves), so an empty owner set for
+ * any of them cannot be a win the bank banks — only a measure that stopped seeing.
+ */
+export const FROZEN_NON_EMPTY: ReadonlySet<string> = new Set([
+	'daemon_transport',
+	'site_placement',
+	'pairing_fingerprint',
+]);
+
+function isFrozenNonEmpty(fact: string): boolean {
+	return FROZEN_NON_EMPTY.has(fact);
 }
 
 /**
@@ -172,6 +249,7 @@ function formatJson(text: string): string {
 
 if (import.meta.main) {
 	const args = new Set(Bun.argv.slice(2));
+	if (wantsCheckJson(Bun.argv)) process.exit(emitRatchetCheck(checkVerdict()));
 	if (args.has('--check')) {
 		const lines = drift();
 		if (lines.length === 0) {

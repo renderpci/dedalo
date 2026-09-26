@@ -745,6 +745,21 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		roots: [['vendor']],
 		scope: 'the vendored third-party tree, verified against its manifest',
 	},
+	'scripts/lib/baseline_artifacts.ts': {
+		roots: [
+			['.'],
+			['.github', 'scripts', 'src', 'test', 'tools'],
+			['engineering'],
+			['engineering'],
+		],
+		scope:
+			'the baseline-artifact registry: the repo root (git), the trees that may read a baseline (READER_ROOTS), and the engineering/ JSON artifacts — on disk and tracked',
+	},
+	'scripts/ci_local.ts': {
+		roots: [['.']],
+		scope:
+			'the working-tree overlay: what differs between HEAD and the disk, asked of git at the repo root',
+	},
 };
 
 /** The four gates that census the write path; each must use the shared corpus. */

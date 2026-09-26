@@ -29,15 +29,30 @@
  *   E. Every tier root (a script a workflow runs directly) keeps the independent-stage
  *      accumulator, and every job that BUILDS the suite database declares its own
  *      service container.
- *   F. Every job that runs a tier root carries NO `if:` (job- or step-level) and NO
- *      `continue-on-error:` — a conditioned job is silent on the events it excludes, a
- *      tolerated step is green whatever the tier said; `needs:` no job that is itself
+ *   F. Every job that runs a tier root carries NO step-level `if:`, NO
+ *      `continue-on-error:`, and no job-level `if:` EXCEPT the one sanctioned dedupe
+ *      condition — a conditioned job is silent on the events it excludes, a tolerated
+ *      step is green whatever the tier said; `needs:` no job that is itself
  *      conditioned (a skipped upstream skips the tier, transitively); the step's WHOLE
  *      payload is exactly `bash <root>` — `|| true`, `; true`, a `run: |` block around
  *      it and a `| tee` (no pipefail in the default shell) all swallow the verdict; and
  *      no tier root exits before its accumulator decides. Measured: `if: false` on the
  *      instance job, `continue-on-error: true` and `|| true` on its run step, and a
  *      `needs:` on an `if:`-gated job each left the other legs green.
+ *      THE DEDUPE CARVE-OUT (2026-09-26): one sha landing on both LANDING_BRANCHES ran
+ *      every tier twice, so a job-level `if:` reading `needs.<job>.outputs.<key>` /
+ *      `needs.<job>.result` of an UNCONDITIONED upstream job is allowed — but it is not
+ *      trusted by spelling. It is EVALUATED (skipConditionFaults) over every event ×
+ *      upstream result × output: true on every non-push event (a PR, a dispatch, a
+ *      schedule can never be skipped), true on a push whose upstream said nothing or
+ *      `false` (fail-open), and true on a push whose upstream FAILED or was cancelled —
+ *      the implicit success() is MODELLED, so a condition without the `!cancelled()`
+ *      guard is red: a failed dedupe would skip the tier, and a skipped job passes a
+ *      required check. Its grammar is closed — an optional `!cancelled() && ( … )`
+ *      around `||`-joined `==`/`!=` comparisons against a quoted literal — so
+ *      `always()`, `success()`, a bare `&&`, a negation or a function call is red, not
+ *      guessed at. What the upstream probe decides is ci_workflow_tripwire rule 19's
+ *      business: it is executed there against stubbed run listings.
  *   G. Every executing workflow that runs a tier root FIRES on the events work lands
  *      through: `pull_request` bare (no paths/branches/types narrowing) and `push` to
  *      exactly LANDING_BRANCHES (`master`, `v7`; held equal both ways so neither the
@@ -741,6 +756,79 @@ describe('tier wiring — every gate is reached by a workflow that executes', ()
 		const clean =
 			'jobs:\n  other:\n    if: false\n    steps:\n      - run: echo not a tier\n  db:\n    runs-on: x\n    steps:\n      - run: bash scripts/ci/db_tier.sh\n';
 		expect([...tierJobFaults('x.yml', clean, new Set(['scripts/ci/db_tier.sh']))]).toEqual([]);
+		// The dedupe carve-out: the sanctioned condition passes in both spellings, and
+		// every way to make it skip more than a verified push is red.
+		const dedupe = (condition: string, needs = 'dedupe', upstream = '') =>
+			`jobs:\n  dedupe:\n    runs-on: x${upstream}\n    outputs:\n      skip: x\n    steps:\n      - run: echo probe\n  db:\n    needs: ${needs}\n    ${condition}\n    runs-on: x\n    steps:\n      - run: bash scripts/ci/db_tier.sh\n`;
+		const tierRoot = new Set(['scripts/ci/db_tier.sh']);
+		const sanctioned =
+			"if: ${{ !cancelled() && (github.event_name != 'push' || needs.dedupe.result != 'success' || needs.dedupe.outputs.skip != 'true') }}";
+		expect([...tierJobFaults('x.yml', dedupe(sanctioned), tierRoot)]).toEqual([]);
+		expect([
+			...tierJobFaults(
+				'x.yml',
+				dedupe(
+					"if: \"!cancelled() && (github.event_name != 'push' || needs.dedupe.result != 'success' || needs.dedupe.outputs.skip != 'true')\"",
+					'[dedupe]',
+				),
+				tierRoot,
+			),
+		]).toEqual([]);
+		for (const [condition, needs, upstream] of [
+			// The implicit success(): a FAILED dedupe skips the tier, and a skip passes a
+			// required check — the verifier's S2 shape, the previously sanctioned spelling.
+			["if: github.event_name != 'push' || needs.dedupe.outputs.skip != 'true'", 'dedupe', ''],
+			// Guarded, but a failed dedupe whose output still says 'true' skips.
+			[
+				"if: ${{ !cancelled() && (github.event_name != 'push' || needs.dedupe.outputs.skip != 'true') }}",
+				'dedupe',
+				'',
+			],
+			[
+				"if: ${{ !cancelled() && (needs.dedupe.result != 'success' || needs.dedupe.outputs.skip != 'true') }}",
+				'dedupe',
+				'',
+			], // skips a PR
+			[
+				"if: ${{ !cancelled() && (github.event_name != 'push' || needs.dedupe.result != 'success' || needs.dedupe.outputs.skip == 'false') }}",
+				'dedupe',
+				'',
+			], // fails closed on an empty output
+			["if: needs.dedupe.outputs.skip != 'true'", 'dedupe', ''], // skips a PR
+			["if: needs.dedupe.outputs.skip == 'false'", 'dedupe', ''], // fails closed
+			["if: github.event_name != 'push' && needs.dedupe.outputs.skip != 'true'", 'dedupe', ''],
+			[
+				"if: always() && (github.event_name != 'push' || needs.dedupe.outputs.skip != 'true')",
+				'dedupe',
+				'',
+			],
+			[
+				"if: ${{ success() && (github.event_name != 'push' || needs.dedupe.result != 'success' || needs.dedupe.outputs.skip != 'true') }}",
+				'dedupe',
+				'',
+			],
+			["if: github.event_name != 'push' || !needs.dedupe.outputs.skip", 'dedupe', ''],
+			["if: github.event_name != 'push' || needs.other.outputs.skip != 'true'", 'dedupe', ''],
+			["if: github.event_name != 'push' || needs.other.result != 'success'", 'dedupe', ''],
+			["if: github.event_name == 'pull_request'", 'dedupe', ''], // dark on push
+			[sanctioned, 'dedupe', '\n    if: false'], // the upstream itself conditioned
+		] as const) {
+			expect(
+				[...tierJobFaults('x.yml', dedupe(condition, needs, upstream), tierRoot)].length,
+				`${condition} (upstream${upstream})`,
+			).toBeGreaterThan(0);
+		}
+		// The sanctioned condition is JOB-level only: on the run step it is red.
+		expect(
+			tierJobFaults(
+				'x.yml',
+				clean.replace(
+					'      - run: bash scripts/ci/db_tier.sh\n',
+					`      - run: bash scripts/ci/db_tier.sh\n        ${sanctioned}\n`,
+				),
+				tierRoot,
+			),
+		).toHaveLength(1);
 		// The run payload is the WHOLE step: `|| true`, `; true`, a tee, a block.
 		for (const payload of [
 			'bash scripts/ci/db_tier.sh || true',
@@ -775,7 +863,7 @@ describe('tier wiring — every gate is reached by a workflow that executes', ()
 		).toBeGreaterThanOrEqual(3);
 		expect(
 			faults,
-			'Tier jobs whose execution is CONDITIONED or whose verdict is TOLERATED. A `jobs.<id>.if` or a step `if:` decides whether the tier runs at all — on the events it excludes the tier is "wired" and silent; a `needs:` on such a job skips the tier with it; `continue-on-error`, a `|| true`, a `; true`, a `| tee` or a `run: |` block around the run line turn a red tier green. None belongs on a gate:\n  ' +
+			'Tier jobs whose execution is CONDITIONED or whose verdict is TOLERATED. A `jobs.<id>.if` or a step `if:` decides whether the tier runs at all — on the events it excludes the tier is "wired" and silent; a `needs:` on such a job skips the tier with it; `continue-on-error`, a `|| true`, a `; true`, a `| tee` or a `run: |` block around the run line turn a red tier green. None belongs on a gate — the ONE exception is the job-level dedupe condition, and only while it evaluates true on every non-push event and on an unverified push (skipConditionFaults):\n  ' +
 				faults.join('\n  '),
 		).toEqual([]);
 		for (const rel of REAL.roots) {
@@ -980,8 +1068,16 @@ function tierJobFaults(
 		const refs = scriptRefs(block).filter((r) => roots.has(r));
 		if (refs.length === 0) continue;
 		faults.jobsSeen++;
-		for (const line of codeLines(block)) {
-			if (/^(?:-\s+)?if:/.test(line)) faults.push(`${rel} job '${id}': conditioned by \`${line}\``);
+		for (const raw of block.split('\n')) {
+			const line = raw.trim();
+			if (line === '' || line.startsWith('#')) continue;
+			if (/^(?:-\s+)?if:/.test(line)) {
+				// Job-level (4-space key): the dedupe carve-out, EVALUATED. Anywhere else: red.
+				const why = /^ {4}if:/.test(raw)
+					? skipConditionFaults(line.replace(/^if:\s*/, ''), needsOf(block))
+					: ['a step-level `if:` conditions the tier'];
+				for (const w of why) faults.push(`${rel} job '${id}': conditioned by \`${line}\` — ${w}`);
+			}
 			if (/^(?:-\s+)?continue-on-error:/.test(line))
 				faults.push(`${rel} job '${id}': tolerated by \`${line}\``);
 		}
@@ -1001,6 +1097,84 @@ function tierJobFaults(
 				);
 		}
 	}
+	return faults;
+}
+
+/**
+ * The dedupe carve-out's judge: the faults of a tier job's job-level `if:` expression,
+ * found by EVALUATING it, never by comparing its spelling. The grammar is closed — an
+ * optional `!cancelled() && ( … )` status guard around `||`-joined comparisons
+ * `<operand> ==|!= '<literal>'`, the operand `github.event_name`,
+ * `needs.<a job this one needs>.outputs.<key>` or `needs.<a job this one needs>.result`
+ * — and anything outside it is a fault (`always()`, `success()`, a bare `&&`, `!x`, a
+ * function call), because a condition this gate cannot evaluate is one it cannot vouch
+ * for. String comparison is case-insensitive, as GitHub's is.
+ *
+ * The status guard is MODELLED, not assumed: without it GitHub applies the implicit
+ * `success()`, so a FAILED (or timed-out) upstream SKIPS the tier — and a skipped job
+ * reports as passing to a required check, so a runner fault in the dedupe would pass
+ * branch protection with no tier executed. That is a fault here. `!cancelled()` lets
+ * the tier run whatever the upstream's result; only a cancelled WORKFLOW stops it.
+ *
+ * Required outcomes, over every upstream result (success, failure, cancelled) and
+ * output ('true', 'false', ''): TRUE on every non-push event — a pull request, a
+ * dispatch or a schedule can never be skipped; TRUE on a push whose upstream did not
+ * conclude success (the probe proved nothing); TRUE on a push whose output is empty or
+ * `false` (the probe failed open or found nothing). The ONE admissible skip is a push
+ * whose upstream concluded success and said 'true'.
+ */
+function skipConditionFaults(expression: string, needs: readonly string[]): string[] {
+	let body = expression.replace(/\s+#.*$/, '').trim();
+	body = body.replace(/^(['"])([\s\S]*)\1$/, '$2').trim();
+	body = body.replace(/^\$\{\{([\s\S]*)\}\}$/, '$1').trim();
+	const guard = body.match(/^!\s*cancelled\(\)\s*&&\s*\(([\s\S]*)\)$/);
+	const statusGuarded = guard !== null;
+	if (guard !== null) body = (guard[1] as string).trim();
+	if (/&&|[()]|!(?!=)/.test(body))
+		return [
+			`\`${body}\` is outside the evaluable grammar (&&, !, parentheses, a function call — the one admitted status guard is \`!cancelled() && ( … )\`)`,
+		];
+	type Operand = 'event' | 'output' | 'result';
+	const terms: Array<{ operand: Operand; op: string; literal: string }> = [];
+	for (const term of body.split('||').map((t) => t.trim())) {
+		const m = term.match(
+			/^(?:github\.event_name|needs\.([A-Za-z0-9_-]+)\.(outputs\.[A-Za-z0-9_-]+|result))\s*(==|!=)\s*'([^']*)'$/,
+		);
+		if (m === null) return [`the term \`${term}\` is outside the evaluable grammar`];
+		if (m[1] !== undefined && !needs.includes(m[1]))
+			return [`it reads needs.${m[1]}, a job this one does not need`];
+		const operand: Operand = m[1] === undefined ? 'event' : m[2] === 'result' ? 'result' : 'output';
+		terms.push({ operand, op: m[3] as string, literal: m[4] as string });
+	}
+	const evaluate = (event: string, result: string, output: string) => {
+		// The implicit success(): an unguarded condition is never reached on a non-success upstream.
+		if (!statusGuarded && result !== 'success') return false;
+		const value = { event, result, output };
+		return terms.some((t) => {
+			const equal = value[t.operand].toLowerCase() === t.literal.toLowerCase();
+			return t.op === '==' ? equal : !equal;
+		});
+	};
+	const faults: string[] = [];
+	const RESULTS = ['success', 'failure', 'cancelled'];
+	const OUTPUTS = ['true', 'false', ''];
+	for (const event of ['pull_request', 'workflow_dispatch', 'schedule', 'merge_group'])
+		for (const result of RESULTS)
+			for (const output of OUTPUTS)
+				if (!evaluate(event, result, output))
+					faults.push(
+						`it skips the tier on a ${event} event (upstream ${result}, output '${output}') — only a verified PUSH may be deduplicated`,
+					);
+	for (const result of RESULTS)
+		for (const output of OUTPUTS) {
+			if (result === 'success' && output === 'true') continue; // the one admissible skip
+			if (!evaluate('push', result, output))
+				faults.push(
+					result === 'success'
+						? `it skips a push whose upstream output is '${output}' — the dedupe must fail OPEN`
+						: `it skips a push whose upstream ${result === 'failure' ? 'FAILED' : 'was cancelled'} (output '${output}') — a skipped job reports as passing to a required check, so a broken dedupe must RUN the tiers (guard with \`!cancelled() && ( … )\`, and test the upstream's result)`,
+				);
+		}
 	return faults;
 }
 

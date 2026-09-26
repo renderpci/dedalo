@@ -5,6 +5,9 @@
  *   bun run scripts/unit_baseline.ts            # rewrite the JSON baseline (default)
  *   bun run scripts/unit_baseline.ts --check    # print drift, exit 1 if any
  *   bun run scripts/unit_baseline.ts --report   # failing tests per file
+ *   bun run scripts/unit_baseline.ts --record-new [file…]  # ONLY a new file's per_file
+ *                                  # floor, measured; refuses a red (scripts/lib/red_baseline.ts
+ *                                  # recordNewDecision) — no file: every unrecorded one
  *
  * ── WHAT THIS IS ─────────────────────────────────────────────────────────────
  * The unit tier is the engine's real gate tier: 727 files, 8800 cases, and by

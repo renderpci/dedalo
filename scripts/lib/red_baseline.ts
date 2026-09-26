@@ -24,6 +24,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import { Glob } from 'bun';
 import { type FileCounts, type ParityRun, REPO_ROOT, runTier } from './parity_census.ts';
+import { emitRatchetCheck, type RatchetCheck, wantsCheckJson } from './ratchet_check.ts';
 
 /** Everything that differs between one ratcheted tier and another. */
 export interface TierSpec {
@@ -131,6 +132,17 @@ export interface TierDrift {
 	 * reported nothing, or skips that FELL. Re-freeze to lock the state in.
 	 */
 	floorsStale: string[];
+	/**
+	 * The FILES (repo-relative, the `per_file` keys) — each with its own line — behind the "reported nothing
+	 * this run" lines of {@link floorsStale} — the one staleness the bank cannot
+	 * read off the line, because it means two opposite things: the file was
+	 * deleted/renamed (a stale record, drop it) or it is still on disk and CRASHED
+	 * before its first case (a gate that stopped running — never a win). Kept as a
+	 * structured side list so {@link classifyTierDrift} decides by the file's
+	 * presence, not by parsing prose. Not counted by {@link driftCount}: its line
+	 * already is.
+	 */
+	floorsSilent: { file: string; line: string }[];
 }
 
 export function generatedBy(spec: TierSpec): string {
@@ -233,6 +245,7 @@ export function computeDrift(spec: TierSpec, run: ParityRun, baseline: RedBaseli
 		vacuity: [],
 		floors: [],
 		floorsStale: [],
+		floorsSilent: [],
 	};
 
 	// Status of every case actually observed, keyed file + name.
@@ -311,9 +324,9 @@ export function computeDrift(spec: TierSpec, run: ParityRun, baseline: RedBaseli
 	}
 	for (const file of Object.keys(baseline.per_file)) {
 		if (run.perFile[file] === undefined) {
-			drift.floorsStale.push(
-				`${file}: recorded in per_file but reported nothing this run (deleted, renamed, or crashed before its first case)`,
-			);
+			const line = `${file}: recorded in per_file but reported nothing this run (deleted, renamed, or crashed before its first case)`;
+			drift.floorsStale.push(line);
+			drift.floorsSilent.push({ file, line });
 		}
 	}
 
@@ -391,7 +404,15 @@ export function driftCount(d: TierDrift): number {
 
 /** An all-empty drift, for callers that need to mask buckets when formatting. */
 export function emptyDrift(): TierDrift {
-	return { regressions: [], stale: [], summary: [], vacuity: [], floors: [], floorsStale: [] };
+	return {
+		regressions: [],
+		stale: [],
+		summary: [],
+		vacuity: [],
+		floors: [],
+		floorsStale: [],
+		floorsSilent: [],
+	};
 }
 
 /**
@@ -403,15 +424,92 @@ export function emptyDrift(): TierDrift {
  * GENERATOR refuses a floor drop (the fix command every red points at), not
  * only that `--check` reports one. Staleness never refuses: a re-freeze is
  * exactly what the writer is for.
+ *
+ * ONE decision with the bank's classification: the refused set IS
+ * {@link classifyTierDrift}'s `regressions` — so a flagless re-run (what
+ * `baselines:bank --with-db` invokes, with no second measurement after it) can
+ * never write what the bank would have called red. That adds two refusals:
+ *  - VACUITY — a tier that did not really run is not a measurement. Refused even
+ *    under `--allow-regression`: that flag accepts a new red, it cannot turn a
+ *    crashed runner into a baseline. Fix the runner, never the floor.
+ *  - a recorded file that reported NOTHING yet is still ON DISK (crashed before
+ *    its first case) — writing would erase its per-file floor.
+ * `onDisk` is the same injectable presence probe classifyTierDrift takes.
  */
 export function writeRefusal(
 	spec: TierSpec,
 	drift: TierDrift,
 	allowRegression: boolean,
+	onDisk?: (repoRelativePath: string) => boolean,
 ): string | null {
+	if (drift.vacuity.length > 0) {
+		return `${spec.id}_baseline: REFUSING to write — the ${spec.id} tier did not really run, so this is not a measurement (--allow-regression does not apply).\n${formatDrift({ ...emptyDrift(), vacuity: drift.vacuity })}\nFix the runner, never the floor.`;
+	}
 	if (allowRegression) return null;
-	if (drift.regressions.length === 0 && drift.floors.length === 0) return null;
-	return `${spec.id}_baseline: REFUSING to write — the ${spec.id} tier GREW new reds or LOWERED a per-file floor. A ratchet cannot absorb a regression by regeneration.\n${formatDrift({ ...emptyDrift(), regressions: drift.regressions, floors: drift.floors })}\nEither fix the regression, or re-run with --allow-regression and state in the commit message WHY the new red is acceptable.`;
+	const refused = classifyTierDrift(spec, drift, onDisk).regressions;
+	if (refused.length === 0) return null;
+	return `${spec.id}_baseline: REFUSING to write — the ${spec.id} tier GREW new reds, LOWERED a per-file floor, or lost a file that is still on disk (it crashed). A ratchet cannot absorb a regression by regeneration.\n${formatDrift({ ...emptyDrift(), regressions: drift.regressions, floors: drift.floors })}${refused
+		.filter((line) => line.includes('on disk but reported NOTHING'))
+		.map((line) => `\n  ${line}`)
+		.join(
+			'',
+		)}\nEither fix the regression, or re-run with --allow-regression and state in the commit message WHY the new red is acceptable.`;
+}
+
+// ---------------------------------------------------------------------------
+// `--check --json` — this tier's side of the banking contract (scripts/lib/ratchet_check.ts).
+// ---------------------------------------------------------------------------
+
+/**
+ * A red tier's drift, classified for the bank — and the ONE decision the
+ * writer's refusal ({@link writeRefusal}) is derived from, so the two cannot
+ * disagree: new reds and lowered per-file floors are regressions, and so are:
+ *  - vacuity: a tier that did not run is not a measurement, and banking it would
+ *    replace the frozen debt with an empty list;
+ *  - a recorded file that reported NOTHING yet is still ON DISK: it crashed
+ *    before its first case (a load error, a top-level throw). Banking that would
+ *    erase its per-file floor and call the lost gate a win. Only a file that is
+ *    really gone (deleted/renamed) has a stale record to drop.
+ * Everything else — stale reds, stale per-file records, the `measured` counts
+ * that follow from them — is what the flagless writer banks.
+ *
+ * `onDisk` is the presence probe (repo-relative path → exists), injectable so
+ * the classification is provable without planting files in the tree.
+ */
+export function classifyTierDrift(
+	spec: TierSpec,
+	drift: TierDrift,
+	onDisk: (repoRelativePath: string) => boolean = (file) => existsSync(join(REPO_ROOT, file)),
+): RatchetCheck {
+	// A silent file's floorsStale line is re-classified by the file's presence,
+	// never banked blind.
+	const silentLines = new Set(drift.floorsSilent.map((s) => s.line));
+	const crashed = drift.floorsSilent.filter((s) => onDisk(s.file)).map((s) => s.file);
+	return {
+		ratchet: `${spec.id}_baseline`,
+		baselines: [spec.baselinePath],
+		regressions: [
+			...drift.regressions.map((line) => `new red: ${line}`),
+			...drift.floors.map((line) => `per-file floor: ${line}`),
+			...drift.vacuity.map((line) => `vacuity: ${line}`),
+			...crashed.map(
+				(file) =>
+					`per-file floor: ${file}: on disk but reported NOTHING this run — it crashed before its first case; fix the file, never drop its record`,
+			),
+		],
+		improvements: [
+			...drift.stale.map((line) => `stale red: ${line}`),
+			...drift.floorsStale
+				.filter((line) => !silentLines.has(line))
+				.map((line) => `per-file record: ${line}`),
+			...drift.floorsSilent
+				.filter((s) => !onDisk(s.file))
+				.map(
+					({ file }) => `per-file record: ${file}: deleted/renamed — its stale record is dropped`,
+				),
+			...drift.summary.map((line) => `measured: ${line}`),
+		],
+	};
 }
 
 /**
@@ -457,8 +555,116 @@ export function baselineFile(spec: TierSpec): string {
 }
 
 /**
+ * `--record-new` — THE NARROW DOOR FOR A NEW FILE'S FLOOR, and nothing else.
+ *
+ * A new test file needs a `per_file` record the day it lands (suite_assertion_floor_tripwire
+ * is red on an unrecorded file, in the HERMETIC tier). The only other door is the full
+ * re-freeze, which is all-or-nothing by design: on a machine where ANY unrelated file is
+ * red (an order-dependent gate, a stray untracked directory a census counts) it refuses —
+ * correctly — and the new file stays unrecorded, or somebody hand-types the record. A
+ * hand-typed floor is a number nobody measured. So this door MEASURES — it runs `bun test`
+ * over exactly the files it records, under the same census (junit, childEnv) — and it can
+ * only ever ADD strictness:
+ *
+ *   - it writes `per_file` entries for files that have NONE — an existing record changes
+ *     only through the full census (a floor re-measured in isolation must not replace one
+ *     measured in suite order);
+ *   - it REFUSES a file with a failing case (a new file that adds a red is a regression —
+ *     the full writer with --allow-regression is where that decision is taken), a file
+ *     that reported nothing (it crashed), and a file that asserted nothing (the vacuity
+ *     this floor exists to catch);
+ *   - it REFUSES on an `exactCounts` tier (parity): its size is asserted exactly, so a new
+ *     file there changes `measured` and only the full census may say so;
+ *   - every other byte of the artifact — reds, counts, other records — is untouched.
+ *
+ * No file named: every on-disk tier file without a record. Pure, so the gate proves the
+ * refusals on planted runs (test/unit/baselines_bank_native.test.ts).
+ */
+export type RecordNewDecision =
+	| { kind: 'refuse'; message: string }
+	| { kind: 'write'; baseline: RedBaseline; recorded: string[] };
+
+export function recordNewDecision(
+	spec: TierSpec,
+	existing: RedBaseline,
+	targets: readonly string[],
+	run: ParityRun,
+): RecordNewDecision {
+	const refuse = (why: string[]): RecordNewDecision => ({
+		kind: 'refuse',
+		message: [`${spec.id}_baseline --record-new: REFUSING — nothing was written.`, ...why].join(
+			'\n  ',
+		),
+	});
+	if (spec.exactCounts) {
+		return refuse([
+			`the ${spec.id} tier asserts its size exactly; a new file changes \`measured\`, so only the full census (${spec.fixCommand}) may record it`,
+		]);
+	}
+	if (targets.length === 0) return refuse(['no unrecorded file to record']);
+	const problems: string[] = [];
+	const failing = buildBaseline(spec, run).files;
+	for (const file of targets) {
+		if (!spec.paths.some((path) => file.startsWith(`${path}/`))) {
+			problems.push(`${file}: not a ${spec.id}-tier file (${spec.paths.join(', ')})`);
+			continue;
+		}
+		if (existing.per_file[file] !== undefined) {
+			problems.push(
+				`${file}: already recorded — a record changes only through the full census (${spec.fixCommand})`,
+			);
+			continue;
+		}
+		const counts = run.perFile[file];
+		if (counts === undefined) {
+			problems.push(`${file}: reported NOTHING — it crashed before its first case; fix the file`);
+			continue;
+		}
+		const reds = failing[file] ?? [];
+		if (reds.length > 0) {
+			problems.push(
+				`${file}: ${reds.length} failing case(s) — a new file that adds a red is a REGRESSION: fix it, or take the decision with ${spec.fixCommand} --allow-regression:\n      ${reds.join('\n      ')}`,
+			);
+			continue;
+		}
+		if (counts.tests === 0 || counts.assertions === 0) {
+			problems.push(
+				`${file}: ${counts.tests} case(s), ${counts.assertions} assertion(s) — a file that asserts nothing is the vacuity the floor exists to catch`,
+			);
+		}
+	}
+	if (problems.length > 0) return refuse(problems);
+	const perFile: Record<string, FileCounts> = { ...existing.per_file };
+	for (const file of targets) {
+		const counts = run.perFile[file];
+		if (counts !== undefined) perFile[file] = counts;
+	}
+	const sorted: Record<string, FileCounts> = {};
+	for (const file of Object.keys(perFile).sort()) {
+		const counts = perFile[file];
+		if (counts !== undefined) sorted[file] = counts;
+	}
+	return {
+		kind: 'write',
+		baseline: { ...existing, per_file: sorted },
+		recorded: [...targets].sort(),
+	};
+}
+
+/** A run that measured nothing — what `--record-new` compares against when there is nothing to record. */
+function emptyRun(): ParityRun {
+	return { cases: [], files: [], totals: { tests: 0, pass: 0, fail: 0, skip: 0 }, perFile: {} };
+}
+
+/** The tier's on-disk files that have no `per_file` record — `--record-new`'s default. */
+export function unrecordedFiles(spec: TierSpec, existing: RedBaseline): string[] {
+	return onDiskTestFiles(spec).filter((file) => existing.per_file[file] === undefined);
+}
+
+/**
  * The shared CLI: `--report` prints what the tier does today, `--check` exits non-zero
- * on drift, and the default (re)writes the baseline — refusing to absorb a NEW red
+ * on drift (`--check --json`: the same verdict as one {@link RatchetCheck} line, the
+ * bank's input), and the default (re)writes the baseline — refusing to absorb a NEW red
  * OR a lowered per-file floor unless `--allow-regression` is passed, because a
  * ratchet that can be cleared by regeneration is not a ratchet. That refusal is the
  * whole reason this is a script and not a `--update` flag.
@@ -470,6 +676,32 @@ export function baselineFile(spec: TierSpec): string {
  */
 export function runBaselineCli(spec: TierSpec, io: BaselineCliIo = realBaselineCliIo()): void {
 	const args = new Set(io.argv);
+
+	if (args.has('--record-new')) {
+		// Before the full measure: this door runs ONLY the files it records.
+		const existing = loadBaseline(spec);
+		const named = io.argv.filter((arg) => !arg.startsWith('--'));
+		const targets = named.length > 0 ? named : unrecordedFiles(spec, existing);
+		const decision = recordNewDecision(
+			spec,
+			existing,
+			targets,
+			targets.length > 0 ? io.measure(targets) : emptyRun(),
+		);
+		if (decision.kind === 'refuse') {
+			io.error(decision.message);
+			io.exit(1);
+		} else {
+			const target = baselineFile(spec);
+			io.writeFile(target, `${JSON.stringify(decision.baseline, null, '\t')}\n`);
+			io.format(target);
+			io.log(
+				`${spec.id}_baseline: recorded the per-file floor of ${decision.recorded.length} new file(s) in ${spec.baselinePath}:\n  ${decision.recorded.join('\n  ')}`,
+			);
+			io.exit(0);
+		}
+	}
+
 	const run = io.measure(spec.paths);
 
 	if (args.has('--report')) {
@@ -482,6 +714,17 @@ export function runBaselineCli(spec: TierSpec, io: BaselineCliIo = realBaselineC
 			for (const n of names) io.log(`    ${n}`);
 		}
 		io.exit(0);
+	}
+
+	if (wantsCheckJson(io.argv)) {
+		// The bank's reading: same measurement, same drift, classified by the
+		// writer's own refusal (classifyTierDrift). Same exit as the plain --check.
+		io.exit(
+			emitRatchetCheck(
+				classifyTierDrift(spec, computeDrift(spec, run, loadBaseline(spec))),
+				io.log,
+			),
+		);
 	}
 
 	if (args.has('--check')) {

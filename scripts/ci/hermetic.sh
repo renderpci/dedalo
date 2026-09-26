@@ -79,6 +79,20 @@ export PUPPETEER_SKIP_DOWNLOAD=1
 # — `bun run scripts/parity_baseline.ts --check`, on a tier that has a database.
 export DEDALO_PARITY_DRIFT=0
 
+# THE CALENDAR IS NOT A PUSH INPUT (2026-09-26). vendor_advisory_tripwire's
+# load-bearing leg has two WALL-CLOCK halves — a vendored row's review window
+# lapsing, an advisory acceptance expiring — that made the same sha green one day
+# and red the next, on whoever pushed next. This key drops exactly those two from
+# the always-run tripwire block below; every tree-only leg (an in-range advisory
+# with no acceptance, a verify clause that no longer holds, the pdf.js mount) still
+# runs on every push. The dated halves run in the dependency-audit stage further
+# down (scripts/ci/audit.ts calls the same checker with the calendar ON) whenever a
+# push changes what they read, and every night in .github/workflows/nightly.yml,
+# which warns 21 days before a window closes. Read by the gate as
+# process.env.DEDALO_VENDOR_DATED_CHECKS; ci_workflow_tripwire rule 12 holds both
+# ends. Default (unset) is ON: a developer's bare `bun test` still sees them.
+export DEDALO_VENDOR_DATED_CHECKS=0
+
 # Stub the required-no-default config keys so the config catalog loads.
 # Externally provided values always win (: "${VAR:=default}" keeps them).
 # This list must cover EVERY require*() key in src/config/config.ts — pinned by
@@ -134,6 +148,8 @@ HERMETIC_TRIPWIRES=(
 	test/unit/client_suite_registration_tripwire.test.ts
 	test/unit/config_dead_field_tripwire.test.ts
 	test/unit/update_waiver_trace_native.test.ts
+	test/unit/update_channel_native.test.ts
+	test/unit/audit_trigger_closure_native.test.ts
 	test/unit/diffusion_publication_gate_native.test.ts
 	test/unit/alternate_preflight_native.test.ts
 	test/unit/seed_definitions_equality_tripwire.test.ts
@@ -333,6 +349,15 @@ HERMETIC_TRIPWIRES=(
 	test/unit/zip_encoder_census_tripwire.test.ts
 	# leg 1, the helper's DB outcome, SKIPS here via DB_READY; leg 2, the source scan, runs.
 	test/unit/diffusion_scratch_tables_tripwire.test.ts
+	# --- 2026-09-26: the pre-push / bank / ci:local gates. DB-free by construction: scratch
+	#     git repos and planted ratchets under the OS temp dir, a fake `docker` on PATH,
+	#     stub scripts, and the hermetic ratchets' own read-only `--check --json` runs.
+	#     Empirically verified DB-less (DB_HOST=127.0.0.1 DB_PORT=59999: 131 pass / 0 fail).
+	#     Their only blocking home: the unit tier that also runs them is advisory.
+	test/unit/baseline_registry_tripwire.test.ts
+	test/unit/baselines_bank_native.test.ts
+	test/unit/ci_local_native.test.ts
+	test/unit/pre_push_gate_native.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"
@@ -388,6 +413,10 @@ bun test --timeout=30000 "${HERMETIC_TRIPWIRES[@]}" || tw_rc=$?
 # crap_baseline.ts refuses (proved in ratchet_integrity_tripwire) — red, never
 # a comparison against the index. scripts/verify.ts's `crap:ledger` stage is
 # the developer-desk twin (merge-base of HEAD and --base).
+#
+# The `|| CI_REFERENCE=""` is load-bearing: a bare `x="$(f)"` whose f fails
+# EXITS under `set -e`, which would abort the tier here instead of handing the
+# stage the empty value it already treats safely (crap_baseline refuses it).
 crap_ledger_reference() {
 	local target="${GITHUB_BASE_REF:-${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-}}"
 	if [ -n "$target" ]; then
@@ -400,10 +429,57 @@ crap_ledger_reference() {
 		git rev-parse --verify --quiet 'HEAD^' || return 1
 	fi
 }
-echo "== hermetic: crap ledger (append-only vs the reference)"
+CI_REFERENCE="$(crap_ledger_reference)" || CI_REFERENCE=""
+echo "== hermetic: crap ledger (append-only vs the reference${CI_REFERENCE:+ ${CI_REFERENCE:0:12}})"
 cl_rc=0
-bun run scripts/crap_baseline.ts --check --reference "$(crap_ledger_reference)" || cl_rc=$?
+bun run scripts/crap_baseline.ts --check --reference "$CI_REFERENCE" || cl_rc=$?
 [ "$cl_rc" -eq 0 ] || { echo "== hermetic: RED in crap ledger (exit $cl_rc)"; tier_status=1; }
+
+# THE AUDIT'S BASE IS THE WHOLE PUSH, NOT ITS TIP (2026-09-26). The dependency
+# audit below skips when the change set carries none of its inputs, so its base
+# must cover EVERY commit this run is the gate for. The crap ledger's push
+# reference (HEAD^) does not: in a three-commit push whose lockfile bump sits in
+# the first commit, HEAD^ already contains it, the diff HEAD^..HEAD is lockfile-
+# free, and the stage SKIPPED — the bump reached master with its advisories
+# unaudited until the next nightly. So the audit resolves its own base:
+#   pull/merge request  CI_REFERENCE — the target tip, which the PR checkout is
+#                       merged onto, so the diff is the whole PR.
+#   explicit            DEDALO_CI_AUDIT_BASE — a caller that KNOWS the remote's
+#                       state (the pre-push hook's remote sha, ci:local's host
+#                       upstream) names it.
+#   GitHub push         the event payload's `before` — the ref's tip before this
+#                       push, i.e. every commit the push carries.
+#   GitLab push         CI_COMMIT_BEFORE_SHA, the same fact.
+#   a developer's desk  the merge-base with the branch's upstream: all unpushed work.
+# A base that is absent, all zeros (a new branch; GitHub and GitLab both send
+# that), not a hex sha, or unfetchable (force-pushed away) resolves to NOTHING,
+# and audit.ts RUNS on an empty base — the only failure direction that is safe.
+# Never a fallback to HEAD^: that is the defect this replaced.
+audit_reference() {
+	if [ -n "${GITHUB_BASE_REF:-${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-}}" ]; then
+		[ -n "$CI_REFERENCE" ] || return 1
+		printf '%s\n' "$CI_REFERENCE"
+		return 0
+	fi
+	local before=""
+	if [ -n "${DEDALO_CI_AUDIT_BASE:-}" ]; then
+		before="$DEDALO_CI_AUDIT_BASE"
+	elif [ "${GITHUB_EVENT_NAME:-}" = push ] && [ -r "${GITHUB_EVENT_PATH:-}" ]; then
+		before="$(bun -e 'const e = await Bun.file(Bun.argv[1]).json(); console.log(typeof e?.before === "string" ? e.before : "")' "$GITHUB_EVENT_PATH")" || return 1
+	elif [ -n "${CI_COMMIT_BEFORE_SHA:-}" ]; then
+		before="$CI_COMMIT_BEFORE_SHA"
+	else
+		before="$(git rev-parse --verify --quiet '@{upstream}' 2>/dev/null)" || return 1
+		before="$(git merge-base HEAD "$before")" || return 1
+	fi
+	case "$before" in '' | *[!0-9a-f]*) return 1 ;; esac
+	case "$before" in *[!0]*) ;; *) return 1 ;; esac
+	if ! git cat-file -e "${before}^{commit}" 2>/dev/null; then
+		git fetch --quiet --depth=1 origin "$before" >&2 || return 1
+	fi
+	git rev-parse --verify --quiet "${before}^{commit}" || return 1
+}
+AUDIT_REFERENCE="$(audit_reference)" || AUDIT_REFERENCE=""
 
 # Dependency advisories, as a RATCHET against engineering/dependency_audit_baseline.json:
 # a NEW advisory is red, a known one is not (the tree already carried 7 on the day this
@@ -419,9 +495,24 @@ bun run scripts/crap_baseline.ts --check --reference "$(crap_ledger_reference)" 
 # typecheck; a red lint disarming 101 invariant gates), at the one stage that had
 # not been given the treatment. Record the verdict, keep going, report it at the
 # end with every other stage.
-echo "== hermetic: dependency audit ratchet"
+#
+# RUN ONLY WHEN ITS INPUTS CHANGED (2026-09-26). The stage reads three things that
+# move with the CALENDAR, not with a commit — the `bun audit` registry, the GitHub
+# advisory feed and the vendored rows' review/acceptance windows — so on a push
+# that touched none of its inputs, a red here could only say "the world changed
+# overnight", and it said it to whoever pushed next. `--changed-since` makes
+# audit.ts diff against AUDIT_REFERENCE (the whole push or PR, resolved above)
+# and print `== audit: SKIPPED — <why>` (exit 0) unless a bun.lock, a package.json
+# at any depth, vendor/ or a manifest root, or one of the audit's own inputs (its CODE
+# derived from audit.ts's import closure: `auditCodeInputs`, never a hand list)
+# changed. Unresolvable base → it RUNS. DEDALO_CI_FORCE_AUDIT=1 or a `schedule`
+# event → it RUNS. The time-based half has its own home, every night:
+# .github/workflows/nightly.yml (`audit.ts --force`, one `ci-nightly` issue). The
+# DEC-12 ratchet itself — what is red when it runs — is unchanged.
+echo "== hermetic: dependency audit ratchet (lockfile / vendor changes, or forced)"
 da_rc=0
-bun run scripts/ci/audit.ts || da_rc=$?
+echo "   audit base: ${AUDIT_REFERENCE:-<none — the audit runs>}"
+bun run scripts/ci/audit.ts --changed-since "$AUDIT_REFERENCE" || da_rc=$?
 [ "$da_rc" -eq 0 ] || { echo "== hermetic: RED in the dependency audit ratchet (exit $da_rc)"; tier_status=1; }
 
 # The site-builder daemon (publication/site_builder) is its own package with a fully

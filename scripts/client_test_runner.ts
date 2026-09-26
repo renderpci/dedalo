@@ -70,6 +70,13 @@
  *                      switched-off registration count) into
  *                      engineering/client_gate_inventory.json. REFUSES to lower
  *                      a floor or raise a budget (scripts/lib/client_gate_verdict.ts).
+ *   --check --json     NO browser, NO server: the STATIC half of the inventory
+ *                      (assertion-free / switched-off budgets, the suite floor
+ *                      the registry derives) as the bank's verdict
+ *                      (scripts/lib/ratchet_check.ts; staticInventoryVerdict).
+ *   --bank-static      Bank that static half, improvements only (a budget that
+ *                      fell, a floor that rose); REFUSES the other direction.
+ *                      mocha_test_floor is never touched — only a green run moves it.
  *   --replay <file>    NO browser, NO server: read a scraped observation
  *                      (a ScrapedRun — {cards: [{status, dataset}], counters,
  *                      groups}, exactly what the page scrape returns) from a
@@ -87,7 +94,7 @@ import { join } from 'node:path';
 import puppeteer, { type Browser, type Page } from 'puppeteer';
 import { readEnv } from '../src/config/env.ts';
 import type { RunCreatedSweeper } from '../src/core/test_data/run_created_records.ts';
-import { staticCensusTotals } from '../test/helpers/client_suite_census.ts';
+import { gatedCardCount, staticCensusTotals } from '../test/helpers/client_suite_census.ts';
 import {
 	assertServedDatabase,
 	type ClientTestServer,
@@ -112,9 +119,11 @@ import {
 	type RunResults,
 	type ScrapedCard,
 	type ScrapedRun,
+	staticInventoryVerdict,
 	type Verdict,
 	writeInventory,
 } from './lib/client_gate_verdict.ts';
+import { emitRatchetCheck } from './lib/ratchet_check.ts';
 
 /** The install seed's own user, and the credential the suite database gets. */
 const SUITE_LOGIN_USER = 'root';
@@ -1129,7 +1138,35 @@ async function handleLogin(page: Page, user: string, pass: string): Promise<void
 	}
 }
 
-if (replayFile !== undefined) {
+if (args.includes('--check') && args.includes('--json')) {
+	// THE STATIC HALF of the inventory, for `baselines:bank` (scripts/lib/ratchet_check.ts):
+	// no browser, no server, no DB — the three numbers the hermetic tripwire derives from
+	// the tree. Exits 1 on any drift, like every ratchet's --check.
+	const { check } = staticInventoryVerdict(loadInventory(), staticCensusTotals(), gatedCardCount());
+	process.exit(emitRatchetCheck(check, log));
+} else if (args.includes('--bank-static')) {
+	// Bank the static half, IMPROVEMENTS ONLY: a budget that fell, a suite floor that rose.
+	// Anything the other way is refused exactly as `--update` refuses it — a lowered
+	// floor or a raised budget is a hand edit whose commit says why, never a regeneration.
+	const { check, next } = staticInventoryVerdict(
+		loadInventory(),
+		staticCensusTotals(),
+		gatedCardCount(),
+	);
+	if (check.regressions.length > 0) {
+		error(
+			`--bank-static REFUSED — the static inventory moved the wrong way:\n  ${check.regressions.join('\n  ')}\nFix it, or edit engineering/client_gate_inventory.json by hand and say why in the commit.`,
+		);
+		process.exit(1);
+	}
+	if (check.improvements.length > 0) writeInventory(next);
+	log(
+		check.improvements.length > 0
+			? `--bank-static: banked ${check.improvements.join('; ')}`
+			: '--bank-static: nothing to bank',
+	);
+	process.exit(0);
+} else if (replayFile !== undefined) {
 	log(`--replay: ${replayFile} (no browser, no server)`);
 	conclude(JSON.parse(readFileSync(replayFile, 'utf8')) as ScrapedRun);
 } else {

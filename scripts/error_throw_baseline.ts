@@ -5,6 +5,7 @@
  *   bun run scripts/error_throw_baseline.ts            # rewrite the JSON baseline (default)
  *   bun run scripts/error_throw_baseline.ts --check    # print drift, exit 1 if any
  *   bun run scripts/error_throw_baseline.ts --report   # totals per dir + zero-tier + top files
+ *   bun run scripts/error_throw_baseline.ts --check --json   # the bank's verdict (checkVerdict)
  *
  * ── WHAT THIS IS ─────────────────────────────────────────────────────────────
  * The error-taxonomy plan (decision 4, "middle") retires the untyped
@@ -37,6 +38,12 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import {
+	classifyCount,
+	emitRatchetCheck,
+	type RatchetCheck,
+	wantsCheckJson,
+} from './lib/ratchet_check.ts';
 import {
 	byPath,
 	census,
@@ -250,6 +257,42 @@ export function formatDrift(drift: Drift): string {
 	return lines.join('\n');
 }
 
+/**
+ * THE BANK'S VERDICT (`--check --json`, scripts/lib/ratchet_check.ts): {@link computeDrift}
+ * sorted by what the flagless regeneration does with it. Its refusal is
+ * {@link raisedEntries} — a raised entry or a new file, which is exactly
+ * `drift.regressions` — so those, a GROWN summary counter, a vacuous scan and (once
+ * enforced) a zero-tier holder are regressions; stale entries and a FALLEN counter
+ * are what the regeneration banks.
+ */
+export function checkVerdict(
+	results: readonly FileThrows[],
+	baseline: ThrowBaseline,
+): RatchetCheck {
+	const drift = computeDrift(results, baseline);
+	const verdict: RatchetCheck = {
+		ratchet: 'error_throw_baseline',
+		baselines: [BASELINE_PATH],
+		improvements: [...drift.stale],
+		regressions: [
+			...drift.regressions,
+			...drift.vacuity.map((line) => `vacuity: ${line}`),
+			...(ZERO_TIER_ENFORCED ? drift.zeroTier.map((line) => `zero-tier: ${line}`) : []),
+		],
+	};
+	// The writer is asked, not paraphrased: should its refusal ever see growth the
+	// drift did not (the two are the same set today), the bank still may not write.
+	if (verdict.regressions.length === 0) {
+		verdict.regressions.push(
+			...raisedEntries(baseline, buildBaseline(results)).map((line) => `refused: ${line}`),
+		);
+	}
+	const fresh = summarize(results);
+	classifyCount(verdict, 'summary.files', baseline.summary.files, fresh.files);
+	classifyCount(verdict, 'summary.total', baseline.summary.total, fresh.total);
+	return verdict;
+}
+
 // ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
@@ -341,6 +384,7 @@ function main(): number {
 		return 0;
 	}
 
+	if (wantsCheckJson(process.argv)) return emitRatchetCheck(checkVerdict(results, loadBaseline()));
 	const drift = computeDrift(results, loadBaseline());
 	if (!hasDrift(drift)) {
 		const totals = summarize(results);

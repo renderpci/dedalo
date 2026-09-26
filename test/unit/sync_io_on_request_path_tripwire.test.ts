@@ -251,7 +251,8 @@ const EXEMPTIONS: { file: string; reason: string }[] = [
 	},
 	{
 		file: 'src/core/update/channel.ts',
-		reason: 'reads /proc/self/cgroup and mountinfo to detect the container channel; boot-time',
+		reason:
+			'stats the product-image marker and reads mountinfo to detect the image channel; update-panel/pipeline only',
 	},
 	{
 		file: 'src/core/update/code_build.ts',

@@ -5,6 +5,7 @@
  *   bun run scripts/generic_tld_baseline.ts            # rewrite the JSON baseline (default)
  *   bun run scripts/generic_tld_baseline.ts --check    # print drift, exit 1 if any
  *   bun run scripts/generic_tld_baseline.ts --report   # files per install TLD, top files
+ *   bun run scripts/generic_tld_baseline.ts --check --json   # the bank's verdict (checkVerdict)
  *
  * ── WHAT THIS IS ─────────────────────────────────────────────────────────────
  * AGENTS.md hard rules (2026-08-19): a test uses the generic `test` TLD and
@@ -37,6 +38,12 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import {
+	classifyCount,
+	emitRatchetCheck,
+	type RatchetCheck,
+	wantsCheckJson,
+} from './lib/ratchet_check.ts';
 import {
 	census,
 	type FileTldRefs,
@@ -180,6 +187,36 @@ export function formatDrift(d: TldDrift): string {
 	return lines.join('\n');
 }
 
+/**
+ * THE BANK'S VERDICT (`--check --json`, scripts/lib/ratchet_check.ts): {@link computeDrift}
+ * sorted by what the flagless regeneration does. The writer refuses exactly
+ * `drift.regressions` (a new file, a gained TLD); those, a vacuous scan and a GROWN
+ * summary count are regressions. A lost TLD, a file that binds nothing now and a
+ * FALLEN count are what it banks.
+ */
+export function checkVerdict(results: readonly FileTldRefs[], baseline: TldBaseline): RatchetCheck {
+	const drift = computeDrift(results, baseline);
+	const verdict: RatchetCheck = {
+		ratchet: 'generic_tld_baseline',
+		baselines: [BASELINE_PATH],
+		improvements: [...drift.stale],
+		regressions: [...drift.regressions, ...drift.vacuity.map((line) => `vacuity: ${line}`)],
+	};
+	classifyCount(verdict, 'summary.files', baseline.summary.files, results.length);
+	const by = summarizeByTld(results);
+	for (const tld of [
+		...new Set([...Object.keys(by), ...Object.keys(baseline.summary.by_tld)]),
+	].sort()) {
+		classifyCount(
+			verdict,
+			`summary.by_tld.${tld}`,
+			baseline.summary.by_tld[tld] ?? 0,
+			by[tld] ?? 0,
+		);
+	}
+	return verdict;
+}
+
 // ── CLI ──────────────────────────────────────────────────────────────────────
 
 if (import.meta.main) {
@@ -197,6 +234,9 @@ if (import.meta.main) {
 		console.log('INSTALL_TLDS:', [...INSTALL_TLDS].join(' '));
 		process.exit(0);
 	}
+
+	if (wantsCheckJson(process.argv))
+		process.exit(emitRatchetCheck(checkVerdict(results, loadBaseline())));
 
 	if (args.has('--check')) {
 		const drift = computeDrift(results, loadBaseline());

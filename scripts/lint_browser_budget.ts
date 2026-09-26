@@ -22,12 +22,17 @@
  *
  *   bun run scripts/lint_browser_budget.ts            # check against the budget
  *   bun run scripts/lint_browser_budget.ts --update   # record a LOWER count
+ *   bun run scripts/lint_browser_budget.ts --check --json   # the bank's verdict
+ *
+ * NOTE the plain check is GREEN below budget (it only nudges); `--check --json`
+ * still reports the fall as an improvement, so `baselines:bank` locks it in.
  */
 
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { $ } from 'bun';
+import { classifyCount, emitRatchetCheck, wantsCheckJson } from './lib/ratchet_check.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..');
 const BIOME_CONFIG = join(REPO_ROOT, 'biome.jsonc');
@@ -143,6 +148,21 @@ export function readBudget(): LintCounts & { measured: string } {
 if (import.meta.main) {
 	const update = process.argv.includes('--update');
 	const counts = await measure();
+	if (wantsCheckJson(process.argv)) {
+		// The bank's verdict (scripts/lib/ratchet_check.ts). `errors` is the one asserted
+		// number and a BUDGET: lower is what `--update` banks, higher is what it refuses.
+		// An unmeasured run never gets here — measure() threw (assertMeasured), and a
+		// crash is not a verdict. A missing budget is a regression, never "mint one".
+		const verdict = {
+			ratchet: 'lint_browser_budget',
+			baselines: ['engineering/lint_browser_budget.json'],
+			improvements: [] as string[],
+			regressions: [] as string[],
+		};
+		if (!existsSync(BUDGET_PATH)) verdict.regressions.push(`${BUDGET_PATH} is missing`);
+		else classifyCount(verdict, 'errors', readBudget().errors, counts.errors);
+		process.exit(emitRatchetCheck(verdict));
+	}
 	if (!existsSync(BUDGET_PATH)) {
 		console.log('no budget yet — writing the first one');
 	}

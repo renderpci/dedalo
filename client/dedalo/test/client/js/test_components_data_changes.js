@@ -20,6 +20,32 @@ const SWEEP_SECTION_ID = 10
 
 
 
+// AUTOREFERENCE — why a random locator is steered off the host record.
+// component_portal (test80) targets test3 itself, and fn.random_locator draws
+// section_id from 1..50. The save door REFUSES a locator that addresses the
+// record it is saved on (relations/save.ts 'autoreference', PHP :1082 — the
+// infinite-loop guard; locator law: loose section_id), so the stored and the
+// returned value are both empty. The draw hit the sweep record (10) 1 time in
+// 50: 'component_portal. Data save using API … expected {type:dd151,
+// section_id:10,section_tipo:test3,from_component_tipo:test80} to deeply equal
+// {}' plus the matching read-back red, measured 1 run in 7. The server was
+// right; the test asked for a value the contract forbids. A hit is moved to
+// the next id in the same 1..50 range — deterministic, never the host.
+const without_autoreference = function(value, host_section_tipo, host_section_id) {
+	const fix = (item) => {
+		if (item && typeof item==='object'
+			&& item.section_tipo===host_section_tipo
+			&& item.section_id!==undefined
+			&& Number(item.section_id)===Number(host_section_id)) {
+			return {...item, section_id: (Number(host_section_id) % 50) + 1}
+		}
+		return item
+	}
+	return Array.isArray(value) ? value.map(fix) : fix(value)
+}
+
+
+
 describe("COMPONENTS DATA CHANGES", async function() {
 
 	this.timeout(10000);
@@ -48,8 +74,13 @@ describe("COMPONENTS DATA CHANGES", async function() {
 			let old_instance = null
 			let new_instance = null
 
-			// new_value. Calculated as random proper data for current component
-				const new_value = element.new_value(element.new_value_params)
+			// new_value. Calculated as random proper data for current component,
+			// never a link from the sweep record to itself (see AUTOREFERENCE).
+				const new_value = without_autoreference(
+					element.new_value(element.new_value_params),
+					element.section_tipo,
+					sweep_section_id
+				)
 
 			// TEST data save
 				it(`${element.model}. Data save using API`, async function() {

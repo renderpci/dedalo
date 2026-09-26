@@ -127,6 +127,19 @@ RUN set -eu; \
       cp src/core/media/engine/imagemagick-policy/policy.xml "$d/policy.xml"; \
     done
 
+# --- The image-channel marker (src/core/update/channel.ts) --------------------
+# The code tree above is BAKED into this image: a code-update tree swap would
+# land in the container's writable layer and be discarded on the next
+# recreation, so the updater must refuse and point at deploy/dedalo-image-update.sh.
+# "Running in a container" does not say that (the CI toolchain image runs the
+# update drills against trees it owns), so THIS build states it positively.
+# Outside the tree on purpose: nothing that exports or bind-mounts a tree can
+# carry it. A checkout bind-mounted over /opt/dedalo still reads `tree_swap`
+# (channel.ts's mount check). Path = IMAGE_TREE_MARKER_PATH; gate:
+# test/unit/update_channel_native.test.ts.
+RUN install -d /etc/dedalo \
+ && printf '%s\n' /opt/dedalo/master_dedalo > /etc/dedalo/image_tree
+
 # --- Writable trees ----------------------------------------------------------
 # THE CONTAINER PROBLEM: `../private/` is a SIBLING of the repo, and in an image
 # there is no writable parent to create it in. DEDALO_PRIVATE_DIR relocates the

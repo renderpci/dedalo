@@ -108,6 +108,11 @@ export const IMAGE_EXCLUSIONS: readonly ImageExclusion[] = [
 		entry: '.github',
 		reason: 'CI workflows — never read at runtime. Excluded before this policy too.',
 	},
+	{
+		entry: 'ci',
+		reason:
+			'The CI TOOLCHAIN image (ci/Dockerfile + its compose stack) — a separate image built from its own context (ci/Dockerfile.dockerignore replaces this file for that build). Never read by the engine at runtime.',
+	},
 	{ entry: '.gitlab', reason: 'CI templates — never read at runtime.' },
 	{ entry: '.gitlab-ci.yml', reason: 'CI pipeline definition — never read at runtime.' },
 	{ entry: '.vscode', reason: 'Editor settings — a developer-machine artifact.' },

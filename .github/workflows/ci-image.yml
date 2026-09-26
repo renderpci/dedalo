@@ -1,0 +1,191 @@
+# CI IMAGE — build and publish ghcr.io/renderpci/dedalo-ci from ci/Dockerfile.
+#
+# WHAT IT IS FOR. The executing tiers (ci.yml, db.yml) and `bun run ci:local -- --docker`
+# run INSIDE this image, so a verdict is a property of the commit and not of whichever
+# runner or Mac judged it (ci/Dockerfile header: the unit tier measured 25 red files on
+# a bare runner against 3 on a developer box — missing media tools, not code). The
+# workflows pin the image by DIGEST (rule 12 of test/unit/ci_workflow_tripwire.test.ts);
+# this workflow produces the digests, and Dependabot's docker ecosystem proposes the pin
+# bumps. Exactness with an updater — the .bun-version rule.
+#
+# MULTI-ARCH, NATIVELY. linux/amd64 is what GitHub runs; linux/arm64 is what an
+# Apple-Silicon Mac runs `ci:local` on without emulation. Each arch builds on its OWN
+# native runner (ubuntu-24.04 / ubuntu-24.04-arm — free on a public repo) rather than
+# under QEMU: an emulated apt postinst or an emulated smoke test is a second, slower
+# machine judging the image. Each build is SMOKE-TESTED as the exact bytes it pushes
+# (load → run → push), then `merge` stitches the two into one manifest list.
+#
+# TAGS (all on the manifest list):
+#   fp-<fingerprint>  sha256(ci/Dockerfile ++ .bun-version) — what `ci:local` pulls to get
+#                     the image matching THIS checkout's definition (the same value as
+#                     /etc/dedalo-ci-image and the org.dedalo.ci.fingerprint label).
+#   <YYYYMMDD>        the build day; a rebuild with an unchanged fingerprint still moves
+#                     distro packages, and this names which week's packages a digest holds.
+#   latest            convenience only — nothing may pin it.
+# The per-arch tags fp-<fingerprint>-amd64/-arm64 are the merge's inputs.
+#
+# TRIGGERS.
+#   push     master/v7, only when the image DEFINITION moved (the fingerprint inputs,
+#            plus this file and the build context's ignore file).
+#   schedule weekly, with the layer cache OFF: every layer is keyed on the Dockerfile
+#            text, so a cached rebuild would republish last month's packages forever.
+#            The weekly build is the updater for the distro half (security fixes).
+#   workflow_dispatch — a manual rebuild.
+# NO pull_request: publishing needs `packages: write`, and a fork PR must never reach a
+# job holding it. A Dockerfile change is proven BEFORE the push by the local gate —
+# `ci:local --docker` builds ci/Dockerfile whenever dedalo-ci:local's fingerprint does not
+# match the checkout — and here, on the branch, before any workflow pin moves to it.
+#
+# Invariants in this file are enforced by test/unit/ci_workflow_tripwire.test.ts
+# (top-level least-privilege permissions, SHA-pinned actions, no secret, no expression
+# interpolated into a run: script). The registry login uses the job's own GITHUB_TOKEN
+# via `github.token` — not a repository secret — scoped by the job's `packages: write`.
+name: ci-image
+
+on:
+  push:
+    branches: [master, v7]
+    paths:
+      - ci/Dockerfile
+      - ci/Dockerfile.dockerignore
+      - .bun-version
+      - .github/workflows/ci-image.yml
+  schedule:
+    # Mondays 04:17 UTC — off the hour, after the Monday Dependabot sweep is proposed.
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+# Least privilege (rule 7): read-only by default; ONLY the jobs that push widen it.
+permissions:
+  contents: read
+
+# One publisher at a time: master and v7 receiving the same commit would otherwise
+# race to write the same tags. Never cancel — a half-published manifest list is worse
+# than a queued rebuild.
+concurrency:
+  group: ci-image
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/renderpci/dedalo-ci
+
+jobs:
+  build:
+    name: build (${{ matrix.arch }})
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      fingerprint: ${{ steps.fp.outputs.fingerprint }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The SAME computation ci/Dockerfile verifies in its last layer; the build refuses
+      # a mismatch, so the label cannot describe a different definition than the layers.
+      - name: Fingerprint
+        id: fp
+        run: |
+          fp="$(cat ci/Dockerfile .bun-version | sha256sum | cut -d' ' -f1)"
+          echo "fingerprint=$fp" >> "$GITHUB_OUTPUT"
+          echo "fingerprint $fp"
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build (load into the runner's engine for the smoke test)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: ci/Dockerfile
+          platforms: linux/${{ matrix.arch }}
+          build-args: DEDALO_CI_FINGERPRINT=${{ steps.fp.outputs.fingerprint }}
+          tags: ${{ env.IMAGE }}:fp-${{ steps.fp.outputs.fingerprint }}-${{ matrix.arch }}
+          load: true
+          push: false
+          pull: true
+          # Weekly = fresh distro packages; see the header's TRIGGERS.
+          no-cache: ${{ github.event_name == 'schedule' }}
+          cache-from: type=gha,scope=ci-image-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=ci-image-${{ matrix.arch }}
+
+      # The contract every consumer codes against (ci/README.md): fingerprint file ==
+      # label == this checkout's computation; bun == .bun-version; pg client 18; the
+      # media tools; MariaDB; and a browser that actually launches headless.
+      - name: Smoke test the built image
+        env:
+          REF: ${{ env.IMAGE }}:fp-${{ steps.fp.outputs.fingerprint }}-${{ matrix.arch }}
+          WANT_FP: ${{ steps.fp.outputs.fingerprint }}
+        run: |
+          set -euo pipefail
+          label="$(docker image inspect "$REF" --format '{{ index .Config.Labels "org.dedalo.ci.fingerprint" }}')"
+          [ "$label" = "$WANT_FP" ] || { echo "label '$label' != '$WANT_FP'"; exit 1; }
+          docker run --rm -e WANT_FP -e WANT_BUN="$(tr -d '[:space:]' < .bun-version)" "$REF" bash -euo pipefail -c '
+            [ "$(cat /etc/dedalo-ci-image)" = "$WANT_FP" ]
+            [ "$DEDALO_CI_IMAGE" = 1 ]
+            [ "$(bun --version)" = "$WANT_BUN" ]
+            pg_dump --version | grep -q "PostgreSQL) 18\."
+            for b in ffmpeg ffprobe qt-faststart magick pdftoppm pdfinfo pdftotext gs rsvg-convert mariadb mariadbd git rsync unzip; do
+              command -v "$b" >/dev/null || { echo "missing: $b"; exit 1; }
+            done
+            chromium --headless --no-sandbox --disable-gpu --dump-dom about:blank | grep -q "<body>"
+            cat /etc/dedalo-ci-versions
+          '
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Push the smoke-tested bytes
+        env:
+          REF: ${{ env.IMAGE }}:fp-${{ steps.fp.outputs.fingerprint }}-${{ matrix.arch }}
+        run: docker push "$REF"
+
+  merge:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      # The digest printed here is what ci.yml/db.yml pin (`container:` image) and what
+      # Dependabot proposes afterwards — written to the job summary so it is one click away.
+      - name: Publish the multi-arch manifest list
+        env:
+          FP: ${{ needs.build.outputs.fingerprint }}
+        run: |
+          set -euo pipefail
+          day="$(date -u +%Y%m%d)"
+          docker buildx imagetools create \
+            -t "$IMAGE:fp-$FP" -t "$IMAGE:$day" -t "$IMAGE:latest" \
+            "$IMAGE:fp-$FP-amd64" "$IMAGE:fp-$FP-arm64"
+          digest="$(docker buildx imagetools inspect "$IMAGE:fp-$FP" --format '{{ json .Manifest }}' | jq -r .digest)"
+          {
+            echo "### dedalo-ci published"
+            echo ""
+            echo "- fingerprint: \`$FP\`"
+            echo "- pin: \`$IMAGE@$digest\`"
+            echo "- tags: \`fp-$FP\`, \`$day\`, \`latest\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "$IMAGE@$digest"

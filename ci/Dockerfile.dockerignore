@@ -1,0 +1,6 @@
+# Build context of ci/Dockerfile (BuildKit reads <Dockerfile>.dockerignore beside it,
+# and it REPLACES the root .dockerignore for this build). The CI image is a toolchain,
+# never the tree: exactly the two files its fingerprint is computed from travel.
+*
+!ci/Dockerfile
+!.bun-version

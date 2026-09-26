@@ -1,0 +1,577 @@
+/**
+ * GATE — `ci:local --docker` tests THE TREE ON DISK, and its `--summary` names the stages
+ * the tier scripts actually ran (scripts/ci_local.ts).
+ *
+ * Two things the pre-push hook trusts without seeing:
+ *
+ *   1. THE OVERLAY (`workingTreeLists`). The container gets HEAD + the paths to copy +
+ *      the paths to delete. Proven by OUTCOME in a scratch repo that builds every state
+ *      a developer's tree can be in — unstaged edit, STAGED edit, staged new file,
+ *      untracked file, ignored file, unstaged delete, `git rm`, a staged rename, a staged
+ *      edit reverted on disk. The defect this pins (2026-09-26): `ls-files --modified`
+ *      compares disk with the INDEX, so every staged change vanished and the container
+ *      tested a tree that was not the one on disk.
+ *   2. THE STAGE PARSER (`parseStages`). The summary is read back from the tier scripts'
+ *      own `== <prefix>: …` protocol. Fixture outputs pin every verdict path (red,
+ *      advisory, SKIPPED from a child, died-under-set-e, the final verdict line that is
+ *      NOT a stage, a workflow step, ANSI, bun's recap dedup, drift blocks → fix_hint);
+ *      and the REAL tier scripts are read to prove they still speak that protocol under
+ *      the prefix `TIERS` expects — a renamed prefix or marker would otherwise empty the
+ *      summary silently.
+ *
+ *   3. A HOSTILE AMBIENT GIT_* (GIT_DIR / GIT_WORK_TREE / GIT_INDEX_FILE exported, as git
+ *      does into a hook run from a linked worktree) redirects neither this file's scratch
+ *      git calls nor `workingTreeLists`: a decoy repository comes out byte-identical.
+ *
+ *   4. A LINKED WORKTREE (`containerMounts` + the driver's clone line). The worktree's `.git`
+ *      is a file naming a host path; the container clones the COMMON git dir mounted
+ *      beside it. Proven by copying each mount into a sandbox, moving the originals away,
+ *      and running the driver's own clone source — with the old source as negative control.
+ *      A repository whose objects come through ALTERNATES (`git clone --shared`) is refused
+ *      up front (exit 2, naming the file) — its objects live at a host path the container
+ *      cannot see; a plain clone of the same repository is the positive control.
+ *
+ *   5. A SYMLINKED top-level node_modules (the one the hook lends a linked worktree) is not
+ *      in the overlay: `.gitignore`'s `node_modules/` matches only a directory, so git lists
+ *      the link as untracked, and the container died at `bun install` on a dangling link.
+ *
+ * HERMETIC: a scratch git repo under the OS temp dir, and repo files read. No DB, no
+ * docker, no network, no repo file written. Every git spawned here gets NO GIT_* variable.
+ */
+
+import { afterAll, describe, expect, test } from 'bun:test';
+import {
+	cpSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	renameSync,
+	rmSync,
+	symlinkSync,
+	writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import {
+	CONTAINER_GIT,
+	CONTAINER_SRC,
+	containerMounts,
+	DRIVER_SCRIPT,
+	failFastSkip,
+	gitScrubbedEnv,
+	parseStages,
+	TIERS,
+	type TierResult,
+	workingTreeLists,
+} from '../../scripts/ci_local.ts';
+
+const REPO_ROOT = join(import.meta.dir, '..', '..');
+
+// ── 1. the overlay ───────────────────────────────────────────────────────────
+
+const scratch = mkdtempSync(join(tmpdir(), 'dedalo-ci-local-gate-'));
+afterAll(() => rmSync(scratch, { recursive: true, force: true }));
+
+/**
+ * The environment of every git THIS FILE spawns: no GIT_* at all. A scratch repo is named
+ * by `cwd`; an inherited GIT_DIR / GIT_WORK_TREE / GIT_INDEX_FILE (a hook's context, a
+ * caller's export) would override it and run `init`, `add`, `commit`, `rm` against that
+ * repository — this checkout, when `bun test` runs under a hook. Read at call time, so the
+ * hostile-environment case below exercises it.
+ */
+function noGitEnv(): Record<string, string | undefined> {
+	return Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')));
+}
+
+function sh(args: string[], cwd: string = scratch): void {
+	const proc = Bun.spawnSync(
+		[
+			'git',
+			'-c',
+			'user.name=gate',
+			'-c',
+			'user.email=gate@example.invalid',
+			'-c',
+			'commit.gpgsign=false',
+			'-c',
+			'core.hooksPath=/dev/null',
+			...args,
+		],
+		{ cwd, env: noGitEnv(), stdout: 'pipe', stderr: 'pipe' },
+	);
+	if (proc.exitCode !== 0) throw new Error(`git ${args.join(' ')}: ${proc.stderr.toString()}`);
+}
+function gitOut(cwd: string, args: string[]): string {
+	const proc = Bun.spawnSync(['git', ...args], {
+		cwd,
+		env: noGitEnv(),
+		stdout: 'pipe',
+		stderr: 'pipe',
+	});
+	if (proc.exitCode !== 0) throw new Error(`git ${args.join(' ')}: ${proc.stderr.toString()}`);
+	return proc.stdout.toString();
+}
+const put = (path: string, text: string, root: string = scratch) => {
+	mkdirSync(join(root, path, '..'), { recursive: true });
+	writeFileSync(join(root, path), text);
+};
+
+describe('workingTreeLists — the overlay is HEAD vs THE DISK', () => {
+	sh(['init', '-q', '-b', 'main']);
+	for (const name of [
+		'unstaged_edit',
+		'staged_edit',
+		'staged_then_reverted',
+		'unstaged_delete',
+		'git_rm',
+		'rename_from',
+		'untouched',
+	])
+		put(`tracked/${name}.txt`, `${name}\n`);
+	put('.gitignore', 'ignored.txt\n');
+	sh(['add', '-A']);
+	sh(['commit', '-q', '-m', 'base']);
+
+	put('tracked/unstaged_edit.txt', 'changed\n');
+	put('tracked/staged_edit.txt', 'changed\n');
+	sh(['add', 'tracked/staged_edit.txt']);
+	put('tracked/staged_then_reverted.txt', 'changed\n');
+	sh(['add', 'tracked/staged_then_reverted.txt']);
+	put('tracked/staged_then_reverted.txt', 'staged_then_reverted\n');
+	put('new/staged_new.txt', 'new\n');
+	sh(['add', 'new/staged_new.txt']);
+	put('new/untracked.txt', 'new\n');
+	put('ignored.txt', 'ignored\n');
+	rmSync(join(scratch, 'tracked/unstaged_delete.txt'));
+	sh(['rm', '-q', 'tracked/git_rm.txt']);
+	sh(['mv', 'tracked/rename_from.txt', 'tracked/rename_to.txt']);
+	put('with space/ütf8 name.txt', 'quoted path\n');
+
+	const lists = workingTreeLists(scratch);
+
+	test('every path that differs on disk is copied — staged or not', () => {
+		expect(lists.copy).toEqual([
+			'new/staged_new.txt',
+			'new/untracked.txt',
+			'tracked/rename_to.txt',
+			'tracked/staged_edit.txt',
+			'tracked/unstaged_edit.txt',
+			'with space/ütf8 name.txt',
+		]);
+	});
+
+	test('every path HEAD has and the disk does not is deleted — git rm and rename source too', () => {
+		expect(lists.remove).toEqual([
+			'tracked/git_rm.txt',
+			'tracked/rename_from.txt',
+			'tracked/unstaged_delete.txt',
+		]);
+	});
+
+	test('what equals HEAD on disk (a staged edit reverted, untouched, ignored) is not in the overlay', () => {
+		const all = [...lists.copy, ...lists.remove];
+		expect(all).not.toContain('tracked/staged_then_reverted.txt');
+		expect(all).not.toContain('tracked/untouched.txt');
+		expect(all).not.toContain('ignored.txt');
+	});
+});
+
+// ── 1b. a hostile ambient GIT_* never redirects a git call ──────────────────
+
+describe('a hostile GIT_DIR / GIT_WORK_TREE / GIT_INDEX_FILE in the environment', () => {
+	test('gitScrubbedEnv drops every repository-local variable and keeps transport ones', () => {
+		const env = gitScrubbedEnv({
+			PATH: '/usr/bin',
+			GIT_DIR: '/x/.git',
+			GIT_WORK_TREE: '/x',
+			GIT_INDEX_FILE: '/x/.git/index',
+			GIT_COMMON_DIR: '/x/.git',
+			GIT_OBJECT_DIRECTORY: '/x/.git/objects',
+			GIT_CONFIG_COUNT: '1',
+			GIT_CONFIG_KEY_0: 'core.worktree',
+			GIT_CONFIG_VALUE_0: '/x',
+			GIT_SSH_COMMAND: 'ssh -i key',
+			GIT_CONFIG_GLOBAL: '/home/me/.gitconfig',
+		});
+		expect(Object.keys(env).sort()).toEqual(['GIT_CONFIG_GLOBAL', 'GIT_SSH_COMMAND', 'PATH']);
+	});
+
+	test('building a scratch repo and listing its overlay touch only the scratch repo, never the decoy', () => {
+		// The decoy stands in for "the real repository": a committed repo whose refs,
+		// index and working tree must come out byte-identical.
+		const decoy = join(scratch, 'decoy');
+		mkdirSync(decoy, { recursive: true });
+		sh(['init', '-q', '-b', 'main'], decoy);
+		put('kept.txt', 'decoy\n', decoy);
+		sh(['add', '-A'], decoy);
+		sh(['commit', '-q', '-m', 'decoy'], decoy);
+		const decoyState = () => ({
+			refs: gitOut(decoy, ['for-each-ref', '--format=%(refname) %(objectname)']),
+			status: gitOut(decoy, ['status', '--porcelain', '--untracked-files=all']),
+			index: readFileSync(join(decoy, '.git', 'index')).toString('base64'),
+			log: gitOut(decoy, ['log', '--all', '--format=%H %s']),
+		});
+		const before = decoyState();
+
+		const hostile = {
+			GIT_DIR: join(decoy, '.git'),
+			GIT_WORK_TREE: decoy,
+			GIT_INDEX_FILE: join(decoy, '.git', 'index'),
+		};
+		const saved = Object.fromEntries(Object.keys(hostile).map((key) => [key, process.env[key]]));
+		const target = join(scratch, 'target');
+		mkdirSync(target, { recursive: true });
+		let lists: { copy: string[]; remove: string[] };
+		try {
+			Object.assign(process.env, hostile);
+			sh(['init', '-q', '-b', 'main'], target);
+			put('a.txt', 'a\n', target);
+			put('gone.txt', 'gone\n', target);
+			sh(['add', '-A'], target);
+			sh(['commit', '-q', '-m', 'base'], target);
+			put('a.txt', 'changed\n', target);
+			put('new.txt', 'new\n', target);
+			sh(['rm', '-q', 'gone.txt'], target);
+			lists = workingTreeLists(target);
+		} finally {
+			for (const [key, value] of Object.entries(saved)) {
+				if (value === undefined) delete process.env[key];
+				else process.env[key] = value;
+			}
+		}
+		// The scratch repo got the commit and its overlay describes IT …
+		expect(gitOut(target, ['log', '--format=%s'])).toBe('base\n');
+		expect(lists).toEqual({ copy: ['a.txt', 'new.txt'], remove: ['gone.txt'] });
+		// … and the decoy is exactly as it was.
+		expect(decoyState()).toEqual(before);
+	});
+});
+
+// ── 1c. a linked worktree: the container can clone what it is mounted ─────────
+
+describe('containerMounts — from a LINKED WORKTREE the container still clones the commit', () => {
+	// The defect (2026-09-26): only the worktree was mounted, its `.git` is a FILE naming a
+	// HOST path, and the driver's `git clone … /src` died in the container. Measured by
+	// outcome: each mount is COPIED to <sandbox><container path>, the originals are moved
+	// away (so no host path resolves — the container's condition), and the DRIVER'S OWN
+	// clone line runs against the sandbox.
+	const root = join(scratch, 'wt');
+	const main = join(root, 'main');
+	const linked = join(root, 'linked');
+	mkdirSync(main, { recursive: true });
+	sh(['init', '-q', '-b', 'main'], main);
+	put('a.txt', 'a\n', main);
+	sh(['add', '-A'], main);
+	sh(['commit', '-q', '-m', 'a'], main);
+	sh(['worktree', 'add', '-q', linked, '-b', 'feat'], main);
+	put('b.txt', 'b\n', linked);
+	sh(['add', '-A'], linked);
+	sh(['commit', '-q', '-m', 'b'], linked);
+	const sha = gitOut(linked, ['rev-parse', 'HEAD']).trim();
+	const mounts = containerMounts(linked);
+	const plain = containerMounts(main);
+
+	const sandbox = join(scratch, 'container');
+	for (const mount of mounts)
+		cpSync(mount.host, join(sandbox, mount.container), { recursive: true, verbatimSymlinks: true });
+	renameSync(root, join(scratch, 'wt_moved_away'));
+
+	const cloneLine = DRIVER_SCRIPT.match(/^git clone (?:--\S+ )*(\/\S+) dedalo$/m);
+	const tarSource = DRIVER_SCRIPT.match(/tar -C (\/\S+) --null -T \/ci-in\/copy\.lst/);
+	const clone = (source: string, into: string) =>
+		Bun.spawnSync(
+			['git', 'clone', '--quiet', '--shared', '--no-checkout', join(sandbox, source), into],
+			{
+				cwd: sandbox,
+				env: noGitEnv(),
+				stdout: 'pipe',
+				stderr: 'pipe',
+			},
+		);
+
+	test('two mounts: the checkout at CONTAINER_SRC, the COMMON git dir at CONTAINER_GIT', () => {
+		expect(mounts.map((mount) => mount.container)).toEqual([CONTAINER_SRC, CONTAINER_GIT]);
+		expect(mounts[1]?.host).toMatch(/\/wt\/main\/\.git$/);
+		// A plain checkout: its own .git is the common dir.
+		expect(plain.map((mount) => mount.host.replace(/.*\/wt\//, ''))).toEqual(['main', 'main/.git']);
+	});
+
+	test("the driver's clone source, as mounted, yields the pushed commit on its branch", () => {
+		expect(cloneLine?.[1]).toBe(CONTAINER_GIT);
+		const into = join(sandbox, 'work_new');
+		const cloned = clone(cloneLine?.[1] as string, into);
+		expect(cloned.exitCode, cloned.stderr.toString()).toBe(0);
+		sh(['checkout', '-q', '-B', 'feat', sha], into);
+		expect(gitOut(into, ['log', '--format=%s']).split('\n').filter(Boolean)).toEqual(['b', 'a']);
+		expect(readFileSync(join(into, 'b.txt'), 'utf8')).toBe('b\n');
+	});
+
+	test('negative control: the worktree mount alone (the old clone source) cannot be cloned', () => {
+		const cloned = clone(CONTAINER_SRC, join(sandbox, 'work_old'));
+		expect(cloned.exitCode).not.toBe(0);
+		expect(cloned.stderr.toString()).toContain('not a git repository');
+	});
+
+	test("the overlay is still read from the checkout mount, which holds the worktree's files", () => {
+		expect(tarSource?.[1]).toBe(CONTAINER_SRC);
+		expect(readFileSync(join(sandbox, CONTAINER_SRC, 'b.txt'), 'utf8')).toBe('b\n');
+	});
+});
+
+describe('containerMounts — a repository borrowing objects through ALTERNATES is refused', () => {
+	// fail() exits the process, so the call runs in a subprocess: `bun -e` importing the
+	// real containerMounts, handed the scratch repository through the environment.
+	const source = join(scratch, 'alt_source');
+	mkdirSync(source);
+	sh(['init', '-q', '-b', 'main'], source);
+	put('a.txt', 'a\n', source);
+	sh(['add', '-A'], source);
+	sh(['commit', '-q', '-m', 'a'], source);
+	const shared = join(scratch, 'alt_shared');
+	const full = join(scratch, 'alt_full');
+	sh(['clone', '-q', '--shared', source, shared]);
+	sh(['clone', '-q', '--no-local', source, full]);
+	const mountsOf = (dir: string) => {
+		const proc = Bun.spawnSync(
+			[
+				process.execPath,
+				'-e',
+				`const { containerMounts } = await import(${JSON.stringify(join(REPO_ROOT, 'scripts/ci_local.ts'))});\nconsole.log(JSON.stringify(containerMounts(process.env.CI_LOCAL_GATE_DIR)));`,
+			],
+			{
+				cwd: scratch,
+				env: { ...noGitEnv(), CI_LOCAL_GATE_DIR: dir },
+				stdout: 'pipe',
+				stderr: 'pipe',
+			},
+		);
+		return { code: proc.exitCode, out: proc.stdout.toString(), err: proc.stderr.toString() };
+	};
+
+	test('a --shared clone: exit 2 (could-not-run), naming the alternates file and the cure', () => {
+		const run = mountsOf(shared);
+		expect(run.code, run.err).toBe(2);
+		expect(run.err).toContain(join('alt_shared', '.git', 'objects', 'info', 'alternates'));
+		expect(run.err).toContain('git repack -a -d');
+		expect(run.out).toBe('');
+	});
+
+	test('positive control: a full clone of the same repository mounts normally', () => {
+		const run = mountsOf(full);
+		expect(run.code, run.err).toBe(0);
+		const mounts = JSON.parse(run.out) as { host: string; container: string }[];
+		expect(mounts.map((mount) => mount.container)).toEqual([CONTAINER_SRC, CONTAINER_GIT]);
+		expect(mounts[1]?.host).toMatch(/\/alt_full\/\.git$/);
+	});
+});
+
+describe('workingTreeLists — a SYMLINKED top-level node_modules is never in the overlay', () => {
+	const repo = join(scratch, 'nm');
+	const deps = join(scratch, 'nm_deps');
+	mkdirSync(join(deps, 'dep'), { recursive: true });
+	writeFileSync(join(deps, 'dep', 'marker'), 'installed\n');
+	mkdirSync(repo);
+	sh(['init', '-q', '-b', 'main'], repo);
+	put('.gitignore', 'node_modules/\n', repo);
+	put('a.txt', 'a\n', repo);
+	sh(['add', '-A'], repo);
+	sh(['commit', '-q', '-m', 'a'], repo);
+	symlinkSync(deps, join(repo, 'node_modules'));
+	// Positive control: a symlink under any other name IS an untracked path to copy.
+	symlinkSync(deps, join(repo, 'other_link'));
+	put('new.txt', 'new\n', repo);
+	const lists = workingTreeLists(repo);
+
+	test("the case is live: git itself reports the linked node_modules as untracked (`.gitignore`'s dir pattern misses it)", () => {
+		const status = gitOut(repo, ['status', '--porcelain', '--untracked-files=all']);
+		expect(status.split('\n')).toContain('?? node_modules');
+	});
+
+	test('the overlay copies the new file and the other link, never node_modules', () => {
+		expect(lists.copy).toEqual(['new.txt', 'other_link']);
+		expect(lists.remove).toEqual([]);
+	});
+});
+
+// ── 2. the stage parser ──────────────────────────────────────────────────────
+
+const ESC = '\u001b';
+
+describe('parseStages — fixture outputs of the tier protocol', () => {
+	test('green stages, a RED stage with keyed + deduplicated failures, the final line is not a stage', () => {
+		const output = [
+			'== hermetic: bun install (frozen lockfile)',
+			'done',
+			'== hermetic: static tripwires (3)',
+			`${ESC}[1mtest/unit/a_tripwire.test.ts:${ESC}[0m`,
+			'(pass) fine',
+			'(fail) broke one [2.00ms]',
+			'::group::test/unit/b_tripwire.test.ts:',
+			'(fail) broke two',
+			'',
+			' 2 tests failed:',
+			'(fail) broke one [2.00ms]',
+			'(fail) broke two',
+			'== hermetic: RED in static tripwires (exit 1)',
+			'== hermetic: crap ledger (append-only vs the reference)',
+			'== hermetic: RED — see the stage verdicts above',
+		].join('\n');
+		const stages = parseStages('hermetic', output, 1);
+		expect(stages.map((stage) => [stage.name, stage.verdict])).toEqual([
+			['bun install (frozen lockfile)', 'green'],
+			['static tripwires (3)', 'red'],
+			['crap ledger (append-only vs the reference)', 'green'],
+		]);
+		const red = stages[1];
+		expect(red?.failures).toEqual([
+			'test/unit/a_tripwire.test.ts › broke one [2.00ms]',
+			'test/unit/b_tripwire.test.ts › broke two',
+		]);
+		expect(red?.notes).toEqual(['RED in static tripwires (exit 1)']);
+		expect(red?.fix_hint).toContain('bun test --timeout=30000');
+		expect(stages[0]?.fix_hint).toBeNull();
+	});
+
+	test('ADVISORY drift, a child SKIPPED, a banner line and an [ADVISORY] header', () => {
+		const output = [
+			'== db_tier: bun 1.3.0 (pin: 1.3.0)',
+			'== db_tier: unit tier (test/unit + test/integration) vs its frozen red baseline [ADVISORY]',
+			'STALE:',
+			'  test/unit/x.test.ts › now passes',
+			'SUMMARY:',
+			'  fail 10 → 9',
+			'== db_tier: unit-tier drift (exit 1) — ADVISORY, not failing the tier; see the block above',
+			'== db_tier: dependency audit',
+			'== audit: SKIPPED — no audit input changed since origin/master',
+			'== db_tier: OK',
+		].join('\n');
+		const stages = parseStages('db_tier', output, 0);
+		expect(stages.map((stage) => [stage.name, stage.verdict])).toEqual([
+			[
+				'unit tier (test/unit + test/integration) vs its frozen red baseline [ADVISORY]',
+				'advisory',
+			],
+			['dependency audit', 'skipped'],
+		]);
+		expect(stages[0]?.drift).toEqual([
+			'STALE: test/unit/x.test.ts › now passes',
+			'SUMMARY: fail 10 → 9',
+		]);
+		expect(stages[0]?.fix_hint).toContain('bun run baselines:bank');
+		expect(stages[1]?.notes).toEqual(['SKIPPED — no audit input changed since origin/master']);
+		expect(stages[1]?.fix_hint).toBeNull();
+	});
+
+	test('REGRESSION drift is never told to bank', () => {
+		const output = [
+			'== db_tier: parity tier vs its frozen red baseline',
+			'REGRESSIONS:',
+			'  test/unit/y.test.ts › newly red',
+			'== db_tier: RED in the parity tier (exit 1)',
+			'== db_tier: RED',
+		].join('\n');
+		const [stage] = parseStages('db_tier', output, 1);
+		expect(stage?.verdict).toBe('red');
+		expect(stage?.drift).toEqual(['REGRESSIONS: test/unit/y.test.ts › newly red']);
+		expect(stage?.fix_hint).toContain('REGRESSION');
+		expect(stage?.fix_hint).not.toContain('improvement-only drift');
+	});
+
+	test('a non-zero exit with no RED stage: the running stage is where it died; none at all is "tier start"', () => {
+		const died = parseStages(
+			'hermetic',
+			['== hermetic: bun install (frozen lockfile)', 'error: lockfile had changes'].join('\n'),
+			1,
+		);
+		expect(died).toHaveLength(1);
+		expect(died[0]?.verdict).toBe('red');
+		expect(died[0]?.notes[0]).toContain('ABORTED here (exit 1)');
+		expect(died[0]?.fix_hint).toContain('bun install --frozen-lockfile');
+
+		const early = parseStages('hermetic', 'bash: nope: command not found', 127);
+		expect(early.map((stage) => [stage.name, stage.verdict])).toEqual([['tier start', 'red']]);
+	});
+
+	test("ci:local's own workflow_step marker opens a stage", () => {
+		const output = [
+			'== workflow_step: bun install --frozen-lockfile',
+			'== db_tier: build the suite database (from repo-vendored bytes)',
+			'== db_tier: OK',
+		].join('\n');
+		expect(parseStages('db_tier', output, 0).map((stage) => stage.name)).toEqual([
+			'bun install --frozen-lockfile',
+			'build the suite database (from repo-vendored bytes)',
+		]);
+	});
+});
+
+describe('--fail-fast — a red tier ends the run, the rest is REPORTED not_run', () => {
+	const [hermetic, db, instance] = TIERS;
+	const result = (tier: string, verdict: 'green' | 'red'): TierResult => ({
+		tier,
+		verdict,
+		exit_code: verdict === 'green' ? 0 : 1,
+		duration_s: 1,
+		stages: [],
+	});
+	const on = { flags: new Set(['--fail-fast']) };
+	const off = { flags: new Set<string>() };
+
+	test('after a red tier, with --fail-fast: the next tier is not run and says so', () => {
+		const skipped = failFastSkip(on, db as (typeof TIERS)[number], [
+			result(hermetic?.id ?? 'hermetic', 'red'),
+		]);
+		expect(skipped).toEqual({
+			tier: db?.id,
+			verdict: 'not_run',
+			exit_code: -1,
+			duration_s: 0,
+			stages: [],
+		});
+	});
+
+	test('without --fail-fast every tier runs; with it, green predecessors never skip', () => {
+		const red = [result(hermetic?.id ?? 'hermetic', 'red')];
+		expect(failFastSkip(off, db as (typeof TIERS)[number], red)).toBeNull();
+		const green = [result(hermetic?.id ?? 'hermetic', 'green'), result(db?.id ?? 'db', 'green')];
+		expect(failFastSkip(on, instance as (typeof TIERS)[number], green)).toBeNull();
+		expect(failFastSkip(on, hermetic as (typeof TIERS)[number], [])).toBeNull();
+	});
+});
+
+describe('the REAL tier scripts still speak the protocol parseStages reads', () => {
+	for (const tier of TIERS) {
+		const source = readFileSync(join(REPO_ROOT, tier.script), 'utf8');
+		const markers = [...source.matchAll(/echo "== ([a-z_]+): ([^"$]*)/g)].map(
+			(match) => [match[1], match[2] ?? ''] as const,
+		);
+
+		test(`${tier.script}: every marker uses prefix '${tier.prefix}'`, () => {
+			expect(markers.length).toBeGreaterThan(2);
+			expect([...new Set(markers.map(([prefix]) => prefix))]).toEqual([tier.prefix]);
+		});
+
+		test(`${tier.script}: opens stages, marks RED stages, and ends on a final verdict`, () => {
+			const texts = markers.map(([, text]) => text);
+			expect(texts.some((text) => text.startsWith('RED in '))).toBe(true);
+			expect(texts.some((text) => /^(GREEN|OK)\b/.test(text))).toBe(true);
+			// a stage header is a marker that is none of the protocol's verdict words
+			expect(
+				texts.filter((text) => !/^(RED|GREEN|OK)\b/.test(text) && !/ADVISORY/.test(text)).length,
+			).toBeGreaterThan(1);
+		});
+
+		test(`${tier.script}: a synthesized run of its own headers parses into those stages`, () => {
+			const headers = markers
+				.map(([, text]) => text)
+				.filter(
+					(text) =>
+						text !== '' &&
+						!/^(RED|GREEN|OK|bun \d|installing )/.test(text) &&
+						!/ADVISORY(?!\]\s*$)/.test(text),
+				);
+			const output = headers.map((text) => `== ${tier.prefix}: ${text}`).join('\n');
+			expect(parseStages(tier.prefix, output, 0).map((stage) => stage.name)).toEqual(headers);
+		});
+	}
+});

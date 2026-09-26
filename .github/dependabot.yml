@@ -70,3 +70,38 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 3
+
+  # THE CI IMAGE'S BASE (ci/Dockerfile `FROM debian:trixie-slim@sha256:…`). The digest pin
+  # is exactness; this is its updater — the same rule as the SHA-pinned actions above. A
+  # merged bump changes the image fingerprint, which republishes ghcr.io/renderpci/dedalo-ci
+  # (.github/workflows/ci-image.yml). Distro PACKAGES inside the image are refreshed by that
+  # workflow's weekly no-cache rebuild, not here.
+  - package-ecosystem: docker
+    directory: "/ci"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+
+  # THE LOCAL-GATE STACK (ci/compose.yml: the CI image + the pgvector service). Dependabot
+  # can only track an image written as `name:tag@sha256:…` — a bare `name@sha256:…` names
+  # no tag to follow — so the compose file carries the tag.
+  #
+  # ONE DIGEST, ONE UPDATER — THE HAZARD THIS ENTRY CREATES. Dependabot does NOT update
+  # `services:`/`container:` images inside .github/workflows/ (dependabot-core#5819, still
+  # open), so while .github/workflows/db.yml ALSO spells the pgvector digest (its `db` and
+  # `instance` services), this entry bumps ONE copy of a pin that must be the same bytes on
+  # the runner and on the Mac — `ci:local` would then judge against a different Postgres
+  # than the hosted tier, the exact drift the stack exists to remove. The structural answer
+  # is a single source: the hosted jobs start pgvector FROM ci/compose.yml (the tiers are
+  # moving into the CI image anyway), so this PR is the whole bump. Until then the copies
+  # are held equal by a gate (test/unit/ci_workflow_tripwire.test.ts: every pgvector image
+  # under .github/workflows/ == ci/compose.yml's digest), which turns this entry's PR red
+  # until the workflow pins move with it in the same PR — a loud, one-line follow-up,
+  # never a silent split.
+  - package-ecosystem: docker-compose
+    directory: "/ci"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3

@@ -29,6 +29,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+	CORPUS_FLOOR,
 	emptinessAssertions,
 	testFilesScanned,
 	vacuitySites,
@@ -59,7 +60,8 @@ describe('a gate must be able to fail', () => {
 		// The CORPUS is the witness, not the offender set: both counts above are
 		// meant to fall to zero, so flooring the offenders would turn a clean
 		// suite into a red gate. The number of test files only grows.
-		expect(testFilesScanned(REPO_ROOT)).toBeGreaterThan(400);
+		// The floor is the census's own constant, the one the bank's verdict reads too.
+		expect(testFilesScanned(REPO_ROOT)).toBeGreaterThan(CORPUS_FLOOR);
 		// NO floor on the offender set. `scanned.size > 20` was left here in an
 		// earlier pass and is the same backwards ratchet in miniature: the
 		// burn-down is meant to take the offenders to zero, and this gate would

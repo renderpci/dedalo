@@ -137,6 +137,15 @@ export function emptinessAssertions(repoRoot: string): VacuitySite[] {
 }
 
 /**
+ * The corpus floor {@link testFilesScanned} must CLEAR (strictly above), in ONE place:
+ * test/unit/gate_vacuity_tripwire.test.ts asserts it and scripts/gate_vacuity_budget.ts
+ * `--check --json` calls a walk at or under it a regression (a blind census would look
+ * like the best burn-down ever). Two literals would drift apart and let one door accept
+ * what the other refuses.
+ */
+export const CORPUS_FLOOR = 400;
+
+/**
  * How many `*.test.ts` files the two censuses above walk.
  *
  * The anti-vacuity probe used to floor the number of OFFENDING files, which is

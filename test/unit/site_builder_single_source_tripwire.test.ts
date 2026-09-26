@@ -79,6 +79,7 @@ import {
 	BASELINE_PATH,
 	drift,
 	readBaseline,
+	SCANNED_FILE_FLOOR,
 } from '../../scripts/site_builder_single_source_baseline.ts';
 import {
 	instanceFingerprint as engineFingerprint,
@@ -167,7 +168,8 @@ describe('A — the second-census ratchet', () => {
 
 		test('the census really scans both deployables, and a floor on how much', () => {
 			const files = scannedFiles();
-			expect(files.length).toBeGreaterThan(60);
+			// The generator's own floor — the one the bank's verdict reads too.
+			expect(files.length).toBeGreaterThan(SCANNED_FILE_FLOOR);
 			expect(files.some((path) => path.startsWith('publication/site_builder/src/'))).toBe(true);
 			expect(files.some((path) => path.startsWith('tools/tool_sitebuilder/server/'))).toBe(true);
 			expect(files.some((path) => path.startsWith('src/core/site_builder/'))).toBe(true);

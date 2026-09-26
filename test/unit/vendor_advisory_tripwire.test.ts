@@ -33,7 +33,11 @@
  *      A tree that states no version anywhere (json-view) says so, in a reason a
  *      human wrote and this gate requires;
  *   4. `reviewed` is inside the row's own `review_window_days` — a HARD FAIL, which
- *      is the whole difference from the nudge it replaces;
+ *      is the whole difference from the nudge it replaces. This leg, and the
+ *      acceptance expiry in 5, read the CALENDAR: since 2026-09-26 the push gate
+ *      runs them only where time is the input (DEDALO_VENDOR_DATED_CHECKS, below —
+ *      scripts/ci/audit.ts on a lockfile/vendor change, and nightly.yml every day,
+ *      which warns 21 days before either window closes);
  *   5. the declared version is not inside any ledgered advisory range, unless the
  *      row carries an acceptance with a closed-set reason code, an unexpired date
  *      and at least one `verify` clause that the checker RE-PROVES against the
@@ -82,7 +86,11 @@
 import { describe, expect, test } from 'bun:test';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { classifyAdvisoryFeedStatus } from '../../scripts/ci/audit.ts';
+import {
+	auditRunDecision,
+	auditTriggerMatcher,
+	classifyAdvisoryFeedStatus,
+} from '../../scripts/ci/audit.ts';
 import {
 	ADVISORY_REASON_CODES,
 	checkVendorAdvisories,
@@ -94,10 +102,13 @@ import {
 	listVendorDirs,
 	parseVersion,
 	readManifest,
+	VENDOR_WINDOW_WARNING_DAYS,
 	type VendorAdvisoryBlock,
+	type VendorAdvisoryCheckOptions,
 	type VendorAdvisoryRecord,
 	type VendorManifest,
 	type VendorVersionEvidenceClause,
+	vendorWindowWarningsIn,
 	versionInRange,
 } from '../../scripts/vendor_verify.ts';
 
@@ -288,11 +299,216 @@ describe('vendor advisory tripwire — the declared version is the version the b
 	});
 });
 
+/**
+ * THE CALENDAR KEY (2026-09-26). `DEDALO_VENDOR_DATED_CHECKS=0` drops the two
+ * wall-clock legs (a lapsed review window, an expired acceptance) from the
+ * load-bearing assertion below — scripts/ci/hermetic.sh sets it, because on the push
+ * gate those legs turned the same sha red overnight. Unset (a developer's `bun test`,
+ * scripts/verify.ts) they run. Where they run in CI regardless of this key:
+ * scripts/ci/audit.ts calls the SAME checker with `dated: true` on the
+ * lockfile/vendor path of hermetic.sh and every night (.github/workflows/nightly.yml).
+ * ci_workflow_tripwire rule 12 holds that hermetic.sh sets the key and that THIS
+ * file reads it here.
+ */
+const DATED_CHECKS = process.env.DEDALO_VENDOR_DATED_CHECKS !== '0';
+
 describe('vendor advisory tripwire — the load-bearing assertion', () => {
-	test('no vendored version is inside a published advisory, and no review window has lapsed', () => {
+	test('no vendored version is inside a published advisory (tree-only legs — every run)', () => {
 		// THE assertion. It is deliberately one call: the same function scripts/ci/audit.ts
 		// runs, so a developer's `bun test` and CI cannot disagree about what is red.
-		expect(checkVendorAdvisories()).toEqual([]);
+		// `dated: false` is a pure function of the committed tree: same sha, same answer.
+		expect(checkVendorAdvisories(new Date(), { dated: false })).toEqual([]);
+	});
+
+	test.skipIf(!DATED_CHECKS)(
+		'no review window has lapsed and no acceptance has expired (the calendar legs — skipped under DEDALO_VENDOR_DATED_CHECKS=0)',
+		() => {
+			expect(checkVendorAdvisories()).toEqual([]);
+		},
+	);
+});
+
+describe('vendor advisory tripwire — the time split and the warning window', () => {
+	test('dated:false drops EXACTLY the two calendar legs, and nothing else', () => {
+		// A lapsed window: red with the calendar, silent without it.
+		const lapsed = checkSynthetic({ version: '6.2.108', reviewed: '2026-01-01' });
+		expect(lapsed.join('\n')).toContain('past its 90-day window');
+		expect(
+			checkSynthetic({ version: '6.2.108', reviewed: '2026-01-01' }, { dated: false }),
+		).toEqual([]);
+		// An expired acceptance: same.
+		const expired = {
+			version: '5.7.284',
+			advisories: [
+				inRangeAdvisory({
+					reason_code: 'feature_absent',
+					reason: 'x'.repeat(50),
+					assessed: '2020-01-01',
+					expires: '2020-06-01',
+					evidence: 'audits/2026-08-26_deep/FINDINGS.md',
+					verify: [{ file: 'vendor/vendor_manifest.json', must_contain: 'tree_sha256' }],
+				}),
+			],
+		};
+		expect(checkSynthetic(expired).join('\n')).toContain('EXPIRED on 2020-06-01');
+		expect(checkSynthetic(expired, { dated: false })).toEqual([]);
+		// ...and every TREE-ONLY leg still fires with the calendar off — the split may not
+		// become a way past an in-range advisory, a failed clause or a missing date.
+		expect(
+			checkSynthetic(
+				{ version: '5.7.284', advisories: [inRangeAdvisory(null)] },
+				{ dated: false },
+			).join('\n'),
+		).toContain('is INSIDE published advisory');
+		expect(
+			checkSynthetic(
+				{
+					version: '5.7.284',
+					advisories: [
+						inRangeAdvisory({
+							reason_code: 'feature_absent',
+							reason: 'x'.repeat(50),
+							assessed: '2026-08-28',
+							expires: '2027-02-28',
+							evidence: 'audits/2026-08-26_deep/FINDINGS.md',
+							verify: [{ file: 'vendor/vendor_manifest.json', must_not_contain: 'tree_sha256' }],
+						}),
+					],
+				},
+				{ dated: false },
+			).join('\n'),
+		).toContain('FAILED');
+		expect(
+			checkSynthetic({ version: '6.2.108', reviewed: 'not-a-date' }, { dated: false }).join('\n'),
+		).toContain('not a parseable date');
+	});
+
+	test('the warning starts VENDOR_WINDOW_WARNING_DAYS (21) before a review window closes, and stops when it has closed', () => {
+		expect(VENDOR_WINDOW_WARNING_DAYS).toBe(21);
+		// TODAY is 2026-08-28; the synthetic row's window is 90 days.
+		const warnFor = (reviewed: string) =>
+			vendorWindowWarningsIn(syntheticManifest({ version: '6.2.108', reviewed }), TODAY);
+		// 69 days old → 21 left: the first warning day.
+		expect(warnFor('2026-06-20').join('\n')).toContain('closes in 21 days');
+		// 68 days old → 22 left: not yet.
+		expect(warnFor('2026-06-21')).toEqual([]);
+		// 90 days old → 0 left: the last day, still a warning and still NOT red.
+		expect(warnFor('2026-05-30').join('\n')).toContain('closes in 0 days');
+		expect(checkSynthetic({ version: '6.2.108', reviewed: '2026-05-30' })).toEqual([]);
+		// 91 days old → closed: a problem (red), never also a warning.
+		expect(warnFor('2026-05-29')).toEqual([]);
+		expect(checkSynthetic({ version: '6.2.108', reviewed: '2026-05-29' }).join('\n')).toContain(
+			'past its 90-day window',
+		);
+		// A lead time is a parameter the nightly dispatch can lower or raise.
+		expect(
+			vendorWindowWarningsIn(
+				syntheticManifest({ version: '6.2.108', reviewed: '2026-08-01' }),
+				TODAY,
+				70,
+			).join('\n'),
+		).toContain('closes in 63 days');
+		expect(() =>
+			vendorWindowWarningsIn(syntheticManifest({ version: '6.2.108' }), TODAY, -1),
+		).toThrow();
+	});
+
+	test('an acceptance that still bites warns before it expires; one that no longer bites does not', () => {
+		const accepted = (expires: string) =>
+			inRangeAdvisory({
+				reason_code: 'feature_absent',
+				reason: 'x'.repeat(50),
+				assessed: '2026-08-01',
+				expires,
+				evidence: 'audits/2026-08-26_deep/FINDINGS.md',
+				verify: [{ file: 'vendor/vendor_manifest.json', must_contain: 'tree_sha256' }],
+			});
+		const warn = (version: string, expires: string) =>
+			vendorWindowWarningsIn(
+				syntheticManifest({ version, advisories: [accepted(expires)] }),
+				TODAY,
+			).join('\n');
+		expect(warn('5.7.284', '2026-09-18')).toContain('expires in 21 days');
+		expect(warn('5.7.284', '2026-09-19')).toBe('');
+		expect(warn('5.7.284', '2026-08-28')).toContain('expires in 0 days');
+		expect(warn('5.7.284', '2026-08-27')).toBe(''); // expired → a problem, not a warning
+		// Out of range: the acceptance is a static problem already; no second voice.
+		expect(warn('6.2.108', '2026-09-01')).toBe('');
+	});
+
+	test('the committed manifest is parsed by the warning function without throwing', () => {
+		// Not an assertion that nothing is close (that is the calendar, and nightly's job):
+		// only that the real rows are within the function's grammar.
+		expect(Array.isArray(vendorWindowWarningsIn(readManifest(), new Date()))).toBe(true);
+	});
+});
+
+describe('vendor advisory tripwire — when the push gate runs the audit', () => {
+	const isTrigger = auditTriggerMatcher(['publication/server_api/v1/docu/ui/swagger-ui']);
+	const decide = (
+		changed: readonly string[] | null,
+		extra: Partial<{ force: boolean; given: boolean }> = {},
+	) =>
+		auditRunDecision({
+			force: extra.force ?? false,
+			changedSinceGiven: extra.given ?? true,
+			reference: 'abc123',
+			changed,
+			isTrigger,
+		});
+
+	test('every lockfile, every package.json, vendor/, a manifest root and the audit inputs trigger it', () => {
+		for (const path of [
+			'bun.lock',
+			'package.json',
+			'publication/site_builder/bun.lock',
+			'publication/site_builder/templates/basic/package.json',
+			'publication/server_api/v2/package.json',
+			'vendor/vendor_manifest.json',
+			'vendor/pdfjs/web/viewer.mjs',
+			'publication/server_api/v1/docu/ui/swagger-ui/swagger-ui-bundle.js',
+			'engineering/dependency_audit_baseline.json',
+			'scripts/ci/audit.ts',
+			'scripts/vendor_verify.ts',
+			'scripts/lib/reason_validator.ts',
+			'.bun-version',
+		]) {
+			expect(isTrigger(path), path).toBe(true);
+		}
+		for (const path of [
+			'src/core/section/read.ts',
+			'client/dedalo/core/component_pdf/js/view_default_edit_pdf.js',
+			'vendorish/x.js',
+			'node_modules/foo/package.json',
+			'docs/package.json.md',
+		]) {
+			expect(isTrigger(path), path).toBe(false);
+		}
+	});
+
+	test('a push that touched none of its inputs SKIPS, and says where the time-based half runs', () => {
+		const skipped = decide(['src/core/section/read.ts', 'test/unit/x.test.ts']);
+		expect(skipped.run).toBe(false);
+		expect(skipped.why).toContain('abc123');
+		expect(skipped.why).toContain('nightly.yml');
+		expect(skipped.why).toContain('DEDALO_CI_FORCE_AUDIT=1');
+	});
+
+	test('a push that touched one RUNS, and names it', () => {
+		const ran = decide(['src/a.ts', 'publication/site_builder/bun.lock']);
+		expect(ran.run).toBe(true);
+		expect(ran.why).toContain('publication/site_builder/bun.lock');
+	});
+
+	test('FAIL-SAFE: an undiffable base RUNS — never read as an empty change set', () => {
+		expect(decide(null).run).toBe(true);
+		// ...while a genuinely empty diff is a skip (the base resolved, nothing changed).
+		expect(decide([]).run).toBe(false);
+	});
+
+	test('force and a bare invocation always run', () => {
+		expect(decide(['src/a.ts'], { force: true }).run).toBe(true);
+		expect(decide(['src/a.ts'], { given: false }).run).toBe(true);
 	});
 });
 
@@ -819,14 +1035,21 @@ function inRangeAdvisory(accepted: unknown): VendorAdvisoryRecord {
 	};
 }
 
-/** One synthetic pdfjs-shaped row, checked by the real checker. */
-function checkSynthetic(options: {
+type SyntheticRow = {
 	version: string;
 	humanVersion?: string;
 	reviewed?: string;
 	advisories?: VendorAdvisoryRecord[];
-}): string[] {
-	const manifest: VendorManifest = {
+};
+
+/** One synthetic pdfjs-shaped row, checked by the real checker. */
+function checkSynthetic(options: SyntheticRow, check: VendorAdvisoryCheckOptions = {}): string[] {
+	return checkVendorAdvisoriesIn(syntheticManifest(options), TODAY, check);
+}
+
+/** The synthetic manifest itself — shared by the checker and the warning-window controls. */
+function syntheticManifest(options: SyntheticRow): VendorManifest {
+	return {
 		note: 'synthetic',
 		libs: {
 			pdfjs: {
@@ -856,7 +1079,6 @@ function checkSynthetic(options: {
 			},
 		},
 	};
-	return checkVendorAdvisoriesIn(manifest, TODAY);
 }
 
 /**

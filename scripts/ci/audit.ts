@@ -99,7 +99,26 @@
  * no gate. `test/unit/ratchet_integrity_tripwire.test.ts` proves both on
  * constructed fixtures.
  *
+ * THE TIME SPLIT (2026-09-26). Three of this script's inputs change with the
+ * CALENDAR, not with a commit: the `bun audit` registry, the GitHub advisory feed,
+ * and the review windows / acceptance expiries in vendor/vendor_manifest.json. On
+ * the push gate they made the same sha green one day and red the next, and the red
+ * landed on whoever pushed next. So:
+ *   - scripts/ci/hermetic.sh passes `--changed-since <base>`, where the base covers
+ *     EVERY commit the run gates (hermetic.sh `audit_reference`: the push's `before`,
+ *     the PR's target tip — never HEAD^, which hides a non-tip lockfile bump; rule
+ *     18 of ci_workflow_tripwire). With no lockfile / package.json / vendored-tree /
+ *     audit-input change against it, the run prints `== audit: SKIPPED — …` and
+ *     exits 0 (`auditRunDecision`, pure and gated). An unresolvable base RUNS.
+ *   - .github/workflows/nightly.yml runs it `--force` every day, and turns a red —
+ *     or a WARNING — into its one `ci-nightly` issue (`--summary <file>`).
+ *   - WARNING: a window closing within `--warn-days` (default 21,
+ *     VENDOR_WINDOW_WARNING_DAYS) is printed and recorded, never red. Red is still
+ *     "already closed", and still hard.
+ * The DEC-12 ratchet itself (what is red, what --update refuses) is unchanged.
+ *
  * Usage: bun run scripts/ci/audit.ts [--update [--allow-regression --reason "<text>"]] [--require-network]
+ *                                    [--changed-since <ref>] [--force] [--summary <file>] [--warn-days <n>]
  *        --update            rewrites the baseline from the current audit (review the diff);
  *                            REFUSES to accept an advisory the baseline does not hold.
  *        --allow-regression  with --update: accept new advisories. Needs --reason.
@@ -111,16 +130,25 @@
  *        --baseline <path>   read (and on --update, write) the artifact at <path> instead of
  *                            the committed one. For the gate's subprocess probes over a
  *                            scratch copy; CI never passes it.
+ *        --changed-since <ref>  skip (exit 0, SKIPPED) unless an audit input changed since
+ *                            <ref>; an empty or undiffable <ref> RUNS. Ignored by --update.
+ *        --force             run regardless of --changed-since (also DEDALO_CI_FORCE_AUDIT=1,
+ *                            or GITHUB_EVENT_NAME=schedule).
+ *        --summary <file>    write the verdict as JSON (AuditSummary) on EVERY exit path.
+ *        --warn-days <n>     the warning lead time before a vendor window closes (default 21).
  */
 
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { Glob } from 'bun';
+import { auditTriggerMatcher, changedSince } from '../lib/audit_triggers.ts';
 import { readFlagValue, readReasonArg, thinReasonProblem } from '../lib/reason_validator.ts';
 import {
 	checkVendorAdvisories,
 	readManifest,
+	VENDOR_WINDOW_WARNING_DAYS,
 	type VendorAdvisoryBlock,
+	vendorWindowWarningsIn,
 	verifyVendorTrees,
 } from '../vendor_verify.ts';
 
@@ -380,7 +408,7 @@ export function updateDecision(
  * information about whether the audit RAN — only stdout does. Empty stdout with a
  * non-zero exit is the offline/transport case.
  */
-async function auditPackage(dir: string): Promise<AuditReport | 'unreachable'> {
+async function auditPackage(dir: string): Promise<AuditReport | 'unreachable' | 'not_json'> {
 	const proc = Bun.spawn(['bun', 'audit', '--json'], {
 		cwd: join(REPO_ROOT, dir),
 		stdout: 'pipe',
@@ -401,9 +429,9 @@ async function auditPackage(dir: string): Promise<AuditReport | 'unreachable'> {
 		return JSON.parse(trimmed) as AuditReport;
 	} catch {
 		// Parseable-looking output that is not JSON means the CLI contract moved under us.
-		// That is a RED: we no longer know whether anything was audited.
+		// That is a RED (the caller's): we no longer know whether anything was audited.
 		console.error(`   audit output in ${dir} is not JSON: ${trimmed.slice(0, 300)}`);
-		process.exit(1);
+		return 'not_json';
 	}
 }
 
@@ -572,19 +600,187 @@ async function discoverVendorAdvisories(
 	return outcome;
 }
 
+// The trigger set (AUDIT_CODE_ROOTS / auditCodeInputs / auditTriggerMatcher) lives in
+// scripts/lib/audit_triggers.ts — side-effect free, so its gate need not load this
+// script's PACKAGES glob. Re-exported for existing importers.
+export {
+	AUDIT_CODE_ROOTS,
+	type AuditCodeInputs,
+	auditCodeInputs,
+	auditTriggerMatcher,
+	type SourceReader,
+} from '../lib/audit_triggers.ts';
+
+/** Why the ratchet runs, or why it is skipped — one decision, one printed line. */
+export type AuditRunDecision = { run: true; why: string } | { run: false; why: string };
+
+/**
+ * WHETHER THIS RUN AUDITS (2026-09-26, the time-based split). Pure and exported,
+ * so the gate proves every branch on constructed inputs.
+ *
+ * WHY A PUSH MAY SKIP IT AT ALL. Everything this script measures is either a
+ * function of the lockfiles/vendored trees (which only a change to them moves) or
+ * a function of the CALENDAR and a third-party feed (which no commit moves). On a
+ * push that touched neither, the only thing a red here could report is "the world
+ * changed overnight" — a new upstream advisory, a review window that closed — and
+ * that red lands on whoever pushed next, for code they did not touch. That is the
+ * "CI is red on every push" failure: the gate does its job, on the wrong event.
+ * So the time-based half runs where time IS the input — the nightly workflow
+ * (.github/workflows/nightly.yml, forced, opening an issue) — and on the push gate
+ * only when the push changed what the audit reads.
+ *
+ * FAIL-SAFE IN THE ONLY DIRECTION THAT MATTERS: anything that prevents a
+ * confident "nothing relevant changed" RUNS the audit. An unresolvable reference
+ * (`changed === null` — shallow clone, no parent, fetch refused) is never read as
+ * an empty diff. A skip needs a positive, complete answer.
+ *
+ *   force            DEDALO_CI_FORCE_AUDIT=1, --force, or a `schedule` event: run.
+ *   no --changed-since given at all: run (a developer's bare invocation, nightly).
+ *   changed === null the base could not be diffed: run, and say so.
+ *   a trigger path in the diff: run, naming the first few.
+ *   otherwise: SKIPPED, naming the base it compared against.
+ */
+export function auditRunDecision(input: {
+	force: boolean;
+	changedSinceGiven: boolean;
+	reference: string;
+	changed: readonly string[] | null;
+	isTrigger: (path: string) => boolean;
+}): AuditRunDecision {
+	if (input.force)
+		return { run: true, why: 'forced (nightly / DEDALO_CI_FORCE_AUDIT=1 / --force)' };
+	if (!input.changedSinceGiven) return { run: true, why: 'no --changed-since: unconditional run' };
+	if (input.changed === null) {
+		return {
+			run: true,
+			why: `the change set against "${input.reference}" could not be computed — running rather than guessing`,
+		};
+	}
+	const hits = input.changed.filter(input.isTrigger);
+	if (hits.length > 0) {
+		const shown = hits.slice(0, 5).join(', ');
+		return {
+			run: true,
+			why: `lockfile/manifest/vendor/audit-input change since ${input.reference}: ${shown}${hits.length > 5 ? ` (+${hits.length - 5} more)` : ''}`,
+		};
+	}
+	return {
+		run: false,
+		why:
+			`no lockfile, package.json, vendored tree or audit input changed since ${input.reference} ` +
+			`(${input.changed.length} file${input.changed.length === 1 ? '' : 's'} compared). The advisory feeds ` +
+			'and the review windows are time-based inputs: they run NIGHTLY (.github/workflows/nightly.yml), ' +
+			'and on this gate whenever a push changes what they read. Force with DEDALO_CI_FORCE_AUDIT=1.',
+	};
+}
+
+/**
+ * The machine-readable verdict `--summary <file>` writes. The nightly workflow reads
+ * it to open, update or close its ONE `ci-nightly` issue, so everything a human
+ * would need from the log is in here as data: the problems (red), the warnings
+ * (a window closing within the lead time — never red) and the notes (degraded
+ * lookups, nudges, a skip's reason).
+ */
+export type AuditSummary = {
+	tool: 'scripts/ci/audit.ts';
+	verdict: 'green' | 'red' | 'skipped';
+	generated: string;
+	warn_days: number;
+	problems: string[];
+	warnings: string[];
+	notes: string[];
+};
+
 /**
  * The audit run. A FUNCTION, not top-level code: this module is imported for its
  * `PACKAGES` census, and an import that shells out to three networked `bun audit`
  * calls would make the tripwire that imports it slow, flaky and offline-dependent.
+ *
+ * EVERY EXIT GOES THROUGH `finish()`, so `--summary` is written on every path —
+ * a red that left no summary would make the nightly issue say "green" by omission.
  */
 async function main(): Promise<void> {
-	const update = process.argv.includes('--update');
+	const argv = process.argv;
+	const update = argv.includes('--update');
 	// A tier that CAN guarantee egress may demand the networked arm actually answered.
 	// The hermetic tier cannot, which is why this is opt-in rather than the default —
 	// see the header: the default must never red a build for a rate limit.
-	const requireNetwork = process.argv.includes('--require-network');
-	const baselinePath = readFlagValue(process.argv, '--baseline') ?? BASELINE_PATH;
+	const requireNetwork = argv.includes('--require-network');
+	const baselinePath = readFlagValue(argv, '--baseline') ?? BASELINE_PATH;
+	const summaryPath = readFlagValue(argv, '--summary');
+	const changedSinceRef = readFlagValue(argv, '--changed-since');
+	const changedSinceGiven = argv.some(
+		(arg) => arg === '--changed-since' || arg.startsWith('--changed-since='),
+	);
+	const warnDaysRaw = readFlagValue(argv, '--warn-days');
 	const runDate = new Date().toISOString().slice(0, 10);
+
+	const summary: AuditSummary = {
+		tool: 'scripts/ci/audit.ts',
+		verdict: 'green',
+		generated: new Date().toISOString(),
+		warn_days: VENDOR_WINDOW_WARNING_DAYS,
+		problems: [],
+		warnings: [],
+		notes: [],
+	};
+	const finish = async (code: 0 | 1, verdict?: AuditSummary['verdict']): Promise<never> => {
+		summary.verdict = verdict ?? (code === 0 ? 'green' : 'red');
+		if (summaryPath !== null && summaryPath !== '') {
+			await Bun.write(summaryPath, `${JSON.stringify(summary, null, '\t')}\n`);
+		}
+		process.exit(code);
+	};
+	/** Print a RED block to stderr AND record it, then leave red. */
+	const red = async (lines: string[]): Promise<never> => {
+		for (const line of lines) console.error(line);
+		summary.problems.push(lines.join('\n').trim());
+		return finish(1);
+	};
+
+	if (warnDaysRaw !== null) {
+		const parsed = Number(warnDaysRaw);
+		if (!/^\d+$/.test(warnDaysRaw) || !Number.isSafeInteger(parsed)) {
+			await red([
+				`== audit: RED — --warn-days must be a non-negative integer, got "${warnDaysRaw}".`,
+			]);
+		}
+		summary.warn_days = parsed;
+	}
+	if (changedSinceGiven && changedSinceRef === null) {
+		await red([
+			'== audit: RED — --changed-since needs a value (an empty "" means "unresolved: run").',
+		]);
+	}
+
+	// --- does this run audit at all? (the time-based split) -------------------
+	// Decided FIRST, before any read: a skipped run touches nothing, and a forced or
+	// unconditional one proceeds exactly as it always did. --update is a developer
+	// action on the baseline and is never skipped.
+	const force =
+		argv.includes('--force') ||
+		process.env.DEDALO_CI_FORCE_AUDIT === '1' ||
+		process.env.GITHUB_EVENT_NAME === 'schedule';
+	if (!update) {
+		const manifestRoots = Object.values(readManifest().libs)
+			.map((entry) => entry.root)
+			.filter((root): root is string => typeof root === 'string');
+		const decision = auditRunDecision({
+			force,
+			changedSinceGiven,
+			reference: changedSinceRef ?? '',
+			changed: changedSinceGiven ? changedSince(changedSinceRef ?? '') : [],
+			isTrigger: auditTriggerMatcher(manifestRoots),
+		});
+		if (!decision.run) {
+			// The marker line scripts/ci_local.ts and a log reader key on.
+			console.log(`== audit: SKIPPED — ${decision.why}`);
+			summary.notes.push(decision.why);
+			await finish(0, 'skipped');
+		}
+		console.log(`== audit: running — ${decision.why}`);
+		summary.notes.push(decision.why);
+	}
 
 	// The artifact is read FIRST, through the three-state reader, before any
 	// vendored-tree or network work: a missing or conflicted baseline is a
@@ -593,34 +789,31 @@ async function main(): Promise<void> {
 	// gate proves this outcome by subprocess, offline, on a scratch copy.
 	const previous = await readPreviousBaseline(baselinePath);
 	if (update && previous.kind === 'unparseable') {
-		const decision = updateDecision(previous, {}, process.argv, runDate);
-		console.error(decision.kind === 'refuse' ? decision.message : 'unreachable');
-		process.exit(1);
+		const decision = updateDecision(previous, {}, argv, runDate);
+		await red([decision.kind === 'refuse' ? decision.message : 'unreachable']);
 	}
 	if (!update && previous.kind !== 'present') {
-		console.error(
-			`== audit: RED — ${baselinePath} is ${previous.kind === 'absent' ? 'missing' : `not the artifact (${previous.error})`}.\n` +
+		await red([
+			`== audit: RED — ${baselinePath} is ${previous.kind === 'absent' ? 'missing' : `not the artifact (${(previous as { error: string }).error})`}.\n` +
 				'   The ratchet cannot run without its baseline. Restore the committed file (a conflict\n' +
 				'   marker is a merge left half-done, not an empty baseline).\n',
-		);
-		process.exit(1);
+		]);
 	}
 
 	// --- vendored trees: integrity (hard) then staleness (nudge) ---------------
 	// Deliberately before the network audit: integrity must hold offline too.
 	const vendorProblems = verifyVendorTrees();
 	if (vendorProblems.length > 0) {
-		console.error('== vendor: RED — committed third-party trees do not match the manifest:\n');
-		for (const problem of vendorProblems) console.error(`   ${problem}`);
-		console.error(
+		await red([
+			'== vendor: RED — committed third-party trees do not match the manifest:\n',
+			...vendorProblems.map((problem) => `   ${problem}`),
 			'\n   Investigate before regenerating: bun run scripts/vendor_verify.ts --write\n',
-		);
-		process.exit(1);
+		]);
 	}
 	const manifest = readManifest();
 	const vendorRows = Object.entries(manifest.libs);
 	console.log(`== vendor: ${vendorRows.length} committed trees, digests match the manifest`);
-	const today = Date.now();
+	const today = new Date();
 	for (const [id, entry] of vendorRows) {
 		// Age is still REPORTED here — the threshold lives in the manifest, per row,
 		// because a dead-upstream bundle (ckeditor) and an actively-released viewer
@@ -629,7 +822,7 @@ async function main(): Promise<void> {
 		const reviewedAt = Date.parse(entry.reviewed);
 		const days = Number.isNaN(reviewedAt)
 			? '??'
-			: String(Math.floor((today - reviewedAt) / 86_400_000));
+			: String(Math.floor((today.getTime() - reviewedAt) / 86_400_000));
 		const provenance =
 			entry.archive_sha256 === null ? 'no archive digest' : 'archive digest on file';
 		const window = entry.advisory?.review_window_days ?? '??';
@@ -639,15 +832,31 @@ async function main(): Promise<void> {
 	}
 
 	// The offline advisory + review-window arm. HARD, and before the network: an
-	// offline run must still be able to fail on a ledgered advisory.
-	const advisoryProblems = checkVendorAdvisories();
+	// offline run must still be able to fail on a ledgered advisory. DATED — this
+	// run is where the calendar is an input (see VendorAdvisoryCheckOptions).
+	const advisoryProblems = checkVendorAdvisories(today, { dated: true });
 	if (advisoryProblems.length > 0) {
-		console.error('\n== vendor: RED — advisory / review state of the committed trees:\n');
-		for (const problem of advisoryProblems) console.error(`   ${problem}`);
-		console.error('');
-		process.exit(1);
+		await red([
+			'\n== vendor: RED — advisory / review state of the committed trees:\n',
+			...advisoryProblems.map((problem) => `   ${problem}`),
+			'',
+		]);
 	}
-	console.log('   advisory ledger + review windows: OK\n');
+	console.log('   advisory ledger + review windows: OK');
+
+	// THE WARNING WINDOW: a review window or an acceptance that closes within
+	// `warn_days` is printed and recorded, NEVER red. Red stays "already closed"
+	// (the check above); this is the three weeks of notice before that day, which
+	// the nightly workflow turns into its issue.
+	const windowWarnings = vendorWindowWarningsIn(manifest, today, summary.warn_days);
+	if (windowWarnings.length > 0) {
+		console.log(
+			`\n== vendor: WARNING — ${windowWarnings.length} window${windowWarnings.length === 1 ? ' closes' : 's close'} within ${summary.warn_days} days (not a failure; red only once closed):`,
+		);
+		for (const warning of windowWarnings) console.log(`   ${warning}`);
+		summary.warnings.push(...windowWarnings);
+	}
+	console.log('');
 
 	// The networked discovery arm. Three outcomes, kept apart on purpose — see the
 	// header: a finding is a vulnerability, a rejection is our bug, a degraded lookup
@@ -655,27 +864,23 @@ async function main(): Promise<void> {
 	const discovery = await discoverVendorAdvisories(manifest.libs);
 
 	if (discovery.rejected.length > 0) {
-		console.error('\n== vendor advisories: RED — the advisory feed refused our request:\n');
-		for (const problem of discovery.rejected) console.error(`   ${problem}`);
-		console.error(
+		await red([
+			'\n== vendor advisories: RED — the advisory feed refused our request:\n',
+			...discovery.rejected.map((problem) => `   ${problem}`),
 			'\nThis is not a network state and not a vulnerability: it is a query this script got\n' +
 				'wrong, or a credential the API rejected. Fix the coordinate or the token.\n',
-		);
-		process.exit(1);
+		]);
 	}
 
 	if (discovery.findings.length > 0) {
-		console.error(
+		await red([
 			'\n== vendor advisories: RED — published advisories the manifest does not ledger:\n',
-		);
-		for (const problem of discovery.findings) console.error(`   ${problem}`);
-		console.error(
+			...discovery.findings.map((problem) => `   ${problem}`),
 			'\nAdd each one to the lib row in vendor/vendor_manifest.json (id, cve, severity,\n' +
 				'published, vulnerable_range, first_patched_version, summary) and then FIX it — bump\n' +
 				'with scripts/vendor_fetch.ts, or record an acceptance with a verify clause the gate\n' +
 				'can re-prove. Ledgering alone does not make it green.\n',
-		);
-		process.exit(1);
+		]);
 	}
 
 	if (discovery.degraded.length > 0) {
@@ -693,11 +898,11 @@ async function main(): Promise<void> {
 				'   Set GITHUB_TOKEN to raise the anonymous 60/hour-per-IP limit; pass\n' +
 				'   --require-network on a tier that must not tolerate this at all.',
 		);
+		summary.notes.push(...discovery.degraded.map((line) => `DEGRADED ${line}`));
 		if (requireNetwork) {
-			console.error(
+			await red([
 				'\n== vendor advisories: RED — --require-network was passed and the lookup was degraded.\n',
-			);
-			process.exit(1);
+			]);
 		}
 		console.log('');
 	}
@@ -714,11 +919,16 @@ async function main(): Promise<void> {
 	for (const dir of PACKAGES) {
 		console.log(`== audit: ${dir}`);
 		const report = await auditPackage(dir);
+		if (report === 'not_json') {
+			// Parseable-looking output that is not JSON means the CLI contract moved under
+			// us. That is a RED: we no longer know whether anything was audited.
+			await red([`== audit: RED — \`bun audit --json\` in ${dir} did not print JSON.`]);
+		}
 		if (report === 'unreachable') {
 			unreachable++;
 			continue;
 		}
-		current[dir] = flatten(dir, report).sort((a, b) =>
+		current[dir] = flatten(dir, report as AuditReport).sort((a, b) =>
 			`${a.package}${a.id}`.localeCompare(`${b.package}${b.id}`),
 		);
 	}
@@ -726,34 +936,38 @@ async function main(): Promise<void> {
 	if (unreachable === PACKAGES.length) {
 		console.log('== audit: SKIPPED — the advisory registry is unreachable from here (offline).');
 		console.log('   This is the only tolerated skip, and it is loud on purpose.');
-		process.exit(0);
+		if (requireNetwork) {
+			await red([
+				'== audit: RED — --require-network was passed and the advisory registry was unreachable.',
+			]);
+		}
+		summary.notes.push('bun audit: the advisory registry was unreachable (offline)');
+		await finish(0);
 	}
 	if (unreachable > 0) {
 		// A partial failure is NOT offline — it is one package that could not be audited while
 		// its neighbours could, which would silently narrow coverage.
-		console.error('== audit: RED — some packages audited and some did not. Not a network state.');
-		process.exit(1);
+		await red(['== audit: RED — some packages audited and some did not. Not a network state.']);
 	}
 
 	if (update) {
 		// The decision is `updateDecision` — pure, exported, proved by the gate on a
 		// swap, a conflicted file and a missing file. This block only carries it out.
-		const decision = updateDecision(previous, current, process.argv, runDate);
-		if (decision.kind === 'refuse') {
-			console.error(decision.message);
-			process.exit(1);
+		const decision = updateDecision(previous, current, argv, runDate);
+		if (decision.kind === 'refuse') await red([decision.message]);
+		else {
+			await Bun.write(baselinePath, `${JSON.stringify(decision.next, null, '\t')}\n`);
+			console.log(
+				`== audit: baseline REWRITTEN (${baselinePath}) — review the diff before committing.`,
+			);
+			await finish(0);
 		}
-		await Bun.write(baselinePath, `${JSON.stringify(decision.next, null, '\t')}\n`);
-		console.log(
-			`== audit: baseline REWRITTEN (${baselinePath}) — review the diff before committing.`,
-		);
-		process.exit(0);
 	}
 
 	// The artifact was read at the top of main through the three-state reader:
 	// a missing or conflicted baseline exited RED there, before the network.
 	const committed = previous;
-	if (committed.kind !== 'present') process.exit(1);
+	if (committed.kind !== 'present') return finish(1);
 	const baseline = committed.baseline;
 
 	// The artifact is checked, not trusted: an entry that reached the file with no
@@ -761,13 +975,12 @@ async function main(): Promise<void> {
 	// here, exactly where the generator cannot have run.
 	const entryProblems = acceptedEntryProblems(baseline);
 	if (entryProblems.length > 0) {
-		console.error('== audit: RED — accepted advisories without a valid reason in the baseline:\n');
-		for (const problem of entryProblems) console.error(`   ${problem}`);
-		console.error(
+		await red([
+			'== audit: RED — accepted advisories without a valid reason in the baseline:\n',
+			...entryProblems.map((problem) => `   ${problem}`),
 			'\n   Every accepted advisory records WHY it is accepted rather than fixed, in the entry\n' +
 				'   itself. Record it: bun run scripts/ci/audit.ts --update --reason "<text>"\n',
-		);
-		process.exit(1);
+		]);
 	}
 
 	const baselineKeys = new Set(acceptedByKey(baseline.accepted).keys());
@@ -780,28 +993,30 @@ async function main(): Promise<void> {
 	const gone = [...baselineKeys].filter((k) => !currentKeys.has(k));
 
 	for (const k of gone) {
-		console.log(`   nudge: baseline advisory no longer reported — ${k} (tighten the baseline)`);
+		const nudge = `baseline advisory no longer reported — ${k} (tighten the baseline)`;
+		console.log(`   nudge: ${nudge}`);
+		summary.notes.push(nudge);
 	}
 
 	if (added.length > 0) {
-		console.error('\n== audit: RED — advisories that the committed baseline does not accept:\n');
-		for (const [, e] of added) {
-			console.error(`   [${e.severity}] ${e.package} (${e.dir}) — ${e.title}`);
-			console.error(`      https://github.com/advisories (advisory id ${e.id})`);
-		}
-		console.error(
+		await red([
+			'\n== audit: RED — advisories that the committed baseline does not accept:\n',
+			...added.flatMap(([, e]) => [
+				`   [${e.severity}] ${e.package} (${e.dir}) — ${e.title}`,
+				`      https://github.com/advisories (advisory id ${e.id})`,
+			]),
 			'\nFix it (bun update / an override / drop the dependency), or accept it deliberately —\n' +
 				'the reason is validated and written INTO the baseline entry, where a gate reads it:\n' +
 				'   bun run scripts/ci/audit.ts --update --allow-regression --reason "<why it is accepted rather than fixed>"\n' +
 				'A plain --update REFUSES a new advisory. An accepted advisory is a decision, not a default.\n',
-		);
-		process.exit(1);
+		]);
 	}
 
 	const total = [...currentKeys.keys()].length;
 	console.log(
 		`== audit: GREEN — ${total} known advisories, 0 new (baseline ${baseline.generated})`,
 	);
+	await finish(0);
 }
 
 if (import.meta.main) await main();

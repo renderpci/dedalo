@@ -1,0 +1,120 @@
+# THE LOCAL CI RUNNER — the GitHub tiers, reproduced in the CI image, on this machine.
+#
+# Driven ONLY by `bun run ci:local -- --docker` (scripts/ci_local.ts), which sets the
+# interpolated variables below, gives every run its own compose project, and tears the
+# project down (`down -v`) when the tier ends. Not meant to be `docker compose up`'d by
+# hand: the runner services are one-shot (`compose run`), and the values ci_local
+# computes (the image, the checkout, the ref) have no sensible defaults.
+#
+# WHAT IS COPIED FROM THE WORKFLOWS, AND WHY EXACTLY.
+#
+#   postgres     .github/workflows/db.yml's service: the same image at the same
+#                DIGEST, the same three env keys, the same health command (polled
+#                faster: the cadence only decides when the tier starts). A tag here
+#                would let the local database drift from the one CI asserts against —
+#                the whole point of this file is that it cannot. The tag is written in
+#                front of the digest (`repo:tag@sha256:…`) only so Dependabot's
+#                docker-compose ecosystem (.github/dependabot.yml, directory /ci) can
+#                recognise and bump it; the digest is what is pulled. BUMP db.yml's two
+#                copies IN THE SAME CHANGE — Dependabot does not see workflow services.
+#
+#   runner       the hermetic job: NO database at all. hermetic.sh points DB_HOST at a
+#                deliberately closed port and several tripwires SKIP a leg on DB_READY,
+#                so a reachable Postgres would change what the tier measures. That is
+#                why this service has no depends_on and does not share postgres' network.
+#
+#   runner-db    the db and instance jobs. `network_mode: service:postgres` puts the
+#                runner in the service's network namespace, so 127.0.0.1:5432 IS the
+#                database — exactly what a hosted job sees through `ports: 5432:5432`,
+#                and exactly what scripts/ci/hosted_env.sh defaults DB_HOST to. Nothing
+#                is overridden to make the local run work; an override here would be a
+#                difference from CI that nobody wrote down.
+#
+# THE RUNNER'S USER. The container starts as root only long enough to create `runner`
+# (uid 1001, the GitHub-hosted runner's uid) and then drops to it for every tier command
+# (scripts/ci_local.ts, IN_CONTAINER_DRIVER). Root would silently pass the gates that
+# chmod a file away and assert the refusal, and would refuse to start mariadbd — a
+# difference in WHAT IS MEASURED, not in speed.
+#
+# THE CHECKOUT. The host checkout is mounted READ-ONLY at /src and the repository's
+# COMMON git dir at /src-git (a separate mount: from a linked worktree /src/.git is a
+# file naming a host path the container cannot see); neither is written. The tier
+# runs in a clone at /home/runner/work/dedalo/dedalo — the path actions/checkout uses,
+# so `../private` resolves where it does on a runner — sharing /src-git's object store
+# (`git clone --shared`: no copy of history, full history available, so the crap
+# ledger's HEAD^ and the update drills' `git clone` both work). ci_local passes the list
+# of working-tree changes in /ci-in; see IN_CONTAINER_DRIVER for how it becomes a commit.
+#
+# THE ONE PERSISTENT THING is the bun download cache (`dedalo-ci-bun-cache`, external,
+# so `down -v` keeps it). Every install is `--frozen-lockfile`, which verifies each
+# package against the lockfile's integrity hash, so a warm cache changes how long an
+# install takes and never what it installs. `docker volume rm dedalo-ci-bun-cache`
+# drops it.
+
+name: dedalo-ci
+
+x-github-env: &github-env
+  # What GitHub's hosted runner puts in every step's environment and the repo (or bun
+  # itself) reads: CI=true makes `bun test` refuse to write a new snapshot and fail a
+  # stray `.only`; GITHUB_EVENT_NAME / GITHUB_BASE_REF decide audit.ts's run decision
+  # and hermetic.sh's crap-ledger reference; GITHUB_ACTIONS turns on bun's annotations.
+  CI: 'true'
+  GITHUB_ACTIONS: 'true'
+  GITHUB_EVENT_NAME: ${DEDALO_CI_EVENT:-push}
+  GITHUB_REF: ${DEDALO_CI_GITHUB_REF:-refs/heads/master}
+  GITHUB_REF_NAME: ${DEDALO_CI_BRANCH:-master}
+  GITHUB_BASE_REF: ${DEDALO_CI_BASE_REF:-}
+  # A push's `before` (GitHub's event.before), resolved on the HOST by ci_local — the
+  # container's clone cannot know what the remote had. hermetic.sh's dependency audit
+  # diffs against it; empty or all zeros → the audit runs (see resolveAuditBase).
+  DEDALO_CI_AUDIT_BASE: ${DEDALO_CI_AUDIT_BASE:-}
+  GITHUB_WORKSPACE: /home/runner/work/dedalo/dedalo
+  RUNNER_OS: Linux
+  RUNNER_TEMP: /home/runner/work/_temp
+  DEDALO_CI_TIER_SCRIPT: ${DEDALO_CI_TIER_SCRIPT:?set by scripts/ci_local.ts}
+  DEDALO_CI_BRANCH: ${DEDALO_CI_BRANCH:-master}
+  DEDALO_CI_SHA: ${DEDALO_CI_SHA:?set by scripts/ci_local.ts}
+  DEDALO_CI_OVERLAY: ${DEDALO_CI_OVERLAY:-0}
+
+x-runner: &runner
+  image: ${DEDALO_CI_IMAGE_REF:-dedalo-ci:local}
+  user: '0:0'
+  environment: *github-env
+  volumes:
+    - ${DEDALO_CI_SRC:?set by scripts/ci_local.ts}:/src:ro
+    - ${DEDALO_CI_GIT:?set by scripts/ci_local.ts}:/src-git:ro
+    - ${DEDALO_CI_IN:?set by scripts/ci_local.ts}:/ci-in:ro
+    - bun-cache:/home/runner/.bun/install/cache
+  # Chromium's renderer uses /dev/shm; Docker's 64 MB default crashes tabs under load.
+  shm_size: 1g
+  entrypoint: ['bash', '/ci-in/driver.sh']
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a
+    profiles: ['db']
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'postgres']
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  runner:
+    <<: *runner
+
+  runner-db:
+    <<: *runner
+    profiles: ['db']
+    network_mode: service:postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  bun-cache:
+    name: dedalo-ci-bun-cache
+    external: true

@@ -46,6 +46,10 @@
  * the row's own window. `scripts/ci/audit.ts` adds the networked half: it asks the
  * GitHub advisory feed the same question and reds on anything the ledger does not
  * already carry, so the ledger cannot silently fall behind the world.
+ * The two CALENDAR legs (lapsed window, expired acceptance) are separable
+ * (`{ dated: false }`, 2026-09-26): the push gate runs the tree-only legs, the
+ * nightly + lockfile/vendor path runs all of them, and `vendorWindowWarningsIn`
+ * warns VENDOR_WINDOW_WARNING_DAYS (21) before either window closes.
  *
  * THE VERSION-BINDING AXIS (CLI-26 review, 2026-08-28). Both axes above ask their
  * question about the version the row DECLARES, and until this was added nothing
@@ -819,9 +823,118 @@ function verifyAcceptanceClauses(
  *
  * `today` is injectable so the gate can prove its own date arithmetic on constructed
  * inputs rather than waiting for a calendar.
+ *
+ * `options.dated` (default TRUE) — see VendorAdvisoryCheckOptions: `false` drops
+ * exactly the two WALL-CLOCK legs (a lapsed review window, an expired acceptance)
+ * and keeps every leg that is a pure function of the committed tree.
  */
-export function checkVendorAdvisories(today: Date = new Date()): string[] {
-	return checkVendorAdvisoriesIn(readManifest(), today);
+export function checkVendorAdvisories(
+	today: Date = new Date(),
+	options: VendorAdvisoryCheckOptions = {},
+): string[] {
+	return checkVendorAdvisoriesIn(readManifest(), today, options);
+}
+
+/**
+ * THE TIME SPLIT (2026-09-26). Two legs of this gate answer a question about the
+ * CALENDAR, not about the commit: "is `reviewed` older than the row's window?" and
+ * "has an acceptance passed its `expires`?". Every other leg — an in-range advisory
+ * with no acceptance, a verify clause that no longer holds, a drifted version pair,
+ * an unparseable date — is a pure function of the committed bytes and gives the
+ * same answer for the same sha on any day.
+ *
+ * On the push gate the two dated legs were the reds nobody's push caused: the same
+ * sha green on Monday, red on Tuesday, for a window that closed overnight. So they
+ * moved to where time IS the input — the nightly workflow and the lockfile/vendor
+ * path of scripts/ci/audit.ts (both call this with `dated: true`, the default) —
+ * and the push-gate run of test/unit/vendor_advisory_tripwire.test.ts passes
+ * `dated: false`. The window is not weakened: nightly still reds on the day it
+ * lapses, and `vendorWindowWarningsIn` below starts shouting 21 days before that.
+ */
+export interface VendorAdvisoryCheckOptions {
+	/** Include the wall-clock legs (lapsed review window, expired acceptance). Default true. */
+	dated?: boolean;
+}
+
+/**
+ * How many days BEFORE a window closes the nightly run starts warning. A warning is
+ * not a red: it is the three weeks in which re-reviewing a row is a planned task
+ * rather than the reason a build is red.
+ */
+export const VENDOR_WINDOW_WARNING_DAYS = 21;
+
+/**
+ * Rows whose review window, or an acceptance whose `expires`, closes within
+ * `leadDays` of `today` — and has NOT closed yet (a closed one is a problem from
+ * `checkVendorAdvisoriesIn`, never also a warning). Returns one line per window,
+ * EMPTY when nothing is close. Pure over the manifest it is given, so the gate proves
+ * the boundary days on constructed rows.
+ *
+ * An acceptance is only warned about while it still bites (its advisory is in range
+ * of the declared version): an out-of-range acceptance is already a static problem.
+ */
+export function vendorWindowWarningsIn(
+	manifest: VendorManifest,
+	today: Date,
+	leadDays: number = VENDOR_WINDOW_WARNING_DAYS,
+): string[] {
+	if (!Number.isInteger(leadDays) || leadDays < 0) {
+		throw new Error(
+			`vendorWindowWarningsIn: leadDays must be a non-negative integer, got ${leadDays}`,
+		);
+	}
+	const warnings: string[] = [];
+	for (const [id, entry] of Object.entries(manifest.libs)) {
+		const label = libRootRelative(id, entry);
+		const block = entry.advisory as VendorAdvisoryBlock | undefined;
+		if (block === undefined || block === null || typeof block !== 'object') continue;
+		if (Number.isInteger(block.review_window_days) && block.review_window_days >= 1) {
+			const age = daysBetween(entry.reviewed, today);
+			if (age !== null) {
+				const left = block.review_window_days - age;
+				if (left >= 0 && left <= leadDays) {
+					warnings.push(
+						`${label}: review window closes in ${left} day${left === 1 ? '' : 's'} ` +
+							`(reviewed ${entry.reviewed}, ${block.review_window_days}-day window). Re-check the upstream ` +
+							'release feed and the advisory feed, record anything new, then move `reviewed`.',
+					);
+				}
+			}
+		}
+		const keyed = typeof block.version === 'string';
+		for (const advisory of Array.isArray(block.advisories) ? block.advisories : []) {
+			const acceptance = advisory.accepted;
+			if (acceptance === null || acceptance === undefined) continue;
+			if (!/^\d{4}-\d{2}-\d{2}$/.test(acceptance.expires ?? '')) continue;
+			if (keyed) {
+				let inRange = false;
+				try {
+					inRange = versionInRange(block.version as string, advisory.vulnerable_range);
+				} catch {
+					continue; // an unparseable range is a static problem, reported there
+				}
+				if (!inRange) continue;
+			}
+			const past = daysBetween(acceptance.expires, today);
+			if (past === null) continue;
+			const left = -past;
+			if (left >= 0 && left <= leadDays) {
+				warnings.push(
+					`${label}: acceptance of ${advisory.id} expires in ${left} day${left === 1 ? '' : 's'} ` +
+						`(${acceptance.expires}). Re-assess it against the current bytes, or fix it.`,
+				);
+			}
+		}
+	}
+	return warnings;
+}
+
+/** `vendorWindowWarningsIn` over the committed manifest. */
+export function vendorWindowWarnings(
+	today: Date = new Date(),
+	leadDays: number = VENDOR_WINDOW_WARNING_DAYS,
+): string[] {
+	return vendorWindowWarningsIn(readManifest(), today, leadDays);
 }
 
 /**
@@ -833,7 +946,12 @@ export function checkVendorAdvisories(today: Date = new Date()): string[] {
  * `mock_isolation_tripwire` rightly distrusts) and without a second copy of the
  * rules that could drift from the one CI runs.
  */
-export function checkVendorAdvisoriesIn(manifest: VendorManifest, today: Date): string[] {
+export function checkVendorAdvisoriesIn(
+	manifest: VendorManifest,
+	today: Date,
+	options: VendorAdvisoryCheckOptions = {},
+): string[] {
+	const dated = options.dated !== false;
 	const problems: string[] = [];
 
 	for (const [id, entry] of Object.entries(manifest.libs)) {
@@ -882,7 +1000,7 @@ export function checkVendorAdvisoriesIn(manifest: VendorManifest, today: Date): 
 			const age = daysBetween(entry.reviewed, today);
 			if (age === null) {
 				problems.push(`${label}: reviewed "${entry.reviewed}" is not a parseable date`);
-			} else if (age > block.review_window_days) {
+			} else if (dated && age > block.review_window_days) {
 				problems.push(
 					`${label}: reviewed ${entry.reviewed} — ${age} days ago, past its ${block.review_window_days}-day window.\n` +
 						'      Dependabot cannot watch a vendored tree, so this date IS the watch. Re-check the\n' +
@@ -971,7 +1089,7 @@ export function checkVendorAdvisoriesIn(manifest: VendorManifest, today: Date): 
 			const daysPastExpiry = daysBetween(acceptance.expires ?? '', today);
 			if (!/^\d{4}-\d{2}-\d{2}$/.test(acceptance.expires ?? '') || daysPastExpiry === null) {
 				problems.push(`${label}: acceptance of ${advisory.id} has no ISO "expires" date`);
-			} else if (daysPastExpiry > 0) {
+			} else if (dated && daysPastExpiry > 0) {
 				problems.push(
 					`${label}: acceptance of ${advisory.id} EXPIRED on ${acceptance.expires}. Re-assess the advisory against the current bytes, or fix it.`,
 				);

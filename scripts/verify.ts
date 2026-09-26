@@ -280,6 +280,12 @@ const TRIPWIRES = [
 	'test/unit/ontology_property_census_tripwire.test.ts',
 	'test/unit/zip_encoder_census_tripwire.test.ts',
 	'test/unit/diffusion_scratch_tables_tripwire.test.ts',
+	'test/unit/baseline_registry_tripwire.test.ts',
+	'test/unit/baselines_bank_native.test.ts',
+	'test/unit/ci_local_native.test.ts',
+	'test/unit/pre_push_gate_native.test.ts',
+	'test/unit/update_channel_native.test.ts',
+	'test/unit/audit_trigger_closure_native.test.ts',
 ];
 
 // ---------------------------------------------------------------------------
