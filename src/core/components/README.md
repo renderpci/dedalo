@@ -56,7 +56,7 @@ bottom; the descriptor-facet steps are enforced by
    `defaultRelationType` (the PHP class-level `$default_relation_type`).
    The propagate/relation-data set derives automatically from the column.
 5. Non-relation searchable model? Declare `searchBuilder`
-   (`'string' | 'number' | 'date' | 'iri' | 'section_id'`) — without it,
+   (`'string' | 'number' | 'date' | 'iri' | 'section_id' | 'json'`) — without it,
    SQO searches on the model throw loudly in `search/conform.ts`.
 6. CSV-importable scalar model? Declare `importValueProperty: true`
    (PHP `$components_using_value_property`) — without it, bare cells import
@@ -122,14 +122,13 @@ bottom; the descriptor-facet steps are enforced by
 
 **Engine side (STILL SCATTERED — check each; this is the honest part):**
 
-10. `resolve/relation_list.ts` — its per-model value branches still read
-    hardcoded sets (rewire to `getFlatValueFamily` pending, owned by the
-    cache-lifecycle workstream); a new model may render `null` cells until
-    added.
+10. `resolve/relation_list.ts` dispatches on `getFlatValueFamily` — nothing
+    to edit there; a model whose `flatValue` family is wrong renders the
+    wrong cell, so step 7's facet is the one to get right.
 11. `resolve/section_elements_context.ts` `DEFAULT_EXCLUDE` — media/system
     models excluded from the simple-context panel (PHP parity list).
-12. `ai/rag/config.ts` `DEFAULT_EMBEDDABLE_MODELS` — opt the model in if its
-    values should embed.
+12. RAG embedding is AUTHORED per section (the section_map `rag.embed`
+    groups; the model allowlist was retired 2026-07-22) — nothing per model.
 13. A model whose PHP search is a dedicated pipeline (children/index/
     external/_tm twins) needs its builder ported under `search/` or
     `relations/` — `search: {status:'unported', reason}` keeps the throw

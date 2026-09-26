@@ -28,9 +28,10 @@
  *  1. master.json — the guaranteed-complete base (labels_tripwire);
  *  2. the INSTALL's default application lang (DEDALO_APPLICATION_LANGS_DEFAULT
  *     — the operator's choice, not the engine's);
- *  3. a declared LINGUISTIC alias (LANG_ALIAS, e.g. lg-vlca reads lg-cat —
- *     language proximity, preserving the aliasing PHP baked into its
- *     generated vlca file);
+ *  3. a declared LINGUISTIC alias (`translationLangOf`, driven by
+ *     DEDALO_LANG_EQUIVALENCES, e.g. lg-vlca reads lg-cat — language
+ *     proximity, preserving the aliasing PHP baked into its generated vlca
+ *     file);
  *  4. the requested lang's own catalog.
  *
  * A missing per-lang catalog is normal (the chain serves); a missing or

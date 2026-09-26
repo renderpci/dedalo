@@ -86,6 +86,7 @@ const TRIPWIRES = [
 	'test/unit/gate_vacuity_tripwire.test.ts',
 	'test/unit/batch_scope_tripwire.test.ts',
 	'test/unit/agent_alias_tripwire.test.ts',
+	'test/unit/agent_skills_tripwire.test.ts',
 	'test/unit/css_source_tripwire.test.ts',
 	'test/unit/engineering_currency_tripwire.test.ts',
 	'test/unit/comment_doc_path_tripwire.test.ts',

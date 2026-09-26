@@ -302,7 +302,7 @@ export interface ComponentModel {
 	 * Set explicitly `false` only on the CANONICAL non-sortable models; alias
 	 * stubs inherit their canonical target's value via getModelByTipo. The
 	 * per-TIPO exception (DEDALO_NOTES_TEXT_TIPO rsc329 → false) lives inline in
-	 * buildCore. Pinned by list_column_sortable_tripwire.
+	 * buildCore. Pinned by test/parity/list_column_sortable_differential.test.ts.
 	 */
 	readonly sortable?: boolean;
 	/**

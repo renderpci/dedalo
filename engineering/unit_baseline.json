@@ -171,6 +171,11 @@
 			"skipped": 0,
 			"assertions": 40
 		},
+		"test/unit/agent_skills_tripwire.test.ts": {
+			"tests": 13,
+			"skipped": 0,
+			"assertions": 31
+		},
 		"test/unit/agent_stream_protocol.test.ts": {
 			"tests": 10,
 			"skipped": 0,

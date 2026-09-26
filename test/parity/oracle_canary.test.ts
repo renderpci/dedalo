@@ -1,16 +1,16 @@
 /**
  * ORACLE-PRESENCE CANARY (S2-40 / DEC-14a — the green-suite trap).
  *
- * Without the live PHP oracle, ~83% of parity assertions used to vanish while
- * bun reported PASS with zero skips. The differential files are now gated with
- * describe.if(hasPhpCredentials()) so they report explicit SKIPS — and this
- * canary makes an oracle-less run IMPOSSIBLE to mistake for a verified one:
+ * Makes a run that verifies nothing IMPOSSIBLE to mistake for a verified one.
+ * Pre-cutover, ~83% of parity assertions vanished without the live PHP oracle
+ * while bun reported PASS; the PHP engine is decommissioned since 2026-07-11,
+ * so the oracle is now the FROZEN fixture store:
  *
- *  - default: FAILS loudly when the oracle is not configured or not reachable;
- *  - ORACLE_OPTIONAL=1: acknowledges the oracle is absent for this run and
- *    skips (the differentials still report as skipped, never as green);
- *  - ORACLE_REQUIRED=1 (CI mode for the parity job): overrides ORACLE_OPTIONAL
- *    — absent creds hard-fail the job.
+ *  - default (ORACLE_MODE=fixtures): FAILS unless the frozen store is present,
+ *    and names every parity file still holding blocks gated on
+ *    hasLivePhpOracle() — dead forever, verifying nothing;
+ *  - the non-fixtures legs (live creds / ORACLE_OPTIONAL / ORACLE_REQUIRED)
+ *    are historical: no live oracle exists to satisfy them.
  */
 
 import { describe, expect, test } from 'bun:test';

@@ -1,127 +1,86 @@
 ---
 name: dedalo-ts-testing
-description: How to test the Dédalo v7 TypeScript/Bun rewrite oracle-honestly — the two tiers (test/unit/ pure+DB, test/parity/ differential replaying the FROZEN 2026-07-11 fixture store — the live PHP oracle is decommissioned), the generic-`test`-TLD law (a test BUILDS its situation, never reads a specific install's numisdata/oh/tch/rsc records), the DEDICATED SUITE DATABASE and its `dedalo_test_marker` (every test-data writer refuses without it), the green-suite trap, the eleven tripwire tests that are the invariant-enforcement backbone, and scratch-write hygiene. Use when a test-data writer REFUSES ('no dedalo_test_marker row'), when building the suite DB with bun run test:db:setup, when writing or debugging any *.test.ts or *_differential.test.ts, when a test fails only in full-suite/parallel order, when oracle-gating with describe.if(hasPhpCredentials()) / test.if(...), running ORACLE_MODE=fixtures/record harvest (scripts/oracle_harvest.ts), asking "is this test actually asserting anything or silently green", adding or trusting a tripwire, chasing a mock.module leak across files ("mock.restore doesn't revert"), a wiped session store, or a deliberate TS↔PHP wire divergence (WC-001, entries:[]). Symbols: hasPhpCredentials (test/parity/php_client.ts:178), oracleMode/ORACLE_MODE (test/parity/oracle_fixtures.ts), oracle_canary.test.ts, DEDALO_SESSION_DB_PATH. Sibling: dedalo-parity-debugging for the differential probe/browser workflow. Authoritative: rewrite/LEDGER.md (tripwire index + measured state), engineering/ORACLE_HARVEST.md, engineering/wire_contract/.
+description: How to test the Dédalo v7 TS/Bun engine honestly — test/unit/ (pure, DB, TS-native *_native write-path gates, tripwires) and test/parity/ (read-path replay of the FROZEN 2026-07-11 fixture store). Use when writing or debugging any *.test.ts; when a test-data writer REFUSES ('no dedalo_test_marker row') or a media door refuses a root without '.dedalo_test_media'; when building the suite DB (bun run test:db:setup); when a gate must BUILD its situation on the generic `test` TLD (ensureSituation, zz* TLDs); when asking "is this test asserting anything or silently green" (gate_vacuity_tripwire, oracle_canary); when a test fails only in full-suite order (mock.module leak); for a wiped session store (DEDALO_SESSION_DB_PATH); for ORACLE_MODE questions; when adding or trusting a tripwire; or for a deliberate wire divergence (engineering/wire_contract/). Sibling: dedalo-parity-debugging for a red parity gate. Index: engineering/TRIPWIRES.md.
 ---
 
-# Dédalo v7 testing (TypeScript rewrite)
+# Dédalo v7 testing (TypeScript/Bun engine)
 
-The rewrite in `src/` is verified against the **live PHP server on the same Postgres** as the oracle. The one law of this suite: **a test that cannot fail proves nothing.** The 2026-07 foundation audit found the opposite everywhere — every invariant guarded only by docs/memory had been violated in practice; every TRIPWIRED boundary held. So: correctness lives in tests that go RED when the code is wrong, and oracle absence is LOUD, never a silent green.
+The PHP engine was decommissioned at the 2026-07-11 cutover; there is no live oracle. What verifies the engine now: **read-path parity** replaying a frozen fixture store, and **TS-native gates** that build their own situation and assert contracts. The one law of this suite: **a test that cannot fail proves nothing.** The 2026-07 foundation audit found every invariant guarded only by docs/memory violated in practice, every TRIPWIRED boundary held.
 
-Run: `bun test`. Current measured gate counts + subsystem homes live in **rewrite/LEDGER.md** — read that for "where are we", not this skill. This skill is how to write a test that earns its keep.
+Run: `bun test` (full run takes minutes) or `bun test test/unit/<file>` for a targeted gate. Measured baselines live in rewrite/LEDGER.md (gitignored, local-only) and the banked baselines under `engineering/` (`unit_baseline.json`, `parity_baseline.json`). This skill is how to write a test that earns its keep.
 
 ## Two tiers
 
-- **`test/unit/`** — pure logic + DB-touching units. No PHP. Includes the tripwires (below).
-- **`test/parity/`** — `*_differential.test.ts` gates that diff a TS response against the live PHP response. **This is the correctness bar.** The differential workflow itself — in-process probes, driving the real PHP client via Chrome DevTools, scratch twins — is the **`dedalo-parity-debugging`** skill; read it before writing a new differential.
+- **`test/unit/`** — pure logic, DB-touching units, the TS-native write-path gates (`*_native.test.ts`), and the tripwires. **New gates go here.**
+- **`test/parity/`** — `*_differential.test.ts` gates replaying the frozen PHP capture (read path only). No new differential can be harvested. When one reds, see **`dedalo-parity-debugging`**.
 
-## THE GREEN-SUITE TRAP (the audit's central testing finding)
+## THE GREEN-SUITE TRAP
 
-A differential test with no oracle to compare against passes **trivially**. On any machine without PHP creds, an ungated differential is a silent no-op that reads as green — false confidence, the exact failure mode the audit flagged (S2-40).
+Bun counts a test body that `return`s before asserting as a PASS. So:
 
-RULE: gate **every** oracle-touching test at collection time:
+- **Never early-`return` from a test body.** The honest idiom for a precondition you cannot meet is `test.skip` (or `test.if(cond)`) with the reason in the test NAME, so the runner says it out loud. `gate_vacuity_tripwire` counts silent returns against a shrink-only budget (`engineering/gate_vacuity_budget.json`); a new one is red.
+- **Never write an assertion that passes on an empty result.** `toEqual([])` over a census whose walk read nothing is green by construction — floor the walk (`census_derivation_tripwire`). A diff of `[]` vs `[]` is the trap wearing a costume.
+- **Do not gate a new test on `hasPhpCredentials()` / `hasLivePhpOracle()`.** The latter is false forever; the former only reports whether the fixture store is present. A native gate needs neither.
+- **The canary:** `test/parity/oracle_canary.test.ts` asserts the frozen store is present under `ORACLE_MODE=fixtures` (the default) and prints what the run does and does not verify, including any parity file still holding blocks gated on `hasLivePhpOracle()` (permanently unreachable — retire or twin them). Never gate the canary itself.
 
-```ts
-import { describe, test } from 'bun:test';
-import { hasPhpCredentials } from './php_client.ts'; // :178
-describe.if(hasPhpCredentials())('my differential', () => { /* … */ });
-// or per-case: test.if(hasPhpCredentials())('…', async () => { … });
-```
+## Frozen-fixture parity (DEC-14b)
 
-`hasPhpCredentials()` (`test/parity/php_client.ts:178`) is true when a live PHP server (base URL + dev creds) OR — under `ORACLE_MODE=fixtures` — the harvested golden store is available. When false, bun reports an explicit **SKIP** instead of a fake pass. 62 parity gates already use this pattern; copy it.
+`ORACLE_MODE` defaults to `fixtures` (`oracleMode()` in `test/parity/oracle_fixtures.ts`): read-path differentials run with no network and no credentials, replaying `test/parity/fixtures/oracle_harvest/` (one JSON per gate) matched by canonical request hash — **a miss THROWS**, it never falls through to green. A generic-`test`-TLD gate still finds its frozen interaction: `unmapRqo` maps the request back to install terms before hashing (WC-2026-08-19-test-tld-replay).
 
-**The canary:** `test/parity/oracle_canary.test.ts` is deliberately NOT gated — it exists to FAIL when the oracle is absent, so a credless full-suite run cannot look clean. It stands down only for `ORACLE_OPTIONAL=1` (dev acknowledges no oracle) and is forced back on by `ORACLE_REQUIRED=1` (the CI parity job). Never gate this file; never `git`-commit a run that silenced it by accident.
+- **A re-harvest is impossible** — the oracle is gone. `scripts/oracle_harvest.ts` and the `record` mode are history. **Any fixture change is a deliberate contract edit** and needs its `engineering/wire_contract/` entry the same day.
+- `FIXTURE_EXEMPT_GATES` is EMPTY: the live-only (write-path) differentials retired with the oracle. Their contracts live in `test/unit/*_native.test.ts` twins, mapped in `engineering/ORACLE_HARVEST.md` (DEC-14b punch list, § Generic-TLD replacement map) and derived into `engineering/twin_map.json` from each twin's `@twin-of` / `@twin-status` header directives (`scripts/twin_map.ts`).
+- **Corpus-bound by construction.** Every harvested gate carries `entity: monedaiberica`; on the suite DB the tier is mostly red from corpus absence (2026-08-18: 173 pass / 208 fail, 186 of the reds corpus absence). Do NOT restore the harvest-day snapshot to make them green — that tests one install, not the engine. Each corpus-bound gate is replaced by a generic-TLD twin, or re-expressed to replay under the `test` TLD.
 
-**Never write a differential that could pass on an empty/degenerate response.** Assert on real emitted structure; a diff of `[]` vs `[]` is the trap wearing a costume.
+## The generic `test` TLD law
 
-## Fixture mode (DEC-14b) — credless replay
+A test uses the generic `test` TLD and BUILDS its situation: structure through `src/core/test_data/situations/` (`situation({tld:'zz…', …})` → `ensureSituation` / `dropSituation`, written through the engine's own door `upsertDdOntologyNode`, torn down after), records created at runtime. Never `numisdata`/`oh`/`tch`/`rsc`/`ich`/`mdcat`… in a test, and never read whatever records the ambient DB holds. Ratchet: `generic_tld_tripwire` (shrink-only), which scans `test/**/*.test.ts`, the browser suite (`client/dedalo/test/client/js/`) and `src/core/test_data/`. The client suite binds the `test` TLD and the canonical `test3` playground; a write-heavy client suite takes its own test3 record (`SUITE_ISOLATION_RECORDS` in `src/core/test_data/manifest.ts`).
 
-`ORACLE_MODE=fixtures` runs read-path differentials with **no network, no credentials**, replaying the 76 harvested golden gates (449 interactions) from `test/parity/fixtures/oracle_harvest/` (one JSON per gate), matched by canonical request hash — a **miss THROWS loudly**, it never falls through to green. Re-harvest with `bun run scripts/oracle_harvest.ts` (sets `ORACLE_HARVEST_GATE`, one gate per process — bun fires no exit hooks, hence the append-log design; never set `ORACLE_MODE=record` by hand on the full suite). **Write-path gates are fixture-exempt** — they mutate a DB, so they SKIP under fixtures. Authoritative: **engineering/ORACLE_HARVEST.md** (`oracleMode()` in `test/parity/oracle_fixtures.ts`).
+## THE TEST DATABASE AND ITS MARKER
 
-**Corpus-bound = wrong shape (2026-08-19).** All 76 harvested gates carry `entity: monedaiberica`; on the vendored suite DB the tier measures 173 pass / 208 fail (186 = corpus absence). Do NOT restore the harvest DB to make them green — that tests an install, not the engine. LAW (AGENTS.md hard rules): a test uses the generic `test` TLD and BUILDS its situation (`src/core/test_data/` situations, `zz*` scratch TLDs, torn down after). Never `numisdata`/`oh`/`tch`/`rsc`/`ich`/`mdcat`… in a test. Ratchet: `generic_tld_tripwire` (shrink-only). It measures THREE trees (`SCAN_ROOTS`, widened 2026-08-22): `test/**/*.test.ts`, **`client/dedalo/test/client/js/**/*.js`** and **`src/core/test_data/**/*.ts`** — the browser suite and the test-data writers were added after `test_additional_text_area.js` was found binding the `dmm` install's "map of grapes" demo ontology (dmm480/507/506), propped up by a `src/core/test_data` fixture that PROVISIONED it so the binding would resolve; both were invisible to a `*.test.ts`-only census. **The client suite is under the law too**: it binds the generic `test` TLD and the canonical `test3` playground, and a write-heavy client suite takes its own test3 record (`SUITE_ISOLATION_RECORDS` in `src/core/test_data/manifest.ts`, bound by id in `client/dedalo/test/client/js/elements.js`). Replacement ledger: ORACLE_HARVEST.md "Generic-TLD replacement map".
+`bun run test:db:setup` builds the suite DB (`DEDALO_TEST_DATABASE`, else `<DB_NAME>_test`) from repo-vendored files: install seed → **marker** → generic `test` TLD ontology (`src/core/test_data/test_tld_ontology.json`, through the engine's doors) → hierarchies + tools. Definitions, not records. `bun test` preloads repoint the process at it automatically.
 
-## THE TEST DATABASE AND ITS MARKER (the law, 2026-08-19)
+**The marker IS the guarantee.** One row in `dedalo_test_marker` (`src/core/test_data/test_database_marker.ts`): `id=1` PK, the purpose sentence pinned by a CHECK, the database it names, build stamp + git rev + seed/ontology sha256. It cannot be created by accident, a marker naming another database REFUSES (a misrouted restore), and `scripts/test_db_setup.ts` is its only producer.
 
-`bun run test:db:setup` builds the suite DB (`DEDALO_TEST_DATABASE`, else `<DB_NAME>_test`) from repo-vendored files: install seed → **marker** → generic `test` TLD ontology (from `src/core/test_data/test_tld_ontology.json`, through the engine's doors) → numisdata test ontology → hierarchies + tools. Definitions, not records: the corpus is a situation a gate ensures/drops itself.
+Every test-data writer calls `await assertTestDatabase('<door>')` **before its first write** and refuses otherwise, with nothing written — e.g. `materializeTestTldOntology`, `ensureTestCorpus`/`dropTestCorpus`/`ensureMediaKit`, `ensureSituation`/`dropSituation`, `createScratchRecord`/`cleanScratchRecord`/`cleanScratchTipo`, `installAclIdentityFixture`/`removeAclIdentityFixture`, `ensureSuiteProjectsFixture`/`removeSuiteProjectsFixture`, `ensureSuiteLoginPassword`.
 
-**The marker IS the guarantee.** Step 2b writes one row into `dedalo_test_marker` (`src/core/test_data/test_database_marker.ts`): `id=1` PK, the purpose sentence pinned by a CHECK, the database it names, build stamp + git rev + seed/ontology sha256. It cannot be created by accident (that shape is a paragraph of deliberate typing), it cannot be *travelled* (a marker naming another database REFUSES — that is a misrouted restore), and it is written by that script and nothing else.
+- **A NEW writer must call it too** — `test_db_marker_tripwire` DERIVES the writer list from `src/core/test_data/**` + `test/helpers/**`, so forgetting is red; an exemption needs a written reason in its `EXEMPT_WRITERS` (today: the marker module itself, the two media-root helpers, and `seed.ts`, whose test3 writers the installer and the maintenance widget call on real databases).
+- **The one bypass** is the installer's `materializeTestTldOntology({allowAnyDatabase:true})` (`src/core/install/db_restore.ts`): a fresh install gets the `test` TLD ONTOLOGY, definitions only. Do not add a second.
+- **There is NO reserved `section_id` band.** Isolation is the dedicated database and its markers, never an id range. A fixture on an identity table (e.g. `src/core/test_data/projects_fixture.ts`) writes an EXPLICIT id it owns and sweeps; the counter still moves through it (`insertMatrixRecordWithExplicitId` raises it with GREATEST) — correct, not drift.
+- **The client run is inside the law.** `bun run test:client` starts its OWN server on the suite DB (`scripts/client_test_server.ts`), verifies any `--url` target over `/health` (an opaque fingerprint of the marker row), sets the suite DB's own login credential (`src/core/test_data/suite_login.ts`), and pins what two suites need: the diffusion domain (`SUITE_DIFFUSION_DOMAIN = 'test'` — a domain is matched BY TERM, so an install's name resolves to nothing here) and a second project for the `dd153` filter. Gate: `test/unit/client_situations_native.test.ts`. Browse the same setup by hand with `bun run test:client:server`.
+- Symptom → cause: `REFUSING to write test data into database '…'` = your process points at a database the suite did not build. Run `bun run test:db:setup`; never write the marker onto an install.
 
-Every test-data writer calls `await assertTestDatabase('<door>')` **before its first write** and refuses otherwise, with nothing written:
-`materializeTestTldOntology` · `ensureTestCorpus`/`dropTestCorpus`/`ensureMediaKit` · `ensureSituation`/`dropSituation` · `createScratchRecord`/`cleanScratchRecord`/`cleanScratchTipo` · `installAclIdentityFixture`/`removeAclIdentityFixture` · `seedTermChainIfAbsent`/`sweepTermChain`/`sweepSeedTermReferencerResidue` · `ensureSuiteProjectsFixture`/`removeSuiteProjectsFixture` · `ensureSuiteLoginPassword`.
+## THE TEST MEDIA ROOT AND ITS MARKER
 
-- **A NEW writer must call it too** — `test_db_marker_tripwire` derives the writer list from the sources (`src/core/test_data/**` + `test/helpers/**`, write-seam scan), so forgetting is red, and an exemption needs a written reason.
-- **The one bypass** is the installer (`src/core/install/db_restore.ts`, `materializeTestTldOntology({allowAnyDatabase:true})`): a fresh real install has no marker and must still get the `test` TLD ONTOLOGY (definitions, no records). Do not add a second.
-- **Named exemption** (one): `test_data/seed.ts` (test3 playground — an installer + maintenance-widget surface).
-- **The client run is inside the law too (2026-08-19).** `bun run test:client` writes through a LIVE SERVER, so its writes never pass this process's guard. It therefore **starts its own server on the suite DB** and stops it (`scripts/client_test_server.ts`): no dev server to start first, no `SERVER_TCP_PORT` to pass. The target is **verified over the wire** — `/health` answers `test_database`, an opaque sha256 of the marker row (dev-mode-only, never the DB name), and a server without it (an app database) or with a foreign one is refused before Chrome launches. `--url` still works and is checked the same way. The run also sets the suite DB's own login credential (`src/core/test_data/suite_login.ts` — the seed ships `root` passwordless), so `--auth cookie` is a real password-verified login and `--auth mint` stays an escape hatch.
-- **The client run PINS its situation too (2026-08-22).** Two browser suites cannot assert anything against a from-scratch suite DB, and both used to be green only because the run drove the developer's own server on the APPLICATION database. `test_diffusion` needs `tool_diffusion` to BE AVAILABLE for the section it renders, and availability is `haveSectionDiffusion` — a lookup in the map built from the CONFIGURED diffusion domain, which is matched BY TERM: the installation's name (`mht`) resolves to a truncated clone on the suite DB, so the map comes back EMPTY, no opener is drawn, and six DOM assertions fail without naming the cause. The run pins the repo-owned generic domain instead (`scripts/client_test_server.ts` `SUITE_DIFFUSION_DOMAIN = 'test'`, materialized from `src/core/test_data/test_tld_ontology.json`) and REFUSES to start when it does not reach the section. `test_component_filter` needs the projects datalist to offer MORE THAN ONE option (the seed ships exactly one project, already selected by the canonical record): `src/core/test_data/projects_fixture.ts` installs a second one pre-run and sweeps it after. Two rules the pair teaches: **an env value matched by term is only meaningful against one database's ontology** — pin it with the database, never inherit it; and **a fixture on a shared identity table writes an EXPLICIT id in the reserved `>= 900000` band, never a counter-allocated one**, because the counter raise survives the sweep and grows every run. Gate: `test/unit/client_situations_native.test.ts`.
-- Symptom → cause: `REFUSING to write test data into database '…'` means your process is pointed at a database the suite did not build. Run `bun run test:db:setup`; never "fix" it by writing the marker onto an install.
+The filesystem half. The suite's media land in `../private/test_media/<suite db name>/`, marked by a `.dedalo_test_media` file — `bun run test:db:setup` sweeps and rebuilds it, `bun test` creates it if missing; `test/helpers/test_media_root.ts` is the one derivation and refuses a root overlapping the installation's `MEDIA_PATH`.
 
-## THE TEST MEDIA ROOT AND ITS MARKER (the filesystem half, 2026-08-19)
+**One key does both halves**: `DEDALO_TEST_MEDIA_ROOT` repoints `config.media.rootPath` AND arms the refusal, so a run cannot be armed at the install's root nor repointed with the guard asleep. Armed, every door that resolves a media root (`requireMediaRoot` in `src/core/media/path.ts` and the rest, `src/core/media/test_media_root.ts`) refuses a root without the marker, names itself, and writes nothing.
 
-The database was not the only shared surface — `MEDIA_PATH` was. Media derivatives, staged uploads, publication markers and the corpus's media files used to land in the **installation's** media tree. They now land in the suite's own:
+- **A gate's OWN scratch root needs the declaration too** — `test/helpers/media_scratch_root.ts`: `markMediaRoot(dir)` · `scratchMediaRoot(prefix)` · `resetMediaRoot(dir)` (an `rmSync` takes the marker with it).
+- Never create the marker inside an installation's media tree. Gate: `test/unit/test_media_root_tripwire.test.ts`.
 
-```
-<repo>/../private/test_media/<suite db name>/        ← .dedalo_test_media
-```
+## The test corpus: what its values ARE
 
-`../private/` is already this checkout's non-served, non-repo state (`.env`, session store, `processes/`), and keying by the suite DB name keeps media and database ONE fixture (`files_info.file_path` rows name files in that tree). `bun run test:db:setup` **sweeps and rebuilds** it; `bun test` creates and marks it if missing (a fresh clone just works); `test/helpers/test_media_root.ts` is the ONE derivation, and it refuses a root that is, contains, or is contained by `MEDIA_PATH`.
+`src/core/test_data/test_corpus/` is DERIVED by `scripts/derive_test_corpus.ts` from the frozen harvest store; a gate calls `ensureTestCorpus(scope)` / `dropTestCorpus(scope)` itself (one owning file per scope — `corpus_scope_ownership_tripwire`).
 
-**ONE KEY DOES BOTH HALVES.** `DEDALO_TEST_MEDIA_ROOT` (catalog scope `test_seam`) *becomes* `config.media.rootPath` **and** *arms* the refusal. Neither half is settable alone, so a run cannot be armed at the install's root, nor repointed with the guard asleep. Three setters, one per tier: `test/preload/test_media.ts`, `scripts/test_db_setup.ts`, `scripts/client_test_server.ts` (which hands it to the server it spawns for the browser suite).
+- **Most values are LIST PROJECTIONS, not stored bytes** (each record declares `component_sources` and `reconstructed`). Never re-read a `list`-sourced component through the list pipeline and compare VALUES — you truncate twice. Compare values only on `reconstructed: false` rows. A component ABSENT from a reconstructed record is UNKNOWN, not empty.
+- **Inverse edges are materialized from the far end** (`inverse_edges[]`, `edge_only: true`); an unmappable one is REFUSED into `refused.json`, never approximated. If your gate's records are in `refused.json`, fix the derive, do not weaken the assertion.
 
-**Armed, every media-root RESOLVER demands the marker** and refuses without it, naming itself and stating that nothing was written (`src/core/media/test_media_root.ts`): `requireMediaRoot` (path.ts — the one root resolver behind every quality path, segment, subtitle, staging dir and `deleted/` move), `media_protection.mediaRoot()`, `media_index.markerStoreBase()`, `provisionMediaTree`, `checkDirectories`, `tool_import_dedalo_csv`, and `ensureMediaKit` (which asks unconditionally — it is a test-only door). Unset — every real installation — the guard is one property read and returns.
+## Scratch-write hygiene
 
-- **A gate's OWN scratch root needs the declaration too.** "It is under /tmp" is a claim about a path, which is the class of guarantee this replaces. Use `test/helpers/media_scratch_root.ts`: `markMediaRoot(dir)` · `scratchMediaRoot(prefix)` · `resetMediaRoot(dir)` (rm + re-declare — `rmSync(root, {recursive:true})` takes the marker with it).
-- Symptom → cause: `requireMediaRoot REFUSED: … carries no '.dedalo_test_media' marker` means a door was pointed at an undeclared directory. Declare the scratch root, or run `bun run test:db:setup`. **Never** create the marker inside an installation's media tree.
-- Gate: `test/unit/test_media_root_tripwire.test.ts` — the door inventory is DERIVED from a source scan of every `config.media.rootPath` reader, each door is proved to refuse an unmarked root *with the directory still empty afterwards*, and a marked root is proved to write.
+- Write only to the suite DB (the marker guarantees it) and only on surfaces the test built: a `zz*` situation, a scratch record, an explicit-id fixture. **Never assert against a mutable record you did not create**; clean up before AND after, and assert zero residue.
+- **Session store isolation (S1-18):** `bun test` preloads `test/preload/session_db.ts`, which points `DEDALO_SESSION_DB_PATH` at a throwaway store. `src/core/security/session_store.ts` reads it ONCE at module load (`sessionDbPath`), so the override must be set before that module is imported — which the preload guarantees. A test run once WIPED the live session store; the guard is `test/unit/session_store_reset_guard.test.ts`. Never hardcode a path that bypasses the override.
 
-## The test corpus: what its values ARE (2026-08-19)
+## Deliberate wire divergences — ledger, don't normalize
 
-`src/core/test_data/test_corpus/` is DERIVED by `scripts/derive_test_corpus.ts` from the frozen harvest store and provisioned by a gate that calls `ensureTestCorpus(scope)` / `dropTestCorpus(scope)` itself (never the preload). Two properties decide what you may assert on it:
+When TS intentionally differs from the frozen PHP shape, the gate transforms the fixture side — and that transform must be **recorded** in `engineering/wire_contract/`, one file per entry (rules: `engineering/WIRE_CONTRACT.md`; e.g. **WC-001**: empty component value is `entries: []`, PHP emitted `null`). A normalization with no ledger entry is a regression in disguise.
 
-- **Most values are LIST PROJECTIONS, not stored bytes.** The store mostly shows records through reads, and a list read slices by lang, resolves labels and truncates. Measured 2026-08-19 over 1 018 written (record, component) pairs: **16 raw · 170 edit · 832 list projections** (81.7 %). Each record declares `component_sources: {tipo: 'raw'|'edit'|'list'}` and `reconstructed: true/false`, and the deriver always keeps the richest source it saw for a pair (10 upgrades, 88 poorer sources rejected in the last run). **Rule: never re-read a `list`-sourced component through the list pipeline and compare VALUES** — you truncate twice. Compare identity/order/presence there, and compare values only on `reconstructed: false` rows (what `read_differential` does). A component ABSENT from a reconstructed record is UNKNOWN, not empty.
-- **Inverse edges are materialized from the far end.** A record is otherwise rebuilt from its own projections, so a locator that lives on A and points at B is invisible while walking B — and every index/inverse/children gate resolves 0 items. The deriver reads the computed inverse pages (`{type, section_tipo, section_id, from_component_top_tipo}`, PHP `parse_data`) and writes the locator onto the POINTING record, where the `matrix_*_relation_index_sync` trigger indexes it like a real save. Each one is listed as `inverse_edges[]` (`origin: 'inverse_edge'` + the gate/record/component that stated it) and a record that exists ONLY because of one is `edge_only: true`. An edge whose pointing record has no ontology clone, whose component does not store, or whose target is unmappable is REFUSED into `refused.json` (`inverse_edge_*`), never approximated. `relation_index_get_data_differential` is the worked example.
+## THE TRIPWIRE-TEST PATTERN
 
-`refused.json` is the punch list: if your gate's records are in there, its corpus is incomplete — fix the derive, do not weaken the assertion.
+Rule: **"tripwire or delete."** Every structural invariant has a gate in `test/unit/` that reddens the moment the rule is broken. The authoritative index is **`engineering/TRIPWIRES.md`** (machine-read: `scripts/verify.ts` `TRIPWIRES` must equal it — add a row to both in the same change). When you rely on a tripwire, **prove it honest**: plant a violation, watch the exact gate go red, revert. Most carry positive controls for exactly this.
 
-## Scratch-write hygiene (non-negotiable)
+## Bun gotcha — `mock.module` leaks across files
 
-The oracle shares the corpus Postgres — a careless write corrupts real records for both engines.
-
-- DB writes go **ONLY** to `matrix_test` / provisioned test TLDs (`test2`, …) / `dedalo_ts_test_*` tables. **Never mutate a real record.** Round-trip/save gates create a **scratch twin** and delete it (before AND after — see `dataframe_roundtrip_differential.test.ts`, `delete_differential.test.ts`).
-- **Session store isolation (S1-18):** `bun test` preloads `test/preload/session_db.ts` which points `DEDALO_SESSION_DB_PATH` (`src/core/security/session_store.ts:76`, re-read at call time) at a throwaway store. This exists because a test run once **WIPED the live session store**, logging everyone out. The guard is `test/unit/session_store_reset_guard.test.ts`. Do not read/write the live session DB from a test, and do not hardcode a path that bypasses the override.
-
-## Deliberate TS↔PHP divergences — ledger, don't normalize
-
-When TS intentionally differs from PHP (a PHP live defect, or a chosen wire improvement), the gate normalizes the oracle side to match — but that normalization must be **justified and recorded**, never a silent smoothing-over that hides a real regression. Record it in **engineering/wire_contract/**, one file per entry (e.g. **WC-001**: empty component value is `entries: []`, unified across all models — PHP emitted `null`) and update the gate to transform the fixture. A normalization key with no ledger entry is a bug in disguise; the reviewer's question is always "is this divergence deliberate and ledgered, or are you papering over a diff?".
-
-## THE TRIPWIRE-TEST PATTERN — the enforcement backbone
-
-Rule: **"tripwire or delete."** A documented invariant with no test that FAILS on violation will rot — the audit proved it. Every structural invariant in this codebase has a tripwire in `test/unit/` that greps the tree (or asserts a boundary) and reddens the moment the rule is broken. When you add an invariant, add its tripwire. When you rely on one, **prove it honest**: plant a violation, watch the exact tripwire go red, revert.
-
-The eleven (index + invariants also in **rewrite/LEDGER.md** "Tripwire index"):
-
-| Tripwire (test/…) | Invariant it guards |
-|---|---|
-| `unit/sql_confinement_tripwire.test.ts` | Tiered SQL confinement (T1–T4, DEC-09) |
-| `unit/config_env_tripwire.test.ts` | No `process.env.` outside `src/config/` |
-| `unit/module_state_tripwire.test.ts` | No cross-request module state (lifecycle-justified allowlists only) |
-| `unit/diffusion_boundaries.test.ts` | diffusion→core direction; MariaDB confined to `targets/mariadb/` |
-| `unit/boundary_seam_tripwire.test.ts` | core→diffusion seam grows facade-only (S3-02) |
-| `unit/coex_tag_tripwire.test.ts` | COEX tags cite their DEC + have a COEXISTENCE.md row (DEC-19) |
-| `unit/descriptor_completeness_tripwire.test.ts` | Component descriptors declare required facets (S2-26) |
-| `unit/import_scc_tripwire.test.ts` | No static value-import cycle of size >1 (S2-20; allowlist empty) |
-| `unit/ws_a_tripwires.test.ts` | `json_codec` at jsonb binds; no inline locator compares |
-| `unit/client_serving.test.ts` | `client/` byte-identity to the PHP source |
-| `parity/oracle_canary.test.ts` | Oracle absence is LOUD, never a silent green |
-
-Why they exist (concrete breakage each prevents):
-- **config_env** — a stray `process.env` read outside `src/config/` (the only reader is `readEnv`, `src/config/env.ts:98`) means a setting silently ignores the typed catalog / `.env` and "isn't taking effect".
-- **module_state** — a module-level mutable `Map/Set/let` carrying request/principal/lang state bleeds one request's data into another under concurrency (cross-request lang bleed, wrong-user reads). Request state belongs in the 3 ALS stores (transaction, `request_lang.ts`, `security/request_context.ts`); request-derived caches come from `createOntologyCache`/`createDataCache` (`ontology/cache_factory.ts`), which are hub-registered by construction.
-- **ws_a** — a jsonb bind that skips `encodeForJsonb` (`json_codec.ts:102`) hits the Bun.sql `::text::jsonb` trap (a plain object/native array gets mis-encoded into the jsonb param), so PHP reads back a payload it parses differently.
-- **client_serving** — `client/` is byte-identical to PHP's; any drift means the copied vanilla-JS client renders against a contract the server no longer serves and silently crashes.
-
-## Bun gotcha — `mock.module` leaks across files (this once reddened 7 gates)
-
-`mock.module` is **process-GLOBAL**, and `mock.restore()` does **NOT** revert it. A mock installed in one test file stays installed for every file that runs after it. Pattern (see `test/unit/record_scope_gates.test.ts`): snapshot the REAL module exports at import time, then re-install them in an `afterEach`:
+`mock.module` is **process-GLOBAL**, and `mock.restore()` does **NOT** revert it. Snapshot the REAL module exports at import time and re-install them in `afterEach` (pattern: `test/unit/record_scope_gates.test.ts`):
 
 ```ts
 import * as record_scope from '../../src/core/security/record_scope.ts';
@@ -129,14 +88,16 @@ const REAL_RECORD_SCOPE = { ...record_scope };
 afterEach(() => { mock.module('../../src/core/security/record_scope.ts', () => REAL_RECORD_SCOPE); });
 ```
 
-A test that fails **only in full-suite / parallel order** but passes standalone is almost always this (a leaked module mock) or a scratch row/session-store collision — not a real regression. Check the leak before "fixing" the code. (One known-flaky exception is documented in project memory: the diffusion retry-queue test.)
+A test that fails **only in full-suite order** but passes standalone is almost always a leaked module mock or a scratch-row/session-store collision — not a real regression. Check the leak before "fixing" the code.
 
 ## Checklist for a new test
 
-1. Oracle-touching? → gate it `describe.if(hasPhpCredentials())`. Assert on real structure, not `[]`.
-2. Writes the DB? → `matrix_test` / `dedalo_ts_test_*` only; scratch twin; clean up both ends; never the live session store. Writing through a NEW helper of your own? It calls `assertTestDatabase()` first (marker law above).
-3. Diverges from PHP on purpose? → an `engineering/wire_contract/` entry + normalization key, not a silent smoothing.
-4. New invariant? → new tripwire, and prove it red-on-violation before trusting it.
-5. Uses `mock.module`? → snapshot + `afterEach` re-install, or it leaks.
+1. Native gate in `test/unit/`; builds its situation on the `test` TLD / a `zz*` situation; no install TLD, no ambient records.
+2. No early `return` in a test body — `test.skip`/`test.if` with the reason in the name. Assert on real structure, floor every census.
+3. Writes? → suite DB only, scratch surface, cleaned both ends, zero residue asserted. A NEW write helper calls `assertTestDatabase()` first; a media write uses a declared root.
+4. Replaces a retired differential? → `@twin-of` / `@twin-status` header directives, then `scripts/twin_map.ts`.
+5. Diverges from the frozen shape on purpose? → an `engineering/wire_contract/` entry the same day.
+6. New invariant? → new tripwire + index row, proved red-on-violation.
+7. Uses `mock.module`? → snapshot + `afterEach` re-install.
 
-Write-path primitives you may need to assert against: `withTransaction` (`db/postgres.ts:303`), `insertMatrixRecordWithCounter` (`db/matrix_write.ts:388`), `encodeForJsonb` (`db/json_codec.ts:102`), `compareLocators` (`concepts/locator.ts:133`), `dbTimestamp` (`db/db_timestamp.ts:34`).
+Write-path primitives you may assert against: `withTransaction` (`src/core/db/postgres.ts`), `insertMatrixRecordWithCounter` (`src/core/db/matrix_write.ts`), `encodeForJsonb` (`src/core/db/json_codec.ts`), `compareLocators` (`src/core/concepts/locator.ts`), `dbTimestamp` (`src/core/db/db_timestamp.ts`).

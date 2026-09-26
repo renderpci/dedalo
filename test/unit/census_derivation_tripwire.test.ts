@@ -713,6 +713,11 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		roots: [],
 		scope: 'NOT a corpus: `readdirSync` lists the suite media base for marked shard twins to sweep',
 	},
+	'test/helpers/agent_skills_corpus.ts': {
+		roots: [['.agents/skills'], ['.']],
+		scope:
+			'the project skills — every `.agents/skills/*/SKILL.md` (the real path, never the `.claude` alias), and the git index a skill may point at (`git ls-files` at the repo root: a clone is what a skill is read on)',
+	},
 	'test/helpers/docs_corpus.ts': {
 		roots: [['docs'], ['docs']],
 		scope: 'the manual — every docs/**/*.md page, the one lister a docs-censusing gate imports',

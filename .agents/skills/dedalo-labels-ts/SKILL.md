@@ -1,6 +1,6 @@
 ---
 name: dedalo-labels-ts
-description: The Dédalo v7 TypeScript/Bun UI-label subsystem — repo-owned label catalogs as the SINGLE source of truth for program strings (WC-033 + WC-034, 2026-07-16). Covers the two roles (src/core/labels/master.json = source of definitions; catalog/lg-<code>.json = per-lang translations), the getLabels serving/fallback chain (src/core/labels/catalog.ts), the labels_tripwire invariants, the scripts/labels_fill.ts translation backlog, the WC-034 rename/tool-local/removal map (test/parity/wc034_label_cleanup.json), and why dd_ontology model='label' rows are now INERT. Use when adding/renaming/removing a UI label key, translating a lang catalog, editing src/core/labels/**, debugging a labels_tripwire or environment_differential get_label failure, wiring a get_label.x reference in client/widget code, moving a string to a tool's register.json, or asking "why does my label serve undefined / why did my label change not show up". PHP oracle (dead): dd_ontology dd383 label children, rebuild_lang_files, client/dedalo/core/common/js/lang/lg-*.js (deleted).
+description: Dédalo v7 TS/Bun UI-label subsystem — repo-owned catalogs as the SINGLE source of truth for program strings (WC-033/WC-034, 2026-07-16). Covers the two roles (src/core/labels/master.json = source of definitions; catalog/lg-<code>.json = per-lang translations), the getLabels serving/fallback chain (src/core/labels/catalog.ts), the labels_tripwire invariants, the scripts/labels_fill.ts translation backlog, the WC-034 rename/tool-local/removal map (test/parity/wc034_label_cleanup.json), and why dd_ontology model='label' rows are now INERT. Use when adding/renaming/removing a UI label key, translating a lang catalog, editing src/core/labels/**, debugging a labels_tripwire or environment_differential get_label failure, wiring a get_label.x reference in client/widget code, moving a string to a tool's register.json, or asking "why does my label serve undefined / why did my label change not show up". Replaces (history): dd_ontology dd383 label children, rebuild_lang_files, the deleted client lang/lg-*.js files.
 ---
 
 # Dédalo v7 UI labels (TypeScript/Bun)
@@ -22,7 +22,7 @@ This skill POINTS — the authoritative content lives in `engineering/wire_contr
 
 1. `master.json` — the guaranteed-complete base;
 2. the INSTALL's default application lang (`config.lang.applicationLangsDefault` = `DEDALO_APPLICATION_LANGS_DEFAULT`, the operator's choice);
-3. a declared LINGUISTIC alias (`LANG_ALIAS`, e.g. `lg-vlca` reads `lg-cat`);
+3. a declared LINGUISTIC equivalence — `translationLangOf` (`src/core/resolve/lang_alias.ts`), driven by the `DEDALO_LANG_EQUIVALENCES` config key (e.g. `lg-vlca` reads `lg-cat`);
 4. the requested lang's own catalog.
 
 **Special case:** requesting `MASTER_SOURCE_LANG` applies ONLY its own override catalog — no other lang may shadow a master the requester already reads natively. A missing per-lang catalog is normal; a missing/malformed **master** throws loudly (broken deploy). Merged dictionaries are cached in the ontology cache hub (`createOntologyCache`) — immutable per deploy; a hub clear just re-reads the files.
@@ -53,10 +53,10 @@ NOT covered (documented, not silently narrowed): dynamic `get_label[variable]` a
 - `bun run scripts/labels_fill.ts --json` — full backlog as JSON (MT/agent input).
 Add translated keys to `catalog/lg-<code>.json` (sorted, tab-indented), review the diff like any code change. The recent `i18n(<lang>): add missing … translations` commits are exactly this.
 
-**Rename / remove / move a key** is a WC-034-class contract edit. The machine-readable map is **`test/parity/wc034_label_cleanup.json`** (28 renames, 21 tool-local migrations, 240 removals) — extend it if you do more, and reconcile `environment_differential` per WC-034. Rules:
-- **Rename → English key:** update every reference across `client/src/tools/install`; merging into an existing English key keeps the target's translations and adopts the source's for missing langs.
+**Rename / remove / move a key** is a WC-034-class contract edit. The machine-readable map is **`test/parity/wc034_label_cleanup.json`** (28 renames, 21 tool-local migrations, 238 removals) — extend it if you do more, and reconcile `environment_differential` per WC-034. Rules:
+- **Rename → English key:** update every reference across `client/`, `src/`, `tools/` and `install/`; merging into an existing English key keeps the target's translations and adopts the source's for missing langs.
 - **Remove:** only if proven unused — no static reference anywhere, not reachable from any dynamic `get_label[expr]` site, no DB hit (data-driven state/calculation widgets + `search_operators.ts` operator→key map read the live dictionary; degrade via `get_label[x] || x`).
-- **Tool-local migration:** a key used by exactly ONE tool and tool-specific in meaning moves into that tool's `register.json` `misc.dd1372` labels; the tool JS switches `get_label.x` → `self.get_tool_label('x')`, keeping its `|| 'literal'` fallback. Requires re-running the *Register tools* maintenance widget to land the DB `matrix_tools` rows. Genuinely generic vocabulary used by one tool (`error`, `print`, `upload`, …) STAYS global.
+- **Tool-local migration:** a key used by exactly ONE tool and tool-specific in meaning moves into that tool's `register.json` `misc.dd1372` labels; the tool JS switches `get_label.x` → `self.get_tool_label('x')`, keeping its `|| 'literal'` fallback. Lands in the DB `matrix_tools` rows only via the *Register tools* maintenance widget, which WRITES only when `TOOLS_ENABLE_REGISTRY_IMPORT=true` (`config.tools.enableRegistryImport`, default false → dry run). Genuinely generic vocabulary used by one tool (`error`, `print`, `upload`, …) STAYS global.
 
 ## The OTHER label store: tool-local labels (`get_tool_label`)
 
@@ -67,7 +67,10 @@ Add translated keys to `catalog/lg-<code>.json` (sorted, tab-indented), review t
 § "Tool labels". The parts that bite:
 
 - **`register.json` is a SEED.** Runtime reads `matrix_tools`; an edit does
-  nothing until the *Register tools* maintenance widget re-imports it.
+  nothing until the *Register tools* maintenance widget re-imports it — and that
+  widget only dry-runs unless `TOOLS_ENABLE_REGISTRY_IMPORT=true`
+  (`src/core/tools/register.ts`, `dryRun` defaults to
+  `!config.tools.enableRegistryImport`).
 - **SINGLE-LANG SERVING CONTRACT.** `buildToolElementContext`
   (`src/core/tools/registry.ts`) emits ONLY the requested application lang, and
   `[]` when the tool has no label in it; a key missing in that lang is omitted,
@@ -82,8 +85,8 @@ Add translated keys to `catalog/lg-<code>.json` (sorted, tab-indented), review t
   silently to the literal. Audit by scanning tool JS for `get_tool_label(` (mind
   the wrapper helpers: `const L = (n,f) => self.get_tool_label?.(n) || f`, and
   dynamic keys like `get_tool_label(quality.label)`) and diffing against the
-  register. Coverage as of 2026-07-27: 309 keys × the 10 configured app langs,
-  100%.
+  register. Per-lang coverage is uneven (only `lg-eng`/`lg-spa` are complete) —
+  measure it by counting `{lang, name, value}` entries per lang, don't assume.
 - **A tool that renders English regardless of lang** is usually not a missing
   translation but broken wiring — the tool reaching for the global `get_label`
   map or a method the instance does not have, instead of `self.get_tool_label`.
@@ -93,8 +96,8 @@ Add translated keys to `catalog/lg-<code>.json` (sorted, tab-indented), review t
 - **Label change not showing?** Labels ride CODE deploys, not ontology updates. A running server caches merged dictionaries — the cache lives in the ontology hub; an invalidation/clear re-reads the files. In production, files are immutable per deploy.
 - **`get_label` serves `undefined`?** Pre-migration behavior — no longer possible for a defined key (master is complete). If a key is undefined, it's either in the `UNCATALOGED_CLIENT_KEYS` ratchet (add the definition) or genuinely missing (tripwire would fail).
 - **Keys must be sorted** in both master and every catalog, or the tripwire fails.
-- **Two deliberate VALUE divergences from the PHP oracle dictionary** (WC-033 dup-name collision fixes): asserted present-and-changed in `environment_differential`, not byte-equal. Don't "fix" them back.
-- **One-time DB↔file reconcile** (dup-name rows, 22 mojibake-corrupted Italian values, baked-fallback removal) is recorded in `rewrite/LABELS_RECONCILE.md` (local-only).
+- **Two deliberate VALUE divergences from the frozen PHP-era dictionary** (WC-033 dup-name collision fixes): asserted present-and-changed in `environment_differential`, not byte-equal. Don't "fix" them back.
+- **One-time DB↔file reconcile** (dup-name rows, 22 mojibake-corrupted Italian values, baked-fallback removal) is recorded in the local-only rewrite/LABELS_RECONCILE.md (gitignored, not on a clone).
 
 ## Map
 
@@ -102,7 +105,8 @@ Add translated keys to `catalog/lg-<code>.json` (sorted, tab-indented), review t
 |---|---|
 | `src/core/labels/master.json` | Source of definitions — complete key set, tripwired complete. |
 | `src/core/labels/catalog/lg-<code>.json` | Per-lang translations (sparse); `lg-eng.json` = sparse override, starts `{}`. |
-| `src/core/labels/catalog.ts` | `getLabels` serving + fallback chain; `MASTER_SOURCE_LANG`, `LANG_ALIAS`, cache. |
+| `src/core/labels/catalog.ts` | `getLabels` serving + fallback chain; `MASTER_SOURCE_LANG`, cache. |
+| `src/core/resolve/lang_alias.ts` | `translationLangOf` — lang equivalences (`DEDALO_LANG_EQUIVALENCES`). |
 | `test/unit/labels_tripwire.test.ts` | The invariant gate. |
 | `scripts/labels_fill.ts` | Per-lang missing-key translation backlog. |
 | `test/parity/wc034_label_cleanup.json` | Machine-readable rename/tool-local/removal map. |
@@ -112,6 +116,5 @@ Add translated keys to `catalog/lg-<code>.json` (sorted, tab-indented), review t
 | `test/unit/tool_context_labels_lang.test.ts` | Gate for the single-lang serving contract. |
 | `engineering/TOOLS_SPEC.md` (§ Tool labels) | Authoritative tool-label spec. |
 | `engineering/wire_contract/` (WC-033, WC-034) | Authoritative contract + gate reconciliation. |
-| `rewrite/LABELS_RECONCILE.md` (local-only) | The one-time DB↔file merge record. |
 
 Foundation: **`dedalo-ts-foundation`** (tripwire law). Serving lands in `get_environment` — section/environment read path.

@@ -18,7 +18,7 @@ definition of done, is `engineering/MEDIA_PROTECTION.md`.
 One media tree, two audiences, no file duplication:
 
 * **Rule A — work system.** A logged-in user carries the fixed-name cookie
-  `dedalo_media_auth`; its daily-rotated value must exist as a marker in
+  `dedalo_media_auth`; its per-session value must exist as a marker in
   `<media>/.publication/auth/{value}`. Unrestricted access.
 * **Rule B — publication.** An anonymous user reads only **published** records, only inside the
   configured public quality folders. The web server stats
@@ -69,8 +69,8 @@ every unparseable file in a public quality folder.
 
 Other invariants the gates pin, each of which shipped as a real bug or a near miss:
 
-* **The cookie NAME is fixed; only the VALUE rotates.** That is what lets the generated rules
-  stay static and lets nginx survive the daily rotation with no reload — the rules never name a
+* **The cookie NAME is fixed; only the VALUE changes (one per session).** That is what lets the
+  generated rules stay static and lets nginx accept every new session with no reload — the rules never name a
   value, only the marker whose file name *is* the value.
 * **Apache rule B backreferences `$1_$2`, not `%1_%2`**, and its `RewriteRule` must stay
   immediately after its `RewriteCond`.

@@ -44,11 +44,9 @@
  *     based census silently drops those three; this pin is what proves the
  *     census is not one.
  *  5. ZERO-TIER (plan §3 P3 exit): the request chokepoints, security, tools
- *     dispatch, write path, DB layer and section_id grammar must reach 0. NOT
- *     yet enforced — `ZERO_TIER_ENFORCED` (scripts/lib/throw_census.ts) is
- *     `false` at P0 and the describe below only REPORTS the per-prefix totals.
- *     Flipping it to `true` is the P3 exit criterion; the enforced check is
- *     already implemented behind the flag.
+ *     dispatch, write path, DB layer and section_id grammar must reach 0.
+ *     ENFORCED — `ZERO_TIER_ENFORCED` (scripts/lib/throw_census.ts) is `true`
+ *     (the P3 exit criterion): an untyped throw under a zero-tier prefix is red.
  *
  * ── HOW TO LOWER A COUNT ─────────────────────────────────────────────────────
  * Replace the bare throw with the registered-code form (`src/core/errors/`,

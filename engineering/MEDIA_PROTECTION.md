@@ -34,7 +34,7 @@ has been put in the byte path and the design is broken.
 ## 2. The two rules
 
 - **Rule A — the work system.** A logged-in user carries the fixed-name cookie
-  `dedalo_media_auth`, whose daily-rotated 128-hex value must exist as a zero-byte marker
+  `dedalo_media_auth`, whose per-session 128-hex value must exist as a zero-byte marker
   at `<media>/.publication/auth/{value}`. Grants unrestricted media access.
 - **Rule B — publication.** An anonymous user may read only files of **published** records,
   and only inside the configured public quality folders. The web server stats
@@ -180,7 +180,8 @@ a prune, where the caller is definitionally holding the real store.
    `media_control` widget writes. `null`/absent = no override; `false` = explicitly OFF.
 2. `.env` `DEDALO_MEDIA_ACCESS_MODE` — `private` | `publication`.
 3. legacy `.env` `DEDALO_PROTECT_MEDIA_FILES=true` → `private`.
-4. else `false` (media world-readable).
+4. else `'publication'` — the fail-closed default (2026-08-24, `readMediaAccessMode`). Only an
+   explicit opt-out resolves to `false` (media world-readable).
 
 The override lives in `ts_state.json` and **not** in `.env` because `../private/.env` is
 append-only *and* parsed once at import — this Bun process lives for weeks, so a `.env`
@@ -245,7 +246,7 @@ Conversely, an `include` of a *missing* file makes nginx refuse to start. That i
 fail-closed and intended — but the tempting "fix" is to comment the include out, which is
 world-open. Generate the rules at boot so the file is always there.
 
-Note what does **not** need a reload: the daily cookie rotation.
+Note what does **not** need a reload: a new session's cookie value (§5).
 
 ## 8. Operational gotchas
 

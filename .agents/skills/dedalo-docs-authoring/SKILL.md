@@ -33,18 +33,25 @@ Two failure modes, both found live in `docs/core/components/component_dataframe.
 
 ### The rule
 
-> Never invent a tipo. Take examples from the LIVE ontology, and verify the
+> Never invent a tipo. Take examples from the real ontology, and verify the
 > model of every tipo you name before you publish it.
 
 Verification is one query — run it over every tipo the page mentions, in code
-font AND in JSON:
+font AND in JSON. Point `psql` at the app DB named in `../private/.env` (never a
+hardcoded role/DB) and run **read-only** queries only:
 
 ```bash
+# connection = the app DB in ../private/.env
+env_val() { grep "^$1=" ../private/.env | cut -d= -f2- | tr -d '"'; }
+export PGHOST="$(env_val DEDALO_HOSTNAME_CONN)" PGPORT="$(env_val DEDALO_DB_PORT_CONN)" \
+  PGUSER="$(env_val DEDALO_USERNAME_CONN)" PGDATABASE="$(env_val DEDALO_DATABASE_CONN)" \
+  PGPASSWORD="$(env_val DEDALO_PASSWORD_CONN)"
+
 # every tipo referenced in a doc page, checked against the ontology
 grep -o '`[a-z]\{2,12\}[0-9]\{1,5\}`' docs/<page>.md | tr -d '`' | sort -u > /tmp/t.txt
 grep -o '"[a-z]\{2,12\}[0-9]\{1,5\}"' docs/<page>.md | tr -d '"' | sort -u >> /tmp/t.txt
 sort -u /tmp/t.txt -o /tmp/t.txt
-psql -h /tmp -U render -d dedalo_mib_v7 -At -c "
+psql -At -c "
 WITH t(tipo) AS (VALUES $(sed "s/.*/('&')/" /tmp/t.txt | paste -sd, -))
 SELECT t.tipo||' -> '||coalesce(o.model,'*** NOT IN ONTOLOGY ***')
 FROM t LEFT JOIN dd_ontology o USING (tipo) ORDER BY 1;"
@@ -56,8 +63,7 @@ the **model must match what the sentence claims it is**.
 Pull the example itself from the source of truth rather than retyping it:
 
 ```bash
-psql -h /tmp -U render -d dedalo_mib_v7 -At -c \
-  "SELECT jsonb_pretty(properties) FROM dd_ontology WHERE tipo='numisdata1447';"
+psql -At -c "SELECT jsonb_pretty(properties) FROM dd_ontology WHERE tipo='numisdata1447';"
 ```
 
 If a config genuinely has no live instance, say so in the prose ("no live
@@ -66,9 +72,10 @@ honest gap beats a fictional example.
 
 ### Naming the install
 
-The corpus tipos differ per install. Anchor examples in the one this repo is
-developed against (`monedaiberica` / `dedalo_mib_v7`) and *say which* when it
-matters, so a reader on another install knows why `numisdata161` is absent.
+The corpus tipos differ per install. The install-independent choice is the
+generic `test` TLD the repo itself ships (`test3`, …) or core `dd`/`rsc`
+nodes. When an example needs a corpus node (`numisdata…`, `oh…`), *say which
+install* it comes from, so a reader on another install knows why it is absent.
 
 ## The other thing examples get wrong: storage shape
 
@@ -89,8 +96,8 @@ tipo**, not a flat array. Literal values live in `string` (also keyed by tipo).
 Check before writing a storage example:
 
 ```bash
-psql -h /tmp -U render -d dedalo_mib_v7 -At -c \
-  "SELECT jsonb_pretty(relation) FROM matrix WHERE section_tipo='oh1' AND section_id=368;"
+psql -At -c "SELECT section_id, jsonb_pretty(relation) FROM matrix
+  WHERE section_tipo='<section_tipo>' AND relation <> '{}'::jsonb LIMIT 1;"
 ```
 
 ## Document what is WIRED, and mark what is inert
@@ -107,7 +114,7 @@ Before documenting a property as having an effect:
 
 ```bash
 grep -rn "<property_name>" src/ client/     # who actually reads it?
-psql … -c "SELECT count(*) FROM dd_ontology WHERE properties ? '<property_name>';"
+psql -At -c "SELECT count(*) FROM dd_ontology WHERE properties ? '<property_name>';"
 ```
 
 Zero readers ⇒ document it as **INERT** with a warning admonition. Zero
@@ -133,7 +140,7 @@ Two traps worth naming, both hit in one session:
 
 - Writing "PHP" in an explanatory aside (e.g. citing `get_list_of_values`) fails
   the first gate. Describe the *behaviour* instead of citing the PHP symbol.
-- Linking `component_autocomplete.md` — it does not exist. `component_autocomplete`
+- Linking a component_autocomplete.md page — it does not exist. `component_autocomplete`
   is an alias of `component_portal`; check `docs/core/components/` before linking
   a component page.
 
@@ -142,13 +149,13 @@ installed in this environment — the tripwire is the gate that must pass.
 
 ## Admonitions
 
-Use the set already in use (`note` 372×, `warning` 257×, `info` 116×, `tip` 74×,
-`danger` 45×). Reserve `danger` for "this silently produces a broken config".
+Use the set already in use (`note`, `warning`, `info`, `tip`, `danger` — most to
+least frequent). Reserve `danger` for "this silently produces a broken config".
 
 ## Checklist before finishing a docs edit
 
 - [ ] Every tipo verified to EXIST **and** to have the model the prose claims.
-- [ ] Examples pulled from the live ontology / a live row, not retyped from memory.
+- [ ] Examples pulled from the ontology / a real row (read-only), not retyped from memory.
 - [ ] Storage shapes use `relation` (object keyed by tipo), `string` for literals.
 - [ ] Properties documented as effective have a real reader in `src/`; inert keys marked.
 - [ ] `bun test test/unit/docs_current_engine_tripwire.test.ts` green.

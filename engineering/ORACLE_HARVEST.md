@@ -2,7 +2,9 @@
 
 > **CUTOVER EXECUTED 2026-07-11** (owner-authorized; `rewrite/CUTOVER_RUNBOOK.md`).
 > The PHP oracle is DECOMMISSIONED. This store IS the read-path
-> baseline-of-record (final harvest: 76 gates / 449 interactions; credless
+> baseline-of-record (final harvest: 76 gates / 449 interactions — the store now
+> holds 71 gate files / 417 interactions after five corpus-bound fixtures were
+> retired to native twins; credless
 > proof 382 pass / 0 fail / 124 skip — MEASURED AGAINST THE LIVE `dedalo_mib_v7`
 > DB), pinned to the same-instant DB snapshot
 > `../private/backups/db/2026-07-11_102750.….custom.backup`. `ORACLE_MODE` now
@@ -100,6 +102,13 @@ the repo's normal `../private/.env` TS config (ENTITY, DB_*) are still
 needed**. Only the PHP HTTP oracle is replaced.
 
 ## Drift policy
+
+> **ADDENDUM 2026-09-26.** Pre-cutover text. Since the cutover no re-harvest
+> exists: a fixture-mode red with no engine change is corpus absence (the
+> suite DB does not hold the harvested install's records — the generic-`test`
+> TLD twins replace those gates) or a deliberate contract edit, which changes
+> the fixture WITH a same-day `engineering/wire_contract/` entry. The bullets
+> below that prescribe a re-harvest describe the retired live-oracle era.
 
 The fixtures freeze responses over the **live, mutable shared DB** (audit
 S2-43's fixture-rot channel). The TS side keeps reading that DB live, so:
