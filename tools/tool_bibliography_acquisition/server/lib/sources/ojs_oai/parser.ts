@@ -10,6 +10,7 @@ interface OaiRecord {
 	abstract: string | null;
 	publisher: string | null;
 	date: string | null;
+	types: string[];
 	sourceValues: string[];
 	landingPageUrl: string | null;
 }
@@ -58,6 +59,7 @@ function parseOaiRecords(xml: string): OaiRecord[] {
 		const abstract = pickPreferredText($, metadata.find('dc\\:description'));
 		const publisher = cleanText(metadata.find('dc\\:publisher').first().text());
 		const date = cleanText(metadata.find('dc\\:date').first().text());
+		const types = collectText($, metadata.find('dc\\:type'));
 		const sourceValues = collectText($, metadata.find('dc\\:source'));
 		const identifierValues = collectText($, metadata.find('dc\\:identifier'));
 		const landingPageUrl = identifierValues.find((v) => /^https?:\/\//i.test(v)) ?? null;
@@ -69,6 +71,7 @@ function parseOaiRecords(xml: string): OaiRecord[] {
 			abstract,
 			publisher,
 			date,
+			types,
 			sourceValues,
 			landingPageUrl,
 		});
@@ -116,6 +119,24 @@ function absoluteUrl(href: string | undefined, baseUrl: string): string | null {
 	}
 }
 
+/** Every distinct article id linked from a listing page (a journal homepage showing its current
+ * issue, an issue page, a search result, ...) - confirmed live: an OJS homepage links each article
+ * twice (its own view page and its PDF galley), so this is de-duplicated by id, in first-seen order. */
+export function extractArticleIds(html: string): string[] {
+	const $ = cheerio.load(html);
+	const seen = new Set<string>();
+	const ids: string[] = [];
+	$('a[href*="/article/view/"]').each((_, el) => {
+		const href = $(el).attr('href') ?? '';
+		const id = href.match(/\/article\/view\/(\d+)/)?.[1];
+		if (id && !seen.has(id)) {
+			seen.add(id);
+			ids.push(id);
+		}
+	});
+	return ids;
+}
+
 /** The landing page's PDF galley link (`<a class="obj_galley_link pdf">`) - one level short of the
  * real downloadable file, see extractDownloadUrl. */
 export function extractGalleyViewUrl(html: string, baseUrl: string): string | null {
@@ -139,6 +160,8 @@ export function parseOaiPublications(xml: string): ExtractedPublication[] {
 			authors: record.creators,
 			abstract: record.abstract,
 			publisher: record.publisher,
+			types: record.types,
+			issn: record.sourceValues.find((v) => isIssn(v)) ?? null,
 			seriesName: citation?.seriesName ?? null,
 			seriesNumber: citation?.seriesNumber ?? null,
 			pages: citation?.pages ?? null,

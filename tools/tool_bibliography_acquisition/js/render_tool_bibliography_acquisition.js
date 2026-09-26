@@ -287,12 +287,21 @@ const get_content_data = function(self) {
 
 	// Builds the series status line, publication checklist, and Confirm button
 	// from one successful preview response.
-		const build_review = function(series, series_status, publications) {
+		const build_review = function(series, series_status, publications, partial_error) {
 
 			const review_container = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'review_container'
 			})
+
+				if (partial_error) {
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'error_message',
+						text_content	: 'The journal stopped responding partway through (' + partial_error + ') — showing the ' + publications.length + ' publications fetched before that happened.',
+						parent			: review_container
+					})
+				}
 
 				const series_line_text = series && series.name
 					? 'Series: ' + series.name +
@@ -501,6 +510,14 @@ const get_content_data = function(self) {
 					})
 					const results = Array.isArray(data.results) ? data.results : []
 					results.forEach(function(result) {
+						if (result.skipped) {
+							ui.create_dom_element({
+								element_type	: 'div',
+								text_content	: 'rsc205 #' + result.section_id + ' — already imported, skipped',
+								parent			: summary
+							})
+							return
+						}
 						const series_bit = result.series_section_id
 							? ' — series rsc212 #' + result.series_section_id +
 								(result.series_created ? ' (created)' : ' (reused)')
@@ -591,7 +608,7 @@ const get_content_data = function(self) {
 					}
 					const data = response_data(response)
 					const publications = Array.isArray(data.publications) ? data.publications : []
-					result_container.appendChild(build_review(data.series || null, data.series_status || null, publications))
+					result_container.appendChild(build_review(data.series || null, data.series_status || null, publications, data.partial_error || null))
 				}).catch(function(error) {
 					preview_button.classList.remove('loading')
 					console.error('[tool_bibliography_acquisition] preview_html failed:', error)
@@ -605,7 +622,7 @@ const get_content_data = function(self) {
 				stream_id			: 'tool_bibliography_acquisition_preview',
 				on_success			: (data) => {
 					const publications = Array.isArray(data.publications) ? data.publications : []
-					result_container.appendChild(build_review(data.series || null, data.series_status || null, publications))
+					result_container.appendChild(build_review(data.series || null, data.series_status || null, publications, data.partial_error || null))
 				},
 				on_settle			: () => {
 					preview_button.classList.remove('loading')

@@ -5,6 +5,10 @@ import type { ExtractedSeries } from '../domain/series.ts';
 export interface MultiPageAcquisition {
 	seriesIdentifier: string;
 	pages: RawSource[];
+	/** Set when a page fetch failed part-way through (real, observed flakiness on some OAI-PMH
+	 * hosts near the tail of their record set) - pages gathered before the failure are still
+	 * returned rather than discarded. */
+	partialError?: string;
 }
 
 /** Called after each page is fetched, with the page just completed and the total known so far. */
