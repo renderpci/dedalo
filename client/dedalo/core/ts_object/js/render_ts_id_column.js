@@ -161,7 +161,7 @@ export const render_id_column = function(self) {
 							header			: (get_label.new || 'New') + ' ' + (get_label.record || 'record'),
 							note			: self.term_text?.textContent || null,
 							body			: get_label.sure || 'Are you sure?',
-							accept_class	: 'primary new'
+							accept_class	: 'brand new'
 						})
 						if (confirmed!==true) {
 							return

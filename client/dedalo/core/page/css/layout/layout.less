@@ -695,6 +695,8 @@
 			display: flex;
 			padding: 1rem;
 			background-color: var(--modal_header_bg);
+			// brand accent stripe (see --modal_header_accent); painted, no layout shift
+			background-image: linear-gradient(var(--modal_header_accent, transparent) 0 4px, transparent 4px);
 			color: var(--modal_header_color);
 			font-weight: normal;
 			z-index: 2;
@@ -910,6 +912,20 @@
 			padding: 1.5rem;
 			padding-top: 1.75rem;
 			min-height: 2.5rem;
+		}
+
+		// footer: Cancel (ghost) + accept share one row height and centre line;
+		// the accept icon must not make it taller than its sibling
+		.footer.content {
+			display: flex;
+			justify-content: flex-end;
+			align-items: stretch;
+			gap: 0.5rem;
+			// the bottom gap the buttons' margin-bottom gave, now on the row
+			padding-bottom: 1.25rem;
+			>button {
+				margin: 0;
+			}
 		}
 	}//end dd-modal.dd_confirm
 

@@ -217,6 +217,28 @@ button {
 			border-color: @color_danger_hover_border;
 		}
 	}
+	// brand: default accept of ui.confirm. Same muted green + white ink as the
+	// search Apply (the one solid action); orange stays with the dialog header
+	&.brand {
+		background-color: var(--search_apply_bg);
+		border-color: var(--search_apply_bg);
+		color: var(--search_apply_fg);
+		&:before {
+			background-color: var(--search_apply_fg) !important;
+		}
+		&:hover {
+			filter: brightness(1.1);
+		}
+	}
+	// ghost: no fill, grey outline (ui.confirm Cancel beside the solid accept)
+	&.ghost {
+		background-color: transparent;
+		border-color: var(--border_default);
+		color: var(--fg_default, @color_grey_1);
+		&:hover {
+			background-color: @color_grey_15;
+		}
+	}
 	&.warning {
 		background-color: @color_orange_dedalo;
 		border-color: @color_orange_border;
@@ -739,9 +761,8 @@ button.button_spinner {
 // nothing was primary and the row shouted over the data it sits above. Here the
 // resting button takes NO fill of its own — it is the page plus a hairline
 // around the hit area, in both themes — and the accent moves to the hover,
-// where it means "this one is about to act". `New` keeps the fill at rest: it
-// is the one primary action of the row (its `.warning.new` rule below/above
-// still applies, because this block deliberately does not match `.new`).
+// where it means "this one is about to act". `New` included: the row is
+// homogeneous (no button filled at rest).
 //
 // Scoped to the two toolbar containers (search strip + the other-buttons
 // block), NOT to `.warning` at large: the same class paints inspector, portal
@@ -760,17 +781,15 @@ button.button_spinner {
 .buttons_container .other_buttons_block button.warning,
 .buttons_container > button.warning.search,
 .buttons_container > button.warning.show_all {
-	&:not(.new) {
-		background-color: transparent;
-		border-color: var(--border_strong);
-		color: var(--fg_default);
-		--button-bg-color: var(--fg_muted);
+	background-color: transparent;
+	border-color: var(--border_strong);
+	color: var(--fg_default);
+	--button-bg-color: var(--fg_muted);
 
-		&:hover {
-			background-color: @color_orange_dedalo;
-			border-color: @color_orange_border;
-			color: var(--fg_on_brand);
-			--button-bg-color: var(--fg_on_brand);
-		}
+	&:hover {
+		background-color: @color_orange_dedalo;
+		border-color: @color_orange_border;
+		color: var(--fg_on_brand);
+		--button-bg-color: var(--fg_on_brand);
 	}
 }

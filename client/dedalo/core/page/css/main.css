@@ -681,11 +681,12 @@ template {
   --modal_overlay_bg_weak: rgba(0, 0, 0, 0.075);
   --modal_content_bg: var(--color_white);
   --modal_content_shadow: var(--shadow-4);
-  --modal_header_bg: var(--color_orange_dedalo);
+  --modal_header_bg: var(--color_grey_2);
+  --modal_header_accent: var(--color_orange_dedalo);
   --modal_header_shadow: var(--shadow-2);
-  --modal_header_color: var(--fg_on_brand);
+  --modal_header_color: #ffffff;
   --modal_btn_color: var(--color_white);
-  --modal_btn_hover_color: var(--color_black);
+  --modal_btn_hover_color: var(--color_orange_dedalo);
   --modal_mini_header_bg: var(--color_orange_dedalo);
   --modal_radius: var(--radius-lg);
   --color_primary_border: #2972bf;
@@ -2143,6 +2144,25 @@ button.danger:before {
 button.danger:hover {
   background-color: var(--color_danger_hover_bg);
   border-color: var(--color_danger_hover_border);
+}
+button.brand {
+  background-color: var(--search_apply_bg);
+  border-color: var(--search_apply_bg);
+  color: var(--search_apply_fg);
+}
+button.brand:before {
+  background-color: var(--search_apply_fg) !important;
+}
+button.brand:hover {
+  filter: brightness(1.1);
+}
+button.ghost {
+  background-color: transparent;
+  border-color: var(--border_default);
+  color: var(--fg_default, var(--color_grey_1));
+}
+button.ghost:hover {
+  background-color: var(--color_grey_15);
 }
 button.warning {
   background-color: var(--color_orange_dedalo);
@@ -4877,19 +4897,19 @@ button.button_spinner.success::before {
 :root[data-theme="dark"] .button.grey {
   background-color: var(--color_grey_6);
 }
-.buttons_container .search_buttons_container button.warning:not(.new),
-.buttons_container .other_buttons_block button.warning:not(.new),
-.buttons_container > button.warning.search:not(.new),
-.buttons_container > button.warning.show_all:not(.new) {
+.buttons_container .search_buttons_container button.warning,
+.buttons_container .other_buttons_block button.warning,
+.buttons_container > button.warning.search,
+.buttons_container > button.warning.show_all {
   background-color: transparent;
   border-color: var(--border_strong);
   color: var(--fg_default);
   --button-bg-color: var(--fg_muted);
 }
-.buttons_container .search_buttons_container button.warning:not(.new):hover,
-.buttons_container .other_buttons_block button.warning:not(.new):hover,
-.buttons_container > button.warning.search:not(.new):hover,
-.buttons_container > button.warning.show_all:not(.new):hover {
+.buttons_container .search_buttons_container button.warning:hover,
+.buttons_container .other_buttons_block button.warning:hover,
+.buttons_container > button.warning.search:hover,
+.buttons_container > button.warning.show_all:hover {
   background-color: var(--color_orange_dedalo);
   border-color: var(--color_orange_border);
   color: var(--fg_on_brand);
@@ -5443,6 +5463,7 @@ dd-modal .header {
   display: flex;
   padding: 1rem;
   background-color: var(--modal_header_bg);
+  background-image: linear-gradient(var(--modal_header_accent, transparent) 0 4px, transparent 4px);
   color: var(--modal_header_color);
   font-weight: normal;
   z-index: 2;
@@ -5607,6 +5628,16 @@ dd-modal.dd_confirm .body.content {
   padding: 1.5rem;
   padding-top: 1.75rem;
   min-height: 2.5rem;
+}
+dd-modal.dd_confirm .footer.content {
+  display: flex;
+  justify-content: flex-end;
+  align-items: stretch;
+  gap: 0.5rem;
+  padding-bottom: 1.25rem;
+}
+dd-modal.dd_confirm .footer.content > button {
+  margin: 0;
 }
 .disabled_component .content_data.component,
 .disabled_component .buttons_container,

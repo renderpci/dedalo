@@ -2960,7 +2960,7 @@ export const ui = {
 	*   div.body.content by attach_to_modal.
 	* @param {string} [options.accept_label] - Accept button caption. Default: get_label.continue.
 	* @param {string} [options.cancel_label] - Cancel button caption. Default: get_label.cancel.
-	* @param {string|null} [options.accept_class='primary'] - Class list for the accept button.
+	* @param {string|null} [options.accept_class='brand'] - Class list for the accept button.
 	*   Any button colour class plus any icon class, e.g. 'primary new', 'primary duplicate',
 	*   'danger remove', 'warning'. Cancel is always 'secondary'.
 	* @param {string} [options.size='small'] - Modal size variant passed through to attach_to_modal.
@@ -2971,7 +2971,7 @@ export const ui = {
 		// options
 			const accept_label	= options.accept_label || get_label.continue || 'Continue'
 			const cancel_label	= options.cancel_label || get_label.cancel || 'Cancel'
-			const accept_class	= options.accept_class ?? 'primary'
+			const accept_class	= options.accept_class ?? 'brand'
 			const note			= options.note ?? null
 			const size			= options.size || 'small'
 
@@ -3019,7 +3019,7 @@ export const ui = {
 
 			const button_cancel = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'secondary',
+				class_name		: 'ghost',
 				text_content	: cancel_label,
 				parent			: footer
 			})

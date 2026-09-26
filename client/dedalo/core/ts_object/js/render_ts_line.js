@@ -237,7 +237,7 @@ export const render_ts_line = function(self) {
 							header			: (get_label.duplicate || 'Duplicate') + ` ID: ${section_id}`,
 							note			: self.term_text?.textContent || null,
 							body			: get_label.sure || 'Are you sure?',
-							accept_class	: 'primary duplicate'
+							accept_class	: 'brand duplicate'
 						})
 						if (confirmed!==true) {
 							return false

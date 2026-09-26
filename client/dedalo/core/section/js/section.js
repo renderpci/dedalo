@@ -348,7 +348,7 @@ section.prototype.init = async function(options) {
 						header			: (get_label.new || 'New') + ' ' + (get_label.record || 'record'),
 						note			: label,
 						body			: get_label.sure || 'Are you sure?',
-						accept_class	: 'primary new'
+						accept_class	: 'brand new'
 					})
 					if (confirmed!==true) {
 						return false
@@ -409,7 +409,7 @@ section.prototype.init = async function(options) {
 						header			: (get_label.duplicate || 'Duplicate') + ` ID: ${section_id}`,
 						note			: label,
 						body			: get_label.sure || 'Are you sure?',
-						accept_class	: 'primary duplicate'
+						accept_class	: 'brand duplicate'
 					})
 					if (confirmed!==true) {
 						return false
