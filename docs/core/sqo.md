@@ -48,6 +48,29 @@ Search Query Object is send as part of Request Query Object to be processed by s
     B --JSON--> A
 ```
 
+### Client SQO sanitizing
+
+Every SQO received from the client (`rqo->sqo` in `dd_manager` and the tools `options->sqo` in `dd_tools_api`) is
+cleaned by `search::sanitize_client_sqo()` before it reaches the SQL builder. Several SQO properties are SQL
+fragments computed by the server and written as is into the query, so a client never provides them:
+
+- server computed leaf properties are removed (`q_parsed`, `operator`, `format`, `use_function`,
+  `component_path`, `join_id`...) and computed again by the components from `q`. The pass-through formats
+  `column` and `function` are kept and validated when the SQL is built.
+- `section_tipo`, path tipos, group operators and `lang` must have a valid shape, else the request is rejected with
+  `Error. Invalid sqo`. `section_tipo` `all` is accepted only with `"mode": "related"`.
+- legacy suffixed group operators of old stored searches (`$or_link`, `$and_...`) are renamed to `$or` / `$and`.
+- path `model` is resolved from the ontology. When the ontology model is not a component (a stale path, as a
+  stored search whose tipo is no longer installed or changed its model), the client model is kept only if it is an
+  existing `component_*` class.
+- order `direction` is normalized to `ASC` / `DESC` (optionally `NULLS FIRST|LAST`) and the order path `column` is
+  removed. The date order column (`component_date`) is rebuilt by the server for single-step paths in the main
+  section of a single-section search.
+- `parsed` is always reset to `false`, so the SQO is always conformed by the server.
+
+`limit` and `offset` are normalized for every SQO: `limit` accepts a non negative integer (`0` = no limit), `all`
+or `false`; any other value falls back to `10`. `offset` accepts a non negative integer or `false`.
+
 ## Parameters
 
 - **id** : `string` section_tipo and other params to define the unique id **optional** | ex : oh1
@@ -275,6 +298,10 @@ In previous example, the section_tipo is an array: `["es1", "fr1"]` with multipl
 #### all
 
 In some cases is not possible to define the section_tipo to be searcher because you want to get any result in any place that match with your query. For this situations is possible to define the section_tipo as `all`. The result will be; all sections founded with the query. Take account that the result will be not consistent, every section will have his own components(fields).
+
+!!! note "all is only for related searches"
+    `all` is resolved by the related search (`"mode": "related"`, as relation_list or tool_indexation). A client SQO
+    with `all` in any other mode is rejected (see [Client SQO sanitizing](#client-sqo-sanitizing)).
 
 Example with multiple sections, using `all` section: Search 'Benimamet' in the field Term [hierarchy25](https://dedalo.dev/ontology/hierarchy25) of all sections.
 
@@ -1778,6 +1805,10 @@ The result can be counted or used to be paginated directly in a simple way.
 Defines if the SQO has been parsed by the components and has his own operators.
 
 Definition: `bool` (true || false) state of the sqo, it indicates if the filter was parsed by the components to add operators to the q. It's used as internal property, but is possible parse it manually and indicate this state. Default false  **optional**
+
+!!! note
+    Only server side SQOs can be sent already parsed. The value received from the client is always reset to `false`
+    (see [Client SQO sanitizing](#client-sqo-sanitizing)).
 
 ## Text search indexes
 

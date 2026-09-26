@@ -211,12 +211,22 @@ class search {
 					if (in_array($item->component_tipo, self::$ar_direct_columns, true)) {
 						// direct column: no model
 					}else if ($is_tipo($item->component_tipo)) {
-						// model is used as class name: always from ontology
-						$model = RecordObj_dd::get_modelo_name_by_tipo($item->component_tipo, true);
-						if (empty($model)) {
-							unset($item->model); // not installed tipo: ignored later by conform
-						}else{
+						// model is used as class name: from ontology when it is a component
+						$model			= RecordObj_dd::get_modelo_name_by_tipo($item->component_tipo, true);
+						$client_model	= $item->model ?? null;
+						if (!empty($model) && strpos($model, 'component_')===0) {
 							$item->model = $model;
+						}else if (is_string($client_model)
+							&& preg_match('/^component_[a-z0-9_]+$/', $client_model)===1
+							&& file_exists(DEDALO_CORE_PATH . '/' . $client_model . '/class.' . $client_model . '.php')) {
+							// stale path (e.g. stored preset) whose tipo is not installed or is no
+							// longer a component (as 'value_type'): the client component model is
+							// kept, as before sanitizing. Only existing component classes are accepted
+							$item->model = $client_model;
+						}else if (!empty($model)) {
+							$item->model = $model; // non component models as 'section'
+						}else{
+							unset($item->model); // not installed tipo: ignored later by conform
 						}
 					}else{
 						$errors[] = 'invalid path component_tipo: ' . to_string($item->component_tipo);
@@ -243,6 +253,20 @@ class search {
 				return false;
 			}
 			if (!property_exists($node, 'path')) {
+				// legacy v5 suffixed group operators (as '$or_link' in stored search presets) are
+				// renamed to the plain operator ('$or'). Key order is kept
+				$ar_vars = get_object_vars($node);
+				if (!empty(preg_grep('/^\$(and|or)_\w+$/i', array_keys($ar_vars)))) {
+					foreach ($ar_vars as $op => $children) {
+						unset($node->{$op});
+					}
+					foreach ($ar_vars as $op => $children) {
+						$op = preg_replace_callback('/^\$(and|or)_\w+$/i', fn($m) => '$'.strtolower($m[1]), (string)$op);
+						$node->{$op} =(isset($node->{$op}) && is_array($node->{$op}) && is_array($children))
+							? array_merge($node->{$op}, $children)
+							: $children;
+					}
+				}
 				// group: every key must be a logical operator with an array of nodes
 				foreach (get_object_vars($node) as $op => $children) {
 					if (preg_match('/^\$?(and|or)$/i', (string)$op)!==1 || !is_array($children)) {
@@ -295,7 +319,8 @@ class search {
 			if (isset($sqo->section_tipo)) {
 				foreach ((array)$sqo->section_tipo as $item) {
 					$tipo = is_object($item) ? ($item->tipo ?? null) : $item;
-					if (!$is_tipo($tipo)) {
+					// 'all' is used by related searches only (relation_list, tool_indexation...)
+					if (!$is_tipo($tipo) && !($tipo==='all' && ($sqo->mode ?? null)==='related')) {
 						$errors[] = 'invalid section_tipo: ' . to_string($tipo);
 						return null;
 					}
@@ -326,6 +351,19 @@ class search {
 					unset($item->component_path);
 					if ($name==='order') {
 						$item->direction = self::safe_order_direction($item->direction ?? null);
+						// date order column (removed by sanitize_path) rebuilt from the tipos. Only for a
+						// single-step path in the main section of a single-section search: the column uses
+						// the main section alias (multi-step and union 'mix' fall back to the join path)
+						$end_path		= end($item->path);
+						$ar_sqo_tipos	= array_map(fn($el) => is_object($el) ? ($el->tipo ?? null) : $el, (array)($sqo->section_tipo ?? []));
+						if (count($item->path)===1
+							&& count($ar_sqo_tipos)===1
+							&& is_object($end_path)
+							&& ($end_path->model ?? null)==='component_date'
+							&& isset($end_path->section_tipo)
+							&& $end_path->section_tipo===$ar_sqo_tipos[0]) {
+							$end_path->column = component_date::get_order_column($end_path->component_tipo, $end_path->section_tipo);
+						}
 					}
 				}
 			}

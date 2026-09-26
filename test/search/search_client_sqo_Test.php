@@ -405,6 +405,107 @@ final class search_client_sqo_test extends TestCase {
 
 
 	/**
+	* TEST_SANITIZE_ACCEPTS_SECTION_TIPO_ALL
+	* Related searches (relation_list, tool_indexation...) send section_tipo ['all']
+	* @return void
+	*/
+	public function test_sanitize_accepts_section_tipo_all() : void {
+
+		$errors = [];
+		$sqo = search::sanitize_client_sqo(json_decode('{"mode":"related","section_tipo":["all"],"filter_by_locators":[{"section_tipo":"rsc197","section_id":"1"}]}'), $errors);
+		$this->assertNotNull($sqo, to_string($errors));
+		$this->assertSame(['all'], $sqo->section_tipo);
+
+		// plain search with 'all' is rejected (invalid SQL alias)
+		$sqo = search::sanitize_client_sqo(json_decode('{"section_tipo":["all"]}'), $errors);
+		$this->assertNull($sqo);
+	}//end test_sanitize_accepts_section_tipo_all
+
+
+
+	/**
+	* TEST_SANITIZE_RENAMES_LEGACY_GROUP_OPERATOR
+	* v5 stored search presets use suffixed group operators as '$or_link'
+	* @return void
+	*/
+	public function test_sanitize_renames_legacy_group_operator() : void {
+
+		$errors = [];
+		$sqo = search::sanitize_client_sqo(json_decode('{"section_tipo":["rsc197"],"filter":{"$or_link":[{"q":"a","path":[{"section_tipo":"rsc197","component_tipo":"rsc85"}]},{"$and":[{"q":"b","path":[{"section_tipo":"rsc197","component_tipo":"rsc86"}]}]}]}}'), $errors);
+		$this->assertNotNull($sqo, to_string($errors));
+		$this->assertSame(['$or'], array_keys(get_object_vars($sqo->filter)));
+		$this->assertCount(2, $sqo->filter->{'$or'});
+
+		// SQL must be valid with 2 operands (before: 'OR_LINK' operator)
+		$result = search::get_instance($sqo)->search();
+		$this->assertIsArray($result->ar_records);
+
+		// unknown operators are still rejected
+		$sqo = search::sanitize_client_sqo(json_decode('{"section_tipo":["rsc197"],"filter":{"$not":[]}}'), $errors);
+		$this->assertNull($sqo);
+	}//end test_sanitize_renames_legacy_group_operator
+
+
+
+	/**
+	* TEST_SANITIZE_STALE_PATH_MODEL
+	* Stale paths (stored presets) whose tipo is not installed keep the client component
+	* model as before sanitizing. Other client models are never used as class name
+	* @return void
+	*/
+	public function test_sanitize_stale_path_model() : void {
+
+		$errors = [];
+
+		// ontology component model wins over the client one
+		$sqo = search::sanitize_client_sqo(json_decode('{"section_tipo":["rsc197"],"filter":{"$and":[{"q":"a","path":[{"section_tipo":"rsc197","component_tipo":"rsc85","model":"component_text_area"}]}]}}'), $errors);
+		$this->assertSame(RecordObj_dd::get_modelo_name_by_tipo('rsc85', true), $sqo->filter->{'$and'}[0]->path[0]->model);
+
+		// not installed tipo: existing client component model is kept
+		$sqo = search::sanitize_client_sqo(json_decode('{"section_tipo":["rsc197"],"filter":{"$and":[{"q":"a","path":[{"section_tipo":"rsc197","component_tipo":"zz99999","model":"component_input_text"}]}]}}'), $errors);
+		$this->assertSame('component_input_text', $sqo->filter->{'$and'}[0]->path[0]->model);
+
+		// not installed tipo: non component or unknown client models are removed
+		foreach (['search','component_zz_unknown','component_input_text/../x'] as $client_model) {
+			$sqo = search::sanitize_client_sqo(json_decode('{"section_tipo":["rsc197"],"filter":{"$and":[{"q":"a","path":[{"section_tipo":"rsc197","component_tipo":"zz99999","model":'.json_encode($client_model).'}]}]}}'), $errors);
+			$this->assertObjectNotHasProperty('model', $sqo->filter->{'$and'}[0]->path[0], $client_model);
+		}
+	}//end test_sanitize_stale_path_model
+
+
+
+	/**
+	* TEST_SANITIZE_REBUILDS_DATE_ORDER_COLUMN
+	* Client order path column is removed, but the component_date one is rebuilt server side
+	* @return void
+	*/
+	public function test_sanitize_rebuilds_date_order_column() : void {
+
+		$errors = [];
+		$sqo = search::sanitize_client_sqo(json_decode('{"section_tipo":["rsc205"],"order":[{"direction":"DESC","path":[{"component_tipo":"rsc224","section_tipo":"rsc205","column":"1; DROP TABLE x"}]}]}'), $errors);
+		$this->assertNotNull($sqo, to_string($errors));
+		$this->assertSame(
+			component_date::get_order_column('rsc224', 'rsc205'),
+			$sqo->order[0]->path[0]->column
+		);
+
+		// multi-step path and multi-section: no column (join path), SQL must be valid
+		$ar_sqo = [
+			'{"section_tipo":["rsc170"],"limit":1,"order":[{"direction":"DESC","path":[{"component_tipo":"rsc29","section_tipo":"rsc170"},{"component_tipo":"rsc224","section_tipo":"rsc205"}]}]}',
+			'{"section_tipo":["rsc205","rsc197"],"limit":1,"order":[{"direction":"DESC","path":[{"component_tipo":"rsc224","section_tipo":"rsc205"}]}]}'
+		];
+		foreach ($ar_sqo as $json) {
+			$sqo = search::sanitize_client_sqo(json_decode($json), $errors);
+			$this->assertNotNull($sqo, to_string($errors));
+			$this->assertObjectNotHasProperty('column', end($sqo->order[0]->path));
+			$result = search::get_instance($sqo)->search();
+			$this->assertIsArray($result->ar_records, $json);
+		}
+	}//end test_sanitize_rebuilds_date_order_column
+
+
+
+	/**
 	* TEST_TOOLS_API_REJECTS_INVALID_CLIENT_SQO
 	* Tools search with the client options->sqo (tool_export...): sanitized as rqo->sqo
 	* @return void

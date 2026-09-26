@@ -1564,6 +1564,24 @@ class component_date extends component_common {
 
 
 	/**
+	* GET_ORDER_COLUMN
+	* Full SQL column definition used to order by the date start time.
+	* Server computed only: search::sanitize_client_sqo rebuilds it for client order paths
+	* @param string $component_tipo
+	* @param string $section_tipo
+	* @return string $column
+	*/
+	public static function get_order_column(string $component_tipo, string $section_tipo) : string {
+
+		// trim_section_tipo. Trim section name as search do to get safe name
+		$trim_section_tipo = search::trim_tipo($section_tipo);
+
+		return "jsonb_path_query_first({$trim_section_tipo}.datos, 'strict $.components.{$component_tipo}.dato.\"lg-nolan\"[0].start.time', silent => true)";
+	}//end get_order_column
+
+
+
+	/**
 	* GET_ORDER_PATH
 	* Calculate full path of current element to use in columns order path (context)
 	* @see https://habr.com/en/company/postgrespro/blog/500440/
@@ -1593,9 +1611,6 @@ class component_date extends component_common {
 				// WHERE rs167.section_tipo='rsc205'
 				// LIMIT 10;
 
-		// trim_section_tipo. Trim section name as search do to get safe name
-			$trim_section_tipo = search::trim_tipo($section_tipo);
-
 		// self path
 			$path = [
 				// self component path
@@ -1604,7 +1619,7 @@ class component_date extends component_common {
 					'model'				=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
 					'name'				=> RecordObj_dd::get_termino_by_tipo($component_tipo),
 					'section_tipo'		=> $section_tipo,
-					'column'			=> "jsonb_path_query_first({$trim_section_tipo}.datos, 'strict $.components.{$component_tipo}.dato.\"lg-nolan\"[0].start.time', silent => true)"
+					'column'			=> self::get_order_column($component_tipo, $section_tipo)
 				]
 			];
 
