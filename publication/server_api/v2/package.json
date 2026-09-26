@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "@scalar/api-reference": "^1.69.1",
+    "@scalar/api-reference": "^1.71.0",
     "swagger-ui-dist": "^5.33.0",
     "zod": "^4.6.5"
   },
