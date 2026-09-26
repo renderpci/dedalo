@@ -125,6 +125,8 @@ fi
 : "${DEDALO_UPLOAD_SERVICE_CHUNK_FILES:=5}"
 : "${DEDALO_IMAGE_EXTENSIONS_SUPPORTED:=jpg,jpeg,png,tif,tiff,bmp,psd,raw,heic}"
 : "${DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS:=avif}"
+# Held EQUAL to test/helpers/suite_posture.ts (the local `bun test` preload pins the same
+# value) by test/unit/media_export_base.test.ts — change both or neither.
 : "${DEDALO_MEDIA_EXPORT_BASE:=http://localhost:8080/dedalo/media}"
 
 # Postgres client. ubuntu-latest ships psql 16 and an OLDER CLIENT REFUSES a

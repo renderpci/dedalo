@@ -114,6 +114,22 @@ function withAlternates(spec: MediaTypeSpec, extensions: readonly string[]): Med
 }
 
 /**
+ * `spec` with `extension` ADMITTED to (or REFUSED from) the upload allowlist —
+ * the only input `shouldBackUpTwin` reads to decide "could a human have put
+ * this file here?". BUILT, never borrowed: the shipped default admits avif
+ * (`DEDALO_IMAGE_EXTENSIONS_SUPPORTED`), so a gate that took the install's
+ * allowlist asserted a machine-only avif it did not have. `managedExtensions`
+ * is left as is — enumeration must still see the twin.
+ */
+function withUpload(spec: MediaTypeSpec, extension: string, admitted: boolean): MediaTypeSpec {
+	const others = spec.allowedExtensions.filter((value) => value !== extension);
+	return Object.freeze({
+		...spec,
+		allowedExtensions: Object.freeze(admitted ? [...others, extension] : others),
+	}) as MediaTypeSpec;
+}
+
+/**
  * The pdf twin of the above. `coverExtensions` is rebuilt exactly as
  * concepts/media.ts coverExtensionsFor does it — the canonical jpg FIRST, then
  * the configured alternates — so an emptied key still yields ['jpg'].
@@ -625,25 +641,28 @@ describe.if(HAVE_MAGICK)('A7-A10 — replacement, failure and backup policy', ()
 		// NOT a size heuristic: `assertNormalizedExtensionForTier` admits an upload
 		// into a derived tier for [defaultExtension, ...alternateExtensions] and
 		// `assertAllowedExtension` additionally requires the upload allowlist, so a
-		// .png twin in the default tier MAY be an operator's file while an .avif one
-		// cannot be. The default tier is rebuilt on EVERY master ingest, so backing up
-		// a machine-authored twin there would turn every upload on the install into
-		// deleted/ churn for bytes nobody authored.
-		expect(image.allowedExtensions).not.toContain(ALT);
-		expect(image.allowedExtensions).toContain('png');
+		// twin in the default tier MAY be an operator's file exactly when its format
+		// is uploadable. The default tier is rebuilt on EVERY master ingest, so
+		// backing up a machine-authored twin there would turn every upload on the
+		// install into deleted/ churn for bytes nobody authored. Both sides are
+		// BUILT (withUpload): whether this install's allowlist admits a format is
+		// the operator's choice, not this gate's premise.
+		const machineSpec = withUpload(twinImage, ALT, false);
+		const pngSpec = withUpload(withAlternates(image, ['png']), 'png', true);
+		expect(machineSpec.allowedExtensions).not.toContain(ALT);
+		expect(pngSpec.allowedExtensions).toContain('png');
 
 		// (a) default tier + a format no human could have uploaded → NO backup.
 		const machine = nextIdentity();
 		await makeImage(pathOf(machine, image.originalQuality, 'tif'), 'red');
-		await regenerateImage(twinImage, machine, pathOpts, 'tif');
+		await regenerateImage(machineSpec, machine, pathOpts, 'tif');
 		await makeImage(pathOf(machine, MODIFIED, 'tif'), 'blue');
-		await regenerateImage(twinImage, machine, pathOpts, 'tif');
+		await regenerateImage(machineSpec, machine, pathOpts, 'tif');
 		const machineTwin = pathOf(machine, DERIVED, ALT);
 		expect(await depicts(machineTwin)).toBe('blue'); // rebuilt in place…
 		expect(deletedTwins(machineTwin, machine, ALT)).toEqual([]); // …with zero churn
 
 		// (b) default tier + a format the allowlist admits → BACKED UP.
-		const pngSpec = withAlternates(image, ['png']);
 		const human = nextIdentity();
 		await makeImage(pathOf(human, image.originalQuality, 'tif'), 'red');
 		await regenerateImage(pngSpec, human, pathOpts, 'tif');

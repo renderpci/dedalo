@@ -28,6 +28,7 @@
  */
 
 import { readEnv } from '../../src/config/env.ts';
+import { SUITE_MEDIA_EXPORT_BASE } from '../helpers/suite_posture.ts';
 import { testDatabaseName } from '../helpers/test_database.ts';
 
 // Pin the media WEB base to the same-origin relative default for the WHOLE suite
@@ -53,6 +54,9 @@ process.env.DEDALO_SMTP_HOST = '';
 process.env.IS_A_CODE_SERVER = 'false';
 process.env.IS_AN_ONTOLOGY_SERVER = 'false';
 process.env.DEDALO_CODE_SERVER_DEV_CHANNEL = 'false';
+// The media export base CI runs with (test/helpers/suite_posture.ts). `??=`, like
+// hosted_env.sh's `:=`: a shell export still wins, the developer's .env does not.
+process.env.DEDALO_MEDIA_EXPORT_BASE ??= SUITE_MEDIA_EXPORT_BASE;
 // NOT PINNED HERE: DEDALO_DIFFUSION_SCHEDULER_ENABLED. Turning dispatch off for
 // the whole tier looks tempting (the unit suite does spawn real runner
 // subprocesses), but MEASURED it reds 5 gates that legitimately exercise
