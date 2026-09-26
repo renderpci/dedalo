@@ -38,6 +38,9 @@ import { ojsOaiAdapter } from './lib/sources/ojs_oai/adapter.ts';
 // itself, not rsc3 - confirmed against rsc170 (the coin tool's own virtual image section), whose
 // 1,820 real rows all carry section_tipo='rsc170'.
 const PUBLICATION_TIPO = 'rsc205';
+// Dedup key - the same field tool_import_marc21/tool_import_zotero populate with their own
+// source's item id (Zotero key, MARC control number). We use the OAI <identifier>.
+const CODE_TIPO = 'rsc137'; // component_input_text, "Code"
 const TITLE_TIPO = 'rsc140'; // component_input_text, "Title"
 const AUTHORSHIP_RELATION_TIPO = 'rsc139'; // component_autocomplete_hi -> rsc197 (People)
 const PERSONAL_NAME_TIPO = 'rsc349'; // component_input_text, quick-paste author text
@@ -52,6 +55,22 @@ const PUBLICATION_DATE_TIPO = 'rsc224'; // component_date, date_mode: "range"
 const URL_TIPO = 'rsc217'; // component_iri
 const PDF_URI_TIPO = 'rsc668'; // component_iri
 const DOCUMENT_TIPO = 'rsc209'; // component_pdf, direct field on the Publication record itself
+
+// Thesaurus-backed (component_select -> dd810), unlike every other field here - match-only, same
+// spirit as the coin tool's Type linking. section_id=8 confirmed real: tool_import_zotero's own
+// production config maps CSL "article"/"article-journal" to it, and its dd812 label reads
+// "Artículo en revista científica" / "Scientific journal article" - exactly what dc:type's
+// "info:eu-repo/semantics/article" means.
+const TYPOLOGY_RELATION_TIPO = 'rsc138';
+const TYPOLOGY_SECTION_TIPO = 'dd810';
+const ARTICLE_TYPOLOGY_SECTION_ID = 8;
+
+// Same match-only pattern, confirmed the same way: tool_import_zotero's config maps CSL "ISSN" to
+// dd292 section_id=2, whose dd296 label reads "ISSN".
+const STANDARD_NUMBER_TIPO = 'rsc147'; // component_input_text, holds the ISBN/ISSN value itself
+const STANDARD_NUMBER_TYPE_RELATION_TIPO = 'rsc249';
+const STANDARD_NUMBER_TYPE_SECTION_TIPO = 'dd292';
+const ISSN_TYPE_SECTION_ID = 2;
 
 const PEOPLE_SECTION_TIPO = 'rsc197'; // also virtual (relations -> rsc75); same storage rule applies
 const PERSON_SURNAME_TIPO = 'rsc86';
@@ -88,19 +107,20 @@ function findAdapterOrThrow(url: string) {
 }
 
 /**
- * Fetches and parses one journal's OAI-PMH listing - no curation, no persistence. Also runs a
- * read-only Series existence check so the review screen can show "will link" vs "will create".
- * Runs as a background job - a full journal harvest can page through hundreds of records.
+ * Fetches and parses one bounded set of articles - a single article, or every article linked from
+ * the pasted listing page (a journal homepage's current issue, an issue page, ...) - never a whole
+ * journal's history. Also runs a read-only Series existence check so the review screen can show
+ * "will link" vs "will create". Runs as a background job - one GetRecord fetch per article.
  */
 async function previewUrl(context: ToolActionContext): Promise<ToolResponse> {
 	const url = assertUrlOption(context.options);
 	const adapter = findAdapterOrThrow(url);
 
-	const acquisition = await adapter.acquire(url, (currentPage, totalPages) => {
+	const acquisition = await adapter.acquire(url, (current, total) => {
 		context.publishProgress?.({
-			msg: `Fetching page ${currentPage} of ${totalPages}`,
-			counter: currentPage,
-			total: totalPages,
+			msg: `Fetching article ${current} of ${total}`,
+			counter: current,
+			total,
 		});
 	});
 	const firstPage = acquisition.pages[0];
@@ -124,6 +144,7 @@ async function previewUrl(context: ToolActionContext): Promise<ToolResponse> {
 				exists: existingSeriesSectionId !== null,
 				section_id: existingSeriesSectionId,
 			},
+			partial_error: acquisition.partialError ?? null,
 		},
 		{ requestId: toolRequestId(context) },
 	);
@@ -186,8 +207,31 @@ async function writeField(
 	});
 }
 
-/** Writes a component_date field in date_mode "range" shape - the server (save_component.ts's
- * component_date override) computes the sort-key `time` on each of start/end itself. */
+/** component_iri stores {id, iri, title} - NOT the generic {id, value} writeField uses. A bare
+ * value-only entry silently fails to render (the edit UI reads .iri, finds undefined, shows blank)
+ * even though it's really stored. */
+async function writeIriField(
+	sectionId: number,
+	sectionTipo: string,
+	componentTipo: string,
+	iri: string,
+	title: string | null,
+	userId: number,
+): Promise<void> {
+	await saveComponentData({
+		componentTipo,
+		sectionTipo,
+		sectionId,
+		lang: NO_LANG,
+		userId,
+		changedData: [{ action: 'set_data', value: [{ id: 1, iri, title: title ?? '' }] }],
+	});
+}
+
+/** Writes a component_date field's `start` only, matching how real records represent a single
+ * point-in-time date - the field's own date_mode is "range", but leaving `end` unset (rather than
+ * duplicating the same date into it) is what the real production records do. save_component.ts's
+ * component_date override computes the sort-key `time` on `start` regardless. */
 async function writeDateField(
 	sectionId: number,
 	sectionTipo: string,
@@ -204,16 +248,28 @@ async function writeDateField(
 		changedData: [
 			{
 				action: 'set_data',
-				value: [
-					{
-						id: 1,
-						start: { year: date.year, month: date.month, day: date.day },
-						end: { year: date.year, month: date.month, day: date.day },
-					},
-				],
+				value: [{ id: 1, start: { year: date.year, month: date.month, day: date.day } }],
 			},
 		],
 	});
+}
+
+/** Exact Code match - lets a re-import reuse the existing rsc205 record instead of duplicating it. */
+async function findExistingPublication(identifier: string): Promise<number | null> {
+	const table = await getMatrixTableFromTipo(PUBLICATION_TIPO);
+	if (table === null) {
+		throw new DedaloError('tool.action_failed', {
+			message: `No matrix table for section '${PUBLICATION_TIPO}'.`,
+		});
+	}
+	const existing = (await sql.unsafe(
+		`SELECT section_id FROM "${table}"
+		 WHERE section_tipo = $1
+		   AND string->'${CODE_TIPO}'->0->>'value' = $2
+		 LIMIT 1`,
+		[PUBLICATION_TIPO, identifier],
+	)) as { section_id: number }[];
+	return existing[0]?.section_id ?? null;
 }
 
 /** Exact name match - used by previewUrl (check only) and findOrCreateSeries. */
@@ -277,6 +333,44 @@ async function linkSeries(
 	if (!save.ok) {
 		throw new DedaloError('record.save_failed', {
 			message: `Could not link the Series relation: ${save.message}`,
+		});
+	}
+}
+
+/** Links a Publication field to one fixed, known-in-advance thesaurus term - used for both
+ * Bibliographic typology (always "journal article") and Type of standard number (always "ISSN"),
+ * neither of which needs a dynamic lookup since we only ever recognize one term for each. */
+async function linkFixedTerm(
+	context: ToolActionContext,
+	publicationSectionId: number,
+	componentTipo: string,
+	targetSectionTipo: string,
+	targetSectionId: number,
+): Promise<void> {
+	const save = await saveComponentData({
+		componentTipo,
+		sectionTipo: PUBLICATION_TIPO,
+		sectionId: publicationSectionId,
+		lang: NO_LANG,
+		userId: context.userId,
+		changedData: [
+			{
+				action: 'set_data',
+				value: [
+					{
+						id: 1,
+						type: RELATION_TYPE_LINK,
+						section_id: targetSectionId,
+						section_tipo: targetSectionTipo,
+						from_component_tipo: componentTipo,
+					},
+				],
+			},
+		],
+	});
+	if (!save.ok) {
+		throw new DedaloError('record.save_failed', {
+			message: `Could not link ${componentTipo}: ${save.message}`,
 		});
 	}
 }
@@ -498,11 +592,21 @@ async function resolvePersonCached(
 	return resolved;
 }
 
+/** OAI identifiers are "scheme:repository-id:local-id" (colon-delimited by protocol convention) -
+ * the local-id alone reads far cleaner in the Code column than the full string. */
+function shortPublicationCode(identifier: string): string {
+	const lastColon = identifier.lastIndexOf(':');
+	return lastColon === -1 ? identifier : identifier.slice(lastColon + 1);
+}
+
 /** One publication's outcome from commitPublications. */
 interface CommitOnePublicationResult {
 	publication_identifier: unknown;
 	section_tipo: string;
 	section_id: number;
+	/** True when an rsc205 record with this Code already existed - nothing else in this result was
+	 * attempted, section_id names the pre-existing record. */
+	skipped: boolean;
 	fields_written: string[];
 	series_section_id: number | null;
 	series_created: boolean | null;
@@ -517,7 +621,8 @@ interface CommitOnePublicationResult {
  * Creates an rsc205 record from one previewed publication, writes its fields, and resolves/links
  * Series, Authors, and the PDF document. The Series/author/document steps are best-effort - a
  * failure there is surfaced in the result, not thrown, since the record itself already exists with
- * real fields on it by that point.
+ * real fields on it by that point. Skips entirely (no create, no field writes) when a record with
+ * the same Code was already imported, rather than risk clobbering a cataloger's later edits.
  */
 async function commitOnePublication(
 	context: ToolActionContext,
@@ -526,9 +631,38 @@ async function commitOnePublication(
 	personCache: Map<string, ResolvedPerson>,
 ): Promise<CommitOnePublicationResult> {
 	const p = publication;
+	const identifier =
+		typeof p.publicationIdentifier === 'string' && p.publicationIdentifier !== ''
+			? shortPublicationCode(p.publicationIdentifier)
+			: null;
+
+	if (identifier !== null) {
+		const existingSectionId = await findExistingPublication(identifier);
+		if (existingSectionId !== null) {
+			return {
+				publication_identifier: p.publicationIdentifier,
+				section_tipo: PUBLICATION_TIPO,
+				section_id: existingSectionId,
+				skipped: true,
+				fields_written: [],
+				series_section_id: null,
+				series_created: null,
+				series_error: null,
+				author_section_ids: [],
+				author_errors: [],
+				document_imported: false,
+				document_error: null,
+			};
+		}
+	}
+
 	const sectionId = await createSectionRecord(PUBLICATION_TIPO, context.userId);
 	const fieldsWritten: string[] = [];
 
+	if (identifier !== null) {
+		await writeField(sectionId, PUBLICATION_TIPO, CODE_TIPO, identifier, context.userId);
+		fieldsWritten.push(CODE_TIPO);
+	}
 	if (typeof p.title === 'string' && p.title.trim() !== '') {
 		await writeField(sectionId, PUBLICATION_TIPO, TITLE_TIPO, p.title, context.userId);
 		fieldsWritten.push(TITLE_TIPO);
@@ -555,8 +689,16 @@ async function commitOnePublication(
 		);
 		fieldsWritten.push(SERIES_NUMBER_TIPO);
 	}
+	const publicationTitle = typeof p.title === 'string' ? p.title : null;
 	if (typeof p.landingPageUrl === 'string' && p.landingPageUrl.trim() !== '') {
-		await writeField(sectionId, PUBLICATION_TIPO, URL_TIPO, p.landingPageUrl, context.userId);
+		await writeIriField(
+			sectionId,
+			PUBLICATION_TIPO,
+			URL_TIPO,
+			p.landingPageUrl,
+			publicationTitle,
+			context.userId,
+		);
 		fieldsWritten.push(URL_TIPO);
 	}
 	const authors = Array.isArray(p.authors)
@@ -582,6 +724,31 @@ async function commitOnePublication(
 			context.userId,
 		);
 		fieldsWritten.push(PUBLICATION_DATE_TIPO);
+	}
+	const types = Array.isArray(p.types)
+		? p.types.filter((t): t is string => typeof t === 'string')
+		: [];
+	if (types.includes('info:eu-repo/semantics/article')) {
+		await linkFixedTerm(
+			context,
+			sectionId,
+			TYPOLOGY_RELATION_TIPO,
+			TYPOLOGY_SECTION_TIPO,
+			ARTICLE_TYPOLOGY_SECTION_ID,
+		);
+		fieldsWritten.push(TYPOLOGY_RELATION_TIPO);
+	}
+	if (typeof p.issn === 'string' && p.issn.trim() !== '') {
+		await writeField(sectionId, PUBLICATION_TIPO, STANDARD_NUMBER_TIPO, p.issn, context.userId);
+		fieldsWritten.push(STANDARD_NUMBER_TIPO);
+		await linkFixedTerm(
+			context,
+			sectionId,
+			STANDARD_NUMBER_TYPE_RELATION_TIPO,
+			STANDARD_NUMBER_TYPE_SECTION_TIPO,
+			ISSN_TYPE_SECTION_ID,
+		);
+		fieldsWritten.push(STANDARD_NUMBER_TYPE_RELATION_TIPO);
 	}
 
 	let seriesSectionId: number | null = null;
@@ -627,7 +794,14 @@ async function commitOnePublication(
 		documentImported = outcome.documentImported;
 		documentError = outcome.documentError;
 		if (outcome.pdfUrl !== null) {
-			await writeField(sectionId, PUBLICATION_TIPO, PDF_URI_TIPO, outcome.pdfUrl, context.userId);
+			await writeIriField(
+				sectionId,
+				PUBLICATION_TIPO,
+				PDF_URI_TIPO,
+				outcome.pdfUrl,
+				publicationTitle,
+				context.userId,
+			);
 			fieldsWritten.push(PDF_URI_TIPO);
 		}
 	} catch (error) {
@@ -638,6 +812,7 @@ async function commitOnePublication(
 		publication_identifier: p.publicationIdentifier,
 		section_tipo: PUBLICATION_TIPO,
 		section_id: sectionId,
+		skipped: false,
 		fields_written: fieldsWritten,
 		series_section_id: seriesSectionId,
 		series_created: seriesCreated,

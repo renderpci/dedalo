@@ -167,11 +167,12 @@ tool_bibliography_acquisition.prototype.preview_html = async function(url, html)
 * @returns {Promise<Object>} API response envelope; on success carries
 *   pid/pfile as extension keys (NOT under .data) for the caller to stream.
 *   The terminal frame's data is { results: [{ publication_identifier,
-*   section_tipo, section_id, fields_written, series_section_id,
+*   section_tipo, section_id, skipped, fields_written, series_section_id,
 *   series_created, series_error, author_section_ids, author_errors,
-*   document_imported, document_error }, ...] } — the *_error fields are
-*   non-null when that step failed without rolling back what already
-*   succeeded.
+*   document_imported, document_error }, ...] } — skipped:true means a
+*   record with this Code already existed (section_id names it, nothing
+*   else was attempted); the *_error fields are non-null when that step
+*   failed without rolling back what already succeeded.
 */
 tool_bibliography_acquisition.prototype.commit_publications = async function(publications) {
 
