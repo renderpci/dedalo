@@ -116,6 +116,25 @@ HERMETIC_ONLY_PATHS='presentation/ overrides/ .vscode/ License.md'
 say() { printf '%s\n' "pre-push: $*" >&2; }
 rule() { printf '%s\n' '────────────────────────────────────────────────────────────────────' >&2; }
 
+# ── bun is FOUND, never assumed on PATH ──────────────────────────────────────
+# A hook inherits the PATH of whatever ran `git push`, and bun's installer puts
+# bun in ~/.bun/bin via the login shell's rc — which a GUI/IDE git client or a
+# non-interactive shell never reads (measured 2026-09-26: `bun: command not
+# found` at the bank step, AFTER the ref scan). So the installer's own location
+# ($BUN_INSTALL, default ~/.bun) is tried before giving up, and giving up
+# happens HERE, naming the fix, not halfway through the gate.
+if ! command -v bun >/dev/null 2>&1; then
+	bun_bin_dir="${BUN_INSTALL:-$HOME/.bun}/bin"
+	if [ -x "$bun_bin_dir/bun" ]; then
+		PATH="$bun_bin_dir:$PATH"
+		export PATH
+	else
+		say "REFUSED — bun is not on PATH and not at $bun_bin_dir/bun."
+		say '  Push from a shell where `bun --version` works, or set BUN_INSTALL.'
+		exit 1
+	fi
+fi
+
 repo_root="$(git rev-parse --show-toplevel)" || exit 1
 git_dir="$(git rev-parse --absolute-git-dir)" || exit 1
 
