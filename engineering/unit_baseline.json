@@ -3491,6 +3491,11 @@
 			"skipped": 0,
 			"assertions": 6
 		},
+		"test/unit/select_family_echo_datalist_native.test.ts": {
+			"tests": 9,
+			"skipped": 0,
+			"assertions": 49
+		},
 		"test/unit/sequence_verdict_native.test.ts": {
 			"tests": 12,
 			"skipped": 0,

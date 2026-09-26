@@ -14,4 +14,7 @@ export const component_select_lang: ComponentModel = {
 	resolveData: 'select_family',
 	search: { status: 'ported' },
 	importConform: 'select_lang',
+	// Options = the project languages, not the lg1 section's ~21.7k records
+	// (relations/datalist.ts DATALIST_SOURCE_IMPLEMENTATIONS).
+	datalistSource: 'project_langs',
 };

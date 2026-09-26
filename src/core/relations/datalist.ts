@@ -28,6 +28,8 @@
  * install carries them).
  */
 
+import { getComponentModel } from '../components/registry.ts';
+import type { DatalistSourceId } from '../components/types.ts';
 import { compareLocators, type Locator } from '../concepts/locator.ts';
 import type { MatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
@@ -40,6 +42,7 @@ import { resolveComponentValue } from '../resolve/component_data.ts';
 import { registerSectionDataListener } from '../section_record/save_event.ts';
 import { buildRequestConfigForElement } from './request_config/build.ts';
 import { extractSqoSectionTipos, type RequestConfigContext } from './request_config/explicit.ts';
+import { getSelectLangDatalist, type SelectLangDatalistItem } from './select_lang.ts';
 
 /**
  * One resolved HIDE-ddo value of an option (PHP `$hide_item`, :2949-2953).
@@ -88,6 +91,37 @@ export interface DatalistItem {
 	 */
 	tool_name?: string;
 	always_active?: boolean;
+}
+
+/**
+ * Any component's datalist option: the generic target-section option, or a
+ * model-sourced one (DatalistSourceId) — today select_lang's language option,
+ * which carries no `hide` and keys by the 'lg-<code>' token (PHP parity).
+ */
+export type ComponentDatalistItem = DatalistItem | SelectLangDatalistItem;
+
+/**
+ * Model-declared option sources (descriptor facet `datalistSource`,
+ * components/types.ts DatalistSourceId). Consulted FIRST by getDatalist and
+ * probeDatalistSize — the one door — so no caller can reach the generic
+ * enumeration for a model whose options are something else. Each source owns
+ * its own caching (select_lang: the resolved project langs, cleared by an lg1
+ * write).
+ */
+export const DATALIST_SOURCE_IMPLEMENTATIONS: Readonly<
+	Record<DatalistSourceId, (lang: string) => Promise<ComponentDatalistItem[]>>
+> = {
+	project_langs: (lang) => getSelectLangDatalist(lang),
+};
+
+/** The component's model-declared option source, or null for the generic one. */
+async function modelDatalistSource(
+	componentTipo: string,
+): Promise<((lang: string) => Promise<ComponentDatalistItem[]>) | null> {
+	const model = await getModelByTipo(componentTipo);
+	if (model === null) return null;
+	const sourceId = getComponentModel(model)?.datalistSource;
+	return sourceId === undefined ? null : DATALIST_SOURCE_IMPLEMENTATIONS[sourceId];
 }
 
 /**
@@ -317,6 +351,9 @@ export async function probeDatalistSize(
 	limit: number,
 ): Promise<number> {
 	if (limit <= 0) return 0;
+	// A model-sourced list is small by construction and cheap to build: count it.
+	const modelSource = await modelDatalistSource(componentTipo);
+	if (modelSource !== null) return Math.min((await modelSource(lang)).length, limit);
 	// A list already built is already paid for — count it rather than re-probe.
 	// SAME key shape as getDatalist (owner section included) — the doc-block on
 	// resolveDatalistSources is the contract: probe and build must never
@@ -377,6 +414,25 @@ export async function probeDatalistSize(
  * custom rule when declared (path + direction, numeric-aware).
  */
 export async function getDatalist(
+	componentTipo: string,
+	componentProperties: unknown,
+	ownerSectionTipo: string,
+	lang: string,
+): Promise<ComponentDatalistItem[]> {
+	// The model's OWN option source wins (descriptor `datalistSource`): for
+	// component_select_lang that is the project languages — the node's sqo
+	// names lg1, whose generic enumeration is every language record there is.
+	const modelSource = await modelDatalistSource(componentTipo);
+	if (modelSource !== null) return modelSource(lang);
+	return getTargetSectionDatalist(componentTipo, componentProperties, ownerSectionTipo, lang);
+}
+
+/**
+ * The GENERIC option list — every record of the request_config target
+ * section(s). Private: reached only through getDatalist, after the model's own
+ * source was consulted.
+ */
+async function getTargetSectionDatalist(
 	componentTipo: string,
 	componentProperties: unknown,
 	ownerSectionTipo: string,

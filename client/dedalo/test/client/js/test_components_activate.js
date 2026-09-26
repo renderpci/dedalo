@@ -25,6 +25,11 @@ import {pause} from '../../../core/common/js/utils/util.js'
 // 5000ms exceeded' (gh run 35843092386, instance tier), a red charged to a
 // component that did nothing wrong. The server log of that run shows a test3/1
 // save fired by this suite (select_lang, test89) taking 10.3 s.
+// That multi-second save was an ENGINE defect, fixed at its root 2026-09-26:
+// the select_lang save echo enumerated all ~21.7k lg1 records as its datalist
+// (2.2 MB) instead of the project languages the read serves (a few KB, ~15 ms).
+// Gate: test/unit/select_family_echo_datalist_native.test.ts. The wait below
+// stays — it is what makes each case own its save, not a timing allowance.
 //
 // The real condition is polled, bounded: change_value() raises `changing`
 // synchronously, before its first await, and clears it in its `finally`; save()
