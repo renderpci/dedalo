@@ -6,7 +6,7 @@
  * engines.bun, the system_info widget's MIN_BUN floor, the `Dockerfile` base
  * image tag, and `init_test.ts`'s installer floor (compared on major.minor,
  * since it is deliberately a floor rather than an exact pin). A SIXTH copy, the
- * `.gitlab-ci.yml` `oven/bun:<tag>` image and the GitHub workflows'
+ * `.gitlab-ci.yml` CI-image fingerprint pin and the GitHub workflows'
  * `bun-version-file` wiring, is owned by `ci_workflow_tripwire.test.ts` — that
  * is the complete census as of 2026-08-25. Add a copy anywhere else and it must
  * be added here too. This file also asserts the diffusion zip writer

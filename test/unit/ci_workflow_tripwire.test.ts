@@ -5,9 +5,10 @@
  *
  *   1. Bun pin — every GitHub workflow using setup-bun pins via
  *      `bun-version-file: .bun-version` (never an inline version), and the
- *      .gitlab-ci.yml `oven/bun:<tag>` image tag equals .bun-version. The pin
- *      is load-bearing: Bun.sql jsonb-inference drift is a data-corruption
- *      class.
+ *      .gitlab-ci.yml hermetic image is the CI image by digest, as uid 1001,
+ *      whose `# fp-<fingerprint>` equals sha256(ci/Dockerfile ++ .bun-version).
+ *      The pin is load-bearing: Bun.sql jsonb-inference drift is a
+ *      data-corruption class.
  *   2. Oracle honesty — every self-hosted workflow that runs test/parity or
  *      scripts/verify.ts sets ORACLE_REQUIRED: "1", so an absent PHP oracle is
  *      a RED canary, never a silent green (the AGENTS.md "oracle trap").
@@ -123,8 +124,6 @@ import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
 
 const repoRoot = join(import.meta.dir, '..', '..');
 const read = (rel: string) => readFileSync(join(repoRoot, rel), 'utf8');
-
-const bunPin = read('.bun-version').trim();
 
 const yaml = (f: string) => f.endsWith('.yml') || f.endsWith('.yaml');
 
@@ -1410,11 +1409,31 @@ describe('CI workflow tripwire', () => {
 		).toBe(true);
 	});
 
-	test('.gitlab-ci.yml oven/bun image tag equals the .bun-version pin', () => {
+	// Rule 1b (2026-09-26) — GitLab runs the CI IMAGE, for the CURRENT definition, as
+	// the runner uid. It was `oven/bun:<.bun-version>` as root: no git and root, so
+	// hermetic was red there from 2026-08 while GitHub was green. The fingerprint is the
+	// measured binding — recomputed here from the bytes, never read off a spelling — so
+	// a .bun-version bump (or any ci/Dockerfile edit) is red until the pin moves to the
+	// digest ci-image.yml publishes for it.
+	test('.gitlab-ci.yml hermetic runs the CI image of THIS definition, digest-pinned, as uid 1001', () => {
 		const src = read('.gitlab-ci.yml');
-		const tag = src.match(/image:\s*oven\/bun:(\S+)/)?.[1];
-		expect(tag, '.gitlab-ci.yml: oven/bun:<tag> image not found').toBeDefined();
-		expect(tag).toBe(bunPin);
+		const m = src.match(
+			/^\s*name:\s*ghcr\.io\/renderpci\/dedalo-ci@sha256:[0-9a-f]{64}[ \t]+#[ \t]*fp-([0-9a-f]{64})\s*$/m,
+		);
+		expect(
+			m,
+			'.gitlab-ci.yml: hermetic image must be `name: ghcr.io/renderpci/dedalo-ci@sha256:<digest> # fp-<fingerprint>`',
+		).not.toBeNull();
+		const hasher = new Bun.CryptoHasher('sha256');
+		hasher.update(readFileSync(join(repoRoot, 'ci', 'Dockerfile')));
+		hasher.update(readFileSync(join(repoRoot, '.bun-version')));
+		expect(
+			m?.[1],
+			'.gitlab-ci.yml pins a CI image built from ANOTHER ci/Dockerfile/.bun-version. Move it to the fp-<new> digest ci-image.yml published (ci/README.md).',
+		).toBe(hasher.digest('hex'));
+		expect(src, '.gitlab-ci.yml: hermetic must run as the runner uid, never root').toMatch(
+			/^\s*docker:\s*\n\s*user:\s*"1001"\s*$/m,
+		);
 	});
 
 	// Binds to BOTH tiers: the self-hosted jobs now live in workflows-selfhosted/, and the

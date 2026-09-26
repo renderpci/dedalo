@@ -44,7 +44,7 @@ by a hosted one (`tier_wiring_tripwire` leg B).
 | `.github/workflows/security.yml` | PR + push master + weekly cron + dispatch | hosted ubuntu | secret scan (gitleaks, digest-pinned image): working tree every run, FULL HISTORY weekly |
 | `.github/workflows/codeql.yml` | PR + push master + weekly cron | hosted ubuntu | CodeQL dataflow SAST (javascript-typescript, `build-mode: none`) → Security tab |
 | `.github/workflows/docs.yml` | PR + push master, both narrowed to `docs/**`/`mkdocs.yml` | hosted ubuntu | the mkdocs manual build (not a tier: legs F/G do not bind it) |
-| `.gitlab-ci.yml` | MR + default-branch push (GitLab mirror) | GitLab shared runners | hermetic tier only — the SAME `scripts/ci/hermetic.sh` |
+| `.gitlab-ci.yml` | MR + default-branch push (GitLab mirror) | GitLab shared runners, in the CI image (digest-pinned, uid 1001) | hermetic tier only — the SAME `scripts/ci/hermetic.sh` |
 | *— PRIVATE MIRROR ONLY (inert on the public repo) —* | | | |
 | `.github/workflows-selfhosted/selfhosted.yml` | dispatch (restore PR/push triggers on the mirror) | self-hosted mac | `verify` + `full` (`bun test test/unit test/parity`) — both twinned hosted |
 | `.github/workflows-selfhosted/nightly.yml` | cron 01:00 UTC + manual | self-hosted mac | full `bun test` incl. `test/integration/**` MariaDB legs (the only thing that runs nowhere else) + client gate |
@@ -327,8 +327,9 @@ ci/compose.yml's digest" turns that PR red until the workflow pins follow.
 
 ## Non-negotiables (each is tripwired)
 
-- **Bun pin**: `bun-version-file: .bun-version` (GitHub), `oven/bun:<tag>` =
-  `.bun-version` (GitLab), the image builds from the same file;
+- **Bun pin**: `bun-version-file: .bun-version` (GitHub), the CI image by digest
+  whose `# fp-<fingerprint>` = sha256(`ci/Dockerfile` ++ `.bun-version`) (GitLab),
+  the image builds from the same file;
   `scripts/ci/env_guard.sh` re-checks the actual binary. Never fix a mismatch by
   editing the pin in CI — fix the runner.
 - **Oracle flag (post-cutover, largely vestigial)**: PHP is decommissioned and

@@ -1242,7 +1242,10 @@ describe('a planted link is not READ through either — the daemon does not serv
     rmSync(ws, { recursive: true, force: true });
     mkdirSync(ws, { recursive: true });
     scratch.push(ws);
-    const outside = mkdtempSync(join(tmpdir(), 'dedalo-read-victim-'));
+    // OUTSIDE the workspace but on ITS filesystem: the hard-link plant below needs one
+    // device, as the real attack does. tmpdir() is another mount on a CI runner whose
+    // checkout is a volume (GitLab's /builds) — linkSync then dies EXDEV (2026-09-26).
+    const outside = mkdtempSync(join(dirname(roots.sitesRoot), 'dedalo-read-victim-'));
     scratch.push(outside);
     const secret = join(outside, 'service.env');
     writeFileSync(secret, SECRET, { mode: 0o600 });
