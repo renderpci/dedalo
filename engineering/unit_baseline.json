@@ -356,6 +356,16 @@
 			"skipped": 0,
 			"assertions": 33
 		},
+		"test/unit/change_log_render.test.ts": {
+			"tests": 34,
+			"skipped": 0,
+			"assertions": 51
+		},
+		"test/unit/change_log_tripwire.test.ts": {
+			"tests": 8,
+			"skipped": 0,
+			"assertions": 10
+		},
 		"test/unit/check_config_diffusion_langs_native.test.ts": {
 			"tests": 10,
 			"skipped": 0,
@@ -1941,6 +1951,11 @@
 			"skipped": 0,
 			"assertions": 17
 		},
+		"test/unit/legacy_dialect_boundary_native.test.ts": {
+			"tests": 4,
+			"skipped": 0,
+			"assertions": 20
+		},
 		"test/unit/legacy_password_migration.test.ts": {
 			"tests": 6,
 			"skipped": 0,
@@ -2030,6 +2045,11 @@
 			"tests": 18,
 			"skipped": 0,
 			"assertions": 81
+		},
+		"test/unit/master_legacy_routing_tripwire.test.ts": {
+			"tests": 12,
+			"skipped": 0,
+			"assertions": 110
 		},
 		"test/unit/matrix_copy_columns_tripwire.test.ts": {
 			"tests": 1,
