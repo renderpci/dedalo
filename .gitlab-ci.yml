@@ -42,10 +42,14 @@ hermetic:
     name: ghcr.io/renderpci/dedalo-ci@sha256:ec014ba81eedffff31ea4827eb55c0d23d969e3dd5087ba84e349f703e60a1fe # fp-92f539dcd87e60c4989bb11502583edefab0a237cadcd58a53bac43cdfeadc9b
     docker:
       user: "1001"
-  variables:
-    # uid 1001 has no passwd entry in the image, so HOME would be `/` (unwritable): bun's
-    # install cache and git's global config need a real one.
-    HOME: /tmp/runner-home
+  # uid 1001 has no passwd entry in the image, so HOME would be `/` (unwritable): bun's
+  # install cache and git's global config need a real one. Set in the JOB's shell, never
+  # as a job `variables:` entry — those reach the runner's helper container too, whose
+  # clone then died on `could not lock config file /tmp/runner-home/.gitconfig`
+  # (measured 2026-09-26, the first run in this image).
+  before_script:
+    - export HOME=/tmp/runner-home
+    - mkdir -p "$HOME"
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
