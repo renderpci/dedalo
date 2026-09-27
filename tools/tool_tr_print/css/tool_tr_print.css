@@ -21,6 +21,19 @@
   margin-bottom: 2em;
   border-bottom: 1px dotted var(--color_grey_13);
 }
+@media screen and (max-width: 600px) {
+  .wrapper_tool.tool_tr_print .content_data .left_container {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 0.5rem 1rem;
+  }
+  .wrapper_tool.tool_tr_print .content_data .left_container .option_container {
+    border-right: none;
+  }
+  .wrapper_tool.tool_tr_print .content_data .left_container .selector {
+    max-width: 100%;
+  }
+}
 .wrapper_tool.tool_tr_print .content_data .left_container > .lang_container {
   display: flex;
   align-items: center;

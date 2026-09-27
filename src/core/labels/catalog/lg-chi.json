@@ -447,6 +447,7 @@
 	"table": "表",
 	"tables_list": "表列表，如 dd_ontology, matrix_ontology, matrix",
 	"tag": "标签",
+	"tap_term_to_place": "轻触一个术语以放置",
 	"terms": "术语",
 	"test_connection": "测试连接",
 	"test_diffusion_first": "请先成功测试发布连接，然后再继续（或禁用它）。",

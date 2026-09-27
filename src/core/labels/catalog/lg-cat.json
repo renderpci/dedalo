@@ -447,6 +447,7 @@
 	"table": "taula",
 	"tables_list": "Llista de taules com dd_ontology, matrix_ontology, matrix",
 	"tag": "etiqueta",
+	"tap_term_to_place": "Toca un terme per a col·locar-lo",
 	"terms": "Termes",
 	"test_connection": "Provar connexió",
 	"test_diffusion_first": "Proveu la connexió de difusió correctament abans de continuar (o desactiveu-la).",

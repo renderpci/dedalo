@@ -795,6 +795,12 @@
 				padding: 0.5rem;
 				min-width: 34rem;
 				min-height: 20rem;
+				// phone: the modal is a full sheet (dd-modal.js); a 544px floor
+				// would overflow it by definition
+				@media screen and (max-width: @width_break_point_phone) {
+					min-width: 0;
+					min-height: 0;
+				}
 
 				>.wrapper_component {
 					margin: 1rem;

@@ -82,6 +82,10 @@
 			border-color: var(--tool_lang_multi_fill);
 			color: @color_white;
 			min-height: 2.5em;
+
+			@media screen and (max-width: @width_break_point_phone) {
+				min-height: 44px; // @phone_hit_target
+			}
 		}
 
 		// status message shown during/after the translate-all action

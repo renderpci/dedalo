@@ -44,6 +44,12 @@
   min-width: 34rem;
   max-width: 60rem;
 }
+@media screen and (max-width: 600px) {
+  .wrapper_tool.tool_identify > .content_data {
+    min-width: 0;
+    padding: 0.5rem;
+  }
+}
 .wrapper_tool.tool_identify > .content_data .identify_thumb {
   flex: 0 0 auto;
   display: flex;

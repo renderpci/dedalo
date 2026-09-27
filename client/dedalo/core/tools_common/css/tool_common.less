@@ -8,6 +8,7 @@
 // per-tool --tool_edge / --tool_fill / --tool_on_fill (GENERATED: scripts/tool_colors.ts)
 @import (once) "tool_colors";
 @import (once, reference) "tool_mixins";
+@import (once) "tool_responsive";
 
 // THE TOOL HEADER CONTROLS BAND — shared geometry.
 // One height and one padding for every tool, so the band does not stand at a
@@ -324,6 +325,16 @@
 			box-sizing: border-box;
 			margin: 0px;
 			vertical-align: middle;
+
+			// phone: the band's one control height becomes the tap target
+			// (@phone_hit_target, tool_responsive.less). Stated HERE, not in
+			// tool_responsive: that sheet is imported above this block, so an
+			// equal-specificity override there loses the cascade.
+			@media screen and (max-width: @width_break_point_phone) {
+				height: @phone_hit_target;
+				min-height: @phone_hit_target;
+				line-height: normal;
+			}
 		}
 
 		select {

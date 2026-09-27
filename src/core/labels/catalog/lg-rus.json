@@ -447,6 +447,7 @@
 	"table": "таблица",
 	"tables_list": "Список таблиц, например dd_ontology, matrix_ontology, matrix",
 	"tag": "тег",
+	"tap_term_to_place": "Коснитесь термина, чтобы поместить",
 	"terms": "Термины",
 	"test_connection": "Проверить соединение",
 	"test_diffusion_first": "Сначала успешно протестируйте соединение распространения (или отключите его).",

@@ -1,0 +1,227 @@
+/**
+* TOOL_RESPONSIVE — the PHONE tier shared by every tool surface.
+*
+* Imported from tool_common.less. Contract (rewrite plan phase 0, gated by
+* test/unit/tool_phone_tripwire.test.ts + scripts/tool_viewport_check.ts):
+* at @min_target_viewport (360px) a tool renders with no page-level
+* horizontal scroll, every control on screen and at least 44px tall.
+* Usable, not comfortable.
+*
+* LAYOUT ONLY. Colours stay in the theme / generated tool tokens; nothing
+* here may paint.
+*
+* A tool that needs its own phone rules writes them in its own sheet, against
+* @width_break_point_phone — never a literal width.
+*/
+
+// WCAG 2.5.5 target size
+@phone_hit_target: 44px;
+
+@media screen and (max-width: @width_break_point_phone) {
+
+	// THE PAGE NEVER SCROLLS SIDEWAYS. A wide child scrolls inside its own box
+	// (tables below) or reflows; `clip` rather than `hidden` so no scroll
+	// container is created and sticky headers keep working.
+	.wrapper_tool {
+		min-width: 0;
+		max-width: 100vw;
+		overflow-x: clip;
+
+		>.content_data {
+			min-width: 0;
+			padding: 0.5rem;
+			padding-top: 1rem;
+
+			>.footer_node {
+				padding: 1.5rem 0.5rem;
+				flex-wrap: wrap;
+			}
+		}
+
+		// fluid media
+		img, video, canvas, svg:not(.icon) {
+			max-width: 100%;
+			height: auto;
+		}
+		iframe {
+			max-width: 100%;
+		}
+
+		// last resort for data tables: scroll inside their own box
+		table {
+			display: block;
+			max-width: 100%;
+			overflow-x: auto;
+		}
+
+		// any input fills its row and is a tap target. 16px text: iOS Safari
+		// zooms the page on focus of anything smaller, which on a phone layout
+		// is the horizontal scroll this tier exists to prevent.
+		input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+		select,
+		textarea {
+			max-width: 100%;
+			font-size: max(16px, 1em);
+		}
+		input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+		select {
+			min-height: @phone_hit_target;
+		}
+		// short numeric inputs (paginator page, geo zoom/altitude) keep a
+		// tappable width, not only height
+		input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]) {
+			min-width: @phone_hit_target;
+		}
+		// the map controls a component_geolocation brings (leaflet, 30px). The
+		// .leaflet-touch prefix matches leaflet's own touch rule's specificity.
+		.leaflet-touch .leaflet-bar a,
+		.leaflet-bar a,
+		.leaflet-buttons-control-button {
+			width: @phone_hit_target;
+			height: @phone_hit_target;
+			line-height: @phone_hit_target;
+		}
+	}
+
+	// THE HEADER. Defined outside .wrapper_tool (modal + window contexts,
+	// see tool_common.less), so here too.
+	.tool_header {
+		position: sticky;
+		top: 0;
+		// vertical padding only: the controls band bleeds exactly 1rem into the
+		// side padding (tool_common.less), so the sides stay at 1rem
+		padding-top: calc(0.5rem + 4px); // + the identity edge, as tool_common.less
+		padding-bottom: 0.5rem;
+
+		// TITLE OVER DESCRIPTION. Side by side, a 360px row gives the title
+		// ~100px and it breaks mid-word ("Act/uali/zar"). Stacked, the title
+		// gets the row minus the close ✕ (dd-modal/window button, ~3rem).
+		>.tool_name_container {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 0.25rem;
+			margin-right: 0;
+			padding-right: 3rem;
+			min-width: 0;
+			max-width: 100%;
+
+			>.label {
+				font-size: 1.15rem;
+				white-space: normal;
+				overflow-wrap: break-word; // only a word longer than the row breaks
+			}
+			// two lines at most: the header is sticky, and an unclamped
+			// description ate a third of a 740px screen (tool_propagate…)
+			>.description {
+				padding: 0;
+				font-size: 0.9rem;
+				line-height: 1.25rem;
+				display: -webkit-box;
+				-webkit-box-orient: vertical;
+				-webkit-line-clamp: 2;
+				line-clamp: 2;
+				overflow: hidden;
+			}
+		}
+		.selector {
+			max-width: 100%;
+		}
+
+		>.tool_buttons_container {
+			>div:not(.wrapper_component),
+			>button,
+			>select {
+				flex: 1 1 auto;
+				min-height: @phone_hit_target;
+			}
+		}
+	}
+
+	// shared hit target for tool action buttons
+	.wrapper_tool button,
+	.wrapper_tool .button.tool_button,
+	.wrapper_tool [role="button"],
+	.tool_header button {
+		min-height: @phone_hit_target;
+	}
+
+	// generic opt-in stack: a tool grid that should become one column marks
+	// itself `phone_stack` instead of writing its own media rule.
+	.wrapper_tool .phone_stack {
+		display: flex !important;
+		flex-direction: column;
+		min-width: 0;
+
+		>* {
+			min-width: 0;
+			max-width: 100%;
+		}
+	}
+}//end phone tier
+
+// PANE SWITCH (tools_common/js/pane_switch.js). A two-pane tool renders
+// `[A | B]` on a phone and shows one pane at a time; on desktop the switch is
+// absent and both panes show. Panes are marked `data-pane="<key>"`; the tool
+// wrapper carries `pane_active_<key>`.
+.pane_switch {
+	display: none;
+}
+@media screen and (max-width: @width_break_point_phone) {
+	.pane_switch {
+		display: flex;
+		width: 100%;
+		gap: 0.25rem;
+		padding: 0.25rem;
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		background-color: var(--bg_surface_alt);
+
+		>.pane_btn {
+			flex: 1 1 0;
+			min-height: @phone_hit_target;
+			border: 1px solid var(--border_default);
+			border-radius: 4px;
+			background: transparent;
+			color: var(--fg_default);
+
+			&.active {
+				border-color: var(--tool_edge, var(--border_default));
+				box-shadow: inset 0 -3px 0 var(--tool_edge, var(--fg_default));
+			}
+		}
+	}
+	.pane_host.pane_switch_on [data-pane] {
+		display: none !important;
+	}
+	.pane_host.pane_switch_on [data-pane].pane_active {
+		display: block !important;
+	}
+}//end pane switch
+
+// PHONE REORDER (tools_common/js/phone_reorder.js). Drag-sort is desktop-only;
+// on a phone each sortable item gets up/down buttons instead (decision
+// 2026-09-27: buttons, not a touch-drag rewrite).
+.phone_reorder {
+	display: none;
+}
+@media screen and (max-width: @width_break_point_phone) {
+	.phone_reorder {
+		display: inline-flex;
+		gap: 0.25rem;
+		flex-shrink: 0;
+
+		>.phone_reorder_btn {
+			min-width: @phone_hit_target;
+			min-height: @phone_hit_target;
+			border: 1px solid var(--border_default);
+			border-radius: 4px;
+			background: transparent;
+			color: var(--fg_default);
+
+			&:disabled {
+				opacity: 0.35;
+			}
+		}
+	}
+}//end phone reorder

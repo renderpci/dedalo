@@ -1188,6 +1188,43 @@ body.tp_col_resizing * { cursor: col-resize !important; user-select: none !impor
 			}
 		}
 	}
+
+	// phone: every toolbar group is its own full-width wrapping row, every
+	// control a 44px target. The A4 preview keeps its real geometry and pans
+	// inside .pages_viewport (overflow:auto) — a page preview scaled to 360px
+	// would be unreadable; panning it is the honest phone behaviour.
+	@media (max-width: @width_break_point_phone) {
+		> .content_data.print_layout_editor {
+			.print_toolbar {
+				gap: .5rem;
+			}
+			.print_toolbar .toolbar_group,
+			.toolbar_group {
+				flex: 1 1 100%;
+				flex-wrap: wrap;
+				border-right: none;
+				padding-right: 0;
+			}
+			.tool_button,
+			select,
+			.template_picker,
+			.zoom_select,
+			.template_name_input {
+				height: 44px;
+				font-size: 16px; // iOS zooms the page on focus of anything smaller
+			}
+			.template_picker,
+			.template_name_input {
+				flex: 1 1 10rem;
+				min-width: 0;
+			}
+			.zoom_select { width: 6rem; }
+			.pages_viewport { padding: .5rem; }
+			.panel_collapse_toggle {
+				min-width: 44px;
+			}
+		}
+	}
 }
 
 

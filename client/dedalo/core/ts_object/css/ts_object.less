@@ -760,4 +760,94 @@
 		display: none;
 	}
 
+	// PHONE. The tree is embedded by tools (indexation, cataloging) and by
+	// area_thesaurus; on a touch screen its 20px icons, 1rem expander and bare
+	// term text are not targets. Hit boxes grow to 44px (@phone_hit_target);
+	// the INK does not (icons keep @ts_icon_ink via the absolute mask-size,
+	// the expander keeps its triangle). Rows get taller — usable, not dense.
+	@media screen and (max-width: @width_break_point_phone) {
+		@phone_target: 44px;
+
+		>.content_data {
+			>.id_column_content {
+				min-height: @phone_target;
+
+				.id_column_link {
+					width: @phone_target;
+					height: @phone_target;
+					margin-right: 0;
+				}
+			}
+
+			>.elements_container {
+				min-height: @phone_target;
+				// a long term + its badge + the expander wrap instead of pushing
+				// the expander past the screen edge
+				flex-wrap: wrap;
+				min-width: 0;
+
+				>.term > .term_text,
+				>.term_text {
+					display: inline-flex;
+					align-items: center;
+					min-height: @phone_target;
+					min-width: @phone_target;
+					margin: 0;
+				}
+
+				// the 'M'/model badges: the TARGET grows, the painted badge does
+				// not — transparent padding, background clipped to the content box
+				>.button_show_component {
+					flex: 0 0 auto;
+					box-sizing: border-box;
+					min-width: @phone_target;
+					min-height: @phone_target;
+					padding: 12px 8px;
+					background-clip: content-box;
+					display: inline-flex;
+					align-items: center;
+					justify-content: center;
+				}
+
+				// the expander: the triangle is drawn by BORDERS, so the box
+				// itself cannot grow without warping it. On a phone the element
+				// becomes a transparent 44px box and the same triangle is drawn
+				// by ::before (::after belongs to .loading_spinner).
+				>.link_children {
+					border: 0 !important;
+					width: @phone_target;
+					height: @phone_target;
+					flex: 0 0 @phone_target; // a flex item: a long term beside it shrank it to 10px
+					top: 0;
+					left: 0;
+					display: inline-flex;
+					align-items: center;
+					justify-content: center;
+
+					&::before {
+						content: '';
+						border-style: solid;
+						border-width: 6px 0px 6px 10.4px;
+						border-color: transparent transparent transparent @color_orange;
+
+						.area_ontology & {
+							border-left-color: @color_grey_9;
+						}
+					}
+					&.open::before {
+						border-width: 10.4px 6px 0px 6px;
+						border-color: @color_orange transparent transparent transparent;
+
+						.area_ontology & {
+							border-top-color: @color_grey_9;
+						}
+					}
+					&.loading_spinner::before {
+						display: none;
+					}
+				}
+			}
+		}
+	}
+
 }//end .wrap_ts_object

@@ -447,6 +447,7 @@
 	"table": "테이블",
 	"tables_list": "테이블 목록 (예: dd_ontology, matrix_ontology, matrix)",
 	"tag": "태그",
+	"tap_term_to_place": "배치할 용어를 탭하세요",
 	"terms": "용어",
 	"test_connection": "연결 테스트",
 	"test_diffusion_first": "계속하기 전에 확산 연결을 성공적으로 테스트하세요 (또는 비활성화).",

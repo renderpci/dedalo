@@ -212,6 +212,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/config_docs_tripwire.test.ts
 	test/unit/labels_tripwire.test.ts
 	test/unit/tool_header_contract_tripwire.test.ts
+	test/unit/tool_phone_tripwire.test.ts
 	test/unit/tool_color_contrast_tripwire.test.ts
 	test/unit/dataframe_scan_coverage_tripwire.test.ts
 	test/unit/diffusion_scope_tripwire.test.ts

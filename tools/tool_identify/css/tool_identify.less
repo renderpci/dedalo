@@ -102,6 +102,12 @@
 		min-width	: 34rem;
 		max-width	: 60rem;
 
+		// phone: the modal is a full sheet; a 544px floor overflows it
+		@media screen and (max-width: @width_break_point_phone) {
+			min-width	: 0;
+			padding		: 0.5rem;
+		}
+
 		// ── the picture ─────────────────────────────────────────────────────
 		// Identification is a visual task, so the seed and every candidate carry
 		// a thumbnail. `.empty` is the NEUTRAL placeholder used both when the

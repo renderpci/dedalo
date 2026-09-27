@@ -351,6 +351,28 @@ class DDModal extends HTMLElement {
 					max-width: unset;
 				}
 			}
+			/* PHONE: every modal (not the minimised dock chip) is a full-viewport
+			   sheet. 600px mirrors @width_break_point_phone (vars.less) — a shadow
+			   root cannot read LESS; test/unit/tool_phone_tripwire.test.ts pins
+			   the two equal. */
+			@media screen and (max-width: 600px) {
+				.modal:not(.mini) > .modal-content,
+				.modal_big:not(.mini) > .modal-content,
+				.modal_small:not(.mini) > .modal-content {
+					width: 100vw;
+					max-width: 100vw;
+					min-width: 0;
+					height: 100dvh;
+					max-height: 100dvh;
+					top: 0;
+					left: 0;
+					transform: none;
+					margin: 0;
+					border-radius: 0;
+					resize: none;
+					padding-bottom: env(safe-area-inset-bottom);
+				}
+			}
 
 			.mini {
 				position: fixed;

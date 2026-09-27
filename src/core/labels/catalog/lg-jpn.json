@@ -447,6 +447,7 @@
 	"table": "テーブル",
 	"tables_list": "テーブルリスト（例: dd_ontology, matrix_ontology, matrix）",
 	"tag": "タグ",
+	"tap_term_to_place": "配置する用語をタップしてください",
 	"terms": "用語",
 	"test_connection": "接続をテスト",
 	"test_diffusion_first": "続行する前に配信接続を正常にテストしてください（または無効にしてください）。",

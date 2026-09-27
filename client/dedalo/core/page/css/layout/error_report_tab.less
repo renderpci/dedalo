@@ -126,3 +126,32 @@
 		animation: none;
 	}
 }
+
+// ---- phone -------------------------------------------------------------------
+// A touch screen has no hover, and a 14px sliver is not a tap target. The
+// PAINTED strip stays the same width; the box grows to the 44px target leftward
+// with a transparent padding (background clipped to the content box), so it
+// still covers ~14px of page visually. The one-off shadow and radius would draw
+// around the invisible part, so they go.
+@media screen and (max-width: @width_break_point_phone) {
+	@phone_tab_target: 44px;
+	.error_report_edge_tab {
+		// mid-screen, not low: on a phone the bottom edge is where the action
+		// bars live (the assistant composer's send button, sticky tool
+		// footers), and a fixed tab there sat on top of them
+		bottom: 45vh;
+		width: @phone_tab_target;
+		padding: 0 0 0 calc(@phone_tab_target - 0.9rem);
+		background-clip: content-box;
+		box-shadow: none;
+		border-radius: 0;
+
+		&:hover,
+		&:focus-visible,
+		&.alerted {
+			width: @phone_tab_target;
+			padding-left: calc(@phone_tab_target - 1.7rem);
+			box-shadow: none;
+		}
+	}
+}

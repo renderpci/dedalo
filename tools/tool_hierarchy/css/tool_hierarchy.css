@@ -68,6 +68,19 @@
 .wrapper_tool.tool_hierarchy > .content_data > .status_container > .status_checks > .check > .check_detail {
   color: var(--color_grey_4);
 }
+@media screen and (max-width: 600px) {
+  .wrapper_tool.tool_hierarchy > .content_data > .status_container > .status_checks > .check {
+    flex-wrap: wrap;
+  }
+  .wrapper_tool.tool_hierarchy > .content_data > .status_container > .status_checks > .check > .check_label {
+    flex: 1 1 calc(100% - 1.5rem);
+  }
+  .wrapper_tool.tool_hierarchy > .content_data > .status_container > .status_checks > .check > .check_detail {
+    flex: 1 1 100%;
+    padding-left: 1.5rem;
+    overflow-wrap: anywhere;
+  }
+}
 .wrapper_tool.tool_hierarchy > .content_data > .status_container > .status_checks > .check:before {
   flex: 0 0 1rem;
   font-weight: 700;

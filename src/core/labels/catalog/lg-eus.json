@@ -447,6 +447,7 @@
 	"table": "taula",
 	"tables_list": "Taulen zerrenda, adibidez dd_ontology, matrix_ontology, matrix",
 	"tag": "etiketa",
+	"tap_term_to_place": "Sakatu termino bat kokatzeko",
 	"terms": "Terminoak",
 	"test_connection": "Probatu konexioa",
 	"test_diffusion_first": "Probatu hedapen-konexioa arrakastaz jarraitu aurretik (edo desgaitu ezazu).",

@@ -289,7 +289,7 @@ page.prototype.init = async function(options) {
 			const activate_component_handler = function(component_instance) {
 
 				// lock_component. launch worker
-				if (DEDALO_LOCK_COMPONENTS===true && component_instance.mode==='edit') {
+				if (typeof DEDALO_LOCK_COMPONENTS!=='undefined' && DEDALO_LOCK_COMPONENTS===true && component_instance.mode==='edit') {
 					dd_request_idle_callback(
 						() => {
 							data_manager.request({
@@ -1192,7 +1192,9 @@ page.prototype.add_events = function() {
 			// just frees the lock immediately when the browser allows a final beacon.
 			// sendBeacon cannot set headers, so the CSRF token travels in the body (the
 			// API accepts rqo->csrf_token); text/plain avoids a CORS preflight on unload.
-				if (DEDALO_LOCK_COMPONENTS===true && page_globals.component_active && typeof navigator!=='undefined' && navigator.sendBeacon) {
+				// typeof-guarded: a window unloaded before `start` delivered the
+				// environment (a reload while booting) has no such global yet
+				if (typeof DEDALO_LOCK_COMPONENTS!=='undefined' && DEDALO_LOCK_COMPONENTS===true && page_globals.component_active && typeof navigator!=='undefined' && navigator.sendBeacon) {
 					try {
 						const ca		= page_globals.component_active
 						const api_url	= (typeof DEDALO_API_URL!=='undefined') ? DEDALO_API_URL : '../api/v1/json/'

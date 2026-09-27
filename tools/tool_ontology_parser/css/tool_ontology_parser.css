@@ -181,6 +181,11 @@
   padding-top: 0.5rem;
   padding-bottom: 1.2rem;
 }
+@media screen and (max-width: 600px) {
+  .wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .children_container {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 .wrapper_tool.tool_ontology_parser > .content_data > .status_container {
   margin: 0 0 1rem 0;
   padding: 1rem 1.25rem;
@@ -259,6 +264,16 @@
   align-items: flex-start;
   justify-content: center;
   gap: 1rem;
+}
+@media screen and (max-width: 600px) {
+  .wrapper_tool.tool_ontology_parser > .content_data > .buttons_container {
+    flex-wrap: wrap;
+    padding: 1rem 0;
+  }
+  .wrapper_tool.tool_ontology_parser > .content_data > .buttons_container .button_group {
+    flex: 1 1 100%;
+    max-width: none;
+  }
 }
 .wrapper_tool.tool_ontology_parser > .content_data > .buttons_container .button_group {
   display: flex;

@@ -1949,6 +1949,36 @@ html {
     visibility: visible !important;
   }
 }
+.touch_pick_bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2001;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+  background-color: var(--bg_surface_alt);
+  color: var(--fg_default);
+  border-top: 3px solid var(--color_orange_dedalo);
+  box-shadow: var(--shadow-2);
+}
+.touch_pick_bar > .touch_pick_text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.touch_pick_bar > .touch_pick_cancel {
+  flex: 0 0 auto;
+  min-height: 44px;
+  min-width: 44px;
+}
+.touch_pick_active .wrap_ts_object > .content_data > .elements_container {
+  outline: 1px dashed var(--color_orange_dedalo);
+  outline-offset: -1px;
+}
 @-webkit-keyframes progress-bar-stripes {
   from {
     background-position: 40px 0px;
@@ -5546,6 +5576,12 @@ dd-modal .body.content_no_buttons {
   min-width: 34rem;
   min-height: 20rem;
 }
+@media screen and (max-width: 600px) {
+  dd-modal .body.content_no_buttons {
+    min-width: 0;
+    min-height: 0;
+  }
+}
 dd-modal .body.content_no_buttons > .wrapper_component {
   margin: 1rem;
   margin-top: 2rem;
@@ -6329,6 +6365,16 @@ dd-modal.dd_confirm .footer.content > button {
 }
 .page > .bubbles_notification_container .bubble {
   box-shadow: 3px 2px 5px var(--color_grey_9);
+}
+@media screen and (max-width: 600px) {
+  .page > .bubbles_notification_container {
+    max-width: none;
+    left: 0.5rem;
+    right: 0.5rem;
+  }
+  .page > .bubbles_notification_container .bubble {
+    overflow-wrap: anywhere;
+  }
 }
 /**
 * list_body
@@ -7140,6 +7186,23 @@ body:has(.assistant_container.standalone.show) {
 @media (prefers-reduced-motion: reduce) {
   .error_report_edge_tab.alerted {
     animation: none;
+  }
+}
+@media screen and (max-width: 600px) {
+  .error_report_edge_tab {
+    bottom: 45vh;
+    width: 44px;
+    padding: 0 0 0 calc(44px - 0.9rem);
+    background-clip: content-box;
+    box-shadow: none;
+    border-radius: 0;
+  }
+  .error_report_edge_tab:hover,
+  .error_report_edge_tab:focus-visible,
+  .error_report_edge_tab.alerted {
+    width: 44px;
+    padding-left: calc(44px - 1.7rem);
+    box-shadow: none;
   }
 }
 /**
@@ -12346,6 +12409,180 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   --tool_fill_hover: #bb2a3f;
   --tool_on_fill: #ffffff;
 }
+/**
+* TOOL_RESPONSIVE — the PHONE tier shared by every tool surface.
+*
+* Imported from tool_common.less. Contract (rewrite plan phase 0, gated by
+* test/unit/tool_phone_tripwire.test.ts + scripts/tool_viewport_check.ts):
+* at @min_target_viewport (360px) a tool renders with no page-level
+* horizontal scroll, every control on screen and at least 44px tall.
+* Usable, not comfortable.
+*
+* LAYOUT ONLY. Colours stay in the theme / generated tool tokens; nothing
+* here may paint.
+*
+* A tool that needs its own phone rules writes them in its own sheet, against
+* @width_break_point_phone — never a literal width.
+*/
+@media screen and (max-width: 600px) {
+  .wrapper_tool {
+    min-width: 0;
+    max-width: 100vw;
+    overflow-x: clip;
+  }
+  .wrapper_tool > .content_data {
+    min-width: 0;
+    padding: 0.5rem;
+    padding-top: 1rem;
+  }
+  .wrapper_tool > .content_data > .footer_node {
+    padding: 1.5rem 0.5rem;
+    flex-wrap: wrap;
+  }
+  .wrapper_tool img,
+  .wrapper_tool video,
+  .wrapper_tool canvas,
+  .wrapper_tool svg:not(.icon) {
+    max-width: 100%;
+    height: auto;
+  }
+  .wrapper_tool iframe {
+    max-width: 100%;
+  }
+  .wrapper_tool table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .wrapper_tool input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+  .wrapper_tool select,
+  .wrapper_tool textarea {
+    max-width: 100%;
+    font-size: max(16px, 1em);
+  }
+  .wrapper_tool input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+  .wrapper_tool select {
+    min-height: 44px;
+  }
+  .wrapper_tool input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]) {
+    min-width: 44px;
+  }
+  .wrapper_tool .leaflet-touch .leaflet-bar a,
+  .wrapper_tool .leaflet-bar a,
+  .wrapper_tool .leaflet-buttons-control-button {
+    width: 44px;
+    height: 44px;
+    line-height: 44px;
+  }
+  .tool_header {
+    position: sticky;
+    top: 0;
+    padding-top: calc(0.5rem + 4px);
+    padding-bottom: 0.5rem;
+  }
+  .tool_header > .tool_name_container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    margin-right: 0;
+    padding-right: 3rem;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .tool_header > .tool_name_container > .label {
+    font-size: 1.15rem;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  .tool_header > .tool_name_container > .description {
+    padding: 0;
+    font-size: 0.9rem;
+    line-height: 1.25rem;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+  }
+  .tool_header .selector {
+    max-width: 100%;
+  }
+  .tool_header > .tool_buttons_container > div:not(.wrapper_component),
+  .tool_header > .tool_buttons_container > button,
+  .tool_header > .tool_buttons_container > select {
+    flex: 1 1 auto;
+    min-height: 44px;
+  }
+  .wrapper_tool button,
+  .wrapper_tool .button.tool_button,
+  .wrapper_tool [role="button"],
+  .tool_header button {
+    min-height: 44px;
+  }
+  .wrapper_tool .phone_stack {
+    display: flex !important;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .wrapper_tool .phone_stack > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+.pane_switch {
+  display: none;
+}
+@media screen and (max-width: 600px) {
+  .pane_switch {
+    display: flex;
+    width: 100%;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: var(--bg_surface_alt);
+  }
+  .pane_switch > .pane_btn {
+    flex: 1 1 0;
+    min-height: 44px;
+    border: 1px solid var(--border_default);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--fg_default);
+  }
+  .pane_switch > .pane_btn.active {
+    border-color: var(--tool_edge, var(--border_default));
+    box-shadow: inset 0 -3px 0 var(--tool_edge, var(--fg_default));
+  }
+  .pane_host.pane_switch_on [data-pane] {
+    display: none !important;
+  }
+  .pane_host.pane_switch_on [data-pane].pane_active {
+    display: block !important;
+  }
+}
+.phone_reorder {
+  display: none;
+}
+@media screen and (max-width: 600px) {
+  .phone_reorder {
+    display: inline-flex;
+    gap: 0.25rem;
+    flex-shrink: 0;
+  }
+  .phone_reorder > .phone_reorder_btn {
+    min-width: 44px;
+    min-height: 44px;
+    border: 1px solid var(--border_default);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--fg_default);
+  }
+  .phone_reorder > .phone_reorder_btn:disabled {
+    opacity: 0.35;
+  }
+}
 .wrapper_tool {
   contain: content;
   margin: 0px;
@@ -12472,6 +12709,17 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   box-sizing: border-box;
   margin: 0px;
   vertical-align: middle;
+}
+@media screen and (max-width: 600px) {
+  .tool_header > .tool_buttons_container button,
+  .tool_header > .tool_buttons_container select,
+  .tool_header > .tool_buttons_container input:not([type="checkbox"]):not([type="radio"]),
+  .tool_header > .tool_buttons_container .button,
+  .tool_header > .tool_buttons_container .tool_button {
+    height: 44px;
+    min-height: 44px;
+    line-height: normal;
+  }
 }
 .tool_header > .tool_buttons_container select {
   opacity: 1;
@@ -19262,6 +19510,20 @@ body.inspector_resizing {
 .section.list > .buttons_container > .search_buttons_container {
   display: flex;
 }
+@media screen and (max-width: 600px) {
+  .section.list > .buttons_container {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  .section.list > .buttons_container > .search_buttons_container {
+    flex-wrap: wrap;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .section.list > .buttons_container .semantic_pinned_chip {
+    max-width: 100%;
+  }
+}
 .section.list > .buttons_container > .other_buttons_block {
   display: flex;
   flex-wrap: wrap;
@@ -20782,6 +21044,70 @@ body.inspector_resizing {
 }
 .wrap_ts_object .removed_from_view {
   display: none;
+}
+@media screen and (max-width: 600px) {
+  .wrap_ts_object > .content_data > .id_column_content {
+    min-height: 44px;
+  }
+  .wrap_ts_object > .content_data > .id_column_content .id_column_link {
+    width: 44px;
+    height: 44px;
+    margin-right: 0;
+  }
+  .wrap_ts_object > .content_data > .elements_container {
+    min-height: 44px;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .wrap_ts_object > .content_data > .elements_container > .term > .term_text,
+  .wrap_ts_object > .content_data > .elements_container > .term_text {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    min-width: 44px;
+    margin: 0;
+  }
+  .wrap_ts_object > .content_data > .elements_container > .button_show_component {
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 12px 8px;
+    background-clip: content-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .wrap_ts_object > .content_data > .elements_container > .link_children {
+    border: 0 !important;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    top: 0;
+    left: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .wrap_ts_object > .content_data > .elements_container > .link_children::before {
+    content: '';
+    border-style: solid;
+    border-width: 6px 0px 6px 10.4px;
+    border-color: transparent transparent transparent var(--color_orange);
+  }
+  .area_ontology .wrap_ts_object > .content_data > .elements_container > .link_children::before {
+    border-left-color: var(--color_grey_9);
+  }
+  .wrap_ts_object > .content_data > .elements_container > .link_children.open::before {
+    border-width: 10.4px 6px 0px 6px;
+    border-color: var(--color_orange) transparent transparent transparent;
+  }
+  .area_ontology .wrap_ts_object > .content_data > .elements_container > .link_children.open::before {
+    border-top-color: var(--color_grey_9);
+  }
+  .wrap_ts_object > .content_data > .elements_container > .link_children.loading_spinner::before {
+    display: none;
+  }
 }
 /**
 * section_group

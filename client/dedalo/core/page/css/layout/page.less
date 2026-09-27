@@ -65,5 +65,17 @@
 		.bubble {
 			box-shadow: 3px 2px 5px @color_grey_9;
 		}
+
+		// phone: 22rem outgrows a 360px screen (the root font steps up below
+		// @width_break_point_0), and an error's request id is one long word
+		@media screen and (max-width: @width_break_point_phone) {
+			max-width: none;
+			left: 0.5rem;
+			right: 0.5rem;
+
+			.bubble {
+				overflow-wrap: anywhere;
+			}
+		}
 	}
 }

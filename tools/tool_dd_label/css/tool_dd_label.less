@@ -60,6 +60,16 @@
 			display: grid;
 			margin-top: 1rem;
 
+			// phone: name + one column per language (~17) in 360px left each
+			// column one letter wide. A translation matrix IS a table: it keeps
+			// readable columns and pans inside its own box (the page does not).
+			// !important: the template is set inline by render_tool_dd_label.js.
+			@media screen and (max-width: @width_break_point_phone) {
+				grid-template-columns: 44px repeat(var(--label_cols, 2), minmax(8rem, 1fr)) !important;
+				overflow-x: auto;
+				-webkit-overflow-scrolling: touch;
+			}
+
 			>.row {
 				display: contents;
 

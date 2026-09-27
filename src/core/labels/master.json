@@ -641,6 +641,7 @@
 	"table": "table",
 	"tables_list": "Tables list as dd_ontology, matrix_ontology, matrix",
 	"tag": "tag",
+	"tap_term_to_place": "Tap a term to place it",
 	"terms": "Terms",
 	"test_connection": "Test connection",
 	"test_diffusion_first": "Test the diffusion connection successfully before continuing (or disable it).",

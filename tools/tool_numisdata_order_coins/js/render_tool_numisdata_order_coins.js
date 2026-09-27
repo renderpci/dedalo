@@ -33,6 +33,7 @@
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {render_node_info} from '../../../core/common/js/utils/notifications.js'
+	import * as touch_pick from '../../../core/common/js/touch_pick.js'
 
 
 
@@ -554,23 +555,19 @@ render_tool_numisdata_order_coins.prototype.drop = function (options) {
 						current_node.classList.remove('dragover')
 				},false)
 
-			// drop event
-				current_node.addEventListener('drop', function(e){
-					e.preventDefault()
-					e.stopPropagation()
+			// place: the drop's body, shared by the mouse drop and the touch
+			// placement below (one implementation, two gestures)
+				const place = function(data) {
 
 					// css
 						current_node.classList.remove('dragover')
 						current_node.classList.add('drop_ordered_coins')
 
-					// data_transfer
-						const data	= e.dataTransfer.getData('text/plain');// element that's move
-
 					// the drag element will sent the data of the original position, the source_key
 						const data_parse = JSON.parse(data)
 
 					// assign element to target portal
-						const change = self.assign_element({
+						self.assign_element({
 							caller 	: current_node.component_instance,
 							locator : data_parse.locator
 						}).then( response =>{
@@ -588,6 +585,24 @@ render_tool_numisdata_order_coins.prototype.drop = function (options) {
 								draged_section_record.node.querySelector('#col_original .drag').classList.add('used')
 							}
 						})
+				}
+
+			// drop event
+				current_node.addEventListener('drop', function(e){
+					e.preventDefault()
+					e.stopPropagation()
+					place(e.dataTransfer.getData('text/plain'))
+				},false)
+
+			// touch placement: a coin picked by a tap (touch_pick.js — a finger
+			// cannot drag) is placed by a tap on this slot
+				current_node.addEventListener('click', function(e){
+					if (!touch_pick.active()) {
+						return
+					}
+					e.preventDefault()
+					e.stopPropagation()
+					place(touch_pick.as_drop_event().dataTransfer.getData('text/plain'))
 				},false)
 	}// end for (let i = drop_zones_len - 1; i >= 0; i--)
 }//end drop

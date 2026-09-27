@@ -447,6 +447,7 @@
 	"table": "Tabelle",
 	"tables_list": "Tabellenliste wie dd_ontology, matrix_ontology, matrix",
 	"tag": "Label",
+	"tap_term_to_place": "Tippe auf einen Begriff, um es abzulegen",
 	"terms": "Begriffe",
 	"test_connection": "Verbindung testen",
 	"test_diffusion_first": "Testen Sie die Diffusionsverbindung erfolgreich, bevor Sie fortfahren (oder deaktivieren Sie sie).",

@@ -447,6 +447,7 @@
 	"table": "جدول",
 	"tables_list": "قائمة الجداول مثل dd_ontology، matrix_ontology، matrix",
 	"tag": "وسم",
+	"tap_term_to_place": "اضغط على مصطلح لوضعه فيه",
 	"terms": "المصطلحات",
 	"test_connection": "اختبار الاتصال",
 	"test_diffusion_first": "اختبر اتصال النشر بنجاح قبل المتابعة (أو عطّله).",

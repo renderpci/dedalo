@@ -1,3 +1,6 @@
+// imports
+@import (once) '../../../client/dedalo/core/page/css/layout/vars';
+
 // Indigo identity hue. ONE value for both themes (registered THEME_INVARIANT in
 // palette_axis_parity_tripwire): it is an EDGE and an ACCENT — the header's 4px
 // top strip (3.78:1 on the dark surface, above the 3:1 non-text floor), the
@@ -122,6 +125,20 @@
 	&.show {
 		display: flex;
 	}
+
+	// phone: the panel IS the screen under the menu bar. A 22rem side panel
+	// left an unusable strip of the list beside it.
+	@media screen and (max-width: @width_break_point_phone) {
+		left: 0;
+		right: 0;
+		width: 100%;
+		height: calc(100dvh - var(--menu_heigth, 2.6rem));
+		max-height: calc(100dvh - var(--menu_heigth, 2.6rem));
+		border-radius: 0;
+		border-left: none;
+		border-right: none;
+		padding-bottom: env(safe-area-inset-bottom);
+	}
 }
 
 // content_data wrapper for the assistant tool
@@ -159,6 +176,12 @@
 	&:hover {
 		background-color: var(--bg_surface_alt);
 		border-color: var(--border_strong);
+	}
+
+	// phone: a tap target (@phone_hit_target, tool_responsive.less)
+	@media screen and (max-width: @width_break_point_phone) {
+		min-width: 44px;
+		min-height: 44px;
 	}
 }
 
@@ -602,6 +625,12 @@
 	max-height: 8rem;
 	min-height: 1.8rem;
 	line-height: 1.4;
+
+	// phone: a tap target, and 16px so iOS does not zoom the page on focus
+	@media screen and (max-width: @width_break_point_phone) {
+		min-height: 44px;
+		font-size: 16px;
+	}
 	outline: none;
 	transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 	overflow-y: auto;
@@ -627,6 +656,11 @@
 	border-radius: 0.5rem;
 	width: 2.2rem;
 	height: 2.2rem;
+
+	@media screen and (max-width: @width_break_point_phone) {
+		width: 44px;
+		height: 44px;
+	}
 	font-size: 1.1rem;
 	cursor: pointer;
 	display: flex;

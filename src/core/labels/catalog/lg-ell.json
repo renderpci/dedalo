@@ -447,6 +447,7 @@
 	"table": "πίνακας",
 	"tables_list": "Λίστα πινάκων όπως dd_ontology, matrix_ontology, matrix",
 	"tag": "επιγραφή",
+	"tap_term_to_place": "Πατήστε έναν όρο για να το τοποθετήσετε",
 	"terms": "ονόματα",
 	"test_connection": "Δοκιμή σύνδεσης",
 	"test_diffusion_first": "Δοκιμάστε επιτυχώς τη σύνδεση διάχυσης πριν συνεχίσετε (ή απενεργοποιήστε την).",

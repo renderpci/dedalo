@@ -18,6 +18,13 @@
   display: grid;
   margin-top: 1rem;
 }
+@media screen and (max-width: 600px) {
+  .wrapper_tool.tool_dd_label > .content_data > .label_matix {
+    grid-template-columns: 44px repeat(var(--label_cols, 2), minmax(8rem, 1fr)) !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
 .wrapper_tool.tool_dd_label > .content_data > .label_matix > .row {
   display: contents;
 }

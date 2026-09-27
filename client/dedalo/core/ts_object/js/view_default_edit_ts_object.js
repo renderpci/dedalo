@@ -52,6 +52,7 @@
 		on_dragover,
 		on_dragleave
 	} from './drag_and_drop.js'
+	import * as touch_pick from '../../common/js/touch_pick.js'
 	import {ts_object} from '../../ts_object/js/ts_object.js'
 	import {a11y} from '../../common/js/a11y.js'
 	import {render_ts_line} from './render_ts_line.js'
@@ -820,6 +821,19 @@ const render_wrapper = function(self) {
 				on_dragleave(self, e)
 			}
 			wrap_ts_object.addEventListener('dragleave', dragleave_handler)
+
+			// touch placement: while a payload is picked (touch_pick.js — a
+			// finger cannot drag), a tap on a term IS the drop, through the same
+			// on_drop. The innermost term handles it and stops the bubble.
+			const touch_place_handler = (e) => {
+				if (!touch_pick.active()) {
+					return
+				}
+				e.preventDefault()
+				e.stopPropagation()
+				on_drop(self, touch_pick.as_drop_event(), wrap_ts_object)
+			}
+			wrap_ts_object.addEventListener('click', touch_place_handler)
 		}
 
 

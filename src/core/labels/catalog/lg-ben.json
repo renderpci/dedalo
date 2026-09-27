@@ -447,6 +447,7 @@
 	"table": "টেবিল",
 	"tables_list": "টেবিলের তালিকা যেমন dd_ontology, matrix_ontology, matrix",
 	"tag": "ট্যাগ",
+	"tap_term_to_place": "রাখতে একটি পদে ট্যাপ করুন",
 	"terms": "শর্তাবলী",
 	"test_connection": "সংযোগ পরীক্ষা করুন",
 	"test_diffusion_first": "চালিয়ে যাওয়ার আগে প্রসার সংযোগ সফলভাবে পরীক্ষা করুন (বা এটি নিষ্ক্রিয় করুন)।",

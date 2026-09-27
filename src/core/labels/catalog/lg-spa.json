@@ -448,6 +448,7 @@
 	"table": "tabla",
 	"tables_list": "Lista de tablas como dd_ontology, matrix_ontology, matrix",
 	"tag": "etiqueta",
+	"tap_term_to_place": "Toca un término para colocarlo",
 	"terms": "Términos",
 	"test_connection": "Probar conexión",
 	"test_diffusion_first": "Pruebe la conexión de difusión correctamente antes de continuar (o desactívela).",

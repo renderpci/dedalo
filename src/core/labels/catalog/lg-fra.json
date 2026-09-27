@@ -447,6 +447,7 @@
 	"table": "table",
 	"tables_list": "Liste de tables comme dd_ontology, matrix_ontology, matrix",
 	"tag": "libellé",
+	"tap_term_to_place": "Touchez un terme pour le placer",
 	"terms": "Conditions d'utilisation",
 	"test_connection": "Tester la connexion",
 	"test_diffusion_first": "Testez la connexion de diffusion avec succès avant de continuer (ou désactivez-la).",

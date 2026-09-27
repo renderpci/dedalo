@@ -243,6 +243,12 @@
 				display: grid;
 				grid-template-columns: repeat(4, 1fr);
 				grid-gap: 0.5rem;
+
+				// phone: four columns truncated every TLD name to its first
+				// letters ("hierar…"); two keep them readable
+				@media screen and (max-width: @width_break_point_phone) {
+					grid-template-columns: repeat(2, minmax(0, 1fr));
+				}
 				margin-top: 0.5rem;
 				padding: 0.25rem;
 				padding-top: 0.5rem;
@@ -323,6 +329,18 @@
 			align-items: flex-start;
 			justify-content: center;
 			gap: 1rem;
+
+			// phone: centred and unwrapped, the action groups spilled off BOTH
+			// edges (Repair TLDs sat at x −70). Wrapped, each group is a row.
+			@media screen and (max-width: @width_break_point_phone) {
+				flex-wrap: wrap;
+				padding: 1rem 0;
+
+				.button_group {
+					flex: 1 1 100%;
+					max-width: none;
+				}
+			}
 
 			// each action = button + caption description, stacked and centered.
 			.button_group {
