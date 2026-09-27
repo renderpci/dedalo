@@ -8,7 +8,7 @@ import {event_manager} from '../../../core/common/js/event_manager.js'
 import {data_manager} from '../../../core/common/js/data_manager.js'
 import {ui} from '../../../core/common/js/ui.js'
 import {clone, pause} from '../../../core/common/js/utils/util.js'
-import {response_data} from '../../../core/common/js/api_error.js'
+import {response_data, request_failed} from '../../../core/common/js/api_error.js'
 
 
 
@@ -470,12 +470,54 @@ describe(`COMPONENT_RELATION_CHILDREN DATA OPERATIONS`, async function() {
 	// (!) change_value with set_data action works client-side
 	// but the server save is a no-op for this component.
 	// The test verifies the client-side data manipulation works.
+	//
+	// The block BUILDS its situation: a fresh record, created here and deleted in
+	// after(). The children of a SHARED record are whatever other suites linked to
+	// it — test_components_data_changes gives test3/10 a random test71 parent, and
+	// 1 run in 25 that parent was test3/1, which this block used to read: the save
+	// echo then listed test3/10 and "entries must be empty" failed (2026-09-26).
 
 	describe(`CHANGE DATA (change_value)`, function() {
 
+		let fresh_id = null
+
+		const api = async function(body) {
+			const api_response = await data_manager.request({body})
+			if (request_failed(api_response)) {
+				throw new Error(`${body.action} refused: ${api_response.error.code}`)
+			}
+			return response_data(api_response)
+		}
+		const section_source = function(section_id=null) {
+			return {
+				typo			: 'source',
+				type			: 'section',
+				model			: 'section',
+				tipo			: children_section,
+				section_tipo	: children_section,
+				section_id		: section_id,
+				mode			: 'edit',
+				lang			: page_globals?.dedalo_data_lang ?? 'lg-eng'
+			}
+		}
+
+		before(async function() {
+			fresh_id = Number(await api({action: 'create', source: section_source()}))
+			assert.ok(fresh_id > 0, 'a fresh record was created')
+		})
+
+		after(async function() {
+			if (fresh_id > 0) {
+				await api({
+					action	: 'delete',
+					source	: Object.assign(section_source(fresh_id), {delete_mode: 'delete_record'})
+				})
+			}
+		})
+
 		it(`${children_model} change_value with set_data clears entries`, async function() {
 
-			const instance = await get_children_instance('edit', 'default', children_section_id)
+			const instance = await get_children_instance('edit', 'default', fresh_id)
 			await instance.render()
 
 			// set_data with null clears the entries client-side
@@ -502,7 +544,7 @@ describe(`COMPONENT_RELATION_CHILDREN DATA OPERATIONS`, async function() {
 
 		it(`${children_model} change_value with insert returns api_response (read-only: insert does not persist)`, async function() {
 
-			const instance = await get_children_instance('edit', 'default', children_section_id)
+			const instance = await get_children_instance('edit', 'default', fresh_id)
 			await instance.render()
 
 			// insert a locator

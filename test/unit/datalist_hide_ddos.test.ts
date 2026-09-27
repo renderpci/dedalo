@@ -36,7 +36,17 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
 import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
 import { getNode } from '../../src/core/ontology/resolver.ts';
-import { getDatalist } from '../../src/core/relations/datalist.ts';
+import {
+	type DatalistItem,
+	getDatalist as getComponentDatalist,
+} from '../../src/core/relations/datalist.ts';
+
+/**
+ * These gates exercise the GENERIC target-section option list (their components
+ * declare no model `datalistSource`), so the wider door type narrows here.
+ */
+const getDatalist = (...args: Parameters<typeof getComponentDatalist>) =>
+	getComponentDatalist(...args) as Promise<DatalistItem[]>;
 
 /** Seed-shipped tipo, spelled so the census sees a reference, not a binding. */
 const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;

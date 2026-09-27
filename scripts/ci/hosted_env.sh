@@ -24,8 +24,8 @@
 # Usage:  source scripts/ci/hosted_env.sh   (from the repo root; cd there first)
 
 # Puppeteer is a devDep. The db tier never launches a browser; the instance tier
-# launches the SYSTEM Chrome (`channel: 'chrome'`, scripts/client_test_runner.ts),
-# which ubuntu-latest ships. Never download one on a runner.
+# launches the CI image's Chromium (PUPPETEER_EXECUTABLE_PATH, set by ci/Dockerfile;
+# scripts/client_test_runner.ts). Never download one on a runner.
 export PUPPETEER_SKIP_DOWNLOAD=1
 
 # ---------------------------------------------------------------------------
@@ -129,8 +129,8 @@ fi
 # value) by test/unit/media_export_base.test.ts — change both or neither.
 : "${DEDALO_MEDIA_EXPORT_BASE:=http://localhost:8080/dedalo/media}"
 
-# Postgres client. ubuntu-latest ships psql 16 and an OLDER CLIENT REFUSES a
-# newer server, so the workflow installs postgresql-client-18 and points here.
+# Postgres client. An OLDER CLIENT REFUSES a newer server; the CI image ships
+# postgresql-client-18 (ci/Dockerfile) at this path.
 # src/core/install/pg_bin.ts probes an explicit path first, then Apple-Silicon
 # Homebrew (macOS-only), then bare PATH -- so on Linux this key or PATH is the
 # only way it resolves.

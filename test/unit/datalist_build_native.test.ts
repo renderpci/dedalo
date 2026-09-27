@@ -43,11 +43,19 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
 import {
 	clearDatalistCache,
-	getDatalist,
+	type DatalistItem,
+	getDatalist as getComponentDatalist,
 	probeDatalistSize,
 } from '../../src/core/relations/datalist.ts';
 import { fireSaveEvent } from '../../src/core/section_record/save_event.ts';
 import { PROFILE_TOOLS_COMPONENT } from '../../src/core/tools/ontology_map.ts';
+
+/**
+ * These gates exercise the GENERIC target-section option list (their components
+ * declare no model `datalistSource`), so the wider door type narrows here.
+ */
+const getDatalist = (...args: Parameters<typeof getComponentDatalist>) =>
+	getComponentDatalist(...args) as Promise<DatalistItem[]>;
 
 const SECTION = 'test3'; // matrix_test
 const LABEL_DDO = 'test52'; // component_input_text

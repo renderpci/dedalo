@@ -300,6 +300,34 @@ if [ "$untracked_count" -gt 0 ]; then
 	say "note — $untracked_count untracked file(s) here; the bank and the CI tiers gate $head_sha exactly and do not see them."
 fi
 
+# ── bun and docker are FOUND, never assumed on PATH ─────────────────────────
+# A hook inherits the PATH of whatever ran `git push`. bun's installer adds
+# ~/.bun/bin through the login shell's rc, and Docker Desktop lives in
+# /usr/local/bin or its app bundle — none of which a GUI/IDE git client or a
+# non-interactive shell is guaranteed to have (measured 2026-09-26: `bun:
+# command not found` at the bank step). Each tool's own install locations are
+# tried before giving up, and giving up names the fix. It sits HERE, after the
+# ref scan, so a push with nothing to gate never needs either tool.
+find_tool() { # <name> <candidate dir>... — prepends the first dir holding it
+	tool="$1"
+	shift
+	command -v "$tool" >/dev/null 2>&1 && return 0
+	for dir in "$@"; do
+		if [ -x "$dir/$tool" ]; then
+			PATH="$dir:$PATH"
+			export PATH
+			return 0
+		fi
+	done
+	return 1
+}
+if ! find_tool bun "${BUN_INSTALL:-${HOME:-/nonexistent}/.bun}/bin"; then
+	say "REFUSED — bun is not on PATH, nor at ${BUN_INSTALL:-${HOME:-\$HOME}/.bun}/bin."
+	say '  Push from a shell where `bun --version` works, or set BUN_INSTALL.'
+	exit 1
+fi
+find_tool docker /usr/local/bin /Applications/Docker.app/Contents/Resources/bin "${HOME:-/nonexistent}/.docker/bin" || :
+
 # ── Docker: required, never silently skipped ────────────────────────────────
 if ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then
 	rule

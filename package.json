@@ -33,6 +33,7 @@
 		"test": "bun test --timeout=30000",
 		"lint:browser": "bun run scripts/lint_browser_budget.ts",
 		"ci:local": "bun run scripts/ci_local.ts",
+		"ci:image:pin": "bun run scripts/ci_image_pin.ts",
 		"baselines:bank": "bun run scripts/baselines_bank.ts",
 		"push": "bun run scripts/push.ts",
 		"prepare": "[ -z \"$CI\" ] && [ -z \"$DEDALO_CI_IMAGE\" ] && [ -f scripts/hooks/pre-push ] && [ \"$(git rev-parse --is-inside-work-tree 2>/dev/null)\" = true ] && [ -z \"$(git rev-parse --show-prefix 2>/dev/null)\" ] && { cur=\"$(git config --get core.hooksPath)\"; if [ -z \"$cur\" ]; then git config core.hooksPath scripts/hooks && echo 'prepare: pre-push gate installed (core.hooksPath=scripts/hooks)'; elif [ \"$cur\" != scripts/hooks ]; then echo \"prepare: core.hooksPath is '$cur', not scripts/hooks: the pre-push gate is NOT active\" >&2; fi; } || true",
@@ -58,8 +59,8 @@
 		"format": "biome format --write ."
 	},
 	"dependencies": {
-		"@anthropic-ai/sdk": "^0.127.0",
-		"@geoman-io/leaflet-geoman-free": "2.20.1",
+		"@anthropic-ai/sdk": "^0.128.0",
+		"@geoman-io/leaflet-geoman-free": "2.20.2",
 		"@highlightjs/cdn-assets": "11.12.0",
 		"@jaames/iro": "5.5.2",
 		"@modelcontextprotocol/sdk": "^1.30.1",

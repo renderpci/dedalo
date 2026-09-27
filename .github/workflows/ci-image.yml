@@ -3,10 +3,11 @@
 # WHAT IT IS FOR. The executing tiers (ci.yml, db.yml) and `bun run ci:local -- --docker`
 # run INSIDE this image, so a verdict is a property of the commit and not of whichever
 # runner or Mac judged it (ci/Dockerfile header: the unit tier measured 25 red files on
-# a bare runner against 3 on a developer box — missing media tools, not code). The
-# workflows pin the image by DIGEST (rule 12 of test/unit/ci_workflow_tripwire.test.ts);
-# this workflow produces the digests, and Dependabot's docker ecosystem proposes the pin
-# bumps. Exactness with an updater — the .bun-version rule.
+# a bare runner against 3 on a developer box — missing media tools, not code). Every
+# host runs the digest ci/image.json locks (rule 1b of test/unit/ci_workflow_tripwire.test.ts);
+# this workflow produces the digests and `bun run ci:image:pin` moves the lock to one
+# (Dependabot cannot: it does not see workflow `container:` images, dependabot-core#5819).
+# Exactness with an updater — the .bun-version rule.
 #
 # MULTI-ARCH, NATIVELY. linux/amd64 is what GitHub runs; linux/arm64 is what an
 # Apple-Silicon Mac runs `ci:local` on without emulation. Each arch builds on its OWN
@@ -16,8 +17,9 @@
 # (load → run → push), then `merge` stitches the two into one manifest list.
 #
 # TAGS (all on the manifest list):
-#   fp-<fingerprint>  sha256(ci/Dockerfile ++ .bun-version) — what `ci:local` pulls to get
-#                     the image matching THIS checkout's definition (the same value as
+#   fp-<fingerprint>  sha256(ci/Dockerfile ++ .bun-version) — what `bun run ci:image:pin`
+#                     resolves to the digest every host then runs (ci/image.json), the image
+#                     matching THIS checkout's definition (the same value as
 #                     /etc/dedalo-ci-image and the org.dedalo.ci.fingerprint label).
 #   <YYYYMMDD>        the build day; a rebuild with an unchanged fingerprint still moves
 #                     distro packages, and this names which week's packages a digest holds.
@@ -33,7 +35,7 @@
 #   workflow_dispatch — a manual rebuild.
 # NO pull_request: publishing needs `packages: write`, and a fork PR must never reach a
 # job holding it. A Dockerfile change is proven BEFORE the push by the local gate —
-# `ci:local --docker` builds ci/Dockerfile whenever dedalo-ci:local's fingerprint does not
+# `ci:local --docker` builds ci/Dockerfile whenever ci/image.json's fingerprint does not
 # match the checkout — and here, on the branch, before any workflow pin moves to it.
 #
 # Invariants in this file are enforced by test/unit/ci_workflow_tripwire.test.ts

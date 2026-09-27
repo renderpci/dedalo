@@ -108,7 +108,7 @@ jobs:
         run: exit "$RC"
 
   report:
-    needs: check
+    needs: [check, image_pin]
     # always(): a red `check` is exactly when the issue matters. A cancelled or
     # skipped `check` reports nothing (handled in the script, not here, so the
     # condition cannot silently drop a red).
@@ -124,6 +124,8 @@ jobs:
           GH_REPO: ${{ github.repository }}
           CHECK_RESULT: ${{ needs.check.result }}
           SUMMARY: ${{ needs.check.outputs.summary }}
+          PIN_RESULT: ${{ needs.image_pin.result }}
+          PIN_MESSAGE: ${{ needs.image_pin.outputs.message }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
@@ -136,6 +138,11 @@ jobs:
           # (the trap scripts/ci/hermetic.sh documents for its JSON stubs).
           if [ -z "${SUMMARY:-}" ]; then
             SUMMARY='{"verdict":"red","problems":["the check job produced no summary (it died before the audit step) — read its log"],"warnings":[],"notes":[]}'
+          fi
+          # The CI image pin (image_pin job) is one more time-based check: a red one is a
+          # problem in this issue, not only a red scheduled run nobody is notified of.
+          if [ "${PIN_RESULT:-}" = "failure" ]; then
+            SUMMARY="$(jq --arg m "CI image pin is behind: ${PIN_MESSAGE:-read the image_pin job log} — run \`bun run ci:image:pin\` and commit the diff" '.problems = ((.problems // []) + [$m]) | .verdict = "red"' <<<"$SUMMARY")"
           fi
           verdict="$(jq -r '.verdict // "red"' <<<"$SUMMARY")"
           problems="$(jq '.problems // [] | length' <<<"$SUMMARY")"
@@ -202,3 +209,28 @@ jobs:
           else
             gh issue create --title "$title" --label "$label" --body-file "$body"
           fi
+
+  # THE CI IMAGE PIN'S UPDATER SIGNAL (scripts/lib/ci_image.ts). ci-image.yml rebuilds the
+  # image weekly with the layer cache OFF to take distro security fixes — under the SAME
+  # fingerprint, so nothing else notices a new digest was published. Red here means the
+  # lock still pins the older build: run `bun run ci:image:pin` and commit the diff.
+  image_pin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      message: ${{ steps.pin.outputs.message }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version # the load-bearing pin — never inline a version
+      - name: The CI image pin is the latest published build of this definition
+        id: pin
+        run: |
+          set +e
+          bun run ci:image:pin --check > "$RUNNER_TEMP/pin.log" 2>&1
+          rc=$?
+          set -e
+          cat "$RUNNER_TEMP/pin.log"
+          echo "message=$(grep '^ci:image:pin:' "$RUNNER_TEMP/pin.log" | tail -1 | tr -d '\r')" >> "$GITHUB_OUTPUT"
+          exit "$rc"

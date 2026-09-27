@@ -176,7 +176,7 @@ describe('CLIENT_ACTION_OUTCOME', function () {
 			await new Promise((resolve) => requestAnimationFrame(resolve));
 			const confirm_modal = document.querySelector('dd-modal.dd_confirm');
 			assert.notEqual(confirm_modal, null, 'the confirm dialog opened');
-			const button_cancel = confirm_modal.querySelector('button.secondary');
+			const button_cancel = confirm_modal.querySelector('button[data-role="cancel"]');
 			assert.notEqual(button_cancel, null, 'the confirm has a cancel button');
 			button_cancel.click();
 			const answer = await confirmed;

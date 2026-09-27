@@ -104,6 +104,25 @@ export type ImportConformId =
 export type TargetSourceId = 'section_model';
 
 /**
+ * The DATALIST-SOURCE IDs a descriptor may name in `datalistSource`: a model
+ * whose OPTIONS are not "every record of the request_config target section".
+ * Same DATA shape as `targetSource` (S2-20 — components/ keeps zero value-import
+ * edges into the engine). Bound to its implementation in relations/datalist.ts
+ * DATALIST_SOURCE_IMPLEMENTATIONS and applied at the ONE door, `getDatalist` —
+ * so every caller that asks a component for its options (edit read, save echo,
+ * temporal echo, filter_by_list, state widget, identify vocabulary) gets the
+ * model's options, never the generic enumeration.
+ *
+ * - 'project_langs': the project default languages (PHP
+ *   component_select_lang::get_list_of_values → lang::resolve_multiple
+ *   (DEDALO_PROJECTS_DEFAULT_LANGS)), a handful of lg1 records — NOT the ~21.7k
+ *   records of the lg1 section its node targets. Asking the generic builder
+ *   instead read every language record and put a 2.2 MB datalist on each
+ *   select_lang save echo (the 8.7–10.3 s CI saves of test89, 2026-09).
+ */
+export type DatalistSourceId = 'project_langs';
+
+/**
  * The search face of a relation model (mirrors the old SEARCH_UNCOVERED
  * ledger). Only relation-column models carry this; a model whose PHP search is
  * a dedicated, not-yet-ported pipeline is marked 'unported' with its reason and
@@ -285,6 +304,13 @@ export interface ComponentModel {
 	 * with no usable sqo target resolves nothing, as today.
 	 */
 	readonly targetSource?: TargetSourceId;
+	/**
+	 * The model's OPTION source when it is not the generic target-section
+	 * enumeration (see DatalistSourceId). Omitted = getDatalist enumerates the
+	 * request_config target sections. Pinned by descriptor_completeness_tripwire
+	 * (the id must name a real implementation).
+	 */
+	readonly datalistSource?: DatalistSourceId;
 	/**
 	 * Dataframe FRAME tipos this model ALWAYS pairs with, regardless of
 	 * properties.has_dataframe (PHP component_iri_json's hardcoded

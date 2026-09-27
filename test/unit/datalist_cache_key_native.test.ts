@@ -58,7 +58,8 @@ import { sql } from '../../src/core/db/postgres.ts';
 import { getModelSectionForSection } from '../../src/core/ontology/model_section.ts';
 import {
 	clearDatalistCache,
-	getDatalist,
+	type DatalistItem,
+	getDatalist as getComponentDatalist,
 	probeDatalistSize,
 } from '../../src/core/relations/datalist.ts';
 import { fireSaveEvent } from '../../src/core/section_record/save_event.ts';
@@ -66,6 +67,13 @@ import {
 	SYNTHETIC_HIERARCHY_A_TLD,
 	SYNTHETIC_HIERARCHY_B_TLD,
 } from '../../src/core/test_data/synthetic_hierarchy_constants.ts';
+
+/**
+ * These gates exercise the GENERIC target-section option list (their components
+ * declare no model `datalistSource`), so the wider door type narrows here.
+ */
+const getDatalist = (...args: Parameters<typeof getComponentDatalist>) =>
+	getComponentDatalist(...args) as Promise<DatalistItem[]>;
 
 /** The two callers of the ONE component node, and the model section each must
  * reach — the SYNTHETIC hierarchies' terms/model twins (ES_/FR_ names kept:

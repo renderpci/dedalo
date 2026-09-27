@@ -81,9 +81,15 @@ export const selectFamilyResolver: RelationModelResolver = {
 		// [] (NOT null) so the client's data.entries is always an array (life-cycle
 		// suites assert Array.isArray(entries), e.g. test_component_check_box:222 —
 		// which fails once a prior test clears the shared record's value).
-		const datalist = isSelectLang
-			? await (await import('../select_lang.ts')).getSelectLangDatalist(ddoLang)
-			: await getDatalist(ddo.tipo, node?.properties ?? null, row.section_tipo, ddoLang);
+		// getDatalist is the ONE door: it applies the model's own option source
+		// (select_lang → project langs, descriptor `datalistSource`) itself, so the
+		// save/temporal echoes that call it cannot diverge from this read.
+		const datalist = await getDatalist(
+			ddo.tipo,
+			node?.properties ?? null,
+			row.section_tipo,
+			ddoLang,
+		);
 		const item = buildDataItem(
 			ddo.tipo,
 			row.section_tipo,

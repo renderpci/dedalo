@@ -205,7 +205,7 @@ tag_note.prototype.render_empty_note = function(tag) {
 				header			: (get_label.new || 'New') + ' ' + (get_label.note || 'note'),
 				note			: tag.label || null,
 				body			: get_label.sure || 'Are you sure?',
-				accept_class	: 'primary new'
+				accept_class	: 'brand new'
 			})
 			if (confirmed!==true) {
 				return false

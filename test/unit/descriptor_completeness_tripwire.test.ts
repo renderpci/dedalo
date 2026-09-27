@@ -36,6 +36,7 @@ import {
 	renderClassOfDescriptor,
 } from '../../src/core/components/registry.ts';
 import type { ComponentModel } from '../../src/core/components/types.ts';
+import { DATALIST_SOURCE_IMPLEMENTATIONS } from '../../src/core/relations/datalist.ts';
 import { TARGET_SOURCE_IMPLEMENTATIONS } from '../../src/core/relations/request_config/target_sources.ts';
 import { IMPORT_CONFORM } from '../../src/core/tools/import_conform.ts';
 import { VALUE_PROPERTY_MODELS } from '../../src/core/tools/import_data.ts';
@@ -329,6 +330,31 @@ describe('descriptor completeness (S2-26 tripwire)', () => {
 				`${descriptor.model} names a target source that has no implementation: '${descriptor.targetSource}'`,
 			).toBe(true);
 		}
+	});
+
+	test('every datalistSource facet names a real implementation', () => {
+		// Same idiom as targetSource: the facet is DATA, so a typo would surface
+		// only inside a request — as the GENERIC enumeration silently answering
+		// for a model whose options are something else (component_select_lang
+		// once served all ~21.7k lg1 records on every save echo that way).
+		for (const descriptor of descriptors) {
+			if (descriptor.datalistSource === undefined) continue;
+			expect(
+				Object.hasOwn(DATALIST_SOURCE_IMPLEMENTATIONS, descriptor.datalistSource),
+				`${descriptor.model} names a datalist source that has no implementation: '${descriptor.datalistSource}'`,
+			).toBe(true);
+		}
+	});
+
+	test('component_select_lang declares the option source its node cannot state', () => {
+		// Its node's sqo names lg1 — every language record there is. Its options
+		// are the PROJECT languages (PHP component_select_lang::get_list_of_values),
+		// which only the descriptor can say. The outcome gate is
+		// select_family_echo_datalist_native.test.ts.
+		expect(
+			descriptors.find((descriptor) => descriptor.model === 'component_select_lang')
+				?.datalistSource,
+		).toBe('project_langs');
 	});
 
 	test('component_relation_model declares the target source its node cannot state', () => {

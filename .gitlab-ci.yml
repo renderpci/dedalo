@@ -6,8 +6,16 @@
 # client gate) run ONLY via GitHub Actions — one runner machine-owner, no
 # cross-system collision on the shared scratch DB surfaces.
 #
-# The image tag must equal .bun-version (the load-bearing Bun.sql jsonb pin);
-# test/unit/ci_workflow_tripwire.test.ts enforces it.
+# THE IMAGE IS THE CI IMAGE (2026-09-26) — ghcr.io/renderpci/dedalo-ci, the one
+# ci:local and the GitHub tiers use (ci/README.md), pinned by DIGEST, run as uid 1001
+# (the GitHub runner's, and ci:local's `runner`). It was bare oven/bun as root: no git
+# (site_builder publishes through git) and root defeats the uid/permission gates, so
+# hermetic here was red on master from 2026-08 while GitHub was green. The digest is
+# ci/image.json's (scripts/lib/ci_image.ts), whose fingerprint must equal
+# sha256(ci/Dockerfile ++ .bun-version) — that keeps the load-bearing Bun.sql jsonb pin
+# binding here: a .bun-version or Dockerfile edit is red until `bun run ci:image:pin`
+# moves every copy to the build ci-image.yml publishes for it.
+# test/unit/ci_workflow_tripwire.test.ts enforces both.
 #
 # SECURITY SCANNERS (added 2026-08-03). The two platforms are NOT symmetric here, and
 # that is deliberate rather than drift: GitHub runs CodeQL + gitleaks from
@@ -31,7 +39,18 @@ include:
 # lives — see its header for the shape and the verify-on-first-run note.)
 
 hermetic:
-  image: oven/bun:1.4.2
+  image:
+    name: ghcr.io/renderpci/dedalo-ci@sha256:ec014ba81eedffff31ea4827eb55c0d23d969e3dd5087ba84e349f703e60a1fe
+    docker:
+      user: "1001"
+  # uid 1001 has no passwd entry in the image, so HOME would be `/` (unwritable): bun's
+  # install cache and git's global config need a real one. Set in the JOB's shell, never
+  # as a job `variables:` entry — those reach the runner's helper container too, whose
+  # clone then died on `could not lock config file /tmp/runner-home/.gitconfig`
+  # (measured 2026-09-26, the first run in this image).
+  before_script:
+    - export HOME=/tmp/runner-home
+    - mkdir -p "$HOME"
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
