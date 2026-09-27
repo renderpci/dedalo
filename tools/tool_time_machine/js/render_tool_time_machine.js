@@ -238,18 +238,6 @@ const get_content_data = async function(self) {
 								// the coded error and no payload at all.
 								if (!request_failed(response) && response_data(response)) {
 									// success case
-									// A partial revert is still a success: rows the server
-									// refused (e.g. `frames_changed_since_run`) stay UNCHANGED
-									// and ride `skipped[]`. Tell the admin before the window
-									// closes, or the un-reverted rows go unnoticed.
-									const skipped = response_data(response).skipped
-									const skipped_msg = bulk_revert_skipped_message(
-										skipped,
-										self.get_tool_label('bulk_revert_skipped_msg', Array.isArray(skipped) ? skipped.length : 0)
-									)
-									if (skipped_msg) {
-										alert(skipped_msg)
-									}
 									if (window.opener) {
 										// close this window when was opened from another
 										window.close()
@@ -423,39 +411,6 @@ const get_content_data = async function(self) {
 *   ui.load_item_with_spinner (which is replaced asynchronously by the rendered
 *   component), or false if lang_value is falsy.
 */
-/**
-* BULK_REVERT_SKIPPED_MESSAGE
-* Builds the operator notice for the rows a bulk revert did NOT revert.
-* The server's `skipped[]` entries are typed `{reason, section_tipo?, tipo?,
-* section_id?}` (never sentences); this counts them per reason code.
-* @param {Array|undefined} skipped - `data.skipped` of the bulk revert response
-* @param {string|null} heading - tool label `bulk_revert_skipped_msg`, its `%s`
-*   already interpolated with the count, or null to use the English fallback
-* @returns {string|null} the message, or null when nothing was skipped
-*/
-export const bulk_revert_skipped_message = function(skipped, heading=null) {
-
-	if (!Array.isArray(skipped) || skipped.length===0) {
-		return null
-	}
-
-	const by_reason = new Map()
-	for (const entry of skipped) {
-		const reason = entry?.reason || 'unknown'
-		by_reason.set(reason, (by_reason.get(reason) || 0) + 1)
-	}
-
-	const title = (typeof heading==='string' && heading.length>0)
-		? heading
-		: `${skipped.length} row(s) were NOT reverted and were left unchanged (see the server log):`
-
-	const lines = [...by_reason].map(([reason, count]) => `- ${reason}: ${count}`)
-
-	return title + '\n' + lines.join('\n')
-}//end bulk_revert_skipped_message
-
-
-
 export const add_component = async (self, component_container, lang_value, label, mode, matrix_id=null) => {
 
 	// user select blank lang_value case

@@ -14,12 +14,9 @@
  *     item minus its start were pinned VERBATIM by the differential's
  *     full-row compare);
  *   - Time Machine: a backfill row with the OLD full value, then the save
- *     row with data null, backfill stamped exactly 60_000 ms BEFORE the save
- *     row (the differential pins the delta on both engines). The TAG is the
- *     one deliberate divergence (2026-09-27, WC-2026-09-27-csv-import-append-mode
- *     §wipe rows): PHP tagged the pair with the data lang (lg-spa); a
- *     lang-sliced component now gets ONE PAIR PER STORED LANGUAGE, tagged with
- *     it — VALUE's one item is lg-nolan, so the pair is lg-nolan.
+ *     row with data null — both lang lg-spa (test52 is translatable; the
+ *     data lang), backfill stamped exactly 60_000 ms BEFORE the save row
+ *     (the differential pins the delta on both engines).
  *
  * SOFTENED / TS-side notes (never oracle-pinned by the differential):
  *  - dd201's start instant: virtual-calendar self-consistency + wall-clock
@@ -175,7 +172,7 @@ describe('delete_data end-state (TS-native, differential-pinned shapes)', () => 
 		);
 	});
 
-	test('TM pair: backfill (old value, its stored lang) then null save row, −60s apart', () => {
+	test('TM pair: backfill (old value, lg-spa) then null save row, −60s apart', () => {
 		// Exactly two rows, asserted BEFORE the shape: an observer hop, a re-run
 		// without teardown or a concurrent writer taking an id between the pair
 		// otherwise surfaces as a value diff and sends the reader to the wrong
@@ -183,8 +180,8 @@ describe('delete_data end-state (TS-native, differential-pinned shapes)', () => 
 		expect(tmRows.length, 'unexpected TM row count — the pair is not a pair').toBe(2);
 		const shape = tmRows.map((tm) => ({ tipo: tm.tipo, lang: tm.lang, data: tm.data }));
 		expect(shape).toEqual([
-			{ tipo: COMPONENT, lang: 'lg-nolan', data: VALUE },
-			{ tipo: COMPONENT, lang: 'lg-nolan', data: null },
+			{ tipo: COMPONENT, lang: 'lg-spa', data: VALUE },
+			{ tipo: COMPONENT, lang: 'lg-spa', data: null },
 		]);
 		// The backfill precedes the save row by exactly 60 seconds (pinned live).
 		const delta =

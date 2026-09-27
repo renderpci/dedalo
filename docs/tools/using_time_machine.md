@@ -27,7 +27,7 @@ The time machine attaches to record elements — both individual **components** 
 2. For a single component or record, the window shows two panes side by side: a **Now** pane with the current value, and a **preview** pane.
 3. **Pick an entry.** Click a history row's preview (eye) icon. The historical value loads into the preview pane, read-only, so you can compare it against **Now** before committing.
 4. **Apply and save.** When you are sure, press **Apply and save** — the live value is overwritten from the snapshot you selected. Restoring a whole section record restores all its components at once, and recovers any files that were deleted with it. The restore is itself recorded as a new history entry.
-5. **Revert a batch (administrators).** If the entry you picked belongs to a batch run, an administrator additionally sees **Revert the bulk process**. Pressing it rolls back every record that run changed to its pre-run value, in one operation — except rows it must leave alone: a row whose dataframe entries were edited after the run (reverting it would destroy that later edit), or one outside your project scope. Those rows are **skipped, left unchanged**, and a notice lists how many were skipped and why before the window closes. Non-administrators see a notice to contact an administrator instead.
+5. **Revert a batch (administrators).** If the entry you picked belongs to a batch run, an administrator additionally sees **Revert the bulk process**. Pressing it rolls back every record that run changed to its pre-run value, in one operation. Non-administrators see a notice to contact an administrator instead.
 
 ## Options
 
@@ -46,7 +46,7 @@ The time machine attaches to record elements — both individual **components** 
     Always check the preview against the **Now** pane before pressing **Apply and save** — a restore replaces the whole current value with the snapshot, it does not merge the two.
 
 !!! warning "Restoring overwrites the current value"
-    **Apply and save** and **Revert the bulk process** overwrite live data. They are reversible (each restore is itself logged as new history), and **Apply and save** is not partial — the whole selected snapshot lands on the record. **Revert the bulk process** can be: it skips the rows it cannot safely revert (see step 5) and tells you how many. Reverting a batch and applying a component restore both need write permission on the record; reverting a batch needs an administrator role.
+    **Apply and save** and **Revert the bulk process** overwrite live data. They are reversible (each restore is itself logged as new history), but they are not partial — the whole selected snapshot lands on the record. Reverting a batch and applying a component restore both need write permission on the record; reverting a batch needs an administrator role.
 
 !!! info "How batch undo links up"
     A batch tool stamps every write in one run with the same id. That id is what the time machine's **Revert the bulk process** follows to find and roll back every affected record — so a single mistaken [propagation](using_propagate_component_data.md) is undone as one unit, not record by record.

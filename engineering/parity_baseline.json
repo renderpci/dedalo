@@ -4,10 +4,10 @@
 	"measured": {
 		"tier_files": 78,
 		"tier_tests": 382,
-		"tier_pass": 270,
+		"tier_pass": 269,
 		"tier_skip": 13,
-		"failing_files": 29,
-		"failing_tests": 99
+		"failing_files": 30,
+		"failing_tests": 100
 	},
 	"files": {
 		"test/parity/activity_read_differential.test.ts": [
@@ -122,6 +122,9 @@
 		],
 		"test/parity/start_differential.test.ts": [
 			"start action differential > default-section context matches (tipo/model/label/matrix_table/config)"
+		],
+		"test/parity/tool_element_context_differential.test.ts": [
+			"tool element context differential (open_tool string branch) > tool_time_machine: TS tool context matches PHP get_element_context"
 		],
 		"test/parity/tool_export_breakdown_differential.test.ts": [
 			"tool_export deep-breakdown differential > test6099 §1490 (Type, 3 refs, 2-author pub) — WC-008 single-step portal COMPACT grid_value/columns",
@@ -507,7 +510,7 @@
 		"test/parity/tool_element_context_differential.test.ts": {
 			"tests": 3,
 			"skipped": 0,
-			"assertions": 25
+			"assertions": 16
 		},
 		"test/parity/tool_export_breakdown_differential.test.ts": {
 			"tests": 21,

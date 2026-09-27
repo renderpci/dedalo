@@ -411,12 +411,13 @@ describe('apply_value drops a frame naming a tipo that is not a live slot', () =
 
 /**
  * THE SLOT SET IS THE ONTOLOGY'S, NEVER THE CLIENT'S. `apply_value`'s write
- * targets used to be waived in action_scope_binding_tripwire (R2 matched the
- * `ddo_map` spelling in the tool) on the claim that the slot discovery reads the
- * main's ontology request_config, not a client map. The discovery moved to core
- * (`src/core/relations/dataframe_slots.ts`, 2026-09-27) and the waiver went
- * stale — this is the OUTCOME that claim promised: a request that smuggles a
- * foreign component_dataframe in every client-map shape leaves every other slot untouched.
+ * targets are waived in action_scope_binding_tripwire (EXEMPT
+ * 'tool_time_machine.apply_value': R2 matches the `ddo_map` spelling in
+ * dataframe_restore.ts) on the claim that the slot discovery reads the main's
+ * ONTOLOGY request_config, never a client map. A spelling waiver proves
+ * nothing by itself — this is its OUTCOME PROOF: a request that smuggles a
+ * foreign component_dataframe in every client-map shape leaves every other
+ * slot untouched. Red here = the exemption's reason is false; drop it.
  */
 describe('apply_value ignores a client-supplied ddo_map', () => {
 	let recordId = 0;

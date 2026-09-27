@@ -22,12 +22,11 @@
  *  - refusals at the door: image, select, radio_button, the section_id key and
  *    dd199 in append mode refuse the whole file and write NO dd800 record; an
  *    unknown import_mode does the same;
- *  - bulk revert (time machine on) restores the pre-import state — also over
- *    data with NO time-machine history, or STALE history whose newest row a
- *    later TM-off write (a TM-off import, legacy replace frames) left behind:
- *    the append writes a pre-append baseline row whenever that row differs —
- *    but never when that row is the SAME run's (a repeated section_id whose
- *    slice drifted between two appends): the pre-run state lies below it.
+ *  - time machine: an append writes ONE normal TM row per language it changed,
+ *    exactly like replace; an append that changes nothing writes none;
+ *  - bulk revert (time machine on) of an append over TM-recorded data restores
+ *    the pre-import state. Exact revert over data WITHOUT history is the
+ *    undo-log's job (WC-…-bulk-revert-undo-log), not this gate's.
  *
  * Scratch surface: test3 records created at runtime (createSectionRecord, the
  * generic `test` TLD playground), one orphan zz scratch node (a capped
@@ -40,14 +39,10 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { isDataframeEntry } from '../../src/core/concepts/subdatum.ts';
-import { dbTimestamp } from '../../src/core/db/db_timestamp.ts';
 import { deleteTldNodes, upsertDdOntologyNode } from '../../src/core/db/dd_ontology.ts';
 import { sql } from '../../src/core/db/postgres.ts';
-import { recordTimeMachine } from '../../src/core/db/time_machine.ts';
 import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
-import { deleteSectionData } from '../../src/core/section/record/delete_record.ts';
-import { saveComponentData } from '../../src/core/section/record/save_component.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import type { ImportFileReport } from '../../src/core/tools/import_wire.ts';
@@ -78,10 +73,6 @@ const MONO_TEXT = `${CAP_TLD}2`;
 const TEXT_ALIAS = `${CAP_TLD}3`;
 /** Orphan scratch node: a component_alias of the created-date audit tipo. */
 const CREATED_DATE_ALIAS = `${CAP_TLD}4`;
-/** Orphan scratch node: a translatable input_text MAIN with a real dataframe slot child. */
-const FRAMED_MAIN = `${CAP_TLD}5`;
-/** Orphan scratch node: the component_dataframe SLOT of FRAMED_MAIN (ontology child). */
-const FRAMED_SLOT = `${CAP_TLD}6`;
 
 const dir = resolve(config.media.rootPath ?? '', 'import/files', String(USER));
 const created: number[] = [];
@@ -172,25 +163,6 @@ async function seed(sectionId: number, column: string, tipo: string, items: unkn
 	);
 }
 
-/** Bulk-revert one dd800 run through the real tool action; the revert's own run is swept. */
-async function revertRun(bulkId: number | null): Promise<{ skipped: unknown[] }> {
-	const response = await toolTimeMachineBulkRevert({
-		principal: await resolvePrincipal(-1),
-		userId: -1,
-		background: false,
-		options: { section_tipo: SECTION, bulk_process_id: mustGet(bulkId, 'append run bulk id') },
-	} as ToolActionContext);
-	const data = response.data as { bulk_process_id: number; skipped: unknown[] };
-	bulkProcessIds.push(data.bulk_process_id);
-	return data;
-}
-
-/** Items sorted by lang then value — the order-free comparison of two stored arrays. */
-const byLangValue = (items: unknown[]): unknown[] =>
-	[...(items as Record<string, unknown>[])].sort((a, b) =>
-		`${String(a.lang)}|${String(a.value)}`.localeCompare(`${String(b.lang)}|${String(b.value)}`),
-	);
-
 async function tmRows(sectionId: number): Promise<number> {
 	const rows = (await sql.unsafe(
 		'SELECT count(*)::int AS n FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2',
@@ -242,28 +214,6 @@ beforeAll(async () => {
 		model: 'component_input_text',
 		tld: CAP_TLD,
 		term: { 'lg-spa': 'scratch csv append non-translatable text' },
-		is_model: false,
-		is_translatable: false,
-		is_main: false,
-		properties: {},
-	});
-	await upsertDdOntologyNode({
-		tipo: FRAMED_MAIN,
-		parent: `${CAP_TLD}x`,
-		model: 'component_input_text',
-		tld: CAP_TLD,
-		term: { 'lg-spa': 'scratch csv append framed main' },
-		is_model: false,
-		is_translatable: true,
-		is_main: false,
-		properties: {},
-	});
-	await upsertDdOntologyNode({
-		tipo: FRAMED_SLOT,
-		parent: FRAMED_MAIN,
-		model: 'component_dataframe',
-		tld: CAP_TLD,
-		term: { 'lg-spa': 'scratch csv append framed slot' },
 		is_model: false,
 		is_translatable: false,
 		is_main: false,
@@ -433,6 +383,69 @@ describe('translatable input_text append', () => {
 			expect(await stored(host, 'string', TEXT)).toEqual(before);
 			expect(await tmRows(host)).toBe(tmBefore);
 		}
+	}, 60000);
+
+	/**
+	 * THE TM LAW OF APPEND: an append save audits exactly like a replace save —
+	 * ONE ordinary row per language it wrote, tagged with that language, holding
+	 * that language's persisted slice, attributed to the run. No extra row of
+	 * any kind (a pre-append baseline, a composed frame snapshot) — even over a
+	 * value with NO history. A re-import that changes nothing writes none.
+	 */
+	test('time machine: one normal row per written language, like replace; a no-op writes none', async () => {
+		const tmOf = async (sectionId: number) =>
+			(await sql.unsafe(
+				`SELECT lang, data, bulk_process_id FROM matrix_time_machine
+				 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3 ORDER BY lang`,
+				[SECTION, sectionId, TEXT],
+			)) as { lang: string; data: Item[]; bulk_process_id: number | null }[];
+		const cell = langCell({ 'lg-spa': ['dos'], 'lg-eng': ['two'] });
+		const seedValue = [
+			{ id: 1, lang: 'lg-spa', value: 'uno' },
+			{ id: 1, lang: 'lg-eng', value: 'one' },
+		];
+		// seeded raw: the stored value has NO time-machine history at all
+		const appendHost = await newRecord();
+		const replaceHost = await newRecord();
+		await seed(appendHost, 'string', TEXT, seedValue);
+		await seed(replaceHost, 'string', TEXT, seedValue);
+		expect(await tmOf(appendHost)).toEqual([]);
+
+		const appended = await importCsv(`section_id;${TEXT}\n${appendHost};${cell}\n`, [
+			KEY,
+			col(TEXT, 'component_input_text', 'append'),
+		]);
+		expect(appended.failed).toEqual([]);
+		const replaced = await importCsv(`section_id;${TEXT}\n${replaceHost};${cell}\n`, [
+			KEY,
+			col(TEXT, 'component_input_text'),
+		]);
+		expect(replaced.failed).toEqual([]);
+
+		const storedSlice = async (sectionId: number, lang: string) =>
+			((await stored(sectionId, 'string', TEXT)) as Item[]).filter((i) => i.lang === lang);
+		for (const [host, run] of [
+			[appendHost, appended.bulk_process_id],
+			[replaceHost, replaced.bulk_process_id],
+		] as const) {
+			const rows = await tmOf(host);
+			expect(rows.map((row) => row.lang)).toEqual(['lg-eng', 'lg-spa']);
+			for (const row of rows) {
+				expect(row.bulk_process_id).toBe(mustGet(run, 'run bulk id'));
+				expect(row.data).toEqual(await storedSlice(host, row.lang));
+			}
+		}
+		// the append kept the seed beside the new items; the replace did not
+		expect(await storedSlice(appendHost, 'lg-spa')).toHaveLength(2);
+		expect(await storedSlice(replaceHost, 'lg-spa')).toHaveLength(1);
+
+		// re-importing the same cell: nothing changes, so no row is written
+		const again = await importCsv(`section_id;${TEXT}\n${appendHost};${cell}\n`, [
+			KEY,
+			col(TEXT, 'component_input_text', 'append'),
+		]);
+		expect(again.failed).toEqual([]);
+		expect(await tmOf(appendHost)).toHaveLength(2);
 	}, 60000);
 });
 
@@ -1048,256 +1061,6 @@ describe('bulk revert of an append run (time machine on)', () => {
 	}, 60000);
 });
 
-describe('bulk revert of an append over data that has NO time-machine history', () => {
-	test('portal seeded with TM off: the revert keeps the pre-import locator', async () => {
-		const host = await newRecord();
-		const seeded = await importCsv(
-			`section_id;${PORTAL}\n${host};${targetA}\n`,
-			[KEY, col(PORTAL, 'component_portal')],
-			{
-				timeMachine: false,
-			},
-		);
-		expect(seeded.failed).toEqual([]);
-		const portalBefore = await stored(host, 'relation', PORTAL);
-		expect(portalBefore).toHaveLength(1);
-
-		const appended = await importCsv(
-			`section_id;${PORTAL}\n${host};${targetB}\n`,
-			[KEY, col(PORTAL, 'component_portal', 'append')],
-			{ timeMachine: true },
-		);
-		expect(appended.failed).toEqual([]);
-		expect(await stored(host, 'relation', PORTAL)).toHaveLength(2);
-
-		const response = await toolTimeMachineBulkRevert({
-			principal: await resolvePrincipal(-1),
-			userId: -1,
-			background: false,
-			options: {
-				section_tipo: SECTION,
-				bulk_process_id: mustGet(appended.bulk_process_id, 'append run bulk id'),
-			},
-		} as ToolActionContext);
-		const data = response.data as { bulk_process_id: number; skipped: unknown[] };
-		bulkProcessIds.push(data.bulk_process_id);
-		expect(data.skipped).toEqual([]);
-		// the pre-import locator survives; only the appended one is gone
-		expect(await stored(host, 'relation', PORTAL)).toEqual(portalBefore);
-	}, 60000);
-
-	test('dataframe slot written by legacy REPLACE frames: the revert keeps its frames', async () => {
-		const host = await newRecord();
-		const frameOf = (target: number) => ({
-			from_component_tipo: DATAFRAME,
-			id_key: 1,
-			main_component_tipo: TEXT,
-			section_tipo: SECTION,
-			section_id: target,
-		});
-		// replace import, TM on: the MAIN gets a TM row, the slot (saveTm:false) none
-		const seedEnvelope = { data: [{ id: 1, value: 'seed' }], dataframe: [frameOf(targetA)] };
-		const seeded = await importCsv(
-			`section_id;${TEXT}\n${host};${q(JSON.stringify({ dedalo_data: seedEnvelope }))}\n`,
-			[KEY, col(TEXT, 'component_input_text')],
-		);
-		expect(seeded.failed).toEqual([]);
-		const slotBefore = await stored(host, 'relation', DATAFRAME);
-		expect(slotBefore).toHaveLength(1);
-		const main = mustGet(((await stored(host, 'string', TEXT)) as Item[])[0], 'seeded main item');
-
-		const envelope = {
-			data: [{ id: 1, lang: main.lang, value: 'seed' }],
-			dataframe: [frameOf(targetB)],
-		};
-		const appended = await importCsv(
-			`section_id;${TEXT}\n${host};${q(JSON.stringify({ dedalo_data: envelope }))}\n`,
-			[KEY, col(TEXT, 'component_input_text', 'append')],
-			{ timeMachine: true },
-		);
-		expect(appended.failed).toEqual([]);
-		expect(await stored(host, 'relation', DATAFRAME)).toHaveLength(2);
-
-		const response = await toolTimeMachineBulkRevert({
-			principal: await resolvePrincipal(-1),
-			userId: -1,
-			background: false,
-			options: {
-				section_tipo: SECTION,
-				bulk_process_id: mustGet(appended.bulk_process_id, 'append run bulk id'),
-			},
-		} as ToolActionContext);
-		const data = response.data as { bulk_process_id: number; skipped: unknown[] };
-		bulkProcessIds.push(data.bulk_process_id);
-		expect(data.skipped).toEqual([]);
-		expect(await stored(host, 'relation', DATAFRAME)).toEqual(slotBefore);
-	}, 60000);
-
-	test('the baseline row is written once, and never for an empty component', async () => {
-		const host = await newRecord();
-		await importCsv(
-			`section_id;${PORTAL}\n${host};${targetA}\n`,
-			[KEY, col(PORTAL, 'component_portal', 'append')],
-			{
-				timeMachine: true,
-			},
-		);
-		// nothing was stored: only the append's own row
-		expect(await tmRows(host)).toBe(1);
-		await importCsv(
-			`section_id;${PORTAL}\n${host};${targetB}\n`,
-			[KEY, col(PORTAL, 'component_portal', 'append')],
-			{
-				timeMachine: true,
-			},
-		);
-		// history existed: no baseline, just the second append's row
-		expect(await tmRows(host)).toBe(2);
-	}, 60000);
-});
-
-describe('bulk revert of an append over STALE time-machine history (a later TM-off write)', () => {
-	test('portal: TM-on import, then TM-off import, then append — the revert keeps the TM-off value', async () => {
-		const host = await newRecord();
-		const first = await importCsv(`section_id;${PORTAL}\n${host};${targetA}\n`, [
-			KEY,
-			col(PORTAL, 'component_portal'),
-		]);
-		expect(first.failed).toEqual([]);
-		const offRun = await importCsv(
-			`section_id;${PORTAL}\n${host};${targetB}\n`,
-			[KEY, col(PORTAL, 'component_portal')],
-			{ timeMachine: false },
-		);
-		expect(offRun.failed).toEqual([]);
-		const portalBefore = await stored(host, 'relation', PORTAL);
-		expect(portalBefore).toHaveLength(1);
-		expect(portalBefore).toEqual([expect.objectContaining({ section_id: targetB })]);
-		const rowsBefore = await tmRows(host);
-
-		const appended = await importCsv(
-			`section_id;${PORTAL}\n${host};${targetA}\n`,
-			[KEY, col(PORTAL, 'component_portal', 'append')],
-			{ timeMachine: true },
-		);
-		expect(appended.failed).toEqual([]);
-		expect(await stored(host, 'relation', PORTAL)).toHaveLength(2);
-		// the stale newest row ([A]) differs from what is stored ([B]): baseline + own row
-		expect(await tmRows(host)).toBe(rowsBefore + 2);
-
-		expect((await revertRun(appended.bulk_process_id)).skipped).toEqual([]);
-		expect(await stored(host, 'relation', PORTAL)).toEqual(portalBefore);
-	}, 60000);
-
-	test('dataframe slot: TM row, then legacy REPLACE frames (saveTm:false), then append — the revert keeps the replace frames', async () => {
-		const host = await newRecord();
-		const frameOf = (target: number) => ({
-			from_component_tipo: DATAFRAME,
-			id_key: 1,
-			main_component_tipo: TEXT,
-			section_tipo: SECTION,
-			section_id: target,
-		});
-		await importCsv(`section_id;${TEXT}\n${host};seed\n`, [KEY, col(TEXT, 'component_input_text')]);
-		const main = mustGet(((await stored(host, 'string', TEXT)) as Item[])[0], 'seeded main item');
-		const cell = (target: number) =>
-			q(
-				JSON.stringify({
-					dedalo_data: {
-						data: [{ id: main.id, lang: main.lang, value: 'seed' }],
-						dataframe: [frameOf(target)],
-					},
-				}),
-			);
-		// 1. append of a frame: the SLOT gets its own TM row [frame A]
-		const slotHistory = await importCsv(
-			`section_id;${TEXT}\n${host};${cell(targetA)}\n`,
-			[KEY, col(TEXT, 'component_input_text', 'append')],
-			{ timeMachine: true },
-		);
-		expect(slotHistory.failed).toEqual([]);
-		// 2. replace import of legacy frames: the slot becomes [frame B], no slot TM row
-		const replaced = await importCsv(`section_id;${TEXT}\n${host};${cell(targetB)}\n`, [
-			KEY,
-			col(TEXT, 'component_input_text'),
-		]);
-		expect(replaced.failed).toEqual([]);
-		const slotBefore = await stored(host, 'relation', DATAFRAME);
-		expect(slotBefore).toEqual([expect.objectContaining({ section_id: targetB })]);
-
-		// 3. append of another frame over the stale slot history
-		const appended = await importCsv(
-			`section_id;${TEXT}\n${host};${cell(targetA)}\n`,
-			[KEY, col(TEXT, 'component_input_text', 'append')],
-			{ timeMachine: true },
-		);
-		expect(appended.failed).toEqual([]);
-		expect(await stored(host, 'relation', DATAFRAME)).toHaveLength(2);
-
-		expect((await revertRun(appended.bulk_process_id)).skipped).toEqual([]);
-		expect(await stored(host, 'relation', DATAFRAME)).toEqual(slotBefore);
-	}, 60000);
-});
-
-describe('bulk revert of a run that appends TWICE to one component with a TM-off write between', () => {
-	test("no mid-run baseline: the revert walks past both of the run's rows to the pre-run value", async () => {
-		const host = await newRecord();
-		// pre-run history: [A], TM on
-		const seeded = await importCsv(`section_id;${PORTAL}\n${host};${targetA}\n`, [
-			KEY,
-			col(PORTAL, 'component_portal'),
-		]);
-		expect(seeded.failed).toEqual([]);
-		const preRun = await stored(host, 'relation', PORTAL);
-		expect(preRun).toEqual([expect.objectContaining({ section_id: targetA })]);
-
-		// the run's FIRST append (row 1): [A, B], TM row stamped with run X
-		const run = await importCsv(
-			`section_id;${PORTAL}\n${host};${targetB}\n`,
-			[KEY, col(PORTAL, 'component_portal', 'append')],
-			{ timeMachine: true },
-		);
-		expect(run.failed).toEqual([]);
-		const runId = mustGet(run.bulk_process_id, 'append run bulk id');
-		const principal = await resolvePrincipal(-1);
-		const coordinates = {
-			componentTipo: PORTAL,
-			sectionTipo: SECTION,
-			sectionId: host,
-			lang: 'lg-nolan',
-			userId: -1,
-			principal,
-		};
-		// a TM-off write inside the run (as a legacy replace-envelope slot write is): [C]
-		const drift = await saveComponentData({
-			...coordinates,
-			saveTm: false,
-			bulkProcessId: runId,
-			changedData: [
-				{ action: 'set_data', value: [{ section_tipo: SECTION, section_id: targetC }] },
-			],
-		});
-		expect(drift.ok).toBe(true);
-		const rowsBefore = await tmRows(host);
-		// the run's SECOND append to the same component (a repeated section_id)
-		const second = await saveComponentData({
-			...coordinates,
-			appendImport: true,
-			bulkProcessId: runId,
-			changedData: [
-				{ action: 'set_data', value: [{ id: 1, section_tipo: SECTION, section_id: targetA }] },
-			],
-		});
-		expect(second.ok).toBe(true);
-		expect(await stored(host, 'relation', PORTAL)).toHaveLength(2);
-		// its own row only: the newest row is the run's, so no baseline of [C]
-		expect(await tmRows(host)).toBe(rowsBefore + 1);
-
-		expect((await revertRun(runId)).skipped).toEqual([]);
-		expect(await stored(host, 'relation', PORTAL)).toEqual(preRun);
-	}, 60000);
-});
-
 describe('bulk revert of a legacy-envelope frame on a DUPLICATE main item', () => {
 	test('the frame has its own TM row, so the revert removes it', async () => {
 		const host = await newRecord();
@@ -1343,592 +1106,6 @@ describe('bulk revert of a legacy-envelope frame on a DUPLICATE main item', () =
 		expect(data.skipped).toEqual([]);
 		expect(await stored(host, 'relation', DATAFRAME)).toEqual([]);
 		expect(await stored(host, 'string', TEXT)).toEqual(seeded);
-	}, 60000);
-});
-
-// ------------------------------------------------ multi-language append + revert
-
-describe('bulk revert of a MULTI-LANGUAGE append (per-language baseline)', () => {
-	test('stored eng-only value, no history: a spa+eng append reverts to the stored eng value', async () => {
-		const host = await newRecord();
-		const seeded = [{ id: 1, lang: 'lg-eng', value: 'Hello' }];
-		await seed(host, 'string', TEXT, seeded);
-		expect(await tmRows(host)).toBe(0);
-
-		const appended = await importCsv(
-			`section_id;${TEXT}\n${host};${langCell({ 'lg-spa': ['Hola'], 'lg-eng': ['Hello2'] })}\n`,
-			[KEY, col(TEXT, 'component_input_text', 'append')],
-		);
-		expect(appended.failed).toEqual([]);
-		expect(await stored(host, 'string', TEXT)).toHaveLength(3);
-
-		expect((await revertRun(appended.bulk_process_id)).skipped).toEqual([]);
-		expect(await stored(host, 'string', TEXT)).toEqual(seeded);
-	}, 60000);
-
-	test('stored eng + spa, no history: both languages revert to their pre-import slice', async () => {
-		const host = await newRecord();
-		const seeded = [
-			{ id: 1, lang: 'lg-eng', value: 'one' },
-			{ id: 1, lang: 'lg-spa', value: 'uno' },
-		];
-		await seed(host, 'string', TEXT, seeded);
-
-		const appended = await importCsv(
-			`section_id;${TEXT}\n${host};${langCell({ 'lg-eng': ['two'], 'lg-spa': ['dos'] })}\n`,
-			[KEY, col(TEXT, 'component_input_text', 'append')],
-		);
-		expect(appended.failed).toEqual([]);
-		expect(await stored(host, 'string', TEXT)).toHaveLength(4);
-
-		expect((await revertRun(appended.bulk_process_id)).skipped).toEqual([]);
-		expect(byLangValue(await stored(host, 'string', TEXT))).toEqual(byLangValue(seeded));
-	}, 60000);
-
-	test('earlier history only in ANOTHER language: the appended language still reverts', async () => {
-		const host = await newRecord();
-		// an eng replace import writes eng history; spa is then seeded with none
-		await importCsv(`section_id;${TEXT}\n${host};${langCell({ 'lg-eng': ['one'] })}\n`, [
-			KEY,
-			col(TEXT, 'component_input_text'),
-		]);
-		const eng = (await stored(host, 'string', TEXT)) as Item[];
-		const seeded = [...eng, { id: 7, lang: 'lg-spa', value: 'uno' }];
-		await seed(host, 'string', TEXT, seeded);
-
-		const appended = await importCsv(
-			`section_id;${TEXT}\n${host};${langCell({ 'lg-spa': ['dos'] })}\n`,
-			[KEY, col(TEXT, 'component_input_text', 'append')],
-		);
-		expect(appended.failed).toEqual([]);
-		expect(await stored(host, 'string', TEXT)).toHaveLength(3);
-
-		expect((await revertRun(appended.bulk_process_id)).skipped).toEqual([]);
-		expect(byLangValue(await stored(host, 'string', TEXT))).toEqual(byLangValue(seeded));
-	}, 60000);
-});
-
-/** A TM row as the writers that tag ONE language but store ALL of them write it (tool_lang, propagate, duplicate backfill). */
-async function tmRow(sectionId: number, lang: string, data: unknown[]): Promise<void> {
-	await recordTimeMachine(
-		{ sectionTipo: SECTION, sectionId, componentTipo: TEXT, lang, userId: -1, data },
-		dbTimestamp(),
-	);
-}
-
-describe('bulk revert reads each language from ITS history only (any bulk run)', () => {
-	test('an older eng-TAGGED all-language row never puts a stale spa value back', async () => {
-		const host = await newRecord();
-		// tool_lang translated to eng: tagged eng, holds spa v1 too
-		await tmRow(host, 'lg-eng', [
-			{ id: 1, lang: 'lg-spa', value: 'v1' },
-			{ id: 1, lang: 'lg-eng', value: 'e1' },
-		]);
-		// a curator then edits spa (a spa slice row)
-		const current = [
-			{ id: 1, lang: 'lg-spa', value: 'v2' },
-			{ id: 1, lang: 'lg-eng', value: 'e1' },
-		];
-		await seed(host, 'string', TEXT, current);
-		await tmRow(host, 'lg-spa', [current[0] as Item]);
-
-		const replaced = await importCsv(
-			`section_id;${TEXT}\n${host};${langCell({ 'lg-eng': ['e2'] })}\n`,
-			[KEY, col(TEXT, 'component_input_text')],
-		);
-		expect(replaced.failed).toEqual([]);
-		expect((await revertRun(replaced.bulk_process_id)).skipped).toEqual([]);
-		expect(byLangValue(await stored(host, 'string', TEXT))).toEqual(byLangValue(current));
-	}, 60000);
-
-	test('a language recorded only inside another-tagged row (duplicate backfill) is restored, not blanked', async () => {
-		const host = await newRecord();
-		const copied = [
-			{ id: 1, lang: 'lg-spa', value: 's' },
-			{ id: 1, lang: 'lg-eng', value: 'c' },
-		];
-		await seed(host, 'string', TEXT, copied);
-		// duplicate_record: backfill (all languages) + slice, BOTH tagged spa
-		await tmRow(host, 'lg-spa', copied);
-		await tmRow(host, 'lg-spa', [copied[0] as Item]);
-
-		const replaced = await importCsv(
-			`section_id;${TEXT}\n${host};${langCell({ 'lg-eng': ['n'] })}\n`,
-			[KEY, col(TEXT, 'component_input_text')],
-		);
-		expect(replaced.failed).toEqual([]);
-		expect((await revertRun(replaced.bulk_process_id)).skipped).toEqual([]);
-		expect(byLangValue(await stored(host, 'string', TEXT))).toEqual(byLangValue(copied));
-	}, 60000);
-
-	test('the append baseline probe reads the same history: an equal value inside a spa-tagged row needs no baseline', async () => {
-		const host = await newRecord();
-		const copied = [
-			{ id: 1, lang: 'lg-spa', value: 's' },
-			{ id: 1, lang: 'lg-eng', value: 'c' },
-		];
-		await seed(host, 'string', TEXT, copied);
-		await tmRow(host, 'lg-spa', copied);
-		const tmBefore = await tmRows(host);
-
-		const appended = await importCsv(
-			`section_id;${TEXT}\n${host};${langCell({ 'lg-eng': ['x'] })}\n`,
-			[KEY, col(TEXT, 'component_input_text', 'append')],
-		);
-		expect(appended.failed).toEqual([]);
-		// the append's own row only — eng's history already says 'c'
-		expect(await tmRows(host)).toBe(tmBefore + 1);
-		expect((await revertRun(appended.bulk_process_id)).skipped).toEqual([]);
-		expect(byLangValue(await stored(host, 'string', TEXT))).toEqual(byLangValue(copied));
-	}, 60000);
-});
-
-describe('a PHP-era LANG-LESS value: its tagged row speaks for the tagged language', () => {
-	/** A TM row of the non-translatable text, tagged `lang`, holding `data` verbatim. */
-	const monoRow = (sectionId: number, lang: string, data: unknown[]) =>
-		recordTimeMachine(
-			{ sectionTipo: SECTION, sectionId, componentTipo: MONO_TEXT, lang, userId: -1, data },
-			dbTimestamp(),
-		);
-	const legacy = [{ id: 1, value: 'old url' }];
-
-	test('replace run over a lang-less value: the revert brings the old value back (never blanks it)', async () => {
-		const host = await newRecord();
-		await seed(host, 'string', MONO_TEXT, legacy);
-		await monoRow(host, 'lg-nolan', legacy);
-
-		const replaced = await importCsv(`section_id;${MONO_TEXT}\n${host};new url\n`, [
-			KEY,
-			col(MONO_TEXT, 'component_input_text'),
-		]);
-		expect(replaced.failed).toEqual([]);
-		expect(((await stored(host, 'string', MONO_TEXT)) as Item[]).map((i) => i.value)).toEqual([
-			'new url',
-		]);
-
-		expect((await revertRun(replaced.bulk_process_id)).skipped).toEqual([]);
-		// the old item, stamped with the slice language as any save of it is
-		expect(await stored(host, 'string', MONO_TEXT)).toEqual([
-			{ id: 1, lang: 'lg-nolan', value: 'old url' },
-		]);
-	}, 60000);
-
-	test('append run over a lang-less value: the revert restores it byte-exact, once', async () => {
-		const host = await newRecord();
-		await seed(host, 'string', MONO_TEXT, legacy);
-		await monoRow(host, 'lg-nolan', legacy);
-
-		const appended = await importCsv(`section_id;${MONO_TEXT}\n${host};added\n`, [
-			KEY,
-			col(MONO_TEXT, 'component_input_text', 'append'),
-		]);
-		expect(appended.failed).toEqual([]);
-		expect(await stored(host, 'string', MONO_TEXT)).toHaveLength(2);
-
-		expect((await revertRun(appended.bulk_process_id)).skipped).toEqual([]);
-		expect(await stored(host, 'string', MONO_TEXT)).toEqual(legacy);
-	}, 60000);
-
-	test('an INSERT run that keeps the lang-less item: the revert restores it once, never twice', async () => {
-		const host = await newRecord();
-		await seed(host, 'string', MONO_TEXT, legacy);
-		await monoRow(host, 'lg-nolan', legacy);
-		// any dd800 writer that inserts beside the stored item (the insert path keeps it)
-		const runId = await createSectionRecord('dd800', -1);
-		bulkProcessIds.push(runId);
-		const inserted = await saveComponentData({
-			componentTipo: MONO_TEXT,
-			sectionTipo: SECTION,
-			sectionId: host,
-			lang: 'lg-nolan',
-			userId: -1,
-			principal: await resolvePrincipal(-1),
-			bulkProcessId: runId,
-			changedData: [{ action: 'insert', id: null, value: { value: 'inserted' } }],
-		});
-		expect(inserted.ok).toBe(true);
-		expect(await stored(host, 'string', MONO_TEXT)).toHaveLength(2);
-
-		expect((await revertRun(runId)).skipped).toEqual([]);
-		expect(await stored(host, 'string', MONO_TEXT)).toEqual([
-			{ id: 1, lang: 'lg-nolan', value: 'old url' },
-		]);
-	}, 60000);
-});
-
-describe('a record WIPE (delete_data) is part of every language history', () => {
-	test('stored eng + spa, wiped, then a run writes the other language: the revert leaves it empty', async () => {
-		const host = await newRecord();
-		const wipeLang = (config.menu as { dataLang?: string }).dataLang ?? 'lg-spa';
-		const other = wipeLang === 'lg-eng' ? 'lg-spa' : 'lg-eng';
-		const both = [
-			{ id: 1, lang: wipeLang, value: 'w' },
-			{ id: 1, lang: other, value: 'o' },
-		];
-		await seed(host, 'string', TEXT, both);
-		await tmRow(host, wipeLang, [both[0] as Item]);
-		await tmRow(host, other, [both[1] as Item]);
-
-		await deleteSectionData(SECTION, host, -1);
-		expect(await stored(host, 'string', TEXT)).toEqual([]);
-
-		const written = await importCsv(
-			`section_id;${TEXT}\n${host};${langCell({ [other]: ['n'] })}\n`,
-			[KEY, col(TEXT, 'component_input_text')],
-		);
-		expect(written.failed).toEqual([]);
-		expect(await stored(host, 'string', TEXT)).toHaveLength(1);
-
-		expect((await revertRun(written.bulk_process_id)).skipped).toEqual([]);
-		// the wiped value never comes back: the pre-run state was empty
-		expect(await stored(host, 'string', TEXT)).toEqual([]);
-	}, 60000);
-
-	test('an EXISTING single-tag wipe row (PHP / pre-fix shape, data null) blanks the other language too', async () => {
-		const host = await newRecord();
-		const wipeLang = 'lg-spa';
-		const other = 'lg-eng';
-		const both = [
-			{ id: 1, lang: wipeLang, value: 'w' },
-			{ id: 1, lang: other, value: 'o' },
-		];
-		await seed(host, 'string', TEXT, both);
-		await tmRow(host, wipeLang, [both[0] as Item]);
-		await tmRow(host, other, [both[1] as Item]);
-		// the wipe as history already holds it: ONE row per component, tagged with
-		// ONE language, data null — and several components emptied at ONE instant
-		// (the delete_data shape: the sibling null row is what marks it a wipe)
-		await sql.unsafe(
-			`UPDATE ${TABLE} SET string = string - $3::text WHERE section_tipo = $1 AND section_id = $2`,
-			[SECTION, host, TEXT],
-		);
-		const wipedAt = dbTimestamp();
-		for (const componentTipo of [TEXT, TEXT_AREA]) {
-			await recordTimeMachine(
-				{
-					sectionTipo: SECTION,
-					sectionId: host,
-					componentTipo,
-					lang: wipeLang,
-					userId: -1,
-					data: null,
-				},
-				wipedAt,
-			);
-		}
-
-		const written = await importCsv(
-			`section_id;${TEXT}\n${host};${langCell({ [other]: ['n'] })}\n`,
-			[KEY, col(TEXT, 'component_input_text')],
-		);
-		expect(written.failed).toEqual([]);
-		expect(await stored(host, 'string', TEXT)).toHaveLength(1);
-
-		expect((await revertRun(written.bulk_process_id)).skipped).toEqual([]);
-		// the eng walk sees the spa-tagged wipe: 'o' stays deleted
-		expect(await stored(host, 'string', TEXT)).toEqual([]);
-	}, 60000);
-});
-
-describe('a LONE per-language clear (PHP: one component, one language, data null) is not a wipe', () => {
-	test('eng value, then a spa-tagged null row, then a run writes eng: the revert restores eng', async () => {
-		const host = await newRecord();
-		const eng = { id: 1, lang: 'lg-eng', value: 'foo' };
-		await seed(host, 'string', TEXT, [eng]);
-		await tmRow(host, 'lg-eng', [eng]);
-		// a curator cleared SPANISH only: PHP stored null under the spa tag, alone
-		await recordTimeMachine(
-			{
-				sectionTipo: SECTION,
-				sectionId: host,
-				componentTipo: TEXT,
-				lang: 'lg-spa',
-				userId: -1,
-				data: null,
-			},
-			dbTimestamp(),
-		);
-
-		const written = await importCsv(
-			`section_id;${TEXT}\n${host};${langCell({ 'lg-eng': ['bar'] })}\n`,
-			[KEY, col(TEXT, 'component_input_text')],
-		);
-		expect(written.failed).toEqual([]);
-		expect(((await stored(host, 'string', TEXT)) as Item[]).map((i) => i.value)).toEqual(['bar']);
-
-		expect((await revertRun(written.bulk_process_id)).skipped).toEqual([]);
-		// English goes back to 'foo' — the spa clear never stood in for eng history
-		expect(await stored(host, 'string', TEXT)).toEqual([eng]);
-	}, 60000);
-});
-
-describe('bulk revert of an append whose main already had FRAMES', () => {
-	test('the appended main item and its frame are both undone; the old frame stays', async () => {
-		const host = await newRecord();
-		await importCsv(`section_id;${FRAMED_MAIN}\n${host};seed\n`, [
-			KEY,
-			col(FRAMED_MAIN, 'component_input_text'),
-		]);
-		const seeded = (await stored(host, 'string', FRAMED_MAIN)) as Item[];
-		const main = mustGet(seeded[0], 'seeded main item');
-		// a frame the main's (frameless) TM row knows nothing about
-		await seed(host, 'relation', FRAMED_SLOT, [
-			{
-				type: 'dd490',
-				section_tipo: SECTION,
-				section_id: targetA,
-				from_component_tipo: FRAMED_SLOT,
-				main_component_tipo: FRAMED_MAIN,
-				id_key: main.id,
-			},
-		]);
-		const slotBefore = await stored(host, 'relation', FRAMED_SLOT);
-
-		const frames = [
-			{ section_tipo: SECTION, section_id: targetB, main_component_tipo: FRAMED_MAIN, id_key: 1 },
-		];
-		const appended = await importCsv(
-			`section_id;${FRAMED_SLOT};${FRAMED_MAIN}\n${host};${q(JSON.stringify(frames))};${q(JSON.stringify([{ id: 1, value: 'framed' }]))}\n`,
-			[
-				KEY,
-				col(FRAMED_SLOT, 'component_dataframe', 'append'),
-				col(FRAMED_MAIN, 'component_input_text', 'append'),
-			],
-			{ timeMachine: true },
-		);
-		expect(appended.failed).toEqual([]);
-		expect(appended.errors).toEqual([]);
-		expect(await stored(host, 'string', FRAMED_MAIN)).toHaveLength(2);
-		expect(await stored(host, 'relation', FRAMED_SLOT)).toHaveLength(2);
-
-		// never a frameless_wipe skip: the append's rows carry the slot's frames
-		expect((await revertRun(appended.bulk_process_id)).skipped).toEqual([]);
-		expect(await stored(host, 'string', FRAMED_MAIN)).toEqual(seeded);
-		expect(await stored(host, 'relation', FRAMED_SLOT)).toEqual(slotBefore);
-	}, 60000);
-});
-
-/**
- * An append run A over a framed main (frame F0 stored), adding main item
- * 'framed' + its frame FB. Returns what A left behind.
- */
-async function framedAppendRun(): Promise<{
-	host: number;
-	runA: number | null;
-	mainAfterA: unknown[];
-	slotAfterA: unknown[];
-}> {
-	const host = await newRecord();
-	await importCsv(`section_id;${FRAMED_MAIN}\n${host};seed\n`, [
-		KEY,
-		col(FRAMED_MAIN, 'component_input_text'),
-	]);
-	const main = mustGet(((await stored(host, 'string', FRAMED_MAIN)) as Item[])[0], 'seeded main');
-	await seed(host, 'relation', FRAMED_SLOT, [
-		{
-			type: 'dd490',
-			section_tipo: SECTION,
-			section_id: targetA,
-			from_component_tipo: FRAMED_SLOT,
-			main_component_tipo: FRAMED_MAIN,
-			id_key: main.id,
-		},
-	]);
-	const frames = [
-		{ section_tipo: SECTION, section_id: targetB, main_component_tipo: FRAMED_MAIN, id_key: 1 },
-	];
-	const appended = await importCsv(
-		`section_id;${FRAMED_SLOT};${FRAMED_MAIN}\n${host};${q(JSON.stringify(frames))};${q(JSON.stringify([{ id: 1, value: 'framed' }]))}\n`,
-		[
-			KEY,
-			col(FRAMED_SLOT, 'component_dataframe', 'append'),
-			col(FRAMED_MAIN, 'component_input_text', 'append'),
-		],
-	);
-	expect(appended.failed).toEqual([]);
-	const slotAfterA = await stored(host, 'relation', FRAMED_SLOT);
-	expect(slotAfterA).toHaveLength(2);
-	return {
-		host,
-		runA: appended.bulk_process_id,
-		mainAfterA: await stored(host, 'string', FRAMED_MAIN),
-		slotAfterA,
-	};
-}
-
-/** A later REPLACE run B on the framed main (its TM row is frameless). */
-async function replaceRunB(host: number): Promise<number | null> {
-	const replaced = await importCsv(`section_id;${FRAMED_MAIN}\n${host};b\n`, [
-		KEY,
-		col(FRAMED_MAIN, 'component_input_text'),
-	]);
-	expect(replaced.failed).toEqual([]);
-	return replaced.bulk_process_id;
-}
-
-describe("an append main's own TM row carries the frames the row WROTE", () => {
-	test("the batch row composes the post-row slot (F0 + the append's frame)", async () => {
-		const { host, runA, slotAfterA } = await framedAppendRun();
-		const rows = (await sql.unsafe(
-			`SELECT data FROM matrix_time_machine
-			 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3 AND bulk_process_id = $4`,
-			[SECTION, host, FRAMED_MAIN, mustGet(runA, 'run A')],
-		)) as { data: unknown[] }[];
-		expect(rows).toHaveLength(1);
-		const frames: unknown[] = (rows[0]?.data ?? []).filter((entry) => isDataframeEntry(entry));
-		expect(frames).toHaveLength(slotAfterA.length);
-		for (const frame of slotAfterA) expect(frames).toContainEqual(frame);
-	}, 60000);
-
-	test('a later frameless run B reverts to A: the frames A paired survive', async () => {
-		const { host, mainAfterA, slotAfterA } = await framedAppendRun();
-		const runB = await replaceRunB(host);
-		expect((await revertRun(runB)).skipped).toEqual([]);
-		expect(await stored(host, 'string', FRAMED_MAIN)).toEqual(mainAfterA);
-		expect(await stored(host, 'relation', FRAMED_SLOT)).toEqual(slotAfterA);
-	}, 60000);
-});
-
-describe('a composed snapshot whose frames went STALE never overwrites the slot', () => {
-	test('append A, a later frame edit, replace B, revert B: skipped, the edit survives', async () => {
-		const { host } = await framedAppendRun();
-		// a curator's frame edit: saved on the SLOT, no main TM row
-		const edited = ((await stored(host, 'relation', FRAMED_SLOT)) as Item[]).map((frame) => ({
-			...frame,
-			section_id: targetC,
-		}));
-		await seed(host, 'relation', FRAMED_SLOT, edited);
-		const runB = await replaceRunB(host);
-		const mainAfterB = await stored(host, 'string', FRAMED_MAIN);
-
-		const { skipped } = await revertRun(runB);
-		expect(skipped).toEqual([
-			{
-				reason: 'frames_changed_since_run',
-				section_tipo: SECTION,
-				tipo: FRAMED_MAIN,
-				section_id: host,
-			},
-		]);
-		// refused as a whole: nothing written
-		expect(await stored(host, 'relation', FRAMED_SLOT)).toEqual(edited);
-		expect(await stored(host, 'string', FRAMED_MAIN)).toEqual(mainAfterB);
-	}, 60000);
-
-	test("another main's frame added to a shared slot after A is kept by B's revert", async () => {
-		const { host, mainAfterA, slotAfterA } = await framedAppendRun();
-		const foreign = {
-			type: 'dd490',
-			section_tipo: SECTION,
-			section_id: targetC,
-			from_component_tipo: FRAMED_SLOT,
-			main_component_tipo: MONO_TEXT,
-			id_key: 1,
-		};
-		await seed(host, 'relation', FRAMED_SLOT, [...slotAfterA, foreign]);
-		const runB = await replaceRunB(host);
-
-		expect((await revertRun(runB)).skipped).toEqual([]);
-		expect(await stored(host, 'string', FRAMED_MAIN)).toEqual(mainAfterA);
-		const slot = (await stored(host, 'relation', FRAMED_SLOT)) as Item[];
-		// order-free: the other main's frame stays, A's frames are restored
-		expect(slot).toHaveLength(slotAfterA.length + 1);
-		for (const frame of [...slotAfterA, foreign]) expect(slot).toContainEqual(frame as Item);
-	}, 60000);
-});
-
-/**
- * A PHP-era COMPOSED pre-batch row (the main's items + the FULL slot, one of
- * them another main's frame) under a REPLACE run that writes the slot itself.
- * The slot differs from the snapshot because of the RUN, not a later edit: the
- * revert must restore main AND frames (never `frames_changed_since_run`).
- */
-async function phpComposedHost(): Promise<{ host: number; main: Item; phpSlot: Item[] }> {
-	const host = await newRecord();
-	await importCsv(`section_id;${FRAMED_MAIN}\n${host};old\n`, [
-		KEY,
-		col(FRAMED_MAIN, 'component_input_text'),
-	]);
-	const main = mustGet(((await stored(host, 'string', FRAMED_MAIN)) as Item[])[0], 'main item');
-	const frame = (mainTipo: string, idKey: unknown, target: number): Item => ({
-		type: 'dd490',
-		section_tipo: SECTION,
-		section_id: target,
-		from_component_tipo: FRAMED_SLOT,
-		main_component_tipo: mainTipo,
-		id_key: idKey,
-	});
-	const phpSlot = [frame(FRAMED_MAIN, main.id, targetA), frame(MONO_TEXT, 1, targetC)];
-	await seed(host, 'relation', FRAMED_SLOT, phpSlot);
-	// the PHP save's row: the main's own items followed by the slot's FULL frames
-	await recordTimeMachine(
-		{
-			sectionTipo: SECTION,
-			sectionId: host,
-			componentTipo: FRAMED_MAIN,
-			lang: String(main.lang),
-			userId: -1,
-			data: [main, ...phpSlot],
-		},
-		dbTimestamp(),
-	);
-	return { host, main, phpSlot };
-}
-
-describe('a PHP-era composed snapshot under a REPLACE run that wrote the slot', () => {
-	test('legacy envelope frames (saveTm:false): the revert restores main and frames', async () => {
-		const { host, main, phpSlot } = await phpComposedHost();
-		const envelope = {
-			data: [{ id: 1, lang: main.lang, value: 'new' }],
-			dataframe: [
-				{
-					from_component_tipo: FRAMED_SLOT,
-					id_key: 1,
-					main_component_tipo: FRAMED_MAIN,
-					section_tipo: SECTION,
-					section_id: targetB,
-				},
-			],
-		};
-		const replaced = await importCsv(
-			`section_id;${FRAMED_MAIN}\n${host};${q(JSON.stringify({ dedalo_data: envelope }))}\n`,
-			[KEY, col(FRAMED_MAIN, 'component_input_text')],
-		);
-		expect(replaced.failed).toEqual([]);
-		const slotAfterB = (await stored(host, 'relation', FRAMED_SLOT)) as Item[];
-		expect(slotAfterB.some((f) => f.section_id === targetB)).toBe(true);
-
-		expect((await revertRun(replaced.bulk_process_id)).skipped).toEqual([]);
-		expect(await stored(host, 'string', FRAMED_MAIN)).toEqual([main]);
-		// order-free, and blind to the item `id` the slot save gives a kept frame
-		const slot = ((await stored(host, 'relation', FRAMED_SLOT)) as Item[]).map(
-			({ id: _id, ...frame }) => frame,
-		);
-		expect(slot).toHaveLength(phpSlot.length);
-		for (const entry of phpSlot) expect(slot).toContainEqual(entry);
-	}, 60000);
-
-	test('a REPLACE slot column (its row reverted first): main and the whole PHP slot come back', async () => {
-		const { host, main, phpSlot } = await phpComposedHost();
-		const frames = [
-			{
-				section_tipo: SECTION,
-				section_id: targetB,
-				main_component_tipo: FRAMED_MAIN,
-				id_key: main.id,
-			},
-		];
-		const replaced = await importCsv(
-			`section_id;${FRAMED_MAIN};${FRAMED_SLOT}\n${host};new;${q(JSON.stringify(frames))}\n`,
-			[KEY, col(FRAMED_MAIN, 'component_input_text'), col(FRAMED_SLOT, 'component_dataframe')],
-		);
-		expect(replaced.failed).toEqual([]);
-
-		expect((await revertRun(replaced.bulk_process_id)).skipped).toEqual([]);
-		expect(await stored(host, 'string', FRAMED_MAIN)).toEqual([main]);
-		const slot = (await stored(host, 'relation', FRAMED_SLOT)) as Item[];
-		expect(slot).toHaveLength(phpSlot.length);
-		for (const entry of phpSlot) expect(slot).toContainEqual(entry);
 	}, 60000);
 });
 

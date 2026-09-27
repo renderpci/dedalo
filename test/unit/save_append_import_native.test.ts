@@ -308,7 +308,9 @@ describe('appendImport — portal (relation items)', () => {
 		const before = await stored(hostId, 'relation', PORTAL);
 		const stampBefore = await modifiedStamp(hostId);
 		const tmBefore = await tmRowCount(hostId, PORTAL);
-		expect(tmBefore).toBeGreaterThan(0); // the first append did write one (non-vacuous)
+		// the first append over the raw (history-less) seed wrote exactly its ONE
+		// normal row, like a replace — no baseline row (and the count is live)
+		expect(tmBefore).toBe(1);
 		const result = await saveComponentData({
 			componentTipo: PORTAL,
 			sectionTipo: SECTION,

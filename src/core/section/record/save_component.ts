@@ -59,7 +59,7 @@ import {
 	appendMatrixKeyItems,
 } from '../../db/matrix_write.ts';
 import { deferPostTransaction, sql, withTransaction } from '../../db/postgres.ts';
-import { latestTimeMachineDataMatch, recordTimeMachine } from '../../db/time_machine.ts';
+import { recordTimeMachine } from '../../db/time_machine.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { ONTOLOGY_TLD } from '../../ontology/ontology_tipos.ts';
 import {
@@ -200,15 +200,6 @@ export interface SaveRequest {
 	 * CSV import executor sets it. Gate: test/unit/save_append_import_native.test.ts.
 	 */
 	appendImport?: true | AppendImportOptions;
-	/**
-	 * INTERNAL, NOT A WIRE FIELD (same rule as `appendImport`): report the id
-	 * of the TM row a MAIN component's REPLACE save writes (`SaveResult.tmRowId`).
-	 * Only the CSV executor sets it — a replace column whose legacy
-	 * `{data, dataframe}` envelope writes frames AFTER the main save re-composes
-	 * that row with them (`recomposeAppendTmRows`), so the frames it wrote are
-	 * audited in the main's row, as they are in an append's.
-	 */
-	reportTmRowId?: boolean;
 }
 
 /** The object form of `SaveRequest.appendImport`. */
@@ -257,18 +248,6 @@ export interface SaveResult {
 	appendedIdMap?: Map<string, unknown>;
 	/** INTERNAL, never on the wire: incoming entries skipped as already present. */
 	appendSkipped?: number;
-	/**
-	 * INTERNAL, never on the wire (append saves of a MAIN component with
-	 * Time Machine on): the id of the TM row this save wrote. Its frames are
-	 * the slots' as they stood BEFORE the caller writes the row's own frames;
-	 * the CSV executor re-composes them afterwards (`recomposeAppendTmRows`).
-	 */
-	appendTmRowId?: number;
-	/**
-	 * INTERNAL, never on the wire (`SaveRequest.reportTmRowId` REPLACE saves of
-	 * a MAIN component with Time Machine on): the id of the TM row this save wrote.
-	 */
-	tmRowId?: number;
 }
 
 /**
@@ -1285,241 +1264,22 @@ async function appendChangeStep(
 }
 
 /**
- * The save's internal Time Machine outputs — never on the wire: an append
- * save's outputs (its main TM row id among them), or, for a REPLACE save that
- * asked (`SaveRequest.reportTmRowId`), the main TM row id alone.
- */
-async function attachSaveTmOutputs(
-	result: SaveResult,
-	outcome: AppendMergeResult | null,
-	mainTmRowId: number | null,
-	reportTmRowId: boolean,
-): Promise<void> {
-	if (outcome !== null) {
-		await attachAppendOutcome(result, outcome, mainTmRowId);
-		return;
-	}
-	if (reportTmRowId && mainTmRowId !== null) result.tmRowId = mainTmRowId;
-}
-
-/**
  * The append save's internal outputs — never on the wire. Called AFTER the id
  * allocation loop, so every new item's final id is readable.
  */
 async function attachAppendOutcome(
 	result: SaveResult,
 	outcome: AppendMergeResult | null,
-	appendTmRowId: number | null = null,
 ): Promise<void> {
 	if (outcome === null) return;
-	if (appendTmRowId !== null) result.appendTmRowId = appendTmRowId;
 	const { resolveAppendedIdMap } = await import('./append_merge.ts');
 	result.appendedIdMap = resolveAppendedIdMap(outcome.idMapPlan);
 	result.appendSkipped = outcome.skipped.filter((skip) => skip.reason === 'duplicate').length;
 }
 
 /**
- * THE APPEND BASELINE. An append save's TM row holds the MERGED value (stored
- * + appended), and the dd800 bulk revert restores the row OLDER than the
- * batch's — or, when the batch row is the component's ONLY history row, blanks
- * the component (preBulkState, PHP sub_n_rows===1). Harmless for a replace,
- * which had already destroyed the stored value; fatal for an append, which
- * promises to keep it whenever the stored value is NOT what the newest TM row
- * says: no history at all (migrated/seeded records), or STALE history — a
- * later write ran with saveTm:false (a TM-off import, a slot written by legacy
- * replace-envelope frames), so the revert would restore the older row and wipe
- * what that write stored. So, before the append's own row, the PRE-APPEND value
- * is audited (no bulk id — it belongs to no run) whenever the newest eligible
- * row differs from it — decided by CONTENT (latestTimeMachineDataMatch: the
- * revert's own epoch/lang view, jsonb equality), never by mere existence. With
- * no history and nothing stored there is nothing to protect (the revert blanks
- * — the right answer); with history, an empty stored slice that differs from
- * the newest row IS recorded, or the revert would resurrect the stale row.
- * Same lang slicing as the append's own row; the dataframe slot is the full
- * slot, as its row. PER LANGUAGE for a lang-sliced model: a multi-lang cell is
- * saved one language at a time, and each TM row snapshots ONE slice — the probe
- * reads this language's rows (plus lang-less legacy rows, as the revert does).
- * NEVER mid-run: when the newest eligible row is this save's OWN dd800 run
- * (`runBulkProcessId`, a repeated section_id), the run's pre-state already
- * lies below its rows and the revert's walk reaches it — a baseline here would
- * snapshot the run's own earlier append and stop that walk short.
- * A no-op for a save that is not an append (`appendOutcome` null).
- */
-async function recordAppendBaseline(
-	appendOutcome: AppendMergeResult | null,
-	coordinates: Omit<Parameters<typeof recordTimeMachine>[0], 'data' | 'bulkProcessId'>,
-	baseline: unknown[],
-	langSliced: boolean,
-	runBulkProcessId: number | null | undefined,
-): Promise<void> {
-	if (appendOutcome === null) return;
-	const { sectionTipo, sectionId, componentTipo, lang } = coordinates;
-	const historyLang = langSliced ? lang : null;
-	const match = await latestTimeMachineDataMatch(
-		sectionTipo,
-		sectionId,
-		componentTipo,
-		historyLang,
-		baseline,
-		runBulkProcessId ?? null,
-	);
-	if (!appendBaselineNeeded(match, baseline.length)) return;
-	await recordTimeMachine({ ...coordinates, data: baseline, bulkProcessId: null }, dbTimestamp());
-}
-
-/**
- * recordAppendBaseline's decision: a baseline only when the newest eligible row
- * is not this run's, differs from the stored value, and — with no history at
- * all — there is something stored to protect.
- */
-function appendBaselineNeeded(
-	match: Awaited<ReturnType<typeof latestTimeMachineDataMatch>>,
-	storedLength: number,
-): boolean {
-	if (match === 'none') return storedLength > 0;
-	return match === 'differs';
-}
-
-/**
- * THE CAPTURE HALF, for an append save: the frames the main component's
- * dataframe slots hold NOW (read under this save's row lock), composed after
- * the main's own items into BOTH its TM row and its pre-append baseline — the
- * PHP shape (`component_common::get_time_machine_data_to_save` :1580, the
- * main's data followed by every slot's FULL data), which is exactly what the
- * restore half (`composeTimeMachineSnapshot` / `planDataframeRestore`) reads.
- * Without it every row of an append run is FRAMELESS, and the dd800 revert of
- * a main whose slot already held frames is refused as a frameless wipe
- * (`refuseFramelessWipe`) — the appended main items stayed. The baseline
- * probe compares the composed value too, so a frameless older row never
- * answers for a main whose slot is populated.
- *
- * Append saves only: an ordinary save's rows stay frameless (the capture half
- * for every save is ledgered with `refuseFramelessWipe`), and a SLOT save
- * (`component_dataframe`) is its own frame set. `[]` for anything else.
- */
-async function appendTmFrames(
-	appendOutcome: AppendMergeResult | null,
-	model: string,
-	table: string,
-	sectionTipo: string,
-	sectionId: number,
-	componentTipo: string,
-): Promise<unknown[]> {
-	if (appendOutcome === null || model === 'component_dataframe') return [];
-	const { readDataframeSlotFrames } = await import('../../relations/dataframe_slots.ts');
-	return readDataframeSlotFrames(table, sectionTipo, sectionId, componentTipo);
-}
-
-/**
- * The save's Time Machine audit (PHP save :2097-2135): the append baseline
- * when one is due, then the row of the NEW data snapshot. Returns the row id
- * of a MAIN component's row (the executor re-composes an append's, and a
- * replace envelope's, frames once the row's frames are written —
- * `recomposeAppendTmRows`); `null` for a slot.
- */
-async function recordSaveTimeMachine(
-	target: {
-		table: string;
-		sectionTipo: string;
-		sectionId: number;
-		componentTipo: string;
-		userId: number;
-		model: string;
-	},
-	value: {
-		items: unknown[];
-		storedValue: unknown[];
-		langSliced: boolean;
-		effectiveLang: string;
-		tmLang: string;
-	},
-	appendOutcome: AppendMergeResult | null,
-	bulkProcessId: number | null,
-): Promise<number | null> {
-	const { table, sectionTipo, sectionId, componentTipo, userId, model } = target;
-	const { items, storedValue, langSliced, effectiveLang, tmLang } = value;
-	// An APPEND save's rows carry the paired slots' frames (appendTmFrames).
-	const tmFrames = await appendTmFrames(
-		appendOutcome,
-		model,
-		table,
-		sectionTipo,
-		sectionId,
-		componentTipo,
-	);
-	await recordAppendBaseline(
-		appendOutcome,
-		{ sectionTipo, sectionId, componentTipo, lang: tmLang, userId },
-		[...timeMachineSnapshot(storedValue, langSliced, effectiveLang), ...tmFrames],
-		langSliced,
-		bulkProcessId,
-	);
-	const tmRowId = await recordTimeMachine(
-		{
-			sectionTipo,
-			sectionId,
-			componentTipo,
-			lang: tmLang,
-			userId,
-			data: [...timeMachineSnapshot(items, langSliced, effectiveLang), ...tmFrames],
-			bulkProcessId,
-		},
-		dbTimestamp(),
-	);
-	return model !== 'component_dataframe' ? tmRowId : null;
-}
-
-/**
- * THE POST-ROW CAPTURE for an append main's own TM row. `appendTmFrames`
- * reads the slots when the MAIN is saved; the CSV executor writes the row's
- * frames only afterwards (pass 2 — they pair with the main's FINAL ids), so
- * that row held the appended main items beside the slot as it was BEFORE the
- * append: restoring it (apply_value), or walking to it as the pre-batch state
- * of a later run, reset the slot and wiped the frames the append paired with
- * those items. Called once the row's frames are written, INSIDE the row's
- * transaction (the rows are its own, uncommitted): each row keeps its main
- * items and takes the slots' frames as they stand NOW. The pre-append
- * baseline is untouched — main and slot are both from before, as they must be.
- */
-export async function recomposeAppendTmRows(rowIds: readonly number[]): Promise<void> {
-	if (rowIds.length === 0) return;
-	const { readTimeMachineRow, replaceTimeMachineRowData } = await import(
-		'../../db/time_machine.ts'
-	);
-	for (const id of rowIds) {
-		const row = await readTimeMachineRow(id);
-		const composed = row === null ? null : await recomposedTmData(row);
-		if (composed !== null) await replaceTimeMachineRowData(id, composed);
-	}
-}
-
-/**
- * One append main's TM row data with its frames re-read from the slots NOW:
- * its own main items, then every slot's full frames. `null` when there is
- * nothing to rewrite (not an array, unresolvable, or already current).
- */
-async function recomposedTmData(row: {
-	section_tipo: string;
-	section_id: number;
-	tipo: string;
-	data: unknown;
-}): Promise<unknown[] | null> {
-	const table = await getMatrixTableFromTipo(row.section_tipo);
-	const model = await getModelByTipo(row.tipo);
-	if (!Array.isArray(row.data) || model === null || table === null) return null;
-	const { stripDataframeFramesFromTmMain } = await import('../../tm_record/tm_record.ts');
-	const { readDataframeSlotFrames } = await import('../../relations/dataframe_slots.ts');
-	const { canonicalJson } = await import('./append_merge.ts');
-	const main = stripDataframeFramesFromTmMain(model, row.data) as unknown[];
-	const frames = await readDataframeSlotFrames(table, row.section_tipo, row.section_id, row.tipo);
-	const composed = [...main, ...frames];
-	return canonicalJson(composed) === canonicalJson(row.data) ? null : composed;
-}
-
-/**
- * The Time Machine snapshot (PHP get_time_machine_data_to_save =
- * get_data_lang): the effective-lang slice for the translation-supporting
- * literal classes, the full array otherwise.
+ * The Time Machine snapshot of a save (PHP get_data_lang()): the effective-lang
+ * slice for a lang-sliced component, the full array otherwise.
  */
 function timeMachineSnapshot(
 	items: unknown[],
@@ -2229,18 +1989,23 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 	// EFFECTIVE-lang slice for the translation-supporting literal classes
 	// (:1297-1332 no-slices when supports_translation is false), the full array
 	// for everything else — stamped with the component's normalized lang.
-	const tmLang = langSliced ? effectiveLang : lang;
+	const tmSnapshot = timeMachineSnapshot(items, langSliced, effectiveLang);
 	// saveTm:false suppresses the audit row (the bulk-import opt-out — PHP
 	// tm_record::$save_tm); bulkProcessId attributes it to the dd800 run.
-	const mainTmRowId =
-		request.saveTm === false
-			? null
-			: await recordSaveTimeMachine(
-					{ table, sectionTipo, sectionId, componentTipo, userId, model },
-					{ items, storedValue, langSliced, effectiveLang, tmLang },
-					appendOutcome,
-					request.bulkProcessId ?? null,
-				);
+	if (request.saveTm !== false) {
+		await recordTimeMachine(
+			{
+				sectionTipo,
+				sectionId,
+				componentTipo,
+				lang: langSliced ? effectiveLang : lang,
+				userId,
+				data: tmSnapshot,
+				bulkProcessId: request.bulkProcessId ?? null,
+			},
+			dbTimestamp(),
+		);
+	}
 
 	// RAG re-index event (S2-13): PHP save() enqueues the record for re-indexing
 	// on every component save (class.section_record.php:988). Since P1-8
@@ -2254,7 +2019,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 
 	const result: SaveResult = { ok: true, message: 'ok', data: items };
 	// After the id allocation above: every new appended item now has its id.
-	await attachSaveTmOutputs(result, appendOutcome, mainTmRowId, request.reportTmRowId === true);
+	await attachAppendOutcome(result, appendOutcome);
 	if (createdSectionId !== null) {
 		result.created_section_id = createdSectionId;
 	}

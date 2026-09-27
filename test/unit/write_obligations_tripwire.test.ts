@@ -437,19 +437,10 @@ const MATRIX: DoorRow[] = [
 			'persistModifiedStamp(',
 			"door: 'saveComponentData atomic insert'",
 			"rag: 'index'",
-			// the TM row moved into its helper (2026-09-27, CSV append baseline +
-			// frame capture); the helper's own row below pins recordTimeMachine(.
-			'recordSaveTimeMachine(',
+			'recordTimeMachine(',
 		],
 		// no obligation remembered inline beside the hook
 		mustNot: ['fireSaveEvent(', 'fireRagRecordEvent(', 'reactToRecordComponentWrite('],
-		empty: {},
-	},
-	{
-		file: SAVE_COMPONENT,
-		fn: 'recordSaveTimeMachine',
-		must: ['recordTimeMachine(', 'recordAppendBaseline('],
-		mustNot: ['fireSaveEvent(', 'fireRagRecordEvent('],
 		empty: {},
 	},
 	{

@@ -564,86 +564,11 @@ export const EXCLUDED_EMPTY_MODELS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * The languages a lang-sliced component's stored value speaks, in first-seen
- * order: each item's own `lang`, a LANG-LESS item (PHP-era data) counted under
- * `fallbackLang` — the language its row would be tagged with. Never empty.
- */
-function storedLanguages(stored: unknown, fallbackLang: string): string[] {
-	const langs = (Array.isArray(stored) ? stored : [])
-		.filter((item) => item !== null && typeof item === 'object')
-		.map((item) => ownLangOr(item, fallbackLang));
-	return langs.length > 0 ? [...new Set(langs)] : [fallbackLang];
-}
-
-/** An item's own non-empty `lang`, else `fallbackLang` (a lang-less item). */
-function ownLangOr(item: unknown, fallbackLang: string): string {
-	const itemLang = (item as { lang?: unknown }).lang;
-	return typeof itemLang === 'string' && itemLang !== '' ? itemLang : fallbackLang;
-}
-
-/**
- * THE WIPE'S TIME MACHINE ROWS for one emptied component: per language, a
- * backfill row with the OLD value (stamped 60s before, only when that language
- * has no history yet) then the emptied row.
- *
- * ONE ROW IS ONE LANGUAGE for a lang-sliced model (tmAuditSlice, the law every
- * other writer keeps): the wipe empties EVERY language of the key, so it writes
- * one pair PER LANGUAGE the stored value holds — each backfill that language's
- * slice (a lang-less item rides with `tmLang`, the tag its row gets), each
- * emptied row tagged with it. A single row tagged with the request's data lang
- * (PHP) is invisible to every other language's history
- * (`tmLangHistoryPredicate`): the dd800 revert of a LATER run on another
- * language walked past the wipe and restored the value the wipe had deleted.
- * An unsliced model keeps its one full-value pair under `tmLang`, as before.
- */
-async function recordEmptiedComponentTm(
-	target: { sectionTipo: string; sectionId: number; componentTipo: string; userId: number },
-	value: { stored: unknown; newData: unknown; tmLang: string; langSliced: boolean },
-	stamps: { backfill: string; now: string },
-): Promise<void> {
-	const { tmLangHistoryPredicate } = await import('../../db/time_machine.ts');
-	const { sectionTipo, sectionId, componentTipo, userId } = target;
-	const { stored, newData, tmLang, langSliced } = value;
-	const langs = langSliced ? storedLanguages(stored, tmLang) : [tmLang];
-	await ensureRecordGenerationTable();
-	for (const lang of langs) {
-		const history = (await sql.unsafe(
-			// P0-14: same narrowing as the sibling probe above — a dead generation's
-			// rows must not answer for this record.
-			`SELECT 1 FROM matrix_time_machine
-			 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3
-			   AND ${langSliced ? tmLangHistoryPredicate('$4') : 'lang = $4'}
-			   AND ${tmEpochPredicate()} LIMIT 1`,
-			[sectionTipo, sectionId, componentTipo, lang],
-		)) as unknown[];
-		const coordinates = { sectionTipo, sectionId, componentTipo, lang, userId };
-		if (history.length === 0) {
-			// Backfill-repair: the OLD value (this language's slice), 60s before the change.
-			const backfill = langSliced ? storedSlice(stored, lang, lang === tmLang) : stored;
-			await recordTimeMachine({ ...coordinates, data: backfill }, stamps.backfill);
-		}
-		await recordTimeMachine({ ...coordinates, data: newData }, stamps.now);
-	}
-}
-
-/** One language's slice of a stored value; lang-less items join the slice when `adoptLangless`. */
-function storedSlice(stored: unknown, lang: string, adoptLangless: boolean): unknown[] {
-	return (Array.isArray(stored) ? stored : []).filter(
-		(item) =>
-			item !== null &&
-			typeof item === 'object' &&
-			ownLangOr(item, adoptLangless ? lang : '') === lang,
-	);
-}
-
-/**
  * delete_data mode (PHP section_record::delete_data): keep the row, EMPTY
  * every component child of the section that has stored data —
  *   - per component: a Time Machine pair (backfill row with the OLD full
  *     value at NOW-60s when the tipo+lang has no TM history yet, then the
- *     save row with the new value) — ONE PAIR PER STORED LANGUAGE for a
- *     lang-sliced model (recordEmptiedComponentTm; deliberate divergence from
- *     PHP's single data-lang pair), and the column KEY REMOVED
+ *     save row with the new value), and the column KEY REMOVED
  *     (jsonb_set_lax 'delete_key'; component_filter gets the user's default
  *     project instead of null);
  *   - then the modified stamps refresh (dd197 user locator + dd201 date,
@@ -694,7 +619,6 @@ export async function deleteSectionData(
 	const { maintainRelationSearchIndex } = await import('../../relations/save.ts');
 	const { dbTimestamp: stamp } = await import('./create_record.ts');
 	const { config } = await import('../../../config/config.ts');
-	const { isLangSlicedModel } = await import('./save_component.ts');
 
 	// Component children of the section (recursive; virtual sections resolve
 	// through their real section's tree). Canonical accessor (S2-19/T3): this
@@ -821,10 +745,39 @@ export async function deleteSectionData(
 						: null;
 
 				const tmLang = (await getTranslatableByTipo(component.tipo)) ? dataLang : 'lg-nolan';
-				await recordEmptiedComponentTm(
-					{ sectionTipo, sectionId, componentTipo: component.tipo, userId },
-					{ stored, newData, tmLang, langSliced: isLangSlicedModel(model) },
-					{ backfill: backfillStamp, now: nowStamp },
+				await ensureRecordGenerationTable();
+				const history = (await sql.unsafe(
+					// P0-14: same narrowing as the sibling probe above — a dead generation's
+					// rows must not answer for this record.
+					`SELECT 1 FROM matrix_time_machine
+			 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3 AND lang = $4
+			   AND ${tmEpochPredicate()} LIMIT 1`,
+					[sectionTipo, sectionId, component.tipo, tmLang],
+				)) as unknown[];
+				if (history.length === 0) {
+					// Backfill-repair: the OLD full value, stamped 60s before the change.
+					await recordTimeMachine(
+						{
+							sectionTipo,
+							sectionId,
+							componentTipo: component.tipo,
+							lang: tmLang,
+							userId,
+							data: stored,
+						},
+						backfillStamp,
+					);
+				}
+				await recordTimeMachine(
+					{
+						sectionTipo,
+						sectionId,
+						componentTipo: component.tipo,
+						lang: tmLang,
+						userId,
+						data: newData,
+					},
+					nowStamp,
 				);
 				// Chokepoint write (PHP key-removal semantics: last key leaves '{}');
 				// the stamps refresh ONCE at the end, not per component.

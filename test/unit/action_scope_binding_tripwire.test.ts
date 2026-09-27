@@ -255,6 +255,12 @@ const EXEMPT: Record<string, string> = {
 		'record every run creates to label itself and to tag moved files, never a user-targeted write; ' +
 		'its user-targeted writes are on row.section_tipo × selection tipo, which the targets extractor ' +
 		'derives from sqo (R1 is bound, not exempt, here).',
+	'tool_time_machine.apply_value':
+		"A RESTORE INTO THE CALLER'S OWN COMPONENT (R2): `ddo_map` is read from the ONTOLOGY of the " +
+		'component being restored (dataframe_restore.ts reads the request_config of the caller tipo to ' +
+		'find which frames belong to it), not from a client map; the write goes to (section_tipo, tipo, ' +
+		"section_id) of the request, which the 'tipo' kind + scopeIfRecordTargeted gate " +
+		'(tm_scope_authz_native).',
 };
 
 // ── the source model: functions + constants of a tool directory ──────────────

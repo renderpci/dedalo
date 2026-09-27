@@ -44,22 +44,21 @@ instantiated and nothing is cached: one call is one function call.
   injected into a synthetic `dd15` `MatrixRecord`.
 - **Write guards** — `TM_EXCLUDED_SECTIONS` refuses to version `dd15` itself, and
   `recordTimeMachine()` skips non-positive `section_id`s.
-- **Row deletion** — none: no function deletes a Time Machine row. History is
-  never edited once committed. The ONE in-place rewrite is
-  `replaceTimeMachineRowData()` (`src/core/db/time_machine.ts`), called only by
-  `recomposeAppendTmRows()` (`save_component.ts`) from the CSV import executor,
-  inside the row's own transaction, on rows that transaction just wrote and has
-  not committed: an append row, or a replace-envelope row, keeps its main items
-  and takes its dataframe frames as they stand once the frames are written.
+- **Row deletion** — none. The Time Machine surface is **append-only**: no
+  function deletes a row.
 
 !!! warning "Every component save writes a Time Machine row"
     `recordTimeMachine()` is called on every save from `save_component.ts` —
     a replace save writes a row even when the new value equals the stored one,
-    so re-importing the same CSV in *Replace* mode writes one row per cell. There is no suppression switch a bulk operation can flip,
-    so a large bulk edit writes one audit row per item. An **append** save
-    (CSV import, *Append* mode) that adds nothing — every incoming value already
-    present, empty or dropped — changes nothing and writes **no** Time Machine
-    row, so re-importing the same file leaves history untouched. The bulk transforms that must *not* version
+    so re-importing the same CSV in *Replace* mode writes one row per cell.
+    There is no suppression switch a bulk operation can flip, so a large bulk
+    edit writes one audit row per item. An **append** save (CSV import, *Append*
+    mode) that adds something writes the same row a replace save writes —
+    tagged with the saved language, holding the value after the save. One that
+    adds nothing —
+    every incoming value already present, empty or dropped — changes nothing and
+    writes **no** Time Machine row, so re-importing the same file leaves history
+    untouched. The bulk transforms that must *not* version
     (record relocation, for instance) avoid it by writing with a direct `UPDATE`
     rather than by going through the component-save path.
 
@@ -163,20 +162,9 @@ await recordTimeMachine(
 
     A record edited before Time Machine ever ran has no baseline to revert to, so
     `delete_record.ts` and `duplicate_record.ts` compute a back-fill timestamp
-    (`now - 60s`) and write a **pair**: the previous data, then the new. The
-    *Delete data* wipe writes one pair **per language** the stored value holds
-    for a translatable component (one row is one language), the back-fill only
-    when that language has no history yet; other components keep one pair.
-
-    An ordinary replace save in `save_component.ts` does not back-fill. An
-    **append** save does: before its own row it writes a pre-append **baseline**
-    row (no bulk id — it belongs to no run) holding the stored value, whenever
-    the newest eligible Time Machine row differs from it. The decision is by
-    content (`latestTimeMachineDataMatch()`, jsonb equality over the revert's
-    own epoch and language view), not by whether history exists: with no history
-    a baseline is written only when something is stored, and none is written
-    when the newest row is this run's own. Without it, reverting the run would
-    blank or roll back values the append promised to keep.
+    (`now - 60s`) and call `recordTimeMachine()` **twice**: once for the previous
+    data, once for the new. The ordinary per-save path in `save_component.ts` does
+    not back-fill; only the delete and duplicate flows do.
 
 ### How a TM row becomes a renderable record
 

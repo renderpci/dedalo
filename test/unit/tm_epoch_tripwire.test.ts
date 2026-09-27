@@ -74,9 +74,9 @@ const EXEMPT_TM_READERS: Readonly<Record<string, { reads: number; reason: string
 			'The epoch MINT itself: it reads the address’s existing rows to place the boundary. It is what the other readers are narrowed BY.',
 	},
 	'src/core/db/time_machine.ts': {
-		reads: 5,
+		reads: 2,
 		reason:
-			"readTimeMachineRow is a PK read whose CALLERS carry the identity check (tool_time_machine apply_value, section/read.ts preview — both narrowed; recomposeAppendTmRows reads a row id its OWN transaction just inserted). readTimeMachineHistory has NO production caller (dead code); narrow or delete it before wiring one. The third, latestTimeMachineDataMatch (the CSV-append baseline probe), IS narrowed (tmEpochPredicate) — counted only because the census counts every read of an exempt file. The fourth, replaceTimeMachineRowData, is an UPDATE by PK of that same own-transaction row (no history is served). The fifth, tmLangHistoryPredicate's legacy-wipe sibling probe, is a correlated sub-read of the SAME record at the SAME timestamp as a row its (narrowed) caller already admitted, and is itself narrowed (tmEpochPredicate('wipe_sibling')).",
+			'readTimeMachineRow is a PK read whose CALLERS carry the identity check (tool_time_machine apply_value, section/read.ts preview — both narrowed). readTimeMachineHistory has NO production caller (dead code); narrow or delete it before wiring one.',
 	},
 	'src/core/update/transform/locators.ts': {
 		reads: 2,
@@ -158,7 +158,7 @@ const NARROWED_READERS: Readonly<Record<string, { reads: number; narrowSites: nu
 	'src/core/resolve/read_tm.ts': { reads: 6, narrowSites: 4 },
 	'src/core/section/record/delete_record.ts': { reads: 2, narrowSites: 2 },
 	'src/core/section/record/observers.ts': { reads: 1, narrowSites: 1 },
-	'tools/tool_time_machine/server/bulk_revert.ts': { reads: 3, narrowSites: 3 },
+	'tools/tool_time_machine/server/bulk_revert.ts': { reads: 2, narrowSites: 2 },
 };
 
 describe('time-machine epoch tripwire', () => {

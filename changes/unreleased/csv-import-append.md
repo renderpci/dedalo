@@ -14,7 +14,6 @@ text becomes a new paragraph, and an empty cell leaves the record untouched.
 Values already present are skipped and counted in the report, so importing the
 same file twice adds nothing the second time. Components where adding has no
 meaning — media, single-choice lists, computed values — refuse append before
-anything is written. Reverting an import run undoes an appended value
-together with its dataframe entries, even when the record already had some
-(the other changes to bulk reverts are listed under *Changed*). See
+anything is written. An append records the same Time Machine entry per language
+as a replace import. See
 [Adding instead of replacing](./tools/using_import_dedalo_csv.md#adding-instead-of-replacing).

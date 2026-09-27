@@ -8,12 +8,8 @@
   declares its policy; `test/unit/append_merge.test.ts` — the merge laws;
   `test/unit/save_append_import_native.test.ts` — the engine door and its
   backstop). A NEW capability, not a re-shaping of an existing field: every
-  field below is additive, EXCEPT the behaviour changes named in §1 (replace
-  mode's legacy envelope frames, and the re-composition of their main's
-  time-machine row) and §5 (the `dd800` bulk revert's per-language walk, its
-  lang-less rule, its legacy-wipe rule, the stale-frames refusal and the
-  per-main frame scoping — all of which apply to EVERY bulk run — and the
-  `delete_data` wipe's per-language time-machine rows).
+  field below is additive, EXCEPT the replace-mode behaviour change named in
+  §1 (a legacy envelope's frames: modified stamp, row lock, alias target).
 
 ## Shape before (PHP, and TS until 2026-09-26)
 
@@ -34,10 +30,7 @@ mode. A flat `lat, lon` geolocation cell always became layer `1`.
    row's imported `dd197`/`dd201` modified stamp, their slot is read under
    the row lock, and on a `component_alias` column a frame without its own
    `main_component_tipo` pairs with — and replaces only the frames of — the
-   alias TARGET, the tipo stored frames name; and, with time machine on, the
-   main's own time-machine row of that cell is re-composed with the slots'
-   frames as the row left them — the frames are saved without a row of their
-   own, so this is where they are audited). Any other value
+   alias TARGET, the tipo stored frames name). Any other value
    refuses the WHOLE file with `request.invalid_options`, before the dd800
    bulk-process record is created — nothing is written. No new error code, and
    no CSV header suffix (a suffix would collide with the `tipo_lang` /
@@ -121,78 +114,17 @@ mode. A flat `lat, lon` geolocation cell always became layer `1`.
      it); and a replace-mode column whose legacy envelope frames name an
      append-mode main. A replace dataframe column — empty or not — beside an
      append column it holds no frames of imports as usual.
-   - **Bulk revert**: before an append save's own time-machine row, a
-     component whose pre-append value is NOT what its newest time-machine
-     row holds — no history (and something stored), or STALE history (a
-     later write ran with Time Machine off: a TM-off import, replace-mode
-     legacy envelope frames) — gets a baseline row of its pre-append value
-     (no bulk id), so the `dd800` revert restores exactly that instead of
-     blanking the component or resurrecting the stale row. Decided by content
-     (jsonb equality against the newest row the revert itself would walk).
-     For a language-sliced model this is PER LANGUAGE (each time-machine row
-     snapshots one language's slice): the probe reads that language's
-     history exactly as the revert does, each row compared as its slice of
-     that language. The `dd800` revert's pre-batch walk of a language-sliced
-     component reads the rows TAGGED with the batch row's language plus any
-     row whose data CARRIES that language (pre-migration rows without a tag,
-     and the writers that tag one language but store all: tool_lang,
-     propagate, the duplicate backfill), and restores ONLY that language,
-     from the found row's slice — so a multi-language append reverts every
-     language, not just the one whose row happened to sit below the batch,
-     and an older all-language row never overwrites a language the batch did
-     not touch. A LANG-LESS item (PHP-era data: no `lang` key, `''` or
-     null) belongs to the language its row is TAGGED with: it is part of that
-     language's slice (restored stamped with the language, as any save of the
-     slice stamps it; the live value's lang-less items are replaced with it,
-     never kept beside it), and the baseline probe slices the same way — a
-     tagged row of lang-less items is no longer the EMPTY slice, which
-     blanked the component on revert. This revert
-     change applies to every bulk run, not only appends.
-   - **Dataframe frames in an append save's time-machine rows**: an append
-     save of a MAIN component composes the frames its dataframe slots hold
-     (read under the row lock) after its own items, in BOTH its own row and
-     its baseline — the PHP `get_time_machine_data_to_save` shape the restore
-     doors already read. So the `dd800` revert of an append over a main whose
-     slot already held frames restores the main AND its slot, instead of
-     skipping it as `frameless_wipe` (the appended item used to stay). An
-     ordinary save's rows stay frameless (unchanged). The main's OWN batch
-     row is composed from the slots as the import ROW LEFT them (the row's
-     frames are written after its main, so the row is re-composed at the end
-     of the row's transaction); the baseline keeps the slots from before.
-   - **Stale frames in a composed snapshot** (`bulk_revert_process`, EVERY
-     bulk run — an append row and a PHP-era row are both composed): a
-     composed snapshot's frames are the slot as it stood at its row, and a
-     later frame edit writes no main row. When the live slot (this main's
-     frames) equals neither the snapshot's frames nor ANY state the run or
-     this revert left it in — the frames the BATCH row composed (an append's
-     row, a replace envelope's re-composed row), the run's own newest slot
-     row (a slot column), this revert's own newest slot row (a batch's slot
-     row reverted before its main) — the slot changed after the run: the row
-     is skipped with the NEW closed-vocabulary reason
-     `frames_changed_since_run` (extends
-     WC-2026-09-03-bulk-revert-skipped-typed-entries), nothing is written.
-     Otherwise only THIS main's frames are replayed; frames paired with other
-     mains in the same slot stay as they are live — EXCEPT a slot whose whole
-     live content is what this revert itself just wrote there, which takes
-     the snapshot WHOLE (as before this change: a PHP-era slot has no rows of
-     its own, so its revert blanks it and only the main's composed row knows
-     the other mains' frames).
-   - **Record wipes already in the history**: a null-data time-machine row
-     tagged with ONE language belongs to EVERY language's history only when
-     it has the legacy wipe's SHAPE — untagged, or with a sibling null row
-     (another component of the same record at the same timestamp: the wipe
-     empties several at once). So a wipe written before the per-language
-     pairs (or by PHP) still blanks every other language on the revert of a
-     later run, while a LONE null row — PHP's per-language clear of one
-     translatable component — is only its own language's history (read as a
-     wipe, it blanked another language on revert instead of restoring it).
-   - **Record wipe (`delete_data`) time-machine rows**: a language-sliced
-     component gets ONE backfill/emptied pair PER LANGUAGE its stored value
-     holds (lang-less items ride with the data-lang tag), each tagged with and
-     sliced to that language — PHP wrote one pair tagged with the request's
-     data lang, which every other language's history ignores: the revert of a
-     later run on another language walked past the wipe and restored the
-     values it had deleted. Unsliced models keep their one full-value pair.
+   - **Time machine**: an append save that changes something writes the SAME
+     time-machine row a replace save writes — one row per save,
+     tagged with its language, holding the value after the save, under the run's bulk
+     id (`saveTm` honoured as for replace). No baseline, no composed frames,
+     no in-place row rewrite. Append-mode frames (a dataframe column, or a
+     legacy envelope's) are saved with their own row, as a slot column's.
+     The `dd800` bulk revert is unchanged by this entry: it infers the
+     pre-run value from the history, so an append over a component whose only
+     history is the run's own row is blanked by a revert. The exact revert —
+     a pre-image recorded with every bulk save — is the pending bulk-revert
+     undo-log change, with its own entry; not shipped.
    - **Replace mode, legacy envelope frames aimed at a non-dataframe slot**:
      still ONE `IGNORED … which is not a component_dataframe` warning per slot,
      `data` the slot's normalised frames (unchanged).
@@ -203,14 +135,6 @@ mode. A flat `lat, lon` geolocation cell always became layer `1`.
 7. **Tool labels** (additive — tool-context `labels` are wire, precedent
    WC-2026-08-23-tool-export-register-labels). Every shipped language, one row
    per name:
-   - `tools/tool_time_machine/register.json`: `bulk_revert_skipped_msg` (the
-     bulk-revert result notice naming skipped rows). The frozen
-     `tool_time_machine` context predates it:
-     `test/parity/tool_element_context_differential.test.ts` exempts EXACTLY
-     `{apply_value_confirm_msg (WC-2026-08-29-tm-apply-value-confirm-label),
-     bulk_revert_skipped_msg}` — every exempted name must be a TS label, the
-     frozen side must hold none — and compares the rest byte-for-byte (the
-     case left `engineering/parity_baseline.json`'s red set with this entry).
    - `tools/tool_import_dedalo_csv/register.json`: `import_mode`, `replace`,
      `append`, `append_layer`, `append_no_tm_warning` (the column mode
      selector). No parity gate replays this tool's context, so no fixture and
@@ -241,6 +165,5 @@ the tool or its actions), so NO re-harvest and no fixture edit; an absent
 **Decision** plus the tool's native import tests
 (`test/unit/tool_import_dedalo_csv.test.ts`, `test/unit/import_csv*.test.ts`),
 and above all the door gate `test/unit/import_csv_append_native.test.ts`
-(through the real `import_files` / `validate_import` handlers and the dd800
-bulk revert). The client mode selector is gated in the browser suite
+(through the real `import_files` / `validate_import` handlers). The client mode selector is gated in the browser suite
 (`client/dedalo/test/client/js/test_tool_import_dedalo_csv.js`).

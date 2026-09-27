@@ -53,7 +53,6 @@ import { createSectionRecord } from '../section/record/create_record.ts';
 import { setRecordMetadata } from '../section/record/record_metadata.ts';
 import {
 	isLangSlicedModel,
-	recomposeAppendTmRows,
 	type SaveResult,
 	saveComponentData,
 } from '../section/record/save_component.ts';
@@ -179,16 +178,6 @@ interface RowWriteContext {
 	appendMains: ReadonlySet<string>;
 	/** Duplicates skipped per CSV column tipo — reported only once the row COMMITTED. */
 	skipped: Map<string, number>;
-	/**
-	 * The TM rows this row's APPEND main saves wrote (`SaveResult.appendTmRowId`),
-	 * and those of the REPLACE main saves whose column carries a legacy
-	 * `{data, dataframe}` envelope (`SaveResult.tmRowId`): their frames are
-	 * re-composed once pass 2 has written the row's frames
-	 * (`recomposeAppendTmRows`), so each carries the frames it pairs with — the
-	 * envelope's frames are saved with saveTm:false and audited THERE, and the
-	 * dd800 revert reads them as the slot the run left (refuseStaleFrames).
-	 */
-	appendTmRows: number[];
 }
 
 function addSkipped(ctx: RowWriteContext, reportTipo: string, count: number): void {
@@ -345,8 +334,7 @@ async function writeLegacyFramesReplace(
 			changedData: [{ action: 'set_data', id: null, value: [...kept, ...group] }],
 			userId: ctx.userId,
 			bulkProcessId: ctx.bulkProcessId,
-			// The frames are audited through their MAIN component's TM row, not
-			// twice: writeReplaceData queued that row for re-composition.
+			// The frames are audited through their MAIN component's TM row, not twice.
 			saveTm: false,
 			skipModifiedStamp: ctx.skipModifiedStamp,
 		});
@@ -669,32 +657,20 @@ async function writeReplaceData(column: PlannedColumn, ctx: RowWriteContext): Pr
 		skipModifiedStamp: ctx.skipModifiedStamp,
 	};
 	const groups = groupItemsByLang(column.conform.result, column.lang);
-	// A legacy envelope writes its frames after this save (pass 2): its rows are
-	// re-composed with them then (RowWriteContext.appendTmRows).
-	const envelope = hasLegacyFrames(column);
-	const keepTmRow = (outcome: SaveResult): void => {
-		if (envelope && outcome.tmRowId !== undefined) ctx.appendTmRows.push(outcome.tmRowId);
-	};
 	if (groups.size === 0) {
 		// An explicit CLEAR (empty cell).
-		keepTmRow(
-			await saveOrRefuse({
-				...base,
-				lang: column.lang,
-				changedData: [{ action: 'set_data', id: null, value: [] }],
-				reportTmRowId: envelope,
-			}),
-		);
+		await saveOrRefuse({
+			...base,
+			lang: column.lang,
+			changedData: [{ action: 'set_data', id: null, value: [] }],
+		});
 	}
 	for (const [lang, items] of groups) {
-		keepTmRow(
-			await saveOrRefuse({
-				...base,
-				lang,
-				changedData: [{ action: 'set_data', id: null, value: items }],
-				reportTmRowId: envelope,
-			}),
-		);
+		await saveOrRefuse({
+			...base,
+			lang,
+			changedData: [{ action: 'set_data', id: null, value: items }],
+		});
 	}
 }
 
@@ -727,7 +703,6 @@ async function writeAppendData(column: PlannedColumn, ctx: RowWriteContext): Pro
 		});
 		mergeFirstIds(idMap, outcome.appendedIdMap);
 		addSkipped(ctx, column.tipo, outcome.appendSkipped ?? 0);
-		if (outcome.appendTmRowId !== undefined) ctx.appendTmRows.push(outcome.appendTmRowId);
 	}
 }
 
@@ -788,9 +763,8 @@ async function writeLegacyFrames(column: PlannedColumn, ctx: RowWriteContext): P
 	const pending = await parseLegacyFrames(column.dataframe ?? [], dataTipoOf(column), ctx);
 	if (pending.length === 0) return;
 	if (column.mode === 'append') {
-		// Its OWN Time Machine row (as a slot column's): the main save may be a
-		// no-op (every item a duplicate, no TM row), and a frame written with no
-		// TM row of its run is one the dd800 bulk revert cannot undo.
+		// A normal save of the slot, TM per ctx.saveTm: the main save may be a
+		// no-op (every item a duplicate, no TM row).
 		await writeFramesAppend(pending, ctx, column.tipo, ctx.saveTm);
 		return;
 	}
@@ -1077,7 +1051,6 @@ export async function executeCsvImport(request: CsvExecuteRequest): Promise<Impo
 			appendedIds: new Map(),
 			appendMains: appendMainsOf(record),
 			skipped: new Map(),
-			appendTmRows: [],
 		};
 		try {
 			assertRowModesCompatible(record);
@@ -1095,8 +1068,6 @@ export async function executeCsvImport(request: CsvExecuteRequest): Promise<Impo
 
 				const secondPass = await writeRowPassOne(record, ctx, metadata, publishColumn);
 				await writeRowPassTwo(secondPass, ctx, publishColumn);
-				// The append mains' TM rows take the slots' frames as the row LEFT them.
-				await recomposeAppendTmRows(ctx.appendTmRows);
 
 				// The `data`-column twin of dd199/dd200 (see record_metadata.ts): without
 				// it the edit view says 1998 and every list says "created today".

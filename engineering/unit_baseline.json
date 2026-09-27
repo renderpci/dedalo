@@ -1777,9 +1777,9 @@
 			"assertions": 23
 		},
 		"test/unit/import_csv_append_native.test.ts": {
-			"tests": 55,
+			"tests": 34,
 			"skipped": 0,
-			"assertions": 335
+			"assertions": 235
 		},
 		"test/unit/import_csv_execute.test.ts": {
 			"tests": 14,
@@ -3852,9 +3852,9 @@
 			"assertions": 28
 		},
 		"test/unit/tm_bulk_revert.test.ts": {
-			"tests": 17,
+			"tests": 13,
 			"skipped": 0,
-			"assertions": 61
+			"assertions": 54
 		},
 		"test/unit/tm_count_cache.test.ts": {
 			"tests": 3,

@@ -293,11 +293,6 @@
           },
           {
             "lang": "lg-cat",
-            "name": "bulk_revert_skipped_msg",
-            "value": "%s files NO s'han revertit i s'han deixat sense canvis:"
-          },
-          {
-            "lang": "lg-cat",
             "name": "apply_and_save",
             "value": "Aplicar i salvar"
           },
@@ -330,11 +325,6 @@
             "lang": "lg-deu",
             "name": "bulk_revert_confirm_msg",
             "value": "Sind Sie sicher, dass Sie den Massenprozess rückgängig machen wollen: {0}?\n\nAlle in diesem Prozess vorgenommenen Änderungen werden in allen Datensätzen rückgängig gemacht"
-          },
-          {
-            "lang": "lg-deu",
-            "name": "bulk_revert_skipped_msg",
-            "value": "%s Zeilen wurden NICHT zurückgesetzt und blieben unverändert:"
           },
           {
             "lang": "lg-deu",
@@ -373,11 +363,6 @@
           },
           {
             "lang": "lg-ell",
-            "name": "bulk_revert_skipped_msg",
-            "value": "%s γραμμές ΔΕΝ επαναφέρθηκαν και έμειναν αμετάβλητες:"
-          },
-          {
-            "lang": "lg-ell",
             "name": "apply_and_save",
             "value": "εφαρμόστε και αποθηκεύστε"
           },
@@ -410,11 +395,6 @@
             "lang": "lg-eng",
             "name": "bulk_revert_confirm_msg",
             "value": "Are you sure to revert the bulk process: {0}? All changed done in this process will be reverted in all records"
-          },
-          {
-            "lang": "lg-eng",
-            "name": "bulk_revert_skipped_msg",
-            "value": "%s rows were NOT reverted and were left unchanged:"
           },
           {
             "lang": "lg-eng",
@@ -456,11 +436,6 @@
           },
           {
             "lang": "lg-eus",
-            "name": "bulk_revert_skipped_msg",
-            "value": "%s errenkada EZ dira leheneratu eta aldatu gabe geratu dira:"
-          },
-          {
-            "lang": "lg-eus",
             "name": "apply_and_save",
             "value": "Eska ezazu eta gorde"
           },
@@ -493,11 +468,6 @@
             "lang": "lg-fra",
             "name": "bulk_revert_confirm_msg",
             "value": "Êtes-vous sûr de vouloir inverser le processus en vrac : {0}? Toutes les modifications effectuées dans ce processus seront annulées dans tous les enregistrements."
-          },
-          {
-            "lang": "lg-fra",
-            "name": "bulk_revert_skipped_msg",
-            "value": "%s lignes n'ont PAS été rétablies et sont restées inchangées :"
           },
           {
             "lang": "lg-fra",
@@ -536,11 +506,6 @@
           },
           {
             "lang": "lg-ita",
-            "name": "bulk_revert_skipped_msg",
-            "value": "%s righe NON sono state ripristinate e sono rimaste invariate:"
-          },
-          {
-            "lang": "lg-ita",
             "name": "apply_and_save",
             "value": "Applica e salva"
           },
@@ -573,11 +538,6 @@
             "lang": "lg-nep",
             "name": "bulk_revert_confirm_msg",
             "value": "के तपाइँ बल्क प्रक्रियालाई उल्टाउन निश्चित हुनुहुन्छ: {0}?\\n\\nयस प्रक्रियामा गरिएका सबै परिवर्तनहरू सबै रेकर्डहरूमा उल्टाइनेछन्"
-          },
-          {
-            "lang": "lg-nep",
-            "name": "bulk_revert_skipped_msg",
-            "value": "%s पङ्क्तिहरू फर्काइएनन् र अपरिवर्तित छोडिए:"
           },
           {
             "lang": "lg-nep",
@@ -616,11 +576,6 @@
           },
           {
             "lang": "lg-por",
-            "name": "bulk_revert_skipped_msg",
-            "value": "%s linhas NÃO foram revertidas e ficaram inalteradas:"
-          },
-          {
-            "lang": "lg-por",
             "name": "apply_and_save",
             "value": "Aplique e salve"
           },
@@ -653,11 +608,6 @@
             "lang": "lg-spa",
             "name": "bulk_revert_confirm_msg",
             "value": "¿Estás seguro de revertir el proceso masivo: {0}?\n\nTodos los cambios realizados en este proceso se revertirán en todos los registros"
-          },
-          {
-            "lang": "lg-spa",
-            "name": "bulk_revert_skipped_msg",
-            "value": "%s filas NO se han revertido y se han dejado sin cambios:"
           },
           {
             "lang": "lg-spa",

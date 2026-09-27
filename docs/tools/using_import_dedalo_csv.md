@@ -96,7 +96,9 @@ section_id;test80;test100;test17
 Record 1 gains links to records 4 and 6 (unless it already had them), a new Point layer, and a paragraph `<p>Second campaign, 2025.</p>` at the end of its text in the current data language.
 
 !!! warning "Append with time machine off cannot be undone"
-    An append only adds, but it is still a write. With *Save time machine history on import* on, the whole run can be reverted from its bulk-process record like any other import; with it off, the panel warns you, and the added values must be removed by hand.
+    An append only adds, but it is still a write. With *Save time machine history on import* on, each append records the same time-machine entry as a *Replace* import — one per language written, holding the value after the append — and the run can be reverted from its bulk-process record like any other import; with it off, the panel warns you, and the added values must be removed by hand.
+
+    The revert rebuilds each value from the history entry just before the run. Where the run's entry is the component's **only** history — values stored before the time machine recorded them, or written with it off — the revert **empties** that component instead of restoring what the append kept. An exact revert of such runs is a pending change, not yet available: until then, check a run over records without history before reverting it.
 
 ## Tips and gotchas
 
