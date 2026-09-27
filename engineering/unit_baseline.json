@@ -1026,6 +1026,11 @@
 			"skipped": 0,
 			"assertions": 55
 		},
+		"test/unit/developer_flags_native.test.ts": {
+			"tests": 5,
+			"skipped": 0,
+			"assertions": 15
+		},
 		"test/unit/diffusion_actions.test.ts": {
 			"tests": 8,
 			"skipped": 0,

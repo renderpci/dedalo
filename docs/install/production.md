@@ -652,7 +652,7 @@ Hardening recap — verify each, because each is a real hole:
 | Setting | Production value | Why |
 | --- | --- | --- |
 | `SERVER_TCP_PORT` | **unset** | the TCP listener is a development convenience; production is socket-only |
-| `DEDALO_DEV_MODE` | `false` | dev mode exposes the browser test harness and developer payloads |
+| `DEDALO_DEV_MODE` | `false` | dev mode exposes the browser test harness and unminified client libraries (developer surfaces follow the logged user, not this key) |
 | `DEDALO_DEBUG_API_ERRORS` | `false` | otherwise exception text is echoed to the client |
 | `MEDIA_DEV_ROUTE_ENABLED` | **unset** | unset is already safe: the engine media fallback answers only on the TCP dev listener (unset in production) and only while protection is unconfigured. Setting it to `true` FORCES it on for every listener — the socket included — serving media with **no per-record ACL** and bypassing the generated rules entirely |
 | `DEDALO_INSTALL_ALLOWED_IPS` | unset (= the local machine only), or the exact address you install from | the install surface is pre-auth until the instance is sealed; the default is fail-closed, and `any` is the only spelling that opens it |

@@ -169,7 +169,9 @@ dropping them silently.
 
 PHP sessions and the cache manager (`DEDALO_SESSION_HANDLER`,
 `DEDALO_SESSIONS_PATH`, `DEDALO_CACHE_MANAGER`) — v7 has its own session store.
-The PHP logger and debug flags (`LOGGER_LEVEL`, `SHOW_DEBUG`, `SHOW_DEVELOPER`).
+The PHP logger (`LOGGER_LEVEL`). The debug flags `SHOW_DEBUG` and `SHOW_DEVELOPER`
+are no longer configuration: v7 derives them per logged user, as v6 did (root →
+`SHOW_DEBUG`; a user flagged as developer, root included → `SHOW_DEVELOPER`).
 The front-end CDN/library URLs (`USE_CDN`, `JQUERY_*`, `BOOTSTRAP_*`, `D3_URL_JS`,
 `LEAFLET_JS_URL`, …) — v7 serves its own client. PHP binaries and DB management
 (`PHP_BIN_PATH`, `DEDALO_DB_TYPE`, `DEDALO_DB_MANAGEMENT`). Plus

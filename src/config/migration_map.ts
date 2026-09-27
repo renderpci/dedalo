@@ -376,19 +376,20 @@ const DROPPED: Readonly<Record<string, MigrationRule>> = {
 
 	// Never really CONFIG in v6: derived per REQUEST from the logged user —
 	// SHOW_DEBUG = "is the superuser", SHOW_DEVELOPER = the user's is_developer flag
-	// in the database. The client flags of the same name still exist in v7 (the
-	// client reads them in ~470 files); the server now derives them from ONE env key,
-	// DEDALO_DEV_MODE, instead of from the user. Nothing to carry across — but the
-	// capability is NOT gone, so do not call this "PHP-only".
+	// in the database. v7 derives them the SAME way (src/core/resolve/environment.ts,
+	// buildPlainVars), so there is nothing to carry across; the client flags of the
+	// same name still exist and are read in ~470 client files. Do NOT call these
+	// "PHP-only": the capability is live. DEDALO_DEV_MODE does NOT drive them — it
+	// is the SERVER posture (DEVELOPMENT_SERVER, no-cache path, readable libs).
 	SHOW_DEBUG: {
 		cls: 'DROPPED',
 		reason:
-			'per-user in v6 (superuser only); in v7 the client SHOW_DEBUG flag is driven server-wide by DEDALO_DEV_MODE=true',
+			'per-user in v6 (superuser only); in v7 the client SHOW_DEBUG flag is derived the same way (superuser), NOT from config',
 	},
 	SHOW_DEVELOPER: {
 		cls: 'DROPPED',
 		reason:
-			'per-user in v6 (the is_developer DB flag); in v7 the client SHOW_DEVELOPER flag is driven server-wide by DEDALO_DEV_MODE=true',
+			'per-user in v6 (the is_developer DB flag); in v7 the client SHOW_DEVELOPER flag is derived the same way (is_developer), NOT from config',
 	},
 	DEVELOPMENT_SERVER: {
 		cls: 'DROPPED',

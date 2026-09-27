@@ -3172,15 +3172,20 @@ DEDALO_DEBUG_API_ERRORS=true
 
 DEDALO_DEV_MODE `bool`
 
-Marks this installation as a development server. With `true`, logged-in users get the
-debug and developer surfaces in the interface (the extra inspection panels), the client is told
+Marks this installation as a development server. With `true`, the client is told
 it is talking to a development server so it takes the no-cache path instead of the offline
-service-worker one, and the readable, non-minified versions of the client libraries are served.
-The configuration widget in the maintenance area reports the mode it resolved, so you can always
-check what a running server thinks it is.
+service-worker one, the readable, non-minified versions of the client libraries are served,
+and the dev-only client libraries the browser test harness needs (mocha/chai) are served. The configuration widget in the maintenance
+area reports the mode it resolved, so you can always check what a running server thinks it is.
 
-Default `false`, the production posture. Never `true` on a shared or public installation: the
-developer surfaces expose internal structure that ordinary users have no business seeing.
+This key is the SERVER's posture only. It does NOT control the debug/developer surfaces in the
+interface (the info bar, the ontology/inspector shortcuts): those follow the LOGGED USER — a
+user flagged `is_developer` in their record sees them, root (superuser) included. A
+non-developer gets neither even on a development server — the surfaces follow the person, not
+the box.
+
+Default `false`, the production posture. Never `true` on a shared or public installation: it
+switches the client off the offline cache and serves unminified libraries.
 
 The real environment wins over the configuration file, so a single development run can be marked
 without editing anything:
