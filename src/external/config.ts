@@ -1,6 +1,5 @@
 /**
- * ONTOLOGY api_config → a typed, credential-stripped, allowlist-validated
- * binding.
+ * ONTOLOGY api_config → a typed, credential-stripped, shape-validated binding.
  *
  * A section BINDS an external service when its ontology node carries
  * `properties.api_config` (zenon1, test3 — plus rsc205, whose copy is a stale
@@ -13,8 +12,16 @@
  * anyone who can edit the ontology can change where the server points.
  * Everything in this module follows from that one fact:
  *
- *  - the api_url's HOST must be in the operator's allowlist, or the binding is
- *    refused outright — the ontology proposes, the operator disposes;
+ *  - the ontology proposes, the operator disposes — but at the DOOR, not here.
+ *    Parse validates SHAPE only (object, bare entity, parseable http(s) URLs
+ *    without embedded credentials, response_map). The operator's host
+ *    allowlist (`DEDALO_EXTERNAL_ALLOWED_HOSTS`) is consulted in exactly one
+ *    place: transport.ts `fetchExternalJson`, on the final URL, before any DNS.
+ *    CLASSIFICATION (is this section external? — record_fields.ts, the TM
+ *    restore's section_id transform, section_id.ts) never consults it: egress
+ *    policy governs what this server CONTACTS, and a classification contacts
+ *    nothing. Checking it here made every TM restore fail `update.refused` on
+ *    an install with the default empty allowlist (2026-09-27);
  *  - `ui_base_url` must be http(s), so an edit cannot turn a record link into
  *    `javascript:…` in every user's browser;
  *  - any CREDENTIAL-SHAPED key is STRIPPED before the value is typed, and the
@@ -25,8 +32,9 @@
  *
  * The resolved binding is cached through `createOntologyCache`, which IS the
  * right lifecycle here — the content is ontology-derived, so an ontology
- * write should drop it. (The circuit breaker deliberately does NOT use it; see
- * breaker.ts.)
+ * write should drop it. It does NOT depend on the host allowlist (parse never
+ * reads it), so an allowlist change needs no invalidation here. (The circuit
+ * breaker deliberately does NOT use it; see breaker.ts.)
  */
 
 import { createOntologyCache } from '../core/ontology/cache_factory.ts';
@@ -37,9 +45,8 @@ import type {
 	ResolvedExternalService,
 } from './api/types.ts';
 import type { ResponseMap } from './descriptor_types.ts';
-import { ExternalServiceError, originOf } from './errors.ts';
+import { ExternalServiceError } from './errors.ts';
 import { getExternalService } from './registry.ts';
-import { isAllowedExternalHost } from './transport.ts';
 
 /**
  * Key names that may hold a secret. Matched case-insensitively against every
@@ -57,13 +64,15 @@ function badConfig(sectionTipo: string, detail: string, service = 'unknown'): ne
 	throw new ExternalServiceError({ service, kind: 'bad_config', sectionTipo, detail });
 }
 
-/** Validate one URL field: parseable, http(s), and (when fetched) allowlisted. */
+/**
+ * Validate one URL field's SHAPE: a non-empty string, parseable, http(s), no
+ * embedded credentials. No host allowlist — that is the door's job (header).
+ */
 function validateUrlField(
 	sectionTipo: string,
 	service: string,
 	field: string,
 	value: unknown,
-	options: { readonly fetched: boolean },
 ): string {
 	if (typeof value !== 'string' || value.trim().length === 0) {
 		badConfig(sectionTipo, `api_config.${field} is not a non-empty string`, service);
@@ -82,15 +91,6 @@ function validateUrlField(
 	}
 	if (url.username !== '' || url.password !== '') {
 		badConfig(sectionTipo, `api_config.${field} carries embedded credentials`, service);
-	}
-	if (options.fetched && !isAllowedExternalHost(url.hostname)) {
-		throw new ExternalServiceError({
-			service,
-			kind: 'blocked_host',
-			origin: originOf(url),
-			sectionTipo,
-			detail: `api_config.${field} host is not in DEDALO_EXTERNAL_ALLOWED_HOSTS`,
-		});
 	}
 	return url.toString();
 }
@@ -118,7 +118,9 @@ function parseResponseMap(sectionTipo: string, service: string, raw: unknown): R
 /**
  * THE parser. Every api_config in the installation goes through it, and nothing
  * else may build an `ExternalApiConfig` — the constructor IS the validation.
- * Throws `bad_config` / `blocked_host`; never returns a partly-vetted object.
+ * Throws `bad_config` only; never returns a partly-vetted object. A host outside
+ * the allowlist PARSES — the request to it is refused `blocked_host` at the
+ * door (transport.ts), never here.
  */
 export function parseApiConfig(raw: unknown, context: { sectionTipo: string }): ExternalApiConfig {
 	const { sectionTipo } = context;
@@ -141,23 +143,18 @@ export function parseApiConfig(raw: unknown, context: { sectionTipo: string }): 
 	}
 	const service = entity.toLowerCase();
 
-	const apiUrl = validateUrlField(sectionTipo, service, 'api_url', source.api_url, {
-		fetched: true,
-	});
+	const apiUrl = validateUrlField(sectionTipo, service, 'api_url', source.api_url);
 	const apiUrlSearch =
 		source.api_url_search === undefined || source.api_url_search === null
 			? null
-			: validateUrlField(sectionTipo, service, 'api_url_search', source.api_url_search, {
-					fetched: true,
-				});
-	// ui_base_url is RENDERED, not fetched: its scheme is what matters, and the
-	// host allowlist (which governs what this SERVER contacts) does not apply.
+			: validateUrlField(sectionTipo, service, 'api_url_search', source.api_url_search);
+	// ui_base_url is RENDERED, not fetched: its scheme is what matters (the
+	// `javascript:` case). The fetched URLs get the same shape checks; WHERE the
+	// server may go is decided at the door.
 	const uiBaseUrl =
 		source.ui_base_url === undefined || source.ui_base_url === null
 			? null
-			: validateUrlField(sectionTipo, service, 'ui_base_url', source.ui_base_url, {
-					fetched: false,
-				});
+			: validateUrlField(sectionTipo, service, 'ui_base_url', source.ui_base_url);
 
 	return {
 		entity: service,
@@ -199,11 +196,12 @@ const PUBLISHABLE_API_CONFIG_KEYS: readonly string[] = [
  *     `javascript:` value stored in the ontology would be stored XSS on a
  *     curator's click.
  *
- * WHY NO HOST ALLOWLIST HERE, unlike parseApiConfig. `DEDALO_EXTERNAL_ALLOWED_HOSTS`
- * governs what THIS SERVER contacts. These URLs are rendered by, and fetched
- * from, the CURATOR'S BROWSER — a different trust boundary — and gating them on
- * the server's egress list would silently break a working catalogue link on
- * every install that has not opted into server-side fetching yet.
+ * WHY NO HOST ALLOWLIST HERE (nor in parseApiConfig). `DEDALO_EXTERNAL_ALLOWED_HOSTS`
+ * governs what THIS SERVER contacts, and is enforced only at the outbound door
+ * (transport.ts). These URLs are rendered by, and fetched from, the CURATOR'S
+ * BROWSER — a different trust boundary — and gating them on the server's
+ * egress list would silently break a working catalogue link on every install
+ * that has not opted into server-side fetching yet.
  *
  * NEVER THROWS. Both call sites are read paths whose job is to render a form;
  * a mis-catalogued api_config must degrade to "no external binding published",
@@ -246,13 +244,11 @@ export function publishApiConfig(
 			badConfig(sectionTipo, 'api_config.entity is missing or not a bare name');
 		}
 		const service = entity.toLowerCase();
-		// (3) URL vetting. `fetched:false` everywhere — see the header on why the
-		// host allowlist is not this boundary's control.
+		// (3) URL vetting — shape only; see above on why the host allowlist is not
+		// this boundary's control.
 		const published: PublishedApiConfig = {
 			entity: service,
-			api_url: validateUrlField(sectionTipo, service, 'api_url', source.api_url, {
-				fetched: false,
-			}),
+			api_url: validateUrlField(sectionTipo, service, 'api_url', source.api_url),
 			...(source.api_url_search === undefined || source.api_url_search === null
 				? {}
 				: {
@@ -261,15 +257,12 @@ export function publishApiConfig(
 							service,
 							'api_url_search',
 							source.api_url_search,
-							{ fetched: false },
 						),
 					}),
 			...(source.ui_base_url === undefined || source.ui_base_url === null
 				? {}
 				: {
-						ui_base_url: validateUrlField(sectionTipo, service, 'ui_base_url', source.ui_base_url, {
-							fetched: false,
-						}),
+						ui_base_url: validateUrlField(sectionTipo, service, 'ui_base_url', source.ui_base_url),
 					}),
 			response_map: parseResponseMap(sectionTipo, service, source.response_map),
 		};

@@ -213,8 +213,9 @@ function assertServiceEnabled(model: ExternalServiceModel, sectionTipo?: string)
 
 /**
  * Step 3: the operator's host allowlist, applied to a PARSED url and BEFORE any
- * resolution. Exported because config.ts applies the same rule to an api_url at
- * parse time — one allowlist, one comparison, checked in both places.
+ * resolution. This door is the ONLY place the allowlist is consulted: config.ts
+ * parse checks an api_url's SHAPE only, and classification (is this section
+ * external?) never asks where the server may go — it contacts nothing.
  *
  * Comparison is on the host NAME alone, case-insensitively: no scheme, no port,
  * no path, no wildcards. An empty allowlist refuses everything, by design.

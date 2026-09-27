@@ -61,6 +61,24 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Time machine restore no longer fails on installs whose outbound host allowlist is empty.**
+
+    Before, restoring any value from the [time machine](./tools/using_time_machine.md) was
+    refused when `DEDALO_EXTERNAL_ALLOWED_HOSTS` was empty — which is the default. The error
+    named a section you had not touched (on a standard install, `test3`) and its external
+    catalogue host (Zenon), because the engine checked the allowlist while merely reading an
+    [external service](./core/system/external_services.md) binding, even though a restore
+    never contacts that service.
+
+    Now restores work with no change to your `.env`. The allowlist still guards every request
+    the server sends out: a request to a host that is not listed is refused before any
+    connection is opened. Where a host is not allowed, what you see changes in three places: an
+    external search notice now names the real service and says the host is blocked, and an
+    external value in a record and an export's degradation report name the real service, all
+    instead of reporting an unknown, misconfigured source.
+
+    Wire contract: `WC-2026-09-27-external-allowlist-at-door-only`.
+
 - **The multi-instance Apache example now sets an empty `DocumentRoot` and the entry redirects.**
 
     The Apache virtual host in [Multiple instances](./install/multi_instance.md) had no
@@ -88,7 +106,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 46 entries"
+??? note "Wire contract — 47 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -136,6 +154,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-24-multi-section-search-identity-dedup`
     - `WC-2026-09-24-tool-export-server-built-artifacts`
     - `WC-2026-09-27-csv-import-append-mode`
+    - `WC-2026-09-27-external-allowlist-at-door-only`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

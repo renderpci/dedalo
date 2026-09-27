@@ -232,7 +232,7 @@ function dbTierTripwires(): string[] {
 /**
  * THE HOSTED TIER SCRIPTS — DERIVED from the executing workflows, never a hand list.
  *
- * Rules 6, 6b and 13 used to iterate `['scripts/ci/hermetic.sh', 'scripts/ci/db_tier.sh']`.
+ * Rules 6 and 13 used to iterate `['scripts/ci/hermetic.sh', 'scripts/ci/db_tier.sh']`.
  * A third hosted tier (scripts/ci/instance_tier.sh, 2026-09-02) would then have been
  * held to none of them until somebody remembered the list — the rot every derived
  * census in this repo exists to prevent. So the set is read off the `run:` lines of
@@ -903,67 +903,6 @@ describe('CI workflow tripwire', () => {
 			expect(
 				unstubbed,
 				`Required config keys not assigned-and-exported in ${script} (or the scripts it sources). On a bare CI runner there is no ../private/.env, so the config catalog THROWS at module init and the whole tier dies (with cascading "Cannot access 'config' before initialization" TDZ noise). Add a harmless stub — it only has to parse — and put the key on an export line:`,
-			).toEqual([]);
-		}
-	});
-
-	/**
-	 * Rule 6b — db_tier.sh ALLOWLISTS EVERY EGRESS HOST THE VENDORED SEED NAMES.
-	 *
-	 * `src/external/config.ts` refuses an `api_config` whose `api_url` host is not in
-	 * DEDALO_EXTERNAL_ALLOWED_HOSTS AT PARSE TIME — `fetched` is a property of the FIELD,
-	 * not of the caller, so nothing has to be about to make a request. And
-	 * `isExternalReferenceSection` THROWS on a refused config by design ("is this external?"
-	 * must not be where a configuration error becomes silence), which
-	 * `listExternalSectionTipos` turns into `update.refused` on the TIME MACHINE RESTORE
-	 * path.
-	 *
-	 * So an unset allowlist does not degrade the external subsystem — it reds gates that
-	 * have nothing to do with external services. MEASURED 2026-08-31: 14 of the 15 red
-	 * gates in the db tier's first stage, all of them in tm_lang_slice_restore_native,
-	 * every one green on a developer box because ../private/.env happens to carry the
-	 * host the seed uses.
-	 *
-	 * DERIVED FROM THE SEED, never a second list: the hosts come out of
-	 * install/db/dedalo_install.pgsql.gz itself, so adding an api_config to the seed
-	 * without allowlisting its host reds THIS gate rather than a dozen unrelated ones on
-	 * a runner nobody can reproduce.
-	 */
-	test('every suite-building hosted tier allowlists every api_config host the vendored seed ships', () => {
-		const sql = new TextDecoder().decode(
-			Bun.gunzipSync(readFileSync(join(repoRoot, 'install', 'db', 'dedalo_install.pgsql.gz'))),
-		);
-		const seedHosts = [
-			...new Set(
-				[...sql.matchAll(/"api_url(?:_search)?"\s*:\s*"(https?:\/\/[^"/]+)/g)].map(
-					(match) => new URL(match[1] as string).hostname,
-				),
-			),
-		].sort();
-		// The seed is the corpus: if it stops naming any host at all the rule below would
-		// pass over nothing, which is the vacuity this repo gates everywhere else.
-		expect(
-			seedHosts.length,
-			'no api_config host found in the install seed — the extraction broke, or the seed changed shape',
-		).toBeGreaterThan(0);
-
-		const tiers = suiteBuildingTiers();
-		expect(
-			tiers,
-			'no hosted tier runs `bun run test:db:setup` — the derivation is blind',
-		).toContain('scripts/ci/db_tier.sh');
-		for (const tier of tiers) {
-			const declared = effectiveSource(tier).match(
-				/^\s*: "\$\{DEDALO_EXTERNAL_ALLOWED_HOSTS:=([^}]*)\}"/m,
-			)?.[1];
-			expect(
-				declared,
-				`${tier} must compose DEDALO_EXTERNAL_ALLOWED_HOSTS (itself or via scripts/ci/hosted_env.sh) — the tier builds its whole environment, and the seed it installs names external hosts`,
-			).toBeDefined();
-			const allowed = new Set((declared ?? '').split(',').map((host) => host.trim()));
-			expect(
-				seedHosts.filter((host) => !allowed.has(host)),
-				`api_config hosts the seed ships that ${tier} does not allowlist. The refusal lands on the RESTORE path, not on anything external — add the host to scripts/ci/hosted_env.sh:`,
 			).toEqual([]);
 		}
 	});

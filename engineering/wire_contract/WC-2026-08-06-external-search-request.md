@@ -290,3 +290,9 @@ remote field name does not blank the search", the built `zzxt` situation,
 resolved end to end with a stub transport), mutation-verified — dropping the
 union filter, the misconfigured row, the all-refused refusal or the log each
 reddens a case.
+
+## Addendum 2026-09-27 — allowlist refusal moved to the door
+
+A search against a non-allowlisted host now parses and is refused
+`blocked_host` by `fetchExternalJson` before any DNS, with the real service
+named in the notice. See `WC-2026-09-27-external-allowlist-at-door-only`.

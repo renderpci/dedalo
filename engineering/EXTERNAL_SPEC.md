@@ -118,8 +118,17 @@ of truth: no engine path reads a CALLER's copy.
 ```
 
 - `entity` — the registry key. Unknown ⇒ `ExternalServiceNotRegisteredError`.
-- `api_url` / `api_url_search` — FETCHED by this server, so their host must be
-  in `DEDALO_EXTERNAL_ALLOWED_HOSTS` or the binding is refused.
+- `api_url` / `api_url_search` — FETCHED by this server. The binding checks
+  their SHAPE only (parseable http(s), no embedded credentials); WHERE the
+  server may go is decided at the outbound door, step 3 of §5 (the host
+  allowlist `DEDALO_EXTERNAL_ALLOWED_HOSTS`, before any DNS), and nowhere
+  else. A non-allowlisted host therefore still PARSES: the binding answers
+  classification (`isExternalReferenceSection`, the restore/sweep set) the same
+  on every install, and the request itself is refused `blocked_host` when it
+  is made. Until 2026-09-27 the allowlist was also applied at parse, so on an
+  install with the default EMPTY allowlist every classification question threw
+  — and every time-machine restore was refused (`update.refused`) though
+  nothing was being fetched (`WC-2026-09-27-external-allowlist-at-door-only`).
 - `ui_base_url` — RENDERED in the curator's browser, a different trust
   boundary: http(s)-only, no host allowlist (§7).
 - `response_map` — local role → remote payload key; `ar_records` names the row
@@ -150,7 +159,10 @@ purgeable) by the sweep like any local section's. Ledger:
 which nothing reads: **DEAD**.
 
 `parseApiConfig` is the ONLY constructor of a typed `ExternalApiConfig` — the
-constructor IS the validation.
+constructor IS the validation. It validates the binding's SHAPE and never
+consults the egress allowlist: classification must not depend on the
+operator's egress policy (an empty allowlist is the safe default, not a
+misconfiguration).
 
 ### 2.3 The component's `fields_map`
 

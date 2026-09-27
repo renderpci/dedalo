@@ -31,9 +31,11 @@ export interface ResolvedExternalService {
 }
 
 /**
- * The typed, credential-stripped, allowlist-validated form of a section's
+ * The typed, credential-stripped, shape-validated form of a section's
  * `properties.api_config`. Nothing outside `config.ts` may build one — the
- * constructor IS the validation.
+ * constructor IS the validation. NOT egress-vetted: `apiUrl` may name a host
+ * outside the allowlist; egress is enforced only at the outbound door
+ * (`fetchExternalJson` → `parseAllowedUrl`, `transport.ts`).
  */
 export interface ExternalApiConfig {
 	readonly entity: string;

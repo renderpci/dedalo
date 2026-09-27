@@ -36,7 +36,7 @@ import {
 import { intifySectionIdsInValue } from '../../src/core/update/transform/section_id_intify.ts';
 import { listExternalSectionTipos } from '../../src/core/update/transform/section_id_restore.ts';
 import * as externalApi from '../../src/external/api/index.ts';
-import { externalSettings, overrideExternalSettingsForTests } from '../../src/external/settings.ts';
+import { overrideExternalSettingsForTests } from '../../src/external/settings.ts';
 
 const RESIDUE = 'zzxr1';
 const RESIDUE_NOTE = 'zzxr2';
@@ -94,11 +94,11 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-	// Keep every host the ambient suite ontology binds (listExternalSectionTipos
-	// validates EVERY api_config carrier) and add the situation's inert one.
-	overrideExternalSettingsForTests({
-		allowedHosts: [...externalSettings().allowedHosts, 'external.invalid'],
-	});
+	// The allowlist is forced EMPTY (the safe default), so the ambient .env can
+	// never mask a regression: classification is shape-only and must answer
+	// with NO host allowlisted — egress is decided at the outbound door alone
+	// (2026-09-27; the regression gate is external_allowlist_classification_native).
+	overrideExternalSettingsForTests({ allowedHosts: [] });
 	await clearOntologyDerivedCaches();
 });
 

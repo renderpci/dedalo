@@ -12,9 +12,13 @@
  *  (b) every credential an adapter names is a real catalog key with
  *      `scope:'secret'`, read through the readers;
  *  (c) a POSITIVE CONTROL: a hostile fixture api_config carrying a stray
- *      `api_key`, a `javascript:` ui_base_url and a non-allowlisted api_url is
- *      stripped or refused — so this file fails if the parser ever stops
- *      doing its job, not merely if someone deletes a line;
+ *      `api_key` or a `javascript:` ui_base_url is stripped or refused — so
+ *      this file fails if the parser ever stops doing its job, not merely if
+ *      someone deletes a line. A non-allowlisted api_url is a SHAPE-valid
+ *      binding (parse is classification, and the egress policy must never
+ *      block work that contacts nothing — 2026-09-27, every TM restore died on
+ *      it); it is refused `blocked_host` at the OUTBOUND DOOR, before DNS,
+ *      which is the only enforcement point and is driven here too;
  *  (d) THE SAME POSITIVE CONTROL through BOTH PUBLICATION PATHS. api_config
  *      reaches a browser two ways — `request_config[].api_config` and the
  *      structure-context emitted-properties echo — and a control that drove
@@ -31,13 +35,42 @@ import { resolveEmittedPropertiesAndCss } from '../../src/core/resolve/structure
 import { parseApiConfig, publishApiConfig } from '../../src/external/config.ts';
 import { ExternalServiceError } from '../../src/external/errors.ts';
 import { listExternalServices } from '../../src/external/registry.ts';
+import { zenon } from '../../src/external/services/zenon.ts';
 import { overrideExternalSettingsForTests } from '../../src/external/settings.ts';
+import { fetchExternalJson } from '../../src/external/transport.ts';
 
 const EXTERNAL_DIR = join(import.meta.dir, '..', '..', 'src', 'external');
 const ALLOWED_HOST = 'zenon.dainst.org';
 
 function stripComments(source: string): string {
 	return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+}
+
+/**
+ * Drive one URL through the REAL outbound door with the network injected: the
+ * guard stub records whether resolution was even attempted, so "refused before
+ * DNS" is observable (the external_transport_native approach).
+ */
+async function throughTheDoor(url: string): Promise<{ error: unknown; calls: string[] }> {
+	const calls: string[] = [];
+	const error = await fetchExternalJson({
+		model: zenon,
+		request: { url, method: 'GET' },
+		deps: {
+			fetchImpl: async () => {
+				calls.push('fetch');
+				return new Response('{}', { status: 200 });
+			},
+			assertPublicUrlImpl: async (uri: string) => {
+				calls.push('resolve');
+				return { url: new URL(uri), addresses: ['141.100.1.1'] };
+			},
+		},
+	}).then(
+		() => null,
+		(thrown: unknown) => thrown,
+	);
+	return { error, calls };
 }
 
 function externalSources(): { relative: string; code: string }[] {
@@ -146,20 +179,25 @@ describe('(c) positive control — a hostile api_config is stripped or refused',
 		expect(error?.message).toContain('non-http(s) scheme');
 	});
 
-	test('a non-allowlisted api_url is REFUSED as blocked_host', () => {
-		const error = (() => {
-			try {
-				parseApiConfig(
-					{ ...hostile, api_url: 'https://attacker.example.net/api' },
-					{ sectionTipo: 'zzexternal1' },
-				);
-				return null;
-			} catch (thrown) {
-				return thrown as ExternalServiceError;
-			}
-		})();
-		expect(error?.kind).toBe('blocked_host');
-		expect(error?.origin).toBe('https://attacker.example.net');
+	test('a non-allowlisted api_url PARSES — and the outbound door refuses it blocked_host BEFORE DNS', async () => {
+		// Parse is a CLASSIFICATION question (isExternalReferenceSection, the TM
+		// restore's externality set): the egress allowlist has no say in it.
+		const parsed = parseApiConfig(
+			{ ...hostile, api_url: 'https://attacker.example.net/api' },
+			{ sectionTipo: 'zzexternal1' },
+		);
+		expect(parsed.apiUrl).toBe('https://attacker.example.net/api');
+		// The door is the ONE enforcement point, and it holds: no resolve, no socket.
+		const { error, calls } = await throughTheDoor(`${parsed.apiUrl}?id=1`);
+		expect(error).toBeInstanceOf(ExternalServiceError);
+		expect((error as ExternalServiceError).kind).toBe('blocked_host');
+		expect((error as ExternalServiceError).origin).toBe('https://attacker.example.net');
+		expect(calls).toEqual([]);
+	});
+
+	test('the same URL on the allowlisted host DOES reach the resolver (the refusal above is the allowlist, not a broken stub)', async () => {
+		const { calls } = await throughTheDoor(`https://${ALLOWED_HOST}/api/v1/record?id=1`);
+		expect(calls[0]).toBe('resolve');
 	});
 
 	test('an api_url with embedded credentials is REFUSED', () => {
@@ -171,15 +209,29 @@ describe('(c) positive control — a hostile api_config is stripped or refused',
 		).toThrow(/embedded credentials/);
 	});
 
-	test('an error never carries the query string, the credential or the payload', () => {
-		try {
-			parseApiConfig(
-				{ ...hostile, api_url: 'https://attacker.example.net/api?key=SUPER-SECRET-VALUE' },
-				{ sectionTipo: 'zzexternal1' },
-			);
-			throw new Error('expected a refusal');
-		} catch (thrown) {
-			const message = (thrown as Error).message;
+	test('an error never carries the query string, the credential or the payload', async () => {
+		// Parse side: a shape refusal (non-http scheme) on a secret-bearing URL.
+		const parseError = (() => {
+			try {
+				parseApiConfig(
+					{ ...hostile, api_url: 'ftp://attacker.example.net/api?key=SUPER-SECRET-VALUE' },
+					{ sectionTipo: 'zzexternal1' },
+				);
+				return null;
+			} catch (thrown) {
+				return thrown;
+			}
+		})();
+		// Anti-vacuity: a refusal MUST have happened, or the checks below are free.
+		expect(parseError).toBeInstanceOf(ExternalServiceError);
+		expect((parseError as ExternalServiceError).kind).toBe('bad_config');
+		// Door side: the allowlist refusal of the same secret-bearing query.
+		const { error: doorError } = await throughTheDoor(
+			'https://attacker.example.net/api?key=SUPER-SECRET-VALUE',
+		);
+		expect((doorError as ExternalServiceError).kind).toBe('blocked_host');
+		for (const error of [parseError, doorError]) {
+			const message = (error as Error).message;
 			expect(message).not.toContain('SUPER-SECRET-VALUE');
 			expect(message).not.toContain('?key=');
 		}
