@@ -9,6 +9,14 @@ export const component_relation_model: ComponentModel = {
 	model: 'component_relation_model',
 	column: 'relation',
 	render: 'text',
+	// Single-choice in practice: its client class IS component_select's (a
+	// verbatim re-export), which reads only entries[0] — an appended second
+	// locator would be stored, never shown, never editable. Same refusal as
+	// component_select (descriptor_completeness_tripwire keys on the client alias).
+	importAppend: {
+		refuse:
+			'single-choice: only one value is ever read, a second one cannot be added — use replace',
+	},
 	defaultRelationType: 'dd98',
 	resolveData: 'select_family',
 	flatValue: 'datalist',

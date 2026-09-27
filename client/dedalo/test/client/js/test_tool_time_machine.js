@@ -19,6 +19,7 @@
  */
 
 import {tool_time_machine} from '../../../tools/tool_time_machine/js/tool_time_machine.js'
+import {bulk_revert_skipped_message} from '../../../tools/tool_time_machine/js/render_tool_time_machine.js'
 
 
 
@@ -60,6 +61,33 @@ describe('TOOL_TIME_MACHINE CLIENT TEST', function() {
 		assert.equal(typeof tool_time_machine.prototype.apply_value, 'function', 'expected apply_value defined')
 		assert.equal(typeof tool_time_machine.prototype.bulk_revert_process, 'function', 'expected bulk_revert_process defined')
 		assert.equal(typeof tool_time_machine.prototype.get_bulk_process_label, 'function', 'expected get_bulk_process_label defined')
+	})
+
+	// A bulk revert that SKIPS rows (e.g. `frames_changed_since_run`) still answers
+	// ok; the success branch must surface `skipped[]` instead of silently closing.
+	describe('bulk_revert_skipped_message', function() {
+
+		it('returns null when nothing was skipped', function() {
+			assert.equal(bulk_revert_skipped_message(undefined), null)
+			assert.equal(bulk_revert_skipped_message([]), null)
+		})
+
+		it('counts skipped rows per reason code', function() {
+			const msg = bulk_revert_skipped_message([
+				{reason: 'frames_changed_since_run', section_tipo: 'test3', tipo: 'test52', section_id: 1},
+				{reason: 'frames_changed_since_run', section_tipo: 'test3', tipo: 'test52', section_id: 2},
+				{reason: 'out_of_scope'}
+			])
+			assert.equal(typeof msg, 'string', 'expected a message')
+			assert.ok(msg.startsWith('3 row(s) were NOT reverted and were left unchanged'), 'expected the total in the fallback heading: ' + msg)
+			assert.ok(msg.includes('- frames_changed_since_run: 2'), 'expected per-reason count: ' + msg)
+			assert.ok(msg.includes('- out_of_scope: 1'), 'expected per-reason count: ' + msg)
+		})
+
+		it('uses the interpolated tool label as heading when given', function() {
+			const msg = bulk_revert_skipped_message([{reason: 'failed'}], '1 filas NO se han revertido')
+			assert.equal(msg, '1 filas NO se han revertido\n- failed: 1')
+		})
 	})
 
 })

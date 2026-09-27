@@ -205,6 +205,8 @@ A [dataframe](components/component_dataframe.md) is a component of its own, with
 
 A raw export writes the dataframe column right after the component it belongs to, and writes it for every record of the export — empty where a record has no frames.
 
+In *Append* mode the pairing is re-established against the final ids: a frame is paired with the item its main value became after the append — or with the existing item, when that value was already present and skipped. Frames already stored are not added twice, and the dataframe's `data_limit` still applies.
+
 What links the two columns is the data, not their position: each frame locator's `id_key` pairs it with the item carrying the same `id` in the main component (this is why explicit item ids round-trip). Import the dataframe column like any other component column and the pairing is restored; import it alone and only the frames are written, leaving the framed component untouched.
 
 ??? note "Legacy envelope (accepted)"
@@ -213,9 +215,18 @@ What links the two columns is the data, not their position: each frame locator's
 
 ### Empty cells
 
-!!! warning "An empty cell clears the existing data"
+!!! warning "An empty cell clears the existing data (replace mode)"
 
-    An empty CSV cell is imported as `null` and **clears the existing data** of that component for that record (and for the current data language when the component is translatable). If you don't want to touch a component in some records, don't include its column in the CSV file, or split the import into several files.
+    In the default *Replace* mode an empty CSV cell is imported as `null` and **clears the existing data** of that component for that record (and for the current data language when the component is translatable). If you don't want to touch a component in some records, don't include its column in the CSV file, split the import into several files, or set the column to *Append* mode, where an empty cell changes nothing.
+
+### Replace or append
+
+Each mapped column is imported in one of two modes, chosen per column in the import tool (see [Adding instead of replacing](../tools/using_import_dedalo_csv.md#adding-instead-of-replacing)):
+
+- **Replace** (the default) — the cell becomes the component's data, as described throughout this page. An empty cell clears it.
+- **Append** — the cell's values are **added** after the stored ones; nothing already stored is changed. A value already present is skipped and reported as a warning, so re-importing the same file adds nothing. An empty cell, or an empty language group such as `{"lg-spa":[]}`, changes nothing, and an empty value inside a cell is never added as a blank entry. A cell with several languages on a component that is not translatable adds all its values to the component's one language-neutral set.
+
+The cell formats are the same in both modes: a cell is conformed exactly as this page describes, and only what happens to the stored data differs. Append is available for the list-shaped components — text, email, number, date, URI, related data and dataframes — plus geolocation (a [new layer](#geolocation)) and formatted text (a [new paragraph](#formatted-text)). It is refused, before anything is written, for media, single-choice components (select, radio button, language, publication, model), single-document components (JSON, password, permissions, record filters), computed components (info, inverse, external, children, index), the `section_id` column and the record's creation and modification stamps.
 
 ---
 
@@ -387,6 +398,10 @@ section_id;numisdata18
     1 | `["<p>El meu text per <strong>importar</strong></p>","<p>Altra dada</p>"]`
 
 In the flat string cases the import process assumes the Dédalo data lang defined by the user in the menu and imports the value as the single value in the array, replacing previous data of that lang.
+
+!!! note "Append mode: a new paragraph"
+
+    In *Append* mode the cell is added at the end of the stored text of its language, as a new paragraph: `Altra dada` is stored as `<p>Altra dada</p>` after the existing paragraphs, and a paragraph identical to one already present is skipped. A cell that carries any indexation tag (below) is **rejected** in append mode: tags are tied to the index entries that point at them, and an addition cannot keep that pairing. Import tagged text in *Replace* mode.
 
 #### Indexation tags
 
@@ -1119,6 +1134,10 @@ With drawn shapes:
     The map center is taken from the first `Point` feature and the full collection is stored as the layer 1 shapes.
 
 Latitude must be in range \[-90, 90] and longitude in \[-180, 180]; `zoom` defaults to 16 and `alt` to 0 when omitted.
+
+!!! note "Append mode: a new layer"
+
+    In *Append* mode (*Add as new layer*) a geolocation cell does not replace the map. Each drawn layer of the cell — or, for a flat `lat, lon` cell, a Point at that position — is added to the stored `lib_data` as a **new layer**, numbered after the highest layer id already stored and named `layer_<id>`. The stored layers and the stored map centre (`lat`, `lon`, `zoom`, `alt`) are not changed. A layer whose shapes equal a stored layer's is skipped. On a record with no geolocation yet, the cell's first item is stored as it would be in *Replace* mode, and every later item of the cell (a layer, or a flat point as a Point layer) is added to it as a new layer the same way: the component holds one map, so the values are never stored as separate items the map would not show.
 
 ---
 

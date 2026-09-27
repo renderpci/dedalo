@@ -622,8 +622,8 @@ tool_time_machine.prototype.apply_value = function(options) {
 * COUNTED in `response.data.skipped[]` as `{reason:'out_of_scope'}` — with no
 * coordinates, since the batch may name records outside the caller's scope
 * (SEC-16, WC-2026-09-03-bulk-revert-skipped-typed-entries). Every other
-* skipped row (`no_pre_batch_state`, `no_column`, `frameless_wipe`, `no_lang`,
-* `failed`) carries `section_tipo`/`tipo`/`section_id`; the words behind a
+* skipped row (`no_pre_batch_state`, `no_column`, `frameless_wipe`,
+* `frames_changed_since_run`, `no_lang`, `failed`) carries `section_tipo`/`tipo`/`section_id`; the words behind a
 * refusal are in the server log, never on the wire.
 *
 * Timeout is set to 180 s to accommodate very large bulk processes spanning

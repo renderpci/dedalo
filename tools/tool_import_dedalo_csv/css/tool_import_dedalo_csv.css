@@ -172,7 +172,7 @@
 }
 .wrapper_tool.tool_import_dedalo_csv > .content_data > .files_list > .file_item > .columns_mapper > .columns_body {
   display: grid;
-  grid-template-columns: minmax(5rem, 10rem) minmax(9rem, 14rem) minmax(7rem, 10rem) minmax(3rem, 4.5rem) minmax(7rem, 30rem) minmax(7rem, auto);
+  grid-template-columns: minmax(5rem, 10rem) minmax(9rem, 14rem) minmax(7rem, 10rem) minmax(3rem, 4.5rem) minmax(7rem, 30rem) minmax(10rem, 13rem) minmax(7rem, auto);
   background-color: var(--color_grey_14);
   border-radius: 5px;
 }
@@ -208,6 +208,12 @@
   margin: 1.1em;
 }
 .wrapper_tool.tool_import_dedalo_csv > .content_data > .files_list > .file_item > .columns_mapper > .columns_body > .columns_mapper_line .target_container .mapped_to_options_container .decimal_select {
+  background: none;
+  appearance: auto;
+  background-color: var(--color_white);
+}
+.wrapper_tool.tool_import_dedalo_csv > .content_data > .files_list > .file_item > .columns_mapper > .columns_body > .columns_mapper_line .import_mode_container .import_mode_select {
+  width: 98%;
   background: none;
   appearance: auto;
   background-color: var(--color_white);
@@ -318,6 +324,10 @@
 }
 .wrapper_tool.tool_import_dedalo_csv > .content_data > .submit_container > label > input {
   margin-right: 0.25rem;
+}
+.wrapper_tool.tool_import_dedalo_csv > .content_data > .submit_container > .append_tm_warning {
+  margin-left: 1rem;
+  padding: 0.25rem 0.5rem;
 }
 .wrapper_tool.tool_import_dedalo_csv > .content_data > .process_info_container {
   display: flex;

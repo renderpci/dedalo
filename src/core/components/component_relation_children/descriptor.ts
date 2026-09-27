@@ -15,6 +15,12 @@ export const component_relation_children: ComponentModel = {
 	model: 'component_relation_children',
 	column: 'relation',
 	render: 'text',
+	// Computed, never stored forward (edit + list read the inverse question;
+	// only search mode reads the column) — an append would be written and never read.
+	importAppend: {
+		refuse:
+			"derived: children are computed from each child record's parent link, there is no stored data to append to (import the parent on the child records)",
+	},
 	defaultRelationType: 'dd48',
 	resolveData: 'relation_children',
 	search: { status: 'ported' }, // builder_relation_children.ts (dedicated inverse-parent pipeline)

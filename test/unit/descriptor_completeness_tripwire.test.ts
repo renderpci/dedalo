@@ -19,7 +19,11 @@
  *     that silently changes an engine set fails HERE, with the diff visible;
  *  5. every canonical non-relation model has made an EXPLICIT search
  *     decision: declare a searchBuilder family or appear in the ledgered
- *     unsearchable list below. Adding a model without deciding fails.
+ *     unsearchable list below. Adding a model without deciding fails;
+ *  6. every canonical model declares its CSV-import APPEND policy
+ *     (`importAppend`), and the placement laws hold (media / derived /
+ *     no-import models refuse with a reason, no monovalue model appends
+ *     items, 'geo_layer' / 'text_paragraphs' stay on their one model family).
  *
  * ALLOWLIST LIFECYCLE (DEC-12 refinement — who clears these and when):
  * entries here are cleared by whoever ports the missing behavior, in the
@@ -27,15 +31,21 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
 	allComponentModels,
 	getComponentModel,
+	getImportAppendPolicy,
 	getRenderClass,
 	getSearchBuilderFamily,
+	importAppendOfDescriptor,
+	isMonovalueModel,
 	relationDataModels,
 	renderClassOfDescriptor,
 } from '../../src/core/components/registry.ts';
-import type { ComponentModel } from '../../src/core/components/types.ts';
+import type { ComponentModel, ImportAppendPolicy } from '../../src/core/components/types.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { DATALIST_SOURCE_IMPLEMENTATIONS } from '../../src/core/relations/datalist.ts';
 import { TARGET_SOURCE_IMPLEMENTATIONS } from '../../src/core/relations/request_config/target_sources.ts';
 import { IMPORT_CONFORM } from '../../src/core/tools/import_conform.ts';
@@ -172,6 +182,85 @@ const PHP_COMPONENTS_WITH_RELATIONS = [
 	'component_select',
 	'component_select_lang',
 ].sort();
+
+/**
+ * DERIVED-value canonical models the descriptor facts below do NOT name: no
+ * stored value of their own (computed at read time, computed backlinks, or a
+ * remote service). An EXTRA list only — the derived set is computed from the
+ * descriptors (derivedValueModels), so a new computed model is caught by its
+ * facts, not by someone remembering to list it here.
+ */
+const DERIVED_VALUE_MODELS: ReadonlySet<string> = new Set([
+	'component_external',
+	'component_info',
+	'component_inverse',
+]);
+
+/** Emit hooks that OWN the value (it is produced at emit time, never read from a column). */
+const DERIVED_EMIT_HOOKS: ReadonlySet<string> = new Set(['external', 'info']);
+
+/**
+ * Relation resolvers that COMPUTE the component's data as an inverse question
+ * (who declares me as parent / who points at me) — edit + list never read the
+ * component's own column, so a stored locator there is never served.
+ */
+const COMPUTED_INVERSE_RESOLVERS: ReadonlySet<string> = new Set([
+	'relation_children',
+	'relation_index',
+]);
+
+/**
+ * THE append-policy map of record (canonical models only): 'refuse' stands for
+ * any `{ refuse }`. A descriptor edit that changes a model's policy fails here
+ * with the diff visible — widening append to a model is a deliberate decision
+ * (tool_import_dedalo_csv + saveComponentData must support it), never a
+ * side effect.
+ */
+const IMPORT_APPEND_POLICY_MAP: Record<
+	string,
+	'items' | 'geo_layer' | 'text_paragraphs' | 'refuse'
+> = {
+	component_3d: 'refuse',
+	component_av: 'refuse',
+	component_check_box: 'items',
+	component_dataframe: 'items',
+	component_date: 'items',
+	component_email: 'items',
+	component_external: 'refuse',
+	component_filter: 'items',
+	component_filter_master: 'items',
+	component_filter_records: 'refuse',
+	component_geolocation: 'geo_layer',
+	component_image: 'refuse',
+	component_info: 'refuse',
+	component_input_text: 'items',
+	component_inverse: 'refuse',
+	component_iri: 'items',
+	component_json: 'refuse',
+	component_number: 'items',
+	component_password: 'refuse',
+	component_pdf: 'refuse',
+	component_portal: 'items',
+	component_publication: 'refuse',
+	component_radio_button: 'refuse',
+	component_relation_children: 'refuse',
+	component_relation_index: 'refuse',
+	component_relation_model: 'refuse',
+	component_relation_parent: 'items',
+	component_relation_related: 'items',
+	component_section_id: 'refuse',
+	component_security_access: 'refuse',
+	component_select: 'refuse',
+	component_select_lang: 'refuse',
+	component_svg: 'refuse',
+	component_text_area: 'text_paragraphs',
+};
+
+function appendKind(
+	policy: ImportAppendPolicy,
+): 'items' | 'geo_layer' | 'text_paragraphs' | 'refuse' {
+	return typeof policy === 'string' ? policy : 'refuse';
+}
 
 /** A descriptor is CANONICAL when it is not an alias-only/alias-carrying stub. */
 function isCanonical(descriptor: { alias?: string }): boolean {
@@ -495,6 +584,193 @@ describe('descriptor completeness (S2-26 tripwire)', () => {
 		);
 		// and a declared one resolves to exactly its declaration
 		expect(renderClassOfDescriptor({ ...classless, render: 'url' }, classless.model)).toBe('url');
+	});
+
+	// ------------------------------------------------------------------
+	// CSV-IMPORT APPEND POLICY (`importAppend` facet, tool_import_dedalo_csv
+	// per-column append mode). Every check reads the RESOLVED policy through
+	// the accessor, so it measures what the import will do, not a spelling.
+	// ------------------------------------------------------------------
+
+	test('every canonical model declares an append policy, and alias stubs never do', () => {
+		const canonical = descriptors.filter(isCanonical);
+		expect(canonical.length).toBeGreaterThan(30); // anti-vacuity
+		for (const descriptor of canonical) {
+			expect(
+				descriptor.importAppend,
+				`${descriptor.model}: a canonical model must decide what an append-mode import column does (\`importAppend\` facet)`,
+			).toBeDefined();
+		}
+		const aliases = descriptors.filter((d) => !isCanonical(d));
+		expect(aliases.length).toBeGreaterThan(0);
+		for (const descriptor of aliases) {
+			expect(
+				descriptor.importAppend,
+				`${descriptor.model}: an alias inherits its canonical target's append policy — declaring one here would let the two disagree`,
+			).toBeUndefined();
+			// and the hop resolves to exactly the target's policy
+			expect(getImportAppendPolicy(descriptor.model)).toEqual(
+				getImportAppendPolicy(descriptor.alias as string),
+			);
+		}
+	});
+
+	test('the append policy of every canonical model equals the map of record', () => {
+		const actual: Record<string, string> = {};
+		for (const descriptor of descriptors.filter(isCanonical)) {
+			actual[descriptor.model] = appendKind(getImportAppendPolicy(descriptor.model));
+		}
+		expect(actual).toEqual(IMPORT_APPEND_POLICY_MAP);
+	});
+
+	test('every append refusal carries a reason', () => {
+		for (const descriptor of descriptors.filter(isCanonical)) {
+			const policy = getImportAppendPolicy(descriptor.model);
+			if (typeof policy === 'string') continue;
+			expect(
+				typeof policy.refuse === 'string' && policy.refuse.trim().length > 0,
+				`${descriptor.model}: an append refusal without a reason — the user sees it verbatim`,
+			).toBe(true);
+		}
+	});
+
+	test('every media model refuses append', () => {
+		const media = descriptors.filter((d) => isCanonical(d) && d.column === 'media');
+		expect(media.length).toBeGreaterThanOrEqual(5); // 3d, av, image, pdf, svg
+		for (const descriptor of media) {
+			expect(
+				appendKind(getImportAppendPolicy(descriptor.model)),
+				`${descriptor.model}: a media model must refuse append`,
+			).toBe('refuse');
+		}
+	});
+
+	test("no monovalue model appends 'items' (only element 0 is ever read)", () => {
+		for (const descriptor of descriptors) {
+			if (!isMonovalueModel(descriptor.model)) continue;
+			expect(
+				getImportAppendPolicy(descriptor.model),
+				`${descriptor.model}: monovalue — an appended item would be stored and never read`,
+			).not.toBe('items');
+		}
+	});
+
+	test("no model whose CLIENT class is a monovalue model's appends 'items' (the UI reads only entries[0])", () => {
+		// A client module that re-exports another component's class verbatim
+		// (`export const component_x = component_y`) renders with y's widget. When
+		// y is monovalue (a single-choice widget), x is single-choice in the UI
+		// whatever its descriptor says — an appended item would be stored, never
+		// shown, never editable (component_relation_model → component_select).
+		const clientCore = resolve(import.meta.dir, '../../client/dedalo/core');
+		let checked = 0;
+		for (const descriptor of descriptors) {
+			const file = resolve(clientCore, descriptor.model, 'js', `${descriptor.model}.js`);
+			if (!existsSync(file)) continue;
+			const match = new RegExp(
+				`^export\\s+const\\s+${descriptor.model}\\s*=\\s*(component_\\w+)\\s*;?\\s*$`,
+				'm',
+			).exec(readFileSync(file, 'utf8'));
+			const clientClass = match?.[1];
+			if (clientClass === undefined || getComponentModel(clientClass) === undefined) continue;
+			checked += 1;
+			if (!isMonovalueModel(clientClass)) continue;
+			expect(
+				getImportAppendPolicy(descriptor.model),
+				`${descriptor.model}: its client is ${clientClass}'s single-choice widget — an appended item is never shown`,
+			).not.toBe('items');
+		}
+		// anti-vacuity: the relation aliases (model, parent, children, …) are found
+		expect(checked).toBeGreaterThanOrEqual(3);
+		expect(isMonovalueModel('component_select')).toBe(true);
+	});
+
+	test("'geo_layer' is geolocation's alone, 'text_paragraphs' is the html render class's alone", () => {
+		for (const descriptor of descriptors) {
+			const policy = getImportAppendPolicy(descriptor.model);
+			if (policy === 'geo_layer') {
+				const canonical = descriptor.alias ?? descriptor.model;
+				expect(canonical, `${descriptor.model}: 'geo_layer' outside geolocation`).toBe(
+					'component_geolocation',
+				);
+			}
+			if (policy === 'text_paragraphs') {
+				expect(
+					getRenderClass(descriptor.model),
+					`${descriptor.model}: 'text_paragraphs' on a non-html model`,
+				).toBe('html');
+			}
+		}
+		// anti-vacuity: both policies are live
+		expect(getImportAppendPolicy('component_geolocation')).toBe('geo_layer');
+		expect(getImportAppendPolicy('component_text_area')).toBe('text_paragraphs');
+		expect(getImportAppendPolicy('component_html_text')).toBe('text_paragraphs'); // via the hop
+	});
+
+	test('derived-value and no-import-conform models refuse append', () => {
+		// The derived set is READ FROM THE DESCRIPTORS (the facts that make a
+		// model derived), the hand list only adds to it.
+		const derived = new Set(DERIVED_VALUE_MODELS);
+		for (const descriptor of descriptors) {
+			if (!isCanonical(descriptor)) continue;
+			if (descriptor.emitHook !== undefined && DERIVED_EMIT_HOOKS.has(descriptor.emitHook)) {
+				derived.add(descriptor.model);
+			}
+			if (
+				descriptor.resolveData !== undefined &&
+				COMPUTED_INVERSE_RESOLVERS.has(descriptor.resolveData)
+			) {
+				derived.add(descriptor.model);
+			}
+		}
+		// Vacuity guard: the derivation must actually find the computed models.
+		for (const model of [
+			'component_external',
+			'component_info',
+			'component_inverse',
+			'component_relation_children',
+			'component_relation_index',
+		]) {
+			expect(derived.has(model), `derived set lost '${model}'`).toBe(true);
+		}
+		// Every computed-inverse resolver is bound by at least one canonical model
+		// (a renamed resolver id would otherwise silently empty the derivation).
+		for (const resolver of COMPUTED_INVERSE_RESOLVERS) {
+			expect(
+				descriptors.some((d) => isCanonical(d) && d.resolveData === resolver),
+				`no canonical model resolves through '${resolver}'`,
+			).toBe(true);
+		}
+		for (const model of [...derived, ...NO_IMPORT_CONFORM]) {
+			expect(getComponentModel(model), `'${model}' is not a registered model`).toBeDefined();
+			expect(
+				appendKind(getImportAppendPolicy(model)),
+				`${model}: a model with no stored/importable value must refuse append`,
+			).toBe('refuse');
+		}
+	});
+
+	test('a canonical descriptor without the facet makes the accessor THROW, never default', () => {
+		// no live canonical model lacks the facet (asserted above), so the branch
+		// is exercised with a fabricated descriptor
+		const policyless = {
+			model: 'component_zz_policyless',
+			column: 'string',
+			render: 'text',
+		} as ComponentModel;
+		let caught: unknown;
+		try {
+			importAppendOfDescriptor(policyless, policyless.model);
+		} catch (error) {
+			caught = error;
+		}
+		expect(caught).toBeInstanceOf(DedaloError);
+		expect((caught as DedaloError).code).toBe('internal.invariant');
+		// an unregistered model throws the same invariant
+		expect(() => getImportAppendPolicy('component_no_such_model')).toThrow(DedaloError);
+		// and a declared one resolves to exactly its declaration
+		expect(
+			importAppendOfDescriptor({ ...policyless, importAppend: 'items' }, policyless.model),
+		).toBe('items');
 	});
 
 	test('relationDataModels derivation covers the legacy autocomplete aliases', () => {

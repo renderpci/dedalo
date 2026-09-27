@@ -602,6 +602,8 @@ const T2_BOUND_JSONB_UPDATE = new RegExp(
 );
 
 const T2_UNLOCKED_RMW_EXEMPT: Readonly<Record<string, string>> = {
+	'src/core/db/time_machine.ts':
+		'owner of matrix_time_machine: the one bound UPDATE (replaceTimeMachineRowData) rewrites, by PK, a row the SAME transaction inserted (the CSV append executor, recomposeAppendTmRows) — uncommitted, so no other writer can see it, let alone race it; the unlocked SELECTs are history reads that feed no write.',
 	'src/core/area_maintenance/user_stats.ts':
 		'T4 owner of matrix_stats: the unlocked SELECTs are the report pages; the UPDATE merges values built from the REQUEST (`|| jsonb_build_object`), never from a read-back row.',
 	'src/core/update/transform/locators.ts':

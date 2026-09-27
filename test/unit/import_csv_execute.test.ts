@@ -16,6 +16,13 @@
  *  2. WARNINGS. The one warning the engine produces: a lang that resolves but is
  *     not a project language. It must be IMPORTED and flagged — not rejected.
  *  3. PREFLIGHT. validate_import must catch a bad column map and write NOTHING.
+ *  4. APPEND MODE (plan §5). A column in `import_mode: 'append'` ADDS to the
+ *     stored items; a duplicate is skipped and reported; an empty cell is a
+ *     no-op; an appended main's legacy frames are re-paired to the FINAL item
+ *     id (no match fails the row); a replace slot that names or STORES frames
+ *     of an append main fails the row (an unrelated one imports); a replace
+ *     envelope whose frames name an append main fails the row.
+ *  5. A REPLACE row's legacy envelope frames keep the imported dd201 stamp.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
@@ -34,6 +41,13 @@ const SECTION = 'test3';
 const USER = 987670;
 const ID = 900700; // far outside the canonical test3 ids
 const DF_ID = 914000; // the dataframe gate's own scratch record
+const APPEND_ID = 914100; // the append-mode gate's own scratch record
+const APPEND_FRAME_ID = 914110; // the append frame-remap gate's own scratch record
+const MIXED_ID = 914120; // the mixed-mode envelope gate's own scratch record
+const STAMP_ID = 914200; // the envelope-frames-keep-the-stamp gate's own scratch record
+const BAD_SLOT_ID = 914210; // the non-dataframe-slot warning gate's own scratch record
+/** A component_portal of test3 (→ test3): an APPEND main distinct from TEXT. */
+const PORTAL = 'test80';
 /** A component_dataframe of the test3 family (parent test45). */
 const DATAFRAME = 'test60';
 const CSV = 'execute_gate.csv';
@@ -53,7 +67,7 @@ beforeAll(() => {
 
 afterAll(async () => {
 	rmSync(dir, { recursive: true, force: true });
-	for (const id of [ID, DF_ID]) {
+	for (const id of [ID, DF_ID, APPEND_ID, APPEND_FRAME_ID, MIXED_ID, STAMP_ID, BAD_SLOT_ID]) {
 		await sql.unsafe('DELETE FROM matrix_test WHERE section_tipo = $1 AND section_id = $2', [
 			SECTION,
 			id,
@@ -227,6 +241,89 @@ describe('imported dataframe frames carry the ENGINE marker (D19)', () => {
 	});
 });
 
+describe('legacy envelope frames honour the imported modified stamp (replace mode)', () => {
+	test('a row carrying dd201 + an envelope with frames keeps the imported dd201', async () => {
+		const envelope = JSON.stringify({
+			dedalo_data: {
+				data: [{ id: 1, value: 'framed, stamped' }],
+				dataframe: [
+					{
+						section_tipo: SECTION,
+						section_id: 2,
+						from_component_tipo: DATAFRAME,
+						id_key: 1,
+						type: 'dd490',
+					},
+				],
+			},
+		});
+		const cell = `"${envelope.replace(/"/g, '""')}"`;
+		// dd201 FIRST: the frames (pass 2) are saved after it — the save that used
+		// to re-stamp it with "now, by the importer".
+		const report = await importCsv(
+			`section_id;${MODIFIED_DATE}_dmy;${TEXT}\n${STAMP_ID};03-04-2001;${cell}\n`,
+			[
+				KEY_COLUMN,
+				{
+					tipo: `${MODIFIED_DATE}_dmy`,
+					model: 'component_date',
+					checked: true,
+					map_to: MODIFIED_DATE,
+				},
+				{ tipo: TEXT, model: 'component_input_text', checked: true, map_to: TEXT },
+			],
+		);
+		expect(report.failed).toEqual([]);
+		const rows = (await sql.unsafe(
+			`SELECT date -> '${MODIFIED_DATE}' AS modified, relation -> '${DATAFRAME}' AS frames
+			   FROM matrix_test WHERE section_tipo = $1 AND section_id = $2`,
+			[SECTION, STAMP_ID],
+		)) as { modified: { start?: Record<string, number> }[]; frames: unknown[] | null }[];
+		// the frame WAS written (so its save ran) …
+		expect(rows[0]?.frames).toHaveLength(1);
+		// … and did not overwrite the imported stamp
+		expect(rows[0]?.modified?.[0]?.start).toEqual({
+			day: 3,
+			month: 4,
+			year: 2001,
+			time: ddDateToSeconds({ day: 3, month: 4, year: 2001 }),
+		});
+	});
+});
+
+describe('legacy envelope frames aimed at a NON-dataframe slot (replace mode)', () => {
+	test("two frames in one bad slot: ONE IGNORED warning, data = the slot's normalised frames", async () => {
+		const frame = (idKey: number) => ({
+			section_tipo: SECTION,
+			section_id: 2,
+			from_component_tipo: PORTAL, // a component_portal, not a component_dataframe
+			id_key: String(idKey),
+		});
+		const envelope = JSON.stringify({
+			dedalo_data: { data: [{ id: 1, value: 'bad slot' }], dataframe: [frame(1), frame(2)] },
+		});
+		const report = await importCsv(
+			`section_id;${TEXT}\n${BAD_SLOT_ID};"${envelope.replace(/"/g, '""')}"\n`,
+			[KEY_COLUMN, { tipo: TEXT, model: 'component_input_text', checked: true, map_to: TEXT }],
+		);
+		expect(report.failed).toEqual([]);
+		const ignored = report.warnings.filter((w) =>
+			String(w.msg).includes('which is not a component_dataframe'),
+		);
+		expect(ignored).toHaveLength(1);
+		expect(ignored[0]?.component_tipo).toBe(PORTAL);
+		const data = ignored[0]?.data as Record<string, unknown>[];
+		expect(data).toHaveLength(2);
+		for (const [index, entry] of data.entries()) {
+			expect(entry).toMatchObject({
+				type: DATAFRAME_RELATION_TYPE,
+				id_key: index + 1,
+				main_component_tipo: TEXT,
+			});
+		}
+	});
+});
+
 describe('the warnings channel (imported, but flagged)', () => {
 	test('a lang outside the project languages is IMPORTED and warned about', async () => {
 		// lg-vtvn resolves to a real lg1 record but is not in DEDALO_PROJECTS_DEFAULT_LANGS.
@@ -366,4 +463,218 @@ describe('validate_import (preflight) — catches the map BEFORE anything is wri
 		expect(file.failed).toEqual([]);
 		expect(file.rows_total).toBe(1);
 	});
+});
+
+describe('append mode (import_mode: append)', () => {
+	/** The stored input_text items of a scratch record. */
+	async function storedText(sectionId: number): Promise<Record<string, unknown>[]> {
+		const rows = (await sql.unsafe(
+			`SELECT string -> '${TEXT}' AS items FROM matrix_test WHERE section_tipo = $1 AND section_id = $2`,
+			[SECTION, sectionId],
+		)) as { items: Record<string, unknown>[] | null }[];
+		return rows[0]?.items ?? [];
+	}
+
+	const appendColumn = { tipo: TEXT, model: 'component_input_text', checked: true, map_to: TEXT };
+
+	test('adds next to the stored value; a re-import skips + reports; an empty cell is a no-op', async () => {
+		// Seed in REPLACE mode (the default).
+		const seeded = await importCsv(`section_id;${TEXT}\n${APPEND_ID};alpha\n`, [
+			KEY_COLUMN,
+			appendColumn,
+		]);
+		expect(seeded.failed).toEqual([]);
+		const before = await storedText(APPEND_ID);
+		expect(before.map((item) => item.value)).toEqual(['alpha']);
+
+		const appended = await importCsv(`section_id;${TEXT}\n${APPEND_ID};beta\n`, [
+			KEY_COLUMN,
+			{ ...appendColumn, import_mode: 'append' },
+		]);
+		expect(appended.failed).toEqual([]);
+		expect(appended.warnings).toEqual([]);
+		const after = await storedText(APPEND_ID);
+		expect(after.map((item) => item.value)).toEqual(['alpha', 'beta']);
+		// the stored item is kept byte-for-byte
+		expect(after[0]).toEqual(mustGet(before[0], 'seeded item'));
+		// the appended item got its own fresh id
+		expect(after[1]?.id).not.toBe(after[0]?.id);
+
+		// Re-importing the same file changes nothing, and says so.
+		const again = await importCsv(`section_id;${TEXT}\n${APPEND_ID};beta\n`, [
+			KEY_COLUMN,
+			{ ...appendColumn, import_mode: 'append' },
+		]);
+		expect(again.failed).toEqual([]);
+		expect(again.updated).toEqual([APPEND_ID]);
+		expect(again.warnings).toHaveLength(1);
+		expect(again.warnings[0]).toMatchObject({
+			section_id: APPEND_ID,
+			component_tipo: TEXT,
+			msg: '1 already present, not added',
+			row: 2,
+		});
+		expect(await storedText(APPEND_ID)).toEqual(after);
+
+		// An empty cell NEVER clears in append mode.
+		const empty = await importCsv(`section_id;${TEXT}\n${APPEND_ID};\n`, [
+			KEY_COLUMN,
+			{ ...appendColumn, import_mode: 'append' },
+		]);
+		expect(empty.failed).toEqual([]);
+		expect(await storedText(APPEND_ID)).toEqual(after);
+	});
+
+	/** A {"dedalo_data":{data, dataframe}} legacy-envelope cell, CSV-quoted. */
+	function legacyCell(itemId: number, value: string, idKey: number): string {
+		const envelope = JSON.stringify({
+			dedalo_data: {
+				data: [{ id: itemId, value }],
+				dataframe: [
+					{
+						section_tipo: SECTION,
+						section_id: APPEND_FRAME_ID + 1,
+						from_component_tipo: DATAFRAME,
+						id_key: idKey,
+						type: 'dd490',
+					},
+				],
+			},
+		});
+		return `"${envelope.replace(/"/g, '""')}"`;
+	}
+
+	test('an appended main re-pairs its frames to the FINAL item id', async () => {
+		// Seed a stored item so the file's id 1 is NOT the id the append gets.
+		await importCsv(`section_id;${TEXT}\n${APPEND_FRAME_ID};seed\n`, [KEY_COLUMN, appendColumn]);
+		const report = await importCsv(
+			`section_id;${TEXT}\n${APPEND_FRAME_ID};${legacyCell(1, 'framed', 1)}\n`,
+			[KEY_COLUMN, { ...appendColumn, import_mode: 'append' }],
+		);
+		expect(report.failed).toEqual([]);
+
+		const items = await storedText(APPEND_FRAME_ID);
+		const framed = items.find((item) => item.value === 'framed');
+		expect(framed).toBeDefined();
+		expect(framed?.id).not.toBe(1);
+
+		const rows = (await sql.unsafe(
+			`SELECT relation -> '${DATAFRAME}' AS frames FROM matrix_test WHERE section_tipo = $1 AND section_id = $2`,
+			[SECTION, APPEND_FRAME_ID],
+		)) as { frames: Record<string, unknown>[] | null }[];
+		const frames = rows[0]?.frames ?? [];
+		expect(frames).toHaveLength(1);
+		expect(isDataframeEntry(frames[0])).toBe(true);
+		expect(frames[0]).toMatchObject({ main_component_tipo: TEXT, id_key: framed?.id });
+	});
+
+	test('a frame whose item the cell does not carry FAILS the row', async () => {
+		const before = await storedText(APPEND_FRAME_ID);
+		const report = await importCsv(
+			`section_id;${TEXT}\n${APPEND_FRAME_ID};${legacyCell(5, 'orphan-framed', 99)}\n`,
+			[KEY_COLUMN, { ...appendColumn, import_mode: 'append' }],
+		);
+		expect(report.failed).toHaveLength(1);
+		expect(report.failed[0]?.msg).toContain("this row's cell does not carry");
+		// rolled back: the main append did not land either
+		expect(await storedText(APPEND_FRAME_ID)).toEqual(before);
+	});
+
+	test('an empty REPLACE slot that STORES frames of an APPEND main fails the row', async () => {
+		// APPEND_FRAME_ID's slot holds a frame of TEXT (the re-pair test above):
+		// the empty replace cell would clear it under the appended main.
+		const itemsBefore = await storedText(APPEND_FRAME_ID);
+		const framesBefore = await storedFrames(APPEND_FRAME_ID);
+		expect(framesBefore.some((frame) => frame.main_component_tipo === TEXT)).toBe(true);
+		const report = await importCsv(`section_id;${TEXT};${DATAFRAME}\n${APPEND_FRAME_ID};delta;\n`, [
+			KEY_COLUMN,
+			{ ...appendColumn, import_mode: 'append' },
+			{ tipo: DATAFRAME, model: 'component_dataframe', checked: true, map_to: DATAFRAME },
+		]);
+		expect(report.failed).toHaveLength(1);
+		expect(report.failed[0]?.msg).toContain('REPLACE mode');
+		expect(await storedText(APPEND_FRAME_ID)).toEqual(itemsBefore);
+		expect(await storedFrames(APPEND_FRAME_ID)).toEqual(framesBefore);
+	});
+
+	test('an empty REPLACE slot holding no frame of the APPEND main imports cleanly', async () => {
+		// APPEND_ID has no frames: a raw export's empty dataframe column beside an
+		// unrelated append column is not a clash.
+		expect(await storedFrames(APPEND_ID)).toEqual([]);
+		const before = await storedText(APPEND_ID);
+		const report = await importCsv(`section_id;${TEXT};${DATAFRAME}\n${APPEND_ID};delta;\n`, [
+			KEY_COLUMN,
+			{ ...appendColumn, import_mode: 'append' },
+			{ tipo: DATAFRAME, model: 'component_dataframe', checked: true, map_to: DATAFRAME },
+		]);
+		expect(report.failed).toEqual([]);
+		expect(report.updated).toEqual([APPEND_ID]);
+		const after = await storedText(APPEND_ID);
+		expect(after.slice(0, before.length)).toEqual(before);
+		expect(after.map((item) => item.value)).toContain('delta');
+	});
+
+	test('a REPLACE envelope whose frames name an APPEND main fails the row (no unremapped id_key)', async () => {
+		// Seed a stored portal item 1, so an unremapped id_key 1 WOULD pair with it.
+		const seeded = await importCsv(
+			`section_id;${PORTAL}\n${MIXED_ID};${`"${JSON.stringify([{ id: 1, section_tipo: SECTION, section_id: 2 }]).replace(/"/g, '""')}"`}\n`,
+			[KEY_COLUMN, { tipo: PORTAL, model: 'component_portal', checked: true, map_to: PORTAL }],
+		);
+		expect(seeded.failed).toEqual([]);
+		const portalBefore = await storedPortal(MIXED_ID);
+		const envelope = JSON.stringify({
+			dedalo_data: {
+				data: [{ id: 1, value: 'replace text' }],
+				dataframe: [
+					{
+						section_tipo: SECTION,
+						section_id: 4,
+						from_component_tipo: DATAFRAME,
+						main_component_tipo: PORTAL,
+						id_key: 1,
+						type: 'dd490',
+					},
+				],
+			},
+		});
+		const portalCell = JSON.stringify([{ id: 1, section_tipo: SECTION, section_id: 3 }]);
+		const q = (value: string): string => `"${value.replace(/"/g, '""')}"`;
+		const report = await importCsv(
+			`section_id;${TEXT};${PORTAL}\n${MIXED_ID};${q(envelope)};${q(portalCell)}\n`,
+			[
+				KEY_COLUMN,
+				appendColumn,
+				{
+					tipo: PORTAL,
+					model: 'component_portal',
+					checked: true,
+					map_to: PORTAL,
+					import_mode: 'append',
+				},
+			],
+		);
+		expect(report.failed).toHaveLength(1);
+		expect(report.failed[0]?.msg).toContain('APPEND mode');
+		expect(await storedPortal(MIXED_ID)).toEqual(portalBefore);
+		expect(await storedFrames(MIXED_ID)).toEqual([]);
+		expect(await storedText(MIXED_ID)).toEqual([]);
+	});
+
+	/** The stored frames of the DATAFRAME slot of a scratch record. */
+	async function storedFrames(sectionId: number): Promise<Record<string, unknown>[]> {
+		const rows = (await sql.unsafe(
+			`SELECT relation -> '${DATAFRAME}' AS frames FROM matrix_test WHERE section_tipo = $1 AND section_id = $2`,
+			[SECTION, sectionId],
+		)) as { frames: Record<string, unknown>[] | null }[];
+		return rows[0]?.frames ?? [];
+	}
+
+	/** The stored portal locators of a scratch record. */
+	async function storedPortal(sectionId: number): Promise<Record<string, unknown>[]> {
+		const rows = (await sql.unsafe(
+			`SELECT relation -> '${PORTAL}' AS items FROM matrix_test WHERE section_tipo = $1 AND section_id = $2`,
+			[SECTION, sectionId],
+		)) as { items: Record<string, unknown>[] | null }[];
+		return rows[0]?.items ?? [];
+	}
 });

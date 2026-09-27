@@ -410,6 +410,60 @@ describe('apply_value drops a frame naming a tipo that is not a live slot', () =
 });
 
 /**
+ * THE SLOT SET IS THE ONTOLOGY'S, NEVER THE CLIENT'S. `apply_value`'s write
+ * targets used to be waived in action_scope_binding_tripwire (R2 matched the
+ * `ddo_map` spelling in the tool) on the claim that the slot discovery reads the
+ * main's ontology request_config, not a client map. The discovery moved to core
+ * (`src/core/relations/dataframe_slots.ts`, 2026-09-27) and the waiver went
+ * stale — this is the OUTCOME that claim promised: a request that smuggles a
+ * foreign component_dataframe in every client-map shape leaves every other slot untouched.
+ */
+describe('apply_value ignores a client-supplied ddo_map', () => {
+	let recordId = 0;
+	let tmRowId = 0;
+	/** A real component_dataframe node of the test TLD that is NOT a slot of MAIN. */
+	const FOREIGN_SLOT = 'test60';
+	const smuggledDdoMap = [{ tipo: FOREIGN_SLOT, section_tipo: SECTION, parent: MAIN }];
+
+	/**
+	 * LIVE frames under the foreign slot. The snapshot names NO frame of it (a
+	 * snapshot frame naming a real slot is planned by design — see "a frame
+	 * naming an UNDISCOVERED real slot"), so only the smuggled map could put it
+	 * in the plan; if it did, the restore would rewrite this key to the
+	 * snapshot's (empty) share and wipe it.
+	 */
+	const LIVE_FOREIGN = [{ ...FRAMES_B[0], id: 5, from_component_tipo: FOREIGN_SLOT }];
+
+	beforeAll(async () => {
+		({ recordId, tmRowId } = await makeTwin([...MAIN_A, ...FRAMES_A]));
+		await sql.unsafe(
+			`UPDATE ${TABLE} SET relation = relation || $3::text::jsonb
+			 WHERE section_tipo = $1 AND section_id = $2`,
+			[SECTION, recordId, JSON.stringify({ [FOREIGN_SLOT]: LIVE_FOREIGN })],
+		);
+	});
+
+	test('the smuggled slot is left exactly as it was; the real slot restores', async () => {
+		const response = await toolTimeMachineApplyValue(
+			await context({
+				section_tipo: SECTION,
+				section_id: recordId,
+				tipo: MAIN,
+				lang: 'lg-nolan',
+				matrix_id: tmRowId,
+				ddo_map: smuggledDdoMap,
+				tool_config: { ddo_map: smuggledDdoMap },
+				request_config: [{ show: { ddo_map: smuggledDdoMap } }],
+			}),
+		);
+		expect(response.ok).toBe(true);
+		expect(await storedKey(recordId, MAIN)).toEqual(MAIN_A_STORED);
+		expect(await storedKey(recordId, SLOT)).toEqual(FRAMES_A_STORED);
+		expect(await storedKey(recordId, FOREIGN_SLOT)).toEqual(LIVE_FOREIGN);
+	});
+});
+
+/**
  * The plan primitive on its own — the two shapes the doors cannot stage with
  * real ontology (a main with NO slot at all, and a main with TWO).
  */

@@ -1522,6 +1522,256 @@
             "lang": "lg-nep",
             "name": "warnings",
             "value": "चेतावनीहरू"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "import_mode",
+            "value": "Mode"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "import_mode",
+            "value": "Modo"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "import_mode",
+            "value": "Mode"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "import_mode",
+            "value": "Modua"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "import_mode",
+            "value": "Mode"
+          },
+          {
+            "lang": "lg-por",
+            "name": "import_mode",
+            "value": "Modo"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "import_mode",
+            "value": "Modus"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "import_mode",
+            "value": "Modalità"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "import_mode",
+            "value": "Λειτουργία"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "import_mode",
+            "value": "मोड"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "replace",
+            "value": "Replace"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "replace",
+            "value": "Reemplazar"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "replace",
+            "value": "Reemplaçar"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "replace",
+            "value": "Ordeztu"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "replace",
+            "value": "Remplacer"
+          },
+          {
+            "lang": "lg-por",
+            "name": "replace",
+            "value": "Substituir"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "replace",
+            "value": "Ersetzen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "replace",
+            "value": "Sostituisci"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "replace",
+            "value": "Αντικατάσταση"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "replace",
+            "value": "प्रतिस्थापन गर्नुहोस्"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "append",
+            "value": "Append"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "append",
+            "value": "Añadir"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "append",
+            "value": "Afegir"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "append",
+            "value": "Gehitu"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "append",
+            "value": "Ajouter"
+          },
+          {
+            "lang": "lg-por",
+            "name": "append",
+            "value": "Acrescentar"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "append",
+            "value": "Anhängen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "append",
+            "value": "Aggiungi"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "append",
+            "value": "Προσθήκη"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "append",
+            "value": "थप्नुहोस्"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "append_layer",
+            "value": "Add as new layer"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "append_layer",
+            "value": "Añadir como nueva capa"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "append_layer",
+            "value": "Afegir com a nova capa"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "append_layer",
+            "value": "Gehitu geruza berri gisa"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "append_layer",
+            "value": "Ajouter comme nouvelle couche"
+          },
+          {
+            "lang": "lg-por",
+            "name": "append_layer",
+            "value": "Adicionar como nova camada"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "append_layer",
+            "value": "Als neue Ebene hinzufügen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "append_layer",
+            "value": "Aggiungi come nuovo livello"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "append_layer",
+            "value": "Προσθήκη ως νέο επίπεδο"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "append_layer",
+            "value": "नयाँ तहको रूपमा थप्नुहोस्"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "append_no_tm_warning",
+            "value": "Time machine is off: the values added by append-mode columns cannot be reverted."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "append_no_tm_warning",
+            "value": "La máquina del tiempo está desactivada: los valores añadidos por las columnas en modo añadir no se podrán revertir."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "append_no_tm_warning",
+            "value": "La màquina del temps està desactivada: els valors afegits per les columnes en mode afegir no es podran revertir."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "append_no_tm_warning",
+            "value": "Denbora-makina desaktibatuta dago: gehitu moduko zutabeek gehitutako balioak ezin izango dira leheneratu."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "append_no_tm_warning",
+            "value": "La machine à remonter le temps est désactivée : les valeurs ajoutées par les colonnes en mode ajout ne pourront pas être annulées."
+          },
+          {
+            "lang": "lg-por",
+            "name": "append_no_tm_warning",
+            "value": "A máquina do tempo está desativada: os valores acrescentados pelas colunas em modo acrescentar não poderão ser revertidos."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "append_no_tm_warning",
+            "value": "Die Zeitmaschine ist ausgeschaltet: Die von Spalten im Anhängemodus hinzugefügten Werte können nicht rückgängig gemacht werden."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "append_no_tm_warning",
+            "value": "La macchina del tempo è disattivata: i valori aggiunti dalle colonne in modalità aggiunta non potranno essere ripristinati."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "append_no_tm_warning",
+            "value": "Η χρονομηχανή είναι απενεργοποιημένη: οι τιμές που προστίθενται από στήλες σε λειτουργία προσθήκης δεν μπορούν να αναιρεθούν."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "append_no_tm_warning",
+            "value": "टाइम मेसिन बन्द छ: थप्ने मोडका स्तम्भहरूले थपेका मानहरू फिर्ता गर्न सकिँदैन।"
           }
         ]
       }

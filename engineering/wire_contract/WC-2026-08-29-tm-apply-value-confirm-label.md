@@ -54,3 +54,10 @@ Two consequences, both now recorded in `audits/2026-08-26_deep/raw/batch6_result
 2. **A parity baseline is a function of the FIXTURE as well as the code**, and nothing
    said so. Re-freezing it after a `test:db:setup` is now the documented expectation, not
    a surprise.
+
+## Addendum 2026-09-27
+
+The differential no longer reports this label as a red: it exempts it by name, in an
+EXACT added-name set shared with `bulk_revert_skipped_msg`
+(WC-2026-09-27-csv-import-append-mode §7), and compares the rest of the context
+byte-for-byte. The case left `engineering/parity_baseline.json`'s red set.

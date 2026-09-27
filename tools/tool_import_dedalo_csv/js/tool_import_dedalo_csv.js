@@ -418,7 +418,9 @@ tool_import_dedalo_csv.prototype.remove_file = function(item) {
 *   file              : {string}  basename of the staged CSV file
 *   section_tipo      : {string}  target section tipo (e.g. 'oh1')
 *   ar_columns_map    : {Array}   column-to-component mapping built by the column mapper UI;
-*                                 each entry: { tipo, model, label, checked, mapped_to [, decimal] }
+*                                 each entry: { tipo, model, label, checked, map_to [, decimal] [, import_mode] }
+*                                 import_mode: 'replace' | 'append' (absent = 'replace'); set only
+*                                 on columns whose target component has an import_append policy
 *   bulk_process_label: {string}  human-readable name for the bulk-process record (dd800)
 * }
 *
@@ -522,7 +524,9 @@ tool_import_dedalo_csv.prototype.get_background_jobs = function(action) {
 * section_tipo change triggered by the user).
 *
 * On success, response.result is an array of component-descriptor objects:
-*   { value: 'oh25', label: 'Title', model: 'component_input_text' }
+*   { value: 'oh25', label: 'Title', model: 'component_input_text', import_append: 'items' }
+* import_append is the component's append policy ('items' | 'geo_layer' |
+* 'text_paragraphs'), or null when the server refuses append for that model.
 *
 * On failure (unknown tipo, etc.), response.result is falsy and response.msg carries
 * the human-readable error. In that case this method resolves with

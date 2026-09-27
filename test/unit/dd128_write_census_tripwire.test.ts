@@ -97,6 +97,8 @@ const NON_PRIMITIVE_EXPORTS: Record<string, string> = {
 		'a PURE PREDICATE over a changed_data array (P0-8, 2026-08-30): it answers with a refusal message when a `remove` names no item, and writes nothing at all. It is exported so the in-memory temporal door can refuse exactly what the persisted door refuses — one law, two doors — which is the opposite of a second write path.',
 	persistModifiedStamp:
 		'DOES write the matrix, but only the modified-by/modified-date audit columns of a record a primitive is already writing. It can never carry a dd131/dd244/dd133 value, so it is not an account transition and adding it to the primitive list would widen the door set to every save path twice over.',
+	recomposeAppendTmRows:
+		'rewrites only time_machine rows (by id, inside the CSV import row transaction) so an append main\'s TM row carries the slot frames as the row left them; it never writes a matrix record, so it cannot carry a dd131/dd244/dd133 value.',
 	afterRecordWrite:
 		'writes NOTHING to the matrix: it is the post-write obligation hook (P1-8, 2026-09-03) every primitive ends in — save event, the security reaction, the RAG seam — and the two insert doors call it AFTER their own primitive. A caller of it is already a caller of a primitive; listing it would double-count every door.',
 };

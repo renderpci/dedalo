@@ -17,7 +17,56 @@ Merged since the last release; these ship with the next one.
 
 ### For users
 
+#### Changed
+
+- **Reverting any bulk process now restores every language, keeps later dataframe edits and never undoes a *Delete data*.**
+
+    This applies to every bulk-process record the Time Machine can revert — CSV
+    imports, *Propagate component data* runs and the other importers alike. A revert
+    now works **one language at a time**: it restores every language of a
+    translatable field the run changed, not only one of them, and never puts an older
+    value back into a language the run did not change. Older values stored without a
+    language are restored instead of emptying the field. A revert never brings back
+    values a *Delete data* wiped, older wipes included. A revert no longer overwrites
+    dataframe entries edited after the run: such a row is left unchanged, and the
+    revert tells the administrator how many rows it skipped and why
+    (`frames_changed_since_run`). *Delete data* on a record now writes one Time
+    Machine entry per stored language of each translatable field it empties, instead
+    of a single entry in the current data language, so each language's history shows
+    the wipe. See [Time Machine](./tools/using_time_machine.md).
+
+    Wire contract: `WC-2026-09-27-csv-import-append-mode`.
+
+#### Added
+
+- **The CSV import can now add a column's values to what a record already holds, instead of replacing them.**
+
+    Until now every column of a CSV import replaced the component's data, and an
+    empty cell cleared it. Each mapped column now has a **Mode**: *Replace* (the
+    default, unchanged) or *Append*. In append mode the file's values are added
+    after the stored ones and nothing stored is changed: related records are added
+    next to the existing links, a geolocation cell becomes a **new map layer**, a
+    text becomes a new paragraph, and an empty cell leaves the record untouched.
+    Values already present are skipped and counted in the report, so importing the
+    same file twice adds nothing the second time. Components where adding has no
+    meaning — media, single-choice lists, computed values — refuse append before
+    anything is written. Reverting an import run undoes an appended value
+    together with its dataframe entries, even when the record already had some
+    (the other changes to bulk reverts are listed under *Changed*). See
+    [Adding instead of replacing](./tools/using_import_dedalo_csv.md#adding-instead-of-replacing).
+
+    Wire contract: `WC-2026-09-27-csv-import-append-mode`.
+
 #### Fixed
+
+- **A CSV import that carries the modification date and user keeps them on records whose cells embed dataframe frames.**
+
+    When a CSV row carried the record's *modified date* / *modified by* columns and
+    also a cell with embedded dataframe frames (a `{"data":…,"dataframe":…}` value
+    from a raw export), saving those frames re-stamped the record as modified
+    "now, by the importer", overwriting the imported values. The frames are now
+    saved without touching the stamp, so the record keeps the date and user from
+    the file — as it already did for every other column.
 
 - **Saving a language selector is instant again and keeps showing only the project languages.**
 
@@ -47,7 +96,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 45 entries"
+??? note "Wire contract — 46 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -94,6 +143,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-24-external-record-field-set`
     - `WC-2026-09-24-multi-section-search-identity-dedup`
     - `WC-2026-09-24-tool-export-server-built-artifacts`
+    - `WC-2026-09-27-csv-import-append-mode`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

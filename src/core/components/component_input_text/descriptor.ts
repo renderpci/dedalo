@@ -9,6 +9,7 @@ export const component_input_text: ComponentModel = {
 	model: 'component_input_text',
 	column: 'string',
 	render: 'text',
+	importAppend: 'items',
 	classSupportsTranslation: true,
 	searchBuilder: 'string',
 	flatValue: 'string',

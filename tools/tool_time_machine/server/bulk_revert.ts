@@ -27,6 +27,15 @@
  * A row whose pre-batch snapshot carries NO frames over LIVE frames is skipped
  * with a surfaced error instead of reverted (`refuseFramelessWipe` — the
  * unported capture half would make that revert an unrecoverable deletion).
+ * A snapshot that DOES carry frames (an append save composes them; so did
+ * every PHP save) is the slot as it stood at its row — on EVERY bulk run, not
+ * only an append one: when the live slot matches neither it nor any state the
+ * run or this revert left it in (the batch row's own frames, the run's and this
+ * revert's slot rows), the slot changed after the run and the row is skipped
+ * as `frames_changed_since_run` (`refuseStaleFrames`); otherwise only THIS
+ * main's frames are replayed, other mains' stay live (`scopePlanToMain`) —
+ * except a slot this revert itself already rewrote, which takes the snapshot
+ * whole (`slotsLeftByRevert`).
  *
  * ATOMIC PER ROW, AND LOCKED FIRST (P1-9 / DATA-30, the same law `apply_value`
  * carries — gate `test/unit/bulk_operation_atomicity_native.test.ts`): every
@@ -78,7 +87,7 @@ import {
 	ensureRecordGenerationTable,
 	tmEpochPredicate,
 } from '../../../src/core/db/record_generation.ts';
-import { recordTimeMachine } from '../../../src/core/db/time_machine.ts';
+import { recordTimeMachine, tmLangHistoryPredicate } from '../../../src/core/db/time_machine.ts';
 import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import {
 	getColumnNameByModel,
@@ -100,10 +109,14 @@ import { normalizeRestoredSectionIds } from '../../../src/core/update/transform/
 import {
 	applyDataframeRestore,
 	composeTimeMachineSnapshot,
+	DataframeRestoreError,
 	type DataframeSlotRestore,
 	planDataframeRestore,
 	refuseFramelessWipe,
+	refuseStaleFrames,
 	resolveDataframeSlotTipos,
+	scopePlanToMain,
+	slotsLeftByRevert,
 } from './dataframe_restore.ts';
 import { propagateRestoreToObservers } from './restore_common.ts';
 import { mergeRestoredLangSlice, snapshotLangs, tmAuditSlice } from './tool_time_machine.ts';
@@ -126,6 +139,9 @@ export type BulkRevertSkipReason =
 	| 'no_column'
 	/** the snapshot carries no frames over LIVE frames (refuseFramelessWipe) */
 	| 'frameless_wipe'
+	/** the paired dataframe slot changed after the run: the snapshot's frames
+	 *  are stale and restoring them would delete that change (refuseStaleFrames) */
+	| 'frames_changed_since_run'
 	/** a lang-sliced snapshot nothing can name a language for */
 	| 'no_lang'
 	/** the row's revert threw; the exception text is in the server log */
@@ -172,9 +188,9 @@ interface TmRow {
  * (PHP sub_n_rows===1 → []).
  */
 export function preBulkState(
-	historyDesc: readonly { bulk_process_id: number | null; data: unknown }[],
+	historyDesc: readonly { bulk_process_id: number | null; data: unknown; lang?: string | null }[],
 	targetBulkId: number,
-): { data: unknown; found: boolean } {
+): { data: unknown; found: boolean; lang?: string | null } {
 	const idx = historyDesc.findIndex((row) => Number(row.bulk_process_id) === targetBulkId);
 	if (idx === -1) return { data: [], found: false };
 	// PHP sub_n_rows===1: the batch change is the only history row → blank it.
@@ -189,18 +205,158 @@ export function preBulkState(
 	const row = historyDesc[older];
 	// Every row belongs to the batch (and there is more than one): PHP writes
 	// nothing rather than blanking the component.
-	return row === undefined ? { data: [], found: false } : { data: row.data, found: true };
+	if (row === undefined) return { data: [], found: false };
+	// The chosen row's TAG rides along when the history carries it: a lang-less
+	// item of that row belongs to the language it is tagged with (preBatchLangSlice).
+	return row.lang === undefined
+		? { data: row.data, found: true }
+		: { data: row.data, found: true, lang: row.lang };
+}
+
+/** An item with no language of its own (no `lang` key, '' or null — PHP-era data). */
+function isLanglessItem(item: unknown): item is Record<string, unknown> {
+	if (item === null || typeof item !== 'object') return false;
+	const itemLang = (item as { lang?: unknown }).lang;
+	return itemLang === undefined || itemLang === null || itemLang === '';
 }
 
 /**
- * The frameless-wipe refusal, raised INSIDE a row's transaction so the rollback
- * writes nothing, and mapped right after it onto the closed skip vocabulary
- * (`frameless_wipe`). File-local on purpose: it is a control-flow marker
+ * The pre-batch snapshot as its slice of ONE language `lang`, on a
+ * per-language walk. An item of `lang` is kept verbatim; a LANG-LESS item
+ * (PHP-era data — hundreds of thousands of `lg-nolan` rows hold `[{id, iri,
+ * title}]`) belongs to the language its ROW is tagged with, so it is part of
+ * the slice when `rowTag === lang` — stamped with that language, as any engine
+ * save of the slice stamps it (set_data_lang), so the restored value and the
+ * revert's own one-language audit row (tmAuditSlice) agree. Slicing by item
+ * lang alone made such a snapshot the EMPTY slice: the revert removed the live
+ * slice and put nothing back, blanking the component.
+ *
+ * `adoptsLangless`: the slice took lang-less items. The live value's lang-less
+ * items are then this language's too (the snapshot says so), so the merge
+ * replaces them as well — keeping them would put the restored item back twice.
+ * Same rule, in SQL, as `tmLangSliceSql` (the append-baseline probe).
+ */
+export function preBatchLangSlice(
+	snapshot: unknown,
+	lang: string,
+	rowTag: string | null | undefined,
+): { items: unknown[]; adoptsLangless: boolean } {
+	if (!Array.isArray(snapshot)) return { items: [], adoptsLangless: false };
+	const items: unknown[] = [];
+	let adoptsLangless = false;
+	for (const item of snapshot) {
+		if (item === null || typeof item !== 'object') continue;
+		if ((item as { lang?: unknown }).lang === lang) {
+			items.push(item);
+		} else if (rowTag === lang && isLanglessItem(item)) {
+			items.push({ ...item, lang });
+			adoptsLangless = true;
+		}
+	}
+	return { items, adoptsLangless };
+}
+
+/** The live items the merge may replace: lang-less ones only when the slice adopted lang-less items. */
+function liveForMerge(liveItems: readonly unknown[], adoptsLangless: boolean): readonly unknown[] {
+	return adoptsLangless ? liveItems.filter((item) => !isLanglessItem(item)) : liveItems;
+}
+
+/**
+ * The frame refusals (frameless wipe, stale frames), raised INSIDE a row's
+ * transaction so the rollback writes nothing, and mapped right after it onto
+ * the closed skip vocabulary (`frameless_wipe` / `frames_changed_since_run`). File-local on purpose: it is a control-flow marker
  * between the transaction body and the loop's catch, never a wire error — the
  * message is the guard's sentence, LOG-only (slot tipos), like every other
  * `detail` the skip channel keeps off the caller.
  */
-class FramelessWipeRefusal extends Error {}
+class FrameRefusal extends Error {
+	constructor(
+		readonly reason: 'frameless_wipe' | 'frames_changed_since_run',
+		message: string,
+	) {
+		super(message);
+	}
+}
+
+/**
+ * The frame plan of the BATCH row itself (its data int-canonicalized as the
+ * snapshot's is): the frames an append save composed into it. `null` when the
+ * row's frames cannot be attributed — the guard then has no evidence and
+ * trusts only a snapshot that equals the live slot.
+ */
+async function batchFramePlan(
+	row: TmRow,
+	slotTipos: readonly string[],
+): Promise<DataframeSlotRestore[] | null> {
+	const container = { value: row.data };
+	await normalizeRestoredSectionIds(container);
+	try {
+		return await planDataframeRestore(row.tipo, container.value, slotTipos);
+	} catch (error) {
+		if (error instanceof DataframeRestoreError) return null;
+		throw error;
+	}
+}
+
+/**
+ * The newest TM row of each planned slot written by the RUN being reverted
+ * (`run`) and by THIS revert (`revert`) on the row's record — the slot as the
+ * run left it (a slot column's own row) and as this revert already left it (a
+ * batch's slot row reverted before its main, id DESC). Int-canonical, as the
+ * snapshot is (D6.2). Read on the ambient connection (the row's transaction).
+ */
+async function slotRowsOfRuns(
+	target: { sectionTipo: string; sectionId: number },
+	slotTipos: readonly string[],
+	runId: number,
+	revertId: number,
+): Promise<{ run: Map<string, unknown[]>; revert: Map<string, unknown[]> }> {
+	const run = new Map<string, unknown[]>();
+	const revert = new Map<string, unknown[]>();
+	if (slotTipos.length === 0) return { run, revert };
+	// P0-14 like the history walk: a dead generation's slot row is no evidence.
+	await ensureRecordGenerationTable();
+	const rows = (await sql.unsafe(
+		`SELECT DISTINCT ON (tipo, bulk_process_id) tipo, bulk_process_id, data
+		 FROM matrix_time_machine
+		 WHERE section_tipo = $1 AND section_id = $2 AND tipo = ANY(string_to_array($3, ','))
+		   AND bulk_process_id IN ($4, $5)
+		   AND ${tmEpochPredicate()}
+		 ORDER BY tipo, bulk_process_id, id DESC`,
+		[target.sectionTipo, target.sectionId, slotTipos.join(','), runId, revertId],
+	)) as { tipo: string; bulk_process_id: number | string; data: unknown }[];
+	for (const slotRow of rows) {
+		const container = { value: slotRow.data };
+		await normalizeRestoredSectionIds(container);
+		const frames = Array.isArray(container.value) ? container.value : [];
+		(Number(slotRow.bulk_process_id) === revertId ? revert : run).set(slotRow.tipo, frames);
+	}
+	return { run, revert };
+}
+
+/**
+ * The stale-frames guard's evidence per slot (SlotEvidence): the frames the
+ * BATCH row composed (only when it carries any — a frameless row is no
+ * capture), the run's own slot row, this revert's own slot row.
+ */
+function slotEvidence(
+	batchPlan: readonly DataframeSlotRestore[] | null,
+	runSlotRows: ReadonlyMap<string, unknown[]>,
+	revertSlotRows: ReadonlyMap<string, unknown[]>,
+): Map<string, unknown[][]> {
+	const evidence = new Map<string, unknown[][]>();
+	const add = (slotTipo: string, frames: unknown[]) => {
+		const states = evidence.get(slotTipo);
+		if (states === undefined) evidence.set(slotTipo, [frames]);
+		else states.push(frames);
+	};
+	if (batchPlan?.some((slot) => slot.frames.length > 0)) {
+		for (const slot of batchPlan) add(slot.slotTipo, slot.frames);
+	}
+	for (const [slotTipo, frames] of runSlotRows) add(slotTipo, frames);
+	for (const [slotTipo, frames] of revertSlotRows) add(slotTipo, frames);
+	return evidence;
+}
 
 /** dd800 bulk-process record + label so this revert is itself revertible. */
 async function createRevertBulkProcess(label: string, userId: number): Promise<number> {
@@ -334,16 +490,31 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 			inScope = true;
 
 			// Full per-component history (id DESC) → the pre-batch snapshot.
+			// PER LANGUAGE for a lang-sliced model whose batch row names one
+			// (`tmLangHistoryPredicate`): rows tagged with that language, plus any
+			// row whose data CARRIES it (pre-migration lang-less rows, and the
+			// writers that tag one language but store all: tool_lang, propagate,
+			// the duplicate backfill). A slice row of another language is never
+			// this row's pre-batch state (a multi-lang run — an import cell saved
+			// one language at a time — reverted only the language whose row
+			// happened to sit below both batch rows), and the snapshot found is
+			// read as ITS slice of this language only (the lang plan below): an
+			// all-language row must not put stale sibling values back.
 			await ensureRecordGenerationTable();
+			const historyLang =
+				isLangSlicedModel(model) && row.lang !== null && row.lang !== '' ? row.lang : null;
 			const history = (await sql.unsafe(
 				// P0-14: preBulkState walks this history for the pre-batch snapshot;
 				// a dead generation's row must not be eligible to become it.
-				`SELECT bulk_process_id, data FROM matrix_time_machine
+				`SELECT bulk_process_id, lang, data FROM matrix_time_machine
 				 WHERE tipo = $1 AND section_tipo = $2 AND section_id = $3
+				   ${historyLang === null ? '' : `AND ${tmLangHistoryPredicate('$4')}`}
 				   AND ${tmEpochPredicate()} ORDER BY id DESC`,
-				[row.tipo, row.section_tipo, row.section_id],
-			)) as { bulk_process_id: number | null; data: unknown }[];
-			const { data: revertData, found } = preBulkState(history, bulkProcessId);
+				historyLang === null
+					? [row.tipo, row.section_tipo, row.section_id]
+					: [row.tipo, row.section_tipo, row.section_id, historyLang],
+			)) as { bulk_process_id: number | null; lang: string | null; data: unknown }[];
+			const { data: revertData, found, lang: snapshotTag } = preBulkState(history, bulkProcessId);
 			if (!found) {
 				// No determinable pre-batch state — PHP saves nothing rather than
 				// blanking the component. Surfaced, never silent.
@@ -376,13 +547,13 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 			const mainData = isSlotRow
 				? canonicalRevertData
 				: stripDataframeFramesFromTmMain(model, canonicalRevertData);
+			const slotTipos = isSlotRow ? [] : await resolveDataframeSlotTipos(row.tipo);
 			const framePlan: DataframeSlotRestore[] = isSlotRow
 				? []
-				: await planDataframeRestore(
-						row.tipo,
-						canonicalRevertData,
-						await resolveDataframeSlotTipos(row.tipo),
-					);
+				: await planDataframeRestore(row.tipo, canonicalRevertData, slotTipos);
+			// The frames the BATCH row itself composed (an append save's row) —
+			// the stale-frames guard's evidence of the slot as the run left it.
+			const batchPlan = isSlotRow ? null : await batchFramePlan(row, slotTipos);
 
 			// THE LANG PLAN (DATA-03). `revertLangs` is the set of languages this
 			// row's snapshot speaks for — the only ones the revert may replace. For
@@ -391,11 +562,27 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 			// resurrect locators and select values a later save legitimately
 			// removed).
 			const langSliced = isLangSlicedModel(model);
-			const snapshotItems = Array.isArray(mainData) ? mainData : [];
+			// A per-language walk (historyLang) restores THAT language only: the
+			// snapshot is sliced to it and nothing else is replaced, whatever else
+			// the row it came from carries.
+			// A lang-less item of a row TAGGED with that language is part of it
+			// (preBatchLangSlice) — PHP-era rows carry no item langs at all.
+			const langSlice =
+				historyLang === null
+					? {
+							items: Array.isArray(mainData) ? mainData : [],
+							adoptsLangless: false,
+						}
+					: preBatchLangSlice(mainData, historyLang, snapshotTag);
+			const snapshotItems = langSlice.items;
 			// Not gated on that array shape: a NULL or scalar snapshot is the EMPTY
 			// SLICE of its own language, never a licence to replace the key.
 			const rowLang = row.lang === null || row.lang === '' ? null : row.lang;
-			const revertLangs = langSliced ? snapshotLangs(snapshotItems, rowLang ?? '') : null;
+			const revertLangs = !langSliced
+				? null
+				: historyLang !== null
+					? new Set([historyLang])
+					: snapshotLangs(snapshotItems, rowLang ?? '');
 			// The language the audit row is TAGGED with and SLICED to — both from
 			// the same source, so the row this door writes is one-language by
 			// construction (tmAuditSlice). The batch row's own lang column names it;
@@ -447,7 +634,36 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 					// never silent, and this component is left untouched rather than
 					// half-reverted.
 					const framelessRefusal = await refuseFramelessWipe(writeTarget, row.tipo, framePlan);
-					if (framelessRefusal !== null) throw new FramelessWipeRefusal(framelessRefusal);
+					if (framelessRefusal !== null) {
+						throw new FrameRefusal('frameless_wipe', framelessRefusal);
+					}
+					// A COMPOSED snapshot's frames are the slot as it stood at ITS row;
+					// a later slot edit writes no main row. Refuse when the slot changed
+					// since the run by anything but the run or this revert
+					// (refuseStaleFrames), then touch THIS main's frames only — other
+					// mains' frames in a shared slot stay as they are live — unless the
+					// slot is exactly what this revert already wrote (slotsLeftByRevert).
+					const slotRows = await slotRowsOfRuns(
+						writeTarget,
+						framePlan.map((slot) => slot.slotTipo),
+						bulkProcessId,
+						newBulkId,
+					);
+					const staleRefusal = await refuseStaleFrames(
+						writeTarget,
+						row.tipo,
+						framePlan,
+						slotEvidence(batchPlan, slotRows.run, slotRows.revert),
+					);
+					if (staleRefusal !== null) {
+						throw new FrameRefusal('frames_changed_since_run', staleRefusal);
+					}
+					const appliedPlan = await scopePlanToMain(
+						writeTarget,
+						row.tipo,
+						framePlan,
+						await slotsLeftByRevert(writeTarget, framePlan, slotRows.revert),
+					);
 
 					// The merge, over the value read under the lock above: this is a
 					// read-modify-write of a whole component key, so an unlocked read
@@ -455,11 +671,15 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 					// the sibling languages in between. null = the ROW does not exist;
 					// there is nothing to merge over.
 					if (revertLangs !== null) {
-						revertedValue = mergeRestoredLangSlice(lockedItems ?? [], snapshotItems, revertLangs);
+						revertedValue = mergeRestoredLangSlice(
+							liveForMerge(lockedItems ?? [], langSlice.adoptsLangless),
+							snapshotItems,
+							revertLangs,
+						);
 					}
 
 					// Frames FIRST (PHP apply_value's order; see dataframe_restore.ts).
-					await applyDataframeRestore(writeTarget, framePlan);
+					await applyDataframeRestore(writeTarget, appliedPlan);
 					await persistRecordKeys(
 						writeTarget,
 						[{ column: column as MatrixJsonbColumn, key: row.tipo, value: revertedValue }],
@@ -490,7 +710,7 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 							userId,
 							data: composeTimeMachineSnapshot(
 								langSliced ? tmAuditSlice(revertedValue, auditLang as string) : revertedValue,
-								framePlan,
+								appliedPlan,
 							),
 							bulkProcessId: newBulkId,
 						},
@@ -500,8 +720,8 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 			} catch (error) {
 				// The guard's refusal, rolled back: the row is skipped on the closed
 				// vocabulary; anything else is the row's failure (the outer catch).
-				if (!(error instanceof FramelessWipeRefusal)) throw error;
-				skip(row, 'frameless_wipe', inScope, error.message);
+				if (!(error instanceof FrameRefusal)) throw error;
+				skip(row, error.reason, inScope, error.message);
 				continue;
 			}
 

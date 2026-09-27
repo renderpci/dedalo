@@ -59,16 +59,14 @@
 import { DATAFRAME_RELATION_TYPE } from '../../../src/core/concepts/subdatum.ts';
 import type { MatrixJsonbColumn } from '../../../src/core/db/matrix.ts';
 import { absorbComponentItemIds } from '../../../src/core/db/matrix_write.ts';
-import {
-	getColumnNameByModel,
-	getModelByTipo,
-	getPropertiesByTipo,
-} from '../../../src/core/ontology/resolver.ts';
-import { getDataframeChildTipos } from '../../../src/core/section/list_definitions/section_list.ts';
+import { getColumnNameByModel, getModelByTipo } from '../../../src/core/ontology/resolver.ts';
+import { resolveDataframeSlotTipos } from '../../../src/core/relations/dataframe_slots.ts';
+import { canonicalJson } from '../../../src/core/section/record/append_merge.ts';
 import {
 	persistRecordKeys,
 	type RecordWriteTarget,
 } from '../../../src/core/section_record/index.ts';
+import { normalizeRestoredSectionIds } from '../../../src/core/update/transform/section_id_restore.ts';
 import { readComponentItems } from './restore_common.ts';
 
 /** One slot's restored content: `frames` empty ⇒ the key is removed (the wipe). */
@@ -94,44 +92,12 @@ function isFrameEntry(entry: unknown): entry is Record<string, unknown> {
 	return candidate.type === DATAFRAME_RELATION_TYPE || candidate.main_component_tipo !== undefined;
 }
 
-/** Every `tipo` named by a ddo of the component's OWN request_config (show + hide). */
-function ownConfigDdoTipos(properties: unknown): string[] {
-	const source = (properties as { source?: { request_config?: unknown } } | null)?.source;
-	const config = source?.request_config;
-	if (!Array.isArray(config)) return [];
-	const tipos: string[] = [];
-	for (const item of config) {
-		for (const block of ['show', 'hide'] as const) {
-			const map = (item as Record<string, { ddo_map?: unknown }> | null)?.[block]?.ddo_map;
-			if (!Array.isArray(map)) continue;
-			for (const ddo of map) {
-				const tipo = (ddo as { tipo?: unknown } | null)?.tipo;
-				if (typeof tipo === 'string') tipos.push(tipo);
-			}
-		}
-	}
-	return tipos;
-}
-
 /**
- * The dataframe slot tipos of a main component (PHP `get_dataframe_ddo`,
- * broadened per the header): ontology children with model
- * `component_dataframe` ∪ own-config ddos that resolve to that model.
- * Order is stable (children first, then config order) so the composed TM
- * snapshot below is deterministic.
+ * The slot discovery lives in core (`relations/dataframe_slots.ts`) because the
+ * save path's CAPTURE half reads it too; re-exported so this module's callers
+ * keep one import site and there is one discovery, never two that drift.
  */
-export async function resolveDataframeSlotTipos(mainTipo: string): Promise<string[]> {
-	const candidates = [
-		...(await getDataframeChildTipos(mainTipo)),
-		...ownConfigDdoTipos(await getPropertiesByTipo(mainTipo)),
-	];
-	const slots: string[] = [];
-	for (const tipo of candidates) {
-		if (slots.includes(tipo)) continue;
-		if ((await getModelByTipo(tipo)) === 'component_dataframe') slots.push(tipo);
-	}
-	return slots;
-}
+export { resolveDataframeSlotTipos };
 
 /**
  * Partition a main component's TM snapshot into the frame set of each slot.
@@ -203,8 +169,10 @@ export async function planDataframeRestore(
  *
  * `save_component.ts` builds a main component's TM snapshot from the
  * component's OWN items and never appends the paired slots' frames (PHP's
- * `component_common::get_time_machine_data_to_save` :1580 did). So every TM row
- * the TS engine has written for a dataframe-paired main is FRAMELESS, and it is
+ * `component_common::get_time_machine_data_to_save` :1580 did) — except an
+ * APPEND-import save, which composes them (`appendTmFrames`, 2026-09-27). So
+ * every other TM row the TS engine has written for a dataframe-paired main is
+ * FRAMELESS, and it is
  * indistinguishable from a PHP-era row whose slots were genuinely empty. Wiping
  * on that ambiguity is the worst outcome an archive can have: the frames exist
  * in no other row (PHP writes no TM row for a slot — `oh115` has 0 against
@@ -247,6 +215,154 @@ export async function refuseFramelessWipe(
 	}
 	if (populated.length === 0) return null;
 	return `time-machine snapshot of '${mainTipo}' carries no dataframe frames while its slot(s) ${populated.join(', ')} hold live frames. The engine does not yet append the slots' frames when it CAPTURES a snapshot (section/record/save_component.ts), so an empty history cannot be told apart from an unrecorded one, and restoring would delete those frames irrecoverably. Refusing (uncovered scope)`;
+}
+
+/** The main component a frame pairs with; a frame naming none is the planned main's (legacy). */
+function ownedBy(entry: Record<string, unknown>, mainTipo: string): boolean {
+	const main = entry.main_component_tipo;
+	return typeof main !== 'string' || main === '' || main === mainTipo;
+}
+
+/** Order-free structural key of a frame list (sorted canonical JSON of each frame). */
+function frameSetKey(frames: readonly unknown[]): string {
+	return JSON.stringify(frames.map((frame) => canonicalJson(frame)).sort());
+}
+
+/** One slot's LIVE frames (read on the ambient connection — the caller's locked row). */
+async function liveSlotFrames(target: RecordWriteTarget, slotTipo: string): Promise<unknown[]> {
+	const column = getColumnNameByModel('component_dataframe');
+	if (column === null) {
+		throw new DataframeRestoreError('no matrix column for model component_dataframe');
+	}
+	return readComponentItems(target.table, target.sectionTipo, target.sectionId, column, slotTipo);
+}
+
+/**
+ * What the slots hold AS THE RUN (or this revert) LEFT THEM — the stale-frames
+ * guard's evidence that a live slot differing from the snapshot is the run's
+ * own doing, not a later edit: per slot, frame lists that are all legitimate
+ * live states. Filled by the caller from (a) the frames the BATCH row itself
+ * composed (an append save's row, a replace main's row whose legacy envelope
+ * wrote frames), (b) the newest slot TM row the RUN wrote (a slot column),
+ * (c) the newest slot TM row THIS REVERT wrote (a batch's slot row reverted
+ * before its main — id DESC).
+ */
+export type SlotEvidence = ReadonlyMap<string, readonly (readonly unknown[])[]>;
+
+/** Int-canonical frames of a slot's live value (D6.2: a string-form address is the same frame). */
+async function canonicalLiveFrames(
+	target: RecordWriteTarget,
+	slotTipo: string,
+): Promise<unknown[]> {
+	const container = { value: await liveSlotFrames(target, slotTipo) };
+	await normalizeRestoredSectionIds(container);
+	return Array.isArray(container.value) ? container.value : [];
+}
+
+/** The entries of `frames` paired with `mainTipo` (frames only — non-objects dropped). */
+function ownFrames(frames: readonly unknown[], mainTipo: string): Record<string, unknown>[] {
+	return frames.filter(
+		(entry): entry is Record<string, unknown> =>
+			entry !== null &&
+			typeof entry === 'object' &&
+			ownedBy(entry as Record<string, unknown>, mainTipo),
+	);
+}
+
+/**
+ * REFUSE a bulk revert whose snapshot's frames went STALE. A composed snapshot
+ * (an append save's row, a PHP-era row — `get_time_machine_data_to_save`) holds
+ * the slot as it stood at THAT row, and a later frame edit is saved on the SLOT
+ * tipo and never writes a main row. Applying such a plan replaced the slot
+ * with the old frames: a curator's later edit was silently deleted, with
+ * `ok:true`. Applies to EVERY bulk run (not only append runs) — the hole is the
+ * snapshot's, whoever wrote it.
+ *
+ * Per slot, over THIS main's frames only, the plan is safe when the live
+ * frames equal the snapshot's (the restore changes nothing in the slot) or ANY
+ * state the run or this revert left the slot in (`evidence`, see SlotEvidence)
+ * — the change since the snapshot is then the run's own, and undoing it is the
+ * revert's job. Anything else means the slot changed after the run: refuse
+ * (closed skip reason `frames_changed_since_run`), never guess. Returns the
+ * refusal message (LOG-only, slot tipos), or `null` when the plan is safe.
+ */
+export async function refuseStaleFrames(
+	target: RecordWriteTarget,
+	mainTipo: string,
+	plan: readonly DataframeSlotRestore[],
+	evidence: SlotEvidence,
+): Promise<string | null> {
+	const changed: string[] = [];
+	for (const { slotTipo, frames } of plan) {
+		const liveKey = frameSetKey(ownFrames(await canonicalLiveFrames(target, slotTipo), mainTipo));
+		const accepted = [frames, ...(evidence.get(slotTipo) ?? [])];
+		if (accepted.some((state) => frameSetKey(ownFrames(state, mainTipo)) === liveKey)) continue;
+		changed.push(slotTipo);
+	}
+	if (changed.length === 0) return null;
+	return `the dataframe slot(s) ${changed.join(', ')} of '${mainTipo}' changed after the run being reverted (their frames match neither the pre-batch snapshot nor any state the run or this revert left them in); restoring the snapshot's frames would delete that later change. Refusing`;
+}
+
+/**
+ * The plan narrowed to THIS main's frames: each slot keeps, as LIVE, the
+ * frames paired with OTHER main components (a slot can serve several) and
+ * takes the snapshot's frames of this main. A composed snapshot holds the
+ * FULL slot as it stood at its row; replaying other mains' frames from it
+ * reverted work the batch never did (every bulk run, like refuseStaleFrames).
+ *
+ * EXCEPT a slot in `wholeSlots`: its live content is exactly what THIS REVERT
+ * already wrote (the batch's slot row, reverted first). Nothing there is
+ * anyone else's later work, and that slot row's own history can be blind to
+ * what the snapshot knows (a PHP-era slot has no TM rows — its history lives
+ * in the main's composed rows — so its revert blanks it): the snapshot is
+ * replayed WHOLE, as before the scoping existed. Read on the ambient
+ * connection (the caller's locked row).
+ */
+export async function scopePlanToMain(
+	target: RecordWriteTarget,
+	mainTipo: string,
+	plan: readonly DataframeSlotRestore[],
+	wholeSlots: ReadonlySet<string> = new Set(),
+): Promise<DataframeSlotRestore[]> {
+	const scoped: DataframeSlotRestore[] = [];
+	for (const { slotTipo, frames } of plan) {
+		if (wholeSlots.has(slotTipo)) {
+			scoped.push({ slotTipo, frames: [...frames] });
+			continue;
+		}
+		const others = (await liveSlotFrames(target, slotTipo)).filter(
+			(entry): entry is Record<string, unknown> =>
+				entry !== null &&
+				typeof entry === 'object' &&
+				!ownedBy(entry as Record<string, unknown>, mainTipo),
+		);
+		scoped.push({
+			slotTipo,
+			frames: [...others, ...frames.filter((entry) => ownedBy(entry, mainTipo))],
+		});
+	}
+	return scoped;
+}
+
+/**
+ * The planned slots whose WHOLE live content equals the frames THIS REVERT
+ * wrote to them (`revertLeft`, slot → the revert's own slot row) — see
+ * scopePlanToMain's `wholeSlots`.
+ */
+export async function slotsLeftByRevert(
+	target: RecordWriteTarget,
+	plan: readonly DataframeSlotRestore[],
+	revertLeft: ReadonlyMap<string, readonly unknown[]>,
+): Promise<Set<string>> {
+	const whole = new Set<string>();
+	for (const { slotTipo } of plan) {
+		const left = revertLeft.get(slotTipo);
+		if (left === undefined) continue;
+		if (frameSetKey(await canonicalLiveFrames(target, slotTipo)) === frameSetKey(left)) {
+			whole.add(slotTipo);
+		}
+	}
+	return whole;
 }
 
 /**

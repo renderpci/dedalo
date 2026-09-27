@@ -118,6 +118,19 @@ bottom; the descriptor-facet steps are enforced by
    never guesses by model name. Alias stubs inherit through the hop and must
    NOT declare it. Gates: `descriptor_completeness_tripwire`,
    `render_class_native`, `render_escape_tripwire`.
+8d. **CSV-import append policy — REQUIRED on every canonical descriptor.**
+   Declare `importAppend` (types.ts ImportAppendPolicy): what an
+   `import_mode:'append'` column of tool_import_dedalo_csv does with the
+   stored data. `'items'` adds the imported items next to the stored ones
+   (duplicates skipped); `'geo_layer'` adds a new geolocation layer
+   (geolocation only); `'text_paragraphs'` appends a paragraph per language
+   (the html render class only); `{ refuse: '<reason>' }` refuses the column
+   loudly — REQUIRED for media, single-choice/opaque, and derived models, and
+   never on a model that can take `'items'`. No monovalue model may be
+   `'items'`. Read through `getImportAppendPolicy` (alias-following; throws
+   `internal.invariant` on a canonical model without it). Alias stubs inherit
+   and must NOT declare it. Gate: `descriptor_completeness_tripwire` (the
+   placement laws + the policy map of record).
 9. (Optional) drop a `samples/` reference set alongside it.
 
 **Engine side (STILL SCATTERED — check each; this is the honest part):**

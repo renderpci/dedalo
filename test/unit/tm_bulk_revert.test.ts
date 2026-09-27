@@ -39,6 +39,7 @@ import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import type { ToolActionContext, ToolResponse } from '../../src/core/tools/module.ts';
 import {
 	type BulkRevertSkipped,
+	preBatchLangSlice,
 	preBulkState,
 	toolTimeMachineBulkRevert,
 } from '../../tools/tool_time_machine/server/bulk_revert.ts';
@@ -99,6 +100,40 @@ describe('preBulkState', () => {
 			{ bulk_process_id: 5, data: ['older'] },
 		];
 		expect(preBulkState(history, 77).data).toEqual(['older']);
+	});
+});
+
+describe('preBatchLangSlice (a lang-less item belongs to its row tag)', () => {
+	const legacy = [{ id: 1, iri: 'x' }];
+	test('a row TAGGED with the language: its lang-less items are the slice, stamped', () => {
+		expect(preBatchLangSlice(legacy, 'lg-nolan', 'lg-nolan')).toEqual({
+			items: [{ id: 1, iri: 'x', lang: 'lg-nolan' }],
+			adoptsLangless: true,
+		});
+	});
+	test('a row tagged with ANOTHER language (or none): lang-less items are not this slice', () => {
+		expect(preBatchLangSlice(legacy, 'lg-nolan', 'lg-eng')).toEqual({
+			items: [],
+			adoptsLangless: false,
+		});
+		expect(preBatchLangSlice(legacy, 'lg-nolan', null)).toEqual({
+			items: [],
+			adoptsLangless: false,
+		});
+	});
+	test("items of the language stay verbatim; other languages' items never join", () => {
+		const own = { id: 2, lang: 'lg-spa', value: 's' };
+		const snapshot = [own, { id: 2, lang: 'lg-eng', value: 'e' }, { id: 3, value: '', lang: '' }];
+		const slice = preBatchLangSlice(snapshot, 'lg-spa', 'lg-spa');
+		expect(slice.items[0]).toBe(own);
+		expect(slice.items).toEqual([own, { id: 3, value: '', lang: 'lg-spa' }]);
+		expect(slice.adoptsLangless).toBe(true);
+	});
+	test('a non-array snapshot is the empty slice', () => {
+		expect(preBatchLangSlice(null, 'lg-spa', 'lg-spa')).toEqual({
+			items: [],
+			adoptsLangless: false,
+		});
 	});
 });
 

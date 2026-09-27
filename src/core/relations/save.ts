@@ -471,15 +471,34 @@ export async function validateRelationInsert(
 	rawValue: Record<string, unknown>,
 	context: RelationInsertContext,
 ): Promise<Record<string, unknown> | null> {
+	return (await validateRelationInsertVerdict(rawValue, context)).value;
+}
+
+/**
+ * The length-1 door WITH the drop's reason: exactly `validateRelationInsert`
+ * (constraint refusals THROW the same typed errors), but a PHP-era drop
+ * answers its `code` — and, for a `duplicate`, the existing item the law
+ * matched (`duplicateOf`) — instead of a bare null. The CSV append merge needs
+ * both: a duplicate re-pairs its file id with the matched item, any other drop
+ * pairs with nothing.
+ */
+export async function validateRelationInsertVerdict(
+	rawValue: Record<string, unknown>,
+	context: RelationInsertContext,
+): Promise<{
+	value: Record<string, unknown> | null;
+	code?: RelationInsertRefusalCode;
+	duplicateOf?: unknown;
+}> {
 	const { outcomes } = await validateRelationInserts([rawValue], context);
 	const outcome = outcomes[0];
 	if (outcome === undefined || outcome.status === 'refused') {
 		if (outcome?.code !== undefined && !PHP_ERA_DROPS.has(outcome.code)) {
 			throw refusalToError(outcome, context);
 		}
-		return null;
+		return { value: null, code: outcome?.code, duplicateOf: outcome?.duplicateOf };
 	}
-	return outcome.value ?? null;
+	return { value: outcome.value ?? null };
 }
 
 /**
@@ -599,6 +618,14 @@ export interface RelationInsertOutcome {
 	value?: Record<string, unknown>;
 	code?: RelationInsertRefusalCode;
 	reason?: string;
+	/**
+	 * On a `duplicate` refusal ONLY: the existing item (from `existingItems` or
+	 * an earlier acceptance in the batch) the law matched, BY REFERENCE. The
+	 * CSV append merge re-pairs a skipped duplicate's file id with it — read
+	 * from the law's own match, never re-derived with a second key that could
+	 * drift from this one (the normalized `type` fill, section_id canon).
+	 */
+	duplicateOf?: unknown;
 }
 
 export interface RelationInsertBatchResult {
@@ -701,6 +728,7 @@ export async function validateRelationInserts(
 				status: 'refused',
 				code: normalized.code,
 				reason: normalized.reason,
+				...(normalized.duplicateOf !== undefined ? { duplicateOf: normalized.duplicateOf } : {}),
 			});
 			continue;
 		}
@@ -753,7 +781,12 @@ async function normalizeRelationInsert(
 	rawValue: Record<string, unknown>,
 	context: RelationInsertContext,
 	batchAccepted: readonly Record<string, unknown>[],
-): Promise<{ value?: Record<string, unknown>; code?: RelationInsertRefusalCode; reason?: string }> {
+): Promise<{
+	value?: Record<string, unknown>;
+	code?: RelationInsertRefusalCode;
+	reason?: string;
+	duplicateOf?: unknown;
+}> {
 	const existingItems =
 		batchAccepted.length === 0
 			? context.existingItems
@@ -807,7 +840,11 @@ async function normalizeRelationInsert(
 		for (const item of existingItems) {
 			if (dataframeEntriesEqual(item, normalized)) {
 				// already framed — ignored
-				return { code: 'duplicate', reason: 'this record is already framed from that item' };
+				return {
+					code: 'duplicate',
+					reason: 'this record is already framed from that item',
+					duplicateOf: item,
+				};
 			}
 		}
 		return { value: normalized };
@@ -836,7 +873,7 @@ async function normalizeRelationInsert(
 		for (const item of existingItems) {
 			if (dataframeEntriesEqual(item, value)) {
 				// the same frame twice — ignored
-				return { code: 'duplicate', reason: 'the same frame is already stored' };
+				return { code: 'duplicate', reason: 'the same frame is already stored', duplicateOf: item };
 			}
 		}
 		return { value };
@@ -858,7 +895,7 @@ async function normalizeRelationInsert(
 	for (const item of existingItems) {
 		if (lookupKey(item) === valueKey) {
 			// already linked — ignored
-			return { code: 'duplicate', reason: 'that record is already linked here' };
+			return { code: 'duplicate', reason: 'that record is already linked here', duplicateOf: item };
 		}
 	}
 	return { value };

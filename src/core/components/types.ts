@@ -203,6 +203,35 @@ export type FlatValueFamily =
 export type RenderClass = 'text' | 'html' | 'url' | 'number';
 
 /**
+ * What a CSV import column in APPEND mode (tool_import_dedalo_csv
+ * `import_mode:'append'`) does with the model's stored data — the
+ * `importAppend` facet, read by registry.ts getImportAppendPolicy.
+ *
+ * - 'items':           the imported items are ADDED next to the stored ones
+ *                      (relations: the insert dedup law; literals: per-lang
+ *                      value equality). Stored items stay byte-identical.
+ * - 'geo_layer':       the imported value becomes a NEW geolocation layer
+ *                      (fresh layer_id); stored layers and centre untouched.
+ * - 'text_paragraphs': per language, the imported text is appended as a new
+ *                      paragraph; a value carrying index/tc tags is refused.
+ * - { refuse }:        append has no meaning for the model (media,
+ *                      single-choice/opaque, derived) — the column is REFUSED
+ *                      loudly with this reason, never silently turned into
+ *                      replace.
+ *
+ * REQUIRED on every canonical descriptor; alias stubs inherit through the
+ * canonical hop and must NOT declare it. Pinned by
+ * descriptor_completeness_tripwire (placement laws: media refuse, no
+ * monovalue 'items', 'geo_layer' only on geolocation, 'text_paragraphs' only
+ * on the html render class, derived + no-import-conform models refuse).
+ */
+export type ImportAppendPolicy =
+	| 'items'
+	| 'geo_layer'
+	| 'text_paragraphs'
+	| { readonly refuse: string };
+
+/**
  * One component model's declarative descriptor. Only the fields the engines
  * actually READ live here; heavier per-model behavior is linked out via file
  * comments (see the DISCIPLINE note above).
@@ -352,4 +381,13 @@ export interface ComponentModel {
 	 * canonical descriptors; getRenderClass throws on a model without one.
 	 */
 	readonly render?: RenderClass;
+	/**
+	 * CSV-import APPEND policy (see ImportAppendPolicy). Consumed by
+	 * registry.ts getImportAppendPolicy → the tool_import_dedalo_csv column
+	 * mapper/resolver and the saveComponentData `appendImport` backstop.
+	 * Required on canonical descriptors; the accessor throws on a model
+	 * without one (no silent default — a guessed 'items' would append to a
+	 * single-choice model, a guessed refusal would hide a capability).
+	 */
+	readonly importAppend?: ImportAppendPolicy;
 }
