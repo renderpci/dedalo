@@ -6,6 +6,7 @@
 
 // imports
 @import (once) '../../../client/dedalo/core/page/css/layout/vars';
+@import (once, reference) '../../../client/dedalo/core/tools_common/css/tool_mixins';
 
 // local vars
 // Reference the shared ontology identifier colour (NOT a hardcoded hex) so every
@@ -344,18 +345,9 @@
 			}
 
 			button.gear {
-				background-color: @tool_color;
-				border-color: @tool_color;
-				// The ink belongs with the fill. These are
-				// `class="warning gear"` buttons, so they carried the core .warning
-				// ink — `--fg_on_brand`, the near-black tuned for the BRAND ORANGE
-				// fill this rule replaces with the ontology green: 3.01:1 in light,
-				// 3.03:1 on the redesign line, under the 4.5:1 floor. The static
-				// gate cannot see that pair (fill here, ink in buttons.less), which
-				// is why it survived. --ut_on_green is the ink for a green fill on
-				// every axis — 5.91:1 light / 5.18:1 dark — the same token the
-				// filter toggle above takes.
-				color: var(--ut_on_green);
+				// `class="warning gear"`: the core .warning ink was tuned for the brand
+				// orange (3.01:1 on this green) — fill and ink come as one set now
+				.tool_action_button();
 			}
 
 			.checkbox-label {
@@ -404,8 +396,3 @@
 	}//end content_data
 
 }//end wrapper_tool
-
-// modal and new window header tool modification
-.tool_header.tool_ontology_parser {
-	background-color: @tool_color;
-}

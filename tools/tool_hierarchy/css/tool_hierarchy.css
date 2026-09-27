@@ -5,7 +5,6 @@
 */
 :root {
   --tool_hierarchy: #c80000;
-  --tool_hierarchy_border: #af0000;
 }
 .wrapper_tool.tool_hierarchy {
   position: relative;
@@ -98,8 +97,16 @@
   justify-content: center;
 }
 .wrapper_tool.tool_hierarchy > .content_data > .buttons_container button {
-  background-color: var(--tool_hierarchy);
-  border-color: var(--tool_hierarchy_border);
+  background-color: var(--tool_fill);
+  border-color: var(--tool_fill);
+  color: var(--tool_on_fill);
+}
+.wrapper_tool.tool_hierarchy > .content_data > .buttons_container button::before {
+  background-color: var(--button-bg-color, var(--tool_on_fill)) !important;
+}
+.wrapper_tool.tool_hierarchy > .content_data > .buttons_container button:hover {
+  background-color: var(--tool_fill_hover);
+  border-color: var(--tool_fill_hover);
 }
 .wrapper_tool.tool_hierarchy > .content_data > .buttons_container .checkbox-label {
   padding-left: 1rem;
@@ -121,8 +128,5 @@
 .wrapper_tool.tool_hierarchy > .content_data > .messages_container .error {
   padding: 0.5rem;
   border-radius: 4px;
-}
-.tool_header.tool_hierarchy {
-  background-color: var(--tool_hierarchy);
 }
 /*# sourceMappingURL=tool_hierarchy.css.map */

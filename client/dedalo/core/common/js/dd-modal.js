@@ -69,8 +69,8 @@
  * CSS custom properties consumed (all have defaults):
  *   --modal_overlay_bg, --modal_overlay_bg_weak
  *   --modal_content_bg, --modal_content_shadow, --modal_radius
- *   --modal_header_bg, --modal_header_color, --modal_header_shadow
- *   --modal_btn_color, --modal_btn_hover_color
+ *   --modal_header_bg, --modal_header_color (--modal_header_shadow: layout.less only)
+ *   --modal_btn_color, --modal_btn_hover_color, --modal_btn_hover_bg, --focus_ring
  *
  * Additional styles are applied from layout.less → dd-modal (light DOM side).
  */
@@ -253,45 +253,56 @@ class DDModal extends HTMLElement {
 				to {top:0; opacity:1}
 			}
 
-			.mini_modal {
-				color: var(--modal_btn_color, white);
+			/* window buttons: a 2.5rem (~32px at the 13px root) hit target each, not the bare glyph;
+			   theme ink from the host (--modal_btn_*), a faint wash on hover and a
+			   VISIBLE ring for keyboard focus (they are role=button tabindex=0) */
+			.mini_modal,
+			.close_modal {
+				color: var(--modal_btn_color, var(--fg_muted));
 				font-size: 1.75rem;
 				font-weight: bold;
+				line-height: 1;
 				position: absolute;
-				top: 0.1rem;
-				right: 2.75rem;
+				top: 0.6rem;
 				z-index: 3;
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				width: 2.5rem;
+				height: 2.5rem;
+				border-radius: 5px;
+				cursor: pointer;
+				transition: background-color 0.15s ease, color 0.15s ease;
+			}
+			.close_modal { right: 0.5rem; }
+			.mini_modal {
+				right: 3.25rem;
+				align-items: flex-start; /* the "_" glyph sits on the baseline */
 			}
 			.mini_modal:hover,
-			.mini_modal:focus {
-				color: var(--modal_btn_hover_color, #f78a1c);
-				text-decoration: none;
-				cursor: pointer;
+			.close_modal:hover {
+				color: var(--modal_btn_hover_color, var(--fg_default));
+				background-color: var(--modal_btn_hover_bg);
 			}
-
-			.close_modal {
-				color: var(--modal_btn_color, white);
-				font-size: 1.75rem;
-				font-weight: bold;
-				position: absolute;
-				top: 0.5rem;
-				right: 0.75rem;
-				z-index: 3;
-			}
-			.close_modal:hover,
-			.close_modal:focus {
-				color: var(--modal_btn_hover_color, #f78a1c);
-				text-decoration: none;
-				cursor: pointer;
+			.mini_modal:focus,
+			.close_modal:focus { outline: none; }
+			.mini_modal:focus-visible,
+			.close_modal:focus-visible {
+				color: var(--modal_btn_hover_color, var(--fg_default));
+				outline: 2px solid var(--focus_ring, var(--color_input_focus));
+				outline-offset: 1px;
 			}
 
 			.modal-header {
 				position: sticky;
 				top: 0;
 				z-index: 4;
-				background-color: var(--modal_header_bg, var(--color_orange_dedalo));
-				color: var(--modal_header_color, var(--color_white));
-				box-shadow: var(--modal_header_shadow, 0 2px 3px var(--color_grey_10));
+				background-color: var(--modal_header_bg, var(--bg_surface_alt));
+				color: var(--modal_header_color, var(--fg_default));
+				/* no shadow of its own: this bar is a fixed 3.66rem, the slotted header
+				   is not (a tool header runs taller), so a shadow here cut across it.
+				   The slotted .header carries the one shadow (layout.less / tool_common) */
+				box-shadow: none;
 				/* brand accent stripe on top edge; painted, so height is unchanged */
 				background-image: linear-gradient(var(--modal_header_accent, transparent) 0 4px, transparent 4px);
 				height: 3.66rem;
@@ -368,7 +379,7 @@ class DDModal extends HTMLElement {
 			.mini .mini_modal {
 				position: absolute;
 				right: 10px;
-				top: -8px;
+				top: calc((60px - 2.5rem) / 2); /* centred in the 60px mini bar */
 			}
 			.mini .close_modal {
 				right: 0;

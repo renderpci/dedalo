@@ -109,7 +109,7 @@ The token families in `vars_tokens.less`:
 | Elevation scale | `--shadow-1` … `--shadow-4`, `--shadow-focus` | Built on `--shadow_default` so they retune per theme automatically (no dark override needed). |
 | Motion | `--ease-standard`, `--transition-fast/base/slow` | |
 | Component tokens | `--menu_dropdown_bg`, `--checkbox_checked_bg`, `--input_bg`, `--select_icon_url`, `--toolbar_btn_hover_bg` | |
-| Modal tokens | `--modal_overlay_bg`, `--modal_content_bg`, `--modal_header_bg`, `--modal_radius` | Used by `dd-modal`; pierce the Shadow DOM boundary via `var()`. |
+| Modal tokens | `--modal_overlay_bg`, `--modal_content_bg`, `--modal_header_bg`, `--modal_header_color`, `--modal_header_accent`, `--modal_btn_color`, `--modal_btn_hover_color`, `--modal_btn_hover_bg`, `--modal_radius` | Used by `dd-modal`; pierce the Shadow DOM boundary via `var()`. The header is the same model as a tool header: a neutral surface (`--bg_surface_alt`), the brand colour only as the 4px top edge (`--modal_header_accent`), theme text colours. They are defined once, as `var()`s of theme tokens, and the dark theme does not redeclare them. |
 | Field grid | `--field_inset_x`, `--field_box_bleed`, `--field_row_h`, `--field_line_h`, `--field_value_pad_t`, `--field_rest_bg` | The one geometry every edit field shares, plus its resting fill — see [Field grid](#the-field-grid) below. No dark override, deliberately. |
 | UI chrome (`--ut_*`) | `--ut_bg_app`, `--ut_bg_panel`, `--ut_text_primary`, `--ut_accent`, `--ut_border` | The shell/installer/test-runner chrome palette. A second token FAMILY, not a second file — see the note under [Only `main.less` may import `vars_tokens.less`](#tokens-css-custom-properties-vs-less-aliases). |
 

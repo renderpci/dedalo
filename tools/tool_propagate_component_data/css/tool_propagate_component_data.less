@@ -6,6 +6,7 @@
 
 // imports
 @import (once) '../../../client/dedalo/core/page/css/layout/vars';
+@import (once, reference) '../../../client/dedalo/core/tools_common/css/tool_mixins';
 
 // local vars
 :root {
@@ -66,8 +67,7 @@
 			}
 
 			button {
-				background-color: @tool_color;
-				border-color: @tool_color;
+				.tool_action_button(); // was the raw hue under the .warning ink: 2.63:1
 
 				@media screen and (max-width: @width_break_point_1) {
 					width: 100%;
@@ -94,8 +94,3 @@
 
 	}//end content_data
 }//end wrapper_tool
-
-// modal header tool modification
-.tool_header.tool_propagate_component_data {
-	background-color: @tool_color;
-}

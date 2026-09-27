@@ -698,9 +698,6 @@
   height: 2em;
   font-size: 0.8em;
 }
-.tool_header.tool_export {
-  background-color: var(--tool_export);
-}
 .tool_export_modal .quality_selector {
   margin: 1rem;
 }

@@ -187,9 +187,6 @@
 .wrapper_tool.tool_media_versions > .content_data > .versions_container > .column .file_info .cell_node .find {
   margin-right: 0.5rem;
 }
-.tool_header.tool_media_versions {
-  background-color: var(--tool_media_versions);
-}
 @keyframes job_progress_sweep {
   0% {
     transform: translateX(-100%);

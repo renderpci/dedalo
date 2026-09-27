@@ -69,7 +69,4 @@
   grid-row: 1 / span 4;
   grid-column: span 4;
 }
-.tool_header.tool_user_admin {
-  background-color: var(--tool_user_admin);
-}
 /*# sourceMappingURL=tool_user_admin.css.map */

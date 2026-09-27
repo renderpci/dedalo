@@ -79,7 +79,4 @@
 .wrapper_tool.tool_pdf_extractor > .content_data > .info > * > label {
   padding-right: 2em;
 }
-.tool_header.tool_pdf_extractor {
-  background-color: var(--tool_pdf_extractor);
-}
 /*# sourceMappingURL=tool_pdf_extractor.css.map */

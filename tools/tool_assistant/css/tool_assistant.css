@@ -37,9 +37,6 @@
   --assistant_err_border: #5a3030;
   --assistant_pre_bg: rgba(255, 255, 255, 0.06);
 }
-.tool_header.tool_assistant {
-  background-color: var(--tool_assistant);
-}
 .assistant_container {
   display: flex;
   flex-direction: column;

@@ -53,7 +53,4 @@
   content: attr(data-placeholder);
   color: var(--color_grey_11);
 }
-.tool_header.tool_dd_label {
-  background-color: var(--tool_dd_label);
-}
 /*# sourceMappingURL=tool_dd_label.css.map */

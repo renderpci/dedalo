@@ -178,7 +178,7 @@ const BANK = {
 		stale_fallback: 6,
 		undeclared_fallback: 0,
 		/** OUTER budget: every colour literal spelled in a shipped JS string */
-		string_literals: 74,
+		string_literals: 72, // 2026-09-27: dd-modal window-button fallbacks now name theme tokens
 	},
 } as const;
 

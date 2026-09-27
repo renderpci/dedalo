@@ -235,7 +235,4 @@
   outline: 1px solid var(--color_orange_dedalo);
   z-index: 2;
 }
-.tool_header.tool_cataloging {
-  background-color: var(--tool_cataloging);
-}
 /*# sourceMappingURL=tool_cataloging.css.map */

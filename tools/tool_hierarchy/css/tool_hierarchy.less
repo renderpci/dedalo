@@ -6,11 +6,11 @@
 
 // imports
 @import (once) '../../../client/dedalo/core/page/css/layout/vars';
+@import (once, reference) '../../../client/dedalo/core/tools_common/css/tool_mixins';
 
 // local vars
 :root {
 	--tool_hierarchy: #c80000;
-	--tool_hierarchy_border: #af0000;
 }
 @tool_color: var(--tool_hierarchy);
 
@@ -136,8 +136,7 @@
 			justify-content: center;
 
 			button {
-				background-color: @tool_color;
-				border-color: var(--tool_hierarchy_border);
+				.tool_action_button();
 			}
 
 			.checkbox-label {
@@ -169,8 +168,3 @@
 	}//end content_data
 
 }//end wrapper_tool
-
-// modal and new window header tool modification
-.tool_header.tool_hierarchy {
-	background-color: @tool_color;
-}

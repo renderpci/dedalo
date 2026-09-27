@@ -3946,6 +3946,11 @@
 			"skipped": 0,
 			"assertions": 21
 		},
+		"test/unit/tool_color_contrast_tripwire.test.ts": {
+			"tests": 5,
+			"skipped": 0,
+			"assertions": 14
+		},
 		"test/unit/tool_context_labels_lang.test.ts": {
 			"tests": 4,
 			"skipped": 0,

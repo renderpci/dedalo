@@ -15,6 +15,7 @@
 
 import { cpSync, existsSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
+import { collectHues, OUT_FILE, render } from './tool_colors.ts';
 
 const TOOLS_ROOT = resolve(import.meta.dir, '../tools');
 const TEMPLATE = 'tool_dev_template';
@@ -79,5 +80,13 @@ const authoring = {
 };
 writeFileSync(resolve(targetDir, 'register.json'), `${JSON.stringify(authoring, null, '\t')}\n`);
 
+// 4. Give it its identity colours. The header edge, wash and button fill/ink come
+//    only from the GENERATED tool_colors.less (tool_header_contract_tripwire and
+//    tool_color_contrast_tripwire refuse a tool missing from it).
+writeFileSync(OUT_FILE, render(collectHues().hues));
+
 console.log(`Created ${name} at ${targetDir}`);
+console.log(
+	`Colour: set --${name} (its identity hue — copied from the template) in tools/${name}/css/${name}.less, then run "bun run css:tool-colors" and "bun run css:build".`,
+);
 console.log('Next: run the area_maintenance "Register tools" widget to reconcile dd1324.');
