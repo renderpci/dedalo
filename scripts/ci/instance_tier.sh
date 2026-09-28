@@ -86,6 +86,16 @@ client_rc=0
 bash scripts/ci/client_gate.sh || client_rc=$?
 [ "$client_rc" -eq 0 ] || { echo "== instance_tier: RED in the client suite (exit $client_rc)"; tier_status=1; }
 
+# ── STAGE 1b — EVERY TOOL AT PHONE WIDTH ─────────────────────────────────────
+#
+# scripts/tool_viewport_check.ts: every tool at 360×740 on the same suite database
+# through the same verified server door as the client suite, real login, scratch
+# records swept. Ratchet: test/helpers/tool_phone_ratchet.ts.
+echo "== instance_tier: tools at phone width (bun run test:tools:phone)"
+phone_rc=0
+bun run test:tools:phone || phone_rc=$?
+[ "$phone_rc" -eq 0 ] || { echo "== instance_tier: RED in the tool phone contract (exit $phone_rc)"; tier_status=1; }
+
 # ── STAGE 2 — THE CODE UPDATER, RELEASE CHANNEL ──────────────────────────────
 #
 # A real master builds and serves the 7.0.1 release through the wire; a
