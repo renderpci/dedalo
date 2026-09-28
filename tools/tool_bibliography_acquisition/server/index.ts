@@ -871,9 +871,17 @@ export const tool: ToolServerModule = {
 			minLevel: 1,
 			handler: previewHtml,
 		},
+		// 'targets' (not 'section'): the handler always writes rsc205/rsc197/
+		// rsc212 regardless of what options.section_tipo says, so the gate must
+		// name those fixed targets rather than trust the client's value.
 		commit_publications: {
-			permission: 'section',
+			permission: 'targets',
 			minLevel: 2,
+			targets: () => [
+				{ section_tipo: PUBLICATION_TIPO },
+				{ section_tipo: PEOPLE_SECTION_TIPO },
+				{ section_tipo: SERIES_SECTION_TIPO },
+			],
 			handler: commitPublications,
 		},
 	},
