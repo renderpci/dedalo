@@ -466,6 +466,36 @@ const get_content_data = function(self) {
 						parent			: company_container
 					})
 
+					// One radio option row: label + change listener + optional
+					// preselection. Shared by both the candidate loop and the
+					// "create new" row below, which otherwise built the identical
+					// row/radio/label structure twice.
+					const add_company_option = function(radio_name, label_text, preselected, on_select) {
+						const option_row = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'company_option',
+							parent			: company_results
+						})
+						const radio = ui.create_dom_element({
+							element_type	: 'input',
+							type			: 'radio',
+							name			: radio_name,
+							parent			: option_row
+						})
+						ui.create_dom_element({
+							element_type	: 'label',
+							text_content	: label_text,
+							parent			: option_row
+						})
+						radio.addEventListener('change', function() {
+							if (radio.checked) on_select()
+						})
+						if (preselected) {
+							radio.checked = true
+							on_select()
+						}
+					}
+
 					// Renders one radio per candidate Entity plus an always-present
 					// "create new" option — never auto-picks a candidate unless its
 					// name matches exactly (case/accent-loose), matching the
@@ -480,54 +510,20 @@ const get_content_data = function(self) {
 						const exact_match = candidates.find((c) => c.name.trim().toLowerCase()===normalized)
 
 						candidates.forEach(function(candidate) {
-							const option_row = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'company_option',
-								parent			: company_results
-							})
-							const radio = ui.create_dom_element({
-								element_type	: 'input',
-								type			: 'radio',
-								name			: radio_name,
-								parent			: option_row
-							})
-							ui.create_dom_element({
-								element_type	: 'label',
-								text_content	: candidate.name + ' (rsc106 #' + candidate.section_id + ')',
-								parent			: option_row
-							})
-							radio.addEventListener('change', function() {
-								if (radio.checked) current_company_selection = { section_id: candidate.section_id }
-							})
-							if (exact_match && candidate.section_id===exact_match.section_id) {
-								radio.checked = true
-								current_company_selection = { section_id: candidate.section_id }
-							}
+							add_company_option(
+								radio_name,
+								candidate.name + ' (rsc106 #' + candidate.section_id + ')',
+								exact_match!==undefined && candidate.section_id===exact_match.section_id,
+								function() { current_company_selection = { section_id: candidate.section_id } }
+							)
 						})
 
-						const create_row = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'company_option',
-							parent			: company_results
-						})
-						const create_radio = ui.create_dom_element({
-							element_type	: 'input',
-							type			: 'radio',
-							name			: radio_name,
-							parent			: create_row
-						})
-						ui.create_dom_element({
-							element_type	: 'label',
-							text_content	: (self.get_tool_label('company_create') || 'Create new Entity') + ' "' + name + '"',
-							parent			: create_row
-						})
-						create_radio.addEventListener('change', function() {
-							if (create_radio.checked) current_company_selection = { create: true, name: name }
-						})
-						if (!exact_match) {
-							create_radio.checked = true
-							current_company_selection = { create: true, name: name }
-						}
+						add_company_option(
+							radio_name,
+							(self.get_tool_label('company_create') || 'Create new Entity') + ' "' + name + '"',
+							exact_match===undefined,
+							function() { current_company_selection = { create: true, name: name } }
+						)
 					}
 
 					const run_company_search = function() {
