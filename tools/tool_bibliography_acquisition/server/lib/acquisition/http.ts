@@ -1,7 +1,6 @@
 import { looksBlocked } from './block-signals.ts';
 import { waitForTurn } from './rate-limit.ts';
 import { getCrawlDelayMs, isAllowedByRobots, USER_AGENT } from './robots.ts';
-import { assertNotPrivateHost } from './url-safety.ts';
 
 export interface RawSource {
 	html: string;
@@ -32,8 +31,9 @@ const MAX_BODY_BYTES = 20 * 1024 * 1024; // 20MB - generous for a metadata listi
 const REQUEST_TIMEOUT_MS = 20_000;
 
 export interface FetchPageOptions {
-	/** Validates the URL is https + a safe host; throws UnsafeUrlError otherwise. */
-	assertSafeUrl: (rawUrl: string) => URL;
+	/** Validates the URL is https + a safe host; throws UnsafeUrlError otherwise. Re-run on every
+	 * redirect hop, not just the first URL - a redirect target is exactly as untrusted as the input. */
+	assertSafeUrl: (rawUrl: string) => Promise<URL>;
 	/** Whether a redirect target's hostname is still acceptable - refuses to follow off it. */
 	allowRedirectHost: (hostname: string) => boolean;
 }
@@ -47,7 +47,7 @@ export async function fetchPublicPage(
 	rawUrl: string,
 	options: FetchPageOptions,
 ): Promise<RawSource> {
-	let currentUrl = options.assertSafeUrl(rawUrl);
+	let currentUrl = await options.assertSafeUrl(rawUrl);
 
 	for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount++) {
 		const allowed = await isAllowedByRobots(currentUrl);
@@ -73,14 +73,14 @@ export async function fetchPublicPage(
 				throw new AcquisitionBlockedError('Redirected without a Location header.', response.status);
 			}
 			const nextUrl = new URL(location, currentUrl);
-			assertNotPrivateHost(nextUrl.hostname);
 			if (!options.allowRedirectHost(nextUrl.hostname)) {
 				throw new AcquisitionBlockedError(
 					'Redirected off-site; refusing to follow.',
 					response.status,
 				);
 			}
-			currentUrl = nextUrl;
+			// Full re-check, not just the private-IP half: a redirect can also downgrade to http://.
+			currentUrl = await options.assertSafeUrl(nextUrl.href);
 			continue;
 		}
 

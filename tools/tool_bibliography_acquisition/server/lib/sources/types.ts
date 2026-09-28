@@ -23,8 +23,10 @@ export interface SourceAdapter {
 	id: string;
 	sourceDomain: string;
 	matchesUrl(rawUrl: string): boolean;
-	/** Throws UnsafeUrlError with a specific reason (https-only, private IP, ...). */
-	assertSafeUrl(rawUrl: string): URL;
+	/** Throws UnsafeUrlError with a specific reason (https-only, private IP, ...). Async: a private-IP
+	 * check that only inspected literal IPs let a DNS name pointing at an internal address straight
+	 * through, so this resolves the name and checks every address it returns. */
+	assertSafeUrl(rawUrl: string): Promise<URL>;
 	/** Extracted synchronously from the URL alone (no network) - used for the dedupe fast path. */
 	parseSeriesIdentifier(rawUrl: string): string | null;
 	/** Fetches every page belonging to the series/listing at this URL, reporting page-by-page progress. */
