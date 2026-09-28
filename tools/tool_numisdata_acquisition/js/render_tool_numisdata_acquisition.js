@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global */
+/*global page_globals */
 /*eslint no-undef: "error"*/
 
 
@@ -127,6 +127,84 @@ const detect_url_from_html = function(html) {
 
 	return null
 }//end detect_url_from_html
+
+
+
+/**
+* SEARCH_COMPANIES
+* Searches real rsc106 (Entity) records by name through the engine's normal
+* read/search API — the same picker mechanism the ontology's own autocomplete
+* widgets use (dd_core_api / action:'read' / source.action:'search') — rather
+* than trusting the auction house name scraped off the page as free text.
+* Runs with the CALLING user's session, so it only sees Entities they can
+* read (server/index.ts's own dedup check runs the equivalent SQO with the
+* same principal).
+* @param {string} name - the name to search for (contains-match)
+* @returns {Promise<Array<{section_id:number, name:string}>>}
+*/
+const search_companies = async function(name) {
+
+	const rqo = {
+		dd_api	: 'dd_core_api',
+		action	: 'read',
+		source	: {
+			action			: 'search',
+			model			: 'section',
+			tipo			: 'rsc106',
+			section_tipo	: 'rsc106',
+			mode			: 'list',
+			lang			: page_globals.dedalo_data_lang
+		},
+		// Explicit ddo_map: rsc106 has no ontology-configured search view of its
+		// own, and without this the response would carry matched section_ids
+		// with no name to show for them.
+		show : {
+			ddo_map : [{ tipo: 'rsc116', parent: 'self', section_tipo: 'self' }]
+		},
+		sqo : {
+			section_tipo	: ['rsc106'],
+			limit			: 10,
+			filter			: {
+				$and : [{
+					q		: name,
+					path	: [{ section_tipo: 'rsc106', component_tipo: 'rsc116' }]
+				}]
+			}
+		}
+	}
+
+	const api_response = await data_manager.request({ body: rqo })
+	if (request_failed(api_response)) {
+		console.error('[tool_numisdata_acquisition] company search failed:', api_response)
+		return []
+	}
+
+	// The read envelope is a FLAT array: one 'sections' entry naming every
+	// matched section_id (in order), then one entry per (row, shown component)
+	// pair — correlated back to its row via row_section_id (confirmed against
+	// a real captured list-mode search response, test/parity/fixtures/
+	// oracle_harvest/sqo_differential.json).
+	const data = response_data(api_response)
+	const rows = Array.isArray(data && data.data) ? data.data : []
+
+	const sections_entry = rows.find((item) => item && item.typo==='sections')
+	const row_ids = (sections_entry && Array.isArray(sections_entry.entries))
+		? sections_entry.entries.map((entry) => entry.section_id)
+		: []
+
+	const name_by_row_id = new Map()
+	rows.forEach(function(item) {
+		if (!item || item.tipo!=='rsc116' || item.row_section_id===undefined) return
+		const first = Array.isArray(item.entries) ? item.entries[0] : null
+		if (first && typeof first.value==='string' && first.value!=='') {
+			name_by_row_id.set(item.row_section_id, first.value)
+		}
+	})
+
+	return row_ids
+		.map((section_id) => ({ section_id: section_id, name: name_by_row_id.get(section_id) || '' }))
+		.filter((entry) => Number.isInteger(entry.section_id) && entry.name!=='')
+}//end search_companies
 
 
 
@@ -348,6 +426,129 @@ const get_content_data = function(self) {
 					text_content	: auction_line_text,
 					parent			: review_container
 				})
+
+			// Company resolution: numisdata228 is a REAL relation to rsc106
+			// (Entity), not free text — a scraped house name is a guess, an
+			// Entity is an authority, so the operator confirms it here rather
+			// than the tool silently writing the scraped string (review item 9).
+			// `current_company_selection` feeds commit_lots; left null when there
+			// is no house name at all (server/index.ts skips Company entirely
+			// in that case, same as before).
+				let current_company_selection = null
+				if (auction && auction.auctionHouse) {
+
+					const company_container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'company_resolution',
+						parent			: review_container
+					})
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'company_resolution_label',
+						text_content	: self.get_tool_label('company_label') || 'Company (links numisdata224 to an rsc106 Entity):',
+						parent			: company_container
+					})
+					const company_name_input = ui.create_dom_element({
+						element_type	: 'input',
+						type			: 'text',
+						class_name		: 'company_name_input',
+						parent			: company_container
+					})
+					company_name_input.value = auction.auctionHouse
+					const company_search_button = ui.create_dom_element({
+						element_type	: 'button',
+						inner_html		: self.get_tool_label('company_search') || 'Search',
+						parent			: company_container
+					})
+					const company_results = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'company_results',
+						parent			: company_container
+					})
+
+					// Renders one radio per candidate Entity plus an always-present
+					// "create new" option — never auto-picks a candidate unless its
+					// name matches exactly (case/accent-loose), matching the
+					// server's own exact-match dedup so the preselection and the
+					// eventual write agree.
+					const render_company_options = function(name, candidates) {
+						while (company_results.firstChild) {
+							company_results.removeChild(company_results.firstChild)
+						}
+						const radio_name = 'company_choice_' + Date.now()
+						const normalized = name.trim().toLowerCase()
+						const exact_match = candidates.find((c) => c.name.trim().toLowerCase()===normalized)
+
+						candidates.forEach(function(candidate) {
+							const option_row = ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'company_option',
+								parent			: company_results
+							})
+							const radio = ui.create_dom_element({
+								element_type	: 'input',
+								type			: 'radio',
+								name			: radio_name,
+								parent			: option_row
+							})
+							ui.create_dom_element({
+								element_type	: 'label',
+								text_content	: candidate.name + ' (rsc106 #' + candidate.section_id + ')',
+								parent			: option_row
+							})
+							radio.addEventListener('change', function() {
+								if (radio.checked) current_company_selection = { section_id: candidate.section_id }
+							})
+							if (exact_match && candidate.section_id===exact_match.section_id) {
+								radio.checked = true
+								current_company_selection = { section_id: candidate.section_id }
+							}
+						})
+
+						const create_row = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'company_option',
+							parent			: company_results
+						})
+						const create_radio = ui.create_dom_element({
+							element_type	: 'input',
+							type			: 'radio',
+							name			: radio_name,
+							parent			: create_row
+						})
+						ui.create_dom_element({
+							element_type	: 'label',
+							text_content	: (self.get_tool_label('company_create') || 'Create new Entity') + ' "' + name + '"',
+							parent			: create_row
+						})
+						create_radio.addEventListener('change', function() {
+							if (create_radio.checked) current_company_selection = { create: true, name: name }
+						})
+						if (!exact_match) {
+							create_radio.checked = true
+							current_company_selection = { create: true, name: name }
+						}
+					}
+
+					const run_company_search = function() {
+						const name = company_name_input.value.trim()
+						if (!name) return
+						company_search_button.classList.add('loading')
+						search_companies(name).then(function(candidates) {
+							company_search_button.classList.remove('loading')
+							render_company_options(name, candidates)
+						})
+					}
+
+					company_search_button.addEventListener('click', function(e) {
+						e.stopPropagation()
+						run_company_search()
+					})
+
+					// Auto-run once with the scraped name, so the operator sees a
+					// resolved state immediately instead of an empty picker.
+					run_company_search()
+				}
 
 			// Bulk selection: select all/none, a keyword filter, and a lot-NUMBER
 			// range [from, to) — the scraped lot number, not row position.
@@ -591,7 +792,7 @@ const get_content_data = function(self) {
 					confirm_button.classList.add('loading')
 
 					stream_background_job({
-						dispatch_promise	: self.commit_lots(kept, auction),
+						dispatch_promise	: self.commit_lots(kept, auction, current_company_selection),
 						container			: commit_result_container,
 						stream_id			: 'tool_numisdata_acquisition_commit',
 						on_success			: (data) => {

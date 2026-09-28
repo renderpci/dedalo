@@ -168,6 +168,11 @@ tool_numisdata_acquisition.prototype.preview_html = async function(url, html) {
 * minutes for a real batch.
 * @param {Object[]} lots - the curated ExtractedLot[] (excluded ones dropped)
 * @param {Object} auction - the ExtractedAuction JSON preview_url returned (unmodified)
+* @param {Object|null} [company_selection] - the operator's picker choice for
+*   the batch's own auction house: {section_id} (an existing rsc106 Entity) or
+*   {create:true, name} (create a new one). Null/omitted falls back to an
+*   automatic exact-name-match-or-create resolution server-side (never free
+*   text again either way — see server/index.ts's resolveCompanySelectionByName).
 * @returns {Promise<Object>} API response envelope; on success carries
 *   pid/pfile as extension keys (NOT under .data) for the caller to stream.
 *   The terminal frame's data is { results: [{ lot_identifier, section_tipo,
@@ -179,7 +184,7 @@ tool_numisdata_acquisition.prototype.preview_html = async function(url, html) {
 *   created); a non-null type_citation with a null type_section_id means "a
 *   citation was found but nothing in the catalog matched it."
 */
-tool_numisdata_acquisition.prototype.commit_lots = async function(lots, auction) {
+tool_numisdata_acquisition.prototype.commit_lots = async function(lots, auction, company_selection) {
 
 	const self = this
 
@@ -187,9 +192,10 @@ tool_numisdata_acquisition.prototype.commit_lots = async function(lots, auction)
 		action		: 'commit_lots',
 		background	: true,
 		options		: {
-			lots			: lots,
-			auction			: auction,
-			section_tipo	: self.section_tipo
+			lots				: lots,
+			auction				: auction,
+			company_selection	: company_selection || null,
+			section_tipo		: self.section_tipo
 		}
 	})
 
