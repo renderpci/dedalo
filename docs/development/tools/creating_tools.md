@@ -263,6 +263,10 @@ The tool button now appears on matching elements (per *Affected models* / *Affec
 
 Follow the existing test pattern for a real tool (e.g. `test/parity/tool_export_differential.test.ts` or `test/unit/tools_dispatch.test.ts`): drive the same `tool_request` through the dispatcher and assert on the response — parity gates replay the frozen fixture store (`test/parity/fixtures/oracle_harvest/`) rather than a live external server.
 
+### On a phone
+
+Every tool must work on a 360px phone. Add a probe for your tool to `test/helpers/tool_phone_ratchet.ts` and run `bun run test:tools:phone --tool <your_tool> --shots <dir>`; a new tool directory missing from that list fails `tool_phone_tripwire`. The contract, the shared rules you get for free and the touch gestures are in [Tools on a phone](phone_layout.md).
+
 ## Out-of-repo tools
 
 Third-party tools can live **outside** the Dédalo checkout (surviving `git pull`, independently versioned). Configure an additional root via `config.tools.additionalRoots` (env `DEDALO_ADDITIONAL_TOOLS`, JSON):

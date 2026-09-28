@@ -41,6 +41,10 @@ Order coins is configured on the coin section it applies to and opens in **its o
 | Original / Copy radios | Select which coins are originals and which are copies before applying. |
 | **Set Original / Copy** | Writes the original/copy status of the selected coins and links the copies to their originals. |
 
+## On a phone
+
+A finger cannot drag. On a touch screen, **tap** a coin to pick it — a bar at the bottom of the screen names what you are carrying — then **tap** the slot in the ordered list to place it. The placement is the same as a drop. **Cancel** in the bar puts it back.
+
 ## Tips and gotchas
 
 !!! tip "Sort to find matches, then order"

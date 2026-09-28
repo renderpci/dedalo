@@ -211,7 +211,20 @@ try {
 		// restores its search panel after a record visit, and that panel is
 		// wider than a phone — a list/search finding, not the tool's).
 		const context = await browser.createBrowserContext();
-		await context.setCookie(...sessionCookies);
+		let asFixture: { remove: () => Promise<void> } | null = null;
+		if (probe.kind === 'method' && probe.as === 'door_reader') {
+			// a NON-ADMIN user: the read-door identity fixture, minted and swept
+			// around this probe, with its own session in this context
+			const fixture = await import('../test/helpers/read_door_identity_fixture.ts');
+			await fixture.installReadDoorIdentityFixture();
+			asFixture = { remove: () => fixture.removeReadDoorIdentityFixture() };
+			const { createSession } = await import('../src/core/security/session_store.ts');
+			const { issueSessionMediaKey } = await import('../src/core/media/protection.ts');
+			const token = createSession(fixture.DOOR_READER_USER_ID, 'zzdoor_reader', false, issueSessionMediaKey());
+			await context.setCookie({ name: SESSION_COOKIE, value: token, domain: hostname, path: '/' });
+		} else {
+			await context.setCookie(...sessionCookies);
+		}
 		const opener = await context.newPage();
 		watch(opener, 'record page');
 		await opener.emulate(PHONE_DEVICE);
@@ -241,6 +254,7 @@ try {
 			if (toolPage !== opener) await toolPage.close().catch(() => {});
 			await opener.close();
 			await context.close();
+			if (asFixture) await asFixture.remove();
 			if (built) await (built as { sweep: () => Promise<unknown> }).sweep();
 		}
 		verdicts.push({ tool, expected, ok: problems.length === 0, problems, notes });

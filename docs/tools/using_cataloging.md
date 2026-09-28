@@ -29,6 +29,10 @@ The tool is wired onto an element through that element's configuration, which su
 4. On drop, Dédalo creates a **new term** under that node and links the dragged record into it. The tree updates to show the new term, and the card's drag handle switches to the "used" state so you can see it is now filed.
 5. Repeat for each record. The activity panel shows save notifications as you go.
 
+## On a phone
+
+A finger cannot drag. On a touch screen, **tap** a record card to pick it — a bar at the bottom of the screen names what you are carrying — then **tap** the thesaurus term to place it. The placement is the same as a drop. **Cancel** in the bar puts it back.
+
 ## Tips and gotchas
 
 !!! tip "The highlighted drag handle means already filed"

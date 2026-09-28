@@ -5,7 +5,7 @@ audience: user
 date: 2026-09-28
 ---
 
-On a phone (screens up to 600px wide), 33 of the 37 tools now display and work:
+On a phone (screens up to 600px wide), 34 of the 37 tools now display and work:
 the page no longer scrolls sideways, buttons and fields are large enough to tap,
 titles no longer break mid-word, and tools that open in a dialog fill the whole
 screen. Wide tables (such as the label translation matrix) scroll inside their

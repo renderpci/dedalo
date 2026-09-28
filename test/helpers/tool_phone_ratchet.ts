@@ -67,7 +67,18 @@ export type ToolPhoneProbe =
 	| { kind: 'section_tool'; section_tool: string; build?: 'target' }
 	| { kind: 'click'; url: string; clicks: string[]; root?: string }
 	/** a live instance's own handler, where the UI door is closed to the suite's root login */
-	| { kind: 'method'; url: string; model: string; method: string }
+	| {
+			kind: 'method';
+			url: string;
+			model: string;
+			method: string;
+			/**
+			 * run as a NON-ADMIN fixture user instead of the suite root login
+			 * (test/helpers/read_door_identity_fixture.ts, installed and swept
+			 * around the probe) — for tools that are a non-root user's own
+			 */
+			as?: 'door_reader';
+	  }
 	/** a launcher's own exported open function, called as its button does */
 	| { kind: 'module'; url: string; module: string; fn: string; root?: string };
 
@@ -98,6 +109,7 @@ export const PHONE_CASES: Record<string, ToolPhoneProbe> = {
 	tool_lang: test3('test52', 'component_input_text', 'lg-spa'),
 	tool_lang_multi: test3('test52', 'component_input_text', 'lg-spa'),
 	tool_media_versions: test3('test26', 'component_3d'),
+	tool_numisdata_epigraphy: { kind: 'section_tool', section_tool: 'test6269', build: 'target' },
 	tool_numisdata_order_coins: { kind: 'section_tool', section_tool: 'test6413', build: 'target' },
 	tool_ontology: { caller: { tipo: 'test0', section_tipo: 'test0', section_id: 1, mode: 'edit', model: 'section', lang: 'lg-spa' } },
 	tool_ontology_parser: { caller: { tipo: 'dd5', section_tipo: 'dd5', section_id: null, mode: 'list', model: 'area', lang: 'lg-spa' } },
@@ -125,11 +137,10 @@ export const PHONE_CASES: Record<string, ToolPhoneProbe> = {
  */
 export const NOT_YET_PHONE: Record<string, { phase: 1 | 2 | 3 | 4; reason: string; probe?: ToolPhoneProbe }> = {
 	// phase 1 — shared foundation should suffice, small fixes
-	tool_user_admin: { phase: 1, reason: 'BLOCKED BY A TOOL BUG, not layout: renders the api_error panel (client.bad_response) — a ddo_map component arrives without context (component_common.js:443) for root\'s dd128 record', probe: { kind: 'method', url: 'tipo=test3&mode=list', model: 'menu', method: 'open_tool_user_admin_handler' } },
+	tool_user_admin: { phase: 1, reason: 'NEEDS A NON-ADMIN FIXTURE WITH A PROFILE, not layout: the tool is a non-root user\'s own (root\'s username link is noevents; root\'s dd128/-1 fields answer an empty context); the read-door fixture user is refused (perm.denied) — its profile grants neither tool_user_admin nor its own dd128 fields', probe: { kind: 'method', url: 'tipo=test3&mode=list', model: 'menu', method: 'open_tool_user_admin_handler', as: 'door_reader' } },
 	// phase 2 — modal-hosted tools become sheets
 	// phase 3 — CSS relayout
 	tool_import_rdf: { phase: 3, reason: 'UNREACHABLE ON THE TEST TLD: its register limits it to numisdata310 (dd1350); the test TLD twin test6324 is not in that list, so no generic element offers it', probe: { caller: { tipo: 'test6324', section_tipo: 'test6099', section_id: 'built', mode: 'edit', model: 'component_iri', lang: 'lg-nolan' }, build: 'test6099' } },
 	// phase 4 — layout + JS (pane switch / up-down reorder / touch)
 	tool_subtitles: { phase: 4, reason: 'BLOCKED BY A TOOL BUG, not layout: its subtitles_component ddo_map role does not resolve on rsc167, render reads .context of undefined (the value[0] crash before it is fixed 2026-09-28)', probe: { caller: { tipo: 'rsc36', section_tipo: 'rsc167', section_id: 'built', mode: 'edit', model: 'component_text_area', lang: 'lg-spa' }, build: 'rsc167' } },
-	tool_numisdata_epigraphy: { phase: 4, reason: 'BLOCKED BY A TOOL BUG, not layout: renders the api_error panel (client.bad_response) on a built test6099 record via section_tool test6269', probe: { kind: 'section_tool', section_tool: 'test6269', build: 'target' } },
 };

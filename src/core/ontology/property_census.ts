@@ -304,7 +304,6 @@ export const HONOURED_PROPERTY_KEYS: readonly string[] = [
 	'layout',
 	'limit',
 	'list_show_key',
-	'look_inside',
 	'main_tld',
 	'mandatory',
 	'match',
