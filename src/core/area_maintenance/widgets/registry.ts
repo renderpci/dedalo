@@ -51,6 +51,7 @@ import { widget as reconcile_status } from './reconcile_status.ts';
 import { widget as register_tools } from './register_tools.ts';
 import { widget as runtime_info } from './runtime_info.ts';
 import { widget as sequences_status } from './sequences_status.ts';
+import { widget as serve_ontology } from './serve_ontology.ts';
 import { widget as site_builder_status } from './site_builder_status.ts';
 import { widget as sqo_test_environment } from './sqo_test_environment.ts';
 import type { LabelRule, WidgetModule, WidgetResponse } from './support.ts';
@@ -96,6 +97,7 @@ const CORE_WIDGET_MODULES: readonly WidgetModule[] = [
 	config_areas,
 	menu_skip_tipos,
 	update_ontology,
+	serve_ontology,
 	register_tools,
 	move_tld,
 	move_locator,

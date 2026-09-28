@@ -1,32 +1,41 @@
 /**
- * update_ontology panel — the SERVING-side readout.
+ * serve_ontology widget — the PROVIDER-side readout (TS-only,
+ * WC-2026-09-28-maintenance-serve-ontology-widget).
  *
- * The panel does not only pull: it also tells the administrator whether THIS
- * installation can SERVE its ontology to others, because that answer is spread
- * over three unrelated .env keys (IS_AN_ONTOLOGY_SERVER, ONTOLOGY_SERVER_CODE,
- * DEDALO_CORS_ALLOWED_ORIGINS) and no single screen used to hold it. The client
- * renders one checklist row per key, so the contract gated here is:
+ * Split out of update_ontology (2026-09-28). The answer to "can OTHER
+ * installations pull their ontology from here?" is spread over three unrelated
+ * .env keys (IS_AN_ONTOLOGY_SERVER, ONTOLOGY_SERVER_CODE,
+ * DEDALO_CORS_ALLOWED_ORIGINS); the client renders one checklist row per key, so
+ * the contract gated here is:
  *
- *   1. `serving` exists, with the three booleans + the endpoint clients register;
- *   2. each boolean tracks ITS key (a checklist that lies is worse than none);
- *   3. the access CODE ITSELF never rides the wire — only whether one is set.
+ *   1. registration + display-only surface (no apiActions);
+ *   2. the three booleans + the endpoint clients register, each boolean tracking
+ *      ITS key (a checklist that lies is worse than none);
+ *   3. the access CODE ITSELF never rides the wire — only whether one is set;
+ *   4. update_ontology no longer carries the readout (one home, no drift).
  *
- * `config` and CORS_ENABLED are both frozen at import time, so every case boots a
- * REAL subprocess: re-importing in-process would assert nothing about how the
- * server actually reads its configuration.
+ * `config` and CORS_ENABLED are both frozen at import time, so every env case
+ * boots a REAL subprocess: re-importing in-process would assert nothing about
+ * how the server actually reads its configuration.
  */
 
 import { describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
+import { ALL_WIDGET_MODULES } from '../../src/core/area_maintenance/widgets/registry.ts';
+import { widget } from '../../src/core/area_maintenance/widgets/serve_ontology.ts';
 
 const ROOT = join(import.meta.dir, '..', '..');
 
-/** The panel payload as the client receives it, from a child booted with a given env. */
+/**
+ * The panel payload as the client receives it, from a child booted with a given
+ * env — plus the update_ontology payload's key set (leg 4).
+ */
 const READ_PANEL_SERVING =
 	"const { dispatchGetWidgetValue } = await import('./src/core/area_maintenance/widgets/registry.ts');" +
 	'const ADMIN = { userId: -1, isGlobalAdmin: true, isDeveloper: true };' +
-	"const body = await dispatchGetWidgetValue(ADMIN, { model: 'update_ontology' });" +
-	'console.log(JSON.stringify(body.data.serving));';
+	"const body = await dispatchGetWidgetValue(ADMIN, { model: 'serve_ontology' });" +
+	"const pull = await dispatchGetWidgetValue(ADMIN, { model: 'update_ontology' });" +
+	'console.log(JSON.stringify({ ...body.data, update_ontology_keys: Object.keys(pull.data) }));';
 
 /**
  * Every test here SPAWNS A FULL ENGINE BOOT (config graph + a Postgres
@@ -49,8 +58,8 @@ function panelServingWith(env: Record<string, string | undefined>): {
 		cwd: ROOT,
 		env: {
 			...process.env,
-			// No configured masters: the panel probes every one of them over the
-			// network, and this gate is about the SERVING half.
+			// No configured masters: update_ontology (read for leg 4) probes every
+			// one of them over the network.
 			ONTOLOGY_SERVERS: '[]',
 			...env,
 		} as Record<string, string>,
@@ -67,7 +76,15 @@ function panelServingWith(env: Record<string, string | undefined>): {
 	};
 }
 
-describe('update_ontology panel — serving readout', () => {
+describe('serve_ontology widget — serving readout', () => {
+	test('is registered, config category, display-only', () => {
+		expect(ALL_WIDGET_MODULES.find((m) => m.spec.id === 'serve_ontology')).toBe(widget);
+		expect(widget.spec.category).toBe('config');
+		expect(widget.spec.label).toEqual({ kind: 'label', key: 'serve_ontology' });
+		expect(widget.apiActions).toBeUndefined();
+		expect(typeof widget.getValue).toBe('function');
+	});
+
 	test('reports every serving key as unset when none is configured', () => {
 		// Explicit empty values, never `undefined`: the installation's own
 		// ../private/.env is still read by the child, so a key is only OFF for
@@ -84,6 +101,9 @@ describe('update_ontology panel — serving readout', () => {
 		// The endpoint is reported whatever the state — it is what a client must
 		// register, and the admin needs it BEFORE turning serving on.
 		expect(String(boot.serving.url)).toContain('/dedalo/core/api/v1/json/');
+		// leg 4: the pull panel no longer carries a second copy of the readout
+		expect(boot.serving.update_ontology_keys).toContain('servers');
+		expect(boot.serving.update_ontology_keys).not.toContain('serving');
 	}, 30000);
 
 	test('each flag tracks its own key', () => {

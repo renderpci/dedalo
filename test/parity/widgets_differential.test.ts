@@ -117,11 +117,15 @@ describe.if(hasPhpCredentials())('maintenance widget catalog differential', () =
 		// TS-ONLY as well: the reconcile REGISTRY it lists (src/core/reconcile, audit
 		// 2026-08-26 S-10) has no PHP peer. Its own shape is asserted natively by
 		// test/unit/reconcile_registry_native.test.ts (the widget door legs).
+		// serve_ontology (WC-2026-09-28-maintenance-serve-ontology-widget) is TS-ONLY:
+		// the provider-side readout split out of update_ontology. Its own shape is
+		// asserted natively by test/unit/serve_ontology_widget.test.ts.
 		const TS_ONLY_WIDGET_IDS = new Set([
 			'error_reports',
 			'site_builder_status',
 			'ai_models',
 			'reconcile_status',
+			'serve_ontology',
 		]);
 		const tsList = ((tsItem as { datalist?: Record<string, unknown>[] }).datalist ?? []).filter(
 			(item) => !TS_ONLY_WIDGET_IDS.has((item as { id?: string }).id ?? ''),

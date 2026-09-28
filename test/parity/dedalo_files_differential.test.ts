@@ -85,6 +85,9 @@ function isToolAssistantEntry(entry: ManifestEntry): boolean {
  *  - ai_models maintenance widget
  *    (WC-2026-08-13-maintenance-ai-models-widget) — the display-only panel over
  *    the native local AI model store (src/core/ai/), which has no PHP peer.
+ *  - serve_ontology maintenance widget
+ *    (WC-2026-09-28-maintenance-serve-ontology-widget) — the provider-side
+ *    readout split out of update_ontology.
  * Their files exist only in the TS census; filtered from BOTH sides. */
 function isTsOnlyEntry(entry: ManifestEntry): boolean {
 	return (
@@ -95,7 +98,8 @@ function isTsOnlyEntry(entry: ManifestEntry): boolean {
 		entry.url.startsWith('/dedalo/tools/tool_identify/') ||
 		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/ai_models/') ||
 		// WC-2026-09-03-maintenance-reconcile-status-widget (audit S-10, TS-only registry)
-		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/reconcile_status/')
+		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/reconcile_status/') ||
+		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/serve_ontology/')
 	);
 }
 

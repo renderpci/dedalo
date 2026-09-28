@@ -14449,6 +14449,13 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   color: var(--fg_muted);
   font-weight: 500;
 }
+/**
+* .dd_env_checklist()
+* A ../private/.env admin checklist: inline `code` chips (reclaimed from the app's
+* global BLOCK `code` rule), live `.serving_checks .chk.on|off|field` rows, the
+* literal `.env_sample` block and a `.serve_url` endpoint row. Shared by
+* update_ontology (the ONTOLOGY_SERVERS note) and serve_ontology.
+*/
 .area_maintenance > .content_data h1 {
   line-height: 1em;
 }
@@ -17445,6 +17452,137 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   white-space: pre-wrap;
 }
 /**
+* serve_ontology
+*
+* Included from area_maintenance.less file.
+* The checklist, .env block and endpoint row come from widget_kit's
+* .dd_env_checklist(); only the state line lives here.
+*/
+.wrapper_widget.serve_ontology .serve_ontology_content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.wrapper_widget.serve_ontology .serve_ontology_content code {
+  display: inline !important;
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0.05em 0.35em !important;
+  border: 1px solid var(--border_default);
+  border-radius: 4px;
+  background-color: color-mix(in srgb, var(--color_primary) 8%, var(--bg_surface_alt));
+  color: var(--fg_default);
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.76rem;
+  font-weight: 400;
+  line-height: 1.6;
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks .chk {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks .chk .mark {
+  flex: 0 0 1rem;
+  line-height: 1.35;
+  text-align: center;
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks .chk.on .mark {
+  color: var(--color_success);
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks .chk.off .mark,
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks .chk.field .mark {
+  color: var(--fg_muted);
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks .chk .txt {
+  min-width: 0;
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks .chk .hd {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks .chk .hd code {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: normal;
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks .chk .val {
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--border_default);
+  border-radius: 999px;
+  background-color: var(--bg_surface_alt);
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg_muted);
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks .chk.on .val {
+  color: var(--color_success);
+  border-color: color-mix(in srgb, var(--color_success) 35%, var(--border_default));
+  background-color: color-mix(in srgb, var(--color_success) 8%, transparent);
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks .chk .desc {
+  font-size: 0.8rem;
+  color: var(--fg_muted);
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .env_sample {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border_default);
+  border-radius: 6px;
+  background-color: var(--bg_surface_alt);
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  white-space: pre;
+  overflow-x: auto;
+  color: var(--fg_default);
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serve_url {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serve_url .dd_k {
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--fg_muted);
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serve_url code {
+  white-space: normal;
+  word-break: break-all;
+}
+.wrapper_widget.serve_ontology .serve_ontology_content > .dd_note {
+  margin: 0;
+  line-height: 1.6;
+}
+.wrapper_widget.serve_ontology .serve_state {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.wrapper_widget.serve_ontology .serve_state .ttl {
+  flex: 1 1 auto;
+  font-weight: 600;
+  color: var(--fg_default);
+}
+.wrapper_widget.serve_ontology .serve_state .dd_badge {
+  flex: 0 0 auto;
+}
+/**
 * sqo_test_environment
 *
 * Included from area_maintenance.less file.
@@ -17775,50 +17913,43 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   white-space: nowrap;
   vertical-align: baseline;
 }
-.wrapper_widget.update_ontology .serving_info .serving_body > .dd_note,
-.wrapper_widget.update_ontology .serving_info .serving_body .desc {
-  line-height: 1.6;
-}
-.wrapper_widget.update_ontology .serving_info .serving_body > .dd_note {
-  margin: 0;
-}
-.wrapper_widget.update_ontology .serving_info .serving_checks {
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks {
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
 }
-.wrapper_widget.update_ontology .serving_info .serving_checks .chk {
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks .chk {
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
 }
-.wrapper_widget.update_ontology .serving_info .serving_checks .chk .mark {
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks .chk .mark {
   flex: 0 0 1rem;
   line-height: 1.35;
   text-align: center;
 }
-.wrapper_widget.update_ontology .serving_info .serving_checks .chk.on .mark {
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks .chk.on .mark {
   color: var(--color_success);
 }
-.wrapper_widget.update_ontology .serving_info .serving_checks .chk.off .mark,
-.wrapper_widget.update_ontology .serving_info .serving_checks .chk.field .mark {
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks .chk.off .mark,
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks .chk.field .mark {
   color: var(--fg_muted);
 }
-.wrapper_widget.update_ontology .serving_info .serving_checks .chk .txt {
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks .chk .txt {
   min-width: 0;
 }
-.wrapper_widget.update_ontology .serving_info .serving_checks .chk .hd {
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks .chk .hd {
   display: flex;
   align-items: baseline;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
-.wrapper_widget.update_ontology .serving_info .serving_checks .chk .hd code {
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks .chk .hd code {
   font-size: 0.8rem;
   font-weight: 600;
   white-space: normal;
 }
-.wrapper_widget.update_ontology .serving_info .serving_checks .chk .val {
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks .chk .val {
   padding: 0.1rem 0.4rem;
   border: 1px solid var(--border_default);
   border-radius: 999px;
@@ -17829,16 +17960,16 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   letter-spacing: 0.06em;
   color: var(--fg_muted);
 }
-.wrapper_widget.update_ontology .serving_info .serving_checks .chk.on .val {
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks .chk.on .val {
   color: var(--color_success);
   border-color: color-mix(in srgb, var(--color_success) 35%, var(--border_default));
   background-color: color-mix(in srgb, var(--color_success) 8%, transparent);
 }
-.wrapper_widget.update_ontology .serving_info .serving_checks .chk .desc {
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks .chk .desc {
   font-size: 0.8rem;
   color: var(--fg_muted);
 }
-.wrapper_widget.update_ontology .serving_info .env_sample {
+.wrapper_widget.update_ontology .serving_info .serving_body .env_sample {
   margin: 0;
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--border_default);
@@ -17851,25 +17982,32 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   overflow-x: auto;
   color: var(--fg_default);
 }
-.wrapper_widget.update_ontology .serving_info.client_info .env_sample {
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-.wrapper_widget.update_ontology .serving_info .serve_url {
+.wrapper_widget.update_ontology .serving_info .serving_body .serve_url {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.2rem;
 }
-.wrapper_widget.update_ontology .serving_info .serve_url .dd_k {
+.wrapper_widget.update_ontology .serving_info .serving_body .serve_url .dd_k {
   font-size: 0.66rem;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--fg_muted);
 }
-.wrapper_widget.update_ontology .serving_info .serve_url code {
+.wrapper_widget.update_ontology .serving_info .serving_body .serve_url code {
   white-space: normal;
+  word-break: break-all;
+}
+.wrapper_widget.update_ontology .serving_info .serving_body > .dd_note,
+.wrapper_widget.update_ontology .serving_info .serving_body .desc {
+  line-height: 1.6;
+}
+.wrapper_widget.update_ontology .serving_info .serving_body > .dd_note {
+  margin: 0;
+}
+.wrapper_widget.update_ontology .serving_info.client_info .serving_body .env_sample {
+  white-space: pre-wrap;
   word-break: break-all;
 }
 .wrapper_widget.update_ontology .version_change {

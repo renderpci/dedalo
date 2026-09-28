@@ -642,7 +642,7 @@ const build_list_view = async function(self, widgets) {
 		{ id:'pub',		title:'Publication',	x:50, y:66, tools:['diffusion_server_control','publication_api','site_builder_status'] },
 		{ id:'media',	title:'Media store',	x:69, y:66, tools:['media_control','ai_models'] },
 		{ id:'onto',	title:'Ontology',		x:88, y:66,
-			tools:['update_ontology','move_tld','move_locator','move_to_portal','move_lang','export_hierarchy','add_hierarchy'] }
+			tools:['update_ontology','serve_ontology','move_tld','move_locator','move_to_portal','move_lang','export_hierarchy','add_hierarchy'] }
 	]
 	const MAP_EDGES = [
 		['clients','web'], ['web','core'], ['core','pg'], ['core','bak'],
@@ -688,6 +688,7 @@ const build_list_view = async function(self, widgets) {
 		media_control:				'Sets the media access-protection mode and rebuilds the gate rules.',
 		ai_models:					'Local AI model store: which speech models are installed and usable.',
 		update_ontology:			'Overwrites the live ontology with a snapshot from a master server. Irreversible.',
+		serve_ontology:				'Whether other installations can pull their ontology from this one: the three .env keys that decide it and the endpoint they register.',
 		move_tld:					'Rewrites the ontology tipo across every matrix table. Irreversible.',
 		move_locator:				'Bulk-moves locators from a source section to a target. Irreversible.',
 		move_to_portal:				'Portalizes component data into a portal-linked sub-section.',

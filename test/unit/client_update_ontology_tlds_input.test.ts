@@ -54,15 +54,20 @@ function selection_handler_body(): string {
 }
 
 describe('update_ontology admin notes', () => {
-	test('both notes are COLLAPSED on load, in every configuration state', () => {
-		// The panel's first screen is the update itself; the summary pills already
-		// report state ("None configured" / "Not configured"), so neither note may
-		// open itself — the empty-picker case used to.
-		const notes = src.slice(
-			src.indexOf('const build_client_info'),
-			src.indexOf('const build_tlds_reference'),
-		);
-		expect(/setAttribute\('open'/.test(notes), 'neither admin note may open itself on render').toBe(
+	test('the admin note is COLLAPSED on load, in every configuration state', () => {
+		// The panel's first screen is the update itself; the summary pill already
+		// reports state ("None configured"), so the note may not open itself — the
+		// empty-picker case used to. (The serving note left for serve_ontology,
+		// 2026-09-28.) The slice must be non-empty: build_tlds_reference is declared
+		// BEFORE build_client_info, so bounding by it yielded '' and the gate was
+		// vacuous — bounded by the next function below instead.
+		const start = src.indexOf('const build_client_info');
+		const end = src.indexOf('const get_content_data_edit', start);
+		expect(start).toBeGreaterThan(-1);
+		expect(end).toBeGreaterThan(start);
+		const notes = src.slice(start, end);
+		expect(notes).toContain("element_type	: 'details'");
+		expect(/setAttribute\('open'/.test(notes), 'the admin note may not open itself on render').toBe(
 			false,
 		);
 

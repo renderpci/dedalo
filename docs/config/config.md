@@ -2244,7 +2244,8 @@ The one workflow that needs it is a Dédalo acting as an **ontology master**
 (`IS_AN_ONTOLOGY_SERVER=true`): the update panel on the *client* Dédalo fetches
 `get_ontology_update_info` from the master **directly from the browser**
 (`client/dedalo/core/area_maintenance/widgets/update_ontology/js/render_update_ontology.js`),
-so the master must name the client origins here. The server-to-server probe
+so the master must name the client origins here. The master's **Serve Ontology** maintenance
+panel shows whether this key (and the other two serving keys) is set. The server-to-server probe
 (`checkRemoteServer`) is unaffected — it is a Bun `fetch`, and CORS is a browser rule.
 
 An entry is matched as an **exact, case-sensitive origin string** — scheme + host + port, no

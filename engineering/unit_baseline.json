@@ -521,6 +521,11 @@
 			"skipped": 0,
 			"assertions": 22
 		},
+		"test/unit/client_serve_ontology_render.test.ts": {
+			"tests": 5,
+			"skipped": 0,
+			"assertions": 9
+		},
 		"test/unit/client_serving.test.ts": {
 			"tests": 9,
 			"skipped": 0,
@@ -569,7 +574,7 @@
 		"test/unit/client_update_ontology_tlds_input.test.ts": {
 			"tests": 7,
 			"skipped": 0,
-			"assertions": 33
+			"assertions": 36
 		},
 		"test/unit/client_upload_queue.test.ts": {
 			"tests": 32,
@@ -3511,6 +3516,11 @@
 			"skipped": 0,
 			"assertions": 35
 		},
+		"test/unit/serve_ontology_widget.test.ts": {
+			"tests": 4,
+			"skipped": 0,
+			"assertions": 20
+		},
 		"test/unit/server_state.test.ts": {
 			"tests": 8,
 			"skipped": 0,
@@ -4380,11 +4390,6 @@
 			"tests": 9,
 			"skipped": 0,
 			"assertions": 11
-		},
-		"test/unit/update_ontology_panel_serving.test.ts": {
-			"tests": 3,
-			"skipped": 0,
-			"assertions": 13
 		},
 		"test/unit/update_ownership.test.ts": {
 			"tests": 1,

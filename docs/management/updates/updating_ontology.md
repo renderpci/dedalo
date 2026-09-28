@@ -28,16 +28,15 @@ Common and shared tlds are defined by `ACTIVE_ONTOLOGY_TLDS` (set in `../private
 
 ## What the panel tells you
 
-The update panel carries the configuration it depends on, as two collapsible notes under the
-master-server list — both collapsed until you open them. Both read the LIVE configuration of the
-installation you are looking at, so
-they double as a check: each `../private/.env` key is shown with its current state (`CONFIGURED`
-/ `NOT SET`), never with its value — the access code itself is never sent to the browser.
+Under the master-server list, a collapsed note, **Connect to a remote ontology server**, shows
+the [`ONTOLOGY_SERVERS`](../../config/config.md#ontology-servers) entry that puts a master in the
+list, field by field. When the picker is empty this is why, and the pill beside the title reads
+*None configured*.
 
-* **Connect to a remote ontology server** — the [`ONTOLOGY_SERVERS`](../../config/config.md#ontology-servers)
-  entry that puts a master in the list above, field by field. When the picker is empty this is
-  why, and the pill beside the title reads *None configured*.
-* **Serve this ontology to other installations** — the three keys below, as a checklist.
+Whether THIS installation can serve its ontology to others is a separate maintenance panel,
+**Serve Ontology** (see below). It reads the LIVE configuration, so it doubles as a check: each
+`../private/.env` key is shown with its current state (`CONFIGURED` / `NOT SET`), never with its
+value — the access code itself is never sent to the browser.
 
 ## Serving other installations (ontology master)
 
@@ -55,7 +54,8 @@ DEDALO_CORS_ALLOWED_ORIGINS=["*"]
 endpoint (and adds a *Local files* source to this installation's own panel);
 [`ONTOLOGY_SERVER_CODE`](../../config/config.md#defining-the-ontology-master-server-code) is the access code every
 client must present — pick your own, and give it to the installations you authorize. The
-endpoint clients register is `<your origin>/dedalo/core/api/v1/json/`, printed in the panel.
+endpoint clients register is `<your origin>/dedalo/core/api/v1/json/`, printed in the
+**Serve Ontology** panel, which also shows the three keys as a live checklist.
 
 Which value of `DEDALO_CORS_ALLOWED_ORIGINS` depends on who you serve:
 
