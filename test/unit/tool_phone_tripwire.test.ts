@@ -26,7 +26,12 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { trackedRepoFiles } from '../helpers/css_reference_corpus.ts';
-import { NOT_YET_PHONE, PHONE_CASES, PHONE_HIT_TARGET_PX, PHONE_VIEWPORT } from '../helpers/tool_phone_ratchet.ts';
+import {
+	NOT_YET_PHONE,
+	PHONE_CASES,
+	PHONE_HIT_TARGET_PX,
+	PHONE_VIEWPORT,
+} from '../helpers/tool_phone_ratchet.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const TOOLS_COMMON_CSS = join(REPO_ROOT, 'client/dedalo/core/tools_common/css');
@@ -45,7 +50,9 @@ function lessVarPx(source: string, name: string): number {
 describe('tool phone ratchet', () => {
 	const toolDirs = [
 		...new Set(
-			TRACKED.map((file) => file.match(/^tools\/(tool_[^/]+)\//)?.[1]).filter((name): name is string => name !== undefined),
+			TRACKED.map((file) => file.match(/^tools\/(tool_[^/]+)\//)?.[1]).filter(
+				(name): name is string => name !== undefined,
+			),
 		),
 	].sort();
 
@@ -69,7 +76,9 @@ describe('tool phone ratchet', () => {
 
 describe('tool @media widths are tokens', () => {
 	const sheets = TRACKED.filter(
-		(file) => /^tools\/.+\.less$/.test(file) || /^client\/dedalo\/core\/tools_common\/css\/[^/]+\.less$/.test(file),
+		(file) =>
+			/^tools\/.+\.less$/.test(file) ||
+			/^client\/dedalo\/core\/tools_common\/css\/[^/]+\.less$/.test(file),
 	);
 
 	test('sheet floor (anti-vacuity)', () => {
@@ -81,17 +90,20 @@ describe('tool @media widths are tokens', () => {
 		let judged = 0;
 		for (const path of sheets) {
 			const lines = read(join(REPO_ROOT, path)).split('\n');
-			lines.forEach((line, i) => {
+			for (const [i, line] of lines.entries()) {
 				const code = line.replace(/\/\/.*$/, '');
-				if (!/@media\b/.test(code)) return;
+				if (!/@media\b/.test(code)) continue;
 				for (const m of code.matchAll(/(?:max|min)-width\s*:\s*([^)]*\)?)/g)) {
 					judged++;
-					const value = (m[1] ?? '').replace(/\)+\s*$/, '').replace(/^\(/, '').trim();
+					const value = (m[1] ?? '')
+						.replace(/\)+\s*$/, '')
+						.replace(/^\(/, '')
+						.trim();
 					if (!/^@width_break_point_\w+(\s*\+\s*1)?$/.test(value)) {
 						offenders.push(`${path}:${i + 1}  ${line.trim()}`);
 					}
 				}
-			});
+			}
 		}
 		expect(offenders).toEqual([]);
 		expect(judged).toBeGreaterThan(20);
@@ -122,6 +134,8 @@ describe('one phone width everywhere', () => {
 	});
 
 	test('tool_common.less imports the phone foundation', () => {
-		expect(read(join(TOOLS_COMMON_CSS, 'tool_common.less'))).toMatch(/@import \(once\) "tool_responsive";/);
+		expect(read(join(TOOLS_COMMON_CSS, 'tool_common.less'))).toMatch(
+			/@import \(once\) "tool_responsive";/,
+		);
 	});
 });

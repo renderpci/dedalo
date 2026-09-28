@@ -401,6 +401,11 @@
 			"skipped": 0,
 			"assertions": 84
 		},
+		"test/unit/client_build_failure.test.ts": {
+			"tests": 7,
+			"skipped": 0,
+			"assertions": 14
+		},
 		"test/unit/client_caller_chain_tripwire.test.ts": {
 			"tests": 4,
 			"skipped": 0,
@@ -425,6 +430,11 @@
 			"tests": 7,
 			"skipped": 0,
 			"assertions": 29
+		},
+		"test/unit/client_error_capture_console.test.ts": {
+			"tests": 5,
+			"skipped": 0,
+			"assertions": 12
 		},
 		"test/unit/client_error_contract_tripwire.test.ts": {
 			"tests": 18,
@@ -4130,6 +4140,11 @@
 			"tests": 7,
 			"skipped": 0,
 			"assertions": 177
+		},
+		"test/unit/tool_phone_tripwire.test.ts": {
+			"tests": 9,
+			"skipped": 0,
+			"assertions": 16
 		},
 		"test/unit/tool_picker_wiring_tripwire.test.ts": {
 			"tests": 3,

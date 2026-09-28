@@ -90,7 +90,10 @@ describe('error_capture console.error recording', () => {
 
 describe('console type is accepted on both sides of the wire', () => {
 	test('client whitelist and server enum agree', () => {
-		const tool = readFileSync(join(REPO_ROOT, 'tools/tool_error_report/js/tool_error_report.js'), 'utf8');
+		const tool = readFileSync(
+			join(REPO_ROOT, 'tools/tool_error_report/js/tool_error_report.js'),
+			'utf8',
+		);
 		const schema = readFileSync(join(REPO_ROOT, 'src/core/error_report/schema.ts'), 'utf8');
 		expect(tool).toContain("el.type==='console'");
 		expect(schema).toMatch(/type: z\.enum\(\[[^\]]*'console'[^\]]*\]\)/);

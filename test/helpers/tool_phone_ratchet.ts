@@ -91,18 +91,65 @@ const test3Section = (): ToolPhoneProbe => test3('test3', 'section', 'lg-spa');
 /** Tools PROVEN on a phone: probe must pass. Grows only by moving a tool out of NOT_YET_PHONE. */
 export const PHONE_CASES: Record<string, ToolPhoneProbe> = {
 	// 2026-09-28: the shared phone tier (tool_responsive.less) + local fixes, screenshots reviewed
-	tool_assistant: { kind: 'click', url: 'tipo=test3&mode=list', clicks: ['.ai_assistant_button'], root: '.assistant_container' },
+	tool_assistant: {
+		kind: 'click',
+		url: 'tipo=test3&mode=list',
+		clicks: ['.ai_assistant_button'],
+		root: '.assistant_container',
+	},
 	tool_cataloging: { kind: 'button', section: 'test6099', button: 'test6415', build: 'test6099' },
-	tool_dd_label: { caller: { tipo: 'dd1372', section_tipo: 'dd1324', section_id: 1, mode: 'edit', model: 'component_json', lang: 'lg-nolan' } },
+	tool_dd_label: {
+		caller: {
+			tipo: 'dd1372',
+			section_tipo: 'dd1324',
+			section_id: 1,
+			mode: 'edit',
+			model: 'component_json',
+			lang: 'lg-nolan',
+		},
+	},
 	tool_dev_template: test3('test100', 'component_geolocation'),
-	tool_diffusion: { caller: { tipo: 'test7289', section_tipo: 'test7289', section_id: 'built', mode: 'edit', model: 'section', lang: 'lg-spa' }, build: 'test7289' },
-	tool_error_report: { kind: 'click', url: 'tipo=test3&mode=list&menu=false', clicks: ['.error_report_edge_tab'] },
+	tool_diffusion: {
+		caller: {
+			tipo: 'test7289',
+			section_tipo: 'test7289',
+			section_id: 'built',
+			mode: 'edit',
+			model: 'section',
+			lang: 'lg-spa',
+		},
+		build: 'test7289',
+	},
+	tool_error_report: {
+		kind: 'click',
+		url: 'tipo=test3&mode=list&menu=false',
+		clicks: ['.error_report_edge_tab'],
+	},
 	tool_export: test3Section(),
-	tool_hierarchy: { caller: { tipo: 'hierarchy1', section_tipo: 'hierarchy1', section_id: 1, mode: 'edit', model: 'section', lang: 'lg-spa' } },
+	tool_hierarchy: {
+		caller: {
+			tipo: 'hierarchy1',
+			section_tipo: 'hierarchy1',
+			section_id: 1,
+			mode: 'edit',
+			model: 'section',
+			lang: 'lg-spa',
+		},
+	},
 	tool_identify: test3Section(),
 	tool_image_rotation: test3('test99', 'component_image'),
 	tool_import_dedalo_csv: test3Section(),
-	tool_import_files: { caller: { tipo: 'test1090', section_tipo: 'test1030', section_id: 'built', mode: 'edit', model: 'component_portal', lang: 'lg-nolan' }, build: 'test1030' },
+	tool_import_files: {
+		caller: {
+			tipo: 'test1090',
+			section_tipo: 'test1030',
+			section_id: 'built',
+			mode: 'edit',
+			model: 'component_portal',
+			lang: 'lg-nolan',
+		},
+		build: 'test1030',
+	},
 	tool_import_marc21: { kind: 'button', section: 'rsc205', button: 'rsc363', build: 'rsc205' },
 	tool_import_zotero: { kind: 'button', section: 'rsc205', button: 'rsc227', build: 'rsc205' },
 	tool_indexation: { kind: 'section_tool', section_tool: 'test6879', build: 'target' },
@@ -111,8 +158,26 @@ export const PHONE_CASES: Record<string, ToolPhoneProbe> = {
 	tool_media_versions: test3('test26', 'component_3d'),
 	tool_numisdata_epigraphy: { kind: 'section_tool', section_tool: 'test6269', build: 'target' },
 	tool_numisdata_order_coins: { kind: 'section_tool', section_tool: 'test6413', build: 'target' },
-	tool_ontology: { caller: { tipo: 'test0', section_tipo: 'test0', section_id: 1, mode: 'edit', model: 'section', lang: 'lg-spa' } },
-	tool_ontology_parser: { caller: { tipo: 'dd5', section_tipo: 'dd5', section_id: null, mode: 'list', model: 'area', lang: 'lg-spa' } },
+	tool_ontology: {
+		caller: {
+			tipo: 'test0',
+			section_tipo: 'test0',
+			section_id: 1,
+			mode: 'edit',
+			model: 'section',
+			lang: 'lg-spa',
+		},
+	},
+	tool_ontology_parser: {
+		caller: {
+			tipo: 'dd5',
+			section_tipo: 'dd5',
+			section_id: null,
+			mode: 'list',
+			model: 'area',
+			lang: 'lg-spa',
+		},
+	},
 	tool_pdf_extractor: test3('test85', 'component_pdf'),
 	tool_posterframe: test3('test26', 'component_3d'),
 	tool_print: test3Section(),
@@ -121,10 +186,37 @@ export const PHONE_CASES: Record<string, ToolPhoneProbe> = {
 	// the probe reaches the 'not configured' state (no site-builder daemon on the
 	// suite); the 3-pane workspace stacks to one column below @width_break_point_0
 	// (tool_sitebuilder.less) — judged when a daemon is available
-	tool_sitebuilder: { kind: 'module', url: 'tipo=test3&mode=list&menu=false', module: '/dedalo/core/area_maintenance/widgets/site_builder_status/js/render_site_builder_status.js', fn: 'open_site_builder', root: 'div.tool_sitebuilder' },
-	tool_tc: { caller: { tipo: 'rsc36', section_tipo: 'rsc167', section_id: 'built', mode: 'edit', model: 'component_text_area', lang: 'lg-spa' }, build: 'rsc167' },
+	tool_sitebuilder: {
+		kind: 'module',
+		url: 'tipo=test3&mode=list&menu=false',
+		module:
+			'/dedalo/core/area_maintenance/widgets/site_builder_status/js/render_site_builder_status.js',
+		fn: 'open_site_builder',
+		root: 'div.tool_sitebuilder',
+	},
+	tool_tc: {
+		caller: {
+			tipo: 'rsc36',
+			section_tipo: 'rsc167',
+			section_id: 'built',
+			mode: 'edit',
+			model: 'component_text_area',
+			lang: 'lg-spa',
+		},
+		build: 'rsc167',
+	},
 	tool_time_machine: test3('test52', 'component_input_text', 'lg-spa'),
-	tool_tr_print: { caller: { tipo: 'rsc36', section_tipo: 'rsc167', section_id: 'built', mode: 'edit', model: 'component_text_area', lang: 'lg-spa' }, build: 'rsc167' },
+	tool_tr_print: {
+		caller: {
+			tipo: 'rsc36',
+			section_tipo: 'rsc167',
+			section_id: 'built',
+			mode: 'edit',
+			model: 'component_text_area',
+			lang: 'lg-spa',
+		},
+		build: 'rsc167',
+	},
 	tool_transcription: { kind: 'section_tool', section_tool: 'test6877', build: 'target' },
 	tool_update_cache: test3Section(),
 	tool_upload: test3('test26', 'component_3d'),
@@ -135,12 +227,56 @@ export const PHONE_CASES: Record<string, ToolPhoneProbe> = {
  * one anyway: a listed tool that passes is red, so the list cannot go stale.
  * `phase` refers to the responsive-tools plan.
  */
-export const NOT_YET_PHONE: Record<string, { phase: 1 | 2 | 3 | 4; reason: string; probe?: ToolPhoneProbe }> = {
+export const NOT_YET_PHONE: Record<
+	string,
+	{ phase: 1 | 2 | 3 | 4; reason: string; probe?: ToolPhoneProbe }
+> = {
 	// phase 1 — shared foundation should suffice, small fixes
-	tool_user_admin: { phase: 1, reason: 'NEEDS A NON-ADMIN FIXTURE WITH A PROFILE, not layout: the tool is a non-root user\'s own (root\'s username link is noevents; root\'s dd128/-1 fields answer an empty context); the read-door fixture user is refused (perm.denied) — its profile grants neither tool_user_admin nor its own dd128 fields', probe: { kind: 'method', url: 'tipo=test3&mode=list', model: 'menu', method: 'open_tool_user_admin_handler', as: 'door_reader' } },
+	tool_user_admin: {
+		phase: 1,
+		reason:
+			"NEEDS A NON-ADMIN FIXTURE WITH A PROFILE, not layout: the tool is a non-root user's own (root's username link is noevents; root's dd128/-1 fields answer an empty context); the read-door fixture user is refused (perm.denied) — its profile grants neither tool_user_admin nor its own dd128 fields",
+		probe: {
+			kind: 'method',
+			url: 'tipo=test3&mode=list',
+			model: 'menu',
+			method: 'open_tool_user_admin_handler',
+			as: 'door_reader',
+		},
+	},
 	// phase 2 — modal-hosted tools become sheets
 	// phase 3 — CSS relayout
-	tool_import_rdf: { phase: 3, reason: 'UNREACHABLE ON THE TEST TLD: its register limits it to numisdata310 (dd1350); the test TLD twin test6324 is not in that list, so no generic element offers it', probe: { caller: { tipo: 'test6324', section_tipo: 'test6099', section_id: 'built', mode: 'edit', model: 'component_iri', lang: 'lg-nolan' }, build: 'test6099' } },
+	tool_import_rdf: {
+		phase: 3,
+		reason:
+			'UNREACHABLE ON THE TEST TLD: its register limits it to numisdata310 (dd1350); the test TLD twin test6324 is not in that list, so no generic element offers it',
+		probe: {
+			caller: {
+				tipo: 'test6324',
+				section_tipo: 'test6099',
+				section_id: 'built',
+				mode: 'edit',
+				model: 'component_iri',
+				lang: 'lg-nolan',
+			},
+			build: 'test6099',
+		},
+	},
 	// phase 4 — layout + JS (pane switch / up-down reorder / touch)
-	tool_subtitles: { phase: 4, reason: 'BLOCKED BY A TOOL BUG, not layout: its subtitles_component ddo_map role does not resolve on rsc167, render reads .context of undefined (the value[0] crash before it is fixed 2026-09-28)', probe: { caller: { tipo: 'rsc36', section_tipo: 'rsc167', section_id: 'built', mode: 'edit', model: 'component_text_area', lang: 'lg-spa' }, build: 'rsc167' } },
+	tool_subtitles: {
+		phase: 4,
+		reason:
+			'BLOCKED BY A TOOL BUG, not layout: its subtitles_component ddo_map role does not resolve on rsc167, render reads .context of undefined (the value[0] crash before it is fixed 2026-09-28)',
+		probe: {
+			caller: {
+				tipo: 'rsc36',
+				section_tipo: 'rsc167',
+				section_id: 'built',
+				mode: 'edit',
+				model: 'component_text_area',
+				lang: 'lg-spa',
+			},
+			build: 'rsc167',
+		},
+	},
 };

@@ -29,8 +29,8 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { toolDirectoryNames } from '../helpers/tool_directory_corpus.ts';
 import { collectHues, OUT_FILE, render } from '../../scripts/tool_colors.ts';
+import { toolDirectoryNames } from '../helpers/tool_directory_corpus.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const read = (rel: string) => readFileSync(join(REPO_ROOT, rel), 'utf8');

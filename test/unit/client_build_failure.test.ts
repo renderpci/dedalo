@@ -44,6 +44,10 @@ type FakeNode = {
 
 const globals = globalThis as unknown as Record<string, unknown>;
 const saved: Record<string, unknown> = {};
+/** modules snapshotted + restored. ui.js is NOT: its real import needs a browser
+ * lib bun cannot resolve, and it has ONE export, so the stub never narrows it. */
+const MOCKED = ['data_manager.js', 'error_dispatch.js'] as const;
+const REAL: Record<string, Record<string, unknown>> = {};
 let render_build_failure: (o: Record<string, unknown>) => FakeNode;
 let ApiError: new (f: Record<string, unknown>) => object;
 let build_autoload: (self: Record<string, unknown>) => Promise<unknown>;
@@ -76,25 +80,36 @@ const make_node = (o: Record<string, unknown>): FakeNode => {
 };
 
 beforeAll(async () => {
-	for (const key of ['window', 'SHOW_DEBUG', 'SHOW_DEVELOPER', 'get_label']) saved[key] = globals[key];
+	for (const key of ['window', 'SHOW_DEBUG', 'SHOW_DEVELOPER', 'get_label'])
+		saved[key] = globals[key];
 	globals.window = globalThis;
 	globals.SHOW_DEBUG = false;
 	globals.SHOW_DEVELOPER = false;
 	globals.get_label = {};
+	// Snapshot the REAL modules (spread copies, before any mock) so each stub
+	// overrides only what it needs and afterAll can re-mock them back.
 	mock.module(join(CLIENT_COMMON, 'ui.js'), () => ({ ui: { create_dom_element: make_node } }));
+	for (const name of MOCKED)
+		REAL[name] = { ...((await import(join(CLIENT_COMMON, name))) as object) };
 	({ render_build_failure } = (await import(join(CLIENT_COMMON, 'render_api_error.js'))) as never);
 	({ ApiError } = (await import(join(CLIENT_COMMON, 'api_error.js'))) as never);
 	mock.module(join(CLIENT_COMMON, 'data_manager.js'), () => ({
+		...REAL['data_manager.js'],
 		data_manager: { request: async () => responses.shift() },
 	}));
 	mock.module(join(CLIENT_COMMON, 'error_dispatch.js'), () => ({
+		...REAL['error_dispatch.js'],
 		handle_api_error: async () => ({ recovered }),
 	}));
 	({ build_autoload } = (await import(join(CLIENT_COMMON, 'common.js'))) as never);
 });
 
 afterAll(() => {
-	for (const key of ['window', 'SHOW_DEBUG', 'SHOW_DEVELOPER', 'get_label']) globals[key] = saved[key];
+	// `mock.restore()` does NOT revert `mock.module` in bun: re-mock each module
+	// back to its snapshot so no later file inherits the stubs.
+	for (const name of MOCKED) mock.module(join(CLIENT_COMMON, name), () => REAL[name]);
+	for (const key of ['window', 'SHOW_DEBUG', 'SHOW_DEVELOPER', 'get_label'])
+		globals[key] = saved[key];
 });
 
 const text_of = (node: FakeNode) => node.children.map((c) => c.text_content ?? '').join(' ');
@@ -113,7 +128,9 @@ describe('render_build_failure', () => {
 	});
 
 	test('B. no build_error keeps the permission hint', () => {
-		const text = text_of(render_build_failure({ instance: { model: 'section', section_tipo: 'test3' } }));
+		const text = text_of(
+			render_build_failure({ instance: { model: 'section', section_tipo: 'test3' } }),
+		);
 		expect(text).toContain('permissions');
 		expect(text).toContain('test3');
 	});
@@ -135,9 +152,16 @@ describe('render_build_failure', () => {
 	test('C. non-transient error → no Reload button', () => {
 		const instance = {
 			model: 'section',
-			build_error: new ApiError({ code: 'auth.forbidden', message: 'No', retryable: false, category: 'permission' }),
+			build_error: new ApiError({
+				code: 'auth.forbidden',
+				message: 'No',
+				retryable: false,
+				category: 'permission',
+			}),
 		};
-		expect(button_of(render_build_failure({ instance, on_retry: async () => null }))).toBeUndefined();
+		expect(
+			button_of(render_build_failure({ instance, on_retry: async () => null })),
+		).toBeUndefined();
 	});
 });
 
