@@ -9,6 +9,7 @@
 
 import { join } from 'node:path';
 import { NO_LANG } from '../../../src/config/data_langs.ts';
+import { sanitizeClientSqo } from '../../../src/core/concepts/sqo.ts';
 import { sql } from '../../../src/core/db/postgres.ts';
 import { DedaloError } from '../../../src/core/errors/dedalo_error.ts';
 import { ok } from '../../../src/core/errors/index.ts';
@@ -25,6 +26,7 @@ import {
 	persistUploadedMedia,
 } from '../../../src/core/media/tools/files_info_persist.ts';
 import { getMatrixTableFromTipo } from '../../../src/core/ontology/resolver.ts';
+import { buildSearchSql } from '../../../src/core/search/sql_assembler.ts';
 import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
 import { saveComponentData } from '../../../src/core/section/record/save_component.ts';
 import {
@@ -58,7 +60,17 @@ const PUBLIC_REMARK_TIPO = 'numisdata150';
 
 // numisdata224's own fields (confirmed via dd_ontology this session).
 const AUCTION_SECTION_TIPO = 'numisdata224';
-const AUCTION_COMPANY_TIPO = 'numisdata228'; // component_autocomplete, no source config -> free text
+// numisdata228 IS a relation, not free text (review item 9, confirmed against
+// 14,759/14,780 real numisdata224 rows): component_autocomplete -> rsc106
+// (Entity), display name on rsc116. Writing it as {id,value} text gets
+// silently dropped by validateRelationInsert's PHP-era 'bad_form' compat path
+// (saveComponentData still returns ok:true), so findExistingAuction's text
+// match never hits and every batch created a duplicate Auction with no
+// company linked. Resolved as a real relation below (findEntityByExactName /
+// resolveCompanySelectionByName / linkCompany).
+const AUCTION_COMPANY_TIPO = 'numisdata228';
+const ENTITY_SECTION_TIPO = 'rsc106';
+const ENTITY_NAME_TIPO = 'rsc116'; // the only field every real rsc106 record carries
 // "Number & title" is a genuinely COMBINED field — formatAuctionNumberTitle
 // uses the source's own title text, not the bare number. Since that's no
 // longer a stable dedup key on its own, the bare number is ALSO written to
@@ -147,19 +159,13 @@ async function previewUrl(context: ToolActionContext): Promise<ToolResponse> {
 
 	const auctionHouse = auction.auctionHouse?.trim() ?? '';
 	const auctionNumber = auction.auctionNumber?.trim() ?? '';
-	const existingAuctionSectionId =
-		auctionHouse !== '' && auctionNumber !== ''
-			? await findExistingAuction(auctionHouse, auctionNumber)
-			: null;
+	const auctionStatus = await checkExistingAuctionStatus(auctionHouse, auctionNumber, context);
 
 	return ok(
 		{
 			auction,
 			lots,
-			auction_status: {
-				exists: existingAuctionSectionId !== null,
-				section_id: existingAuctionSectionId,
-			},
+			auction_status: auctionStatus,
 		},
 		{ requestId: toolRequestId(context) },
 	);
@@ -198,19 +204,13 @@ async function previewHtml(context: ToolActionContext): Promise<ToolResponse> {
 
 	const auctionHouse = auction.auctionHouse?.trim() ?? '';
 	const auctionNumber = auction.auctionNumber?.trim() ?? '';
-	const existingAuctionSectionId =
-		auctionHouse !== '' && auctionNumber !== ''
-			? await findExistingAuction(auctionHouse, auctionNumber)
-			: null;
+	const auctionStatus = await checkExistingAuctionStatus(auctionHouse, auctionNumber, context);
 
 	return ok(
 		{
 			auction,
 			lots,
-			auction_status: {
-				exists: existingAuctionSectionId !== null,
-				section_id: existingAuctionSectionId,
-			},
+			auction_status: auctionStatus,
 		},
 		{ requestId: toolRequestId(context) },
 	);
@@ -415,50 +415,186 @@ async function importImagesForLot(
 	return created;
 }
 
+/** Either an EXISTING Entity the operator (or an auto-resolve fallback)
+ * picked, or an explicit instruction to create a new one — never a bare
+ * string, so a Company can no longer be silently written as text. */
+type CompanySelection = { sectionId: number } | { create: true; name: string };
+
 /**
- * Exact match on (Company, Number & title) — a wrong match would silently
- * attach a lot to someone else's auction, worse than an occasional
- * duplicate. Used by previewUrl (check only) and findOrCreateAuction.
+ * Exact-name (case/accent-insensitive, via the engine's '==' operator) lookup
+ * of an rsc106 Entity. Runs WITH the caller's principal (buildSearchSql's
+ * `{principal}` option), so it only sees Entities the caller can read — never
+ * a hand-written SQL WHERE that bypasses the projects filter.
  */
-async function findExistingAuction(
-	auctionHouse: string,
-	auctionNumber: string,
+async function findEntityByExactName(
+	name: string,
+	context: ToolActionContext,
 ): Promise<number | null> {
-	const table = await getMatrixTableFromTipo(AUCTION_SECTION_TIPO);
-	if (table === null) {
-		throw new DedaloError('tool.action_failed', {
-			message: `No matrix table for section '${AUCTION_SECTION_TIPO}'.`,
-		});
-	}
-	const existing = (await sql.unsafe(
-		`SELECT section_id FROM "${table}"
-		 WHERE section_tipo = $1
-		   AND string->'${AUCTION_COMPANY_TIPO}'->0->>'value' = $2
-		   AND string->'${AUCTION_CODE_TIPO}'->0->>'value' = $3
-		 LIMIT 1`,
-		[AUCTION_SECTION_TIPO, auctionHouse, auctionNumber],
-	)) as { section_id: number }[];
-	return existing[0]?.section_id ?? null;
+	const sqo = sanitizeClientSqo({
+		section_tipo: [ENTITY_SECTION_TIPO],
+		limit: 1,
+		filter: {
+			$and: [
+				{
+					q: `==${name}`,
+					path: [{ section_tipo: ENTITY_SECTION_TIPO, component_tipo: ENTITY_NAME_TIPO }],
+				},
+			],
+		},
+	});
+	const built = await buildSearchSql(sqo, { principal: context.principal });
+	const rows = (await sql.unsafe(built.sql, built.params as (string | number | null)[])) as {
+		section_id: number;
+	}[];
+	return rows[0]?.section_id ?? null;
 }
 
-/** Finds an existing numisdata224 Auction record, or creates one when none matches. */
+/** The auto-resolve fallback used where no human picker is in the loop (the
+ * biddr/sixbid per-lot auction-house override, and a defensive fallback if
+ * the client's own picker selection is missing/malformed): reuse an exact
+ * name match when one exists, otherwise an explicit "create new". Still never
+ * writes free text — just skips the human-confirmation step the client
+ * picker normally provides for the batch's own auction. */
+async function resolveCompanySelectionByName(
+	name: string,
+	context: ToolActionContext,
+): Promise<CompanySelection> {
+	const existing = await findEntityByExactName(name, context);
+	return existing !== null ? { sectionId: existing } : { create: true, name };
+}
+
+/** Resolves a CompanySelection to a real rsc106 section_id, creating one
+ * (Name only — the one field every real Entity record carries) when the
+ * selection says to. */
+async function resolveCompanyEntityId(
+	context: ToolActionContext,
+	selection: CompanySelection,
+): Promise<number> {
+	if ('sectionId' in selection) return selection.sectionId;
+	const sectionId = await createSectionRecord(ENTITY_SECTION_TIPO, context.userId);
+	await writeField(
+		sectionId,
+		ENTITY_SECTION_TIPO,
+		ENTITY_NAME_TIPO,
+		selection.name,
+		context.userId,
+	);
+	return sectionId;
+}
+
+/** Links numisdata224's Company field to a real rsc106 Entity — same relation
+ * shape as linkAuction/linkType below, not the free-text writeField call this
+ * replaces. */
+async function linkCompany(
+	context: ToolActionContext,
+	auctionSectionId: number,
+	entitySectionId: number,
+): Promise<void> {
+	const save = await saveComponentData({
+		componentTipo: AUCTION_COMPANY_TIPO,
+		sectionTipo: AUCTION_SECTION_TIPO,
+		sectionId: auctionSectionId,
+		lang: NO_LANG,
+		userId: context.userId,
+		changedData: [
+			{
+				action: 'set_data',
+				value: [
+					{
+						id: 1,
+						type: RELATION_TYPE_LINK,
+						section_id: entitySectionId,
+						section_tipo: ENTITY_SECTION_TIPO,
+						from_component_tipo: AUCTION_COMPANY_TIPO,
+					},
+				],
+			},
+		],
+	});
+	if (!save.ok) {
+		throw new DedaloError('record.save_failed', {
+			message: `Could not link the Company relation: ${save.message}`,
+		});
+	}
+}
+
+/**
+ * Exact match on (Company Entity, Code) — a wrong match would silently
+ * attach a lot to someone else's auction, worse than an occasional
+ * duplicate. A `format:'relation'` SQO leaf (docs/core/sqo.md's "Relation
+ * filter leaves") over the resolved Entity id, run WITH the caller's
+ * principal — never a hand-written SQL WHERE that bypasses the engine's
+ * search subsystem and its projects filter. Used by previewUrl (check only)
+ * and findOrCreateAuction.
+ */
+async function findExistingAuction(
+	companyEntityId: number,
+	auctionNumber: string,
+	context: ToolActionContext,
+): Promise<number | null> {
+	const sqo = sanitizeClientSqo({
+		section_tipo: [AUCTION_SECTION_TIPO],
+		limit: 1,
+		filter: {
+			$and: [
+				{
+					q: [
+						{
+							section_tipo: ENTITY_SECTION_TIPO,
+							section_id: companyEntityId,
+							from_component_tipo: AUCTION_COMPANY_TIPO,
+						},
+					],
+					path: [{ section_tipo: AUCTION_SECTION_TIPO, component_tipo: AUCTION_COMPANY_TIPO }],
+					format: 'relation',
+				},
+				{
+					q: `==${auctionNumber}`,
+					path: [{ section_tipo: AUCTION_SECTION_TIPO, component_tipo: AUCTION_CODE_TIPO }],
+				},
+			],
+		},
+	});
+	const built = await buildSearchSql(sqo, { principal: context.principal });
+	const rows = (await sql.unsafe(built.sql, built.params as (string | number | null)[])) as {
+		section_id: number;
+	}[];
+	return rows[0]?.section_id ?? null;
+}
+
+/** previewUrl/previewHtml's informational "does this auction already exist"
+ * check — an exact-name Entity lookup (the same match the client's own
+ * picker would land on for an unambiguous name) feeding the same SQO dedup
+ * check commit time uses. Purely informational: the operator's actual pick
+ * (possibly a different Entity, or "create new") is what commit_lots uses. */
+async function checkExistingAuctionStatus(
+	auctionHouse: string,
+	auctionNumber: string,
+	context: ToolActionContext,
+): Promise<{ exists: boolean; section_id: number | null }> {
+	if (auctionHouse === '' || auctionNumber === '') return { exists: false, section_id: null };
+	const entityId = await findEntityByExactName(auctionHouse, context);
+	const existingAuctionSectionId =
+		entityId !== null ? await findExistingAuction(entityId, auctionNumber, context) : null;
+	return { exists: existingAuctionSectionId !== null, section_id: existingAuctionSectionId };
+}
+
+/** Finds an existing numisdata224 Auction record, or creates one when none
+ * matches — resolving (and, per `selection`, possibly creating) the Company
+ * Entity first, since the dedup check itself needs a real entity id. */
 async function findOrCreateAuction(
 	context: ToolActionContext,
-	auctionHouse: string,
+	companySelection: CompanySelection,
 	auctionNumber: string,
 	title: string | null,
 ): Promise<{ sectionId: number; created: boolean }> {
-	const found = await findExistingAuction(auctionHouse, auctionNumber);
+	const entityId = await resolveCompanyEntityId(context, companySelection);
+
+	const found = await findExistingAuction(entityId, auctionNumber, context);
 	if (found !== null) return { sectionId: found, created: false };
 
 	const sectionId = await createSectionRecord(AUCTION_SECTION_TIPO, context.userId);
-	await writeField(
-		sectionId,
-		AUCTION_SECTION_TIPO,
-		AUCTION_COMPANY_TIPO,
-		auctionHouse,
-		context.userId,
-	);
+	await linkCompany(context, sectionId, entityId);
 	await writeField(
 		sectionId,
 		AUCTION_SECTION_TIPO,
@@ -652,11 +788,12 @@ async function resolveAuctionCached(
 	auctionHouse: string,
 	auctionNumber: string,
 	title: string | null,
+	companySelection: CompanySelection,
 ): Promise<ResolvedAuction> {
 	const key = `${auctionHouse} ${auctionNumber}`;
 	const cached = cache.get(key);
 	if (cached !== undefined) return cached;
-	const resolved = await findOrCreateAuction(context, auctionHouse, auctionNumber, title);
+	const resolved = await findOrCreateAuction(context, companySelection, auctionNumber, title);
 	cache.set(key, resolved);
 	return resolved;
 }
@@ -695,6 +832,11 @@ async function commitOneLot(
 	auctionNumber: string,
 	auctionTitle: string | null,
 	auctionSourceDomain: string,
+	// The operator's picker choice for the BATCH's own auction house — used
+	// as-is when a lot doesn't override it (the common case). A biddr/sixbid
+	// per-lot override (below) has no picker in the loop, so it auto-resolves
+	// by exact name instead (still a real relation, never free text again).
+	batchCompanySelection: CompanySelection,
 	auctionCache: Map<string, ResolvedAuction>,
 	catalogueIndex: CatalogueIndex,
 ): Promise<CommitOneLotResult> {
@@ -789,12 +931,20 @@ async function commitOneLot(
 	let auctionError: string | null = null;
 	if (effectiveAuctionHouse !== '' && effectiveAuctionNumber !== '') {
 		try {
+			// No picker ever ran for a per-lot override (it's only known after
+			// parsing THIS lot) — auto-resolve it the same safe way the picker's
+			// own fallback does, rather than leaving it as free text again.
+			const companySelection =
+				effectiveAuctionHouse === auctionHouse
+					? batchCompanySelection
+					: await resolveCompanySelectionByName(effectiveAuctionHouse, context);
 			const resolved = await resolveAuctionCached(
 				context,
 				auctionCache,
 				effectiveAuctionHouse,
 				effectiveAuctionNumber,
 				effectiveAuctionTitle,
+				companySelection,
 			);
 			auctionSectionId = resolved.sectionId;
 			auctionCreated = resolved.created;
@@ -880,6 +1030,34 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 		typeof a?.title === 'string' && a.title.trim() !== '' ? a.title.trim() : null;
 	const auctionSourceDomain = typeof a?.sourceDomain === 'string' ? a.sourceDomain : '';
 
+	// The client's picker resolution for the batch's OWN auction house (search
+	// → confirm existing / create new — never a bare string). A missing or
+	// malformed selection falls back to the same auto-resolve-by-name the
+	// biddr/sixbid per-lot override uses, rather than hard-failing a commit
+	// whose picker search hadn't finished — still a real relation either way.
+	const rawSelection = context.options.company_selection;
+	const s =
+		rawSelection !== null && typeof rawSelection === 'object'
+			? (rawSelection as Record<string, unknown>)
+			: null;
+	let companySelection: CompanySelection;
+	if (s !== null && Number.isInteger(s.section_id) && Number(s.section_id) > 0) {
+		companySelection = { sectionId: Number(s.section_id) };
+	} else if (
+		s !== null &&
+		s.create === true &&
+		typeof s.name === 'string' &&
+		s.name.trim() !== ''
+	) {
+		companySelection = { create: true, name: s.name.trim() };
+	} else if (auctionHouse !== '') {
+		companySelection = await resolveCompanySelectionByName(auctionHouse, context);
+	} else {
+		// No company info in the batch's own auction at all — commitOneLot's
+		// `effectiveAuctionHouse !== ''` guard means this value is never read.
+		companySelection = { create: true, name: '' };
+	}
+
 	const auctionCache = new Map<string, ResolvedAuction>();
 	const catalogueIndex = await loadCatalogueIndex();
 	const results: CommitOneLotResult[] = [];
@@ -901,6 +1079,7 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 				auctionNumber,
 				auctionTitle,
 				auctionSourceDomain,
+				companySelection,
 				auctionCache,
 				catalogueIndex,
 			),
@@ -936,6 +1115,9 @@ export const tool: ToolServerModule = {
 				{ section_tipo: NUMISDATA_OBJECT_TIPO },
 				{ section_tipo: AUCTION_SECTION_TIPO },
 				{ section_tipo: IMAGE_SECTION_TIPO },
+				// Company may now resolve to a NEW rsc106 Entity (review item 9's
+				// fix), not just an existing one linked read-only.
+				{ section_tipo: ENTITY_SECTION_TIPO },
 			],
 			handler: commitLots,
 		},
