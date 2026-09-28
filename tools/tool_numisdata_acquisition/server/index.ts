@@ -272,7 +272,7 @@ async function writeField(
 	value: string | number,
 	userId: number,
 ): Promise<void> {
-	await saveComponentData({
+	const save = await saveComponentData({
 		componentTipo,
 		sectionTipo,
 		sectionId,
@@ -280,6 +280,11 @@ async function writeField(
 		userId,
 		changedData: [{ action: 'set_data', value: [{ id: 1, value }] }],
 	});
+	if (!save.ok) {
+		throw new DedaloError('record.save_failed', {
+			message: `Could not write ${componentTipo} on ${sectionTipo}/${sectionId}: ${save.message}`,
+		});
+	}
 }
 
 /**
