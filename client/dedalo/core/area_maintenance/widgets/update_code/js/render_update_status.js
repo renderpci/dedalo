@@ -422,7 +422,7 @@ const render_readiness = function(parent, consumer) {
 			? (get_label.update_code_ready_with_waiver || 'Ready to update, but only with a waiver')
 			: undefined
 	)
-	;(consumer.checks || []).forEach(check => check_row(readiness, check))
+	;(consumer.checks || []).forEach(check => { check_row(readiness, check) })
 
 	return readiness.parentNode
 }//end render_readiness

@@ -17533,7 +17533,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .wrapper_widget.serve_code > .content_data .update_status .restore_row > .dd_v > button.button_delete_point {
   margin-left: 0.4rem;
   padding: 0.15rem 0.7rem;
-  color: var(--state_danger_fg, #b3261e);
+  color: var(--color_danger);
 }
 .wrapper_widget.serve_code > .content_data .update_status .restore_row > .dd_v > button.button_delete_point[disabled] {
   color: var(--fg_muted);
@@ -18583,7 +18583,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .wrapper_widget.update_code > .content_data .update_status .restore_row > .dd_v > button.button_delete_point {
   margin-left: 0.4rem;
   padding: 0.15rem 0.7rem;
-  color: var(--state_danger_fg, #b3261e);
+  color: var(--color_danger);
 }
 .wrapper_widget.update_code > .content_data .update_status .restore_row > .dd_v > button.button_delete_point[disabled] {
   color: var(--fg_muted);

@@ -169,9 +169,9 @@ const BANK = {
 		/** `var(--declared, literal)` where the literal is not a value of that token */
 		stale_fallback: 38,
 		/** `var(--undeclared, literal)` — the literal paints in every axis */
-		undeclared_fallback: 5,
+		undeclared_fallback: 4,
 		/** OUTER budget: every literal in a paint position, drift or not (retune-stable) */
-		paint_literals: 273,
+		paint_literals: 272,
 	},
 	js: {
 		has_token: 27,

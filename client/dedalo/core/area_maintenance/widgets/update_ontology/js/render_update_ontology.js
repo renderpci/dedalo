@@ -1065,7 +1065,7 @@ export const render_servers_list = function (value, env_key='ONTOLOGY_SERVERS', 
 			const change_handler = () => {
 				servers.forEach( el => delete el.active )
 				current_server.active = input_radio.checked
-				picker.querySelectorAll('.server_row').forEach( el => el.classList.remove('on') )
+				picker.querySelectorAll('.server_row').forEach( el => { el.classList.remove('on') } )
 				server_row.classList.add('on')
 				store_server(storage_key, current_server.url)
 				if (typeof on_change==='function') {

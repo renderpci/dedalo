@@ -176,7 +176,7 @@ const render_code_server_status = function(parent, code_server, mount_builder, b
 			get_label.serve_code_publish_ready || 'Ready to publish',
 			get_label.serve_code_publish_blocked || 'Cannot publish'
 		)
-		;(code_server.checks || []).forEach(check => check_row(role, check))
+		;(code_server.checks || []).forEach(check => { check_row(role, check) })
 
 	// the tree releases are built FROM
 		const source = code_server.source || {}
@@ -307,7 +307,7 @@ const render_code_server_status = function(parent, code_server, mount_builder, b
 				)
 				return
 			}
-			rung.files.forEach(file => fact_row(offered, `${rung.for_version} → ${file.version}`, file.url, true))
+			rung.files.forEach(file => { fact_row(offered, `${rung.for_version} → ${file.version}`, file.url, true) })
 		})
 
 	return wrapper

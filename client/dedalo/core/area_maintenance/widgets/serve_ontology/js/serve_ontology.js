@@ -27,8 +27,8 @@
 
 
 // imports
-	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
 	import {area_maintenance} from '../../../../area_maintenance/js/area_maintenance.js'
+	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
 	import {render_serve_ontology} from './render_serve_ontology.js'
 
 

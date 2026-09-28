@@ -417,7 +417,7 @@ const get_content_data_edit = async function(self) {
 			e.stopPropagation()
 
 			// clean previous inline feedback
-				body_response.querySelectorAll('.error').forEach(el => el.remove())
+				body_response.querySelectorAll('.error').forEach(el => { el.remove() })
 				servers_list.classList.remove('empty')
 
 			// busy guard: a running update OR restore owns the panel (make_backup
@@ -1284,9 +1284,9 @@ export const render_info_modal = function( self, versions_info, body_response ) 
 
 			// change event handler
 			const change_handler = () => {
-				files.forEach( el => delete el.active )
+				files.forEach( el => { delete el.active } )
 				current_version.active = input_radio.checked
-				body.querySelectorAll('.version_label, .value').forEach( el => el.classList.remove('active') )
+				body.querySelectorAll('.version_label, .value').forEach( el => { el.classList.remove('active') } )
 				version_label.classList.add('active')
 				value_node.classList.add('active')
 				date_node.classList.add('active')

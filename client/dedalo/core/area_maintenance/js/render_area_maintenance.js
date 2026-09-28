@@ -452,7 +452,7 @@ const build_list_view = async function(self, widgets) {
 			chip.addEventListener('click', (e) => {
 				e.preventDefault()
 				active_category = key
-				chips.forEach(c => c.classList.toggle('active', c===chip))
+				chips.forEach(c => { c.classList.toggle('active', c===chip) })
 				apply_filters()
 				// persist selection (fire-and-forget; default 'All' stores no record)
 				try {
@@ -889,7 +889,7 @@ const build_map_view = function(self, widgets, opts={}) {
 				badge.remove()
 			}
 		}
-		MAP_NODES.forEach(n => paint_node(n.id))
+		MAP_NODES.forEach(n => { paint_node(n.id) })
 
 	// ---- summary line ----
 		const paint_summary = () => {
@@ -978,7 +978,7 @@ const build_map_view = function(self, widgets, opts={}) {
 		const select_node = (id, preferred_tool) => {
 			selected = id
 			const n = MAP_NODES.find(x => x.id===id)
-			Object.keys(node_els).forEach(k => node_els[k].classList.toggle('sel', k===id))
+			Object.keys(node_els).forEach(k => { node_els[k].classList.toggle('sel', k===id) })
 
 			// available tools for this node (served ids only), preserving order
 			const tools = n.tools.filter(tid => by_id[tid])
@@ -1028,7 +1028,7 @@ const build_map_view = function(self, widgets, opts={}) {
 			const token = ++mount_token
 			const body = context.querySelector('.ctx_body')
 			if (!body) { return }
-			context.querySelectorAll('.tool_chip').forEach(c => c.classList.toggle('sel', c.dataset.id===tid))
+			context.querySelectorAll('.tool_chip').forEach(c => { c.classList.toggle('sel', c.dataset.id===tid) })
 			persist_sel(node_id, tid)
 
 			// (!) Destroy the outgoing tool BEFORE wiping its DOM. `innerHTML=''`

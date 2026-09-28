@@ -2858,7 +2858,7 @@ export const build_autoload = async function(self, {recovery_retry=false}={}) {
 					// "permissions" banner over a page that had in fact loaded.
 					// One retry only (`recovery_retry`): a second auth failure stops.
 					if (recovered===true && !(window.unsaved_data ?? false) && recovery_retry!==true) {
-						delete self.tmp_api_response
+						self.tmp_api_response = undefined
 						return build_autoload(self, {recovery_retry: true})
 					}
 				}
