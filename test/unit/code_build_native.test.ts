@@ -420,9 +420,11 @@ describe('the release version comes from the ref, not the process', () => {
 		// re-imports DEDALO_VERSION to default `version`, the process is naming
 		// releases again.
 		const widget = readFileSync(
-			join(import.meta.dir, '../../src/core/area_maintenance/widgets/update_code.ts'),
+			join(import.meta.dir, '../../src/core/area_maintenance/widgets/serve_code.ts'),
 			'utf8',
 		);
+		// the slice must find its function: a moved handler made this pass on ''
+		expect(widget).toContain('async function buildVersionOwned');
 		const build = widget.slice(widget.indexOf('async function buildVersionOwned'));
 		const body = build.slice(0, build.indexOf('\n}'));
 		expect(body).not.toContain('DEDALO_VERSION');

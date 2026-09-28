@@ -32,7 +32,7 @@
  *      sha256 sidecar. The manifest (dd_utils_api:get_code_update_info) and
  *      the serving route then advertise it LIVE — no master restart needed
  *      for publication, because the files-dir contents are checked per
- *      request. (The wire twin — widget_request build_version_from_git_master
+ *      request. (The wire twin — widget_request serve_code.build_version_from_git_master
  *      — runs when DEDALO_CODE_SERVER_GIT_DIR points at a local checkout;
  *      scripts/update_drill.ts exercises exactly that path.)
  *   3. MUSEUM TREE — the image-baked stack cannot tree-swap (channel 'image',

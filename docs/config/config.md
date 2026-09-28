@@ -5508,6 +5508,8 @@ IS_A_CODE_SERVER `bool`
 
 This parameter defines if the server can provide code to other Dédalo servers. By default no Dédalo server provides code, but it is possible to set one up as a mirror server that provides code versions. To enable it, also set `DEDALO_CODE_FILES_DIR` — the URL other servers fetch from is derived automatically.
 
+When it is on, the maintenance area shows the **Serve Code** panel: whether this server can publish, the build source, the archives on disk, and the buttons that build a release. See [Updating code](../management/updates/updating_code.md).
+
 ```bash
 IS_A_CODE_SERVER=false
 ```
@@ -5521,6 +5523,8 @@ IS_A_CODE_SERVER=false
 IS_AN_ONTOLOGY_SERVER `bool`
 
 It defines if the installation server can provide his ontology files to other Dédalo servers.
+
+The maintenance area's **Serve Ontology** panel shows whether this key, `ONTOLOGY_SERVER_CODE` and `DEDALO_CORS_ALLOWED_ORIGINS` are set, and the endpoint other installations register. See [Updating ontology](../management/updates/updating_ontology.md#serving-other-installations-ontology-master).
 
 ```bash
 IS_AN_ONTOLOGY_SERVER=false

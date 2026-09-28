@@ -521,6 +521,11 @@
 			"skipped": 0,
 			"assertions": 22
 		},
+		"test/unit/client_serve_code_render.test.ts": {
+			"tests": 17,
+			"skipped": 0,
+			"assertions": 204
+		},
 		"test/unit/client_serve_ontology_render.test.ts": {
 			"tests": 5,
 			"skipped": 0,
@@ -567,9 +572,9 @@
 			"assertions": 31
 		},
 		"test/unit/client_update_code_render.test.ts": {
-			"tests": 72,
+			"tests": 61,
 			"skipped": 0,
-			"assertions": 344
+			"assertions": 246
 		},
 		"test/unit/client_update_ontology_tlds_input.test.ts": {
 			"tests": 7,
@@ -599,7 +604,7 @@
 		"test/unit/code_build_native.test.ts": {
 			"tests": 46,
 			"skipped": 0,
-			"assertions": 119
+			"assertions": 120
 		},
 		"test/unit/code_files_dir_native.test.ts": {
 			"tests": 12,
@@ -3516,6 +3521,11 @@
 			"skipped": 0,
 			"assertions": 35
 		},
+		"test/unit/serve_code_widget_native.test.ts": {
+			"tests": 6,
+			"skipped": 0,
+			"assertions": 12
+		},
 		"test/unit/serve_ontology_widget.test.ts": {
 			"tests": 4,
 			"skipped": 0,
@@ -4367,9 +4377,9 @@
 			"assertions": 18
 		},
 		"test/unit/update_code_widget_native.test.ts": {
-			"tests": 3,
+			"tests": 2,
 			"skipped": 0,
-			"assertions": 6
+			"assertions": 5
 		},
 		"test/unit/update_disk_space_native.test.ts": {
 			"tests": 13,

@@ -625,7 +625,7 @@ const build_list_view = async function(self, widgets) {
 		{ id:'clients',	title:'Clients',		x:10, y:14, tools:['lock_components'] },
 		{ id:'web',		title:'Web server',		x:29, y:14, tools:['system_info','runtime_info','environment'] },
 		{ id:'core',	title:'Dédalo core',	x:50, y:14, kind:'core',
-			tools:['check_config','config_areas','menu_skip_tipos','update_code','update_data_version','error_reports'] },
+			tools:['check_config','config_areas','menu_skip_tipos','update_code','serve_code','update_data_version','error_reports'] },
 		// the tools/ package tree + its dd1324 registry records (matrix_tools) — a
 		// subsystem of its own, not part of the engine core: register_tools reconciles
 		// the two and touches nothing else.
@@ -672,6 +672,7 @@ const build_list_view = async function(self, widgets) {
 		dedalo_api_test_environment:'API endpoint testing sandbox.',
 		sqo_test_environment:		'Search-query-object testing sandbox.',
 		update_code:				'Downloads, verifies and installs a new code release, then restarts. The previous tree is kept as a restore point.',
+		serve_code:					'Code server: builds releases from git and serves them to the installations that update from this one.',
 		update_data_version:		'Runs pending data-version migrations against live data.',
 		lock_components:			'Active user sessions and component-lock tracking.',
 		database_info:				'Live PostgreSQL catalog snapshot and maintenance actions.',

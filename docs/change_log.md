@@ -92,6 +92,14 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **Building and serving code releases now has its own maintenance panel, Serve Code.**
+
+    The **Update code** panel used to hold two jobs: installing a new release on this installation, and — on a code server — building releases from git and serving them to others. The second job is now its own panel, **Serve Code**, shown only on a code server (`IS_A_CODE_SERVER=true`) or the development installation. **Update code** keeps installing, restoring and deleting restore points.
+
+    For scripts that build releases through the API: send the build request to `serve_code` instead of `update_code` (same action name, `build_version_from_git_master`, same options).
+
+    Wire contract: `WC-2026-09-28-maintenance-serve-code-widget`.
+
 - **Serving your ontology to other installations now has its own maintenance panel, Serve Ontology.**
 
     The **Update Ontology** panel used to do two jobs: download an ontology from a master server, and — folded away at the bottom — report whether this installation can serve its own ontology to others. The two are now separate panels. **Update Ontology** only downloads; the new **Serve Ontology** panel shows the three `../private/.env` settings that decide serving (`IS_AN_ONTOLOGY_SERVER`, `ONTOLOGY_SERVER_CODE`, `DEDALO_CORS_ALLOWED_ORIGINS`), the lines to add, and the address other installations must register.
@@ -138,7 +146,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 46 entries"
+??? note "Wire contract — 47 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -185,6 +193,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-24-external-record-field-set`
     - `WC-2026-09-24-multi-section-search-identity-dedup`
     - `WC-2026-09-24-tool-export-server-built-artifacts`
+    - `WC-2026-09-28-maintenance-serve-code-widget`
     - `WC-2026-09-28-maintenance-serve-ontology-widget`
 
 ## 7.0.0-beta.4 — 2026-08-24

@@ -178,7 +178,7 @@ Every widget carries a `category`; the client groups and filters by it.
 | --- | --- |
 | `data` | Backups, database version artifacts, the data-version upgrade, hierarchy import/export. |
 | `migration` | The bulk transforms — `move_tld`, `move_locator`, `move_to_portal`, `move_to_table`, `move_lang`. |
-| `config` | Configuration and code: `check_config`, `config_areas`, `menu_skip_tipos`, `update_ontology`, `serve_ontology`, `register_tools`, `update_code`. |
+| `config` | Configuration and code: `check_config`, `config_areas`, `menu_skip_tipos`, `update_ontology`, `serve_ontology`, `register_tools`, `update_code`, `serve_code`. |
 | `integrity` | `lock_components`, `sequences_status`, `media_control`, `counters_status`, `reconcile_status`, `dataframe_control`. |
 | `system` | Environment, database info, system info, the runtime panel, error reports. |
 | `diffusion` | `publication_api`, `diffusion_server_control`. |
@@ -203,7 +203,8 @@ read-only panel: it reports state through `getValue` or an eager catalog value.
 | `update_ontology` | config | `update_ontology` — PULL: overwrite the local ontology from a master |
 | `serve_ontology` | config | *(read-only panel)* — SERVE: whether other installations can pull from here (`IS_AN_ONTOLOGY_SERVER`, `ONTOLOGY_SERVER_CODE`, `DEDALO_CORS_ALLOWED_ORIGINS`) and the endpoint they register |
 | `register_tools` | config | `register_tools` |
-| `update_code` | config | `update_code`, `build_version_from_git_master` |
+| `update_code` | config | `update_code`, `restore_code`, `delete_restore_point` — PULL: install a release from a code server |
+| `serve_code` | config | `build_version_from_git_master` — SERVE: the code-server readout and the release builds; catalogued only on a code server or the `development` entity |
 | `lock_components` | integrity | *(area-level action — see the dispatch table)* |
 | `sequences_status` | integrity | *(read-only panel)* |
 | `media_control` | integrity | `set_media_access_mode`, `rebuild_media_index` |

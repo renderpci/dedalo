@@ -88,6 +88,9 @@ function isToolAssistantEntry(entry: ManifestEntry): boolean {
  *  - serve_ontology maintenance widget
  *    (WC-2026-09-28-maintenance-serve-ontology-widget) — the provider-side
  *    readout split out of update_ontology.
+ *  - serve_code maintenance widget
+ *    (WC-2026-09-28-maintenance-serve-code-widget) — the code-server half
+ *    split out of update_code.
  * Their files exist only in the TS census; filtered from BOTH sides. */
 function isTsOnlyEntry(entry: ManifestEntry): boolean {
 	return (
@@ -99,7 +102,8 @@ function isTsOnlyEntry(entry: ManifestEntry): boolean {
 		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/ai_models/') ||
 		// WC-2026-09-03-maintenance-reconcile-status-widget (audit S-10, TS-only registry)
 		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/reconcile_status/') ||
-		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/serve_ontology/')
+		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/serve_ontology/') ||
+		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/serve_code/')
 	);
 }
 
