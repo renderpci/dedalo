@@ -189,7 +189,10 @@ async function previewHtml(context: ToolActionContext): Promise<ToolResponse> {
 	);
 }
 
-/** Writes one field as a fresh 'set_data' (a bare {id, value} item). */
+/** Writes one field as a fresh 'set_data' (a bare {id, value} item). saveComponentData does not
+ * throw on a refused write - it returns {ok: false, message} - so a discarded result here would let
+ * a field the engine refused still get reported to the cataloguer as written. Never narrow scope
+ * silently: a write that did not happen must be visible. */
 async function writeField(
 	sectionId: number,
 	sectionTipo: string,
@@ -197,7 +200,7 @@ async function writeField(
 	value: string | number,
 	userId: number,
 ): Promise<void> {
-	await saveComponentData({
+	const save = await saveComponentData({
 		componentTipo,
 		sectionTipo,
 		sectionId,
@@ -205,6 +208,11 @@ async function writeField(
 		userId,
 		changedData: [{ action: 'set_data', value: [{ id: 1, value }] }],
 	});
+	if (!save.ok) {
+		throw new DedaloError('record.save_failed', {
+			message: `Could not write ${componentTipo} on ${sectionTipo}/${sectionId}: ${save.message}`,
+		});
+	}
 }
 
 /** component_iri stores {id, iri, title} - NOT the generic {id, value} writeField uses. A bare
@@ -218,7 +226,7 @@ async function writeIriField(
 	title: string | null,
 	userId: number,
 ): Promise<void> {
-	await saveComponentData({
+	const save = await saveComponentData({
 		componentTipo,
 		sectionTipo,
 		sectionId,
@@ -226,6 +234,11 @@ async function writeIriField(
 		userId,
 		changedData: [{ action: 'set_data', value: [{ id: 1, iri, title: title ?? '' }] }],
 	});
+	if (!save.ok) {
+		throw new DedaloError('record.save_failed', {
+			message: `Could not write ${componentTipo} on ${sectionTipo}/${sectionId}: ${save.message}`,
+		});
+	}
 }
 
 /** Writes a component_date field's `start` only, matching how real records represent a single
@@ -239,7 +252,7 @@ async function writeDateField(
 	date: { year: number; month: number; day: number },
 	userId: number,
 ): Promise<void> {
-	await saveComponentData({
+	const save = await saveComponentData({
 		componentTipo,
 		sectionTipo,
 		sectionId,
@@ -252,6 +265,11 @@ async function writeDateField(
 			},
 		],
 	});
+	if (!save.ok) {
+		throw new DedaloError('record.save_failed', {
+			message: `Could not write ${componentTipo} on ${sectionTipo}/${sectionId}: ${save.message}`,
+		});
+	}
 }
 
 /** Exact Code match - lets a re-import reuse the existing rsc205 record instead of duplicating it. */
