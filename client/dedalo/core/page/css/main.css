@@ -659,7 +659,7 @@ template {
   --menu_item_active_fg: var(--fg_on_accent);
   --menu_item_active_accent: transparent;
   --debug_info_bar_bg: var(--color_grey_4);
-  --debug_info_bar_text: var(--color_grey_8);
+  --debug_info_bar_text: var(--color_grey_9);
   --checkbox_bg: var(--color_grey_16);
   --checkbox_border: var(--color_grey_8);
   --checkbox_checked_bg: var(--color_input_focus);
