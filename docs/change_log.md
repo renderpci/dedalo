@@ -92,6 +92,10 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Error reports now include logged client errors**
+
+    The "Report a problem" tool now attaches errors the client caught and logged (`console.error`), not only uncaught ones, so a report of real breakage no longer says "0 errors". Only a short message and stack are kept; repeats are counted, not duplicated.
+
 - **The developer information bar is shown to developers and root again, on any server.**
 
     The information strip at the top of the interface — engine version, build, database and runtime — is a developer surface. It had become tied to `DEDALO_DEV_MODE`, so on an installation that did not set that key it was hidden even from a logged-in developer, and setting it in `private/.env` did nothing because the container environment takes precedence. That is what a Docker installation saw: no developer bar, whatever the `.env` said.

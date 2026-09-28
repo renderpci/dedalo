@@ -52,7 +52,7 @@ const SCREENSHOT_DATA_URL = /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]
 /** One captured entry of the client buffer (window.dedalo_js_errors). */
 const jsErrorSchema = z
 	.object({
-		type: z.enum(['error', 'unhandledrejection']),
+		type: z.enum(['error', 'unhandledrejection', 'console']),
 		msg: z.string().max(2000).nullable(),
 		source: z.string().max(1024).nullable(),
 		line: z.number().int().nullable(),
