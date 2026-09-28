@@ -58,6 +58,8 @@ type LeafNode = Extract<ConformedFilter, { kind: 'leaf' }>;
 type GroupNode = Extract<ConformedFilter, { kind: 'group' }>;
 
 const NEGATING_OPS: ReadonlySet<string> = new Set(['$not', '$nand', '$nor']);
+/** The group operators whose sibling leaves may form a reversed unit. */
+const REVERSIBLE_OPS: ReadonlySet<string> = new Set(['$and', '$or']);
 
 /** Rewrite eligible multi-hop leaves into the reversed shape (in place). */
 export async function reverseDeepPaths(tree: ConformedFilter): Promise<ConformedFilter> {
@@ -87,19 +89,48 @@ function dropInertJoins(node: ConformedFilter): ConformedFilter {
 	return node;
 }
 
+function addAliasUser(sink: Map<string, Set<LeafNode>>, alias: string, leaf: LeafNode): void {
+	const users = sink.get(alias) ?? new Set<LeafNode>();
+	users.add(leaf);
+	sink.set(alias, users);
+}
+
 function collectAliasUsers(node: ConformedFilter, sink: Map<string, Set<LeafNode>>): void {
 	if (node.kind === 'leaf') {
-		for (const join of node.joins ?? []) {
-			let users = sink.get(join.alias);
-			if (users === undefined) {
-				users = new Set();
-				sink.set(join.alias, users);
-			}
-			users.add(node);
-		}
+		for (const join of node.joins ?? []) addAliasUser(sink, join.alias, node);
 		return;
 	}
 	if (node.kind === 'group') for (const item of node.items) collectAliasUsers(item, sink);
+}
+
+/** Units: sibling candidate leaves with the identical chain. */
+function groupUnits(group: GroupNode): LeafNode[][] {
+	const units = new Map<string, LeafNode[]>();
+	for (const item of group.items) {
+		if (!isCandidate(item)) continue;
+		const key = chainKey(item.deep as DeepLeafPlan);
+		units.set(key, [...(units.get(key) ?? []), item]);
+	}
+	return [...units.values()];
+}
+
+/** Put `reversed` in the unit's first slot; the unit's other leaves become inert. */
+function replaceUnit(group: GroupNode, unit: LeafNode[], reversed: ConformedFilter): void {
+	const [first, ...rest] = unit;
+	group.items = group.items.map((item) => {
+		if (item === first) return reversed;
+		return rest.includes(item as LeafNode) ? { kind: 'leaf', fragment: false } : item;
+	});
+}
+
+async function reverseGroupUnits(
+	group: GroupNode,
+	aliasUsers: Map<string, Set<LeafNode>>,
+): Promise<void> {
+	for (const unit of groupUnits(group)) {
+		const reversed = await tryReverse(unit, group.op, aliasUsers);
+		if (reversed !== null) replaceUnit(group, unit, reversed);
+	}
 }
 
 async function rewriteGroup(
@@ -108,27 +139,7 @@ async function rewriteGroup(
 	aliasUsers: Map<string, Set<LeafNode>>,
 ): Promise<void> {
 	const childPositive = positive && !NEGATING_OPS.has(group.op);
-	if (childPositive && (group.op === '$and' || group.op === '$or')) {
-		// Units: sibling candidate leaves with the identical chain.
-		const units = new Map<string, LeafNode[]>();
-		for (const item of group.items) {
-			if (!isCandidate(item)) continue;
-			const key = chainKey(item.deep as DeepLeafPlan);
-			units.set(key, [...(units.get(key) ?? []), item]);
-		}
-		for (const unit of units.values()) {
-			const reversed = await tryReverse(unit, group.op, aliasUsers);
-			if (reversed === null) continue;
-			const [first, ...rest] = unit;
-			group.items = group.items.map((item) =>
-				item === first
-					? reversed
-					: rest.includes(item as LeafNode)
-						? { kind: 'leaf', fragment: false }
-						: item,
-			);
-		}
-	}
+	if (childPositive && REVERSIBLE_OPS.has(group.op)) await reverseGroupUnits(group, aliasUsers);
 	for (const item of group.items) {
 		if (item.kind === 'group') await rewriteGroup(item, childPositive, aliasUsers);
 	}
@@ -147,31 +158,43 @@ function chainKey(plan: DeepLeafPlan): string {
 	return plan.hops.map((hop) => hop.alias).join('|');
 }
 
+/** Every plan of a unit, or null when any leaf lacks one (or the unit is empty). */
+function unitPlans(unit: LeafNode[]): DeepLeafPlan[] | null {
+	const plans = unit.map((leaf) => leaf.deep).filter((plan) => plan !== undefined);
+	return plans.length === unit.length && plans.length > 0 ? plans : null;
+}
+
+/** 3. alias exclusivity: no join alias of the unit is used outside it. */
+function aliasesExclusive(unit: LeafNode[], aliasUsers: Map<string, Set<LeafNode>>): boolean {
+	const joins = unit.flatMap((leaf) => leaf.joins ?? []);
+	return joins.every((join) =>
+		[...(aliasUsers.get(join.alias) ?? [])].every((user) => unit.includes(user)),
+	);
+}
+
+/** 1. the all-NULL row: TRUE when any plan's forward predicate holds on it. */
+async function anyTrueOnNullRow(plans: DeepLeafPlan[], leafHop: JoinHop): Promise<boolean> {
+	for (const leafPlan of plans) {
+		if (await trueOnNullRow(leafPlan, leafHop)) return true;
+	}
+	return false;
+}
+
 async function tryReverse(
 	unit: LeafNode[],
 	op: string,
 	aliasUsers: Map<string, Set<LeafNode>>,
 ): Promise<ConformedFilter | null> {
-	const plans = unit.map((leaf) => leaf.deep).filter((plan) => plan !== undefined);
-	if (plans.length !== unit.length || plans.length === 0) return null;
+	const plans = unitPlans(unit);
+	if (plans === null) return null;
 	const plan = plans[0] as DeepLeafPlan;
 
-	// 3. alias exclusivity.
-	for (const leaf of unit) {
-		for (const join of leaf.joins ?? []) {
-			for (const user of aliasUsers.get(join.alias) ?? []) {
-				if (!unit.includes(user)) return null;
-			}
-		}
-	}
+	if (!aliasesExclusive(unit, aliasUsers)) return null;
 	// 4. index coverage of every source table.
 	const sourceTables = [plan.mainTable, ...plan.hops.slice(0, -1).map((hop) => hop.table)];
 	if (!(await relationIndexCovers([...new Set(sourceTables)]))) return null;
-	// 1. the all-NULL row.
 	const leafHop = plan.hops[plan.hops.length - 1] as JoinHop;
-	for (const leafPlan of plans) {
-		if (await trueOnNullRow(leafPlan, leafHop)) return null;
-	}
+	if (await anyTrueOnNullRow(plans, leafHop)) return null;
 
 	const { open, close } = reverseShell(plan);
 	return {

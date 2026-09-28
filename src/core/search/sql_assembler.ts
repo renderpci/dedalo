@@ -119,24 +119,9 @@ export function renderConformedFilter(node: ConformedFilter, params: ParamsColle
 	return parseConformedFilter(node, params);
 }
 
-function parseConformedFilter(node: ConformedFilter, params: ParamsCollector): string {
-	if (node.kind === 'leaf') {
-		return resolveBuilderResult(node.fragment, params);
-	}
-	if (node.kind === 'reverse') {
-		const inner = resolveBuilderResult(node.inner, params);
-		return inner === '' ? '' : `${node.open}${inner}${node.close}`;
-	}
-	const fragments = node.items
-		.map((item) => {
-			const parsed = parseConformedFilter(item, params);
-			// Nested groups get wrapped in parentheses (PHP :315-318).
-			return item.kind === 'group' && parsed !== '' ? `( ${parsed} )` : parsed;
-		})
-		.filter((sqlFragment) => sqlFragment !== '');
-	if (fragments.length === 0) return '';
-
-	const operator = node.op.slice(1).toUpperCase(); // '$and' → 'AND'
+/** Join a group's rendered fragments by its boolean operator. */
+function joinGroupFragments(op: string, fragments: string[]): string {
+	const operator = op.slice(1).toUpperCase(); // '$and' → 'AND'
 	switch (operator) {
 		case 'AND':
 			return fragments.join('\n AND ');
@@ -150,6 +135,31 @@ function parseConformedFilter(node: ConformedFilter, params: ParamsCollector): s
 		default:
 			return '';
 	}
+}
+
+/** deep_path.ts reversed shape: the shell around the innermost leaf predicate. */
+function parseReverseNode(
+	node: Extract<ConformedFilter, { kind: 'reverse' }>,
+	params: ParamsCollector,
+): string {
+	const inner = resolveBuilderResult(node.inner, params);
+	return inner === '' ? '' : `${node.open}${inner}${node.close}`;
+}
+
+function parseConformedFilter(node: ConformedFilter, params: ParamsCollector): string {
+	if (node.kind === 'leaf') {
+		return resolveBuilderResult(node.fragment, params);
+	}
+	if (node.kind === 'reverse') return parseReverseNode(node, params);
+	const fragments = node.items
+		.map((item) => {
+			const parsed = parseConformedFilter(item, params);
+			// Nested groups get wrapped in parentheses (PHP :315-318).
+			return item.kind === 'group' && parsed !== '' ? `( ${parsed} )` : parsed;
+		})
+		.filter((sqlFragment) => sqlFragment !== '');
+	if (fragments.length === 0) return '';
+	return joinGroupFragments(node.op, fragments);
 }
 
 /**

@@ -59,6 +59,20 @@ const DD_TIPOS: Readonly<Record<string, string>> = {
 	DEDALO_COMPONENT_RESOURCES_IMAGE_TIPO: 'rsc29',
 };
 
+/** Debug/developer surfaces of the LOGGED user (see SHOW_DEBUG below). */
+function userSurfaces(
+	session: Session | null,
+	principal: Principal | null,
+): { showDebug: boolean; showDeveloper: boolean } {
+	if (session === null) return { showDebug: false, showDeveloper: false };
+	return { showDebug: session.userId === -1, showDeveloper: principal?.isDeveloper === true };
+}
+
+/** A non-empty notification string, else null. */
+function notificationText(notification: unknown): string | null {
+	return typeof notification === 'string' && notification !== '' ? notification : null;
+}
+
 /**
  * JS plain globals (PHP get_js_plain_vars). URL layout matches the PHP deploy.
  *
@@ -71,9 +85,7 @@ export function buildPlainVars(
 	session: Session | null,
 	principal: Principal | null,
 ): Record<string, unknown> {
-	const isLogged = session !== null;
-	const isRoot = (session?.userId ?? null) === -1;
-	const isDeveloper = principal?.isDeveloper === true;
+	const surfaces = userSurfaces(session, principal);
 	// DIFFUSION CUTOVER LEVER (DIFFUSION_PLAN P5, spec §2.3): the copied
 	// tool_diffusion client calls DEDALO_DIFFUSION_API_URL when defined and
 	// falls back to the MAIN API otherwise. Emitting the key points the client
@@ -111,17 +123,14 @@ export function buildPlainVars(
 		// form reads it BEFORE authentication to pick the no-service-worker cache
 		// path on dev servers — gating it on isLogged stalls every dev login
 		// (S1-19 register; the flag only reveals dev-vs-prod posture, not debug data).
-		SHOW_DEBUG: isLogged && isRoot,
-		SHOW_DEVELOPER: isLogged && isDeveloper,
+		SHOW_DEBUG: surfaces.showDebug,
+		SHOW_DEVELOPER: surfaces.showDeveloper,
 		DEVELOPMENT_SERVER: DEV_MODE,
 		DEDALO_UPLOAD_SERVICE_CHUNK_FILES: config.media.upload.chunkFilesMb,
 		DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT: config.media.upload.maxConcurrent,
 		DEDALO_LOCK_COMPONENTS: config.features.lockComponents,
 		DEDALO_MAINTENANCE_MODE: serverState.maintenance_mode,
-		DEDALO_NOTIFICATION:
-			typeof serverState.notification === 'string' && serverState.notification !== ''
-				? serverState.notification
-				: null,
+		DEDALO_NOTIFICATION: notificationText(serverState.notification),
 		DEDALO_RR_WORKER: false,
 		DD_TIPOS,
 	};

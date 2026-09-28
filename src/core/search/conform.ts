@@ -442,6 +442,76 @@ function parseLegacyFunctionLeaf(leaf: {
 	return columns.map(([column, cast], index) => [column, cast, keyParts[index] as string]);
 }
 
+/** Where a leaf sits: the root alias/table, the final join alias/table, its chain. */
+interface LeafPlacement {
+	alias: string;
+	table: string;
+	leafAlias: string;
+	leafTable: string;
+	joins: JoinFragment[];
+	hops: JoinHop[];
+}
+
+/** The locators of a relation/function leaf; null = malformed legacy key (contributes nothing). */
+function relationLeafLocators(
+	leaf: SqoFilterLeaf,
+	leafFormat: 'relation' | 'function',
+): RelationLeafLocator[] | null {
+	if (leafFormat === 'relation') return parseRelationLeafQ(leaf.q);
+	const legacy = parseLegacyFunctionLeaf(leaf as { use_function?: unknown; q?: unknown });
+	return legacy === null ? null : [legacy];
+}
+
+/** One `(r.col = _QfN_::cast AND …)` per locator, OR-joined, with its bound values. */
+function relationLocatorConditions(locators: RelationLeafLocator[]): {
+	sql: string;
+	values: Record<string, unknown>;
+} {
+	const conditions: string[] = [];
+	const values: Record<string, unknown> = {};
+	let tokenIndex = 0;
+	for (const locator of locators) {
+		const parts: string[] = [];
+		for (const [column, cast, value] of locator) {
+			tokenIndex += 1;
+			const name = `_Qf${tokenIndex}_`;
+			parts.push(`r.${column} = ${name}::${cast}`);
+			values[name] = value;
+		}
+		conditions.push(`(${parts.join(' AND ')})`);
+	}
+	return { sql: conditions.join(' OR '), values };
+}
+
+/**
+ * RELATION LEAVES — filter records whose `relation` column holds a locator
+ * matching the given fields (see the format notes at the call site). Both wire
+ * shapes resolve to the SAME exact tuple-IN over matrix_relation_index.
+ */
+async function conformRelationLeaf(
+	leaf: SqoFilterLeaf,
+	leafFormat: 'relation' | 'function',
+	at: LeafPlacement,
+): Promise<ConformedFilter> {
+	const locators = relationLeafLocators(leaf, leafFormat);
+	if (locators === null) return { kind: 'leaf', fragment: false };
+	await requireRelationIndex([at.leafTable]);
+	const conditions = relationLocatorConditions(locators);
+	const result = fragmentResult(
+		`(${at.leafAlias}.section_tipo, ${at.leafAlias}.section_id) IN ` +
+			`(SELECT r.section_tipo, r.section_id FROM matrix_relation_index r WHERE ${conditions.sql})`,
+		conditions.values,
+	);
+	return at.joins.length > 0
+		? {
+				kind: 'leaf',
+				fragment: result,
+				joins: at.joins,
+				deep: deepPlan(at.alias, at.table, at.hops, result, result),
+			}
+		: { kind: 'leaf', fragment: result };
+}
+
 /** Conform one leaf: gates → ontology → builder. */
 async function conformLeaf(
 	leaf: SqoFilterLeaf,
@@ -545,44 +615,14 @@ async function conformLeaf(
 	//   this tree emits it anymore.
 	const leafFormat = (leaf as { format?: unknown }).format;
 	if (leafFormat === 'relation' || leafFormat === 'function') {
-		let locators: RelationLeafLocator[];
-		if (leafFormat === 'relation') {
-			locators = parseRelationLeafQ(leaf.q);
-		} else {
-			const legacy = parseLegacyFunctionLeaf(leaf as { use_function?: unknown; q?: unknown });
-			if (legacy === null) {
-				// malformed flat key — contributes nothing (the legacy contract)
-				return { kind: 'leaf', fragment: false };
-			}
-			locators = [legacy];
-		}
-		await requireRelationIndex([leafTable]);
-		const conditions: string[] = [];
-		const tokenValues: Record<string, unknown> = {};
-		let tokenIndex = 0;
-		for (const locator of locators) {
-			const parts: string[] = [];
-			for (const [column, cast, value] of locator) {
-				tokenIndex += 1;
-				const name = `_Qf${tokenIndex}_`;
-				parts.push(`r.${column} = ${name}::${cast}`);
-				tokenValues[name] = value;
-			}
-			conditions.push(`(${parts.join(' AND ')})`);
-		}
-		const result = fragmentResult(
-			`(${leafAlias}.section_tipo, ${leafAlias}.section_id) IN ` +
-				`(SELECT r.section_tipo, r.section_id FROM matrix_relation_index r WHERE ${conditions.join(' OR ')})`,
-			tokenValues,
-		);
-		return joins.length > 0
-			? {
-					kind: 'leaf',
-					fragment: result,
-					joins,
-					deep: deepPlan(alias, table, hops, result, result),
-				}
-			: { kind: 'leaf', fragment: result };
+		return conformRelationLeaf(leaf, leafFormat, {
+			alias,
+			table,
+			leafAlias,
+			leafTable,
+			joins,
+			hops,
+		});
 	}
 
 	// Ontology resolution. PHP ontology_utils::check_active_tld:271 allowlists
