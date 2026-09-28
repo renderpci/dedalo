@@ -64,6 +64,7 @@ import {
 } from '../../../src/core/relations/dataframe_slots.ts';
 import {
 	type LaneLaw,
+	laneLaw,
 	laneRegion,
 	NOLAN,
 	restoreLane,
@@ -379,7 +380,12 @@ async function recordRevertHistory(
 	);
 }
 
-/** A key's lane identity: its model's slicing, its translatable flag, its lang as the door lane. */
+/** A key's lane law (main_lanes.ts laneLaw: the ontology flag counts for a sliced model only). */
+export async function keyLaneLaw(key: RevertKey): Promise<LaneLaw> {
+	return laneLaw(key.sliced, key.sliced && (await getTranslatableByTipo(key.tipo)));
+}
+
+/** A key's lane identity: its lane law, its lang as the door lane (lg-nolan for an unsliced key). */
 export async function laneIdentityOf(key: RevertKey): Promise<{
 	tipo: string;
 	sliced: boolean;
@@ -388,9 +394,8 @@ export async function laneIdentityOf(key: RevertKey): Promise<{
 }> {
 	return {
 		tipo: key.tipo,
-		sliced: key.sliced,
-		translatable: await getTranslatableByTipo(key.tipo),
-		lang: key.lang === '' ? NOLAN : key.lang,
+		...(await keyLaneLaw(key)),
+		lang: key.lang === '' || !key.sliced ? NOLAN : key.lang,
 	};
 }
 
@@ -540,10 +545,7 @@ async function revertKey(
 	if (record === null) return null;
 	const live = rawKeyValue(record, target, key.tipo);
 	const plan = key.exact
-		? planExactKey(key, live, {
-				sliced: key.sliced,
-				translatable: await getTranslatableByTipo(key.tipo),
-			})
+		? planExactKey(key, live, await keyLaneLaw(key))
 		: await planLegacyKey(key, live, {
 				target,
 				recordCreatedDate: createdDateOf(record),

@@ -204,17 +204,29 @@ On the `oh1` (Oral History) section, for example, `oh24` (*Informants*, a
 informant locators followed by every `oh115` frame (the `dd490` locators), and `oh115`
 has no history rows of its own.
 
-- **One rule for every main.** A non-translatable main keeps its whole value in
+- **The lane follows the data shape, never the ontology flag.** A main whose data is
+  not split by language — every relation (`component_portal`, `component_select`,
+  `component_check_box`, `component_radio_button`, `component_filter`, the
+  `component_relation_*` family…) and every other unsliced model — keeps its whole
+  value in `lg-nolan`, **always**: each save writes one `lg-nolan` row (value + frames),
+  whatever the node's `translatable` flag says and whatever the working language, and
+  every language's history lists **all** its rows, whatever language tag an older
+  (Dédalo v6) row carries — v6 tagged a relation marked translatable with the working
+  language, and each such row holds the whole value. The delete doors' backfill probe
+  counts those rows too, so no redundant `lg-nolan` row is written over them. A relation holds locators, which are never
+  translatable, so a "translatable portal" is an ontology setting the history ignores.
+  Language lanes exist only for lang-sliced models (`component_input_text`,
+  `component_text_area`, `component_iri`…).
+- **One rule for every sliced main.** A non-translatable one keeps its whole value in
   `lg-nolan`, so each save writes one `lg-nolan` row: value + frames. A translatable
-  main has no `lg-nolan` value, so its `lg-nolan` rows hold the frames only — the
+  sliced main has no `lg-nolan` value, so its `lg-nolan` rows hold the frames only — the
   shared frame lane of all its languages. A *transliterable* main
   (`with_lang_versions`, such as a person's name, `rsc85` in `rsc197`) keeps its base
   form in `lg-nolan` and each transliteration in its own language (*Augustus* in
   `lg-nolan`, *Αύγουστος* in `lg-ell`): its `lg-nolan` row is the base + the frames,
   its language rows the transliterations. No flag is read: every item's own `lang`
   places it. A value item with no language at all (a v6 orphan) is recorded in the row of
-  the language that saved it; a translatable main's `lg-nolan` row never holds one. A translatable main stored as one value (a translatable list of linked
-  records) keeps that value in the working language's lane and its frames in `lg-nolan`.
+  the language that saved it; a translatable main's `lg-nolan` row never holds one.
 - **What a save writes.** A save of the main in language X writes ONE row in lane X,
   plus an `lg-nolan` row only when the save changed the frames (removing an item strips
   its frames) or the `lg-nolan` value — the `lg-nolan` row first, so the language row
@@ -241,8 +253,9 @@ has no history rows of its own.
   made with the time machine off), one `lg-nolan` row of that state is written first
   (`recordFrameLaneBaseline()`). So restoring a language row never rolls frames back to
   an older recorded state, or empties frames that were never recorded.
-- **The history list.** The history of a main in language X lists the rows of X **and**
-  of `lg-nolan` — every main, whether its dataframe is declared or only holds its frames.
+- **The history list.** The history of a lang-sliced main in language X lists the rows of
+  X **and** of `lg-nolan` — whether its dataframe is declared or only holds its frames.
+  An unsliced main's history is every row of it, whatever the tag (see above).
   A non-translatable main that keeps language versions (a transliterable name, asked in
   `lg-nolan`) lists its `lg-nolan` rows and the rows of the working data language, so
   *Αύγουστος* appears while working in Greek; the preview of such a row shows the base
@@ -307,8 +320,11 @@ A TM row is written by the **callers**, after a successful save, through
 1. **`src/core/section/record/save_component.ts`** — after the component's new
    data is persisted, it builds a `TimeMachineEntry` (`sectionTipo`, `sectionId`,
    `componentTipo`, `lang`, `userId`, `data`) and calls
-   `recordTimeMachine(entry, nowDbTimestamp())`. For a translatable component the
-   snapshot is the **current-lang slice**, not the whole value. For a main with
+   `recordTimeMachine(entry, nowDbTimestamp())`. For a **lang-sliced** translatable
+   component (`component_input_text`, `component_text_area`…) the snapshot is the
+   **current-lang slice**, not the whole value. An unsliced model (every relation
+   component, whatever its `translatable` flag) writes its whole value in one
+   `lg-nolan` row ([two lanes](#dataframe-mains-two-lanes)). For a main with
    dataframe slots the rows follow the [two lanes](#dataframe-mains-two-lanes)
    (`finishSaveHistory()` → `recordMainHistory()`, `src/core/section/record/bulk_capture.ts`),
    and a slot save writes the main's `lg-nolan` row.

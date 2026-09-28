@@ -1085,3 +1085,71 @@ frame edited after the run → whole unit `changed_since_run`, nothing written);
 `tm_two_lanes_native` +2 (iri list cells of value and frame rows; transliterable lg-nolan cells
 in lg-ell = the row's base). Mutation-checked, each red: per-key slottedness → 1; graft gated on
 `getTranslatableByTipo` → 1; no iri cell lang → 1; no lg-nolan-item guard → 1.
+
+## Addendum 2026-09-29 — the lane follows the data shape; relations are never translatable
+
+User decision (2026-09-29): a relation component (portal, select, check_box, radio_button,
+filter, relation_*…) holds LOCATORS and is NEVER translatable — "a translatable portal"
+makes no sense. SUPERSEDES every clause above that files an UNSLICED translatable main in a
+language lane (the "two lanes" addendum's "An UNSLICED translatable main (a translatable
+portal) keeps its whole value in the request language's lane"; review 5's "Preview of an
+unsliced main's frame row"; review 6's "One value chain for an UNSLICED main"; the review
+addendum's "an unsliced translatable relation main gets its frame row in the working data
+lang", and the wipe/undelete "request lang" tag of such a main).
+
+- **The rule.** The TM lane of a main depends ONLY on its model's data shape
+  (`isLangSlicedModel`), never on the ontology `translatable` flag. An UNSLICED model (every
+  relation, number, date…) has ONE lane, `lg-nolan`: every change writes one `lg-nolan` row =
+  the whole value + every frame of its slots, whatever the flag and whatever the request
+  language. Language lanes exist only for lang-sliced models (input_text, text_area, iri…,
+  transliterable `with_lang_versions` included).
+- **One constructor** (`laneLaw`, relations/main_lanes.ts): `translatable = sliced && flag`;
+  `laneHoldsValue` = `sliced || lane == lg-nolan`. Every door and reader builds its law through
+  it (capture `bulk_capture.ts` `saveDoorLane` → lg-nolan for unsliced; `mainIdentity` /
+  `mainRowLang`; `recordMainHistory` / `recordMainBackfill` normalize any unsliced door identity
+  to lg-nolan; the preview `section/read.ts`; the list graft `read_tm.ts` — sliced models only;
+  apply_value / preview read an unsliced row as lg-nolan whatever its tag
+  (`readRowLaneState`); the exact and composed revert (`keyLaneLaw`, `laneGroups` one lg-nolan
+  chain); the plan keys an unsliced key `lg-nolan`; Delete data and duplicate tag by the law).
+- **Removed:** `readValueRowAt` (time_machine.ts), `valueDoorIdentity`, the unsliced-translatable
+  branches of `readLaneValueAt` / `previewLaneValue` / `laneGroups` / `planLane`.
+- **Unchanged:** the save path's DATA (a translatable relation's locators still carry the
+  request `lang` stamp — relations/save.ts). TS-era rows tagged with a language for an
+  unsliced main are unsupported (v7 TS beta); readers treat them as lg-nolan.
+- **The list and the backfill probe ignore the tag of an unsliced main** (review 2026-09-29).
+  Dédalo v6 tagged each save of a relation flagged translatable with the data lang, the row
+  holding the WHOLE value — the one lane. `read_tm.ts` `timelineScope` drops the locator's
+  lang for an unsliced main (no lang clause: every row listed in every language); the delete
+  doors' and observer's backfill probe (`LaneHistoryProbe`, `anyTag` = `!sliced`) matches any
+  tag, so a main whose history is only v6 language-tagged rows gets no redundant `lg-nolan`
+  backfill row. `laneClause` (`lang IN (X, 'lg-nolan')`) stays for lang-sliced mains only.
+- **Wire addition — dd15 context `tm_main`** (review 2026-09-29). On a ONE-COMPONENT history
+  read the dd15 section context entry carries `tm_main: {tipo, lang_sliced}` (`read_tm.ts`
+  `tmMainLaneLaw`; absent on every other read). The tool client never re-derives the law:
+  `history_lang()` answers `lg-nolan` for `lang_sliced: false`, which hides the language
+  selector and makes the apply confirm name `lg-nolan`. `apply_value_confirm_msg` reworded in
+  every lang block (name and tokens unchanged): a component with per-language text keeps its
+  other languages; any other (lg-nolan, relations included) is replaced in full with its
+  dataframes. No fixture edit (no frozen gate replays a dd15 one-component context).
+
+**Gate reconciliation:** no fixture edit. New `tm_relation_lane_native` (5): a portal and a
+select whose ontology node says translatable, saved under lg-spa and lg-eng requests → lg-nolan
+composed rows only (value + frames), listed and counted in lg-spa / lg-eng / lg-nolan, preview
+in any language, apply_value exact (restore row lg-nolan), bulk pairs lg-nolan only, revert and
+revert-of-revert exact; a portal whose ontology node says translatable, frame-first: restoring
+the empty-portal frame row keeps its frame although the item later saved is stamped lg-spa; a
+run that adds the stamped item and moves its frame reverts exact (`full`, nothing skipped).
+Rewritten to the new rule (they pinned the removed behaviour):
+`tm_save_order_native` 3, `tm_two_lanes_native` 2 (+2 retitled), `bulk_revert_undo_native` 2
+(+2 lane assertions). Mutation-checked: the old lane law restored in `laneLaw` /
+`laneHoldsValue` → `tm_relation_lane_native` 2 red; the locator `lang` stamp read as the item's
+lane (`unsliced` → false) in `rowFrameSlice` → the frame-first restore test red, in
+`otherLaneItemIds` (composed bulk) → the frame-first run test red.
+Review 2026-09-29 gates: `tm_relation_lane_native` +2 (v6 lg-spa/lg-eng-tagged select rows
+listed 2 in lg-spa/lg-eng/lg-nolan and a Delete data writes ONE row, no backfill; the dd15
+`tm_main` law for portal/select/input_text); client `test_tool_time_machine` +3
+(`history_lang`). Mutation-checked: `timelineScope` keeping the lang → list 1≠2; probe
+`anyTag` forced false → 2 rows written; `lang_sliced` forced true → red.
+Per-file floor re-frozen (`engineering/unit_baseline.json`): `tm_relation_lane_native`
+5 tests / 71 assertions → 7 / 82, measured green on the suite DB (`--record-new` refuses a
+recorded file, so the stale floor left the two review gates unguarded).

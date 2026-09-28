@@ -57,7 +57,7 @@ import {
 	savesInRequestLang,
 } from '../ontology/resolver.ts';
 import { resolveDataframeSlotTipos, splitComposed } from '../relations/dataframe_slots.ts';
-import { NOLAN } from '../relations/main_lanes.ts';
+import { laneLaw, NOLAN } from '../relations/main_lanes.ts';
 import type {
 	EmitDdo,
 	EmitRowContext,
@@ -192,7 +192,8 @@ interface TmRow {
  * the writer files an lg-nolan frame row for any slot holding the main's
  * frames, a declared one or an undeclared live one (dataframe_slots.ts
  * readMainSlots), and a main with no frame lane simply has no lg-nolan row of
- * it to add (a non-translatable main's X IS lg-nolan).
+ * it to add. An UNSLICED main never reaches this clause: its one lane is every
+ * row whatever the tag (timelineScope drops the lang).
  */
 function laneClause(param: string): string {
 	return `lang IN (${param}, 'lg-nolan')`;
@@ -214,18 +215,57 @@ async function timelineScope(sqo: Record<string, unknown>): Promise<Record<strin
 	const dataLang = currentDataLang();
 	const locators: unknown[] = [];
 	for (const locator of sqo.filter_by_locators as Record<string, unknown>[]) {
-		locators.push((await readsInDataLang(locator)) ? { ...locator, lang: dataLang } : locator);
+		if (await isUnslicedMainLocator(locator)) {
+			locators.push(withoutLang(locator));
+		} else {
+			locators.push((await readsInDataLang(locator)) ? { ...locator, lang: dataLang } : locator);
+		}
 	}
 	return { ...sqo, filter_by_locators: locators };
 }
 
-/** Whether a locator asks, in lg-nolan, for a non-translatable main that keeps language versions. */
+/**
+ * Whether a locator names a main whose data is NOT lang-sliced (every relation
+ * model, decision 2026-09-29): its history is ONE lane whatever the row tag —
+ * a PHP save of a relation flagged translatable was tagged with the data lang
+ * and held the WHOLE value, exactly like an lg-nolan row (readRowLaneState
+ * reads it so) — so every language's timeline lists ALL its rows: no lang
+ * clause at all.
+ */
+async function isUnslicedMainLocator(locator: Record<string, unknown>): Promise<boolean> {
+	const { tipo, lang } = locator;
+	if (typeof lang !== 'string' || lang === '' || typeof tipo !== 'string' || tipo === '')
+		return false;
+	return isUnslicedMain(tipo);
+}
+
+/** A main whose data is not lang-sliced: its history is ONE lane, whatever tag or request lang. */
+async function isUnslicedMain(tipo: string): Promise<boolean> {
+	const model = await getModelByTipo(tipo);
+	return model !== null && isMainValueModel(model) && !isLangSlicedModel(model);
+}
+
+/** A copy of a locator without its lang (the caller's SQO is never mutated). */
+function withoutLang(locator: Record<string, unknown>): Record<string, unknown> {
+	const { lang: _lang, ...rest } = locator;
+	return rest;
+}
+
+/**
+ * Whether a locator asks, in lg-nolan, for a non-translatable LANG-SLICED main
+ * that keeps language versions (an unsliced main's one lane is lg-nolan).
+ */
 async function readsInDataLang(locator: Record<string, unknown>): Promise<boolean> {
 	const { tipo, lang } = locator;
 	if (lang !== 'lg-nolan' || typeof tipo !== 'string' || tipo === '') return false;
 	if (await getTranslatableByTipo(tipo)) return false;
+	return keepsLangVersions(tipo);
+}
+
+/** A LANG-SLICED main whose saves keep the request lang (resolver.ts savesInRequestLang). */
+async function keepsLangVersions(tipo: string): Promise<boolean> {
 	const model = await getModelByTipo(tipo);
-	return model !== null && (await savesInRequestLang(tipo, model));
+	return model !== null && isLangSlicedModel(model) && (await savesInRequestLang(tipo, model));
 }
 
 /**
@@ -685,10 +725,7 @@ async function graftFrameRowValue(
 ): Promise<void> {
 	const model = await frameRowModel(row, viewLang);
 	if (model === null) return;
-	const law = {
-		sliced: isLangSlicedModel(model),
-		translatable: await getTranslatableByTipo(row.tipo),
-	};
+	const law = laneLaw(isLangSlicedModel(model), await getTranslatableByTipo(row.tipo));
 	const coords = {
 		sectionTipo: row.section_tipo,
 		sectionId: row.section_id,
@@ -698,11 +735,15 @@ async function graftFrameRowValue(
 	if (asOf.recorded) injectComponentData(record, row.tipo, model, asOf.value ?? emptyKeyOf(law));
 }
 
-/** The model of a language-lane main whose frames-only lg-nolan row is viewed in a language; null otherwise. */
+/**
+ * The model of a language-lane main whose frames-only lg-nolan row is viewed
+ * in a language; null otherwise. Never an unsliced model: its lg-nolan row IS
+ * its whole value (main_lanes.ts laneLaw — a relation is never translatable).
+ */
 async function frameRowModel(row: TmRow, viewLang: string): Promise<string | null> {
 	if (!isFrameRowView(row, viewLang) || holdsNolanItem(row.data)) return null;
 	const model = await getModelByTipo(row.tipo);
-	if (model === null || !isMainValueModel(model)) return null;
+	if (model === null || !isLaneValueModel(model)) return null;
 	return (await savesInRequestLang(row.tipo, model)) ? model : null;
 }
 
@@ -731,6 +772,11 @@ function laneCellLang(model: string, cellLang: string): { lang?: string } {
 /** A per-component (array snapshot) lg-nolan row, read in a language lane. */
 function isFrameRowView(row: TmRow, viewLang: string): boolean {
 	return row.lang === NOLAN && viewLang !== NOLAN && viewLang !== '' && Array.isArray(row.data);
+}
+
+/** A LANG-SLICED main model: its value can live in language lanes (isMainValueModel ∧ isLangSlicedModel). */
+function isLaneValueModel(model: string): boolean {
+	return isMainValueModel(model) && isLangSlicedModel(model);
 }
 
 /** A main model whose value lands in a jsonb column (never a dataframe slot, never section_id). */
@@ -923,6 +969,17 @@ export const tmReadSource: SectionReadSource = {
 };
 
 /**
+ * THE LANE LAW of a one-component history (decision 2026-09-29), stamped on
+ * the dd15 context so the tool never re-derives it: `lang_sliced` false ⇒ the
+ * main's history is ONE lane (every relation model, whatever its ontology
+ * `translatable` flag) — no language to choose, and a restore replaces the
+ * whole value and its frames.
+ */
+async function tmMainLaneLaw(tipo: string): Promise<{ tipo: string; lang_sliced: boolean }> {
+	return { tipo, lang_sliced: !(await isUnslicedMain(tipo)) };
+}
+
+/**
  * Build the dd15 structure-context for a TM read (PHP section::get_json context
  * over the virtual dd15 record). dd15's LIST columns are the CLIENT's chosen
  * components (the caller section's fields shown as history columns), so — unlike
@@ -955,13 +1012,13 @@ async function buildTmContext(rqo: Rqo, _principal: Principal): Promise<Structur
 	const clientColumns = rqo.show?.ddo_map ?? [];
 	let columns: { tipo?: unknown; label?: unknown; view?: unknown; column_id?: unknown }[] =
 		clientColumns;
+	const { resolveTimeMachineScope, tmListColumns } = await import(
+		'../section/list_definitions/time_machine_list.ts'
+	);
+	const scope = resolveTimeMachineScope(rqo.sqo as Record<string, unknown> | undefined, {
+		surface: source.tm_surface,
+	});
 	if (clientColumns.length === 0) {
-		const { resolveTimeMachineScope, tmListColumns } = await import(
-			'../section/list_definitions/time_machine_list.ts'
-		);
-		const scope = resolveTimeMachineScope(rqo.sqo as Record<string, unknown> | undefined, {
-			surface: source.tm_surface,
-		});
 		const derived = await tmListColumns(scope);
 		if (derived !== null) {
 			columns = derived as never;
@@ -1012,6 +1069,7 @@ async function buildTmContext(rqo: Rqo, _principal: Principal): Promise<Structur
 				}),
 			);
 		}
+		if (scope.tipo !== undefined) sectionCtx.tm_main = await tmMainLaneLaw(scope.tipo);
 		tmContext.push(sectionCtx);
 	}
 	for (const ddo of columns) {

@@ -246,7 +246,8 @@ interface HistoryItem {
  * row (imported with the time machine off, then edited, then deleted) is still
  * another language's item, and a frame paired to it never comes back as an
  * orphan. Lang-less items belong to every language and are never "another
- * language's".
+ * language's". `unsliced` (an unsliced main) files EVERY item under
+ * lg-nolan, its one lane — a locator's own `lang` stamp is ignored.
  *
  * `restoredRowId` (apply_value, the legacy bulk path — ONE row restored): an
  * item is left out when the history PROVES it did not exist at that row — the
@@ -267,17 +268,22 @@ export async function readOtherLangItemIds(
 	coords: TmCoords,
 	exceptLangs: readonly string[],
 	restoredRowId: number | null = null,
-	langlessByTag = false,
+	unsliced = false,
 ): Promise<Set<string>> {
 	await ensureTmHistoryReady();
-	// An item's LANE: its own `lang`, or — `langlessByTag`, an UNSLICED main
-	// whose items carry no language (a portal's locators) — the lane its row is
-	// filed under (relations/main_lanes.ts). Every visible row of the address
-	// (its tag, even with no item: a tagged row speaks for its language) with
-	// its other-lane items — one statement.
-	const itemLane = `COALESCE(NULLIF(e.value->>'lang', ''), CASE WHEN $5::boolean THEN matrix_time_machine.lang END)`;
+	// An item's LANE: its own `lang` — or, `unsliced` (an UNSLICED main:
+	// ONE lane, relations/main_lanes.ts laneLaw), lg-nolan for every item,
+	// whatever `lang` the save stamped on a locator of a portal flagged
+	// translatable (decision 2026-09-29: the flag never changes the history).
+	// Every visible row of the address (its tag, even with no item: a tagged
+	// row speaks for its language) with its other-lane items — one statement.
+	// `unsliced`: every ROW is the lg-nolan lane too, whatever its tag (a v6
+	// row of a translatable-flagged portal is tagged lg-spa) — else a
+	// frame-first frame on such a row would never be proven and be dropped.
+	const itemLane = `CASE WHEN $5::boolean THEN 'lg-nolan' ELSE NULLIF(e.value->>'lang', '') END`;
 	const rows = (await sql.unsafe(
-		`SELECT matrix_time_machine.id AS row_id, matrix_time_machine.lang AS row_lang,
+		`SELECT matrix_time_machine.id AS row_id,
+		        CASE WHEN $5::boolean THEN 'lg-nolan' ELSE matrix_time_machine.lang END AS row_lang,
 		        e.value->>'id' AS id, ${itemLane} AS lang
 		 FROM matrix_time_machine
 		 LEFT JOIN LATERAL jsonb_array_elements(
@@ -294,13 +300,7 @@ export async function readOtherLangItemIds(
 				 AND matrix_time_machine.tipo = $3`,
 			)}
 		 ORDER BY matrix_time_machine.id DESC`,
-		[
-			coords.sectionTipo,
-			coords.sectionId,
-			coords.componentTipo,
-			exceptLangs.join(','),
-			langlessByTag,
-		],
+		[coords.sectionTipo, coords.sectionId, coords.componentTipo, exceptLangs.join(','), unsliced],
 	)) as { row_id: number; row_lang: string | null; id: string | null; lang: string | null }[];
 	const items: HistoryItem[] = [];
 	for (const row of rows) {
@@ -384,16 +384,6 @@ export function readLaneRowAt(
 	rowId: number,
 ): Promise<TimeMachineRow | null> {
 	return newestRowAt(coords, rowId, 'matrix_time_machine.lang = $5', [lang]);
-}
-
-/**
- * THE VALUE OF AN UNSLICED TRANSLATABLE MAIN AS OF ROW `rowId` (a translatable
- * portal): its value is ONE whole key filed under whichever request language
- * saved it (relations/main_lanes.ts), so the value as of R is the newest
- * visible row of ANY value lane (every tag but lg-nolan) at or below it.
- */
-export function readValueRowAt(coords: TmCoords, rowId: number): Promise<TimeMachineRow | null> {
-	return newestRowAt(coords, rowId, "matrix_time_machine.lang IS DISTINCT FROM 'lg-nolan'");
 }
 
 /**
@@ -489,9 +479,10 @@ export interface BulkPairEntry {
 	coords: TmCoords;
 	/**
 	 * The row language. A lang-sliced model: the slice lang (both images are
-	 * that language's REGION). An unsliced model or a dataframe slot: the
-	 * request lang, as the ordinary save path tags it — the revert groups those
-	 * keys language-blind.
+	 * that language's REGION). An unsliced model: always `lg-nolan`, its one
+	 * lane (relations/main_lanes.ts laneLaw — whatever the ontology flag or the
+	 * request lang). A dataframe slot never has a pair of its own (its change
+	 * is the main's lg-nolan pair).
 	 */
 	lang: string;
 	userId: number;

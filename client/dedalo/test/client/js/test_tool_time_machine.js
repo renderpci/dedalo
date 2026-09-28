@@ -62,6 +62,36 @@ describe('TOOL_TIME_MACHINE CLIENT TEST', function() {
 		assert.equal(typeof tool_time_machine.prototype.apply_value, 'function', 'expected apply_value defined')
 		assert.equal(typeof tool_time_machine.prototype.bulk_revert_process, 'function', 'expected bulk_revert_process defined')
 		assert.equal(typeof tool_time_machine.prototype.get_bulk_process_label, 'function', 'expected get_bulk_process_label defined')
+		assert.equal(typeof tool_time_machine.prototype.history_lang, 'function', 'expected history_lang defined')
+	})
+
+	// THE LANE LAW is the server's (dd15 context tm_main, decision 2026-09-29):
+	// a relation flagged translatable has ONE lane, lg-nolan — no language
+	// selector, and the restore confirm names lg-nolan (replaced whole).
+	describe('history_lang', function() {
+
+		const with_state = function(main_element, tm_main) {
+			const instance = new tool_time_machine()
+			instance.main_element	= main_element
+			instance.tm_list		= tm_main===undefined ? null : {context : {tipo : 'dd15', tm_main}}
+			return instance
+		}
+
+		it('an unsliced main (server: lang_sliced false) reads lg-nolan whatever its context lang', function() {
+			const instance = with_state({tipo : 'test80', lang : 'lg-spa'}, {tipo : 'test80', lang_sliced : false})
+			assert.equal(instance.history_lang(), 'lg-nolan')
+		})
+
+		it('a lang-sliced main keeps its own lang', function() {
+			const instance = with_state({tipo : 'test52', lang : 'lg-spa'}, {tipo : 'test52', lang_sliced : true})
+			assert.equal(instance.history_lang(), 'lg-spa')
+		})
+
+		it('no server statement (or one about another tipo) keeps the context lang', function() {
+			assert.equal(with_state({tipo : 'test52', lang : 'lg-eng'}).history_lang(), 'lg-eng')
+			const other = with_state({tipo : 'test52', lang : 'lg-eng'}, {tipo : 'test80', lang_sliced : false})
+			assert.equal(other.history_lang(), 'lg-eng')
+		})
 	})
 
 	// A bulk revert that SKIPS or INFERS items still answers ok; the success

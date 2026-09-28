@@ -37,12 +37,7 @@
  * restored value no longer holds is stale and its frame is never written back.
  */
 
-import {
-	readFrameStateRowAt,
-	readLaneRowAt,
-	readValueRowAt,
-	type TmCoords,
-} from '../db/time_machine.ts';
+import { readFrameStateRowAt, readLaneRowAt, type TmCoords } from '../db/time_machine.ts';
 import { isFrameStateRow, isFramesOnlyImage, splitComposed } from '../relations/dataframe_slots.ts';
 import { type LaneLaw, laneHoldsValue, NOLAN, rowLaneItems } from '../relations/main_lanes.ts';
 
@@ -105,8 +100,9 @@ function mainItems(data: unknown): unknown[] {
 
 /**
  * Whether a row of `lane` restores a VALUE: never a frames-only row
- * (isFramesOnlyImage), never the lg-nolan lane of a translatable main (it holds
- * no value). An unsliced main's row of any other tag carries its whole value.
+ * (isFramesOnlyImage), never the lg-nolan lane of a translatable sliced main
+ * (it holds no value). An unsliced main's row (always read as lg-nolan —
+ * readRowLaneState) carries its whole value.
  */
 export function rowRestoresValue(row: LaneRow, lane: string, law: LaneLaw): boolean {
 	if (lane === NOLAN && law.translatable) return false;
@@ -135,10 +131,14 @@ async function frameStateAt(
 	return { frameImage: found?.data ?? [], frameRowId: found === null ? null : Number(found.id) };
 }
 
-/** The state at a row (see the header): its own lane value, and the frame state as of it. */
+/**
+ * The state at a row (see the header): its own lane value, and the frame state
+ * as of it. An UNSLICED main has one lane (main_lanes.ts laneLaw): its row is
+ * read as lg-nolan whatever its tag.
+ */
 export async function readRowLaneState(input: LaneStateInput): Promise<RowLaneState> {
 	const { coords, row, law } = input;
-	const rowLane = rowLaneOf(row, input.fallbackLang);
+	const rowLane = law.sliced ? rowLaneOf(row, input.fallbackLang) : NOLAN;
 	const own = rowRestoresValue(row, rowLane, law)
 		? laneValueOf(row, rowLane, law)
 		: { lane: rowLane, recorded: false, value: undefined };
@@ -147,12 +147,11 @@ export async function readRowLaneState(input: LaneStateInput): Promise<RowLaneSt
 
 /**
  * The value of lane `lane` AS OF row `rowId` (the newest lane row at or below
- * it; none = the lane was empty then; an UNSLICED translatable main — one
- * whole value filed under whichever language saved it — the newest row of ANY
- * value lane, readValueRowAt) — the PREVIEW's other half: a row of one
+ * it; none = the lane was empty then) — the PREVIEW's other half: a row of one
  * lane previews the other lanes of the timeline as they stood. Not `recorded`
- * when the lane holds no value of this main, nor for a translatable main's
- * lg-nolan lane — rowRestoresValue's law: history never speaks for that value.
+ * when the lane holds no value of this main (an unsliced main's language
+ * lane), nor for a translatable main's lg-nolan lane — rowRestoresValue's law:
+ * history never speaks for that value.
  */
 export async function readLaneValueAt(
 	coords: TmCoords,
@@ -163,12 +162,7 @@ export async function readLaneValueAt(
 	if (!laneHoldsValue(lane, law) || (lane === NOLAN && law.translatable)) {
 		return { lane, recorded: false, value: undefined };
 	}
-	// An UNSLICED translatable main: one whole value, whichever language lane last wrote it.
-	const row =
-		!law.sliced && law.translatable
-			? await readValueRowAt(coords, rowId)
-			: await readLaneRowAt(coords, lane, rowId);
-	return laneValueOf(row, lane, law);
+	return laneValueOf(await readLaneRowAt(coords, lane, rowId), lane, law);
 }
 
 /**
@@ -260,8 +254,7 @@ export function restoredLaneValue(
  * the timeline's OTHER lane as of the row (`asOf`, readLaneValueAt) put back
  * STRICTLY — only items tagged exactly that lane are replaced, so a lang-less
  * (PHP orphan) item stays where the own lane left it. An unsliced main has one
- * value lane: a row that records no value of it (a translatable portal's
- * lg-nolan frame row) previews that lane AS OF the row, never the live value.
+ * lane, lg-nolan: its row IS its whole value (no other lane to add).
  */
 export function previewLaneValue(
 	live: unknown,
@@ -270,10 +263,7 @@ export function previewLaneValue(
 	law: { sliced: boolean },
 ): unknown {
 	const own = restoredLaneValue(live, state, law);
-	if (asOf === null || !asOf.recorded) return own;
-	// An unsliced main's value is ONE lane: its own row's value, else (a
-	// translatable main's frames-only lg-nolan row) the value as of the row.
-	if (!law.sliced) return state.own.recorded ? own : asOf.value;
+	if (asOf === null || !asOf.recorded || !law.sliced) return own;
 	const tagged = (item: unknown) => (item as { lang?: unknown } | null)?.lang === asOf.lane;
 	return [
 		...asItemList(own).filter((item) => !tagged(item)),

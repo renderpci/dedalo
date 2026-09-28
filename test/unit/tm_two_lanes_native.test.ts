@@ -87,7 +87,7 @@ const PMAIN = `${TLD}6`; // component_portal (non-translatable relation main)
 const PSLOT = `${TLD}7`;
 const NMAIN = `${TLD}8`; // component_number (non-translatable literal main), has_dataframe
 const NSLOT = `${TLD}9`;
-const TPMAIN = `${TLD}10`; // component_portal, TRANSLATABLE (unsliced: its value in the data lang's lane)
+const TPMAIN = `${TLD}10`; // component_portal whose ontology node says translatable — unsliced: lg-nolan lane only
 const TPSLOT = `${TLD}11`;
 const UMAIN = `${TLD}12`; // component_input_text, translatable, declares NO slot
 const USLOT = `${TLD}13`; // a dataframe no main declares (parent: the section)
@@ -1172,7 +1172,7 @@ describe('(6) a BULK run over a translatable main with frames: pairs per lane, e
 		});
 	}, 60_000);
 
-	test('an UNSLICED translatable portal with a slot, saved spa, eng, spa in ONE run: ONE value chain across the tags — the revert is exact, never interleaved_write', async () => {
+	test('a TRANSLATABLE-flagged portal (unsliced) with a slot, saved from spa, eng, spa requests in ONE run: every pair is lg-nolan, ONE chain — the revert is exact, never interleaved_write', async () => {
 		const locator = (role: Role): Item => ({
 			type: 'dd151',
 			section_tipo: SECTION,
@@ -1206,14 +1206,15 @@ describe('(6) a BULK run over a translatable main with frames: pairs per lane, e
 		);
 		const post = await portalState(id);
 		expect(post.value).toEqual(['author', 'translator']); // FLOOR
+		// decision 2026-09-29: a relation's lane is lg-nolan whatever the request language
 		expect((await runRows(TPMAIN, id, run)).map((row) => row.lang)).toEqual([
-			SPA,
-			SPA,
-			ENG,
-			ENG,
-			SPA,
-			SPA,
-		]); // FLOOR: the one value chain spans two tags
+			NOLAN,
+			NOLAN,
+			NOLAN,
+			NOLAN,
+			NOLAN,
+			NOLAN,
+		]);
 		const data = await revert(run);
 		expect(data.skipped).toEqual([]);
 		expect(data.exact).toBe('full');
@@ -1734,7 +1735,7 @@ describe('(10) bulk revert, preview and list completeness', () => {
 		expect(cells.get(second)).toEqual(['lg-spa:casa-grande']);
 	}, 60_000);
 
-	test('the preview of an lg-nolan (frame) row of a TRANSLATABLE PORTAL shows the value AS OF the row, not the live one', async () => {
+	test('the preview of an lg-nolan (frame) row of a TRANSLATABLE-flagged portal shows the value the row recorded, not the live one', async () => {
 		const locator = (role: Role): Item => ({
 			type: 'dd151',
 			section_tipo: SECTION,
@@ -1788,7 +1789,7 @@ describe('(10) bulk revert, preview and list completeness', () => {
 
 // ---------------------------------------------------------------- 11: the backfill is frame-first
 
-describe('(11) the BACKFILL (duplicate, Delete data) writes the frame lane FIRST; an unsliced translatable main previews its value from ANY language lane', () => {
+describe('(11) the BACKFILL (duplicate, Delete data) writes the frame lane FIRST; an unsliced main saved from two request languages has ONE lane', () => {
 	const frame = (role: Role): Item => ({
 		id: 1,
 		type: 'dd490',
@@ -1892,7 +1893,7 @@ describe('(11) the BACKFILL (duplicate, Delete data) writes the frame lane FIRST
 		expect((await preview(L, id, engRow.id, ENG)).frames).toEqual([]);
 	}, 60_000);
 
-	test('the preview of a frame row of a TRANSLATABLE PORTAL saved from TWO request languages shows the value the LAST save left (any language lane), with its frames', async () => {
+	test('a TRANSLATABLE-flagged portal saved from TWO request languages: every row lg-nolan, listed in both timelines; the preview of its frame row shows the value the LAST save left, with its frames', async () => {
 		const locator = (role: Role): Item => ({
 			type: 'dd151',
 			section_tipo: SECTION,
@@ -1914,7 +1915,9 @@ describe('(11) the BACKFILL (duplicate, Delete data) writes the frame lane FIRST
 		);
 		await addFrame(TP, id, Number(reviewerItem.id), 'editor');
 		const rows = await visibleRows(TPMAIN, id);
-		expect(rows.map((row) => row.lang)).toEqual([SPA, ENG, NOLAN]); // FLOOR
+		expect(rows.map((row) => row.lang)).toEqual([NOLAN, NOLAN, NOLAN]);
+		expect(await countTimeMachineData(historyRqo(TP, id, SPA))).toBe(3);
+		expect(await countTimeMachineData(historyRqo(TP, id, ENG))).toBe(3);
 		const frameRow = mustGet(rows[2], 'the frame row');
 		const shown = await runWithRequestLangs({ applicationLang: ENG, dataLang: SPA }, async () => {
 			const read = (await readComponentData({

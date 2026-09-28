@@ -164,8 +164,9 @@ const get_content_data = async function(self) {
 					parent			: fragment
 				})
 
-			// lang selector
-				if (self.main_element.lang!=='lg-nolan') {
+			// lang selector — only for a main with language lanes (history_lang:
+			// the server's lane law; a relation has one lane whatever its flag)
+				if (self.history_lang()!=='lg-nolan') {
 
 					// label
 					ui.create_dom_element({
@@ -312,16 +313,21 @@ const get_content_data = async function(self) {
 					// {1} language, {2} record), which the translator may reorder. The
 					// English literal below is the fallback for an install whose registered
 					// tool data predates the key, never the normal path.
+					//
+					// The language named is the main's HISTORY lane (history_lang, the
+					// server's lane law): 'lg-nolan' for a main without language lanes —
+					// every relation, whatever its ontology flag — which is replaced whole.
 					const component_label	= self.main_element.label || self.main_element.tipo
 					const record_address	= `${self.main_element.section_tipo}/${self.main_element.section_id}`
+					const history_lang		= self.history_lang()
 					const apply_confirm_msg = self.get_tool_label(
 							'apply_value_confirm_msg',
 							component_label,
-							self.main_element.lang,
+							history_lang,
 							record_address
 						)
-						|| `The current data of "${component_label}" (language ${self.main_element.lang}) in record ${record_address} will be OVERWRITTEN with the selected historical version.\n\n`
-						+ `A translatable component keeps its other languages: only the one named here is replaced. Any other component is replaced in full.\n\n`
+						|| `The current data of "${component_label}" (language ${history_lang}) in record ${record_address} will be OVERWRITTEN with the selected historical version.\n\n`
+						+ `A component with per-language text keeps its other languages: only the one named here is replaced. Any other component (lg-nolan: relations included) is replaced in full, with its dataframes.\n\n`
 						+ `Continue?`
 
 					if (!confirm(apply_confirm_msg)) {

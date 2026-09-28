@@ -525,54 +525,32 @@ async function wipedKeysOf(
 	return { keys, written: false };
 }
 
-/** One pair of a wiped key's restore: a language's region before and after its step. */
-interface WipedKeyStep {
-	lang: string;
-	before: unknown;
-	after: unknown;
-	/** The whole key once this step (and every one before it) is applied. */
-	state: unknown;
-}
-
 /**
- * A wiped key's restore as SEQUENTIAL per-language saves — the shape the undo
- * log's revert undoes (LIFO over the language regions; a dataframe main's
- * steps are composed with its slots by recordWipedHistory). Each language's
- * pair is cut from the state the PREVIOUS language's step left, never all from
- * the one pre-write state: a lang-less orphan belongs to EVERY language's
- * region, so independent pairs would all claim the same orphans, and undoing
- * the last language (which drops them with its region) would leave the next
- * one's live region differing from its recorded after — a revert of this
- * revert refused `changed_since_run` though nothing changed. An unsliced key,
- * or a non-array value, is one whole-key step. That step — and a sliced key
- * whose items name no language — is tagged `ownLang`, the MAIN's own row lang
- * (mainIdentity: a translatable main's data lang, else lg-nolan), the lang the
- * wipe it undoes was tagged with (deleteSectionData tmLang): tagged lg-nolan, a
- * translatable main's restore sat in no timeline the tool lists. The STATES
- * never depend on it (a lang-less item is in every language's region).
+ * A wiped key's restored value as SEQUENTIAL per-language saves would leave it
+ * (the shape the undo log's revert undoes, LIFO over the language regions):
+ * each language's region is placed over the state the PREVIOUS language left,
+ * never all over the one pre-write state — a lang-less orphan belongs to EVERY
+ * language's region, so independent placements would all claim the same
+ * orphans. An unsliced key, or a non-array value, is one whole-key step. The
+ * undo PAIRS are not cut here: recordWipedHistory writes them, tagged by
+ * mainIdentity (lg-nolan for every unsliced main whatever its ontology flag, a
+ * translatable sliced main's data lang); deleteSectionData's own wipe row
+ * takes its lane in recordWipeHistory.
  */
-function wipedKeySteps(key: WipedKey, sliced: boolean, ownLang: string): WipedKeyStep[] {
-	if (!sliced || !Array.isArray(key.value)) {
-		return [{ lang: ownLang, before: key.live, after: key.value, state: key.value }];
-	}
-	const steps: WipedKeyStep[] = [];
+function wipedKeyState(key: WipedKey, sliced: boolean): unknown {
+	if (!sliced || !Array.isArray(key.value)) return key.value;
 	let state = key.live;
-	for (const lang of itemLangs([key.live, key.value], ownLang)) {
-		const next = restoreRegion(state, lang, regionOf(key.value, lang, true), true);
-		steps.push({
-			lang,
-			before: regionOf(state, lang, true),
-			after: regionOf(next, lang, true),
-			state: next,
-		});
-		state = next;
+	// A key whose items name no language is one step over the lang-less region
+	// (in every language's region, so the lane named here never changes it).
+	for (const lang of itemLangs([key.live, key.value], 'lg-nolan')) {
+		state = restoreRegion(state, lang, regionOf(key.value, lang, true), true);
 	}
-	return steps;
+	return state;
 }
 
 /**
  * Write one wiped key back (its undo pairs are recordWipedHistory's). What is
- * written is the END state of the sequential steps (wipedKeySteps) — the
+ * written is the END state of the sequential steps (wipedKeyState) — the
  * pre-wipe items, with each language region placed as its own save would place
  * it — so the key and its pairs agree byte for byte.
  */
@@ -583,9 +561,7 @@ async function writeWipedKey(
 	context: RecordContext,
 ): Promise<unknown> {
 	const target = { table, sectionTipo: marker.sectionTipo, sectionId: marker.sectionId };
-	// Only the end STATE is used here, which no step's lang tag changes.
-	const steps = wipedKeySteps(key, key.model !== '' && isLangSlicedModel(key.model), 'lg-nolan');
-	const written = steps.at(-1)?.state ?? key.value;
+	const written = wipedKeyState(key, key.model !== '' && isLangSlicedModel(key.model));
 	const ownsStamps = runOwnsRecordStamps(
 		context.keyAddresses ?? new Set(),
 		marker.sectionTipo,

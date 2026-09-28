@@ -452,6 +452,34 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 
 /**
+* HISTORY_LANG
+* The language lane the main element's history lives in — the lane the
+* restore confirm names and whether a language selector means anything.
+*
+* The SERVER states it (dd15 context `tm_main.lang_sliced`, read_tm.ts
+* tmMainLaneLaw) — never re-derived here: a main whose data is not
+* lang-sliced (every relation model, whatever its ontology `translatable`
+* flag) has ONE lane, 'lg-nolan', and a restore replaces its whole value and
+* frames. Otherwise the main element's own lang.
+*
+* @returns {string} 'lg-nolan' or the main element's lang
+*/
+tool_time_machine.prototype.history_lang = function() {
+
+	const self = this
+
+	const lang = self.main_element?.lang || 'lg-nolan'
+	const tm_main = self.tm_list?.context?.tm_main
+	if (tm_main && tm_main.tipo===self.main_element?.tipo && tm_main.lang_sliced===false) {
+		return 'lg-nolan'
+	}
+
+	return lang
+}//end history_lang
+
+
+
+/**
 * GET_COMPONENT
 * Creates and returns a component instance loaded with data from a specific
 * `matrix_time_machine` row, to be placed in the preview pane.

@@ -1,9 +1,9 @@
 /**
  * THE TWO LANES OF A MAIN'S HISTORY (2026-09-28,
  * WC-2026-09-27-bulk-revert-undo-log, addendum "two lanes"). Pure: no I/O, no ontology lookup — the
- * caller hands the LaneLaw it read (the model's `isLangSlicedModel` answer and
- * the ontology `translatable` flag), so the capture and every reader cut the
- * same key with the same law.
+ * caller hands the LaneLaw it read (laneLaw: the model's `isLangSlicedModel`
+ * answer and, for a sliced model only, the ontology `translatable` flag), so
+ * the capture and every reader cut the same key with the same law.
  *
  * Every history row of a main (and of its dataframes) is stored under the
  * MAIN's tipo, in one of two kinds of lane:
@@ -24,10 +24,13 @@
  *     lane is then its shared frame lane); a PHP-era lg-nolan item on it is
  *     recorded like any other (a restore reads such a main's lg-nolan row for
  *     its frames only — tm_record/lane_state.ts rowRestoresValue).
- * An UNSLICED model (relation, number…) holds its WHOLE key in one lane: the
- * lg-nolan lane when non-translatable, the request language's lane when
- * translatable (a translatable portal: every language timeline is the same
- * value, the frames live in lg-nolan).
+ * An UNSLICED model (every relation — portal, select, check_box, radio,
+ * filter, relation_* — and number, date…) holds its WHOLE key in ONE lane, the
+ * lg-nolan lane: one row = the whole value + every frame. ALWAYS, whatever the
+ * ontology `translatable` flag says and whatever the request language
+ * (decision 2026-09-29: the lane depends on the model's DATA SHAPE only; a
+ * relation holds locators, which are never translatable — laneLaw drops the
+ * flag of an unsliced model). Every language's timeline lists that one lane.
  *
  * REGIONS. The undo law (`laneRegion`, concepts/lang_region.ts regionOf —
  * lang-less orphans kept, absence = undefined; a translatable main's lg-nolan
@@ -41,18 +44,31 @@ import { regionOf, restoreRegion } from '../concepts/lang_region.ts';
 /** The lang tag of the shared frame lane (and of a non-translatable value). */
 export const NOLAN = 'lg-nolan';
 
-/** What decides how a main's key splits into lanes. */
+/** What decides how a main's key splits into lanes (build it with laneLaw). */
 export interface LaneLaw {
-	/** `isLangSlicedModel(model)` — the save path's answer. */
+	/** `isLangSlicedModel(model)` — the save path's answer: the model's DATA SHAPE. */
 	sliced: boolean;
-	/** The ontology `translatable` flag of the main. */
+	/**
+	 * A LANG-SLICED main whose ontology node is `translatable` (its lg-nolan lane
+	 * is then its shared frame lane). Always false for an unsliced model.
+	 */
 	translatable: boolean;
 }
 
-/** Whether `lane` carries a VALUE of the main (see the header). */
+/**
+ * THE ONE CONSTRUCTOR of a lane law (decision 2026-09-29): the lane of a main
+ * depends on its data shape only. The ontology `translatable` flag is kept
+ * for a lang-sliced model and DROPPED for an unsliced one — a relation's
+ * locators are never translatable, so a "translatable portal" is an
+ * ontology accident the history ignores.
+ */
+export function laneLaw(sliced: boolean, ontologyTranslatable: boolean): LaneLaw {
+	return { sliced, translatable: sliced && ontologyTranslatable };
+}
+
+/** Whether `lane` carries a VALUE of the main: every lane of a sliced model; only lg-nolan for an unsliced one. */
 export function laneHoldsValue(lane: string, law: LaneLaw): boolean {
-	if (lane === NOLAN) return law.sliced || !law.translatable;
-	return law.sliced || law.translatable;
+	return law.sliced || lane === NOLAN;
 }
 
 /** A stored value as its item list (absent / null → none; a non-array is the one item it is). */

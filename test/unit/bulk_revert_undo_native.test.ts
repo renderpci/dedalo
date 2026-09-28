@@ -12,7 +12,7 @@
  *   §2.9 additions — a two-language run; an edit after the run, a TM-off write
  *   mid-run, a delete after the run; an empty and an absent before-value;
  *   created records (deleted if safe, kept otherwise); a main+slot unit; an
- *   unsliced key saved under two request languages; two runs reverted LIFO and
+ *   unsliced key saved under two request languages (one lg-nolan lane); two runs reverted LIFO and
  *   in the wrong order; revert of a revert, a double revert, two concurrent
  *   reverts; a live-run refusal; a cascade delete (hard: undeleted; soft: the
  *   wiped data restored); legacy runs (born in the run vs not); the propagate
@@ -113,7 +113,7 @@ const SECTION = `${TLD}1`;
 const MAIN = `${TLD}2`; // portal → SLOT (unlink)
 const SLOT = `${TLD}3`;
 const TEXT = `${TLD}4`; // input_text, translatable (lang-SLICED)
-const TPORTAL = `${TLD}5`; // portal, translatable (lang-UNSLICED)
+const TPORTAL = `${TLD}5`; // portal whose ontology node says translatable — unsliced: lg-nolan lane only
 const HMAIN = `${TLD}6`; // portal → HSLOT (hard delete)
 const HSLOT = `${TLD}7`;
 const SMAIN = `${TLD}8`; // portal → SSLOT (soft delete: delete_target)
@@ -616,6 +616,12 @@ describe('the exact path (§2.9)', () => {
 				bulk: run,
 			},
 		);
+		// ONE lane, lg-nolan, whatever the request language (decision 2026-09-29).
+		const tags = (await sql.unsafe(
+			'SELECT DISTINCT lang FROM matrix_time_machine WHERE bulk_process_id = $1 AND tipo = $2',
+			[run, MAIN2],
+		)) as { lang: string }[];
+		expect(tags.map((row) => row.lang)).toEqual(['lg-nolan']);
 		const data = await revert(run);
 		expect(await stored(id, 'relation', MAIN2)).toEqual([locator(1, a, MAIN2)]);
 		expect(data).toMatchObject({ counter: 1, exact: 'full', skipped: [] });
@@ -1253,11 +1259,11 @@ describe('the dataframe cascade of a run (D3)', () => {
 		expect(rows[0]?.n).toBe(0);
 	});
 
-	test('SOFT, curator in lg-eng: the wipe row of a translatable main and its undelete pair share the REQUEST lang', async () => {
-		// DATA-01: the wipe (deleteSectionData) and its undo (mainKeySteps) both
-		// tag a translatable UNSLICED main with the request data lang — one
-		// timeline, never the install's menu lang for one and the curator's for
-		// the other.
+	test('SOFT, curator in lg-eng: the wipe row of a TRANSLATABLE-flagged portal and its undelete pair are both lg-nolan — one timeline', async () => {
+		// Decision 2026-09-29: a relation holds locators, never translatable —
+		// the wipe (deleteSectionData) and its undo (mainKeySteps) both file an
+		// unsliced main in lg-nolan, whatever its ontology flag and whatever the
+		// curator's language (DATA-01: never the install's menu lang either).
 		const requestLang = 'lg-eng';
 		expect((config.menu as { dataLang?: string }).dataLang).not.toBe(requestLang);
 		const host = await rec();
@@ -1279,9 +1285,9 @@ describe('the dataframe cascade of a run (D3)', () => {
 			 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3 ORDER BY id`,
 			[SECTION, role, TPORTAL],
 		)) as { lang: string }[];
-		// backfill + wipe, then the revert's pair: every row in the curator's timeline.
+		// backfill + wipe, then the revert's pair: every row in the one lg-nolan lane.
 		expect(rows.length).toBeGreaterThanOrEqual(3);
-		expect([...new Set(rows.map((row) => row.lang))]).toEqual([requestLang]);
+		expect([...new Set(rows.map((row) => row.lang))]).toEqual(['lg-nolan']);
 	});
 
 	test('SOFT: the wipe moved the target’s media FILES into deleted/; the revert moves them back', async () => {
@@ -1534,6 +1540,12 @@ describe('the propagate region on a translatable, UNSLICED model (M2)', () => {
 		// PINNED (M2, WC-2026-09-27-bulk-revert-undo-log): the region of an
 		// unsliced model is the whole key — the eng locator is replaced too.
 		expect(targetsOf(await stored(id, 'relation', TPORTAL))).toEqual([c]);
+		// …and its pair is ONE lg-nolan pair, never tagged with the request lang.
+		const tags = (await sql.unsafe(
+			'SELECT lang FROM matrix_time_machine WHERE bulk_process_id = $1 AND tipo = $2',
+			[run, TPORTAL],
+		)) as { lang: string }[];
+		expect(tags.map((row) => row.lang)).toEqual(['lg-nolan', 'lg-nolan']);
 		const data = await revert(run);
 		expect(await stored(id, 'relation', TPORTAL)).toEqual(pre);
 		expect(data.exact).toBe('full');
@@ -2273,7 +2285,7 @@ describe('a SOFT cascade restore is tagged with the MAIN’s own row lang (revie
 		return rows.map((row) => row.lang);
 	}
 
-	test('a translatable UNSLICED main and a SLICED main holding only lang-less items: the restore row sits in the wipe’s timeline', async () => {
+	test('a TRANSLATABLE-flagged portal (lg-nolan) and a translatable SLICED main holding only lang-less items (its data lang): the restore row sits in the wipe’s timeline', async () => {
 		const host = await rec();
 		const [t1, role, other] = [await rec(), await rec(), await rec()];
 		await seed(role, 'relation', TPORTAL, [locator(1, other, TPORTAL)]);
@@ -2288,9 +2300,11 @@ describe('a SOFT cascade restore is tagged with the MAIN’s own row lang (revie
 		for (const tipo of [TPORTAL, TEXT]) {
 			// The wipe's visible rows (its pre-state backfill, then the wipe itself).
 			const wipe = (await visibleLangs(role, tipo, null)).at(-1);
-			// FLOOR: the wipe is in a translatable main's data-lang timeline.
+			// An unsliced main's one lane is lg-nolan (decision 2026-09-29); a
+			// translatable sliced main's wipe is in its data-lang timeline.
 			expect(wipe, `${tipo} wipe lang`).toBeString();
-			expect(wipe, `${tipo} wipe lang`).not.toBe('lg-nolan');
+			if (tipo === TPORTAL) expect(wipe, `${tipo} wipe lang`).toBe('lg-nolan');
+			else expect(wipe, `${tipo} wipe lang`).not.toBe('lg-nolan');
 			expect(await visibleLangs(role, tipo, back.bulk_process_id), `${tipo} restore lang`).toEqual([
 				wipe as string,
 			]);

@@ -97,7 +97,7 @@ const REF = `${TLD}15`; // the referencing section of the observer pair
 const INDEXER = `${TLD}16`; // component_autocomplete_hi on REF — the OBSERVED indexer
 const OMAIN = `${TLD}17`; // component_autocomplete on SECTION — the set_dato_external OBSERVER
 const OSLOT = `${TLD}18`; // the observer's dataframe slot (its child)
-const TMAIN = `${TLD}19`; // a TRANSLATABLE portal (unsliced, its saves tagged with the data lang)
+const TMAIN = `${TLD}19`; // a portal whose ontology node says translatable — unsliced: its history is lg-nolan only
 const TSLOT = `${TLD}20`;
 const XMAIN = `${TLD}21`; // component_number, has_dataframe, its slot named ONLY by its request_config ddo
 const XSLOT = `${TLD}22`; // … living OUTSIDE the section's subtree (under REF)
@@ -1722,7 +1722,7 @@ describe('a slot save writes ONE lg-nolan row; the timeline of a language lists 
 		}),
 	};
 
-	test('a TRANSLATABLE RELATION main: its value in its language lane, its frames in lg-nolan — listed together, and a frame row restores only the frames', async () => {
+	test('a TRANSLATABLE-flagged RELATION main is UNSLICED: every save is ONE lg-nolan row (value + frames), listed in every language timeline; a frame row restores value and frames', async () => {
 		await inDataLang('lg-spa', async () => {
 			const id = await rec();
 			await saveMain(tKind, id, [tKind.item(1, 1)]);
@@ -1730,15 +1730,22 @@ describe('a slot save writes ONE lg-nolan row; the timeline of a language lists 
 			const first = await ownFrameOf(tKind, id, 1);
 			await changeFrame(tKind, id, 1, 2);
 			const rows = await mainRows(tKind, id);
-			expect(rows.map((row) => row.lang)).toEqual(['lg-spa', NOLAN, NOLAN]);
-			expect(splitComposed(rows[0]?.data).frames).toEqual([]); // the value row: no frame
+			// decision 2026-09-29: the lane follows the DATA SHAPE — never the ontology flag
+			expect(rows.map((row) => row.lang)).toEqual([NOLAN, NOLAN, NOLAN]);
+			const value = asList(await stored(id, 'relation', TMAIN)); // (the save stamps its request lang on the locator: save-path data, not a lane)
+			for (const row of rows) {
+				expect(splitComposed(row.data).main).toEqual(value); // the whole value, every row
+			}
 			expect(await toolListed(TMAIN, id, 'lg-spa')).toBe(rows.length);
-			// Going back to the frame-add state (a slot save's lg-nolan row) from the tool.
+			expect(await toolListed(TMAIN, id, 'lg-eng')).toBe(rows.length);
 			const frameRow = mustGet(rows[1], 'the frame-add row');
 			expect(ownFrames(tKind, splitComposed(frameRow.data).frames)).toEqual([first]);
 			await applyValue(tKind, id, frameRow);
 			expect(ownFrames(tKind, asList(await stored(id, 'relation', TSLOT)))).toEqual([first]);
 			expect(asList(await stored(id, 'relation', TMAIN)).map((item) => item.id)).toEqual([1]);
+			// the restore's own row is lg-nolan too
+			const after = await mainRows(tKind, id, (rows.at(-1) as TmRow).id);
+			expect(after.map((row) => row.lang)).toEqual([NOLAN]);
 		});
 	}, 60_000);
 
@@ -1785,7 +1792,7 @@ describe('a slot save writes ONE lg-nolan row; the timeline of a language lists 
 		return rows.map((row) => ({ ...row, id: Number(row.id) }));
 	}
 
-	test('a BULK run over a TRANSLATABLE RELATION main whose frame lane is NEWEST (main save, then a slot save): the revert records the value it restores in its language lane, and its revert is exact', async () => {
+	test('a BULK run over a TRANSLATABLE-flagged RELATION main (main save, then a slot save): lg-nolan pairs only; the revert — from another data lang — is exact, and so is its revert', async () => {
 		const id = await inDataLang('lg-spa', async () => {
 			const created = await rec();
 			await saveMain(tKind, created, [tKind.item(1, 1)]);
@@ -1796,27 +1803,30 @@ describe('a slot save writes ONE lg-nolan row; the timeline of a language lists 
 		const run = await mint();
 		await inDataLang('lg-spa', async () => {
 			await saveMain(tKind, id, [tKind.item(1, 2)], 'lg-spa', run);
-			await changeFrame(tKind, id, 1, 2, run); // an lg-nolan pair ABOVE the lg-spa pair
+			await changeFrame(tKind, id, 1, 2, run);
 		});
 		const post = await live(tKind, id);
 		expect(canonicalJson(post)).not.toBe(canonicalJson(pre)); // FLOOR: the run changed both
-		// The revert runs in ANOTHER data lang: its door lane must come from the unit, not the request.
+		const runLangs = (await sql.unsafe(
+			`SELECT DISTINCT lang FROM matrix_time_machine WHERE bulk_process_id = $1 AND tipo = $2`,
+			[run, TMAIN],
+		)) as { lang: string }[];
+		expect(runLangs.map((row) => row.lang)).toEqual([NOLAN]);
 		const back = await inDataLang('lg-eng', () => revert(run));
 		expect(back.skipped).toEqual([]);
 		expect(back.exact).toBe('full');
 		expect(await live(tKind, id)).toEqual(pre);
 		const rows = await runRows(id, back.bulk_process_id);
-		const valueRow = rows.find((row) => row.lang === 'lg-spa');
-		expect(splitComposed(mustGet(valueRow, 'the revert value row').data).main).toEqual(pre.main);
-		expect(rows.some((row) => row.lang === 'lg-eng')).toBe(false);
-		// The revert of the revert puts back the run's value AND its frames.
+		expect(rows.length).toBeGreaterThan(0);
+		expect(rows.every((row) => row.lang === NOLAN)).toBe(true);
+		expect(splitComposed((rows.at(-1) as TmRow).data).main).toEqual(pre.main);
 		const again = await inDataLang('lg-eng', () => revert(back.bulk_process_id));
 		expect(again.skipped).toEqual([]);
 		expect(again.exact).toBe('full');
 		expect(await live(tKind, id)).toEqual(post);
 	}, 60_000);
 
-	test('a door handing lg-nolan as the lane of a CHANGED translatable-portal value records it in the data lang (never a value-less frame row)', async () => {
+	test('a door handing a LANGUAGE lane (and the ontology flag) for an UNSLICED main records it in lg-nolan: value + frames, one row', async () => {
 		const id = await rec();
 		const target = { table: TABLE, sectionTipo: SECTION, sectionId: id };
 		const slots = { slots: [TSLOT], images: {} };
@@ -1824,7 +1834,7 @@ describe('a slot save writes ONE lg-nolan row; the timeline of a language lists 
 		await inDataLang('lg-spa', () =>
 			recordMainHistory(
 				target,
-				{ tipo: TMAIN, lang: NOLAN, sliced: false, translatable: true },
+				{ tipo: TMAIN, lang: 'lg-spa', sliced: false, translatable: true },
 				{
 					before: { value: [tKind.item(1, 1)], slots },
 					after: { value: [tKind.item(1, 2)], slots },
@@ -1833,8 +1843,8 @@ describe('a slot save writes ONE lg-nolan row; the timeline of a language lists 
 			),
 		);
 		const rows = await mainRows(tKind, id, mark);
-		const valueRow = rows.find((row) => row.lang === 'lg-spa');
-		expect(splitComposed(mustGet(valueRow, 'the lg-spa value row').data).main).toEqual([
+		expect(rows.map((row) => row.lang)).toEqual([NOLAN]);
+		expect(splitComposed(mustGet(rows[0], 'the lg-nolan row').data).main).toEqual([
 			tKind.item(1, 2),
 		]);
 	}, 60_000);

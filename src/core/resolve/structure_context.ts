@@ -189,6 +189,12 @@ export interface StructureContextEntry extends StructureContextCore {
 	 * this grouper, so the tabs exactly match the panels that will render. ABSENT
 	 * for every other model; the client only reads it in the section_tab view. */
 	children?: { tipo: string; label: string | null }[];
+	/** dd15 only, on a ONE-COMPONENT history read (read_tm.ts tmMainLaneLaw):
+	 * the scoped main's lane law — `lang_sliced` false ⇒ one lg-nolan lane
+	 * (every relation model, whatever its `translatable` flag). The
+	 * tool_time_machine client hides its language selector and words its
+	 * restore confirm from it. ABSENT on every other read. */
+	tm_main?: { tipo: string; lang_sliced: boolean };
 	/** PER-RECORD context options (PHP context->options). Today one producer:
 	 * component_text_area edit contexts carry `related_component_lang` — the
 	 * record's original language resolved from its related component_select_lang

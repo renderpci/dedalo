@@ -16,8 +16,9 @@
  *
  * THE KEY. (section_tipo, section_id, tipo, lang) for a lang-sliced model —
  * one language's region — and (section_tipo, section_id, tipo) for every other
- * model, grouped LANGUAGE-BLIND: an unsliced key saved under two request
- * languages is ONE value with one history, and its rows interleave by id. The
+ * model: an unsliced key (every relation, whatever its ontology `translatable`
+ * flag) has ONE lane, lg-nolan (relations/main_lanes.ts laneLaw, decision
+ * 2026-09-29), whatever tag a row carries. The
  * model is read at REVERT time (the predicate the region is cut with must be
  * the one the live key is written with). Each key is reverted once, however
  * many rows it has — the defect of the row-per-row loop this replaces.
@@ -55,6 +56,7 @@ import {
 	resolveDataframeSlotTipos,
 	splitComposed,
 } from '../../../src/core/relations/dataframe_slots.ts';
+import { NOLAN } from '../../../src/core/relations/main_lanes.ts';
 import { isLangSlicedModel } from '../../../src/core/section/record/save_component.ts';
 import type { BulkRevertInexactBasis, BulkRevertSkipReason } from './bulk_revert.ts';
 import type { DataframeSlotRestore, FrameSlice } from './dataframe_restore.ts';
@@ -83,9 +85,9 @@ export interface RevertKey {
 	model: string;
 	sliced: boolean;
 	/**
-	 * The region's language for a sliced key; the language of the key's FIRST
-	 * row for an unsliced one (the tag the revert's own pair is written under).
-	 * '' when a legacy sliced key's rows name no language (refused as `no_lang`).
+	 * The region's language for a sliced key; lg-nolan for an unsliced one (its
+	 * one lane — the tag the revert's own pair is written under). '' when a
+	 * legacy sliced key's rows name no language (refused as `no_lang`).
 	 */
 	lang: string;
 	/** The run's rows of this key, id ASC — roles 1 and NULL only. */
@@ -235,7 +237,7 @@ async function groupKeys(rows: readonly RunRow[], unplanned: Unplanned[]): Promi
 		}
 		if (model === null || !model.startsWith('component_')) continue;
 		const sliced = isLangSlicedModel(model);
-		const lang = sliced ? legacyRowLang(row) : (row.lang ?? '');
+		const lang = sliced ? legacyRowLang(row) : NOLAN;
 		const id = sliced ? `${address}|${lang}` : address;
 		const key = keys.get(id) ?? {
 			sectionTipo: row.section_tipo,

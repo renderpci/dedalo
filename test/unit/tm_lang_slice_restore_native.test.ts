@@ -787,7 +787,8 @@ describe('the destructive client action is confirmed', () => {
 		// Component, language and record — a generic are-you-sure teaches nothing
 		// and gets clicked through.
 		expect(handler).toContain('component_label');
-		expect(handler).toContain('self.main_element.lang');
+		// the language is the main's HISTORY lane (the server's lane law, decision 2026-09-29)
+		expect(handler).toContain('self.history_lang()');
 		expect(handler).toContain('record_address');
 		expect(handler).toMatch(/OVERWRITTEN/);
 	});
@@ -825,8 +826,8 @@ describe('the destructive client action is confirmed', () => {
 		// label reads them.
 		const call = handler.slice(handler.indexOf("'apply_value_confirm_msg'"));
 		expect(call.indexOf('component_label')).toBeGreaterThan(-1);
-		expect(call.indexOf('self.main_element.lang')).toBeGreaterThan(call.indexOf('component_label'));
-		expect(call.indexOf('record_address')).toBeGreaterThan(call.indexOf('self.main_element.lang'));
+		expect(call.indexOf('history_lang,')).toBeGreaterThan(call.indexOf('component_label'));
+		expect(call.indexOf('record_address')).toBeGreaterThan(call.indexOf('history_lang,'));
 	});
 
 	test('the bulk-revert door still confirms too (the door that always did)', () => {

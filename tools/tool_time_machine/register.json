@@ -299,7 +299,7 @@
           {
             "lang": "lg-cat",
             "name": "apply_value_confirm_msg",
-            "value": "Les dades actuals de \"{0}\" (idioma {1}) al registre {2} se SOBREESCRIURAN amb la versió històrica seleccionada.\n\nUn component traduïble conserva els altres idiomes: només se substitueix el que s'indica aquí. Qualsevol altre component se substitueix completament.\n\nVoleu continuar?"
+            "value": "Les dades actuals de \"{0}\" (idioma {1}) al registre {2} se SOBREESCRIURAN amb la versió històrica seleccionada.\n\nUn component amb text per idioma conserva els altres idiomes: només se substitueix el que s'indica aquí. Qualsevol altre component (lg-nolan: incloses les relacions) se substitueix completament, amb els seus dataframes.\n\nVoleu continuar?"
           },
           {
             "lang": "lg-cat",
@@ -354,7 +354,7 @@
           {
             "lang": "lg-deu",
             "name": "apply_value_confirm_msg",
-            "value": "Die aktuellen Daten von \"{0}\" (Sprache {1}) im Datensatz {2} werden mit der ausgewählten historischen Version ÜBERSCHRIEBEN.\n\nEine übersetzbare Komponente behält ihre anderen Sprachen: Nur die hier genannte wird ersetzt. Jede andere Komponente wird vollständig ersetzt.\n\nFortfahren?"
+            "value": "Die aktuellen Daten von \"{0}\" (Sprache {1}) im Datensatz {2} werden mit der ausgewählten historischen Version ÜBERSCHRIEBEN.\n\nEine Komponente mit Text je Sprache behält ihre anderen Sprachen: Nur die hier genannte wird ersetzt. Jede andere Komponente (lg-nolan: auch Relationen) wird vollständig ersetzt, mit ihren Dataframes.\n\nFortfahren?"
           },
           {
             "lang": "lg-deu",
@@ -409,7 +409,7 @@
           {
             "lang": "lg-ell",
             "name": "apply_value_confirm_msg",
-            "value": "Τα τρέχοντα δεδομένα του \"{0}\" (γλώσσα {1}) στην εγγραφή {2} θα ΑΝΤΙΚΑΤΑΣΤΑΘΟΥΝ από την επιλεγμένη ιστορική έκδοση.\n\nΈνα μεταφράσιμο στοιχείο διατηρεί τις άλλες γλώσσες του: αντικαθίσταται μόνο αυτή που αναφέρεται εδώ. Κάθε άλλο στοιχείο αντικαθίσταται πλήρως.\n\nΣυνέχεια;"
+            "value": "Τα τρέχοντα δεδομένα του \"{0}\" (γλώσσα {1}) στην εγγραφή {2} θα ΑΝΤΙΚΑΤΑΣΤΑΘΟΥΝ από την επιλεγμένη ιστορική έκδοση.\n\nΈνα στοιχείο με κείμενο ανά γλώσσα διατηρεί τις άλλες γλώσσες του: αντικαθίσταται μόνο αυτή που αναφέρεται εδώ. Κάθε άλλο στοιχείο (lg-nolan: και οι σχέσεις) αντικαθίσταται πλήρως, μαζί με τα dataframes του.\n\nΣυνέχεια;"
           },
           {
             "lang": "lg-ell",
@@ -464,7 +464,7 @@
           {
             "lang": "lg-eng",
             "name": "apply_value_confirm_msg",
-            "value": "The current data of \"{0}\" (language {1}) in record {2} will be OVERWRITTEN with the selected historical version.\n\nA translatable component keeps its other languages: only the one named here is replaced. Any other component is replaced in full.\n\nContinue?"
+            "value": "The current data of \"{0}\" (language {1}) in record {2} will be OVERWRITTEN with the selected historical version.\n\nA component with per-language text keeps its other languages: only the one named here is replaced. Any other component (lg-nolan: relations included) is replaced in full, with its dataframes.\n\nContinue?"
           },
           {
             "lang": "lg-eng",
@@ -522,7 +522,7 @@
           {
             "lang": "lg-eus",
             "name": "apply_value_confirm_msg",
-            "value": "\"{0}\" osagaiaren uneko datuak ({1} hizkuntza) {2} erregistroan hautatutako bertsio historikoarekin GAINIDATZIKO dira.\n\nOsagai itzulgarri batek beste hizkuntzak mantentzen ditu: hemen adierazitakoa bakarrik ordezkatzen da. Beste edozein osagai osorik ordezkatzen da.\n\nJarraitu?"
+            "value": "\"{0}\" osagaiaren uneko datuak ({1} hizkuntza) {2} erregistroan hautatutako bertsio historikoarekin GAINIDATZIKO dira.\n\nHizkuntza bakoitzeko testua duen osagai batek beste hizkuntzak mantentzen ditu: hemen adierazitakoa bakarrik ordezkatzen da. Beste edozein osagai (lg-nolan: erlazioak barne) osorik ordezkatzen da, bere dataframe-ekin.\n\nJarraitu?"
           },
           {
             "lang": "lg-eus",
@@ -577,7 +577,7 @@
           {
             "lang": "lg-fra",
             "name": "apply_value_confirm_msg",
-            "value": "Les données actuelles de \"{0}\" (langue {1}) dans la fiche {2} seront ÉCRASÉES par la version historique sélectionnée.\n\nUn composant traduisible conserve ses autres langues : seule celle indiquée ici est remplacée. Tout autre composant est remplacé en entier.\n\nContinuer ?"
+            "value": "Les données actuelles de \"{0}\" (langue {1}) dans la fiche {2} seront ÉCRASÉES par la version historique sélectionnée.\n\nUn composant avec un texte par langue conserve ses autres langues : seule celle indiquée ici est remplacée. Tout autre composant (lg-nolan : relations comprises) est remplacé en entier, avec ses dataframes.\n\nContinuer ?"
           },
           {
             "lang": "lg-fra",
@@ -632,7 +632,7 @@
           {
             "lang": "lg-ita",
             "name": "apply_value_confirm_msg",
-            "value": "I dati attuali di \"{0}\" (lingua {1}) nel record {2} verranno SOVRASCRITTI con la versione storica selezionata.\n\nUn componente traducibile mantiene le altre lingue: viene sostituita solo quella indicata qui. Qualsiasi altro componente viene sostituito per intero.\n\nContinuare?"
+            "value": "I dati attuali di \"{0}\" (lingua {1}) nel record {2} verranno SOVRASCRITTI con la versione storica selezionata.\n\nUn componente con testo per lingua mantiene le altre lingue: viene sostituita solo quella indicata qui. Qualsiasi altro componente (lg-nolan: relazioni comprese) viene sostituito per intero, con i suoi dataframe.\n\nContinuare?"
           },
           {
             "lang": "lg-ita",
@@ -687,7 +687,7 @@
           {
             "lang": "lg-nep",
             "name": "apply_value_confirm_msg",
-            "value": "रेकर्ड {2} मा रहेको \"{0}\" ({1} भाषा) को हालको डेटा चयन गरिएको ऐतिहासिक संस्करणले प्रतिस्थापन गरिनेछ।\n\nअनुवादयोग्य कम्पोनेन्टले अन्य भाषाहरू कायम राख्छ: यहाँ उल्लेख गरिएको भाषा मात्र प्रतिस्थापन हुन्छ। अन्य कुनै पनि कम्पोनेन्ट पूर्ण रूपमा प्रतिस्थापन हुन्छ।\n\nजारी राख्ने?"
+            "value": "रेकर्ड {2} मा रहेको \"{0}\" ({1} भाषा) को हालको डेटा चयन गरिएको ऐतिहासिक संस्करणले प्रतिस्थापन गरिनेछ।\n\nभाषाअनुसार पाठ भएको कम्पोनेन्टले अन्य भाषाहरू कायम राख्छ: यहाँ उल्लेख गरिएको भाषा मात्र प्रतिस्थापन हुन्छ। अन्य कुनै पनि कम्पोनेन्ट (lg-nolan: सम्बन्धहरू समेत) आफ्ना डेटाफ्रेमसहित पूर्ण रूपमा प्रतिस्थापन हुन्छ।\n\nजारी राख्ने?"
           },
           {
             "lang": "lg-nep",
@@ -742,7 +742,7 @@
           {
             "lang": "lg-por",
             "name": "apply_value_confirm_msg",
-            "value": "Os dados atuais de \"{0}\" (idioma {1}) no registo {2} serão SUBSTITUÍDOS pela versão histórica selecionada.\n\nUm componente traduzível mantém os outros idiomas: apenas o indicado aqui é substituído. Qualquer outro componente é substituído por completo.\n\nContinuar?"
+            "value": "Os dados atuais de \"{0}\" (idioma {1}) no registo {2} serão SUBSTITUÍDOS pela versão histórica selecionada.\n\nUm componente com texto por idioma mantém os outros idiomas: apenas o indicado aqui é substituído. Qualquer outro componente (lg-nolan: incluindo as relações) é substituído por completo, com os seus dataframes.\n\nContinuar?"
           },
           {
             "lang": "lg-por",
@@ -797,7 +797,7 @@
           {
             "lang": "lg-spa",
             "name": "apply_value_confirm_msg",
-            "value": "Los datos actuales de \"{0}\" (idioma {1}) en el registro {2} se SOBRESCRIBIRÁN con la versión histórica seleccionada.\n\nUn componente traducible conserva sus otros idiomas: solo se reemplaza el indicado aquí. Cualquier otro componente se reemplaza por completo.\n\n¿Continuar?"
+            "value": "Los datos actuales de \"{0}\" (idioma {1}) en el registro {2} se SOBRESCRIBIRÁN con la versión histórica seleccionada.\n\nUn componente con texto por idioma conserva sus otros idiomas: solo se reemplaza el indicado aquí. Cualquier otro componente (lg-nolan: incluidas las relaciones) se reemplaza por completo, con sus dataframes.\n\n¿Continuar?"
           },
           {
             "lang": "lg-spa",

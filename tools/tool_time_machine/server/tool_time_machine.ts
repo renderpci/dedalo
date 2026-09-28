@@ -475,8 +475,10 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 	// own `isLangSlicedModel` (save_component.ts, PHP supports_translation &&
 	// !is_relation) — never the ontology `translatable` flag alone, which
 	// mis-slices an ontology-non-translatable input_text (it slices on the
-	// `lg-nolan` the engine normalizes it to) — and the translatable flag, which
-	// decides whether the lg-nolan lane holds a value.
+	// `lg-nolan` the engine normalizes it to) — and, for a SLICED model only, the
+	// translatable flag, which decides whether the lg-nolan lane holds a value.
+	// An unsliced main (every relation) has one lane, lg-nolan (main_lanes.ts
+	// laneLaw, decision 2026-09-29).
 	const identity = await mainIdentity(tipo, lang);
 	// The request's effective lang — the save path's rule (resolver.ts
 	// effectiveSaveLang). Only the FALLBACK for a pre-migration row with no

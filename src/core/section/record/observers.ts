@@ -1505,13 +1505,16 @@ export async function recomputeExternalRelation(
 		// VISIBLE rows only (withTmHistory): a bulk run's hidden undo-log row
 		// (a BEFORE image, a birth marker) is not the visible baseline and must
 		// not suppress the pair dd15 needs.
-		const hasHistory = async (lane: string): Promise<boolean> =>
+		// `anyTag`: an unsliced main's one lane is every row whatever its tag (LaneHistoryProbe).
+		const hasHistory = async (lane: string, anyTag: boolean): Promise<boolean> =>
 			(
 				(await sql.unsafe(
 					`SELECT 1 FROM matrix_time_machine
-					 WHERE ${withTmHistory('section_tipo = $1 AND section_id = $2 AND tipo = $3 AND lang = $4')}
+					 WHERE ${withTmHistory(`section_tipo = $1 AND section_id = $2 AND tipo = $3${anyTag ? '' : ' AND lang = $4'}`)}
 					 LIMIT 1`,
-					[targetSection, targetId, observerTipo, lane],
+					anyTag
+						? [targetSection, targetId, observerTipo]
+						: [targetSection, targetId, observerTipo, lane],
 				)) as unknown[]
 			).length > 0;
 		await recordMainBackfill(

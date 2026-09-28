@@ -7,8 +7,10 @@
  * Every row of a main and of its dataframes is stored under the MAIN's tipo,
  * in one of two kinds of lane: a LANGUAGE lane (lg-spa, lg-ell…) holding only
  * that language's value, and the lg-nolan lane holding the main's lg-nolan
- * value (a non-translatable main's value, a transliterable main's base; empty
- * for a translatable main) plus ALL frames of ALL its slots. Two save kinds:
+ * value (an unsliced main's WHOLE value — every relation, whatever its
+ * ontology flag —, a non-translatable main's value, a transliterable main's
+ * base; empty for a translatable sliced main) plus ALL frames of ALL its
+ * slots. Two save kinds:
  *   - a MAIN save in lane X writes ONE row in lane X (its value) and an
  *     lg-nolan row ONLY when the save changed the frames (removing an item
  *     strips its frames) or the lg-nolan value; a save of the lg-nolan value
@@ -60,8 +62,7 @@ import {
 	type SlotTarget,
 	withSlotImage,
 } from '../../relations/dataframe_slots.ts';
-import { NOLAN } from '../../relations/main_lanes.ts';
-import { currentDataLang } from '../../resolve/request_lang.ts';
+import { laneLaw, NOLAN } from '../../relations/main_lanes.ts';
 
 const DATAFRAME_MODEL = 'component_dataframe';
 
@@ -88,7 +89,7 @@ export interface SaveHistoryInput {
 	model: string;
 	/** `isLangSlicedModel(model)` — the SAME answer the save sliced with. */
 	sliced: boolean;
-	/** The ontology `translatable` flag of the saved key. */
+	/** The ontology `translatable` flag of the saved key (kept for a sliced model only — main_lanes.ts laneLaw). */
 	translatable: boolean;
 	/** The lang a sliced save cut its slice with (its effective lang). */
 	lang: string;
@@ -133,22 +134,19 @@ export interface SaveHistoryDone {
 }
 
 /**
- * No slot read: a plain save of an UNSLICED non-translatable main — its only
- * lane is the frame lane, whose lg-nolan row it writes whatever the frames did.
+ * No slot read: a plain save of an UNSLICED main — its only lane is the frame
+ * lane, whose lg-nolan row it writes whatever the frames did.
  */
 const UNREAD_SLOTS: SlotImages = { slots: [], images: {} };
 
 /**
  * THE DOOR LANE of a main save (relations/main_lanes.ts): a sliced model's
- * effective lang; an unsliced one's request lang when translatable (the data
- * lang from a language-less door), lg-nolan otherwise.
+ * effective lang; lg-nolan for every unsliced one — a relation is never
+ * translatable, whatever its ontology flag or the request language (decision
+ * 2026-09-29).
  */
 function saveDoorLane(input: SaveHistoryInput): string {
-	if (input.sliced) return input.lang;
-	if (!input.translatable) return NOLAN;
-	return input.requestLang === '' || input.requestLang === NOLAN
-		? currentDataLang()
-		: input.requestLang;
+	return input.sliced ? input.lang : NOLAN;
 }
 
 /**
@@ -174,8 +172,7 @@ export async function beginSaveHistory(input: SaveHistoryInput): Promise<SaveHis
 		tipo: input.componentTipo,
 		model: input.model,
 		column: input.column,
-		sliced: input.sliced,
-		translatable: input.translatable,
+		...laneLaw(input.sliced, input.translatable),
 		lang: saveDoorLane(input),
 	};
 	// A sliced main can hold language items even from its lg-nolan door (a

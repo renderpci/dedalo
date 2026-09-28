@@ -71,6 +71,7 @@ import {
 	type SlotTarget,
 	slotsFromBag,
 } from '../../relations/dataframe_slots.ts';
+import { NOLAN } from '../../relations/main_lanes.ts';
 import { currentDataLang } from '../../resolve/request_lang.ts';
 import { fireRagRecordEvent, fireSaveEvent } from '../../section_record/save_event.ts';
 import { bulkIdOf } from './bulk_capture.ts';
@@ -493,13 +494,21 @@ interface DoorAudit {
  * answer for the reborn record (its own history would never be written).
  * Visibility: a hidden undo-log row (tm_role) is not history either.
  */
-async function hasVisibleHistory(target: SlotTarget, tipo: string, lang: string): Promise<boolean> {
+async function hasVisibleHistory(
+	target: SlotTarget,
+	tipo: string,
+	lang: string,
+	anyTag: boolean,
+): Promise<boolean> {
 	await ensureTmHistoryReady();
+	// `anyTag`: an unsliced main's one lane is every row whatever its tag (LaneHistoryProbe).
+	const params: unknown[] = [target.sectionTipo, target.sectionId, tipo];
+	if (!anyTag) params.push(lang);
 	const history = (await sql.unsafe(
 		`SELECT 1 FROM matrix_time_machine
-		 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3 AND lang = $4
+		 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3${anyTag ? '' : ' AND lang = $4'}
 		   AND ${tmEpochPredicate()} AND ${tmVisiblePredicate()} LIMIT 1`,
-		[target.sectionTipo, target.sectionId, tipo, lang],
+		params,
 	)) as unknown[];
 	return history.length > 0;
 }
@@ -555,7 +564,7 @@ async function recordOwnerMain(
 		identity,
 		before,
 		{ userId: audit.userId, timestamp: audit.backfillStamp },
-		(lane) => hasVisibleHistory(target, identity.tipo, lane),
+		(lane, anyTag) => hasVisibleHistory(target, identity.tipo, lane, anyTag),
 	);
 	await recordMainHistory(
 		target,
@@ -810,8 +819,6 @@ interface WipedKey {
 	tipo: string;
 	model: string;
 	column: string;
-	/** The door's historical tag: the data lang when the tipo is translatable, else lg-nolan. */
-	tmLang: string;
 	stored: unknown;
 	newData: unknown;
 	/** A slot a main's frame strip rewrote (wipeDeclaredSlotsOfMains): the mains that stripped it. */
@@ -821,7 +828,6 @@ interface WipedKey {
 /** One main a wipe records: its value on both sides, and the extra slots that name it. */
 interface WipeMain {
 	tipo: string;
-	tmLang: string;
 	stored: unknown;
 	newData: unknown;
 	extraSlots: string[];
@@ -859,15 +865,12 @@ async function unwipedSlotMain(
 	tipo: string,
 	slotTipo: string,
 ): Promise<WipeMain> {
-	const { getModelByTipo, getColumnNameByModel, getTranslatableByTipo } = await import(
-		'../../ontology/resolver.ts'
-	);
+	const { getModelByTipo, getColumnNameByModel } = await import('../../ontology/resolver.ts');
 	const model = await getModelByTipo(tipo);
 	const column = model === null ? null : getColumnNameByModel(model);
 	const stored = column === null ? undefined : asBag(ctx.record[column as MatrixJsonbColumn])[tipo];
-	const tmLang = (await getTranslatableByTipo(tipo)) ? ctx.dataLang : 'lg-nolan';
 	const value = stored ?? null;
-	return { tipo, tmLang, stored: value, newData: value, extraSlots: [slotTipo] };
+	return { tipo, stored: value, newData: value, extraSlots: [slotTipo] };
 }
 
 /**
@@ -946,7 +949,6 @@ function noteStrippedSlot(
 		tipo: strip.slot,
 		model: 'component_dataframe',
 		column: 'relation',
-		tmLang: 'lg-nolan',
 		stored: prior.stored,
 		newData: strip.newData,
 		owners: [...(prior.owners ?? []), strip.mainTipo],
@@ -995,7 +997,10 @@ async function recordWipeHistory(
 	for (const main of await wipeMains(ctx, wiped)) {
 		const slotsBefore = await slotsFromBag(main.tipo, relationBefore, main.extraSlots);
 		const slotsAfter = await slotsFromBag(main.tipo, relationAfter, slotsBefore.slots);
-		const identity = { ...(await mainIdentity(main.tipo, ctx.dataLang)), lang: main.tmLang };
+		// The door's lane: the data lang for a translatable SLICED main, else
+		// lg-nolan — every unsliced main, whatever its ontology flag (main_lanes.ts laneLaw).
+		const lane = await mainIdentity(main.tipo, ctx.dataLang);
+		const identity = { ...lane, lang: lane.translatable ? ctx.dataLang : NOLAN };
 		const before = { value: main.stored ?? undefined, slots: slotsBefore };
 		const after = { value: main.newData ?? undefined, slots: slotsAfter };
 		await recordMainBackfill(
@@ -1003,7 +1008,7 @@ async function recordWipeHistory(
 			identity,
 			before,
 			{ userId: audit.userId, timestamp: audit.backfillStamp },
-			(lane) => hasVisibleHistory(ctx.target, main.tipo, lane),
+			(lane, anyTag) => hasVisibleHistory(ctx.target, main.tipo, lane, anyTag),
 		);
 		await recordMainHistory(
 			ctx.target,
@@ -1061,13 +1066,8 @@ export async function deleteSectionData(
 			coordinates: { section_tipo: sectionTipo },
 		});
 	}
-	const {
-		getModelByTipo,
-		getColumnNameByModel,
-		getTranslatableByTipo,
-		getOrderedSubtree,
-		getSectionRealTipo,
-	} = await import('../../ontology/resolver.ts');
+	const { getModelByTipo, getColumnNameByModel, getOrderedSubtree, getSectionRealTipo } =
+		await import('../../ontology/resolver.ts');
 	const { persistRecordKeys, persistModifiedStamp } = await import('../../section_record/index.ts');
 	const { maintainRelationSearchIndex } = await import('../../relations/save.ts');
 	const { dbTimestamp: stamp } = await import('./create_record.ts');
@@ -1201,8 +1201,7 @@ export async function deleteSectionData(
 
 				// The history rows are written after the loop (recordWipeHistory),
 				// COMPOSED: a main's rows carry its slots' frames, a slot gets none.
-				const tmLang = (await getTranslatableByTipo(component.tipo)) ? dataLang : 'lg-nolan';
-				wiped.push({ tipo: component.tipo, model, column, tmLang, stored, newData });
+				wiped.push({ tipo: component.tipo, model, column, stored, newData });
 				// Chokepoint write (PHP key-removal semantics: last key leaves '{}');
 				// the stamps refresh ONCE at the end, not per component.
 				await persistRecordKeys(

@@ -56,6 +56,7 @@ import { getDataframeChildTipos } from '../section/list_definitions/section_list
 import {
 	type LaneLaw,
 	laneHoldsValue,
+	laneLaw,
 	laneRegion,
 	laneVisible,
 	NOLAN,
@@ -568,9 +569,9 @@ export interface MainIdentity extends LaneLaw {
 	column: MatrixJsonbColumn;
 	/**
 	 * The DOOR LANE: the lane the door's value write belongs to — the MAIN's own
-	 * lang (mainRowLang), never the door's: a sliced save's effective lang, a
-	 * translatable unsliced main's request lang, lg-nolan otherwise. A slot save
-	 * writes the frame lane (lg-nolan).
+	 * lang (mainRowLang), never the door's: a sliced save's effective lang,
+	 * lg-nolan otherwise (every unsliced main, whatever its ontology flag). A
+	 * slot save writes the frame lane (lg-nolan).
 	 */
 	lang: string;
 }
@@ -580,14 +581,22 @@ export type LaneIdentity = Pick<MainIdentity, 'tipo' | 'lang' | 'sliced' | 'tran
 
 /**
  * THE DOOR LANE OF A MAIN for a request lang — derived from the MAIN, never
- * from the door that wrote. A main that is neither translatable nor an iri
- * speaks `lg-nolan` (a non-translatable iri: the request lang its save uses,
- * lg-nolan from a language-less door). A translatable main speaks the request's
- * lang — and when the door speaks no language (`lg-nolan`: a frame strip, a
- * revert), the request's DATA lang (currentDataLang), the lang the main's own
- * saves from the same page use.
+ * from the door that wrote. An UNSLICED main (every relation) speaks `lg-nolan`
+ * whatever its ontology flag (decision 2026-09-29, main_lanes.ts laneLaw). A
+ * sliced main that is neither translatable nor an iri speaks `lg-nolan` (a
+ * non-translatable iri: the request lang its save uses, lg-nolan from a
+ * language-less door). A translatable sliced main speaks the request's lang —
+ * and when the door speaks no language (`lg-nolan`: a frame strip, a revert),
+ * the request's DATA lang (currentDataLang), the lang the main's own saves from
+ * the same page use.
  */
 async function mainRowLang(tipo: string, model: string, requestLang: string): Promise<string> {
+	if (!isLangSlicedModel(model)) return NOLAN;
+	return slicedRowLang(tipo, model, requestLang);
+}
+
+/** mainRowLang for a LANG-SLICED main. */
+async function slicedRowLang(tipo: string, model: string, requestLang: string): Promise<string> {
 	const doorless = requestLang === '' || requestLang === NOLAN;
 	if (await getTranslatableByTipo(tipo)) return doorless ? currentDataLang() : requestLang;
 	// A non-translatable iri keeps the request lang, as its save does (save_component.ts).
@@ -618,8 +627,7 @@ export async function mainIdentity(tipo: string, requestLang: string): Promise<M
 		tipo,
 		model,
 		column,
-		sliced: isLangSlicedModel(model),
-		translatable: await getTranslatableByTipo(tipo),
+		...laneLaw(isLangSlicedModel(model), await getTranslatableByTipo(tipo)),
 		lang: await mainRowLang(tipo, model, requestLang),
 	};
 }
@@ -806,7 +814,7 @@ async function recordMainRows(
  * door that records no history, a migration, an import before the undo log),
  * ONE visible lg-nolan row of the BEFORE state is written first. A main with
  * no slot and nothing in its frame lane has no frame lane to complete.
- * (A save door whose slots were not read is an UNSLICED non-translatable
+ * (A save door whose slots were not read is an UNSLICED
  * main's, which has no language lane — bulk_capture.ts UNREAD_SLOTS.)
  */
 async function recordFrameLaneBaseline(
@@ -939,7 +947,7 @@ export async function recordMainHistory(
 	options: { forceDoorLane?: boolean } = {},
 ): Promise<void> {
 	const { bulkId } = stamp;
-	const door = valueDoorIdentity(identity, change);
+	const door = unslicedDoorIdentity(identity);
 	if (bulkId !== null) {
 		await recordMainPairs(target, door, change, { ...stamp, bulkId });
 		return;
@@ -948,20 +956,23 @@ export async function recordMainHistory(
 }
 
 /**
- * A translatable UNSLICED main (a translatable portal) keeps its value in its
- * LANGUAGE lane only — the lg-nolan lane is its frame lane. A door that hands
- * lg-nolan as its lane while the value CHANGED would record no row of that
- * value at all: its lane is then the request's data lang (mainRowLang's rule
- * for a doorless write).
+ * An UNSLICED main has ONE lane, lg-nolan (main_lanes.ts laneLaw, decision
+ * 2026-09-29): whatever lane a door hands for it, its history is filed there,
+ * with its ontology flag dropped.
  */
-function valueDoorIdentity(
-	identity: LaneIdentity,
-	change: { before: MainState; after: MainState },
-): LaneIdentity {
-	if (identity.sliced || !identity.translatable || identity.lang !== NOLAN) return identity;
-	if (canonicalJson(change.before.value) === canonicalJson(change.after.value)) return identity;
-	return { ...identity, lang: currentDataLang() };
+function unslicedDoorIdentity(identity: LaneIdentity): LaneIdentity {
+	if (identity.sliced) return identity;
+	return { ...identity, translatable: false, lang: NOLAN };
 }
+
+/**
+ * A backfill's history probe: whether the record already has a visible row of
+ * the main in `lane`. `anyTag` — an UNSLICED main's one lane is every row of
+ * it whatever its tag (a PHP save of a relation flagged translatable was
+ * tagged with the data lang and held the whole value), so the probe must match
+ * any lang, not the lg-nolan tag only.
+ */
+export type LaneHistoryProbe = (lane: string, anyTag: boolean) => Promise<boolean>;
 
 /**
  * THE BACKFILL of a main (the delete / duplicate doors): the state as it
@@ -976,12 +987,14 @@ function valueDoorIdentity(
  */
 export async function recordMainBackfill(
 	target: SlotTarget,
-	identity: LaneIdentity,
+	doorIdentity: LaneIdentity,
 	state: MainState,
 	stamp: HistoryStamp,
-	hasHistory: (lane: string) => Promise<boolean> = async () => false,
+	probe: LaneHistoryProbe = async () => false,
 	options: { emptyDoorLane?: boolean } = {},
 ): Promise<void> {
+	const identity = unslicedDoorIdentity(doorIdentity);
+	const hasHistory = (lane: string) => probe(lane, !identity.sliced);
 	// `emptyDoorLane`: the door's own lane is backfilled even EMPTY (the observer
 	// mirror's PHP baseline: "it held nothing before this write").
 	const keeps = (lane: string, image: unknown) =>

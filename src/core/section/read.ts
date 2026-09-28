@@ -748,11 +748,9 @@ async function tmPreviewGraft(
 	const { readRowLaneState } = await import('../tm_record/lane_state.ts');
 	const { getTranslatableByTipo } = await import('../ontology/resolver.ts');
 	const { isLangSlicedModel } = await import('../components/registry.ts');
+	const { laneLaw } = await import('../relations/main_lanes.ts');
 	const mainModel = model === 'component_dataframe' ? await getModelByTipo(tmRow.tipo) : model;
-	const law = {
-		sliced: isLangSlicedModel(mainModel ?? ''),
-		translatable: await getTranslatableByTipo(tmRow.tipo),
-	};
+	const law = laneLaw(isLangSlicedModel(mainModel ?? ''), await getTranslatableByTipo(tmRow.tipo));
 	const coords = { ...live, componentTipo: tmRow.tipo };
 	const state = await readRowLaneState({ coords, row: tmRow, law, fallbackLang: viewLang });
 	const slots = await recordedSlotFrames(tmRow.tipo, state.frameImage, live);

@@ -5,8 +5,9 @@
  *
  * The capture records a main in TWO kinds of lane (relations/main_lanes.ts):
  * a LANGUAGE lane's pair holds that language's region only; the lg-nolan
- * lane's pair holds the lg-nolan region (a non-translatable main's value, a
- * transliterable main's base, nothing for a translatable main) followed by the
+ * lane's pair holds the lg-nolan region (an unsliced or non-translatable
+ * main's value, a transliterable main's base, nothing for a translatable
+ * sliced main) followed by the
  * FULL frames of every slot. This module undoes a unit in ONE transaction,
  * under the record's row lock, PER LANE:
  *
@@ -16,8 +17,8 @@
  *      SHARED with another main stores both mains' frames, but the other
  *      main's frames are that main's history: never checked nor restored here.
  *   2. ONE CHAIN PER LANE (the pairs of one lang tag, id order — an UNSLICED
- *      main's value pairs form ONE chain whatever their tags: one value, one
- *      history; its lg-nolan frame pairs stay apart), undone newest
+ *      main has ONE lane, lg-nolan, whatever a pair's tag: main_lanes.ts
+ *      laneLaw, decision 2026-09-29), undone newest
  *      lane first — a lang-less orphan belongs to every sliced lane's region,
  *      and the capture cut the lanes sequentially, so they are undone in
  *      reverse (LIFO). A language lane's state is its region; the lg-nolan
@@ -52,10 +53,7 @@
 import { canonicalJson } from '../../../src/core/concepts/canonical_json.ts';
 import type { MatrixJsonbColumn } from '../../../src/core/db/matrix.ts';
 import { readFrameStateRowAt, readOtherLangItemIds } from '../../../src/core/db/time_machine.ts';
-import {
-	getColumnNameByModel,
-	getTranslatableByTipo,
-} from '../../../src/core/ontology/resolver.ts';
+import { getColumnNameByModel } from '../../../src/core/ontology/resolver.ts';
 import {
 	heldItemIds,
 	isFrameEntry,
@@ -84,6 +82,7 @@ import {
 	asItems,
 	type ComposedKeyWrite,
 	image,
+	keyLaneLaw,
 	lockUnitRecord,
 	rawKeyValue,
 	resolveKeyTarget,
@@ -113,10 +112,9 @@ interface SplitPair {
 	after: Split;
 }
 
-/** One lane's chain of pairs (`tags`: every lang tag it spans — several for an unsliced main). */
+/** One lane's chain of pairs. */
 interface LaneGroup {
 	lang: string;
-	tags: string[];
 	pairs: SplitPair[];
 }
 
@@ -210,21 +208,15 @@ function splitPairs(unit: RevertUnit, scope: ComposedScope): SplitPair[] {
 
 /**
  * The unit's lane chains, newest first (LIFO — see the header). An untagged
- * pair is lg-nolan's. An UNSLICED main's value is ONE key with ONE history
- * (a translatable portal files it under whichever request language saved it),
- * so every value pair joins ONE chain, id order — only the lg-nolan (frame)
- * lane stays apart; the chain's lane is its newest pair's tag.
+ * pair is lg-nolan's; so is every pair of an UNSLICED main (its one lane).
  */
 function laneGroups(pairs: readonly SplitPair[], law: LaneLaw): LaneGroup[] {
 	const groups = new Map<string, LaneGroup>();
 	for (const pair of pairs) {
-		const lang = pair.lang === '' ? NOLAN : pair.lang;
-		const chain = law.sliced || lang === NOLAN ? lang : '';
-		const group = groups.get(chain) ?? { lang, tags: [], pairs: [] };
-		group.lang = lang;
-		if (!group.tags.includes(lang)) group.tags.push(lang);
+		const lang = pair.lang === '' || !law.sliced ? NOLAN : pair.lang;
+		const group = groups.get(lang) ?? { lang, pairs: [] };
 		group.pairs.push(pair);
-		groups.set(chain, group);
+		groups.set(lang, group);
 	}
 	const newest = (group: LaneGroup): number => group.pairs.at(-1)?.id ?? 0;
 	return [...groups.values()].sort((a, b) => newest(b) - newest(a));
@@ -334,11 +326,10 @@ function planLane(
 	if (frames) plan.frames = first.before.frames;
 	if (value) {
 		plan.value = restoreMain(plan.value, lang, first.before.main, scope.law);
-		plan.valueLanes.push(...group.tags);
+		plan.valueLanes.push(lang);
 	}
-	// The door lane is a VALUE lane whenever the unit restores a value: the frame
-	// lane may be the newest, but a translatable UNSLICED main's value is filed
-	// under its language lane only (an lg-nolan door would record no value pair).
+	// The door lane is a VALUE lane whenever the unit restores a value (the
+	// frame lane may be the newest): the revert's own pairs lead with it.
 	if (plan.lang === '' || (value && plan.lang === NOLAN)) plan.lang = lang;
 }
 
@@ -367,7 +358,8 @@ function restoreMain(current: unknown, lane: string, recorded: unknown, law: Lan
  * pairing law's input, dataframe_slots.ts isStaleItemFrame), read from the
  * WHOLE visible history (time_machine.ts readOtherLangItemIds, unbounded: an
  * item deleted at any point since is a change a refusal reports, never loses).
- * An unsliced main's items carry no language: they belong to their row's lane.
+ * An unsliced main has ONE lane (lg-nolan, every item, whatever its `lang`
+ * stamp): the set is empty.
  */
 function otherLaneItemIds(plan: UnitPlan, scope: ComposedScope): Promise<Set<string>> {
 	return readOtherLangItemIds(
@@ -507,7 +499,7 @@ async function composedScope(unit: RevertUnit): Promise<ComposedScope> {
 		key,
 		report: unitReportKey(unit),
 		mainTipo: key.tipo,
-		law: { sliced: key.sliced, translatable: await getTranslatableByTipo(key.tipo) },
+		law: await keyLaneLaw(key),
 		slotTipos: unit.composed?.slotTipos ?? [],
 		target: { table: target.table, sectionTipo: key.sectionTipo, sectionId: key.sectionId },
 		column: target.column,
