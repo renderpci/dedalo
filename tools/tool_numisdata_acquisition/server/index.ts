@@ -930,6 +930,9 @@ export const tool: ToolServerModule = {
 	// Both run in the background — each is slow enough that the client drives
 	// them as jobs with live progress rather than one synchronous request.
 	backgroundRunnable: ['preview_url', 'commit_lots'],
+	// preview_url scrapes the auction site; commit_lots downloads/crops lot
+	// images, so it spends the media budget (PERF-11 lane declaration).
+	backgroundLanes: { preview_url: 'maintenance', commit_lots: 'media' },
 	// Scopes the toolbar button to numisdata4 only (register.json's
 	// affected_models:["section"] has no narrower scope of its own).
 	isAvailable: (availabilityContext) => availabilityContext.sectionTipo === NUMISDATA_OBJECT_TIPO,
