@@ -3,6 +3,12 @@
  * acquisition (https + host allowlist, rate limiting, size limit). Source-
  * agnostic: the caller passes the SourceAdapter's own `assertSafeUrl`, whose
  * allowlist already covers that source's image/CDN hosts.
+ *
+ * Redirects are followed manually, each hop re-checked through `assertSafeUrl`:
+ * `fetch()`'s default auto-follow only validates the FIRST url, so a server
+ * could 302 a request that passed the allowlist off it. Lower severity here
+ * than the bibliography tool's equivalent (the allowlist still constrains the
+ * FIRST hop), but the same fix either way.
  */
 
 import { waitForTurn } from './rate-limit.ts';
@@ -13,6 +19,7 @@ export class ImageDownloadError extends Error {}
 
 const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 20_000;
+const MAX_REDIRECTS = 5;
 
 export interface DownloadedImage {
 	bytes: Uint8Array;
@@ -23,23 +30,41 @@ export async function downloadImageBytes(
 	sourceUrl: string,
 	assertSafeUrl: (rawUrl: string) => URL,
 ): Promise<DownloadedImage> {
-	const url = assertSafeUrl(sourceUrl);
-	const crawlDelay = await getCrawlDelayMs(url);
-	await waitForTurn(url.hostname, crawlDelay ?? undefined);
+	let currentUrl = assertSafeUrl(sourceUrl);
 
-	const response = await fetch(url, {
-		headers: { 'User-Agent': USER_AGENT },
-		signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-	});
-	if (!response.ok) {
-		throw new ImageDownloadError(`Could not download image (HTTP ${response.status}).`);
+	for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount++) {
+		const crawlDelay = await getCrawlDelayMs(currentUrl);
+		await waitForTurn(currentUrl.hostname, crawlDelay ?? undefined);
+
+		const response = await fetch(currentUrl, {
+			redirect: 'manual',
+			headers: { 'User-Agent': USER_AGENT },
+			signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+		});
+
+		if (response.status >= 300 && response.status < 400) {
+			const location = response.headers.get('location');
+			if (!location) {
+				throw new ImageDownloadError(
+					`Redirected without a Location header (HTTP ${response.status}).`,
+				);
+			}
+			currentUrl = assertSafeUrl(new URL(location, currentUrl).href);
+			continue;
+		}
+
+		if (!response.ok) {
+			throw new ImageDownloadError(`Could not download image (HTTP ${response.status}).`);
+		}
+		const contentType = response.headers.get('content-type') ?? '';
+		if (!contentType.startsWith('image/')) {
+			throw new ImageDownloadError('Remote content is not an image.');
+		}
+		const bytes = await readWithLimit(response, MAX_IMAGE_BYTES);
+		return { bytes, contentType };
 	}
-	const contentType = response.headers.get('content-type') ?? '';
-	if (!contentType.startsWith('image/')) {
-		throw new ImageDownloadError('Remote content is not an image.');
-	}
-	const bytes = await readWithLimit(response, MAX_IMAGE_BYTES);
-	return { bytes, contentType };
+
+	throw new ImageDownloadError('Too many redirects.');
 }
 
 async function readWithLimit(response: Response, maxBytes: number): Promise<Uint8Array> {

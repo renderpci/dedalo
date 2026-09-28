@@ -167,7 +167,7 @@ async function previewHtml(context: ToolActionContext): Promise<ToolResponse> {
 	}
 
 	const adapter = findAdapterOrThrow(url);
-	adapter.assertSafeUrl(url);
+	await adapter.assertSafeUrl(url);
 
 	const page: RawSource = { html, finalUrl: url, httpStatus: 200, contentType: 'text/xml' };
 	const series = adapter.parseSeries(page, url);
