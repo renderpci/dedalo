@@ -63,7 +63,10 @@ export function parseJesusvicoTotalPages(html: string): number {
  */
 function extractJesusvicoWeight(text: string | null | undefined): string | null {
 	if (!text) return null;
-	const match = text.match(/(\d+(?:[.,]\d+)?)\s*g\.?\s/i);
+	// A lookahead, not a literal trailing \s: text has been through cleanText
+	// (trimmed), so "... 6,75 g." at the very end of the string has nothing
+	// after the dot, and \s required there matched nothing at all.
+	const match = text.match(/(\d+(?:[.,]\d+)?)\s*g\.?(?=\s|$|[,;)])/i);
 	return match ? `${match[1]!.replace(',', '.')}g` : null;
 }
 

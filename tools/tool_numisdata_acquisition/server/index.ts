@@ -243,7 +243,13 @@ function splitJesusvicoDesign(description: string | null): {
 	const trimTrailingPunctuation = (text: string): string => text.trim().replace(/[.,;]\s*$/, '');
 	const obverse = trimTrailingPunctuation(description.slice(obverseStart + 2, reverseStart));
 	const afterReverse = description.slice(reverseStart + 2);
-	const metrologyMatch = afterReverse.match(/\b(?:AE|AR|AV|AU|BI|Æ)\b|\d+(?:[.,]\d+)?\s*g\.?\s/i);
+	// Lookahead, not a literal trailing \s (same fix as extractJesusvicoWeight):
+	// a weight mention at the very end of the description has nothing after the
+	// dot, so a literal \s there never matched and the whole metrology tail
+	// (weight included) bled into the reverse design text instead of being cut.
+	const metrologyMatch = afterReverse.match(
+		/\b(?:AE|AR|AV|AU|BI|Æ)\b|\d+(?:[.,]\d+)?\s*g\.?(?=\s|$|[,;)])/i,
+	);
 	const reverse = trimTrailingPunctuation(
 		metrologyMatch?.index !== undefined
 			? afterReverse.slice(0, metrologyMatch.index)

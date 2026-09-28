@@ -93,16 +93,29 @@ async function readWithLimit(response: Response, maxBytes: number): Promise<Uint
 	return out;
 }
 
-/** Extension from the URL's own path, falling back to the sniffed content-type. */
+const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
+	'image/jpeg': 'jpg',
+	'image/png': 'png',
+	'image/webp': 'webp',
+	'image/tiff': 'tif',
+};
+
+/**
+ * Extension from the server's own content-type first, falling back to the
+ * URL's last path segment. The URL alone was unreliable: `lastIndexOf('.')`
+ * over the WHOLE path matched the wrong thing on a versioned path
+ * (`/v1.2/img/123` -> "2/img/123") or a query-string id (`/image.php?id=5`
+ * -> "php"), and receiveUpload rejects whatever came out, failing that lot's
+ * image import. `url` is already a successfully-downloaded URL by this point
+ * (downloadImageBytes only returns on success), so no try/catch is needed.
+ */
 export function extensionFromUrl(url: string, contentType: string): string {
-	try {
-		const pathname = new URL(url).pathname;
-		const dot = pathname.lastIndexOf('.');
-		if (dot > 0) return pathname.slice(dot + 1).toLowerCase();
-	} catch {
-		// fall through to content-type
-	}
-	if (contentType.includes('png')) return 'png';
-	if (contentType.includes('webp')) return 'webp';
-	return 'jpg';
+	const mime = contentType.split(';')[0]?.trim().toLowerCase() ?? '';
+	const byMimeType = EXTENSION_BY_MIME_TYPE[mime];
+	if (byMimeType !== undefined) return byMimeType;
+
+	const lastSegment = new URL(url).pathname.split('/').pop() ?? '';
+	const dot = lastSegment.lastIndexOf('.');
+	const extension = dot > 0 ? lastSegment.slice(dot + 1).toLowerCase() : '';
+	return /^(?:jpe?g|png|webp|tiff?)$/.test(extension) ? extension : 'jpg';
 }
