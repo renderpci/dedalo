@@ -921,9 +921,17 @@ export const tool: ToolServerModule = {
 			handler: previewHtml,
 		},
 		// Write: resolves Auction/Type, creates one record per kept lot, imports images.
+		// 'targets' (not 'section'): the handler always writes numisdata4/
+		// numisdata224/rsc170 regardless of what options.section_tipo says, so the
+		// gate must name those fixed targets rather than trust the client's value.
 		commit_lots: {
-			permission: 'section',
+			permission: 'targets',
 			minLevel: 2,
+			targets: () => [
+				{ section_tipo: NUMISDATA_OBJECT_TIPO },
+				{ section_tipo: AUCTION_SECTION_TIPO },
+				{ section_tipo: IMAGE_SECTION_TIPO },
+			],
 			handler: commitLots,
 		},
 	},
