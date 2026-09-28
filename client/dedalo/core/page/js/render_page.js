@@ -30,6 +30,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_update_data_maintenance} from '../../area_maintenance/js/render_update_data_maintenance.js'
 	import {render_job_tray} from './job_tray.js'
+	import {render_build_failure} from '../../common/js/render_api_error.js'
 
 
 
@@ -247,15 +248,15 @@ const get_content_data = async function(self) {
 						try {
 							const build_result = await current_instance.build(true)
 							if (build_result === false) {
-								const parts = []
-								if(current_instance.section_tipo) parts.push(current_instance.section_tipo)
-								if(current_instance.section_id) parts.push(current_instance.section_id)
-								const _id = parts.join(' - ')
-								return ui.create_dom_element({
-									element_type	: 'div',
-									class_name		: 'error_alert',
-									inner_html		: `Error: Could not build element "${current_instance.model}" (missing context or data). Maybe your user doesn't have permissions to access to this element: ${_id}`
-								})
+								// on_retry: a transient failure (server restarting, timeout)
+								// rebuilds just this element; still failing → a fresh banner.
+								const on_retry = async () => {
+									const retry_result = await current_instance.build(true)
+									return retry_result === false
+										? render_build_failure({instance: current_instance, on_retry})
+										: await current_instance.render()
+								}
+								return render_build_failure({instance: current_instance, on_retry})
 							}
 
 							// render node

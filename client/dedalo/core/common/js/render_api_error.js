@@ -285,4 +285,68 @@ export const render_error_modal = (api_error, options = {}) => {
 
 
 
+/**
+* RENDER_BUILD_FAILURE
+* The node that replaces an element whose build() returned false. Tells the
+* truth instead of guessing: with the request's ApiError (instance.build_error,
+* stamped by build_autoload) it shows that error's text; only with NO error
+* (empty context — the server's answer for an element the user cannot reach)
+* does it name permissions. A transient failure (retryable / transport) gets a
+* Reload button that rebuilds just this element via `on_retry`.
+* @param {Object} options
+* @param {Object} options.instance - the element whose build failed
+* @param {Function} [options.on_retry] - async () => HTMLElement|null, the rebuilt node
+* @param {string} [options.class_name='error_alert']
+* @return HTMLElement
+*/
+export const render_build_failure = ({instance, on_retry, class_name='error_alert'}) => {
+
+	const labels		= get_labels()
+	const api_error		= is_api_error(instance?.build_error) ? instance.build_error : null
+	const model			= instance?.model || 'element'
+	const id			= [instance?.section_tipo, instance?.section_id].filter(Boolean).join(' - ')
+
+	const text = api_error
+		? `Error: Could not build element "${model}" ${id}: ` + error_text(api_error) + error_debug_suffix(api_error)
+		: `Error: Could not build element "${model}" (missing context or data). Maybe your user doesn't have permissions to access to this element: ${id}`
+
+	const node = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: class_name
+	})
+	ui.create_dom_element({
+		element_type	: 'span',
+		text_content	: text,
+		parent			: node
+	})
+
+	const transient = api_error && (api_error.retryable===true || api_error.transport===true)
+	if (transient && typeof on_retry==='function') {
+		const button = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'light reload',
+			text_content	: labels.reload || 'Reload',
+			parent			: node
+		})
+		button.addEventListener('click', async (e) => {
+			e.stopPropagation()
+			button.disabled = true
+			try {
+				const new_node = await on_retry()
+				if (new_node && node.parentNode) {
+					node.replaceWith(new_node)
+					return
+				}
+			} catch (error) {
+				console.error('render_build_failure retry failed:', error)
+			}
+			button.disabled = false
+		})
+	}
+
+	return node
+}//end render_build_failure
+
+
+
 // @license-end

@@ -58,6 +58,20 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **A section that fails to load says why, and can be reloaded**
+
+    When a section or thesaurus element could not be loaded, the red banner always
+    suggested a permissions problem, even when the real cause was a failed request
+    (server restarting, timeout, network). The banner now shows the actual error,
+    keeps the permissions hint only when the server answered with nothing to show,
+    and offers a Reload button for temporary failures that rebuilds just that
+    element.
+
+    It also no longer appears after logging back in: when a session expired and the
+    user re-logged, the page loaded but the "permissions" banner was painted over
+    it anyway. The request is now re-sent once after re-login and the page builds
+    normally.
+
 - **Searching through a related record (e.g. a coin's type → its mint → the mint's name) is much faster.**
 
     A filter on a field of a linked record used to scan every record of the section being searched, whatever the filter selected. On a 184,000-coin collection, searching coins by the name of their type's mint took about 3 seconds per paint (up to 9 with a cold cache). The search now starts from the few linked records that match and walks the links back, so the same search answers in a few tens of milliseconds.
