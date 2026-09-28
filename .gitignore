@@ -110,3 +110,6 @@ src/core/update/install_stamp.json
 # Development tools
 dev/
 dev_tools/
+
+# recovery ontology versions backup
+/install/import/ontology/*/recovery
