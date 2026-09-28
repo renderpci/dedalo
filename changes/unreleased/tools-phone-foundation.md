@@ -19,3 +19,7 @@ maintenance widget; the subtitles tool crashed on a record with no subtitles
 yet; the section list became wider than a phone after returning from a record
 with a pinned semantic search; the AI assistant panel now fills the screen on a
 phone.
+
+For tool developers: every tool built from the template could not reach its
+server (`tool_request` was missing from the standard wiring); `wire_tool` now
+provides it. New tools are entered in the phone check automatically.

@@ -85,8 +85,28 @@ writeFileSync(resolve(targetDir, 'register.json'), `${JSON.stringify(authoring, 
 //    tool_color_contrast_tripwire refuse a tool missing from it).
 writeFileSync(OUT_FILE, render(collectHues().hues));
 
+// 5. Enter it in the phone ratchet as PENDING (tool_phone_tripwire requires every
+//    tool directory in exactly one list). It owes a probe + a green
+//    `bun run test:tools:phone --tool <name>` before it moves to PHONE_CASES
+//    (docs/development/tools/phone_layout.md).
+const RATCHET = resolve(import.meta.dir, '../test/helpers/tool_phone_ratchet.ts');
+const ratchet = readFileSync(RATCHET, 'utf8');
+const pendingAnchor = 'export const NOT_YET_PHONE: Record<string, { phase: 1 | 2 | 3 | 4; reason: string; probe?: ToolPhoneProbe }> = {\n';
+if (!ratchet.includes(`\t${name}:`) && ratchet.includes(pendingAnchor)) {
+	writeFileSync(
+		RATCHET,
+		ratchet.replace(
+			pendingAnchor,
+			`${pendingAnchor}\t${name}: { phase: 1, reason: 'new tool (scripts/create_tool.ts): add a probe, then prove it with bun run test:tools:phone' },\n`,
+		),
+	);
+} else if (!ratchet.includes(`\t${name}:`)) {
+	console.error('Could not enter the tool in test/helpers/tool_phone_ratchet.ts NOT_YET_PHONE — add it by hand.');
+}
+
 console.log(`Created ${name} at ${targetDir}`);
 console.log(
 	`Colour: set --${name} (its identity hue — copied from the template) in tools/${name}/css/${name}.less, then run "bun run css:tool-colors" and "bun run css:build".`,
 );
 console.log('Next: run the area_maintenance "Register tools" widget to reconcile dd1324.');
+console.log(`Phone: entered as pending in test/helpers/tool_phone_ratchet.ts — add a probe and run "bun run test:tools:phone --tool ${name} --shots <dir>".`);

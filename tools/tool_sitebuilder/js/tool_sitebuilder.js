@@ -40,13 +40,9 @@ export const tool_sitebuilder = function() {
 
 
 
-// Standard prototype wiring: render/destroy/refresh from tool_common, edit from the render
-// module (wire_tool).
+// Standard prototype wiring: render/destroy/refresh/tool_request from tool_common, edit
+// from the render module (wire_tool).
 wire_tool(tool_sitebuilder, render_tool_sitebuilder)
-// tool_request (the server round-trip every controller call goes through) is NOT part of
-// wire_tool — each tool that needs it assigns it, as tool_identify / tool_export do.
-// Missing, the first controller call threw 'self.tool.tool_request is not a function'.
-tool_sitebuilder.prototype.tool_request = tool_common.prototype.tool_request
 
 
 
