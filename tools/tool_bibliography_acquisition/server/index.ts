@@ -878,6 +878,9 @@ export const tool: ToolServerModule = {
 		},
 	},
 	backgroundRunnable: ['preview_url', 'commit_publications'],
+	// preview_url scrapes the journal's OAI-PMH endpoint; commit_publications
+	// stores PDFs, so it spends the media budget (PERF-11 lane declaration).
+	backgroundLanes: { preview_url: 'maintenance', commit_publications: 'media' },
 	// rsc3 covered too in case the resolved/real tipo is what reaches isAvailable instead of rsc205.
 	isAvailable: (availabilityContext) =>
 		availabilityContext.sectionTipo === PUBLICATION_TIPO ||
