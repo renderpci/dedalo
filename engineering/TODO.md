@@ -15,6 +15,8 @@
 - [ ] Responsive CSS. Improve the current mobile view: buttons, layout, list, etc.
 - [ ] Messages system for users communication (see Agora https://agora.dedalo.dev/d/364-proposal-to-include-a-message-thread).
 - [ ] Overwritting Ontology nodes (with localontlogy definitions -localontlogy0-) (see https://github.com/renderpci/dedalo/blob/v7_php_frozen/docs/core/ontology/ontology_class.md). Ensure the functionality is implemented in v7 ts. Note that the overwrite is made on parse the ontology (creating dd_ontology resolved records) and is not calculated never again until a new parse.
+- [ ] Search presets: clean up all presets to prevent issues. Important.
+- [ ] Messages from request when the server takes more time than expected: valorate the improve the messges manager policy to be less intrusive.
 
 # deploy
 - [x] Documentation: Build entire flow to publish v7 doc + v6 doc. (2026-09-21: one permanent prefix per major — dedalo.dev/docs/v7/ and /docs/v6/ — with /docs/ redirecting to the latest and legacy flat URLs 301'd to v7, which is a path-compatible superset of v6 (46 of its 52 pages exist at the identical path; the 3 that do not are a closed exception list). `bun run docs:publish` IS the gate: content tripwires + `mkdocs build --strict`, then a --delete rsync scoped inside the version prefix; hard refusal, no --force, no CI and no vendor in the path (.github/workflows/docs.yml is advisory only). v6 is off the shared site_dir symlink, wears slate blue-grey instead of the Dédalo orange so readers can tell the manuals apart, and carries the version switcher plus an 'older version' banner. v8 = build into /docs/v8/, add a versions.json row, flip one redirect. Gate test/unit/docs_versioning_tripwire.test.ts, including the rename gate that refuses to publish a page deleted without a redirect_maps entry; routing in deploy/docs/htaccess.)
@@ -25,6 +27,7 @@
 - [ ] Search: improve search panel design (see 'CSS search panel design' session)
 - [x] Search: The UI count panel has a delay when calculating and returning, which creates a moment of confusion for the user (who views the old value as the new one).
 - [ ] Ontology: Default lang will be english. Review the entire workflow to ensure it works correctly, especially publication (current definition is only in spanish).
+- [ ] area_maintenance widget 'unit_test' make sense in production mode?
 
 # Deep search found bugs
 - [x] Deep-path filters are slow (count and list): the join runs FORWARD from every main record (numisdata4: 184k records, 175k Tipo links unnested per search), and the trigram prefilter is disabled on joined leaves (src/core/search/conform.ts, searchStoreCovered). A valueless `@? '$.<tipo>[*]'` leaf is unindexable -> full matrix scan. Measured monedaiberica, 3-hop Tipo>Ceca>name 'ikalesken': 2906 ms now vs 33 ms reversed via matrix_relation_index + prefilter (same count). Fix must keep negation/empty semantics and group same-path conditions onto one related record (items below). DONE: src/core/search/deep_path.ts reverses only provably-exact units (3049 -> 14 ms, same ids); gate test/unit/search_deep_path_reverse_native.test.ts.
@@ -33,4 +36,5 @@
 - [x] Searching several sections at once with a deep path returns duplicate rows (WC-2026-09-24-multi-section-search-identity-dedup).
 
 # style
-- [ ] Modal headers and buttons restyling (contrast limitation issues)
+- [x] Modal headers and buttons restyling (contrast limitation issues)
+- [ ] Responsive design: ensure all main tools are responsive
