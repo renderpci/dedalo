@@ -12,6 +12,7 @@
  */
 
 import { relationDataModels } from '../../../src/core/components/registry.ts';
+import { sameItemValue } from '../../../src/core/concepts/item_value.ts';
 
 export type PropagateAction = 'replace' | 'delete' | 'add';
 
@@ -48,17 +49,31 @@ function normalizeToArray(value: unknown): unknown[] {
 	return Array.isArray(value) ? value : [value];
 }
 
-/** Order-sensitive deep equality (matches PHP `===` on arrays: same keys/order/values). */
-function deepEqual(a: unknown, b: unknown): boolean {
-	return JSON.stringify(a) === JSON.stringify(b);
+/**
+ * Whether the STORED item `stored` carries the value of the CLIENT item
+ * `candidate` — id-blind when the candidate names none (the save door stamps
+ * every stored item with an id a propagated value never carries). The ONE rule,
+ * shared with the save door's set_data id carry-over: concepts/item_value.ts.
+ */
+const sameValue = sameItemValue;
+
+/** Two item sequences hold the same values, position by position (see sameValue). */
+function sameSequence(stored: readonly unknown[], candidate: readonly unknown[]): boolean {
+	return (
+		stored.length === candidate.length &&
+		stored.every((item, index) => sameValue(item, candidate[index]))
+	);
 }
 
-/** Whether two data items are "the same" for delete/add — locator identity or deep value. */
-function itemsMatch(a: unknown, b: unknown, withRelations: boolean): boolean {
-	if (withRelations && isLocator(a) && isLocator(b)) {
-		return a.section_tipo === b.section_tipo && String(a.section_id) === String(b.section_id);
+/** Whether a stored item is "the same" as a value item — locator identity or value. */
+function itemsMatch(stored: unknown, candidate: unknown, withRelations: boolean): boolean {
+	if (withRelations && isLocator(stored) && isLocator(candidate)) {
+		return (
+			stored.section_tipo === candidate.section_tipo &&
+			String(stored.section_id) === String(candidate.section_id)
+		);
 	}
-	return deepEqual(a, b);
+	return sameValue(stored, candidate);
 }
 
 function isLocator(value: unknown): value is { section_tipo: string; section_id: unknown } {
@@ -88,14 +103,14 @@ export function applyPropagation(
 	switch (action) {
 		case 'replace': {
 			const final = normalizeToArray(value);
-			return { final, changed: !deepEqual(currentArr, final) };
+			return { final, changed: !sameSequence(currentArr, final) };
 		}
 		case 'delete': {
 			const toRemove = normalizeToArray(value);
 			const final = currentArr.filter(
 				(item) => !toRemove.some((rem) => itemsMatch(item, rem, withRelations)),
 			);
-			return { final, changed: !deepEqual(currentArr, final) };
+			return { final, changed: !sameSequence(currentArr, final) };
 		}
 		case 'add': {
 			const toAdd = normalizeToArray(value);
@@ -105,7 +120,7 @@ export function applyPropagation(
 					final.push(candidate);
 				}
 			}
-			return { final, changed: !deepEqual(currentArr, final) };
+			return { final, changed: !sameSequence(currentArr, final) };
 		}
 	}
 }

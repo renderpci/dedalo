@@ -4,10 +4,10 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 553,
-		"functions": 5380,
-		"functionsOverCap": 694,
-		"filesOverCap": 272
+		"files": 563,
+		"functions": 5795,
+		"functionsOverCap": 689,
+		"filesOverCap": 271
 	},
 	"ledger": [
 		{
@@ -36,6 +36,16 @@
 			"generated": "2026-09-24",
 			"functionsOverCap": 694,
 			"filesOverCap": 272
+		},
+		{
+			"generated": "2026-09-28",
+			"functionsOverCap": 692,
+			"filesOverCap": 271
+		},
+		{
+			"generated": "2026-09-28",
+			"functionsOverCap": 689,
+			"filesOverCap": 271
 		}
 	],
 	"files": {
@@ -47,7 +57,7 @@
 		"src/core/api/handlers/dd_component_av_api.ts": 7,
 		"src/core/api/handlers/dd_component_info.ts": 12,
 		"src/core/api/handlers/dd_component_text_area_api.ts": 20,
-		"src/core/api/handlers/dd_core_api.ts": 67,
+		"src/core/api/handlers/dd_core_api.ts": 65,
 		"src/core/api/handlers/dd_error_report_api.ts": 10,
 		"src/core/api/handlers/dd_external_api.ts": 26,
 		"src/core/api/handlers/dd_identify_api.ts": 48,
@@ -151,7 +161,7 @@
 		"src/core/media/engine/probe.ts": 8,
 		"src/core/media/engine/spawn.ts": 12,
 		"src/core/media/engine/verify_content.ts": 16,
-		"src/core/media/file_date.ts": 11,
+		"src/core/media/file_date.ts": 9,
 		"src/core/media/file_ops.ts": 18,
 		"src/core/media/files_info.ts": 12,
 		"src/core/media/files_info_reconcile.ts": 26,
@@ -250,16 +260,15 @@
 		"src/core/section/read.ts": 81,
 		"src/core/section/read_facade.ts": 61,
 		"src/core/section/read_source.ts": 11,
-		"src/core/section/record/create_record.ts": 8,
-		"src/core/section/record/delete_record.ts": 27,
-		"src/core/section/record/duplicate_record.ts": 28,
+		"src/core/section/record/delete_record.ts": 26,
+		"src/core/section/record/duplicate_record.ts": 25,
 		"src/core/section/record/observer_reconcile.ts": 16,
 		"src/core/section/record/observer_subscriptions.ts": 44,
 		"src/core/section/record/observers.ts": 40,
 		"src/core/section/record/record_defaults.ts": 23,
 		"src/core/section/record/record_metadata.ts": 10,
-		"src/core/section/record/save_component.ts": 110,
-		"src/core/section/record/temporal.ts": 23,
+		"src/core/section/record/save_component.ts": 97,
+		"src/core/section/record/temporal.ts": 21,
 		"src/core/section/record/temporal_store.ts": 11,
 		"src/core/section/record_loader.ts": 12,
 		"src/core/section_record/save_event.ts": 7,
@@ -272,7 +281,7 @@
 		"src/core/security/session_store.ts": 9,
 		"src/core/security/ssrf_guard.ts": 12,
 		"src/core/test_data/seed.ts": 9,
-		"src/core/tm_record/tm_record.ts": 14,
+		"src/core/tm_record/tm_record.ts": 12,
 		"src/core/tools/babel.ts": 11,
 		"src/core/tools/background.ts": 7,
 		"src/core/tools/config.ts": 11,

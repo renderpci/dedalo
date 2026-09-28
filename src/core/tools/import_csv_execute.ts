@@ -42,6 +42,7 @@ import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
 	getModelByTipo,
+	savesInRequestLang,
 } from '../ontology/resolver.ts';
 import {
 	isEmptyLiteralItem,
@@ -50,7 +51,11 @@ import {
 	literalEqualityFamilyOf,
 } from '../section/record/append_merge.ts';
 import { createSectionRecord } from '../section/record/create_record.ts';
-import { setRecordMetadata } from '../section/record/record_metadata.ts';
+import {
+	metadataPatchFromAuditValue,
+	type RecordMetadataPatch,
+	setRecordMetadata,
+} from '../section/record/record_metadata.ts';
 import {
 	isLangSlicedModel,
 	type SaveResult,
@@ -90,10 +95,12 @@ export interface CsvExecuteRequest {
 	plan: PlannedRecord[];
 	sectionTipo: string;
 	userId: number;
-	/** The dd800 run every TM row is stamped with — the revert handle. */
+	/**
+	 * The dd800 run every save is attributed to — the revert handle. Every save
+	 * under it records its BEFORE/AFTER undo pair and a visible after-row
+	 * (decision D1, WC bulk-revert-undo-log): an import has no TM opt-out.
+	 */
 	bulkProcessId: number;
-	/** The import UI's "save time machine history" checkbox. */
-	saveTm: boolean;
 	/** File-level errors accumulated before the plan (unmapped columns, …). */
 	errors: string[];
 	/** Read-time notices (an encoding conversion) — carried through, never merged
@@ -117,37 +124,14 @@ function isObject(value: unknown): value is Record<string, unknown> {
 	return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-/** A dd_date {year, month, day} → the 'YYYY-MM-DD HH:MM:SS' the `data` column stores. */
-function ddDateToDbTimestamp(date: Record<string, unknown>): string | null {
-	const year = Number(date.year);
-	if (!Number.isFinite(year)) return null;
-	const pad = (value: unknown, fallback: number): string =>
-		String(Number.isFinite(Number(value)) ? Number(value) : fallback).padStart(2, '0');
-	const yyyy = (year < 0 ? '-' : '') + String(Math.abs(year)).padStart(4, '0');
-	return `${yyyy}-${pad(date.month, 1)}-${pad(date.day, 1)} ${pad(date.hour, 0)}:${pad(date.minute, 0)}:${pad(date.second, 0)}`;
-}
-
 /**
  * The `data`-column metadata this row's audit columns imply (PHP's
- * set_created_date / set_created_by_userID side of the metadata branches).
+ * set_created_date / set_created_by_userID side of the metadata branches) —
+ * derived by record_metadata.ts, which the bulk revert shares to put the twin
+ * back in agreement with the audit component it restores.
  */
-function metadataPatchFor(column: PlannedColumn): {
-	createdDate?: string;
-	createdByUserId?: number;
-} {
-	const items = Array.isArray(column.conform.result) ? column.conform.result : [];
-	const first = items[0];
-	if (!isObject(first)) return {};
-
-	if (column.tipo === AUDIT_TIPOS.createdDate && isObject(first.start)) {
-		const stamp = ddDateToDbTimestamp(first.start);
-		return stamp === null ? {} : { createdDate: stamp };
-	}
-	if (column.tipo === AUDIT_TIPOS.createdByUser && first.section_id !== undefined) {
-		const userId = Number(first.section_id);
-		return Number.isFinite(userId) ? { createdByUserId: userId } : {};
-	}
-	return {};
+function metadataPatchFor(column: PlannedColumn): RecordMetadataPatch {
+	return metadataPatchFromAuditValue(column.tipo, column.conform.result);
 }
 
 /** The model of a dataframe SLOT column (its cell holds frames, not main data). */
@@ -160,7 +144,6 @@ interface RowWriteContext {
 	sectionId: number;
 	userId: number;
 	bulkProcessId: number;
-	saveTm: boolean;
 	skipModifiedStamp: boolean;
 	row: number;
 	/** The file's warnings channel (IGNORED frames are reported as they arise). */
@@ -333,9 +316,11 @@ async function writeLegacyFramesReplace(
 			lang: 'lg-nolan',
 			changedData: [{ action: 'set_data', id: null, value: [...kept, ...group] }],
 			userId: ctx.userId,
+			// A SLOT save with no caller pairing: it writes no history under the
+			// slot — the engine records the COMPOSED row / undo pair of the main
+			// the frames name (each carries main_component_tipo, normalisedFrame),
+			// the main's data + every slot's frames after this write (D1).
 			bulkProcessId: ctx.bulkProcessId,
-			// The frames are audited through their MAIN component's TM row, not twice.
-			saveTm: false,
 			skipModifiedStamp: ctx.skipModifiedStamp,
 		});
 	}
@@ -384,7 +369,6 @@ async function writeFramesAppend(
 	pending: readonly PendingFrame[],
 	ctx: RowWriteContext,
 	reportTipo: string,
-	saveTm: boolean,
 ): Promise<void> {
 	const groups = new Map<
 		string,
@@ -413,7 +397,6 @@ async function writeFramesAppend(
 			callerDataframe: { main_component_tipo: main, id_key: idKey },
 			userId: ctx.userId,
 			bulkProcessId: ctx.bulkProcessId,
-			saveTm,
 			skipModifiedStamp: ctx.skipModifiedStamp,
 			appendImport: true,
 		});
@@ -653,7 +636,6 @@ async function writeReplaceData(column: PlannedColumn, ctx: RowWriteContext): Pr
 		sectionId: ctx.sectionId,
 		userId: ctx.userId,
 		bulkProcessId: ctx.bulkProcessId,
-		saveTm: ctx.saveTm,
 		skipModifiedStamp: ctx.skipModifiedStamp,
 	};
 	const groups = groupItemsByLang(column.conform.result, column.lang);
@@ -681,7 +663,7 @@ async function writeReplaceData(column: PlannedColumn, ctx: RowWriteContext): Pr
  * merged under the column tipo for pass 2.
  */
 async function writeAppendData(column: PlannedColumn, ctx: RowWriteContext): Promise<void> {
-	const groups = appendLangGroups(column);
+	const groups = await appendLangGroups(column);
 	if (groups.length === 0) return;
 	const shared = await resolveSharedIds(column, groups, ctx);
 	// Keyed by the DATA tipo: a frame's main_component_tipo names it (stored
@@ -697,7 +679,6 @@ async function writeAppendData(column: PlannedColumn, ctx: RowWriteContext): Pro
 			changedData: [{ action: 'set_data', id: null, value: items }],
 			userId: ctx.userId,
 			bulkProcessId: ctx.bulkProcessId,
-			saveTm: ctx.saveTm,
 			skipModifiedStamp: ctx.skipModifiedStamp,
 			appendImport: preallocatedIds === undefined ? true : { preallocatedIds },
 		});
@@ -707,19 +688,20 @@ async function writeAppendData(column: PlannedColumn, ctx: RowWriteContext): Pro
 }
 
 /**
- * A main column's non-empty lang groups for the append saves. A NON-translatable
- * column stores every item in ONE slice (the save's effective lang is
- * 'lg-nolan' whatever the request lang — component_iri excepted, which slices
- * by the request lang either way), so a multi-lang cell collapses into ONE
- * save of all its items: the values are appended to that slice, where
- * per-lang saves would each claim the same shared id there and refuse the row.
+ * A main column's non-empty lang groups for the append saves. A column whose
+ * saves are ALL 'lg-nolan' whatever the request lang (resolver.ts
+ * savesInRequestLang false: not translatable, not transliterable, not
+ * component_iri) stores every item in ONE slice, so a multi-lang cell
+ * collapses into ONE save of all its items: the values are appended to that
+ * slice, where per-lang saves would each claim the same shared id there and
+ * refuse the row. A transliterable column (with_lang_versions) keeps its
+ * groups: its base and each transliteration are slices of their own.
  */
-function appendLangGroups(column: PlannedColumn): [string, unknown[]][] {
+async function appendLangGroups(column: PlannedColumn): Promise<[string, unknown[]][]> {
 	const groups = [...groupItemsByLang(column.conform.result, column.lang)].filter(
 		([, items]) => items.length > 0,
 	);
-	const oneSlice = column.lang === 'lg-nolan' && column.model !== 'component_iri';
-	if (!oneSlice || groups.length < 2) return groups;
+	if (groups.length < 2 || (await savesInRequestLang(column.tipo, column.model))) return groups;
 	return [[column.lang, groups.flatMap(([, items]) => items)]];
 }
 
@@ -751,7 +733,7 @@ async function writeColumnData(column: PlannedColumn, ctx: RowWriteContext): Pro
 		return;
 	}
 	if (column.model === DATAFRAME_MODEL) {
-		await writeFramesAppend(slotColumnFrames(column), ctx, column.tipo, ctx.saveTm);
+		await writeFramesAppend(slotColumnFrames(column), ctx, column.tipo);
 		return;
 	}
 	await writeAppendData(column, ctx);
@@ -763,9 +745,10 @@ async function writeLegacyFrames(column: PlannedColumn, ctx: RowWriteContext): P
 	const pending = await parseLegacyFrames(column.dataframe ?? [], dataTipoOf(column), ctx);
 	if (pending.length === 0) return;
 	if (column.mode === 'append') {
-		// A normal save of the slot, TM per ctx.saveTm: the main save may be a
-		// no-op (every item a duplicate, no TM row).
-		await writeFramesAppend(pending, ctx, column.tipo, ctx.saveTm);
+		// A slot save through the engine, recorded as the main's COMPOSED pair
+		// (the caller pairing names the main): even when the main save was a
+		// no-op (every item a duplicate, no TM row), the frames are recorded.
+		await writeFramesAppend(pending, ctx, column.tipo);
 		return;
 	}
 	await writeLegacyFramesReplace(pending, dataTipoOf(column), ctx);
@@ -966,7 +949,7 @@ function hasLegacyFrames(column: PlannedColumn): boolean {
  * and the relations that point at them.
  */
 export async function executeCsvImport(request: CsvExecuteRequest): Promise<ImportFileReport> {
-	const { plan, sectionTipo, userId, bulkProcessId, saveTm, progress } = request;
+	const { plan, sectionTipo, userId, bulkProcessId, progress } = request;
 	const startedAt = performance.now();
 
 	const created: number[] = [];
@@ -1044,7 +1027,6 @@ export async function executeCsvImport(request: CsvExecuteRequest): Promise<Impo
 			sectionId,
 			userId,
 			bulkProcessId,
-			saveTm,
 			skipModifiedStamp: carriesModifiedMetadata,
 			row: record.row,
 			warnings,
@@ -1061,8 +1043,12 @@ export async function executeCsvImport(request: CsvExecuteRequest): Promise<Impo
 				if (isNew) {
 					// conflictTolerant: a concurrent writer may have taken the id; then the
 					// insert is a no-op and we simply save the components onto it.
+					// bulkProcessId: a REAL insert writes the run's birth marker (tm_role
+					// 3), so a revert knows this run created the record (decision D2);
+					// the conflict no-op writes none — the record is not the run's.
 					await createSectionRecord(sectionTipo, userId, new Date(), sectionId, {
 						conflictTolerant: true,
+						bulkProcessId,
 					});
 				}
 

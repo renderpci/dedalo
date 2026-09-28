@@ -370,11 +370,10 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		const savedLang = source.lang ?? 'lg-nolan';
 		let savedItems = Array.isArray(outcome.data) ? outcome.data : [];
 		{
-			const { getModelByTipo, getTranslatableByTipo } = await import('../../ontology/resolver.ts');
+			const { getModelByTipo, effectiveSaveLang } = await import('../../ontology/resolver.ts');
 			const echoModel = await getModelByTipo(source.tipo);
 			if (echoModel !== null && isLangSlicedModel(echoModel)) {
-				const translatable = await getTranslatableByTipo(source.tipo);
-				const echoLang = translatable || echoModel === 'component_iri' ? savedLang : 'lg-nolan';
+				const echoLang = await effectiveSaveLang(source.tipo, echoModel, savedLang);
 				savedItems = filterItemsByLang(savedItems, echoLang);
 			}
 		}

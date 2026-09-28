@@ -18,10 +18,10 @@
  * This is the locked client template (layer 1: module-load + construct + wiring).
  */
 
+import * as render_module from '../../../tools/tool_import_dedalo_csv/js/render_tool_import_dedalo_csv.js'
 import {
 	import_mode_allowed,
-	render_columns_mapper,
-	update_append_tm_warning
+	render_columns_mapper
 } from '../../../tools/tool_import_dedalo_csv/js/render_tool_import_dedalo_csv.js'
 import {tool_import_dedalo_csv} from '../../../tools/tool_import_dedalo_csv/js/tool_import_dedalo_csv.js'
 
@@ -88,14 +88,9 @@ describe('TOOL_IMPORT_DEDALO_CSV APPEND MODE SELECTOR', function() {
 	]
 
 	const build = async function() {
-		const tm_checkbox = document.createElement('input')
-		tm_checkbox.type = 'checkbox'
-		tm_checkbox.checked = false
 		const self = {
 			get_section_components_list	: async () => ({label: 'Test', list: components}),
 			get_tool_label				: () => null,
-			append_tm_warning			: (() => { const node = document.createElement('div'); node.classList.add('hide'); return node })(),
-			checkbox_time_machine_save	: tm_checkbox,
 			csv_files_list				: []
 		}
 		const item = {
@@ -158,37 +153,31 @@ describe('TOOL_IMPORT_DEDALO_CSV APPEND MODE SELECTOR', function() {
 		assert.equal(item.ar_columns_map[3].import_mode, 'replace')
 	})
 
-	it('the time-machine-off warning follows the append columns and the checkbox', async function() {
-		const {self, lines} = await build()
-		assert.isTrue(self.append_tm_warning.classList.contains('hide'))
-		change(mode_select(lines[1]), 'append')
-		assert.isFalse(self.append_tm_warning.classList.contains('hide'), 'append + TM off: warn')
-		self.checkbox_time_machine_save.checked = true
-		assert.equal(update_append_tm_warning(self), false)
-		assert.isTrue(self.append_tm_warning.classList.contains('hide'), 'TM on: no warning')
-		self.checkbox_time_machine_save.checked = false
-		change(mode_select(lines[1]), 'replace')
-		assert.equal(update_append_tm_warning(self), false, 'no append column: no warning')
+	it('no time-machine switch and no TM-off warning: every import is revertible (D1)', function() {
+		// WC-2026-09-27-bulk-revert-undo-log: a save under a bulk id always writes
+		// its undo pair, so the opt-out and the warning it needed are gone. A
+		// resurrected export would mean the switch came back.
+		assert.equal(render_module.update_append_tm_warning, undefined, 'update_append_tm_warning must stay removed')
+		// import_files takes the file list only (no time_machine_save argument)
+		assert.equal(tool_import_dedalo_csv.prototype.import_files.length, 1, 'import_files(files)')
 	})
 
-	it('a re-render (section_tipo change) re-syncs the time-machine-off warning', async function() {
+	it('a re-render (section_tipo change) drops a refused append and keeps a preserved one', async function() {
 		const {self, item, lines} = await build()
 		change(mode_select(lines[1]), 'append')
-		assert.isFalse(self.append_tm_warning.classList.contains('hide'), 'append + TM off: warn')
+		assert.equal(item.ar_columns_map[1].import_mode, 'append')
 
-		// the new section refuses append on the portal: its mode is dropped, the warning goes
+		// the new section refuses append on the portal: its mode is dropped
 		const refusing = components.map(c => ({...c, import_append: null}))
 		self.get_section_components_list = async () => ({label: 'Other', list: refusing})
 		await render_columns_mapper(self, item)
 		assert.equal(item.ar_columns_map[1].import_mode, undefined)
-		assert.isTrue(self.append_tm_warning.classList.contains('hide'), 'no append column left: no warning')
 
-		// the reverse: a preserved 'append' on a re-matched column shows the warning at once
+		// the reverse: a preserved 'append' on a re-matched column survives
 		item.ar_columns_map[1].import_mode = 'append'
 		self.get_section_components_list = async () => ({label: 'Test', list: components})
 		await render_columns_mapper(self, item)
 		assert.equal(item.ar_columns_map[1].import_mode, 'append')
-		assert.isFalse(self.append_tm_warning.classList.contains('hide'), 'preserved append + TM off: warn')
 	})
 
 })

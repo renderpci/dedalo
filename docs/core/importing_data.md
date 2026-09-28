@@ -228,6 +228,10 @@ Each mapped column is imported in one of two modes, chosen per column in the imp
 
 The cell formats are the same in both modes: a cell is conformed exactly as this page describes, and only what happens to the stored data differs. Append is available for the list-shaped components — text, email, number, date, URI, related data and dataframes — plus geolocation (a [new layer](#geolocation)) and formatted text (a [new paragraph](#formatted-text)). It is refused, before anything is written, for media, single-choice components (select, radio button, language, publication, model), single-document components (JSON, password, permissions, record filters), computed components (info, inverse, external, children, index), the `section_id` column and the record's creation and modification stamps.
 
+### Undoing an import
+
+Every import runs as one bulk process and can be reverted as a whole from the [Time machine](../tools/using_time_machine.md#reverting-a-batch-run), in either mode. Each change the import makes records the value it replaced, so the revert puts back exactly what each record held before — also for components that had no earlier history — and leaves alone, and reports, any value edited after the import. There is no option to import without this record.
+
 ---
 
 ### Text

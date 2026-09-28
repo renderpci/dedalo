@@ -20,6 +20,19 @@ export function installPrivateDir(): string {
 /** The vendored core seed dump restored into an empty DB (PHP dedalo7_install). */
 export const SEED_DUMP_PATH: string = join(projectRoot, 'install/db/dedalo_install.pgsql.gz');
 
+/**
+ * The migrations the seed PREDATES and the installer must apply itself, right
+ * after restoring it: the installer runs in install mode, which skips the boot
+ * migration runner, yet it mints records (activateHierarchy) before any boot.
+ * Today one — `0010_tm_role.sql` (the seed's `matrix_time_machine` has no
+ * `tm_role`; every history reader needs it). Idempotent, so the first real
+ * boot's runner re-applying it is a no-op. Remove an entry when the seed is
+ * regenerated with it.
+ */
+export const SEED_PREDATED_MIGRATION_PATHS: readonly string[] = [
+	join(projectRoot, 'install/db/migrations/0010_tm_role.sql'),
+];
+
 /** Directory holding the vendored hierarchy import files + metadata JSONs. */
 export const HIERARCHY_IMPORT_DIR: string = join(projectRoot, 'install/import/hierarchy');
 

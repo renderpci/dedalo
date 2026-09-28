@@ -284,8 +284,10 @@ describe('the remove sentinel — an id-less remove destroys nothing', () => {
 		const cleared = await save([{ action: 'clear', value: null }]);
 		expect(cleared.ok).toBe(true);
 		expect(await storedItems()).toEqual([]);
-		// A wipe is a change like any other: the Time Machine can undo it.
-		expect(await tmRowCount()).toBe(tmBefore + 1);
+		// A wipe is a change like any other: the Time Machine can undo it — one
+		// row per language it emptied (two lanes: one row is one language,
+		// WC-2026-09-27-bulk-revert-undo-log).
+		expect(await tmRowCount()).toBe(tmBefore + 4);
 	});
 
 	test('E. the MCP door refuses a remove with no item_id, before permissions or the engine', async () => {

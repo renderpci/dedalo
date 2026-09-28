@@ -308,6 +308,11 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
  * list.
  */
 const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
+	// Bootstrap memo for matrix_time_machine.tm_role (ensureTmRoleColumn — the
+	// self-heal when migration 0010 did not land at boot): the TABLES verified
+	// to carry the column. No request identity; set only on success, cleared by
+	// a restart, and the DDL cannot un-apply.
+	'core/db/record_generation.ts:tmRoleReadyTables',
 	// Model-artifact digest VERDICT cache (2026-09-04, P1-25): absolute path →
 	// {size, mtimeMs, ino, sha256}, so the serving door hashes a gigabyte weight
 	// once per process and re-hashes only when the stat identity moves. A digest
@@ -359,6 +364,15 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// Background tool-job registry (S2-16): keyed by job id; terminal entries
 	// pruned by its own retention sweep; ops visibility state.
 	'core/tools/background.ts:jobs',
+	// Live bulk-run registry (2026-09-27, decision D5 of the bulk-revert undo
+	// log): the dd800 ids whose run is executing in THIS process, and the ids a
+	// revert is undoing right now. Process-wide facts about in-process work —
+	// keyed by bulk id, never by principal or language. Each entry is removed in
+	// the `finally` of the run/revert that added it (withLiveBulkRun /
+	// releaseBulkRevert), so the sets drain themselves; a restart empties them,
+	// which is correct because no bulk run survives one.
+	'core/tools/bulk_run_registry.ts:liveBulkRuns',
+	'core/tools/bulk_run_registry.ts:revertsInFlight',
 	// Request/gauge counters (WS-E observability): monotonic ops metrics,
 	// never cleared by design.
 	'core/api/counters.ts:counters',
@@ -947,7 +961,7 @@ describe('config.menu lang reads outside src/config/ (P0-7 census)', () => {
 			['tools/tool_update_cache/server/index.ts', "translatable ? currentDataLang() : 'lg-nolan'"],
 			[
 				'src/core/section/record/duplicate_record.ts',
-				"translatable ? currentDataLang() : 'lg-nolan'",
+				'main.translatable ? currentDataLang() : NOLAN',
 			],
 			['tools/tool_posterframe/server/index.ts', 'translatable ? currentDataLang() : null'],
 		] as const) {

@@ -6,18 +6,15 @@
  * from one Time Machine row; `bulk_revert_process` (bulk_revert.ts) restores
  * EVERY component a dd800 batch touched to its pre-batch value and stamps the
  * restores with a NEW dd800 id. Both are read-modify-writes of a record row
- * that also replay dataframe FRAMES into the paired slots — and a TS-captured
- * snapshot carries no frames, so the doors' `refuseFramelessWipe` guard is the
- * only thing between a restore and the unrecoverable deletion of every frame a
- * curator saved since.
+ * that also replay dataframe FRAMES into the paired slots. Every row of a main
+ * is COMPOSED (decision 2026-09-28: PHP-era rows always were; TS-era beta rows
+ * are unsupported), so a row with no frame MEANS "no frames at that time".
  *
- * DATA-30 (the interleave). The guard and the pre-restore read used to run
- * BEFORE the door's transaction opened, and `bulk_revert` locked the row only
- * for lang-sliced models: a frame COMMITTED between the guard's read and the
- * door's write was wiped by a plan built from a stale view — the guard saw an
- * empty slot, allowed the wipe, and the racing save's frame went with it, with
- * `ok:true` to both sides. Nothing single-threaded can see that; it exists only
- * BETWEEN two connections. So this gate drives two and lets POSTGRES be the
+ * DATA-30 (the interleave). The pre-restore read used to run BEFORE the door's
+ * transaction opened, and `bulk_revert` locked the row only for lang-sliced
+ * models: a frame COMMITTED between the read and the door's write was handled
+ * by a plan built from a stale view, with `ok:true` to both sides. Nothing
+ * single-threaded can see that; it exists only BETWEEN two connections. So this gate drives two and lets POSTGRES be the
  * clock (modelled on `delete_inverse_lost_update_native`):
  *
  *   T2 (the curator) opens a transaction, inserts an ordinary dataframe frame
@@ -27,11 +24,13 @@
  *   gate polls `pg_blocking_pids` until it provably does; only then is T2
  *   released, so the frame lands strictly INSIDE the door's read→write window.
  *
- * With the lock taken first, T1 reads the committed frame, the guard refuses,
- * the transaction rolls back and NOTHING is written — the frame survives, the
- * main is untouched, no audit row exists for a restore that did not happen.
- * With the pre-fix order the same run wipes the frame. The interleave itself is
- * asserted (a run where T1 never waited on T2 is RED, never quietly green).
+ * With the lock taken first, T1 plans over the committed frame: apply_value (a
+ * deliberate restore of ONE row) serializes after the curator and leaves exactly
+ * the row's state — the frame emptied, its own composed row recording that, the
+ * curator's composed row keeping the frame in history; both bulk-revert paths
+ * see a unit the run did not leave and refuse it `changed_since_run`, the frame
+ * surviving. The interleave itself is asserted (a run where T1 never waited on
+ * T2 is RED, never quietly green).
  *
  * DATA-31 (atomicity of the failure). Faults are injected into the DATABASE,
  * never into the module graph: `mock.module` is process-global and
@@ -56,7 +55,13 @@
  *
  * REVERTIBILITY. The happy path proves the stamp: `bulk_revert` answers the new
  * dd800 id, that record exists, EVERY TM row the run wrote for the batch's
- * components carries it, and their count equals the run's `counter`.
+ * components carries it, and they are one undo-log B/A pair per reverted unit
+ * (WC-2026-09-27-bulk-revert-undo-log).
+ *
+ * BOTH REVERT PATHS race the curator: a run made under the undo log (exact —
+ * the revert lands, the frame survives) and a LEGACY run, built by stripping
+ * the undo log (test/helpers/legacy_bulk_run.ts) — the inference path, whose
+ * conflict check must see the frame behind the lock.
  *
  * Everything is built through the engine's own write path on the reserved
  * scratch TLD `zzboa` (section on `test1` → `matrix_test`; a portal MAIN with
@@ -68,7 +73,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { DATAFRAME_RELATION_TYPE } from '../../src/core/concepts/subdatum.ts';
 import { sql, withTransaction } from '../../src/core/db/postgres.ts';
-import { isDedaloError } from '../../src/core/errors/index.ts';
 import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
@@ -89,6 +93,7 @@ import {
 } from '../../tools/tool_time_machine/server/bulk_revert.ts';
 import { resolveDataframeSlotTipos } from '../../tools/tool_time_machine/server/dataframe_restore.ts';
 import { toolTimeMachineApplyValue } from '../../tools/tool_time_machine/server/tool_time_machine.ts';
+import { demoteToLegacyRun } from '../helpers/legacy_bulk_run.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
 /** Scratch TLD unique to this gate — concurrent gates cannot collide with it. */
@@ -151,16 +156,31 @@ async function storedKey(recordId: number, key: string): Promise<unknown> {
 	return rows[0]?.items ?? undefined;
 }
 
-async function tmRowsOf(
-	recordId: number,
-	tipo: string,
-): Promise<{ id: number; bulk: number | null; data: unknown }[]> {
+interface TmRowOf {
+	id: number;
+	bulk: number | null;
+	/** undo-log role (WC-2026-09-27-bulk-revert-undo-log): null = visible history. */
+	role: number | null;
+	data: unknown;
+}
+
+/** EVERY time-machine row of the key, hidden undo-log rows included, id ASC. */
+async function tmRowsOf(recordId: number, tipo: string): Promise<TmRowOf[]> {
 	const rows = (await sql.unsafe(
-		`SELECT id, bulk_process_id AS bulk, data FROM matrix_time_machine
+		`SELECT id, bulk_process_id AS bulk, tm_role AS role, data FROM matrix_time_machine
 		 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3 ORDER BY id ASC`,
 		[SECTION, recordId, tipo],
-	)) as { id: number; bulk: number | null; data: unknown }[];
-	return rows.map((row) => ({ ...row, bulk: row.bulk === null ? null : Number(row.bulk) }));
+	)) as TmRowOf[];
+	return rows.map((row) => ({
+		...row,
+		bulk: row.bulk === null ? null : Number(row.bulk),
+		role: row.role === null ? null : Number(row.role),
+	}));
+}
+
+/** The key's VISIBLE history (what dd15 shows) — the undo log's hidden rows excluded. */
+async function visibleRowsOf(recordId: number, tipo: string): Promise<TmRowOf[]> {
+	return (await tmRowsOf(recordId, tipo)).filter((row) => row.role === null);
 }
 
 async function bulkRowExists(id: number): Promise<boolean> {
@@ -202,24 +222,42 @@ async function saveMainLocator(
 }
 
 /**
- * A record with a two-row MAIN history — `[A]` then `[A, B]` (the second save
- * optionally stamped as a batch) — and an EMPTY slot. Both TM rows are
- * TS-captured, hence FRAMELESS: restoring the older one plans a slot wipe.
+ * A record with a two-row visible MAIN history — `[A]` then `[A, B]` (the
+ * second save optionally stamped as a batch) — and an EMPTY slot. Both visible
+ * rows are composed with an empty slot: restoring the older one plans "no
+ * frames". A batched second save ALSO writes its hidden undo-log BEFORE row
+ * (tm_role 1, holding `[A]`) just below its visible after-row — D1: whatever
+ * saveTm says. `legacy: true` strips that BEFORE (demoteToLegacyRun), leaving
+ * the shape every pre-undo-log run left: the revert then takes the LEGACY
+ * inference path.
  */
 async function makeHistory(
 	batchId: number | null = null,
+	options: { legacy?: boolean } = {},
 ): Promise<{ recordId: number; itemA: number; olderTmId: number }> {
 	const recordId = await createSectionRecord(SECTION, USER_ID);
 	const itemA = await saveMainLocator(recordId, targetA);
 	await saveMainLocator(recordId, targetB, batchId);
-	const history = await tmRowsOf(recordId, MAIN);
-	// Corpus floor: the history this gate restores from is exactly two rows, the
-	// older one holding ONE item and no frame — the TS-captured snapshot shape.
+	if (options.legacy === true && batchId !== null) {
+		expect(await demoteToLegacyRun(batchId)).toBe(1);
+	}
+	const history = await visibleRowsOf(recordId, MAIN);
+	// Corpus floor: the visible history this gate restores from is exactly two
+	// rows, the older one holding ONE item and no frame (its slot was empty).
 	expect(history.length).toBe(2);
 	const older = history[0] as { id: number; data: unknown };
 	expect(Array.isArray(older.data)).toBe(true);
 	expect((older.data as unknown[]).length).toBe(1);
 	expect(history[1]?.bulk).toBe(batchId);
+	const hidden = (await tmRowsOf(recordId, MAIN)).filter((row) => row.role !== null);
+	if (batchId === null || options.legacy === true) {
+		expect(hidden).toEqual([]);
+	} else {
+		// the batch's BEFORE: role 1, the run's id, the exact `[A]` it replaced
+		expect(hidden.map((row) => [row.role, row.bulk])).toEqual([[1, batchId]]);
+		expect(hidden[0]?.data).toEqual(older.data);
+		expect((hidden[0] as TmRowOf).id).toBeLessThan((history[1] as TmRowOf).id);
+	}
 	expect(await storedKey(recordId, SLOT)).toBeUndefined();
 	return { recordId, itemA, olderTmId: older.id };
 }
@@ -415,26 +453,32 @@ describe('apply_value vs a concurrent frame save (DATA-30)', () => {
 		expect(result.blocked).toBe(true);
 	});
 
-	test('the restore REFUSED — it read the committed frame, not its stale plan', () => {
-		expect('error' in result.door).toBe(true);
-		const error = 'error' in result.door ? result.door.error : null;
-		expect(isDedaloError(error)).toBe(true);
-		expect(isDedaloError(error) ? error.code : null).toBe('engine.uncovered_scope');
+	test('the restore LANDED after the curator: exactly the row’s state — main [A], its frames emptied', async () => {
+		expect('value' in result.door).toBe(true);
+		const main = (await storedKey(recordId, MAIN)) as { section_id: number }[];
+		expect(main.map((item) => Number(item.section_id))).toEqual([targetA]);
+		expect(mainBefore).not.toEqual(main); // the restore really wrote
+		// the row recorded NO frame: planned over the COMMITTED frame, it empties it
+		expect(await storedKey(recordId, SLOT)).toBeUndefined();
 	});
 
-	test("the curator's frame SURVIVES; the main is untouched", async () => {
-		const frame = storedFrame(await storedKey(recordId, SLOT), itemA);
-		expect(frame).not.toBeNull();
-		expect(frame?.type).toBe(DATAFRAME_RELATION_TYPE);
-		expect(await storedKey(recordId, MAIN)).toEqual(mainBefore);
-	});
-
-	test('no partial audit row: the main history is the two rows it had', async () => {
-		expect((await tmRowsOf(recordId, MAIN)).length).toBe(2);
+	test('nothing is lost from history: the curator’s composed row keeps the frame, the restore’s row records none', async () => {
+		// Serialized: the curator's slot save (recorded under the MAIN — a slot
+		// writes no row of its own) THEN the restore's own composed row.
+		const history = await tmRowsOf(recordId, MAIN);
+		expect(history.length).toBe(4);
+		expect(storedFrame(history[2]?.data, itemA)).not.toBeNull();
+		expect(storedFrame(history[3]?.data, itemA)).toBeNull();
+		expect((history[3]?.data as unknown[]).length).toBe(1);
 	});
 });
 
-describe('bulk_revert vs a concurrent frame save (DATA-30)', () => {
+describe('bulk_revert of a LEGACY run vs a concurrent frame save (DATA-30)', () => {
+	// A run made before the undo log has no BEFORE row: its pre-run value is
+	// INFERRED from the visible (composed) history, and the conflict check —
+	// the live unit against the run's last row, frames included — is what stands
+	// between that inference and the curator's frame, so it must read the frame
+	// COMMITTED behind its lock.
 	let recordId = 0;
 	let itemA = 0;
 	let batchId = 0;
@@ -443,7 +487,7 @@ describe('bulk_revert vs a concurrent frame save (DATA-30)', () => {
 
 	beforeAll(async () => {
 		batchId = await mintBulkId();
-		({ recordId, itemA } = await makeHistory(batchId));
+		({ recordId, itemA } = await makeHistory(batchId, { legacy: true }));
 		mainBefore = await storedKey(recordId, MAIN);
 		result = await interleave(recordId, itemA, async () =>
 			toolTimeMachineBulkRevert(await context({ bulk_process_id: batchId })),
@@ -455,20 +499,22 @@ describe('bulk_revert vs a concurrent frame save (DATA-30)', () => {
 		expect(result.blocked).toBe(true);
 	});
 
-	test('the row is SKIPPED as frameless_wipe — never a lost update', () => {
+	test('the key is SKIPPED as changed_since_run — never a lost update', () => {
 		expect('value' in result.door).toBe(true);
 		const response = 'value' in result.door ? result.door.value : null;
 		expect(response?.ok).toBe(true);
 		const data = response?.data as {
 			counter: number;
 			bulk_process_id: number;
+			exact: string;
 			skipped: BulkRevertSkipped[];
 		};
 		expect(data.counter).toBe(0);
 		mintedBulkIds.push(data.bulk_process_id);
 		expect(data.skipped).toEqual([
-			{ reason: 'frameless_wipe', section_tipo: SECTION, tipo: MAIN, section_id: recordId },
+			{ reason: 'changed_since_run', section_tipo: SECTION, tipo: MAIN, section_id: recordId },
 		]);
+		expect(data.exact).toBe('none');
 	});
 
 	test("the curator's frame SURVIVES; the main is untouched", async () => {
@@ -478,8 +524,10 @@ describe('bulk_revert vs a concurrent frame save (DATA-30)', () => {
 	});
 
 	test('no partial audit row: nothing carries the revert id; the history is unchanged', async () => {
+		// two rows it had + the curator's composed frame row (see apply_value above)
 		const history = await tmRowsOf(recordId, MAIN);
-		expect(history.length).toBe(2);
+		expect(history.length).toBe(3);
+		expect(storedFrame(history[2]?.data, itemA)).not.toBeNull();
 		const response = 'value' in result.door ? result.door.value : null;
 		const revertId = (response?.data as { bulk_process_id: number }).bulk_process_id;
 		expect(revertId).toBeGreaterThan(0);
@@ -488,6 +536,57 @@ describe('bulk_revert vs a concurrent frame save (DATA-30)', () => {
 			[revertId],
 		)) as { n: number }[];
 		expect(stamped[0]?.n).toBe(0);
+	});
+});
+
+describe('bulk_revert of an UNDO-LOG run vs a concurrent frame save (DATA-30)', () => {
+	// The exact path reads the run's COMPOSED BEFORE (`[A]`, no frames) and
+	// checks the LIVE main AND its frames against the run's last after-image,
+	// behind the row lock. The curator commits a frame of the main inside the
+	// revert's read→write window: the main's unit (main + its frames, amendment
+	// 2026-09-27) is no longer what the run left, so the revert REFUSES it
+	// `changed_since_run` — never a restore that silently takes the frame with it.
+	let recordId = 0;
+	let itemA = 0;
+	let batchId = 0;
+	let result: Interleave<Awaited<ReturnType<typeof toolTimeMachineBulkRevert>>>;
+
+	beforeAll(async () => {
+		batchId = await mintBulkId();
+		({ recordId, itemA } = await makeHistory(batchId));
+		result = await interleave(recordId, itemA, async () =>
+			toolTimeMachineBulkRevert(await context({ bulk_process_id: batchId })),
+		);
+	}, 60_000);
+
+	test('the interleave actually happened: the revert waited on the curator lock', () => {
+		expect(result.curatorSaveOk).toBe(true);
+		expect(result.blocked).toBe(true);
+	});
+
+	test('the unit is REFUSED changed_since_run — it read the committed frame; the main is untouched', async () => {
+		const response = 'value' in result.door ? result.door.value : null;
+		expect(response?.ok).toBe(true);
+		const data = response?.data as {
+			counter: number;
+			bulk_process_id: number;
+			exact: string;
+			skipped: BulkRevertSkipped[];
+		};
+		mintedBulkIds.push(data.bulk_process_id);
+		expect(data.skipped).toEqual([
+			{ reason: 'changed_since_run', section_tipo: SECTION, tipo: MAIN, section_id: recordId },
+		]);
+		expect(data.counter).toBe(0);
+		expect(data.exact).toBe('none');
+		const main = (await storedKey(recordId, MAIN)) as { id: number; section_id: number }[];
+		expect(main.map((item) => Number(item.section_id))).toEqual([targetA, targetB]);
+	});
+
+	test("the curator's frame SURVIVES, still paired to item A", async () => {
+		const frame = storedFrame(await storedKey(recordId, SLOT), itemA);
+		expect(frame).not.toBeNull();
+		expect(frame?.type).toBe(DATAFRAME_RELATION_TYPE);
 	});
 });
 
@@ -526,15 +625,18 @@ describe('bulk_revert stamps every row it writes with the dd800 it answers', () 
 		expect(await bulkRowExists(data.bulk_process_id)).toBe(true);
 	});
 
-	test('EVERY TM row the run wrote for the batch carries it, and their count is the counter', async () => {
+	test('EVERY TM row the run wrote for the batch carries it: one B/A pair per reverted unit', async () => {
 		const written = (await sql.unsafe(
-			`SELECT bulk_process_id AS bulk FROM matrix_time_machine
-			 WHERE id > $1 AND section_tipo = $2 AND tipo LIKE 'zzboa%'`,
+			`SELECT bulk_process_id AS bulk, tm_role AS role FROM matrix_time_machine
+			 WHERE id > $1 AND section_tipo = $2 AND tipo LIKE 'zzboa%' ORDER BY id`,
 			[tmMaxBefore, SECTION],
-		)) as { bulk: number | null }[];
-		expect(written.length).toBe(data.counter);
+		)) as { bulk: number | null; role: number | null }[];
+		// The revert is itself a bulk run with an undo log: its BEFORE (hidden,
+		// role 1) then its visible after-row, so reverting the revert is exact.
+		expect(written.length).toBe(data.counter * 2);
+		expect(written.map((row) => row.role)).toEqual([1, null]);
 		expect(written.every((row) => Number(row.bulk) === data.bulk_process_id)).toBe(true);
-		const stamped = await tmRowsOf(recordId, MAIN);
+		const stamped = await visibleRowsOf(recordId, MAIN);
 		expect(stamped.filter((row) => row.bulk === data.bulk_process_id).length).toBe(1);
 	});
 });
@@ -582,8 +684,11 @@ describe('bulk_revert refuses to START when its dd800 cannot be minted (DATA-31)
 		expect(await scratchUserBulkCount()).toBe(bulkCountBefore);
 		expect(await storedKey(recordId, MAIN)).toEqual(mainBefore);
 		expect(await tmRowsOf(recordId, MAIN)).toEqual(historyBefore);
-		// And the batch it was asked to undo is still there to be undone.
-		expect((await tmRowsOf(recordId, MAIN)).filter((row) => row.bulk === batchId).length).toBe(1);
+		// And the batch it was asked to undo is still there to be undone: its
+		// hidden BEFORE and its visible after-row.
+		expect(
+			(await tmRowsOf(recordId, MAIN)).filter((row) => row.bulk === batchId).map((r) => r.role),
+		).toEqual([1, null]);
 	});
 });
 
@@ -663,6 +768,8 @@ describe('a restore whose Time Machine row cannot be written rolls back WHOLE (D
 			{ reason: 'failed', section_tipo: SECTION, tipo: MAIN, section_id: bulkRecord },
 		]);
 		expect(await storedKey(bulkRecord, MAIN)).toEqual(bulkMainBefore);
-		expect((await tmRowsOf(bulkRecord, MAIN)).length).toBe(2);
+		// the two visible rows + the batch's BEFORE; nothing of the revert
+		expect((await tmRowsOf(bulkRecord, MAIN)).length).toBe(3);
+		expect((await visibleRowsOf(bulkRecord, MAIN)).length).toBe(2);
 	});
 });

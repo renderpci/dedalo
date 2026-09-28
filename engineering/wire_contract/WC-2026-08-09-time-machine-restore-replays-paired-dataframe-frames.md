@@ -138,3 +138,31 @@ frameless pre-batch state, and an observed component's restore recomputes the
 target mirror and writes its observer TM audit row.
 Plus `test/unit/tool_request.test.ts` (Phase 6) for the non-refusal in
 divergence 2.
+
+## Addendum 2026-09-27 — the capture half landed: composed rows
+
+The known-open dependency above is closed by WC-2026-09-27-bulk-revert-undo-log §8. Every
+history row of a main with at least one dataframe slot is now COMPOSED — the main's data
+followed by the full frames of every slot (the discovery union of divergence 1, now in core:
+`resolveDataframeSlotTipos` in `src/core/relations/dataframe_slots.ts`, re-exported by the
+tool). A slot save writes the main's composed row, never a row of its own, and a bulk run records no
+slot pair either: `bulk_revert_process` reverts the main and its frames as one unit from the
+main's composed undo pairs (WC-2026-09-27-bulk-revert-undo-log §4 step 3).
+
+- **Divergence 5 is RETIRED** (WC-2026-09-27-bulk-revert-undo-log, addendum 2026-09-28):
+  TS-era rows are unsupported beta history, so no frameless row is refused. Every row —
+  Dédalo v6 or engine-written — is the full state of the main and all its dataframes: a slot
+  it is silent about was empty then and is emptied (`rowSlotTipos`), in `apply_value`, the
+  preview and both bulk-revert paths (WC-2026-09-27-bulk-revert-undo-log, addendum 2026-09-28
+  — full-state contract; the composition epoch is removed). `refuseFramelessWipe`, its tests and the `frameless_wipe` skip reason are gone
+  (retired "with its tests, not by loosening them", as this entry required).
+- **Two lanes (2026-09-28, WC-2026-09-27-bulk-revert-undo-log, addendum "two lanes") narrows
+  the two bullets above.** Only a FRAME-STATE row — an lg-nolan row, or a Dédalo v6 row carrying
+  frames — is the full frame state of the main, and only there is a slot it is silent about
+  emptied. A LANGUAGE-lane row is value-only for every main: its frames are those of the newest
+  frame-state row at or below it (`src/core/tm_record/lane_state.ts` `readRowLaneState`), in
+  `apply_value`, the preview and both bulk-revert paths; it never empties a slot. "Every row is
+  COMPOSED / the full state" above reads as "every frame-state row".
+- **Divergence 4 stays**: no supported history has a slot row (PHP never wrote one), and
+  `apply_value` on one is still refused.
+- **Divergences 1–3 unchanged.**

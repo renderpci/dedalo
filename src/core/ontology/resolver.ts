@@ -308,6 +308,38 @@ export async function getTranslatableByTipo(tipo: string): Promise<boolean> {
 	return node?.translatable ?? false;
 }
 
+/**
+ * THE LANG A SAVE OF `tipo` WRITES (PHP component_common::__construct
+ * :666-678): the request lang for a translatable component, for a
+ * `with_lang_versions` one (a TRANSLITERABLE component, e.g. rsc85 in rsc197:
+ * an lg-nolan base beside per-language versions — Augustus lg-nolan,
+ * Αύγουστος lg-ell) and for component_iri (which slices by the request lang
+ * either way); `lg-nolan` otherwise. The ONE rule of every door that saves a
+ * lang slice, echoes it or cuts the slice it will save back — never a local
+ * copy. (The component READ, resolve/component_data.ts, keeps PHP
+ * get_element_lang's nolan-forcing of a non-translatable string component.)
+ */
+export async function effectiveSaveLang(
+	tipo: string,
+	model: string,
+	lang: string,
+): Promise<string> {
+	return (await savesInRequestLang(tipo, model)) ? lang : 'lg-nolan';
+}
+
+/** Whether a save of `tipo` keeps the request lang (effectiveSaveLang); false = every save is `lg-nolan`. */
+export async function savesInRequestLang(tipo: string, model: string): Promise<boolean> {
+	if (model === 'component_iri' || (await getTranslatableByTipo(tipo))) return true;
+	return hasLangVersions(tipo);
+}
+
+/** tipo → `properties.with_lang_versions === true` (an alias answers for its target). */
+async function hasLangVersions(tipo: string): Promise<boolean> {
+	const node = await getNode(tipo);
+	if (node?.model === 'component_alias') return hasLangVersions(await aliasTargetTipoOf(tipo));
+	return (node?.properties as { with_lang_versions?: unknown } | null)?.with_lang_versions === true;
+}
+
 /** model → matrix jsonb column (PHP section_record_data::get_column_name). */
 export function getColumnNameByModel(model: string): string | null {
 	return componentModelFields(model)?.column ?? NON_COMPONENT_COLUMN_MAP[model] ?? null;

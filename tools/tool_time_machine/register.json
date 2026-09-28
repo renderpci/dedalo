@@ -302,6 +302,26 @@
             "value": "Les dades actuals de \"{0}\" (idioma {1}) al registre {2} se SOBREESCRIURAN amb la versió històrica seleccionada.\n\nUn component traduïble conserva els altres idiomes: només se substitueix el que s'indica aquí. Qualsevol altre component se substitueix completament.\n\nVoleu continuar?"
           },
           {
+            "lang": "lg-cat",
+            "name": "bulk_revert_summary",
+            "value": "Reversió en bloc acabada. Revertits: {0}. Ja tenien el valor previ: {1}. Aquesta reversió queda registrada com a procés en bloc {2}, de manera que també es pot revertir."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "bulk_revert_not_exact",
+            "value": "Aquesta reversió NO és exacta: reviseu els elements indicats a sota."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "bulk_revert_skipped_heading",
+            "value": "{0} element(s) NO s'han revertit i s'han deixat sense canvis (detalls al registre del servidor):"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "bulk_revert_inexact_heading",
+            "value": "{0} element(s) s'han restaurat per inferència o amb efectes secundaris; reviseu-los:"
+          },
+          {
             "lang": "lg-deu",
             "name": "revert_bulk_process",
             "value": "Rückgängigmachung des Massenverfahrens"
@@ -335,6 +355,26 @@
             "lang": "lg-deu",
             "name": "apply_value_confirm_msg",
             "value": "Die aktuellen Daten von \"{0}\" (Sprache {1}) im Datensatz {2} werden mit der ausgewählten historischen Version ÜBERSCHRIEBEN.\n\nEine übersetzbare Komponente behält ihre anderen Sprachen: Nur die hier genannte wird ersetzt. Jede andere Komponente wird vollständig ersetzt.\n\nFortfahren?"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "bulk_revert_summary",
+            "value": "Massen-Rückgängigmachung abgeschlossen. Rückgängig gemacht: {0}. Bereits auf dem vorherigen Wert: {1}. Diese Rückgängigmachung ist als Massenprozess {2} protokolliert und kann daher selbst rückgängig gemacht werden."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "bulk_revert_not_exact",
+            "value": "Diese Rückgängigmachung ist NICHT exakt: Prüfen Sie die unten aufgeführten Elemente."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "bulk_revert_skipped_heading",
+            "value": "{0} Element(e) wurden NICHT rückgängig gemacht und blieben unverändert (Details im Serverprotokoll):"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "bulk_revert_inexact_heading",
+            "value": "{0} Element(e) wurden durch Ableitung oder mit Nebenwirkungen wiederhergestellt; bitte prüfen:"
           },
           {
             "lang": "lg-ell",
@@ -372,6 +412,26 @@
             "value": "Τα τρέχοντα δεδομένα του \"{0}\" (γλώσσα {1}) στην εγγραφή {2} θα ΑΝΤΙΚΑΤΑΣΤΑΘΟΥΝ από την επιλεγμένη ιστορική έκδοση.\n\nΈνα μεταφράσιμο στοιχείο διατηρεί τις άλλες γλώσσες του: αντικαθίσταται μόνο αυτή που αναφέρεται εδώ. Κάθε άλλο στοιχείο αντικαθίσταται πλήρως.\n\nΣυνέχεια;"
           },
           {
+            "lang": "lg-ell",
+            "name": "bulk_revert_summary",
+            "value": "Η μαζική αναστροφή ολοκληρώθηκε. Αναστράφηκαν: {0}. Ήταν ήδη στην προηγούμενη τιμή: {1}. Η αναστροφή καταγράφηκε ως μαζική διαδικασία {2}, οπότε μπορεί και η ίδια να αναστραφεί."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "bulk_revert_not_exact",
+            "value": "Αυτή η αναστροφή ΔΕΝ είναι ακριβής: ελέγξτε τα στοιχεία που αναφέρονται παρακάτω."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "bulk_revert_skipped_heading",
+            "value": "{0} στοιχείο(α) ΔΕΝ αναστράφηκαν και έμειναν αμετάβλητα (λεπτομέρειες στο αρχείο καταγραφής του διακομιστή):"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "bulk_revert_inexact_heading",
+            "value": "{0} στοιχείο(α) αποκαταστάθηκαν με συμπερασμό ή με παρενέργειες· ελέγξτε τα:"
+          },
+          {
             "lang": "lg-eng",
             "name": "revert_bulk_process",
             "value": "Revert the bulk process"
@@ -405,6 +465,26 @@
             "lang": "lg-eng",
             "name": "apply_value_confirm_msg",
             "value": "The current data of \"{0}\" (language {1}) in record {2} will be OVERWRITTEN with the selected historical version.\n\nA translatable component keeps its other languages: only the one named here is replaced. Any other component is replaced in full.\n\nContinue?"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "bulk_revert_summary",
+            "value": "Bulk revert finished. Reverted: {0}. Already at their pre-run value: {1}. This revert is recorded as bulk process {2}, so it can itself be reverted."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "bulk_revert_not_exact",
+            "value": "This revert is NOT exact: check the items listed below."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "bulk_revert_skipped_heading",
+            "value": "{0} item(s) were NOT reverted and were left unchanged (details in the server log):"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "bulk_revert_inexact_heading",
+            "value": "{0} item(s) were restored by inference or with side effects; check them:"
           },
           {
             "lang": "lg-eus",
@@ -445,6 +525,26 @@
             "value": "\"{0}\" osagaiaren uneko datuak ({1} hizkuntza) {2} erregistroan hautatutako bertsio historikoarekin GAINIDATZIKO dira.\n\nOsagai itzulgarri batek beste hizkuntzak mantentzen ditu: hemen adierazitakoa bakarrik ordezkatzen da. Beste edozein osagai osorik ordezkatzen da.\n\nJarraitu?"
           },
           {
+            "lang": "lg-eus",
+            "name": "bulk_revert_summary",
+            "value": "Blokeko leheneratzea amaitu da. Leheneratuak: {0}. Aurreko balioan zeudenak: {1}. Leheneratze hau {2} bloke-prozesu gisa erregistratu da, beraz, hura ere lehenera daiteke."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "bulk_revert_not_exact",
+            "value": "Leheneratze hau EZ da zehatza: berrikusi behean zerrendatutako elementuak."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "bulk_revert_skipped_heading",
+            "value": "{0} elementu EZ dira leheneratu eta aldatu gabe utzi dira (xehetasunak zerbitzariaren erregistroan):"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "bulk_revert_inexact_heading",
+            "value": "{0} elementu inferentziaz edo albo-ondorioekin berreskuratu dira; berrikusi itzazu:"
+          },
+          {
             "lang": "lg-fra",
             "name": "revert_bulk_process",
             "value": "Inverser le processus en bloc"
@@ -478,6 +578,26 @@
             "lang": "lg-fra",
             "name": "apply_value_confirm_msg",
             "value": "Les données actuelles de \"{0}\" (langue {1}) dans la fiche {2} seront ÉCRASÉES par la version historique sélectionnée.\n\nUn composant traduisible conserve ses autres langues : seule celle indiquée ici est remplacée. Tout autre composant est remplacé en entier.\n\nContinuer ?"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "bulk_revert_summary",
+            "value": "Annulation en bloc terminée. Annulés : {0}. Déjà à leur valeur antérieure : {1}. Cette annulation est enregistrée comme processus en bloc {2} et peut donc elle-même être annulée."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "bulk_revert_not_exact",
+            "value": "Cette annulation n'est PAS exacte : vérifiez les éléments listés ci-dessous."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "bulk_revert_skipped_heading",
+            "value": "{0} élément(s) n'ont PAS été annulés et sont restés inchangés (détails dans le journal du serveur) :"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "bulk_revert_inexact_heading",
+            "value": "{0} élément(s) ont été restaurés par inférence ou avec des effets secondaires ; vérifiez-les :"
           },
           {
             "lang": "lg-ita",
@@ -515,6 +635,26 @@
             "value": "I dati attuali di \"{0}\" (lingua {1}) nel record {2} verranno SOVRASCRITTI con la versione storica selezionata.\n\nUn componente traducibile mantiene le altre lingue: viene sostituita solo quella indicata qui. Qualsiasi altro componente viene sostituito per intero.\n\nContinuare?"
           },
           {
+            "lang": "lg-ita",
+            "name": "bulk_revert_summary",
+            "value": "Ripristino in blocco completato. Ripristinati: {0}. Già al valore precedente: {1}. Questo ripristino è registrato come processo in blocco {2}, quindi può essere a sua volta annullato."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "bulk_revert_not_exact",
+            "value": "Questo ripristino NON è esatto: controlla gli elementi elencati sotto."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "bulk_revert_skipped_heading",
+            "value": "{0} elemento/i NON sono stati ripristinati e sono rimasti invariati (dettagli nel log del server):"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "bulk_revert_inexact_heading",
+            "value": "{0} elemento/i sono stati ripristinati per inferenza o con effetti collaterali; controllali:"
+          },
+          {
             "lang": "lg-nep",
             "name": "revert_bulk_process",
             "value": "बल्क प्रक्रिया उल्टाउनुहोस्"
@@ -548,6 +688,26 @@
             "lang": "lg-nep",
             "name": "apply_value_confirm_msg",
             "value": "रेकर्ड {2} मा रहेको \"{0}\" ({1} भाषा) को हालको डेटा चयन गरिएको ऐतिहासिक संस्करणले प्रतिस्थापन गरिनेछ।\n\nअनुवादयोग्य कम्पोनेन्टले अन्य भाषाहरू कायम राख्छ: यहाँ उल्लेख गरिएको भाषा मात्र प्रतिस्थापन हुन्छ। अन्य कुनै पनि कम्पोनेन्ट पूर्ण रूपमा प्रतिस्थापन हुन्छ।\n\nजारी राख्ने?"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "bulk_revert_summary",
+            "value": "बल्क उल्टाउने कार्य सम्पन्न भयो। उल्टाइएका: {0}। पहिले नै अघिल्लो मानमा रहेका: {1}। यो उल्टाइ बल्क प्रक्रिया {2} को रूपमा दर्ता गरिएको छ, त्यसैले यसलाई पनि उल्टाउन सकिन्छ।"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "bulk_revert_not_exact",
+            "value": "यो उल्टाइ सटीक छैन: तल सूचीबद्ध वस्तुहरू जाँच गर्नुहोस्।"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "bulk_revert_skipped_heading",
+            "value": "{0} वस्तु(हरू) उल्टाइएनन् र अपरिवर्तित छोडिए (विवरण सर्भर लगमा):"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "bulk_revert_inexact_heading",
+            "value": "{0} वस्तु(हरू) अनुमानबाट वा साइड इफेक्टसहित पुनर्स्थापित गरिए; तिनलाई जाँच गर्नुहोस्:"
           },
           {
             "lang": "lg-por",
@@ -585,6 +745,26 @@
             "value": "Os dados atuais de \"{0}\" (idioma {1}) no registo {2} serão SUBSTITUÍDOS pela versão histórica selecionada.\n\nUm componente traduzível mantém os outros idiomas: apenas o indicado aqui é substituído. Qualquer outro componente é substituído por completo.\n\nContinuar?"
           },
           {
+            "lang": "lg-por",
+            "name": "bulk_revert_summary",
+            "value": "Reversão em bloco concluída. Revertidos: {0}. Já estavam no valor anterior: {1}. Esta reversão fica registada como processo em bloco {2}, pelo que também pode ser revertida."
+          },
+          {
+            "lang": "lg-por",
+            "name": "bulk_revert_not_exact",
+            "value": "Esta reversão NÃO é exata: verifique os elementos listados abaixo."
+          },
+          {
+            "lang": "lg-por",
+            "name": "bulk_revert_skipped_heading",
+            "value": "{0} elemento(s) NÃO foram revertidos e ficaram inalterados (detalhes no registo do servidor):"
+          },
+          {
+            "lang": "lg-por",
+            "name": "bulk_revert_inexact_heading",
+            "value": "{0} elemento(s) foram restaurados por inferência ou com efeitos secundários; verifique-os:"
+          },
+          {
             "lang": "lg-spa",
             "name": "revert_bulk_process",
             "value": "Revertir el cambio en bloque"
@@ -618,6 +798,26 @@
             "lang": "lg-spa",
             "name": "apply_value_confirm_msg",
             "value": "Los datos actuales de \"{0}\" (idioma {1}) en el registro {2} se SOBRESCRIBIRÁN con la versión histórica seleccionada.\n\nUn componente traducible conserva sus otros idiomas: solo se reemplaza el indicado aquí. Cualquier otro componente se reemplaza por completo.\n\n¿Continuar?"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "bulk_revert_summary",
+            "value": "Reversión en bloque terminada. Revertidos: {0}. Ya estaban en su valor previo: {1}. Esta reversión queda registrada como proceso en bloque {2}, por lo que también puede revertirse."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "bulk_revert_not_exact",
+            "value": "Esta reversión NO es exacta: revise los elementos indicados abajo."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "bulk_revert_skipped_heading",
+            "value": "{0} elemento(s) NO se han revertido y se han dejado sin cambios (detalles en el registro del servidor):"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "bulk_revert_inexact_heading",
+            "value": "{0} elemento(s) se han restaurado por inferencia o con efectos secundarios; revíselos:"
           }
         ]
       }

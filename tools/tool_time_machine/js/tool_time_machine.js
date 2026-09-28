@@ -605,11 +605,13 @@ tool_time_machine.prototype.apply_value = function(options) {
 * operation identified by `bulk_process_id`.
 *
 * This is a potentially long-running, wide-scope operation: the server handler
-* (`tools/tool_time_machine/server/bulk_revert.ts`) searches `matrix_time_machine`
-* for every row with the given `bulk_process_id`, iterates each affected
-* component, and restores the component to its state immediately prior to the
-* bulk change. A component whose ONLY history row is the batch write is
-* blanked; one whose pre-batch state cannot be determined is skipped.
+* (`tools/tool_time_machine/server/bulk_revert.ts`) replays the run's UNDO LOG
+* (WC-2026-09-27-bulk-revert-undo-log): every save of the run recorded the exact
+* region it replaced (a hidden BEFORE row) next to its visible after-row, so each
+* key is restored to that region — unless it changed after the run
+* (`changed_since_run`), in which case it is left alone and reported. A run
+* recorded before the undo log is reverted by inference from the history and
+* listed in `inexact[]`. A run still writing is refused.
 *
 * The operation is recorded as a new bulk-process entry in the
 * `DEDALO_BULK_PROCESS_SECTION_TIPO` (dd800) section so that this revert is
@@ -618,13 +620,15 @@ tool_time_machine.prototype.apply_value = function(options) {
 * Access control: only global admins can trigger the bulk-revert UI button
 * (enforced in `render_tool_time_machine`), but the server enforces its own
 * per-row permission check (level 2 on the (section_tipo, tipo) pair AND
-* per-record project scope). Rows the caller cannot write are skipped and
+* per-record project scope). Keys the caller cannot write are skipped and
 * COUNTED in `response.data.skipped[]` as `{reason:'out_of_scope'}` — with no
 * coordinates, since the batch may name records outside the caller's scope
 * (SEC-16, WC-2026-09-03-bulk-revert-skipped-typed-entries). Every other
-* skipped row (`no_pre_batch_state`, `no_column`, `frameless_wipe`, `no_lang`,
-* `failed`) carries `section_tipo`/`tipo`/`section_id`; the words behind a
-* refusal are in the server log, never on the wire.
+* skipped entry (`changed_since_run`, `interleaved_write`, `created_record_kept`,
+* `cascade_delete_not_reverted`, `no_pre_batch_state`, `no_column`,
+* `no_lang`, `failed`) carries its coordinates; the words
+* behind a refusal are in the server log, never on the wire. The renderer shows
+* the whole payload to the admin before closing (bulk_revert_summary_message).
 *
 * Timeout is set to 180 s to accommodate very large bulk processes spanning
 * hundreds of records.
@@ -644,7 +648,8 @@ tool_time_machine.prototype.apply_value = function(options) {
 * @param {number} options.selected_bulk_process_id - The bulk_process_id (dd1371) to revert
 * @param {string} options.bulk_revert_process_label - Human-readable name logged as the new process label
 * @returns {Promise<Object>} Resolves with the envelope v2 response: on success
-*                            `data` is `{counter, bulk_process_id, skipped}`;
+*                            `data` is `{counter, unchanged, bulk_process_id,
+*                            exact, skipped, inexact}`;
 *                            a refusal carries the coded `error` and no data
 */
 tool_time_machine.prototype.bulk_revert_process = function(options) {

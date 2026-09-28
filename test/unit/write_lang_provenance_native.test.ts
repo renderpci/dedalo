@@ -362,9 +362,17 @@ const SAVE_DOORS: ReadonlyMap<string, { lang: string; reason: string }> = new Ma
 	[
 		'tools/tool_update_cache/server/index.ts',
 		{
-			lang: 'items',
+			lang: 'request+items',
 			reason:
-				'OPEN (DATA-01, third site): re-saves each stored lang group, but the DEFAULT bucket for lang-less items and for an empty component is still config.menu.dataLang. Outside P0-7’s edit scope.',
+				'Re-saves each stored lang group (groupItemsByLang); the DEFAULT bucket for lang-less items and for an empty component is currentDataLang() (lg-nolan when not translatable) — the language the operator works in, never config.menu.dataLang (DATA-01 third site, closed). The dd800 label save is lg-nolan.',
+		},
+	],
+	[
+		'tools/tool_propagate_component_data/server/index.ts',
+		{
+			lang: 'caller',
+			reason:
+				'The propagation writes in the language the operator chose in the tool (options.lang), handed to the save door as the request lang; the door’s effectiveLang rule then slices on it for a translatable model and on lg-nolan otherwise (the region the propagate transform reads is cut with the same rule). The lg-nolan save in the same file is the dd800 run label (2026-09-27, WC-2026-09-27-bulk-revert-undo-log: propagate saves through saveComponentData).',
 		},
 	],
 ]);

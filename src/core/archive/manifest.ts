@@ -39,6 +39,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
+import { canonicalJson } from '../concepts/canonical_json.ts';
 import type { DdOntologyRow } from '../db/dd_ontology.ts';
 import type { MatrixJsonbColumn } from '../db/matrix.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
@@ -148,19 +149,9 @@ export function sha256File(absolutePath: string): string {
 }
 
 /**
- * Canonical JSON — keys sorted at every depth, no whitespace — so a digest over
- * a structure is a digest over the structure, not over one serializer's habits.
+ * The ontology digest: sha256 over the canonical form (concepts/canonical_json.ts —
+ * a PERSISTED format, pinned there) of the subtree rows, sorted by tipo.
  */
-export function canonicalJson(value: unknown): string {
-	if (value === null || typeof value !== 'object') return JSON.stringify(value);
-	if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
-	const keys = Object.keys(value as Record<string, unknown>).sort();
-	return `{${keys
-		.map((k) => `${JSON.stringify(k)}:${canonicalJson((value as Record<string, unknown>)[k])}`)
-		.join(',')}}`;
-}
-
-/** The ontology digest: sha256 over the canonical form of the subtree rows, sorted by tipo. */
 export function ontologyDigest(subtree: readonly DdOntologyRow[]): string {
 	const sorted = [...subtree].sort((a, b) => (a.tipo < b.tipo ? -1 : a.tipo > b.tipo ? 1 : 0));
 	return sha256Hex(canonicalJson(sorted));

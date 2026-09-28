@@ -7,8 +7,9 @@
  *    handler is the ONLY gate — a non-admin must be refused before any write);
  *  - the count-drift ceiling (live result wider than the client total aborts
  *    and touches nothing);
- *  - a real replace across several records: value written, TM row appended,
- *    every TM row carrying the run's bulk_process_id (that id is what makes the
+ *  - a real replace across several records: value written through the save
+ *    door, one visible TM row + one hidden undo-log BEFORE row per record,
+ *    every row carrying the run's bulk_process_id (that id is what makes the
  *    batch revertible through tool_time_machine.bulk_revert_process);
  *  - live PROGRESS frames and cooperative ABORT — a backgroundRunnable action
  *    whose client shows a progress line and offers a Stop button must publish
@@ -95,6 +96,19 @@ async function seed(): Promise<void> {
 	}
 }
 
+/**
+ * The propagated value as the SAVE DOOR stores it: one item of the run's
+ * language carrying the value, and an item id the door stamped (propagate
+ * sends none; `set_data` mints it from the record's counter).
+ */
+function expectPropagated(items: unknown, value: string): void {
+	expect(Array.isArray(items)).toBe(true);
+	const list = items as Record<string, unknown>[];
+	expect(list).toHaveLength(1);
+	expect(list[0]).toMatchObject({ lang: LANG, value });
+	expect(Number.isInteger(list[0]?.id) && (list[0]?.id as number) > 0).toBe(true);
+}
+
 beforeAll(seed);
 
 afterAll(async () => {
@@ -165,19 +179,33 @@ describe('propagate_component_data — the write', () => {
 		if (typeof bulkId === 'number') mintedBulkIds.push(bulkId);
 
 		const values = await liveValues();
-		for (const id of IDS) {
-			expect(values[id]).toEqual([{ lang: LANG, value: 'PROPAGATED' }]);
-		}
+		for (const id of IDS) expectPropagated(values[id], 'PROPAGATED');
 
-		// One TM row per record, all carrying the run's bulk_process_id — the
-		// handle bulk_revert_process needs.
+		// Per record: ONE visible TM row (the persisted value) and ONE hidden
+		// undo-log BEFORE row (tm_role 1, the seeded slice), both carrying the
+		// run's bulk_process_id — the handle bulk_revert_process needs
+		// (WC-2026-09-27-bulk-revert-undo-log: propagate saves through the
+		// save door, under a lock, one language region per record).
 		const tm = (await sql.unsafe(
-			`SELECT section_id, bulk_process_id FROM matrix_time_machine
-			 WHERE section_tipo = $1 AND tipo = $2 AND section_id IN (${IDS.join(',')})`,
+			`SELECT id, section_id, bulk_process_id, tm_role, data FROM matrix_time_machine
+			 WHERE section_tipo = $1 AND tipo = $2 AND section_id IN (${IDS.join(',')})
+			 ORDER BY id`,
 			[SECTION_TIPO, COMPONENT_TIPO],
-		)) as { section_id: number; bulk_process_id: number | null }[];
-		expect(tm.length).toBe(IDS.length);
+		)) as {
+			id: number;
+			section_id: number;
+			bulk_process_id: number | null;
+			tm_role: number | null;
+			data: unknown;
+		}[];
+		expect(tm.length).toBe(IDS.length * 2);
 		for (const row of tm) expect(row.bulk_process_id).toBe(bulkId);
+		for (const id of IDS) {
+			const own = tm.filter((row) => Number(row.section_id) === id);
+			expect(own.map((row) => row.tm_role)).toEqual([1, null]);
+			expect(own[0]?.data).toEqual([{ id: 1, lang: LANG, value: `ORIGINAL-${id}` }]);
+			expect(own[1]?.data).toEqual(values[id]);
+		}
 	});
 
 	test('a second identical run is a NO-OP (changed:false skips the save)', async () => {
@@ -227,6 +255,39 @@ describe('propagate_component_data — background wire', () => {
 		);
 	});
 
+	test("'add' over a PHP-era SINGLE-OBJECT stored value keeps it — the value is the one item it is", async () => {
+		// The locked read answered [] for a non-array value: 'add' then decided
+		// over nothing and set_data REPLACED the stored item. Read the way the
+		// save path and every reader read it ([raw]), the item stays.
+		const id = IDS[0] as number;
+		await cleanScratchRecord(SECTION_TIPO, id);
+		await createScratchRecord(SECTION_TIPO, id, {
+			string: { [COMPONENT_TIPO]: { id: 1, lang: LANG, value: 'SINGLE' } },
+		});
+		const run = await handler();
+		const response = await run(
+			contextOf(
+				optionsFor({
+					action: 'add',
+					total: 1,
+					propagate_data_value: [{ lang: LANG, value: 'ADDED' }],
+					sqo: {
+						section_tipo: [SECTION_TIPO],
+						filter_by_locators: [{ section_tipo: SECTION_TIPO, section_id: String(id) }],
+					},
+				}),
+			),
+		);
+		expect(response.ok).toBe(true);
+		const bulkId = (response.data as { bulk_process_id?: unknown }).bulk_process_id;
+		if (typeof bulkId === 'number') mintedBulkIds.push(bulkId);
+		const stored = (await liveValues())[id] as { value?: unknown }[];
+		expect(Array.isArray(stored)).toBe(true);
+		expect(stored.map((item) => item.value)).toEqual(['SINGLE', 'ADDED']);
+		await cleanScratchRecord(SECTION_TIPO, id);
+		await seed();
+	});
+
 	test('an aborted signal stops the batch mid-run and leaves the rest untouched', async () => {
 		await seed();
 		const controller = new AbortController();
@@ -253,7 +314,7 @@ describe('propagate_component_data — background wire', () => {
 			mintedBulkIds.push(stoppedData.bulk_process_id);
 		}
 		const values = await liveValues();
-		expect(values[IDS[0] as number]).toEqual([{ lang: LANG, value: 'ABORTED-RUN' }]);
+		expectPropagated(values[IDS[0] as number], 'ABORTED-RUN');
 		// The records the abort skipped keep their seeded value.
 		expect(values[IDS[2] as number]).toEqual([{ id: 1, lang: LANG, value: `ORIGINAL-${IDS[2]}` }]);
 	});

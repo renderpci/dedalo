@@ -78,6 +78,7 @@ const TRIPWIRES = [
 	'test/unit/matrix_copy_columns_tripwire.test.ts',
 	'test/unit/matrix_counter_monotonic_tripwire.test.ts',
 	'test/unit/tm_epoch_tripwire.test.ts',
+	'test/unit/tm_history_visibility_tripwire.test.ts',
 	'test/unit/relogin_identity_tripwire.test.ts',
 	'test/unit/pdf_extract_symmetry_tripwire.test.ts',
 	'test/unit/ssrf_one_guard_tripwire.test.ts',

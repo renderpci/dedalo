@@ -38,6 +38,104 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Deleting a record's data now also empties every dataframe of its fields.**
+
+    **Delete data** empties every field of a record, and now also removes the frames of every
+    [dataframe](./core/components/component_dataframe.md) those fields had — whatever the field
+    is: a portal, a text or number field, or a link (IRI) with its labels — even a field that
+    held no value of its own when the frames were saved first. Before, a dataframe
+    that was not itself a field of the section (an IRI's labels, a dataframe named only in a
+    field's configuration) kept its frames after the wipe, attached to nothing and impossible to
+    remove from the edit view. Restoring an older entry from the
+    [Time machine](./tools/using_time_machine.md) likewise removes the frames of the values it
+    takes out, in every dataframe of the field. The history entries **Delete data** writes are
+    filed in each language's own history (and the frames in the `lg-nolan` entry), so every
+    language's time machine lists the wipe.
+
+- **A field's history now keeps its dataframe with it, and restoring an entry restores both.**
+
+    A field with a [dataframe](./core/components/component_dataframe.md) — informants with their
+    role, a value with its certainty — stores the two apart, but they mean one thing. Until now
+    the history recorded them apart as well: the field's entries held no frames, so restoring
+    an entry left the frames as they were today. The field's history now holds both, in two
+    kinds of entry: an entry of a **language** holds that language's value, and an entry marked
+    **lg-nolan** holds the value that has no language (a field that is not translatable, or the
+    base form of a name with transliterations — *Augustus*, beside *Αύγουστος* in Greek) and
+    **all** the frames. A change to a frame adds ONE lg-nolan entry to the field's own history
+    (the dataframe has none), never a copy per language, and the history of a language lists
+    its own entries and the lg-nolan entries together. It does not matter whether the value or
+    the frame was saved first: the preview of any entry shows the whole state at that moment —
+    the language's value and the frames as they were — and restoring it returns that state:
+    a language entry puts its language back with the frames of that moment, an lg-nolan entry
+    puts its frames back. The field's other languages, and another field sharing the same
+    dataframe, keep theirs; a frame of an item deleted since is never put back.
+    This holds for every kind of field a dataframe can hang from — a list of linked records, a
+    text in several languages, a transliterable name, a number, a date, a web address with its
+    label. Translations and duplicated records record their history the same way. Reverting a
+    batch run does the same for every field it changed, language by language.
+    Entries recorded by Dédalo v6 are read the same way: an entry that carries frames gives its
+    language value and the frames of that moment, and a dataframe such an entry is silent about
+    was empty then; a v6 language entry with no frames at all takes the frames recorded before it.
+    Removing an item of any such field — a text, a number, a date, a web address, not only a
+    list of linked records — now removes its frames too. See
+    [Time machine](./tools/using_time_machine.md).
+
+    Wire contract: `WC-2026-09-27-bulk-revert-undo-log`.
+
+- **A field's history now shows the dataframe it had at that moment.**
+
+    In the [Time machine](./tools/using_time_machine.md) preview, an entry of a field with a
+    [dataframe](./core/components/component_dataframe.md) now shows the frames the field had at
+    that moment — the role of each informant, the certainty of each value — instead of
+    today's, together with the field's value as it stood then, and the field's own values no
+    longer list the frames among them. Entries recorded by Dédalo v6 show their frames too: in
+    an entry that carries frames, a dataframe it holds none for shows empty — which is what a
+    restore leaves there; a v6 language entry with no frames at all shows the frames recorded
+    before it.
+
+    Wire contract: `WC-2026-09-27-bulk-revert-undo-log`.
+
+- **A transliteration saved in its language no longer replaces the base form.**
+
+    A field that keeps a base form and per-language versions — a person's name such as
+    *Augustus* with its Greek form *Αύγουστος* ([component_input_text](./core/components/component_input_text.md)
+    with `with_lang_versions`) — now stores a version saved in a language beside the base
+    form. Before, editing the field in Greek, importing a CSV cell with both forms, or running
+    *Propagate component data* or *Update cache* on it replaced the base form with the
+    version, and *Update cache* could even create a base form that never existed. Each form
+    now also has its own entry in the [Time machine](./tools/using_time_machine.md) history, listed
+    while you work in that form's language; its preview shows the base form, and restoring it puts
+    the form back.
+
+- **Reverting a batch run now restores exactly what the run replaced, and says what it could not.**
+
+    **Revert the bulk process** used to guess each value's state before the run from the
+    history just older than it. Where that history was missing — values stored before the time
+    machine recorded them, written with it off, or appended to by a CSV import — the revert
+    **emptied** the field instead of restoring it; where a later edit had been made with the
+    time machine off, it rolled that edit back. Every batch run (CSV import, bulk component
+    edit, update cache, MARC21 and Zotero imports, and a revert itself) now records, with each
+    change, the exact value it replaced, so the revert puts that value back. A field someone
+    edited after the run is **left alone** and reported, never overwritten; records the run
+    created are removed only when nothing else refers to them, and records the run deleted
+    come back together with every link that pointed at them. Reverting an old import never
+    touches a record that a later import created again at the same id. When the revert finishes, a
+    summary lists what was reverted, what was skipped and why, and the id of the revert, which
+    can itself be reverted; reverting the same run a second time changes nothing and says
+    so. Re-importing an unchanged file, or repeating the same bulk replace, records nothing,
+    portal links included, and the dataframe frames of those links stay attached. Runs made
+    before this update are still reverted the old way, with its known fixes, and the summary
+    marks those values as inferred; a frame edited after such a run is left alone and reported, and
+    the dataframe frames of an old run that saved several languages of a field are restored together
+    instead of being refused as changed. The CSV import no longer
+    has a *Save time machine history on import* switch: every import can be reverted. A revert,
+    a single-field restore or a record recovery of a hierarchical term field now also updates
+    its broader-term search index, so a search for a broader term finds the restored value (and
+    no longer the value it replaced) without waiting for a later save. See
+    [Time machine](./tools/using_time_machine.md).
+
+    Wire contract: `WC-2026-09-27-bulk-revert-undo-log`.
+
 - **A CSV import that carries the modification date and user keeps them on records whose cells embed dataframe frames.**
 
     When a CSV row carried the record's *modified date* / *modified by* columns and
@@ -106,7 +204,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 47 entries"
+??? note "Wire contract — 48 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -153,6 +251,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-24-external-record-field-set`
     - `WC-2026-09-24-multi-section-search-identity-dedup`
     - `WC-2026-09-24-tool-export-server-built-artifacts`
+    - `WC-2026-09-27-bulk-revert-undo-log`
     - `WC-2026-09-27-csv-import-append-mode`
     - `WC-2026-09-27-external-allowlist-at-door-only`
 

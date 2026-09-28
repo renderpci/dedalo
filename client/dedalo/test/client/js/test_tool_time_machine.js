@@ -18,6 +18,8 @@
  * This is the locked client template (layer 1: module-load + construct + wiring).
  */
 
+import {printf} from '../../../core/common/js/utils/util.js'
+import {bulk_revert_summary_message} from '../../../tools/tool_time_machine/js/render_tool_time_machine.js'
 import {tool_time_machine} from '../../../tools/tool_time_machine/js/tool_time_machine.js'
 
 
@@ -60,6 +62,82 @@ describe('TOOL_TIME_MACHINE CLIENT TEST', function() {
 		assert.equal(typeof tool_time_machine.prototype.apply_value, 'function', 'expected apply_value defined')
 		assert.equal(typeof tool_time_machine.prototype.bulk_revert_process, 'function', 'expected bulk_revert_process defined')
 		assert.equal(typeof tool_time_machine.prototype.get_bulk_process_label, 'function', 'expected get_bulk_process_label defined')
+	})
+
+	// A bulk revert that SKIPS or INFERS items still answers ok; the success
+	// branch must surface the summary (WC-2026-09-27-bulk-revert-undo-log §2.7)
+	// instead of silently closing the window.
+	describe('bulk_revert_summary_message', function() {
+
+		it('returns null when there is no payload', function() {
+			assert.equal(bulk_revert_summary_message(undefined), null)
+			assert.equal(bulk_revert_summary_message(null), null)
+			assert.equal(bulk_revert_summary_message('x'), null)
+		})
+
+		it('an exact, clean revert names the counts and the new bulk id only', function() {
+			const msg = bulk_revert_summary_message({
+				counter: 3, unchanged: 1, bulk_process_id: 77, exact: 'full', skipped: [], inexact: []
+			})
+			assert.equal(
+				msg,
+				'Bulk revert finished. Reverted: 3. Already at their pre-run value: 1. This revert is recorded as bulk process 77, so it can itself be reverted.'
+			)
+		})
+
+		it('counts skipped items per reason and inexact items per basis', function() {
+			const msg = bulk_revert_summary_message({
+				counter: 1,
+				unchanged: 0,
+				bulk_process_id: 9,
+				exact: 'partial',
+				skipped: [
+					{reason: 'changed_since_run', section_tipo: 'test3', tipo: 'test52', section_id: 1},
+					{reason: 'changed_since_run', section_tipo: 'test3', tipo: 'test52', section_id: 2},
+					{reason: 'out_of_scope'},
+					{reason: 'created_record_kept', section_tipo: 'test3', section_id: 5}
+				],
+				inexact: [
+					{basis: 'legacy_inference', section_tipo: 'test3', tipo: 'test52', section_id: 3},
+					{basis: 'cascade_undelete', section_tipo: 'test3', section_id: 4}
+				]
+			})
+			const lines = msg.split('\n')
+			assert.include(lines, 'This revert is NOT exact: check the items listed below.')
+			assert.include(lines, '4 item(s) were NOT reverted and were left unchanged (details in the server log):')
+			assert.include(lines, '- changed_since_run: 2')
+			assert.include(lines, '- out_of_scope: 1')
+			assert.include(lines, '- created_record_kept: 1')
+			assert.include(lines, '2 item(s) were restored by inference or with side effects; check them:')
+			assert.include(lines, '- legacy_inference: 1')
+			assert.include(lines, '- cascade_undelete: 1')
+			// the skipped block precedes the inexact block
+			assert.isBelow(lines.indexOf('- out_of_scope: 1'), lines.indexOf('- legacy_inference: 1'))
+		})
+
+		it('a missing exact flag is never reported as exact', function() {
+			const msg = bulk_revert_summary_message({counter: 0, unchanged: 0, bulk_process_id: 1})
+			assert.include(msg, 'This revert is NOT exact')
+		})
+
+		it('uses the translated tool labels with positional tokens when present', function() {
+			const catalog = {
+				bulk_revert_summary			: 'Revertidos: {0}. Sin cambios: {1}. Proceso {2}.',
+				bulk_revert_not_exact		: 'NO exacta.',
+				bulk_revert_skipped_heading	: '{0} NO revertidos:',
+				bulk_revert_inexact_heading	: '{0} inexactos:'
+			}
+			const get_label = (name, ...args) => catalog[name] ? printf(catalog[name], ...args) : null
+			const msg = bulk_revert_summary_message({
+				counter: 2, unchanged: 5, bulk_process_id: 40, exact: 'none',
+				skipped: [{reason: 'interleaved_write'}],
+				inexact: [{basis: 'legacy_born_in_run'}]
+			}, get_label)
+			assert.equal(
+				msg,
+				'Revertidos: 2. Sin cambios: 5. Proceso 40.\n\nNO exacta.\n\n1 NO revertidos:\n- interleaved_write: 1\n\n1 inexactos:\n- legacy_born_in_run: 1'
+			)
+		})
 	})
 
 })

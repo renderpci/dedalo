@@ -1965,6 +1965,21 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 	},
+	/**
+	 * A bulk revert refused because the run it would undo is still executing in
+	 * this process, or another revert of the same run is (decision D5 of the
+	 * bulk-revert undo log; src/core/tools/bulk_run_registry.ts). Retryable: the
+	 * refusal lifts when the run or the other revert finishes.
+	 */
+	'tool.bulk_run_live': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_tool_bulk_run_live',
+		message: 'The bulk process is still running or already being reverted',
+		severity: 'info',
+		disclosure: 'public',
+		retryable: true,
+	},
 	'tool.dependency_unavailable': {
 		category: 'unavailable',
 		status: 503,

@@ -28,8 +28,11 @@
  *                     inspector component_history note view consumes it.
  *   data            → source model 'section': adopt the snapshot's own component
  *                     columns wholesale (skip structural 'data'/'id'); other
- *                     models: inject under dd1574 (generic) + the component's own
- *                     tipo so component get_data() finds it — EXCEPT models with
+ *                     models: inject under dd1574 (generic, RAW) + the component's
+ *                     own tipo so component get_data() finds it — SPLIT: the
+ *                     main's items under its tipo, each dataframe slot's frames
+ *                     under the slot (a composed row, injectComponentSnapshot) —
+ *                     EXCEPT models with
  *                     no storable jsonb column (component_section_id, whose
  *                     "column" is the section_id PK): the own-tipo inject is
  *                     skipped (it would throw), matching PHP set_component_data
@@ -47,6 +50,7 @@ import {
 	getMatrixTableFromTipo,
 	getModelByTipo,
 } from '../ontology/resolver.ts';
+import { isOwnFrame, splitComposed } from '../relations/dataframe_slots.ts';
 import {
 	injectColumnData,
 	injectComponentData,
@@ -75,40 +79,79 @@ const CREATED_BY_USER = 'dd200'; // DEDALO_SECTION_INFO_CREATED_BY_USER
 const USERS_SECTION_TIPO = 'dd128'; // DEDALO_SECTION_USERS_TIPO
 const RELATION_TYPE_LINK = 'dd151'; // DEDALO_RELATION_TYPE_LINK
 
-/** The dataframe relation-type marker (PHP DEDALO_DATAFRAME_TYPE). */
-const DATAFRAME_TYPE_TIPO = 'dd490';
+/** The model a frame's `from_component_tipo` must resolve to for it to name a slot. */
+const DATAFRAME_MODEL = 'component_dataframe';
 
 /**
- * PHP component_common::is_dataframe_entry — dual-read: the unified dd490 type
- * marker OR the legacy pairing-key shape (main_component_tipo present).
+ * THE FRAME HALF OF A MAIN'S TM SNAPSHOT, per slot — the READ split of a
+ * COMPOSED row (relations/dataframe_slots.ts composeTmData; PHP get_data
+ * data_source='tm' on a component_dataframe, which reads the MAIN's row and
+ * keeps the frames of its own slot). The complement of `splitComposed().main`
+ * (relations/dataframe_slots.ts — the ONE partition by isFrameEntry): every
+ * reader that renders a snapshot shows the main from the one and the slots
+ * from the other, so a frame never renders as a main item and a main item
+ * never as a frame.
+ *
+ * - SCOPED TO THE MAIN: a shared slot stores every main's frames; a frame
+ *   naming ANOTHER `main_component_tipo` is not this main's history and is left
+ *   out (an unstamped legacy frame is kept);
+ * - a frame naming `from_component_tipo` belongs to that slot when the tipo IS a
+ *   `component_dataframe` (else it names no slot and is inert — the restore's
+ *   planDataframeRestore reads it the same way);
+ * - a legacy frame naming no slot belongs to the main's ONLY slot in play; with
+ *   several it cannot be attributed and is not shown (a read never guesses).
+ *
+ * `declaredSlots` seed the map with EMPTY lists: a snapshot's silence about a
+ * slot means "empty then" (the row is the full state — relations/dataframe_slots.ts
+ * rowSlotTipos), as apply_value restores it.
  */
-function isTmDataframeEntry(entry: unknown): boolean {
-	if (entry === null || typeof entry !== 'object') return false;
-	const candidate = entry as { type?: unknown; main_component_tipo?: unknown };
-	return candidate.type === DATAFRAME_TYPE_TIPO || candidate.main_component_tipo !== undefined;
+export async function snapshotSlotFrames(
+	mainTipo: string,
+	data: unknown,
+	declaredSlots: readonly string[],
+): Promise<Map<string, Record<string, unknown>[]>> {
+	const bySlot = new Map<string, Record<string, unknown>[]>(
+		declaredSlots.map((slot) => [slot, []]),
+	);
+	const unplaced: Record<string, unknown>[] = [];
+	for (const frame of mainFrames(mainTipo, data)) {
+		const slot = namedSlot(frame);
+		if (slot === null) unplaced.push(frame);
+		else if (await claimSlot(bySlot, slot)) bySlot.get(slot)?.push(frame);
+	}
+	attributeUnplaced(bySlot, unplaced);
+	return bySlot;
 }
 
-/**
- * Strip dataframe FRAME entries from a component's TM MAIN data (PHP
- * component_common::get_data data_source='tm' branch AND tool_time_machine::
- * apply_value): a TM snapshot of a dataframe-paired component carries BOTH the
- * main items and dd490 frame objects; the main render/restore must drop the
- * frames or a frame leaks into the main column. component_iri keeps only entries
- * carrying `iri` (frames never do); every other model drops entries flagged by
- * the dual-read dataframe predicate. Non-array data passes through unchanged.
- *
- * This is the SINGLE definition shared by the TM preview read (read.ts) and the
- * TM restore (tool_time_machine.ts) so the value the tool previews is exactly
- * the value "Apply and save" would write.
- */
-export function stripDataframeFramesFromTmMain(model: string, data: unknown): unknown {
-	if (!Array.isArray(data)) return data;
-	if (model === 'component_iri') {
-		return data.filter(
-			(entry) => entry !== null && typeof entry === 'object' && Object.hasOwn(entry, 'iri'),
-		);
-	}
-	return data.filter((entry) => !isTmDataframeEntry(entry));
+/** The slot a frame names in `from_component_tipo`, or null (a legacy frame). */
+function namedSlot(frame: Record<string, unknown>): string | null {
+	const from = frame.from_component_tipo;
+	return typeof from === 'string' && from !== '' ? from : null;
+}
+
+/** Legacy frames naming no slot go to the ONLY slot in play; with several, nowhere. */
+function attributeUnplaced(
+	bySlot: Map<string, Record<string, unknown>[]>,
+	unplaced: readonly Record<string, unknown>[],
+): void {
+	if (unplaced.length === 0 || bySlot.size !== 1) return;
+	for (const frames of bySlot.values()) frames.push(...unplaced);
+}
+
+/** The snapshot's frame entries that belong to `mainTipo` (its own, or unstamped legacy ones). */
+function mainFrames(mainTipo: string, data: unknown): Record<string, unknown>[] {
+	return splitComposed(data).frames.filter((frame) => isOwnFrame(frame, mainTipo));
+}
+
+/** Whether `slot` is (or, once model-checked, becomes) a slot of the partition. */
+async function claimSlot(
+	bySlot: Map<string, Record<string, unknown>[]>,
+	slot: string,
+): Promise<boolean> {
+	if (bySlot.has(slot)) return true;
+	if ((await getModelByTipo(slot)) !== DATAFRAME_MODEL) return false;
+	bySlot.set(slot, []);
+	return true;
 }
 
 /** '2026-07-01 10:13:08' → the dd_date object PHP emits for dd559. */
@@ -213,13 +256,74 @@ function bulkProcessValue(stored: number | null | undefined): number {
 }
 
 /**
+ * A per-component history snapshot into the virtual dd15 record: the RAW
+ * snapshot under dd1574 (PHP's generic data column, byte-verbatim), and the
+ * SPLIT one under the component tipos the list cells resolve — the main's own
+ * items under its tipo (splitComposed: every entry that is not a frame, so a
+ * v6 title-only component_iri item stays) and each slot's frames
+ * under the slot (snapshotSlotFrames). A COMPOSED row (the main + every slot's
+ * frames, dataframe_slots.ts) injected whole under the main made a relation
+ * main page its frames as portal rows and a literal main render frame objects
+ * as its values, while the dataframe cells stayed empty. A row under a slot's
+ * OWN tipo is no supported history (TS-era beta; PHP never wrote one): only its
+ * raw dd1574 copy is shown.
+ *
+ * Models with no storable column (e.g. component_section_id, whose "column"
+ * is the section_id PK) have nowhere to land — injecting would throw. PHP
+ * set_component_data logs + continues past them; the dd1574 copy still
+ * carries the data.
+ */
+async function injectComponentSnapshot(
+	record: MatrixRecord,
+	row: TimeMachineRow,
+	sourceModel: string | null,
+	declaredSlots: readonly string[],
+): Promise<void> {
+	const dataParsed = snapshotItems(row.data);
+	await injectTmField(record, TM_COLUMN_DATA, dataParsed);
+	if (!hasStorableColumn(sourceModel) || sourceModel === DATAFRAME_MODEL) return;
+	injectComponentData(record, row.tipo, sourceModel, splitComposed(dataParsed).main);
+	await injectSnapshotSlots(record, row.tipo, dataParsed, declaredSlots);
+}
+
+/** A per-component snapshot as items (PHP coerces a non-array datum to [datum]). */
+function snapshotItems(data: unknown): unknown[] | null {
+	if (Array.isArray(data)) return data;
+	return data === null ? null : [data];
+}
+
+/** Whether a model maps to a real jsonb column (component_section_id does not). */
+function hasStorableColumn(model: string | null): model is string {
+	if (model === null) return false;
+	const column = getColumnNameByModel(model);
+	return column !== null && MATRIX_JSONB_COLUMNS.includes(column as MatrixJsonbColumn);
+}
+
+/** Each slot's frames of the snapshot's main, under the slot (a slot with none stays absent). */
+async function injectSnapshotSlots(
+	record: MatrixRecord,
+	mainTipo: string,
+	data: unknown,
+	declaredSlots: readonly string[],
+): Promise<void> {
+	for (const [slot, frames] of await snapshotSlotFrames(mainTipo, data, declaredSlots)) {
+		if (frames.length > 0) injectComponentData(record, slot, DATAFRAME_MODEL, frames);
+	}
+}
+
+/**
  * Reconstruct the virtual dd15 section record for one TM row. `lang` selects
  * the term-label language for the dd577/dd1772 fields (PHP uses the fixed data
  * lang; the caller passes the request lang for list rendering parity).
+ * `declaredSlots` are the row main's dataframe slots
+ * (relations/dataframe_slots.ts resolveDataframeSlotTipos — passed in, since
+ * that module builds on this one): they attribute a legacy frame that names no
+ * slot (snapshotSlotFrames).
  */
 export async function buildTmSectionRecord(
 	row: TimeMachineRow,
 	lang: string,
+	declaredSlots: readonly string[] = [],
 ): Promise<MatrixRecord> {
 	const record = makeVirtualRecord(TIME_MACHINE_SECTION_TIPO, row.id);
 
@@ -235,23 +339,7 @@ export async function buildTmSectionRecord(
 			}
 		}
 	} else {
-		// Per-component history snapshot: inject under dd1574 + the component's tipo.
-		const dataParsed = Array.isArray(row.data) ? row.data : row.data === null ? null : [row.data];
-		await injectTmField(record, TM_COLUMN_DATA, dataParsed);
-		// Inject under the component's own tipo only when its model maps to a real
-		// jsonb column. Models with no storable column (e.g. component_section_id,
-		// whose "column" is the section_id PK) have nowhere to land — injecting
-		// would throw. PHP set_component_data logs + continues past them; the
-		// dd1574 copy above (via the guarded injectTmField) still carries the data.
-		if (sourceModel !== null) {
-			const sourceColumn = getColumnNameByModel(sourceModel);
-			if (
-				sourceColumn !== null &&
-				MATRIX_JSONB_COLUMNS.includes(sourceColumn as MatrixJsonbColumn)
-			) {
-				injectComponentData(record, row.tipo, sourceModel, dataParsed);
-			}
-		}
+		await injectComponentSnapshot(record, row, sourceModel, declaredSlots);
 	}
 
 	// --- id / who / when / where / what ---

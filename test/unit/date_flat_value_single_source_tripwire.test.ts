@@ -115,6 +115,11 @@ const CENSUS: readonly CensusEntry[] = [
 		why: 'builds the SQL timestamp literal an import row is written with',
 	},
 	{
+		file: 'src/core/section/record/record_metadata.ts',
+		role: 'machine-timestamp',
+		why: 'renders a dd199 `start` as the `data.created_date` SQL timestamp literal (the record-header twin the CSV importer writes and the bulk revert re-derives); never a component_date item',
+	},
+	{
 		file: 'src/core/ontology/property_census.ts',
 		role: 'documentation',
 		why: 'a REGISTRY of ontology property NAMES: `date_mode` appears as a string in the honoured-key list, and nothing here reads or renders a date',

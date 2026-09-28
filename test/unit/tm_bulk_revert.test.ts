@@ -1,14 +1,17 @@
 /**
  * R5 gate: tool_time_machine.bulk_revert_process.
  *
- * preBulkState picks the correct pre-batch snapshot from a component's TM
- * history (id DESC): the row immediately older than EVERY row of the batch, or
- * empty when the batch row was the component's first-ever change. The module
- * registers both actions.
+ * The module registers both actions. (The row-per-row `preBulkState` unit
+ * cases left with the function, 2026-09-27: the legacy inference is per KEY
+ * now — bulk_revert_legacy.ts, pinned by bulk_revert_undo_native.)
  *
  * Plus (2026-07-28) the DB DRIVE — the ledgered gap: a seeded two-record batch
  * is reverted for real and the live matrix values, the fresh bulk-tagged TM
  * rows and the per-row authorization skip are asserted against the database.
+ * The seeded batch is a LEGACY run (visible rows only, no undo-log BEFORE), so
+ * the drive pins the §2.6 inference path of WC-2026-09-27-bulk-revert-undo-log:
+ * reverted and reported per KEY, every write `inexact`, the revert's own writes
+ * an exact undo-log pair. The exact path is bulk_revert_undo_native's.
  *
  * Plus the SKIP CHANNEL's disclosure law (SEC-16,
  * WC-2026-09-03-bulk-revert-skipped-typed-entries): `data.skipped[]` is typed
@@ -39,7 +42,6 @@ import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import type { ToolActionContext, ToolResponse } from '../../src/core/tools/module.ts';
 import {
 	type BulkRevertSkipped,
-	preBulkState,
 	toolTimeMachineBulkRevert,
 } from '../../tools/tool_time_machine/server/bulk_revert.ts';
 import { mustGet } from '../helpers/assert.ts';
@@ -48,59 +50,6 @@ import { cleanScratchRecord, createScratchRecord } from '../helpers/test_data.ts
 
 const REAL_RECORD_SCOPE = { ...realRecordScope };
 const REAL_RESOLVER = { ...realResolver };
-
-describe('preBulkState', () => {
-	test('returns the row immediately older than the batch row', () => {
-		// id DESC: newest first. Batch row (bulk 77) has an older row before it.
-		const history = [
-			{ bulk_process_id: 88, data: ['newest'] },
-			{ bulk_process_id: 77, data: ['the batch change'] },
-			{ bulk_process_id: null, data: ['pre-batch value'] },
-		];
-		expect(preBulkState(history, 77)).toEqual({ data: ['pre-batch value'], found: true });
-	});
-
-	test('batch row is the oldest/only row → pre-batch state is empty', () => {
-		expect(preBulkState([{ bulk_process_id: 77, data: ['first ever'] }], 77)).toEqual({
-			data: [],
-			found: true,
-		});
-	});
-
-	test('bulk id not in history → not found (empty)', () => {
-		const history = [{ bulk_process_id: 88, data: ['x'] }];
-		expect(preBulkState(history, 77)).toEqual({ data: [], found: false });
-	});
-
-	test('a batch that touched the component TWICE still reverts to the PRE-batch value', () => {
-		// PHP `continue`s past EVERY row of the batch; taking idx+1 blindly
-		// restored a value the batch itself wrote (fixed 2026-07-28).
-		const history = [
-			{ bulk_process_id: 77, data: ['batch write B'] },
-			{ bulk_process_id: 77, data: ['batch write A'] },
-			{ bulk_process_id: null, data: ['pre-batch value'] },
-		];
-		expect(preBulkState(history, 77)).toEqual({ data: ['pre-batch value'], found: true });
-	});
-
-	test('ALL history rows belong to the batch (n>1) → no pre-batch state, no write', () => {
-		// PHP runs off the end of its inner loop and saves nothing; blanking the
-		// component here would be data loss the oracle never performed.
-		const history = [
-			{ bulk_process_id: 77, data: ['batch B'] },
-			{ bulk_process_id: 77, data: ['batch A'] },
-		];
-		expect(preBulkState(history, 77)).toEqual({ data: [], found: false });
-	});
-
-	test('matches on numeric-coerced bulk id (string/number)', () => {
-		const history = [
-			{ bulk_process_id: 77 as unknown as number, data: ['batch'] },
-			{ bulk_process_id: 5, data: ['older'] },
-		];
-		expect(preBulkState(history, 77).data).toEqual(['older']);
-	});
-});
 
 describe('tool_time_machine module', () => {
 	test('registers apply_value + bulk_revert_process with the right gates', async () => {
@@ -175,16 +124,21 @@ describe('bulk_revert_process — DB drive', () => {
 			await insertTm(id, `PRE-${id}`, null, '2026-01-01 00:00:00');
 			await insertTm(id, `BATCH-${id}`, BATCH_BULK_ID, '2026-01-02 00:00:00');
 		}
-		// The positive control: two batch rows and NOTHING older (preBulkState
-		// found:false) — skipped with coordinates, never written.
+		// The positive control: two batch rows and NOTHING older (the legacy
+		// inference finds no pre-run row) — skipped with coordinates, never written.
 		await createScratchRecord(SECTION_TIPO, NO_PRE_ID, {
 			string: { [COMPONENT_TIPO]: [{ id: 1, lang: LANG, value: `BATCH-${NO_PRE_ID}` }] },
 		});
 		await insertTm(NO_PRE_ID, `BATCH-A-${NO_PRE_ID}`, BATCH_BULK_ID, '2026-01-02 00:00:00');
 		await insertTm(NO_PRE_ID, `BATCH-B-${NO_PRE_ID}`, BATCH_BULK_ID, '2026-01-02 00:00:01');
 	});
-	/** One TM row per batch write: the batch above holds IDS.length + 2 rows. */
-	const BATCH_ROWS = IDS.length + 2;
+	/**
+	 * The batch is a LEGACY run (visible rows, no undo-log BEFORE — the shape
+	 * every pre-2026-09-27 run left), reverted per KEY, never per row
+	 * (WC-2026-09-27-bulk-revert-undo-log §2.5 step 3): one key per record —
+	 * the control record's two rows are ONE key, reported once.
+	 */
+	const BATCH_KEYS = IDS.length + 1;
 
 	afterAll(async () => {
 		mock.module('../../src/core/security/record_scope.ts', () => REAL_RECORD_SCOPE);
@@ -235,7 +189,7 @@ describe('bulk_revert_process — DB drive', () => {
 			expect(batch.counter).toBe(0);
 			// The per-row refusals are PAYLOAD (`data.skipped`), never the
 			// envelope's failure channel — the batch itself did not fail.
-			expect(batch.skipped.length).toBe(BATCH_ROWS);
+			expect(batch.skipped.length).toBe(BATCH_KEYS);
 			// SEC-16: a denied row is COUNTED, never LOCATED. The batch row set
 			// comes from a TM search with no projects filter and the bulk id is a
 			// small integer: the coordinates of records outside the caller's
@@ -277,7 +231,7 @@ describe('bulk_revert_process — DB drive', () => {
 			};
 			mintedBulkIds.push(batch.bulk_process_id);
 			expect(batch.counter).toBe(0);
-			expect(batch.skipped.length).toBe(BATCH_ROWS);
+			expect(batch.skipped.length).toBe(BATCH_KEYS);
 			for (const entry of batch.skipped) expect(entry).toEqual({ reason: 'failed' });
 			const wire = JSON.stringify(response);
 			expect(wire).not.toContain('SENTINEL-');
@@ -295,7 +249,7 @@ describe('bulk_revert_process — DB drive', () => {
 		// from persistRecordKeys, the transaction, the frame restore…) is located
 		// — it is the caller's to see — and STILL carries nothing of what threw.
 		// Planted at `getMatrixTableFromTipo`, which runs after both gate halves
-		// and after preBulkState (so the no-pre-state control keeps its own
+		// and after the legacy inference (so the no-pre-state control keeps its own
 		// reason); the entry is asserted EXACTLY, so a `detail` smuggled onto it
 		// through skip()'s log parameter is a red, not a limit.
 		const sentinel = 'SENTINEL-/srv/secret/relation "matrix_private" does not exist';
@@ -320,16 +274,19 @@ describe('bulk_revert_process — DB drive', () => {
 			};
 			mintedBulkIds.push(batch.bulk_process_id);
 			expect(batch.counter).toBe(0);
-			expect(batch.skipped.length).toBe(BATCH_ROWS);
+			expect(batch.skipped.length).toBe(BATCH_KEYS);
+			// Every key resolves its storage (the planted throw) before anything
+			// else behind the gate, so the control record fails here too.
 			const failed = batch.skipped.filter((entry) => entry.reason === 'failed');
-			expect(failed.length).toBe(IDS.length);
-			for (const id of IDS) {
+			expect(failed.length).toBe(BATCH_KEYS);
+			for (const id of [...IDS, NO_PRE_ID]) {
 				const entry = failed.find((candidate) => candidate.section_id === id);
 				expect(entry).toStrictEqual({
 					reason: 'failed',
 					section_tipo: SECTION_TIPO,
 					tipo: COMPONENT_TIPO,
 					section_id: id,
+					lang: LANG,
 				});
 			}
 			const wire = JSON.stringify(response);
@@ -355,37 +312,54 @@ describe('bulk_revert_process — DB drive', () => {
 		const batch = response.data as {
 			counter: number;
 			bulk_process_id: number | null;
+			exact: string;
 			skipped: BulkRevertSkipped[];
+			inexact: { basis: string; section_id: number }[];
 		};
 		expect(batch.counter).toBe(IDS.length);
+		// A legacy key's pre-run value is INFERRED: every write is reported
+		// inexact, and nothing was reverted exactly.
+		expect(batch.exact).toBe('none');
+		expect(batch.inexact.map((entry) => [entry.basis, entry.section_id]).sort()).toEqual(
+			IDS.map((id) => ['legacy_inference', id]),
+		);
 		const newBulkId = batch.bulk_process_id;
 		if (typeof newBulkId === 'number') mintedBulkIds.push(newBulkId);
 		// POSITIVE CONTROL for the disclosure law: an IN-SCOPE row that could not
 		// be reverted DOES carry its coordinates — the omission above is the
 		// gate's doing, not a channel that never locates anything. (One entry
-		// per batch ROW, and the control record has two — PHP's loop shape.)
+		// per KEY: the control record's two batch rows are one key.)
 		const located: BulkRevertSkipped = {
 			reason: 'no_pre_batch_state',
 			section_tipo: SECTION_TIPO,
 			tipo: COMPONENT_TIPO,
 			section_id: NO_PRE_ID,
+			lang: LANG,
 		};
-		expect(batch.skipped).toEqual([located, located]);
+		expect(batch.skipped).toEqual([located]);
 
 		const values = await liveValues();
 		for (const id of IDS) {
 			expect(values[id]).toEqual([{ id: 1, lang: LANG, value: `PRE-${id}` }]);
 		}
 
-		// The revert is itself revertible: one fresh TM row per component, all
-		// carrying the NEW bulk id (never the reverted one).
+		// The revert is itself revertible — EXACTLY, though the run it undid was
+		// legacy: one undo-log pair per component (hidden BEFORE = the batch
+		// value it replaced, visible after = the restored value), all carrying
+		// the NEW bulk id (never the reverted one).
 		const fresh = (await sql.unsafe(
-			`SELECT section_id, bulk_process_id, data FROM matrix_time_machine
+			`SELECT section_id, tm_role, data FROM matrix_time_machine
 			 WHERE section_tipo = $1 AND tipo = $2 AND section_id IN (${IDS.join(',')})
-			   AND bulk_process_id IS NOT DISTINCT FROM $3`,
+			   AND bulk_process_id IS NOT DISTINCT FROM $3
+			 ORDER BY section_id, id`,
 			[SECTION_TIPO, COMPONENT_TIPO, newBulkId],
-		)) as { section_id: number; data: unknown }[];
-		expect(fresh.length).toBe(IDS.length);
-		expect(JSON.stringify(fresh)).toContain(`PRE-${IDS[0]}`);
+		)) as { section_id: number; tm_role: number | null; data: unknown }[];
+		expect(fresh.length).toBe(IDS.length * 2);
+		for (const id of IDS) {
+			const own = fresh.filter((row) => Number(row.section_id) === id);
+			expect(own.map((row) => row.tm_role)).toEqual([1, null]);
+			expect(own[0]?.data).toEqual([{ id: 1, lang: LANG, value: `BATCH-${id}` }]);
+			expect(own[1]?.data).toEqual([{ id: 1, lang: LANG, value: `PRE-${id}` }]);
+		}
 	});
 });

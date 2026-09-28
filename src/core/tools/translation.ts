@@ -87,10 +87,37 @@ export interface TranslateItemsConfig {
 	targetLang: string;
 }
 
+/** One target-language item; `id` is the source item's, when it had one. */
+export interface TranslatedItem {
+	id?: number | string;
+	value: string;
+	lang: string;
+}
+
+/**
+ * The target item for one source item: the translated `value` in the target
+ * `lang`, carrying the source item's `id` (a number or a non-empty string) when
+ * it had one — never an invented one.
+ */
+function targetItem(source: unknown, value: string, lang: string): TranslatedItem {
+	const id =
+		source !== null && typeof source === 'object' ? (source as { id?: unknown }).id : undefined;
+	return typeof id === 'number' || (typeof id === 'string' && id !== '')
+		? { id, value, lang }
+		: { value, lang };
+}
+
 /**
  * Translate every source item's `value` into target-lang items. Stops and
  * surfaces the provider error on the first failure (PHP returns immediately). The
  * "Sorry. Quota exceeded" leading string is treated as an error, never persisted.
+ *
+ * A target item KEEPS its source item's `id`: the translation (or
+ * transliteration — Augustus lg-nolan / Αύγουστος lg-ell) of item N IS item N
+ * in another language. Dropping it left the frame of item N unpaired
+ * (dataframe `id_key`) and let the next save stamp a fresh id on the target —
+ * a spurious change of that language's TM lane. A source item without an id
+ * yields a target item without one (no id is invented here).
  */
 /*
  * COVERAGE-EXEMPT — the PROVIDER CALL below (coverage plan §5.2; reason
@@ -104,8 +131,8 @@ export async function translateItems(
 	sourceItems: readonly unknown[],
 	provider: TranslationProvider,
 	cfg: TranslateItemsConfig,
-): Promise<{ items: { value: string; lang: string }[]; error: string | null }> {
-	const out: { value: string; lang: string }[] = [];
+): Promise<{ items: TranslatedItem[]; error: string | null }> {
+	const out: TranslatedItem[] = [];
 	for (const item of sourceItems) {
 		const text =
 			item !== null && typeof item === 'object'
@@ -122,7 +149,7 @@ export async function translateItems(
 		if (res.text.startsWith('Sorry. Quota exceeded')) {
 			return { items: [], error: 'Sorry. Quota exceeded' };
 		}
-		out.push({ value: res.text, lang: cfg.targetLang });
+		out.push(targetItem(item, res.text, cfg.targetLang));
 	}
 	return { items: out, error: null };
 }
@@ -231,7 +258,7 @@ export function resolveTranslationProvider(engine: string): {
 /**
  * Read a component's source-lang items, translate them, and write the target-lang
  * slot (PHP automatic_translation save path). Empty source → nothing saved. Uses
- * the verified direct-write path (persistRecordKeys + recordTimeMachine, stamping
+ * the verified direct-write path (persistRecordKeys + recordComposedRow, stamping
  * the record's modified metadata like PHP's component->save()). Shared
  * by tool_lang (one target) and tool_lang_multi (looped targets).
  *
@@ -264,7 +291,9 @@ export async function translateAndWrite(input: {
 	const { readMatrixRecord } = await import('../db/matrix.ts');
 	const { readComponentItems, filterItemsByLang } = await import('../resolve/component_data.ts');
 	const { persistRecordKeys } = await import('../section_record/index.ts');
-	const { recordTimeMachine } = await import('../db/time_machine.ts');
+	const { mainIdentity, readMainSlots, recordMainHistory } = await import(
+		'../relations/dataframe_slots.ts'
+	);
 	const { dbTimestamp } = await import('../db/db_timestamp.ts');
 	const { withTransaction } = await import('../db/postgres.ts');
 	const { readMatrixKeyForUpdate } = await import('../db/matrix_write.ts');
@@ -357,16 +386,23 @@ export async function translateAndWrite(input: {
 			[{ column: column as MatrixJsonbColumn, key: input.componentTipo, value: merged }],
 			{ userId: input.userId },
 		);
-		await recordTimeMachine(
-			{
-				sectionTipo: input.sectionTipo,
-				sectionId: input.sectionId,
-				componentTipo: input.componentTipo,
-				lang: input.targetLang,
-				userId: input.userId,
-				data: merged,
-			},
-			dbTimestamp(),
+		// The history through the capture's own writer (dataframe_slots.ts
+		// recordMainHistory — two lanes): ONE row in the TARGET language's lane,
+		// its value only — one row is one language, engine-wide; the whole merged
+		// value under one tag put every other language back from this timeline. A
+		// translation changes no frame and no lg-nolan value, so no lg-nolan row
+		// (WC-2026-09-27-bulk-revert-undo-log, "two lanes").
+		const target = { table, sectionTipo: input.sectionTipo, sectionId: input.sectionId };
+		const identity = {
+			...(await mainIdentity(input.componentTipo, input.targetLang)),
+			lang: input.targetLang,
+		};
+		const slots = await readMainSlots(target, identity.tipo);
+		await recordMainHistory(
+			target,
+			identity,
+			{ before: { value: currentItems, slots }, after: { value: merged, slots } },
+			{ userId: input.userId, timestamp: dbTimestamp(), bulkId: null },
 		);
 		return { ok: true, msg: 'OK. Request done', count: targetItems.length };
 	});

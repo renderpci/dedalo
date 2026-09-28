@@ -157,14 +157,16 @@ describe('dataframe cascade on the three removal paths (S1-05)', () => {
 		expect(orphansOf(slotAfter, 1)).toEqual([]); // re-attachment regression
 		expect(orphansOf(slotAfter, 2).length).toBe(1); // sibling frame survives
 
-		// PHP suppresses the slot's own TM row (main TM row captures full state).
+		// PHP suppresses the slot's own TM row: the main's row is COMPOSED
+		// (get_time_machine_data_to_save :1580) — its kept items followed by the
+		// slot's frames as the cascade left them.
 		expect(await slotTmRowCount(hostId)).toBe(0);
 		const mainTm = (await sql.unsafe(
-			`SELECT count(*)::int AS n FROM matrix_time_machine
-			 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3`,
+			`SELECT data FROM matrix_time_machine
+			 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3 ORDER BY id DESC LIMIT 1`,
 			[HOST_SECTION, hostId, PORTAL],
-		)) as { n: number }[];
-		expect((mainTm[0]?.n ?? 0) > 0).toBe(true);
+		)) as { data: unknown }[];
+		expect(mainTm[0]?.data).toEqual([...portalAfter, ...slotAfter]);
 	}, 30000);
 
 	test('portal unlink (delete_locator): removed locator cascades its frames', async () => {

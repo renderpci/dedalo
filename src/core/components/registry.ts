@@ -201,6 +201,26 @@ export function isMonovalueModel(model: string): boolean {
 }
 
 /**
+ * PHP lang-slice gate — supports_translation && !is_relation (PHP
+ * update_data_value :4110-4126/:4169-4180 conditions): only the literal
+ * translation-supporting CLASSES (classSupportsTranslation, PHP
+ * component_string_common subclasses + iri) slice their data by language;
+ * relation/locator classes never do. The ontology `translatable` flag alone
+ * would mis-slice: an ontology-non-translatable input_text still slices, on the
+ * lg-nolan lang PHP normalizes to at instantiation (__construct :677; read-path
+ * twin: resolve/component_data.ts effective-lang rule).
+ *
+ * THE one definition: the save path (save_component.ts re-exports it), the
+ * temporal door, the composed time-machine image of a dataframe main
+ * (relations/dataframe_slots.ts `mainIdentity`) and the bulk revert all slice
+ * with it — two copies would drift into two notions of "the current language".
+ */
+export function isLangSlicedModel(model: string): boolean {
+	const descriptor = getComponentModel(model);
+	return descriptor?.classSupportsTranslation === true && descriptor.resolveData === undefined;
+}
+
+/**
  * The value's RENDER CLASS at the client DOM boundary (`render` facet,
  * alias-following — see types.ts RenderClass). THE key the render-boundary
  * escaper switches on: 'html' is the ONLY class whose value is stored as

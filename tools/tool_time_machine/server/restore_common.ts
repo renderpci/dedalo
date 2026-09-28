@@ -3,8 +3,9 @@
  * (`apply_value` and `bulk_revert_process`).
  *
  * Both doors deliberately bypass `saveComponentData` — only the direct path
- * (persistRecordKeys + recordTimeMachine) can thread a bulk id and replay a
- * snapshot without the save pipeline's defaults firing. The cost of that
+ * (persistRecordKeys + a time-machine writer: recordTimeMachine for
+ * apply_value, the undo-log pair `recordBulkPair` for the bulk revert) can
+ * replay a stored image without the save pipeline's defaults firing. The cost of that
  * bypass is that every side effect the chokepoint performs has to be
  * reproduced here explicitly, or it silently disappears from the restore path.
  * The observer cascade was one such casualty: PHP restored through

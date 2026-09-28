@@ -167,3 +167,21 @@ the tool or its actions), so NO re-harvest and no fixture edit; an absent
 and above all the door gate `test/unit/import_csv_append_native.test.ts`
 (through the real `import_files` / `validate_import` handlers). The client mode selector is gated in the browser suite
 (`client/dedalo/test/client/js/test_tool_import_dedalo_csv.js`).
+
+## Addendum 2026-09-27 — the revert line is closed; no TM switch
+
+The pending change named in §5 (*Time machine*) is WC-2026-09-27-bulk-revert-undo-log. Every
+save of a CSV run now records its undo pair — a hidden BEFORE image and the ordinary visible
+after-row — whatever the old `time_machine_save` flag said (decision D1), so a revert
+restores what the run replaced, exactly, append columns and envelope frames included. The
+*Save time machine history on import* checkbox and the append-with-TM-off warning are removed
+from the client, with the `append_no_tm_warning` label (§7 now lists `import_mode`,
+`replace`, `append`, `append_layer`). `import_files` no longer reads `time_machine_save`; a
+caller still sending it is not refused.
+
+The same day's composed-row amendment (WC-2026-09-27-bulk-revert-undo-log §8) also retires
+§5's "Append-mode frames … are saved with their own row, as a slot column's": no slot column,
+envelope or append-mode frame writes a row under the slot tipo any more. Each is recorded in
+the composed row (in a run, the composed pair) of the main its frames belong to — the main's
+data followed by all its slots' frames — also when the main item was a duplicate and the
+main's own save wrote nothing.

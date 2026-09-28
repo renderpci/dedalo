@@ -9,8 +9,9 @@
  * carries BOTH the main items and dd490 frame objects, and restoring a frame
  * into the main column corrupts it (this strip applies to literal mains too,
  * not only relation models — the historical relation-only filter leaked
- * locators into literal columns). component_iri separates by the `iri`
- * property instead (frames never carry it). The stripped-out frames are NOT
+ * locators into literal columns). Every model, component_iri included, splits
+ * by the one frame predicate (splitComposed) — an iri-key filter dropped v6
+ * title-only iri items along with the frames. The stripped-out frames are NOT
  * discarded: they are replayed into their `component_dataframe` slots FIRST
  * (dataframe_restore.ts — PHP's set_time_machine_data sequence), because a
  * main restored without its frames leaves orphan pairings behind. The restore
@@ -26,22 +27,25 @@
  * PHP session), and the TM-row consumption (PHP deletes the restored snapshot;
  * TS keeps it — harmless, the fresh audit row supersedes it in the list).
  *
- * UNCOVERED SCOPE (denied loudly, never guessed) — both refusals exist because
- * the alternative is DELETING data the archive cannot get back:
- *   1. restoring a TM row whose own tipo IS a `component_dataframe` slot — with
- *      or without `caller_dataframe`. For such a row the snapshot's dd490
- *      entries ARE the component's value, so the shared
- *      `stripDataframeFramesFromTmMain` (which the TM PREVIEW read applies too)
- *      reduces it to an empty array and the restore would silently WIPE the
- *      slot. Un-stripping only the restore would make the tool write something
- *      the user never previewed; the fix belongs in the ONE shared strip plus
- *      `section/read.ts`, so until then the door refuses instead of deleting.
- *   2. restoring a snapshot that carries NO frames onto a main whose slots DO
- *      hold frames (`refuseFramelessWipe`). The CAPTURE half is unported —
- *      `save_component.ts` never appends the slots' frames — so every TS-written
- *      TM row is frameless and indistinguishable from a PHP-era row whose slots
- *      were genuinely empty. Replaying the wipe would delete frames that exist
- *      in no other row. Lifted the day capture lands.
+ * UNCOVERED SCOPE (denied loudly, never guessed): restoring a TM row whose own
+ * tipo IS a `component_dataframe` slot — with or without `caller_dataframe`. No
+ * supported history has one (PHP never wrote a slot row; a slot's frames ride in
+ * its main's composed row), and for such a row the snapshot's dd490 entries ARE
+ * the value, so the shared `splitComposed().main` would reduce it to nothing and
+ * the restore would silently WIPE the slot. The door refuses instead.
+ *
+ * TWO LANES (WC-2026-09-27-bulk-revert-undo-log addendum): a row of a main is
+ * ONE lane. The restore puts the row's OWN lane back (a language row's value
+ * merged over the live other languages; an lg-nolan row's lg-nolan items) and
+ * the frames AS OF the row (tm_record/lane_state.ts — the row itself when it is
+ * a frame state, else the newest lg-nolan row below it; none = no frames then:
+ * the main's own frames are EMPTIED; other mains' frames of a shared slot stay
+ * — decision D-A). A frame of an item that existed at the row and exists no
+ * more is never written back. No refusal.
+ *
+ * A FRAMES-ONLY row (relations/dataframe_slots.ts isFramesOnlyImage — a v6
+ * slot save of a translatable main, tagged lg-nolan) restores the frames only:
+ * the main stays live, and the restore's history is its one lg-nolan row.
  *
  * A frame naming a tipo that is NOT a live dataframe slot is NOT refused: PHP's
  * per-slot filter matches it nowhere either, so it restores nothing and is
@@ -53,27 +57,39 @@ import type { MatrixJsonbColumn } from '../../../src/core/db/matrix.ts';
 import { MATRIX_JSONB_COLUMNS } from '../../../src/core/db/matrix.ts';
 import {
 	absorbComponentItemIds,
+	insertMatrixRecordIfAbsent,
 	readMatrixKeyForUpdate,
 } from '../../../src/core/db/matrix_write.ts';
 import { withTransaction } from '../../../src/core/db/postgres.ts';
 import { recordEpoch } from '../../../src/core/db/record_generation.ts';
 import {
+	readOtherLangItemIds,
 	readTimeMachineRow,
-	recordTimeMachine,
-	type TimeMachineRow,
+	type TmCoords,
 } from '../../../src/core/db/time_machine.ts';
 import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import { restoreDeletedSectionMediaFiles } from '../../../src/core/media/file_ops.ts';
 import {
+	effectiveSaveLang,
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
 	getModelByTipo,
-	getTranslatableByTipo,
 } from '../../../src/core/ontology/resolver.ts';
-import { isLangSlicedModel } from '../../../src/core/section/record/save_component.ts';
+import {
+	heldItemIds,
+	mainIdentity,
+	readMainState,
+	recordMainHistory,
+	rowSlotTipos,
+} from '../../../src/core/relations/dataframe_slots.ts';
+import { NOLAN } from '../../../src/core/relations/main_lanes.ts';
+import {
+	reindexRelationColumnLikeSave,
+	reindexRelationSearchLikeSave,
+} from '../../../src/core/relations/save.ts';
 import { persistRecordColumns, persistRecordKeys } from '../../../src/core/section_record/index.ts';
 import { principalCanAccessRecord } from '../../../src/core/security/record_scope.ts';
-import { stripDataframeFramesFromTmMain } from '../../../src/core/tm_record/tm_record.ts';
+import { readRowLaneState, restoredLaneValue } from '../../../src/core/tm_record/lane_state.ts';
 import {
 	type ToolActionContext,
 	type ToolResponse,
@@ -82,12 +98,10 @@ import {
 import { normalizeRestoredSectionIds } from '../../../src/core/update/transform/section_id_restore.ts';
 import {
 	applyDataframeRestore,
-	composeTimeMachineSnapshot,
 	DataframeRestoreError,
 	type DataframeSlotRestore,
+	type FrameSlice,
 	planDataframeRestore,
-	refuseFramelessWipe,
-	resolveDataframeSlotTipos,
 } from './dataframe_restore.ts';
 import { propagateRestoreToObservers } from './restore_common.ts';
 
@@ -97,13 +111,90 @@ import { propagateRestoreToObservers } from './restore_common.ts';
  * chokepoint (PHP element->set_data + save(), which stamps the modified audit).
  * Structural 'id' is not a column; every jsonb column present in the snapshot
  * is written (including 'data' section metadata — PHP set_data replaces all).
+ *
+ * THE UNDELETE DOOR: also the bulk revert's (bulk_revert_records.ts) for a
+ * record a run's dataframe cascade deleted — one restore of a whole record,
+ * files included, not two. `tmId` is the snapshot row's id, for the refusal.
  */
-async function restoreSection(
-	tmRow: TimeMachineRow,
+export async function restoreSection(
+	snapshot: unknown,
+	tmId: number,
 	sectionTipo: string,
 	sectionId: number,
 	userId: number,
 ): Promise<void> {
+	const columns = await restoreSectionRow(snapshot, tmId, sectionTipo, sectionId, userId);
+	await restoreSectionMedia(sectionTipo, sectionId, columns);
+	// LEDGERED (no TS twin / no fixture): session-SQO reset, and consuming
+	// (deleting) the restored TM row.
+}
+
+/**
+ * The ROW half of {@link restoreSection}: write the snapshot's jsonb columns
+ * back (section ids converged, see below) and answer the columns AS WRITTEN.
+ * Joins an ambient transaction — the bulk revert undeletes a cascade target
+ * inside the transaction of the unit that re-links it, so a refused unit rolls
+ * the undelete back with it. The FILE half ({@link restoreSectionMedia}) must
+ * then run after that transaction commits.
+ */
+export async function restoreSectionRow(
+	snapshot: unknown,
+	tmId: number,
+	sectionTipo: string,
+	sectionId: number,
+	userId: number,
+): Promise<Partial<Record<MatrixJsonbColumn, unknown>>> {
+	const { table, columns } = await snapshotColumns(snapshot, tmId, sectionTipo, sectionId);
+	await persistRecordColumns({ table, sectionTipo, sectionId }, columns, { userId });
+	await reindexRelationColumnLikeSave(table, sectionTipo, sectionId, columns.relation);
+	return columns;
+}
+
+/**
+ * The INSERT-ONLY twin of {@link restoreSectionRow}: put the snapshot back
+ * ONLY where the address is empty, and answer `null` — nothing written — when
+ * something stands there (a record created at that explicit id since the
+ * delete). The upsert of restoreSectionRow would overwrite it. The existence
+ * test IS the insert (ON CONFLICT DO NOTHING under the explicit-id advisory
+ * lock), so there is no window between a check and the write. The bulk
+ * revert's cascade undelete.
+ *
+ * `userId: null` writes the snapshot VERBATIM — no dd197/dd201 stamp. The bulk
+ * revert's undeletes pass it: the snapshot carries its own stamps, and a run
+ * may own them (a CSV import carrying dd197/dd201 columns has undo pairs on
+ * those keys). Stamping "now" there made every stamp unit of the undeleted
+ * record refuse `changed_since_run`, so reverting a revert was not exact.
+ */
+export async function restoreAbsentSectionRow(
+	snapshot: unknown,
+	tmId: number,
+	sectionTipo: string,
+	sectionId: number,
+	userId: number | null,
+): Promise<Partial<Record<MatrixJsonbColumn, unknown>> | null> {
+	const { table, columns } = await snapshotColumns(snapshot, tmId, sectionTipo, sectionId);
+	if (!(await insertMatrixRecordIfAbsent(table, sectionTipo, sectionId, columns))) return null;
+	// The row is ours: the ordinary whole-record write (stamped unless verbatim)
+	// fires the record-write obligations (save event, security reaction, RAG index).
+	await persistRecordColumns(
+		{ table, sectionTipo, sectionId },
+		columns,
+		userId === null ? false : { userId },
+	);
+	// The snapshot's relation_search is the delete-time chain; a save would
+	// derive it from today's thesaurus (a term moved since answers for its
+	// NEW broader terms), so the undelete re-derives it the same way.
+	await reindexRelationColumnLikeSave(table, sectionTipo, sectionId, columns.relation);
+	return columns;
+}
+
+/** A TM section snapshot's jsonb columns (section ids converged), and its table. */
+async function snapshotColumns(
+	snapshot: unknown,
+	tmId: number,
+	sectionTipo: string,
+	sectionId: number,
+): Promise<{ table: string; columns: Partial<Record<MatrixJsonbColumn, unknown>> }> {
 	const table = await getMatrixTableFromTipo(sectionTipo);
 	if (table === null) {
 		throw new DedaloError('request.invalid_model', {
@@ -111,10 +202,9 @@ async function restoreSection(
 			message: `No matrix table for '${sectionTipo}'`,
 		});
 	}
-	const snapshot = tmRow.data;
 	if (snapshot === null || typeof snapshot !== 'object') {
 		throw new DedaloError('tool.target_not_found', {
-			coordinates: { section_tipo: sectionTipo, section_id: sectionId, tm_id: tmRow.id },
+			coordinates: { section_tipo: sectionTipo, section_id: sectionId, tm_id: tmId },
 			message: 'The TM section snapshot is empty',
 		});
 	}
@@ -130,20 +220,29 @@ async function restoreSection(
 	// sweep would convert (external remote ids and junk pass verbatim), so
 	// restores CONVERGE on the canonical form instead of undoing the sweep.
 	await normalizeRestoredSectionIds(columns);
-	await persistRecordColumns({ table, sectionTipo, sectionId }, columns, { userId });
+	return { table, columns };
+}
 
-	// THE FILES, TOO (P1-11 / LIFE-08). The delete moved every managed file of
-	// every media component into its quality dir's `deleted/` sub-folder — a
-	// move, never a hard delete, precisely so this step can undo it. Without it
-	// the restored record's media column points at live paths holding NO FILES
-	// and the restore still answers ok:true: the row is back, the objects are
-	// not, and only opening the record shows it.
-	//
-	// POST-PERSIST and unwrapped, matching the delete's own post-commit half: the
-	// row must be back before the files are, and a media failure must not undo a
-	// restore that landed. `restoreDeletedSectionMediaFiles` never overwrites a
-	// live file — an operator may have re-uploaded since, and silently replacing
-	// the newer file with the pre-delete one is the one outcome nothing can undo.
+/**
+ * The FILE half of {@link restoreSection} (P1-11 / LIFE-08). The delete moved
+ * every managed file of every media component into its quality dir's
+ * `deleted/` sub-folder — a move, never a hard delete, precisely so this step
+ * can undo it. Without it the restored record's media column points at live
+ * paths holding NO FILES and the restore still answers ok:true: the row is
+ * back, the objects are not, and only opening the record shows it.
+ *
+ * POST-PERSIST (after COMMIT when the row half ran in a transaction) and
+ * unwrapped, matching the delete's own post-commit half: the row must be back
+ * before the files are, and a media failure must not undo a restore that
+ * landed. `restoreDeletedSectionMediaFiles` never overwrites a live file — an
+ * operator may have re-uploaded since, and silently replacing the newer file
+ * with the pre-delete one is the one outcome nothing can undo.
+ */
+export async function restoreSectionMedia(
+	sectionTipo: string,
+	sectionId: number,
+	columns: Partial<Record<MatrixJsonbColumn, unknown>>,
+): Promise<void> {
 	try {
 		const mediaColumn = columns.media as Record<string, unknown[]> | null | undefined;
 		const outcome = await restoreDeletedSectionMediaFiles(sectionTipo, sectionId, mediaColumn);
@@ -158,125 +257,31 @@ async function restoreSection(
 			`[tool_time_machine] media restore for ${sectionTipo}/${sectionId} FAILED: ${error instanceof Error ? error.message : String(error)}`,
 		);
 	}
-
-	// LEDGERED (no TS twin / no fixture): session-SQO reset, and consuming
-	// (deleting) the restored TM row.
 }
 
 /**
- * The LANGUAGES a component TM snapshot speaks for — the set whose live items
- * the restore is entitled to replace (DATA-03,
- * WC-2026-08-27-tm-lang-slice-restore-merge).
- *
- * A lang-sliced component's TM row is NOT the component's value: it is the
- * EFFECTIVE-LANGUAGE SLICE of it. `save_component.ts` writes it that way
- * (`tmSnapshot = langSliced ? items.filter(item => item.lang === effectiveLang)`
- * :1231-1238, PHP get_data_lang parity), so a trilingual literal has three
- * independent one-language histories and no row anywhere holds all three.
- *
- * The languages are read from the SNAPSHOT ITSELF rather than from the TM row's
- * `lang` column, because the items are what the write actually carries: a row
- * whose column and payload disagree would otherwise decide the fate of a
- * language the payload never mentions. The column is the fallback for the two
- * cases the items cannot answer, and both must still touch exactly ONE language
- * rather than turn the restore into a no-op or into a whole-key replace:
- *   - an EMPTY snapshot (the slice was cleared that day);
- *   - a snapshot that is not an item array at all — SQL NULL (what an empty
- *     slice is stored as) or a bare scalar. The caller passes `[]` for those:
- *     an unrepresentable snapshot is the EMPTY SLICE of its own language, never
- *     a licence to reach a sibling language.
- *
- * SHARED with the bulk door (`bulk_revert.ts`), which applies the same law to
- * the same per-language snapshots — one predicate, never a second copy.
+ * The frame plan of a restored row. The row is the FULL state of the main and
+ * all its dataframes: every slot it is silent about was empty then, and is
+ * emptied — the live record's slots of the main included (rowSlotTipos). Read
+ * behind the caller's row lock. An unplaceable frame refuses the restore; the
+ * refusal sentence names slot tipos — LOG-only (the code's disclosure is
+ * 'operator'), never echoed on the wire.
  */
-export function snapshotLangs(
-	snapshotItems: readonly unknown[],
-	fallbackLang: string,
-): Set<string> {
-	const langs = new Set<string>();
-	for (const item of snapshotItems) {
-		if (item === null || typeof item !== 'object') continue;
-		const itemLang = (item as { lang?: unknown }).lang;
-		if (typeof itemLang === 'string' && itemLang !== '') langs.add(itemLang);
+async function planRowFrames(
+	tipo: string,
+	snapshot: unknown,
+	target: { table: string; sectionTipo: string; sectionId: number },
+): Promise<DataframeSlotRestore[]> {
+	try {
+		return await planDataframeRestore(tipo, snapshot, await rowSlotTipos(tipo, [snapshot], target));
+	} catch (error) {
+		if (!(error instanceof DataframeRestoreError)) throw error;
+		throw new DedaloError('engine.uncovered_scope', {
+			cause: error,
+			coordinates: { tipo, section_tipo: target.sectionTipo },
+			message: error.message,
+		});
 	}
-	if (langs.size === 0) langs.add(fallbackLang);
-	return langs;
-}
-
-/**
- * MERGE a restored snapshot OVER the live value instead of replacing the key
- * (DATA-03 — the divergence from PHP, ledgered in
- * `engineering/wire_contract/WC-2026-08-27-tm-lang-slice-restore-merge.md`).
- *
- * THE LAW, stated once: *a component restore never deletes a language the
- * snapshot does not carry.* PHP's apply_value wrote the one-language slice as
- * the whole component key, so restoring the Spanish version of a trilingual
- * literal DELETED the Basque and the English value — silently, with `ok:true`,
- * and the fresh TM row the restore wrote carried only the restored slice, so
- * the loss was invisible even in the history the restore itself created.
- * Sequential per-language restores ping-ponged, which is why the tool could not
- * reassemble a multilingual value at all.
- *
- * Survivors keep their stored object VERBATIM (same reference, therefore the
- * same key order through json_codec), so an untouched language is byte-identical
- * before and after. They come first and the restored items last, which is the
- * order `save_component.ts` already writes a lang-sliced save in
- * (`items = [...otherLangs, ...stamped]`, PHP set_data_lang :1052-1128) — the
- * restore must not invent a second array shape for the same component.
- *
- * DELIBERATELY MORE CONSERVATIVE than set_data_lang in one respect: a live item
- * with no `lang` (a lang orphan) is KEPT here, where the save path drops it.
- * This door's mandate is to replay a snapshot, not to garbage-collect data no
- * snapshot mentions — and an orphan deleted by a restore is deleted with no row
- * anywhere to recover it from.
- *
- * SHARED with `bulk_revert.ts`: both restore doors write the same shape from the
- * same per-language snapshots, so they merge through this one function. A second
- * copy would drift into a second notion of "the slice" — and the bulk door's
- * blast radius is a whole batch per click.
- */
-export function mergeRestoredLangSlice(
-	liveItems: readonly unknown[],
-	restoredItems: readonly unknown[],
-	restoredLangs: ReadonlySet<string>,
-): unknown[] {
-	const survivors = liveItems.filter((item) => {
-		if (item === null || typeof item !== 'object') return true;
-		const itemLang = (item as { lang?: unknown }).lang;
-		return typeof itemLang !== 'string' || !restoredLangs.has(itemLang);
-	});
-	return [...survivors, ...restoredItems];
-}
-
-/**
- * The ONE-LANGUAGE slice a restore's own TM AUDIT row carries (DATA-03,
- * WC-2026-08-27-tm-lang-slice-restore-merge).
- *
- * Byte-for-byte the rule the save path applies to the same write —
- * `save_component.ts:1231-1238`, `items.filter(item => item.lang ===
- * effectiveLang)` stamped `lang: effectiveLang` — because ONE TM ROW IS ONE
- * LANGUAGE everywhere else in the engine: the dd15 history list filters the
- * rows by `filter_by_locators.lang` (`js/tool_time_machine.js` :381-386), the
- * preview and list emit resolve a row against the request lang
- * (`section/read.ts` :715-722 grafts the row, :751 injects it; the lang filter
- * is `resolve/component_data.ts` :123-125), and both
- * restore doors decide what they may replace from the row's own items
- * (`snapshotLangs`). A row that carried several languages under one `lang` tag
- * therefore reverted languages nobody selected — restoring it from the Spanish
- * timeline put an English value back that the English timeline had already
- * moved past.
- *
- * The tag and the payload are derived from the SAME lang, so the row is
- * self-consistent by construction: a written value whose items do not speak the
- * audit language yields the empty slice for it, which is the invariant being
- * enforced rather than propagated.
- */
-export function tmAuditSlice(writtenValue: unknown, auditLang: string): unknown {
-	if (!Array.isArray(writtenValue)) return writtenValue;
-	return writtenValue.filter(
-		(item) =>
-			item !== null && typeof item === 'object' && (item as { lang?: unknown }).lang === auditLang,
-	);
 }
 
 /**
@@ -303,6 +308,39 @@ async function logRecoverActivity(
 		host: hostFromClientIp(context.clientIp),
 		data: payload,
 	});
+}
+
+/** A snapshot with its section ids int-canonical (WC-2026-08-10 D6.2). */
+async function canonicalImage(data: unknown): Promise<unknown> {
+	const container = { value: data };
+	await normalizeRestoredSectionIds(container);
+	return container.value;
+}
+
+/**
+ * The frame scope of a row restore (dataframe_restore.ts FrameSlice): no live
+ * frame is kept (the frame state as of the row replaces this main's frames),
+ * and a recorded frame is STALE — never written back — when its item existed
+ * in any language at the row OR at the frame-state row the frames came from
+ * (time_machine.ts readOtherLangItemIds, every lane, the frame-first proof at
+ * each row) and the restored value no longer holds it. The second row matters
+ * for a frameless PHP language row that dropped the only framed item: its
+ * frames come from an older row that still held the item — judged at the
+ * restored row alone, the item is "proven absent" and its frame would come
+ * back as an orphan. A frame saved before its item comes back.
+ */
+async function rowFrameSlice(
+	coords: TmCoords,
+	rows: { rowId: number; frameRowId: number | null },
+	restoredValue: unknown,
+	sliced: boolean,
+): Promise<FrameSlice> {
+	const known = await readOtherLangItemIds(coords, [], rows.rowId, !sliced);
+	if (rows.frameRowId !== null && rows.frameRowId !== rows.rowId) {
+		for (const id of await readOtherLangItemIds(coords, [], rows.frameRowId, !sliced))
+			known.add(id);
+	}
+	return { survivorIds: new Set(), otherLangIds: known, heldIds: heldItemIds(restoredValue) };
 }
 
 export async function toolTimeMachineApplyValue(context: ToolActionContext): Promise<ToolResponse> {
@@ -386,7 +424,7 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 	if (model === 'section') {
 		// Throws on refusal (the dispatch catch converts), so the activity row is
 		// appended only for a restore that actually landed.
-		await restoreSection(tmRow, sectionTipo, sectionId, userId);
+		await restoreSection(tmRow.data, tmRow.id, sectionTipo, sectionId, userId);
 		await logRecoverActivity(
 			context,
 			'RECOVER SECTION',
@@ -421,57 +459,7 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 	// slots are stored addresses too, so normalizing only the main would write
 	// the main int-form and its frames string-form — half a convergence, and the
 	// legacy form re-injected on exactly the rows the sweep just fixed.
-	const snapshot = { value: tmRow.data };
-	await normalizeRestoredSectionIds(snapshot);
-	const canonicalSnapshot = snapshot.value;
-
-	// Main data: strip dataframe frames (iri: keep only entries carrying `iri`).
-	// SAME strip the tool_time_machine preview read applies (read.ts), so the
-	// value the user previewed is exactly what this restore writes.
-	const data = stripDataframeFramesFromTmMain(model, canonicalSnapshot);
-
-	// IS THIS SNAPSHOT A LANGUAGE SLICE? (DATA-03). The predicate is the WRITE
-	// engine's own export — `isLangSlicedModel` (save_component.ts :326, PHP
-	// supports_translation && !is_relation) — never a second copy and never the
-	// ontology `translatable` flag alone: the flag mis-slices, because an
-	// ontology-non-translatable input_text still slices, on the `lg-nolan` the
-	// engine normalizes it to. Read and write must agree on what "the slice" is,
-	// or a restore replaces a language the save never wrote there. For every
-	// OTHER model the TM row holds the component's whole value, and this door
-	// keeps replacing the key exactly as PHP did — merging there would resurrect
-	// portal locators and select values a later save legitimately removed.
-	const langSliced = isLangSlicedModel(model);
-	// The request's effective lang — the same translatable-or-iri rule the save
-	// path stamps with (save_component.ts :680). It is only the FALLBACK here:
-	// see `snapshotLang` below.
-	const translatable = await getTranslatableByTipo(tipo);
-	const requestEffectiveLang = translatable || model === 'component_iri' ? lang : 'lg-nolan';
-	// THE LANGUAGE THIS RESTORE SPEAKS FOR — the TM ROW's own lang column, and
-	// only when that is null/empty (pre-migration rows) the request's effective
-	// lang. The bulk door derives it the same way (`bulk_revert.ts` :292,
-	// `auditLang = rowLang ?? …`), and the two doors must agree.
-	//
-	// (!) `options.lang` is NOT validated against `tmRow.lang` — the target check
-	// above covers section_tipo / section_id / tipo only — so a caller may hand
-	// this door a Spanish row with `lang: lg-eng`. The MERGE was already right
-	// there (it reads its languages from the snapshot items), but tagging and
-	// slicing the audit row with the REQUEST lang wrote that row into the
-	// UNTOUCHED language's timeline, carrying that language's surviving items:
-	// the changed language recorded nothing, and the untouched one gained a row
-	// duplicating its current value — restoring which later reverts an edit
-	// nobody selected. Deriving both from the ROW closes it (DATA-03).
-	const snapshotLang = tmRow.lang !== null && tmRow.lang !== '' ? tmRow.lang : requestEffectiveLang;
-	// The snapshot's ITEMS — `[]` for a snapshot that is not an item array.
-	// (!) The lang branch is NOT gated on that array shape. `matrix_time_machine.data`
-	// is a NULLABLE jsonb column, so a lang-sliced component's row can hold SQL
-	// NULL (what an empty slice is written as) or a bare scalar — PHP-era rows do.
-	// Such a snapshot is the EMPTY SLICE of its own language; sending it down the
-	// whole-key path instead deleted EVERY language the component had and wrote a
-	// bare string into a key that must hold an item array. The snapshot's shape may
-	// decide how much of ONE language is restored; it may never decide whether a
-	// SIBLING language lives.
-	const restoredItems = Array.isArray(data) ? data : [];
-	const restoredLangs = langSliced ? snapshotLangs(restoredItems, snapshotLang) : null;
+	const canonicalRow = { ...tmRow, data: await canonicalImage(tmRow.data) };
 
 	// Overwrite the live component value.
 	const column = getColumnNameByModel(model);
@@ -483,53 +471,30 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 		});
 	}
 	const writeTarget = { table, sectionTipo, sectionId };
+	// THE LANE LAW of this main (relations/main_lanes.ts): the write engine's
+	// own `isLangSlicedModel` (save_component.ts, PHP supports_translation &&
+	// !is_relation) — never the ontology `translatable` flag alone, which
+	// mis-slices an ontology-non-translatable input_text (it slices on the
+	// `lg-nolan` the engine normalizes it to) — and the translatable flag, which
+	// decides whether the lg-nolan lane holds a value.
+	const identity = await mainIdentity(tipo, lang);
+	// The request's effective lang — the save path's rule (resolver.ts
+	// effectiveSaveLang). Only the FALLBACK for a pre-migration row with no
+	// `lang`: the lane a restore speaks for is the ROW's own (DATA-03 — a caller
+	// may hand a Spanish row with `lang: lg-eng`; tagging the restore with the
+	// request lang filed it in a timeline the restore did not touch).
+	const fallbackLang = await effectiveSaveLang(tipo, model, lang);
 
-	// The FRAME half (PHP apply_value :277-333). Planned before anything is
-	// written so an unplaceable frame refuses the whole restore instead of
-	// leaving the record half-restored.
-	let framePlan: DataframeSlotRestore[];
-	try {
-		framePlan = await planDataframeRestore(
-			tipo,
-			canonicalSnapshot,
-			await resolveDataframeSlotTipos(tipo),
-		);
-	} catch (error) {
-		if (error instanceof DataframeRestoreError) {
-			// The refusal sentence names slot tipos — LOG-only (the code's
-			// disclosure is 'operator'), never echoed on the wire.
-			throw new DedaloError('engine.uncovered_scope', {
-				cause: error,
-				coordinates: { tipo, section_tipo: sectionTipo },
-				message: error.message,
-			});
-		}
-		throw error;
-	}
-
-	// What the restore WRITES. Identical to the snapshot for every non-sliced
-	// model; for a sliced one it is the snapshot merged over the languages the
-	// snapshot does not speak for, computed under the row lock below.
-	let restoredValue: unknown = data;
+	// What the restore WRITES, computed under the row lock below.
+	let restoredValue: unknown = null;
 	// The observer cascade needs the locators this restore DROPS (targets whose
 	// mirror still references the record). Read under the lock, with everything
 	// else this plan depends on.
 	let preRestoreItems: unknown[] = [];
 
 	await withTransaction(async () => {
-		// THE ROW LOCK, FIRST AND UNCONDITIONALLY (P1-9 / DATA-30).
-		//
-		// The frameless-wipe guard and the pre-restore read used to run BEFORE
-		// this transaction opened, so a dataframe frame saved in the
-		// check-to-commit window was deleted by a plan built from a stale read:
-		// the guard saw no frames, allowed the wipe, and the racing save's frame
-		// went with it. Recoverable — that save wrote its own TM row — but silent,
-		// which is the part that matters.
-		//
-		// Everything the plan depends on is now read INSIDE the transaction and
-		// BEHIND the lock, and the lock is taken for every model rather than only
-		// the lang-sliced one: it is the same row this restore is about to write,
-		// so holding it costs nothing a writer was entitled to.
+		// THE ROW LOCK, FIRST AND UNCONDITIONALLY (P1-9 / DATA-30): everything the
+		// plan depends on is read INSIDE the transaction and BEHIND the lock.
 		const lockedItems = await readMatrixKeyForUpdate(
 			table,
 			sectionTipo,
@@ -538,33 +503,39 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 			tipo,
 		);
 		preRestoreItems = Array.isArray(lockedItems) ? lockedItems : [];
-
-		// The frameless-wipe guard (dataframe_restore.ts): the CAPTURE half is
-		// unported, so a TS-written snapshot carries no frames and applying this
-		// plan would DELETE the live ones with no row anywhere to recover them.
-		// Refuse before a single write, never "restore most of it". Throwing here
-		// rolls the transaction back, so the refusal writes nothing.
-		const framelessRefusal = await refuseFramelessWipe(writeTarget, tipo, framePlan);
-		if (framelessRefusal !== null) {
-			throw new DedaloError('engine.uncovered_scope', {
-				coordinates: { tipo, section_tipo: sectionTipo, section_id: sectionId },
-				message: framelessRefusal,
-			});
-		}
-
-		// LANG-SLICE MERGE (DATA-03), over the value read under the lock above —
-		// an unlocked read would silently revert whatever a concurrent save
-		// committed on the sibling languages between the read and the write.
-		if (restoredLangs !== null) {
-			// Already read FOR UPDATE above — one lock, one consistent view.
-			// null = the ROW does not exist; there is nothing to merge over and
-			// nothing this door can write either.
-			restoredValue = mergeRestoredLangSlice(lockedItems ?? [], restoredItems, restoredLangs);
-		}
-
-		// Frames FIRST (PHP restores the slots before saving the main).
-		await applyDataframeRestore(writeTarget, framePlan);
-
+		const before = await readMainState(writeTarget, identity);
+		// THE STATE AT THE ROW (two lanes — tm_record/lane_state.ts, the reader
+		// the preview shares): the row's own lane value, and the frame state AS OF
+		// the row (the row itself when it is one — an lg-nolan row, a PHP row
+		// carrying frames — else the newest lg-nolan row below it).
+		const state = await readRowLaneState({
+			coords: { sectionTipo, sectionId, componentTipo: tipo },
+			row: canonicalRow,
+			law: identity,
+			fallbackLang,
+		});
+		// The FRAME half (PHP apply_value :277-333), planned behind the lock and
+		// before anything is written, so an unplaceable frame refuses the whole
+		// restore instead of leaving the record half-restored.
+		const frameImage = await canonicalImage(state.frameImage);
+		const framePlan = await planRowFrames(tipo, frameImage, writeTarget);
+		restoredValue = restoredLaneValue(before.value, state, identity);
+		// Frames FIRST (PHP restores the slots before saving the main) — THIS
+		// main's frames only (a shared slot's other mains stay live, as the
+		// preview shows them): the frame state as of the row, minus the frame of
+		// an item that existed then and no longer exists in any language
+		// (dataframe_slots.ts isStaleItemFrame) — never an orphan.
+		await applyDataframeRestore(
+			writeTarget,
+			tipo,
+			framePlan,
+			await rowFrameSlice(
+				{ sectionTipo, sectionId, componentTipo: tipo },
+				{ rowId: tmRow.id, frameRowId: state.frameRowId },
+				restoredValue,
+				identity.sliced,
+			),
+		);
 		// Chokepoint write: restored value + the record's modified stamps in one
 		// update (PHP: apply_value restores via element->save(), which stamps).
 		await persistRecordKeys(
@@ -572,6 +543,9 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 			[{ column: column as MatrixJsonbColumn, key: tipo, value: restoredValue }],
 			{ userId },
 		);
+		// The save's relation_search law: the ancestor index moves with the
+		// restored locators (a component save re-derives it; so must a restore).
+		await reindexRelationSearchLikeSave(table, sectionTipo, sectionId, tipo, restoredValue);
 		// Restored items carry explicit ids; raise the counter so a later insert
 		// cannot mint a duplicate (PHP raises on every set_data). For a
 		// dataframe-paired main this is load-bearing: a duplicated main item id
@@ -583,43 +557,25 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 			tipo,
 			Array.isArray(restoredValue) ? restoredValue : [],
 		);
-
 		// Fresh TM audit for the restore itself (PHP: the component save creates a
-		// new TM entry; the consumed row is kept). Its data is main + every
-		// restored frame (PHP get_time_machine_data_to_save), so reverting the
-		// restore brings the frames back with it. Stamp via the ONE shared
-		// DEDALO_TIMEZONE-aware helper (S1-03) — never an inline UTC formatter.
-		//
-		// For a lang-sliced component that row is ONE LANGUAGE — `snapshotLang`,
-		// the language the restored ROW speaks for, sliced out of the post-merge
-		// value exactly as the save path slices the same write (`tmAuditSlice`,
-		// save_component.ts :1231-1238). DATA-03: writing the whole merged value
-		// under a single-language `lang` tag broke the one-row-one-language
-		// assumption every other consumer of this table holds (see
-		// `tmAuditSlice`), so restoring the row this door had just written
-		// reverted languages the operator never selected — English came back from
-		// the Spanish timeline while the English timeline's newest row said
-		// something else. The merge is what makes a one-language row sufficient:
-		// reverting it replaces that language and leaves the others standing.
-		// The tag is the ROW's language and not the REQUEST's for the same
-		// reason: they can differ, and then the request lang files the row under
-		// a timeline this restore did not touch.
-		await recordTimeMachine(
-			{
-				sectionTipo,
-				sectionId,
-				componentTipo: tipo,
-				lang: langSliced ? snapshotLang : lang,
-				userId,
-				data: composeTimeMachineSnapshot(
-					langSliced ? tmAuditSlice(restoredValue, snapshotLang) : restoredValue,
-					framePlan,
-				),
-			},
-			dbTimestamp(),
+		// new TM entry; the consumed row is kept), through the capture's own writer
+		// (relations/dataframe_slots.ts recordMainHistory — two lanes): the
+		// restored lane's row (its value only — one row is one language), and the
+		// lg-nolan row (lg-nolan value + every slot's frames after the restore)
+		// when the restore changed it — so reverting the restore brings the frames
+		// back with it. A frames-only restore's door lane is the frame lane.
+		const after = await readMainState(
+			writeTarget,
+			identity,
+			framePlan.map((restore) => restore.slotTipo),
+		);
+		await recordMainHistory(
+			writeTarget,
+			{ ...identity, lang: state.own.recorded ? state.rowLane : NOLAN },
+			{ before, after },
+			{ userId, timestamp: dbTimestamp(), bulkId: null },
 		);
 	});
-
 	// Observer cascade, POST-COMMIT (PHP: apply_value restores through
 	// element->save(), whose last act is propagate_to_observers — this port
 	// wrote through the chokepoint directly and skipped it, so a TM restore of

@@ -33,12 +33,19 @@
  */
 
 import { config } from '../../config/config.ts';
+import { isLangSlicedModel } from '../components/registry.ts';
 import type { Ddo } from '../concepts/ddo.ts';
 import { compareLocators, type StoredSectionId } from '../concepts/locator.ts';
 import type { Rqo } from '../concepts/rqo.ts';
 import type { Sqo } from '../concepts/sqo.ts';
+import { MATRIX_JSONB_COLUMNS, type MatrixJsonbColumn, type MatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
-import { ensureRecordGenerationTable, withTmEpoch } from '../db/record_generation.ts';
+import {
+	ensureTmHistoryReady,
+	tmHiddenPredicate,
+	withTmEpoch,
+	withTmHistory,
+} from '../db/record_generation.ts';
 import type { TimeMachineRow } from '../db/time_machine.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
@@ -47,14 +54,19 @@ import {
 	getColumnNameByModel,
 	getModelByTipo,
 	getTranslatableByTipo,
+	savesInRequestLang,
 } from '../ontology/resolver.ts';
+import { resolveDataframeSlotTipos, splitComposed } from '../relations/dataframe_slots.ts';
+import { NOLAN } from '../relations/main_lanes.ts';
 import type {
 	EmitDdo,
 	EmitRowContext,
 	SectionReadSource,
 	SectionRow,
 } from '../section/read_source.ts';
+import { injectComponentData } from '../section_record/index.ts';
 import { type Principal, SUPERUSER_ID } from '../security/permissions.ts';
+import { readLaneValueAt } from '../tm_record/lane_state.ts';
 import {
 	buildTmSectionRecord,
 	TM_COLUMN_BULK_PROCESS_ID as TIPO_BULK_PROCESS,
@@ -172,6 +184,51 @@ interface TmRow {
 }
 
 /**
+ * THE HISTORY OF ONE LANGUAGE of a main (two lanes — relations/main_lanes.ts,
+ * WC-2026-09-27-bulk-revert-undo-log addendum "two lanes"): a main records its
+ * frames (and its lg-nolan value) in the shared lg-nolan lane, so its timeline
+ * in language X is the rows of lane X AND of lane lg-nolan —
+ * `lang IN (X, 'lg-nolan')` — for EVERY locator. No slot lookup decides it:
+ * the writer files an lg-nolan frame row for any slot holding the main's
+ * frames, a declared one or an undeclared live one (dataframe_slots.ts
+ * readMainSlots), and a main with no frame lane simply has no lg-nolan row of
+ * it to add (a non-translatable main's X IS lg-nolan).
+ */
+function laneClause(param: string): string {
+	return `lang IN (${param}, 'lg-nolan')`;
+}
+
+/**
+ * THE TIMELINE OF A TRANSLITERABLE MAIN (`with_lang_versions`, e.g. rsc85 in
+ * rsc197; and a non-translatable component_iri — every main whose saves keep
+ * the request lang without being translatable, resolver.ts
+ * savesInRequestLang): the tool asks for it in `lg-nolan` (its context lang),
+ * but its versions live in their language lanes (Augustus lg-nolan, Αύγουστος
+ * lg-ell). Such a locator is read in the request's DATA language — lang IN
+ * (data lang, 'lg-nolan'): the base, the frames and the version of the
+ * language the curator works in. A COPY of the scope; the caller's SQO is
+ * never mutated.
+ */
+async function timelineScope(sqo: Record<string, unknown>): Promise<Record<string, unknown>> {
+	if (!Array.isArray(sqo.filter_by_locators)) return sqo;
+	const dataLang = currentDataLang();
+	const locators: unknown[] = [];
+	for (const locator of sqo.filter_by_locators as Record<string, unknown>[]) {
+		locators.push((await readsInDataLang(locator)) ? { ...locator, lang: dataLang } : locator);
+	}
+	return { ...sqo, filter_by_locators: locators };
+}
+
+/** Whether a locator asks, in lg-nolan, for a non-translatable main that keeps language versions. */
+async function readsInDataLang(locator: Record<string, unknown>): Promise<boolean> {
+	const { tipo, lang } = locator;
+	if (lang !== 'lg-nolan' || typeof tipo !== 'string' || tipo === '') return false;
+	if (await getTranslatableByTipo(tipo)) return false;
+	const model = await getModelByTipo(tipo);
+	return model !== null && (await savesInRequestLang(tipo, model));
+}
+
+/**
  * Build the WHERE for a TM query. `filter_by_locators` → per-component history
  * (OR of locator groups). Else a `tipo` column filter → the record-snapshot LIST
  * (WHERE tipo = q, matching PHP). Returns whether it is the record-list surface
@@ -210,7 +267,7 @@ function buildTmWhere(sqo: Record<string, unknown>): {
 			}
 			if (typeof locator.lang === 'string' && locator.lang !== '') {
 				params.push(locator.lang);
-				clauses.push(`lang = $${params.length}`);
+				clauses.push(laneClause(`$${params.length}`));
 			}
 			return `(${clauses.join(' AND ')})`;
 		});
@@ -339,22 +396,44 @@ interface TmRawRow {
  * the opposite end.
  */
 async function tmCount(whereSql: string, params: unknown[]): Promise<number> {
-	await ensureRecordGenerationTable();
+	await ensureTmHistoryReady();
 	const ttl = config.ops.tmCountCacheTtlMs;
 	const bare = whereSql === 'true';
 	if (bare && ttl > 0) {
 		const hit = tmBareCountCache.get('bare');
 		if (hit !== undefined && Date.now() - hit.at < ttl) return hit.value;
 	}
-	const rows = (await sql.unsafe(
-		`SELECT COUNT(*)::int AS c FROM matrix_time_machine WHERE ${withTmEpoch(whereSql)}`,
-		params,
-	)) as { c: number }[];
+	const rows = (await sql.unsafe(tmHistoryCountSql(whereSql), params)) as { c: number }[];
 	const value = Number(rows[0]?.c ?? 0);
 	if (bare && ttl > 0) {
 		tmBareCountCache.set('bare', { value, at: Date.now() });
 	}
 	return value;
+}
+
+/**
+ * The VISIBLE-history COUNT of a TM where-shape, as TOTAL − HIDDEN in ONE
+ * statement (one snapshot, so the two halves can never disagree about a
+ * concurrent insert).
+ *
+ * WHY NOT ONE COUNT UNDER withTmHistory. `tm_role` is in no full index, so
+ * the `tm_role IS NULL` half forces the count onto the heap: the bare dd15 count
+ * measured 15,020 ms (Parallel Seq Scan + Nested Loop Anti Join) against
+ * 3,072 ms index-only before the column existed (29.45M rows, dedalo_mib_v7,
+ * TM count TTL 0 = every list open pays it). Here the TOTAL keeps the
+ * epoch-narrowed index-only count it always had, and the HIDDEN half
+ * (`tm_role IS NOT NULL`) is index-only on the partial
+ * matrix_time_machine_tm_role_hidden_idx (migration 0011), which holds only the
+ * undo-log rows. Exact: every row is either visible (NULL) or hidden, and both
+ * halves carry the same scope and epoch. Plan shape pinned by
+ * tm_count_index_only_plan_native.
+ *
+ * EXPORTED for that gate, which EXPLAINs the exact emitted statement.
+ */
+export function tmHistoryCountSql(whereSql: string): string {
+	return `SELECT ((SELECT COUNT(*) FROM matrix_time_machine WHERE ${withTmEpoch(whereSql)})
+	              - (SELECT COUNT(*) FROM matrix_time_machine
+	                  WHERE ${withTmEpoch(whereSql)} AND ${tmHiddenPredicate()}))::int AS c`;
 }
 
 /**
@@ -366,15 +445,23 @@ async function tmCount(whereSql: string, params: unknown[]): Promise<number> {
 async function queryTmRows(
 	sqo: Record<string, unknown>,
 ): Promise<{ rows: TmRow[]; isRecordList: boolean }> {
-	// The epoch predicate below names the generation store; ensure it exists
-	// before any of the four query shapes runs (see record_generation.ts).
-	await ensureRecordGenerationTable();
+	// Every shape below is narrowed by withTmHistory: the generation epoch AND
+	// `tm_role IS NULL`, so a bulk run's undo-log rows (hidden BEFORE images,
+	// birth markers, cascade snapshots) never reach the list, the count, the
+	// component history or the dd1371 filters. The epoch half names the
+	// generation store; ensure it exists first (see record_generation.ts).
+	await ensureTmHistoryReady();
 	// TWO scoping surfaces (see buildTmWhere): the per-record component HISTORY
 	// (filter_by_locators) and the section-record LIST (the tool_time_machine
 	// browse: one row per record-level snapshot, tipo = caller section_tipo — PHP
 	// applies the tipo column filter, WHERE tipo = q). A dd578 USER relation filter
 	// is still IGNORED (PHP ignores it; tm_relation_filter_differential pins that).
-	const { whereSql, params: scopeParams, isRecordList, rangeFilter } = buildTmWhere(sqo);
+	const {
+		whereSql,
+		params: scopeParams,
+		isRecordList,
+		rangeFilter,
+	} = buildTmWhere(await timelineScope(sqo));
 
 	// Order: dd15's list columns ARE matrix_time_machine's own flat columns, so a
 	// header-click sort maps 1:1 to a real column (PHP search_tm orders over the
@@ -450,7 +537,7 @@ async function queryTmRows(
 			`SELECT tm.id, tm.section_id, tm.section_tipo, tm.tipo, tm.lang, tm.timestamp::text AS timestamp, tm.user_id, tm.bulk_process_id, tm.data
 			 FROM matrix_time_machine tm
 			 JOIN (SELECT id FROM (SELECT id FROM matrix_time_machine
-			                       WHERE ${withTmEpoch(whereSql)}
+			                       WHERE ${withTmHistory(whereSql)}
 			                       OFFSET 0) scoped
 			       ORDER BY id ${direction}
 			       LIMIT $${barrierParams.length - 1} OFFSET $${barrierParams.length}) page ON page.id = tm.id
@@ -478,13 +565,7 @@ async function queryTmRows(
 		}
 		const lateParams = [...scopeParams, effLimit, effOffset];
 		const rows = (await sql.unsafe(
-			`SELECT tm.id, tm.section_id, tm.section_tipo, tm.tipo, tm.lang, tm.timestamp::text AS timestamp, tm.user_id, tm.bulk_process_id, tm.data
-			 FROM matrix_time_machine tm
-			 JOIN (SELECT id FROM matrix_time_machine
-			       WHERE ${withTmEpoch(whereSql)}
-			       ORDER BY id ${effDirection}
-			       LIMIT $${lateParams.length - 1} OFFSET $${lateParams.length}) page ON page.id = tm.id
-			 ORDER BY tm.id ${effDirection}`,
+			tmLatePageSql(whereSql, effDirection, lateParams.length),
 			lateParams,
 		)) as TmRow[];
 		// The flip fetched the page in the opposite order; restore the requested one.
@@ -495,12 +576,33 @@ async function queryTmRows(
 	const rows = (await sql.unsafe(
 		`SELECT id, section_id, section_tipo, tipo, lang, timestamp::text AS timestamp, user_id, bulk_process_id, data
 		 FROM matrix_time_machine tm
-		 WHERE ${withTmEpoch(whereSql, 'tm')}
+		 WHERE ${withTmHistory(whereSql, 'tm')}
 		 ORDER BY ${orderSql}
 		 LIMIT $${params.length - 1} OFFSET $${params.length}`,
 		params,
 	)) as TmRow[];
 	return { rows, isRecordList };
+}
+
+/**
+ * THE DEEP-PAGE LATE ROW LOOKUP (see queryTmRows): the page of ids found on a
+ * narrow index walk, joined back for the wide `data`. `paramCount` is the bind
+ * list's length: its last two are LIMIT and OFFSET.
+ *
+ * The id walk carries `withTmHistory` (`tm_role IS NULL`), which no FULL index
+ * holds — it stays index-only on the PARTIAL
+ * `matrix_time_machine_history_visible_idx` (migration 0012), whose predicate
+ * it implies. Without it the walk read the heap: 8.9-10.0 s vs 4.1 s at OFFSET
+ * 5M on 29.06M rows. Pinned by tm_count_index_only_plan_native.
+ */
+export function tmLatePageSql(whereSql: string, direction: string, paramCount: number): string {
+	return `SELECT tm.id, tm.section_id, tm.section_tipo, tm.tipo, tm.lang, tm.timestamp::text AS timestamp, tm.user_id, tm.bulk_process_id, tm.data
+			 FROM matrix_time_machine tm
+			 JOIN (SELECT id FROM matrix_time_machine
+			       WHERE ${withTmHistory(whereSql)}
+			       ORDER BY id ${direction}
+			       LIMIT $${paramCount - 1} OFFSET $${paramCount}) page ON page.id = tm.id
+			 ORDER BY tm.id ${direction}`;
 }
 
 /** The envelope-entry extras every dd15 row carries (client-consumed; byte-gated). */
@@ -557,6 +659,97 @@ const TM_CELL_DECORATORS: Readonly<
 };
 
 /**
+ * The dataframe slots of a per-component row's main, for the COMPOSED-row
+ * split in buildTmSectionRecord (the main's items under its tipo, each slot's
+ * frames under the slot). Only an ARRAY snapshot can carry frames; a
+ * whole-record snapshot (an object) has none to attribute.
+ */
+async function snapshotDeclaredSlots(row: TmRow): Promise<string[]> {
+	return Array.isArray(row.data) ? await resolveDataframeSlotTipos(row.tipo) : [];
+}
+
+/**
+ * THE VALUE CELL OF A FRAME ROW (two lanes): a per-component lg-nolan row of a
+ * main whose value lives in LANGUAGE lanes (savesInRequestLang — translatable,
+ * transliterable, component_iri) and that holds no lg-nolan item carries only
+ * frames, so a list read straight from it shows every frame edit as "value
+ * emptied". Its value cell is the view lane AS OF the row (readLaneValueAt,
+ * under the main's real lane law), the same state the preview shows. Every
+ * other row keeps its own snapshot (a transliterable main's lg-nolan base shows
+ * as recorded).
+ */
+async function graftFrameRowValue(
+	record: MatrixRecord,
+	row: TmRow,
+	viewLang: string,
+): Promise<void> {
+	const model = await frameRowModel(row, viewLang);
+	if (model === null) return;
+	const law = {
+		sliced: isLangSlicedModel(model),
+		translatable: await getTranslatableByTipo(row.tipo),
+	};
+	const coords = {
+		sectionTipo: row.section_tipo,
+		sectionId: row.section_id,
+		componentTipo: row.tipo,
+	};
+	const asOf = await readLaneValueAt(coords, viewLang, row.id, law);
+	if (asOf.recorded) injectComponentData(record, row.tipo, model, asOf.value ?? emptyKeyOf(law));
+}
+
+/** The model of a language-lane main whose frames-only lg-nolan row is viewed in a language; null otherwise. */
+async function frameRowModel(row: TmRow, viewLang: string): Promise<string | null> {
+	if (!isFrameRowView(row, viewLang) || holdsNolanItem(row.data)) return null;
+	const model = await getModelByTipo(row.tipo);
+	if (model === null || !isMainValueModel(model)) return null;
+	return (await savesInRequestLang(row.tipo, model)) ? model : null;
+}
+
+/** Whether a row's main part holds an item tagged lg-nolan (a value of the lg-nolan lane). */
+function holdsNolanItem(data: unknown): boolean {
+	const { main } = splitComposed(data);
+	return (
+		Array.isArray(main) && main.some((item) => (item as { lang?: unknown } | null)?.lang === NOLAN)
+	);
+}
+
+/**
+ * THE CELL LANG OF A LANGUAGE-LANE LITERAL THAT IS NOT TRANSLATABLE: a
+ * component_iri keeps its value in the request language's lane whatever its
+ * flag (savesInRequestLang; component_data.ts resolveComponentValue honours the
+ * requested lang for it), but emitDdoData nolan-forces a non-translatable ddo
+ * — and the client echoes the column context's lg-nolan — so its cell would
+ * read the (empty) lg-nolan slice of every row. Its cell is pinned to the
+ * audit lang. Every other model keeps the ddo's own lang (a non-translatable
+ * string is nolan-forced by its reader anyway).
+ */
+function laneCellLang(model: string, cellLang: string): { lang?: string } {
+	return model === 'component_iri' ? { lang: cellLang } : {};
+}
+
+/** A per-component (array snapshot) lg-nolan row, read in a language lane. */
+function isFrameRowView(row: TmRow, viewLang: string): boolean {
+	return row.lang === NOLAN && viewLang !== NOLAN && viewLang !== '' && Array.isArray(row.data);
+}
+
+/** A main model whose value lands in a jsonb column (never a dataframe slot, never section_id). */
+function isMainValueModel(model: string): boolean {
+	return model !== 'component_dataframe' && hasJsonbColumn(model);
+}
+
+/** The value an emptied key shows with: `[]` for a sliced model, `null` otherwise. */
+function emptyKeyOf(law: { sliced: boolean }): unknown {
+	return law.sliced ? [] : null;
+}
+
+/** Whether a model stores into a matrix jsonb column (component_section_id does not). */
+function hasJsonbColumn(model: string): boolean {
+	const column = getColumnNameByModel(model);
+	return column !== null && MATRIX_JSONB_COLUMNS.includes(column as MatrixJsonbColumn);
+}
+
+/**
  * Emit ONE dd15 row's data items — one generic cell per requested ddo, resolved
  * from the virtual dd15 record that `tm_record.ts` materializes for the row.
  *
@@ -592,7 +785,12 @@ async function emitTmRow(
 	// note) AND the section's own components in the record-snapshot list. It is
 	// built once per row now rather than lazily: every branch needs it.
 	// TmRow is TimeMachineRow minus the parity `dataText` twin (unused here).
-	const tmRecord = await buildTmSectionRecord(row as unknown as TimeMachineRow, lang);
+	const tmRecord = await buildTmSectionRecord(
+		row as unknown as TimeMachineRow,
+		lang,
+		await snapshotDeclaredSlots(row),
+	);
+	await graftFrameRowValue(tmRecord, row, lang);
 
 	// THE AUDIT-LANG RULE. A snapshot renders in the language it was RECORDED in,
 	// never the language the menu happens to be on — `matrix_time_machine` carries
@@ -646,7 +844,7 @@ async function emitTmRow(
 		const cellLang = tipo === TIPO_NOTES ? lang : snapshotLang;
 		const clientDdo = (ddoByTipo.get(tipo) ?? { tipo }) as Record<string, unknown>;
 		// LIST mode is the whole point: it is what makes every emit hook fire.
-		const cellDdo = { ...clientDdo, tipo, mode: 'list' };
+		const cellDdo = { ...clientDdo, tipo, mode: 'list', ...laneCellLang(model, cellLang) };
 
 		const before = emission.items.length;
 		await emitDdo(
@@ -711,7 +909,8 @@ export const tmReadSource: SectionReadSource = {
 	},
 
 	async count(sqo: Sqo): Promise<number> {
-		const where = buildTmWhere(sqo as Record<string, unknown>);
+		const scope = sqo as Record<string, unknown>;
+		const where = buildTmWhere(await timelineScope(scope));
 		return tmCount(where.whereSql, where.params);
 	},
 

@@ -230,6 +230,18 @@ const TIME_MACHINE: MatrixTablePolicy = {
 				'WRITE-PATH index, not a search one — that is why its scan count dwarfs every other index here. The save/delete backfill probe `WHERE section_tipo=? AND section_id=? AND tipo=? AND lang=? LIMIT 1` (observers.ts, delete_record.ts x2) binds all four leading columns, so this is the only index that answers it index-only. Measured on es1/1: MISS (the case the probe exists to detect) 1.3 ms with it, 24 941 ms without — a 25 s stall on a save. Also scopes the portalize TM relocation UPDATE. Was classified "review" (operator opt-in to DROP) on scan-count-vs-size grounds; the audit that asked its own question — "confirm no history-search shape needs it" — found the consumer is the write path.',
 		},
 		{
+			signature: 'using btree (section_tipo, section_id desc, id desc) where (tm_role is not null)',
+			disposition: 'keep',
+			reason:
+				'The HIDDEN half of every dd15 history count (read_tm.ts tmHistoryCountSql: total − hidden). Partial on tm_role IS NOT NULL — only a bulk run’s undo-log rows — and carrying (section_tipo, section_id, id), so the hidden count and its generation-epoch anti-join are index-only. Without it the history count must filter tm_role on the heap: the bare count measured 15.0 s (Parallel Seq Scan) against 3.1 s index-only on 29.45M rows. Shipped by migration 0011_tm_role_hidden_index.sql. Cold on an install with no bulk run — cold ≠ unused.',
+		},
+		{
+			signature: 'using btree (section_tipo, section_id desc, id desc) where (tm_role is null)',
+			disposition: 'keep',
+			reason:
+				'The record-history index restricted to VISIBLE rows — its predicate is withTmHistory’s `tm_role IS NULL` literally, so every narrowed history reader implies it and walks it index-only with no per-row tm_role test. Load-bearing for the deep-page LATE ROW LOOKUP (read_tm.ts tmLatePageSql): with tm_role in no full index its id walk left the index-only path — measured 8.9-10.0 s (Parallel Seq Scan + external sort) against 4.1 s on this index, bare browse OFFSET 5M, 29.06M rows; 29 ms / 49 ms for deep pages of one record / one section. An INCLUDE (tm_role) twin was index-only only with seq scans disabled. With the hidden partial above it partitions the table by visibility; the full record-history index stays for the unnarrowed readers. Shipped by migration 0012_tm_history_visible_index.sql.',
+		},
+		{
 			signature: 'using btree (section_id)',
 			disposition: 'keep',
 			reason:

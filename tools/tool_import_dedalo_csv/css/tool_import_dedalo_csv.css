@@ -322,13 +322,6 @@
   margin-left: 0.75rem;
   margin-bottom: 0.5rem;
 }
-.wrapper_tool.tool_import_dedalo_csv > .content_data > .submit_container > label > input {
-  margin-right: 0.25rem;
-}
-.wrapper_tool.tool_import_dedalo_csv > .content_data > .submit_container > .append_tm_warning {
-  margin-left: 1rem;
-  padding: 0.25rem 0.5rem;
-}
 .wrapper_tool.tool_import_dedalo_csv > .content_data > .process_info_container {
   display: flex;
   justify-content: center;

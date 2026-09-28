@@ -211,3 +211,24 @@ batch row. That predates this entry and is unchanged by it — the merge now bou
 its consequence to the languages that older snapshot itself names, instead of the
 whole key — but the selection is still wrong for a multilingual component and is
 carried as open work.
+
+## Addendum 2026-09-27 — the Residual is closed
+
+A run recorded after WC-2026-09-27-bulk-revert-undo-log is reverted from its own BEFORE
+images, keyed per language for a lang-sliced model: no history walk at all. A run recorded
+before it takes the legacy path, whose `preBulkState` walk is now filtered by the key's
+language for a lang-sliced model, takes the row older than the run's EARLIEST row (never an
+interleaved one), and restores through `restoreRegion` (other languages kept). The
+wrong-language selection carried above as open work is therefore gone on both paths.
+`apply_value` is unchanged by this addendum, except for the orphan rule below.
+
+## Addendum 2026-09-27 (b) — a snapshot that carries lang-less items owns them
+
+The first deviation above (a live lang orphan is KEPT) assumed every snapshot is a strict
+one-language slice with no orphan in it. A bulk run's visible after-row
+(WC-2026-09-27-bulk-revert-undo-log §2) is the key's REGION instead — every item that is not
+another language's, lang-less items included — so keeping the live orphans AND appending the
+snapshot's wrote each orphan twice. `mergeRestoredLangSlice` now drops the live lang-less
+items exactly when the restored snapshot carries lang-less items of its own (they are the
+same region); a snapshot without any keeps the live orphans as before. Gate:
+`bulk_revert_undo_native` "apply_value of its after-row: the orphan is stored ONCE".

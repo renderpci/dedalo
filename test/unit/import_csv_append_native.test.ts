@@ -92,7 +92,6 @@ let targetC = 0;
 
 interface ImportOptions {
 	file?: string;
-	timeMachine?: boolean;
 }
 
 async function importCsv(
@@ -108,7 +107,6 @@ async function importCsv(
 		userId: USER,
 		background: false,
 		options: {
-			time_machine_save: options.timeMachine ?? true,
 			files: [
 				{ file, section_tipo: SECTION, bulk_process_label: file, ar_columns_map: columnsMap },
 			],
@@ -389,16 +387,28 @@ describe('translatable input_text append', () => {
 	 * THE TM LAW OF APPEND: an append save audits exactly like a replace save —
 	 * ONE ordinary row per language it wrote, tagged with that language, holding
 	 * that language's persisted slice, attributed to the run. No extra row of
-	 * any kind (a pre-append baseline, a composed frame snapshot) — even over a
-	 * value with NO history. A re-import that changes nothing writes none.
+	 * any kind (a pre-append baseline) — even over a value with NO history. (A
+	 * main WITH dataframe slots composes its slots' frames into that same row —
+	 * relations/dataframe_slots.ts; this component has none.) A re-import that
+	 * changes nothing writes none.
 	 */
 	test('time machine: one normal row per written language, like replace; a no-op writes none', async () => {
 		const tmOf = async (sectionId: number) =>
 			(await sql.unsafe(
-				`SELECT lang, data, bulk_process_id FROM matrix_time_machine
-				 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3 ORDER BY lang`,
+				`SELECT lang, data, bulk_process_id, tm_role FROM matrix_time_machine
+				 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3 ORDER BY lang, id`,
 				[SECTION, sectionId, TEXT],
-			)) as { lang: string; data: Item[]; bulk_process_id: number | null }[];
+			)) as {
+				lang: string;
+				data: Item[];
+				bulk_process_id: number | null;
+				tm_role: number | null;
+			}[];
+		// The VISIBLE history (tm_role NULL) is the law above; the run's hidden
+		// undo-log BEFORE rows (tm_role 1, WC-2026-09-27-bulk-revert-undo-log)
+		// ride beside it and are pinned separately.
+		const visibleOf = async (sectionId: number) =>
+			(await tmOf(sectionId)).filter((row) => row.tm_role === null);
 		const cell = langCell({ 'lg-spa': ['dos'], 'lg-eng': ['two'] });
 		const seedValue = [
 			{ id: 1, lang: 'lg-spa', value: 'uno' },
@@ -428,11 +438,18 @@ describe('translatable input_text append', () => {
 			[appendHost, appended.bulk_process_id],
 			[replaceHost, replaced.bulk_process_id],
 		] as const) {
-			const rows = await tmOf(host);
+			const rows = await visibleOf(host);
 			expect(rows.map((row) => row.lang)).toEqual(['lg-eng', 'lg-spa']);
 			for (const row of rows) {
 				expect(row.bulk_process_id).toBe(mustGet(run, 'run bulk id'));
 				expect(row.data).toEqual(await storedSlice(host, row.lang));
+			}
+			// one hidden BEFORE per written language: that language's seed slice
+			const before = (await tmOf(host)).filter((row) => row.tm_role === 1);
+			expect(before.map((row) => row.lang)).toEqual(['lg-eng', 'lg-spa']);
+			for (const row of before) {
+				expect(row.bulk_process_id).toBe(mustGet(run, 'run bulk id'));
+				expect(row.data).toEqual(seedValue.filter((item) => item.lang === row.lang));
 			}
 		}
 		// the append kept the seed beside the new items; the replace did not
@@ -445,7 +462,7 @@ describe('translatable input_text append', () => {
 			col(TEXT, 'component_input_text', 'append'),
 		]);
 		expect(again.failed).toEqual([]);
-		expect(await tmOf(appendHost)).toHaveLength(2);
+		expect(await tmOf(appendHost)).toHaveLength(4);
 	}, 60000);
 });
 
@@ -1036,11 +1053,11 @@ describe('bulk revert of an append run (time machine on)', () => {
 		const portalBefore = await stored(host, 'relation', PORTAL);
 		const textBefore = await stored(host, 'string', TEXT);
 
-		const appended = await importCsv(
-			`section_id;${PORTAL};${TEXT}\n${host};${targetB};added\n`,
-			[KEY, col(PORTAL, 'component_portal', 'append'), col(TEXT, 'component_input_text', 'append')],
-			{ timeMachine: true },
-		);
+		const appended = await importCsv(`section_id;${PORTAL};${TEXT}\n${host};${targetB};added\n`, [
+			KEY,
+			col(PORTAL, 'component_portal', 'append'),
+			col(TEXT, 'component_input_text', 'append'),
+		]);
 		expect(appended.failed).toEqual([]);
 		expect(await stored(host, 'relation', PORTAL)).toHaveLength(2);
 		expect(await stored(host, 'string', TEXT)).toHaveLength(2);
@@ -1062,7 +1079,7 @@ describe('bulk revert of an append run (time machine on)', () => {
 });
 
 describe('bulk revert of a legacy-envelope frame on a DUPLICATE main item', () => {
-	test('the frame has its own TM row, so the revert removes it', async () => {
+	test("the frame rides the MAIN's composed pair, so the revert removes it", async () => {
 		const host = await newRecord();
 		await importCsv(`section_id;${TEXT}\n${host};seed\n`, [KEY, col(TEXT, 'component_input_text')]);
 		const seeded = (await stored(host, 'string', TEXT)) as Item[];
@@ -1082,7 +1099,6 @@ describe('bulk revert of a legacy-envelope frame on a DUPLICATE main item', () =
 		const appended = await importCsv(
 			`section_id;${TEXT}\n${host};${q(JSON.stringify({ dedalo_data: envelope }))}\n`,
 			[KEY, col(TEXT, 'component_input_text', 'append')],
-			{ timeMachine: true },
 		);
 		expect(appended.failed).toEqual([]);
 		// the main item was a duplicate (no main write) …

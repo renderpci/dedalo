@@ -73,7 +73,6 @@ describe('tool_import_dedalo_csv module', () => {
 		// The exact wire the client posts (render_tool_import_dedalo_csv fn_import).
 		const options = {
 			background_running: true,
-			time_machine_save: true,
 			files: [
 				{ file: 'a.csv', section_tipo: 'test2', ar_columns_map: [] },
 				{ file: 'b.csv', section_tipo: SECTION, ar_columns_map: [] },
@@ -204,7 +203,6 @@ describe('import_files writes the mapped columns (scratch record, cleaned up)', 
 			background: false,
 			// The exact payload render_tool_import_dedalo_csv posts.
 			options: {
-				time_machine_save: true,
 				files: [
 					{
 						file: CSV,
@@ -247,15 +245,29 @@ describe('import_files writes the mapped columns (scratch record, cleaned up)', 
 		expect(rows.length).toBe(1);
 		expect(JSON.stringify(rows[0]?.items)).toContain('imported by the csv tool');
 
-		// The TM row is attributed to the dd800 run — this is what makes the whole
-		// import revertable as ONE operation.
+		// The record's time-machine rows are attributed to the dd800 run — this is
+		// what makes the whole import revertable as ONE operation — and they are
+		// the run's UNDO LOG (WC-2026-09-27-bulk-revert-undo-log), id ASC: the
+		// BIRTH marker (role 3, tipo = the section: the import created the
+		// record; its data is the birth image, never absent), then the
+		// component's hidden BEFORE (role 1, the key was absent → SQL NULL) and
+		// its visible after-row (role NULL, what was stored).
 		const tm = (await sql.unsafe(
-			`SELECT bulk_process_id FROM matrix_time_machine
-			  WHERE section_tipo = 'test3' AND section_id = $1 AND tipo = 'test52'`,
+			`SELECT tipo, bulk_process_id, tm_role, data IS NULL AS absent FROM matrix_time_machine
+			  WHERE section_tipo = 'test3' AND section_id = $1 ORDER BY id ASC`,
 			[SCRATCH_ID],
-		)) as { bulk_process_id: number | null }[];
-		expect(tm.length).toBeGreaterThan(0);
-		expect(tm[0]?.bulk_process_id).toBe(report.bulk_process_id as number);
+		)) as {
+			tipo: string;
+			bulk_process_id: number | null;
+			tm_role: number | null;
+			absent: boolean;
+		}[];
+		expect(tm.map((row) => [row.tipo, row.tm_role, row.absent])).toEqual([
+			['test3', 3, false],
+			['test52', 1, true],
+			['test52', null, false],
+		]);
+		for (const row of tm) expect(row.bulk_process_id).toBe(report.bulk_process_id as number);
 	});
 
 	test('a flat human-authored DMY date IMPORTS (the capability the port was missing)', async () => {

@@ -119,6 +119,32 @@ describe.if(hasPhpCredentials())(
 					for (const row of phpLabels) expect(ADDED.has(String(row.name))).toBe(false);
 					tsContext.labels = kept;
 				}
+				if (toolName === 'tool_time_machine') {
+					// Labels the register grew after the final harvest. Additive only,
+					// EXACT set, same law as tool_export above: each name is ledgered —
+					//   apply_value_confirm_msg: WC-2026-08-29-tm-apply-value-confirm-label
+					//   bulk_revert_summary, bulk_revert_not_exact,
+					//   bulk_revert_skipped_heading, bulk_revert_inexact_heading:
+					//     WC-2026-09-27-bulk-revert-undo-log (§ Client summary)
+					// A DB whose tools were registered before a name landed is red here
+					// until they are registered again (bun run test:db:setup).
+					const ADDED = new Set([
+						'apply_value_confirm_msg',
+						'bulk_revert_summary',
+						'bulk_revert_not_exact',
+						'bulk_revert_skipped_heading',
+						'bulk_revert_inexact_heading',
+					]);
+					type LabelRow = { name?: unknown };
+					const tsLabels = tsContext.labels as LabelRow[];
+					const phpLabels = phpContext.labels as LabelRow[];
+					expect(Array.isArray(tsLabels)).toBe(true);
+					expect(Array.isArray(phpLabels)).toBe(true);
+					const tsNames = new Set(tsLabels.map((row) => String(row.name)));
+					expect([...ADDED].filter((name) => !tsNames.has(name))).toEqual([]);
+					for (const row of phpLabels) expect(ADDED.has(String(row.name))).toBe(false);
+					tsContext.labels = tsLabels.filter((row) => !ADDED.has(String(row.name)));
+				}
 				if (toolName === 'tool_lang') {
 					// WC-2026-08-19-tool-lang-translator-engine-type-and-browser-transformer:
 					// the frozen list predates the contract. Assert the frozen side IS

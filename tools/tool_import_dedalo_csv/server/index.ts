@@ -24,6 +24,7 @@ import { config } from '../../../src/config/config.ts';
 import { getImportAppendPolicy } from '../../../src/core/components/registry.ts';
 import type { ImportAppendPolicy } from '../../../src/core/components/types.ts';
 import { AUDIT_TIPOS, BULK_PROCESS_TIPOS } from '../../../src/core/concepts/section.ts';
+import { withTransaction } from '../../../src/core/db/postgres.ts';
 import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import { sanitizeSegment } from '../../../src/core/media/ingest/add_file.ts';
 import { assertTestMediaRoot } from '../../../src/core/media/test_media_root.ts';
@@ -33,6 +34,7 @@ import { getModelByTipo, getTranslatableByTipo } from '../../../src/core/ontolog
 import { currentDataLang } from '../../../src/core/resolve/request_lang.ts';
 import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
 import { saveComponentData } from '../../../src/core/section/record/save_component.ts';
+import { withLiveBulkRun } from '../../../src/core/tools/bulk_run_registry.ts';
 import {
 	assertCsvStructure,
 	type CsvAnalysis,
@@ -544,31 +546,42 @@ async function resolveMappedColumns(
 }
 
 /**
- * The dd800 record that owns this import run. Every TM row the run writes is
- * stamped with its id, so the whole import can be reverted as ONE operation.
- * Created BEFORE any data row is touched — a failure here fails the file rather
- * than importing unattributably.
+ * The dd800 record that owns this import run. Every save the run makes is
+ * attributed to its id (its undo pair + visible TM row), so the whole import
+ * can be reverted as ONE operation. Created BEFORE any data row is touched — a
+ * failure here fails the file rather than importing unattributably — and ATOMIC:
+ * the row, its file and its label are ONE transaction, so a refused label
+ * leaves no orphan dd800 in the operator's Processes list (the twin of
+ * import_execute's mint).
  */
 async function createBulkProcessRecord(
 	fileName: string,
 	label: string,
 	userId: number,
 ): Promise<number> {
-	const bulkProcessId = await createSectionRecord(BULK_PROCESS_TIPOS.section, userId);
-	for (const [tipo, value] of [
-		[BULK_PROCESS_TIPOS.file, fileName],
-		[BULK_PROCESS_TIPOS.label, label],
-	] as const) {
-		await saveComponentData({
-			componentTipo: tipo,
-			sectionTipo: BULK_PROCESS_TIPOS.section,
-			sectionId: bulkProcessId,
-			lang: 'lg-nolan',
-			changedData: [{ action: 'set_data', id: null, value: [{ value }] }],
-			userId,
-		});
-	}
-	return bulkProcessId;
+	return await withTransaction(async () => {
+		const bulkProcessId = await createSectionRecord(BULK_PROCESS_TIPOS.section, userId);
+		for (const [tipo, value] of [
+			[BULK_PROCESS_TIPOS.file, fileName],
+			[BULK_PROCESS_TIPOS.label, label],
+		] as const) {
+			const outcome = await saveComponentData({
+				componentTipo: tipo,
+				sectionTipo: BULK_PROCESS_TIPOS.section,
+				sectionId: bulkProcessId,
+				lang: 'lg-nolan',
+				changedData: [{ action: 'set_data', id: null, value: [{ value }] }],
+				userId,
+			});
+			if (outcome.ok === false) {
+				throw new DedaloError('record.save_failed', {
+					message: `the dd800 run record was refused: ${outcome.message}`,
+					coordinates: { section_tipo: BULK_PROCESS_TIPOS.section, tipo },
+				});
+			}
+		}
+		return bulkProcessId;
+	});
 }
 
 /**
@@ -755,7 +768,7 @@ async function validateImport(ctx: ToolActionContext): Promise<ToolResponse> {
 
 /**
  * import_files: the client posts a BATCH — options.files[] = {file, section_tipo,
- * ar_columns_map, bulk_process_label} + time_machine_save. Each file carries its
+ * ar_columns_map, bulk_process_label}. Each file carries its
  * own section target and column map, so the write gate is per file; it has already
  * run in the dispatcher ('section_list' spec below), i.e. BEFORE the background
  * fork, where a denial is still observable to the caller.
@@ -766,10 +779,12 @@ async function validateImport(ctx: ToolActionContext): Promise<ToolResponse> {
 async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 	const files = Array.isArray(ctx.options.files) ? (ctx.options.files as CsvImportFile[]) : [];
 	if (files.length === 0) throw invalidRequest('Missing files');
-	// PHP defaults an absent flag to NO time machine; we default to KEEPING the
-	// audit trail — losing the history of a 10k-row write is not a safe default for
-	// a caller that simply forgot the flag. The client always sends the checkbox.
-	const saveTm = ctx.options.time_machine_save !== false;
+	// NO TIME-MACHINE OPT-OUT (decision D1, WC bulk-revert-undo-log). PHP's
+	// `time_machine_save` flag is retired: every save of a run records its
+	// BEFORE/AFTER undo pair and a visible after-row, because a run that left no
+	// record of what it replaced could not be reverted exactly. A legacy caller
+	// still sending the flag is not refused — the flag can only ask for LESS
+	// history, and none is withheld — it is simply not read.
 	const publish = ctx.publishProgress ?? ((): void => {});
 
 	const report: ImportFileReport[] = [];
@@ -821,24 +836,27 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				ctx.userId,
 			);
 			const plan = await planCsvImport(rows.slice(1), columns, sectionTipo);
-			report.push(
-				await executeCsvImport({
+			const labels = await resolveColumnLabels(columns);
+			// The run is held in the active-run registry while it writes: a revert
+			// of it is refused until it ends (decision D5).
+			const fileReport = await withLiveBulkRun(bulkProcessId, () =>
+				executeCsvImport({
 					plan,
 					sectionTipo,
 					userId: ctx.userId,
 					bulkProcessId,
-					saveTm,
 					errors,
 					notices,
 					progress: {
 						file: fileName,
 						fileIndex: index + 1,
 						filesTotal: files.length,
-						labels: await resolveColumnLabels(columns),
+						labels,
 						publish,
 					},
 				}),
 			);
+			report.push(fileReport);
 		} catch (error) {
 			report.push({
 				ok: false,

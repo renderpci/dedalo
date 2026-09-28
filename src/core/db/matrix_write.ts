@@ -639,26 +639,18 @@ export async function insertMatrixRecordWithCounter(
 }
 
 /**
- * Insert a NEW section record with an EXPLICIT section_id (the PHP import /
- * explicit-id create path used by ontology provisioning: `<tld>0` node records
- * whose section_id is chosen by the caller, e.g. descriptor=1, model=2, typology
- * groupers). Mirrors insertMatrixRecordWithCounter's advisory lock so a
- * concurrent counter-driven insert on the same tipo can't race, and raises the
- * per-tipo counter to GREATEST(value, section_id) so a later auto-allocation
- * never reuses this id. By default throws if the (section_tipo, section_id)
- * row already exists (PHP create returns false → provisioning rolls back);
- * with options.onConflict='ignore' an existing row is TOLERATED (ON CONFLICT
- * DO NOTHING — no error, so an ambient transaction survives) and the given
- * sectionId is returned — the save path's lost-create race (S1-02: two saves
- * both find no row and both try to materialize it). Returns section_id.
+ * THE explicit-id INSERT statement (see insertMatrixRecordWithExplicitId): the
+ * advisory lock, the counter raise, the row. Answers the inserted section_id,
+ * or `undefined` when `tolerateConflict` let an existing row stand (ON CONFLICT
+ * DO NOTHING — no error, so an ambient transaction survives).
  */
-export async function insertMatrixRecordWithExplicitId(
+async function insertExplicitIdRow(
 	tableName: string,
 	sectionTipo: string,
 	sectionId: number,
 	jsonbColumns: Partial<Record<MatrixJsonbColumn, unknown>>,
-	options: { onConflict?: 'throw' | 'ignore' } = {},
-): Promise<number> {
+	tolerateConflict: boolean,
+): Promise<number | undefined> {
 	assertMatrixTable(tableName);
 	const counterTable = counterTableFor(tableName);
 
@@ -668,7 +660,12 @@ export async function insertMatrixRecordWithExplicitId(
 	const params: (string | number | RawJsonText)[] = [sectionTipo, sectionId];
 	let paramIndex = 3;
 	for (const [columnName, value] of Object.entries(jsonbColumns)) {
-		if (value === undefined) continue;
+		// null = SQL NULL (the column left out of the INSERT), as in every other
+		// matrix writer — never the jsonb literal `null`, which the row triggers
+		// (matrix_string_search_sync / matrix_relation_index_sync: jsonb_each)
+		// refuse. A TM snapshot carries `"string": null` for a record that never
+		// had a string value; undeleting one died on it.
+		if (value === undefined || value === null) continue;
 		if (!MATRIX_JSONB_COLUMNS.includes(columnName as MatrixJsonbColumn)) {
 			throw new DedaloError('internal.invariant', {
 				message: `insertMatrixRecordWithExplicitId: '${columnName}' is not a matrix jsonb column`,
@@ -681,7 +678,6 @@ export async function insertMatrixRecordWithExplicitId(
 		paramIndex++;
 	}
 
-	const tolerateConflict = options.onConflict === 'ignore';
 	const rows = (await sql.unsafe(
 		`WITH locked AS (
 			SELECT pg_advisory_xact_lock(hashtext($1))
@@ -707,7 +703,58 @@ export async function insertMatrixRecordWithExplicitId(
 		RETURNING section_id`,
 		params as (string | number | null)[],
 	)) as { section_id: number }[];
-	const inserted = rows[0]?.section_id;
+	return rows[0]?.section_id;
+}
+
+/**
+ * INSERT-ONLY: materialize a row at an explicit address the caller believes
+ * EMPTY, and say whether it did. `false` = the address is occupied, and the row
+ * standing there is untouched — never overwritten the way an upsert
+ * (updateMatrixRecord) would. The undelete of a record that must not land on
+ * whatever was created at its address since (the bulk revert's cascade
+ * undelete). Same lock, counter raise and no-epoch rule as
+ * insertMatrixRecordWithExplicitId (an undelete is the same record continuing).
+ */
+export async function insertMatrixRecordIfAbsent(
+	tableName: string,
+	sectionTipo: string,
+	sectionId: number,
+	jsonbColumns: Partial<Record<MatrixJsonbColumn, unknown>>,
+): Promise<boolean> {
+	return (
+		(await insertExplicitIdRow(tableName, sectionTipo, sectionId, jsonbColumns, true)) !== undefined
+	);
+}
+
+/**
+ * Insert a NEW section record with an EXPLICIT section_id (the PHP import /
+ * explicit-id create path used by ontology provisioning: `<tld>0` node records
+ * whose section_id is chosen by the caller, e.g. descriptor=1, model=2, typology
+ * groupers). Mirrors insertMatrixRecordWithCounter's advisory lock so a
+ * concurrent counter-driven insert on the same tipo can't race, and raises the
+ * per-tipo counter to GREATEST(value, section_id) so a later auto-allocation
+ * never reuses this id. By default throws if the (section_tipo, section_id)
+ * row already exists (PHP create returns false → provisioning rolls back);
+ * with options.onConflict='ignore' an existing row is TOLERATED (ON CONFLICT
+ * DO NOTHING — no error, so an ambient transaction survives) and the given
+ * sectionId is returned — the save path's lost-create race (S1-02: two saves
+ * both find no row and both try to materialize it). Returns section_id.
+ */
+export async function insertMatrixRecordWithExplicitId(
+	tableName: string,
+	sectionTipo: string,
+	sectionId: number,
+	jsonbColumns: Partial<Record<MatrixJsonbColumn, unknown>>,
+	options: { onConflict?: 'throw' | 'ignore' } = {},
+): Promise<number> {
+	const tolerateConflict = options.onConflict === 'ignore';
+	const inserted = await insertExplicitIdRow(
+		tableName,
+		sectionTipo,
+		sectionId,
+		jsonbColumns,
+		tolerateConflict,
+	);
 	if (inserted === undefined) {
 		if (tolerateConflict) {
 			// The row already exists (concurrent create won the race) — that is

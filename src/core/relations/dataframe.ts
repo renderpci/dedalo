@@ -367,15 +367,25 @@ export function dataframeTargetsOf(entries: readonly unknown[]): DataframeTarget
  * never a dangling locator and never a poisoned transaction. The wire cannot
  * carry that failure: the response envelope was built by then, so the client
  * grammar is "unlinked; the target's deletion follows the commit".
+ *
+ * BULK RUNS (WC …-bulk-revert-undo-log, M1). A save carrying a bulk id passes
+ * it here, and every delete door the cascade reaches is handed it: the record
+ * delete and the data wipe each write a role-4 twin of their whole-record
+ * snapshot carrying the run id (time_machine.ts recordBulkCascadeDelete), so
+ * the run's revert can find, undelete and report what its cascade destroyed.
+ * The media moves and the diffusion unpublish those deletes perform stay
+ * irreversible — the revert reports them as inexact (decision D3). A nested
+ * cascade (a deleted target's own hard frames) carries the same id.
  */
 export async function applyDataframeDeletePolicy(
 	policy: DataframeDeletePolicy,
 	targets: readonly DataframeTarget[],
 	userId: number,
+	bulkProcessId: number | null = null,
 ): Promise<void> {
 	if (policy === 'unlink' || targets.length === 0) return;
 	await assertFrameTargetWriteGrant(policy, targets, userId);
-	const run = (): Promise<void> => deleteDataframeTargets(policy, targets, userId);
+	const run = (): Promise<void> => deleteDataframeTargets(policy, targets, userId, bulkProcessId);
 	if (isInTransaction() && registerCommitAction(run)) return;
 	await run();
 }
@@ -423,6 +433,7 @@ async function deleteDataframeTargets(
 	policy: DataframeDeletePolicy,
 	targets: readonly DataframeTarget[],
 	userId: number,
+	bulkProcessId: number | null,
 ): Promise<void> {
 	// CONVENTIONS §2 rationale 1 (cycle): delete_record.ts reaches
 	// relations/save.ts (removeDataframeDataById), which imports this module.
@@ -434,10 +445,15 @@ async function deleteDataframeTargets(
 			// Both primitives are called BY NAME: the dd128 write census derives
 			// its door list from the call spelling, and a door hidden behind a
 			// variable is a door the census cannot judge.
+			// `undefined` keeps each door's own `now` default.
 			if (policy === 'delete_target_record') {
-				await deleteSectionRecord(target.section_tipo, target.section_id, userId);
+				await deleteSectionRecord(target.section_tipo, target.section_id, userId, undefined, {
+					bulkProcessId,
+				});
 			} else {
-				await deleteSectionData(target.section_tipo, target.section_id, userId);
+				await deleteSectionData(target.section_tipo, target.section_id, userId, undefined, {
+					bulkProcessId,
+				});
 			}
 		} catch (error) {
 			console.error(
@@ -457,7 +473,11 @@ async function deleteDataframeTargets(
  * snapshot's `relation` bag, inside its transaction; the deletes queue on the
  * commit lane like every other door.
  */
-export async function applyOwnFramePolicies(relationBag: unknown, userId: number): Promise<void> {
+export async function applyOwnFramePolicies(
+	relationBag: unknown,
+	userId: number,
+	bulkProcessId: number | null = null,
+): Promise<void> {
 	if (relationBag === null || typeof relationBag !== 'object') return;
 	for (const [slotTipo, entries] of Object.entries(relationBag as Record<string, unknown>)) {
 		if (!Array.isArray(entries) || entries.length === 0) continue;
@@ -465,6 +485,6 @@ export async function applyOwnFramePolicies(relationBag: unknown, userId: number
 		if (node?.model !== 'component_dataframe') continue;
 		const policy = dataframeDeletePolicyOf(node.properties);
 		if (policy === 'unlink') continue;
-		await applyDataframeDeletePolicy(policy, dataframeTargetsOf(entries), userId);
+		await applyDataframeDeletePolicy(policy, dataframeTargetsOf(entries), userId, bulkProcessId);
 	}
 }

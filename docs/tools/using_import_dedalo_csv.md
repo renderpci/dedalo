@@ -8,7 +8,7 @@ Import a CSV file into a section, creating or updating one record per row and co
 
 Most cataloguing corrections are faster in a spreadsheet than one record at a time. You export a section, fix the transcriptions, dates or codes in bulk, and bring the file back in. Because every row carries its own `section_id`, the records you edited are updated in place — nothing is duplicated.
 
-Concrete scenario: a numismatics team exports the *Types* section (`numisdata3`) with the export tool in the `dedalo_raw` format, cleans up the legend transcriptions and date ranges in a spreadsheet, and re-imports the file here. Each Type record is matched by its `section_id` and updated; empty cells clear the component they sit under (in the default *Replace* mode); and with the time-machine option left on, the whole batch stays reversible.
+Concrete scenario: a numismatics team exports the *Types* section (`numisdata3`) with the export tool in the `dedalo_raw` format, cleans up the legend transcriptions and date ranges in a spreadsheet, and re-imports the file here. Each Type record is matched by its `section_id` and updated; empty cells clear the component they sit under (in the default *Replace* mode); and the whole batch stays reversible from its bulk-process record (every import records its undo log; there is no option to turn it off).
 
 The same tool also accepts hand-authored CSVs — a plain number, a date like `2023/10/26`, or a comma-separated list of related ids — so you can prepare data outside Dédalo without learning the internal JSON shapes. The full per-component format catalogue lives in [Importing data](../core/importing_data.md).
 
@@ -40,7 +40,7 @@ The filename can name the target section: a file called `types_clean-numisdata3.
 6. **Choose each column's mode.** *Replace* (the default) overwrites the component with the cell; *Append* adds the cell's values to the stored ones. The selector only appears on columns whose component can take an addition — see [Adding instead of replacing](#adding-instead-of-replacing).
 7. **Preview.** Use the preview toggle on each card to see sample rows, or the parse errors if the file has malformed JSON cells.
 8. **Edit the process title** if you want the bulk-process record to carry a recognisable name.
-9. **Tick the file's checkbox** to select it for import, leave *Save time machine history on import* on, and click **Import**.
+9. **Tick the file's checkbox** to select it for import and click **Import**. Every import can be reverted afterwards as one run — there is no switch to turn that off.
 10. **Watch progress.** A live progress bar shows the current file, row and component, with running created / updated / failed / warning counts. When it finishes, each file shows its report.
 
 ## Options
@@ -53,7 +53,6 @@ The filename can name the target section: a file called `types_clean-numisdata3.
 | Decimal (number columns) | The decimal separator (`.` or `,`) used to parse a `component_number` column. |
 | Mode (per column) | *Replace* (default): the cell replaces the component's data. *Append*: the cell's values are added to the stored ones (*Add as new layer* on a geolocation column). Hidden on columns that cannot append. |
 | Process title | The label of the bulk-process record that tracks (and reverts) the run. |
-| Save time machine history on import | On by default. When off, the batch is **not** reversible — the panel warns when any column is in *Append* mode with it off. |
 
 ## Adding instead of replacing
 
@@ -95,10 +94,8 @@ section_id;test80;test100;test17
 
 Record 1 gains links to records 4 and 6 (unless it already had them), a new Point layer, and a paragraph `<p>Second campaign, 2025.</p>` at the end of its text in the current data language.
 
-!!! warning "Append with time machine off cannot be undone"
-    An append only adds, but it is still a write. With *Save time machine history on import* on, each append records the same time-machine entry as a *Replace* import — one per language written, holding the value after the append — and the run can be reverted from its bulk-process record like any other import; with it off, the panel warns you, and the added values must be removed by hand.
-
-    The revert rebuilds each value from the history entry just before the run. Where the run's entry is the component's **only** history — values stored before the time machine recorded them, or written with it off — the revert **empties** that component instead of restoring what the append kept. An exact revert of such runs is a pending change, not yet available: until then, check a run over records without history before reverting it.
+!!! info "An append can be reverted exactly"
+    An append only adds, but it is still a write, and it is recorded like any other: each change stores the value it replaced (hidden from the history list) next to the usual time-machine entry holding the value after it. Reverting the run from its bulk-process record puts back exactly what each component held before, the values the append kept included — also where the time machine had no earlier entry for that component. The record's *Modified by* and *Modified date* are the exception: they show the revert as the latest change (unless your file wrote them as columns, in which case they come back too). An append that adds nothing records nothing. See [Reverting a batch run](using_time_machine.md#reverting-a-batch-run).
 
 ## Tips and gotchas
 
@@ -114,8 +111,8 @@ Record 1 gains links to records 4 and 6 (unless it already had them), a new Poin
 !!! tip "Read the report before moving on"
     The report separates **failed** cells (rejected, the record kept its previous value) from **warnings** (written, but worth a look — for example a language code that is valid but not in the project's configured languages). The *created* and *updated* lists are the actual `section_id`s, and you can copy them straight into a search to inspect what changed.
 
-!!! warning "Time machine is your undo"
-    Leaving *Save time machine history on import* on records a reversible snapshot per row, tracked by the bulk-process record. A large run with the option off cannot be rolled back from that record — see [Time machine](using_time_machine.md).
+!!! tip "Time machine is your undo"
+    Every import is recorded under its bulk-process record: each change keeps the value it replaced, so the whole run can be reverted exactly in one action. A value someone edited after the import is left alone by the revert and reported, never overwritten — see [Reverting a batch run](using_time_machine.md#reverting-a-batch-run).
 
 ## Related
 

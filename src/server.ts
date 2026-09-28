@@ -27,7 +27,11 @@ import { chmodSync, existsSync, readFileSync, unlinkSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
 import { Glob } from 'bun';
-import { runBootMigrations } from '../install/db/migrate.ts';
+import {
+	runBootSchema,
+	startOnlineMigrations,
+	stopOnlineMigrations,
+} from '../install/db/migrate.ts';
 import { initRagHooks } from './ai/rag/bootstrap.ts';
 import { config } from './config/config.ts';
 import { projectRoot, readEnv } from './config/env.ts';
@@ -1645,6 +1649,10 @@ async function shutdownGracefully(
 	} catch (error) {
 		console.error('[shutdown] background job journal failed:', error);
 	}
+	// The background online index build (migrate.ts) holds a reserved
+	// connection through an unbounded CONCURRENTLY build: cancel it, or the
+	// pool close below waits for the whole build. Unrecorded ⇒ next boot retries.
+	await stopOnlineMigrations();
 	try {
 		const { closeDatabasePool } = await import('./core/db/postgres.ts');
 		await closeDatabasePool();
@@ -1804,14 +1812,9 @@ export async function startServer() {
 	// smoke boot (read-only by construction — running migrations pre-swap would
 	// mutate the shared DB while the old code is live).
 	if (!config.installMode && !smokeBoot) {
-		try {
-			await runBootMigrations();
-		} catch (error) {
-			console.error(
-				'[migrations] boot migration run failed (continuing with lazy bootstraps):',
-				error,
-			);
-		}
+		// runBootSchema logs a failed run and continues, then heals the
+		// tm_role column outside any transaction (migrate.ts) — never throws.
+		await runBootSchema();
 
 		// Derived search-store self-provisioning (2026-07-21): a database from a
 		// previous beta (no matrix_string_search / matrix_relation_index, or
@@ -2341,6 +2344,13 @@ export async function startServer() {
 	}
 
 	console.log(`Dédalo TS server listening on unix socket ${socketPath} (entity: ${config.entity})`);
+
+	// ONLINE MIGRATIONS (migrate.ts runOnlineMigrations): the CONCURRENTLY index
+	// builds that must never hold the listener — a full-heap build pre-listen
+	// outlasted the systemd watchdog (rollback / restart loop). Background, never
+	// awaited; every reader is correct without the index. Same skips as the boot
+	// runner (install mode: no DB; smoke boot: read-only by construction).
+	if (!config.installMode && !smokeBoot) void startOnlineMigrations();
 
 	// CODE-UPDATE BOOT CONFIRMATION (core/update/boot_confirm.ts): once the
 	// listener is up AND the first DB ping is green, flip a pending update

@@ -48,6 +48,7 @@
 
 import { TAG_WIDTHS } from '../../components/component_text_area/tag_grammar.ts';
 import type { ImportAppendPolicy } from '../../components/types.ts';
+import { canonicalJson } from '../../concepts/canonical_json.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { TC_PATTERN } from '../../resolve/tr_marks.ts';
 
@@ -217,19 +218,6 @@ function recordId(plan: AppendIdMapEntry[], raw: AppendItem, target: AppendIdTar
 function targetOf(match: AppendItem, accepted: readonly AppendItem[]): AppendIdTarget {
 	if (accepted.includes(match) || isAbsentId(match.id)) return { kind: 'new', item: match };
 	return { kind: 'existing', id: match.id };
-}
-
-/** Deterministic JSON (sorted object keys) — structural equality without key-order noise. */
-export function canonicalJson(value: unknown): string {
-	return JSON.stringify(sortKeysDeep(value)) ?? 'undefined';
-}
-
-function sortKeysDeep(value: unknown): unknown {
-	if (Array.isArray(value)) return value.map(sortKeysDeep);
-	if (!isObject(value)) return value;
-	const sorted: AppendItem = {};
-	for (const key of Object.keys(value).sort()) sorted[key] = sortKeysDeep(value[key]);
-	return sorted;
 }
 
 function withoutKeys(item: AppendItem, keys: readonly string[]): AppendItem {

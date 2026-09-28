@@ -27,7 +27,10 @@ The time machine attaches to record elements — both individual **components** 
 2. For a single component or record, the window shows two panes side by side: a **Now** pane with the current value, and a **preview** pane.
 3. **Pick an entry.** Click a history row's preview (eye) icon. The historical value loads into the preview pane, read-only, so you can compare it against **Now** before committing.
 4. **Apply and save.** When you are sure, press **Apply and save** — the live value is overwritten from the snapshot you selected. Restoring a whole section record restores all its components at once, and recovers any files that were deleted with it. The restore is itself recorded as a new history entry.
-5. **Revert a batch (administrators).** If the entry you picked belongs to a batch run, an administrator additionally sees **Revert the bulk process**. Pressing it rolls back every record that run changed to its pre-run value, in one operation. Non-administrators see a notice to contact an administrator instead.
+5. **Revert a batch (administrators).** If the entry you picked belongs to a batch run, an administrator additionally sees **Revert the bulk process**. Pressing it rolls back every record that run changed to its pre-run value, in one operation, then shows a summary of what was reverted and what was not — see [Reverting a batch run](#reverting-a-batch-run). Non-administrators see a notice to contact an administrator instead.
+
+!!! note "Fields with a dataframe"
+    A field with a [dataframe](../core/components/component_dataframe.md) — for example the *Informants* of an oral-history interview, each with its *Role* — keeps the two together in its history, in two kinds of entry: an entry of a **language** holds that language's value, and an entry marked **lg-nolan** holds the value that has no language (a field that is not translatable, or the base form of a name that has transliterations — *Augustus*, beside *Αύγουστος* in Greek) and **all** the frames. Changing a frame adds one lg-nolan entry to the **field's** history (the dataframe has none of its own), never a copy per language, and the history of a language shows its own entries and the lg-nolan entries together. It does not matter whether the value or the frame was saved first: the preview of any entry shows the whole state at that moment — the language's value as it was and the frames as they were. Restoring a language entry puts that language's value back with the frames as they stood at that moment; restoring an lg-nolan entry puts its frames (and its value without language) back. The field's other languages, and the frames that belong to another field sharing the same dataframe, are left as they are; a frame of an item that has been deleted since is never put back. For a name with transliterations, the history lists the base-form entries and those of the language you are working in (work in Greek to see *Αύγουστος*); the preview of a transliteration entry shows the base form and the frames as they were, and restoring it puts the transliteration back. A dataframe an lg-nolan entry (or an entry from Dédalo v6 that carries frames) holds no frames for was empty at that time, so restoring that entry — or reverting a batch run to it — empties that dataframe; a language entry never empties a dataframe.
 
 ## Options
 
@@ -40,19 +43,42 @@ The time machine attaches to record elements — both individual **components** 
 | **Apply and save** | Overwrites the live value with the selected snapshot (a component, or a whole record and its files). |
 | **Revert the bulk process** | Administrator-only: undoes an entire batch run across every record it touched. |
 
+## Reverting a batch run
+
+Every batch run — a [CSV import](using_import_dedalo_csv.md), a [bulk component edit](using_propagate_component_data.md), an [update cache](using_update_cache.md) run, a MARC21 or Zotero import, and a revert itself — records, with each change it makes, the exact value that change replaced. Those recorded values are not shown in the history list; the list shows the usual entry holding the value after the change. **Revert the bulk process** puts the recorded values back.
+
+What the revert does, field by field:
+
+- **A field the run changed, and nobody touched since** — restored exactly to what it held before the run, including a value the time machine had never recorded before and an empty field the run filled. In a translatable field only the language the run wrote is restored; the other languages stay as they are.
+- **A field already back at its pre-run value** — left as it is and counted as *already at the pre-run value*.
+- **A field someone edited after the run** — **left alone**: the revert never overwrites a later edit. It is listed as skipped (*changed_since_run*). The same happens when another change was made to the field in the middle of the run (*interleaved_write*), and when undoing the run would remove an item someone gave a dataframe value after the run.
+- **A field and its dataframe** — reverted together or not at all, language by language: every language the run changed and the field's frames come back as they were before the run. A dataframe shared by several fields only has the frames of the reverted field put back; the others stay as they are.
+- **A record the run created** — deleted, but only when the whole revert of that record succeeded, the record holds nothing the run did not write besides what every new record of its section starts with (its project, its default values), and no other record refers to it. Otherwise it is kept and listed (*created_record_kept*).
+- **A record the run deleted** (a dataframe target removed together with its main value) — restored together with the field that pointed at it, including links other records had to it, and listed as not exact: its media files are moved back from the deleted folder (a file uploaded since is kept), but its published copies are not republished. If that field cannot be reverted (someone edited it since), the record stays deleted and is listed (*cascade_delete_not_reverted*). If the record is still there but someone edited it since, it is left as it is and listed the same way. The field that points at it is still reverted. If the record is already back as it was (you are reverting the same run a second time), nothing is done and nothing is listed.
+- **A record's creation date or author** (imported from a CSV) — restored, and the record's summary date and author are recalculated from it; listed as not exact (*metadata_twin*).
+- **A record's *Modified by* and *Modified date*** — not restored: every change, the revert's own included, updates them, so after a revert they show the revert as the record's latest change. They come back only when the run wrote them itself (CSV columns for them).
+
+When it finishes, a summary lists how many fields (or field groups, such as a field and its dataframe) were reverted, how many fields were already at their pre-run value, every item skipped with its reason, every item restored by inference or with side effects, and the id of the revert itself — which is a batch run of its own, so you can revert the revert.
+
+!!! warning "Runs made before the 2026-09-27 update are reverted by inference"
+    A run made before the update did not record what it replaced. Its revert still takes each value from the history entry just before the run, as it always did: that is exact only where such an entry exists and is current. Where the run's entry is a field's **only** history, the field is emptied only if the run created the record, and skipped (*no_pre_batch_state*) otherwise. The summary marks every value restored this way as inferred, so you know which records to check.
+
+!!! note "A running batch cannot be reverted"
+    A revert of a run that is still in progress is refused until the run ends, and two reverts of the same run cannot run at once.
+
 ## Tips and gotchas
 
 !!! tip "Compare before you restore"
     Always check the preview against the **Now** pane before pressing **Apply and save** — a restore replaces the whole current value with the snapshot, it does not merge the two.
 
 !!! warning "Restoring overwrites the current value"
-    **Apply and save** and **Revert the bulk process** overwrite live data. They are reversible (each restore is itself logged as new history), but they are not partial — the whole selected snapshot lands on the record. Reverting a batch and applying a component restore both need write permission on the record; reverting a batch needs an administrator role.
+    **Apply and save** and **Revert the bulk process** overwrite live data. Both are reversible (each restore is itself logged as new history). **Apply and save** is not partial — the whole selected snapshot lands on the record; a batch revert skips, and reports, every field edited after the run. Reverting a batch and applying a component restore both need write permission on the record; reverting a batch needs an administrator role.
 
 !!! info "How batch undo links up"
-    A batch tool stamps every write in one run with the same id. That id is what the time machine's **Revert the bulk process** follows to find and roll back every affected record — so a single mistaken [propagation](using_propagate_component_data.md) is undone as one unit, not record by record.
+    A batch tool stamps every write in one run with the same id, and records with each write the value it replaced. That id is what the time machine's **Revert the bulk process** follows to find and roll back every affected record — so a single mistaken [propagation](using_propagate_component_data.md) is undone as one unit, not record by record.
 
 ## Related
 
-- **[Propagate component data](using_propagate_component_data.md)** — the batch tool whose runs the time machine can revert as a whole.
+- **[Propagate component data](using_propagate_component_data.md)** and **[CSV import](using_import_dedalo_csv.md)** — batch tools whose runs the time machine can revert as a whole.
 - **[Export](using_export.md)** — export the change history itself for offline review.
 - **[Developer reference](../development/tools/reference/tool_time_machine.md)** — internals, API actions and options.

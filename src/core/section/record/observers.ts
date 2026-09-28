@@ -65,7 +65,7 @@
 import { incrementCounter } from '../../api/counters.ts';
 import { canonicalizeStoredSectionId } from '../../concepts/section_id.ts';
 import { isInTransaction, registerCommitAction, sql } from '../../db/postgres.ts';
-import { ensureRecordGenerationTable, tmEpochPredicate } from '../../db/record_generation.ts';
+import { ensureTmHistoryReady, withTmHistory } from '../../db/record_generation.ts';
 import { recordTimeMachine } from '../../db/time_machine.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { getMatrixTableFromTipo, getModelByTipo, getNode } from '../../ontology/resolver.ts';
@@ -1084,6 +1084,16 @@ export function nextObserverItemId(existing: { id?: unknown }[]): number {
  */
 const EXTERNAL_REFERENCES_FREEZE = 2000;
 
+/** The numeric item `id`s of `before` that `after` no longer holds (the dropped locators). */
+function droppedItemIds(before: readonly unknown[], after: readonly unknown[]): number[] {
+	const idOf = (entry: unknown): number | null => {
+		const id = Number((entry as { id?: unknown } | null)?.id);
+		return Number.isInteger(id) && id > 0 ? id : null;
+	};
+	const kept = new Set(after.map(idOf));
+	return before.map(idOf).filter((id): id is number => id !== null && !kept.has(id));
+}
+
 /**
  * set_dato_external's default path: the component's data := every record
  * referencing (targetSection, targetId) through source.component_to_search
@@ -1472,48 +1482,65 @@ export async function recomputeExternalRelation(
 		}
 
 		const { persistRecordKeys } = await import('../../section_record/index.ts');
+		const { mainIdentity, readMainSlots, readMainState, recordMainBackfill, recordMainHistory } =
+			await import('../../relations/dataframe_slots.ts');
+		const { removeDataframeDataById } = await import('../../relations/save.ts');
+		const target = { table, sectionTipo: targetSection, sectionId: targetId };
+		const identity = await mainIdentity(observerTipo, 'lg-nolan');
 		const stamp = dbTimestamp(now);
-		await ensureRecordGenerationTable();
-		const history = (await sql.unsafe(
-			// P0-14: the probe asks whether THIS record already has a backfill row.
-			// Without the epoch narrowing, a DEAD generation's rows at the same
-			// address answer yes and the reborn record's own history is never
-			// written — the defect inverted: not inherited history, but suppressed.
-			`SELECT 1 FROM matrix_time_machine
-			 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3 AND lang = 'lg-nolan'
-			   AND ${tmEpochPredicate()} LIMIT 1`,
-			[targetSection, targetId, observerTipo],
-		)) as unknown[];
-		if (history.length === 0) {
-			await recordTimeMachine(
-				{
-					sectionTipo: targetSection,
-					sectionId: targetId,
-					componentTipo: observerTipo,
-					lang: 'lg-nolan',
-					userId,
-					data: existing.length > 0 ? existing : null,
-				},
-				dbTimestamp(new Date(now.getTime() - 60_000)),
-			);
-		}
-		await recordTimeMachine(
-			{
-				sectionTipo: targetSection,
-				sectionId: targetId,
-				componentTipo: observerTipo,
-				lang: 'lg-nolan',
-				userId,
-				data: finalData.length > 0 ? finalData : null,
-			},
-			stamp,
+		await ensureTmHistoryReady();
+		// The observer's state BEFORE this write (read now, under the lock): its
+		// value and its slots — an observer may carry a dataframe slot like any
+		// component, and its history is two-lane like every main's
+		// (relations/dataframe_slots.ts recordMainHistory).
+		const before = {
+			// an empty mirror is recorded as nothing (null), the PHP baseline shape
+			value: existing.length > 0 ? existing : undefined,
+			slots: await readMainSlots(target, observerTipo),
+		};
+		// P0-14: the probe asks whether THIS record already has a backfill row.
+		// Without the epoch narrowing, a DEAD generation's rows at the same
+		// address answer yes and the reborn record's own history is never
+		// written — the defect inverted: not inherited history, but suppressed.
+		// VISIBLE rows only (withTmHistory): a bulk run's hidden undo-log row
+		// (a BEFORE image, a birth marker) is not the visible baseline and must
+		// not suppress the pair dd15 needs.
+		const hasHistory = async (lane: string): Promise<boolean> =>
+			(
+				(await sql.unsafe(
+					`SELECT 1 FROM matrix_time_machine
+					 WHERE ${withTmHistory('section_tipo = $1 AND section_id = $2 AND tipo = $3 AND lang = $4')}
+					 LIMIT 1`,
+					[targetSection, targetId, observerTipo, lane],
+				)) as unknown[]
+			).length > 0;
+		await recordMainBackfill(
+			target,
+			identity,
+			before,
+			{ userId, timestamp: dbTimestamp(new Date(now.getTime() - 60_000)) },
+			hasHistory,
+			{ emptyDoorLane: true },
 		);
 		// Chokepoint write: observer value + the owner's modified stamps (dd197/
 		// dd201) in ONE update, like every PHP component save.
 		await persistRecordKeys(
-			{ table, sectionTipo: targetSection, sectionId: targetId },
+			target,
 			[{ column: 'relation', key: observerTipo, value: finalData.length > 0 ? finalData : [] }],
 			{ userId, now },
+		);
+		// A dropped locator takes its paired frames with it (the component save's
+		// remove cascade, PHP remove_dataframe_data_by_id) — else they stay in the
+		// slot as orphans every later frame-lane row would record as live.
+		for (const id of droppedItemIds(existing, finalData)) {
+			await removeDataframeDataById(table, targetSection, targetId, observerTipo, id, userId);
+		}
+		// The save rows: the value written + the slots AFTER the cascade.
+		await recordMainHistory(
+			target,
+			identity,
+			{ before, after: await readMainState(target, identity, before.slots.slots) },
+			{ userId, timestamp: stamp, bulkId: null },
 		);
 		// `after` = the full-law target (see the return contract). When drops
 		// were withheld the record actually holds existing+additions entries.

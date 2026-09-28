@@ -47,8 +47,12 @@ const CENSUS_ROOTS = ['src', 'tools'] as const;
  */
 const TM_SELECT = /(?:FROM|JOIN|UPDATE|DELETE\s+FROM)\s+matrix_time_machine/gi;
 
-/** The two ways a statement declares itself narrowed to one generation. */
-const TM_NARROWING = /tmEpochPredicate\(|withTmEpoch\(/g;
+/**
+ * The ways a statement declares itself narrowed to one generation. withTmHistory
+ * is withTmEpoch AND `tm_role IS NULL` (the undo-log visibility law), so it
+ * carries the epoch narrowing too.
+ */
+const TM_NARROWING = /tmEpochPredicate\(|withTmEpoch\(|withTmHistory\(/g;
 
 /**
  * Files that read `matrix_time_machine` WITHOUT the epoch narrowing, each with
@@ -74,9 +78,9 @@ const EXEMPT_TM_READERS: Readonly<Record<string, { reads: number; reason: string
 			'The epoch MINT itself: it reads the address’s existing rows to place the boundary. It is what the other readers are narrowed BY.',
 	},
 	'src/core/db/time_machine.ts': {
-		reads: 2,
+		reads: 4,
 		reason:
-			'readTimeMachineRow is a PK read whose CALLERS carry the identity check (tool_time_machine apply_value, section/read.ts preview — both narrowed). readTimeMachineHistory has NO production caller (dead code); narrow or delete it before wiring one.',
+			'readTimeMachineRow is a PK read whose CALLERS carry the identity check (tool_time_machine apply_value, section/read.ts preview — both narrowed); it is VISIBILITY-narrowed (tmVisiblePredicate) but deliberately not epoch-narrowed, so a dead-generation id answers the specific "does not belong" refusal. readTimeMachineHistory, readOtherLangItemIds (the frame pairing law\'s input) and newestRowAt (the two-lane as-of reader: readFrameStateRowAt / readLaneRowAt) are narrowed with withTmHistory (epoch AND visible).',
 	},
 	'src/core/update/transform/locators.ts': {
 		reads: 2,
@@ -153,12 +157,19 @@ const NARROWED_READERS: Readonly<Record<string, { reads: number; narrowSites: nu
 	// narrowSites < reads is CORRECT here: the deep-page barrier and late-lookup
 	// shapes each name the table twice (an outer `FROM matrix_time_machine tm`
 	// joined to an inner scoped subquery), and the narrowing belongs on the INNER
-	// one that selects the ids. Four narrowings cover the four WHERE clauses:
-	// the count twin, the barrier inner, the late-lookup inner, and the plain page.
-	'src/core/resolve/read_tm.ts': { reads: 6, narrowSites: 4 },
-	'src/core/section/record/delete_record.ts': { reads: 2, narrowSites: 2 },
+	// one that selects the ids. Five narrowings cover the five WHERE clauses:
+	// the count's TWO halves (tmHistoryCountSql: total − hidden, each
+	// withTmEpoch-narrowed), the barrier inner, the late-lookup inner, and the
+	// plain page.
+	'src/core/resolve/read_tm.ts': { reads: 7, narrowSites: 5 },
+	'src/core/section/record/delete_record.ts': { reads: 1, narrowSites: 1 },
 	'src/core/section/record/observers.ts': { reads: 1, narrowSites: 1 },
-	'tools/tool_time_machine/server/bulk_revert.ts': { reads: 2, narrowSites: 2 },
+	// The undo-log rewrite (2026-09-27): the orchestrator's one read is the run
+	// loader (every role, epoch-narrowed); the legacy inference's three are the
+	// per-language pre-run row, its wipe-sibling subquery and the record's
+	// pre-run-history probe — each epoch- (and visibility-) narrowed.
+	'tools/tool_time_machine/server/bulk_revert.ts': { reads: 1, narrowSites: 1 },
+	'tools/tool_time_machine/server/bulk_revert_legacy.ts': { reads: 3, narrowSites: 3 },
 };
 
 describe('time-machine epoch tripwire', () => {

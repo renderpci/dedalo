@@ -15,9 +15,9 @@
  *   - source component data copied with the audit tipos
  *     (dd197/dd199/dd200/dd201) DROPPED;
  *   - `meta`: [{count: maxItemId}] per copied component tipo;
- *   - Time Machine: one backfill+save pair per copied component — backfill
- *     with the FULL copied value, save row with the DATA-LANG slice
- *     (lg-spa; test52 is translatable), in that order.
+ *   - Time Machine: the backfill (the copied value, one row per language
+ *     lane — two lanes, WC-2026-09-27-bulk-revert-undo-log) then the save row
+ *     of the DATA-LANG lane (lg-spa; test52 is translatable), in that order.
  *
  * SOFTENED / TS-side notes (never oracle-pinned by the differential):
  *  - the 60_000 ms backfill→save delta: the differential compared TM
@@ -211,20 +211,24 @@ describe('duplicate core contract (TS-native, differential-pinned anatomy)', () 
 		expect((dup as DupRow).relation_search).toBeNull(); // nothing to copy
 	});
 
-	test('TM: one backfill+save pair for the copied component (full value → lg-spa slice)', () => {
-		// Exactly two rows, asserted BEFORE the shape: an observer hop, a re-run
-		// without teardown or a concurrent writer taking an id between the pair
+	test('TM: the backfill per language lane, then the save row of the data lang (two lanes)', () => {
+		// Exactly three rows, asserted BEFORE the shape: an observer hop, a re-run
+		// without teardown or a concurrent writer taking an id between them
 		// otherwise surfaces as a value diff and sends the reader to the wrong
 		// subsystem. The delta below indexes positionally and needs this.
-		expect(tmRows.length, 'unexpected TM row count — the pair is not a pair').toBe(2);
+		// TWO LANES (WC-2026-09-27-bulk-revert-undo-log): one row is one language —
+		// the backfill is one row per language lane holding a value (the PHP
+		// oracle's single all-language backfill row is the retired shape).
+		expect(tmRows.length, 'unexpected TM row count').toBe(3);
 		const shapes = tmRows.map((tm) => ({ tipo: tm.tipo, lang: tm.lang, data: tm.data }));
 		expect(shapes).toEqual([
-			{ tipo: COMPONENT, lang: 'lg-spa', data: SEED_VALUE }, // backfill: FULL copied value
-			{ tipo: COMPONENT, lang: 'lg-spa', data: [SEED_VALUE[0]] }, // save: data-lang slice
+			{ tipo: COMPONENT, lang: 'lg-spa', data: [SEED_VALUE[0]] }, // backfill: the spa lane
+			{ tipo: COMPONENT, lang: 'lg-eng', data: [SEED_VALUE[1]] }, // backfill: the eng lane
+			{ tipo: COMPONENT, lang: 'lg-spa', data: [SEED_VALUE[0]] }, // save: the data-lang lane
 		]);
 		// Backfill precedes the save row by 60s (engine mechanism — see header).
 		const delta =
-			new Date(String(tmRows[1]?.ts)).getTime() - new Date(String(tmRows[0]?.ts)).getTime();
+			new Date(String(tmRows[2]?.ts)).getTime() - new Date(String(tmRows[0]?.ts)).getTime();
 		expect(delta).toBe(60_000);
 	});
 });

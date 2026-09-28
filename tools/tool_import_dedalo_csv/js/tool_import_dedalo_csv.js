@@ -425,12 +425,14 @@ tool_import_dedalo_csv.prototype.remove_file = function(item) {
 * }
 *
 * @param {Array}   files             - Array of file-descriptor objects (see above)
-* @param {boolean} time_machine_save - When true, the server saves a time-machine snapshot
-*   for every record touched, enabling per-record revert. Defaults to true in the UI.
+* No time-machine switch is sent: the import runs under a bulk id, and every
+* save carrying one writes its undo pair (hidden BEFORE row + visible after-row),
+* so the whole run can be reverted exactly from the Time Machine tool
+* (WC-2026-09-27-bulk-revert-undo-log, decision D1).
 * @returns {Promise<Object>} Resolves with the full API response object; on success
 *   response.result===true and response.pid/response.pfile identify the background process
 */
-tool_import_dedalo_csv.prototype.import_files = function(files, time_machine_save) {
+tool_import_dedalo_csv.prototype.import_files = function(files) {
 
 	const self = this
 
@@ -445,8 +447,7 @@ tool_import_dedalo_csv.prototype.import_files = function(files, time_machine_sav
 			source	: source,
 			options	: {
 				background_running	: true,
-				files				: files,
-				time_machine_save	: time_machine_save
+				files				: files
 			}
 		}
 

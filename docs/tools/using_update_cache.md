@@ -48,6 +48,9 @@ Update cache is a **section-level** tool: you open it on a section, and it lists
 !!! warning "This re-saves real records in bulk"
     Update cache writes to every matched record. It does not change the visible value, but it is still a large write operation: it needs write permission on the section, runs as a background job, and can take a long time on big sections. Narrow the scope with a filter when you can.
 
+!!! info "A run can be reverted, and records only what it changed"
+    Each run is one bulk process. A record where the component holds no value is skipped, and a re-save that leaves a component exactly as it was writes nothing to its history; one that does change the stored form writes a normal history entry and records the value it replaced, so the whole run can be reverted from the [Time machine](using_time_machine.md#reverting-a-batch-run). The media repair is the exception: the refreshed file index is derived from the files on disk, and files moved aside are not moved back, so that part of a run is not reverted.
+
 !!! tip "Value change vs. cache refresh"
     If you want the value to *change* across records, this is the wrong tool — use [Propagate component data](using_propagate_component_data.md). Update cache only refreshes the stored/derived form of the value that is already there.
 

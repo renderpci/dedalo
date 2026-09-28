@@ -35,12 +35,14 @@ import { canonicalizeStoredSectionId, classifyWireSectionId } from '../concepts/
 import { mergeSessionSqo, sanitizeClientSqo } from '../concepts/sqo.ts';
 import type { MatrixRecord } from '../db/matrix.ts';
 import { memoizedReadMatrixRecord, runWithRecordMemo } from '../db/record_memo.ts';
+import type { TmCoords } from '../db/time_machine.ts';
 import { DedaloError, isErrorInDomain } from '../errors/dedalo_error.ts';
 import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
 	getModelByTipo,
 } from '../ontology/resolver.ts';
+import type { SlotTarget } from '../relations/dataframe_slots.ts';
 import { emitDataframeItem, expandPortal } from '../relations/relation_core.ts';
 import {
 	buildDataItem,
@@ -64,6 +66,7 @@ import {
 	resolveComponentContextPermission,
 	resolveOwnUserRecordPermission,
 } from '../security/permissions.ts';
+import type { LaneValue, RowLaneState } from '../tm_record/lane_state.ts';
 import { pickReadSource } from './read_source.ts';
 import { prefetchRecords } from './record_loader.ts';
 
@@ -651,33 +654,217 @@ async function tmRowBelongsToRecord(
 }
 
 /**
+ * Whether a TM row may be served as the preview of `tipo` on this record: it
+ * belongs to the record (tmRowBelongsToRecord), and it is not a row under a
+ * dataframe slot's OWN tipo — no supported history has one (PHP never wrote
+ * one; a slot's frames ride in its main's composed row), so it previews empty.
+ */
+async function tmRowServable(
+	tmRow: { id: number; section_tipo: string; section_id: number; tipo: string },
+	sectionTipo: string,
+	sectionId: number,
+	model: string,
+	tipo: string,
+): Promise<boolean> {
+	if (model === 'component_dataframe' && tmRow.tipo === tipo) return false;
+	return tmRowBelongsToRecord(tmRow, sectionTipo, sectionId);
+}
+
+/**
+ * A TM preview's graft over the record the read serves (resolveTmPreview) —
+ * the STATE AT THE ROW, reconstructed from the two lanes
+ * (tm_record/lane_state.ts). `value`: the row's state and the other half of
+ * the timeline AS OF the row (an lg-nolan row previews the view language as it
+ * stood; a language row previews the lg-nolan value as it stood), put back over
+ * the live key by lane_state.ts previewLaneValue — the row's own lane exactly
+ * as apply_value writes it. Null: the component keeps its live value. `slots`
+ * are the frame state as of the row, per dataframe slot of `mainTipo`; a slot
+ * the frame state carries no frame for previews EMPTY; null (no slot in play)
+ * keeps the live frames.
+ */
+interface TmPreviewGraft {
+	value: { state: RowLaneState; asOf: LaneValue | null } | null;
+	law: { sliced: boolean; translatable: boolean };
+	mainTipo: string;
+	slots: Map<string, Record<string, unknown>[]> | null;
+}
+
+/**
  * The Time Machine PREVIEW override (PHP component_common::get_data
  * data_source='tm', dd_core_api :2372-2383): the tool_time_machine preview pane
  * loads a component's value from a SPECIFIC matrix_time_machine row, not the
  * live record. The section context and datalist stay live — only the value
  * changes.
  *
+ * TWO LANES (WC-2026-09-27-bulk-revert-undo-log, addendum "two lanes"): a row
+ * of a main is ONE lane — a language's value, or the lg-nolan value + every
+ * frame — so the preview shows the FULL state at the row: the row's lane, the
+ * other lane as of the row, and the frames as of the row (the newest frame
+ * state at or below it), so a middle state of the timeline is visible exactly
+ * as it stood. A dataframe requested by the main's row id (PHP searches the
+ * MAIN's row for a component_dataframe) takes the frames as of that row. A row
+ * under a slot's OWN tipo is no supported history (PHP never wrote one; TS-era
+ * beta rows are unsupported) and previews empty, like an absent row.
+ *
  * `served:false` means the caller must answer empty, as PHP does for an absent
  * row — and, since P0-14, for a row belonging to a dead generation at the same
- * address.
+ * address. A bulk run's undo-log row (tm_role set: a hidden BEFORE image, a
+ * birth marker) is answered as ABSENT by readTimeMachineRow's visibility
+ * narrowing, so its id previews empty, never as history nobody saw.
  */
 async function resolveTmPreview(
-	source: { data_source?: unknown; matrix_id?: unknown },
+	source: { data_source?: unknown; matrix_id?: unknown; lang?: unknown },
 	model: string,
+	tipo: string,
 	sectionTipo: string,
 	sectionId: number,
-): Promise<{ served: true; value: unknown | null } | { served: false; value: null }> {
+): Promise<{ served: true; graft: TmPreviewGraft | null } | { served: false; graft: null }> {
 	if (source.data_source !== 'tm' || source.matrix_id === null || source.matrix_id === undefined) {
-		return { served: true, value: null };
+		return { served: true, graft: null };
 	}
 	const { readTimeMachineRow } = await import('../db/time_machine.ts');
-	const { stripDataframeFramesFromTmMain } = await import('../tm_record/tm_record.ts');
 	const tmRow = await readTimeMachineRow(Number(source.matrix_id));
-	if (tmRow === null) return { served: false, value: null };
-	if (!(await tmRowBelongsToRecord(tmRow, sectionTipo, sectionId))) {
-		return { served: false, value: null };
+	if (tmRow === null) return { served: false, graft: null };
+	if (!(await tmRowServable(tmRow, sectionTipo, sectionId, model, tipo))) {
+		return { served: false, graft: null };
 	}
-	return { served: true, value: stripDataframeFramesFromTmMain(model, tmRow.data) };
+	const graft = await tmPreviewGraft(tmRow, model, { sectionTipo, sectionId }, viewLangOf(source));
+	return { served: true, graft };
+}
+
+/** The language the preview is asked in ('' when the request names none). */
+function viewLangOf(source: { lang?: unknown }): string {
+	return typeof source.lang === 'string' ? source.lang : '';
+}
+
+/** The graft of one visible TM row (see resolveTmPreview); null = nothing to graft. */
+async function tmPreviewGraft(
+	tmRow: { id: number; tipo: string; lang: string | null; data: unknown },
+	model: string,
+	live: Omit<SlotTarget, 'table'>,
+	viewLang: string,
+): Promise<TmPreviewGraft | null> {
+	// Rationale 3 (CONVENTIONS §2): the TM preview is a cold, tool-scale path.
+	const { readRowLaneState } = await import('../tm_record/lane_state.ts');
+	const { getTranslatableByTipo } = await import('../ontology/resolver.ts');
+	const { isLangSlicedModel } = await import('../components/registry.ts');
+	const mainModel = model === 'component_dataframe' ? await getModelByTipo(tmRow.tipo) : model;
+	const law = {
+		sliced: isLangSlicedModel(mainModel ?? ''),
+		translatable: await getTranslatableByTipo(tmRow.tipo),
+	};
+	const coords = { ...live, componentTipo: tmRow.tipo };
+	const state = await readRowLaneState({ coords, row: tmRow, law, fallbackLang: viewLang });
+	const slots = await recordedSlotFrames(tmRow.tipo, state.frameImage, live);
+	const value =
+		model === 'component_dataframe'
+			? null
+			: previewValueOf(state, await previewAsOf(state, coords, tmRow.id, law, viewLang));
+	if (value === null && slots === null) return null;
+	return { value, law, mainTipo: tmRow.tipo, slots };
+}
+
+/** The value half of a graft: null when the row shows no value (a frames-only row with no lane as of it). */
+function previewValueOf(state: RowLaneState, asOf: LaneValue | null): TmPreviewGraft['value'] {
+	return state.own.recorded || asOf !== null ? { state, asOf } : null;
+}
+
+/**
+ * The timeline's other half AS OF the row (the view language for an lg-nolan
+ * row, the lg-nolan value for a language row); null when that lane holds no
+ * value history speaks for (readLaneValueAt).
+ */
+async function previewAsOf(
+	state: RowLaneState,
+	coords: TmCoords,
+	rowId: number,
+	law: { sliced: boolean; translatable: boolean },
+	viewLang: string,
+): Promise<LaneValue | null> {
+	const { readLaneValueAt } = await import('../tm_record/lane_state.ts');
+	const other = state.rowLane === 'lg-nolan' ? viewLang : 'lg-nolan';
+	if (other === '' || other === state.rowLane) return null;
+	const asOf = await readLaneValueAt(coords, other, rowId, law);
+	return asOf.recorded ? asOf : null;
+}
+
+/**
+ * The frame state's frames of its main, per slot — every slot of the main the
+ * state speaks for (rowSlotTipos: a frame state is the full set of frames, so
+ * a slot it carries no frame for — a live undeclared slot of the main included
+ * — maps to `[]` and previews empty, exactly as apply_value empties it) — null
+ * when no slot is in play at all.
+ */
+async function recordedSlotFrames(
+	mainTipo: string,
+	frameImage: unknown,
+	live: Omit<SlotTarget, 'table'>,
+): Promise<Map<string, Record<string, unknown>[]> | null> {
+	// Rationale 3 (CONVENTIONS §2): the TM preview is a cold, tool-scale path.
+	const { snapshotSlotFrames } = await import('../tm_record/tm_record.ts');
+	const { rowSlotTipos } = await import('../relations/dataframe_slots.ts');
+	const bySlot = await snapshotSlotFrames(
+		mainTipo,
+		frameImage,
+		await rowSlotTipos(mainTipo, [frameImage], {
+			...live,
+			table: (await getMatrixTableFromTipo(live.sectionTipo)) ?? 'matrix',
+		}),
+	);
+	return bySlot.size > 0 ? bySlot : null;
+}
+
+/**
+ * The record with a TM preview grafted over it — a CLONE, never the shared
+ * record. The main's key is its live value with the graft's lanes put back
+ * (every other lane stays live); each recorded slot holds the frames of OTHER
+ * mains as they are live (a shared slot stores every main's frames; this
+ * history speaks only for its own) followed by the frame state's frames of the
+ * main.
+ */
+async function applyTmGraft(
+	record: MatrixRecord,
+	tipo: string,
+	model: string,
+	graft: TmPreviewGraft,
+): Promise<MatrixRecord> {
+	const { cloneRecord, injectComponentData } = await import('../section_record/index.ts');
+	const { previewLaneValue } = await import('../tm_record/lane_state.ts');
+	const grafted = cloneRecord(record);
+	if (graft.value !== null) {
+		const { state, asOf } = graft.value;
+		const value = previewLaneValue(liveKeyOf(grafted, tipo, model), state, asOf, graft.law);
+		injectComponentData(grafted, tipo, model, value ?? emptyKeyOf(graft.law));
+	}
+	for (const [slot, frames] of graft.slots ?? []) {
+		const others = liveFramesOfOtherMains(grafted, slot, graft.mainTipo);
+		injectComponentData(grafted, slot, 'component_dataframe', [...others, ...frames]);
+	}
+	return grafted;
+}
+
+/** The value an emptied key previews with: `[]` for a sliced model, `null` otherwise. */
+function emptyKeyOf(law: { sliced: boolean }): unknown {
+	return law.sliced ? [] : null;
+}
+
+/** A record's raw stored value of one component key (`undefined` = absent). */
+function liveKeyOf(record: MatrixRecord, tipo: string, model: string): unknown {
+	const column = getColumnNameByModel(model);
+	const bag = column === null ? null : record.columns[column as keyof typeof record.columns];
+	return (bag as Record<string, unknown> | null | undefined)?.[tipo];
+}
+
+/** A slot's live frames that belong to a main other than `mainTipo`. */
+function liveFramesOfOtherMains(record: MatrixRecord, slot: string, mainTipo: string): unknown[] {
+	const column = getColumnNameByModel('component_dataframe');
+	const bag = column === null ? null : record.columns[column as keyof typeof record.columns];
+	const live = (bag as Record<string, unknown> | null | undefined)?.[slot];
+	if (!Array.isArray(live)) return [];
+	return live.filter((entry) => {
+		const owner = (entry as { main_component_tipo?: unknown } | null)?.main_component_tipo;
+		return typeof owner === 'string' && owner !== mainTipo;
+	});
 }
 
 /**
@@ -827,11 +1014,11 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 	// datalist stay live (real section_tipo/section_id), only the value changes.
 	// Without this, every preview shows the live value regardless of the row the
 	// user picked (the "always the last value" bug).
-	const preview = await resolveTmPreview(source, model, sectionTipo, numericSectionId);
+	const preview = await resolveTmPreview(source, model, tipo, sectionTipo, numericSectionId);
 	// PHP get_data returns null (empty) when the snapshot is absent — or, since
 	// P0-14, when it belongs to a dead generation at the same address.
 	if (preview.served === false) return [];
-	const tmOverride: unknown | null = preview.value;
+	const tmOverride: TmPreviewGraft | null = preview.graft;
 
 	// NON-relation components: PHP dd_core_api serves get_data for ANY
 	// component (the autocomplete_hi edit-in-place widget refreshes the chosen
@@ -857,9 +1044,7 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 			await graftScratch(literalRecord);
 		}
 		if (tmOverride !== null) {
-			const { cloneRecord, injectComponentData } = await import('../section_record/index.ts');
-			literalRecord = cloneRecord(literalRecord);
-			injectComponentData(literalRecord, tipo, model, tmOverride);
+			literalRecord = await applyTmGraft(literalRecord, tipo, model, tmOverride);
 		}
 		const literalEmission = new EmissionContext();
 		const literalData = literalEmission.items;
@@ -1053,9 +1238,7 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 	// value. This REPLACES the live value and short-circuits the relation_children
 	// computation (the snapshot already holds what changed).
 	if (tmOverride !== null) {
-		const { cloneRecord, injectComponentData } = await import('../section_record/index.ts');
-		record = cloneRecord(record);
-		injectComponentData(record, tipo, model, tmOverride);
+		record = await applyTmGraft(record, tipo, model, tmOverride);
 	} else if (model === 'component_relation_children') {
 		// relation_children: COMPUTED locators (inverse dd47 — the component owns
 		// no rows). Grafted into a CLONE of the record (never the shared original)

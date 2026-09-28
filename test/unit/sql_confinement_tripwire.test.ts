@@ -517,8 +517,9 @@ const T2_PSQL_WRITE_CHANNEL: Readonly<Record<string, { writes: number; reason: s
 		reason: '`-f` restore of a dd_ontology recovery dump (plain SQL the engine itself wrote).',
 	},
 	'src/core/install/db_restore.ts': {
-		writes: 1,
-		reason: '`-f` restore of the vendored install seed (install/db/dedalo_install.pgsql.gz).',
+		writes: 2,
+		reason:
+			'`-f` restore of the vendored install seed (install/db/dedalo_install.pgsql.gz), then `-1 -f` of each shipped migration the seed PREDATES (paths.ts SEED_PREDATED_MIGRATION_PATHS — install mode skips the boot runner).',
 	},
 	'scripts/test_db_setup.ts': {
 		writes: 1,

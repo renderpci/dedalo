@@ -24,6 +24,13 @@ describe('applyPropagation — replace', () => {
 			changed: false,
 		});
 	});
+	test('an identical DATE (no derived `time`) is not a change — compared as persisted', () => {
+		const stored = [{ id: 7, start: { year: 2020, month: 1, day: 2, time: 64924502400 } }];
+		const value = [{ start: { year: 2020, month: 1, day: 2 } }];
+		expect(applyPropagation(stored, 'replace', value, false).changed).toBe(false);
+		const other = [{ start: { year: 2020, month: 1, day: 3 } }];
+		expect(applyPropagation(stored, 'replace', other, false).changed).toBe(true);
+	});
 	test('null value clears the slice', () => {
 		expect(applyPropagation(['a'], 'replace', null, false)).toEqual({ final: [], changed: true });
 		expect(applyPropagation([], 'replace', null, false)).toEqual({ final: [], changed: false });

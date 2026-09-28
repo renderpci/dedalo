@@ -112,17 +112,19 @@ import { isConvertibleSectionIdString, isSectionId } from '../../concepts/sectio
 import { isDataframeEntry } from '../../concepts/subdatum.ts';
 import { MATRIX_JSONB_COLUMNS, type MatrixJsonbColumn, readMatrixRecord } from '../../db/matrix.ts';
 import { insertMatrixRecordWithCounter, updateMatrixKeyData } from '../../db/matrix_write.ts';
-import { recordTimeMachine } from '../../db/time_machine.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { duplicateMediaFiles } from '../../media/file_ops.ts';
 import { refreshStoredFilesInfo } from '../../media/files_info.ts';
 import { resolveMediaPathOptions } from '../../media/ontology_path.ts';
 import type { MediaIdentity } from '../../media/path.ts';
+import { getMatrixTableFromTipo, getModelByTipo } from '../../ontology/resolver.ts';
 import {
-	getMatrixTableFromTipo,
-	getModelByTipo,
-	getTranslatableByTipo,
-} from '../../ontology/resolver.ts';
+	mainIdentity,
+	recordMainBackfill,
+	recordMainHistory,
+	slotsFromBag,
+} from '../../relations/dataframe_slots.ts';
+import { NOLAN } from '../../relations/main_lanes.ts';
 import { currentDataLang } from '../../resolve/request_lang.ts';
 import { afterRecordWrite } from '../../section_record/record_write.ts';
 import type { Principal } from '../../security/permissions.ts';
@@ -301,35 +303,13 @@ export async function duplicateSectionRecord(
 		);
 	}
 
-	// 5. Time Machine: TWO rows per copied component (empirically verified) —
-	//    (a) the backfill-repair row (PHP tm_record::create previous_data path:
-	//        history is empty on a fresh record, so the FULL copied value is
-	//        stored first, stamped one minute EARLIER to order before the save);
-	//    (b) the save row with the data-lang slice (nolan for non-translatable
-	//        components — the re-save loop's instance lang).
-	const saveTimestamp = dbTimestamp(now);
-	const backfillTimestamp = dbTimestamp(new Date(now.getTime() - 60_000));
-	for (const component of copied) {
-		const translatable = await getTranslatableByTipo(component.tipo);
-		// currentDataLang(), NOT config.menu.dataLang (P0-7/DATA-01): the slice this
-		// picks is the one the duplicate's TM rows are stamped with, so the install
-		// default silently audited the copy under a language the operator was not
-		// working in.
-		const sliceLang = translatable ? currentDataLang() : 'lg-nolan';
-		const hasLangKeys = component.items.some((item) => item.lang !== undefined);
-		const slice = hasLangKeys
-			? component.items.filter((item) => item.lang === sliceLang)
-			: component.items;
-		const baseEntry = {
-			sectionTipo,
-			sectionId: newSectionId,
-			componentTipo: component.tipo,
-			lang: sliceLang,
-			userId,
-		};
-		await recordTimeMachine({ ...baseEntry, data: component.items }, backfillTimestamp);
-		await recordTimeMachine({ ...baseEntry, data: slice }, saveTimestamp);
-	}
+	// 5. Time Machine: TWO rows per copied MAIN component (recordDuplicateHistory).
+	await recordDuplicateHistory(
+		{ table, sectionTipo, sectionId: newSectionId },
+		copied,
+		values.relation,
+		{ userId, now },
+	);
 
 	// 6. Observer cascade (2026-07-24): the duplicate is a NEW referencer of
 	//    every target its copied relation locators point at — the targets'
@@ -842,5 +822,48 @@ async function duplicateRecordMediaFiles(
 		} catch {
 			// PHP logs and continues; a media-copy failure never aborts the duplicate.
 		}
+	}
+}
+
+/**
+ * Step 5 of a duplicate — the Time Machine, per copied MAIN component, in its
+ * two lanes (relations/dataframe_slots.ts, WC-2026-09-27-bulk-revert-undo-log
+ * "two lanes"):
+ *   (a) the BACKFILL (PHP tm_record::create previous_data path: history is
+ *       empty on a fresh record, so the FULL copied value is stored first,
+ *       stamped one minute EARLIER to order before the save) — one row per
+ *       language lane holding a value, and the lg-nolan row (the lg-nolan value
+ *       + the copy's re-minted frames) when it holds anything;
+ *   (b) the SAVE row of the re-save loop's instance lang (the data lang for a
+ *       translatable component, lg-nolan otherwise): that lane's value — for
+ *       lg-nolan, the value + the frames.
+ * A dataframe SLOT gets no row of its own (its frames ride in the main's
+ * lg-nolan lane, and apply_value refuses a slot row).
+ */
+async function recordDuplicateHistory(
+	target: { table: string; sectionTipo: string; sectionId: number },
+	copied: readonly CopiedComponent[],
+	relationBag: unknown,
+	audit: { userId: number; now: Date },
+): Promise<void> {
+	const saveStamp = { userId: audit.userId, timestamp: dbTimestamp(audit.now), bulkId: null };
+	const backfillStamp = {
+		userId: audit.userId,
+		timestamp: dbTimestamp(new Date(audit.now.getTime() - 60_000)),
+	};
+	for (const component of copied) {
+		if ((await getModelByTipo(component.tipo)) === 'component_dataframe') continue;
+		// currentDataLang(), NOT config.menu.dataLang (P0-7/DATA-01): the lane this
+		// picks is the one the duplicate's save row is stamped with, so the install
+		// default silently audited the copy under a language the operator was not
+		// working in.
+		const main = await mainIdentity(component.tipo, currentDataLang());
+		const identity = { ...main, lang: main.translatable ? currentDataLang() : NOLAN };
+		const state = {
+			value: component.items,
+			slots: await slotsFromBag(component.tipo, relationBag),
+		};
+		await recordMainBackfill(target, identity, state, backfillStamp);
+		await recordMainHistory(target, identity, { before: state, after: state }, saveStamp);
 	}
 }

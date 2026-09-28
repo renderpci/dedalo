@@ -62,6 +62,7 @@ import type { Rqo, RqoSource } from '../../concepts/rqo.ts';
 import { isConsultationOnlySection } from '../../concepts/section.ts';
 import { DedaloError, ok } from '../../errors/index.ts';
 import {
+	effectiveSaveLang,
 	getColumnNameByModel,
 	getModelByTipo,
 	getTranslatableByTipo,
@@ -471,7 +472,7 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 	const translatable = await getTranslatableByTipo(componentTipo);
 	const outcome = applyTemporalLiteralChanges(currentChipsFromPayload(payload), changedData, {
 		langSliced: isLangSlicedModel(model),
-		effectiveLang: translatable || model === 'component_iri' ? lang : 'lg-nolan',
+		effectiveLang: await effectiveSaveLang(componentTipo, model, lang),
 		translatable,
 		lang,
 	});

@@ -186,7 +186,7 @@ const render_service_upload = function(self) {
 *   - process_file    – transient upload-progress indicator (spinner + status text)
 *   - user_msg_container – reserved for user-facing messages
 *   - files_list      – one render_file_info card per uploaded CSV file
-*   - submit_container – import button + time-machine checkbox
+*   - submit_container – import button
 *   - process_info_container – SSE progress display (hidden until import starts)
 *
 * Also triggers check_process_data so that a previously-started import that was
@@ -279,11 +279,12 @@ const get_content_data = async function(self) {
 					}
 				})
 
-			// time_machine_save. Get current checked status
-				const time_machine_save = checkbox_time_machine_save.checked
-
 			// import_files
-				self.import_files(files, time_machine_save)
+				// No time-machine switch: every CSV import runs under a bulk id, and a
+				// save carrying a bulk id ALWAYS writes its undo pair (a hidden BEFORE
+				// row + the normal visible after-row), so the run is revertible exactly
+				// (WC-2026-09-27-bulk-revert-undo-log, decision D1).
+				self.import_files(files)
 				.then(async function(api_response){
 					if(SHOW_DEBUG===true) {
 						console.log(')) import_files api_response:', api_response)
@@ -316,42 +317,6 @@ const get_content_data = async function(self) {
 			parent			: submit_container
 		})
 		import_button.addEventListener('click', fn_import)
-
-	// checkbox_time_machine_save
-		// Wrapping label + prepended checkbox — toggling saves a TM snapshot per imported row.
-		// Defaults to checked so the import is always reversible unless the user opts out.
-		const checkbox_label = ui.create_dom_element({
-			element_type	: 'label',
-			class_name		: 'checkbox_label',
-			inner_html		: 'Save time machine history on import',
-			parent			: submit_container
-		})
-		const checkbox_time_machine_save = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'checkbox',
-			class_name		: 'checkbox_time_machine_save'
-		})
-		checkbox_time_machine_save.checked = 'checked' // default is checked
-		checkbox_label.prepend(checkbox_time_machine_save)
-		checkbox_time_machine_save.addEventListener('change', function(){
-			update_append_tm_warning(self)
-		})
-
-	// append_tm_warning
-		// Append mode with time machine off is allowed (the server does not refuse
-		// it) but leaves the added values without a revert path: warn, never block.
-		// update_append_tm_warning() toggles it; the column mapper calls it on
-		// every mode / target / checkbox change.
-		const append_tm_warning = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'warning append_tm_warning hide',
-			text_content	: self.get_tool_label('append_no_tm_warning')
-				|| 'Time machine is off: the values added by append-mode columns cannot be reverted.',
-			parent			: submit_container
-		})
-		self.append_tm_warning			= append_tm_warning
-		self.checkbox_time_machine_save	= checkbox_time_machine_save
-		update_append_tm_warning(self)
 
 	// process_info_container
 		// Hidden until import_files returns a job_id; shown by follow_import_job.
@@ -420,36 +385,6 @@ export const import_mode_allowed = function(column_map, policy) {
 
 
 /**
-* UPDATE_APPEND_TM_WARNING
-* Shows the 'time machine off + append' warning when the time machine checkbox
-* is unchecked and any checked column of any selected file is in append mode.
-* Warn only: the import is not refused.
-* @param {Object} self - tool_import_dedalo_csv instance
-* @returns {boolean} true when the warning is visible
-*/
-export const update_append_tm_warning = function(self) {
-
-	const warning_node	= self.append_tm_warning
-	const tm_checkbox	= self.checkbox_time_machine_save
-	if (!warning_node || !tm_checkbox) {
-		return false
-	}
-
-	const files = self.csv_files_list || []
-	const has_append = files.some(file => {
-		return file.checked===true
-			&& Array.isArray(file.ar_columns_map)
-			&& file.ar_columns_map.some(col => col && col.checked===true && col.import_mode==='append')
-	})
-	const visible = has_append && tm_checkbox.checked!==true
-	warning_node.classList.toggle('hide', !visible)
-
-	return visible
-}//end update_append_tm_warning
-
-
-
-/**
 * RENDER_FILE_INFO
 * Renders a single file card for one uploaded CSV file.
 *
@@ -505,7 +440,6 @@ const render_file_info = function(self, item) {
 			})
 			checkbox_file_selection.addEventListener("change", function(){
 				item.checked = checkbox_file_selection.checked ? true : false
-				update_append_tm_warning(self)
 				button_csv.classList.toggle('active')
 				arrow_right.classList.toggle('active')
 			})
@@ -952,7 +886,6 @@ export const render_columns_mapper = async function(self, item) {
 				})
 				checkbox_file_selection.addEventListener('change', function(){
 					ar_columns_map[i].checked = checkbox_file_selection.checked
-					update_append_tm_warning(self)
 				})
 
 			// target component list selector
@@ -1062,7 +995,6 @@ export const render_columns_mapper = async function(self, item) {
 							i			: i,
 							container	: import_mode_container
 						})
-						update_append_tm_warning(self)
 				})
 
 				const mapped_to_options_container = ui.create_dom_element({
@@ -1229,14 +1161,8 @@ export const render_columns_mapper = async function(self, item) {
 
 			import_mode_select.addEventListener('change', function() {
 				ar_columns_map[i].import_mode = import_mode_select.value
-				update_append_tm_warning(self)
 			})
 		}
-
-	// time-machine-off warning: a re-render (section_tipo change) may have
-	// dropped every append column (render_import_mode_selector resets
-	// import_mode) or kept a preserved 'append' — sync it with the new map
-		update_append_tm_warning(self)
 
 	return fragment
 }//end render_columns_mapper

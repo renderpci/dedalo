@@ -39,19 +39,110 @@
  * stripped by removeAllInverseReferences below). No wire-shape change.
  */
 
+import { config } from '../../../config/config.ts';
 import { compareLocators } from '../../concepts/locator.ts';
 import { isConsultationOnlySection } from '../../concepts/section.ts';
 import { dbTimestamp } from '../../db/db_timestamp.ts';
 import { MATRIX_JSONB_COLUMNS, type MatrixJsonbColumn } from '../../db/matrix.ts';
 import { deleteMatrixRecord } from '../../db/matrix_write.ts';
 import { sql, withTransaction } from '../../db/postgres.ts';
-import { ensureRecordGenerationTable, tmEpochPredicate } from '../../db/record_generation.ts';
-import { recordTimeMachine } from '../../db/time_machine.ts';
+import {
+	ensureTmHistoryReady,
+	tmEpochPredicate,
+	tmVisiblePredicate,
+} from '../../db/record_generation.ts';
+import { recordBulkCascadeDelete, recordTimeMachine } from '../../db/time_machine.ts';
 import type { UnpublishIntent } from '../../diffusion_bridge/diffusion_delete.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { getMatrixTableFromTipo } from '../../ontology/resolver.ts';
 import { applyOwnFramePolicies } from '../../relations/dataframe.ts';
+import {
+	attributeSlotMains,
+	historyMainsOf,
+	type MainIdentity,
+	type MainState,
+	mainIdentity,
+	readKeyImage,
+	recordMainBackfill,
+	recordMainHistory,
+	resolveDataframeSlotTipos,
+	restoreSlot,
+	type SlotImages,
+	type SlotTarget,
+	slotsFromBag,
+} from '../../relations/dataframe_slots.ts';
+import { currentDataLang } from '../../resolve/request_lang.ts';
 import { fireRagRecordEvent, fireSaveEvent } from '../../section_record/save_event.ts';
+import { bulkIdOf } from './bulk_capture.ts';
+
+/** The bulk-run context a cascade hands the delete doors (relations/dataframe.ts). */
+export interface DeleteBulkOptions {
+	/**
+	 * The dd800 run whose dataframe cascade is deleting this record — null /
+	 * absent for every ordinary delete. With it, the door writes a role-4 twin of
+	 * its whole-record snapshot carrying the run id (recordCascadeDeleteTwin).
+	 */
+	bulkProcessId?: number | null;
+}
+
+/** deleteSectionRecord's options: the bulk context plus an optional locked precondition. */
+export interface DeleteRecordOptions extends DeleteBulkOptions {
+	/**
+	 * Evaluated INSIDE the delete's transaction, right after its `FOR UPDATE`
+	 * read of the record, over the locked whole-record snapshot (every jsonb
+	 * column). A non-null answer ABORTS the delete with nothing written and
+	 * comes back as `DeleteRecordResult.refused` — a check that must hold AT
+	 * the delete (the bulk revert's D2 "only the run's values, unreferenced")
+	 * cannot be raced by a save committing between check and delete.
+	 */
+	precondition?: (snapshot: Record<string, unknown>) => Promise<string | null>;
+}
+
+/**
+ * THE ROLE-4 TWIN (WC …-bulk-revert-undo-log, M1 / decision D3). A record a
+ * bulk run's dataframe cascade deletes (deleteSectionRecord) or wipes
+ * (deleteSectionData) carries no bulk id through the ordinary history — the
+ * delete snapshot row (record delete) and the per-component rows (wipe) are
+ * the door's own, visible and unattributed, exactly as for an interactive
+ * delete. The twin is the run's handle on it: the same whole-record image
+ * (every jsonb column as it stood BEFORE the door changed anything), hidden
+ * (tm_role 4) and stamped with the run id, in the door's transaction and with
+ * the door's stamp. Without a run id: nothing.
+ */
+async function recordCascadeDeleteTwin(
+	options: DeleteBulkOptions,
+	entry: {
+		sectionTipo: string;
+		sectionId: number;
+		userId: number;
+		snapshot: Record<string, unknown>;
+		timestamp: string;
+	},
+): Promise<void> {
+	const bulkId = bulkIdOf(options.bulkProcessId);
+	if (bulkId === null) return;
+	await recordBulkCascadeDelete({ ...entry, bulkId });
+}
+
+/**
+ * What a data WIPE (deleteSectionData) leaves in one component key: nothing
+ * (null removes the key), except component_filter, which keeps the default
+ * project (PHP get_default_data_for_user) instead of emptying. Exported so the
+ * bulk revert can recognise a key still in its wiped state (bulk_revert_records).
+ */
+export function wipedComponentValue(model: string, componentTipo: string): unknown[] | null {
+	if (model !== 'component_filter') return null;
+	return [
+		{
+			type: 'dd151',
+			// DEDALO_DEFAULT_PROJECT — already an int config value
+			// (WC-2026-08-10-section-id-int-canonical).
+			section_id: config.features.defaultProject,
+			section_tipo: config.features.filterSectionTipo, // DEDALO_FILTER_SECTION_TIPO_DEFAULT
+			from_component_tipo: componentTipo,
+		},
+	];
+}
 
 export interface DeleteRecordResult {
 	/**
@@ -63,6 +154,32 @@ export interface DeleteRecordResult {
 	deleted: number[];
 	/** True when a matrix row was actually removed. */
 	removed: boolean;
+	/** The `precondition`'s refusal, when it aborted the delete (nothing written). */
+	refused?: string;
+}
+
+/**
+ * `SELECT … FOR UPDATE` of every jsonb column of one record — the delete's
+ * whole-record snapshot (SQL NULL columns as `null`) — or null when the row
+ * does not exist.
+ */
+async function lockRecordSnapshot(
+	table: string,
+	sectionTipo: string,
+	sectionId: number,
+): Promise<Record<string, unknown> | null> {
+	const columnList = MATRIX_JSONB_COLUMNS.map((column) => `"${column}"`).join(', ');
+	const rows = (await sql.unsafe(
+		`SELECT ${columnList} FROM "${table}" WHERE section_tipo = $1 AND section_id = $2 FOR UPDATE`,
+		[sectionTipo, sectionId],
+	)) as Record<MatrixJsonbColumn, unknown>[];
+	const record = rows[0];
+	if (record === undefined) return null;
+	const snapshot: Record<string, unknown> = {};
+	for (const column of MATRIX_JSONB_COLUMNS) {
+		snapshot[column] = record[column] ?? null;
+	}
+	return snapshot;
 }
 
 /**
@@ -75,6 +192,7 @@ export async function deleteSectionRecord(
 	sectionId: number,
 	userId: number,
 	now: Date = new Date(),
+	options: DeleteRecordOptions = {},
 ): Promise<DeleteRecordResult> {
 	if (isConsultationOnlySection(sectionTipo)) {
 		throw new DedaloError('perm.denied', {
@@ -106,30 +224,27 @@ export async function deleteSectionRecord(
 	// ambient outer transaction the "post-commit" steps run while that outer tx
 	// is still open — composed callers own that trade-off.
 	const txOutcome = await withTransaction(
-		async (): Promise<{
-			snapshot: Record<string, unknown>;
-			removedCount: number;
-			inverseRewrites: InverseRewrite[];
-			unpublishIntent: UnpublishIntent;
-		} | null> => {
+		async (): Promise<
+			| {
+					snapshot: Record<string, unknown>;
+					removedCount: number;
+					inverseRewrites: InverseRewrite[];
+					unpublishIntent: UnpublishIntent;
+			  }
+			| { refused: string }
+			| null
+		> => {
 			// 1. Read the full record (every jsonb column) for the TM snapshot — this is
 			//    PHP section_record::get_data(), the object stored in matrix_time_machine.
-			const columnList = MATRIX_JSONB_COLUMNS.map((column) => `"${column}"`).join(', ');
-			const rows = (await sql.unsafe(
-				`SELECT ${columnList} FROM "${table}" WHERE section_tipo = $1 AND section_id = $2 FOR UPDATE`,
-				[sectionTipo, sectionId],
-			)) as Record<MatrixJsonbColumn, unknown>[];
-			const record = rows[0];
-			if (record === undefined) {
-				return null; // nothing to delete
-			}
-			const snapshot: Record<string, unknown> = {};
-			for (const column of MATRIX_JSONB_COLUMNS) {
-				snapshot[column] = record[column] ?? null;
-			}
+			const snapshot = await lockRecordSnapshot(table, sectionTipo, sectionId);
+			if (snapshot === null) return null; // nothing to delete
+			// 1a. The caller's precondition, behind the lock (DeleteRecordOptions).
+			const refused = (await options.precondition?.(snapshot)) ?? null;
+			if (refused !== null) return { refused };
 
 			// 2. Time Machine audit (state 'deleted'): tipo = section_tipo, nolan lang,
 			//    data = the full record snapshot (PHP tm_record::create in delete()).
+			const snapshotStamp = dbTimestamp(now);
 			await recordTimeMachine(
 				{
 					sectionTipo,
@@ -139,21 +254,36 @@ export async function deleteSectionRecord(
 					userId,
 					data: snapshot,
 				},
-				dbTimestamp(now),
+				snapshotStamp,
 			);
+			// 2a. Under a bulk run's cascade: the snapshot's role-4 twin (see
+			//     recordCascadeDeleteTwin).
+			await recordCascadeDeleteTwin(options, {
+				sectionTipo,
+				sectionId,
+				userId,
+				snapshot,
+				timestamp: snapshotStamp,
+			});
 
 			// 2b. THE RECORD'S OWN FRAMES (WC-2026-09-06-dataframe-delete-policy-on-slot):
 			//     every dataframe slot in the snapshot applies its delete policy to
 			//     the frame targets its entries addressed. Queued on the commit lane
 			//     by the applier — they run after this row is gone.
-			await applyOwnFramePolicies(snapshot.relation, userId);
+			await applyOwnFramePolicies(snapshot.relation, userId, options.bulkProcessId);
 
 			// 3. Referential integrity: remove every locator in OTHER records that
 			//    points at this one (PHP remove_all_inverse_references, delete step 3).
 			//    Each owner it rewrites is LOCKED for the rest of this transaction
 			//    (DATA-02, see the read there): the rewrite is a read-modify-write of
 			//    a record this transaction does not otherwise hold.
-			const inverseRewrites = await removeAllInverseReferences(sectionTipo, sectionId, userId, now);
+			const inverseRewrites = await removeAllInverseReferences(
+				sectionTipo,
+				sectionId,
+				userId,
+				now,
+				options.bulkProcessId ?? null,
+			);
 
 			// 4. Remove the row. (Ontology-node cleanup ledgered.)
 			const removedCount = await deleteMatrixRecord(table, sectionTipo, sectionId);
@@ -173,8 +303,8 @@ export async function deleteSectionRecord(
 			return { snapshot, removedCount, inverseRewrites, unpublishIntent };
 		},
 	);
-	if (txOutcome === null) {
-		return { deleted: [], removed: false };
+	if (txOutcome === null || 'refused' in txOutcome) {
+		return { deleted: [], removed: false, ...(txOutcome ?? {}) };
 	}
 
 	// 6. Media files (POST-COMMIT): move every file of every media component into
@@ -331,11 +461,148 @@ interface InverseRewrite {
 	removed: unknown[];
 }
 
+/** An owner record's whole `relation` bag (tipo → value), `{}` when null. */
+async function readRelationBag(owner: {
+	table: string;
+	ownerSection: string;
+	ownerId: number;
+}): Promise<Record<string, unknown>> {
+	const rows = (await sql.unsafe(
+		`SELECT relation FROM "${owner.table}" WHERE section_tipo = $1 AND section_id = $2`,
+		[owner.ownerSection, owner.ownerId],
+	)) as { relation: unknown }[];
+	const bag = rows[0]?.relation;
+	return bag !== null && typeof bag === 'object'
+		? structuredClone(bag as Record<string, unknown>)
+		: {};
+}
+
+/** A delete door's history stamps: the actor, the run (null outside one), the backfill + now stamps. */
+interface DoorAudit {
+	userId: number;
+	bulkId: number | null;
+	backfillStamp: string;
+	nowStamp: string;
+}
+
+/**
+ * Whether this record already has a VISIBLE history row for (tipo, lang) — the
+ * backfill probe of the delete doors: without one, the door first records the
+ * value as it stood (stamped 60 s earlier), so the change has a "before" in dd15.
+ * P0-14: epoch-narrowed — a DEAD generation's rows at the same address must not
+ * answer for the reborn record (its own history would never be written).
+ * Visibility: a hidden undo-log row (tm_role) is not history either.
+ */
+async function hasVisibleHistory(target: SlotTarget, tipo: string, lang: string): Promise<boolean> {
+	await ensureTmHistoryReady();
+	const history = (await sql.unsafe(
+		`SELECT 1 FROM matrix_time_machine
+		 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3 AND lang = $4
+		   AND ${tmEpochPredicate()} AND ${tmVisiblePredicate()} LIMIT 1`,
+		[target.sectionTipo, target.sectionId, tipo, lang],
+	)) as unknown[];
+	return history.length > 0;
+}
+
+/** A main's raw value on both sides of an owner rewrite, and its slots on both sides. */
+interface OwnerImages {
+	rawBefore: unknown;
+	rawAfter: unknown;
+	slotsBefore: SlotImages;
+	slotsAfter: SlotImages;
+}
+
+/**
+ * The images of one history main of an owner rewrite. A relation main is read
+ * from the two bags; any other main (a literal whose frame was stripped) was
+ * not written by the rewrite, so its stored value is both sides.
+ */
+async function ownerImages(
+	target: SlotTarget,
+	identity: MainIdentity,
+	changedTipo: string,
+	bags: { before: Record<string, unknown>; after: Record<string, unknown> },
+): Promise<OwnerImages> {
+	const extra = identity.tipo === changedTipo ? [] : [changedTipo];
+	const slotsBefore = await slotsFromBag(identity.tipo, bags.before, extra);
+	const slotsAfter = await slotsFromBag(identity.tipo, bags.after, slotsBefore.slots);
+	if (identity.column === 'relation') {
+		const rawBefore = bags.before[identity.tipo];
+		return { rawBefore, rawAfter: bags.after[identity.tipo], slotsBefore, slotsAfter };
+	}
+	const raw = await readKeyImage(target, identity.column, identity.tipo);
+	return { rawBefore: raw, rawAfter: raw, slotsBefore, slotsAfter };
+}
+
+/**
+ * The history of one main of an owner rewrite, in its two lanes
+ * (relations/dataframe_slots.ts): the BACKFILL of every lane that has no
+ * visible row yet (the state as it stood), then the change itself — outside a
+ * run its visible rows (a changed value lane, the lg-nolan row when a frame was
+ * stripped), under a run's cascade its undo pairs (whose after-rows are the
+ * visible ones).
+ */
+async function recordOwnerMain(
+	target: SlotTarget,
+	identity: MainIdentity,
+	images: OwnerImages,
+	audit: DoorAudit,
+): Promise<void> {
+	const before: MainState = { value: images.rawBefore, slots: images.slotsBefore };
+	const after: MainState = { value: images.rawAfter, slots: images.slotsAfter };
+	await recordMainBackfill(
+		target,
+		identity,
+		before,
+		{ userId: audit.userId, timestamp: audit.backfillStamp },
+		(lane) => hasVisibleHistory(target, identity.tipo, lane),
+	);
+	await recordMainHistory(
+		target,
+		identity,
+		{ before, after },
+		{ userId: audit.userId, timestamp: audit.nowStamp, bulkId: audit.bulkId },
+		{ forceDoorLane: false },
+	);
+}
+
+/**
+ * THE HISTORY OF AN INVERSE-REFERENCE STRIP on one owner component — COMPOSED
+ * (relations/dataframe_slots.ts): the rewritten component when it is a main
+ * (its slots' frames, as the dataframe strip left them, ride in its row), or
+ * the main(s) of the stripped frames when the component is a dataframe slot (a
+ * frame that targeted the deleted record). No slot ever gets a row or a pair
+ * of its own. Written after the key is persisted, inside the delete's
+ * transaction; `bagBefore` is the owner's relation bag read under its lock.
+ */
+async function recordOwnerRewriteHistory(
+	owner: { table: string; ownerSection: string; ownerId: number; component: string },
+	bagBefore: Record<string, unknown>,
+	audit: DoorAudit,
+): Promise<void> {
+	const target = { table: owner.table, sectionTipo: owner.ownerSection, sectionId: owner.ownerId };
+	const bagAfter = await readRelationBag(owner);
+	const mains = await historyMainsOf(owner.component, {
+		before: bagBefore[owner.component],
+		after: bagAfter[owner.component],
+		callerMain: null,
+		requestLang: 'lg-nolan',
+		// A strip door: a stripped frame no main owns leaves without history.
+		orphan: 'skip',
+	});
+	for (const identity of mains) {
+		const bags = { before: bagBefore, after: bagAfter };
+		const images = await ownerImages(target, identity, owner.component, bags);
+		await recordOwnerMain(target, identity, images, audit);
+	}
+}
+
 async function removeAllInverseReferences(
 	sectionTipo: string,
 	sectionId: number,
 	userId: number,
 	now: Date,
+	bulkProcessId: number | null = null,
 ): Promise<InverseRewrite[]> {
 	const { findInverseReferenceLocators } = await import('../../search/search_related.ts');
 	const { readMatrixKeyForUpdate } = await import('../../db/matrix_write.ts');
@@ -374,6 +641,7 @@ async function removeAllInverseReferences(
 		if (typeof raw.type === 'string') group.types.add(raw.type);
 	}
 
+	const bulkId = bulkIdOf(bulkProcessId);
 	const backfillStamp = stamp(new Date(now.getTime() - 60_000));
 	const nowStamp = stamp(now);
 	const touchedOwners = new Set<string>();
@@ -444,6 +712,13 @@ async function removeAllInverseReferences(
 		}
 		if (removedEntries.length === 0) continue; // nothing matched
 
+		// THE OWNER'S HISTORY IS COMPOSED (recordOwnerRewriteHistory): its whole
+		// relation bag is captured here, behind the owner lock taken above, so
+		// the rewritten main's row (or pair, under a run's cascade — the revert
+		// that undeletes the target puts the stripped locators back) carries its
+		// slots' frames on both sides of the dataframe strip below.
+		const bagBefore = await readRelationBag(group);
+
 		// DATAFRAME cascade (PHP remove_locator_from_data :1362 via
 		// remove_all_inverse_references, S1-05): each removed locator strips the
 		// owner's frame entries paired with its item id, so no orphaned frames
@@ -461,48 +736,12 @@ async function removeAllInverseReferences(
 					group.component,
 					Math.trunc(Number(itemId)),
 					userId,
+					bulkProcessId,
 				);
 			}
 		}
 
 		const newData = remaining.length > 0 ? remaining : null;
-		// Component save audit (relation data is nolan): backfill pair like any
-		// TS-side component write.
-		await ensureRecordGenerationTable();
-		const history = (await sql.unsafe(
-			// P0-14: the probe asks whether THIS record already has a backfill row.
-			// Without the epoch narrowing, a DEAD generation's rows at the same
-			// address answer yes and the reborn record's own history is never
-			// written — the defect inverted: not inherited history, but suppressed.
-			`SELECT 1 FROM matrix_time_machine
-			 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3 AND lang = 'lg-nolan'
-			   AND ${tmEpochPredicate()} LIMIT 1`,
-			[group.ownerSection, group.ownerId, group.component],
-		)) as unknown[];
-		if (history.length === 0) {
-			await recordTimeMachine(
-				{
-					sectionTipo: group.ownerSection,
-					sectionId: group.ownerId,
-					componentTipo: group.component,
-					lang: 'lg-nolan',
-					userId,
-					data: bag,
-				},
-				backfillStamp,
-			);
-		}
-		await recordTimeMachine(
-			{
-				sectionTipo: group.ownerSection,
-				sectionId: group.ownerId,
-				componentTipo: group.component,
-				lang: 'lg-nolan',
-				userId,
-				data: newData,
-			},
-			nowStamp,
-		);
 		// Chokepoint write, no audit here: the owner's stamps refresh ONCE below
 		// (an owner may hold several affected components).
 		// THE ANCESTOR INDEX MOVES WITH THE LOCATORS (P1-7 / DATA-12). Since
@@ -526,6 +765,9 @@ async function removeAllInverseReferences(
 			[{ column: 'relation', key: group.component, value: newData }],
 			false,
 		);
+		// Component save audit (relation data is nolan): backfill row + after-row
+		// (or the run's pair), composed, like any TS-side component write.
+		await recordOwnerRewriteHistory(group, bagBefore, { userId, bulkId, backfillStamp, nowStamp });
 		touchedOwners.add(`${group.table}|${group.ownerSection}|${group.ownerId}`);
 		rewrites.push({
 			ownerSection: group.ownerSection,
@@ -563,6 +805,216 @@ export const EXCLUDED_EMPTY_MODELS: ReadonlySet<string> = new Set([
 	'component_inverse',
 ]);
 
+/** One key a data wipe emptied (deleteSectionData). */
+interface WipedKey {
+	tipo: string;
+	model: string;
+	column: string;
+	/** The door's historical tag: the data lang when the tipo is translatable, else lg-nolan. */
+	tmLang: string;
+	stored: unknown;
+	newData: unknown;
+	/** A slot a main's frame strip rewrote (wipeDeclaredSlotsOfMains): the mains that stripped it. */
+	owners?: string[];
+}
+
+/** One main a wipe records: its value on both sides, and the extra slots that name it. */
+interface WipeMain {
+	tipo: string;
+	tmLang: string;
+	stored: unknown;
+	newData: unknown;
+	extraSlots: string[];
+}
+
+/** The wipe's record: the locked pre-wipe row, and the data lang of the door's tag rule. */
+interface WipeContext {
+	target: SlotTarget;
+	record: Record<MatrixJsonbColumn, unknown>;
+	dataLang: string;
+}
+
+/** A jsonb column value as a key bag (`{}` when null or not an object). */
+function asBag(value: unknown): Record<string, unknown> {
+	return value !== null && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+/** The record's relation bag AFTER the wipe (in memory: null removes the key). */
+function wipedRelationBag(
+	before: Record<string, unknown>,
+	wiped: readonly WipedKey[],
+): Record<string, unknown> {
+	const after = { ...before };
+	for (const key of wiped) {
+		if (key.column !== 'relation') continue;
+		if (key.newData === null) delete after[key.tipo];
+		else after[key.tipo] = key.newData;
+	}
+	return after;
+}
+
+/** A main a wiped slot's frames belong to but the wipe did not empty: its value is both sides. */
+async function unwipedSlotMain(
+	ctx: WipeContext,
+	tipo: string,
+	slotTipo: string,
+): Promise<WipeMain> {
+	const { getModelByTipo, getColumnNameByModel, getTranslatableByTipo } = await import(
+		'../../ontology/resolver.ts'
+	);
+	const model = await getModelByTipo(tipo);
+	const column = model === null ? null : getColumnNameByModel(model);
+	const stored = column === null ? undefined : asBag(ctx.record[column as MatrixJsonbColumn])[tipo];
+	const tmLang = (await getTranslatableByTipo(tipo)) ? ctx.dataLang : 'lg-nolan';
+	const value = stored ?? null;
+	return { tipo, tmLang, stored: value, newData: value, extraSlots: [slotTipo] };
+}
+
+/**
+ * A WIPED RECORD'S FRAMES LEAVE WITH IT — whatever the main's kind, and
+ * whether or not the main held a value. The subtree walk empties a slot only
+ * when the slot is a component of the section; a main's DECLARED slot that is
+ * not (component_iri's fixed dd560, a slot named only by the main's
+ * request_config ddo) would keep the main's frames as orphans pairing no item.
+ * For EVERY non-slot component of the walked subtree — a wiped main, and an
+ * EMPTY one too (a frame saved before its item, or left behind by a `clear`) —
+ * each declared slot the walk did not empty loses that main's OWN frames
+ * (restoreSlot with none recorded — other mains' frames stay; an empty result
+ * removes the key). The removed frames join `emptiedFrames` (the slot's delete
+ * policy), and the slot joins `wiped` carrying the mains that stripped it
+ * (`owners`: the composed wipe row of each, wipeMains). Returns the rewritten
+ * slots.
+ */
+async function wipeDeclaredSlotsOfMains(
+	target: SlotTarget,
+	record: Record<MatrixJsonbColumn, unknown>,
+	wiped: WipedKey[],
+	emptiedFrames: Record<string, unknown[]>,
+	components: readonly { tipo: string; model: string }[],
+): Promise<WipedKey[]> {
+	const bag = { ...asBag(record.relation) };
+	const done = new Set(wiped.map((key) => key.tipo));
+	const written = new Map<string, WipedKey>();
+	const mains = new Set(
+		[...wiped, ...components]
+			.filter((key) => key.model !== 'component_dataframe')
+			.map((key) => key.tipo),
+	);
+	for (const main of mains) {
+		const slots = (await resolveDataframeSlotTipos(main)).filter((slot) => !done.has(slot));
+		for (const slot of slots) {
+			await stripWipedMainFrames({ target, bag, written, emptiedFrames }, slot, main);
+		}
+	}
+	wiped.push(...written.values());
+	return [...written.values()];
+}
+
+/** The running state of wipeDeclaredSlotsOfMains: the in-memory relation bag and what it wrote. */
+interface SlotStrip {
+	target: SlotTarget;
+	bag: Record<string, unknown>;
+	written: Map<string, WipedKey>;
+	emptiedFrames: Record<string, unknown[]>;
+}
+
+/** Remove `mainTipo`'s own frames from one slot (restoreSlot with none recorded), when it holds any. */
+async function stripWipedMainFrames(
+	state: SlotStrip,
+	slot: string,
+	mainTipo: string,
+): Promise<void> {
+	const live = Array.isArray(state.bag[slot]) ? (state.bag[slot] as unknown[]) : [];
+	const kept = restoreSlot(live, mainTipo, []);
+	if (kept.length === live.length) return;
+	const { persistRecordKeys } = await import('../../section_record/index.ts');
+	const newData = kept.length === 0 ? null : kept;
+	await persistRecordKeys(state.target, [{ column: 'relation', key: slot, value: newData }], false);
+	const removed = live.filter((entry) => !kept.includes(entry));
+	state.emptiedFrames[slot] = [...(state.emptiedFrames[slot] ?? []), ...removed];
+	noteStrippedSlot(state.written, { slot, mainTipo, live, newData });
+	state.bag[slot] = kept;
+}
+
+/** Record one strip of `slot` by `mainTipo`: its first pre-strip image, its latest value, its owners. */
+function noteStrippedSlot(
+	written: Map<string, WipedKey>,
+	strip: { slot: string; mainTipo: string; live: unknown[]; newData: unknown },
+): void {
+	const prior = written.get(strip.slot) ?? { stored: strip.live, owners: [] };
+	written.set(strip.slot, {
+		tipo: strip.slot,
+		model: 'component_dataframe',
+		column: 'relation',
+		tmLang: 'lg-nolan',
+		stored: prior.stored,
+		newData: strip.newData,
+		owners: [...(prior.owners ?? []), strip.mainTipo],
+	});
+}
+
+/**
+ * The mains whose history a wipe writes: every emptied non-slot key, plus the
+ * main(s) of each emptied slot's frames — the mains that stripped it
+ * (wipeDeclaredSlotsOfMains `owners`), else attributeSlotMains; a frame no main
+ * owns leaves without history (orphan 'skip'). A slot writes no row of its own.
+ */
+async function wipeMains(ctx: WipeContext, wiped: readonly WipedKey[]): Promise<WipeMain[]> {
+	const mains: WipeMain[] = wiped
+		.filter((key) => key.model !== 'component_dataframe')
+		.map((key) => ({ ...key, extraSlots: [] }));
+	for (const slot of wiped.filter((key) => key.model === 'component_dataframe')) {
+		const owners =
+			slot.owners ??
+			(await attributeSlotMains(slot.tipo, slot.stored, slot.newData ?? undefined, null, 'skip'));
+		for (const tipo of owners) {
+			const known = mains.find((main) => main.tipo === tipo);
+			if (known !== undefined) known.extraSlots.push(slot.tipo);
+			else mains.push(await unwipedSlotMain(ctx, tipo, slot.tipo));
+		}
+	}
+	return mains;
+}
+
+/**
+ * THE HISTORY OF A DATA WIPE — two lanes (relations/dataframe_slots.ts): per
+ * main, the backfill of every lane that has no visible row yet (its old value
+ * per language + the lg-nolan value and its slots' frames as they stood), then
+ * the wipe itself — one emptied row per language lane that held a value, and
+ * the lg-nolan row when its value or a frame went. Written inside the wipe's
+ * transaction, after every key was emptied; the slots are read from the locked
+ * row and its in-memory wiped twin.
+ */
+async function recordWipeHistory(
+	ctx: WipeContext,
+	wiped: readonly WipedKey[],
+	audit: DoorAudit,
+): Promise<void> {
+	const relationBefore = asBag(ctx.record.relation);
+	const relationAfter = wipedRelationBag(relationBefore, wiped);
+	for (const main of await wipeMains(ctx, wiped)) {
+		const slotsBefore = await slotsFromBag(main.tipo, relationBefore, main.extraSlots);
+		const slotsAfter = await slotsFromBag(main.tipo, relationAfter, slotsBefore.slots);
+		const identity = { ...(await mainIdentity(main.tipo, ctx.dataLang)), lang: main.tmLang };
+		const before = { value: main.stored ?? undefined, slots: slotsBefore };
+		const after = { value: main.newData ?? undefined, slots: slotsAfter };
+		await recordMainBackfill(
+			ctx.target,
+			identity,
+			before,
+			{ userId: audit.userId, timestamp: audit.backfillStamp },
+			(lane) => hasVisibleHistory(ctx.target, main.tipo, lane),
+		);
+		await recordMainHistory(
+			ctx.target,
+			identity,
+			{ before, after },
+			{ userId: audit.userId, timestamp: audit.nowStamp, bulkId: null },
+			{ forceDoorLane: false },
+		);
+	}
+}
+
 /**
  * delete_data mode (PHP section_record::delete_data): keep the row, EMPTY
  * every component child of the section that has stored data —
@@ -588,6 +1040,7 @@ export async function deleteSectionData(
 	sectionId: number,
 	userId: number,
 	now: Date = new Date(),
+	options: DeleteRecordOptions = {},
 ): Promise<DeleteRecordResult> {
 	if (isConsultationOnlySection(sectionTipo)) {
 		throw new DedaloError('perm.denied', {
@@ -618,7 +1071,6 @@ export async function deleteSectionData(
 	const { persistRecordKeys, persistModifiedStamp } = await import('../../section_record/index.ts');
 	const { maintainRelationSearchIndex } = await import('../../relations/save.ts');
 	const { dbTimestamp: stamp } = await import('./create_record.ts');
-	const { config } = await import('../../../config/config.ts');
 
 	// Component children of the section (recursive; virtual sections resolve
 	// through their real section's tree). Canonical accessor (S2-19/T3): this
@@ -665,7 +1117,11 @@ export async function deleteSectionData(
 		if (realTipo !== sectionTipo) components = await childrenOf(realTipo);
 	}
 
-	const dataLang = (config.menu as { dataLang?: string }).dataLang ?? 'lg-spa';
+	// currentDataLang(), NOT config.menu.dataLang (P0-7/DATA-01): a translatable
+	// main's wipe rows follow the main-lang rule every other door uses
+	// (dataframe_slots.ts mainRowLang), so the wipe, its backfill and a bulk
+	// revert's undelete sit in ONE timeline — the curator's.
+	const dataLang = currentDataLang();
 	const backfillStamp = stamp(new Date(now.getTime() - 60_000));
 	const nowStamp = stamp(now);
 	const { DATAFRAME_RELATION_TYPE } = await import('../../concepts/subdatum.ts');
@@ -695,6 +1151,15 @@ export async function deleteSectionData(
 			)) as Record<MatrixJsonbColumn, unknown>[];
 			const record = rows[0];
 			if (record === undefined) return null;
+			// Under a bulk run's cascade: the PRE-WIPE record's role-4 twin (see
+			// recordCascadeDeleteTwin) — the row survives a wipe, its data does not.
+			await recordCascadeDeleteTwin(options, {
+				sectionTipo,
+				sectionId,
+				userId,
+				snapshot: { ...record },
+				timestamp: nowStamp,
+			});
 
 			/** Relation slots this wipe emptied — the observer cascade's input below. */
 			const emptied: { component: string; removed: unknown[]; remaining: unknown[] }[] = [];
@@ -708,6 +1173,8 @@ export async function deleteSectionData(
 			const emptiedMedia: Record<string, unknown[]> = {};
 			/** Dataframe slots this wipe emptied (tipo → pre-wipe entries) — the ONLY bag the policies may reach. */
 			const emptiedFrames: Record<string, unknown[]> = {};
+			/** Every key this wipe emptied — its history, composed, after the loop. */
+			const wiped: WipedKey[] = [];
 
 			for (const component of components) {
 				if (EXCLUDED_EMPTY_MODELS.has(component.model)) continue;
@@ -730,55 +1197,12 @@ export async function deleteSectionData(
 
 				// component_filter keeps the user's default project (PHP
 				// get_default_data_for_user) instead of emptying to null.
-				const newData =
-					model === 'component_filter'
-						? [
-								{
-									type: 'dd151',
-									// DEDALO_DEFAULT_PROJECT — already an int config value
-									// (WC-2026-08-10-section-id-int-canonical).
-									section_id: config.features.defaultProject,
-									section_tipo: config.features.filterSectionTipo, // DEDALO_FILTER_SECTION_TIPO_DEFAULT
-									from_component_tipo: component.tipo,
-								},
-							]
-						: null;
+				const newData = wipedComponentValue(model, component.tipo);
 
+				// The history rows are written after the loop (recordWipeHistory),
+				// COMPOSED: a main's rows carry its slots' frames, a slot gets none.
 				const tmLang = (await getTranslatableByTipo(component.tipo)) ? dataLang : 'lg-nolan';
-				await ensureRecordGenerationTable();
-				const history = (await sql.unsafe(
-					// P0-14: same narrowing as the sibling probe above — a dead generation's
-					// rows must not answer for this record.
-					`SELECT 1 FROM matrix_time_machine
-			 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3 AND lang = $4
-			   AND ${tmEpochPredicate()} LIMIT 1`,
-					[sectionTipo, sectionId, component.tipo, tmLang],
-				)) as unknown[];
-				if (history.length === 0) {
-					// Backfill-repair: the OLD full value, stamped 60s before the change.
-					await recordTimeMachine(
-						{
-							sectionTipo,
-							sectionId,
-							componentTipo: component.tipo,
-							lang: tmLang,
-							userId,
-							data: stored,
-						},
-						backfillStamp,
-					);
-				}
-				await recordTimeMachine(
-					{
-						sectionTipo,
-						sectionId,
-						componentTipo: component.tipo,
-						lang: tmLang,
-						userId,
-						data: newData,
-					},
-					nowStamp,
-				);
+				wiped.push({ tipo: component.tipo, model, column, tmLang, stored, newData });
 				// Chokepoint write (PHP key-removal semantics: last key leaves '{}');
 				// the stamps refresh ONCE at the end, not per component.
 				await persistRecordKeys(
@@ -818,18 +1242,37 @@ export async function deleteSectionData(
 				}
 			}
 
+			const target = { table, sectionTipo, sectionId };
+			const stripped = await wipeDeclaredSlotsOfMains(
+				target,
+				record,
+				wiped,
+				emptiedFrames,
+				components,
+			);
+			for (const slot of stripped) {
+				await reindexEmptiedRelation(slot.column, slot.tipo, slot.newData);
+			}
+			await recordWipeHistory({ target, record, dataLang }, wiped, {
+				userId,
+				bulkId: null,
+				backfillStamp,
+				nowStamp,
+			});
+
 			// THE RECORD'S OWN FRAMES (WC-2026-09-06-dataframe-delete-policy-on-slot):
 			// the wipe above emptied every dataframe slot, so each slot's delete
 			// policy applies to the frame targets its pre-wipe entries addressed —
 			// the same answer the record delete gives (step 2b there); which delete
 			// mode the curator picked must not decide whether a `hard_delete`
-			// rating survives. ONLY the slots the wipe EMPTIED: a dd490 bag stored
-			// under a tipo outside the section's current subtree keeps its key,
-			// and a target deleted under a surviving locator is the state this
-			// contract forbids. Queued on the commit lane by the applier; the
+			// rating survives. ONLY the frames the wipe REMOVED: the slots it
+			// emptied, and a main's own frames (wiped or empty) out of a declared
+			// slot outside the subtree (wipeDeclaredSlotsOfMains); any other dd490
+			// bag keeps its key, and a target deleted under a surviving locator is
+			// the state this contract forbids. Queued on the commit lane by the applier; the
 			// grant on the target section is asked here, inside the transaction,
 			// so a refusal rolls the wipe back.
-			await applyOwnFramePolicies(emptiedFrames, userId);
+			await applyOwnFramePolicies(emptiedFrames, userId, options.bulkProcessId);
 			// Modified stamps (PHP update_modified_section_data 'update_record').
 			await persistModifiedStamp({ table, sectionTipo, sectionId }, { userId, now });
 			return { record, emptied, emptiedMedia };

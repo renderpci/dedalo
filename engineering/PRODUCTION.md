@@ -817,6 +817,45 @@ is an operator's decision, with the dry report in view.
   `install/db/migrate.ts` into the `dedalo_ts_schema_migrations` version
   table (one transaction per file; idempotent; never edit an applied file).
   Subsystem lazy `CREATE TABLE IF NOT EXISTS` bootstraps remain as fallback.
+  Every file's lock WAIT is bounded (`SET LOCAL lock_timeout`, default 5s) and
+  a lock timeout (SQLSTATE 55P03) is retried with backoff before the run gives
+  up, so a boot migration never queues forever behind a long reader of a big
+  table. The shared schema is touched only in the three shapes
+  `install/db/migrate.ts` names and `migration_shared_row_tripwire` enforces:
+  a tagged, `@>`-pinned seed-defect UPDATE; a tagged, lock-bounded
+  SHARED-SCHEMA ADDITIVE COLUMN (nullable, no default — metadata-only on any
+  table size; `0010_tm_role.sql`, the time machine's undo-log role); or an
+  ONLINE index build
+  (below).
+- **Online migrations** (`-- ONLINE MIGRATION:` tag, grammar in
+  `install/db/online_migration.ts`: only `CREATE INDEX CONCURRENTLY IF NOT
+  EXISTS` + `ANALYZE`). Today `0011_tm_role_hidden_index.sql` and
+  `0012_tm_history_visible_index.sql`, both on `matrix_time_machine`. The boot
+  runner defers them; `startOnlineMigrations` runs them in the BACKGROUND after
+  the listener binds (never in install mode). What an operator must expect:
+  - **Load right after an upgrade.** Each is a full-heap index build + ANALYZE
+    of the time machine (29M+ rows on a large install): I/O and CPU for
+    minutes, while the server already serves.
+  - **No bounds.** One reserved connection, `statement_timeout = 0`,
+    `lock_timeout = 0`, under the advisory lock `7020926001`
+    (`pg_try_advisory_lock` — a second process skips its run, it never waits).
+    A `CONCURRENTLY` build waits for every transaction older than it,
+    **a running backup included**: it finishes after them.
+  - **Failure / retry.** A file is recorded in `dedalo_ts_schema_migrations`
+    only once every index it names is `VALID`. A failed or interrupted build
+    (a restart mid-build) is logged; the INVALID leftover is dropped
+    (`DROP INDEX CONCURRENTLY`) and rebuilt on the NEXT boot — no retry within
+    the same process.
+  - **A stop mid-build cancels it.** SIGTERM / a planned restart / an update
+    swap during a build does NOT wait for it: the graceful shutdown calls
+    `stopOnlineMigrations` before closing the pool (`pg_cancel_backend` on the
+    reserved backend, waits ≤ 5 s), logs `online run stopped by shutdown`, and
+    the file stays unrecorded — so every restart before the build completes
+    pays its cost again from the start. Leave the server up until
+    `[migrations] applied … (online)` appears.
+  - **Performance depends on them.** Until they land, the `dd15` time-machine
+    history count and its deep pages are correct but slow (no partial index to
+    walk). Check `[migrations] applied … (online)` in the log.
 - **Shared matrix/dd_ontology schema**: provisioned by the **TS-native
   installer** (`src/core/install/`, DEC-19 — the former cutover blocker is
   RESOLVED). A fresh, empty PostgreSQL database is provisioned by restoring the

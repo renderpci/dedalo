@@ -1722,56 +1722,6 @@
             "lang": "lg-nep",
             "name": "append_layer",
             "value": "नयाँ तहको रूपमा थप्नुहोस्"
-          },
-          {
-            "lang": "lg-eng",
-            "name": "append_no_tm_warning",
-            "value": "Time machine is off: the values added by append-mode columns cannot be reverted."
-          },
-          {
-            "lang": "lg-spa",
-            "name": "append_no_tm_warning",
-            "value": "La máquina del tiempo está desactivada: los valores añadidos por las columnas en modo añadir no se podrán revertir."
-          },
-          {
-            "lang": "lg-cat",
-            "name": "append_no_tm_warning",
-            "value": "La màquina del temps està desactivada: els valors afegits per les columnes en mode afegir no es podran revertir."
-          },
-          {
-            "lang": "lg-eus",
-            "name": "append_no_tm_warning",
-            "value": "Denbora-makina desaktibatuta dago: gehitu moduko zutabeek gehitutako balioak ezin izango dira leheneratu."
-          },
-          {
-            "lang": "lg-fra",
-            "name": "append_no_tm_warning",
-            "value": "La machine à remonter le temps est désactivée : les valeurs ajoutées par les colonnes en mode ajout ne pourront pas être annulées."
-          },
-          {
-            "lang": "lg-por",
-            "name": "append_no_tm_warning",
-            "value": "A máquina do tempo está desativada: os valores acrescentados pelas colunas em modo acrescentar não poderão ser revertidos."
-          },
-          {
-            "lang": "lg-deu",
-            "name": "append_no_tm_warning",
-            "value": "Die Zeitmaschine ist ausgeschaltet: Die von Spalten im Anhängemodus hinzugefügten Werte können nicht rückgängig gemacht werden."
-          },
-          {
-            "lang": "lg-ita",
-            "name": "append_no_tm_warning",
-            "value": "La macchina del tempo è disattivata: i valori aggiunti dalle colonne in modalità aggiunta non potranno essere ripristinati."
-          },
-          {
-            "lang": "lg-ell",
-            "name": "append_no_tm_warning",
-            "value": "Η χρονομηχανή είναι απενεργοποιημένη: οι τιμές που προστίθενται από στήλες σε λειτουργία προσθήκης δεν μπορούν να αναιρεθούν."
-          },
-          {
-            "lang": "lg-nep",
-            "name": "append_no_tm_warning",
-            "value": "टाइम मेसिन बन्द छ: थप्ने मोडका स्तम्भहरूले थपेका मानहरू फिर्ता गर्न सकिँदैन।"
           }
         ]
       }
