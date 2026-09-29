@@ -84,6 +84,7 @@ import {
 	image,
 	keyLaneLaw,
 	lockUnitRecord,
+	type ProducedKey,
 	rawKeyValue,
 	resolveKeyTarget,
 	rowPairsOf,
@@ -188,6 +189,12 @@ function isEmptyMain(value: unknown): boolean {
 function sameMain(left: unknown, right: unknown): boolean {
 	if (isEmptyMain(left) && isEmptyMain(right)) return true;
 	return canonicalJson(left) === canonicalJson(right);
+}
+
+/** Slot equality as slotWrite decides it: an empty slot stays as it is (absent or `[]`). */
+function sameSlot(live: unknown, produced: unknown): boolean {
+	if (asItems(live).length === 0 && asItems(produced).length === 0) return true;
+	return canonicalJson(live) === canonicalJson(produced);
 }
 
 /** Frame-map equality. */
@@ -519,6 +526,61 @@ function writtenOf(write: ComposedKeyWrite, scope: ComposedScope): WrittenKey {
 		after: write.after,
 		inexact: null,
 	};
+}
+
+/**
+ * What a COMPOSED unit LEAVES on a record, placed over `start`
+ * (bulk_revert_undo.ts exactUnitProduces is the non-composed twin;
+ * bulk_revert_records.ts producedStateOf the consumer) — the same internals as
+ * revertComposedUnit: each lane's earliest BEFORE, newest lane first
+ * (restoreMain), and — the lg-nolan lane — this main's recorded frames in
+ * every slot (restoreSlot, an emptied slot absent), exactly as slotWrites
+ * does. Live values equal to this are, by construction, what planUnit finds
+ * unchanged. null when the unit cannot be planned at all (no column, a
+ * malformed log): undecided for the caller.
+ */
+export async function composedUnitProduces(
+	unit: RevertUnit,
+	start: (column: MatrixJsonbColumn, tipo: string) => unknown,
+): Promise<ProducedKey[] | null> {
+	let scope: ComposedScope;
+	let groups: LaneGroup[];
+	let slotColumn: MatrixJsonbColumn;
+	try {
+		scope = await composedScope(unit);
+		groups = laneGroups(splitPairs(unit, scope), scope.law);
+		slotColumn = dataframeColumn(scope);
+	} catch (error) {
+		if (error instanceof RevertRefusal) return null;
+		throw error;
+	}
+	let main = start(scope.column, scope.mainTipo);
+	let frames: FrameMap | null = null;
+	for (const group of groups) {
+		const first = group.pairs[0] as SplitPair;
+		main = restoreMain(main, group.lang, first.before.main, scope.law);
+		if (group.lang === NOLAN) frames = first.before.frames;
+	}
+	const produced: ProducedKey[] = [
+		{ column: scope.column, tipo: scope.mainTipo, value: main, same: sameMain },
+	];
+	if (frames !== null) {
+		const recorded = frames;
+		const tipos = [
+			...scope.slotTipos,
+			...Object.keys(recorded).filter((tipo) => !scope.slotTipos.includes(tipo)),
+		];
+		for (const tipo of tipos) {
+			const next = restoreSlot(start(slotColumn, tipo), scope.mainTipo, recorded[tipo] ?? []);
+			produced.push({
+				column: slotColumn,
+				tipo,
+				value: next.length > 0 ? next : undefined,
+				same: sameSlot,
+			});
+		}
+	}
+	return produced;
 }
 
 /**

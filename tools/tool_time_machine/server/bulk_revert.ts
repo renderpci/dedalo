@@ -415,11 +415,19 @@ async function executeRevert(ctx: ToolActionContext, run: RevertRun): Promise<To
 		'../../../src/core/api/handlers/activity_log.ts'
 	);
 	const activity = { logActivity, host: hostFromClientIp(ctx.clientIp), userId };
+	// The revert's units per record (newest first, the order it applies them):
+	// what a cascade record is judged against (bulk_revert_records.ts producedStateOf).
+	const unitsByRecord = new Map<string, RevertUnit[]>();
+	for (const unit of run.plan.units) {
+		const address = recordAddress(unit.sectionTipo, unit.sectionId);
+		unitsByRecord.set(address, [...(unitsByRecord.get(address) ?? []), unit]);
+	}
 	const recordContext = {
 		principal,
 		userId,
 		newBulkId: run.newBulkId,
 		keyAddresses: run.plan.keyAddresses,
+		unitsByRecord,
 	};
 	// Records the run created that are GONE are at their pre-run state: never
 	// undeleted, never scope-searched (goneBornAddresses).
@@ -455,6 +463,7 @@ async function executeRevert(ctx: ToolActionContext, run: RevertRun): Promise<To
 		runCreatedDate: run.createdDate,
 		bulkId: run.bulkProcessId,
 		keyAddresses: run.plan.keyAddresses,
+		unitsByRecord,
 		goneBorn,
 	};
 	// TWO sets, never one (a refused marker must not read as handled): `landed`

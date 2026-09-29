@@ -224,6 +224,68 @@ export function planExactKey(key: RevertKey, live: unknown, law: LaneLaw): KeyPl
 	};
 }
 
+/** One key of a record image a unit PRODUCES (unitProduces). */
+export interface ProducedKey {
+	column: MatrixJsonbColumn;
+	tipo: string;
+	value: unknown;
+	/**
+	 * THE UNIT'S OWN equality for this key — the one its plan decides
+	 * `unchanged` with (an exact key: strict canonical, planExactKey; a composed
+	 * main: sameMain; a slot: slotWrite's "empty stays empty"). A judgement that
+	 * called a value "already there" by a looser law would skip a put-back the
+	 * unit then refuses (a pre-run `[]` against an absent key).
+	 */
+	same: (live: unknown, produced: unknown) => boolean;
+}
+
+/** Strict stored-value equality — planExactKey's. */
+function sameCanonical(left: unknown, right: unknown): boolean {
+	return canonicalJson(left) === canonicalJson(right);
+}
+
+/**
+ * What a NON-COMPOSED EXACT unit LEAVES on a record, placed over `start` —
+ * planExactKey's own write (restoreLane: the key's lane back at its earliest
+ * BEFORE, every other lane as `start` holds it). A key whose live value equals
+ * this is, by construction, one planExactKey finds `unchanged` (its lane is at
+ * the earliest BEFORE), so no second law is needed. null for a unit this does
+ * not cover (a legacy key: its plan reads the record's history, not an image;
+ * a malformed log) — the caller treats its keys as undecided.
+ *
+ * Used by the cascade-record judgement (bulk_revert_records.ts
+ * producedStateOf): a record the revert undeletes or un-wipes is at "the
+ * state the revert produces" when its keys equal the snapshot WITH every
+ * unit's restore applied.
+ */
+export async function exactUnitProduces(
+	unit: RevertUnit,
+	start: (column: MatrixJsonbColumn, tipo: string) => unknown,
+): Promise<ProducedKey[] | null> {
+	if (unit.composed !== null || unit.keys.some((key) => !key.exact)) return null;
+	const produced: ProducedKey[] = [];
+	for (const key of unit.keys) {
+		const column = getColumnNameByModel(key.model);
+		if (column === null) return null;
+		const law = await keyLaneLaw(key);
+		const lane = key.lang === '' ? NOLAN : key.lang;
+		let earliest: unknown;
+		try {
+			earliest = pairsOf(key)[0]?.before;
+		} catch (error) {
+			if (error instanceof RevertRefusal) return null; // a malformed log: undecided
+			throw error;
+		}
+		produced.push({
+			column: column as MatrixJsonbColumn,
+			tipo: key.tipo,
+			value: restoreLane(start(column as MatrixJsonbColumn, key.tipo), lane, earliest, law),
+			same: sameCanonical,
+		});
+	}
+	return produced;
+}
+
 /** Resolve where a key is stored, or refuse it (`no_column`). */
 export async function resolveKeyTarget(key: RevertKey): Promise<KeyTarget> {
 	const column = getColumnNameByModel(key.model);

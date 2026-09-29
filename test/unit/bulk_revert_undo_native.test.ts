@@ -1493,6 +1493,218 @@ describe('generations and cascade targets across reverts (review 2026-09-27)', (
 		expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([`${HMAIN}#1->${target}`]);
 	});
 
+	test('a SECOND revert of a run whose cascade target CARRIES run keys: unchanged, full — the keys its own units put back are not "written since"', async () => {
+		// D2's snapshot is taken AFTER the revert cleared the target's run keys;
+		// the revert of that revert undeletes the row, then the target's OWN units
+		// write the keys back. A repeat revert must judge the record against the
+		// state the revert produces (snapshot + its own units' restore images),
+		// not the bare snapshot — else it reports the unit's own value as a
+		// foreign write (`kept`, cascade_delete_not_reverted).
+		const { host, target, revertId } = await revertDeletedTarget();
+		// FLOOR: the snapshot lacks the text the units restore
+		const twin = (await runRowsOf(SECTION, target, revertId)).find((row) => row.tm_role === 4);
+		expect(JSON.stringify(twin?.data)).not.toContain('role record');
+		const first = await revert(revertId);
+		expect(first.inexact.map((entry) => entry.basis)).toEqual(['cascade_undelete']);
+		expect(texts(await stored(target, 'string', TEXT))).toEqual(['lg-spa:role record']);
+		const again = await revert(revertId);
+		expect(again).toMatchObject({ counter: 0, exact: 'full', skipped: [], inexact: [] });
+		expect(again.unchanged).toBeGreaterThan(0);
+		expect(texts(await stored(target, 'string', TEXT))).toEqual(['lg-spa:role record']);
+		expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([`${HMAIN}#1->${target}`]);
+	});
+
+	test('a SECOND revert of a run whose cascade target carries its OWN framed main: the slot frames its units restore are not "written since"', async () => {
+		// The composed branch of producedStateOf: the target's own main (MAIN, a
+		// portal with dataframe slot SLOT) was written by the run with a frame.
+		// Its composed unit restores main + frames; the snapshot holds neither,
+		// so the slot is judged against the produced state, not the bare snapshot.
+		const [linked, frameTarget] = [await rec(), await rec()];
+		const { target, revertId } = await revertDeletedTarget({
+			text: null,
+			link: async (born, run) => {
+				const item = await insertLocator(born, MAIN, linked, run);
+				await insertFrame(born, SLOT, MAIN, item, frameTarget, run);
+			},
+		});
+		const first = await revert(revertId);
+		expect(first.skipped).toEqual([]);
+		// FLOOR: the target's own main and its frame are back
+		expect(targetsOf(await stored(target, 'relation', MAIN))).toEqual([linked]);
+		expect(framePairs(await stored(target, 'relation', SLOT)).length).toBe(1);
+		const again = await revert(revertId);
+		expect(again).toMatchObject({ counter: 0, exact: 'full', skipped: [], inexact: [] });
+		expect(framePairs(await stored(target, 'relation', SLOT)).length).toBe(1);
+	});
+
+	test('a second revert after a curator EDITED a run key of the undeleted target: the edit survives, reported at the record AND the key', async () => {
+		// The positive control of the test above: a value that is neither the
+		// snapshot's nor the one the revert's own units produce IS a later write —
+		// the record is `kept` (cascade_delete_not_reverted) and the key's unit
+		// refuses it (changed_since_run).
+		const { target, revertId } = await revertDeletedTarget();
+		await revert(revertId);
+		await setText(target, 'lg-spa', 'edited after the undelete');
+		const again = await revert(revertId);
+		expect(texts(await stored(target, 'string', TEXT))).toEqual([
+			'lg-spa:edited after the undelete',
+		]);
+		expect(reasons(again)).toEqual(['cascade_delete_not_reverted', 'changed_since_run'].sort());
+	});
+
+	test('a repeat revert after a curator added ANOTHER LANGUAGE to a run key of the undeleted target: a write since, never settled', async () => {
+		// The unit of the run's lane (lg-spa) is unchanged here, so only the
+		// per-lane PRODUCED value catches the curator's lg-eng: the revert does
+		// not produce it, so the record is kept (cascade_delete_not_reverted).
+		const { target, revertId } = await revertDeletedTarget();
+		await revert(revertId);
+		await setText(target, 'lg-eng', 'curator eng');
+		const again = await revert(revertId);
+		expect(reasons(again)).toEqual(['cascade_delete_not_reverted']);
+		expect(texts(await stored(target, 'string', TEXT)).sort()).toEqual(
+			['lg-eng:curator eng', 'lg-spa:role record'].sort(),
+		);
+	});
+
+	test('SOFT, a run key whose PRE-RUN value was EMPTY: a repeat revert is unchanged, full (a run key emptied by its unit is not "wiped")', async () => {
+		const host = await rec();
+		const [t1, role] = [await rec(), await rec()];
+		await seed(host, 'relation', SMAIN, [locator(1, t1, SMAIN)]);
+		await seed(host, 'relation', SSLOT, [{ id: 1, ...frame(1, role, SMAIN, SSLOT) }]);
+		const run = await mint();
+		await setText(role, 'lg-spa', 'written by the run', { bulk: run });
+		await save(host, SSLOT, 'lg-nolan', [{ action: 'remove', id: 1, value: null }], { bulk: run });
+		// FLOOR: the wipe snapshot holds the run's value
+		const twin = (await runRowsOf(SECTION, role, run)).find((row) => row.tm_role === 4);
+		expect(JSON.stringify(twin?.data)).toContain('written by the run');
+		const first = await revert(run);
+		expect(first.skipped).toEqual([]);
+		expect(texts(await stored(role, 'string', TEXT))).toEqual([]);
+		expect(framePairs(await stored(host, 'relation', SSLOT))).toEqual([`${SMAIN}#1->${role}`]);
+		const again = await revert(run);
+		expect(again).toMatchObject({ counter: 0, exact: 'full', skipped: [], inexact: [] });
+		expect(texts(await stored(role, 'string', TEXT))).toEqual([]);
+	});
+
+	test('SOFT, an UNSLICED run key whose pre-run value was a stored `[]`: restored to `[]`, exact — and a repeat is unchanged, full', async () => {
+		// An unsliced `[]` is a PRESENT key (lang_region.ts). The wipe removed it:
+		// absent live must NOT read as "already at the produced `[]`" — the unit's
+		// own law is strict (planExactKey), so a lenient judgement would skip the
+		// put-back and the unit would refuse it (changed_since_run).
+		const host = await rec();
+		const [t1, role, linked] = [await rec(), await rec(), await rec()];
+		await seed(role, 'relation', TPORTAL, []);
+		await seed(host, 'relation', SMAIN, [locator(1, t1, SMAIN)]);
+		await seed(host, 'relation', SSLOT, [{ id: 1, ...frame(1, role, SMAIN, SSLOT) }]);
+		const run = await mint();
+		await insertLocator(role, TPORTAL, linked, run);
+		await save(host, SSLOT, 'lg-nolan', [{ action: 'remove', id: 1, value: null }], { bulk: run });
+		// FLOOR: the wipe removed the key, and the pre-run value really was a stored []
+		expect(await stored(role, 'relation', TPORTAL)).toBeUndefined();
+		const first = await revert(run);
+		expect(first.skipped).toEqual([]);
+		expect(await stored(role, 'relation', TPORTAL)).toEqual([]);
+		const again = await revert(run);
+		expect(again).toMatchObject({ counter: 0, exact: 'full', skipped: [], inexact: [] });
+		expect(await stored(role, 'relation', TPORTAL)).toEqual([]);
+	});
+
+	test('SOFT, a COMPOSED main of the target, empty before the run: the run framed an item, the cascade wiped it — a repeat revert is unchanged, full', async () => {
+		// The composed twin of the pre-run-empty tests: the produced main is the
+		// earliest BEFORE (empty) and the produced slot is emptied — the unit's
+		// own equalities (sameMain, slotWrite's "empty stays empty") must judge
+		// absent and [] alike, or the repeat reads a write since.
+		const host = await rec();
+		const [t1, role, linked, frameTarget] = [await rec(), await rec(), await rec(), await rec()];
+		await seed(host, 'relation', SMAIN, [locator(1, t1, SMAIN)]);
+		await seed(host, 'relation', SSLOT, [{ id: 1, ...frame(1, role, SMAIN, SSLOT) }]);
+		const run = await mint();
+		const item = await insertLocator(role, MAIN, linked, run);
+		await insertFrame(role, SLOT, MAIN, item, frameTarget, run);
+		await save(host, SSLOT, 'lg-nolan', [{ action: 'remove', id: 1, value: null }], { bulk: run });
+		// FLOOR: the wipe emptied the target's main and slot, and the run's value is in the snapshot
+		expect(targetsOf(await stored(role, 'relation', MAIN))).toEqual([]);
+		const twin = (await runRowsOf(SECTION, role, run)).find((row) => row.tm_role === 4);
+		expect(JSON.stringify(twin?.data)).toContain(String(frameTarget));
+		const first = await revert(run);
+		expect(first.skipped).toEqual([]);
+		expect(targetsOf(await stored(role, 'relation', MAIN))).toEqual([]);
+		expect(framePairs(await stored(role, 'relation', SLOT))).toEqual([]);
+		const again = await revert(run);
+		expect(again).toMatchObject({ counter: 0, exact: 'full', skipped: [], inexact: [] });
+	});
+
+	test('SOFT, a COMPOSED main stored as `[]` before the run, absent after the wipe: already at the produced state — no put-back, no cascade_undelete', async () => {
+		// A composed main's `[]` and absence are one state to its unit (sameMain,
+		// planPart), and an emptied slot is absent (slotWrite). The judgement uses
+		// the SAME equalities: a strict one would put the wiped snapshot back and
+		// have the unit revert it again (a spurious write + cascade_undelete).
+		const host = await rec();
+		const [t1, role, linked, frameTarget] = [await rec(), await rec(), await rec(), await rec()];
+		await seed(role, 'relation', MAIN, []);
+		await seed(host, 'relation', SMAIN, [locator(1, t1, SMAIN)]);
+		await seed(host, 'relation', SSLOT, [{ id: 1, ...frame(1, role, SMAIN, SSLOT) }]);
+		const run = await mint();
+		const item = await insertLocator(role, MAIN, linked, run);
+		await insertFrame(role, SLOT, MAIN, item, frameTarget, run);
+		await save(host, SSLOT, 'lg-nolan', [{ action: 'remove', id: 1, value: null }], { bulk: run });
+		// FLOOR: the wipe left the main and the slot absent
+		expect(await stored(role, 'relation', MAIN)).toBeUndefined();
+		expect(await stored(role, 'relation', SLOT)).toBeUndefined();
+		// …and another writer (a legacy path, a repair) stores the empty slot as
+		// `[]` — to slotWrite an empty slot is empty, whatever its shape
+		await seed(role, 'relation', SLOT, []);
+		const first = await revert(run);
+		expect(first.skipped).toEqual([]);
+		expect(first.inexact).toEqual([]);
+		expect(framePairs(await stored(host, 'relation', SSLOT))).toEqual([`${SMAIN}#1->${role}`]);
+		expect(targetsOf(await stored(role, 'relation', MAIN))).toEqual([]);
+	});
+
+	test('SOFT, a curator wrote ANOTHER LANGUAGE of a run-written key after the wipe: a write since — the record is kept, never "present"', async () => {
+		// A FIRST-PASS control: the record is not settled, so nothing hides the
+		// conflict. (The per-LANE law itself is discriminated by the repeat-pass
+		// twin 'a repeat revert after a curator added ANOTHER LANGUAGE…', where
+		// the run's own lane IS at its produced value.)
+		const host = await rec();
+		const [t1, role] = [await rec(), await rec()];
+		await setText(role, 'lg-spa', 'pre-run');
+		await seed(host, 'relation', SMAIN, [locator(1, t1, SMAIN)]);
+		await seed(host, 'relation', SSLOT, [{ id: 1, ...frame(1, role, SMAIN, SSLOT) }]);
+		const run = await mint();
+		await setText(role, 'lg-spa', 'written by the run', { bulk: run });
+		await save(host, SSLOT, 'lg-nolan', [{ action: 'remove', id: 1, value: null }], { bulk: run });
+		// FLOOR: the wipe emptied the key; only the curator's lg-eng is live
+		expect(texts(await stored(role, 'string', TEXT))).toEqual([]);
+		await setText(role, 'lg-eng', 'curator eng');
+		const first = await revert(run);
+		// kept at the record; the run's lg-spa lane (wiped, not at its last after)
+		// is refused by its own unit — the curator's lg-eng is never overwritten
+		expect(reasons(first)).toEqual(['cascade_delete_not_reverted', 'changed_since_run'].sort());
+		expect(texts(await stored(role, 'string', TEXT))).toEqual(['lg-eng:curator eng']);
+	});
+
+	test('SOFT: a run that wrote a key on a frame target and then wiped it — a repeat revert is unchanged, full', async () => {
+		const host = await rec();
+		const [t1, role] = [await rec(), await rec()];
+		await setText(role, 'lg-spa', 'pre-run');
+		await seed(host, 'relation', SMAIN, [locator(1, t1, SMAIN)]);
+		await seed(host, 'relation', SSLOT, [{ id: 1, ...frame(1, role, SMAIN, SSLOT) }]);
+		const run = await mint();
+		await setText(role, 'lg-spa', 'written by the run', { bulk: run });
+		await save(host, SSLOT, 'lg-nolan', [{ action: 'remove', id: 1, value: null }], { bulk: run });
+		// FLOOR: wiped, row kept
+		expect(await stored(role, 'data', 'section_id')).not.toBe('NO-RECORD');
+		expect(texts(await stored(role, 'string', TEXT))).toEqual([]);
+		const first = await revert(run);
+		expect(texts(await stored(role, 'string', TEXT))).toEqual(['lg-spa:pre-run']);
+		expect(framePairs(await stored(host, 'relation', SSLOT))).toEqual([`${SMAIN}#1->${role}`]);
+		expect(first.skipped).toEqual([]);
+		const again = await revert(run);
+		expect(again).toMatchObject({ counter: 0, exact: 'full', skipped: [], inexact: [] });
+		expect(texts(await stored(role, 'string', TEXT))).toEqual(['lg-spa:pre-run']);
+	});
+
 	test('a second revert after a curator EDITED the undeleted target: the unit is not refused, the edit survives', async () => {
 		const { host, target, revertId } = await revertDeletedTarget({ text: null });
 		await revert(revertId);

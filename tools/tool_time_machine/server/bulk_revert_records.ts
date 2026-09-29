@@ -16,7 +16,10 @@
  * (delete_target) kept the row and wiped its data: the wiped keys are written
  * back into it (restoreWipedRecord) while the row is still as the wipe left
  * it, and — after COMMIT, as the missing-row undelete does — the files the
- * wipe moved into `deleted/` for its media keys are moved back; a key written since is left alone and the record reported
+ * wipe moved into `deleted/` for its media keys are moved back; a key already
+ * at the state the revert PRODUCES (snapshot + its units' restores —
+ * producedStateOf) is settled; any other key
+ * written since is left alone and the record reported
  * `cascade_delete_not_reverted` (`kept` — the record is there, so the unit
  * re-linking it still runs); a record already back as its snapshot says is a
  * no-op (`present` — a repeat revert). An address held by ANOTHER record
@@ -114,8 +117,10 @@ import { persistRecordKeys } from '../../../src/core/section_record/index.ts';
 import { getSectionPermissions, type Principal } from '../../../src/core/security/permissions.ts';
 import { principalCanAccessRecord } from '../../../src/core/security/record_scope.ts';
 import { revokeDeletedAccountAccess } from '../../../src/core/security/revocation.ts';
+import { composedUnitProduces } from './bulk_revert_composed.ts';
 import type { RecordMarker, RevertKey, RevertUnit, RunRow } from './bulk_revert_plan.ts';
 import { recordAddress, runOwnsRecordStamps } from './bulk_revert_plan.ts';
+import { exactUnitProduces, type ProducedKey } from './bulk_revert_undo.ts';
 import { propagateRestoreToObservers } from './restore_common.ts';
 import { restoreAbsentSectionRow, restoreSectionMedia } from './tool_time_machine.ts';
 
@@ -174,6 +179,12 @@ export interface RecordContext {
 	 * here (runOwnsRecordStamps). Absent = the run owns none.
 	 */
 	keyAddresses?: ReadonlySet<string>;
+	/**
+	 * The revert's units per record address (RunPlan.units, newest first — the
+	 * order it applies them): what a cascade record is judged against
+	 * (producedStateOf). Absent = none; every key then judged by the snapshot.
+	 */
+	unitsByRecord?: ReadonlyMap<string, readonly RevertUnit[]>;
 }
 
 /** Section-level write (the delete door's level) AND the record in scope. */
@@ -499,17 +510,88 @@ function isWipedState(live: unknown, model: string, tipo: string): boolean {
 	return wiped !== null && canonicalJson(live) === canonicalJson(wiped);
 }
 
+/** The state a revert PRODUCES on one record, per key (producedStateOf). */
+interface ProducedState {
+	/** Whether this key is settled: covered by the revert's units, and live already at the produced value. */
+	settled: (column: MatrixJsonbColumn, tipo: string, live: unknown) => boolean;
+}
+
+/**
+ * THE STATE THE REVERT PRODUCES on a cascade record (2026-09-29, the repeat
+ * revert `kept` defect — WC-2026-09-27-bulk-revert-undo-log addendum).
+ *
+ * A role-4 snapshot is only where the revert STARTS for the record: a
+ * revert's D2 snapshots a born record AFTER clearing the run's keys, a run's
+ * cascade wipe snapshots the run's value. What the revert LEAVES is the
+ * snapshot with every one of its units on this record applied, in the order
+ * it applies them (newest first). Judged against the bare snapshot, every key
+ * a unit had put back read as a foreign write on a repeat revert.
+ *
+ * A key is SETTLED — nothing to put back and no write since — when a unit of
+ * the revert covers it and its live value equals the PRODUCED value: the
+ * snapshot with each covering unit's restore placed over it, by the units'
+ * own writers (restoreLane / restoreMain / restoreSlot), compared with the
+ * unit's OWN equality (ProducedKey.same — strict for an exact key). Per LANE: a sliced
+ * key's other languages stay the snapshot's, so a curator's write in a
+ * language the run did not touch is still a write since. A live value equal
+ * to the produced one is, by construction, one every covering unit finds
+ * `unchanged` (its lane at its earliest BEFORE) — this judgement and the unit
+ * that runs next agree without a second law.
+ * A unit the producers do not cover (a legacy key; a log it cannot plan)
+ * leaves its keys UNDECIDED, and a key no unit covers (the run never wrote
+ * it, or its rows were unplanned) is judged against the snapshot as before.
+ * The check runs BEFORE the wiped-state test: a run key whose pre-run value is
+ * empty reads as "wiped" once its unit emptied it.
+ */
+async function producedStateOf(
+	marker: RecordMarker,
+	context: RecordContext,
+	snapshot: Record<string, unknown>,
+): Promise<ProducedState> {
+	const units =
+		context.unitsByRecord?.get(recordAddress(marker.sectionTipo, marker.sectionId)) ?? [];
+	const at = (column: string, tipo: string): string => `${column}|${tipo}`;
+	const produced = new Map<string, ProducedKey>();
+	const undecided = new Set<string>();
+	const startOf = (column: MatrixJsonbColumn, tipo: string): unknown =>
+		produced.has(at(column, tipo))
+			? produced.get(at(column, tipo))?.value
+			: keyOf(snapshot, column, tipo);
+	for (const unit of units) {
+		const result =
+			unit.composed !== null
+				? await composedUnitProduces(unit, startOf)
+				: await exactUnitProduces(unit, startOf);
+		if (result === null) {
+			for (const key of unit.keys) undecided.add(key.tipo);
+			for (const slot of unit.slotTipos) undecided.add(slot);
+			continue;
+		}
+		for (const key of result) produced.set(at(key.column, key.tipo), key);
+	}
+	return {
+		settled: (column, tipo, liveValue) => {
+			const key = produced.get(at(column, tipo));
+			return key !== undefined && !undecided.has(tipo) && key.same(liveValue, key.value);
+		},
+	};
+}
+
 /**
  * What stands between a live row of the SAME record (the caller checked the
  * generation) and its snapshot: the wiped keys to put back, and whether a
- * key holds a value neither the snapshot nor the wipe left (`written`: a write
- * after the wipe, or after an earlier undelete brought the record back).
+ * key holds a value neither the snapshot, the wipe, nor the revert's own units
+ * leave (`written`: a write after the wipe, or after an earlier undelete brought
+ * the record back — see producedStateOf).
  */
 async function wipedKeysOf(
+	marker: RecordMarker,
+	context: RecordContext,
 	snapshot: Record<string, unknown>,
 	live: Record<string, unknown>,
 ): Promise<{ keys: WipedKey[]; written: boolean }> {
 	const keys: WipedKey[] = [];
+	const state = await producedStateOf(marker, context, snapshot);
 	for (const column of MATRIX_JSONB_COLUMNS) {
 		if (METADATA_COLUMNS.has(column)) continue;
 		const tipos = new Set([
@@ -521,6 +603,8 @@ async function wipedKeysOf(
 			const value = keyOf(snapshot, column, tipo);
 			const liveValue = keyOf(live, column, tipo);
 			if (canonicalJson(value) === canonicalJson(liveValue)) continue;
+			// Already at the state the revert produces: its units find it unchanged.
+			if (state.settled(column, tipo, liveValue)) continue;
 			const model = (await getModelByTipo(tipo)) ?? '';
 			if (!isWipedState(liveValue, model, tipo)) return { keys, written: true };
 			if (isEmptyValue(value)) continue; // nothing to bring back
@@ -757,7 +841,8 @@ function itemLangs(values: readonly unknown[], fallback: string): string[] {
  *     the snapshot — the address taken again): `refused`
  *     `cascade_delete_not_reverted` — the ONE case that refuses a unit
  *     re-linking it (its link would land on a foreign record);
- *   - the same record, a key written since the wipe or undelete: `kept`,
+ *   - the same record, a key neither the snapshot, the wipe nor the revert's
+ *     produced state (producedStateOf) explains: `kept`,
  *     nothing written (the write is someone's);
  *   - the same record with nothing to put back: `present` (a repeat revert
  *     stays `unchanged`);
@@ -785,7 +870,7 @@ async function restoreWipedRecord(
 		if (record === null || (await isRebornSince(marker))) {
 			return { kind: 'refused', reason: 'cascade_delete_not_reverted' } as const;
 		}
-		const { keys, written } = await wipedKeysOf(snapshot, record.columns);
+		const { keys, written } = await wipedKeysOf(marker, context, snapshot, record.columns);
 		if (written) return { kind: 'kept' } as const;
 		if (keys.length === 0) return { kind: 'present' } as const;
 		const mains = await wipedMainsOf(marker, table, keys);

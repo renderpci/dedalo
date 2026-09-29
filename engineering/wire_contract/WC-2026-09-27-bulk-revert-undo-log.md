@@ -1192,3 +1192,63 @@ record, so the missing-row undelete, the unit coupling and the epoch refusal
 are reached by revert-of-revert. The role-4 description "a record the run's
 dataframe cascade deleted" now reads "wiped (a run's cascade) or deleted (a
 revert's D2)".
+
+## Addendum 2026-09-29 — a repeat revert judges a cascade record against the state it PRODUCES
+
+A role-4 snapshot is where a revert STARTS for the record, not where it ends:
+- a revert's D2 snapshots a born record AFTER clearing the run's keys;
+- a run's cascade wipe snapshots the run's value.
+
+On a repeat revert, every key the record's own units had put back therefore
+differed from the snapshot, and `restoreWipedRecord` reported the record `kept`
+/ `cascade_delete_not_reverted`. That broke "a double revert says unchanged".
+
+`wipedKeysOf` now judges each key against the state the revert PRODUCES
+(`producedStateOf`): the snapshot with every unit of the revert on that record
+applied, newest first, by the units' own writers. Those are `restoreLane` for
+an exact unit (`exactUnitProduces`), and `restoreMain` + `restoreSlot` for a
+composed one (`composedUnitProduces`). The produced state is per language lane.
+
+A key covered by a unit whose live value equals the produced value is settled,
+and this is checked BEFORE the wiped-state test. "Equals" is the unit's OWN
+equality (`ProducedKey.same`):
+- an exact key compares strictly, as `planExactKey` does, so a pre-run unsliced
+  `[]` is never "already there" as an absent key;
+- a composed main uses `sameMain`;
+- a slot uses slotWrite's rule that an empty slot stays as it is.
+
+By construction every covering unit then finds that key `unchanged`.
+Everything else is judged as before:
+- a key no unit covers (never written by the run, or its rows unplanned) is
+  compared against the snapshot;
+- a legacy or unplannable unit leaves its keys undecided (never settled).
+
+**No report change for real edits.** A curator's later edit is still reported
+at the record (`cascade_delete_not_reverted`). When it touches the very lane the
+run wrote, it is also reported by that key's unit (`changed_since_run`). A write
+in a language the run did not touch is reported at the record only, because the
+run's lane unit finds its own lane unchanged. Only the false alarm is gone.
+
+Gates (`bulk_revert_undo_native`):
+- keyed revert-of-revert repeat → unchanged/full;
+- soft wipe of a run key → repeat unchanged/full (pre-run value empty or not);
+- a target's own framed main → repeat unchanged/full;
+- an unsliced run key with a pre-run `[]` → restored to `[]`, repeat unchanged;
+- curator edit of a run key, or of another language of it → still reported.
+
+- a composed main stored `[]` before the run and left absent (its slot
+  stored `[]` by another writer) → already at the produced state: no put-back,
+  no `cascade_undelete`.
+
+Mutation-proved against the 116-test gate:
+- settled check removed → 7 red;
+- produced-value comparison removed → 5 red;
+- coverage condition removed (uncovered keys settled) → 11 red;
+- composed producer removed → 3 red;
+- an exact key's strict equality replaced by the lenient one → 1 red (the
+  unsliced pre-run `[]` test);
+- the composed main's `sameMain`, or the slot's empty rule, made strict → 1 red
+  each (the composed `[]` test).
+
+Honest limit: the `undecided` guard (a legacy unit sharing a key with an exact
+one) is a fail-safe with no gate. Producing it needs forged legacy log rows.
