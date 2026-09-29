@@ -34,6 +34,13 @@
 - [x] Negation over a deep path gives wrong results. On mdcat, "does not contain NIF" returned 38,749 records; the right answer is 18,635. Users can reach this from the search UI through -, != and !*. Because it returns rows instead of failing, nobody would notice. (2026-09-29: a deep leaf is now a semi-join over the related records — negation = NOT EXISTS over the positive twin, `!=` = some value AND none equal; mdcat `-NIF` measures 18,635. WC-2026-09-29-search-deep-leaf-mixed-rule; gate test/unit/search_deep_semantics_native.test.ts.)
 - [x] Two conditions on the same deep path must match the same related record. Final PHP fixed this on 2026-06-15; TS lost the fix in the port. (2026-09-29: owner chose the MIXED rule — positive conditions on DIFFERENT fields share one related record; the SAME field repeated is matched independently (the PHP 2518d2059c conjunction); a negation never shares. Same WC + gate.)
 - [x] Searching several sections at once with a deep path returns duplicate rows (WC-2026-09-24-multi-section-search-identity-dedup).
+- [x] SECURITY: a filter whose root is `$or` escaped the record ACL and the section pin (`pin AND A OR B AND acl`); a scoped user saw records of projects she does not hold. (2026-09-29: every WHERE part is parenthesized where the parts meet. WC-2026-09-29-search-where-parts-parenthesized; gate test/unit/search_path_acl_native.test.ts, root-$or case.)
+# confirm this items before proceed
+- [ ] Deep `!=`: its "has a value" half runs the reversed (index) shape over the WHOLE related section — the dominant cost on a large one. Force it to the correlated form (the `reverse` field of DeepClause makes it a one-line policy). Measure first.
+- [ ] Deep `!!` ACL lookup (`aggAcl`, conform.ts) runs `recordPredicate` for EVERY deep string/json leaf, not only `!!` ones. Compute it only when a unit classifies `duplicated`.
+- [ ] Deep search gates: add a multi-section (UNION) search with a deep leaf to test/unit/search_deep_semantics_native.test.ts (only hand-probed so far).
+- [ ] Deep reversed shape: an intermediate hop's source is constrained to neither the declared step table nor its section_tipo when that hop has no ACL; and the index skips non-int4 locator ids that the correlated form still casts. Both pre-existing; decide whether the reversed shape should match the correlated one exactly.
+- [ ] mdcat DB (dedalo7_mdcat) lacks migration 0009 (`f_regex_literal` / `f_like_literal`): every text search fails there. Apply the migration before using it as a perf/validation DB (schema change — needs authorisation).
 
 # style
 - [x] Modal headers and buttons restyling (contrast limitation issues)
