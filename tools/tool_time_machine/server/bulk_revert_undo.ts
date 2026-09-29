@@ -79,6 +79,7 @@ import {
 	persistRecordKeys,
 	type RecordWriteTarget,
 } from '../../../src/core/section_record/index.ts';
+import type { Principal } from '../../../src/core/security/permissions.ts';
 import type { BulkRevertInexactBasis } from './bulk_revert.ts';
 import { planLegacyKey } from './bulk_revert_legacy.ts';
 import {
@@ -97,6 +98,8 @@ import { applyDataframeRestore } from './dataframe_restore.ts';
 
 /** The context a unit's revert runs in. */
 export interface UnitContext {
+	/** The caller — a legacy frame half's slot beyond the pre-gated set is judged on its grant. */
+	principal: Principal;
 	userId: number;
 	/** The revert's own dd800 id — its pairs are stamped with it. */
 	newBulkId: number;
@@ -427,8 +430,10 @@ export interface ComposedHistory {
  * WRITE a COMPOSED unit (bulk_revert_composed.ts plans it): every changed key —
  * the main and its slots — in ONE chokepoint call, each key's post-write
  * obligations (relation_search, the item-id counter), then the revert's own
- * two-lane history (recordMainHistory — sequential per language lane, then the
- * lg-nolan lane). Inside the unit's transaction.
+ * two-lane history (recordMainHistory → recordMainPairs: the lg-nolan pair —
+ * lg-nolan value + every slot's frames — FIRST, then one pair per language
+ * lane, each cut from the state the previous step left). Inside the unit's
+ * transaction.
  */
 export async function writeComposedUnit(
 	writes: readonly ComposedKeyWrite[],
@@ -531,13 +536,13 @@ export async function lockUnitRecord(
 
 /**
  * Lock the record, read the key behind the lock, plan it, and write it.
- * `frameUnit`: the unit's keys when this key carries the main's frame half
+ * `frameUnit`: the unit when this key carries the main's frame half
  * (a legacy key: bulk_revert_legacy.ts), null when it restores its region only.
  */
 async function revertKey(
 	key: RevertKey,
 	context: UnitContext,
-	frameUnit: readonly RevertKey[] | null,
+	frameUnit: RevertUnit | null,
 	deferred: DeferredHistory[] | null = null,
 ): Promise<WrittenKey | null> {
 	const target = await resolveKeyTarget(key);
@@ -552,6 +557,7 @@ async function revertKey(
 				runCreatedDate: context.runCreatedDate,
 				bulkId: context.bulkId,
 				frameUnit,
+				principal: context.principal,
 			});
 	if (plan.kind === 'unchanged') return null;
 	await writeRevertedKey(key, target, live, plan, context, deferred);
@@ -636,7 +642,7 @@ export async function revertUnit<P>(
 		const deferred: DeferredHistory[] | null = unit.keys[0]?.framed === true ? [] : null;
 		for (const [index, key] of unit.keys.entries()) {
 			const carrier = index === unit.keys.length - 1;
-			const written = await revertKey(key, context, carrier ? unit.keys : null, deferred);
+			const written = await revertKey(key, context, carrier ? unit : null, deferred);
 			if (written === null) result.unchanged += 1;
 			else result.written.push(written);
 		}

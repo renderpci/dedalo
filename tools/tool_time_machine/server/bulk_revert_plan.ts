@@ -30,8 +30,10 @@
  * rows) of a main that HAS slots — declared, or named by a frame ANY row of the
  * main carries (decided per main ADDRESS, never per key: a language key's rows
  * carry no frame) — is the main's ADDRESS unit, every lane of it together
- * (bulk_revert_composed.ts restores it lane by lane, in one transaction), carrying the slot tipos it may write (`composed.slotTipos`),
- * which the scope gate checks like the main's own tipo. No column marks a
+ * (bulk_revert_composed.ts restores it lane by lane, in one transaction). A
+ * unit of a main with slots — composed or legacy — carries the slot tipos it
+ * may write (`slotTipos`), which the scope gate checks like the main's own
+ * tipo (a slot has no key of its own to be gated by). No column marks a
  * composed row (decision 2026-09-28): the ontology and the rows decide. A
  * LEGACY (PHP-era) key of a main with slots is the main's LEGACY unit, every
  * language tag of it together (`address|legacy`, lg-nolan slot saves
@@ -100,11 +102,9 @@ export interface RevertKey {
 	framed: boolean;
 }
 
-/** A composed unit's main and the slots its restore may write. */
+/** A composed unit's main. */
 export interface ComposedUnit {
 	mainTipo: string;
-	/** Declared slots ∪ every slot a row's frame names (model-checked) — scope-gated. */
-	slotTipos: string[];
 }
 
 /** Keys reverted together in one transaction. */
@@ -118,6 +118,15 @@ export interface RevertUnit {
 	keys: RevertKey[];
 	/** Set for a dataframe main's composed unit (bulk_revert_composed.ts). */
 	composed: ComposedUnit | null;
+	/**
+	 * The slots a composed or legacy (framed) unit may write: declared slots ∪
+	 * every slot a run row's frame names (model-checked) — scope-gated (level 2
+	 * on each). A write to any other slot: composed unit → refused `failed`;
+	 * legacy frame half → written only on the caller's level-2 grant on that
+	 * slot, else `out_of_scope` (bulk_revert_legacy.ts assertSlotGrants).
+	 * [] for a unit of a main without slots.
+	 */
+	slotTipos: string[];
 }
 
 /** A record-level marker of the run (a birth or a cascade delete). */
@@ -293,7 +302,7 @@ async function isSlottedMainKey(key: RevertKey): Promise<boolean> {
 	try {
 		return (await resolveDataframeSlotTipos(key.tipo)).length > 0;
 	} catch {
-		// Unresolvable slots: attachComposed reports an exact key `failed`; a
+		// Unresolvable slots: attachSlots reports an exact key `failed`; a
 		// legacy key stays a unit of its own and fails in its own plan.
 		return key.exact;
 	}
@@ -312,11 +321,11 @@ function namedSlots(rows: readonly RunRow[]): string[] {
 }
 
 /**
- * The slots a composed unit may write: the main's declared slots ∪ every slot
- * its rows' frames name, when that tipo is a dataframe (a frame naming anything
- * else names no slot — dataframe_restore.ts's rule).
+ * The slots a unit may write: the main's declared slots ∪ every slot its rows'
+ * frames name, when that tipo is a dataframe (a frame naming anything else
+ * names no slot — dataframe_restore.ts's rule).
  */
-async function composedSlotTipos(mainTipo: string, rows: readonly RunRow[]): Promise<string[]> {
+async function unitSlotTipos(mainTipo: string, rows: readonly RunRow[]): Promise<string[]> {
 	const slots = [...(await resolveDataframeSlotTipos(mainTipo))];
 	for (const tipo of namedSlots(rows)) {
 		if (!slots.includes(tipo) && (await getModelByTipo(tipo)) === DATAFRAME_MODEL) slots.push(tipo);
@@ -340,12 +349,16 @@ function unplaceable(key: RevertKey): string | null {
 	return null;
 }
 
-/** Attach a composed unit's slot set; a main whose slots cannot be resolved leaves the plan. */
-async function attachComposed(unit: RevertUnit, unplanned: Unplanned[]): Promise<boolean> {
+/**
+ * Attach a slotted unit's gated slot set (and, composed, its main); a main
+ * whose slots cannot be resolved leaves the plan.
+ */
+async function attachSlots(unit: RevertUnit, unplanned: Unplanned[]): Promise<boolean> {
 	const key = unit.keys[0] as RevertKey;
 	try {
 		const rows = unit.keys.flatMap((member) => member.rows);
-		unit.composed = { mainTipo: key.tipo, slotTipos: await composedSlotTipos(key.tipo, rows) };
+		unit.slotTipos = await unitSlotTipos(key.tipo, rows);
+		if (key.composed) unit.composed = { mainTipo: key.tipo };
 		return true;
 	} catch (error) {
 		unplanned.push({
@@ -372,6 +385,7 @@ async function groupUnits(keys: RevertKey[], unplanned: Unplanned[]): Promise<Re
 			sectionId: key.sectionId,
 			keys: [],
 			composed: null,
+			slotTipos: [],
 		};
 		unit.keys.push(key);
 		units.set(unitId, unit);
@@ -382,7 +396,8 @@ async function groupUnits(keys: RevertKey[], unplanned: Unplanned[]): Promise<Re
 		// A legacy unit's languages newest first (an undo log is undone in
 		// reverse); its LAST key carries the frame half, after every main region.
 		if (main.framed) unit.keys.sort((a, b) => keyNewestRow(b) - keyNewestRow(a));
-		if (!main.composed || (await attachComposed(unit, unplanned))) planned.push(unit);
+		const slotted = main.composed || main.framed;
+		if (!slotted || (await attachSlots(unit, unplanned))) planned.push(unit);
 	}
 	// LIFO: the unit whose newest row is newest is undone first (a lang-less
 	// orphan belongs to every language's region, so the languages of one key

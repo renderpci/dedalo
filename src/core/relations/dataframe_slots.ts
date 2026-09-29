@@ -604,7 +604,7 @@ async function slicedRowLang(tipo: string, model: string, requestLang: string): 
 }
 
 /** A main's model and matrix column; null when the tipo has no model or no storable column. */
-async function mainStorage(
+export async function mainStorage(
 	tipo: string,
 ): Promise<{ model: string; column: MatrixJsonbColumn } | null> {
 	const model = await getModelByTipo(tipo);

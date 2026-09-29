@@ -382,8 +382,8 @@ function createReporter(requestId: string, bulkProcessId: number) {
 type Reporter = ReturnType<typeof createReporter>;
 
 /**
- * Level 2 on EVERY key's (section_tipo, tipo) pair — and, for a composed unit,
- * on every slot tipo it may write (the slots have no key of their own in the
+ * Level 2 on EVERY key's (section_tipo, tipo) pair — and, for a unit of a main
+ * with slots (composed or legacy), on every slot tipo it may write (the slots have no key of their own in the
  * unit, so without this a frame could be written on the main's grant alone) —
  * and the record in scope —
  * unless `recordScopeDeferred`: the unit's own record is a deleted one it
@@ -397,7 +397,7 @@ async function unitInScope(
 	principal: Principal,
 	recordScopeDeferred: boolean,
 ): Promise<boolean> {
-	const tipos = [...unit.keys.map((key) => key.tipo), ...(unit.composed?.slotTipos ?? [])];
+	const tipos = [...unit.keys.map((key) => key.tipo), ...unit.slotTipos];
 	for (const tipo of new Set(tipos)) {
 		if ((await getPermissions(principal, unit.sectionTipo, tipo)) < 2) return false;
 	}
@@ -449,6 +449,7 @@ async function executeRevert(ctx: ToolActionContext, run: RevertRun): Promise<To
 		blocked.add(recordAddress(failure.sectionTipo, failure.sectionId));
 	}
 	const unitContext = {
+		principal,
 		userId,
 		newBulkId: run.newBulkId,
 		runCreatedDate: run.createdDate,

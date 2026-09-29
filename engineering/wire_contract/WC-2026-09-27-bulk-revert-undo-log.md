@@ -1150,6 +1150,35 @@ listed 2 in lg-spa/lg-eng/lg-nolan and a Delete data writes ONE row, no backfill
 `tm_main` law for portal/select/input_text); client `test_tool_time_machine` +3
 (`history_lang`). Mutation-checked: `timelineScope` keeping the lang → list 1≠2; probe
 `anyTag` forced false → 2 rows written; `lang_sliced` forced true → red.
-Per-file floor re-frozen (`engineering/unit_baseline.json`): `tm_relation_lane_native`
-5 tests / 71 assertions → 7 / 82, measured green on the suite DB (`--record-new` refuses a
-recorded file, so the stale floor left the two review gates unguarded).
+Further review 2026-09-29 gates, `tm_relation_lane_native` +4: a PHP-era frame-first row
+tagged lg-spa (empty value + frame) restores with its frame; a select row tagged lg-spa
+restores (asked in lg-eng) and previews (in every language) its whole value; a portal row
+tagged lg-spa made with no frame is its own frame state (restores with no frame, not an older
+lg-nolan row's); a legacy run whose rows PHP tagged lg-eng / lg-spa is ONE lg-nolan key, the
+revert exact. Mutation-checked (each alone): `readOtherLangItemIds` `row_lang` keeping the
+row's tag for an unsliced main → the frame-first lg-spa test red; `restoredLaneValue` merging
+an unsliced main by lane → the whole-value test red (+ the portal/select/no-frame tests);
+`readRowLaneState` reading an unsliced row in its tag's lane → the no-frame portal test red;
+the bulk plan keying an unsliced legacy key per row tag → the legacy-run test red.
+Per-file floor (`engineering/unit_baseline.json`): `tm_relation_lane_native` 11 tests / 115
+assertions, measured green on the suite DB (`--record-new` refuses a recorded file, so a stale
+floor leaves added gates unguarded).
+Review 2026-09-29 (round 3) fixes: (1) a LEGACY framed unit (PHP-era run over a main with
+slots) is scope-gated on its slots too — `RevertUnit.slotTipos` (declared ∪ slots a run row's
+frames name) is set for composed AND legacy framed units and checked by `unitInScope`; a
+legacy frame half that would change any other slot (named only by the pre-run row, or live)
+needs the caller's level 2 on it, else the unit is `out_of_scope` (`assertSlotGrants`). Gates
+`bulk_revert_undo_native` +2; mutation-checked: `unitInScope` gating slots of composed units
+only → red; `assertSlotGrants` skipped → red. (2) Duplicate records a copied key whose tipo
+no longer resolves to a storable model (no model / no matrix column) as one unsliced lg-nolan
+lane (the wipe/revert doors' rule) instead of throwing `engine.uncovered_scope` after the
+insert. Gate `duplicate_record_native` +1 (stray `zz*` key: lg-nolan backfill + save row);
+mutation-checked: the stray branch removed → `engine.uncovered_scope`, red.
+Per-file floors re-frozen (round 3, `engineering/unit_baseline.json`, measured green on the
+suite DB through the census runner over every test file this change touches):
+`bulk_revert_undo_native` 107 tests / 721 assertions, `tm_two_lanes_native` 51 / 445,
+`tm_composed_rows_native` 31 / 222, `tm_save_order_native` 100 / 1777, `duplicate_record_native`
+6 / 32 (others of the change raised to their measured counts). Two floors LOWERED on purpose:
+`tm_bulk_revert` 13 → 7 tests (the deleted row-per-row `preBulkState` and its 6 cases) and
+`action_scope_binding_tripwire` 95 → 92 assertions (the retired `tool_time_machine.apply_value`
+exemption).

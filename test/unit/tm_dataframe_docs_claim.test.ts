@@ -80,6 +80,48 @@ const REMOVED_RULES: readonly RemovedRule[] = [
 		control: 'its frames restore whole, and the main stays',
 		reason: 'frames of items deleted since are dropped (isStaleItemFrame)',
 	},
+	{
+		phrase: /(frames of|are those of) the newest `lg-nolan` row|`lg-nolan` row must hold/i,
+		control: 'the frames of the newest `lg-nolan` row up to it',
+		reason:
+			'the frames come from the newest FRAME-STATE row (lg-nolan, or a v6 row carrying frames — readFrameStateRowAt)',
+	},
+	{
+		phrase: /held no frames of this field\) is emptied|lg-nolan entry[^.]*empties that dataframe/i,
+		control: 'a dataframe that was empty then (or held no frames of this field) is emptied.',
+		reason:
+			"a restore replaces only THIS main's frames; another main's frames in a shared slot stay (D-A)",
+	},
+	{
+		phrase:
+			/is not partial — the whole selected snapshot|replaces the whole current value with the snapshot/i,
+		control: '**Apply and save** is not partial — the whole selected snapshot lands on the record',
+		reason:
+			"a restore is per lane: a language row merges over the live other languages; another main's frames stay",
+	},
+];
+
+/**
+ * Comment formulations of the revert's own history order the engine reversed
+ * (WC addendum "review 5 — the frame lane first"): recordMainPairs writes the
+ * lg-nolan pair FIRST, then each language lane.
+ */
+const REMOVED_SOURCE_RULES: readonly RemovedRule[] = [
+	{
+		phrase: /then\s+(\*\s+)?the\s+(\*\s+)?lg-nolan\s+(\*\s+)?(pair|lane)/i,
+		control: 'sequential per language lane, then the\n * lg-nolan lane',
+		reason: 'recordMainPairs writes the lg-nolan (frame-lane) pair FIRST, then each language lane',
+	},
+];
+
+const SOURCE_FILES: readonly string[] = [
+	'src/core/relations/dataframe_slots.ts',
+	'tools/tool_time_machine/server/bulk_revert.ts',
+	'tools/tool_time_machine/server/bulk_revert_composed.ts',
+	'tools/tool_time_machine/server/bulk_revert_legacy.ts',
+	'tools/tool_time_machine/server/bulk_revert_plan.ts',
+	'tools/tool_time_machine/server/bulk_revert_records.ts',
+	'tools/tool_time_machine/server/bulk_revert_undo.ts',
 ];
 
 /** Every `path:line` of the manual matching `phrase`. */
@@ -108,6 +150,14 @@ describe('TM dataframe docs claim', () => {
 		test(`no page states the removed rule ${rule.phrase} — ${rule.reason}`, () => {
 			expect(rule.phrase.test(rule.control)).toBe(true);
 			expect(hits(pages, rule.phrase)).toEqual([]);
+		});
+	}
+
+	for (const rule of REMOVED_SOURCE_RULES) {
+		test(`no revert source comment states ${rule.phrase} — ${rule.reason}`, () => {
+			expect(rule.phrase.test(rule.control)).toBe(true);
+			const found = SOURCE_FILES.filter((file) => rule.phrase.test(read(file)));
+			expect(found).toEqual([]);
 		});
 	}
 

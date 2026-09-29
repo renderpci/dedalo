@@ -119,7 +119,9 @@ import { resolveMediaPathOptions } from '../../media/ontology_path.ts';
 import type { MediaIdentity } from '../../media/path.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from '../../ontology/resolver.ts';
 import {
+	type LaneIdentity,
 	mainIdentity,
+	mainStorage,
 	recordMainBackfill,
 	recordMainHistory,
 	slotsFromBag,
@@ -826,6 +828,22 @@ async function duplicateRecordMediaFiles(
 }
 
 /**
+ * The history identity of a copied key. A key whose tipo the ontology no longer
+ * stores (no model — a node removed from the ontology — or a model with no
+ * matrix column) is recorded the way the wipe and revert doors record it: one
+ * unsliced, non-translatable lane, lg-nolan (bulk_revert_records.ts
+ * wipedMainIdentity). Otherwise currentDataLang(), NOT config.menu.dataLang
+ * (P0-7/DATA-01): the lane this picks is the one the duplicate's save row is
+ * stamped with, so the install default silently audited the copy under a
+ * language the operator was not working in.
+ */
+async function copiedKeyIdentity(tipo: string, storable: boolean): Promise<LaneIdentity> {
+	if (!storable) return { tipo, sliced: false, translatable: false, lang: NOLAN };
+	const main = await mainIdentity(tipo, currentDataLang());
+	return { ...main, lang: main.translatable ? currentDataLang() : NOLAN };
+}
+
+/**
  * Step 5 of a duplicate — the Time Machine, per copied MAIN component, in its
  * two lanes (relations/dataframe_slots.ts, WC-2026-09-27-bulk-revert-undo-log
  * "two lanes"):
@@ -852,13 +870,9 @@ async function recordDuplicateHistory(
 		timestamp: dbTimestamp(new Date(audit.now.getTime() - 60_000)),
 	};
 	for (const component of copied) {
-		if ((await getModelByTipo(component.tipo)) === 'component_dataframe') continue;
-		// currentDataLang(), NOT config.menu.dataLang (P0-7/DATA-01): the lane this
-		// picks is the one the duplicate's save row is stamped with, so the install
-		// default silently audited the copy under a language the operator was not
-		// working in.
-		const main = await mainIdentity(component.tipo, currentDataLang());
-		const identity = { ...main, lang: main.translatable ? currentDataLang() : NOLAN };
+		const storage = await mainStorage(component.tipo);
+		if (storage?.model === 'component_dataframe') continue;
+		const identity = await copiedKeyIdentity(component.tipo, storage !== null);
 		const state = {
 			value: component.items,
 			slots: await slotsFromBag(component.tipo, relationBag),

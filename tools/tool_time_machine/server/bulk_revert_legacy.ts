@@ -42,7 +42,12 @@
  * ONE READING RULE (decision 2026-09-28): every row of a main is the FULL
  * state of the main and ALL its dataframes, so a slot a row is silent about
  * was empty then and the revert EMPTIES the main's own frames there
- * (rowSlotTipos) — no frameless refusal, no per-row provenance. A run's row on a dataframe SLOT tipo (TS-era beta shape,
+ * (rowSlotTipos) — no frameless refusal, no per-row provenance. The scope gate
+ * checked the caller's grant on the unit's `slotTipos`; a frame half that
+ * would change any other slot (a live or pre-run slot no run row names) needs
+ * the caller's level 2 on it, else the unit is refused `out_of_scope`.
+ *
+ * A run's row on a dataframe SLOT tipo (TS-era beta shape,
  * PHP never wrote one) never reaches this path: the plan refuses it `failed`.
  */
 
@@ -64,6 +69,7 @@ import {
 	rowSlotTipos,
 	splitComposed,
 } from '../../../src/core/relations/dataframe_slots.ts';
+import { getPermissions, type Principal } from '../../../src/core/security/permissions.ts';
 import { mergeRestoredLangSlice } from '../../../src/core/tm_record/lane_state.ts';
 import { normalizeRestoredSectionIds } from '../../../src/core/update/transform/section_id_restore.ts';
 import type { BulkRevertInexactBasis } from './bulk_revert.ts';
@@ -73,6 +79,7 @@ import {
 	type KeyTarget,
 	type RevertKey,
 	RevertRefusal,
+	type RevertUnit,
 	type RunRow,
 } from './bulk_revert_plan.ts';
 import {
@@ -94,8 +101,13 @@ export interface LegacyContext {
 	runCreatedDate: string | null;
 	/** The run being reverted. */
 	bulkId: number;
-	/** Every key of the main's unit when this key carries the frame half; null = its main region only. */
-	frameUnit: readonly RevertKey[] | null;
+	/**
+	 * The main's unit when this key carries the frame half (its keys, and the
+	 * slots the scope gate checked — `slotTipos`); null = its main region only.
+	 */
+	frameUnit: RevertUnit | null;
+	/** The caller: a slot outside `frameUnit.slotTipos` is written only on its level-2 grant. */
+	principal: Principal;
 }
 
 /** A plan that writes. */
@@ -496,6 +508,30 @@ async function isAllLangImage(key: RevertKey): Promise<boolean> {
 }
 
 /**
+ * Refuse (`out_of_scope`) a frame half that would change a slot the scope gate
+ * did not check (outside the unit's `slotTipos`: a live or pre-run slot no run
+ * row names) and the caller holds no level 2 on.
+ */
+async function assertSlotGrants(
+	key: RevertKey,
+	record: { table: string; sectionTipo: string; sectionId: number },
+	plan: WritePlan,
+	context: LegacyContext,
+): Promise<void> {
+	const gated = context.frameUnit?.slotTipos ?? [];
+	for (const slot of plan.framePlan) {
+		if (gated.includes(slot.slotTipo)) continue;
+		if (await framePlanIsNoop(record, key.tipo, [slot], plan.frameSlice ?? null)) continue;
+		if ((await getPermissions(context.principal, key.sectionTipo, slot.slotTipo)) >= 2) continue;
+		throw new RevertRefusal(
+			'out_of_scope',
+			key,
+			`${describeKey(key)}: no write grant on slot ${slot.slotTipo}`,
+		);
+	}
+}
+
+/**
  * Plan one legacy key over its live value (see the header): its main region,
  * and — the unit's carrier only — the main's frame half. A key already at the
  * inferred pre-run value is `unchanged` BEFORE the conflict check, as on the
@@ -519,7 +555,7 @@ export async function planLegacyKey(
 	const half =
 		context.frameUnit === null
 			? null
-			: await legacyFrameHalf(key, main.value, context, context.frameUnit);
+			: await legacyFrameHalf(key, main.value, context, context.frameUnit.keys);
 	const plan: WritePlan = {
 		kind: 'write',
 		value: main.value,
@@ -530,12 +566,20 @@ export async function planLegacyKey(
 	// A main with a declared slot ALWAYS has a frame plan (every slot is named,
 	// frames or not), so "already restored" asks whether applying it would change
 	// anything — never its length, or a second revert is refused changed_since_run.
+	const record = {
+		table: context.target.table,
+		sectionTipo: key.sectionTipo,
+		sectionId: key.sectionId,
+	};
 	const framesAtTarget = await framePlanIsNoop(
-		{ table: context.target.table, sectionTipo: key.sectionTipo, sectionId: key.sectionId },
+		record,
 		key.tipo,
 		plan.framePlan,
 		plan.frameSlice ?? null,
 	);
+	if (context.frameUnit !== null && !framesAtTarget) {
+		await assertSlotGrants(key, record, plan, context);
+	}
 	if (framesAtTarget && canonicalJson(plan.value) === canonicalJson(live)) {
 		return { kind: 'unchanged' };
 	}

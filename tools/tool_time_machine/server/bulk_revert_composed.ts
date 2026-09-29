@@ -500,7 +500,7 @@ async function composedScope(unit: RevertUnit): Promise<ComposedScope> {
 		report: unitReportKey(unit),
 		mainTipo: key.tipo,
 		law: await keyLaneLaw(key),
-		slotTipos: unit.composed?.slotTipos ?? [],
+		slotTipos: unit.slotTipos,
 		target: { table: target.table, sectionTipo: key.sectionTipo, sectionId: key.sectionId },
 		column: target.column,
 	};

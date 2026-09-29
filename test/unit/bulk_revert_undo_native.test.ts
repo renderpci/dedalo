@@ -1772,6 +1772,119 @@ describe('LEGACY composed snapshots (catalogue wt:1878)', () => {
 		expect(data.skipped).toEqual([]);
 		expect(data.inexact.map((entry) => entry.basis)).toEqual(['legacy_inference']);
 	});
+	test('a non-admin with the MAIN’s grant but not the SLOT’s reverting a LEGACY framed run: out_of_scope, the slot unchanged (the legacy unit gates its slots too)', async () => {
+		await installAclIdentityFixture();
+		try {
+			const grants = [
+				{ id: 50, tipo: SECTION, section_tipo: SECTION, value: 2 },
+				{ id: 52, tipo: HMAIN, section_tipo: SECTION, value: 2 },
+				{ id: 53, tipo: HSLOT, section_tipo: SECTION, value: 1 },
+			];
+			await sql.unsafe(
+				`UPDATE matrix_profiles SET misc = jsonb_set(misc, '{dd774}', (misc->'dd774') || $1::text::jsonb)
+				 WHERE section_tipo = 'dd234' AND section_id = $2`,
+				[JSON.stringify(grants), ACL_NON_ADMIN_PROFILE_ID],
+			);
+			clearAclIdentityCaches();
+			const reader = await resolvePrincipal(ACL_NON_ADMIN_USER_ID);
+			const host = await rec();
+			const [t1, t2, r1, r2] = [await rec(), await rec(), await rec(), await rec()];
+			const run = await mint();
+			await insertLegacyBulkRow({
+				sectionTipo: SECTION,
+				sectionId: host,
+				tipo: HMAIN,
+				lang: 'lg-nolan',
+				bulkId: null,
+				data: [locator(1, t1, HMAIN), frame(1, r1, HMAIN, HSLOT)],
+			});
+			const batchMain = [locator(1, t1, HMAIN), locator(2, t2, HMAIN)];
+			const batchSlot = [frame(1, r1, HMAIN, HSLOT), frame(2, r2, HMAIN, HSLOT)];
+			await insertLegacyBulkRow({
+				sectionTipo: SECTION,
+				sectionId: host,
+				tipo: HMAIN,
+				lang: 'lg-nolan',
+				bulkId: run,
+				data: [...batchMain, ...batchSlot],
+			});
+			await seed(host, 'relation', HMAIN, batchMain);
+			await seed(host, 'relation', HSLOT, batchSlot);
+			// FLOOR: the record is in scope; the reader can edit the main, not the slot.
+			expect(reader.isGlobalAdmin).toBe(false);
+			expect(await principalCanAccessRecord(SECTION, host, reader)).toBe(true);
+			const response = await toolTimeMachineBulkRevert({
+				principal: reader,
+				userId: ACL_NON_ADMIN_USER_ID,
+				options: { bulk_process_id: run },
+				background: false,
+			});
+			const data = response.data as RevertData;
+			minted.push(data.bulk_process_id);
+			expect(data.skipped.map((entry) => entry.reason)).toEqual(['out_of_scope']);
+			expect(data.counter).toBe(0);
+			expect(await stored(host, 'relation', HMAIN)).toEqual(batchMain);
+			expect(await stored(host, 'relation', HSLOT)).toEqual(batchSlot);
+		} finally {
+			await removeAclIdentityFixture();
+		}
+	});
+	test('a LEGACY frame half that would write a slot no run row names (named only by the pre-run row) needs the caller’s grant on it: out_of_scope, nothing written', async () => {
+		await installAclIdentityFixture();
+		try {
+			const grants = [
+				{ id: 50, tipo: SECTION, section_tipo: SECTION, value: 2 },
+				{ id: 52, tipo: HMAIN, section_tipo: SECTION, value: 2 },
+				{ id: 53, tipo: HSLOT, section_tipo: SECTION, value: 2 },
+				{ id: 54, tipo: OSLOT, section_tipo: SECTION, value: 1 },
+			];
+			await sql.unsafe(
+				`UPDATE matrix_profiles SET misc = jsonb_set(misc, '{dd774}', (misc->'dd774') || $1::text::jsonb)
+				 WHERE section_tipo = 'dd234' AND section_id = $2`,
+				[JSON.stringify(grants), ACL_NON_ADMIN_PROFILE_ID],
+			);
+			clearAclIdentityCaches();
+			const reader = await resolvePrincipal(ACL_NON_ADMIN_USER_ID);
+			const host = await rec();
+			const [t1, t2, r1] = [await rec(), await rec(), await rec()];
+			const run = await mint();
+			// pre-run: a frame in OSLOT (no component declares it); the run's row is silent about it
+			await insertLegacyBulkRow({
+				sectionTipo: SECTION,
+				sectionId: host,
+				tipo: HMAIN,
+				lang: 'lg-nolan',
+				bulkId: null,
+				data: [locator(1, t1, HMAIN), frame(1, r1, HMAIN, OSLOT)],
+			});
+			const batchMain = [locator(1, t1, HMAIN), locator(2, t2, HMAIN)];
+			await insertLegacyBulkRow({
+				sectionTipo: SECTION,
+				sectionId: host,
+				tipo: HMAIN,
+				lang: 'lg-nolan',
+				bulkId: run,
+				data: batchMain,
+			});
+			await seed(host, 'relation', HMAIN, batchMain);
+			expect(reader.isGlobalAdmin).toBe(false);
+			expect(await principalCanAccessRecord(SECTION, host, reader)).toBe(true);
+			const response = await toolTimeMachineBulkRevert({
+				principal: reader,
+				userId: ACL_NON_ADMIN_USER_ID,
+				options: { bulk_process_id: run },
+				background: false,
+			});
+			const data = response.data as RevertData;
+			minted.push(data.bulk_process_id);
+			expect(data.skipped.map((entry) => entry.reason)).toEqual(['out_of_scope']);
+			expect(data.counter).toBe(0);
+			expect(await stored(host, 'relation', HMAIN)).toEqual(batchMain);
+			expect(await stored(host, 'relation', OSLOT)).toBeUndefined();
+		} finally {
+			await removeAclIdentityFixture();
+		}
+	});
 	// (A legacy run carrying rows under the SLOT tipo — a TS-era beta CSV
 	// replace — is unsupported history since 2026-09-28: tm_composed_rows_native
 	// 'a SLOT row with no BEFORE' pins it `failed`.)

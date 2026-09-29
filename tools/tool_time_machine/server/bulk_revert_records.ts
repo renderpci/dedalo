@@ -659,10 +659,10 @@ async function wipedMainIdentity(main: WipedMain): Promise<{
 
 /**
  * The restore's undo pairs under the revert's bulk id, per MAIN, two lanes
- * (dataframe_slots.ts recordMainHistory): one pair per language lane it put
- * back — cut sequentially, each from the state the previous language's step
- * left — then the lg-nolan pair (the lg-nolan value + the slots' frames). The
- * AFTER side is re-read from the row.
+ * (dataframe_slots.ts recordMainPairs): the lg-nolan pair (the lg-nolan value
+ * + every slot's frames) FIRST, then one pair per language lane it put back,
+ * each cut from the state the previous step left. The AFTER side is re-read
+ * from the row.
  */
 async function recordWipedHistory(
 	marker: RecordMarker,

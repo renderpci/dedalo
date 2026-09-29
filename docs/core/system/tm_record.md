@@ -245,10 +245,11 @@ has no history rows of its own.
 - **The state at a row.** Saves to one record are serialised by the record's row lock,
   so row ids follow the real order. The state at row R is rebuilt from the lanes: each
   language's value is the newest row of that language with an id up to R; the frames
-  (and the `lg-nolan` value) are those of the newest `lg-nolan` row up to R
-  (`src/core/tm_record/lane_state.ts`).
+  are those of the newest frame-state row up to R (an `lg-nolan` row, or a Dédalo v6
+  row carrying frames — `readFrameStateRowAt()`); the `lg-nolan` value is that of the
+  newest `lg-nolan` row up to R (`src/core/tm_record/lane_state.ts`).
 - **The frame lane is complete.** Before a language row is written, the newest
-  `lg-nolan` row must hold the main's frames and `lg-nolan` value as they are: when it
+  frame-state row must hold the main's frames and `lg-nolan` value as they are: when it
   does not (frames written by a door that records no history — a migration, an import
   made with the time machine off), one `lg-nolan` row of that state is written first
   (`recordFrameLaneBaseline()`). So restoring a language row never rolls frames back to

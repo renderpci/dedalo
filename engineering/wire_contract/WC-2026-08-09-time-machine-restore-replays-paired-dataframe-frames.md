@@ -161,7 +161,9 @@ main's composed undo pairs (WC-2026-09-27-bulk-revert-undo-log §4 step 3).
   frames — is the full frame state of the main, and only there is a slot it is silent about
   emptied. A LANGUAGE-lane row is value-only for every main: its frames are those of the newest
   frame-state row at or below it (`src/core/tm_record/lane_state.ts` `readRowLaneState`), in
-  `apply_value`, the preview and both bulk-revert paths; it never empties a slot. "Every row is
+  `apply_value`, the preview and both bulk-revert paths. The language row itself names no
+  slot; the frame-state row it resolves to decides what is emptied (none at or below it: every
+  slot of the main loses its frames of the main — the state at the row held none). "Every row is
   COMPOSED / the full state" above reads as "every frame-state row".
 - **Divergence 4 stays**: no supported history has a slot row (PHP never wrote one), and
   `apply_value` on one is still refused.

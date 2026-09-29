@@ -232,3 +232,40 @@ describe('duplicate core contract (TS-native, differential-pinned anatomy)', () 
 		expect(delta).toBe(60_000);
 	});
 });
+
+describe('duplicate: a copied key whose tipo the ontology no longer stores', () => {
+	// A node removed from the ontology leaves its key in long-lived records. The
+	// duplicate copies it and must still record its history (one unsliced lane,
+	// lg-nolan — the wipe/revert doors' rule), not refuse the whole duplicate.
+	const STRAY = 'zzdupstray1'; // unregistered: no dd_ontology node, model null
+	const STRAY_VALUE = [{ id: 1, lang: 'lg-nolan', value: 'orphan' }];
+	let strayId = 0;
+	let strayDupId = 0;
+
+	afterAll(async () => {
+		for (const id of [strayId, strayDupId]) {
+			if (id > 0) await cleanScratchRecord(SECTION, id, TABLE);
+		}
+	});
+
+	test('duplicates, with one lg-nolan backfill row plus one save row for the stray key', async () => {
+		const { getModelByTipo } = await import('../../src/core/ontology/resolver.ts');
+		expect(await getModelByTipo(STRAY)).toBeNull();
+		strayId = await createSectionRecord(SECTION, USER_ID);
+		await sql.unsafe(
+			`UPDATE ${TABLE} SET string = jsonb_build_object($3::text, $4::text::jsonb)
+			 WHERE section_tipo = $1 AND section_id = $2`,
+			[SECTION, strayId, STRAY, JSON.stringify(STRAY_VALUE)],
+		);
+		strayDupId = await duplicateSectionRecord(SECTION, strayId, USER_ID);
+		const rows = (await sql.unsafe(
+			`SELECT lang, data FROM matrix_time_machine
+			 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3 ORDER BY id`,
+			[SECTION, strayDupId, STRAY],
+		)) as { lang: string; data: unknown }[];
+		expect(rows).toEqual([
+			{ lang: 'lg-nolan', data: STRAY_VALUE }, // backfill
+			{ lang: 'lg-nolan', data: STRAY_VALUE }, // save
+		]);
+	}, 30000);
+});

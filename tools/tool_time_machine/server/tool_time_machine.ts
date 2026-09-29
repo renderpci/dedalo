@@ -38,7 +38,8 @@
  * ONE lane. The restore puts the row's OWN lane back (a language row's value
  * merged over the live other languages; an lg-nolan row's lg-nolan items) and
  * the frames AS OF the row (tm_record/lane_state.ts — the row itself when it is
- * a frame state, else the newest lg-nolan row below it; none = no frames then:
+ * a frame state, else the newest frame-state row below it (lg-nolan, or a v6 row
+ * carrying frames); none = no frames then:
  * the main's own frames are EMPTIED; other mains' frames of a shared slot stay
  * — decision D-A). A frame of an item that existed at the row and exists no
  * more is never written back. No refusal.
@@ -509,7 +510,8 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 		// THE STATE AT THE ROW (two lanes — tm_record/lane_state.ts, the reader
 		// the preview shares): the row's own lane value, and the frame state AS OF
 		// the row (the row itself when it is one — an lg-nolan row, a PHP row
-		// carrying frames — else the newest lg-nolan row below it).
+		// carrying frames — else the newest frame-state row below it: lg-nolan,
+		// or a v6 row carrying frames).
 		const state = await readRowLaneState({
 			coords: { sectionTipo, sectionId, componentTipo: tipo },
 			row: canonicalRow,
