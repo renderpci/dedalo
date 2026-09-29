@@ -126,6 +126,30 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-29-dataframe-hard-delete-retired`.
 
+- **The time machine shows a field's frames and their values as they were at the chosen change.**
+
+    In the [time machine](./tools/using_time_machine.md), the preview of a field with a
+    [dataframe](./core/components/component_dataframe.md) could show today's frames instead of
+    the ones of the chosen entry, and a frame's own values — a role, a rating and its colour —
+    were always shown as they are now. The preview and the history list now show the frames and
+    their values as they were at that change: an entry from before a frame was added shows no
+    frame, a rating edited later shows its earlier value, and a frame record emptied since shows
+    what it held. Switching between entries, or clicking the same entry again, never shows the
+    previous entry's frames, and a save made elsewhere no longer changes an open preview. The
+    history list's frame column now matches the preview for every entry, including the entries
+    of one language of a translatable field, which showed no frames before, and each entry's frame
+    button shows the rating colour of that entry, not the newest one. In a record's whole history
+    (the entries of a deleted or recovered record), each field's frames show their values as they
+    were at that entry: a deleted record shows them as they were when it was deleted, not the
+    emptied values its dataframe policy left after the deletion. Recovering a deleted record now
+    adds its own entry to the record's history, so the deleted record's entry keeps showing those
+    values after the recovery. In the time machine a frame's button is now read-only: it shows the
+    frame's label and colour, but offers no **+** and opens nothing — before, clicking it opened the
+    record as it is now, editable, from a view of the past. The same holds for a user without
+    permission to edit the dataframe.
+
+    Wire contract: `WC-2026-09-29-tm-preview-frame-children-as-of`.
+
 - **A section that fails to load says why, and can be reloaded**
 
     When a section or thesaurus element could not be loaded, the red banner always
@@ -411,6 +435,16 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **A refused save no longer leaves an empty record behind.**
+
+    A save to a record that does not exist yet creates the record first. When the change itself was
+    then refused (for example, removing a value the field does not hold), the answer was a failure,
+    but the new empty record stayed, the section's id counter had moved to its id, and the activity
+    log recorded its creation. A refused save now leaves nothing behind: no record, no counter move,
+    no history or activity entry. The answer to the request is unchanged. A save run inside a
+    larger operation (an import row, for example) leaves that choice to the operation, which rolls
+    the row back as before.
+
 - **A relation search with an unreadable value now fails with an error instead of quietly matching every record.**
 
     Relation fields (selects, portals,
@@ -425,7 +459,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 52 entries"
+??? note "Wire contract — 53 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -479,6 +513,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-28-maintenance-serve-ontology-widget`
     - `WC-2026-09-29-dataframe-hard-delete-retired`
     - `WC-2026-09-29-rdf-per-uri-error-wire-body`
+    - `WC-2026-09-29-tm-preview-frame-children-as-of`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

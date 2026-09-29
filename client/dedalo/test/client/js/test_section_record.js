@@ -6,7 +6,10 @@
 
 
 import {section_record} from '../../../core/section_record/js/section_record.js'
-import {add_instance, delete_instance, key_instances_builder} from '../../../core/common/js/instances.js'
+import {get_section_records} from '../../../core/section/js/section.js'
+import {get_dataframe} from '../../../core/component_common/js/dataframe.js'
+import {event_manager} from '../../../core/common/js/event_manager.js'
+import {add_instance, delete_instance, get_instance_by_id, key_instances_builder} from '../../../core/common/js/instances.js'
 
 
 
@@ -799,6 +802,349 @@ describe(`SECTION_RECORD (extended)`, async () => {
 		assert.equal(instances.length, 2, 'both columns build')
 		assert.equal(instances[0], a, 'fixed_mode===true -> the child is instanced in the ontology mode (edit)')
 		assert.equal(instances[1], b, 'a truthy non-true fixed_mode keeps the section_record mode (list)')
+	})
+})
+
+
+/**
+* SECTION_RECORD (time machine keying)
+* The tool_time_machine preview portal and the live "Now" portal render the SAME
+* entries of the SAME component, both with id_variant 'tool_time_machine'. The only
+* coordinate that tells them apart is the TM row id (matrix_id), and it must reach:
+*
+*   get_section_records — from the CALLER (options || caller), never the locator
+*   the section_record   — in its instance key and as `data_source`
+*   its children         — matrix_id (key) to every child; data_source 'tm' ONLY to
+*                          the component_dataframe (the only child whose record IS
+*                          the TM row's; the server refuses the row for any other)
+*
+* Before 2026-09-29 get_section_records passed neither: the preview received the
+* live, already-built section_record from the cache — and with it the live
+* dataframe child — so the preview always showed the live frames.
+*
+* Children here are REAL instances (component_input_text, component_dataframe),
+* built with autoload=false from the injected datum: no API request is issued.
+* Every instance created is destroyed deep in after() (registry hygiene).
+*/
+
+// tm fixtures. Generic test TLD only
+	const TM_MAIN_TIPO		= 'test_tm_main'	// the previewed portal (main component)
+	const TM_HOST_TIPO		= 'test3'			// its section
+	const TM_TARGET_TIPO	= 'test_tm_target'	// the linked record's section
+	const TM_DF_TIPO		= 'test_tm_df'		// dataframe slot
+	const TM_TEXT_TIPO		= 'test_tm_text'	// a plain child of the linked record
+	const TM_MATRIX_ID		= 51581272
+
+	// one portal entry: linked record test_tm_target/5, main item id (id_key) 3
+	const tm_entries = () => [{ id:3, section_tipo:TM_TARGET_TIPO, section_id:5, paginated_key:0 }]
+
+	const tm_context = () => [
+		{ model:'component_dataframe', tipo:TM_DF_TIPO, section_tipo:TM_TARGET_TIPO, parent:TM_MAIN_TIPO, type:'component', mode:'edit', lang:'lg-nolan', request_config:[] },
+		{ model:'component_input_text', tipo:TM_TEXT_TIPO, section_tipo:TM_TARGET_TIPO, parent:TM_MAIN_TIPO, type:'component', mode:'edit', lang:'lg-nolan', request_config:[] }
+	]
+
+	// frame datum entry for the main item id_key 3 — `frame_id` marks whose datum it is
+	const tm_frame = (frame_id) => ({
+		tipo				: TM_DF_TIPO,
+		section_tipo		: TM_TARGET_TIPO,
+		section_id			: 1, // the caller's (host) section_id
+		mode				: 'edit',
+		id_key				: 3,
+		main_component_tipo	: TM_MAIN_TIPO,
+		entries				: frame_id===null ? [] : [{ type:'dd490', section_tipo:'test_tm_frame', section_id:frame_id, id_key:3, main_component_tipo:TM_MAIN_TIPO }]
+	})
+
+	// the two portal callers get_section_records sees
+	const make_tm_caller = (extra={}) => Object.assign({
+		model			: 'component_portal',
+		tipo			: TM_MAIN_TIPO,
+		section_tipo	: TM_HOST_TIPO,
+		section_id		: 1,
+		mode			: 'edit',
+		lang			: 'lg-nolan',
+		id_variant		: 'tool_time_machine',
+		permissions		: 1,
+		context			: { request_config:[] },
+		data			: { entries:tm_entries() }
+	}, extra)
+
+	// tm_built — every instance these cases create, destroyed deep in after()
+	const tm_built = []
+
+
+
+describe(`SECTION_RECORD (time machine keying)`, async () => {
+
+	after(async function(){
+		for (const instance of tm_built) {
+			if (instance && instance.status!=='destroyed') {
+				await instance.destroy(true, true, false)
+			}
+		}
+		tm_built.length = 0
+	})
+
+
+	it(`a TM caller and a live caller over the same entries get distinct section_records and dataframe children, each with its own datum`, async function() {
+
+		this.timeout(10000)
+
+		// preview (TM row: frame 585 absent -> no frame) vs live (frame 585)
+			const tm_datum		= { context:tm_context(), data:[ tm_frame(null) ] }
+			const live_datum	= { context:tm_context(), data:[ tm_frame(585) ] }
+
+			const tm_caller		= make_tm_caller({ matrix_id:TM_MATRIX_ID, data_source:'tm', datum:tm_datum })
+			const live_caller	= make_tm_caller({ datum:live_datum })
+
+		// live first: it is the one already built (and cached) when the preview asks
+			const [live_sr]	= await get_section_records({ caller:live_caller, mode:'edit' })
+			const [tm_sr]	= await get_section_records({ caller:tm_caller, mode:'edit' })
+			tm_built.push(live_sr, tm_sr)
+
+			assert.ok(live_sr && tm_sr, 'both records are built')
+			assert.notStrictEqual(tm_sr, live_sr, 'the preview must NOT receive the live section_record from the cache')
+			assert.notEqual(tm_sr.id, live_sr.id, 'distinct instance keys')
+			assert.strictEqual(tm_sr.matrix_id, TM_MATRIX_ID, 'the preview record carries the caller matrix_id')
+			assert.strictEqual(tm_sr.data_source, 'tm', 'the preview record carries the caller data_source')
+			assert.strictEqual(live_sr.matrix_id, null, 'the live record has no matrix_id')
+			assert.strictEqual(live_sr.data_source, null, 'the live record has no data_source')
+			assert.strictEqual(tm_sr.datum, tm_datum, 'the preview record holds the TM datum')
+			assert.strictEqual(live_sr.datum, live_datum, 'the live record holds the live datum')
+
+		// children
+			const live_children	= await live_sr.get_ar_instances_edit()
+			const tm_children	= await tm_sr.get_ar_instances_edit()
+			tm_built.push(...live_children, ...tm_children)
+
+			const live_df	= live_children.find(el => el.model==='component_dataframe')
+			const tm_df		= tm_children.find(el => el.model==='component_dataframe')
+			const tm_text	= tm_children.find(el => el.model==='component_input_text')
+			const live_text	= live_children.find(el => el.model==='component_input_text')
+
+			assert.ok(live_df && tm_df && tm_text && live_text, 'both records build both children')
+			assert.notStrictEqual(tm_df, live_df, 'the preview dataframe is NOT the live dataframe')
+			assert.notStrictEqual(tm_text, live_text, 'the preview plain child is NOT the live one')
+
+			assert.deepEqual(tm_df.data.entries, [], 'the preview dataframe shows the TM row (no frame)')
+			assert.equal(live_df.data.entries.length, 1, 'the live dataframe keeps its frame')
+			assert.equal(live_df.data.entries[0].section_id, 585, 'the live frame is 585')
+
+		// option forwarding: matrix_id to every child, data_source ONLY to the dataframe
+			assert.strictEqual(tm_df.matrix_id, TM_MATRIX_ID, 'the dataframe child is keyed by the TM row')
+			assert.strictEqual(tm_df.data_source, 'tm', 'the dataframe child reads as of the TM row')
+			assert.strictEqual(tm_text.matrix_id, TM_MATRIX_ID, 'a plain child is keyed by the TM row too')
+			assert.notEqual(tm_text.data_source, 'tm', 'a plain child (another record) must NOT get data_source tm')
+			assert.notEqual(live_df.data_source, 'tm', 'the live dataframe has no data_source')
+
+		// sync_data: the live dataframe subscribes, the preview one must not
+			const subscribed_events = (instance) => (instance.events_tokens || [])
+				.map(token => event_manager.tokenMap.get(token)?.event_name)
+			assert.ok(subscribed_events(live_df).some(el => el && el.startsWith('sync_data_')), 'the live dataframe subscribes to sync_data (control)')
+			assert.notOk(subscribed_events(tm_df).some(el => el && el.startsWith('sync_data_')), 'the preview dataframe must NOT subscribe to live sync_data')
+
+		// destroying the preview subtree leaves the live record intact
+			await tm_sr.destroy(true, true, false)
+			assert.equal(tm_sr.status, 'destroyed', 'preview record destroyed')
+			assert.equal(tm_df.status, 'destroyed', 'preview dataframe destroyed with it (deep)')
+			assert.notEqual(live_sr.status, 'destroyed', 'the live record survives')
+			assert.notEqual(live_df.status, 'destroyed', 'the live dataframe survives')
+			assert.strictEqual(get_instance_by_id(live_sr.id), live_sr, 'the live record is still registered')
+			assert.strictEqual(get_instance_by_id(live_df.id), live_df, 'the live dataframe is still registered')
+	})
+
+
+	it(`get_dataframe (literal-main path) forwards matrix_id AND data_source 'tm' from a TM preview main`, async function() {
+
+		this.timeout(10000)
+
+		// a literal main (e.g. a component_iri preview) holding its slot ddo and the frame datum
+			const make_main = (extra={}) => Object.assign({
+				tipo			: 'test_tm_lit',
+				section_tipo	: TM_HOST_TIPO,
+				section_id		: 1,
+				context			: { request_config:[ { show:{ ddo_map:[
+					{ model:'component_dataframe', tipo:TM_DF_TIPO, section_tipo:TM_HOST_TIPO, mode:'edit' }
+				] } } ] },
+				datum			: { context:[
+					{ model:'component_dataframe', tipo:TM_DF_TIPO, section_tipo:TM_HOST_TIPO, type:'component', mode:'edit', lang:'lg-nolan', request_config:[] }
+				], data:[
+					Object.assign(tm_frame(585), { section_tipo:TM_HOST_TIPO, main_component_tipo:'test_tm_lit' })
+				] }
+			}, extra)
+
+			const frame_options = { section_id:1, id_key:3, main_component_tipo:'test_tm_lit', lang:'lg-nolan' }
+
+			const tm_df		= await get_dataframe(Object.assign({ self:make_main({ matrix_id:TM_MATRIX_ID, data_source:'tm' }) }, frame_options))
+			const live_df	= await get_dataframe(Object.assign({ self:make_main() }, frame_options))
+			tm_built.push(tm_df, live_df)
+
+			assert.ok(tm_df && live_df, 'both frames are built')
+			assert.notStrictEqual(tm_df, live_df, 'distinct frame instances')
+			assert.strictEqual(tm_df.matrix_id, TM_MATRIX_ID, 'the preview frame is keyed by the TM row')
+			assert.strictEqual(tm_df.data_source, 'tm', 'the preview frame reads as of the TM row')
+			assert.notEqual(live_df.data_source, 'tm', 'the live frame has no data_source')
+			assert.equal(tm_df.data.entries[0].section_id, 585, 'the preview frame pairs its datum entry by id_key (no matrix_id match needed)')
+
+		// matrix_id is NOT a pairing discriminator: an item carrying a (foreign) matrix_id still
+		// pairs by id_key + main_component_tipo (the retired el.matrix_id branch would drop it)
+			const stamped_main = make_main({ matrix_id:TM_MATRIX_ID, data_source:'tm' })
+			stamped_main.datum.data[0].matrix_id = 999
+			const stamped_df = await get_dataframe(Object.assign({ self:stamped_main }, frame_options))
+			tm_built.push(stamped_df)
+			assert.equal(stamped_df.data?.entries?.[0]?.section_id, 585, 'an item matrix_id never filters the pairing')
+
+			const subscribed_events = (instance) => (instance.events_tokens || [])
+				.map(token => event_manager.tokenMap.get(token)?.event_name)
+			assert.ok(subscribed_events(live_df).some(el => el && el.startsWith('sync_data_')), 'the live frame subscribes to sync_data (control)')
+			assert.notOk(subscribed_events(tm_df).some(el => el && el.startsWith('sync_data_')), 'the preview frame must NOT subscribe to live sync_data')
+	})
+
+
+	it(`get_dataframe (literal-main path) keys a nested main with matrix_id but NO data_source: no tm read for another record, no live sync inside the preview`, async function() {
+
+		this.timeout(10000)
+
+		// a nested literal main of a linked record inside a preview portal row: section_record
+		// build_instance forwards matrix_id (keying) but not data_source. Its frame is a DIFFERENT
+		// record than the TM row's, so a data_source 'tm' read would be refused by the server
+		// (tmRowBelongsToRecord) and blank the frame.
+			const nested_main = {
+				tipo			: 'test_tm_nested',
+				section_tipo	: TM_TARGET_TIPO,
+				section_id		: 5,
+				matrix_id		: TM_MATRIX_ID,
+				context			: { request_config:[ { show:{ ddo_map:[
+					{ model:'component_dataframe', tipo:TM_DF_TIPO, section_tipo:TM_TARGET_TIPO, mode:'edit' }
+				] } } ] },
+				datum			: { context:[
+					{ model:'component_dataframe', tipo:TM_DF_TIPO, section_tipo:TM_TARGET_TIPO, type:'component', mode:'edit', lang:'lg-nolan', request_config:[] }
+				], data:[
+					Object.assign(tm_frame(585), { section_id:5, main_component_tipo:'test_tm_nested' })
+				] }
+			}
+
+			const frame = await get_dataframe({ self:nested_main, section_id:5, id_key:3, main_component_tipo:'test_tm_nested', lang:'lg-nolan' })
+			tm_built.push(frame)
+
+			assert.ok(frame, 'the frame is built')
+			assert.strictEqual(frame.matrix_id, TM_MATRIX_ID, 'the frame is still keyed by the TM row (no collision with the live frame)')
+			assert.ok(frame.id_variant.endsWith(`_${TM_MATRIX_ID}`), 'matrix_id is part of the frame id_variant')
+			assert.notEqual(frame.data_source, 'tm', 'a nested main without data_source tm must NOT send tm reads for another record')
+
+			const subscribed_events = (instance) => (instance.events_tokens || [])
+				.map(token => event_manager.tokenMap.get(token)?.event_name)
+			// reads stay live (no data_source 'tm' above), but the frame is a descendant of a TM
+			// preview (matrix_id up its chain): a live save must not re-render inside the snapshot
+			// (events_subscription is_time_machine_view walks the whole caller chain)
+			assert.notOk(subscribed_events(frame).some(el => el && el.startsWith('sync_data_')), 'a frame inside a TM preview does not follow live saves (sync_data)')
+	})
+
+
+	it(`the tool 'Now' pane (id_variant tool_time_machine, no matrix_id) and the page get distinct dataframe children; a deep destroy of one leaves the other`, async function() {
+
+		this.timeout(10000)
+
+		// own main tipo: no key overlap with the other cases of this suite
+			const NOW_MAIN_TIPO = 'test_tm_now'
+			const now_context = () => tm_context().map(el => Object.assign(el, { parent:NOW_MAIN_TIPO }))
+			const now_frame = (frame_id) => {
+				const frame = tm_frame(frame_id)
+				frame.main_component_tipo = NOW_MAIN_TIPO
+				frame.entries.forEach(el => { el.main_component_tipo = NOW_MAIN_TIPO })
+				return frame
+			}
+
+		// same live datum, same entries; only the caller id_variant differs (the page portal has none)
+			const page_caller	= make_tm_caller({ tipo:NOW_MAIN_TIPO, id_variant:null, datum:{ context:now_context(), data:[ now_frame(585) ] } })
+			const now_caller	= make_tm_caller({ tipo:NOW_MAIN_TIPO, datum:{ context:now_context(), data:[ now_frame(585) ] } })
+
+		// the page first: it is the one already built (and cached) when the tool opens
+			const [page_sr]	= await get_section_records({ caller:page_caller, mode:'edit' })
+			const [now_sr]	= await get_section_records({ caller:now_caller, mode:'edit' })
+			tm_built.push(page_sr, now_sr)
+			assert.ok(page_sr && now_sr, 'both records are built')
+			assert.notStrictEqual(now_sr, page_sr, 'distinct section_records (control: their id_variant differs)')
+
+			const page_children	= await page_sr.get_ar_instances_edit()
+			const now_children	= await now_sr.get_ar_instances_edit()
+			tm_built.push(...page_children, ...now_children)
+
+			const page_df	= page_children.find(el => el.model==='component_dataframe')
+			const now_df	= now_children.find(el => el.model==='component_dataframe')
+			assert.ok(page_df && now_df, 'both records build their dataframe child')
+			assert.notStrictEqual(now_df, page_df, 'the Now pane must NOT receive the page dataframe from the cache')
+			assert.notEqual(now_df.id, page_df.id, 'distinct dataframe instance keys')
+			assert.strictEqual(now_df.caller, now_sr, 'the Now dataframe belongs to the Now record')
+			assert.strictEqual(page_df.caller, page_sr, 'the page dataframe still belongs to the page record')
+
+		// key contract: <section_record id_variant>_<base>_<id_key>_<main_component_tipo>
+			const base = `${NOW_MAIN_TIPO}_5_${TM_HOST_TIPO}_1`
+			assert.equal(now_df.id_variant, `tool_time_machine_${base}_3_${NOW_MAIN_TIPO}`, 'the dataframe id_variant keeps the parent id_variant prefix')
+			assert.equal(page_df.id_variant, `${base}_3_${NOW_MAIN_TIPO}`, 'without a parent id_variant the key is unchanged')
+
+		// closing the tool deep-destroys its subtree: the page dataframe must survive
+			await now_sr.destroy(true, true, true)
+			assert.equal(now_df.status, 'destroyed', 'the Now dataframe is destroyed with its record (deep)')
+			assert.notEqual(page_df.status, 'destroyed', 'the page dataframe survives the tool close')
+			assert.strictEqual(get_instance_by_id(page_df.id), page_df, 'the page dataframe is still registered')
+			assert.strictEqual(get_instance_by_id(page_sr.id), page_sr, 'the page record is still registered')
+	})
+
+
+	it(`get_section_records takes matrix_id from options over the caller, and never from the locator`, async function() {
+
+		const datum = { context:[], data:[] }
+
+		// options win over the caller
+			const [from_options] = await get_section_records({
+				caller		: make_tm_caller({ matrix_id:111, data_source:'tm', datum:datum, tipo:'test_tm_opt' }),
+				mode		: 'edit',
+				matrix_id	: 222,
+				data_source	: 'tm'
+			})
+			tm_built.push(from_options)
+			assert.strictEqual(from_options.matrix_id, 222, 'options.matrix_id wins over caller.matrix_id')
+
+		// a dd15-like entry carrying its own matrix_id must NOT key the record
+			const [from_locator] = await get_section_records({
+				caller	: make_tm_caller({ datum:datum, tipo:'test_tm_loc' }),
+				mode	: 'edit',
+				entries	: [{ section_tipo:TM_TARGET_TIPO, section_id:6, paginated_key:0, matrix_id:333 }]
+			})
+			tm_built.push(from_locator)
+			assert.strictEqual(from_locator.matrix_id, null, 'locator.matrix_id is never read')
+			assert.strictEqual(from_locator.data_source, null, 'no data_source without a TM caller')
+	})
+
+
+	it(`a section caller with no matrix_id keeps the pre-existing section_record key`, async function() {
+
+		const caller = {
+			model			: 'section',
+			tipo			: 'test_tm_sec',
+			section_tipo	: 'test_tm_sec',
+			section_id		: null,
+			mode			: 'list',
+			lang			: 'lg-eng',
+			permissions		: 1,
+			context			: { request_config:[] },
+			datum			: { context:[], data:[] },
+			data			: { entries:[{ section_tipo:'test_tm_sec', section_id:8, paginated_key:0 }] }
+		}
+
+		const [sr] = await get_section_records({ caller:caller })
+		tm_built.push(sr)
+
+		const expected_key = key_instances_builder({
+			model			: 'section_record',
+			tipo			: 'test_tm_sec',
+			section_tipo	: 'test_tm_sec',
+			section_id		: 8,
+			mode			: 'list',
+			lang			: 'lg-eng'
+		})
+		assert.equal(sr.id, expected_key, 'no matrix_id / data_source segment in the key of a plain section record')
+		assert.strictEqual(sr.matrix_id, null, 'matrix_id stays null')
 	})
 })
 

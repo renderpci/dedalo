@@ -37,7 +37,13 @@
  * restored value no longer holds is stale and its frame is never written back.
  */
 
-import { readFrameStateRowAt, readLaneRowAt, type TmCoords } from '../db/time_machine.ts';
+import {
+	type KeyLaneRow,
+	readFrameStateRowAt,
+	readKeyLanesAt,
+	readLaneRowAt,
+	type TmCoords,
+} from '../db/time_machine.ts';
 import { isFrameStateRow, isFramesOnlyImage, splitComposed } from '../relations/dataframe_slots.ts';
 import { type LaneLaw, laneHoldsValue, NOLAN, rowLaneItems } from '../relations/main_lanes.ts';
 
@@ -163,6 +169,180 @@ export async function readLaneValueAt(
 		return { lane, recorded: false, value: undefined };
 	}
 	return laneValueOf(await readLaneRowAt(coords, lane, rowId), lane, law);
+}
+
+/** What history says of one key AS OF a bound (componentValueAsOf). */
+export interface KeyValueAsOf {
+	/** false: history never recorded this key (silent) — the caller keeps the live value. */
+	spoken: boolean;
+	/** The value as of the bound (`null` = empty, for an unsliced key); meaningful only when `spoken`. */
+	value: unknown;
+}
+
+/**
+ * THE VALUE OF ONE KEY OF ANOTHER RECORD AS OF A BOUND — the TM preview's
+ * frame children (tm_record/frame_as_of.ts;
+ * WC-2026-09-29-tm-preview-frame-children-as-of). A frame target has no row
+ * lane and nothing restores it, so its honest picture is EVERY lane as of
+ * `boundId`:
+ *   - UNSLICED (relations, numbers, dates…): one lane, lg-nolan, whatever the
+ *     rows' tags (the readRowLaneState law): the newest visible row at or below
+ *     the bound, its main part (splitComposed — a target that is itself a main
+ *     carries frames in its rows). Rows only above the bound: EMPTY (null).
+ *   - SLICED: each language lane judged on its own — a lane with a speaking
+ *     row at or below the bound takes that row's items of the lane; a lane
+ *     with rows only above it, or with only frames-only rows at or below it,
+ *     is EMPTY; a lane never recorded keeps `base`'s items. A translatable key's lg-nolan lane never speaks (readLaneValueAt's
+ *     law), an untagged pre-migration row speaks for nothing. The lang-less
+ *     (orphan) items come from the newest speaking row, once — rowLaneItems
+ *     would hand them to every lane. Merged over `base` by
+ *     mergeRestoredLangSlice: exactly the spoken lanes are replaced.
+ *   - NO visible row at all: not spoken (history silent: an import with the
+ *     time machine off) — the caller keeps `base`.
+ * `floorId` (> 0): `base` is the key's state AT that row — a whole-record
+ * snapshot (an archive restore) that superseded every key row at or below it.
+ * Those rows, and a lane whose rows all lie above the bound, then say nothing:
+ * `base` stands for them. Not spoken = no key row in (floorId, boundId] speaks.
+ * A key whose only rows lie above the bound (no floor) previews EMPTY even when
+ * its pre-edit value was an unrecorded import (or a backfill pre-value row,
+ * which cannot be told from an ordinary one): ledgered, never guessed.
+ */
+export async function componentValueAsOf(
+	coords: TmCoords,
+	base: unknown,
+	boundId: number,
+	law: LaneLaw,
+	floorId = 0,
+): Promise<KeyValueAsOf> {
+	const lanes = await readKeyLanesAt(coords, boundId);
+	if (lanes.length === 0) return { spoken: false, value: base };
+	if (!law.sliced) return unslicedValueAsOf(lanes, law, base, floorId);
+	const state: SlicedAsOf = { spokenLanes: new Set(), restored: [], orphanSource: null };
+	for (const entry of lanes) await judgeLaneAsOf(state, coords, entry, law, floorId);
+	if (state.spokenLanes.size === 0) return { spoken: false, value: base };
+	const restored = [...state.restored, ...orphansOf(state.orphanSource)];
+	return {
+		spoken: true,
+		value: mergeRestoredLangSlice(asItemList(base), restored, state.spokenLanes),
+	};
+}
+
+/** The sliced lanes judged so far (componentValueAsOf). */
+interface SlicedAsOf {
+	spokenLanes: Set<string>;
+	restored: unknown[];
+	/** The newest speaking row — the one source of the lang-less items. */
+	orphanSource: LaneRow | null;
+}
+
+/** Whether a tag is a language lane of the key that can speak (componentValueAsOf's lane law). */
+function isSpeakableLane(lane: string | null, law: LaneLaw): lane is string {
+	if (lane === null || lane === '' || !laneHoldsValue(lane, law)) return false;
+	return !(lane === NOLAN && law.translatable);
+}
+
+/** One sliced lane as of the bound, folded into `state`. */
+async function judgeLaneAsOf(
+	state: SlicedAsOf,
+	coords: TmCoords,
+	entry: KeyLaneRow,
+	law: LaneLaw,
+	floorId: number,
+): Promise<void> {
+	const lane = entry.lang;
+	if (!isSpeakableLane(lane, law)) return;
+	const speaking = entry.atOrBelow
+		? await speakingRowAtOrBelow(coords, lane, entry.row, law, floorId)
+		: null;
+	if (speaking === null) {
+		// The lane is RECORDED but nothing at or below the bound speaks for a
+		// value (rows only above it, or only frames-only rows at or below it):
+		// the lane was empty at the bound — never its live (post-bound) items —
+		// unless a floor's snapshot stands for it.
+		if (floorId === 0) state.spokenLanes.add(lane);
+		return;
+	}
+	state.spokenLanes.add(lane);
+	state.restored.push(...laneItemsOf(speaking, lane, law));
+	state.orphanSource = newerRow(state.orphanSource, speaking);
+}
+
+/** The newer of two rows (by id — the one TM order). */
+function newerRow(current: LaneRow | null, row: LaneRow): LaneRow {
+	return current === null || row.id > current.id ? row : current;
+}
+
+/** A speaking row's items of exactly `lane` (its main part). */
+function laneItemsOf(row: LaneRow, lane: string, law: LaneLaw): unknown[] {
+	return asItemList(rowLaneItems(splitComposed(row.data).main, lane, law)).filter(
+		(item) => (item as { lang?: unknown } | null)?.lang === lane,
+	);
+}
+
+/** The lang-less items of the newest speaking row (none without one). */
+function orphansOf(row: LaneRow | null): unknown[] {
+	return row === null ? [] : asItemList(splitComposed(row.data).main).filter(isLanglessObject);
+}
+
+/**
+ * An unsliced key as of the bound: the newest row at or below it, any tag,
+ * above the floor. None: EMPTY (null) — or, over a floor, not spoken (the
+ * snapshot `base` stands).
+ */
+function unslicedValueAsOf(
+	lanes: readonly KeyLaneRow[],
+	law: LaneLaw,
+	base: unknown,
+	floorId: number,
+): KeyValueAsOf {
+	const newest = newestAtOrBelow(lanes);
+	if (newest !== null && newest.id > floorId) {
+		return {
+			spoken: true,
+			value: rowLaneItems(splitComposed(newest.data).main, NOLAN, law) ?? null,
+		};
+	}
+	return floorId > 0 ? { spoken: false, value: base } : { spoken: true, value: null };
+}
+
+/** The newest row at or below the bound across every tag, or null. */
+function newestAtOrBelow(lanes: readonly KeyLaneRow[]): LaneRow | null {
+	let newest: LaneRow | null = null;
+	for (const entry of lanes) {
+		if (entry.atOrBelow && (newest === null || entry.row.id > newest.id)) newest = entry.row;
+	}
+	return newest;
+}
+
+/**
+ * The newest row of `lane` at or below `row` and ABOVE `floorId` that SPEAKS
+ * for a value (rowRestoresValue): a frames-only row is skipped for the next
+ * older one.
+ */
+async function speakingRowAtOrBelow(
+	coords: TmCoords,
+	lane: string,
+	row: LaneRow,
+	law: LaneLaw,
+	floorId: number,
+): Promise<LaneRow | null> {
+	let candidate: LaneRow | null = row;
+	while (candidate !== null && candidate.id > floorId) {
+		if (rowRestoresValue(candidate, lane, law)) return candidate;
+		candidate = await olderLaneRow(coords, lane, candidate);
+	}
+	return null;
+}
+
+/** The next older visible row of `lane` below `row`, or null. */
+async function olderLaneRow(coords: TmCoords, lane: string, row: LaneRow): Promise<LaneRow | null> {
+	const older = await readLaneRowAt(coords, lane, Number(row.id) - 1);
+	return older === null ? null : { id: Number(older.id), lang: older.lang, data: older.data };
+}
+
+/** A lang-less OBJECT item (an orphan of a sliced value; a non-object is never an item). */
+function isLanglessObject(item: unknown): boolean {
+	return item !== null && typeof item === 'object' && isLanglessItem(item);
 }
 
 /**

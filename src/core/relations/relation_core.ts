@@ -25,7 +25,12 @@ import { canonicalizeStoredSectionId, isSectionId } from '../concepts/section_id
 import { dataframeEntryMatches } from '../concepts/subdatum.ts';
 import type { MatrixRecord } from '../db/matrix.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from '../ontology/resolver.ts';
-import { buildDataItem, type DataItem, type EmissionContext } from '../resolve/component_data.ts';
+import {
+	buildDataItem,
+	type DataItem,
+	type EmissionContext,
+	type TmAsOf,
+} from '../resolve/component_data.ts';
 import { isTimeMachineRead } from '../section/list_definitions/tm_scope_context.ts';
 import { loadRecordCached } from '../section/record_loader.ts';
 import type { EmitDdoFn } from './registry.ts';
@@ -146,6 +151,44 @@ async function loadAddressedRecord(
 	sectionId: number | string,
 ): Promise<MatrixRecord | null> {
 	return isSectionId(sectionId) ? loadRecordCached(emission, table, sectionTipo, sectionId) : null;
+}
+
+/**
+ * A portal target's record: loadAddressedRecord — or, for a DIRECT dataframe
+ * read inside a TM preview (`targetsAsOf`: the locators are frames), the target
+ * AS OF the preview's bound with its compatible children grafted
+ * (tm_record/frame_as_of.ts) — only a frame of the bound's own main
+ * (`locator.main_component_tipo`, isSubjectMain). Called BEFORE the null-record fallback, so a
+ * target gone live that has history still renders. Cold path: dynamic import.
+ */
+async function loadPortalTarget(
+	emission: EmissionContext,
+	targetsAsOf: TmAsOf | undefined,
+	locator: Record<string, unknown>,
+	table: string,
+	sectionTipo: string,
+	sectionId: number | string,
+	childDdos: readonly Ddo[],
+): Promise<MatrixRecord | null> {
+	if (targetsAsOf === undefined || !isSectionId(sectionId)) {
+		return loadAddressedRecord(emission, table, sectionTipo, sectionId);
+	}
+	const { isSubjectMain, loadFrameTargetAsOf } = await import('../tm_record/frame_as_of.ts');
+	// CONFINEMENT per frame: only the previewed main's frames read as of the
+	// bound — another main's frame in a shared slot stays LIVE, children too.
+	if (!(await isSubjectMain(targetsAsOf, locator.main_component_tipo))) {
+		return loadAddressedRecord(emission, table, sectionTipo, sectionId);
+	}
+	return loadFrameTargetAsOf(
+		emission,
+		table,
+		sectionTipo,
+		sectionId,
+		targetsAsOf,
+		childDdos
+			.filter((childDdo) => ddoTargetsSection(childDdo, sectionTipo))
+			.map((childDdo) => childDdo.tipo),
+	);
 }
 
 /** value.ts externalComponentAppliesTo, reached lazily (core → component module, no static edge). */
@@ -336,6 +379,14 @@ export interface ExpandPortalOptions {
 	 * oracle on rsc92/fr1 (2026-07-09).
 	 */
 	ddinfoBare?: boolean;
+	/**
+	 * The tool_time_machine preview's bound, set ONLY on the top-level
+	 * expansion of a DIRECT dataframe read (section/read.ts readComponentData,
+	 * model component_dataframe): its locators are frames, so each target
+	 * record reads its compatible children AS OF the bound
+	 * (tm_record/frame_as_of.ts). Never passed to a nested expansion.
+	 */
+	targetsAsOf?: TmAsOf;
 }
 
 /**
@@ -511,11 +562,14 @@ export async function expandPortal(
 			// Only a matrix ADDRESS has a stored row. A non-address id (an external
 			// remote id '000012281', verbatim) is never Number()-ed into one — that
 			// read local record 12281 and rendered it as the remote record.
-			targetRecord = await loadAddressedRecord(
+			targetRecord = await loadPortalTarget(
 				emission,
+				options.targetsAsOf,
+				locator,
 				targetTable,
 				targetSectionTipo,
 				targetSectionId,
+				childDdos,
 			);
 			if (targetRecord === null) {
 				// NO STORED ROW. v6 dispatches purely by component MODEL —
@@ -732,6 +786,70 @@ export async function expandPortal(
 }
 
 /**
+ * The record a frame bag is read from (emitDataframeItem). It lives on the
+ * record of the ddo's DECLARED section_tipo (PHP builds the component_dataframe
+ * instance with the ddo's scalar section_tipo + the caller's section_id).
+ * Components shared across sections may anchor their frames on a SIBLING
+ * record: numisdata75 in a numisdata3 read stores its numisdata1531/1532 frames
+ * on the numisdata4 record with the SAME section_id. 'self'/undeclared reads
+ * the main record.
+ *
+ * Under a TM bound (`asOf`, the subject's own frames only: `mainRecord` is
+ * the emission ROOT) the record is addressed by the SUBJECT (frame_as_of.ts
+ * subjectRowOf): in the dd15 history list `mainRecord` is the virtual row
+ * record standing in for it, whose own section/id address nothing. A sibling bag is then read AS OF the bound (the
+ * main's own slots are already grafted into `mainRecord`: applyTmGraft on a
+ * preview, the list's row frame state).
+ */
+async function frameBagRecord(
+	emission: EmissionContext,
+	frameDdo: Ddo,
+	mainRecord: MatrixRecord,
+	mainComponentTipo: string,
+	row: { section_tipo: string; section_id: number },
+	bound: FrameBound | null,
+): Promise<MatrixRecord | null> {
+	const subject = bound?.module.subjectRowOf(bound.asOf, mainRecord) ?? {
+		section_tipo: mainRecord.section_tipo,
+		section_id: row.section_id,
+	};
+	// The main record itself (a literal main's undeclared slot names it) or the
+	// subject it stands for holds the bag; any other section is a sibling.
+	const declared = siblingFrameSection(frameDdo, [subject.section_tipo, mainRecord.section_tipo]);
+	if (declared === null) return mainRecord;
+	const frameTable = await getMatrixTableFromTipo(declared);
+	if (frameTable === null) return null;
+	const anchor = { sectionTipo: declared, sectionId: Number(subject.section_id) };
+	const live = await loadRecordCached(emission, frameTable, declared, anchor.sectionId);
+	if (bound === null) return live;
+	return bound.module.frameBagAsOf(
+		emission,
+		anchor,
+		live,
+		mainComponentTipo,
+		frameDdo.tipo,
+		bound.asOf,
+	);
+}
+
+/** A frame emission's TM bound and the (lazily loaded) module that reads it. */
+interface FrameBound {
+	asOf: TmAsOf;
+	module: typeof import('../tm_record/frame_as_of.ts');
+}
+
+/** The frame ddo's declared section when it is a SIBLING (none of `ownSections`); null = the main record holds the bag. */
+function siblingFrameSection(frameDdo: Ddo, ownSections: readonly string[]): string | null {
+	const declared = Array.isArray(frameDdo.section_tipo)
+		? frameDdo.section_tipo[0]
+		: frameDdo.section_tipo;
+	if (typeof declared !== 'string' || declared === 'self' || ownSections.includes(declared)) {
+		return null;
+	}
+	return declared;
+}
+
+/**
  * component_dataframe slot (PHP get_subdatum's dataframe branch + the frame's
  * own json): the frame pairs with the MAIN record — entries are the main
  * record's relation[frameTipo] dd490 locators matching this main component
@@ -756,32 +874,26 @@ export async function emitDataframeItem(
 	const { resolveFrameConfig } = await import('../section/list_definitions/section_list.ts');
 	const frame = await resolveFrameConfig(frameDdo.tipo);
 	const frameLimit = frame.limit;
-	// The frame bag lives on the record of the ddo's DECLARED section_tipo
-	// (PHP builds the component_dataframe instance with the ddo's scalar
-	// section_tipo + the caller's section_id). Components shared across
-	// sections may anchor their frames on a SIBLING record: numisdata75 in a
-	// numisdata3 read stores its numisdata1531/1532 frames on the numisdata4
-	// record with the SAME section_id. 'self'/undeclared reads the main record.
-	let bagRecord: MatrixRecord | null = mainRecord;
-	const declaredFrameSection = Array.isArray(frameDdo.section_tipo)
-		? frameDdo.section_tipo[0]
-		: frameDdo.section_tipo;
-	if (
-		typeof declaredFrameSection === 'string' &&
-		declaredFrameSection !== 'self' &&
-		declaredFrameSection !== mainRecord.section_tipo
-	) {
-		const frameTable = await getMatrixTableFromTipo(declaredFrameSection);
-		bagRecord =
-			frameTable === null
-				? null
-				: await loadRecordCached(
-						emission,
-						frameTable,
-						declaredFrameSection,
-						Number(row.section_id),
-					);
-	}
+	// TM PREVIEW / HISTORY-LIST ROW: the subject's own frames read AS OF the
+	// row (WC-2026-09-29-tm-preview-frame-children-as-of) — the sibling bag and
+	// the frame children. Null for every other read, and for every NESTED
+	// dataframe (a main record other than the emission root — the subject's own
+	// record met again nested included; confinement: frameTargetsAsOf).
+	const asOfModule = emission.tmAsOf === null ? null : await import('../tm_record/frame_as_of.ts');
+	const asOf =
+		asOfModule === null
+			? null
+			: await asOfModule.frameTargetsAsOf(emission, mainComponentTipo, mainRecord);
+	const bound: FrameBound | null =
+		asOf !== null && asOfModule !== null ? { asOf, module: asOfModule } : null;
+	const bagRecord = await frameBagRecord(
+		emission,
+		frameDdo,
+		mainRecord,
+		mainComponentTipo,
+		row,
+		bound,
+	);
 	// component_alias data key (WC-020) — uniformity; no live alias targets a frame.
 	const { resolveDataTipo: resolveFrameDataTipo } = await import('../ontology/alias.ts');
 	// KEPT UNION below: the raw stored dataframe bag — unswept rows still hold
@@ -841,9 +953,19 @@ export async function emitDataframeItem(
 		// identity-only placeholder — the portal expansion's rule.
 		const frameTargetId = canonicalizeStoredSectionId(targetId) as number | string;
 		const isAddress = isSectionId(frameTargetId);
-		const targetRecord = isAddress
-			? await loadRecordCached(emission, table, targetSection, frameTargetId)
-			: externalTargetRecord(targetSection, frameTargetId);
+		// TM preview: an addressed target reads its frame children AS OF the bound.
+		const targetRecord = !isAddress
+			? externalTargetRecord(targetSection, frameTargetId)
+			: asOf !== null && asOfModule !== null
+				? await asOfModule.loadFrameTargetAsOf(
+						emission,
+						table,
+						targetSection,
+						frameTargetId as number,
+						asOf,
+						frame.ddos.map((child) => child.tipo),
+					)
+				: await loadRecordCached(emission, table, targetSection, frameTargetId as number);
 		if (targetRecord === null) continue;
 		for (const child of frame.ddos) {
 			if (!isAddress && (await getModelByTipo(child.tipo)) !== 'component_external') continue;

@@ -29,7 +29,12 @@ import { config as dedaloConfig } from '../../config/config.ts';
 import { type EmitHookContext, getEmitHook } from '../components/emit_hooks.ts';
 import { getComponentModel } from '../components/registry.ts';
 import type { Ddo } from '../concepts/ddo.ts';
-import { callerDataframePairing, isTemporalSource, type Rqo } from '../concepts/rqo.ts';
+import {
+	callerDataframePairing,
+	isTemporalSource,
+	type Rqo,
+	type RqoSource,
+} from '../concepts/rqo.ts';
 import { isConsultationOnlySection, TIME_MACHINE_SECTION_TIPO } from '../concepts/section.ts';
 import { canonicalizeStoredSectionId, classifyWireSectionId } from '../concepts/section_id.ts';
 import { mergeSessionSqo, sanitizeClientSqo } from '../concepts/sqo.ts';
@@ -50,6 +55,7 @@ import {
 	EmissionContext,
 	resolveComponentValue,
 	type SectionsEnvelope,
+	type TmAsOf,
 } from '../resolve/component_data.ts';
 import { currentDataLang } from '../resolve/request_lang.ts';
 import {
@@ -713,23 +719,165 @@ interface TmPreviewGraft {
  * narrowing, so its id previews empty, never as history nobody saw.
  */
 async function resolveTmPreview(
-	source: { data_source?: unknown; matrix_id?: unknown; lang?: unknown },
+	source: RqoSource,
 	model: string,
 	tipo: string,
 	sectionTipo: string,
 	sectionId: number,
-): Promise<{ served: true; graft: TmPreviewGraft | null } | { served: false; graft: null }> {
+): Promise<TmPreview> {
 	if (source.data_source !== 'tm' || source.matrix_id === null || source.matrix_id === undefined) {
-		return { served: true, graft: null };
+		return { served: true, graft: null, asOf: null, siblingSlot: false };
 	}
 	const { readTimeMachineRow } = await import('../db/time_machine.ts');
 	const tmRow = await readTimeMachineRow(Number(source.matrix_id));
-	if (tmRow === null) return { served: false, graft: null };
-	if (!(await tmRowServable(tmRow, sectionTipo, sectionId, model, tipo))) {
-		return { served: false, graft: null };
+	if (tmRow === null) return TM_PREVIEW_NOT_SERVED;
+	if (await tmRowServable(tmRow, sectionTipo, sectionId, model, tipo)) {
+		const graft = await tmPreviewGraft(
+			tmRow,
+			model,
+			{ sectionTipo, sectionId },
+			viewLangOf(source),
+		);
+		// asOf even when graft is null: a row with nothing to graft on the main
+		// still previews its frame children as of the row.
+		return { served: true, graft, asOf: await tmAsOfRow(tmRow), siblingSlot: false };
 	}
-	const graft = await tmPreviewGraft(tmRow, model, { sectionTipo, sectionId }, viewLangOf(source));
-	return { served: true, graft };
+	if (await siblingSlotServable(source, tmRow, model, tipo, sectionTipo, sectionId)) {
+		return { served: true, graft: null, asOf: await tmAsOfRow(tmRow), siblingSlot: true };
+	}
+	return TM_PREVIEW_NOT_SERVED;
+}
+
+/**
+ * What resolveTmPreview answers. `asOf`: the bound the preview subject's frame
+ * children read at (tm_record/frame_as_of.ts) — non-null whenever a row is
+ * served. `siblingSlot`: the read is a SIBLING-anchored slot previewed through
+ * its main's row (siblingSlotServable) — its bag is taken as of the bound.
+ */
+type TmPreview =
+	| { served: true; graft: TmPreviewGraft | null; asOf: TmAsOf | null; siblingSlot: boolean }
+	| { served: false; graft: null; asOf: null; siblingSlot: false };
+
+const TM_PREVIEW_NOT_SERVED: TmPreview = {
+	served: false,
+	graft: null,
+	asOf: null,
+	siblingSlot: false,
+};
+
+/**
+ * A TM preview's emission and the record it emits from. Under a served bound
+ * the emission ROOT is a CLONE of `record` (frame_as_of.ts rootedAt): the one
+ * object that stands for the subject — never the live object record_loader
+ * answers when the subject's own address is met again NESTED (a portal target
+ * pointing back at it), which therefore stays live, as in the history list.
+ * No bound: `record` itself and a plain emission.
+ */
+async function tmPreviewEmission(
+	preview: TmPreview,
+	record: MatrixRecord,
+): Promise<{ emission: EmissionContext; root: MatrixRecord }> {
+	if (preview.asOf === null) return { emission: new EmissionContext(), root: record };
+	const { rootedAt } = await import('../tm_record/frame_as_of.ts');
+	const { cloneRecord } = await import('../section_record/index.ts');
+	const root = cloneRecord(record);
+	return { emission: new EmissionContext([], { tmAsOf: rootedAt(preview.asOf, root) }), root };
+}
+
+/** The preview bound of a served row: frame_as_of.ts tmAsOfRow (the one bound computation). */
+async function tmAsOfRow(tmRow: {
+	id: number;
+	section_tipo: string;
+	section_id: number;
+	tipo: string;
+}): Promise<TmAsOf> {
+	const { tmAsOfRow: boundOf } = await import('../tm_record/frame_as_of.ts');
+	return boundOf(tmRow);
+}
+
+/**
+ * DOOR 3 ON A SIBLING-ANCHORED SLOT. A main whose slot is declared on a SIBLING
+ * section (numisdata75 on numisdata3/N keeps its frames on numisdata4/N) has
+ * its preview's frame widget read DIRECTLY with section_tipo = the sibling and
+ * matrix_id = a row of the MAIN's record — which tmRowBelongsToRecord refuses
+ * (the section differs), so the widget came back empty. Served ONLY when every
+ * one of these holds — anything looser would serve a foreign row as this
+ * record's history:
+ *   - the model is component_dataframe and the row is not under the slot's own tipo;
+ *   - the caller's pairing is complete and names the row's main;
+ *   - the row's record is the sibling's id at another section;
+ *   - the main's own config declares THIS slot on THIS section;
+ *   - the row belongs to the MAIN's living record (its epoch).
+ */
+async function siblingSlotServable(
+	source: RqoSource,
+	tmRow: { id: number; section_tipo: string; section_id: number; tipo: string },
+	model: string,
+	tipo: string,
+	sectionTipo: string,
+	sectionId: number,
+): Promise<boolean> {
+	if (model !== 'component_dataframe' || tmRow.tipo === tipo) return false;
+	if (tmRow.section_tipo === sectionTipo || tmRow.section_id !== sectionId) return false;
+	const pairing = callerDataframePairing(source);
+	if (pairing === null || pairing.main_component_tipo !== tmRow.tipo) return false;
+	const { resolveOwnConfigMap } = await import('./list_definitions/section_list.ts');
+	const declared = ((await resolveOwnConfigMap(tmRow.tipo)).rawDdos ?? []).some((ddo) => {
+		const declaredSection = Array.isArray(ddo.section_tipo)
+			? ddo.section_tipo[0]
+			: ddo.section_tipo;
+		return ddo.tipo === tipo && declaredSection === sectionTipo;
+	});
+	if (!declared) return false;
+	return tmRowBelongsToRecord(tmRow, tmRow.section_tipo, sectionId);
+}
+
+/**
+ * Whether the preview plays a recorded state back over the record (live or a
+ * virtual stand-in): a grafted row, or door 3 on a sibling slot.
+ */
+function previewPlaysBack(preview: TmPreview): boolean {
+	return preview.graft !== null || preview.siblingSlot;
+}
+
+/**
+ * The record with the served preview played back (previewPlaysBack): the
+ * row's graft, else DOOR 3 ON A SIBLING SLOT (siblingSlotServable) — the slot
+ * bag of this sibling record as of the main row's bound (the frames the row's
+ * state held, other mains' frames live). `liveRecord`: the record as it lives
+ * NOW (null when gone) — the anchor's lifecycle is judged by it
+ * (frame_as_of.ts wholeRowIsDelete), never by the virtual stand-in.
+ */
+async function applyTmPreview(
+	record: MatrixRecord,
+	liveRecord: MatrixRecord | null,
+	tipo: string,
+	model: string,
+	preview: TmPreview,
+): Promise<MatrixRecord> {
+	if (preview.graft !== null) return applyTmGraft(record, tipo, model, preview.graft);
+	if (preview.asOf === null) return record;
+	const { frameBagAsOf } = await import('../tm_record/frame_as_of.ts');
+	const bag = await frameBagAsOf(
+		null,
+		{ sectionTipo: record.section_tipo, sectionId: Number(record.section_id) },
+		liveRecord,
+		preview.asOf.mainTipo,
+		tipo,
+		preview.asOf,
+	);
+	return bag ?? record;
+}
+
+/**
+ * The portal expansion's `targetsAsOf` option: a DIRECT dataframe read's
+ * locators are frames, so inside a TM preview their targets read as of the
+ * row (door 3). No other model.
+ */
+function portalAsOfOption(model: string, preview: TmPreview): { targetsAsOf?: TmAsOf } {
+	return model === 'component_dataframe' && preview.asOf !== null
+		? { targetsAsOf: preview.asOf }
+		: {};
 }
 
 /** The language the preview is asked in ('' when the request names none). */
@@ -745,15 +893,12 @@ async function tmPreviewGraft(
 	viewLang: string,
 ): Promise<TmPreviewGraft | null> {
 	// Rationale 3 (CONVENTIONS §2): the TM preview is a cold, tool-scale path.
-	const { readRowLaneState } = await import('../tm_record/lane_state.ts');
-	const { getTranslatableByTipo } = await import('../ontology/resolver.ts');
-	const { isLangSlicedModel } = await import('../components/registry.ts');
-	const { laneLaw } = await import('../relations/main_lanes.ts');
+	// The state + frames at the row: frame_as_of.ts rowFrameState, the one
+	// source the history list's cells read too (resolve/read_tm.ts).
+	const { rowFrameState } = await import('../tm_record/frame_as_of.ts');
 	const mainModel = model === 'component_dataframe' ? await getModelByTipo(tmRow.tipo) : model;
-	const law = laneLaw(isLangSlicedModel(mainModel ?? ''), await getTranslatableByTipo(tmRow.tipo));
+	const { state, law, slots } = await rowFrameState(tmRow, mainModel, live, viewLang);
 	const coords = { ...live, componentTipo: tmRow.tipo };
-	const state = await readRowLaneState({ coords, row: tmRow, law, fallbackLang: viewLang });
-	const slots = await recordedSlotFrames(tmRow.tipo, state.frameImage, live);
 	const value =
 		model === 'component_dataframe'
 			? null
@@ -787,32 +932,6 @@ async function previewAsOf(
 }
 
 /**
- * The frame state's frames of its main, per slot — every slot of the main the
- * state speaks for (rowSlotTipos: a frame state is the full set of frames, so
- * a slot it carries no frame for — a live undeclared slot of the main included
- * — maps to `[]` and previews empty, exactly as apply_value empties it) — null
- * when no slot is in play at all.
- */
-async function recordedSlotFrames(
-	mainTipo: string,
-	frameImage: unknown,
-	live: Omit<SlotTarget, 'table'>,
-): Promise<Map<string, Record<string, unknown>[]> | null> {
-	// Rationale 3 (CONVENTIONS §2): the TM preview is a cold, tool-scale path.
-	const { snapshotSlotFrames } = await import('../tm_record/tm_record.ts');
-	const { rowSlotTipos } = await import('../relations/dataframe_slots.ts');
-	const bySlot = await snapshotSlotFrames(
-		mainTipo,
-		frameImage,
-		await rowSlotTipos(mainTipo, [frameImage], {
-			...live,
-			table: (await getMatrixTableFromTipo(live.sectionTipo)) ?? 'matrix',
-		}),
-	);
-	return bySlot.size > 0 ? bySlot : null;
-}
-
-/**
  * The record with a TM preview grafted over it — a CLONE, never the shared
  * record. The main's key is its live value with the graft's lanes put back
  * (every other lane stays live); each recorded slot holds the frames of OTHER
@@ -828,6 +947,7 @@ async function applyTmGraft(
 ): Promise<MatrixRecord> {
 	const { cloneRecord, injectComponentData } = await import('../section_record/index.ts');
 	const { previewLaneValue } = await import('../tm_record/lane_state.ts');
+	const { liveFramesOfOtherMains } = await import('../tm_record/frame_as_of.ts');
 	const grafted = cloneRecord(record);
 	if (graft.value !== null) {
 		const { state, asOf } = graft.value;
@@ -851,18 +971,6 @@ function liveKeyOf(record: MatrixRecord, tipo: string, model: string): unknown {
 	const column = getColumnNameByModel(model);
 	const bag = column === null ? null : record.columns[column as keyof typeof record.columns];
 	return (bag as Record<string, unknown> | null | undefined)?.[tipo];
-}
-
-/** A slot's live frames that belong to a main other than `mainTipo`. */
-function liveFramesOfOtherMains(record: MatrixRecord, slot: string, mainTipo: string): unknown[] {
-	const column = getColumnNameByModel('component_dataframe');
-	const bag = column === null ? null : record.columns[column as keyof typeof record.columns];
-	const live = (bag as Record<string, unknown> | null | undefined)?.[slot];
-	if (!Array.isArray(live)) return [];
-	return live.filter((entry) => {
-		const owner = (entry as { main_component_tipo?: unknown } | null)?.main_component_tipo;
-		return typeof owner === 'string' && owner !== mainTipo;
-	});
 }
 
 /**
@@ -1044,13 +1152,14 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 		if (tmOverride !== null) {
 			literalRecord = await applyTmGraft(literalRecord, tipo, model, tmOverride);
 		}
-		const literalEmission = new EmissionContext();
+		const literalRoot = await tmPreviewEmission(preview, literalRecord);
+		const literalEmission = literalRoot.emission;
 		const literalData = literalEmission.items;
 		const literalMode = source.mode ?? 'edit';
 		await emitDdoData(
 			{ tipo, section_tipo: sectionTipo, mode: literalMode, lang } as Ddo,
 			[],
-			literalRecord,
+			literalRoot.root,
 			{ section_tipo: sectionTipo, section_id: literalRowId },
 			literalMode,
 			lang,
@@ -1139,7 +1248,9 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 	let record = hasRecordId
 		? await memoizedReadMatrixRecord(table, sectionTipo, numericSectionId)
 		: null;
-	if (record === null && tmOverride !== null) {
+	// The record as it lives NOW, before any virtual stand-in (applyTmPreview).
+	const liveRecord = record;
+	if (record === null && previewPlaysBack(preview)) {
 		// TM preview of a component whose live record is gone: play back the
 		// snapshot against an empty virtual record (PHP get_data still renders it).
 		const { makeVirtualRecord } = await import('../section_record/virtual_record.ts');
@@ -1235,8 +1346,8 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 	// SELECT-family and portal paths below page/resolve it exactly like a stored
 	// value. This REPLACES the live value and short-circuits the relation_children
 	// computation (the snapshot already holds what changed).
-	if (tmOverride !== null) {
-		record = await applyTmGraft(record, tipo, model, tmOverride);
+	if (previewPlaysBack(preview)) {
+		record = await applyTmPreview(record, liveRecord, tipo, model, preview);
 	} else if (model === 'component_relation_children') {
 		// relation_children: COMPUTED locators (inverse dd47 — the component owns
 		// no rows). Grafted into a CLONE of the record (never the shared original)
@@ -1261,7 +1372,8 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 	// pagination path below.
 	if (isSelectOrFilterFamily) {
 		const mode = source.mode ?? 'edit';
-		const familyEmission = new EmissionContext();
+		const familyRoot = await tmPreviewEmission(preview, record);
+		const familyEmission = familyRoot.emission;
 		const familyData = familyEmission.items;
 		// Echo a non-record id VERBATIM — the search filter's 'search_<n>' token
 		// and an external remote id both match the client instance by String()
@@ -1272,7 +1384,7 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 		await emitDdoData(
 			{ tipo, section_tipo: sectionTipo, mode, lang } as Ddo,
 			[],
-			record,
+			familyRoot.root,
 			{ section_tipo: sectionTipo, section_id: emitSectionId as number },
 			mode,
 			lang,
@@ -1430,7 +1542,10 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 	);
 
 	// Portal ddo: paginate the locators by the rqo sqo (get_data pages fully).
-	const emission = new EmissionContext();
+	// tmAsOf: a TM preview's frame children read as of the row
+	// (WC-2026-09-29-tm-preview-frame-children-as-of), rooted at this record.
+	const portalRoot = await tmPreviewEmission(preview, record);
+	const emission = portalRoot.emission;
 	const data = emission.items;
 	const portalDdo: Ddo = {
 		tipo,
@@ -1440,7 +1555,7 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 		limit: effectiveLimit,
 	} as Ddo;
 	await expandPortal(
-		record,
+		portalRoot.root,
 		portalDdo,
 		model,
 		childDdos,
@@ -1457,7 +1572,13 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 		// autocomplete_hi ddinfo breadcrumb in its BARE get_data shape (the save
 		// echo depends on it — the picked chip renders its thesaurus chain
 		// without a reload; byte-diffed vs the oracle, 2026-07-09).
-		{ offset: sqoOffset, childRowFromTarget: true, ownConfig: true, ddinfoBare: true },
+		{
+			offset: sqoOffset,
+			childRowFromTarget: true,
+			ownConfig: true,
+			ddinfoBare: true,
+			...portalAsOfOption(model, preview),
+		},
 	);
 	// The portal's OWN item in a direct get_data carries NO row_section_id —
 	// that stamp belongs to SUBDATUM rows (PHP get_subdatum :2792); the item

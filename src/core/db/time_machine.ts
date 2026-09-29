@@ -387,6 +387,119 @@ export function readLaneRowAt(
 }
 
 /**
+ * THE NEXT VISIBLE ROW that ends one key's interval after `rowId` (any lane),
+ * or null when nothing does. The TM PREVIEW's bound (tm_record/frame_as_of.ts):
+ * the main held row R's state over [R, next) — another record "as of R" is its
+ * state at the end of that interval. Row ids, one sequence across all records.
+ *
+ * Two kinds of row end it: the key's own next row, AND the record's own
+ * SECTION-LEVEL row (tipo = section_tipo at the same address: the delete
+ * snapshot, delete_record.ts; an archive restore's snapshot, archive/restore.ts).
+ * A whole-record delete writes nothing on the main key, yet its commit-lane
+ * frame policies (applyOwnFramePolicies → delete_target) wipe every frame
+ * target ABOVE the delete row — without this arm the main's newest row had no
+ * next row, the bound was unbounded, and the preview of a deleted record showed
+ * its targets already wiped (state that never existed at R).
+ */
+export async function nextVisibleRowAfter(coords: TmCoords, rowId: number): Promise<number | null> {
+	return (
+		(await nextVisibleRow(coords.sectionTipo, coords.sectionId, coords.componentTipo, rowId))?.id ??
+		null
+	);
+}
+
+/**
+ * THE NEXT VISIBLE ROW OF THE LIVING RECORD after `rowId`, whatever its key
+ * (id + tipo), or null. The TM preview's record-lifecycle probes
+ * (tm_record/frame_as_of.ts): after a whole-record row (tipo = section_tipo),
+ * what the address wrote next tells a delete from an archive restore; from row
+ * 0, the living generation's FIRST row (the epoch narrows the dead ones away).
+ */
+export function nextVisibleRecordRowAfter(
+	sectionTipo: string,
+	sectionId: number,
+	rowId: number,
+): Promise<{ id: number; tipo: string } | null> {
+	return nextVisibleRow(sectionTipo, sectionId, null, rowId);
+}
+
+/**
+ * THE NEWEST VISIBLE WHOLE-RECORD ROW at or below `rowId` (tipo = section_tipo:
+ * a delete snapshot or an archive restore's snapshot — same shape, data = every
+ * jsonb column), or null. The TM preview's sibling-bag lifecycle probe.
+ */
+export function readWholeRecordRowAt(
+	sectionTipo: string,
+	sectionId: number,
+	rowId: number,
+): Promise<TimeMachineRow | null> {
+	return newestRowAt({ sectionTipo, sectionId, componentTipo: sectionTipo }, rowId, 'TRUE');
+}
+
+/**
+ * The one statement behind nextVisibleRowAfter / nextVisibleRecordRowAfter:
+ * `tipo` a key (that key OR the section-level key), or null (any key).
+ */
+async function nextVisibleRow(
+	sectionTipo: string,
+	sectionId: number,
+	tipo: string | null,
+	rowId: number,
+): Promise<{ id: number; tipo: string } | null> {
+	await ensureTmHistoryReady();
+	const rows = (await sql.unsafe(
+		`SELECT matrix_time_machine.id, matrix_time_machine.tipo FROM matrix_time_machine
+		 WHERE ${withTmHistory(
+				`matrix_time_machine.section_tipo = $1 AND matrix_time_machine.section_id = $2
+				 AND ($3::text IS NULL OR matrix_time_machine.tipo = $3 OR matrix_time_machine.tipo = $1)
+				 AND matrix_time_machine.id > $4`,
+			)}
+		 ORDER BY matrix_time_machine.id ASC LIMIT 1`,
+		[sectionTipo, sectionId, tipo, rowId],
+	)) as { id: number | string; tipo: string }[];
+	const row = rows[0];
+	return row === undefined ? null : { id: Number(row.id), tipo: row.tipo };
+}
+
+/** One tag (lane) of a key as readKeyLanesAt answers it. */
+export interface KeyLaneRow {
+	/** The row's tag (null: an untagged pre-migration row). */
+	lang: string | null;
+	row: TimeMachineRow;
+	/** The row is at or below the bound (false: every row of the tag lies above it; `row` is then its newest). */
+	atOrBelow: boolean;
+}
+
+/**
+ * EVERY TAG OF ONE KEY, AS OF `boundId`, in ONE statement: per tag the newest
+ * visible row at or below the bound, else (the tag has rows only above it) its
+ * newest row, flagged `atOrBelow: false`. A tag with no visible row at all is
+ * absent — history never recorded that lane. Visibility = withTmHistory (the
+ * living generation, no undo-log row).
+ */
+export async function readKeyLanesAt(coords: TmCoords, boundId: number): Promise<KeyLaneRow[]> {
+	await ensureTmHistoryReady();
+	const rows = (await sql.unsafe(
+		`SELECT DISTINCT ON (matrix_time_machine.lang)
+		        id, section_id, section_tipo, tipo, lang, timestamp, user_id,
+		        bulk_process_id, data, data::text AS data__text,
+		        (matrix_time_machine.id <= $4) AS at_or_below
+		 FROM matrix_time_machine
+		 WHERE ${withTmHistory(
+				`matrix_time_machine.section_tipo = $1 AND matrix_time_machine.section_id = $2
+				 AND matrix_time_machine.tipo = $3`,
+			)}
+		 ORDER BY matrix_time_machine.lang, (matrix_time_machine.id <= $4) DESC,
+		          matrix_time_machine.id DESC`,
+		[coords.sectionTipo, coords.sectionId, coords.componentTipo, boundId],
+	)) as Record<string, unknown>[];
+	return rows.map((row) => {
+		const parsed = rowFromDb(row);
+		return { lang: parsed.lang, row: parsed, atOrBelow: row.at_or_below === true };
+	});
+}
+
+/**
  * The frame-first proof of readOtherLangItemIds: an item is absent at the
  * restored row when the newest row at or below it (`rowsDesc`, id DESC) that
  * speaks for the item's language — tagged with it, or carrying items of it —

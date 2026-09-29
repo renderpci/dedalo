@@ -78,9 +78,9 @@ const EXEMPT_TM_READERS: Readonly<Record<string, { reads: number; reason: string
 			'The epoch MINT itself: it reads the address’s existing rows to place the boundary. It is what the other readers are narrowed BY.',
 	},
 	'src/core/db/time_machine.ts': {
-		reads: 4,
+		reads: 6,
 		reason:
-			'readTimeMachineRow is a PK read whose CALLERS carry the identity check (tool_time_machine apply_value, section/read.ts preview — both narrowed); it is VISIBILITY-narrowed (tmVisiblePredicate) but deliberately not epoch-narrowed, so a dead-generation id answers the specific "does not belong" refusal. readTimeMachineHistory, readOtherLangItemIds (the frame pairing law\'s input) and newestRowAt (the two-lane as-of reader: readFrameStateRowAt / readLaneRowAt) are narrowed with withTmHistory (epoch AND visible).',
+			'readTimeMachineRow is a PK read whose CALLERS carry the identity check (tool_time_machine apply_value, section/read.ts preview — both narrowed); it is VISIBILITY-narrowed (tmVisiblePredicate) but deliberately not epoch-narrowed, so a dead-generation id answers the specific "does not belong" refusal. readTimeMachineHistory, readOtherLangItemIds (the frame pairing law\'s input) and newestRowAt (the two-lane as-of reader: readFrameStateRowAt / readLaneRowAt), nextVisibleRow (the TM preview bound: nextVisibleRowAfter, and the record-lifecycle probe nextVisibleRecordRowAfter) and readKeyLanesAt (the per-lane as-of reader of frame targets) are narrowed with withTmHistory (epoch AND visible).',
 	},
 	'src/core/update/transform/locators.ts': {
 		reads: 2,

@@ -102,6 +102,9 @@ export const section_record = function() {
 
 	/** @var {string|null} matrix_id - Time-machine matrix row identifier; null in normal (non-TM) mode */
 	this.matrix_id		= null
+	/** @var {string|null} data_source - 'tm' when this record belongs to a time-machine preview; null otherwise.
+	 * Forwarded ONLY to component_dataframe children (see build_instance) */
+	this.data_source	= null
 	/** @var {string|null} id_variant - Suffix appended to the instance key for deduplication (propagated from parent) */
 	this.id_variant		= null
 
@@ -173,6 +176,7 @@ export const section_record = function() {
 * @param {Array} options.columns_map - Column layout descriptors built by get_columns_map
 * @param {Object|null} [options.caller] - Owning section/portal instance
 * @param {string|null} [options.matrix_id] - Time-machine matrix id (null in normal mode)
+* @param {string|null} [options.data_source] - 'tm' in a time-machine preview (null in normal mode)
 * @param {string|null} [options.column_id] - Grid column id (list mode)
 * @param {number|null} [options.offset] - Pagination offset of the current page
 * @param {Object} options.locator - Source locator { section_tipo, section_id, paginated_key, ... }
@@ -228,6 +232,7 @@ section_record.prototype.init = async function(options) {
 		self.caller						= options.caller || null
 
 		self.matrix_id					= options.matrix_id || null
+		self.data_source				= options.data_source || null
 		self.column_id					= options.column_id
 
 		self.offset						= options.offset
@@ -337,8 +342,18 @@ const build_instance = async (self, context, section_id, current_data, column_id
 				: section_record_id_variant
 
 		// matrix_id — time machine matrix_id; forwarded so TM children can address the correct matrix row
+		// and, being part of the instance key, never collide with the live children of the same record
 			if (self.matrix_id) {
 				instance_options.matrix_id = self.matrix_id
+			}
+
+		// data_source — time machine. Forwarded ONLY to component_dataframe: it is the only child
+		// whose coordinates are the TM row's own record (its frames live in the main's snapshot), so
+		// the server reads it from that row, and the client does not subscribe it to live sync_data.
+		// Any other child (e.g. a linked record material1/N) is a DIFFERENT record: the server would
+		// refuse the TM row for it (tmRowBelongsToRecord), so it keeps matrix_id (keying) only.
+			if (self.data_source==='tm' && instance_options.model==='component_dataframe') {
+				instance_options.data_source = 'tm'
 			}
 
 		// column_id — forwarded to child so the grid cell renderer knows which column it belongs to
@@ -346,10 +361,14 @@ const build_instance = async (self, context, section_id, current_data, column_id
 				instance_options.column_id = column_id
 			}
 
-		// dataframe — override id_variant to encode the virtual sub-section row identity
-		// Format: <base_id_variant>_<id_key>_<main_component_tipo>
+		// dataframe — extend id_variant to encode the virtual sub-section row identity
+		// Format: <base_id_variant>_<id_key>_<main_component_tipo>, where base_id_variant keeps
+		// the section_record's own id_variant prefix (e.g. 'tool_time_machine'). Dropping it would
+		// give the tool 'Now' pane's dataframe the same key as the page's live dataframe: get_instance
+		// would hand the page instance to the tool (moving its DOM node into the modal) and the
+		// tool's deep destroy on close would destroy and deregister the page's dataframe.
 			instance_options.id_variant = (instance_options.model==='component_dataframe')
-				? `${section_record_id_variant}_${current_data.id_key}_${current_data.main_component_tipo}`
+				? `${instance_options.id_variant}_${current_data.id_key}_${current_data.main_component_tipo}`
 				: instance_options.id_variant
 
 	// component / section group — get_instance either creates a fresh instance or reuses/moves an existing one
@@ -568,9 +587,6 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 			return self.ar_instances
 		}
 
-		// matrix_id — time machine case only; passed down to get_component_data for TM row matching
-			const matrix_id	= self.matrix_id
-
 		// columns_map — ordered column descriptors, built by common.get_columns_map during section build
 		// @see common.get_columns_map for a full overview of how columns are derived from ddo_map
 			const columns_map = self.columns_map || []
@@ -649,7 +665,6 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 									ddo				: current_ddo,
 									section_tipo	: section_tipo,
 									section_id		: section_id,
-									matrix_id		: matrix_id,
 									// dataframe pairing key = the MAIN item id (portal entry id = self.locator.id)
 									dataframe_id_key			: (current_ddo.model==='component_dataframe')
 										? (self.locator?.id ?? null)
@@ -821,8 +836,9 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 *   id it already holds), so no server-side normalization is needed. (`ddo.caller_dataframe`
 *   is only populated by the Time Machine tool.)
 *
-* The `matrix_id` (time machine) match path is commented out in the current code;
-* the TM case is handled differently at a higher level.
+* Time machine: no `matrix_id` match is needed. The server never stamps `matrix_id`
+* on datum items; a time-machine preview datum is already the grafted snapshot of
+* its TM row, so the plain identity tuple (plus the dataframe pairing) selects it.
 *
 * Empty stub shape (when no data found):
 * ```json
@@ -842,7 +858,6 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 * @param {Object} options.ddo - The DDO descriptor for the component being looked up
 * @param {string} options.section_tipo - Section ontology tipo for the lookup
 * @param {string|number} options.section_id - Record identifier for the lookup
-* @param {string|null} [options.matrix_id] - Time-machine matrix id (currently unused in matching)
 * @returns {Object} component_data — the matched datum.data entry, or an empty stub
 *   if no match is found
 */
@@ -854,7 +869,6 @@ section_record.prototype.get_component_data = function(options) {
 		const ddo			= options.ddo
 		const section_tipo	= options.section_tipo
 		const section_id	= options.section_id
-		const matrix_id		= options.matrix_id || null
 
 	// dataframe pairing key (explicit, threaded from the caller's portal entry) takes priority
 		const dataframe_id_key = options.dataframe_id_key ?? null
@@ -886,23 +900,6 @@ section_record.prototype.get_component_data = function(options) {
 				&& el.section_tipo			=== section_tipo // match section_tipo
 				&& el.mode					=== ddo.mode // match mode
 				){
-
-				// time machine case
-				// (!) This block is deliberately commented out; TM matching is handled at a higher level.
-				// Kept here for reference when revisiting TM + component_dataframe combination.
-				// if (el.matrix_id && matrix_id) {
-
-				// 	if (ddo.model==='component_dataframe') {
-
-				// 		return (
-				// 			parseInt(el.matrix_id)		=== parseInt(matrix_id)	&&
-				// 			parseInt(el.id_key)			=== parseInt(id_key) &&
-				// 			el.main_component_tipo		=== main_component_tipo
-				// 		)
-				// 	}
-
-				// 	return parseInt(el.matrix_id)===parseInt(matrix_id)
-				// }
 
 				// dataframe case — additional discriminators are needed because the same component_dataframe
 				// tipo can appear multiple times in datum.data (one per virtual row).

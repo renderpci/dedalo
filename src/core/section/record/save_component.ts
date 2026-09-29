@@ -986,9 +986,13 @@ export function applyUpdate(
  * TRANSACTIONAL (S1-02 / DEC-01): the whole change application runs in ONE
  * transaction, so the FOR UPDATE row lock holds to COMMIT and the data write +
  * TM audit row are atomic — a deliberate break with the PHP oracle's
- * last-writer-wins window (DECISIONS.md DEC-01: recommendation (b)). A save
- * that returns ok:false COMMITS whatever cascade steps already ran (matching
- * the PHP no-tx posture for validation failures); a THROWN error rolls back.
+ * last-writer-wins window (DECISIONS.md DEC-01: recommendation (b)). A REFUSED
+ * save (ok:false) leaves NO TRACE: everything it wrote before refusing — the
+ * create-on-first-save record and its counter move, the NEW activity row, TM
+ * rows, item-id absorption — is rolled back when this door owns the
+ * transaction (runSaveAtomically; under a caller's transaction the caller
+ * owns that choice). A THROWN error rolls back as always. The wire answer is
+ * unchanged.
  */
 export async function saveComponentData(request: SaveRequest): Promise<SaveResult> {
 	// Consultation-only sections (Activity dd542, Time Machine dd15, …) are
@@ -1059,7 +1063,7 @@ export async function saveComponentData(request: SaveRequest): Promise<SaveResul
 	// refuses per column first; this holds for any other caller.
 	await assertAppendImportRequest(effectiveRequest);
 
-	const result = await withTransaction(() => applySaveComponentData(effectiveRequest));
+	const result = await runSaveAtomically(effectiveRequest);
 
 	// Post-commit side effect — deliberately OUTSIDE the transaction (S1-14
 	// posture: clearing a shared cache mid-tx invites repopulation with
@@ -1119,6 +1123,57 @@ export async function saveComponentData(request: SaveRequest): Promise<SaveResul
 		);
 	}
 	return result;
+}
+
+// ---------------------------------------------------------------------------
+// A REFUSED SAVE LEAVES NO TRACE (2026-09-29).
+//
+// applySaveComponentData answers a refusal with `{ok:false}` — some of them
+// AFTER it already wrote: the create-on-first-save branch materializes a
+// missing record (row + matrix_counter raise + NEW activity row) before the
+// change loop runs, and a `remove` of an absent id then refuses. Committing
+// that left an empty record and a jumped counter for a save that reported
+// failure. The refusal is therefore carried OUT of the transaction as a
+// throw (so it rolls back) and converted back to the unchanged ok:false
+// result at this boundary — the throw never escapes saveComponentData.
+//
+// AMBIENT TRANSACTION (the import doors' per-record wrap): `withTransaction`
+// joins, the throw is caught here, and the refused part's writes stay in the
+// CALLER's transaction — its owner decides (the CSV door throws on ok:false and
+// rolls the row back). Deliberately NOT a SAVEPOINT: a row inserted inside a
+// subtransaction carries the SUBtransaction's xid as xmin, so
+// create_record.ts insertedByThisTransaction (xmin = the top-level xid) would
+// answer "not mine" for every create-on-save under a savepoint — no NEW
+// activity row and, worse, no bulk-run BIRTH marker (the run's revert could
+// no longer tell it created the record). Measured, 2026-09-29.
+// ---------------------------------------------------------------------------
+
+/** The refusal in flight — thrown inside the transaction, caught right here. */
+class SaveRefusedRollback extends DedaloError {
+	readonly result: SaveResult;
+
+	constructor(result: SaveResult) {
+		super('record.save_failed', { message: `saveComponentData refused: ${result.message}` });
+		this.name = 'SaveRefusedRollback';
+		this.result = result;
+	}
+}
+
+/** Apply the save; a refusal becomes a throw so the enclosing transaction rolls it back. */
+async function applyOrThrowRefusal(request: SaveRequest): Promise<SaveResult> {
+	const result = await applySaveComponentData(request);
+	if (!result.ok) throw new SaveRefusedRollback(result);
+	return result;
+}
+
+/** One save, atomically: committed whole on success, no trace on a refusal. */
+async function runSaveAtomically(request: SaveRequest): Promise<SaveResult> {
+	try {
+		return await withTransaction(() => applyOrThrowRefusal(request));
+	} catch (error) {
+		if (error instanceof SaveRefusedRollback) return error.result;
+		throw error;
+	}
 }
 
 // ---------------------------------------------------------------------------

@@ -4026,6 +4026,11 @@
 			"skipped": 0,
 			"assertions": 22
 		},
+		"test/unit/tm_preview_frame_as_of_native.test.ts": {
+			"tests": 29,
+			"skipped": 0,
+			"assertions": 280
+		},
 		"test/unit/tm_range_filter_barrier.test.ts": {
 			"tests": 6,
 			"skipped": 0,

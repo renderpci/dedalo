@@ -25,7 +25,8 @@
  * write chokepoint (PHP element->set_data + save()). LEDGERED vs PHP (no
  * fixture / no TS twin): deleted-media relink, the session-SQO reset (TS has no
  * PHP session), and the TM-row consumption (PHP deletes the restored snapshot;
- * TS keeps it — harmless, the fresh audit row supersedes it in the list).
+ * TS keeps it — the recover writes its own whole-record audit row, which
+ * supersedes it in the list and closes its bound).
  *
  * UNCOVERED SCOPE (denied loudly, never guessed): restoring a TM row whose own
  * tipo IS a `component_dataframe` slot — with or without `caller_dataframe`. No
@@ -55,7 +56,7 @@
 
 import { dbTimestamp } from '../../../src/core/db/db_timestamp.ts';
 import type { MatrixJsonbColumn } from '../../../src/core/db/matrix.ts';
-import { MATRIX_JSONB_COLUMNS } from '../../../src/core/db/matrix.ts';
+import { MATRIX_JSONB_COLUMNS, readMatrixRecord } from '../../../src/core/db/matrix.ts';
 import {
 	absorbComponentItemIds,
 	insertMatrixRecordIfAbsent,
@@ -66,6 +67,7 @@ import { recordEpoch } from '../../../src/core/db/record_generation.ts';
 import {
 	readOtherLangItemIds,
 	readTimeMachineRow,
+	recordTimeMachine,
 	type TmCoords,
 } from '../../../src/core/db/time_machine.ts';
 import { DedaloError, ok } from '../../../src/core/errors/index.ts';
@@ -124,10 +126,44 @@ export async function restoreSection(
 	sectionId: number,
 	userId: number,
 ): Promise<void> {
-	const columns = await restoreSectionRow(snapshot, tmId, sectionTipo, sectionId, userId);
+	const columns = await withTransaction(async () => {
+		const written = await restoreSectionRow(snapshot, tmId, sectionTipo, sectionId, userId);
+		await recordRecoverRow(sectionTipo, sectionId, userId);
+		return written;
+	});
 	await restoreSectionMedia(sectionTipo, sectionId, columns);
 	// LEDGERED (no TS twin / no fixture): session-SQO reset, and consuming
 	// (deleting) the restored TM row.
+}
+
+/**
+ * THE RECOVER'S OWN AUDIT ROW: one whole-record TM row (tipo = section_tipo,
+ * lg-nolan, data = the record AS WRITTEN — the archive restore's shape), in
+ * the restore's transaction. It makes the recover revertible and listed, and
+ * it is what classifies the snapshot it restored: a whole-record row followed
+ * by another whole-record row is a DELETE (frame_as_of.ts wholeRowIsDelete),
+ * so the deleted record's snapshot keeps previewing its frame children as of
+ * the delete, never the delete_target-wiped live state.
+ */
+async function recordRecoverRow(
+	sectionTipo: string,
+	sectionId: number,
+	userId: number,
+): Promise<void> {
+	const table = (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix';
+	const record = await readMatrixRecord(table, sectionTipo, sectionId);
+	if (record === null) return;
+	await recordTimeMachine(
+		{
+			sectionTipo,
+			sectionId,
+			componentTipo: sectionTipo,
+			lang: 'lg-nolan',
+			userId,
+			data: { ...record.columns },
+		},
+		dbTimestamp(new Date()),
+	);
 }
 
 /**

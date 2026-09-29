@@ -126,8 +126,11 @@ export const is_dataframe_entry = function(el) {
 *  8. Inject datum, data, context, and caller reference onto the instance, then
 *     call build(false) to produce the rendered DOM tree without a network round-trip.
 *
-* Time-machine: when self.matrix_id is set, the match predicate additionally
-* filters by matrix_id (TM rows can hold frames from several snapshots merged).
+* Time-machine: when self.matrix_id is set (inside a tool_time_machine preview),
+* the frame instance is keyed by it; it gets data_source 'tm' only when the main
+* itself is the TM read (self.data_source==='tm'). The match predicate is
+* the same as the live one: the server never stamps matrix_id on datum items, the
+* preview datum is already the grafted snapshot of that TM row.
 *
 * @param {Object} options - build options
 * @param {Object} options.self - main component instance (must have datum, context, tipo, section_tipo, section_id)
@@ -186,12 +189,23 @@ export const get_dataframe = async function(options) {
 	instance_options.id_variant	= `${instance_options.tipo}_${section_id}_${self.section_tipo}_${self.section_id}_${id_key}_${main_component_tipo}_${Math.random()}`
 	instance_options.standalone	= false
 
-	// matrix_id. When the caller is a time-machine view, propagate matrix_id
-	// so the frame instance fetches from the same TM snapshot. Also include it
-	// in the id_variant to avoid cache collisions across snapshots.
+	// matrix_id. When the caller lives inside a time-machine preview, propagate
+	// matrix_id and include it in the id_variant to avoid cache collisions across
+	// snapshots (keying only).
 	if (self.matrix_id) {
-		instance_options.matrix_id = self.matrix_id
-		instance_options.id_variant = `${instance_options.id_variant}_${self.matrix_id}`
+		instance_options.matrix_id		= self.matrix_id
+		instance_options.id_variant		= `${instance_options.id_variant}_${self.matrix_id}`
+	}
+	// data_source. Forwarded ONLY when the main is itself a TM read (the preview
+	// main, data_source 'tm'): its frames live in that TM row, so the frame reads
+	// as of it and is not subscribed to live sync_data (a live save or refresh would
+	// flip the preview back to the live frames). A nested literal main of a linked
+	// record inside a preview portal row also carries matrix_id (keying), but its
+	// frame is a DIFFERENT record: the server would refuse the TM row for it
+	// (tmRowBelongsToRecord) and answer [], so it stays a live frame, as in
+	// section_record build_instance.
+	if (self.data_source==='tm') {
+		instance_options.data_source	= 'tm'
 	}
 
 	// add lang if is defined from options
@@ -211,22 +225,12 @@ export const get_dataframe = async function(options) {
 			&& el.section_tipo			=== component_dataframe.section_tipo
 			&& parseInt(el.section_id)	=== parseInt(component_dataframe.section_id)
 			){
-				// time machine case. TM rows merge frames from multiple snapshots;
-				// the matrix_id filters to the right snapshot before the pairing predicate.
-				if( el.matrix_id && self.matrix_id){
-					return (
-						parseInt(el.matrix_id)		=== parseInt(self.matrix_id)
-						&& parseInt(el.id_key)		=== parseInt(id_key)
-						&& el.main_component_tipo	=== main_component_tipo
-					)
-				}
-				// normal case
-				else{
-					return (
-						parseInt(el.id_key)			=== parseInt(id_key)
-						&& el.main_component_tipo	=== main_component_tipo
-					)
-				}
+				// pairing predicate. Also the time machine case: the server never stamps
+				// matrix_id on items, the preview datum is already the TM row's snapshot
+				return (
+					parseInt(el.id_key)			=== parseInt(id_key)
+					&& el.main_component_tipo	=== main_component_tipo
+				)
 			}
 		return false
 	})

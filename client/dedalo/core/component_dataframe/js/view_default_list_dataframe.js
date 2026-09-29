@@ -9,6 +9,7 @@
 	import { render_value } from '../../common/js/utils/render_escape.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {same_section_id} from '../../common/js/utils/index.js'
+	import {is_time_machine_view} from '../../component_common/js/events_subscription.js'
 
 
 
@@ -33,6 +34,7 @@
 *
 * Exported static methods:
 *   view_default_list_dataframe.render(self, options) — entry point called by `list()`.
+*   view_default_list_dataframe.is_read_only(self)    — the chip's read-only predicate.
 *
 * Private module-scoped helpers (not exported):
 *   get_content_data(self)                — builds the .content_data container node.
@@ -109,6 +111,34 @@ view_default_list_dataframe.render = async function(self, options) {
 
 
 /**
+* IS_READ_ONLY
+* Whether this slot's chip must stay inert: no open of the frame target, no
+* create, no refresh, no Delete.
+*
+* The chip's only interactive door (open_target_section) opens the LIVE target
+* record in an EDITABLE modal whose Delete unlinks at the slot's own coordinates
+* and whose close refreshes it from the live store. That is wrong everywhere the
+* slot is not the live editable record:
+*   - permissions < 2 (or show_interface.read_only), as for any read-only component;
+*   - a Time Machine surface (is_time_machine_view — the dd15 history list, whose
+*     cell coordinates are (host section, dd15 row id), or a tool preview): the
+*     chip shows a HISTORICAL frame, and the live target is not what it shows.
+* Read-only means no action at all (no read-only viewer): the chip still paints
+* its label + rating colour, with the 'read_only' state other components use.
+*
+* @param {Object} self - The `component_dataframe` instance.
+* @returns {boolean}
+*/
+view_default_list_dataframe.is_read_only = function(self) {
+
+	return self.permissions < 2
+		|| self.show_interface?.read_only===true
+		|| is_time_machine_view(self)
+}//end is_read_only
+
+
+
+/**
 * GET_CONTENT_DATA
 * Builds the `.content_data` container element and populates it with the
 * rendered content_value subtree (activate button + add button).
@@ -169,6 +199,10 @@ const get_content_data = function(self) {
 * The `altKey` modifier on mousedown is reserved for debugging instance selection
 * (a developer tool) and bypasses all click handling.
 *
+* Read-only (view_default_list_dataframe.is_read_only — permissions < 2 or a
+* Time Machine surface): the activate button gets no handler and button_new is
+* not rendered; content_value carries 'read_only'. Label and rating colour stay.
+*
 * @param {Object} options      - Configuration object.
 * @param {Object} options.self - The `component_dataframe` instance.
 * @returns {HTMLElement} A `.content_value` div containing button_activate and button_new.
@@ -182,11 +216,12 @@ const render_content_value = function(options) {
 		const data		= self.data || {}
 		const entries	= data.entries || []
 		const default_bk_color = ui.css_var('--color_blue_3', '#006ed2');
+		const read_only	= view_default_list_dataframe.is_read_only(self)
 
 	// content_value
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'content_value'
+			class_name		: 'content_value' + (read_only ? ' read_only' : '')
 		})
 
 	// button_activate
@@ -196,7 +231,13 @@ const render_content_value = function(options) {
 			text_content 	:  self.properties.label || '?',
 			parent			: content_value
 		})
-		button_activate.addEventListener('mousedown', fn_mousedown)
+		// read_only: an inert chip — no handler (the event reaches the row like any
+		// read-only cell) and no pointer cursor (the stylesheet forces it !important)
+		if (read_only) {
+			button_activate.style.setProperty('cursor', 'default', 'important')
+		}else{
+			button_activate.addEventListener('mousedown', fn_mousedown)
+		}
 		function fn_mousedown(e) {
 			e.stopPropagation()
 
@@ -260,6 +301,11 @@ const render_content_value = function(options) {
 					const text_color = ui.get_text_color(bg_color)
 					button_activate.style.color = text_color
 			}
+		}
+
+	// read_only: no add button (nothing to create) — the chip alone
+		if (read_only) {
+			return content_value
 		}
 
 	// button_new

@@ -48,10 +48,12 @@ import {
 } from '../db/record_generation.ts';
 import type { TimeMachineRow } from '../db/time_machine.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
+import { resolveDataTipo } from '../ontology/alias.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
 import { termByTipo } from '../ontology/labels.ts';
 import {
 	getColumnNameByModel,
+	getMatrixTableFromTipo,
 	getModelByTipo,
 	getTranslatableByTipo,
 	savesInRequestLang,
@@ -64,6 +66,7 @@ import type {
 	SectionReadSource,
 	SectionRow,
 } from '../section/read_source.ts';
+import { loadRecordCached } from '../section/record_loader.ts';
 import { injectComponentData } from '../section_record/index.ts';
 import { type Principal, SUPERUSER_ID } from '../security/permissions.ts';
 import { readLaneValueAt } from '../tm_record/lane_state.ts';
@@ -709,6 +712,120 @@ async function snapshotDeclaredSlots(row: TmRow): Promise<string[]> {
 }
 
 /**
+ * THE FRAME CELLS OF A LISTED ROW == ITS PREVIEW'S FRAMES
+ * (WC-2026-09-29-tm-preview-frame-children-as-of, "the history list"): a row
+ * of a main with declared slots gets, under each slot, the frame state AT the
+ * row (frame_as_of.ts rowFrameState — the preview graft's one source), not
+ * only the frames its own snapshot carries: a LANGUAGE row carries none, and
+ * its list cell showed no frame while its preview showed the frames it stood
+ * with. The returned emission carries the row's bound ROOTED at the virtual
+ * dd15 record (rootedAt), so the frame emission reads the frame children and a
+ * sibling bag as of it, addressed by the row's record (never the dd15 id).
+ * Any other row (no declared slot, a row filed under a slot's own tipo —
+ * unsupported, previews empty) keeps `emission` untouched; a whole-record
+ * snapshot never reaches here (rowCellEmissions: one bound per framed cell).
+ */
+async function graftRowFrameState(
+	record: MatrixRecord,
+	row: TmRow,
+	viewLang: string,
+	declaredSlots: readonly string[],
+	emission: EmissionContext,
+): Promise<EmissionContext> {
+	const model = declaredSlots.length === 0 ? null : await getModelByTipo(row.tipo);
+	if (model === null || !isMainValueModel(model)) return emission;
+	const { rootedAt, rowFrameState, tmAsOfRow } = await import('../tm_record/frame_as_of.ts');
+	const live = { sectionTipo: row.section_tipo, sectionId: Number(row.section_id) };
+	const { slots } = await rowFrameState(row, model, live, viewLang);
+	for (const [slot, frames] of slots ?? []) {
+		injectComponentData(record, slot, 'component_dataframe', frames);
+	}
+	// ROOTED at the virtual dd15 record: it alone stands for the subject
+	// (frame_as_of.ts subjectRowOf, by identity) — the subject's live record met
+	// as a portal target inside the row's cells stays live.
+	const tmAsOf = rootedAt(await tmAsOfRow({ ...row, section_id: live.sectionId }), record);
+	return new EmissionContext(emission.items, { tmAsOf });
+}
+
+/** One cell's emission: the row's shared one, or a per-cell bound (a whole-record snapshot row). */
+type CellEmission = (cellTipo: string) => Promise<EmissionContext>;
+
+/**
+ * THE EMISSION EACH CELL OF A LISTED ROW EMITS UNDER. A per-component row has
+ * ONE subject (its main): graftRowFrameState, one emission for every cell. A
+ * WHOLE-RECORD snapshot row (tipo = section_tipo: a delete, an archive
+ * restore — the deleted-records / record-snapshot list) stands for EVERY main
+ * of the record at once, so each framed cell gets its own (snapshotCellEmission).
+ */
+async function rowCellEmissions(
+	record: MatrixRecord,
+	row: TmRow,
+	viewLang: string,
+	declaredSlots: readonly string[],
+	emission: EmissionContext,
+): Promise<CellEmission> {
+	if (await isWholeRecordRow(row)) {
+		return (cellTipo) => snapshotCellEmission(record, row, cellTipo, emission);
+	}
+	const shared = await graftRowFrameState(record, row, viewLang, declaredSlots, emission);
+	return async () => shared;
+}
+
+/** A whole-record snapshot row: filed under the section tipo, its data a full record object. */
+async function isWholeRecordRow(row: TmRow): Promise<boolean> {
+	if (row.data === null || typeof row.data !== 'object' || Array.isArray(row.data)) return false;
+	return (await getModelByTipo(row.tipo)) === 'section';
+}
+
+/**
+ * THE FRAME CELL OF A WHOLE-RECORD SNAPSHOT ROW
+ * (WC-2026-09-29-tm-preview-frame-children-as-of, "whole-record rows"): the
+ * SAME law as a per-component row, one main at a time. The subject is the
+ * snapshot's record (its section + id — never the dd15 row id); the frame bag
+ * is the snapshot's own `relation.<slot>` frames, already adopted by
+ * buildTmSectionRecord onto the virtual record; the frame children read as of
+ * the cell main's bound at the row (frame_as_of.ts tmAsOfWholeRow: a DELETE
+ * snapshot ends at the row — its delete_target wipes lie above it; an archive
+ * RESTORE holds until the main key's next row or the record's next
+ * section-level row, tmAsOfRow, the preview's one bound). Rooted at the
+ * virtual dd15 record, so only the root's frames read as of it (confinement).
+ * A cell of a main with no declared slot keeps the shared emission.
+ */
+async function snapshotCellEmission(
+	record: MatrixRecord,
+	row: TmRow,
+	cellTipo: string,
+	emission: EmissionContext,
+): Promise<EmissionContext> {
+	const model = await getModelByTipo(cellTipo);
+	if (model === null || !isMainValueModel(model)) return emission;
+	if ((await resolveDataframeSlotTipos(cellTipo)).length === 0) return emission;
+	const { rootedAt, tmAsOfWholeRow } = await import('../tm_record/frame_as_of.ts');
+	const subject = {
+		id: row.id,
+		section_tipo: row.section_tipo,
+		section_id: Number(row.section_id),
+	};
+	const bound = await tmAsOfWholeRow(
+		subject,
+		await resolveDataTipo(cellTipo),
+		(await loadSubjectRecord(emission, subject)) !== null,
+	);
+	return new EmissionContext(emission.items, { tmAsOf: rootedAt(bound, record) });
+}
+
+/** The snapshot's record as it lives now (null: gone, or its section has no matrix table). */
+async function loadSubjectRecord(
+	emission: EmissionContext,
+	subject: { section_tipo: string; section_id: number },
+): Promise<MatrixRecord | null> {
+	const table = await getMatrixTableFromTipo(subject.section_tipo);
+	return table === null
+		? null
+		: loadRecordCached(emission, table, subject.section_tipo, subject.section_id);
+}
+
+/**
  * THE VALUE CELL OF A FRAME ROW (two lanes): a per-component lg-nolan row of a
  * main whose value lives in LANGUAGE lanes (savesInRequestLang — translatable,
  * transliterable, component_iri) and that holds no lg-nolan item carries only
@@ -831,12 +948,17 @@ async function emitTmRow(
 	// note) AND the section's own components in the record-snapshot list. It is
 	// built once per row now rather than lazily: every branch needs it.
 	// TmRow is TimeMachineRow minus the parity `dataText` twin (unused here).
+	const declaredSlots = await snapshotDeclaredSlots(row);
 	const tmRecord = await buildTmSectionRecord(
 		row as unknown as TimeMachineRow,
 		lang,
-		await snapshotDeclaredSlots(row),
+		declaredSlots,
 	);
 	await graftFrameRowValue(tmRecord, row, lang);
+	// A framed main's cells read the row's frames AS THE PREVIEW DOES (the frame
+	// state at the row, its frame children and sibling bag as of its bound):
+	// one bound per row, so its own emission over the SAME items array.
+	const cellEmission = await rowCellEmissions(tmRecord, row, lang, declaredSlots, emission);
 
 	// THE AUDIT-LANG RULE. A snapshot renders in the language it was RECORDED in,
 	// never the language the menu happens to be on — `matrix_time_machine` carries
@@ -892,7 +1014,8 @@ async function emitTmRow(
 		// LIST mode is the whole point: it is what makes every emit hook fire.
 		const cellDdo = { ...clientDdo, tipo, mode: 'list', ...laneCellLang(model, cellLang) };
 
-		const before = emission.items.length;
+		const rowEmission = await cellEmission(tipo);
+		const before = rowEmission.items.length;
 		await emitDdo(
 			cellDdo as never,
 			clientDdoMap as never,
@@ -901,15 +1024,15 @@ async function emitTmRow(
 			'list',
 			cellLang,
 			TM_SECTION_TIPO,
-			emission,
+			rowEmission,
 		);
 
 		// PORTAL family pins each nested block's parent to its own record; SELECT
 		// family (a flat resolved label) has no nested blocks to pin.
 		const isPortalFamily =
 			getColumnNameByModel(model) === 'relation' && !SELECT_FAMILY_MODELS.has(model);
-		for (let i = before; i < emission.items.length; i++) {
-			const item = emission.items[i] as Record<string, unknown>;
+		for (let i = before; i < rowEmission.items.length; i++) {
+			const item = rowEmission.items[i] as Record<string, unknown>;
 			if (item.tipo === tipo) {
 				// No mode restamp: the cell stays in the LIST mode it was emitted in,
 				// matching the column ddo the context now declares
@@ -929,7 +1052,7 @@ async function emitTmRow(
 
 		if (tipo === TIPO_USER) {
 			applySuperuserDisplayName(
-				emission.items.slice(before) as unknown as Record<string, unknown>[],
+				rowEmission.items.slice(before) as unknown as Record<string, unknown>[],
 				row.user_id,
 			);
 		}

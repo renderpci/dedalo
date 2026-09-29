@@ -200,6 +200,10 @@ const N: Main = { tipo: NMAIN, slot: NSLOT, column: 'number' };
 const TP: Main = { tipo: TPMAIN, slot: TPSLOT, column: 'relation' };
 const U: Main = { tipo: UMAIN, slot: USLOT, column: 'string' };
 const I: Main = { tipo: IMAIN, slot: ISLOT, column: 'iri' };
+/** component_iri's FIXED label slot (its descriptor's fixedDataframeTipos) — the one its cells emit. */
+const IL: Main = { tipo: IMAIN, slot: 'dd560', column: 'iri' };
+/** The section dd560's frames target (the iri labels). */
+const LABEL_SECTION = 'dd1706';
 
 /** Frame roles: runtime records of the section a frame points at. */
 const ROLES = ['author', 'editor', 'translator', 'reviewer'] as const;
@@ -227,6 +231,9 @@ beforeAll(async () => {
 }, 60_000);
 
 const runs: number[] = [];
+/** A section's activity rows (dd542: the audited address rides in misc dd551, never in `data`). */
+const ACTIVITY_OF_SECTION = `matrix_activity WHERE section_tipo = 'dd542'
+	   AND misc->'dd551'->0->'value'->>'section_tipo' = $1`;
 afterAll(async () => {
 	const bulkTable = (await getMatrixTableFromTipo('dd800')) as string;
 	for (const id of runs) {
@@ -242,7 +249,11 @@ afterAll(async () => {
 	await sql.unsafe('DELETE FROM matrix_time_machine WHERE section_tipo = $1', [SECTION]);
 	await sql.unsafe('DELETE FROM dedalo_ts_record_generation WHERE section_tipo = $1', [SECTION]);
 	await sql.unsafe(`DELETE FROM "${TABLE}" WHERE section_tipo = $1`, [SECTION]);
-	await sql.unsafe(`DELETE FROM matrix_activity WHERE data->>'section_tipo' = $1`, [SECTION]);
+	await sql.unsafe(`DELETE FROM ${ACTIVITY_OF_SECTION}`, [SECTION]);
+	const residue = (await sql.unsafe(`SELECT count(*) AS n FROM ${ACTIVITY_OF_SECTION}`, [
+		SECTION,
+	])) as { n: number | string }[];
+	expect(Number(residue[0]?.n)).toBe(0);
 	expect(await dropSituation(SITUATION)).toBe(0);
 }, 60_000);
 
@@ -1940,5 +1951,264 @@ describe('(11) the BACKFILL (duplicate, Delete data) writes the frame lane FIRST
 		});
 		expect(shown.values).toEqual(['author', 'reviewer']);
 		expect(shown.frames).toEqual([`${reviewerItem.id}→editor`]);
+	}, 60_000);
+});
+
+// ---------------------------------------------------------------- 12: list cells == preview frames
+
+describe('(12) the history LIST shows, for EVERY listed row, exactly the frames its PREVIEW shows (WC-2026-09-29-tm-preview-frame-children-as-of, "the history list")', () => {
+	/** The list of `lang` (read in that data language): row id → the main's frames in its slot cells. */
+	async function listFrames(main: Main, id: number, lang: string): Promise<Map<number, string[]>> {
+		const { data } = await runWithRequestLangs(
+			{ applicationLang: ENG, dataLang: lang === NOLAN ? ENG : lang },
+			() => readTimeMachineData(historyRqo(main, id, lang)),
+		);
+		const byRow = new Map<number, Item[]>();
+		for (const item of data as Item[]) {
+			if (item.tipo !== main.slot) continue;
+			const rowId = Number(item.row_section_id ?? item.section_id);
+			byRow.set(rowId, [...(byRow.get(rowId) ?? []), ...asList(item.entries)]);
+		}
+		return new Map(
+			[...byRow].map(([rowId, frames]) => [
+				rowId,
+				framesRoles(frames.filter((frame) => frame.main_component_tipo === main.tipo)),
+			]),
+		);
+	}
+
+	/**
+	 * Compare list and preview for EVERY row listed in each of `langs`. Answers
+	 * the rows compared per lane of the row, the floor callers assert against
+	 * (a comparison over no row, or over rows with no frame, proves nothing).
+	 */
+	async function expectListEqualsPreview(main: Main, id: number, langs: readonly string[]) {
+		const compared: { rowLang: string | null; frames: string[] }[] = [];
+		const byId = new Map((await visibleRows(main.tipo, id)).map((row) => [row.id, row]));
+		for (const lang of langs) {
+			const rowIds = await listed(main, id, lang);
+			expect(rowIds.length).toBeGreaterThan(0); // FLOOR
+			const cells = await listFrames(main, id, lang);
+			for (const rowId of rowIds) {
+				const shown = (await preview(main, id, rowId, lang)).frames;
+				expect({ row: rowId, lang, frames: cells.get(rowId) ?? [] }).toEqual({
+					row: rowId,
+					lang,
+					frames: shown,
+				});
+				compared.push({ rowLang: byId.get(rowId)?.lang ?? null, frames: shown });
+			}
+		}
+		return compared;
+	}
+
+	/** Rows of a LANGUAGE lane (not lg-nolan) whose preview shows at least one frame. */
+	const framedLanguageRows = (compared: { rowLang: string | null; frames: string[] }[]) =>
+		compared.filter((c) => c.rowLang !== null && c.rowLang !== NOLAN && c.frames.length > 0);
+
+	test('a TRANSLATABLE literal main (per-language rows + frames-only lg-nolan rows): every row of the spa and eng lists — a language row shows the frames it stood with', async () => {
+		const id = await rec();
+		await setText(L, id, SPA, [text(1, SPA, 'Casa')]);
+		await setText(L, id, ENG, [text(1, ENG, 'House')]);
+		await addFrame(L, id, 1, 'author');
+		await setText(L, id, SPA, [text(1, SPA, 'Casa grande')]);
+		await changeFrame(L, id, 1, 'editor');
+		await setText(L, id, ENG, [text(1, ENG, 'Big house')]);
+		const compared = await expectListEqualsPreview(L, id, [SPA, ENG]);
+		// FLOOR: both lanes' language rows AND frames-only rows were compared, framed.
+		expect(framedLanguageRows(compared).map((c) => c.rowLang)).toEqual([SPA, ENG]);
+		expect(compared.filter((c) => c.rowLang === NOLAN && c.frames.length > 0).length).toBe(4);
+		expect(compared.some((c) => c.frames.length === 0)).toBe(true); // the pre-frame rows
+	}, 60_000);
+
+	test('a component_iri main (NOT translatable, items in language lanes) with its FIXED label slot dd560: every row of the spa list', async () => {
+		const iri = (itemId: number, value: string): Item => ({
+			id: itemId,
+			lang: SPA,
+			iri: `http://example.org/${value}`,
+			title: value,
+		});
+		// dd560 frames target the iri-label section dd1706: two runtime records, swept below.
+		const labelTable = mustGet(await getMatrixTableFromTipo(LABEL_SECTION), 'the dd1706 table');
+		const labels = [
+			await createSectionRecord(LABEL_SECTION, USER_ID),
+			await createSectionRecord(LABEL_SECTION, USER_ID),
+		];
+		const [first, second] = labels as [number, number];
+		try {
+			const id = await rec();
+			const label = (change: Item) => frameSave(IL, id, 1, change, null);
+			await setText(I, id, SPA, [iri(1, 'casa')]);
+			await label({
+				action: 'insert',
+				id: null,
+				value: { section_tipo: LABEL_SECTION, section_id: String(first) },
+			});
+			await setText(I, id, SPA, [iri(1, 'casa-grande')]);
+			const frame = mustGet((await liveFrames(IL, id))[0], 'the dd560 frame');
+			await label({
+				action: 'update',
+				id: frame.id,
+				value: { ...frame, section_id: String(second) },
+			});
+			await setText(I, id, SPA, [iri(1, 'casa-chica')]);
+			const compared = await expectListEqualsPreview(IL, id, [SPA]);
+			// FLOOR: the language rows after each frame change show it (the defect: none).
+			expect(framedLanguageRows(compared).map((c) => c.frames)).toEqual([
+				[`1→${first}`],
+				[`1→${second}`],
+			]);
+		} finally {
+			for (const labelId of labels) {
+				await sql.unsafe(
+					`DELETE FROM "${labelTable}" WHERE section_tipo = $1 AND section_id = $2`,
+					[LABEL_SECTION, labelId],
+				);
+				await sql.unsafe(
+					'DELETE FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2',
+					[LABEL_SECTION, labelId],
+				);
+				await sql.unsafe(
+					'DELETE FROM dedalo_ts_record_generation WHERE section_tipo = $1 AND section_id = $2',
+					[LABEL_SECTION, labelId],
+				);
+				// createSectionRecord's activity row (misc dd551 carries the address).
+				await sql.unsafe(
+					`DELETE FROM matrix_activity WHERE section_tipo = 'dd542'
+					   AND misc->'dd551'->0->'value'->>'section_tipo' = $1
+					   AND misc->'dd551'->0->'value'->>'section_id' = $2`,
+					[LABEL_SECTION, String(labelId)],
+				);
+			}
+			for (const labelId of labels) {
+				const residue = (await sql.unsafe(
+					`SELECT (SELECT count(*) FROM "${labelTable}" WHERE section_tipo = $1 AND section_id = $2)
+					      + (SELECT count(*) FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2)
+					      + (SELECT count(*) FROM matrix_activity WHERE section_tipo = 'dd542'
+					           AND misc->'dd551'->0->'value'->>'section_tipo' = $1
+					           AND misc->'dd551'->0->'value'->>'section_id' = $2::text) AS n`,
+					[LABEL_SECTION, labelId],
+				)) as { n: number | string }[];
+				expect(Number(residue[0]?.n)).toBe(0);
+			}
+		}
+	}, 60_000);
+
+	test("a RELATION main (composed lg-nolan rows) and a NUMBER main: every row — the portal frame cell reads the ROW's record, never a record at the dd15 row id", async () => {
+		const portalItem = (itemId: number, role: Role): Item => ({
+			id: itemId,
+			type: 'dd151',
+			section_tipo: SECTION,
+			section_id: targetOf(role),
+			from_component_tipo: PMAIN,
+		});
+		const pid = await rec();
+		await save(pid, PMAIN, NOLAN, [{ action: 'set_data', value: [portalItem(1, 'author')] }]);
+		await addFrame(P, pid, 1, 'editor');
+		await save(pid, PMAIN, NOLAN, [{ action: 'set_data', value: [portalItem(1, 'reviewer')] }]);
+		await changeFrame(P, pid, 1, 'translator');
+		const portal = await expectListEqualsPreview(P, pid, [SPA]);
+		expect(portal.map((c) => c.frames)).toEqual([[], ['1→editor'], ['1→editor'], ['1→translator']]);
+		const nid = await rec();
+		await save(nid, NMAIN, NOLAN, [
+			{ action: 'set_data', value: [{ id: 1, lang: NOLAN, value: 1 }] },
+		]);
+		await addFrame(N, nid, 1, 'author');
+		await save(nid, NMAIN, NOLAN, [
+			{ action: 'set_data', value: [{ id: 1, lang: NOLAN, value: 2 }] },
+		]);
+		const number = await expectListEqualsPreview(N, nid, [SPA]);
+		expect(number.map((c) => c.frames)).toEqual([[], ['1→author'], ['1→author']]);
+	}, 60_000);
+
+	test("a row filed under a SLOT's own tipo (unsupported history): its list cell and its preview are both EMPTY", async () => {
+		const id = await rec();
+		await setText(L, id, SPA, [text(1, SPA, 'Casa')]);
+		await addFrame(L, id, 1, 'author');
+		const frame = mustGet((await liveFrames(L, id))[0], 'the live frame');
+		const slotRow = await insertLegacyBulkRow({
+			sectionTipo: SECTION,
+			sectionId: id,
+			tipo: LSLOT,
+			lang: NOLAN,
+			bulkId: null,
+			data: [frame],
+		});
+		const slotMain: Main = { tipo: LSLOT, slot: LSLOT, column: 'relation' };
+		expect(await listed(slotMain, id, SPA)).toEqual([slotRow]); // FLOOR: listed under the slot
+		// The cell is read from the list that CONTAINS the row (the slot-scoped
+		// one; the main's column requested too, which is what emits the slot's
+		// frame cell), unfiltered. It must be EMITTED, and emitted empty: an
+		// absent cell would pass any assertion on its content.
+		const { data: slotList } = await runWithRequestLangs(
+			{ applicationLang: ENG, dataLang: SPA },
+			() =>
+				readTimeMachineData({
+					...(historyRqo(slotMain, id, SPA) as object),
+					show: {
+						ddo_map: [
+							{ tipo: LMAIN, section_tipo: 'dd15' },
+							{ tipo: LSLOT, section_tipo: 'dd15' },
+						],
+					},
+				} as never),
+		);
+		const slotCells = (slotList as Item[]).filter(
+			(item) => item.tipo === LSLOT && Number(item.row_section_id) === slotRow,
+		);
+		expect(slotCells.length).toBeGreaterThan(0); // FLOOR: the row's frame cell is emitted
+		expect(slotCells.flatMap((item) => asList(item.entries))).toEqual([]);
+		const shown = (await runWithRequestLangs({ applicationLang: ENG, dataLang: SPA }, () =>
+			readComponentData({
+				source: {
+					tipo: LSLOT,
+					section_tipo: SECTION,
+					section_id: id,
+					lang: SPA,
+					mode: 'edit',
+					data_source: 'tm',
+					matrix_id: slotRow,
+					caller_dataframe: { main_component_tipo: LMAIN, id_key: 1 },
+				},
+			} as never),
+		)) as { tipo?: string; entries?: Item[] }[];
+		expect(shown.flatMap((item) => (item.tipo === LSLOT ? (item.entries ?? []) : []))).toEqual([]);
+	}, 60_000);
+
+	test('an UNTAGGED PHP-era row of a translatable main (listed by a lang-less locator): read under the VIEW lane like its preview — a value row showing the frames it stood with', async () => {
+		const id = await rec();
+		await setText(L, id, SPA, [text(1, SPA, 'Casa')]);
+		await addFrame(L, id, 1, 'author');
+		const untagged = await insertLegacyBulkRow({
+			sectionTipo: SECTION,
+			sectionId: id,
+			tipo: LMAIN,
+			lang: null as never,
+			bulkId: null,
+			data: [text(1, SPA, 'Casa vieja')],
+		});
+		const { data } = await runWithRequestLangs({ applicationLang: ENG, dataLang: SPA }, () =>
+			readTimeMachineData({
+				sqo: {
+					filter_by_locators: [{ section_tipo: SECTION, section_id: id, tipo: LMAIN }],
+					limit: 100,
+				},
+				source: { lang: SPA },
+				show: { ddo_map: [{ tipo: LMAIN, section_tipo: 'dd15' }] },
+			} as never),
+		);
+		const cells = (data as Item[]).filter(
+			(item) => item.tipo === L.slot && Number(item.row_section_id ?? item.section_id) === untagged,
+		);
+		expect(cells.length).toBeGreaterThan(0); // FLOOR: the untagged row is listed, its frame cell emitted
+		const shown = (await preview(L, id, untagged, SPA)).frames;
+		expect(shown).toEqual(['1→author']); // FLOOR: a framed picture, not an empty one
+		expect(
+			framesRoles(
+				cells
+					.flatMap((item) => asList(item.entries))
+					.filter((frame) => frame.main_component_tipo === LMAIN),
+			),
+		).toEqual(shown);
 	}, 60_000);
 });
