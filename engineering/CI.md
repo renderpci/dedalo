@@ -126,6 +126,8 @@ re-recorded. The same verdict now happens on the desk.
         [--base <branch>]    # behave as a pull_request against <branch>
         [--audit-base <sha>] # the push's `before` (the audit's skip base)
     any mode: [--fail-fast]  # stop after the first red tier; the rest report `not_run`
+              [--skip-advisory] # skip the db tier's ADVISORY unit stage (desk only; no
+                                # workflow sets it — ci_local_native)
               [--summary <file.json>]
 
 It runs `scripts/ci/hermetic.sh`, `db_tier.sh` and `instance_tier.sh` UNCHANGED with an
@@ -212,7 +214,9 @@ against local bare remotes with stubbed bank/ci:local). For the pushed refs it:
 3. adds `--db --instance` unless every file the pushed range touches (renames count
    both paths; a merge is diffed against its first parent; >500 new commits or a URL
    remote count as everything) is in its `HERMETIC_ONLY_PATHS` allow-list (anything
-   unlisted selects the full gate), or always with `DEDALO_PREPUSH=full`.
+   unlisted selects the full gate), or always with `DEDALO_PREPUSH=full`. With them
+   goes `--skip-advisory`: the db tier's ADVISORY unit stage (~5 min) cannot change the
+   verdict, so the desk skips it; the runner still runs it on every push.
 
 **The audit base is the remote's sha**, per ref as git hands it: one gated remote sha
 this clone has → that sha; a new branch (`000…`), an unfetched remote tip, or gated refs

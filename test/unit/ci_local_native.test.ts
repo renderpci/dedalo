@@ -35,6 +35,12 @@
  *      in the overlay: `.gitignore`'s `node_modules/` matches only a directory, so git lists
  *      the link as untracked, and the container died at `bun install` on a dangling link.
  *
+ *   6. `--skip-advisory` (the pre-push hook's) skips ONLY a stage that cannot fail its tier:
+ *      the env is always set explicitly, an own-prefix SKIPPED line parses as `skipped`, the
+ *      one reader is db_tier.sh's ADVISORY stage while that stage is still advisory (pinned
+ *      line-for-line). That no workflow names the key is ci_workflow_tripwire's (it owns
+ *      the workflow roots).
+ *
  * HERMETIC: a scratch git repo under the OS temp dir, and repo files read. No DB, no
  * docker, no network, no repo file written. Every git spawned here gets NO GIT_* variable.
  */
@@ -53,6 +59,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
+	advisoryEnv,
 	CONTAINER_GIT,
 	CONTAINER_SRC,
 	containerMounts,
@@ -557,7 +564,8 @@ describe('the REAL tier scripts still speak the protocol parseStages reads', () 
 			expect(texts.some((text) => /^(GREEN|OK)\b/.test(text))).toBe(true);
 			// a stage header is a marker that is none of the protocol's verdict words
 			expect(
-				texts.filter((text) => !/^(RED|GREEN|OK)\b/.test(text) && !/ADVISORY/.test(text)).length,
+				texts.filter((text) => !/^(RED|GREEN|OK|SKIPPED)\b/.test(text) && !/ADVISORY/.test(text))
+					.length,
 			).toBeGreaterThan(1);
 		});
 
@@ -567,11 +575,67 @@ describe('the REAL tier scripts still speak the protocol parseStages reads', () 
 				.filter(
 					(text) =>
 						text !== '' &&
-						!/^(RED|GREEN|OK|bun \d|installing )/.test(text) &&
+						!/^(RED|GREEN|OK|SKIPPED|bun \d|installing )/.test(text) &&
 						!/ADVISORY(?!\]\s*$)/.test(text),
 				);
 			const output = headers.map((text) => `== ${tier.prefix}: ${text}`).join('\n');
 			expect(parseStages(tier.prefix, output, 0).map((stage) => stage.name)).toEqual(headers);
 		});
 	}
+});
+
+describe('--skip-advisory — the desk skips ONLY a stage that cannot fail its tier', () => {
+	const KEY = 'DEDALO_CI_SKIP_ADVISORY';
+	const dbTier = readFileSync(join(REPO_ROOT, 'scripts/ci/db_tier.sh'), 'utf8');
+
+	test('the env is ALWAYS set explicitly — an exported value never reaches a tier unasked', () => {
+		expect(advisoryEnv({ flags: new Set(['--skip-advisory']) })).toEqual({ [KEY]: '1' });
+		expect(advisoryEnv({ flags: new Set() })).toEqual({ [KEY]: '0' });
+	});
+
+	test('an own-prefix SKIPPED line marks the open stage skipped, never a red one', () => {
+		const output = [
+			'== db_tier: unit tier (test/unit + test/integration) vs its frozen red baseline [ADVISORY]',
+			'== db_tier: SKIPPED — advisory stage, DEDALO_CI_SKIP_ADVISORY=1 (desk gate); the runner runs it',
+			'== db_tier: parity tier vs its frozen red baseline',
+			'== db_tier: RED in the parity tier (exit 1)',
+			'== db_tier: SKIPPED — must not launder a red',
+			'== db_tier: RED',
+		].join('\n');
+		expect(parseStages('db_tier', output, 1).map((stage) => [stage.name, stage.verdict])).toEqual([
+			['unit tier (test/unit + test/integration) vs its frozen red baseline [ADVISORY]', 'skipped'],
+			['parity tier vs its frozen red baseline', 'red'],
+		]);
+	});
+
+	test('the one reader is the db tier ADVISORY stage, and that stage still cannot fail the tier', () => {
+		const code = (text: string) =>
+			text.split('\n').filter((line) => line.trim() !== '' && !/^\s*#/.test(line));
+		const start = dbTier.indexOf('echo "== db_tier: unit tier');
+		const end = dbTier.indexOf('echo "== db_tier: parity tier');
+		expect(start).toBeGreaterThan(-1);
+		expect(end).toBeGreaterThan(start);
+		// The stage's EXACT code: any edit to it — a blocking restore spelled any way
+		// (`tier_status=$unit_rc`, `|| exit 1`, …), a second read — must come through here
+		// and say whether the skip still holds. Restoring blocking means the skip must go.
+		expect(code(dbTier.slice(start, end))).toEqual([
+			'echo "== db_tier: unit tier (test/unit + test/integration) vs its frozen red baseline [ADVISORY]"',
+			'unit_rc=0',
+			`if [ "\${${KEY}:-0}" = 1 ]; then`,
+			`\techo "== db_tier: SKIPPED — advisory stage, ${KEY}=1 (desk gate); the runner runs it"`,
+			'else',
+			'\tbun run scripts/unit_baseline.ts --check || unit_rc=$?',
+			'fi',
+			'[ "$unit_rc" -eq 0 ] || echo "== db_tier: unit-tier drift (exit $unit_rc) — ADVISORY, not failing the tier; see the block above"',
+		]);
+		// Every mention of the key in db_tier.sh CODE — braced or not, any reader shape —
+		// is inside that pinned stage: the one read and the one SKIPPED echo.
+		const outside = code(dbTier.slice(0, start) + dbTier.slice(end));
+		expect(outside.filter((line) => line.includes(KEY))).toEqual([]);
+		// Nothing after the stage reads unit_rc: it cannot reach the tier's verdict.
+		expect(code(dbTier.slice(end)).filter((line) => line.includes('unit_rc'))).toEqual([]);
+		for (const other of ['hermetic.sh', 'instance_tier.sh', 'hosted_env.sh', 'client_gate.sh']) {
+			expect(readFileSync(join(REPO_ROOT, 'scripts/ci', other), 'utf8')).not.toContain(KEY);
+		}
+	});
 });

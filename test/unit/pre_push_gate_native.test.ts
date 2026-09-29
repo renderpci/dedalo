@@ -464,7 +464,9 @@ describe('pre-push gate: tier selection and the gated tree', () => {
 		const r = run(['git', 'push', 'origin', 'v7'], repo);
 		expect(r.code, r.err).toBe(0);
 		expect(r.err).toContain('the range touches floors/gone.json');
-		expect(ciCalls()[0]).toMatch(/^ci --docker --fail-fast --hermetic --db --instance --ref /);
+		expect(ciCalls()[0]).toMatch(
+			/^ci --docker --fail-fast --skip-advisory --hermetic --db --instance --ref /,
+		);
 	});
 
 	test('a RENAME out of src/ into a hermetic-only dir runs the full gate (the old path counts)', () => {
