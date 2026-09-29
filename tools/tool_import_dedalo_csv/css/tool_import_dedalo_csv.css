@@ -341,9 +341,6 @@
     margin-right: unset;
   }
 }
-.tool_header.tool_import_dedalo_csv {
-  background-color: var(--tool_import_dedalo_csv);
-}
 .import_progress_panel {
   display: flex;
   flex-direction: column;

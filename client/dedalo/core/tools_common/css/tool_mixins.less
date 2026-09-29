@@ -1,0 +1,29 @@
+/**
+* TOOL_MIXINS
+*
+* Mixins only (no output) — import from a tool sheet with
+* `@import (once, reference) '../../../client/dedalo/core/tools_common/css/tool_mixins';`
+*/
+
+// .tool_action_button()
+// A button painted in the tool's colour. THE FILL NEVER TRAVELS WITHOUT ITS INK:
+// a tool that repaints a core `.warning`/plain button with its raw hue keeps the
+// core ink, which was tuned for a different fill (propagate's red under the
+// .warning near-black measured 2.63:1; ontology_parser's green 3.01:1). The
+// three tokens come as a set from the GENERATED tool_colors.less — the hue
+// clamped in OKLCH lightness until its ink clears 4.5:1, per theme — so a
+// button that uses this cannot pair a fill with the wrong ink.
+.tool_action_button() {
+	background-color: var(--tool_fill);
+	border-color: var(--tool_fill);
+	color: var(--tool_on_fill);
+	// the icon glyph is a mask painted with background-color
+	&::before {
+		background-color: var(--button-bg-color, var(--tool_on_fill)) !important;
+	}
+	// hover moves further AWAY from the ink: it can only raise contrast
+	&:hover {
+		background-color: var(--tool_fill_hover);
+		border-color: var(--tool_fill_hover);
+	}
+}

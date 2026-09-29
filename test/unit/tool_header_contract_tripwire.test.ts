@@ -189,18 +189,46 @@ describe('tool header contract (DEC-12)', () => {
 		expect(sheets.length).toBeGreaterThan(30);
 	});
 
-	test('every tool paints the identity hue on its header', () => {
-		const missing: string[] = [];
-		for (const { tool, file, text } of sheets) {
-			if (EXEMPTIONS[`${tool}:identity_hue`]) continue;
-			const painted = flattenRules(text).some(
-				(r) => /\.tool_header/.test(r.selector) && /(^|\n)\s*background-color\s*:/.test(r.body),
-			);
-			if (!painted) missing.push(file);
-		}
+	test('every tool has a generated identity entry', () => {
+		// The edge colour, the wash and the button fill/ink all come from
+		// tool_colors.less, GENERATED from the tool's `--<tool>` hue by
+		// scripts/tool_colors.ts (`--check` keeps it fresh). A tool missing from it
+		// has no edge and falls back to the generic Dédalo orange.
+		const generated = readFileSync(
+			join(REPO_ROOT, 'client/dedalo/core/tools_common/css/tool_colors.less'),
+			'utf8',
+		);
+		const missing = sheets
+			.filter(({ tool }) => !EXEMPTIONS[`${tool}:identity_hue`])
+			.filter(({ tool }) => !generated.includes(`.tool_header.${tool},`))
+			.map(({ file }) => file);
 		expect(
 			missing,
-			'These tools never paint their header, so the 4px identity edge — the only thing naming the tool — falls back to the generic Dédalo orange. Add `.tool_header.<tool> { background-color: @tool_color; }` (background-COLOR, never the `background` shorthand: the shorthand resets the gradient tool_common paints the header surface with).',
+			"Declare the tool's hue as `--<tool>` in its sheet's :root and run `bun run css:tool-colors`.",
+		).toEqual([]);
+	});
+
+	test('no tool paints the header surface itself', () => {
+		// Surface (wash), edge colour and shadow are tool_common.less's, in both
+		// the modal and the tool's own window. A per-tool rule on the header NODE
+		// re-forks them — the 34 `background-color: @tool_color` copies removed
+		// 2026-09-27 are what this keeps out. The header's CHILDREN stay open.
+		const SURFACE = /^\s*(background(-color|-image)?|box-shadow)\s*:/;
+		const offenders: string[] = [];
+		for (const { tool, file, text } of sheets) {
+			for (const rule of flattenRules(text)) {
+				const last = rule.selector.split(' ').filter(Boolean).pop() ?? '';
+				if (!/\.tool_header/.test(last)) continue;
+				for (const decl of rule.body.split(';')) {
+					if (!SURFACE.test(decl)) continue;
+					if (EXEMPTIONS[`${tool}:header_surface`]) continue;
+					offenders.push(`${file}:${rule.line}  ${decl.trim()} (on ${rule.selector})`);
+				}
+			}
+		}
+		expect(
+			offenders,
+			"The header surface, edge and shadow are tool_common.less's. Change the tool's `--<tool>` hue instead, or add a named EXEMPTIONS entry.",
 		).toEqual([]);
 	});
 
@@ -225,48 +253,49 @@ describe('tool header contract (DEC-12)', () => {
 
 	/**
 	 * The MODAL case, pinned separately because the ink that broke it did not
-	 * come from a tool stylesheet at all — the three assertions above would
-	 * never have caught it.
+	 * come from a tool stylesheet at all — the assertions above would never
+	 * have caught it.
 	 *
-	 * `dd-modal .header` (layout.less) sets `color: var(--modal_header_color)`,
-	 * and that token is declared `var(--color_white)` at `:root`, so it computes
-	 * to #ffffff THERE and inherits down as a literal white — the header's own
-	 * `--color_white` re-point cannot reach it, because a custom property is
-	 * substituted where it is declared, not where it is used. The modal tool
-	 * header therefore rendered its title white on the neutral surface.
+	 * dd-modal's header chrome (`dd-modal .header` in layout.less, and the
+	 * shadow-root minimise/close glyphs in dd-modal.js, reached only by custom
+	 * properties inherited from the host) reads the --modal_* tokens. A custom
+	 * property is resolved where it is DECLARED, so a literal or a light-bar value
+	 * at :root reaches a tool header as that literal: that is how a tool modal
+	 * rendered its title and its close ✕ in WHITE on the neutral surface, and why
+	 * two re-point patches existed in tool_common.less.
 	 *
-	 * tool_common.less restates the ink in its `&.header` branch at (0,2,0),
-	 * which out-specifies `dd-modal .header` (0,1,1). This asserts that branch
-	 * still exists: deleting it as "redundant" silently restores the bug.
+	 * Since 2026-09-27 the modal header IS the tool header's model — neutral
+	 * surface, theme ink — so the patches are gone and this pins the cause
+	 * instead: the four tokens are theme-token var()s at :root, and dark does not
+	 * redeclare them (a dark twin would fork the model again).
 	 */
-	test('the modal tool header restates its ink over dd-modal', () => {
-		const compiled = readFileSync(join(REPO_ROOT, 'client/dedalo/core/page/css/main.css'), 'utf8');
-		const rule = /\.tool_header\.header\s*\{[^}]*\bcolor\s*:\s*var\(--fg_default\)/;
+	test('the modal header tokens are theme ink on the neutral surface', () => {
+		const light = readFileSync(
+			join(REPO_ROOT, 'client/dedalo/core/page/css/layout/vars_tokens.less'),
+			'utf8',
+		);
+		const dark = readFileSync(
+			join(REPO_ROOT, 'client/dedalo/core/page/css/layout/theme_dark.less'),
+			'utf8',
+		);
+		const want: Record<string, string> = {
+			'--modal_header_bg': 'var(--bg_surface_alt)',
+			'--modal_header_color': 'var(--fg_default)',
+			'--modal_btn_color': 'var(--fg_muted)',
+			'--modal_btn_hover_color': 'var(--fg_default)',
+		};
+		const wrong: string[] = [];
+		for (const [token, value] of Object.entries(want)) {
+			const m = light.match(new RegExp(`^\\s*${token}\\s*:\\s*([^;]+);`, 'm'));
+			if (m?.[1]?.trim() !== value)
+				wrong.push(`vars_tokens.less ${token}: ${m?.[1]?.trim() ?? '(missing)'} — want ${value}`);
+			if (new RegExp(`^\\s*${token}\\s*:`, 'm').test(dark))
+				wrong.push(`theme_dark.less redeclares ${token}`);
+		}
 		expect(
-			rule.test(compiled),
-			`main.css has no \`.tool_header.header { color: var(--fg_default) }\`. Without it, \`dd-modal .header { color: var(--modal_header_color) }\` wins and a tool opened in a modal renders its NAME in white on the neutral header surface — the token resolves to #ffffff at :root and the header's --color_white re-point cannot reach it.`,
-		).toBe(true);
-	});
-
-	/**
-	 * Same class of bug, one element further out and unreachable by any selector
-	 * here: the modal's minimise/close glyphs live in dd-modal's SHADOW ROOT
-	 * (dd-modal.js `.mini_modal` / `.close_modal`). They read
-	 * `--modal_btn_color` / `--modal_btn_hover_color`, which cross the shadow
-	 * boundary by INHERITANCE from the host — and whose default is white,
-	 * correct on the modal's own orange bar and invisible on the neutral surface
-	 * a tool header paints. tool_common.less re-points them on the host, for the
-	 * tool case only (`dd-modal:has(.tool_header)`), so a plain modal keeps the
-	 * white glyphs its own bar needs.
-	 */
-	test('a tool-headed modal re-points the shadow-DOM chrome buttons', () => {
-		const compiled = readFileSync(join(REPO_ROOT, 'client/dedalo/core/page/css/main.css'), 'utf8');
-		const rule =
-			/dd-modal:has\(\.tool_header\)\s*\{[^}]*--modal_btn_color\s*:[^}]*--modal_btn_hover_color\s*:/;
-		expect(
-			rule.test(compiled),
-			`main.css has no \`dd-modal:has(.tool_header) { --modal_btn_color: …; --modal_btn_hover_color: … }\`. Without it the modal's own minimise and close glyphs inherit the default white — correct on the modal's orange bar, invisible on the neutral surface a tool header paints. They are in a shadow root, so a custom property on the host is the ONLY way to reach them.`,
-		).toBe(true);
+			wrong,
+			"The modal header must be the tool header's model (neutral surface, theme ink): anything else puts white ink or white close/minimise glyphs on the neutral tool header, which no selector can fix for the shadow-root glyphs.",
+		).toEqual([]);
 	});
 
 	test('no tool hard-sets header ink to a literal colour', () => {

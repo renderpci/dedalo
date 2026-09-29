@@ -213,8 +213,9 @@ tool_subtitles.prototype.build = async function(autoload=false) {
 			const subtitles_component_ddo	= self.tool_config.ddo_map.find(el => el.role==="subtitles_component")
 			self.subtitles_component		= self.ar_instances.find(el => el.tipo===subtitles_component_ddo.tipo)
 
-		// get the subtitles_component data
-		self.get_subtitles_data(self.lang)
+		// get the subtitles_component data. AWAITED: un-awaited, a throw escaped
+		// this try as an unhandled rejection and the tool never rendered
+		await self.get_subtitles_data(self.lang)
 
 	} catch (error) {
 		self.error = error
@@ -307,8 +308,10 @@ tool_subtitles.prototype.get_subtitles_data = async function(lang) {
 
 	const self = this
 
-	// fix the data of the component as ar_value
-	const original_ar_value = self.subtitles_component.data.value[0]
+	// fix the data of the component as ar_value. A record with no subtitles yet
+	// has no value[0]: that is the empty model, not an error (it crashed the
+	// tool on every fresh record)
+	const original_ar_value = self.subtitles_component?.data?.value?.[0] || {}
 	// const values_map = new Map(original_ar_value)
 
 	const ar_value_lang	= original_ar_value[lang] || null

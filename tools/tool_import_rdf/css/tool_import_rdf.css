@@ -5,7 +5,6 @@
 */
 :root {
   --tool_import_rdf: #5e77b3;
-  --tool_import_rdf_border: #475f97;
 }
 .wrapper_tool.tool_import_rdf .spinner {
   background-color: var(--tool_import_rdf);
@@ -32,8 +31,16 @@
 .wrapper_tool.tool_import_rdf .components_container .button_apply {
   width: 8rem;
   margin-top: 2rem;
-  background-color: var(--tool_import_rdf);
-  border-color: var(--tool_import_rdf_border);
+  background-color: var(--tool_fill);
+  border-color: var(--tool_fill);
+  color: var(--tool_on_fill);
+}
+.wrapper_tool.tool_import_rdf .components_container .button_apply::before {
+  background-color: var(--button-bg-color, var(--tool_on_fill)) !important;
+}
+.wrapper_tool.tool_import_rdf .components_container .button_apply:hover {
+  background-color: var(--tool_fill_hover);
+  border-color: var(--tool_fill_hover);
 }
 .wrapper_tool.tool_import_rdf .components_container .component_data_label {
   font-size: 16px;
@@ -52,8 +59,5 @@
 .wrapper_tool.tool_import_rdf .view_rdf_data_wrapper .spinner {
   left: calc(50% - 1.5rem);
   top: 0.5rem;
-}
-.tool_header.tool_import_rdf {
-  background-color: var(--tool_import_rdf);
 }
 /*# sourceMappingURL=tool_import_rdf.css.map */

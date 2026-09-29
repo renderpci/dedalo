@@ -100,6 +100,12 @@ The live-oracle era is over. The baselines of record are FROZEN:
     allocator raises it with GREATEST (`insertMatrixRecordWithExplicitId`),
     which is why `test3`'s counter stands in the hundreds of thousands. That is
     correct behaviour, not drift. 
+- `bun run test:tools:phone` — every tool at 360×740 on the SUITE database (own
+  server, real login, click-path probes, scratch records swept): the phone
+  contract of `tools_common/css/tool_responsive.less`. `--shots <dir>` for the
+  visual review, `--tool a,b` to narrow, `--discover <tipo>/<id|list>` to find
+  callers, `--overflow '<query>|<query>'` to find what widens a page. Ratchet:
+  `test/helpers/tool_phone_ratchet.ts`.
 - `bunx tsc --noEmit` — zero-NEW-errors rule (pre-existing baseline is   ledgered in `rewrite/LEDGER.md`). 
 - `bun run test:update` — the code-updater's REAL-SCENARIO drill (opt-in, `scripts/update_drill.ts`): a scratch `git clone` gets the release commit (version bump + bun pin), a REAL master instance builds + serves the 7.0.1 release through the wire, a git-archive copy of this checkout under a supervisor loop installs it across the planned-death restart — panel probe → manifest → tampered-sha refusal → job frames → `/health` answering 7.0.1 → sentinel confirmed. Needs the suite DB (`test:db:setup`) + network for the quarantine `bun install`; ~3–5 min; never touches the app DB or the live private state. 
 - `bun run test:update:dev` — the same drill on the DEVELOPER CHANNEL: the

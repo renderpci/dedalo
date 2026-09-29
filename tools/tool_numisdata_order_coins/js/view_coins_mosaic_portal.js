@@ -95,10 +95,12 @@
 	} from '../../../core/component_portal/js/render_edit_component_portal.js'
 	import {
 		on_dragstart_mosaic,
+		get_mosaic_transfer_data,
 		on_dragover,
 		on_dragleave,
 		on_drop
 	} from '../../../core/component_portal/js/drag_and_drop.js'
+	import * as touch_pick from '../../../core/common/js/touch_pick.js'
 
 
 
@@ -393,6 +395,17 @@ const drag_and_drop = function(options) {
 	drag_node.draggable = true
 	drag_node.classList.add('draggable')
 	drag_node.addEventListener('dragstart',function(e){on_dragstart_mosaic(this, e, options)})
+	// touch: a finger cannot drag — a TAP picks the same payload, a tap on an
+	// ordered-coins slot places it (render_tool_numisdata_order_coins.drop)
+	if (touch_pick.is_touch()) {
+		drag_node.addEventListener('click', function(e){
+			e.stopPropagation()
+			touch_pick.pick(
+				JSON.stringify(get_mosaic_transfer_data(options)),
+				String(options.locator?.section_id ?? '')
+			)
+		})
+	}
 	// drag_node.addEventListener('dragover',function(e){on_dragover(this, e)})
 	// drag_node.addEventListener('dragleave',function(e){on_dragleave(this, e)})
 	// drag_node.addEventListener('drop',function(e){on_drop(this, e, options)})

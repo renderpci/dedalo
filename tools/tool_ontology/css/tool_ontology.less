@@ -6,6 +6,7 @@
 
 // imports
 @import (once) '../../../client/dedalo/core/page/css/layout/vars';
+@import (once, reference) '../../../client/dedalo/core/tools_common/css/tool_mixins';
 
 // local vars
 :root {
@@ -57,8 +58,7 @@
 			justify-content: center;
 
 			button {
-				background-color: @tool_color;
-				border-color: @tool_color;
+				.tool_action_button();
 			}
 
 			.checkbox-label {
@@ -96,8 +96,3 @@
 	}//end content_data
 
 }//end wrapper_tool
-
-// modal and new window header tool modification
-.tool_header.tool_ontology {
-	background-color: @tool_color;
-}

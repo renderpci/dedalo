@@ -6,6 +6,7 @@
 
 // imports
 @import (once) '../../../client/dedalo/core/page/css/layout/vars';
+@import (once, reference) '../../../client/dedalo/core/tools_common/css/tool_mixins';
 
 // local vars
 :root {
@@ -156,7 +157,7 @@
 			position: relative;
 
 			.button_apply {
-				background-color: @tool_color;
+				.tool_action_button();
 				padding-left: 1.5rem;
 				padding-right: 1.5rem;
 			}
@@ -193,8 +194,3 @@
 		}
 	}//end content_data
 }//end wrapper_tool
-
-// modal header tool modification
-.tool_header.tool_update_cache {
-	background-color: @tool_color;
-}

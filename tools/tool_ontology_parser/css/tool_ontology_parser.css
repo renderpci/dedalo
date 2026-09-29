@@ -181,6 +181,11 @@
   padding-top: 0.5rem;
   padding-bottom: 1.2rem;
 }
+@media screen and (max-width: 600px) {
+  .wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .children_container {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 .wrapper_tool.tool_ontology_parser > .content_data > .status_container {
   margin: 0 0 1rem 0;
   padding: 1rem 1.25rem;
@@ -260,6 +265,16 @@
   justify-content: center;
   gap: 1rem;
 }
+@media screen and (max-width: 600px) {
+  .wrapper_tool.tool_ontology_parser > .content_data > .buttons_container {
+    flex-wrap: wrap;
+    padding: 1rem 0;
+  }
+  .wrapper_tool.tool_ontology_parser > .content_data > .buttons_container .button_group {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+}
 .wrapper_tool.tool_ontology_parser > .content_data > .buttons_container .button_group {
   display: flex;
   flex-direction: column;
@@ -277,9 +292,16 @@
   text-align: center;
 }
 .wrapper_tool.tool_ontology_parser > .content_data > .buttons_container button.gear {
-  background-color: var(--tool_ontology_parser);
-  border-color: var(--tool_ontology_parser);
-  color: var(--ut_on_green);
+  background-color: var(--tool_fill);
+  border-color: var(--tool_fill);
+  color: var(--tool_on_fill);
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .buttons_container button.gear::before {
+  background-color: var(--button-bg-color, var(--tool_on_fill)) !important;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .buttons_container button.gear:hover {
+  background-color: var(--tool_fill_hover);
+  border-color: var(--tool_fill_hover);
 }
 .wrapper_tool.tool_ontology_parser > .content_data > .buttons_container .checkbox-label {
   padding-left: 1rem;
@@ -310,8 +332,5 @@
   width: 49%;
   color: var(--ut_red);
   display: inline-block;
-}
-.tool_header.tool_ontology_parser {
-  background-color: var(--tool_ontology_parser);
 }
 /*# sourceMappingURL=tool_ontology_parser.css.map */

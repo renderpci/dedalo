@@ -43,9 +43,6 @@
 .wrapper_tool.tool_indexation .spinner {
   background-color: var(--tool_indexation);
 }
-.wrapper_tool.tool_indexation > .tool_header {
-  background-color: var(--tool_indexation);
-}
 .wrapper_tool.tool_indexation > .tool_header > .tool_buttons_container > .tool_button > .icon {
   height: 1rem;
   margin-right: 0.33rem;

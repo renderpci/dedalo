@@ -659,7 +659,7 @@ template {
   --menu_item_active_fg: var(--fg_on_accent);
   --menu_item_active_accent: transparent;
   --debug_info_bar_bg: var(--color_grey_4);
-  --debug_info_bar_text: var(--color_grey_8);
+  --debug_info_bar_text: var(--color_grey_9);
   --checkbox_bg: var(--color_grey_16);
   --checkbox_border: var(--color_grey_8);
   --checkbox_checked_bg: var(--color_input_focus);
@@ -681,12 +681,13 @@ template {
   --modal_overlay_bg_weak: rgba(0, 0, 0, 0.075);
   --modal_content_bg: var(--color_white);
   --modal_content_shadow: var(--shadow-4);
-  --modal_header_bg: var(--color_grey_2);
+  --modal_header_bg: var(--bg_surface_alt);
   --modal_header_accent: var(--color_orange_dedalo);
   --modal_header_shadow: var(--shadow-2);
-  --modal_header_color: #ffffff;
-  --modal_btn_color: var(--color_white);
-  --modal_btn_hover_color: var(--color_orange_dedalo);
+  --modal_header_color: var(--fg_default);
+  --modal_btn_color: var(--fg_muted);
+  --modal_btn_hover_color: var(--fg_default);
+  --modal_btn_hover_bg: color-mix(in srgb, var(--fg_default) 10%, transparent);
   --modal_mini_header_bg: var(--color_orange_dedalo);
   --modal_radius: var(--radius-lg);
   --color_primary_border: #2972bf;
@@ -927,11 +928,7 @@ template {
   --modal_overlay_bg_weak: rgba(0, 0, 0, 0.2);
   --modal_content_bg: var(--color_grey_15);
   --modal_content_shadow: var(--shadow-4);
-  --modal_header_bg: var(--color_grey_blue);
   --modal_header_shadow: var(--shadow-2);
-  --modal_header_color: var(--color_black);
-  --modal_btn_color: var(--color_grey_4);
-  --modal_btn_hover_color: var(--color_white);
   --modal_mini_header_bg: var(--color_grey_4);
   --modal_radius: var(--radius-lg);
   --ut_bg_app: #0b0e14;
@@ -973,7 +970,6 @@ template {
   --tool_export_border: #7058a0;
   --tool_export_lighten_10: #b090e0;
   --tool_hierarchy: #ff3030;
-  --tool_hierarchy_border: #dd2020;
   --tool_image_rotation: #7a9db0;
   --tool_image_rotation_border: #608090;
   --tool_import_dedalo_csv: #30c8e0;
@@ -982,7 +978,6 @@ template {
   --tool_import_marc21: #80c0ff;
   --tool_import_marc21_border: #60b0ff;
   --tool_import_rdf: #7a98d0;
-  --tool_import_rdf_border: #6080b8;
   --tool_import_zotero: #e04050;
   --tool_import_zotero_border: #d03040;
   --tool_indexation: #30d8e0;
@@ -1953,6 +1948,36 @@ html {
     animation: none !important;
     visibility: visible !important;
   }
+}
+.touch_pick_bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2001;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+  background-color: var(--bg_surface_alt);
+  color: var(--fg_default);
+  border-top: 3px solid var(--color_orange_dedalo);
+  box-shadow: var(--shadow-2);
+}
+.touch_pick_bar > .touch_pick_text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.touch_pick_bar > .touch_pick_cancel {
+  flex: 0 0 auto;
+  min-height: 44px;
+  min-width: 44px;
+}
+.touch_pick_active .wrap_ts_object > .content_data > .elements_container {
+  outline: 1px dashed var(--color_orange_dedalo);
+  outline-offset: -1px;
 }
 @-webkit-keyframes progress-bar-stripes {
   from {
@@ -5462,6 +5487,7 @@ dd-modal .spinner_modal {
 dd-modal .header {
   display: flex;
   padding: 1rem;
+  padding-right: 6.5rem;
   background-color: var(--modal_header_bg);
   background-image: linear-gradient(var(--modal_header_accent, transparent) 0 4px, transparent 4px);
   color: var(--modal_header_color);
@@ -5488,6 +5514,10 @@ dd-modal .header > span.label .button {
   vertical-align: text-bottom;
   margin-right: 0.5em;
   display: inline-block;
+}
+dd-modal .header.label,
+dd-modal .header.content {
+  padding-right: 6.5rem;
 }
 dd-modal .header .description {
   font-size: 0.95rem;
@@ -5545,6 +5575,12 @@ dd-modal .body.content_no_buttons {
   padding: 0.5rem;
   min-width: 34rem;
   min-height: 20rem;
+}
+@media screen and (max-width: 600px) {
+  dd-modal .body.content_no_buttons {
+    min-width: 0;
+    min-height: 0;
+  }
 }
 dd-modal .body.content_no_buttons > .wrapper_component {
   margin: 1rem;
@@ -6330,6 +6366,16 @@ dd-modal.dd_confirm .footer.content > button {
 .page > .bubbles_notification_container .bubble {
   box-shadow: 3px 2px 5px var(--color_grey_9);
 }
+@media screen and (max-width: 600px) {
+  .page > .bubbles_notification_container {
+    max-width: none;
+    left: 0.5rem;
+    right: 0.5rem;
+  }
+  .page > .bubbles_notification_container .bubble {
+    overflow-wrap: anywhere;
+  }
+}
 /**
 * list_body
 *
@@ -6886,8 +6932,8 @@ dd-modal.dd_confirm .footer.content > button {
 * #276f67) so it reads as "ontology", not as an error/warning. Works in both
 * light and dark themes (the teal carries white text on both).
 *
-* All markers are position:fixed pseudo-elements with pointer-events:none, so
-* they never intercept clicks and need no extra DOM. Included from main.less.
+* Markers: the teal menu bar + a thin top stripe (position:fixed pseudo-element,
+* pointer-events:none, no extra DOM). Included from main.less.
 */
 body.is_ontology_server {
   --ontology_server_bg: var(--color_green_ontology);
@@ -6905,43 +6951,8 @@ body.is_ontology_server:before {
   z-index: 10000;
   pointer-events: none;
 }
-body.is_ontology_server:after {
-  content: 'ONTOLOGY SERVER';
-  position: fixed;
-  bottom: 0.6rem;
-  left: 0.6rem;
-  padding: 0.55rem 1rem 0.55rem 2.5rem;
-  background-color: var(--ontology_server_bg);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%23fff' stroke-width='1.7' stroke-linecap='round'%3E%3Cpath d='M6.5 7.5 17 8.5M6.5 7.5 11.5 17M17 8.5 11.5 17'/%3E%3C/g%3E%3Cg fill='%23fff'%3E%3Ccircle cx='6.5' cy='7.5' r='2.7'/%3E%3Ccircle cx='17' cy='8.5' r='2.7'/%3E%3Ccircle cx='11.5' cy='17' r='2.7'/%3E%3C/g%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: 0.85rem center;
-  background-size: 1.15em 1.15em;
-  color: var(--ontology_server_fg);
-  font-family: 'SF Mono', 'JetBrains Mono', 'Menlo', 'Monaco', monospace;
-  font-size: 0.9rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  line-height: 1;
-  border-radius: 4px;
-  box-shadow: var(--shadow-2);
-  opacity: 0.92;
-  z-index: 10000;
-  pointer-events: none;
-  white-space: nowrap;
-  animation: ontology_badge_in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both;
-}
 body.is_ontology_server .menu > .content_data {
   background-color: var(--ontology_server_bg);
-}
-@keyframes ontology_badge_in {
-  from {
-    opacity: 0;
-    transform: translateX(-150%);
-  }
-  to {
-    opacity: 0.92;
-    transform: translateX(0);
-  }
 }
 /**
 * floating_dock
@@ -7140,6 +7151,23 @@ body:has(.assistant_container.standalone.show) {
 @media (prefers-reduced-motion: reduce) {
   .error_report_edge_tab.alerted {
     animation: none;
+  }
+}
+@media screen and (max-width: 600px) {
+  .error_report_edge_tab {
+    bottom: 45vh;
+    width: 44px;
+    padding: 0 0 0 calc(44px - 0.9rem);
+    background-clip: content-box;
+    box-shadow: none;
+    border-radius: 0;
+  }
+  .error_report_edge_tab:hover,
+  .error_report_edge_tab:focus-visible,
+  .error_report_edge_tab.alerted {
+    width: 44px;
+    padding-left: calc(44px - 1.7rem);
+    box-shadow: none;
   }
 }
 /**
@@ -11865,6 +11893,661 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 *
 * Included from main.less file
 */
+.tool_header.tool_assistant,
+.wrapper_tool.tool_assistant {
+  --tool_edge: var(--tool_assistant, #6366f1);
+  --tool_fill: #6265f0;
+  --tool_fill_hover: #5352db;
+  --tool_on_fill: #ffffff;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_assistant, .wrapper_tool.tool_assistant) {
+  --tool_edge: var(--tool_assistant, #6366f1);
+  --tool_fill: #6265f0;
+  --tool_fill_hover: #5352db;
+  --tool_on_fill: #ffffff;
+}
+.tool_header.tool_cataloging,
+.wrapper_tool.tool_cataloging {
+  --tool_edge: var(--tool_cataloging, #f78a1c);
+  --tool_fill: #f78a1c;
+  --tool_fill_hover: #ffa55d;
+  --tool_on_fill: #16181b;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_cataloging, .wrapper_tool.tool_cataloging) {
+  --tool_edge: var(--tool_cataloging, #ffa54a);
+  --tool_fill: #ffa54a;
+  --tool_fill_hover: #fec28b;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_dd_label,
+.wrapper_tool.tool_dd_label {
+  --tool_edge: var(--tool_dd_label, #818181);
+  --tool_fill: #818181;
+  --tool_fill_hover: #939393;
+  --tool_on_fill: #16181b;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_dd_label, .wrapper_tool.tool_dd_label) {
+  --tool_edge: var(--tool_dd_label, #b0b0b0);
+  --tool_fill: #b0b0b0;
+  --tool_fill_hover: #c3c3c3;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_dev_template,
+.wrapper_tool.tool_dev_template {
+  --tool_edge: var(--tool_dev_template, #f78a1c);
+  --tool_fill: #f78a1c;
+  --tool_fill_hover: #ffa55d;
+  --tool_on_fill: #16181b;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_dev_template, .wrapper_tool.tool_dev_template) {
+  --tool_edge: var(--tool_dev_template, #ffa040);
+  --tool_fill: #ffa040;
+  --tool_fill_hover: #ffbd84;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_diffusion,
+.wrapper_tool.tool_diffusion {
+  --tool_edge: var(--tool_diffusion, #567528);
+  --tool_fill: #567528;
+  --tool_fill_hover: #466313;
+  --tool_on_fill: #ffffff;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_diffusion, .wrapper_tool.tool_diffusion) {
+  --tool_edge: var(--tool_diffusion, #567528);
+  --tool_fill: #567528;
+  --tool_fill_hover: #466313;
+  --tool_on_fill: #ffffff;
+}
+.tool_header.tool_error_report,
+.wrapper_tool.tool_error_report {
+  --tool_edge: var(--tool_error_report, #7152a5);
+  --tool_fill: #7152a5;
+  --tool_fill_hover: #604192;
+  --tool_on_fill: #ffffff;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_error_report, .wrapper_tool.tool_error_report) {
+  --tool_edge: var(--tool_error_report, #9070c8);
+  --tool_fill: #9070c8;
+  --tool_fill_hover: #a282dc;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_export,
+.wrapper_tool.tool_export {
+  --tool_edge: var(--tool_export, #7152a5);
+  --tool_fill: #7152a5;
+  --tool_fill_hover: #604192;
+  --tool_on_fill: #ffffff;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_export, .wrapper_tool.tool_export) {
+  --tool_edge: var(--tool_export, #9070c8);
+  --tool_fill: #9070c8;
+  --tool_fill_hover: #a282dc;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_hierarchy,
+.wrapper_tool.tool_hierarchy {
+  --tool_edge: var(--tool_hierarchy, #c80000);
+  --tool_fill: #c80000;
+  --tool_fill_hover: #a90302;
+  --tool_on_fill: #ffffff;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_hierarchy, .wrapper_tool.tool_hierarchy) {
+  --tool_edge: var(--tool_hierarchy, #ff3030);
+  --tool_fill: #ff3030;
+  --tool_fill_hover: #ff695e;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_identify,
+.wrapper_tool.tool_identify {
+  --tool_edge: var(--tool_identify, #3f7f8c);
+  --tool_fill: #3f7f8c;
+  --tool_fill_hover: #2c6d7a;
+  --tool_on_fill: #ffffff;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_identify, .wrapper_tool.tool_identify) {
+  --tool_edge: var(--tool_identify, #5aa6b5);
+  --tool_fill: #5aa6b5;
+  --tool_fill_hover: #6db9c8;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_image_rotation,
+.wrapper_tool.tool_image_rotation {
+  --tool_edge: var(--tool_image_rotation, #587d8f);
+  --tool_fill: #567b8d;
+  --tool_fill_hover: #456a7b;
+  --tool_on_fill: #ffffff;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_image_rotation, .wrapper_tool.tool_image_rotation) {
+  --tool_edge: var(--tool_image_rotation, #7a9db0);
+  --tool_fill: #7a9db0;
+  --tool_fill_hover: #8cb0c3;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_import_dedalo_csv,
+.wrapper_tool.tool_import_dedalo_csv {
+  --tool_edge: var(--tool_import_dedalo_csv, #17a2b8);
+  --tool_fill: #17a2b8;
+  --tool_fill_hover: #37b5cb;
+  --tool_on_fill: #16181b;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_import_dedalo_csv, .wrapper_tool.tool_import_dedalo_csv) {
+  --tool_edge: var(--tool_import_dedalo_csv, #30c8e0);
+  --tool_fill: #30c8e0;
+  --tool_fill_hover: #4cdcf4;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_import_files,
+.wrapper_tool.tool_import_files {
+  --tool_edge: var(--tool_import_files, #2b77c7);
+  --tool_fill: #2b77c7;
+  --tool_fill_hover: #1465b3;
+  --tool_on_fill: #ffffff;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_import_files, .wrapper_tool.tool_import_files) {
+  --tool_edge: var(--tool_import_files, #4a9eff);
+  --tool_fill: #4a9eff;
+  --tool_fill_hover: #73b2ff;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_import_marc21,
+.wrapper_tool.tool_import_marc21 {
+  --tool_edge: var(--tool_import_marc21, #63adf8);
+  --tool_fill: #63adf8;
+  --tool_fill_hover: #85c0fe;
+  --tool_on_fill: #16181b;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_import_marc21, .wrapper_tool.tool_import_marc21) {
+  --tool_edge: var(--tool_import_marc21, #80c0ff);
+  --tool_fill: #80c0ff;
+  --tool_fill_hover: #a6d2ff;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_import_rdf,
+.wrapper_tool.tool_import_rdf {
+  --tool_edge: var(--tool_import_rdf, #5e77b3);
+  --tool_fill: #5c75b1;
+  --tool_fill_hover: #4c649e;
+  --tool_on_fill: #ffffff;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_import_rdf, .wrapper_tool.tool_import_rdf) {
+  --tool_edge: var(--tool_import_rdf, #7a98d0);
+  --tool_fill: #7a98d0;
+  --tool_fill_hover: #8cabe4;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_import_zotero,
+.wrapper_tool.tool_import_zotero {
+  --tool_edge: var(--tool_import_zotero, #cc2936);
+  --tool_fill: #cc2936;
+  --tool_fill_hover: #b70324;
+  --tool_on_fill: #ffffff;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_import_zotero, .wrapper_tool.tool_import_zotero) {
+  --tool_edge: var(--tool_import_zotero, #e04050);
+  --tool_fill: #e64655;
+  --tool_fill_hover: #fc5b66;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_indexation,
+.wrapper_tool.tool_indexation {
+  --tool_edge: var(--tool_indexation, #23bcc7);
+  --tool_fill: #23bcc7;
+  --tool_fill_hover: #42d0db;
+  --tool_on_fill: #16181b;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_indexation, .wrapper_tool.tool_indexation) {
+  --tool_edge: var(--tool_indexation, #30d8e0);
+  --tool_fill: #30d8e0;
+  --tool_fill_hover: #4eecf4;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_lang,
+.wrapper_tool.tool_lang {
+  --tool_edge: var(--tool_lang, #7f75e0);
+  --tool_fill: #7f75e0;
+  --tool_fill_hover: #9088f5;
+  --tool_on_fill: #16181b;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_lang, .wrapper_tool.tool_lang) {
+  --tool_edge: var(--tool_lang, #a098f0);
+  --tool_fill: #a098f0;
+  --tool_fill_hover: #b3acff;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_lang_multi,
+.wrapper_tool.tool_lang_multi {
+  --tool_edge: var(--tool_lang_multi, #7859ae);
+  --tool_fill: #7859ae;
+  --tool_fill_hover: #67479b;
+  --tool_on_fill: #ffffff;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_lang_multi, .wrapper_tool.tool_lang_multi) {
+  --tool_edge: var(--tool_lang_multi, #9878d0);
+  --tool_fill: #9878d0;
+  --tool_fill_hover: #aa8ae4;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_media_versions,
+.wrapper_tool.tool_media_versions {
+  --tool_edge: var(--tool_media_versions, #a24540);
+  --tool_fill: #a24540;
+  --tool_fill_hover: #8e3330;
+  --tool_on_fill: #ffffff;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_media_versions, .wrapper_tool.tool_media_versions) {
+  --tool_edge: var(--tool_media_versions, #c06060);
+  --tool_fill: #c46463;
+  --tool_fill_hover: #d87675;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_numisdata_epigraphy,
+.wrapper_tool.tool_numisdata_epigraphy {
+  --tool_edge: var(--tool_numisdata_epigraphy, #e37d4b);
+  --tool_fill: #e37d4b;
+  --tool_fill_hover: #f8905e;
+  --tool_on_fill: #16181b;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_numisdata_epigraphy, .wrapper_tool.tool_numisdata_epigraphy) {
+  --tool_edge: var(--tool_numisdata_epigraphy, #f09060);
+  --tool_fill: #f09060;
+  --tool_fill_hover: #fea77c;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_numisdata_order_coins,
+.wrapper_tool.tool_numisdata_order_coins {
+  --tool_edge: var(--tool_numisdata_order_coins, #9b8962);
+  --tool_fill: #9b8962;
+  --tool_fill_hover: #ae9b74;
+  --tool_on_fill: #16181b;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_numisdata_order_coins, .wrapper_tool.tool_numisdata_order_coins) {
+  --tool_edge: var(--tool_numisdata_order_coins, #b8a078);
+  --tool_fill: #b8a078;
+  --tool_fill_hover: #cbb38a;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_ontology,
+.wrapper_tool.tool_ontology {
+  --tool_edge: var(--tool_ontology_color, #276f67);
+  --tool_fill: #276f67;
+  --tool_fill_hover: #0f5e56;
+  --tool_on_fill: #ffffff;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_ontology, .wrapper_tool.tool_ontology) {
+  --tool_edge: var(--tool_ontology_color, #3a6d65);
+  --tool_fill: #3a6d65;
+  --tool_fill_hover: #285c54;
+  --tool_on_fill: #ffffff;
+}
+.tool_header.tool_ontology_parser,
+.wrapper_tool.tool_ontology_parser {
+  --tool_edge: var(--tool_ontology_parser, #276f67);
+  --tool_fill: #276f67;
+  --tool_fill_hover: #0f5e56;
+  --tool_on_fill: #ffffff;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_ontology_parser, .wrapper_tool.tool_ontology_parser) {
+  --tool_edge: var(--tool_ontology_parser, #409890);
+  --tool_fill: #409890;
+  --tool_fill_hover: #54aba2;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_pdf_extractor,
+.wrapper_tool.tool_pdf_extractor {
+  --tool_edge: var(--tool_pdf_extractor, #794960);
+  --tool_fill: #794960;
+  --tool_fill_hover: #67394f;
+  --tool_on_fill: #ffffff;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_pdf_extractor, .wrapper_tool.tool_pdf_extractor) {
+  --tool_edge: var(--tool_pdf_extractor, #986080);
+  --tool_fill: #986080;
+  --tool_fill_hover: #854f6e;
+  --tool_on_fill: #ffffff;
+}
+.tool_header.tool_posterframe,
+.wrapper_tool.tool_posterframe {
+  --tool_edge: var(--tool_posterframe, #779a32);
+  --tool_fill: #779a32;
+  --tool_fill_hover: #89ad46;
+  --tool_on_fill: #16181b;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_posterframe, .wrapper_tool.tool_posterframe) {
+  --tool_edge: var(--tool_posterframe, #90b848);
+  --tool_fill: #90b848;
+  --tool_fill_hover: #a2cb5c;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_print,
+.wrapper_tool.tool_print {
+  --tool_edge: var(--tool_print, #2a7d6f);
+  --tool_fill: #2a7d6f;
+  --tool_fill_hover: #106b5e;
+  --tool_on_fill: #ffffff;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_print, .wrapper_tool.tool_print) {
+  --tool_edge: var(--tool_print, #3da89a);
+  --tool_fill: #3da89a;
+  --tool_fill_hover: #53bbad;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_propagate_component_data,
+.wrapper_tool.tool_propagate_component_data {
+  --tool_edge: var(--tool_propagate_component_data, #be0f1d);
+  --tool_fill: #be0f1d;
+  --tool_fill_hover: #a20013;
+  --tool_on_fill: #ffffff;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_propagate_component_data, .wrapper_tool.tool_propagate_component_data) {
+  --tool_edge: var(--tool_propagate_component_data, #e03040);
+  --tool_fill: #e03040;
+  --tool_fill_hover: #ca0e2e;
+  --tool_on_fill: #ffffff;
+}
+.tool_header.tool_qr,
+.wrapper_tool.tool_qr {
+  --tool_edge: var(--tool_qr, #6fa7cd);
+  --tool_fill: #6fa7cd;
+  --tool_fill_hover: #81bae1;
+  --tool_on_fill: #16181b;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_qr, .wrapper_tool.tool_qr) {
+  --tool_edge: var(--tool_qr, #90c0e0);
+  --tool_fill: #90c0e0;
+  --tool_fill_hover: #a3d3f4;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_sitebuilder,
+.wrapper_tool.tool_sitebuilder {
+  --tool_edge: var(--tool_sitebuilder, #0e7490);
+  --tool_fill: #0e7490;
+  --tool_fill_hover: #01627b;
+  --tool_on_fill: #ffffff;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_sitebuilder, .wrapper_tool.tool_sitebuilder) {
+  --tool_edge: var(--tool_sitebuilder, #1590b0);
+  --tool_fill: #1590b0;
+  --tool_fill_hover: #33a3c3;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_subtitles,
+.wrapper_tool.tool_subtitles {
+  --tool_edge: var(--tool_subtitles, #fd7f26);
+  --tool_fill: #fd7f26;
+  --tool_fill_hover: #ff9f67;
+  --tool_on_fill: #16181b;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_subtitles, .wrapper_tool.tool_subtitles) {
+  --tool_edge: var(--tool_subtitles, #ff9040);
+  --tool_fill: #ff9040;
+  --tool_fill_hover: #feaf7d;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_tc,
+.wrapper_tool.tool_tc {
+  --tool_edge: var(--tool_tc, #000000);
+  --tool_fill: #000000;
+  --tool_fill_hover: #000000;
+  --tool_on_fill: #ffffff;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_tc, .wrapper_tool.tool_tc) {
+  --tool_edge: var(--tool_tc, #ffffff);
+  --tool_fill: #ffffff;
+  --tool_fill_hover: #ffffff;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_time_machine,
+.wrapper_tool.tool_time_machine {
+  --tool_edge: var(--tool_time_machine, #f78a1c);
+  --tool_fill: #f78a1c;
+  --tool_fill_hover: #ffa55d;
+  --tool_on_fill: #16181b;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_time_machine, .wrapper_tool.tool_time_machine) {
+  --tool_edge: var(--tool_time_machine, #ffa040);
+  --tool_fill: #ffa040;
+  --tool_fill_hover: #ffbd84;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_tr_print,
+.wrapper_tool.tool_tr_print {
+  --tool_edge: var(--tool_tr_print, #9d535e);
+  --tool_fill: #9d535e;
+  --tool_fill_hover: #8a424d;
+  --tool_on_fill: #ffffff;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_tr_print, .wrapper_tool.tool_tr_print) {
+  --tool_edge: var(--tool_tr_print, #c07080);
+  --tool_fill: #c07080;
+  --tool_fill_hover: #d48292;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_transcription,
+.wrapper_tool.tool_transcription {
+  --tool_edge: var(--tool_transcription, #fd7f26);
+  --tool_fill: #fd7f26;
+  --tool_fill_hover: #ff9f67;
+  --tool_on_fill: #16181b;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_transcription, .wrapper_tool.tool_transcription) {
+  --tool_edge: var(--tool_transcription, #ff9040);
+  --tool_fill: #ff9040;
+  --tool_fill_hover: #feaf7d;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_update_cache,
+.wrapper_tool.tool_update_cache {
+  --tool_edge: var(--tool_update_cache, #62866a);
+  --tool_fill: #65896d;
+  --tool_fill_hover: #779b7e;
+  --tool_on_fill: #16181b;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_update_cache, .wrapper_tool.tool_update_cache) {
+  --tool_edge: var(--tool_update_cache, #80a888);
+  --tool_fill: #80a888;
+  --tool_fill_hover: #92bb9a;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_upload,
+.wrapper_tool.tool_upload {
+  --tool_edge: var(--tool_upload, #f78a1c);
+  --tool_fill: #f78a1c;
+  --tool_fill_hover: #ffa55d;
+  --tool_on_fill: #16181b;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_upload, .wrapper_tool.tool_upload) {
+  --tool_edge: var(--tool_upload, #ffa040);
+  --tool_fill: #ffa040;
+  --tool_fill_hover: #ffbd84;
+  --tool_on_fill: #16181b;
+}
+.tool_header.tool_user_admin,
+.wrapper_tool.tool_user_admin {
+  --tool_edge: var(--tool_user_admin, #a22b29);
+  --tool_fill: #a22b29;
+  --tool_fill_hover: #8e1317;
+  --tool_on_fill: #ffffff;
+}
+:root[data-theme="dark"] :is(.tool_header.tool_user_admin, .wrapper_tool.tool_user_admin) {
+  --tool_edge: var(--tool_user_admin, #d04050);
+  --tool_fill: #d04050;
+  --tool_fill_hover: #bb2a3f;
+  --tool_on_fill: #ffffff;
+}
+/**
+* TOOL_RESPONSIVE — the PHONE tier shared by every tool surface.
+*
+* Imported from tool_common.less. Contract (rewrite plan phase 0, gated by
+* test/unit/tool_phone_tripwire.test.ts + scripts/tool_viewport_check.ts):
+* at @min_target_viewport (360px) a tool renders with no page-level
+* horizontal scroll, every control on screen and at least 44px tall.
+* Usable, not comfortable.
+*
+* LAYOUT ONLY. Colours stay in the theme / generated tool tokens; nothing
+* here may paint.
+*
+* A tool that needs its own phone rules writes them in its own sheet, against
+* @width_break_point_phone — never a literal width.
+*/
+@media screen and (max-width: 600px) {
+  .wrapper_tool {
+    min-width: 0;
+    max-width: 100vw;
+    overflow-x: clip;
+  }
+  .wrapper_tool > .content_data {
+    min-width: 0;
+    padding: 0.5rem;
+    padding-top: 1rem;
+  }
+  .wrapper_tool > .content_data > .footer_node {
+    padding: 1.5rem 0.5rem;
+    flex-wrap: wrap;
+  }
+  .wrapper_tool img,
+  .wrapper_tool video,
+  .wrapper_tool canvas,
+  .wrapper_tool svg:not(.icon) {
+    max-width: 100%;
+    height: auto;
+  }
+  .wrapper_tool iframe {
+    max-width: 100%;
+  }
+  .wrapper_tool table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .wrapper_tool input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+  .wrapper_tool select,
+  .wrapper_tool textarea {
+    max-width: 100%;
+    font-size: max(16px, 1em);
+  }
+  .wrapper_tool input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+  .wrapper_tool select {
+    min-height: 44px;
+  }
+  .wrapper_tool input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]) {
+    min-width: 44px;
+  }
+  .wrapper_tool .leaflet-touch .leaflet-bar a,
+  .wrapper_tool .leaflet-bar a,
+  .wrapper_tool .leaflet-buttons-control-button {
+    width: 44px;
+    height: 44px;
+    line-height: 44px;
+  }
+  .tool_header {
+    position: sticky;
+    top: 0;
+    padding-top: calc(0.5rem + 4px);
+    padding-bottom: 0.5rem;
+  }
+  .tool_header > .tool_name_container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    margin-right: 0;
+    padding-right: 3rem;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .tool_header > .tool_name_container > .label {
+    font-size: 1.15rem;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  .tool_header > .tool_name_container > .description {
+    padding: 0;
+    font-size: 0.9rem;
+    line-height: 1.25rem;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+  }
+  .tool_header .selector {
+    max-width: 100%;
+  }
+  .tool_header > .tool_buttons_container > div:not(.wrapper_component),
+  .tool_header > .tool_buttons_container > button,
+  .tool_header > .tool_buttons_container > select {
+    flex: 1 1 auto;
+    min-height: 44px;
+  }
+  .wrapper_tool button,
+  .wrapper_tool .button.tool_button,
+  .wrapper_tool [role="button"],
+  .tool_header button {
+    min-height: 44px;
+  }
+  .wrapper_tool .phone_stack {
+    display: flex !important;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .wrapper_tool .phone_stack > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+.pane_switch {
+  display: none;
+}
+@media screen and (max-width: 600px) {
+  .pane_switch {
+    display: flex;
+    width: 100%;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: var(--bg_surface_alt);
+  }
+  .pane_switch > .pane_btn {
+    flex: 1 1 0;
+    min-height: 44px;
+    border: 1px solid var(--border_default);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--fg_default);
+  }
+  .pane_switch > .pane_btn.active {
+    border-color: var(--tool_edge, var(--border_default));
+    box-shadow: inset 0 -3px 0 var(--tool_edge, var(--fg_default));
+  }
+  .pane_host.pane_switch_on [data-pane] {
+    display: none !important;
+  }
+  .pane_host.pane_switch_on [data-pane].pane_active {
+    display: block !important;
+  }
+}
+.phone_reorder {
+  display: none;
+}
+@media screen and (max-width: 600px) {
+  .phone_reorder {
+    display: inline-flex;
+    gap: 0.25rem;
+    flex-shrink: 0;
+  }
+  .phone_reorder > .phone_reorder_btn {
+    min-width: 44px;
+    min-height: 44px;
+    border: 1px solid var(--border_default);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--fg_default);
+  }
+  .phone_reorder > .phone_reorder_btn:disabled {
+    opacity: 0.35;
+  }
+}
 .wrapper_tool {
   contain: content;
   margin: 0px;
@@ -11909,12 +12592,14 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .tool_header {
   contain: content;
-  background-color: var(--color_orange_dedalo);
-  background-image: linear-gradient(to bottom, transparent 0, transparent 4px, var(--bg_surface_alt) 4px, var(--bg_surface_alt) 100%);
+  background-color: var(--tool_edge, var(--color_orange_dedalo));
+  --tool_wash: color-mix(in srgb, var(--tool_edge, transparent) 6%, var(--bg_surface_alt));
+  background-image: linear-gradient(to bottom, transparent 0, transparent 4px, var(--tool_wash) 4px, var(--tool_wash) 100%);
   --color_white: var(--fg_default);
   position: relative;
   color: var(--fg_default);
-  box-shadow: inset 0 -1px 0 var(--border_default);
+  box-shadow: inset 0 -1px 0 var(--border_default), var(--modal_header_shadow);
+  z-index: 1;
   width: 100%;
   display: flex;
   align-items: center;
@@ -11989,6 +12674,17 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   box-sizing: border-box;
   margin: 0px;
   vertical-align: middle;
+}
+@media screen and (max-width: 600px) {
+  .tool_header > .tool_buttons_container button,
+  .tool_header > .tool_buttons_container select,
+  .tool_header > .tool_buttons_container input:not([type="checkbox"]):not([type="radio"]),
+  .tool_header > .tool_buttons_container .button,
+  .tool_header > .tool_buttons_container .tool_button {
+    height: 44px;
+    min-height: 44px;
+    line-height: normal;
+  }
 }
 .tool_header > .tool_buttons_container select {
   opacity: 1;
@@ -12122,17 +12818,30 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   background-color: var(--color_grey_7) !important;
 }
 .tool_header.header {
-  color: var(--fg_default);
+  background-color: var(--tool_edge, var(--color_orange_dedalo));
+  background-image: linear-gradient(to bottom, transparent 0, transparent 4px, var(--tool_wash) 4px, var(--tool_wash) 100%);
+  box-shadow: inset 0 -1px 0 var(--border_default), var(--modal_header_shadow);
 }
 .tool_header.header > .button.close {
   display: none;
 }
-dd-modal:has(.tool_header) {
-  --modal_btn_color: var(--fg_muted);
-  --modal_btn_hover_color: var(--fg_default);
+:is(.wrapper_tool, .tool_header) button.primary {
+  background-color: var(--tool_fill);
+  border-color: var(--tool_fill);
+  color: var(--tool_on_fill);
+}
+:is(.wrapper_tool, .tool_header) button.primary::before {
+  background-color: var(--button-bg-color, var(--tool_on_fill)) !important;
+}
+:is(.wrapper_tool, .tool_header) button.primary:hover {
+  background-color: var(--tool_fill_hover);
+  border-color: var(--tool_fill_hover);
+}
+:is(.wrapper_tool, .tool_header) button.light:hover {
+  border-color: var(--tool_edge, var(--color_light_hover_border));
 }
 :root:not([data-theme="dark"]) .tool_header {
-  --fg_muted: #6f6f6f;
+  --fg_muted: #626262;
 }
 :root[data-theme="dark"] .tool_header > .tool_buttons_container button,
 :root[data-theme="dark"] .tool_header > .tool_buttons_container select,
@@ -13740,6 +14449,13 @@ dd-modal:has(.tool_header) {
   color: var(--fg_muted);
   font-weight: 500;
 }
+/**
+* .dd_env_checklist()
+* A ../private/.env admin checklist: inline `code` chips (reclaimed from the app's
+* global BLOCK `code` rule), live `.serving_checks .chk.on|off|field` rows, the
+* literal `.env_sample` block and a `.serve_url` endpoint row. Shared by
+* update_ontology (the ONTOLOGY_SERVERS note) and serve_ontology.
+*/
 .area_maintenance > .content_data h1 {
   line-height: 1em;
 }
@@ -16736,6 +17452,319 @@ dd-modal:has(.tool_header) {
   white-space: pre-wrap;
 }
 /**
+* serve_code
+*
+* Included from area_maintenance.less file.
+* The status readout layout is update_code's .dd_update_status() mixin (one
+* vocabulary for both halves of the code exchange); only the build rows — the
+* action button beside the archive it writes — live here.
+*/
+.wrapper_widget.serve_code > .content_data > .serve_code_note {
+  margin: 0 0 0.9rem 0;
+}
+.wrapper_widget.serve_code > .content_data .update_status {
+  margin-bottom: 1rem;
+}
+.wrapper_widget.serve_code > .content_data .update_status .status_block {
+  margin-bottom: 0.75rem;
+}
+.wrapper_widget.serve_code > .content_data .update_status .status_block .dd_eyebrow {
+  margin-bottom: 0.33rem;
+}
+.wrapper_widget.serve_code > .content_data .update_status .status_verdict {
+  font-size: 1rem;
+  font-weight: bold;
+  margin-top: 0.5rem;
+  margin-bottom: 2rem;
+}
+.wrapper_widget.serve_code > .content_data .update_status .status_verdict.state_ok {
+  color: var(--color_success);
+}
+.wrapper_widget.serve_code > .content_data .update_status .status_verdict.state_danger {
+  color: var(--color_danger);
+}
+.wrapper_widget.serve_code > .content_data .update_status .status_verdict.state_warning {
+  color: var(--color_warning);
+}
+.wrapper_widget.serve_code > .content_data .update_status .check_row .dd_v {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+.wrapper_widget.serve_code > .content_data .update_status .check_row .check_detail {
+  overflow-wrap: anywhere;
+  opacity: 0.85;
+}
+.wrapper_widget.serve_code > .content_data .update_status .check_row .check_scope {
+  font-size: 0.9em;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+.wrapper_widget.serve_code > .content_data .update_status .check_row .check_note {
+  flex-basis: 100%;
+  font-size: 0.9em;
+  opacity: 0.75;
+}
+.wrapper_widget.serve_code > .content_data .update_status .dd_v > .dd_badge {
+  margin-left: 0.4rem;
+  margin-right: 0.33rem;
+  white-space: nowrap;
+}
+.wrapper_widget.serve_code > .content_data .update_status .restore_row .dd_v {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+.wrapper_widget.serve_code > .content_data .update_status .restore_row .restore_version {
+  opacity: 0.85;
+}
+.wrapper_widget.serve_code > .content_data .update_status .restore_row .restore_reason {
+  flex-basis: 100%;
+  font-size: 0.9em;
+  opacity: 0.75;
+}
+.wrapper_widget.serve_code > .content_data .update_status .restore_row .restore_reason_detail {
+  flex-basis: 100%;
+  font-size: 0.9em;
+  opacity: 0.9;
+}
+.wrapper_widget.serve_code > .content_data .update_status .restore_row > .dd_v > button.button_delete_point {
+  margin-left: 0.4rem;
+  padding: 0.15rem 0.7rem;
+  color: var(--state_danger_fg, #b3261e);
+}
+.wrapper_widget.serve_code > .content_data .update_status .restore_row > .dd_v > button.button_delete_point[disabled] {
+  color: var(--fg_muted);
+}
+.wrapper_widget.serve_code > .content_data .update_status .restore_row > .dd_v > button.button_restore {
+  margin-left: auto;
+  padding: 0.15rem 0.7rem;
+  font-size: 0.9em;
+}
+.wrapper_widget.serve_code > .content_data .update_status .restore_row > .dd_v > button.button_restore[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.wrapper_widget.serve_code > .content_data .update_status .dd_v > .check_note {
+  font-size: 0.9em;
+  opacity: 0.75;
+  margin-top: 0.2rem;
+}
+.wrapper_widget.serve_code > .content_data > .serve_code_body > .update_status:first-child {
+  margin-top: 0;
+}
+.wrapper_widget.serve_code > .content_data .build_row > .dd_k.build_action {
+  display: flex;
+  align-items: center;
+  padding: 0.4rem 0.5rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.wrapper_widget.serve_code > .content_data .build_row > .dd_k.build_action.none {
+  color: var(--fg_muted);
+  font-style: italic;
+}
+.wrapper_widget.serve_code > .content_data .build_row > .dd_k.build_action > .form_container {
+  width: 100%;
+  margin: 0px;
+}
+.wrapper_widget.serve_code > .content_data .build_row > .dd_k.build_action button.build_button {
+  display: block;
+  width: 100%;
+  margin: 0px;
+  padding: 0.55rem 0.8rem;
+  border-radius: 4px;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: normal;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+.wrapper_widget.serve_code > .content_data .build_row > .dd_k.build_action button.build_button.primary {
+  color: var(--fg_inverse);
+  background-color: var(--color_primary);
+  border: 1px solid var(--color_primary);
+}
+.wrapper_widget.serve_code > .content_data .build_row > .dd_k.build_action button.build_button.primary:hover {
+  filter: brightness(1.08);
+}
+.wrapper_widget.serve_code > .content_data .build_row > .dd_k.build_action button.build_button.light:not(.primary) {
+  color: var(--fg_default);
+  border: 1px solid var(--border_strong);
+  background-color: var(--bg_surface);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+}
+.wrapper_widget.serve_code > .content_data .build_row > .dd_k.build_action button.build_button.light:not(.primary):hover {
+  background-color: var(--bg_surface_alt);
+}
+.wrapper_widget.serve_code > .content_data .build_row > .dd_v.build_file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.wrapper_widget.serve_code > .content_data .build_row > .dd_v.build_file > .build_file_meta {
+  color: var(--fg_muted);
+}
+.wrapper_widget.serve_code > .content_data .build_row > .dd_v.build_file.none {
+  color: var(--fg_muted);
+  font-style: italic;
+}
+.wrapper_widget.serve_code > .content_data .build_row > .dd_v.build_file.building {
+  animation: build_pulse 1.4s ease-in-out infinite;
+}
+.wrapper_widget.serve_code > .content_data .build_row > .dd_v.build_file.building > .build_file_name,
+.wrapper_widget.serve_code > .content_data .build_row > .dd_v.build_file.building > .build_file_meta {
+  opacity: 0.45;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wrapper_widget.serve_code > .content_data .build_row > .dd_v.build_file.building {
+    animation: none;
+    opacity: 1;
+  }
+}
+.wrapper_widget.serve_code > .content_data .build_row > .dd_v.build_file > .build_file_previous {
+  flex-basis: 100%;
+  font-size: 0.9em;
+  color: var(--fg_muted);
+}
+.wrapper_widget.serve_code > .content_data .build_row > .dd_v.build_file.built_updated {
+  animation: build_settled 1.6s ease-out 1;
+}
+/**
+* serve_ontology
+*
+* Included from area_maintenance.less file.
+* The checklist, .env block and endpoint row come from widget_kit's
+* .dd_env_checklist(); only the state line lives here.
+*/
+.wrapper_widget.serve_ontology .serve_ontology_content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.wrapper_widget.serve_ontology .serve_ontology_content code {
+  display: inline !important;
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0.05em 0.35em !important;
+  border: 1px solid var(--border_default);
+  border-radius: 4px;
+  background-color: color-mix(in srgb, var(--color_primary) 8%, var(--bg_surface_alt));
+  color: var(--fg_default);
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.76rem;
+  font-weight: 400;
+  line-height: 1.6;
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks .chk {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks .chk .mark {
+  flex: 0 0 1rem;
+  line-height: 1.35;
+  text-align: center;
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks .chk.on .mark {
+  color: var(--color_success);
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks .chk.off .mark,
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks .chk.field .mark {
+  color: var(--fg_muted);
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks .chk .txt {
+  min-width: 0;
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks .chk .hd {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks .chk .hd code {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: normal;
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks .chk .val {
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--border_default);
+  border-radius: 999px;
+  background-color: var(--bg_surface_alt);
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg_muted);
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks .chk.on .val {
+  color: var(--color_success);
+  border-color: color-mix(in srgb, var(--color_success) 35%, var(--border_default));
+  background-color: color-mix(in srgb, var(--color_success) 8%, transparent);
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serving_checks .chk .desc {
+  font-size: 0.8rem;
+  color: var(--fg_muted);
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .env_sample {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border_default);
+  border-radius: 6px;
+  background-color: var(--bg_surface_alt);
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  white-space: pre;
+  overflow-x: auto;
+  color: var(--fg_default);
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serve_url {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serve_url .dd_k {
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--fg_muted);
+}
+.wrapper_widget.serve_ontology .serve_ontology_content .serve_url code {
+  white-space: normal;
+  word-break: break-all;
+}
+.wrapper_widget.serve_ontology .serve_ontology_content > .dd_note {
+  margin: 0;
+  line-height: 1.6;
+}
+.wrapper_widget.serve_ontology .serve_state {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.wrapper_widget.serve_ontology .serve_state .ttl {
+  flex: 1 1 auto;
+  font-weight: 600;
+  color: var(--fg_default);
+}
+.wrapper_widget.serve_ontology .serve_state .dd_badge {
+  flex: 0 0 auto;
+}
+/**
 * sqo_test_environment
 *
 * Included from area_maintenance.less file.
@@ -17066,50 +18095,43 @@ dd-modal:has(.tool_header) {
   white-space: nowrap;
   vertical-align: baseline;
 }
-.wrapper_widget.update_ontology .serving_info .serving_body > .dd_note,
-.wrapper_widget.update_ontology .serving_info .serving_body .desc {
-  line-height: 1.6;
-}
-.wrapper_widget.update_ontology .serving_info .serving_body > .dd_note {
-  margin: 0;
-}
-.wrapper_widget.update_ontology .serving_info .serving_checks {
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks {
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
 }
-.wrapper_widget.update_ontology .serving_info .serving_checks .chk {
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks .chk {
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
 }
-.wrapper_widget.update_ontology .serving_info .serving_checks .chk .mark {
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks .chk .mark {
   flex: 0 0 1rem;
   line-height: 1.35;
   text-align: center;
 }
-.wrapper_widget.update_ontology .serving_info .serving_checks .chk.on .mark {
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks .chk.on .mark {
   color: var(--color_success);
 }
-.wrapper_widget.update_ontology .serving_info .serving_checks .chk.off .mark,
-.wrapper_widget.update_ontology .serving_info .serving_checks .chk.field .mark {
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks .chk.off .mark,
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks .chk.field .mark {
   color: var(--fg_muted);
 }
-.wrapper_widget.update_ontology .serving_info .serving_checks .chk .txt {
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks .chk .txt {
   min-width: 0;
 }
-.wrapper_widget.update_ontology .serving_info .serving_checks .chk .hd {
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks .chk .hd {
   display: flex;
   align-items: baseline;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
-.wrapper_widget.update_ontology .serving_info .serving_checks .chk .hd code {
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks .chk .hd code {
   font-size: 0.8rem;
   font-weight: 600;
   white-space: normal;
 }
-.wrapper_widget.update_ontology .serving_info .serving_checks .chk .val {
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks .chk .val {
   padding: 0.1rem 0.4rem;
   border: 1px solid var(--border_default);
   border-radius: 999px;
@@ -17120,16 +18142,16 @@ dd-modal:has(.tool_header) {
   letter-spacing: 0.06em;
   color: var(--fg_muted);
 }
-.wrapper_widget.update_ontology .serving_info .serving_checks .chk.on .val {
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks .chk.on .val {
   color: var(--color_success);
   border-color: color-mix(in srgb, var(--color_success) 35%, var(--border_default));
   background-color: color-mix(in srgb, var(--color_success) 8%, transparent);
 }
-.wrapper_widget.update_ontology .serving_info .serving_checks .chk .desc {
+.wrapper_widget.update_ontology .serving_info .serving_body .serving_checks .chk .desc {
   font-size: 0.8rem;
   color: var(--fg_muted);
 }
-.wrapper_widget.update_ontology .serving_info .env_sample {
+.wrapper_widget.update_ontology .serving_info .serving_body .env_sample {
   margin: 0;
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--border_default);
@@ -17142,25 +18164,32 @@ dd-modal:has(.tool_header) {
   overflow-x: auto;
   color: var(--fg_default);
 }
-.wrapper_widget.update_ontology .serving_info.client_info .env_sample {
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-.wrapper_widget.update_ontology .serving_info .serve_url {
+.wrapper_widget.update_ontology .serving_info .serving_body .serve_url {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.2rem;
 }
-.wrapper_widget.update_ontology .serving_info .serve_url .dd_k {
+.wrapper_widget.update_ontology .serving_info .serving_body .serve_url .dd_k {
   font-size: 0.66rem;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--fg_muted);
 }
-.wrapper_widget.update_ontology .serving_info .serve_url code {
+.wrapper_widget.update_ontology .serving_info .serving_body .serve_url code {
   white-space: normal;
+  word-break: break-all;
+}
+.wrapper_widget.update_ontology .serving_info .serving_body > .dd_note,
+.wrapper_widget.update_ontology .serving_info .serving_body .desc {
+  line-height: 1.6;
+}
+.wrapper_widget.update_ontology .serving_info .serving_body > .dd_note {
+  margin: 0;
+}
+.wrapper_widget.update_ontology .serving_info.client_info .serving_body .env_sample {
+  white-space: pre-wrap;
   word-break: break-all;
 }
 .wrapper_widget.update_ontology .version_change {
@@ -17419,7 +18448,7 @@ dd-modal:has(.tool_header) {
 .wrapper_widget.update_code .server_picker .server_row .dd_badge {
   flex: 0 0 auto;
 }
-.wrapper_widget.update_code > .content_data .role_body > .button_submit {
+.wrapper_widget.update_code > .content_data > .button_submit {
   margin: 1rem;
   margin-left: 0px;
   margin-bottom: 2rem;
@@ -17431,167 +18460,27 @@ dd-modal:has(.tool_header) {
   border: 1px solid color-mix(in srgb, var(--color_orange_dedalo) 75%, #000);
   border-radius: 4px;
 }
-.wrapper_widget.update_code > .content_data .role_body > .button_submit:before {
+.wrapper_widget.update_code > .content_data > .button_submit:before {
   background-color: var(--button-bg-color, #ffffff) !important;
 }
-.wrapper_widget.update_code > .content_data .role_body > .button_submit:hover:not(:disabled) {
+.wrapper_widget.update_code > .content_data > .button_submit:hover:not(:disabled) {
   background-color: color-mix(in srgb, var(--color_orange_dedalo) 88%, #000);
 }
-.wrapper_widget.update_code > .content_data .role_body > .button_submit:disabled {
+.wrapper_widget.update_code > .content_data > .button_submit:disabled {
   color: var(--fg_muted);
   background-color: var(--bg_surface_alt);
   border-color: var(--border_default);
 }
-.wrapper_widget.update_code > .content_data .role_body > .dd_readout {
+.wrapper_widget.update_code > .content_data > .dd_readout {
   margin-bottom: 0.75rem;
 }
-.wrapper_widget.update_code > .content_data .role_body > .dd_note {
+.wrapper_widget.update_code > .content_data > .dd_note {
   margin: 0.5rem 0;
 }
-.wrapper_widget.update_code > .content_data > .role_block {
-  margin: 0 0 1.5rem 0;
-  padding: 0.9rem 1rem 1rem 1rem;
-  border: 1px solid var(--border_default);
-  border-radius: 4px;
-  background-color: var(--bg_surface_alt);
-}
-.wrapper_widget.update_code > .content_data > .role_block > .role_header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 1.05em;
-  font-weight: 600;
-  color: var(--fg_default);
-}
-.wrapper_widget.update_code > .content_data > .role_block > .role_header .role_icon {
-  background-color: var(--fg_muted);
-}
-.wrapper_widget.update_code > .content_data > .role_block > .role_note {
-  margin: 0.35rem 0 0.9rem 1.6rem;
-  font-size: 0.85em;
-  color: var(--fg_muted);
-}
-.wrapper_widget.update_code > .content_data > .role_block.collapsed {
-  padding-bottom: 0.9rem;
-}
-.wrapper_widget.update_code > .content_data > .role_block.collapsed > .role_header {
-  margin-bottom: 0px;
-}
-.wrapper_widget.update_code > .content_data > .role_block.role_consumer > .role_header .role_icon {
-  content: ' ';
-  display: inline-block;
-  flex: 0 0 auto;
-  width: 1.1em;
-  height: 1.1em;
-  -webkit-mask-image: url('../../themes/default/icons/download.svg');
-  mask-image: url('../../themes/default/icons/download.svg');
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-}
-.wrapper_widget.update_code > .content_data > .role_block.role_code_server > .role_header .role_icon {
-  content: ' ';
-  display: inline-block;
-  flex: 0 0 auto;
-  width: 1.1em;
-  height: 1.1em;
-  -webkit-mask-image: url('../../themes/default/icons/upload.svg');
-  mask-image: url('../../themes/default/icons/upload.svg');
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-}
-.wrapper_widget.update_code > .content_data > .role_block > .role_body > .update_status:first-child {
-  margin-top: 0;
-}
-.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_k.build_action {
-  display: flex;
-  align-items: center;
-  padding: 0.4rem 0.5rem;
-  text-transform: none;
-  letter-spacing: normal;
-}
-.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_k.build_action.none {
-  color: var(--fg_muted);
-  font-style: italic;
-}
-.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_k.build_action > .form_container {
-  width: 100%;
-  margin: 0px;
-}
-.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_k.build_action button.build_button {
-  display: block;
-  width: 100%;
-  margin: 0px;
-  padding: 0.55rem 0.8rem;
-  border-radius: 4px;
-  font-weight: 600;
-  line-height: 1.25;
-  white-space: normal;
-  cursor: pointer;
-  font-size: 0.8rem;
-}
-.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_k.build_action button.build_button.primary {
-  color: var(--fg_inverse);
-  background-color: var(--color_primary);
-  border: 1px solid var(--color_primary);
-}
-.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_k.build_action button.build_button.primary:hover {
-  filter: brightness(1.08);
-}
-.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_k.build_action button.build_button.light:not(.primary) {
-  color: var(--fg_default);
-  border: 1px solid var(--border_strong);
-  background-color: var(--bg_surface);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
-}
-.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_k.build_action button.build_button.light:not(.primary):hover {
-  background-color: var(--bg_surface_alt);
-}
-.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_v.build_file {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-}
-.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_v.build_file > .build_file_meta {
-  color: var(--fg_muted);
-}
-.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_v.build_file.none {
-  color: var(--fg_muted);
-  font-style: italic;
-}
-.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_v.build_file.building {
-  animation: build_pulse 1.4s ease-in-out infinite;
-}
-.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_v.build_file.building > .build_file_name,
-.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_v.build_file.building > .build_file_meta {
-  opacity: 0.45;
-}
-@media (prefers-reduced-motion: reduce) {
-  .wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_v.build_file.building {
-    animation: none;
-    opacity: 1;
-  }
-}
-.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_v.build_file > .build_file_previous {
-  flex-basis: 100%;
-  font-size: 0.9em;
-  color: var(--fg_muted);
-}
-.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_v.build_file.built_updated {
-  animation: build_settled 1.6s ease-out 1;
-}
-.wrapper_widget.update_code > .content_data .role_body > .dev_channel_row {
+.wrapper_widget.update_code > .content_data > .dev_channel_row {
   margin: 0.75rem 0 0.25rem 0;
 }
-.wrapper_widget.update_code > .content_data .role_body > .dev_channel_row > .dev_channel_label {
+.wrapper_widget.update_code > .content_data > .dev_channel_row > .dev_channel_label {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -17600,10 +18489,10 @@ dd-modal:has(.tool_header) {
   padding-bottom: 0px;
   color: var(--color_blue_2);
 }
-.wrapper_widget.update_code > .content_data .role_body > .dev_channel_row > .dev_channel_label > .dev_channel_check {
+.wrapper_widget.update_code > .content_data > .dev_channel_row > .dev_channel_label > .dev_channel_check {
   height: initial;
 }
-.wrapper_widget.update_code > .content_data .role_body > .dev_channel_row > .dev_channel_label > .dev_channel_icon {
+.wrapper_widget.update_code > .content_data > .dev_channel_row > .dev_channel_label > .dev_channel_icon {
   content: ' ';
   display: inline-block;
   flex: 0 0 auto;
@@ -17619,7 +18508,7 @@ dd-modal:has(.tool_header) {
   mask-position: center;
   background-color: var(--color_blue_2);
 }
-.wrapper_widget.update_code > .content_data .role_body > .dev_channel_row > .dd_note.dev_channel_note {
+.wrapper_widget.update_code > .content_data > .dev_channel_row > .dd_note.dev_channel_note {
   margin: 0.25rem 0 0 3.1rem;
   max-width: 60rem;
 }
@@ -17889,6 +18778,15 @@ dd-modal:has(.tool_header) {
   margin: 0px;
   top: 2rem;
 }
+/**
+* .dd_update_status()
+* STATUS readouts (render_update_status.js) — LAYOUT ONLY.
+* The severity vocabulary is the shared widget_kit's (.dd_badge +
+* pill_ok / pill_warning / pill_danger, .dd_eyebrow, .dd_readout): a
+* second chip system local to this widget would drift from every other
+* maintenance panel, so nothing here defines a state colour.
+* Shared by update_code (consumer readout) and serve_code (code-server readout).
+*/
 /**
 * dataframe_control
 *
@@ -18765,6 +19663,20 @@ body.inspector_resizing {
 }
 .section.list > .buttons_container > .search_buttons_container {
   display: flex;
+}
+@media screen and (max-width: 600px) {
+  .section.list > .buttons_container {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  .section.list > .buttons_container > .search_buttons_container {
+    flex-wrap: wrap;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .section.list > .buttons_container .semantic_pinned_chip {
+    max-width: 100%;
+  }
 }
 .section.list > .buttons_container > .other_buttons_block {
   display: flex;
@@ -20286,6 +21198,70 @@ body.inspector_resizing {
 }
 .wrap_ts_object .removed_from_view {
   display: none;
+}
+@media screen and (max-width: 600px) {
+  .wrap_ts_object > .content_data > .id_column_content {
+    min-height: 44px;
+  }
+  .wrap_ts_object > .content_data > .id_column_content .id_column_link {
+    width: 44px;
+    height: 44px;
+    margin-right: 0;
+  }
+  .wrap_ts_object > .content_data > .elements_container {
+    min-height: 44px;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .wrap_ts_object > .content_data > .elements_container > .term > .term_text,
+  .wrap_ts_object > .content_data > .elements_container > .term_text {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    min-width: 44px;
+    margin: 0;
+  }
+  .wrap_ts_object > .content_data > .elements_container > .button_show_component {
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 12px 8px;
+    background-clip: content-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .wrap_ts_object > .content_data > .elements_container > .link_children {
+    border: 0 !important;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    top: 0;
+    left: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .wrap_ts_object > .content_data > .elements_container > .link_children::before {
+    content: '';
+    border-style: solid;
+    border-width: 6px 0px 6px 10.4px;
+    border-color: transparent transparent transparent var(--color_orange);
+  }
+  .area_ontology .wrap_ts_object > .content_data > .elements_container > .link_children::before {
+    border-left-color: var(--color_grey_9);
+  }
+  .wrap_ts_object > .content_data > .elements_container > .link_children.open::before {
+    border-width: 10.4px 6px 0px 6px;
+    border-color: var(--color_orange) transparent transparent transparent;
+  }
+  .area_ontology .wrap_ts_object > .content_data > .elements_container > .link_children.open::before {
+    border-top-color: var(--color_grey_9);
+  }
+  .wrap_ts_object > .content_data > .elements_container > .link_children.loading_spinner::before {
+    display: none;
+  }
 }
 /**
 * section_group

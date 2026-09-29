@@ -6,11 +6,11 @@
 
 // imports
 @import (once) '../../../client/dedalo/core/page/css/layout/vars';
+@import (once, reference) '../../../client/dedalo/core/tools_common/css/tool_mixins';
 
 // local vars
 :root {
 	--tool_import_rdf: #5e77b3;
-	--tool_import_rdf_border: #475f97;
 }
 @tool_color : var(--tool_import_rdf);
 
@@ -47,8 +47,7 @@
 		.button_apply {
 			width: 8rem;
 			margin-top: 2rem;
-			background-color: @tool_color;
-			border-color: var(--tool_import_rdf_border);
+			.tool_action_button();
 		}
 		.component_data_label {
 			font-size: 16px;
@@ -72,8 +71,3 @@
 		}
 	}
 }//end tool_wrapper
-
-// modal header tool modification
-.tool_header.tool_import_rdf {
-	background-color: @tool_color;
-}

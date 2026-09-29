@@ -16,7 +16,9 @@ Updating the Dédalo code should be supervised by the IT team. Some changes — 
 ## Panel self-update
 
 The "Update code" maintenance panel (`update_code` widget,
-`src/core/area_maintenance/widgets/update_code.ts`) downloads a release
+`src/core/area_maintenance/widgets/update_code.ts`) is the RECEIVING side; building
+and serving releases is the [Serve Code panel](#what-the-serve-code-panel-tells-a-code-server).
+It downloads a release
 archive from a configured code server, verifies its sha256 checksum,
 pre-validates every archive entry, extracts it into a quarantine directory,
 installs its dependencies and boot-tests it **there**, and only then swaps it
@@ -225,10 +227,12 @@ or an institution's own mirror. Set in `../private/.env` (see the
 | `CODE_SERVERS` | Must include this server's own entry: the `code` in it is the shared secret a caller has to present. |
 | `DEDALO_CORS_ALLOWED_ORIGINS` | The origins allowed to read the manifest. Each client fetches it **from the browser**, so without this the update panel of every remote install fails with a network error. Use `*` for a public master. |
 
-### What the panel tells a code server
+### What the Serve Code panel tells a code server
 
-On a code server the panel adds a second status block, answering whether this
-instance can publish at all:
+Publishing has its own maintenance panel, **Serve Code** (`serve_code` widget),
+next to Update Code. It is shown only on a code server (`IS_A_CODE_SERVER=true`)
+and on the `development` installation, and it answers whether this instance can
+publish at all:
 
 - **Code server** — the role flag, the two directories, and whether the build
   itself would be accepted, checked through the same planner the Build buttons
@@ -271,8 +275,9 @@ instance can publish at all:
 
 ### Building a release
 
-On a code server, the "Update code" panel shows two extra buttons, "Build
-master release" and "Build developer release". Each archives a branch of the
+On a code server, the **Serve Code** panel shows two buttons, "Build
+master release" and "Build developer release", each beside the archive it
+writes. Each archives a branch of the
 configured git checkout at the engine's **current version**. A build of the
 `master` branch writes the published release name; a build of any other branch
 gets a `-dev` suffix, so it can never overwrite the published master release

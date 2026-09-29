@@ -157,11 +157,6 @@ const THEME_INVARIANT: ReadonlyArray<{ token: string; file: string; reason: stri
 			'one deep sage for both themes, declared once in the tool sheet; a dark entry in theme_dark.less would win on specificity and silently reinstate a light bar under white header ink (the tool sheet says so in-file)',
 	},
 	{
-		token: '--tool_diffusion_border',
-		file: 'tools/tool_diffusion/css/tool_diffusion.less',
-		reason: 'the edge of the same invariant sage; moves with --tool_diffusion or not at all',
-	},
-	{
 		token: '--tool_assistant',
 		file: 'tools/tool_assistant/css/tool_assistant.less',
 		reason:

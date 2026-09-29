@@ -171031,7 +171031,6 @@
 					".wrapper_component": {}
 				},
 				"alias_of": "test6122",
-				"look_inside": true,
 				"edit_view999": "clean"
 			},
 			"model_tipo": "dd164",
@@ -171104,8 +171103,6 @@
 					".wrapper_component": {}
 				},
 				"alias_of": "test6123",
-				"edit_view": "view_tool_description",
-				"look_inside": true,
 				"edit_view999": "clean",
 				"force_model99": "component_portal"
 			},
@@ -171135,7 +171132,6 @@
 					".wrapper_component": {}
 				},
 				"alias_of": "test6140",
-				"look_inside": true,
 				"edit_view999": "clean"
 			},
 			"model_tipo": "dd164",
@@ -171239,7 +171235,6 @@
 					".wrapper_component": {}
 				},
 				"alias_of": "test6152",
-				"look_inside": true,
 				"edit_view9999": "clean"
 			},
 			"model_tipo": "dd164",
@@ -171316,7 +171311,6 @@
 					".wrapper_component": {}
 				},
 				"alias_of": "test6151",
-				"look_inside": true,
 				"edit_view999": "clean"
 			},
 			"model_tipo": "dd164",
@@ -171684,9 +171678,7 @@
 					]
 				},
 				"alias_of": "test6157",
-				"edit_view": "view_tool_description",
-				"look_inside": false,
-				"max_records": 1
+				"view": "mosaic"
 			},
 			"model_tipo": "dd164",
 			"is_model": false,
@@ -176427,7 +176419,6 @@
 					".wrapper_component": {}
 				},
 				"alias_of": "test6150",
-				"look_inside": true,
 				"edit_view999": "clean"
 			},
 			"model_tipo": "dd164",
@@ -178187,10 +178178,8 @@
 					]
 				},
 				"alias_of": "test6157",
-				"edit_view": "view_tool_description_countermark",
-				"look_inside": false,
-				"max_records": 1,
-				"edit_view_DES": "view_mosaic"
+				"edit_view_DES": "view_mosaic",
+				"view": "mosaic"
 			},
 			"model_tipo": "dd164",
 			"is_model": false,

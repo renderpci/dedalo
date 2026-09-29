@@ -6,6 +6,7 @@
 
 // imports
 @import (once) '../../../client/dedalo/core/page/css/layout/vars';
+@import (once, reference) '../../../client/dedalo/core/tools_common/css/tool_mixins';
 // (reference) is MANDATORY: the .dd_* classes are already emitted into main.css,
 // so a plain @import would duplicate ~67 rules into tool_diffusion.css. We want
 // the MIXINS (.dd_surface, .dd_console) and @dd_mono only.
@@ -21,7 +22,6 @@
 :root {
 	--tool_diffusion: #567528;
 	--tool_diffusion_text: #040503;
-	--tool_diffusion_border: #7d9558;
 }
 @tool_color : var(--tool_diffusion);
 
@@ -292,23 +292,11 @@
 							display: flex;
 							align-items: center;
 
-							// publication_button: default style
-							// White label in BOTH themes. The button carries the
-							// core `.warning` class, whose `color: @color_white`
-							// INVERTS to #1b1d20 in dark — near-black on this fixed
-							// green. Same law as the item-label bars: the background
-							// does not follow the theme, so the ink must not either.
-							// The ::before glyph is a mask painted via
-							// --button-bg-color and inverts identically.
+							// publication_button: the tool's action button (fill + ink + glyph
+							// as one generated set — tool_mixins.less)
 							.publication_button {
 								margin: 1rem;
-								background-color: @tool_color;
-								border-color: var(--tool_diffusion_border);
-								color: var(--fg_inverse);
-
-								&:before {
-									background-color: var(--fg_inverse) !important;
-								}
+								.tool_action_button();
 
 								&.not_ready {
 									opacity: 0.4;
@@ -587,16 +575,6 @@
 		}
 	}//end content_data
 }//end wrapper_tool
-
-// modal header tool modification
-// NOTE `ui.build_modal` ADDS the `header` class to this same node, so the bar is
-// `.tool_header.tool_diffusion.header` and all of its ink comes from the modal
-// tokens, which resolve LIGHT in dark (title/description --modal_header_color ->
-// #ffffff, close/minimize --modal_btn_color -> #e5e7ea, masked icon literal
-// #ffffff). @tool_color must therefore stay dark enough to carry white ink.
-.tool_header.tool_diffusion {
-	background-color: @tool_color;
-}
 
 // engine advisory banner
 // Same severity vocabulary as .run_report above (rail + faint tint from a

@@ -173,7 +173,7 @@ CGI-only spellings by name (§6).
 - Serving `src/core/update/code_serving.ts:29-52`
   (`/dedalo/install/code/(\d+\.\d+\.\d+)/<file>`, fail-closed on
   `IS_A_CODE_SERVER` + dir), wired `src/server.ts:1140`.
-- Producer: the update_code widget's build action → `src/core/update/code_build.ts`
+- Producer: the serve_code widget's build action (update_code's until 2026-09-28) → `src/core/update/code_build.ts`
   (`git archive` of a validated ref of the code server's OWN checkout, named
   after that ref's `src/core/update/version.ts`, sha256 sidecar; WC-024,
   WC-2026-08-15, WC-2026-08-24). Drill: `bun run test:update` /
@@ -341,7 +341,7 @@ widget (`data_io.ts:112` → `<IO dir>/7.0/<tld>.copy.gz` + `ontology.json`),
 never by copying the vendored `install/import/ontology/7.0` seeds — a code
 update replaces that tree.
 
-**Publishing 7.x code**: the update_code widget's build action (§2.5). The
+**Publishing 7.x code**: the serve_code widget's build action (§2.5). The
 deployed tree must therefore be a git checkout the build action can
 `git archive` from.
 

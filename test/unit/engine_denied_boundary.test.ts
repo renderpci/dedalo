@@ -41,7 +41,7 @@ const ROOT = { userId: -1, isGlobalAdmin: true };
 // test/parity/tools_register_differential.test.ts + test/unit/tools_register*.
 //
 // 2026-07-11 cutover: the ownership-GATED actions (update_code.update_code /
-// build_version_from_git_master, update_ontology.update_ontology, the move_*
+// serve_code.build_version_from_git_master (update_code's until 2026-09-28), update_ontology.update_ontology, the move_*
 // family, build_database_version.build_recovery_version_file /
 // restore_dd_ontology_recovery_from_file) left this LIVE-dispatch boundary —
 // engineOwnsInstall() is collapsed to true, so their OPEN branches answer

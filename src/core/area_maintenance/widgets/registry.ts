@@ -51,6 +51,8 @@ import { widget as reconcile_status } from './reconcile_status.ts';
 import { widget as register_tools } from './register_tools.ts';
 import { widget as runtime_info } from './runtime_info.ts';
 import { widget as sequences_status } from './sequences_status.ts';
+import { widget as serve_code, servesCode } from './serve_code.ts';
+import { widget as serve_ontology } from './serve_ontology.ts';
 import { widget as site_builder_status } from './site_builder_status.ts';
 import { widget as sqo_test_environment } from './sqo_test_environment.ts';
 import type { LabelRule, WidgetModule, WidgetResponse } from './support.ts';
@@ -96,6 +98,7 @@ const CORE_WIDGET_MODULES: readonly WidgetModule[] = [
 	config_areas,
 	menu_skip_tipos,
 	update_ontology,
+	serve_ontology,
 	register_tools,
 	move_tld,
 	move_locator,
@@ -127,7 +130,11 @@ const CORE_WIDGET_MODULES: readonly WidgetModule[] = [
 ];
 
 /** The total surface: every module in the code, gated or not. Ownership classifies THIS. */
-export const ALL_WIDGET_MODULES: readonly WidgetModule[] = [...CORE_WIDGET_MODULES, error_reports];
+export const ALL_WIDGET_MODULES: readonly WidgetModule[] = [
+	...CORE_WIDGET_MODULES,
+	serve_code,
+	error_reports,
+];
 
 /**
  * The ordered catalog THIS INSTALLATION serves — one module per PHP get_ar_widgets
@@ -141,7 +148,13 @@ export const ALL_WIDGET_MODULES: readonly WidgetModule[] = [...CORE_WIDGET_MODUL
  * ALL_WIDGET_MODULES split above.
  */
 export const WIDGET_MODULES: readonly WidgetModule[] = [
-	...CORE_WIDGET_MODULES,
+	// serve_code (WC-2026-09-28-maintenance-serve-code-widget) sits right after
+	// update_code, and only where it can act — a code server or the development
+	// entity. Elsewhere it is neither in the catalog nor reachable through
+	// widget_request (MODULE_BY_ID below).
+	...CORE_WIDGET_MODULES.flatMap((module) =>
+		module === update_code && servesCode() ? [module, serve_code] : [module],
+	),
 	...(config.errorReport.receiverEnabled || config.errorReport.masterApiUrl ? [error_reports] : []),
 ];
 

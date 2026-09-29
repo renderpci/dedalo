@@ -546,6 +546,16 @@
 			"skipped": 0,
 			"assertions": 22
 		},
+		"test/unit/client_serve_code_render.test.ts": {
+			"tests": 17,
+			"skipped": 0,
+			"assertions": 204
+		},
+		"test/unit/client_serve_ontology_render.test.ts": {
+			"tests": 5,
+			"skipped": 0,
+			"assertions": 9
+		},
 		"test/unit/client_serving.test.ts": {
 			"tests": 9,
 			"skipped": 0,
@@ -587,14 +597,14 @@
 			"assertions": 31
 		},
 		"test/unit/client_update_code_render.test.ts": {
-			"tests": 72,
+			"tests": 61,
 			"skipped": 0,
-			"assertions": 344
+			"assertions": 246
 		},
 		"test/unit/client_update_ontology_tlds_input.test.ts": {
 			"tests": 7,
 			"skipped": 0,
-			"assertions": 33
+			"assertions": 36
 		},
 		"test/unit/client_upload_queue.test.ts": {
 			"tests": 32,
@@ -619,7 +629,7 @@
 		"test/unit/code_build_native.test.ts": {
 			"tests": 46,
 			"skipped": 0,
-			"assertions": 119
+			"assertions": 120
 		},
 		"test/unit/code_files_dir_native.test.ts": {
 			"tests": 12,
@@ -1065,6 +1075,11 @@
 			"tests": 16,
 			"skipped": 0,
 			"assertions": 55
+		},
+		"test/unit/developer_flags_native.test.ts": {
+			"tests": 5,
+			"skipped": 0,
+			"assertions": 15
 		},
 		"test/unit/diffusion_actions.test.ts": {
 			"tests": 8,
@@ -3321,6 +3336,11 @@
 			"skipped": 0,
 			"assertions": 31
 		},
+		"test/unit/search_deep_path_reverse_native.test.ts": {
+			"tests": 6,
+			"skipped": 0,
+			"assertions": 16
+		},
 		"test/unit/search_duplicated_uncorrelated_native.test.ts": {
 			"tests": 8,
 			"skipped": 0,
@@ -3555,6 +3575,16 @@
 			"tests": 12,
 			"skipped": 0,
 			"assertions": 35
+		},
+		"test/unit/serve_code_widget_native.test.ts": {
+			"tests": 6,
+			"skipped": 0,
+			"assertions": 12
+		},
+		"test/unit/serve_ontology_widget.test.ts": {
+			"tests": 4,
+			"skipped": 0,
+			"assertions": 20
 		},
 		"test/unit/server_state.test.ts": {
 			"tests": 8,
@@ -4046,6 +4076,11 @@
 			"skipped": 0,
 			"assertions": 21
 		},
+		"test/unit/tool_color_contrast_tripwire.test.ts": {
+			"tests": 5,
+			"skipped": 0,
+			"assertions": 14
+		},
 		"test/unit/tool_context_labels_lang.test.ts": {
 			"tests": 4,
 			"skipped": 0,
@@ -4452,9 +4487,9 @@
 			"assertions": 18
 		},
 		"test/unit/update_code_widget_native.test.ts": {
-			"tests": 3,
+			"tests": 2,
 			"skipped": 0,
-			"assertions": 6
+			"assertions": 5
 		},
 		"test/unit/update_disk_space_native.test.ts": {
 			"tests": 13,
@@ -4475,11 +4510,6 @@
 			"tests": 9,
 			"skipped": 0,
 			"assertions": 11
-		},
-		"test/unit/update_ontology_panel_serving.test.ts": {
-			"tests": 3,
-			"skipped": 0,
-			"assertions": 13
 		},
 		"test/unit/update_ownership.test.ts": {
 			"tests": 1,

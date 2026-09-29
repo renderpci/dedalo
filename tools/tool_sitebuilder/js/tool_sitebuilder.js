@@ -40,8 +40,8 @@ export const tool_sitebuilder = function() {
 
 
 
-// Standard prototype wiring: render/destroy/refresh from tool_common, edit from the render
-// module. tool_request (the server round-trip) also comes from tool_common.
+// Standard prototype wiring: render/destroy/refresh/tool_request from tool_common, edit
+// from the render module (wire_tool).
 wire_tool(tool_sitebuilder, render_tool_sitebuilder)
 
 

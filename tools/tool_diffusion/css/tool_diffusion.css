@@ -6,7 +6,6 @@
 :root {
   --tool_diffusion: #567528;
   --tool_diffusion_text: #040503;
-  --tool_diffusion_border: #7d9558;
 }
 .wrapper_tool.tool_diffusion {
   --color_1: var(--tool_diffusion);
@@ -208,12 +207,16 @@
 }
 .wrapper_tool.tool_diffusion > .content_data .publication_items > .publication_item_body > .publication_items_grid .container_bottom > .buttons_container .publication_button {
   margin: 1rem;
-  background-color: var(--tool_diffusion);
-  border-color: var(--tool_diffusion_border);
-  color: var(--fg_inverse);
+  background-color: var(--tool_fill);
+  border-color: var(--tool_fill);
+  color: var(--tool_on_fill);
 }
-.wrapper_tool.tool_diffusion > .content_data .publication_items > .publication_item_body > .publication_items_grid .container_bottom > .buttons_container .publication_button:before {
-  background-color: var(--fg_inverse) !important;
+.wrapper_tool.tool_diffusion > .content_data .publication_items > .publication_item_body > .publication_items_grid .container_bottom > .buttons_container .publication_button::before {
+  background-color: var(--button-bg-color, var(--tool_on_fill)) !important;
+}
+.wrapper_tool.tool_diffusion > .content_data .publication_items > .publication_item_body > .publication_items_grid .container_bottom > .buttons_container .publication_button:hover {
+  background-color: var(--tool_fill_hover);
+  border-color: var(--tool_fill_hover);
 }
 .wrapper_tool.tool_diffusion > .content_data .publication_items > .publication_item_body > .publication_items_grid .container_bottom > .buttons_container .publication_button.not_ready {
   opacity: 0.4;
@@ -463,9 +466,6 @@
 .wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .dd_readout .dd_v {
   font-variant-numeric: tabular-nums;
   word-break: break-word;
-}
-.tool_header.tool_diffusion {
-  background-color: var(--tool_diffusion);
 }
 .diffusion_engine_advisory {
   margin: 1em;

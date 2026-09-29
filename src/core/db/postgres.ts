@@ -417,17 +417,31 @@ export const sql: SQL = new Proxy(pool, {
 	},
 }) as unknown as SQL;
 
+/**
+ * Slow-query log cap. Generous so a real filter reads whole (the old 300-char
+ * cut hid every join), bounded so an id-list/UNION statement cannot emit MBs.
+ */
+const SLOW_QUERY_LOG_MAX_CHARS = 16_384;
+
+/** Collapse whitespace; a cut is always announced, never silent. */
+export function capQueryText(text: string): string {
+	const oneLine = text.replace(/\s+/g, ' ');
+	return oneLine.length <= SLOW_QUERY_LOG_MAX_CHARS
+		? oneLine
+		: `${oneLine.slice(0, SLOW_QUERY_LOG_MAX_CHARS)}… (+${oneLine.length - SLOW_QUERY_LOG_MAX_CHARS} chars)`;
+}
+
 /** Lazy one-line description of a tagged-template call, for the slow-query log. */
 function describeTemplate(argumentsList: unknown[]): () => string {
 	return () =>
-		String((argumentsList[0] as { raw?: readonly string[] } | undefined)?.raw?.join('?') ?? '')
-			.replace(/\s+/g, ' ')
-			.slice(0, 300);
+		capQueryText(
+			String((argumentsList[0] as { raw?: readonly string[] } | undefined)?.raw?.join('?') ?? ''),
+		);
 }
 
 /** Lazy one-line description of an `.unsafe` statement, for the slow-query log. */
 function describeText(query: string): () => string {
-	return () => query.replace(/\s+/g, ' ').slice(0, 300);
+	return () => capQueryText(query);
 }
 
 /**

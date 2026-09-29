@@ -132,6 +132,25 @@ export const on_dragstart = function(node, event, options) {
 
 
 /**
+* GET_MOSAIC_TRANSFER_DATA
+* The drop payload of a mosaic tile — one builder for both gestures that carry
+* it: the mouse drag (on_dragstart_mosaic) and the touch pick (touch_pick.js).
+* @param {Object} options - {locator, paginated_key, caller}
+* @returns {Object}
+*/
+export const get_mosaic_transfer_data = function(options) {
+	return {
+		locator			: options.locator,
+		paginated_key	: options.paginated_key,
+		source_tipo		: options.caller.tipo || null,
+		source_id		: options.caller.id || null,
+		draggable_to 	: options.caller.properties.draggable_to || []
+	}
+}//end get_mosaic_transfer_data
+
+
+
+/**
 * ON_DRAGSTART_MOSAIC
 * Initialises a drag operation from the mosaic view of a component_portal.
 * Functionally equivalent to `on_dragstart` but operates on the section-record
@@ -151,15 +170,7 @@ export const on_dragstart_mosaic = function(node, event, options) {
 	event.stopPropagation();
 
 	// will be necessary the original locator of the section_record and the paginated_key (the position in the array of data)
-	const draggable_to = options.caller.properties.draggable_to || []
-
-	const transfer_data = {
-		locator			: options.locator,
-		paginated_key	: options.paginated_key,
-		source_tipo		: options.caller.tipo || null,
-		source_id		: options.caller.id || null,
-		draggable_to 	: draggable_to
-	}
+	const transfer_data = get_mosaic_transfer_data(options)
 
 	// set tmp data to be used by the `dragover`
 		tmp.data = transfer_data

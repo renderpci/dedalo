@@ -37,9 +37,6 @@
   --assistant_err_border: #5a3030;
   --assistant_pre_bg: rgba(255, 255, 255, 0.06);
 }
-.tool_header.tool_assistant {
-  background-color: var(--tool_assistant);
-}
 .assistant_container {
   display: flex;
   flex-direction: column;
@@ -63,6 +60,19 @@
 }
 .assistant_container.standalone.show {
   display: flex;
+}
+@media screen and (max-width: 600px) {
+  .assistant_container.standalone {
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: calc(100dvh - var(--menu_heigth, 2.6rem));
+    max-height: calc(100dvh - var(--menu_heigth, 2.6rem));
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
 .assistant_content_data {
   display: flex;
@@ -95,6 +105,12 @@
 .assistant_toolbar_button:hover {
   background-color: var(--bg_surface_alt);
   border-color: var(--border_strong);
+}
+@media screen and (max-width: 600px) {
+  .assistant_toolbar_button {
+    min-width: 44px;
+    min-height: 44px;
+  }
 }
 .assistant_history_wrap,
 .assistant_settings_wrap {
@@ -493,6 +509,12 @@
   background-color: var(--input_bg);
   color: var(--input_fg);
 }
+@media screen and (max-width: 600px) {
+  .assistant_input {
+    min-height: 44px;
+    font-size: 16px;
+  }
+}
 .assistant_input:focus {
   border-color: #6366f1;
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
@@ -516,6 +538,13 @@
   justify-content: center;
   flex-shrink: 0;
   transition: background-color var(--transition-fast);
+}
+@media screen and (max-width: 600px) {
+  .assistant_send_button,
+  .assistant_stop_button {
+    width: 44px;
+    height: 44px;
+  }
 }
 .assistant_send_button:hover,
 .assistant_stop_button:hover {

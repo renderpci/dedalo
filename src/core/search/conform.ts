@@ -79,7 +79,43 @@ export interface JoinFragment {
 export type ConformedFilter =
 	| { kind: 'group'; op: string; items: ConformedFilter[] }
 	/** `fragment` is the leaf's BuilderResult — the SQL it contributes, `false` when it contributes nothing. */
-	| { kind: 'leaf'; fragment: BuilderResult; joins?: JoinFragment[] };
+	| {
+			kind: 'leaf';
+			fragment: BuilderResult;
+			joins?: JoinFragment[];
+			/** Multi-hop leaves only: what the deep_path pass needs to reverse it. */
+			deep?: DeepLeafPlan;
+	  }
+	/**
+	 * A REVERSED deep-path leaf set (deep_path.ts): `open` + the inner leaf
+	 * predicate(s) + `close`. Contributes no joins. `open`/`close` carry no
+	 * tokens — only gated identifiers and the frontier ACL predicates.
+	 */
+	| { kind: 'reverse'; open: string; inner: BuilderResult; close: string };
+
+/** One hop of a multi-hop chain, as buildJoinChain resolved it. */
+export interface JoinHop {
+	/** Storage key of the hop component on the SOURCE record (alias-resolved). */
+	hopDataTipo: string;
+	/** Alias of the TARGET record this hop joins. */
+	alias: string;
+	/** Matrix table of the target step's declared section. */
+	table: string;
+	/** The caller's record ACL on the target alias ('' when none). */
+	acl: string;
+}
+
+/** Everything the reverse pass needs about one multi-hop leaf. */
+export interface DeepLeafPlan {
+	mainAlias: string;
+	/** Source table of the FIRST hop (the searched section's table). */
+	mainTable: string;
+	hops: JoinHop[];
+	/** Forward predicate, exactly as the join shape would render it. */
+	forward: BuilderResult;
+	/** Same predicate with the search-store prefilter enabled (string leaves). */
+	reverseFragment: BuilderResult;
+}
 
 /**
  * THE PER-REQUEST ACL A MULTI-HOP PATH MUST OBEY (SEC-02, 2026-08-28).
@@ -166,9 +202,11 @@ export async function buildJoinChain(
 	lastTable: string;
 	/** False when the principal holds no read grant on some step's component. */
 	authorized: boolean;
+	hops: JoinHop[];
 }> {
 	const { getMatrixTableFromTipo } = await import('../ontology/resolver.ts');
 	const joins: JoinFragment[] = [];
+	const hops: JoinHop[] = [];
 	let previousAlias = mainAlias;
 	let lastTable = '';
 	let authorized = true;
@@ -220,6 +258,7 @@ export async function buildJoinChain(
 			`${joinAlias}.section_id = NULLIF((${locatorRef}->>'section_id'), '')::bigint`,
 			`${joinAlias}.section_tipo = (${locatorRef}->>'section_tipo')::text`,
 		];
+		let acl = '';
 		if (scope !== undefined) {
 			// This step's OWN component: the leaf component on the last step, the
 			// next hop's relation component on an intermediate one — both are read
@@ -244,8 +283,12 @@ export async function buildJoinChain(
 				table: stepTable,
 				alias: joinAlias,
 			});
-			if (predicate !== '') onParts.push(`(${predicate})`);
+			if (predicate !== '') {
+				onParts.push(`(${predicate})`);
+				acl = predicate;
+			}
 		}
+		hops.push({ hopDataTipo, alias: joinAlias, table: stepTable, acl });
 		joins.push({
 			alias: joinAlias,
 			sql:
@@ -257,7 +300,7 @@ export async function buildJoinChain(
 		previousAlias = joinAlias;
 		lastTable = stepTable;
 	}
-	return { joins, lastAlias: previousAlias, lastTable, authorized };
+	return { joins, lastAlias: previousAlias, lastTable, authorized, hops };
 }
 
 const BOOLEAN_OPERATORS: ReadonlySet<string> = new Set(['$and', '$or', '$not', '$nand', '$nor']);
@@ -431,6 +474,7 @@ async function conformLeaf(
 	let leafAlias = alias;
 	let leafTable = table;
 	const joins: JoinFragment[] = [];
+	let hops: JoinHop[] = [];
 	if (path.length > 1) {
 		const chain = await buildJoinChain(
 			path as { section_tipo?: string; component_tipo?: string }[],
@@ -438,6 +482,7 @@ async function conformLeaf(
 			scope,
 		);
 		joins.push(...chain.joins);
+		hops = chain.hops;
 		leafAlias = chain.lastAlias;
 		leafTable = chain.lastTable;
 		if (!chain.authorized) {
@@ -531,7 +576,12 @@ async function conformLeaf(
 			tokenValues,
 		);
 		return joins.length > 0
-			? { kind: 'leaf', fragment: result, joins }
+			? {
+					kind: 'leaf',
+					fragment: result,
+					joins,
+					deep: deepPlan(alias, table, hops, result, result),
+				}
 			: { kind: 'leaf', fragment: result };
 	}
 
@@ -590,11 +640,13 @@ async function conformLeaf(
 		model,
 		...(dateMode === undefined ? {} : { dateMode }),
 		// string leaves: let builder_string prepend its search-store pre-filter
-		// when the table's sync trigger exists (cached catalog check). ONLY for
-		// NON-joined leaves (path length 1): on a hop-joined alias the join
-		// already bounds the per-row work, and the prefilter's tiny-cardinality
-		// estimate makes the planner FLIP the join order into an unindexed
-		// person→records filter join (measured: multi-hop count 150ms → 660ms).
+		// when the table's sync trigger exists (cached catalog check). NOT on the
+		// FORWARD join shape: there the prefilter's tiny-cardinality estimate
+		// makes the planner FLIP the join order into an unindexed person→records
+		// filter join (measured: multi-hop count 150ms → 660ms). A multi-hop leaf
+		// gets a SECOND, prefiltered fragment below for the REVERSED shape
+		// (deep_path.ts), where the leaf is the driving set and the prefilter is
+		// exactly what it needs.
 		searchStoreCovered:
 			column === 'string' && joins.length === 0 ? await searchStoreCovers(leafTable) : false,
 	};
@@ -649,9 +701,36 @@ async function conformLeaf(
 			coordinates: { model },
 		});
 	}
-	return joins.length > 0
-		? { kind: 'leaf', fragment: result, joins }
-		: { kind: 'leaf', fragment: result };
+	if (joins.length === 0) return { kind: 'leaf', fragment: result };
+	// DEEP PATH: the reversed shape (deep_path.ts) makes the leaf the DRIVING
+	// set, so the search-store prefilter the forward join must not carry (see
+	// searchStoreCovered above) is exactly what it wants.
+	const reverseFragment =
+		builderFamily !== undefined &&
+		column === 'string' &&
+		getColumnNameByModel(model) !== 'relation' &&
+		(await searchStoreCovers(leafTable))
+			? FAMILY_BUILDERS[builderFamily](leaf.q, leaf.q_operator ?? null, leaf.q_split === true, {
+					...context,
+					searchStoreCovered: true,
+				})
+			: result;
+	return {
+		kind: 'leaf',
+		fragment: result,
+		joins,
+		deep: deepPlan(alias, table, hops, result, reverseFragment),
+	};
+}
+
+function deepPlan(
+	mainAlias: string,
+	mainTable: string,
+	hops: JoinHop[],
+	forward: BuilderResult,
+	reverseFragment: BuilderResult,
+): DeepLeafPlan {
+	return { mainAlias, mainTable, hops, forward, reverseFragment };
 }
 
 /** Recursively conform a filter node ($and/$or trees with leaves). */

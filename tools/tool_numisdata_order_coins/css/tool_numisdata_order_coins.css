@@ -343,9 +343,6 @@
   background-position-y: 3px !important;
   background-position-x: 6px !important;
 }
-.tool_header.tool_numisdata_order_coins {
-  background-color: var(--tool_numisdata_order_coins);
-}
 .header_tool #header_info {
   display: block;
   float: left;

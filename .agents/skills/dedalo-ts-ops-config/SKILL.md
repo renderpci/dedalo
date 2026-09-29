@@ -55,11 +55,12 @@ prose must be **PHP-free** — it renders into `docs/config/config.md`, where
   publication call from the tool then 404s. Set `false` only on a deployment that still runs the
   external service behind its own proxy route. `DEDALO_DIFFUSION_NATIVE_ELEMENTS` is a staged-
   migration allowlist of elements (unset = permissive); refusals come from `src/diffusion/api/actions.ts`.
-- **`DEDALO_DEV_MODE`** (`src/core/resolve/environment.ts`, `buildPlainVars`) — drives the dev
-  posture flags. **`DEVELOPMENT_SERVER` is exposed pre-auth** (the login path on dev servers
+- **`DEDALO_DEV_MODE`** (`src/core/resolve/environment.ts`, `buildPlainVars`) — the SERVER
+  posture only: `DEVELOPMENT_SERVER`, the dev-only client libraries (mocha/chai), the no-cache
+  manifest. **`DEVELOPMENT_SERVER` is exposed pre-auth** (the login path on dev servers
   needs it; gating it on `isLogged` stalled every dev login — the S1-19 fix).
-  **`SHOW_DEBUG` / `SHOW_DEVELOPER` are `isLogged && DEV_MODE`** — never advertise the debug
-  posture to anonymous callers.
+  **`SHOW_DEBUG` / `SHOW_DEVELOPER` follow the logged user, NOT this key**: `SHOW_DEBUG` = root,
+  `SHOW_DEVELOPER` = `principal.isDeveloper` (root included); both false for anonymous callers.
 - **`test_seam` keys** (e.g. `DEDALO_SESSION_DB_PATH`, `DEDALO_TEST_MEDIA_ROOT`) exist for test
   isolation, set by the `bun test` preloads and the suite scripts — never in a production `.env`.
   `DEDALO_SESSION_DB_PATH` is read once at module load by `src/core/security/session_store.ts`;

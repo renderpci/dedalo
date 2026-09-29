@@ -25,9 +25,6 @@
   --print_page_shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
   --tp_desk_bg: #2a2d31;
 }
-.tool_header.tool_print {
-  background-color: var(--tool_print);
-}
 .wrapper_tool.tool_print .spinner {
   background-color: var(--tool_print);
 }
@@ -1304,6 +1301,40 @@ body.tp_col_resizing * {
     position: relative;
     flex-wrap: wrap;
     overflow-x: visible;
+  }
+}
+@media (max-width: 600px) {
+  .wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar {
+    gap: 0.5rem;
+  }
+  .wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .toolbar_group,
+  .wrapper_tool.tool_print > .content_data.print_layout_editor .toolbar_group {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    border-right: none;
+    padding-right: 0;
+  }
+  .wrapper_tool.tool_print > .content_data.print_layout_editor .tool_button,
+  .wrapper_tool.tool_print > .content_data.print_layout_editor select,
+  .wrapper_tool.tool_print > .content_data.print_layout_editor .template_picker,
+  .wrapper_tool.tool_print > .content_data.print_layout_editor .zoom_select,
+  .wrapper_tool.tool_print > .content_data.print_layout_editor .template_name_input {
+    height: 44px;
+    font-size: 16px;
+  }
+  .wrapper_tool.tool_print > .content_data.print_layout_editor .template_picker,
+  .wrapper_tool.tool_print > .content_data.print_layout_editor .template_name_input {
+    flex: 1 1 10rem;
+    min-width: 0;
+  }
+  .wrapper_tool.tool_print > .content_data.print_layout_editor .zoom_select {
+    width: 6rem;
+  }
+  .wrapper_tool.tool_print > .content_data.print_layout_editor .pages_viewport {
+    padding: 0.5rem;
+  }
+  .wrapper_tool.tool_print > .content_data.print_layout_editor .panel_collapse_toggle {
+    min-width: 44px;
   }
 }
 .wrapper_tool.tool_print .print_root .cell_content {

@@ -30,6 +30,7 @@ import { config } from '../../src/config/config.ts';
 import type { ApiRequestContext } from '../../src/core/api/dispatch.ts';
 import {
 	authorizeUpdateManifest,
+	localOriginRefusal,
 	utilsApiActions,
 } from '../../src/core/api/handlers/dd_utils_api.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
@@ -343,5 +344,39 @@ describe('the rewire is real (source assertions — a revert must go red)', () =
 	test('the refusal bytes live in exactly one place now', () => {
 		expect(source.split("'Error. Invalid code'").length - 1).toBe(1);
 		expect(source.split("'Error. Invalid version number'").length - 1).toBe(1);
+	});
+});
+
+describe('localOriginRefusal — a local public origin is never advertised to another machine', () => {
+	test('a public origin serves everyone', () => {
+		expect(localOriginRefusal({ originIsLocal: false, clientIp: '203.0.113.9' })).toBeNull();
+	});
+
+	test.each(['127.0.0.1', '::1', '::ffff:127.0.0.1', 'local'])(
+		'a local origin still serves a same-machine caller (%p — dev two-instance, update drill)',
+		(clientIp) => {
+			expect(localOriginRefusal({ originIsLocal: true, clientIp })).toBeNull();
+		},
+	);
+
+	test.each(['203.0.113.9', '192.168.1.20', '2001:db8::1'])(
+		'a local origin REFUSES a remote caller (%p) and names the key to fix',
+		(clientIp) => {
+			const msg = localOriginRefusal({ originIsLocal: true, clientIp });
+			expect(msg).not.toBeNull();
+			expect(msg as string).toContain('DEDALO_HOST');
+		},
+	);
+
+	test('BOTH doors apply it AFTER authorization (only an authorized peer learns of it)', () => {
+		const source = readFileSync(HANDLER_SOURCE_PATH, 'utf8');
+		for (const door of ['get_ontology_update_info: async', 'get_code_update_info: async']) {
+			const body = source.slice(source.indexOf(door), source.indexOf(door) + 3000);
+			const auth = body.indexOf('authorizeUpdateManifest({');
+			const guard = body.indexOf('localOriginRefusal({');
+			expect(auth).toBeGreaterThan(-1);
+			expect(guard).toBeGreaterThan(auth);
+			expect(body.indexOf('publicOrigin()')).toBeGreaterThan(guard);
+		}
 	});
 });

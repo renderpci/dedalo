@@ -44,6 +44,12 @@
   min-width: 34rem;
   max-width: 60rem;
 }
+@media screen and (max-width: 600px) {
+  .wrapper_tool.tool_identify > .content_data {
+    min-width: 0;
+    padding: 0.5rem;
+  }
+}
 .wrapper_tool.tool_identify > .content_data .identify_thumb {
   flex: 0 0 auto;
   display: flex;
@@ -957,8 +963,5 @@
   text-transform: uppercase;
   font-size: 0.78em;
   letter-spacing: 0.03em;
-}
-.tool_header.tool_identify {
-  background-color: var(--tool_identify);
 }
 /*# sourceMappingURL=tool_identify.css.map */

@@ -32,7 +32,7 @@
  *     2. a REAL master instance boots (suite database, scratch state) with
  *        IS_A_CODE_SERVER + DEDALO_CODE_SERVER_GIT_DIR + DEDALO_CODE_FILES_DIR;
  *     3. the release archive is built THROUGH THE WIRE
- *        (widget_request → build_version_from_git_master), sidecar included;
+ *        (widget_request serve_code → build_version_from_git_master), sidecar included;
  *     4. the serving URL is probed anonymously (code_serving.ts).
  *
  *   STAGING_VALIDATION §I1/I2-class assertions (the consumer side)
@@ -761,7 +761,7 @@ async function main(): Promise<void> {
 				prevent_lock: true,
 				source: {
 					type: 'widget',
-					model: 'update_code',
+					model: 'serve_code',
 					action: 'build_version_from_git_master',
 				},
 				options: { version: RELEASE_VERSION, ref: RELEASE_BRANCH },

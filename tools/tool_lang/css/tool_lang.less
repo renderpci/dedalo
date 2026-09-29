@@ -86,13 +86,6 @@
 		margin-bottom: 0.5rem;
 	}
 
-	// the identity hue; tool_common.less demotes it to the header's top edge and
-	// owns everything else here — surface, ink, the controls band and its captions,
-	// select shape, control heights, the narrow-viewport behaviour
-	>.tool_header {
-		background-color: @tool_color;
-	}//end >.tool_header
-
 
 	// The tool body is a column: the two panes take whatever height is left and the
 	// action row sits under them. It used to be `height: calc(100vh - 14rem)` on
@@ -462,8 +455,3 @@
 		}
 	}
 }//end wrapper_tool
-
-// modal header tool modification
-.tool_header.tool_lang {
-	background-color: @tool_color;
-}

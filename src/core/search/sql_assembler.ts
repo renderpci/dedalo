@@ -54,17 +54,17 @@ import {
 	FILTER_MASTER_COMPONENT as USERS_FILTER_MASTER_COMPONENT,
 } from '../security/permissions.ts';
 import { bareBrowseCount, scopedBrowseCount } from './bare_count.ts';
-import type { BuilderResult } from './builders/types.ts';
 import type { ConformedFilter } from './conform.ts';
 import { conformFilter } from './conform.ts';
 import { composeContains, relationProbeGroups } from './containment.ts';
+import { reverseDeepPaths } from './deep_path.ts';
 import {
 	assertValidDataColumn,
 	assertValidLang,
 	assertValidTipo,
 	assertValidTipoOrColumn,
 } from './identifier_gate.ts';
-import { ParamsCollector } from './params.ts';
+import { ParamsCollector, resolveBuilderResult } from './params.ts';
 
 const DEFAULT_DATA_LANG = readString('DATA_LANG');
 
@@ -94,21 +94,6 @@ export interface BuiltQuery {
 	params: unknown[];
 }
 
-/** Resolve a BuilderResult into an SQL fragment string (or '' when empty). */
-function resolveBuilderResult(result: BuilderResult, params: ParamsCollector): string {
-	if (result === false) return '';
-	if (result.kind === 'fragment') {
-		return params.substitute(result.sentence, result.tokenValues);
-	}
-	// compound: recurse and join
-	const parts = result.items
-		.map((item) => resolveBuilderResult(item, params))
-		.filter((part) => part !== '');
-	if (parts.length === 0) return '';
-	const joiner = result.op === '$and' ? '\n AND ' : '\n OR ';
-	return parts.length === 1 ? (parts[0] as string) : `( ${parts.join(joiner)} )`;
-}
-
 /**
  * The recursive filter parser (PHP filter_parser, trait.where.php:281):
  * AND/OR join; NOT/NAND wrap in NOT(...AND...); NOR wraps NOT(...OR...).
@@ -121,6 +106,7 @@ function collectJoins(node: ConformedFilter, sink: Map<string, string>): void {
 		}
 		return;
 	}
+	if (node.kind === 'reverse') return; // deep_path.ts: no joins by construction
 	for (const item of node.items) collectJoins(item, sink);
 }
 
@@ -136,6 +122,10 @@ export function renderConformedFilter(node: ConformedFilter, params: ParamsColle
 function parseConformedFilter(node: ConformedFilter, params: ParamsCollector): string {
 	if (node.kind === 'leaf') {
 		return resolveBuilderResult(node.fragment, params);
+	}
+	if (node.kind === 'reverse') {
+		const inner = resolveBuilderResult(node.inner, params);
+		return inner === '' ? '' : `${node.open}${inner}${node.close}`;
 	}
 	const fragments = node.items
 		.map((item) => {
@@ -1379,11 +1369,9 @@ async function buildPlainSearchSql(sqo: Sqo, options: SearchOptions): Promise<Bu
 	let nonAclWhereParts = 0;
 	const joinFragments = new Map<string, string>();
 	if (sqo.filter !== undefined && sqo.filter !== null) {
-		const conformed = await conformFilter(
-			sqo.filter as Record<string, unknown>,
-			alias,
-			matrixTable,
-			pathScope,
+		// Deep paths driven from the leaf where provably exact (deep_path.ts).
+		const conformed = await reverseDeepPaths(
+			await conformFilter(sqo.filter as Record<string, unknown>, alias, matrixTable, pathScope),
 		);
 		collectJoins(conformed, joinFragments);
 		const filterSql = parseConformedFilter(conformed, params);

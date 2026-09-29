@@ -610,6 +610,11 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		scope:
 			'the tool NAMES of this checkout — every `tools/tool_<name>/` directory, for gates that census where src/ names a specific tool (core_tool_edge_tripwire)',
 	},
+	'scripts/tool_colors.ts': {
+		roots: [['tools']],
+		scope:
+			'every tool\'s identity hue — the `--<tool>` (or `--<tool>_color`) declaration in each `tools/tool_<name>/css/tool_<name>.less`, the input of the GENERATED tool_colors.less; read by tool_color_contrast_tripwire to prove the generated file is fresh',
+	},
 	'test/helpers/migrations_corpus.ts': {
 		roots: [['install/db/migrations']],
 		scope:

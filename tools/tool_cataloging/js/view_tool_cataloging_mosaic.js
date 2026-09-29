@@ -6,6 +6,7 @@
 
 // imports
 	import {event_manager} from '../../../core/common/js/event_manager.js'
+	import * as touch_pick from '../../../core/common/js/touch_pick.js'
 	import {window_section_rows} from '../../../core/section/js/section.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {set_element_css} from '../../../core/page/js/css.js'
@@ -383,9 +384,39 @@ const set_drag_and_drop = function(options) {
 			on_dragstart_mosaic(this, e, options)
 		})
 
+	// touch: a finger cannot drag (HTML5 dragstart never fires), so a TAP picks
+	// the same payload and a tap on a thesaurus term places it (touch_pick.js;
+	// the term side is wired in view_default_edit_ts_object.render_wrapper)
+		if (touch_pick.is_touch()) {
+			drag_node.addEventListener('click', function(e){
+				e.stopPropagation()
+				touch_pick.pick(
+					get_transfer_data(options),
+					String(options.locator?.section_id ?? '')
+				)
+			})
+		}
+
 
 	return true
 }//end set_drag_and_drop
+
+
+
+/**
+* GET_TRANSFER_DATA
+* The drop payload, as the 'text/plain' JSON string both gestures carry (the
+* mouse drag and the touch pick). One builder, so the two cannot drift.
+* @param {Object} options - {locator, paginated_key}
+* @returns {string}
+*/
+const get_transfer_data = function(options) {
+	return JSON.stringify({
+		locator			: options.locator,
+		paginated_key	: options.paginated_key,
+		caller			: 'tool_cataloging'
+	})
+}//end get_transfer_data
 
 
 
@@ -426,14 +457,7 @@ const on_dragstart_mosaic = function(node, event, options) {
 		const paginated_key	= options.paginated_key
 
 	// will be necessary the original locator of the section_record and the paginated_key (the position in the array of data)
-		const transfer_data = {
-			locator			: locator,
-			paginated_key	: paginated_key,
-			caller			: 'tool_cataloging'
-		}
-
-		// the data will be transfer to drop in text format
-		const data = JSON.stringify(transfer_data)
+		const data = get_transfer_data({locator, paginated_key})
 
 	event.dataTransfer.effectAllowed = 'move';
 	event.dataTransfer.setData('text/plain', data);

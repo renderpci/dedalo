@@ -39,6 +39,11 @@
   color: var(--color_white);
   min-height: 2.5em;
 }
+@media screen and (max-width: 600px) {
+  .wrapper_tool.tool_lang_multi .top_container .button_automatic_translation {
+    min-height: 44px;
+  }
+}
 .wrapper_tool.tool_lang_multi .top_container > .status_container {
   flex: 0 0 100%;
   text-align: left;
@@ -162,8 +167,5 @@
   word-break: break-word;
   font-size: 0.95em;
   line-height: 1.4;
-}
-.tool_header.tool_lang_multi {
-  background-color: var(--tool_lang_multi);
 }
 /*# sourceMappingURL=tool_lang_multi.css.map */

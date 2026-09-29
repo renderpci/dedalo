@@ -174,6 +174,8 @@ const TRIPWIRES = [
 	'test/unit/diffusion_queue_stream_tripwire.test.ts',
 	'test/unit/dataframe_scan_coverage_tripwire.test.ts',
 	'test/unit/tool_header_contract_tripwire.test.ts',
+	'test/unit/tool_phone_tripwire.test.ts',
+	'test/unit/tool_color_contrast_tripwire.test.ts',
 	'test/unit/external_registry_totality_tripwire.test.ts',
 	'test/unit/external_outbound_tripwire.test.ts',
 	'test/unit/external_secret_confinement_tripwire.test.ts',

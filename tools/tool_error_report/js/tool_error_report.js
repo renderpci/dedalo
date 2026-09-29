@@ -205,14 +205,14 @@ tool_error_report.prototype.collect_report_data = function() {
 			? window.dedalo_js_errors.slice(-50)
 			: []
 		const js_errors	= buffer.map(el => ({
-			type	: el.type==='unhandledrejection' ? 'unhandledrejection' : 'error',
+			type	: (el.type==='unhandledrejection' || el.type==='console') ? el.type : 'error',
 			msg		: typeof el.msg==='string' ? el.msg.slice(0, 2000) : null,
 			source	: typeof el.source==='string' ? el.source.slice(0, 1024) : null,
 			line	: typeof el.line==='number' ? el.line : null,
 			col		: typeof el.col==='number' ? el.col : null,
 			stack	: typeof el.stack==='string' ? el.stack.slice(0, 6000) : null,
 			time	: typeof el.time==='string' ? el.time.slice(0, 40) : null,
-			count	: typeof el.count==='number' && el.count > 0 ? el.count : 1
+			count	: typeof el.count==='number' && el.count > 0 ? Math.min(el.count, 1000000) : 1
 		}))
 
 	// informational snapshot (server re-asserts identity; this only helps

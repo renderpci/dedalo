@@ -32,6 +32,21 @@
 				margin-bottom:  2em;
 				border-bottom: 1px dotted @color_grey_13;
 
+				// phone: the option groups wrap into rows instead of running past
+				// the screen edge; the per-group divider becomes noise
+				@media screen and (max-width: @width_break_point_phone) {
+					flex-wrap: wrap;
+					justify-content: flex-start;
+					gap: 0.5rem 1rem;
+
+					.option_container {
+						border-right: none;
+					}
+					.selector {
+						max-width: 100%;
+					}
+				}
+
 				>.lang_container {
 					display: flex;
 					align-items: center;
@@ -243,8 +258,3 @@
 
 	}//end .wrapper_tool.tool_tr_print
 
-
-// modal and new window header tool modification
-	.tool_header.tool_tr_print {
-		background-color: @tool_color;
-	}

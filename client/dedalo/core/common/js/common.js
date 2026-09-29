@@ -2797,15 +2797,23 @@ export const push_browser_history = function(options) {
 *
 * @param {Object} self - The Dédalo instance (area, section, or component_portal)
 *   that owns `self.rqo` (the pre-built request query object) and `self.status`
+* @param {Object} [options]
+* @param {boolean} [options.recovery_retry=false] - internal: this call is the one
+*   re-send after a recovered auth failure (re-login); it never retries again
 * @returns {Promise<Object|boolean>} The raw api_response object on success, or false
 *   when the response is missing/invalid or a known error was handled
 */
-export const build_autoload = async function(self) {
+export const build_autoload = async function(self, {recovery_retry=false}={}) {
 
 	// load context and data
 		const api_response = self.tmp_api_response || await data_manager.request({
 			body : self.rqo
 		})
+
+	// build_error. The request's ApiError, kept so a caller that only sees
+	// build()===false can say what actually failed (render_build_failure)
+	// instead of guessing permissions. null on success / empty-data answers.
+		self.build_error = request_failed(api_response) ? api_response.error : null
 
 	// debug last server error. Only for development
 		if(SHOW_DEVELOPER===true || SHOW_DEBUG===true) {
@@ -2843,12 +2851,15 @@ export const build_autoload = async function(self) {
 			// is gone — today that means the user logged back in.
 				if (request_failed(api_response)) {
 					const {recovered} = await handle_api_error(api_response.error, {wrapper: self.node})
-					if (recovered===true && !(window.unsaved_data ?? false)) {
-						await self.build(true)
-						await self.render({
-							render_level	: 'full', // content|full
-							render_mode		: self.mode
-						})
+					// Recovered (re-login): re-send the SAME request and hand its answer
+					// back to the build() in flight. (!) Never a nested build()+render()
+					// here: that rendered a second copy, reset build_error, and this
+					// function still answered false — so the caller painted a phantom
+					// "permissions" banner over a page that had in fact loaded.
+					// One retry only (`recovery_retry`): a second auth failure stops.
+					if (recovered===true && !(window.unsaved_data ?? false) && recovery_retry!==true) {
+						delete self.tmp_api_response
+						return build_autoload(self, {recovery_retry: true})
 					}
 				}
 

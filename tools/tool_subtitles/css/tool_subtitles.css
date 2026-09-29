@@ -147,9 +147,6 @@
   background-position-y: 3px !important;
   background-position-x: 6px !important;
 }
-.tool_header.tool_subtitles {
-  background-color: var(--tool_subtitles);
-}
 /* COMMON
 ------------------------------------------------------ */
 .tool_subtitles_left,

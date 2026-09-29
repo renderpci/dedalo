@@ -5,6 +5,11 @@
 * Included from main.less file
 */
 
+// per-tool --tool_edge / --tool_fill / --tool_on_fill (GENERATED: scripts/tool_colors.ts)
+@import (once) "tool_colors";
+@import (once, reference) "tool_mixins";
+@import (once) "tool_responsive";
+
 // THE TOOL HEADER CONTROLS BAND — shared geometry.
 // One height and one padding for every tool, so the band does not stand at a
 // different height (and the content below does not start at a different y) in
@@ -72,7 +77,10 @@
 // (!) Note that is defined outside wrapper_tool to be compatible with modal and new tab window
 .tool_header {
 	contain: content;
-	background-color: @color_orange_dedalo;
+	// the edge colour: the tool's generated --tool_edge (tool_colors.less). Nine
+	// tool sheets never set it, so they all showed the brand orange (tool_indexation
+	// read as orange, not cyan); the orange stays as the fallback for a hueless tool.
+	background-color: var(--tool_edge, @color_orange_dedalo);
 	// THE IDENTITY HUE IS AN EDGE, NOT A SLAB (both themes since 2026-07-31).
 	//
 	// Every string in this bar is white (see `color` below, and the 44 tool-css
@@ -90,19 +98,20 @@
 	// Two deliberate choices let one block fix every tool, including tools added
 	// later:
 	//
-	//  1. The tool's own `background-color` is NOT overridden. This
-	//     `background-image` paints the header surface over everything BELOW the
-	//     first 3px, so what stays visible is a 3px strip of the tool's REAL
-	//     hue. No per-tool list to keep in sync, no `!important`, no specificity
-	//     war. (Safe because no tool uses the `background` shorthand here — that
-	//     would reset the gradient.)
+	//  1. The `background-color` IS the edge (--tool_edge, GENERATED per tool
+	//     and theme in tool_colors.less); this `background-image` paints the
+	//     surface over everything BELOW the edge. Since 2026-09-27 no tool sheet
+	//     paints its header at all (tool_header_contract_tripwire), so there is
+	//     no per-tool list to keep in sync.
 	//
-	//  2. `--color_white` is RE-SCOPED to the theme's ink. Those 44 declarations
-	//     were written when the bar was always a saturated slab; on a neutral
-	//     surface #ffffff is invisible in light and wrong in dark. Out-specifying
-	//     44 declarations from here would be a losing game; re-pointing the token
-	//     they all read is one line. Scoped to the header, so the page-level
-	//     meaning of --color_white is untouched.
+	//  2. `--color_white` is RE-SCOPED to the theme's ink. The 44 per-tool
+	//     header declarations it was written for are gone, but it is still
+	//     load-bearing: CORE rules render inside this header with white as their
+	//     default — the window-view close button (`.button.close.white` mask),
+	//     `.button.white` icons, button glyphs `var(--button-bg-color,
+	//     @color_white)` — and on a neutral surface #ffffff is invisible in light.
+	//     Scoped to the header, so the page-level meaning is untouched. Do not
+	//     remove it without re-inking those (checked 2026-09-27).
 	//
 	// --bg_surface_alt is the app's own menu-bar material, so a tool window reads
 	// as the same product; it is also RECESSED relative to the control fills
@@ -115,17 +124,36 @@
 	// #ffa54a) read as generic chrome rather than as this tool's colour. 4px is
 	// still an edge, not the slab this replaced — but it is legible at a glance.
 	@edge_height: 4px;
-	background-image: linear-gradient(
+	// THE WASH. The surface under the edge carries 6% of the identity hue, so the
+	// whole bar (not only its 4px edge) says which tool this is. Mixed in SRGB,
+	// not oklch, because that is the space the contrast budget was measured in:
+	// the darkest hue (tool_tc, #000) is the worst case, and at 6% the header's
+	// muted ink (#626262, see the LIGHT THEME CONTRAST block) still clears 4.93:1;
+	// dark worst case 6.44:1. 8% dropped light to 4.71 with no gain in recognition.
+	// --tool_edge comes from the GENERATED tool_colors.less; a tool without a hue
+	// (tool_ontology) gets transparent, i.e. the plain surface.
+	--tool_wash: color-mix(in srgb, var(--tool_edge, transparent) 6%, var(--bg_surface_alt));
+	@tool_header_surface: linear-gradient(
 		to bottom,
 		transparent 0,
 		transparent @edge_height,
-		var(--bg_surface_alt) @edge_height,
-		var(--bg_surface_alt) 100%
+		var(--tool_wash) @edge_height,
+		var(--tool_wash) 100%
 	);
+	background-image: @tool_header_surface;
 	--color_white: var(--fg_default); // see (2) above
 	position: relative;
 	color: var(--fg_default);
-	box-shadow: inset 0 -1px 0 var(--border_default); // hairline against the body
+	// ONE SHADOW, both contexts (2026-09-27): the hairline against the body plus
+	// the modal header's drop shadow, the same in a modal and in the tool's own
+	// window. It was a bare hairline in a window, and in a modal `dd-modal .header`
+	// swapped it for --modal_header_shadow while the shadow-root bar drew a second
+	// one at its fixed 3.66rem, across a taller tool header. That bar no longer
+	// draws one (dd-modal.js); `&.header` below restates this over layout.less.
+	@tool_header_shadow: inset 0 -1px 0 var(--border_default), var(--modal_header_shadow);
+	box-shadow: @tool_header_shadow;
+	// above the body that follows it, or the body's own background hides the shadow
+	z-index: 1;
 	width: 100%;
 	display: flex;
 	align-items: center;
@@ -165,13 +193,15 @@
 			align-items: center;
 
 			>.button {
-				// the mask fill IS the icon colour; the bar is a neutral surface
-				// in both themes now, so it follows the header ink
+				// the mask fill IS the icon colour; it follows the header title ink
+				// (design decision 2026-09-27: the tool's identity lives in the edge
+				// and the wash, not in the icon)
 				background-color: var(--fg_default) !important;
 				font-size: 1.25rem;
 				vertical-align: baseline;
 				margin-right: 0.75rem;
 			}
+
 		}
 
 		// the subtitle steps back from the title: on the old saturated bar both
@@ -295,6 +325,16 @@
 			box-sizing: border-box;
 			margin: 0px;
 			vertical-align: middle;
+
+			// phone: the band's one control height becomes the tap target
+			// (@phone_hit_target, tool_responsive.less). Stated HERE, not in
+			// tool_responsive: that sheet is imported above this block, so an
+			// equal-specificity override there loses the cascade.
+			@media screen and (max-width: @width_break_point_phone) {
+				height: @phone_hit_target;
+				min-height: @phone_hit_target;
+				line-height: normal;
+			}
 		}
 
 		select {
@@ -508,28 +548,23 @@
 	// INSIDE A MODAL.
 	// tool_common.js promotes the tool's own header into the modal's
 	// <slot name="header"> and adds `.header` to it, so the node is both
-	// `.tool_header` and the modal's `.header` — and `dd-modal .header`
-	// (layout.less) sets `color: var(--modal_header_color)`.
+	// `.tool_header` and the modal's `.header`. The INK needs nothing here any
+	// more: the modal tokens are theme ink on a neutral surface since 2026-09-27
+	// (vars_tokens.less MODAL TOKENS), the same as this header — which also
+	// retired the `dd-modal:has(.tool_header)` re-point of the shadow-root
+	// minimise/close glyphs.
 	//
-	// That token is NOT rescued by the `--color_white` re-point above. A custom
-	// property is substituted where it is DECLARED, not where it is used:
-	// `--modal_header_color: var(--color_white)` is declared at `:root`, so it
-	// computes to #ffffff there and inherits down as a literal white, whatever
-	// `--color_white` means further in. Measured on the header node:
-	// `--color_white` = #353535 (re-pointed, as intended) while
-	// `--modal_header_color` = #ffffff.
-	//
-	// So the modal header's title rendered WHITE on the neutral surface — the
-	// tool NAME, the one string that must always be readable. The description
-	// escaped it only because it carries its own `--fg_muted` rule at (0,3,0);
-	// the title has no colour of its own and simply inherited.
-	//
-	// Restated here at (0,2,0), which beats `dd-modal .header` (0,1,1) on
-	// specificity alone, so source order between the two files cannot matter.
-	// The modal's own bar keeps `--modal_header_color` — this narrows it to the
-	// case where a TOOL supplies the header.
+	// The SURFACE still does: `dd-modal .header` (layout.less) paints its own
+	// background-image (the brand stripe over a transparent body) at (0,1,1),
+	// which beats `.tool_header` (0,1,0) — the wash was dropped and the tool's
+	// edge colour showed as a full slab (seen on tool_propagate_component_data).
+	// Same for the EDGE colour (`dd-modal .header` also sets background-color:
+	// a tool lost its edge in a modal) and the SHADOW (it sets box-shadow too).
+	// All three restated here at (0,2,0).
 	&.header {
-		color: var(--fg_default);
+		background-color: var(--tool_edge, @color_orange_dedalo);
+		background-image: @tool_header_surface;
+		box-shadow: @tool_header_shadow;
 
 		>.button.close {
 			display: none;
@@ -538,32 +573,26 @@
 }//end .tool_header
 
 
-// THE MODAL'S OWN CHROME, WHEN A TOOL SUPPLIES THE HEADER
+// TOOL BUTTON ROLES
 // ------------------------------------------------------------------
-// The minimise `_` and close `✕` live in dd-modal's SHADOW ROOT
-// (client/dedalo/core/common/js/dd-modal.js — `.mini_modal` / `.close_modal`),
-// so no selector here can reach them. What DOES reach them is inheritance: they
-// read `--modal_btn_color` / `--modal_btn_hover_color`, and custom properties
-// cross the shadow boundary from the host.
+// Three roles, one source. The tool's colour reaches a button ONLY through the
+// GENERATED pair (tool_colors.less): --tool_fill is the identity hue clamped in
+// OKLCH lightness until --tool_on_fill clears 4.5:1, --tool_fill_hover moves
+// further AWAY from the ink, so hover can only raise contrast. Never the raw
+// hue under text: half the hues fail white and the other half fail black.
 //
-// Those tokens are correct for the modal's OWN bar, which is
-// `--modal_header_bg` = the saturated Dédalo orange — white glyphs on it. But
-// when a TOOL supplies the header the bar becomes the neutral --bg_surface_alt
-// this file paints, and white glyphs disappear into it. Same failure as the
-// title (see `&.header` above), one element over and out of reach of the same
-// fix, because these are the MODAL's controls, not the tool's.
+//  primary    the tool's main action — the clamped tool fill
+//  light      secondary — neutral (buttons.less), the hue only as hover edge
+//  warning/danger  global semantics, never the tool's colour (untouched here)
 //
-// So the condition is stated where it is true — a dd-modal whose header came
-// from a tool — and the tokens are re-pointed on the host for that case only. A
-// modal with its own orange bar is untouched.
-//
-// `--fg_muted` at rest, `--fg_default` on hover: the same quiet-then-committed
-// hierarchy the header's captions use, and it retunes with the theme for free.
-// Both glyphs are 1.75rem bold (≈17pt), i.e. WCAG large text at a 3:1 floor —
-// --fg_muted measures 3.71:1 on the light bar and 7.64:1 on the dark one.
-dd-modal:has(.tool_header) {
-	--modal_btn_color: var(--fg_muted);
-	--modal_btn_hover_color: var(--fg_default);
+// Scoped to the wrapper AND the header because in a modal the header is
+// promoted into dd-modal's slot and is no longer inside .wrapper_tool.
+// Every tool has a hue now (tool_ontology via --tool_ontology_color).
+:is(.wrapper_tool, .tool_header) button.primary {
+	.tool_action_button();
+}
+:is(.wrapper_tool, .tool_header) button.light:hover {
+	border-color: var(--tool_edge, @color_light_hover_border);
 }
 
 
@@ -588,8 +617,11 @@ dd-modal:has(.tool_header) {
 // Scoped by `:not([data-theme="dark"])` rather than re-pointed inside
 // .tool_header and restored in the dark block, so the dark value stays in the
 // one place that owns it and is not copied here to be kept in sync.
+// 2026-09-27: #626262 — the surface is now the 6% hue WASH, not plain #f6f6f6,
+// and the darkest wash (tool_tc) took #6f6f6f to 4.06:1. #626262 is the
+// lightest neutral clearing 4.5:1 on every generated wash (worst 4.93:1).
 :root:not([data-theme="dark"]) .tool_header {
-	--fg_muted: #6f6f6f;
+	--fg_muted: #626262;
 }
 
 

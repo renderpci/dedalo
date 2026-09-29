@@ -40,8 +40,16 @@
   padding-bottom: 1rem;
 }
 .wrapper_tool.tool_propagate_component_data > .content_data > .buttons_container button {
-  background-color: var(--tool_propagate_component_data);
-  border-color: var(--tool_propagate_component_data);
+  background-color: var(--tool_fill);
+  border-color: var(--tool_fill);
+  color: var(--tool_on_fill);
+}
+.wrapper_tool.tool_propagate_component_data > .content_data > .buttons_container button::before {
+  background-color: var(--button-bg-color, var(--tool_on_fill)) !important;
+}
+.wrapper_tool.tool_propagate_component_data > .content_data > .buttons_container button:hover {
+  background-color: var(--tool_fill_hover);
+  border-color: var(--tool_fill_hover);
 }
 @media screen and (max-width: 960px) {
   .wrapper_tool.tool_propagate_component_data > .content_data > .buttons_container button {
@@ -60,8 +68,5 @@
 }
 .wrapper_tool.tool_propagate_component_data > .content_data > .response_message .successfully {
   font-weight: 600;
-}
-.tool_header.tool_propagate_component_data {
-  background-color: var(--tool_propagate_component_data);
 }
 /*# sourceMappingURL=tool_propagate_component_data.css.map */

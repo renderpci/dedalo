@@ -19,6 +19,45 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **Tools work on phones**
+
+    On a phone (screens up to 600px wide), 34 of the 37 tools now display and work:
+    the page no longer scrolls sideways, buttons and fields are large enough to tap,
+    titles no longer break mid-word, and tools that open in a dialog fill the whole
+    screen. Wide tables (such as the label translation matrix) scroll inside their
+    own box, and the thesaurus tree has larger tap targets.
+
+    Tools that relied on dragging (cataloguing and coin ordering) gain a touch
+    alternative: tap a record to pick it, then tap the term or slot to place it.
+
+    Also fixed along the way: the site-builder tool could not be opened from its
+    maintenance widget; the subtitles tool crashed on a record with no subtitles
+    yet; the section list became wider than a phone after returning from a record
+    with a pinned semantic search; the AI assistant panel now fills the screen on a
+    phone.
+
+    For tool developers: every tool built from the template could not reach its
+    server (`tool_request` was missing from the standard wiring); `wire_tool` now
+    provides it. New tools are entered in the phone check automatically.
+
+- **Tool windows and dialogs: readable buttons and one consistent header**
+
+    Every tool keeps its own colour, but that colour no longer makes text hard to read.
+
+    - **Buttons** painted in a tool's colour now always pair it with a readable label
+      colour (at least 4.5:1, in the light and the dark theme). Before, some tools put
+      dark text on their colour — the *Replace* and *Delete* buttons of *Propagate
+      component data* were barely legible on red.
+    - **Headers** look the same in every tool and every dialog, whether the tool opens
+      in a dialog or in its own window: a light bar with the tool's colour as a thin top
+      edge and a faint tint, the same shadow, and the title in the normal text colour.
+      Plain dialogs (confirmations, record pickers) use the same header instead of a dark
+      bar. Several tools that showed the generic orange edge now show their own colour.
+    - The dialog's **minimise and close** buttons are larger click targets and show a
+      visible outline when reached with the keyboard.
+
+#### Changed
+
 - **The history of a field that links records is one timeline, whatever the working language.**
 
     A field that links records — a portal, a select, a check box, a list of informants — holds
@@ -54,6 +93,26 @@ Merged since the last release; these ship with the next one.
     Wire contract: `WC-2026-09-27-csv-import-append-mode`.
 
 #### Fixed
+
+- **A section that fails to load says why, and can be reloaded**
+
+    When a section or thesaurus element could not be loaded, the red banner always
+    suggested a permissions problem, even when the real cause was a failed request
+    (server restarting, timeout, network). The banner now shows the actual error,
+    keeps the permissions hint only when the server answered with nothing to show,
+    and offers a Reload button for temporary failures that rebuilds just that
+    element.
+
+    It also no longer appears after logging back in: when a session expired and the
+    user re-logged, the page loaded but the "permissions" banner was painted over
+    it anyway. The request is now re-sent once after re-login and the page builds
+    normally.
+
+- **Searching through a related record (e.g. a coin's type → its mint → the mint's name) is much faster.**
+
+    A filter on a field of a linked record used to scan every record of the section being searched, whatever the filter selected. On a 184,000-coin collection, searching coins by the name of their type's mint took about 3 seconds per paint (up to 9 with a cold cache). The search now starts from the few linked records that match and walks the links back, so the same search answers in a few tens of milliseconds.
+
+    The results are the same: the faster route is used only where it provably returns exactly the same records, and every other search (for example "is empty") keeps the previous route.
 
 - **Reverting the same bulk run a second time no longer reports records as "not reverted" when nothing changed.**
 
@@ -204,6 +263,46 @@ Merged since the last release; these ship with the next one.
 
 ### For administrators
 
+#### Changed
+
+- **Building and serving code releases now has its own maintenance panel, Serve Code.**
+
+    The **Update code** panel used to hold two jobs: installing a new release on this installation, and — on a code server — building releases from git and serving them to others. The second job is now its own panel, **Serve Code**, shown only on a code server (`IS_A_CODE_SERVER=true`) or the development installation. **Update code** keeps installing, restoring and deleting restore points.
+
+    For scripts that build releases through the API: send the build request to `serve_code` instead of `update_code` (same action name, `build_version_from_git_master`, same options).
+
+    Wire contract: `WC-2026-09-28-maintenance-serve-code-widget`.
+
+- **Serving your ontology to other installations now has its own maintenance panel, Serve Ontology.**
+
+    The **Update Ontology** panel used to do two jobs: download an ontology from a master server, and — folded away at the bottom — report whether this installation can serve its own ontology to others. The two are now separate panels. **Update Ontology** only downloads; the new **Serve Ontology** panel shows the three `../private/.env` settings that decide serving (`IS_AN_ONTOLOGY_SERVER`, `ONTOLOGY_SERVER_CODE`, `DEDALO_CORS_ALLOWED_ORIGINS`), the lines to add, and the address other installations must register.
+
+    Wire contract: `WC-2026-09-28-maintenance-serve-ontology-widget`.
+
+#### Fixed
+
+- **Error reports now include logged client errors**
+
+    The "Report a problem" tool now attaches errors the client caught and logged (`console.error`), not only uncaught ones, so a report of real breakage no longer says "0 errors". Only a short message and stack are kept; repeats are counted, not duplicated.
+
+- **An update server with no public host now says so, instead of sending download links that point at localhost.**
+
+    When an ontology or code update server had no `DEDALO_HOST` set (or set it to `localhost`), it still answered other installations, but every download link in its answer pointed at `http://localhost`. The installation being updated rightly refused them, with an "origin mismatch" error that seemed to blame its own setup.
+
+    The server now refuses those requests itself, and its message names the setting to fix: set `DEDALO_HOST` (and `DEDALO_PROTOCOL`) on the update server. Requests from the same machine are still served, so local development setups keep working.
+
+- **The developer information bar is shown to developers and root again, on any server.**
+
+    The information strip at the top of the interface — engine version, build, database and runtime — is a developer surface. It had become tied to `DEDALO_DEV_MODE`, so on an installation that did not set that key it was hidden even from a logged-in developer, and setting it in `private/.env` did nothing because the container environment takes precedence. That is what a Docker installation saw: no developer bar, whatever the `.env` said.
+
+    The bar now follows the logged-in user, as the application itself did before the TypeScript rewrite: a user flagged as a developer in their record sees it, and root (superuser) always counts as a developer. `DEDALO_DEV_MODE` keeps its own meaning as the server posture — it selects the no-cache boot, the readable client libraries and the dev-only libraries the browser test harness needs — but it no longer decides who sees developer surfaces.
+
+    Debug-only surfaces (`SHOW_DEBUG`) are now shown to root alone, as before the rewrite; other developers keep the developer surfaces but not the debug ones, and non-developers see neither, even on a development server.
+
+    The main navigation bar is unchanged; only the extra information strip and the developer-only shortcuts are affected.
+
+### For administrators
+
 #### Fixed
 
 - **Time machine restore no longer fails on installs whose outbound host allowlist is empty.**
@@ -251,7 +350,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 49 entries"
+??? note "Wire contract — 51 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -302,6 +401,8 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-27-csv-import-append-mode`
     - `WC-2026-09-27-external-allowlist-at-door-only`
     - `WC-2026-09-29-dataframe-hard-delete-retired`
+    - `WC-2026-09-28-maintenance-serve-code-widget`
+    - `WC-2026-09-28-maintenance-serve-ontology-widget`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

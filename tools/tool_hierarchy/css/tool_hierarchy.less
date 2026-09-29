@@ -6,11 +6,11 @@
 
 // imports
 @import (once) '../../../client/dedalo/core/page/css/layout/vars';
+@import (once, reference) '../../../client/dedalo/core/tools_common/css/tool_mixins';
 
 // local vars
 :root {
 	--tool_hierarchy: #c80000;
-	--tool_hierarchy_border: #af0000;
 }
 @tool_color: var(--tool_hierarchy);
 
@@ -100,6 +100,21 @@
 						color: @color_grey_4;
 					}
 
+					// phone: a 12rem label left the detail ~90px, one word per
+					// line. The detail wraps UNDER the label, full width.
+					@media screen and (max-width: @width_break_point_phone) {
+						flex-wrap: wrap;
+
+						>.check_label {
+							flex: 1 1 calc(100% - 1.5rem);
+						}
+						>.check_detail {
+							flex: 1 1 100%;
+							padding-left: 1.5rem;
+							overflow-wrap: anywhere;
+						}
+					}
+
 					// The mark carries the state; colour alone never does (a11y).
 					&:before {
 						flex: 0 0 1rem;
@@ -136,8 +151,7 @@
 			justify-content: center;
 
 			button {
-				background-color: @tool_color;
-				border-color: var(--tool_hierarchy_border);
+				.tool_action_button();
 			}
 
 			.checkbox-label {
@@ -169,8 +183,3 @@
 	}//end content_data
 
 }//end wrapper_tool
-
-// modal and new window header tool modification
-.tool_header.tool_hierarchy {
-	background-color: @tool_color;
-}

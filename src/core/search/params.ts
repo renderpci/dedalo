@@ -14,6 +14,8 @@
  *   placeholders, registering values in insertion order.
  */
 
+import type { BuilderResult } from './builders/types.ts';
+
 export class ParamsCollector {
 	private readonly values: unknown[] = [];
 
@@ -46,4 +48,19 @@ export class ParamsCollector {
 	toArray(): unknown[] {
 		return [...this.values];
 	}
+}
+
+/** Resolve a BuilderResult into an SQL fragment string (or '' when empty). */
+export function resolveBuilderResult(result: BuilderResult, params: ParamsCollector): string {
+	if (result === false) return '';
+	if (result.kind === 'fragment') {
+		return params.substitute(result.sentence, result.tokenValues);
+	}
+	// compound: recurse and join
+	const parts = result.items
+		.map((item) => resolveBuilderResult(item, params))
+		.filter((part) => part !== '');
+	if (parts.length === 0) return '';
+	const joiner = result.op === '$and' ? '\n AND ' : '\n OR ';
+	return parts.length === 1 ? (parts[0] as string) : `( ${parts.join(joiner)} )`;
 }

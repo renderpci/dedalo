@@ -30,10 +30,16 @@ import { currentApplicationLang, currentDataLang } from './request_lang.ts';
 import { getServerState } from './server_state.ts';
 
 /**
- * Dev-mode signal (L5): drives the SHOW_DEBUG / SHOW_DEVELOPER / DEVELOPMENT_SERVER
- * client flags instead of hardcoding them true. Defaults FALSE (production posture);
- * set DEDALO_DEV_MODE=true on a development deployment. Still gated by isLogged so
- * anonymous callers never learn the posture.
+ * Dev-mode signal (L5): the SERVER posture. It drives DEVELOPMENT_SERVER (and,
+ * elsewhere, the no-cache boot path, the readable client libs and the browser
+ * test harness). Defaults FALSE (production posture).
+ *
+ * It deliberately does NOT drive the debug/developer SURFACES: those follow the
+ * LOGGED USER, exactly as PHP defined them in boot
+ * (core/base/boot/class.boot_web_phases.php: `SHOW_DEBUG = superuser`,
+ * `SHOW_DEVELOPER = logged_user_is_developer()`) and as the frozen oracle fixture
+ * records (test/parity/fixtures/oracle_harvest/environment_differential.json: a
+ * NON-developer on a dev server gets both false, DEVELOPMENT_SERVER true).
  */
 const DEV_MODE = readString('DEDALO_DEV_MODE') === 'true';
 
@@ -55,10 +61,19 @@ const DD_TIPOS: Readonly<Record<string, string>> = {
 
 /**
  * JS plain globals (PHP get_js_plain_vars). URL layout matches the PHP deploy.
- * `isLogged` gates the developer/debug flags: an unauthenticated caller (the login
- * form) must not be told the server runs in debug/developer/dev-server mode.
+ *
+ * The debug/developer flags are PER-USER (PHP boot): an unauthenticated caller
+ * (the login form) gets both false, so it never learns whether the person who
+ * might log in would see developer surfaces. DEVELOPMENT_SERVER is the server's
+ * own posture (DEDALO_DEV_MODE) and is emitted pre-auth on purpose — see below.
  */
-export function buildPlainVars(isLogged: boolean): Record<string, unknown> {
+export function buildPlainVars(
+	session: Session | null,
+	principal: Principal | null,
+): Record<string, unknown> {
+	const isLogged = session !== null;
+	const isRoot = (session?.userId ?? null) === -1;
+	const isDeveloper = principal?.isDeveloper === true;
 	// DIFFUSION CUTOVER LEVER (DIFFUSION_PLAN P5, spec §2.3): the copied
 	// tool_diffusion client calls DEDALO_DIFFUSION_API_URL when defined and
 	// falls back to the MAIN API otherwise. Emitting the key points the client
@@ -85,15 +100,19 @@ export function buildPlainVars(isLogged: boolean): Record<string, unknown> {
 		// Additional-root tools only (name → base URL); primary-root tools are
 		// absent and fall back to /dedalo/tools/<name> in the client (instances.js).
 		DEDALO_TOOLS_URLS: getAdditionalToolsUrlMap(),
-		// Developer/debug flags — config-driven (DEDALO_DEV_MODE, default false).
-		// SHOW_DEBUG/SHOW_DEVELOPER stay authenticated-only (never advertise the
-		// debug posture to anonymous callers). DEVELOPMENT_SERVER must be exposed
-		// pre-auth like PHP (get_js_plain_vars emits it unconditionally): the login
+		// Debug/developer SURFACES follow the LOGGED USER, not the server posture
+		// (PHP boot class.boot_web_phases.php): SHOW_DEBUG = superuser,
+		// SHOW_DEVELOPER = the user's is_developer flag. In v7 root resolves
+		// isDeveloper=true, so the developer bar is shown to root through
+		// SHOW_DEVELOPER as well. Both stay authenticated-only: an anonymous
+		// caller must never learn the posture (PHP get_js_plain_vars gated them
+		// on the logged user too). DEVELOPMENT_SERVER, by contrast, must be
+		// exposed pre-auth like PHP (it is emitted unconditionally): the login
 		// form reads it BEFORE authentication to pick the no-service-worker cache
 		// path on dev servers — gating it on isLogged stalls every dev login
 		// (S1-19 register; the flag only reveals dev-vs-prod posture, not debug data).
-		SHOW_DEBUG: isLogged && DEV_MODE,
-		SHOW_DEVELOPER: isLogged && DEV_MODE,
+		SHOW_DEBUG: isLogged && isRoot,
+		SHOW_DEVELOPER: isLogged && isDeveloper,
 		DEVELOPMENT_SERVER: DEV_MODE,
 		DEDALO_UPLOAD_SERVICE_CHUNK_FILES: config.media.upload.chunkFilesMb,
 		DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT: config.media.upload.maxConcurrent,
@@ -389,7 +408,7 @@ export async function buildEnvironment(
 	return {
 		result: {
 			page_globals: await buildPageGlobals(session, principal),
-			plain_vars: buildPlainVars(session !== null),
+			plain_vars: buildPlainVars(session, principal),
 			get_label: await getLabels(currentApplicationLang()),
 		},
 		msg: 'OK. Request done successfully',

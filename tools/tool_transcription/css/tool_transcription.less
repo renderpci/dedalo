@@ -93,14 +93,12 @@
 		background-color: @tool_color;
 	}
 
-	// the identity hue; tool_common.less demotes it to the header's top edge and
-	// owns the rest — surface, ink, and the controls band: its geometry and gaps,
+	// tool_common.less owns the header — the identity edge (generated
+	// --tool_edge), surface, ink, and the controls band: its geometry and gaps,
 	// the caption idiom, the select shape, one control height for every widget on
 	// the line, and the narrow-viewport behaviour. What stays here is what the
 	// shared block deliberately does not reach.
 	>.tool_header {
-		background-color: @tool_color;
-
 		>.tool_buttons_container {
 
 			// (the `.container_label` treatment that used to sit here is gone:

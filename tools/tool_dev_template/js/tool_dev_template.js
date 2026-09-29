@@ -101,6 +101,7 @@ export const tool_dev_template = function () {
 *   render  <- tool_common.prototype.render   (full render dispatcher)
 *   destroy <- common.prototype.destroy       (cleanup, event unsubscribe)
 *   refresh <- common.prototype.refresh       (re-render in place)
+*   tool_request <- tool_common.prototype.tool_request (the server round-trip)
 *   edit    <- render_tool_dev_template.prototype.edit  (concrete DOM builder)
 *
 * This replaces the boilerplate of manually assigning each prototype.

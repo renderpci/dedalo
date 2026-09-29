@@ -695,6 +695,11 @@ export const wire_tool = function(tool_constructor, render_module) {
 	tool_constructor.prototype.render	= tool_common.prototype.render
 	tool_constructor.prototype.destroy	= common.prototype.destroy
 	tool_constructor.prototype.refresh	= common.prototype.refresh
+	// tool_request: the server round-trip. Part of the standard wiring: it was not,
+	// so tool_dev_template (the scaffolder's source) and every tool copied from it
+	// called self.tool_request on a prototype that lacked it ('not a function' —
+	// how tool_sitebuilder shipped unable to reach its server).
+	tool_constructor.prototype.tool_request	= tool_common.prototype.tool_request
 
 	if (render_module) {
 		if (typeof render_module.prototype.edit==='function') {

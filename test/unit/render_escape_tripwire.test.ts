@@ -1062,8 +1062,10 @@ const REMAINDER_RATCHET: Readonly<Record<string, number>> = {
 	'client/dedalo/core/area_maintenance/widgets/publication_api/js/render_publication_api.js': 1,
 	'client/dedalo/core/area_maintenance/widgets/register_tools/js/render_register_tools.js': 4,
 	'client/dedalo/core/area_maintenance/widgets/runtime_info/js/render_runtime_info.js': 1,
+	// moved out of render_update_ontology.js with the serving readout (2026-09-28), not new
+	'client/dedalo/core/area_maintenance/widgets/serve_ontology/js/render_serve_ontology.js': 1,
 	'client/dedalo/core/area_maintenance/widgets/update_code/js/render_update_code.js': 2,
-	'client/dedalo/core/area_maintenance/widgets/update_ontology/js/render_update_ontology.js': 5,
+	'client/dedalo/core/area_maintenance/widgets/update_ontology/js/render_update_ontology.js': 4,
 	'client/dedalo/core/area_thesaurus/js/render_area_thesaurus.js': 5,
 	'client/dedalo/core/common/js/common.js': 2,
 	'client/dedalo/core/common/js/dd-modal.js': 1,

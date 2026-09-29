@@ -1,0 +1,36 @@
+/**
+* serve_ontology
+*
+* Included from area_maintenance.less file.
+* The checklist, .env block and endpoint row come from widget_kit's
+* .dd_env_checklist(); only the state line lives here.
+*/
+.wrapper_widget.serve_ontology {
+
+	.serve_ontology_content {
+		.dd_env_checklist();
+		display: flex;
+		flex-direction: column;
+		gap: 0.8rem;
+
+		> .dd_note {
+			margin: 0;
+			line-height: 1.6;
+		}
+	}
+
+	.serve_state {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+
+		.ttl {
+			flex: 1 1 auto;
+			font-weight: 600;
+			color: var(--fg_default);
+		}
+		.dd_badge {
+			flex: 0 0 auto;
+		}
+	}
+}

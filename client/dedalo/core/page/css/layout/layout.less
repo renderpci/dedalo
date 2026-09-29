@@ -694,6 +694,10 @@
 		.header {
 			display: flex;
 			padding: 1rem;
+			// keep the title clear of the shadow-root window buttons (dd-modal.js):
+			// minimise at right 3.25rem + its 2.5rem box, plus a 0.75rem gap
+			@modal_window_buttons_clearance: 6.5rem;
+			padding-right: @modal_window_buttons_clearance;
 			background-color: var(--modal_header_bg);
 			// brand accent stripe (see --modal_header_accent); painted, no layout shift
 			background-image: linear-gradient(var(--modal_header_accent, transparent) 0 4px, transparent 4px);
@@ -717,6 +721,10 @@
 					margin-right: 0.5em;
 					display: inline-block;
 				}
+			}
+			// ...restated: the group above resets it for a label/content header
+			&.label, &.content {
+				padding-right: @modal_window_buttons_clearance;
 			}
 
 			.description {
@@ -787,6 +795,12 @@
 				padding: 0.5rem;
 				min-width: 34rem;
 				min-height: 20rem;
+				// phone: the modal is a full sheet (dd-modal.js); a 544px floor
+				// would overflow it by definition
+				@media screen and (max-width: @width_break_point_phone) {
+					min-width: 0;
+					min-height: 0;
+				}
 
 				>.wrapper_component {
 					margin: 1rem;

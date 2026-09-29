@@ -28,8 +28,9 @@ the process holds no cross-request search state:
 | `conform.ts` | **Phase A** — walk the SQO filter tree, gate every identifier, resolve each leaf's model/column, dispatch to the per-model fragment builder. |
 | `builders/` | the per-component SQL fragment builders (`builder_string`, `builder_number`, `builder_iri`, `builder_date`, `builder_section_id`, `builder_relation`). |
 | `identifier_gate.ts` | the injection chokepoint — `assertValidTipo` / `assertValidLang` / `assertValidDataColumn` / `assertValidTipoOrColumn`. |
+| `deep_path.ts` | between the phases — drives a multi-hop filter leaf from the LEAF through `matrix_relation_index` where that is provably exact (see [Deep-path filters](#deep-path-filters-driven-from-the-leaf)). |
 | `sql_assembler.ts` | **Phase B** — assemble SELECT / FROM / JOIN / WHERE / ORDER / LIMIT into the final `{sql, params}`; multi-section UNION; per-record projects ACL. |
-| `params.ts` | `ParamsCollector` — the positional `$1..$n` prepared-param list. |
+| `params.ts` | `ParamsCollector` — the positional `$1..$n` prepared-param list; `resolveBuilderResult()` renders a builder fragment onto it. |
 | `search_related.ts` | the inverse-reference / relation-breakdown engine — one btree query over `matrix_relation_index`, the only relation engine (see [The relation index](#the-relation-index-matrix_relation_index)). |
 | `search_store.ts` | coverage gates for the two derived stores: `matrix_string_search` (string contains pre-filter) and `matrix_relation_index` (inverse/related engine + WC-012 translation). Coverage = sync triggers present AND the store backfilled. |
 | `count.ts` | `countSectionRecords()` — the `full_count` variant for one section. |
@@ -86,7 +87,8 @@ flowchart TB
   a `$n` placeholder.
 - **Multi-section UNION** — `buildSearchSql()` emits one `UNION ALL` branch per
   matrix table when an SQO spans more than one section.
-- **Counting** — `full_count` builds the `count(DISTINCT …)` variant;
+- **Counting** — `full_count` builds the count variant: `count(*)` when no
+  join chain fans records out, `count(DISTINCT …)` when one does;
   `countSectionRecords()` and `countInverseReferences()` wrap it for their
   callers.
 
@@ -140,7 +142,7 @@ const select: string[]                    // SELECT columns (DISTINCT ON unless 
 const selectExtra: string[]               // component sort-select aliases
 const orderClauses: string[]              // custom (sqo.order) ordering
 const orderDefault = [`${alias}.section_id ASC`] // deterministic tie-break
-const joinFragments: Map<string,string>   // LEFT JOIN LATERAL chains, dedup by alias
+const joinFragments: Map<string,string>   // LEFT JOIN LATERAL chains, dedup by alias (forward deep paths only)
 ```
 
 ### Identity / table resolution
@@ -294,7 +296,7 @@ The shape is deliberate, and each choice is load-bearing:
 | uncorrelated `ANY(ARRAY(…))`, not a correlated `EXISTS` | plans as a one-shot InitPlan so the main table is **entered by `section_id`**; the correlated form let jsonb selectivity misestimates invert the plan back to the per-row scan. |
 | no `section_tipo` condition inside the subquery | the multi-section UNION replicates the WHERE verbatim into every branch; a section pin would fail-close other branches — cross-section ids only **widen** the superset, the outer `section_tipo` pin and the exact predicate still decide. |
 | emitted for **positive** shapes only (contains / begins / ends / `==` / `=` / quoted literal) with a **regex-plain** `q` | the exact predicate is regex-semantic, the store `LIKE` is literal-substring — they only agree on plain text; `%`/`_` are escaped. Negations (`!*`, `!=`, `-`, `!!`) and bare `*` never carry it. |
-| emitted for **non-joined leaves** only (path length 1) | on a hop-joined alias the join already bounds the per-row work, and the pre-filter's tiny cardinality estimate flips the join order into an unindexed filter join (measured 4× slower). `conform.ts` gates on the leaf's join chain. |
+| never on a **forward** hop-joined alias | there the pre-filter's tiny cardinality estimate flips the join order into an unindexed filter join (measured 4× slower). A multi-hop leaf gets a second, pre-filtered fragment that only the **reversed** shape uses, where the leaf is the driving set (see [Deep-path filters](#deep-path-filters-driven-from-the-leaf)). |
 | gated on the table's **sync trigger presence** (`search_store.ts`, cached; the maintenance rebuild actions clear the cache) | against an unmaintained table the empty store would wrongly *exclude* rows — the gate is correctness, not just performance. Uncovered tables (e.g. `matrix_time_machine`) keep the classic SQL byte-identically. |
 
 The store is **derived data** kept in sync by `AFTER INSERT OR DELETE OR UPDATE
@@ -393,6 +395,52 @@ failure. Fresh installs and v6→v7 closures arrive with everything in place.
     replaces the flat-GIN redundancy instead of adding to it, content tables
     only (~9.7M rows at MIB), `type` kept.
 
+### Deep-path filters (driven from the leaf)
+
+A filter leaf whose `path` crosses one or more relations (a coin's Tipo → its
+Ceca → the mint's name) has two SQL shapes.
+
+**Forward** (`buildJoinChain`): from every record of the searched section,
+unnest every locator of every hop, join the target, test the leaf. The cost is
+the size of the searched section whatever the filter selects, and the fan-out
+forces `count(DISTINCT …)`.
+
+**Reversed** (`deep_path.ts`, since 2026-09-26): find the matching LEAF records
+first (with the string-store pre-filter), then walk each hop back through
+`matrix_relation_index` (target → source):
+
+```sql
+(main.section_tipo, main.section_id) IN (
+  SELECT ri1.section_tipo, ri1.section_id FROM matrix_relation_index AS ri1
+  WHERE ri1.from_component_tipo = '<hop 1>'
+    AND (ri1.target_section_tipo, ri1.target_section_id) IN (
+      SELECT leaf.section_tipo, leaf.section_id FROM <leaf table> AS leaf
+      WHERE <leaf ACL> AND (<leaf predicate>)))
+```
+
+No join fragments, no fan-out, a plain `count(*)`. Measured on a 184,000-record
+section with a three-hop text filter: 3,049 ms forward, 19 ms reversed, same
+records.
+
+A leaf (or a set of sibling leaves) is reversed **only when the answer is
+provably the forward one**; anything else keeps the forward SQL unchanged:
+
+| condition | why |
+| --- | --- |
+| the forward predicate is **not TRUE on the all-NULL row** — probed in SQL (`LEFT JOIN <table> ON false`), never inferred from the operator | forward also tests the NULL row of a hop that found nothing (no locator, a dangling one, an ACL-refused record); the reversed shape only sees real records. "Is empty" (`!*`) is TRUE there and stays forward; `!=` is null-safe and reverses. |
+| no `$not` / `$nand` / `$nor` ancestor | reversal is only proved for positive contexts. |
+| every alias of the chain is used **only by its unit** | forward aliases dedup by path, so two leaves on the same hop are tested on the SAME related record. A unit is the set of sibling leaves with the identical chain; their predicates are combined inside the innermost `WHERE` with the parent's `$and`/`$or`, which keeps that guarantee. A prefix shared with a longer path, or the same path in another group, stays forward. |
+| `matrix_relation_index` covers every **source** table of the chain | its trigger keys each row by the relation storage key, which is the hop's data tipo. |
+
+The per-hop access control travels with it: the leaf record's predicate sits in
+the innermost `WHERE`, an intermediate record's on a join of its own table — the
+same predicate text the forward `ON` clause carries, on the same alias. A leaf
+with no predicate (an empty `q`) contributes no join chain at all.
+
+Gates: `test/unit/search_deep_path_reverse_native.test.ts` (exact record sets
+and shape per case), `test/unit/search_path_acl_native.test.ts` (the ACL
+census over both shapes).
+
 ### Multi-section UNION
 
 `buildSearchSql()` builds one `UNION ALL` branch per distinct matrix table. Each
@@ -485,7 +533,8 @@ noted.
 | --- | --- |
 | `conformFilter(filter, alias, table)` | Recursively conform a filter node: `$and`/`$or`/`$not`/`$nand`/`$nor` groups + leaves; returns a `ConformedFilter` tree. |
 | `buildJoinChain(path, mainAlias)` | Build the `LEFT JOIN LATERAL jsonb_array_elements(...)` + matrix-table join chain for a multi-hop path; gates every hop's tipos. Used by filter leaves **and** ORDER paths. |
-| `ConformedFilter` / `JoinFragment` | The conform-tree types the assembler consumes. |
+| `ConformedFilter` / `JoinFragment` / `JoinHop` / `DeepLeafPlan` | The conform-tree types the assembler consumes; a multi-hop leaf carries its `deep` plan, a reversed unit becomes a `reverse` node. |
+| `reverseDeepPaths(tree)` (`deep_path.ts`) | Rewrite the provably-exact multi-hop leaves into the reversed shape; called by `buildSearchSql()` right after `conformFilter()`. |
 
 ### Identifier allowlists (`identifier_gate.ts`)
 
