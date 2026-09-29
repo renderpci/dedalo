@@ -395,10 +395,6 @@ const LOCAL_ONLY_SCRIPTS: ReadonlyMap<string, string> = new Map([
 		'Keeps the client suite server alive for BROWSING a page by hand (scripts/client_test_serve.ts); the suite that asserts is test:client, which the instance tier runs.',
 	],
 	[
-		'test:tools:phone',
-		'The tools-at-360px harness (scripts/tool_viewport_check.ts, 4360de77c0): own server + Chrome on the suite DB, like test:client. NOT YET a hosted gate — measured 2026-09-29 it answers 34/37 red locally (most tools "did not render" on the suite fixture), so wiring it into the instance tier would only move that red to CI. Its ratchet (test/helpers/tool_phone_ratchet.ts) is held hermetically by tool_phone_tripwire. Remove this row when the harness is green and add it to scripts/ci/instance_tier.sh.',
-	],
-	[
 		'ci:local',
 		'IS the local reproduction of the CI tiers (scripts/ci_local.ts): it runs the tier scripts this gate holds; running it from CI would run CI inside CI.',
 	],
