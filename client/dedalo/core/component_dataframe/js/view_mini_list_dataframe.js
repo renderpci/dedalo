@@ -150,8 +150,8 @@ const get_content_data = function(self) {
 *   2. If a datum exists and has at least one value entry, the first value's
 *      `section_id` is matched against `rating_data.datalist` to retrieve the
 *      rated item, which carries a `hide[0].literal` hex colour string.
-*   3. If the value is present but no datalist match is found (e.g. empty datalist
-*      or not-yet-set rating), the fallback colour is `--color_blue_3` (#006ed2),
+*   3. If the value is present but no datalist match is found (e.g. empty or
+*      ABSENT datalist, or not-yet-set rating), the fallback colour is `--color_blue_3` (#006ed2),
 *      read live from the document's CSS custom properties via `ui.css_var()`.
 *   4. A WCAG-contrast foreground colour is computed by `ui.get_text_color()` and
 *      applied to `button_activate.style.color`.
@@ -201,16 +201,24 @@ const render_content_value = function(options) {
 				// Match the first entry's section_id against the radio_button datalist.
 				// When rating_value is falsy (value array is empty), synthesise a sentinel
 				// object that supplies the blue fallback colour as hide[0].literal.
+				// a rating item may arrive WITHOUT a datalist (e.g. mode 'solved'):
+				// no datalist = no option = the default colour, never a throw.
+				const default_bk_color	= ui.css_var('--color_blue_3', '#006ed2')
+				const datalist			= Array.isArray(rating_data.datalist) ? rating_data.datalist : []
 				const rating = (rating_value)
-					? rating_data.datalist.find(el => same_section_id(el.section_id, rating_value.section_id) )
+					? datalist.find(el => same_section_id(el.section_id, rating_value.section_id) )
 					: {
 						hide:[{
-							literal: ui.css_var('--color_blue_3', '#006ed2') // default when the datalist is empty (rating not set)
+							literal: default_bk_color // default when the datalist is empty (rating not set)
 						}]
 					}
 
 				// update background color
-					const bg_color = rating.hide[0].literal || ui.css_var('--color_orange_dedalo', '#f78a1c')
+					// no matching option (no datalist, or a deleted/out-of-scope option):
+					// the default colour; an option without a literal: the orange marker.
+					const bg_color = rating
+						? (rating.hide?.[0]?.literal || ui.css_var('--color_orange_dedalo', '#f78a1c'))
+						: default_bk_color
 					button_activate.style.backgroundColor = bg_color
 
 				// update text color based on background

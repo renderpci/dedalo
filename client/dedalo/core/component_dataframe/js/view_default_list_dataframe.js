@@ -277,8 +277,13 @@ const render_content_value = function(options) {
 			if(rating_entries){
 
 				const rating_value = rating_entries[0]
+				// a rating item may arrive WITHOUT a datalist (a mode the server emits
+				// stored data only for, e.g. 'solved'): no datalist = no option = the
+				// default colour, never a throw (it killed the portal refresh after a
+				// time machine apply).
+				const datalist = Array.isArray(rating_data.datalist) ? rating_data.datalist : []
 				const rating = (rating_value)
-					? rating_data.datalist.find(el => same_section_id(el.section_id, rating_value.section_id) )
+					? datalist.find(el => same_section_id(el.section_id, rating_value.section_id) )
 					: {
 						hide:[{
 							literal: default_bk_color // gray/blue when the datalist is empty (the rating is not set)

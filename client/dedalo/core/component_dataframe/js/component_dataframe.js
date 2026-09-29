@@ -193,6 +193,9 @@ component_dataframe.prototype.create_new_section = async function(options) {
 * and by `row_section_id` to scope it to this slot's own listed row (a TM history
 * list emits the same frame target once per row, each as of that row).
 *
+* When several datum items match (the rating emitted once per ddo naming it, e.g.
+* 'edit' + 'solved'), `pick_rating_item` prefers the ddo's mode and a datalist.
+*
 * @returns {Object|null} The matching datum entry (carrying tipo, section_tipo,
 *   section_id, and the rating value), or null if the rating cannot be resolved.
 */
@@ -233,7 +236,7 @@ component_dataframe.prototype.get_rating = function() {
 		//  - is scoped to this dataframe slot (from_component_tipo === self.tipo)
 		//  - belongs to the first frame entry (section_tipo + section_id match)
 		//  - belongs to this slot's row (row_section_id), when both sides carry it
-		const data_rating = self.datum.data.find(el =>
+		const candidates = self.datum.data.filter(el =>
 			el.tipo === rating_ddo.tipo
 			&& el.from_component_tipo === self.tipo
 			&& el.section_tipo === locator.section_tipo
@@ -244,11 +247,48 @@ component_dataframe.prototype.get_rating = function() {
 				|| same_section_id(el.row_section_id, row_section_id)
 			)
 		)
-		return data_rating
+		return pick_rating_item(candidates, rating_ddo.mode)
 	}
 
 	return null
 }//end get_rating
+
+
+
+/**
+* PICK_RATING_ITEM
+* Chooses, among the datum items that are this slot's rating (same tipo, frame
+* target and row), the one the chip can paint: the one carrying a `datalist`.
+*
+* The server may emit the rating component MORE THAN ONCE per frame target —
+* one item per ddo that names it (WC-2026-08-05-multi-engine-ddo-expansion):
+* e.g. the show ddo in mode 'edit' (with datalist) and the hide `role:"rating"`
+* ddo in mode 'solved' (which a server may emit WITHOUT a datalist). Their order in the shared datum is not a
+* contract (a refresh merged by update_datum used to append new items REVERSED),
+* so taking the first match painted from a datalist-less item and threw.
+*
+* Order of preference:
+*  1. an item in the ddo's own mode (when the ddo declares one) with a datalist
+*  2. any matching item with a datalist
+*  3. the first item in the ddo's mode, else the first match (the entries are the
+*     same stored value; the view guards the missing datalist)
+*
+* @param {Array<Object>} candidates - matching datum items, datum order
+* @param {string|undefined} mode - the rating ddo's declared mode
+* @returns {Object|undefined} the chosen item, undefined when there is none
+*/
+const pick_rating_item = function(candidates, mode) {
+
+	const has_datalist	= el => Array.isArray(el.datalist)
+	const in_mode		= mode
+		? candidates.filter(el => el.mode === mode)
+		: candidates
+
+	return in_mode.find(has_datalist)
+		?? candidates.find(has_datalist)
+		?? in_mode[0]
+		?? candidates[0]
+}//end pick_rating_item
 
 
 

@@ -126,6 +126,20 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-29-dataframe-hard-delete-retired`.
 
+- **Applying a Time Machine value no longer breaks a record's rated portal.**
+
+    A portal whose items carry a rating (the coloured chip of a dataframe, such as
+    the certainty of an attribution) could stop rendering right after the Time
+    Machine tool applied an earlier value to it: the refresh failed and the portal
+    stayed broken until the page was reloaded. The server now sends the rating's
+    list of options with every copy of the rating it returns, so the chip always
+    finds its colour, and the portal refreshes normally after an apply. The client no longer
+    depends on it either: it picks the copy of the rating that carries the options,
+    keeps new items in the order the server sent them, and paints the default
+    colour instead of failing when a rating has no options.
+
+    Wire contract: `WC-2026-09-29-select-family-mode-datalist`.
+
 - **The time machine shows a field's frames and their values as they were at the chosen change.**
 
     In the [time machine](./tools/using_time_machine.md), the preview of a field with a
@@ -459,7 +473,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 53 entries"
+??? note "Wire contract — 54 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -513,6 +527,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-28-maintenance-serve-ontology-widget`
     - `WC-2026-09-29-dataframe-hard-delete-retired`
     - `WC-2026-09-29-rdf-per-uri-error-wire-body`
+    - `WC-2026-09-29-select-family-mode-datalist`
     - `WC-2026-09-29-tm-preview-frame-children-as-of`
 
 ## 7.0.0-beta.4 — 2026-08-24
