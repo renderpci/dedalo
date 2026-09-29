@@ -36,11 +36,12 @@ export function receiverEnabled(): boolean {
 
 /**
  * Is the caller's IP allowed to reach the intake? Same ENTRY GRAMMAR as the install
- * gate — it reuses that module's loopback spellings and its `ipInCidr`, so there is
- * ONE definition of "this machine", one of a CIDR block, and one ENTRY MATCHER
- * (`allowEntryMatches`) shared with it — so a literal `127.0.0.1` appears in neither
- * file, and neither predicate can quietly stop understanding a spelling the other
- * still admits.
+ * gate — it reuses that module's loopback spellings and ENTRY MATCHER
+ * (`allowEntryMatches`, install/gate.ts), whose CIDR arithmetic is the shared
+ * `ipInCidr` of security/ip_address.ts — so there is ONE definition of "this
+ * machine", one of a CIDR block, and one matcher: a literal `127.0.0.1` appears in
+ * neither file, and neither predicate can quietly stop understanding a spelling the
+ * other still admits.
  *
  * The DEFAULT deliberately differs, and the difference is the point: the install
  * gate fronts an unauthenticated installer that rewrites `.env`, so an unset key

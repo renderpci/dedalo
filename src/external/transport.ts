@@ -24,8 +24,9 @@
  *      redirects: SSRF plus MITM. The frozen PHP shared/core_functions.php
  *      DID hold an allowlist; assertPublicUrl does not.)
  *   4. assertPublicUrl → resolve + vet every address, then PIN the socket to a
- *      vetted one. This closes the DNS-rebinding residual documented at
- *      core/security/ssrf_guard.ts:16-20 for this subsystem.
+ *      vetted one (`pinToVettedAddress`, self-checked). This closes, for this
+ *      subsystem, the DNS-rebinding window core/security/ssrf_guard.ts's header
+ *      describes for the unpinned `fetchGuardedText`.
  *   5. attach the credential — ONLY NOW. Attaching it before 3/4 would let an
  *      ontology edit point the request at an attacker's host and exfiltrate it.
  *   6. fetch: redirect:'error' (a redirect re-chooses the target), an
@@ -49,17 +50,23 @@
  * Retries are inside the slot, so a retrying request cannot multiply the load a
  * struggling service is already failing under.
  *
- * COMPOSITION NOTE. `fetchGuardedText` (ssrf_guard.ts) implements steps 4/6
- * only, and cannot express pinning, the allowlist, the classified error kinds
- * or the retry policy; its byte-cap read loop is reproduced here (not
- * duplicated logic — a streamed cap is four lines) rather than losing the rest.
+ * COMPOSITION NOTE. The two security primitives of steps 4 and 6 are NOT
+ * re-implemented here: the socket pin is ssrf_guard.ts `pinToVettedAddress` and
+ * the streamed byte ceiling is its `readBytesCapped` — the same code under
+ * `fetchPinnedHop` and `fetchBoundedText`, so a fix to either reaches every
+ * outbound door at once. What this door adds is what those cannot express: the
+ * allowlist, the classified error kinds, the breaker and the retry policy.
  */
 
-import { isIP } from 'node:net';
 import { catalogEntry } from '../config/catalog/index.ts';
 import { readOptionalString } from '../config/readers.ts';
-import type { SafeUrlResult } from '../core/security/ssrf_guard.ts';
-import { assertPublicUrl } from '../core/security/ssrf_guard.ts';
+import type { PinnedFetchInit, SafeUrlResult } from '../core/security/ssrf_guard.ts';
+import {
+	assertPublicUrl,
+	parseRetryAfterMs,
+	pinToVettedAddress,
+	readBytesCapped,
+} from '../core/security/ssrf_guard.ts';
 import {
 	checkBreaker,
 	isCircuitOpen,
@@ -93,11 +100,8 @@ const READ_ONLY_METHODS: ReadonlySet<string> = new Set(['GET', 'POST']);
 /** A service's own Retry-After is honoured, but never beyond this. */
 const MAX_RETRY_AFTER_MS = 10_000;
 
-/** Fetch init with the Bun-only TLS field the socket pin needs. */
-export interface ExternalFetchInit extends RequestInit {
-	/** SNI + certificate identity, kept at the REAL host while the URL holds an IP. */
-	tls?: { serverName?: string };
-}
+/** Fetch init with the Bun-only TLS field the socket pin needs (ssrf_guard's own type). */
+export type ExternalFetchInit = PinnedFetchInit;
 
 export type ExternalFetchImpl = (url: string, init: ExternalFetchInit) => Promise<Response>;
 
@@ -328,55 +332,68 @@ function attachCredential(model: ExternalServiceModel, url: URL, headers: Header
 // ---------------------------------------------------------------------------
 
 /**
- * Read a response body with a hard, STREAMED ceiling. Never truncates into a
- * value. The ceiling breach THROWS `external.too_large` directly (typed at
- * the point of knowledge; the caller adds no wrapping); any other stream
- * failure is the caller's `transport`.
+ * Read a response body with the shared STREAMED ceiling (`readBytesCapped`). Never
+ * truncates into a value. The ceiling breach THROWS `external.too_large` directly
+ * (typed at the point of knowledge through `onBreach`; the caller adds no
+ * wrapping); any other stream failure is the caller's `transport`.
  */
 async function readCapped(
 	response: Response,
 	maxBytes: number,
 	coordinates: Omit<ExternalErrorFields, 'kind'>,
 ): Promise<string> {
-	const reader = response.body?.getReader();
-	if (reader === undefined) return '';
-	const chunks: Uint8Array[] = [];
-	let total = 0;
-	for (;;) {
-		const { done, value } = await reader.read();
-		if (done) break;
-		if (value === undefined) continue;
-		total += value.byteLength;
-		if (total > maxBytes) {
-			await reader.cancel();
-			throw new ExternalServiceError({
+	const { bytes } = await readBytesCapped(response, maxBytes, {
+		onBreach: (max) =>
+			new ExternalServiceError({
 				...coordinates,
 				kind: 'too_large',
-				detail: `response exceeds ${maxBytes} bytes`,
-			});
-		}
-		chunks.push(value);
-	}
-	const merged = new Uint8Array(total);
-	let offset = 0;
-	for (const chunk of chunks) {
-		merged.set(chunk, offset);
-		offset += chunk.byteLength;
-	}
-	return new TextDecoder().decode(merged);
+				detail: `response exceeds ${max} bytes`,
+			}),
+	});
+	return new TextDecoder().decode(bytes);
 }
 
-/** `Retry-After` in ms (delta-seconds or HTTP-date), capped; null when absent/bogus. */
-function retryAfterMs(response: Response, now: number): number | null {
-	const header = response.headers.get('retry-after');
-	if (header === null) return null;
-	const seconds = Number(header.trim());
-	if (Number.isFinite(seconds) && seconds >= 0) {
-		return Math.min(seconds * 1000, MAX_RETRY_AFTER_MS);
+/**
+ * The socket pin (ssrf_guard `pinToVettedAddress`): address the first vetted IP
+ * and keep the real host for SNI, certificate identity and the Host header. Any
+ * refusal — no vetted address, or a pin that did not take — is `blocked_host`,
+ * so it stays inside this door's classified kinds.
+ */
+function pinExternal(
+	requestUrl: URL,
+	vetted: SafeUrlResult,
+	headers: Headers,
+	init: ExternalFetchInit,
+	coordinates: Omit<ExternalErrorFields, 'kind'>,
+): void {
+	const pinned = vetted.addresses[0];
+	if (pinned === undefined) {
+		throw new ExternalServiceError({
+			...coordinates,
+			kind: 'blocked_host',
+			detail: 'no vetted address',
+		});
 	}
-	const at = Date.parse(header);
-	if (Number.isNaN(at)) return null;
-	return Math.min(Math.max(0, at - now), MAX_RETRY_AFTER_MS);
+	try {
+		pinToVettedAddress(requestUrl, pinned, headers, init);
+	} catch (error) {
+		throw new ExternalServiceError({
+			...coordinates,
+			kind: 'blocked_host',
+			detail: 'socket pin failed',
+			cause: error,
+		});
+	}
+}
+
+/**
+ * `Retry-After` in ms, capped at this door's ceiling; null when absent or bogus. Read
+ * by the guard's one parser (`parseRetryAfterMs`) — the harvesting door reads the
+ * same header the same way and applies its own ceiling.
+ */
+function retryAfterMs(response: Response, now: number): number | null {
+	const asked = parseRetryAfterMs(response.headers.get('retry-after'), now);
+	return asked === null ? null : Math.min(asked, MAX_RETRY_AFTER_MS);
 }
 
 /**
@@ -423,24 +440,9 @@ async function attempt(
 	if (request.contentType !== undefined) headers.set('Content-Type', request.contentType);
 	attachCredential(model, requestUrl, headers);
 
-	// The socket pin: when the host was a NAME, address the vetted IP directly
-	// and keep the real host for SNI, certificate identity and the Host header.
-	// An IP-literal host has nothing to rebind, so it is left alone.
-	const realHost = requestUrl.hostname;
+	// The socket pin: when the host was a NAME, address the vetted IP directly.
 	const init: ExternalFetchInit = { method: request.method, headers, redirect: 'error' };
-	if (isIP(realHost.replace(/^\[|\]$/g, '')) === 0) {
-		const pinned = vetted.addresses[0];
-		if (pinned === undefined) {
-			throw new ExternalServiceError({
-				...coordinates,
-				kind: 'blocked_host',
-				detail: 'no vetted address',
-			});
-		}
-		headers.set('Host', requestUrl.host);
-		init.tls = { serverName: realHost };
-		requestUrl.hostname = isIP(pinned) === 6 ? `[${pinned}]` : pinned;
-	}
+	pinExternal(requestUrl, vetted, headers, init, coordinates);
 	if (request.body !== undefined) init.body = request.body;
 
 	const timeoutMs = model.timeoutMs ?? externalSettings().timeoutMs;

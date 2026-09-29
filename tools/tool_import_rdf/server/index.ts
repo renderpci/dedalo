@@ -1,7 +1,9 @@
 /**
  * tool_import_rdf server module (PHP tool_import_rdf::get_rdf_data). Fetches each
- * RDF URI (SSRF-guarded) and parses it with the from-scratch RDF/XML parser
- * (rdf_xml.ts, no 3rd-party lib), returning the extracted subjects/properties.
+ * RDF URI through `fetchGuardedText` (the guard resolves and vets every address,
+ * refuses redirects, bounds the wait and the read) and parses it with the
+ * from-scratch RDF/XML parser (rdf_xml.ts, no 3rd-party lib), returning the
+ * extracted subjects/properties.
  *
  * The subject→Dédalo ontology CLASS-MAP (properties.xmlns / class_map_to_dd) is
  * config-driven and ledgered; the fetch + graph parse are real.
@@ -13,7 +15,13 @@
  * `options.section_tipo`, which this tool's client never sends.
  */
 
-import { DedaloError, ok } from '../../../src/core/errors/index.ts';
+import {
+	type ApiErrorBody,
+	DedaloError,
+	ok,
+	toDedaloError,
+	toErrorBody,
+} from '../../../src/core/errors/index.ts';
 import { getPermissions } from '../../../src/core/security/permissions.ts';
 import { fetchGuardedText } from '../../../src/core/security/ssrf_guard.ts';
 import {
@@ -23,74 +31,6 @@ import {
 	toolRequestId,
 } from '../../../src/core/tools/module.ts';
 import { applyRdfMap, parseRdfXml, type RdfMapEntry } from '../../../src/core/tools/rdf_xml.ts';
-
-/**
- * SSRF guard for outbound RDF fetches (PHP is_safe_remote_url, SEC-072).
- *
- * LITERAL-HOST half only, and deliberately over-broad: it rejects the whole
- * loopback/link-local/private/reserved space rather than the handful of
- * addresses the first port spelled out — `127.0.0.2`, `0.0.0.0`, `[::]`,
- * `10.x` written as a decimal integer and `anything.localhost` all resolved to
- * a local service and all passed the old checks.
- *
- * NOT COVERED (escalated in the tools audit report, PHP does both): DNS
- * resolution of a public NAME that points at a private address, and the
- * redirect hop — Bun's fetch follows 3xx, so a public URL may still land on an
- * internal one. PHP resolves once and pins CURLOPT_RESOLVE.
- */
-export function isSafeRemoteUrl(uri: string): boolean {
-	let url: URL;
-	try {
-		url = new URL(uri);
-	} catch {
-		return false;
-	}
-	if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
-	// URL lowercases the host and strips the [] of an IPv6 literal.
-	const host = url.hostname.replace(/^\[|]$/g, '');
-	if (host === '') return false;
-	if (host === 'localhost' || host.endsWith('.localhost') || host === 'localhost.localdomain') {
-		return false;
-	}
-
-	// IPv4 dotted-quad (incl. the 0-padded forms) → check the numeric ranges.
-	const quad = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-	if (quad !== null) {
-		const [a, b] = [Number(quad[1]), Number(quad[2])];
-		if (a === 0 || a === 10 || a === 127) return false; // this-network, private, loopback
-		if (a === 169 && b === 254) return false; // link-local (cloud metadata)
-		if (a === 172 && b >= 16 && b <= 31) return false; // private
-		if (a === 192 && b === 168) return false; // private
-		if (a === 100 && b >= 64 && b <= 127) return false; // CGNAT
-		if (a >= 224) return false; // multicast + reserved
-		return true;
-	}
-	// A bare integer / hex host is an alternate IPv4 spelling ('2130706433' =
-	// 127.0.0.1). Never legitimate for an RDF URI — refuse the whole shape.
-	if (/^(\d+|0x[0-9a-f]+)$/i.test(host)) return false;
-
-	// IPv6 literal: refuse loopback, unspecified, unique-local and link-local,
-	// plus the IPv4-mapped forms of all of the above.
-	if (host.includes(':')) {
-		if (host === '::1' || host === '::') return false;
-		if (/^f[cd][0-9a-f]{2}:/i.test(host)) return false; // fc00::/7
-		if (/^fe[89ab][0-9a-f]:/i.test(host)) return false; // fe80::/10
-		// IPv4-MAPPED (::ffff:a.b.c.d). URL normalizes the dotted tail to hextets
-		// ('::ffff:127.0.0.1' → '::ffff:7f00:1'), so decode BOTH spellings and
-		// re-run the IPv4 rules on the address they denote.
-		const dotted = host.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/i);
-		if (dotted !== null) return isSafeRemoteUrl(`${url.protocol}//${dotted[1]}`);
-		const hextets = host.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i);
-		if (hextets !== null) {
-			const high = Number.parseInt(hextets[1] as string, 16);
-			const low = Number.parseInt(hextets[2] as string, 16);
-			const quad = [high >> 8, high & 0xff, low >> 8, low & 0xff].join('.');
-			return isSafeRemoteUrl(`${url.protocol}//${quad}`);
-		}
-		return true;
-	}
-	return true;
-}
 
 /**
  * The action's permission target (the 'section_list' gate reads this).
@@ -108,49 +48,80 @@ function rdfSectionTipos(options: Record<string, unknown>): unknown[] {
 	return locator.section_tipo === undefined ? [] : [locator.section_tipo];
 }
 
-async function getRdfData(ctx: ToolActionContext): Promise<ToolResponse> {
-	const o = ctx.options;
-	const arValues = (o.ar_values ?? []) as string[];
-	const locator = (o.locator ?? {}) as { section_tipo?: string };
-	if (locator.section_tipo) {
-		// Defense in depth behind the declarative gate — same level, so a direct
-		// call can never reach the fetch loop on a weaker check than the wire.
-		if ((await getPermissions(ctx.principal, locator.section_tipo, locator.section_tipo)) < 2) {
-			throw new DedaloError('perm.denied', {
-				coordinates: { tool: 'tool_import_rdf', section_tipo: locator.section_tipo },
-			});
-		}
-	}
-	if (!Array.isArray(arValues) || arValues.length === 0) {
-		throw new DedaloError('request.invalid_options', {
-			publicMessage: 'Missing ar_values (RDF URIs)',
-		});
-	}
+/** One IRI's outcome: its (mapped) subjects, or the wire body of why it failed. */
+type RdfOutcome =
+	| { kind: 'loaded'; entry: { uri: string; subjects: unknown[] } }
+	| { kind: 'failed'; failure: { uri: string; error: ApiErrorBody } };
 
-	const rdfData: { uri: string; subjects: unknown[] }[] = [];
-	const errors: string[] = [];
-	for (const raw of arValues) {
-		const uri = raw.endsWith('.rdf') ? raw : `${raw}.rdf`;
-		try {
-			// SSRF-01 + DOS-05: resolve+vet the URL against private/reserved
-			// ranges (not a string blocklist), no redirects, timeout, body cap.
-			const xml = await fetchGuardedText(uri, { maxBytes: 20 * 1024 * 1024 });
-			const { subjects } = parseRdfXml(xml);
-			// If a class-map is supplied, return the mapped fields (the dd_object
-			// the client form consumes); else the raw subjects.
-			const map = ((ctx.options.tool_config as { config?: { main?: unknown[] } })?.config?.main ??
-				[]) as RdfMapEntry[];
-			const mapped = Array.isArray(map) && map.length > 0 ? applyRdfMap(subjects, map) : null;
-			rdfData.push({ uri, subjects: mapped ?? subjects });
-		} catch (error) {
-			errors.push(`${uri}: ${(error as Error).message}`);
-		}
+/**
+ * Defense in depth behind the declarative gate — same level, so a direct call can
+ * never reach the fetch loop on a weaker check than the wire.
+ */
+async function assertLocatorWrite(
+	ctx: ToolActionContext,
+	sectionTipo: string | undefined,
+): Promise<void> {
+	if (!sectionTipo) return;
+	if ((await getPermissions(ctx.principal, sectionTipo, sectionTipo)) >= 2) return;
+	throw new DedaloError('perm.denied', {
+		coordinates: { tool: 'tool_import_rdf', section_tipo: sectionTipo },
+	});
+}
+
+/** The IRIs to dereference; none is a caller error. */
+function rdfValues(options: Record<string, unknown>): string[] {
+	const values = options.ar_values ?? [];
+	if (Array.isArray(values) && values.length > 0) return values as string[];
+	throw new DedaloError('request.invalid_options', {
+		publicMessage: 'Missing ar_values (RDF URIs)',
+	});
+}
+
+/** The class-map the caller supplied (`tool_config.config.main`), or none. */
+function rdfMap(options: Record<string, unknown>): RdfMapEntry[] {
+	const map = (options.tool_config as { config?: { main?: unknown } } | undefined)?.config?.main;
+	return Array.isArray(map) ? (map as RdfMapEntry[]) : [];
+}
+
+/**
+ * Fetch, parse and map ONE IRI. SSRF-01 + DOS-05: `fetchGuardedText` resolves and
+ * vets the URL against private/reserved ranges (not a string blocklist), refuses
+ * redirects, and bounds the wait and the body. A failure is reported as the error
+ * system's wire body, never `error.message`: the guard's message names the address
+ * a refused host resolved to (an internal-network oracle).
+ */
+async function loadRdf(raw: string, map: RdfMapEntry[]): Promise<RdfOutcome> {
+	const uri = raw.endsWith('.rdf') ? raw : `${raw}.rdf`;
+	try {
+		const xml = await fetchGuardedText(uri, { maxBytes: 20 * 1024 * 1024 });
+		const { subjects } = parseRdfXml(xml);
+		// A class-map yields the mapped fields (the dd_object the client form
+		// consumes); without one, the raw subjects.
+		const mapped = map.length > 0 ? applyRdfMap(subjects, map) : subjects;
+		return { kind: 'loaded', entry: { uri, subjects: mapped } };
+	} catch (error) {
+		return { kind: 'failed', failure: { uri, error: toErrorBody(toDedaloError(error)) } };
+	}
+}
+
+async function getRdfData(ctx: ToolActionContext): Promise<ToolResponse> {
+	const locator = (ctx.options.locator ?? {}) as { section_tipo?: string };
+	await assertLocatorWrite(ctx, locator.section_tipo);
+	const values = rdfValues(ctx.options);
+	const map = rdfMap(ctx.options);
+	const rdf: { uri: string; subjects: unknown[] }[] = [];
+	const errors: { uri: string; error: ApiErrorBody }[] = [];
+	for (const raw of values) {
+		const outcome = await loadRdf(raw, map);
+		if (outcome.kind === 'loaded') rdf.push(outcome.entry);
+		else errors.push(outcome.failure);
 	}
 	// The subject→dd_object class-map is config-driven (ledgered); the fetch +
 	// parse are done and returned for the client/mapper to consume.
 	// `errors` is the PER-URI refusal list (one bad URI never fails the batch):
-	// payload, not a wire failure — so it rides inside `data`.
-	return ok({ rdf: rdfData, errors }, { requestId: toolRequestId(ctx) });
+	// payload, not a wire failure — so it rides inside `data`, one `{uri, error}` per
+	// URI, `error` the same body a failed call would carry.
+	return ok({ rdf, errors }, { requestId: toolRequestId(ctx) });
 }
 
 export const tool: ToolServerModule = {

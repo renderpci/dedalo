@@ -602,6 +602,9 @@ export const NEW_IN_V7: readonly string[] = [
 	// shape is narrower on purpose — only the origin list is an operator's to
 	// set (core/security/cors.ts explains why methods/headers are constants).
 	'DEDALO_CORS_ALLOWED_ORIGINS',
+	// The outbound SSRF guard's declared NAT64 network-specific prefixes (RFC 6052).
+	// No v6 counterpart: v6's is_safe_remote_url had no IPv6-translation awareness.
+	'DEDALO_NAT64_PREFIXES',
 	// sessions / login / permissions (the TS-native auth stack)
 	'SESSION_TTL_SECONDS',
 	'SESSION_ABSOLUTE_TTL_SECONDS',

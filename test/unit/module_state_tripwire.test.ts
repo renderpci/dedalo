@@ -296,6 +296,21 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// LIFECYCLE: incremented when a leader stores its outcome, decremented by
 	// dropLedgerEntry on every eviction, and zeroed with the map by the test seam.
 	'core/api/dispatch.ts:idempotencyLedgerBytes',
+	// RFC 7050 NAT64 prefix discovery cache (the SSRF guard, security/ssrf_guard.ts).
+	// Holds the NAT64 prefixes of the NETWORK this process sits on — install/host
+	// state, never a user, session, language, record or request. It is TIGHTEN-ONLY
+	// (a discovered prefix can refuse an address, never admit one the IPv6 rules
+	// refuse), so a stale value can only refuse more. LIFECYCLE: refreshed lazily by
+	// assertPublicUrl once expiresAt passes (10 min after an answer, 60 s after an
+	// empty one, which KEEPS the previous prefixes — nextNat64Discovery); never
+	// written by a call that injects its own resolver (deps.lookup bypasses it both
+	// ways). Process restart otherwise.
+	'core/security/ssrf_guard.ts:nat64Discovered',
+	// The refresh in flight, so concurrent first calls share ONE lookup (the
+	// in-flight coalescing precedent of external/cache.ts:inFlight). Holds a
+	// promise of the same host-level prefixes. LIFECYCLE: set when a refresh starts,
+	// cleared in that refresh's own `finally`.
+	'core/security/ssrf_guard.ts:nat64DiscoveryInFlight',
 ]);
 
 /**
@@ -457,6 +472,22 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// moment the last holder releases with nobody waiting (the media_index
 	// keyLocks precedent).
 	'external/transport.ts:concurrencySlots',
+	// --- the harvesting door (src/core/harvest) --------------------------------
+	// robots.txt verdicts per ORIGIN. NOT factory-built: robots.txt derives from a
+	// remote site, which neither invalidation channel knows about. Lifecycle: TIME
+	// and SIZE — 1 h TTL (5 min for an unavailable verdict), replaced on the next
+	// ask once expired, oldest insertion evicted past 512 origins OR past
+	// ROBOTS_CACHE_MAX_WEIGHT (16 MiB) of what the entries retain — rule objects
+	// as well as pattern text; a load that
+	// REJECTS (a refused origin) deletes its own entry, so a refusal is never
+	// remembered. Keys are origins, never session/user/lang.
+	'core/harvest/robots.ts:robotsPolicies',
+	// Per-ORIGIN pacing queue. A serialization primitive (the concurrencySlots
+	// precedent above), not a cache. Lifecycle: SELF-DRAINING — an unref'd drain
+	// timer deletes the entry once nobody waits and its interval has passed (a
+	// timer that fires early re-arms, so no idle entry is stranded);
+	// clearPacingForTests empties it for gate isolation.
+	'core/harvest/pacing.ts:originPaces',
 	// In-flight fetch coalescing, keyed by the row cache key. A serialization
 	// primitive, not a cache: each entry is deleted in the `finally` of the very
 	// fetch it coalesces. The ROW cache beside it IS factory-built.

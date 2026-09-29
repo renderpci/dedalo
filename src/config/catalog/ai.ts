@@ -909,7 +909,8 @@ Outbound requests to private ranges are refused by default, because an *external
 must never be able to make the engine reach inside the network. An *on-premise* recogniser
 (faster-whisper, WhisperX, whisper.cpp on a LAN machine) is the legitimate opposite case, and
 this parameter is how you say so — deliberately, per installation, rather than by weakening
-the guard for everyone. The cloud metadata address stays refused either way.
+the guard for everyone. The cloud metadata addresses stay refused either way, and so does all
+of IPv4 link-local (\`169.254.0.0/16\`), which is never a machine on your LAN.
 
 It applies only to the \`local_whisper\` engine, which is POSTed the audio bytes; the external
 engine keeps the strict guard regardless.

@@ -1,17 +1,18 @@
 /**
  * IP address literals as BYTES — the one parser every address predicate shares.
  *
- * Two security predicates need to know what an address literal IS rather than how
- * it is spelled: the install/error-report allow gate (does this peer fall inside
- * an operator-written CIDR?) and the outbound SSRF guard (is this resolved address
- * public?). An address has many spellings (`::ffff:7f00:1` and `::ffff:127.0.0.1`,
- * `::1` and `0:0:0:0:0:0:0:1`), and every hand-rolled STRING check so far has
- * matched one of them and let the others through. Packed into bytes, they are one
- * value — so both callers ask here, and a spelling cannot reach one and not the
- * other.
+ * Every address predicate needs to know what an address literal IS rather than how
+ * it is spelled — the install/error-report allow gates (does this peer fall inside
+ * an operator-written CIDR?), the outbound SSRF guard and its NAT64 reading (is this
+ * resolved address public, and which IPv4 does it carry?), the on-premise
+ * transcriber's metadata refusal. An address has many spellings (`::ffff:7f00:1` and
+ * `::ffff:127.0.0.1`, `::1` and `0:0:0:0:0:0:0:1`), and every hand-rolled STRING check
+ * so far has matched one of them and let the others through. Packed into bytes, they
+ * are one value — so every caller asks here, and a spelling cannot reach one and not
+ * another.
  *
  * PURE and TOTAL: no imports, no I/O, and every failure is a null or a `false`,
- * never a throw — both callers are security predicates (one of them pre-auth), where
+ * never a throw — every caller is a security predicate (one of them pre-auth), where
  * an exception on a hostile input is itself the vulnerability. What "I could not
  * parse it" MEANS (no match, or refuse) is the caller's decision, not this module's.
  */
@@ -20,13 +21,64 @@
  * Normalize an address for comparison: trim, lowercase, and fold the IPv4-mapped
  * IPv6 form (`::ffff:203.0.113.10`) down to its v4 spelling. A dual-stack listener
  * reports a v4 peer in that mapped form, so without the fold a literal entry the
- * operator copied out of their own `ip addr` output would never match.
+ * operator copied out of their own `ip addr` output would never match. TEXT-level
+ * and dotted-only on purpose: `packCidr` runs it on a block's network, where a hex
+ * `::ffff:0:0/96` is an IPv6 block (the SSRF guard's range table) and must stay one.
+ * A PEER's mapped address in any spelling is folded by `peerBytes`. Module-private:
+ * a caller asks `peerBytes` or `packCidr`, never a second normalizing entry point.
  */
-export function normalizeAddress(value: string): string {
+function normalizeAddress(value: string): string {
 	const trimmed = value.trim().toLowerCase();
 	const mapped = /^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/.exec(trimmed);
 	return mapped?.[1] ?? trimmed;
 }
+
+/** `::ffff:0:0/96`, the IPv4-mapped block (RFC 4291 §2.5.5.2). */
+function isMappedIpv4(bytes: Uint8Array): boolean {
+	return (
+		bytes.subarray(0, 10).every((byte) => byte === 0) && bytes[10] === 0xff && bytes[11] === 0xff
+	);
+}
+
+/**
+ * A PEER address (what a gate is asked about, or a literal allow entry) as bytes: an
+ * IPv4-mapped IPv6 address in ANY spelling — `::ffff:127.0.0.1`, `::ffff:7f00:1`,
+ * `0:0:0:0:0:ffff:7f00:1` — is the IPv4 it maps, so every spelling of one peer is
+ * one value. Null when the text is not an address.
+ */
+export function peerBytes(value: string): Uint8Array | null {
+	const bytes = packAddress(normalizeAddress(value));
+	return bytes !== null && bytes.length === 16 && isMappedIpv4(bytes) ? bytes.slice(12) : bytes;
+}
+
+/** Bytes equal, both lengths included — so a 4-byte and a 16-byte value never match. */
+export function sameBytes(left: Uint8Array, right: Uint8Array): boolean {
+	return left.length === right.length && left.every((byte, index) => byte === right[index]);
+}
+
+/**
+ * Do two address texts name the same address? Equal BYTES once normalized, so every
+ * spelling of one address is that address (`2001:db8:0::1` is `2001:db8::1`). A text
+ * that is not an address matches nothing — fail-closed, like `ipInCidr`.
+ */
+export function sameAddress(left: string, right: string): boolean {
+	const a = peerBytes(left);
+	const b = peerBytes(right);
+	return a !== null && b !== null && sameBytes(a, b);
+}
+
+/**
+ * One dotted-quad part: a decimal 0-255 with NO leading zero (`0` itself excepted).
+ *
+ * The leading-zero refusal is deliberate, not pedantry. `inet_aton` and several URL
+ * stacks read `010` as OCTAL (8), while a naive decimal read says 10 — so a literal
+ * like `127.0.0.01` has two meanings depending on who parses it, and a security
+ * predicate must not guess which one the socket will use. The WHATWG URL parser
+ * never emits one (it canonicalizes every numeric form to plain decimal) and
+ * `node:net` `isIP` refuses them too, so the only spellings this rejects are the
+ * ambiguous ones an operator or an attacker typed by hand.
+ */
+const IPV4_PART = /^(?:0|[1-9]\d{0,2})$/;
 
 /** Pack a dotted-quad into 4 bytes, or null when it is not one. */
 export function packIpv4(value: string): Uint8Array | null {
@@ -35,12 +87,15 @@ export function packIpv4(value: string): Uint8Array | null {
 	const bytes = new Uint8Array(4);
 	for (let index = 0; index < 4; index++) {
 		const part = parts[index] ?? '';
-		if (!/^\d{1,3}$/.test(part)) return null;
-		const byte = Number(part);
-		if (byte > 255) return null;
-		bytes[index] = byte;
+		if (!IPV4_PART.test(part) || Number(part) > 255) return null;
+		bytes[index] = Number(part);
 	}
 	return bytes;
+}
+
+/** The dotted spelling of 4 packed bytes (no validation: they are bytes already). */
+export function formatIpv4(bytes: Uint8Array): string {
+	return Array.from(bytes.subarray(0, 4)).join('.');
 }
 
 /**
@@ -53,6 +108,12 @@ export function packIpv4(value: string): Uint8Array | null {
  * problems at once. Every failure is a null, never a throw: a caller here decides whether
  * to admit an unauthenticated request, so "I could not parse it" must degrade to "no
  * match", not to an exception on the request path.
+ *
+ * The dotted quad is peeled off the TAIL only — the half the literal ends with — because
+ * RFC 4291 §2.2 allows it solely as the FINAL 32 bits. Peeling it off the last group of
+ * the whole list (the previous shape) read `1.2.3.4::` as `::1.2.3.4`: a malformed literal
+ * accepted as a different, valid address. A dotted group anywhere else is left in the hex
+ * list, where the hex-group check refuses it.
  */
 function splitIpv6(value: string): {
 	head: string[];
@@ -61,17 +122,12 @@ function splitIpv6(value: string): {
 } | null {
 	const halves = ipv6Halves(value);
 	if (halves === null) return null;
-	const trailing = splitV4Tail([...halves.head, ...halves.tail]);
+	const trailing = splitV4Tail(halves.tail);
 	if (trailing === null) return null;
-	const { hexGroups, v4Tail } = trailing;
 	// An embedded v4 tail (`::ffff:203.0.113.10`) occupies TWO groups' worth of bytes.
-	const groupCount = hexGroups.length + v4Tail.length / 2;
+	const groupCount = halves.head.length + trailing.hexGroups.length + trailing.v4Tail.length / 2;
 	if (!ipv6GroupCountValid(groupCount, halves.elided)) return null;
-
-	const headLength = halves.elided
-		? Math.min(halves.head.length, hexGroups.length)
-		: hexGroups.length;
-	return { head: hexGroups.slice(0, headLength), tail: hexGroups.slice(headLength), v4Tail };
+	return { head: halves.head, tail: trailing.hexGroups, v4Tail: trailing.v4Tail };
 }
 
 /**
@@ -87,17 +143,21 @@ function splitV4Tail(groups: string[]): { hexGroups: string[]; v4Tail: Uint8Arra
 	return v4Tail === null ? null : { hexGroups: groups.slice(0, -1), v4Tail };
 }
 
-/** The groups either side of the `::` elision, or null when the literal is malformed. */
+/**
+ * The groups either side of the `::` elision, or null when the literal is malformed.
+ *
+ * WITHOUT an elision every group is filed under `tail`, right-aligned from byte 0 of a
+ * full 8-group address — so the tail is always the half the literal ENDS with, and the
+ * only place `splitV4Tail` looks. A triple colon splits into an empty group (`:::1` →
+ * `['', ':1']` → groups `''` and `'1'`), which the hex-group check refuses.
+ */
 function ipv6Halves(value: string): { head: string[]; tail: string[]; elided: boolean } | null {
 	if (!value.includes(':')) return null;
 	const halves = value.split('::');
 	if (halves.length > 2) return null;
 	const expand = (half: string): string[] => (half === '' ? [] : half.split(':'));
-	return {
-		head: expand(halves[0] ?? ''),
-		tail: halves.length === 2 ? expand(halves[1] ?? '') : [],
-		elided: halves.length === 2,
-	};
+	if (halves.length === 1) return { head: [], tail: expand(value), elided: false };
+	return { head: expand(halves[0] ?? ''), tail: expand(halves[1] ?? ''), elided: true };
 }
 
 /**
@@ -111,7 +171,9 @@ function ipv6GroupCountValid(groupCount: number, elided: boolean): boolean {
 
 /** Write one 16-bit hex group at a byte offset. False when it is not a hex group. */
 function writeIpv6Group(bytes: Uint8Array, group: string, at: number): boolean {
-	if (!/^[0-9a-f]{1,4}$/.test(group)) return false;
+	// Case-INSENSITIVE: `FE80::1` is the same address as `fe80::1`, and a caller that
+	// forgot to lowercase must not get a null (read as "not an address") for it.
+	if (!/^[0-9a-f]{1,4}$/i.test(group)) return false;
 	const numeric = Number.parseInt(group, 16);
 	bytes[at] = (numeric >> 8) & 0xff;
 	bytes[at + 1] = numeric & 0xff;
@@ -159,43 +221,114 @@ export function packAddress(value: string): Uint8Array | null {
  *
  * Comparison is bitwise on the packed address: whole bytes are compared directly,
  * and the straddling byte is masked to the remaining bits, so `/23` and `/25` mean
- * what they say instead of what a string-prefix comparison would guess.
+ * what they say instead of what a string-prefix comparison would guess. `ip` is a
+ * PEER (`peerBytes`): a mapped IPv6 in any spelling is judged as the IPv4 it maps,
+ * exactly as a literal allow entry is (`sameAddress`).
  */
 export function ipInCidr(ip: string, cidr: string): boolean {
-	const address = packAddress(normalizeAddress(ip));
-	return address !== null && packedInCidr(address, cidr);
+	const address = peerBytes(ip);
+	const block = peerBlock(cidr);
+	return address !== null && block !== null && packedInBlock(address, block);
 }
 
 /**
- * Is an ALREADY-PACKED address inside `cidr`? The same bitwise, total, fail-closed
- * comparison as `ipInCidr`, minus its text normalization.
- *
- * Exists because that normalization is a POLICY, not parsing: `ipInCidr` folds a
- * dotted IPv4-mapped peer (`::ffff:203.0.113.10`) down to IPv4 so an operator's v4
- * allow entry matches a dual-stack listener's report of it. A caller asking which
- * IPv6 block an address sits in (the SSRF guard) must not have `::ffff:…` quietly
- * become a v4 value first — it would then match no IPv6 block at all.
+ * An ALLOW-ENTRY block as the peers it admits, or null when the text is not a block.
+ * A peer is folded to IPv4 whenever it is IPv4-mapped (`peerBytes`), so a block
+ * written INSIDE `::ffff:0:0/96` (a /96 or longer, in either spelling:
+ * `::ffff:a00:0/104`, `::ffff:10.0.0.0/104`) is the IPv4 block it spells — prefix
+ * minus 96 — or it would match no peer at all. Any other block is `packCidr`'s. Only
+ * for allow entries: the SSRF guard packs its range table with `packCidr`, where
+ * `::ffff:0:0/96` is an IPv6 block and stays one. Exported so the install banner can
+ * name an entry this predicate cannot read (install/gate.ts `allowEntryUsable`).
  */
-export function packedInCidr(address: Uint8Array, cidr: string): boolean {
-	const parsed = parseCidr(cidr);
-	if (parsed === null) return false;
-	if (parsed.network.length !== address.length) return false; // never match across families
-	return sharesPrefix(parsed.network, address, parsed.prefixBits);
+export function peerBlock(cidr: string): PackedCidr | null {
+	return mappedBlockAsIpv4(cidr) ?? packCidr(cidr);
 }
 
-/** A CIDR's packed network address and prefix length, or null when it is not one. */
-function parseCidr(cidr: string): { network: Uint8Array; prefixBits: number } | null {
-	const slash = cidr.indexOf('/');
-	if (slash < 0) return null;
-	const prefixText = cidr.slice(slash + 1).trim();
-	if (!/^\d{1,3}$/.test(prefixText)) return null;
-	const network = packAddress(normalizeAddress(cidr.slice(0, slash)));
+/** A /96-or-longer block inside `::ffff:0:0/96` as its IPv4 block; null for any other text. */
+function mappedBlockAsIpv4(cidr: string): PackedCidr | null {
+	const raw = rawCidrNetwork(cidr);
+	const prefixBits = cidrPrefixBits(cidr) ?? 0;
+	if (raw?.length !== 16 || !isMappedIpv4(raw)) return null;
+	return prefixBits >= 96 && prefixBits <= 128
+		? { network: raw.slice(12), prefixBits: prefixBits - 96 }
+		: null;
+}
+
+/**
+ * A CIDR block, packed once. A caller that tests the same blocks on every request (the
+ * SSRF guard's range tables) packs them at module load with `packCidr` and asks
+ * `packedInBlock`, instead of re-parsing constant text on every address it judges.
+ */
+export interface PackedCidr {
+	readonly network: Uint8Array;
+	readonly prefixBits: number;
+}
+
+/**
+ * A CIDR's packed network address and prefix length, or null when it is not one.
+ * Total and fail-closed like everything here: a malformed text is a null, never a throw.
+ */
+export function packCidr(cidr: string): PackedCidr | null {
+	const prefixBits = cidrPrefixBits(cidr);
+	if (prefixBits === null) return null;
+	const network = packAddress(normalizeAddress(cidr.slice(0, cidr.indexOf('/'))));
 	if (network === null) return null;
-	const prefixBits = Number(prefixText);
 	// A prefix wider than the family is a typo, not a wildcard. Refusing it is what
 	// keeps `/33` from silently meaning `/32`.
 	if (prefixBits > network.length * 8) return null;
 	return { network, prefixBits };
+}
+
+/** A CIDR's prefix length (1-3 digits after the slash), or null. */
+function cidrPrefixBits(cidr: string): number | null {
+	const slash = cidr.indexOf('/');
+	if (slash < 0) return null;
+	const prefixText = cidr.slice(slash + 1).trim();
+	return /^\d{1,3}$/.test(prefixText) ? Number(prefixText) : null;
+}
+
+/** A CIDR's network as written (trimmed, lower-cased, NOT folded), packed; or null. */
+function rawCidrNetwork(cidr: string): Uint8Array | null {
+	const slash = cidr.indexOf('/');
+	return slash < 0 ? null : packAddress(cidr.slice(0, slash).trim().toLowerCase());
+}
+
+/** Is a packed address inside a packed block? Never matches across families. */
+export function packedInBlock(address: Uint8Array, block: PackedCidr): boolean {
+	if (block.network.length !== address.length) return false;
+	return sharesPrefix(block.network, address, block.prefixBits);
+}
+
+/**
+ * The prefix lengths RFC 6052 §2.2 defines for an IPv4-embedded IPv6 address. Any other
+ * length has no defined layout, so an address "inside" it carries no IPv4 anyone can
+ * name — a translator prefix of another length is a configuration error, not a guess.
+ */
+export const RFC6052_PREFIX_LENGTHS: ReadonlySet<number> = new Set([32, 40, 48, 56, 64, 96]);
+
+/**
+ * The IPv4 address embedded in an IPv6 address under a translator prefix of
+ * `prefixBits`, per RFC 6052 §2.2's per-length layout — or null when the address is not
+ * IPv6 or the length is not one of the six the RFC defines.
+ *
+ * The IPv4 starts right after the prefix, EXCEPT that bits 64-71 (byte 8, the "u"
+ * octet) are reserved and never carry address bits: a /40 prefix puts three IPv4 octets
+ * in bytes 5-7 and the fourth in byte 9, a /56 one octet in byte 7 and three in 9-11.
+ * Reading the four bytes straight after the prefix — the obvious shortcut — would put
+ * the u octet into the address for every length below /64, and judge a different
+ * address from the one the translator reaches. /96 (the well-known `64:ff9b::/96`, and
+ * the IPv4-mapped `::ffff:0:0/96`) is simply bytes 12-15.
+ */
+export function extractRfc6052Ipv4(address: Uint8Array, prefixBits: number): Uint8Array | null {
+	if (address.length !== 16 || !RFC6052_PREFIX_LENGTHS.has(prefixBits)) return null;
+	const ipv4 = new Uint8Array(4);
+	let written = 0;
+	for (let at = prefixBits >> 3; written < 4; at++) {
+		if (at === 8) continue; // the u octet: reserved, never an address bit
+		ipv4[written++] = address[at] ?? 0;
+	}
+	return ipv4;
 }
 
 /**

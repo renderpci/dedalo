@@ -2356,6 +2356,48 @@ DEDALO_MEDIA_PUBLIC_QUALITIES=["image/1.5MB","av/404","av/subtitles"]
 
 ---
 
+### Declaring the NAT64 prefixes of an IPv6-only host
+
+DEDALO_NAT64_PREFIXES `array`
+
+Only for a server on an **IPv6-only network that reaches the IPv4 internet through a
+NAT64 translator using its own network-specific prefix** (RFC 6052). Leave it empty
+everywhere else — that is almost every installation.
+
+Whenever the server fetches a URL on a user's behalf (an RDF import, a catalogue lookup,
+a translation or transcription service, a harvest), it first checks that the address is on
+the public internet. Behind a NAT64 translator an IPv6 address *inside the translator's
+prefix* actually reaches the IPv4 address embedded in it — so with a provider prefix such
+as `2001:db8:64::/96`, the address `2001:db8:64::a9fe:a9fe` is really `169.254.169.254`,
+the cloud metadata endpoint, although it looks like an ordinary public IPv6 address.
+Declaring the prefix here makes the check judge every address inside it by the IPv4
+address it carries.
+
+The well-known prefix `64:ff9b::/96` is always understood and needs no entry. The engine
+also asks the network itself (the RFC 7050 `ipv4only.arpa` lookup) and uses what it
+learns, but only to refuse MORE: an answer from a resolver is not your word, so a prefix it
+reports never makes an otherwise-refused address acceptable. If your translator's prefix
+is taken from the local-use block `64:ff9b:1::/48` or from a unique-local range such as
+`fd00::/8` — those are the RANGES it comes from, not entries to copy — sites on the IPv4
+internet are reachable only once you declare the translator's OWN prefix here, for example
+`64:ff9b:1::/96`.
+
+Each entry is the translator's prefix exactly as it is configured, of length 32, 40, 48, 56,
+64 or 96 — the only lengths RFC 6052 defines (most translators use /96). Declare the length
+the translator uses: the length decides which bytes carry the IPv4 address, so a /48 entry
+for a /96 translator reads the wrong bytes and every IPv4 site it reaches is refused. An
+entry of any other length (`fd00::/8` is one) is refused loudly: until it is fixed,
+**every IPv6 destination is refused**, because the check can no longer tell which of them
+lead into IPv4.
+
+```bash
+DEDALO_NAT64_PREFIXES=2001:db8:64::/96
+```
+
+*Default: []*
+
+---
+
 ### Defining lock components notifications
 
 DEDALO_NOTIFICATIONS `bool`
@@ -3772,7 +3814,9 @@ DEDALO_ERROR_REPORT_ALLOWED_IPS `string`
 
 Only meaningful on the **master** installation (the one that receives reports). A
 comma-separated list of the IP addresses allowed to reach the intake; a report from any
-other address is refused. The shorthand `loopback` accepts the local machine.
+other address is refused. The shorthand `loopback` accepts the local machine. Write
+every IPv4 part in plain decimal: an entry with a leading zero (`010.0.0.1`) is refused,
+because some software reads it as octal — it matches no address at all.
 
 Unset (the default) leaves the intake open to any address — it is still anonymous,
 rate-limited and size-capped, but if you know which installations report to you, listing
@@ -4888,7 +4932,8 @@ Outbound requests to private ranges are refused by default, because an *external
 must never be able to make the engine reach inside the network. An *on-premise* recogniser
 (faster-whisper, WhisperX, whisper.cpp on a LAN machine) is the legitimate opposite case, and
 this parameter is how you say so — deliberately, per installation, rather than by weakening
-the guard for everyone. The cloud metadata address stays refused either way.
+the guard for everyone. The cloud metadata addresses stay refused either way, and so does all
+of IPv4 link-local (`169.254.0.0/16`), which is never a machine on your LAN.
 
 It applies only to the `local_whisper` engine, which is POSTed the audio bytes; the external
 engine keeps the strict guard regardless.
@@ -5362,7 +5407,7 @@ This parameter defines which addresses may reach the install wizard.
 
 A fresh installation has no users yet, so the wizard cannot ask anyone to log in: until the installation is SEALED (the last step of the wizard), its actions are reachable without a password by whoever can open the page — and those actions write the configuration file and restart the server. **Unset, the wizard answers the local machine and nobody else.** To install from another machine — which is the normal case for a container, a virtual machine or a hosted server — you must name the address you will browse from, before you start the wizard.
 
-An entry is one of four things: the word `loopback` (the local machine), a literal address, a range in CIDR notation such as `10.0.0.0/24`, or the word `any`, which opens the wizard to every address. Write `any` only when nothing else can reach the machine — a firewall, or a laptop with no network — and remove it once the installation is sealed. Separate several entries with commas.
+An entry is one of four things: the word `loopback` (the local machine), a literal address, a range in CIDR notation such as `10.0.0.0/24`, or the word `any`, which opens the wizard to every address. Write `any` only when nothing else can reach the machine — a firewall, or a laptop with no network — and remove it once the installation is sealed. Separate several entries with commas. Write every IPv4 part in plain decimal: a part with a leading zero (`127.0.0.01`, `010.0.0.0/8`) is refused, because some software reads it as octal and some as decimal — such an entry matches no address, and the server log names it as ignored.
 
 The address is taken from the trusted hop reported by the web server in front of Dédalo, so behind a proxy `loopback` will NOT match: name the real address of the machine you install from. If a request arrives with no such information the engine treats it as local, so put the wizard behind the proxy the production guide prescribes, or behind a closed port, whenever the machine is reachable from a network. The effective list is printed in the server log when the engine starts, so an installation you cannot reach tells you why. Once the installation is sealed, the whole install surface answers "not found" for good and this parameter no longer matters.
 

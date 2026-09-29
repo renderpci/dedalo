@@ -16,7 +16,7 @@
 import { readEnv } from '../../config/env.ts';
 import { INSTALL_MODE } from '../../config/install_mode.ts';
 import { getServerState } from '../resolve/server_state.ts';
-import { ipInCidr, normalizeAddress } from '../security/ip_address.ts';
+import { ipInCidr, peerBlock, peerBytes, sameAddress } from '../security/ip_address.ts';
 
 /** The (class:action) pairs that make up the pre-auth install surface. */
 export const INSTALL_ACTION_KEYS: ReadonlySet<string> = new Set([
@@ -84,8 +84,8 @@ export function installSurfaceReachable(): boolean {
  * opening the surface is an explicit, written act (`any`).
  *
  * Entry spellings, in the one grammar this file defines:
- *   `loopback`       the local machine — the exact spellings in LOOPBACK_SPELLINGS
- *   `203.0.113.10`   a literal address (v4 or v6)
+ *   `loopback`       the local machine — the addresses in LOOPBACK_SPELLINGS, any spelling
+ *   `203.0.113.10`   a literal address (v4 or v6), compared as bytes (sameAddress)
  *   `10.0.0.0/24`    a CIDR block (v4 or v6), matched bitwise by ipInCidr
  *   `any`            EVERY address. The one opt-out, never a default.
  *
@@ -107,8 +107,9 @@ export function installSurfaceReachable(): boolean {
  * dispatcher's own sentinel for a request that carried no `X-Forwarded-For` (a unix
  * socket, the CLI installer, a direct dev request) — without it a fresh box locks
  * its own operator out of the wizard, which is the failure mode opposite to the one
- * this gate exists for. Exact spellings only: `127.0.0.2` is loopback to the kernel
- * but is not a spelling anything in this engine produces, and an allowlist that
+ * this gate exists for. Exact ADDRESSES only (in any spelling — they are compared as
+ * bytes): `127.0.0.2` is loopback to the kernel but is not an address anything in
+ * this engine produces, and an allowlist that
  * guesses is an allowlist that surprises. Typed ReadonlySet — a constant table, not
  * a cache (module_state_tripwire).
  */
@@ -168,8 +169,11 @@ export function installAllowPolicy(): InstallAllowPolicy {
  * One line naming the policy in force, for the boot banner next to INSTALL MODE.
  * An operator who cannot reach their own wizard must be able to read WHY off the
  * log rather than guess at an env key, and an operator who wrote `any` must see
- * that they did. Deliberately says nothing a log reader could not already read out
- * of the configuration — this string is for the console, never for a response body.
+ * that they did — or wrote an entry that matches nothing (`127.0.0.01`: a leading
+ * zero is refused, see ip_address.ts `IPV4_PART`), which the line names as IGNORED
+ * instead of listing it as if it were in force. Deliberately says nothing a log
+ * reader could not already read out of the configuration — this string is for the
+ * console, never for a response body.
  */
 export function describeInstallAllowPolicy(): string {
 	const { entries, source } = installAllowPolicy();
@@ -179,7 +183,25 @@ export function describeInstallAllowPolicy(): string {
 			: entries.includes(INSTALL_ALLOW_ANY)
 				? ' (DEDALO_INSTALL_ALLOWED_IPS — OPEN TO EVERY ADDRESS)'
 				: ' (DEDALO_INSTALL_ALLOWED_IPS)';
-	return `install allowlist: ${entries.join(', ')}${suffix}`;
+	return `install allowlist: ${entries.join(', ')}${suffix}${unusableEntriesNote(entries)}`;
+}
+
+/** The banner's note on entries that match no address, or '' when every entry is usable. */
+function unusableEntriesNote(entries: readonly string[]): string {
+	const unusable = entries.filter((entry) => !allowEntryUsable(entry));
+	if (unusable.length === 0) return '';
+	return ` — IGNORED, not an address or CIDR block (a leading zero is refused): ${unusable.join(', ')}`;
+}
+
+/**
+ * Can this entry match ANY address? The same readings `allowEntryMatches` makes, in
+ * the same order — the two tokens, a block (`peerBlock`, what `ipInCidr` reads), a
+ * literal (`peerBytes`, what `sameAddress` reads) — so "usable" can never disagree
+ * with what the matcher does.
+ */
+export function allowEntryUsable(entry: string): boolean {
+	if (entry === INSTALL_ALLOW_ANY || entry === 'loopback') return true;
+	return entry.includes('/') ? peerBlock(entry) !== null : peerBytes(entry) !== null;
 }
 
 /**
@@ -214,9 +236,19 @@ export function installIpAllowed(clientIp: string): boolean {
  * `any` there means it).
  */
 export function allowEntryMatches(entry: string, clientIp: string): boolean {
-	const address = normalizeAddress(clientIp);
 	if (entry === INSTALL_ALLOW_ANY) return true;
-	if (entry === 'loopback') return LOOPBACK_SPELLINGS.has(address);
-	if (entry.includes('/')) return ipInCidr(address, entry);
-	return normalizeAddress(entry) === address;
+	if (entry === 'loopback') return isLoopbackPeer(clientIp);
+	if (entry.includes('/')) return ipInCidr(clientIp, entry);
+	return sameAddress(entry, clientIp);
+}
+
+/**
+ * The `loopback` token: the dispatcher's `'local'` sentinel (a text, not an
+ * address), or one of the LOOPBACK_SPELLINGS addresses in any spelling of it —
+ * `0:0:0:0:0:0:0:1` is `::1`, `::ffff:7f00:1` is `127.0.0.1`. Still those exact
+ * addresses: `127.0.0.2` is not one of them (see LOOPBACK_SPELLINGS).
+ */
+function isLoopbackPeer(clientIp: string): boolean {
+	if (clientIp.trim().toLowerCase() === 'local') return true;
+	return [...LOOPBACK_SPELLINGS].some((spelling) => sameAddress(spelling, clientIp));
 }

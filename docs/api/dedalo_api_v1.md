@@ -266,7 +266,7 @@ the error channel.
 - **[dd_diffusion_api](classes/dd_diffusion_api.md)** — publication / diffusion process control.
 - **[dd_rag_api](classes/dd_rag_api.md)** — semantic retrieval (RAG) and image similarity.
 - **[dd_identify_api](classes/dd_identify_api.md)** — object identification: matches for a seed record, identification by photograph, value proposals, Type promotion.
-- **[dd_external_api](classes/dd_external_api.md)** — search a third-party catalogue through the engine's one outbound door.
+- **[dd_external_api](classes/dd_external_api.md)** — search a third-party catalogue through the external-services door (one of the engine's three outbound doors).
 - **[dd_component_portal_api](classes/dd_component_portal_api.md)** — portal component helpers.
 - **[dd_component_text_area_api](classes/dd_component_text_area_api.md)** — transcription tags: resolve them, delete one.
 - **[dd_component_av_api](classes/dd_component_av_api.md)** — audio/video helpers.

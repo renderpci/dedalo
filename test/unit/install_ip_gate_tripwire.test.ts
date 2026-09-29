@@ -48,6 +48,8 @@ import { join } from 'node:path';
 import { Glob } from 'bun';
 import { readEnv } from '../../src/config/env.ts';
 import {
+	allowEntryMatches,
+	allowEntryUsable,
 	DEFAULT_INSTALL_ALLOW_ENTRIES,
 	describeInstallAllowPolicy,
 	INSTALL_ALLOW_ANY,
@@ -55,7 +57,7 @@ import {
 	installIpAllowed,
 	LOOPBACK_SPELLINGS,
 } from '../../src/core/install/gate.ts';
-import { ipInCidr } from '../../src/core/security/ip_address.ts';
+import { ipInCidr, peerBytes, sameAddress } from '../../src/core/security/ip_address.ts';
 
 const KEY = 'DEDALO_INSTALL_ALLOWED_IPS';
 const original = process.env[KEY];
@@ -160,6 +162,29 @@ describe('`any` is the ONE open spelling, and it is always explicit', () => {
 		process.env[KEY] = 'any';
 		expect(describeInstallAllowPolicy()).toContain('EVERY ADDRESS');
 	});
+
+	test('an entry that matches NO address is named as ignored, never listed as in force', () => {
+		// A leading zero is refused (ip_address.ts IPV4_PART): these match nothing, and
+		// an operator reading the banner must learn that rather than see them "in force".
+		process.env[KEY] = '127.0.0.01, 010.0.0.0/8, 10.0.0.0/8, loopback';
+		const banner = describeInstallAllowPolicy();
+		const ignored = banner.split('IGNORED')[1] ?? '';
+		expect(ignored).toContain('127.0.0.01');
+		expect(ignored).toContain('010.0.0.0/8');
+		expect(ignored).not.toContain(' 10.0.0.0/8');
+		expect(ignored).not.toContain('loopback');
+		// …the SAME readings the matcher makes: an ignored entry admits nobody.
+		expect(allowEntryMatches('127.0.0.01', '127.0.0.1')).toBe(false);
+		expect(allowEntryMatches('010.0.0.0/8', '10.1.2.3')).toBe(false);
+		for (const entry of ['any', 'loopback', '10.0.0.0/8', '::ffff:a00:0/104', '2001:db8::1']) {
+			expect(allowEntryUsable(entry), entry).toBe(true);
+		}
+		for (const entry of ['ANY', 'local', '10.0.0.0/33', 'not-an-ip', '::ffff:1.2.3']) {
+			expect(allowEntryUsable(entry), entry).toBe(false);
+		}
+		process.env[KEY] = '10.0.0.0/8,loopback';
+		expect(describeInstallAllowPolicy()).not.toContain('IGNORED');
+	});
 });
 
 describe('ipInCidr — bitwise, total, fail-closed', () => {
@@ -196,6 +221,11 @@ describe('ipInCidr — bitwise, total, fail-closed', () => {
 			['10.0.0.5', '10.0.0.0/-1'],
 			['10.0.0.5', '10.0.0.0/33'], // wider than the family
 			['10.0.0.5', '10.0.0.0/999'],
+			// …and against the address ITSELF: a /33 read as /32 would match here, so
+			// only these prove the width refusal (the pairs above miss the network anyway).
+			['10.0.0.5', '10.0.0.5/33'],
+			['10.0.0.5', '10.0.0.5/999'],
+			['2001:db8::1', '2001:db8::1/129'],
 			['10.0.0.5', '/24'],
 			['10.0.0.5', ''],
 			['10.0.0.5', 'not-an-address/24'],
@@ -208,11 +238,105 @@ describe('ipInCidr — bitwise, total, fail-closed', () => {
 			['2001:db8:::1', '2001:db8::/32'],
 			['2001:zzzz::1', '2001:db8::/32'],
 			['0x7f.0.0.1', '127.0.0.0/8'],
-			['127.0.0.01', '127.0.0.0/32'], // leading zeros are not a second spelling
+			// Leading zeros are not a second spelling: `01` is octal to inet_aton and
+			// decimal to a naive read, so the literal is REFUSED, not guessed at. Checked
+			// against the /32 of the address a decimal read WOULD mean — a case that
+			// matched before 2026-09-29 (the old parser read `01` as 1) — so it proves
+			// the refusal rather than passing vacuously against a block it misses anyway.
+			['127.0.0.01', '127.0.0.1/32'],
+			['010.0.0.5', '10.0.0.0/8'],
+			['10.0.0.5', '010.0.0.0/8'], // …in the CIDR's network too
 		];
 		for (const [ip, cidr] of malformed) {
 			expect(() => ipInCidr(ip, cidr)).not.toThrow();
 			expect(ipInCidr(ip, cidr)).toBe(false);
+		}
+	});
+
+	test('a MALFORMED dotted tail is not an address, as peer or entry — and never a throw', () => {
+		// The module promises PURE and TOTAL: a literal that LOOKS like it ends in a v4
+		// tail but does not pack as one must be a null, not an exception in a pre-auth gate.
+		for (const bad of ['::ffff:1.2.3', '::1.2.3.256', '1.2.3.4::', '::ffff:1.2.3.4.5']) {
+			expect(() => ipInCidr(bad, '0.0.0.0/0'), bad).not.toThrow();
+			expect(ipInCidr(bad, '0.0.0.0/0'), bad).toBe(false);
+			expect(ipInCidr(bad, '::/0'), bad).toBe(false);
+			expect(ipInCidr('1.2.3.4', `${bad}/128`), bad).toBe(false);
+			expect(sameAddress(bad, '1.2.3.4'), bad).toBe(false);
+			expect(sameAddress(bad, bad), bad).toBe(false);
+			expect(allowEntryMatches(bad, '1.2.3.4'), bad).toBe(false);
+			expect(allowEntryMatches('loopback', bad), bad).toBe(false);
+		}
+	});
+
+	test('only ::ffff:0:0/96 is folded: an address one byte off it is NOT the IPv4 it ends in', () => {
+		// Byte 0 set, byte 10 clear: each is an ordinary IPv6 address, not 127.0.0.1.
+		for (const near of ['100::ffff:7f00:1', '::ff:7f00:1', '::ff00:7f00:1']) {
+			expect(allowEntryMatches('loopback', near), near).toBe(false);
+			expect(sameAddress(near, '127.0.0.1'), near).toBe(false);
+			expect(ipInCidr(near, '127.0.0.0/8'), near).toBe(false);
+		}
+		expect(ipInCidr('100::ffff:a00:1', '10.0.0.0/8')).toBe(false);
+		expect(allowEntryMatches('loopback', '::ffff:7f00:1')).toBe(true); // positive control
+	});
+
+	test('a mapped block is an IPv4 block ONLY from /96 on: a shorter one is plain IPv6', () => {
+		// /96 is the whole mapped space: every IPv4 peer.
+		expect(ipInCidr('203.0.113.9', '::ffff:0:0/96')).toBe(true);
+		// Shorter than /96 there is no IPv4 prefix to fold to (it would be negative and
+		// compare no bytes, admitting every IPv4 peer): it is an IPv6 block, which no
+		// IPv4 peer is in.
+		for (const block of ['::ffff:a00:0/80', '::ffff:a00:0/95', '::ffff:a00:0/0']) {
+			expect(ipInCidr('203.0.113.9', block), block).toBe(false);
+			expect(ipInCidr('10.0.0.1', block), block).toBe(false);
+		}
+		expect(ipInCidr('::1', '::ffff:a00:0/0')).toBe(true); // …it is IPv6: /0 is every IPv6
+	});
+
+	test('host-length prefixes (/32, /128) match exactly one address', () => {
+		expect(ipInCidr('203.0.113.7', '203.0.113.7/32')).toBe(true);
+		expect(ipInCidr('203.0.113.8', '203.0.113.7/32')).toBe(false);
+		expect(ipInCidr('203.0.113.6', '203.0.113.7/32')).toBe(false);
+		expect(ipInCidr('2001:db8::7', '2001:db8::7/128')).toBe(true);
+		expect(ipInCidr('2001:db8::8', '2001:db8::7/128')).toBe(false);
+		expect(ipInCidr('2001:db8::6', '2001:db8::7/128')).toBe(false);
+	});
+
+	test('the octet boundary: 255 is an address, 256 is not', () => {
+		expect(ipInCidr('10.0.0.255', '10.0.0.0/24')).toBe(true);
+		expect(ipInCidr('10.0.0.256', '10.0.0.0/8')).toBe(false);
+		expect(ipInCidr('255.255.255.255', '255.255.255.255/32')).toBe(true);
+		expect(ipInCidr('256.0.0.0', '0.0.0.0/0')).toBe(false);
+	});
+
+	test('upper-case IPv6 matches its lower-case CIDR (and the reverse)', () => {
+		expect(ipInCidr('2001:DB8::1', '2001:db8::/32')).toBe(true);
+		expect(ipInCidr('2001:db8::1', '2001:DB8::/32')).toBe(true);
+		expect(ipInCidr('FE80::ABCD', 'fe80::/10')).toBe(true);
+		expect(ipInCidr('2001:DB9::1', '2001:db8::/32')).toBe(false);
+	});
+
+	test('MALFORMED IPv6 literals deny (RFC 4291 §2.2)', () => {
+		for (const ip of [
+			'1.2.3.4::', // a dotted quad only as the FINAL 32 bits
+			'::1.2.3.4:1',
+			'1:2:3:4:5:6:7:8::', // 8 groups AND an elision
+			'::1:2:3:4:5:6:7:8',
+			'1:2:3:4:5:6:7', // 7 groups, no elision
+			'1:2:3:4:5:6:7:8:9',
+			'1:::2', // a triple colon
+			':::1',
+			'1::2::3', // two elisions
+			'12345::1', // a 5-hex-digit group
+			'1:2:3:4:5:6:7:1.2.3.4', // 7 groups + a v4 tail = 9 groups' worth
+			'::ffff:1.2.3.04', // a leading zero inside the v4 tail
+			'fe80::1%eth0', // a zone is not part of an address to match
+		]) {
+			expect(() => ipInCidr(ip, '::/0')).not.toThrow();
+			expect(ipInCidr(ip, '::/0'), ip).toBe(false);
+		}
+		// Positive controls: the well-formed neighbours of the cases above DO match.
+		for (const ip of ['::1.2.3.4', '1:2:3:4:5:6:7:8', '1:2:3:4:5:6:1.2.3.4', '1::2', 'ffff::1']) {
+			expect(ipInCidr(ip, '::/0'), ip).toBe(true);
 		}
 	});
 
@@ -227,6 +351,65 @@ describe('ipInCidr — bitwise, total, fail-closed', () => {
 		process.env[KEY] = '10.0.0.0/notanumber, 192.168.1.9';
 		expect(installIpAllowed('192.168.1.9')).toBe(true);
 		expect(installIpAllowed('10.0.0.9')).toBe(false);
+	});
+
+	test('a LITERAL entry and the loopback token compare BYTES: every spelling of one address', () => {
+		process.env[KEY] = '2001:db8:0::1, ::ffff:127.0.0.1';
+		expect(installIpAllowed('2001:db8::1')).toBe(true);
+		expect(installIpAllowed('2001:0db8:0000:0000:0000:0000:0000:0001')).toBe(true);
+		expect(installIpAllowed('::ffff:7f00:1')).toBe(true); // the hex spelling of the entry
+		expect(installIpAllowed('127.0.0.1')).toBe(true); // …and the IPv4 it maps
+		expect(installIpAllowed('2001:db8::2')).toBe(false);
+		expect(installIpAllowed('127.0.0.01')).toBe(false); // ambiguous, never guessed
+		process.env[KEY] = 'loopback';
+		for (const ip of ['0:0:0:0:0:0:0:1', '::ffff:7f00:1', '0:0:0:0:0:ffff:7f00:1', 'LOCAL']) {
+			expect(installIpAllowed(ip), ip).toBe(true);
+		}
+		for (const ip of ['127.0.0.2', '::ffff:7f00:2', '::2', 'localhost']) {
+			expect(installIpAllowed(ip), ip).toBe(false); // exact addresses, not a range
+		}
+		// Near-miss MAPPED PREFIXES: only `::ffff:0:0/96` folds to IPv4. A prefix one byte
+		// off is an ordinary IPv6 address, never 127.0.0.1 — folding it would open the
+		// pre-auth installer to any peer that can pick its own IPv6 bits.
+		for (const ip of ['::ff00:7f00:1', '::fffe:7f00:1', '::1:ffff:7f00:1', '1::ffff:7f00:1']) {
+			expect(installIpAllowed(ip), ip).toBe(false);
+			expect(peerBytes(ip)?.length, ip).toBe(16);
+		}
+	});
+
+	test('a 4-byte and a 16-byte address never match, whatever their bytes', () => {
+		// `102:304::` starts with the bytes of 1.2.3.4; only the length tells them apart.
+		expect(sameAddress('1.2.3.4', '102:304::')).toBe(false);
+		expect(sameAddress('102:304::', '1.2.3.4')).toBe(false);
+		process.env[KEY] = '1.2.3.4';
+		expect(installIpAllowed('102:304::')).toBe(false);
+		expect(installIpAllowed('1.2.3.4')).toBe(true); // positive control
+	});
+
+	test('a CIDR entry written inside ::ffff:0:0/96 (/96 or longer) is the IPv4 block it spells', () => {
+		// RFC 4291 §2.5.5.2 spellings of 10.0.0.0/8: a mapped peer is folded to IPv4, so
+		// the block must be too, or the entry matches no peer at all.
+		for (const entry of ['::ffff:a00:0/104', '::ffff:10.0.0.0/104', '::FFFF:A00:0/104']) {
+			expect(ipInCidr('::ffff:a00:1', entry), entry).toBe(true);
+			expect(ipInCidr('10.200.0.1', entry), entry).toBe(true);
+			expect(ipInCidr('11.0.0.1', entry), entry).toBe(false);
+			expect(ipInCidr('::a00:1', entry), entry).toBe(false); // IPv4-compatible is not mapped
+		}
+		expect(ipInCidr('10.0.0.1', '::ffff:10.0.0.1/128')).toBe(true);
+		expect(ipInCidr('10.0.0.2', '::ffff:10.0.0.1/128')).toBe(false);
+		expect(ipInCidr('10.0.0.1', '::ffff:a00:1/129')).toBe(false); // wider than IPv6: a typo
+		process.env[KEY] = '::ffff:a00:0/104';
+		expect(installIpAllowed('::ffff:10.1.2.3')).toBe(true);
+		expect(installIpAllowed('192.168.0.1')).toBe(false);
+	});
+
+	test('a mapped-form CIDR is the IPv4 block it spells; a mapped peer in any spelling is its IPv4', () => {
+		expect(ipInCidr('192.168.1.7', '::ffff:192.168.1.0/24')).toBe(true);
+		expect(ipInCidr('192.168.1.7', '::FFFF:192.168.1.0/24')).toBe(true); // case is not a spelling
+		expect(ipInCidr('::1', '::ffff:192.168.1.0/24')).toBe(false); // not a v6 /24 of zeros
+		expect(ipInCidr('::ffff:c0a8:107', '192.168.1.0/24')).toBe(true);
+		expect(ipInCidr('::ffff:7f00:1', '127.0.0.0/8')).toBe(true);
+		expect(ipInCidr('10.0.0.5', '10.0.0.0/0008')).toBe(false); // a prefix is 1-3 digits
 	});
 });
 

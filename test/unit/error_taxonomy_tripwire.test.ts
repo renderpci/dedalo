@@ -393,7 +393,6 @@ const RAW_KEYED_EXEMPTIONS: Readonly<Record<string, { count: number; reason: Raw
 	'tools/tool_import_dedalo_csv/server/index.ts': { count: 3, reason: 'admin_report' },
 	'tools/tool_import_files/server/index.ts': { count: 1, reason: 'admin_report' },
 	'tools/tool_import_marc21/server/index.ts': { count: 1, reason: 'admin_report' },
-	'tools/tool_import_rdf/server/index.ts': { count: 1, reason: 'admin_report' },
 	'tools/tool_import_zotero/server/index.ts': { count: 1, reason: 'admin_report' },
 	'tools/tool_ontology_parser/server/tool_ontology_parser.ts': { count: 1, reason: 'admin_report' },
 	'tools/tool_propagate_component_data/server/index.ts': { count: 1, reason: 'admin_report' },

@@ -17,10 +17,10 @@ The pipeline is **ontology-driven graph fetch and mapping**: the external RDF sc
 **Server** (`tools/tool_import_rdf/server/index.ts`, `src/core/tools/rdf_xml.ts`):
 
 - `get_rdf_data` is the single API entry point, declaratively gated `permission: 'section', minLevel: 1` when `options.locator.section_tipo` is present.
-- For each IRI it appends `.rdf` (if absent) and **SSRF-confines** the URL — refusing non-http(s) schemes, loopback, RFC1918/link-local, and the cloud metadata address (`169.254.169.254`) — then fetches the graph with the platform `fetch`.
+- For each IRI it appends `.rdf` (if absent) and fetches it through `fetchGuardedText`, the shared outbound guard: http(s) only, every address the host resolves to must be public (loopback, private ranges, link-local and the cloud metadata address included), a redirect is refused, and the wait and the body are bounded.
 - `parseRdfXml` (`rdf_xml.ts`) is a from-scratch reader that extracts RDF subjects/properties from the raw XML.
 - When the request's `tool_config.config.main` carries a predicate→component map, `applyRdfMap` (`rdf_xml.ts`) resolves it against the parsed subjects; without a map, the raw parsed subjects are returned as-is for the caller to interpret. The map is a flat list of `{predicate, component_tipo}` entries — there is no ontology-driven class-hierarchy walk that auto-derives which section/properties apply from an RDF `rdf:type`; the caller must supply the map explicitly.
-- **`get_rdf_data` does not write anything.** The handler only fetches, parses and maps — it returns `{result: [{uri, subjects}], msg, errors}` and performs no database write. This matches its read-only (`minLevel: 1`) gate: importing the resolved values into a record is a separate, caller responsibility, not something this action does.
+- **`get_rdf_data` does not write anything.** The handler only fetches, parses and maps — it returns `{rdf: [{uri, subjects}], errors}` and performs no database write. This matches its read-only (`minLevel: 1`) gate: importing the resolved values into a record is a separate, caller responsibility, not something this action does.
 
 **Client** (`tools/tool_import_rdf/js/`): `tool_import_rdf.js` is the instance; `render_tool_import_rdf.js` builds the edit UI — a radio button per IRI value found on the source `component_iri`, a default-language selector (for literals that arrive without a language tag), and an **OK** button. The tool reads its `external_ontology` tipo from the source element's `properties.ar_tools_name.tool_import_rdf.external_ontology`, calls `get_rdf_data(ontology_tipo, ar_values)`, and on success renders the graph dump (`ar_rdf_html`) in a result pane and refreshes the parent section so the freshly imported data shows. Unchanged for the TS rewrite.
 
@@ -40,7 +40,7 @@ Key options read by `get_rdf_data`:
 | `ar_values` | array of strings | The IRIs to fetch, e.g. `["http://numismatics.org/ocre/id/ric.1(2).aug.1A"]` (the values the user ticked on the source IRI component). Each is suffixed with `.rdf` if needed, SSRF-checked, then loaded. |
 | `locator` | object | `{section_tipo, section_id}` of the record the import targets. Drives the **read permission gate**. `get_rdf_data` does **not** write to it — see the note above. |
 
-Response: `{ result: [ {uri, subjects}, … ] | false, msg, errors }` — the parsed (and, when a map was supplied, mapped) subjects per IRI. There is no `ar_rdf_html` dump field and no side-effect write.
+Response data: `{ rdf: [ {uri, subjects}, … ], errors: [ {uri, error}, … ] }` — the parsed (and, when a map was supplied, mapped) subjects per IRI, and one entry per IRI that failed. `error` is the error system's wire body (`code`, `message`, `retryable`, …), the same one a failed call carries: its `message` is a fixed public sentence, so a refused address never reaches the page. There is no `ar_rdf_html` dump field and no side-effect write.
 
 The module is a single fetch→parse→map function (`getRdfData`) plus the pure `parseRdfXml`/`applyRdfMap` core.
 

@@ -159,6 +159,26 @@ describe('step 4 — the SSRF guard and the socket pin', () => {
 		expect(error.kind).toBe('blocked_host');
 	});
 
+	test('a pin that does not take is blocked_host inside this door — never a raw guard error', async () => {
+		// A zoned address: the URL hostname setter silently ignores it, and the pin's
+		// self-check refuses (security.ssrf_blocked pin_failed). This door classifies.
+		const calls: string[] = [];
+		const error = await fetchExternalJson({
+			model: zenon,
+			request,
+			deps: {
+				assertPublicUrlImpl: guardStub(calls, ['fe80::1%eth0']),
+				fetchImpl: async () => {
+					calls.push('fetch');
+					return jsonResponse({});
+				},
+			},
+		}).catch((e: unknown) => e);
+		expect((error as ExternalServiceError).name).toBe('ExternalServiceError');
+		expect((error as ExternalServiceError).kind).toBe('blocked_host');
+		expect(calls).toEqual(['resolve']); // no socket
+	});
+
 	test('the socket is PINNED to a vetted address, with SNI and Host kept at the real name', async () => {
 		let seenUrl = '';
 		let seenServerName: string | undefined;
@@ -399,6 +419,58 @@ describe('step 7 — the retry policy', () => {
 			},
 		});
 		expect(waits).toEqual([2000]);
+	});
+
+	test('Retry-After is read by the guard’s ONE reader: a lenient date is not a wait', async () => {
+		// `Date.parse` reads these as far-future instants (a private reader would park the
+		// retry at the ceiling); RFC 9110 knows neither form, so the jitter decides.
+		for (const asked of ['2099-01-01T00:00:00Z', 'Fri, 01 Jan 2100 00:00:00 +0000', '1.5']) {
+			const waits: number[] = [];
+			let index = 0;
+			await fetchExternalJson({
+				model: zenon,
+				request,
+				deps: {
+					fetchImpl: async () => {
+						index++;
+						return index === 1
+							? jsonResponse({}, 503, { 'retry-after': asked })
+							: jsonResponse({ ok: true });
+					},
+					assertPublicUrlImpl: guardStub([]),
+					random: () => 0,
+					sleep: async (ms: number) => {
+						waits.push(ms);
+					},
+				},
+			});
+			expect(waits, asked).toEqual([0]);
+		}
+	});
+
+	test('a Retry-After past the door ceiling waits 10 s, never a day holding a slot', async () => {
+		for (const asked of ['86400', 'Fri, 01 Jan 2100 00:00:00 GMT']) {
+			const waits: number[] = [];
+			let index = 0;
+			await fetchExternalJson({
+				model: zenon,
+				request,
+				deps: {
+					fetchImpl: async () => {
+						index++;
+						return index === 1
+							? jsonResponse({}, 503, { 'retry-after': asked })
+							: jsonResponse({ ok: true });
+					},
+					assertPublicUrlImpl: guardStub([]),
+					random: () => 0,
+					sleep: async (ms: number) => {
+						waits.push(ms);
+					},
+				},
+			});
+			expect(waits, asked).toEqual([10_000]);
+		}
 	});
 });
 

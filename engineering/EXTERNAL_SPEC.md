@@ -60,7 +60,7 @@ Layout — every file is private except `api/`:
 | `descriptor_types.ts` | `ExternalServiceModel` and its satellites (§4). |
 | `config.ts` | ontology `api_config` → a typed, vetted binding; `publishApiConfig`. |
 | `fields_map.ts` | payload → entries: unwrap, pick, extract, format, id codec, ceilings. |
-| `transport.ts` | THE ONE OUTBOUND DOOR (§5) + the concurrency ceiling. |
+| `transport.ts` | THE SUBSYSTEM'S ONE OUTBOUND DOOR (§5) — one of the engine's three (`engineering/OUTBOUND_SPEC.md`) — + the concurrency ceiling. |
 | `breaker.ts` | circuit breaker per (service, origin). |
 | `cache.ts` | row cache, in-flight coalescing, the per-page fan-out. |
 | `errors.ts` | the closed error taxonomy + the log grammar. |
@@ -444,7 +444,11 @@ answer became a confidently wrong value. A non-matching answer is `not_found`
 
 ## 5. Transport — the one door and its order
 
-Every byte the subsystem sends leaves through `transport.ts::fetchExternalJson`;
+Every byte the subsystem sends leaves through `transport.ts::fetchExternalJson`
+— the external subsystem's door, one of the engine's three outbound doors
+(`engineering/OUTBOUND_SPEC.md` says which request takes which, and names the
+guard all three share: this door reads its body with the guard's
+`readBytesCapped` and pins with its `pinToVettedAddress`, never a copy).
 `external_outbound_tripwire` fails the build on any other `fetch(` /
 `new Request(` / `node:http(s)` / `Bun.connect` under `src/external/**`. THE
 ORDER IS LOAD-BEARING — each step exists because the next one would otherwise
@@ -767,8 +771,8 @@ external search goes through the adapter, never through SQO
 (`component_external.search` is still `{status:'unported'}` and THROWS — a
 silently empty result set would look like "no matches").
 
-The browser asks the engine; the engine asks the service through the ONE
-outbound door. Until 2026-08-06 `service_autocomplete.js` (`zenon_engine`)
+The browser asks the engine; the engine asks the service through the
+subsystem's ONE outbound door (§5). Until 2026-08-06 `service_autocomplete.js` (`zenon_engine`)
 called the search endpoint DIRECTLY FROM THE BROWSER, which bypassed every
 control in §5 — and, since the XSS-02 CSP dropped third-party origins from
 `connect-src`, failed outright. Widening `connect-src` was the wrong fix twice
@@ -863,7 +867,7 @@ autocomplete path), and `client/dedalo/test/client/js/test_service_autocomplete.
 | Gate | Guards |
 |---|---|
 | `external_registry_totality_tripwire` | every declared engine/entity resolves to a registered adapter; unknown THROWS; every `api_config` parses; every `fields_map` well-formed; every adapter declares egress + capabilities + a round-tripping id codec |
-| `external_outbound_tripwire` | ONE outbound door, and it still performs every step of §5 in order |
+| `external_outbound_tripwire` | ONE outbound door under `src/external/`, and it still performs every step of §5 in order (the engine's other two doors: `engineering/OUTBOUND_SPEC.md`) |
 | `external_secret_confinement_tripwire` | §7, on BOTH publication paths + a no-third-path scan |
 | `external_isolation_tripwire` | the closed set of module-level state; no captured request identity; concurrent langs/field sets never serve each other's row |
 | `external_egress_tripwire` | §6, sentinel-driven; per-PATH classes (`egress` / `searchEgress`) |
