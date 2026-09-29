@@ -42,8 +42,8 @@ import {
 	untilAborted,
 } from '../../src/core/security/ssrf_guard.ts';
 
-const NAT64_KEY = 'DEDALO_NAT64_PREFIXES';
-const originalNat64 = process.env[NAT64_KEY];
+const NAT64_SETTING = 'DEDALO_NAT64_PREFIXES';
+const originalNat64 = process.env[NAT64_SETTING];
 /** The process discovery cache as this file found it — restored after every case. */
 const originalDiscovery = nat64DiscoveryState();
 
@@ -53,12 +53,12 @@ const originalDiscovery = nat64DiscoveryState();
  * who declared a real prefix there would change what these cases judge.
  */
 beforeEach(() => {
-	process.env[NAT64_KEY] = '';
+	process.env[NAT64_SETTING] = '';
 });
 
 afterEach(() => {
-	if (originalNat64 === undefined) delete process.env[NAT64_KEY];
-	else process.env[NAT64_KEY] = originalNat64;
+	if (originalNat64 === undefined) delete process.env[NAT64_SETTING];
+	else process.env[NAT64_SETTING] = originalNat64;
 	setNat64DiscoveryForTests(originalDiscovery);
 });
 
@@ -80,7 +80,7 @@ function seedDiscovered(...networks: string[]): void {
  * `undefined` declares none — as '' (see the beforeEach), never by deleting the key.
  */
 function declareNat64(value: string | undefined): void {
-	process.env[NAT64_KEY] = value ?? '';
+	process.env[NAT64_SETTING] = value ?? '';
 }
 
 /** A resolver seam: a fixed answer per name, `ipv4only.arpa` included. */

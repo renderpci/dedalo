@@ -45,18 +45,18 @@ const originalDiscovery = nat64DiscoveryState();
  * change what these cases judge — the guard's own gate (ssrf_guard.test.ts) does
  * the same.
  */
-const NAT64_KEY = 'DEDALO_NAT64_PREFIXES';
-const originalNat64 = process.env[NAT64_KEY];
+const NAT64_SETTING = 'DEDALO_NAT64_PREFIXES';
+const originalNat64 = process.env[NAT64_SETTING];
 
 beforeEach(() => {
-	process.env[NAT64_KEY] = '';
+	process.env[NAT64_SETTING] = '';
 });
 
 afterEach(() => {
 	setExemption(undefined);
 	setNat64DiscoveryForTests(originalDiscovery);
-	if (originalNat64 === undefined) delete process.env[NAT64_KEY];
-	else process.env[NAT64_KEY] = originalNat64;
+	if (originalNat64 === undefined) delete process.env[NAT64_SETTING];
+	else process.env[NAT64_SETTING] = originalNat64;
 });
 
 /** Seed the guard's RFC 7050 discovery cache with a /96 a resolver "reported". */

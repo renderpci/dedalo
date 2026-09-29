@@ -60,14 +60,14 @@ import { stripComments } from '../helpers/strip_comments.ts';
  * `DEDALO_NAT64_PREFIXES` — a typo fails every IPv6 closed — cannot change what
  * they judge. The guard's own gate (ssrf_guard.test.ts) does the same.
  */
-const NAT64_KEY = 'DEDALO_NAT64_PREFIXES';
-const originalNat64 = process.env[NAT64_KEY];
+const NAT64_SETTING = 'DEDALO_NAT64_PREFIXES';
+const originalNat64 = process.env[NAT64_SETTING];
 beforeEach(() => {
-	process.env[NAT64_KEY] = '';
+	process.env[NAT64_SETTING] = '';
 });
 afterEach(() => {
-	if (originalNat64 === undefined) delete process.env[NAT64_KEY];
-	else process.env[NAT64_KEY] = originalNat64;
+	if (originalNat64 === undefined) delete process.env[NAT64_SETTING];
+	else process.env[NAT64_SETTING] = originalNat64;
 });
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
