@@ -181,8 +181,18 @@ describe('code server status', () => {
 	test('the build gate is planCodeBuild’s own verdict, not a second opinion', () => {
 		const { config } =
 			require('../../src/config/config.ts') as typeof import('../../src/config/config.ts');
+		const tag = status.source.release_ref;
+		if (tag === null) {
+			// no release tag: nothing to plan, and the panel says so
+			expect(byId(status.checks, 'build_plan').state).toBe('unknown');
+			expect(byId(status.checks, 'release_tag').state).not.toBe('ok');
+			return;
+		}
 		const plan = planCodeBuild(
-			{ version: status.advertises.for_version, ref: 'master' },
+			{
+				version: status.source.release_version ?? status.advertises.for_version,
+				ref: `refs/tags/${tag}`,
+			},
 			{
 				isCodeServer: config.update.isCodeServer,
 				codeServerGitDir: config.update.codeServerGitDir,
@@ -226,34 +236,35 @@ describe('code server status', () => {
 
 	test('every publish check names the ref it was evaluated against', () => {
 		// The 2026-08-24 confusion: `archive_installable` was blocked on paths
-		// HEAD had already excluded, because it reads the RELEASE ref. A check
+		// HEAD had already excluded, because it reads the release ref. A check
 		// whose scope is invisible reads as a false alarm.
-		const scoped = ['build_plan', 'master_ref', 'archive_installable', 'release_ref_current'];
-		for (const id of scoped) {
-			expect(byId(status.checks, id).scope, `${id} must name its ref`).toBe(
-				status.source.release_ref,
-			);
+		expect(byId(status.checks, 'master_ref').scope).toBe('master');
+		const tag = status.source.release_ref;
+		expect(byId(status.checks, 'archive_installable').scope).toBe(tag ?? 'master');
+		if (tag !== null) {
+			for (const id of ['build_plan', 'release_version_matches_ref']) {
+				expect(byId(status.checks, id).scope, `${id} must name its ref`).toBe(tag);
+			}
 		}
 	});
 
-	test('the release ref is reported separately from the checked-out branch', () => {
-		// They are routinely different, and every publish check reads the
-		// former — so the panel must never conflate them.
-		expect(status.source.release_ref).toBe('master');
+	test('the channel refs are reported separately from the checked-out branch', () => {
+		// Policy 2026-09-29: release = newest vX.Y.Z tag, developer = master.
+		// Neither is the checked-out branch, and every publish check reads one
+		// of them — so the panel must never conflate them.
+		expect(status.source.dev_ref).toBe('master');
+		const tag = status.source.release_ref;
+		if (tag !== null) expect(tag).toMatch(/^v\d+\.\d+\.\d+$/);
+		expect(byId(status.checks, 'release_tag').state).toBe(
+			status.source.head_sha === null ? 'unknown' : tag === null ? 'blocked' : 'ok',
+		);
 		if (status.source.divergence !== null) {
 			expect(Number.isInteger(status.source.divergence.behind)).toBe(true);
 			expect(Number.isInteger(status.source.divergence.ahead)).toBe(true);
-			// `behind` is what explains a red check on already-committed work.
-			expect(byId(status.checks, 'release_ref_current').state).toBe(
-				status.source.divergence.behind === 0 ? 'ok' : 'warn',
-			);
 		}
-	});
-
-	test('a release ref behind the branch WARNS, never blocks', () => {
-		// Publishing an older release ref is a legitimate act; the line exists
-		// to explain a red neighbour, not to add a gate of its own.
-		expect(byId(status.checks, 'release_ref_current').state).not.toBe('blocked');
+		// the retired check: master running ahead of the release is the normal
+		// state under the tag policy, not something to warn about
+		expect(status.checks.some((check) => check.id === 'release_ref_current')).toBe(false);
 	});
 
 	test('a broken archive probe degrades to unknown, never a false ok', () => {

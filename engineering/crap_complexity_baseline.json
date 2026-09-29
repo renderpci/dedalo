@@ -5,9 +5,9 @@
 	"root": "src/core",
 	"summary": {
 		"files": 556,
-		"functions": 5456,
-		"functionsOverCap": 699,
-		"filesOverCap": 272
+		"functions": 5484,
+		"functionsOverCap": 698,
+		"filesOverCap": 271
 	},
 	"ledger": [
 		{
@@ -42,6 +42,11 @@
 			"functionsOverCap": 699,
 			"filesOverCap": 272,
 			"reason": "Deep-path search fix (WC-2026-09-29-search-deep-leaf-mixed-rule) adds one operator classifier per builder family - classifyIri, classifyJson, classifyNumber, classifyRelation, classifySectionId, classifyString - each the ONE precedence-ordered parse of its family's operator grammar that both the shallow builder and the deep polarity dispatch on; a flat if-chain over the grammar is clearer than a rule table. The builders' own max complexity DROPS (iri 22->20, json 22->20, number 12->10, section_id 19->17, string 33->32) because the parse moved out of them, and sql_assembler loses collectJoins."
+		},
+		{
+			"generated": "2026-09-29",
+			"functionsOverCap": 698,
+			"filesOverCap": 271
 		}
 	],
 	"files": {
@@ -305,7 +310,6 @@
 		"src/core/ts_object/term_resolver.ts": 13,
 		"src/core/ts_object/ts_api.ts": 12,
 		"src/core/ts_object/ts_object.ts": 22,
-		"src/core/update/code_build_plan.ts": 7,
 		"src/core/update/code_download.ts": 7,
 		"src/core/update/engine.ts": 37,
 		"src/core/update/transform/definitions.ts": 9,

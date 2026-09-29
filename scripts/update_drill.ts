@@ -15,20 +15,21 @@
  * "failed its pre-swap boot check". Run it with a short scratch root —
  * `TMPDIR=/tmp/dd bun run test:update` — rather than hunting a phantom bug.
  *
- * `--dev` rehearses the DEVELOPER CHANNEL instead: the release is cut from a
- * branch that is not `master` (so it is built and served as `<v>-dev.zip`) and
- * installed OVER THE SAME VERSION, which is how unreleased branch work reaches
- * a real installation. It is the only pass that proves the identity story —
+ * `--dev` rehearses the DEVELOPER CHANNEL instead: the archive is the tip of
+ * `master` with no release tag (so it is built and served as `<v>-dev.zip`) and
+ * installed OVER THE SAME VERSION, which is how integrated, unreleased work
+ * reaches a real installation. It is the only pass that proves the identity story —
  * with the version fixed on both sides of the swap, only the installed archive
  * digest can tell the new tree from a rolled-back one.
  *
  * This drill IS that scenario, end to end, entirely on scratch surfaces:
  *
- *   RELEASE.md steps 1–7 (the master side)
+ *   RELEASE.md steps 1–8 (the master side)
  *     1. a throwaway `git clone --shared` of THIS checkout gets the release
  *        commit a human release manager would make (RELEASE.md steps 1–2):
  *        version triple bumped to the rung's TO end + `.bun-version` pinned to
- *        the RUNNING bun, committed on a branch literally named `master`;
+ *        the RUNNING bun, committed on `master` and tagged `v<version>` (only
+ *        a release TAG claims the published `<v>.zip` name);
  *     2. a REAL master instance boots (suite database, scratch state) with
  *        IS_A_CODE_SERVER + DEDALO_CODE_SERVER_GIT_DIR + DEDALO_CODE_FILES_DIR;
  *     3. the release archive is built THROUGH THE WIRE
@@ -49,7 +50,7 @@
  *        frames download→…→restart(expected_version) → the process DIES
  *        mid-stream (the designed handoff) → the supervisor respawns the NEW
  *        tree → /health answers the RELEASE version with no .dev tag (both
- *        markers moved — RELEASE.md step 10);
+ *        markers moved — RELEASE.md step 11);
  *     9. disk truth: sentinel status "confirmed" (boot_confirm), exactly one
  *        dedalo_<from>_* backup carrying package.json+node_modules+.git (the
  *        rollback-bootability contract), the quarantine's fresh node_modules
@@ -143,7 +144,7 @@ function newestCatalogRung(): { from: number[]; to: number[] } {
 
 /**
  * `--dev` rehearses the DEVELOPER CHANNEL instead of a published rung: the
- * release is built from a branch NOT named `master` (so `code_build_plan.ts`
+ * archive is built from the tip of `master`, untagged (so `code_build_plan.ts`
  * names it `<v>-dev.zip`), the consumer is NOT moved a rung — it installs the
  * SAME version over itself, which is the whole point of the channel.
  *
@@ -153,16 +154,18 @@ function newestCatalogRung(): { from: number[]; to: number[] } {
  * rolled-back tree would answer the version check just as happily.
  */
 const DEV_CHANNEL_MODE = process.argv.includes('--dev');
-/** The branch the release is cut from: `master` publishes, anything else is a dev build. */
-const RELEASE_BRANCH = DEV_CHANNEL_MODE ? 'drill_dev_branch' : 'master';
+/** Both channels commit on `master` (the developer channel's ref); only the release pass TAGS it. */
+const RELEASE_BRANCH = 'master';
+/** The channel the build is asked for: the release pass builds its tag, `--dev` the tip of `master`. */
+const BUILD_CHANNEL: 'master' | 'dev' = DEV_CHANNEL_MODE ? 'dev' : 'master';
 
 const RUNG = newestCatalogRung();
 /** The version the consumer install is pinned to (the upgrade's FROM end). */
 const CURRENT_VERSION = RUNG.from.join('.');
 /**
  * The version the release clone is bumped to and the master publishes. On the
- * dev channel there IS no bump: a branch build carries the version it was
- * branched from, and installing it over the same version is the feature.
+ * dev channel there IS no bump: a `master` build carries the version of the
+ * last release, and installing it over the same version is the feature.
  */
 const RELEASE_VERSION = DEV_CHANNEL_MODE ? CURRENT_VERSION : RUNG.to.join('.');
 /** The literal `DEDALO_VERSION_TRIPLE` bodies the two trees must carry. */
@@ -660,13 +663,14 @@ async function main(): Promise<void> {
 		// scripts/lib/release_clone.ts: clone → `checkout -B` → edit → commit. The
 		// branch is taken with `checkout -B`, never `branch -m`: a PR checkout is a
 		// DETACHED HEAD (refs/remotes/pull/N/merge) and `branch -m` refuses it. Only a
-		// ref named `master` claims the published <v>.zip name (code_build_plan.ts);
-		// `--dev` deliberately uses another name, so the build lands as `<v>-dev.zip` —
-		// a real developer build, not a release wearing a different name.
+		// release TAG claims the published <v>.zip name (code_build_plan.ts); `--dev`
+		// deliberately tags nothing and builds the `master` tip, so the build lands
+		// as `<v>-dev.zip` — a real developer build, not a release under another name.
 		await cloneForReleaseCommit({
 			source: projectRoot,
 			cloneDir,
 			releaseBranch: RELEASE_BRANCH,
+			...(DEV_CHANNEL_MODE ? {} : { tag: `v${RELEASE_VERSION}` }),
 			message: `release ${RELEASE_VERSION} (update drill)`,
 			edit: (dir) => {
 				const versionTsPath = join(dir, 'src', 'core', 'update', 'version.ts');
@@ -764,7 +768,10 @@ async function main(): Promise<void> {
 					model: 'serve_code',
 					action: 'build_version_from_git_master',
 				},
-				options: { version: RELEASE_VERSION, ref: RELEASE_BRANCH },
+				// the panel's own shape — a CHANNEL; the server resolves the ref (the
+				// release pass: refs/tags/v<version>; --dev: master). `version` is the
+				// claim the build checks against the ref's own version.ts.
+				options: { version: RELEASE_VERSION, channel: BUILD_CHANNEL },
 			},
 			masterAuth,
 		);
@@ -773,7 +780,7 @@ async function main(): Promise<void> {
 		const builtSha = typeof builtData?.sha256 === 'string' ? builtData.sha256 : '';
 		must(/^[a-f0-9]{64}$/.test(builtSha), 'built sha256 is not 64 hex chars');
 
-		// The artifact on disk, exactly where RELEASE.md step 6 looks.
+		// The artifact on disk, exactly where RELEASE.md step 7 looks.
 		const releaseZip = join(codeFilesDir, '7', '7.0', RELEASE_FILE_NAME);
 		must(existsSync(releaseZip), `release archive missing at ${releaseZip}`);
 		const sidecarDigest = (
@@ -1131,7 +1138,7 @@ async function main(): Promise<void> {
 			!readFileSync(join(consumerTree, 'src', 'core', 'update', 'build_info.txt'), 'utf8').includes(
 				'$Format:',
 			),
-			'build stamp did not expand (RELEASE.md step 10)',
+			'build stamp did not expand (RELEASE.md step 11)',
 		);
 
 		// The final poll answers ONE terminal frame. Which one depends on timing

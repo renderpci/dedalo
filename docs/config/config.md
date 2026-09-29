@@ -5473,9 +5473,9 @@ DEDALO_CODE_SERVER_GIT_DIR="/my_dedalo_git_directory"
 
 DEDALO_CODE_SERVER_DEV_CHANNEL `bool`
 
-This parameter lets a code server OFFER developer builds (`<version>-dev.zip`, produced by building any branch other than `master`) to installations that explicitly ask for them.
+This parameter lets a code server OFFER developer builds (`<version>-dev.zip`, built from the tip of the `master` branch) to installations that explicitly ask for them. Published releases (`<version>.zip`) are built from release tags (`vX.Y.Z`) and are offered regardless of this setting.
 
-It exists so a developer can test unreleased branch work on a real installation without cutting a release: a developer build carries no version bump, so it is installed OVER the same version. Both switches must be on — this one here, and the "Developer builds" switch in the target installation's code-update panel. A code server that leaves this unset answers a developer-channel request exactly as it answers a normal one, so branch builds are never enumerable from outside.
+It exists so a developer can test integrated but unreleased work on a real installation without cutting a release: a developer build carries no version bump of its own, so it can be installed OVER the same version. Both switches must be on — this one here, and the "Developer builds" switch in the target installation's code-update panel. A code server that leaves this unset answers a developer-channel request exactly as it answers a normal one, so developer builds are never enumerable from outside.
 
 Everything else is unchanged: the archive is still fetched from a configured code server, still verified against its `.sha256` sidecar, and the update still requires a superuser, maintenance mode and a recent backup.
 

@@ -361,7 +361,7 @@ const get_content_data_edit = async function(self) {
 		}
 
 	// dev_channel switch — ask the code server for DEVELOPER BUILDS too.
-	// A developer build is a branch build (any ref but 'master'), so it carries
+	// A developer build is a build of the 'master' tip (a release is a tag), so it carries
 	// NO version bump and installs over the same version: it is how unreleased
 	// work is tested on a real installation. Flipping this switch is the ARMING
 	// on this side — everything else (superuser, maintenance mode, a recent
@@ -398,7 +398,7 @@ const get_content_data_edit = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'dd_note dev_channel_note',
-			text_content	: get_label.update_code_dev_channel_note || 'Also offers unreleased builds made from a development branch. They carry the same version number as the installed one, so they are installed over it. Use them to test development work, never on a production installation.',
+			text_content	: get_label.update_code_dev_channel_note || "Also offers developer builds made from the 'master' branch: the latest integrated code, not yet released. A developer build may carry the same version number as the installed one, and is then installed over it. Use them to test development work, never on a production installation.",
 			parent			: dev_channel_row
 		})
 

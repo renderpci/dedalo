@@ -526,7 +526,7 @@ export const render_consumer_status = function(parent, consumer, on_restore, on_
 		const posture_text = engine.posture==='release'
 			? (get_label.update_code_posture_release || 'Release build')
 			: engine.install_channel==='dev'
-				? (get_label.update_code_posture_dev_build || 'Developer build (unreleased branch code)')
+				? (get_label.update_code_posture_dev_build || "Developer build (unreleased code from 'master')")
 				: (get_label.update_code_posture_dev || 'Development checkout')
 		fact_row(
 			installation,

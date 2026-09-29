@@ -85,11 +85,15 @@ describe('serve_code registration + gate', () => {
 });
 
 describe('build_version_from_git_master option mapping', () => {
-	test('a bare branch forwards ONLY the ref — the bytes name the release', async () => {
-		const calls: { version?: string; ref?: string }[] = [];
+	test('a channel (or a legacy bare branch) forwards no version — the bytes name the release', async () => {
+		const calls: { version?: string; ref?: string; channel?: string }[] = [];
 		mock.module('../../src/core/update/code_build.ts', () => ({
 			...REAL_BUILD,
-			buildVersionFromGit: async (options: { version?: string; ref?: string }) => {
+			buildVersionFromGit: async (options: {
+				version?: string;
+				ref?: string;
+				channel?: string;
+			}) => {
 				calls.push(options);
 				return { ok: true, request_id: 'test', data: { built: true } };
 			},
@@ -98,6 +102,11 @@ describe('build_version_from_git_master option mapping', () => {
 		const action = widget.apiActions?.build_version_from_git_master;
 		expect(action).toBeDefined();
 
+		// the panel sends a CHANNEL; a pre-2026-09-29 cached page sends `branch`,
+		// honoured as the explicit ref it names; an unknown channel is dropped
+		await action?.({ channel: 'master' }, {} as never);
+		await action?.({ channel: 'dev' }, {} as never);
+		await action?.({ channel: 'v7' }, {} as never);
 		for (const branch of ['master', 'developer']) {
 			await action?.({ branch }, {} as never);
 		}
@@ -108,7 +117,13 @@ describe('build_version_from_git_master option mapping', () => {
 		// zip that assertLinearUpgrade refuses (measured 2026-08-24: an
 		// uninstallable 7.0.0.zip). The release is now named after the version
 		// the REF declares; the widget must not supply one at all.
-		expect(calls).toEqual([{ ref: 'master' }, { ref: 'developer' }]);
+		expect(calls).toEqual([
+			{ channel: 'master' },
+			{ channel: 'dev' },
+			{},
+			{ ref: 'master' },
+			{ ref: 'developer' },
+		]);
 	});
 
 	test('an explicit version/ref still wins over the branch (API callers)', async () => {

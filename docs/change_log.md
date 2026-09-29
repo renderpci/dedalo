@@ -134,6 +134,14 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **A published code release is now built from a release tag (`vX.Y.Z`); developer builds come from `master`.**
+
+    On a code server, **Serve Code**'s *Build release* button used to archive the tip of the `master` branch, and *Build developer release* whatever other branch the server had checked out. Now a published release is always a tagged version: *Build release* archives the newest `vX.Y.Z` tag of this engine in the build checkout (prerelease tags such as betas are not releases, earlier-engine `v6` tags are never candidates, and a tag whose version file disagrees with its name is refused), and *Build developer release* archives the tip of `master` — the latest integrated code, before its release. The branch the server has checked out no longer matters.
+
+    What to do on a code server: tag each release commit (`git tag v7.0.1`, pushed to the remote) and fetch tags into the build checkout (`git fetch --tags`) before building; until a tag exists the panel reports that nothing can be published. While v7 is in beta this is the expected state: installations receive v7 code only as developer builds. See [Updating code](./management/updates/updating_code.md).
+
+    Wire contract: `WC-2026-09-29-code-release-channel-refs`.
+
 - **Building and serving code releases now has its own maintenance panel, Serve Code.**
 
     The **Update code** panel used to hold two jobs: installing a new release on this installation, and — on a code server — building releases from git and serving them to others. The second job is now its own panel, **Serve Code**, shown only on a code server (`IS_A_CODE_SERVER=true`) or the development installation. **Update code** keeps installing, restoring and deleting restore points.
@@ -188,7 +196,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 50 entries"
+??? note "Wire contract — 51 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -237,6 +245,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-24-tool-export-server-built-artifacts`
     - `WC-2026-09-28-maintenance-serve-code-widget`
     - `WC-2026-09-28-maintenance-serve-ontology-widget`
+    - `WC-2026-09-29-code-release-channel-refs`
     - `WC-2026-09-29-number-not-equal`
     - `WC-2026-09-29-search-deep-leaf-mixed-rule`
     - `WC-2026-09-29-search-where-parts-parenthesized`

@@ -104,43 +104,57 @@ describe('serve_code split', () => {
 });
 
 describe('serve_code developer-builds', () => {
-	test("the developer channel builds THE SERVER'S branch, never a literal ref", () => {
+	test('the buttons send a CHANNEL, never a ref — the server resolves it', () => {
 		// A client-baked 'v7' refused on every code server that does not carry
 		// that branch ("Could not read src/core/update/version.ts at ref 'v7'").
-		// The ref is source.branch; when it IS the release ref there is nothing
-		// unreleased to publish and the row says so instead of offering a button.
-		// no branch LITERAL other than the release ref's own channel
-		expect(/branch\s*:\s*['"](?!master['"])/.test(render_src)).toBe(false);
-		expect(render_src).toContain('const dev_branch');
-		expect(/branch\s*:\s*dev_branch/.test(render_src)).toBe(true);
+		// Policy 2026-09-29: release = the newest vX.Y.Z tag (source.release_ref),
+		// developer = the tip of `master` (source.dev_ref). The client only NAMES
+		// them in the confirm; the request carries the channel alone.
+		// (comments stripped: prose may say "branch:")
+		const code = render_src.replace(/^\s*(\/\/|\*).*$/gm, '');
+		expect(/\b(branch|ref)\s*:/.test(code)).toBe(false);
+		expect(render_src).toContain('channel : channel');
 		expect(render_src).toContain('source.release_ref');
+		expect(render_src).toContain('source.dev_ref');
+		// a channel with nothing to build says why instead of offering a button
+		expect(render_src).toContain('serve_code_build_master_unavailable');
 		expect(render_src).toContain('serve_code_build_developer_unavailable');
-		// the branch is a NAMED placeholder: its position differs per language
+		expect(render_src).toContain('serve_code_build_developer_no_ref');
+		// the refs are NAMED placeholders: their position differs per language
 		expect(render_src).toContain("replaceAll('%branch%'");
+		expect(render_src).toContain("replaceAll('%tag%'");
 		expect(master_labels.serve_code_build_developer_confirm).toContain('%branch%');
+		expect(master_labels.serve_code_build_master_confirm).toContain('%tag%');
+		// each row pairs with ITS channel's version (release tag's / master's)
+		expect(render_src).toContain('source.release_version');
+		expect(render_src).toContain('source.dev_version');
 	});
 
-	test('every translation of the confirm keeps ONE %branch% and TWO %s', () => {
-		// The client substitutes %branch% by NAME and then the two %s POSITIONALLY
-		// (version, then path). A translator dropping %branch% ships a sentence
-		// naming no branch; a third %s puts the path where the version belongs —
-		// both silent, and both invisible to the labels tripwire (it checks key
-		// sets, never placeholders).
-		const key = 'serve_code_build_developer_confirm';
+	test('every translation of both confirms keeps ONE named ref and TWO %s', () => {
+		// The client substitutes %branch% / %tag% by NAME and then the two %s
+		// POSITIONALLY (version, then path). A translator dropping the name ships
+		// a sentence naming no ref; a third %s puts the path where the version
+		// belongs — both silent, and both invisible to the labels tripwire (it
+		// checks key sets, never placeholders).
 		const catalog_dir = join(import.meta.dir, '../../src/core/labels/catalog');
-		const sentences: Array<[string, string]> = [['master', master_labels[key] as string]];
-		for (const file of readdirSync(catalog_dir).filter((name) => name.endsWith('.json'))) {
-			const labels = JSON.parse(readFileSync(join(catalog_dir, file), 'utf8')) as Record<
-				string,
-				string
-			>;
-			// lg-eng carries no copy of master.json (the tripwire refuses duplicates)
-			if (typeof labels[key] === 'string') sentences.push([file, labels[key]]);
-		}
-		expect(sentences.length).toBeGreaterThan(10);
-		for (const [where, sentence] of sentences) {
-			expect(`${where}: ${sentence.split('%branch%').length - 1}`).toBe(`${where}: 1`);
-			expect(`${where}: ${sentence.split('%s').length - 1}`).toBe(`${where}: 2`);
+		for (const [key, token] of [
+			['serve_code_build_developer_confirm', '%branch%'],
+			['serve_code_build_master_confirm', '%tag%'],
+		] as const) {
+			const sentences: Array<[string, string]> = [['master', master_labels[key] as string]];
+			for (const file of readdirSync(catalog_dir).filter((name) => name.endsWith('.json'))) {
+				const labels = JSON.parse(readFileSync(join(catalog_dir, file), 'utf8')) as Record<
+					string,
+					string
+				>;
+				// lg-eng carries no copy of master.json (the tripwire refuses duplicates)
+				if (typeof labels[key] === 'string') sentences.push([file, labels[key]]);
+			}
+			expect(sentences.length).toBeGreaterThan(10);
+			for (const [where, sentence] of sentences) {
+				expect(`${key} ${where}: ${sentence.split(token).length - 1}`).toBe(`${key} ${where}: 1`);
+				expect(`${key} ${where}: ${sentence.split('%s').length - 1}`).toBe(`${key} ${where}: 2`);
+			}
 		}
 	});
 
