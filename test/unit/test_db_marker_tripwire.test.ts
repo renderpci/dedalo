@@ -12,7 +12,7 @@
  * ITSELF declaring what it is (the `dedalo_test_marker` row), and every
  * test-data writer asking it first.
  *
- * SEVEN RULES, and every one of them has an anti-vacuity probe:
+ * EIGHT RULES, and every one of them has an anti-vacuity probe:
  *
  *  1. THE INVENTORY (source scan). Every file under `src/core/test_data/**` and
  *     `test/helpers/**` that HAS A WRITE SEAM must call `assertTestDatabase(`,
@@ -68,6 +68,22 @@
  *     tree, so it must refuse a `<template>__shard<N>` target BEFORE any side
  *     effect (both existing name guards pass a shard name happily).
  *
+ *  6b. THE CLIENT SERVER'S SURFACES FOLLOW THE LANE (2026-09-30). The spawned
+ *     server's environment is composed in a CHILD process that starts from a
+ *     shell carrying none of the preload-set seams (so a value inherited from
+ *     this bun-test process cannot fake the answer): its database, media root
+ *     and VECTOR database must all be the suite database's own derivations —
+ *     the vector one was missing, so the client server read the installation's
+ *     semantic index — and two runs must get distinct session stores/sockets.
+ *  8. CONCURRENT LANES CAN BUILD (2026-09-30, closure plan Wave 0). Writer
+ *     lanes each own a suite database (`DEDALO_TEST_DATABASE=<db>_lN`) and
+ *     are provisioned in parallel — but `test:db:setup` step 5b mutates the
+ *     CLUSTER-shared `dedalo_test_ro` role, and two builds at once died with
+ *     `tuple concurrently updated` (measured). The step's exact text
+ *     (readOnlyRoleClusterSql) is run concurrently here and every run must
+ *     succeed; a positive control runs the same text MINUS its advisory lock
+ *     and must produce the collision, so the harness provably contends.
+ *
  * HONEST LIMITS. The inventory is a REGEX classifier over stripped sources: it
  * sees DML text and the named write doors, not a write reached through an
  * arbitrary dynamic indirection. It covers the two directories test data lives
@@ -91,8 +107,10 @@ import {
 	probeServedDatabase,
 	resolveSuiteDatabase,
 } from '../../scripts/client_test_server.ts';
+import { config } from '../../src/config/config.ts';
 import { sql, withTransaction } from '../../src/core/db/postgres.ts';
 import { DedaloError } from '../../src/core/errors/index.ts';
+import { type DbConnDescriptor, runPsql } from '../../src/core/install/pg_exec.ts';
 import {
 	assertTestDatabase,
 	clearTestDatabaseMarkerCache,
@@ -104,7 +122,13 @@ import {
 } from '../../src/core/test_data/test_database_marker.ts';
 import { materializeTestTldOntology } from '../../src/core/test_data/test_tld_materialize.ts';
 import { stripComments } from '../helpers/strip_comments.ts';
-import { applicationDatabaseName } from '../helpers/test_database.ts';
+import {
+	applicationDatabaseName,
+	READ_ONLY_ROLE_LOCK_KEY,
+	readOnlyRoleClusterSql,
+} from '../helpers/test_database.ts';
+import { testMediaRootPath } from '../helpers/test_media_root.ts';
+import { installationRagDatabaseName, suiteRagDatabaseName } from '../helpers/test_rag_database.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const read = (file: string): string => readFileSync(join(REPO_ROOT, file), 'utf-8');
@@ -1275,6 +1299,120 @@ describe('rule 4 — every SQL pool the process can open is classified', () => {
 				reachable,
 				`${file} is marked marker-guarded but neither it nor any guarded writer mentions ${symbol}`,
 			).toBe(true);
+		}
+	});
+});
+
+// ---------------------------------------------------------------------------
+// RULE 8 — concurrent lane builds do not collide on the cluster-shared role.
+// ---------------------------------------------------------------------------
+
+describe('rule 8 — concurrent lane builds serialize the cluster-shared role step', () => {
+	/** Maintenance-database descriptor: step 5b runs against `postgres`. */
+	const admin: DbConnDescriptor = {
+		database: 'postgres',
+		host: config.db.host,
+		port: config.db.port,
+		user: config.db.user,
+		password: config.db.password,
+	};
+	const CONCURRENCY = 8;
+
+	/** Fire `CONCURRENCY` psql runs of `text` at once; return the failed ones' stderr. */
+	async function concurrentFailures(text: string): Promise<string[]> {
+		const runs = await Promise.all(
+			Array.from({ length: CONCURRENCY }, () =>
+				runPsql(admin, ['-v', 'ON_ERROR_STOP=1', '-q', '-f', '-'], { stdin: text }),
+			),
+		);
+		return runs.filter((run) => run.exitCode !== 0).map((run) => run.stderr);
+	}
+
+	test('the build sends the role step through the serialized text, and nowhere else', () => {
+		const setup = stripComments(read('scripts/test_db_setup.ts'));
+		expect(setup).toContain("psql('postgres', ['-f', '-'], readOnlyRoleClusterSql(testDb))");
+		// No second, unserialized mutation of the role can sit beside it.
+		expect(setup).not.toMatch(/\b(?:ALTER|CREATE)\s+ROLE\b/i);
+		expect(readOnlyRoleClusterSql('x')).toContain(
+			`SELECT pg_advisory_xact_lock(${READ_ONLY_ROLE_LOCK_KEY});`,
+		);
+		expect(() => readOnlyRoleClusterSql('a"b')).toThrow(/refusing to interpolate/);
+	});
+
+	test('positive control: the same text WITHOUT the lock collides (the harness contends)', async () => {
+		const db = await currentDatabaseName();
+		const unlocked = readOnlyRoleClusterSql(db).replace(
+			`SELECT pg_advisory_xact_lock(${READ_ONLY_ROLE_LOCK_KEY});\n`,
+			'',
+		);
+		expect(unlocked).not.toContain('pg_advisory_xact_lock');
+		const failures: string[] = [];
+		for (let round = 0; round < 10 && failures.length === 0; round++) {
+			failures.push(...(await concurrentFailures(unlocked)));
+		}
+		expect(
+			failures.length,
+			'no collision without the lock in 10 rounds — the concurrent harness is not contending, so the locked assertion below would prove nothing',
+		).toBeGreaterThan(0);
+		expect(failures.join('\n')).toMatch(/tuple concurrently updated|already exists/);
+	}, 60_000);
+
+	test('the serialized text: every concurrent run succeeds', async () => {
+		const locked = readOnlyRoleClusterSql(await currentDatabaseName());
+		for (let round = 0; round < 3; round++) {
+			expect(await concurrentFailures(locked)).toEqual([]);
+		}
+	}, 60_000);
+});
+
+// ---------------------------------------------------------------------------
+// RULE 6b — the client run's server surfaces follow the lane.
+// ---------------------------------------------------------------------------
+
+describe("rule 6b — the client server's stateful surfaces are the suite database's own", () => {
+	/** Seams the preloads set on THIS process; a fresh `bun run test:client` shell has none. */
+	const PRELOAD_SEAMS = [
+		'DEDALO_TEST_RAG_DB_NAME',
+		'DEDALO_TEST_MEDIA_ROOT',
+		'DEDALO_SESSION_DB_PATH',
+		'DEDALO_TS_STATE_PATH',
+	] as const;
+
+	/** Compose the spawned server's environment in a child, exactly as the runner does. */
+	function composeInChild(suiteDb: string): Record<string, string> {
+		const env: Record<string, string> = { ...(process.env as Record<string, string>) };
+		for (const key of PRELOAD_SEAMS) delete env[key];
+		const script = `
+			const m = await import(${JSON.stringify(join(REPO_ROOT, 'scripts', 'client_test_server.ts'))});
+			const paths = m.suiteServerPaths();
+			const out = m.suiteServerEnvironment({ suiteDb: ${JSON.stringify(suiteDb)}, port: 1, ...paths });
+			const keys = ['DB_NAME', 'DEDALO_TEST_MEDIA_ROOT', 'DEDALO_TEST_RAG_DB_NAME', 'DEDALO_SESSION_DB_PATH', 'SERVER_UNIX_SOCKET', 'DEDALO_TS_STATE_PATH'];
+			console.log(JSON.stringify(Object.fromEntries(keys.map((k) => [k, out[k] ?? null]))));
+		`;
+		const child = Bun.spawnSync(['bun', '-e', script], { cwd: REPO_ROOT, env });
+		expect(child.exitCode, child.stderr.toString()).toBe(0);
+		const lines = child.stdout.toString().trim().split('\n');
+		return JSON.parse(lines[lines.length - 1] as string);
+	}
+
+	test('database, media root and vector database are the suite derivations — never the installation', async () => {
+		const suiteDb = await currentDatabaseName();
+		const served = composeInChild(suiteDb);
+		expect(served.DB_NAME).toBe(suiteDb);
+		expect(served.DEDALO_TEST_MEDIA_ROOT).toBe(testMediaRootPath(suiteDb));
+		expect(
+			served.DEDALO_TEST_RAG_DB_NAME,
+			"the client server's vector database must be the suite's own `<suite db>_rag` — unset, its ragSql resolves to the installation's semantic index",
+		).toBe(suiteRagDatabaseName(suiteDb));
+		expect(served.DEDALO_TEST_RAG_DB_NAME).not.toBe(installationRagDatabaseName());
+	});
+
+	test('two concurrent runs get distinct session stores, sockets and state files', async () => {
+		const suiteDb = await currentDatabaseName();
+		const [a, b] = [composeInChild(suiteDb), composeInChild(suiteDb)];
+		for (const key of ['DEDALO_SESSION_DB_PATH', 'SERVER_UNIX_SOCKET', 'DEDALO_TS_STATE_PATH']) {
+			expect(a[key], key).toBeString();
+			expect(a[key], `${key} must be per-run`).not.toBe(b[key]);
 		}
 	});
 });

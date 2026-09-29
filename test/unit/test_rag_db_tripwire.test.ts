@@ -77,8 +77,10 @@
  *     sets it, `bunfig.toml` registers that same file, and the assignment sits
  *     behind no `if` and no early `return` (arm first, provision second — a
  *     preload that sometimes arms is a preload that leaves the installation's
- *     index reachable on the day it does not). Exactly one file under
- *     `scripts/` sets it, `scripts/test_db_setup.ts`. And there is ONE PRODUCER
+ *     index reachable on the day it does not). Exactly two files under
+ *     `scripts/` set it: `scripts/test_db_setup.ts` (the builder) and
+ *     `scripts/client_test_server.ts` (the client suite's OWN server, which
+ *     otherwise read the installation's index — 2026-09-30). And there is ONE PRODUCER
  *     of the marker — `test/helpers/test_rag_database.ts`, the provisioner both
  *     tiers call: stamping a database "disposable" is provenance, claimable only
  *     by the code that just created it, and NO engine module may mint it.
@@ -987,11 +989,14 @@ describe('rule 5 — one setter per tier', () => {
 		).toBe(false);
 	});
 
-	test('EXACTLY ONE script sets it, and it is the suite builder', () => {
+	test('EXACTLY TWO scripts set it: the suite builder and the client suite server', () => {
+		// client_test_server.ts arms the spawned server beside its DB_NAME and media
+		// repoint — without it that server's ragSql resolved to the installation's
+		// semantic index (test_db_marker_tripwire rule 6b proves the outcome).
 		const setters = engineSources().filter(
 			(file) => file.startsWith('scripts/') && setsSeamKey(read(file)),
 		);
-		expect(setters).toEqual(['scripts/test_db_setup.ts']);
+		expect(setters).toEqual(['scripts/client_test_server.ts', 'scripts/test_db_setup.ts']);
 	});
 
 	test('ONE PRODUCER of the marker, and it is not in the engine', () => {
@@ -1039,10 +1044,14 @@ describe('rule 5 — one setter per tier', () => {
  */
 
 describe('rule 6 — the name comes from ONE derivation, and it refuses the install index', () => {
-	test('both setters derive the name — neither composes one of its own', async () => {
+	test('every setter derives the name — none composes one of its own', async () => {
 		const helper = 'test/helpers/test_rag_database.ts';
 		const preload = PRELOAD_FILES.filter((file) => setsSeamKey(read(file)))[0] as string;
-		for (const file of [preload, 'scripts/test_db_setup.ts']) {
+		const scriptSetters = engineSources().filter(
+			(file) => file.startsWith('scripts/') && setsSeamKey(read(file)),
+		);
+		expect(scriptSetters.length).toBeGreaterThan(0);
+		for (const file of [preload, ...scriptSetters]) {
 			const code = stripComments(read(file));
 			expect(code, `${file} must derive the name through suiteRagDatabaseName()`).toContain(
 				'suiteRagDatabaseName(',
