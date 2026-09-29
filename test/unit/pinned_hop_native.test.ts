@@ -40,15 +40,15 @@ const originalDiscovery = nat64DiscoveryState();
  * ../private/.env through readEnv), so an operator's `DEDALO_NAT64_PREFIXES` —
  * a real one, or a typo that fails IPv6 closed — cannot change what these judge.
  */
-const NAT64_KEY = 'DEDALO_NAT64_PREFIXES';
-const originalNat64 = process.env[NAT64_KEY];
+const NAT64_SETTING = 'DEDALO_NAT64_PREFIXES';
+const originalNat64 = process.env[NAT64_SETTING];
 beforeEach(() => {
-	process.env[NAT64_KEY] = '';
+	process.env[NAT64_SETTING] = '';
 	setNat64DiscoveryForTests({ prefixes: [], expiresAt: Date.now() + 60 * 60_000 });
 });
 afterEach(() => {
-	if (originalNat64 === undefined) delete process.env[NAT64_KEY];
-	else process.env[NAT64_KEY] = originalNat64;
+	if (originalNat64 === undefined) delete process.env[NAT64_SETTING];
+	else process.env[NAT64_SETTING] = originalNat64;
 	setNat64DiscoveryForTests(originalDiscovery);
 });
 
