@@ -33,7 +33,7 @@ describe('isPrivateIp — comprehensive private/reserved vetting', () => {
 	});
 
 	test('accepts genuine public IPv4', () => {
-		for (const ip of ['8.8.8.8', '1.1.1.1', '93.184.216.34', '203.0.113.10']) {
+		for (const ip of ['8.8.8.8', '1.1.1.1', '93.184.216.34', '9.9.9.9']) {
 			expect(isPrivateIp(ip), `${ip} must be public`).toBe(false);
 		}
 	});
@@ -54,6 +54,49 @@ describe('isPrivateIp — comprehensive private/reserved vetting', () => {
 
 	test('accepts a public IPv6', () => {
 		expect(isPrivateIp('2606:4700:4700::1111')).toBe(false); // Cloudflare
+	});
+
+	/**
+	 * The gaps measured 2026-09-29 (PR #114 review): the old check was a BLOCKLIST of
+	 * v6 prefixes, and every one of these was read as PUBLIC. Each is given in the
+	 * spelling the URL parser actually hands the guard (`new URL(…).hostname`), since
+	 * that — not the textbook form — is what arrives.
+	 */
+	test('rejects every IPv6 form that reaches a private address, in its URL spelling', () => {
+		for (const literal of [
+			'[::127.0.0.1]', // IPv4-compatible (deprecated) loopback
+			'[::ffff:0:7f00:1]', // IPv4-translated (SIIT) loopback
+			'[::ffff:0:a9fe:a9fe]', // SIIT → cloud metadata
+			'[64:ff9b::a9fe:a9fe]', // NAT64 → cloud metadata
+			'[64:ff9b::127.0.0.1]', // NAT64 → loopback, dotted
+			'[64:ff9b:1::5db8:d822]', // local-use NAT64: the translator is inside
+			'[2002:7f00:1::]', // 6to4 → loopback
+			'[2002:a00:1::1]', // 6to4 → 10.0.0.1
+			'[2001::1]', // Teredo
+			'[2001:db8::1]', // documentation
+			'[3fff::1]', // documentation (RFC 9637)
+			'[fec0::1]', // deprecated site-local
+			'[ff02::1]', // multicast
+			'[100::1]', // discard-only
+			'[0:0:0:0:0:0:0:1]', // loopback, long form
+			'[FE80::1]', // link-local, upper case
+		]) {
+			const host = new URL(`http://${literal}/`).hostname.replace(/^\[|\]$/g, '');
+			expect(isPrivateIp(host), `${literal} (arrives as ${host}) must be private`).toBe(true);
+		}
+	});
+
+	test('an IPv4-carrying IPv6 address to a PUBLIC host stays public', () => {
+		// The fix vets the embedded IPv4 rather than refusing the prefix wholesale: an
+		// IPv6-only host with DNS64 reaches the whole v4 internet through 64:ff9b::/96.
+		for (const ip of [
+			'::ffff:93.184.216.34', // mapped, dotted — the text fold must not hide it
+			'::ffff:5db8:d822', // mapped, hex
+			'64:ff9b::5db8:d822', // NAT64 → 93.184.216.34
+			'2002:5db8:d822::1', // 6to4 → 93.184.216.34
+		]) {
+			expect(isPrivateIp(ip), `${ip} must be public`).toBe(false);
+		}
 	});
 
 	test('a non-IP string is refused (fail closed)', () => {

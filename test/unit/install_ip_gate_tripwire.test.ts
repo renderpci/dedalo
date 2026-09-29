@@ -53,9 +53,9 @@ import {
 	INSTALL_ALLOW_ANY,
 	installAllowPolicy,
 	installIpAllowed,
-	ipInCidr,
 	LOOPBACK_SPELLINGS,
 } from '../../src/core/install/gate.ts';
+import { ipInCidr } from '../../src/core/security/ip_address.ts';
 
 const KEY = 'DEDALO_INSTALL_ALLOWED_IPS';
 const original = process.env[KEY];

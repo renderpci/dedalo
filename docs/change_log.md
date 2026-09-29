@@ -19,6 +19,21 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **The history of a field that links records is one timeline, whatever the working language.**
+
+    A field that links records — a portal, a select, a check box, a list of informants — holds
+    links, and links have no language, even when the field's definition is marked translatable.
+    Its [time machine](./tools/using_time_machine.md) history is now always one timeline: every
+    change is one entry holding the whole field and its dataframe frames, shown in the history of
+    every language, and restoring it or reverting a batch run puts back exactly that field,
+    whichever language you work in. Before, such a field marked translatable filed each change
+    under the language of the page that saved it. Language entries remain for text fields. Older entries a
+    previous version filed under a language are part of the same timeline and are listed in every
+    language too. The time machine no longer offers a language choice for such a field, and its
+    restore confirmation says the whole field is replaced.
+
+    Wire contract: `WC-2026-09-27-bulk-revert-undo-log`.
+
 - **Tools work on phones**
 
     On a phone (screens up to 600px wide), 34 of the 37 tools now display and work:
@@ -56,23 +71,6 @@ Merged since the last release; these ship with the next one.
     - The dialog's **minimise and close** buttons are larger click targets and show a
       visible outline when reached with the keyboard.
 
-#### Changed
-
-- **The history of a field that links records is one timeline, whatever the working language.**
-
-    A field that links records — a portal, a select, a check box, a list of informants — holds
-    links, and links have no language, even when the field's definition is marked translatable.
-    Its [time machine](./tools/using_time_machine.md) history is now always one timeline: every
-    change is one entry holding the whole field and its dataframe frames, shown in the history of
-    every language, and restoring it or reverting a batch run puts back exactly that field,
-    whichever language you work in. Before, such a field marked translatable filed each change
-    under the language of the page that saved it. Language entries remain for text fields. Older entries a
-    previous version filed under a language are part of the same timeline and are listed in every
-    language too. The time machine no longer offers a language choice for such a field, and its
-    restore confirmation says the whole field is replaced.
-
-    Wire contract: `WC-2026-09-27-bulk-revert-undo-log`.
-
 #### Added
 
 - **The CSV import can now add a column's values to what a record already holds, instead of replacing them.**
@@ -93,26 +91,6 @@ Merged since the last release; these ship with the next one.
     Wire contract: `WC-2026-09-27-csv-import-append-mode`.
 
 #### Fixed
-
-- **A section that fails to load says why, and can be reloaded**
-
-    When a section or thesaurus element could not be loaded, the red banner always
-    suggested a permissions problem, even when the real cause was a failed request
-    (server restarting, timeout, network). The banner now shows the actual error,
-    keeps the permissions hint only when the server answered with nothing to show,
-    and offers a Reload button for temporary failures that rebuilds just that
-    element.
-
-    It also no longer appears after logging back in: when a session expired and the
-    user re-logged, the page loaded but the "permissions" banner was painted over
-    it anyway. The request is now re-sent once after re-login and the page builds
-    normally.
-
-- **Searching through a related record (e.g. a coin's type → its mint → the mint's name) is much faster.**
-
-    A filter on a field of a linked record used to scan every record of the section being searched, whatever the filter selected. On a 184,000-coin collection, searching coins by the name of their type's mint took about 3 seconds per paint (up to 9 with a cold cache). The search now starts from the few linked records that match and walks the links back, so the same search answers in a few tens of milliseconds.
-
-    The results are the same: the faster route is used only where it provably returns exactly the same records, and every other search (for example "is empty") keeps the previous route.
 
 - **Reverting the same bulk run a second time no longer reports records as "not reverted" when nothing changed.**
 
@@ -143,6 +121,20 @@ Merged since the last release; these ship with the next one.
     cleared and the record is kept.
 
     Wire contract: `WC-2026-09-29-dataframe-hard-delete-retired`.
+
+- **A section that fails to load says why, and can be reloaded**
+
+    When a section or thesaurus element could not be loaded, the red banner always
+    suggested a permissions problem, even when the real cause was a failed request
+    (server restarting, timeout, network). The banner now shows the actual error,
+    keeps the permissions hint only when the server answered with nothing to show,
+    and offers a Reload button for temporary failures that rebuilds just that
+    element.
+
+    It also no longer appears after logging back in: when a session expired and the
+    user re-logged, the page loaded but the "permissions" banner was painted over
+    it anyway. The request is now re-sent once after re-login and the page builds
+    normally.
 
 - **Deleting a record's data now also empties every dataframe of its fields.**
 
@@ -251,6 +243,12 @@ Merged since the last release; these ship with the next one.
     saved without touching the stamp, so the record keeps the date and user from
     the file — as it already did for every other column.
 
+- **Searching through a related record (e.g. a coin's type → its mint → the mint's name) is much faster.**
+
+    A filter on a field of a linked record used to scan every record of the section being searched, whatever the filter selected. On a 184,000-coin collection, searching coins by the name of their type's mint took about 3 seconds per paint (up to 9 with a cold cache). The search now starts from the few linked records that match and walks the links back, so the same search answers in a few tens of milliseconds.
+
+    The results are the same: the faster route is used only where it provably returns exactly the same records, and every other search (for example "is empty") keeps the previous route.
+
 - **Saving a language selector is instant again and keeps showing only the project languages.**
 
     Choosing a value in a language selector (for example a record's original language)
@@ -262,6 +260,24 @@ Merged since the last release; these ship with the next one.
     offered, including list filters and the state widget.
 
 ### For administrators
+
+#### Security
+
+- **Outbound fetches now refuse every IPv6 route to an internal address.**
+
+    When the server fetches a URL on a user's behalf (an RDF import, an external catalogue
+    lookup, a translation or transcription service), it first checks that the address is on the public internet, so
+    a user cannot point it at your internal network or at the cloud metadata endpoint. Until
+    now several IPv6 forms passed that check although they lead to an internal address: the
+    NAT64 prefix `64:ff9b::/96` (on an IPv6-only host this reaches `169.254.169.254`), 6to4
+    `2002::/16`, the IPv4-compatible and IPv4-translated forms, the old site-local range,
+    multicast and Teredo. The documentation ranges (`192.0.2.0/24`, `198.51.100.0/24`,
+    `203.0.113.0/24`, `2001:db8::/32`) were also accepted.
+
+    Now all of them are refused. An IPv6 address is accepted only inside the global unicast
+    space, and one that carries an IPv4 address (mapped, NAT64, 6to4) is judged by that
+    IPv4 address, so on an IPv6-only install public sites stay reachable through NAT64.
+    Nothing to configure.
 
 #### Changed
 
@@ -291,20 +307,6 @@ Merged since the last release; these ship with the next one.
 
     The server now refuses those requests itself, and its message names the setting to fix: set `DEDALO_HOST` (and `DEDALO_PROTOCOL`) on the update server. Requests from the same machine are still served, so local development setups keep working.
 
-- **The developer information bar is shown to developers and root again, on any server.**
-
-    The information strip at the top of the interface — engine version, build, database and runtime — is a developer surface. It had become tied to `DEDALO_DEV_MODE`, so on an installation that did not set that key it was hidden even from a logged-in developer, and setting it in `private/.env` did nothing because the container environment takes precedence. That is what a Docker installation saw: no developer bar, whatever the `.env` said.
-
-    The bar now follows the logged-in user, as the application itself did before the TypeScript rewrite: a user flagged as a developer in their record sees it, and root (superuser) always counts as a developer. `DEDALO_DEV_MODE` keeps its own meaning as the server posture — it selects the no-cache boot, the readable client libraries and the dev-only libraries the browser test harness needs — but it no longer decides who sees developer surfaces.
-
-    Debug-only surfaces (`SHOW_DEBUG`) are now shown to root alone, as before the rewrite; other developers keep the developer surfaces but not the debug ones, and non-developers see neither, even on a development server.
-
-    The main navigation bar is unchanged; only the extra information strip and the developer-only shortcuts are affected.
-
-### For administrators
-
-#### Fixed
-
 - **Time machine restore no longer fails on installs whose outbound host allowlist is empty.**
 
     Before, restoring any value from the [time machine](./tools/using_time_machine.md) was
@@ -331,6 +333,16 @@ Merged since the last release; these ship with the next one.
     at an empty directory, like the single-instance reference, and carries the `302`
     redirects from `/`, `/dedalo/` and `/dedalo/core/` to the login page. Check each
     existing Dédalo vhost for a `DocumentRoot` line.
+
+- **The developer information bar is shown to developers and root again, on any server.**
+
+    The information strip at the top of the interface — engine version, build, database and runtime — is a developer surface. It had become tied to `DEDALO_DEV_MODE`, so on an installation that did not set that key it was hidden even from a logged-in developer, and setting it in `private/.env` did nothing because the container environment takes precedence. That is what a Docker installation saw: no developer bar, whatever the `.env` said.
+
+    The bar now follows the logged-in user, as the application itself did before the TypeScript rewrite: a user flagged as a developer in their record sees it, and root (superuser) always counts as a developer. `DEDALO_DEV_MODE` keeps its own meaning as the server posture — it selects the no-cache boot, the readable client libraries and the dev-only libraries the browser test harness needs — but it no longer decides who sees developer surfaces.
+
+    Debug-only surfaces (`SHOW_DEBUG`) are now shown to root alone, as before the rewrite; other developers keep the developer surfaces but not the debug ones, and non-developers see neither, even on a development server.
+
+    The main navigation bar is unchanged; only the extra information strip and the developer-only shortcuts are affected.
 
 ### For developers
 
@@ -400,9 +412,9 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-27-bulk-revert-undo-log`
     - `WC-2026-09-27-csv-import-append-mode`
     - `WC-2026-09-27-external-allowlist-at-door-only`
-    - `WC-2026-09-29-dataframe-hard-delete-retired`
     - `WC-2026-09-28-maintenance-serve-code-widget`
     - `WC-2026-09-28-maintenance-serve-ontology-widget`
+    - `WC-2026-09-29-dataframe-hard-delete-retired`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

@@ -23,6 +23,7 @@ import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import { DedaloError } from '../errors/index.ts';
 import { currentJobSignal } from '../media/job_scope.ts';
+import { ipInCidr, packedInCidr, packIpv4, packIpv6 } from './ip_address.ts';
 
 /**
  * The guard's refusals, as ONE registered code. `security.ssrf_blocked` is
@@ -50,43 +51,87 @@ export function isSsrfRefusal(error: unknown): boolean {
 	return error instanceof DedaloError && error.code === 'security.ssrf_blocked';
 }
 
-/** Parse an IPv4 dotted string to its 32-bit value, or null if malformed. */
-function ipv4ToInt(ip: string): number | null {
-	const parts = ip.split('.');
-	if (parts.length !== 4) return null;
-	let value = 0;
-	for (const part of parts) {
-		if (!/^\d{1,3}$/.test(part)) return null;
-		const n = Number(part);
-		if (n > 255) return null;
-		value = value * 256 + n;
-	}
-	return value >>> 0;
-}
+/**
+ * IPv4 blocks that are not the public internet (IANA special-purpose registry).
+ * CIDR text on purpose: `ipInCidr` compares bitwise on the packed address, so a
+ * block means exactly what it says and a reader can check it against the RFC.
+ */
+const NON_PUBLIC_IPV4: readonly string[] = [
+	'0.0.0.0/8', // "this" network / 0.0.0.0
+	'10.0.0.0/8', // private
+	'100.64.0.0/10', // CGNAT
+	'127.0.0.0/8', // loopback
+	'169.254.0.0/16', // link-local (incl. cloud metadata 169.254.169.254)
+	'172.16.0.0/12', // private
+	'192.0.0.0/24', // IETF protocol assignments
+	'192.0.2.0/24', // documentation (TEST-NET-1)
+	'192.88.99.0/24', // deprecated 6to4 relay anycast
+	'192.168.0.0/16', // private
+	'198.18.0.0/15', // benchmarking
+	'198.51.100.0/24', // documentation (TEST-NET-2)
+	'203.0.113.0/24', // documentation (TEST-NET-3)
+	'224.0.0.0/4', // multicast
+	'240.0.0.0/4', // reserved, incl. broadcast 255.255.255.255
+];
 
 /** True when an IPv4 address is private / loopback / link-local / reserved. */
 function isPrivateIpv4(ip: string): boolean {
-	const v = ipv4ToInt(ip);
-	if (v === null) return true; // unparseable ⇒ refuse
-	const inRange = (base: string, bits: number): boolean => {
-		const b = ipv4ToInt(base);
-		if (b === null) return false;
-		const mask = bits === 0 ? 0 : (0xffffffff << (32 - bits)) >>> 0;
-		return (v & mask) === (b & mask);
-	};
-	return (
-		inRange('0.0.0.0', 8) || // "this" network / 0.0.0.0
-		inRange('10.0.0.0', 8) || // private
-		inRange('100.64.0.0', 10) || // CGNAT
-		inRange('127.0.0.0', 8) || // loopback
-		inRange('169.254.0.0', 16) || // link-local (incl. cloud metadata 169.254.169.254)
-		inRange('172.16.0.0', 12) || // private
-		inRange('192.0.0.0', 24) || // IETF protocol assignments
-		inRange('192.168.0.0', 16) || // private
-		inRange('198.18.0.0', 15) || // benchmarking
-		inRange('224.0.0.0', 4) || // multicast
-		inRange('240.0.0.0', 4) // reserved / broadcast
-	);
+	if (packIpv4(ip) === null) return true; // unparseable ⇒ refuse
+	return NON_PUBLIC_IPV4.some((block) => ipInCidr(ip, block));
+}
+
+/**
+ * The IPv6 blocks that CARRY an IPv4 address, and the byte offset it sits at. An
+ * address in one of them reaches whatever that IPv4 reaches — through the host's
+ * own stack (mapped), a translator (SIIT, NAT64) or a relay (6to4) — so it is vetted
+ * AS that IPv4, never on its v6 face: `64:ff9b::a9fe:a9fe` is the cloud metadata
+ * endpoint on any IPv6-only host with DNS64, and `2002:7f00:1::` is loopback.
+ *
+ * ABSENT on purpose (so refused, being outside global unicast): the deprecated
+ * IPv4-compatible `::/96` (`::7f00:1` is loopback), and the local-use NAT64 prefix
+ * `64:ff9b:1::/48`, whose translator is by definition inside the network.
+ */
+const IPV4_CARRYING_IPV6: readonly { block: string; at: number }[] = [
+	{ block: '::ffff:0:0/96', at: 12 }, // IPv4-mapped (RFC 4291)
+	{ block: '::ffff:0:0:0/96', at: 12 }, // IPv4-translated, SIIT (RFC 2765)
+	{ block: '64:ff9b::/96', at: 12 }, // NAT64 well-known prefix (RFC 6052)
+	{ block: '2002::/16', at: 2 }, // 6to4 (RFC 3056)
+];
+
+/** Global unicast — the only IPv6 space the public internet routes (RFC 4291). */
+const GLOBAL_UNICAST_IPV6 = '2000::/3';
+
+/**
+ * Special-purpose blocks INSIDE global unicast that are still not a public host.
+ * Teredo (`2001::/32`, inside `2001::/23`) is refused whole: its embedded IPv4 is
+ * obfuscated and the protocol is a tunnel, not a destination.
+ */
+const NON_PUBLIC_GLOBAL_IPV6: readonly string[] = [
+	'2001::/23', // IETF protocol assignments: Teredo, benchmarking, ORCHID
+	'2001:db8::/32', // documentation
+	'3fff::/20', // documentation (RFC 9637)
+];
+
+/**
+ * True when an IPv6 address is not a public host.
+ *
+ * An ALLOWLIST of the routable space rather than a blocklist of known-bad prefixes:
+ * outside global unicast (`2000::/3`) everything is refused — loopback, `::`,
+ * unique-local, link-local, the deprecated site-local `fec0::/10`, multicast, the
+ * IPv4-compatible block — because a list of bad prefixes is only as good as the
+ * last one someone remembered, and that is how `fec0::1`, `ff02::1` and every
+ * IPv4-carrying prefix got through before (measured 2026-09-29, PR #114 review).
+ * Judged on the PACKED bytes, so no spelling of an address differs from another.
+ */
+function isPrivateIpv6(ip: string): boolean {
+	const addr = ip.toLowerCase().split('%')[0] ?? ip; // drop any zone id
+	const bytes = packIpv6(addr);
+	if (bytes === null) return true; // unparseable ⇒ refuse
+	for (const { block, at } of IPV4_CARRYING_IPV6) {
+		if (packedInCidr(bytes, block)) return isPrivateIpv4(bytes.slice(at, at + 4).join('.'));
+	}
+	if (!packedInCidr(bytes, GLOBAL_UNICAST_IPV6)) return true;
+	return NON_PUBLIC_GLOBAL_IPV6.some((block) => packedInCidr(bytes, block));
 }
 
 /**
@@ -111,20 +156,6 @@ export function mappedIpv4(addr: string): string | null {
 	const high = Number.parseInt(hex[1], 16);
 	const low = Number.parseInt(hex[2], 16);
 	return `${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`;
-}
-
-/** True when an IPv6 address is loopback / link-local / ULA / mapped-private. */
-function isPrivateIpv6(ip: string): boolean {
-	const addr = ip.toLowerCase().split('%')[0] ?? ip; // drop any zone id
-	if (addr === '::1' || addr === '::' || addr === '::0') return true;
-	// IPv4-mapped / -compatible: vet the embedded v4, in EITHER spelling.
-	const mapped = mappedIpv4(addr);
-	if (mapped !== null) return isPrivateIpv4(mapped);
-	// fc00::/7 unique-local, fe80::/10 link-local.
-	const head = addr.split(':')[0] ?? '';
-	if (/^f[cd][0-9a-f]{0,2}$/.test(head)) return true; // fc.. / fd..
-	if (/^fe[89ab][0-9a-f]?$/.test(head)) return true; // fe80..febf
-	return false;
 }
 
 /** True when an already-resolved IP literal is not a public address. */
