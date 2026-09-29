@@ -145,7 +145,7 @@ export interface SaveRequest {
 	 * region it replaces plus its ordinary VISIBLE after-row, both carrying the
 	 * run id, for every key it changes (nothing for a save that changes
 	 * nothing); a record the save materializes gets the run's BIRTH marker, and
-	 * a target its dataframe cascade deletes gets a role-4 snapshot. That is what
+	 * a target its dataframe cascade wipes gets a role-4 snapshot. That is what
 	 * makes a bulk run revertable EXACTLY, as one operation.
 	 * `saveTm: false` suppresses the TM row entirely — OUTSIDE a bulk run only.
 	 * Under a bulk id it is IGNORED (decision D1): an unrecorded bulk write is
@@ -820,8 +820,8 @@ async function cascadeAppliedRemoves(input: {
 		const policy = dataframeDeletePolicyOf((await getNode(input.componentTipo))?.properties);
 		if (policy === 'unlink') return;
 		const entries = input.removes.flatMap((remove) => remove.removedEntries);
-		// Under a bulk id the cascade's deletes carry the run's id: each deleted
-		// target gets its role-4 snapshot, so the run's revert can undelete it.
+		// Under a bulk id the cascade's wipes carry the run's id: each emptied
+		// target gets its role-4 snapshot, so the run's revert can restore it.
 		await applyDataframeDeletePolicy(
 			policy,
 			dataframeTargetsOf(entries),

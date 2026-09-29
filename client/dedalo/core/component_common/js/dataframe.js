@@ -439,8 +439,8 @@ export const attach_item_dataframe = async function(options) {
 *
 * The client removes the LOCATOR only. What happens to the frame TARGET record
 * is the server's decision, from the slot node's delete policy (unlink /
-* delete_target / delete_target_record, or the v6 `hard_delete: true`) —
-* applied after the unlink has committed.
+* delete_target; the v6 `hard_delete: true` is inert — a target row is never
+* removed) — applied after the unlink has committed.
 *
 * Steps:
 *  1. Validate pairing keys (id_key, main_component_tipo); return false
@@ -515,7 +515,7 @@ export const delete_dataframe = async function(options) {
 
 	// unlink the frame(s): remove their locators from the slot. The target
 	// record's fate is the SERVER's, from the slot node's delete policy
-	// (unlink / delete_target / delete_target_record —
+	// (unlink / delete_target —
 	// src/core/relations/dataframe.ts). The stored entries are selected by
 	// their PAIRING (id_key + main_component_tipo — `section_id` here is the
 	// HOST record's, the frame target's id is unknown to the caller), and

@@ -114,7 +114,7 @@ import { propagateRestoreToObservers } from './restore_common.ts';
  * is written (including 'data' section metadata — PHP set_data replaces all).
  *
  * THE UNDELETE DOOR: also the bulk revert's (bulk_revert_records.ts) for a
- * record a run's dataframe cascade deleted — one restore of a whole record,
+ * record a revert's D2 deleted, when that revert is reverted — one restore of a whole record,
  * files included, not two. `tmId` is the snapshot row's id, for the refusal.
  */
 export async function restoreSection(
@@ -134,7 +134,7 @@ export async function restoreSection(
  * The ROW half of {@link restoreSection}: write the snapshot's jsonb columns
  * back (section ids converged, see below) and answer the columns AS WRITTEN.
  * Joins an ambient transaction — the bulk revert undeletes a cascade target
- * inside the transaction of the unit that re-links it, so a refused unit rolls
+ * (a record a revert's D2 deleted) inside the transaction of the unit that re-links it, so a refused unit rolls
  * the undelete back with it. The FILE half ({@link restoreSectionMedia}) must
  * then run after that transaction commits.
  */

@@ -1287,10 +1287,11 @@ export async function getRelationTypeByTipo(tipo: string): Promise<string> {
  *   responsibility too (the main save/delete path refreshes them).
  * - The delete policy is the SLOT's (dataframeDeletePolicyOf, relations/
  *   dataframe.ts — PHP read it from the main, which no shipped node carried):
- *   'unlink' clears slot entries only; 'delete_target' soft-deletes the
- *   unlinked frame TARGET records; 'delete_target_record' (= the v6
- *   `hard_delete: true`) deletes them (targets collected BEFORE clearing,
- *   deleted AFTER every slot write; per-target failures log and continue).
+ *   'unlink' clears slot entries only; 'delete_target' empties the unlinked
+ *   frame TARGET records, row kept (targets collected BEFORE clearing, wiped
+ *   AFTER every slot write; per-target failures log and continue). No policy
+ *   removes a target row — the v6 `hard_delete: true` is inert
+ *   (WC-2026-09-29-dataframe-hard-delete-retired).
  */
 export async function removeDataframeDataById(
 	table: string,
@@ -1310,13 +1311,12 @@ export async function removeDataframeDataById(
 	if (slotTipos.length === 0) return;
 
 	// Delete policy PER SLOT, read from the SLOT node (dataframeDeletePolicyOf:
-	// `hard_delete: true` = hard, `dataframe.delete_policy` = soft/hard, else
-	// unlink). The targets are lifted from the RAW stored entries BEFORE the
+	// `dataframe.delete_policy: "delete_target"` = soft wipe, else unlink). The targets are lifted from the RAW stored entries BEFORE the
 	// strip and handed to the applier only AFTER every slot write; the applier
 	// queues the deletes on the commit lane — a target is never deleted while a
 	// locator still addresses it (see applyDataframeDeletePolicy).
 	const pendingDeletes: {
-		policy: 'delete_target' | 'delete_target_record';
+		policy: 'delete_target';
 		targets: DataframeTarget[];
 	}[] = [];
 
@@ -1354,8 +1354,8 @@ export async function removeDataframeDataById(
 		);
 	}
 
-	// Under a bulk run the deletes carry its id: each deleted target gets its
-	// role-4 snapshot, so the run's revert can undelete it (D3).
+	// Under a bulk run the wipes carry its id: each emptied target gets its
+	// role-4 snapshot, so the run's revert can write its data back (D3).
 	for (const pending of pendingDeletes) {
 		await applyDataframeDeletePolicy(pending.policy, pending.targets, userId, bulkProcessId);
 	}

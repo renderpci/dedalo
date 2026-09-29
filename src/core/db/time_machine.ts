@@ -451,7 +451,10 @@ export const TM_ROLE = {
 	before: 1,
 	/** BIRTH marker: the record was created by this run (tipo = section_tipo, data = its birth image). */
 	birth: 3,
-	/** A record the run's dataframe cascade DELETED: its whole-record snapshot. */
+	/**
+	 * A record WIPED by a run's dataframe cascade (row kept) or DELETED by a
+	 * revert's D2 (row gone): its whole-record snapshot under that bulk id.
+	 */
 	cascadeDelete: 4,
 } as const;
 
@@ -589,8 +592,10 @@ export interface BulkCascadeDeleteEntry extends BulkRecordEntry {
 }
 
 /**
- * The role-4 twin of a delete snapshot: a record the run's dataframe cascade
- * DELETED, carrying the run's bulk id so its revert can find and undelete it.
+ * The role-4 twin of a whole-record snapshot: a record a run's dataframe
+ * cascade WIPED (`delete_target`, row kept — no policy removes a frame target
+ * row, WC-2026-09-29-dataframe-hard-delete-retired) or a revert's D2 DELETED,
+ * carrying the bulk id so its revert can find and restore/undelete it.
  * The ordinary delete snapshot row (tipo = section_tipo, lg-nolan, visible)
  * is still written by the delete door; pass ITS timestamp here so the two
  * rows read as one event. Returns the row id, or null for an unaudited address.

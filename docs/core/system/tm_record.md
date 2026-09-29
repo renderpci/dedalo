@@ -123,7 +123,7 @@ and never shown:
 | `NULL` | every ordinary row — every non-bulk write, and the AFTER row of every bulk save | yes |
 | `1` | BEFORE image: the exact region the bulk save replaced (`data` NULL = the region held nothing: the key was absent, stored JSON `null`, or — for a lang-sliced model — held no item of that language) | no |
 | `3` | BIRTH marker: a record the run created (`tipo` = the section tipo, `lg-nolan`, `data` = its birth image: the projects filter and `dato_default` values the create wrote, or the snapshot a revert's undelete restored) | no |
-| `4` | the whole-record snapshot of a record the run's dataframe cascade deleted | no (the ordinary delete snapshot stays visible) |
+| `4` | the whole-record snapshot of a record the run's dataframe cascade **wiped** (`delete_target`: data emptied, row kept — no policy removes a frame target row, since 2026-09-29), or that a revert's D2 **deleted** (a born record) | no (the ordinary wipe rows / delete snapshot stay visible) |
 
 **The pair law.** A save carrying a bulk id writes, for every key it changes (the
 modified stamps excepted, see below), a
@@ -459,7 +459,7 @@ not a save through the `tm`-mode component.
 | `readTimeMachineHistory(sourceSectionTipo, sourceSectionId, componentTipo, limit?)` | A component's change history on one source record, newest first (`ORDER BY timestamp DESC`). |
 | `recordTimeMachine(entry, timestamp)` | Insert one ordinary (visible) audit row. No-ops for `section_id <= 0` or an excluded section tipo. Never used for a bulk save. |
 | `recordBulkPair(entry)` | A bulk save's undo pair: the hidden BEFORE row, then the visible after-row, both with the bulk id; nothing when before and after are canonically equal. Returns the two ids, or `null`. |
-| `recordBulkBirth(entry)` / `recordBulkCascadeDelete(entry)` | The hidden role-3 birth marker / role-4 cascade-delete snapshot of a bulk run. |
+| `recordBulkBirth(entry)` / `recordBulkCascadeDelete(entry)` | The hidden role-3 birth marker / role-4 cascade snapshot (a run's cascade wipe, or a revert's D2 delete) of a bulk run. |
 | `TM_ROLE`, `decodeTmImage()` | The role codes, and the decoder of an undo-log image (`data IS NULL` = the region held nothing — select `TM_IMAGE_ABSENT_COLUMN`; the pair writer never stores a JSON `null` image, it maps one to absence). |
 | `nowDbTimestamp()` | The current time as a Postgres-style timestamp string. |
 | `TM_EXCLUDED_SECTIONS` | The section tipos never versioned — `dd15` itself. |

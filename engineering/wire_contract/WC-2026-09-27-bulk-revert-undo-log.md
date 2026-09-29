@@ -1182,3 +1182,13 @@ suite DB through the census runner over every test file this change touches):
 `tm_bulk_revert` 13 → 7 tests (the deleted row-per-row `preBulkState` and its 6 cases) and
 `action_scope_binding_tripwire` 95 → 92 assertions (the retired `tool_time_machine.apply_value`
 exemption).
+
+## Addendum 2026-09-29 — a run's dataframe cascade no longer deletes rows
+
+Under `WC-2026-09-29-dataframe-hard-delete-retired` no dataframe policy removes
+a frame target row. A run's cascade writes role-4 twins of soft wipes only (row
+kept). A missing-row role-4 twin comes only from a revert's D2 delete of a born
+record, so the missing-row undelete, the unit coupling and the epoch refusal
+are reached by revert-of-revert. The role-4 description "a record the run's
+dataframe cascade deleted" now reads "wiped (a run's cascade) or deleted (a
+revert's D2)".

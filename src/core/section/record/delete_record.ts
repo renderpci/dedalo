@@ -79,8 +79,9 @@ import { bulkIdOf } from './bulk_capture.ts';
 /** The bulk-run context a cascade hands the delete doors (relations/dataframe.ts). */
 export interface DeleteBulkOptions {
 	/**
-	 * The dd800 run whose dataframe cascade is deleting this record — null /
-	 * absent for every ordinary delete. With it, the door writes a role-4 twin of
+	 * The dd800 run this delete belongs to — a run's dataframe cascade (a soft
+	 * wipe) or a revert's D2 delete of a born record — null / absent for every
+	 * ordinary delete. With it, the door writes a role-4 twin of
 	 * its whole-record snapshot carrying the run id (recordCascadeDeleteTwin).
 	 */
 	bulkProcessId?: number | null;
@@ -101,8 +102,9 @@ export interface DeleteRecordOptions extends DeleteBulkOptions {
 
 /**
  * THE ROLE-4 TWIN (WC …-bulk-revert-undo-log, M1 / decision D3). A record a
- * bulk run's dataframe cascade deletes (deleteSectionRecord) or wipes
- * (deleteSectionData) carries no bulk id through the ordinary history — the
+ * bulk run's dataframe cascade wipes (deleteSectionData — no policy removes a
+ * frame target row, WC-2026-09-29-dataframe-hard-delete-retired) or a revert's
+ * D2 deletes (deleteSectionRecord) carries no bulk id through the ordinary history — the
  * delete snapshot row (record delete) and the per-component rows (wipe) are
  * the door's own, visible and unattributed, exactly as for an interactive
  * delete. The twin is the run's handle on it: the same whole-record image
@@ -257,7 +259,7 @@ export async function deleteSectionRecord(
 				},
 				snapshotStamp,
 			);
-			// 2a. Under a bulk run's cascade: the snapshot's role-4 twin (see
+			// 2a. Under a bulk id (a revert's D2): the snapshot's role-4 twin (see
 			//     recordCascadeDeleteTwin).
 			await recordCascadeDeleteTwin(options, {
 				sectionTipo,
@@ -1263,8 +1265,8 @@ export async function deleteSectionData(
 			// the wipe above emptied every dataframe slot, so each slot's delete
 			// policy applies to the frame targets its pre-wipe entries addressed —
 			// the same answer the record delete gives (step 2b there); which delete
-			// mode the curator picked must not decide whether a `hard_delete`
-			// rating survives. ONLY the frames the wipe REMOVED: the slots it
+			// mode the curator picked must not decide whether a `delete_target`
+			// frame's data survives. ONLY the frames the wipe REMOVED: the slots it
 			// emptied, and a main's own frames (wiped or empty) out of a declared
 			// slot outside the subtree (wipeDeclaredSlotsOfMains); any other dd490
 			// bag keeps its key, and a target deleted under a surviving locator is

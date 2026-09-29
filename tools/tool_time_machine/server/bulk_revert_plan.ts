@@ -9,7 +9,8 @@
  *   - role 1 (BEFORE) and role NULL (the visible after-row, or a legacy run's
  *     only row) on a COMPONENT tipo → one KEY per component region;
  *   - role 3 → a record the run CREATED (decision D2, bulk_revert_records.ts);
- *   - role 4 → a record the run's dataframe cascade DELETED (decision D3).
+ *   - role 4 → a record the run's dataframe cascade WIPED, or a revert's D2
+ *     DELETED (decision D3).
  * A row on a non-component tipo that is neither (a section snapshot, a model
  * the ontology no longer resolves) is not the revert's to replay — the section
  * restore is apply_value's — and is ignored, as it always was.
@@ -129,7 +130,7 @@ export interface RevertUnit {
 	slotTipos: string[];
 }
 
-/** A record-level marker of the run (a birth or a cascade delete). */
+/** A record-level marker of the run (a birth, or a cascade wipe / D2 delete). */
 export interface RecordMarker {
 	sectionTipo: string;
 	sectionId: number;

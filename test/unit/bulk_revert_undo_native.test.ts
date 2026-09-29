@@ -14,8 +14,10 @@
  *   created records (deleted if safe, kept otherwise); a main+slot unit; an
  *   unsliced key saved under two request languages (one lg-nolan lane); two runs reverted LIFO and
  *   in the wrong order; revert of a revert, a double revert, two concurrent
- *   reverts; a live-run refusal; a cascade delete (hard: undeleted; soft: the
- *   wiped data restored); legacy runs (born in the run vs not); the propagate
+ *   reverts; a live-run refusal; a cascade (soft: the wiped data restored; a
+ *   record a REVERT deleted, D2: undeleted by the revert of that revert — the
+ *   one producer of a row-deleted cascade target since the dataframe hard
+ *   delete was retired, WC-2026-09-29-dataframe-hard-delete-retired); legacy runs (born in the run vs not); the propagate
  *   region on a translatable UNSLICED model (M2).
  *   The Part-1 catalogue (deleted import_csv_append_native titles) and its
  *   addendum (preBatchLangSlice rules, the per-language legacy walk, the wipe
@@ -39,8 +41,8 @@
  *
  * SITUATION: a `zzbru` scratch section on `test1` (→ matrix_test) with a
  * translatable input_text, portals whose request_config names their dataframe
- * slots (an unlink slot shared with a second main, a HARD-delete slot, a SOFT
- * one), a translatable portal and a date. Runs are REAL dd800 records (the
+ * slots (an unlink slot shared with a second main, a second unlink slot shared
+ * by HMAIN/HMAIN2, a SOFT one), a translatable portal and a date. Runs are REAL dd800 records (the
  * legacy born-in-run rule reads their created_date); legacy runs are built by
  * test/helpers/legacy_bulk_run.ts. Everything is swept; the situation drop
  * asserts zero residue. assertTestDatabase before the first write.
@@ -114,7 +116,7 @@ const MAIN = `${TLD}2`; // portal → SLOT (unlink)
 const SLOT = `${TLD}3`;
 const TEXT = `${TLD}4`; // input_text, translatable (lang-SLICED)
 const TPORTAL = `${TLD}5`; // portal whose ontology node says translatable — unsliced: lg-nolan lane only
-const HMAIN = `${TLD}6`; // portal → HSLOT (hard delete)
+const HMAIN = `${TLD}6`; // portal → HSLOT (unlink; the frame chain the revert-of-revert re-links)
 const HSLOT = `${TLD}7`;
 const SMAIN = `${TLD}8`; // portal → SSLOT (soft delete: delete_target)
 const SSLOT = `${TLD}9`;
@@ -127,7 +129,7 @@ const FTEXT = `${TLD}15`; // input_text, translatable — what a run writes in F
 const IMAGE = `${TLD}16`; // component_image (a SOFT cascade moves its files)
 const LMAIN = `${TLD}17`; // input_text, translatable (lang-SLICED) WITH a dataframe slot
 const LSLOT = `${TLD}18`;
-const HMAIN2 = `${TLD}19`; // a second portal whose frames live in HSLOT too (a SHARED hard slot)
+const HMAIN2 = `${TLD}19`; // a second portal whose frames live in HSLOT too (a SHARED slot)
 const OSLOT = `${TLD}20`; // a dataframe slot NO component declares (parent: the section) — orphan frames
 const TABLE = 'matrix_test';
 const USER_ID = -1;
@@ -175,8 +177,8 @@ const SITUATION = situation({
 			tipo: HSLOT,
 			parent: HMAIN,
 			model: 'component_dataframe',
-			term: { 'lg-eng': 'Hard slot' },
-			properties: { hard_delete: true },
+			// unlink: no policy removes a frame target row (WC-2026-09-29)
+			term: { 'lg-eng': 'Shared slot' },
 		},
 		portalWithSlot(SMAIN, SSLOT),
 		{
@@ -965,7 +967,8 @@ describe('the COMPOSED revert (amendment 2026-09-27: main + frames from one row)
 			});
 			const data = response.data as RevertData;
 			minted.push(data.bulk_process_id);
-			expect(await stored(role, 'string', TEXT)).toBe('NO-RECORD');
+			// an unlink slot: the target was never touched, and the frame stays out
+			expect(texts(await stored(role, 'string', TEXT))).toEqual(['lg-spa:role record']);
 			expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([]);
 			expect(data.skipped.map((entry) => entry.reason)).toContain('out_of_scope');
 			expect(data.counter).toBe(0);
@@ -1149,37 +1152,70 @@ describe('wipes and clears (catalogue wt:1559 first case)', () => {
 	});
 });
 
+/**
+ * THE PRODUCER of a ROW-DELETED cascade target (no dataframe policy removes a
+ * frame target row any more: WC-2026-09-29-dataframe-hard-delete-retired). A
+ * run A creates `target` and frames it from `host` (HSLOT, paired to HMAIN's
+ * pre-run item 1); the revert R of A takes the frame away, and D2 deletes the
+ * now unreferenced born record UNDER R's BULK ID — a role-4 twin. The revert
+ * of R is the one that must re-link and undelete it. `link` adds more links
+ * under A (each is reverted by R before D2 runs).
+ */
+async function revertDeletedTarget(
+	options: {
+		text?: string | null;
+		birth?: Date;
+		link?: (target: number, run: number) => Promise<void>;
+	} = {},
+): Promise<{ host: number; target: number; run: number; revertId: number }> {
+	const text = options.text === undefined ? 'role record' : options.text;
+	const host = await rec();
+	const t1 = await rec();
+	await seed(host, 'relation', HMAIN, [locator(1, t1, HMAIN)]);
+	const run = await mint();
+	const target = await createSectionRecord(
+		SECTION,
+		USER_ID,
+		options.birth ?? new Date(),
+		undefined,
+		{
+			bulkProcessId: run,
+		},
+	);
+	if (text !== null) await setText(target, 'lg-spa', text, { bulk: run });
+	await insertFrame(host, HSLOT, HMAIN, 1, target, run);
+	if (options.link !== undefined) await options.link(target, run);
+	const first = await revert(run);
+	// FLOOR: D2 deleted the target under the revert's id (its role-4 twin), and
+	// the frame that linked it is gone — so the next revert has a row to undelete.
+	expect(first.skipped).toEqual([]);
+	expect(await stored(target, 'data', 'section_id')).toBe('NO-RECORD');
+	expect(
+		(await runRowsOf(SECTION, target, first.bulk_process_id)).some((row) => row.tm_role === 4),
+	).toBe(true);
+	expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([]);
+	return { host, target, run, revertId: first.bulk_process_id };
+}
+
 describe('the dataframe cascade of a run (D3)', () => {
-	test('HARD: a frame removed from the slot deleted its target; the revert UNDELETES it (inexact: cascade_undelete)', async () => {
-		const host = await rec();
-		const [t1, role] = [await rec(), await rec()];
-		await setText(role, 'lg-spa', 'role record');
-		await seed(host, 'relation', HMAIN, [locator(1, t1, HMAIN)]);
-		await seed(host, 'relation', HSLOT, [{ id: 1, ...frame(1, role, HMAIN, HSLOT) }]);
-		const run = await mint();
-		await save(host, HSLOT, 'lg-nolan', [{ action: 'remove', id: 1, value: null }], { bulk: run });
-		expect(await stored(role, 'string', TEXT)).toBe('NO-RECORD');
-		const data = await revert(run);
-		expect(texts(await stored(role, 'string', TEXT))).toEqual(['lg-spa:role record']);
-		expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([`${HMAIN}#1->${role}`]);
+	test('a record a REVERT deleted (D2) is UNDELETED by the revert of that revert, with its frame (inexact: cascade_undelete)', async () => {
+		const { host, target, revertId } = await revertDeletedTarget();
+		const data = await revert(revertId);
+		expect(texts(await stored(target, 'string', TEXT))).toEqual(['lg-spa:role record']);
+		expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([`${HMAIN}#1->${target}`]);
 		expect(data.inexact).toEqual([
-			{ basis: 'cascade_undelete', section_tipo: SECTION, section_id: role, tipo: SECTION },
+			{ basis: 'cascade_undelete', section_tipo: SECTION, section_id: target, tipo: SECTION },
 		]);
 		expect(data.exact).toBe('partial');
 	});
 
-	test('HARD, address taken again: cascade_delete_not_reverted, the new record untouched', async () => {
-		const host = await rec();
-		const [t1, role] = [await rec(), await rec()];
-		await seed(host, 'relation', HMAIN, [locator(1, t1, HMAIN)]);
-		await seed(host, 'relation', HSLOT, [{ id: 1, ...frame(1, role, HMAIN, HSLOT) }]);
-		const run = await mint();
-		await save(host, HSLOT, 'lg-nolan', [{ action: 'remove', id: 1, value: null }], { bulk: run });
+	test('address taken again before the revert of the revert: cascade_delete_not_reverted, the new record untouched', async () => {
+		const { host, target, revertId } = await revertDeletedTarget({ text: null });
 		// A new record born at the address (a create at an explicit id opens an epoch).
-		await createSectionRecord(SECTION, USER_ID, laterBirth(), role);
-		await setText(role, 'lg-spa', 'a new record here');
-		const data = await revert(run);
-		expect(texts(await stored(role, 'string', TEXT))).toEqual(['lg-spa:a new record here']);
+		await createSectionRecord(SECTION, USER_ID, laterBirth(), target);
+		await setText(target, 'lg-spa', 'a new record here');
+		const data = await revert(revertId);
+		expect(texts(await stored(target, 'string', TEXT))).toEqual(['lg-spa:a new record here']);
 		// The target refuses the UNIT that re-links it (located at the unit, which
 		// passed its gate): the frame is NOT restored onto the foreign record.
 		expect(data.skipped).toEqual([
@@ -1194,21 +1230,25 @@ describe('the dataframe cascade of a run (D3)', () => {
 		expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([]);
 	});
 
-	test('HARD, via a MAIN item removal: the frame target is undeleted with the main and slot', async () => {
-		// §2.3 item 7 (M1): the cascade a main removal fires must reach the
-		// revert, or the restored frame points at a record that no longer exists.
+	test('linked by a MAIN locator: the composed row re-links through its MAIN part, and the target comes back with it', async () => {
+		// What the revert of the revert re-links must come back with the unit, or
+		// the restored locator points at a record that is gone. (§2.3 item 7, M1 —
+		// the cascade a MAIN item removal fires — is pinned by the SOFT test
+		// 'via a MAIN item removal' below.)
 		const host = await rec();
-		const [t1, role] = [await rec(), await rec()];
-		await setText(role, 'lg-spa', 'role record');
+		const t1 = await rec();
 		await seed(host, 'relation', HMAIN, [locator(1, t1, HMAIN)]);
-		await seed(host, 'relation', HSLOT, [{ id: 1, ...frame(1, role, HMAIN, HSLOT) }]);
 		const run = await mint();
-		await save(host, HMAIN, 'lg-nolan', [{ action: 'remove', id: 1, value: null }], { bulk: run });
-		expect(await stored(role, 'string', TEXT)).toBe('NO-RECORD');
-		await revert(run);
+		const target = await rec(run);
+		await setText(target, 'lg-spa', 'role record', { bulk: run });
+		await insertLocator(host, HMAIN, target, run);
+		const first = await revert(run);
+		// FLOOR: D2 deleted the target under the revert's id.
+		expect(await stored(target, 'string', TEXT)).toBe('NO-RECORD');
 		expect(targetsOf(await stored(host, 'relation', HMAIN))).toEqual([t1]);
-		expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([`${HMAIN}#1->${role}`]);
-		expect(texts(await stored(role, 'string', TEXT))).toEqual(['lg-spa:role record']);
+		await revert(first.bulk_process_id);
+		expect(targetsOf(await stored(host, 'relation', HMAIN))).toEqual([t1, target].sort());
+		expect(texts(await stored(target, 'string', TEXT))).toEqual(['lg-spa:role record']);
 	});
 
 	test('SOFT (delete_target): the target’s WIPED data comes back — the row was never gone', async () => {
@@ -1227,6 +1267,28 @@ describe('the dataframe cascade of a run (D3)', () => {
 		]);
 		await revert(run);
 		expect(texts(await stored(role, 'string', TEXT))).toEqual(['lg-spa:role record']);
+	});
+
+	test('SOFT, via a MAIN item removal: the cascade carries the run id, and the revert restores main, frame and the wiped target together', async () => {
+		// §2.3 item 7 (M1): the cascade a main removal fires must reach the revert,
+		// or the restored frame points at a record whose data is gone.
+		const host = await rec();
+		const [t1, role] = [await rec(), await rec()];
+		await setText(role, 'lg-spa', 'role record');
+		await seed(host, 'relation', SMAIN, [locator(1, t1, SMAIN)]);
+		await seed(host, 'relation', SSLOT, [{ id: 1, ...frame(1, role, SMAIN, SSLOT) }]);
+		const run = await mint();
+		await save(host, SMAIN, 'lg-nolan', [{ action: 'remove', id: 1, value: null }], { bulk: run });
+		// FLOOR: the main item, its frame and the target's data are gone; the row stays.
+		expect(targetsOf(await stored(host, 'relation', SMAIN))).toEqual([]);
+		expect(framePairs(await stored(host, 'relation', SSLOT))).toEqual([]);
+		expect(texts(await stored(role, 'string', TEXT))).toEqual([]);
+		expect(await stored(role, 'data', 'section_id')).not.toBe('NO-RECORD');
+		const data = await revert(run);
+		expect(targetsOf(await stored(host, 'relation', SMAIN))).toEqual([t1]);
+		expect(framePairs(await stored(host, 'relation', SSLOT))).toEqual([`${SMAIN}#1->${role}`]);
+		expect(texts(await stored(role, 'string', TEXT))).toEqual(['lg-spa:role record']);
+		expect(data.inexact.map((entry) => entry.basis)).toEqual(['cascade_undelete']);
 	});
 
 	test('SOFT, the target holds an ORPHAN frame (a slot no main declares, a main the ontology lacks): undeleted, never failed', async () => {
@@ -1374,20 +1436,19 @@ describe('generations and cascade targets across reverts (review 2026-09-27)', (
 	});
 
 	test('a target that refused one unit refuses EVERY unit re-linking it — no locator onto a foreign record', async () => {
-		const [host, owner] = [await rec(), await rec()];
-		const [t1, role] = [await rec(), await rec()];
-		await seed(host, 'relation', HMAIN, [locator(1, t1, HMAIN)]);
-		await seed(host, 'relation', HSLOT, [{ id: 1, ...frame(1, role, HMAIN, HSLOT) }]);
-		await insertLocator(owner, TPORTAL, role);
-		const run = await mint();
-		// The frame removal hard-deletes `role`; the delete strips owner's locator
-		// under the run's id — two units (host's slot, owner's portal) re-link it.
-		await save(host, HSLOT, 'lg-nolan', [{ action: 'remove', id: 1, value: null }], { bulk: run });
+		const owner = await rec();
+		// Two units re-link it: host's slot, and owner's portal — both linked in the run.
+		const { host, target, revertId } = await revertDeletedTarget({
+			text: null,
+			link: async (target, run) => {
+				await insertLocator(owner, TPORTAL, target, run);
+			},
+		});
 		expect(targetsOf(await stored(owner, 'relation', TPORTAL))).toEqual([]);
-		await createSectionRecord(SECTION, USER_ID, laterBirth(), role);
-		await setText(role, 'lg-spa', 'a new record here');
-		const data = await revert(run);
-		expect(texts(await stored(role, 'string', TEXT))).toEqual(['lg-spa:a new record here']);
+		await createSectionRecord(SECTION, USER_ID, laterBirth(), target);
+		await setText(target, 'lg-spa', 'a new record here');
+		const data = await revert(revertId);
+		expect(texts(await stored(target, 'string', TEXT))).toEqual(['lg-spa:a new record here']);
 		expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([]);
 		expect(targetsOf(await stored(owner, 'relation', TPORTAL))).toEqual([]);
 		expect(reasons(data)).toEqual(['cascade_delete_not_reverted', 'cascade_delete_not_reverted']);
@@ -1395,21 +1456,16 @@ describe('generations and cascade targets across reverts (review 2026-09-27)', (
 	});
 
 	test('a cascade target re-created by a BULK run at its explicit id (a new epoch) still refuses the unit re-linking it', async () => {
-		const host = await rec();
-		const [t1, role] = [await rec(), await rec()];
-		await seed(host, 'relation', HMAIN, [locator(1, t1, HMAIN)]);
-		await seed(host, 'relation', HSLOT, [{ id: 1, ...frame(1, role, HMAIN, HSLOT) }]);
-		const run = await mint();
-		await save(host, HSLOT, 'lg-nolan', [{ action: 'remove', id: 1, value: null }], { bulk: run });
+		const { host, target, revertId } = await revertDeletedTarget({ text: null });
 		const reimport = await mint();
-		await createSectionRecord(SECTION, USER_ID, laterBirth(), role, {
+		await createSectionRecord(SECTION, USER_ID, laterBirth(), target, {
 			conflictTolerant: true,
 			bulkProcessId: reimport,
 		});
-		await setText(role, 'lg-spa', 'imported again', { bulk: reimport });
-		const data = await revert(run);
+		await setText(target, 'lg-spa', 'imported again', { bulk: reimport });
+		const data = await revert(revertId);
 		expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([]);
-		expect(texts(await stored(role, 'string', TEXT))).toEqual(['lg-spa:imported again']);
+		expect(texts(await stored(target, 'string', TEXT))).toEqual(['lg-spa:imported again']);
 		expect(data.skipped).toEqual([
 			{
 				reason: 'cascade_delete_not_reverted',
@@ -1422,33 +1478,31 @@ describe('generations and cascade targets across reverts (review 2026-09-27)', (
 	});
 
 	test('a SECOND revert of a run whose cascade target is back: unchanged, full — no cascade_undelete, no refusal', async () => {
-		const host = await rec();
-		const [t1, role] = [await rec(), await rec()];
-		await setText(role, 'lg-spa', 'role record');
-		await seed(host, 'relation', HMAIN, [locator(1, t1, HMAIN)]);
-		await seed(host, 'relation', HSLOT, [{ id: 1, ...frame(1, role, HMAIN, HSLOT) }]);
-		const run = await mint();
-		await save(host, HSLOT, 'lg-nolan', [{ action: 'remove', id: 1, value: null }], { bulk: run });
-		expect((await revert(run)).inexact.map((entry) => entry.basis)).toEqual(['cascade_undelete']);
-		const again = await revert(run);
+		// text: null — the target carries no key of its own run. (With one, D2's
+		// role-4 snapshot is taken AFTER the revert cleared that key, so once the
+		// key's own unit writes it back the row differs from the snapshot and a
+		// repeat revert reports it `kept` — an open revert defect, ledgered in
+		// rewrite/LEDGER.md 2026-09-29, not pinned here.)
+		const { host, target, revertId } = await revertDeletedTarget({ text: null });
+		expect((await revert(revertId)).inexact.map((entry) => entry.basis)).toEqual([
+			'cascade_undelete',
+		]);
+		const again = await revert(revertId);
 		expect(again).toMatchObject({ counter: 0, exact: 'full', skipped: [], inexact: [] });
 		expect(again.unchanged).toBeGreaterThan(0);
-		expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([`${HMAIN}#1->${role}`]);
+		expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([`${HMAIN}#1->${target}`]);
 	});
 
 	test('a second revert after a curator EDITED the undeleted target: the unit is not refused, the edit survives', async () => {
-		const host = await rec();
-		const [t1, role] = [await rec(), await rec()];
-		await setText(role, 'lg-spa', 'role record');
-		await seed(host, 'relation', HMAIN, [locator(1, t1, HMAIN)]);
-		await seed(host, 'relation', HSLOT, [{ id: 1, ...frame(1, role, HMAIN, HSLOT) }]);
-		const run = await mint();
-		await save(host, HSLOT, 'lg-nolan', [{ action: 'remove', id: 1, value: null }], { bulk: run });
-		await revert(run);
-		await setText(role, 'lg-spa', 'edited after the undelete');
-		const again = await revert(run);
-		expect(texts(await stored(role, 'string', TEXT))).toEqual(['lg-spa:edited after the undelete']);
-		expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([`${HMAIN}#1->${role}`]);
+		const { host, target, revertId } = await revertDeletedTarget({ text: null });
+		await revert(revertId);
+		expect(await stored(target, 'data', 'section_id')).not.toBe('NO-RECORD'); // FLOOR: back
+		await setText(target, 'lg-spa', 'edited after the undelete');
+		const again = await revert(revertId);
+		expect(texts(await stored(target, 'string', TEXT))).toEqual([
+			'lg-spa:edited after the undelete',
+		]);
+		expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([`${HMAIN}#1->${target}`]);
 		// The referencing unit ran (its keys already at their pre-run value);
 		// only the target is reported — at the record, never at the unit.
 		expect(again.unchanged).toBeGreaterThan(0);
@@ -1457,7 +1511,7 @@ describe('generations and cascade targets across reverts (review 2026-09-27)', (
 				reason: 'cascade_delete_not_reverted',
 				section_tipo: SECTION,
 				tipo: SECTION,
-				section_id: role,
+				section_id: target,
 			},
 		]);
 	});
@@ -1467,18 +1521,13 @@ describe('generations and cascade targets across reverts (review 2026-09-27)', (
 		// record whose birth stamp equals the dead one's. The dead snapshot's
 		// values must not be poured into it, nor the frame restored onto it.
 		const birth = new Date('2026-01-02T03:04:05.000Z');
-		const host = await rec();
-		const t1 = await rec();
-		const role = await createSectionRecord(SECTION, USER_ID, birth);
-		await setText(role, 'lg-spa', 'the dead record');
-		await seed(host, 'relation', HMAIN, [locator(1, t1, HMAIN)]);
-		await seed(host, 'relation', HSLOT, [{ id: 1, ...frame(1, role, HMAIN, HSLOT) }]);
-		const run = await mint();
-		await save(host, HSLOT, 'lg-nolan', [{ action: 'remove', id: 1, value: null }], { bulk: run });
-		expect(await stored(role, 'string', TEXT)).toBe('NO-RECORD');
-		await createSectionRecord(SECTION, USER_ID, birth, role);
-		const data = await revert(run);
-		expect(await stored(role, 'string', TEXT)).toBeUndefined();
+		const { host, target, revertId } = await revertDeletedTarget({
+			text: 'the dead record',
+			birth,
+		});
+		await createSectionRecord(SECTION, USER_ID, birth, target);
+		const data = await revert(revertId);
+		expect(await stored(target, 'string', TEXT)).toBeUndefined();
 		expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([]);
 		expect(data.skipped).toEqual([
 			{
@@ -1489,6 +1538,29 @@ describe('generations and cascade targets across reverts (review 2026-09-27)', (
 				section_id: host,
 			},
 		]);
+	});
+
+	test('a deleted snapshot WITH values, its address reborn with the SAME birth stamp: nothing is poured into the new record', async () => {
+		// Companion of the test above. There the snapshot holds no values (the
+		// revert cleared the run's keys before D2), so the re-linking unit is
+		// what gets refused. Here the snapshot carries text, via the delete door
+		// under a bulk id, and nothing re-links the record: the standalone undelete
+		// must refuse the reborn address rather than restore the old values into it.
+		const birth = new Date('2026-01-02T03:04:05.000Z');
+		const target = await createSectionRecord(SECTION, USER_ID, birth);
+		await setText(target, 'lg-spa', 'the dead record');
+		const id = await mint();
+		expect(
+			(await deleteSectionRecord(SECTION, target, USER_ID, undefined, { bulkProcessId: id }))
+				.removed,
+		).toBe(true);
+		// FLOOR: the snapshot under the run carries the text
+		const twin = (await runRowsOf(SECTION, target, id)).find((row) => row.tm_role === 4);
+		expect(JSON.stringify(twin?.data)).toContain('the dead record');
+		await createSectionRecord(SECTION, USER_ID, birth, target);
+		const data = await revert(id);
+		expect(await stored(target, 'string', TEXT)).toBeUndefined();
+		expect(reasons(data)).toEqual(['cascade_delete_not_reverted']);
 	});
 
 	test('SOFT-wiped target whose created_date was REWRITTEN since (a CSV dd199 column): the same record, restored', async () => {
@@ -2031,37 +2103,31 @@ describe('records born in a REAL section: the birth defaults are the record’s 
 });
 
 describe('the revert’s own record deletes and undeletes are revertible (D2/D3)', () => {
-	test('reverting the revert of a HARD cascade undelete deletes the target again', async () => {
-		const host = await rec();
-		const [t1, role] = [await rec(), await rec()];
-		await setText(role, 'lg-spa', 'role record');
-		await seed(host, 'relation', HMAIN, [locator(1, t1, HMAIN)]);
-		await seed(host, 'relation', HSLOT, [{ id: 1, ...frame(1, role, HMAIN, HSLOT) }]);
-		const run = await mint();
-		await save(host, HSLOT, 'lg-nolan', [{ action: 'remove', id: 1, value: null }], { bulk: run });
-		const data = await revert(run);
-		expect(texts(await stored(role, 'string', TEXT))).toEqual(['lg-spa:role record']);
+	test('reverting the revert of an undelete deletes the target again', async () => {
+		const { host, target, revertId } = await revertDeletedTarget();
+		const data = await revert(revertId);
+		expect(texts(await stored(target, 'string', TEXT))).toEqual(['lg-spa:role record']);
 		// The undelete is the revert's BIRTH: its revert deletes the record again
 		// (the restored snapshot is its birth image, not "someone else's value").
 		const back = await revert(data.bulk_process_id);
-		expect(await stored(role, 'string', TEXT)).toBe('NO-RECORD');
+		expect(await stored(target, 'string', TEXT)).toBe('NO-RECORD');
 		expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([]);
 		expect(back.skipped).toEqual([]);
 	});
 
-	test('a born record’s delete runs under the REVERT’s bulk id: its nested cascade is revertible too', async () => {
-		// deleteBornRecords over a born record that still holds a HARD frame AS
-		// ITS BIRTH VALUE (an undelete's birth image is the whole restored
-		// snapshot, frames included): the delete door hard-deletes the frame
-		// target through the record's own frame policy. That nested delete must
-		// carry the revert's id, or nothing can undelete it.
+	test('a born record’s delete runs under the REVERT’s bulk id: its nested (soft) cascade is revertible too', async () => {
+		// deleteBornRecords over a born record that still holds a `delete_target`
+		// frame AS ITS BIRTH VALUE (an undelete's birth image is the whole restored
+		// snapshot, frames included): the delete door WIPES the frame target
+		// through the record's own frame policy. That nested wipe must carry the
+		// revert's id, or nothing can restore it.
 		const run = await mint();
 		const role = await rec();
 		await setText(role, 'lg-spa', 'nested target');
 		const born = await rec(run);
 		const t1 = await rec();
-		await seed(born, 'relation', HMAIN, [locator(1, t1, HMAIN)]);
-		await seed(born, 'relation', HSLOT, [{ id: 1, ...frame(1, role, HMAIN, HSLOT) }]);
+		await seed(born, 'relation', SMAIN, [locator(1, t1, SMAIN)]);
+		await seed(born, 'relation', SSLOT, [{ id: 1, ...frame(1, role, SMAIN, SSLOT) }]);
 		const marker = mustGet(
 			(await runRowsOf(SECTION, born, run)).find((row) => row.tm_role === 3),
 			'birth marker',
@@ -2079,9 +2145,10 @@ describe('the revert’s own record deletes and undeletes are revertible (D2/D3)
 			new Set(),
 		);
 		expect([...outcomes.values()]).toEqual([{ kind: 'done' }]);
-		expect(await stored(born, 'relation', HMAIN)).toBe('NO-RECORD');
-		expect(await stored(role, 'string', TEXT)).toBe('NO-RECORD');
-		// both deletes carry the revert's id — the born record AND the nested target
+		expect(await stored(born, 'relation', SMAIN)).toBe('NO-RECORD');
+		// the nested target is WIPED, its row kept (no policy removes a frame target row)
+		expect(await stored(role, 'string', TEXT)).toBeUndefined();
+		// both carry the revert's id — the born record's delete AND the nested wipe
 		const twins = (await sql.unsafe(
 			`SELECT section_id FROM matrix_time_machine
 			 WHERE section_tipo = $1 AND bulk_process_id = $2 AND tm_role = 4 ORDER BY section_id`,
@@ -2093,20 +2160,25 @@ describe('the revert’s own record deletes and undeletes are revertible (D2/D3)
 
 describe('a cascade target another record REFERENCED (inverse references, D3)', () => {
 	test('the revert puts the stripped PORTAL locator back, with the target', async () => {
-		const host = await rec();
-		const [t1, role, other] = [await rec(), await rec(), await rec()];
+		// The producer is the delete door under a bulk id. Since
+		// WC-2026-09-29-dataframe-hard-delete-retired only a revert's D2 calls it
+		// that way, and D2 refuses a referenced record, so the strip happens only
+		// in D2's KNOWN WINDOW (bulk_revert_records.ts header): a locator committed
+		// after the precondition. That race cannot be scheduled from a test, so
+		// the door is driven directly on a referenced record, as D2 would drive it.
+		const [role, other] = [await rec(), await rec()];
 		await setText(role, 'lg-spa', 'role record');
-		await seed(host, 'relation', HMAIN, [locator(1, t1, HMAIN)]);
-		await seed(host, 'relation', HSLOT, [{ id: 1, ...frame(1, role, HMAIN, HSLOT) }]);
 		await seed(other, 'relation', MAIN2, [locator(1, role, MAIN2)]);
-		const run = await mint();
-		await save(host, HSLOT, 'lg-nolan', [{ action: 'remove', id: 1, value: null }], { bulk: run });
+		const id = await mint();
+		expect(
+			(await deleteSectionRecord(SECTION, role, USER_ID, undefined, { bulkProcessId: id })).removed,
+		).toBe(true);
+		// FLOOR: the record is gone and the delete stripped the other record's locator.
 		expect(await stored(role, 'string', TEXT)).toBe('NO-RECORD');
 		expect(targetsOf(await stored(other, 'relation', MAIN2))).toEqual([]);
-		const data = await revert(run);
+		const data = await revert(id);
 		expect(texts(await stored(role, 'string', TEXT))).toEqual(['lg-spa:role record']);
 		expect(targetsOf(await stored(other, 'relation', MAIN2))).toEqual([role]);
-		expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([`${HMAIN}#1->${role}`]);
 		expect(data.skipped).toEqual([]);
 		expect(data.inexact.map((entry) => entry.basis)).toEqual(['cascade_undelete']);
 	});
@@ -2114,23 +2186,19 @@ describe('a cascade target another record REFERENCED (inverse references, D3)', 
 
 describe('the undelete is COUPLED to the unit that re-links it (D3)', () => {
 	test('the re-linking unit is REFUSED: the target stays deleted — never an orphan', async () => {
-		const host = await rec();
-		const [t1, t2, role] = [await rec(), await rec(), await rec()];
-		await setText(role, 'lg-spa', 'role record');
-		await seed(host, 'relation', HMAIN, [locator(1, t1, HMAIN)]);
-		await seed(host, 'relation', HSLOT, [{ id: 1, ...frame(1, role, HMAIN, HSLOT) }]);
-		const run = await mint();
-		await save(host, HSLOT, 'lg-nolan', [{ action: 'remove', id: 1, value: null }], { bulk: run });
-		// an edit to the slot after the run: its unit refuses (changed_since_run)
+		const { host, target, revertId } = await revertDeletedTarget({ text: null });
+		// an edit to the slot after the revert: its unit refuses (changed_since_run)
+		const t2 = await rec();
 		await insertFrame(host, HSLOT, HMAIN, 1, t2);
-		const data = await revert(run);
-		expect(await stored(role, 'string', TEXT)).toBe('NO-RECORD');
+		const data = await revert(revertId);
+		expect(await stored(target, 'data', 'section_id')).toBe('NO-RECORD');
 		expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([`${HMAIN}#1->${t2}`]);
 		expect(reasons(data)).toEqual(['cascade_delete_not_reverted', 'changed_since_run']);
 		expect(data.inexact).toEqual([]);
 	});
 
-	test('a NON-ADMIN reverts a HARD cascade: the missing target is authorized by its unit, and comes back', async () => {
+	test('a NON-ADMIN reverts the revert that deleted a framed record: the missing target is authorized by its unit, and comes back', async () => {
+		const { host, target, revertId } = await revertDeletedTarget({ text: null });
 		await installAclIdentityFixture();
 		try {
 			// level 2 on the section, the main and the slot of the unit — nothing else
@@ -2147,28 +2215,19 @@ describe('the undelete is COUPLED to the unit that re-links it (D3)', () => {
 			);
 			clearAclIdentityCaches();
 			const reader = await resolvePrincipal(ACL_NON_ADMIN_USER_ID);
-			const host = await rec();
-			const [t1, role] = [await rec(), await rec()];
-			await setText(role, 'lg-spa', 'role record');
-			await seed(host, 'relation', HMAIN, [locator(1, t1, HMAIN)]);
-			await seed(host, 'relation', HSLOT, [{ id: 1, ...frame(1, role, HMAIN, HSLOT) }]);
-			const run = await mint();
-			await save(host, HSLOT, 'lg-nolan', [{ action: 'remove', id: 1, value: null }], {
-				bulk: run,
-			});
 			// FLOOR: the non-admin passes the unit's gate (else nothing is tested).
 			expect(reader.isGlobalAdmin).toBe(false);
 			expect(await principalCanAccessRecord(SECTION, host, reader)).toBe(true);
 			const response = await toolTimeMachineBulkRevert({
 				principal: reader,
 				userId: ACL_NON_ADMIN_USER_ID,
-				options: { bulk_process_id: run },
+				options: { bulk_process_id: revertId },
 				background: false,
 			});
 			const data = response.data as RevertData;
 			minted.push(data.bulk_process_id);
-			expect(texts(await stored(role, 'string', TEXT))).toEqual(['lg-spa:role record']);
-			expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([`${HMAIN}#1->${role}`]);
+			expect(await stored(target, 'data', 'section_id')).not.toBe('NO-RECORD');
+			expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([`${HMAIN}#1->${target}`]);
 			expect(data.skipped).toEqual([]);
 		} finally {
 			await removeAclIdentityFixture();
@@ -2523,25 +2582,33 @@ describe('a record born in the run and GONE is at its pre-run state (review 2026
 		}
 	});
 
-	test('a run that CREATED a record and cascade-deleted it: never undeleted — first and repeat revert write nothing for it', async () => {
+	test('a run that CREATED a record and cascade-WIPED it, a curator then deleted it: never undeleted — first and repeat revert write nothing for it', async () => {
+		// Re-pointed 2026-09-29 (WC-2026-09-29-dataframe-hard-delete-retired): a
+		// run's cascade no longer removes a row, so the born record the run wiped
+		// is removed by a CURATOR afterwards. The run still holds a birth (3) and
+		// a cascade (4) marker for a record that is GONE — goneBornAddresses drops
+		// the role-4 marker instead of undeleting it.
 		const host = await rec();
 		const t1 = await rec();
-		await seed(host, 'relation', HMAIN, [locator(1, t1, HMAIN)]);
+		await seed(host, 'relation', SMAIN, [locator(1, t1, SMAIN)]);
 		const run = await mint();
 		const born = await rec(run);
 		await setText(born, 'lg-spa', 'imported', { bulk: run });
-		await insertFrame(host, HSLOT, HMAIN, 1, born, run);
-		const frames = (await stored(host, 'relation', HSLOT)) as Item[];
+		await insertFrame(host, SSLOT, SMAIN, 1, born, run);
+		const frames = (await stored(host, 'relation', SSLOT)) as Item[];
 		const frameId = mustGet(frames[0], 'frame').id;
-		// The run removes its own frame: the HARD policy deletes the born record.
-		await save(host, HSLOT, 'lg-nolan', [{ action: 'remove', id: frameId, value: null }], {
+		// The run removes its own frame: the SOFT policy wipes the born record, row kept.
+		await save(host, SSLOT, 'lg-nolan', [{ action: 'remove', id: frameId, value: null }], {
 			bulk: run,
 		});
-		expect(await stored(born, 'string', TEXT)).toBe('NO-RECORD');
+		expect(await stored(born, 'string', TEXT)).not.toBe('NO-RECORD');
 		// FLOOR: the run holds both markers for it — birth (3) and cascade (4).
 		const roles = (await runRowsOf(SECTION, born, run)).map((row) => row.tm_role);
 		expect(roles).toContain(3);
 		expect(roles).toContain(4);
+		// A curator deletes the wiped record, outside any run.
+		expect((await deleteSectionRecord(SECTION, born, USER_ID)).removed).toBe(true);
+		expect(await stored(born, 'string', TEXT)).toBe('NO-RECORD');
 		const rowsOfBorn = async (): Promise<number> =>
 			Number(
 				(
@@ -2555,10 +2622,7 @@ describe('a record born in the run and GONE is at its pre-run state (review 2026
 		const first = await revert(run);
 		expect(first).toMatchObject({ exact: 'full', skipped: [], inexact: [] });
 		expect(await stored(born, 'string', TEXT)).toBe('NO-RECORD');
-		// No frame (the frame the run added and removed is gone). The key may stay
-		// `[]`: a composed image holds a slot's FRAMES, and `[]` and an absent
-		// slot both hold none (amendment 2026-09-27).
-		expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([]);
+		expect(framePairs(await stored(host, 'relation', SSLOT))).toEqual([]);
 		const again = await revert(run);
 		expect(again).toMatchObject({ counter: 0, skipped: [], inexact: [], exact: 'full' });
 		expect(await stored(born, 'string', TEXT)).toBe('NO-RECORD');
@@ -2604,18 +2668,11 @@ describe('a deleted record is undeleted WITH its own units, never apart', () => 
 });
 
 describe('the undelete of a MISSING row is one transaction, and insert-only', () => {
-	/** A hard cascade: run removes host's HSLOT frame → `role` deleted; its role-4 marker. */
+	/** A record a revert deleted (D2, revertDeletedTarget): the address and its role-4 marker. */
 	async function hardCascade(): Promise<{ role: number; marker: RunRow }> {
-		const host = await rec();
-		const [t1, role] = [await rec(), await rec()];
-		await setText(role, 'lg-spa', 'role record');
-		await seed(host, 'relation', HMAIN, [locator(1, t1, HMAIN)]);
-		await seed(host, 'relation', HSLOT, [{ id: 1, ...frame(1, role, HMAIN, HSLOT) }]);
-		const run = await mint();
-		await save(host, HSLOT, 'lg-nolan', [{ action: 'remove', id: 1, value: null }], { bulk: run });
-		expect(await stored(role, 'string', TEXT)).toBe('NO-RECORD');
-		const marker = (await runRowsOf(SECTION, role, run)).find((row) => row.tm_role === 4);
-		return { role, marker: mustGet(marker, 'cascade marker') };
+		const { target, revertId } = await revertDeletedTarget();
+		const marker = (await runRowsOf(SECTION, target, revertId)).find((row) => row.tm_role === 4);
+		return { role: target, marker: mustGet(marker, 'cascade marker') };
 	}
 
 	test('a birth marker that fails to write rolls the restored row back — never a row without its marker', async () => {
@@ -2683,110 +2740,56 @@ describe('a dataframe main whose SLOT the run never touched', () => {
 
 // ======================================== nested cascades (review finding)
 
-describe('a NESTED cascade: a target’s own hard frame target comes back only WITH it (D3)', () => {
+describe('a NESTED cascade: a deleted record’s own frame target comes back only WITH it (D3)', () => {
+	// The unit-re-linked variants ("the re-linking unit lands / is REFUSED / the
+	// CHILD cannot come back") were deleted 2026-09-29: they need a ROW-DELETED
+	// child under a unit-re-linked parent, and no production path deletes a frame
+	// target row any more (WC-2026-09-29-dataframe-hard-delete-retired). A nested
+	// child is now a SOFT wipe (a `delete_target` slot on the deleted record);
+	// the group law it obeys is pinned by the two standalone cases below.
+
 	/**
-	 * host --HSLOT frame--> T --HSLOT frame--> T2. The run removes host's frame:
-	 * the delete door hard-deletes T, and T's own frame policy (same bulk id)
-	 * hard-deletes T2. T2 is referenced by T's role-4 snapshot only — never by
-	 * a unit's BEFORE image — so it must travel with T.
+	 * born --SSLOT frame--> child. D2's door deletes `born` under the revert's id;
+	 * born's own `delete_target` policy WIPES child (row kept) under the same id.
+	 * child's marker is referenced by born's snapshot only — never by a unit's
+	 * BEFORE image — so it travels with born.
 	 */
-	async function nestedCascade(): Promise<{
-		host: number;
-		parent: number;
-		child: number;
-		run: number;
-	}> {
-		const host = await rec();
-		const [t1, t1b, parent, child] = [await rec(), await rec(), await rec(), await rec()];
-		await setText(parent, 'lg-spa', 'parent target');
-		await setText(child, 'lg-spa', 'child target');
-		await seed(host, 'relation', HMAIN, [locator(1, t1, HMAIN)]);
-		await seed(host, 'relation', HSLOT, [{ id: 1, ...frame(1, parent, HMAIN, HSLOT) }]);
-		await seed(parent, 'relation', HMAIN, [locator(1, t1b, HMAIN)]);
-		await seed(parent, 'relation', HSLOT, [{ id: 1, ...frame(1, child, HMAIN, HSLOT) }]);
-		const run = await mint();
-		await save(host, HSLOT, 'lg-nolan', [{ action: 'remove', id: 1, value: null }], { bulk: run });
-		// FLOOR: both deletes happened, both under the run's id.
-		expect(await stored(parent, 'string', TEXT)).toBe('NO-RECORD');
-		expect(await stored(child, 'string', TEXT)).toBe('NO-RECORD');
-		expect((await runRowsOf(SECTION, child, run)).some((row) => row.tm_role === 4)).toBe(true);
-		return { host, parent, child, run };
-	}
-
-	test('the re-linking unit lands: parent AND child come back, the parent’s frame resolves', async () => {
-		const { host, parent, child, run } = await nestedCascade();
-		const data = await revert(run);
-		expect(texts(await stored(parent, 'string', TEXT))).toEqual(['lg-spa:parent target']);
-		expect(texts(await stored(child, 'string', TEXT))).toEqual(['lg-spa:child target']);
-		expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([`${HMAIN}#1->${parent}`]);
-		expect(framePairs(await stored(parent, 'relation', HSLOT))).toEqual([`${HMAIN}#1->${child}`]);
-		expect(data.skipped).toEqual([]);
-		expect(data.inexact.map((entry) => entry.section_id).sort()).toEqual([parent, child].sort());
-	});
-
-	test('the re-linking unit is REFUSED: the child stays deleted with its parent — never an orphan', async () => {
-		const { host, parent, child, run } = await nestedCascade();
-		const t2 = await rec();
-		await insertFrame(host, HSLOT, HMAIN, 1, t2); // an edit after the run: the unit refuses
-		const data = await revert(run);
-		expect(await stored(parent, 'string', TEXT)).toBe('NO-RECORD');
-		expect(await stored(child, 'string', TEXT)).toBe('NO-RECORD');
-		expect(reasons(data)).toEqual([
-			'cascade_delete_not_reverted',
-			'cascade_delete_not_reverted',
-			'changed_since_run',
-		]);
-		expect(data.inexact).toEqual([]);
-	});
-
-	test('the CHILD cannot come back (address taken): the whole group refuses — no frame onto a foreign record', async () => {
-		const { host, parent, child, run } = await nestedCascade();
-		// A new record born at the address through the create door (it opens an epoch).
-		await createSectionRecord(SECTION, USER_ID, new Date(), child);
-		await setText(child, 'lg-spa', 'squatter');
-		const data = await revert(run);
-		expect(await stored(parent, 'string', TEXT)).toBe('NO-RECORD');
-		expect(texts(await stored(child, 'string', TEXT))).toEqual(['lg-spa:squatter']);
-		expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([]);
-		expect(reasons(data)).toEqual(['cascade_delete_not_reverted', 'cascade_delete_not_reverted']);
-		expect(data.inexact).toEqual([]);
-	});
-
-	test('a STANDALONE group (no unit re-links the parent) rolls back whole when the child refuses', async () => {
-		// The revert of a born record's D2 delete: the born record's marker is the
-		// only unit-less root; its nested hard target is its child.
+	async function nestedSoftCascade(): Promise<{ born: number; child: number; revertId: number }> {
 		const run = await mint();
 		const child = await rec();
 		await setText(child, 'lg-spa', 'nested target');
 		const born = await rec(run);
 		const t1 = await rec();
-		await seed(born, 'relation', HMAIN, [locator(1, t1, HMAIN)]);
-		await seed(born, 'relation', HSLOT, [{ id: 1, ...frame(1, child, HMAIN, HSLOT) }]);
+		await seed(born, 'relation', SMAIN, [locator(1, t1, SMAIN)]);
+		await seed(born, 'relation', SSLOT, [{ id: 1, ...frame(1, child, SMAIN, SSLOT) }]);
 		const revertId = await mint();
 		await deleteSectionRecord(SECTION, born, USER_ID, undefined, { bulkProcessId: revertId });
-		expect(await stored(child, 'string', TEXT)).toBe('NO-RECORD');
-		// A new record born at the address through the create door (it opens an epoch).
-		await createSectionRecord(SECTION, USER_ID, new Date(), child);
+		// FLOOR: born gone, child WIPED (row kept), both under the revert's id.
+		expect(await stored(born, 'relation', SSLOT)).toBe('NO-RECORD');
+		expect(await stored(child, 'data', 'section_id')).not.toBe('NO-RECORD');
+		expect(await stored(child, 'string', TEXT)).toBeUndefined();
+		expect((await runRowsOf(SECTION, child, revertId)).some((row) => row.tm_role === 4)).toBe(true);
+		return { born, child, revertId };
+	}
+
+	test('a STANDALONE group (no unit re-links the parent) rolls back whole when the child refuses', async () => {
+		const { born, child, revertId } = await nestedSoftCascade();
+		// The child's address taken by ANOTHER record since: a curator deleted it and
+		// a create at its explicit id opened a new epoch.
+		await deleteSectionRecord(SECTION, child, USER_ID);
+		await createSectionRecord(SECTION, USER_ID, laterBirth(), child);
 		await setText(child, 'lg-spa', 'squatter');
 		const data = await revert(revertId);
 		// never the born record back with a frame onto the squatter
-		expect(await stored(born, 'relation', HSLOT)).toBe('NO-RECORD');
+		expect(await stored(born, 'relation', SSLOT)).toBe('NO-RECORD');
 		expect(texts(await stored(child, 'string', TEXT))).toEqual(['lg-spa:squatter']);
 		expect(reasons(data)).toEqual(['cascade_delete_not_reverted', 'cascade_delete_not_reverted']);
 	});
 
-	test('a STANDALONE group lands whole: parent and child back', async () => {
-		const run = await mint();
-		const child = await rec();
-		await setText(child, 'lg-spa', 'nested target');
-		const born = await rec(run);
-		const t1 = await rec();
-		await seed(born, 'relation', HMAIN, [locator(1, t1, HMAIN)]);
-		await seed(born, 'relation', HSLOT, [{ id: 1, ...frame(1, child, HMAIN, HSLOT) }]);
-		const revertId = await mint();
-		await deleteSectionRecord(SECTION, born, USER_ID, undefined, { bulkProcessId: revertId });
+	test('a STANDALONE group lands whole: parent back, child’s wiped data back', async () => {
+		const { born, child, revertId } = await nestedSoftCascade();
 		const data = await revert(revertId);
-		expect(framePairs(await stored(born, 'relation', HSLOT))).toEqual([`${HMAIN}#1->${child}`]);
+		expect(framePairs(await stored(born, 'relation', SSLOT))).toEqual([`${SMAIN}#1->${child}`]);
 		expect(texts(await stored(child, 'string', TEXT))).toEqual(['lg-spa:nested target']);
 		expect(data.skipped).toEqual([]);
 		expect(data.inexact.map((entry) => entry.section_id).sort()).toEqual([born, child].sort());
@@ -2966,26 +2969,28 @@ describe('a frames-only revert checks PAIRING against the main it leaves, every 
 	});
 });
 
-describe('a SHARED hard slot: a composed row re-links through its OWN frames only (review 2026-09-27)', () => {
-	test('A saved before B’s framed item is removed, B refused: the target stays deleted, A reverts', async () => {
+describe('a SHARED slot: a composed row re-links through its OWN frames only (review 2026-09-27)', () => {
+	test('A saved after B’s frame to a born record, B refused: the target stays deleted, A reverts', async () => {
 		const host = await rec();
-		const [t1, t2, t3, role] = [await rec(), await rec(), await rec(), await rec()];
-		await setText(role, 'lg-spa', 'role record');
+		const [t1, t2, t3] = [await rec(), await rec(), await rec()];
 		await seed(host, 'relation', HMAIN, [locator(1, t1, HMAIN)]);
 		await seed(host, 'relation', HMAIN2, [locator(1, t2, HMAIN2)]);
-		await seed(host, 'relation', HSLOT, [{ id: 1, ...frame(1, role, HMAIN2, HSLOT) }]);
 		const run = await mint();
-		// A first: its composed BEFORE carries the FULL shared slot — B's frame → role included
+		const role = await rec(run);
+		// B frames the born record in the SHARED slot; then A appends — A's composed
+		// AFTER carries the FULL shared slot, B's frame → role included.
+		await insertFrame(host, HSLOT, HMAIN2, 1, role, run);
 		await insertLocator(host, HMAIN, t3, run);
-		// then B's framed item goes: the hard policy deletes role (a role-4 marker)
-		await save(host, HMAIN2, 'lg-nolan', [{ action: 'remove', id: 1, value: null }], {
-			bulk: run,
-		});
-		expect(await stored(role, 'string', TEXT)).toBe('NO-RECORD'); // FLOOR: the cascade ran
-		await insertLocator(host, HMAIN2, t1); // a curator edits B after the run: B refuses
-		const data = await revert(run);
+		const first = await revert(run);
+		// FLOOR: the revert took both away, and D2 deleted role under its id.
+		expect(await stored(role, 'data', 'section_id')).toBe('NO-RECORD');
 		expect(targetsOf(await stored(host, 'relation', HMAIN))).toEqual([t1]);
-		expect(await stored(role, 'string', TEXT)).toBe('NO-RECORD'); // never an orphan
+		await insertLocator(host, HMAIN2, t1); // a curator edits B after the revert: B refuses
+		// The revert of the revert: A's BEFORE image references role only through
+		// B's frame — never A's to re-link.
+		const data = await revert(first.bulk_process_id);
+		expect(targetsOf(await stored(host, 'relation', HMAIN))).toEqual([t1, t3].sort());
+		expect(await stored(role, 'data', 'section_id')).toBe('NO-RECORD'); // never an orphan
 		expect(data.skipped.filter((entry) => entry.tipo === HMAIN)).toEqual([]);
 		expect(reasons(data)).toContain('changed_since_run');
 		expect(data.counter).toBe(1);

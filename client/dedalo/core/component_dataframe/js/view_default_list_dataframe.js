@@ -53,22 +53,6 @@
 * activate-button concept for inline/mini render contexts but omits click behaviour
 * (read-only display).  This module adds full interactive create/open/delete flows.
 */
-/**
-* NEEDS_DOUBLE_CONFIRM
-* Whether removing a frame from this slot also deletes the frame TARGET record
-* — read from the server-resolved `context.delete_policy` (the ONE reader,
-* dataframeDeletePolicyOf; never from the ontology properties). Under a hard
-* policy the modal's Delete asks twice, the portal's "delete resource and all
-* links" grammar. Exported for the client gate (test_component_dataframe_delete).
-* @param {Object} context - the slot's structure context
-* @returns {boolean}
-*/
-export const needs_double_confirm = function(context) {
-	return context?.delete_policy==='delete_target_record'
-}
-
-
-
 export const view_default_list_dataframe = function() {
 
 	return true
@@ -331,12 +315,11 @@ const render_content_value = function(options) {
 *        the slot. What happens to the frame TARGET record is the SERVER's
 *        decision, resolved from this slot node's ontology by the one reader
 *        (`dataframeDeletePolicyOf`, src/core/relations/dataframe.ts) and
-*        served as `context.delete_policy`: `delete_target_record` (the v6
-*        `hard_delete: true`, or the spelled value) deletes it after a Time
-*        Machine snapshot once the unlink has committed, `delete_target`
-*        empties it, `unlink` leaves it. The client never deletes the target.
-*      - Under `delete_target_record` the user confirms TWICE (the portal's
-*        "delete resource and all links" grammar), since the record goes.
+*        served as `context.delete_policy`: `delete_target` empties it (row
+*        kept, recoverable from Time Machine) once the unlink has committed,
+*        `unlink` leaves it. No policy removes the target row — Time Machine
+*        renders past states through it (the v6 `hard_delete: true` is
+*        inert). The client never deletes the target.
 *      - Closes the modal immediately after the unlink.
 *   5. Opens the modal via `ui.attach_to_modal()`.  The `callback` is invoked once
 *      the modal DOM is attached; it uses `ui.load_item_with_spinner()` to show a
@@ -396,16 +379,6 @@ const open_target_section = async function (self) {
 				if (!confirm(get_label.sure)) {
 					return
 				}
-
-				// hard policy: the target RECORD goes with the locator (server
-				// side, from this slot's ontology). The server resolved the slot's
-				// policy into context.delete_policy (the ONE reader,
-				// dataframeDeletePolicyOf) — the client never re-reads the
-				// properties. Second confirm, as the portal's "delete resource
-				// and all links" does.
-					if (needs_double_confirm(self.context) && !confirm(get_label.sure)) {
-						return
-					}
 
 				footer_container.classList.add('loading')
 

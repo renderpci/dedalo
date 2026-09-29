@@ -2,13 +2,17 @@
  * BULK REVERT — the RECORDS a run created or deleted (2026-09-27,
  * WC-…-bulk-revert-undo-log §2.5 steps 8-9; decisions D2 and D3).
  *
- * CASCADE-DELETED RECORDS (role 4, D3). A run that removed main items fired the
- * dataframe delete policy, which hard-deleted frame target records. Their
- * whole-record snapshot rides the run's bulk id, so the revert UNDELETES them
+ * CASCADE RECORDS (role 4, D3). Two producers write a whole-record snapshot
+ * under a bulk id. (1) A run that removed main items fired the dataframe delete
+ * policy, whose only destructive value is the SOFT `delete_target`: it keeps
+ * the row and wipes its data (no policy removes a frame target row —
+ * WC-2026-09-29-dataframe-hard-delete-retired). (2) A revert's own D2 delete
+ * of a born record (deleteIfSafe) removes the row under the REVERT's id, so a
+ * revert of that revert finds a MISSING row. A missing row is UNDELETED
  * through the time machine's own undelete door (`restoreSection` — the row
- * and, from `deleted/`, the files), and reports each one `inexact`: the
- * delete's media move and diffusion unpublish are side effects the undelete
- * does not replay as they were (a later upload, a republish). A SOFT cascade
+ * and, from `deleted/`, the files) and reported `inexact`: the delete's media
+ * move and diffusion unpublish are side effects the undelete does not replay
+ * as they were (a later upload, a republish). A SOFT cascade
  * (delete_target) kept the row and wiped its data: the wiped keys are written
  * back into it (restoreWipedRecord) while the row is still as the wipe left
  * it, and — after COMMIT, as the missing-row undelete does — the files the
@@ -199,7 +203,8 @@ async function mayUndelete(
 }
 
 /**
- * Undelete one record the run's cascade deleted (D3). `authorizedByUnit`: the
+ * Undelete or restore one record a role-4 marker names (D3): a missing row a
+ * revert's D2 deleted, or a row a run's cascade wiped. `authorizedByUnit`: the
  * call runs INSIDE the transaction of a unit that passed its scope gate and
  * re-links this record by REFERENCE (see the header) — that gate stands for the
  * missing record's scope. Otherwise (a standalone marker, or the unit's OWN
@@ -319,9 +324,9 @@ function referencesRecord(value: unknown, sectionTipo: string, sectionId: number
  * of a record the search cannot find; the unit undeletes it first and judges
  * its scope on the restored row.
  *
- * NESTED CASCADES (`children`). Deleting a target T under the run's bulk id runs
- * T's OWN frame policies with the same id, which delete T's frame targets T2
- * and write a role-4 marker for T2. No unit image references T2 — only T's
+ * NESTED CASCADES (`children`). Deleting a record T under a bulk id runs T's
+ * OWN frame policies with the same id, which wipe T's frame targets T2 (soft,
+ * row kept) and write a role-4 marker for T2. No unit image references T2 — only T's
  * snapshot does — so T2 is a CHILD of T: undeleted only WITH T, right after it,
  * in T's transaction, and T refuses when T2 cannot come back (never T's
  * restored frames pointing at a missing T2), while T2 never comes back without
@@ -918,8 +923,8 @@ async function rowExists(marker: RecordMarker): Promise<boolean> {
 /**
  * The records born in the run whose row is GONE — at their PRE-RUN state,
  * non-existence, whatever removed them: a previous revert's D2 delete (a repeat
- * revert), the run's OWN cascade (a record it created and then cascade-deleted),
- * a curator's delete. One rule for all three: nothing is undeleted, their keys
+ * revert), a curator's delete (also of a record the run's own cascade had
+ * wiped — its role-4 marker then points at a gone row). One rule for both: nothing is undeleted, their keys
  * are unchanged, their D2 step is a no-op (`present`), and no record-scope
  * search runs for them (it searches existing rows, so it could never see one;
  * a non-admin would read every such unit `out_of_scope`). Their role-4

@@ -76,11 +76,11 @@ export interface StructureContextCore {
 	render_class?: RenderClass;
 	/**
 	 * The slot's resolved delete policy (dataframeDeletePolicyOf, ONE reader —
-	 * WC-2026-09-06-dataframe-delete-policy-on-slot) — ADDITIVE wire key,
-	 * present on `component_dataframe` entries only. The client's Delete
-	 * button switches its confirmation grammar on it and never re-reads the
-	 * ontology properties, so the two sides cannot disagree on what a spelling
-	 * means.
+	 * WC-2026-09-06-dataframe-delete-policy-on-slot, hard value retired by
+	 * WC-2026-09-29-dataframe-hard-delete-retired) — ADDITIVE wire key,
+	 * `'unlink' | 'delete_target'`, present on `component_dataframe` entries
+	 * only. The client never re-reads the ontology properties, so the two
+	 * sides cannot disagree on what a spelling means.
 	 */
 	delete_policy?: DataframeDeletePolicy;
 }

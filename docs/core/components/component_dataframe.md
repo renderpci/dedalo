@@ -301,7 +301,7 @@ The frame stays attached to portal row `id:1` even if that locator is later re-p
 
 - **Create** — the user activates the frame button on a value: a new target record is created (`create_new_section`) and the pairing locator saved. If the value is not persisted yet, pending changes are saved first (*save-then-attach*, single-writer rule): ids are minted server-side only, atomically, then the attach is repeated against the real id.
 - **Update / reorder** — pairing is untouched: the item `id` is immutable and order-independent. Re-pointing a relation locator to another target also keeps its frame (the frame qualifies the *statement*, not the target).
-- **Delete** — a frame locator leaves its slot through two doors: removing the **main item** cascades server-side (`removeDataframeDataById()`, `src/core/relations/save.ts`, wired into the component save path for a removed item, strips the paired frame locators from every dataframe slot of the main component — relation and literal mains alike, `component_iri`'s fixed `dd560` included, and also when an observer recompute drops a locator; the same cascade runs for inverse-reference cleanup when a whole record is deleted, `src/core/section/record/delete_record.ts`), and deleting the **frame itself** from the dataframe modal removes that one locator from the slot. On both doors, what happens to the frame **target record** is the slot's [delete policy](#dataframedelete_policy-on-the-dataframe-slot-node): by default it **survives** — the time machine needs it to render past states — and is reclaimed later by maintenance; a frame-private slot can opt into emptying it or deleting it.
+- **Delete** — a frame locator leaves its slot through two doors: removing the **main item** cascades server-side (`removeDataframeDataById()`, `src/core/relations/save.ts`, wired into the component save path for a removed item, strips the paired frame locators from every dataframe slot of the main component — relation and literal mains alike, `component_iri`'s fixed `dd560` included, and also when an observer recompute drops a locator; the same cascade runs for inverse-reference cleanup when a whole record is deleted, `src/core/section/record/delete_record.ts`), and deleting the **frame itself** from the dataframe modal removes that one locator from the slot. On both doors, what happens to the frame **target record** is the slot's [delete policy](#dataframedelete_policy-on-the-dataframe-slot-node): by default it **survives** — the time machine needs it to render past states — and is reclaimed later by maintenance; a frame-private slot can opt into emptying it (the row is always kept).
 - **Time machine** — the main's history is kept in two lanes: its language rows (each language's value only) and its `lg-nolan` rows (its `lg-nolan` value + the full frames of its slots), whichever of the two was saved. Restoring a language row puts that language back with the frames as they stood at that row; restoring an `lg-nolan` row puts its `lg-nolan` value and its frames back. Another main's frames in a shared slot stay as they are, and a frame of an item deleted since is not written back. A dataframe the frame state holds no frames for was empty then, and restoring empties it (`rowSlotTipos()`). A Dédalo v6 save of the main (one language + the frames) is read as that language's value and that moment's frames; a v6 dataframe save as the `lg-nolan` lane. A bulk revert restores the main and all its frames together, as one unit, lane by lane.
 - **Writes are caller-aware** — the save path preserves the sibling frames of other items sharing the slot (`filterCallerEntries()`/`mergeCallerEntries()`, `src/core/relations/dataframe.ts`), so clearing the frames of one item never wipes another item's frames.
 
@@ -432,17 +432,16 @@ Dataframe configuration is split across two nodes: a flag on the **main componen
 
 ### dataframe.delete_policy *(on the dataframe slot node)*
 
-- **Values:** `"unlink"` (default) | `"delete_target"` | `"delete_target_record"`. Read from the **slot node's** `properties` by `dataframeDeletePolicyOf()` (`src/core/relations/dataframe.ts`) on every door a frame locator can leave its slot by: the main-item cascade (`removeDataframeDataById()`), the direct frame removal from the modal (the save path's `remove` on the slot), and the deletion of the host record itself in either mode. A policy written on the *main* component is ignored. The curator must hold a **write grant (level 2) on the frame target section**: the door was authorized on the host only, so the applier asks that grant itself and refuses the whole request with `perm.denied` otherwise. The resolved value is served to the client as the context key `delete_policy` on the slot entry.
-- **Effect:** controls what happens to a frame **target record** once its pairing locator has left the slot. The target is touched only *after* the unlink has **committed** (the deletes are queued on the transaction's commit lane, each in its own transaction); if the request rolls back, the locator and the target both stay as they were. An entry whose stored `section_id` is not a record address is left alone under every policy.
+- **Values:** `"unlink"` (default) | `"delete_target"`. Read from the **slot node's** `properties` by `dataframeDeletePolicyOf()` (`src/core/relations/dataframe.ts`) on every door a frame locator can leave its slot by: the main-item cascade (`removeDataframeDataById()`), the direct frame removal from the modal (the save path's `remove` on the slot), and the deletion of the host record itself in either mode. A policy written on the *main* component is ignored. The curator must hold a **write grant (level 2) on the frame target section**: the door was authorized on the host only, so the applier asks that grant itself and refuses the whole request with `perm.denied` otherwise. The resolved value is served to the client as the context key `delete_policy` on the slot entry.
+- **Effect:** controls what happens to a frame **target record** once its pairing locator has left the slot. **No policy ever removes the target row.** The time machine renders a main's past frames through their targets. The target is touched only *after* the unlink has **committed** (the wipes are queued on the transaction's commit lane, each in its own transaction); if the request rolls back, the locator and the target both stay as they were. An entry whose stored `section_id` is not a record address is left alone under every policy.
     - `unlink` — only the pairing locator is removed; the target record survives (the time machine needs it) and is reclaimed later by maintenance.
     - `delete_target` — for frame-private sections where an unlinked record is meaningless: the target is **emptied** (every component cleared, row kept — `deleteSectionData()`, recoverable from the time machine).
-    - `delete_target_record` — the target record is **deleted** (time-machine snapshot, then the row goes — `deleteSectionRecord()`; the same path as the portal's *Delete resource and all links*). The client asks for a second confirmation before removing such a frame.
-- **`hard_delete: true`** — the v6 spelling of `delete_target_record`, carried on the slot node. It is honoured as the hard policy and wins over a conflicting `dataframe.delete_policy`. Anything else (a typo, a value on the wrong node) is `unlink`: an unknown spelling never destroys data.
+- **`hard_delete: true`** — a **retired** v6 key and **inert**: v6 removed its reader on purpose ("time machine needs to show the previous state, so, never deletes it"), and the engine reads it as `unlink`. The resolver logs each node that still carries it. `"delete_target_record"` (briefly accepted in 2026-09) is likewise `unlink`. Anything else (a typo, a value on the wrong node) is `unlink`: an unknown spelling never destroys data.
 
 ```json
 {
     "dataframe": {
-        "delete_policy": "delete_target_record"
+        "delete_policy": "delete_target"
     }
 }
 ```
@@ -495,15 +494,14 @@ the chip without rendering a second column.
 }
 ```
 
-!!! warning "`hard_delete: true` DELETES the frame target record"
-    `numisdata1447` carries it, and so do 58 other slot nodes of the `monedaiberica`
-    install (59 measured 2026-09-06). Inert from v6
-    until 2026-09-06 (its only reader was a commented-out client branch), it
-    is now read as the hard delete policy: removing this frame — from the
-    modal, or by removing the valuation it qualifies — deletes the `rsc1242`
-    record after a time-machine snapshot. That is what the key always meant.
-    New configs should spell it `"dataframe": {"delete_policy":
-    "delete_target_record"}` (below); both forms are honoured.
+!!! note "`hard_delete: true` is inert"
+    `numisdata1447` carries it, and so do 58 other slot nodes of the
+    `monedaiberica` install. v6 retired the key on purpose, and the engine
+    ignores it: removing this frame, from the modal or by removing the
+    valuation it qualifies, only unlinks it, and the `rsc1242` record
+    survives for the time machine. To empty frame-private targets on unlink,
+    use `"dataframe": {"delete_policy": "delete_target"}` (see
+    [dataframe.delete_policy](#dataframedelete_policy-on-the-dataframe-slot-node)).
 
 **2. The rating component** (`rsc1246`, a `component_radio_button` under the
 `rsc1243` grouper of section `rsc1242`) — its options are the records of

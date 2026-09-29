@@ -27,7 +27,7 @@
  * bulk_revert (its own writes), the delete doors and the dataframe cascade.
  *
  * SITUATION: a `zzbuc` scratch section on `test1` (→ matrix_test) with a
- * portal MAIN whose request_config names a hard-delete dataframe SLOT, a
+ * portal MAIN whose request_config names a `delete_target` dataframe SLOT, a
  * translatable input_text and a date; the CSV / import / propagate /
  * update_cache doors run on runtime-created `test3` playground records (the
  * generic `test` TLD). Every record, TM row, activity row and dd800 run is
@@ -62,7 +62,7 @@ import { mustGet } from '../helpers/assert.ts';
 
 const SECTION = 'zzbuc1';
 const MAIN = 'zzbuc2'; // component_portal, request_config names SLOT
-const SLOT = 'zzbuc3'; // component_dataframe, hard_delete
+const SLOT = 'zzbuc3'; // component_dataframe, delete_policy: delete_target (soft)
 const TEXT = 'zzbuc4'; // component_input_text, translatable
 const DATE = 'zzbuc5'; // component_date
 const DATE_MAIN = 'zzbuc6'; // component_date, has_dataframe → DATE_SLOT
@@ -105,7 +105,7 @@ const SITUATION = situation({
 			parent: MAIN,
 			model: 'component_dataframe',
 			term: { 'lg-eng': 'Slot' },
-			properties: { hard_delete: true },
+			properties: { dataframe: { delete_policy: 'delete_target' } },
 		},
 		{
 			tipo: TEXT,
@@ -618,6 +618,8 @@ describe('the dataframe cascade of a run', () => {
 		const host = await newRecord();
 		const target = await newRecord();
 		const role = await newRecord();
+		// the target carries CONTENT, so the soft wipe has something to empty
+		await seed(SECTION, role, 'string', TEXT, [{ id: 1, lang: 'lg-spa', value: 'role record' }]);
 		await seed(SECTION, host, 'relation', MAIN, [
 			{
 				id: 1,
@@ -641,13 +643,20 @@ describe('the dataframe cascade of a run', () => {
 		return { host, role, target };
 	}
 
-	test('a FRAME removed from the slot (hard policy): the target is deleted and twinned under the run', async () => {
+	test('a FRAME removed from the slot (delete_target): the target is emptied, row kept, and twinned under the run', async () => {
 		const { host, role } = await framedHost();
+		// FLOOR: the target holds content before the cascade
+		expect(await stored(SECTION, role, 'string', TEXT)).toEqual([
+			{ id: 1, lang: 'lg-spa', value: 'role record' },
+		]);
 		const bulk = syntheticBulk();
 		await save(host, SLOT, 'lg-nolan', [{ action: 'remove', id: 1, value: null }], {
 			bulkProcessId: bulk,
 		});
-		expect(await stored(SECTION, role, 'data', 'section_id')).toBe('NO-RECORD');
+		// the row stays: no policy removes a frame target (WC-2026-09-29) — its content is emptied
+		expect(await stored(SECTION, role, 'data', 'section_id')).not.toBe('NO-RECORD');
+		const wiped = await stored(SECTION, role, 'string', TEXT);
+		expect(wiped === undefined || (Array.isArray(wiped) && wiped.length === 0)).toBe(true);
 		const twin = (await runRows(SECTION, role, bulk)).filter((row) => row.tm_role === 4);
 		expect(twin.length).toBe(1);
 		const emptied = await stored(SECTION, host, 'relation', SLOT);
@@ -669,10 +678,13 @@ describe('the dataframe cascade of a run', () => {
 		expect(rows.filter((row) => row.tipo === SLOT)).toEqual([]);
 	});
 
-	test('a MAIN item removed: ONE composed pair (main + its stripped slot), and the hard-deleted frame target is twinned under the run', async () => {
+	test('a MAIN item removed: ONE composed pair (main + its stripped slot), and the emptied frame target is twinned under the run', async () => {
 		// §2.3 item 7 (M1): the cascade the main removal fires must carry the run
-		// id down to the delete door — the revert can undelete only what it can find.
+		// id down to the wipe door — the revert can restore only what it can find.
 		const { host, role } = await framedHost();
+		expect(await stored(SECTION, role, 'string', TEXT)).toEqual([
+			{ id: 1, lang: 'lg-spa', value: 'role record' },
+		]);
 		const bulk = syntheticBulk();
 		const slotBefore = await stored(SECTION, host, 'relation', SLOT);
 		const mainBefore = await stored(SECTION, host, 'relation', MAIN);
@@ -684,7 +696,10 @@ describe('the dataframe cascade of a run', () => {
 		const slotAfter = await stored(SECTION, host, 'relation', SLOT);
 		expectPair(rows, MAIN, composedOf(mainBefore, slotBefore), composedOf(mainAfter, slotAfter));
 		expect(rows.filter((row) => row.tipo === SLOT)).toEqual([]);
-		expect(await stored(SECTION, role, 'data', 'section_id')).toBe('NO-RECORD');
+		// the row stays: no policy removes a frame target (WC-2026-09-29) — its content is emptied
+		expect(await stored(SECTION, role, 'data', 'section_id')).not.toBe('NO-RECORD');
+		const wiped = await stored(SECTION, role, 'string', TEXT);
+		expect(wiped === undefined || (Array.isArray(wiped) && wiped.length === 0)).toBe(true);
 		const twin = (await runRows(SECTION, role, bulk)).filter((row) => row.tm_role === 4);
 		expect(twin.length).toBe(1);
 	});

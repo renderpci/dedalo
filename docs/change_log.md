@@ -55,6 +55,22 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Removing a dataframe frame no longer deletes the frame's target record.**
+
+    Since the late-September update, removing a frame (a valuation rating, say)
+    from the frame window, or removing the value it qualified, deleted the frame's
+    target record whenever the ontology slot carried the old `hard_delete: true`
+    flag. That flag was retired on purpose in v6, because the Time Machine needs
+    the target to show past states. It is ignored again: a removed frame is only
+    unlinked, and its target record stays.
+
+    Targets deleted during that window can be recovered from the Time Machine.
+    Ontology authors who want frame-private targets emptied on unlink can set
+    `"dataframe": {"delete_policy": "delete_target"}` on the slot. The data is
+    cleared and the record is kept.
+
+    Wire contract: `WC-2026-09-29-dataframe-hard-delete-retired`.
+
 - **Deleting a record's data now also empties every dataframe of its fields.**
 
     **Delete data** empties every field of a record, and now also removes the frames of every
@@ -221,7 +237,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 48 entries"
+??? note "Wire contract — 49 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -271,6 +287,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-27-bulk-revert-undo-log`
     - `WC-2026-09-27-csv-import-append-mode`
     - `WC-2026-09-27-external-allowlist-at-door-only`
+    - `WC-2026-09-29-dataframe-hard-delete-retired`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

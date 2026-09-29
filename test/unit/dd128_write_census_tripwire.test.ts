@@ -634,7 +634,7 @@ const SEAM_SYMBOLS = [
 /** Doors that call a CALLER-owned primitive but can never address a dd128 record. */
 const REACH_EXEMPT: Record<string, string> = {
 	'src/core/relations/dataframe.ts':
-		'its only caller-owned deletes are applyDataframeDeletePolicy’s `delete_target` / `delete_target_record` policies, which empty or delete the dataframe FRAME TARGET records a dd490 pairing addresses (an ontology-declared frame section, never the users section), after asking the write grant on that section — the slot-policy applier every delete door calls (removeDataframeDataById in relations/save.ts, the direct frame remove in save_component.ts, both record-delete modes in delete_record.ts).',
+		'its only caller-owned delete is applyDataframeDeletePolicy’s `delete_target` policy, which empties (never removes) the dataframe FRAME TARGET records a dd490 pairing addresses (an ontology-declared frame section, never the users section), after asking the write grant on that section — the slot-policy applier every delete door calls (removeDataframeDataById in relations/save.ts, the direct frame remove in save_component.ts, both record-delete modes in delete_record.ts).',
 	'src/core/section/record/delete_record.ts':
 		'the delete ENGINE — it DEFINES both primitives, holds no principal and no component tipo, and its own docblock puts authorization on the caller. Putting the seam here would revoke on an ontology delete too.',
 	'src/core/test_data/synthetic_hierarchy_fixture.ts':
