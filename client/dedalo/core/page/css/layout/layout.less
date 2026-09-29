@@ -181,6 +181,18 @@
 			align-content: start;
 		}
 
+		// save lock (component_common.save adds 'loading'). Pointer lock is
+		// immediate; the global .loading dim is DEFERRED so a fast save does not
+		// blink the whole component (click-to-save chips: radio, check_box…).
+		// Only a slow save fades to the loading opacity.
+		&.loading {
+			opacity: 1;
+			animation: wrapper_loading_dim 0.2s ease-out 0.4s forwards;
+			// !important: exec_save_successfully_animation leaves an inline
+			// animationPlayState='paused' on the wrapper (its line lives on ::before)
+			animation-play-state: running !important;
+		}
+
 		&.modified {
 			&:after {
 				content: " ";
@@ -564,6 +576,9 @@
 			}//end >.content_data
 		}//end .section_record &, .wrapper_tool &
 	}//end .wrapper_component
+	@keyframes wrapper_loading_dim {
+		to { opacity: 0.4; }
+	}
 
 // ---- FIELD GRID (every edit field, wherever it is drawn) ----
 // Before this block every family carried its own inset, so three different

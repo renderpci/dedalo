@@ -5076,6 +5076,11 @@ input::placeholder {
   grid-template-rows: var(--component_label_height) minmax(auto, 100%);
   align-content: start;
 }
+.wrapper_component.loading {
+  opacity: 1;
+  animation: wrapper_loading_dim 0.2s ease-out 0.4s forwards;
+  animation-play-state: running !important;
+}
 .wrapper_component.modified:after {
   content: " ";
   display: block;
@@ -5425,6 +5430,11 @@ dd-modal .wrapper_component > .content_data.vertical,
   background-color: var(--color_grey_5);
   justify-content: center;
   flex-flow: unset;
+}
+@keyframes wrapper_loading_dim {
+  to {
+    opacity: 0.4;
+  }
 }
 .wrapper_component.edit.component_input_text > .content_data,
 .wrapper_component.edit.component_number > .content_data,

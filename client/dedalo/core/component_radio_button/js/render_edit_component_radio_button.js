@@ -277,20 +277,28 @@ const get_content_value = (i, datalist_item, self) => {
 		// change handler
 		const change_handler = async function() {
 
-			// common change handler (clone value + add id, set_changed_data, change_value)
-			// read id dynamically from self.data (not from stale closure)
-			await handle_radio_change(self, datalist_value)
-
 			// update the checked status of ALL option labels in the group. The
 			// browser fires 'change' only on the newly-checked input, so the
 			// previously-checked label must be cleared here too — sync every
 			// label class from its own input's native checked state.
-			const group_labels = this.closest('.content_data')
-				?.querySelectorAll(':scope > .content_value > .label') || []
-			group_labels.forEach(el => {
-				const group_input = el.querySelector('input')
-				el.classList.toggle('checked', !!(group_input && group_input.checked))
-			})
+			const content_data = this.closest('.content_data')
+			const sync_labels = () => {
+				const group_labels = content_data?.querySelectorAll(':scope > .content_value > .label') || []
+				group_labels.forEach(el => {
+					const group_input = el.querySelector('input')
+					el.classList.toggle('checked', !!(group_input && group_input.checked))
+				})
+			}
+			// sync BEFORE the save: waiting for the round-trip left the old label
+			// '.checked' — two lit chips until the save resolved (flicker)
+			sync_labels()
+
+			// common change handler (clone value + add id, set_changed_data, change_value)
+			// read id dynamically from self.data (not from stale closure)
+			await handle_radio_change(self, datalist_value)
+
+			// re-sync after the save (a queued change may have moved the selection)
+			sync_labels()
 		}
 		input.addEventListener('change', change_handler)
 		// focus event
