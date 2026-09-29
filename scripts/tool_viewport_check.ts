@@ -69,14 +69,24 @@ interface Verdict {
 const { suiteDb } = resolveSuiteDatabase();
 repointProcessToSuiteDatabase(suiteDb);
 
-const { ensureSuiteLoginPassword, SUITE_LOGIN_PASSWORD } = await import('../src/core/test_data/suite_login.ts');
+const { ensureSuiteLoginPassword, SUITE_LOGIN_PASSWORD } = await import(
+	'../src/core/test_data/suite_login.ts'
+);
 await ensureSuiteLoginPassword('root', SUITE_LOGIN_PASSWORD);
 
 const probes: { tool: string; probe: ToolPhoneProbe; expected: 'pass' | 'pending' }[] = [
-	...Object.entries(PHONE_CASES).map(([tool, probe]) => ({ tool, probe, expected: 'pass' as const })),
+	...Object.entries(PHONE_CASES).map(([tool, probe]) => ({
+		tool,
+		probe,
+		expected: 'pass' as const,
+	})),
 	...Object.entries(NOT_YET_PHONE)
 		.filter(([, entry]) => entry.probe !== undefined)
-		.map(([tool, entry]) => ({ tool, probe: entry.probe as ToolPhoneProbe, expected: 'pending' as const })),
+		.map(([tool, entry]) => ({
+			tool,
+			probe: entry.probe as ToolPhoneProbe,
+			expected: 'pending' as const,
+		})),
 ].filter((p) => only === undefined || only.split(',').includes(p.tool));
 
 if (probes.length === 0 && !args.includes('--discover') && !args.includes('--overflow')) {
@@ -100,11 +110,19 @@ try {
 	const { SESSION_COOKIE } = await import('../src/core/security/session_store.ts');
 	const { MEDIA_AUTH_COOKIE } = await import('../src/core/media/protection.ts');
 	const session = await login('root', SUITE_LOGIN_PASSWORD, '127.0.0.1');
-	if (!session.ok || session.sessionToken === undefined) throw new Error(`login refused: ${session.message}`);
+	if (!session.ok || session.sessionToken === undefined)
+		throw new Error(`login refused: ${session.message}`);
 	const { hostname } = new URL(server.origin);
-	const sessionCookies = [{ name: SESSION_COOKIE, value: session.sessionToken, domain: hostname, path: '/' }];
+	const sessionCookies = [
+		{ name: SESSION_COOKIE, value: session.sessionToken, domain: hostname, path: '/' },
+	];
 	if (session.mediaAuthCookieValue) {
-		sessionCookies.push({ name: MEDIA_AUTH_COOKIE, value: session.mediaAuthCookieValue, domain: hostname, path: '/' });
+		sessionCookies.push({
+			name: MEDIA_AUTH_COOKIE,
+			value: session.mediaAuthCookieValue,
+			domain: hostname,
+			path: '/',
+		});
 	}
 	await browser.setCookie(...sessionCookies);
 
@@ -123,15 +141,31 @@ try {
 			await new Promise((r) => setTimeout(r, 1500));
 		}
 		const report = await page.evaluate((vw: number) => {
-			const out: string[] = [`scrollWidth ${document.documentElement.scrollWidth} / viewport ${vw} (innerWidth ${window.innerWidth})`];
-			const wide = [...document.querySelectorAll('body *')].filter((el) => el.getBoundingClientRect().right > vw + 1);
-			const outer = wide.filter((el) => !el.parentElement || el.parentElement.getBoundingClientRect().right <= vw + 1);
+			const out: string[] = [
+				`scrollWidth ${document.documentElement.scrollWidth} / viewport ${vw} (innerWidth ${window.innerWidth})`,
+			];
+			const wide = [...document.querySelectorAll('body *')].filter(
+				(el) => el.getBoundingClientRect().right > vw + 1,
+			);
+			const outer = wide.filter(
+				(el) => !el.parentElement || el.parentElement.getBoundingClientRect().right <= vw + 1,
+			);
 			// innermost: wide elements none of whose children are wide — the causes
-			const inner = wide.filter((el) => ![...el.children].some((c) => c.getBoundingClientRect().right > vw + 1));
-			for (const el of [...outer.slice(0, 8), ...inner.slice(0, 12).map((e) => { (e as HTMLElement).dataset.inner = '1'; return e; })]) {
+			const inner = wide.filter(
+				(el) => ![...el.children].some((c) => c.getBoundingClientRect().right > vw + 1),
+			);
+			for (const el of [
+				...outer.slice(0, 8),
+				...inner.slice(0, 12).map((e) => {
+					(e as HTMLElement).dataset.inner = '1';
+					return e;
+				}),
+			]) {
 				const r = el.getBoundingClientRect();
 				const cs = getComputedStyle(el);
-				out.push(`${(el as HTMLElement).dataset.inner ? 'INNER ' : ''}${Math.round(r.left)}..${Math.round(r.right)} ${el.tagName.toLowerCase()}.${(el.getAttribute('class') ?? '').trim().split(/\s+/).slice(0, 3).join('.')} min-width:${cs.minWidth} width:${cs.width} white-space:${cs.whiteSpace}`);
+				out.push(
+					`${(el as HTMLElement).dataset.inner ? 'INNER ' : ''}${Math.round(r.left)}..${Math.round(r.right)} ${el.tagName.toLowerCase()}.${(el.getAttribute('class') ?? '').trim().split(/\s+/).slice(0, 3).join('.')} min-width:${cs.minWidth} width:${cs.width} white-space:${cs.whiteSpace}`,
+				);
 			}
 			return out;
 		}, PHONE_VIEWPORT.width);
@@ -151,7 +185,10 @@ try {
 		const page = await browser.newPage();
 		page.on('dialog', (d) => d.dismiss());
 		await page.setViewport({ width: 1400, height: 900 });
-		const query = mode === 'list' ? `tipo=${sectionTipo}&mode=list` : `tipo=${sectionTipo}&section_id=${sectionId}&mode=edit`;
+		const query =
+			mode === 'list'
+				? `tipo=${sectionTipo}&mode=list`
+				: `tipo=${sectionTipo}&section_id=${sectionId}&mode=edit`;
 		await page.goto(`${server.origin}/dedalo/core/page/?${query}&menu=false`, {
 			waitUntil: 'networkidle0',
 			timeout: 60_000,
@@ -159,6 +196,7 @@ try {
 		await new Promise((r) => setTimeout(r, 2000));
 		const found = await page.evaluate(async () => {
 			const spec = '/dedalo/core/common/js/instances.js';
+			// biome-ignore lint/suspicious/noExplicitAny: a live instance of the untyped client JS, read inside the page
 			const mod = (await import(spec)) as { get_all_instances: () => Array<Record<string, any>> };
 			const out: Record<string, unknown> = {};
 			for (const inst of mod.get_all_instances()) {
@@ -199,12 +237,19 @@ try {
 					void arg
 						?.evaluate((e) => (e instanceof Error ? e.stack : null))
 						.then((stack) => {
-							if (stack) notes.push(`stack: ${String(stack).replace(/https?:\/\/[^/]+\/dedalo\//g, '').slice(0, 700)}`);
+							if (stack)
+								notes.push(
+									`stack: ${String(stack)
+										.replace(/https?:\/\/[^/]+\/dedalo\//g, '')
+										.slice(0, 700)}`,
+								);
 						})
 						.catch(() => {});
 				}
 			});
-			p.on('pageerror', (err) => problems.push(`pageerror (${who}): ${String((err as Error).stack ?? err).slice(0, 600)}`));
+			p.on('pageerror', (err) =>
+				problems.push(`pageerror (${who}): ${String((err as Error).stack ?? err).slice(0, 600)}`),
+			);
 		};
 		// A FRESH browser context per probe: each tool is judged on a first
 		// visit, not on storage an earlier probe left behind (the list view
@@ -220,7 +265,12 @@ try {
 			asFixture = { remove: () => fixture.removeReadDoorIdentityFixture() };
 			const { createSession } = await import('../src/core/security/session_store.ts');
 			const { issueSessionMediaKey } = await import('../src/core/media/protection.ts');
-			const token = createSession(fixture.DOOR_READER_USER_ID, 'zzdoor_reader', false, issueSessionMediaKey());
+			const token = createSession(
+				fixture.DOOR_READER_USER_ID,
+				'zzdoor_reader',
+				false,
+				issueSessionMediaKey(),
+			);
 			await context.setCookie({ name: SESSION_COOKIE, value: token, domain: hostname, path: '/' });
 		} else {
 			await context.setCookie(...sessionCookies);
@@ -247,7 +297,8 @@ try {
 			await toolPage.waitForNetworkIdle({ idleTime: 500, timeout: 20_000 }).catch(() => {});
 			await new Promise((r) => setTimeout(r, 500));
 			problems.push(...(await judge(toolPage, tool, toolPage === opener, opened.root)));
-			if (shotsDir) await toolPage.screenshot({ path: join(shotsDir, `${tool}.png`), fullPage: true });
+			if (shotsDir)
+				await toolPage.screenshot({ path: join(shotsDir, `${tool}.png`), fullPage: true });
 		} catch (err) {
 			problems.push(`did not render: ${(err as Error).message.split('\n')[0]}`);
 		} finally {
@@ -280,14 +331,17 @@ for (const v of verdicts) {
 	for (const p of v.problems.slice(0, 12)) console.log(`    - ${p}`);
 	if (v.problems.length > 12) console.log(`    … ${v.problems.length - 12} more`);
 	if (v.notes.length > 0 && (verbose || !v.ok)) {
-		for (const n of [...new Set(v.notes)].slice(0, verbose ? 30 : 4)) console.log(`    · console: ${n}`);
+		for (const n of [...new Set(v.notes)].slice(0, verbose ? 30 : 4))
+			console.log(`    · console: ${n}`);
 	}
 }
 console.log(`\n${verdicts.length} probed, ${red} red.`);
 process.exit(red === 0 ? 0 : 1);
 
 /** Create one scratch record in `sectionTipo` (suite DB only), armed for sweeping. */
-async function buildRecord(sectionTipo: string): Promise<{ id: number; sweep: () => Promise<unknown> }> {
+async function buildRecord(
+	sectionTipo: string,
+): Promise<{ id: number; sweep: () => Promise<unknown> }> {
 	const { assertTestDatabase } = await import('../src/core/test_data/test_database_marker.ts');
 	await assertTestDatabase('tool_viewport_check.buildRecord');
 	// the resolver needs the component-model registry, as every entrypoint loads it
@@ -296,7 +350,8 @@ async function buildRecord(sectionTipo: string): Promise<{ id: number; sweep: ()
 	const { armRunCreatedSweep } = await import('../src/core/test_data/run_created_records.ts');
 	const { createSectionRecord } = await import('../src/core/section/record/create_record.ts');
 	const table = await getMatrixTableFromTipo(sectionTipo);
-	if (table === null) throw new Error(`build: '${sectionTipo}' has no matrix table on the suite database`);
+	if (table === null)
+		throw new Error(`build: '${sectionTipo}' has no matrix table on the suite database`);
 	const sweeper = await armRunCreatedSweep(sectionTipo, table);
 	const id = await createSectionRecord(sectionTipo, -1);
 	return { id, sweep: () => sweeper.sweep() };
@@ -304,10 +359,15 @@ async function buildRecord(sectionTipo: string): Promise<{ id: number; sweep: ()
 
 /** A section_tool node's target section, from the ontology. */
 async function sectionToolTarget(sectionTool: string): Promise<string> {
-	const { getPropertiesByTipo: getNodeProperties } = await import('../src/core/ontology/resolver.ts');
-	const props = (await getNodeProperties(sectionTool)) as { config?: { target_section_tipo?: string } } | null;
+	const { getPropertiesByTipo: getNodeProperties } = await import(
+		'../src/core/ontology/resolver.ts'
+	);
+	const props = (await getNodeProperties(sectionTool)) as {
+		config?: { target_section_tipo?: string };
+	} | null;
 	const target = props?.config?.target_section_tipo;
-	if (!target) throw new Error(`section_tool '${sectionTool}' declares no config.target_section_tipo`);
+	if (!target)
+		throw new Error(`section_tool '${sectionTool}' declares no config.target_section_tipo`);
 	return target;
 }
 
@@ -351,11 +411,17 @@ async function openProbe(
 					const cs = getComputedStyle(el);
 					return `${Math.round(r.left)},${Math.round(r.top)} ${Math.round(r.width)}×${Math.round(r.height)} display:${cs.display} visibility:${cs.visibility} pointer-events:${cs.pointerEvents}`;
 				});
-				const widths = await page.evaluate(() => `page ${document.documentElement.scrollWidth}/${window.innerWidth} visual ${window.visualViewport?.width}×${window.visualViewport?.scale}`);
+				const widths = await page.evaluate(
+					() =>
+						`page ${document.documentElement.scrollWidth}/${window.innerWidth} visual ${window.visualViewport?.width}×${window.visualViewport?.scale}`,
+				);
 				throw new Error(`cannot tap '${selector}' (${box}; ${widths}): ${(err as Error).message}`);
 			}
 		}
-		const child = await Promise.race([popup, new Promise<null>((r) => setTimeout(() => r(null), 3000))]);
+		const child = await Promise.race([
+			popup,
+			new Promise<null>((r) => setTimeout(() => r(null), 3000)),
+		]);
 		return child ? { page: child, root: probe.root } : { page, root: probe.root };
 	}
 
@@ -372,7 +438,10 @@ async function openProbe(
 			probe.fn,
 		);
 		if (result !== 'ok') throw new Error(result);
-		const child = await Promise.race([popup, new Promise<null>((r) => setTimeout(() => r(null), 3000))]);
+		const child = await Promise.race([
+			popup,
+			new Promise<null>((r) => setTimeout(() => r(null), 3000)),
+		]);
 		return { page: child ?? page, root: probe.root };
 	}
 
@@ -381,9 +450,13 @@ async function openProbe(
 		const result = await page.evaluate(
 			async (model: string, method: string) => {
 				const spec = '/dedalo/core/common/js/instances.js';
-				const { get_all_instances } = (await import(spec)) as { get_all_instances: () => Array<Record<string, any>> };
+				// biome-ignore lint/suspicious/noExplicitAny: a live instance of the untyped client JS, read inside the page
+				const { get_all_instances } = (await import(spec)) as {
+					get_all_instances: () => Array<Record<string, any>>;
+				};
 				const instance = get_all_instances().find((i) => i.model === model);
-				if (!instance || typeof instance[method] !== 'function') return `no live ${model} with ${method}()`;
+				if (!instance || typeof instance[method] !== 'function')
+					return `no live ${model} with ${method}()`;
 				instance[method]();
 				return 'ok';
 			},
@@ -391,17 +464,34 @@ async function openProbe(
 			probe.method,
 		);
 		if (result !== 'ok') throw new Error(result);
-		const child = await Promise.race([popup, new Promise<null>((r) => setTimeout(() => r(null), 3000))]);
+		const child = await Promise.race([
+			popup,
+			new Promise<null>((r) => setTimeout(() => r(null), 3000)),
+		]);
 		return { page: child ?? page };
 	}
 
 	// the record-bearing kinds
 	let url: string;
-	let find: { tipo: string; sectionTipo: string; sectionId: string | null; mode: string; via: string; button?: string };
+	let find: {
+		tipo: string;
+		sectionTipo: string;
+		sectionId: string | null;
+		mode: string;
+		via: string;
+		button?: string;
+	};
 	if (probe.kind === 'button') {
 		if (probe.build) onBuilt(await buildRecord(probe.build));
 		url = `tipo=${probe.section}&mode=list`;
-		find = { tipo: probe.section, sectionTipo: probe.section, sectionId: null, mode: 'list', via: 'button', button: probe.button };
+		find = {
+			tipo: probe.section,
+			sectionTipo: probe.section,
+			sectionId: null,
+			mode: 'list',
+			via: 'button',
+			button: probe.button,
+		};
 	} else if (probe.kind === 'section_tool') {
 		let selected: string | null = null;
 		if (probe.build === 'target') {
@@ -412,9 +502,18 @@ async function openProbe(
 		// `start` reroutes a section_tool URL (dd_core_api.ts): the page element
 		// becomes the TARGET section and carries config.tool_context — so the
 		// live instance is the target section, found by that config below.
-		await page.goto(pageUrl(`tipo=${probe.section_tool}&mode=list&menu=false`), { waitUntil: 'networkidle0', timeout: 60_000 });
+		await page.goto(pageUrl(`tipo=${probe.section_tool}&mode=list&menu=false`), {
+			waitUntil: 'networkidle0',
+			timeout: 60_000,
+		});
 		url = '';
-		find = { tipo: probe.section_tool, sectionTipo: probe.section_tool, sectionId: selected, mode: 'list', via: 'section_tool' };
+		find = {
+			tipo: probe.section_tool,
+			sectionTipo: probe.section_tool,
+			sectionId: selected,
+			mode: 'list',
+			via: 'section_tool',
+		};
 	} else {
 		const { caller } = probe as Extract<ToolPhoneProbe, { caller: unknown }>;
 		let id = caller.section_id === null ? null : String(caller.section_id);
@@ -423,12 +522,20 @@ async function openProbe(
 			onBuilt(b);
 			if (id === 'built') id = String(b.id);
 		}
-		url = caller.mode === 'list' || id === null
-			? `tipo=${caller.section_tipo}&mode=list`
-			: `tipo=${caller.section_tipo}&section_id=${id}&mode=edit`;
-		find = { tipo: caller.tipo, sectionTipo: caller.section_tipo, sectionId: caller.mode === 'list' ? null : id, mode: caller.mode, via: kind };
+		url =
+			caller.mode === 'list' || id === null
+				? `tipo=${caller.section_tipo}&mode=list`
+				: `tipo=${caller.section_tipo}&section_id=${id}&mode=edit`;
+		find = {
+			tipo: caller.tipo,
+			sectionTipo: caller.section_tipo,
+			sectionId: caller.mode === 'list' ? null : id,
+			mode: caller.mode,
+			via: kind,
+		};
 	}
-	if (url !== '') await page.goto(pageUrl(`${url}&menu=false`), { waitUntil: 'networkidle0', timeout: 60_000 });
+	if (url !== '')
+		await page.goto(pageUrl(`${url}&menu=false`), { waitUntil: 'networkidle0', timeout: 60_000 });
 
 	// Components build lazily as they enter the viewport (when_in_viewport),
 	// and a phone form is tall: scroll the way a user would until the caller
@@ -438,9 +545,16 @@ async function openProbe(
 			const present = await page.evaluate(
 				async (toolName: string, tipo: string) => {
 					const spec = '/dedalo/core/common/js/instances.js';
-					const { get_all_instances } = (await import(spec)) as { get_all_instances: () => Array<Record<string, any>> };
+					// biome-ignore lint/suspicious/noExplicitAny: a live instance of the untyped client JS, read inside the page
+					const { get_all_instances } = (await import(spec)) as {
+						get_all_instances: () => Array<Record<string, any>>;
+					};
 					return get_all_instances().some(
-						(i) => i.tipo === tipo && [...(i.context?.tools ?? []), ...(i.tools ?? [])].some((t: { name: string }) => t.name === toolName),
+						(i) =>
+							i.tipo === tipo &&
+							[...(i.context?.tools ?? []), ...(i.tools ?? [])].some(
+								(t: { name: string }) => t.name === toolName,
+							),
 					);
 				},
 				tool,
@@ -460,21 +574,38 @@ async function openProbe(
 		async (toolName: string, f: typeof find) => {
 			const instancesSpec = '/dedalo/core/common/js/instances.js';
 			const toolSpec = '/dedalo/core/tools_common/js/tool_common.js';
-			const { get_all_instances } = (await import(instancesSpec)) as { get_all_instances: () => Array<Record<string, any>> };
-			const { open_tool } = (await import(toolSpec)) as { open_tool: (o: object) => Promise<unknown> };
+			// biome-ignore lint/suspicious/noExplicitAny: a live instance of the untyped client JS, read inside the page
+			const { get_all_instances } = (await import(instancesSpec)) as {
+				get_all_instances: () => Array<Record<string, any>>;
+			};
+			const { open_tool } = (await import(toolSpec)) as {
+				open_tool: (o: object) => Promise<unknown>;
+			};
 			const all = get_all_instances();
+			// biome-ignore lint/suspicious/noExplicitAny: a live instance of the untyped client JS, read inside the page
 			const matches = (i: Record<string, any>) =>
-				i.tipo === f.tipo && i.section_tipo === f.sectionTipo && i.mode === f.mode &&
+				i.tipo === f.tipo &&
+				i.section_tipo === f.sectionTipo &&
+				i.mode === f.mode &&
 				(f.sectionId === null || f.mode === 'list' || String(i.section_id) === f.sectionId);
 			if (f.via === 'button') {
 				const section = all.find((i) => matches(i) && i.model === 'section');
-				const button = (section?.context?.buttons ?? []).find((b: { tipo: string }) => b.tipo === f.button);
-				if (!section || !button?.tools?.[0]) return { error: `no button '${f.button}' with a tool on live '${f.tipo}'` };
-				void open_tool({ tool_context: button.tools[0], caller: section, caller_options: { section_tipo: section.section_tipo, button_tipo: button.tipo } });
+				const button = (section?.context?.buttons ?? []).find(
+					(b: { tipo: string }) => b.tipo === f.button,
+				);
+				if (!section || !button?.tools?.[0])
+					return { error: `no button '${f.button}' with a tool on live '${f.tipo}'` };
+				void open_tool({
+					tool_context: button.tools[0],
+					caller: section,
+					caller_options: { section_tipo: section.section_tipo, button_tipo: button.tipo },
+				});
 				return { openAs: String(button.tools[0].properties?.open_as ?? 'modal') };
 			}
 			if (f.via === 'section_tool') {
-				const section = all.find((i) => i.model === 'section' && i.mode === 'list' && i.config?.tool_context);
+				const section = all.find(
+					(i) => i.model === 'section' && i.mode === 'list' && i.config?.tool_context,
+				);
 				const tool_context = section?.config?.tool_context;
 				if (!tool_context) return { error: `live '${f.tipo}' carries no config.tool_context` };
 				if (f.sectionId !== null) section.section_id_selected = Number(f.sectionId);
@@ -482,7 +613,9 @@ async function openProbe(
 				return { openAs: String(tool_context.properties?.open_as ?? 'modal') };
 			}
 			const offers = (i: Record<string, any>) =>
-				[...(i.context?.tools ?? []), ...(i.tools ?? [])].find((t: { name: string }) => t.name === toolName);
+				[...(i.context?.tools ?? []), ...(i.tools ?? [])].find(
+					(t: { name: string }) => t.name === toolName,
+				);
 			const instance = all.find((i) => matches(i) && offers(i));
 			if (!instance) return { error: `no live '${f.tipo}' instance offering ${toolName}` };
 			const tool_context = offers(instance);
@@ -506,19 +639,31 @@ async function openProbe(
  * its header. Page chrome (the error-report tab, the developer debug button)
  * and, in modal mode, the record page behind the sheet are not the tool's.
  */
-async function judge(page: Page, tool: string, isModal: boolean, customRoot?: string): Promise<string[]> {
+async function judge(
+	page: Page,
+	tool: string,
+	isModal: boolean,
+	customRoot?: string,
+): Promise<string[]> {
 	return await page.evaluate(
 		(minTarget: number, toolName: string, modalMode: boolean, rootSel: string | null) => {
 			const out: string[] = [];
 			const vw = window.innerWidth;
-			const roots = [...document.querySelectorAll(rootSel ?? `.wrapper_tool.${toolName}, .tool_header.${toolName}`)];
+			const roots = [
+				...document.querySelectorAll(
+					rootSel ?? `.wrapper_tool.${toolName}, .tool_header.${toolName}`,
+				),
+			];
 			if (roots.length === 0) return [`no ${rootSel ?? `.wrapper_tool.${toolName}`} in the page`];
 			// the tool's own error panel, or the page-level API error panel
 			// (render_api_error.js) rendered inside the tool
 			const errorPanel = document.querySelector(
 				`.wrapper_tool.${toolName} .content_data_error, .wrapper_tool.${toolName} .tool_error, .wrapper_tool.${toolName} .api_error_panel`,
 			);
-			if (errorPanel) out.push(`tool rendered its ERROR panel: ${(errorPanel.textContent ?? '').trim().slice(0, 160)}`);
+			if (errorPanel)
+				out.push(
+					`tool rendered its ERROR panel: ${(errorPanel.textContent ?? '').trim().slice(0, 160)}`,
+				);
 
 			const describe = (el: Element): string => {
 				const cls = (el.getAttribute('class') ?? '').trim().split(/\s+/).slice(0, 3).join('.');
@@ -543,16 +688,22 @@ async function judge(page: Page, tool: string, isModal: boolean, customRoot?: st
 				// the page behind is the record page; judge the tool's own box
 				for (const root of roots) {
 					const r = root.getBoundingClientRect();
-					if (r.right > vw + 1 || r.left < -1) out.push(`tool box off-screen: ${Math.round(r.left)}..${Math.round(r.right)}`);
+					if (r.right > vw + 1 || r.left < -1)
+						out.push(`tool box off-screen: ${Math.round(r.left)}..${Math.round(r.right)}`);
 					if (root.scrollWidth > root.clientWidth + 1) {
 						out.push(`tool content wider than its box: ${root.scrollWidth} > ${root.clientWidth}`);
 						// name the widest offenders (outermost first) so the fix has an address
 						const culprits = [...root.querySelectorAll('*')]
 							.filter((el) => el.getBoundingClientRect().right > vw + 1 && !inContainedScroller(el))
-							.filter((el) => !el.parentElement || el.parentElement.getBoundingClientRect().right <= vw + 1);
+							.filter(
+								(el) =>
+									!el.parentElement || el.parentElement.getBoundingClientRect().right <= vw + 1,
+							);
 						for (const el of culprits.slice(0, 4)) {
 							const r = el.getBoundingClientRect();
-							out.push(`  overflows at ${Math.round(r.right)}px: ${describe(el)} (w ${Math.round(r.width)}, min-width ${getComputedStyle(el).minWidth})`);
+							out.push(
+								`  overflows at ${Math.round(r.right)}px: ${describe(el)} (w ${Math.round(r.width)}, min-width ${getComputedStyle(el).minWidth})`,
+							);
 						}
 					}
 				}
@@ -561,7 +712,8 @@ async function judge(page: Page, tool: string, isModal: boolean, customRoot?: st
 				if (sw > vw + 1) out.push(`page scrolls sideways: scrollWidth ${sw} > ${vw}`);
 			}
 
-			const selector = 'button, select, input:not([type=hidden]), textarea, [role=button], .button.tool_button';
+			const selector =
+				'button, select, input:not([type=hidden]), textarea, [role=button], .button.tool_button';
 			const controls = new Set<Element>();
 			for (const root of roots) for (const el of root.querySelectorAll(selector)) controls.add(el);
 			for (const el of controls) {
@@ -574,7 +726,8 @@ async function judge(page: Page, tool: string, isModal: boolean, customRoot?: st
 				if (style.visibility === 'hidden') continue;
 				// scrolled out of a contained scroller is fine; off the PAGE is not
 				if (r.right > vw + 1 || r.left < -1) {
-					if (!inContainedScroller(el)) out.push(`off-screen (${Math.round(r.left)}..${Math.round(r.right)}): ${describe(el)}`);
+					if (!inContainedScroller(el))
+						out.push(`off-screen (${Math.round(r.left)}..${Math.round(r.right)}): ${describe(el)}`);
 				}
 				const type = el.getAttribute('type');
 				if (type === 'checkbox' || type === 'radio') continue; // judged by their label
@@ -600,9 +753,15 @@ async function judge(page: Page, tool: string, isModal: boolean, customRoot?: st
 				if (cs.visibility === 'hidden' || cs.writingMode.startsWith('vertical')) continue;
 				const fs = Number.parseFloat(cs.fontSize) || 16;
 				// the CONTENT box: a padded cell hides a one-letter text column
-				const contentWidth = r.width - (Number.parseFloat(cs.paddingLeft) || 0) - (Number.parseFloat(cs.paddingRight) || 0);
+				const contentWidth =
+					r.width -
+					(Number.parseFloat(cs.paddingLeft) || 0) -
+					(Number.parseFloat(cs.paddingRight) || 0);
 				if (contentWidth < fs * 1.6 && r.height > fs * 3) {
-					if (squeezed++ < 5) out.push(`squeezed text ${Math.round(r.width)}×${Math.round(r.height)}: ${describe(el)}`);
+					if (squeezed++ < 5)
+						out.push(
+							`squeezed text ${Math.round(r.width)}×${Math.round(r.height)}: ${describe(el)}`,
+						);
 				}
 			}
 			if (squeezed > 5) out.push(`… ${squeezed - 5} more squeezed text nodes`);

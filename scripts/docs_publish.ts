@@ -361,7 +361,7 @@ const manifest = {
 	published_at: new Date().toISOString().slice(0, 10),
 	paths: publishedPagePaths(REPO_ROOT),
 };
-writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2) + '\n');
+writeFileSync(MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`);
 console.log(`[4/4] Recorded ${manifest.paths.length} published paths in docs/published_paths.json`);
 console.log('      COMMIT THIS FILE — it is what makes the rename gate real.\n');
 

@@ -91,7 +91,8 @@ writeFileSync(OUT_FILE, render(collectHues().hues));
 //    (docs/development/tools/phone_layout.md).
 const RATCHET = resolve(import.meta.dir, '../test/helpers/tool_phone_ratchet.ts');
 const ratchet = readFileSync(RATCHET, 'utf8');
-const pendingAnchor = 'export const NOT_YET_PHONE: Record<string, { phase: 1 | 2 | 3 | 4; reason: string; probe?: ToolPhoneProbe }> = {\n';
+const pendingAnchor =
+	'export const NOT_YET_PHONE: Record<string, { phase: 1 | 2 | 3 | 4; reason: string; probe?: ToolPhoneProbe }> = {\n';
 if (!ratchet.includes(`\t${name}:`) && ratchet.includes(pendingAnchor)) {
 	writeFileSync(
 		RATCHET,
@@ -101,7 +102,9 @@ if (!ratchet.includes(`\t${name}:`) && ratchet.includes(pendingAnchor)) {
 		),
 	);
 } else if (!ratchet.includes(`\t${name}:`)) {
-	console.error('Could not enter the tool in test/helpers/tool_phone_ratchet.ts NOT_YET_PHONE — add it by hand.');
+	console.error(
+		'Could not enter the tool in test/helpers/tool_phone_ratchet.ts NOT_YET_PHONE — add it by hand.',
+	);
 }
 
 console.log(`Created ${name} at ${targetDir}`);
@@ -109,4 +112,6 @@ console.log(
 	`Colour: set --${name} (its identity hue — copied from the template) in tools/${name}/css/${name}.less, then run "bun run css:tool-colors" and "bun run css:build".`,
 );
 console.log('Next: run the area_maintenance "Register tools" widget to reconcile dd1324.');
-console.log(`Phone: entered as pending in test/helpers/tool_phone_ratchet.ts — add a probe and run "bun run test:tools:phone --tool ${name} --shots <dir>".`);
+console.log(
+	`Phone: entered as pending in test/helpers/tool_phone_ratchet.ts — add a probe and run "bun run test:tools:phone --tool ${name} --shots <dir>".`,
+);

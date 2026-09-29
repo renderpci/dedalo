@@ -459,7 +459,16 @@ const MATRIX: DoorRow[] = [
 	{
 		file: SAVE_COMPONENT,
 		fn: 'saveComponentData',
-		must: ['withTransaction(', 'propagateToObservers('],
+		// The transaction moved into runSaveAtomically (cc2ccddc31); the door must
+		// still route through it, and the row below holds it to withTransaction.
+		must: ['runSaveAtomically(', 'propagateToObservers('],
+		mustNot: [],
+		empty: {},
+	},
+	{
+		file: SAVE_COMPONENT,
+		fn: 'runSaveAtomically',
+		must: ['withTransaction('],
 		mustNot: [],
 		empty: {},
 	},
