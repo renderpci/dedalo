@@ -8,6 +8,7 @@ export const component_email: ComponentModel = {
 	model: 'component_email',
 	column: 'string',
 	render: 'text',
+	importAppend: 'items',
 	classSupportsTranslation: true,
 	searchBuilder: 'string',
 	flatValue: 'string',

@@ -296,6 +296,21 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// LIFECYCLE: incremented when a leader stores its outcome, decremented by
 	// dropLedgerEntry on every eviction, and zeroed with the map by the test seam.
 	'core/api/dispatch.ts:idempotencyLedgerBytes',
+	// RFC 7050 NAT64 prefix discovery cache (the SSRF guard, security/ssrf_guard.ts).
+	// Holds the NAT64 prefixes of the NETWORK this process sits on — install/host
+	// state, never a user, session, language, record or request. It is TIGHTEN-ONLY
+	// (a discovered prefix can refuse an address, never admit one the IPv6 rules
+	// refuse), so a stale value can only refuse more. LIFECYCLE: refreshed lazily by
+	// assertPublicUrl once expiresAt passes (10 min after an answer, 60 s after an
+	// empty one, which KEEPS the previous prefixes — nextNat64Discovery); never
+	// written by a call that injects its own resolver (deps.lookup bypasses it both
+	// ways). Process restart otherwise.
+	'core/security/ssrf_guard.ts:nat64Discovered',
+	// The refresh in flight, so concurrent first calls share ONE lookup (the
+	// in-flight coalescing precedent of external/cache.ts:inFlight). Holds a
+	// promise of the same host-level prefixes. LIFECYCLE: set when a refresh starts,
+	// cleared in that refresh's own `finally`.
+	'core/security/ssrf_guard.ts:nat64DiscoveryInFlight',
 ]);
 
 /**
@@ -308,6 +323,11 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
  * list.
  */
 const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
+	// Bootstrap memo for matrix_time_machine.tm_role (ensureTmRoleColumn — the
+	// self-heal when migration 0010 did not land at boot): the TABLES verified
+	// to carry the column. No request identity; set only on success, cleared by
+	// a restart, and the DDL cannot un-apply.
+	'core/db/record_generation.ts:tmRoleReadyTables',
 	// Model-artifact digest VERDICT cache (2026-09-04, P1-25): absolute path →
 	// {size, mtimeMs, ino, sha256}, so the serving door hashes a gigabyte weight
 	// once per process and re-hashes only when the stat identity moves. A digest
@@ -359,6 +379,15 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// Background tool-job registry (S2-16): keyed by job id; terminal entries
 	// pruned by its own retention sweep; ops visibility state.
 	'core/tools/background.ts:jobs',
+	// Live bulk-run registry (2026-09-27, decision D5 of the bulk-revert undo
+	// log): the dd800 ids whose run is executing in THIS process, and the ids a
+	// revert is undoing right now. Process-wide facts about in-process work —
+	// keyed by bulk id, never by principal or language. Each entry is removed in
+	// the `finally` of the run/revert that added it (withLiveBulkRun /
+	// releaseBulkRevert), so the sets drain themselves; a restart empties them,
+	// which is correct because no bulk run survives one.
+	'core/tools/bulk_run_registry.ts:liveBulkRuns',
+	'core/tools/bulk_run_registry.ts:revertsInFlight',
 	// Request/gauge counters (WS-E observability): monotonic ops metrics,
 	// never cleared by design.
 	'core/api/counters.ts:counters',
@@ -443,6 +472,22 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// moment the last holder releases with nobody waiting (the media_index
 	// keyLocks precedent).
 	'external/transport.ts:concurrencySlots',
+	// --- the harvesting door (src/core/harvest) --------------------------------
+	// robots.txt verdicts per ORIGIN. NOT factory-built: robots.txt derives from a
+	// remote site, which neither invalidation channel knows about. Lifecycle: TIME
+	// and SIZE — 1 h TTL (5 min for an unavailable verdict), replaced on the next
+	// ask once expired, oldest insertion evicted past 512 origins OR past
+	// ROBOTS_CACHE_MAX_WEIGHT (16 MiB) of what the entries retain — rule objects
+	// as well as pattern text; a load that
+	// REJECTS (a refused origin) deletes its own entry, so a refusal is never
+	// remembered. Keys are origins, never session/user/lang.
+	'core/harvest/robots.ts:robotsPolicies',
+	// Per-ORIGIN pacing queue. A serialization primitive (the concurrencySlots
+	// precedent above), not a cache. Lifecycle: SELF-DRAINING — an unref'd drain
+	// timer deletes the entry once nobody waits and its interval has passed (a
+	// timer that fires early re-arms, so no idle entry is stranded);
+	// clearPacingForTests empties it for gate isolation.
+	'core/harvest/pacing.ts:originPaces',
 	// In-flight fetch coalescing, keyed by the row cache key. A serialization
 	// primitive, not a cache: each entry is deleted in the `finally` of the very
 	// fetch it coalesces. The ROW cache beside it IS factory-built.
@@ -947,7 +992,7 @@ describe('config.menu lang reads outside src/config/ (P0-7 census)', () => {
 			['tools/tool_update_cache/server/index.ts', "translatable ? currentDataLang() : 'lg-nolan'"],
 			[
 				'src/core/section/record/duplicate_record.ts',
-				"translatable ? currentDataLang() : 'lg-nolan'",
+				'main.translatable ? currentDataLang() : NOLAN',
 			],
 			['tools/tool_posterframe/server/index.ts', 'translatable ? currentDataLang() : null'],
 		] as const) {

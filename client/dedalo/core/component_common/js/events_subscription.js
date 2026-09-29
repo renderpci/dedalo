@@ -33,7 +33,7 @@
 * Tokens returned by event_manager.subscribe() are stored in self.events_tokens so that
 * component_common.destroy() can unsubscribe them all in one pass.
 *
-* Exports: {Function} events_subscription
+* Exports: {Function} events_subscription, {Function} is_time_machine_view
 */
 
 // imports
@@ -41,6 +41,39 @@
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {is_empty} from '../../component_common/js/component_common.js'
+
+
+
+/**
+* IS_TIME_MACHINE_VIEW
+* True when the instance, or ANY instance up its caller chain, is a Time Machine
+* surface: a tool_time_machine preview (data_source 'tm', or a matrix_id keying
+* the subtree to one TM row) or the dd15 history list.
+*
+* The whole chain, not the instance alone: a preview's descendants do not all
+* carry data_source 'tm' — it is forwarded only to the preview main and its own
+* component_dataframe (a linked record's child is a DIFFERENT record and must
+* not read the TM row). A frame child (e.g. the rating inside the dataframe's
+* section_record) is historical all the same, so a live save must not reach it.
+* Walks callers only (never reads or requests data). Cycle-safe.
+*
+* @param {Object|null} instance - Any client instance (component, section, section_record…)
+* @returns {boolean}
+*/
+export const is_time_machine_view = function(instance) {
+
+	const seen = new Set()
+	let current = instance
+	while (current && !seen.has(current)) {
+		if (current.data_source==='tm' || current.matrix_id || current.section_tipo==='dd15') {
+			return true
+		}
+		seen.add(current)
+		current = current.caller
+	}
+
+	return false
+}//end is_time_machine_view
 
 
 
@@ -55,7 +88,8 @@
 * Events registered:
 *   - 'render_{self.id}'           — search-mode hilite toggle (deferred, idle)
 *   - 'sync_data_{id_base}_{lang}' — cross-DOM datum sync (skipped for a Time
-*     Machine view: dd15 cells and the tool's data_source='tm' preview)
+*     Machine view: anything under a dd15 list or a tool preview — see
+*     is_time_machine_view)
 *
 * @param {Object} self - The component instance being initialised. Expected properties:
 *   {string}        self.id              - Unique component DOM id (tipo+section+id).
@@ -125,7 +159,10 @@ export const events_subscription = function(self) {
 	// is now what the instance actually IS — a cell of the dd15 virtual section,
 	// or the tool's preview pane (data_source 'tm', which renders from an EDIT
 	// template and so was never excluded by the old mode check at all).
-		if (self.data_source!=='tm' && self.section_tipo!=='dd15') {
+	// The test walks the whole caller chain (is_time_machine_view): every descendant of a
+	// preview — a frame child such as the rating inside the preview dataframe's
+	// section_record included — shows history, not only the instances carrying 'tm'.
+		if (!is_time_machine_view(self)) {
 
 			const sync_data_handler = (options) => {
 
@@ -152,12 +189,10 @@ export const events_subscription = function(self) {
 				// historical snapshot on screen with the current live value.
 				// The test is the SECTION, not a service model: the list is an ordinary
 				// dd15 `section` instance now (WC-2026-08-14-tm-scope-server-owned).
-				// Guard both direct parent and grandparent to cover nested structures.
-					if (self.caller) {
-						const is_tm_host = (instance) => instance && instance.section_tipo==='dd15'
-						if (is_tm_host(self.caller) || is_tm_host(self.caller.caller)) {
-							return
-						}
+				// Re-checked at publish time over the WHOLE caller chain: a reused instance can
+				// have been re-parented under a TM surface after it subscribed.
+					if (is_time_machine_view(self)) {
+						return
 					}
 
 				// update_data_value

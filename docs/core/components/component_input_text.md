@@ -143,7 +143,7 @@ All properties are optional and live in the ontology node `properties` JSON. Ver
 ### with_lang_versions
 
 - **Values:** `true` | `false` (default `false`).
-- **Effect:** turns an otherwise non-translatable instance into a *transliterable* one. The main value stays in `lg-nolan`, but the component keeps `tool_lang` so other languages can be added (e.g. a personal name transliterated to other scripts). The render layer shows the transliteration in parentheses in list view and as a `transliterate_value` line in edit view, and it is the flag that lets exports emit all language versions in JSON.
+- **Effect:** turns an otherwise non-translatable instance into a *transliterable* one. The main value stays in `lg-nolan`, but the component keeps `tool_lang` so other languages can be added (e.g. a personal name transliterated to other scripts). The render layer shows the transliteration in parentheses in list view and as a `transliterate_value` line in edit view, and it is the flag that lets exports emit all language versions in JSON. A save in a language (the component save, a CSV import cell, *Propagate component data*, *Update cache*) writes that language's version beside the `lg-nolan` base and never replaces the base (`effectiveSaveLang()`, `src/core/ontology/resolver.ts`).
 
 ### unique
 

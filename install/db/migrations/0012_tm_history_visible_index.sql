@@ -1,0 +1,35 @@
+-- 0012 — matrix_time_machine: the VISIBLE-history record index (2026-09-27).
+--
+-- WHY. 0011 closed the dd15 COUNT regression (TOTAL − HIDDEN), but not the
+-- deep-page LATE ROW LOOKUP: its inner id walk (read_tm.ts tmLatePageSql) carries
+-- `withTmHistory`, whose `tm_role IS NULL` no full index holds, so the walk left
+-- its index-only path. Measured read-only on dedalo_mib_v7 (29.06M rows, bare
+-- browse, ORDER BY id DESC LIMIT 10 OFFSET 5,000,000): before tm_role, Parallel
+-- Index Only Scan on matrix_time_machine_record_history_idx, 3.5-4.2 s; with the
+-- predicate, Parallel Seq Scan + external sort, 8.9-10.0 s. A NOT EXISTS / NOT IN
+-- rewrite against 0011's hidden index did not win the plan back (8.3 s / 16.3 s),
+-- and an INCLUDE (tm_role) twin was index-only only with seq scans disabled (the
+-- planner costs the per-tuple filter above the seq scan).
+--
+-- THIS INDEX is the record-history index restricted to VISIBLE rows: its
+-- predicate is `withTmHistory`'s literally, so every narrowed reader implies it
+-- and scans it index-only with no per-row tm_role test — measured 4.1 s for the
+-- same deep page (default planner), 29 ms for a 30k-deep page of one record,
+-- 49 ms for a 100k-deep page of one section. With 0011's hidden partial it
+-- PARTITIONS the table by visibility (every row is in exactly one of the two).
+-- matrix_time_machine_record_history_idx stays: its unnarrowed readers (the
+-- epoch MAX(id) of a reborn address, the bulk revert, the legacy probes) read
+-- every role.
+--
+-- ONLINE MIGRATION: a full-heap index build on the time machine never holds the
+-- listener (install/db/online_migration.ts). It runs in the background once the
+-- server serves, CONCURRENTLY; every narrowed reader is correct without it, only
+-- slower until it lands.
+--
+-- Declared in src/core/db/db_pg_definitions.json (ar_index) and classified
+-- 'keep' in src/core/db/matrix_index_policy.ts.
+--
+-- IDEMPOTENT: IF NOT EXISTS (an INVALID leftover of a killed build is dropped by
+-- the runner first).
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS matrix_time_machine_history_visible_idx ON "matrix_time_machine" USING btree (section_tipo, section_id DESC, id DESC) WHERE tm_role IS NULL;

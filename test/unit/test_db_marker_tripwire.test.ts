@@ -358,6 +358,22 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 		run: async () => (await import('../helpers/test_data.ts')).cleanScratchTipo('zzmk1'),
 	},
 	{
+		name: 'insertLegacyBulkRow',
+		run: async () =>
+			(await import('../helpers/legacy_bulk_run.ts')).insertLegacyBulkRow({
+				sectionTipo: 'zzmk1',
+				sectionId: 999_997,
+				tipo: 'zzmk2',
+				lang: 'lg-nolan',
+				bulkId: null,
+				data: [],
+			}),
+	},
+	{
+		name: 'demoteToLegacyRun',
+		run: async () => (await import('../helpers/legacy_bulk_run.ts')).demoteToLegacyRun(999_997),
+	},
+	{
 		name: 'ensureSyntheticHierarchies',
 		run: async () =>
 			(

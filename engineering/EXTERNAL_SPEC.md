@@ -60,7 +60,7 @@ Layout — every file is private except `api/`:
 | `descriptor_types.ts` | `ExternalServiceModel` and its satellites (§4). |
 | `config.ts` | ontology `api_config` → a typed, vetted binding; `publishApiConfig`. |
 | `fields_map.ts` | payload → entries: unwrap, pick, extract, format, id codec, ceilings. |
-| `transport.ts` | THE ONE OUTBOUND DOOR (§5) + the concurrency ceiling. |
+| `transport.ts` | THE SUBSYSTEM'S ONE OUTBOUND DOOR (§5) — one of the engine's three (`engineering/OUTBOUND_SPEC.md`) — + the concurrency ceiling. |
 | `breaker.ts` | circuit breaker per (service, origin). |
 | `cache.ts` | row cache, in-flight coalescing, the per-page fan-out. |
 | `errors.ts` | the closed error taxonomy + the log grammar. |
@@ -118,8 +118,17 @@ of truth: no engine path reads a CALLER's copy.
 ```
 
 - `entity` — the registry key. Unknown ⇒ `ExternalServiceNotRegisteredError`.
-- `api_url` / `api_url_search` — FETCHED by this server, so their host must be
-  in `DEDALO_EXTERNAL_ALLOWED_HOSTS` or the binding is refused.
+- `api_url` / `api_url_search` — FETCHED by this server. The binding checks
+  their SHAPE only (parseable http(s), no embedded credentials); WHERE the
+  server may go is decided at the outbound door, step 3 of §5 (the host
+  allowlist `DEDALO_EXTERNAL_ALLOWED_HOSTS`, before any DNS), and nowhere
+  else. A non-allowlisted host therefore still PARSES: the binding answers
+  classification (`isExternalReferenceSection`, the restore/sweep set) the same
+  on every install, and the request itself is refused `blocked_host` when it
+  is made. Until 2026-09-27 the allowlist was also applied at parse, so on an
+  install with the default EMPTY allowlist every classification question threw
+  — and every time-machine restore was refused (`update.refused`) though
+  nothing was being fetched (`WC-2026-09-27-external-allowlist-at-door-only`).
 - `ui_base_url` — RENDERED in the curator's browser, a different trust
   boundary: http(s)-only, no host allowlist (§7).
 - `response_map` — local role → remote payload key; `ar_records` names the row
@@ -150,7 +159,10 @@ purgeable) by the sweep like any local section's. Ledger:
 which nothing reads: **DEAD**.
 
 `parseApiConfig` is the ONLY constructor of a typed `ExternalApiConfig` — the
-constructor IS the validation.
+constructor IS the validation. It validates the binding's SHAPE and never
+consults the egress allowlist: classification must not depend on the
+operator's egress policy (an empty allowlist is the safe default, not a
+misconfiguration).
 
 ### 2.3 The component's `fields_map`
 
@@ -432,7 +444,11 @@ answer became a confidently wrong value. A non-matching answer is `not_found`
 
 ## 5. Transport — the one door and its order
 
-Every byte the subsystem sends leaves through `transport.ts::fetchExternalJson`;
+Every byte the subsystem sends leaves through `transport.ts::fetchExternalJson`
+— the external subsystem's door, one of the engine's three outbound doors
+(`engineering/OUTBOUND_SPEC.md` says which request takes which, and names the
+guard all three share: this door reads its body with the guard's
+`readBytesCapped` and pins with its `pinToVettedAddress`, never a copy).
 `external_outbound_tripwire` fails the build on any other `fetch(` /
 `new Request(` / `node:http(s)` / `Bun.connect` under `src/external/**`. THE
 ORDER IS LOAD-BEARING — each step exists because the next one would otherwise
@@ -755,8 +771,8 @@ external search goes through the adapter, never through SQO
 (`component_external.search` is still `{status:'unported'}` and THROWS — a
 silently empty result set would look like "no matches").
 
-The browser asks the engine; the engine asks the service through the ONE
-outbound door. Until 2026-08-06 `service_autocomplete.js` (`zenon_engine`)
+The browser asks the engine; the engine asks the service through the
+subsystem's ONE outbound door (§5). Until 2026-08-06 `service_autocomplete.js` (`zenon_engine`)
 called the search endpoint DIRECTLY FROM THE BROWSER, which bypassed every
 control in §5 — and, since the XSS-02 CSP dropped third-party origins from
 `connect-src`, failed outright. Widening `connect-src` was the wrong fix twice
@@ -851,7 +867,7 @@ autocomplete path), and `client/dedalo/test/client/js/test_service_autocomplete.
 | Gate | Guards |
 |---|---|
 | `external_registry_totality_tripwire` | every declared engine/entity resolves to a registered adapter; unknown THROWS; every `api_config` parses; every `fields_map` well-formed; every adapter declares egress + capabilities + a round-tripping id codec |
-| `external_outbound_tripwire` | ONE outbound door, and it still performs every step of §5 in order |
+| `external_outbound_tripwire` | ONE outbound door under `src/external/`, and it still performs every step of §5 in order (the engine's other two doors: `engineering/OUTBOUND_SPEC.md`) |
 | `external_secret_confinement_tripwire` | §7, on BOTH publication paths + a no-third-path scan |
 | `external_isolation_tripwire` | the closed set of module-level state; no captured request identity; concurrent langs/field sets never serve each other's row |
 | `external_egress_tripwire` | §6, sentinel-driven; per-PATH classes (`egress` / `searchEgress`) |

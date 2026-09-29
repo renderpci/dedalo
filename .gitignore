@@ -111,5 +111,5 @@ src/core/update/install_stamp.json
 dev/
 dev_tools/
 
-# recovery ontology versions backup
-/install/import/ontology/*/recovery
+# ontology recovery-file output (generated locally by the ontology tools)
+install/import/ontology/*/recovery/

@@ -9,6 +9,9 @@ export const component_info: ComponentModel = {
 	model: 'component_info',
 	column: 'misc',
 	render: 'text',
+	importAppend: {
+		refuse: 'derived: the value is computed at read time, there is no stored data to append to',
+	},
 	importValueProperty: true,
 	emitHook: 'info',
 	sortable: false, // PHP component_info::get_sortable() → false (also covers state/calculation aliases)

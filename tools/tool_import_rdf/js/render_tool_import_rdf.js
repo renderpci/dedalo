@@ -30,7 +30,7 @@
 	import {ui} from '../../../core/common/js/ui.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
-	import {render_error_inline} from '../../../core/common/js/render_api_error.js'
+	import {render_error_inline, error_text} from '../../../core/common/js/render_api_error.js'
 	import {when_in_dom} from '../../../core/common/js/events.js'
 	import {get_caller_by_model} from '../../../core/common/js/utils/index.js'
 
@@ -278,14 +278,21 @@ const get_content_data_edit = async function(self) {
 							})
 						}
 
-					// per-URI refusals: payload facts (one bad URI never fails the batch)
+					// per-URI refusals: payload facts (one bad URI never fails the batch),
+					// each `{uri, error}` — `error` the same wire body a failed call carries,
+					// so it is rendered as one: `error_text` (the user's-language label
+					// filled from `details`, else the public `message`), never log text.
 						const uri_failures	= rdf_payload.errors
 						const ar_uri_errors	= Array.isArray(uri_failures) ? uri_failures : []
 						if (ar_uri_errors.length>0) {
+							const lines = ar_uri_errors.map(function(item) {
+								const message = (item && item.error) ? error_text(item.error) : ''
+								return ((item && item.uri) || '') + ': ' + message
+							})
 							ui.create_dom_element({
 								element_type	: 'pre',
 								class_name		: 'error',
-								text_content	: ar_uri_errors.join('\n'),
+								text_content	: lines.join('\n'),
 								parent			: view_rdf_data_wrapper
 							})
 						}

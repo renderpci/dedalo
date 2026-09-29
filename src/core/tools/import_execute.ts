@@ -40,6 +40,7 @@ import { getModelByTipo, getTranslatableByTipo } from '../ontology/resolver.ts';
 import { currentDataLang } from '../resolve/request_lang.ts';
 import { createSectionRecord } from '../section/record/create_record.ts';
 import { saveComponentData } from '../section/record/save_component.ts';
+import { withLiveBulkRun } from './bulk_run_registry.ts';
 import { type ConformFailure, conformImportData, groupItemsByLang } from './import_data.ts';
 
 export interface MappedField {
@@ -132,7 +133,11 @@ async function writeMappedRecord(
 ): Promise<RecordOutcome> {
 	const failed: ConformFailure[] = [];
 	const wasCreated = record.sectionId === null;
-	const sectionId = record.sectionId ?? (await createSectionRecord(sectionTipo, userId));
+	// A record the run CREATES carries the run's birth marker (tm_role 3), so a
+	// revert knows the run made it (decision D2).
+	const sectionId =
+		record.sectionId ??
+		(await createSectionRecord(sectionTipo, userId, new Date(), undefined, { bulkProcessId }));
 
 	for (const field of record.fields) {
 		const model = await getModelByTipo(field.component_tipo);
@@ -268,31 +273,35 @@ export async function importMappedRecords(
 	// would split the file across two language slices.
 	const dataLang = currentDataLang();
 
-	for (const record of records) {
-		try {
-			// ONE TRANSACTION PER RECORD (the CSV door's posture): a failure part-way
-			// through a record leaves NO half-written record behind.
-			const outcome = await withTransaction(() =>
-				writeMappedRecord(record, sectionTipo, userId, bulkProcessId, dataLang),
-			);
-			if (outcome.wasCreated) {
-				created += 1;
-				createdIds.push(outcome.sectionId);
-			} else {
-				updated += 1;
+	// The run is held in the active-run registry while it writes: a revert of it
+	// is refused until it ends (decision D5).
+	await withLiveBulkRun(bulkProcessId, async () => {
+		for (const record of records) {
+			try {
+				// ONE TRANSACTION PER RECORD (the CSV door's posture): a failure part-way
+				// through a record leaves NO half-written record behind.
+				const outcome = await withTransaction(() =>
+					writeMappedRecord(record, sectionTipo, userId, bulkProcessId, dataLang),
+				);
+				if (outcome.wasCreated) {
+					created += 1;
+					createdIds.push(outcome.sectionId);
+				} else {
+					updated += 1;
+				}
+				failed.push(...outcome.failed);
+			} catch (error) {
+				// The row is rolled back, so the run continues and REPORTS it — an engine
+				// fault used to escape here and discard the whole report, `createdIds`
+				// included, leaving the operator with records they could not find.
+				failed.push({
+					section_id: record.sectionId ?? 0,
+					data: '',
+					component_tipo: sectionTipo,
+					msg: `IGNORED: the record was not written — ${error instanceof Error ? error.message : String(error)}`,
+				});
 			}
-			failed.push(...outcome.failed);
-		} catch (error) {
-			// The row is rolled back, so the run continues and REPORTS it — an engine
-			// fault used to escape here and discard the whole report, `createdIds`
-			// included, leaving the operator with records they could not find.
-			failed.push({
-				section_id: record.sectionId ?? 0,
-				data: '',
-				component_tipo: sectionTipo,
-				msg: `IGNORED: the record was not written — ${error instanceof Error ? error.message : String(error)}`,
-			});
 		}
-	}
+	});
 	return { created, updated, failed, createdIds, bulkProcessId };
 }

@@ -15,6 +15,10 @@ shape by the id under which the source tree records each one
 
 Merged since the last release; these ship with the next one.
 
+!!! warning "Action needed when you update"
+
+    - Outbound fetches now refuse every IPv6 route to an internal address.
+
 ### For users
 
 #### Security
@@ -31,6 +35,21 @@ Merged since the last release; these ship with the next one.
     Wire contract: `WC-2026-09-29-search-where-parts-parenthesized`.
 
 #### Changed
+
+- **The history of a field that links records is one timeline, whatever the working language.**
+
+    A field that links records — a portal, a select, a check box, a list of informants — holds
+    links, and links have no language, even when the field's definition is marked translatable.
+    Its [time machine](./tools/using_time_machine.md) history is now always one timeline: every
+    change is one entry holding the whole field and its dataframe frames, shown in the history of
+    every language, and restoring it or reverting a batch run puts back exactly that field,
+    whichever language you work in. Before, such a field marked translatable filed each change
+    under the language of the page that saved it. Language entries remain for text fields. Older entries a
+    previous version filed under a language are part of the same timeline and are listed in every
+    language too. The time machine no longer offers a language choice for such a field, and its
+    restore confirmation says the whole field is replaced.
+
+    Wire contract: `WC-2026-09-27-bulk-revert-undo-log`.
 
 - **Tools work on phones**
 
@@ -69,7 +88,56 @@ Merged since the last release; these ship with the next one.
     - The dialog's **minimise and close** buttons are larger click targets and show a
       visible outline when reached with the keyboard.
 
+#### Added
+
+- **The CSV import can now add a column's values to what a record already holds, instead of replacing them.**
+
+    Until now every column of a CSV import replaced the component's data, and an
+    empty cell cleared it. Each mapped column now has a **Mode**: *Replace* (the
+    default, unchanged) or *Append*. In append mode the file's values are added
+    after the stored ones and nothing stored is changed: related records are added
+    next to the existing links, a geolocation cell becomes a **new map layer**, a
+    text becomes a new paragraph, and an empty cell leaves the record untouched.
+    Values already present are skipped and counted in the report, so importing the
+    same file twice adds nothing the second time. Components where adding has no
+    meaning — media, single-choice lists, computed values — refuse append before
+    anything is written. An append records the same Time Machine entry per language
+    as a replace import. See
+    [Adding instead of replacing](./tools/using_import_dedalo_csv.md#adding-instead-of-replacing).
+
+    Wire contract: `WC-2026-09-27-csv-import-append-mode`.
+
 #### Fixed
+
+- **Reverting the same bulk run a second time no longer reports records as "not reverted" when nothing changed.**
+
+    Reverting a bulk revert, or a run whose dataframe removal had emptied a record,
+    and then repeating that revert used to report some records as
+    *cascade_delete_not_reverted*, as if someone had edited them. It happened when
+    the record carried values the run itself had written, even though nothing had
+    changed. A repeat now reports them unchanged.
+
+    A value someone really did edit after the revert is still reported as before:
+    at the record, and also at the field when the edit touched the very value the
+    run wrote.
+
+    Wire contract: `WC-2026-09-27-bulk-revert-undo-log`.
+
+- **Removing a dataframe frame no longer deletes the frame's target record.**
+
+    Since the late-September update, removing a frame (a valuation rating, say)
+    from the frame window, or removing the value it qualified, deleted the frame's
+    target record whenever the ontology slot carried the old `hard_delete: true`
+    flag. That flag was retired on purpose in v6, because the Time Machine needs
+    the target to show past states. It is ignored again: a removed frame is only
+    unlinked, and its target record stays.
+
+    Targets deleted during that window can be recovered from the Time Machine.
+    Ontology authors who want frame-private targets emptied on unlink can set
+    `"dataframe": {"delete_policy": "delete_target"}` on the slot. The data is
+    cleared and the record is kept.
+
+    Wire contract: `WC-2026-09-29-dataframe-hard-delete-retired`.
 
 - **Choosing an option in a radio-button field no longer makes the field flicker.**
 
@@ -100,6 +168,30 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-29-search-deep-leaf-mixed-rule`, `WC-2026-09-29-number-not-equal`.
 
+- **The time machine shows a field's frames and their values as they were at the chosen change.**
+
+    In the [time machine](./tools/using_time_machine.md), the preview of a field with a
+    [dataframe](./core/components/component_dataframe.md) could show today's frames instead of
+    the ones of the chosen entry, and a frame's own values — a role, a rating and its colour —
+    were always shown as they are now. The preview and the history list now show the frames and
+    their values as they were at that change: an entry from before a frame was added shows no
+    frame, a rating edited later shows its earlier value, and a frame record emptied since shows
+    what it held. Switching between entries, or clicking the same entry again, never shows the
+    previous entry's frames, and a save made elsewhere no longer changes an open preview. The
+    history list's frame column now matches the preview for every entry, including the entries
+    of one language of a translatable field, which showed no frames before, and each entry's frame
+    button shows the rating colour of that entry, not the newest one. In a record's whole history
+    (the entries of a deleted or recovered record), each field's frames show their values as they
+    were at that entry: a deleted record shows them as they were when it was deleted, not the
+    emptied values its dataframe policy left after the deletion. Recovering a deleted record now
+    adds its own entry to the record's history, so the deleted record's entry keeps showing those
+    values after the recovery. In the time machine a frame's button is now read-only: it shows the
+    frame's label and colour, but offers no **+** and opens nothing — before, clicking it opened the
+    record as it is now, editable, from a view of the past. The same holds for a user without
+    permission to edit the dataframe.
+
+    Wire contract: `WC-2026-09-29-tm-preview-frame-children-as-of`.
+
 - **A section that fails to load says why, and can be reloaded**
 
     When a section or thesaurus element could not be loaded, the red banner always
@@ -113,6 +205,113 @@ Merged since the last release; these ship with the next one.
     user re-logged, the page loaded but the "permissions" banner was painted over
     it anyway. The request is now re-sent once after re-login and the page builds
     normally.
+
+- **Deleting a record's data now also empties every dataframe of its fields.**
+
+    **Delete data** empties every field of a record, and now also removes the frames of every
+    [dataframe](./core/components/component_dataframe.md) those fields had — whatever the field
+    is: a portal, a text or number field, or a link (IRI) with its labels — even a field that
+    held no value of its own when the frames were saved first. Before, a dataframe
+    that was not itself a field of the section (an IRI's labels, a dataframe named only in a
+    field's configuration) kept its frames after the wipe, attached to nothing and impossible to
+    remove from the edit view. Restoring an older entry from the
+    [Time machine](./tools/using_time_machine.md) likewise removes the frames of the values it
+    takes out, in every dataframe of the field. The history entries **Delete data** writes are
+    filed in each language's own history (and the frames in the `lg-nolan` entry), so every
+    language's time machine lists the wipe.
+
+- **A field's history now keeps its dataframe with it, and restoring an entry restores both.**
+
+    A field with a [dataframe](./core/components/component_dataframe.md) — informants with their
+    role, a value with its certainty — stores the two apart, but they mean one thing. Until now
+    the history recorded them apart as well: the field's entries held no frames, so restoring
+    an entry left the frames as they were today. The field's history now holds both, in two
+    kinds of entry: an entry of a **language** holds that language's value, and an entry marked
+    **lg-nolan** holds the value that has no language (a field that is not translatable, or the
+    base form of a name with transliterations — *Augustus*, beside *Αύγουστος* in Greek) and
+    **all** the frames. A change to a frame adds ONE lg-nolan entry to the field's own history
+    (the dataframe has none), never a copy per language, and the history of a language lists
+    its own entries and the lg-nolan entries together. It does not matter whether the value or
+    the frame was saved first: the preview of any entry shows the whole state at that moment —
+    the language's value and the frames as they were — and restoring it returns that state:
+    a language entry puts its language back with the frames of that moment, an lg-nolan entry
+    puts its frames back. The field's other languages, and another field sharing the same
+    dataframe, keep theirs; a frame of an item deleted since is never put back.
+    This holds for every kind of field a dataframe can hang from — a list of linked records, a
+    text in several languages, a transliterable name, a number, a date, a web address with its
+    label. Translations and duplicated records record their history the same way. Reverting a
+    batch run does the same for every field it changed, language by language.
+    Entries recorded by Dédalo v6 are read the same way: an entry that carries frames gives its
+    language value and the frames of that moment, and a dataframe such an entry is silent about
+    was empty then; a v6 language entry with no frames at all takes the frames recorded before it.
+    Removing an item of any such field — a text, a number, a date, a web address, not only a
+    list of linked records — now removes its frames too. See
+    [Time machine](./tools/using_time_machine.md).
+
+    Wire contract: `WC-2026-09-27-bulk-revert-undo-log`.
+
+- **A field's history now shows the dataframe it had at that moment.**
+
+    In the [Time machine](./tools/using_time_machine.md) preview, an entry of a field with a
+    [dataframe](./core/components/component_dataframe.md) now shows the frames the field had at
+    that moment — the role of each informant, the certainty of each value — instead of
+    today's, together with the field's value as it stood then, and the field's own values no
+    longer list the frames among them. Entries recorded by Dédalo v6 show their frames too: in
+    an entry that carries frames, a dataframe it holds none for shows empty — which is what a
+    restore leaves there; a v6 language entry with no frames at all shows the frames recorded
+    before it.
+
+    Wire contract: `WC-2026-09-27-bulk-revert-undo-log`.
+
+- **A transliteration saved in its language no longer replaces the base form.**
+
+    A field that keeps a base form and per-language versions — a person's name such as
+    *Augustus* with its Greek form *Αύγουστος* ([component_input_text](./core/components/component_input_text.md)
+    with `with_lang_versions`) — now stores a version saved in a language beside the base
+    form. Before, editing the field in Greek, importing a CSV cell with both forms, or running
+    *Propagate component data* or *Update cache* on it replaced the base form with the
+    version, and *Update cache* could even create a base form that never existed. Each form
+    now also has its own entry in the [Time machine](./tools/using_time_machine.md) history, listed
+    while you work in that form's language; its preview shows the base form, and restoring it puts
+    the form back.
+
+- **Reverting a batch run now restores exactly what the run replaced, and says what it could not.**
+
+    **Revert the bulk process** used to guess each value's state before the run from the
+    history just older than it. Where that history was missing — values stored before the time
+    machine recorded them, written with it off, or appended to by a CSV import — the revert
+    **emptied** the field instead of restoring it; where a later edit had been made with the
+    time machine off, it rolled that edit back. Every batch run (CSV import, bulk component
+    edit, update cache, MARC21 and Zotero imports, and a revert itself) now records, with each
+    change, the exact value it replaced, so the revert puts that value back. A field someone
+    edited after the run is **left alone** and reported, never overwritten; records the run
+    created are removed only when nothing else refers to them, and records the run deleted
+    come back together with every link that pointed at them. Reverting an old import never
+    touches a record that a later import created again at the same id. When the revert finishes, a
+    summary lists what was reverted, what was skipped and why, and the id of the revert, which
+    can itself be reverted; reverting the same run a second time changes nothing and says
+    so. Re-importing an unchanged file, or repeating the same bulk replace, records nothing,
+    portal links included, and the dataframe frames of those links stay attached. Runs made
+    before this update are still reverted the old way, with its known fixes, and the summary
+    marks those values as inferred; a frame edited after such a run is left alone and reported, and
+    the dataframe frames of an old run that saved several languages of a field are restored together
+    instead of being refused as changed. The CSV import no longer
+    has a *Save time machine history on import* switch: every import can be reverted. A revert,
+    a single-field restore or a record recovery of a hierarchical term field now also updates
+    its broader-term search index, so a search for a broader term finds the restored value (and
+    no longer the value it replaced) without waiting for a later save. See
+    [Time machine](./tools/using_time_machine.md).
+
+    Wire contract: `WC-2026-09-27-bulk-revert-undo-log`.
+
+- **A CSV import that carries the modification date and user keeps them on records whose cells embed dataframe frames.**
+
+    When a CSV row carried the record's *modified date* / *modified by* columns and
+    also a cell with embedded dataframe frames (a `{"data":…,"dataframe":…}` value
+    from a raw export), saving those frames re-stamped the record as modified
+    "now, by the importer", overwriting the imported values. The frames are now
+    saved without touching the stamp, so the record keeps the date and user from
+    the file — as it already did for every other column.
 
 - **Searching through a related record (e.g. a coin's type → its mint → the mint's name) is much faster.**
 
@@ -131,6 +330,51 @@ Merged since the last release; these ship with the next one.
     offered, including list filters and the state widget.
 
 ### For administrators
+
+#### Security
+
+- **Outbound fetches now refuse every IPv6 route to an internal address.** *(action needed)*
+
+    When the server fetches a URL on a user's behalf (an RDF import, an external catalogue
+    lookup, a translation or transcription service, a harvest), it first checks that the
+    address is on the public internet, so a user cannot point it at your internal network or
+    at the cloud metadata endpoint. Until now several IPv6 forms passed that check although
+    they lead to an internal address: the NAT64 prefix `64:ff9b::/96` (on an IPv6-only host
+    this reaches `169.254.169.254`), 6to4 `2002::/16`, the IPv4-compatible and IPv4-translated
+    forms, the old site-local range, multicast, Teredo, and any address carrying a zone
+    (`%eth0`). The documentation ranges (`192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`,
+    `2001:db8::/32`) were also accepted.
+
+    Now all of them are refused. An IPv6 address is accepted only inside the global unicast
+    space. One that carries an IPv4 address through the IPv4-mapped form or NAT64 is judged by
+    that IPv4 address, so on an IPv6-only install public sites stay reachable. 6to4 and Teredo
+    are tunnels and are refused whole.
+
+    **Action needed on an IPv6-only server behind a NAT64 translator that uses its own
+    prefix** (a network-specific one, or one taken from the local-use block `64:ff9b:1::/48`
+    or a unique-local range): IPv4 sites are unreachable from it until you declare the
+    translator's prefix, exactly as it is configured, in the new setting
+    `DEDALO_NAT64_PREFIXES` (for example `2001:db8:64::/96` or `64:ff9b:1::/96`). Addresses
+    inside it are then judged by the IPv4 address they reach. The server also asks the network
+    for its NAT64 prefix on its own, but uses the answer only to refuse more, never to allow
+    more. Nothing to configure anywhere else.
+
+    With `DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS` on, an on-premise transcription server may
+    still not sit on IPv4 link-local (`169.254.0.0/16`) or on another cloud's metadata address
+    (`100.100.100.200`, `192.0.0.192`, and the IPv6 metadata servers of AWS, `fd00:ec2::254`,
+    and Google Compute Engine, `fd20:ce::254`), in any spelling — through a local-use NAT64
+    address (`64:ff9b:1::/48`) included.
+
+    **Action needed if an address allowlist** (`DEDALO_INSTALL_ALLOWED_IPS`,
+    `DEDALO_ERROR_REPORT_ALLOWED_IPS`) **has an IPv4 part with a leading zero**
+    (`127.0.0.01`, `010.0.0.1`): such an entry is no longer read as a number and matches no
+    client, because some systems read it as octal — so the installer or the error report
+    refuses that client until you rewrite the entry without leading zeros. The install
+    allowlist line the server logs when it starts names such an entry as ignored. An entry now
+    matches its address in every spelling: `2001:db8:0::1` matches a client reported as
+    `2001:db8::1`, `127.0.0.1` (or the `loopback` token) matches `::ffff:7f00:1`, the form a
+    dual-stack listener may report, and a block written in the IPv4-mapped form
+    (`::ffff:10.0.0.0/104` or `::ffff:a00:0/104`) is the IPv4 block it spells (`10.0.0.0/8`).
 
 #### Changed
 
@@ -168,6 +412,33 @@ Merged since the last release; these ship with the next one.
 
     The server now refuses those requests itself, and its message names the setting to fix: set `DEDALO_HOST` (and `DEDALO_PROTOCOL`) on the update server. Requests from the same machine are still served, so local development setups keep working.
 
+- **Time machine restore no longer fails on installs whose outbound host allowlist is empty.**
+
+    Before, restoring any value from the [time machine](./tools/using_time_machine.md) was
+    refused when `DEDALO_EXTERNAL_ALLOWED_HOSTS` was empty — which is the default. The error
+    named a section you had not touched (on a standard install, `test3`) and its external
+    catalogue host (Zenon), because the engine checked the allowlist while merely reading an
+    [external service](./core/system/external_services.md) binding, even though a restore
+    never contacts that service.
+
+    Now restores work with no change to your `.env`. The allowlist still guards every request
+    the server sends out: a request to a host that is not listed is refused before any
+    connection is opened. Where a host is not allowed, what you see changes in three places: an
+    external search notice now names the real service and says the host is blocked, and an
+    external value in a record and an export's degradation report name the real service, all
+    instead of reporting an unknown, misconfigured source.
+
+    Wire contract: `WC-2026-09-27-external-allowlist-at-door-only`.
+
+- **The multi-instance Apache example now sets an empty `DocumentRoot` and the entry redirects.**
+
+    The Apache virtual host in [Multiple instances](./install/multi_instance.md) had no
+    `DocumentRoot`, so a vhost copied from it inherited the server-wide one (often
+    `/var/www/html`) and served its contents on any path it did not route. It now points
+    at an empty directory, like the single-instance reference, and carries the `302`
+    redirects from `/`, `/dedalo/` and `/dedalo/core/` to the login page. Check each
+    existing Dédalo vhost for a `DocumentRoot` line.
+
 - **The developer information bar is shown to developers and root again, on any server.**
 
     The information strip at the top of the interface — engine version, build, database and runtime — is a developer surface. It had become tied to `DEDALO_DEV_MODE`, so on an installation that did not set that key it was hidden even from a logged-in developer, and setting it in `private/.env` did nothing because the container environment takes precedence. That is what a Docker installation saw: no developer bar, whatever the `.env` said.
@@ -180,7 +451,49 @@ Merged since the last release; these ship with the next one.
 
 ### For developers
 
+#### Security
+
+- **The RDF import no longer shows the internal address a refused link resolved to.**
+
+    When an RDF link was refused because its host leads into the institution's own network,
+    the per-link error list of `get_rdf_data` repeated the server's log text, which names the
+    internal address the host resolved to. Each failed link is now reported as
+    `{uri, error}`, where `error` is the same error body a failed request carries: a fixed,
+    public sentence and a code (`security.ssrf_blocked`), never the address. The import
+    screen shows one line per failed link, as before, now in the user's language when that
+    error has a translated label.
+
+    Wire contract: `WC-2026-09-29-rdf-per-uri-error-wire-body`.
+
+#### Added
+
+- **Tool authors can read other sites through `harvestFetch`, a harvesting door that obeys robots.txt and paces its requests.**
+
+    A tool that imports from another institution's site (an auction catalogue, a journal's
+    OAI endpoint, a publisher's PDF) can now call `harvestFetch` instead of building its own
+    fetch layer. For every hop of a redirect chain it re-checks the address and your host
+    policy, refuses a switch from https to http, and asks the site's `robots.txt` — for
+    images, PDFs and POSTs too. It sends one request at a time per origin, for the whole
+    installation, at least three seconds apart, or at the site's `Crawl-delay` or
+    `Retry-After` capped at one minute. It connects to the address it checked, bounds each
+    hop by a total and an idle timeout and a byte ceiling, and can refuse an unexpected
+    media type before downloading it. Its refusals carry their own codes
+    (`harvest.refused`, `harvest.robots_disallowed`, `harvest.robots_unavailable`,
+    `harvest.too_large`, `harvest.unexpected_type`), which name the site and the reason, so
+    a cataloguer learns why a URL was not fetched. See
+    [Fetching from other sites](./development/tools/server_contract.md#fetching-from-other-sites-srccoreharvestharvestts).
+
 #### Fixed
+
+- **A refused save no longer leaves an empty record behind.**
+
+    A save to a record that does not exist yet creates the record first. When the change itself was
+    then refused (for example, removing a value the field does not hold), the answer was a failure,
+    but the new empty record stayed, the section's id counter had moved to its id, and the activity
+    log recorded its creation. A refused save now leaves nothing behind: no record, no counter move,
+    no history or activity entry. The answer to the request is unchanged. A save run inside a
+    larger operation (an import row, for example) leaves that choice to the operation, which rolls
+    the row back as before.
 
 - **A relation search with an unreadable value now fails with an error instead of quietly matching every record.**
 
@@ -196,7 +509,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 51 entries"
+??? note "Wire contract — 57 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -243,12 +556,18 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-24-external-record-field-set`
     - `WC-2026-09-24-multi-section-search-identity-dedup`
     - `WC-2026-09-24-tool-export-server-built-artifacts`
+    - `WC-2026-09-27-bulk-revert-undo-log`
+    - `WC-2026-09-27-csv-import-append-mode`
+    - `WC-2026-09-27-external-allowlist-at-door-only`
     - `WC-2026-09-28-maintenance-serve-code-widget`
     - `WC-2026-09-28-maintenance-serve-ontology-widget`
     - `WC-2026-09-29-code-release-channel-refs`
+    - `WC-2026-09-29-dataframe-hard-delete-retired`
     - `WC-2026-09-29-number-not-equal`
+    - `WC-2026-09-29-rdf-per-uri-error-wire-body`
     - `WC-2026-09-29-search-deep-leaf-mixed-rule`
     - `WC-2026-09-29-search-where-parts-parenthesized`
+    - `WC-2026-09-29-tm-preview-frame-children-as-of`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

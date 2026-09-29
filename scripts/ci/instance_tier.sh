@@ -25,7 +25,7 @@
 # reseed on"). A second job with its own service container is that isolation.
 #
 # WHAT IT SHARES WITH THE DB TIER, by `source`: the whole composed environment
-# (scripts/ci/hosted_env.sh — the required keys, the seed's egress allowlist, the
+# (scripts/ci/hosted_env.sh — the required keys, the
 # fixture-harvest configuration, the seam tables, the Postgres client path). One
 # copy, so the two tiers cannot drift; the rules that pin it follow the `source`.
 #

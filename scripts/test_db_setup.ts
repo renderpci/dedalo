@@ -603,10 +603,22 @@ console.log(
 // The marker is already written (2b), so this is a write to a database that
 // says it is disposable; the migration lane itself is the install's, not a
 // test-data writer, which is why it needs no assertTestDatabase of its own.
-const { runMigrations } = await import('../install/db/migrate.ts');
+//
+// A booted install ALSO runs the ONLINE migrations (install/db/online_migration.ts
+// — the CONCURRENTLY index builds the boot run DEFERS so they never hold the
+// listener; startServer runs them right after it binds). The suite database
+// never listens, so without this step its history indexes (0011/0012) existed
+// only after some test:client server had happened to start on it — the same
+// order-dependence as above, on the plans the TM read gates EXPLAIN. Awaited
+// here: nothing is serving, so there is no listener to hold.
+const { runMigrations, runOnlineMigrations } = await import('../install/db/migrate.ts');
 const migrations = await runMigrations();
 console.log(
 	`[test-db] boot migrations applied: ${migrations.applied.length} (${migrations.applied.join(', ')}; ${migrations.skipped} already recorded) — the suite database is a BOOTED install`,
+);
+const onlineMigrations = await runOnlineMigrations();
+console.log(
+	`[test-db] online migrations applied: ${onlineMigrations.applied.length} (${onlineMigrations.applied.join(', ')})`,
 );
 
 // 5d. THE DERIVED-STORE HEAL — the same self-provisioning a real boot runs

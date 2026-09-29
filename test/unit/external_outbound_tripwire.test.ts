@@ -187,7 +187,12 @@ describe(`${DOOR} still performs every step of its order`, () => {
 		{ step: '3 — the host allowlist', pattern: /isAllowedExternalHost\s*\(/ },
 		{ step: '4 — the SSRF guard', pattern: /assertPublicUrl\b/ },
 		{ step: '4 — the socket pin (vetted address)', pattern: /vetted\.addresses\[/ },
-		{ step: '4 — the pin keeps SNI at the real host', pattern: /serverName/ },
+		// The pin (and its SNI-at-the-real-host half) is ssrf_guard's ONE implementation
+		// since 2026-09-29; the behaviour is asserted by external_transport_native.
+		{
+			step: '4 — the shared socket pin keeps SNI at the real host',
+			pattern: /pinToVettedAddress\s*\(/,
+		},
 		{ step: '5 — the credential, after vetting', pattern: /attachCredential\s*\(/ },
 		{ step: "6 — redirect:'error'", pattern: /redirect:\s*'error'/ },
 		{ step: '6 — an AbortSignal', pattern: /controller\.signal/ },

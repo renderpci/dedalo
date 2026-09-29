@@ -51,7 +51,7 @@ The tool attaches to the components it can edit. While a section is in **edit** 
     Propagation changes real data across your whole selection. Running it with no filter applies to **every** record in the section — the tool warns you, but read the count before confirming. You need write permission on the section and component. Very large selections run as a background job and can take a while.
 
 !!! tip "You can undo the whole batch"
-    Every write in one run is stamped with the same batch id, so the entire propagation is reversible as a unit. If a run set the wrong value, open the [Time machine](using_time_machine.md) on any affected record, find that batch, and **revert the bulk process** — every record the run touched is rolled back in one action (an administrator role is required to revert a batch).
+    Every write in one run is stamped with the same batch id and records the value it replaced, so the entire propagation is reversible as a unit, exactly. If a run set the wrong value, open the [Time machine](using_time_machine.md) on any affected record, find that batch, and **revert the bulk process** — every record the run touched is rolled back in one action (an administrator role is required to revert a batch). A record someone edited after the run is left alone and reported — see [Reverting a batch run](using_time_machine.md#reverting-a-batch-run).
 
 ## Related
 

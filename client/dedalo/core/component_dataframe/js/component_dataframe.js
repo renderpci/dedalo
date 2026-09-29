@@ -189,7 +189,9 @@ component_dataframe.prototype.create_new_section = async function(options) {
 * (!) `self.datum.data` is the flat relations / data bag loaded by the parent
 * section record; it is NOT the dataframe's own data. Filtering by (tipo,
 * section_tipo, section_id) is required to scope the lookup to the right frame entry
-* among potentially many frames attached to different items in the same record.
+* among potentially many frames attached to different items in the same record,
+* and by `row_section_id` to scope it to this slot's own listed row (a TM history
+* list emits the same frame target once per row, each as of that row).
 *
 * @returns {Object|null} The matching datum entry (carrying tipo, section_tipo,
 *   section_id, and the rating value), or null if the rating cannot be resolved.
@@ -218,15 +220,29 @@ component_dataframe.prototype.get_rating = function() {
 		// The rating component's data lives inside that target section record.
 		const locator = entries[0]
 
+		// row — the listed row that owns this slot (the server stamps it on the frame item
+		// and on every frame child: row_section_id). The datum is the LIST's, shared by every
+		// row, and the same frame target can be emitted once PER ROW with a different value:
+		// a time machine history list reads each row's frame children AS OF that row
+		// (WC-2026-09-29-tm-preview-frame-children-as-of). Without this key every row linking
+		// the same target showed the first-emitted row's rating.
+		const row_section_id = self.data.row_section_id
+
 		// Scan the parent datum bag for a data entry that:
 		//  - belongs to the rating component (rating_ddo.tipo)
 		//  - is scoped to this dataframe slot (from_component_tipo === self.tipo)
 		//  - belongs to the first frame entry (section_tipo + section_id match)
+		//  - belongs to this slot's row (row_section_id), when both sides carry it
 		const data_rating = self.datum.data.find(el =>
 			el.tipo === rating_ddo.tipo
 			&& el.from_component_tipo === self.tipo
 			&& el.section_tipo === locator.section_tipo
 			&& same_section_id(el.section_id, locator.section_id)
+			&& (
+				row_section_id===undefined || row_section_id===null
+				|| el.row_section_id===undefined || el.row_section_id===null
+				|| same_section_id(el.row_section_id, row_section_id)
+			)
 		)
 		return data_rating
 	}

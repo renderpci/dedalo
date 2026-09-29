@@ -1,22 +1,26 @@
 /**
- * DATAFRAME DELETE POLICY — the SLOT's, on BOTH doors, with a hard value
- * (WC-2026-09-06-dataframe-delete-policy-on-slot).
+ * DATAFRAME DELETE POLICY — the SLOT's, on every door, and NEVER a row removal
+ * (WC-2026-09-06-dataframe-delete-policy-on-slot; hard value retired by
+ * WC-2026-09-29-dataframe-hard-delete-retired).
  *
- * THE THREE DEFECTS THIS GATE CLOSES, each reproduced by a test that goes red
- * when its fix is undone:
+ * THE DEFECTS THIS GATE CLOSES, each reproduced by a test that goes red when
+ * its fix is undone:
  *  - WRONG NODE. The engine read `dataframe.delete_policy` from the MAIN
- *    component; the docs, the retired-key tripline and the 59 legacy
- *    `hard_delete` nodes put it on the SLOT. Test "a policy on the MAIN node
- *    alone is ignored" pins the slot as the ONE home; the four spellings pin
- *    the slot read.
+ *    component; the docs and the retired-key tripline put it on the SLOT.
+ *    Test "a policy on the MAIN node alone is ignored" pins the slot as the
+ *    ONE home.
  *  - ONE DOOR. The dataframe modal's Delete button removes the frame through
  *    `action:'remove'` on the SLOT itself, which reached the main-item cascade
  *    with the slot as "main" and returned without touching the target. The
  *    `direct` door of every case is that button.
- *  - SOFT ONLY. `hard_delete: true` (the v6 opt-in, inert since v6 — its only
- *    reader shipped commented out) and the spelled `delete_target_record`
- *    delete the target RECORD after a Time Machine snapshot; `delete_target`
- *    keeps the soft meaning it had.
+ *  - A TARGET ROW REMOVED (2026-09-29). The 2026-09-06 entry read the v6
+ *    `hard_delete: true` as "delete the target record" and REMOVED frame
+ *    targets (numisdata251 → rsc1242 on a curator's Delete). v6 had retired
+ *    that key on purpose: Time Machine renders a main's past frames through
+ *    the target, so the row must stay. `hard_delete` and the TS-invented
+ *    `delete_target_record` are now `unlink`: every door leaves the target
+ *    whole, and no door writes a whole-record `deleted` snapshot for it. The
+ *    only opt-in is the soft `delete_target` (components emptied, row kept).
  *
  * ANTI-VACUITY. Every case first proves the frame target EXISTS with its
  * literal (a target that was never there makes "row gone" free), asserts the
@@ -25,15 +29,16 @@
  * asserted to resolve to `component_dataframe` (a mis-modelled slot takes a
  * different save path and the direct door would be testing nothing).
  *
- * THE COMMIT LANE IS ASSERTED, not trusted: a target delete never shares the
- * save's transaction (deleteSectionRecord's media move and diffusion unpublish
- * are irreversible and must be genuinely post-commit), so inside an OUTER
- * transaction the target must still be there after the save returns and gone
- * only after COMMIT — and on ROLLBACK both the unlink and the target come back.
+ * THE COMMIT LANE IS ASSERTED, not trusted: a target wipe never shares the
+ * save's transaction (deleteSectionData's media move is irreversible and must
+ * be genuinely post-commit), so inside an OUTER transaction the target must
+ * still carry its note after the save returns and be emptied only after COMMIT
+ * — and on ROLLBACK both the unlink and the target's data come back.
  *
  * THE WHOLE-RECORD DOOR: deleting the host itself applies each slot's policy to
- * its own frames (applyOwnFramePolicies) — the same ontology may not orphan
- * its ratings because the curator deleted the coin instead of the valuation.
+ * its own frames (applyOwnFramePolicies) — a `delete_target` slot does not
+ * keep its frame-private data because the curator deleted the coin instead of
+ * the valuation.
  *
  * THE SITUATION IS BUILT on the reserved scratch TLD `zzdfdp` — host section,
  * portal main, dataframe slot, frame-private target section with one literal,
@@ -131,6 +136,8 @@ const FRAME_NOTE = 'zzdfdp5'; // component_input_text on the frame target
 const PORTAL_TARGET = 'zzdfdp6'; // section: what the main's items point at
 const FRAME_NOTE_2 = 'zzdfdp7'; // a SECOND literal on the frame target (the atomicity case)
 const USER_ID = SUPERUSER_ID;
+/** The one destructive opt-in: soft, row kept. */
+const SOFT = { dataframe: { delete_policy: 'delete_target' } } as const;
 
 /** The situation with the SLOT carrying `slotProperties` beside its portal source. */
 function situationWithSlot(
@@ -381,7 +388,7 @@ async function removeThrough(door: Door, hostId: number): Promise<void> {
 	if (result.ok !== true) throw new Error(`${door} remove failed: ${result.message}`);
 }
 
-type Expected = 'survives' | 'emptied' | 'gone';
+type Expected = 'survives' | 'emptied';
 
 /** Every section tipo the save event fired for — the cache-invalidation channel. */
 const saveEventsFired: string[] = [];
@@ -412,10 +419,8 @@ async function runCase(door: Door, expected: Expected): Promise<void> {
 		// the write chokepoint the wipe goes through, on the post-tx lane
 		expect(saveEventsFired.filter((tipo) => tipo === FRAME_SECTION).length).toBeGreaterThan(0);
 	}
-	if (expected === 'gone') {
-		expect(a).toEqual({ row: false, note: false });
-		expect(await deletedSnapshots(frameA)).toBe(1); // recoverable: snapshot first
-	}
+	// under EVERY policy the target row stays: no whole-record removal snapshot
+	expect(await deletedSnapshots(frameA)).toBe(0);
 	// the sibling's target is never touched, whatever the policy
 	expect(await targetState(frameB)).toEqual({ row: true, note: true });
 }
@@ -441,20 +446,16 @@ afterAll(async () => {
 });
 
 describe('dataframeDeletePolicyOf — the reader', () => {
-	test('the four spellings, the precedence, and the fail-safe default', () => {
+	test('ONE destructive spelling, soft; everything else — hard_delete included — is unlink', () => {
 		expect(dataframeDeletePolicyOf(null)).toBe('unlink');
 		expect(dataframeDeletePolicyOf({})).toBe('unlink');
-		expect(dataframeDeletePolicyOf({ dataframe: { delete_policy: 'delete_target' } })).toBe(
-			'delete_target',
-		);
+		expect(dataframeDeletePolicyOf(SOFT)).toBe('delete_target');
+		// the retired hard spellings: inert (WC-2026-09-29-dataframe-hard-delete-retired)
+		expect(dataframeDeletePolicyOf({ hard_delete: true })).toBe('unlink');
 		expect(dataframeDeletePolicyOf({ dataframe: { delete_policy: 'delete_target_record' } })).toBe(
-			'delete_target_record',
+			'unlink',
 		);
-		expect(dataframeDeletePolicyOf({ hard_delete: true })).toBe('delete_target_record');
-		// hard_delete wins over a conflicting spelled policy
-		expect(
-			dataframeDeletePolicyOf({ hard_delete: true, dataframe: { delete_policy: 'unlink' } }),
-		).toBe('delete_target_record');
+		expect(dataframeDeletePolicyOf({ hard_delete: true, ...SOFT })).toBe('delete_target');
 		// an unknown spelling never destroys data
 		expect(dataframeDeletePolicyOf({ hard_delete: 'true' })).toBe('unlink');
 		expect(dataframeDeletePolicyOf({ hard_delete: 1 })).toBe('unlink');
@@ -482,9 +483,9 @@ describe('dataframeTargetsOf — what a policy may reach', () => {
 	});
 });
 
-describe('the delete runs on the COMMIT lane — after the unlink, never inside it', () => {
-	test('inside an outer transaction the target survives the save and goes at COMMIT', async () => {
-		await ensureSlot({ hard_delete: true });
+describe('the wipe runs on the COMMIT lane — after the unlink, never inside it', () => {
+	test('inside an outer transaction the target keeps its data through the save and is emptied at COMMIT', async () => {
+		await ensureSlot(SOFT);
 		const { hostId, frameA, frameB } = await seed();
 		let insideAfterSave: { row: boolean; note: boolean } | null = null;
 		let slotInside: unknown[] = [];
@@ -496,14 +497,14 @@ describe('the delete runs on the COMMIT lane — after the unlink, never inside 
 		});
 		expect((slotInside as { id_key?: unknown }[]).map((entry) => entry.id_key)).toEqual([2]);
 		expect(insideAfterSave as unknown).toEqual({ row: true, note: true });
-		// after COMMIT the queued delete ran, in its own transaction
-		expect(await targetState(frameA)).toEqual({ row: false, note: false });
-		expect(await deletedSnapshots(frameA)).toBe(1);
+		// after COMMIT the queued wipe ran, in its own transaction; the row stays
+		expect(await targetState(frameA)).toEqual({ row: true, note: false });
+		expect(await deletedSnapshots(frameA)).toBe(0);
 		expect(await targetState(frameB)).toEqual({ row: true, note: true });
 	}, 30000);
 
 	test('on ROLLBACK the unlink and the target both come back — the queue is discarded', async () => {
-		await ensureSlot({ hard_delete: true });
+		await ensureSlot(SOFT);
 		const { hostId, frameA, frameB } = await seed();
 		await expect(
 			withTransaction(async () => {
@@ -599,7 +600,7 @@ async function installReaderIdentity(): Promise<void> {
 
 describe('the WRITE GRANT on the frame target section is asked, not inherited from the host', () => {
 	test('level 2 on the host, level 1 on the frame section → perm.denied, unlink rolled back, target intact', async () => {
-		await ensureSlot({ hard_delete: true });
+		await ensureSlot(SOFT);
 		await installReaderIdentity();
 		const { hostId, frameA, frameB } = await seed();
 		// the grant really is the difference: the identity resolves to a non-admin
@@ -636,13 +637,13 @@ describe('the WRITE GRANT on the frame target section is asked, not inherited fr
 		expect(await targetState(frameB)).toEqual({ row: true, note: true });
 		// positive control: the same remove as root goes through
 		await removeThrough('direct', hostId);
-		expect(await targetState(frameA)).toEqual({ row: false, note: false });
+		expect(await targetState(frameA)).toEqual({ row: true, note: false });
 	}, 30000);
 });
 
-describe('a target delete that fails AFTER commit is logged, and the loop continues', () => {
-	test('host delete under hard_delete with frame A refused: host gone, A survives as an orphan, B gone', async () => {
-		await ensureSlot({ hard_delete: true });
+describe('a target wipe that fails AFTER commit is logged, and the loop continues', () => {
+	test('host delete under delete_target with frame A refused: host gone, A whole, B emptied', async () => {
+		await ensureSlot(SOFT);
 		const { hostId, frameA, frameB } = await seed();
 		failTimeMachineForRecord = frameA;
 		let outcome: { removed: boolean } | null = null;
@@ -653,26 +654,25 @@ describe('a target delete that fails AFTER commit is logged, and the loop contin
 		}
 		expect(outcome?.removed).toBe(true);
 		expect(await targetState(frameA)).toEqual({ row: true, note: true }); // the orphan, whole
-		expect(await deletedSnapshots(frameA)).toBe(0);
-		expect(await targetState(frameB)).toEqual({ row: false, note: false }); // the loop went on
-		expect(await deletedSnapshots(frameB)).toBe(1);
+		expect(await targetState(frameB)).toEqual({ row: true, note: false }); // the loop went on
+		expect(await deletedSnapshots(frameB)).toBe(0);
 	}, 30000);
 });
 
 describe('the inverse-cleanup doors — a target delete and a portal unlink reach the slot policy', () => {
-	test('deleting the PORTAL TARGET record strips the host’s items and deletes both frame targets', async () => {
-		await ensureSlot({ hard_delete: true });
+	test('deleting the PORTAL TARGET record strips the host’s items and empties both frame targets', async () => {
+		await ensureSlot(SOFT);
 		const { hostId, portalTargetId, frameA, frameB } = await seed();
 		expect((await deleteSectionRecord(PORTAL_TARGET, portalTargetId, USER_ID)).removed).toBe(true);
 		expect(await slotEntries(hostId)).toEqual([]);
-		expect(await targetState(frameA)).toEqual({ row: false, note: false });
-		expect(await targetState(frameB)).toEqual({ row: false, note: false });
-		expect(await deletedSnapshots(frameA)).toBe(1);
-		expect(await deletedSnapshots(frameB)).toBe(1);
+		expect(await targetState(frameA)).toEqual({ row: true, note: false });
+		expect(await targetState(frameB)).toEqual({ row: true, note: false });
+		expect(await deletedSnapshots(frameA)).toBe(0);
+		expect(await deletedSnapshots(frameB)).toBe(0);
 	}, 30000);
 
-	test('deletePortalLocator on main item 1 deletes frame A’s target and leaves frame B’s', async () => {
-		await ensureSlot({ hard_delete: true });
+	test('deletePortalLocator on main item 1 empties frame A’s target and leaves frame B’s', async () => {
+		await ensureSlot(SOFT);
 		const { hostId, portalTargetId, frameA, frameB } = await seed();
 		// both main items point at the same portal target: remove ONE by its id
 		const response = await deletePortalLocator(
@@ -691,36 +691,75 @@ describe('the inverse-cleanup doors — a target delete and a portal unlink reac
 		);
 		expect(response.removed).toBe(1);
 		expect((await slotEntries(hostId)).map((entry) => entry.id_key)).toEqual([2]);
-		expect(await targetState(frameA)).toEqual({ row: false, note: false });
-		expect(await deletedSnapshots(frameA)).toBe(1);
+		expect(await targetState(frameA)).toEqual({ row: true, note: false });
+		expect(await deletedSnapshots(frameA)).toBe(0);
 		expect(await targetState(frameB)).toEqual({ row: true, note: true });
 	}, 30000);
+
+	for (const [name, properties] of [
+		['hard_delete: true', { hard_delete: true }],
+		[
+			'delete_policy: delete_target_record',
+			{ dataframe: { delete_policy: 'delete_target_record' } },
+		],
+	] as const) {
+		test(`${name} (retired) → deleting the PORTAL TARGET leaves both frame targets whole`, async () => {
+			await ensureSlot(properties);
+			const { hostId, portalTargetId, frameA, frameB } = await seed();
+			expect((await deleteSectionRecord(PORTAL_TARGET, portalTargetId, USER_ID)).removed).toBe(
+				true,
+			);
+			expect(await slotEntries(hostId)).toEqual([]);
+			expect(await targetState(frameA)).toEqual({ row: true, note: true });
+			expect(await targetState(frameB)).toEqual({ row: true, note: true });
+			expect(await deletedSnapshots(frameA)).toBe(0);
+			expect(await deletedSnapshots(frameB)).toBe(0);
+		}, 30000);
+	}
 });
 
 describe('the whole-record door — deleting the host applies each slot’s policy to its own frames', () => {
-	test('hard_delete: true → the SOFT host delete (delete_data) deletes both frame targets too', async () => {
-		await ensureSlot({ hard_delete: true });
-		const { hostId, frameA, frameB } = await seed();
-		const outcome = await deleteSectionData(HOST, hostId, USER_ID);
-		expect(outcome.deleted).toEqual([hostId]);
-		expect(await targetState(frameA)).toEqual({ row: false, note: false });
-		expect(await targetState(frameB)).toEqual({ row: false, note: false });
-		expect(await deletedSnapshots(frameA)).toBe(1);
-		expect(await deletedSnapshots(frameB)).toBe(1);
-	}, 30000);
+	for (const mode of ['record', 'data'] as const) {
+		/** Delete the host through `mode`, and prove it happened (the floor). */
+		const deleteHost = async (hostId: number): Promise<void> => {
+			if (mode === 'record') {
+				expect((await deleteSectionRecord(HOST, hostId, USER_ID)).removed).toBe(true);
+			} else {
+				expect((await deleteSectionData(HOST, hostId, USER_ID)).deleted).toEqual([hostId]);
+				// the wipe really emptied the slot the policy reads its targets from
+				expect(await slotEntries(hostId)).toEqual([]);
+			}
+		};
 
-	test('hard_delete: true → both frame targets are gone with snapshots when the host is deleted', async () => {
-		await ensureSlot({ hard_delete: true });
-		const { hostId, frameA, frameB } = await seed();
-		expect(await targetState(frameA)).toEqual({ row: true, note: true });
-		expect(await targetState(frameB)).toEqual({ row: true, note: true });
-		const outcome = await deleteSectionRecord(HOST, hostId, USER_ID);
-		expect(outcome.removed).toBe(true);
-		expect(await targetState(frameA)).toEqual({ row: false, note: false });
-		expect(await targetState(frameB)).toEqual({ row: false, note: false });
-		expect(await deletedSnapshots(frameA)).toBe(1);
-		expect(await deletedSnapshots(frameB)).toBe(1);
-	}, 30000);
+		test(`[${mode}] delete_target → both frame targets are emptied, rows kept`, async () => {
+			await ensureSlot(SOFT);
+			const { hostId, frameA, frameB } = await seed();
+			await deleteHost(hostId);
+			expect(await targetState(frameA)).toEqual({ row: true, note: false });
+			expect(await targetState(frameB)).toEqual({ row: true, note: false });
+			expect(await deletedSnapshots(frameA)).toBe(0);
+			expect(await deletedSnapshots(frameB)).toBe(0);
+		}, 30000);
+
+		const retired: [string, Record<string, unknown>][] = [
+			['hard_delete: true', { hard_delete: true }],
+			[
+				'delete_policy: delete_target_record',
+				{ dataframe: { delete_policy: 'delete_target_record' } },
+			],
+		];
+		for (const [name, properties] of retired) {
+			test(`[${mode}] ${name} (retired) → both frame targets survive whole`, async () => {
+				await ensureSlot(properties);
+				const { hostId, frameA, frameB } = await seed();
+				await deleteHost(hostId);
+				expect(await targetState(frameA)).toEqual({ row: true, note: true });
+				expect(await targetState(frameB)).toEqual({ row: true, note: true });
+				expect(await deletedSnapshots(frameA)).toBe(0);
+				expect(await deletedSnapshots(frameB)).toBe(0);
+			}, 30000);
+		}
+	}
 
 	test('no policy → deleting the host leaves both frame targets as they were', async () => {
 		await ensureSlot({});
@@ -743,13 +782,13 @@ describe('the resolved policy is SERVED to the client — context.delete_policy'
 
 	const spellings: [string, Record<string, unknown>, string][] = [
 		['no policy', {}, 'unlink'],
-		['delete_target', { dataframe: { delete_policy: 'delete_target' } }, 'delete_target'],
+		['delete_target', SOFT, 'delete_target'],
 		[
-			'delete_target_record',
+			'delete_target_record (retired)',
 			{ dataframe: { delete_policy: 'delete_target_record' } },
-			'delete_target_record',
+			'unlink',
 		],
-		['hard_delete: true', { hard_delete: true }, 'delete_target_record'],
+		['hard_delete: true (retired)', { hard_delete: true }, 'unlink'],
 	];
 	for (const [name, properties, expected] of spellings) {
 		test(`${name} → the slot's context entry carries delete_policy '${expected}'`, async () => {
@@ -761,7 +800,7 @@ describe('the resolved policy is SERVED to the client — context.delete_policy'
 	}
 
 	test('a non-dataframe entry (the MAIN) carries no delete_policy key at all', async () => {
-		await ensureSlot({ hard_delete: true }, { hard_delete: true });
+		await ensureSlot(SOFT, SOFT);
 		const entry = await contextOf(MAIN);
 		expect(entry?.model).toBe('component_portal');
 		expect('delete_policy' in (entry as object)).toBe(false);
@@ -796,7 +835,7 @@ describe('deleteSectionData is ATOMIC — a wipe is whole or it is nothing', () 
 
 describe('a REFUSED save runs no cascade — the cascade is deferred past the batch', () => {
 	test('a valid remove followed by a duplicate of itself: refused, nothing written, nothing queued', async () => {
-		await ensureSlot({ hard_delete: true });
+		await ensureSlot(SOFT);
 		const { hostId, frameA, frameB } = await seed();
 		const result = await saveComponentData({
 			componentTipo: MAIN,
@@ -818,7 +857,7 @@ describe('a REFUSED save runs no cascade — the cascade is deferred past the ba
 	}, 30000);
 
 	test('a valid remove followed by an unknown id: nothing is written, nothing is queued', async () => {
-		await ensureSlot({ hard_delete: true });
+		await ensureSlot(SOFT);
 		const { hostId, frameA, frameB } = await seed();
 		const result = await saveComponentData({
 			componentTipo: MAIN,
@@ -846,7 +885,7 @@ describe('a REFUSED save runs no cascade — the cascade is deferred past the ba
 	}, 30000);
 });
 
-describe('the policy is the SLOT node’s, on both doors', () => {
+describe('the policy is the SLOT node’s, on both doors — and never removes the row', () => {
 	for (const door of ['main', 'direct'] as const) {
 		test(`[${door}] no policy → the target survives`, async () => {
 			await ensureSlot({});
@@ -854,25 +893,22 @@ describe('the policy is the SLOT node’s, on both doors', () => {
 		}, 30000);
 
 		test(`[${door}] dataframe.delete_policy: delete_target → the target is emptied, row kept`, async () => {
-			await ensureSlot({ dataframe: { delete_policy: 'delete_target' } });
+			await ensureSlot(SOFT);
 			await runCase(door, 'emptied');
 		}, 30000);
 
-		test(`[${door}] dataframe.delete_policy: delete_target_record → the target record is gone, snapshot taken`, async () => {
+		test(`[${door}] dataframe.delete_policy: delete_target_record (retired) → the target survives`, async () => {
 			await ensureSlot({ dataframe: { delete_policy: 'delete_target_record' } });
-			await runCase(door, 'gone');
+			await runCase(door, 'survives');
 		}, 30000);
 
-		test(`[${door}] hard_delete: true (the v6 spelling) → the target record is gone, snapshot taken`, async () => {
+		test(`[${door}] hard_delete: true (retired in v6) → the target survives`, async () => {
 			await ensureSlot({ hard_delete: true });
-			await runCase(door, 'gone');
+			await runCase(door, 'survives');
 		}, 30000);
 
 		test(`[${door}] a policy on the MAIN node alone is ignored — the target survives`, async () => {
-			await ensureSlot(
-				{},
-				{ hard_delete: true, dataframe: { delete_policy: 'delete_target_record' } },
-			);
+			await ensureSlot({}, SOFT);
 			await runCase(door, 'survives');
 		}, 30000);
 	}

@@ -38,10 +38,9 @@ cd "$REPO_ROOT"
 
 # ---------------------------------------------------------------------------
 # The environment — ONE copy, shared with the instance tier. Every DEDALO_* key the
-# tier needs, the egress allowlist the vendored seed requires, the configuration the
-# frozen fixtures were harvested under, the seam tables and the Postgres client path
+# tier needs, the configuration the frozen fixtures were harvested under, the seam tables and the Postgres client path
 # are composed in scripts/ci/hosted_env.sh; the rules that pin that block
-# (ci_workflow_tripwire 6, 6b, 13) follow this `source` line. Process env outranks
+# (ci_workflow_tripwire 6, 13) follow this `source` line. Process env outranks
 # everything it sets, so a caller may still rename ENTITY or point at another host.
 # ---------------------------------------------------------------------------
 # shellcheck source=scripts/ci/hosted_env.sh

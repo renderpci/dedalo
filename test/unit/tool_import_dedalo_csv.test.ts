@@ -73,7 +73,6 @@ describe('tool_import_dedalo_csv module', () => {
 		// The exact wire the client posts (render_tool_import_dedalo_csv fn_import).
 		const options = {
 			background_running: true,
-			time_machine_save: true,
 			files: [
 				{ file: 'a.csv', section_tipo: 'test2', ar_columns_map: [] },
 				{ file: 'b.csv', section_tipo: SECTION, ar_columns_map: [] },
@@ -107,6 +106,48 @@ describe('tool_import_dedalo_csv module', () => {
 			expect(typeof el.value).toBe('string'); // the tipo
 			expect(typeof el.model).toBe('string');
 			expect('label' in el).toBe(true);
+		}
+	});
+
+	test('get_section_components_list carries each component append policy (null = refused)', async () => {
+		const loaded = await getLoadedTool('tool_import_dedalo_csv');
+		const res = await mustGet(
+			loaded!.module.apiActions.get_section_components_list,
+			'get_section_components_list',
+		).handler({
+			principal: await resolvePrincipal(-1),
+			userId: -1,
+			background: false,
+			options: { section_tipo: SECTION },
+		});
+		const list = (res.data as { components: Record<string, unknown>[] }).components;
+		const policyOf = (tipo: string): unknown => {
+			const entry = list.find((el) => el.value === tipo);
+			expect(entry, `${tipo} is listed`).toBeDefined();
+			expect('import_append' in (entry ?? {})).toBe(true);
+			return entry?.import_append;
+		};
+		expect(policyOf('test52')).toBe('items'); // input_text
+		expect(policyOf('test80')).toBe('items'); // portal
+		expect(policyOf('test100')).toBe('geo_layer'); // geolocation
+		expect(policyOf('test17')).toBe('text_paragraphs'); // text_area
+		expect(policyOf('test99')).toBeNull(); // image (media)
+		expect(policyOf('test91')).toBeNull(); // select
+		expect(policyOf('test87')).toBeNull(); // radio_button
+		// the key column and the audit tipos, when listed, never offer append
+		for (const el of list) {
+			if (
+				el.model === 'component_section_id' ||
+				['dd199', 'dd200', 'dd201', 'dd197'].includes(String(el.value))
+			) {
+				expect(el.import_append, String(el.value)).toBeNull();
+			}
+		}
+		// every non-null value is a policy name, never a refusal object
+		for (const el of list) {
+			expect([null, 'items', 'geo_layer', 'text_paragraphs']).toContain(
+				el.import_append as string | null,
+			);
 		}
 	});
 });
@@ -162,7 +203,6 @@ describe('import_files writes the mapped columns (scratch record, cleaned up)', 
 			background: false,
 			// The exact payload render_tool_import_dedalo_csv posts.
 			options: {
-				time_machine_save: true,
 				files: [
 					{
 						file: CSV,
@@ -205,15 +245,29 @@ describe('import_files writes the mapped columns (scratch record, cleaned up)', 
 		expect(rows.length).toBe(1);
 		expect(JSON.stringify(rows[0]?.items)).toContain('imported by the csv tool');
 
-		// The TM row is attributed to the dd800 run — this is what makes the whole
-		// import revertable as ONE operation.
+		// The record's time-machine rows are attributed to the dd800 run — this is
+		// what makes the whole import revertable as ONE operation — and they are
+		// the run's UNDO LOG (WC-2026-09-27-bulk-revert-undo-log), id ASC: the
+		// BIRTH marker (role 3, tipo = the section: the import created the
+		// record; its data is the birth image, never absent), then the
+		// component's hidden BEFORE (role 1, the key was absent → SQL NULL) and
+		// its visible after-row (role NULL, what was stored).
 		const tm = (await sql.unsafe(
-			`SELECT bulk_process_id FROM matrix_time_machine
-			  WHERE section_tipo = 'test3' AND section_id = $1 AND tipo = 'test52'`,
+			`SELECT tipo, bulk_process_id, tm_role, data IS NULL AS absent FROM matrix_time_machine
+			  WHERE section_tipo = 'test3' AND section_id = $1 ORDER BY id ASC`,
 			[SCRATCH_ID],
-		)) as { bulk_process_id: number | null }[];
-		expect(tm.length).toBeGreaterThan(0);
-		expect(tm[0]?.bulk_process_id).toBe(report.bulk_process_id as number);
+		)) as {
+			tipo: string;
+			bulk_process_id: number | null;
+			tm_role: number | null;
+			absent: boolean;
+		}[];
+		expect(tm.map((row) => [row.tipo, row.tm_role, row.absent])).toEqual([
+			['test3', 3, false],
+			['test52', 1, true],
+			['test52', null, false],
+		]);
+		for (const row of tm) expect(row.bulk_process_id).toBe(report.bulk_process_id as number);
 	});
 
 	test('a flat human-authored DMY date IMPORTS (the capability the port was missing)', async () => {

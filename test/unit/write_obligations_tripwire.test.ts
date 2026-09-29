@@ -73,6 +73,9 @@ const OBSERVERS = 'src/core/section/record/observers.ts';
 const DD_CORE_API = 'src/core/api/handlers/dd_core_api.ts';
 const CACHE_INVALIDATION = 'src/core/ontology/cache_invalidation.ts';
 const INFO_EMIT = 'src/core/components/component_info/emit.ts';
+const TM_TOOL = 'tools/tool_time_machine/server/tool_time_machine.ts';
+const REVERT_UNDO = 'tools/tool_time_machine/server/bulk_revert_undo.ts';
+const REVERT_RECORDS = 'tools/tool_time_machine/server/bulk_revert_records.ts';
 
 /** What a raw caller must reach to be a chokepoint writer (any one of these). */
 const CHOKEPOINT_REACH = ['persistRecordKeys(', 'persistRecordColumns(', 'afterRecordWrite('];
@@ -437,16 +440,35 @@ const MATRIX: DoorRow[] = [
 			'persistModifiedStamp(',
 			"door: 'saveComponentData atomic insert'",
 			"rag: 'index'",
-			'recordTimeMachine(',
+			// the save's history — composed, main-attributed (bulk_capture.ts), and
+			// the ONLY TM writer of this door: it ends in recordTimeMachine /
+			// recordBulkPair through relations/dataframe_slots.ts
+			'finishSaveHistory(',
+			'reindexRelationSearchLikeSave(',
 		],
-		// no obligation remembered inline beside the hook
-		mustNot: ['fireSaveEvent(', 'fireRagRecordEvent(', 'reactToRecordComponentWrite('],
+		// no obligation remembered inline beside the hook, and no private copy of
+		// the index law (its model test lives in the shared helper)
+		mustNot: [
+			'fireSaveEvent(',
+			'fireRagRecordEvent(',
+			'reactToRecordComponentWrite(',
+			'maintainRelationSearchIndex(',
+		],
 		empty: {},
 	},
 	{
 		file: SAVE_COMPONENT,
 		fn: 'saveComponentData',
-		must: ['withTransaction(', 'propagateToObservers('],
+		// The transaction moved into runSaveAtomically (cc2ccddc31); the door must
+		// still route through it, and the row below holds it to withTransaction.
+		must: ['runSaveAtomically(', 'propagateToObservers('],
+		mustNot: [],
+		empty: {},
+	},
+	{
+		file: SAVE_COMPONENT,
+		fn: 'runSaveAtomically',
+		must: ['withTransaction('],
 		mustNot: [],
 		empty: {},
 	},
@@ -480,7 +502,8 @@ const MATRIX: DoorRow[] = [
 			"what: 'NEW'",
 			'source_section_id: sourceSectionId',
 			'propagateToObservers(',
-			'recordTimeMachine(',
+			// the history rows, through its step-5 helper (the next row)
+			'recordDuplicateHistory(',
 			'currentRequestContext()',
 		],
 		mustNot: ['fireSaveEvent(', 'fireRagRecordEvent('],
@@ -490,11 +513,24 @@ const MATRIX: DoorRow[] = [
 		},
 	},
 	{
+		file: DUPLICATE_RECORD,
+		fn: 'recordDuplicateHistory',
+		// the two-lane history rows (relations/dataframe_slots.ts recordMainBackfill /
+		// recordMainHistory → recordTimeMachine)
+		must: ['recordMainBackfill(', 'recordMainHistory('],
+		mustNot: ['fireSaveEvent(', 'fireRagRecordEvent(', 'recordTimeMachine('],
+		empty: {
+			obligations:
+				'history only: the duplicate door that calls it owns every other obligation (afterRecordWrite, activity, observers).',
+		},
+	},
+	{
 		file: RELATIONS_SAVE,
 		fn: 'deletePortalLocator',
 		must: [
 			'persistRecordKeys(',
-			'recordTimeMachine(',
+			// the two-lane history (relations/dataframe_slots.ts → recordMainHistory)
+			'recordKeyChangeRows(',
 			'propagateToObservers(',
 			'maintainRelationSearchIndex(',
 		],
@@ -537,6 +573,126 @@ const MATRIX: DoorRow[] = [
 		mustNot: ['updateMatrixKeyData(', 'updateMatrixRecord('],
 		empty: {},
 	},
+	// THE TIME MACHINE'S RESTORE DOORS (2026-09-27). They write relation keys
+	// with SAVE semantics but bypass saveComponentData, so every obligation the
+	// chokepoint does not own must be reached here explicitly — above all the
+	// relation_search ancestor index, through the save's OWN law (the shared
+	// helper), never a private copy of it.
+	{
+		file: REVERT_UNDO,
+		fn: 'writeRevertedKey',
+		// the revert's own history: two-lane pairs (relations/dataframe_slots.ts
+		// recordMainHistory → recordBulkPair)
+		must: ['persistRecordKeys(', 'reindexRelationSearchLikeSave(', 'recordRevertHistory('],
+		mustNot: [
+			'updateMatrixKeyData(',
+			'fireSaveEvent(',
+			'fireRagRecordEvent(',
+			'maintainRelationSearchIndex(',
+		],
+		empty: {
+			observers:
+				'the bulk revert propagates every written key post-commit from its orchestrator (bulk_revert.ts), once per unit, not per key write.',
+			activity:
+				'the revert logs ONE activity row per run at its orchestrator; a key write is not a SAVE at the API door.',
+		},
+	},
+	{
+		file: REVERT_UNDO,
+		fn: 'writeComposedUnit',
+		// one chokepoint write of the main + its slots, then the revert's own
+		// two-lane pairs (recordRevertHistory → recordMainHistory → recordBulkPair)
+		must: ['persistRecordKeys(', 'reindexRelationSearchLikeSave(', 'recordRevertHistory('],
+		mustNot: [
+			'updateMatrixKeyData(',
+			'fireSaveEvent(',
+			'fireRagRecordEvent(',
+			'maintainRelationSearchIndex(',
+		],
+		empty: {
+			observers:
+				'the bulk revert propagates every written key post-commit from its orchestrator (bulk_revert.ts), once per unit, not per key write.',
+			activity:
+				'the revert logs ONE activity row per run at its orchestrator; a key write is not a SAVE at the API door.',
+		},
+	},
+	{
+		file: REVERT_RECORDS,
+		fn: 'restoreWipedRecord',
+		// every wiped key written (writeWipedKey), then the history per MAIN,
+		// two lanes (a slot never gets a pair of its own)
+		must: ['writeWipedKey(', 'recordWipedHistory('],
+		mustNot: ['updateMatrixKeyData(', 'fireSaveEvent(', 'fireRagRecordEvent('],
+		empty: {
+			observers:
+				'the observer cascade of the restored keys runs post-commit (wipedRecordAfterCommit), never inside the unit transaction.',
+		},
+	},
+	{
+		file: REVERT_RECORDS,
+		fn: 'writeWipedKey',
+		must: ['persistRecordKeys(', 'reindexRelationSearchLikeSave('],
+		mustNot: [
+			'updateMatrixKeyData(',
+			'fireSaveEvent(',
+			'fireRagRecordEvent(',
+			'maintainRelationSearchIndex(',
+			'recordBulkPair(',
+		],
+		empty: {
+			history:
+				'recorded per MAIN, two lanes, by recordWipedHistory once every key of the record is written (restoreWipedRecord) — a slot key never gets a pair of its own.',
+			observers:
+				'the bulk revert propagates every written key post-commit from its orchestrator (bulk_revert.ts), once per unit, not per key write.',
+			activity:
+				'the revert logs ONE activity row per run at its orchestrator; a key write is not a SAVE at the API door.',
+		},
+	},
+	{
+		file: TM_TOOL,
+		fn: 'restoreAbsentSectionRow',
+		must: ['persistRecordColumns(', 'reindexRelationColumnLikeSave('],
+		mustNot: ['fireSaveEvent(', 'fireRagRecordEvent(', 'maintainRelationSearchIndex('],
+		empty: {
+			history:
+				'the caller writes the birth marker (recordBulkBirth) under the revert bulk id, in the same transaction as the row.',
+		},
+	},
+	{
+		file: TM_TOOL,
+		fn: 'restoreSectionRow',
+		must: ['persistRecordColumns(', 'reindexRelationColumnLikeSave('],
+		mustNot: ['fireSaveEvent(', 'fireRagRecordEvent(', 'maintainRelationSearchIndex('],
+		empty: {},
+	},
+	{
+		file: TM_TOOL,
+		fn: 'toolTimeMachineApplyValue',
+		must: [
+			'persistRecordKeys(',
+			'reindexRelationSearchLikeSave(',
+			// the two-lane history (relations/dataframe_slots.ts → recordTimeMachine)
+			'recordMainHistory(',
+			'propagateRestoreToObservers(',
+		],
+		mustNot: ['fireSaveEvent(', 'fireRagRecordEvent(', 'maintainRelationSearchIndex('],
+		empty: {},
+	},
+];
+
+/**
+ * The DIRECT callers of the index primitive, enumerated: the save's shared law
+ * (reindexRelationSearchLikeSave) and the three REMOVAL doors, which clear the
+ * ancestors of the locators they drop for every relation model (P1-7). Any
+ * other door writes a relation key with save semantics and must go through
+ * the shared law, or it re-implements (and can drift from) the model test
+ * conform.ts reads by.
+ */
+const INDEX_PRIMITIVE_CALLERS: readonly string[] = [
+	`${RELATIONS_SAVE}#reindexRelationSearchLikeSave`,
+	`${RELATIONS_SAVE}#deletePortalLocator`,
+	`${DELETE_RECORD}#removeAllInverseReferences`,
+	`${DELETE_RECORD}#deleteSectionData`,
 ];
 
 /** The activity rows that stay at the API door, by design (oracle shape). */
@@ -611,6 +767,21 @@ describe('B. the doors × obligations matrix holds on the function bodies', () =
 			).toBe(true);
 			expect(source).not.toMatch(/insertMatrixRecordWith(?:Counter|ExplicitId)\(/);
 		}
+	});
+
+	test('the relation_search index primitive is called ONLY by the save law and the enumerated removal doors', () => {
+		const callers = new Set<string>();
+		for (const file of CORPUS) {
+			for (const block of topLevelBlocks(code(file))) {
+				// the definition's own signature is not a call
+				if (block.name === 'maintainRelationSearchIndex') continue;
+				if (/(?<![.\w])maintainRelationSearchIndex\(/.test(block.body)) {
+					callers.add(`${file}#${block.name}`);
+				}
+			}
+		}
+		// anti-vacuous: the scan must see the enumerated callers themselves
+		expect([...callers].sort()).toEqual([...INDEX_PRIMITIVE_CALLERS].sort());
 	});
 
 	test('the stored-value branch of component_info is GONE (DATA-15): the read always computes', () => {

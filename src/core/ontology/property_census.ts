@@ -84,6 +84,11 @@ export const RETIRED_PROPERTY_KEYS: Readonly<Record<string, RetiredPropertyKey>>
 		replacement:
 			"the component model's single-value facet in its descriptor (components/registry.ts) + properties.show_interface.button_add",
 	},
+	hard_delete: {
+		reason:
+			'v6 dataframe-slot "delete the frame target record" opt-in (~58 nodes), DELIBERATELY retired in v6 — "REMOVED because time machine needs to show the previous state, so, never deletes it". The slot unlinks and the target survives (WC-2026-09-29-dataframe-hard-delete-retired). (`dataframe.delete_policy: "delete_target"` is a different opt-in, for frame-PRIVATE targets only: it empties the target, and past states then render it empty.)',
+		replacement: null,
+	},
 	data_to_be_used: {
 		reason:
 			'v6 component_portal/autocomplete value selector ("dato" vs "valor", 15 nodes). The v7 read path resolves the published value from the component descriptor, not from a per-node switch.',
@@ -290,7 +295,6 @@ export const HONOURED_PROPERTY_KEYS: readonly string[] = [
 	'external_source',
 	'fields_map',
 	'fields_separator',
-	'hard_delete',
 	'head',
 	'host',
 	'identifying_image',

@@ -953,6 +953,13 @@ const INLINE_SECTION_ID_MATCH_RATCHET = new Set<string>([
 	// engine; derive_test_corpus.ts's real locator dedup was migrated onto
 	// compareLocators in the same change instead of being listed.
 	'scripts/migrate_component_alias.ts',
+	// tool_viewport_check.ts (2026-09-29, the test:tools:phone harness): inside a
+	// Puppeteer page.evaluate callback — BROWSER code, where src/core/concepts/
+	// locator.ts cannot be imported — `String(i.section_id) === f.sectionId`
+	// picks the LIVE UI instance whose record the operator named on the command
+	// line (--discover tipo/id). It matches a client instance, not a locator: no
+	// tipo/type quad, and a miss only means "no such tool on that page".
+	'scripts/tool_viewport_check.ts',
 ]);
 
 /**

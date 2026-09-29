@@ -8,8 +8,8 @@
  * (engineering/wire_contract/WC-2026-09-06-dataframe-delete-policy-on-slot.md).
  *
  * The client removes the frame LOCATOR only; what happens to the frame target
- * record is the server's, from the slot node's delete policy. Two client facts
- * make that door work, and each regressed silently once:
+ * record is the server's, from the slot node's delete policy. One client fact
+ * makes that door work, and it regressed silently once:
  *
  *  1. `delete_dataframe` must hand `unlink_record` the STORED frame entries —
  *     the ones carrying an `id`, selected by their PAIRING (id_key +
@@ -19,9 +19,10 @@
  *     success and the frame stayed on the record. A lookup by the HOST's
  *     section_id (the only id the callers know) is the second wrong shape, and
  *     it is asserted against too: the frame target's id is unrelated to it.
- *  2. The modal's second confirm — the "the record goes" grammar — switches on
- *     the SERVER-resolved `context.delete_policy` and on nothing else. The
- *     ontology properties are not re-read here: one reader, one meaning.
+ *
+ * (The modal's second confirm left with the hard policy, 2026-09-29 —
+ * WC-2026-09-29-dataframe-hard-delete-retired: no policy removes a target
+ * record any more, so there is nothing for a second confirm to warn about.)
  *
  * NO BACKEND, BY CONSTRUCTION. The frame instance is a plain object registered
  * in the shared instance registry under the exact identity `delete_dataframe`
@@ -32,7 +33,6 @@
 // imports
 import { add_instance, delete_instance } from '../../../core/common/js/instances.js';
 import { delete_dataframe } from '../../../core/component_common/js/dataframe.js';
-import { needs_double_confirm } from '../../../core/component_dataframe/js/view_default_list_dataframe.js';
 
 // fixtures
 const HOST_TIPO = 'test6099';
@@ -166,22 +166,6 @@ describe('component_dataframe — the DELETE door (client half)', function () {
 		});
 		assert.strictEqual(removed, false);
 		assert.strictEqual(calls.length, 0);
-	});
-
-	it('the second confirm switches on the server-resolved context.delete_policy only', function () {
-		assert.strictEqual(needs_double_confirm({ delete_policy: 'delete_target_record' }), true);
-		assert.strictEqual(needs_double_confirm({ delete_policy: 'delete_target' }), false);
-		assert.strictEqual(needs_double_confirm({ delete_policy: 'unlink' }), false);
-		assert.strictEqual(needs_double_confirm({}), false);
-		assert.strictEqual(needs_double_confirm(null), false);
-		// the ontology properties are NOT a source: one reader, on the server
-		assert.strictEqual(needs_double_confirm({ properties: { hard_delete: true } }), false);
-		assert.strictEqual(
-			needs_double_confirm({
-				properties: { dataframe: { delete_policy: 'delete_target_record' } },
-			}),
-			false,
-		);
 	});
 });
 

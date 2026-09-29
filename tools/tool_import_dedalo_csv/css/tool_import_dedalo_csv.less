@@ -230,7 +230,7 @@
 					}
 					>.columns_body {
 						display: grid;
-						grid-template-columns: minmax(5rem,10rem) minmax(9rem,14rem) minmax(7rem,10rem) minmax(3rem,4.5rem) minmax(7rem,30rem) minmax(7rem,auto);
+						grid-template-columns: minmax(5rem,10rem) minmax(9rem,14rem) minmax(7rem,10rem) minmax(3rem,4.5rem) minmax(7rem,30rem) minmax(10rem,13rem) minmax(7rem,auto);
 						background-color: @color_grey_14;
 						border-radius: 5px;
 
@@ -277,6 +277,16 @@
 										appearance: auto;
 										background-color: @color_white;
 									}
+								}
+							}
+							// replace / append selector (render_import_mode_selector)
+							.import_mode_container {
+
+								.import_mode_select {
+									width: 98%;
+									background: none;
+									appearance: auto;
+									background-color: @color_white;
 								}
 							}
 						}
@@ -403,12 +413,6 @@
 				margin-right: 1rem;
 				margin-left: 0.75rem;
 				margin-bottom: 0.5rem;
-			}
-
-			>label {
-				>input {
-					margin-right: 0.25rem;
-				}
 			}
 		}
 

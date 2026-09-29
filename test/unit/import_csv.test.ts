@@ -141,4 +141,49 @@ describe('planCsvImport', () => {
 		expect(plan[0]?.columns).toHaveLength(1);
 		expect(plan[0]?.columns[0]?.conform.result).toEqual([{ value: 'kept' }]);
 	});
+
+	// import_mode plumbing (the tool server parses + gates the wire field; the
+	// planner only CARRIES it to the executor). Absent = 'replace', the
+	// historical behaviour — a planner that dropped the field would silently
+	// turn every append column back into a destructive replace.
+	test("mode defaults to 'replace' when the column declares none", async () => {
+		const plan = await planCsvImport([['7', 'hello', '']], columns, 'test3');
+		expect(plan[0]?.columns.map((c) => c.mode)).toEqual(['replace', 'replace']);
+	});
+
+	test('a column mode reaches its PlannedColumn, per column', async () => {
+		const cols: (CsvColumn | null)[] = [
+			{ tipo: 'test102', model: 'component_section_id', columnName: 'test102', lang: 'lg-nolan' },
+			{
+				tipo: 'test52',
+				model: 'component_input_text',
+				columnName: 'test52',
+				lang: 'lg-nolan',
+				mode: 'append',
+			},
+			{
+				tipo: 'test88',
+				model: 'component_relation_related',
+				columnName: 'test88',
+				lang: 'lg-nolan',
+				mode: 'replace',
+			},
+		];
+		const plan = await planCsvImport(
+			[
+				['7', 'a', ''],
+				['8', 'b', ''],
+			],
+			cols,
+			'test3',
+		);
+		for (const record of plan) {
+			expect(record.columns.map((c) => [c.tipo, c.mode])).toEqual([
+				['test52', 'append'],
+				['test88', 'replace'],
+			]);
+		}
+		// The mode does not alter the conform: the same cell conforms identically.
+		expect(plan[0]?.columns[0]?.conform.result).toEqual([{ value: 'a' }]);
+	});
 });

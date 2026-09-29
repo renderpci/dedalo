@@ -97,7 +97,7 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 	}
 	const { sanitizeClientSqo } = await import('../../../src/core/concepts/sqo.ts');
 	const { buildSearchSql } = await import('../../../src/core/search/sql_assembler.ts');
-	const { sql } = await import('../../../src/core/db/postgres.ts');
+	const { sql, withTransaction } = await import('../../../src/core/db/postgres.ts');
 	const { readMatrixRecord } = await import('../../../src/core/db/matrix.ts');
 	const { readComponentItems } = await import('../../../src/core/resolve/component_data.ts');
 	const { getMatrixTableFromTipo, getTranslatableByTipo } = await import(
@@ -145,25 +145,28 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 		}),
 	);
 	const sectionName = (await getTermByTipo(sectionTipo, labelLang)) ?? sectionTipo;
-	const bulkProcessId = await createSectionRecord(BULK_PROCESS_TIPOS.section, ctx.userId);
-	await saveComponentData({
-		componentTipo: BULK_PROCESS_TIPOS.label,
-		sectionTipo: BULK_PROCESS_TIPOS.section,
-		sectionId: bulkProcessId,
-		lang: 'lg-nolan',
-		changedData: [
-			{
-				action: 'set_data',
-				id: null,
-				value: [
-					{
-						value: `Update cache | ${sectionName}[${sectionTipo}] | ${componentNames.join(', ')}`,
-					},
-				],
-			},
-		],
-		userId: ctx.userId,
+	// ATOMIC + FAIL-CLOSED: the row and its label are ONE mint (a failing label
+	// leaves no orphan dd800), and a failure throws before any record is touched.
+	const bulkLabel = `Update cache | ${sectionName}[${sectionTipo}] | ${componentNames.join(', ')}`;
+	const bulkProcessId = await withTransaction(async () => {
+		const id = await createSectionRecord(BULK_PROCESS_TIPOS.section, ctx.userId);
+		const outcome = await saveComponentData({
+			componentTipo: BULK_PROCESS_TIPOS.label,
+			sectionTipo: BULK_PROCESS_TIPOS.section,
+			sectionId: id,
+			lang: 'lg-nolan',
+			changedData: [{ action: 'set_data', id: null, value: [{ value: bulkLabel }] }],
+			userId: ctx.userId,
+		});
+		if (outcome.ok === false) {
+			throw new DedaloError('record.save_failed', {
+				message: `update_cache: the dd800 run label was refused: ${outcome.message}`,
+				coordinates: { section_tipo: BULK_PROCESS_TIPOS.section, tipo: BULK_PROCESS_TIPOS.label },
+			});
+		}
+		return id;
 	});
+	const { withLiveBulkRun } = await import('../../../src/core/tools/bulk_run_registry.ts');
 
 	// Progress: the pfile frame the client's stream renderer already formats
 	// (data.counter / data.total / data.current.section_id / data.n_components —
@@ -178,115 +181,138 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 	let mediaHeld = 0;
 	let stopped = false;
 	const mediaErrors: string[] = [];
-	for (const row of rows) {
-		// Cooperative cancellation (dd_utils_api::stop_process → mediaJobs.stop →
-		// the executor's AbortSignal): finish the current record, never mid-write.
-		if (ctx.signal?.aborted === true) {
-			stopped = true;
-			break;
-		}
-		counter++;
-		const now = Date.now();
-		if (counter === rows.length || now - lastPublish >= PROGRESS_MS) {
-			lastPublish = now;
-			publish({
-				msg: 'Running tool_update_cache::update_cache',
-				is_running: true,
-				counter,
-				total: rows.length,
-				current: { section_id: row.section_id },
-				n_components: selection.length,
-			});
-		}
-		const table = (await getMatrixTableFromTipo(row.section_tipo)) ?? 'matrix';
-		const record = await readMatrixRecord(table, row.section_tipo, row.section_id);
-		if (record === null) continue;
-		for (const sel of selection) {
-			const tipo = String(sel.tipo ?? '');
-			const model = tipo !== '' ? await getModelByTipo(tipo) : null;
-			if (model === null) continue;
-			if (isMediaModel(model)) {
-				// MEDIA repair: the shared kernel (core/media/repair.ts) builds only the
-				// MISSING derivatives (v6 regenerate_component parity — an existing file
-				// is never re-encoded; image thumb always; envelope create-or-fix) and
-				// re-scans files_info per item. The persist here is the established
-				// files_info write-back (per-key jsonb, NO Time Machine entry —
-				// files_info is a filesystem cache; media/tools/files_info_persist.ts).
-				const storedItems = (readComponentItems(record, tipo, model) ?? []) as unknown[];
-				if (storedItems.length === 0) continue;
-				const regenerateOptions = (sel.regenerate_options ?? null) as {
-					delete_normalized_files?: unknown;
-				} | null;
-				const { refreshedItems, errors, heldShrinks } = await refreshMediaItems({
-					componentTipo: tipo,
-					sectionTipo: row.section_tipo,
-					sectionId: row.section_id,
-					model,
-					items: storedItems,
-					regenerate: true,
-					// v6 delete_normalized_files (the client's per-component regenerate
-					// checkbox): move the normalized default-quality files to
-					// deleted/<bulk id>/ before the rebuild.
-					deleteNormalized: regenerateOptions?.delete_normalized_files === true,
-					bulkProcessId,
-					// NEVER shrink from a tool sweep: on a partial-media box the rescan
-					// would wipe the valid index of every record whose files are not
-					// local (the 2026-07-19 incident). Shrinks need the ops script's
-					// explicit --allow-shrink adjudication.
-					holdShrink: true,
+	// The run is held in the active-run registry while it writes: a revert of
+	// it is refused until it ends (decision D5).
+	await withLiveBulkRun(bulkProcessId, async () => {
+		for (const row of rows) {
+			// Cooperative cancellation (dd_utils_api::stop_process → mediaJobs.stop →
+			// the executor's AbortSignal): finish the current record, never mid-write.
+			if (ctx.signal?.aborted === true) {
+				stopped = true;
+				break;
+			}
+			counter++;
+			const now = Date.now();
+			if (counter === rows.length || now - lastPublish >= PROGRESS_MS) {
+				lastPublish = now;
+				publish({
+					msg: 'Running tool_update_cache::update_cache',
+					is_running: true,
+					counter,
+					total: rows.length,
+					current: { section_id: row.section_id },
+					n_components: selection.length,
 				});
-				mediaErrors.push(...errors.map((message) => `${tipo}#${row.section_id}: ${message}`));
-				mediaHeld += heldShrinks;
-				// v6 media_common regenerate (:2670-2705): restore a missing
-				// original_file_name from the section's target_filename component
-				// (properties.target_filename, e.g. rsc398 'Original file name'),
-				// deriving original_normalized_name from it.
-				await restoreOriginalNames(refreshedItems, tipo, record, row.section_tipo);
-				await updateMatrixKeyData(
-					table,
-					row.section_tipo,
-					row.section_id,
-					'media',
-					tipo,
-					refreshedItems,
-				);
+			}
+			const table = (await getMatrixTableFromTipo(row.section_tipo)) ?? 'matrix';
+			const record = await readMatrixRecord(table, row.section_tipo, row.section_id);
+			if (record === null) continue;
+			for (const sel of selection) {
+				const tipo = String(sel.tipo ?? '');
+				const model = tipo !== '' ? await getModelByTipo(tipo) : null;
+				if (model === null) continue;
+				if (isMediaModel(model)) {
+					// MEDIA repair: the shared kernel (core/media/repair.ts) builds only the
+					// MISSING derivatives (v6 regenerate_component parity — an existing file
+					// is never re-encoded; image thumb always; envelope create-or-fix) and
+					// re-scans files_info per item. The persist here is the established
+					// files_info write-back (per-key jsonb, NO Time Machine entry —
+					// files_info is a filesystem cache; media/tools/files_info_persist.ts).
+					//
+					// NAMED EXEMPTION from the undo log (decision D4, WC
+					// bulk-revert-undo-log): this write records no BEFORE/AFTER pair,
+					// so a bulk revert of this run leaves it in place. files_info is
+					// DERIVED from the files on disk, and the files this pass moves to
+					// deleted/<bulk id>/ or rebuilds are not database state a revert
+					// could put back — restoring the old files_info would describe
+					// files that are no longer where it says. The next update_cache
+					// re-derives it from whatever the disk then holds.
+					const storedItems = (readComponentItems(record, tipo, model) ?? []) as unknown[];
+					if (storedItems.length === 0) continue;
+					const regenerateOptions = (sel.regenerate_options ?? null) as {
+						delete_normalized_files?: unknown;
+					} | null;
+					const { refreshedItems, errors, heldShrinks } = await refreshMediaItems({
+						componentTipo: tipo,
+						sectionTipo: row.section_tipo,
+						sectionId: row.section_id,
+						model,
+						items: storedItems,
+						regenerate: true,
+						// v6 delete_normalized_files (the client's per-component regenerate
+						// checkbox): move the normalized default-quality files to
+						// deleted/<bulk id>/ before the rebuild.
+						deleteNormalized: regenerateOptions?.delete_normalized_files === true,
+						bulkProcessId,
+						// NEVER shrink from a tool sweep: on a partial-media box the rescan
+						// would wipe the valid index of every record whose files are not
+						// local (the 2026-07-19 incident). Shrinks need the ops script's
+						// explicit --allow-shrink adjudication.
+						holdShrink: true,
+					});
+					mediaErrors.push(...errors.map((message) => `${tipo}#${row.section_id}: ${message}`));
+					mediaHeld += heldShrinks;
+					// v6 media_common regenerate (:2670-2705): restore a missing
+					// original_file_name from the section's target_filename component
+					// (properties.target_filename, e.g. rsc398 'Original file name'),
+					// deriving original_normalized_name from it.
+					await restoreOriginalNames(refreshedItems, tipo, record, row.section_tipo);
+					await updateMatrixKeyData(
+						table,
+						row.section_tipo,
+						row.section_id,
+						'media',
+						tipo,
+						refreshedItems,
+					);
+					regenerated += 1;
+					continue;
+				}
+				const items = readComponentItems(record, tipo, model) ?? [];
+				// NOTHING STORED, NOTHING TO REGENERATE. An absent (or empty) key has
+				// no value a derivation could refresh — and re-saving it would store
+				// `[]` over ABSENCE, which the undo log (canonicalJson keeps the two
+				// apart) records as a real change: a hidden BEFORE row plus a VISIBLE
+				// "[] saved by the sweep" history row for every record of a sparse
+				// component (two TM rows per empty record on an incident-scale
+				// section). WC …-bulk-revert-undo-log §2: a re-save that changes
+				// nothing leaves history untouched.
+				if (items.length === 0) continue;
+				const translatable = await getTranslatableByTipo(tipo);
+				// currentDataLang(), NOT config.menu.dataLang (P0-7/DATA-01): the
+				// regenerate bucket RE-SAVES curated values, so it must write in the
+				// language the operator is working in. Reading the install default made
+				// every user whose data lang differs re-stamp the wrong slice. Outside a
+				// request it falls back to DEDALO_DATA_LANG_DEFAULT, which is the read
+				// fallback chain's first candidate — a job's write stays reachable.
+				const componentLang = translatable ? currentDataLang() : 'lg-nolan';
+				// The stored array carries EVERY language; set_data is lang-sliced
+				// (PHP set_data_lang), so a translatable literal must be re-saved one
+				// lang group at a time — a single flat save would re-stamp every
+				// translation onto componentLang.
+				const groups = groupItemsByLang(items, componentLang);
+				for (const [lang, group] of groups) {
+					await saveComponentData({
+						componentTipo: tipo,
+						sectionTipo: row.section_tipo,
+						sectionId: row.section_id,
+						lang,
+						changedData: [{ action: 'set_data', id: null, value: group }],
+						userId: ctx.userId,
+						// THE UNDO LOG (decision D1, WC bulk-revert-undo-log): a save
+						// under a bulk id records its BEFORE/AFTER pair whatever saveTm
+						// says, and the after-row is ordinary visible history — so the
+						// v6 "TM disabled for the whole run" (:45-47) is retired here. A
+						// regenerate that re-saves the SAME value writes nothing (the
+						// pair law skips a canonical no-op), so the sweep adds history
+						// only where the derivation actually CHANGED a value.
+						bulkProcessId,
+					});
+				}
 				regenerated += 1;
-				continue;
 			}
-			const items = readComponentItems(record, tipo, model) ?? [];
-			const translatable = await getTranslatableByTipo(tipo);
-			// currentDataLang(), NOT config.menu.dataLang (P0-7/DATA-01): the
-			// regenerate bucket RE-SAVES curated values, so it must write in the
-			// language the operator is working in. Reading the install default made
-			// every user whose data lang differs re-stamp the wrong slice. Outside a
-			// request it falls back to DEDALO_DATA_LANG_DEFAULT, which is the read
-			// fallback chain's first candidate — a job's write stays reachable.
-			const componentLang = translatable ? currentDataLang() : 'lg-nolan';
-			// The stored array carries EVERY language; set_data is lang-sliced
-			// (PHP set_data_lang), so a translatable literal must be re-saved one
-			// lang group at a time — a single flat save would re-stamp every
-			// translation onto componentLang.
-			const groups = groupItemsByLang(items, componentLang);
-			if (groups.size === 0) groups.set(componentLang, []);
-			for (const [lang, group] of groups) {
-				await saveComponentData({
-					componentTipo: tipo,
-					sectionTipo: row.section_tipo,
-					sectionId: row.section_id,
-					lang,
-					changedData: [{ action: 'set_data', id: null, value: group }],
-					userId: ctx.userId,
-					// v6 tool_update_cache (:45-47): Time Machine is DISABLED for the
-					// whole run — a regenerate re-saves the same value, so per-row TM
-					// versions would be pure bloat on a bulk sweep. The run stays
-					// attributable through its dd800 record.
-					saveTm: false,
-					bulkProcessId,
-				});
-			}
-			regenerated += 1;
 		}
-	}
+	});
 	// The abort check runs BEFORE the counter increment, so `counter` always equals
 	// the number of FULLY processed records — stopped or not.
 	const processed = counter;

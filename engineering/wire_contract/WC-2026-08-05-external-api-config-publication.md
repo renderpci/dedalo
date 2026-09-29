@@ -110,3 +110,10 @@ an explicit SKIP where the suite DB has no `zenon` ontology.
 after with an identical failure set (211, all pre-existing DB drift), including
 the seven harvested contexts that echo an external section's properties.
 **Re-harvest: NO — impossible by definition.**
+
+## Addendum 2026-09-27 — allowlist enforced at the door only
+
+The line above, "`parseApiConfig` (the SERVER binding) still enforces it", is
+superseded: `parseApiConfig` no longer consults the host allowlist; it is
+enforced only at the outbound door (`fetchExternalJson` → `parseAllowedUrl`).
+Publication is unchanged. See `WC-2026-09-27-external-allowlist-at-door-only`.

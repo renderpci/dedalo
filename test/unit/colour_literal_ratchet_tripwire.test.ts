@@ -178,7 +178,11 @@ const BANK = {
 		stale_fallback: 6,
 		undeclared_fallback: 0,
 		/** OUTER budget: every colour literal spelled in a shipped JS string */
-		string_literals: 72, // 2026-09-27: dd-modal window-button fallbacks now name theme tokens
+		// 2026-09-27: 72 — dd-modal window-button fallbacks now name theme tokens.
+		// 2026-09-29: 74 — RAISED by decision: test_component_dataframe_tm_read_only.js
+		// asserts a rating chip paints its datalist colour, so it needs one concrete
+		// colour as FIXTURE DATA ('#ff0000' in, 'rgb(255, 0, 0)' out). Not a paint site.
+		string_literals: 74,
 	},
 } as const;
 

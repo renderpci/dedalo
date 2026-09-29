@@ -14,9 +14,12 @@
  *     item minus its start were pinned VERBATIM by the differential's
  *     full-row compare);
  *   - Time Machine: a backfill row with the OLD full value, then the save
- *     row with data null — both lang lg-spa (test52 is translatable; the
- *     data lang), backfill stamped exactly 60_000 ms BEFORE the save row
- *     (the differential pins the delta on both engines).
+ *     row with data null, backfill stamped exactly 60_000 ms BEFORE the save
+ *     row (the differential pins the delta on both engines). The LANE is the
+ *     two-lane contract's (WC-2026-09-27-bulk-revert-undo-log "two lanes"):
+ *     the seeded item is lg-nolan, so both rows are lg-nolan — the PHP
+ *     oracle's lg-spa tag (test52 is translatable; the data lang) is the
+ *     retired one-row-all-languages shape.
  *
  * SOFTENED / TS-side notes (never oracle-pinned by the differential):
  *  - dd201's start instant: virtual-calendar self-consistency + wall-clock
@@ -36,7 +39,9 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { config } from '../../src/config/config.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
 import {
 	createSectionRecord,
 	virtualDateNow,
@@ -76,6 +81,8 @@ interface SurvivingRow {
 }
 
 let recordId = 0;
+/** A second twin wiped under a REQUEST data lang that is not the install's menu lang. */
+let engRecordId = 0;
 let outcome: DeleteRecordResult | undefined;
 let row: SurvivingRow | undefined;
 let tmRows: Record<string, unknown>[] = [];
@@ -108,6 +115,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
 	if (recordId > 0) await cleanScratchRecord(SECTION, recordId, TABLE);
+	if (engRecordId > 0) await cleanScratchRecord(SECTION, engRecordId, TABLE);
 });
 
 describe('delete_data end-state (TS-native, differential-pinned shapes)', () => {
@@ -179,13 +187,42 @@ describe('delete_data end-state (TS-native, differential-pinned shapes)', () => 
 		// subsystem. The delta below indexes positionally and needs this.
 		expect(tmRows.length, 'unexpected TM row count — the pair is not a pair').toBe(2);
 		const shape = tmRows.map((tm) => ({ tipo: tm.tipo, lang: tm.lang, data: tm.data }));
+		// TWO LANES (WC-2026-09-27-bulk-revert-undo-log): the stored item is lg-nolan,
+		// so its history is the lg-nolan lane's — never filed under the data lang.
 		expect(shape).toEqual([
-			{ tipo: COMPONENT, lang: 'lg-spa', data: VALUE },
-			{ tipo: COMPONENT, lang: 'lg-spa', data: null },
+			{ tipo: COMPONENT, lang: 'lg-nolan', data: VALUE },
+			{ tipo: COMPONENT, lang: 'lg-nolan', data: null },
 		]);
 		// The backfill precedes the save row by exactly 60 seconds (pinned live).
 		const delta =
 			new Date(String(tmRows[1]?.ts)).getTime() - new Date(String(tmRows[0]?.ts)).getTime();
 		expect(delta).toBe(60_000);
+	});
+});
+
+describe('delete_data tags a translatable main with the REQUEST data lang (DATA-01)', () => {
+	test('a curator working in lg-eng on an install whose menu lang differs: an lg-eng value’s wipe rows are lg-eng', async () => {
+		const engValue = [{ id: 1, lang: 'lg-eng', value: 'DELETE_DATA_NATIVE' }];
+		const requestLang = 'lg-eng';
+		// FLOOR: the case only discriminates when the menu lang is another one.
+		expect((config.menu as { dataLang?: string }).dataLang).not.toBe(requestLang);
+		engRecordId = await createSectionRecord(SECTION, USER_ID);
+		await sql.unsafe(
+			`UPDATE ${TABLE} SET string = jsonb_build_object($3::text, $4::text::jsonb)
+			 WHERE section_tipo = $1 AND section_id = $2`,
+			[SECTION, engRecordId, COMPONENT, JSON.stringify(engValue)],
+		);
+		await runWithRequestLangs({ applicationLang: requestLang, dataLang: requestLang }, () =>
+			deleteSectionData(SECTION, engRecordId, USER_ID),
+		);
+		const rows = (await sql.unsafe(
+			`SELECT lang, data FROM matrix_time_machine
+			 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3 ORDER BY id`,
+			[SECTION, engRecordId, COMPONENT],
+		)) as { lang: string; data: unknown }[];
+		expect(rows).toEqual([
+			{ lang: requestLang, data: engValue },
+			{ lang: requestLang, data: null },
+		]);
 	});
 });

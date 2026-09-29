@@ -34,7 +34,20 @@
 
 import { isIP } from 'node:net';
 import { readString } from '../../config/readers.ts';
-import { fetchBoundedText, isPrivateIp, mappedIpv4 } from '../security/ssrf_guard.ts';
+import {
+	extractRfc6052Ipv4,
+	type PackedCidr,
+	packAddress,
+	packedInBlock,
+	packIpv6,
+} from '../security/ip_address.ts';
+import {
+	claimedIpv4s,
+	fetchBoundedText,
+	isPrivateIp,
+	isTunnelIpv6,
+	packBlocks,
+} from '../security/ssrf_guard.ts';
 import type {
 	TranscribeRequest,
 	TranscribeResult,
@@ -132,26 +145,134 @@ export function privateTranscriberHostsAllowed(): boolean {
 }
 
 /**
- * The host a transcriber URI addresses — lowercased, unbracketed and
- * NORMALISED — or null when the URI is not a usable http(s) address at all.
+ * Every form of the host a transcriber URI addresses — lowercased and unbracketed,
+ * the host itself FIRST, then each IPv4 it may reach — or null when the URI is not
+ * a usable http(s) address at all.
  *
- * NORMALISE FIRST. An IPv4-mapped IPv6 address is the same address wearing a
- * different spelling, and the WHATWG parser rewrites the dotted form into hex
- * on the way in — so `[::ffff:169.254.169.254]` arrives as `::ffff:a9fe:a9fe`
- * and matched no literal in the refusals its caller applies. With the
- * private-host exemption ON (which is this provider's whole purpose) that made
- * the metadata-endpoint refusal reachable.
+ * An IPv6 address that CARRIES an IPv4 (mapped `::ffff:…`, NAT64 `64:ff9b::…`, a
+ * declared or discovered NAT64 prefix) reaches that IPv4, so the IPv4 is judged too
+ * — read on the PACKED bytes by the guard's own `claimedIpv4s`. The previous fold was
+ * a second regex parser that knew only the mapped prefix, so with the private-host
+ * exemption ON (this provider's whole purpose) `[64:ff9b::a9fe:a9fe]` read as an
+ * ordinary private address and walked past the metadata refusal. (The SIIT and
+ * IPv4-compatible spellings, `[::ffff:0:a9fe:a9fe]`, are NOT folded by the guard —
+ * `LEGACY_IPV4_EMBEDDINGS` below catches those.)
+ *
+ * The forms are ADDED, never substituted: a policy below refuses when ANY form is
+ * forbidden or internal. A fold that replaced the host would let a resolver's word
+ * loosen the check — a discovered "NAT64 prefix fd00::/96" would turn the LAN host
+ * `[fd00::808:808]` into the public 8.8.8.8 (RFC 7050 §7: that answer is untrusted).
  */
-function asrUrlHost(uri: string): string | null {
+function asrUrlHosts(uri: string): string[] | null {
+	const url = parseAsrUrl(uri);
+	if (url === null) return null;
+	const host = url.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+	return [host, ...carriedIpv4Forms(host)];
+}
+
+/** The URI as an http(s) URL, or null. */
+function parseAsrUrl(uri: string): URL | null {
 	let url: URL;
 	try {
 		url = new URL(uri);
 	} catch {
 		return null;
 	}
-	if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
-	const rawHost = url.hostname.replace(/^\[|\]$/g, '').toLowerCase();
-	return mappedIpv4(rawHost) ?? rawHost;
+	return url.protocol === 'http:' || url.protocol === 'https:' ? url : null;
+}
+
+/** The dotted IPv4s an IPv6 host may reach (none for any other host). */
+function carriedIpv4Forms(host: string): string[] {
+	const bytes = host.includes(':') ? packIpv6(host) : null;
+	return bytes === null ? [] : claimedIpv4s(bytes);
+}
+
+/**
+ * The cloud metadata endpoints, as PACKED blocks: ALL of IPv4 link-local
+ * `169.254.0.0/16` (AWS/GCP/Azure/OpenStack `169.254.169.254`, the ECS task endpoint
+ * `169.254.170.2`, Tencent's `169.254.0.23` — and link-local is never a sidecar on
+ * the institution's LAN), Alibaba's `100.100.100.200`, the legacy OCI
+ * `192.0.0.192`, AWS's IPv6 IMDS `fd00:ec2::254`, and Google Compute Engine's IPv6
+ * metadata server `fd20:ce::254` (documented for IPv6-only VMs:
+ * cloud.google.com/compute/docs/metadata/querying-metadata). Compared as bytes, so no
+ * spelling of one differs from another; packed by the guard's `packBlocks`, so a
+ * constant that does not parse fails the import instead of matching nothing.
+ */
+const METADATA_BLOCKS: readonly PackedCidr[] = packBlocks([
+	'169.254.0.0/16',
+	'100.100.100.200/32',
+	'192.0.0.192/32',
+	'fd00:ec2::254/128',
+	'fd20:ce::254/128',
+]);
+
+/** The metadata endpoints that are only ever addressed by NAME. */
+const METADATA_NAMES: ReadonlySet<string> = new Set(['metadata.google.internal']);
+
+/**
+ * The DEPRECATED IPv6 forms that embed an IPv4 in their last 32 bits: IPv4-compatible
+ * `::/96` (RFC 4291 §2.5.5.1) and the SIIT "IPv4-translated" `::ffff:0:0:0/96` (RFC
+ * 2765). The shared guard refuses both as non-routable, and `embeddedIpv4` does not
+ * fold them (no current stack translates them) — but on THIS path "non-routable"
+ * means "private", which the exemption ALLOWS. So they are checked here, bytes 12-15
+ * against the metadata addresses, because an old or odd stack that still honours
+ * one would put `[::ffff:0:a9fe:a9fe]` straight onto the metadata endpoint.
+ */
+const LEGACY_IPV4_EMBEDDINGS: readonly PackedCidr[] = packBlocks(['::/96', '::ffff:0:0:0/96']);
+
+/**
+ * RFC 8215's LOCAL-USE NAT64 block, `64:ff9b:1::/48`. A translator's prefix is carved
+ * from it at any RFC 6052 length from /48 to /96, so an address inside it may carry
+ * its IPv4 in any of those layouts. It is not global unicast, so the shared guard
+ * calls it private — which the exemption ALLOWS — and the guard folds it only once
+ * DNS64 discovery has named the prefix, which this synchronous check never asks for.
+ * So, as with the deprecated embeddings above, every layout is checked here against
+ * the metadata addresses: tighten-only, since a layout can only add a refusal.
+ */
+const LOCAL_USE_NAT64: readonly PackedCidr[] = packBlocks(['64:ff9b:1::/48']);
+const LOCAL_USE_PREFIX_LENGTHS: readonly number[] = [48, 56, 64, 96];
+
+/** Is this packed address one of the metadata endpoints? */
+function isMetadataAddress(bytes: Uint8Array): boolean {
+	return METADATA_BLOCKS.some((block) => packedInBlock(bytes, block));
+}
+
+/** The IPv4 a deprecated embedding carries in its last 32 bits, or null. */
+function legacyEmbeddedIpv4(bytes: Uint8Array): Uint8Array | null {
+	const legacy = LEGACY_IPV4_EMBEDDINGS.some((block) => packedInBlock(bytes, block));
+	return legacy ? bytes.subarray(12, 16) : null;
+}
+
+/** The IPv4s a local-use NAT64 address may carry, one per layout (none outside the block). */
+function localUseEmbeddedIpv4s(bytes: Uint8Array): Uint8Array[] {
+	if (!LOCAL_USE_NAT64.some((block) => packedInBlock(bytes, block))) return [];
+	return LOCAL_USE_PREFIX_LENGTHS.flatMap((bits) => extractRfc6052Ipv4(bytes, bits) ?? []);
+}
+
+/** Every IPv4 an address may stand for on an odd or local stack (see the two tables above). */
+function embeddedIpv4Candidates(bytes: Uint8Array): Uint8Array[] {
+	const legacy = legacyEmbeddedIpv4(bytes);
+	return [...(legacy === null ? [] : [legacy]), ...localUseEmbeddedIpv4s(bytes)];
+}
+
+/**
+ * Is this host (in any of its forms) one no transcriber can be, exemption or not?
+ * The metadata endpoints hand out the instance's credentials to anything that can
+ * address them — in ANY spelling, so they are compared as packed bytes, directly and
+ * through the deprecated embeddings above. A 6to4 or Teredo address is a TUNNEL whose
+ * embedded IPv4 is a relay, so no fold can say where it lands (`[2002:a9fe:a9fe::]`
+ * rides a relay at the metadata address) — never a sidecar on the institution's LAN.
+ */
+function isForbiddenAsrHost(host: string): boolean {
+	if (METADATA_NAMES.has(host.replace(/\.$/, ''))) return true;
+	const bytes = packAddress(host);
+	return bytes !== null && isForbiddenAsrAddress(bytes);
+}
+
+/** A tunnel, or a metadata address directly, through a deprecated embedding, or local-use NAT64. */
+function isForbiddenAsrAddress(bytes: Uint8Array): boolean {
+	if (bytes.length === 16 && isTunnelIpv6(bytes)) return true;
+	return [bytes, ...embeddedIpv4Candidates(bytes)].some(isMetadataAddress);
 }
 
 /**
@@ -186,15 +307,14 @@ function isInternalAsrHost(host: string): boolean {
  * that vetting now; what is left here is the POLICY, in three sentences.
  */
 export function isSafeLocalAsrUrl(uri: string): boolean {
-	const host = asrUrlHost(uri);
-	if (host === null) return false;
+	const hosts = asrUrlHosts(uri);
+	if (hosts === null) return false;
 
-	// The cloud metadata endpoints are never a transcriber, exemption or not:
-	// they hand out the instance's credentials to anything that can address them.
-	const METADATA_HOSTS = new Set(['169.254.169.254', '169.254.170.2', 'metadata.google.internal']);
-	if (METADATA_HOSTS.has(host)) return false;
+	// The cloud metadata endpoints (and the tunnels that could ride to one) are
+	// never a transcriber, exemption or not — in ANY form of the host.
+	if (hosts.some(isForbiddenAsrHost)) return false;
 
-	return isInternalAsrHost(host) ? privateTranscriberHostsAllowed() : true;
+	return hosts.some(isInternalAsrHost) ? privateTranscriberHostsAllowed() : true;
 }
 
 /** Join a base URI and a path without doubling or dropping the separator. */

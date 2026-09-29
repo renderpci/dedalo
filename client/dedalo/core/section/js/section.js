@@ -1202,6 +1202,13 @@ section.prototype.render = async function(options={}) {
 * @param {number} [options.row_key_base=0] - Offset added to each entry's index
 *   for its `row_key`: a row window (window_section_rows) materializes one entry
 *   at a time and must hand it the row_key it has in the whole page
+* @param {number|string|null} [options.matrix_id] - Time-machine row id; defaults
+*   to `caller.matrix_id`. Keys every section_record (and, forwarded, its
+*   children) to that TM row, so a tool_time_machine preview never shares
+*   instances with the live 'Now' pane or the page
+* @param {string|null} [options.data_source] - 'tm' for a time-machine preview;
+*   defaults to `caller.data_source`. Forwarded only to the records' dataframe
+*   children (see section_record build_instance)
 * @returns {Promise<Array<Object>>} Array of successfully built section_record
 *   instances (nulls from failed builds are excluded)
 */
@@ -1231,6 +1238,14 @@ export const get_section_records = async function(options) {
 			? self.data.entries
 			: [])
 		const row_key_base		= Number.isInteger(options.row_key_base) ? options.row_key_base : 0
+		// matrix_id / data_source — time machine. Always from the CALLER (a
+		// tool_time_machine preview portal), NEVER from locator.matrix_id: dd15
+		// history-list entries carry one matrix_id per row, and re-keying on it
+		// would stamp that id onto every dd15 cell source. Without them, the
+		// preview's section_records collide with the live ones (same key) and
+		// the preview reuses the live children, live dataframe included.
+		const matrix_id			= options.matrix_id || self.matrix_id || null
+		const data_source		= options.data_source || self.data_source || null
 
 	// iterate records
 		const ar_promises		= []
@@ -1260,7 +1275,9 @@ export const get_section_records = async function(options) {
 				columns_map		: columns_map,
 				column_id		: column_id,
 				locator			: locator,
-				id_variant		: id_variant
+				id_variant		: id_variant,
+				matrix_id		: matrix_id,
+				data_source		: data_source
 			}
 
 			// locator tag_id modifies id_variant when is present

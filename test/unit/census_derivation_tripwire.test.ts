@@ -485,7 +485,7 @@ const PRIVATE_ROOT_WALKERS: Readonly<Record<string, string>> = {
 	'test/unit/tier_wiring_tripwire.test.ts':
 		'ROOTS: `.github/workflows`; `.github/workflows-selfhosted`; `scripts/ci`; `test` ×2.',
 	'test/unit/tm_epoch_tripwire.test.ts': 'ROOTS: `src` `tools` — CENSUS_ROOTS.',
-	'test/unit/tm_lang_slice_restore_native.test.ts': 'ROOTS: `tools/tool_time_machine/server` ×2.',
+	'test/unit/tm_lang_slice_restore_native.test.ts': 'ROOTS: `tools/tool_time_machine/server`.',
 	'test/unit/tm_mode_retired_tripwire.test.ts': 'ROOTS: `client/dedalo` `src` `tools`.',
 	'test/unit/tool_header_contract_tripwire.test.ts': 'ROOTS: `tools` — `*/css/*.less`.',
 	'test/unit/tool_lossless_writeback_tripwire.test.ts':

@@ -47,7 +47,6 @@ import {
 import { dbTimestamp } from '../db/db_timestamp.ts';
 import type { MatrixJsonbColumn } from '../db/matrix.ts';
 import { sql, withTransaction } from '../db/postgres.ts';
-import { recordTimeMachine } from '../db/time_machine.ts';
 import { DedaloError } from '../errors/index.ts';
 import type { Principal } from '../security/permissions.ts';
 import {
@@ -56,6 +55,11 @@ import {
 	dataframeDeletePolicyOf,
 	dataframeTargetsOf,
 } from './dataframe.ts';
+import {
+	readMainSlots,
+	recordKeyChangeRows,
+	resolveDataframeSlotTipos,
+} from './dataframe_slots.ts';
 import {
 	inCapScope,
 	isTargetAllowed,
@@ -411,6 +415,52 @@ export async function maintainRelationSearchIndex(
 }
 
 /**
+ * THE SAVE'S `relation_search` LAW, shared by every door that writes a
+ * relation key WITH SAVE SEMANTICS (the component save, the time machine's
+ * restores and the bulk revert's key writes, 2026-09-27): only a node whose
+ * OWN stored model is the legacy `component_autocomplete_hi` keeps an ancestor
+ * index — the exact test `conform.ts` applies before it READS one — and for it
+ * the index is re-derived from the value just written (empty/absent value →
+ * the key is removed). Every other model is a no-op, as in the save. A door
+ * that restores a relation key without this leaves `relation_search` naming
+ * the ancestors of the value it replaced, and a broader-term search answers
+ * for a value the record no longer holds.
+ */
+export async function reindexRelationSearchLikeSave(
+	table: string,
+	sectionTipo: string,
+	sectionId: number,
+	componentTipo: string,
+	value: unknown,
+): Promise<void> {
+	const { getNode } = await import('../ontology/resolver.ts');
+	if ((await getNode(componentTipo))?.model !== 'component_autocomplete_hi') return;
+	await maintainRelationSearchIndex(
+		table,
+		sectionTipo,
+		sectionId,
+		componentTipo,
+		Array.isArray(value) ? value : [],
+	);
+}
+
+/**
+ * The same law over a whole restored `relation` column (a record undelete
+ * writes every key at once): each key re-derives as its own save would.
+ */
+export async function reindexRelationColumnLikeSave(
+	table: string,
+	sectionTipo: string,
+	sectionId: number,
+	relationColumn: unknown,
+): Promise<void> {
+	if (relationColumn === null || typeof relationColumn !== 'object') return;
+	for (const [componentTipo, value] of Object.entries(relationColumn as Record<string, unknown>)) {
+		await reindexRelationSearchLikeSave(table, sectionTipo, sectionId, componentTipo, value);
+	}
+}
+
+/**
  * PHP component_relation_common::validate_data_element (:1058-1198) — the
  * relation-family INSERT validation/normalization. The service_autocomplete
  * link_record flow depends on every step (found live 2026-07-09: the generic
@@ -471,15 +521,34 @@ export async function validateRelationInsert(
 	rawValue: Record<string, unknown>,
 	context: RelationInsertContext,
 ): Promise<Record<string, unknown> | null> {
+	return (await validateRelationInsertVerdict(rawValue, context)).value;
+}
+
+/**
+ * The length-1 door WITH the drop's reason: exactly `validateRelationInsert`
+ * (constraint refusals THROW the same typed errors), but a PHP-era drop
+ * answers its `code` — and, for a `duplicate`, the existing item the law
+ * matched (`duplicateOf`) — instead of a bare null. The CSV append merge needs
+ * both: a duplicate re-pairs its file id with the matched item, any other drop
+ * pairs with nothing.
+ */
+export async function validateRelationInsertVerdict(
+	rawValue: Record<string, unknown>,
+	context: RelationInsertContext,
+): Promise<{
+	value: Record<string, unknown> | null;
+	code?: RelationInsertRefusalCode;
+	duplicateOf?: unknown;
+}> {
 	const { outcomes } = await validateRelationInserts([rawValue], context);
 	const outcome = outcomes[0];
 	if (outcome === undefined || outcome.status === 'refused') {
 		if (outcome?.code !== undefined && !PHP_ERA_DROPS.has(outcome.code)) {
 			throw refusalToError(outcome, context);
 		}
-		return null;
+		return { value: null, code: outcome?.code, duplicateOf: outcome?.duplicateOf };
 	}
-	return outcome.value ?? null;
+	return { value: outcome.value ?? null };
 }
 
 /**
@@ -599,6 +668,14 @@ export interface RelationInsertOutcome {
 	value?: Record<string, unknown>;
 	code?: RelationInsertRefusalCode;
 	reason?: string;
+	/**
+	 * On a `duplicate` refusal ONLY: the existing item (from `existingItems` or
+	 * an earlier acceptance in the batch) the law matched, BY REFERENCE. The
+	 * CSV append merge re-pairs a skipped duplicate's file id with it — read
+	 * from the law's own match, never re-derived with a second key that could
+	 * drift from this one (the normalized `type` fill, section_id canon).
+	 */
+	duplicateOf?: unknown;
 }
 
 export interface RelationInsertBatchResult {
@@ -701,6 +778,7 @@ export async function validateRelationInserts(
 				status: 'refused',
 				code: normalized.code,
 				reason: normalized.reason,
+				...(normalized.duplicateOf !== undefined ? { duplicateOf: normalized.duplicateOf } : {}),
 			});
 			continue;
 		}
@@ -753,7 +831,12 @@ async function normalizeRelationInsert(
 	rawValue: Record<string, unknown>,
 	context: RelationInsertContext,
 	batchAccepted: readonly Record<string, unknown>[],
-): Promise<{ value?: Record<string, unknown>; code?: RelationInsertRefusalCode; reason?: string }> {
+): Promise<{
+	value?: Record<string, unknown>;
+	code?: RelationInsertRefusalCode;
+	reason?: string;
+	duplicateOf?: unknown;
+}> {
 	const existingItems =
 		batchAccepted.length === 0
 			? context.existingItems
@@ -807,7 +890,11 @@ async function normalizeRelationInsert(
 		for (const item of existingItems) {
 			if (dataframeEntriesEqual(item, normalized)) {
 				// already framed — ignored
-				return { code: 'duplicate', reason: 'this record is already framed from that item' };
+				return {
+					code: 'duplicate',
+					reason: 'this record is already framed from that item',
+					duplicateOf: item,
+				};
 			}
 		}
 		return { value: normalized };
@@ -836,7 +923,7 @@ async function normalizeRelationInsert(
 		for (const item of existingItems) {
 			if (dataframeEntriesEqual(item, value)) {
 				// the same frame twice — ignored
-				return { code: 'duplicate', reason: 'the same frame is already stored' };
+				return { code: 'duplicate', reason: 'the same frame is already stored', duplicateOf: item };
 			}
 		}
 		return { value };
@@ -858,7 +945,7 @@ async function normalizeRelationInsert(
 	for (const item of existingItems) {
 		if (lookupKey(item) === valueKey) {
 			// already linked — ignored
-			return { code: 'duplicate', reason: 'that record is already linked here' };
+			return { code: 'duplicate', reason: 'that record is already linked here', duplicateOf: item };
 		}
 	}
 	return { value };
@@ -1184,22 +1271,27 @@ export async function getRelationTypeByTipo(tipo: string): Promise<string> {
 /**
  * PHP trait.dataframe_common::remove_dataframe_data_by_id (:280-369) — the
  * server-authoritative cascade fired when ONE data item of a main component
- * is removed: every dataframe slot declared in the main's request_config
- * ddo_map loses the frame locators paired with that item (id_key contract),
- * sibling items' frames untouched.
+ * is removed: every dataframe slot of the main (resolveDataframeSlotTipos —
+ * relation AND literal mains, iri's fixed dd560 included) loses the frame
+ * locators paired with that item (id_key contract), sibling items' frames
+ * untouched.
  *
  * PHP-fidelity details (S1-05):
  * - The slot strip emits NO Time Machine row: PHP suppresses the slot's own
  *   TM entry (tm_record::$save_tm=false, REL-01) because the MAIN component's
- *   TM row captures the full state; a separate slot row would break TM
- *   restore ordering. The modified stamps are the caller's responsibility
- *   too (the main save/delete path refreshes them).
+ *   TM row captures the full state — true since 2026-09-27: every caller's
+ *   main's lg-nolan row is written after this strip (relations/dataframe_slots.ts
+ *   recordMainHistory — the two lanes), so it
+ *   carries the slots' frames as the strip left them. A separate slot row
+ *   would break TM restore ordering. The modified stamps are the caller's
+ *   responsibility too (the main save/delete path refreshes them).
  * - The delete policy is the SLOT's (dataframeDeletePolicyOf, relations/
  *   dataframe.ts — PHP read it from the main, which no shipped node carried):
- *   'unlink' clears slot entries only; 'delete_target' soft-deletes the
- *   unlinked frame TARGET records; 'delete_target_record' (= the v6
- *   `hard_delete: true`) deletes them (targets collected BEFORE clearing,
- *   deleted AFTER every slot write; per-target failures log and continue).
+ *   'unlink' clears slot entries only; 'delete_target' empties the unlinked
+ *   frame TARGET records, row kept (targets collected BEFORE clearing, wiped
+ *   AFTER every slot write; per-target failures log and continue). No policy
+ *   removes a target row — the v6 `hard_delete: true` is inert
+ *   (WC-2026-09-29-dataframe-hard-delete-retired).
  */
 export async function removeDataframeDataById(
 	table: string,
@@ -1208,37 +1300,23 @@ export async function removeDataframeDataById(
 	mainComponentTipo: string,
 	itemId: number,
 	userId: number,
+	bulkProcessId: number | null = null,
 ): Promise<void> {
-	const { getNode, getModelByTipo } = await import('../ontology/resolver.ts');
-	const node = await getNode(mainComponentTipo);
-	if (node === undefined || node === null) return;
-
-	// dataframe slots declared in the main's request_config (PHP
-	// get_dataframe_ddo: ddo_map entries whose model is component_dataframe).
-	const { buildRequestConfigForElement } = await import('./request_config/build.ts');
-	const config = await buildRequestConfigForElement(node.properties ?? null, {
-		ownerTipo: mainComponentTipo,
-		ownerSectionTipo: sectionTipo,
-		mode: 'edit',
-		ownerIsSection: false,
-	});
-	const slotTipos: string[] = [];
-	for (const item of config) {
-		for (const ddo of item.show?.ddo_map ?? []) {
-			if (typeof ddo.tipo !== 'string' || slotTipos.includes(ddo.tipo)) continue;
-			if ((await getModelByTipo(ddo.tipo)) === 'component_dataframe') slotTipos.push(ddo.tipo);
-		}
-	}
+	const { getNode } = await import('../ontology/resolver.ts');
+	// THE one slot-discovery law (dataframe_slots.ts): ontology dataframe
+	// children ∪ own show/hide ddos ∪ the model's fixed frames — so a literal
+	// main switched on with has_dataframe (no request_config of its own) and
+	// component_iri's fixed dd560 slot cascade exactly like a relation main.
+	const slotTipos = await resolveDataframeSlotTipos(mainComponentTipo);
 	if (slotTipos.length === 0) return;
 
 	// Delete policy PER SLOT, read from the SLOT node (dataframeDeletePolicyOf:
-	// `hard_delete: true` = hard, `dataframe.delete_policy` = soft/hard, else
-	// unlink). The targets are lifted from the RAW stored entries BEFORE the
+	// `dataframe.delete_policy: "delete_target"` = soft wipe, else unlink). The targets are lifted from the RAW stored entries BEFORE the
 	// strip and handed to the applier only AFTER every slot write; the applier
 	// queues the deletes on the commit lane — a target is never deleted while a
 	// locator still addresses it (see applyDataframeDeletePolicy).
 	const pendingDeletes: {
-		policy: 'delete_target' | 'delete_target_record';
+		policy: 'delete_target';
 		targets: DataframeTarget[];
 	}[] = [];
 
@@ -1276,8 +1354,10 @@ export async function removeDataframeDataById(
 		);
 	}
 
+	// Under a bulk run the wipes carry its id: each emptied target gets its
+	// role-4 snapshot, so the run's revert can write its data back (D3).
 	for (const pending of pendingDeletes) {
-		await applyDataframeDeletePolicy(pending.policy, pending.targets, userId);
+		await applyDataframeDeletePolicy(pending.policy, pending.targets, userId, bulkProcessId);
 	}
 }
 
@@ -1457,6 +1537,12 @@ export async function deletePortalLocator(
 			}
 		}
 		if (removedLocators.length > 0) {
+			// The main's slots BEFORE the cascade strips them — the history's
+			// BEFORE side (two lanes: a stripped frame is an lg-nolan change).
+			const slotsBefore = await readMainSlots(
+				{ table, sectionTipo, sectionId: Number(sectionId) },
+				tipo,
+			);
 			// Dataframe cascade (PHP remove_locator_from_data :1362): each removed
 			// locator strips the frame entries paired with its item id (unified
 			// id_key pairing). Pre-migration locators without an id have no id_key
@@ -1497,16 +1583,16 @@ export async function deletePortalLocator(
 				[{ column: column as MatrixJsonbColumn, key: tipo, value: kept }],
 				{ userId: principal.userId },
 			);
-			await recordTimeMachine(
-				{
-					sectionTipo,
-					sectionId: Number(sectionId),
-					componentTipo: tipo,
-					lang: 'lg-nolan',
-					userId: principal.userId,
-					data: kept,
-				},
-				dbTimestamp(),
+			// The history, two lanes (dataframe_slots.ts recordMainHistory): the
+			// portal's kept locators in its value lane, and — when the cascade
+			// above stripped a frame — the lg-nolan row with the slots as they
+			// stand now. A slot tipo records the lg-nolan row of the main(s) the
+			// removed frames belonged to, never its own.
+			await recordKeyChangeRows(
+				{ table, sectionTipo, sectionId: Number(sectionId) },
+				tipo,
+				{ before: items, after: kept, requestLang: 'lg-nolan', slotsBefore },
+				{ userId: principal.userId, timestamp: dbTimestamp() },
 			);
 		}
 		return {
@@ -1561,4 +1647,62 @@ export async function deletePortalLocator(
 		msg.push(`No locators are removed (${model} - ${tipo})`);
 	}
 	return { removed, msg };
+}
+
+/** The locator fields a replace must match for an id-less locator to keep a stored twin's id. */
+const LOCATOR_IDENTITY = ['section_tipo', 'section_id', 'type', 'tag_id'] as const;
+
+/**
+ * `validated` (a relation `set_data` replace, already through the insert door)
+ * with each ID-LESS locator given the id of the stored locator it IS — a copy,
+ * the caller's objects never mutated. The relation twin of the literal
+ * `adoptStoredItemIds` (concepts/item_value.ts): a CSV cell or a propagate
+ * value names no locator id, and without this the save's id safety net
+ * re-minted one per element, so an unchanged re-import (a) wrote an undo pair +
+ * a visible row and (b) left every paired dataframe frame keyed (`id_key`) to
+ * the OLD id — unpaired (review 2026-09-28).
+ *
+ * The same LINK: `compareLocators` on section_tipo / section_id (loose) / type /
+ * tag_id, plus `lang` for a translatable component and the pairing block for a
+ * frame (String-loose, as `isAlreadyStored` compares it). The stored twin at the
+ * SAME position wins (a repeated target keeps its own id); otherwise the first
+ * unclaimed match. No stored id is ever adopted twice, nor one an incoming
+ * locator already names.
+ */
+export function adoptStoredLocatorIds(
+	validated: readonly Record<string, unknown>[],
+	stored: readonly unknown[],
+	options: { translatable: boolean; pairing: boolean },
+): Record<string, unknown>[] {
+	const fields: readonly string[] = options.translatable
+		? [...LOCATOR_IDENTITY, 'lang']
+		: LOCATOR_IDENTITY;
+	const sameLink = (a: Record<string, unknown>, b: Record<string, unknown>): boolean =>
+		compareLocators(a as never, b as never, fields) &&
+		(!options.pairing ||
+			(String(a.main_component_tipo) === String(b.main_component_tipo) &&
+				String(a.id_key) === String(b.id_key)));
+	const storedLocators = stored.map((item) =>
+		item !== null && typeof item === 'object' && !lacksId(item as Record<string, unknown>)
+			? (item as Record<string, unknown>)
+			: null,
+	);
+	const claimed = new Set(
+		validated.filter((item) => !lacksId(item)).map((item) => String(item.id)),
+	);
+	const claimable = (candidate: Record<string, unknown> | null, locator: Record<string, unknown>) =>
+		candidate !== null && !claimed.has(String(candidate.id)) && sameLink(locator, candidate);
+	return validated.map((locator, index) => {
+		if (!lacksId(locator)) return locator;
+		const twin = claimable(storedLocators[index] ?? null, locator)
+			? storedLocators[index]
+			: storedLocators.find((candidate) => claimable(candidate ?? null, locator));
+		if (twin === undefined || twin === null) return locator;
+		claimed.add(String(twin.id));
+		return { ...locator, id: twin.id };
+	});
+}
+
+function lacksId(item: Record<string, unknown>): boolean {
+	return item.id === undefined || item.id === null || item.id === '';
 }

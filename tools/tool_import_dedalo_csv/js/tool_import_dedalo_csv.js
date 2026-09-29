@@ -418,17 +418,21 @@ tool_import_dedalo_csv.prototype.remove_file = function(item) {
 *   file              : {string}  basename of the staged CSV file
 *   section_tipo      : {string}  target section tipo (e.g. 'oh1')
 *   ar_columns_map    : {Array}   column-to-component mapping built by the column mapper UI;
-*                                 each entry: { tipo, model, label, checked, mapped_to [, decimal] }
+*                                 each entry: { tipo, model, label, checked, map_to [, decimal] [, import_mode] }
+*                                 import_mode: 'replace' | 'append' (absent = 'replace'); set only
+*                                 on columns whose target component has an import_append policy
 *   bulk_process_label: {string}  human-readable name for the bulk-process record (dd800)
 * }
 *
 * @param {Array}   files             - Array of file-descriptor objects (see above)
-* @param {boolean} time_machine_save - When true, the server saves a time-machine snapshot
-*   for every record touched, enabling per-record revert. Defaults to true in the UI.
+* No time-machine switch is sent: the import runs under a bulk id, and every
+* save carrying one writes its undo pair (hidden BEFORE row + visible after-row),
+* so the whole run can be reverted exactly from the Time Machine tool
+* (WC-2026-09-27-bulk-revert-undo-log, decision D1).
 * @returns {Promise<Object>} Resolves with the full API response object; on success
 *   response.result===true and response.pid/response.pfile identify the background process
 */
-tool_import_dedalo_csv.prototype.import_files = function(files, time_machine_save) {
+tool_import_dedalo_csv.prototype.import_files = function(files) {
 
 	const self = this
 
@@ -443,8 +447,7 @@ tool_import_dedalo_csv.prototype.import_files = function(files, time_machine_sav
 			source	: source,
 			options	: {
 				background_running	: true,
-				files				: files,
-				time_machine_save	: time_machine_save
+				files				: files
 			}
 		}
 
@@ -522,7 +525,9 @@ tool_import_dedalo_csv.prototype.get_background_jobs = function(action) {
 * section_tipo change triggered by the user).
 *
 * On success, response.result is an array of component-descriptor objects:
-*   { value: 'oh25', label: 'Title', model: 'component_input_text' }
+*   { value: 'oh25', label: 'Title', model: 'component_input_text', import_append: 'items' }
+* import_append is the component's append policy ('items' | 'geo_layer' |
+* 'text_paragraphs'), or null when the server refuses append for that model.
 *
 * On failure (unknown tipo, etc.), response.result is falsy and response.msg carries
 * the human-readable error. In that case this method resolves with

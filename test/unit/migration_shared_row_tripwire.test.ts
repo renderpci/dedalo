@@ -25,6 +25,16 @@
  * overwritten. Comments are stripped before the DML scan; the tag is looked
  * for in the raw text.
  *
+ * THE ONE SCHEMA EXCEPTION (2026-09-27, 0010_tm_role.sql): a "SHARED-SCHEMA
+ * ADDITIVE COLUMN". An existing install gets the shared schema through this
+ * lane or not at all, so an ALTER on a shared table is admitted ONLY as (a)
+ * `ADD COLUMN IF NOT EXISTS <name> <type> [NULL]` — nothing after the type, so
+ * no DEFAULT (a rewrite/backfill) and no NOT NULL (a scan) — or (b) `ADD
+ * CONSTRAINT <name> CHECK (…) NOT VALID` (no validation scan); in a file
+ * tagged `-- SHARED-SCHEMA ADDITIVE COLUMN:` that bounds its lock wait with
+ * `SET LOCAL lock_timeout`. Every other ALTER — DROP/RENAME/ALTER COLUMN, a
+ * default, a validated constraint, an untagged or unbounded file — stays red.
+ *
  * ANTI-VACUITY: 0004 is pinned as the positive control (it must be found, it
  * must be tagged, its UPDATEs must be `@>`-pinned), and every matcher fires on
  * a synthetic offender.
@@ -42,6 +52,9 @@ const RUNNER = join(REPO, 'install', 'db', 'migrate.ts');
 
 /** The tag a shared-row correction file MUST carry (verbatim, a `--` comment). */
 const SHARED_ROW_CORRECTION_TAG = '-- SHARED-ROW SEED CORRECTION:';
+
+/** The tag a shared-schema additive-column file MUST carry (verbatim). */
+const ADDITIVE_COLUMN_TAG = '-- SHARED-SCHEMA ADDITIVE COLUMN:';
 
 /** The shared-schema tables the TS-owned lane does not own. */
 const SHARED_TABLE = String.raw`(?:public\.)?(?:matrix_[a-z0-9_]*|matrix|dd_ontology[a-z0-9_]*)`;
@@ -78,6 +91,34 @@ const FORBIDDEN_DML = new RegExp(
 /** The one admissible shape: an UPDATE, whose statement text is then inspected. */
 const SHARED_UPDATE = new RegExp(String.raw`\bUPDATE${TABLE_INFIX}\s+"?${SHARED_TABLE}"?\b`, 'gi');
 
+/** `ALTER TABLE [IF EXISTS] <shared>` — the head both admissible additive shapes share. */
+const ALTER_SHARED_HEAD = String.raw`^ALTER\s+TABLE(?:\s+IF\s+EXISTS)?\s+"?${SHARED_TABLE}"?\s+`;
+
+/**
+ * The admissible additive shapes, matched against ONE whole statement (from
+ * `ALTER` to its `;`). Anchored at both ends: anything after the type (DEFAULT,
+ * NOT NULL, GENERATED, REFERENCES, a second action after a comma) fails.
+ */
+const ADDITIVE_SHAPES: readonly RegExp[] = [
+	new RegExp(
+		String.raw`${ALTER_SHARED_HEAD}ADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\s+"?[a-z_][a-z0-9_]*"?\s+[a-z][a-z0-9_]*(?:\s*\(\s*\d+\s*\))?(?:\s+NULL)?\s*$`,
+		'i',
+	),
+	new RegExp(
+		String.raw`${ALTER_SHARED_HEAD}ADD\s+CONSTRAINT\s+"?[a-z_][a-z0-9_]*"?\s+CHECK\s*\([^;]*\)\s+NOT\s+VALID\s*$`,
+		'i',
+	),
+];
+
+/** Whether an ALTER hit is an admissible additive statement in an admissible file. */
+function isAdmittedAdditive(raw: string, body: string, index: number, verb: string): boolean {
+	if (!/^ALTER/i.test(verb)) return false;
+	if (!raw.includes(ADDITIVE_COLUMN_TAG)) return false;
+	if (!/\bSET\s+LOCAL\s+lock_timeout\b/i.test(body)) return false;
+	const statement = statementFrom(body, index).trim();
+	return ADDITIVE_SHAPES.some((shape) => shape.test(statement));
+}
+
 /** Strip `--` line comments (the only comment form these files use). */
 function stripSqlComments(sql: string): string {
 	return sql
@@ -95,6 +136,8 @@ function statementFrom(sql: string, index: number): string {
 interface FileVerdict {
 	file: string;
 	sharedUpdates: number;
+	/** ALTERs admitted as shared-schema additive statements. */
+	additives: number;
 	violations: string[];
 }
 
@@ -102,8 +145,15 @@ interface FileVerdict {
 function judgeMigration(file: string, raw: string): FileVerdict {
 	const violations: string[] = [];
 	const body = stripSqlComments(raw);
+	let additives = 0;
 	for (const hit of body.matchAll(FORBIDDEN_DML)) {
-		violations.push(`${file}: '${hit[0].trim()}' — only an UPDATE may correct a shared row`);
+		if (isAdmittedAdditive(raw, body, hit.index ?? 0, hit[1] ?? '')) {
+			additives += 1;
+			continue;
+		}
+		violations.push(
+			`${file}: '${hit[0].trim()}' — only an UPDATE may correct a shared row, and only a tagged, lock-bounded ADD COLUMN IF NOT EXISTS (nullable, no default) or ADD CONSTRAINT … NOT VALID may extend a shared table`,
+		);
 	}
 	const updates = [...body.matchAll(SHARED_UPDATE)];
 	if (updates.length > 0 && !raw.includes(SHARED_ROW_CORRECTION_TAG)) {
@@ -119,7 +169,7 @@ function judgeMigration(file: string, raw: string): FileVerdict {
 			);
 		}
 	}
-	return { file, sharedUpdates: updates.length, violations };
+	return { file, sharedUpdates: updates.length, additives, violations };
 }
 
 function migrationFiles(): string[] {
@@ -140,6 +190,13 @@ describe('migration shared-row tripwire — install/db/migrations/*.sql', () => 
 		expect(verdicts.length).toBeGreaterThanOrEqual(4);
 	});
 
+	test('anti-vacuity: the positive control 0010 is scanned and IS an admitted additive column', () => {
+		const control = verdicts.find((v) => v.file === '0010_tm_role.sql');
+		expect(control).toBeDefined();
+		expect(control?.additives).toBe(2);
+		expect(control?.violations).toEqual([]);
+	});
+
 	test('every shared-row DML is a TAGGED, `@>`-pinned UPDATE', () => {
 		expect(verdicts.flatMap((v) => v.violations)).toEqual([]);
 	});
@@ -148,6 +205,38 @@ describe('migration shared-row tripwire — install/db/migrations/*.sql', () => 
 		const header = readFileSync(RUNNER, 'utf8');
 		expect(header).toContain(SHARED_ROW_CORRECTION_TAG);
 		expect(header).toContain('seed-defect correction');
+		expect(header).toContain(ADDITIVE_COLUMN_TAG.replace('-- ', ''));
+		expect(header).toContain('shared-schema additive column');
+	});
+
+	test('anti-vacuity: the additive-column exception admits ONLY its exact shape', () => {
+		const head = `${ADDITIVE_COLUMN_TAG} probe\nSET LOCAL lock_timeout = '5s';\n`;
+		const admitted = judgeMigration(
+			'9999_probe.sql',
+			`${head}ALTER TABLE matrix_time_machine ADD COLUMN IF NOT EXISTS probe smallint NULL;\n` +
+				'ALTER TABLE matrix_time_machine ADD CONSTRAINT probe_check CHECK (probe IN (1, 2)) NOT VALID;',
+		);
+		expect(admitted.violations).toEqual([]);
+		expect(admitted.additives).toBe(2);
+		for (const offender of [
+			// a default rewrites/backfills; NOT NULL scans; the rest are not additive
+			'ALTER TABLE matrix_time_machine ADD COLUMN IF NOT EXISTS probe smallint DEFAULT 0;',
+			'ALTER TABLE matrix_time_machine ADD COLUMN IF NOT EXISTS probe smallint NOT NULL;',
+			'ALTER TABLE matrix_time_machine ADD COLUMN probe smallint;',
+			'ALTER TABLE matrix_time_machine ADD COLUMN IF NOT EXISTS probe smallint, DROP COLUMN data;',
+			'ALTER TABLE matrix_time_machine DROP COLUMN IF EXISTS bulk_process_temp;',
+			'ALTER TABLE matrix_time_machine ALTER COLUMN lang TYPE text;',
+			'ALTER TABLE matrix_time_machine RENAME COLUMN lang TO language;',
+			'ALTER TABLE matrix_time_machine ADD CONSTRAINT probe_check CHECK (probe IN (1, 2));',
+		]) {
+			const judged = judgeMigration('9999_probe.sql', `${head}${offender}`);
+			expect(judged.violations.length, `admitted: ${offender}`).toBeGreaterThan(0);
+		}
+		const clean = 'ALTER TABLE matrix_time_machine ADD COLUMN IF NOT EXISTS probe smallint NULL;';
+		const untagged = judgeMigration('9999_probe.sql', `SET LOCAL lock_timeout = '5s';\n${clean}`);
+		expect(untagged.violations.length, 'an untagged additive file').toBeGreaterThan(0);
+		const unbounded = judgeMigration('9999_probe.sql', `${ADDITIVE_COLUMN_TAG} probe\n${clean}`);
+		expect(unbounded.violations.length, 'a file with no lock_timeout').toBeGreaterThan(0);
 	});
 
 	test('anti-vacuity: each matcher fires on a synthetic offender', () => {

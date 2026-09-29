@@ -268,7 +268,8 @@ export function updateInlineValueByIdKey(
 
 /**
  * DELETE POLICY of a dataframe SLOT (2026-09-06,
- * WC-2026-09-06-dataframe-delete-policy-on-slot). What happens to a frame's
+ * WC-2026-09-06-dataframe-delete-policy-on-slot; hard value retired
+ * 2026-09-29). What happens to a frame's
  * TARGET record when its pairing locator leaves the slot — on EITHER door:
  * the main-item cascade (removeDataframeDataById) and the direct frame
  * removal (the dataframe modal's Delete button → `action:'remove'` on the
@@ -279,34 +280,31 @@ export function updateInlineValueByIdKey(
  * read from the slot node's properties, never from the main's — a main with
  * two frames may want two answers. Until this entry the engine read
  * `dataframe.delete_policy` from the MAIN node, which no shipped node ever
- * carried, while the docs, the resolver tripline and the 59 legacy nodes all
- * put it on the slot.
+ * carried, while the docs and the resolver tripline put it on the slot.
  *
- * - `unlink`               — locators leave; the target survives (default).
- * - `delete_target`        — soft: deleteSectionData, row kept, components
- *                            emptied, recoverable from Time Machine.
- * - `delete_target_record` — hard: deleteSectionRecord, Time Machine snapshot
- *                            then the row is removed (the v6 intent).
+ * - `unlink`        — locators leave; the target survives (default).
+ * - `delete_target` — soft: deleteSectionData, row kept, components emptied,
+ *                     recoverable from Time Machine. The PHP opt-in.
  *
- * `properties.hard_delete: true` — the v6 spelling, carried by 59 slot nodes
- * of the numisdata ontology and inert since v6 (its only reader was a
- * commented-out client branch) — IS the hard policy. The ontology is not
- * rewritten to a new key: the nodes finally mean what their authors wrote.
- * It wins over a conflicting `delete_policy`. Anything else is `unlink`
- * (fail-safe: an unknown spelling never destroys data).
+ * THERE IS NO HARD VALUE (2026-09-29,
+ * WC-2026-09-29-dataframe-hard-delete-retired). A frame target is never
+ * removed as a row: a past state of the main renders its frame through the
+ * target, so a deleted target makes Time Machine lie about history. That is
+ * why v6 RETIRED `properties.hard_delete: true` on purpose — its client branch
+ * was commented out with "REMOVED because time machine needs to show the
+ * previous state, so, never deletes it". The key stays on ~58 slot nodes and
+ * is INERT (RETIRED_PROPERTY_KEYS, ontology/property_census.ts); the
+ * 2026-09-06 entry that read it as a hard delete misread that retirement.
+ * Anything but `delete_target` — `hard_delete`, a `delete_target_record`
+ * written in that window, a typo — is `unlink`: an unknown spelling never
+ * destroys data.
  */
-export type DataframeDeletePolicy = 'unlink' | 'delete_target' | 'delete_target_record';
+export type DataframeDeletePolicy = 'unlink' | 'delete_target';
 
 export function dataframeDeletePolicyOf(slotProperties: unknown): DataframeDeletePolicy {
 	if (slotProperties === null || typeof slotProperties !== 'object') return 'unlink';
-	const properties = slotProperties as {
-		hard_delete?: unknown;
-		dataframe?: { delete_policy?: unknown } | null;
-	};
-	if (properties.hard_delete === true) return 'delete_target_record';
-	const policy = properties.dataframe?.delete_policy;
-	if (policy === 'delete_target' || policy === 'delete_target_record') return policy;
-	return 'unlink';
+	const properties = slotProperties as { dataframe?: { delete_policy?: unknown } | null };
+	return properties.dataframe?.delete_policy === 'delete_target' ? 'delete_target' : 'unlink';
 }
 
 /** A frame target lifted from a stored slot entry, its id in canonical (int) form. */
@@ -345,13 +343,12 @@ export function dataframeTargetsOf(entries: readonly unknown[]): DataframeTarget
  * WHEN IT RUNS — after the unlink is COMMITTED, never before. Both doors call
  * this from inside an ambient transaction (the component save, the portal
  * unlink, the whole-record delete), and a target delete is not a statement
- * that can share that transaction: `deleteSectionRecord` snapshots, rewrites
- * every other holder, removes the row, then moves media files and settles the
- * diffusion unpublish — the last two are irreversible and run "post-commit"
- * only when the delete owns its transaction. Run inline inside the save's
- * transaction they would happen BEFORE the save committed, and a later
- * failure of the same save would roll the row and the locator back while the
- * files sat under `deleted/` and the public tier had forgotten the record.
+ * that can share that transaction: `deleteSectionData` snapshots, empties
+ * every component, then moves the emptied media components' files — an
+ * irreversible step. Run inline inside the save's transaction it would
+ * happen BEFORE the save committed, and a later failure of the same save
+ * would roll the data and the locator back while the files sat under
+ * `deleted/`.
  * So inside an ambient transaction the deletes are queued on the COMMIT-ONLY
  * lane (registerCommitAction): they run after COMMIT, with no ambient
  * transaction, each delete opening its own — and on ROLLBACK the queue is
@@ -360,22 +357,31 @@ export function dataframeTargetsOf(entries: readonly unknown[]): DataframeTarget
  *
  * FAILURE POSTURE. The write grant on every target section is asked BEFORE
  * queueing (assertFrameTargetWriteGrant) and refuses the whole request. A
- * target whose delete still fails after commit (infrastructure, a refusal
+ * target whose wipe still fails after commit (infrastructure, a refusal
  * deep inside the delete engine) is logged and the loop continues (PHP
  * remove_dataframe_data_by_id): the unlink has already been committed, so
  * what remains is an orphan target — survivable, reclaimable by maintenance —
  * never a dangling locator and never a poisoned transaction. The wire cannot
  * carry that failure: the response envelope was built by then, so the client
- * grammar is "unlinked; the target's deletion follows the commit".
+ * grammar is "unlinked; the target's wipe follows the commit".
+ *
+ * BULK RUNS (WC …-bulk-revert-undo-log, M1). A save carrying a bulk id passes
+ * it here, and the data wipe is handed it: it writes a role-4 twin of its
+ * whole-record snapshot carrying the run id (time_machine.ts
+ * recordBulkCascadeDelete), so the run's revert can find, restore and report
+ * what its cascade emptied. The media moves stay irreversible — the revert
+ * reports them as inexact (decision D3). A nested cascade (a wiped target's
+ * own `delete_target` frames) carries the same id.
  */
 export async function applyDataframeDeletePolicy(
 	policy: DataframeDeletePolicy,
 	targets: readonly DataframeTarget[],
 	userId: number,
+	bulkProcessId: number | null = null,
 ): Promise<void> {
 	if (policy === 'unlink' || targets.length === 0) return;
 	await assertFrameTargetWriteGrant(policy, targets, userId);
-	const run = (): Promise<void> => deleteDataframeTargets(policy, targets, userId);
+	const run = (): Promise<void> => deleteDataframeTargets(policy, targets, userId, bulkProcessId);
 	if (isInTransaction() && registerCommitAction(run)) return;
 	await run();
 }
@@ -418,27 +424,25 @@ async function assertFrameTargetWriteGrant(
 	}
 }
 
-/** The deletes themselves — one owned transaction per target, log-and-continue. */
+/** The wipes themselves — one owned transaction per target, log-and-continue. */
 async function deleteDataframeTargets(
 	policy: DataframeDeletePolicy,
 	targets: readonly DataframeTarget[],
 	userId: number,
+	bulkProcessId: number | null,
 ): Promise<void> {
 	// CONVENTIONS §2 rationale 1 (cycle): delete_record.ts reaches
 	// relations/save.ts (removeDataframeDataById), which imports this module.
-	const { deleteSectionData, deleteSectionRecord } = await import(
-		'../section/record/delete_record.ts'
-	);
+	const { deleteSectionData } = await import('../section/record/delete_record.ts');
 	for (const target of targets) {
 		try {
-			// Both primitives are called BY NAME: the dd128 write census derives
-			// its door list from the call spelling, and a door hidden behind a
-			// variable is a door the census cannot judge.
-			if (policy === 'delete_target_record') {
-				await deleteSectionRecord(target.section_tipo, target.section_id, userId);
-			} else {
-				await deleteSectionData(target.section_tipo, target.section_id, userId);
-			}
+			// Called BY NAME: the dd128 write census derives its door list from
+			// the call spelling. NEVER deleteSectionRecord here — a frame target
+			// row is never removed (see dataframeDeletePolicyOf).
+			// `undefined` keeps the door's own `now` default.
+			await deleteSectionData(target.section_tipo, target.section_id, userId, undefined, {
+				bulkProcessId,
+			});
 		} catch (error) {
 			console.error(
 				`applyDataframeDeletePolicy: ${policy} failed for ${target.section_tipo}/${String(target.section_id)} — the target survives as an orphan:`,
@@ -451,13 +455,17 @@ async function deleteDataframeTargets(
 /**
  * THE WHOLE-RECORD DOOR: when a record is deleted outright, every dataframe
  * slot it carried loses its frames with the row — and each slot's policy
- * still applies to the targets those frames addressed (a `hard_delete`
- * rating slot must not orphan its ratings because the curator deleted the
+ * still applies to the targets those frames addressed (a `delete_target`
+ * slot must not keep its frame-private data because the curator deleted the
  * coin instead of the valuation). Called by deleteSectionRecord with the
  * snapshot's `relation` bag, inside its transaction; the deletes queue on the
  * commit lane like every other door.
  */
-export async function applyOwnFramePolicies(relationBag: unknown, userId: number): Promise<void> {
+export async function applyOwnFramePolicies(
+	relationBag: unknown,
+	userId: number,
+	bulkProcessId: number | null = null,
+): Promise<void> {
 	if (relationBag === null || typeof relationBag !== 'object') return;
 	for (const [slotTipo, entries] of Object.entries(relationBag as Record<string, unknown>)) {
 		if (!Array.isArray(entries) || entries.length === 0) continue;
@@ -465,6 +473,6 @@ export async function applyOwnFramePolicies(relationBag: unknown, userId: number
 		if (node?.model !== 'component_dataframe') continue;
 		const policy = dataframeDeletePolicyOf(node.properties);
 		if (policy === 'unlink') continue;
-		await applyDataframeDeletePolicy(policy, dataframeTargetsOf(entries), userId);
+		await applyDataframeDeletePolicy(policy, dataframeTargetsOf(entries), userId, bulkProcessId);
 	}
 }

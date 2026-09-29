@@ -205,6 +205,7 @@ try {
 		await new Promise((r) => setTimeout(r, 2000));
 		const found = await page.evaluate(async () => {
 			const spec = '/dedalo/core/common/js/instances.js';
+			// biome-ignore lint/suspicious/noExplicitAny: a live instance of the untyped client JS, read inside the page
 			const mod = (await import(spec)) as { get_all_instances: () => Array<Record<string, any>> };
 			const out: Record<string, unknown> = {};
 			for (const inst of mod.get_all_instances()) {
@@ -616,6 +617,7 @@ async function openProbe(
 				open_tool: (o: object) => Promise<unknown>;
 			};
 			const all = get_all_instances();
+			// biome-ignore lint/suspicious/noExplicitAny: a live instance of the untyped client JS, read inside the page
 			const matches = (i: Record<string, any>) => ids.includes(String(i.id));
 			if (f.via === 'button') {
 				const section = all.find((i) => matches(i) && i.model === 'section');

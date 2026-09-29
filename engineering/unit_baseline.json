@@ -59,7 +59,7 @@
 		"test/unit/action_scope_binding_tripwire.test.ts": {
 			"tests": 6,
 			"skipped": 0,
-			"assertions": 95
+			"assertions": 92
 		},
 		"test/unit/active_ontology_tlds.test.ts": {
 			"tests": 8,
@@ -216,6 +216,11 @@
 			"skipped": 0,
 			"assertions": 17
 		},
+		"test/unit/append_merge.test.ts": {
+			"tests": 47,
+			"skipped": 0,
+			"assertions": 139
+		},
 		"test/unit/archive_docs_claim_tripwire.test.ts": {
 			"tests": 3,
 			"skipped": 0,
@@ -327,14 +332,29 @@
 			"assertions": 296
 		},
 		"test/unit/bulk_operation_atomicity_native.test.ts": {
-			"tests": 16,
+			"tests": 18,
 			"skipped": 0,
-			"assertions": 50
+			"assertions": 64
 		},
 		"test/unit/bulk_process_id_tripwire.test.ts": {
-			"tests": 11,
+			"tests": 12,
 			"skipped": 0,
-			"assertions": 29
+			"assertions": 35
+		},
+		"test/unit/bulk_revert_relation_search_native.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 18
+		},
+		"test/unit/bulk_revert_undo_native.test.ts": {
+			"tests": 107,
+			"skipped": 0,
+			"assertions": 721
+		},
+		"test/unit/bulk_undo_capture_native.test.ts": {
+			"tests": 32,
+			"skipped": 0,
+			"assertions": 226
 		},
 		"test/unit/cache_lifecycle_wsb.test.ts": {
 			"tests": 8,
@@ -346,6 +366,11 @@
 			"skipped": 0,
 			"assertions": 3
 		},
+		"test/unit/canonical_json.test.ts": {
+			"tests": 7,
+			"skipped": 0,
+			"assertions": 23
+		},
 		"test/unit/catalog_behaviour_tripwire.test.ts": {
 			"tests": 8,
 			"skipped": 0,
@@ -354,7 +379,7 @@
 		"test/unit/census_derivation_tripwire.test.ts": {
 			"tests": 45,
 			"skipped": 0,
-			"assertions": 539
+			"assertions": 550
 		},
 		"test/unit/change_lang.test.ts": {
 			"tests": 15,
@@ -921,6 +946,11 @@
 			"skipped": 0,
 			"assertions": 27
 		},
+		"test/unit/dataframe_stale_main_native.test.ts": {
+			"tests": 5,
+			"skipped": 0,
+			"assertions": 23
+		},
 		"test/unit/dataframe_write_contract_native.test.ts": {
 			"tests": 11,
 			"skipped": 0,
@@ -949,7 +979,7 @@
 		"test/unit/date_flat_value_single_source_tripwire.test.ts": {
 			"tests": 7,
 			"skipped": 0,
-			"assertions": 42
+			"assertions": 44
 		},
 		"test/unit/db_assets_definitions.test.ts": {
 			"tests": 4,
@@ -969,7 +999,7 @@
 		"test/unit/dd128_write_census_tripwire.test.ts": {
 			"tests": 25,
 			"skipped": 0,
-			"assertions": 862
+			"assertions": 874
 		},
 		"test/unit/dd_mcp_api.test.ts": {
 			"tests": 10,
@@ -1017,9 +1047,9 @@
 			"assertions": 17
 		},
 		"test/unit/delete_data_native.test.ts": {
-			"tests": 4,
+			"tests": 5,
 			"skipped": 0,
-			"assertions": 14
+			"assertions": 16
 		},
 		"test/unit/delete_inverse_lost_update_native.test.ts": {
 			"tests": 4,
@@ -1052,9 +1082,9 @@
 			"assertions": 54
 		},
 		"test/unit/descriptor_completeness_tripwire.test.ts": {
-			"tests": 23,
+			"tests": 34,
 			"skipped": 0,
-			"assertions": 386
+			"assertions": 515
 		},
 		"test/unit/destructive_action_guards_native.test.ts": {
 			"tests": 16,
@@ -1327,9 +1357,9 @@
 			"assertions": 4
 		},
 		"test/unit/duplicate_record_dataframe_native.test.ts": {
-			"tests": 13,
+			"tests": 14,
 			"skipped": 0,
-			"assertions": 106
+			"assertions": 111
 		},
 		"test/unit/duplicate_record_media.test.ts": {
 			"tests": 1,
@@ -1337,9 +1367,9 @@
 			"assertions": 13
 		},
 		"test/unit/duplicate_record_native.test.ts": {
-			"tests": 5,
+			"tests": 6,
 			"skipped": 0,
-			"assertions": 30
+			"assertions": 32
 		},
 		"test/unit/embedding_failclosed_native.test.ts": {
 			"tests": 28,
@@ -1380,6 +1410,11 @@
 			"tests": 11,
 			"skipped": 0,
 			"assertions": 114
+		},
+		"test/unit/error_report_ip_gate.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 15
 		},
 		"test/unit/error_report_receiver.test.ts": {
 			"tests": 13,
@@ -1455,6 +1490,11 @@
 			"tests": 8,
 			"skipped": 0,
 			"assertions": 10060
+		},
+		"test/unit/external_allowlist_classification_native.test.ts": {
+			"tests": 4,
+			"skipped": 0,
+			"assertions": 18
 		},
 		"test/unit/external_breaker_evidence_native.test.ts": {
 			"tests": 28,
@@ -1666,6 +1706,11 @@
 			"skipped": 0,
 			"assertions": 14
 		},
+		"test/unit/harvest_door_native.test.ts": {
+			"tests": 75,
+			"skipped": 0,
+			"assertions": 253
+		},
 		"test/unit/has_dataframe_literal_native.test.ts": {
 			"tests": 3,
 			"skipped": 0,
@@ -1709,7 +1754,7 @@
 		"test/unit/human_write_scope_tripwire.test.ts": {
 			"tests": 6,
 			"skipped": 0,
-			"assertions": 12
+			"assertions": 16
 		},
 		"test/unit/identify_api.test.ts": {
 			"tests": 18,
@@ -1797,14 +1842,19 @@
 			"assertions": 53
 		},
 		"test/unit/import_csv.test.ts": {
-			"tests": 10,
+			"tests": 12,
 			"skipped": 0,
-			"assertions": 19
+			"assertions": 23
+		},
+		"test/unit/import_csv_append_native.test.ts": {
+			"tests": 34,
+			"skipped": 0,
+			"assertions": 245
 		},
 		"test/unit/import_csv_execute.test.ts": {
-			"tests": 6,
+			"tests": 14,
 			"skipped": 0,
-			"assertions": 27
+			"assertions": 75
 		},
 		"test/unit/import_data.test.ts": {
 			"tests": 21,
@@ -1951,6 +2001,11 @@
 			"skipped": 0,
 			"assertions": 6
 		},
+		"test/unit/item_value.test.ts": {
+			"tests": 7,
+			"skipped": 0,
+			"assertions": 12
+		},
 		"test/unit/job_lane_budget_native.test.ts": {
 			"tests": 10,
 			"skipped": 0,
@@ -1980,6 +2035,11 @@
 			"tests": 10,
 			"skipped": 0,
 			"assertions": 17
+		},
+		"test/unit/lang_region.test.ts": {
+			"tests": 16,
+			"skipped": 0,
+			"assertions": 44
 		},
 		"test/unit/legacy_dialect_boundary_native.test.ts": {
 			"tests": 4,
@@ -2437,9 +2497,9 @@
 			"assertions": 42
 		},
 		"test/unit/migration_shared_row_tripwire.test.ts": {
-			"tests": 4,
+			"tests": 6,
 			"skipped": 0,
-			"assertions": 19
+			"assertions": 36
 		},
 		"test/unit/mock_isolation_tripwire.test.ts": {
 			"tests": 8,
@@ -2637,9 +2697,9 @@
 			"assertions": 8
 		},
 		"test/unit/ops_migrations.test.ts": {
-			"tests": 3,
+			"tests": 11,
 			"skipped": 0,
-			"assertions": 9
+			"assertions": 39
 		},
 		"test/unit/ops_observability.test.ts": {
 			"tests": 6,
@@ -2741,6 +2801,11 @@
 			"skipped": 0,
 			"assertions": 13
 		},
+		"test/unit/pinned_hop_native.test.ts": {
+			"tests": 27,
+			"skipped": 0,
+			"assertions": 120
+		},
 		"test/unit/portal_caller_map_descendants_native.test.ts": {
 			"tests": 4,
 			"skipped": 0,
@@ -2812,9 +2877,9 @@
 			"assertions": 59
 		},
 		"test/unit/propagate_component_data.test.ts": {
-			"tests": 9,
+			"tests": 10,
 			"skipped": 0,
-			"assertions": 16
+			"assertions": 18
 		},
 		"test/unit/proxy_trust_tripwire.test.ts": {
 			"tests": 12,
@@ -3226,6 +3291,11 @@
 			"skipped": 0,
 			"assertions": 14
 		},
+		"test/unit/save_append_import_native.test.ts": {
+			"tests": 9,
+			"skipped": 0,
+			"assertions": 51
+		},
 		"test/unit/save_component_failure_native.test.ts": {
 			"tests": 4,
 			"skipped": 0,
@@ -3250,6 +3320,11 @@
 			"tests": 3,
 			"skipped": 0,
 			"assertions": 22
+		},
+		"test/unit/save_refusal_no_trace_native.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 18
 		},
 		"test/unit/save_relation_roundtrip.test.ts": {
 			"tests": 1,
@@ -3774,7 +3849,7 @@
 		"test/unit/test_db_marker_tripwire.test.ts": {
 			"tests": 35,
 			"skipped": 0,
-			"assertions": 156
+			"assertions": 160
 		},
 		"test/unit/test_media_root_tripwire.test.ts": {
 			"tests": 62,
@@ -3887,19 +3962,39 @@
 			"assertions": 28
 		},
 		"test/unit/tm_bulk_revert.test.ts": {
-			"tests": 13,
+			"tests": 7,
 			"skipped": 0,
 			"assertions": 54
+		},
+		"test/unit/tm_composed_read_split_native.test.ts": {
+			"tests": 6,
+			"skipped": 0,
+			"assertions": 24
+		},
+		"test/unit/tm_composed_rows_native.test.ts": {
+			"tests": 31,
+			"skipped": 0,
+			"assertions": 222
 		},
 		"test/unit/tm_count_cache.test.ts": {
 			"tests": 3,
 			"skipped": 0,
 			"assertions": 4
 		},
-		"test/unit/tm_dataframe_restore_native.test.ts": {
-			"tests": 16,
+		"test/unit/tm_count_index_only_plan_native.test.ts": {
+			"tests": 5,
 			"skipped": 0,
-			"assertions": 39
+			"assertions": 18
+		},
+		"test/unit/tm_dataframe_docs_claim.test.ts": {
+			"tests": 9,
+			"skipped": 0,
+			"assertions": 27
+		},
+		"test/unit/tm_dataframe_restore_native.test.ts": {
+			"tests": 19,
+			"skipped": 0,
+			"assertions": 49
 		},
 		"test/unit/tm_deep_offset_flip.test.ts": {
 			"tests": 5,
@@ -3926,10 +4021,20 @@
 			"skipped": 0,
 			"assertions": 22
 		},
+		"test/unit/tm_history_visibility_native.test.ts": {
+			"tests": 15,
+			"skipped": 0,
+			"assertions": 42
+		},
+		"test/unit/tm_history_visibility_tripwire.test.ts": {
+			"tests": 8,
+			"skipped": 0,
+			"assertions": 34
+		},
 		"test/unit/tm_lang_slice_restore_native.test.ts": {
 			"tests": 30,
 			"skipped": 0,
-			"assertions": 148
+			"assertions": 151
 		},
 		"test/unit/tm_list_definitions_native.test.ts": {
 			"tests": 13,
@@ -3946,6 +4051,11 @@
 			"skipped": 0,
 			"assertions": 22
 		},
+		"test/unit/tm_preview_frame_as_of_native.test.ts": {
+			"tests": 29,
+			"skipped": 0,
+			"assertions": 280
+		},
 		"test/unit/tm_range_filter_barrier.test.ts": {
 			"tests": 6,
 			"skipped": 0,
@@ -3955,6 +4065,21 @@
 			"tests": 1,
 			"skipped": 0,
 			"assertions": 5
+		},
+		"test/unit/tm_relation_lane_native.test.ts": {
+			"tests": 11,
+			"skipped": 0,
+			"assertions": 115
+		},
+		"test/unit/tm_role_self_heal_native.test.ts": {
+			"tests": 9,
+			"skipped": 0,
+			"assertions": 22
+		},
+		"test/unit/tm_save_order_native.test.ts": {
+			"tests": 100,
+			"skipped": 0,
+			"assertions": 1777
 		},
 		"test/unit/tm_scope_authz_native.test.ts": {
 			"tests": 4,
@@ -3975,6 +4100,16 @@
 			"tests": 18,
 			"skipped": 0,
 			"assertions": 47
+		},
+		"test/unit/tm_two_lanes_native.test.ts": {
+			"tests": 51,
+			"skipped": 0,
+			"assertions": 445
+		},
+		"test/unit/tm_undo_log_writers_native.test.ts": {
+			"tests": 11,
+			"skipped": 0,
+			"assertions": 38
 		},
 		"test/unit/tm_wallclock.test.ts": {
 			"tests": 1,
@@ -4087,9 +4222,9 @@
 			"assertions": 54
 		},
 		"test/unit/tool_import_dedalo_csv.test.ts": {
-			"tests": 13,
+			"tests": 14,
 			"skipped": 0,
-			"assertions": 210
+			"assertions": 282
 		},
 		"test/unit/tool_import_files.test.ts": {
 			"tests": 31,
@@ -4117,14 +4252,14 @@
 			"assertions": 32
 		},
 		"test/unit/tool_lang.test.ts": {
-			"tests": 17,
+			"tests": 18,
 			"skipped": 0,
-			"assertions": 38
+			"assertions": 40
 		},
 		"test/unit/tool_lossless_writeback_tripwire.test.ts": {
 			"tests": 42,
 			"skipped": 0,
-			"assertions": 152
+			"assertions": 155
 		},
 		"test/unit/tool_ontology.test.ts": {
 			"tests": 4,
@@ -4167,9 +4302,9 @@
 			"assertions": 58
 		},
 		"test/unit/tool_propagate_component_data_drive.test.ts": {
-			"tests": 8,
+			"tests": 9,
 			"skipped": 0,
-			"assertions": 41
+			"assertions": 69
 		},
 		"test/unit/tool_request.test.ts": {
 			"tests": 6,
@@ -4197,9 +4332,9 @@
 			"assertions": 290
 		},
 		"test/unit/tool_update_cache.test.ts": {
-			"tests": 10,
+			"tests": 11,
 			"skipped": 0,
-			"assertions": 70
+			"assertions": 74
 		},
 		"test/unit/tool_upload.test.ts": {
 			"tests": 6,
@@ -4579,7 +4714,7 @@
 		"test/unit/wire_disclosure_tripwire.test.ts": {
 			"tests": 7,
 			"skipped": 0,
-			"assertions": 71
+			"assertions": 82
 		},
 		"test/unit/wire_field_agreement_tripwire.test.ts": {
 			"tests": 4,
@@ -4602,9 +4737,9 @@
 			"assertions": 56
 		},
 		"test/unit/write_obligations_tripwire.test.ts": {
-			"tests": 26,
+			"tests": 35,
 			"skipped": 0,
-			"assertions": 197
+			"assertions": 266
 		},
 		"test/unit/ws_a_tripwires.test.ts": {
 			"tests": 6,

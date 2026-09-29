@@ -1965,6 +1965,21 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 	},
+	/**
+	 * A bulk revert refused because the run it would undo is still executing in
+	 * this process, or another revert of the same run is (decision D5 of the
+	 * bulk-revert undo log; src/core/tools/bulk_run_registry.ts). Retryable: the
+	 * refusal lifts when the run or the other revert finishes.
+	 */
+	'tool.bulk_run_live': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_tool_bulk_run_live',
+		message: 'The bulk process is still running or already being reverted',
+		severity: 'info',
+		disclosure: 'public',
+		retryable: true,
+	},
 	'tool.dependency_unavailable': {
 		category: 'unavailable',
 		status: 503,
@@ -2077,6 +2092,82 @@ export const ERROR_REGISTRY = {
 		severity: 'warn',
 		disclosure: 'operator',
 		retryable: true,
+	},
+	// --- harvest.* — the harvesting door (core/harvest/) --------------------
+	// How a tool reads another institution's site: robots.txt obeyed, pace kept,
+	// every redirect hop re-vetted. The domain is the door's own (§2.1: the
+	// subsystem that OWNS the refusal), not `security`: these are the door's
+	// published POLICY answers, which a cataloguer who pasted a URL must be able to
+	// read — which site, and what said no. `site` is the origin the caller asked
+	// for — or, for every ROBOTS verdict (robots_disallowed, robots_unavailable, and
+	// harvest.refused reasons robots_too_complex / robots_redirect_refused), the public origin whose robots.txt
+	// decided — or a fixed token for text that is not a URL: never a path, never a
+	// query or credentials, never a resolved address (core/harvest/refusals.ts is
+	// the one builder and states that rule). ADDRESS refusals stay `security.ssrf_blocked`
+	// above — operator disclosure, because naming what a host resolved to is the
+	// internal-network oracle that code exists to deny.
+	'harvest.refused': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_harvest_refused',
+		// PUBLIC: the per-reason sentence is authored in refusals.ts (a closed
+		// table, never caller text); `reason` is the machine token beside it.
+		message: 'The harvesting rules refused this address',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+		details_keys: ['site', 'reason'],
+	},
+	// The site's robots.txt (RFC 9309) disallows the path. The site's own policy.
+	'harvest.robots_disallowed': {
+		category: 'permission',
+		status: 403,
+		label_key: 'error_harvest_robots_disallowed',
+		message: "The site's robots.txt does not allow automated access to this address",
+		severity: 'info',
+		disclosure: 'operator',
+		retryable: false,
+		details_keys: ['site'],
+	},
+	// RFC 9309 §2.3.1.4: a robots.txt the SERVER failed to deliver (5xx, 429, a
+	// redirect without a target, or no answer) means "assume complete disallow" —
+	// never "assume allowed". Retryable: the verdict is re-asked after minutes.
+	'harvest.robots_unavailable': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_harvest_robots_unavailable',
+		message: "The site's robots.txt could not be read, so automated access is not assumed",
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: true,
+		details_keys: ['site'],
+	},
+	// The body passed the caller's ceiling (maxBytes). Category `caller` (400), NOT
+	// `limit`, for media.too_large's reason: the request is wrong for this file, not
+	// rate-limited, and the same request reads the same file — a 429 that is not
+	// retryable would contradict itself on the wire. The primitive's own
+	// `security.outbound_failed` (reason body_cap) is mapped to this at the door.
+	'harvest.too_large': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_harvest_too_large',
+		message: 'The remote file is larger than this request allows',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+		details_keys: ['site', 'max_bytes'],
+	},
+	// A 2xx answer whose media type is not one the caller declared
+	// (`expectContentType`) — refused before its body is read.
+	'harvest.unexpected_type': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_harvest_unexpected_type',
+		message: 'The remote site answered with a different kind of file than expected',
+		severity: 'info',
+		disclosure: 'operator',
+		retryable: false,
+		details_keys: ['site', 'content_type'],
 	},
 	'diffusion.unported_fn': {
 		category: 'unavailable',

@@ -79,7 +79,7 @@ import { component_select_lang } from './component_select_lang/descriptor.ts';
 import { component_state } from './component_state/descriptor.ts';
 import { component_svg } from './component_svg/descriptor.ts';
 import { component_text_area } from './component_text_area/descriptor.ts';
-import type { ComponentModel, RenderClass } from './types.ts';
+import type { ComponentModel, ImportAppendPolicy, RenderClass } from './types.ts';
 
 /** Every registered descriptor. One entry per `component_<model>/descriptor.ts`. */
 const ALL_DESCRIPTORS: readonly ComponentModel[] = [
@@ -201,6 +201,26 @@ export function isMonovalueModel(model: string): boolean {
 }
 
 /**
+ * PHP lang-slice gate — supports_translation && !is_relation (PHP
+ * update_data_value :4110-4126/:4169-4180 conditions): only the literal
+ * translation-supporting CLASSES (classSupportsTranslation, PHP
+ * component_string_common subclasses + iri) slice their data by language;
+ * relation/locator classes never do. The ontology `translatable` flag alone
+ * would mis-slice: an ontology-non-translatable input_text still slices, on the
+ * lg-nolan lang PHP normalizes to at instantiation (__construct :677; read-path
+ * twin: resolve/component_data.ts effective-lang rule).
+ *
+ * THE one definition: the save path (save_component.ts re-exports it), the
+ * temporal door, the composed time-machine image of a dataframe main
+ * (relations/dataframe_slots.ts `mainIdentity`) and the bulk revert all slice
+ * with it — two copies would drift into two notions of "the current language".
+ */
+export function isLangSlicedModel(model: string): boolean {
+	const descriptor = getComponentModel(model);
+	return descriptor?.classSupportsTranslation === true && descriptor.resolveData === undefined;
+}
+
+/**
  * The value's RENDER CLASS at the client DOM boundary (`render` facet,
  * alias-following — see types.ts RenderClass). THE key the render-boundary
  * escaper switches on: 'html' is the ONLY class whose value is stored as
@@ -236,6 +256,43 @@ export function renderClassOfDescriptor(
 		});
 	}
 	return canonical.render;
+}
+
+/**
+ * The model's CSV-import APPEND policy (`importAppend` facet, alias-following
+ * — see types.ts ImportAppendPolicy): 'items' / 'geo_layer' /
+ * 'text_paragraphs', or `{ refuse: reason }`. Read by the
+ * tool_import_dedalo_csv column resolver (refuses before any write) and by
+ * saveComponentData's `appendImport` backstop. A canonical model without the
+ * facet throws: guessing 'items' would append to a single-choice model, and
+ * guessing a refusal would hide a capability.
+ */
+export function getImportAppendPolicy(model: string): ImportAppendPolicy {
+	return importAppendOfDescriptor(resolveCanonical(model), model);
+}
+
+/**
+ * The pure half of getImportAppendPolicy (same shape as
+ * renderClassOfDescriptor): exported so the facet-less refusal can be gated
+ * with a fabricated descriptor — every live canonical model declares it.
+ */
+export function importAppendOfDescriptor(
+	canonical: ComponentModel | undefined,
+	model: string,
+): ImportAppendPolicy {
+	if (canonical === undefined) {
+		throw new DedaloError('internal.invariant', {
+			message: `component registry: no descriptor for model '${model}' (import append policy)`,
+			coordinates: { module: 'components/registry', model },
+		});
+	}
+	if (canonical.importAppend === undefined) {
+		throw new DedaloError('internal.invariant', {
+			message: `component registry: '${canonical.model}' declares no import append policy (descriptor \`importAppend\` facet)`,
+			coordinates: { module: 'components/registry', model: canonical.model },
+		});
+	}
+	return canonical.importAppend;
 }
 
 /** PHP $components_using_value_property membership (CSV import). */

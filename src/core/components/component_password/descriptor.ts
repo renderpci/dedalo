@@ -8,6 +8,7 @@ export const component_password: ComponentModel = {
 	model: 'component_password',
 	column: 'string',
 	render: 'text',
+	importAppend: { refuse: 'opaque: a password is one secret value — use replace' },
 	monovalue: true,
 	classSupportsTranslation: true,
 	importValueProperty: true,

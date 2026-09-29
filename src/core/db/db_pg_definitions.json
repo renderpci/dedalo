@@ -973,6 +973,22 @@
 			"info": "Record history (inspector time machine): scope AND sort key in one index. With section_tipo and section_id equality-bound the trailing id DESC is the requested order, so a page costs 40 index entries. Without it the planner must either read the record's whole history and top-N sort it, or walk the section's whole log filtering section_id — both seconds once a record passes ~100k time machine rows."
 		},
 		{
+			"tables": ["matrix_time_machine"],
+			"add": "CREATE INDEX IF NOT EXISTS {$table}_tm_role_hidden_idx ON \"{$table}\" USING btree (section_tipo, section_id DESC, id DESC) WHERE tm_role IS NOT NULL; ANALYZE {$table} (tm_role);",
+			"drop": "DROP INDEX IF EXISTS \"{$table}_tm_role_hidden_idx\"",
+			"sample": "SELECT COUNT(*) FROM matrix_time_machine WHERE tm_role IS NOT NULL",
+			"name": "matrix_time_machine_tm_role_hidden_idx",
+			"info": "The HIDDEN half of the dd15 history count (read_tm.ts tmHistoryCountSql: total − hidden). Partial on tm_role IS NOT NULL, so it holds only a bulk run's undo-log rows; with (section_tipo, section_id, id) it answers the hidden count AND its generation-epoch anti-join index-only, which keeps the bare dd15 COUNT index-only (measured 3.1 s index-only vs 15.0 s seq scan on 29.45M rows when the count carried tm_role IS NULL). Shipped by migration 0011_tm_role_hidden_index.sql."
+		},
+		{
+			"tables": ["matrix_time_machine"],
+			"add": "CREATE INDEX IF NOT EXISTS {$table}_history_visible_idx ON \"{$table}\" USING btree (section_tipo, section_id DESC, id DESC) WHERE tm_role IS NULL;",
+			"drop": "DROP INDEX IF EXISTS \"{$table}_history_visible_idx\"",
+			"sample": "SELECT id FROM matrix_time_machine WHERE tm_role IS NULL ORDER BY id DESC LIMIT 10 OFFSET 100000",
+			"name": "matrix_time_machine_history_visible_idx",
+			"info": "The record-history index restricted to VISIBLE rows (predicate = withTmHistory's tm_role IS NULL). Keeps every narrowed history reader index-only — above all the deep-page late row lookup's id walk (read_tm.ts tmLatePageSql), which with tm_role in no full index left its index-only path: measured 8.9-10.0 s (seq scan + external sort) vs 4.1 s index-only on 29.06M rows, OFFSET 5M. With tm_role_hidden_idx it partitions the table by visibility. Shipped by migration 0012_tm_history_visible_index.sql."
+		},
+		{
 			"tables": ["matrix_langs"],
 			"add": "CREATE INDEX IF NOT EXISTS {$table}_hierarchy41_value_idx ON \"{$table}\" ((string->'hierarchy41'->0->>'value')); ANALYZE {$table};",
 			"drop": "DROP INDEX IF EXISTS \"{$table}_hierarchy41_value_idx\"",

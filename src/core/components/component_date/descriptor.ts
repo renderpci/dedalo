@@ -11,6 +11,7 @@ export const component_date: ComponentModel = {
 	flatValue: 'date',
 	column: 'date',
 	render: 'text',
+	importAppend: 'items',
 	searchBuilder: 'date',
 	importConform: 'date',
 };

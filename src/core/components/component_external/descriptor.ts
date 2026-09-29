@@ -53,6 +53,9 @@ export const component_external: ComponentModel = {
 	model: 'component_external',
 	column: 'relation', // INERT — column-map parity only (see the header)
 	render: 'text',
+	importAppend: {
+		refuse: 'derived: the value lives in a remote service, there is no local data to append to',
+	},
 	search: {
 		status: 'unported',
 		reason:

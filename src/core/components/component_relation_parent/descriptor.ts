@@ -19,6 +19,7 @@ export const component_relation_parent: ComponentModel = {
 	model: 'component_relation_parent',
 	column: 'relation',
 	render: 'text',
+	importAppend: 'items',
 	defaultRelationType: 'dd47',
 	resolveData: 'portal',
 	search: { status: 'ported' },

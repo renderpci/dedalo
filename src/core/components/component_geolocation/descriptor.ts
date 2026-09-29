@@ -9,6 +9,7 @@ export const component_geolocation: ComponentModel = {
 	model: 'component_geolocation',
 	column: 'geo',
 	render: 'text',
+	importAppend: 'geo_layer',
 	monovalue: true,
 	sortable: false, // PHP component_geolocation::get_sortable() → false
 	importConform: 'geolocation',

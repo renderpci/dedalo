@@ -76,11 +76,11 @@ export interface StructureContextCore {
 	render_class?: RenderClass;
 	/**
 	 * The slot's resolved delete policy (dataframeDeletePolicyOf, ONE reader —
-	 * WC-2026-09-06-dataframe-delete-policy-on-slot) — ADDITIVE wire key,
-	 * present on `component_dataframe` entries only. The client's Delete
-	 * button switches its confirmation grammar on it and never re-reads the
-	 * ontology properties, so the two sides cannot disagree on what a spelling
-	 * means.
+	 * WC-2026-09-06-dataframe-delete-policy-on-slot, hard value retired by
+	 * WC-2026-09-29-dataframe-hard-delete-retired) — ADDITIVE wire key,
+	 * `'unlink' | 'delete_target'`, present on `component_dataframe` entries
+	 * only. The client never re-reads the ontology properties, so the two
+	 * sides cannot disagree on what a spelling means.
 	 */
 	delete_policy?: DataframeDeletePolicy;
 }
@@ -189,6 +189,12 @@ export interface StructureContextEntry extends StructureContextCore {
 	 * this grouper, so the tabs exactly match the panels that will render. ABSENT
 	 * for every other model; the client only reads it in the section_tab view. */
 	children?: { tipo: string; label: string | null }[];
+	/** dd15 only, on a ONE-COMPONENT history read (read_tm.ts tmMainLaneLaw):
+	 * the scoped main's lane law — `lang_sliced` false ⇒ one lg-nolan lane
+	 * (every relation model, whatever its `translatable` flag). The
+	 * tool_time_machine client hides its language selector and words its
+	 * restore confirm from it. ABSENT on every other read. */
+	tm_main?: { tipo: string; lang_sliced: boolean };
 	/** PER-RECORD context options (PHP context->options). Today one producer:
 	 * component_text_area edit contexts carry `related_component_lang` — the
 	 * record's original language resolved from its related component_select_lang

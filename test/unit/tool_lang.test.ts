@@ -59,6 +59,22 @@ describe('translateItems (stub provider)', () => {
 		]);
 	});
 
+	test('a target item keeps its SOURCE item id (item N translated is item N); no id is invented', async () => {
+		const out = await translateItems(
+			[
+				{ id: 1, value: 'cat', lang: 'lg-eng' },
+				{ value: 'dog', lang: 'lg-eng' },
+			],
+			upperStub,
+			cfg,
+		);
+		expect(out.items).toEqual([
+			{ id: 1, value: '[CAT]', lang: 'lg-spa' },
+			{ value: '[DOG]', lang: 'lg-spa' },
+		]);
+		expect('id' in (out.items[1] ?? {})).toBe(false);
+	});
+
 	test('provider failure short-circuits with the error', async () => {
 		const failStub: TranslationProvider = async () => ({ ok: false, msg: 'boom' });
 		const out = await translateItems([{ value: 'x' }], failStub, cfg);

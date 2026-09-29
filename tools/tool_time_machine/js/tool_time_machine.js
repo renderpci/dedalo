@@ -18,13 +18,13 @@
 * toolbar, with `caller` pointing to the component (or section) whose history
 * is being inspected.  The tool instantiates one `tm_list` — a
 * paginated list of all historical snapshots, sorted by `timestamp DESC`.
-* When the user clicks the eye icon on a list row the service publishes the
-* `tm_edit_record` event (see `view_tool_time_machine_list.js`); the tool
+* When the user clicks the eye icon on a list row the dd15 list view publishes
+* the `tm_edit_record` event (see `core/section/js/view_tm_list_section.js`); the tool
 * subscribes, loads the historical snapshot through `get_component()`, renders
 * it in the preview pane, and enables the "Apply and save" button.
 *
 * Pressing "Apply and save" calls `apply_value()` which posts an
-* `apply_value` tool_request to `dd_tools_api`; the PHP handler overwrites
+* `apply_value` tool_request to `dd_tools_api`; the server handler overwrites
 * the live data and logs the restore in the activity log.
 *
 * Bulk-process support
@@ -153,7 +153,7 @@ export const tool_time_machine = function () {
 *   3. Inherits the active language from the caller component (null when opened
 *      on a section, which has no meaningful single lang).
 *   4. Subscribes to `tm_edit_record` — published by
-*      `view_tool_time_machine_list.js` whenever the user clicks the eye icon
+*      `core/section/js/view_tm_list_section.js` whenever the user clicks the eye icon
 *      on a history row.  The handler loads the historical snapshot, renders it
 *      in the preview pane, updates `selected_matrix_id`, and shows/hides the
 *      apply and bulk-revert controls.
@@ -452,6 +452,34 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 
 /**
+* HISTORY_LANG
+* The language lane the main element's history lives in — the lane the
+* restore confirm names and whether a language selector means anything.
+*
+* The SERVER states it (dd15 context `tm_main.lang_sliced`, read_tm.ts
+* tmMainLaneLaw) — never re-derived here: a main whose data is not
+* lang-sliced (every relation model, whatever its ontology `translatable`
+* flag) has ONE lane, 'lg-nolan', and a restore replaces its whole value and
+* frames. Otherwise the main element's own lang.
+*
+* @returns {string} 'lg-nolan' or the main element's lang
+*/
+tool_time_machine.prototype.history_lang = function() {
+
+	const self = this
+
+	const lang = self.main_element?.lang || 'lg-nolan'
+	const tm_main = self.tm_list?.context?.tm_main
+	if (tm_main && tm_main.tipo===self.main_element?.tipo && tm_main.lang_sliced===false) {
+		return 'lg-nolan'
+	}
+
+	return lang
+}//end history_lang
+
+
+
+/**
 * GET_COMPONENT
 * Creates and returns a component instance loaded with data from a specific
 * `matrix_time_machine` row, to be placed in the preview pane.
@@ -466,9 +494,14 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 *   - `mode: 'edit'` — forced to 'edit' regardless of the `mode` argument;
 *                      the render step later sets permissions=1 (read-only).
 *   - `to_delete_instances` — any previous TM-preview instances with the same
-*                      tipo are marked for deletion inside `load_component`,
-*                      preventing stale previews from accumulating in
-*                      `ar_instances`.
+*                      tipo and ANOTHER matrix_id are destroyed DEEP inside
+*                      `load_component` (`delete_dependencies:true`), so neither
+*                      they nor their subtree (section_records, dataframes, with
+*                      that row's data) stay in `ar_instances` / the instances
+*                      map. The instance of the requested row itself is never
+*                      listed: re-clicking the same row returns it from the
+*                      instances cache, and destroying it would destroy the very
+*                      instance about to be (re)built.
 *
 * (!) The `mode` parameter is accepted but overridden by the hardcoded
 * `'edit'` value in the options object.  This was intentional (force edit
@@ -484,10 +517,16 @@ tool_time_machine.prototype.get_component = async function(lang, mode, matrix_id
 
 	const self = this
 
-	// to_delete_instances. Select instances with same tipo and property matrix_id not empty
-		// Collect any existing TM-preview instances so load_component can remove them
-		// after the new one is ready (avoids accumulating ghost instances in ar_instances).
-		const to_delete_instances = self.ar_instances.filter(el => el.tipo===self.main_element.tipo && el.matrix_id)
+	// to_delete_instances. Select instances with same tipo and another, not empty, matrix_id
+		// Collect the superseded TM-preview instances so load_component can remove them
+		// (avoids accumulating ghost instances in ar_instances). The requested row's own
+		// instance is excluded: get_instance serves it from cache on a same-row re-click,
+		// so listing it would destroy the instance load_component is about to build.
+		const to_delete_instances = self.ar_instances.filter(el =>
+			el.tipo===self.main_element.tipo
+			&& el.matrix_id
+			&& String(el.matrix_id)!==String(matrix_id)
+		)
 
 	// instance_options (clone context and edit)
 		// Clone main_element.context so the live component is not mutated,
@@ -500,6 +539,9 @@ tool_time_machine.prototype.get_component = async function(lang, mode, matrix_id
 			matrix_id			: matrix_id,
 			data_source			: 'tm',
 			to_delete_instances	: to_delete_instances, // array of instances to delete after create the new on
+			// deep destroy, scoped to this tool (load_component's shared default stays shallow):
+			// a preview subtree is keyed by its matrix_id and belongs to nothing else
+			delete_dependencies	: true
 		})
 
 	// call generic common tool build
@@ -516,15 +558,16 @@ tool_time_machine.prototype.get_component = async function(lang, mode, matrix_id
 * Sends a tool_request to `dd_tools_api` asking the server to overwrite the
 * live component data with the historical snapshot identified by `matrix_id`.
 *
-* The server-side handler (`tool_time_machine::apply_value` in PHP) will:
+* The server-side handler (`apply_value`, `tools/tool_time_machine/server/tool_time_machine.ts`) will:
 *   - Read the `matrix_time_machine` row for `matrix_id`.
 *   - Write that data back to the live component (or section) via `set_data`
 *     + `save()`.
 *   - Log the restore as a RECOVER COMPONENT/SECTION activity entry.
-*   - Delete the TM row that was just restored.
+*   - Write the restore's own history row (a section recover writes a whole-record
+*     row); the TM row that was just restored is kept.
 *
 * Dataframe context: when `self.caller_dataframe` is set (the tool was opened
-* on a dataframe-paired component), it is forwarded so the PHP handler can
+* on a dataframe-paired component), it is forwarded so the server handler can
 * correctly route the restore to the right dataframe slot.
 *
 * Timeout is intentionally generous (60 s) because section restores can
@@ -573,7 +616,7 @@ tool_time_machine.prototype.apply_value = function(options) {
 		}
 
 	// dataframe caller
-		// Forward the dataframe context so the PHP handler routes the restore
+		// Forward the dataframe context so the server handler routes the restore
 		// to the correct dataframe slot when the component is dataframe-paired.
 		if (self.caller_dataframe) {
 			rqo.options.caller_dataframe = self.caller_dataframe
@@ -605,11 +648,13 @@ tool_time_machine.prototype.apply_value = function(options) {
 * operation identified by `bulk_process_id`.
 *
 * This is a potentially long-running, wide-scope operation: the server handler
-* (`tools/tool_time_machine/server/bulk_revert.ts`) searches `matrix_time_machine`
-* for every row with the given `bulk_process_id`, iterates each affected
-* component, and restores the component to its state immediately prior to the
-* bulk change. A component whose ONLY history row is the batch write is
-* blanked; one whose pre-batch state cannot be determined is skipped.
+* (`tools/tool_time_machine/server/bulk_revert.ts`) replays the run's UNDO LOG
+* (WC-2026-09-27-bulk-revert-undo-log): every save of the run recorded the exact
+* region it replaced (a hidden BEFORE row) next to its visible after-row, so each
+* key is restored to that region — unless it changed after the run
+* (`changed_since_run`), in which case it is left alone and reported. A run
+* recorded before the undo log is reverted by inference from the history and
+* listed in `inexact[]`. A run still writing is refused.
 *
 * The operation is recorded as a new bulk-process entry in the
 * `DEDALO_BULK_PROCESS_SECTION_TIPO` (dd800) section so that this revert is
@@ -618,13 +663,15 @@ tool_time_machine.prototype.apply_value = function(options) {
 * Access control: only global admins can trigger the bulk-revert UI button
 * (enforced in `render_tool_time_machine`), but the server enforces its own
 * per-row permission check (level 2 on the (section_tipo, tipo) pair AND
-* per-record project scope). Rows the caller cannot write are skipped and
+* per-record project scope). Keys the caller cannot write are skipped and
 * COUNTED in `response.data.skipped[]` as `{reason:'out_of_scope'}` — with no
 * coordinates, since the batch may name records outside the caller's scope
 * (SEC-16, WC-2026-09-03-bulk-revert-skipped-typed-entries). Every other
-* skipped row (`no_pre_batch_state`, `no_column`, `frameless_wipe`, `no_lang`,
-* `failed`) carries `section_tipo`/`tipo`/`section_id`; the words behind a
-* refusal are in the server log, never on the wire.
+* skipped entry (`changed_since_run`, `interleaved_write`, `created_record_kept`,
+* `cascade_delete_not_reverted`, `no_pre_batch_state`, `no_column`,
+* `no_lang`, `failed`) carries its coordinates; the words
+* behind a refusal are in the server log, never on the wire. The renderer shows
+* the whole payload to the admin before closing (bulk_revert_summary_message).
 *
 * Timeout is set to 180 s to accommodate very large bulk processes spanning
 * hundreds of records.
@@ -644,7 +691,8 @@ tool_time_machine.prototype.apply_value = function(options) {
 * @param {number} options.selected_bulk_process_id - The bulk_process_id (dd1371) to revert
 * @param {string} options.bulk_revert_process_label - Human-readable name logged as the new process label
 * @returns {Promise<Object>} Resolves with the envelope v2 response: on success
-*                            `data` is `{counter, bulk_process_id, skipped}`;
+*                            `data` is `{counter, unchanged, bulk_process_id,
+*                            exact, skipped, inexact}`;
 *                            a refusal carries the coded `error` and no data
 */
 tool_time_machine.prototype.bulk_revert_process = function(options) {

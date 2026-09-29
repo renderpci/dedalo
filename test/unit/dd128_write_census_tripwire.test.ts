@@ -81,10 +81,11 @@ const WRITE_MODULES = [
  * has to make in this file, not an omission nobody notices.
  */
 const NON_PRIMITIVE_EXPORTS: Record<string, string> = {
+	wipedComponentValue:
+		'a pure value rule (what a data wipe leaves in one key); reads config, writes nothing.',
 	isInstalledDataLang: 'a language predicate; reads config, writes nothing.',
 	installedDataLangs: 'a language accessor; reads config, writes nothing.',
 	ontologyTldRefusal: 'builds a refusal message from an ontology node; writes nothing.',
-	isLangSlicedModel: 'a model-descriptor predicate; writes nothing.',
 	normalizeItemId: 'a value normalizer over an in-memory item; writes nothing.',
 	getIdFromKey: 'parses an id out of a key string; writes nothing.',
 	applyUpdate: 'the in-memory merge that PRODUCES the value a primitive then persists.',
@@ -323,9 +324,19 @@ const CENSUS: Record<string, CensusRow> = {
 			'gated at permission:’section’ yet its handlers rewrite COMPONENTS, so a section-level grant admits a component write the per-component rule never sees.',
 	},
 	'tools/tool_time_machine/server/bulk_revert.ts': {
+		verdict: 'not-dd128',
+		reason:
+			'Since the undo-log rewrite (2026-09-27) the orchestrator writes ONLY its own run record: the dd800 row (createSectionRecord) and its dd796 label (persistRecordKeys) — never a dd128 component. The component writes moved to bulk_revert_undo.ts (PENDING, SEC-03 carried over) and the record writes to bulk_revert_records.ts.',
+	},
+	'tools/tool_time_machine/server/bulk_revert_undo.ts': {
 		verdict: 'PENDING',
 		reason:
-			'SEC-03, named: the per-row gate holds row.section_id and reads the raw level of (row.section_tipo, row.tipo).',
+			'SEC-03, named (carried over from bulk_revert.ts, 2026-09-27): the bulk revert’s per-unit component write (undo-log exact path + legacy inference, and a dataframe main’s composed unit — the main and its own frames, planned by bulk_revert_composed.ts), gated by the orchestrator’s unitInScope, which reads the raw level of every (section_tipo, tipo) key pair — and every slot a composed unit may write — and the record scope, never the own-record component rule.',
+	},
+	'tools/tool_time_machine/server/bulk_revert_records.ts': {
+		verdict: 'section-level',
+		reason:
+			'the bulk revert’s RECORD half: undeletes a record the run’s cascade deleted (restoreSection) and deletes a record the run created (the delete door) — whole records only, gated by getSectionPermissions(section) >= 2 plus the record scope (the delete door’s own rule). No component pair exists to downgrade.',
 	},
 	'tools/tool_time_machine/server/tool_time_machine.ts': {
 		verdict: 'PENDING',
@@ -623,7 +634,7 @@ const SEAM_SYMBOLS = [
 /** Doors that call a CALLER-owned primitive but can never address a dd128 record. */
 const REACH_EXEMPT: Record<string, string> = {
 	'src/core/relations/dataframe.ts':
-		'its only caller-owned deletes are applyDataframeDeletePolicy’s `delete_target` / `delete_target_record` policies, which empty or delete the dataframe FRAME TARGET records a dd490 pairing addresses (an ontology-declared frame section, never the users section), after asking the write grant on that section — the slot-policy applier every delete door calls (removeDataframeDataById in relations/save.ts, the direct frame remove in save_component.ts, both record-delete modes in delete_record.ts).',
+		'its only caller-owned delete is applyDataframeDeletePolicy’s `delete_target` policy, which empties (never removes) the dataframe FRAME TARGET records a dd490 pairing addresses (an ontology-declared frame section, never the users section), after asking the write grant on that section — the slot-policy applier every delete door calls (removeDataframeDataById in relations/save.ts, the direct frame remove in save_component.ts, both record-delete modes in delete_record.ts).',
 	'src/core/section/record/delete_record.ts':
 		'the delete ENGINE — it DEFINES both primitives, holds no principal and no component tipo, and its own docblock puts authorization on the caller. Putting the seam here would revoke on an ontology delete too.',
 	'src/core/test_data/synthetic_hierarchy_fixture.ts':

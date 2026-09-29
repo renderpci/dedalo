@@ -8,8 +8,8 @@
 # BOOT a real server over the wire — the browser suite and the two update drills)
 # the block would have been duplicated, and the two copies would have drifted the
 # way every hand-maintained pair in this repo has drifted. So the block moved here
-# and both tiers `source` it. The rules that pin it (ci_workflow_tripwire rules 6,
-# 6b, 13) follow `source` lines, so what they held over db_tier.sh they hold over
+# and both tiers `source` it. The rules that pin it (ci_workflow_tripwire rules 6
+# and 13) follow `source` lines, so what they held over db_tier.sh they hold over
 # the sourced text of every hosted tier.
 #
 # Every value is exported HERE rather than written into a ../private/.env, so what
@@ -64,25 +64,6 @@ fi
 # running probes under UTC+14 and UTC-11.
 : "${DEDALO_TIMEZONE:=Europe/Madrid}"
 
-# EGRESS ALLOWLIST — because the VENDORED SEED names a host, and this tier composes the
-# whole environment itself. install/db/dedalo_install.pgsql.gz ships two sections with an
-# `api_config` (`test3` and `rsc205`, both `https://zenon.dainst.org/api/v1/...`), and
-# src/external/config.ts refuses an api_config whose api_url host is not allowlisted AT
-# PARSE TIME — `fetched` is a property of the FIELD, not of the caller, so nothing has to
-# be about to make a request for the refusal to fire.
-#
-# With the key unset every host is blocked, so `isExternalSectionTipo` THROWS, and
-# listExternalSectionTipos turns that into `update.refused` — which is on the Time Machine
-# RESTORE path (tools/tool_time_machine, via normalizeRestoredSectionIds). Net effect
-# measured 2026-08-31: 14 of the 15 red gates in this tier's first stage, none of them
-# about external services at all, and every one green on a developer box where
-# ../private/.env happens to carry the same host.
-#
-# So this is not a permission being granted for convenience: it is the tier declaring the
-# egress policy the repo's OWN fixture requires. A new api_config host in the seed belongs
-# here too, or the tier goes red the same way.
-: "${DEDALO_EXTERNAL_ALLOWED_HOSTS:=zenon.dainst.org}"
-
 # THE CONFIG THE FROZEN FIXTURES WERE HARVESTED UNDER (2026-08-31).
 #
 # The parity tier replays PHP bodies recorded on ONE installation and compares them
@@ -90,8 +71,7 @@ fi
 # composes its whole environment in-process, so a key the developer's ../private/.env
 # happens to supply is simply absent here and the comparison diverges. That is not a
 # regression and does not belong in engineering/parity_baseline.json: it is this tier
-# failing to declare the configuration the repo's own fixtures require, exactly like the
-# egress allowlist above.
+# failing to declare the configuration the repo's own fixtures require.
 #
 # MEASURED 2026-08-31: with the census addressing fixed but these eight unset, the tier
 # reports 5 unlisted regressions (382/264/105/13). With them it reports 382/269/100/13 and
@@ -156,7 +136,6 @@ fi
 : "${DEDALO_TS_STATE_PATH:=${TMPDIR:-/tmp}/dedalo_ci_ts_state.json}"
 
 export ENTITY DB_HOST DB_PORT DB_USER DB_PASSWORD DB_NAME
-export DEDALO_EXTERNAL_ALLOWED_HOSTS
 export DEDALO_DEV_MODE DEDALO_DIFFUSION_NATIVE DEDALO_DIFFUSION_DOMAIN DEDALO_ENTITY_ID
 export DEDALO_UPLOAD_SERVICE_CHUNK_FILES DEDALO_MEDIA_EXPORT_BASE
 export DEDALO_IMAGE_EXTENSIONS_SUPPORTED DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS

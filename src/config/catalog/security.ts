@@ -36,7 +36,8 @@ The one workflow that needs it is a Dédalo acting as an **ontology master**
 (\`IS_AN_ONTOLOGY_SERVER=true\`): the update panel on the *client* Dédalo fetches
 \`get_ontology_update_info\` from the master **directly from the browser**
 (\`client/dedalo/core/area_maintenance/widgets/update_ontology/js/render_update_ontology.js\`),
-so the master must name the client origins here. The server-to-server probe
+so the master must name the client origins here. The master's **Serve Ontology** maintenance
+panel shows whether this key (and the other two serving keys) is set. The server-to-server probe
 (\`checkRemoteServer\`) is unaffected — it is a Bun \`fetch\`, and CORS is a browser rule.
 
 An entry is matched as an **exact, case-sensitive origin string** — scheme + host + port, no
@@ -136,6 +137,46 @@ refused entry is dropped and logged; it never silently becomes public and never 
 \`\`\`bash
 # publish the larger image derivative too, and keep thumbnails private
 DEDALO_MEDIA_PUBLIC_QUALITIES=["image/1.5MB","av/404","av/subtitles"]
+\`\`\``,
+	},
+	DEDALO_NAT64_PREFIXES: {
+		type: 'string_list',
+		scope: 'operator',
+		default: [],
+		heading: 'Declaring the NAT64 prefixes of an IPv6-only host',
+		typeLabel: 'array',
+		doc: `Only for a server on an **IPv6-only network that reaches the IPv4 internet through a
+NAT64 translator using its own network-specific prefix** (RFC 6052). Leave it empty
+everywhere else — that is almost every installation.
+
+Whenever the server fetches a URL on a user's behalf (an RDF import, a catalogue lookup,
+a translation or transcription service, a harvest), it first checks that the address is on
+the public internet. Behind a NAT64 translator an IPv6 address *inside the translator's
+prefix* actually reaches the IPv4 address embedded in it — so with a provider prefix such
+as \`2001:db8:64::/96\`, the address \`2001:db8:64::a9fe:a9fe\` is really \`169.254.169.254\`,
+the cloud metadata endpoint, although it looks like an ordinary public IPv6 address.
+Declaring the prefix here makes the check judge every address inside it by the IPv4
+address it carries.
+
+The well-known prefix \`64:ff9b::/96\` is always understood and needs no entry. The engine
+also asks the network itself (the RFC 7050 \`ipv4only.arpa\` lookup) and uses what it
+learns, but only to refuse MORE: an answer from a resolver is not your word, so a prefix it
+reports never makes an otherwise-refused address acceptable. If your translator's prefix
+is taken from the local-use block \`64:ff9b:1::/48\` or from a unique-local range such as
+\`fd00::/8\` — those are the RANGES it comes from, not entries to copy — sites on the IPv4
+internet are reachable only once you declare the translator's OWN prefix here, for example
+\`64:ff9b:1::/96\`.
+
+Each entry is the translator's prefix exactly as it is configured, of length 32, 40, 48, 56,
+64 or 96 — the only lengths RFC 6052 defines (most translators use /96). Declare the length
+the translator uses: the length decides which bytes carry the IPv4 address, so a /48 entry
+for a /96 translator reads the wrong bytes and every IPv4 site it reaches is refused. An
+entry of any other length (\`fd00::/8\` is one) is refused loudly: until it is fixed,
+**every IPv6 destination is refused**, because the check can no longer tell which of them
+lead into IPv4.
+
+\`\`\`bash
+DEDALO_NAT64_PREFIXES=2001:db8:64::/96
 \`\`\``,
 	},
 	DEDALO_NOTIFICATIONS: {

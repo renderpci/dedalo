@@ -49,9 +49,12 @@
 *   file_info         : string[] – column names (first row of the CSV)
 *   sample_data       : Array[]  – a few parsed rows for preview (each an array of cell values)
 *   sample_data_errors: Object[] – JSON parse errors found in sample rows (empty if OK)
-*   ar_columns_map    : Object[] – per-column map: { tipo, model, label, checked, map_to, decimal? }
+*   ar_columns_map    : Object[] – per-column map: { tipo, model, label, checked, map_to, decimal?, import_mode? }
 *   section_tipo      : string   – auto-detected or user-supplied target section tipo (e.g. 'oh1')
 *   section_label     : string   – resolved section label (set by render_columns_mapper)
+*                       import_mode: 'replace' | 'append' — absent means 'replace'
+*                       (the server default); only set on columns whose target
+*                       component has an import_append policy
 *   bulk_process_label: string   – editable title for the bulk-process tracking record
 *   checked           : boolean  – whether the file checkbox is selected for import
 *   result_container  : HTMLElement – injected by render_file_info; render_final_report writes here
@@ -183,7 +186,7 @@ const render_service_upload = function(self) {
 *   - process_file    – transient upload-progress indicator (spinner + status text)
 *   - user_msg_container – reserved for user-facing messages
 *   - files_list      – one render_file_info card per uploaded CSV file
-*   - submit_container – import button + time-machine checkbox
+*   - submit_container – import button
 *   - process_info_container – SSE progress display (hidden until import starts)
 *
 * Also triggers check_process_data so that a previously-started import that was
@@ -264,7 +267,9 @@ const get_content_data = async function(self) {
 
 			// array of file names
 				// Build the stripped-down file descriptor that the server expects.
-				// ar_columns_map objects follow the shape: { tipo, model, label, checked, map_to, decimal? }
+				// ar_columns_map objects follow the shape: { tipo, model, label, checked, map_to, decimal?, import_mode? }
+				// import_mode ('replace'|'append') is only present on columns whose
+				// target accepts append; absent = 'replace' on the server.
 				const files = selected_files.map(el => {
 					return {
 						file				: el.name, // string like 'exported_oral-history_-1-oh1.csv'
@@ -274,11 +279,12 @@ const get_content_data = async function(self) {
 					}
 				})
 
-			// time_machine_save. Get current checked status
-				const time_machine_save = checkbox_time_machine_save.checked
-
 			// import_files
-				self.import_files(files, time_machine_save)
+				// No time-machine switch: every CSV import runs under a bulk id, and a
+				// save carrying a bulk id ALWAYS writes its undo pair (a hidden BEFORE
+				// row + the normal visible after-row), so the run is revertible exactly
+				// (WC-2026-09-27-bulk-revert-undo-log, decision D1).
+				self.import_files(files)
 				.then(async function(api_response){
 					if(SHOW_DEBUG===true) {
 						console.log(')) import_files api_response:', api_response)
@@ -312,23 +318,6 @@ const get_content_data = async function(self) {
 		})
 		import_button.addEventListener('click', fn_import)
 
-	// checkbox_time_machine_save
-		// Wrapping label + prepended checkbox — toggling saves a TM snapshot per imported row.
-		// Defaults to checked so the import is always reversible unless the user opts out.
-		const checkbox_label = ui.create_dom_element({
-			element_type	: 'label',
-			class_name		: 'checkbox_label',
-			inner_html		: 'Save time machine history on import',
-			parent			: submit_container
-		})
-		const checkbox_time_machine_save = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'checkbox',
-			class_name		: 'checkbox_time_machine_save'
-		})
-		checkbox_time_machine_save.checked = 'checked' // default is checked
-		checkbox_label.prepend(checkbox_time_machine_save)
-
 	// process_info_container
 		// Hidden until import_files returns a job_id; shown by follow_import_job.
 		const process_info_container = ui.create_dom_element({
@@ -352,6 +341,46 @@ const get_content_data = async function(self) {
 
 	return content_data
 }//end get_content_data
+
+
+
+/**
+* AUDIT_COLUMN_TIPOS
+* The section's audit components (created/modified by/date: dd200, dd199,
+* dd197, dd201 — src/core/concepts/section.ts). The engine stamps them; an
+* import column mapped to one of them is never offered append mode. The
+* server refuses it too (by tipo), this only keeps the UI honest.
+*/
+const AUDIT_COLUMN_TIPOS = ['dd197', 'dd199', 'dd200', 'dd201']
+
+
+
+/**
+* IMPORT_MODE_ALLOWED
+* Whether a mapped column may offer the replace/append mode selector.
+* @param {Object|null} column_map - one ar_columns_map entry
+* @param {string|null} policy - the target component's import_append policy
+*   ('items' | 'geo_layer' | 'text_paragraphs'), null when append is refused
+* @returns {boolean}
+*/
+export const import_mode_allowed = function(column_map, policy) {
+
+	if (!column_map || typeof policy!=='string' || policy.length<1) {
+		return false
+	}
+	// the record key column: matched on, never written as a component
+	if (column_map.tipo==='section_id'
+		|| column_map.model==='section_id'
+		|| column_map.model==='component_section_id') {
+		return false
+	}
+	// an audit column (by target tipo)
+	if (AUDIT_COLUMN_TIPOS.includes(column_map.map_to)) {
+		return false
+	}
+
+	return true
+}//end import_mode_allowed
 
 
 
@@ -673,7 +702,7 @@ const render_file_info = function(self, item) {
 * @param {Object} item - one entry from self.csv_files_list (shape documented in module header)
 * @returns {Promise<DocumentFragment>} fragment containing the full columns-mapper UI
 */
-const render_columns_mapper = async function(self, item) {
+export const render_columns_mapper = async function(self, item) {
 
 	// short vars
 		const file_info					= item.file_info // array of columns name (first row of csv file)
@@ -776,15 +805,37 @@ const render_columns_mapper = async function(self, item) {
 			})
 			ui.create_dom_element({
 				element_type	: 'div',
+				text_content	: self.get_tool_label('import_mode') || 'Mode',
+				parent			: line
+			})
+			ui.create_dom_element({
+				element_type	: 'div',
 				inner_html		: 'Sample data',
 				parent			: line
 			})
+
+	// column_import_append. Per column, the mapped component's append policy
+	// ('items' | 'geo_layer' | 'text_paragraphs') or null when the server
+	// refuses append for it. UI state only: it never travels in ar_columns_map.
+		const column_import_append = []
 
 	// columns value
 		const file_info_length = file_info.length
 		for (let i = 0; i < file_info_length; i++) {
 
 			const column_name = file_info[i]
+
+			// map entry. The server sends null for a header cell it cannot resolve
+			// (empty cell, unknown tipo); the user may still map it by hand, so an
+			// empty (unchecked) entry replaces it instead of crashing the mapper.
+				if (!ar_columns_map[i] || typeof ar_columns_map[i]!=='object') {
+					ar_columns_map[i] = {
+						tipo	: column_name,
+						model	: null,
+						label	: '',
+						checked	: false
+					}
+				}
 
 			// line
 				const line = ui.create_dom_element({
@@ -880,8 +931,11 @@ const render_columns_mapper = async function(self, item) {
 						text_content	: ar_components[k].label + ' [' + ar_components[k].value + ' - '+ ar_components[k].model +']',
 						parent			: target_select
 					})
-					// assign the model to the option to be obtained by the the event
-					option.model = ar_components[k].model
+					// assign the model and the append policy to the option to be
+					// obtained by the change event (import_append: the component's
+					// append policy string, or null when append is refused)
+					option.model			= ar_components[k].model
+					option.import_append	= ar_components[k].import_append ?? null
 
 					// selected options set on match
 					if ( ar_components[k].value===column_component_tipo ||
@@ -890,9 +944,14 @@ const render_columns_mapper = async function(self, item) {
 						// checkbox_file_selection update
 						checkbox_file_selection.checked = true
 
-						// update ar_columns_map object
-						ar_columns_map[i].checked	= true
-						ar_columns_map[i].map_to	= ar_components[k].value
+						// update ar_columns_map object. The model is set here too:
+						// the mode selector and the decimal selector read it, and
+						// the target's model is the truth, not the header's guess.
+						ar_columns_map[i].checked		= true
+						ar_columns_map[i].map_to		= ar_components[k].value
+						ar_columns_map[i].model			= ar_components[k].model
+						// the policy is UI state, kept off the wire map
+						column_import_append[i]			= option.import_append
 					}
 
 					// in any case the column_name will be the csv column name as user has specify
@@ -907,10 +966,12 @@ const render_columns_mapper = async function(self, item) {
 					}
 
 					// update ar_columns_map object
-					const model = e.target.options[e.target.selectedIndex].model
+					const selected_option = e.target.options[e.target.selectedIndex]
+					const model = selected_option.model
 					ar_columns_map[i].checked	= checkbox_file_selection.checked
 					ar_columns_map[i].map_to	= e.target.value
 					ar_columns_map[i].model		= model
+					column_import_append[i]		= selected_option.import_append ?? null
 
 					// empty container
 						while (mapped_to_options_container.firstChild) {
@@ -926,6 +987,14 @@ const render_columns_mapper = async function(self, item) {
 								container	: mapped_to_options_container
 							})
 						}
+
+					// import mode: a new target resets the mode to the default
+					// (replace) — the previous choice was made for another model
+						ar_columns_map[i].import_mode = undefined // absent = replace (dropped by JSON)
+						render_import_mode_selector({
+							i			: i,
+							container	: import_mode_container
+						})
 				})
 
 				const mapped_to_options_container = ui.create_dom_element({
@@ -941,6 +1010,17 @@ const render_columns_mapper = async function(self, item) {
 						container	: mapped_to_options_container
 					})
 				}
+
+			// import mode (replace | append), its own grid cell under the 'Mode' header
+				const import_mode_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'import_mode_container',
+					parent			: line
+				})
+				render_import_mode_selector({
+					i			: i,
+					container	: import_mode_container
+				})
 
 			// sample_data (search non empty values)
 				// Walk sample rows to find the first non-empty value for this column position,
@@ -1025,6 +1105,64 @@ const render_columns_mapper = async function(self, item) {
 			})
 		}
 
+	// render the import mode selector
+		// Inline helper, modelled on render_decimal_selector: builds a
+		// replace/append select inside `container` and keeps
+		// ar_columns_map[i].import_mode in sync. Nothing is rendered (and no
+		// import_mode is sent, so the server applies its default 'replace') when
+		// the column cannot append: no policy (the server refuses append for the
+		// model), the section_id key column, or an audit column.
+		function render_import_mode_selector(options){
+
+			const i			= options.i
+			const container	= options.container
+
+			// empty container (re-render on target change)
+				while (container.firstChild) {
+					container.removeChild(container.firstChild)
+				}
+
+			const policy = column_import_append[i] ?? null
+			if (!import_mode_allowed(ar_columns_map[i], policy)) {
+				ar_columns_map[i].import_mode = undefined // absent = replace
+				return
+			}
+
+			const mode_label	= self.get_tool_label('import_mode') || 'Mode'
+			const replace_name	= self.get_tool_label('replace') || 'Replace'
+			// geolocation appends a new map layer; every other policy appends values
+			const append_name	= policy==='geo_layer'
+				? (self.get_tool_label('append_layer') || 'Add as new layer')
+				: (self.get_tool_label('append') || 'Append')
+
+			const import_mode_select = ui.create_dom_element({
+				element_type	: 'select',
+				class_name		: 'import_mode_select',
+				title			: mode_label,
+				parent			: container
+			})
+			import_mode_select.setAttribute('aria-label', mode_label)
+			ui.create_dom_element({
+				element_type	: 'option',
+				value			: 'replace',
+				text_content	: replace_name,
+				parent			: import_mode_select
+			})
+			ui.create_dom_element({
+				element_type	: 'option',
+				value			: 'append',
+				text_content	: append_name,
+				parent			: import_mode_select
+			})
+			import_mode_select.value = ar_columns_map[i].import_mode==='append'
+				? 'append'
+				: 'replace'
+			ar_columns_map[i].import_mode = import_mode_select.value
+
+			import_mode_select.addEventListener('change', function() {
+				ar_columns_map[i].import_mode = import_mode_select.value
+			})
+		}
 
 	return fragment
 }//end render_columns_mapper
@@ -1450,6 +1588,9 @@ const render_issue_block = (self, parent, label_key, fallback_label, issues, css
 			text_content	: row_label + issue.section_id + ' | ' + issue.component_tipo + ' | ' + issue.msg,
 			parent			: parent
 		})
+		// a notice with no payload (e.g. 'N already present, not added') has
+		// data:null — no 'null' line under it
+		if (issue.data===null || issue.data===undefined) continue
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'failed_data_container ' + css_class,

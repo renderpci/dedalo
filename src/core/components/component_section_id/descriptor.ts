@@ -10,6 +10,9 @@ export const component_section_id: ComponentModel = {
 	flatValue: 'section_id',
 	column: 'section_id',
 	render: 'text',
+	importAppend: {
+		refuse: 'identity: the record id is the row key, it is never written by an import value',
+	},
 	monovalue: true,
 	searchBuilder: 'section_id',
 	emitHook: 'section_id',

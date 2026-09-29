@@ -39,9 +39,9 @@ import { readMatrixRecord } from '../../../src/core/db/matrix.ts';
 import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import { replaceTimecodes } from '../../../src/core/media/tools/timecode.ts';
 import {
+	effectiveSaveLang,
 	getMatrixTableFromTipo,
 	getModelByTipo,
-	getTranslatableByTipo,
 } from '../../../src/core/ontology/resolver.ts';
 import { filterItemsByLang, readComponentItems } from '../../../src/core/resolve/component_data.ts';
 import {
@@ -54,9 +54,6 @@ import {
 	type ToolServerModule,
 	toolRequestId,
 } from '../../../src/core/tools/module.ts';
-
-/** PHP DEDALO_DATA_NOLAN — the structural no-language token. */
-const NOLAN = 'lg-nolan';
 
 async function changeAllTimecodes(ctx: ToolActionContext): Promise<ToolResponse> {
 	// SAME ORDER as the record_tipo gate (src/core/tools/security.ts): reading these
@@ -112,8 +109,7 @@ async function changeAllTimecodes(ctx: ToolActionContext): Promise<ToolResponse>
 	// rule) rather than a second copy: read and write must address the same slice,
 	// or the save would relocate the items it just read.
 	const langSliced = isLangSlicedModel(model);
-	const translatable = await getTranslatableByTipo(componentTipo);
-	const effectiveLang = translatable || model === 'component_iri' ? lang : NOLAN;
+	const effectiveLang = await effectiveSaveLang(componentTipo, model, lang);
 	const slice = langSliced ? filterItemsByLang(storedItems, effectiveLang) : storedItems;
 
 	// Optional single-key filter (PHP `is_null($key) || $key == $raw_key`), else

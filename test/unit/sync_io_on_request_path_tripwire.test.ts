@@ -84,12 +84,13 @@ const ROOT_MODULES = ['src/core/api/dispatch.ts', 'src/server.ts'];
 const ENGINE_CORPUS = writePathSourceFiles();
 
 /**
- * The ONE reachable module outside the engine corpus: the boot migration
- * entrypoint the server imports out of `install/`. Written as an exact expected
- * set, so a closure that wandered anywhere else is a failure and not a wider
- * census.
+ * The reachable modules outside the engine corpus: the boot migration
+ * entrypoint the server imports out of `install/`, and the ONLINE-migration
+ * grammar it parses post-listen files with (online_migration.ts, pure — no
+ * I/O). Written as an exact expected set, so a closure that wandered anywhere
+ * else is a failure and not a wider census.
  */
-const REACHABLE_OUTSIDE_CORPUS = ['install/db/migrate.ts'];
+const REACHABLE_OUTSIDE_CORPUS = ['install/db/migrate.ts', 'install/db/online_migration.ts'];
 
 /**
  * The forbidden class: a synchronous call whose cost scales with a file's bytes

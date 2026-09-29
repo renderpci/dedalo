@@ -756,6 +756,11 @@ export const wire_tool = function(tool_constructor, render_module) {
 *   defaults to the owning tool's model name to prevent cross-page collisions
 * @param {Object[]} [options.to_delete_instances] - Existing instances to destroy
 *   before loading the new one (used when swapping the displayed component)
+* @param {boolean} [options.delete_dependencies=false] - Destroy the
+*   `to_delete_instances` DEEP (their whole subtree: section_records, children).
+*   Default false keeps the shallow destroy every other tool relies on;
+*   tool_time_machine sets it so a superseded preview does not leave its subtree,
+*   with that row's data, registered in the instances map
 * @param {Object|null} [options.caller_dataframe=null] - Dataframe context for
 *   `component_dataframe` callers; threads the row key through to the new instance
 * @returns {Promise<Object>} The fully initialised and built component instance
@@ -776,6 +781,7 @@ export const load_component = async function(options) {
 		const data_source			= options.data_source || null
 		const id_variant			= options.id_variant || self.model
 		const to_delete_instances	= options.to_delete_instances
+		const delete_dependencies	= options.delete_dependencies===true
 		const caller_dataframe		= options.caller_dataframe || null
 
 	// component instance_options
@@ -816,7 +822,11 @@ export const load_component = async function(options) {
 				if (to_delete_instances.includes(current_instance)) {
 					// remove from array of instances and destroy
 					self.ar_instances.splice(i, 1)
-					await current_instance.destroy()
+					await current_instance.destroy(
+						true, // delete_self
+						delete_dependencies, // delete_dependencies (default false: shallow)
+						false // remove_dom
+					)
 				}
 			}
 		}

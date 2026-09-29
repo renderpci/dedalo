@@ -121,3 +121,13 @@ author wrote in v6; it is live for the first time.
 
 `hard_delete` leaves `RETIRED_PROPERTY_KEYS` and joins `HONOURED_PROPERTY_KEYS`
 (`src/core/ontology/property_census.ts`); the resolver no longer reports it.
+
+## Addendum 2026-09-29 — the hard value is withdrawn; `hard_delete: true` is inert again
+
+The premise above that `hard_delete` was "a promise nobody kept" was wrong. v6
+retired it on purpose (`REMOVED because time machine needs to show the previous
+state, so, never deletes it`). `hard_delete: true` and `delete_target_record`
+now resolve to `unlink`. `delete_target` is the only destructive value, and it
+never removes the row. The "Consequence on live installs" section above no
+longer holds, and `hard_delete` is back in `RETIRED_PROPERTY_KEYS`. See
+`WC-2026-09-29-dataframe-hard-delete-retired`.

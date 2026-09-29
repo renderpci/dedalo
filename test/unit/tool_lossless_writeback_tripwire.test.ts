@@ -580,10 +580,10 @@ const CENSUS: Record<string, CensusRow> = {
 			reason:
 				'saves the entries the operator composed into the tool’s OWN temporal (tmp-section) component, which is the scratch surface the propagation value is edited on — not a curated record.',
 		},
-	'tools/tool_propagate_component_data/server/index.ts :: propagateComponentData': {
+	'tools/tool_propagate_component_data/server/index.ts :: propagateOneRecord': {
 		verdict: 'operator-value',
 		reason:
-			'writes the single value the operator chose across the records their SQO matched — the operation they asked for, not a transform of each target. Each overwritten value is recorded in the Time Machine in the same call (recordTimeMachine beside the persistRecordKeys), so a propagation is recoverable per record.',
+			'writes the value the operator chose (replace / add / delete of THEIR items) into one record their SQO matched — the operation they asked for, not a machine transform of the stored value. Since 2026-09-27 it saves through saveComponentData under the run’s bulk id, behind the record lock, so every overwritten region is kept EXACTLY in the run’s undo log (hidden BEFORE + visible after, WC-2026-09-27-bulk-revert-undo-log) and the whole propagation reverts as one operation.',
 	},
 	'tools/tool_subtitles/js/render_tool_subtitles.js :: get_custom_buttons': {
 		verdict: 'operator-value',
@@ -595,20 +595,37 @@ const CENSUS: Record<string, CensusRow> = {
 		reason:
 			'restores the component value of the Time Machine version the operator picked. Overwriting the current value IS the operation, the replaced value stays in the Time Machine, and the restored value is a stored version — nothing is derived or reshaped.',
 	},
-	'tools/tool_time_machine/server/tool_time_machine.ts :: restoreSection': {
+	'tools/tool_time_machine/server/tool_time_machine.ts :: restoreSectionRow': {
 		verdict: 'operator-value',
 		reason:
-			'the whole-record restore of an operator-picked Time Machine version, written through persistRecordColumns. Same shape as apply_value: a stored version replaces the current one and the current one remains in the Time Machine.',
+			'the ROW half of the whole-record restore of an operator-picked Time Machine version (restoreSection), written through persistRecordColumns — also the bulk revert’s undelete of a record the run’s cascade deleted, inside the unit that re-links it. Same shape as apply_value: a stored version replaces the current one and the current one remains in the Time Machine.',
+	},
+	'tools/tool_time_machine/server/tool_time_machine.ts :: restoreAbsentSectionRow': {
+		verdict: 'operator-value',
+		reason:
+			'the INSERT-ONLY twin of restoreSectionRow: the bulk revert’s undelete of a record the run’s cascade deleted (WC-2026-09-27-bulk-revert-undo-log). It writes the stored TM snapshot back ONLY where the address is empty (insert-if-absent under the explicit-id lock, answering null when anything stands there), so no current value is ever overwritten — a stored version fills a vacancy, nothing is derived or reshaped.',
 	},
 	'tools/tool_time_machine/server/dataframe_restore.ts :: applyDataframeRestore': {
 		verdict: 'operator-value',
 		reason:
-			'the dataframe half of the same operator-chosen restore: it writes the frames of the picked version back through persistRecordKeys. No transform of the current value takes place.',
+			'the dataframe half of the same operator-chosen restore: it writes the picked version’s frames OF THAT MAIN back through persistRecordKeys — other mains’ frames of a shared slot, and a lang-sliced main’s surviving other-language frames, are kept verbatim in place. No transform of any value takes place.',
 	},
-	'tools/tool_time_machine/server/bulk_revert.ts :: toolTimeMachineBulkRevert': {
+	'tools/tool_time_machine/server/bulk_revert_undo.ts :: writeRevertedKey': {
 		verdict: 'operator-value',
 		reason:
-			'reverts the records of an operator-selected bulk process to their stored pre-process versions. The value written is a Time Machine version, and the revert itself is recorded, so the operation is reversible in turn.',
+			'writes back, per key of an operator-selected bulk run, the region that run REPLACED — read from the run’s undo log (the exact BEFORE image), or inferred from visible history for a pre-undo-log run and reported inexact. The live value is only cut to put the other languages back beside it, never reshaped; the revert writes its own undo pair, so it is reversible in turn.',
+	},
+
+	'tools/tool_time_machine/server/bulk_revert_undo.ts :: writeComposedUnit': {
+		verdict: 'operator-value',
+		reason:
+			'writes back, for a dataframe main of an operator-selected bulk run, the main region and its OWN frames that run REPLACED — both read from the run’s composed undo log (the exact BEFORE image; amendment 2026-09-27). The other mains’ frames of a shared slot are kept in place, never reshaped; the revert writes its own composed undo pairs, so it is reversible in turn.',
+	},
+
+	'tools/tool_time_machine/server/bulk_revert_records.ts :: writeWipedKey': {
+		verdict: 'operator-value',
+		reason:
+			'writes back, for a frame target record a SOFT dataframe cascade of an operator-selected bulk run wiped, the pre-wipe value of each key — read from the run’s role-4 snapshot. Only keys still in the state the wipe left (isWipedState: empty, or the default-project filter) are written; any other live value refuses the whole record. No transform of the current value; the restore records composed undo pairs per main (recordWipedHistory), so the revert is reversible in turn.',
 	},
 
 	// --- NEW RECORD -------------------------------------------------------

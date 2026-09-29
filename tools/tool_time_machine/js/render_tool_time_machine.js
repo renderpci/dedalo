@@ -164,8 +164,9 @@ const get_content_data = async function(self) {
 					parent			: fragment
 				})
 
-			// lang selector
-				if (self.main_element.lang!=='lg-nolan') {
+			// lang selector — only for a main with language lanes (history_lang:
+			// the server's lane law; a relation has one lane whatever its flag)
+				if (self.history_lang()!=='lg-nolan') {
 
 					// label
 					ui.create_dom_element({
@@ -233,11 +234,23 @@ const get_content_data = async function(self) {
 								bulk_revert_process_label	: bulk_revert_process_name
 							})
 							.then(function(response){
-								// envelope v2: the revert's payload is
-								// `{counter, bulk_process_id, skipped}`; a refusal carries
+								// envelope v2: the revert's payload is `{counter, unchanged,
+								// bulk_process_id, exact, skipped, inexact}`
+								// (WC-2026-09-27-bulk-revert-undo-log); a refusal carries
 								// the coded error and no payload at all.
 								if (!request_failed(response) && response_data(response)) {
 									// success case
+									// A revert that skipped or inferred items still answers
+									// ok. Tell the admin what happened BEFORE the window
+									// closes, or the un-reverted / inexact items and the new
+									// bulk id (the revert's own undo handle) go unnoticed.
+									const summary = bulk_revert_summary_message(
+										response_data(response),
+										(name, ...args) => self.get_tool_label(name, ...args)
+									)
+									if (summary) {
+										alert(summary)
+									}
 									if (window.opener) {
 										// close this window when was opened from another
 										window.close()
@@ -300,16 +313,21 @@ const get_content_data = async function(self) {
 					// {1} language, {2} record), which the translator may reorder. The
 					// English literal below is the fallback for an install whose registered
 					// tool data predates the key, never the normal path.
+					//
+					// The language named is the main's HISTORY lane (history_lang, the
+					// server's lane law): 'lg-nolan' for a main without language lanes —
+					// every relation, whatever its ontology flag — which is replaced whole.
 					const component_label	= self.main_element.label || self.main_element.tipo
 					const record_address	= `${self.main_element.section_tipo}/${self.main_element.section_id}`
+					const history_lang		= self.history_lang()
 					const apply_confirm_msg = self.get_tool_label(
 							'apply_value_confirm_msg',
 							component_label,
-							self.main_element.lang,
+							history_lang,
 							record_address
 						)
-						|| `The current data of "${component_label}" (language ${self.main_element.lang}) in record ${record_address} will be OVERWRITTEN with the selected historical version.\n\n`
-						+ `A translatable component keeps its other languages: only the one named here is replaced. Any other component is replaced in full.\n\n`
+						|| `The current data of "${component_label}" (language ${history_lang}) in record ${record_address} will be OVERWRITTEN with the selected historical version.\n\n`
+						+ `A component with per-language text keeps its other languages: only the one named here is replaced. Any other component (lg-nolan: relations included) is replaced in full, with its dataframes.\n\n`
 						+ `Continue?`
 
 					if (!confirm(apply_confirm_msg)) {
@@ -353,6 +371,78 @@ const get_content_data = async function(self) {
 
 	return content_data
 }//end get_content_data
+
+
+
+/**
+* BULK_REVERT_SUMMARY_MESSAGE
+* Builds the operator notice shown after a bulk revert answers ok, before the
+* window closes (WC-2026-09-27-bulk-revert-undo-log §2.7). The payload is
+* `{counter, unchanged, bulk_process_id, exact, skipped[], inexact[]}`:
+*   - `counter` units reverted, `unchanged` keys already at their pre-run value,
+*     `bulk_process_id` the revert's OWN bulk id (so the revert is revertible);
+*   - `exact` 'full' | 'partial' | 'none';
+*   - `skipped[]` typed `{reason, …coords?}` entries, never sentences;
+*   - `inexact[]` typed `{basis, …coords}` entries: legacy inference, a record
+*     born in a legacy run, a cascade undelete with media/diffusion side effects.
+* Entries are counted per `reason` / `basis` code; the words behind a refusal
+* stay in the server log.
+* @param {Object|null} data - `response.data` of the bulk revert
+* @param {Function} get_label - `(name, ...args) => string|null`, the tool's
+*   label lookup (printf `{n}` tokens); null/empty falls back to English
+* @returns {string|null} the message, or null when data is not an object
+*/
+export const bulk_revert_summary_message = function(data, get_label=()=>null) {
+
+	if (!data || typeof data!=='object') {
+		return null
+	}
+
+	const label = (name, fallback, ...args) => {
+		const value = get_label(name, ...args)
+		return (typeof value==='string' && value.length>0) ? value : fallback
+	}
+	const count_by = (list, key) => {
+		const counts = new Map()
+		for (const entry of list) {
+			const code = entry?.[key] || 'unknown'
+			counts.set(code, (counts.get(code) || 0) + 1)
+		}
+		return [...counts].map(([code, count]) => `- ${code}: ${count}`)
+	}
+
+	const counter		= Number(data.counter) || 0
+	const unchanged		= Number(data.unchanged) || 0
+	const new_bulk_id	= data.bulk_process_id ?? ''
+	const skipped		= Array.isArray(data.skipped) ? data.skipped : []
+	const inexact		= Array.isArray(data.inexact) ? data.inexact : []
+
+	const lines = [label(
+		'bulk_revert_summary',
+		`Bulk revert finished. Reverted: ${counter}. Already at their pre-run value: ${unchanged}. This revert is recorded as bulk process ${new_bulk_id}, so it can itself be reverted.`,
+		counter, unchanged, new_bulk_id
+	)]
+
+	if (data.exact!=='full') {
+		lines.push('', label('bulk_revert_not_exact', 'This revert is NOT exact: check the items listed below.'))
+	}
+	if (skipped.length>0) {
+		lines.push('', label(
+			'bulk_revert_skipped_heading',
+			`${skipped.length} item(s) were NOT reverted and were left unchanged (details in the server log):`,
+			skipped.length
+		), ...count_by(skipped, 'reason'))
+	}
+	if (inexact.length>0) {
+		lines.push('', label(
+			'bulk_revert_inexact_heading',
+			`${inexact.length} item(s) were restored by inference or with side effects; check them:`,
+			inexact.length
+		), ...count_by(inexact, 'basis'))
+	}
+
+	return lines.join('\n')
+}//end bulk_revert_summary_message
 
 
 
