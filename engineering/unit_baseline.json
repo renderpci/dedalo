@@ -321,6 +321,11 @@
 			"skipped": 0,
 			"assertions": 16
 		},
+		"test/unit/builder_shallow_snapshot.test.ts": {
+			"tests": 19,
+			"skipped": 0,
+			"assertions": 296
+		},
 		"test/unit/bulk_operation_atomicity_native.test.ts": {
 			"tests": 16,
 			"skipped": 0,
@@ -3296,6 +3301,11 @@
 			"skipped": 0,
 			"assertions": 16
 		},
+		"test/unit/search_deep_semantics_native.test.ts": {
+			"tests": 22,
+			"skipped": 0,
+			"assertions": 48
+		},
 		"test/unit/search_duplicated_uncorrelated_native.test.ts": {
 			"tests": 8,
 			"skipped": 0,
@@ -3372,9 +3382,9 @@
 			"assertions": 5
 		},
 		"test/unit/search_path_acl_native.test.ts": {
-			"tests": 16,
+			"tests": 17,
 			"skipped": 0,
-			"assertions": 53
+			"assertions": 66
 		},
 		"test/unit/search_pattern_escape_tripwire.test.ts": {
 			"tests": 9,

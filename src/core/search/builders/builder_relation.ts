@@ -27,7 +27,7 @@
 
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { composeContains, composeNotContains, relationProbeGroups } from '../containment.ts';
-import type { BuilderContext, BuilderResult } from './types.ts';
+import type { BuilderContext, BuilderResult, Classified } from './types.ts';
 import { compound, fragment } from './types.ts';
 
 /**
@@ -269,14 +269,15 @@ export function buildRelationFragment(
 	if (context.table === 'matrix_time_machine') {
 		return buildRelationFragmentTm(rawQ, qOperator, context);
 	}
+	const classified = classifyRelation(rawQ, qOperator);
+	const { op, qLocators } = classified;
 	const operator = qOperator ?? '';
-	const qLocators = normalizeRelationQ(rawQ);
 	// The comparison target: `<alias>.<column>`, or the context's explicit
 	// NULL-safe ancestor expression (BuilderContext.columnExpr).
 	const columnRef = columnRefOf(context);
 
 	// '!*' — empty: the component key is absent from the relation column.
-	if (operator === '!*') {
+	if (op === 'empty') {
 		return fragment(`NOT (${columnRef} ? _Q1_)`, { _Q1_: context.tipo });
 	}
 
@@ -286,13 +287,13 @@ export function buildRelationFragment(
 	if (
 		context.table === 'matrix_activity' &&
 		ACTIVITY_EXPRESSION_INDEXED.has(context.tipo) &&
-		operator !== '*'
+		op !== 'notEmpty'
 	) {
 		return buildActivityWhoFragment(rawQ, operator, context);
 	}
 
 	// '*' — not-empty: key exists.
-	if (operator === '*') {
+	if (op === 'notEmpty') {
 		return fragment(`(${columnRef} ? _Q1_)`, { _Q1_: context.tipo });
 	}
 
@@ -302,7 +303,7 @@ export function buildRelationFragment(
 	// int-form after, and @> is type-strict either way.
 
 	// '!=' — has relations for this component AND does not contain q.
-	if (operator === '!=' && qLocators !== null) {
+	if (op === 'different' && qLocators !== null) {
 		const tokenValues: Record<string, unknown> = { _K_: context.tipo };
 		const notContains = composeNotContains(
 			columnRef,
@@ -313,7 +314,7 @@ export function buildRelationFragment(
 	}
 
 	// '!==' — strict different: not-contains (includes records with no key).
-	if (operator === '!==' && qLocators !== null) {
+	if (op === 'strictDifferent' && qLocators !== null) {
 		const tokenValues: Record<string, unknown> = {};
 		const notContains = composeNotContains(
 			columnRef,
@@ -334,6 +335,51 @@ export function buildRelationFragment(
 		bindSequential(tokenValues),
 	);
 	return fragment(contains, tokenValues);
+}
+
+/** The one parsed operator of a relation leaf. */
+export type RelationOp =
+	| 'none'
+	| 'empty'
+	| 'notEmpty'
+	| 'different'
+	| 'strictDifferent'
+	| 'contains';
+
+/**
+ * THE relation-family classifier (see builder_string classifyString — same
+ * law), over NEGATING_RELATION_OPERATORS: '!*' neg(twin '*'); '!==' neg(twin
+ * containment); '!=' neq(has '*', twin containment); everything else pos. q is
+ * normalized (and refused) here exactly as the builder always did, so a bad q
+ * throws the same request.invalid on either depth. The autocomplete_hi
+ * ancestor wrap is applied by the caller to the TWIN after classification
+ * (its '!='→'!==' and COALESCE belong to the negating arm; the twin is
+ * positive, so polarity carries). Not for matrix_time_machine (its own
+ * scalar twin; a deep hop never lands there).
+ */
+export function classifyRelation(
+	rawQ: unknown,
+	qOperator: string | null,
+): Classified<RelationOp> & { qLocators: Record<string, unknown>[] | null } {
+	const operator = qOperator ?? '';
+	const qLocators = normalizeRelationQ(rawQ);
+	if (operator === '!*') {
+		return { kind: 'neg', op: 'empty', twin: { q: null, qOperator: '*' }, qLocators };
+	}
+	if (operator === '*') return { kind: 'pos', op: 'notEmpty', qLocators };
+	if (operator === '!=' && qLocators !== null) {
+		return {
+			kind: 'neq',
+			op: 'different',
+			has: { q: null, qOperator: '*' },
+			twin: { q: rawQ, qOperator: null },
+			qLocators,
+		};
+	}
+	if (operator === '!==' && qLocators !== null) {
+		return { kind: 'neg', op: 'strictDifferent', twin: { q: rawQ, qOperator: null }, qLocators };
+	}
+	return { kind: 'pos', op: qLocators === null ? 'none' : 'contains', qLocators };
 }
 
 /**

@@ -1,17 +1,14 @@
 /**
- * DEEP-PATH REVERSAL — exactness gate (src/core/search/deep_path.ts).
+ * DEEP-PATH SHAPES — which physical form a deep filter leaf takes, and that
+ * each form answers the record-level semantics (src/core/search/deep_path.ts,
+ * WC-2026-09-29-search-deep-leaf-mixed-rule; the semantics themselves are
+ * gated by search_deep_semantics_native).
  *
- * A multi-hop filter leaf is driven from the LEAF through matrix_relation_index
- * when (and only when) the answer is provably the forward join's. This gate
- * BUILDS the situations where the two shapes could disagree and pins the exact
- * record set AND the shape chosen for each:
- *
- *  - one linked target / two linked targets / a dangling locator / no locator;
- *  - two conditions on the SAME path under $and must hold on the SAME related
- *    record (M3 links alpha and beta on DIFFERENT targets: never a match);
- *  - '!*' (is empty) is TRUE on the all-NULL row → the forward shape stays and
- *    still answers the records whose hop found nothing (M5, M6);
- *  - '!=' is null-safe → reversed, same answer as forward.
+ *  - a POSITIVE semi-join in a positive context, over index-covered tables,
+ *    is driven from the LEAF through matrix_relation_index (reversed);
+ *  - a NEGATED clause ('!*', the twin of '!=', anything under $not) is a
+ *    correlated NOT EXISTS / NOT (EXISTS …) — never reversed;
+ *  - no deep leaf adds a join to the main FROM: the count is count(*).
  *
  * Situation: test3 records (matrix_test) at explicit ids, hop test54
  * (component_relation_related) → leaf test52 (component_input_text). Records
@@ -132,11 +129,11 @@ describe.if(DB_READY)('deep-path reversal is exact', () => {
 		expect(result.ids).toEqual([M1, M3, M4]);
 	});
 
-	test('same path under $and: both conditions on the SAME related record', async () => {
+	test('same field twice under $and: two independent reversed semi-joins', async () => {
 		const result = await run({ $and: [leaf('alpha'), leaf('beta')] });
 		expect(result.reversed).toBe(true);
-		// M3 links alpha and beta on two different records: not a match.
-		expect(result.ids).toEqual([M4]);
+		// M3: alpha on T1, beta on T2 — the same field is matched independently.
+		expect(result.ids).toEqual([M3, M4]);
 	});
 
 	test('same path under $or: any related record satisfying either', async () => {
@@ -146,27 +143,25 @@ describe.if(DB_READY)('deep-path reversal is exact', () => {
 		expect(result.ids).toEqual([M1, M2, M3]);
 	});
 
-	test("'!*' is TRUE on the all-NULL row: forward stays, empty hops still match", async () => {
+	test("'!*' is a NOT EXISTS: records with no (or a dangling) related record match", async () => {
 		const result = await run({ $and: [leaf('!*')] });
 		expect(result.reversed).toBe(false);
-		expect(result.count).toContain('count(DISTINCT');
+		expect(result.count).toContain('NOT EXISTS (SELECT 1 FROM');
+		expect(result.count).toContain('count(*) as full_count');
 		expect(result.ids).toEqual([M5, M6]);
 	});
 
-	test("'!=' is null-safe: reversed, a linked record without the value matches", async () => {
+	test("'!=': the has-half reversed, the twin a NOT EXISTS", async () => {
 		const result = await run({ $and: [leaf('!=zzdeep alpha one')] });
 		expect(result.reversed).toBe(true);
-		expect(result.ids).toEqual([M2, M3, M4]);
+		expect(result.count).toContain('NOT EXISTS (SELECT 1 FROM');
+		// M3 links T1 ('zzdeep alpha one'): some related record equals → out.
+		expect(result.ids).toEqual([M2, M4]);
 	});
 
-	test('under $not the leaf keeps the forward shape', async () => {
+	test('under $not the semi-join stays correlated (never reversed)', async () => {
 		const result = await run({ $and: [{ $not: [leaf('zzdeep alpha')] }] });
 		expect(result.reversed).toBe(false);
-		// Only the SHAPE is pinned here. The forward answer tests NOT per linked
-		// record, so M3 (one non-alpha link) matches too — the open deep-path
-		// negation bug (engineering/TODO.md), not a contract to freeze.
-		expect(result.ids).toContain(M2);
-		expect(result.ids).not.toContain(M1);
-		expect(result.ids).not.toContain(M4);
+		expect(result.ids).toEqual([M2, M5, M6]);
 	});
 });

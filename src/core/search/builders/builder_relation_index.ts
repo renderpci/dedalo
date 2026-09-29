@@ -39,10 +39,26 @@
  */
 
 import { DedaloError } from '../../errors/dedalo_error.ts';
-import { type BuilderContext, type BuilderResult, fragment } from './types.ts';
+import { type BuilderContext, type BuilderResult, type Classified, fragment } from './types.ts';
 
 /** DEDALO_RELATION_TYPE_INDEX_TIPO — the indexation locator type. */
 const INDEX_RELATION_TYPE = 'dd96';
+
+/** The one parsed operator of a relation_index leaf. */
+export type RelationIndexOp = 'indexed' | 'orphan' | 'none';
+
+/**
+ * THE relation_index classifier (see builder_string classifyString — same
+ * law): '!*' neg(twin '*'); '*' pos; any other operator emits no clause.
+ */
+export function classifyRelationIndex(
+	_rawQ: unknown,
+	qOperator: string | null,
+): Classified<RelationIndexOp> {
+	if (qOperator === '!*') return { kind: 'neg', op: 'orphan', twin: { q: null, qOperator: '*' } };
+	if (qOperator === '*') return { kind: 'pos', op: 'indexed' };
+	return { kind: 'pos', op: 'none' };
+}
 
 export async function buildRelationIndexFragment(
 	_rawQ: unknown,
@@ -55,7 +71,8 @@ export async function buildRelationIndexFragment(
 				'relation_index search: no time-machine twin exists (PHP has none; the computed-inverse scan targets live relation columns)',
 		});
 	}
-	if (qOperator !== '*' && qOperator !== '!*') return false; // PHP :135-149
+	const { op } = classifyRelationIndex(_rawQ, qOperator);
+	if (op === 'none') return false; // PHP :135-149
 
 	if (context.sectionTipo === '') return false; // unresolvable leaf section
 
@@ -75,7 +92,7 @@ export async function buildRelationIndexFragment(
 	const tokenValues = { _Qri1_: context.sectionTipo, _Qri2_: INDEX_RELATION_TYPE };
 
 	return fragment(
-		`${context.alias}.section_id ${qOperator === '*' ? 'IN' : 'NOT IN'} (${referenced})`,
+		`${context.alias}.section_id ${op === 'indexed' ? 'IN' : 'NOT IN'} (${referenced})`,
 		tokenValues,
 	);
 }

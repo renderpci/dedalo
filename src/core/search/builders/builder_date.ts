@@ -60,7 +60,7 @@
  */
 
 import { DedaloError } from '../../errors/dedalo_error.ts';
-import type { BuilderContext, BuilderResult } from './types.ts';
+import type { BuilderContext, BuilderResult, Classified } from './types.ts';
 import { fragment } from './types.ts';
 
 const SECONDS_PER_DAY = 24 * 60 * 60;
@@ -475,6 +475,21 @@ function buildDateTimeFragment(
 	return jsonpathFragment(context, `@.start.time >= ${time} && @.start.time <= ${final}`);
 }
 
+/** The one parsed operator of a date leaf (the value's own op is read later). */
+export type DateOp = 'empty' | 'notEmpty' | 'value';
+
+/**
+ * THE date-family classifier (see builder_string classifyString — same law).
+ * Polarity: '!*' neg(twin '*'); everything else pos (a '!=' date is refused
+ * by the builder as uncovered scope, on either depth).
+ */
+export function classifyDate(_rawQ: unknown, qOperator: string | null): Classified<DateOp> {
+	const operator = qOperator ?? '';
+	if (operator === '!*') return { kind: 'neg', op: 'empty', twin: { q: null, qOperator: '*' } };
+	if (operator === '*') return { kind: 'pos', op: 'notEmpty' };
+	return { kind: 'pos', op: 'value' };
+}
+
 export function buildDateFragment(
 	rawQ: unknown,
 	qOperator: string | null,
@@ -482,16 +497,17 @@ export function buildDateFragment(
 ): BuilderResult {
 	const operator = qOperator ?? '';
 	const isTimeMachine = TIME_MACHINE_TABLES.has(context.table);
+	const { op } = classifyDate(rawQ, qOperator);
 
 	// Existence operators (PHP resolve_common_date_operators / _tm), resolved
 	// BEFORE the mode dispatch — they are mode-agnostic and need no date value.
 	// The time-machine variant tests the dedicated `timestamp` column.
-	if (operator === '!*') {
+	if (op === 'empty') {
 		return isTimeMachine
 			? fragment(`${context.alias}."timestamp" IS NULL`)
 			: fragment(`NOT (${context.alias}.${context.column} @? '$.${context.tipo}[*]')`);
 	}
-	if (operator === '*') {
+	if (op === 'notEmpty') {
 		return isTimeMachine
 			? fragment(`${context.alias}."timestamp" IS NOT NULL`)
 			: fragment(`(${context.alias}.${context.column} @? '$.${context.tipo}[*]')`);

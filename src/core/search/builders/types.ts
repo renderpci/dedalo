@@ -213,3 +213,73 @@ export function likeContainsPattern(token: string): string {
 export function isLiteralQ(q: string): boolean {
 	return q.length >= 2 && q.startsWith("'") && q.endsWith("'");
 }
+
+/**
+ * STRUCTURED builder options — the INTERNAL twins of the deep-search
+ * classifiers. They travel as a typed argument, never as a q string, so no
+ * SQO a client sends can reach them (they are not wire-reachable operators).
+ *
+ * - `mode: 'nonEmpty'`     — json: some entry carries a non-empty value (the
+ *                             positive body of '!*').
+ * - `mode: 'containsRaw'`  — string/iri/json: the POSITIVE body of the '-'
+ *                             not-contain branch, byte-for-byte (raw term, no
+ *                             operator stripping, lang kept) — so NOT EXISTS
+ *                             over it is exactly the shallow negation lifted.
+ * - `mode: 'hasEntries'`   — string/iri: the lang-scoped entries-exist guard
+ *                             of '!=' (entries with EMPTY values count — the
+ *                             exact guard, which '*' is not).
+ * - `mode: 'differentTwin'` — string: the positive body of '!=' (q = the term
+ *                             after '!=', wildcards kept, anchors as '!=' reads
+ *                             them) — no re-parse through the q grammar.
+ * - `aggTable`/`aggAcl`     — '!!': the duplicate aggregate reads this table
+ *                             restricted by this record predicate (a deep hop's
+ *                             SEC-02 ACL), so a hidden record never makes a
+ *                             visible one a "duplicate".
+ */
+export interface BuilderOpts {
+	mode?: 'nonEmpty' | 'containsRaw' | 'hasEntries' | 'differentTwin';
+	aggTable?: string;
+	aggAcl?: (alias: string) => string;
+}
+
+/** A builder invocation: what the deep renderer runs INSIDE its semi-join. */
+export interface BuilderTwin {
+	q: unknown;
+	qOperator: string | null;
+	opts?: BuilderOpts;
+}
+
+/**
+ * The deep-search POLARITY of one leaf (engineering/wire_contract
+ * WC-2026-09-29-search-deep-leaf-mixed-rule). Over R = the visible records a
+ * deep path reaches:
+ *   - pos: EXISTS r in R: P(r)                       (the builder itself)
+ *   - neg: NOT EXISTS r in R: twin(r)
+ *   - neq: EXISTS r in R: has(r) AND NOT EXISTS r in R: twin(r)
+ * Every twin/has is POSITIVE. The shallow builder SQL is unaffected by the
+ * classification (it only dispatches on `op`).
+ */
+export type LeafPolarity =
+	| { kind: 'pos' }
+	| { kind: 'neg'; twin: BuilderTwin }
+	| { kind: 'neq'; has: BuilderTwin; twin: BuilderTwin };
+
+/** A classifier's answer: the polarity plus the ONE parsed operator the builder dispatches on. */
+export type Classified<Op extends string> = LeafPolarity & { op: Op };
+
+export const POSITIVE: { kind: 'pos' } = Object.freeze({ kind: 'pos' }) as { kind: 'pos' };
+
+/** '<op><q>' — the glued effective operator string every text family dispatches on. */
+export function effectiveOf(rawQ: unknown, qOperator: string | null): string {
+	const q = extractNormalizedQ(rawQ) ?? '';
+	const operator = qOperator ?? '';
+	return operator !== '' ? operator + q : q;
+}
+
+/**
+ * The deep '!!' ACL restriction of the duplicate aggregate (BuilderOpts
+ * aggAcl): '' on a shallow leaf, so the shallow sentence is byte-identical.
+ */
+export function aggAclClause(opts: BuilderOpts | undefined): string {
+	return opts?.aggAcl ? ` AND (${opts.aggAcl('m2')})` : '';
+}

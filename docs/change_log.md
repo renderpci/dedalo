@@ -58,6 +58,28 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Searches through a related section now answer negations and combined conditions correctly.**
+
+    A search condition that looks inside a related record (for example *Movements →
+    Municipality*) now means what it says:
+
+    - **Negations mean "none".** "Does not contain X", "is empty" and "different
+      from X" now return the records where *no* related record matches. Before, a
+      record linked to one matching and one non-matching record was returned too,
+      so the result was silently too large (on one installation, 38,749 records
+      instead of 18,635).
+    - **Two conditions on the same field** joined with AND can now be met by
+      different related records: "Municipality = Madrid AND Municipality =
+      Valencia" finds people with one movement to each. Before it always found
+      nobody.
+    - **Conditions on different fields** joined with AND still describe the same
+      related record: "Municipality = Madrid AND Year = 1939" finds a movement to
+      Madrid in 1939, not one to Madrid and another in 1939.
+    - A number search "different from *n*" now returns the records whose value is
+      not *n*. Before, it returned the records whose value is zero.
+
+    Wire contract: `WC-2026-09-29-search-deep-leaf-mixed-rule`, `WC-2026-09-29-number-not-equal`.
+
 - **A section that fails to load says why, and can be reloaded**
 
     When a section or thesaurus element could not be loaded, the red banner always
@@ -146,7 +168,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 47 entries"
+??? note "Wire contract — 49 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -195,6 +217,8 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-24-tool-export-server-built-artifacts`
     - `WC-2026-09-28-maintenance-serve-code-widget`
     - `WC-2026-09-28-maintenance-serve-ontology-widget`
+    - `WC-2026-09-29-number-not-equal`
+    - `WC-2026-09-29-search-deep-leaf-mixed-rule`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

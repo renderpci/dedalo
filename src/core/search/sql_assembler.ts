@@ -57,16 +57,24 @@ import { bareBrowseCount, scopedBrowseCount } from './bare_count.ts';
 import type { ConformedFilter } from './conform.ts';
 import { conformFilter } from './conform.ts';
 import { composeContains, relationProbeGroups } from './containment.ts';
-import { reverseDeepPaths } from './deep_path.ts';
+import { planDeepFilters } from './deep_path.ts';
 import {
 	assertValidDataColumn,
 	assertValidLang,
 	assertValidTipo,
 	assertValidTipoOrColumn,
 } from './identifier_gate.ts';
-import { ParamsCollector, resolveBuilderResult } from './params.ts';
+import {
+	NamedTokenCollector,
+	ParamsCollector,
+	resolveBuilderResult,
+	substituteUsed,
+} from './params.ts';
 
 const DEFAULT_DATA_LANG = readString('DATA_LANG');
+
+/** Named-token prefix of a filter chain's hop ACL (`_ACL1_`…, NamedTokenCollector). */
+const HOP_ACL_TOKEN_PREFIX = 'ACL';
 
 /** Default SELECT data columns (PHP trait.select.php:122 — relation_search excluded). */
 const DEFAULT_SELECT_COLUMNS = [
@@ -92,22 +100,6 @@ export function trimTipo(tipo: string): string | null {
 export interface BuiltQuery {
 	sql: string;
 	params: unknown[];
-}
-
-/**
- * The recursive filter parser (PHP filter_parser, trait.where.php:281):
- * AND/OR join; NOT/NAND wrap in NOT(...AND...); NOR wraps NOT(...OR...).
- */
-/** Gather every leaf's join fragments (dedup by alias, first wins). */
-function collectJoins(node: ConformedFilter, sink: Map<string, string>): void {
-	if (node.kind === 'leaf') {
-		for (const join of node.joins ?? []) {
-			if (!sink.has(join.alias)) sink.set(join.alias, join.sql);
-		}
-		return;
-	}
-	if (node.kind === 'reverse') return; // deep_path.ts: no joins by construction
-	for (const item of node.items) collectJoins(item, sink);
 }
 
 /**
@@ -137,20 +129,34 @@ function joinGroupFragments(op: string, fragments: string[]): string {
 	}
 }
 
-/** deep_path.ts reversed shape: the shell around the innermost leaf predicate. */
-function parseReverseNode(
-	node: Extract<ConformedFilter, { kind: 'reverse' }>,
+/** deep_path.ts semi-join: the shell around the innermost leaf predicate. */
+function parseSemijoinNode(
+	node: Extract<ConformedFilter, { kind: 'semijoin' }>,
 	params: ParamsCollector,
 ): string {
 	const inner = resolveBuilderResult(node.inner, params);
-	return inner === '' ? '' : `${node.open}${inner}${node.close}`;
+	if (inner === '') return '';
+	// The hop ACL's named tokens ride open/close AND the inner predicate (the
+	// deep '!!' aggregate carries the last hop's ACL); bind only those present.
+	return substituteUsed(params, `${node.open}${inner}${node.close}`, node.tokens);
 }
 
+/**
+ * The recursive filter parser (PHP filter_parser, trait.where.php:281):
+ * AND/OR join; NOT/NAND wrap in NOT(...AND...); NOR wraps NOT(...OR...).
+ */
 function parseConformedFilter(node: ConformedFilter, params: ParamsCollector): string {
 	if (node.kind === 'leaf') {
 		return resolveBuilderResult(node.fragment, params);
 	}
-	if (node.kind === 'reverse') return parseReverseNode(node, params);
+	if (node.kind === 'semijoin') return parseSemijoinNode(node, params);
+	if (node.kind === 'deep') {
+		// planDeepFilters replaces every deep node before rendering; one reaching
+		// here would be rendered as NOTHING, i.e. silently widen the search.
+		throw new DedaloError('internal.invariant', {
+			message: 'search assembler: a deep filter leaf reached rendering unplanned (deep_path.ts)',
+		});
+	}
 	const fragments = node.items
 		.map((item) => {
 			const parsed = parseConformedFilter(item, params);
@@ -1379,11 +1385,17 @@ async function buildPlainSearchSql(sqo: Sqo, options: SearchOptions): Promise<Bu
 	let nonAclWhereParts = 0;
 	const joinFragments = new Map<string, string>();
 	if (sqo.filter !== undefined && sqo.filter !== null) {
-		// Deep paths driven from the leaf where provably exact (deep_path.ts).
-		const conformed = await reverseDeepPaths(
-			await conformFilter(sqo.filter as Record<string, unknown>, alias, matrixTable, pathScope),
+		// Deep paths → semi-joins over the related records (deep_path.ts): the
+		// filter never adds a join to the main FROM.
+		// The hop ACL of a FILTER chain binds through named tokens: a leaf that
+		// renders nothing (refused, inert) must leave no orphan `$N` behind.
+		const filterAcl = new NamedTokenCollector(HOP_ACL_TOKEN_PREFIX);
+		const filterScope = buildPathScope(principal, sqo.skip_projects_filter === true, filterAcl);
+		const conformed = await planDeepFilters(
+			await conformFilter(sqo.filter as Record<string, unknown>, alias, matrixTable, filterScope),
+			tables,
+			filterAcl.tokenValues,
 		);
-		collectJoins(conformed, joinFragments);
 		const filterSql = parseConformedFilter(conformed, params);
 		if (filterSql !== '') {
 			whereParts.push(filterSql);

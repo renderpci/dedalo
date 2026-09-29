@@ -35,14 +35,19 @@ import {
 	noteFrontierRefusal,
 	type SqlFrontierScope,
 } from '../security/frontier_scope.ts';
-import { buildDateFragment } from './builders/builder_date.ts';
-import { buildIriFragment } from './builders/builder_iri.ts';
-import { buildJsonFragment } from './builders/builder_json.ts';
-import { buildNumberFragment } from './builders/builder_number.ts';
-import { buildSectionIdFragment } from './builders/builder_section_id.ts';
-import { buildStringFragment } from './builders/builder_string.ts';
-import type { BuilderContext, BuilderResult } from './builders/types.ts';
-import { fragment as fragmentResult } from './builders/types.ts';
+import { buildDateFragment, classifyDate } from './builders/builder_date.ts';
+import { buildIriFragment, classifyIri } from './builders/builder_iri.ts';
+import { buildJsonFragment, classifyJson } from './builders/builder_json.ts';
+import { buildNumberFragment, classifyNumber } from './builders/builder_number.ts';
+import { buildSectionIdFragment, classifySectionId } from './builders/builder_section_id.ts';
+import { buildStringFragment, classifyString } from './builders/builder_string.ts';
+import type { BuilderContext, BuilderOpts, BuilderResult, LeafPolarity } from './builders/types.ts';
+import {
+	compound,
+	extractNormalizedQ,
+	fragment as fragmentResult,
+	splitSearchTerms,
+} from './builders/types.ts';
 import { assertValidLang, assertValidTipo, assertValidTipoOrColumn } from './identifier_gate.ts';
 import { requireRelationIndex, searchStoreCovers } from './search_store.ts';
 
@@ -60,14 +65,37 @@ const _DEFAULT_DATA_LANG = readString('DATA_LANG');
  */
 const FAMILY_BUILDERS: Record<
 	NonNullable<ReturnType<typeof getSearchBuilderFamily>>,
-	(q: unknown, qOperator: string | null, qSplit: boolean, context: BuilderContext) => BuilderResult
+	(
+		q: unknown,
+		qOperator: string | null,
+		qSplit: boolean,
+		context: BuilderContext,
+		opts?: BuilderOpts,
+	) => BuilderResult
 > = {
 	string: buildStringFragment,
 	number: (q, qOperator, _qSplit, context) => buildNumberFragment(q, qOperator, context),
 	date: (q, qOperator, _qSplit, context) => buildDateFragment(q, qOperator, context),
-	iri: (q, qOperator, _qSplit, context) => buildIriFragment(q, qOperator, context),
-	json: (q, qOperator, _qSplit, context) => buildJsonFragment(q, qOperator, context),
+	iri: (q, qOperator, _qSplit, context, opts) => buildIriFragment(q, qOperator, context, opts),
+	json: (q, qOperator, _qSplit, context, opts) => buildJsonFragment(q, qOperator, context, opts),
 	section_id: (q, qOperator, _qSplit, context) => buildSectionIdFragment(q, qOperator, context),
+};
+
+/**
+ * The deep-search classifiers of the same families — each builder file's own
+ * classify<Family>(), the ONE parse of its operator grammar, so the shallow
+ * SQL and the deep polarity can never read an operator differently.
+ */
+const FAMILY_CLASSIFIERS: Record<
+	NonNullable<ReturnType<typeof getSearchBuilderFamily>>,
+	(q: unknown, qOperator: string | null) => LeafPolarity
+> = {
+	string: (q, qOperator) => classifyString(q, qOperator),
+	number: classifyNumber,
+	date: classifyDate,
+	iri: (q, qOperator) => classifyIri(q, qOperator),
+	json: (q, qOperator) => classifyJson(q, qOperator),
+	section_id: classifySectionId,
 };
 
 /** One LEFT JOIN chain fragment a multi-hop leaf requires (keyed for dedup). */
@@ -79,19 +107,49 @@ export interface JoinFragment {
 export type ConformedFilter =
 	| { kind: 'group'; op: string; items: ConformedFilter[] }
 	/** `fragment` is the leaf's BuilderResult — the SQL it contributes, `false` when it contributes nothing. */
-	| {
-			kind: 'leaf';
-			fragment: BuilderResult;
-			joins?: JoinFragment[];
-			/** Multi-hop leaves only: what the deep_path pass needs to reverse it. */
-			deep?: DeepLeafPlan;
-	  }
+	| { kind: 'leaf'; fragment: BuilderResult }
 	/**
-	 * A REVERSED deep-path leaf set (deep_path.ts): `open` + the inner leaf
-	 * predicate(s) + `close`. Contributes no joins. `open`/`close` carry no
-	 * tokens — only gated identifiers and the frontier ACL predicates.
+	 * A filter leaf whose path crosses relation hops (path.length > 1), as
+	 * conform classified it. Never rendered as is: deep_path.ts planDeepFilters
+	 * turns it into `semijoin` nodes (WC-2026-09-29-search-deep-leaf-mixed-rule).
 	 */
-	| { kind: 'reverse'; open: string; inner: BuilderResult; close: string };
+	| DeepLeafNode
+	/**
+	 * A deep-path semi-join (deep_path.ts): `open` + the inner leaf
+	 * predicate(s) + `close`. Contributes no joins. `open`/`close` carry only
+	 * gated identifiers and the frontier ACL predicates, whose values ride as
+	 * NAMED tokens (`tokens`, NamedTokenCollector) bound only when rendered.
+	 */
+	| {
+			kind: 'semijoin';
+			open: string;
+			inner: BuilderResult;
+			close: string;
+			tokens: Record<string, unknown>;
+	  };
+
+/**
+ * One clause of a DEEP leaf. Every `result` is POSITIVE, built over the last
+ * hop alias; negation lives only in `neg` (NOT EXISTS over the related
+ * records). `reverse` is the same predicate for the reversed (leaf-driven)
+ * shape — with the search-store prefilter where the family has one.
+ */
+export interface DeepClause {
+	neg: boolean;
+	result: BuilderResult;
+	reverse: BuilderResult;
+}
+
+/** A classified deep leaf: its chain, the field it reads, its clauses. */
+export interface DeepLeafNode {
+	kind: 'deep';
+	plan: DeepChainPlan;
+	/** The leaf component tipo — the "same field" key of the mixed rule. */
+	field: string;
+	/** Every clause is positive: the leaf may share one related record with siblings. */
+	positive: boolean;
+	clauses: DeepClause[];
+}
 
 /** One hop of a multi-hop chain, as buildJoinChain resolved it. */
 export interface JoinHop {
@@ -103,18 +161,19 @@ export interface JoinHop {
 	table: string;
 	/** The caller's record ACL on the target alias ('' when none). */
 	acl: string;
+	/**
+	 * The hop as a FROM item of a correlated semi-join (purpose 'filter'):
+	 * `jsonb_array_elements(<previous>.relation->'<key>') AS rel_<alias> JOIN
+	 * <table> AS <alias> ON <locator identity> [AND (<acl>)]` — the same ON
+	 * conjuncts as the LEFT JOIN, so the two cannot drift.
+	 */
+	join: string;
 }
 
-/** Everything the reverse pass needs about one multi-hop leaf. */
-export interface DeepLeafPlan {
+/** The hop chain of one multi-hop leaf, as deep_path.ts renders it. */
+export interface DeepChainPlan {
 	mainAlias: string;
-	/** Source table of the FIRST hop (the searched section's table). */
-	mainTable: string;
 	hops: JoinHop[];
-	/** Forward predicate, exactly as the join shape would render it. */
-	forward: BuilderResult;
-	/** Same predicate with the search-store prefilter enabled (string leaves). */
-	reverseFragment: BuilderResult;
 }
 
 /**
@@ -288,7 +347,15 @@ export async function buildJoinChain(
 				acl = predicate;
 			}
 		}
-		hops.push({ hopDataTipo, alias: joinAlias, table: stepTable, acl });
+		hops.push({
+			hopDataTipo,
+			alias: joinAlias,
+			table: stepTable,
+			acl,
+			join:
+				`jsonb_array_elements(${previousAlias}.relation->'${hopDataTipo}') AS ${relationAlias}\n  ` +
+				`JOIN ${stepTable} AS ${joinAlias} ON ${onParts.join(' AND ')}`,
+		});
 		joins.push({
 			alias: joinAlias,
 			sql:
@@ -442,14 +509,14 @@ function parseLegacyFunctionLeaf(leaf: {
 	return columns.map(([column, cast], index) => [column, cast, keyParts[index] as string]);
 }
 
-/** Where a leaf sits: the root alias/table, the final join alias/table, its chain. */
+/** Where a leaf sits: its alias/table and, on a deep path, the hop chain. */
 interface LeafPlacement {
-	alias: string;
-	table: string;
 	leafAlias: string;
 	leafTable: string;
-	joins: JoinFragment[];
-	hops: JoinHop[];
+	/** The leaf component tipo (the mixed rule's "field"). */
+	field: string;
+	/** null on a shallow leaf. */
+	plan: DeepChainPlan | null;
 }
 
 /** The locators of a relation/function leaf; null = malformed legacy key (contributes nothing). */
@@ -486,7 +553,8 @@ function relationLocatorConditions(locators: RelationLeafLocator[]): {
 /**
  * RELATION LEAVES — filter records whose `relation` column holds a locator
  * matching the given fields (see the format notes at the call site). Both wire
- * shapes resolve to the SAME exact tuple-IN over matrix_relation_index.
+ * shapes resolve to the SAME exact tuple-IN over matrix_relation_index. On a
+ * deep path it is one POSITIVE clause over the last hop's records.
  */
 async function conformRelationLeaf(
 	leaf: SqoFilterLeaf,
@@ -502,17 +570,11 @@ async function conformRelationLeaf(
 			`(SELECT r.section_tipo, r.section_id FROM matrix_relation_index r WHERE ${conditions.sql})`,
 		conditions.values,
 	);
-	return at.joins.length > 0
-		? {
-				kind: 'leaf',
-				fragment: result,
-				joins: at.joins,
-				deep: deepPlan(at.alias, at.table, at.hops, result, result),
-			}
-		: { kind: 'leaf', fragment: result };
+	if (at.plan === null) return { kind: 'leaf', fragment: result };
+	return deepNode(at.plan, at.field, true, [{ neg: false, result, reverse: result }]);
 }
 
-/** Conform one leaf: gates → ontology → builder. */
+/** Conform one leaf: gates → (hop chain) → ontology → builder / deep clauses. */
 async function conformLeaf(
 	leaf: SqoFilterLeaf,
 	alias: string,
@@ -534,27 +596,20 @@ async function conformLeaf(
 	if (leaf.lang !== undefined) assertValidLang(leaf.lang, 'filter leaf');
 
 	// MULTI-HOP path: each intermediate step is a relation component pointing
-	// at the next step's section — build the PHP build_sql_join chain (LATERAL
-	// unnest of the relation key + LEFT JOIN on the target identity) and
-	// conform the FINAL component against the last join alias.
-	//
-	// buildJoinChain IS the chain builder (it used to be copy-pasted here, which
-	// is how the ORDER twin and the FILTER twin could drift): one home, so the
-	// SEC-02 hop ACL cannot land on one of them only.
+	// at the next step's section. buildJoinChain resolves the hops (aliases,
+	// tables, the SEC-02 hop ACL) — ONE home shared with the ORDER twin, so the
+	// hop ACL cannot land on one of them only. The filter leaf never joins the
+	// chain into the main FROM: deep_path.ts renders it as a semi-join over the
+	// related records (WC-2026-09-29-search-deep-leaf-mixed-rule).
 	let leafAlias = alias;
 	let leafTable = table;
-	const joins: JoinFragment[] = [];
-	let hops: JoinHop[] = [];
+	let plan: DeepChainPlan | null = null;
 	if (path.length > 1) {
 		const chain = await buildJoinChain(
 			path as { section_tipo?: string; component_tipo?: string }[],
 			alias,
 			scope,
 		);
-		joins.push(...chain.joins);
-		hops = chain.hops;
-		leafAlias = chain.lastAlias;
-		leafTable = chain.lastTable;
 		if (!chain.authorized) {
 			// SEC-02. A step names a component this principal holds 0 on. The leaf
 			// answers FALSE for EVERY row — never a throw, and never a silent drop:
@@ -570,11 +625,6 @@ async function conformLeaf(
 			//    contributes nothing to an OR, empties an AND, and negates to the
 			//    same answer for every record.
 			//
-			// The join chain is still emitted (aliases dedup with other clauses'
-			// identical paths, and the sort-select of an ORDER on the same path
-			// must still resolve); it simply carries no leaf predicate that can
-			// distinguish one hidden value from another.
-			//
 			// LOUD, THOUGH: buildJoinChain has already written the named
 			// `[frontier] REFUSED …` operator log line and recorded the request's
 			// `perm.out_of_scope` notice. The CALLER's answer is identical for hit
@@ -582,8 +632,11 @@ async function conformLeaf(
 			// the result set was narrowed and why. A narrowing nobody can observe
 			// is what AGENTS.md forbids; a narrowing the attacker cannot observe is
 			// what the refusal law requires. Both hold here.
-			return { kind: 'leaf', fragment: fragmentResult('1=0'), joins };
+			return { kind: 'leaf', fragment: fragmentResult('1=0') };
 		}
+		plan = { mainAlias: alias, hops: chain.hops };
+		leafAlias = chain.lastAlias;
+		leafTable = chain.lastTable;
 	}
 
 	const componentTipo = lastStep.component_tipo;
@@ -616,12 +669,10 @@ async function conformLeaf(
 	const leafFormat = (leaf as { format?: unknown }).format;
 	if (leafFormat === 'relation' || leafFormat === 'function') {
 		return conformRelationLeaf(leaf, leafFormat, {
-			alias,
-			table,
 			leafAlias,
 			leafTable,
-			joins,
-			hops,
+			field: componentTipo,
+			plan,
 		});
 	}
 
@@ -680,97 +731,238 @@ async function conformLeaf(
 		model,
 		...(dateMode === undefined ? {} : { dateMode }),
 		// string leaves: let builder_string prepend its search-store pre-filter
-		// when the table's sync trigger exists (cached catalog check). NOT on the
-		// FORWARD join shape: there the prefilter's tiny-cardinality estimate
-		// makes the planner FLIP the join order into an unindexed person→records
-		// filter join (measured: multi-hop count 150ms → 660ms). A multi-hop leaf
-		// gets a SECOND, prefiltered fragment below for the REVERSED shape
-		// (deep_path.ts), where the leaf is the driving set and the prefilter is
-		// exactly what it needs.
+		// when the table's sync trigger exists (cached catalog check). ONLY on a
+		// SHALLOW leaf: inside a correlated deep semi-join the hop already bounds
+		// the per-row work, and the prefilter's tiny-cardinality estimate makes
+		// the planner flip the join order (measured on the old forward join:
+		// multi-hop count 150ms → 660ms). The REVERSED shape (deep_path.ts), where
+		// the leaf is the driving set, gets its own prefiltered twin below.
 		searchStoreCovered:
-			column === 'string' && joins.length === 0 ? await searchStoreCovers(leafTable) : false,
+			column === 'string' && plan === null ? await searchStoreCovers(leafTable) : false,
 	};
 
 	// Builder dispatch by descriptor facet (S2-26): relation-column models go
 	// through the relations registry; everything else through its declared
 	// searchBuilder family; no facet = unsearchable, throw loudly (§9).
-	let result: BuilderResult;
 	const builderFamily = getSearchBuilderFamily(model);
-	if (getColumnNameByModel(model) === 'relation') {
-		// ANCESTOR INDEX (PHP resolve_query_object_sql step 4 + add_relation_search):
-		// the LEGACY component_autocomplete_hi model ALSO searches the
-		// `relation_search` column, so a broader term matches the records filed
-		// under its narrower ones ("search Spain, match Madrid" — the index
-		// save_component.ts maintains on every save of one of these components).
-		// Ledger: WC-2026-08-09-autocomplete-hi-ancestor-search.
-		//
-		// The decision belongs HERE and not in the relations registry: the
-		// registry dispatches on the RUNTIME model, and component_autocomplete_hi
-		// has already been replaced by component_portal by the time it gets
-		// there. This is the last place holding the tipo — PHP resolves the same
-		// question the same way, via ontology_node::get_legacy_model_by_tipo.
-		//
-		// The test must match the WRITER exactly (save_component.ts reads the
-		// node's OWN stored model before calling maintainRelationSearchIndex):
-		// wrapping a leaf whose index is never maintained would widen nothing and
-		// would cost a second GIN probe per row. TM tables carry no such index
-		// (their relation datum is the scalar user_id column) and are excluded.
-		const usesAncestorIndex =
-			!TIME_MACHINE_TABLES.has(leafTable) &&
-			(await getNode(componentTipo))?.model === 'component_autocomplete_hi';
-		if (usesAncestorIndex) {
-			const { buildRelationSearchAncestorFragment } = await import(
-				'./builders/builder_relation.ts'
-			);
-			result = buildRelationSearchAncestorFragment(leaf.q, leaf.q_operator ?? null, context);
-		} else {
-			const { getRelationSearchFragmentBuilder } = await import('../relations/registry.ts');
-			const buildFragment = await getRelationSearchFragmentBuilder(model);
-			result = await buildFragment(leaf.q, leaf.q_operator ?? null, context);
-		}
-	} else if (builderFamily !== undefined) {
-		result = FAMILY_BUILDERS[builderFamily](
-			leaf.q,
-			leaf.q_operator ?? null,
-			leaf.q_split === true,
-			context,
-		);
-	} else {
+	const isRelation = column === 'relation';
+	if (!isRelation && builderFamily === undefined) {
 		throw new DedaloError('engine.uncovered_scope', {
 			message: `search conform: model '${model}' declares no searchBuilder family and is not a relation model — unsearchable through conform (ledgered, never silently narrowed)`,
 			coordinates: { model },
 		});
 	}
-	if (joins.length === 0) return { kind: 'leaf', fragment: result };
-	// DEEP PATH: the reversed shape (deep_path.ts) makes the leaf the DRIVING
-	// set, so the search-store prefilter the forward join must not carry (see
-	// searchStoreCovered above) is exactly what it wants.
-	const reverseFragment =
-		builderFamily !== undefined &&
-		column === 'string' &&
-		getColumnNameByModel(model) !== 'relation' &&
-		(await searchStoreCovers(leafTable))
-			? FAMILY_BUILDERS[builderFamily](leaf.q, leaf.q_operator ?? null, leaf.q_split === true, {
-					...context,
-					searchStoreCovered: true,
-				})
-			: result;
-	return {
-		kind: 'leaf',
-		fragment: result,
-		joins,
-		deep: deepPlan(alias, table, hops, result, reverseFragment),
+	// ANCESTOR INDEX (PHP resolve_query_object_sql step 4 + add_relation_search):
+	// the LEGACY component_autocomplete_hi model ALSO searches the
+	// `relation_search` column, so a broader term matches the records filed
+	// under its narrower ones ("search Spain, match Madrid" — the index
+	// save_component.ts maintains on every save of one of these components).
+	// Ledger: WC-2026-08-09-autocomplete-hi-ancestor-search.
+	//
+	// The decision belongs HERE and not in the relations registry: the
+	// registry dispatches on the RUNTIME model, and component_autocomplete_hi
+	// has already been replaced by component_portal by the time it gets
+	// there. This is the last place holding the tipo — PHP resolves the same
+	// question the same way, via ontology_node::get_legacy_model_by_tipo.
+	//
+	// The test must match the WRITER exactly (save_component.ts reads the
+	// node's OWN stored model before calling maintainRelationSearchIndex):
+	// wrapping a leaf whose index is never maintained would widen nothing and
+	// would cost a second GIN probe per row. TM tables carry no such index
+	// (their relation datum is the scalar user_id column) and are excluded.
+	const usesAncestorIndex =
+		isRelation &&
+		!TIME_MACHINE_TABLES.has(leafTable) &&
+		(await getNode(componentTipo))?.model === 'component_autocomplete_hi';
+	const run: LeafRunner = async (q, qOperator, qSplit, opts, how = {}) => {
+		const ancestor = how.ancestor ?? usesAncestorIndex;
+		const builderContext =
+			how.prefilter === true ? { ...context, searchStoreCovered: true } : context;
+		if (isRelation) {
+			if (ancestor) {
+				const { buildRelationSearchAncestorFragment } = await import(
+					'./builders/builder_relation.ts'
+				);
+				return buildRelationSearchAncestorFragment(q, qOperator, builderContext);
+			}
+			const { getRelationSearchFragmentBuilder } = await import('../relations/registry.ts');
+			const buildFragment = await getRelationSearchFragmentBuilder(model);
+			return buildFragment(q, qOperator, builderContext);
+		}
+		const family = builderFamily as NonNullable<typeof builderFamily>;
+		return FAMILY_BUILDERS[family](q, qOperator, qSplit, builderContext, opts);
 	};
+
+	if (plan === null) {
+		return {
+			kind: 'leaf',
+			fragment: await run(leaf.q, leaf.q_operator ?? null, leaf.q_split === true),
+		};
+	}
+	// The reversed shape makes the leaf the DRIVING set, so the search-store
+	// prefilter the correlated shape must not carry is exactly what it wants.
+	const prefilter =
+		builderFamily === 'string' && column === 'string' && (await searchStoreCovers(leafTable));
+	const classify = await classifierFor(model, isRelation, builderFamily);
+	// '!!' (duplicated) over a deep path: the aggregate reads the LAST step
+	// table restricted by that hop's record ACL, so a record the caller may not
+	// see never makes a visible one a "duplicate" (R = the visible records).
+	const aggAcl =
+		scope !== undefined && (builderFamily === 'string' || builderFamily === 'json')
+			? await scope.recordPredicate({
+					sectionTipo: lastStep.section_tipo ?? '',
+					table: leafTable,
+					alias: DUPLICATE_AGGREGATE_ALIAS,
+				})
+			: '';
+	const posOpts: BuilderOpts | undefined =
+		aggAcl === '' ? undefined : { aggTable: leafTable, aggAcl: () => aggAcl };
+	return deepLeaf(leaf, plan, componentTipo, builderFamily, classify, run, prefilter, posOpts);
 }
 
-function deepPlan(
-	mainAlias: string,
-	mainTable: string,
-	hops: JoinHop[],
-	forward: BuilderResult,
-	reverseFragment: BuilderResult,
-): DeepLeafPlan {
-	return { mainAlias, mainTable, hops, forward, reverseFragment };
+/** The duplicate aggregate's own alias (types.ts aggAclClause). */
+const DUPLICATE_AGGREGATE_ALIAS = 'm2';
+
+/** A leaf's builder runner (conformLeaf's `run`). */
+type LeafRunner = (
+	q: unknown,
+	qOperator: string | null,
+	qSplit: boolean,
+	opts?: BuilderOpts,
+	how?: { ancestor?: boolean; prefilter?: boolean },
+) => Promise<BuilderResult>;
+
+/** A leaf's classifier: the builder file's own classify<Family>() (one parse home). */
+type LeafClassifier = (q: unknown, qOperator: string | null) => LeafPolarity;
+
+async function classifierFor(
+	model: string,
+	isRelation: boolean,
+	family: ReturnType<typeof getSearchBuilderFamily>,
+): Promise<LeafClassifier> {
+	if (isRelation) {
+		if (model === 'component_relation_children') {
+			const { classifyRelationChildren } = await import('./builders/builder_relation_children.ts');
+			return classifyRelationChildren;
+		}
+		if (model === 'component_relation_index') {
+			const { classifyRelationIndex } = await import('./builders/builder_relation_index.ts');
+			return classifyRelationIndex;
+		}
+		const { classifyRelation } = await import('./builders/builder_relation.ts');
+		return classifyRelation;
+	}
+	return FAMILY_CLASSIFIERS[family as NonNullable<typeof family>];
+}
+
+/**
+ * DEEP leaf → its clauses (types.ts LeafPolarity), over R = the related
+ * records the chain reaches:
+ *
+ *   pos  EXISTS r in R: P(r)
+ *   neg  NOT EXISTS r in R: twin(r)
+ *   neq  EXISTS r in R: has(r)  AND  NOT EXISTS r in R: twin(r)
+ *
+ * q_split (string family only, as on a shallow leaf): each token is classified
+ * on its own; POSITIVE tokens stay in ONE clause (one related record must match
+ * them all), each NEGATIVE token is its own NOT EXISTS ('-a b' = no related
+ * record contains a AND none contains b), and neq tokens share ONE has-half.
+ */
+async function deepLeaf(
+	leaf: SqoFilterLeaf,
+	plan: DeepChainPlan,
+	field: string,
+	builderFamily: ReturnType<typeof getSearchBuilderFamily>,
+	classify: LeafClassifier,
+	run: LeafRunner,
+	prefilter: boolean,
+	posOpts: BuilderOpts | undefined,
+): Promise<ConformedFilter> {
+	const acc: DeepAccumulator = {
+		positives: [],
+		positivesReverse: [],
+		clauses: [],
+		hasEmitted: false,
+	};
+	let allPositive = true;
+	for (const unit of deepUnits(leaf, builderFamily)) {
+		const polarity = classify(unit.q, unit.qOperator);
+		if (polarity.kind === 'pos') {
+			acc.positives.push(await run(unit.q, unit.qOperator, false, posOpts));
+			acc.positivesReverse.push(
+				prefilter ? await run(unit.q, unit.qOperator, false, posOpts, { prefilter }) : false,
+			);
+			continue;
+		}
+		allPositive = false;
+		await pushNegatedClauses(polarity, run, acc);
+	}
+	const positive = allOf(acc.positives);
+	if (positive !== false) {
+		const reverse = prefilter ? allOf(acc.positivesReverse) : positive;
+		acc.clauses.unshift({ neg: false, result: positive, reverse });
+	}
+	return deepNode(plan, field, allPositive, acc.clauses);
+}
+
+/** What deepLeaf gathers across a leaf's units. */
+interface DeepAccumulator {
+	positives: BuilderResult[];
+	positivesReverse: BuilderResult[];
+	clauses: DeepClause[];
+	/** A neq unit already contributed the (shared) has-half. */
+	hasEmitted: boolean;
+}
+
+/** q_split tokens (string family) as classification units; otherwise the leaf's own q. */
+function deepUnits(
+	leaf: SqoFilterLeaf,
+	builderFamily: ReturnType<typeof getSearchBuilderFamily>,
+): { q: unknown; qOperator: string | null }[] {
+	const qOperator = leaf.q_operator ?? null;
+	const tokens =
+		builderFamily === 'string' && leaf.q_split === true
+			? splitSearchTerms(extractNormalizedQ(leaf.q) ?? '')
+			: [];
+	return tokens.length > 1 ? tokens.map((q) => ({ q, qOperator })) : [{ q: leaf.q, qOperator }];
+}
+
+/** A neg / neq unit: its NOT EXISTS twin, plus the has-half once per leaf for neq. */
+async function pushNegatedClauses(
+	polarity: Exclude<LeafPolarity, { kind: 'pos' }>,
+	run: LeafRunner,
+	acc: DeepAccumulator,
+): Promise<void> {
+	if (polarity.kind === 'neq' && !acc.hasEmitted) {
+		acc.hasEmitted = true;
+		// The has-half reads the DIRECT column (the shallow '!=' guard), never
+		// the ancestor index.
+		const has = polarity.has;
+		const result = await run(has.q, has.qOperator, false, has.opts, { ancestor: false });
+		acc.clauses.push({ neg: false, result, reverse: result });
+	}
+	const twin = polarity.twin;
+	const result = await run(twin.q, twin.qOperator, false, twin.opts);
+	acc.clauses.push({ neg: true, result, reverse: result });
+}
+
+/** One clause from several positive results (all must hold on one related record). */
+function allOf(results: BuilderResult[]): BuilderResult {
+	const kept = results.filter((result) => result !== false);
+	if (kept.length === 0) return false;
+	return kept.length === 1 ? (kept[0] as BuilderResult) : compound('$and', kept);
+}
+
+/** The deep node, dropping clauses that contribute nothing (all dropped → an inert leaf). */
+function deepNode(
+	plan: DeepChainPlan,
+	field: string,
+	positive: boolean,
+	clauses: DeepClause[],
+): ConformedFilter {
+	const kept = clauses.filter((clause) => clause.result !== false);
+	if (kept.length === 0) return { kind: 'leaf', fragment: false };
+	return { kind: 'deep', plan, field, positive, clauses: kept };
 }
 
 /** Recursively conform a filter node ($and/$or trees with leaves). */

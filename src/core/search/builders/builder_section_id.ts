@@ -8,7 +8,7 @@
  * '!=', '>=', '<=', '>', '<', default '='. Values digit-stripped.
  */
 
-import type { BuilderContext, BuilderResult } from './types.ts';
+import type { BuilderContext, BuilderResult, Classified } from './types.ts';
 import { compound, extractNormalizedQ, fragment } from './types.ts';
 
 /** Strip everything but digits (PHP preg_replace('/[^0-9]/','')). */
@@ -16,18 +16,52 @@ function digitsOnly(value: string): string {
 	return value.replace(/[^0-9]/g, '');
 }
 
+/** q → string (PHP unwraps locator-shaped q: {value} then {section_id}). */
+function sectionIdQ(rawQ: unknown): string | null {
+	let q = extractNormalizedQ(rawQ);
+	if (q === null && rawQ !== null && typeof rawQ === 'object' && 'section_id' in (rawQ as object)) {
+		q = String((rawQ as { section_id: unknown }).section_id);
+	}
+	return q;
+}
+
+/** The one parsed operator of a section_id leaf. */
+export type SectionIdOp = 'none' | 'between' | 'sequence' | 'compare' | 'notEqual' | 'equal';
+
+/**
+ * THE section_id classifier (see builder_string classifyString — same law).
+ * Polarity: '!=n' NEG(twin '=n') — on a deep path "no related record has id
+ * n", TRUE when there is no relation at all (owner decision D2 2026-09-24,
+ * WC-2026-09-29-search-deep-leaf-mixed-rule); everything else pos. A '!=' with no digits
+ * drops the clause (the builder returns false), so it classifies 'none'.
+ */
+export function classifySectionId(
+	rawQ: unknown,
+	qOperator: string | null,
+): Classified<SectionIdOp> {
+	const effective = `${qOperator ?? ''}${sectionIdQ(rawQ) ?? ''}`;
+	if (effective === '') return { kind: 'pos', op: 'none' };
+	if (effective.includes('...')) return { kind: 'pos', op: 'between' };
+	if (effective.includes(',')) return { kind: 'pos', op: 'sequence' };
+	if (effective.startsWith('!=')) {
+		const value = digitsOnly(effective.slice(2));
+		if (value === '') return { kind: 'pos', op: 'none' };
+		return { kind: 'neg', op: 'notEqual', twin: { q: value, qOperator: null } };
+	}
+	if (['>=', '<=', '>', '<'].some((comparison) => effective.startsWith(comparison))) {
+		return { kind: 'pos', op: 'compare' };
+	}
+	return { kind: 'pos', op: 'equal' };
+}
+
 export function buildSectionIdFragment(
 	rawQ: unknown,
 	qOperator: string | null,
 	context: BuilderContext,
 ): BuilderResult {
-	// PHP unwraps locator-shaped q ({value} then {section_id}).
-	let q = extractNormalizedQ(rawQ);
-	if (q === null && rawQ !== null && typeof rawQ === 'object' && 'section_id' in (rawQ as object)) {
-		q = String((rawQ as { section_id: unknown }).section_id);
-	}
-	const effective = `${qOperator ?? ''}${q ?? ''}`;
-	if (effective === '') {
+	const effective = `${qOperator ?? ''}${sectionIdQ(rawQ) ?? ''}`;
+	const { op } = classifySectionId(rawQ, qOperator);
+	if (op === 'none') {
 		return false;
 	}
 	const columnExpr = `${context.alias}.section_id::integer`;
@@ -41,7 +75,7 @@ export function buildSectionIdFragment(
 	const INT = '::integer';
 
 	// '...' between → $and of two comparisons (mirrors the PHP clone approach).
-	if (effective.includes('...')) {
+	if (op === 'between') {
 		const [lowRaw, highRaw] = effective.split('...');
 		const low = digitsOnly(lowRaw ?? '');
 		const high = digitsOnly(highRaw ?? '');
@@ -52,7 +86,7 @@ export function buildSectionIdFragment(
 		]);
 	}
 	// ',' sequence → = ANY('{a,b,c}'::integer[])
-	if (effective.includes(',')) {
+	if (op === 'sequence') {
 		const ids = effective
 			.split(',')
 			.map(digitsOnly)
@@ -62,7 +96,7 @@ export function buildSectionIdFragment(
 	}
 	// Comparison operators, longest first.
 	for (const comparisonOperator of ['!=', '>=', '<=', '>', '<'] as const) {
-		if (effective.startsWith(comparisonOperator)) {
+		if ((op === 'notEqual' || op === 'compare') && effective.startsWith(comparisonOperator)) {
 			const value = digitsOnly(effective.slice(comparisonOperator.length));
 			if (value === '') return false;
 			return fragment(`${columnExpr} ${comparisonOperator} _Q1_${INT}`, { _Q1_: value });
