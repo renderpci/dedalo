@@ -7,7 +7,8 @@
  * action speaks to model `serve_code`, and the readout re-uses the consumer
  * panel's row helpers instead of a second copy of them.
  *
- * Honest limit: reads the source (no DOM). DB-less, network-less → hermetic tier.
+ * Honest limit: reads the source (no DOM), layout-blind (`flat`) so a re-format
+ * cannot redden it. DB-less, network-less → hermetic tier.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -16,6 +17,20 @@ import { join } from 'node:path';
 
 const WIDGETS = join(import.meta.dir, '..', '..', 'client/dedalo/core/area_maintenance/widgets');
 const render_src = readFileSync(join(WIDGETS, 'serve_code/js/render_serve_code.js'), 'utf8');
+/**
+ * LAYOUT-BLIND view of render_src: no whitespace, no `;`, no trailing comma.
+ * The file is biome-formatted (lint:browser budget) and may be re-formatted;
+ * these assertions pin what the code SAYS, never how it is laid out. The same
+ * normalization is applied to every needle, so a negative check matches ANY
+ * layout of the forbidden code — stronger than a literal, not weaker.
+ */
+const flat = (text: string) =>
+	text
+		.replace(/\s+/g, '')
+		.replace(/;/g, '')
+		.replace(/,(?=[)\]}])/g, '');
+const render_flat = flat(render_src);
+const has = (needle: string) => render_flat.includes(flat(needle));
 const css_src = readFileSync(join(WIDGETS, 'serve_code/css/serve_code.less'), 'utf8');
 /** The row helpers the readout imports (release_facts lives there, shared). */
 const status_src = readFileSync(join(WIDGETS, 'update_code/js/render_update_status.js'), 'utf8');
@@ -25,16 +40,32 @@ const master_labels = JSON.parse(
 
 describe('serve_code split', () => {
 	test('the build action targets model serve_code, never update_code', () => {
-		expect(render_src).toContain(
+		expect(
+			has("model	: 'serve_code',\n\t\t\t\t\taction	: 'build_version_from_git_master'"),
 			"model	: 'serve_code',\n\t\t\t\t\taction	: 'build_version_from_git_master'",
-		);
-		expect(render_src).not.toContain("model	: 'update_code'");
+		).toBe(true);
+		expect(has("model	: 'update_code'"), "model	: 'update_code'").toBe(false);
 	});
 
 	test('the readout re-uses the shared row helpers (one vocabulary, no copy)', () => {
-		expect(render_src).toContain(
-			"import {CHANNELS, section, fact_row, check_row, verdict, release_facts, channel_label} from '../../update_code/js/render_update_status.js'",
+		const shared = render_src.match(
+			/import\s*\{([^}]*)\}\s*from\s*'\.\.\/\.\.\/update_code\/js\/render_update_status\.js'/,
 		);
+		expect(
+			(shared?.[1] ?? '')
+				.split(',')
+				.map((name) => name.trim())
+				.filter((name) => name !== '')
+				.sort(),
+		).toEqual([
+			'CHANNELS',
+			'channel_label',
+			'check_row',
+			'fact_row',
+			'release_facts',
+			'section',
+			'verdict',
+		]);
 		for (const helper of [
 			'section',
 			'fact_row',
@@ -44,7 +75,7 @@ describe('serve_code split', () => {
 			'channel_label',
 		]) {
 			expect(status_src).toContain(`export const ${helper} = function(`);
-			expect(render_src).not.toContain(`const ${helper} = function(`);
+			expect(has(`const ${helper} = function(`), `const ${helper} = function(`).toBe(false);
 		}
 		expect(status_src).toContain("export const CHANNELS = ['master', 'dev']");
 	});
@@ -68,7 +99,7 @@ describe('serve_code split', () => {
 	});
 
 	test('a non-code-server (development entity) is told which key makes it one', () => {
-		expect(render_src).toContain('serve_code_not_server');
+		expect(has('serve_code_not_server'), 'serve_code_not_server').toBe(true);
 		expect(master_labels.serve_code_not_server).toContain('IS_A_CODE_SERVER');
 	});
 
@@ -98,8 +129,8 @@ describe('serve_code split', () => {
 	test('no dead cross-widget event: nothing publishes what nobody subscribes to', () => {
 		// 'build_code_done' was published for update_data_version, which never
 		// subscribed to it. A build changes nothing THIS install runs.
-		expect(render_src).not.toContain("publish('build_code_done'");
-		expect(render_src).not.toContain('import {event_manager}');
+		expect(has("publish('build_code_done'"), "publish('build_code_done'").toBe(false);
+		expect(has('import {event_manager}'), 'import {event_manager}').toBe(false);
 	});
 });
 
@@ -113,21 +144,28 @@ describe('serve_code developer-builds', () => {
 		// (comments stripped: prose may say "branch:")
 		const code = render_src.replace(/^\s*(\/\/|\*).*$/gm, '');
 		expect(/\b(branch|ref)\s*:/.test(code)).toBe(false);
-		expect(render_src).toContain('channel : channel');
-		expect(render_src).toContain('source.release_ref');
-		expect(render_src).toContain('source.dev_ref');
+		expect(has('channel : channel'), 'channel : channel').toBe(true);
+		expect(has('source.release_ref'), 'source.release_ref').toBe(true);
+		expect(has('source.dev_ref'), 'source.dev_ref').toBe(true);
 		// a channel with nothing to build says why instead of offering a button
-		expect(render_src).toContain('serve_code_build_master_unavailable');
-		expect(render_src).toContain('serve_code_build_developer_unavailable');
-		expect(render_src).toContain('serve_code_build_developer_no_ref');
+		expect(has('serve_code_build_master_unavailable'), 'serve_code_build_master_unavailable').toBe(
+			true,
+		);
+		expect(
+			has('serve_code_build_developer_unavailable'),
+			'serve_code_build_developer_unavailable',
+		).toBe(true);
+		expect(has('serve_code_build_developer_no_ref'), 'serve_code_build_developer_no_ref').toBe(
+			true,
+		);
 		// the refs are NAMED placeholders: their position differs per language
-		expect(render_src).toContain("replaceAll('%branch%'");
-		expect(render_src).toContain("replaceAll('%tag%'");
+		expect(has("replaceAll('%branch%'"), "replaceAll('%branch%'").toBe(true);
+		expect(has("replaceAll('%tag%'"), "replaceAll('%tag%'").toBe(true);
 		expect(master_labels.serve_code_build_developer_confirm).toContain('%branch%');
 		expect(master_labels.serve_code_build_master_confirm).toContain('%tag%');
 		// each row pairs with ITS channel's version (release tag's / master's)
-		expect(render_src).toContain('source.release_version');
-		expect(render_src).toContain('source.dev_version');
+		expect(has('source.release_version'), 'source.release_version').toBe(true);
+		expect(has('source.dev_version'), 'source.dev_version').toBe(true);
 	});
 
 	test('every translation of both confirms keeps ONE named ref and TWO %s', () => {
@@ -162,24 +200,30 @@ describe('serve_code developer-builds', () => {
 		// The buttons and the archives were two blocks, and nothing said the first
 		// writes the second. The readout now lays out a row per channel and calls
 		// back to mount the action into it.
-		expect(render_src).toContain('make_builder_mounter');
+		expect(has('make_builder_mounter'), 'make_builder_mounter').toBe(true);
 		// rendered through render_code_server_half, so a build can re-run it
 		expect(
 			/render_code_server_status\(\s*content_data_body,\s*code_server,\s*make_builder_mounter/.test(
 				render_src,
 			),
 		).toBe(true);
-		expect(render_src).toContain('render_code_server_half(value.code_server)');
+		expect(
+			has('render_code_server_half(value.code_server)'),
+			'render_code_server_half(value.code_server)',
+		).toBe(true);
 		// the mounter also receives the ARTIFACT CELL and the facts it currently
 		// shows: the in-flight state belongs on the row being rewritten, and the
 		// before-value has to be captured before the refresh destroys this half.
-		expect(render_src).toContain('mount_builder(channel, action, value, built || null)');
-		expect(render_src).toContain('build_row');
-		expect(render_src).toContain('serve_code_build_publish');
+		expect(
+			has('mount_builder(channel, action, value, built || null)'),
+			'mount_builder(channel, action, value, built || null)',
+		).toBe(true);
+		expect(has('build_row'), 'build_row').toBe(true);
+		expect(has('serve_code_build_publish'), 'serve_code_build_publish').toBe(true);
 		// an unbuilt channel still shows its row, saying so
 		expect(status_src).toContain('update_code_not_built');
 		// and archives of other versions are listed, never dropped
-		expect(render_src).toContain('serve_code_other_archives');
+		expect(has('serve_code_other_archives'), 'serve_code_other_archives').toBe(true);
 		// ONE writer for the archive facts, called from BOTH lists (the duplicate
 		// is how the stale 'developer (not offered)' wording survived in one)
 		expect(status_src).toContain('const release_facts = function(');
@@ -189,8 +233,11 @@ describe('serve_code developer-builds', () => {
 	test('the build actions read as BUTTONS, weighted by channel', () => {
 		// In the readout's label column a pale outline reads as a caption; the one
 		// thing on the row that DOES something must not be the quietest mark on it.
-		expect(render_src).toContain("button_class\t: 'primary'");
-		expect(render_src).toContain("classList.add('build_button', def.button_class)");
+		expect(has("button_class\t: 'primary'"), "button_class\t: 'primary'").toBe(true);
+		expect(
+			has("classList.add('build_button', def.button_class)"),
+			"classList.add('build_button', def.button_class)",
+		).toBe(true);
 		expect(css_src).toContain('button.build_button');
 	});
 
@@ -198,8 +245,8 @@ describe('serve_code developer-builds', () => {
 		// The row next to the button is a claim about the disk that the build just
 		// changed: stale, it shows the old timestamp — or 'Not built yet' next to a
 		// build that succeeded.
-		expect(render_src).toContain('on_built');
-		expect(render_src).toContain('refresh_code_server');
+		expect(has('on_built'), 'on_built').toBe(true);
+		expect(has('refresh_code_server'), 'refresh_code_server').toBe(true);
 		// re-read from the SERVER, not from the value this render closed over
 		expect(
 			/refresh_code_server\s*=\s*async\s*\(build_mark\)\s*=>\s*\{[\s\S]{0,200}await self\.get_value\(\)/.test(
@@ -209,7 +256,10 @@ describe('serve_code developer-builds', () => {
 		// and the half is re-rendered from that fresh value, carrying the mark:
 		// the whole half is replaced, so without it the new archive line appears
 		// where the old one was with nothing saying which one is on screen.
-		expect(render_src).toContain('render_code_server_half(fresh.code_server, build_mark)');
+		expect(
+			has('render_code_server_half(fresh.code_server, build_mark)'),
+			'render_code_server_half(fresh.code_server, build_mark)',
+		).toBe(true);
 		// a failed refresh must not take the panel down
 		expect(
 			/catch \(error\) \{[\s\S]{0,240}console\.error\('serve_code: could not refresh/.test(
@@ -225,28 +275,38 @@ describe('serve_code build feedback', () => {
 		// `button_spinner`, before its first await — so a listener registered
 		// after it sees the spinner iff the operator confirmed. Marking on click
 		// would leave a declined confirm showing "building…" forever.
-		expect(render_src).toContain("form.addEventListener('submit'");
-		expect(render_src).toContain("classList.contains('button_spinner')");
-		expect(render_src).toContain("artifact_cell.classList.add('building')");
-		expect(render_src).toContain('serve_code_build_building');
+		expect(has("form.addEventListener('submit'"), "form.addEventListener('submit'").toBe(true);
+		expect(
+			has("classList.contains('button_spinner')"),
+			"classList.contains('button_spinner')",
+		).toBe(true);
+		expect(
+			has("artifact_cell.classList.add('building')"),
+			"artifact_cell.classList.add('building')",
+		).toBe(true);
+		expect(has('serve_code_build_building'), 'serve_code_build_building').toBe(true);
 		// the marker goes on the ARTIFACT cell, not on the button: the button
 		// already reports the request; only the row can report that ITS file is
 		// the one being rewritten.
-		expect(render_src).toContain('function(channel, node, artifact_cell, built_before)');
+		expect(
+			has('function(channel, node, artifact_cell, built_before)'),
+			'function(channel, node, artifact_cell, built_before)',
+		).toBe(true);
 	});
 
 	test('the before-value is captured at mount and survives the refresh', () => {
 		// the refresh destroys this half, so nothing could read it back off the
 		// DOM afterwards — it has to be closed over when the row is built.
-		expect(render_src).toContain('built_before');
+		expect(has('built_before'), 'built_before').toBe(true);
 		expect(/previous\s*:\s*built_before/.test(render_src)).toBe(true);
-		expect(render_src).toContain('channel\t\t: channel');
+		expect(has('channel\t\t: channel'), 'channel\t\t: channel').toBe(true);
 		// …and reaches the renderer as the mark for that channel only
-		expect(render_src).toContain('build_mark && build_mark.channel===channel');
 		expect(
-			/render_code_server_status = function\(parent, code_server, mount_builder, build_mark\)/.test(
-				render_src,
-			),
+			has('build_mark && build_mark.channel===channel'),
+			'build_mark && build_mark.channel===channel',
+		).toBe(true);
+		expect(
+			has('render_code_server_status = function(parent, code_server, mount_builder, build_mark)'),
 		).toBe(true);
 	});
 
