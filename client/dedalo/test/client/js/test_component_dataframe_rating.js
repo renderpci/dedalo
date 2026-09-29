@@ -77,7 +77,7 @@ describe('component_dataframe — the rating chip reads its own row', function (
 		assert.strictEqual(
 			older.entries[0].value,
 			'as_of_101',
-			'the older row must show its OWN as-of rating, not the first-emitted row\'s',
+			"the older row must show its OWN as-of rating, not the first-emitted row's",
 		);
 	});
 
@@ -86,7 +86,7 @@ describe('component_dataframe — the rating chip reads its own row', function (
 		assert.strictEqual(get_rating(make_slot(datum, 101)).entries[0].value, 'as_of_101');
 	});
 
-	it('a row with no copy of its own gets NO rating, never another row\'s', function () {
+	it("a row with no copy of its own gets NO rating, never another row's", function () {
 		const datum = { data: [rating_item(102, 'live')] };
 		assert.strictEqual(get_rating(make_slot(datum, 101)), undefined);
 	});

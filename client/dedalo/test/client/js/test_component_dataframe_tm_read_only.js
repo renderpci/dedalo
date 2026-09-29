@@ -69,7 +69,8 @@ const make_slot = function (extra = {}) {
 	);
 };
 
-const render = async (self) => view_default_list_dataframe.render(self, { render_level: 'content' });
+const render = async (self) =>
+	view_default_list_dataframe.render(self, { render_level: 'content' });
 
 const mousedown = (node) =>
 	node.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
@@ -78,7 +79,9 @@ const modal_count = () => document.querySelectorAll('dd-modal').length;
 
 // a sync_data subscription for this id_base/lang
 const sync_tokens = (self) =>
-	event_manager.get_events().filter((ev) => ev.event_name === `sync_data_${self.id_base}_${self.lang}`);
+	event_manager
+		.get_events()
+		.filter((ev) => ev.event_name === `sync_data_${self.id_base}_${self.lang}`);
 
 describe('component_dataframe — Time Machine surfaces are read-only history', function () {
 	const created_tokens = [];
@@ -132,10 +135,19 @@ describe('component_dataframe — Time Machine surfaces are read-only history', 
 			'a dd15 history-list cell (host section, dd15 row id)': () =>
 				make_slot({
 					section_id: 5501,
-					caller: { model: 'section_record', section_tipo: HOST_TIPO, caller: { model: 'section', section_tipo: 'dd15' } },
+					caller: {
+						model: 'section_record',
+						section_tipo: HOST_TIPO,
+						caller: { model: 'section', section_tipo: 'dd15' },
+					},
 				}),
 			'inside a tool preview (data_source tm up the chain)': () =>
-				make_slot({ caller: { model: 'section_record', caller: { model: 'component_portal', data_source: 'tm' } } }),
+				make_slot({
+					caller: {
+						model: 'section_record',
+						caller: { model: 'component_portal', data_source: 'tm' },
+					},
+				}),
 			'inside a tool preview (matrix_id on the slot)': () => make_slot({ matrix_id: 900 }),
 		};
 
@@ -175,10 +187,15 @@ describe('component_dataframe — Time Machine surfaces are read-only history', 
 				},
 			});
 			// get_rating lives on the component prototype; the plain slot borrows it
-			const { component_dataframe } = await import('../../../core/component_dataframe/js/component_dataframe.js');
+			const { component_dataframe } = await import(
+				'../../../core/component_dataframe/js/component_dataframe.js'
+			);
 			self.get_rating = component_dataframe.prototype.get_rating;
 			const node = await render(self);
-			assert.strictEqual(node.querySelector('.button.activate').style.backgroundColor, 'rgb(255, 0, 0)');
+			assert.strictEqual(
+				node.querySelector('.button.activate').style.backgroundColor,
+				'rgb(255, 0, 0)',
+			);
 		});
 	});
 
@@ -198,7 +215,10 @@ describe('component_dataframe — Time Machine surfaces are read-only history', 
 			);
 
 		it('a live component subscribes (the path exists)', function () {
-			const self = make_component({ model: 'section_record', caller: { model: 'section', section_tipo: HOST_TIPO } });
+			const self = make_component({
+				model: 'section_record',
+				caller: { model: 'section', section_tipo: HOST_TIPO },
+			});
 			events_subscription(self);
 			created_tokens.push(...self.events_tokens);
 			assert.strictEqual(sync_tokens(self).length, 1);
@@ -207,7 +227,10 @@ describe('component_dataframe — Time Machine surfaces are read-only history', 
 		it('a frame child deep inside a tool preview (no tm marker of its own) does NOT subscribe', function () {
 			// preview main (data_source tm) -> its section_record -> dataframe -> frame section_record -> rating
 			const preview_main = { model: 'component_portal', data_source: 'tm', matrix_id: 900 };
-			const dataframe = { model: 'component_dataframe', caller: { model: 'section_record', caller: preview_main } };
+			const dataframe = {
+				model: 'component_dataframe',
+				caller: { model: 'section_record', caller: preview_main },
+			};
 			const frame_record = { model: 'section_record', caller: dataframe };
 			const self = make_component(frame_record);
 			events_subscription(self);
@@ -217,7 +240,10 @@ describe('component_dataframe — Time Machine surfaces are read-only history', 
 
 		it('a cell three levels under a dd15 list does NOT subscribe', function () {
 			const dd15 = { model: 'section', section_tipo: 'dd15' };
-			const self = make_component({ model: 'section_record', caller: { model: 'component_portal', caller: { caller: dd15 } } });
+			const self = make_component({
+				model: 'section_record',
+				caller: { model: 'component_portal', caller: { caller: dd15 } },
+			});
 			events_subscription(self);
 			created_tokens.push(...self.events_tokens);
 			assert.strictEqual(sync_tokens(self).length, 0);
@@ -252,7 +278,13 @@ describe('component_dataframe — Time Machine surfaces are read-only history', 
 				events_subscription(self);
 				created_tokens.push(...self.events_tokens);
 				assert.strictEqual(sync_tokens(self).length, 1, 'no chain at init: it subscribes');
-				self.caller = { model: 'component_input_text', caller: { model: 'section_record', caller: { model: 'section', section_tipo: HOST_TIPO } } };
+				self.caller = {
+					model: 'component_input_text',
+					caller: {
+						model: 'section_record',
+						caller: { model: 'section', section_tipo: HOST_TIPO },
+					},
+				};
 				publish_live_save(self);
 				assert.strictEqual(self.updated, 1);
 				assert.strictEqual(self.refreshed, 1);
@@ -268,7 +300,10 @@ describe('component_dataframe — Time Machine surfaces are read-only history', 
 					created_tokens.push(...self.events_tokens);
 					assert.strictEqual(sync_tokens(self).length, 1, 'no chain at init: it subscribes');
 					// frame -> literal main -> section_record -> <TM surface>
-					self.caller = { model: 'component_input_text', caller: { model: 'section_record', caller: tail } };
+					self.caller = {
+						model: 'component_input_text',
+						caller: { model: 'section_record', caller: tail },
+					};
 					publish_live_save(self);
 					assert.strictEqual(self.updated, 0, 'update_data_value must not run');
 					assert.strictEqual(self.refreshed, 0, 'refresh must not run');

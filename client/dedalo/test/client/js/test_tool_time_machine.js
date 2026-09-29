@@ -18,8 +18,8 @@
  * This is the locked client template (layer 1: module-load + construct + wiring).
  */
 
-import {printf} from '../../../core/common/js/utils/util.js'
 import {add_instance, delete_instance, get_instance_by_id, key_instances_builder} from '../../../core/common/js/instances.js'
+import {printf} from '../../../core/common/js/utils/util.js'
 import {load_component} from '../../../core/tools_common/js/tool_common.js'
 import {bulk_revert_summary_message} from '../../../tools/tool_time_machine/js/render_tool_time_machine.js'
 import {tool_time_machine} from '../../../tools/tool_time_machine/js/tool_time_machine.js'

@@ -702,25 +702,45 @@ async function conformLeaf(
 		});
 	}
 	if (joins.length === 0) return { kind: 'leaf', fragment: result };
-	// DEEP PATH: the reversed shape (deep_path.ts) makes the leaf the DRIVING
-	// set, so the search-store prefilter the forward join must not carry (see
-	// searchStoreCovered above) is exactly what it wants.
-	const reverseFragment =
-		builderFamily !== undefined &&
-		column === 'string' &&
-		getColumnNameByModel(model) !== 'relation' &&
-		(await searchStoreCovers(leafTable))
-			? FAMILY_BUILDERS[builderFamily](leaf.q, leaf.q_operator ?? null, leaf.q_split === true, {
-					...context,
-					searchStoreCovered: true,
-				})
-			: result;
+	const reverseFragment = await reversedLeafFragment(
+		leaf,
+		{ builderFamily, column, model, leafTable, context },
+		result,
+	);
 	return {
 		kind: 'leaf',
 		fragment: result,
 		joins,
 		deep: deepPlan(alias, table, hops, result, reverseFragment),
 	};
+}
+
+/**
+ * The leaf predicate for the REVERSED deep-path shape (deep_path.ts). There the
+ * leaf is the DRIVING set, so the search-store prefilter the forward join must
+ * not carry (see searchStoreCovered in conformLeaf) is exactly what it wants —
+ * for a string leaf of a non-relation model whose table the store covers. Any
+ * other leaf reverses with the forward predicate unchanged.
+ */
+async function reversedLeafFragment(
+	leaf: SqoFilterLeaf,
+	shape: {
+		builderFamily: ReturnType<typeof getSearchBuilderFamily>;
+		column: string;
+		model: string;
+		leafTable: string;
+		context: BuilderContext;
+	},
+	forward: BuilderResult,
+): Promise<BuilderResult> {
+	const { builderFamily, column, model, leafTable, context } = shape;
+	if (builderFamily === undefined || column !== 'string') return forward;
+	if (getColumnNameByModel(model) === 'relation') return forward;
+	if (!(await searchStoreCovers(leafTable))) return forward;
+	return FAMILY_BUILDERS[builderFamily](leaf.q, leaf.q_operator ?? null, leaf.q_split === true, {
+		...context,
+		searchStoreCovered: true,
+	});
 }
 
 function deepPlan(

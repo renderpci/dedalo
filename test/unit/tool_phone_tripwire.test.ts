@@ -81,9 +81,9 @@ describe('tool @media widths are tokens', () => {
 		let judged = 0;
 		for (const path of sheets) {
 			const lines = read(join(REPO_ROOT, path)).split('\n');
-			lines.forEach((line, i) => {
+			for (const [i, line] of lines.entries()) {
 				const code = line.replace(/\/\/.*$/, '');
-				if (!/@media\b/.test(code)) return;
+				if (!/@media\b/.test(code)) continue;
 				for (const m of code.matchAll(/(?:max|min)-width\s*:\s*([^)]*\)?)/g)) {
 					judged++;
 					const value = (m[1] ?? '').replace(/\)+\s*$/, '').replace(/^\(/, '').trim();
@@ -91,7 +91,7 @@ describe('tool @media widths are tokens', () => {
 						offenders.push(`${path}:${i + 1}  ${line.trim()}`);
 					}
 				}
-			});
+			}
 		}
 		expect(offenders).toEqual([]);
 		expect(judged).toBeGreaterThan(20);
