@@ -17,6 +17,19 @@ Merged since the last release; these ship with the next one.
 
 ### For users
 
+#### Security
+
+- **A search whose conditions are joined by OR at the top level no longer returns records outside the user's projects.**
+
+    When every condition of a search was joined by OR (for example "title contains
+    X **or** title contains Y"), one of the conditions was checked without the
+    user's project restrictions and the other without the section being searched.
+    A user limited to some projects could therefore see records of projects they
+    do not hold. The conditions are now always kept inside those restrictions.
+    Administrators without project restrictions see no difference.
+
+    Wire contract: `WC-2026-09-29-search-where-parts-parenthesized`.
+
 #### Changed
 
 - **Tools work on phones**
@@ -168,7 +181,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 49 entries"
+??? note "Wire contract — 50 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -219,6 +232,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-28-maintenance-serve-ontology-widget`
     - `WC-2026-09-29-number-not-equal`
     - `WC-2026-09-29-search-deep-leaf-mixed-rule`
+    - `WC-2026-09-29-search-where-parts-parenthesized`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

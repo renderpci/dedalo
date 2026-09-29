@@ -3382,9 +3382,9 @@
 			"assertions": 5
 		},
 		"test/unit/search_path_acl_native.test.ts": {
-			"tests": 17,
+			"tests": 18,
 			"skipped": 0,
-			"assertions": 66
+			"assertions": 70
 		},
 		"test/unit/search_pattern_escape_tripwire.test.ts": {
 			"tests": 9,

@@ -1521,7 +1521,14 @@ async function buildPlainSearchSql(sqo: Sqo, options: SearchOptions): Promise<Bu
 	// repeated path in another clause reuses the same joined rows, PHP rule).
 	const joinsSql = joinFragments.size > 0 ? `\n${[...joinFragments.values()].join('\n')}` : '';
 	const fromClause = `${matrixTable} AS ${alias}${joinsSql}`;
-	const whereAll = [...mainWhere, ...whereParts].filter((part) => part !== '');
+	// Every part is ONE conjunct: parenthesized here, the single place all WHERE
+	// parts meet, so no part's own OR can bind across its neighbours. A bare
+	// root `$or` filter used to render `pin AND A OR B AND acl` = `(pin AND A)
+	// OR (B AND acl)` — branch A escaped the record ACL, branch B the section
+	// pin (WC-2026-09-29-search-where-parts-parenthesized).
+	const whereAll = [...mainWhere, ...whereParts]
+		.filter((part) => part !== '')
+		.map((part) => `(${part})`);
 	let queryInside = `SELECT ${select.join(',\n')}\nFROM ${fromClause}${whereAll.length > 0 ? `\nWHERE ${whereAll.join('\n AND ')}` : ''}`;
 
 	// --- multi-section UNION ALL (exact-substring FROM swap, PHP :1035) ---------

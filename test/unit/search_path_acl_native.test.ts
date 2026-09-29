@@ -572,6 +572,37 @@ describe.if(DB_READY)('SEC-02 — the ACL holds at EVERY hop of a search path', 
 		}
 	});
 
+	test('a ROOT $or filter stays inside the section pin and the record ACL', async () => {
+		// The client filter tree is rendered to ONE WHERE part and ANDed with the
+		// section pin and the ACL parts. A root `$or` rendered bare
+		// (`pin AND A OR B AND acl`) binds as `(pin AND A) OR (B AND acl)`:
+		// branch A escapes the ACL, branch B the section pin
+		// (WC-2026-09-29-search-where-parts-parenthesized).
+		const rootOr = () =>
+			sanitizeClientSqo({
+				section_tipo: [SECTION],
+				limit: 50,
+				offset: 0,
+				filter: {
+					$or: [
+						{ q: HIDDEN_VALUE, path: [{ section_tipo: SECTION, component_tipo: LEAF_COMPONENT }] },
+						{ q: VISIBLE_VALUE, path: [{ section_tipo: SECTION, component_tipo: LEAF_COMPONENT }] },
+					],
+				},
+			} as never);
+
+		// Non-degeneracy: the admin (no record ACL) sees both records.
+		const admin = await idsOf(await buildSearchSql(rootOr(), { principal: ADMIN }));
+		expect(admin).toContain(HIDDEN_ID);
+		expect(admin).toContain(VISIBLE_ID);
+
+		// The scoped caller sees only the record in her own project.
+		const scoped = await buildSearchSql(rootOr(), { principal: SCOPED });
+		const ids = await idsOf(scoped);
+		expect(ids).toContain(VISIBLE_ID);
+		expect(ids).not.toContain(HIDDEN_ID);
+	});
+
 	// --- (b) the oracle itself ---------------------------------------------
 
 	test('ORACLE CLOSED: HIT and MISS are the same answer for a value she cannot read', async () => {

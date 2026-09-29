@@ -81,7 +81,11 @@ flowchart TB
 - **SQL assembly** — `buildSearchSql()` builds SELECT / FROM / JOIN / WHERE /
   ORDER / LIMIT in a load-bearing order, using the window-subquery pattern.
 - **Access-control filter** — `buildProjectsFilter()` (per-user project scoping)
-  reaches the WHERE clause for non-global-admins with a `principal`.
+  reaches the WHERE clause for non-global-admins with a `principal`. Every WHERE
+  part (the section pin, the client filter tree, the projects filter, the
+  per-user record allow-list, `filter_by_locators`) is parenthesized where the
+  parts are joined, so an `OR` inside one part — a root `$or` filter, say — can
+  never bind across the access-control parts next to it.
 - **Prepared params** — `ParamsCollector.getPlaceholder()` maintains the
   positional `$1..$n` list that `sql.unsafe()` binds; every literal value becomes
   a `$n` placeholder.
