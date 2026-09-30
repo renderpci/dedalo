@@ -459,13 +459,21 @@ export async function withUnboundedStatements<T>(work: () => Promise<T>): Promis
  * by its handler included — is returned unchanged. For a door that ran work in
  * `withUnboundedStatements` (the maintenance widget door); the data-update unit
  * retries its own 55P03 (withMaintenanceTransaction) and classifies the rest.
+ *
+ * WHAT IT MAY CLAIM: only the transaction (or autocommit statement) that WAITED
+ * rolled back. A handler is not one transaction — it may have committed earlier
+ * units before the wait (a per-file transform, a per-store rebuild) — so the
+ * message never says the ACTION changed nothing. A handler whose partial state
+ * would be harmful makes its units atomic and reports per unit instead of
+ * letting the 55P03 escape (update/transform/engine.ts runDefinitionFile).
  */
 export function typedMaintenanceLockWait(error: unknown): unknown {
 	if (error instanceof DedaloError || sqlStateOf(error) !== LOCK_NOT_AVAILABLE) return error;
 	return new DedaloError('db.lock_timeout', {
 		message:
 			`postgres: a maintenance statement waited past its ${MAINTENANCE_LOCK_TIMEOUT} lock_timeout ` +
-			'for a lock another session holds — nothing of that transaction persisted',
+			'for a lock another session holds — the transaction it ran in rolled back; work the ' +
+			'action committed before it stands',
 		cause: error,
 		coordinates: { lane: 'maintenance', lock_timeout: MAINTENANCE_LOCK_TIMEOUT },
 	});

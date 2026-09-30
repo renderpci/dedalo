@@ -66,6 +66,11 @@ const SECTION_IDS = [1, 2, 3];
 const BG_ROWS = `dedalo_ts_test_upd_${PID}_bg`;
 const BG_VER = `dedalo_ts_test_upd_${PID}_bgver`;
 const DEFINITION_FILE = 'zz_ops6_move.json';
+/** The move_tld atomicity leg: a scratch section renamed old → new (tld `zzmdu`, this file's). */
+const MOVE_OLD = 'zzmdu5';
+const MOVE_NEW = 'zzmdu6';
+const MOVE_IDS = [1, 2, 3];
+const MOVE_FILE = 'zz_ops6_move_tld.json';
 
 const definitionsDir = mkdtempSync(join(tmpdir(), 'dedalo-perf11-defs-'));
 const driver = childDriver('dedalo-maintenance-door');
@@ -80,8 +85,22 @@ async function countOf(table: string): Promise<number> {
 
 async function sweepSection(): Promise<void> {
 	for (const table of [SOURCE, TARGET, 'matrix_time_machine']) {
-		await sql.unsafe(`DELETE FROM "${table}" WHERE section_tipo = $1`, [SECTION]);
+		await sql.unsafe(`DELETE FROM "${table}" WHERE section_tipo IN ($1, $2, $3)`, [
+			SECTION,
+			MOVE_OLD,
+			MOVE_NEW,
+		]);
 	}
+	// the move_tld leg's carries (counter + generation epochs), under either name
+	for (const table of ['matrix_counter', 'matrix_counter_dd']) {
+		await sql.unsafe(`DELETE FROM ${table} WHERE tipo IN ($1, $2)`, [MOVE_OLD, MOVE_NEW]);
+	}
+	await sql.unsafe(
+		`DO $$ BEGIN IF to_regclass('dedalo_ts_record_generation') IS NOT NULL THEN
+		   DELETE FROM dedalo_ts_record_generation WHERE section_tipo IN ('${MOVE_OLD}', '${MOVE_NEW}');
+		 END IF; END $$`,
+		[],
+	);
 }
 
 interface DoorResult {
@@ -301,6 +320,47 @@ async function sawWaiter(table, mode) {
 	results.lock_bound_typed = { ...outcome, waited, value };
 }
 
+// 7. move_tld is ONE atomic unit per definition file. Its section rename spans
+// every matrix table, the Time Machine tail, and the generation/counter carries;
+// on the maintenance lane every statement carries the 5s lock-wait bound. A row
+// lock on the section's TM row, held PAST that bound, must never leave the section
+// split between the old and the new tipo — not while held (a committed half), not
+// after (a half the report calls an error). Sampled from outside, every instant.
+{
+	const MOVE_HOLD_MS = 6500; // > MAINTENANCE_LOCK_TIMEOUT: the first attempt's wait runs out
+	const holder = await sql.reserve();
+	await holder.unsafe('BEGIN', []);
+	await holder.unsafe("SELECT id FROM matrix_time_machine WHERE section_tipo = '${MOVE_OLD}' FOR UPDATE", []);
+	const splitState = async () => (await sql.unsafe(
+		"SELECT (SELECT count(*)::int FROM matrix_test WHERE section_tipo = '${MOVE_OLD}') AS data_old, " +
+		"(SELECT count(*)::int FROM matrix_test WHERE section_tipo = '${MOVE_NEW}') AS data_new, " +
+		"(SELECT count(*)::int FROM matrix_time_machine WHERE section_tipo = '${MOVE_OLD}') AS tm_old, " +
+		"(SELECT count(*)::int FROM matrix_time_machine WHERE section_tipo = '${MOVE_NEW}') AS tm_new", []))[0];
+	const startedAt = performance.now();
+	const action = dispatchWidgetRequest(ROOT, { model: 'move_tld', action: 'move_tld' },
+		{ files_selected: [${JSON.stringify(MOVE_FILE)}], dry_run: false })
+		.then((response) => ({ ok: true, errors: response.errors ?? [], value: response.msg }), (e) => ({ ok: false, error: describe(e) }));
+	let waited = false;
+	const waitDeadline = Date.now() + 20000;
+	while (Date.now() < waitDeadline) {
+		const rows = await sql.unsafe(
+			"SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname = current_database() AND application_name LIKE 'dedalo_maintenance:%' AND wait_event_type = 'Lock'", []);
+		if (rows[0].n > 0) { waited = true; break; }
+		await Bun.sleep(10);
+	}
+	const samples = [];
+	const heldUntil = Date.now() + MOVE_HOLD_MS;
+	while (Date.now() < heldUntil) {
+		samples.push(await splitState());
+		await Bun.sleep(200);
+	}
+	await holder.unsafe('COMMIT', []);
+	holder.release();
+	const outcome = await action;
+	results.move_tld_atomic = { ...outcome, waited,
+		value: { samples, final: await splitState(), actionMs: performance.now() - startedAt, holdMs: MOVE_HOLD_MS } };
+}
+
 console.log('RESULT ' + JSON.stringify(results));
 process.exit(0);
 `;
@@ -324,6 +384,23 @@ beforeAll(async () => {
 		`CREATE TABLE IF NOT EXISTS "${BG_VER}" (id serial PRIMARY KEY, version text NOT NULL)`,
 		[],
 	);
+	for (const sectionId of MOVE_IDS) {
+		await sql.unsafe(
+			`INSERT INTO "${SOURCE}" (section_id, section_tipo, "data") VALUES ($1, $2, $3::text::jsonb)`,
+			[sectionId, MOVE_OLD, JSON.stringify({ zzmdu51: [{ note: `move_tld row ${sectionId}` }] })],
+		);
+	}
+	// ONE Time Machine row of the section: the lock the leg holds sits on it.
+	await sql.unsafe(
+		`INSERT INTO matrix_time_machine (section_id, section_tipo, tipo, lang, "timestamp", user_id)
+		 VALUES (1, $1, $1, 'lg-nolan', now(), '-1')`,
+		[MOVE_OLD],
+	);
+	mkdirSync(join(definitionsDir, 'move_tld'), { recursive: true });
+	writeFileSync(
+		join(definitionsDir, 'move_tld', MOVE_FILE),
+		JSON.stringify([{ old: MOVE_OLD, new: MOVE_NEW, type: 'section' }]),
+	);
 	mkdirSync(join(definitionsDir, 'move_to_table'), { recursive: true });
 	writeFileSync(
 		join(definitionsDir, 'move_to_table', DEFINITION_FILE),
@@ -343,6 +420,11 @@ afterAll(async () => {
 	await sweepSection();
 	for (const table of [BG_ROWS, BG_VER]) await sql.unsafe(`DROP TABLE IF EXISTS "${table}"`, []);
 	for (const table of [SOURCE, TARGET]) expect(await countOf(table)).toBe(0);
+	const moveLeft = (await sql.unsafe(
+		`SELECT count(*)::int AS n FROM "${SOURCE}" WHERE section_tipo IN ($1, $2)`,
+		[MOVE_OLD, MOVE_NEW],
+	)) as { n: number }[];
+	expect(moveLeft[0]?.n).toBe(0);
 	rmSync(definitionsDir, { recursive: true, force: true });
 	rmSync(join(tmpdir(), `dedalo_perf11_bg_${PID}.log`), { force: true });
 	driver.dispose();
@@ -434,6 +516,42 @@ describe('a declared action never lifts the LOCK-WAIT bound (readers do not queu
 		expect(leg.ok, JSON.stringify(leg)).toBe(false);
 		expect(leg.error?.code, JSON.stringify(leg.error)).toBe('db.lock_timeout');
 		expect(leg.error?.errno, 'the typed error lost its SQLSTATE cause').toBe('55P03');
+	});
+});
+
+describe('a bulk transform is atomic per definition file under the lock-wait bound', () => {
+	test('move_tld held past the lock bound on its TM row: the section is never split between old and new tipo, and ends wholly renamed', () => {
+		interface Split {
+			data_old: number;
+			data_new: number;
+			tm_old: number;
+			tm_new: number;
+		}
+		const leg = results.move_tld_atomic as DoorResult & {
+			value?: { samples?: Split[]; final?: Split; actionMs?: number; holdMs?: number };
+		};
+		expect(leg, 'move_tld atomicity leg did not run').toBeDefined();
+		expect(leg.waited, 'the rename never queued behind the held TM row lock (vacuous leg)').toBe(
+			true,
+		);
+		const samples = leg.value?.samples ?? [];
+		// Non-vacuity: the hold outlived the first attempt's lock_timeout (5s) — the
+		// instant a non-atomic rename commits its first half and then gives up.
+		expect(samples.length, 'too few samples to cover the lock bound').toBeGreaterThan(20);
+		expect(leg.value?.holdMs ?? 0).toBeGreaterThan(5000);
+		const whole = (state: Split) =>
+			(state.data_new === 0 && state.tm_new === 0) || (state.data_old === 0 && state.tm_old === 0);
+		const split = samples.filter((state) => !whole(state));
+		expect(split, 'a committed HALF-rename was visible while the TM row was locked').toEqual([]);
+		// The unit retried after its bounded wait and applied whole.
+		expect(leg.ok, JSON.stringify(leg)).toBe(true);
+		expect(leg.errors ?? [], 'the rename reported a failed file').toEqual([]);
+		expect(leg.value?.final).toEqual({
+			data_old: 0,
+			data_new: MOVE_IDS.length,
+			tm_old: 0,
+			tm_new: 1,
+		});
 	});
 });
 

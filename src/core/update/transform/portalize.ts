@@ -161,8 +161,9 @@ export async function portalizeOne(
 
 		// D6 (2026-08-09): the five steps run in ONE transaction, so a failure
 		// mid-row can no longer leave the data duplicated into the new record
-		// with the source not yet nulled. A failed row rolls back alone; the
-		// loop continues with the next row.
+		// with the source not yet nulled. On execute this JOINS the file's own
+		// unit (engine.ts runDefinitionFile — one transaction per definition
+		// file), so a failed row rolls the WHOLE file back and the report names it.
 		await withTransaction(() =>
 			applyPortalizeRow({
 				item,

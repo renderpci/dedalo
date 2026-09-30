@@ -54,6 +54,27 @@ export class TransformRecorder {
 		this.errors.push(message);
 	}
 
+	/**
+	 * A fresh, EMPTY recorder in the same mode — one executed definition file's
+	 * attempt records into it, and only a COMMITTED attempt is merged back
+	 * (absorb), so a rolled-back attempt never reports writes that did not persist.
+	 */
+	fork(): TransformRecorder {
+		return new TransformRecorder(this.dryRun);
+	}
+
+	/** Merge a committed attempt's counts, sample (still capped) and errors into this run. */
+	absorb(attempt: TransformRecorder): void {
+		for (const [op, count] of Object.entries(attempt.counts)) {
+			this.counts[op] = (this.counts[op] ?? 0) + count;
+		}
+		for (const delta of attempt.sample) {
+			if (this.sample.length >= SAMPLE_CAP) break;
+			this.sample.push(delta);
+		}
+		this.errors.push(...attempt.errors);
+	}
+
 	toReport(msgPrefix: string): TransformReport {
 		const total = Object.values(this.counts).reduce((sum, n) => sum + n, 0);
 		const mode = this.dryRun ? 'DRY RUN' : 'executed';

@@ -1581,7 +1581,8 @@ export const ERROR_REGISTRY = {
 	// A 55P03 escaping a declared maintenance widget action: the maintenance pool
 	// lifts the statement ceiling but keeps a startup lock_timeout
 	// (MAINTENANCE_LOCK_TIMEOUT), so readers never queue behind its waiting ACCESS
-	// EXCLUSIVE request. The transaction rolled back.
+	// EXCLUSIVE request. The transaction that waited rolled back — not
+	// necessarily the whole action (units it committed earlier stand).
 	'db.lock_timeout': {
 		category: 'unavailable',
 		status: 503,

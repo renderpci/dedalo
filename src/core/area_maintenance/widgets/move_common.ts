@@ -145,7 +145,9 @@ export function buildMoveWidget(id: string, spec: WidgetSpec): WidgetModule {
 			),
 		},
 		// A bulk transform of stored records (incl. its in-transaction
-		// INSERT…SELECT): maintenance (PERF-11).
+		// INSERT…SELECT): maintenance (PERF-11). Each executed definition file is
+		// ONE atomic, lock-retried unit (engine.ts runDefinitionFile), so the lane's
+		// lock-wait bound rolls a file back whole — it never splits one.
 		unboundedActions: [id],
 		getValue: moveWidgetGetValue(id),
 	};

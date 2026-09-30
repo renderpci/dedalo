@@ -24,9 +24,16 @@
  * file: definitions.ts swallows the parse error and drops the name from the
  * list with no report — a separate, deliberate PHP json_decode-null parity
  * behaviour, left as-is here.
+ *
+ * ONE EXECUTED FILE = ONE ATOMIC UNIT (OPS-6/PERF-11, the last describe below):
+ * an EXECUTE runs each file in a real maintenance transaction, so those legs
+ * touch the lane SUITE database — one scratch table `dedalo_ts_test_tr_<pid>`
+ * (assertTestDatabase first; dropped in afterAll). The executor stays a fake.
  */
 
-import { afterAll, afterEach, describe, expect, mock, test } from 'bun:test';
+import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from 'bun:test';
+import { sql } from '../../src/core/db/postgres.ts';
+import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import type { TransformRecorder } from '../../src/core/update/transform/report.ts';
 
 // --- injectable definition catalog (replaces the filesystem) ----------------
@@ -58,9 +65,21 @@ mock.module(DEFINITIONS_PATH, () => ({
 // bindings resolve to the injected catalog and never touch a real dir.
 const { runTransform } = await import('../../src/core/update/transform/engine.ts');
 
-afterAll(() => {
+/** The scratch table the atomicity legs write through a fake executor. */
+const SCRATCH = `dedalo_ts_test_tr_${process.pid}`;
+
+beforeAll(async () => {
+	await assertTestDatabase('transform_run_native');
+	await sql.unsafe(
+		`CREATE TABLE IF NOT EXISTS "${SCRATCH}" (id serial PRIMARY KEY, tag text NOT NULL)`,
+		[],
+	);
+});
+
+afterAll(async () => {
 	mock.module(DEFINITIONS_PATH, () => REAL_DEFINITIONS);
 	mock.restore();
+	await sql.unsafe(`DROP TABLE IF EXISTS "${SCRATCH}"`, []);
 });
 
 afterEach(() => {
@@ -389,5 +408,95 @@ describe('runTransform executor dispatch', () => {
 		expect(report.sample).toEqual([]);
 		expect(report.ok).toBe(true);
 		expect(report.msg).toContain('0 change(s)');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// ONE EXECUTED FILE = ONE ATOMIC UNIT (OPS-6/PERF-11)
+// ---------------------------------------------------------------------------
+
+describe('runTransform execute: each definition file applies whole or not at all', () => {
+	/** A fake executor that WRITES one tagged row per call, then (optionally) fails. */
+	function writingExecutor(fail: (items: unknown, attempt: number) => unknown | null) {
+		let attempts = 0;
+		const executor = async (items: unknown, recorder: TransformRecorder): Promise<void> => {
+			attempts += 1;
+			const tag = `${JSON.stringify(items)}#${attempts}`;
+			await sql.unsafe(`INSERT INTO "${SCRATCH}" (tag) VALUES ($1)`, [tag]);
+			recorder.record({ op: 'insert', table: SCRATCH, target: tag });
+			const failure = fail(items, attempts);
+			if (failure !== null) throw failure;
+		};
+		return { executor, attempts: () => attempts };
+	}
+
+	async function tags(): Promise<string[]> {
+		const rows = (await sql.unsafe(`SELECT tag FROM "${SCRATCH}" ORDER BY id`, [])) as {
+			tag: string;
+		}[];
+		return rows.map((row) => row.tag);
+	}
+
+	afterEach(async () => {
+		await sql.unsafe(`DELETE FROM "${SCRATCH}"`, []);
+	});
+
+	test('a file that fails after writing is ROLLED BACK: its write is gone, its delta unreported, the next file still applies', async () => {
+		CATALOG = { 'bad.json': { n: 1 }, 'ok.json': { n: 2 } };
+		const { executor } = writingExecutor((items) =>
+			(items as { n: number }).n === 1 ? new Error('boom after write') : null,
+		);
+		const report = await runTransform(
+			'move_tld',
+			{ dry_run: false, files_selected: ['bad.json', 'ok.json'] },
+			executor,
+		);
+		// Pre-atomicity the first file's INSERT autocommitted: a half-applied file
+		// the report still counted as a change.
+		expect(await tags()).toEqual(['{"n":2}#2']);
+		expect(report.counts).toEqual({ insert: 1 });
+		expect(report.sample.map((delta) => delta.target)).toEqual(['{"n":2}#2']);
+		expect(report.errors).toEqual([
+			'bad.json: boom after write — rolled back: nothing of this file was applied',
+		]);
+		expect(report.ok).toBe(false);
+	});
+
+	test('a lock timeout (55P03) retries the WHOLE file; the discarded attempt is neither kept nor counted', async () => {
+		CATALOG = { 'a.json': { n: 1 } };
+		const lockTimeout = Object.assign(new Error('canceling statement due to lock timeout'), {
+			errno: '55P03',
+		});
+		const { executor, attempts } = writingExecutor((_items, attempt) =>
+			attempt === 1 ? lockTimeout : null,
+		);
+		const report = await runTransform(
+			'move_tld',
+			{ dry_run: false, files_selected: ['a.json'] },
+			executor,
+		);
+		expect(attempts()).toBe(2);
+		expect(await tags()).toEqual(['{"n":1}#2']);
+		expect(report.counts).toEqual({ insert: 1 });
+		expect(report.errors).toEqual([]);
+		expect(report.ok).toBe(true);
+	}, 15000);
+
+	test('the executor runs INSIDE one transaction on the maintenance lane', async () => {
+		CATALOG = { 'a.json': 1 };
+		let seen: { xid: string | null; app: string } | undefined;
+		await runTransform('move_tld', { dry_run: false, files_selected: ['a.json'] }, async () => {
+			// An autocommit statement starts a fresh transaction with no xid yet; the
+			// unit has already taken one (its COMMIT detector), so a non-null xid here
+			// means the executor is inside the unit's transaction.
+			const rows = (await sql.unsafe(
+				`SELECT pg_current_xact_id_if_assigned()::text AS xid,
+				        current_setting('application_name') AS app`,
+				[],
+			)) as { xid: string | null; app: string }[];
+			seen = { xid: rows[0]?.xid ?? null, app: String(rows[0]?.app) };
+		});
+		expect(seen?.app).toStartWith('dedalo_maintenance:');
+		expect(seen?.xid).not.toBeNull();
 	});
 });

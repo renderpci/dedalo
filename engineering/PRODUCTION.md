@@ -359,14 +359,20 @@ order, so a declared action waiting for ACCESS EXCLUSIVE (a store rebuild's
 TRUNCATE, an ALTER, a `LOCK TABLE`) behind a long reader would otherwise hold
 EVERY later reader of that table queued behind it for as long as the long
 reader runs. Bounded, the waiter gives up after 5 s (SQLSTATE 55P03, its
-transaction rolls back — nothing of it persists) and the readers proceed. Only
+transaction rolls back — nothing of THAT transaction persists; units the action
+committed before it stand) and the readers proceed. Only
 the WAIT is bounded: a granted lock is held for the work's whole span (a
 backfill still blocks its store while it rebuilds it). A widget action does not
 retry — it is not guaranteed to be one re-runnable unit: a 55P03 that escapes
 the action is the typed, retryable 503 `db.lock_timeout` ("try again in a
 moment"); one the action catches itself (the backfill's per-store line) is
 reported in its `errors`. The data-update engine retries its whole unit
-(1s/2s/4s/8s). The NON-TRANSACTIONAL lane (CONCURRENTLY/VACUUM) keeps no bound:
+(1s/2s/4s/8s), and so does each executed `move_*` definition file: a file is ONE
+`withMaintenanceTransaction` unit (`src/core/update/transform/engine.ts`
+runDefinitionFile), so a lock wait — or any failure — rolls that file back whole
+instead of committing its first tables under the new tipo (a section split
+between two tipos, a half-applied locator move); a file that still fails is
+named in `errors` as rolled back, and only committed files' deltas are counted. The NON-TRANSACTIONAL lane (CONCURRENTLY/VACUUM) keeps no bound:
 its waits block neither reads nor writes, and an aborted concurrent build would
 leave an invalid index. Gate: `test/unit/maintenance_door_unbounded_native.test.ts`
 (a later reader gets through while the long reader still holds; the escaping
@@ -376,7 +382,7 @@ Census of the legitimately long statements (who is unbounded, and how):
 
 | Lane | Handling |
 |---|---|
-| Maintenance-area ACTIONS a widget declares maintenance (`unboundedActions`: every database_info action — VACUUM/ANALYZE, REINDEX, the store rebuilds and backfill, the relation-index report, consolidate, user stats —, every `move_*` transform incl. its in-transaction INSERT…SELECT, update_ontology, the dd_ontology recovery build/restore, add_hierarchy install/reset, export_hierarchy, reconcile_status run) | The widget door wraps THOSE handlers in the scope; every other action and every panel load stays bounded. `dataframe_control` is not maintenance: each batch runs under `SET LOCAL statement_timeout` = what is left of its per-table/total budgets (WC-071/072), never above the pool ceiling. |
+| Maintenance-area ACTIONS a widget declares maintenance (`unboundedActions`: every database_info action — VACUUM/ANALYZE, REINDEX, the store rebuilds and backfill, the relation-index report, consolidate, user stats —, every `move_*` transform — one atomic, lock-retried unit per definition file —, update_ontology, the dd_ontology recovery build/restore, add_hierarchy install/reset, export_hierarchy, reconcile_status run) | The widget door wraps THOSE handlers in the scope; every other action and every panel load stays bounded. `dataframe_control` is not maintenance: each batch runs under `SET LOCAL statement_timeout` = what is left of its per-table/total budgets (WC-071/072), never above the pool ceiling. |
 | `runWithoutStatementTimeout` (REINDEX/VACUUM/DROP INDEX CONCURRENTLY) | The non-transactional maintenance lane (same gate, never cancelled by shutdown — see above); refused inside a transaction. |
 | Data-update engine (`src/core/update/engine.ts`) | Its own atomic unit: `withMaintenanceTransaction` (one transaction, `SET LOCAL lock_timeout` + `SET LOCAL statement_timeout = 0`, whole-unit retry on 55P03 — each discarded attempt logged to update.log — abort cancels the running statement). The background job has NO deadline (`deadlineMs: 0`, overriding the maintenance lane's 6 h): a clock that fired mid-run would roll the whole unit back, every time. The verdict of record is the `matrix_updates` version row (it commits with the steps); update.log is advisory: a `BEGIN atomic run … [xact <xid>]` line per attempt that won the single-flight claim (a refused one writes only `REFUSED [xact <xid>] (…)`) and an fsynced `COMMITTED <version> [xact <xid>]` line after the COMMIT succeeded, but a failed log write (full or read-only private dir) only reaches the server log and never changes the verdict — and a crash between COMMIT and that line leaves a committed run without it, so read `matrix_updates` when in doubt. A statement cancelled from outside (a shutdown, an operator) is reported as an interruption, never as the step's SQL failing. A failure the engine did not raise itself (a connection lost during COMMIT) is classified by `pg_xact_status` of the run's own transaction (read on a dedicated connection, ≤ 2 s per read) — committed, rolled back, or "outcome unknown" — never by re-reading the version. Once a run is aborted, no further statement of it is sent. No step can end the unit: transaction control is refused before it is sent; should the between-steps checkpoint ever see the transaction id change anyway, the run is reported `PARTIAL` (what ran before persisted, the version is not stamped) — never "rolled back". Known limit: `lock_timeout` bounds EVERY lock wait, row locks too — a long migration that meets a row lock held > 5 s is retried whole (maintenance mode excludes ordinary editors; a background import or runner started before it does not). |
 | Boot migrations (`install/db/migrate.ts`) | Already `SET LOCAL statement_timeout = 0` per file (the recorder sees it); the ONLINE lane uses a reserved connection with a session 0 it RESETs. |
