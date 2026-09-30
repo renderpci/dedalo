@@ -410,35 +410,64 @@ function narrowSectionShowToCaller(
 ): void {
 	const items = sectionEntry.request_config;
 	if (!Array.isArray(items)) return;
-	const mainIndex = items.findIndex((item) => {
-		const i = item as { api_engine?: string; type?: string };
-		return i.api_engine === 'dedalo' && i.type === 'main';
-	});
+	const mainIndex = items.findIndex(isDedaloMainItem);
 	if (mainIndex === -1) return;
 	const main = items[mainIndex] as { show?: { ddo_map?: Record<string, unknown>[] } };
-	const ontologyDdos = main.show?.ddo_map ?? [];
-	const sectionTipo = sectionEntry.section_tipo;
-	const narrowed: Record<string, unknown>[] = [];
-	for (const ddo of callerDdoMap) {
-		const ddoSection = ddo.section_tipo === undefined || ddo.section_tipo === 'self' ? sectionTipo : ddo.section_tipo;
-		// no context entry = the per-component READ gate dropped it: no column either
-		const built = context.find((c) => c.tipo === ddo.tipo && c.section_tipo === ddoSection);
-		if (built === undefined) continue;
-		const known = ontologyDdos.find((d) => d.tipo === ddo.tipo && d.section_tipo === ddoSection);
-		narrowed.push(
-			known ?? {
-				tipo: ddo.tipo,
-				model: built.model,
-				section_tipo: ddoSection,
-				parent: ddo.parent === 'self' || ddo.parent === undefined ? sectionEntry.tipo : ddo.parent,
-				mode: built.mode,
-				label: built.label,
-			},
-		);
-	}
+	const narrowed = callerColumns(callerDdoMap, sectionEntry, main.show?.ddo_map ?? [], context);
 	const replaced = [...items];
-	replaced[mainIndex] = { ...main, show: { ...(main.show ?? {}), ddo_map: narrowed } };
+	replaced[mainIndex] = { ...main, show: { ...main.show, ddo_map: narrowed } };
 	sectionEntry.request_config = replaced;
+}
+
+function callerColumns(
+	callerDdoMap: readonly Ddo[],
+	sectionEntry: StructureContextEntry,
+	ontologyDdos: readonly Record<string, unknown>[],
+	context: readonly StructureContextEntry[],
+): Record<string, unknown>[] {
+	const columns: Record<string, unknown>[] = [];
+	for (const ddo of callerDdoMap) {
+		const column = callerColumn(ddo, sectionEntry, ontologyDdos, context);
+		if (column !== undefined) columns.push(column);
+	}
+	return columns;
+}
+
+function isDedaloMainItem(item: unknown): boolean {
+	const i = item as { api_engine?: string; type?: string };
+	return i.api_engine === 'dedalo' && i.type === 'main';
+}
+
+/** `self` / absent resolves to the fallback (the section entry's own tipo). */
+function selfOr<T>(value: T | undefined, fallback: string): T | string {
+	return value === undefined || value === 'self' ? fallback : value;
+}
+
+/**
+ * One caller ddo as a section-list column: the ontology's own ddo when it has
+ * one, else a minimal ddo from the built context entry. undefined = no context
+ * entry (the per-component READ gate dropped it): no column either.
+ */
+function callerColumn(
+	ddo: Ddo,
+	sectionEntry: StructureContextEntry,
+	ontologyDdos: readonly Record<string, unknown>[],
+	context: readonly StructureContextEntry[],
+): Record<string, unknown> | undefined {
+	const ddoSection = selfOr(ddo.section_tipo, sectionEntry.section_tipo);
+	const built = context.find((c) => c.tipo === ddo.tipo && c.section_tipo === ddoSection);
+	if (built === undefined) return undefined;
+	const known = ontologyDdos.find((d) => d.tipo === ddo.tipo && d.section_tipo === ddoSection);
+	return (
+		known ?? {
+			tipo: ddo.tipo,
+			model: built.model,
+			section_tipo: ddoSection,
+			parent: selfOr(ddo.parent, sectionEntry.tipo),
+			mode: built.mode,
+			label: built.label,
+		}
+	);
 }
 
 /**

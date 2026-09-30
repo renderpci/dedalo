@@ -5,10 +5,10 @@
 
 
 // imports
-	import {ui} from '../../common/js/ui.js'
 	import {format_label} from '../../common/js/common.js'
+	import {deregister_unsaved_instance, register_unsaved_instance} from '../../common/js/events.js'
 	import {error_text} from '../../common/js/render_api_error.js'
-	import {register_unsaved_instance, deregister_unsaved_instance} from '../../common/js/events.js'
+	import {ui} from '../../common/js/ui.js'
 	import {save_password} from './component_password.js'
 	import {check_password} from './password_policy.js'
 

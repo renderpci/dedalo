@@ -1548,7 +1548,7 @@ describe('TOOL_EXPORT DROP MODEL (one zone, one marker)', function() {
 	const reset = () => {
 		list.replaceChildren()
 		rows = ['a', 'b', 'c'].map(make_row)
-		rows.forEach(r => list.appendChild(r))
+		list.append(...rows)
 		self = {
 			user_selection_list		: list,
 			compose_id				: (ddo) => ddo.tipo,
