@@ -618,7 +618,18 @@ async function main(): Promise<number> {
 				`[sweep] REFUSED to remove '${dir}': no .dedalo_test_media marker — not a declared test media root.`,
 			);
 		}
-		return report.refused.length > 0 || report.mediaRefused.length > 0 ? 1 : 0;
+		for (const lane of report.mariadbSwept)
+			console.log(`[sweep] stopped + removed suite MariaDB lane ${lane}`);
+		for (const lane of report.mariadbRefused) {
+			console.error(
+				`[sweep] REFUSED to remove suite MariaDB lane '${lane}': no .dedalo_test_mariadb marker — the suite did not create it.`,
+			);
+		}
+		return report.refused.length > 0 ||
+			report.mediaRefused.length > 0 ||
+			report.mariadbRefused.length > 0
+			? 1
+			: 0;
 	}
 
 	// Resolve the file set: explicit list (validated), else bun's own discovery.
@@ -668,12 +679,23 @@ async function main(): Promise<number> {
 	const entry = await sweepShardClones(template);
 	for (const name of entry.dropped) console.log(`[shard] entry sweep dropped stale clone ${name}`);
 	for (const dir of entry.mediaSwept) console.log(`[shard] entry sweep removed media twin ${dir}`);
-	if (entry.refused.length > 0 || entry.mediaRefused.length > 0) {
+	for (const lane of entry.mariadbSwept)
+		console.log(`[shard] entry sweep removed suite MariaDB lane ${lane}`);
+	if (
+		entry.refused.length > 0 ||
+		entry.mediaRefused.length > 0 ||
+		entry.mariadbRefused.length > 0
+	) {
 		for (const refusal of entry.refused) {
 			console.error(`[shard] REFUSING to run: '${refusal.name}' is ${refusal.state}.`);
 		}
 		for (const dir of entry.mediaRefused) {
 			console.error(`[shard] REFUSING to run: '${dir}' has no test-media marker.`);
+		}
+		for (const lane of entry.mariadbRefused) {
+			console.error(
+				`[shard] REFUSING to run: suite MariaDB lane '${lane}' has no .dedalo_test_mariadb marker.`,
+			);
 		}
 		console.error(
 			'[shard] something at a shard name is not a shard clone — provisioning over it would destroy it. Nothing was dropped, nothing was written.',
@@ -743,8 +765,14 @@ async function main(): Promise<number> {
 		for (const refusal of exit.refused) {
 			console.error(`[shard] exit sweep REFUSED '${refusal.name}': ${refusal.state}`);
 		}
+		for (const lane of exit.mariadbSwept) console.log(`[shard] swept suite MariaDB lane ${lane}`);
 		for (const dir of exit.mediaRefused) {
 			console.error(`[shard] exit sweep REFUSED '${dir}': no test-media marker`);
+		}
+		for (const lane of exit.mariadbRefused) {
+			console.error(
+				`[shard] exit sweep REFUSED suite MariaDB lane '${lane}': no .dedalo_test_mariadb marker`,
+			);
 		}
 	}
 }

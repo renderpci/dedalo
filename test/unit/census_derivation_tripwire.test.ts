@@ -483,7 +483,7 @@ const PRIVATE_ROOT_WALKERS: Readonly<Record<string, string>> = {
 	'test/unit/tier_assignment_tripwire.test.ts': 'ROOTS: `scripts`; `scripts/ci` ×2; `test`.',
 	'test/unit/tier_execution_tripwire.test.ts': 'ROOTS: `scripts/ci`.',
 	'test/unit/tier_wiring_tripwire.test.ts':
-		'ROOTS: `.github/workflows`; `.github/workflows-selfhosted`; `scripts/ci`; `test` ×2.',
+		'ROOTS: `.github/workflows`; `.github/workflows-selfhosted`; `scripts/ci` ×2; `test` ×3.',
 	'test/unit/tm_epoch_tripwire.test.ts': 'ROOTS: `src` `tools` — CENSUS_ROOTS.',
 	'test/unit/tm_lang_slice_restore_native.test.ts': 'ROOTS: `tools/tool_time_machine/server`.',
 	'test/unit/tm_mode_retired_tripwire.test.ts': 'ROOTS: `client/dedalo` `src` `tools`.',
@@ -523,6 +523,11 @@ interface SharedLister {
  * repo knows about is written next to the roots it is a subset of.
  */
 const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
+	'scripts/ci/mariadb_tier.ts': {
+		roots: [['test/integration', 'test/unit', 'test/parity']],
+		scope:
+			"the MariaDB tier's test corpus — every test file under test/integration, test/unit and test/parity (the preload arms all three), from which it walks the RUNTIME import graph (Bun's transpiler) to derive the set that acquires the suite MariaDB and the no-contact population that reaches the pool module; its SEAM_EDGES rows add each computed-import seam's glob (tools/*/server/**, src/core/**). Read by the stage itself, by suite_mariadb_target_native and by tier_wiring leg J (the starter classification).",
+	},
 	'test/helpers/write_path_corpus.ts': {
 		roots: [['scripts', 'src', 'tools']],
 		scope: 'the code that runs in the engine process — the write-path class corpus',

@@ -1,32 +1,36 @@
 /**
  * MariaDB target + SQL-writer integration gate (DIFFUSION_PLAN D3-P2;
- * DIFFUSION_SPEC §9-P2) — against the REAL MariaDB deployment.
+ * DIFFUSION_SPEC §9-P2) — against the SUITE's own MariaDB server (PUB-05).
  *
  * Exercises the full WriterSession lifecycle on a synthetic PublicationPlan
- * with a SCRATCH table (`dedalo_ts_test_writer` in web_numisdata_mib):
- * open (loud missing-db posture) → ensureSchema (table anatomy: typed
- * columns, composite PK, indexes) → writeRows (multi-row upsert per lang;
- * re-write updates in place) → additive schema EVOLUTION (extended plan →
- * new column, existing data intact) → removeRecords (all lang variants gone;
- * missing table tolerated as no-op) → close (old engine_response.tables
- * counts). Plus the pure statement-shape assertions (no DB needed) for the
- * sql_generator builders and the writer registry's loud unknown-format error.
+ * with a SCRATCH table (`dedalo_ts_test_writer`) in the `zzd` situation's first
+ * target database: open (loud missing-db posture) → ensureSchema (table
+ * anatomy: typed columns, composite PK, indexes) → writeRows (multi-row upsert
+ * per lang; re-write updates in place) → additive schema EVOLUTION (extended
+ * plan → new column, existing data intact) → removeRecords (all lang variants
+ * gone; missing table tolerated as no-op) → close (old engine_response.tables
+ * counts). Plus the pure statement-shape assertions for the sql_generator
+ * builders and the writer registry's loud unknown-format error.
  *
- * SAFETY: this suite only ever touches tables named `dedalo_ts_test_*` —
- * web_numisdata_mib holds REAL published data. The scratch table is dropped
- * in afterAll unconditionally.
+ * THE TARGET (PUB-05, audit 2026-09-26). Until then this gate wrote into one
+ * INSTALLATION's publication database through whatever socket
+ * `../private/.env` named, and skipped GREEN (`test.if(HAVE_DB)`) wherever that
+ * socket was absent. Now the database is DERIVED from the zzd situation
+ * (`zzdTargetDatabases()`), it lives on the lane's suite server that
+ * test/preload/suite_mariadb.ts arms this process at, and `beforeAll` acquires
+ * it through `requireSuiteMariadb()` — which refuses an unarmed process, a
+ * database the situations do not declare, and one whose marker row does not
+ * name this lane. There is no skip: a machine that cannot host the suite server
+ * is RED.
  *
- * Credentials: DEDALO_DIFFUSION_DB_* from ../private/.env (db.ts), same as
- * the runtime — the old per-user fallback to the OLD engine's env file at a
- * hardcoded /Users/… path was removed (S3-67 machine decoupling; the keys now
- * live in ../private/.env). When the keys are absent (or the socket is) the
- * suite skips with a logged message (test.if pattern,
- * media_processing.test.ts precedent).
+ * The missing-database posture is TWO legs, each asserting the errno it met: 1049 on
+ * GRANTED_ABSENT_CONTROL_DB (granted, never created — what a production user with
+ * broader grants sees for a dropped database) and 1044 on an ungranted name (the suite
+ * user's per-database grants refuse it before the server says whether it exists). Both
+ * must surface as the typed MissingTargetDatabaseError.
  */
 
-import { afterAll, describe, expect, test } from 'bun:test';
-import { existsSync } from 'node:fs';
-import { readEnv } from '../../src/config/env.ts';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import type { FieldPlan, PublicationPlan, SectionPlan } from '../../src/diffusion/plan/types.ts';
 import type { ProjectedRow } from '../../src/diffusion/project/lang_ladder.ts';
 import {
@@ -45,27 +49,15 @@ import {
 	getDiffusionWriter,
 	UnknownDiffusionFormatError,
 } from '../../src/diffusion/writers/registry.ts';
-
-// ---------------------------------------------------------------------------
-// Environment gating: DEDALO_DIFFUSION_DB_* from ../private/.env, like the
-// runtime (S3-67: no machine-specific fallback paths).
-// ---------------------------------------------------------------------------
-
-const RESOLVED_SOCKET = (readEnv('DEDALO_DIFFUSION_DB_SOCKET') ?? '/tmp/mysql.sock') as string;
-const HAVE_DB =
-	readEnv('DEDALO_DIFFUSION_DB_USER') !== undefined &&
-	(readEnv('DEDALO_DIFFUSION_DB_HOST') !== undefined || existsSync(RESOLVED_SOCKET));
-if (!HAVE_DB) {
-	console.warn(
-		`[SKIPPED] diffusion_mariadb integration: no MariaDB credentials/socket available (set DEDALO_DIFFUSION_DB_USER/_DB_PASSWORD/_DB_SOCKET; probed socket: ${RESOLVED_SOCKET})`,
-	);
-}
+import { GRANTED_ABSENT_CONTROL_DB, requireSuiteMariadb } from '../helpers/suite_mariadb.ts';
+import { zzdTargetDatabases } from '../helpers/zzd_diffusion_fixture.ts';
 
 // ---------------------------------------------------------------------------
 // Synthetic PublicationPlan fixtures (2 fields; evolution adds a third).
 // ---------------------------------------------------------------------------
 
-const TARGET_DATABASE = 'web_numisdata_mib';
+/** The zzd situation's first target database, on the lane's suite server. */
+const TARGET_DATABASE = zzdTargetDatabases()[0] as string;
 const SCRATCH_TABLE = 'dedalo_ts_test_writer';
 const MISSING_TABLE = 'dedalo_ts_test_writer_missing';
 
@@ -154,9 +146,16 @@ async function selectScratchRows(): Promise<
 	)) as never;
 }
 
+let acquired = false;
+
+beforeAll(async () => {
+	await requireSuiteMariadb(import.meta.path, [TARGET_DATABASE]);
+	acquired = true;
+}, 120_000);
+
 afterAll(async () => {
-	if (HAVE_DB) {
-		// ALWAYS drop the scratch table — never leave residue in the real database.
+	if (acquired) {
+		// ALWAYS drop the scratch tables — the suite target is reused by the next run.
 		const pool = getTargetPool(TARGET_DATABASE);
 		await pool.unsafe(`DROP TABLE IF EXISTS ${SCRATCH_TABLE}`, []).catch(() => {});
 		await pool.unsafe(`DROP TABLE IF EXISTS ${MISSING_TABLE}`, []).catch(() => {});
@@ -165,7 +164,7 @@ afterAll(async () => {
 });
 
 // ---------------------------------------------------------------------------
-// Pure statement shapes + registry (no DB required — always run).
+// Pure statement shapes + registry (their assertions need no database).
 // ---------------------------------------------------------------------------
 
 describe('sql_generator statement shapes (pure, oracle anatomy)', () => {
@@ -235,88 +234,85 @@ describe('writer registry (loud unknown-format posture)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Live-MariaDB session lifecycle (env-gated).
+// Live-MariaDB session lifecycle, on the suite target (acquired in beforeAll).
 // ---------------------------------------------------------------------------
 
-describe('mariadb_sql writer against the live target (env-gated)', () => {
-	test.if(HAVE_DB)(
-		'full session: ensureSchema → writeRows → upsert-rewrite → remove → close',
-		async () => {
-			const plan = makePlan(BASE_FIELDS);
-			const section = plan.sections[0] as SectionPlan;
+describe('mariadb_sql writer against the suite target', () => {
+	test('full session: ensureSchema → writeRows → upsert-rewrite → remove → close', async () => {
+		const plan = makePlan(BASE_FIELDS);
+		const section = plan.sections[0] as SectionPlan;
 
-			// Clean slate (a previous aborted run may have left the scratch table).
-			const pool = getTargetPool(TARGET_DATABASE);
-			await pool.unsafe(`DROP TABLE IF EXISTS ${SCRATCH_TABLE}`, []);
+		// Clean slate (a previous aborted run may have left the scratch table).
+		const pool = getTargetPool(TARGET_DATABASE);
+		await pool.unsafe(`DROP TABLE IF EXISTS ${SCRATCH_TABLE}`, []);
 
-			const session = await mariadbSqlWriter.open(plan);
+		const session = await mariadbSqlWriter.open(plan);
 
-			// Guard: DML before the schema critical section is a programming error.
-			await expect(session.writeRows(section, makeRows('Early'))).rejects.toThrow(
-				/before ensureSchema/,
-			);
+		// Guard: DML before the schema critical section is a programming error.
+		await expect(session.writeRows(section, makeRows('Early'))).rejects.toThrow(
+			/before ensureSchema/,
+		);
 
-			// --- ensureSchema: table exists with the exact anatomy ---------------
-			await session.ensureSchema();
-			const columns = (await pool.unsafe(
-				'SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? ORDER BY ORDINAL_POSITION',
-				[TARGET_DATABASE, SCRATCH_TABLE],
-			)) as { COLUMN_NAME: string; DATA_TYPE: string }[];
-			expect(columns.map((c) => c.COLUMN_NAME)).toEqual([
-				'section_id',
-				'lang',
-				'title',
-				'description',
-			]);
-			expect(columns.find((c) => c.COLUMN_NAME === 'title')?.DATA_TYPE).toBe('varchar');
-			expect(columns.find((c) => c.COLUMN_NAME === 'description')?.DATA_TYPE).toBe('text');
-			const primaryKey = (await pool.unsafe(
-				"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND INDEX_NAME = 'PRIMARY' ORDER BY SEQ_IN_INDEX",
-				[TARGET_DATABASE, SCRATCH_TABLE],
-			)) as { COLUMN_NAME: string }[];
-			expect(primaryKey.map((c) => c.COLUMN_NAME)).toEqual(['section_id', 'lang']);
+		// --- ensureSchema: table exists with the exact anatomy ---------------
+		await session.ensureSchema();
+		const columns = (await pool.unsafe(
+			'SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? ORDER BY ORDINAL_POSITION',
+			[TARGET_DATABASE, SCRATCH_TABLE],
+		)) as { COLUMN_NAME: string; DATA_TYPE: string }[];
+		expect(columns.map((c) => c.COLUMN_NAME)).toEqual([
+			'section_id',
+			'lang',
+			'title',
+			'description',
+		]);
+		expect(columns.find((c) => c.COLUMN_NAME === 'title')?.DATA_TYPE).toBe('varchar');
+		expect(columns.find((c) => c.COLUMN_NAME === 'description')?.DATA_TYPE).toBe('text');
+		const primaryKey = (await pool.unsafe(
+			"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND INDEX_NAME = 'PRIMARY' ORDER BY SEQ_IN_INDEX",
+			[TARGET_DATABASE, SCRATCH_TABLE],
+		)) as { COLUMN_NAME: string }[];
+		expect(primaryKey.map((c) => c.COLUMN_NAME)).toEqual(['section_id', 'lang']);
 
-			// Idempotent: re-ensuring an up-to-date schema is a clean no-op.
-			await session.ensureSchema();
+		// Idempotent: re-ensuring an up-to-date schema is a clean no-op.
+		await session.ensureSchema();
 
-			// --- writeRows: 2 records × 2 langs ----------------------------------
-			const firstWrite = await session.writeRows(section, makeRows('Title'));
-			expect(firstWrite).toEqual({ written: 4, deleted: 0 });
-			const rowsAfterInsert = await selectScratchRows();
-			expect(rowsAfterInsert).toHaveLength(4);
-			expect(rowsAfterInsert[0]).toMatchObject({
-				section_id: 1,
-				lang: 'lg-eng',
-				title: 'Title 1 lg-eng',
-				description: 'Description 1 lg-eng — utf8mb4 çedille 🏛️', // 4-byte emoji intact
-			});
+		// --- writeRows: 2 records × 2 langs ----------------------------------
+		const firstWrite = await session.writeRows(section, makeRows('Title'));
+		expect(firstWrite).toEqual({ written: 4, deleted: 0 });
+		const rowsAfterInsert = await selectScratchRows();
+		expect(rowsAfterInsert).toHaveLength(4);
+		expect(rowsAfterInsert[0]).toMatchObject({
+			section_id: 1,
+			lang: 'lg-eng',
+			title: 'Title 1 lg-eng',
+			description: 'Description 1 lg-eng — utf8mb4 çedille 🏛️', // 4-byte emoji intact
+		});
 
-			// --- upsert semantics: rewrite updates in place, no duplicates -------
-			const rewrite = await session.writeRows(section, makeRows('Retitled'));
-			expect(rewrite).toEqual({ written: 4, deleted: 0 });
-			const rowsAfterRewrite = await selectScratchRows();
-			expect(rowsAfterRewrite).toHaveLength(4); // still 4: PK (section_id, lang)
-			expect(rowsAfterRewrite[3]?.title).toBe('Retitled 2 lg-spa');
+		// --- upsert semantics: rewrite updates in place, no duplicates -------
+		const rewrite = await session.writeRows(section, makeRows('Retitled'));
+		expect(rewrite).toEqual({ written: 4, deleted: 0 });
+		const rowsAfterRewrite = await selectScratchRows();
+		expect(rowsAfterRewrite).toHaveLength(4); // still 4: PK (section_id, lang)
+		expect(rowsAfterRewrite[3]?.title).toBe('Retitled 2 lg-spa');
 
-			// --- removeRecords: all lang variants of section_id 1 gone ----------
-			const removal = await session.removeRecords(section, [1]);
-			expect(removal).toEqual({ written: 0, deleted: 2 });
-			const rowsAfterRemove = await selectScratchRows();
-			expect(rowsAfterRemove.map((r) => r.section_id)).toEqual([2, 2]);
+		// --- removeRecords: all lang variants of section_id 1 gone ----------
+		const removal = await session.removeRecords(section, [1]);
+		expect(removal).toEqual({ written: 0, deleted: 2 });
+		const rowsAfterRemove = await selectScratchRows();
+		expect(rowsAfterRemove.map((r) => r.section_id)).toEqual([2, 2]);
 
-			// --- close: old engine_response.tables shape -------------------------
-			// records_affected: 4 inserts + 8 (MariaDB counts an ON-DUPLICATE update
-			// as 2) + 2 deleted; records_count: 4 + 4 rows written.
-			const summary = await session.close();
-			expect(summary).toEqual({
-				tables: [{ table_name: SCRATCH_TABLE, records_affected: 14, records_count: 8 }],
-				errors: [],
-			});
-			await session.abort(); // no-op, must not throw after close
-		},
-	);
+		// --- close: old engine_response.tables shape -------------------------
+		// records_affected: 4 inserts + 8 (MariaDB counts an ON-DUPLICATE update
+		// as 2) + 2 deleted; records_count: 4 + 4 rows written.
+		const summary = await session.close();
+		expect(summary).toEqual({
+			tables: [{ table_name: SCRATCH_TABLE, records_affected: 14, records_count: 8 }],
+			errors: [],
+		});
+		await session.abort(); // no-op, must not throw after close
+	});
 
-	test.if(HAVE_DB)('schema EVOLUTION: extended plan adds the new column additively', async () => {
+	test('schema EVOLUTION: extended plan adds the new column additively', async () => {
 		const evolvedPlan = makePlan(EVOLVED_FIELDS);
 		const evolvedSection = evolvedPlan.sections[0] as SectionPlan;
 		const session = await mariadbSqlWriter.open(evolvedPlan);
@@ -354,34 +350,43 @@ describe('mariadb_sql writer against the live target (env-gated)', () => {
 		await session.close();
 	});
 
-	test.if(HAVE_DB)(
-		'removeRecords on a missing table is a tolerated no-op (errno 1146)',
-		async () => {
-			const missingPlan = makePlan(BASE_FIELDS, MISSING_TABLE);
-			const missingSection = missingPlan.sections[0] as SectionPlan;
-			const session = await mariadbSqlWriter.open(missingPlan);
-			// No ensureSchema on purpose: the table never exists.
-			const removal = await session.removeRecords(missingSection, [1, 2, 3]);
-			expect(removal).toEqual({ written: 0, deleted: 0 });
-			const summary = await session.close();
-			expect(summary.tables).toEqual([
-				{ table_name: MISSING_TABLE, records_affected: 0, records_count: 0 },
-			]);
-		},
-	);
+	test('removeRecords on a missing table is a tolerated no-op (errno 1146)', async () => {
+		const missingPlan = makePlan(BASE_FIELDS, MISSING_TABLE);
+		const missingSection = missingPlan.sections[0] as SectionPlan;
+		const session = await mariadbSqlWriter.open(missingPlan);
+		// No ensureSchema on purpose: the table never exists.
+		const removal = await session.removeRecords(missingSection, [1, 2, 3]);
+		expect(removal).toEqual({ written: 0, deleted: 0 });
+		const summary = await session.close();
+		expect(summary.tables).toEqual([
+			{ table_name: MISSING_TABLE, records_affected: 0, records_count: 0 },
+		]);
+	});
 
-	test.if(HAVE_DB)(
-		'missing target database fails LOUDLY at open (never auto-created)',
-		async () => {
-			const badPlan: PublicationPlan = {
-				...makePlan(BASE_FIELDS),
-				target: { kind: 'table', database: 'dedalo_ts_test_no_such_db' },
-			};
-			await expect(mariadbSqlWriter.open(badPlan)).rejects.toThrow(MissingTargetDatabaseError);
-		},
-	);
+	/** Open a plan on `database`; the typed error it must fail with, or a throw of the test. */
+	async function openFailure(database: string): Promise<MissingTargetDatabaseError> {
+		const badPlan: PublicationPlan = {
+			...makePlan(BASE_FIELDS),
+			target: { kind: 'table', database },
+		};
+		try {
+			await mariadbSqlWriter.open(badPlan);
+		} catch (error) {
+			expect(error).toBeInstanceOf(MissingTargetDatabaseError);
+			return error as MissingTargetDatabaseError;
+		}
+		throw new Error(`open(${database}) succeeded — a missing database must fail LOUDLY`);
+	}
 
-	test.if(HAVE_DB)("non-'table' target is rejected at open", async () => {
+	test('an UNKNOWN target database (1049: granted, never created) fails LOUDLY at open (never auto-created)', async () => {
+		expect((await openFailure(GRANTED_ABSENT_CONTROL_DB)).errno).toBe(1049);
+	});
+
+	test('an UNGRANTED target database (1044) fails LOUDLY at open', async () => {
+		expect((await openFailure('dedalo_ts_test_no_such_db')).errno).toBe(1044);
+	});
+
+	test("non-'table' target is rejected at open", async () => {
 		const filesPlan: PublicationPlan = {
 			...makePlan(BASE_FIELDS),
 			target: { kind: 'files', serviceName: 'test' },

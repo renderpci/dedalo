@@ -25,32 +25,46 @@
  *      registry door, reports the pending debt of the deleted record and a
  *      seeded GHOST marker; apply removes the ghost and nothing else.
  *
- * The MariaDB ROW leg — a live publication table losing its row — is stated
- * as a skip IN ITS NAME: the suite owns no marked MariaDB target, so that
- * half is proven at the executor seam (the same executor a record delete
- * registers at boot), not against a live table.
+ * THE MariaDB ROW LEG (PUB-05, audit 2026-09-26) — a live publication table
+ * losing its row. It was a `test.skip` stating that the suite owned no marked
+ * MariaDB target. It owns one now: the zzd1 element's plan is COMPILED, a row
+ * for a runtime-created test3 record is published through the engine's writer
+ * into the zzd situation's target on the lane's suite server (acquired in
+ * `beforeAll` through `requireSuiteMariadb`), and the REAL record-delete door,
+ * with the REAL executor the server registers at boot, must remove exactly that
+ * row — a sibling row survives — and ledger both elements unpublished.
  */
 
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { config } from '../../src/config/config.ts';
+import { readEnv } from '../../src/config/env.ts';
 import { insertMatrixRecordWithCounter } from '../../src/core/db/matrix_write.ts';
 import { sql, withTransaction } from '../../src/core/db/postgres.ts';
 import { registerAllReconciles } from '../../src/core/reconcile/catalog.ts';
 import { runReconcile } from '../../src/core/reconcile/registry.ts';
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
+import { compileElementPlan } from '../../src/diffusion/plan/compile.ts';
+import type { PublicationPlan } from '../../src/diffusion/plan/types.ts';
+import { buildVirtualDiffusionTree } from '../../src/diffusion/plan/virtual_tree.ts';
+import { closeAllTargetPools, getTargetPool } from '../../src/diffusion/targets/mariadb/db.ts';
+import { executeSqlDeleteTargets } from '../../src/diffusion/targets/mariadb/delete_record.ts';
+import { mariadbSqlWriter } from '../../src/diffusion/writers/mariadb_sql.ts';
 import { DB_READY } from '../helpers/db_ready.ts';
 import { ensureDiffusionScratchTables } from '../helpers/diffusion_scratch_tables.ts';
+import { requireSuiteMariadb } from '../helpers/suite_mariadb.ts';
 import {
 	countZzdOntology,
 	dropZzdOntology,
+	SQL_ELEMENT_ONE,
 	SQL_KEY_ONE,
 	SQL_KEY_TWO,
 	SQL_SECTION,
 	seedZzdOntology,
 	TERMINAL_KEYS,
 	TERMINAL_SECTION,
+	zzdTargetDatabases,
 } from '../helpers/zzd_diffusion_fixture.ts';
 
 // The dd1758 seam: a table PRIVATE to this file (the guard accepts the prefix;
@@ -133,9 +147,12 @@ function mediaRoot(): string {
 
 /** Scratch test3 records this file created through the REAL doors (swept). */
 const scratchRecords: number[] = [];
+/** The MariaDB table the ROW leg published into (dropped in afterAll). */
+let publishedTable: { database: string; table: string } | null = null;
 
 describe.if(DB_READY)('unpublish debt — removed from the public tier, or REPORTED (P1-12)', () => {
 	beforeAll(async () => {
+		await requireSuiteMariadb(import.meta.path, zzdTargetDatabases());
 		expect(activityTable()).toBe(SCRATCH_ACTIVITY_TABLE);
 		await ensureDiffusionScratchTables(); // builds the private seam table
 		const { preCount } = await seedZzdOntology();
@@ -173,6 +190,12 @@ describe.if(DB_READY)('unpublish debt — removed from the public tier, or REPOR
 			recursive: true,
 			force: true,
 		});
+		if (publishedTable !== null) {
+			await getTargetPool(publishedTable.database)
+				.unsafe(`DROP TABLE IF EXISTS \`${publishedTable.table}\``, [])
+				.catch(() => {});
+		}
+		await closeAllTargetPools();
 		await dropZzdOntology();
 		expect(await countZzdOntology()).toBe(0);
 		if (PRELOAD_ACTIVITY_TABLE === undefined) delete process.env.DIFFUSION_ACTIVITY_TABLE;
@@ -371,8 +394,63 @@ describe.if(DB_READY)('unpublish debt — removed from the public tier, or REPOR
 		}
 	}, 60_000);
 
-	test.skip('MariaDB ROW leg — the suite owns no marked MariaDB target, so a live publication table losing its row is proven at the executor seam above, not against a live table', () => {
-		// Deliberately empty: the skip IS the statement (anti-vacuity rule —
-		// a leg the suite cannot run says so in its name, never a silent pass).
-	});
+	test('MariaDB ROW leg: the real delete door, with the real executor, removes the published row from the live table — and only it', async () => {
+		// The zzd1 element's plan, COMPILED from the situation (not typed): its
+		// target database and table are the fixture's first sql target.
+		const tree = await buildVirtualDiffusionTree(readEnv('DEDALO_DIFFUSION_DOMAIN'));
+		if (tree === null) throw new Error('the zzd domain did not resolve after seed');
+		const plan: PublicationPlan = await compileElementPlan(SQL_ELEMENT_ONE, { tree });
+		if (plan.target.kind !== 'table')
+			throw new Error(`${SQL_ELEMENT_ONE} compiled to ${plan.target.kind}`);
+		const section = plan.sections.find((entry) => entry.sectionTipo === SQL_SECTION);
+		if (section === undefined)
+			throw new Error(`the ${SQL_ELEMENT_ONE} plan has no ${SQL_SECTION} section`);
+		const database = plan.target.database;
+		expect(`${database}|${section.tableName}`).toBe(SQL_KEY_ONE);
+		expect(zzdTargetDatabases()).toContain(database);
+		publishedTable = { database, table: section.tableName };
+
+		// A runtime-created record, published: its row, and a SIBLING row the
+		// delete must not touch.
+		const sectionId = await insertMatrixRecordWithCounter(TABLE, SQL_SECTION, {
+			data: { label: 'zzd unpublish-debt row leg', section_tipo: SQL_SECTION },
+		});
+		scratchRecords.push(sectionId);
+		const sibling = sectionId + 1;
+		const pool = getTargetPool(database);
+		await pool.unsafe(`DROP TABLE IF EXISTS \`${section.tableName}\``, []);
+		const session = await mariadbSqlWriter.open(plan);
+		await session.ensureSchema();
+		expect(
+			await session.writeRows(section, [
+				{ sectionId, lang: 'lg-eng', columns: {} },
+				{ sectionId: sibling, lang: 'lg-eng', columns: {} },
+			]),
+		).toEqual({ written: 2, deleted: 0 });
+		await session.close();
+		const idsIn = async () =>
+			(
+				(await pool.unsafe(
+					`SELECT section_id FROM \`${section.tableName}\` ORDER BY section_id`,
+					[],
+				)) as { section_id: number }[]
+			).map((row) => Number(row.section_id));
+		expect(await idsIn()).toEqual([sectionId, sibling]);
+
+		// THE REAL DOOR with THE REAL EXECUTOR (what src/server.ts registers at boot).
+		registerNativeDiffusionSqlDelete(executeSqlDeleteTargets);
+		const deleted = await deleteSectionRecord(SQL_SECTION, sectionId, USER_ID);
+		expect(deleted.removed).toBe(true);
+
+		// The row is gone from the live table; the sibling is not.
+		expect(await idsIn()).toEqual([sibling]);
+		// Both elements settled: the second target's table was never created, which
+		// the executor confirms as an idempotent no-op (errno 1146).
+		const rows = await rowsFor(SQL_SECTION, sectionId);
+		expect(rows.map((row) => row.element_id).sort()).toEqual(['1', '4']); // zzd1, zzd4
+		expect(rows.map((row) => row.action)).toEqual([
+			DIFFUSION_ACTION.unpublished,
+			DIFFUSION_ACTION.unpublished,
+		]);
+	}, 60_000);
 });

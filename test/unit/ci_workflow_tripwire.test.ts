@@ -402,6 +402,10 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		'Every leg drives the real dd1758 ledger, the zzd diffusion ontology and a real record delete on the suite Postgres (describe.if(DB_READY) skips all 5 cases on a closed port)',
 	],
 	[
+		'test/unit/suite_mariadb_target_native.test.ts',
+		"Its live legs install, start and drive THIS lane's own suite mariadbd (a --skip-networking unix socket under ../private/test_mariadb/<lane>, per-database grants, the marker schema) and read its USER_STATISTICS; the hermetic tier builds no server, while db_tier.sh starts that server before its gates and its EXIT trap stops it",
+	],
+	[
 		'test/unit/diffusion_frontier_scope_native.test.ts',
 		'It runs the real resolver over the zzdif domain records and the ACL identity fixture on the suite Postgres (describe.if(DB_READY) skips both cases on a closed port)',
 	],

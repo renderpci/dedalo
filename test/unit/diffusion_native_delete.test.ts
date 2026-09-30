@@ -5,10 +5,37 @@
  * - with a registered native executor, deleteDiffusionRecord routes sql
  *   targets through it, with the exact engine-wire target shape;
  * - partial confirmation lands split across deleted/pending;
- * - the real executor (targets/mariadb) treats missing table/database as
- *   idempotent success (oracle errno 1146/1049 posture).
+ * - the real executor (targets/mariadb) treats a missing table (1146) and an
+ *   UNKNOWN database (1049) as idempotent success (the oracle posture).
  *
  * dd1758 writes are avoided (logActivity=false); the DB is never mutated.
+ *
+ * THE REAL EXECUTOR RUNS AGAINST THE SUITE's MariaDB (PUB-05, audit 2026-09-26).
+ * Its legs used to reach whatever server `../private/.env` named: on a runner
+ * without one the connection error was swallowed into the very errno class the
+ * legs assert (or surfaced as an unexplained red), so the verdict depended on the
+ * machine. `beforeAll` now acquires the zzd situation's target databases on the
+ * lane's suite server (`requireSuiteMariadb`), so `zzd_probe_db` answers errno 1146
+ * for a table never created — deterministic, on every machine.
+ *
+ * 1049 IS PROVEN, NOT ASSUMED. The suite user holds per-database grants (the
+ * production posture), so an arbitrary absent name answers 1044 at connect and never
+ * reaches the 1049 branch; the suite therefore provisions GRANTED_ABSENT_CONTROL_DB —
+ * granted, never created — the one name that answers 1049. Each leg first reads the
+ * errno its database actually gives through the same engine pool, so a leg can never
+ * silently test another branch.
+ *
+ * 1044 IS DELIBERATELY NOT PINNED (review 2026-09-30). The executor today counts 1044
+ * ("access denied to database") as a missing database (`isMissingDatabaseError`,
+ * src/diffusion/targets/mariadb/db.ts) and so CONFIRMS the delete. Under per-database
+ * grants 1044 answers two different situations: the database is absent, OR it exists
+ * and the diffusion user's grant was revoked or never given — in which case the rows
+ * stay on the public site while dd1758 records the record as unpublished and no retry
+ * ever sees it. That is an open ENGINE question (raised to the integrator), not a
+ * contract: a leg asserting "1044 is an idempotent success" would freeze the fail-open
+ * reading and make its fix look like a regression. When the owner decides, the leg that
+ * lands pins the decided posture (pending / config error) — with a wire_contract entry
+ * if 1044 stays idempotent.
  */
 // Migrated to the generic `test` TLD 2026-08-19: the sql diffusion section is
 // PROVISIONED by the `zzd` situation, so the seam test no longer probes an
@@ -22,7 +49,13 @@ import {
 	resetNativeDiffusionSqlDeleteForTests,
 } from '../../src/core/diffusion_bridge/diffusion_delete.ts';
 import { getSectionDiffusionTargets } from '../../src/core/diffusion_bridge/diffusion_map.ts';
+import {
+	closeAllTargetPools,
+	getTargetPool,
+	type MariadbErrorLike,
+} from '../../src/diffusion/targets/mariadb/db.ts';
 import { executeSqlDeleteTargets } from '../../src/diffusion/targets/mariadb/delete_record.ts';
+import { GRANTED_ABSENT_CONTROL_DB, requireSuiteMariadb } from '../helpers/suite_mariadb.ts';
 import {
 	countZzdOntology,
 	dropZzdOntology,
@@ -30,18 +63,21 @@ import {
 	SQL_KEY_TWO,
 	SQL_SECTION,
 	seedZzdOntology,
+	zzdTargetDatabases,
 } from '../helpers/zzd_diffusion_fixture.ts';
 
 /** The two sql targets the fixture guarantees on SQL_SECTION. */
 const FIXTURE_KEYS = [SQL_KEY_ONE, SQL_KEY_TWO].sort();
 
 beforeAll(async () => {
+	await requireSuiteMariadb(import.meta.path, zzdTargetDatabases());
 	const { preCount } = await seedZzdOntology();
 	expect(preCount).toBe(0);
-});
+}, 120_000);
 
 afterAll(async () => {
 	resetNativeDiffusionSqlDeleteForTests();
+	await closeAllTargetPools();
 	await dropZzdOntology();
 	expect(await countZzdOntology()).toBe(0);
 });
@@ -84,23 +120,33 @@ describe('native diffusion sql delete (registration seam)', () => {
 	// (The 'explicit socketPath forces the legacy engine path' test retired at
 	// the 2026-07-11 cutover with the socket plumbing itself.)
 
-	test('real executor: missing table and missing database are idempotent successes', async () => {
+	/** The errno the engine's own pool meets on `database` (the branch the executor takes). */
+	async function errnoAt(database: string, table: string): Promise<number | 'no error'> {
+		try {
+			await getTargetPool(database).unsafe(`SELECT 1 FROM \`${table}\` LIMIT 0`, []);
+			return 'no error';
+		} catch (error) {
+			return (error as MariadbErrorLike).errno ?? -1;
+		}
+	}
+
+	test('real executor: a missing TABLE (errno 1146) is an idempotent success', async () => {
+		const [database] = zzdTargetDatabases();
+		const table = 'dedalo_ts_never_created_table';
+		expect(await errnoAt(database as string, table)).toBe(1146);
 		const result = await executeSqlDeleteTargets([
-			{
-				database_name: 'zzd_probe_db',
-				table_name: 'dedalo_ts_never_created_table',
-				section_ids: [1],
-			},
-			{
-				database_name: 'dedalo_ts_no_such_db',
-				table_name: 'whatever',
-				section_ids: [1],
-			},
+			{ database_name: database as string, table_name: table, section_ids: [1] },
 		]);
-		expect(result.deleted).toEqual([
-			'zzd_probe_db|dedalo_ts_never_created_table',
-			'dedalo_ts_no_such_db|whatever',
+		expect(result.deleted).toEqual([`${database}|${table}`]);
+		expect(result.errors).toEqual([]);
+	});
+
+	test('real executor: an UNKNOWN database (errno 1049 — granted, never created) is an idempotent success', async () => {
+		expect(await errnoAt(GRANTED_ABSENT_CONTROL_DB, 'whatever')).toBe(1049);
+		const result = await executeSqlDeleteTargets([
+			{ database_name: GRANTED_ABSENT_CONTROL_DB, table_name: 'whatever', section_ids: [1] },
 		]);
+		expect(result.deleted).toEqual([`${GRANTED_ABSENT_CONTROL_DB}|whatever`]);
 		expect(result.errors).toEqual([]);
 	});
 

@@ -63,6 +63,7 @@ import type { ProjectedRow } from '../../src/diffusion/project/lang_ladder.ts';
 import { resolvePublication } from '../../src/diffusion/resolve/resolver.ts';
 import { getTargetPool } from '../../src/diffusion/targets/mariadb/db.ts';
 import { getDiffusionWriter } from '../../src/diffusion/writers/registry.ts';
+import { suiteContactRefusal } from '../helpers/suite_mariadb_env.ts';
 
 const ELEMENT = 'numisdata29'; // 'Web MIB' → database web_numisdata_mib
 const SECTION = 'numisdata4'; // 'coins' table — richest real section
@@ -141,6 +142,12 @@ let databaseName: string | null = null;
  */
 const E2E = await (async (): Promise<{ ok: boolean; reason: string | null }> => {
 	try {
+		// PUB-05: contact nothing unless ARMED at this lane's suite socket AND that socket
+		// is PRESENT (the reasons live with the guard, test/helpers/suite_mariadb_env.ts).
+		// Held by suite_mariadb_target_native (M7): this file run unarmed against a planted
+		// counting socket makes 0 contacts and logs the refusal.
+		const refusal = suiteContactRefusal();
+		if (refusal !== null) return { ok: false, reason: refusal };
 		const plan = await getCompiledPlan(ELEMENT);
 		if (plan.target.kind !== 'table') {
 			return { ok: false, reason: `element ${ELEMENT} target is not a table` };

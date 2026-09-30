@@ -3631,6 +3631,11 @@
 			"skipped": 0,
 			"assertions": 49
 		},
+		"test/unit/select_family_mode_datalist_native.test.ts": {
+			"tests": 8,
+			"skipped": 0,
+			"assertions": 80
+		},
 		"test/unit/sequence_verdict_native.test.ts": {
 			"tests": 12,
 			"skipped": 0,
@@ -3670,6 +3675,11 @@
 			"tests": 4,
 			"skipped": 0,
 			"assertions": 8
+		},
+		"test/unit/shard_mariadb_sweep_native.test.ts": {
+			"tests": 1,
+			"skipped": 0,
+			"assertions": 9
 		},
 		"test/unit/shard_partition_tripwire.test.ts": {
 			"tests": 21,
@@ -3810,6 +3820,11 @@
 			"tests": 22,
 			"skipped": 2,
 			"assertions": 77
+		},
+		"test/unit/suite_mariadb_target_native.test.ts": {
+			"tests": 23,
+			"skipped": 0,
+			"assertions": 222
 		},
 		"test/unit/sync_io_on_request_path_tripwire.test.ts": {
 			"tests": 23,
