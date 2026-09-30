@@ -408,6 +408,14 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **A failed ontology update now says why, inside the Update ontology panel**
+
+    When fetching the master's file list or importing the ontology failed, the
+    panel showed nothing — the error only reached the browser console. The panel
+    now shows the failure in place: the error, the server's explanation (for
+    example which address was refused) and the request id to find it in the
+    server log.
+
 - **Updating the ontology works from every configured master, not only the first**
 
     When `ONTOLOGY_SERVERS` listed several masters sharing the same access code,
