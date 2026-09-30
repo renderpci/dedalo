@@ -408,6 +408,15 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Updating the ontology works from every configured master, not only the first**
+
+    When `ONTOLOGY_SERVERS` listed several masters sharing the same access code,
+    choosing any of them except the first failed every file with
+    `Download failed … (origin mismatch: <chosen> != <first>)`. The engine now
+    identifies the chosen master by its address, so each listed server updates
+    from itself. A server address that is not in `ONTOLOGY_SERVERS` is still
+    refused before anything is downloaded.
+
 - **Error reports now include logged client errors**
 
     The "Report a problem" tool now attaches errors the client caught and logged (`console.error`), not only uncaught ones, so a report of real breakage no longer says "0 errors". Only a short message and stack are kept; repeats are counted, not duplicated.

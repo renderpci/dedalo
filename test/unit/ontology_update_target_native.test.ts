@@ -4,7 +4,7 @@
  * extracted to `src/core/ontology/ontology_update_target.ts`:
  *
  *   - resolveUpdateTarget  — WC-023 D5: the target is re-resolved from the
- *     CONFIG catalog by code; the client-supplied url is IGNORED.
+ *     CONFIG catalog by url origin; an unlisted client url is refused.
  *   - stageOntologyFiles   — Phase A staging, whose load-bearing guard is that
  *     `section_tipo` is RECOMPUTED from the tld (the options schema still
  *     accepts a client `section_tipo`, so honouring it would aim an `es`
@@ -80,29 +80,66 @@ describe('resolveUpdateTarget', () => {
 		isOntologyServer: false,
 	};
 
-	test('unknown server code is refused with the operator-facing msg', () => {
+	test('an unconfigured origin is refused with the operator-facing msg', () => {
 		const out = resolveUpdateTarget(
-			{ name: 'zz', url: 'https://zz.example/', code: 'zz' },
+			{ name: 'zz', url: 'https://zz.example/', code: 'master' },
 			catalog,
 		);
 		expect(out).toEqual({
-			error: 'unknown ontology server code: zz',
+			error: 'unknown ontology server: https://zz.example',
 			msg: 'Error. The selected server is not configured on this instance',
 		});
 	});
 
-	test('a known code takes its origin from the CATALOG — the client url is ignored', () => {
+	test('a hostile client url is refused even with a configured code — never reached', () => {
 		const out = resolveUpdateTarget(
-			// hostile client url: a different host entirely
 			{ name: 'master', url: 'https://evil.attacker.example/es.copy.gz', code: 'master' },
 			catalog,
 		);
-		expect(out).toEqual({ isLocal: false, configuredOrigin: 'https://master.example' });
+		expect(out).toEqual({
+			error: 'unknown ontology server: https://evil.attacker.example',
+			msg: 'Error. The selected server is not configured on this instance',
+		});
+	});
+
+	test('an unparseable client url is refused', () => {
+		const out = resolveUpdateTarget({ name: 'm', url: 'not a url', code: 'master' }, catalog);
+		expect(out).toEqual({
+			error: 'unknown ontology server: not a url',
+			msg: 'Error. The selected server is not configured on this instance',
+		});
 	});
 
 	test('the configured origin keeps a non-default port and drops the path', () => {
-		const out = resolveUpdateTarget({ name: 'o', url: 'https://x/', code: 'other' }, catalog);
+		const out = resolveUpdateTarget(
+			{ name: 'o', url: 'https://other.example:8443/y/z', code: 'other' },
+			catalog,
+		);
 		expect(out).toEqual({ isLocal: false, configuredOrigin: 'https://other.example:8443' });
+	});
+
+	test('masters SHARING one code resolve to the SELECTED one, not the first listed', () => {
+		const shared = {
+			servers: [
+				{ code: 'shared', url: 'https://official.example/dedalo/core/api/v1/json/' },
+				{ code: 'shared', url: 'http://192.0.2.10:4000/dedalo/core/api/v1/json/' },
+			],
+			isOntologyServer: false,
+		};
+		const second = resolveUpdateTarget(
+			{ name: 'local', url: 'http://192.0.2.10:4000/dedalo/core/api/v1/json/', code: 'shared' },
+			shared,
+		);
+		expect(second).toEqual({ isLocal: false, configuredOrigin: 'http://192.0.2.10:4000' });
+		const first = resolveUpdateTarget(
+			{
+				name: 'official',
+				url: 'https://official.example/dedalo/core/api/v1/json/',
+				code: 'shared',
+			},
+			shared,
+		);
+		expect(first).toEqual({ isLocal: false, configuredOrigin: 'https://official.example' });
 	});
 
 	test("'localhost' + isOntologyServer true resolves LOCAL (no origin)", () => {
@@ -113,13 +150,13 @@ describe('resolveUpdateTarget', () => {
 		expect(out).toEqual({ isLocal: true, configuredOrigin: null });
 	});
 
-	test("'localhost' + isOntologyServer false falls through to the unknown-code refusal", () => {
+	test("'localhost' + isOntologyServer false falls through to the unknown-server refusal", () => {
 		const out = resolveUpdateTarget(
 			{ name: 'Local files', url: 'https://ignored.example/', code: 'localhost' },
 			{ servers: [], isOntologyServer: false },
 		);
 		expect(out).toEqual({
-			error: 'unknown ontology server code: localhost',
+			error: 'unknown ontology server: https://ignored.example',
 			msg: 'Error. The selected server is not configured on this instance',
 		});
 	});

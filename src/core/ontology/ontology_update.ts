@@ -256,7 +256,7 @@ export async function updateOntology(
 	const options = parsed.data;
 
 	// The network target comes from the CONFIG catalog, never the client
-	// (WC-023 D5): match the selected server by code, or the localhost
+	// (WC-023 D5): match the selected server by url origin, or the localhost
 	// pseudo-server when this instance is an ontology master.
 	const target = resolveUpdateTarget(options.server, catalog);
 	if ('error' in target) {

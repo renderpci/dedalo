@@ -215,6 +215,10 @@ ONTOLOGY_SERVERS=[{"name":"Official Dédalo Ontology server","url":"https://v7.m
 
 It gets the tld from the [ACTIVE_ONTOLOGY_TLDS](#defining-active-ontology-tlds) definition.
 
+A master is identified by its \`url\`, not by its \`code\`: several masters may share one access
+code, and the update downloads only from the address of the master picked in the panel. List
+each master once.
+
 The update panel interrogates each master **from the browser**, so the engine adds every origin
 named here to its own \`connect-src\` Content-Security-Policy automatically — there is no second
 setting to keep in step. The policy is built at boot, so **restart** after adding a master, or

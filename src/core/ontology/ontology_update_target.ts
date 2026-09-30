@@ -5,8 +5,8 @@
  * orchestrator returns on:
  *
  *   1. resolveUpdateTarget  — WC-023 D5: the network target is re-resolved
- *      from the CONFIG catalog by code; the client-supplied `server.url` is
- *      never trusted (it is ignored entirely).
+ *      from the CONFIG catalog by origin; the client-supplied `server.url`
+ *      only selects a configured entry — an unlisted origin is refused.
  *   2. stageOntologyFiles   — Phase A: download (or copy, for a local master)
  *      every manifest file into the staging dir, gunzip under caps, sanity
  *      check the COPY payload, and build the StagedFile list. Wholly
@@ -59,25 +59,46 @@ export interface UpdateTarget {
 }
 
 /**
- * Match the client-selected server against the configured catalog by CODE, or
- * accept the `localhost` pseudo-server when this instance is itself an
- * ontology master. Returns the resolved target, or the refusal
- * (`error` + the operator-facing `msg`).
+ * Match the client-selected server against the configured catalog by the
+ * ORIGIN of its url, or accept the `localhost` pseudo-server when this
+ * instance is itself an ontology master. Returns the resolved target, or the
+ * refusal (`error` + the operator-facing `msg`).
+ *
+ * Never by code: masters routinely share one access code, and `find` by code
+ * handed the FIRST such entry's origin to a panel that had picked another —
+ * every file then refused with an "origin mismatch". The origin is exactly
+ * what the target yields (the download pin), so origin identity is both
+ * unambiguous and sufficient. The client url only SELECTS among configured
+ * entries; the returned origin is the catalog's, so an unlisted host is
+ * refused, never reached (D5).
  */
 export function resolveUpdateTarget(
 	server: { name: string; url: string; code: string },
 	catalog: OntologyUpdateCatalog,
 ): UpdateTarget | { error: string; msg: string } {
-	const isLocal = server.code === 'localhost' && catalog.isOntologyServer;
-	const configured = catalog.servers.find((entry) => entry.code === server.code);
-	if (!isLocal && configured === undefined) {
+	if (server.code === 'localhost' && catalog.isOntologyServer) {
+		return { isLocal: true, configuredOrigin: null };
+	}
+	const selected = originOf(server.url);
+	const configured =
+		selected === null
+			? undefined
+			: catalog.servers.find((entry) => originOf(entry.url) === selected);
+	if (configured === undefined) {
 		return {
-			error: `unknown ontology server code: ${server.code}`,
+			error: `unknown ontology server: ${selected ?? server.url}`,
 			msg: 'Error. The selected server is not configured on this instance',
 		};
 	}
-	const configuredOrigin = isLocal ? null : new URL((configured as { url: string }).url).origin;
-	return { isLocal, configuredOrigin };
+	return { isLocal: false, configuredOrigin: selected };
+}
+
+function originOf(url: string): string | null {
+	try {
+		return new URL(url).origin;
+	} catch {
+		return null;
+	}
 }
 
 /**

@@ -73,6 +73,11 @@ ONTOLOGY_SERVERS=[{"name":"Dédalo Ontology server","url":"https://myserverdomai
 `code` is the `ONTOLOGY_SERVER_CODE` configured on **that** server; a wrong or missing one makes
 the master answer as *Unreachable* in the picker. Add one object per master.
 
+A master is identified by its `url`, never by its `code`: several masters may share the same
+access code (the official one and a local copy of it, for example), and the update downloads
+only from the address of the master you picked. A file whose address is on any other host is
+refused before it is written.
+
 The client's own engine must also allow the connection: the browser's Content-Security-Policy has to name the master in `connect-src`, or the fetch is refused before it leaves. The engine derives this automatically from the master URLs in [`ONTOLOGY_SERVERS`](../../config/config.md#ontology-servers) — there is no second setting — but the policy is built at **boot**, so a client that has just added or changed a master must be **restarted** before the panel can reach it.
 
 !!! warning "The panel can report a master as *ready* and still fail on submit"
