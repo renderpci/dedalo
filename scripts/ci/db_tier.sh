@@ -160,6 +160,7 @@ DB_TIER_TRIPWIRES=(
 	test/unit/statement_ceiling_scope_native.test.ts
 	test/unit/maintenance_door_unbounded_native.test.ts
 	test/unit/optimize_concurrent_leftover_native.test.ts
+	test/unit/db_asset_rebuild_atomic_native.test.ts
 )
 
 # ── THE STAGES ARE INDEPENDENT ───────────────────────────────────────────────

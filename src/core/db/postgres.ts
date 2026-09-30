@@ -1804,12 +1804,14 @@ async function onDedicatedConnection<T>(
 			)
 			.finally(() => dedicatedConnections.release());
 	};
-	const running = (async () => {
+	const running = (async (): Promise<{ value: T } | 'timed out'> => {
 		await dedicatedConnections.acquire();
 		// The budget ran out while this waited for a slot: hand it straight back.
+		// The race already answered 'timed out' — this is that same verdict, never
+		// a failure (nothing reads it; a throw here was an untyped zero-tier site).
 		if (finished) {
 			dedicatedConnections.release();
-			throw new Error(`[${label}] dedicated connection slot granted after its budget`);
+			return 'timed out';
 		}
 		connection = new SQL(buildSqlOptions(1, undefined, `dedalo_${label}:${process.pid}`));
 		return { value: await work(connection) };

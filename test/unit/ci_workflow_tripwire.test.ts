@@ -621,6 +621,10 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		'test/unit/optimize_concurrent_leftover_native.test.ts',
 		'It builds a scratch table with a deliberately slow index on the suite Postgres, cancels a real REINDEX CONCURRENTLY mid-build and reads pg_index / pg_stat_progress_create_index, so it cannot run without a live Postgres.',
 	],
+	[
+		'test/unit/db_asset_rebuild_atomic_native.test.ts',
+		"It rebuilds constraints, triggers and indexes on scratch tables of the suite Postgres while holding a real lock on a blocker table, so its legs drive the maintenance pool's 55P03 lock timeout, a concurrent reader and pg_indexes / pg_constraint / pg_trigger reads, and its control runs the real rebuild_db_constraints / rebuild_db_indexes door; it cannot run without a live suite Postgres carrying the dedalo_test_marker.",
+	],
 ]);
 
 /**
