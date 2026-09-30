@@ -114,10 +114,28 @@
 					width: 100%;
 				}
 
+				// free room below the rows (part of the one drop zone). While the
+				// list is empty it carries the drop hint.
 				>.empty_space {
-					height: 100%;
-					max-height: 100%;
+					flex: 1 1 auto;
+					min-height: 4rem;
 					width: 100%;
+
+					>.drop_hint {
+						display: none;
+					}
+				}
+				>.user_selection_list:empty + .empty_space >.drop_hint {
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					min-height: 6rem;
+					padding: 1rem;
+					border: 2px dashed @color_grey_12;
+					border-radius: 4px;
+					color: @color_grey_9;
+					font-size: 0.9rem;
+					text-align: center;
 				}
 
 				// h1 list_title
@@ -127,8 +145,29 @@
 				}
 				.user_selection_list{
 
-					&.dragover {
-						outline: 1px solid @tool_color;
+					// insertion marker: where the dragged element will land. Zero
+					// net height (the negative margins), so rows never move under
+					// the pointer; a dot anchors the line's start.
+					>.drop_marker {
+						position: relative;
+						z-index: 2;
+						height: 3px;
+						margin: -1.5px 0;
+						background-color: var(--tool_export_fill);
+						border-radius: 2px;
+						pointer-events: none;
+
+						&:before {
+							content: "";
+							position: absolute;
+							left: -4px;
+							top: 50%;
+							width: 9px;
+							height: 9px;
+							border-radius: 50%;
+							background-color: var(--tool_export_fill);
+							transform: translateY(-50%);
+						}
 					}
 
 					>.list_title {
@@ -153,23 +192,6 @@
 						border-left: 1px solid @color_orange_dedalo;
 						border-bottom: 1px solid @color_grey_14;
 						transition: opacity 150ms;
-
-						&:last-of-type {
-
-							&:after {
-								content: " ";
-								display: block;
-								height: 4rem;
-								width: 100%;
-								position: absolute;
-								top: 1.7rem;
-								left: 0;
-							}
-						}
-
-						&.displaced {
-							padding-top: 2rem;
-						}
 
 						&:hover {
 							cursor: move;
@@ -247,13 +269,15 @@
 						}
 
 						&.dragging {
-							opacity: 0.2;
-							width: auto;
+							opacity: 0.35;
 						}
 
-						&.dragover {
-							opacity: 0.5;
-							pointer-events: none;
+						// dragging an element that is already in the list: point at
+						// its row (the drop itself is refused)
+						&.drop_duplicate {
+							background-color: var(--tool_export_lighten_40);
+							outline: 2px dashed var(--tool_export_fill);
+							outline-offset: -2px;
 						}
 					}
 				}

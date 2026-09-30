@@ -82,16 +82,48 @@
   }
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .selection_list_contaniner > .empty_space {
-  height: 100%;
-  max-height: 100%;
+  flex: 1 1 auto;
+  min-height: 4rem;
   width: 100%;
+}
+.wrapper_tool.tool_export > .content_data > .grid_top > .selection_list_contaniner > .empty_space > .drop_hint {
+  display: none;
+}
+.wrapper_tool.tool_export > .content_data > .grid_top > .selection_list_contaniner > .user_selection_list:empty + .empty_space > .drop_hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 6rem;
+  padding: 1rem;
+  border: 2px dashed var(--color_grey_12);
+  border-radius: 4px;
+  color: var(--color_grey_9);
+  font-size: 0.9rem;
+  text-align: center;
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .selection_list_contaniner .list_title {
   margin-bottom: 1em;
   font-size: 1.2em;
 }
-.wrapper_tool.tool_export > .content_data > .grid_top > .selection_list_contaniner .user_selection_list.dragover {
-  outline: 1px solid var(--tool_export);
+.wrapper_tool.tool_export > .content_data > .grid_top > .selection_list_contaniner .user_selection_list > .drop_marker {
+  position: relative;
+  z-index: 2;
+  height: 3px;
+  margin: -1.5px 0;
+  background-color: var(--tool_export_fill);
+  border-radius: 2px;
+  pointer-events: none;
+}
+.wrapper_tool.tool_export > .content_data > .grid_top > .selection_list_contaniner .user_selection_list > .drop_marker:before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background-color: var(--tool_export_fill);
+  transform: translateY(-50%);
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .selection_list_contaniner .user_selection_list > .list_title {
   font-weight: bold;
@@ -114,18 +146,6 @@
   border-left: 1px solid var(--color_orange_dedalo);
   border-bottom: 1px solid var(--color_grey_14);
   transition: opacity 150ms;
-}
-.wrapper_tool.tool_export > .content_data > .grid_top > .selection_list_contaniner .user_selection_list > .export_component:last-of-type:after {
-  content: " ";
-  display: block;
-  height: 4rem;
-  width: 100%;
-  position: absolute;
-  top: 1.7rem;
-  left: 0;
-}
-.wrapper_tool.tool_export > .content_data > .grid_top > .selection_list_contaniner .user_selection_list > .export_component.displaced {
-  padding-top: 2rem;
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .selection_list_contaniner .user_selection_list > .export_component:hover {
   cursor: move;
@@ -189,12 +209,12 @@
   font-style: italic;
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .selection_list_contaniner .user_selection_list > .export_component.dragging {
-  opacity: 0.2;
-  width: auto;
+  opacity: 0.35;
 }
-.wrapper_tool.tool_export > .content_data > .grid_top > .selection_list_contaniner .user_selection_list > .export_component.dragover {
-  opacity: 0.5;
-  pointer-events: none;
+.wrapper_tool.tool_export > .content_data > .grid_top > .selection_list_contaniner .user_selection_list > .export_component.drop_duplicate {
+  background-color: var(--tool_export_lighten_40);
+  outline: 2px dashed var(--tool_export_fill);
+  outline-offset: -2px;
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config {
   background-color: var(--color_grey_16);

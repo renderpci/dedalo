@@ -141,6 +141,17 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Export — a marker shows where a dragged column will land.**
+
+    In *Export*, dropping a field just below the *Active elements* list put it above the
+    last column instead of at the end. Now, while you drag a field or a column over the
+    list, a line shows exactly where it will be placed: before or after the row under
+    the pointer, depending on which half of the row you are over, and at the end when
+    you are below the list. The rows no longer shift while you drag.
+
+    Dragging a field that is already in the list highlights the existing column instead,
+    and the drop is refused. An empty list shows a "Drag a field here" area.
+
 - **Export presets panel — one-line rows, lighter design, click a row to apply.**
 
     In *Export*, each saved preset showed on two lines, with its delete button wrapped
