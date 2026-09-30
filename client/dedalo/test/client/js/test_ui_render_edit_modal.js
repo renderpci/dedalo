@@ -176,3 +176,75 @@ describe(`UI_RENDER_EDIT_MODAL`, async () => {
 			delete_instance(key)
 	})
 })
+
+
+
+/**
+* DD_MODAL — room above an edit form's first field
+* A section in edit mode as the modal body (slotted directly, or the direct child
+* of the body) gets top padding: the active field's tool strip floats
+* @component_buttons_offset (2.4rem) above it (layout.less .buttons_container)
+* and slid under the modal header without it. Only that shape is matched: a
+* section deeper inside a tool's own layout, or a list section, keeps its own
+* padding. Reads the real main.css (loaded by the test page).
+*/
+describe('DD_MODAL edit form clearance', function() {
+
+	this.timeout(10000)
+
+	const expected = () => (2.4 + 0.25) * parseFloat(getComputedStyle(document.documentElement).fontSize)
+	const padding_top = (node) => parseFloat(getComputedStyle(node).paddingTop)
+
+	const make_section = (mode) => ui.create_dom_element({
+		element_type	: 'section',
+		class_name		: `wrapper_section section ${mode}`,
+		text_content	: 'form'
+	})
+
+	const open_with = async (body) => {
+		const modal = ui.attach_to_modal({ header:'clearance', body:body, transient:true })
+		await new Promise(resolve => requestAnimationFrame(resolve))
+		return modal
+	}
+
+	it('a section in edit mode slotted as the body gets the room', async function() {
+		const section = make_section('edit')
+		const modal = await open_with(section)
+		try {
+			assert.closeTo(padding_top(section), expected(), 0.5)
+		} finally {
+			await modal.close()
+		}
+	})
+
+	it('a section in edit mode as the direct child of the body gets the room', async function() {
+		const section = make_section('edit')
+		const body = ui.create_dom_element({ element_type:'div', class_name:'container' })
+		body.appendChild(section)
+		const modal = await open_with(body)
+		try {
+			assert.closeTo(padding_top(section), expected(), 0.5)
+		} finally {
+			await modal.close()
+		}
+	})
+
+	it('a deeper section, or a list section, is not matched', async function() {
+		// deeper: body > div > section (a tool's own layout)
+		const deep_body		= ui.create_dom_element({ element_type:'div' })
+		const deep_inner	= ui.create_dom_element({ element_type:'div', parent:deep_body })
+		const deep_section	= make_section('edit')
+		deep_inner.appendChild(deep_section)
+		// list: a section in list mode as the body
+		const list_section	= make_section('list')
+
+		for (const [body, section] of [[deep_body, deep_section], [list_section, list_section]]) {
+			const modal = await open_with(body)
+			try {
+				assert.ok(Math.abs(padding_top(section) - expected()) > 0.5, `not matched (padding-top ${padding_top(section)}px)`)
+			} finally {
+				await modal.close()
+			}
+		}
+	})
+})

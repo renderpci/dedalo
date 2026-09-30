@@ -5494,6 +5494,10 @@ dd-modal .spinner_modal {
   position: relative;
   margin: 1rem;
 }
+dd-modal > .wrapper_section.edit[slot="body"],
+dd-modal > [slot="body"] > .wrapper_section.edit {
+  padding-top: calc(2.4rem + 0.25rem);
+}
 dd-modal .header {
   display: flex;
   padding: 1rem;

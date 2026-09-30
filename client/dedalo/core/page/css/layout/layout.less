@@ -6,6 +6,12 @@
 * Included from main.less file
 */
 
+// component_buttons_offset. How far the active component's tool strip
+// (.buttons_container) floats ABOVE its field. Shared with the room a modal
+// edit form leaves above its first field (dd-modal below), so the two cannot
+// drift apart and the strip never slides under the modal header.
+@component_buttons_offset: 2.4rem;
+
 // hilite (used on focus)
 	.hilite_mixin(@outline_offset:0) {
 		outline-offset: @outline_offset;
@@ -243,7 +249,7 @@
 			right: 0px;
 			width: auto;
 			padding: 0px;
-			top: -2.4rem; // small air gap: the strip floats instead of docking
+			top: -@component_buttons_offset; // small air gap: the strip floats instead of docking
 			max-height: 2rem;
 			border-radius: var(--radius-pill);
 			font-size: 1.1rem;
@@ -704,6 +710,17 @@
 		.spinner_modal {
 			position: relative;
 			margin: 1rem;
+		}
+
+		// an edit FORM as the modal body — a section in edit mode, slotted directly
+		// or as the direct child of the body (preset editors, the portal / select /
+		// dataframe "open record" dialogs). The active field's tool strip floats
+		// @component_buttons_offset above it: without room the first field's strip
+		// slid under the header. Deeper sections (inside a tool's own layout) are
+		// not matched.
+		>.wrapper_section.edit[slot="body"],
+		>[slot="body"] >.wrapper_section.edit {
+			padding-top: calc(@component_buttons_offset + 0.25rem);
 		}
 
 		.header {
