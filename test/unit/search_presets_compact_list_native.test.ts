@@ -53,7 +53,7 @@ describe('search-presets compact list — caller view + section_map label (dd623
 		const expected = term === null ? [] : Array.isArray(term) ? term : [term];
 		const resolved = (
 			await resolveSectionMapGetDdoMap(PRESETS_SECTION, PRESETS_SECTION, GET_DDO_MAP)
-		).map((d) => d.tipo);
+		).map((d) => String(d.tipo));
 		expect(resolved).toEqual(expected);
 	});
 
@@ -98,7 +98,7 @@ describe('caller show narrows the section entry request_config (context = data c
 	test('get_ddo_map directive: the section entry lists the resolved columns', async () => {
 		const resolved = (
 			await resolveSectionMapGetDdoMap(PRESETS_SECTION, PRESETS_SECTION, GET_DDO_MAP)
-		).map((d) => d.tipo);
+		).map((d) => String(d.tipo));
 		const { context } = await readSection(baseRqo({ view: PRESETS_VIEW }, { get_ddo_map: GET_DDO_MAP }));
 		const tipos = mainShowTipos(context, PRESETS_SECTION);
 		if (resolved.length > 0) expect(tipos).toEqual(resolved);
