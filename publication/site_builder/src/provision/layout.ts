@@ -978,14 +978,15 @@ export interface InstanceLayout {
    * THE NAME EVERY TRANSIENT AGENT UNIT OF THIS MUSEUM BEGINS WITH.
    *
    * One turn is one transient systemd service (`<prefix><uuid>.service`), started by the
-   * daemon through `systemd-run --uid=<agentUser>`. The prefix is the whole basis of the
-   * authorization: the rendered polkit rule permits this museum's service user to manage
-   * units whose name starts with it AND NOTHING ELSE, so the grant cannot reach another
-   * museum's units, the web server's, or the engine's. Derived here because three
+   * daemon through `systemd-run --uid=<agentUser>` — REFUSED today (F2: polkit cannot bind a
+   * transient unit's run-as uid, so the rule grants no start; see render/agent_authorization.ts).
+   * The prefix is the whole basis of the authorization: the rendered polkit rule permits this
+   * museum's service user to STOP and KILL units whose name starts with it AND NOTHING ELSE,
+   * so the grant cannot reach another museum's units, the web server's, or the engine's. Derived here because three
    * consumers spell it — the renderer, the rendered env, and `src/drivers/confinement.ts`.
    */
   readonly agentUnitPrefix: string;
-  /** The rendered polkit rule that authorizes exactly those transient units. */
+  /** The rendered polkit rule that authorizes stop/kill (never start) of exactly those units. */
   readonly agentPolicyPath: string;
   /** The value of systemd's RuntimeDirectory= — relative to /run, as systemd requires. */
   readonly runtimeDirectory: string;

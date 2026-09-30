@@ -25,6 +25,12 @@
  *
  * Plus the per-turn credential residence: the MCP config a driver writes is 0640 and is
  * DELETED when the turn ends, on every exit path.
+ *
+ * And, since F2 (2026-09-26 audit): on a REAL host every confined door REFUSES — the polkit
+ * rule grants no transient start because it cannot bind the run-as uid — and the per-run
+ * environment file PID 1 reads as root is never written through a link (the two blocks at
+ * the end). The argv legs above run on a stand-in runner that does start, and keep the
+ * shape LEAD-1b's per-site units inherit.
  */
 
 import { describe, test, expect, afterEach } from 'bun:test';
@@ -67,6 +73,7 @@ import {
   writeFileSharedAtomic,
 } from '../src/util/shared_tree';
 import {
+  CONFINED_RUNS_DISABLED,
   EGRESS_DENY,
   confineTurn,
   runConfined,
@@ -75,8 +82,10 @@ import {
   egressAllow,
   policyFromConfig,
   renderEnvironmentFile,
+  writeTurnEnvironmentFile,
   type ConfinementPolicy,
 } from '../src/drivers/confinement';
+import { AGENT_UNIT_VERBS, TRANSIENT_START_AUTHORIZED } from '../src/provision/render/agent_authorization';
 import { spawnAgentProcess } from '../src/drivers/process';
 import { ALLOWED_TOOLS, DENIED_TOOLS, writeMcpConfig } from '../src/drivers/claude_code';
 import { DENIED_PERMISSIONS, writeMcpConfig as writeOpencodeConfig } from '../src/drivers/opencode';
@@ -108,6 +117,11 @@ afterEach(() => {
  * runtime directory the per-turn environment file is written into. Nothing here is spawned:
  * what is asserted is the argv this daemon would hand PID 1, which is the artifact the
  * confinement actually is.
+ *
+ * `transientStartAuthorized: true` is the stand-in runner's own truth — it starts whatever it
+ * is handed. On a REAL host the fact is read off the rendered polkit rule and is `false`
+ * (F2), which the "no transient start" block below asserts; these tests keep the shape the
+ * per-site units of LEAD-1b inherit.
  */
 function systemdPolicy(overrides: Partial<ConfinementPolicy> = {}): ConfinementPolicy {
   const dir = mkdtempSync(join(tmpdir(), 'dedalo-confinement-'));
@@ -116,6 +130,7 @@ function systemdPolicy(overrides: Partial<ConfinementPolicy> = {}): ConfinementP
   writeFileSync(runner, '#!/bin/sh\nexit 0\n', { mode: 0o755 });
   return {
     mode: 'systemd_scope',
+    transientStartAuthorized: true,
     agentUser: 'dedalo-agent-test',
     unitPrefix: 'dedalo-site-test-agent-',
     systemdRunBin: runner,
@@ -1375,5 +1390,149 @@ describe('a planted link is not READ through either — the daemon does not serv
     expect(await replayEvents('zzreadsess', 'nosuch', 0)).toEqual([]);
     expect(await readMeta('zzreadsess', 'nosuch')).toBeNull();
     expect(await listSessions('zznosuchsite')).toEqual([]);
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * F2 — NO TRANSIENT START, SO NO CONFINED RUN (until LEAD-1b)
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * The polkit rule granted "start" on `<prefix>*.service` and could not see the uid the unit
+ * runs as: on systemd >= 257 the service user could `systemd-run --unit=<prefix>x.service
+ * --uid=root`, i.e. the daemon was root-equivalent. The rule now grants stop/kill only, and
+ * the daemon's policy reads that SAME list — so every confined door refuses up front, loudly,
+ * and spawns nothing. Mutation: put "start" back in AGENT_UNIT_VERBS and every leg is red.
+ */
+describe('F2: the daemon may not start a transient unit, so a confined run is refused', () => {
+  /** The REAL host's fact, on an otherwise complete policy — only F2 stands in the way. */
+  const realHostPolicy = (overrides: Partial<ConfinementPolicy> = {}) =>
+    systemdPolicy({ transientStartAuthorized: policyFromConfig().transientStartAuthorized, ...overrides });
+
+  test('the rule grants stop and kill, never start — and the daemon reads that as a fact', () => {
+    expect([...AGENT_UNIT_VERBS].sort()).toEqual(['kill', 'stop']);
+    expect(TRANSIENT_START_AUTHORIZED).toBe(false);
+    expect(policyFromConfig().transientStartAuthorized).toBe(false);
+  });
+
+  test('the refusal is FIRST, names LEAD-1b, and is a 503 at every pre-reservation check', () => {
+    const problems = confinementProblems(realHostPolicy());
+    // The only missing piece is F2's: the refusal is not a side effect of an incomplete policy.
+    expect(problems).toEqual([CONFINED_RUNS_DISABLED]);
+    expect(CONFINED_RUNS_DISABLED).toContain('LEAD-1b');
+    expect(CONFINED_RUNS_DISABLED).toContain('F2');
+    let caught: unknown;
+    try {
+      assertTurnConfinementAvailable(realHostPolicy());
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(ConfinementUnavailableError);
+    expect((caught as ConfinementUnavailableError).status).toBe(503);
+    expect((caught as Error).message).toContain('DISABLED');
+  });
+
+  test('confineTurn refuses, and writes no per-turn environment file', async () => {
+    const policy = realHostPolicy();
+    await expect(
+      confineTurn({ argv: ['/opt/claude'], cwd: '/srv/ws/a', env: { K: 'v' }, timeoutMs: 1000 }, policy),
+    ).rejects.toThrow(/DISABLED until per-site agent identities/);
+    const turnDir = join(dirname(policy.listenSocket), 'turns');
+    expect(existsSync(turnDir) ? readdirSync(turnDir) : []).toEqual([]);
+  });
+
+  test('runConfined refuses a build/git step and the runner is never executed', async () => {
+    const runner = recordingPolicy({ transientStartAuthorized: policyFromConfig().transientStartAuthorized });
+    await expect(
+      runConfined({ argv: ['bun', 'install'], cwd: runner.cwd, env: {}, timeoutMs: 5000 }, runner.policy),
+    ).rejects.toThrow(ConfinementUnavailableError);
+    // The recording runner writes argv.log the moment it runs; its absence is "nothing ran".
+    expect(existsSync(join(dirname(runner.policy.systemdRunBin), 'argv.log'))).toBe(false);
+  });
+
+  test('a turn through the supervisor becomes a refusal event, never a spawned turn', async () => {
+    const policy = realHostPolicy();
+    writeFileSync(policy.systemdRunBin, '#!/bin/sh\necho started\nexit 0\n', { mode: 0o755 });
+    const events: Array<{ type: string; text?: string; message?: string }> = [];
+    const proc = spawnAgentProcess(
+      { workspace: tmpdir(), prompt: 'x', mcp: { name: 'x', url: 'http://x/mcp' }, env: {}, timeoutMs: 30_000 },
+      async () => ({ argv: ['/opt/claude'], parseLine: (line: string) => [{ type: 'text' as const, text: line }] }),
+      policy,
+    );
+    for await (const event of proc.events) events.push(event as (typeof events)[number]);
+    expect(events.some(event => event.type === 'text' && event.text === 'started')).toBe(false);
+    expect(
+      events.some(event => event.type === 'error' && (event.message ?? '').includes('confinement refused')),
+    ).toBe(true);
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * ENVFILE — PID 1 reads the per-run file AS ROOT and follows links: never through one
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+describe('the per-run environment file is never written through a link or a foreign directory', () => {
+  function runtime(): string {
+    const dir = mkdtempSync(join(tmpdir(), 'dedalo-envfile-'));
+    scratch.push(dir);
+    return dir;
+  }
+
+  test('the control: a private turns/ directory gets a fresh 0600 file', async () => {
+    const dir = runtime();
+    const path = await writeTurnEnvironmentFile(dir, 'u.service.env', 'A="1"\n');
+    expect(readFileSync(path, 'utf8')).toBe('A="1"\n');
+    // eslint-disable-next-line no-bitwise -- the permission word is the assertion
+    expect(statSync(path).mode & 0o777).toBe(0o600);
+    // eslint-disable-next-line no-bitwise -- the permission word is the assertion
+    expect(statSync(join(dir, 'turns')).mode & 0o077).toBe(0);
+  });
+
+  test('turns/ planted as a symlink is refused, and nothing lands at its target', async () => {
+    const dir = runtime();
+    const elsewhere = runtime();
+    symlinkSync(elsewhere, join(dir, 'turns'));
+    await expect(writeTurnEnvironmentFile(dir, 'u.service.env', 'A="1"\n')).rejects.toThrow(/is a symlink/);
+    expect(readdirSync(elsewhere)).toEqual([]);
+  });
+
+  test('the runtime directory itself as a symlink is refused', async () => {
+    const real = runtime();
+    const link = join(runtime(), 'run');
+    symlinkSync(real, link);
+    await expect(writeTurnEnvironmentFile(link, 'u.service.env', 'A="1"\n')).rejects.toThrow(/is a symlink/);
+    expect(readdirSync(real)).toEqual([]);
+  });
+
+  test('a turns/ directory open beyond this daemon is refused', async () => {
+    const dir = runtime();
+    mkdirSync(join(dir, 'turns'), { mode: 0o755 });
+    chmodSync(join(dir, 'turns'), 0o755);
+    await expect(writeTurnEnvironmentFile(dir, 'u.service.env', 'A="1"\n')).rejects.toThrow(/open beyond/);
+    expect(readdirSync(join(dir, 'turns'))).toEqual([]);
+  });
+
+  test('an existing name — a planted link included — is refused, never written through', async () => {
+    const dir = runtime();
+    mkdirSync(join(dir, 'turns'), { mode: 0o700 });
+    const victim = join(runtime(), 'victim');
+    writeFileSync(victim, 'ORIGINAL');
+    symlinkSync(victim, join(dir, 'turns', 'u.service.env'));
+    await expect(writeTurnEnvironmentFile(dir, 'u.service.env', 'A="1"\n')).rejects.toThrow(
+      ConfinementUnavailableError,
+    );
+    expect(readFileSync(victim, 'utf8')).toBe('ORIGINAL');
+    expect(lstatSync(join(dir, 'turns', 'u.service.env')).isSymbolicLink()).toBe(true);
+  });
+
+  test('a directory owned by another uid is refused', async () => {
+    const dir = runtime();
+    const realGetuid = process.getuid;
+    process.getuid = () => (realGetuid?.() ?? 0) + 1;
+    try {
+      await expect(writeTurnEnvironmentFile(dir, 'u.service.env', 'A="1"\n')).rejects.toThrow(/owned by uid/);
+    } finally {
+      process.getuid = realGetuid;
+    }
   });
 });

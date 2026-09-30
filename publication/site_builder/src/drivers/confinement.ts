@@ -13,12 +13,22 @@
  * and the append handle on the audit trail were all one open() away from text a language
  * model wrote.
  *
- * WHAT THIS DOES. One turn becomes one TRANSIENT SYSTEMD SERVICE, started through
- * `systemd-run --uid=<agent user>` and authorized by the museum's own rendered polkit rule
- * (`render/agent_authorization.ts`). PID 1 — not this daemon — sets the uid, so the turn is
- * a different principal in the kernel's eyes and the daemon's secrets become unreachable
- * rather than merely undocumented. The same call carries the rest of the confinement,
- * because a transient unit accepts every property a unit file does:
+ * CONFINED RUNS ARE REFUSED TODAY (F2, 2026-09-26 audit). The design below asked PID 1 for
+ * the transient unit through a polkit grant of "start" on `<prefix>*.service` — and polkit
+ * is shown a transient unit's name and verb, never the uid it runs as, so on systemd >= 257
+ * that grant let the service user start `<prefix>x.service` AS ROOT. The rendered rule
+ * (`render/agent_authorization.ts`) no longer grants "start", and `confinementProblems()`
+ * derives its first refusal from that same verb list: every confined run is refused up
+ * front, with a 503 naming why, until LEAD-1b's root-rendered per-site units land. The
+ * argv below is kept, and gated, as the shape those units inherit; it is not reachable on a
+ * real host.
+ *
+ * WHAT THIS DID. One turn became one TRANSIENT SYSTEMD SERVICE, started through
+ * `systemd-run --uid=<agent user>` and meant to be authorized by the museum's rendered polkit
+ * rule. PID 1 — not this daemon — sets the uid, so the turn is a different principal in the
+ * kernel's eyes and the daemon's secrets become unreachable rather than merely
+ * undocumented. The same call carries the rest of the confinement, because a transient unit
+ * accepts every property a unit file does:
  *
  *   - THE CAPS, per turn: MemoryMax, CPUQuota, TasksMax and RuntimeMaxSec. The last is the
  *     one that cannot be worked around — the daemon's own timer kills the CLIENT, and a
@@ -37,7 +47,11 @@
  * are readable over D-Bus by any uid on the host (`systemctl show`), so the child's
  * environment is written to a per-turn 0600 file in the daemon's runtime directory and
  * passed as `EnvironmentFile=`; PID 1 reads it as root, and the file is deleted when the
- * turn ends. That is a strictly smaller residence than the `Bun.spawn` environment it
+ * turn ends. PID 1 FOLLOWS A SYMLINK there, as root — so the file is created
+ * `O_CREAT|O_EXCL|O_NOFOLLOW` into a directory proved (lstat) to be a real, private,
+ * daemon-owned one, and anything else is refused with nothing written
+ * (`writeTurnEnvironmentFile`). That refuses a PLANTED link; it cannot bound the daemon's
+ * own uid, which owns the directory — that half is F2's, closed by granting no start. That is a strictly smaller residence than the `Bun.spawn` environment it
  * replaces, which lived in `/proc/<pid>/environ` for the life of the turn.
  *
  * AND WHERE THERE IS NO SYSTEMD — a laptop, a container, this suite — it REFUSES rather
@@ -46,13 +60,14 @@
  * silent fallback: an unconfined turn is either declared or it does not happen.
  */
 
-import { existsSync } from 'node:fs';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { constants as FS, existsSync } from 'node:fs';
+import { lstat, mkdir, open, rm } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { dirname, isAbsolute, join } from 'node:path';
 import { config } from '../config';
 import { ConfinementUnavailableError } from '../errors';
+import { TRANSIENT_START_AUTHORIZED } from '../provision/render/agent_authorization';
 import { CONFINED_ARGV, runBinary, type SpawnResult } from '../util/spawn';
 
 /** The grammar the rendered unit prefix is held to at both ends (see layout.ts). */
@@ -101,6 +116,15 @@ export const EGRESS_DENY: readonly string[] = Object.freeze([
  */
 export interface ConfinementPolicy {
   readonly mode: 'systemd_scope' | 'none';
+  /**
+   * Whether this host's authorization lets the daemon START a transient agent unit.
+   *
+   * A FACT, read off the rendered polkit rule (`TRANSIENT_START_AUTHORIZED`), never a
+   * setting: the rule grants no start (F2 — polkit cannot bind the run-as uid), so on every
+   * real host this is `false` and every confined run is refused. A gate's stand-in runner,
+   * which does start what it is handed, is the only honest `true`.
+   */
+  readonly transientStartAuthorized: boolean;
   /** The uid a turn runs as. */
   readonly agentUser: string;
   /** The name every transient unit of this museum begins with; the polkit grant's scope. */
@@ -122,6 +146,7 @@ export interface ConfinementPolicy {
 export function policyFromConfig(): ConfinementPolicy {
   return {
     mode: config.AGENT_CONFINEMENT,
+    transientStartAuthorized: TRANSIENT_START_AUTHORIZED,
     agentUser: config.AGENT_USER,
     unitPrefix: config.AGENT_UNIT_PREFIX,
     systemdRunBin: config.SYSTEMD_RUN_BIN,
@@ -166,9 +191,25 @@ export function assertTurnConfinementAvailable(policy: ConfinementPolicy = polic
   if (problems.length > 0) throw new ConfinementUnavailableError(problems.join(' '));
 }
 
+/**
+ * THE F2 REFUSAL — first, because no other fix on the host lifts it.
+ *
+ * The rendered polkit rule grants no transient START: polkit sees a transient unit's name
+ * and verb but never the uid it would run as, so a start grant let the service user start
+ * `<prefix>x.service` as root. Without the grant PID 1 would deny `systemd-run` anyway;
+ * refusing here says so at the request, as a 503, instead of failing inside a turn.
+ */
+export const CONFINED_RUNS_DISABLED =
+  `Confined agent runs (AGENT_CONFINEMENT=systemd_scope) are DISABLED until per-site agent ` +
+  `identities land (LEAD-1b: root-rendered units whose User= the daemon cannot choose). The ` +
+  `polkit rule no longer lets this daemon start a transient unit, because polkit cannot see ` +
+  `the uid such a unit runs as — the grant made the daemon root-equivalent (F2). No turn, ` +
+  `build step or git command in a site workspace will run on this host until then.`;
+
 /** Every reason this host cannot run a confined turn, in the order an operator fixes them. */
 export function confinementProblems(policy: ConfinementPolicy): string[] {
   const problems: string[] = [];
+  if (!policy.transientStartAuthorized) problems.push(CONFINED_RUNS_DISABLED);
   if (!policy.agentUser) {
     problems.push(
       `AGENT_CONFINEMENT is 'systemd_scope' but AGENT_USER is empty: there is no uid to run ` +
@@ -241,13 +282,10 @@ export async function confineTurn(
 
   const unitName = `${policy.unitPrefix}${randomUUID()}.service`;
   const runtimeDir = dirname(policy.listenSocket);
-  const turnDir = join(runtimeDir, 'turns');
-  const envFile = join(turnDir, `${unitName}.env`);
-  await mkdir(turnDir, { recursive: true, mode: 0o700 });
   // 0600: PID 1 reads it as root; nothing else on the host may. The agent itself must not
   // read it either — it receives these values as its environment, which is a different
   // thing from being able to re-read them after the daemon has rotated one.
-  await writeFile(envFile, renderEnvironmentFile(opts.env), { encoding: 'utf8', mode: 0o600 });
+  const envFile = await writeTurnEnvironmentFile(runtimeDir, `${unitName}.env`, renderEnvironmentFile(opts.env));
 
   // PID 1 is the wall clock of record. The supervisor's own timer fires first (it is the
   // one that can report a timeout as an event); this is the backstop for the case that
@@ -301,7 +339,7 @@ export async function confineTurn(
     announcement: null,
     stop() {
       // systemd-run's client relays a signal only while it lives; a turn whose client was
-      // killed outright is stopped through PID 1, by the same grant that started it.
+      // killed outright is stopped through PID 1, by the rule's stop grant.
       try {
         const systemctl = join(dirname(policy.systemdRunBin), 'systemctl');
         spawn(systemctl, ['stop', unitName], { stdio: 'ignore' }).unref();
@@ -353,6 +391,75 @@ function publicationApiAllowTokens(policy: ConfinementPolicy): string[] {
   if (/^\d{1,3}(\.\d{1,3}){3}$/.test(bare)) return [`${bare}/32`];
   if (bare.includes(':')) return [`${bare}/128`];
   return [];
+}
+
+/**
+ * WRITE THE PER-TURN ENVIRONMENT FILE — never through a link, never into a directory that is
+ * not this daemon's own and private.
+ *
+ * PID 1 reads `EnvironmentFile=` AS ROOT and follows symlinks: a link where this file lands
+ * would make PID 1 read any KEY=VALUE file on the host into a unit's environment. So:
+ *   - the runtime directory and `turns/` are lstat-proved REAL directories (not links) owned
+ *     by this uid, and `turns/` is closed to group and world (mode & 077 === 0);
+ *   - the file is opened `O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW` — any existing name, a link
+ *     included, is EEXIST/ELOOP rather than a redirect (the name carries a fresh UUID, so a
+ *     legitimate collision does not exist);
+ *   - the handle is asked the inode's owner and link count before a byte is written.
+ * Any failure is a `ConfinementUnavailableError` with nothing written.
+ */
+export async function writeTurnEnvironmentFile(runtimeDir: string, name: string, body: string): Promise<string> {
+  const turnDir = join(runtimeDir, 'turns');
+  const envFile = join(turnDir, name);
+  const refuse = (why: string): never => {
+    throw new ConfinementUnavailableError(
+      `refusing to write the per-run environment file '${envFile}': ${why}. PID 1 reads it as ` +
+        `root and follows links, so it is written only into this daemon's own private ` +
+        `directory, never through a link. Nothing was written and nothing was spawned.`,
+    );
+  };
+  if (name.includes('/') || name.startsWith('.')) refuse('the name is not a plain file name');
+  const uid = process.getuid?.();
+  // One level at a time, each proved BEFORE the next is created inside it: a recursive mkdir
+  // of `turns/` would already have followed a linked runtime directory.
+  for (const [dir, mustBePrivate] of [[runtimeDir, false], [turnDir, true]] as const) {
+    if (dir === runtimeDir) await mkdir(dir, { recursive: true, mode: 0o700 });
+    else {
+      try {
+        await mkdir(dir, { mode: 0o700 });
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+      }
+    }
+    const stats = await lstat(dir);
+    if (stats.isSymbolicLink()) refuse(`'${dir}' is a symlink`);
+    if (!stats.isDirectory()) refuse(`'${dir}' is not a directory`);
+    if (uid !== undefined && stats.uid !== uid) refuse(`'${dir}' is owned by uid ${stats.uid}, not this daemon`);
+    // eslint-disable-next-line no-bitwise -- the permission word is the question
+    if (mustBePrivate && (stats.mode & 0o077) !== 0) {
+      refuse(`'${dir}' is mode ${(stats.mode & 0o777).toString(8)}, open beyond this daemon`);
+    }
+  }
+  let handle: Awaited<ReturnType<typeof open>>;
+  try {
+    // eslint-disable-next-line no-bitwise -- open(2) flags
+    handle = await open(envFile, FS.O_WRONLY | FS.O_CREAT | FS.O_EXCL | FS.O_NOFOLLOW, 0o600);
+  } catch (error) {
+    return refuse(`the name already exists or is a link (${(error as NodeJS.ErrnoException).code ?? 'error'})`);
+  }
+  try {
+    const stats = await handle.stat();
+    if (!stats.isFile() || stats.nlink !== 1 || (uid !== undefined && stats.uid !== uid)) {
+      refuse('the opened inode is not a fresh, single-named file of this daemon');
+    }
+    await handle.writeFile(body, 'utf8');
+    await handle.chmod(0o600);
+  } catch (error) {
+    await handle.close();
+    await rm(envFile, { force: true });
+    throw error;
+  }
+  await handle.close();
+  return envFile;
 }
 
 /**
