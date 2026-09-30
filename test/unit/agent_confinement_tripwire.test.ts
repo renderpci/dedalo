@@ -25,7 +25,9 @@
  *      (`ProtectProc=invisible`, `RestrictSUIDSGID`, `LockPersonality`), beside the
  *      hardening set that was already there — asserted on a real render.
  *   §3 THE AUTHORIZATION. The rendered polkit rule: this museum's service user, this
- *      museum's transient-unit prefix, `manage-units` and three verbs, and nothing else.
+ *      museum's transient-unit prefix, `manage-units`, STOP and KILL — and never START (F2:
+ *      polkit sees no run-as uid for a transient start, so a start grant was root), with
+ *      the daemon's confined runs refused off that same verb list until LEAD-1b.
  *   §4 THE RECORDED DECISION. One agent uid per MUSEUM, not per site — the acceptance the
  *      row required to be written down rather than left as an absence, asserted here so it
  *      cannot be silently reversed in either direction.
@@ -71,6 +73,10 @@ import {
 	MODES,
 	USER_PREFIX,
 } from '../../publication/site_builder/src/provision/layout.ts';
+import {
+	AGENT_UNIT_VERBS,
+	TRANSIENT_START_AUTHORIZED,
+} from '../../publication/site_builder/src/provision/render/agent_authorization.ts';
 import { renderAll } from '../../publication/site_builder/src/provision/render/index.ts';
 import { parseManifest } from '../../publication/site_builder/src/provision/schema.ts';
 import {
@@ -162,7 +168,7 @@ const EXEMPT: Readonly<Record<string, string>> = Object.freeze({
 		'do the thing it exists to do.',
 	'drivers/confinement.ts':
 		"the confinement's OWN control plane: `systemctl stop <this turn's transient unit>`, " +
-		'issued through the same polkit grant that started it, because killing the client that ' +
+		"issued through the polkit rule's stop grant (the rule grants no start — F2), because killing the client that " +
 		'waits on a unit does not stop the unit — and `id -u/-G <AGENT_USER>`, a pinned ' +
 		'root-owned binary asked which uid and groups the agent has, so the trust check can ask ' +
 		'whether the AGENT can change what its own unit executes first. Neither runs anything ' +
@@ -330,24 +336,53 @@ describe('the agent authorization is rendered, scoped and per museum', () => {
 		});
 	});
 
-	test('it grants THIS museum’s service user THIS museum’s transient units, and three verbs', () => {
+	test('it grants THIS museum’s service user THIS museum’s agent units, STOP and KILL only', () => {
 		const body = rule?.body ?? '';
 		expect(body).toContain('org.freedesktop.systemd1.manage-units');
 		expect(body).toContain(`subject.user !== "${layout.identity.user}"`);
 		expect(body).toContain(`unit.indexOf("${layout.agentUnitPrefix}") !== 0`);
 		expect(body).toContain('".service"');
-		for (const verb of ['"start"', '"stop"', '"kill"']) {
-			expect({ verb, present: body.includes(verb) }).toEqual({ verb, present: true });
-		}
-		// The verbs a turn does NOT need, and which would make this grant a way to manage the
-		// host: enabling a unit at boot, or reloading the manager's own configuration.
-		for (const verb of ['"enable"', '"reload-daemon"', '"mask"']) {
+		// The ENTIRE set of verbs answered YES, read off the rendered array — not a substring hunt
+		// a comment could satisfy.
+		const allowed = /var allowed = \[([^\]]*)\];/.exec(body)?.[1];
+		expect(allowed).toBe('"stop", "kill"');
+		// F2. polkit is handed a transient unit's NAME and VERB, never the uid it runs as, so a
+		// "start" grant on `<prefix>*.service` let the service user `systemd-run
+		// --unit=<prefix>x.service --uid=root` on systemd >= 257: root-equivalent. No verb that
+		// creates or starts a unit may appear in the rule at all — code or comment.
+		for (const verb of [
+			'"start"',
+			'"restart"',
+			'"reload-or-restart"',
+			'"enable"',
+			'"reload-daemon"',
+			'"mask"',
+		]) {
 			expect({ verb, present: body.includes(verb) }).toEqual({ verb, present: false });
 		}
 		// Everything unmatched falls through, so this file can only ADD the permission it
 		// names — it can never widen or revoke another rule on the host.
 		expect(body).toContain('polkit.Result.NOT_HANDLED');
 		expect(body).toContain('polkit.Result.YES');
+	});
+
+	test('with no start granted, the daemon refuses confined runs — off the SAME verb list', () => {
+		// The daemon's policy is a fact read off the rule's verbs, so the rule and the refusal
+		// cannot disagree: put "start" back and both this leg and the one above are red.
+		expect([...AGENT_UNIT_VERBS].sort()).toEqual(['kill', 'stop']);
+		expect(TRANSIENT_START_AUTHORIZED).toBe(false);
+		// The wiring, read from CODE (comments stripped). The behaviour — every confined door
+		// answers 503 and spawns nothing — is publication/site_builder/tests/agent_confinement
+		// .test.ts ("F2: …"); this gate cannot import the daemon's config (zod) by design.
+		const code = readFileSync(join(SOURCE_ROOT, 'drivers/confinement.ts'), 'utf8')
+			.split('\n')
+			.map((line) => line.replace(/^\s*(\/\/|\*|\/\*).*$/, ''))
+			.join('\n');
+		expect(code).toContain('transientStartAuthorized: TRANSIENT_START_AUTHORIZED');
+		expect(code).toContain(
+			'if (!policy.transientStartAuthorized) problems.push(CONFINED_RUNS_DISABLED)',
+		);
+		expect(code).toContain('LEAD-1b');
 	});
 
 	test("one museum's grant cannot reach another museum's turns", () => {
@@ -635,7 +670,9 @@ const RAW_FS_EXEMPT: Readonly<Record<string, string>> = Object.freeze({
 	'drivers/confinement.ts':
 		"The per-turn environment file, in the DAEMON'S RUNTIME DIRECTORY (`RuntimeDirectory=`, " +
 		'0700, root-created, outside `SITES_ROOT`). It is written there precisely BECAUSE the ' +
-		'workspace is agent-writable — putting the museum keys in the tree is the defect it avoids.',
+		'workspace is agent-writable — putting the museum keys in the tree is the defect it avoids. ' +
+		'And PID 1 reads it AS ROOT following links, so it is opened O_CREAT|O_EXCL|O_NOFOLLOW into ' +
+		'lstat-proved, daemon-owned, private directories (ENVFILE).',
 	'provision/apply.ts':
 		'THE PROVISIONER, which runs as root before an agent uid exists and CREATES the roots ' +
 		'the rest of this census is measured against. Its writes are an interface (`mkdir`, ' +
@@ -684,6 +721,7 @@ const RAW_FS_EXEMPT: Readonly<Record<string, string>> = Object.freeze({
  */
 const REFUSAL_BY_CONSTRUCTION: Readonly<Record<string, string>> = Object.freeze({
 	'instance/roots.ts': 'O_EXCL',
+	'drivers/confinement.ts': 'FS.O_EXCL | FS.O_NOFOLLOW',
 	'context/agents_md.ts': 'symlink(',
 });
 

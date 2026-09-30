@@ -126,8 +126,9 @@ pure function of it:**
 `src/provision/schema.ts` is that file's grammar, `src/provision/layout.ts` derives every
 name, path, owner, group and mode from it, and `src/provision/render/` turns the result
 into the exact bytes of each artifact — the systemd unit, the daemon's environment file,
-one vhost per site per surface, the polkit rule that lets this museum's daemon start an agent
-turn under the AGENT's uid, and the pairing fragment the paired engine's `.env` receives. Each rendered file carries a hash of its own body on the first line, so a hand
+one vhost per site per surface, the polkit rule that lets this museum's daemon stop and kill its
+agent units (never start one — F2: polkit cannot bind the run-as uid, so confined runs are
+refused until per-site identities land), and the pairing fragment the paired engine's `.env` receives. Each rendered file carries a hash of its own body on the first line, so a hand
 edit is drift the next run reports by name rather than a change that survives until
 someone re-runs the provisioner and silently loses it.
 

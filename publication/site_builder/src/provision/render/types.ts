@@ -61,8 +61,8 @@ import { stamp } from '../hash';
  * (unit.ts, env.ts, sites.ts, nginx.ts, apache.ts, engine_fragment.ts), so a stamp line read
  * off a museum's host names the file in this tree that produced it.
  *
- * `agent_authorization` is the polkit rule that lets the non-root daemon start an agent
- * turn under the AGENT's uid — a host permission, so a host artifact, with the same stamp
+ * `agent_authorization` is the polkit rule that lets the non-root daemon stop and kill its
+ * agent units (never start one — F2, see agent_authorization.ts) — a host permission, so a host artifact, with the same stamp
  * and the same drift story as the unit it stands beside.
  *
  * The list is closed and lives here rather than in each renderer: `renderAll()` must be

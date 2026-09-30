@@ -73,6 +73,14 @@ the DAEMON's own copies and deletes inside a root; they cannot constrain a child
 the daemon spawned. What constrains that child is the uid it runs as, and the fact that
 nothing belonging to another museum is readable by that uid.
 
+**Confined runs are refused today (F2, 2026-09-26 audit).** The transient-unit launch
+(`systemd-run --uid=<agent user>`) needed a polkit grant of `start` on the museum's unit
+prefix, and polkit is shown a transient unit's name and verb, never the uid it runs as: on
+systemd >= 257 that grant let the service user start a prefixed unit as root. The rendered
+rule now grants `stop` and `kill` only, and `confinementProblems()` refuses every confined
+turn, build step and workspace `git` command with a 503 until the per-site identities of
+LEAD-1b (root-rendered units whose `User=` the daemon cannot choose) replace the launch.
+
 **Topology is fixed and is 1:1.** N museums means N Dédalo engines and N site builders,
 paired one to one:
 
