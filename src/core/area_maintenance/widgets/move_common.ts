@@ -10,6 +10,8 @@
  * TS-owned config.ops.transformDefinitionsDir (never the PHP tree).
  */
 
+import { DedaloError } from '../../errors/index.ts';
+import type { Principal } from '../../security/permissions.ts';
 import {
 	engineDenied,
 	failAction,
@@ -96,37 +98,115 @@ function moveWidgetGetValue(widget: string): WidgetHandler {
 /**
  * The OPEN (owned) transform run — dry-run mandatory before an execute.
  *
- * COVERAGE-EXEMPT for execution (coverage plan §5.1; reason registered in
- * engineering/crap_coverage_exempt.json): a zero-branch field rename over
- * `runTransform`'s report. The dry-run law and the transform semantics are gated
- * in test/unit/update_engine.test.ts and the per-transform gates; RUNNING this
- * shell would execute a bulk rewrite of stored records against the shared suite
- * database, which no scratch surface can contain.
+ * A DRY RUN is inline (runDryInline): it writes nothing and holds no lock, and
+ * its report is the response. AN EXECUTE IS A JOB (submitExecuteJob,
+ * OPS-6/PERF-11 r3), never inline. Gate: test/unit/transform_run_native.test.ts
+ * drives both through the real widget door with a fake executor.
  */
 function moveWidgetRun(id: string): WidgetHandler {
-	return async (options): Promise<WidgetResponse> => {
-		const { runTransform } = await import('../../update/transform/engine.ts');
+	return async (options, principal): Promise<WidgetResponse> => {
+		const widget = id as MoveWidgetId;
 		const executor = await executorFor(id);
-		const report = await runTransform(
-			id as import('../../update/transform/definitions.ts').MoveWidgetId,
-			options,
-			executor,
-		);
-		// A refused/failed run throws with the transform's own sentence; a
-		// successful one keeps msg/errors and the diagnostic fields the widget
-		// renders generically (dry_run / counts / sample).
-		if (!report.ok) {
-			failAction(
-				report.errors.length === 0 ? report.msg : `${report.msg} (${report.errors.join('; ')})`,
-			);
-		}
-		return {
-			data: report.ok,
-			msg: report.msg,
-			...(report.errors.length === 0 ? {} : { errors: report.errors }),
-			extend: { dry_run: report.dryRun, counts: report.counts, sample: report.sample },
-		};
+		return options.dry_run === false
+			? submitExecuteJob(widget, options, executor, principal)
+			: runDryInline(widget, options, executor);
 	};
+}
+
+type MoveWidgetId = import('../../update/transform/definitions.ts').MoveWidgetId;
+type TransformExecutor = import('../../update/transform/engine.ts').TransformExecutor;
+type TransformReport = import('../../update/transform/report.ts').TransformReport;
+
+/** A transform report's diagnostic fields, as the widget renders them generically. */
+function reportExtend(report: TransformReport): Record<string, unknown> {
+	return { dry_run: report.dryRun, counts: report.counts, sample: report.sample };
+}
+
+/**
+ * The inline DRY RUN. A refused/failed run throws with the transform's own
+ * sentence; a successful one keeps msg/errors and the diagnostic fields.
+ */
+async function runDryInline(
+	widget: MoveWidgetId,
+	options: Record<string, unknown>,
+	executor: TransformExecutor,
+): Promise<WidgetResponse> {
+	const { runTransform } = await import('../../update/transform/engine.ts');
+	const report = await runTransform(widget, options, executor);
+	if (!report.ok) {
+		failAction(
+			report.errors.length === 0 ? report.msg : `${report.msg} (${report.errors.join('; ')})`,
+		);
+	}
+	return {
+		data: report.ok,
+		msg: report.msg,
+		...(report.errors.length === 0 ? {} : { errors: report.errors }),
+		extend: reportExtend(report),
+	};
+}
+
+/**
+ * The EXECUTE, as a maintenance-lane job. Each file is one lock-holding unit
+ * with the statement ceiling lifted, so the run must be endable: the job's
+ * signal (the operator's stop, a shutdown) cancels the running file and rolls it
+ * back (engine.ts). NO deadline (deadlineMs 0): a clock firing mid-file rolls
+ * back a file whose rerun meets the same clock — update_data_version's reason.
+ * The response is `{pid, pfile}` at once (the widget polls
+ * dd_utils_api:get_process_status); the job's final `data` is the report
+ * `{result, msg, errors, dry_run, counts, sample}`. SINGLE-FLIGHT: a second
+ * execute while one is claimed is refused (`resource.conflict`) before any job
+ * exists; across processes the engine's per-file run lock refuses it.
+ */
+async function submitExecuteJob(
+	widget: MoveWidgetId,
+	options: Record<string, unknown>,
+	executor: TransformExecutor,
+	principal: Principal,
+): Promise<WidgetResponse> {
+	const { claimTransformRun, runTransform } = await import('../../update/transform/engine.ts');
+	const release = claimTransformRun();
+	if (release === null) {
+		throw new DedaloError('resource.conflict', {
+			message: `${widget} refused: another move_* transform is running in this process`,
+			publicMessage: 'Another move_* transform is running',
+		});
+	}
+	const { mediaJobs } = await import('../../media/jobs.ts');
+	try {
+		const record = mediaJobs.submit(
+			widget,
+			async ({ signal }) => {
+				const report = await runTransform(widget, options, executor, { signal });
+				return {
+					result: report.ok,
+					msg: report.msg,
+					errors: report.errors,
+					...reportExtend(report),
+				};
+			},
+			{
+				// Operator work on stored data: the maintenance lane (PERF-11).
+				lane: 'maintenance',
+				deadlineMs: 0,
+				// The report samples name records: the status stream is owner-scoped.
+				userId: principal.userId,
+				// The claim is freed on the job's FIRST terminal transition: for a
+				// started job that is when its worker SETTLES (a stop included — its
+				// file already rolled back), for one stopped while still queued it is
+				// at once (its worker never runs). Idempotent.
+				onTerminal: release,
+			},
+		);
+		return {
+			data: true,
+			msg: `OK. Running ${widget} ${process.pid}`,
+			extend: { pid: process.pid, pfile: `${record.id}.json`, dry_run: false },
+		};
+	} catch (error) {
+		release();
+		throw error;
+	}
 }
 
 /**
@@ -144,9 +224,10 @@ export function buildMoveWidget(id: string, spec: WidgetSpec): WidgetModule {
 				moveWidgetRun(id),
 			),
 		},
-		// A bulk transform of stored records (incl. its in-transaction
-		// INSERT…SELECT): maintenance (PERF-11). Each executed definition file is
-		// ONE atomic, lock-retried unit (engine.ts runDefinitionFile), so the lane's
+		// A bulk transform of stored records: maintenance (PERF-11). The inline
+		// DRY RUN reads every row under this door scope; an EXECUTE is a detached
+		// job whose files each declare their own unit (engine.ts
+		// runDefinitionFile — atomic, lock-retried, abortable), so the lane's
 		// lock-wait bound rolls a file back whole — it never splits one.
 		unboundedActions: [id],
 		getValue: moveWidgetGetValue(id),

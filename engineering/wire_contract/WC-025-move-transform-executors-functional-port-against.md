@@ -50,3 +50,9 @@
   + counter drop, cleaned up). portalize/locators EXECUTE against live sections
   is an operator drill on a scratch instance (ledgered — no automated surface
   mutates live section data).
+
+## Addendum 2026-09-30 — the EXECUTE is a job
+
+The EXECUTE (`dry_run: false`) no longer answers the report inline: it answers `{pid, pfile}`
+and the report is the job's final `data`; it is stoppable and single-flight. See
+`WC-2026-09-30-move-transform-execute-job`. The dry run is unchanged.

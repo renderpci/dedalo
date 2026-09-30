@@ -449,6 +449,12 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-27-bulk-revert-undo-log`.
 
+- **A move_* data transform can be stopped, and only one runs at a time.**
+
+    Running a move transform for real (Move TLD, Move locator, Move to portal, Move to table, Move lang with `dry_run: false`) used to happen inside the web request. Nothing could stop it except restarting the server. It kept every record it had changed locked until the end of each definition file. If it was sent again it waited behind itself and then reported a failure while the first run carried on unseen. Now the transform runs as a background process that answers at once, reports its progress in the maintenance panel and has no time limit. Stopping it cancels the definition file it is working on and undoes that file completely; the files after it are reported as not run. A second transform started while one is running is refused ("Another move_* transform is running") instead of waiting. A dry run is unchanged: it still answers directly with its report.
+
+    Wire contract: `WC-2026-09-30-move-transform-execute-job`.
+
 - **A site builder turn whose egress gate fails to close now still ends, instead of leaving the session running forever.**
 
     When the daemon could not remove a turn's per-run egress directory (for example, the host refused the unlink), the turn's remaining cleanup was skipped: the driver's MCP configuration stayed in the workspace and the session never left the running state. Each cleanup step now runs on its own. The turn ends normally, and the failure is written as an `[egress]` line in the session log. The same holds for a build or git step: its gate failing to close no longer replaces the step's own result, and the `[egress]` line goes to the build log. A run refused after its gate opened (for example, an environment value with a control character) now reports that refusal, not the error from closing the gate.
@@ -619,7 +625,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 60 entries"
+??? note "Wire contract — 61 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -679,6 +685,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-30-backup-part-promotion`
     - `WC-2026-09-30-db-typed-503`
     - `WC-2026-09-30-guarded-text-pinned-typed-transport`
+    - `WC-2026-09-30-move-transform-execute-job`
     - `WC-2026-09-30-update-engine-atomic`
     - `WC-2026-09-30-update-manifest-local-origin-refusal`
 

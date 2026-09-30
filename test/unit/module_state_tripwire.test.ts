@@ -132,6 +132,10 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// two concurrent ontology imports must never interleave DELETEs — ops
 	// state, never request identity; set/cleared around one admin operation.
 	'core/ontology/ontology_update.ts:updateInFlight',
+	// move_* transform EXECUTE single-flight claim (OPS-6/PERF-11 r3): taken by
+	// the widget door before the job is submitted, freed when its worker settles
+	// (or the job ends unstarted) — ops state, never request identity.
+	'core/update/transform/engine.ts:transformRunClaimed',
 	// Pool-saturation gauge (WS-E observability): process-wide slot accounting
 	// decremented/incremented around every pool acquire — ops state, never
 	// request identity; read by the counters endpoint.

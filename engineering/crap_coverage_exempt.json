@@ -110,12 +110,6 @@
 			"reason": "The static body catalog plus listDefinitionFiles. Its `?? ''` fallback is UNREACHABLE by construction (all five buildMoveWidget call sites pass keys of MOVE_WIDGET_BODIES — ledgered as D20), and the registry-consistency claim it DOES carry is gated in move_widget_registry_native.test.ts, which asserts in both directions that every registered id is a switch arm and a body key."
 		},
 		{
-			"file": "src/core/area_maintenance/widgets/move_common.ts",
-			"symbol": "moveWidgetRun",
-			"class": "unrunnable-destructive",
-			"reason": "A zero-branch field rename over runTransform's report; the dry-run law and the transform semantics are gated in update_engine.test.ts and the per-transform gates. Running this shell executes a bulk rewrite of stored records against the shared database."
-		},
-		{
 			"file": "src/core/area_maintenance/widgets/publication_api.ts",
 			"symbol": "buildPublicationApiValue",
 			"class": "NOT-EXEMPT-RESCUED",

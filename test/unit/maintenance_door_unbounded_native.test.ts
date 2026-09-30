@@ -151,6 +151,26 @@ async function holdLock(statement, table) {
 	// caller's await, which would then wait out the whole hold before acting.
 	return { done };
 }
+/**
+ * A move_* EXECUTE through the door is a maintenance JOB (OPS-6/PERF-11 r3): the
+ * door answers {pid, pfile} at once; the report is the job's final data. Resolves
+ * to the report like the pre-job inline response, and rejects the same way a
+ * failed report used to (a thrown maintenance.action_failed).
+ */
+async function runExecute(source, options) {
+	const response = await dispatchWidgetRequest(ROOT, source, options);
+	const id = String(response.extend?.pfile ?? '').slice(0, -'.json'.length);
+	const deadline = Date.now() + 60000;
+	let status = mediaJobs.status(id);
+	while (status !== null && (status.status === 'queued' || status.status === 'running') && Date.now() < deadline) {
+		await Bun.sleep(50);
+		status = mediaJobs.status(id);
+	}
+	if (status?.status !== 'done' || status.data?.result !== true) {
+		throw Object.assign(new Error(\`\${source.model} job \${id} ended \${status?.status}: \${status?.data?.msg} \${JSON.stringify(status?.data?.errors ?? status?.errors)}\`), { code: 'maintenance.action_failed' });
+	}
+	return { msg: status.data.msg, ...(status.data.errors.length === 0 ? {} : { errors: status.data.errors }) };
+}
 function describe(e) {
 	return { code: e?.code, errno: e?.errno ?? e?.cause?.errno, message: String(e?.message ?? e).slice(0, 400),
 		publicMessage: e?.publicMessage };
@@ -172,7 +192,7 @@ const results = {};
 {
 	const { done: held } = await holdLock('LOCK TABLE ${TARGET} IN SHARE MODE', '${TARGET}');
 	try {
-		const response = await dispatchWidgetRequest(ROOT,
+		const response = await runExecute(
 			{ model: 'move_to_table', action: 'move_to_table' },
 			{ files_selected: [${JSON.stringify(DEFINITION_FILE)}], dry_run: false });
 		results.move_to_table = { ok: true, errors: response.errors ?? [], value: response.msg };
@@ -337,7 +357,7 @@ async function sawWaiter(table, mode) {
 		"(SELECT count(*)::int FROM matrix_time_machine WHERE section_tipo = '${MOVE_OLD}') AS tm_old, " +
 		"(SELECT count(*)::int FROM matrix_time_machine WHERE section_tipo = '${MOVE_NEW}') AS tm_new", []))[0];
 	const startedAt = performance.now();
-	const action = dispatchWidgetRequest(ROOT, { model: 'move_tld', action: 'move_tld' },
+	const action = runExecute({ model: 'move_tld', action: 'move_tld' },
 		{ files_selected: [${JSON.stringify(MOVE_FILE)}], dry_run: false })
 		.then((response) => ({ ok: true, errors: response.errors ?? [], value: response.msg }), (e) => ({ ok: false, error: describe(e) }));
 	let waited = false;

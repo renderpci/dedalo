@@ -61,6 +61,21 @@ mock.module(DEFINITIONS_PATH, () => ({
 	},
 }));
 
+/**
+ * The DOOR legs drive move_tld through the real widget door; its executor
+ * (`executeChangesInTipos`, resolved lazily by move_common.executorFor) is
+ * replaced by whatever the leg sets here — a fake that writes the scratch table.
+ */
+type DoorExecutor = (items: unknown, recorder: TransformRecorder) => Promise<void>;
+let doorExecutor: DoorExecutor = async () => {};
+const TIPOS_PATH = '../../src/core/update/transform/tipos.ts';
+const REAL_TIPOS = await import(TIPOS_PATH);
+mock.module(TIPOS_PATH, () => ({
+	...REAL_TIPOS,
+	executeChangesInTipos: (items: unknown, recorder: TransformRecorder) =>
+		doorExecutor(items, recorder),
+}));
+
 // engine.ts must be imported AFTER the mock is installed, so its static
 // bindings resolve to the injected catalog and never touch a real dir.
 const { runTransform } = await import('../../src/core/update/transform/engine.ts');
@@ -78,6 +93,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
 	mock.module(DEFINITIONS_PATH, () => REAL_DEFINITIONS);
+	mock.module(TIPOS_PATH, () => REAL_TIPOS);
 	mock.restore();
 	await sql.unsafe(`DROP TABLE IF EXISTS "${SCRATCH}"`, []);
 });
@@ -498,5 +514,357 @@ describe('runTransform execute: each definition file applies whole or not at all
 		});
 		expect(seen?.app).toStartWith('dedalo_maintenance:');
 		expect(seen?.xid).not.toBeNull();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// AN EXECUTE IS STOPPABLE AND SINGLE-FLIGHT (OPS-6/PERF-11 r3)
+// ---------------------------------------------------------------------------
+
+describe('runTransform execute: a stop rolls the running file back; a concurrent run is refused', () => {
+	/** A promise the test awaits until the executor is INSIDE file n=1's unit. */
+	function deferred(): { promise: Promise<void>; resolve: () => void } {
+		let resolve: () => void = () => {};
+		const promise = new Promise<void>((done) => {
+			resolve = done;
+		});
+		return { promise, resolve };
+	}
+
+	/**
+	 * Writes one tagged row per file, then — on file n=1 — sits in an 8s server-side
+	 * sleep (the stand-in for a long rewrite statement). Only a cancel of the
+	 * RUNNING statement ends it early; an abort checked between files would not.
+	 */
+	function sleepingExecutor(entered: () => void) {
+		const ran: number[] = [];
+		const executor = async (items: unknown, recorder: TransformRecorder): Promise<void> => {
+			const n = (items as { n: number }).n;
+			ran.push(n);
+			await sql.unsafe(`INSERT INTO "${SCRATCH}" (tag) VALUES ($1)`, [`n${n}`]);
+			recorder.record({ op: 'insert', table: SCRATCH, target: `n${n}` });
+			if (n === 1) {
+				entered();
+				await sql.unsafe('SELECT pg_sleep(8)', []);
+			}
+		};
+		return { executor, ran };
+	}
+
+	async function tags(): Promise<string[]> {
+		const rows = (await sql.unsafe(`SELECT tag FROM "${SCRATCH}" ORDER BY id`, [])) as {
+			tag: string;
+		}[];
+		return rows.map((row) => row.tag);
+	}
+
+	afterEach(async () => {
+		doorExecutor = async () => {};
+		await sql.unsafe(`DELETE FROM "${SCRATCH}"`, []);
+	});
+
+	test('a stop mid-file cancels its running statement, rolls that file back, and runs no later file', async () => {
+		CATALOG = { 'a.json': { n: 1 }, 'b.json': { n: 2 } };
+		const { jobAbortReason } = await import('../../src/core/media/jobs.ts');
+		const inside = deferred();
+		const { executor, ran } = sleepingExecutor(inside.resolve);
+		const controller = new AbortController();
+		const running = runTransform(
+			'move_tld',
+			{ dry_run: false, files_selected: ['a.json', 'b.json'] },
+			executor,
+			{ signal: controller.signal },
+		);
+		await inside.promise;
+		const stoppedAt = performance.now();
+		controller.abort(jobAbortReason({ cause: 'stop' }));
+		const report = await running;
+		// The 8s statement was CANCELLED, not waited out.
+		expect(performance.now() - stoppedAt).toBeLessThan(5000);
+		// File a's INSERT is gone (rolled back); file b never ran.
+		expect(await tags()).toEqual([]);
+		expect(ran).toEqual([1]);
+		expect(report.counts).toEqual({});
+		expect(report.errors).toEqual([
+			'a.json: aborted (stop) — rolled back: nothing of this file was applied',
+			'b.json: not run — the transform was aborted (stop) before it started',
+		]);
+		expect(report.ok).toBe(false);
+	}, 20000);
+
+	test("an abort that lands AFTER the file's last statement (before its COMMIT) still rolls the file back", async () => {
+		CATALOG = { 'a.json': { n: 4 } };
+		const controller = new AbortController();
+		const report = await runTransform(
+			'move_tld',
+			{ dry_run: false, files_selected: ['a.json'] },
+			async (_items, recorder) => {
+				await sql.unsafe(`INSERT INTO "${SCRATCH}" (tag) VALUES ('late')`, []);
+				recorder.record({ op: 'insert', table: SCRATCH, target: 'late' });
+				// No statement follows: nothing is running for the abort to cancel.
+				controller.abort();
+			},
+			{ signal: controller.signal },
+		);
+		expect(await tags()).toEqual([]);
+		expect(report.counts).toEqual({});
+		expect(report.errors).toEqual([
+			'a.json: aborted (aborted) — rolled back: nothing of this file was applied',
+		]);
+	});
+
+	test('an abort before the first file runs nothing', async () => {
+		CATALOG = { 'a.json': { n: 2 }, 'b.json': { n: 3 } };
+		const { executor, ran } = sleepingExecutor(() => {});
+		const controller = new AbortController();
+		controller.abort();
+		const report = await runTransform(
+			'move_tld',
+			{ dry_run: false, files_selected: ['a.json', 'b.json'] },
+			executor,
+			{ signal: controller.signal },
+		);
+		expect(ran).toEqual([]);
+		expect(await tags()).toEqual([]);
+		expect(report.errors).toEqual([
+			'a.json: not run — the transform was aborted (aborted) before it started',
+			'b.json: not run — the transform was aborted (aborted) before it started',
+		]);
+	});
+
+	test('a transform holding the run lock elsewhere refuses the file AT ONCE (no lock-wait retries) and stops the run', async () => {
+		const { TRANSFORM_RUN_LOCK_KEY } = await import('../../src/core/update/transform/engine.ts');
+		CATALOG = { 'a.json': { n: 2 }, 'b.json': { n: 3 } };
+		const { executor, ran } = sleepingExecutor(() => {});
+		const holder = await sql.reserve();
+		try {
+			await holder.unsafe('BEGIN', []);
+			await holder.unsafe('SELECT pg_advisory_xact_lock($1::bigint)', [TRANSFORM_RUN_LOCK_KEY]);
+			const startedAt = performance.now();
+			const report = await runTransform(
+				'move_tld',
+				{ dry_run: false, files_selected: ['a.json', 'b.json'] },
+				executor,
+			);
+			// Refused, never queued: the 1/2/4/8s lock retries would take > 15s.
+			expect(performance.now() - startedAt).toBeLessThan(3000);
+			expect(ran).toEqual([]);
+			expect(await tags()).toEqual([]);
+			expect(report.errors).toEqual([
+				'a.json: refused — another move_* transform is running; nothing of this file was applied',
+				'b.json: not run — the transform was refused before it started',
+			]);
+		} finally {
+			await holder.unsafe('ROLLBACK', []);
+			holder.release();
+		}
+		// Positive control: with the lock free the same run applies.
+		const free = await runTransform(
+			'move_tld',
+			{ dry_run: false, files_selected: ['a.json', 'b.json'] },
+			executor,
+		);
+		expect(free.errors).toEqual([]);
+		expect(await tags()).toEqual(['n2', 'n3']);
+	}, 20000);
+
+	test('THE DOOR: an execute is a stoppable maintenance job (no deadline, owned); a second execute is refused while it runs; the stop rolls the file back and frees the door', async () => {
+		const { dispatchWidgetRequest } = await import(
+			'../../src/core/area_maintenance/widgets/registry.ts'
+		);
+		const { mediaJobs } = await import('../../src/core/media/jobs.ts');
+		const ROOT = { userId: -1, isGlobalAdmin: true, isDeveloper: true } as never;
+		const SOURCE = { model: 'move_tld', action: 'move_tld' };
+		CATALOG = { 'a.json': { n: 1 }, 'b.json': { n: 2 } };
+		const inside = deferred();
+		const sleeping = sleepingExecutor(inside.resolve);
+		doorExecutor = sleeping.executor;
+
+		const submittedAt = performance.now();
+		const response = await dispatchWidgetRequest(ROOT, SOURCE, {
+			dry_run: false,
+			files_selected: ['a.json', 'b.json'],
+		});
+		// Answered at once — the run is NOT inline in the request.
+		expect(performance.now() - submittedAt).toBeLessThan(3000);
+		const pfile = String(response.extend?.pfile ?? '');
+		expect(pfile, JSON.stringify(response)).toEndWith('.json');
+		expect(response.extend?.pid).toBe(process.pid);
+		const jobId = pfile.slice(0, -'.json'.length);
+		const queued = mediaJobs.status(jobId);
+		expect(queued?.lane).toBe('maintenance');
+		expect(queued?.deadline_ms).toBe(0);
+		expect(queued?.user_id).toBe(-1);
+
+		await inside.promise;
+		// A resubmit while the first runs is REFUSED, not queued behind its locks.
+		let refusal: unknown = null;
+		await dispatchWidgetRequest(ROOT, SOURCE, {
+			dry_run: false,
+			files_selected: ['b.json'],
+		}).catch((error) => {
+			refusal = error;
+		});
+		expect((refusal as { code?: string } | null)?.code).toBe('resource.conflict');
+		expect(sleeping.ran).toEqual([1]);
+
+		const stoppedAt = performance.now();
+		expect(mediaJobs.stop(jobId)).toBe(true);
+		let record = mediaJobs.status(jobId);
+		const deadline = Date.now() + 15000;
+		while (record !== null && (record.status === 'queued' || record.status === 'running')) {
+			if (Date.now() > deadline) break;
+			await Bun.sleep(25);
+			record = mediaJobs.status(jobId);
+		}
+		expect(performance.now() - stoppedAt).toBeLessThan(5000);
+		expect(record?.status).toBe('stopped');
+		expect(await tags()).toEqual([]);
+		expect(sleeping.ran).toEqual([1]);
+		const data = record?.data as { result?: boolean; errors?: string[]; dry_run?: boolean };
+		expect(data?.result).toBe(false);
+		expect(data?.dry_run).toBe(false);
+		expect(data?.errors).toEqual([
+			'a.json: aborted (stop) — rolled back: nothing of this file was applied',
+			'b.json: not run — the transform was aborted (stop) before it started',
+		]);
+
+		// The door is free again: the next execute is accepted and applies.
+		doorExecutor = sleepingExecutor(() => {}).executor;
+		const again = await dispatchWidgetRequest(ROOT, SOURCE, {
+			dry_run: false,
+			files_selected: ['b.json'],
+		});
+		const againId = String(again.extend?.pfile ?? '').slice(0, -'.json'.length);
+		let finished = mediaJobs.status(againId);
+		const doneBy = Date.now() + 15000;
+		while (finished !== null && (finished.status === 'queued' || finished.status === 'running')) {
+			if (Date.now() > doneBy) break;
+			await Bun.sleep(25);
+			finished = mediaJobs.status(againId);
+		}
+		expect(finished?.status).toBe('done');
+		expect((finished?.data as { result?: boolean })?.result).toBe(true);
+		expect(await tags()).toEqual(['n2']);
+	}, 40000);
+
+	test('THE DOOR: an execute stopped while still QUEUED for a maintenance slot frees the door (its worker never ran)', async () => {
+		const { dispatchWidgetRequest } = await import(
+			'../../src/core/area_maintenance/widgets/registry.ts'
+		);
+		const { mediaJobs } = await import('../../src/core/media/jobs.ts');
+		const ROOT = { userId: -1, isGlobalAdmin: true, isDeveloper: true } as never;
+		const SOURCE = { model: 'move_tld', action: 'move_tld' };
+		CATALOG = { 'a.json': { n: 2 } };
+		const sleeping = sleepingExecutor(() => {});
+		doorExecutor = sleeping.executor;
+		// Occupy every maintenance slot, so the execute's job waits in the queue.
+		const gate = deferred();
+		const blockers = Array.from({ length: mediaJobs.laneDepths().maintenance.max }, () =>
+			mediaJobs.submit('zz_transform_blocker', async () => gate.promise, { lane: 'maintenance' }),
+		);
+		const waitTerminal = async (id: string) => {
+			let record = mediaJobs.status(id);
+			const deadline = Date.now() + 15000;
+			while (record !== null && (record.status === 'queued' || record.status === 'running')) {
+				if (Date.now() > deadline) break;
+				await Bun.sleep(25);
+				record = mediaJobs.status(id);
+			}
+			return record;
+		};
+		try {
+			const queued = await dispatchWidgetRequest(ROOT, SOURCE, {
+				dry_run: false,
+				files_selected: ['a.json'],
+			});
+			const queuedId = String(queued.extend?.pfile ?? '').slice(0, -'.json'.length);
+			await Bun.sleep(50);
+			expect(mediaJobs.status(queuedId)?.status).toBe('queued');
+			expect(mediaJobs.stop(queuedId)).toBe(true);
+			expect((await waitTerminal(queuedId))?.status).toBe('stopped');
+			expect(sleeping.ran).toEqual([]);
+			// The claim went with it: the next execute is ACCEPTED (it queues too).
+			const next = await dispatchWidgetRequest(ROOT, SOURCE, {
+				dry_run: false,
+				files_selected: ['a.json'],
+			});
+			const nextId = String(next.extend?.pfile ?? '').slice(0, -'.json'.length);
+			gate.resolve();
+			expect((await waitTerminal(nextId))?.status).toBe('done');
+			expect(await tags()).toEqual(['n2']);
+		} finally {
+			gate.resolve();
+			for (const blocker of blockers) await waitTerminal(blocker.id);
+		}
+	}, 40000);
+
+	test('THE DOOR: a job that could not even be submitted frees the door (the refusal reaches the caller)', async () => {
+		const { dispatchWidgetRequest } = await import(
+			'../../src/core/area_maintenance/widgets/registry.ts'
+		);
+		const { mkdtempSync, rmSync } = await import('node:fs');
+		const { tmpdir } = await import('node:os');
+		const { join } = await import('node:path');
+		const ROOT = { userId: -1, isGlobalAdmin: true, isDeveloper: true } as never;
+		const SOURCE = { model: 'move_tld', action: 'move_tld' };
+		CATALOG = { 'a.json': { n: 2 } };
+		doorExecutor = sleepingExecutor(() => {}).executor;
+		// An UNMARKED processes dir under the armed seam: submit refuses before
+		// the job exists (media.invalid_path) — so no terminal callback ever fires.
+		const unmarked = mkdtempSync(join(tmpdir(), 'dedalo-transform-unmarked-'));
+		const previous = process.env.DEDALO_MEDIA_PROCESSES_DIR;
+		let refusal: unknown = null;
+		try {
+			process.env.DEDALO_MEDIA_PROCESSES_DIR = unmarked;
+			await dispatchWidgetRequest(ROOT, SOURCE, {
+				dry_run: false,
+				files_selected: ['a.json'],
+			}).catch((error) => {
+				refusal = error;
+			});
+		} finally {
+			if (previous === undefined) delete process.env.DEDALO_MEDIA_PROCESSES_DIR;
+			else process.env.DEDALO_MEDIA_PROCESSES_DIR = previous;
+			rmSync(unmarked, { recursive: true, force: true });
+		}
+		expect((refusal as { code?: string } | null)?.code).toBe('media.invalid_path');
+		// The claim was released: the next execute is accepted.
+		const next = await dispatchWidgetRequest(ROOT, SOURCE, {
+			dry_run: false,
+			files_selected: ['a.json'],
+		});
+		const { mediaJobs } = await import('../../src/core/media/jobs.ts');
+		const nextId = String(next.extend?.pfile ?? '').slice(0, -'.json'.length);
+		let record = mediaJobs.status(nextId);
+		const deadline = Date.now() + 15000;
+		while (record !== null && (record.status === 'queued' || record.status === 'running')) {
+			if (Date.now() > deadline) break;
+			await Bun.sleep(25);
+			record = mediaJobs.status(nextId);
+		}
+		expect(record?.status).toBe('done');
+	}, 30000);
+
+	test('THE DOOR: a DRY RUN stays an inline report (writes nothing, holds no claim)', async () => {
+		const { dispatchWidgetRequest } = await import(
+			'../../src/core/area_maintenance/widgets/registry.ts'
+		);
+		const ROOT = { userId: -1, isGlobalAdmin: true, isDeveloper: true } as never;
+		CATALOG = { 'a.json': { n: 2 } };
+		const { executor, ran } = sleepingExecutor(() => {});
+		doorExecutor = async (items, recorder) => {
+			if (recorder.dryRun) ran.push((items as { n: number }).n);
+			else await executor(items, recorder);
+		};
+		const response = await dispatchWidgetRequest(
+			ROOT,
+			{ model: 'move_tld', action: 'move_tld' },
+			{ files_selected: ['a.json'] },
+		);
+		expect(response.extend?.dry_run).toBe(true);
+		expect(response.extend?.pfile).toBeUndefined();
+		expect(ran).toEqual([2]);
+		expect(await tags()).toEqual([]);
 	});
 });

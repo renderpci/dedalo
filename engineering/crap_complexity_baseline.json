@@ -4,10 +4,10 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 577,
-		"functions": 6431,
-		"functionsOverCap": 685,
-		"filesOverCap": 267
+		"files": 578,
+		"functions": 6479,
+		"functionsOverCap": 684,
+		"filesOverCap": 266
 	},
 	"ledger": [
 		{
@@ -61,6 +61,11 @@
 			"generated": "2026-09-30",
 			"functionsOverCap": 685,
 			"filesOverCap": 267
+		},
+		{
+			"generated": "2026-09-30",
+			"functionsOverCap": 684,
+			"filesOverCap": 266
 		}
 	],
 	"files": {
@@ -323,7 +328,6 @@
 		"src/core/update/code_build_plan.ts": 7,
 		"src/core/update/code_download.ts": 7,
 		"src/core/update/transform/definitions.ts": 9,
-		"src/core/update/transform/engine.ts": 8,
 		"src/core/update/transform/lang.ts": 16,
 		"src/core/update/transform/locator_rewrite.ts": 11,
 		"src/core/update/transform/locators.ts": 15,
