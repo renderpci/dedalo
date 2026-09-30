@@ -111,5 +111,6 @@ src/core/update/install_stamp.json
 dev/
 dev_tools/
 
-# ontology recovery-file output (generated locally by the ontology tools)
-install/import/ontology/*/recovery/
+# old ontology default path used to generate ontology and recovery files (deprecated)
+# new default path is out of the dedalo folder: /srv/dedalo/ontology
+install/import/ontology/*
