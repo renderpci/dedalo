@@ -53,6 +53,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { z } from 'zod';
+import { hostProblem, parseHostList } from './drivers/network_profile';
 import { parseEnvFile } from './env_file';
 import {
   DRIVER_IDS,
@@ -75,6 +76,16 @@ const PACKAGE_DIR = resolve(import.meta.dir, '..');
  * `resetInstance()` and every publish `rm -rf` operate on.
  */
 let ENV_FILE_DIR = PACKAGE_DIR;
+
+/** A comma-separated list of egress HOSTNAMES, held to the gate's own grammar at boot. */
+function egressHostList(key: string) {
+  return z.string().superRefine((value, ctx) => {
+    for (const host of parseHostList(value)) {
+      const problem = hostProblem(host);
+      if (problem) ctx.addIssue({ code: 'custom', message: `${key}: ${problem}` });
+    }
+  });
+}
 
 // Absolute or resolved against the env file's directory, once, so nothing downstream ever
 // sees a relative root.
@@ -215,8 +226,8 @@ const envSchema = z.object({
    * this daemon's own or a unit of its own.
    *
    * `systemd_scope` runs each turn as a TRANSIENT systemd service under AGENT_USER, with
-   * per-turn memory/CPU/task/wall-clock caps and an egress policy the kernel enforces
-   * (src/drivers/confinement.ts). It is the default because the unsafe direction must be
+   * per-turn memory/CPU/task/wall-clock caps, in a private network namespace whose one way
+   * out is the daemon's hostname-only egress gate (src/drivers/confinement.ts). It is the default because the unsafe direction must be
    * the one an operator asks for, and it is what `render/env.ts` writes on every
    * provisioned host.
    *
@@ -238,14 +249,35 @@ const envSchema = z.object({
    */
   SYSTEMD_RUN_BIN: z.string().default('/usr/bin/systemd-run'),
   /**
-   * EXTRA destinations an agent turn may reach, as systemd `IPAddressAllow=` tokens
-   * (comma-separated: '10.4.0.7/32', 'localhost'). The turn already denies the host's own
-   * loopback and every private range — that is where the engine, the databases and the
-   * other museums live — while allowing the public internet the model provider is on. A
-   * museum whose Publication API answers on a private address states it here; the address
-   * derivable from PUBLICATION_API_URL is added automatically.
+   * RETIRED — and a LOUD refusal rather than a silently ignored key (LEAD-1).
+   *
+   * It took systemd `IPAddressAllow=` tokens (IP ranges, `localhost`) that re-opened what a
+   * deny list claimed to close — and under systemd's ALLOW-WINS filter every one of them
+   * did. A confined run now lives in a private network namespace whose only way out is the
+   * daemon's egress gate, which speaks HOSTNAMES: AGENT_PROVIDER_HOSTS for a turn's model
+   * provider, BUILD_REGISTRY_HOSTS for a build's package registry. A museum whose env still
+   * states this key is told so at boot, with the replacements named; an empty leftover is
+   * harmless and accepted.
    */
-  AGENT_EGRESS_ALLOW: z.string().default(''),
+  AGENT_EGRESS_ALLOW: z
+    .string()
+    .refine(value => value.trim() === '', {
+      message:
+        'AGENT_EGRESS_ALLOW is retired: an agent run no longer reaches IP ranges at all. Egress is ' +
+        'by HOSTNAME through the daemon gate — name a turn’s model provider in AGENT_PROVIDER_HOSTS ' +
+        'and a build’s package registry in BUILD_REGISTRY_HOSTS (comma-separated DNS names), and ' +
+        'remove AGENT_EGRESS_ALLOW. Loopback and LAN destinations are not reachable by design.',
+    })
+    .default(''),
+  /**
+   * The model provider host(s) an opencode/pi turn may reach through the egress gate
+   * (comma-separated DNS names, port 443 only). Claude Code's host is derived (api.anthropic.com)
+   * and needs no entry. Empty = an opencode/pi turn is REFUSED with this key named, because it
+   * could reach nothing. Never an IP literal, `localhost` or a wildcard.
+   */
+  AGENT_PROVIDER_HOSTS: egressHostList('AGENT_PROVIDER_HOSTS').default(''),
+  /** The package registry host(s) a build may reach through the egress gate. */
+  BUILD_REGISTRY_HOSTS: egressHostList('BUILD_REGISTRY_HOSTS').default('registry.npmjs.org'),
   // The per-TURN share of the host, enforced by the kernel on the transient unit. Separate
   // from the daemon's own (instance.json `resources`): that one caps the museum, these cap
   // one agent run, and a runaway turn must not be able to spend the museum's whole budget.

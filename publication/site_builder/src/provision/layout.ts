@@ -740,6 +740,13 @@ export interface ManifestAgent {
   readonly driver: AgentDriverId;
   /** Only the drivers this museum has installed, pinned by ABSOLUTE path. */
   readonly bins?: Readonly<Partial<Record<AgentDriverId, string>>>;
+  /**
+   * The model provider HOSTNAMES an opencode/pi turn may reach through the egress gate
+   * (rendered as AGENT_PROVIDER_HOSTS). Claude Code's is derived and needs no entry.
+   */
+  readonly provider_hosts?: readonly string[];
+  /** The package registry HOSTNAMES a build may reach (BUILD_REGISTRY_HOSTS). */
+  readonly registry_hosts?: readonly string[];
 }
 
 /** The per-museum caps. Every field is optional and NONE has a default — see LIMIT_ENV. */
@@ -1592,6 +1599,12 @@ function buildEnvVars(
     if (!bin) continue;
     env[DRIVER_BIN_ENV[driver as AgentDriverId]] = absoluteRoot(`agent.bins.${driver}`, bin);
   }
+
+  // EGRESS HOSTNAMES, only when declared: the daemon's defaults (Claude Code's own host, the
+  // npm registry) are the right answer for a museum that states nothing, and a hostname-only
+  // plan is the whole egress policy — there is no IP-range key to render any more.
+  if (manifest.agent.provider_hosts?.length) env.AGENT_PROVIDER_HOSTS = manifest.agent.provider_hosts.join(',');
+  if (manifest.agent.registry_hosts?.length) env.BUILD_REGISTRY_HOSTS = manifest.agent.registry_hosts.join(',');
 
   for (const [field, key] of Object.entries(LIMIT_ENV)) {
     const value = (manifest.limits ?? {})[field as keyof ManifestLimits];

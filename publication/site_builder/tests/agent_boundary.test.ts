@@ -110,6 +110,7 @@ describe('the daemon never commits its own state into a site it publishes', () =
     // Through the confinement door — see git_confinement.test.ts: a command whose cwd is
     // inside the workspaces root is refused by `runBinary` itself.
     const result = await runConfined({
+      door: 'git',
       argv: ['git', ...args],
       cwd: workspacePath(slug),
       env: { PATH: process.env.PATH ?? '/usr/bin:/bin', HOME: workspacePath(slug) },

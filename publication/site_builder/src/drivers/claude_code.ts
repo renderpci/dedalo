@@ -70,8 +70,10 @@ export async function writeMcpConfig(opts: SessionStartOptions): Promise<string>
   if (opts.mcp.headers && Object.keys(opts.mcp.headers).length > 0) {
     server.headers = opts.mcp.headers;
   }
-  // 0640, and DELETED WHEN THE TURN ENDS (the cleanup thunk below). This file carries the
-  // museum's Publication API key: the turn needs it, nothing after the turn does, and a
+  // 0640, and DELETED WHEN THE TURN ENDS (the cleanup thunk below). Under `systemd_scope`
+  // the URL is the unit's loopback and there are NO headers — the egress gate adds the key on
+  // the daemon's side (sessions/manager.ts buildStartOptions). Under a declared `none` this
+  // file carries the museum's Publication API key: the turn needs it, nothing after does, and a
   // credential that stays resident in a directory an agent writes to is a credential
   // waiting to be committed, published or read by the next turn on another site. The mode
   // keeps it out of every uid on the host except the daemon and its own agent, which share

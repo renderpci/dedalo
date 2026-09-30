@@ -15,7 +15,8 @@
  *
  * AND NOTHING HERE SPAWNS A DRIVER'S ARGV DIRECTLY. Every turn goes through
  * `confineTurn()` (./confinement.ts), which decides what the turn runs AS: a transient
- * systemd unit under the agent's own uid, with its own egress policy and its own caps, or —
+ * systemd unit under the agent's own uid, in its own network namespace whose only way out is
+ * the per-run egress gate, with its own caps, or —
  * only where the daemon was explicitly configured `AGENT_CONFINEMENT=none` — a plain child
  * of this daemon that ANNOUNCES itself into the session's durable log. There is no third
  * possibility and no silent fallback: a host that cannot confine refuses the turn.
@@ -33,11 +34,11 @@ export interface TurnPlan {
   /**
    * What the driver's setup left on disk that must not outlive the turn.
    *
-   * Every driver writes an MCP configuration carrying the museum's Publication API key into
-   * the agent's own working tree, and every one of them used to leave it there — a
-   * credential resident, in a directory an agent writes to, from the first turn until
-   * somebody deleted the site. The turn needs it; nothing after the turn does. Run on EVERY
-   * exit path, success, failure, timeout and interrupt alike.
+   * Every driver writes an MCP configuration into the agent's own working tree, and every
+   * one of them used to leave it there. Under `systemd_scope` it no longer carries the
+   * museum's Publication API key (the egress gate adds that on the daemon's side); under a
+   * declared `none` it still does. The turn needs the file; nothing after the turn does.
+   * Run on EVERY exit path, success, failure, timeout and interrupt alike.
    */
   cleanup?: () => Promise<void>;
 }
@@ -149,16 +150,25 @@ export function spawnAgentProcess(
 
     // THE CONFINEMENT DECISION, BEFORE ANY BYTE IS SPAWNED. A refusal here (no runner, no
     // agent uid, no runtime directory) is a normalized error event and NOT a turn that ran
-    // as this daemon: the whole point of the setting is that it has no degraded mode.
+    // as this daemon: the whole point of the setting is that it has no degraded mode. The
+    // turn's egress gate opens inside confineTurn() and is closed by `confined.cleanup()` on
+    // every path below — or by confineTurn() itself when it refuses after opening it.
     try {
       confined = await confineTurn(
         {
+          door: 'turn',
           argv: plan.argv,
           cwd: opts.workspace,
           env: opts.env,
           timeoutMs: opts.timeoutMs,
+          driver: opts.driver,
+          mcpUpstream: opts.mcpUpstream,
+          // A blocked host is a line in the session's own durable log, never a silent hang.
+          onEgress: line => queue.push({ type: 'text', text: line }),
         },
-        policy,
+        // The seam first (a gate stating its host), then the policy the manager CHECKED this
+        // turn against — never a third, fresh read of the config between the two.
+        policy ?? opts.confinement,
       );
     } catch (error) {
       queue.push({ type: 'error', message: `confinement refused: ${errText(error)}`, retriable: false });
@@ -170,6 +180,17 @@ export function spawnAgentProcess(
     // A turn that is NOT confined says so, in the session's own durable log, before it
     // produces a single line of output. An unconfined run is a fact in the audit or it is
     // nothing at all.
+    // Interrupted WHILE confineTurn ran (it opens the gate and writes the env file — several
+    // awaits): there is still no child for interrupt() to kill, so a stop landing here would
+    // otherwise be lost and the whole turn would run. Undo what confineTurn opened; spawn nothing.
+    if (interruptRequested) {
+      queue.push({ type: 'error', message: 'interrupted before start', retriable: true });
+      await confined.cleanup();
+      await runCleanup(plan);
+      queue.close();
+      return;
+    }
+
     if (confined.announcement) queue.push({ type: 'text', text: confined.announcement });
 
     try {

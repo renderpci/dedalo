@@ -311,12 +311,25 @@ describe('every field the schema accepts reaches the derived layout', () => {
     expect(Object.values(layout.envVars).join('\n')).not.toContain('secret-value');
   });
 
-  test('agent.driver and agent.bins reach the rendered env', () => {
+  test('agent.driver, agent.bins and the egress hostnames reach the rendered env', () => {
     const layout = layoutFrom(
-      docWith({ agent: { driver: 'opencode', bins: { opencode: '/opt/opencode/bin/opencode' } } }),
+      docWith({
+        agent: {
+          driver: 'opencode',
+          bins: { opencode: '/opt/opencode/bin/opencode' },
+          provider_hosts: ['api.provider.example', 'fallback.provider.example'],
+          registry_hosts: ['registry.npmjs.org'],
+        },
+      }),
     );
     expect(layout.envVars.AGENT_DRIVER).toBe('opencode');
     expect(layout.envVars.OPENCODE_BIN).toBe('/opt/opencode/bin/opencode');
+    expect(layout.envVars.AGENT_PROVIDER_HOSTS).toBe('api.provider.example,fallback.provider.example');
+    expect(layout.envVars.BUILD_REGISTRY_HOSTS).toBe('registry.npmjs.org');
+    // Undeclared, neither is rendered: the daemon's own defaults apply.
+    const plain = layoutFrom(docWith({}));
+    expect(plain.envVars.AGENT_PROVIDER_HOSTS).toBeUndefined();
+    expect(plain.envVars.BUILD_REGISTRY_HOSTS).toBeUndefined();
   });
 
   test('secrets become derivable credential paths', () => {
@@ -616,6 +629,22 @@ describe('the declaration refuses what it must', () => {
         webspace_base: '/srv/www',
       })),
     ).toMatch(/must lie OUTSIDE every site-builder root/);
+  });
+
+  test('an egress host that is not a hostname', () => {
+    for (const bad of ['10.0.0.5', 'localhost', 'x.internal', '*', 'intranet']) {
+      expect(
+        refusal(
+          docWith({
+            agent: {
+              driver: 'opencode',
+              bins: { opencode: '/opt/opencode/bin/opencode' },
+              provider_hosts: [bad],
+            },
+          }),
+        ),
+      ).toMatch(/agent\.provider_hosts/);
+    }
   });
 
   test('a selected driver with no binary', () => {

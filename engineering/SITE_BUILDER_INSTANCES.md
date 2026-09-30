@@ -149,6 +149,8 @@ never restates.**
 | `serving.aliases` | no | Extra hostname → the SLUG that owns it. A map and not a list, because an alias with no target cannot become a vhost. |
 | `agent.driver` | yes | Default driver for this instance's sites. |
 | `agent.bins` | yes for the selected driver | Driver → ABSOLUTE path. Never a bare command name: PATH is shared between instances. |
+| `agent.provider_hosts` | for an opencode/pi driver | The model provider's API HOSTNAMES a turn may reach through the egress gate (rendered as `AGENT_PROVIDER_HOSTS`). Claude Code's host is derived. Never an IP literal, `localhost`, a local special-use name or a wildcard: loopback and LAN providers are unreachable by design. |
+| `agent.registry_hosts` | no | The package registry HOSTNAMES a build may reach (`BUILD_REGISTRY_HOSTS`; the daemon's default is `registry.npmjs.org`). Same grammar. |
 | `secrets` | no | Credential KEY → the ABSOLUTE PATH of a 0600 file. NAMES and PATHS only; each becomes one `LoadCredential=`. |
 | `limits.*` | no | Per-instance caps. **Optional with NO defaults** — see §2.5. |
 | `resources.*` | no | `memory_max`, `memory_high`, `cpu_quota`, `tasks_max`, rendered into the unit. Absent means the host's default. |
@@ -293,6 +295,37 @@ Example values are for `instance = museum-a`, `sites[n]` = `{ slug: 'coleccion',
 | Daemon `WorkingDirectory=` | `layout.daemon.workingDirectory` | `…/master_dedalo/publication/site_builder` |
 | Pinned bun (`ExecStart=`) | `layout.daemon.bun` | the declared `engine.bun_bin` |
 | The unit's `ReadWritePaths=` | `readWritePaths(layout)` | the three roots + the runtime dir + EVERY site webspace |
+
+**The per-run egress directories live under the runtime dir, and are not layout.** Each
+confined turn or build gets `<runtimeDir>/egress/<uuid>/` (0750, the daemon's user and the
+instance group; its two sockets 0660), created by the daemon's egress gate
+(`src/egress/gate.ts`) when the run starts, bound into that run's unit at
+`/run/dedalo-egress`, and removed when the run ends. It is named by the unit's uuid alone
+because a unix socket path is at most 107 bytes and the full unit name overflows it on every
+instance name. It is never the runtime root (the daemon's socket) and never `turns/` (the
+per-run 0600 environment files): the unit's `/run` is masked, and this directory is the only
+thing bound back in — never `egress/` itself, so no run can open a CONCURRENT run's sockets
+(a build or a git run reaching a turn's `mcp.sock` would speak with the daemon's key). The
+bind alone does not make that true: a concurrent run of the same museum runs as the same
+agent uid, `ProtectProc=invisible` hides only OTHER uids' processes, and `/proc/<pid>/root`
+of any of its processes is its mount view, bound socket directory included. So every door
+also gets its own PID namespace (`PrivatePIDs=yes`), in which no other run's process exists
+to follow — which closes, with the same stroke, reading its environment and signalling it.
+The confinement gates ask every door's reach BESIDE a concurrent turn and hold its
+`proxy.sock`/`mcp.sock` unreachable; dropping the PID namespace turns them red.
+A git command gets none. The gate holds at most 128 client connections per run at once
+(`MAX_PROXY_CLIENTS`): each is the DAEMON's fd, which the unit's own caps do not bound, so a
+runaway build is refused (503, one log line) before it spends the budget of the daemon that
+serves every other site.
+
+**The host's systemd must be 257 or newer** (Debian 13 ships it). `PrivatePIDs=` is new in
+257 and `PrivateIPC=` in 248, and `systemd-run` refuses a property its systemd does not know
+— at spawn, after the request was accepted. So the daemon reads `systemd-run --version` and
+refuses every confined run up front (503) on an older host, naming the properties that host
+lacks; the floor is derived from a table of every rendered property's release
+(`SYSTEMD_SINCE` in `src/drivers/confinement.ts`), which a package gate holds equal to what
+the doors really render. It is not lowered by dropping the PID namespace: that namespace is
+what keeps a museum's concurrent runs out of each other's egress sockets.
 
 **One unit per INSTANCE, two vhosts per SITE.** The two artifacts have different natural
 grains and the layout follows each rather than forcing one. `ReadWritePaths=` has to name
@@ -1061,6 +1094,73 @@ Acceptable for the same reason as residual 1, and bounded by the same gate: the 
 environment's key SET is held by `publication/site_builder/tests/agent_env_boundary.test.ts`,
 which is what must be argued with the day a build step needs a credential. Not acceptable
 was the false sentence, and it is gone.
+
+**6. Egress is hostname-only through the daemon's gate, and these consequences are
+accepted.** Every confined run is in a private network namespace with `/run` masked; its one
+way out is its per-run egress directory (§2.3). What that design does NOT cover, stated:
+
+- (a) **Path sockets outside `/run`, `/tmp` and `/home`.** A unix socket path ignores network
+  namespaces; `/run` is masked, `PrivateTmp=` and `ProtectHome=` hide `/tmp` and `/home`, and
+  the distros' database socket directories outside those are hidden by name
+  (`InaccessiblePaths=` on every door: `/var/lib/mysql` — RHEL/Fedora MariaDB's DEFAULT
+  `mysql.sock`, mode 0777 — `/var/lib/mariadb`, `/var/lib/pgsql`, `/var/lib/postgresql`). But
+  a service socket placed anywhere else — an engine `SERVER_UNIX_SOCKET` under `/srv`, say —
+  stays visible to the agent uid if its mode lets that uid connect (`ProtectSystem=strict`
+  makes it read-only, which does not stop `connect(2)`). Its mode is then the boundary. Keep
+  service sockets under `/run`. The unit's own `ReadWritePaths=` (its workspace and agent
+  HOME) are re-exposed inside `ProtectHome=` by systemd when they lie under `/home` — only
+  those directories, never what sits beside them. The daemon's OWN runtime directory (its
+  socket, `turns/`, every run's `egress/`) is not in this residual: a `LISTEN_SOCKET` whose
+  directory does not resolve under `/run` is REFUSED (503, naming the key). Nor is
+  `/dev/shm`: `PrivateDevices=` binds the HOST's `/dev/shm` (tmpfs, mode 1777) back into the
+  unit's private `/dev`, which would make it one world-writable directory every door of every
+  museum and the host share, so every door mounts its own (`TemporaryFileSystem=/dev/shm`);
+  `PrivateIPC=yes` does the same for SysV IPC and POSIX message queues, which are keyed per
+  IPC namespace rather than by path.
+- (b) **A CLI that ignores `HTTPS_PROXY` has no network.** The unit has no route but the
+  shim's loopback proxy, so such a client fails closed rather than reaching anything directly.
+- (c) **Loopback and LAN model providers are refused.** A provider host is a public DNS name
+  resolving only to public addresses; a model served on `127.0.0.1` or the museum's LAN is
+  unreachable from a turn by design. The route for one, if it is ever wanted, is a named
+  upstream on the same gate socket (like the Publication API's), never an IP token.
+- (d) **The site builder and its runtime must live outside `/home`, `/root`, `/run`, `/tmp`
+  and `/var/tmp`.** The unit's ExecStart is this daemon's bun and the egress shim, and those
+  prefixes are masked inside the unit, so a checkout under them (the
+  `docs/install/migrating_from_v6.md` layout under `/home`) is REFUSED rather than started.
+  The daemon also refuses a shim or runtime the AGENT uid owns, can write (the file or a
+  directory above it — a directory the agent uid OWNS counts as writable whatever its mode,
+  and its sticky bit exempts nothing, since the owner can chmod it back and rename inside
+  it) or cannot read/execute; it does not prove the agent can TRAVERSE
+  every directory above them — a unit that cannot is a run that fails at its first exec, and
+  the VM probe is what shows the provisioned layout traverses.
+- (e) **opencode fetches provider SDK packages at runtime.** Its auto-update, model
+  catalogue, LSP downloads and share uploads are turned off in the child env, but on the
+  first turn with a provider it installs that provider's SDK from `registry.npmjs.org`. A
+  museum whose agent HOME has not cached it names `registry.npmjs.org` in
+  `agent.provider_hosts` beside the provider's own host.
+- (f) **The gate sees the CONNECT host and the TLS SNI, not the Host inside the session.** A
+  tunnel forwards nothing until the client's ClientHello names the CONNECT host (no SNI, a
+  different SNI, and Encrypted Client Hello are refused), so a plan host on a shared CDN is
+  not a route to another site's name on that CDN. What stays open is an HTTP `Host` inside
+  the encrypted session that differs from the SNI (domain fronting), which only the CDN can
+  refuse, and HTTP/2 connection reuse for another name the same certificate covers. Bounded
+  by the plan: every such destination is on the same edge a plan host already reaches.
+- (g) **A NAT64 network-specific prefix hides a private IPv4 from the gate.** The gate judges
+  the two STANDARDIZED IPv4 carriers (`::ffff:0:0/96`, `64:ff9b::/96`) as the IPv4 they carry,
+  as the engine's SSRF guard does. The engine also honours an operator-DECLARED prefix
+  (`DEDALO_NAT64_PREFIXES`) and an RFC 7050-DISCOVERED one; the daemon has neither. On an
+  IPv6-only host whose DNS64 synthesizes into a network-specific prefix, a plan host whose A
+  record is private (`10.0.0.5`) is answered as an address inside that prefix — global
+  unicast, so PUBLIC to the gate — and the translator delivers it to the LAN. Bounded by the
+  plan: only a planned host's own DNS can produce such an answer, the port is 443 and the
+  first flight must be a ClientHello naming that host. Closed by giving the daemon the same
+  declared key and RFC 7050 discovery, with the engine differential
+  (`test/unit/site_builder_public_address_differential.test.ts`) run with a declared prefix
+  on both sides; until then that differential says it covers the no-prefix state only.
+
+The kernel's side of this (the namespace really created, the `/run` mask and bind really
+applied, the proxy variables really honoured by each CLI) is proved on a real systemd host
+by the VM probe, not by the suite, which runs where there is no systemd.
 
 ## 11. What a gate may assert about this document
 

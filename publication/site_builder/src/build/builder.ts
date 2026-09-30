@@ -34,10 +34,11 @@
  *   2. A BUILD STEP RUNS AT EXACTLY AN AGENT TURN'S PRIVILEGE, NEVER WIDER — and this is
  *      now a MECHANISM rather than a description. Every step goes through `runConfined`
  *      (drivers/confinement.ts): the same second unix identity a turn runs as
- *      (`AGENT_USER`), inside a transient unit of the same museum-scoped prefix, with the
- *      same egress policy (public internet yes — a package registry has to be reachable;
- *      loopback, the private ranges and the link-local metadata block no) and the same
- *      per-run caps. Plus the same CONSTRUCTED environment it always had: `{ PATH, HOME }`
+ *      (`AGENT_USER`), inside a transient unit of the same museum-scoped prefix, in the
+ *      same private network namespace (its one way out is the egress gate, which tunnels to
+ *      the package registry's HOSTNAME — BUILD_REGISTRY_HOSTS — and nothing else; loopback,
+ *      the LAN, the metadata block and the public web are absent) and with the same per-run
+ *      caps. Plus the same CONSTRUCTED environment it always had: `{ PATH, HOME }`
  *      and nothing else — not the daemon's SERVICE_TOKEN, not `$CREDENTIALS_DIRECTORY`,
  *      not a provider key.
  *
@@ -72,7 +73,7 @@ import {
 import { config } from '../config';
 import { ConflictError, NotFoundError } from '../errors';
 import {
-  assertTurnConfinementAvailable,
+  assertConfinementAvailable,
   policyFromConfig,
   runConfined,
   type ConfinementPolicy,
@@ -171,7 +172,7 @@ export async function startBuild(
   // same reason the session manager asks it before reserving a workspace: a host that
   // cannot confine must answer the REQUEST with a refusal naming what is missing, never
   // accept the work and then run agent-authored commands as this daemon.
-  assertTurnConfinementAvailable(policy);
+  assertConfinementAvailable('build', policy);
 
   // Reserve the workspace synchronously — one check-and-mark, cross-exclusive with agent
   // turns (workspace_activity.ts), so a build can never start while an agent edits the
@@ -320,6 +321,7 @@ function runStep(
   const argv = command.trim().split(/\s+/).filter(Boolean);
   return runConfined(
     {
+      door: 'build',
       argv,
       cwd,
       env,

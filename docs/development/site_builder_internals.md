@@ -169,8 +169,46 @@ to this interface, so adding an agent is a file under `drivers/` plus one regist
   are not merely undocumented to the agent but unreadable. The same call carries the per-turn
   caps (`MemoryMax`, `CPUQuota`, `TasksMax`, and a `RuntimeMaxSec` PID 1 enforces even if the
   daemon dies), the filesystem confinement (`ProtectSystem=strict` plus the workspace and the
-  agent home) and the egress policy (`IPAddressAllow=any` with loopback and every private
-  range denied, the Publication API allowed back). The child's environment travels in a
+  agent home) and the network design (`src/drivers/network_profile.ts`, the one producer of
+  every network property a unit gets): every run is in a private network namespace with
+  `/run` masked, so host loopback, the LAN, the metadata service, the DNS stub, abstract unix
+  sockets and every service socket under `/run` do not exist inside it; the database
+  directories a distro keeps a socket in outside `/run` (RHEL's MariaDB default is
+  `/var/lib/mysql/mysql.sock`) are made inaccessible by name, and each unit gets its own
+  `/dev/shm` and IPC namespace, so two museums' runs share no world-writable directory and no
+  SysV IPC key. A turn or a build
+  gets exactly one way out — its per-run socket directory, bound at `/run/dedalo-egress` and
+  served by the daemon's egress gate (`src/egress/gate.ts`): a CONNECT proxy that tunnels
+  only to the HOSTNAMES on the run's plan, port 443, after refusing any name that resolves
+  to a non-public address, plus (turns only) the Publication API's MCP endpoint with the API
+  key added on the daemon's side, so the key never enters the unit. A git command gets no way
+  out at all. No run can reach another run's socket directory: only its own is bound in, and
+  every run has its own PID namespace, so a concurrent run of the same museum (the same agent
+  uid) cannot be found in `/proc` and entered through `/proc/<pid>/root` either. The
+  gate holds at most 128 connections per run at once (the daemon's file descriptors, which
+  the unit's own limits do not bound); one more is a 503 with a line in the run's log. The
+  gate dials each vetted address of the ONE lookup in turn until one
+  connects, so a dead first address does not fail the run. It opens only on a plan of
+  hostnames, and once a tunnel is up it forwards nothing until the client's first flight is a
+  TLS ClientHello whose SNI is the CONNECT host (Encrypted Client Hello refused): a plan host
+  on a shared CDN would otherwise be a way to any site behind that CDN. The Host inside the
+  encrypted session is beyond it: a stated residual of the instance specification, as is
+  HTTP/2 reuse of a connection for another name the same certificate covers. The unit's ExecStart is
+  `src/drivers/egress_shim.ts`, which refuses to run anything (exit 78) unless it can PROVE
+  the namespace is in effect — its namespace identity differs from the daemon's (stated in
+  the env file; a missing identity is a refusal, not a skipped check) and it sees no
+  interface but its own `lo` — and then forwards the unit's loopback to the gate's sockets.
+  The host is refused up front (503) when any of this cannot hold: the daemon's runtime
+  directory (`dirname(LISTEN_SOCKET)`) does not resolve under `/run`, the one mask that hides
+  its socket, `turns/` and every run's `egress/` from a unit; the daemon cannot read its own
+  namespace identity; the host's systemd is older than 257 (`PrivatePIDs=`; the refusal
+  names every rendered property that systemd lacks) or its version cannot be read;
+  `AGENT_USER` is not a user on the host; or the shim or the runtime is
+  owned or writable by the AGENT uid (the file or a directory above it; a directory the
+  agent uid owns counts as writable whatever its mode says, sticky or not), unreadable or
+  unexecutable by it, or under a prefix the unit masks. Root, the daemon and a third uid —
+  the engine's, which owns the checkout and its bun — are all acceptable owners. The child's
+  environment travels in a
   per-turn `0600` `EnvironmentFile` — never a unit property, which any uid can read with
   `systemctl show` — and is deleted when the turn ends. A host that cannot do this REFUSES
   the session (503, naming what is missing); `AGENT_CONFINEMENT=none` is the declared
@@ -416,8 +454,17 @@ the daemon *reads*, not as something anyone writes:
 - Agent confinement: `AGENT_CONFINEMENT` (`systemd_scope` on every provisioned host,
   `none` only where it is declared and never under `NODE_ENV=production`), `AGENT_USER` and
   `AGENT_UNIT_PREFIX` (both derived per instance and rendered), plus the host-shaped
-  `SYSTEMD_RUN_BIN`, `AGENT_EGRESS_ALLOW` and the per-turn caps `AGENT_TURN_MEMORY_MAX` /
+  `SYSTEMD_RUN_BIN` and the per-turn caps `AGENT_TURN_MEMORY_MAX` /
   `AGENT_TURN_CPU_QUOTA` / `AGENT_TURN_TASKS_MAX`.
+- Agent egress, by hostname only: `AGENT_PROVIDER_HOSTS` (an opencode/pi turn's model
+  provider; Claude Code's `api.anthropic.com` is derived, and an opencode/pi turn with none
+  is refused) and `BUILD_REGISTRY_HOSTS` (default `registry.npmjs.org`), rendered from the
+  declaration's `agent.provider_hosts` / `agent.registry_hosts` when stated. Never an IP
+  literal, `localhost` or a wildcard. An opencode turn's own off-plan traffic (auto-update,
+  the models.dev catalogue, LSP downloads, share uploads) is switched off in its env; the
+  provider SDK it installs on first use comes from `registry.npmjs.org`, which such a museum
+  names in `agent.provider_hosts` too. The retired `AGENT_EGRESS_ALLOW` (systemd IP tokens)
+  is refused at boot when it is non-empty.
 - Limits: `MAX_SITES`, `MAX_CONCURRENT_SESSIONS`, `SESSION_TURN_TIMEOUT_MS`,
   `INSTALL_TIMEOUT_MS`, `BUILD_TIMEOUT_MS`, `SITE_DISK_QUOTA_MB`, `RELEASES_RETAINED`. A
   limit absent from the rendered file means "the daemon's own default", never a frozen copy
@@ -456,16 +503,20 @@ museum's rendered polkit rule authorizes by unit-name prefix and by nothing else
 (`src/provision/render/agent_authorization.ts`). The workspaces root and the agent home are
 `2770` so both uids can work in them and no other uid on the host can look; the credential
 store, the audit handle and `$CREDENTIALS_DIRECTORY` stay the daemon's alone. Egress IS
-policed per turn — the public internet stays reachable (the model provider cannot be
-enumerated) while loopback, every RFC1918 range and the link-local metadata block are denied,
-with the Publication API allowed back explicitly. THE ACCEPTED LIMIT: all sites of ONE museum
+policed per run, and not by an address list: systemd's IP filter is allow-wins, so the
+`IPAddressAllow=any` this design once relied on granted loopback and the LAN whatever the deny
+list said. Each run lives in a private network namespace with `/run` masked, and reaches the
+outside only through the daemon's egress gate — hostnames on its plan, port 443, public
+addresses only. Loopback and LAN model providers are therefore not reachable, and a CLI that
+ignores the standard proxy environment variables has no network at all (fail-closed). THE ACCEPTED LIMIT: all sites of ONE museum
 share that uid, so an agent turn on one site of an instance can read another site of the SAME
 instance; the sites of an instance are one tenant, and the replacement if that ever stops
 being true is a pre-provisioned pool of per-site agent uids (recorded beside the derivation in
 `src/provision/layout.ts`). A SITE BUILD AND A `git add` ARE THE SAME PRINCIPAL: `site.json`, `package.json` and `.git`
 all live inside the workspace a turn writes, so an install script, a build command and a git
 filter are agent-authored text on a routine publisher-triggered path. Both go through
-`runConfined()` — the same uid, the same unit prefix, the same egress and caps — and
+`runConfined()` — the same uid, the same unit prefix, the same caps and network design (a
+build reaches only its package registry; a git command reaches nothing) — and
 `src/util/spawn.ts` REFUSES any spawn whose working directory is inside `SITES_ROOT` without
 the confinement's token, so a new call site cannot quietly reopen the door.
 

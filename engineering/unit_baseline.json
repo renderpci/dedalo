@@ -3691,6 +3691,11 @@
 			"skipped": 0,
 			"assertions": 117
 		},
+		"test/unit/site_builder_public_address_differential.test.ts": {
+			"tests": 6,
+			"skipped": 0,
+			"assertions": 60
+		},
 		"test/unit/site_builder_single_source_tripwire.test.ts": {
 			"tests": 29,
 			"skipped": 0,

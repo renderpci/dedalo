@@ -51,7 +51,8 @@ export async function writeMcpConfig(opts: SessionStartOptions): Promise<string>
   // denied — arbitrary execution and an outbound channel — and editing, which is the whole
   // job, is allowed.
   //
-  // 0640 and deleted when the turn ends: this file carries the Publication API key. And it
+  // 0640 and deleted when the turn ends: under a declared `none` this file carries the
+  // Publication API key (under `systemd_scope` the gate adds it daemon-side). And it
   // goes through the FD-BASED writer (util/shared_tree.ts) for the same reason the Claude
   // Code driver's does — at the workspace ROOT the plant is even cheaper, since the agent
   // is told to leave this exact filename alone and can therefore replace it with a link to

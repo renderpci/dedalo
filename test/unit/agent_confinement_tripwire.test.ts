@@ -43,6 +43,15 @@
  *      `confinedPath` follows a planted link in both directions — the write plant truncates
  *      the daemon's own audit trail, and the read plant serves the daemon's own
  *      `SERVICE_TOKEN` back through `GET /sites/<slug>/builds/<id>`.
+ *   §8 THE EGRESS. Every door (turn / build / git) renders a PRIVATE network namespace, a
+ *      masked `/run` and `IPAddressDeny=any`; the only reachable path is the door's own
+ *      per-run `/run/dedalo-egress` sockets (none on git) — asked beside a CONCURRENT turn
+ *      of the same uid, whose sockets are one `/proc/<pid>/root` away unless the door has
+ *      its own PID namespace, and of the host's IPC namespace. Evaluated with a model of systemd
+ *      whose filter is ALLOW-WINS — and whose control row, the pre-fix shape
+ *      (`IPAddressAllow=any localhost` + a deny list), must come out UNSAFE, or the model is
+ *      the longest-prefix misreading that made LEAD-1 look closed. Egress plans are
+ *      hostname-only. HONEST LIMIT: the kernel's behaviour is proved by the VM probe, not here.
  *
  * The BEHAVIOUR of a confined turn — the argv, the caps, the egress, the refusals, the
  * per-turn credential — is the package's own gate,
@@ -58,6 +67,7 @@ import {
 	AGENT_USER_PREFIX,
 	derive,
 	type InstanceManifest,
+	MAX_INSTANCE_LENGTH,
 	MODES,
 	USER_PREFIX,
 } from '../../publication/site_builder/src/provision/layout.ts';
@@ -68,6 +78,14 @@ import {
 	SHARED_DIR_MODE,
 	SHARED_FILE_MODE,
 } from '../../publication/site_builder/src/util/shared_tree.ts';
+import {
+	allowsFamily,
+	canEnumerateInterfaces,
+	type Destination,
+	describeDestination,
+	parseProperties,
+	reach,
+} from '../../publication/site_builder/tests/support/systemd_reach.ts';
 import { SITE_BUILDER_SRC, siteBuilderDaemonFiles } from '../helpers/publication_corpus.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
@@ -145,13 +163,21 @@ const EXEMPT: Readonly<Record<string, string>> = Object.freeze({
 	'drivers/confinement.ts':
 		"the confinement's OWN control plane: `systemctl stop <this turn's transient unit>`, " +
 		'issued through the same polkit grant that started it, because killing the client that ' +
-		'waits on a unit does not stop the unit.',
+		'waits on a unit does not stop the unit — and `id -u/-G <AGENT_USER>`, a pinned ' +
+		'root-owned binary asked which uid and groups the agent has, so the trust check can ask ' +
+		'whether the AGENT can change what its own unit executes first. Neither runs anything ' +
+		'agent-authored.',
 	'util/spawn.ts':
 		'runBinary — the ONE place a process is created, and the door itself. It REFUSES a cwd ' +
 		'inside SITES_ROOT without the confinement token (`CONFINED_ARGV`), so a build step, an ' +
 		'install script and a `git add` all reach it through runConfined() under the agent uid; ' +
 		'what is left unconfined here is the driver VERSION PROBE, a pinned root-owned binary ' +
 		'run with --version outside every workspace. §6 holds the import side of that rule.',
+	'drivers/egress_shim.ts':
+		"in-unit exec of the already-confined argv: the shim IS the transient unit's ExecStart, " +
+		'so its one child_process spawn runs inside the unit PID 1 already started under the ' +
+		'agent uid, in its private network namespace — after it has refused a namespace that ' +
+		'is not in effect (§8). It widens nothing the unit did not already grant.',
 });
 
 /* ────────────────────────────────────────────────────────────────────────────────────
@@ -644,6 +670,11 @@ const RAW_FS_EXEMPT: Readonly<Record<string, string>> = Object.freeze({
 		'so it is opened `O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW` — an existing name of any kind, ' +
 		'symlink included, is EEXIST rather than a redirect. It is the synchronous ' +
 		'counterpart of the doors, in the one place that cannot await them.',
+	'egress/gate.ts':
+		'runtime dir, outside SITES_ROOT: the per-run egress socket directory ' +
+		'`<runtime>/egress/<run>/` (mkdir 0750 + chmod 0660 on the two sockets it binds) in ' +
+		"the daemon's RuntimeDirectory, root-created and never a path an agent turn can write; " +
+		'the unit sees it only through its own BindPaths onto /run/dedalo-egress.',
 });
 
 /**
@@ -1007,5 +1038,576 @@ describe('what the daemon reads back out of an agent-writable tree is proved, no
 			'sites/sync.ts',
 			'top_level.ts',
 		]);
+	});
+});
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * §8 The egress
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * WHAT A CONFINED RUN MAY REACH, asked of the unit properties rather than read off them.
+ *
+ * LEAD-1: the unit said `IPAddressAllow=any localhost` and then denied loopback and the
+ * private ranges, under a header claiming "longest-prefix wins". systemd's filter is
+ * ALLOW-WINS: an address matching an allow entry is granted whatever the deny list says,
+ * so `any` granted Postgres, the engine, the LAN and the metadata service to text a
+ * language model wrote. The repair is not a better list — it is a PRIVATE NETWORK
+ * NAMESPACE per run, `/run` masked, and one per-run socket directory bound back in, through
+ * which the daemon's egress gate speaks hostnames only.
+ *
+ * The leaf (`drivers/network_profile.ts`) is the ONE producer of every network property a
+ * unit receives, and it is config-free so this gate can import it; the package gate
+ * (`tests/agent_confinement.test.ts`) proves the real `confineTurn`/`runConfined` render
+ * EXACTLY its list. It is imported dynamically so that its absence is this section's red,
+ * not the whole file's.
+ */
+
+const LEAF = join(PACKAGE, 'src/drivers/network_profile.ts');
+const SHIM = join(PACKAGE, 'src/drivers/egress_shim.ts');
+const CLASSIFIER = join(PACKAGE, 'src/egress/public_address.ts');
+
+interface NetworkLeaf {
+	DOORS: readonly string[];
+	DOOR_PROFILE: Readonly<Record<string, { proxy: boolean; mcp: boolean }>>;
+	PROXY_PORT: number;
+	MCP_PORT: number;
+	unitNetworkProperties(door: string, opts: { egressDir?: string }): string[];
+	egressPlanFor(
+		door: string,
+		facts: {
+			driver?: string;
+			providerHosts: string[];
+			registryHosts: string[];
+		},
+	): { hosts: string[]; mcp: boolean };
+	planProblems(
+		door: string,
+		facts: {
+			driver?: string;
+			providerHosts: string[];
+			registryHosts: string[];
+		},
+	): string[];
+	childEgressEnv(door: string, driver?: string): Record<string, string>;
+	egressDirFor(runtimeDir: string, unitName: string): string;
+}
+
+async function leaf(): Promise<NetworkLeaf> {
+	return (await import(LEAF)) as NetworkLeaf;
+}
+
+/** The host a provisioned museum runs on — the runtime dir is the rendered one. */
+const RUNTIME = '/run/dedalo-sites/test';
+const UNIT = 'dedalo-site-test-agent-00000000-0000-0000-0000-000000000000.service';
+/** A CONCURRENT run's uuid — its egress dir is a sibling of this run's. */
+const SIBLING_RUN = '11111111-1111-1111-1111-111111111111';
+const SIBLING_UNIT = `dedalo-site-test-agent-${SIBLING_RUN}.service`;
+
+/**
+ * HOW EVERY ROW BELOW ASKS: with the namespace in effect, and beside a CONCURRENT TURN of the
+ * same museum (the same agent uid) rendered by the same leaf. A run never runs alone on a
+ * museum with more than one site, and the model knows the route a lone-unit question cannot
+ * see: a same-uid unit's mount view — its bound egress directory — through
+ * `/proc/<pid>/root`, unless the asking unit has its own PID namespace.
+ */
+function reachOptions(net: NetworkLeaf): { netnsHonoured: true; concurrent: string[][] } {
+	const siblingTurn = net.unitNetworkProperties('turn', {
+		egressDir: net.egressDirFor(RUNTIME, SIBLING_UNIT),
+	});
+	return { netnsHonoured: true, concurrent: [siblingTurn] };
+}
+
+/**
+ * WHAT NO DOOR MAY REACH. Host loopback (Postgres, the DNS stub, IPv6 loopback), the LAN,
+ * the cloud metadata service, the host's own public address, the public internet directly
+ * (egress is the gate's job, by hostname), the engine's and the databases' sockets, this
+ * daemon's own socket and per-turn secret files, the docker socket, and an ABSTRACT unix
+ * socket (which no mount mask can hide — only a network namespace does).
+ */
+const FORBIDDEN: readonly Destination[] = Object.freeze([
+	{ kind: 'inet', ip: '127.0.0.1', port: 5432 },
+	{ kind: 'inet', ip: '127.0.0.1', port: 3306 },
+	{ kind: 'inet', ip: '127.0.0.53', port: 53 },
+	{ kind: 'inet', ip: '::1', port: 5432 },
+	{ kind: 'inet', ip: '10.0.0.5', port: 22 },
+	{ kind: 'inet', ip: '192.168.1.1', port: 80 },
+	{ kind: 'inet', ip: '169.254.169.254', port: 80 },
+	{ kind: 'inet', ip: '203.0.113.7', port: 22 },
+	{ kind: 'inet', ip: '1.1.1.1', port: 443 },
+	{ kind: 'inet', ip: '2606:4700:4700::1111', port: 443 },
+	{ kind: 'unix', path: '/run/postgresql/.s.PGSQL.5432' },
+	{ kind: 'unix', path: '/run/dedalo/dedalo_ts.sock' },
+	{ kind: 'unix', path: `${RUNTIME}/daemon.sock` },
+	{ kind: 'unix', path: `${RUNTIME}/turns/${UNIT}.env` },
+	{ kind: 'unix', path: '/var/run/docker.sock' },
+	{ kind: 'unix', path: '/run/mysqld/mysqld.sock' },
+	// RHEL/Fedora MariaDB's DEFAULT socket: outside /run, /tmp and /home, mode 0777 — the
+	// path-socket case the /run mask alone does not cover (a netns does not help: path
+	// sockets ignore network namespaces).
+	{ kind: 'unix', path: '/var/lib/mysql/mysql.sock' },
+	{ kind: 'unix', path: '/var/lib/postgresql/.s.PGSQL.5432' },
+	// ANOTHER run's per-run egress sockets. A build (no MCP) or a git run (nothing) that could
+	// open a concurrent turn's mcp.sock would speak to the Publication API with the daemon's
+	// key. TWO routes, both asked: a view of the whole egress/ directory (the bind), and the
+	// concurrent turn's own mount view through /proc/<pid>/root (same uid, no PID namespace)
+	// — the per-run bind is a run's identity only because the second is closed too.
+	{ kind: 'unix', path: `${RUNTIME}/egress/${SIBLING_RUN}/proxy.sock` },
+	{ kind: 'unix', path: `${RUNTIME}/egress/${SIBLING_RUN}/mcp.sock` },
+	// The host's /dev/shm (tmpfs, mode 1777). PrivateDevices= builds a private /dev but binds
+	// the HOST's /dev/shm back into it, and path sockets ignore network namespaces: without a
+	// per-unit mask it is one world-writable directory every door of every museum shares.
+	{ kind: 'unix', path: '/dev/shm/x.sock' },
+	// A SysV IPC key (or POSIX message queue) in the HOST's IPC namespace — shared by every
+	// unit without PrivateIPC=yes, any museum's, and the host: a rendezvous no path mask sees.
+	{ kind: 'ipc', name: 'sysv:0x5a5a0001' },
+	{ kind: 'abstract', name: 'lp' },
+]);
+
+/** The pre-fix unit shape, kept as the evaluator's control row. */
+const HEAD_SHAPE: readonly string[] = Object.freeze([
+	'RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6',
+	'IPAddressAllow=any localhost',
+	'IPAddressDeny=localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10 169.254.0.0/16 fc00::/7 fe80::/10',
+]);
+
+function doorProps(net: NetworkLeaf, door: string): { props: string[]; egressDir: string | null } {
+	const egressDir = net.DOOR_PROFILE[door]?.proxy ? net.egressDirFor(RUNTIME, UNIT) : null;
+	const props = net.unitNetworkProperties(door, egressDir ? { egressDir } : {});
+	return { props, egressDir };
+}
+
+describe('§8 a confined run reaches its own egress door and nothing else', () => {
+	test('control: the evaluator is ALLOW-WINS — the pre-fix shape reaches host loopback', () => {
+		// If this row ever reads "blocked", the model is the longest-prefix misreading and every
+		// row below it would certify a wide-open unit.
+		for (const dest of [
+			{ kind: 'inet', ip: '127.0.0.1', port: 5432 },
+			{ kind: 'inet', ip: '10.0.0.5', port: 22 },
+			{ kind: 'inet', ip: '169.254.169.254', port: 80 },
+			{ kind: 'unix', path: '/run/postgresql/.s.PGSQL.5432' },
+			{ kind: 'abstract', name: 'lp' },
+		] as const) {
+			expect({
+				dest: describeDestination(dest),
+				reached: reach(HEAD_SHAPE, dest, { netnsHonoured: true }),
+			}).toEqual({
+				dest: describeDestination(dest),
+				reached: true,
+			});
+		}
+	});
+
+	test('the doors are exactly turn, build and git, each with a stated profile', async () => {
+		const net = await leaf();
+		expect([...net.DOORS].sort()).toEqual(['build', 'git', 'turn']);
+		expect(Object.keys(net.DOOR_PROFILE).sort()).toEqual([...net.DOORS].sort());
+		expect(net.DOOR_PROFILE.turn).toEqual({ proxy: true, mcp: true });
+		expect(net.DOOR_PROFILE.build).toEqual({ proxy: true, mcp: false });
+		expect(net.DOOR_PROFILE.git).toEqual({ proxy: false, mcp: false });
+		expect(net.PROXY_PORT).not.toBe(net.MCP_PORT);
+	});
+
+	test('every door: nothing forbidden is reachable, with the netns in effect', async () => {
+		const net = await leaf();
+		for (const door of net.DOORS) {
+			const { props } = doorProps(net, door);
+			const reached = FORBIDDEN.filter((dest) => reach(props, dest, reachOptions(net))).map(
+				describeDestination,
+			);
+			expect({ door, reached }).toEqual({ door, reached: [] });
+		}
+	});
+
+	test('every door: its own sockets, and only the ones its profile names, are reachable', async () => {
+		const net = await leaf();
+		for (const door of net.DOORS) {
+			const { props, egressDir } = doorProps(net, door);
+			const profile = net.DOOR_PROFILE[door] as { proxy: boolean; mcp: boolean };
+			const sockets = egressDir
+				? [join(egressDir, 'proxy.sock'), ...(profile.mcp ? [join(egressDir, 'mcp.sock')] : [])]
+				: [];
+			const reachable = sockets.filter((path) =>
+				reach(props, { kind: 'unix', path }, { netnsHonoured: true }),
+			);
+			expect({ door, reachable }).toEqual({ door, reachable: sockets });
+			// The shim's own loopback listeners, inside the unit's namespace — the BPF backstop
+			// (IPAddressDeny=any) must not have closed the one door it forwards to.
+			if (profile.proxy) {
+				const lo = { kind: 'inet', ip: '127.0.0.1', port: net.PROXY_PORT, scope: 'unit' } as const;
+				expect({ door, loopback: reach(props, lo, { netnsHonoured: true }) }).toEqual({
+					door,
+					loopback: true,
+				});
+			}
+		}
+		// Git talks to nothing: no bind, no proxy, no inet family (the per-door family rows
+		// below hold AF_UNIX + the AF_NETLINK the shim's interface enumeration needs).
+		const git = doorProps(net, 'git');
+		expect(git.egressDir).toBeNull();
+		expect(git.props.some((p) => p.startsWith('BindPaths='))).toBe(false);
+		expect(
+			reach(
+				git.props,
+				{ kind: 'inet', ip: '127.0.0.1', port: net.PROXY_PORT, scope: 'unit' },
+				{ netnsHonoured: true },
+			),
+		).toBe(false);
+	});
+
+	test('every door: the backstop filter denies by default, and allows nothing but the unit loopback', async () => {
+		const net = await leaf();
+		for (const door of net.DOORS) {
+			const { props } = doorProps(net, door);
+			const map = parseProperties(props);
+			expect({ door, deny: map.get('IPAddressDeny') }).toEqual({ door, deny: ['any'] });
+			const allow = (map.get('IPAddressAllow') ?? []).join(' ').split(/\s+/).filter(Boolean);
+			expect({ door, extraAllow: allow.filter((token) => token !== 'localhost') }).toEqual({
+				door,
+				extraAllow: [],
+			});
+			expect({ door, netns: map.get('PrivateNetwork') }).toEqual({ door, netns: ['yes'] });
+		}
+	});
+
+	test('every door: its socket families, as outcomes — git has no inet family, and every door can enumerate its interfaces', async () => {
+		// The families are what decides whether a door can open a TCP socket at all (git must
+		// not) and whether the shim's first act works: getifaddrs(3) is an AF_NETLINK query,
+		// and a unit denied it sees NO interface — which the shim refuses (exit 78) on every
+		// run. Dropping AF_NETLINK from a door is a silent total outage, not a hardening.
+		const net = await leaf();
+		for (const door of net.DOORS) {
+			const { props } = doorProps(net, door);
+			const profile = net.DOOR_PROFILE[door] as { proxy: boolean; mcp: boolean };
+			expect({ door, enumerate: canEnumerateInterfaces(props) }).toEqual({ door, enumerate: true });
+			expect({ door, unix: allowsFamily(props, 'AF_UNIX') }).toEqual({ door, unix: true });
+			// A proxy door needs inet for the shim's loopback listeners; git needs none.
+			expect({
+				door,
+				inet: allowsFamily(props, 'AF_INET'),
+				inet6: allowsFamily(props, 'AF_INET6'),
+			}).toEqual({ door, inet: profile.proxy, inet6: profile.proxy });
+		}
+		// Control: the evaluator really denies an unlisted family.
+		expect(canEnumerateInterfaces(['RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6'])).toBe(
+			false,
+		);
+		expect(allowsFamily(['RestrictAddressFamilies=AF_UNIX AF_NETLINK'], 'AF_INET')).toBe(false);
+		// Control: repeated assignments MERGE, as systemd merges them — an extra allow-list in
+		// front of git's own is inet for git, however the last line reads.
+		const merged = (lines: string[], family: 'AF_UNIX' | 'AF_INET') =>
+			allowsFamily(
+				lines.map((line) => `RestrictAddressFamilies=${line}`),
+				family,
+			);
+		expect(merged(['AF_INET', 'AF_UNIX'], 'AF_INET')).toBe(true);
+		expect(merged(['AF_UNIX AF_INET', '~AF_INET'], 'AF_INET')).toBe(false);
+		expect(merged(['~AF_INET', 'AF_INET'], 'AF_INET')).toBe(true);
+		expect(merged(['~AF_INET', 'AF_INET'], 'AF_UNIX')).toBe(true);
+		expect(merged(['AF_UNIX', ''], 'AF_INET')).toBe(true);
+		expect(merged(['none'], 'AF_UNIX')).toBe(false);
+		const git = doorProps(net, 'git').props;
+		expect(allowsFamily(['RestrictAddressFamilies=AF_INET AF_INET6', ...git], 'AF_INET')).toBe(
+			true,
+		);
+	});
+
+	test('a host that ignores PrivateNetwork= is REFUSED by the shim, because the filter alone lets loopback in', async () => {
+		const net = await leaf();
+		// Without the namespace the `localhost` allow is the HOST's loopback — the reason the
+		// shim, not the filter, is what makes the backstop safe.
+		const { props } = doorProps(net, 'turn');
+		expect(
+			reach(props, { kind: 'inet', ip: '127.0.0.1', port: 5432 }, { netnsHonoured: false }),
+		).toBe(true);
+		const shim = (await import(SHIM)) as {
+			checkNamespace(
+				interfaces: Record<string, Array<{ internal: boolean; address: string; family: string }>>,
+			): boolean;
+		};
+		const lo = [{ internal: true, address: '127.0.0.1', family: 'IPv4' }];
+		expect(
+			shim.checkNamespace({ lo, eth0: [{ internal: false, address: '10.0.0.5', family: 'IPv4' }] }),
+		).toBe(false);
+		expect(shim.checkNamespace({ lo })).toBe(true);
+	});
+
+	test('a proxy door refuses to render without its egress dir, and git refuses one', async () => {
+		const net = await leaf();
+		expect(() => net.unitNetworkProperties('turn', {})).toThrow();
+		expect(() => net.unitNetworkProperties('build', {})).toThrow();
+		expect(() => net.unitNetworkProperties('git', { egressDir: `${RUNTIME}/egress/x` })).toThrow();
+	});
+
+	test('the per-run socket path fits sun_path for the longest legal instance', async () => {
+		// A unix socket path is at most 107 bytes on Linux (108 with the NUL). A per-run dir
+		// that overflows it makes EVERY confined turn fail to bind — so it is measured on the
+		// longest instance name the grammar allows, not on the test's own.
+		const net = await leaf();
+		const instance = `a${'b'.repeat(MAX_INSTANCE_LENGTH - 1)}`;
+		const layout = derive(manifestFrom({ instance }));
+		const unit = `${layout.agentUnitPrefix}${'f'.repeat(8)}-${'f'.repeat(4)}-${'f'.repeat(4)}-${'f'.repeat(4)}-${'f'.repeat(12)}.service`;
+		const dir = net.egressDirFor(layout.runtimeDir, unit);
+		for (const name of ['proxy.sock', 'mcp.sock']) {
+			const path = join(dir, name);
+			expect({ path, fits: Buffer.byteLength(path) <= 107 }).toEqual({ path, fits: true });
+		}
+		// …and it is never the runtime root nor the per-turn secret directory.
+		expect(dir.startsWith(`${layout.runtimeDir}/egress/`)).toBe(true);
+	});
+
+	test('egress plans are hostname-only, and git has none', async () => {
+		const net = await leaf();
+		const facts = { providerHosts: [] as string[], registryHosts: [] as string[] };
+		expect(net.egressPlanFor('git', { ...facts, driver: 'claude_code' }).hosts).toEqual([]);
+		expect(net.egressPlanFor('turn', { ...facts, driver: 'claude_code' }).hosts).toEqual([
+			'api.anthropic.com',
+		]);
+		expect(net.egressPlanFor('build', facts).hosts).toEqual(['registry.npmjs.org']);
+		// NP25: MEMBERSHIP with every other fact non-empty — a host that names provider hosts (for
+		// its opencode sites) and registries gives each door exactly its own, nothing appended.
+		const everything = {
+			providerHosts: ['api.provider.example'],
+			registryHosts: ['registry.example.com'],
+		};
+		expect(net.egressPlanFor('turn', { ...everything, driver: 'claude_code' }).hosts).toEqual([
+			'api.anthropic.com',
+		]);
+		expect(net.egressPlanFor('turn', { ...everything, driver: 'opencode' }).hosts).toEqual([
+			'api.provider.example',
+		]);
+		for (const driver of ['claude_code', 'opencode']) {
+			expect({
+				driver,
+				build: net.egressPlanFor('build', { ...everything, driver }).hosts,
+			}).toEqual({
+				driver,
+				build: ['registry.example.com'],
+			});
+			expect({ driver, git: net.egressPlanFor('git', { ...everything, driver }).hosts }).toEqual({
+				driver,
+				git: [],
+			});
+		}
+		expect(net.egressPlanFor('turn', { ...facts, driver: 'claude_code' }).mcp).toBe(true);
+		expect(net.egressPlanFor('build', facts).mcp).toBe(false);
+		// An opencode/pi turn with no declared provider has no host to reach — a named problem.
+		const none = net.planProblems('turn', { ...facts, driver: 'opencode' });
+		expect(none.join(' ')).toContain('AGENT_PROVIDER_HOSTS');
+		// The grammar: no IP literal, no loopback name, no wildcard, no single label — each
+		// refused with a problem and absent from the plan.
+		for (const bad of [
+			'10.0.0.5',
+			'127.0.0.1',
+			'[::1]',
+			'::1',
+			'localhost',
+			'any',
+			'*',
+			'intranet',
+			'x.localhost',
+		]) {
+			const hostile = { ...facts, driver: 'opencode', providerHosts: [bad] };
+			expect({ bad, refused: net.planProblems('turn', hostile).length > 0 }).toEqual({
+				bad,
+				refused: true,
+			});
+			let hosts: string[] = [];
+			try {
+				hosts = net.egressPlanFor('turn', hostile).hosts;
+			} catch {
+				hosts = [];
+			}
+			expect({ bad, planned: hosts.includes(bad) }).toEqual({ bad, planned: false });
+		}
+		for (const door of net.DOORS) {
+			for (const driver of ['claude_code', 'opencode']) {
+				let hosts: string[] = [];
+				try {
+					hosts = net.egressPlanFor(door, {
+						driver,
+						providerHosts: ['api.provider.example'],
+						registryHosts: ['registry.npmjs.org'],
+					}).hosts;
+				} catch {
+					hosts = [];
+				}
+				for (const host of hosts) {
+					const ok = /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(host);
+					expect({ door, driver, host, hostname: ok }).toEqual({
+						door,
+						driver,
+						host,
+						hostname: true,
+					});
+				}
+			}
+		}
+	});
+
+	test('the child env sends proxy doors through the gate, and gives git no proxy at all', async () => {
+		const net = await leaf();
+		const proxy = `http://127.0.0.1:${net.PROXY_PORT}`;
+		for (const door of ['turn', 'build']) {
+			const env = net.childEgressEnv(door, 'claude_code');
+			for (const key of ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy']) {
+				expect({ door, key, value: env[key] }).toEqual({ door, key, value: proxy });
+			}
+			expect({ door, node: env.NODE_USE_ENV_PROXY }).toEqual({ door, node: '1' });
+		}
+		expect(net.childEgressEnv('turn', 'claude_code').CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC).toBe(
+			'1',
+		);
+		// opencode's own off-plan traffic (auto-update, the models.dev catalogue, LSP downloads,
+		// share uploads) is turned OFF, not refused one CONNECT at a time.
+		const opencode = net.childEgressEnv('turn', 'opencode');
+		for (const key of [
+			'OPENCODE_DISABLE_AUTOUPDATE',
+			'OPENCODE_DISABLE_MODELS_FETCH',
+			'OPENCODE_DISABLE_LSP_DOWNLOAD',
+			'OPENCODE_DISABLE_SHARE',
+		]) {
+			expect({ key, value: opencode[key] }).toEqual({ key, value: '1' });
+		}
+		expect(net.childEgressEnv('git')).toEqual({});
+	});
+
+	test('the leaf, the shim and the classifier import only node builtins', () => {
+		// They run where the daemon's config does not exist (this gate; inside the unit, under
+		// ProtectHome/PrivateTmp/the /run mask), so a config import is a crash in one and a
+		// policy that silently differs in the other.
+		// The shim may read the leaf's port constants (the leaf is itself builtins-only); it
+		// may hold no policy of its own and reach no config.
+		const allowed: Record<string, readonly string[]> = {
+			[LEAF]: [],
+			[CLASSIFIER]: [],
+			[SHIM]: ['./network_profile', './network_profile.ts'],
+		};
+		// The module graph as BUN resolves it (static imports, re-exports, dynamic import() and
+		// require()), not a regex over the text: a string literal in an `export const` is not
+		// an import, and a multi-line import is still one.
+		const transpiler = new Bun.Transpiler({ loader: 'ts' });
+		const specifiersOf = (code: string) => transpiler.scanImports(code).map((entry) => entry.path);
+		for (const [file, extra] of Object.entries(allowed)) {
+			const specifiers = specifiersOf(readFileSync(file, 'utf8'));
+			expect({ file: relative(PACKAGE, file), scanned: specifiers.length > 0 }).toEqual({
+				file: relative(PACKAGE, file),
+				scanned: true,
+			});
+			const foreign = specifiers.filter((s) => !s.startsWith('node:') && !extra.includes(s));
+			expect({ file: relative(PACKAGE, file), foreign }).toEqual({
+				file: relative(PACKAGE, file),
+				foreign: [],
+			});
+		}
+		// Positive control: the scanner sees a config import however it is spelled.
+		expect(
+			specifiersOf(
+				"import {\n  config,\n} from '../config';\nconst x = await import('./y');\nexport { z } from \"../z\";\n",
+			).sort(),
+		).toEqual(['../config', '../z', './y']);
+	});
+
+	// (The retired AGENT_EGRESS_ALLOW key is an OUTCOME gate in the package —
+	// tests/egress_config.test.ts: a museum env carrying it stops the daemon at parse, naming
+	// the replacements. A regex over rendered artifacts for the key's spelling was deleted: the
+	// renderer never emitted it, so that row could not fail.)
+
+	test('mutation: any view of the whole egress/ directory reaches a sibling run — the rows above are not blind to it', async () => {
+		// The per-run bind is the identity. A leaf that bound the PARENT (egressDirFor returning
+		// `<runtime>/egress`), or added a second, read-only view of it anywhere in the unit,
+		// hands every run every concurrent turn's mcp.sock. Each shape must turn the
+		// "nothing forbidden" row red — or that row certifies the leak.
+		const net = await leaf();
+		const sibling = [
+			`unix:${RUNTIME}/egress/${SIBLING_RUN}/proxy.sock`,
+			`unix:${RUNTIME}/egress/${SIBLING_RUN}/mcp.sock`,
+		];
+		for (const door of net.DOORS) {
+			const { props } = doorProps(net, door);
+			for (const extra of [
+				`BindReadOnlyPaths=${RUNTIME}/egress:/run/dedalo-all`,
+				`BindPaths=${RUNTIME}/egress`,
+			]) {
+				const mutated = [...props, extra];
+				const reached = FORBIDDEN.filter((dest) => reach(mutated, dest, reachOptions(net))).map(
+					describeDestination,
+				);
+				expect({ door, extra, reached }).toEqual({ door, extra, reached: sibling });
+			}
+		}
+		// …and the parent-dir bind as the proxy doors' ONE bind (the leaf mutation itself).
+		for (const door of ['turn', 'build']) {
+			const parent = net.unitNetworkProperties(door, { egressDir: `${RUNTIME}/egress` });
+			const reached = FORBIDDEN.filter((dest) => reach(parent, dest, reachOptions(net))).map(
+				describeDestination,
+			);
+			expect({ door, reached }).toEqual({ door, reached: sibling });
+		}
+	});
+
+	test('mutation: without its per-unit mask, the host /dev/shm is a shared path-socket directory', async () => {
+		const net = await leaf();
+		const shm = { kind: 'unix', path: '/dev/shm/x.sock' } as const;
+		for (const door of net.DOORS) {
+			const { props } = doorProps(net, door);
+			expect({ door, shm: reach(props, shm, { netnsHonoured: true }) }).toEqual({
+				door,
+				shm: false,
+			});
+			// PrivateDevices= alone does not hide it: systemd binds the host's /dev/shm into the
+			// private /dev. The model knows that, so dropping the mask is red.
+			const unmasked = [
+				...props.filter((prop) => !/^TemporaryFileSystem=\/dev\/shm(?::|$)/.test(prop)),
+				'PrivateDevices=yes',
+			];
+			expect({ door, shm: reach(unmasked, shm, { netnsHonoured: true }) }).toEqual({
+				door,
+				shm: true,
+			});
+			// Control: PrivateDevices= really does hide the rest of the host's /dev.
+			expect(reach(unmasked, { kind: 'unix', path: '/dev/x.sock' }, { netnsHonoured: true })).toBe(
+				false,
+			);
+		}
+	});
+
+	test('mutation: without its PID namespace, every door reaches a concurrent turn’s sockets through /proc/<pid>/root', async () => {
+		// The units share no mount of egress/, yet a same-uid concurrent unit is visible in /proc
+		// (ProtectProc=invisible hides only OTHER uids) and /proc/<pid>/root is its mount view.
+		// Dropping PrivatePIDs= must turn "nothing forbidden" red with EXACTLY the sibling's two
+		// sockets — the ones its bind exposes — or that row certifies the leak this namespace closed.
+		const net = await leaf();
+		const sibling = [
+			`unix:${RUNTIME}/egress/${SIBLING_RUN}/proxy.sock`,
+			`unix:${RUNTIME}/egress/${SIBLING_RUN}/mcp.sock`,
+		];
+		for (const door of net.DOORS) {
+			const { props } = doorProps(net, door);
+			const shared = props.filter((prop) => !/^PrivatePIDs=/.test(prop));
+			expect({ door, dropped: props.length - shared.length }).toEqual({ door, dropped: 1 });
+			const reached = FORBIDDEN.filter((dest) => reach(shared, dest, reachOptions(net))).map(
+				describeDestination,
+			);
+			expect({ door, reached }).toEqual({ door, reached: sibling });
+			// Control: the route IS the concurrent unit — alone, the same unit reaches nothing.
+			const alone = FORBIDDEN.filter((dest) => reach(shared, dest, { netnsHonoured: true })).map(
+				describeDestination,
+			);
+			expect({ door, alone }).toEqual({ door, alone: [] });
+		}
+	});
+
+	test('mutation: without its IPC namespace, every door shares the host’s SysV keys and message queues', async () => {
+		const net = await leaf();
+		for (const door of net.DOORS) {
+			const { props } = doorProps(net, door);
+			const shared = props.filter((prop) => !/^PrivateIPC=/.test(prop));
+			expect({ door, dropped: props.length - shared.length }).toEqual({ door, dropped: 1 });
+			const reached = FORBIDDEN.filter((dest) => reach(shared, dest, reachOptions(net))).map(
+				describeDestination,
+			);
+			expect({ door, reached }).toEqual({ door, reached: ['ipc:sysv:0x5a5a0001'] });
+		}
 	});
 });

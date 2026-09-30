@@ -136,8 +136,9 @@ matrix, the marker law, the credential path, and the isolation boundary between 
 
 **A museum has TWO uids.** The daemon's, which holds the shared bearer, the provider keys and
 the audit handle; and the AGENT's (`identity.agentUser`), which every turn runs as, in its own
-transient systemd unit with its own memory/CPU/task/wall-clock caps and its own egress policy
-(`src/drivers/confinement.ts`). Nothing separates a process from itself, so a turn that ran as
+transient systemd unit with its own memory/CPU/task/wall-clock caps, in a private network
+namespace whose only way out is the daemon's hostname-only egress gate
+(`src/drivers/confinement.ts`, `src/drivers/network_profile.ts`, `src/egress/gate.ts`). Nothing separates a process from itself, so a turn that ran as
 the daemon could read all three whatever the unit's `Protect*` directives said. Where a host
 cannot do this — a laptop, a container — the daemon REFUSES the session unless
 `AGENT_CONFINEMENT=none` is declared, and then every turn announces itself into its own
