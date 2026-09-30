@@ -260,6 +260,7 @@ const get_content_data = async function(self) {
 				// SSE stream can be opened to track the background process.
 				update_process_status({
 					pid							: api_response.pid,
+					ui.reveal(response_message)
 					pfile						: api_response.pfile,
 					local_db_id					: local_db_id,
 					container					: response_message,
@@ -839,11 +840,13 @@ const update_process_status = (options) => {
 				const is_running = sse_response?.is_running ?? true
 
 				// On the final chunk (is_running===false), append the compact
-				// summary report immediately so it is visible before on_done fires.
+				// summary report immediately so it is visible before on_done fires,
+				// and scroll it into view: it lands below the components list, under
+				// the fold on a long selection.
 				if (is_running===false && sse_response.data) {
-					container.appendChild(
+					ui.reveal(container.appendChild(
 						render_response_report(self, sse_response.data)
-					)
+					))
 				}
 
 				// compound_msg assembles a pipe-delimited status string from the

@@ -255,28 +255,19 @@ describe('update_ontology failures render IN the panel', () => {
 describe('update_ontology results are scrolled into view', () => {
 	// The response surface sits below the TLD reference block and the submit
 	// button: a result or a failure landed under the fold and the panel looked
-	// idle unless the operator scrolled (same fix as update_code's `reveal`).
-	const fn_start = src.indexOf('export const reveal_response');
-	const fn_body = src.slice(fn_start, src.indexOf('}//end reveal_response', fn_start));
-
+	// idle unless the operator scrolled. The mechanism is the shared ui.reveal
+	// (pinned in client_ui_reveal.test.ts); no local copy.
 	test('every ending reveals its node', () => {
-		expect(fn_start).toBeGreaterThan(-1);
+		expect(src).not.toContain('scrollIntoView');
 		// Phase 1 + Phase 2 failures (envelope and non-envelope), the version
 		// change shown while Phase 2 runs, and the success status line
 		expect(src).toContain(
-			'reveal_response(body_response.appendChild(build_failure(server_ontology_api_response.error)))',
+			'ui.reveal(body_response.appendChild(build_failure(server_ontology_api_response.error)))',
 		);
+		expect(src).toContain('ui.reveal(body_response.appendChild(build_failure(api_response.error)))');
 		expect(src).toContain(
-			'reveal_response(body_response.appendChild(build_failure(api_response.error)))',
+			'ui.reveal(body_response.appendChild(build_version_change(current_ontology, result.info)))',
 		);
-		expect(src).toContain(
-			'reveal_response(body_response.appendChild(build_version_change(current_ontology, result.info)))',
-		);
-		expect(src.match(/reveal_response\(ui\.create_dom_element\(/g)?.length).toBe(3);
-	});
-
-	test('scroll is issued next frame and guarded for DOM stubs', () => {
-		expect(fn_body).toContain("typeof node.scrollIntoView==='function'");
-		expect(fn_body).toContain('requestAnimationFrame(bring_into_view)');
+		expect(src.match(/ui\.reveal\(ui\.create_dom_element\(/g)?.length).toBe(3);
 	});
 });

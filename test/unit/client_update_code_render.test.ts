@@ -789,7 +789,7 @@ describe('update_code tracking surface', () => {
 
 	test("the run's scroll is issued AFTER the stream node, and is not animated", () => {
 		const stream_at = tracker.indexOf("class_name\t\t: 'update_stream'");
-		const scroll_at = tracker.indexOf('scrollIntoView');
+		const scroll_at = tracker.indexOf('ui.reveal(body_response');
 		expect(stream_at, 'the stream node is created in the tracker').toBeGreaterThan(-1);
 		expect(scroll_at, 'the tracker scrolls its surface into view').toBeGreaterThan(-1);
 		// ORDER is the fix: scrolling before the stream exists chased a layout
@@ -814,8 +814,10 @@ describe('update_code tracking surface', () => {
 				`an ending note is appended unrevealed: ${note.slice(0, 120)}`,
 			).toBe(true);
 		}
-		// reveal itself must tolerate the DOM stub this gate drives it against
-		expect(tracker).toContain("typeof node.scrollIntoView==='function'");
+		// reveal is the shared ui.reveal (next frame, DOM-stub guarded — pinned
+		// in client_ui_reveal.test.ts), not a local scrollIntoView copy
+		expect(tracker).toContain("const reveal = (node) => ui.reveal(node, { block:'center' })");
+		expect(tracker).not.toContain('scrollIntoView');
 	});
 
 	test('the pinned phase track cannot own its scrollport', () => {

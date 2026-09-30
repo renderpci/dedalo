@@ -258,35 +258,6 @@ export const build_failure = function (api_error) {
 
 
 /**
-* REVEAL_RESPONSE
-* Bring a result node into view. The response surface is appended LAST, below
-* the TLD reference block and the submit button, so a result or a failure lands
-* under the fold: the panel looked like it had done nothing unless the operator
-* scrolled. Same mechanism as update_code's `reveal`, with its measured caveat:
-* a smooth scroll aims at an offset computed when it is issued, so it runs in
-* the next frame, after the nodes appended in this tick have laid out.
-* Guarded on the method: the render gates drive this file against a DOM stub.
-*
-* @param {HTMLElement} node
-* @returns {HTMLElement} node
-*/
-export const reveal_response = function (node) {
-
-	if (node && typeof node.scrollIntoView==='function') {
-		const bring_into_view = () => node.scrollIntoView({ behavior:'smooth', block:'start' })
-		if (typeof requestAnimationFrame==='function') {
-			requestAnimationFrame(bring_into_view)
-		} else {
-			bring_into_view()
-		}
-	}
-
-	return node
-}//end reveal_response
-
-
-
-/**
 * GET_UPDATE_INFO
 * Phase 1 of the update: ask a master for its manifest (available files + the
 * version info). Called from TWO places — the reference block's "Fetch list"
@@ -890,9 +861,9 @@ const get_content_data_edit = async function(self) {
 						const result = response_data(server_ontology_api_response)
 						if(request_failed(server_ontology_api_response) || !result){
 							if (request_failed(server_ontology_api_response)) {
-								reveal_response(body_response.appendChild(build_failure(server_ontology_api_response.error)))
+								ui.reveal(body_response.appendChild(build_failure(server_ontology_api_response.error)))
 							} else {
-								reveal_response(ui.create_dom_element({
+								ui.reveal(ui.create_dom_element({
 									element_type	: 'div',
 									class_name		: 'error',
 									text_content	: String(response_extension(server_ontology_api_response, 'msg') || get_label.update_ontology_unreachable_error || 'Could not reach the master server.'),
@@ -903,7 +874,7 @@ const get_content_data_edit = async function(self) {
 						}
 
 					// show installed → incoming before the import completes
-						reveal_response(body_response.appendChild(build_version_change(current_ontology, result.info)))
+						ui.reveal(body_response.appendChild(build_version_change(current_ontology, result.info)))
 
 					// build the file list: user-selected TLDs, enriched, with matrix_dd always first
 						const files_filtered = result.files.filter( el => ar_active_ontology_tlds.find(item => item === el.tld) )
@@ -931,9 +902,9 @@ const get_content_data_edit = async function(self) {
 					// fail case
 						if(request_failed(api_response) || !response_data(api_response)){
 							if (request_failed(api_response)) {
-								reveal_response(body_response.appendChild(build_failure(api_response.error)))
+								ui.reveal(body_response.appendChild(build_failure(api_response.error)))
 							} else {
-								reveal_response(ui.create_dom_element({
+								ui.reveal(ui.create_dom_element({
 									element_type	: 'div',
 									class_name		: 'error',
 									text_content	: String(response_extension(api_response, 'msg') || get_label.update_ontology_import_failed || 'The ontology import failed.'),
@@ -944,7 +915,7 @@ const get_content_data_edit = async function(self) {
 						}
 
 					// status line (revealed: the whole result reads down from it)
-						reveal_response(ui.create_dom_element({
+						ui.reveal(ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'ok',
 							inner_html		: (get_label.update_ontology_done || 'Ontology updated.'),

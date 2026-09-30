@@ -4019,6 +4019,47 @@ export const ui = {
 
 
 	/**
+	* REVEAL
+	* Scroll a just-appended response node (a result, a failure, a report) into
+	* view. A response surface usually lands LAST, below the form that fired it,
+	* so the outcome sits under the fold and the panel looks idle unless the user
+	* scrolls. One mechanism for every widget/tool with that shape.
+	* Load-bearing (measured in update_code, 2026-08-28): the scroll is issued in
+	* the NEXT frame. scrollIntoView aims at an offset computed when it is issued;
+	* issued in the tick that is still appending nodes, it lands short.
+	* Reduced motion downgrades 'smooth' to 'auto'. Guarded on the method: render
+	* gates drive callers against DOM stubs.
+	* @param {HTMLElement} node
+	* @param {Object} [options]
+	* @param {string} [options.block='start'] - scrollIntoView block
+	* @param {string} [options.behavior='smooth'] - 'smooth' | 'auto'
+	* @returns {HTMLElement} node - so a caller can wrap the append: ui.reveal(parent.appendChild(x))
+	*/
+	reveal : function(node, options={}) {
+
+		if (!node || typeof node.scrollIntoView!=='function') {
+			return node
+		}
+
+		const block				= options.block || 'start'
+		const reduced_motion	= typeof window!=='undefined' && typeof window.matchMedia==='function'
+			? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+			: false
+		const behavior			= reduced_motion ? 'auto' : (options.behavior || 'smooth')
+
+		const bring_into_view = () => node.scrollIntoView({ behavior, block })
+		if (typeof requestAnimationFrame==='function') {
+			requestAnimationFrame(bring_into_view)
+		} else {
+			bring_into_view()
+		}
+
+		return node
+	},//end reveal
+
+
+
+	/**
 	* ENTER_FULLSCREEN
 	* Toggles a CSS fullscreen state on a node by adding/removing the 'fullscreen' class.
 	* Additionally hides the main navigation menu (.menu_wrapper) and appends a visible

@@ -116,6 +116,12 @@ Merged since the last release; these ship with the next one.
     toolbar buttons next to it (*Search*, *Show all*): outlined at rest and
     highlighted on hover.
 
+- **The Update cache tool scrolls to its result**
+
+    When an Update cache run finished, its summary (or a refusal) appeared below
+    the components list, out of sight on a long selection. The tool now scrolls to
+    it, with the same mechanism the Update code and Update ontology panels use.
+
 - **Reverting the same bulk run a second time no longer reports records as "not reverted" when nothing changed.**
 
     Reverting a bulk revert, or a run whose dataframe removal had emptied a record,

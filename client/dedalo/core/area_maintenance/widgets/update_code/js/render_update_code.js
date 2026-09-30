@@ -780,13 +780,8 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 	// with the surface complete lands at 26 exactly. rAF lets the appended nodes
 	// lay out first — without it the offset is computed from a stale layout
 	// again, just one frame earlier.
-		if (scroll_into_view===true && typeof body_response.scrollIntoView==='function') {
-			const bring_into_view = () => body_response.scrollIntoView({ behavior:'auto', block:'start' })
-			if (typeof requestAnimationFrame==='function') {
-				requestAnimationFrame(bring_into_view)
-			} else {
-				bring_into_view()
-			}
+		if (scroll_into_view===true) {
+			ui.reveal(body_response, { behavior:'auto', block:'start' })
 		}
 
 	// frame feed. update_process_status/render_stream expose no per-chunk hook
@@ -837,14 +832,9 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 		// short window (update_code.less caps it for exactly this reason), so a
 		// refusal, a rollback or a lost connection landed in space the operator
 		// never saw: the panel looked like it had simply stopped. The track's
-		// cap makes room; this puts the sentence IN it. Guarded on the method
-		// because the render gate drives this file against a DOM stub.
-		const reveal = (node) => {
-			if (node && typeof node.scrollIntoView==='function') {
-				node.scrollIntoView({ behavior:'smooth', block:'center' })
-			}
-			return node
-		}
+		// cap makes room; this puts the sentence IN it (ui.reveal: next frame,
+		// DOM-stub guarded).
+		const reveal = (node) => ui.reveal(node, { block:'center' })
 
 		const finish_success = async (version) => {
 			end_tracking()
