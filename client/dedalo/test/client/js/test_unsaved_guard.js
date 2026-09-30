@@ -40,7 +40,8 @@
 import {elements} from './elements.js'
 import {get_instance} from '../../../core/common/js/instances.js'
 import {ui} from '../../../core/common/js/ui.js'
-import {events_init, reset_unsaved_data} from '../../../core/common/js/events.js'
+import {events_init, reset_unsaved_data, register_unsaved_instance} from '../../../core/common/js/events.js'
+import {check_unsaved_data} from '../../../core/component_common/js/component_common.js'
 
 
 
@@ -386,6 +387,63 @@ describe('UNSAVED GUARD — per-model coverage (real components, edit mode)', fu
 	afterEach(function() {
 		reset_unsaved_data()
 		container.innerHTML = ''
+	})
+})
+
+
+
+// CHECK_UNSAVED_DATA — what the auto-save sweep could NOT flush is never wiped.
+// Until 2026-09-30 the sweep reset the whole registry, so a refused save or a
+// deliberately non-auto-saved draft (component_password) vanished on navigation
+// with no prompt. In-page callers (activation, click outside) flush only.
+describe('CHECK_UNSAVED_DATA — the sweep never wipes what it did not flush', function() {
+
+	// a registered instance the sweep cannot save: it has no changed_data
+	const draft_holder = {type: 'component', model: 'fake_draft', data: {changed_data: []}}
+	let original_confirm = null
+	let confirm_calls = 0
+
+	beforeEach(function() {
+		reset_unsaved_data()
+		original_confirm = window.confirm
+		confirm_calls = 0
+	})
+
+	afterEach(function() {
+		window.confirm = original_confirm
+		reset_unsaved_data()
+	})
+
+	it('flush_only (in-page callers) never prompts and keeps the draft registered', async function() {
+		window.confirm = () => { confirm_calls++; return true }
+		register_unsaved_instance(draft_holder)
+
+		const result = await check_unsaved_data({flush_only: true})
+
+		assert.strictEqual(result, true)
+		assert.strictEqual(confirm_calls, 0, 'moving between fields must not raise a dialog')
+		assert.strictEqual(window.unsaved_data, true, 'the unflushed draft must stay registered')
+	})
+
+	it('navigation prompts for what the sweep could not flush; cancel keeps it', async function() {
+		window.confirm = () => { confirm_calls++; return false }
+		register_unsaved_instance(draft_holder)
+
+		const result = await check_unsaved_data()
+
+		assert.strictEqual(confirm_calls, 1, 'navigation with an unflushed draft must ask')
+		assert.strictEqual(result, false, 'cancel must stop the navigation')
+		assert.strictEqual(window.unsaved_data, true, 'cancel must keep the draft registered')
+	})
+
+	it('navigation: accepting the loss clears the registry', async function() {
+		window.confirm = () => { confirm_calls++; return true }
+		register_unsaved_instance(draft_holder)
+
+		const result = await check_unsaved_data()
+
+		assert.strictEqual(result, true)
+		assert.strictEqual(window.unsaved_data, false)
 	})
 })
 

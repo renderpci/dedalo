@@ -24014,9 +24014,146 @@ body.inspector_resizing {
 * component_password
 *
 * Included from main.less file
+*
+* Edit view = the password editor (view_default_edit_password.js):
+* field + show/hide toggle, confirm field, live policy checklist, explicit
+* Save/Cancel and a status line. The checklist shows on focus or while a draft
+* exists; confirm + actions only while a draft exists.
 */
 .component_password.view_line {
   display: block;
+}
+.component_password .password_editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 32rem;
+}
+.component_password .password_editor .password_field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.component_password .password_editor .password_field > input {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+.component_password .password_editor .password_field > input::placeholder {
+  color: var(--fg_muted);
+  font-style: normal;
+}
+.component_password .password_editor .password_field > .password_toggle {
+  flex: 0 0 auto;
+  margin: 0;
+  opacity: 0.55;
+}
+.component_password .password_editor .password_field > .password_toggle.active,
+.component_password .password_editor .password_field > .password_toggle:hover {
+  opacity: 1;
+}
+.component_password .password_editor .password_confirm {
+  display: none;
+  padding-right: calc(1.5rem + var(--space-2));
+}
+.component_password .password_editor .password_rules {
+  display: none;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border_default);
+  border-radius: var(--radius-md);
+  background-color: var(--bg_surface_alt);
+  font-size: 0.875rem;
+}
+.component_password .password_editor .password_rules .password_rules_title {
+  color: var(--fg_muted);
+  margin-bottom: var(--space-2);
+}
+.component_password .password_editor .password_rules ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-1);
+}
+.component_password .password_editor .password_rules .password_rule {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  color: var(--fg_default);
+}
+.component_password .password_editor .password_rules .password_rule::before {
+  flex: 0 0 1rem;
+  text-align: center;
+  font-weight: 700;
+}
+.component_password .password_editor .password_rules .password_rule[data-state="pending"] {
+  color: var(--fg_muted);
+}
+.component_password .password_editor .password_rules .password_rule[data-state="pending"]::before {
+  content: '○';
+}
+.component_password .password_editor .password_rules .password_rule[data-state="ok"]::before {
+  content: '✓';
+  color: var(--color_success);
+}
+.component_password .password_editor .password_rules .password_rule[data-state="fail"] {
+  color: var(--color_danger);
+}
+.component_password .password_editor .password_rules .password_rule[data-state="fail"]::before {
+  content: '✗';
+}
+.component_password .password_editor .password_actions {
+  display: none;
+  gap: var(--space-3);
+}
+.component_password .password_editor .password_actions > button {
+  margin: 0;
+}
+.component_password .password_editor .password_actions > button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.component_password .password_editor .password_status {
+  font-size: 0.875rem;
+}
+.component_password .password_editor .password_status:empty {
+  display: none;
+}
+.component_password .password_editor .password_status::before {
+  font-weight: 700;
+  margin-right: var(--space-2);
+}
+.component_password .password_editor .password_status[data-state="idle"] {
+  color: var(--fg_muted);
+}
+.component_password .password_editor .password_status[data-state="draft"] {
+  color: var(--color_warning);
+}
+.component_password .password_editor .password_status[data-state="draft"]::before {
+  content: '●';
+}
+.component_password .password_editor .password_status[data-state="saved"] {
+  color: var(--color_success);
+}
+.component_password .password_editor .password_status[data-state="saved"]::before {
+  content: '✓';
+}
+.component_password .password_editor .password_status[data-state="error"] {
+  color: var(--color_danger);
+}
+.component_password .password_editor .password_status[data-state="error"]::before {
+  content: '✗';
+}
+.component_password .password_editor:focus-within .password_rules,
+.component_password .password_editor.has_draft .password_rules {
+  display: block;
+}
+.component_password .password_editor.has_draft .password_confirm {
+  display: flex;
+}
+.component_password .password_editor.has_draft .password_actions {
+  display: flex;
 }
 /**
 * component_pdf

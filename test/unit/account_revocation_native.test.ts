@@ -350,7 +350,7 @@ const TRANSITIONS: TransitionRow[] = [
 		component: PASSWORD,
 		apply: async (userId) => {
 			await saveAsAdmin(userId, PASSWORD, [
-				{ id: 1, lang: 'lg-nolan', value: 'a_new_scratch_password_77' },
+				{ id: 1, lang: 'lg-nolan', value: 'A_new_scratch_Secret_77' },
 			]);
 		},
 		loginAfter: 'refused',
@@ -544,7 +544,7 @@ describe('the self password change keeps the acting session and kills every othe
 					sectionId: userId,
 					lang: 'lg-nolan',
 					changedData: [
-						{ action: 'set_data', value: [{ id: 1, value: 'my_own_new_password_88' }] },
+						{ action: 'set_data', value: [{ id: 1, value: 'My_own_new_Secret_88' }] },
 					],
 					userId,
 				});
@@ -577,7 +577,7 @@ describe('the self password change keeps the acting session and kills every othe
 			},
 			async () => {
 				await saveAsAdmin(userId, PASSWORD, [
-					{ id: 1, lang: 'lg-nolan', value: 'admin_set_this_password_99' },
+					{ id: 1, lang: 'lg-nolan', value: 'Admin_set_this_Secret_99' },
 				]);
 			},
 		);
@@ -601,7 +601,7 @@ describe('a pending recovery code does not survive a deactivation (SEC-15)', () 
 		expect(loadPasswordReset(resetId)).toBeNull();
 		const { confirmPasswordReset } = await import('../../src/core/security/password_reset.ts');
 		await expect(
-			confirmPasswordReset(resetId, '87654321', 'a_brand_new_password_11', '127.0.0.1'),
+			confirmPasswordReset(resetId, '87654321', 'A_brand_new_Secret_11', '127.0.0.1'),
 		).rejects.toThrow();
 	});
 
@@ -617,7 +617,7 @@ describe('a pending recovery code does not survive a deactivation (SEC-15)', () 
 
 		const { confirmPasswordReset } = await import('../../src/core/security/password_reset.ts');
 		await expect(
-			confirmPasswordReset(resetId, code, 'a_brand_new_password_12', '127.0.0.1'),
+			confirmPasswordReset(resetId, code, 'A_brand_new_Secret_12', '127.0.0.1'),
 		).rejects.toThrow();
 		// And the row is burned, so a retry cannot grind it.
 		expect(loadPasswordReset(resetId)).toBeNull();
@@ -784,7 +784,7 @@ describe('the login-time password COST UPGRADE is not a revocation', () => {
 				});
 			}),
 			saveAsAdmin(genuineId, PASSWORD, [
-				{ id: 1, lang: 'lg-nolan', value: 'concurrency_probe_password_55' },
+				{ id: 1, lang: 'lg-nolan', value: 'Concurrency_probe_Secret_55' },
 			]),
 		]);
 
@@ -821,7 +821,7 @@ describe('the revocation rides the COMMIT-ONLY lane', () => {
 					sectionTipo: USERS,
 					sectionId: userId,
 					lang: 'lg-nolan',
-					changedData: [{ action: 'set_data', value: [{ id: 1, value: 'rolled_back_pw_44' }] }],
+					changedData: [{ action: 'set_data', value: [{ id: 1, value: 'Rolled_back_pw_44' }] }],
 					userId,
 				});
 				expect(outcome.ok).toBe(true);
@@ -848,7 +848,7 @@ describe('the revocation rides the COMMIT-ONLY lane', () => {
 				sectionTipo: USERS,
 				sectionId: userId,
 				lang: 'lg-nolan',
-				changedData: [{ action: 'set_data', value: [{ id: 1, value: 'committed_pw_45' }] }],
+				changedData: [{ action: 'set_data', value: [{ id: 1, value: 'Committed_pw_45' }] }],
 				userId,
 			});
 			expect(outcome.ok).toBe(true);

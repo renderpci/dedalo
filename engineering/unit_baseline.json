@@ -606,6 +606,11 @@
 			"skipped": 0,
 			"assertions": 22
 		},
+		"test/unit/client_ui_reveal.test.ts": {
+			"tests": 5,
+			"skipped": 0,
+			"assertions": 14
+		},
 		"test/unit/client_unsaved_registry.test.ts": {
 			"tests": 14,
 			"skipped": 0,
@@ -2750,6 +2755,11 @@
 			"tests": 7,
 			"skipped": 0,
 			"assertions": 21
+		},
+		"test/unit/password_policy_native.test.ts": {
+			"tests": 28,
+			"skipped": 0,
+			"assertions": 70
 		},
 		"test/unit/password_reset_native.test.ts": {
 			"tests": 11,

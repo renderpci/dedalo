@@ -71,6 +71,8 @@
 	import {strip_tags, url_vars_to_object} from '../../../core/common/js/utils/index.js'
 	import {request_failed, response_data, response_extension} from '../../common/js/api_error.js'
 	import {error_text} from '../../common/js/render_api_error.js'
+	import {format_label} from '../../common/js/common.js'
+	import {check_password} from '../../component_password/js/password_policy.js'
 
 
 
@@ -904,8 +906,11 @@ const get_content_data = function(self) {
 				ui.show_message(messages_container, (get_label.enter_recovery_code || 'Enter the 8-digit recovery code'), 'error', 'component_message', true)
 				return false
 			}
-			if (new_password.length<8) {
-				ui.show_message(messages_container, (get_label.password_too_short || 'Password too short. Use at least 8 characters'), 'error', 'component_message', true)
+			// the engine's ONE password policy (the server refuses the same rules)
+			const policy = check_password(new_password)
+			if (!policy.valid) {
+				const failed = policy.rules.find(el => el.id===policy.failed)
+				ui.show_message(messages_container, format_label(get_label[failed.label] || failed.label, failed.params), 'error', 'component_message', true)
 				return false
 			}
 			if (new_password!==new_password_confirm) {

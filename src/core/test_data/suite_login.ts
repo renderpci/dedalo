@@ -31,6 +31,7 @@ import { updateMatrixRecord } from '../db/matrix_write.ts';
 import { sql } from '../db/postgres.ts';
 import { DedaloError } from '../errors/index.ts';
 import { ARGON2_OPTIONS } from '../security/argon2_params.ts';
+import { assertPasswordPolicy } from '../security/password_policy.ts';
 import { assertTestDatabase } from './test_database_marker.ts';
 
 const USERS_TABLE = 'matrix_users';
@@ -45,7 +46,7 @@ const PASSWORD_COMPONENT = 'dd133';
  * gate depend on an operator's file again. `DEDALO_TEST_PASSWORD` still wins
  * when it is set (scripts/client_test_runner.ts).
  */
-export const SUITE_LOGIN_PASSWORD = 'dedalo_suite_client_tests';
+export const SUITE_LOGIN_PASSWORD = 'Dedalo-Suite-Client-7';
 
 /** What the door did — reported so a run's log says whether it changed anything. */
 export type SuiteLoginOutcome = 'unchanged' | 'set';
@@ -100,6 +101,8 @@ export async function ensureSuiteLoginPassword(
 		return 'unchanged';
 	}
 
+	// The suite credential obeys the engine's ONE password policy, like every other.
+	assertPasswordPolicy(password);
 	const hash = await Bun.password.hash(password, ARGON2_OPTIONS);
 	const merged = { ...(row.string ?? {}) };
 	merged[PASSWORD_COMPONENT] = [{ id: 1, value: hash, lang: 'lg-nolan' }] as never;

@@ -818,8 +818,8 @@ export const ui = {
 		*     override this to handle cursor placement themselves).
 		*  6. Updates page_globals.component_active.
 		*  7. Publishes the 'activate_component' event via event_manager.
-		*  8. Calls check_unsaved_data so that a pending mousedown on another component
-		*     triggers a save-before-navigate prompt.
+		*  8. Calls check_unsaved_data({flush_only:true}) so a pending edit of another
+		*     component is flushed (no prompt: moving between fields is not navigation).
 		*  9. Persists the last selected component tipo for this section in the local DB
 		*     (used to restore the selection on back-navigation).
 		*
@@ -965,7 +965,7 @@ export const ui = {
 			// unsaved_data case
 			// This allow catch page mousedown event (inside any component) and check for unsaved components
 			// usually happens in component_text_area editions because the delay (500 ms) to set as changed
-				check_unsaved_data()
+				check_unsaved_data({flush_only: true})
 
 			// section last selection store
 				data_manager.set_local_db_data(

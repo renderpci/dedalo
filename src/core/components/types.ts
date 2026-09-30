@@ -319,6 +319,17 @@ export interface ComponentModel {
 	 */
 	readonly emitHook?: EmitHookId;
 	/**
+	 * The stored value is a CREDENTIAL (component_password): it is never
+	 * resolved for display. `resolveComponentValue` (resolve/component_data.ts)
+	 * — the one resolver every display door reads through (section read, save
+	 * response, Time Machine, portal list values, datalists, identify, term
+	 * resolution) — serves each non-empty value as `SECRET_MASK`, keeping the
+	 * item's `id`. The engine reads the real value only where it must (auth.ts
+	 * verification, the write path), never through that resolver.
+	 * WC-2026-09-30-password-hash-never-served.
+	 */
+	readonly secretValue?: true;
+	/**
 	 * The model's DEFAULT target source, named as DATA (the `emitHook` /
 	 * `resolveData` shape — see TargetSourceId): where this model's options come
 	 * from when the node's own `sqo.section_tipo` resolves no target. The ID is

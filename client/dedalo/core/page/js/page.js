@@ -1241,8 +1241,8 @@ page.prototype.add_events = function() {
 			// Check for unsaved components, usually happens in component_text_area editions because
 			// the delay (500 ms) to set as changed
 				if (unsaved_data===true) {
-					// check_unsaved_data
-					check_unsaved_data()
+					// check_unsaved_data (flush only: the native beforeunload prompt asks)
+					check_unsaved_data({flush_only: true})
 				}
 
 			// unsaved_data is false. Nothing to worry about

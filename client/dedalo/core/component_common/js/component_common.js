@@ -2126,14 +2126,21 @@ component_common.prototype.set_changed_data = function(changed_data_item) {
 *     any component instances that still carry non-empty changed_data. This handles
 *     the common text-area debounce window (500 ms delay before the component marks
 *     itself changed) where the user navigates faster than the debounce fires.
-*     After the sweep the whole unsaved registry and the coarse assertion are
-*     cleared via reset_unsaved_data() — "everything was just flushed"
-*     (window.unsaved_data is DERIVED from the events.js registry; this function
-*     never assigns the boolean directly).
-*  2. After the auto-save pass, if window.unsaved_data is true again (an edit
-*     landed while the sweep's saves were awaited), show a browser confirm()
-*     dialog. Returning false signals the caller to abort the navigation; an
-*     acceptance resets the registry again — "the user accepted the loss".
+*     Each successful save retires its OWN registration; the sweep never wipes
+*     the registry, because whatever is still registered afterwards was NOT
+*     flushed: a save the server refused, a draft that is deliberately not
+*     auto-saveable (component_password: a password is committed only by its
+*     own Save), an instance-less assertion (set_before_unload(true)).
+*     (Until 2026-09-30 the sweep called reset_unsaved_data() unconditionally,
+*     so those were dropped with no prompt.) window.unsaved_data is DERIVED from
+*     the events.js registry; this function never assigns the boolean directly.
+*  2. Unless `flush_only`, if window.unsaved_data is still true, show a browser
+*     confirm() dialog. Returning false signals the caller to abort the
+*     navigation; an acceptance resets the registry — "the user accepted the
+*     loss". `flush_only` callers are the in-page ones (component activation,
+*     click outside components, the beforeunload handler whose native prompt
+*     does the asking): they flush and never prompt, so moving between fields
+*     with a pending draft does not raise a dialog.
 *
 * Called from:
 *   page.js        — beforeunload, mousedown, user_navigation events
@@ -2144,6 +2151,8 @@ component_common.prototype.set_changed_data = function(changed_data_item) {
 * @param {Object} [options={}] - Options bag
 * @param {string} [options.confirm_msg] - Confirmation prompt text; defaults to the
 *   'discard_changes' i18n label or 'Discard unsaved changes?'
+* @param {boolean} [options.flush_only=false] - Flush auto-saveable edits and return
+*   true without prompting (in-page callers; see phase 2)
 * @returns {Promise<boolean>} true when safe to navigate; false when the user cancelled
 */
 export const check_unsaved_data = async function(options={}) {
@@ -2158,13 +2167,14 @@ export const check_unsaved_data = async function(options={}) {
 		if (typeof window.unsaved_data!=='undefined' && window.unsaved_data===true) {
 			// look in all component instances for unsaved data
 			await save_unsaved_components()
-			// reset unsaved_data state: every dirty component was just flushed by
-			// the sweep (each save() already retired its own registration), so
-			// clear the whole registry plus the coarse assertion. (!) Direct
-			// window.unsaved_data assignment is retired — the flag is DERIVED
-			// (events.js registry) and only reset_unsaved_data() may clear
-			// unsaved state page-wide.
-			reset_unsaved_data()
+			// (!) no reset here: each successful save() retired its own
+			// registration; what is still registered was NOT flushed and must
+			// reach the prompt below, never be wiped silently.
+		}
+
+	// in-page callers: flush only, never prompt
+		if (options.flush_only===true) {
+			return true
 		}
 
 	// unsaved_data value check
@@ -2305,7 +2315,7 @@ export const deactivate_components = function(e) {
 		// unsaved_data case
 		// This allow catch page mousedown event (outside any component) and check for unsaved components
 		// usually happens in component_text_area editions because the delay (500 ms) to set as changed
-			check_unsaved_data()
+			check_unsaved_data({flush_only: true})
 	}
 }//end deactivate_components
 

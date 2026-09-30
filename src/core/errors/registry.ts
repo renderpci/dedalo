@@ -461,6 +461,16 @@ export const ERROR_REGISTRY = {
 			'Client-minted (component_date.js) for browser-side date validation before any ' +
 			'request leaves; the `validation.*` CORE_POLICY entry renders it inline.',
 	},
+	'validation.password_policy': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_validation_password_policy',
+		message: 'The password does not meet the password policy',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+		details_keys: ['rule'],
+	},
 	'request.invalid_context': {
 		category: 'caller',
 		status: 400,

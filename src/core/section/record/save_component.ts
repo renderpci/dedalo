@@ -1122,6 +1122,19 @@ export async function saveComponentData(request: SaveRequest): Promise<SaveResul
 			effectiveRequest.userId,
 		);
 	}
+	// A credential (descriptor `secretValue`) never leaves the write engine: the
+	// returned items are what every door echoes (the dispatch save response, the
+	// MCP tools, the change-plan) — masked like every read
+	// (WC-2026-09-30-password-hash-never-served). After the observer cascade
+	// above, which is internal and reads the real items.
+	if (Array.isArray(result.data) && result.data.length > 0) {
+		const { getModelByTipo } = await import('../../ontology/resolver.ts');
+		const model = await getModelByTipo(effectiveRequest.componentTipo);
+		if (model !== null && getComponentModel(model)?.secretValue === true) {
+			const { maskSecretItems } = await import('../../resolve/component_data.ts');
+			return { ...result, data: maskSecretItems(result.data) ?? [] };
+		}
+	}
 	return result;
 }
 

@@ -11,10 +11,10 @@
 * Responsibilities:
 * - Stores a single password value per record. The raw plaintext is never
 *   persisted: the server layer hashes it before writing to the matrix table.
-* - Validates the candidate password on the client side via
-*   `validate_password_format()` before sending it to the API. Validation
-*   covers length, character-class requirements, banned words/chars, and
-*   sequential-character sequences.
+* - The password policy is `password_policy.js` — ONE evaluator shared with the
+*   server (src/core/security/password_policy.ts refuses a non-conforming
+*   plaintext with `validation.password_policy`). The edit view shows it as a
+*   live checklist; `save_password` re-checks it before sending.
 * - Delegates all rendering to the per-mode sub-modules:
 *     - `render_edit_component_password`  → edit / line / mini / print
 *     - `render_list_component_password`  → list / tm / search
@@ -28,8 +28,8 @@
 *
 * Exported helpers (also used by edit-view modules):
 *   `build_changed_data_item(value, id)` – builds the frozen change payload.
-*   `handle_password_change(self, input_value, input, id)` – validates input,
-*     builds the payload, and calls `change_value`; shared across edit views.
+*   `save_password(self, value)` – checks the policy, saves, and returns the
+*     verdict `{ok, error}` the view renders in its status line.
 *
 * @see component_common  Generic lifecycle, save, change_value, mode-switch.
 * @see render_edit_component_password  Edit-mode view dispatch.
@@ -41,7 +41,8 @@
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_password} from '../../component_password/js/render_edit_component_password.js'
 	import {render_list_component_password} from '../../component_password/js/render_list_component_password.js'
-	import {ui} from '../../common/js/ui.js'
+	import {request_failed} from '../../common/js/api_error.js'
+	import {check_password} from './password_policy.js'
 
 
 
@@ -169,272 +170,118 @@ export const build_changed_data_item = function(value, id=null) {
 
 
 /**
-* HANDLE_PASSWORD_CHANGE
-* Shared change handler for component_password across all edit views.
-* Validates the candidate password, builds the change payload, wires `changed_data`,
-* and persists via `change_value`. Returns the parsed value so the calling view can
-* update any confirmation/strength UI without duplicating the save logic.
+* SAVE_PASSWORD
+* Persist a NEW password the user explicitly accepted, and report the verdict.
 *
 * Flow:
-* 1. Resolve `id` from the live data entry (the closure-captured value may be null
-*    the first time a password is set on an empty component; after the first save
-*    the API assigns a real entry id).
-* 2. Validate format via `validate_password_format`; show/hide error state on the
-*    input element and return null immediately on failure.
-* 3. Build the frozen `changed_data_item` via `build_changed_data_item`.
-* 4. Record the change with `set_changed_data` so the component is marked dirty.
-* 5. Call `change_value` with `refresh: false` and `remove_dialog: false` to persist
-*    without a full re-render or discard confirmation.
+* 1. Re-check the policy (password_policy.js). A refusal here never leaves the
+*    browser; it returns the same `validation.password_policy` shape the server
+*    would, so the view renders one kind of rejection.
+* 2. Build the frozen change item (entry id read LIVE from self.data: on a
+*    record whose password was empty the id only exists after the first save).
+* 3. `change_value` with refresh:false / remove_dialog:false.
+* 4. On ANY failure, drop the pending changed_data: a refused password must not
+*    be re-sent behind the user's back by the navigation auto-save sweep.
+*
+* An empty value is refused (`action:'remove'` is not offered here): clearing a
+* credential is not what "type a new password" means.
 *
 * @param {Object} self - The component_password instance.
-* @param {string} input_value - Current value of the password input element.
-* @param {HTMLElement} input - The `<input>` DOM element; used for error styling via
-*   `ui.component.error()`.
-* @param {number|null} id - Entry id captured in the view's closure; may be stale —
-*   the handler re-reads from `self.data.entries[0].id` before use.
-* @returns {Promise<Object|null>} Resolves to the parsed value object `{value: string}`
-*   when the change was saved, or `null` when validation failed.
+* @param {string} value - The plaintext the user typed (and confirmed).
+* @returns {Promise<{ok: boolean, error: Object|null, api_response: Object|null}>}
 */
-export const handle_password_change = async function(self, input_value, input, id=null) {
+export const save_password = async function(self, value) {
 
-	// resolve id from current data if not provided
-	// (when component was initially empty, the closure id is null,
-	// but after first save the entry gets an id from the API)
-		if (id === null) {
-			id = self.data.entries?.[0]?.id ?? null
+	// policy (client leg of the one policy)
+		const verdict = check_password(value)
+		if (!value || !verdict.valid) {
+			return {
+				ok				: false,
+				api_response	: null,
+				error			: {
+					code		: 'validation.password_policy',
+					label_key	: 'error_validation_password_policy',
+					message		: 'The password does not meet the password policy',
+					details		: {rule: verdict.failed || 'length'}
+				}
+			}
 		}
 
-	// validated. Test password is acceptable string
-		const validation_obj	= self.validate_password_format(input_value)
-		const validated		= validation_obj.valid
-		ui.component.error(!validated, input)
-		if (!validated) {
-			return null
-		}
-
-	// build changed_data_item (validate + freeze)
-		const {changed_data_item, parsed_value} = build_changed_data_item(input_value, id)
-
-	// fix instance changed_data
+	// change item
+		const id = self.data?.entries?.[0]?.id ?? null
+		const {changed_data_item} = build_changed_data_item(value, id)
 		self.set_changed_data(changed_data_item)
 
-	// force to save on every change
-		await self.change_value({
+	// save
+		const api_response = await self.change_value({
 			changed_data	: [changed_data_item],
 			refresh			: false,
 			remove_dialog	: false
 		})
 
-	return parsed_value
-}//end handle_password_change
+	// verdict
+		if (!api_response || request_failed(api_response)) {
+			if (self.data) {
+				self.data.changed_data = []
+			}
+			return {
+				ok				: false,
+				api_response	: api_response || null,
+				// change_value answers `false` (no request) when a save is already
+				// in flight: nothing was stored, and the status line must say so.
+				error			: api_response?.error || {label_key: 'password_not_saved', message: 'Not saved yet'}
+			}
+		}
+
+	return {
+		ok				: true,
+		api_response	: api_response,
+		error			: null
+	}
+}//end save_password
 
 
 
 /**
 * VALIDATE_PASSWORD_FORMAT
-* Client-side password policy validator. Returns a verdict object indicating
-* whether `pw` meets all configured rules.
+* Compatibility shape over the ONE policy (password_policy.js): the pre-2026-09-30
+* signature `{valid, message}` for callers that only need a verdict. There are no
+* per-caller policy overrides any more — a policy the server does not enforce
+* is not a policy.
+* An empty value is `valid:true` (the caller decides what empty means).
 *
-* Default policy (applied when `options` is omitted or partially provided):
-* - At least 1 lowercase letter, 1 uppercase letter, 1 digit.
-* - No special characters required by default (`special: 0`).
-* - Length between 6 and 32 characters.
-* - Banned words (case-insensitive): "password", "contraseña", "clave", etc.
-* - Banned character: `&`.
-* - No runs of 4+ consecutive alphabetical or numeric characters (e.g. "abcd", "1234").
-* - No sequential identical characters rule (commented-out; see inline note).
-* - QWERTY-sequence ban is disabled by default (`noQwertySequences: false`).
-*
-* Callers can override individual policy keys via `options`; only the supplied
-* keys are merged — unrecognised keys in `options` are copied in as-is.
-*
-* Empty password handling: an empty string passes validation immediately with
-* `valid: true` and a descriptive message. This allows components to save a
-* blank field (clearing the credential) without triggering a policy error.
-*
-* Return shape in all cases:
-* ```js
-* { valid: boolean, message: string }
-* ```
-*
-* Adapted from Password Validator 0.1 © 2007 Steven Levithan (MIT License).
-* The original function has been integrated as a prototype method; the algorithm
-* and default policy remain mostly unchanged.
-*
-* @param {string} pw - The candidate password string from the input element.
-* @param {Object} [options] - Optional policy override map. Supported keys:
-*   `lower` {number}              – minimum lowercase characters (default 1).
-*   `upper` {number}              – minimum uppercase characters (default 1).
-*   `alpha` {number}              – minimum alpha characters lower+upper (default 0).
-*   `numeric` {number}            – minimum numeric characters (default 1).
-*   `special` {number}            – minimum special characters (default 0).
-*   `length` {Array}              – `[min, max]` length bounds (default [6, 32]).
-*   `custom` {Array}              – array of RegExp or Function validators (default []).
-*   `badWords` {Array}            – banned substrings, case-insensitive (default list).
-*   `badChars` {Array}            – banned individual characters (default ['&']).
-*   `badSequenceLength` {number}  – max allowed run of sequential chars (default 4).
-*   `noQwertySequences` {boolean} – if true, QWERTY runs are also banned (default false).
-*   `noSequential` {boolean}      – if true, identical adjacent chars are banned (default true,
-*                                   but the check is currently commented out — see inline note).
-* @returns {Object} Validation result: `{ valid: boolean, message: string }`.
-*   `valid: true` means the password is acceptable; `valid: false` means it is not,
-*   and `message` carries a human-readable reason suitable for display.
+* @param {string} pw - Candidate plaintext.
+* @returns {{valid: boolean, message: string, rule: string|null}}
 */
-component_password.prototype.validate_password_format = function (pw, options) {
+component_password.prototype.validate_password_format = function(pw) {
 
-	// empty case
-		if (!pw || pw.length < 1) {
-			const response = {
-				valid	: true,
-				message	: "Password is empty. ignored validation"
-			}
-			return response;
+	if (!pw) {
+		return {
+			valid	: true,
+			message	: 'Password is empty. ignored validation',
+			rule	: null
 		}
-
-	// default options (allows any password)
-		const o = {
-			lower				: 1,
-			upper				: 1,
-			alpha				: 0, /* lower + upper */
-			numeric				: 1,
-			special				: 0,
-			length				: [6, 32],
-			custom				: [ /* regexes and/or functions  (?=.*\d)(?=.*[a-z])(?=.*[A-Z])\w{6,} */ ],
-			badWords			: ["password", "contraseña", "clave","Mynew2Pass5K","dios","micontraseña"],
-			badChars			: ["&"],
-			badSequenceLength	: 4,
-			noQwertySequences	: false,
-			noSequential		: true
-		};
-
-	// set options
-		const opts = options || {};
-		for (const property in opts) {
-			if (opts.hasOwnProperty(property)) {
-				o[property] = opts[property];
-			}
-		}
-
-	let	re = {
-			lower:   /[a-z]/g,
-			upper:   /[A-Z]/g,
-			alpha:   /[A-Z]/gi,
-			numeric: /[0-9]/g,
-			special: /[\W_]/g
-		},
-		rule, i;
-
-	// enforce min/max length
-		if (pw.length < o.length[0] || pw.length > o.length[1]) {
-			const response = {
-				valid	: false,
-				message	: "Password is too short! \nPlease use from " + o.length[0] + " to " + o.length[1] + " chars "
-			}
-			return response;
-		}
-
-	// enforce lower/upper/alpha/numeric/special rules
-		for (rule in re) {
-			if (!re.hasOwnProperty(rule)) continue;
-			if ((pw.match(re[rule]) || []).length < o[rule]) {
-				const response = {
-					valid	: false,
-					message	: "Password is invalid! \nPlease mix lowercase / uppercase chars and numbers"
-				}
-				return response;
-			}
-		}
-
-	// enforce word ban (case insensitive)
-		for (i = 0; i < o.badWords.length; i++) {
-			if (pw.toLowerCase().indexOf(o.badWords[i].toLowerCase()) > -1) {
-				const response = {
-					valid	: false,
-					message	: "Bad word! \nPlease use a different password"
-				}
-				return response;
-			}
-		}
-
-	// enforce character ban
-		for (i = 0; i < o.badChars.length; i++) {
-			if (pw.indexOf(o.badChars[i]) > -1) {
-				const response = {
-					valid	: false,
-					message	: "Invalid character '" + o.badChars[i] + "'! \nPlease use a different password"
-				}
-				return response;
-			}
-		}
-
-	// enforce the no sequential, identical characters rule
-		// (!) This block is disabled. `o.noSequential` defaults to true but the guard
-		// below is commented out, so identical consecutive characters (e.g. "aabb") are
-		// currently accepted even though the policy declares them forbidden.
-		// if (o.noSequential && /([\S\s])\1/.test(pw)) {
-		// 	const response = {
-		// 		valid	: false,
-		// 		message	: 'identical characters in sequential order are not allowed'
-		// 	}
-		// 	return response;
-		// }
-
-	// enforce alphanumeric/qwerty sequence ban rules
-	// sliding window of length `badSequenceLength` scanned against known alphabet strings
-		if (o.badSequenceLength) {
-			let	lower   = "abcdefghijklmnopqrstuvwxyz",
-				upper   = lower.toUpperCase(),
-				numbers = "0123456789",
-				qwerty  = "qwertyuiopasdfghjklzxcvbnm",
-				start   = o.badSequenceLength - 1,
-				seq     = "_" + pw.slice(0, start);
-			for (i = start; i < pw.length; i++) {
-				seq = seq.slice(1) + pw.charAt(i);
-				if (
-					lower.indexOf(seq)   > -1 ||
-					upper.indexOf(seq)   > -1 ||
-					numbers.indexOf(seq) > -1 ||
-					(o.noQwertySequences && qwerty.indexOf(seq) > -1)
-				) {
-					const response ={
-						valid	: false,
-						message	: 'alphabetical order not allowed | numerical order not allowed'
-					}
-					return response;
-				}
-			}
-		}
-
-	// enforce custom regex/function rules
-		for (i = 0; i < o.custom.length; i++) {
-			rule = o.custom[i];
-			if (rule instanceof RegExp) {
-				if (!rule.test(pw)){
-					const response = {
-						valid	: false,
-						message	: 'invalid pw for rule ' + rule
-					}
-					return response;
-				}
-			} else if (rule instanceof Function) {
-				if (!rule(pw)){
-					const response ={
-						valid	: false,
-						message	: 'invalid pw for function ' + rule
-					}
-					return response;
-				}
-			}
-		}
-
-	const response = {
-		valid	: true,
-		message	: 'pw is valid '
 	}
 
-	// great success!
-	return response;
-}//end password validator
+	const verdict = check_password(pw)
+	if (verdict.valid) {
+		return {
+			valid	: true,
+			message	: '',
+			rule	: null
+		}
+	}
+
+	const failed	= verdict.rules.find(el => el.id===verdict.failed)
+	const template	= (typeof get_label!=='undefined' && get_label[failed.label]) || failed.label
+	const message	= String(template).replace(/\$\{(\w+)\}/g, (m, key) => (key in failed.params ? String(failed.params[key]) : m))
+
+	return {
+		valid	: false,
+		message	: message,
+		rule	: verdict.failed
+	}
+}//end validate_password_format
 
 
 
