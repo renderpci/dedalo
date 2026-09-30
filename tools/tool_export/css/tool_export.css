@@ -208,32 +208,31 @@
   }
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets {
+  margin-top: 0;
+  margin-left: -1rem;
+  margin-right: -1rem;
   margin-bottom: 1.5rem;
   border: 1px solid var(--color_grey_13);
-  border-radius: 3px;
+  border-radius: 4px;
   overflow: hidden;
-}
-.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets.open {
-  background-color: var(--color_grey_15);
+  background-color: var(--color_white);
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_header {
   display: flex;
   align-items: center;
-  gap: 0.33rem;
-  padding: 0.5rem 0.66rem;
-  background-color: var(--tool_export_fill);
-  color: var(--color_white);
+  gap: 0.25rem;
+  min-height: 2.5rem;
+  padding: 0.4rem 0.4rem 0.4rem 0.75rem;
+  color: var(--tool_export_fill);
   cursor: pointer;
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_header > .export_presets_title {
   flex: 1 1 auto;
+  min-width: 0;
   font-weight: 600;
   font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.25;
+  overflow-wrap: break-word;
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_header > .export_presets_new,
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_header > .export_presets_toggle {
@@ -242,20 +241,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--color_white);
   color: var(--tool_export_fill);
-  width: 1.25rem;
-  height: 1.25rem;
-  border-radius: 2px;
-  position: relative;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 3px;
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_header > .export_presets_new:hover,
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_header > .export_presets_toggle:hover {
   background-color: var(--tool_export_lighten_40);
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_header > .export_presets_new {
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-size: 1.25rem;
+  font-weight: 600;
   line-height: 1;
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_header > .export_presets_toggle:after {
@@ -269,25 +266,34 @@
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets.open > .export_presets_header > .export_presets_toggle:after {
   transform: translateY(25%) rotate(-135deg);
 }
+.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel {
+  border-top: 1px solid var(--color_grey_13);
+}
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel.display_none {
   display: none;
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_save {
   display: block;
-  width: calc(100% - 1rem);
-  margin: 0.5rem;
-  background-color: var(--tool_export_fill);
-  border-color: var(--tool_export_border);
+  width: calc(100% - 2 * 0.75rem);
+  margin: 0.75rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+  background-color: var(--color_white);
+  color: var(--tool_export_fill);
+  border: 1px solid var(--tool_export_fill);
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_save:hover {
-  background-color: var(--tool_export_lighten_10);
+  background-color: var(--tool_export_lighten_40);
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_save.hide {
   display: none;
 }
+.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_save.hide + .export_presets_list .content_data > .section_record:first-child {
+  border-top: none;
+}
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list .export_presets_loading {
   display: block;
-  padding: 0.5rem;
+  padding: 0.5rem 0.75rem;
   font-size: 0.85rem;
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section {
@@ -295,57 +301,127 @@
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .paginator_container {
   height: unset;
-  padding: 0 0.5rem;
+  padding: 0 0.75rem;
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body {
   display: block;
 }
+.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body > .content_data {
+  padding: 0;
+}
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record {
+  position: relative;
   display: grid;
-  grid-template-columns: 1.4rem 1.2rem 1fr 1.4rem;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: 1.75rem;
+  column-gap: 0.5rem;
   align-items: center;
+  min-height: 2.25rem;
+  padding: 0 0.25rem 0 0.75rem;
   border-top: 1px solid var(--color_grey_13);
-  padding: 0.15rem 0.5rem;
   cursor: pointer;
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record:hover {
   background-color: var(--tool_export_lighten_40);
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record.selected {
-  background-color: var(--tool_export_fill);
-  color: var(--color_white);
+  background-color: var(--tool_export_lighten_40);
+  box-shadow: inset 3px 0 0 var(--tool_export_fill);
 }
-.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record.selected .button.icon {
-  background-color: var(--color_white);
-}
+.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record.selected .column_section,
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record.selected .wrapper_component {
-  color: var(--color_white);
+  font-weight: 600;
 }
-.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record .column_section,
-.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record .wrapper_component {
+.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record > .column {
+  outline: none;
+  padding: 0;
+  box-shadow: none;
+  display: flex;
+  flex-wrap: nowrap;
+  align-content: center;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record > .column .button.icon {
+  background-color: var(--color_grey_10);
+  margin: 0;
+  height: 1.1rem;
+  width: 1.1rem;
+}
+.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record > .column .button.icon:hover {
+  background-color: var(--tool_export_fill);
+}
+.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record > .column_section {
+  justify-content: flex-start;
   min-width: 0;
   pointer-events: none;
 }
-.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record .column_section > span,
-.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record .wrapper_component > span {
+.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record > .column_section .wrapper_component {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+}
+.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record > .column_section .wrapper_component > span {
   display: block;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding: 0.1rem 0.25rem;
   font-size: 0.85rem;
 }
-.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record .column {
-  outline: none;
+.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record > .column_apply_preset .button_apply_preset.button.icon {
+  -webkit-mask: none;
+  mask: none;
+  background-color: transparent;
+  border: 2px solid var(--color_grey_10);
+  border-radius: 50%;
+  flex: none;
+  box-sizing: border-box;
+  width: 0.9rem;
+  height: 0.9rem;
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: 1;
 }
-.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record .column .button.icon {
-  background-color: var(--color_grey_10);
-  margin: 0;
-  height: 1rem;
-  width: 1rem;
+.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record:hover > .column_apply_preset .button_apply_preset.button.icon {
+  background-color: transparent;
+  border-color: var(--tool_export_fill);
 }
-.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record .column_apply_preset .button_apply_preset {
-  transform: scaleX(-1);
+.wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record.selected > .column_apply_preset .button_apply_preset.button.icon {
+  border-color: var(--tool_export_fill);
+  background-color: var(--tool_export_fill);
+  box-shadow: inset 0 0 0 2px var(--color_white);
+}
+@media (hover: hover) {
+  .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record > .column_edit,
+  .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record > .column_delete {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1.75rem;
+    background-color: var(--tool_export_lighten_40);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record > .column_delete,
+  .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record > .column_edit:last-child {
+    right: 0.25rem;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record > .column_edit {
+    right: 2rem;
+    box-shadow: -0.75rem 0 0.5rem -0.25rem var(--tool_export_lighten_40);
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record:hover > .column_edit,
+  .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record:focus-within > .column_edit,
+  .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record:hover > .column_delete,
+  .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record:focus-within > .column_delete {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config .section_label {
   font-size: 1.25rem;
