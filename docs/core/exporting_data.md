@@ -58,6 +58,11 @@ list in the center. Each dropped component becomes one column of the export.
 - **Order matters.** The export columns follow the exact order of the *Active
   elements* list. **Drag the items up and down** to reorder them; the output
   columns (and every download) follow that order.
+- **Where it lands.** While you drag (a new component or an item being
+  reordered), a line shows exactly where it will be placed: before the row under
+  the pointer when you are over its upper half, after it over the lower half, and
+  at the end when you are below the list. A component that is already in the list
+  is highlighted instead, and cannot be added twice.
 - **Remove** a column with the **×** on its item.
 - **Activate all columns / Deactivate all columns** add or clear the whole set at
   once.
