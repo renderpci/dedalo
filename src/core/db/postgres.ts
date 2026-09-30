@@ -1880,3 +1880,58 @@ export async function readTransactionStatus(xid: string): Promise<string | null>
 	}
 	return outcome.value[0]?.status ?? null;
 }
+
+/** What a failed maintenance unit did (outcomeOfFailedUnit). */
+export type FailedUnitOutcome = 'committed' | 'rolled_back' | 'unknown';
+
+/** How long outcomeOfFailedUnit waits for a transaction PostgreSQL still reports in progress. */
+const XACT_STATUS_POLL_MS: readonly number[] = [100, 200, 400, 800, 1500];
+
+/** pg_xact_status's final answers, as a verdict. */
+const XACT_VERDICT: Readonly<Record<string, 'committed' | 'rolled_back'>> = {
+	committed: 'committed',
+	aborted: 'rolled_back',
+};
+
+/**
+ * What a failure its caller did not decide itself did to a maintenance unit
+ * (MaintenanceTransactionContext `xid`). Such a failure — a lost connection, a
+ * cancel, a pool force-closed at shutdown — may strike DURING COMMIT, when the
+ * outcome is decided server-side, so PostgreSQL is asked about THIS attempt's
+ * transaction (`pg_xact_status`, outside the dead transaction): 'committed' /
+ * 'aborted' are the answer; 'in progress' (a COMMIT still waiting, e.g. on a
+ * synchronous standby) is polled briefly; still in progress, NULL, or a failed
+ * read is UNKNOWN — never "rolled back" on a guess. No xid means the attempt
+ * failed before its transaction did any work: a certain rollback. The ONE
+ * classifier of the update engine and the move_* transform engine.
+ */
+export async function outcomeOfFailedUnit(
+	xid: string | undefined,
+	options: { label: string; readStatus?: (xid: string) => Promise<string | null> },
+): Promise<FailedUnitOutcome> {
+	if (xid === undefined) return 'rolled_back';
+	try {
+		return await pollXactStatus(options.readStatus ?? readTransactionStatus, xid);
+	} catch (error) {
+		console.error(
+			`[${options.label}] reading transaction ${xid}'s status after a failure failed:`,
+			error,
+		);
+		return 'unknown';
+	}
+}
+
+/** Read the status, polling while it is 'in progress'; anything else unfinal is unknown. */
+async function pollXactStatus(
+	readStatus: (xid: string) => Promise<string | null>,
+	xid: string,
+): Promise<FailedUnitOutcome> {
+	for (const delayMs of [...XACT_STATUS_POLL_MS, null]) {
+		const status = await readStatus(xid);
+		const verdict = XACT_VERDICT[status ?? ''];
+		if (verdict !== undefined) return verdict;
+		if (status !== 'in progress' || delayMs === null) return 'unknown';
+		await Bun.sleep(delayMs);
+	}
+	return 'unknown';
+}

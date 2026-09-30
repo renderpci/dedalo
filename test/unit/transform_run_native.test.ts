@@ -518,6 +518,179 @@ describe('runTransform execute: each definition file applies whole or not at all
 });
 
 // ---------------------------------------------------------------------------
+// A FAILED FILE IS NEVER "ROLLED BACK" ON A GUESS (OPS-6/PERF-11 review)
+// ---------------------------------------------------------------------------
+
+describe('runTransform execute: a failed file reports what its transaction ACTUALLY did', () => {
+	/**
+	 * A scratch table whose unique key is checked AT COMMIT (DEFERRABLE INITIALLY
+	 * DEFERRED): an executor that writes a duplicate finishes its work, the
+	 * engine sends COMMIT, and the COMMIT itself fails — the exact moment a lost
+	 * connection or a pool force-closed at shutdown strikes, when the outcome is
+	 * decided server-side and the client only sees an error.
+	 */
+	const DEFERRED = `${SCRATCH}_dfr`;
+
+	beforeAll(async () => {
+		await sql.unsafe(`DROP TABLE IF EXISTS "${DEFERRED}"`, []);
+		await sql.unsafe(
+			`CREATE TABLE "${DEFERRED}" (tag text, CONSTRAINT "${DEFERRED}_k" UNIQUE (tag) DEFERRABLE INITIALLY DEFERRED)`,
+			[],
+		);
+	});
+
+	afterAll(async () => {
+		await sql.unsafe(`DROP TABLE IF EXISTS "${DEFERRED}"`, []);
+	});
+
+	afterEach(async () => {
+		await sql.unsafe(`DELETE FROM "${DEFERRED}"`, []);
+	});
+
+	async function deferredTags(): Promise<string[]> {
+		const rows = (await sql.unsafe(`SELECT tag FROM "${DEFERRED}" ORDER BY tag`, [])) as {
+			tag: string;
+		}[];
+		return rows.map((row) => row.tag);
+	}
+
+	/** File n=1 fails AT ITS COMMIT (a deferred duplicate); any other file writes one row. */
+	function commitFailingExecutor() {
+		const xids: string[] = [];
+		const executor = async (items: unknown, recorder: TransformRecorder): Promise<void> => {
+			const n = (items as { n: number }).n;
+			const [row] = (await sql.unsafe('SELECT pg_current_xact_id()::text AS xid', [])) as {
+				xid: string;
+			}[];
+			xids.push(String(row?.xid));
+			const values = n === 1 ? "('dup'), ('dup')" : `('n${n}')`;
+			await sql.unsafe(`INSERT INTO "${DEFERRED}" (tag) VALUES ${values}`, []);
+			recorder.record({ op: 'insert', table: DEFERRED, target: `n${n}` });
+		};
+		return { executor, xids };
+	}
+
+	test("the REAL status read: a COMMIT that failed and PostgreSQL aborted → rolled back (the transaction asked about is the file's own)", async () => {
+		CATALOG = { 'a.json': { n: 1 }, 'b.json': { n: 2 } };
+		const { executor, xids } = commitFailingExecutor();
+		const { readTransactionStatus } = await import('../../src/core/db/postgres.ts');
+		const asked: string[] = [];
+		const report = await runTransform(
+			'move_tld',
+			{ dry_run: false, files_selected: ['a.json', 'b.json'] },
+			executor,
+			{
+				readXactStatus: (xid) => {
+					asked.push(xid);
+					return readTransactionStatus(xid);
+				},
+			},
+		);
+		// Asked once, about file a's own transaction (b applied, nothing to ask).
+		expect(xids).toHaveLength(2);
+		expect(asked).toEqual(xids.slice(0, 1));
+		expect(await deferredTags()).toEqual(['n2']);
+		expect(report.counts).toEqual({ insert: 1 });
+		expect(report.errors).toHaveLength(1);
+		expect(report.errors[0]).toStartWith('a.json: ');
+		expect(report.errors[0]).toEndWith(' — rolled back: nothing of this file was applied');
+	});
+
+	test('PostgreSQL reports the failed file COMMITTED (a lost COMMIT reply): reported applied, its deltas counted, never "rolled back"', async () => {
+		CATALOG = { 'a.json': { n: 1 }, 'b.json': { n: 2 } };
+		const { executor } = commitFailingExecutor();
+		const report = await runTransform(
+			'move_tld',
+			{ dry_run: false, files_selected: ['a.json', 'b.json'] },
+			executor,
+			{ readXactStatus: async () => 'committed' },
+		);
+		expect(report.errors).toHaveLength(1);
+		expect(report.errors[0]).toStartWith('a.json: ');
+		expect(report.errors[0]).toContain('PostgreSQL reports its transaction COMMITTED');
+		expect(report.errors.join('\n')).not.toMatch(/rolled back|nothing of this file/);
+		// The committed file's deltas persisted: the report counts them; b still ran.
+		expect(report.counts).toEqual({ insert: 2 });
+		expect(report.sample.map((delta) => delta.target)).toEqual(['n1', 'n2']);
+	});
+
+	for (const [leg, readXactStatus] of [
+		[
+			'the status cannot be read',
+			async () => {
+				throw new Error('simulated: the database is unreachable');
+			},
+		],
+		['the status stays in progress', async () => 'in progress'],
+		['the status is NULL', async () => null],
+	] as const) {
+		test(`${leg}: OUTCOME UNKNOWN, never "rolled back" — and no later file runs`, async () => {
+			CATALOG = { 'a.json': { n: 1 }, 'b.json': { n: 2 } };
+			const { executor, xids } = commitFailingExecutor();
+			const report = await runTransform(
+				'move_tld',
+				{ dry_run: false, files_selected: ['a.json', 'b.json'] },
+				executor,
+				{ readXactStatus },
+			);
+			expect(xids).toHaveLength(1);
+			expect(report.errors).toHaveLength(2);
+			expect(report.errors[0]).toStartWith('a.json: ');
+			expect(report.errors[0]).toContain('outcome UNKNOWN');
+			expect(report.errors[0]).not.toMatch(/rolled back|nothing of this file/);
+			expect(report.errors[1]).toBe(
+				"b.json: not run — the transform was stopped (an earlier file's outcome is uncertain) before it started",
+			);
+			expect(report.counts).toEqual({});
+		}, 15000);
+	}
+
+	test('a file whose transaction ENDED mid-unit is PARTIALLY applied — never "rolled back" — and no later file runs', async () => {
+		const { transactionEndedMidUnit } = await import('../../src/core/db/postgres.ts');
+		CATALOG = { 'a.json': { n: 1 }, 'b.json': { n: 2 } };
+		const asked: string[] = [];
+		const ran: number[] = [];
+		const report = await runTransform(
+			'move_tld',
+			{ dry_run: false, files_selected: ['a.json', 'b.json'] },
+			async (items) => {
+				ran.push((items as { n: number }).n);
+				// The checkpoint's own verdict (the pool refuses transaction control
+				// before it is sent, so a real one cannot be produced from here).
+				throw transactionEndedMidUnit('100', '101');
+			},
+			{
+				readXactStatus: async (xid) => {
+					asked.push(xid);
+					return 'aborted';
+				},
+			},
+		);
+		expect(ran).toEqual([1]);
+		expect(asked).toEqual([]);
+		expect(report.errors).toEqual([
+			"a.json: PARTIALLY applied — a statement ended the file's transaction mid-unit (xact 100 → 101): what ran before it persisted and what ran after it autocommitted; inspect the data before re-running it (a locator move is not idempotent)",
+			"b.json: not run — the transform was stopped (an earlier file's outcome is uncertain) before it started",
+		]);
+	});
+
+	test('an ABORTED file is classified by its transaction too: an unreadable status is UNKNOWN, never "aborted — rolled back"', async () => {
+		CATALOG = { 'a.json': { n: 3 } };
+		const controller = new AbortController();
+		const report = await runTransform(
+			'move_tld',
+			{ dry_run: false, files_selected: ['a.json'] },
+			async () => {
+				controller.abort();
+			},
+			{ signal: controller.signal, readXactStatus: async () => null },
+		);
+		expect(report.errors).toHaveLength(1);
+		expect(report.errors[0]).toStartWith('a.json: aborted (aborted) — outcome UNKNOWN');
+	});
+});
+
+// ---------------------------------------------------------------------------
 // AN EXECUTE IS STOPPABLE AND SINGLE-FLIGHT (OPS-6/PERF-11 r3)
 // ---------------------------------------------------------------------------
 

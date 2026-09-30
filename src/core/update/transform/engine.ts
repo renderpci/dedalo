@@ -42,9 +42,28 @@
  * refused file stops the run — never queued behind the other run's row locks,
  * never retried. The widget door adds the in-process claim (claimTransformRun)
  * that refuses a second submit before a job is created (move_common.ts).
+ *
+ * A FAILED FILE IS NEVER "ROLLED BACK" ON A GUESS (OPS-6/PERF-11 review). A
+ * failure can strike DURING COMMIT (a lost connection, the pool force-closed at
+ * shutdown), when PostgreSQL may already have committed the file — and a
+ * move_locator file is not idempotent, so a re-run on a false "nothing was
+ * applied" moves its locators twice. So every executed file that fails (save a
+ * run-lock refusal, raised before any write) is classified by ITS OWN
+ * transaction's status (postgres.ts outcomeOfFailedUnit, the update engine's
+ * classifier): committed → reported applied, its deltas counted; aborted →
+ * rolled back; unreadable → OUTCOME UNKNOWN, and the run stops. The checkpoint's
+ * transaction-ended-mid-unit verdict is PARTIALLY applied, and stops the run.
+ * Gate: test/unit/transform_run_native.test.ts.
  */
 
-import { MAINTENANCE_LOCK_TIMEOUT, sql, withMaintenanceTransaction } from '../../db/postgres.ts';
+import {
+	type FailedUnitOutcome,
+	isTransactionEndedMidUnit,
+	MAINTENANCE_LOCK_TIMEOUT,
+	outcomeOfFailedUnit,
+	sql,
+	withMaintenanceTransaction,
+} from '../../db/postgres.ts';
 import { DedaloError } from '../../errors/index.ts';
 import type { MoveWidgetId } from './definitions.ts';
 import { listDefinitionFiles, loadDefinitionFile } from './definitions.ts';
@@ -87,14 +106,26 @@ export function claimTransformRun(): (() => void) | null {
 export interface TransformRun {
 	/** The job's abort signal: a stop / shutdown cancels the running file. */
 	signal?: AbortSignal;
+	/**
+	 * Injected `pg_xact_status(<xid>)` read (tests); default the dedicated-
+	 * connection read (outcomeOfFailedUnit).
+	 */
+	readXactStatus?: (xid: string) => Promise<string | null>;
 }
 
 /**
- * A file's outcome for the run loop: keep going, or stop the run (refused by the
- * run lock). An ABORT needs no outcome of its own: the loop reads the fired
+ * A file's outcome for the run loop: keep going, or stop the run — refused by
+ * the run lock, or a file whose outcome is not a clean apply/rollback (partial,
+ * unknown). An ABORT needs no outcome of its own: the loop reads the fired
  * signal before the next file.
  */
-type FileOutcome = 'continue' | 'refused';
+type FileOutcome = 'continue' | 'refused' | 'uncertain';
+
+/** The stop wording ("the transform was <stop> before it started") of a stopping outcome. */
+const STOP_WORDING: Readonly<Record<Exclude<FileOutcome, 'continue'>, string>> = {
+	refused: 'refused',
+	uncertain: "stopped (an earlier file's outcome is uncertain)",
+};
 
 /** The coordinates marker of refusedByRunLock (an executor's own conflict is not it). */
 const RUN_LOCK_RULE = 'transform_run_lock';
@@ -140,7 +171,7 @@ export async function runTransform(
 		};
 	}
 	const recorder = new TransformRecorder(dryRun);
-	await runSelectedFiles(widget, selected, executor, recorder, run.signal);
+	await runSelectedFiles(widget, selected, executor, recorder, run);
 	return recorder.toReport(
 		`${widget}${dryRun ? ' (no rollback for locator moves — dry run first)' : ''}`,
 	);
@@ -162,20 +193,20 @@ async function runSelectedFiles(
 	selected: string[],
 	executor: TransformExecutor,
 	recorder: TransformRecorder,
-	signal: AbortSignal | undefined,
+	run: TransformRun,
 ): Promise<void> {
 	const available = new Set(listDefinitionFiles(widget).map((file) => file.file_name));
 	let stopped: string | null = null;
 	for (const fileName of selected) {
-		stopped ??= await abortedBefore(signal);
+		stopped ??= await abortedBefore(run.signal);
 		if (stopped !== null) {
 			recorder.error(`${fileName}: not run — the transform was ${stopped} before it started`);
 			continue;
 		}
 		const content = loadSelectedFile(widget, available, fileName, recorder);
 		if (content === undefined) continue;
-		const outcome = await runDefinitionFile(fileName, content, executor, recorder, signal);
-		if (outcome === 'refused') stopped = 'refused';
+		const outcome = await runDefinitionFile(fileName, content, executor, recorder, run);
+		if (outcome !== 'continue') stopped = STOP_WORDING[outcome];
 	}
 }
 
@@ -210,20 +241,31 @@ async function abortCause(signal: AbortSignal | undefined): Promise<string> {
 }
 
 /**
+ * The CURRENT attempt of an executed file (a lock retry starts a new one): its
+ * transaction id — what a failure is classified by — and, once its work
+ * finished (COMMIT is about to be sent), its deltas.
+ */
+interface FileAttempt {
+	xid: string | undefined;
+	finished: TransformRecorder | undefined;
+}
+
+/**
  * Run ONE definition file. A dry run records straight into the run's recorder.
  * An execute is one atomic, lock-retried, abortable maintenance unit (see the
- * header) that first takes the run lock; a file that still fails is ROLLED
- * BACK — its attempt's deltas are dropped (none of them persisted) and one error
- * line names the file. An executor error never aborts the run: the next file
- * still runs. A run-lock refusal stops it ('refused'); an abort, the fired signal.
+ * header) that first takes the run lock; a file that still fails gets ONE error
+ * line naming it and what its transaction did (recordFileFailure). A rolled-back
+ * or committed failure never aborts the run: the next file still runs. A
+ * run-lock refusal or an uncertain outcome stops it; an abort, the fired signal.
  */
 async function runDefinitionFile(
 	fileName: string,
 	content: unknown,
 	executor: TransformExecutor,
 	recorder: TransformRecorder,
-	signal: AbortSignal | undefined,
+	run: TransformRun,
 ): Promise<FileOutcome> {
+	const attempt: FileAttempt = { xid: undefined, finished: undefined };
 	try {
 		if (recorder.dryRun) {
 			await executor(content, recorder);
@@ -231,53 +273,115 @@ async function runDefinitionFile(
 		}
 		const applied = await withMaintenanceTransaction(
 			async (unit) => {
+				attempt.xid = unit.xid; // each attempt (a lock retry starts one) records its own
 				const [lock] = (await sql.unsafe('SELECT pg_try_advisory_xact_lock($1::bigint) AS locked', [
 					TRANSFORM_RUN_LOCK_KEY,
 				])) as { locked: boolean }[];
 				if (lock?.locked !== true) throw refusedByRunLock();
-				const attempt = recorder.fork();
-				await executor(content, attempt);
+				const deltas = recorder.fork();
+				await executor(content, deltas);
 				// An abort that landed after the last statement still rolls back,
 				// and a COMMIT that slipped through the executor is caught here.
 				await unit.checkpoint();
-				return attempt;
+				attempt.finished = deltas;
+				return deltas;
 			},
-			{ lockTimeout: MAINTENANCE_LOCK_TIMEOUT, signal },
+			{ lockTimeout: MAINTENANCE_LOCK_TIMEOUT, signal: run.signal },
 		);
 		recorder.absorb(applied);
 		return 'continue';
 	} catch (error) {
-		return recordFileFailure(fileName, error, recorder, signal);
+		return recordFileFailure(fileName, error, recorder, run, attempt);
 	}
 }
 
 /**
- * A file that did not apply: one error line naming it. A run-lock refusal stops
- * the run (an abort stops it through the fired signal); any other failure (the
- * executor's, a lock wait that outlived every retry) lets the next file run.
+ * A file that failed: ONE error line naming it and what its transaction did. A
+ * run-lock refusal (raised before any write) stops the run; the checkpoint's
+ * transaction-ended-mid-unit verdict is PARTIALLY applied and stops it; every
+ * other failure of an execute — the executor's, a lock wait past its retries, a
+ * failed COMMIT, an abort — is classified by the attempt's own transaction
+ * (outcomeOfFailedUnit): rolled back and committed let the next file run (a
+ * committed file's deltas are counted), unknown stops the run.
  */
 async function recordFileFailure(
 	fileName: string,
 	error: unknown,
 	recorder: TransformRecorder,
-	signal: AbortSignal | undefined,
+	run: TransformRun,
+	attempt: FileAttempt,
 ): Promise<FileOutcome> {
-	if (signal?.aborted === true && !recorder.dryRun) {
-		recorder.error(
-			`${fileName}: aborted (${await abortCause(signal)}) — rolled back: nothing of this file was applied`,
-		);
+	const aborted = run.signal?.aborted === true;
+	const decided = recordDecidedFailure(fileName, error, recorder, aborted);
+	if (decided !== undefined) return decided;
+	const why = aborted ? `aborted (${await abortCause(run.signal)})` : (error as Error).message;
+	const outcome = await outcomeOfFailedUnit(attempt.xid, {
+		label: 'transform',
+		readStatus: run.readXactStatus,
+	});
+	return reportFailedFile(fileName, why, outcome, recorder, attempt, error);
+}
+
+/**
+ * The failures whose outcome needs no transaction read: a dry run's (no
+ * transaction), a run-lock refusal (raised before any write), a transaction
+ * that ended mid-unit (PARTIAL by definition). Undefined for every other one.
+ */
+function recordDecidedFailure(
+	fileName: string,
+	error: unknown,
+	recorder: TransformRecorder,
+	aborted: boolean,
+): FileOutcome | undefined {
+	if (recorder.dryRun) {
+		recorder.error(`${fileName}: ${(error as Error).message}`);
 		return 'continue';
 	}
-	if (error instanceof DedaloError && error.coordinates?.rule === RUN_LOCK_RULE) {
+	if (!aborted && isRunLockRefusal(error)) {
 		recorder.error(
 			`${fileName}: refused — another move_* transform is running; nothing of this file was applied`,
 		);
 		return 'refused';
 	}
+	if (!isTransactionEndedMidUnit(error)) return undefined;
+	const { xid_before: before, xid_now: now } = error.coordinates ?? {};
+	console.error(`[transform] ${fileName}: a statement ended its transaction mid-unit:`, error);
 	recorder.error(
-		`${fileName}: ${(error as Error).message}${
-			recorder.dryRun ? '' : ' — rolled back: nothing of this file was applied'
-		}`,
+		`${fileName}: PARTIALLY applied — a statement ended the file's transaction mid-unit (xact ${before} → ${now}): what ran before it persisted and what ran after it autocommitted; inspect the data before re-running it (a locator move is not idempotent)`,
 	);
-	return 'continue';
+	return 'uncertain';
+}
+
+/** Whether `error` is refusedByRunLock's refusal (an executor's own conflict is not). */
+function isRunLockRefusal(error: unknown): boolean {
+	return error instanceof DedaloError && error.coordinates?.rule === RUN_LOCK_RULE;
+}
+
+/** The error line of a failed execute, by its transaction's outcome (see recordFileFailure). */
+function reportFailedFile(
+	fileName: string,
+	why: string,
+	outcome: FailedUnitOutcome,
+	recorder: TransformRecorder,
+	attempt: FileAttempt,
+	error: unknown,
+): FileOutcome {
+	if (outcome === 'rolled_back') {
+		recorder.error(`${fileName}: ${why} — rolled back: nothing of this file was applied`);
+		return 'continue';
+	}
+	const xact = attempt.xid === undefined ? '' : ` [xact ${attempt.xid}]`;
+	console.error(`[transform] ${fileName}${xact} failed; its transaction is ${outcome}:`, error);
+	if (outcome === 'committed') {
+		// COMMIT is sent only once the work finished, so its deltas are the file's.
+		if (attempt.finished !== undefined) recorder.absorb(attempt.finished);
+		recorder.error(
+			`${fileName}: ${why} — but PostgreSQL reports its transaction COMMITTED: this file WAS applied; do not re-run it`,
+		);
+		return 'continue';
+	}
+	recorder.error(
+		`${fileName}: ${why} — outcome UNKNOWN: its COMMIT may have landed and its transaction's status could not be read back; inspect the data before re-running it (a locator move is not idempotent)`,
+	);
+	return 'uncertain';
 }

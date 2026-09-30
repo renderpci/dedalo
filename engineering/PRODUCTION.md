@@ -372,7 +372,13 @@ reported in its `errors`. The data-update engine retries its whole unit
 runDefinitionFile), so a lock wait — or any failure — rolls that file back whole
 instead of committing its first tables under the new tipo (a section split
 between two tipos, a half-applied locator move); a file that still fails is
-named in `errors` as rolled back, and only committed files' deltas are counted.
+named in `errors` with what its OWN transaction did — `pg_xact_status` of its xid
+(`postgres.ts outcomeOfFailedUnit`, the data-update engine's classifier), since a
+failure during COMMIT may have committed it: rolled back, COMMITTED (its deltas
+counted), or "outcome UNKNOWN" (the run stops; a locator move is not idempotent,
+so a re-run on a guessed rollback would move it twice); a transaction that ended
+mid-unit is PARTIALLY applied and stops the run too. Only committed files'
+deltas are counted.
 Because a file holds the row locks it rewrote until its COMMIT, an EXECUTE is
 never inline: it is a maintenance-lane job with NO deadline (`deadlineMs: 0`,
 the data update's reason) whose signal — the operator's stop, a shutdown —

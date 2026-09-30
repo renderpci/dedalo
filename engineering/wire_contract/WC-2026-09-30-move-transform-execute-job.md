@@ -27,12 +27,25 @@
     process meets the per-file advisory try-lock: `<file>: refused — another move_* transform
     is running; nothing of this file was applied`, later files `not run — the transform was
     refused before it started`.
+  - A failed file's line says what its transaction ACTUALLY did (amended same day, review
+    survivors): PostgreSQL is asked (`pg_xact_status` of the file's xid,
+    `postgres.ts outcomeOfFailedUnit`) whenever the failure is not the run-lock refusal.
+    Aborted → the `— rolled back: nothing of this file was applied` lines above. Committed
+    (a failure during COMMIT that landed) → `<file>: <message|aborted (<cause>)> — but
+    PostgreSQL reports its transaction COMMITTED: this file WAS applied; do not re-run it`,
+    its deltas counted, the next file runs. Unreadable → `<file>: <…> — outcome UNKNOWN: its
+    COMMIT may have landed and its transaction's status could not be read back; inspect the
+    data before re-running it (a locator move is not idempotent)`. The checkpoint's
+    transaction-ended-mid-unit verdict → `<file>: PARTIALLY applied — a statement ended the
+    file's transaction mid-unit (xact <a> → <b>): …`. After an unknown or partial file every
+    later file is `not run — the transform was stopped (an earlier file's outcome is
+    uncertain) before it started`.
   - A dry run (`dry_run` anything but `false`) is unchanged: inline, the report as the response.
 - **Reason:** a lock-holding bulk rewrite with its ceiling lifted must be endable and must not
   run twice at once. The vendored client already sends `background_running: true` and expects
   `{pid, pfile}` (it renders the job stream).
 - **Gate reconciliation:** no parity gate covers the execute (no fixture: WC-025 has no byte
   oracle). Gates: `test/unit/transform_run_native.test.ts` (the door's job shape, refusal, stop
-  mid-file, stop while queued, submit refusal, the run lock) and
+  mid-file, stop while queued, submit refusal, the run lock, the failed-file outcome legs) and
   `test/unit/maintenance_door_unbounded_native.test.ts` (the move_to_table / move_tld legs
   poll the job). No re-harvest.

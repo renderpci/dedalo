@@ -34,6 +34,8 @@
  *     (never swaps the stale one in), the old index intact;
  *   - an index name at the 63-character limit → rebuilds (the temporary name is
  *     truncated; untruncated, PostgreSQL would fold it onto the real name).
+ * A failed pair reaches the ok:true admin report as a SENTENCE — entry, table,
+ * SQLSTATE — never the raw server text (A6, SEC-18; the raw text is logged).
  * Control: the REAL definitions through the REAL door (rebuild_db_constraints,
  * rebuild_db_indexes on three tables incl. the multi-statement adds) and the
  * trigger pass finish error-free with every declared object present.
@@ -187,9 +189,18 @@ describe('asset rebuild: a drop never commits without its add', () => {
 			blocker.release();
 			await blocker.done;
 		}
-		// Each pair failed on the 5s lock bound (55P03 — "lock timeout").
+		// Each pair failed on the 5s lock bound (55P03 — "lock timeout"), and the
+		// admin report says so by CODE, never by the raw server text (A6, SEC-18).
 		expect(response.errors).toHaveLength(3);
-		for (const error of response.errors) expect(String(error)).toMatch(/lock timeout/i);
+		for (const error of response.errors) {
+			expect(String(error)).toMatch(/rolled back \(SQLSTATE 55P03\)/);
+			expect(String(error)).not.toMatch(/canceling statement/i);
+		}
+		expect(response.errors.map((error) => String(error).split(':')[0])).toEqual([
+			`zz_constraint on ${T}`,
+			`zz_trigger on ${T}`,
+			`zz_index on ${T}`,
+		]);
 		// …and rolled back: every object the DROP removed is still there.
 		expect(await hasConstraint()).toBe(true);
 		expect(await hasTrigger()).toBe(true);
@@ -208,6 +219,12 @@ describe('asset rebuild: a drop never commits without its add', () => {
 			rebuildTemplated([broken(constraintEntry('')), broken(indexEntry(''))]),
 		);
 		expect(response.errors).toHaveLength(2);
+		// The raw server text (`column "no_such_column" does not exist`) goes to the
+		// log; the ok:true admin payload gets the entry, the table and the SQLSTATE.
+		expect(response.errors).toEqual([
+			`zz_constraint on ${T}: rebuild failed and was rolled back (SQLSTATE 42703) — the previous definition is intact; see the server log`,
+			`zz_index on ${T}: rebuild failed and was rolled back (SQLSTATE 42703) — the previous definition is intact; see the server log`,
+		]);
 		expect(await hasConstraint()).toBe(true);
 		const indexes = await indexDefinitions();
 		expect(Object.keys(indexes)).toEqual([`${T}_idx`]);

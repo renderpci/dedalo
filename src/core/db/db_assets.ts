@@ -18,9 +18,10 @@
  */
 
 import { sectionIdAddressSqlPredicate } from '../concepts/section_id.ts';
+import { currentRequestId } from '../security/request_context.ts';
 import definitions from './db_pg_definitions.json';
 import { classifyIndex, type LiveIndex, policyForTable } from './matrix_index_policy.ts';
-import { runWithoutStatementTimeout, sql, withTransaction } from './postgres.ts';
+import { runWithoutStatementTimeout, sql, sqlStateOf, withTransaction } from './postgres.ts';
 
 export interface AssetEntry {
 	tables?: string[];
@@ -202,7 +203,7 @@ export async function rebuildTemplated(
 			}
 			const drop = cleanSql(entry.drop.replaceAll('{$table}', table));
 			const add = cleanSql(entry.add.replaceAll('{$table}', table));
-			await rebuildPair(drop, add, response.errors);
+			await rebuildPair(`${entry.name} on ${table}`, drop, add, response.errors);
 		}
 		response.success++;
 	}
@@ -253,8 +254,17 @@ function indexSwapPlan(add: string): IndexSwap | null {
  * which blocks writes only). Dropping first would hold the drop's ACCESS
  * EXCLUSIVE — every reader queued — for the whole build. An entry whose drop
  * does not free the declared name fails its rename, loudly, and rolls back.
+ *
+ * A failed pair is reported as a SENTENCE — `pair` (entry on table), the
+ * SQLSTATE, "rolled back" — on the ok:true admin report; the raw server text
+ * goes to the log with the request id (A6, SEC-18).
  */
-async function rebuildPair(drop: string, add: string, errors: unknown[]): Promise<void> {
+async function rebuildPair(
+	pair: string,
+	drop: string,
+	add: string,
+	errors: unknown[],
+): Promise<void> {
 	if (add === '') {
 		if (drop !== '') await execSql(drop, errors);
 		return;
@@ -272,7 +282,14 @@ async function rebuildPair(drop: string, add: string, errors: unknown[]): Promis
 			await sql.unsafe(`ALTER INDEX ${swap.temporaryName} RENAME TO ${swap.name}`, []);
 		});
 	} catch (error) {
-		errors.push((error as Error).message);
+		const state = sqlStateOf(error);
+		console.error(
+			`db_assets: rebuild of ${pair} rolled back [request ${currentRequestId() || '-'}]:`,
+			error,
+		);
+		errors.push(
+			`${pair}: rebuild failed and was rolled back${state === undefined ? '' : ` (SQLSTATE ${state})`} — the previous definition is intact; see the server log`,
+		);
 	}
 }
 

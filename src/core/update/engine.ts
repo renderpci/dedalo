@@ -94,7 +94,7 @@ import {
 	isTransactionEndedMidUnit,
 	MAINTENANCE_LOCK_TIMEOUT,
 	type MaintenanceTransactionContext,
-	readTransactionStatus,
+	outcomeOfFailedUnit,
 	sql,
 	sqlStateOf,
 	withMaintenanceTransaction,
@@ -143,9 +143,6 @@ export const PARTIALLY_COMMITTED_LINE =
 /** The last msg line of a run whose outcome could not be read back (see outcomeAfterFailure). */
 export const OUTCOME_UNKNOWN_LINE =
 	"Outcome unknown: the run failed and its transaction's outcome could not be read back — reload the panel to see whether the update was applied";
-
-/** How long outcomeAfterFailure waits for a transaction PostgreSQL still reports in progress. */
-const XACT_STATUS_POLL_MS: readonly number[] = [100, 200, 400, 800, 1500];
 
 /** SQLSTATE lock_not_available — rethrown so the whole unit is retried. */
 const LOCK_NOT_AVAILABLE = '55P03';
@@ -535,49 +532,17 @@ async function abortCause(signal: AbortSignal): Promise<string> {
 }
 
 /**
- * What a failure the engine did NOT raise itself did to the install. Only the
- * sentinel (a step failed; COMMIT was never sent) and a typed refusal are KNOWN
- * rollbacks: any other error — a lost connection, a cancel, a lock wait past its
- * retries — may have struck during COMMIT, when the outcome is decided
- * server-side. So PostgreSQL is asked what happened to THIS attempt's
- * transaction (`pg_xact_status`, outside the dead transaction): 'committed' /
- * 'aborted' are the answer; 'in progress' (a COMMIT still waiting, e.g. on a
- * synchronous standby) is polled briefly; still in progress, NULL, or a failed
- * read is UNKNOWN — never report "rolled back" on a guess. No xid means the
- * attempt failed before its transaction started any work: a certain rollback.
+ * What a failure the engine did NOT raise itself did to the install — the
+ * shared classifier (postgres.ts outcomeOfFailedUnit): only the sentinel (a
+ * step failed; COMMIT was never sent) and a typed refusal are KNOWN rollbacks;
+ * anything else is read back from THIS attempt's transaction status, and an
+ * unreadable status is UNKNOWN, never "rolled back" on a guess.
  */
-async function outcomeAfterFailure(
+function outcomeAfterFailure(
 	seams: UpdateEngineSeams,
 	xid: string | undefined,
 ): Promise<'committed' | 'rolled_back' | 'unknown'> {
-	if (xid === undefined) return 'rolled_back';
-	try {
-		return await pollXactStatus(seams.readXactStatus ?? readTransactionStatus, xid);
-	} catch (error) {
-		console.error(`[update] reading transaction ${xid}'s status after a failed run failed:`, error);
-		return 'unknown';
-	}
-}
-
-/** pg_xact_status's final answers, as a verdict. */
-const XACT_VERDICT: Readonly<Record<string, 'committed' | 'rolled_back'>> = {
-	committed: 'committed',
-	aborted: 'rolled_back',
-};
-
-/** Read the status, polling while it is 'in progress'; anything else unfinal is unknown. */
-async function pollXactStatus(
-	readStatus: (xid: string) => Promise<string | null>,
-	xid: string,
-): Promise<'committed' | 'rolled_back' | 'unknown'> {
-	for (const delayMs of [...XACT_STATUS_POLL_MS, null]) {
-		const status = await readStatus(xid);
-		const verdict = XACT_VERDICT[status ?? ''];
-		if (verdict !== undefined) return verdict;
-		if (status !== 'in progress' || delayMs === null) return 'unknown';
-		await Bun.sleep(delayMs);
-	}
-	return 'unknown';
+	return outcomeOfFailedUnit(xid, { label: 'update', readStatus: seams.readXactStatus });
 }
 
 /** The attempt's log tag: ` [xact <xid>]`, or '' before its transaction id was read. */
