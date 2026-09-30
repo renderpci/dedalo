@@ -588,6 +588,8 @@ export const NEW_IN_V7: readonly string[] = [
 	'DB_POOL_MAX',
 	'DB_POOL_ACQUIRE_TIMEOUT_MS',
 	'DB_STATEMENT_TIMEOUT_MS',
+	// the maintenance pool (PERF-11): the separate connections withUnboundedStatements routes to
+	'DB_MAINTENANCE_POOL_MAX',
 	// Postgres TLS mode. NEW_IN_V7 and, more precisely, new in Bun 1.4: that
 	// release taught Bun.sql to fall back to the ambient PGSSLMODE/PG_SSLMODE
 	// when no `tls` option is given, so the engine now passes this value

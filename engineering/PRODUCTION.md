@@ -245,41 +245,134 @@ for the master's own same-origin client. Gates:
 Nothing in that overlay belongs on an ordinary install — do not include it on
 one.
 
-## 4. Database pool + statement timeouts (S2-32)
+## 4. Database pool + statement timeouts (S2-32, PERF-11)
 
-Config keys (all in `../private/.env`; catalog `src/config/config.ts` `ops`):
+Config keys (all in `../private/.env`; catalog `src/config/catalog/db.ts`,
+read into `config.ops` in `src/config/config.ts`). `0` disables each bound:
 
-| Key | Default | Guidance |
-|---|---|---|
-| `DB_POOL_MAX` | 10 | Per PROCESS. Budget: server + each diffusion runner (up to `DEDALO_DIFFUSION_MAX_RUNNERS`) + RAG drain + coexisting PHP must stay under Postgres `max_connections` (typically 100). Example: server 10 + 2 runners × 10 + PHP ~20 → fine; 8 runners × 10 → NOT. |
-| `DB_POOL_ACQUIRE_TIMEOUT_MS` | 0 (wait forever) | Set (e.g. 30000) so pool exhaustion becomes a loud error instead of a silent indefinite hang. |
-| `DB_STATEMENT_TIMEOUT_MS` | 0 (off) | **Set 60000 in production** (WC-055). It is the ONLY bound on a search that cannot abort early — a deliberately-unindexed match (dd551 Data, `f_unaccent(…) ~* …`) reads the whole table, ~175 s on a 33 M-row activity log, and a client disconnecting does **not** cancel it. Maintenance is exempt (below), so this no longer conflicts with REINDEX/VACUUM. |
-| `DEDALO_SLOW_QUERY_MS` | 0 (off) | Warn-log statements slower than this — on EVERY lane: pooled, inside a transaction (the write path) and on a reserved connection. The line names the lane (OPS-13). |
+| Key | Default | Recommended | Guidance |
+|---|---|---|---|
+| `DB_POOL_MAX` | 10 | 10 | Request-pool connections per PROCESS. |
+| `DB_MAINTENANCE_POOL_MAX` | 2 | 2 | The separate MAINTENANCE pool per process (startup `statement_timeout` 0, `application_name` `dedalo_maintenance:<pid>:<boot nonce>`, built on first use, idle connections close after 30 s). |
+| `DB_POOL_ACQUIRE_TIMEOUT_MS` | 0 | 30000 | How long a caller may QUEUE for a connection of either pool. Exhaustion answers the typed 503 `db.pool_exhausted` (retryable) instead of an indefinite hang. |
+| `DB_STATEMENT_TIMEOUT_MS` | 0 | 60000 | The request pool's startup `statement_timeout` (WC-055). It is the ONLY bound on a search that cannot abort early — a deliberately-unindexed match (dd551 Data, `f_unaccent(…) ~* …`) reads the whole table, ~175 s on a 33 M-row activity log, and a client disconnecting does **not** cancel it. A fired ceiling answers the typed 503 `db.statement_timeout`. Maintenance does not run under it (below). |
+| `DEDALO_SLOW_QUERY_MS` | 0 | 5000 | Warn-log statements slower than this — on EVERY lane: pooled, inside a transaction (the write path) and on a reserved connection. The line names the lane (OPS-13). |
 
-All four keys are live in `src/core/db/postgres.ts` (verified 2026-07-07):
-`DB_POOL_MAX` sizes the pool, an acquire gate fronts it so saturation is
-observable (`db_pool_waits` counter) and bounded (`DB_POOL_ACQUIRE_TIMEOUT_MS`
-fail-loud), `DB_STATEMENT_TIMEOUT_MS` is a per-connection GUC, and
-`DEDALO_SLOW_QUERY_MS` warn-logs slow statements. That last one is evaluated in
-`src/core/db/query_tap.ts`, called from all three executor lanes — until OPS-13
-it lived in the pooled branch alone, so nothing issued inside a transaction or
-on a reserved connection was ever measured.
+**The on-by-default flip is pending** (PERF-11 C4): the three bounds ship at
+`0` until every row of the census below marked PENDING enters the unbounded
+scope — a ceiling that ships on while a boot store build or the retention
+prune still runs under it would fail those every day on a large install. The
+flip, its config-census leg and those wraps land in ONE commit.
 
-**Maintenance is exempt from the ceiling** (`runWithoutStatementTimeout`,
-WC-055). `DB_STATEMENT_TIMEOUT_MS` is a POOL-WIDE GUC, so before this it could
-not be set at all without also aborting the operations that are SUPPOSED to run
-for minutes — which is why it shipped disabled. These four paths now clear the
-GUC on a RESERVED connection for their own statement only:
-`db_assets.optimizeTables` (REINDEX + VACUUM per table),
-`db_assets.pruneMatrixIndexes` (DROP INDEX CONCURRENTLY),
-`db_assets.execMaintenance` (the `ar_maintenance` sentences, incl. VACUUM FULL),
-and the Database-info widget's whole-database VACUUM ANALYZE. The GUC is never
-cleared on a POOLED connection: a plain `SET` persists for the life of the
-connection, so that would silently un-bound every later request handed the same
-one. Anything request-driven stays under the ceiling by design.
+**Connection budget.** Each process may open `DB_POOL_MAX +
+DB_MAINTENANCE_POOL_MAX` connections: the server, each diffusion runner (up to
+`DEDALO_DIFFUSION_MAX_RUNNERS`), the RAG drain. All together must stay under
+Postgres `max_connections` (typically 100). Defaults: server + 2 runners ×
+(10 + 2) = 36 → fine; 8 runners × 12 → NOT. `sql.reserve()` takes a gate slot
+until its `release()` — nothing can exhaust a pool behind the gate.
 
-Raise the value if a legitimate REQUEST-path operation on your install (a large
-export) exceeds it; measure first with `DEDALO_SLOW_QUERY_MS`.
+All keys are live in `src/core/db/postgres.ts`: an acquire gate fronts EACH
+pool so saturation is observable (`db_pool_waits` counter, `getPoolStats()` —
+request pool plus `maintenance`) and bounded; `DEDALO_SLOW_QUERY_MS` is
+evaluated in `src/core/db/query_tap.ts`, called from all three executor lanes.
+
+**Maintenance runs unbounded, on its own pool** (`withUnboundedStatements`,
+PERF-11). Before PERF-11 the ceiling could not be on by default: it is a
+pool-wide GUC, and the only opt-out cleared it with a session `SET`/`RESET` on
+a connection that went back to the pool — the WC-055 leak class. Now work that
+is legitimately long DECLARES it with `withUnboundedStatements(work)`, and every
+statement it issues — pooled, in a transaction it opens, on a connection it
+reserves — runs on the maintenance pool, whose connections are BORN with
+`statement_timeout = 0` (sent in the startup packet: it overrides `ALTER ROLE`
+/ `ALTER DATABASE` defaults). No pooled connection's GUC is ever mutated, and a
+session `SET`/`RESET`/`DISCARD` in ANY statement of a pooled or transaction-lane
+text (`SELECT 1; SET statement_timeout = 0` included — the text is split by the
+shared lexer `src/core/db/sql_lexer.ts`) — inside a `DO` body too (read raw,
+`EXECUTE 'SET …'` included) — or a `set_config` that is not provably
+transaction-local (only a literal `true` third argument is: `false`, an
+expression, a bound `$3` are refused), is REFUSED (`internal.invariant`) before
+it is sent. So is TRANSACTION CONTROL (`BEGIN`, `START TRANSACTION`, `COMMIT`,
+`END`, `ROLLBACK` — never `ROLLBACK TO` —, `ABORT`, `PREPARE TRANSACTION`): a
+`COMMIT` would end a caller's unit mid-way, a `BEGIN` would hand the next caller
+a pooled connection inside someone else's transaction. Residual blind spot:
+dynamic SQL a FUNCTION (not a `DO` body) EXECUTEs. Every Bun `sql` member that takes a connection outside
+these doors (`begin`, `transaction`, `savepoint`, `file`, `listen`, `close`, …)
+is refused too: `withTransaction`, `sql.reserve()` and `closeDatabasePool` are
+the doors. The scope expires when it returns (a leaked timer falls back to the
+bounded pool), a detached job never inherits it, and entering it inside a
+request-pool transaction is refused (enter it before BEGIN) — keyed on the
+transaction's pool, not on `DB_STATEMENT_TIMEOUT_MS`, so it is refused under a
+configured 0 too (only an explicit `SET LOCAL statement_timeout = 0` in force
+makes such a transaction joinable).
+
+**Shutdown** (`closeDatabasePool`) closes the maintenance pool FIRST and
+BOUNDED: it cancels this process's running maintenance statements (by its
+per-boot `application_name` AND this database AND this role — pg_stat_activity
+is cluster-wide and every container engine or one-off CLI is PID 1, so a pid
+alone would reach another install's migration on a shared cluster — on a
+short-lived DEDICATED connection — neither pool, which may both be saturated —
+≤ 2 s), closes the maintenance pool with a 5 s timeout,
+then the request pool. A stopped data update's cancel takes the same dedicated
+connection (so does its verdict read, `pg_xact_status`: a released maintenance
+slot goes straight to the next queued maintenance waiter), and a run still
+waiting for its maintenance slot leaves the queue at once.
+An unbounded statement therefore can neither hang the shutdown nor survive it
+holding its locks (a cancelled data update rolls back; the rerun is the resume).
+The one exception is deliberate: `runWithoutStatementTimeout`'s statements
+(REINDEX / CREATE / DROP INDEX CONCURRENTLY, VACUUM) run on a NON-TRANSACTIONAL
+twin of the maintenance pool — same gate, its own `application_name`
+(`dedalo_maintenance:nontx:<pid>:<nonce>`) — which the shutdown never cancels:
+a cancelled CONCURRENTLY build is not rolled back, it leaves an INVALID
+`<index>_ccnew` that every write keeps maintaining and a later `REINDEX TABLE
+CONCURRENTLY` skips. The bounded close drops the client and the server finishes
+the statement (its locks never block reads or writes). An interruption the
+engine cannot prevent (an operator's cancel, a crash, `client_connection_check_interval`)
+is cleaned by `database_info.optimize_tables`, which first drops the optimized
+tables' invalid `_ccnew`/`_ccold` leftovers (never under a build in progress).
+
+The maintenance pool is small by design (2), so the widget door routes only
+the actions a widget DECLARES maintenance (`unboundedActions`) there; every
+other admin action — a read, a setting, a budgeted scan — stays on the request
+pool and never queues behind a long one. Two long actions at once (a
+background data update and a REINDEX) make a THIRD long action queue — for
+`DB_POOL_ACQUIRE_TIMEOUT_MS`, then `db.pool_exhausted`. Raise
+`DB_MAINTENANCE_POOL_MAX` on an install whose operators run maintenance in
+parallel (and count it in the budget). Known limit: the maintenance pool sets
+no `lock_timeout`, so a declared action that needs ACCESS EXCLUSIVE (a store
+rebuild's TRUNCATE, VACUUM FULL) queues behind a long reader, and the readers
+after it queue behind it; the data-update engine is the one lane with
+`SET LOCAL lock_timeout` + whole-unit retry. (The CONCURRENTLY/VACUUM
+statements, whose lock waits a startup `lock_timeout` would abort, now run on
+the separate non-transactional lane, so a startup bound on the transactional
+maintenance pool is possible — it needs each declared transactional action to
+retry its own unit on 55P03 first, or an operator action fails instead of
+waiting. Pending, with the default ceiling flip.)
+
+Census of the legitimately long statements (who is unbounded, and how):
+
+| Lane | Handling |
+|---|---|
+| Maintenance-area ACTIONS a widget declares maintenance (`unboundedActions`: every database_info action — VACUUM/ANALYZE, REINDEX, the store rebuilds and backfill, the relation-index report, consolidate, user stats —, every `move_*` transform incl. its in-transaction INSERT…SELECT, update_ontology, the dd_ontology recovery build/restore, add_hierarchy install/reset, export_hierarchy, reconcile_status run) | The widget door wraps THOSE handlers in the scope; every other action and every panel load stays bounded. `dataframe_control` is not maintenance: each batch runs under `SET LOCAL statement_timeout` = what is left of its per-table/total budgets (WC-071/072), never above the pool ceiling. |
+| `runWithoutStatementTimeout` (REINDEX/VACUUM/DROP INDEX CONCURRENTLY) | The non-transactional maintenance lane (same gate, never cancelled by shutdown — see above); refused inside a transaction. |
+| Data-update engine (`src/core/update/engine.ts`) | Its own atomic unit: `withMaintenanceTransaction` (one transaction, `SET LOCAL lock_timeout` + `SET LOCAL statement_timeout = 0`, whole-unit retry on 55P03 — each discarded attempt logged to update.log — abort cancels the running statement). The background job has NO deadline (`deadlineMs: 0`, overriding the maintenance lane's 6 h): a clock that fired mid-run would roll the whole unit back, every time. The verdict of record is the `matrix_updates` version row (it commits with the steps); update.log is advisory: a `BEGIN atomic run … [xact <xid>]` line per attempt that won the single-flight claim (a refused one writes only `REFUSED [xact <xid>] (…)`) and an fsynced `COMMITTED <version> [xact <xid>]` line after the COMMIT succeeded, but a failed log write (full or read-only private dir) only reaches the server log and never changes the verdict — and a crash between COMMIT and that line leaves a committed run without it, so read `matrix_updates` when in doubt. A statement cancelled from outside (a shutdown, an operator) is reported as an interruption, never as the step's SQL failing. A failure the engine did not raise itself (a connection lost during COMMIT) is classified by `pg_xact_status` of the run's own transaction (read on a dedicated connection, ≤ 2 s per read) — committed, rolled back, or "outcome unknown" — never by re-reading the version. Once a run is aborted, no further statement of it is sent. No step can end the unit: transaction control is refused before it is sent; should the between-steps checkpoint ever see the transaction id change anyway, the run is reported `PARTIAL` (what ran before persisted, the version is not stamped) — never "rolled back". Known limit: `lock_timeout` bounds EVERY lock wait, row locks too — a long migration that meets a row lock held > 5 s is retried whole (maintenance mode excludes ordinary editors; a background import or runner started before it does not). |
+| Boot migrations (`install/db/migrate.ts`) | Already `SET LOCAL statement_timeout = 0` per file (the recorder sees it); the ONLINE lane uses a reserved connection with a session 0 it RESETs. |
+| `db_assets` store builds at boot (`ensureSearchStores` → one whole-table `INSERT … SELECT` backfill per matrix table; `rebuildIndexes` & co.) / `test:db:setup` / `migrate_section_id_locators`; `observer_reconcile` CLI | To enter the scope at the source (the `db_assets` builders, `reconcileObserverMirrors`). PENDING — until then they run under the ceiling, so the default flip ships together with those wraps. |
+| Retention scheduler (`src/core/retention/scheduler.ts`, after boot then daily, from a bare timer): `pruneMatrixEventRowsByAge` on `matrix_activity` (an unbatched `count(*)` + one `DELETE … RETURNING`) and the dd1758 ledger prune | PENDING — enter the scope at the retention pass entry, or batch the prune (`DELETE … WHERE id IN (SELECT … LIMIT n)`, each batch well under the ceiling). Under a ceiling an all-or-nothing DELETE over a 33 M-row log rolls back every day and never makes progress. |
+| Diffusion runners | Stay bounded (their containers already run at 60 s); measured separately. |
+| `psql` / `pg_restore` / `pg_dump` children | Never receive the startup GUC. |
+| Request traffic, and requests waiting behind a maintenance lock | Bounded — a typed 503 by design. |
+
+**The typed failures.** A 57014 is mapped to `db.statement_timeout` only when
+it IS the ceiling: the lane's ceiling is known and positive and the statement
+ran at least that long. A transaction's ceiling starts at its pool's and
+follows a recorded `SET LOCAL statement_timeout` (an unparseable change makes
+it unknown — never mapped); a `ROLLBACK TO SAVEPOINT` restores the ceiling the
+savepoint was taken under, as Postgres restores the setting. An operator's `pg_cancel_backend`, the update
+engine's abort cancel, a cancel that lands before the ceiling, and anything on
+a reserved connection stay raw (`install/db/migrate.ts` reads the raw errno).
+
+Raise `DB_STATEMENT_TIMEOUT_MS` if a legitimate REQUEST-path operation on your
+install (a large export) exceeds it; measure first with `DEDALO_SLOW_QUERY_MS`.
 
 ## 5. Observability (S2-37)
 

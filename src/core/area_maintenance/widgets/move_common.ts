@@ -144,6 +144,9 @@ export function buildMoveWidget(id: string, spec: WidgetSpec): WidgetModule {
 				moveWidgetRun(id),
 			),
 		},
+		// A bulk transform of stored records (incl. its in-transaction
+		// INSERT…SELECT): maintenance (PERF-11).
+		unboundedActions: [id],
 		getValue: moveWidgetGetValue(id),
 	};
 }

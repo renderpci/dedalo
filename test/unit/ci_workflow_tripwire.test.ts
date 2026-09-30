@@ -597,6 +597,26 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		'test/unit/dataframe_contract_tripwire.test.ts',
 		"Its normalizer and identity-predicate legs are pure, but the last describe drives the real dataframe doors against the generic test TLD's sections on the suite database — the frame is written and read back, and the deliberate test6100 target exemption is ASSERTED by asking the ontology what selectability contract that section declares — so with the port closed the behavioural half is red.",
 	],
+	[
+		'test/unit/update_engine_atomic_native.test.ts',
+		'Every leg runs the real data-update engine in ONE transaction on the suite Postgres maintenance pool (scratch dedalo_ts_test_upd_<pid> tables, advisory try-lock, pg_xact_status, pg_cancel_backend/pg_terminate_backend of its own backends), several in a child process with pinned pool sizes, so it cannot run without a live suite Postgres carrying the dedalo_test_marker.',
+	],
+	[
+		'test/unit/update_descriptor_tripwire.test.ts',
+		'Its truth-table half is pure, but every refusal is also asserted as an OUTCOME through updateVersion against the suite Postgres (query-tap count 0, a scratch INSERT that must stay absent), the non-vacuity legs run real steps on the maintenance pool, and the module-load leg loads catalog.ts in a child — with the port closed those legs are red.',
+	],
+	[
+		'test/unit/statement_ceiling_scope_native.test.ts',
+		'Its lexer and recorder truth tables are pure, but the pool legs drive real 57014s, acquire timeouts, reserved connections, session-state and transaction-control refusals and a shutdown cancel against the suite Postgres, in child processes with pinned DB_STATEMENT_TIMEOUT_MS / pool sizes — they need a live Postgres.',
+	],
+	[
+		'test/unit/maintenance_door_unbounded_native.test.ts',
+		'A child with a 300 ms ceiling holds a real conflicting lock on the suite Postgres and drives the widget door (backfill_search_stores, move_to_table on a zz* scratch section, the detached data-update job) plus a saturated maintenance pool, so the gate needs a live suite Postgres carrying the dedalo_test_marker.',
+	],
+	[
+		'test/unit/optimize_concurrent_leftover_native.test.ts',
+		'It builds a scratch table with a deliberately slow index on the suite Postgres, cancels a real REINDEX CONCURRENTLY mid-build and reads pg_index / pg_stat_progress_create_index, so it cannot run without a live Postgres.',
+	],
 ]);
 
 /**

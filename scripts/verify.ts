@@ -293,6 +293,11 @@ const TRIPWIRES = [
 	'test/unit/pre_push_gate_native.test.ts',
 	'test/unit/update_channel_native.test.ts',
 	'test/unit/audit_trigger_closure_native.test.ts',
+	'test/unit/update_engine_atomic_native.test.ts',
+	'test/unit/update_descriptor_tripwire.test.ts',
+	'test/unit/statement_ceiling_scope_native.test.ts',
+	'test/unit/maintenance_door_unbounded_native.test.ts',
+	'test/unit/optimize_concurrent_leftover_native.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

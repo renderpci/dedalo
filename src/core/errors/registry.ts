@@ -1562,6 +1562,34 @@ export const ERROR_REGISTRY = {
 		retryable: false,
 	},
 
+	// ── db (PERF-11) ────────────────────────────────────────────────────────
+	// The two database ceilings, typed so a fired bound is a 503 the client can
+	// show — not a 500 `internal.unexpected` indistinguishable from an engine
+	// bug. Raised ONLY by core/db/postgres.ts; the numbers (lane, ceiling, pool)
+	// ride in operator-only `coordinates`.
+	'db.statement_timeout': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_db_statement_timeout',
+		message: 'A database statement ran past the configured statement ceiling',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+		reason:
+			'A 57014 at or past the lane ceiling (DB_STATEMENT_TIMEOUT_MS, or a recorded SET LOCAL). An operator cancel, an abort cancel and the reserved lane stay raw.',
+	},
+	'db.pool_exhausted': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_db_pool_exhausted',
+		message: 'No database connection became available in time',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: true,
+		reason:
+			'The acquire gate waited DB_POOL_ACQUIRE_TIMEOUT_MS for a pooled connection (every path that takes a connection takes a slot).',
+	},
+
 	// ── internal ────────────────────────────────────────────────────────────
 	'internal.unexpected': {
 		category: 'internal',

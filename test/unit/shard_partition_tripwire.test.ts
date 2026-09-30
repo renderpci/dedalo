@@ -25,9 +25,12 @@
  *  - A re-derivation over an already-sharded env yields `<t>__shard2__shard2`
  *    — a database no sweep enumerates and no budget counted.
  *  - A budget that CLAMPS instead of refusing fills a volume measured at 96%
- *    capacity, or exhausts max_connections=100 where the shipped
- *    DB_POOL_ACQUIRE_TIMEOUT_MS default of 0 turns exhaustion into a silent
- *    HANG in an unrelated file.
+ *    capacity, or exhausts max_connections=100 — where an inherited
+ *    DB_POOL_ACQUIRE_TIMEOUT_MS of 0 (the catalog default until the PERF-11
+ *    flip lands, or an operator .env after it) would turn exhaustion into a
+ *    silent HANG in an unrelated file, so the child pins its own. A process opens BOTH its
+ *    request pool and its maintenance pool (DB_MAINTENANCE_POOL_MAX): the
+ *    budget counts both.
  *
  * ── ANTI-VACUITY ─────────────────────────────────────────────────────────────
  * Every derived set has a floor (discovery > 700 files; the census still holds
@@ -71,8 +74,12 @@ import {
 	type Bin,
 	composeChildEnv,
 	discoverTestFiles,
+	EXPECTED_CONCURRENT_GRANDCHILDREN,
 	loadCostModel,
 	partition,
+	SHARD_CONNECTIONS_PER_PROCESS,
+	SHARD_MAINTENANCE_POOL_MAX,
+	SHARD_POOL_MAX,
 } from '../../scripts/test_shard.ts';
 import { stripComments } from '../helpers/strip_comments.ts';
 import { testDatabaseName } from '../helpers/test_database.ts';
@@ -258,9 +265,11 @@ describe('shard env — the discriminator is total or absent, never partial', ()
 		expect(basename(testMediaRootPath(env.DEDALO_TEST_DATABASE as string))).toBe(
 			`${TEMPLATE}__shard2`,
 		);
-		// The pool is bounded and the acquire timeout NON-ZERO: the shipped
-		// default 0 waits forever, turning cluster exhaustion into a silent hang.
+		// Both pools are bounded and the acquire timeout NON-ZERO (pinned, never
+		// inherited: an operator .env may say 0 = wait forever, turning cluster
+		// exhaustion into a silent hang).
 		expect(Number(env.DB_POOL_MAX)).toBeGreaterThan(0);
+		expect(Number(env.DB_MAINTENANCE_POOL_MAX)).toBeGreaterThan(0);
 		expect(Number(env.DB_POOL_ACQUIRE_TIMEOUT_MS)).toBeGreaterThan(0);
 	});
 
@@ -487,14 +496,17 @@ describe('shard budgets — refusal driven by synthetic inputs, both directions'
 		expect(verdict.arithmetic).toContain('max_connections 100');
 	});
 
-	test('connections: the shipped shard shape PASSES', () => {
+	test('connections: the shipped shard shape PASSES — counting BOTH pools per process', () => {
+		// A process may open its request pool AND its maintenance pool (PERF-11);
+		// budgeting only the first under-counts every child.
+		expect(SHARD_CONNECTIONS_PER_PROCESS).toBe(SHARD_POOL_MAX + SHARD_MAINTENANCE_POOL_MAX);
 		const verdict = assessConnectionBudget({
 			maxConnections: 100,
 			superuserReserved: 3,
 			liveBackends: 19,
 			children: 4,
-			poolMaxPerChild: 3,
-			expectedConcurrentGrandchildren: 1,
+			poolMaxPerChild: SHARD_CONNECTIONS_PER_PROCESS,
+			expectedConcurrentGrandchildren: EXPECTED_CONCURRENT_GRANDCHILDREN,
 		});
 		expect(verdict.ok).toBe(true);
 	});

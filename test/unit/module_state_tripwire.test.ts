@@ -149,7 +149,16 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// under a running server without a deploy (and a deploy restarts it); dev mode
 	// recomputes per call instead of reading this. Carries no request identity.
 	'core/api/dedalo_files.ts:manifestState',
-	'core/db/postgres.ts:availablePoolSlots',
+	// The lazily built MAINTENANCE pool lane (PERF-11): one process-wide pool
+	// + its slot gate, built on first maintenance use. Holds connections and
+	// slot accounting only — no principal, no language, no record. (The slot
+	// state that used to be the top-level availablePoolSlots/poolSlotWaiters now
+	// lives inside each makeSlotGate closure.)
+	'core/db/postgres.ts:maintenanceLane',
+	// Its NON-TRANSACTIONAL twin (runWithoutStatementTimeout's lane — the same
+	// gate, its own application_name the shutdown cancel spares): lazily built,
+	// connections only, no request identity.
+	'core/db/postgres.ts:nonTransactionalLane',
 	'core/tools/loader.ts:loadedTools',
 	'core/tools/loader.ts:collisions',
 	'core/tools/loader.ts:loadingPromise',
@@ -552,14 +561,11 @@ const ALLOWLISTED_MODULE_CONST = new Set<string>([
 	// health state flipped once on a fatal init race — never request identity.
 	'core/api/process_health.ts:poisonState',
 	// DB reachability memo for /health: a timestamped ok/checkedAt pair on the
-	// probe cadence — ops state, same class as availablePoolSlots above.
+	// probe cadence — ops state, same class as the pool slot gate.
 	'server.ts:dbHealth',
 	// Request-latency aggregate (WS-E observability): monotonic count/total/max
 	// ops metrics fed by access_log — never cleared by design, no identity.
 	'core/api/counters.ts:latency',
-	// Pool-saturation wait queue (S2-32): process-wide FIFO of pending pool
-	// acquirers, drained by releasePoolSlot — slot accounting, not request data.
-	'core/db/postgres.ts:poolSlotWaiters',
 ]);
 
 /** Mutation shapes for a named binding: assignment, ++/--, mutating methods. */

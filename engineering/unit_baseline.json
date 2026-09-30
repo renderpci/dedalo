@@ -2111,6 +2111,11 @@
 			"skipped": 1,
 			"assertions": 17
 		},
+		"test/unit/maintenance_door_unbounded_native.test.ts": {
+			"tests": 8,
+			"skipped": 0,
+			"assertions": 39
+		},
 		"test/unit/maintenance_label_rules_native.test.ts": {
 			"tests": 7,
 			"skipped": 0,
@@ -2715,6 +2720,11 @@
 			"tests": 1,
 			"skipped": 0,
 			"assertions": 13
+		},
+		"test/unit/optimize_concurrent_leftover_native.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 9
 		},
 		"test/unit/original_lang.test.ts": {
 			"tests": 13,
@@ -3726,6 +3736,11 @@
 			"skipped": 0,
 			"assertions": 54
 		},
+		"test/unit/statement_ceiling_scope_native.test.ts": {
+			"tests": 136,
+			"skipped": 0,
+			"assertions": 249
+		},
 		"test/unit/statement_timeout_exemption.test.ts": {
 			"tests": 4,
 			"skipped": 0,
@@ -4536,6 +4551,11 @@
 			"skipped": 0,
 			"assertions": 5
 		},
+		"test/unit/update_descriptor_tripwire.test.ts": {
+			"tests": 103,
+			"skipped": 0,
+			"assertions": 272
+		},
 		"test/unit/update_disk_space_native.test.ts": {
 			"tests": 13,
 			"skipped": 0,
@@ -4550,6 +4570,11 @@
 			"tests": 11,
 			"skipped": 0,
 			"assertions": 35
+		},
+		"test/unit/update_engine_atomic_native.test.ts": {
+			"tests": 31,
+			"skipped": 0,
+			"assertions": 197
 		},
 		"test/unit/update_install_stamp_native.test.ts": {
 			"tests": 9,

@@ -56,8 +56,13 @@ export function getBackupDir(): string {
 	return join(privateDir, 'backups', 'db');
 }
 
-/** Current data version from matrix_updates (PHP get_current_data_version). */
-export async function getCurrentDataVersion(): Promise<number[]> {
+/**
+ * The installed data version from matrix_updates, STRICT (OPS-6): `[]` ONLY
+ * when the table does not exist (42P01, a fresh install); any other failure
+ * propagates. The update engine's in-transaction re-read uses this — a
+ * transient read error must never look like "no version" to a migration.
+ */
+export async function readInstalledDataVersionStrict(): Promise<number[]> {
 	try {
 		// (!) `WHERE data ? 'dedalo_version'`: matrix_updates also carries NON-version
 		// rows (the section_id_int_normalize marker, WC-2026-08-10-section-id-int-canonical) — without the guard their NULL version sorts FIRST under DESC
@@ -69,13 +74,24 @@ export async function getCurrentDataVersion(): Promise<number[]> {
 			[],
 		)) as { data: { dedalo_version?: string } | null }[];
 		const version = rows[0]?.data?.dedalo_version;
-		if (typeof version === 'string') {
-			return version.split('.').map((part) => Number(part));
-		}
-	} catch {
-		// fresh installs without matrix_updates report [] (PHP behavior)
+		return typeof version === 'string' ? version.split('.').map((part) => Number(part)) : [];
+	} catch (error) {
+		if ((error as { errno?: unknown } | null)?.errno === '42P01') return [];
+		throw error;
 	}
-	return [];
+}
+
+/**
+ * Current data version from matrix_updates (PHP get_current_data_version) —
+ * the PANEL read: any failure reports `[]` (PHP behavior; the panel bytes of a
+ * fresh or broken install stay what they were).
+ */
+export async function getCurrentDataVersion(): Promise<number[]> {
+	try {
+		return await readInstalledDataVersionStrict();
+	} catch {
+		return [];
+	}
 }
 
 function timestampName(now: Date, forced: boolean): string {

@@ -156,6 +156,8 @@
 	"error_client_render_failed": "This part of the page could not be built; reload the page",
 	"error_client_timeout": "The server took too long to answer",
 	"error_client_worker": "A background worker failed; reload the page",
+	"error_db_pool_exhausted": "The server is busy: no database connection became available in time. Try again in a moment",
+	"error_db_statement_timeout": "The operation took longer than the server allows for one database statement",
 	"error_diffusion_already_draining": "The diffusion server is already draining",
 	"error_diffusion_cancelled": "Process cancelled by user",
 	"error_diffusion_connection_failed": "The diffusion target database could not be reached",

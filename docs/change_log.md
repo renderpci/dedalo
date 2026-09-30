@@ -350,6 +350,12 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **Hitting a database limit now shows a clear "try again" error, and maintenance runs on its own database connections.**
+
+    When a database statement runs past `DB_STATEMENT_TIMEOUT_MS`, or a request waits past `DB_POOL_ACQUIRE_TIMEOUT_MS` for a free database connection, the user now sees a "took longer than the server allows" or "the server is busy, try again" message instead of a generic server error. Maintenance no longer runs under the statement limit: the long maintenance-area actions (rebuilds, VACUUM and REINDEX, bulk transforms, imports) and data updates use a separate set of database connections without it, sized by the new `DB_MAINTENANCE_POOL_MAX` (default 2 per process — count it in your connection budget, see [the database settings](./config/config_db.md)). The other maintenance-area actions keep the limit and never wait behind a long one, and the dataframe integrity scan now stops a batch that runs past its time budget instead of running on. When the server stops, it cancels only its own running maintenance statements: another installation sharing the same PostgreSQL server is never touched. The defaults of the three limits are unchanged (`0`, off); `60000`, `30000` and `5000` are the recommended production values, and the database settings page lists the long operations to measure on a large installation before you set the statement limit. A REINDEX, VACUUM or other index rebuild that is still running when the server stops is left to finish on the database instead of being cancelled, because a cancelled concurrent rebuild leaves a broken index behind; and "Optimize tables" now first removes any such broken index an earlier interrupted rebuild left on the tables it optimizes.
+
+    Wire contract: `WC-2026-09-30-db-typed-503`.
+
 - **Building and serving code releases now has its own maintenance panel, Serve Code.**
 
     The **Update code** panel used to hold two jobs: installing a new release on this installation, and — on a code server — building releases from git and serving them to others. The second job is now its own panel, **Serve Code**, shown only on a code server (`IS_A_CODE_SERVER=true`) or the development installation. **Update code** keeps installing, restoring and deleting restore points.
@@ -371,6 +377,12 @@ Merged since the last release; these ship with the next one.
     When a record was duplicated, a field that keeps per-language versions beside a base value (a transliterable field) or an IRI field got its history row in the language-neutral lane, next to an empty extra row, while a normal save of the same field files it in the working language. The Time Machine of the copy therefore listed the change under the wrong language. The copy's history now lands in the working language, exactly where a save puts it, and the empty extra row is gone. The rule that decides which language a history row belongs to is now one rule shared by every door that writes history.
 
     Wire contract: `WC-2026-09-27-bulk-revert-undo-log`.
+
+- **A data update now applies completely or not at all, and two updates can no longer run at once.**
+
+    Before, each step of a data update was saved as soon as it ran: a failing step, a stopped update or a server restart left the earlier steps applied while the installation still reported the old data version, and running the update again applied them twice. Now the whole update — every step and the new version number — is saved in one piece. If anything goes wrong, or the update is stopped, nothing of it is kept and the report ends with "Rolled back: no statement of this run persisted"; after a restart, simply run the update again. A second update started while one is running, or an update that was already applied from another window, is refused. Stopping the update job now also stops the statement it was running, even while the server is busy. A statement stopped by a server shutdown is reported as an interruption, not as an error in the update's SQL, and the update log marks every run that was saved with a `COMMITTED` line. The installed data version shown in the panel is the final word: if the update log cannot be written (a full disk, say), the update still completes and reports its real outcome. Every required step must stay checked: the update refuses a selection that leaves one out, because the new version number would otherwise claim work that was never done. If the connection to the database is lost at the very end, the report says whether the update was saved after all — as the database itself records it, not as the version number happens to read — or asks you to reload the panel when that cannot be read; it never claims a rollback it cannot confirm. Long updates are no longer cut short by the database statement limit or by the background-job time limit, and a step waiting for a busy table waits only briefly and retries, so ordinary work on that table is not held up behind it. An update step can no longer end the update's own database transaction half-way (a `COMMIT` inside a step is refused before it reaches the database); should that ever happen anyway, the report says the update was partially applied and was not recorded as done, instead of claiming nothing was kept.
+
+    Wire contract: `WC-2026-09-30-update-engine-atomic`.
 
 - **Error reports now include logged client errors**
 
@@ -481,7 +493,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 55 entries"
+??? note "Wire contract — 57 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -537,6 +549,8 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-29-rdf-per-uri-error-wire-body`
     - `WC-2026-09-29-select-family-mode-datalist`
     - `WC-2026-09-29-tm-preview-frame-children-as-of`
+    - `WC-2026-09-30-db-typed-503`
+    - `WC-2026-09-30-update-engine-atomic`
     - `WC-2026-09-30-update-manifest-local-origin-refusal`
 
 ## 7.0.0-beta.4 — 2026-08-24

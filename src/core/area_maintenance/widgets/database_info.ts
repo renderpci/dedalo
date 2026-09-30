@@ -548,7 +548,80 @@ export async function databaseInfoOptimizeTables(
 	// Opt-in preview: only an explicit boolean true is a dry run — anything else
 	// (absent, 'false', 0) keeps the historical destructive behaviour.
 	const dryRun = options.dry_run === true;
-	return fromOutcome(await optimizeTables(tables as string[], { dryRun }));
+	const sweepErrors = await sweepUnlessDryRun(tables as string[], dryRun);
+	const outcome = await optimizeTables(tables as string[], { dryRun });
+	return fromOutcome({ ...outcome, errors: [...sweepErrors, ...outcome.errors] });
+}
+
+/**
+ * The destructive run sweeps the tables' concurrent-build leftovers first
+ * (sweepInvalidConcurrentIndexes — a later REINDEX CONCURRENTLY would skip
+ * them); a dry run changes nothing, the sweep included. Its errors join the
+ * optimize's own.
+ */
+async function sweepUnlessDryRun(tables: string[], dryRun: boolean): Promise<string[]> {
+	return dryRun ? [] : (await sweepInvalidConcurrentIndexes(tables)).errors;
+}
+
+/**
+ * The invalid concurrent-build leftovers of `tables` (public schema): indexes
+ * PostgreSQL itself named `<index>_ccnew[N]` / `<index>_ccold[N]` that are not
+ * valid, on a table with NO index build in progress
+ * (pg_stat_progress_create_index — a live REINDEX's own `_ccnew` is invalid too,
+ * and must not be dropped under it).
+ */
+async function readInvalidConcurrentIndexes(tables: string[]): Promise<string[]> {
+	const rows = (await sql.unsafe(
+		`SELECT ic.relname AS name
+		   FROM pg_index i
+		   JOIN pg_class ic ON ic.oid = i.indexrelid
+		   JOIN pg_class t ON t.oid = i.indrelid
+		   JOIN pg_namespace n ON n.oid = t.relnamespace
+		  WHERE n.nspname = 'public'
+		    AND t.relname IN (SELECT jsonb_array_elements_text($1::text::jsonb))
+		    AND NOT i.indisvalid
+		    AND ic.relname ~ '_cc(new|old)[0-9]*$'
+		    AND NOT EXISTS (SELECT 1 FROM pg_stat_progress_create_index p WHERE p.relid = t.oid)
+		  ORDER BY ic.relname`,
+		[JSON.stringify(tables.filter((table) => typeof table === 'string'))],
+	)) as { name: string }[];
+	return rows.map((row) => row.name);
+}
+
+/**
+ * THE CONCURRENT-BUILD LEFTOVER SWEEP, before an optimize. An interrupted
+ * `REINDEX … CONCURRENTLY` is NOT rolled back: a cancel (an operator's
+ * pg_cancel_backend, a server-side abort on client disconnect), a crash or an
+ * error during the build leaves INVALID `<index>_ccnew` (build phase) or
+ * `<index>_ccold` (swap phase) indexes behind. Every write keeps maintaining
+ * them, and the next `REINDEX TABLE CONCURRENTLY` SKIPS invalid indexes — so
+ * without this sweep nothing ever removes them. Each is dropped with
+ * `DROP INDEX CONCURRENTLY` (no long lock on the live table); a failure is
+ * reported, never fatal (the optimize still runs). Dropped names go to the
+ * server log.
+ */
+export async function sweepInvalidConcurrentIndexes(
+	tables: string[],
+): Promise<{ dropped: string[]; errors: string[] }> {
+	const report = { dropped: [] as string[], errors: [] as string[] };
+	for (const name of await readInvalidConcurrentIndexes(tables)) {
+		try {
+			await runWithoutStatementTimeout(
+				`DROP INDEX CONCURRENTLY IF EXISTS "public"."${name.replaceAll('"', '""')}"`,
+			);
+			report.dropped.push(name);
+		} catch (error) {
+			// The driver text goes to the server log; the wire gets a sentence (SEC-18).
+			console.error(`[optimize_tables] dropping invalid index ${name} failed:`, error);
+			report.errors.push(`SWEEP failed for invalid index ${name} (see server log)`);
+		}
+	}
+	if (report.dropped.length > 0) {
+		console.warn(
+			`[optimize_tables] dropped invalid concurrent-build leftovers: ${report.dropped.join(', ')}`,
+		);
+	}
+	return report;
 }
 
 /**
@@ -701,6 +774,22 @@ export const widget: WidgetModule = {
 			return fromOutcome(response);
 		},
 	},
+	// Every action here scales with the database (VACUUM/ANALYZE, REINDEX, the
+	// store rebuilds and backfill, the relation-index anti-joins, the id
+	// consolidation, the user-stats rebuild): maintenance, run unbounded (PERF-11).
+	unboundedActions: [
+		'analyze_db',
+		'analyze_statistics',
+		'relation_integrity_report',
+		'consolidate_tables',
+		'rebuild_user_stats',
+		'optimize_tables',
+		'rebuild_db_functions',
+		'rebuild_db_constraints',
+		'rebuild_db_indexes',
+		'recreate_db_assets',
+		'backfill_search_stores',
+	],
 	getValue: databaseInfoGetValue,
 	// WC-074: the catalog's inline value carries ONLY the statistics verdict, so
 	// the FOLDED dashboard card can warn without anyone opening the panel — the

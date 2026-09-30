@@ -40,12 +40,16 @@
  *    ~38.7 GiB free (measured 2026-08-25), and each FILE_COPY clone of the
  *    7.6 GB suite database is real bytes. Free space is re-checked AFTER EACH
  *    clone and the remainder aborted rather than filling the volume.
- *  - CONNECTIONS: max_connections=100 on this cluster, and the shipped
- *    DB_POOL_ACQUIRE_TIMEOUT_MS default of 0 means WAIT FOREVER — cluster
- *    exhaustion becomes a silent HANG in an unrelated file, not an error. So
- *    every child in a multi-bin run gets a small pool (DB_POOL_MAX=3 — a shard
- *    runs one file at a time) and a NON-ZERO acquire timeout, and the budget
- *    is asserted before anything is cloned.
+ *  - CONNECTIONS: max_connections=100 on this cluster. Every child in a
+ *    multi-bin run gets a small request pool (DB_POOL_MAX=3 — a shard runs one
+ *    file at a time), a one-connection MAINTENANCE pool (DB_MAINTENANCE_POOL_MAX=1
+ *    — the separate unbounded pool withUnboundedStatements routes to, PERF-11)
+ *    and an EXPLICIT non-zero acquire timeout (PINNED because the catalog
+ *    default of DB_POOL_ACQUIRE_TIMEOUT_MS is still 0 — wait forever — until the
+ *    PERF-11 default flip lands, and an operator .env may say 0 after it too:
+ *    cluster exhaustion must never become a silent HANG in an unrelated file).
+ *    The budget counts BOTH pools per process and is asserted before anything
+ *    is cloned.
  *
  * COST comes from engineering/test_baseline/timings.json WHEN PRESENT; when
  * absent the pack falls back to file count and the manifest SAYS SO — never
@@ -86,7 +90,16 @@ const TIMINGS_PATH = join(REPO_ROOT, 'engineering', 'test_baseline', 'timings.js
 export const DISK_HEADROOM_BYTES = 8 * 1024 ** 3;
 /** Per-child pool — a shard runs one file at a time; 3 covers pool + a stray cursor. */
 export const SHARD_POOL_MAX = 3;
-/** Non-zero ON PURPOSE: the shipped default 0 waits forever (src/config/catalog/db.ts). */
+/** Per-child MAINTENANCE pool (PERF-11): the unbounded lane a maintenance leg opens lazily. */
+export const SHARD_MAINTENANCE_POOL_MAX = 1;
+/** The connections one child process may open: both pools. The budget counts THIS. */
+export const SHARD_CONNECTIONS_PER_PROCESS = SHARD_POOL_MAX + SHARD_MAINTENANCE_POOL_MAX;
+/**
+ * Non-zero ON PURPOSE, and PINNED explicitly: the catalog default
+ * (src/config/catalog/db.ts) is still 0 — wait forever — until the PERF-11
+ * default flip, and after it an operator's .env may still say 0. A child never
+ * inherits either.
+ */
 export const SHARD_POOL_ACQUIRE_TIMEOUT_MS = 30000;
 /** A pinned test may spawn ONE concurrent subprocess with its own pool. */
 export const EXPECTED_CONCURRENT_GRANDCHILDREN = 1;
@@ -295,6 +308,7 @@ export interface ConnectionBudgetInput {
 	superuserReserved: number;
 	liveBackends: number;
 	children: number;
+	/** Connections ONE process may open — its request pool PLUS its maintenance pool. */
 	poolMaxPerChild: number;
 	expectedConcurrentGrandchildren: number;
 }
@@ -374,6 +388,7 @@ export function composeChildEnv(
 	if (!multiBin) return { ...process.env };
 	const env = childEnv();
 	env.DB_POOL_MAX = String(SHARD_POOL_MAX);
+	env.DB_MAINTENANCE_POOL_MAX = String(SHARD_MAINTENANCE_POOL_MAX);
 	env.DB_POOL_ACQUIRE_TIMEOUT_MS = String(SHARD_POOL_ACQUIRE_TIMEOUT_MS);
 	if (shard !== null) {
 		env.DEDALO_TEST_DATABASE = shardDatabaseName(template, shard);
@@ -687,13 +702,13 @@ async function main(): Promise<number> {
 		const connVerdict = assessConnectionBudget({
 			...conn,
 			children: bins.length,
-			poolMaxPerChild: SHARD_POOL_MAX,
+			poolMaxPerChild: SHARD_CONNECTIONS_PER_PROCESS,
 			expectedConcurrentGrandchildren: EXPECTED_CONCURRENT_GRANDCHILDREN,
 		});
 		console.log(`[shard] ${connVerdict.arithmetic}`);
 		if (!connVerdict.ok) {
 			console.error(
-				'[shard] REFUSING: the cluster cannot seat every shard pool. Lower --bins — an over-committed cluster plus the default wait-forever acquire would HANG an unrelated file, not error.',
+				'[shard] REFUSING: the cluster cannot seat every shard pool. Lower --bins — an over-committed cluster fails unrelated files on the acquire timeout instead of running them.',
 			);
 			return 1;
 		}

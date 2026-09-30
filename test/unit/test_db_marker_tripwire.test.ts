@@ -171,6 +171,8 @@ const EXEMPT_WRITERS: Readonly<Record<string, string>> = {
 		'WRITES NO DATA — it creates the suite MEDIA root and plants its `.dedalo_test_media` marker. It is the filesystem twin of this file and holds no database connection at all (importing config.ts there would freeze the connection before the preload repoints it); its own guard is test/unit/test_media_root_tripwire.test.ts.',
 	'test/helpers/media_scratch_root.ts':
 		"WRITES NO DATA — it plants the `.dedalo_test_media` marker in a gate's scratch directory so the media doors will write there. Filesystem only, no database.",
+	'test/helpers/child_driver.ts':
+		"WRITES NO DATA — its one write is a throwaway TS driver file in its own mkdtemp scratch dir (removed on cleanup), run in a CHILD bun process that inherits this run's environment: the preload-repointed suite DB and marked media root. It holds no database connection itself; every driver it runs writes only through test-data doors that call assertTestDatabase (PERF-11/OPS-6 gates).",
 	'src/core/test_data/seed.ts':
 		'NOT A TEST-ONLY WRITER: `resetTestSection`/`restoreCanonicalTest3` write the test3 PLAYGROUND records that every install seed ships, and they are called by the INSTALLER (src/core/install/db_restore.ts) and by the maintenance area widget (area_maintenance/widgets/unit_test.ts) — both on a real database, by design.',
 };

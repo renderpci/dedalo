@@ -158,9 +158,12 @@ const BEHAVIOUR_CLAIMS: readonly BehaviourClaim[] = [
 		definedIn: 'src/core/update/code_serving.ts',
 	},
 	{
+		// PERF-11: was `runWithoutStatementTimeout` ("exempt automatically") — that
+		// helper is now one consumer of the scope named here.
 		key: 'DB_STATEMENT_TIMEOUT_MS',
-		claim: 'long-running maintenance statements are exempt from the ceiling automatically',
-		performedBy: 'runWithoutStatementTimeout',
+		claim:
+			'maintenance does not run under this ceiling: the maintenance-area actions and the data-update engine run on a separate, unbounded maintenance pool',
+		performedBy: 'withUnboundedStatements',
 		definedIn: 'src/core/db/postgres.ts',
 	},
 	{

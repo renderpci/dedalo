@@ -128,3 +128,38 @@ describe('config census: the engine, the migration map, and v6 agree', () => {
 		expect(retiredTargets).toEqual([]);
 	});
 });
+
+/**
+ * PERF-11 (G5): the maintenance pool exists and the generated config docs are
+ * current. The database ceilings' ON-BY-DEFAULT flip (DB_STATEMENT_TIMEOUT_MS,
+ * DB_POOL_ACQUIRE_TIMEOUT_MS, DEDALO_SLOW_QUERY_MS > 0) is NOT pinned here yet:
+ * it ships only together with the unbounded-scope wraps of the long statements
+ * that still run on the request pool (the boot search-store builds, the
+ * observer reconcile, the retention prune — engineering/PRODUCTION.md §4
+ * census). Its leg lands with that flip.
+ */
+describe('PERF-11: the maintenance pool is configured, the config docs are current', () => {
+	test('the maintenance pool has at least one connection by default', () => {
+		const defaultOf = (key: string): unknown => CONFIG_CATALOG[key]?.default;
+		expect(
+			CONFIG_CATALOG.DB_MAINTENANCE_POOL_MAX,
+			'DB_MAINTENANCE_POOL_MAX is not in the catalog',
+		).toBeDefined();
+		expect(typeof defaultOf('DB_MAINTENANCE_POOL_MAX')).toBe('number');
+		expect(defaultOf('DB_MAINTENANCE_POOL_MAX') as number).toBeGreaterThanOrEqual(1);
+	});
+
+	test('the generated config docs render clean (bun run config:check)', async () => {
+		const child = Bun.spawn([process.execPath, 'run', 'scripts/gen_config_docs.ts', '--check'], {
+			cwd: join(import.meta.dir, '..', '..'),
+			stdout: 'pipe',
+			stderr: 'pipe',
+		});
+		const [stdout, stderr, exitCode] = await Promise.all([
+			new Response(child.stdout).text(),
+			new Response(child.stderr).text(),
+			child.exited,
+		]);
+		expect(exitCode, `config:check is stale:\n${stdout}\n${stderr}`).toBe(0);
+	}, 60000);
+});

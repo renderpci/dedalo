@@ -57,6 +57,8 @@ export const widget: WidgetModule = {
 		category: 'data',
 		label: { kind: 'label', key: 'build_database_version' },
 	},
+	// A whole-dd_ontology dump / restore: maintenance (PERF-11).
+	unboundedActions: ['build_recovery_version_file', 'restore_dd_ontology_recovery_from_file'],
 	getValue: buildDatabaseVersionGetValue,
 	apiActions: {
 		build_install_version: engineDenied(
