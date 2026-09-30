@@ -109,6 +109,13 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The Ontology parser button in the Ontology area is readable again**
+
+    In the Ontology area, the *Ontology parser* button was painted solid green with
+    dark grey text and icon, which made it hard to read. It now looks like the other
+    toolbar buttons next to it (*Search*, *Show all*): outlined at rest and
+    highlighted on hover.
+
 - **Reverting the same bulk run a second time no longer reports records as "not reverted" when nothing changed.**
 
     Reverting a bulk revert, or a run whose dataframe removal had emptied a record,

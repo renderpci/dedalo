@@ -23,7 +23,13 @@
  *     themes (the wash is the hue mixed into the surface: a dark hue darkens it);
  *  4. no tool sheet paints a `button` with its raw hue — a button takes the
  *     tool colour only through `.tool_action_button()` (tool_mixins.less),
- *     which carries fill + ink + glyph as one set.
+ *     which carries fill + ink + glyph as one set;
+ *  5. no CORE sheet (compiled main.css) paints a tool LAUNCHER button
+ *     (`button.tool_<x>`, stamped by ui.tool.build_section_tool_button): the
+ *     launcher is a toolbar button and takes the toolbar's look (buttons.less,
+ *     no fill at rest). area_ontology painted tool_ontology_parser's launcher
+ *     with the raw ontology green under the `.warning` ink (~2.5:1) — outside
+ *     tools/, so assertion 4 never saw it (2026-09-30).
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -91,6 +97,16 @@ const rawHueButtons = (tool: string, css: string): string[] =>
 		.filter((m) =>
 			new RegExp(`background(-color)?\\s*:\\s*var\\(--${tool}\\)`).test(m[2] as string),
 		)
+		.map((m) => (m[1] as string).trim().replace(/\s+/g, ' '));
+
+/**
+ * Rules of a compiled CORE sheet that set a background on an element `button`
+ * carrying a `tool_<x>` class — a tool launcher repainted outside its toolbar look.
+ */
+const launcherPaints = (css: string): string[] =>
+	[...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+		.filter((m) => /(^|[\s>+~(,])button(\.[\w-]+)*\.tool_[\w]+/.test(m[1] as string))
+		.filter((m) => /(^|[;\s])background(-color)?\s*:/.test(m[2] as string))
 		.map((m) => (m[1] as string).trim().replace(/\s+/g, ' '));
 
 /** `var(--tool_x, #hex)` → `#hex` (the resolved fallback the generator writes). */
@@ -188,6 +204,30 @@ describe('tool colour contrast (DEC-12)', () => {
 		expect(
 			offenders,
 			'Use `.tool_action_button();` (tool_mixins.less): it paints the generated fill WITH its ink and glyph colour.',
+		).toEqual([]);
+	});
+
+	test('positive control: the launcher scan catches a core repaint, and only that', () => {
+		const planted = [
+			'.area_x > .buttons_container button.tool_x { background-color: var(--color_x); }',
+			'.b button.warning.tool_x:hover { background: red; }',
+			// legal: an icon mask class, a non-background rule, a non-tool class
+			'.wrapper_tool .button.tool_button { background-color: red; }',
+			'.b button.tool_x { margin: 0; }',
+			'.b button.warning { background-color: red; }',
+		].join('\n');
+		expect(launcherPaints(planted)).toEqual([
+			'.area_x > .buttons_container button.tool_x',
+			'.b button.warning.tool_x:hover',
+		]);
+	});
+
+	test('no core sheet repaints a tool launcher button', () => {
+		const css = read('client/dedalo/core/page/css/main.css');
+		expect(css.length).toBeGreaterThan(100_000);
+		expect(
+			launcherPaints(css),
+			'A tool launcher is a toolbar button: it takes the toolbar look (buttons.less), never a per-tool fill.',
 		).toEqual([]);
 	});
 });

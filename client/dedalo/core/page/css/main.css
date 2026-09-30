@@ -19417,10 +19417,6 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .area_ontology {
   height: 100%;
 }
-.area_ontology > .buttons_container button.tool_ontology_parser {
-  background-color: var(--color_green_ontology);
-  border: none;
-}
 .area_ontology > .content_data > .thesaurus_list_wrapper {
   background-color: unset;
 }
