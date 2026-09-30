@@ -116,6 +116,7 @@ const TRIPWIRES = [
 	'test/unit/remove_sentinel_native.test.ts',
 	'test/unit/client_relation_move_native.test.ts',
 	'test/unit/tool_lossless_writeback_tripwire.test.ts',
+	'test/unit/tool_lossless_writeback_tethers_native.test.ts',
 	'test/unit/consultation_only_sections_tripwire.test.ts',
 	'test/unit/tm_mode_retired_tripwire.test.ts',
 	'test/unit/log_section_policy_tripwire.test.ts',

@@ -81,9 +81,11 @@
  *                     comments blanked, so a literal cannot vouch) — or, with `evidence`
  *                     (`file#decl`), in that declaration's code AND the action reaches it
  *                     through RESOLVED edges. The spelling alone is a reading judgment, so
- *                     every server `refuses` cell is also BEHAVIOUR-TETHERED below (the
- *                     refusal executed on a suite-DB record, with its counterfactual), and
- *                     the client one by LEG 2.
+ *                     every server `refuses` cell is also BEHAVIOUR-TETHERED — held EQUAL
+ *                     to SERVER_REFUSES_TETHERS, each a WRITEBACK_TETHERS title that
+ *                     tool_lossless_writeback_tethers_native.test.ts (DB tier) registers
+ *                     and runs through the cell's door on a suite-DB record, with its
+ *                     counterfactual — and the client one by LEG 2.
  *   operator-value  — NOT a write-back: the value written did not derive from the value
  *                     it replaces (a locator the curator just picked, an import mapping
  *                     the operator declared, a Time Machine version they chose). The rule
@@ -108,7 +110,8 @@
  *                     a tether to a FACT of its defect (SERVER_PENDING_TETHERS, total over
  *                     the server PENDING cells), so an in-place fix is red too: the
  *                     translation cells by a behaviour test (the WHOLE translateAndWrite
- *                     path on a scratch suite-DB record), updateCache by its own resolved
+ *                     path on a scratch suite-DB record, in the DB-tier tethers file),
+ *                     updateCache by its own resolved
  *                     references (no readMatrixKeyForUpdate, no recordTimeMachine — a fix
  *                     that locks or records elsewhere, in a helper it calls, is NOT seen).
  *                     SHRINK-ONLY, counted per cell.
@@ -167,7 +170,7 @@
  *   - the client side covers only the three `component_common` tokens.
  */
 
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
@@ -553,9 +556,6 @@ describe(LEGS.timecode, () => {
 // LEG 4 — THE CENSUS
 // ---------------------------------------------------------------------------
 
-import { MATRIX_JSONB_COLUMNS, readMatrixRecord } from '../../src/core/db/matrix.ts';
-import { updateMatrixRecord } from '../../src/core/db/matrix_write.ts';
-import { babelProvider, translateAndWrite } from '../../src/core/tools/translation.ts';
 import { browserSourcesUnfiltered } from '../helpers/browser_corpus.ts';
 import {
 	AFTER_RECORD_WRITE,
@@ -573,7 +573,7 @@ import {
 	type WriterClosure,
 } from '../helpers/matrix_writer_closure.ts';
 import { stripComments } from '../helpers/strip_comments.ts';
-import { cleanScratchRecord } from '../helpers/test_data.ts';
+import { WRITEBACK_TETHER_TITLES, WRITEBACK_TETHERS } from '../helpers/tool_writeback_tethers.ts';
 import { WRITE_PATH_CORPUS_FLOOR } from '../helpers/write_path_corpus.ts';
 
 /**
@@ -1279,7 +1279,7 @@ const CENSUS: Record<string, CensusRow> = {
 				verdict: 'PENDING',
 				closes: TRANSLATION_EMPTY_BODY,
 				reason:
-					'the SERVER half of CLI-14’s tool: translateAndWrite replaces the target language’s items (possibly a human translation) with the provider’s output, under the row lock, with a TM row. A failed call or "Quota exceeded" is refused (translateItems answers items: [] and nothing is written) — but an HTTP 200 with an EMPTY body is accepted as a translation and written, blanking the target language: the exact shape the browser path refuses (LEG 2). Pinned by the empty-body tether below.',
+					'the SERVER half of CLI-14’s tool: translateAndWrite replaces the target language’s items (possibly a human translation) with the provider’s output, under the row lock, with a TM row. A failed call or "Quota exceeded" is refused (translateItems answers items: [] and nothing is written) — but an HTTP 200 with an EMPTY body is accepted as a translation and written, blanking the target language: the exact shape the browser path refuses (LEG 2). Pinned by the empty-body tether (WRITEBACK_TETHERS.emptyBody).',
 			},
 		},
 	},
@@ -1330,39 +1330,23 @@ const RAW_TOOL_CELLS = 3;
  */
 const BYPASS_TOOL_CELLS = 25;
 
-/** The behaviour tether of the two translation PENDING cells (registered below). */
-const EMPTY_BODY_TETHER =
-	'TETHER of the translation PENDING cells: an EMPTY provider body still BLANKS the stored target language';
-
-/** Titles registered through `behaviourTether` — filled at collection, read at run time. */
-const REGISTERED_BEHAVIOUR_TETHERS = new Set<string>();
-
-/**
- * Registers a behaviour tether as a RUNNING test and records its title, so a
- * `{ behaviour }` entry of SERVER_PENDING_TETHERS is checked against what really runs:
- * a deleted tether, or one turned into `test.skip`, leaves its title unregistered.
- */
-function behaviourTether(title: string, body: () => Promise<void>): void {
-	REGISTERED_BEHAVIOUR_TETHERS.add(title);
-	test(title, body);
-}
-
 /**
  * The tether of every SERVER PENDING cell: what turns red when the defect is fixed
- * IN PLACE (door unchanged). `{ behaviour }` = the title of a test registered through
- * `behaviourTether` below, which runs the real path and asserts the defect still
- * happens — the totality test checks the title IS registered, so deleting or skipping
- * the tether (instead of restating the cells) is red; a function = derived facts of the
- * defect over the action's own RESOLVED references, returning the ones that no longer hold.
+ * IN PLACE (door unchanged). `{ behaviour }` = a title in WRITEBACK_TETHERS: a test of
+ * tool_lossless_writeback_tethers_native.test.ts (DB tier) that runs the real path and
+ * asserts the defect still happens — that file holds its REGISTERED titles equal to the
+ * list, so deleting or skipping the tether (instead of restating the cells) is red there;
+ * a function = derived facts of the defect over the action's own RESOLVED references,
+ * returning the ones that no longer hold.
  */
 const SERVER_PENDING_TETHERS: Record<
 	string,
 	{ behaviour: string } | ((action: string) => string[])
 > = {
 	'tools/tool_lang/server/index.ts :: tool.apiActions.automatic_translation × runAutomaticTranslation':
-		{ behaviour: EMPTY_BODY_TETHER },
+		{ behaviour: WRITEBACK_TETHERS.emptyBody },
 	'tools/tool_lang_multi/server/index.ts :: tool.apiActions.automatic_translation × runAutomaticTranslation':
-		{ behaviour: EMPTY_BODY_TETHER },
+		{ behaviour: WRITEBACK_TETHERS.emptyBody },
 	// TOOLS-5: the media branch writes the whole key from an UNLOCKED snapshot with no
 	// TM row. A fix that keeps updateMatrixKeyData must take the row lock and record
 	// the replaced value — either one, in the action's own unit, is this tether's red.
@@ -1384,6 +1368,22 @@ const SERVER_PENDING_TETHERS: Record<
 		}
 		return problems;
 	},
+};
+
+/**
+ * The BEHAVIOUR tether of every SERVER `refuses` cell — `<action> × <door>` → the title of
+ * a tether in WRITEBACK_TETHERS, executed on the suite database by
+ * tool_lossless_writeback_tethers_native.test.ts (DB tier), which holds its registered
+ * titles EQUAL to that list. A `refuses` verdict's `must_contain` is a SPELLING:
+ * `if (guard(x)) log(); return write()` keeps it and loses the refusal. So the server
+ * `refuses` cells are held EQUAL to these keys: a new one is red until its refusal (and
+ * its counterfactual) really runs.
+ */
+const SERVER_REFUSES_TETHERS: Record<string, string> = {
+	'tools/tool_time_machine/server/bulk_revert_records.ts :: deleteIfSafe × deleteSectionRecord':
+		WRITEBACK_TETHERS.deleteIfSafe,
+	'tools/tool_transcription/server/index.ts :: backgroundTranscriberPoll × pollTranscriptionCompletion':
+		WRITEBACK_TETHERS.transcription,
 };
 
 /**
@@ -1701,7 +1701,7 @@ function losslessProblems(
  * `evidence` declaration, which the action must REACH through RESOLVED references (a
  * namespace escape says only "could call any export": enough to make a cell, never to
  * prove one), or else in the action's own body. The tree and the control both judge
- * through it. A spelling check still: the server cells' BEHAVIOUR is LEG 4's tethers.
+ * through it. A spelling check still: the server cells' BEHAVIOUR is SERVER_REFUSES_TETHERS.
  */
 function refusesProblems(
 	closure: WriterClosure,
@@ -2292,6 +2292,42 @@ describe('LEG 4 — the analyser and the judge, on injected inputs (positive con
 		).toEqual({
 			'tools/zz_c/server/index.ts :: viaAlias': { updateMatrixKeyData: 1 },
 			'tools/zz_c/server/index.ts :: viaBarrel': { updateMatrixKeyData: 1 },
+		});
+	});
+
+	test('a STAR-EXPORT CYCLE gives both members their whole export set, whichever escape is resolved first', () => {
+		// a.ts and b.ts `export *` each other: b's exports INCLUDE a's upd. Resolving a's
+		// escape first walks into b with a already on the stack — b's set, truncated there,
+		// must not be memoized as b's whole set, or b's own escape reaches nothing.
+		const files: Record<string, string> = {
+			[MATRIX_WRITE]: MATRIX_WRITE_CONTROL,
+			'src/zz_ctl/a.ts': [
+				"export { updateMatrixKeyData as upd } from '../core/db/matrix_write.ts';",
+				"export * from './b.ts';",
+			].join('\n'),
+			'src/zz_ctl/b.ts': "export * from './a.ts';",
+			'tools/zz_c/server/index.ts': [
+				"import * as a from '../../../src/zz_ctl/a.ts';",
+				"import * as b from '../../../src/zz_ctl/b.ts';",
+				'export async function viaA(run: (m: unknown) => void): Promise<void> {',
+				'\trun(a);',
+				'}',
+				'export async function viaB(run: (m: unknown) => void): Promise<void> {',
+				'\trun(b);',
+				'}',
+			].join('\n'),
+		};
+		const closure = buildWriterClosure({
+			files: Object.keys(files),
+			read: (rel) => files[rel] as string,
+		});
+		expect(
+			Object.fromEntries(
+				[...toolServerCells(closure)].map(([action, doors]) => [action, Object.fromEntries(doors)]),
+			),
+		).toEqual({
+			'tools/zz_c/server/index.ts :: viaA': { updateMatrixKeyData: 1 },
+			'tools/zz_c/server/index.ts :: viaB': { updateMatrixKeyData: 1 },
 		});
 	});
 
@@ -3466,10 +3502,10 @@ describe('LEG 4 — the verdicts are true of the source, not just of the table',
 		for (const [label, tether] of Object.entries(SERVER_PENDING_TETHERS)) {
 			const action = label.slice(0, label.lastIndexOf(' × '));
 			if (typeof tether !== 'function') {
-				// its own test() below — which must really be REGISTERED and running
+				// a tether of the DB-tier file — which holds its REGISTERED titles equal to the list
 				expect(
-					REGISTERED_BEHAVIOUR_TETHERS.has(tether.behaviour),
-					`${label}: behaviour tether '${tether.behaviour}' is not a registered, running test`,
+					WRITEBACK_TETHER_TITLES.includes(tether.behaviour),
+					`${label}: behaviour tether '${tether.behaviour}' is not in WRITEBACK_TETHERS`,
 				).toBe(true);
 				continue;
 			}
@@ -3488,248 +3524,42 @@ describe('LEG 4 — the verdicts are true of the source, not just of the table',
 			`PENDING shrank to ${pending} — lower PENDING_COUNT so the ratchet keeps biting.`,
 		).toBe(PENDING_COUNT);
 	});
-	behaviourTether(EMPTY_BODY_TETHER, async () => {
-		// The WHOLE server write path — translateAndWrite with the REAL babelProvider (its
-		// guarded fetch, its response screen) and the real item loop, locked merge and
-		// chokepoint write — on a scratch record of the SUITE database, with only the
-		// network replaced by an HTTP 200 whose body is empty. A refusal landing ANYWHERE
-		// on that path (the provider, translateItems, translateAndWrite) turns this red:
-		// then move both automatic_translation cells to 'refuses' (evidence: the
-		// declaration that now refuses) and lower PENDING_COUNT by 2.
-		const table = 'matrix_test';
-		const sectionTipo = 'test2';
-		const componentTipo = 'testmint1002'; // input_text, translatable → 'string' column
-		const sectionId = 917491;
-		const human = { id: 1, lang: 'lg-eng', value: 'The text a curator already translated.' };
-		const realFetch = globalThis.fetch;
-		const stubbedCalls: string[] = [];
-		try {
-			await cleanScratchRecord(sectionTipo, sectionId, table);
-			const values: Record<string, unknown> = {};
-			for (const name of MATRIX_JSONB_COLUMNS) values[name] = null;
-			values.string = {
-				[componentTipo]: [{ id: 1, lang: 'lg-spa', value: 'El texto de origen.' }, human],
-			};
-			expect(await updateMatrixRecord(table, sectionTipo, sectionId, values)).toBe('inserted');
-			// The stub COUNTS its calls: if the provider's transport ever stops going
-			// through the global fetch, the count below is red (the provider has no
-			// injectable transport today — integrator request for a seam).
-			globalThis.fetch = (async (input: unknown) => {
-				stubbedCalls.push(String(input instanceof Request ? input.url : input));
-				return new Response('', { status: 200 });
-			}) as unknown as typeof fetch;
-			const outcome = await translateAndWrite({
-				model: 'component_input_text',
-				componentTipo,
-				sectionTipo,
-				sectionId,
-				sourceLang: 'lg-spa',
-				targetLang: 'lg-eng',
-				provider: babelProvider,
-				// a PUBLIC IP literal: the guard's no-lookup path, never dialled (fetch is stubbed)
-				uri: 'https://93.184.216.34/translate',
-				key: 'k',
-				userId: -1,
-			});
-			globalThis.fetch = realFetch;
-			// one source item → one provider call, answered by the stub (never the network)
+	test('every SERVER `refuses` cell is BEHAVIOUR-tethered — its refusal executed, not only spelled', () => {
+		// `refusesProblems` reads a SPELLING; the refusal itself runs in the DB-tier file.
+		// The server `refuses` cells are held EQUAL to SERVER_REFUSES_TETHERS' keys, and each
+		// tether is a title of WRITEBACK_TETHERS (registered and running there).
+		const serverRefuses = CELLS.filter(
+			({ action, cell }) => cell.verdict === 'refuses' && isServerAction(action),
+		).map(({ action, door }) => `${action} × ${door}`);
+		expect(serverRefuses.length).toBeGreaterThan(0);
+		expect(
+			serverRefuses.sort(),
+			'a server `refuses` cell with no behaviour tether (or a stale tether)',
+		).toEqual(Object.keys(SERVER_REFUSES_TETHERS).sort());
+		for (const [label, title] of Object.entries(SERVER_REFUSES_TETHERS)) {
 			expect(
-				stubbedCalls.length,
-				`provider calls seen by the stub: ${stubbedCalls.join(', ')}`,
-			).toBe(1);
-			const record = await readMatrixRecord(table, sectionTipo, sectionId);
-			const stored = ((record?.columns.string ?? {}) as Record<string, unknown>)[componentTipo];
-			const english = (Array.isArray(stored) ? stored : []).filter(
-				(item) => (item as { lang?: string }).lang === 'lg-eng',
-			);
-			expect(
-				{ ok: outcome.ok, english },
-				'the server no longer writes an empty provider body over the target language — move both automatic_translation cells to refuses and lower PENDING_COUNT by 2',
-			).toEqual({ ok: true, english: [{ id: 1, lang: 'lg-eng', value: '' }] });
-		} finally {
-			globalThis.fetch = realFetch;
-			await cleanScratchRecord(sectionTipo, sectionId, table);
+				WRITEBACK_TETHER_TITLES.includes(title),
+				`${label}: behaviour tether '${title}' is not in WRITEBACK_TETHERS`,
+			).toBe(true);
 		}
+	});
+
+	test('no behaviour tether tethers NOTHING — every WRITEBACK_TETHERS title is named by a server cell', () => {
+		const named = new Set<string>(Object.values(SERVER_REFUSES_TETHERS));
+		for (const tether of Object.values(SERVER_PENDING_TETHERS)) {
+			if (typeof tether !== 'function') named.add(tether.behaviour);
+		}
+		expect([...named].sort()).toEqual([...WRITEBACK_TETHER_TITLES].sort());
 	});
 });
 
 // ---------------------------------------------------------------------------
-// THE SERVER `refuses` CELLS, EXECUTED
+// THE JUDGES' OWN PREDICATES
 // ---------------------------------------------------------------------------
+// (The server `refuses` and PENDING cells' BEHAVIOUR tethers run on the suite database in
+// tool_lossless_writeback_tethers_native.test.ts — DB tier; this file stays DB-less.)
 
-import { sql } from '../../src/core/db/postgres.ts';
-import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
-import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
-import { saveComponentData } from '../../src/core/section/record/save_component.ts';
-import { resolvePrincipal } from '../../src/core/security/permissions.ts';
-import {
-	dropSituation,
-	ensureSituation,
-	situation,
-} from '../../src/core/test_data/situations/situation.ts';
-import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
-import { saveTranscriptionResult } from '../../src/core/tools/transcription_asr.ts';
-import { toolTimeMachineBulkRevert } from '../../tools/tool_time_machine/server/bulk_revert.ts';
-
-/**
- * A `refuses` verdict's `must_contain` is a SPELLING: `if (holdsForeignValue(…)) log();
- * return null` keeps it and loses the refusal. So each server `refuses` cell is ALSO
- * executed here, on records of a scratch situation in the SUITE database, with its
- * counterfactual (the refusal is not a blanket refusal). A red here means the refusal is
- * gone: the cell's verdict is false — restate it (PENDING, with its closure item) and
- * raise nothing silently.
- */
-describe('LEG 4 — TETHERS of the server `refuses` cells (behaviour, not spelling)', () => {
-	const TLD = 'zzlwt';
-	const SECTION = `${TLD}1`;
-	const TEXT = `${TLD}2`; // input_text, translatable (lang-SLICED)
-	const DATE = `${TLD}3`;
-	const TABLE = 'matrix_test';
-	const USER_ID = -1;
-	const SITUATION = situation({
-		tld: TLD,
-		name: 'tool_lossless_writeback_tethers',
-		nodes: [
-			{ tipo: SECTION, parent: 'test1', model: 'section', term: { 'lg-eng': 'Tethers' } },
-			{
-				tipo: TEXT,
-				parent: SECTION,
-				model: 'component_input_text',
-				term: { 'lg-eng': 'Text' },
-				is_translatable: true,
-			},
-			{ tipo: DATE, parent: SECTION, model: 'component_date', term: { 'lg-eng': 'Date' } },
-		],
-	});
-	/** dd800 run records (and the revert's own) — outside the situation's section. */
-	const runs: number[] = [];
-	let bulkTable = '';
-
-	const setText = async (id: number, lang: string, value: string, bulk: number | null) => {
-		const saved = await saveComponentData({
-			componentTipo: TEXT,
-			sectionTipo: SECTION,
-			sectionId: id,
-			lang,
-			changedData: [{ action: 'set_data', value: [{ id: 1, lang, value }] }] as never,
-			userId: USER_ID,
-			bulkProcessId: bulk,
-		});
-		expect(saved.ok).toBe(true);
-	};
-	const stored = async (id: number) => {
-		const record = await readMatrixRecord(TABLE, SECTION, id);
-		if (record === null) return null;
-		const column = (name: 'string' | 'date', tipo: string) =>
-			((record.columns[name] ?? {}) as Record<string, unknown>)[tipo];
-		return { text: column('string', TEXT), date: column('date', DATE) };
-	};
-
-	beforeAll(async () => {
-		await assertTestDatabase('tool_lossless_writeback_tethers');
-		await ensureSituation(SITUATION);
-		bulkTable = (await getMatrixTableFromTipo('dd800')) as string;
-		expect(await getMatrixTableFromTipo(SECTION)).toBe(TABLE);
-	}, 60_000);
-
-	afterAll(async () => {
-		await assertTestDatabase('tool_lossless_writeback_tethers');
-		await sql.unsafe('DELETE FROM matrix_time_machine WHERE section_tipo = $1', [SECTION]);
-		await sql.unsafe('DELETE FROM dedalo_ts_record_generation WHERE section_tipo = $1', [SECTION]);
-		await sql.unsafe(`DELETE FROM "${TABLE}" WHERE section_tipo = $1`, [SECTION]);
-		for (const id of runs) {
-			await sql.unsafe(
-				`DELETE FROM "${bulkTable}" WHERE section_tipo = 'dd800' AND section_id = $1`,
-				[id],
-			);
-			await sql.unsafe(
-				`DELETE FROM matrix_time_machine WHERE section_tipo = 'dd800' AND section_id = $1`,
-				[id],
-			);
-		}
-		await sql.unsafe(`DELETE FROM matrix_activity WHERE data->>'section_tipo' = $1`, [SECTION]);
-		expect(await dropSituation(SITUATION)).toBe(0);
-	});
-
-	test('deleteIfSafe × deleteSectionRecord: the revert KEEPS a record it created that someone else wrote to — and deletes one nobody did', async () => {
-		const run = await createSectionRecord('dd800', USER_ID);
-		runs.push(run);
-		const curated = await createSectionRecord(SECTION, USER_ID, new Date(), undefined, {
-			bulkProcessId: run,
-		});
-		await setText(curated, 'lg-spa', 'imported', run);
-		// a value the run did not write: a curator's, after the run
-		const foreign = await saveComponentData({
-			componentTipo: DATE,
-			sectionTipo: SECTION,
-			sectionId: curated,
-			lang: 'lg-nolan',
-			changedData: [{ action: 'insert', value: { start: { year: 1999 } } }] as never,
-			userId: USER_ID,
-		});
-		expect(foreign.ok).toBe(true);
-		const untouched = await createSectionRecord(SECTION, USER_ID, new Date(), undefined, {
-			bulkProcessId: run,
-		});
-		await setText(untouched, 'lg-spa', 'imported', run);
-
-		const response = await toolTimeMachineBulkRevert({
-			principal: await resolvePrincipal(USER_ID),
-			userId: USER_ID,
-			options: { bulk_process_id: run },
-			background: false,
-		});
-		expect(response.ok).toBe(true);
-		const data = response.data as {
-			bulk_process_id: number;
-			skipped: { reason: string; section_id: number }[];
-		};
-		runs.push(data.bulk_process_id);
-
-		const kept = await stored(curated);
-		expect(kept, 'the revert DELETED a record holding a curator’s value').not.toBeNull();
-		expect(kept?.date, 'the curator’s value did not survive the revert').toBeDefined();
-		expect(data.skipped.map(({ reason, section_id }) => `${reason}:${section_id}`)).toEqual([
-			`created_record_kept:${curated}`,
-		]);
-		// the counterfactual: a record holding only the run's own values IS deleted
-		expect(await stored(untouched), 'the refusal became a blanket refusal').toBeNull();
-	});
-
-	test('backgroundTranscriberPoll × pollTranscriptionCompletion: a finished ASR result does NOT replace a non-empty target slice — and fills an empty one', async () => {
-		const curated = await createSectionRecord(SECTION, USER_ID);
-		await setText(curated, 'lg-eng', 'A curator’s own transcript.', null);
-		const ddo = (sectionId: number) => ({
-			component_tipo: TEXT,
-			section_tipo: SECTION,
-			section_id: sectionId,
-		});
-		const segments = [{ start: 0, end: 4, text: ' Machine words.' }];
-		const refused = await saveTranscriptionResult({
-			lang: 'lg-eng',
-			transcriptionDdo: ddo(curated),
-			segments,
-			userId: USER_ID,
-		});
-		expect(refused.saved, 'the ASR result was saved over an existing transcript').toBe(false);
-		const values = (items: unknown) =>
-			(Array.isArray(items) ? items : []).map((item) => {
-				const { lang, value } = item as { lang?: string; value?: unknown };
-				return `${lang}:${String(value)}`;
-			});
-		expect(values((await stored(curated))?.text)).toEqual(['lg-eng:A curator’s own transcript.']);
-		// the counterfactual: an EMPTY target slice receives the transcript
-		const empty = await createSectionRecord(SECTION, USER_ID);
-		const filled = await saveTranscriptionResult({
-			lang: 'lg-eng',
-			transcriptionDdo: ddo(empty),
-			segments,
-			userId: USER_ID,
-		});
-		expect(filled.saved, filled.msg).toBe(true);
-		expect(values((await stored(empty))?.text).join()).toContain('Machine words.');
-	});
-
+describe('LEG 4 — the spelling reader and the out-of-corpus classes', () => {
 	test('the spelling checks read CODE: a string or a comment naming the call cannot vouch for it', () => {
 		expect(codeOnly("log('holdsForeignValue(x)'); // holdsForeignValue(y)")).not.toContain(
 			'holdsForeignValue(',

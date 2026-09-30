@@ -214,7 +214,7 @@ const CORPUS = writePathSourceFiles();
 const TREE_CALLS: RawCall[] = CORPUS.flatMap((file) => rawCallsIn(file, code(file)));
 
 describe('A. the raw matrix_write caller census is TOTAL', () => {
-	test('the primitive list is DERIVED from the module and every export is classified', () => {
+	test('the primitive list is DERIVED from the module and every export is classified', async () => {
 		expect(RAW_PRIMITIVES.length).toBeGreaterThanOrEqual(6);
 		for (const name of [
 			'updateMatrixRecord',
@@ -235,9 +235,18 @@ describe('A. the raw matrix_write caller census is TOTAL', () => {
 			expect(exported, `${name} is no longer exported by ${MATRIX_WRITE}`).toContain(name);
 			expect(reason.length).toBeGreaterThan(30);
 		}
-		// and the derivation is exactly exports minus the classified
-		expect(RAW_PRIMITIVES).toEqual(
-			exported.filter((name) => MATRIX_WRITE_NON_DML[name] === undefined),
+		// The TEXT parser is checked against an independent oracle: the module's RUNTIME
+		// export set, measured by loading it (a namespace object lists exactly the runtime
+		// exports, every syntactic form included). An export form the parser misses would
+		// otherwise be missing from BOTH sides of any comparison built on the parser.
+		const measured = Object.keys(await import(`../../${MATRIX_WRITE}`)).sort();
+		expect(
+			[...exported].sort(),
+			'moduleRuntimeExports disagrees with the loaded module — an export form the text parser does not read',
+		).toEqual(measured);
+		// and the primitives are the MEASURED exports minus the classified
+		expect([...RAW_PRIMITIVES].sort()).toEqual(
+			measured.filter((name) => MATRIX_WRITE_NON_DML[name] === undefined),
 		);
 	});
 

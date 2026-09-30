@@ -177,6 +177,10 @@ const EXEMPT_WRITERS: Readonly<Record<string, string>> = {
 		"WRITES NO DÉDALO DATA — its one write is the diagnostic pid line of the suite MariaDB lane lock, `../private/test_mariadb/<suite db>/.lock`, inside a root the suite created and marked `.dedalo_test_mariadb` (it refuses a lane with no root). The lock itself is a kernel-held flock; the file's content decides nothing. No database connection of any kind. Guarded by test/unit/suite_mariadb_target_native.test.ts leg (i) (PUB-05).",
 	'test/helpers/suite_mariadb.ts':
 		"WRITES NO DÉDALO DATA — it installs, starts and provisions the suite's OWN MariaDB server (../private/test_mariadb/<suite db>, marked `.dedalo_test_mariadb`, a unix socket in a 0700 dir, --skip-networking) and writes only to a server it started and marked: its datadir, its target databases, and the `dedalo_test_mariadb_marker` rows the suite user can read but not write. It holds no Postgres connection. Guarded by test/unit/suite_mariadb_target_native.test.ts (PUB-05).",
+	'test/helpers/matrix_writer_closure.ts':
+		'WRITES NO DATA — a STATIC analyser (the write-path census shared by write_obligations and tool_lossless_writeback): it reads source text and holds no database connection. Its `PSQL_MATRIX_DML` regex NAMES the SQL keywords (`TRUNCATE`, `INSERT INTO`…) it looks for in other files, which is what the seam scan matches.',
+	'test/helpers/real_backup_archive.ts':
+		"WRITES NO DÉDALO DATA — it READS the suite database (`pg_dump -F c -t dd_ontology`) and writes the archive bytes, a truncated copy and an mtime into the CALLER's scratch directory (the backup gates' mkdtemp). No database write, no media root.",
 	'src/core/test_data/seed.ts':
 		'NOT A TEST-ONLY WRITER: `resetTestSection`/`restoreCanonicalTest3` write the test3 PLAYGROUND records that every install seed ships, and they are called by the INSTALLER (src/core/install/db_restore.ts) and by the maintenance area widget (area_maintenance/widgets/unit_test.ts) — both on a real database, by design.',
 };

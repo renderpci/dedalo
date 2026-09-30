@@ -422,6 +422,10 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		'The gate extracts from and restores into the suite database (a second, outside-only situation plays the destination); with the port closed all 5 cases SKIP via describe.if(DB_READY)',
 	],
 	[
+		'test/unit/tool_lossless_writeback_tethers_native.test.ts',
+		'It builds the zzlwt situation on the suite database and runs translateAndWrite, toolTimeMachineBulkRevert and pollTranscriptionCompletion on its records (assertTestDatabase in beforeAll), so without Postgres every case fails in beforeAll',
+	],
+	[
 		'test/unit/write_obligations_native.test.ts',
 		"Every case drives a real write door on the suite database (matrix_test rows, matrix_activity rows, matrix_time_machine, the observer recompute's SQL) and is describe.if(DB_READY)-gated, so without Postgres the file is 13 skips and asserts nothing",
 	],

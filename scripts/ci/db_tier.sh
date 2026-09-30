@@ -142,6 +142,7 @@ DB_TIER_TRIPWIRES=(
 	test/unit/tools_cache_invalidation.test.ts
 	test/unit/write_lang_provenance_native.test.ts
 	test/unit/write_obligations_native.test.ts
+	test/unit/tool_lossless_writeback_tethers_native.test.ts
 	test/unit/value_law_agreement_native.test.ts
 	test/unit/reconcile_registry_native.test.ts
 	test/unit/restore_door_native.test.ts

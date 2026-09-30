@@ -1224,13 +1224,29 @@ export function buildWriterClosure(
 	 * is taken to reach.
 	 */
 	const exportsMemo = new Map<string, string[]>();
-	const allExports = (file: string, seen: Set<string> = new Set()): string[] => {
+	/**
+	 * The walk behind allExports. `seen` is the walk's VISITED set: a module reached a
+	 * second time (a star/namespace cycle, or a diamond) contributes nothing there, so the
+	 * set computed for a NESTED module can be short — `truncated` — and is then not
+	 * memoized (it would be served as that module's whole set to a later escape). The
+	 * top-level set is the union over every module the walk visited, each counted once,
+	 * so it is complete and always memoized.
+	 */
+	const collectExports = (
+		file: string,
+		seen: Set<string>,
+	): { list: string[]; truncated: boolean } => {
 		const memo = exportsMemo.get(file);
-		if (memo !== undefined) return memo;
-		if (seen.has(file)) return [];
+		if (memo !== undefined) return { list: memo, truncated: false };
+		if (seen.has(file)) return { list: [], truncated: true };
 		seen.add(file);
 		const module = parsed.get(file);
-		if (module === undefined) return [];
+		if (module === undefined) return { list: [], truncated: false };
+		let truncated = false;
+		const take = (sub: { list: string[]; truncated: boolean }) => {
+			if (sub.truncated) truncated = true;
+			return sub.list;
+		};
 		const out = new Set<string>();
 		for (const name of [
 			...module.exportedDeclarations,
@@ -1240,16 +1256,21 @@ export function buildWriterClosure(
 		]) {
 			const re = module.reexports.get(name);
 			if (re !== undefined && 'ns' in re) {
-				for (const key of allExports(re.ns, seen)) out.add(key);
+				for (const key of take(collectExports(re.ns, seen))) out.add(key);
 				continue;
 			}
 			const resolved = resolveExport(file, name);
 			if (resolved !== null) out.add(resolved);
 		}
 		for (const star of module.starExports) {
-			for (const key of allExports(star, seen)) out.add(key);
+			for (const key of take(collectExports(star, seen))) out.add(key);
 		}
 		const list = [...out].sort();
+		if (!truncated) exportsMemo.set(file, list);
+		return { list, truncated };
+	};
+	const allExports = (file: string): string[] => {
+		const { list } = collectExports(file, new Set());
 		exportsMemo.set(file, list);
 		return list;
 	};
