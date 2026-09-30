@@ -379,7 +379,66 @@ async function readSectionScoped(rqo: Rqo, principal?: Principal): Promise<ReadR
 
 	attachSectionTabChildren(context);
 
+	if (sectionEntry !== null && hasCallerShow(rqo)) {
+		narrowSectionShowToCaller(sectionEntry, rqoDdoMap, context);
+	}
+
 	return { context: stripSessionSqoStamp(context, source as Record<string, unknown>), data };
+}
+
+/** The caller sent its own columns (a literal show.ddo_map or a get_ddo_map directive). */
+function hasCallerShow(rqo: Rqo): boolean {
+	const show = rqo.show as { ddo_map?: unknown; get_ddo_map?: unknown } | undefined;
+	return (Array.isArray(show?.ddo_map) && show.ddo_map.length > 0) || show?.get_ddo_map !== undefined;
+}
+
+/**
+ * A caller-shaped read (PHP build_request_config_from_rqo short-circuit) must
+ * ship the SAME columns on the section entry's own request_config as the data
+ * half resolved (resolveSectionColumnDdoMap). The client builds its
+ * columns_map from context.request_config (common.js get_columns_map), so
+ * leaving the ontology section_list there rendered one EMPTY cell per
+ * unrequested column — the preset pickers (dd623/dd1781) asked for the name
+ * only and got 5 blank cells, wrapping their rows. Only the dedalo main item's
+ * show.ddo_map is replaced, immutably: the entry is a shallow clone of the
+ * structural cache, so its nested request_config is shared.
+ */
+function narrowSectionShowToCaller(
+	sectionEntry: StructureContextEntry,
+	callerDdoMap: readonly Ddo[],
+	context: readonly StructureContextEntry[],
+): void {
+	const items = sectionEntry.request_config;
+	if (!Array.isArray(items)) return;
+	const mainIndex = items.findIndex((item) => {
+		const i = item as { api_engine?: string; type?: string };
+		return i.api_engine === 'dedalo' && i.type === 'main';
+	});
+	if (mainIndex === -1) return;
+	const main = items[mainIndex] as { show?: { ddo_map?: Record<string, unknown>[] } };
+	const ontologyDdos = main.show?.ddo_map ?? [];
+	const sectionTipo = sectionEntry.section_tipo;
+	const narrowed: Record<string, unknown>[] = [];
+	for (const ddo of callerDdoMap) {
+		const ddoSection = ddo.section_tipo === undefined || ddo.section_tipo === 'self' ? sectionTipo : ddo.section_tipo;
+		// no context entry = the per-component READ gate dropped it: no column either
+		const built = context.find((c) => c.tipo === ddo.tipo && c.section_tipo === ddoSection);
+		if (built === undefined) continue;
+		const known = ontologyDdos.find((d) => d.tipo === ddo.tipo && d.section_tipo === ddoSection);
+		narrowed.push(
+			known ?? {
+				tipo: ddo.tipo,
+				model: built.model,
+				section_tipo: ddoSection,
+				parent: ddo.parent === 'self' || ddo.parent === undefined ? sectionEntry.tipo : ddo.parent,
+				mode: built.mode,
+				label: built.label,
+			},
+		);
+	}
+	const replaced = [...items];
+	replaced[mainIndex] = { ...main, show: { ...(main.show ?? {}), ddo_map: narrowed } };
+	sectionEntry.request_config = replaced;
 }
 
 /**
