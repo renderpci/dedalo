@@ -17565,12 +17565,16 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .wrapper_widget.serve_code > .content_data > .serve_code_body > .update_status:first-child {
   margin-top: 0;
 }
+.wrapper_widget.serve_code > .content_data .dd_readout {
+  grid-template-columns: minmax(min-content, 20rem) 1fr;
+}
 .wrapper_widget.serve_code > .content_data .build_row > .dd_k.build_action {
   display: flex;
   align-items: center;
   padding: 0.4rem 0.5rem;
   text-transform: none;
   letter-spacing: normal;
+  white-space: normal;
 }
 .wrapper_widget.serve_code > .content_data .build_row > .dd_k.build_action.none {
   color: var(--fg_muted);
