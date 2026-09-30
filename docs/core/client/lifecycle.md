@@ -211,6 +211,12 @@ render paths that write into it (e.g. `view_indexation_edit_portal.js` forcing
 `context.properties.show_interface` / `request_config_object.show.interface`
 they came from.
 
+A field created by a section (`section_record`) may receive, before
+`set_context_vars` runs, a `properties.show_interface` declared by the page on
+the section's own `request_config` ddo: the section record merges it into the
+field's context copy, keeping every key the field already defines. The server
+never sees it — see [`properties.show_interface` on a client-sent ddo](../dd_object.md#propertiesshow_interface-on-a-client-sent-ddo).
+
 ### 4. Render — ddo to standard DOM
 
 `common.prototype.render(options)` is the dispatcher. It:

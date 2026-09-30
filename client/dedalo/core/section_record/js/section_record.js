@@ -295,6 +295,9 @@ const build_instance = async (self, context, section_id, current_data, column_id
 	// current_context — clone so mutations below do not affect the shared datum.context entry
 		const current_context = clone(context)
 
+	// caller-declared show_interface (see apply_caller_show_interface)
+		apply_caller_show_interface(self, current_context)
+
 		// Fix context issues with parent value
 		// (!) Note that the API prevents more than one same component in context.
 		// For this, only the first one is added and therefore parent value it is not reliable. Use always self.caller.tipo as parent
@@ -384,6 +387,97 @@ const build_instance = async (self, context, section_id, current_data, column_id
 
 	return current_instance
 }//end build_instance
+
+
+
+/**
+* APPLY_CALLER_SHOW_INTERFACE
+* Honours the `properties.show_interface` declared on the ddos of the
+* request_config a section was given (the preset editors and tool_user_admin
+* declare `{tools:false}`, so a small form draws no tool buttons).
+*
+* CLIENT-SIDE BY DESIGN. The server never receives these properties: its client
+* ddo whitelist strips every key but the display fields (src/core/concepts/ddo.ts,
+* spec §7.8 — exactly PHP's sanitize_client_ddo_map). show_interface only decides
+* which buttons the browser draws, so the declaration is applied here, to the
+* child's private context clone, without widening that contract.
+*
+* WHOSE DECLARATION. `caller.request_config` is whatever the section was given:
+* usually the page's own list (the three callers above), but a section can also
+* be handed a server/ontology-derived list (a nested section built by
+* build_instance, view_graph_solved_section). A show_interface declared in an
+* ontology ddo is honoured the same way — as PHP's get_subdatum injected
+* server-side ddo properties. (No ontology ddo declares one today.)
+*
+* Scope (every limit keeps an existing behaviour unchanged):
+*  - only rows whose caller is a SECTION (portals, services: untouched);
+*  - only the main dedalo request_config item's show.ddo_map; the ddo matched by
+*    tipo, section_tipo ('self'/absent = the row's section; an array = any of) AND
+*    parent ('self'/absent = the row's section) — a deeper ddo of the same
+*    tipo/section (a self-referencing portal's child) is another element;
+*  - only the `show_interface` key, and only a plain object;
+*  - the element's OWN interface wins: every key the context already resolves —
+*    its request_config main item's `show.interface`, overlaid by
+*    `properties.show_interface` (the precedence common.set_context_vars
+*    applies; the latter is the ontology's plus any server-stamped restriction,
+*    e.g. component_relation_related's button_add:false) — is kept. The
+*    declaration only fills keys left unset. Seeding from show.interface too is
+*    what keeps it: once properties.show_interface exists, set_context_vars no
+*    longer reads show.interface at all.
+*
+* @param {Object} self - The owning section_record instance
+* @param {Object} context - The child's CLONED context (mutated in place)
+* @returns {boolean} true when a caller show_interface was applied
+*/
+export const apply_caller_show_interface = function(self, context) {
+
+	const caller = self.caller
+	if (!caller || caller.model!=='section' || !Array.isArray(caller.request_config)) {
+		return false
+	}
+
+	const main_item = caller.request_config.find(el => el && el.api_engine==='dedalo' && el.type==='main')
+	const ddo_map = main_item?.show?.ddo_map
+	if (!Array.isArray(ddo_map)) {
+		return false
+	}
+
+	const is_plain_object = (value) => !!value && typeof value==='object' && !Array.isArray(value)
+
+	const ddo = ddo_map.find(el => {
+		if (!el || el.tipo!==context.tipo) {
+			return false
+		}
+		const st = el.section_tipo
+		const section_match = st===undefined || st==='self' || st===context.section_tipo
+			|| (Array.isArray(st) && st.includes(context.section_tipo))
+		const parent_match = el.parent===undefined || el.parent==='self' || el.parent===self.tipo
+		return section_match && parent_match
+	})
+	const caller_interface = ddo?.properties?.show_interface
+	if (!is_plain_object(caller_interface)) {
+		return false
+	}
+
+	// the element's own interface, in set_context_vars precedence
+	const own_request_config_object = Array.isArray(context.request_config)
+		? context.request_config.find(el => el && el.api_engine==='dedalo' && el.type==='main')
+		: null
+	const own_rco_interface	= own_request_config_object?.show?.interface
+	const own_interface		= context.properties?.show_interface
+	const element_interface	= {
+		...(is_plain_object(own_rco_interface) ? own_rco_interface : {}),
+		...(is_plain_object(own_interface) ? own_interface : {})
+	}
+
+	context.properties = {
+		...(context.properties || {}),
+		// clone: nested values (button_edit_options) must not be shared with the page's request_config
+		show_interface : {...clone(caller_interface), ...element_interface}
+	}
+
+	return true
+}//end apply_caller_show_interface
 
 
 
