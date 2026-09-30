@@ -163,6 +163,13 @@ Merged since the last release; these ship with the next one.
     Dragging a field that is already in the list highlights the existing column instead,
     and the drop is refused. An empty list shows a "Drag a field here" area.
 
+- **Export preset editor — the name field no longer offers a second value.**
+
+    In the dialog for editing a saved *Export* preset, the name field showed an "add
+    value" button, as if a preset could have several names, and its floating button bar
+    overlapped the dialog title. A preset has one name: the button is gone, so nothing
+    covers the title any more.
+
 - **Export presets panel — one-line rows, lighter design, click a row to apply.**
 
     In *Export*, each saved preset showed on two lines, with its delete button wrapped

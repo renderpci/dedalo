@@ -35,7 +35,7 @@ import {get_instance} from '../../../core/common/js/instances.js'
 import {request_failed, response_data, ApiError} from '../../../core/common/js/api_error.js'
 import {create_job_follower_group} from '../../../core/common/js/job_follow.js'
 import {ui} from '../../../core/common/js/ui.js'
-import {apply_export_preset} from '../../../tools/tool_export/js/export_user_presets.js'
+import {apply_export_preset, edit_user_export_preset} from '../../../tools/tool_export/js/export_user_presets.js'
 import {
 	get_drop_index,
 	on_dragstart,
@@ -1627,6 +1627,34 @@ describe('TOOL_EXPORT DROP MODEL (one zone, one marker)', function() {
 		on_dragend.call(self)
 		assert.equal(list.querySelector('.drop_marker'), null)
 		assert.equal(self.drag_payload, null)
+	})
+})
+
+describe('TOOL_EXPORT PRESET EDITOR (dialog chrome)', function() {
+
+	this.timeout(10000)
+
+	// The preset editor is a small dialog: its fields declare, per ddo, the
+	// interface they need (applied client-side by section_record — the server
+	// strips client ddo properties). No tool buttons on any field, and the name
+	// (one per preset) offers no 'add value' button: with both off the name
+	// field draws no floating toolbar that could overlap the dialog header.
+	it('declares tools:false on every field and button_add:false on the name', async function() {
+
+		// a record id nobody has: the read is harmless, the declaration is what is pinned
+		const section = await edit_user_export_preset({}, 999999999)
+		try {
+			const ddo_map = section.request_config
+				.find(el => el.api_engine==='dedalo' && el.type==='main')
+				.show.ddo_map
+			const interface_of = (tipo) => ddo_map.find(el => el.tipo===tipo)?.properties?.show_interface
+
+			assert.deepEqual(interface_of('dd624'), {tools:false, button_add:false}, 'name: no tools, no add value')
+			assert.deepEqual(interface_of('dd640'), {tools:false}, 'public: no tools')
+			assert.deepEqual(interface_of('dd641'), {tools:false}, 'default: no tools')
+		} finally {
+			await section.destroy?.(true, true, true)
+		}
 	})
 })
 

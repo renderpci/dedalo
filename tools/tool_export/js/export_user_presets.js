@@ -411,7 +411,9 @@ export const load_user_export_presets = async function(self) {
 * toolbar elements are disabled so that the modal only shows the three fields.
 *
 * In each ddo entry, properties.show_interface.tools is set to false to
-* suppress per-field toolbar buttons inside the modal.
+* suppress per-field toolbar buttons inside the modal (applied client-side by
+* section_record — the server strips client ddo properties). The name also sets
+* button_add false: a preset has ONE name, so the field offers no second value.
 *
 * Called by render_tool_export.js immediately after create_new_export_preset
 * so the user can set the preset name before the modal is shown.
@@ -432,7 +434,8 @@ export const edit_user_export_preset = async function(self, section_id) {
 						tipo			: presets_component_name_value_tipo, // 'dd624',
 						section_tipo	: presets_section_tipo, // 'dd1781'
 						parent			: presets_section_tipo, // 'dd1781'
-						properties : { show_interface : { tools : false } }
+						// one name per preset: no 'add value' button
+						properties : { show_interface : { tools : false, button_add : false } }
 					},
 					{
 						tipo			: presets_component_public_value_tipo, // 'dd640',
