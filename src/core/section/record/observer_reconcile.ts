@@ -581,7 +581,13 @@ export const OBSERVER_MIRRORS_RECONCILE: ReconcileDefinition = {
 	scopeLabel: 'host section tipo',
 	// A whole-corpus recompute; refused tuples (unported sub-laws) are reported, never swept.
 	schedule: 'operator',
-	sources: ['src/core/section/record/observer_reconcile.ts', 'scripts/observer_reconcile.ts'],
+	// Shells: the CLI, and the data update's post-COMMIT heal (update/engine.ts
+	// reconcileAfterCommit — it calls reconcileObserverMirrors with apply:true).
+	sources: [
+		'src/core/section/record/observer_reconcile.ts',
+		'scripts/observer_reconcile.ts',
+		'src/core/update/engine.ts',
+	],
 	async run({ apply, scope }) {
 		const summary: ReconcileSummary = {
 			tuples: 0,
