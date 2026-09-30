@@ -812,14 +812,11 @@ const get_content_data = function(self) {
 				const tool_css_url = tool_base_url(tool_context.model) + '/css/' + tool_context.model + '.css' + `?v=${page_globals.dedalo_version}`
 				load_style(tool_css_url)
 				// tool_button
-					// bg color. E.g. '--tool_ontology_color'  (a CSS custom property defined by the tool)
-					const button_bg_color = `--${tool_context.name}_color`
 					const tool_button = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button block_icon light blank',
 						style			: {
 							'mask-image' : `url('${tool_context.icon}')`,
-							// '--button-bg-color' : `var(${button_bg_color})`
 						},
 						title  : tool_context.label,
 						parent : tool_parent

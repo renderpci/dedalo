@@ -4,13 +4,13 @@
 * Loaded on tool init
 */
 :root {
-  --tool_ontology_color: var(--color_green_ontology);
+  --tool_ontology: var(--color_green_ontology);
 }
 .wrapper_tool.tool_ontology {
   position: relative;
 }
 .wrapper_tool.tool_ontology .spinner {
-  background-color: var(--tool_ontology_color);
+  background-color: var(--tool_ontology);
   left: calc(50% - 1.4rem);
   top: calc(50% + 2.5rem);
 }

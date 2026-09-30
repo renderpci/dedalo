@@ -17,8 +17,8 @@
  *   --tool_on_fill  the ink for that fill: white or --fg_on_brand's near-black,
  *                   whichever needs the smaller lightness move
  *
- * The hue is `--<tool>`, or `--<tool>_color` for the one sheet that named it so
- * (tool_ontology).
+ * The hue is `--<tool>` — ONE name, no variants: a sheet that names it
+ * otherwise gets no generated entry (tool_header_contract_tripwire assertion 1).
  *
  * and writes them to client/dedalo/core/tools_common/css/tool_colors.less
  * (GENERATED — never edit it; change the tool's hue and re-run).
@@ -236,7 +236,7 @@ export const collectHues = (): { hues: ToolHues[]; skipped: string[] } => {
 		const lvars = lessVars(src);
 		const ownLight = decls(blocks(src, ':root'));
 		const ownDark = decls(blocks(src, ':root[data-theme="dark"]'));
-		const name = ownLight.has(`--${tool}`) ? `--${tool}` : `--${tool}_color`;
+		const name = `--${tool}`;
 		const lightRaw = ownLight.get(name);
 		if (!lightRaw) {
 			skipped.push(tool);

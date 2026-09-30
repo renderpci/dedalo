@@ -587,7 +587,7 @@
 //
 // Scoped to the wrapper AND the header because in a modal the header is
 // promoted into dd-modal's slot and is no longer inside .wrapper_tool.
-// Every tool has a hue now (tool_ontology via --tool_ontology_color).
+// Every tool has a hue (`--<tool>`, one name for all).
 :is(.wrapper_tool, .tool_header) button.primary {
 	.tool_action_button();
 }
