@@ -378,6 +378,12 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **The official update server for v7 installations is v7.master.dedalo.dev.**
+
+    Code and ontology updates are now split by version. v7 installations update from `https://v7.master.dedalo.dev/dedalo/core/api/v1/json/` — the address the configuration examples for `CODE_SERVERS` and `ONTOLOGY_SERVERS` now show. v6 installations keep updating from their own server exactly as before; a v7 update server answers only v7 installations.
+
+    For an installation that serves updates to others, the suggested layout keeps the release archives in `/srv/dedalo/code` (`DEDALO_CODE_FILES_DIR`) and the ontology files in `/srv/dedalo/ontology` (`ONTOLOGY_DATA_IO_DIR`), next to the media in `/srv/dedalo/media`. Nothing changes for an installation that leaves these settings unset.
+
 - **A published code release is now built from a release tag (`vX.Y.Z`); developer builds come from `master`.**
 
     On a code server, **Serve Code**'s *Build release* button used to archive the tip of the `master` branch, and *Build developer release* whatever other branch the server had checked out. Now a published release is always a tagged version: *Build release* archives the newest `vX.Y.Z` tag of this engine in the build checkout (prerelease tags such as betas are not releases, earlier-engine `v6` tags are never candidates, and a tag whose version file disagrees with its name is refused), and *Build developer release* archives the tip of `master` — the latest integrated code, before its release. The branch the server has checked out no longer matters.

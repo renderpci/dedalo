@@ -21,10 +21,8 @@ export const MAINTENANCE_KEYS = {
 \`url\` is the master's JSON API endpoint — it MUST end in \`/dedalo/core/api/v1/json/\` (or \`/api/v1/json\`); any other path answers 404 and the panel reports the server as unreachable. \`code\` is the shared secret: the master only answers a release manifest to a caller presenting a code listed in its OWN \`CODE_SERVERS\`.
 
 \`\`\`bash
-CODE_SERVERS=[{"name":"Official Dédalo code server","url":"https://master.dedalo.dev/api/v1/json","code":"x3a0B4Y020Eg9w"}]
-\`\`\`
-
-On the OFFICIAL master both doors are live and they are not interchangeable: \`/api/v1/json\` is the v7 door, while \`/dedalo/core/api/v1/json/\` on that host is reserved for PRE-7 installations, whose dialect the v7 engine refuses by law and which the web server therefore hands to the retired pre-7 engine (\`engineering/MASTER_SERVER.md\`). Point a v7 install at the v7 door: aimed at the legacy one it reaches the wrong engine and the panel reports the server as unreachable.`,
+CODE_SERVERS=[{"name":"Official Dédalo code server","url":"https://v7.master.dedalo.dev/dedalo/core/api/v1/json/","code":"x3a0B4Y020Eg9w"}]
+\`\`\``,
 	},
 	DEDALO_CODE_RESTORE_POINTS_KEEP: {
 		type: 'number',
@@ -171,8 +169,16 @@ DEDALO_ONTOLOGY_RECOVERY_PATH="/srv/dedalo_private/db/dd_ontology_recovery.sql.g
 
 Unset, Dédalo prefers \`import/ontology\` inside the private directory — OUTSIDE the code tree, because a code update replaces the whole install directory and would otherwise carry downloaded or exported ontology files away with the old code. The legacy \`install/import/ontology\` directory inside the install tree ships the vendored ontology seed files, so it keeps being used until you create the private-directory home (move any files of your own there) or set this key explicitly.
 
+Files are organised in version directories, \`<major.minor>/\`: one \`<tld>.copy.gz\` per ontology, \`matrix_dd.copy.gz\` for the private lists, and the \`ontology.json\` (plus \`ontology_llm_map.json\`) that describe them. The canonical production layout is:
+
+\`\`\`
+/srv/dedalo/ontology/7.0/dd.copy.gz
+/srv/dedalo/ontology/7.0/matrix_dd.copy.gz
+/srv/dedalo/ontology/7.0/ontology.json
+\`\`\`
+
 \`\`\`bash
-ONTOLOGY_DATA_IO_DIR="/srv/dedalo/import/ontology"
+ONTOLOGY_DATA_IO_DIR="/srv/dedalo/ontology"
 \`\`\``,
 	},
 	ONTOLOGY_SERVER_CODE: {
@@ -204,10 +210,8 @@ This parameter needs to be included as \`code\` in [ONTOLOGY_SERVERS](#ontology-
 Each entry is a JSON object with \`name\`, \`url\` and \`code\`. Configuration for the official dedalo.dev server:
 
 \`\`\`bash
-ONTOLOGY_SERVERS=[{"name":"Official Dédalo Ontology server","url":"https://master.dedalo.dev/api/v1/json","code":"x3a0B4Y020Eg9w"}]
+ONTOLOGY_SERVERS=[{"name":"Official Dédalo Ontology server","url":"https://v7.master.dedalo.dev/dedalo/core/api/v1/json/","code":"x3a0B4Y020Eg9w"}]
 \`\`\`
-
-On the OFFICIAL master both doors are live and they are not interchangeable: \`/api/v1/json\` is the v7 door, while \`/dedalo/core/api/v1/json/\` on that host is reserved for PRE-7 installations, whose dialect the v7 engine refuses by law and which the web server therefore hands to the retired pre-7 engine (\`engineering/MASTER_SERVER.md\`). Point a v7 install at the v7 door: aimed at the legacy one it reaches the wrong engine and the panel reports the server as unreachable.
 
 It gets the tld from the [ACTIVE_ONTOLOGY_TLDS](#defining-active-ontology-tlds) definition.
 
