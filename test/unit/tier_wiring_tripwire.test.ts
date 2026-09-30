@@ -70,7 +70,8 @@
  *      day its raise line is restored. Measured: `bun run test:update || true` in
  *      instance_tier.sh left legs A–F green (leg D credits the invocation, leg E only
  *      asks that tier_status is raised SOMEWHERE).
- *   I. Every EXECUTABLE `scripts/ci/*.ts` (it runs `main` under `import.meta.main`) is
+ *   I. Every `scripts/ci/*.ts` — the directory holds programs; a library belongs in
+ *      scripts/lib/ (derived from the directory, never from an `import.meta.main` spelling) — is
  *      invoked BY NAME from a reached script or executing workflow, or carries a reason
  *      in the shrink-only LOCAL_ONLY_CI_MODULES map (ceiling 0, reason > 60 characters,
  *      both asserted); leg H then holds that the line
@@ -429,6 +430,52 @@ const VACUOUS_DELIVERY_EXEMPT: ReadonlyMap<string, string> = new Map([
  */
 const VACUOUS_DELIVERY_CEILING = 5;
 
+/**
+ * SHRINK-ONLY — held, not declared: the baselines whose per-file floors leg B still
+ * reads WITHOUT an `image_fingerprint` stamp, each with why (> 60 characters). The
+ * provenance check (a stamp from another image is red) cannot fail on an unstamped
+ * baseline, so each one is named here rather than printed: a NEW unstamped baseline,
+ * or one that LOSES its stamp, is red; a row whose baseline is stamped now is stale.
+ * Step 1C (the GATE-1 in-image re-record) stamps both and deletes the rows — the
+ * ceiling then drops to 0 (review 2026-09-30, S3).
+ */
+const UNSTAMPED_BASELINES: ReadonlyMap<string, string> = new Map([
+	[
+		'engineering/unit_baseline.json',
+		'recorded before the CI-image provenance stamp existed; Step 1C re-records it in the image and stamps it',
+	],
+	[
+		'engineering/parity_baseline.json',
+		'recorded before the CI-image provenance stamp existed; Step 1C re-records it in the image and stamps it',
+	],
+]);
+/** The ceiling on UNSTAMPED_BASELINES: lower it with every retired row, never raise it. */
+const UNSTAMPED_CEILING = 2;
+
+/** PURE. Unstamped baselines no row names, rows whose baseline is stamped, short reasons. */
+function unstampedFaults(
+	unstamped: readonly string[],
+	allowed: ReadonlyMap<string, string>,
+): string[] {
+	const faults: string[] = [];
+	for (const path of unstamped)
+		if (!allowed.has(path))
+			faults.push(
+				`${path}: floors read with no image_fingerprint and no UNSTAMPED_BASELINES row — re-record it in the CI image`,
+			);
+	for (const [path, reason] of allowed) {
+		if (!unstamped.includes(path))
+			faults.push(
+				`UNSTAMPED_BASELINES names ${path}, which is stamped now (or no longer read) — delete the row and lower the ceiling`,
+			);
+		if (reason.trim().length <= 60)
+			faults.push(
+				`UNSTAMPED_BASELINES row ${path}: the reason must say why its provenance is unproven (> 60 characters)`,
+			);
+	}
+	return faults;
+}
+
 /** Recursive on-disk *.test.ts under a repo-relative directory. */
 function testFilesUnder(rel: string): string[] {
 	const out: string[] = [];
@@ -640,13 +687,18 @@ const LOCAL_ONLY_CI_MODULES: ReadonlyMap<string, string> = new Map();
 /** The day-one ceiling on LOCAL_ONLY_CI_MODULES: no row. */
 const LOCAL_ONLY_CI_CEILING = 0;
 
-/** Every scripts/ci/*.ts that runs as a program (`import.meta.main`). Derived. */
-function ciEntryModules(): string[] {
-	return readdirSync(join(ROOT, 'scripts', 'ci'))
+/**
+ * Every scripts/ci/*.ts — the DIRECTORY is the entry set, never a spelling inside the
+ * file. It used to keep only files containing the text `import.meta.main`, so a module
+ * run as a program without that guard (a top-level `process.exit(await main())`) was
+ * never checked (review 2026-09-30, S3). scripts/ci/ holds programs; a library shared
+ * by them belongs in scripts/lib/, where this leg does not look.
+ */
+function ciEntryModules(dir = join(ROOT, 'scripts', 'ci')): string[] {
+	return readdirSync(dir)
 		.filter((entry) => entry.endsWith('.ts'))
 		.sort()
-		.map((entry) => `scripts/ci/${entry}`)
-		.filter((rel) => /\bimport\.meta\.main\b/.test(read(rel)));
+		.map((entry) => `scripts/ci/${entry}`);
 }
 
 /** PURE. Every executable CI module no chain line runs (and no row excuses), plus stale rows. */
@@ -661,7 +713,9 @@ function ciModuleOrphans(
 		if (run && localOnly.has(rel))
 			orphans.push(`${rel}: listed LOCAL_ONLY but a hosted chain runs it — delete the row`);
 		if (!run && !localOnly.has(rel))
-			orphans.push(`${rel}: an executable CI module no hosted chain runs, and no reason given`);
+			orphans.push(
+				`${rel}: an executable CI module no hosted chain runs, and no reason given (a library belongs in scripts/lib/)`,
+			);
 	}
 	for (const [rel, reason] of localOnly) {
 		if (!modules.includes(rel))
@@ -1142,12 +1196,28 @@ describe('tier wiring — every gate is reached by a workflow that executes', ()
 			`claimed test files that run nothing (all cases skipped, or none):\n  ${vacuousClaimed.join('\n  ')}`,
 		).toEqual([]);
 		expect(vacuity.provenance, vacuity.provenance.join('\n')).toEqual([]);
-		if (vacuity.unstamped.length > 0)
-			console.info(
-				`[tier_wiring B] floors read from baseline(s) with no image_fingerprint (provenance unproven until Step 1C stamps them): ${vacuity.unstamped.join(', ')}`,
-			);
+		// Provenance of the floors themselves: an unstamped baseline is NAMED, shrink-only —
+		// never a console line (review 2026-09-30, S3: no baseline carried a stamp, so the
+		// check above could not fail and nothing said so).
+		const unstamped = unstampedFaults(vacuity.unstamped, UNSTAMPED_BASELINES);
+		expect(unstamped, unstamped.join('\n')).toEqual([]);
+		expect(UNSTAMPED_BASELINES.size).toBeLessThanOrEqual(UNSTAMPED_CEILING);
 		// SHRINK-ONLY ceiling.
 		expect(VACUOUS_DELIVERY_EXEMPT.size).toBeLessThanOrEqual(VACUOUS_DELIVERY_CEILING);
+	});
+
+	test('B. provenance controls: an unstamped baseline without a row is red, a row for a stamped one is stale, a short reason is red', () => {
+		const why = 'recorded before the image stamp existed; the in-image re-record stamps it';
+		expect(unstampedFaults(['a.json'], new Map())).toEqual([
+			expect.stringMatching(/^a\.json: floors read with no image_fingerprint/),
+		]);
+		expect(unstampedFaults(['a.json'], new Map([['a.json', why]]))).toEqual([]);
+		expect(unstampedFaults([], new Map([['a.json', why]]))).toEqual([
+			expect.stringMatching(/^UNSTAMPED_BASELINES names a\.json, which is stamped/),
+		]);
+		expect(unstampedFaults(['a.json'], new Map([['a.json', 'x']]))).toEqual([
+			expect.stringMatching(/^UNSTAMPED_BASELINES row a\.json: the reason/),
+		]);
 	});
 
 	test('B. vacuity controls: all-skipped (incl. 0/0) is caught, a partial skip is not, only a reasoned row excuses — never a running twin — stale rows are red', () => {
@@ -1341,6 +1411,22 @@ describe('tier wiring — every gate is reached by a workflow that executes', ()
 			false,
 		);
 		expect(invokedByName('scripts/ci/x.ts', ['bun run scripts/ci/x.tsx'])).toBe(false);
+		// Control: the entry set is the DIRECTORY, not a spelling. A module that runs as a
+		// program without an `import.meta.main` guard (a top-level
+		// `process.exit(await main())`) is an entry all the same — found by the text
+		// search, it was never checked (review 2026-09-30, S3).
+		const entriesDir = mkdtempSync(join(tmpdir(), 'dedalo_ci_entries_'));
+		try {
+			writeFileSync(join(entriesDir, 'guarded.ts'), 'if (import.meta.main) process.exit(0);\n');
+			writeFileSync(join(entriesDir, 'unguarded.ts'), 'process.exit(await main());\n');
+			writeFileSync(join(entriesDir, 'notes.md'), 'not a module\n');
+			expect(ciEntryModules(entriesDir)).toEqual([
+				'scripts/ci/guarded.ts',
+				'scripts/ci/unguarded.ts',
+			]);
+		} finally {
+			rmSync(entriesDir, { recursive: true, force: true });
+		}
 		// Planted: an unrun module is an orphan; a reasoned row for a run module, or for
 		// a module that is gone, is stale; a row whose reason does not say why is red
 		// even when it excuses a real orphan.

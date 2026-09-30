@@ -41,20 +41,25 @@
  *
  * Guarded by test/unit/suite_mariadb_target_native.test.ts (and, as a stage, by
  * scripts/ci/mariadb_tier.ts). Controlled by scripts/ci/suite_mariadb.ts
- * start|stop|status|sweep. The shard runner's teardown is suite_mariadb_lanes.ts.
+ * start|stop|status|sweep. The sweep (one lane, or the shard runner's many) is
+ * suite_mariadb_lanes.ts.
  */
 
 import { spawn } from 'node:child_process';
 import {
 	appendFileSync,
 	chmodSync,
+	closeSync,
 	existsSync,
+	fsyncSync,
 	mkdirSync,
+	openSync,
 	readFileSync,
+	renameSync,
 	rmSync,
 	writeFileSync,
 } from 'node:fs';
-import { basename, dirname } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { readEnv } from '../../src/config/env.ts';
 import { getTargetPool, type MariadbErrorLike } from '../../src/diffusion/targets/mariadb/db.ts';
 import {
@@ -347,10 +352,90 @@ function tail(file: string, lines = 20): string {
 }
 
 /** Run the client as ROOT over the socket (never TCP). Resolves stdout+stderr+code. */
+/**
+ * DEADLINES (review 2026-09-30, S3). Every client call and the installer run while the
+ * lane lock is held (ensure, provision, self-check), so a server that accepts and never
+ * answers — a stuck DDL — or a wedged installer used to freeze every process of the
+ * lane: each waiter gave up after the lock's 180 s naming the LOCK, never the cause.
+ * Each process is now killed at its deadline and the call throws naming it. `timeoutMs`
+ * on `ensureSuiteMariadb` / `suiteMariadbAdminQuery` overrides both (a gate plants a
+ * hung binary). Held by suite_mariadb_target_native leg (n).
+ */
+const CLIENT_TIMEOUT_MS = 120_000;
+const INSTALL_TIMEOUT_MS = 300_000;
+/** A liveness probe answers in milliseconds or not at all. */
+const PING_TIMEOUT_MS = 15_000;
+/** A started server answers within it, or the start fails. */
+const START_TIMEOUT_MS = 60_000;
+/** SIGTERM → SIGKILL grace for a lane server being stopped. */
+const STOP_WAIT_MS = 30_000;
+/** SIGKILL → gone: the kernel's teardown of a killed process (a big buffer pool unmaps). */
+const KILL_WAIT_MS = 5_000;
+
+interface Deadlines {
+	clientMs: number;
+	installMs: number;
+	pingMs: number;
+	startMs: number;
+	stopMs: number;
+	killMs: number;
+}
+
+/** The defaults, or EVERY deadline set to `timeoutMs` (a gate planting a hung binary). */
+function deadlines(timeoutMs?: number): Deadlines {
+	return {
+		clientMs: timeoutMs ?? CLIENT_TIMEOUT_MS,
+		installMs: timeoutMs ?? INSTALL_TIMEOUT_MS,
+		pingMs: timeoutMs ?? PING_TIMEOUT_MS,
+		startMs: timeoutMs ?? START_TIMEOUT_MS,
+		stopMs: timeoutMs ?? STOP_WAIT_MS,
+		killMs: timeoutMs ?? KILL_WAIT_MS,
+	};
+}
+
+/**
+ * THE LONGEST A HOLDER KEEPS THE LANE LOCK, from the deadlines it runs under (review
+ * 2026-09-30, S3): the worst ensure — the liveness probe, the installer behind its fence,
+ * `start()` (fence the datadir, answer within `startMs` with one probe in flight at the
+ * deadline, fence again to stop the server that never answered), then provisioning plus
+ * the self-check (at most four client calls). A stop or a sweep holds it for one fence, a
+ * reprovision for the four client calls: both fit inside. A step added under the lock
+ * belongs in this sum.
+ */
+function lockHoldMs(limits: Deadlines): number {
+	return (
+		limits.pingMs +
+		fenceMs(limits) +
+		limits.installMs +
+		fenceMs(limits) +
+		limits.startMs +
+		limits.pingMs +
+		fenceMs(limits) +
+		4 * limits.clientMs
+	);
+}
+
+/** How long a waiter queues for the lane lock: the holder's worst case plus a margin. */
+function lockWaitMs(limits: Deadlines): number {
+	const hold = lockHoldMs(limits);
+	return hold + Math.max(1_000, Math.ceil(hold / 10));
+}
+
+/** `lockHoldMs` for the defaults, or for `timeoutMs` (what `ensureSuiteMariadb` gets). */
+export function suiteMariadbLockHoldMs(timeoutMs?: number): number {
+	return lockHoldMs(deadlines(timeoutMs));
+}
+
+/** The lock wait `ensureSuiteMariadb({ timeoutMs })` queues with (the stop/sweep: the default). */
+export function suiteMariadbLockWaitMs(timeoutMs?: number): number {
+	return lockWaitMs(deadlines(timeoutMs));
+}
+
 async function runClient(
 	paths: SuiteMariadbPaths,
 	sql: string,
 	as: { user: string; password?: string; database?: string } = { user: 'root' },
+	timeoutMs = CLIENT_TIMEOUT_MS,
 ): Promise<{ code: number; stdout: string; stderr: string }> {
 	const { client } = binaries();
 	const args = [
@@ -366,22 +451,39 @@ async function runClient(
 	if (as.password !== undefined) args.push(`--password=${as.password}`);
 	if (as.database !== undefined) args.push(as.database);
 	const proc = Bun.spawn(args, { stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' });
-	proc.stdin.write(sql);
-	await proc.stdin.end();
-	const [stdout, stderr, code] = await Promise.all([
-		new Response(proc.stdout).text(),
-		new Response(proc.stderr).text(),
-		proc.exited,
-	]);
-	return { code, stdout, stderr };
+	let timedOut = false;
+	const timer = setTimeout(() => {
+		timedOut = true;
+		proc.kill('SIGKILL');
+	}, timeoutMs);
+	try {
+		proc.stdin.write(sql);
+		await proc.stdin.end();
+		const [stdout, stderr, code] = await Promise.all([
+			new Response(proc.stdout).text(),
+			new Response(proc.stderr).text(),
+			proc.exited,
+		]);
+		if (timedOut)
+			throw new Error(
+				`suite_mariadb: the mariadb client did not finish within ${timeoutMs / 1000}s on ${paths.socket} (killed): ${stderr.trim().split('\n').slice(-5).join(' | ')}`,
+			);
+		return { code, stdout, stderr };
+	} finally {
+		clearTimeout(timer);
+	}
 }
 
 /** Root query over the lane's socket; tab-separated rows. Throws on a client error. */
-export async function suiteMariadbAdminQuery(sql: string, suiteDb?: string): Promise<string> {
+export async function suiteMariadbAdminQuery(
+	sql: string,
+	suiteDb?: string,
+	options: { timeoutMs?: number } = {},
+): Promise<string> {
 	const paths = suiteMariadbPaths(suiteDb);
 	if (!suiteSocketPresent(paths.suiteDb))
 		throw new Error(`suite_mariadb: no server socket at ${paths.socket} — start it first`);
-	const result = await runClient(paths, sql);
+	const result = await runClient(paths, sql, undefined, deadlines(options.timeoutMs).clientMs);
 	if (result.code !== 0)
 		throw new Error(
 			`suite_mariadb: admin query failed (exit ${result.code}): ${result.stderr.trim()}`,
@@ -389,9 +491,28 @@ export async function suiteMariadbAdminQuery(sql: string, suiteDb?: string): Pro
 	return result.stdout;
 }
 
-async function ping(paths: SuiteMariadbPaths): Promise<boolean> {
-	if (!suiteSocketPresent(paths.suiteDb)) return false;
-	return (await runClient(paths, 'SELECT 1;')).code === 0;
+/**
+ * What the lane's socket says (review 2026-09-30, S3). `down` — no socket, or the client
+ * could not reach a server through it (a CLIENT errno, >= 2000: nothing listening, the
+ * connection lost) — is the only state `start()` may replace. A SERVER errno (< 2000:
+ * 1040 too many connections, 1045 access denied, …) means a live server ANSWERED: it
+ * is `refusing`, and ensure surfaces the error instead of signalling a server every
+ * other process of the lane may be using. A client that never finishes throws (the
+ * ping deadline, `runClient`). Held by suite_mariadb_target_native leg (p).
+ */
+type ServerState = { state: 'up' } | { state: 'down' } | { state: 'refusing'; error: string };
+
+async function probeServer(paths: SuiteMariadbPaths, limits = deadlines()): Promise<ServerState> {
+	if (!suiteSocketPresent(paths.suiteDb)) return { state: 'down' };
+	const result = await runClient(paths, 'SELECT 1;', undefined, limits.pingMs);
+	const errno = clientErrno(result);
+	if (errno === null) return { state: 'up' };
+	if (errno > 0 && errno < 2000) return { state: 'refusing', error: result.stderr.trim() };
+	return { state: 'down' };
+}
+
+async function ping(paths: SuiteMariadbPaths, limits = deadlines()): Promise<boolean> {
+	return (await probeServer(paths, limits)).state === 'up';
 }
 
 /**
@@ -406,20 +527,150 @@ function isLaneServer(pid: number, paths: SuiteMariadbPaths): boolean {
 	return command.includes('mariadbd') && command.includes(`--datadir=${paths.datadir}`);
 }
 
-async function stopPid(pid: number, paths: SuiteMariadbPaths, waitMs = 30_000): Promise<void> {
-	if (!isLaneServer(pid, paths)) return;
-	process.kill(pid, 'SIGTERM');
-	const deadline = Date.now() + waitMs;
-	while (pidAlive(pid) && Date.now() < deadline) await Bun.sleep(100);
-	if (pidAlive(pid)) process.kill(pid, 'SIGKILL');
+/** How `terminateProcesses` signals, observes and waits — a gate scripts it (leg s). */
+export interface ProcessControl {
+	signal(pid: number, signal: 'SIGTERM' | 'SIGKILL'): void;
+	/** True once `pid` holds nothing: no such process, or a zombie awaiting its reaper. */
+	gone(pid: number): boolean;
+	now(): number;
+	sleep(ms: number): Promise<void>;
+}
+
+/** A zombie holds no file, lock or socket — it is gone for every purpose here. */
+function processGone(pid: number): boolean {
+	if (!pidAlive(pid)) return true;
+	const ps = Bun.spawnSync(['ps', '-o', 'stat=', '-p', String(pid)], { stdout: 'pipe' });
+	const state = ps.stdout.toString().trim();
+	return state === '' || state.startsWith('Z');
+}
+
+const REAL_PROCESS_CONTROL: ProcessControl = {
+	signal: (pid, signal) => process.kill(pid, signal),
+	gone: processGone,
+	now: () => Date.now(),
+	sleep: (ms) => Bun.sleep(ms),
+};
+
+/**
+ * SIGTERM `pids`, wait up to `termMs`, SIGKILL the survivors, and RETURN ONLY ONCE EVERY
+ * ONE IS GONE — or throw naming the survivors after `killMs` (review 2026-09-30, S3).
+ * Sending SIGKILL is not the process being gone: until the kernel has torn it down it
+ * still holds the datadir, and the callers go on to start a server on it or rename it.
+ * A pid already gone when signalled (ESRCH) is gone. Held by suite_mariadb_target_native
+ * leg (s).
+ */
+export async function terminateProcesses(
+	pids: number[],
+	what: string,
+	waits: { termMs: number; killMs: number },
+	control: ProcessControl = REAL_PROCESS_CONTROL,
+): Promise<void> {
+	/** Pids the kernel said do not exist (ESRCH) — gone, whatever a probe says after. */
+	const vanished = new Set<number>();
+	const send = (signal: 'SIGTERM' | 'SIGKILL', targets: number[]) => {
+		for (const pid of targets)
+			try {
+				control.signal(pid, signal);
+			} catch (error) {
+				if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
+				vanished.add(pid);
+			}
+	};
+	const living = () => pids.filter((pid) => !vanished.has(pid) && !control.gone(pid));
+	const waitGone = async (ms: number) => {
+		const deadline = control.now() + ms;
+		while (living().length > 0 && control.now() < deadline) await control.sleep(100);
+		return living();
+	};
+	send('SIGTERM', pids);
+	const stubborn = await waitGone(waits.termMs);
+	if (stubborn.length === 0) return;
+	send('SIGKILL', stubborn);
+	const survivors = await waitGone(waits.killMs);
+	if (survivors.length > 0)
+		throw new Error(
+			`suite_mariadb: ${what} — pid ${survivors.join(', ')} survived SIGKILL for ${waits.killMs / 1000} s; refusing to go on over a live process`,
+		);
+}
+
+/** A worst-case fence: two rounds of SIGTERM grace + SIGKILL wait. */
+function fenceMs(limits: Deadlines): number {
+	return 2 * (limits.stopMs + limits.killMs);
+}
+
+/** `--datadir=<datadir>` as a whole argument of a process command line. */
+function namesDatadir(command: string, datadir: string): boolean {
+	let at = command.indexOf(`--datadir=${datadir}`);
+	while (at !== -1) {
+		const end = at + `--datadir=${datadir}`.length;
+		if (
+			(at === 0 || /\s/.test(command[at - 1] as string)) &&
+			(end === command.length || /\s/.test(command[end] as string))
+		)
+			return true;
+		at = command.indexOf(`--datadir=${datadir}`, at + 1);
+	}
+	return false;
+}
+
+/** Every process (but this one) whose command line names the lane's datadir. */
+function laneProcesses(paths: SuiteMariadbPaths): number[] {
+	const ps = Bun.spawnSync(['ps', '-A', '-ww', '-o', 'pid=,command='], {
+		stdout: 'pipe',
+		stderr: 'pipe',
+	});
+	// A scan that could not run is not "nothing is running": the fence would open blind.
+	if (ps.exitCode !== 0)
+		throw new Error(
+			`suite_mariadb: cannot list processes to fence ${paths.datadir} (ps exit ${ps.exitCode}): ${ps.stderr.toString().trim()}`,
+		);
+	const pids: number[] = [];
+	for (const line of ps.stdout.toString().split('\n')) {
+		const match = /^\s*(\d+)\s+(.*)$/.exec(line);
+		if (match === null) continue;
+		const pid = Number(match[1]);
+		if (pid !== process.pid && namesDatadir(match[2] as string, paths.datadir)) pids.push(pid);
+	}
+	return pids;
+}
+
+/**
+ * FENCE THE DATADIR: stop EVERY process whose command line names it — the pid-file
+ * server, and what no pid file names: the installer of a holder killed mid-install (the
+ * kernel freed its lock, not its `mariadb-install-db`), a stray `mariadbd`, the
+ * `--bootstrap` server an orphaned installer started (review 2026-09-30, S3). The caller
+ * holds the lane lock and is about to rebuild, start on, or remove the datadir. A second
+ * scan catches a child the first round's victim spawned meanwhile; anything still there
+ * after it is a throw. Held by suite_mariadb_target_native leg (t).
+ */
+async function fenceLane(paths: SuiteMariadbPaths, limits: Deadlines): Promise<void> {
+	for (let round = 0; round < 2; round++) {
+		const pids = laneProcesses(paths).filter((pid) => !processGone(pid));
+		if (pids.length === 0) return;
+		await terminateProcesses(pids, `a process on the lane datadir ${paths.datadir}`, {
+			termMs: limits.stopMs,
+			killMs: limits.killMs,
+		});
+	}
+	const left = laneProcesses(paths).filter((pid) => !processGone(pid));
+	if (left.length > 0)
+		throw new Error(
+			`suite_mariadb: processes keep appearing on ${paths.datadir} (pid ${left.join(', ')}) — refusing to install, start or remove it under them`,
+		);
 }
 
 function isRoot(): boolean {
 	return typeof process.getuid === 'function' && process.getuid() === 0;
 }
 
-async function install(paths: SuiteMariadbPaths, bins: Binaries): Promise<void> {
-	// A datadir without the stamp is a partial install (a crash mid-way): rebuild it.
+async function install(
+	paths: SuiteMariadbPaths,
+	bins: Binaries,
+	limits = deadlines(),
+): Promise<void> {
+	// A datadir without the stamp is a partial install (a crash mid-way): rebuild it —
+	// once nothing runs on it any more (an orphaned installer would write under us).
+	await fenceLane(paths, limits);
 	rmSync(paths.datadir, { recursive: true, force: true });
 	const args = [
 		bins.installDb,
@@ -431,8 +682,19 @@ async function install(paths: SuiteMariadbPaths, bins: Binaries): Promise<void> 
 	// Never `id -un`: GitHub runs the image as a uid with no passwd entry. Only uid 0
 	// needs a name, and root always has one.
 	if (isRoot()) args.push('--user=root');
-	const proc = Bun.spawnSync(args, { stdout: 'pipe', stderr: 'pipe' });
+	const proc = Bun.spawnSync(args, {
+		stdout: 'pipe',
+		stderr: 'pipe',
+		timeout: limits.installMs,
+		killSignal: 'SIGKILL',
+	});
 	writeFileSync(paths.installLog, `${proc.stdout.toString()}\n${proc.stderr.toString()}`);
+	if (proc.exitedDueToTimeout) {
+		rmSync(paths.datadir, { recursive: true, force: true });
+		throw new Error(
+			`suite_mariadb: mariadb-install-db did not finish within ${limits.installMs / 1000}s (killed):\n${tail(paths.installLog)}`,
+		);
+	}
 	if (proc.exitCode !== 0) {
 		rmSync(paths.datadir, { recursive: true, force: true });
 		throw new Error(
@@ -442,9 +704,14 @@ async function install(paths: SuiteMariadbPaths, bins: Binaries): Promise<void> 
 	writeFileSync(paths.installedStamp, `${new Date().toISOString()}\n`);
 }
 
-async function start(paths: SuiteMariadbPaths, bins: Binaries): Promise<void> {
-	const stale = readPid(paths.pidFile);
-	if (stale !== undefined) await stopPid(stale, paths); // alive but not answering: replace it
+async function start(
+	paths: SuiteMariadbPaths,
+	bins: Binaries,
+	limits = deadlines(),
+): Promise<void> {
+	// Alive but not answering (the pid-file server), or in no pid file at all (a stray, an
+	// orphaned installer's bootstrap server): nothing else may hold the datadir we start on.
+	await fenceLane(paths, limits);
 	rmSync(paths.socket, { force: true });
 	const args = [
 		'--no-defaults',
@@ -465,14 +732,21 @@ async function start(paths: SuiteMariadbPaths, bins: Binaries): Promise<void> {
 	const child = spawn(bins.mariadbd, args, { detached: true, stdio: 'ignore' });
 	child.unref();
 	const pid = child.pid;
-	const deadline = Date.now() + 60_000;
+	const deadline = Date.now() + limits.startMs;
 	while (Date.now() < deadline) {
-		if (await ping(paths)) return;
+		if (await ping(paths, limits)) return;
 		if (pid === undefined || !pidAlive(pid))
 			throw new Error(`suite_mariadb: mariadbd exited during start:\n${tail(paths.errorLog)}`);
 		await Bun.sleep(250);
 	}
-	throw new Error(`suite_mariadb: mariadbd did not answer within 60 s:\n${tail(paths.errorLog)}`);
+	// Never leave the DETACHED server we spawned running behind a failed start (review
+	// 2026-09-30, S3; leg (o)): the fence signals only processes on THIS datadir.
+	const log = tail(paths.errorLog);
+	await fenceLane(paths, limits);
+	rmSync(paths.socket, { force: true });
+	throw new Error(
+		`suite_mariadb: mariadbd did not answer within ${limits.startMs / 1000} s:\n${log}`,
+	);
 }
 
 const q = (name: string) => `\`${name}\``;
@@ -532,12 +806,26 @@ function clientErrno(result: { code: number; stderr: string }): number | null {
  * Prove the grants are the production posture, AS the diffusion user: CREATE DATABASE
  * denied (1044), the marker read-only (1142). A widened grant is a THROW.
  */
-async function selfCheck(paths: SuiteMariadbPaths, anyTarget: string): Promise<void> {
+async function selfCheck(
+	paths: SuiteMariadbPaths,
+	anyTarget: string,
+	limits = deadlines(),
+): Promise<void> {
 	const as = { user: SUITE_MARIADB_USER, password: SUITE_MARIADB_PASSWORD, database: anyTarget };
-	const created = await runClient(paths, `CREATE DATABASE ${q(SELF_CHECK_DENIED_DB)};`, as);
+	const created = await runClient(
+		paths,
+		`CREATE DATABASE ${q(SELF_CHECK_DENIED_DB)};`,
+		as,
+		limits.clientMs,
+	);
 	if (clientErrno(created) !== 1044) {
 		if (created.code === 0)
-			await runClient(paths, `DROP DATABASE IF EXISTS ${q(SELF_CHECK_DENIED_DB)};`);
+			await runClient(
+				paths,
+				`DROP DATABASE IF EXISTS ${q(SELF_CHECK_DENIED_DB)};`,
+				undefined,
+				limits.clientMs,
+			);
 		throw new Error(
 			`suite_mariadb: self-check FAILED — the diffusion user must not CREATE DATABASE (expected errno 1044, got ${clientErrno(created) ?? 'success'}): ${created.stderr.trim()}`,
 		);
@@ -546,45 +834,87 @@ async function selfCheck(paths: SuiteMariadbPaths, anyTarget: string): Promise<v
 		paths,
 		`INSERT INTO ${MARKER_TABLE} (database_name, suite_db, purpose) VALUES ('zzd_forged', ${lit(paths.suiteDb)}, ${lit(MARKER_PURPOSE)});`,
 		as,
+		limits.clientMs,
 	);
 	if (clientErrno(forged) !== 1142) {
 		if (forged.code === 0)
-			await runClient(paths, `DELETE FROM ${MARKER_TABLE} WHERE database_name = 'zzd_forged';`);
+			await runClient(
+				paths,
+				`DELETE FROM ${MARKER_TABLE} WHERE database_name = 'zzd_forged';`,
+				undefined,
+				limits.clientMs,
+			);
 		throw new Error(
 			`suite_mariadb: self-check FAILED — the marker must be read-only to the diffusion user (expected errno 1142, got ${clientErrno(forged) ?? 'success'}): ${forged.stderr.trim()}`,
 		);
 	}
 }
 
+function fsyncPath(path: string): void {
+	const fd = openSync(path, 'r');
+	try {
+		fsyncSync(fd);
+	} finally {
+		closeSync(fd);
+	}
+}
+
+let claimSequence = 0;
+
 /**
- * Create the lane root and mark it — or accept it only if it is ALREADY marked. The
- * suite never adopts a directory it did not create. A concurrent creator gets a few
- * seconds to write its marker (the window between its mkdir and its write).
+ * Create the lane root MARKED — or accept it only if it is ALREADY marked. The suite
+ * never adopts a directory it did not create.
+ *
+ * ATOMIC (review 2026-09-30, S3). `mkdir(root)` then `write(marker)` left, for a process
+ * killed between the two, an UNMARKED root that every later ensure refused and every
+ * sweep kept — the lane blocked for good. The root is now built under
+ * `.<lane>.claim-<pid>-<n>` beside it, marked and fsynced, and RENAMED onto the lane
+ * path: the path is absent or marked at every instant. EEXIST/ENOTEMPTY = another
+ * process won; its root is marked, and this temp is removed. A killed claim's temp is
+ * collected by the next sweep of the lane once its pid is dead (`laneLeftoverOf`).
+ * Held by suite_mariadb_target_native leg (r).
  */
 async function claimRoot(paths: SuiteMariadbPaths): Promise<void> {
-	mkdirSync(dirname(paths.root), { recursive: true });
-	let created = false;
-	try {
-		mkdirSync(paths.root);
-		created = true;
-	} catch (error) {
-		if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-	}
-	if (created) {
+	const base = dirname(paths.root);
+	mkdirSync(base, { recursive: true });
+	if (!existsSync(paths.root)) {
+		const temp = join(base, `.${paths.suiteDb}.claim-${process.pid}-${claimSequence++}`);
+		mkdirSync(temp);
+		const marker = join(temp, SUITE_MARIADB_MARKER_FILE);
 		writeFileSync(
-			paths.markerFile,
+			marker,
 			`${JSON.stringify({ suite_db: paths.suiteDb, purpose: MARKER_PURPOSE, created_at: new Date().toISOString() })}\n`,
 		);
-		return;
+		fsyncPath(marker);
+		fsyncPath(temp);
+		try {
+			// Checked, because rename() REPLACES an empty directory: an empty root nobody
+			// marked is refused below, never adopted.
+			if (!existsSync(paths.root)) {
+				renameSync(temp, paths.root);
+				fsyncPath(base);
+				return;
+			}
+		} catch (error) {
+			const code = (error as NodeJS.ErrnoException).code;
+			if (code !== 'EEXIST' && code !== 'ENOTEMPTY') {
+				rmSync(temp, { recursive: true, force: true });
+				throw error;
+			}
+		}
+		rmSync(temp, { recursive: true, force: true });
 	}
-	const deadline = Date.now() + 5_000;
-	while (!existsSync(paths.markerFile)) {
-		if (Date.now() > deadline)
-			throw new Error(
-				`suite_mariadb: ${paths.root} exists but carries no ${basename(paths.markerFile)} — the suite never adopts a directory it did not create. Move it away.`,
-			);
-		await Bun.sleep(100);
-	}
+	if (!existsSync(paths.markerFile))
+		throw new Error(
+			`suite_mariadb: ${paths.root} exists but carries no ${basename(paths.markerFile)} — the suite never adopts a directory it did not create. Move it away.`,
+		);
+}
+
+/** Take `suiteDb`'s lane root: create and mark it, or accept it only when already marked. */
+export async function claimSuiteMariadbRoot(suiteDb?: string): Promise<SuiteMariadbPaths> {
+	const paths = suiteMariadbPaths(suiteDb);
+	await claimRoot(paths);
+	return paths;
 }
 
 const ensured = new Map<string, Promise<SuiteMariadbPaths>>();
@@ -595,13 +925,13 @@ const ensured = new Map<string, Promise<SuiteMariadbPaths>>();
  * lane lock (`suite_mariadb_lock.ts`). `reset` (the CLI's `start`) strips and re-grants the suite user.
  */
 export function ensureSuiteMariadb(
-	options: { suiteDb?: string; reset?: boolean } = {},
+	options: { suiteDb?: string; reset?: boolean; timeoutMs?: number } = {},
 ): Promise<SuiteMariadbPaths> {
 	const paths = suiteMariadbPaths(options.suiteDb);
 	const key = `${paths.suiteDb}|${options.reset === true}`;
 	const cached = ensured.get(key);
 	if (cached !== undefined) return cached;
-	const work = ensureUncached(paths, options.reset === true);
+	const work = ensureUncached(paths, options.reset === true, deadlines(options.timeoutMs));
 	ensured.set(key, work);
 	work.catch(() => ensured.delete(key));
 	return work;
@@ -610,18 +940,24 @@ export function ensureSuiteMariadb(
 async function ensureUncached(
 	paths: SuiteMariadbPaths,
 	reset: boolean,
+	limits: Deadlines,
 ): Promise<SuiteMariadbPaths> {
 	const bins = binaries();
 	await claimRoot(paths);
-	const release = await acquireSuiteMariadbLock(paths.suiteDb);
+	const release = await acquireSuiteMariadbLock(paths.suiteDb, lockWaitMs(limits));
 	try {
 		mkdirSync(paths.socketDir, { recursive: true, mode: 0o700 });
 		chmodSync(paths.socketDir, 0o700);
-		if (!(await ping(paths))) {
-			if (!existsSync(paths.installedStamp)) await install(paths, bins);
-			await start(paths, bins);
+		const server = await probeServer(paths, limits);
+		if (server.state === 'refusing')
+			throw new Error(
+				`suite_mariadb: the lane server on ${paths.socket} is ALIVE but refused the client: ${server.error} — not restarted (other processes of the lane may be using it)`,
+			);
+		if (server.state === 'down') {
+			if (!existsSync(paths.installedStamp)) await install(paths, bins, limits);
+			await start(paths, bins, limits);
 		}
-		await provisionLocked(paths, reset);
+		await provisionLocked(paths, reset, limits);
 		return paths;
 	} finally {
 		release();
@@ -629,11 +965,20 @@ async function ensureUncached(
 }
 
 /** Provision + self-check. The caller holds the lane lock. */
-async function provisionLocked(paths: SuiteMariadbPaths, reset: boolean): Promise<void> {
-	const provisioned = await runClient(paths, provisionSql(paths.suiteDb, reset));
+async function provisionLocked(
+	paths: SuiteMariadbPaths,
+	reset: boolean,
+	limits = deadlines(),
+): Promise<void> {
+	const provisioned = await runClient(
+		paths,
+		provisionSql(paths.suiteDb, reset),
+		undefined,
+		limits.clientMs,
+	);
 	if (provisioned.code !== 0)
 		throw new Error(`suite_mariadb: provisioning failed: ${provisioned.stderr.trim()}`);
-	await selfCheck(paths, SUITE_MARIADB_DATABASES()[0] as string);
+	await selfCheck(paths, SUITE_MARIADB_DATABASES()[0] as string, limits);
 }
 
 /**
@@ -646,7 +991,7 @@ export async function reprovisionSuiteMariadb(suiteDb?: string): Promise<void> {
 	const paths = suiteMariadbPaths(suiteDb);
 	if (!(await ping(paths)))
 		throw new Error(`suite_mariadb: no server answering on ${paths.socket} — ensure it first`);
-	const release = await acquireSuiteMariadbLock(paths.suiteDb);
+	const release = await acquireSuiteMariadbLock(paths.suiteDb, lockWaitMs(deadlines()));
 	try {
 		await provisionLocked(paths, false);
 	} finally {
@@ -663,14 +1008,68 @@ export async function reprovisionSuiteMariadb(suiteDb?: string): Promise<void> {
  */
 export async function stopSuiteMariadb(suiteDb?: string): Promise<{ stopped: boolean }> {
 	const paths = suiteMariadbPaths(suiteDb);
-	const release = existsSync(paths.root) ? await acquireSuiteMariadbLock(paths.suiteDb) : () => {};
+	const release = existsSync(paths.root)
+		? await acquireSuiteMariadbLock(paths.suiteDb, lockWaitMs(deadlines()))
+		: () => {};
 	try {
-		const pid = readPid(paths.pidFile);
-		const stopped = pid !== undefined && isLaneServer(pid, paths);
-		if (pid !== undefined) await stopPid(pid, paths);
-		rmSync(paths.socketDir, { recursive: true, force: true });
-		for (const key of [...ensured.keys()])
-			if (key.startsWith(`${paths.suiteDb}|`)) ensured.delete(key);
+		return await stopLocked(paths);
+	} finally {
+		release();
+	}
+}
+
+/** The stop itself. The caller holds the lane lock (or the lane has no root). */
+async function stopLocked(paths: SuiteMariadbPaths): Promise<{ stopped: boolean }> {
+	const pid = readPid(paths.pidFile);
+	const stopped = pid !== undefined && isLaneServer(pid, paths);
+	// The pid-file server AND anything else on the datadir: a sweep renames it next.
+	await fenceLane(paths, deadlines());
+	rmSync(paths.socketDir, { recursive: true, force: true });
+	for (const key of [...ensured.keys()])
+		if (key.startsWith(`${paths.suiteDb}|`)) ensured.delete(key);
+	return { stopped };
+}
+
+/**
+ * A lane's leftovers beside its root: `.<lane>.swept-<pid>-<ms>` (a root a sweep took off
+ * its path and is deleting) and `.<lane>.claim-<pid>-<n>` (a root a claim is building).
+ */
+const LANE_LEFTOVER = /^\.(.+)\.(swept|claim)-(\d+)-\d+$/;
+
+/**
+ * The lane a leftover belongs to and whether it may be collected now — a sweep's always
+ * (the marker, not the name, licenses the rm), a claim's only once its pid is dead (a
+ * live one is still building it) — or null when `entry` is not a leftover.
+ */
+export function laneLeftoverOf(entry: string): { lane: string; collectable: boolean } | null {
+	const match = LANE_LEFTOVER.exec(entry);
+	if (match === null) return null;
+	const [, lane, kind, pid] = match as unknown as [string, string, string, string];
+	return { lane, collectable: kind === 'swept' || !pidAlive(Number(pid)) };
+}
+
+/**
+ * The LOCKED half of a lane sweep: stop the lane's server and every other process on its
+ * datadir, then RENAME the root off its path to `trash` (same directory, atomic) — both
+ * while the lane lock is held, so the lane path is marked until the instant it is absent
+ * and a process queued on the lock re-validates it and is told the lane was swept
+ * (`suite_mariadb_lock.ts`). The caller has checked the marker; deleting `trash` is
+ * the caller's (marker-last, after this returns and the lock is released).
+ *
+ * The sweep itself — collecting a killed sweep's or claim's leftovers, the refusal of an
+ * unmarked root, the marker-last delete — is `sweepSuiteMariadb` in
+ * suite_mariadb_lanes.ts: it LISTS the lane base, and every gate that acquires the
+ * suite target imports this module, so a listing here would make each of them a walker
+ * of a root it does not choose (census_derivation_tripwire, PUB-05 review 2026-09-30).
+ */
+export async function detachSuiteMariadbRoot(
+	paths: SuiteMariadbPaths,
+	trash: string,
+): Promise<{ stopped: boolean }> {
+	const release = await acquireSuiteMariadbLock(paths.suiteDb, lockWaitMs(deadlines()));
+	try {
+		const { stopped } = await stopLocked(paths);
+		renameSync(paths.root, trash);
 		return { stopped };
 	} finally {
 		release();
@@ -678,27 +1077,29 @@ export async function stopSuiteMariadb(suiteDb?: string): Promise<{ stopped: boo
 }
 
 /**
- * SWEEP a lane: stop its server and delete its whole root (datadir, logs, ledger) —
- * for a disposable lane (a shard clone) or a rebuild (`test:db:setup`). Deletes ONLY a
- * root that carries `.dedalo_test_mariadb`, the file the suite writes when it creates
- * one; any other directory at that path is refused, loudly, untouched (the media
- * root's rule). A lane with no root is a no-op.
+ * A gate's TEARDOWN of its scratch tables on a suite target: DROP each, then COUNT what
+ * is left — residue asserted, never trusted (review 2026-09-30, S3). A refused DROP used
+ * to be swallowed (`.catch(() => {})`) and the next run inherited the table. Throws on a
+ * DROP error and on any table that survived; refuses a database the situations do not
+ * declare and a name that is not a plain identifier. The caller closes its pools after.
  */
-export async function sweepSuiteMariadb(
-	suiteDb?: string,
-): Promise<{ stopped: boolean; removed: boolean }> {
-	const paths = suiteMariadbPaths(suiteDb);
-	if (!existsSync(paths.root)) {
-		rmSync(paths.socketDir, { recursive: true, force: true });
-		return { stopped: false, removed: false };
-	}
-	if (!existsSync(paths.markerFile))
+export async function dropSuiteScratchTables(database: string, tables: string[]): Promise<void> {
+	if (!SUITE_MARIADB_DATABASES().includes(database))
+		throw new Error(`suite_mariadb: '${database}' is not a suite target — refusing to DROP in it`);
+	if (tables.length === 0) return;
+	for (const table of tables)
+		if (!/^[A-Za-z0-9_]+$/.test(table))
+			throw new Error(`suite_mariadb: scratch table '${table}' is not a plain identifier`);
+	const pool = getTargetPool(database);
+	for (const table of tables) await pool.unsafe(`DROP TABLE IF EXISTS ${q(table)}`, []);
+	const left = (await pool.unsafe(
+		`SELECT TABLE_NAME AS name FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME IN (${tables.map(() => '?').join(', ')})`,
+		[database, ...tables],
+	)) as { name: string }[];
+	if (left.length > 0)
 		throw new Error(
-			`suite_mariadb: REFUSING to sweep ${paths.root} — it carries no ${SUITE_MARIADB_MARKER_FILE}, so the suite did not create it. Nothing was stopped or deleted.`,
+			`suite_mariadb: scratch table(s) ${left.map((row) => row.name).join(', ')} survived the DROP on ${database}`,
 		);
-	const { stopped } = await stopSuiteMariadb(paths.suiteDb);
-	rmSync(paths.root, { recursive: true, force: true });
-	return { stopped, removed: true };
 }
 
 /** Rows the SUITE USER changed, as the server counts them (USER_STATISTICS). */

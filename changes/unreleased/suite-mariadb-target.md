@@ -27,6 +27,23 @@ MariaDB connection without going through the suite's own check can still make a
 login attempt against the machine's default MariaDB server. It cannot write
 there, since the attempt uses the suite's own user.
 
+Removing a lane's server is safe against a run that is still using it. The
+lane's directory is either fully there, with its marker, or gone, both when it
+is created and when it is removed. A test waiting to use a removed lane is told
+so instead of carrying on. A removal that was killed halfway is finished by the
+next one. A MariaDB command that hangs is killed after a deadline, so it cannot
+block the lane for everyone else, and a test waiting for the lane waits long
+enough to report the real problem instead of "lane busy". A server that does
+not start in time is stopped, not left running. A server that answers with an
+error is reported and never restarted. Stopping or sweeping a lane also stops
+any stray MariaDB server or installer still running on that lane's data
+directory, for example one left behind by a killed run, and waits until it has
+really exited; if a process survives, the command fails and names it. The shard
+runner (`bun run test:shard`, and its `bun run test:shard:sweep`) removes the
+servers of its shard lanes too, and reports a lane it could not remove with the
+real error, refusing to run or exiting with an error for it, instead of
+claiming the lane was not the suite's.
+
 What this means for you: running the full suite on a development machine now
 needs the MariaDB server binaries (`mariadbd`, `mariadb-install-db` and
 `mariadb`; on macOS, `brew install mariadb`). Without them the MariaDB gates

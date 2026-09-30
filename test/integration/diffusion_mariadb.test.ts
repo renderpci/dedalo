@@ -49,7 +49,11 @@ import {
 	getDiffusionWriter,
 	UnknownDiffusionFormatError,
 } from '../../src/diffusion/writers/registry.ts';
-import { GRANTED_ABSENT_CONTROL_DB, requireSuiteMariadb } from '../helpers/suite_mariadb.ts';
+import {
+	dropSuiteScratchTables,
+	GRANTED_ABSENT_CONTROL_DB,
+	requireSuiteMariadb,
+} from '../helpers/suite_mariadb.ts';
 import { zzdTargetDatabases } from '../helpers/zzd_diffusion_fixture.ts';
 
 // ---------------------------------------------------------------------------
@@ -154,13 +158,17 @@ beforeAll(async () => {
 }, 120_000);
 
 afterAll(async () => {
-	if (acquired) {
-		// ALWAYS drop the scratch tables — the suite target is reused by the next run.
-		const pool = getTargetPool(TARGET_DATABASE);
-		await pool.unsafe(`DROP TABLE IF EXISTS ${SCRATCH_TABLE}`, []).catch(() => {});
-		await pool.unsafe(`DROP TABLE IF EXISTS ${MISSING_TABLE}`, []).catch(() => {});
+	// ALWAYS drop the scratch tables — the suite target is reused by the next run. A failed
+	// DROP, or a table that survived it, is REPORTED (after the pools close), never swallowed.
+	let cleanupError: unknown;
+	try {
+		if (acquired) await dropSuiteScratchTables(TARGET_DATABASE, [SCRATCH_TABLE, MISSING_TABLE]);
+	} catch (error) {
+		cleanupError = error;
+	} finally {
+		await closeAllTargetPools();
 	}
-	await closeAllTargetPools();
+	if (cleanupError !== undefined) throw cleanupError;
 });
 
 // ---------------------------------------------------------------------------

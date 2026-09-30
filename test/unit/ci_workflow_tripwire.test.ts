@@ -406,6 +406,10 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		"Its live legs install, start and drive THIS lane's own suite mariadbd (a --skip-networking unix socket under ../private/test_mariadb/<lane>, per-database grants, the marker schema) and read its USER_STATISTICS; the hermetic tier builds no server, while db_tier.sh starts that server before its gates and its EXIT trap stops it",
 	],
 	[
+		'test/unit/shard_mariadb_sweep_native.test.ts',
+		"sweepShardClones enumerates shard clones and their vector twins through psql on the suite Postgres cluster and the vector server before it sweeps the planted suite MariaDB lane roots, so without a live cluster the sweep throws at its first enumeration; its only other executors are the ADVISORY unit stage and the MariaDB tier's no-contact batch, which never judges a failed case",
+	],
+	[
 		'test/unit/diffusion_frontier_scope_native.test.ts',
 		'It runs the real resolver over the zzdif domain records and the ACL identity fixture on the suite Postgres (describe.if(DB_READY) skips both cases on a closed port)',
 	],

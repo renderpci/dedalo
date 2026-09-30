@@ -80,6 +80,7 @@ import {
 	cloneShardMedia,
 	provisionShardDatabase,
 	psql,
+	type SweepReport,
 	shardDatabaseName,
 	sweepShardClones,
 } from './lib/test_shard_db.ts';
@@ -287,6 +288,61 @@ export function partition(
 }
 
 // ── budgets (pure — the arithmetic is testable with synthetic inputs) ────────
+
+/**
+ * THE ONE VERDICT over a sweep report (PUB-05 review 2026-09-30, S3): one line per item
+ * that BLOCKS — `--sweep` exits 1 on any, the entry sweep refuses the run on any, the
+ * exit sweep prints them. Empty = nothing blocks. Pure, so every field is held without
+ * a multi-bin run (shard_mariadb_sweep_native); a field added to `SweepReport` that
+ * blocks belongs HERE, once, not in three hand-copied conditions.
+ */
+export function sweepBlockers(report: SweepReport): string[] {
+	return [
+		...report.refused.map(
+			(refusal) =>
+				`REFUSED to drop '${refusal.name}': ${refusal.state} — it did not declare itself a disposable test database naming itself. Investigate before dropping by hand.`,
+		),
+		...report.mediaRefused.map(
+			(dir) =>
+				`REFUSED to remove '${dir}': no .dedalo_test_media marker — not a declared test media root.`,
+		),
+		...report.mariadbRefused.map(
+			(lane) =>
+				`REFUSED to remove suite MariaDB lane '${lane}': no .dedalo_test_mariadb marker — the suite did not create it.`,
+		),
+		...report.mariadbFailed.map(
+			(failure) =>
+				`FAILED to sweep suite MariaDB lane '${failure.lane}' (marked, kept): ${failure.error}`,
+		),
+	];
+}
+
+/**
+ * What an entry-sweep refusal MEANS, after its blockers (review 2026-09-30, S3). "Not a
+ * shard clone" is said only when something at a shard name was REFUSED for its missing
+ * marker; a MARKED lane whose sweep FAILED is the suite's own clone and is named as a
+ * failure. "Nothing was removed" is said only when the sweep removed nothing — it may
+ * already have dropped marked clones before it met the blocker. Held by
+ * shard_mariadb_sweep_native.
+ */
+export function entrySweepTrailer(report: SweepReport): string[] {
+	const lines: string[] = [];
+	if (report.refused.length + report.mediaRefused.length + report.mariadbRefused.length > 0)
+		lines.push(
+			'something at a shard name is not a shard clone — provisioning over it would destroy it.',
+		);
+	if (report.mariadbFailed.length > 0)
+		lines.push(
+			'a MARKED suite MariaDB lane could not be swept (its error is above) — fix the cause, then `bun scripts/test_shard.ts --sweep`.',
+		);
+	const removed = report.dropped.length + report.mediaSwept.length + report.mariadbSwept.length;
+	lines.push(
+		removed > 0
+			? `The sweep removed ${removed} marked surface(s), listed above; no clone was built and no test ran.`
+			: 'Nothing was removed, no clone was built, no test ran.',
+	);
+	return lines;
+}
 
 export interface DiskBudgetInput {
 	freeBytes: number;
@@ -617,28 +673,11 @@ async function main(): Promise<number> {
 		const report = await sweepShardClones(template);
 		for (const name of report.dropped) console.log(`[sweep] dropped clone database ${name}`);
 		for (const dir of report.mediaSwept) console.log(`[sweep] removed media twin ${dir}`);
-		for (const refusal of report.refused) {
-			console.error(
-				`[sweep] REFUSED to drop '${refusal.name}': ${refusal.state} — it did not declare itself a disposable test database naming itself. Investigate before dropping by hand.`,
-			);
-		}
-		for (const dir of report.mediaRefused) {
-			console.error(
-				`[sweep] REFUSED to remove '${dir}': no .dedalo_test_media marker — not a declared test media root.`,
-			);
-		}
 		for (const lane of report.mariadbSwept)
 			console.log(`[sweep] stopped + removed suite MariaDB lane ${lane}`);
-		for (const lane of report.mariadbRefused) {
-			console.error(
-				`[sweep] REFUSED to remove suite MariaDB lane '${lane}': no .dedalo_test_mariadb marker — the suite did not create it.`,
-			);
-		}
-		return report.refused.length > 0 ||
-			report.mediaRefused.length > 0 ||
-			report.mariadbRefused.length > 0
-			? 1
-			: 0;
+		const blockers = sweepBlockers(report);
+		for (const blocker of blockers) console.error(`[sweep] ${blocker}`);
+		return blockers.length > 0 ? 1 : 0;
 	}
 
 	// Resolve the file set: explicit list (validated), else bun's own discovery.
@@ -690,25 +729,11 @@ async function main(): Promise<number> {
 	for (const dir of entry.mediaSwept) console.log(`[shard] entry sweep removed media twin ${dir}`);
 	for (const lane of entry.mariadbSwept)
 		console.log(`[shard] entry sweep removed suite MariaDB lane ${lane}`);
-	if (
-		entry.refused.length > 0 ||
-		entry.mediaRefused.length > 0 ||
-		entry.mariadbRefused.length > 0
-	) {
-		for (const refusal of entry.refused) {
-			console.error(`[shard] REFUSING to run: '${refusal.name}' is ${refusal.state}.`);
-		}
-		for (const dir of entry.mediaRefused) {
-			console.error(`[shard] REFUSING to run: '${dir}' has no test-media marker.`);
-		}
-		for (const lane of entry.mariadbRefused) {
-			console.error(
-				`[shard] REFUSING to run: suite MariaDB lane '${lane}' has no .dedalo_test_mariadb marker.`,
-			);
-		}
-		console.error(
-			'[shard] something at a shard name is not a shard clone — provisioning over it would destroy it. Nothing was dropped, nothing was written.',
-		);
+	const entryBlockers = sweepBlockers(entry);
+	if (entryBlockers.length > 0) {
+		for (const blocker of entryBlockers)
+			console.error(`[shard] REFUSING to run — the entry sweep ${blocker}`);
+		for (const line of entrySweepTrailer(entry)) console.error(`[shard] ${line}`);
 		return 1;
 	}
 
@@ -771,18 +796,8 @@ async function main(): Promise<number> {
 		const exit = await sweepShardClones(template);
 		for (const name of exit.dropped) console.log(`[shard] swept clone ${name}`);
 		for (const dir of exit.mediaSwept) console.log(`[shard] swept media twin ${dir}`);
-		for (const refusal of exit.refused) {
-			console.error(`[shard] exit sweep REFUSED '${refusal.name}': ${refusal.state}`);
-		}
 		for (const lane of exit.mariadbSwept) console.log(`[shard] swept suite MariaDB lane ${lane}`);
-		for (const dir of exit.mediaRefused) {
-			console.error(`[shard] exit sweep REFUSED '${dir}': no test-media marker`);
-		}
-		for (const lane of exit.mariadbRefused) {
-			console.error(
-				`[shard] exit sweep REFUSED suite MariaDB lane '${lane}': no .dedalo_test_mariadb marker`,
-			);
-		}
+		for (const blocker of sweepBlockers(exit)) console.error(`[shard] exit sweep ${blocker}`);
 	}
 }
 

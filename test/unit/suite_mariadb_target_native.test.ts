@@ -33,6 +33,18 @@
  *           rule — and ledgers neither; (h) the tier's write measure (the suite user's
  *           USER_STATISTICS rows) is moved 0 by the harness and ≥1 by a real row; (i) the
  *           lane lock admits one process at a time and a killed holder frees it.
+ *   LIFECYCLE (fake binaries / planted lanes, each leg's comment says why) — (j) stop
+ *           waits for the lock; (k) a sweep never exposes an unmarked root; (l) a QUEUED
+ *           waiter (observed, `onQueued`) is told the lane was swept; (m) a killed sweep's
+ *           leftover is collected; (n) hung client/installer die at their deadline;
+ *           (o) a start past its deadline stops the server it spawned; (p) a server
+ *           answering a server-side error is surfaced, never restarted; (q) the lock
+ *           wait is derived from the holder's deadlines; (r) the root claim is atomic
+ *           (SIGSTOP-sampled) and a dead claimer's temp is collected; (s) a stop returns
+ *           only once the process is gone (SIGKILL waited for; a survivor is a throw);
+ *           (t) install, start and sweep first stop EVERY process on the datadir (an
+ *           orphaned installer, a stray server), not only the pid-file one; (u) the
+ *           client suite's server arming — a tethered PENDING row until it is armed.
  *
  * SAFETY — NO CONTACT UNLESS ARMED. Every live leg first asks `armingFaults()` (helper-
  * free, reads only the environment and the private file) and throws WITHOUT opening a
@@ -47,9 +59,17 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+	chmodSync,
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import {
 	type Acquisition,
 	type CalibrationRun,
@@ -118,6 +138,26 @@ function helper(): SuiteMariadbHelper {
 			`test/helpers/suite_mariadb.ts could not be loaded — the suite owns no MariaDB target: ${String(loaded.error).split('\n')[0]}`,
 		);
 	return loaded.module;
+}
+
+/**
+ * The lane sweep and THE lister of the lane base (`suiteMariadbLaneEntries`), loaded the
+ * same way: this gate never lists `../private/test_mariadb/` itself — the base is that
+ * module's, so what a sweep leaves is read through the sweep's own lister.
+ */
+type SuiteMariadbLanes = typeof import('../helpers/suite_mariadb_lanes.ts');
+const loadedLanes: { module: SuiteMariadbLanes | null; error: unknown } = await import(
+	'../helpers/suite_mariadb_lanes.ts'
+).then(
+	(module: SuiteMariadbLanes) => ({ module, error: null }),
+	(error: unknown) => ({ module: null, error }),
+);
+function lanes(): SuiteMariadbLanes {
+	if (loadedLanes.module === null)
+		throw new Error(
+			`test/helpers/suite_mariadb_lanes.ts could not be loaded — the suite cannot sweep its MariaDB lanes: ${String(loadedLanes.error).split('\n')[0]}`,
+		);
+	return loadedLanes.module;
 }
 
 // ── helper-free facts about this process ────────────────────────────────────────────
@@ -423,7 +463,8 @@ describe('suite MariaDB target — pure', () => {
 	});
 
 	test('sweep: deletes a lane root ONLY when the suite marked it; an unmarked one is refused untouched', async () => {
-		const { sweepSuiteMariadb, suiteMariadbPaths, SUITE_MARIADB_MARKER_FILE } = helper();
+		const { suiteMariadbPaths, SUITE_MARIADB_MARKER_FILE } = helper();
+		const { sweepSuiteMariadb } = lanes();
 		const lane = `zz_sweep_probe_${process.pid}`;
 		const paths = suiteMariadbPaths(lane);
 		try {
@@ -449,7 +490,7 @@ describe('suite MariaDB target — pure', () => {
 		// line names mariadbd and the lane's datadir, which is what the helper checks
 		// before signalling — must be stopped by the sweep, not orphaned.
 		const { suiteMariadbPaths, SUITE_MARIADB_MARKER_FILE } = helper();
-		const { sweepSuiteMariadbLanes } = await import('../helpers/suite_mariadb_lanes.ts');
+		const { sweepSuiteMariadbLanes } = lanes();
 		const template = `zz_lanes_probe_${process.pid}`;
 		const marked = suiteMariadbPaths(`${template}__shard1`);
 		const unmarked = suiteMariadbPaths(`${template}__shard2`);
@@ -467,7 +508,11 @@ describe('suite MariaDB target — pure', () => {
 			writeFileSync(marked.pidFile, `${server.pid}\n`);
 			await Bun.sleep(200);
 			const report = await sweepSuiteMariadbLanes((lane) => grammar.test(lane));
-			expect(report).toEqual({ swept: [`${template}__shard1`], refused: [`${template}__shard2`] });
+			expect(report).toEqual({
+				swept: [`${template}__shard1`],
+				refused: [`${template}__shard2`],
+				failed: [],
+			});
 			expect(existsSync(marked.root)).toBe(false);
 			expect(await server.exited, 'the lane server was signalled, not orphaned').not.toBe(0);
 			expect(existsSync(unmarked.datadir), 'an unmarked root is never deleted').toBe(true);
@@ -551,6 +596,871 @@ console.log(JSON.stringify({ released: at }));`,
 			rmSync(paths.root, { recursive: true, force: true });
 		}
 	}, 60_000);
+
+	test('(k) a sweep never exposes an UNMARKED lane root: at every instant the root is absent or still marked', async () => {
+		// `rmSync(root, {recursive})` unlinks `.dedalo_test_mariadb` FIRST and the datadir
+		// after (measured 2026-09-30: the root sat unmarked for most of the rm), so a sweep
+		// killed mid-rm left a root every later sweep REFUSES as "not the suite's" and
+		// every later ensure throws on — a lane only a human could clear (review
+		// 2026-09-30, S3). Sampled from this process while a child sweeps a lane whose
+		// datadir holds enough files to make the rm take a while.
+		const { suiteMariadbPaths, SUITE_MARIADB_MARKER_FILE } = helper();
+		const lane = `zz_sweepatomic_probe_${process.pid}`;
+		const paths = suiteMariadbPaths(lane);
+		const lanesModule = join(import.meta.dir, '..', 'helpers', 'suite_mariadb_lanes.ts');
+		try {
+			mkdirSync(paths.datadir, { recursive: true });
+			writeFileSync(join(paths.root, SUITE_MARIADB_MARKER_FILE), '{}\n');
+			for (let i = 0; i < 3_000; i++) writeFileSync(join(paths.datadir, `f${i}`), 'x');
+			const sweeper = Bun.spawn(
+				[
+					'bun',
+					'-e',
+					`const { sweepSuiteMariadb } = await import(${JSON.stringify(lanesModule)});
+console.log(JSON.stringify(await sweepSuiteMariadb(${JSON.stringify(lane)})));`,
+				],
+				{ stdout: 'pipe', stderr: 'pipe' },
+			);
+			let exposed = 0;
+			let samples = 0;
+			while (sweeper.exitCode === null) {
+				samples++;
+				// Marker FIRST, then the root: read the other way round, a rename landing
+				// between the two reads looks like "present, unmarked" (a sampler artefact).
+				const marked = existsSync(paths.markerFile);
+				if (!marked && existsSync(paths.root)) exposed++;
+				if (samples % 200 === 0) await Bun.sleep(0);
+			}
+			const out = await new Response(sweeper.stdout).text();
+			expect(sweeper.exitCode, await new Response(sweeper.stderr).text()).toBe(0);
+			expect(JSON.parse(out.trim()), 'the sweep removed the lane').toEqual({
+				stopped: false,
+				removed: true,
+			});
+			expect(samples, 'the sampler ran during the sweep').toBeGreaterThan(0);
+			expect(exposed, 'samples that saw the lane root present but UNMARKED').toBe(0);
+			expect(existsSync(paths.root)).toBe(false);
+			const leftovers = lanes()
+				.suiteMariadbLaneEntries()
+				.filter((entry) => entry.includes(lane));
+			expect(leftovers, 'a completed sweep leaves nothing of the lane behind').toEqual([]);
+		} finally {
+			rmSync(paths.root, { recursive: true, force: true });
+		}
+	}, 60_000);
+
+	test('(l) a process WAITING for the lane lock never ends up holding it over a lane the sweep removed', async () => {
+		// The sweep stopped the server under the lock, RELEASED it, and then removed the
+		// root: a process queued on the lock (an ensure) took it on a root being deleted —
+		// and, holding it, would install and start a server into an unmarked directory
+		// (review 2026-09-30, S3). A planted "server" that honours SIGTERM only when told
+		// to keeps the sweep inside its locked stop until a child is queued on the lock.
+		const { suiteMariadbPaths, SUITE_MARIADB_MARKER_FILE } = helper();
+		const { sweepSuiteMariadb } = lanes();
+		const lane = `zz_sweepwait_probe_${process.pid}`;
+		const paths = suiteMariadbPaths(lane);
+		const scratch = mkdtempSync(join(tmpdir(), 'dedalo_sweepwait_'));
+		const sigterm = join(scratch, 'sigterm');
+		const go = join(scratch, 'go');
+		const lockModule = join(import.meta.dir, '..', 'helpers', 'suite_mariadb_lock.ts');
+		let server: ReturnType<typeof Bun.spawn> | undefined;
+		let waiter: ReturnType<typeof Bun.spawn> | undefined;
+		try {
+			mkdirSync(paths.datadir, { recursive: true });
+			writeFileSync(join(paths.root, SUITE_MARIADB_MARKER_FILE), '{}\n');
+			for (let i = 0; i < 500; i++) writeFileSync(join(paths.datadir, `f${i}`), 'x');
+			server = Bun.spawn(
+				[
+					'bun',
+					'-e',
+					`const fs = require('node:fs');
+process.on('SIGTERM', async () => {
+	fs.writeFileSync(${JSON.stringify(sigterm)}, '');
+	while (!fs.existsSync(${JSON.stringify(go)})) await Bun.sleep(20);
+	process.exit(0);
+});
+await Bun.sleep(120000);`,
+					'mariadbd',
+					`--datadir=${paths.datadir}`,
+				],
+				{ stdout: 'ignore', stderr: 'ignore' },
+			);
+			writeFileSync(paths.pidFile, `${server.pid}\n`);
+			await Bun.sleep(300);
+			const sweeping = sweepSuiteMariadb(lane);
+			const deadline = Date.now() + 10_000;
+			while (!existsSync(sigterm) && Date.now() < deadline) await Bun.sleep(20);
+			expect(existsSync(sigterm), 'the sweep reached its locked stop').toBe(true);
+			waiter = Bun.spawn(
+				[
+					'bun',
+					'-e',
+					`import { existsSync } from 'node:fs';
+const { acquireSuiteMariadbLock } = await import(${JSON.stringify(lockModule)});
+console.log('ready');
+try {
+	const release = await acquireSuiteMariadbLock(${JSON.stringify(lane)}, 20_000, () =>
+		console.log('queued'),
+	);
+	await Bun.sleep(600);
+	console.log(JSON.stringify({ held: true, marked: existsSync(${JSON.stringify(paths.markerFile)}) }));
+	release();
+} catch (error) {
+	console.log(JSON.stringify({ held: false, error: String(error instanceof Error ? error.message : error) }));
+}`,
+				],
+				{ stdout: 'pipe', stderr: 'pipe' },
+			);
+			const reader = (waiter.stdout as ReadableStream<Uint8Array>).getReader();
+			let out = '';
+			// QUEUED, observed — never assumed after a fixed sleep (a loaded runner flaked
+			// that red in the blocking stage, review 2026-09-30 S3): the lock calls
+			// `onQueued` once its first non-blocking flock failed, i.e. while the waiter
+			// holds a descriptor on the lock file the sweep is about to take away.
+			while (!out.includes('queued')) {
+				const chunk = await reader.read();
+				if (chunk.done) break;
+				out += new TextDecoder().decode(chunk.value);
+			}
+			expect(out, 'the waiter started and is QUEUED on the lock the sweep holds').toContain(
+				'queued',
+			);
+			writeFileSync(go, '');
+			expect(await sweeping).toEqual({ stopped: true, removed: true });
+			for (;;) {
+				const chunk = await reader.read();
+				if (chunk.done) break;
+				out += new TextDecoder().decode(chunk.value);
+			}
+			const result = JSON.parse(out.trim().split('\n').at(-1) as string) as {
+				held: boolean;
+				marked?: boolean;
+				error?: string;
+			};
+			expect(
+				result.held ? result.marked : true,
+				`the waiter held the lane lock over an unmarked/removed lane: ${out}`,
+			).toBe(true);
+			expect(result.error ?? '', 'the waiter is told the lane was swept').toContain('swept');
+		} finally {
+			waiter?.kill('SIGKILL');
+			server?.kill('SIGKILL');
+			rmSync(paths.root, { recursive: true, force: true });
+			rmSync(scratch, { recursive: true, force: true });
+		}
+	}, 60_000);
+
+	test('(m) what a KILLED sweep leaves is collected by the next one; a look-alike without the marker is kept', async () => {
+		// A sweep takes the lane root off its path in one rename, then deletes it. Killed
+		// in between, it leaves `.<lane>.swept-<pid>-<ms>` — still marked, since the marker
+		// goes last. The next sweep of that lane (by the shard runner's grammar, even when
+		// the lane root itself is gone) collects it; the marker, not the name, licenses
+		// the rm, so a same-shaped directory WITHOUT it is kept.
+		const { suiteMariadbPaths, SUITE_MARIADB_MARKER_FILE } = helper();
+		const { sweepSuiteMariadbLanes } = lanes();
+		const template = `zz_sweeptrash_probe_${process.pid}`;
+		const base = dirname(suiteMariadbPaths(`${template}__shard1`).root);
+		const killed = join(base, `.${template}__shard1.swept-1-1`);
+		const foreign = join(base, `.${template}__shard2.swept-1-1`);
+		try {
+			mkdirSync(join(killed, 'data'), { recursive: true });
+			writeFileSync(join(killed, SUITE_MARIADB_MARKER_FILE), '{}\n');
+			writeFileSync(join(killed, 'data', 'f'), 'x');
+			mkdirSync(join(foreign, 'data'), { recursive: true });
+			writeFileSync(join(foreign, 'data', 'keep'), 'not the suite’s\n');
+			const grammar = new RegExp(`^${template}__shard\\d+$`);
+			await sweepSuiteMariadbLanes((lane) => grammar.test(lane));
+			expect(existsSync(killed), 'the killed sweep’s leftover is collected').toBe(false);
+			expect(
+				readFileSync(join(foreign, 'data', 'keep'), 'utf8'),
+				'an unmarked look-alike is never deleted',
+			).toBe('not the suite’s\n');
+		} finally {
+			rmSync(killed, { recursive: true, force: true });
+			rmSync(foreign, { recursive: true, force: true });
+		}
+	}, 30_000);
+
+	test('(n) a mariadb client or installer that never finishes is killed at its deadline — the lane lock is not held forever', async () => {
+		// runClient awaited the client with no deadline and install() ran
+		// mariadb-install-db with none, both while HOLDING the lane lock: a server that
+		// accepts and never answers (a stuck DDL) or a wedged installer froze every
+		// process of the lane — each waiter for 180 s, then a throw naming the lock, not
+		// the cause (review 2026-09-30, S3). Fake binaries that sleep forever stand in
+		// (first on PATH, which is where the helper looks first); each run is a child so
+		// a hang reds this leg at its own deadline instead of wedging the file.
+		const { suiteMariadbPaths } = helper();
+		const helperModule = join(import.meta.dir, '..', 'helpers', 'suite_mariadb.ts');
+		const lockModule = join(import.meta.dir, '..', 'helpers', 'suite_mariadb_lock.ts');
+		const bin = mkdtempSync(join(tmpdir(), 'dedalo_hungbin_'));
+		const pids = join(bin, 'pids');
+		for (const name of ['mariadb', 'mariadbd', 'mariadb-install-db']) {
+			writeFileSync(join(bin, name), `#!/bin/sh\necho $$ >> ${pids}\nexec sleep 600\n`);
+			chmodSync(join(bin, name), 0o755);
+		}
+		const env = { ...process.env, PATH: `${bin}:${process.env.PATH ?? ''}` };
+		const runChild = async (script: string) => {
+			const child = Bun.spawn(['bun', '-e', script], { env, stdout: 'pipe', stderr: 'pipe' });
+			const killer = setTimeout(() => child.kill('SIGKILL'), 20_000);
+			const [out, err] = await Promise.all([
+				new Response(child.stdout).text(),
+				new Response(child.stderr).text(),
+				child.exited,
+			]);
+			clearTimeout(killer);
+			const last = out.trim().split('\n').at(-1) ?? '';
+			expect(last.startsWith('{'), `the child hung or crashed:\n${out}\n${err}`).toBe(true);
+			return JSON.parse(last) as { ok: boolean; ms: number; error?: string; lockFree?: boolean };
+		};
+		const clientLane = `zz_hungclient_probe_${process.pid}`;
+		const installLane = `zz_hunginstall_probe_${process.pid}`;
+		try {
+			const client = await runChild(`import { mkdirSync } from 'node:fs';
+const m = await import(${JSON.stringify(helperModule)});
+const paths = m.suiteMariadbPaths(${JSON.stringify(clientLane)});
+mkdirSync(paths.socketDir, { recursive: true, mode: 0o700 });
+const listener = Bun.listen({ unix: paths.socket, socket: { data() {} } });
+const t = Date.now();
+try {
+	await m.suiteMariadbAdminQuery('SELECT 1;', ${JSON.stringify(clientLane)}, { timeoutMs: 1000 });
+	console.log(JSON.stringify({ ok: true, ms: Date.now() - t }));
+} catch (error) {
+	console.log(JSON.stringify({ ok: false, ms: Date.now() - t, error: String(error.message) }));
+}
+listener.stop(true);
+process.exit(0);`);
+			expect(client.ok, 'a client that never answers is a failure').toBe(false);
+			expect(client.error ?? '').toContain('did not finish');
+			expect(client.ms, 'it failed at its deadline, not later').toBeLessThan(10_000);
+
+			const install = await runChild(`const m = await import(${JSON.stringify(helperModule)});
+const lock = await import(${JSON.stringify(lockModule)});
+const t = Date.now();
+let result;
+try {
+	await m.ensureSuiteMariadb({ suiteDb: ${JSON.stringify(installLane)}, timeoutMs: 1000 });
+	result = { ok: true, ms: Date.now() - t };
+} catch (error) {
+	result = { ok: false, ms: Date.now() - t, error: String(error.message) };
+}
+const release = await lock.acquireSuiteMariadbLock(${JSON.stringify(installLane)}, 2000);
+release();
+console.log(JSON.stringify({ ...result, lockFree: true }));
+process.exit(0);`);
+			expect(install.ok, 'an installer that never finishes is a failure').toBe(false);
+			expect(install.error ?? '').toContain('did not finish');
+			expect(install.ms, 'it failed at its deadline, not later').toBeLessThan(10_000);
+			expect(install.lockFree, 'the lane lock was released').toBe(true);
+			// Nothing the fakes started outlives the run.
+			const started = existsSync(pids)
+				? readFileSync(pids, 'utf8').trim().split('\n').filter(Boolean).map(Number)
+				: [];
+			expect(started.length, 'the fakes ran').toBeGreaterThanOrEqual(2);
+			const alive = started.filter((pid) => {
+				try {
+					process.kill(pid, 0);
+					return true;
+				} catch {
+					return false;
+				}
+			});
+			expect(alive, 'a timed-out client/installer is killed, not orphaned').toEqual([]);
+		} finally {
+			if (existsSync(pids))
+				for (const pid of readFileSync(pids, 'utf8').trim().split('\n').filter(Boolean))
+					try {
+						process.kill(Number(pid), 'SIGKILL');
+					} catch {}
+			for (const lane of [clientLane, installLane]) {
+				const paths = suiteMariadbPaths(lane);
+				rmSync(paths.root, { recursive: true, force: true });
+				rmSync(paths.socketDir, { recursive: true, force: true });
+			}
+			rmSync(bin, { recursive: true, force: true });
+		}
+	}, 60_000);
+
+	/**
+	 * Fake MariaDB binaries first on PATH (where the helper looks first). Each records
+	 * its pid; `server` is a `mariadbd` that stays alive and never answers — a shell loop,
+	 * NOT `exec sleep`, so its command line keeps naming mariadbd and the datadir, which
+	 * is what the helper checks before it signals anything.
+	 */
+	function fakeBinaries(client: string): {
+		bin: string;
+		pids: string;
+		env: Record<string, string | undefined>;
+		alive: () => number[];
+		cleanup: () => void;
+	} {
+		const bin = mkdtempSync(join(tmpdir(), 'dedalo_fakebin_'));
+		const pids = join(bin, 'pids');
+		const scripts: Record<string, string> = {
+			'mariadb-install-db': 'exit 0',
+			mariadbd: 'while :; do sleep 1; done',
+			mariadb: client,
+		};
+		for (const [name, body] of Object.entries(scripts)) {
+			writeFileSync(join(bin, name), `#!/bin/sh\necho $$ >> ${pids}\n${body}\n`);
+			chmodSync(join(bin, name), 0o755);
+		}
+		const started = () =>
+			existsSync(pids)
+				? readFileSync(pids, 'utf8').trim().split('\n').filter(Boolean).map(Number)
+				: [];
+		const isAlive = (pid: number) => {
+			try {
+				process.kill(pid, 0);
+				return true;
+			} catch {
+				return false;
+			}
+		};
+		return {
+			bin,
+			pids,
+			env: { ...process.env, PATH: `${bin}:${process.env.PATH ?? ''}` },
+			alive: () => started().filter(isAlive),
+			cleanup: () => {
+				for (const pid of started())
+					try {
+						process.kill(pid, 'SIGKILL');
+					} catch {}
+				rmSync(bin, { recursive: true, force: true });
+			},
+		};
+	}
+
+	/** Run `script` in a child `bun -e` with `env`; its LAST stdout line is JSON. */
+	async function jsonChild<T>(
+		script: string,
+		env: Record<string, string | undefined>,
+		killAfterMs = 30_000,
+	): Promise<T> {
+		const child = Bun.spawn(['bun', '-e', script], { env, stdout: 'pipe', stderr: 'pipe' });
+		const killer = setTimeout(() => child.kill('SIGKILL'), killAfterMs);
+		const [out, err] = await Promise.all([
+			new Response(child.stdout).text(),
+			new Response(child.stderr).text(),
+			child.exited,
+		]);
+		clearTimeout(killer);
+		const last = out.trim().split('\n').at(-1) ?? '';
+		if (!last.startsWith('{')) throw new Error(`the child hung or crashed:\n${out}\n${err}`);
+		return JSON.parse(last) as T;
+	}
+
+	function dropLane(lane: string): void {
+		const paths = suiteMariadbPaths(lane);
+		rmSync(paths.root, { recursive: true, force: true });
+		rmSync(paths.socketDir, { recursive: true, force: true });
+	}
+
+	test('(o) a server that never answers is STOPPED when its start deadline passes — a failed start leaves nothing running', async () => {
+		// `start()` threw at its deadline and left the DETACHED mariadbd it had spawned
+		// running, holding the datadir, with its pid file behind (review 2026-09-30, S3).
+		const helperModule = join(import.meta.dir, '..', 'helpers', 'suite_mariadb.ts');
+		const fakes = fakeBinaries('exit 1');
+		const lane = `zz_startorphan_probe_${process.pid}`;
+		try {
+			const result = await jsonChild<{ ok: boolean; error?: string }>(
+				`const m = await import(${JSON.stringify(helperModule)});
+try {
+	await m.ensureSuiteMariadb({ suiteDb: ${JSON.stringify(lane)}, timeoutMs: 1000 });
+	console.log(JSON.stringify({ ok: true }));
+} catch (error) {
+	console.log(JSON.stringify({ ok: false, error: String(error.message) }));
+}
+process.exit(0);`,
+				fakes.env,
+			);
+			expect(result.ok, 'a server that never answers is a failed start').toBe(false);
+			expect(result.error ?? '').toContain('did not answer');
+			expect(fakes.alive(), 'the never-answering mariadbd was stopped, not orphaned').toEqual([]);
+		} finally {
+			fakes.cleanup();
+			dropLane(lane);
+		}
+	}, 60_000);
+
+	test('(p) a server that ANSWERS with an error is alive: ensure surfaces the error and never signals it or removes its socket', async () => {
+		// Any failed ping read as "down", and "down" meant `start()`: SIGTERM the pid in
+		// the pid file and rm the socket — so a lane server answering ERROR 1040 (too many
+		// connections) to one process was killed under every other process of the lane
+		// (review 2026-09-30, S3). A planted live "server" and a client that gets a
+		// server-side ERROR 1040 stand in.
+		const { SUITE_MARIADB_MARKER_FILE } = helper();
+		const helperModule = join(import.meta.dir, '..', 'helpers', 'suite_mariadb.ts');
+		const fakes = fakeBinaries('echo "ERROR 1040 (HY000): Too many connections" >&2\nexit 1');
+		const lane = `zz_pingerror_probe_${process.pid}`;
+		const paths = suiteMariadbPaths(lane);
+		let server: ReturnType<typeof Bun.spawn> | undefined;
+		try {
+			mkdirSync(paths.datadir, { recursive: true });
+			writeFileSync(join(paths.root, SUITE_MARIADB_MARKER_FILE), '{}\n');
+			writeFileSync(paths.installedStamp, 'planted\n');
+			server = Bun.spawn(
+				['/bin/sh', join(fakes.bin, 'mariadbd'), '--no-defaults', `--datadir=${paths.datadir}`],
+				{ stdout: 'ignore', stderr: 'ignore' },
+			);
+			writeFileSync(paths.pidFile, `${server.pid}\n`);
+			await Bun.sleep(200);
+			const result = await jsonChild<{ ok: boolean; error?: string; socket: boolean }>(
+				`import { existsSync, mkdirSync } from 'node:fs';
+const m = await import(${JSON.stringify(helperModule)});
+const paths = m.suiteMariadbPaths(${JSON.stringify(lane)});
+mkdirSync(paths.socketDir, { recursive: true, mode: 0o700 });
+const listener = Bun.listen({ unix: paths.socket, socket: { data() {} } });
+let result;
+try {
+	await m.ensureSuiteMariadb({ suiteDb: ${JSON.stringify(lane)}, timeoutMs: 1000 });
+	result = { ok: true };
+} catch (error) {
+	result = { ok: false, error: String(error.message) };
+}
+console.log(JSON.stringify({ ...result, socket: existsSync(paths.socket) }));
+listener.stop(true);
+process.exit(0);`,
+				fakes.env,
+			);
+			expect(result.ok, 'a server refusing every client is not "ready"').toBe(false);
+			expect(result.error ?? '', 'the server’s own error is surfaced').toContain('1040');
+			expect(server.exitCode, 'the answering server was NOT signalled').toBeNull();
+			expect(result.socket, 'its socket was NOT removed').toBe(true);
+		} finally {
+			server?.kill('SIGKILL');
+			fakes.cleanup();
+			dropLane(lane);
+		}
+	}, 60_000);
+
+	test('(q) a waiter’s patience covers the holder’s worst case: queued behind a hung start it reports the START’s error, and behind a stuck holder it gives up at the derived wait, naming the lock', async () => {
+		// The lock wait was a flat 180 s while the holder of the lane lock may legitimately
+		// keep it for an installer (300 s) plus a start, the provisioning and the
+		// self-check: waiters died blaming the lock for what was the holder's real work
+		// (review 2026-09-30, S3). The wait is now derived from the same deadlines the
+		// holder runs under (`suiteMariadbLockWaitMs`); a gate-sized `timeoutMs` scales
+		// both.
+		const { suiteMariadbLockWaitMs, suiteMariadbLockHoldMs, SUITE_MARIADB_MARKER_FILE } = helper();
+		for (const timeoutMs of [undefined, 1000])
+			expect(
+				suiteMariadbLockWaitMs(timeoutMs),
+				`the wait outlasts the holder's worst case (timeoutMs ${timeoutMs ?? 'default'})`,
+			).toBeGreaterThan(suiteMariadbLockHoldMs(timeoutMs));
+		const helperModule = join(import.meta.dir, '..', 'helpers', 'suite_mariadb.ts');
+		const lockModule = join(import.meta.dir, '..', 'helpers', 'suite_mariadb_lock.ts');
+		const fakes = fakeBinaries('exit 1');
+		const lane = `zz_lockwait_probe_${process.pid}`;
+		const paths = suiteMariadbPaths(lane);
+		let holder: ReturnType<typeof Bun.spawn> | undefined;
+		try {
+			// 1. Two processes ensure one lane whose server never answers: the one queued
+			//    behind the other's start reports the start's deadline, never the lock.
+			const ensureScript = `const m = await import(${JSON.stringify(helperModule)});
+const t = Date.now();
+try {
+	await m.ensureSuiteMariadb({ suiteDb: ${JSON.stringify(lane)}, timeoutMs: 1000 });
+	console.log(JSON.stringify({ ok: true, ms: Date.now() - t }));
+} catch (error) {
+	console.log(JSON.stringify({ ok: false, ms: Date.now() - t, error: String(error.message) }));
+}
+process.exit(0);`;
+			type Outcome = { ok: boolean; ms: number; error?: string };
+			const both = await Promise.all([
+				jsonChild<Outcome>(ensureScript, fakes.env),
+				jsonChild<Outcome>(ensureScript, fakes.env),
+			]);
+			for (const outcome of both) {
+				expect(outcome.ok).toBe(false);
+				expect(outcome.error ?? '', 'each reports the real cause').toContain('did not answer');
+				expect(outcome.error ?? '', 'never the lock').not.toContain('is held');
+			}
+			// 2. Behind a holder that never releases, the waiter gives up at the DERIVED wait.
+			expect(existsSync(join(paths.root, SUITE_MARIADB_MARKER_FILE))).toBe(true);
+			holder = Bun.spawn(
+				[
+					'bun',
+					'-e',
+					`const { acquireSuiteMariadbLock } = await import(${JSON.stringify(lockModule)});
+await acquireSuiteMariadbLock(${JSON.stringify(lane)}, 20_000);
+console.log('held');
+await Bun.sleep(120_000);`,
+				],
+				{ stdout: 'pipe', stderr: 'ignore' },
+			);
+			const reader = (holder.stdout as ReadableStream<Uint8Array>).getReader();
+			expect(new TextDecoder().decode((await reader.read()).value)).toContain('held');
+			const expected = suiteMariadbLockWaitMs(300);
+			const t = Date.now();
+			const waited = await Promise.race([
+				helper()
+					.ensureSuiteMariadb({ suiteDb: lane, timeoutMs: 300 })
+					.then(
+						() => 'resolved',
+						(error: Error) => error.message,
+					),
+				Bun.sleep(expected + 15_000).then(() => 'still waiting'),
+			]);
+			const ms = Date.now() - t;
+			expect(waited, 'the waiter gave up on the held lock').toContain('is held');
+			expect(waited).toContain(`for over ${expected / 1000}s`);
+			expect(ms, 'at the derived wait, not before').toBeGreaterThanOrEqual(expected - 250);
+		} finally {
+			holder?.kill('SIGKILL');
+			fakes.cleanup();
+			dropLane(lane);
+		}
+	}, 90_000);
+
+	test('(r) a lane root is CLAIMED atomically: frozen at any instant, the root is absent or marked; a killed claim’s leftover is collected, a live one kept', async () => {
+		// `mkdir(root)` then `write(marker)`: a process killed between the two left an
+		// UNMARKED root that every later ensure refuses and every sweep keeps — the lane
+		// blocked until a human removes it (review 2026-09-30, S3). A child claims fresh
+		// lanes in a loop; this process FREEZES it (SIGSTOP) at arbitrary instants — what a
+		// crash at that instant would leave — and looks.
+		const { suiteMariadbPaths, SUITE_MARIADB_MARKER_FILE } = helper();
+		const { sweepSuiteMariadbLanes, suiteMariadbLaneEntries } = lanes();
+		const helperModule = join(import.meta.dir, '..', 'helpers', 'suite_mariadb.ts');
+		const prefix = `zz_claim_probe_${process.pid}`;
+		const base = dirname(suiteMariadbPaths(`${prefix}_0`).root);
+		const rootName = new RegExp(`^${prefix}_\\d+$`);
+		const claimer = Bun.spawn(
+			[
+				'bun',
+				'-e',
+				`import { renameSync, rmSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+const m = await import(${JSON.stringify(helperModule)});
+console.log('ready');
+for (let i = 0; ; i++) {
+	const paths = await m.claimSuiteMariadbRoot(${JSON.stringify(prefix)} + '_' + i);
+	// Off the path in one rename, THEN deleted — this loop never exposes an unmarked root.
+	const gone = join(dirname(paths.root), '.' + ${JSON.stringify(prefix)} + '_' + i + '.gone');
+	renameSync(paths.root, gone);
+	rmSync(gone, { recursive: true, force: true });
+}`,
+			],
+			{ stdout: 'pipe', stderr: 'pipe' },
+		);
+		const stopped = () =>
+			Bun.spawnSync(['ps', '-o', 'stat=', '-p', String(claimer.pid)])
+				.stdout.toString()
+				.includes('T');
+		let exposed = 0;
+		let seen = 0;
+		try {
+			const reader = (claimer.stdout as ReadableStream<Uint8Array>).getReader();
+			expect(new TextDecoder().decode((await reader.read()).value)).toContain('ready');
+			await Bun.sleep(100);
+			for (let sample = 0; sample < 150; sample++) {
+				await Bun.sleep(Math.random() * 3);
+				// process.kill, not Subprocess.kill: measured, the latter does not deliver SIGSTOP.
+				process.kill(claimer.pid, 'SIGSTOP');
+				const frozenBy = Date.now() + 5_000;
+				while (!stopped()) {
+					if (Date.now() > frozenBy) throw new Error('the claimer never reached the stopped state');
+					await Bun.sleep(1);
+				}
+				for (const entry of suiteMariadbLaneEntries().filter((name) => rootName.test(name))) {
+					seen++;
+					if (!existsSync(join(base, entry, SUITE_MARIADB_MARKER_FILE))) exposed++;
+				}
+				process.kill(claimer.pid, 'SIGCONT');
+			}
+			expect(claimer.exitCode, 'the claimer ran through every sample').toBeNull();
+			expect(seen, 'the frozen claimer was seen holding a root').toBeGreaterThan(0);
+			expect(exposed, 'frozen instants at which a lane root existed UNMARKED').toBe(0);
+		} finally {
+			claimer.kill('SIGKILL');
+			await claimer.exited;
+			for (const entry of suiteMariadbLaneEntries())
+				if (entry.includes(prefix)) rmSync(join(base, entry), { recursive: true, force: true });
+		}
+
+		// A KILLED claim leaves its marked temp root: the next lane sweep collects it; the
+		// temp root of a claim still in progress (a live pid) is kept.
+		const dead = Bun.spawn(['bun', '-e', '0'], { stdout: 'ignore', stderr: 'ignore' });
+		await dead.exited;
+		const template = `zz_claimtrash_probe_${process.pid}`;
+		const killed = join(base, `.${template}__shard1.claim-${dead.pid}-1`);
+		const inProgress = join(base, `.${template}__shard2.claim-${process.pid}-1`);
+		try {
+			for (const dir of [killed, inProgress]) {
+				mkdirSync(dir, { recursive: true });
+				writeFileSync(join(dir, SUITE_MARIADB_MARKER_FILE), '{}\n');
+			}
+			const grammar = new RegExp(`^${template}__shard\\d+$`);
+			await sweepSuiteMariadbLanes((lane) => grammar.test(lane));
+			expect(existsSync(killed), 'a killed claim’s leftover is collected').toBe(false);
+			expect(existsSync(inProgress), 'a claim in progress is never collected').toBe(true);
+		} finally {
+			rmSync(killed, { recursive: true, force: true });
+			rmSync(inProgress, { recursive: true, force: true });
+		}
+	}, 90_000);
+
+	/**
+	 * PENDING, TETHERED (review 2026-09-30, S3): the client suite's own server is NOT yet
+	 * armed at the lane's MariaDB. `scripts/client_test_server.ts` composes every other
+	 * surface of the lane but no `DEDALO_DIFFUSION_DB_*`, so the server it spawns resolves
+	 * them from `../private/.env` — the installation's MariaDB. Closing it takes BOTH halves:
+	 * compose `suiteMariadbEnvironment(suiteDb)` into the server's environment AND
+	 * `ensureSuiteMariadb()` before the spawn (arming alone falls back to TCP
+	 * localhost:3306 while the socket is absent). Leg (u) is red the day the environment
+	 * is armed while this row still stands: delete the row with the prose in
+	 * engineering/CI.md ("CI seam environment") in the same change.
+	 */
+	const CLIENT_SERVER_MARIADB_PENDING: { reason: string } | null = {
+		reason:
+			'scripts/client_test_server.ts suiteServerEnvironment composes no DEDALO_DIFFUSION_DB_* and starts no lane server',
+	};
+
+	test('(u) the client suite’s server is armed at THIS lane’s MariaDB socket — or the tethered PENDING row says it is not, and reds the day it is', () => {
+		// Composed in a child with no DEDALO_DIFFUSION_DB_* in its environment: a fresh
+		// `bun run test:client` shell, not this process (its preload armed it).
+		const env: Record<string, string> = { ...(process.env as Record<string, string>) };
+		for (const key of Object.keys(env)) if (key.startsWith('DEDALO_DIFFUSION_DB_')) delete env[key];
+		for (const key of [
+			'DEDALO_TEST_RAG_DB_NAME',
+			'DEDALO_TEST_MEDIA_ROOT',
+			'DEDALO_SESSION_DB_PATH',
+			'DEDALO_TS_STATE_PATH',
+		])
+			delete env[key];
+		const serverModule = join(REPO_ROOT, 'scripts', 'client_test_server.ts');
+		const script = `const m = await import(${JSON.stringify(serverModule)});
+const out = m.suiteServerEnvironment({ suiteDb: ${JSON.stringify(LANE)}, port: 1, ...m.suiteServerPaths() });
+const keys = ['DEDALO_DIFFUSION_DB_SOCKET', 'DEDALO_DIFFUSION_DB_HOST', 'DEDALO_DIFFUSION_DB_PORT'];
+console.log(JSON.stringify(Object.fromEntries(keys.map((k) => [k, out[k] ?? null]))));`;
+		const child = Bun.spawnSync(['bun', '-e', script], { cwd: REPO_ROOT, env });
+		expect(child.exitCode, child.stderr.toString()).toBe(0);
+		const served = JSON.parse(
+			child.stdout.toString().trim().split('\n').at(-1) as string,
+		) as Record<string, string | null>;
+		const armed =
+			served.DEDALO_DIFFUSION_DB_SOCKET === suiteMariadbPaths(LANE).socket &&
+			served.DEDALO_DIFFUSION_DB_HOST === '' &&
+			served.DEDALO_DIFFUSION_DB_PORT === '';
+		if (CLIENT_SERVER_MARIADB_PENDING === null)
+			expect(
+				served,
+				'the client server must be armed at this lane’s suite socket, host and port blank',
+			).toEqual({
+				DEDALO_DIFFUSION_DB_SOCKET: suiteMariadbPaths(LANE).socket,
+				DEDALO_DIFFUSION_DB_HOST: '',
+				DEDALO_DIFFUSION_DB_PORT: '',
+			});
+		else
+			expect(
+				armed,
+				`the client server IS armed now — delete CLIENT_SERVER_MARIADB_PENDING (${CLIENT_SERVER_MARIADB_PENDING.reason}) and its prose in engineering/CI.md`,
+			).toBe(false);
+	});
+
+	test('(s) a stop RETURNS only once the process is gone: SIGKILL is waited for, and a process that survives it is a throw naming it', async () => {
+		// stopPid sent SIGKILL and returned at once; its callers then started a new
+		// mariadbd on, or renamed, the datadir the dying one still held (review
+		// 2026-09-30, S3). The window between SIGKILL and the kernel's teardown cannot be
+		// planted with a real process, so a scripted control plays it: a clock that
+		// `sleep` advances, and a process that reports gone N polls after the kill.
+		const { terminateProcesses } = helper();
+		type Signal = 'SIGTERM' | 'SIGKILL';
+		function scripted(options: { goneAfterTerm?: boolean; killPolls: number; esrch?: boolean }) {
+			let clock = 0;
+			let killed = false;
+			let pollsAfterKill = 0;
+			const signals: Signal[] = [];
+			return {
+				signals,
+				pollsAfterKill: () => pollsAfterKill,
+				control: {
+					signal(_pid: number, signal: Signal) {
+						if (options.esrch === true)
+							throw Object.assign(new Error('kill ESRCH'), { code: 'ESRCH' });
+						signals.push(signal);
+						if (signal === 'SIGKILL') killed = true;
+					},
+					gone(_pid: number) {
+						if (options.goneAfterTerm === true && signals.length > 0) return true;
+						if (!killed) return false;
+						pollsAfterKill++;
+						return pollsAfterKill > options.killPolls;
+					},
+					now: () => clock,
+					sleep: async (ms: number) => {
+						clock += ms;
+					},
+				},
+			};
+		}
+		const waits = { termMs: 1000, killMs: 1000 };
+
+		const dying = scripted({ killPolls: 3 });
+		await terminateProcesses([4242], 'a planted slow-dying process', waits, dying.control);
+		expect(dying.signals).toEqual(['SIGTERM', 'SIGKILL']);
+		expect(
+			dying.pollsAfterKill(),
+			'it kept asking until the process was gone (3 alive answers, then gone)',
+		).toBeGreaterThanOrEqual(4);
+
+		const immortal = scripted({ killPolls: Number.POSITIVE_INFINITY });
+		const refused = await terminateProcesses(
+			[4243],
+			'a planted immortal process',
+			waits,
+			immortal.control,
+		).then(
+			() => 'resolved',
+			(error: Error) => error.message,
+		);
+		expect(refused, 'a process alive after SIGKILL + its wait is a THROW').toContain(
+			'survived SIGKILL',
+		);
+		expect(refused, 'naming the pid').toContain('4243');
+
+		const polite = scripted({ goneAfterTerm: true, killPolls: 0 });
+		await terminateProcesses([4244], 'a planted polite process', waits, polite.control);
+		expect(polite.signals, 'a process that exits on SIGTERM is never SIGKILLed').toEqual([
+			'SIGTERM',
+		]);
+
+		const vanished = scripted({ esrch: true, killPolls: 0 });
+		await terminateProcesses([4245], 'a process that already exited', waits, vanished.control);
+
+		// The REAL control on a real process that ignores SIGTERM: resolves (a killed child
+		// not yet reaped is a zombie, which holds nothing — gone, never "survived"), and
+		// the process is dead when it does.
+		const stubborn = Bun.spawn(['/bin/sh', '-c', "trap '' TERM; while :; do sleep 0.1; done"], {
+			stdout: 'ignore',
+			stderr: 'ignore',
+		});
+		try {
+			await Bun.sleep(200);
+			await terminateProcesses([stubborn.pid], 'a planted SIGTERM-ignoring process', {
+				termMs: 300,
+				killMs: 3000,
+			});
+			const state = await Promise.race([
+				stubborn.exited.then(() => stubborn.signalCode),
+				Bun.sleep(2000).then(() => 'still alive'),
+			]);
+			expect(state, 'SIGTERM ignored → SIGKILL, and it is dead').toBe('SIGKILL');
+		} finally {
+			stubborn.kill('SIGKILL');
+		}
+	}, 30_000);
+
+	test('(t) nothing else runs on a lane’s datadir when the suite installs, starts or sweeps it: an orphan (a killed parent’s installer, a stray server) is stopped first', async () => {
+		// A holder killed during `mariadb-install-db` freed the lane lock (kernel-released)
+		// but not its installer: the next holder rm'd the datadir and installed over a
+		// process still writing into it; `start()` stopped only the pid-file server; a
+		// sweep renamed a root out from under a live process (review 2026-09-30, S3).
+		// Planted: a process whose command line carries `--datadir=<lane datadir>` and
+		// that is in NO pid file. Fake binaries record, when they run, what state the
+		// orphan was in (`ps -o stat=`: nothing or Z = gone).
+		const helperModule = join(import.meta.dir, '..', 'helpers', 'suite_mariadb.ts');
+		const { SUITE_MARIADB_MARKER_FILE } = helper();
+		const { sweepSuiteMariadb } = lanes();
+		const bin = mkdtempSync(join(tmpdir(), 'dedalo_orphanbin_'));
+		const strayPid = join(bin, 'stray.pid');
+		const seen = (who: string) => join(bin, `${who}.saw`);
+		const record = (who: string) =>
+			`p=$(cat ${strayPid}); ps -o stat= -p "$p" >> ${seen(who)} 2>/dev/null; echo "--" >> ${seen(who)}`;
+		const scripts: Record<string, string> = {
+			'mariadb-install-db': `${record('installer')}\nexit 0`,
+			mariadbd: `echo $$ >> ${join(bin, 'servers')}\n${record('mariadbd')}\nwhile :; do sleep 1; done`,
+			mariadb: 'exit 1',
+		};
+		for (const [name, body] of Object.entries(scripts)) {
+			writeFileSync(join(bin, name), `#!/bin/sh\n${body}\n`);
+			chmodSync(join(bin, name), 0o755);
+		}
+		const env = { ...process.env, PATH: `${bin}:${process.env.PATH ?? ''}` };
+		/** Every recorded observation of the orphan: '' (no such pid) or its ps state. */
+		const observed = (who: string) =>
+			existsSync(seen(who))
+				? readFileSync(seen(who), 'utf8')
+						.split('--')
+						.map((chunk) => chunk.trim())
+						.filter((_, i, all) => i < all.length - 1)
+				: [];
+		const liveIn = (states: string[]) => states.filter((s) => s !== '' && !s.startsWith('Z'));
+		const lane = `zz_orphan_probe_${process.pid}`;
+		const paths = suiteMariadbPaths(lane);
+		const plantRoot = (installed: boolean) => {
+			mkdirSync(paths.datadir, { recursive: true });
+			writeFileSync(join(paths.root, SUITE_MARIADB_MARKER_FILE), '{}\n');
+			if (installed) writeFileSync(paths.installedStamp, 'planted\n');
+		};
+		const plantOrphan = (ignoresTerm: boolean) => {
+			const trap = ignoresTerm ? "trap '' TERM; " : '';
+			const orphan = Bun.spawn(
+				[
+					'/bin/sh',
+					'-c',
+					`${trap}while :; do sleep 0.1; done`,
+					'orphan',
+					`--datadir=${paths.datadir}`,
+				],
+				{ stdout: 'ignore', stderr: 'ignore' },
+			);
+			writeFileSync(strayPid, `${orphan.pid}\n`);
+			return orphan;
+		};
+		const fate = (orphan: ReturnType<typeof Bun.spawn>) =>
+			Promise.race([orphan.exited.then(() => 'dead'), Bun.sleep(3000).then(() => 'alive')]);
+		const ensureScript = `const m = await import(${JSON.stringify(helperModule)});
+try {
+	await m.ensureSuiteMariadb({ suiteDb: ${JSON.stringify(lane)}, timeoutMs: 1000 });
+	console.log(JSON.stringify({ ok: true }));
+} catch (error) {
+	console.log(JSON.stringify({ ok: false, error: String(error.message) }));
+}
+process.exit(0);`;
+		const orphans: ReturnType<typeof Bun.spawn>[] = [];
+		try {
+			// 1. INSTALL: no stamp, a SIGTERM-ignoring orphan installer on the datadir.
+			plantRoot(false);
+			orphans.push(plantOrphan(true));
+			await Bun.sleep(200);
+			await jsonChild(ensureScript, env);
+			const sawInstall = observed('installer');
+			expect(sawInstall.length, 'the installer ran').toBe(1);
+			expect(liveIn(sawInstall), 'the orphan was gone BEFORE the datadir was rebuilt').toEqual([]);
+			expect(await fate(orphans[0] as ReturnType<typeof Bun.spawn>)).toBe('dead');
+			dropLane(lane);
+
+			// 2. START: installed, a stray on the datadir that no pid file names.
+			plantRoot(true);
+			orphans.push(plantOrphan(true));
+			await Bun.sleep(200);
+			await jsonChild(ensureScript, env);
+			const sawStart = observed('mariadbd');
+			expect(sawStart.length, 'a server was started').toBeGreaterThanOrEqual(1);
+			expect(liveIn(sawStart), 'the stray was gone BEFORE a server was started on it').toEqual([]);
+			expect(await fate(orphans[1] as ReturnType<typeof Bun.spawn>)).toBe('dead');
+			dropLane(lane);
+
+			// 3. SWEEP: a stray (polite: the sweep's stop wait is the 30 s default) that no pid
+			//    file names is stopped before the root is taken off its path.
+			plantRoot(true);
+			orphans.push(plantOrphan(false));
+			await Bun.sleep(200);
+			const swept = await sweepSuiteMariadb(lane);
+			expect(swept.removed).toBe(true);
+			expect(await fate(orphans[2] as ReturnType<typeof Bun.spawn>)).toBe('dead');
+		} finally {
+			for (const orphan of orphans) orphan.kill('SIGKILL');
+			const servers = join(bin, 'servers');
+			if (existsSync(servers))
+				for (const pid of readFileSync(servers, 'utf8').trim().split('\n').filter(Boolean))
+					try {
+						process.kill(Number(pid), 'SIGKILL');
+					} catch {}
+			rmSync(bin, { recursive: true, force: true });
+			dropLane(lane);
+		}
+	}, 90_000);
 
 	test('the STAGE itself, with every input planted: calibration and measure faults reach the verdict, no file’s writes stand in for another’s, and a no-contact file that contacts is named', async () => {
 		// runMariadbTier over the REAL set derivation with a fake helper (scripted

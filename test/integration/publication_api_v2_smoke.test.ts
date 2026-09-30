@@ -48,7 +48,7 @@ import type { FieldPlan, PublicationPlan, SectionPlan } from '../../src/diffusio
 import type { ProjectedRow } from '../../src/diffusion/project/lang_ladder.ts';
 import { closeAllTargetPools, getTargetPool } from '../../src/diffusion/targets/mariadb/db.ts';
 import { mariadbSqlWriter } from '../../src/diffusion/writers/mariadb_sql.ts';
-import { requireSuiteMariadb } from '../helpers/suite_mariadb.ts';
+import { dropSuiteScratchTables, requireSuiteMariadb } from '../helpers/suite_mariadb.ts';
 import { zzdTargetDatabases } from '../helpers/zzd_diffusion_fixture.ts';
 
 /** The zzd situation's first target database, on the lane's suite server. */
@@ -130,7 +130,8 @@ const EXPECTED_WIRE = [
 
 let server: ReturnType<typeof Bun.spawn> | undefined;
 let base = '';
-let published = false;
+/** Set once the suite target is acquired: from then on, afterAll owns the scratch table. */
+let acquired = false;
 
 /** A port nothing listens on right now (bind 0, read, release). */
 function freePort(): number {
@@ -185,6 +186,8 @@ async function startApi(): Promise<void> {
 
 beforeAll(async () => {
 	await requireSuiteMariadb(import.meta.path, [TARGET_DATABASE]);
+	// BEFORE any DDL: a setup that throws after ensureSchema() still has its table dropped.
+	acquired = true;
 	if (!existsSync(join(API_DIR, 'node_modules')))
 		throw new Error(
 			`publication/server_api/v2 has no node_modules — install it: bun install --frozen-lockfile --cwd publication/server_api/v2`,
@@ -194,17 +197,21 @@ beforeAll(async () => {
 	await session.ensureSchema();
 	expect(await session.writeRows(SECTION, ROWS)).toEqual({ written: 2, deleted: 0 });
 	await session.close();
-	published = true;
 	await startApi();
 }, 120_000);
 
 afterAll(async () => {
 	server?.kill();
-	if (published)
-		await getTargetPool(TARGET_DATABASE)
-			.unsafe(`DROP TABLE IF EXISTS \`${TABLE}\``, [])
-			.catch(() => {});
-	await closeAllTargetPools();
+	// A failed DROP, or a table that survived it, is REPORTED — after the pools close.
+	let cleanupError: unknown;
+	try {
+		if (acquired) await dropSuiteScratchTables(TARGET_DATABASE, [TABLE]);
+	} catch (error) {
+		cleanupError = error;
+	} finally {
+		await closeAllTargetPools();
+	}
+	if (cleanupError !== undefined) throw cleanupError;
 });
 
 describe('publication API v2 over a table the engine published on the suite server', () => {

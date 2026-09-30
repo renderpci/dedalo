@@ -28,9 +28,9 @@ import {
 	ensureSuiteMariadb,
 	stopSuiteMariadb,
 	suiteMariadbStatus,
-	sweepSuiteMariadb,
 	truncateAcquisitions,
 } from '../../test/helpers/suite_mariadb.ts';
+import { sweepSuiteMariadb } from '../../test/helpers/suite_mariadb_lanes.ts';
 
 async function main(command: string | undefined): Promise<number> {
 	switch (command) {

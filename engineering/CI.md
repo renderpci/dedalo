@@ -386,11 +386,31 @@ every live leg GREEN.
   root carrying `.dedalo_test_mariadb`). Ensure/stop are serialized per lane by a
   kernel-released `flock` on `<root>/.lock`, so a killed run leaves no stale lock; a
   stop issued while another process holds it waits (`suite_mariadb_target_native`
-  leg j). `sweepSuiteMariadbLanes(match)` (`test/helpers/suite_mariadb_lanes.ts`)
-  sweeps every marked lane root a matcher names — the shard runner's teardown for its
+  leg j). A sweep stops the server AND renames the root off its path (same directory,
+  atomic) under that lock, then deletes it marker-last: the lane path is marked until
+  the instant it is absent (leg k), a process queued on the lock is told the lane was
+  swept instead of holding a lock over it — every flock is re-validated against the
+  current `.lock` inode (leg l) — and a killed sweep's `.<lane>.swept-…` leftover is
+  collected by the next one (leg m). Every client call and the installer have a
+  deadline, so a hung one cannot hold the lane lock (leg n); a waiter's lock wait is
+  DERIVED from those deadlines (the holder's worst ensure plus a margin), so it reports
+  the holder's real failure, never "lock held" (leg q). A start that misses its deadline
+  stops the server it spawned (leg o); a server that ANSWERS with a server-side error
+  (1040, 1045…) is alive and is surfaced, never restarted (leg p). The lane root is
+  claimed atomically — built marked under `.<lane>.claim-<pid>-<n>`, then renamed onto
+  its path — and a dead claimer's temp is collected by the next sweep (leg r). Before it
+installs, starts on or sweeps a datadir, the holder FENCES it: every process whose command
+line names that datadir is stopped, not only the pid-file server — an installer orphaned
+by a killed holder, a stray server (leg t) — and a stop returns only once the process is
+gone, SIGKILL included, or throws naming the survivor (leg s).
+  `sweepSuiteMariadbLanes(match)` (`test/helpers/suite_mariadb_lanes.ts`) sweeps every
+  marked lane root a matcher names — the shard runner's teardown for its
   `<template>__shard<N>` lanes: `sweepShardClones` (`scripts/lib/test_shard_db.ts`) calls
-  it at the entry sweep, the exit sweep and `--sweep`, and an unmarked lane root at a
-  shard name refuses the run (`shard_mariadb_sweep_native`).
+  it at the entry sweep, the exit sweep and `--sweep`. An unmarked lane root at a shard
+  name is REFUSED and a marked one whose sweep fails is a FAILURE with its real error —
+  each refuses the run and makes `--sweep` exit non-zero, through ONE pure verdict,
+  `sweepBlockers` (`shard_mariadb_sweep_native`, a DB-tier tripwire, which sweeps only a
+  probe template it built, never the lane's own).
 
 Locally (needs `mariadbd`, `mariadb-install-db`, `mariadb`; without them the MariaDB
 gates are RED, not skipped):
@@ -531,7 +551,11 @@ Externally provided values win over `test/preload/session_db.ts` defaults and ov
 `DEDALO_DIFFUSION_DB_*` row, so `bun run test:client` on a desk gets the isolation CI
 gets for everything but MariaDB: its server still resolves `DEDALO_DIFFUSION_DB_*` from
 `../private/.env`, i.e. the installation's MariaDB, until `scripts/client_test_server.ts`
-composes `suiteMariadbEnvironment` (pending, with its `test_db_marker` rule). The `dedalo_ts_test_` table
+composes `suiteMariadbEnvironment` and starts the lane's server first (arming alone is
+not enough: an absent socket falls back to TCP `localhost:3306`). Held as a tethered
+PENDING row, `CLIENT_SERVER_MARIADB_PENDING` in `suite_mariadb_target_native` leg (u): the
+leg composes the server's environment and goes red the day it is armed while the row still
+stands, so the row and this paragraph leave together. The `dedalo_ts_test_` table
 prefix is schema-enforced (rule 14 extracts the engine's own guard regex).
 
 ## Sibling paths and client libraries

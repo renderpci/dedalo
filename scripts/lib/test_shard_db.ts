@@ -404,6 +404,8 @@ export interface SweepReport {
 	mariadbSwept: string[];
 	/** Suite MariaDB lane roots at a shard name WITHOUT `.dedalo_test_mariadb` — reported, kept. */
 	mariadbRefused: string[];
+	/** MARKED lane roots whose stop/remove FAILED — kept, with the real error (never "unmarked"). */
+	mariadbFailed: { lane: string; error: string }[];
 }
 
 /** Escape LIKE's metacharacters — a bare `_` is a single-char WILDCARD. */
@@ -432,6 +434,7 @@ export async function sweepShardClones(template: string): Promise<SweepReport> {
 		mediaRefused: [],
 		mariadbSwept: [],
 		mariadbRefused: [],
+		mariadbFailed: [],
 	};
 
 	// Enumerate by ESCAPED LIKE, then re-filter by exact grammar in TS: the LIKE
@@ -533,6 +536,7 @@ export async function sweepShardClones(template: string): Promise<SweepReport> {
 	const lanes = await sweepSuiteMariadbLanes((lane) => grammar.test(lane));
 	report.mariadbSwept.push(...lanes.swept);
 	report.mariadbRefused.push(...lanes.refused);
+	report.mariadbFailed.push(...lanes.failed);
 
 	return report;
 }

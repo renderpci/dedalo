@@ -721,6 +721,11 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		roots: [],
 		scope: 'NOT a corpus: `readdirSync` lists the suite media base for marked shard twins to sweep',
 	},
+	'test/helpers/suite_mariadb_lanes.ts': {
+		roots: [],
+		scope:
+			"NOT a corpus: `suiteMariadbLaneEntries` lists the suite MariaDB lane base (`../private/test_mariadb/`, outside the repo — the module's own root, never a caller's) for the lanes and killed-sweep/claim leftovers a sweep visits; the second site lists one swept lane's trash to delete it marker-last. Kept out of test/helpers/suite_mariadb.ts so the gates that only ACQUIRE the target are not walkers.",
+	},
 	'test/helpers/agent_skills_corpus.ts': {
 		roots: [['.agents/skills'], ['.']],
 		scope:
