@@ -60,7 +60,9 @@ import {
 	readFileSync,
 	readlinkSync,
 	rmSync,
+	statSync,
 	symlinkSync,
+	utimesSync,
 	writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
@@ -1335,6 +1337,136 @@ describe('the nightly backup unit reads keys that exist and reports the failures
 			expect(files.length).toBe(1);
 			// The suffix newestBackupMtimeMs() scans (core/area_maintenance/backup.ts).
 			expect(files[0]).toMatch(/\.custom\.backup$/);
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
+
+	test("an orphaned .part is ADOPTED by a full read, never deleted (the engine's rule)", () => {
+		// OPS-2 review: the nightly `find … -exec rm` deleted every day-old part in
+		// the directory — including the ENGINE's orphans, whose pg_dump outlived a
+		// server restart and may have finished a complete restore point.
+		const root = join(REPO_ROOT, 'test', '.tmp-operator-commands-db-orphans');
+		rmSync(root, { recursive: true, force: true });
+		try {
+			const bin = join(root, 'bin');
+			const dir = join(root, 'db');
+			mkdirSync(bin, { recursive: true });
+			mkdirSync(dir, { recursive: true });
+			// A pg_restore that tells the TWO reads apart, the way the real one does:
+			// `--list` accepts any header-shaped file (GOOD… or HALF… — a 60% cut lists
+			// perfectly), the FULL read (`--file=`) accepts only bytes that end with the
+			// complete marker. A fake that answered both the same could not tell a
+			// TOC-only adoption from the full read (review: that mutation stayed green).
+			const reads = join(root, 'reads.log');
+			writeFileSync(
+				join(bin, 'pg_restore'),
+				[
+					'#!/bin/sh',
+					'for a in "$@"; do f="$a"; done',
+					`printf '%s %s\\n' "$1" "$f" >> '${reads}'`,
+					// HOST-BOUND failures of the full read (the bytes are fine): an I/O
+					// error on the backup storage, and a read killed from outside.
+					'case "$1:$(head -c 4 "$f")" in',
+					'  --file=*:EIOF) echo "pg_restore: error: could not read from input file: Input/output error" >&2; exit 1 ;;',
+					'  --file=*:KILL) kill -9 $$ ;;',
+					'esac',
+					'case "$(head -c 4 "$f")" in GOOD|HALF|EIOF|KILL) ;; *) echo "pg_restore: error: did not find magic string in file header" >&2; exit 1 ;; esac',
+					'case "$1" in --list) exit 0 ;; esac',
+					'case "$(tail -c 3 "$f")" in END) exit 0 ;; *) echo "pg_restore: error: could not read from input file: end of file" >&2; exit 1 ;; esac',
+					'',
+				].join('\n'),
+			);
+			writeFileSync(
+				join(bin, 'pg_dump'),
+				'#!/bin/sh\nfor a in "$@"; do case "$a" in --file=*) f=${a#--file=};; esac; done\nprintf GOODdumpEND > "$f"\nexit 0\n',
+			);
+			for (const name of ['pg_dump', 'pg_restore']) chmodSync(join(bin, name), 0o755);
+			const finalName = (tag: string) =>
+				join(dir, `2026-01-0${tag}_000000.zz.postgresql_timer.custom.backup`);
+			const threeDaysAgo = new Date(Date.now() - 3 * 24 * 3_600_000);
+			const plant = (tag: string, bytes: string, aged: boolean) => {
+				const part = `${finalName(tag)}.part`;
+				writeFileSync(part, bytes);
+				if (aged) utimesSync(part, threeDaysAgo, threeDaysAgo);
+				return part;
+			};
+			const complete = plant('1', 'GOOD a finished orphan END', true);
+			// Passes --list, fails the full read: what a dump cut at 60% looks like.
+			const listsButCut = plant('2', 'HALF a dump that died', true);
+			const young = plant('3', 'GOOD maybe still being written END', false);
+			// A complete orphan whose final name is already taken by other bytes.
+			const nameTaken = plant('4', 'GOOD a second finished orphan END', true);
+			writeFileSync(finalName('4'), 'an operator copy that must survive');
+			// An EMPTY aged part: maybe a pg_dump still queued behind a table lock.
+			const empty = plant('5', '', true);
+			// A disproved orphan whose `.orphaned` name is already taken (an earlier
+			// kept-aside dump): both sets of bytes survive, the new one at `.orphaned.1`.
+			const asideTaken = plant('6', 'HALF a second dump that died', true);
+			writeFileSync(`${finalName('6')}.orphaned`, 'HALF an earlier dump kept aside');
+			// UNDECIDED orphans (OPS-1 review, third round): complete dumps whose read
+			// failed for a reason that is NOT the bytes. The engine leaves such a part
+			// for the next pass; moving it to `.orphaned` took a complete dump out of
+			// the backup set for good (no door reads that name again).
+			const ioError = plant('7', 'EIOF a complete dump on a flaky disk END', true);
+			const killedRead = plant('8', 'KILL a complete dump, read OOM-killed END', true);
+
+			const run = spawnSync(
+				'sh',
+				[
+					join(REPO_ROOT, DB_SCRIPT),
+					'--dir',
+					dir,
+					'--db',
+					'scratch_museum',
+					'--pg-dump',
+					join(bin, 'pg_dump'),
+					'--pg-restore',
+					join(bin, 'pg_restore'),
+				],
+				{ encoding: 'utf8' },
+			);
+			expect({ status: run.status, stderr: run.stderr.includes('NOT a restore point') }).toEqual({
+				status: 0,
+				stderr: true,
+			});
+			// The complete orphan got its final name.
+			expect(existsSync(complete)).toBe(false);
+			expect(readFileSync(finalName('1'), 'utf8')).toBe('GOOD a finished orphan END');
+			// The cut one was asked the FULL read — and never got a backup name.
+			expect(readFileSync(reads, 'utf8')).toContain(`--file=/dev/null ${listsButCut}`);
+			expect(existsSync(finalName('2'))).toBe(false);
+			expect(existsSync(listsButCut)).toBe(false);
+			expect(readFileSync(`${finalName('2')}.orphaned`, 'utf8')).toBe('HALF a dump that died');
+			// The taken name is untouched; the orphan's bytes are kept aside.
+			expect(readFileSync(finalName('4'), 'utf8')).toBe('an operator copy that must survive');
+			expect(existsSync(nameTaken)).toBe(false);
+			expect(readFileSync(`${finalName('4')}.orphaned`, 'utf8')).toBe(
+				'GOOD a second finished orphan END',
+			);
+			// The young part and the empty one are not touched.
+			expect(readFileSync(young, 'utf8')).toBe('GOOD maybe still being written END');
+			expect(existsSync(empty)).toBe(true);
+			expect(statSync(empty).size).toBe(0);
+			// A taken `.orphaned` is never overwritten: the next free number is used.
+			expect(existsSync(asideTaken)).toBe(false);
+			expect(readFileSync(`${finalName('6')}.orphaned`, 'utf8')).toBe(
+				'HALF an earlier dump kept aside',
+			);
+			expect(readFileSync(`${finalName('6')}.orphaned.1`, 'utf8')).toBe(
+				'HALF a second dump that died',
+			);
+			// Undecided: asked the full read, then LEFT IN PLACE — no `.orphaned`, no name.
+			for (const [tag, part] of [
+				['7', ioError],
+				['8', killedRead],
+			] as const) {
+				expect(readFileSync(reads, 'utf8')).toContain(`--file=/dev/null ${part}`);
+				expect(existsSync(part)).toBe(true);
+				expect(existsSync(`${finalName(tag)}.orphaned`)).toBe(false);
+				expect(existsSync(finalName(tag))).toBe(false);
+			}
+			expect(run.stderr).toContain(`left ${ioError} in place`);
 		} finally {
 			rmSync(root, { recursive: true, force: true });
 		}

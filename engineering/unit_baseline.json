@@ -281,6 +281,16 @@
 			"skipped": 0,
 			"assertions": 195
 		},
+		"test/unit/backup_freshness_deep_native.test.ts": {
+			"tests": 25,
+			"skipped": 0,
+			"assertions": 143
+		},
+		"test/unit/backup_inflight_native.test.ts": {
+			"tests": 20,
+			"skipped": 0,
+			"assertions": 169
+		},
 		"test/unit/backup_recency_native.test.ts": {
 			"tests": 5,
 			"skipped": 0,

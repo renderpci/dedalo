@@ -352,7 +352,6 @@ const RAW_KEYED_EXEMPTIONS: Readonly<Record<string, { count: number; reason: Raw
 	'src/ai/mcp/registry.ts': { count: 1, reason: 'validator_sentence' },
 	'src/ai/mcp/tools/search.ts': { count: 1, reason: 'validator_sentence' },
 	'src/core/api/counters.ts': { count: 3, reason: 'admin_report' },
-	'src/core/area_maintenance/backup.ts': { count: 2, reason: 'admin_report' },
 	'src/core/area_maintenance/widgets/database_info.ts': { count: 2, reason: 'admin_report' },
 	'src/core/area_maintenance/widgets/dataframe_control.ts': {
 		count: 1,

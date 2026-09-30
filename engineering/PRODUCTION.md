@@ -536,11 +536,53 @@ install (a large export) exceeds it; measure first with `DEDALO_SLOW_QUERY_MS`.
 The **backup set is five stores** — the matrix DB alone is not a backup:
 
 1. **Matrix Postgres DB** — the make_backup widget (or `pg_dump -F c -b`).
-   The TS server threads `PGPASSWORD` from `DB_PASSWORD`, verifies a
-   **non-empty artifact**, surfaces the pg_dump log tail on failure, and
-   deletes empty artifacts (a zero-byte "backup" discovered at restore time
-   is the worst failure mode). Default dir: `<private>/backups/db`
-   (`DEDALO_BACKUP_DIR` overrides).
+   The TS server threads `PGPASSWORD` from `DB_PASSWORD` and surfaces the
+   pg_dump log tail on failure. pg_dump writes `<name>.custom.backup.part`
+   (claimed atomically; a second claimant of the same name skips), so a running
+   dump is never listed or counted (OPS-2). Two doors give a part the
+   `*.backup` name, never over an existing file, and they prove different
+   things:
+   - **the dump's own promotion** — pg_dump **exited 0**, then a full
+     `pg_restore -f /dev/null` read: proven → `<name>.verified` sidecar →
+     rename → directory fsync. When the read could not LOOK or could not
+     FINISH for a reason that is not the bytes' (no pg_restore on the host, it
+     outran its budget, it was killed from outside, an I/O error, a pg_restore
+     older than the archive) the dump is still named, **without a sidecar**:
+     "completed, not verified" — exit 0 proves completion, not readability,
+     and every later freshness ask reads it again. Only a DISPROOF (empty, not
+     an archive, truncated) retires an exit-0 dump;
+   - **orphan adoption** — a `.part` older than 24 h (the orphan of a server
+     that restarted mid-dump, whose exit status nobody saw) is **adopted, never
+     deleted**: the next dump (and the nightly script) reads it end to end and
+     names it only when that read PROVES it (with its sidecar); a read that
+     DISPROVES it (or a proven one whose name is taken) keeps it aside as
+     `<name>.orphaned`; a read that failed for a host reason leaves it in
+     place for the next pass. An EMPTY orphan is left in place (a dump queued
+     behind a table lock writes nothing yet).
+
+   So a `*.backup` of ours is either proven (sidecar present) or a dump that
+   exited 0 and has not been read back yet — never one known to have failed.
+   The dump runs as a `maintenance`-lane job (kind `backup`, no deadline): its
+   status record is live until the verdict is written, a user stop kills the
+   dump, a server shutdown does not. Every failure is kept as `<name>.failed`
+   (then `.failed.1`, … — an earlier failure is never overwritten; an empty
+   one is deleted). A `*.custom.backup` without the archive header is not a
+   backup (only other names degrade to "foreign format, counted unproven").
+   **A backup counts only when that full read proves it** (OPS-1), and only
+   the archive's own bytes can DISPROVE it: a read killed from outside, an I/O
+   error on the backup storage or a pg_restore older than the archive is
+   `unverifiable_read_failed` — not counted, never cached, read again next
+   time. A `.verified` sidecar is trusted only when this classifier wrote it
+   (`classifier: 2`): a disproof an older engine cached for a host failure is
+   read again once, never trusted forever. The code-update precondition and the update panel ask the same deep
+   verdict (async, single-flight, one read at a time, cached per artifact,
+   at most 3 candidates; the panel says `verifying` rather than wait, and
+   starts no read for a non-superuser — who cannot update anyway). A read
+   that outruns its budget — `max(60 s, DEDALO_BACKUP_VERIFY_SECONDS_PER_GB`
+   (default 60) `× started GiB)` — proves nothing, so the update REFUSES and
+   names that key: raise it on slow backup storage (the budget is capped at
+   2^31-1 ms, what a timer can hold). Default dir:
+   `<private>/backups/db` (`DEDALO_BACKUP_DIR` overrides).
 2. **RAG pgvector DB** (`DEDALO_RAG_*`) — separate database, separate dump.
 3. **Media originals** (`MEDIA_PATH`) — the `original` quality is the source
    of truth every derivative rebuilds from; derivatives need no backup.

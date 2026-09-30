@@ -90,7 +90,10 @@ const BEHAVIOUR_CLAIMS: readonly BehaviourClaim[] = [
 	{
 		key: 'DEDALO_BACKUP_TIME_RANGE',
 		claim: 'a code update is REFUSED when the newest database dump is older than this many hours',
-		performedBy: 'backupFreshness',
+		// `requireFreshBackup` since OPS-1 (2026-09-30): the refusal became its own
+		// async door (the verdict is a full archive read); `backupFreshness` is the
+		// verdict it applies, and code_update.ts calls the refusal, not the verdict.
+		performedBy: 'requireFreshBackup',
 		definedIn: 'src/core/update/preconditions.ts',
 		// The negative half is the one that matters here: the old prose promised a
 		// login-triggered backup. If someone re-introduces a scheduling claim they
@@ -417,7 +420,7 @@ describe('catalog behaviour: documented behaviour is performed by live code', ()
  * than exists is the same class of defect it was written to close.
  *
  *  1. It does not prove the function does what the sentence SAYS. It proves the
- *     named code exists and is reachable from production. `backupFreshness` could
+ *     named code exists and is reachable from production. `requireFreshBackup` could
  *     be rewritten to always return "fresh" and this file would stay green — the
  *     behaviour itself is gated by its own tests, not here.
  *  2. Leg A is a JUDGEMENT, enumerated by hand. A key added tomorrow whose prose

@@ -35,8 +35,8 @@
 #      NOT enough and this is the whole point: the TOC of a custom-format archive is
 #      written near the FRONT, so a dump truncated during the data stream still
 #      lists perfectly. Only reading it through catches the truncation.
-#   c. renames into place only then. The rename is atomic within the directory, so
-#      an artifact under the real name has always been read back.
+#   c. renames into place only then, and syncs. The rename is atomic within the
+#      directory, so an artifact under the real name has always been read back.
 #   d. removes the .part on any failure, and exits non-zero.
 #
 # This makes the nightly artifact a VERIFIED RESTORE POINT in the only sense a
@@ -205,13 +205,119 @@ mkdir -p "$DIR" || fail "cannot create the backup directory '$DIR'"
 chmod 0700 "$DIR" 2>/dev/null || true
 umask 077
 
-# Remains of a run the machine did not survive. Only `*.part` — never anything
-# under the final suffix, and never anything this script did not name. Retention of
-# real dumps is deliberately NOT this script's business: the backup directory also
-# holds artifacts an operator (and, in this repo, a frozen oracle snapshot) put
-# there, and a backup job that deletes files is a backup job that can delete the
-# wrong one.
-find "$DIR" -maxdepth 1 -name '*.custom.backup.part' -mtime +1 -exec rm -f {} \; 2>/dev/null
+# Remains of a run that nothing will ever promote: a `*.custom.backup.part` older
+# than a day — this script's own, or the engine's (the maintenance widget's dump
+# keeps running across a server restart, but the process that would have promoted
+# it does not). Such a part may be a COMPLETE dump, so it is ADOPTED, never
+# deleted, by the engine's rule (adoptOrphanedParts in
+# src/core/area_maintenance/backup.ts): read back END TO END (the full read, not
+# only --list: a 60% cut lists perfectly), and then
+#   - PROVEN → it gets its final name (or, when that name is taken, it is kept
+#     aside like a disproved one — the taken name is never overwritten);
+#   - DISPROVED — pg_restore's own words say the BYTES are damaged (ARCHIVE_DAMAGE
+#     below, the engine's list) → kept aside as `<final>.orphaned` (or the first
+#     free `.orphaned.<n>`);
+#   - UNDECIDED — anything else: a read killed from outside (the OOM killer), an
+#     I/O error on the backup storage, a pg_restore older than the archive, words
+#     nobody catalogued → LEFT IN PLACE for the next pass. ONLY THE BYTES
+#     DISPROVE: a bad night on the host must never take a complete dump out of the
+#     backup set for good (`.orphaned` is a name no door ever reads again). The
+#     engine reads an uncatalogued failure a second time and calls it damage when
+#     it repeats word for word; this script does not — it leaves the part for the
+#     engine, which is the conservative half of the same rule.
+# An EMPTY part is left exactly where it is: a custom-format pg_dump writes nothing
+# until it holds every table lock, so a dump queued behind a lock for a day is a
+# live 0-byte part — removing it would make that dump write into an unlinked file.
+# Every move is NO-CLOBBER (`ln`, which refuses a taken name atomically, then the
+# old name is dropped). Retention of real dumps is deliberately NOT this script's
+# business: the backup directory also holds artifacts an operator (and, in this
+# repo, a frozen oracle snapshot) put there, and a backup job that deletes files is
+# a backup job that can delete the wrong one.
+
+# pg_restore's words for damaged BYTES — the engine's ARCHIVE_DAMAGE, in ERE
+# (`unsupported version (<not 1>.<n>)`: garbage after the magic; a real archive's
+# format major is always 1). Measured with pg_restore 18 on real archives.
+ARCHIVE_DAMAGE='could not read from input file: end of file|unexpected end of file|did not find magic string|unsupported version \(([02-9]|[1-9][0-9]+)\.[0-9]+\)|could not find block ID|possibly corrupt|unrecognized data block type|found unexpected block ID|does not appear to be a valid archive|input file is too short|unrecognized file format|could not (un|de)compress data'
+
+# Failures about THIS HOST, never the bytes — the engine's HOST_BOUND_FAILURE:
+# the file could not be opened, a read error that is not end-of-file (EIO), or a
+# pg_restore older than the archive (`unsupported version (1.<n>)`).
+host_bound() {
+	printf '%s\n' "$1" | grep -Eq 'could not open input file|unsupported version \(1\.[0-9]+\)' && return 0
+	printf '%s\n' "$1" | grep 'could not read from input file' |
+		grep -vq 'could not read from input file: end of file'
+}
+
+# One pg_restore read of an orphan, classified: proven | damaged | undecided.
+read_verdict() {
+	err=$("$PG_RESTORE" "$@" 2>&1 >/dev/null)
+	status=$?
+	if [ "$status" -eq 0 ]; then
+		echo proven
+	elif [ "$status" -gt 128 ] || host_bound "$err"; then
+		echo undecided # killed by a signal, or the host could not read
+	elif printf '%s\n' "$err" | grep -Eq "$ARCHIVE_DAMAGE"; then
+		echo damaged
+	else
+		echo undecided
+	fi
+}
+
+# The TOC first (a fast fail), then the full read — the only one that sees a cut.
+orphan_verdict() {
+	toc=$(read_verdict --list "$1")
+	if [ "$toc" != proven ]; then
+		echo "$toc"
+		return
+	fi
+	read_verdict --file=/dev/null "$1"
+}
+
+# THE NO-CLOBBER RENAME: `ln` fails when the target exists, atomically, and the
+# old name is dropped only once the new one exists. A filesystem without hard
+# links falls back to check-then-rename (the engine's renameNoClobber, same
+# narrow race).
+rename_no_clobber() {
+	if ln "$1" "$2" 2>/dev/null; then
+		rm -f "$1"
+		return 0
+	fi
+	[ -e "$2" ] && return 1
+	mv "$1" "$2"
+}
+
+# Kept aside under `<final>.orphaned`, or the first free `.orphaned.<n>`.
+keep_aside() {
+	aside="$2.orphaned"
+	n=1
+	until rename_no_clobber "$1" "$aside"; do
+		[ "$n" -lt 100 ] || return 0
+		aside="$2.orphaned.$n"
+		n=$((n + 1))
+	done
+	sync
+	echo "dedalo-db-backup: kept $aside — it is NOT a restore point" >&2
+}
+
+find "$DIR" -maxdepth 1 -name '*.custom.backup.part' -mtime +1 2>/dev/null |
+	while IFS= read -r orphan; do
+		orphan_final=${orphan%.part}
+		# Empty: maybe a live dump still waiting on its locks — never touched.
+		[ -s "$orphan" ] || continue
+		verdict=$(orphan_verdict "$orphan")
+		case "$verdict" in
+		proven)
+			if rename_no_clobber "$orphan" "$orphan_final"; then
+				sync
+				echo "dedalo-db-backup: adopted the orphaned dump $orphan_final (read back end to end)"
+			else
+				keep_aside "$orphan" "$orphan_final"
+			fi
+			;;
+		damaged) keep_aside "$orphan" "$orphan_final" ;;
+		*) echo "dedalo-db-backup: left $orphan in place — it could not be read back here (not a verdict on its bytes); the next pass reads it again" >&2 ;;
+		esac
+	done
 
 STAMP=$(date '+%Y-%m-%d_%H%M%S')
 # The naming the maintenance widget uses (src/core/area_maintenance/backup.ts):
@@ -263,6 +369,10 @@ mv "$PART" "$FINAL" || {
 	rm -f "$PART"
 	fail "could not put the verified dump under its final name '$FINAL'"
 }
+# DURABLE: a rename is only on disk once its directory entry is. Without this a
+# power loss right after the success line below can revert the rename, leaving
+# only the .part behind. (`sync` with no operand is POSIX; it flushes everything.)
+sync
 
 SIZE=$(wc -c < "$FINAL" | tr -d ' ')
 echo "dedalo-db-backup: verified $FINAL ($SIZE bytes)"

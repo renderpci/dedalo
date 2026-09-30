@@ -16,11 +16,23 @@
  */
 
 import { afterAll, describe, expect, mock, test } from 'bun:test';
-import { readFileSync, rmSync } from 'node:fs';
+import {
+	chmodSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	utimesSync,
+	writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import * as realConfigModule from '../../src/config/config.ts';
 import { readEnv } from '../../src/config/env.ts';
 import {
+	getBackupDir,
 	getCurrentDataVersion,
+	newestUsableBackup,
 	readInstalledDataVersionStrict,
 } from '../../src/core/area_maintenance/backup.ts';
 import { dispatchWidgetRequest } from '../../src/core/area_maintenance/widgets/registry.ts';
@@ -41,6 +53,7 @@ import {
 import * as realEngine from '../../src/core/update/engine.ts';
 import { ROLLED_BACK_LINE, updateVersion } from '../../src/core/update/engine.ts';
 import * as realOwnership from '../../src/core/update/ownership.ts';
+import { PANEL_WAIT_MS } from '../../src/core/update/preconditions.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
 const STATE_PATH = readEnv('DEDALO_TS_STATE_PATH');
@@ -52,12 +65,57 @@ if (STATE_PATH === undefined) {
 
 const REAL_OWNERSHIP = { ...realOwnership };
 const REAL_ENGINE = { ...realEngine };
+const REAL_CONFIG = { ...realConfigModule };
+/** Scratch DATABASE backup dirs for the inline widget legs (never the installation's). */
+const BACKUP_SCRATCH = mkdtempSync(join(tmpdir(), 'dedalo_update_engine_backups_'));
 afterAll(() => {
 	mock.module('../../src/core/update/ownership.ts', () => REAL_OWNERSHIP);
 	mock.module('../../src/core/update/engine.ts', () => REAL_ENGINE);
+	mock.module('../../src/config/config.ts', () => REAL_CONFIG);
 	mock.restore();
 	setServerState({ maintenance_mode: false });
+	rmSync(BACKUP_SCRATCH, { recursive: true, force: true });
 });
+
+/**
+ * Run `body` with `config.ops` pointing at a scratch backup dir (and optionally a
+ * scratch pg_restore bin dir). The inline update_data_version run asks the
+ * backup verdict of the CONFIGURED directory — a full pg_restore read that writes
+ * `.verified` sidecars — and nothing else in this suite repoints it: without this
+ * it read the installation's ../private/backups/db (review, 2026-09-30). The
+ * safety is asserted as an OUTCOME before the call: if the mock ever stops
+ * reaching the backup module, this reds instead of reading real dumps.
+ */
+async function withScratchBackups<T>(
+	ops: { backupDir: string; pgBinPath?: string },
+	body: () => Promise<T>,
+): Promise<T> {
+	mock.module('../../src/config/config.ts', () => ({
+		...REAL_CONFIG,
+		config: { ...REAL_CONFIG.config, ops: { ...REAL_CONFIG.config.ops, ...ops } },
+	}));
+	try {
+		expect(getBackupDir()).toBe(ops.backupDir);
+		return await body();
+	} finally {
+		mock.module('../../src/config/config.ts', () => REAL_CONFIG);
+	}
+}
+
+/** The error an inline widget dispatch throws (the empty catalog always refuses). */
+async function inlineRefusal(principal: Principal): Promise<DedaloError> {
+	try {
+		await dispatchWidgetRequest(
+			principal,
+			{ model: 'update_data_version', action: 'update_data_version' },
+			{ updates_checked: {} },
+		);
+	} catch (error) {
+		expect(error).toBeInstanceOf(DedaloError);
+		return error as DedaloError;
+	}
+	throw new Error('the inline run did not refuse');
+}
 
 const LOG_PATH = join(readEnv('TMPDIR') ?? '/tmp', `dedalo_update_engine_${process.pid}.log`);
 afterAll(() => rmSync(LOG_PATH, { force: true }));
@@ -333,18 +391,11 @@ describe('widget open mode (mocked gate; engine short-circuits on the empty cata
 			// coexisting bespoke denial (proves the OPEN branch ran). Since the P1
 			// error sweep that refusal is a THROW of maintenance.action_failed whose
 			// PUBLIC sentence is the engine's own.
-			let thrown: unknown;
-			try {
-				await dispatchWidgetRequest(
-					SUPERUSER,
-					{ model: 'update_data_version', action: 'update_data_version' },
-					{ updates_checked: {} },
-				);
-			} catch (error) {
-				thrown = error;
-			}
-			expect(thrown).toBeInstanceOf(DedaloError);
-			const error = thrown as DedaloError;
+			const emptyBackups = join(BACKUP_SCRATCH, 'empty');
+			mkdirSync(emptyBackups, { recursive: true });
+			const error = await withScratchBackups({ backupDir: emptyBackups }, () =>
+				inlineRefusal(SUPERUSER),
+			);
 			expect(error.code).toBe('maintenance.action_failed');
 			expect(error.publicMessage).toContain(
 				'Unable to get proper update version. Nothing to update',
@@ -354,6 +405,48 @@ describe('widget open mode (mocked gate; engine short-circuits on the empty cata
 			mock.module('../../src/core/update/ownership.ts', () => REAL_OWNERSHIP);
 		}
 	});
+
+	test('inline run: the backup warning waits a BOUNDED time, then carries the settled verdict', async () => {
+		// The inline run is an HTTP request: it must never await a full archive read
+		// (the server's idle timeout would cut it). Replacing the bounded look with
+		// the settled `backupFreshness`, or dropping the warnings, reds here.
+		mock.module('../../src/core/update/ownership.ts', () => ({
+			...REAL_OWNERSHIP,
+			engineOwnsInstall: () => true,
+		}));
+		setServerState({ maintenance_mode: true });
+		const dir = join(BACKUP_SCRATCH, 'cut');
+		const binDir = join(BACKUP_SCRATCH, 'cut_bin');
+		const gate = join(BACKUP_SCRATCH, 'cut.release');
+		mkdirSync(dir, { recursive: true });
+		mkdirSync(binDir, { recursive: true });
+		const archive = join(dir, '2026-01-01_000000.zz.postgresql_-1_forced_dbv7.custom.backup');
+		writeFileSync(archive, 'PGDMP a dump cut short');
+		const halfHourAgo = new Date(Date.now() - 30 * 60_000);
+		utimesSync(archive, halfHourAgo, halfHourAgo);
+		// The TOC lists; the FULL read blocks until released, then reports the cut.
+		writeFileSync(
+			join(binDir, 'pg_restore'),
+			`#!/bin/sh\nif [ "$1" = "--list" ]; then exit 0; fi\ni=0\nwhile [ ! -f '${gate}' ] && [ $i -lt 600 ]; do sleep 0.05; i=$((i+1)); done\necho "pg_restore: error: could not read from input file: end of file" >&2\nexit 1\n`,
+		);
+		chmodSync(join(binDir, 'pg_restore'), 0o755);
+		try {
+			await withScratchBackups({ backupDir: dir, pgBinPath: binDir }, async () => {
+				const startedAt = Date.now();
+				const pending = await inlineRefusal(SUPERUSER);
+				expect(Date.now() - startedAt).toBeLessThan(PANEL_WAIT_MS + 5000);
+				expect(pending.publicMessage).toContain('is still being verified');
+				writeFileSync(gate, '');
+				await newestUsableBackup(dir); // the shared scan, settled
+				const settled = await inlineRefusal(SUPERUSER);
+				expect(settled.publicMessage).toContain('did not verify (truncated)');
+			});
+		} finally {
+			writeFileSync(gate, '');
+			setServerState({ maintenance_mode: false });
+			mock.module('../../src/core/update/ownership.ts', () => REAL_OWNERSHIP);
+		}
+	}, 60_000);
 
 	test('a background run is submitted with NO deadline (deadline_ms 0) on a lane that has one', async () => {
 		// An atomic run cannot be cut by a clock: a deadline firing mid-run rolls

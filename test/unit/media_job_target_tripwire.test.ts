@@ -35,6 +35,10 @@ const EXEMPT_SUBMITTERS: ReadonlyMap<string, string> = new Map([
 		'Install-wide data migration: it targets the DATABASE, not a record — no section/component exists to attach it to.',
 	],
 	[
+		'src/core/area_maintenance/backup.ts',
+		'The whole-DATABASE dump (make_backup): it reads every record and changes none — its output is a file in the backup directory, owned by no section or component.',
+	],
+	[
 		'src/core/area_maintenance/widgets/unit_test.ts',
 		'The test-suite runner: it produces a report, not a media derivative.',
 	],

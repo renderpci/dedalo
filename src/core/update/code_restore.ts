@@ -444,7 +444,7 @@ export async function restoreCode(
 	const request = parseRestoreRequest(rawOptions);
 	// Superuser + maintenance mode, but NOT the recent-backup gate: that one is
 	// about updates, and a restore has its own explicit confirmation.
-	checkUpdatePreconditions(principal, { backupWarn: false });
+	checkUpdatePreconditions(principal);
 
 	const targetRoot = seams.targetRoot ?? projectRoot;
 	const runningVersion = DEDALO_VERSION_TRIPLE.join('.');
@@ -549,7 +549,7 @@ export async function deleteRestorePoint(
 		refuseUpdate('update.refused', 'Error. Code restore is not runnable on this engine');
 	}
 	const request = parseRestoreRequest(rawOptions);
-	checkUpdatePreconditions(principal, { backupWarn: false, maintenance: false });
+	checkUpdatePreconditions(principal, { maintenance: false });
 
 	const targetRoot = seams.targetRoot ?? projectRoot;
 	const backupRoot = resolveBackupRootOrRefuse(targetRoot, seams);

@@ -372,6 +372,18 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **A database backup counts only once it has been read back completely.**
+
+    The code updater requires a recent database backup, and the update panel shows whether there is one. Both used a quick check that reads only the start of a dump, so a dump that had stopped part way through still counted as a backup, and a code update could go ahead with no usable way back. Now a backup counts only after PostgreSQL has read it back from beginning to end; a dump that is cut short is named in the refusal ("did not verify (truncated)"), and the next older complete backup is used if there is one. The read happens once per backup file and never makes the server unresponsive: while it is running the panel shows the backup as "verifying" instead of guessing. A read that does not finish in time proves nothing, so that backup does not count either; on slow backup storage raise the new setting [`DEDALO_BACKUP_VERIFY_SECONDS_PER_GB`](./config/config.md) (default 60 seconds per gigabyte), which the refusal names. A file named like a Dédalo backup (`.custom.backup`) that does not even start like a PostgreSQL dump — for example one left full of zeros by a crash — no longer counts as a backup either. Only a problem in the file itself marks a backup as broken: if the read is interrupted, the backup disk reports an error, or the server's PostgreSQL tools are older than the dump, the backup does not count for now but is read again next time instead of being written off — and a backup that an earlier version wrote off for one of those reasons is read again once. Stopping a code update while its backup is being checked, or before it replaces the code, now really stops it: nothing is installed and the server is not restarted. The backup line of the update panel is checked only for the superuser, the only account that can run an update.
+
+    Wire contract: `WC-2026-09-30-backup-freshness-deep-async`.
+
+- **A database backup that is still being written no longer appears as a backup.**
+
+    Before, a dump started from the maintenance area was written straight under its final backup name, so for the whole time it ran the backup list showed an unfinished file, and pressing the button twice in the same second could throw away the dump that was already running. Now a dump is written under a temporary `.part` name and receives its backup name only after it has finished successfully and — where the server can check it — has been read back completely (a finished dump that could not be checked — no time, a disk error, the check interrupted — is named but reported as "not verified", never thrown away); the list shows only finished backups, and a second press while one is running is simply skipped. A dump that fails is kept as `.failed` for you to inspect (a later failure under the same name becomes `.failed.1`, and so on — nothing is overwritten), and never looks like a backup. While the finished dump is being read back, the progress panel keeps showing it as running (it used to report a successful backup as interrupted), and you can stop a running backup from the panel. A `.part` file left behind by a server that restarted mid-dump is never deleted: after 24 hours the next backup reads it back and, if it is complete, gives it its backup name; if the file itself is broken it is kept as `.orphaned` for you to inspect, and if it simply could not be read this time it is left where it is and read again next time (the nightly backup job follows the same rule). The progress of a backup now belongs to the user who started it. An empty `.part` is left alone, because it may belong to a dump that is still waiting to start.
+
+    Wire contract: `WC-2026-09-30-backup-part-promotion`.
+
 - **Duplicating a record now files the history of a transliterable or IRI field in the language it was saved in.**
 
     When a record was duplicated, a field that keeps per-language versions beside a base value (a transliterable field) or an IRI field got its history row in the language-neutral lane, next to an empty extra row, while a normal save of the same field files it in the working language. The Time Machine of the copy therefore listed the change under the wrong language. The copy's history now lands in the working language, exactly where a save puts it, and the empty extra row is gone. The rule that decides which language a history row belongs to is now one rule shared by every door that writes history.
@@ -493,7 +505,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 57 entries"
+??? note "Wire contract — 59 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -549,6 +561,8 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-29-rdf-per-uri-error-wire-body`
     - `WC-2026-09-29-select-family-mode-datalist`
     - `WC-2026-09-29-tm-preview-frame-children-as-of`
+    - `WC-2026-09-30-backup-freshness-deep-async`
+    - `WC-2026-09-30-backup-part-promotion`
     - `WC-2026-09-30-db-typed-503`
     - `WC-2026-09-30-update-engine-atomic`
     - `WC-2026-09-30-update-manifest-local-origin-refusal`

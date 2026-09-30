@@ -87,12 +87,6 @@
 		},
 		{
 			"file": "src/core/area_maintenance/widgets/make_backup.ts",
-			"symbol": "makeBackupPsql",
-			"class": "unrunnable-destructive",
-			"reason": "A six-field forward of initBackupSequence (gated in ops_backup.test.ts); invoking it spawns a detached pg_dump of the live database and writes a multi-GB artifact to disk."
-		},
-		{
-			"file": "src/core/area_maintenance/widgets/make_backup.ts",
 			"symbol": "makeBackupGetFiles",
 			"class": "vacuous-projection",
 			"reason": "A slice over getBackupFiles (gated in ops_backup.test.ts) plus the constant empty MySQL list required by the engine boundary — MariaDB is the diffusion engine's responsibility."

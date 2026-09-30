@@ -737,6 +737,9 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_3D_ALTERNATIVE_EXTENSIONS',
 	// ops
 	'DEDALO_BACKUP_DIR',
+	// The full-read budget of backup verification (OPS-1, 2026-09-30). NEW_IN_V7 by
+	// construction: v6 never read a dump back, so there is no v6 constant to rename.
+	'DEDALO_BACKUP_VERIFY_SECONDS_PER_GB',
 	'DEDALO_TRANSFORM_DEFINITIONS_DIR',
 	'DEDALO_TS_STATE_PATH',
 	// runtime-path census (2026-08-23): the ontology recovery dump moved out of

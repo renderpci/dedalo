@@ -64,10 +64,10 @@ async function updateDataVersionRun(
 	principal: Principal,
 ): Promise<WidgetResponse> {
 	// PHP preconditions (superuser + maintenance mode) — they THROW their own
-	// typed refusal. backupWarn off: this branch carries no warnings channel.
+	// typed refusal. No backup scan: this branch carries no warnings channel.
 	const { checkUpdatePreconditions } = await import('../../update/preconditions.ts');
 	// A failed precondition THROWS (perm.superuser_required / maintenance.mode_required).
-	checkUpdatePreconditions(principal, { backupWarn: false });
+	checkUpdatePreconditions(principal);
 	// Then the bespoke denial: migrations must run exactly once, on the engine
 	// that owns the catalog.
 	return engineDenied(
@@ -97,9 +97,11 @@ async function updateDataVersionRunOwned(
 	options: Record<string, unknown>,
 	principal: Principal,
 ): Promise<WidgetResponse> {
-	const { checkUpdatePreconditions } = await import('../../update/preconditions.ts');
+	const { backupWarningsWithin, checkUpdatePreconditions, PANEL_WAIT_MS } = await import(
+		'../../update/preconditions.ts'
+	);
 	// A failed precondition THROWS (perm.superuser_required / maintenance.mode_required).
-	const preconditions = checkUpdatePreconditions(principal);
+	checkUpdatePreconditions(principal);
 	const updatesChecked = (options.updates_checked ?? {}) as Record<string, unknown>;
 	const { updateVersion } = await import('../../update/engine.ts');
 
@@ -134,8 +136,14 @@ async function updateDataVersionRunOwned(
 		};
 	}
 
+	// The backup verdict is a full archive read and THIS is an HTTP request: wait
+	// a bounded time on the shared scan, and say "still being verified" rather
+	// than block past the server's idle timeout (OPS-1). Warnings only — a data
+	// migration never refuses on a backup. (The background branch above carries
+	// no warnings channel, so it never asks.)
+	const backupWarnings = await backupWarningsWithin(PANEL_WAIT_MS);
 	const outcome = await updateVersion(updatesChecked);
-	const errors = [...preconditions.warnings, ...outcome.errors];
+	const errors = [...backupWarnings, ...outcome.errors];
 	if (!outcome.ok) {
 		failAction(
 			errors.length === 0

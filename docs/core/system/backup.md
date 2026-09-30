@@ -31,6 +31,17 @@ of the PostgreSQL work database, into the server's own backup directory.
 | --- | --- | --- | --- |
 | PostgreSQL work DB | `initBackupSequence()` | `pg_dump -F c -b` | `<date>.<db>.postgresql_<user>[_forced]_dbv<ver>.custom.backup`, plus a sibling `.log` capturing the dump's stderr |
 
+The final name is given only once the dump has finished. The siblings a backup
+directory can hold:
+
+| name | meaning |
+| --- | --- |
+| `<name>.custom.backup.part` | A dump still being written. Never listed, never counted as a backup. |
+| `<name>.custom.backup` | A dump that exited successfully: either proven by a full read (a `.verified` sidecar exists) or not yet read back ("completed, not verified"). Never one known to be damaged. |
+| `<name>.custom.backup.verified` | The cached verdict of a full read (see [Verification](#verification-one-verdict-the-full-read)). |
+| `<name>.custom.backup.failed` (`.failed.1`, …) | A dump that failed or was stopped, kept for inspection. An earlier failure is never overwritten. |
+| `<name>.custom.backup.orphaned` | A `.part` left by a dead process whose full read proved it damaged (or whose final name was already taken). |
+
 `getBackupDir()` resolves the directory: the `DEDALO_BACKUP_DIR` config override
 if set, otherwise `<privateDir>/backups/db`.
 
@@ -52,10 +63,11 @@ process reports success.
 
 ## Failure is surfaced, not swallowed
 
-The dump runs **detached** (`Bun.spawn` + `child.unref()`), so
-`initBackupSequence()` returns the pid and file path immediately rather than
-blocking on a multi-gigabyte dump. That makes reporting failure the hard part, and
-the module does three things about it:
+The dump runs as a **maintenance job** (kind `backup`, no deadline), so
+`initBackupSequence()` returns the job handle immediately rather than blocking
+on a multi-gigabyte dump. The job stays `running` until the dump has been
+promoted or kept aside, so its status never claims success early. The module
+does four things to surface failure:
 
 - **The password is threaded** from `config.db.password`, so a password-auth
   Postgres does not fail with an authentication error into a log file nobody
@@ -63,23 +75,68 @@ the module does three things about it:
 - **A short fast-fail window** catches an immediate exit — an authentication or
   connection error — and reports it as a **failure**, with the tail of the `.log`
   in the widget's message.
-- **The completion check verifies a non-empty artifact.** On failure it logs the
-  `.log` tail and **deletes the empty file**, so the backup list can never offer a
-  zero-byte "backup" as restorable.
+- **A dump is named only after it finishes.** `pg_dump` writes
+  `<name>.part`; a non-zero exit, or a stop, keeps the bytes as `<name>.failed`
+  (an empty one is deleted). The backup list can therefore never offer a
+  half-written file as restorable.
+- **The finished dump is read back** before it is named (see
+  [Verification](#verification-one-verdict-the-full-read)).
 
-The widget feeds the returned pid and log path into the process-status stream, so
-an operator watches the dump run and sees the failure tail live.
+**The job belongs to the caller.** The file keeps the forced dump's name
+(`postgresql_-1_forced_…`), but the job record's user is the person who pressed
+the button: they are the one who may stream it and stop it. A user stop kills
+`pg_dump`; a server shutdown does not (the dump may finish, and the next dump
+adopts it).
 
 ## Naming and the throttle window
 
-`initBackupSequence(userId, skipTimeRange, overrides?)`:
+`initBackupSequence(userId, skipTimeRange, overrides?, ownerId = userId)`:
 
+- **`userId`** is the identity the file name carries; **`ownerId`** is the
+  principal the job belongs to. The widget passes `-1` and the caller's id.
 - **`skipTimeRange = true`** (forced — the maintenance widget's path):
   second-resolution `Y-m-d_His` naming with a `_forced` marker, no throttle check.
 - **`skipTimeRange = false`**: hour-resolution `Y-m-d_H` naming. If the newest
-  existing `.backup` file is younger than `config.ops.backupTimeRangeHours`
-  (`DEDALO_BACKUP_TIME_RANGE`, default 8), the call returns `result: true` with a
-  "skipped, a recent backup already exists" message instead of dumping.
+  **usable** backup is younger than `config.ops.backupTimeRangeHours`
+  (`DEDALO_BACKUP_TIME_RANGE`, default 8), the call reports "skipped, a recent
+  backup already exists" instead of dumping. A backup still being verified when
+  the bounded wait runs out counts as none: the safe direction is to dump more
+  often, never less.
+
+## Verification: one verdict, the full read
+
+`pg_restore --list` exits 0 on a dump cut in half, because the table of contents
+sits at the front of the archive. Only a full read (`pg_restore -f /dev/null`)
+tells a complete dump from a cut one, so that read is the only question the
+engine asks (`verifyBackupArtifact`). It runs asynchronously, one read at a time,
+shared between askers of the same file, and within a budget of
+`max(60 s, DEDALO_BACKUP_VERIFY_SECONDS_PER_GB × started GiB)`.
+
+- **Only the archive's own bytes can disprove it.** Empty, not an archive, or
+  truncated is a disproof: such a dump is kept as `.failed` and never named.
+- **A read that could not finish for a host reason is not a disproof.** A read
+  that outran its budget (`unverifiable_timeout`), or one killed from outside,
+  an I/O error on the backup storage, or a `pg_restore` older than the archive
+  (`unverifiable_read_failed`). A dump that exited 0 but could not be read back
+  is still given its final name, **without** a `.verified` sidecar, and
+  reported as "completed, not verified (`<reason>`)". It does not count as a
+  backup until a later read proves it, and every later freshness check reads it
+  again.
+- **A host that cannot read at all degrades, it does not lie.** With no
+  `pg_restore` on the host (`unverifiable_no_pg_restore`), or for a file whose
+  name does not promise our custom format (`unverifiable_foreign_format`), a
+  backup counts unproven, judged by age alone.
+- **The sidecar is trusted only from this classifier.** A `.verified` sidecar
+  carries `classifier: 2`; one written by an older engine (which could cache a
+  host failure as `truncated`) is read again once and rewritten, never trusted
+  as it stands.
+- **Orphans are adopted, never deleted.** A `.part` older than 24 hours (the
+  orphan of a server that died mid-dump) is read end to end by the next dump:
+  proven, it is named with its sidecar; disproven, it is kept as `.orphaned`;
+  a read that failed for a host reason leaves it where it is, for the next
+  pass. The nightly script `deploy/dedalo-db-backup.sh` follows the same rule:
+  it moves an orphan aside only when `pg_restore`'s own words say the file is
+  damaged, and leaves every undecided orphan in place for the engine.
 
 ## The surface
 
@@ -87,9 +144,11 @@ an operator watches the dump run and sees the failure tail live.
 
 | function | purpose |
 | --- | --- |
-| `initBackupSequence(userId, skipTimeRange=true, overrides?)` | Create the backup directory if missing, apply the throttle window unless forced, build the dated filename, and spawn `pg_dump -F c -b -f <path> …` detached. Returns `{result, msg, errors, pid?, file_path?, pfile?}`. |
-| `getBackupFiles()` | Read the backup directory and return `[{name, size}]` for every `.backup` file, newest first, with a human-readable size. Returns `[]` when the directory does not exist. |
-| `newestBackupMtimeMs(backupDir?)` | The newest `.backup` file's mtime (`0` when there are none). The recency primitive behind the throttle window and the update preconditions' "a recent backup exists" check. |
+| `initBackupSequence(userId, skipTimeRange=true, overrides?, ownerId=userId)` | Create the backup directory if missing, adopt orphaned parts, apply the throttle window unless forced, build the dated filename, and start the dump job (`pg_dump -F c -b -f <path>.part …`). Returns `{ok, msg, errors, pid?, file_path?, pfile?}`; `file_path` is the final name, which exists only once the dump is promoted. |
+| `getBackupFiles(backupDir?)` | Return `[{name, size}]` for every `.backup` file, newest first by name, with a human-readable size. In-flight `.part` files are not listed. Returns `[]` when the directory does not exist. |
+| `newestBackupMtimeMs(backupDir?)` | The newest `.backup` file's mtime (`0` when there are none). Recency only — never the answer to "is there a restore point". |
+| `verifyBackupArtifact(file, options?)` | The full-read verdict of one artifact: `{usable, verified, reason, detail?, budgetMs?}`. |
+| `newestUsableBackup(backupDir?)` / `newestUsableBackupWithin(ms, backupDir?)` | The newest backup that counts as a restore point; the second waits at most `ms` and otherwise reports which file is still being read. |
 | `getBackupDir()` | Resolve the backup directory. |
 | `resolvePgDump()` | Resolve the `pg_dump` binary path. |
 | `getCurrentDataVersion()` | Read `matrix_updates` for the highest `dedalo_version`, parsed into `[major, minor, patch]`. `[]` on a fresh database. |
@@ -100,8 +159,12 @@ an operator watches the dump run and sees the failure tail live.
   is the only caller. It registers two actions — `make_psql_backup` and
   `get_dedalo_backup_files` — plus a `getValue` that reports the would-be filename
   and the backup directory. See [area_maintenance](../areas/area_maintenance.md).
-- **The update preconditions** read `newestBackupMtimeMs()` to warn before a
-  destructive operation runs without a recent backup.
+- **The update preconditions** (`src/core/update/preconditions.ts`) ask
+  `newestUsableBackup`: a code update is refused (`requireFreshBackup`, waivable)
+  when no proven backup is recent enough, and the update panel waits a bounded
+  time and otherwise shows "verifying". A code update also stops cleanly when its
+  job is stopped: it checks after the backup verdict and again just before the
+  swap, so a stopped update never swaps the code tree.
 - **The restore door** (`restore_door.ts`) reuses `verifyBackupArtifact` for its
   first phase — the full-read proof that an artifact is a restore point — and
   `getBackupDir()` for its journal directory (`<backup dir>/restores/`). It is
@@ -119,8 +182,9 @@ an operator watches the dump run and sees the failure tail live.
 import { initBackupSequence } from './backup.ts';
 
 // what the make_backup widget's make_psql_backup action does
-const response = await initBackupSequence(-1, true); // forced → dump now, '_forced' filename
-// response.result, response.pid, response.file_path
+// forced → dump now, '_forced' filename; the job belongs to the caller
+const response = await initBackupSequence(-1, true, {}, principal.userId);
+// response.ok, response.pid, response.file_path (named once promoted)
 ```
 
 ### List existing backups
@@ -128,7 +192,7 @@ const response = await initBackupSequence(-1, true); // forced → dump now, '_f
 ```ts
 import { getBackupFiles } from './backup.ts';
 
-const files = getBackupFiles(); // [{name, size}, …] — *.backup, newest first
+const files = getBackupFiles(); // [{name, size}, …] — *.backup, newest first; no .part
 ```
 
 ### Resolve the version-matched binary

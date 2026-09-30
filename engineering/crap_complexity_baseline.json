@@ -5,7 +5,7 @@
 	"root": "src/core",
 	"summary": {
 		"files": 577,
-		"functions": 6368,
+		"functions": 6431,
 		"functionsOverCap": 685,
 		"filesOverCap": 267
 	},
@@ -89,7 +89,7 @@
 		"src/core/area/dashboard.ts": 20,
 		"src/core/area/read.ts": 21,
 		"src/core/area/tree.ts": 27,
-		"src/core/area_maintenance/backup.ts": 23,
+		"src/core/area_maintenance/backup.ts": 22,
 		"src/core/area_maintenance/user_stats.ts": 33,
 		"src/core/area_maintenance/widgets/check_config.ts": 16,
 		"src/core/area_maintenance/widgets/counters_status.ts": 7,

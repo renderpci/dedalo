@@ -620,6 +620,9 @@ export interface OpsConfig {
 	readonly pgBinPath: string | undefined;
 	/** Min hours between backups — the make_backup throttle window (PHP DEDALO_BACKUP_TIME_RANGE). */
 	readonly backupTimeRangeHours: number;
+	/** Seconds per started GiB a full `pg_restore` read of a backup may take before it is an
+	 * unproven (NOT usable) backup (DEDALO_BACKUP_VERIFY_SECONDS_PER_GB, default 60, min 1). */
+	readonly backupVerifySecondsPerGb: number;
 	/**
 	 * Base directory of the ontology data IO exchange (PHP ONTOLOGY_DATA_IO_DIR
 	 * = DEDALO_INSTALL_PATH.'/import/ontology'). A DERIVED key: defaults to the
@@ -1310,6 +1313,7 @@ export const config: DedaloConfig = Object.freeze({
 		backupDir: readEnv('DEDALO_BACKUP_DIR'),
 		pgBinPath: readEnv('DEDALO_PG_BIN_PATH'),
 		backupTimeRangeHours: Math.max(0, readNumber('DEDALO_BACKUP_TIME_RANGE')),
+		backupVerifySecondsPerGb: Math.max(1, readNumber('DEDALO_BACKUP_VERIFY_SECONDS_PER_GB')),
 		ontologyDataIoDir: readString('ONTOLOGY_DATA_IO_DIR'),
 		transformDefinitionsDir: readString('DEDALO_TRANSFORM_DEFINITIONS_DIR'),
 		exportArtifactsDir: readString('DEDALO_EXPORT_ARTIFACTS_DIR'),

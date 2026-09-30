@@ -20,6 +20,8 @@
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 import { createHash } from 'node:crypto';
 import {
+	chmodSync,
+	copyFileSync,
 	existsSync,
 	lstatSync,
 	mkdirSync,
@@ -35,6 +37,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import * as realConfigModule from '../../src/config/config.ts';
 import { readEnv } from '../../src/config/env.ts';
+import { resolvePgRestore } from '../../src/core/area_maintenance/backup.ts';
 import { setServerState } from '../../src/core/resolve/server_state.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { confirmBootedCodeUpdate } from '../../src/core/update/boot_confirm.ts';
@@ -53,6 +56,7 @@ import {
 } from '../../src/core/update/code_update.ts';
 import * as realOwnershipModule from '../../src/core/update/ownership.ts';
 import { compareVersionArrays, DEDALO_VERSION_TRIPLE } from '../../src/core/update/version.ts';
+import { ageMinutes, buildRealArchive, truncatedCopy } from '../helpers/real_backup_archive.ts';
 import { refusalOf, refusalOfSync } from '../helpers/refusal.ts';
 
 // Capture the REAL modules ONCE at top level; mock.restore() does NOT revert
@@ -140,6 +144,17 @@ function treeDigest(dir: string): string {
 	return hash.digest('hex');
 }
 
+/**
+ * An EMPTY scratch database-backup dir. Every run here waives the backup, and
+ * the waiver's audit line still LOOKS at the backup dir (a bounded verification
+ * scan) — without this seam that look would read, and write verification
+ * sidecars into, the installation's ../private/backups/db.
+ */
+const SCRATCH_DB_BACKUP_DIR = mkdtempSync(join(tmpdir(), 'dedalo_code_update_db_backups_'));
+afterAll(() => {
+	rmSync(SCRATCH_DB_BACKUP_DIR, { recursive: true, force: true });
+});
+
 /** Default no-op pipeline seams + backup waiver options for a swap test. */
 function pipelineSeams(overrides: Partial<CodeUpdateSeams> = {}): CodeUpdateSeams {
 	return {
@@ -148,6 +163,7 @@ function pipelineSeams(overrides: Partial<CodeUpdateSeams> = {}): CodeUpdateSeam
 		installDeps: async () => {},
 		smokeBoot: async () => {},
 		channel: 'tree_swap',
+		databaseBackupDir: SCRATCH_DB_BACKUP_DIR,
 		...overrides,
 	};
 }
@@ -445,6 +461,59 @@ describe('full swap chain against a synthetic release (mocked gate, temp tree)',
 				'swap',
 				'restart',
 			]);
+		} finally {
+			server.stop(true);
+			unmockUpdateEnv();
+		}
+	}, 60000);
+
+	test('a job STOPPED before the swap never swaps: live tree, sentinel and code backups untouched', async () => {
+		if (!zipAvailable) return;
+		// The stop lands while the run is past its last await before the swap (the
+		// smoke boot): the pre-swap re-check is the only thing between a stopped
+		// job and a replaced live tree plus a restart.
+		const base = join(ROOT, 'stopped_before_swap');
+		const zipPath = await buildReleaseZip(base);
+		const sha = createHash('sha256').update(readFileSync(zipPath)).digest('hex');
+		const server = Bun.serve({ port: 0, fetch: () => new Response(readFileSync(zipPath)) });
+		const origin = `http://localhost:${server.port}`;
+		const targetRoot = join(base, 'live');
+		buildLiveTree(targetRoot);
+		const before = treeDigest(targetRoot);
+		const backupRoot = join(base, 'backups');
+		const job = new AbortController();
+		let restarted = false;
+		try {
+			mockUpdateEnv(origin);
+			const refusal = await refusalOf(
+				updateCode(
+					{
+						file: { version: '7.0.1', url: `${origin}/7.0.1.zip`, sha256: sha },
+						waive_backup: true,
+					},
+					SUPERUSER,
+					pipelineSeams({
+						targetRoot,
+						backupRoot,
+						signal: job.signal,
+						smokeBoot: async () => {
+							job.abort();
+						},
+						restart: () => {
+							restarted = true;
+						},
+					}),
+				),
+			);
+			expect(refusal.code).toBe('update.refused');
+			expect(refusal.message).toContain('stopped before the swap');
+			expect(restarted).toBe(false);
+			expect(treeDigest(targetRoot)).toBe(before);
+			expect(existsSync(join(backupRoot, 'last_code_update.json'))).toBe(false);
+			const codeBackups = existsSync(backupRoot)
+				? readdirSync(backupRoot).filter((name) => name.startsWith('dedalo_'))
+				: [];
+			expect(codeBackups).toEqual([]);
 		} finally {
 			server.stop(true);
 			unmockUpdateEnv();
@@ -1449,5 +1518,278 @@ describe('the root whitelist', () => {
 		// it blocked real updates for a file with no content (2026-08-28).
 		const [codeRoot, targetRoot] = trees(['README.md', '.DS_Store'], ['README.md']);
 		expect(() => refuseUnaccountedLiveEntries(codeRoot, targetRoot)).not.toThrow();
+	});
+});
+
+/* ------------------------------------------------------------------------- *
+ * OPS-1 IN-PROCESS: the UNWAIVED update over the backup it would lean on. Every
+ * swap test above waives the backup, so deleting the precondition — or making it
+ * fire-and-forget (`void requireFreshBackup(...)`) — left this file green; the
+ * only gate was the opt-in drill, which runs committed code. REAL archive bytes
+ * (a READ of the suite database), a scratch backup dir, no swap.
+ * ------------------------------------------------------------------------- */
+
+const OPS1_SCRATCH = mkdtempSync(join(tmpdir(), 'dedalo_code_update_ops1_'));
+afterAll(() => {
+	rmSync(OPS1_SCRATCH, { recursive: true, force: true });
+});
+const OPS1_ARCHIVE = buildRealArchive(OPS1_SCRATCH);
+const OPS1_PG_RESTORE = resolvePgRestore();
+const OPS1_READY = OPS1_ARCHIVE.path !== null && OPS1_PG_RESTORE !== null;
+if (!OPS1_READY) {
+	console.warn(`[code_update] OPS-1 real-archive legs SKIPPED (not passed): ${OPS1_ARCHIVE.note}`);
+}
+
+describe.if(OPS1_READY)('the UNWAIVED code update and the database backup (OPS-1)', () => {
+	/** A scratch backup dir holding one real archive, cut to `fraction`, 5 minutes old. */
+	function backupDirWith(name: string, fraction: number): string {
+		const dir = join(OPS1_SCRATCH, name);
+		mkdirSync(dir, { recursive: true });
+		const path = join(dir, `2026-01-01_000000.zz.postgresql_-1_forced_dbv7.custom.backup`);
+		if (fraction >= 1) copyFileSync(OPS1_ARCHIVE.path as string, path);
+		else truncatedCopy(OPS1_ARCHIVE.path as string, path, fraction);
+		ageMinutes(path, 5);
+		return dir;
+	}
+
+	test('a 60% cut REFUSES the update before anything is fetched', async () => {
+		const databaseBackupDir = backupDirWith('truncated', 0.6);
+		let hits = 0;
+		const server = Bun.serve({
+			port: 0,
+			fetch: () => {
+				hits += 1;
+				return new Response('not a release', { status: 404 });
+			},
+		});
+		const origin = `http://localhost:${server.port}`;
+		try {
+			mockUpdateEnv(origin);
+			const refusal = await refusalOf(
+				updateCode(
+					{ file: { version: '7.0.1', url: `${origin}/7.0.1.zip`, sha256: 'a'.repeat(64) } },
+					SUPERUSER,
+					pipelineSeams({ targetRoot: join(OPS1_SCRATCH, 'never_touched'), databaseBackupDir }),
+				),
+			);
+			expect(refusal.code).toBe('update.refused');
+			expect(refusal.message).toContain('(truncated)');
+			expect(hits).toBe(0);
+		} finally {
+			unmockUpdateEnv();
+			server.stop(true);
+		}
+	});
+
+	test('CONTROL: a complete archive gets PAST the backup precondition', async () => {
+		// The next gate in the order is the request shape: a malformed version is
+		// refused there, which proves the backup precondition passed — with no
+		// network and no swap.
+		const databaseBackupDir = backupDirWith('complete', 1);
+		const refusal = await refusalOf(
+			updateCode(
+				{
+					file: {
+						version: 'not-a-version',
+						url: 'http://localhost:1/x.zip',
+						sha256: 'a'.repeat(64),
+					},
+				},
+				SUPERUSER,
+				pipelineSeams({ targetRoot: join(OPS1_SCRATCH, 'never_touched'), databaseBackupDir }),
+			),
+		);
+		expect(refusal.code).toBe('request.invalid_options');
+		expect(refusal.message).toContain('Malformed release version');
+	});
+
+	test('maintenance mode switched OFF during the verification refuses the update', async () => {
+		// The verdict is a settled full read — minutes on a large archive. An
+		// operator who reopens the install meanwhile must not get a swap on a live,
+		// public server: the gate is asked again after the wait.
+		const databaseBackupDir = backupDirWith('maintenance_flip', 1);
+		const gate = join(OPS1_SCRATCH, 'flip.release');
+		const slow = join(OPS1_SCRATCH, 'slow_pg_restore.sh');
+		writeFileSync(
+			slow,
+			`#!/bin/sh\nif [ "$1" = "-f" ]; then i=0; while [ ! -f '${gate}' ] && [ $i -lt 200 ]; do sleep 0.05; i=$((i+1)); done; fi\nexec '${OPS1_PG_RESTORE}' "$@"\n`,
+		);
+		chmodSync(slow, 0o755);
+		const pending = refusalOf(
+			updateCode(
+				{
+					file: {
+						version: 'not-a-version',
+						url: 'http://localhost:1/x.zip',
+						sha256: 'a'.repeat(64),
+					},
+				},
+				SUPERUSER,
+				pipelineSeams({
+					targetRoot: join(OPS1_SCRATCH, 'never_touched'),
+					databaseBackupDir,
+					databaseBackupVerify: { pgRestoreBin: slow },
+				}),
+			),
+		);
+		try {
+			await Bun.sleep(300);
+			setServerState({ maintenance_mode: false });
+			writeFileSync(gate, '');
+			const refusal = await pending;
+			expect(refusal.code).toBe('maintenance.mode_required');
+		} finally {
+			writeFileSync(gate, '');
+			setServerState({ maintenance_mode: true });
+		}
+	});
+
+	test('a job STOPPED during the verification ends there: nothing fetched, nothing swapped', async () => {
+		// The job manager marks a stopped job terminal but cannot stop an awaiting
+		// worker. Without the re-check the run carried on after the (minutes-long)
+		// verification: download, swap, restart — under a job the panel already
+		// showed as stopped. A VALID request, so only the stop can refuse it.
+		const databaseBackupDir = backupDirWith('stopped_during_verify', 1);
+		const gate = join(OPS1_SCRATCH, 'stop.release');
+		const slow = join(OPS1_SCRATCH, 'stop_pg_restore.sh');
+		writeFileSync(
+			slow,
+			`#!/bin/sh\nif [ "$1" = "-f" ]; then i=0; while [ ! -f '${gate}' ] && [ $i -lt 200 ]; do sleep 0.05; i=$((i+1)); done; fi\nexec '${OPS1_PG_RESTORE}' "$@"\n`,
+		);
+		chmodSync(slow, 0o755);
+		let hits = 0;
+		const server = Bun.serve({
+			port: 0,
+			fetch: () => {
+				hits += 1;
+				return new Response('not a release', { status: 404 });
+			},
+		});
+		const origin = `http://localhost:${server.port}`;
+		const targetRoot = join(OPS1_SCRATCH, 'stop_live');
+		const backupRoot = join(OPS1_SCRATCH, 'stop_backups');
+		buildLiveTree(targetRoot);
+		const before = treeDigest(targetRoot);
+		const job = new AbortController();
+		try {
+			mockUpdateEnv(origin);
+			const pending = refusalOf(
+				updateCode(
+					{ file: { version: '7.0.1', url: `${origin}/7.0.1.zip`, sha256: 'a'.repeat(64) } },
+					SUPERUSER,
+					pipelineSeams({
+						targetRoot,
+						backupRoot,
+						databaseBackupDir,
+						databaseBackupVerify: { pgRestoreBin: slow },
+						signal: job.signal,
+					}),
+				),
+			);
+			await Bun.sleep(300);
+			job.abort();
+			writeFileSync(gate, '');
+			const refusal = await pending;
+			expect(refusal.code).toBe('update.refused');
+			expect(refusal.message).toContain('stopped while the database backup was being verified');
+			expect(hits).toBe(0);
+			expect(treeDigest(targetRoot)).toBe(before);
+			expect(existsSync(join(backupRoot, 'last_code_update.json'))).toBe(false);
+		} finally {
+			writeFileSync(gate, '');
+			unmockUpdateEnv();
+			server.stop(true);
+		}
+	});
+});
+
+describe('a non-superuser code update starts NO archive read (identity before the backup)', () => {
+	test('unwaived: perm.superuser_required, and pg_restore is never spawned', async () => {
+		// preconditions.ts states the ORDER: identity and maintenance mode first,
+		// every backup question after. Moving requireFreshBackup ahead of
+		// checkUpdatePreconditions still refuses a global admin — only AFTER reading
+		// the archive on their behalf. The spawn count is what tells the two apart.
+		const dir = mkdtempSync(join(tmpdir(), 'dedalo_code_update_mortal_'));
+		try {
+			const archive = join(dir, '2026-01-01_000000.zz.postgresql_-1_forced_dbv7.custom.backup');
+			writeFileSync(archive, 'PGDMP a header-shaped stub');
+			ageMinutes(archive, 5);
+			const log = join(dir, 'pg_restore.argv');
+			const recorder = join(dir, 'pg_restore.sh');
+			writeFileSync(recorder, `#!/bin/sh\nprintf '%s\\n' "$*" >> '${log}'\nexit 0\n`);
+			chmodSync(recorder, 0o755);
+			// PAY THE FIRST-EXEC COST NOW. macOS scans a freshly written executable on
+			// its first exec (~300 ms measured) — as long as the grace window below, so
+			// a wrongly ordered detached look recorded nothing in time and the waived
+			// half stayed green under that mutation. Warmed, the recorder writes in ms.
+			Bun.spawnSync([recorder, '--warm-up']);
+			rmSync(log, { force: true });
+			const globalAdmin = { userId: 42, isGlobalAdmin: true, isDeveloper: false } as Principal;
+			const request = (waive: boolean) => ({
+				file: { version: '7.0.1', url: 'http://localhost:1/7.0.1.zip', sha256: 'a'.repeat(64) },
+				...(waive ? { waive_backup: true } : {}),
+			});
+			for (const waive of [false, true]) {
+				const refusal = await refusalOf(
+					updateCode(
+						request(waive),
+						globalAdmin,
+						pipelineSeams({
+							targetRoot: join(dir, 'never_touched'),
+							databaseBackupDir: dir,
+							databaseBackupVerify: { pgRestoreBin: recorder },
+						}),
+					),
+				);
+				expect(refusal.code).toBe('perm.superuser_required');
+			}
+			// The waiver's audit look is detached: give a wrongly ordered one time to spawn
+			// (the recorder is warm, so this is an order of magnitude past its latency).
+			await Bun.sleep(1000);
+			expect(existsSync(log)).toBe(false);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	test("waived (superuser): the audit look reads through the refusal's OWN seam", async () => {
+		// POSITIVE control of the leg above, and the gate of "warnBackupWaiver uses
+		// the same verification seam as the refusal": dropping the verify options
+		// on the waiver's look reads with the host's pg_restore, and the recorder
+		// never runs. The malformed version refuses right after the waiver fires.
+		const dir = mkdtempSync(join(tmpdir(), 'dedalo_code_update_waived_'));
+		try {
+			const archive = join(dir, '2026-01-01_000000.zz.postgresql_-1_forced_dbv7.custom.backup');
+			writeFileSync(archive, 'PGDMP a header-shaped stub');
+			ageMinutes(archive, 5);
+			const log = join(dir, 'pg_restore.argv');
+			const recorder = join(dir, 'pg_restore.sh');
+			writeFileSync(recorder, `#!/bin/sh\nprintf '%s\\n' "$*" >> '${log}'\nexit 0\n`);
+			chmodSync(recorder, 0o755);
+			const refusal = await refusalOf(
+				updateCode(
+					{
+						waive_backup: true,
+						file: {
+							version: 'not-a-version',
+							url: 'http://localhost:1/x.zip',
+							sha256: 'a'.repeat(64),
+						},
+					},
+					SUPERUSER,
+					pipelineSeams({
+						targetRoot: join(dir, 'never_touched'),
+						databaseBackupDir: dir,
+						databaseBackupVerify: { pgRestoreBin: recorder },
+					}),
+				),
+			);
+			expect(refusal.code).toBe('request.invalid_options');
+			const deadline = Date.now() + 10_000;
+			while (!existsSync(log) && Date.now() < deadline) await Bun.sleep(50);
+			expect(readFileSync(log, 'utf8')).toContain(archive);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
 	});
 });

@@ -129,7 +129,9 @@ const SCANNED_CALL_FLOOR = 60;
  * bottom).
  */
 const CEILING_FILES = 41;
-const CEILING_CALLS = 93;
+// 93 → 88 (2026-09-30, OPS-2 review): the backup's hand-written process-record
+// writes left backup.ts when the dump became a registered maintenance job.
+const CEILING_CALLS = 88;
 
 const EXEMPTIONS: { file: string; reason: string }[] = [
 	{
@@ -157,7 +159,7 @@ const EXEMPTIONS: { file: string; reason: string }[] = [
 	{
 		file: 'src/core/area_maintenance/backup.ts',
 		reason:
-			'operator-driven backup/restore admin action: job record files, the log tail and pg_dump verification sidecars',
+			'operator-driven backup/restore admin action: the pg_dump log tail and the verification sidecars (a few hundred bytes each)',
 	},
 	{
 		file: 'src/core/geoip/download.ts',

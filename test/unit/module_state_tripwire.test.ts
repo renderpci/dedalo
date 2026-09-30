@@ -159,6 +159,11 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// gate, its own application_name the shutdown cancel spares): lazily built,
 	// connections only, no request identity.
 	'core/db/postgres.ts:nonTransactionalLane',
+	// The full-read slot of backup verification (OPS-1, 2026-09-30): the settle-
+	// promise of the last `pg_restore -f /dev/null` queued, so at most one multi-GB
+	// read runs at a time. A FIFO of promises — no principal, no language, no
+	// record; each reader releases its link in a `finally`.
+	'core/area_maintenance/backup.ts:deepReadTail',
 	'core/tools/loader.ts:loadedTools',
 	'core/tools/loader.ts:collisions',
 	'core/tools/loader.ts:loadingPromise',
@@ -332,6 +337,23 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
  * list.
  */
 const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
+	// Backup verifications in flight (OPS-1, 2026-09-30): keyed on FILE IDENTITY
+	// + how it is judged (realpath|size|mtimeMs|budgetMs|bin) — never request
+	// identity, so two askers of the same bytes share the same bytes' verdict.
+	// Deleted the moment the read settles; only a TIMEOUT verdict is memoized,
+	// 15 min, swept on every access (sweepTimeoutMemo).
+	'core/area_maintenance/backup.ts:verifyInFlight',
+	// Backup-directory scans in flight (OPS-1): keyed on the directory (+ its
+	// verify options), deleted when the walk settles — the panel's bounded wait
+	// and the pipeline's settled ask share one walk. No request identity.
+	'core/area_maintenance/backup.ts:scanInFlight',
+	// The in-flight dump parts THIS process claimed (OPS-2 review): absolute paths
+	// added at the claim, removed when the dump job settles — so the orphan
+	// adoption never judges a live dump of ours. No request identity.
+	'core/area_maintenance/backup.ts:partsInFlight',
+	// Orphan adoptions in flight, keyed on the resolved backup directory, deleted
+	// when the pass settles — concurrent dumps share one pass. No request identity.
+	'core/area_maintenance/backup.ts:adoptionInFlight',
 	// Bootstrap memo for matrix_time_machine.tm_role (ensureTmRoleColumn — the
 	// self-heal when migration 0010 did not land at boot): the TABLES verified
 	// to carry the column. No request identity; set only on success, cleared by
