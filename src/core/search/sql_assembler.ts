@@ -63,6 +63,7 @@ import {
 	assertValidLang,
 	assertValidTipo,
 	assertValidTipoOrColumn,
+	resolveSqlDataTipo,
 } from './identifier_gate.ts';
 import { ParamsCollector, resolveBuilderResult } from './params.ts';
 
@@ -328,8 +329,8 @@ async function buildOrderClauses(
 		const lang = langRaw ?? (translatable ? DEFAULT_DATA_LANG : 'lg-nolan');
 		// component_alias (WC-020): the sort value lives under the TARGET's key
 		// (the emitted order path carries the alias tipo; execution hops here).
-		const { resolveDataTipo } = await import('../ontology/alias.ts');
-		const orderDataTipo = await resolveDataTipo(componentTipo);
+		// Re-gated as an identifier of its own (SURF-1): it names the sort alias too.
+		const orderDataTipo = await resolveSqlDataTipo(componentTipo, 'order');
 		const sortAlias = `${orderDataTipo}_order`;
 
 		// Per-family order-select (PHP $model::build_order_select).

@@ -312,6 +312,12 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-30-guarded-text-pinned-typed-transport`.
 
+- **Ontology identifiers are checked on every read and write, and the database now refuses malformed ones.**
+
+    An ontology node's identifiers (its tipo, its parent, its model, its TLD, and the target of a component alias) are used by the search engine to build its queries. Until now a malformed value stored in the ontology table (for example an alias pointing at a tipo that contains quotes or spaces) could reach a search query unchecked. Now every identifier must be letters followed by digits (a TLD: two or more lowercase letters), no longer than its database column: an alias with a malformed target is refused as an invalid ontology node, the search engine checks the alias target again before using it, the ontology write doors refuse a malformed node, an archive restore refuses one before writing anything, and the ontology recovery file leaves such rows out and names them. The update adds six checks to the `dd_ontology` table that refuse any malformed identifier from then on. An installation that already holds malformed rows still updates normally: the checks start in a "not yet validated" state, and the reconcile `ontology_identifiers` (maintenance area, reconcile status, or `bun run scripts/reconcile.ts`) lists those rows and what it would do with each. Applying it rebuilds each row from its ontology source where one exists, deletes the rows that cannot be rebuilt (every deleted row is listed in full in the report and in the server log, even if the final validation fails), and then validates the checks. Until it is applied, reordering a malformed node is refused with a message that names the check and the reconcile to run. When an ontology source record holds a malformed reference (a parent, model or related-term pointer), the rebuild now drops that reference from the node and names the record in its message, instead of storing the malformed value or failing the whole TLD.
+
+    Wire contract: `WC-2026-09-30-ontology-identifier-grammar`.
+
 - **Site builder agent turns and builds run in a private network namespace and reach the outside only by hostname, through the daemon's egress gate; the Publication API key no longer reaches the agent, and AGENT_EGRESS_ALLOW is refused.**
 
     A confined agent turn used to be allowed "any" address with loopback and the private ranges denied. systemd's address filter lets the allow list win over the deny list, so that turn could in fact reach the database, the engine, the local network and a cloud host's metadata service. Every confined run (a turn, a build step, a git command) now runs in its own private network namespace with `/run` hidden. Loopback, the LAN, the metadata service and the host's own sockets do not exist inside it. A turn or a build reaches the outside only through its own per-run socket directory, served by the site-builder daemon: an HTTPS proxy that connects only to the hostnames that run may use, on port 443, and refuses any name that resolves to a non-public address. It forwards nothing until the connection's TLS handshake names that same hostname, so a hostname behind a shared CDN is not a way to other sites on that CDN. A git command gets no network at all. The database socket directories some distributions keep outside `/run` (RHEL's MariaDB uses `/var/lib/mysql/mysql.sock`) are hidden from every run too, and each run gets its own `/dev/shm` instead of the host's shared one. A run cannot reach another run's socket directory: only its own is mounted, and each run has its own process namespace, so a concurrent run of the same museum cannot be reached through `/proc` either. Each blocked destination is written as one line in the session or build log. A run on a host that silently ignores the namespace setting is refused before anything starts.
@@ -625,7 +631,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 61 entries"
+??? note "Wire contract — 62 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -686,6 +692,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-30-db-typed-503`
     - `WC-2026-09-30-guarded-text-pinned-typed-transport`
     - `WC-2026-09-30-move-transform-execute-job`
+    - `WC-2026-09-30-ontology-identifier-grammar`
     - `WC-2026-09-30-update-engine-atomic`
     - `WC-2026-09-30-update-manifest-local-origin-refusal`
 

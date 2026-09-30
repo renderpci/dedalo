@@ -109,6 +109,7 @@ export const REGISTERED_NAMES: readonly string[] = [
 	'media_index',
 	'rag_index',
 	'ontology',
+	'ontology_identifiers',
 	'hierarchy',
 	'public_tier',
 ];

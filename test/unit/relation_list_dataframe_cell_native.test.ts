@@ -21,7 +21,7 @@
  *     children, a plain literal (test52) and a DATAFRAME (dd560). No shipped
  *     test3 portal declares a dataframe child, and mutating one would be a
  *     shared-fixture edit; this gate mints its own orphan node (parent
- *     `zzr925x`, which does not exist, so no section walk can reach it) and
+ *     `zzr925999`, which does not exist, so no section walk can reach it) and
  *     DELETES it in afterAll, clearing the ontology-derived caches on both
  *     edges — dd_ontology writes are not healed by the preload.
  *   - matrix_test test3 / 925101-925107, created and deleted here.
@@ -134,7 +134,7 @@ beforeAll(async () => {
 	// default) so the join can be attributed to THIS component's config.
 	await sql.unsafe(
 		`INSERT INTO dd_ontology (tipo, parent, model, term, tld, is_model, is_translatable, is_main, order_number, properties)
-		 VALUES ($1, 'zzr925x', 'component_portal', '{"lg-spa":"scratch portal (relation_list dataframe gate)"}'::jsonb, 'zzr', false, false, false, 99, $2::text::jsonb)`,
+		 VALUES ($1, 'zzr925999', 'component_portal', '{"lg-spa":"scratch portal (relation_list dataframe gate)"}'::jsonb, 'zzr', false, false, false, 99, $2::text::jsonb)`,
 		[
 			PORTAL,
 			JSON.stringify({

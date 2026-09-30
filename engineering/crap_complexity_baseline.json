@@ -4,10 +4,10 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 578,
-		"functions": 6479,
-		"functionsOverCap": 684,
-		"filesOverCap": 266
+		"files": 579,
+		"functions": 6566,
+		"functionsOverCap": 683,
+		"filesOverCap": 265
 	},
 	"ledger": [
 		{
@@ -66,6 +66,11 @@
 			"generated": "2026-09-30",
 			"functionsOverCap": 684,
 			"filesOverCap": 266
+		},
+		{
+			"generated": "2026-09-30",
+			"functionsOverCap": 683,
+			"filesOverCap": 265
 		}
 	],
 	"files": {
@@ -207,7 +212,6 @@
 		"src/core/media/tools/subtitles.ts": 16,
 		"src/core/media/tools/timecode.ts": 12,
 		"src/core/media/tools/versions.ts": 12,
-		"src/core/ontology/alias.ts": 11,
 		"src/core/ontology/data_io.ts": 14,
 		"src/core/ontology/data_io_import.ts": 18,
 		"src/core/ontology/hierarchy_provision.ts": 20,
@@ -218,7 +222,7 @@
 		"src/core/ontology/ontology_update.ts": 28,
 		"src/core/ontology/ontology_update_target.ts": 12,
 		"src/core/ontology/ontology_write.ts": 19,
-		"src/core/ontology/parser.ts": 32,
+		"src/core/ontology/parser.ts": 26,
 		"src/core/ontology/recovery_file.ts": 9,
 		"src/core/ontology/resolver.ts": 13,
 		"src/core/ontology/section_map.ts": 9,

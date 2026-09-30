@@ -633,6 +633,26 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		'test/unit/db_asset_rebuild_atomic_native.test.ts',
 		"It rebuilds constraints, triggers and indexes on scratch tables of the suite Postgres while holding a real lock on a blocker table, so its legs drive the maintenance pool's 55P03 lock timeout, a concurrent reader and pg_indexes / pg_constraint / pg_trigger reads, and its control runs the real rebuild_db_constraints / rebuild_db_indexes door; it cannot run without a live suite Postgres carrying the dedalo_test_marker.",
 	],
+	[
+		'test/unit/alias_target_grammar_native.test.ts',
+		'It builds its alias situation on the suite Postgres through upsertDdOntologyNode and plants hostile dd_ontology rows inside a sentinel-rolled-back transaction with the six grammar CHECKs dropped, so every leg reads the live resolver against a live dd_ontology; it cannot run without a live suite Postgres.',
+	],
+	[
+		'test/unit/search_alias_sink_native.test.ts',
+		'It builds one alias per builder family on matrix_test in the suite Postgres, runs real searches through them, and spawns a child bun that searches the same suite database with the alias module mocked, so both the hostile and the sink legs need a live suite Postgres.',
+	],
+	[
+		'test/unit/dd_ontology_identifier_grammar_native.test.ts',
+		'Its truth table is checked against raw INSERTs under the live dd_ontology CHECK constraints and against the write doors with those constraints dropped inside sentinel-rolled-back transactions, and it drives the archive restore plan and the recovery slice, so it cannot run without a live suite Postgres.',
+	],
+	[
+		'test/unit/dd_ontology_grammar_migration_native.test.ts',
+		'It executes migration 0013 and the ontology_identifiers reconcile (DELETE, rebuildOntology, ALTER TABLE VALIDATE CONSTRAINT) against planted dd_ontology and matrix_ontology rows inside sentinel-rolled-back transactions, so it cannot run without a live suite Postgres.',
+	],
+	[
+		'test/unit/ontology_state_identifier_grammar_native.test.ts',
+		"It seeds ontology source records into matrix_ontology and runs rebuildOntology, which rewrites the scratch tld's dd_ontology rows under the live grammar CHECKs, so it cannot run without a live suite Postgres.",
+	],
 ]);
 
 /**

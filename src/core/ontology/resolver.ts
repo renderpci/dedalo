@@ -22,6 +22,7 @@
  * common::get_matrix_table_from_tipo (:828), section_record_data::$column_map.
  */
 
+import { isValidTipo } from '../concepts/ontology.ts';
 import { isInTransaction, sql } from '../db/postgres.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { createOntologyCache } from './cache_factory.ts';
@@ -259,9 +260,9 @@ export async function getModelByTipo(tipo: string): Promise<string | null> {
 	// component_alias hop (WC-020, ontology/alias.ts owns the contract): the
 	// alias behaves as its TARGET everywhere the runtime model is consumed —
 	// the client instantiates the target's JS class, the engines dispatch the
-	// target's behavior. Single hop; the full validation (retired keys etc.)
-	// lives in resolveAliasTargetTipo — here only the minimal fail-loud reads
-	// (this module must not import alias.ts: alias.ts imports getNode).
+	// target's behavior. Single hop through THE alias reader (aliasTargetTipoOf
+	// below — alias.ts delegates to it; this module must not import alias.ts:
+	// alias.ts imports getNode).
 	if (storedModel === 'component_alias') {
 		return getModelByTipo(await aliasTargetTipoOf(tipo));
 	}
@@ -272,40 +273,80 @@ export async function getModelByTipo(tipo: string): Promise<string | null> {
 	);
 }
 
-/** Minimal alias_of read shared by the two resolver hops — target tipo of a
- * KNOWN component_alias node (fail loud on the contract basics; the richer
- * checks live in ontology/alias.ts). */
-async function aliasTargetTipoOf(tipo: string): Promise<string> {
+/** Why an alias node's `alias_of` was refused (the `reason` coordinate, SURF-1). */
+export type AliasRefusalReason = 'missing' | 'grammar' | 'absent' | 'chained';
+
+/**
+ * THE alias reader (WC-020 + SURF-1) — the target tipo of a KNOWN
+ * component_alias node. ONE copy: the resolver's model hop and its data-node
+ * hop (`dataNodeOf` — the translatable and lang-versions rules) call it, and ontology/alias.ts `resolveAliasTargetTipo`
+ * (behind the cache and the retired-key check) delegates to it — so every
+ * consumer of an alias target, the search engine's data-tipo re-key included,
+ * gets the same answer or the same refusal.
+ *
+ * The target is an IDENTIFIER: the search engine interpolates it into JSONB
+ * paths and SQL, the save path keys the matrix slot by it. So it obeys the
+ * §7.6 tipo grammar (`isValidTipo`), checked BEFORE the row lookup — a hostile
+ * value is refused whether or not a row exists under it. Order, each refusal
+ * `ontology.invalid_node` with `{tipo, alias_of, reason}`:
+ *   missing (not a non-empty string) → grammar → absent (no node) → chained
+ *   (the target is itself an alias; single hop only).
+ * `alias_of` in the coordinates and the message is the JSON-escaped value cut
+ * to 64 characters — a planted value never reaches a log line raw.
+ */
+export async function aliasTargetTipoOf(tipo: string): Promise<string> {
 	const aliasOf = ((await getNode(tipo))?.properties as { alias_of?: unknown } | null)?.alias_of;
-	if (typeof aliasOf !== 'string' || aliasOf === '') {
-		throw new DedaloError('ontology.invalid_node', {
-			message: `component_alias '${tipo}': properties.alias_of is required (WC-020)`,
-			coordinates: { tipo },
-		});
-	}
-	const target = await getNode(aliasOf);
-	if (target === null) {
-		throw new DedaloError('ontology.invalid_node', {
-			message: `component_alias '${tipo}': alias_of target '${aliasOf}' does not exist`,
-			coordinates: { tipo, alias_of: aliasOf },
-		});
-	}
-	if (target.model === 'component_alias') {
-		throw new DedaloError('ontology.invalid_node', {
-			message: `component_alias '${tipo}': alias-of-alias refused ('${tipo}' → '${aliasOf}' → …) — single hop only (WC-020)`,
-			coordinates: { tipo, alias_of: aliasOf },
-		});
-	}
-	return aliasOf;
+	const verdict = await aliasTargetVerdict(aliasOf);
+	if ('target' in verdict) return verdict.target;
+	const shown = JSON.stringify(aliasOf ?? null).slice(0, 64);
+	throw new DedaloError('ontology.invalid_node', {
+		message: `component_alias '${tipo}': ${ALIAS_REFUSAL_MESSAGE[verdict.reason](tipo, shown)}`,
+		coordinates: { tipo, alias_of: shown, reason: verdict.reason },
+	});
 }
+
+/**
+ * The ordered checks of an `alias_of` value (see aliasTargetTipoOf): the first
+ * broken one's reason, or the target. The grammar is checked BEFORE the node
+ * lookup, so a hostile value never reaches the reader as a key.
+ */
+async function aliasTargetVerdict(
+	aliasOf: unknown,
+): Promise<{ target: string } | { reason: AliasRefusalReason }> {
+	if (typeof aliasOf !== 'string' || aliasOf === '') return { reason: 'missing' };
+	if (!isValidTipo(aliasOf)) return { reason: 'grammar' };
+	const target = await getNode(aliasOf);
+	if (target === null) return { reason: 'absent' };
+	return target.model === 'component_alias' ? { reason: 'chained' } : { target: aliasOf };
+}
+
+/** The operator sentence of each alias refusal (`shown` = the JSON-escaped value, cut to 64). */
+const ALIAS_REFUSAL_MESSAGE: Record<AliasRefusalReason, (tipo: string, shown: string) => string> = {
+	missing: () =>
+		'properties.alias_of is required (WC-020) — a standalone definition must use its real component model',
+	grammar: (_tipo, shown) =>
+		`alias_of ${shown} is not a tipo (letters+digits, §7.6) — an alias target is an identifier (SURF-1)`,
+	absent: (_tipo, shown) => `alias_of target ${shown} does not exist`,
+	chained: (tipo, shown) =>
+		`alias-of-alias refused ('${tipo}' → ${shown} → …) — single hop only (WC-020)`,
+};
 
 /** tipo → translatable flag (PHP ontology_node::get_translatable). */
 export async function getTranslatableByTipo(tipo: string): Promise<boolean> {
+	return (await dataNodeOf(tipo))?.translatable ?? false;
+}
+
+/**
+ * The node that holds `tipo`'s DATA definition: for a component_alias its
+ * TARGET's node (through THE reader, `aliasTargetTipoOf` — one hop, the target
+ * is never itself an alias), else `tipo`'s own. The translatable and
+ * lang-versions rules read this, so an alias answers for its target and no
+ * consumer carries a second alias hop of its own.
+ */
+async function dataNodeOf(tipo: string): Promise<ResolvedNode | null> {
 	const node = await getNode(tipo);
-	if (node?.model === 'component_alias') {
-		return getTranslatableByTipo(await aliasTargetTipoOf(tipo));
-	}
-	return node?.translatable ?? false;
+	if (node?.model !== 'component_alias') return node;
+	return getNode(await aliasTargetTipoOf(tipo));
 }
 
 /**
@@ -332,14 +373,10 @@ export async function effectiveSaveLang(
 
 /** Whether a save of `tipo` keeps the request lang (effectiveSaveLang); false = every save is `lg-nolan`. */
 export async function savesInRequestLang(tipo: string, model: string): Promise<boolean> {
-	if (model === 'component_iri' || (await getTranslatableByTipo(tipo))) return true;
-	return hasLangVersions(tipo);
-}
-
-/** tipo → `properties.with_lang_versions === true` (an alias answers for its target). */
-async function hasLangVersions(tipo: string): Promise<boolean> {
-	const node = await getNode(tipo);
-	if (node?.model === 'component_alias') return hasLangVersions(await aliasTargetTipoOf(tipo));
+	if (model === 'component_iri') return true;
+	// ONE alias hop for both rules (an alias answers for its target).
+	const node = await dataNodeOf(tipo);
+	if (node?.translatable === true) return true;
 	return (node?.properties as { with_lang_versions?: unknown } | null)?.with_lang_versions === true;
 }
 

@@ -74,6 +74,15 @@
  * section/record/record_defaults.ts, the save refusal in section/record/save_component.ts, and
  * the post-COPY normalization in ontology/data_io_import.ts.
  *
+ * INVALID REFERENCES (`invalidReferenceRecords`, SURF-1) — the same warning-channel shape. A
+ * record whose parent / model / connected-to locator composes into a non-tipo (section_id
+ * `'1 OR'` → `zzgs1 OR`), or whose properties.alias_of breaks the tipo grammar, still parses:
+ * the defective reference is DROPPED from the node (parser.ts OntologyNodeDefect) and named
+ * here by its source record. Not a drift kind: the projection agrees with what the source
+ * parses to. And never a refusal of the tld — one bad record must not block every ontology
+ * update of its tld (with the dd_ontology CHECK constraints live, projecting the value would
+ * roll the whole rebuild back).
+ *
  * SINGLE WRITER: nothing outside this module wipe-and-rebuilds a TLD's dd_ontology, and
  * inside it there is exactly ONE writer. The legacy `regenerateRecordsInDdOntology` is
  * retired onto `rebuildOntology`. Guarded by
@@ -84,6 +93,7 @@ import {
 	alignDdOntologyIdSequence,
 	type DdOntologyNode,
 	type DdOntologyRow,
+	deleteDdOntologyRowsReturning,
 	deleteTldNodes,
 	upsertDdOntologyNode,
 } from '../db/dd_ontology.ts';
@@ -98,7 +108,7 @@ import {
 	getMainNameData,
 	getMainTypologyId,
 } from './ontology_write.ts';
-import { parseSectionRecordToOntologyNode } from './parser.ts';
+import { type OntologyNodeDefect, parseSectionRecordToOntologyNodeWithDefects } from './parser.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from './resolver.ts';
 import { mapTldToTargetSectionTipo, safeTld } from './tld.ts';
 
@@ -145,6 +155,10 @@ export interface OntologyState {
 	 * drift: see the emission in inspectOntology for why they are kept out of it.
 	 */
 	tldlessRecords: string[];
+	/** Count of own nodes that dropped at least one invalid reference (SURF-1; a warning channel). */
+	invalidReferenceNodes: number;
+	/** Every dropped reference, by SOURCE record (see the module header, INVALID REFERENCES). */
+	invalidReferenceRecords: InvalidReferenceRecord[];
 	drift: OntologyDriftItem[];
 	/** No drift and the main node is present → dd_ontology matches its source. */
 	inSync: boolean;
@@ -187,6 +201,17 @@ interface TldlessRecord {
 	source: string;
 }
 
+/** One reference a source record composed but its node could not carry (SURF-1). */
+export interface InvalidReferenceRecord {
+	/** `<section_tipo>/<section_id>` — the record the operator must fix. */
+	source: string;
+	/** The node the record parses into (its OTHER columns were projected). */
+	tipo: string;
+	column: OntologyNodeDefect['column'];
+	/** The raw composed value. */
+	value: unknown;
+}
+
 interface ParsedMatrixNodes {
 	/** Nodes that belong to the inspected tld, keyed by tipo — the projection. */
 	own: Map<string, DdOntologyNode>;
@@ -194,6 +219,8 @@ interface ParsedMatrixNodes {
 	foreign: ForeignRecord[];
 	/** Records of the same section that parsed into NOTHING, for want of an ontology7. */
 	tldless: TldlessRecord[];
+	/** References of `own` nodes dropped for breaking the identifier grammar. */
+	invalidReferences: InvalidReferenceRecord[];
 }
 
 /**
@@ -208,7 +235,8 @@ async function parseMatrixNodes(tld: string): Promise<ParsedMatrixNodes> {
 	const own = new Map<string, DdOntologyNode>();
 	const foreign: ForeignRecord[] = [];
 	const tldless: TldlessRecord[] = [];
-	if (table === null) return { own, foreign, tldless };
+	const invalidReferences: InvalidReferenceRecord[] = [];
+	if (table === null) return { own, foreign, tldless, invalidReferences };
 
 	// BEFORE blaming any record: can `ontology7` itself be resolved?
 	//
@@ -233,7 +261,10 @@ async function parseMatrixNodes(tld: string): Promise<ParsedMatrixNodes> {
 	)) as { section_id: number }[];
 	for (const row of rows) {
 		const sectionId = Number(row.section_id);
-		const node = await parseSectionRecordToOntologyNode(sectionTipo, sectionId);
+		const { node, defects } = await parseSectionRecordToOntologyNodeWithDefects(
+			sectionTipo,
+			sectionId,
+		);
 		if (node === null) {
 			// With ontology7 resolvable (guarded above), the remaining cause is what
 			// this kind names: the RECORD declares no tld. Reported, never dropped.
@@ -249,8 +280,16 @@ async function parseMatrixNodes(tld: string): Promise<ParsedMatrixNodes> {
 			continue;
 		}
 		own.set(node.tipo, node);
+		for (const defect of defects) {
+			invalidReferences.push({
+				source: `${sectionTipo}/${sectionId}`,
+				tipo: node.tipo,
+				column: defect.column,
+				value: defect.value,
+			});
+		}
 	}
-	return { own, foreign, tldless };
+	return { own, foreign, tldless, invalidReferences };
 }
 
 /** The operator-facing line for one misfiled record: what is wrong, where, and that nothing ran. */
@@ -292,6 +331,23 @@ function tldlessNote(state: OntologyState): string {
 	const named = sources.slice(0, TLDLESS_NAMED_LIMIT).join(', ');
 	const rest = sources.length - TLDLESS_NAMED_LIMIT;
 	return ` — ${state.tldlessNodes} source record(s) declare no ontology7 and stay invisible in the tree: ${named}${rest > 0 ? ` (+${rest} more)` : ''}`;
+}
+
+/**
+ * The warning suffix naming source records whose invalid references were dropped (SURF-1),
+ * or ''. Same shape and cap as tldlessNote; the full list is `state.invalidReferenceRecords`.
+ */
+function invalidReferenceNote(state: OntologyState): string {
+	if (state.invalidReferenceNodes === 0) return '';
+	const records = state.invalidReferenceRecords;
+	const named = records
+		.slice(0, TLDLESS_NAMED_LIMIT)
+		.map(
+			(item) => `${item.source} ${item.column} ${(JSON.stringify(item.value) ?? '').slice(0, 64)}`,
+		)
+		.join(', ');
+	const rest = records.length - TLDLESS_NAMED_LIMIT;
+	return ` — ${state.invalidReferenceNodes} node(s) dropped a reference that is not a valid identifier (fix the source record): ${named}${rest > 0 ? ` (+${rest} more)` : ''}`;
 }
 
 /** Read every dd_ontology row for the TLD, keyed by tipo. */
@@ -408,11 +464,13 @@ export async function inspectOntology(rawTld: string): Promise<OntologyState> {
 			foreignNodes: 0,
 			tldlessNodes: 0,
 			tldlessRecords: [],
+			invalidReferenceNodes: 0,
+			invalidReferenceRecords: [],
 			drift: [],
 			inSync: false,
 		};
 	}
-	const { own: parsed, foreign, tldless } = await parseMatrixNodes(tld);
+	const { own: parsed, foreign, tldless, invalidReferences } = await parseMatrixNodes(tld);
 	const stored = await storedNodes(tld);
 	const mainTipo = `${tld}0`;
 	const mainNodeOk = (stored.get(mainTipo)?.is_main ?? false) === true;
@@ -465,6 +523,8 @@ export async function inspectOntology(rawTld: string): Promise<OntologyState> {
 		foreignNodes: foreign.length,
 		tldlessNodes: tldless.length,
 		tldlessRecords: tldless.map((item) => item.source),
+		invalidReferenceNodes: new Set(invalidReferences.map((item) => item.tipo)).size,
+		invalidReferenceRecords: invalidReferences,
 		drift,
 		inSync: drift.length === 0 && mainNodeOk,
 	};
@@ -493,7 +553,22 @@ async function ensureMainNode(tld: string, userId: number): Promise<{ error: str
  * the new projection atomically at commit — which is why no incremental companion is needed
  * (module header).
  */
-export async function rebuildOntology(rawTld: string, userId = -1): Promise<OntologyWriteResult> {
+export interface RebuildOntologyOptions {
+	/**
+	 * dd_ontology row ids to delete INSIDE the same transaction as the tld wipe (SURF-1
+	 * repair, ontology/identifier_grammar.ts): a row filed under ANOTHER tld (or none)
+	 * whose tipo belongs to this one — the `dd_ontology_tipo_in_tld` violation — is not
+	 * reached by `tld = $1`, so it is reclaimed by id, and the re-derive decides whether
+	 * its tipo comes back (from this tld's source) or not.
+	 */
+	reclaimIds?: readonly number[];
+}
+
+export async function rebuildOntology(
+	rawTld: string,
+	userId = -1,
+	options: RebuildOntologyOptions = {},
+): Promise<OntologyWriteResult> {
 	const tld = safeTld(rawTld.trim().toLowerCase());
 	if (tld === null) {
 		const state = await inspectOntology(rawTld);
@@ -522,6 +597,10 @@ export async function rebuildOntology(rawTld: string, userId = -1): Promise<Onto
 			// it only keeps the outcome honest (ok=false while the source stays wrong).
 			for (const item of foreign) errors.push(foreignError(item, tld));
 			await deleteTldNodes(tld);
+			const reclaimed = await deleteDdOntologyRowsReturning(options.reclaimIds ?? []);
+			if (reclaimed.length > 0) {
+				applied.push(`reclaimed ${reclaimed.map((row) => JSON.stringify(row.tipo)).join(', ')}`);
+			}
 			for (const node of parsed.values()) {
 				await upsertDdOntologyNode(node);
 			}
@@ -546,7 +625,7 @@ export async function rebuildOntology(rawTld: string, userId = -1): Promise<Onto
 	return {
 		ok: converged,
 		msg: converged
-			? `Ontology '${tld}' rebuilt${tldlessNote(state)}`
+			? `Ontology '${tld}' rebuilt${tldlessNote(state)}${invalidReferenceNote(state)}`
 			: state.foreignNodes > 0
 				? `Ontology '${tld}' rebuilt; ${state.foreignNodes} source record(s) declare another tld and were skipped`
 				: `Ontology '${tld}' rebuilt with drift`,
@@ -564,6 +643,23 @@ export async function rebuildOntologies(
 	const out: OntologyWriteResult[] = [];
 	for (const tld of tlds) out.push(await rebuildOntology(tld, userId));
 	return out;
+}
+
+/**
+ * Whether `tld` has ANY source record in its `<tld>0` section — i.e. whether a rebuild of
+ * it would re-derive something rather than just wipe (the SURF-1 repair's test for "this
+ * row is addressable by its tld's rebuild"). False for an unsafe tld.
+ */
+export async function tldHasSourceRecords(rawTld: string): Promise<boolean> {
+	const tld = safeTld(rawTld);
+	if (tld === null) return false;
+	const sectionTipo = mapTldToTargetSectionTipo(tld);
+	const table = await getMatrixTableFromTipo(sectionTipo);
+	if (table === null) return false;
+	const rows = (await sql.unsafe(`SELECT 1 FROM "${table}" WHERE section_tipo = $1 LIMIT 1`, [
+		sectionTipo,
+	])) as unknown[];
+	return rows.length > 0;
 }
 
 /* --------------------------------------------------------------- registry */

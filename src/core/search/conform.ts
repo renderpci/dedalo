@@ -43,7 +43,13 @@ import { buildSectionIdFragment } from './builders/builder_section_id.ts';
 import { buildStringFragment } from './builders/builder_string.ts';
 import type { BuilderContext, BuilderResult } from './builders/types.ts';
 import { fragment as fragmentResult } from './builders/types.ts';
-import { assertValidLang, assertValidTipo, assertValidTipoOrColumn } from './identifier_gate.ts';
+import {
+	assertValidLang,
+	assertValidTipo,
+	assertValidTipoOrColumn,
+	resolveSqlDataTipo,
+	type SqlTipo,
+} from './identifier_gate.ts';
 import { requireRelationIndex, searchStoreCovers } from './search_store.ts';
 
 /** Default data language of the installation (PHP DEDALO_DATA_LANG). */
@@ -233,9 +239,9 @@ export async function buildJoinChain(
 		// multi-hop fixed_filter paths) — and what it used to do instead was
 		// unnest a key no relation column has and match nothing, silently.
 		assertValidTipo(hopComponent, 'join path');
-		// component_alias (WC-020): stored locators live under the TARGET's key.
-		const { resolveDataTipo } = await import('../ontology/alias.ts');
-		const hopDataTipo = await resolveDataTipo(hopComponent);
+		// component_alias (WC-020): stored locators live under the TARGET's key —
+		// a value the ontology swaps in, so it passes the gate again (SURF-1).
+		const hopDataTipo: SqlTipo = await resolveSqlDataTipo(hopComponent, 'join path');
 		const stepTable = await getMatrixTableFromTipo(stepSection);
 		if (stepTable === null) {
 			throw new DedaloError('search.invalid_sqo', {
@@ -613,8 +619,6 @@ async function conformLeaf(
 	// data is all lg-nolan, where the nolan scope is observably identical.
 	const lang = leaf.lang ?? (translatable ? 'all' : 'lg-nolan');
 
-	// component_alias (WC-020): the SQL fragment keys the TARGET's data slot.
-	const { resolveDataTipo } = await import('../ontology/alias.ts');
 	// date_mode (PHP get_date_search_context: `$properties->date_mode ?? 'date'`)
 	// selects the per-mode date SQL handler. Read ONLY for date leaves — every
 	// other family ignores it, and the effective-properties read is one more
@@ -632,7 +636,9 @@ async function conformLeaf(
 	const context: BuilderContext = {
 		alias: leafAlias,
 		column,
-		tipo: await resolveDataTipo(componentTipo),
+		// component_alias (WC-020): the SQL fragment keys the TARGET's data slot —
+		// re-gated as an identifier of its own (SURF-1; `section_id` stays admitted).
+		tipo: await resolveSqlDataTipo(componentTipo, 'filter'),
 		sectionTipo: lastStep.section_tipo ?? '',
 		table: leafTable,
 		lang,

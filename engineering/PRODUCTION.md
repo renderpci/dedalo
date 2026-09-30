@@ -964,6 +964,7 @@ and demands it be here):
 | `media_index` | `.publication/dbs` ↔ `.publication/pub` | **boot, auto-apply** | pub/ is a pure derivation: recomputed after every listen |
 | `rag_index` | matrix records ↔ `rag_embeddings` | operator | enqueues index/delete for the drain (§11) |
 | `ontology` | `<tld>0` source records ↔ `dd_ontology` | operator | destructive re-projection per drifted TLD |
+| `ontology_identifiers` | `dd_ontology` identifier columns ↔ the identifier grammar (six CHECKs) | boot (dry) | re-derive each violator's tld from source, delete the unaddressable rest (returned whole), VALIDATE the clean CHECKs |
 | `hierarchy` | `hierarchy1` active rows ↔ their provisioning | operator | `ensure` per broken hierarchy |
 
 **After a data restore** the door runs the registry through
@@ -974,9 +975,9 @@ decide what a restore does with it. Two APPLY: `counters_media` (raise-only,
 idempotent — only the disk remembers the ids minted after the backup) and
 `media_index` (a pure derivation). The rest run DRY and their drift is
 reported as `held` in the journal and the CLI's exit 2: `files_info`,
-`observer_mirrors`, `rag_index`, `ontology`, `hierarchy`, `public_tier` — each a
-decision (a shrink, a budgeted recompute, a re-embed, a destructive
-re-projection, an unpublish from a museum site) the operator takes with the dry
+`observer_mirrors`, `rag_index`, `ontology`, `ontology_identifiers`, `hierarchy`,
+`public_tier` — each a decision (a shrink, a budgeted recompute, a re-embed, a
+destructive re-projection or row delete, an unpublish from a museum site) the operator takes with the dry
 list in view, through the three doors above. A step that throws is recorded by
 its error code and the plan continues.
 

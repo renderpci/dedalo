@@ -304,6 +304,11 @@ const TRIPWIRES = [
 	'test/unit/optimize_concurrent_leftover_native.test.ts',
 	'test/unit/db_asset_rebuild_atomic_native.test.ts',
 	'test/unit/site_builder_public_address_differential.test.ts',
+	'test/unit/alias_target_grammar_native.test.ts',
+	'test/unit/search_alias_sink_native.test.ts',
+	'test/unit/dd_ontology_identifier_grammar_native.test.ts',
+	'test/unit/dd_ontology_grammar_migration_native.test.ts',
+	'test/unit/ontology_state_identifier_grammar_native.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

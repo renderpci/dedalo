@@ -17,14 +17,17 @@
  * filters) are built from validated/derived data only.
  */
 
+import type { SqlTipo } from '../identifier_gate.ts';
+
 /** Resolved context for one leaf (everything already gate-validated). */
 export interface BuilderContext {
 	/** Table alias in the current query (e.g. 'oh1', 'mix'). */
 	alias: string;
 	/** Matrix jsonb column for the component's model (e.g. 'string'). */
 	column: string;
-	/** The component tipo being searched (e.g. 'oh62'). */
-	tipo: string;
+	/** The component's DATA tipo (e.g. 'oh62'; an alias's target) — gate-branded
+	 * (identifier_gate.ts SqlTipo: minted only by asSqlTipo / resolveSqlDataTipo). */
+	tipo: SqlTipo;
 	/** The leaf path step's section tipo ('' when the step omits it) — the
 	 * children builder resolves its paired parent against it; the index
 	 * builder scopes the dd96 reference scan by it. */

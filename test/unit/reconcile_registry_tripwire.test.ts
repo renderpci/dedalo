@@ -207,6 +207,7 @@ describe('reconcile registry completeness (S-10)', () => {
 			media_index: 'src/diffusion/api/reconcile.ts',
 			rag_index: 'src/ai/rag/reconcile.ts',
 			ontology: 'src/core/ontology/ontology_state.ts',
+			ontology_identifiers: 'src/core/ontology/identifier_grammar.ts',
 			hierarchy: 'src/core/ontology/hierarchy_state.ts',
 			public_tier: 'src/diffusion/api/reconcile.ts',
 		};

@@ -32,7 +32,7 @@ import { isInTransaction } from '../db/postgres.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { createOntologyCache } from './cache_factory.ts';
 import { registerOntologyCacheClearer } from './cache_invalidation.ts';
-import { getNode } from './resolver.ts';
+import { aliasTargetTipoOf, getNode } from './resolver.ts';
 
 /** v5 vocabulary retired by the v7 contract — presence on an alias throws. */
 const RETIRED_ALIAS_KEYS = ['max_records', 'look_inside', 'edit_view'] as const;
@@ -56,11 +56,22 @@ function cacheWrite<K, V>(cache: Map<K, V>, key: K, value: V): void {
 	cache.set(key, value);
 }
 
+/** Refuse a component_alias node that still carries a retired v5 key (WC-020). */
+function assertNoRetiredAliasKeys(tipo: string, properties: Record<string, unknown>): void {
+	const retired = RETIRED_ALIAS_KEYS.find((key) => key in properties);
+	if (retired === undefined) return;
+	throw new DedaloError('ontology.invalid_node', {
+		message: `component_alias '${tipo}': retired v5 key '${retired}' present — migrate the node to the v7 shape (WC-020)`,
+		coordinates: { tipo, retired_key: retired },
+	});
+}
+
 /**
  * The alias target tipo of `tipo`, or null when the node is not a
  * component_alias. Enforces the full contract (fail loud, never fall back):
- * missing/empty alias_of, missing target node, alias-of-alias, retired v5
- * keys — all throw.
+ * retired v5 keys here, then THE reader (resolver.ts `aliasTargetTipoOf`):
+ * missing/empty alias_of, a non-grammar target (SURF-1), missing target
+ * node, alias-of-alias — all throw `ontology.invalid_node` with a `reason`.
  */
 export async function resolveAliasTargetTipo(tipo: string): Promise<string | null> {
 	const cached = aliasTargetCache.get(tipo);
@@ -71,37 +82,14 @@ export async function resolveAliasTargetTipo(tipo: string): Promise<string | nul
 		cacheWrite(aliasTargetCache, tipo, null);
 		return null;
 	}
-	const properties = (node.properties ?? {}) as Record<string, unknown>;
-	for (const retired of RETIRED_ALIAS_KEYS) {
-		if (retired in properties) {
-			throw new DedaloError('ontology.invalid_node', {
-				message: `component_alias '${tipo}': retired v5 key '${retired}' present — migrate the node to the v7 shape (WC-020)`,
-				coordinates: { tipo, retired_key: retired },
-			});
-		}
-	}
-	const aliasOf = properties.alias_of;
-	if (typeof aliasOf !== 'string' || aliasOf === '') {
-		throw new DedaloError('ontology.invalid_node', {
-			message: `component_alias '${tipo}': properties.alias_of is required (WC-020) — a standalone definition must use its real component model`,
-			coordinates: { tipo },
-		});
-	}
-	const target = await getNode(aliasOf);
-	if (target === null) {
-		throw new DedaloError('ontology.invalid_node', {
-			message: `component_alias '${tipo}': alias_of target '${aliasOf}' does not exist`,
-			coordinates: { tipo, alias_of: aliasOf },
-		});
-	}
-	if (target.model === 'component_alias') {
-		throw new DedaloError('ontology.invalid_node', {
-			message: `component_alias '${tipo}': alias-of-alias refused ('${tipo}' → '${aliasOf}' → …) — single hop only (WC-020)`,
-			coordinates: { tipo, alias_of: aliasOf },
-		});
-	}
-	cacheWrite(aliasTargetCache, tipo, aliasOf);
-	return aliasOf;
+	assertNoRetiredAliasKeys(tipo, (node.properties ?? {}) as Record<string, unknown>);
+	// THE alias reader (resolver.ts, SURF-1): missing → grammar → absent →
+	// chained. No second copy here — a reader that drifted from the resolver's
+	// hops would let the data-tipo re-key (search SQL, matrix slots) accept what
+	// the model hop refuses.
+	const target = await aliasTargetTipoOf(tipo);
+	cacheWrite(aliasTargetCache, tipo, target);
+	return target;
 }
 
 /**

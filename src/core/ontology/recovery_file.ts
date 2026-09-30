@@ -71,6 +71,21 @@ async function gzipStreamToFile(source: AsyncIterable<Uint8Array>, path: string)
 	await new Promise<void>((resolveDone) => sink.on('close', () => resolveDone()));
 }
 
+/**
+ * SURF-1: rows breaking the identifier grammar are left out of the slice (a
+ * recovery file never carries a row its destination refuses) — say so, in one line.
+ */
+function skippedSliceLines(skipped: readonly string[]): string[] {
+	if (skipped.length === 0) return [];
+	const named = skipped
+		.slice(0, 10)
+		.map((tipo) => JSON.stringify(tipo).slice(0, 64))
+		.join(', ');
+	return [
+		`dd_ontology_recovery: ${skipped.length} row(s) left out — they break the identifier grammar (run reconcile ontology_identifiers): ${named}`,
+	];
+}
+
 /** Build the recovery file (PHP build_recovery_version_file). */
 export async function buildRecoveryVersionFile(
 	conn: DbConnDescriptor = connFromConfig(),
@@ -78,7 +93,8 @@ export async function buildRecoveryVersionFile(
 ): Promise<RecoveryFileResponse> {
 	const response: RecoveryFileResponse = { ok: false, msg: '', errors: [] };
 	try {
-		await createRecoverySlice(RECOVERY_PRESERVE_TLDS);
+		const slice = await createRecoverySlice(RECOVERY_PRESERVE_TLDS);
+		response.errors.push(...skippedSliceLines(slice.skipped));
 	} catch (error) {
 		response.errors.push((error as Error).message);
 		response.msg = 'Error. Unable to build the dd_ontology_recovery slice';

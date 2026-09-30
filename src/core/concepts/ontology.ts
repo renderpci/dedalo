@@ -38,6 +38,21 @@ export const TIPO_PATTERN = /^[a-z]+[0-9]+$/;
  */
 export { isValidLang, LANG_PATTERN } from '../../config/lang_code.ts';
 
+/**
+ * A TLD (top-level-domain namespace) is two-or-more lowercase ASCII letters,
+ * nothing else (PHP safe_tld) — the prefix every tipo carries. ONE copy:
+ * `ontology/tld.ts safeTld`, the dd_ontology identifier predicate
+ * (`db/dd_ontology.ts ddOntologyIdentifierViolations`) and the
+ * `dd_ontology_tld_grammar` CHECK (migration `*_dd_ontology_identifier_grammar.sql`)
+ * all state this shape (SURF-1).
+ */
+export const TLD_PATTERN = /^[a-z]{2,}$/;
+
+/** Validate a TLD namespace (see TLD_PATTERN). */
+export function isValidTld(candidate: unknown): candidate is string {
+	return typeof candidate === 'string' && TLD_PATTERN.test(candidate);
+}
+
 export const tipoSchema = z.string().regex(TIPO_PATTERN, 'invalid ontology tipo');
 export type Tipo = z.infer<typeof tipoSchema>;
 

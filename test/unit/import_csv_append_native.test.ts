@@ -192,7 +192,7 @@ beforeAll(async () => {
 	await deleteTldNodes(CAP_TLD);
 	await upsertDdOntologyNode({
 		tipo: CAPPED,
-		parent: `${CAP_TLD}x`,
+		parent: `${CAP_TLD}999999`, // orphan: a valid tipo no node carries (SURF-1 grammar)
 		model: 'component_portal',
 		tld: CAP_TLD,
 		term: { 'lg-spa': 'scratch csv append cap portal' },
@@ -208,7 +208,7 @@ beforeAll(async () => {
 	});
 	await upsertDdOntologyNode({
 		tipo: MONO_TEXT,
-		parent: `${CAP_TLD}x`,
+		parent: `${CAP_TLD}999999`, // orphan: a valid tipo no node carries (SURF-1 grammar)
 		model: 'component_input_text',
 		tld: CAP_TLD,
 		term: { 'lg-spa': 'scratch csv append non-translatable text' },
@@ -223,7 +223,7 @@ beforeAll(async () => {
 	] as const) {
 		await upsertDdOntologyNode({
 			tipo,
-			parent: `${CAP_TLD}x`,
+			parent: `${CAP_TLD}999999`, // orphan: a valid tipo no node carries (SURF-1 grammar)
 			model: 'component_alias',
 			tld: CAP_TLD,
 			term: { 'lg-spa': `scratch csv append alias of ${target}` },

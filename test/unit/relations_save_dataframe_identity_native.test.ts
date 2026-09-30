@@ -75,7 +75,7 @@ async function buildSlot(tipo: string): Promise<void> {
 		[
 			tipo,
 			// Orphan parent: no section walk can reach these nodes.
-			`${CALLER_TLD}x`,
+			`${CALLER_TLD}999999`, // a valid tipo no node carries (SURF-1 grammar)
 			CALLER_TLD,
 			JSON.stringify({ 'lg-spa': `scratch dataframe slot ${tipo}` }),
 			JSON.stringify({
