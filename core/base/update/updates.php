@@ -33,6 +33,70 @@
 global $updates;
 $updates = new stdClass();
 
+
+$v=698; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 9;
+	$updates->$v->version_minor			= 8;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 9;
+	$updates->$v->update_from_minor		= 7;
+
+	// alert
+		$alert					= new stdClass();
+		$alert->notification	= 'V '.$v;
+
+		$alert->command			= '';
+
+		$alert->command .= "
+			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
+			<p>
+				Review the config definition. The master server has moved to: <strong>v6.master.dedalo.dev</strong>
+			</p>
+			<p>
+				As part of the major update of Dédalo (v7), the master server becomes a specific domain for each version, adding a sub-domain for every major version: v6, v7, etc.
+				So it is mandatory to update the ontology and code server URLs in your config.
+			</p>
+			<p>
+				The current domain, master.dedalo.dev, will provide the next major version on 01/01/2027
+			</p>
+			<br>
+			<p>
+				1. Constants to review:
+			</p>
+			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
+				// Ontologies providers
+					define('ONTOLOGY_SERVERS',	[
+						[
+							'name'	=> 'Official Dédalo Ontology server',
+							'url'	=> 'https://v6.master.dedalo.dev/dedalo/core/api/v1/json/',
+							'code'	=> 'x3a0B4Y020Eg9w'
+						]
+					]);
+				// Dédalo code
+					define('CODE_SERVERS',	[
+						[
+							'name'	=> 'Official Dédalo code server',
+							'url'	=> 'https://v6.master.dedalo.dev/dedalo/core/api/v1/json/',
+							'code'	=> 'x3a0B4Y020Eg9w'
+						]
+					]);
+			</pre>
+			<br>
+		";
+		$updates->$v->alert_update[] = $alert;
+
+		// // Re-index and vacuum tables
+		// $updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+		// 	VACUUM FULL VERBOSE ANALYZE public.jer_dd;
+		// ');
+
+
 $v=697; #####################################################################################
 $updates->$v = new stdClass();
 
