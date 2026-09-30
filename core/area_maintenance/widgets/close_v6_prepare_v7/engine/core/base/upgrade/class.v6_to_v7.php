@@ -1390,6 +1390,20 @@ class v6_to_v7 {
 				continue;
 			}
 
+			// Dataframe locators ride in a main's composed TM row (v6
+			// get_time_machine_data_to_save appends every slot's frames to the main's
+			// data). They are relation locators, not items of this model: pass them
+			// through as they are — never value-wrapped, never given an id or a lang —
+			// so dataframe_v7_migration::migrate_time_machine (transform_entries, which
+			// reads top-level entries only) migrates them to dd490 + id_key. Wrapped as
+			// {value:{frame},id,lang}, the v7 engine read each one as a text item of the
+			// literal and restored it into the literal's column.
+			if (is_object($value) && isset($value->main_component_tipo)
+				&& (isset($value->from_component_tipo) || isset($value->section_id_key) || isset($value->id_key))) {
+				$final_data[] = $value;
+				continue;
+			}
+
 			$value_key++;
 
 			// Prepare object to store
