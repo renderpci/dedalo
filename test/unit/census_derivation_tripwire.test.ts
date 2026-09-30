@@ -488,8 +488,6 @@ const PRIVATE_ROOT_WALKERS: Readonly<Record<string, string>> = {
 	'test/unit/tm_lang_slice_restore_native.test.ts': 'ROOTS: `tools/tool_time_machine/server`.',
 	'test/unit/tm_mode_retired_tripwire.test.ts': 'ROOTS: `client/dedalo` `src` `tools`.',
 	'test/unit/tool_header_contract_tripwire.test.ts': 'ROOTS: `tools` — `*/css/*.less`.',
-	'test/unit/tool_lossless_writeback_tripwire.test.ts':
-		'ROOTS: `src` `tools` — src/ beside tools/.',
 	'test/unit/tool_permission_census_tripwire.test.ts': 'ROOTS: `tools`.',
 	'test/unit/tool_picker_wiring_tripwire.test.ts': 'ROOTS: `tools` ×2.',
 	'test/unit/tools_cache_invalidation.test.ts': 'ROOTS: `src/core/tools` ×2.',
@@ -560,7 +558,7 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 			['client/dedalo', 'tools'],
 		],
 		scope:
-			"the first-party browser trees — every served .js of the app client and of every tool client, vendored libraries excluded (browserSources is git's view, firstPartyClientFiles the on-disk walk)",
+			"browserSources: git's view minus vendored lib/vendor/min; browserSourcesUnfiltered: the same git view UNFILTERED (tool_lossless_writeback's client census — a tool's own lib/ helper is its code)",
 	},
 	'test/helpers/deploy_conf_corpus.ts': {
 		roots: [

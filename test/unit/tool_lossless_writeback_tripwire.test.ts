@@ -35,22 +35,55 @@
  *   3. the one other census row that claims a LOSSLESS transform over a stored value —
  *      tool_tc's timecode offset — really only rewrites the marks.
  *
- *   4. THE CENSUS IS TOTAL BY DERIVATION. Every tool ACTION (file + enclosing top-level
- *      symbol) that calls a component-value write door, across `tools/**\/js/**` and
- *      `tools/**\/server/**`, must carry a row with a verdict and a written reason. A new
- *      one fails this gate. Verdicts are checked against the source, in BOTH directions,
- *      so neither a fix nor a regression can land silently.
+ *   4. THE CENSUS IS TOTAL BY DERIVATION, per (action, door, sites). SERVER doors are
+ *      DERIVED, never listed: the `db/matrix_write.ts` DML primitives, the OFF-HOME
+ *      psql writers (a declaration with a BINDING-resolved edge to `pg_exec.ts#runPsql`
+ *      — named, aliased, namespace member or injected — and a matrix DML statement,
+ *      past every chokepoint; held EQUAL to the by-name view on the tree), plus every
+ *      declaration that reaches one of those seeds
+ *      through IMPORT-RESOLVED references — the writer
+ *      closure (test/helpers/matrix_writer_closure.ts; a missing cell prints its witness
+ *      path) — taken wherever a `tools/<tool>/server/**` declaration (a `tool.apiActions`
+ *      object split per action) references a member OUTSIDE its own tool. CLIENT doors
+ *      are the three `component_common` write tokens over every `tools/**\/js/**` file in
+ *      git's unfiltered view (a tool's own `lib/` helper included). Every
+ *      derived (action, door) cell carries its OWN verdict, reason and site count: a new
+ *      action, a new door on a known action, a new or vanished call site — each is red,
+ *      in BOTH directions (a fix that keeps the door is caught by the PENDING tethers
+ *      below). THE BYPASS RULE: a cell whose door reaches a seed on a path that avoids
+ *      EVERY record-write chokepoint (RECORD_WRITE_CHOKEPOINTS in the helper — each
+ *      checked to be a member that reaches afterRecordWrite; `bypassPath`) must be
+ *      PENDING, lossless over a locked read, or carry a `bypass_reason` (equality pins:
+ *      BYPASS_TOOL_CELLS, and RAW_TOOL_CELLS for the doors that ARE a seed). It is
+ *      judged by PATH, not by the door: a raw write moved into a wrapper of any name,
+ *      any number of declarations deep, is the same bypass. No corpus file — src engine or tool
+ *      server — may load a module through a computed-specifier dynamic import beyond a
+ *      named, reasoned, shrink-only exemption list. The analyser and the judges are run
+ *      on injected inputs (positive controls), and the closure's binding-resolved
+ *      primitive edges must EQUAL write_obligations' name-based census.
  *
- * THE VERDICTS, and what is mechanically checked for each:
+ * THE VERDICTS (per CELL — there is no row-level verdict a new door could inherit; the
+ * `Cell` union makes `tsc` refuse a verdict without its evidence), and what is
+ * mechanically checked for each:
  *
  *   lossless        — a read-transform-write cycle whose transform preserves the stored
- *                     content. CHECKED: rows with `proof` are proved by a behavioural leg
- *                     above (the proof names it); rows without one must say "verified by
- *                     reading" in the reason, so an unproven claim is visible as such.
+ *                     content. CHECKED: `proof` is one of the behavioural legs' REAL
+ *                     titles (`LEGS`, typed and re-checked), or the cell declares
+ *                     `readVerified`, so an unproven claim is visible as such;
+ *                     `lockedRead` additionally requires the action's own unit to
+ *                     REFERENCE readMatrixKeyForUpdate through a RESOLVED edge (a
+ *                     namespace escape proves nothing) — edge PRESENCE, not
+ *                     lock-before-write ordering nor same-transaction.
  *   confirmed       — the operator confirms before the write, with the loss NAMED.
  *                     CHECKED: `confirm(` appears in the action's own body.
  *   refuses         — the action refuses to write a degraded result rather than saving
- *                     it. CHECKED: the row's `must_contain` symbol is in the body.
+ *                     it. CHECKED: `must_contain` is in the action's CODE (strings and
+ *                     comments blanked, so a literal cannot vouch) — or, with `evidence`
+ *                     (`file#decl`), in that declaration's code AND the action reaches it
+ *                     through RESOLVED edges. The spelling alone is a reading judgment, so
+ *                     every server `refuses` cell is also BEHAVIOUR-TETHERED below (the
+ *                     refusal executed on a suite-DB record, with its counterfactual), and
+ *                     the client one by LEG 2.
  *   operator-value  — NOT a write-back: the value written did not derive from the value
  *                     it replaces (a locator the curator just picked, an import mapping
  *                     the operator declared, a Time Machine version they chose). The rule
@@ -62,9 +95,23 @@
  *                     separate, operator-driven save.
  *   not-a-component-write — the derivation's own false positive: the token is a `.save(`
  *                     on something that is not a component.
+ *   derived-state   — the write is state the engine RE-DERIVES from something else (the
+ *                     relation_search index, observer mirrors, the metadata twin,
+ *                     files_info re-scanned under the row lock, ontology / hierarchy
+ *                     rows); no curated value is transformed. A READING judgment, not an
+ *                     executed check.
  *   PENDING         — a real write-back that is neither lossless, confirmed nor refusing.
- *                     CHECKED: `confirm(` is ABSENT from the body, so adding one FAILS
- *                     this gate and forces the row to move. SHRINK-ONLY.
+ *                     Every cell names the item that `closes` it. CHECKED: a client cell's
+ *                     body has NO `confirm(` (adding one FAILS this gate and forces the
+ *                     cell to move); a server cell by its (action, door) key — a fix that
+ *                     changes the door is red as a stale cell plus a missing one — AND by
+ *                     a tether to a FACT of its defect (SERVER_PENDING_TETHERS, total over
+ *                     the server PENDING cells), so an in-place fix is red too: the
+ *                     translation cells by a behaviour test (the WHOLE translateAndWrite
+ *                     path on a scratch suite-DB record), updateCache by its own resolved
+ *                     references (no readMatrixKeyForUpdate, no recordTimeMachine — a fix
+ *                     that locks or records elsewhere, in a helper it calls, is NOT seen).
+ *                     SHRINK-ONLY, counted per cell.
  *
  * WHAT THIS GATE DOES NOT PROVE — stated because an unstated gap reads as coverage:
  *   - it does not prove the two fixed tools are lossless for EVERY input. The
@@ -80,14 +127,64 @@
  *     READ, not executed. The derivation is what makes forgetting an action impossible;
  *     the reason is what makes a wrong verdict a reviewable claim;
  *   - the relation link/unlink doors (P0-11, CLI-02/CLI-03) are a different write and are
- *     not this rule's subject.
+ *     not this rule's subject;
+ *   - the closure's binding is LEXICAL and scope-approximate: a local variable that
+ *     shadows a same-file top-level name is taken for it, a column-0 statement is taken
+ *     for module scope, and a key/value split is read off the source, not a parse tree;
+ *   - a file OUTSIDE the corpus is not followed: a relative import — static, or a
+ *     LITERAL dynamic `import('x')` in any form — may leave it only to a named target
+ *     class (OUT_OF_CORPUS_TARGETS — test/, the migration runner, JSON, a tool's client JS
+ *     the client leg scans, an IMPORT-FREE tools .js leaf); an unresolvable export
+ *     reference is red;
+ *   - `this.x()` and property-object dispatch — a registry indexed by name, a callback
+ *     handed to a non-writer — are unseen: a write reached only that way has no cell;
+ *   - a computed-specifier `import(spec)` is not followed: the exempted sites
+ *     (UNRESOLVED_DYNAMIC_IMPORT_EXEMPT) truncate the closure there, by stated reason;
+ *     a namespace escaping as a value is OVER-approximated (every export reached) —
+ *     enough for a CELL, never for `refuses` evidence nor a `lockedRead` claim (both
+ *     read RESOLVED edges only). A local HOLDING a value-position import (`const m =
+ *     deps ?? (await import(x))`) is bound, so its `m.member` calls count per site; a
+ *     namespace handed on whole counts its OCCURRENCES, not the receiver's calls;
+ *   - the seeds are the `matrix_write.ts` primitives and the off-home PSQL writers (a
+ *     tool-server seed carries a SELF cell — nothing to cross): raw DML on the POOL
+ *     outside matrix_write (a `sql\`` UPDATE in an engine — T2.a's allowlist), a
+ *     statement built in one declaration and run through psql by another, a
+ *     whole-database `psql -f` restore, and a psql child spawned DIRECTLY
+ *     (`Bun.spawn(['psql', …])` — ontology/data_io.ts#runCopyExport,
+ *     scripts/test_db_setup.ts#psql) instead of through runPsql are not seeds, so a
+ *     tool reaching only such a site has no cell;
+ *   - the chokepoint list is DECLARED (with reasons) and checked only for membership
+ *     and for reaching afterRecordWrite — not for WHAT it guarantees. A chokepoint unit
+ *     is cut WHOLE: its own internal writes (the relation_search index, the dataframe
+ *     slot strip inside saveComponentData) and any raw branch beside its hook are
+ *     write_obligations' subject, not this rule's. The bypass walk is over-approximated
+ *     (escape edges included — the strict direction), and a bypass is judged per DOOR:
+ *     `bypass_reason` states why the WRITER the path lands on may skip the chokepoint,
+ *     a READING judgment like every non-executed verdict;
+ *   - a `lossless` cell over a chokepoint read-modify-write is not lock-checked — only a
+ *     `lockedRead` claim is, and only as edge presence (the lock may sit in another
+ *     branch or transaction than the write);
+ *   - the client side covers only the three `component_common` tokens.
  */
 
-import { describe, expect, test } from 'bun:test';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { existsSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 
 const ROOT = resolve(import.meta.dir, '../..');
+
+/**
+ * The behavioural legs' titles — the ONE list both the describe() calls below and a
+ * `lossless` cell's `proof` read. `proof` is typed `LegTitle`, so naming a leg that does
+ * not exist does not compile, and `losslessProblems` re-checks it at run time (with a
+ * control) for a value that reached the census through a cast.
+ */
+const LEGS = {
+	transcription: 'LEG 1 — rebuilding paragraphs preserves the archivist’s markup (CLI-24)',
+	translation: 'LEG 2 — a translation run that lost a block writes nothing (CLI-14)',
+	timecode: 'LEG 3 — tool_tc rewrites the marks and nothing else',
+} as const;
+type LegTitle = (typeof LEGS)[keyof typeof LEGS];
 
 // ---------------------------------------------------------------------------
 // LEG 1 — the transcription round-trip (CLI-24)
@@ -118,7 +215,7 @@ const TRANSCRIPTS: Record<string, string> = {
 /** The three timecode modes the tool can rebuild with (paragraphs.js DEFAULT_OPTIONS). */
 const TC_MODES = ['paragraph_anchors', 'paragraph', 'segment'] as const;
 
-describe('LEG 1 — rebuilding paragraphs preserves the archivist’s markup (CLI-24)', () => {
+describe(LEGS.transcription, () => {
 	for (const [name, stored] of Object.entries(TRANSCRIPTS)) {
 		for (const tc_mode of TC_MODES) {
 			test(`${name} — round-trips unchanged [${tc_mode}]`, () => {
@@ -308,7 +405,7 @@ function statusLines(container: Record<string, any>): string[] {
 	return lines;
 }
 
-describe('LEG 2 — a translation run that lost a block writes nothing (CLI-14)', () => {
+describe(LEGS.translation, () => {
 	/** The stored, human-made Spanish text the run must not overwrite. */
 	const STORED = '<p>El texto humano existente, revisado por la archivera.</p>';
 
@@ -437,7 +534,7 @@ describe('LEG 2 — a translation run that lost a block writes nothing (CLI-14)'
 
 import { replaceTimecodes } from '../../src/core/media/tools/timecode.ts';
 
-describe('LEG 3 — tool_tc rewrites the marks and nothing else', () => {
+describe(LEGS.timecode, () => {
 	test('markup, entities and text survive a timecode offset byte-exactly', () => {
 		const stored =
 			'<p>[TC_00:00:10.000_TC]Dijo <em>&#39;non sei&#39;</em> &amp; call&oacute;.<br>Sigui&oacute;.</p>' +
@@ -456,240 +553,935 @@ describe('LEG 3 — tool_tc rewrites the marks and nothing else', () => {
 // LEG 4 — THE CENSUS
 // ---------------------------------------------------------------------------
 
+import { MATRIX_JSONB_COLUMNS, readMatrixRecord } from '../../src/core/db/matrix.ts';
+import { updateMatrixRecord } from '../../src/core/db/matrix_write.ts';
+import { babelProvider, translateAndWrite } from '../../src/core/tools/translation.ts';
+import { browserSourcesUnfiltered } from '../helpers/browser_corpus.ts';
+import {
+	AFTER_RECORD_WRITE,
+	buildWriterClosure,
+	declarationDoorCalls,
+	deriveRawPrimitives,
+	isPsqlMatrixWriter,
+	MATRIX_WRITE,
+	moduleRuntimeExports,
+	PSQL_DOOR,
+	RAW_PRIMITIVES,
+	RECORD_WRITE_CHOKEPOINTS,
+	rawCallsIn,
+	toolServerCells,
+	type WriterClosure,
+} from '../helpers/matrix_writer_closure.ts';
+import { stripComments } from '../helpers/strip_comments.ts';
+import { cleanScratchRecord } from '../helpers/test_data.ts';
+import { WRITE_PATH_CORPUS_FLOOR } from '../helpers/write_path_corpus.ts';
+
 /**
- * The component-VALUE write doors, per tier. A tool action that calls one of these
- * writes a component's value, which is the only definition of "write-back door" that
- * cannot be gamed by renaming a handler.
+ * The CLIENT component-value write doors. A tool action that calls one of these writes a
+ * component's value, which is the only definition of "write-back door" that cannot be
+ * gamed by renaming a handler.
  *
- * `.set_value(` is in the client list because the P0-12 action itself goes through it:
+ * `.set_value(` is in the list because the P0-12 action itself goes through it:
  * `component_text_area.prototype.set_value` (client/dedalo/core/component_text_area/js/
  * component_text_area.js:554) builds an `update` atom and calls `change_value`, i.e. it
  * saves. On other models it does not — `component_json.prototype.set_value` only stages
  * the value — which is what the `no-persist` verdict is for.
+ *
+ * The SERVER doors are not listed: they are DERIVED (the writer closure, below).
  */
 const CLIENT_DOORS = ['.save(', '.change_value(', '.set_value('];
-const SERVER_DOORS = [
-	'saveComponentData(',
-	'persistRecordKeys(',
-	'persistRecordColumns(',
-	'deletePortalLocator(',
-];
 
-type Verdict =
-	| 'lossless'
-	| 'confirmed'
-	| 'refuses'
-	| 'operator-value'
-	| 'new-record'
-	| 'no-persist'
-	| 'not-a-component-write'
-	| 'PENDING';
+/**
+ * One (action, door) cell. The verdict lives HERE, never on the row: a new door on a
+ * known action can not inherit the verdict of the doors beside it. Each verdict carries
+ * the evidence its check reads, and the union makes `tsc` refuse a cell without it.
+ */
+type Cell = {
+	reason: string;
+	sites?: number;
+	/**
+	 * Why this write may reach the matrix PAST the record-write chokepoint (the door
+	 * resolves to a seed on a path that avoids every RECORD_WRITE_CHOKEPOINTS unit —
+	 * see the bypass rule). Any verdict may carry it; a bypassing cell needs it unless
+	 * it is PENDING or lossless over a locked read.
+	 */
+	bypass_reason?: string;
+} & (
+	| ({ verdict: 'lossless'; lockedRead?: true } & (
+			| { proof: LegTitle; readVerified?: true }
+			| { readVerified: true; proof?: LegTitle }
+	  ))
+	| { verdict: 'confirmed' }
+	| {
+			verdict: 'refuses';
+			must_contain: string;
+			/** `file#decl` whose body carries the refusal; the action must REACH it. */
+			evidence?: string;
+	  }
+	| { verdict: 'PENDING'; closes: string }
+	| {
+			verdict:
+				| 'operator-value'
+				| 'new-record'
+				| 'no-persist'
+				| 'not-a-component-write'
+				| 'derived-state';
+	  }
+);
 
 interface CensusRow {
-	verdict: Verdict;
-	reason: string;
-	/** Required for 'refuses': a symbol that must appear in the action's own body. */
-	must_contain?: string;
-	/** For 'lossless': the behavioural leg in THIS file that proves it. */
-	proof?: string;
+	doors: Readonly<Record<string, Cell>>;
 }
 
 /**
  * The census. The key is `<file> :: <top-level symbol enclosing the door call>` — the
  * ACTION, not the file: P0-12 is exactly the shape where one action in a file is lossy
  * and another beside it is not (tool_transcription's regroup_paragraphs vs
- * save_transcription).
+ * save_transcription). Server doors are closure members by bare name (`file#name` when
+ * the bare name is ambiguous); client doors are the tokens above.
  */
+/**
+ * The closure item of the translation empty-body defect (found 2026-09-30 by deriving
+ * the server doors). CLOSURE_PLAN Step 2 has NO such item yet: its insertion is an
+ * integrator request (the plan is integrator-owned) — until it lands this names the
+ * finding, not an existing plan row.
+ */
+const TRANSLATION_EMPTY_BODY =
+	'TOOLS-6 finding 2026-09-30 (proposed CLOSURE_PLAN Step 2 item TRANSLATION-EMPTY-BODY, integrator request): the server translation must refuse an EMPTY provider body (server twin of CLI-14 LEG 2)';
+
+/**
+ * The BYPASS REASONS (see the bypass rule): why a tool write may reach the matrix past
+ * every record-write chokepoint. Each names the off-chokepoint WRITER the derivation
+ * lands on (the `bypass:` path of a red names it too) and the write_obligations
+ * RAW_CALLER_EXEMPT row that already carries it — one reason per writer, shared by the
+ * cells that reach it, so a cell cannot restate a writer's contract differently.
+ */
+const BYPASS = {
+	filesInfo:
+		'files_info is written by media/tools/files_info_persist.ts#writeItems (updateMatrixKeysData) past the chokepoint BY DESIGN (write_obligations RAW_CALLER_EXEMPT): technical metadata derived from the files on disk — no modified stamp, no Time Machine row, no obligation hook. The stored items are RE-READ under readMatrixKeyForUpdate inside the writer’s own transaction (runReconcile / persistUploadedMedia), so a concurrent write is not reverted; what goes unrecorded is files_info’s own history, which a disk re-scan re-derives.',
+	relationIndex:
+		'the relation_search ancestor index is written by relations/save.ts#maintainRelationSearchIndex (updateMatrixKeyData) past the chokepoint BY DESIGN (write_obligations RAW_CALLER_EXEMPT): a derived, read-only-to-users search column re-derived from the relation value this same unit has just written THROUGH the chokepoint — no stamp and no history of its own, and nothing curated is replaced.',
+	metadataTwin:
+		'the `data`-column METADATA twin is written by section/record/record_metadata.ts#setRecordMetadata (updateMatrixRecord) past the chokepoint BY DESIGN (write_obligations RAW_CALLER_EXEMPT): system bookkeeping MERGED into the column (created_date / created_by_user_id only; label and diffusion_info kept), mirrored from the dd199/dd200 audit value — no component value changes, so no stamp, no history, no index.',
+	observers:
+		'the observer cascade reaches two writers past the chokepoint BY DESIGN (write_obligations RAW_CALLER_EXEMPT): the relation_search index (relations/save.ts#maintainRelationSearchIndex) and the dataframe SLOT strip of a removed main item (#removeDataframeDataById, REL-01 — no TM row by contract: the main’s own chokepoint write records the full state). Measured 2026-09-30, these are the only bypassing writers the cascade reaches; neither replaces a curated value.',
+	hierarchy:
+		'the HIERARCHY INVARIANT single writer (ontology/hierarchy_state.ts#write, #nameRootTerm), the `<tld>0` provisioning (hierarchy_provision.ts#provisionVirtualSections) and the ontology definition writers (ontology_write.ts#addMainSection, #createParentGrouper) write past the chokepoint BY DESIGN (write_obligations RAW_CALLER_EXEMPT): registry, descriptor and definition rows derived from the hierarchy record, with unstamped saves as in PHP — no Time Machine row, no obligation hook.',
+	ontology:
+		'ontology DEFINITION rows — the main node and parent-grouper records in matrix_ontology (ontology/ontology_write.ts#addMainSection, #createParentGrouper) — are written past the chokepoint BY DESIGN (write_obligations RAW_CALLER_EXEMPT): system definitions re-derived from the ontology records by the write driver, which has its own gates; unstamped as in PHP, and no curated value is transformed.',
+} as const;
+
 const CENSUS: Record<string, CensusRow> = {
 	// --- THE TWO P0-12 ACTIONS -------------------------------------------
 	'tools/tool_transcription/js/tool_transcription.js :: tool_transcription.prototype.regroup_paragraphs':
 		{
-			verdict: 'confirmed',
-			reason:
-				'CLI-24. The rebuild is now markup- and entity-preserving (LEG 1 above), but not for every shape a stored value can take: unbalanced markup is REPAIRED rather than reproduced, and a fragment with markup but no words is dropped. So the rebuilt value is MEASURED against the current one and the operator confirms, with the words/tags that would be lost named in the dialog.',
-			must_contain: 'confirm(',
+			doors: {
+				'.set_value(': {
+					verdict: 'confirmed',
+					reason:
+						'CLI-24. The rebuild is now markup- and entity-preserving (LEG 1 above), but not for every shape a stored value can take: unbalanced markup is REPAIRED rather than reproduced, and a fragment with markup but no words is dropped. So the rebuilt value is MEASURED against the current one and the operator confirms, with the words/tags that would be lost named in the dialog.',
+				},
+			},
 		},
 	'tools/tool_lang/js/browser_translation.js :: translate_component_browser': {
-		verdict: 'refuses',
-		reason:
-			'CLI-14. The worker skips a failed block and posts an `end` indistinguishable from a complete run, so the main thread counts the on_block_error messages itself and REFUSES: nothing is saved, the streamed partial is put back, the lost blocks are named and the promise rejects (a resolve would be counted as ok by both callers). Proved by LEG 2 above.',
-		must_contain: 'refuse_run(',
+		doors: {
+			'.save(': {
+				verdict: 'refuses',
+				must_contain: 'refuse_run(',
+				reason:
+					'CLI-14. The worker skips a failed block and posts an `end` indistinguishable from a complete run, so the main thread counts the on_block_error messages itself and REFUSES: nothing is saved, the streamed partial is put back, the lost blocks are named and the promise rejects (a resolve would be counted as ok by both callers). Proved by LEG 2 above.',
+			},
+		},
 	},
 
 	'tools/tool_lang/js/render_tool_lang.js :: get_content_data_edit': {
-		verdict: 'confirmed',
-		reason:
-			'the "copy value" button of tool_lang writes the SOURCE language\u2019s value over the target language\u2019s, verbatim (no transform), and only after a confirm() in the same handler \u2014 the operator is asking for the overwrite.',
-		must_contain: 'confirm(',
+		doors: {
+			'.save(': {
+				verdict: 'confirmed',
+				reason:
+					'the "copy value" button of tool_lang writes the SOURCE language’s value over the target language’s, verbatim (no transform), and only after a confirm() in the same handler — the operator is asking for the overwrite.',
+			},
+		},
 	},
 
 	// --- LOSSLESS ---------------------------------------------------------
 	'tools/tool_tc/server/index.ts :: changeAllTimecodes': {
-		verdict: 'lossless',
-		reason:
-			'the timecode offset rewrites ONLY the [TC_…_TC] marks (replaceTimecodes is a mark-for-mark substitution over the raw string) and clones every element of the slice it does not touch verbatim, so no other character of the transcription can change.',
-		proof: 'LEG 3 — tool_tc rewrites the marks and nothing else',
+		doors: {
+			saveComponentData: {
+				verdict: 'lossless',
+				proof: LEGS.timecode,
+				reason:
+					'the timecode offset rewrites ONLY the [TC_…_TC] marks (replaceTimecodes is a mark-for-mark substitution over the raw string) and clones every element of the slice it does not touch verbatim, so no other character of the transcription can change.',
+			},
+		},
 	},
 	'tools/tool_update_cache/server/index.ts :: updateCache': {
-		verdict: 'lossless',
-		reason:
-			'verified by reading: the regenerate re-saves the items it just READ from the record (readComponentItems → groupItemsByLang → set_data per lang group); the value is unchanged and the run is an identity write, which is why it also disables the Time Machine for the sweep.',
+		doors: {
+			saveComponentData: {
+				verdict: 'lossless',
+				readVerified: true,
+				sites: 2,
+				reason:
+					'two calls. (1) The regenerate re-saves, per language group, the items it just READ from the record (readComponentItems → groupItemsByLang → set_data per lang), under the run’s bulkProcessId: the undo log records each BEFORE/AFTER pair, and a canonical no-op writes none (WC-2026-09-27-bulk-revert-undo-log retired the v6 "TM disabled for the sweep"). (2) The dd800 run label on the bulk-process record created in the same transaction. Honest limit: the items are read outside any lock, so a concurrent edit between the read and the re-save is replaced — it is kept in the BEFORE row and the Time Machine.',
+			},
+			updateMatrixKeyData: {
+				verdict: 'PENDING',
+				closes: 'TOOLS-5 / CLOSURE_PLAN Step 2 locked files_info TRANSFORM',
+				reason:
+					'the MEDIA branch replaces the WHOLE `media -> <tipo>` key with refreshedItems built from the readMatrixRecord snapshot taken at the top of the row, outside any lock, through the RAW primitive: no row lock, no undo pair, no Time Machine row, no chokepoint obligation. A concurrent files_info write-back (an AV job, an upload) committed between the read and this write is silently reverted.',
+			},
+			createSectionRecord: {
+				verdict: 'new-record',
+				reason:
+					'mints the dd800 bulk-process record of the run (created in the same transaction as its label, before any record is touched). Nothing stored is replaced.',
+			},
+		},
 	},
 
 	// --- OPERATOR-VALUE (not a write-back) --------------------------------
 	'tools/tool_cataloging/js/tool_cataloging.js :: tool_cataloging.prototype.init': {
-		verdict: 'operator-value',
-		reason:
-			'inserts the locator of the thesaurus term the curator just created into the portal (action:insert). The written value comes from that pick, not from the value it joins, and nothing stored is replaced.',
+		doors: {
+			'.change_value(': {
+				verdict: 'operator-value',
+				reason:
+					'inserts the locator of the thesaurus term the curator just created into the portal (action:insert). The written value comes from that pick, not from the value it joins, and nothing stored is replaced.',
+			},
+		},
 	},
 	'tools/tool_identify/js/tool_identify.js :: tool_identify.prototype.accept_proposal': {
-		verdict: 'operator-value',
-		reason:
-			'writes the identification proposal the curator explicitly accepted, through the changed_data atom the component itself would have built. The value is the proposal, never a transform of what the component already held.',
+		doors: {
+			'.change_value(': {
+				verdict: 'operator-value',
+				reason:
+					'writes the identification proposal the curator explicitly accepted, through the changed_data atom the component itself would have built. The value is the proposal, never a transform of what the component already held.',
+			},
+		},
 	},
 	'tools/tool_identify/js/tool_identify.js :: tool_identify.prototype.name_type_record': {
-		verdict: 'operator-value',
-		reason:
-			'writes the operator-supplied name into the FIRST EMPTY entry of the component, appending when there is none — it selects an empty slot precisely so it never overwrites an existing value.',
+		doors: {
+			'.change_value(': {
+				verdict: 'operator-value',
+				reason:
+					'writes the operator-supplied name into the FIRST EMPTY entry of the component, appending when there is none — it selects an empty slot precisely so it never overwrites an existing value.',
+			},
+		},
 	},
 	'tools/tool_identify/js/tool_identify.js :: tool_identify.prototype.attach_members': {
-		verdict: 'operator-value',
-		reason:
-			'inserts the locator of the type record the operator is attaching (action:insert, with from_component_tipo). The engine drops a duplicate; no stored value is read, transformed or replaced.',
+		doors: {
+			'.change_value(': {
+				verdict: 'operator-value',
+				reason:
+					'inserts the locator of the type record the operator is attaching (action:insert, with from_component_tipo). The engine drops a duplicate; no stored value is read, transformed or replaced.',
+			},
+		},
 	},
 	'tools/tool_numisdata_order_coins/js/tool_numisdata_order_coins.js :: tool_numisdata_order_coins.prototype.assign_element':
 		{
-			verdict: 'operator-value',
-			reason:
-				'inserts the locator of the element the operator assigned in the ordering UI (action:insert on the caller component). Nothing that is stored is read back and rewritten.',
+			doors: {
+				'.change_value(': {
+					verdict: 'operator-value',
+					reason:
+						'inserts the locator of the element the operator assigned in the ordering UI (action:insert on the caller component). Nothing that is stored is read back and rewritten.',
+				},
+			},
 		},
 	'tools/tool_numisdata_order_coins/js/tool_numisdata_order_coins.js :: tool_numisdata_order_coins.prototype.set_original_copy':
 		{
-			verdict: 'operator-value',
-			reason:
-				'writes the original/copy classification the operator set on the screen: a fixed discard locator per record and the equivalents list built from the nodes they ticked. The values come from the UI state, not from the stored ones they replace.',
+			doors: {
+				'.change_value(': {
+					verdict: 'operator-value',
+					sites: 3,
+					reason:
+						'writes the original/copy classification the operator set on the screen: a fixed discard locator per record and the equivalents list built from the nodes they ticked. The values come from the UI state, not from the stored ones they replace.',
+				},
+			},
 		},
 	'tools/tool_import_files/server/index.ts :: setComponentsData': {
-		verdict: 'operator-value',
-		reason:
-			'writes the values the import run itself carries — target_filename, target_date and the operator-declared input-component mapping — into the destination record. The written value comes from the imported file and the mapping, never from the destination value it replaces.',
+		doors: {
+			saveComponentData: {
+				verdict: 'operator-value',
+				sites: 3,
+				reason:
+					'writes the values the import run itself carries — target_filename, target_date and the operator-declared input-component mapping — into the destination record. The written value comes from the imported file and the mapping, never from the destination value it replaces.',
+			},
+		},
+	},
+	'tools/tool_import_files/server/index.ts :: importFiles': {
+		doors: {
+			processUploadedFile: {
+				verdict: 'operator-value',
+				bypass_reason: BYPASS.filesInfo,
+				reason:
+					'ingests the file the operator is importing into the target media component (derivatives built from THAT file; an AV transcode re-scans files_info under the row lock when it ends). The written files_info describes the imported file, never a transform of the stored one.',
+			},
+			persistUploadedMedia: {
+				verdict: 'operator-value',
+				bypass_reason: BYPASS.filesInfo,
+				reason:
+					'records the imported file on the media item: the stored items are RE-READ under the row lock (readMatrixKeyForUpdate) and only that language item’s files_info and name keys are set from the new file; the other items and languages are kept verbatim.',
+			},
+			createSectionRecord: {
+				verdict: 'new-record',
+				sites: 3,
+				reason:
+					'the three record births of an import: the explicit-id host named by the file, the fresh host for an unnamed file, and the fresh record of the section_resource mode — each written only onto the record it has just created.',
+			},
+			saveComponentData: {
+				verdict: 'new-record',
+				sites: 2,
+				reason:
+					'the portal branches: add_new_element creates the media record in the portal target and links it from the host. The write targets the record it just created, so no stored value is overwritten by it.',
+			},
+		},
+	},
+	'tools/tool_import_dedalo_csv/server/index.ts :: importFiles': {
+		doors: {
+			executeCsvImport: {
+				verdict: 'operator-value',
+				bypass_reason: BYPASS.metadataTwin,
+				reason:
+					'writes the values of the CSV the operator uploaded and mapped, keyed by the file’s own section_id column. The written values come from the file, never from a transform of the stored value they replace; the run is a dd800 bulk process with its undo log.',
+			},
+		},
+	},
+	'tools/tool_import_marc21/server/index.ts :: importFiles': {
+		doors: {
+			importMappedRecords: {
+				verdict: 'operator-value',
+				reason:
+					'writes the MARC21 records the operator imports, through the field mapping they declared: one set_data per mapped field of each record. The values come from the imported file, never from the value they replace.',
+			},
+		},
+	},
+	'tools/tool_import_zotero/server/index.ts :: importFiles': {
+		doors: {
+			importMappedRecords: {
+				verdict: 'operator-value',
+				reason:
+					'writes the Zotero export the operator imports, through the declared field mapping: one set_data per mapped field of each record. The values come from the imported file, never from the value they replace.',
+			},
+		},
+	},
+	'tools/tool_upload/server/index.ts :: processUploaded': {
+		doors: {
+			processUploadedFile: {
+				verdict: 'operator-value',
+				bypass_reason: BYPASS.filesInfo,
+				reason:
+					'ingests the file the operator uploaded into THIS media component: the derivatives are built from that file, and an AV transcode re-scans files_info under the row lock when it ends. Nothing stored is transformed.',
+			},
+			persistUploadedMedia: {
+				verdict: 'operator-value',
+				bypass_reason: BYPASS.filesInfo,
+				reason:
+					'records the uploaded file on the media item: the stored items are RE-READ under the row lock and only that item’s files_info and name keys are set from the new file; the other items and languages are kept verbatim.',
+			},
+		},
 	},
 	'tools/tool_propagate_component_data/js/tool_propagate_component_data.js :: tool_propagate_component_data.prototype.get_component_to_propagate':
 		{
-			verdict: 'operator-value',
-			reason:
-				'saves the entries the operator composed into the tool’s OWN temporal (tmp-section) component, which is the scratch surface the propagation value is edited on — not a curated record.',
+			doors: {
+				'.save(': {
+					verdict: 'operator-value',
+					reason:
+						'saves the entries the operator composed into the tool’s OWN temporal (tmp-section) component, which is the scratch surface the propagation value is edited on — not a curated record.',
+				},
+			},
 		},
 	'tools/tool_propagate_component_data/server/index.ts :: propagateOneRecord': {
-		verdict: 'operator-value',
-		reason:
-			'writes the value the operator chose (replace / add / delete of THEIR items) into one record their SQO matched — the operation they asked for, not a machine transform of the stored value. Since 2026-09-27 it saves through saveComponentData under the run’s bulk id, behind the record lock, so every overwritten region is kept EXACTLY in the run’s undo log (hidden BEFORE + visible after, WC-2026-09-27-bulk-revert-undo-log) and the whole propagation reverts as one operation.',
+		doors: {
+			saveComponentData: {
+				verdict: 'operator-value',
+				reason:
+					'writes the value the operator chose (replace / add / delete of THEIR items) into one record their SQO matched — the operation they asked for, not a machine transform of the stored value. Since 2026-09-27 it saves through saveComponentData under the run’s bulk id, behind the record lock, so every overwritten region is kept EXACTLY in the run’s undo log (hidden BEFORE + visible after, WC-2026-09-27-bulk-revert-undo-log) and the whole propagation reverts as one operation.',
+			},
+		},
 	},
 	'tools/tool_subtitles/js/render_tool_subtitles.js :: get_custom_buttons': {
-		verdict: 'operator-value',
-		reason:
-			'the editor’s Save button writes what the operator typed in the subtitle CKEditor of this very session. The value is their edit, not a machine transform applied behind them.',
+		doors: {
+			'.save(': {
+				verdict: 'operator-value',
+				reason:
+					'the editor’s Save button writes what the operator typed in the subtitle CKEditor of this very session. The value is their edit, not a machine transform applied behind them.',
+			},
+		},
 	},
 	'tools/tool_time_machine/server/tool_time_machine.ts :: toolTimeMachineApplyValue': {
-		verdict: 'operator-value',
-		reason:
-			'restores the component value of the Time Machine version the operator picked. Overwriting the current value IS the operation, the replaced value stays in the Time Machine, and the restored value is a stored version — nothing is derived or reshaped.',
+		doors: {
+			persistRecordKeys: {
+				verdict: 'operator-value',
+				reason:
+					'restores the component value of the Time Machine version the operator picked. Overwriting the current value IS the operation, the replaced value stays in the Time Machine, and the restored value is a stored version — nothing is derived or reshaped.',
+			},
+			reindexRelationSearchLikeSave: {
+				verdict: 'derived-state',
+				bypass_reason: BYPASS.relationIndex,
+				reason:
+					'rebuilds the relation_search ancestor index of the restored relation value, exactly as a save would: a derived search column, never a curated value.',
+			},
+		},
 	},
 	'tools/tool_time_machine/server/tool_time_machine.ts :: restoreSectionRow': {
-		verdict: 'operator-value',
-		reason:
-			'the ROW half of the whole-record restore of an operator-picked Time Machine version (restoreSection), written through persistRecordColumns — also the bulk revert’s undelete of a record the run’s cascade deleted, inside the unit that re-links it. Same shape as apply_value: a stored version replaces the current one and the current one remains in the Time Machine.',
+		doors: {
+			persistRecordColumns: {
+				verdict: 'operator-value',
+				reason:
+					'the ROW half of the whole-record restore of an operator-picked Time Machine version (restoreSection), written through persistRecordColumns — also the bulk revert’s undelete of a record the run’s cascade deleted, inside the unit that re-links it. Same shape as apply_value: a stored version replaces the current one and the current one remains in the Time Machine.',
+			},
+			reindexRelationColumnLikeSave: {
+				verdict: 'derived-state',
+				bypass_reason: BYPASS.relationIndex,
+				reason:
+					'rebuilds the relation_search index of the restored relation column, as a save would: derived search state, re-derived from the value just restored.',
+			},
+		},
 	},
 	'tools/tool_time_machine/server/tool_time_machine.ts :: restoreAbsentSectionRow': {
-		verdict: 'operator-value',
-		reason:
-			'the INSERT-ONLY twin of restoreSectionRow: the bulk revert’s undelete of a record the run’s cascade deleted (WC-2026-09-27-bulk-revert-undo-log). It writes the stored TM snapshot back ONLY where the address is empty (insert-if-absent under the explicit-id lock, answering null when anything stands there), so no current value is ever overwritten — a stored version fills a vacancy, nothing is derived or reshaped.',
+		doors: {
+			insertMatrixRecordIfAbsent: {
+				verdict: 'operator-value',
+				bypass_reason:
+					'INSERT-ONLY under the explicit-id lock (insertExplicitIdRow, ON CONFLICT DO NOTHING): it can only fill a VACANT address with the stored TM snapshot, and the action answers null when anything stands there — no current value is read, transformed or replaced. The row’s obligations then run through persistRecordColumns in the same unit.',
+				reason:
+					'the bulk revert’s undelete of a record the run’s cascade deleted (WC-2026-09-27-bulk-revert-undo-log): the operator-picked stored snapshot is materialized at its old address only if that address is empty.',
+			},
+			persistRecordColumns: {
+				verdict: 'operator-value',
+				reason:
+					'the INSERT-ONLY twin of restoreSectionRow: once the vacancy is filled, the same snapshot columns go through the chokepoint (stamps, hook). A stored version fills a vacancy; nothing is derived or reshaped.',
+			},
+			reindexRelationColumnLikeSave: {
+				verdict: 'derived-state',
+				bypass_reason: BYPASS.relationIndex,
+				reason:
+					'rebuilds the relation_search index of the undeleted record’s relation column, as a save would: derived search state, never a curated value.',
+			},
+		},
 	},
 	'tools/tool_time_machine/server/dataframe_restore.ts :: applyDataframeRestore': {
-		verdict: 'operator-value',
-		reason:
-			'the dataframe half of the same operator-chosen restore: it writes the picked version’s frames OF THAT MAIN back through persistRecordKeys — other mains’ frames of a shared slot, and a lang-sliced main’s surviving other-language frames, are kept verbatim in place. No transform of any value takes place.',
+		doors: {
+			persistRecordKeys: {
+				verdict: 'operator-value',
+				reason:
+					'the dataframe half of the same operator-chosen restore: it writes the picked version’s frames OF THAT MAIN back through persistRecordKeys — other mains’ frames of a shared slot, and a lang-sliced main’s surviving other-language frames, are kept verbatim in place. No transform of any value takes place.',
+			},
+		},
 	},
 	'tools/tool_time_machine/server/bulk_revert_undo.ts :: writeRevertedKey': {
-		verdict: 'operator-value',
-		reason:
-			'writes back, per key of an operator-selected bulk run, the region that run REPLACED — read from the run’s undo log (the exact BEFORE image), or inferred from visible history for a pre-undo-log run and reported inexact. The live value is only cut to put the other languages back beside it, never reshaped; the revert writes its own undo pair, so it is reversible in turn.',
+		doors: {
+			persistRecordKeys: {
+				verdict: 'operator-value',
+				reason:
+					'writes back, per key of an operator-selected bulk run, the region that run REPLACED — read from the run’s undo log (the exact BEFORE image), or inferred from visible history for a pre-undo-log run and reported inexact. The live value is only cut to put the other languages back beside it, never reshaped; the revert writes its own undo pair, so it is reversible in turn.',
+			},
+			reindexRelationSearchLikeSave: {
+				verdict: 'derived-state',
+				bypass_reason: BYPASS.relationIndex,
+				reason:
+					'rebuilds the relation_search ancestor index of the reverted relation key, as a save would: derived search state, re-derived from the value just written back.',
+			},
+		},
 	},
-
 	'tools/tool_time_machine/server/bulk_revert_undo.ts :: writeComposedUnit': {
-		verdict: 'operator-value',
-		reason:
-			'writes back, for a dataframe main of an operator-selected bulk run, the main region and its OWN frames that run REPLACED — both read from the run’s composed undo log (the exact BEFORE image; amendment 2026-09-27). The other mains’ frames of a shared slot are kept in place, never reshaped; the revert writes its own composed undo pairs, so it is reversible in turn.',
+		doors: {
+			persistRecordKeys: {
+				verdict: 'operator-value',
+				reason:
+					'writes back, for a dataframe main of an operator-selected bulk run, the main region and its OWN frames that run REPLACED — both read from the run’s composed undo log (the exact BEFORE image; amendment 2026-09-27). The other mains’ frames of a shared slot are kept in place, never reshaped; the revert writes its own composed undo pairs, so it is reversible in turn.',
+			},
+			reindexRelationSearchLikeSave: {
+				verdict: 'derived-state',
+				bypass_reason: BYPASS.relationIndex,
+				reason:
+					'rebuilds the relation_search ancestor index of the reverted main, as a save would: derived search state, re-derived from the value just written back.',
+			},
+		},
 	},
-
+	'tools/tool_time_machine/server/bulk_revert_undo.ts :: rederiveMetadataTwin': {
+		doors: {
+			setRecordMetadata: {
+				verdict: 'derived-state',
+				bypass_reason: BYPASS.metadataTwin,
+				reason:
+					're-derives the `data` column metadata twin (created_date / created_by_user_id) from the dd199/dd200 audit value the revert just restored, and writes only when the twin disagrees: bookkeeping mirrored from a component, never a curated value.',
+			},
+		},
+	},
 	'tools/tool_time_machine/server/bulk_revert_records.ts :: writeWipedKey': {
-		verdict: 'operator-value',
-		reason:
-			'writes back, for a frame target record a SOFT dataframe cascade of an operator-selected bulk run wiped, the pre-wipe value of each key — read from the run’s role-4 snapshot. Only keys still in the state the wipe left (isWipedState: empty, or the default-project filter) are written; any other live value refuses the whole record. No transform of the current value; the restore records composed undo pairs per main (recordWipedHistory), so the revert is reversible in turn.',
+		doors: {
+			persistRecordKeys: {
+				verdict: 'operator-value',
+				reason:
+					'writes back, for a frame target record a SOFT dataframe cascade of an operator-selected bulk run wiped, the pre-wipe value of each key — read from the run’s role-4 snapshot. Only keys still in the state the wipe left (isWipedState: empty, or the default-project filter) are written; any other live value refuses the whole record. No transform of the current value; the restore records composed undo pairs per main (recordWipedHistory), so the revert is reversible in turn.',
+			},
+			reindexRelationSearchLikeSave: {
+				verdict: 'derived-state',
+				bypass_reason: BYPASS.relationIndex,
+				reason:
+					'rebuilds the relation_search ancestor index of the restored key, as a save would: derived search state, re-derived from the pre-wipe value just written back.',
+			},
+		},
+	},
+	'tools/tool_time_machine/server/bulk_revert_records.ts :: deleteIfSafe': {
+		doors: {
+			deleteSectionRecord: {
+				verdict: 'refuses',
+				must_contain: 'holdsForeignValue(',
+				reason:
+					'the revert of an operator-selected run deletes a record THAT RUN CREATED — and refuses (keeps the record) when it holds any value the run did not write (holdsForeignValue) or is referenced from elsewhere, checked as a precondition on the locked snapshot inside deleteSectionRecord. A record someone else has since curated is never deleted by the revert.',
+			},
+		},
+	},
+	'tools/tool_time_machine/server/restore_common.ts :: propagateRestoreToObservers': {
+		doors: {
+			propagateToObservers: {
+				verdict: 'derived-state',
+				bypass_reason: BYPASS.observers,
+				reason:
+					'propagates a restored relation value to its observers, exactly as a save does: the observer mirrors (component_info, set_dato_external) are state the engine re-derives from the observed value, never a curated value of their own.',
+			},
+		},
 	},
 
 	// --- NEW RECORD -------------------------------------------------------
 	'tools/tool_export/js/export_user_presets.js :: create_new_export_preset': {
-		verdict: 'new-record',
-		reason:
-			'three inserts (section tipo, owner, config blob) into the preset record this same function has just created. There is no prior value on that record for the write to replace.',
+		doors: {
+			'.save(': {
+				verdict: 'new-record',
+				sites: 3,
+				reason:
+					'three inserts (section tipo, owner, config blob) into the preset record this same function has just created. There is no prior value on that record for the write to replace.',
+			},
+		},
 	},
 	'tools/tool_print/js/print_layout_presets.js :: create_new_layout': {
-		verdict: 'new-record',
-		reason:
-			'writes the layout blob into the dd25 record created a few lines above (action:insert on a component of a brand-new section_id). Nothing stored is replaced.',
+		doors: {
+			'.save(': {
+				verdict: 'new-record',
+				reason:
+					'writes the layout blob into the dd25 record created a few lines above (action:insert on a component of a brand-new section_id). Nothing stored is replaced.',
+			},
+		},
 	},
 	'tools/tool_posterframe/server/index.ts :: createIdentifyingImage': {
-		verdict: 'new-record',
-		reason:
-			'creates and links a NEW media record through the portal (add_new_element). The posterframe never lands on top of an existing image record’s value.',
-	},
-	'tools/tool_import_files/server/index.ts :: importFiles': {
-		verdict: 'new-record',
-		reason:
-			'the portal branch: it creates the media record through add_new_element and links it. The write targets the record it just created, so no stored value is overwritten by it.',
+		doors: {
+			saveComponentData: {
+				verdict: 'new-record',
+				reason:
+					'creates and links a NEW media record through the portal (add_new_element). The posterframe never lands on top of an existing image record’s value.',
+			},
+			persistUploadedMedia: {
+				verdict: 'new-record',
+				bypass_reason: BYPASS.filesInfo,
+				reason:
+					'records the posterframe file on the image component of the record created a few lines above (created_section_id of the add_new_element save): the first files_info that record ever holds.',
+			},
+		},
 	},
 	'tools/tool_import_dedalo_csv/server/index.ts :: createBulkProcessRecord': {
-		verdict: 'new-record',
-		reason:
-			'writes the run label into the dd800 bulk-process record created in the same function — the run’s own audit row, never a curated record.',
+		doors: {
+			createSectionRecord: {
+				verdict: 'new-record',
+				reason:
+					'mints the dd800 bulk-process record of a CSV import run — the run’s own audit row, never a curated record.',
+			},
+			saveComponentData: {
+				verdict: 'new-record',
+				reason:
+					'writes the run label into the dd800 bulk-process record created in the same function — the run’s own audit row, never a curated record.',
+			},
+		},
 	},
 	'tools/tool_propagate_component_data/server/index.ts :: createBulkProcess': {
-		verdict: 'new-record',
-		reason:
-			'the same bulk-process audit row for a propagation run: label and metadata onto the dd800 record this function just created.',
+		doors: {
+			createSectionRecord: {
+				verdict: 'new-record',
+				reason:
+					'mints the dd800 bulk-process record of a propagation run — the run’s own audit row, never a curated record.',
+			},
+			saveComponentData: {
+				verdict: 'new-record',
+				reason:
+					'the same bulk-process audit row for a propagation run: label and metadata onto the dd800 record this function just created.',
+			},
+		},
 	},
 	'tools/tool_time_machine/server/bulk_revert.ts :: createRevertBulkProcess': {
-		verdict: 'new-record',
-		reason:
-			'the bulk-process audit row of a revert run, written onto the dd800 record created in the same call.',
+		doors: {
+			createSectionRecord: {
+				verdict: 'new-record',
+				reason:
+					'mints the dd800 bulk-process record of a revert run — the run’s own audit row, never a curated record.',
+			},
+			persistRecordKeys: {
+				verdict: 'new-record',
+				reason:
+					'the bulk-process audit row of a revert run, written onto the dd800 record created in the same call.',
+			},
+		},
+	},
+
+	// --- DERIVED STATE (the engine re-derives it; a READING judgment) ------
+	'tools/tool_image_rotation/server/index.ts :: applyRotation': {
+		doors: {
+			reconcileStoredFilesInfo: {
+				verdict: 'derived-state',
+				bypass_reason: BYPASS.filesInfo,
+				reason:
+					'after rotating the files on disk, re-scans them and reconciles files_info through the single locked writer (items re-read under FOR UPDATE, never minted): files_info is a filesystem-derived cache, not a curated value.',
+			},
+		},
+	},
+	'tools/tool_media_versions/server/media_versions.ts :: buildVersion': {
+		doors: {
+			buildVersionCore: {
+				verdict: 'derived-state',
+				bypass_reason: BYPASS.filesInfo,
+				reason:
+					'builds a quality tier from the master file; an AV build finishes in a background job that re-scans the disk and reconciles files_info under the row lock. The only stored write is files_info, derived from the files.',
+			},
+		},
+	},
+	'tools/tool_media_versions/server/media_versions.ts :: writeBack': {
+		doors: {
+			reconcileStoredFilesInfo: {
+				verdict: 'derived-state',
+				bypass_reason: BYPASS.filesInfo,
+				reason:
+					'the media-versions write-back: a fresh disk scan reconciled into files_info through the single locked writer (re-read under FOR UPDATE, never minted). Filesystem-derived state, not a curated value.',
+			},
+		},
+	},
+	'tools/tool_media_versions/server/media_versions.ts :: syncFiles': {
+		doors: {
+			repairStoredFilesInfo: {
+				verdict: 'derived-state',
+				bypass_reason: BYPASS.filesInfo,
+				reason:
+					'the operator’s explicit sync_files repair of THIS record: reconciles files_info against a fresh disk scan under the row lock, minting the item only when the component has none and files exist. Filesystem-derived state.',
+			},
+		},
+	},
+	'tools/tool_hierarchy/server/tool_hierarchy.ts :: toolHierarchyGenerateVirtualSection': {
+		doors: {
+			ensureHierarchy: {
+				verdict: 'derived-state',
+				bypass_reason: BYPASS.hierarchy,
+				reason:
+					'the HIERARCHY INVARIANT writer (hierarchy_state.ts) provisions the tld’s ontology and hierarchy rows from the hierarchy record: system state derived from that record, not curated content.',
+			},
+			rebuildHierarchy: {
+				verdict: 'derived-state',
+				bypass_reason: BYPASS.hierarchy,
+				reason:
+					'force_to_create: tears the tld’s ONTOLOGY down and re-provisions it through the same invariant writer; the `<tld>1` TERMS are not touched, so the surviving root is relinked afterwards.',
+			},
+			deleteSectionRecord: {
+				verdict: 'derived-state',
+				reason:
+					'handed to rebuildHierarchy (force_to_create) as its delete callback, through which deleteOntologyByTld removes the tld’s ontology_main REGISTRY row and every `<tld>0` ontology node record (its dd_ontology nodes go directly, not through this door); ensureHierarchy then re-provisions all three from the hierarchy record. The `<tld>1` TERMS are never touched. HONEST LIMIT: a curator’s edit to a `<tld>0` node record or to the ontology_main row is not carried over — force_to_create is the operator’s explicit “rebuild from the hierarchy record”, so the verdict is derived-state, not lossless.',
+			},
+		},
+	},
+	'tools/tool_ontology/server/tool_ontology.ts :: toolOntologySetRecords': {
+		doors: {
+			setRecordsInDdOntology: {
+				verdict: 'derived-state',
+				bypass_reason: BYPASS.ontology,
+				sites: 2,
+				reason:
+					'parses the ontology section records into dd_ontology (the single write driver): ontology DEFINITIONS derived from the matrix_ontology records, with their own gates — not a curated value.',
+			},
+		},
+	},
+	'tools/tool_ontology_parser/server/tool_ontology_parser.ts :: toolOntologyParserRegenerate': {
+		doors: {
+			rebuildOntologies: {
+				verdict: 'derived-state',
+				bypass_reason: BYPASS.ontology,
+				reason:
+					'rebuilds the selected tlds’ ontology state (main nodes, parent groupers) through the ontology write driver: definitions re-derived from the ontology records.',
+			},
+		},
+	},
+	'tools/tool_ontology_parser/server/tool_ontology_parser.ts :: toolOntologyParserRepairTlds': {
+		doors: {
+			normalizeOntologyTld: {
+				verdict: 'derived-state',
+				reason:
+					'repair_tlds (developer-only, operator-explicit): rewrites a node record’s `ontology7` to the tld its SECTION requires (requiredOntologyTld — ONT-TLD derives the tld from the section, which is why the edit form renders it read-only). Scope, from normalizeOntologyTld: only rows that ARE nodes (a `string` object carrying a component besides ontology7) and whose declared tld differs; contentless shells are left alone. The value written is derived from the section tipo, never a transform of the value it replaces.',
+				bypass_reason:
+					'an OFF-HOME psql writer: one `UPDATE "matrix_ontology" SET "string" = jsonb_set(…)` over the whole section on psql’s own connection — no row lock, no birth/modified stamp, NO Time Machine row (the misfiled value it replaces is kept nowhere) and no obligation hook (observers, relation_search). Accepted because the replaced value is a DEFECT the inspect report names, the rewrite is derived and idempotent, and it cannot ride inside rebuild’s transaction (it would block on the rows the transaction holds); its routing through the chokepoint belongs to T2 (off-home DML confinement).',
+			},
+		},
+	},
+	'tools/tool_ontology_parser/server/tool_ontology_parser.ts :: PRODUCTION_IO': {
+		doors: {
+			updateOntologyInfo: {
+				verdict: 'derived-state',
+				reason:
+					'the export’s IO seam: updateOntologyInfo rebuilds the ontology metadata record (ontology18 of dd0/1) from the current ontology and saves it through saveComponentData — a derived descriptor, not curated content.',
+			},
+		},
+	},
+
+	// --- REFUSES (server) ------------------------------------------------
+	'tools/tool_transcription/server/index.ts :: backgroundTranscriberPoll': {
+		doors: {
+			pollTranscriptionCompletion: {
+				verdict: 'refuses',
+				evidence: 'src/core/tools/transcription_asr.ts#saveTranscriptionResult',
+				must_contain: 'hasExistingTranscription(',
+				reason:
+					'the server twin of save_transcription: a finished ASR job writes the transcript only when the target language slice is EMPTY — saveTranscriptionResult refuses ("delete the existing data to re-transcribe") when hasExistingTranscription finds any item there, so a curator’s transcript is never replaced. Honest limit: the emptiness check reads outside a lock.',
+			},
+		},
 	},
 
 	// --- NO PERSIST -------------------------------------------------------
 	'tools/tool_dd_label/js/tool_dd_label.js :: tool_dd_label.prototype.update_data': {
-		verdict: 'no-persist',
-		reason:
-			'flushes the label matrix into the caller component_json’s in-memory value. component_json.prototype.set_value stages a changed_data item and, as its own docblock states, does NOT auto-save — the operator saves the component themselves. The array it writes is the parsed array itself, mutated in place, so entries and object keys the matrix does not display survive.',
+		doors: {
+			'.set_value(': {
+				verdict: 'no-persist',
+				reason:
+					'flushes the label matrix into the caller component_json’s in-memory value. component_json.prototype.set_value stages a changed_data item and, as its own docblock states, does NOT auto-save — the operator saves the component themselves. The array it writes is the parsed array itself, mutated in place, so entries and object keys the matrix does not display survive.',
+			},
+		},
 	},
 
 	// --- NOT A COMPONENT WRITE -------------------------------------------
 	'tools/tool_assistant/js/assistant_controller.js :: assistant_controller': {
-		verdict: 'not-a-component-write',
-		reason:
-			'`this._store.save(...)` is conversation_store, the assistant’s localStorage thread persistence (v2 blob). It touches no component and no record; the derivation cannot tell the two `.save(` apart, so the row says which it is.',
+		doors: {
+			'.save(': {
+				verdict: 'not-a-component-write',
+				reason:
+					'`this._store.save(...)` is conversation_store, the assistant’s localStorage thread persistence (v2 blob). It touches no component and no record; the derivation cannot tell the two `.save(` apart, so the row says which it is.',
+			},
+		},
 	},
 
 	// --- PENDING (real, unconfirmed write-backs) --------------------------
 	'tools/tool_transcription/js/tool_transcription.js :: tool_transcription.prototype.save_transcription':
 		{
-			verdict: 'PENDING',
-			reason:
-				'an automatic-transcription result is written to item 1 of the component’s current language, "replacing whatever it held" (its own docblock), with no confirmation and no comparison against what is there — so launching a re-transcription over a record whose transcript a curator has already edited replaces that work. The previous text does go to the Time Machine. Left open here because the fix is a UI decision on the transcription tool, outside the change that wrote this gate.',
+			doors: {
+				'.change_value(': {
+					verdict: 'PENDING',
+					closes:
+						'P0-12 residue (GATE-35, audit 2026-09-06): the re-transcription confirm / existence check on save_transcription',
+					reason:
+						'an automatic-transcription result is written to item 1 of the component’s current language, "replacing whatever it held" (its own docblock), with no confirmation and no comparison against what is there — so launching a re-transcription over a record whose transcript a curator has already edited replaces that work. The previous text does go to the Time Machine. Left open here because the fix is a UI decision on the transcription tool, outside the change that wrote this gate.',
+				},
+			},
 		},
+	'tools/tool_lang/server/index.ts :: tool.apiActions.automatic_translation': {
+		doors: {
+			runAutomaticTranslation: {
+				verdict: 'PENDING',
+				closes: TRANSLATION_EMPTY_BODY,
+				reason:
+					'the SERVER half of CLI-14’s tool: translateAndWrite replaces the target language’s items (possibly a human translation) with the provider’s output, under the row lock, with a TM row. A failed call or "Quota exceeded" is refused (translateItems answers items: [] and nothing is written) — but an HTTP 200 with an EMPTY body is accepted as a translation and written, blanking the target language: the exact shape the browser path refuses (LEG 2). Pinned by the empty-body tether below.',
+			},
+		},
+	},
+	'tools/tool_lang_multi/server/index.ts :: tool.apiActions.automatic_translation': {
+		doors: {
+			runAutomaticTranslation: {
+				verdict: 'PENDING',
+				closes: TRANSLATION_EMPTY_BODY,
+				reason:
+					'the same engine as tool_lang (PHP tool_lang_multi delegates), once per target language: a provider’s EMPTY 200 body is written over that language’s items instead of being refused — see the tool_lang cell and the empty-body tether below.',
+			},
+		},
+	},
 };
 
-/** PINNED. Shrink-only: this may go DOWN, never up. */
-const PENDING_COUNT = 1;
+/**
+ * PINNED. Shrink-only: this may go DOWN, never up. Counted per CELL.
+ * 2026-09-30 (TOOLS-6): 1 → 4. Not new backlog: the census was blind to server writes
+ * through any engine but four hand-listed names, and deriving the doors found two
+ * PRE-EXISTING defects — updateCache's raw media write (misfiled as lossless; TOOLS-5,
+ * one cell) and the server translation's accepted empty body (one engine, two tool
+ * cells). Each cell names its defect and closure item in `closes`; any further raise
+ * needs one named pre-existing defect and its closure item.
+ */
+const PENDING_COUNT = 4;
+
+/**
+ * PINNED, EQUALITY. Tool cells whose door is ITSELF a RAW `matrix_write.ts` primitive or
+ * an OFF-HOME psql writer — the subset of BYPASS_TOOL_CELLS with no wrapper at all.
+ * Shrink-only: CLOSURE_PLAN Step 2 (TOOLS-5) retires updateCache × updateMatrixKeyData.
+ * 2026-09-30: 2 → 3, not new backlog — seeding the closure with the off-home psql
+ * writers surfaced the PRE-EXISTING repair_tlds × normalizeOntologyTld. A raw cell
+ * that moves behind a wrapper leaves this pin but NOT the bypass pin: the bypass rule
+ * judges it where it lands.
+ */
+const RAW_TOOL_CELLS = 3;
+
+/**
+ * PINNED, EQUALITY. Tool cells whose door reaches a seed on a path that avoids EVERY
+ * record-write chokepoint (RECORD_WRITE_CHOKEPOINTS, `bypassPath`) — a raw primitive
+ * reached directly or through any number of off-chokepoint wrappers. Each is PENDING,
+ * lossless over a locked read, or carries its `bypass_reason`. Measured 2026-09-30:
+ * 25 (1 PENDING — updateCache × updateMatrixKeyData; 24 reasoned: the relation_search
+ * index rebuilds, the files_info writers, the ontology/hierarchy writers, the metadata
+ * twin, the observer mirrors, the TM undelete insert and the repair_tlds psql rewrite).
+ * A new bypassing cell is red here AND must state its reason; a vanished one is red
+ * until this is lowered.
+ */
+const BYPASS_TOOL_CELLS = 25;
+
+/** The behaviour tether of the two translation PENDING cells (registered below). */
+const EMPTY_BODY_TETHER =
+	'TETHER of the translation PENDING cells: an EMPTY provider body still BLANKS the stored target language';
+
+/** Titles registered through `behaviourTether` — filled at collection, read at run time. */
+const REGISTERED_BEHAVIOUR_TETHERS = new Set<string>();
+
+/**
+ * Registers a behaviour tether as a RUNNING test and records its title, so a
+ * `{ behaviour }` entry of SERVER_PENDING_TETHERS is checked against what really runs:
+ * a deleted tether, or one turned into `test.skip`, leaves its title unregistered.
+ */
+function behaviourTether(title: string, body: () => Promise<void>): void {
+	REGISTERED_BEHAVIOUR_TETHERS.add(title);
+	test(title, body);
+}
+
+/**
+ * The tether of every SERVER PENDING cell: what turns red when the defect is fixed
+ * IN PLACE (door unchanged). `{ behaviour }` = the title of a test registered through
+ * `behaviourTether` below, which runs the real path and asserts the defect still
+ * happens — the totality test checks the title IS registered, so deleting or skipping
+ * the tether (instead of restating the cells) is red; a function = derived facts of the
+ * defect over the action's own RESOLVED references, returning the ones that no longer hold.
+ */
+const SERVER_PENDING_TETHERS: Record<
+	string,
+	{ behaviour: string } | ((action: string) => string[])
+> = {
+	'tools/tool_lang/server/index.ts :: tool.apiActions.automatic_translation × runAutomaticTranslation':
+		{ behaviour: EMPTY_BODY_TETHER },
+	'tools/tool_lang_multi/server/index.ts :: tool.apiActions.automatic_translation × runAutomaticTranslation':
+		{ behaviour: EMPTY_BODY_TETHER },
+	// TOOLS-5: the media branch writes the whole key from an UNLOCKED snapshot with no
+	// TM row. A fix that keeps updateMatrixKeyData must take the row lock and record
+	// the replaced value — either one, in the action's own unit, is this tether's red.
+	'tools/tool_update_cache/server/index.ts :: updateCache × updateMatrixKeyData': (action) => {
+		const own = CLOSURE.preciseEdgesOf(closureKey(action));
+		const problems: string[] = [];
+		if (takesLockedRead(CLOSURE, action)) {
+			problems.push(
+				'now takes readMatrixKeyForUpdate — the TOOLS-5 snapshot race may be fixed: restate the cell (lossless + lockedRead) and lower PENDING_COUNT',
+			);
+		}
+		if (own.has('src/core/db/time_machine.ts#recordTimeMachine')) {
+			problems.push(
+				'now records a Time Machine row itself — restate the cell and lower PENDING_COUNT',
+			);
+		}
+		if (!own.has(`${MATRIX_WRITE}#updateMatrixKeyData`)) {
+			problems.push('no longer calls updateMatrixKeyData itself — the cell is stale');
+		}
+		return problems;
+	},
+};
+
+/**
+ * NAMED, SHRINK-ONLY (equality per file). Corpus files with a runtime `import(` whose
+ * specifier is COMPUTED, so the closure cannot follow it. Each is a stated limit with
+ * its reason; a new site in any file — or a new site in a listed one — is red.
+ */
+const UNRESOLVED_DYNAMIC_IMPORT_EXEMPT: Record<string, { sites: number; reason: string }> = {
+	'src/core/tools/loader.ts': {
+		sites: 1,
+		reason:
+			'the tool REGISTRY loader imports each tools/<name>/server/index.ts by its canonical path; every such module is itself in the corpus and its writes are its own apiActions units — the dispatch from the registry to them is the stated registry-dispatch limit.',
+	},
+	'src/server.ts': {
+		sites: 1,
+		reason:
+			'boot warm-up (warmCoreModuleGraph): a SIDE-EFFECT import of every src/core module to fill the module cache; the namespace is discarded, so no writer is reached through it.',
+	},
+	'scripts/ci/mariadb_tier.ts': {
+		sites: 1,
+		reason:
+			'the CI tier loads the suite MariaDB helper (test/helpers/suite_mariadb.ts, outside the matrix corpus) by a joined absolute path; it provisions MariaDB, never a matrix row.',
+	},
+	'scripts/tool_viewport_check.ts': {
+		sites: 6,
+		reason:
+			'every site runs INSIDE page.evaluate: a browser-side import of a SERVED client URL (/dedalo/…/instances.js, a tool module) in headless Chrome — not a server module, no matrix writer.',
+	},
+	'scripts/update_probe_ui_proof.ts': {
+		sites: 1,
+		reason:
+			'inside page.evaluate: the browser imports the SERVED update_code_phases.js by URL to prove the served bytes — client code in headless Chrome, no matrix writer.',
+	},
+};
+
+/**
+ * NAMED, by TARGET CLASS (not by importing file, so another lane's new import of an
+ * already-classified target is not a red here). A relative import — static, re-export,
+ * or a LITERAL dynamic `import('x')` in any form — whose target is not a corpus file is
+ * not followed by the closure; it is allowed only when the target EXISTS and falls in
+ * one of these classes, each with the reason nothing the write-back census must see
+ * lies behind it. A missing target (a spelling the resolver does not understand) or any
+ * other out-of-corpus file is red.
+ */
+const OUT_OF_CORPUS_TARGETS: {
+	id: string;
+	matches: (target: string) => boolean;
+	reason: string;
+}[] = [
+	{
+		id: 'suite',
+		matches: (target) => target.startsWith('test/'),
+		reason:
+			'the suite’s own helpers and parity harness: outside the write-path corpus by definition (write_path_corpus.ts, WHAT IS IN), and every test-data writer there is marker-guarded (assertTestDatabase).',
+	},
+	{
+		id: 'migration-runner',
+		matches: (target) => target === 'install/db/migrate.ts',
+		reason:
+			'the schema-migration runner for TS-owned tables; its only shared-row writes are seed corrections held by migration_shared_row_tripwire — an install-lane write, never a tool write-back.',
+	},
+	{
+		id: 'json-data',
+		matches: (target) => target.endsWith('.json'),
+		reason: 'a JSON data import (schema definitions): data, no code, nothing can write through it.',
+	},
+	{
+		id: 'tool-client-js',
+		matches: (target) => CLIENT_FILES.includes(target),
+		reason:
+			'a tool’s CLIENT JS — a file the client leg itself scans (CLIENT_FILES, tools/**/js/**): its component-value writes are that leg’s cells (CLIENT_DOORS), not the server closure’s.',
+	},
+	{
+		id: 'tools-js-leaf',
+		matches: (target) => /^tools\/.+\.js$/.test(target) && isImportFreeLeaf(target),
+		reason:
+			'a tools/**/*.js module OUTSIDE the client leg (e.g. transcribers/lib/paragraphs.js, which src/core/tools/transcription_asr.ts runs SERVER-side) admitted only as a mechanically checked LEAF: no import, no require(, no Bun./process./fetch( — it can reach no module, no database and no network, so it can write nothing.',
+	},
+];
+
+/**
+ * The named classes admitting an out-of-corpus target (ids, in list order); empty = red.
+ * The census and the class controls both judge through it, so a class that widened is
+ * red on the controls, not only on a tree that happens to import the widened case.
+ */
+function admittedBy(target: string): string[] {
+	return OUT_OF_CORPUS_TARGETS.filter((entry) => entry.matches(target)).map((entry) => entry.id);
+}
+
+/**
+ * Is this (existing) .js file a LEAF — its CODE (comments and strings blanked) names no
+ * `import`, `require(`, `Bun.`, `process.` or `fetch(`? Without any of those a module
+ * can reach nothing that writes.
+ */
+function isImportFreeLeaf(target: string): boolean {
+	const code = codeOnly(readFileSync(join(ROOT, target), 'utf8'));
+	return !/(?<![\w$.])(?:import\b|require\s*\(|Bun\s*\.|process\s*\.|fetch\s*\()/.test(code);
+}
 
 /**
  * A top-level declaration: `function x`, `const x =`, `x.prototype.y =`, `obj.y =`.
@@ -699,40 +1491,25 @@ const PENDING_COUNT = 1;
 const DECLARATION =
 	/^(?:export\s+)?(?:async\s+)?(?:function\s+([A-Za-z0-9_$]+)|(?:const|let|var)\s+([A-Za-z0-9_$]+)\s*=|([A-Za-z0-9_$]+(?:\.prototype)?\.[A-Za-z0-9_$]+)\s*=)/;
 
-function walk(dir: string, acc: string[] = []): string[] {
-	for (const entry of readdirSync(dir)) {
-		const path = join(dir, entry);
-		if (statSync(path).isDirectory()) walk(path, acc);
-		else acc.push(path);
-	}
-	return acc;
-}
-
-/** The files under scan: every tool's client JS and every tool's server TS. */
-function scannedFiles(): { path: string; doors: string[] }[] {
-	const files: { path: string; doors: string[] }[] = [];
-	for (const path of walk(join(ROOT, 'tools'))) {
-		// `-min.js` is a build artefact of the file beside it, not a second source.
-		if (path.endsWith('.js') && !path.endsWith('-min.js') && path.includes('/js/')) {
-			files.push({ path, doors: CLIENT_DOORS });
-		} else if (path.endsWith('.ts') && path.includes('/server/')) {
-			files.push({ path, doors: SERVER_DOORS });
-		}
-	}
-	return files;
-}
+/**
+ * Every tool's client JS: the shared browser corpus in git's UNFILTERED view, tool js/
+ * trees only, minus the `-min.js` builds. NOT `browserSources()`: its vendored-library
+ * exclusion (`/lib/`, `/vendor/`, `.min.js`) would also drop a tool's OWN helper under a
+ * `lib/` directory, whose `.save(` would then have no cell and no red.
+ */
+const isToolClientFile = (file: string): boolean =>
+	file.startsWith('tools/') && file.includes('/js/') && !file.endsWith('-min.js');
+const CLIENT_FILES = browserSourcesUnfiltered().filter(isToolClientFile);
 
 /**
- * Walks a file line by line, tracking the nearest top-level declaration, and returns
- * every `<file> :: <symbol>` whose body calls a write door. Comment lines are skipped:
- * a docblock that MENTIONS `saveComponentData(` is not a door, and several of these
- * files discuss the write path at length.
+ * Walks a client file line by line, tracking the nearest top-level declaration, and
+ * returns every `<file> :: <symbol>` → door → site count. Comment lines are skipped: a
+ * docblock that MENTIONS `.save(` is not a door.
  */
-function deriveActions(): Map<string, string[]> {
-	const actions = new Map<string, string[]>();
-	for (const { path, doors } of scannedFiles()) {
-		const rel = relative(ROOT, path);
-		const lines = readFileSync(path, 'utf8').split('\n');
+function deriveClientCells(): Map<string, Map<string, number>> {
+	const actions = new Map<string, Map<string, number>>();
+	for (const rel of CLIENT_FILES) {
+		const lines = readFileSync(join(ROOT, rel), 'utf8').split('\n');
 		let symbol = '(module top level)';
 		let inBlockComment = false;
 		for (const line of lines) {
@@ -744,22 +1521,26 @@ function deriveActions(): Map<string, string[]> {
 			if (declaration !== null) {
 				symbol = declaration[1] ?? declaration[2] ?? declaration[3] ?? symbol;
 			}
-			const hits = doors.filter((door) => line.includes(door));
-			if (hits.length === 0) continue;
-			const key = `${rel} :: ${symbol}`;
-			actions.set(key, [...new Set([...(actions.get(key) ?? []), ...hits])]);
+			for (const door of CLIENT_DOORS) {
+				const sites = line.split(door).length - 1;
+				if (sites === 0) continue;
+				const key = `${rel} :: ${symbol}`;
+				const doors = actions.get(key) ?? new Map<string, number>();
+				doors.set(door, (doors.get(door) ?? 0) + sites);
+				actions.set(key, doors);
+			}
 		}
 	}
 	return actions;
 }
 
 /**
- * The source of ONE action: from its declaration line to the line before the next
+ * The source of ONE client action: from its declaration line to the line before the next
  * top-level declaration. This is what the per-verdict checks read, so a `confirm(`
  * elsewhere in the same file cannot vouch for an action that has none — the exact
  * confusion that let a file hold a confirmed rebuild and an unconfirmed overwrite.
  */
-function actionBody(key: string): string {
+function clientActionBody(key: string): string {
 	const [rel, symbol] = key.split(' :: ') as [string, string];
 	const lines = readFileSync(join(ROOT, rel), 'utf8').split('\n');
 	let start = -1;
@@ -779,27 +1560,315 @@ function actionBody(key: string): string {
 	return lines.slice(start, end).join('\n');
 }
 
-const derived = deriveActions();
+/**
+ * The CODE of a fragment: comments dropped, string and regex bodies blanked (template
+ * substitutions kept) — what a spelling check must read, so a literal or a comment that
+ * MENTIONS a call cannot stand in for it.
+ */
+function codeOnly(fragment: string): string {
+	return stripComments(fragment, {
+		blankStrings: true,
+		keepTemplateSubstitutions: true,
+		blankRegexBodies: true,
+	});
+}
+
+/** `<file> :: <decl>` → the closure's `<file>#<decl>`. */
+const closureKey = (action: string): string => action.replace(' :: ', '#');
+const isServerAction = (action: string): boolean => action.includes('/server/');
+
+const CLOSURE = buildWriterClosure();
+const SERVER_CELLS = toolServerCells(CLOSURE);
+const CLIENT_CELLS = deriveClientCells();
+const DERIVED = new Map<string, Map<string, number>>([...CLIENT_CELLS, ...SERVER_CELLS]);
+
+/** The code body of an action: the closure's unit for a server action, the line scan's for a client one. */
+function actionBody(action: string): string {
+	return isServerAction(action)
+		? (CLOSURE.bodies.get(closureKey(action)) ?? '')
+		: clientActionBody(action);
+}
+
+/** The closure member a server door names (a `file#name` door is its own key). */
+function doorTarget(closure: WriterClosure, door: string): string | undefined {
+	if (door.includes('#')) return door;
+	return [...closure.members.keys()].find((key) => key.endsWith(`#${door}`));
+}
+
+/** The chokepoint cut of the bypass rule (RECORD_WRITE_CHOKEPOINTS, checked below). */
+const CHOKEPOINTS: ReadonlySet<string> = new Set(Object.keys(RECORD_WRITE_CHOKEPOINTS));
+
+/**
+ * Does a server door write the matrix PAST the chokepoint — its resolved target reaches
+ * a seed on a path that avoids every chokepoint unit? The path (door … seed), or null.
+ * Judged through the closure, not by the door's own name or module: a raw write moved
+ * one — or five — declarations deeper into a differently-named wrapper is still found.
+ */
+function bypassOf(
+	closure: WriterClosure,
+	door: string,
+	cut: ReadonlySet<string> = CHOKEPOINTS,
+): string[] | null {
+	const target = doorTarget(closure, door);
+	return target === undefined ? null : closure.bypassPath(target, cut);
+}
+
+/**
+ * Is a server door a RAW `matrix_write.ts` primitive? Judged by its RESOLVED target,
+ * never by the bare name: a door is spelled `file#name` as soon as another closure
+ * member shares its bare name, and a bare-name match would then drop the raw cell out
+ * of the rule exactly when a same-named wrapper appears.
+ */
+function isRawDoor(closure: WriterClosure, door: string): boolean {
+	const target = doorTarget(closure, door);
+	if (target === undefined) return false;
+	// an OFF-HOME psql writer bypasses the chokepoint exactly as a primitive does
+	if (closure.psqlSeeds.includes(target)) return true;
+	if (!target.startsWith(`${MATRIX_WRITE}#`)) return false;
+	return closure.primitives.includes(target.slice(MATRIX_WRITE.length + 1));
+}
+
+/**
+ * The locked-read claim: the action's OWN unit has a RESOLVED edge to
+ * readMatrixKeyForUpdate. Never an escape edge: a matrix_write namespace handed on as
+ * a value reaches every export, the lock included, without anything taking it.
+ */
+function takesLockedRead(closure: WriterClosure, action: string): boolean {
+	return closure.preciseEdgesOf(closureKey(action)).has(`${MATRIX_WRITE}#readMatrixKeyForUpdate`);
+}
+
+type CensusCell = { action: string; door: string; cell: Cell };
+
+/**
+ * THE BYPASS RULE — pure over (closure, cells, cut): `bypass` is every cell whose door
+ * reaches a seed AVOIDING the chokepoint cut (`bypassOf` — path-based, so a wrapper of
+ * any name and depth cannot hide the write); `raw` the subset whose door IS a seed;
+ * `refused` the bypassing cells that are neither PENDING, `lossless` with a lockedRead
+ * the action really takes, nor carrying a `bypass_reason`.
+ */
+function bypassRuleProblems(
+	closure: WriterClosure,
+	cells: readonly CensusCell[],
+	cut: ReadonlySet<string> = CHOKEPOINTS,
+): { raw: string[]; bypass: string[]; refused: string[] } {
+	const bypass = cells.filter(({ door }) => bypassOf(closure, door, cut) !== null);
+	const raw = cells.filter(({ door }) => isRawDoor(closure, door));
+	const refused = bypass.filter(({ action, cell }) => {
+		const lockedLossless =
+			cell.verdict === 'lossless' && cell.lockedRead === true && takesLockedRead(closure, action);
+		const reasoned = typeof cell.bypass_reason === 'string' && cell.bypass_reason.length > 60;
+		return !(cell.verdict === 'PENDING' || lockedLossless || reasoned);
+	});
+	const label = ({ action, door }: CensusCell) => `${action} × ${door}`;
+	return {
+		raw: raw.map(label).sort(),
+		bypass: bypass.map(label).sort(),
+		refused: refused.map(label).sort(),
+	};
+}
+
+/**
+ * THE LOSSLESS HONESTY RULE — pure over (closure, cells, leg titles): a `lossless` cell's
+ * `proof` must be one of the behavioural legs' REAL titles (not merely a string that
+ * appears in this file — the census literal itself would satisfy that), or the cell
+ * declares `readVerified`; a `lockedRead` claim needs the action's lock edge.
+ */
+function losslessProblems(
+	closure: WriterClosure,
+	cells: readonly CensusCell[],
+	legs: readonly string[],
+): string[] {
+	const problems: string[] = [];
+	for (const { action, door, cell } of cells) {
+		if (cell.verdict !== 'lossless') continue;
+		if (cell.proof !== undefined) {
+			if (!legs.includes(cell.proof)) {
+				problems.push(`${action} × ${door}: proof '${cell.proof}' is not a behavioural leg`);
+			}
+		} else if (cell.readVerified !== true) {
+			problems.push(`${action} × ${door}: no proof and not readVerified`);
+		}
+		if (cell.lockedRead === true && !takesLockedRead(closure, action)) {
+			problems.push(`${action} × ${door}: claims a locked read the action never takes`);
+		}
+	}
+	return problems.sort();
+}
+
+/**
+ * THE REFUSES RULE — pure over (closure, cells, body reader): a `refuses` cell's
+ * `must_contain` must be in CODE (strings and comments blanked, `codeOnly`) — in the
+ * `evidence` declaration, which the action must REACH through RESOLVED references (a
+ * namespace escape says only "could call any export": enough to make a cell, never to
+ * prove one), or else in the action's own body. The tree and the control both judge
+ * through it. A spelling check still: the server cells' BEHAVIOUR is LEG 4's tethers.
+ */
+function refusesProblems(
+	closure: WriterClosure,
+	cells: readonly CensusCell[],
+	bodyOf: (action: string) => string,
+): string[] {
+	const problems: string[] = [];
+	for (const { action, door, cell } of cells) {
+		if (cell.verdict !== 'refuses') continue;
+		const label = `${action} × ${door}`;
+		if (cell.evidence === undefined) {
+			if (!codeOnly(bodyOf(action)).includes(cell.must_contain)) {
+				problems.push(`${label}: ${cell.must_contain} is not in its code`);
+			}
+			continue;
+		}
+		const evidence = closure.bodies.get(cell.evidence) ?? '';
+		if (evidence.length === 0) {
+			problems.push(`${label}: ${cell.evidence}: no such declaration`);
+		} else if (!codeOnly(evidence).includes(cell.must_contain)) {
+			problems.push(`${label}: ${cell.must_contain} is not in the code of ${cell.evidence}`);
+		}
+		if (!closure.reachesPrecisely(closureKey(action), cell.evidence)) {
+			problems.push(`${label}: ${cell.evidence} is not reached through RESOLVED references`);
+		}
+	}
+	return problems.sort();
+}
+
+interface CensusProblems {
+	missingActions: string[];
+	staleActions: string[];
+	missingCells: string[];
+	staleCells: string[];
+	siteMismatch: string[];
+}
+
+/**
+ * THE JUDGE — pure over (derived cells, census). The tree scan and the controls both run
+ * through it, so a judge that stopped seeing a class of problem is red on the controls.
+ */
+function censusProblems(
+	derived: ReadonlyMap<string, ReadonlyMap<string, number>>,
+	census: Readonly<Record<string, CensusRow>>,
+): CensusProblems {
+	const problems: CensusProblems = {
+		missingActions: [],
+		staleActions: [],
+		missingCells: [],
+		staleCells: [],
+		siteMismatch: [],
+	};
+	for (const [action, doors] of derived) {
+		const row = census[action];
+		if (row === undefined) problems.missingActions.push(action);
+		for (const [door, sites] of doors) {
+			const cell = row?.doors[door];
+			if (cell === undefined) {
+				problems.missingCells.push(`${action} × ${door}`);
+				continue;
+			}
+			if ((cell.sites ?? 1) !== sites) {
+				problems.siteMismatch.push(
+					`${action} × ${door}: ${sites} site(s) in the source, ${cell.sites ?? 1} in the census`,
+				);
+			}
+		}
+	}
+	for (const [action, row] of Object.entries(census)) {
+		const doors = derived.get(action);
+		if (doors === undefined) problems.staleActions.push(action);
+		for (const door of Object.keys(row.doors)) {
+			if (doors?.has(door) !== true) problems.staleCells.push(`${action} × ${door}`);
+		}
+	}
+	for (const list of Object.values(problems)) list.sort();
+	return problems;
+}
+
+const PROBLEMS = censusProblems(DERIVED, CENSUS);
+
+/** Every (action, door, cell) of the census, flattened. */
+const CELLS: CensusCell[] = Object.entries(CENSUS).flatMap(([action, row]) =>
+	Object.entries(row.doors).map(([door, cell]) => ({ action, door, cell })),
+);
 
 describe('LEG 4 — the tool write-back census is TOTAL by derivation', () => {
-	test('the derivation actually found actions (the scan is not silently empty)', () => {
-		// Without this floor a broken walk() would make every assertion below vacuous.
-		expect(derived.size).toBeGreaterThan(25);
-		// and it found the two P0-12 actions specifically, by their real names
-		expect([...derived.keys()]).toContain(
+	test('anti-vacuity: the corpus, the closure and both derivations are populated', () => {
+		// Without these floors a broken lister or analyser would make every assertion
+		// below vacuous.
+		expect(CLOSURE.files.length).toBeGreaterThan(WRITE_PATH_CORPUS_FLOOR);
+		expect(CLIENT_FILES.length).toBeGreaterThan(100);
+		expect(CLOSURE.members.size).toBeGreaterThanOrEqual(100);
+		const memberNames = new Set([...CLOSURE.members.keys()].map((key) => key.split('#')[1]));
+		for (const name of [
+			'saveComponentData',
+			'persistRecordKeys',
+			'persistRecordColumns',
+			'deletePortalLocator',
+			'createSectionRecord',
+			'deleteSectionRecord',
+			'persistUploadedMedia',
+			'reconcileStoredFilesInfo',
+			'runAutomaticTranslation',
+			// reached only through the `return deps ?? (await import('../user_stats.ts'))`
+			// seam — the namespace-escape rule's tree witness
+			'databaseInfoRebuildUserStats',
+		]) {
+			expect(memberNames.has(name), `${name} is not a writer-closure member`).toBe(true);
+		}
+		for (const key of [
+			// through src/core/test_data/ (NOT excluded: it runs on real databases too)
+			'src/core/install/db_restore.ts#installDbFromSeed',
+			'src/core/area_maintenance/widgets/unit_test.ts#unitTestCreateTestRecord',
+			// through MODULE-SCOPE dynamic bindings made in another unit (top-level await)
+			'scripts/migrate_component_alias.ts#touchedIds',
+		]) {
+			expect(CLOSURE.members.has(key), `${key} is not a writer-closure member`).toBe(true);
+		}
+		// the OFF-HOME psql writers are derived seeds (the T2.b channel), and one tool
+		// action reaches one today
+		for (const key of [
+			'src/core/ontology/data_io_import.ts#normalizeOntologyTld',
+			'src/core/ontology/data_io_import.ts#importFromCopyFile',
+			'src/core/install/hierarchy_import.ts#importCopyFile',
+			'src/core/install/root_pw.ts#setRootPassword',
+		]) {
+			expect(CLOSURE.psqlSeeds, `${key} is not a derived psql seed`).toContain(key);
+		}
+		expect(
+			SERVER_CELLS.get(
+				'tools/tool_ontology_parser/server/tool_ontology_parser.ts :: toolOntologyParserRepairTlds',
+			)?.get('normalizeOntologyTld'),
+		).toBe(1);
+		// a ternary-branch `await import('x')` is never a dropped load: emitDataframeItem
+		// binds frame_as_of through `const asOfModule = c ? null : await import(…)`
+		expect(
+			CLOSURE.edgesOf('src/core/relations/relation_core.ts#emitDataframeItem').has(
+				'src/core/tm_record/frame_as_of.ts#frameTargetsAsOf',
+			),
+		).toBe(true);
+		// Measured 2026-09-30: 35 server actions, 54 server cells, 16 client actions.
+		expect(SERVER_CELLS.size).toBeGreaterThanOrEqual(31);
+		const serverCellCount = [...SERVER_CELLS.values()].reduce((sum, doors) => sum + doors.size, 0);
+		expect(serverCellCount).toBeGreaterThanOrEqual(48);
+		expect(CLIENT_CELLS.size).toBeGreaterThanOrEqual(14);
+		// The write the four hand-listed doors could not see: a RAW primitive, reached
+		// through a dynamic-destructure import, inside a tool action.
+		expect(
+			SERVER_CELLS.get('tools/tool_update_cache/server/index.ts :: updateCache')?.get(
+				'updateMatrixKeyData',
+			),
+		).toBe(1);
+		// and the two P0-12 actions, by their real names
+		expect([...CLIENT_CELLS.keys()]).toContain(
 			'tools/tool_transcription/js/tool_transcription.js :: tool_transcription.prototype.regroup_paragraphs',
 		);
-		expect([...derived.keys()]).toContain(
+		expect([...CLIENT_CELLS.keys()]).toContain(
 			'tools/tool_lang/js/browser_translation.js :: translate_component_browser',
 		);
 	});
 
-	test('every door token is a REAL write door, not a typo', () => {
-		// A door token that matches nothing shrinks the census to silence. A token with no
-		// caller in tools/ today is fine — a token that no longer names anything is not, so
-		// each one is checked against the module that DEFINES it.
+	test('every client door token is a REAL write door, not a typo', () => {
+		// A door token that matches nothing shrinks the census to silence. Each one is
+		// checked against the module that DEFINES it. (Server doors are derived from
+		// matrix_write.ts's exports and cannot be misspelled.)
 		expect(CLIENT_DOORS.length).toBe(3);
-		expect(SERVER_DOORS.length).toBe(4);
 		const componentCommon = readFileSync(
 			join(ROOT, 'client/dedalo/core/component_common/js/component_common.js'),
 			'utf8',
@@ -811,111 +1880,1605 @@ describe('LEG 4 — the tool write-back census is TOTAL by derivation', () => {
 				`${door} is not a component_common write door any more`,
 			).toBe(true);
 		}
-		const srcSources = walk(join(ROOT, 'src'))
-			.filter((path) => path.endsWith('.ts'))
-			.map((path) => readFileSync(path, 'utf8'));
-		for (const door of SERVER_DOORS) {
-			const name = door.slice(0, -1);
-			expect(
-				srcSources.some((source) =>
-					new RegExp(`export (?:async )?function ${name}\\(`).test(source),
-				),
-				`${door} is not exported by src/ any more — is the token still right?`,
-			).toBe(true);
-		}
 	});
 
 	test('every derived action has a census row', () => {
-		const missing = [...derived.keys()].filter((key) => CENSUS[key] === undefined).sort();
 		expect(
-			missing,
-			`Tool action(s) writing a component value with no census row:\n  ${missing.join('\n  ')}\nAdd a row with a verdict and a written reason. If it reads a stored value, transforms it and writes it back, the verdict is 'lossless', 'confirmed' or 'refuses' — never a silent overwrite.`,
+			PROBLEMS.missingActions,
+			`Tool action(s) writing a component value with no census row:\n  ${PROBLEMS.missingActions.join('\n  ')}\nAdd a row with a verdict per door and a written reason. If it reads a stored value, transforms it and writes it back, the verdict is 'lossless', 'confirmed' or 'refuses' — never a silent overwrite.`,
 		).toEqual([]);
 	});
 
-	test('no census row names an action that no longer writes (stale rows)', () => {
-		const stale = Object.keys(CENSUS)
-			.filter((key) => !derived.has(key))
+	test('every derived (action, door) cell has its own verdict', () => {
+		const described = PROBLEMS.missingCells.map((cell) => {
+			const door = cell.slice(cell.lastIndexOf(' × ') + 3);
+			const target = cell.includes('/server/') ? doorTarget(CLOSURE, door) : undefined;
+			return target === undefined
+				? cell
+				: `${cell}\n      witness: ${CLOSURE.witness(target).join(' → ')}`;
+		});
+		expect(
+			described,
+			`(action, door) cell(s) with no verdict — a new writer, or a new door on a known action:\n  ${described.join('\n  ')}`,
+		).toEqual([]);
+	});
+
+	test('no census row or cell names a write that no longer exists (stale)', () => {
+		expect(
+			PROBLEMS.staleActions,
+			'Census row(s) for actions that no longer call a write door (renamed? removed?)',
+		).toEqual([]);
+		expect(PROBLEMS.staleCells, 'Census cell(s) whose door the action no longer reaches').toEqual(
+			[],
+		);
+	});
+
+	test('every cell’s site count is the source’s', () => {
+		expect(
+			PROBLEMS.siteMismatch,
+			'A door gained or lost a call site: re-read the action and restate the cell',
+		).toEqual([]);
+	});
+
+	test('every cell carries a real reason, not a placeholder', () => {
+		for (const { action, door, cell } of CELLS) {
+			expect(
+				cell.reason.length,
+				`${action} × ${door}: the reason is too short to be a reason`,
+			).toBeGreaterThan(60);
+		}
+	});
+
+	test('every RECORD_WRITE_CHOKEPOINTS unit is real and fires the obligation hook', () => {
+		// The cut is what makes a write "sanctioned": a stale key would cut nothing (every
+		// cell through the renamed door turns into a bypass — red, loudly), and a key that
+		// does not reach afterRecordWrite through RESOLVED references is no chokepoint.
+		expect(CHOKEPOINTS.size).toBeGreaterThanOrEqual(7);
+		for (const [key, reason] of Object.entries(RECORD_WRITE_CHOKEPOINTS)) {
+			expect(CLOSURE.members.has(key), `${key} is not a writer-closure member`).toBe(true);
+			expect(
+				CLOSURE.reachesPrecisely(key, AFTER_RECORD_WRITE),
+				`${key} does not reach ${AFTER_RECORD_WRITE} — it is no chokepoint`,
+			).toBe(true);
+			expect(reason.length, `${key}: the chokepoint needs its reason`).toBeGreaterThan(40);
+		}
+	});
+
+	test('the BYPASS rule: a tool cell whose door writes PAST the chokepoint — at any depth — is PENDING, lossless over a locked read, or says why', () => {
+		const { raw, bypass, refused } = bypassRuleProblems(CLOSURE, CELLS);
+		const described = refused.map((label) => {
+			const door = label.slice(label.lastIndexOf(' × ') + 3);
+			return `${label}\n      bypass: ${(bypassOf(CLOSURE, door) ?? []).join(' → ')}`;
+		});
+		expect(
+			described,
+			"a tool write that reaches the matrix past every RECORD_WRITE_CHOKEPOINTS unit must be PENDING, 'lossless' with lockedRead over readMatrixKeyForUpdate, or carry a bypass_reason",
+		).toEqual([]);
+		expect(raw.length, `raw-primitive tool cells: ${raw.join(', ')}`).toBe(RAW_TOOL_CELLS);
+		expect(bypass.length, `bypassing tool cells:\n  ${bypass.join('\n  ')}`).toBe(
+			BYPASS_TOOL_CELLS,
+		);
+		// every raw cell is a bypass (a seed trivially avoids the cut)
+		expect(raw.filter((label) => !bypass.includes(label))).toEqual([]);
+		// a bypass_reason on a cell that does NOT bypass is a stale claim
+		const stale = CELLS.filter(
+			({ door, cell }) => cell.bypass_reason !== undefined && bypassOf(CLOSURE, door) === null,
+		).map(({ action, door }) => `${action} × ${door}`);
+		expect(stale, 'bypass_reason on a cell whose door goes through the chokepoint').toEqual([]);
+	});
+
+	test('no corpus file loads a module through a dynamic import the analyser cannot resolve, beyond the named exemptions', () => {
+		// The WHOLE corpus, not only tool servers: a src engine whose writer sits behind
+		// an unresolvable import drops out of the closure, and every tool delegating to
+		// it silently loses its cell. A literal specifier is always resolved (a
+		// value-position `import('x')` is a namespace escape: every export reached), so
+		// only a COMPUTED specifier lands here.
+		const perFile = new Map<string, string[]>();
+		for (const file of CLOSURE.files) {
+			const sites = CLOSURE.unresolvedDynamicImports(file);
+			if (sites.length > 0) perFile.set(file, sites);
+		}
+		const problems: string[] = [];
+		for (const [file, sites] of perFile) {
+			const exempt = UNRESOLVED_DYNAMIC_IMPORT_EXEMPT[file];
+			if (exempt === undefined || exempt.sites !== sites.length) {
+				problems.push(
+					`${file}: ${sites.length} site(s), ${exempt?.sites ?? 0} exempt\n      ${sites.join('\n      ')}`,
+				);
+			}
+		}
+		for (const [file, exempt] of Object.entries(UNRESOLVED_DYNAMIC_IMPORT_EXEMPT)) {
+			if (!perFile.has(file))
+				problems.push(`${file}: exempt for ${exempt.sites}, has none (stale)`);
+			expect(exempt.reason.length, `${file}: the exemption needs a reason`).toBeGreaterThan(60);
+		}
+		expect(
+			problems.sort(),
+			'an unresolved import is a writer the census cannot see — use a literal specifier (const {x} = await import(…)); a genuinely computed one needs a named exemption with its reason (shrink-only)',
+		).toEqual([]);
+	});
+
+	test('no corpus reference to a corpus module names an export that does not exist — nothing is dropped silently', () => {
+		// A bound name, a `ns.member`, a `(await import('x')).a` or a static import name
+		// whose export does not resolve would give NO edge — the shape a default export
+		// had before `default` was modelled. Every one is listed, so the list is empty.
+		const problems = CLOSURE.files.flatMap((file) => CLOSURE.unresolvedBindings(file));
+		expect(problems, 'an unresolved export reference is an edge the closure silently lost').toEqual(
+			[],
+		);
+	});
+
+	test('no relative import — static or literal dynamic — leaves the corpus except to a named target class', () => {
+		const problems: string[] = [];
+		let outOfCorpus = 0;
+		for (const file of CLOSURE.files) {
+			for (const { site, target } of CLOSURE.outOfCorpusImports(file)) {
+				outOfCorpus++;
+				if (!existsSync(join(ROOT, target))) {
+					problems.push(`${site} → ${target}: no such file (a spelling the resolver missed?)`);
+				} else if (admittedBy(target).length === 0) {
+					problems.push(`${site} → ${target}: outside the corpus and in no named class`);
+				}
+			}
+		}
+		for (const entry of OUT_OF_CORPUS_TARGETS) {
+			expect(entry.reason.length).toBeGreaterThan(60);
+		}
+		// anti-vacuity: the report is live (the corpus imports test/ helpers today)
+		expect(outOfCorpus).toBeGreaterThan(0);
+		expect(problems.sort()).toEqual([]);
+	});
+
+	test('AGREEMENT: the name-based raw-call census (write_obligations leg A) equals the binding-resolved primitive edges', () => {
+		const excluded = (key: string) => key.startsWith(`${MATRIX_WRITE}#`);
+		const byName = new Set<string>();
+		for (const file of CLOSURE.files) {
+			const source = stripComments(readFileSync(join(ROOT, file), 'utf8'));
+			for (const call of rawCallsIn(file, source)) {
+				if (!excluded(call.key)) byName.add(`${call.key} ${call.primitive}`);
+			}
+		}
+		const byBinding = new Set<string>();
+		for (const key of CLOSURE.bodies.keys()) {
+			if (excluded(key)) continue;
+			for (const target of CLOSURE.edgesOf(key).keys()) {
+				const [file, name] = target.split('#') as [string, string];
+				if (file === MATRIX_WRITE && RAW_PRIMITIVES.includes(name)) byBinding.add(`${key} ${name}`);
+			}
+		}
+		expect(byName.size).toBeGreaterThan(25);
+		expect(
+			[...byName].filter((entry) => !byBinding.has(entry)).sort(),
+			'called by name, not resolved',
+		).toEqual([]);
+		expect(
+			[...byBinding].filter((entry) => !byName.has(entry)).sort(),
+			'resolved, not called by name',
+		).toEqual([]);
+	});
+
+	test('AGREEMENT: the psql seeds by BINDING (a resolved edge to runPsql) equal the psql writers by NAME', () => {
+		// Seeds are derived from the binding, so an aliased / namespace / injected runPsql
+		// is a seed; this holds the two views equal on the tree, so a spelling the binder
+		// misses (or a local function that merely shares the name) is red, not a silent
+		// seed more or less.
+		const byName = [...CLOSURE.bodies]
+			.filter(
+				([key, body]) =>
+					!key.startsWith(`${MATRIX_WRITE}#`) &&
+					!key.includes('#<type:') &&
+					isPsqlMatrixWriter(body),
+			)
+			.map(([key]) => key)
 			.sort();
-		expect(
-			stale,
-			`Census row(s) for actions that no longer call a write door (renamed? removed?):\n  ${stale.join('\n  ')}`,
-		).toEqual([]);
-	});
-
-	test('every row carries a real reason, not a placeholder', () => {
-		for (const [key, row] of Object.entries(CENSUS)) {
-			expect(row.reason.length, `${key}: the reason is too short to be a reason`).toBeGreaterThan(
-				60,
+		expect(CLOSURE.psqlSeeds.length).toBeGreaterThanOrEqual(7);
+		expect(CLOSURE.psqlSeeds, 'psql seeds by binding vs psql writers by name').toEqual(byName);
+		for (const seed of CLOSURE.psqlSeeds) {
+			expect(CLOSURE.preciseEdgesOf(seed).has(PSQL_DOOR), `${seed}: no resolved runPsql edge`).toBe(
+				true,
 			);
 		}
 	});
 });
 
-describe('LEG 4 — the verdicts are true of the source, not just of the table', () => {
-	test("every 'confirmed' action really asks before writing", () => {
-		for (const [key, row] of Object.entries(CENSUS)) {
-			if (row.verdict !== 'confirmed') continue;
-			const body = actionBody(key);
-			expect(body.length, `${key}: could not locate the action's body`).toBeGreaterThan(0);
-			expect(
-				body.includes(row.must_contain ?? 'confirm('),
-				`${key} is marked 'confirmed' but its own body never calls confirm()`,
-			).toBe(true);
-		}
+describe('LEG 4 — the analyser and the judge, on injected inputs (positive controls)', () => {
+	const MATRIX_WRITE_CONTROL = [
+		'export async function updateMatrixKeyData(t: string): Promise<void> {',
+		'\tawait sql`x`;',
+		'}',
+		'export async function readMatrixKeyForUpdate(t: string): Promise<void> {}',
+	].join('\n');
+	const ENGINE = [
+		"import { updateMatrixKeyData } from '../core/db/matrix_write.ts';",
+		'export async function zzWrite(): Promise<void> {',
+		"\tawait updateMatrixKeyData('matrix');",
+		'}',
+		'export async function zzRead(): Promise<number> {',
+		'\treturn 1;',
+		'}',
+	].join('\n');
+	const TOOL = [
+		"import { zzWrite as w2 } from '../../../src/zz_ctl/engine.ts';",
+		"import * as ns from '../../../src/zz_ctl/engine.ts';",
+		'const obj = { zzWrite: () => 1 };',
+		'export async function zzAction(): Promise<void> {',
+		"\tconst { zzWrite: w } = await import('../../../src/zz_ctl/engine.ts');",
+		'\tawait w();',
+		'\tawait ns.zzWrite();',
+		'\tobj.zzWrite();',
+		'\tzzRead();',
+		'\tconst note = "zzWrite( w() ns.zzWrite()";',
+		'\t// zzWrite( w() ns.zzWrite() in a comment',
+		'}',
+		'export const tool: ToolServerModule = {',
+		"\tname: 'zz_ctl',",
+		'\tapiActions: {',
+		'\t\trun: {',
+		'\t\t\tpermission: null,',
+		"\t\t\tgatedInHandler: 'a { brace } in a string',",
+		'\t\t\thandler: async () => {',
+		'\t\t\t\tawait w2();',
+		'\t\t\t},',
+		'\t\t},',
+		'\t\tlook: { permission: null, handler: async () => 1 },',
+		'\t},',
+		'};',
+	].join('\n');
+	const LOCAL = [
+		'function zzWrite(): void {}',
+		'export function zzLocal(): void {',
+		'\tzzWrite();',
+		'}',
+	].join('\n');
+	const CONTROL_FILES: Record<string, string> = {
+		[MATRIX_WRITE]: MATRIX_WRITE_CONTROL,
+		'src/zz_ctl/engine.ts': ENGINE,
+		'tools/zz_ctl/server/index.ts': TOOL,
+		'tools/zz_ctl/server/local.ts': LOCAL,
+	};
+	const control = buildWriterClosure({
+		files: Object.keys(CONTROL_FILES),
+		read: (rel) => CONTROL_FILES[rel] as string,
 	});
 
-	test("every 'refuses' action really carries its refusal", () => {
-		for (const [key, row] of Object.entries(CENSUS)) {
-			if (row.verdict !== 'refuses') continue;
-			expect(row.must_contain, `${key}: a 'refuses' row must name the refusal symbol`).toBeString();
-			const body = actionBody(key);
-			expect(
-				body.includes(row.must_contain as string),
-				`${key} is marked 'refuses' but ${row.must_contain} is not in its body`,
-			).toBe(true);
-		}
-	});
-
-	test("every 'lossless' claim is either PROVED here or declared as read-verified", () => {
-		// The honesty rule: a lossless verdict is the strongest claim in the table, so it
-		// may not be a bare assertion. Either a behavioural leg in this file proves it —
-		// and the row names that leg, which must exist in this file's own source — or the
-		// reason says out loud that it was verified by reading.
-		const ownSource = readFileSync(
-			join(ROOT, 'test/unit/tool_lossless_writeback_tripwire.test.ts'),
-			'utf8',
+	test('the injected closure: exactly the resolved cells, witness down to the primitive, no decoy edge', () => {
+		const cells = Object.fromEntries(
+			[...toolServerCells(control)].map(([action, doors]) => [action, Object.fromEntries(doors)]),
 		);
-		for (const [key, row] of Object.entries(CENSUS)) {
-			if (row.verdict !== 'lossless') continue;
-			if (row.proof !== undefined) {
-				expect(
-					ownSource.includes(row.proof),
-					`${key}: names the proof '${row.proof}', which is not a describe/test in this file`,
-				).toBe(true);
-				continue;
-			}
-			expect(
-				row.reason.includes('verified by reading'),
-				`${key} claims 'lossless' with no proof in this file — say "verified by reading" in the reason, or add the behavioural leg`,
-			).toBe(true);
+		expect(cells).toEqual({
+			'tools/zz_ctl/server/index.ts :: zzAction': { zzWrite: 2 },
+			'tools/zz_ctl/server/index.ts :: tool.apiActions.run': { zzWrite: 1 },
+		});
+		expect(control.witness('tools/zz_ctl/server/index.ts#zzAction')).toEqual([
+			'tools/zz_ctl/server/index.ts#zzAction',
+			'src/zz_ctl/engine.ts#zzWrite',
+			`${MATRIX_WRITE}#updateMatrixKeyData`,
+		]);
+		// the decoys (obj.zzWrite() — only `obj` itself, a non-writer, is referenced —
+		// an unbound zzRead(), bound names mentioned in a string and in a comment) and the
+		// same-name LOCAL zzWrite give no edge into the engine and no extra site
+		expect([...control.edgesOf('tools/zz_ctl/server/index.ts#zzAction').keys()].sort()).toEqual([
+			'src/zz_ctl/engine.ts#zzWrite',
+			'tools/zz_ctl/server/index.ts#obj',
+		]);
+		expect(control.members.has('tools/zz_ctl/server/local.ts#zzLocal')).toBe(false);
+		expect([...control.edgesOf('tools/zz_ctl/server/local.ts#zzLocal').keys()]).toEqual([
+			'tools/zz_ctl/server/local.ts#zzWrite',
+		]);
+		expect(control.members.has('src/zz_ctl/engine.ts#zzRead')).toBe(false);
+		expect(
+			control.reaches(
+				'tools/zz_ctl/server/index.ts#tool.apiActions.run',
+				'src/zz_ctl/engine.ts#zzWrite',
+			),
+		).toBe(true);
+		expect(
+			control.reaches('tools/zz_ctl/server/index.ts#zzAction', 'src/zz_ctl/engine.ts#zzRead'),
+		).toBe(false);
+		expect(control.unresolvedDynamicImports('tools/zz_ctl/server/index.ts')).toEqual([]);
+	});
+
+	test('an unresolvable dynamic import is REPORTED at its FILE line, not silently skipped', () => {
+		const files: Record<string, string> = {
+			'tools/zz_ctl/server/index.ts': [
+				"import { x } from './x.ts';",
+				'',
+				'export async function zzAction(spec: string): Promise<void> {',
+				'\tconst m = await import(spec);',
+				'}',
+				'export const tool = {',
+				'\tapiActions: {',
+				'\t\trun: {',
+				'\t\t\thandler: async (spec: string) => {',
+				'\t\t\t\tawait import(spec);',
+				'\t\t\t},',
+				'\t\t},',
+				'\t},',
+				'};',
+			].join('\n'),
+		};
+		const closure = buildWriterClosure({
+			files: Object.keys(files),
+			read: (rel) => files[rel] as string,
+		});
+		// line 4 (a top-level function) and line 10 (inside a split apiActions unit)
+		expect(
+			closure
+				.unresolvedDynamicImports('tools/zz_ctl/server/index.ts')
+				.map((site) => site.split(': ')[0]),
+		).toEqual(['tools/zz_ctl/server/index.ts:4', 'tools/zz_ctl/server/index.ts:10']);
+	});
+
+	test('a namespace that ESCAPES as a value reaches every export — the src-engine DI seam is not a hole', () => {
+		// The shape that dropped database_info#databaseInfoRebuildUserStats out of the
+		// closure: `deps ?? (await import('x'))`, then a property call on the result. And a
+		// static namespace handed on as a value. Both are taken to reach EVERY export of
+		// the module, so the tool action delegating to either engine has its cell.
+		const files: Record<string, string> = {
+			[MATRIX_WRITE]: MATRIX_WRITE_CONTROL,
+			'src/zz_ctl/w.ts': [
+				'export async function eng(deps?: unknown): Promise<void> {',
+				"\tconst m = deps ?? (await import('../core/db/matrix_write.ts'));",
+				"\tawait m.updateMatrixKeyData('x');",
+				'}',
+			].join('\n'),
+			'src/zz_ctl/v.ts': [
+				"import * as mw from '../core/db/matrix_write.ts';",
+				'export async function viaValue(run: (m: unknown) => void): Promise<void> {',
+				'\trun(mw);',
+				'}',
+			].join('\n'),
+			'tools/zz_c/server/index.ts': [
+				"import { eng } from '../../../src/zz_ctl/w.ts';",
+				"import { viaValue } from '../../../src/zz_ctl/v.ts';",
+				'export async function act2(): Promise<void> {',
+				'\tawait eng();',
+				'}',
+				'export async function act3(): Promise<void> {',
+				'\tawait viaValue(() => {});',
+				'}',
+			].join('\n'),
+		};
+		const closure = buildWriterClosure({
+			files: Object.keys(files),
+			read: (rel) => files[rel] as string,
+		});
+		expect(closure.unresolvedDynamicImports('src/zz_ctl/w.ts')).toEqual([]);
+		expect(
+			Object.fromEntries(
+				[...toolServerCells(closure)].map(([action, doors]) => [action, Object.fromEntries(doors)]),
+			),
+		).toEqual({
+			'tools/zz_c/server/index.ts :: act2': { eng: 1 },
+			'tools/zz_c/server/index.ts :: act3': { viaValue: 1 },
+		});
+		expect(closure.witness('src/zz_ctl/w.ts#eng')).toEqual([
+			'src/zz_ctl/w.ts#eng',
+			`${MATRIX_WRITE}#updateMatrixKeyData`,
+		]);
+	});
+
+	test('an escaping namespace reaches what its module RE-EXPORTS — `export {…} from` and `export { local as alias }`', () => {
+		// A barrel exports no declaration of its own: the escape must follow its
+		// re-exports (and a local alias of an import) down to the primitive, or a
+		// namespace handed on from a barrel is a writer the census cannot see.
+		const files: Record<string, string> = {
+			[MATRIX_WRITE]: MATRIX_WRITE_CONTROL,
+			'src/zz_ctl/barrel.ts':
+				"export { updateMatrixKeyData as upd } from '../core/db/matrix_write.ts';",
+			'src/zz_ctl/alias.ts': [
+				"import { updateMatrixKeyData } from '../core/db/matrix_write.ts';",
+				'export { updateMatrixKeyData as upd2 };',
+			].join('\n'),
+			'tools/zz_c/server/index.ts': [
+				"import * as barrel from '../../../src/zz_ctl/barrel.ts';",
+				"import * as alias from '../../../src/zz_ctl/alias.ts';",
+				'export async function viaBarrel(run: (m: unknown) => void): Promise<void> {',
+				'\trun(barrel);',
+				'}',
+				'export async function viaAlias(run: (m: unknown) => void): Promise<void> {',
+				'\trun(alias);',
+				'}',
+			].join('\n'),
+		};
+		const closure = buildWriterClosure({
+			files: Object.keys(files),
+			read: (rel) => files[rel] as string,
+		});
+		expect(
+			Object.fromEntries(
+				[...toolServerCells(closure)].map(([action, doors]) => [action, Object.fromEntries(doors)]),
+			),
+		).toEqual({
+			'tools/zz_c/server/index.ts :: viaAlias': { updateMatrixKeyData: 1 },
+			'tools/zz_c/server/index.ts :: viaBarrel': { updateMatrixKeyData: 1 },
+		});
+	});
+
+	/** Build a closure over injected files and render its tool cells as a plain object. */
+	const injected = (files: Record<string, string>) => {
+		const closure = buildWriterClosure({
+			files: Object.keys(files),
+			read: (rel) => files[rel] as string,
+		});
+		const cells = Object.fromEntries(
+			[...toolServerCells(closure)].map(([action, doors]) => [action, Object.fromEntries(doors)]),
+		);
+		return { closure, cells };
+	};
+	const MW_FROM_TOOL = '../../../src/core/db/matrix_write.ts';
+	const MW_FROM_SRC = '../core/db/matrix_write.ts';
+
+	test('a MODULE-SCOPE dynamic import (top-level await) binds for EVERY unit of the file — destructure and namespace', () => {
+		// Both forms bound at column 0 in one unit (`<module>`, and the `mw` declaration's
+		// own unit), used from OTHER units: a top-level function and a split apiActions
+		// handler. Before, the binding lived only in the unit holding the statement, so
+		// these calls had no edge, no cell and no report.
+		const { closure, cells } = injected({
+			[MATRIX_WRITE]: MATRIX_WRITE_CONTROL,
+			'tools/zz_m/server/index.ts': [
+				`const { updateMatrixKeyData } = await import('${MW_FROM_TOOL}');`,
+				`const mw = await import('${MW_FROM_TOOL}');`,
+				'export async function act(): Promise<void> {',
+				"\tawait updateMatrixKeyData('t');",
+				'}',
+				'export async function act2(): Promise<void> {',
+				"\tawait mw.updateMatrixKeyData('t');",
+				'}',
+				'export const tool = {',
+				'\tapiActions: {',
+				'\t\trun: {',
+				'\t\t\thandler: async () => {',
+				"\t\t\t\tawait updateMatrixKeyData('t');",
+				"\t\t\t\tawait mw.updateMatrixKeyData('t');",
+				'\t\t\t},',
+				'\t\t},',
+				'\t},',
+				'};',
+			].join('\n'),
+			// an INDENTED binding stays local to its function: `other` gets no edge from it
+			'tools/zz_n/server/index.ts': [
+				'export async function inner(): Promise<void> {',
+				`\tconst { updateMatrixKeyData } = await import('${MW_FROM_TOOL}');`,
+				"\tawait updateMatrixKeyData('t');",
+				'}',
+				'export async function other(): Promise<void> {',
+				"\tawait updateMatrixKeyData('t');",
+				'}',
+			].join('\n'),
+		});
+		expect(cells).toEqual({
+			'tools/zz_m/server/index.ts :: act': { updateMatrixKeyData: 1 },
+			'tools/zz_m/server/index.ts :: act2': { updateMatrixKeyData: 1 },
+			'tools/zz_m/server/index.ts :: tool.apiActions.run': { updateMatrixKeyData: 2 },
+			'tools/zz_n/server/index.ts :: inner': { updateMatrixKeyData: 1 },
+		});
+		expect(closure.unresolvedDynamicImports('tools/zz_m/server/index.ts')).toEqual([]);
+		expect(closure.unresolvedBindings('tools/zz_m/server/index.ts')).toEqual([]);
+	});
+
+	test('DEFAULT exports and imports resolve — static default clause, `{ default: w }`, `export default ident;`, an anonymous default', () => {
+		const writes = [`import { updateMatrixKeyData } from '${MW_FROM_SRC}';`];
+		const { closure, cells } = injected({
+			[MATRIX_WRITE]: MATRIX_WRITE_CONTROL,
+			'src/zz_d/def.ts': [
+				...writes,
+				'export default async function zzDef(): Promise<void> {',
+				"\tawait updateMatrixKeyData('x');",
+				'}',
+			].join('\n'),
+			'src/zz_d/def2.ts': [
+				...writes,
+				'async function zzDef2(): Promise<void> {',
+				"\tawait updateMatrixKeyData('x');",
+				'}',
+				'export default zzDef2;',
+			].join('\n'),
+			'src/zz_d/def3.ts': [
+				...writes,
+				'export default async (): Promise<void> => {',
+				"\tawait updateMatrixKeyData('x');",
+				'};',
+			].join('\n'),
+			'src/zz_d/plain.ts': 'export function nothing(): number {\n\treturn 1;\n}',
+			'tools/zz_d/server/index.ts': [
+				"import w from '../../../src/zz_d/def.ts';",
+				"import w2, { type Unused } from '../../../src/zz_d/def2.ts';",
+				"import ghostDefault from '../../../src/zz_d/plain.ts';",
+				"import { ghost } from '../../../src/zz_d/plain.ts';",
+				'export async function viaStatic(): Promise<void> {',
+				'\tawait w();',
+				'}',
+				'export async function viaStaticIdent(): Promise<void> {',
+				'\tawait w2();',
+				'}',
+				'export async function viaDynamic(): Promise<void> {',
+				"\tconst { default: d } = await import('../../../src/zz_d/def2.ts');",
+				'\tawait d();',
+				'}',
+				'export async function viaAnon(): Promise<void> {',
+				"\tconst { default: a } = await import('../../../src/zz_d/def3.ts');",
+				'\tawait a();',
+				'}',
+			].join('\n'),
+		});
+		expect(cells).toEqual({
+			'tools/zz_d/server/index.ts :: viaAnon': { default: 1 },
+			'tools/zz_d/server/index.ts :: viaDynamic': { zzDef2: 1 },
+			'tools/zz_d/server/index.ts :: viaStatic': { zzDef: 1 },
+			'tools/zz_d/server/index.ts :: viaStaticIdent': { zzDef2: 1 },
+		});
+		// a default import of a module without one, and a named import of a missing
+		// export, are REPORTED — not an absent edge nobody sees
+		expect(closure.unresolvedBindings('tools/zz_d/server/index.ts')).toEqual([
+			'tools/zz_d/server/index.ts: src/zz_d/plain.ts#default',
+			'tools/zz_d/server/index.ts: src/zz_d/plain.ts#ghost',
+		]);
+	});
+
+	test('a writer in the tool’s OWN non-server TS is a door; a server helper carries its own cell', () => {
+		const { closure, cells } = injected({
+			[MATRIX_WRITE]: MATRIX_WRITE_CONTROL,
+			'tools/zz_t/shared/writer.ts': [
+				`import { updateMatrixKeyData } from '../../../src/core/db/matrix_write.ts';`,
+				'export async function sharedWrite(): Promise<void> {',
+				"\tawait updateMatrixKeyData('x');",
+				'}',
+			].join('\n'),
+			'tools/zz_t/server/helper.ts': [
+				"import { sharedWrite } from '../shared/writer.ts';",
+				'export async function helper(): Promise<void> {',
+				'\tawait sharedWrite();',
+				'}',
+			].join('\n'),
+			'tools/zz_t/server/index.ts': [
+				"import { sharedWrite } from '../shared/writer.ts';",
+				"import { helper } from './helper.ts';",
+				'export async function act(): Promise<void> {',
+				'\tawait sharedWrite();',
+				'\tawait helper();',
+				'}',
+			].join('\n'),
+		});
+		expect(closure.members.has('tools/zz_t/shared/writer.ts#sharedWrite')).toBe(true);
+		expect(cells).toEqual({
+			'tools/zz_t/server/helper.ts :: helper': { sharedWrite: 1 },
+			'tools/zz_t/server/index.ts :: act': { sharedWrite: 1 },
+		});
+	});
+
+	test('`abstract class`, `var` and `enum` are units of their own: credited to their own name, reachable by importers', () => {
+		const { closure, cells } = injected({
+			[MATRIX_WRITE]: MATRIX_WRITE_CONTROL,
+			'src/zz_a/abs.ts': [
+				`import { updateMatrixKeyData } from '${MW_FROM_SRC}';`,
+				'export function before(): number {',
+				'\treturn 1;',
+				'}',
+				'export abstract class Abs {',
+				'\tasync go(): Promise<void> {',
+				"\t\tawait updateMatrixKeyData('x');",
+				'\t}',
+				'}',
+				'export var zzVar = async (): Promise<void> => {',
+				"\tawait updateMatrixKeyData('x');",
+				'};',
+				'export const enum Mode {',
+				'\tA = 1,',
+				'}',
+			].join('\n'),
+			'tools/zz_a/server/index.ts': [
+				"import { Abs, Mode, zzVar } from '../../../src/zz_a/abs.ts';",
+				'export async function act(x: Abs): Promise<void> {',
+				'\tawait x.go();',
+				'}',
+				'export async function act2(): Promise<Mode> {',
+				'\tawait zzVar();',
+				'\treturn Mode.A;',
+				'}',
+			].join('\n'),
+		});
+		expect(closure.members.has('src/zz_a/abs.ts#before')).toBe(false);
+		expect(cells).toEqual({
+			'tools/zz_a/server/index.ts :: act': { Abs: 1 },
+			'tools/zz_a/server/index.ts :: act2': { zzVar: 1 },
+		});
+		expect(closure.unresolvedBindings('tools/zz_a/server/index.ts')).toEqual([]);
+	});
+
+	test('EVIDENCE needs a RESOLVED path: an escape edge makes a cell but proves nothing', () => {
+		const { closure } = injected({
+			[MATRIX_WRITE]: MATRIX_WRITE_CONTROL,
+			'src/zz_p/eng.ts': [
+				`import { updateMatrixKeyData } from '${MW_FROM_SRC}';`,
+				'export async function refusing(empty: boolean): Promise<void> {',
+				"\tif (empty) throw new Error('REFUSED');",
+				"\tawait updateMatrixKeyData('x');",
+				'}',
+			].join('\n'),
+			'tools/zz_p/server/index.ts': [
+				"import * as eng from '../../../src/zz_p/eng.ts';",
+				'export async function escapes(run: (m: unknown) => void): Promise<void> {',
+				'\trun(eng);',
+				'}',
+				'export async function calls(): Promise<void> {',
+				'\tawait eng.refusing(true);',
+				'}',
+			].join('\n'),
+		});
+		const evidence = 'src/zz_p/eng.ts#refusing';
+		expect(closure.reaches('tools/zz_p/server/index.ts#escapes', evidence)).toBe(true);
+		expect(closure.reachesPrecisely('tools/zz_p/server/index.ts#escapes', evidence)).toBe(false);
+		expect(closure.reachesPrecisely('tools/zz_p/server/index.ts#calls', evidence)).toBe(true);
+	});
+
+	test('an awaited import in VALUE position ESCAPES — only a whole `await import(x);` statement is a side-effect load', () => {
+		// `return await import(x)`, a reassignment, `deps ?? await import(x)` and a
+		// ternary branch (one line, and biome-wrapped) hand the module on as a value. Each
+		// was once claimed as a side-effect load: no binding, no escape, no report — a
+		// writer called through it had no cell. Now each ESCAPES (every export reached).
+		const ENG = `'../../../src/zz_s/engine.ts'`;
+		const { closure, cells } = injected({
+			[MATRIX_WRITE]: MATRIX_WRITE_CONTROL,
+			'src/zz_s/engine.ts': ENGINE,
+			'tools/zz_s/server/index.ts': [
+				'export async function assignLet(): Promise<void> {',
+				'\tlet m;',
+				`\tm = await import(${ENG});`,
+				'\tawait m.zzWrite();',
+				'}',
+				'async function loadA() {',
+				`\treturn await import(${ENG});`,
+				'}',
+				'export async function viaReturn(): Promise<void> {',
+				'\tconst m = await loadA();',
+				'\tawait m.zzWrite();',
+				'}',
+				'export async function viaDeps(deps?: unknown): Promise<void> {',
+				`\tconst m = deps ?? await import(${ENG});`,
+				'\tawait m.zzWrite();',
+				'}',
+				'export async function viaTernary(c: boolean): Promise<void> {',
+				`\tconst m = c ? null : await import(${ENG});`,
+				'\tawait m?.zzWrite();',
+				'}',
+				'export async function viaWrapped(c: boolean): Promise<void> {',
+				'\tconst m = c',
+				'\t\t? null',
+				`\t\t: await import(${ENG});`,
+				'\tawait m?.zzWrite();',
+				'}',
+				'export async function viaAssignWrapped(): Promise<void> {',
+				'\tconst m =',
+				`\t\tawait import(${ENG});`,
+				'\tawait m.zzWrite();',
+				'}',
+				// a STATEMENT-position load discards the namespace: no edge, and not reported
+				'export async function sideEffect(): Promise<void> {',
+				`\tawait import(${ENG});`,
+				'}',
+			].join('\n'),
+		});
+		expect(cells).toEqual({
+			'tools/zz_s/server/index.ts :: assignLet': { zzWrite: 1 },
+			// the loader carries the cell; its caller reaches it inside its own server
+			'tools/zz_s/server/index.ts :: loadA': { zzWrite: 1 },
+			'tools/zz_s/server/index.ts :: viaAssignWrapped': { zzWrite: 1 },
+			'tools/zz_s/server/index.ts :: viaDeps': { zzWrite: 1 },
+			'tools/zz_s/server/index.ts :: viaTernary': { zzWrite: 1 },
+			'tools/zz_s/server/index.ts :: viaWrapped': { zzWrite: 1 },
+		});
+		expect(
+			closure.reaches('tools/zz_s/server/index.ts#viaReturn', 'src/zz_s/engine.ts#zzWrite'),
+		).toBe(true);
+		expect([...closure.edgesOf('tools/zz_s/server/index.ts#sideEffect').keys()]).toEqual([]);
+		expect(closure.unresolvedDynamicImports('tools/zz_s/server/index.ts')).toEqual([]);
+		expect(closure.unresolvedBindings('tools/zz_s/server/index.ts')).toEqual([]);
+	});
+
+	test('an EXPORTED module-scope dynamic binding resolves ACROSS files — destructured name, namespace member, escaping namespace', () => {
+		// `export const { a } = await import(x)` (resolveExportOrType follows it), `export
+		// const ns = await import(x)` (the unit `ns` escapes to every export of x), and an
+		// importer's `import * as exp` escaping as a value (allExports lists both).
+		const { closure, cells } = injected({
+			[MATRIX_WRITE]: MATRIX_WRITE_CONTROL,
+			'src/zz_e/exporter.ts': [
+				`export const { updateMatrixKeyData } = await import('${MW_FROM_SRC}');`,
+				`export const mw = await import('${MW_FROM_SRC}');`,
+			].join('\n'),
+			'tools/zz_e/server/index.ts': [
+				"import { mw, updateMatrixKeyData } from '../../../src/zz_e/exporter.ts';",
+				"import * as exp from '../../../src/zz_e/exporter.ts';",
+				'export async function viaName(): Promise<void> {',
+				"\tawait updateMatrixKeyData('t');",
+				'}',
+				'export async function viaNs(): Promise<void> {',
+				"\tawait mw.updateMatrixKeyData('t');",
+				'}',
+				'export async function viaValue(run: (m: unknown) => void): Promise<void> {',
+				'\trun(exp);',
+				'}',
+			].join('\n'),
+		});
+		expect(cells).toEqual({
+			'tools/zz_e/server/index.ts :: viaName': { updateMatrixKeyData: 1 },
+			'tools/zz_e/server/index.ts :: viaNs': { mw: 1 },
+			'tools/zz_e/server/index.ts :: viaValue': { mw: 1, updateMatrixKeyData: 1 },
+		});
+		expect(closure.witness('tools/zz_e/server/index.ts#viaNs')).toEqual([
+			'tools/zz_e/server/index.ts#viaNs',
+			'src/zz_e/exporter.ts#mw',
+			`${MATRIX_WRITE}#updateMatrixKeyData`,
+		]);
+		expect(closure.unresolvedBindings('src/zz_e/exporter.ts')).toEqual([]);
+		expect(closure.unresolvedBindings('tools/zz_e/server/index.ts')).toEqual([]);
+	});
+
+	test('a TYPE declaration is no reference — an interface method signature named after a writer gives no edge; a runtime statement after it does', () => {
+		const { closure, cells } = injected({
+			[MATRIX_WRITE]: MATRIX_WRITE_CONTROL,
+			'tools/zz_y/server/index.ts': [
+				"import { zzWrite } from '../../../src/zz_ctl/engine.ts';",
+				'export async function before(): Promise<number> {',
+				'\treturn 1;',
+				'}',
+				'export interface Shape {',
+				'\tzzWrite(x: string): void;',
+				'\tother: typeof zzWrite;',
+				'}',
+				'export type Alias =',
+				'\t| { zzWrite(): void }',
+				'\t| null;',
+			].join('\n'),
+			'src/zz_ctl/engine.ts': ENGINE,
+			// a module-level call AFTER an interface opens no unit: it lands in the type
+			// unit, and only the declaration part of that unit is blanked
+			'tools/zz_z/server/index.ts': [
+				"import { zzWrite } from '../../../src/zz_ctl/engine.ts';",
+				'interface Verdict {',
+				'\tzzWrite(): void;',
+				'}',
+				'',
+				'await zzWrite();',
+			].join('\n'),
+		});
+		expect(cells).toEqual({
+			'tools/zz_z/server/index.ts :: <type:Verdict>': { zzWrite: 1 },
+		});
+		for (const key of [
+			'tools/zz_y/server/index.ts#before',
+			'tools/zz_y/server/index.ts#<type:Shape>',
+			'tools/zz_y/server/index.ts#<type:Alias>',
+		]) {
+			expect([...closure.edgesOf(key).keys()], key).toEqual([]);
 		}
 	});
 
-	test("every 'PENDING' action really has NO confirmation — so a fix cannot land silently", () => {
-		for (const [key, row] of Object.entries(CENSUS)) {
-			if (row.verdict !== 'PENDING') continue;
-			const body = actionBody(key);
-			expect(body.length, `${key}: could not locate the action's body`).toBeGreaterThan(0);
+	test('an OFF-HOME psql writer (a `runPsql(` call with a matrix DML statement) is a SEED; a psql export or read is not', () => {
+		const PSQL = "import { runPsql } from '../core/install/pg_exec.ts';";
+		const { closure, cells } = injected({
+			[MATRIX_WRITE]: MATRIX_WRITE_CONTROL,
+			'src/core/install/pg_exec.ts':
+				'export async function runPsql(args: string[]): Promise<number> {\n\treturn args.length;\n}',
+			'src/zz_q/io.ts': [
+				PSQL,
+				'export async function fixTld(tipo: string): Promise<void> {',
+				'\tconst statement = `UPDATE "matrix_ontology" SET "string" = jsonb_set("string", \'{x}\', \'1\') WHERE section_tipo = \'${tipo}\'`;',
+				'\tawait runPsql([statement]);',
+				'}',
+				'export async function load(table: string): Promise<void> {',
+				'\tawait runPsql([`\\\\copy ${table} (a, b) FROM STDIN`]);',
+				'}',
+				'export async function dump(): Promise<void> {',
+				'\tawait runPsql([`\\\\copy (SELECT 1 FROM matrix_ontology) TO STDOUT`]);',
+				'}',
+				'export async function probe(): Promise<void> {',
+				"\tawait runPsql(['SELECT count(*) FROM matrix_ontology']);",
+				'}',
+				// DML with no psql call is the POOL's business (T2.a), not a psql seed
+				'export function describeIt(): string {',
+				"\treturn 'UPDATE matrix_ontology is what fixTld does';",
+				'}',
+			].join('\n'),
+			'tools/zz_q/server/index.ts': [
+				"import { dump, fixTld, load, probe } from '../../../src/zz_q/io.ts';",
+				'export async function repair(): Promise<void> {',
+				"\tawait fixTld('x0');",
+				'}',
+				'export async function reimport(): Promise<void> {',
+				"\tawait load('matrix_x');",
+				'}',
+				'export async function exportIt(): Promise<void> {',
+				'\tawait dump();',
+				'\tawait probe();',
+				'}',
+			].join('\n'),
+		});
+		expect(closure.psqlSeeds).toEqual(['src/zz_q/io.ts#fixTld', 'src/zz_q/io.ts#load']);
+		expect(cells).toEqual({
+			'tools/zz_q/server/index.ts :: reimport': { load: 1 },
+			'tools/zz_q/server/index.ts :: repair': { fixTld: 1 },
+		});
+		expect(closure.witness('tools/zz_q/server/index.ts#repair')).toEqual([
+			'tools/zz_q/server/index.ts#repair',
+			'src/zz_q/io.ts#fixTld',
+		]);
+		expect(isPsqlMatrixWriter('await runPsql([`TRUNCATE TABLE matrix_x`]);')).toBe(true);
+		// the MAIN `matrix` table, bare or quoted, and its \\copy import
+		expect(isPsqlMatrixWriter("await runPsql(conn, ['-c', `UPDATE matrix SET a = 1`]);")).toBe(
+			true,
+		);
+		expect(isPsqlMatrixWriter('await runPsql([`DELETE FROM "matrix" WHERE a = 1`]);')).toBe(true);
+		expect(isPsqlMatrixWriter('await runPsql([`\\copy matrix FROM STDIN`]);')).toBe(true);
+		expect(isPsqlMatrixWriter('await runPsql([`UPDATE matrixfoo SET a = 1`]);')).toBe(false);
+		expect(isPsqlMatrixWriter('await runPsql([`update matrix_x set a = 1`]);')).toBe(false);
+		// a table EXPORT (`\copy <table> TO`) writes nothing; the same table FROM is an import
+		expect(isPsqlMatrixWriter('await runPsql([`\\copy matrix_x TO STDOUT`]);')).toBe(false);
+		expect(isPsqlMatrixWriter('await runPsql([`\\copy matrix_x FROM STDIN`]);')).toBe(true);
+		// and the raw-primitive rule judges a psql door as RAW
+		const judged = bypassRuleProblems(closure, [
+			{
+				action: 'tools/zz_q/server/index.ts :: repair',
+				door: 'fixTld',
+				cell: { verdict: 'derived-state', reason: 'x' },
+			},
+		]);
+		expect(judged.raw).toEqual(['tools/zz_q/server/index.ts :: repair × fixTld']);
+		expect(judged.refused).toEqual(['tools/zz_q/server/index.ts :: repair × fixTld']);
+	});
+
+	test('a `.js` spelling resolves to the `.ts` beside it; a relative static import naming no corpus file is REPORTED', () => {
+		const { closure, cells } = injected({
+			[MATRIX_WRITE]: MATRIX_WRITE_CONTROL,
+			'src/zz_ctl/engine.ts': ENGINE,
+			'tools/zz_j/server/index.ts': [
+				"import { zzWrite } from '../../../src/zz_ctl/engine.js';",
+				"export { zzRead } from '../../../src/zz_ctl/missing.ts';",
+				"import { x } from './gone.ts';",
+				'export async function act(): Promise<void> {',
+				'\tawait zzWrite();',
+				'}',
+			].join('\n'),
+		});
+		expect(cells).toEqual({ 'tools/zz_j/server/index.ts :: act': { zzWrite: 1 } });
+		expect(closure.outOfCorpusImports('tools/zz_j/server/index.ts')).toEqual([
+			{
+				site: "tools/zz_j/server/index.ts:3: './gone.ts'",
+				target: 'tools/zz_j/server/gone.ts',
+			},
+			{
+				site: "tools/zz_j/server/index.ts:2: '../../../src/zz_ctl/missing.ts'",
+				target: 'src/zz_ctl/missing.ts',
+			},
+		]);
+	});
+
+	test('the primitive list is DERIVED from EVERY runtime export form: new ones are primitives until classified', () => {
+		expect(
+			deriveRawPrimitives(
+				[
+					MATRIX_WRITE_CONTROL,
+					'export async function zzReplaceKey(t: string) {}',
+					'export const zzArrow = async (t: string) => {};',
+					'export class ZzWriter {}',
+					'export abstract class ZzAbstract {}',
+					'export var zzVar = async () => {};',
+					'export const enum ZzEnum { A = 1 }',
+					'export type ZzType = string;',
+					'export interface ZzShape { a: string }',
+					'export declare function zzAmbient(): void;',
+					'const zzLocal = 1;',
+					'export { zzLocal as zzListed, type ZzType as ZzAlias };',
+				].join('\n'),
+			),
+		).toEqual([
+			'updateMatrixKeyData',
+			'zzReplaceKey',
+			'zzArrow',
+			'ZzWriter',
+			'ZzAbstract',
+			'zzVar',
+			'ZzEnum',
+			'zzListed',
+		]);
+		// a classified constant stays out; an `export *` is refused, never guessed
+		expect(deriveRawPrimitives('export const MATRIX_COPY_COLUMNS = [];')).toEqual([]);
+		expect(() => deriveRawPrimitives("export * from './zz.ts';")).toThrow(/cannot be enumerated/);
+		// a DESTRUCTURED export names nothing the patterns can read: refused, never dropped
+		expect(() => moduleRuntimeExports('export const { a, b } = makeWriters();')).toThrow(
+			/DESTRUCTURED/,
+		);
+		expect(() => moduleRuntimeExports('export let [c] = x;')).toThrow(/DESTRUCTURED/);
+		// a DEFAULT export is `default` (not its declaration's name) — and a default
+		// primitive has no call name, so the derivation refuses it
+		expect(moduleRuntimeExports('export default async function zzDef() {}')).toEqual(['default']);
+		expect(moduleRuntimeExports('const a = 1;\nexport default a;')).toEqual(['default']);
+		expect(() => deriveRawPrimitives('export default async function zzDef() {}')).toThrow(
+			/export default/,
+		);
+	});
+
+	test('the raw-primitive rule and the lossless rule judge by RESOLVED door and by real legs', () => {
+		const files: Record<string, string> = {
+			[MATRIX_WRITE]: MATRIX_WRITE_CONTROL,
+			'tools/zz_raw/server/index.ts': [
+				"import { readMatrixKeyForUpdate, updateMatrixKeyData } from '../../../src/core/db/matrix_write.ts';",
+				'export async function locked(): Promise<void> {',
+				"\tawait readMatrixKeyForUpdate('t');",
+				"\tawait updateMatrixKeyData('t');",
+				'}',
+				'export async function unlocked(): Promise<void> {',
+				"\tawait updateMatrixKeyData('t');",
+				'}',
+				'export async function bare(): Promise<void> {',
+				"\tawait updateMatrixKeyData('t');",
+				'}',
+			].join('\n'),
+			// a same-named wrapper elsewhere: the primitive's door becomes `file#name`
+			'tools/zz_twin/server/index.ts': [
+				"import { updateMatrixKeyData as raw } from '../../../src/core/db/matrix_write.ts';",
+				'export async function updateMatrixKeyData(): Promise<void> {',
+				"\tawait raw('t');",
+				'}',
+			].join('\n'),
+		};
+		const closure = buildWriterClosure({
+			files: Object.keys(files),
+			read: (rel) => files[rel] as string,
+		});
+		const door = `${MATRIX_WRITE}#updateMatrixKeyData`;
+		const cells = toolServerCells(closure);
+		expect(cells.get('tools/zz_raw/server/index.ts :: locked')?.get(door)).toBe(1);
+		const reason = 'r'.repeat(61);
+		const injected: CensusCell[] = [
+			{
+				action: 'tools/zz_raw/server/index.ts :: locked',
+				door,
+				cell: { verdict: 'lossless', lockedRead: true, readVerified: true, reason },
+			},
+			{
+				action: 'tools/zz_raw/server/index.ts :: unlocked',
+				door,
+				cell: { verdict: 'lossless', lockedRead: true, readVerified: true, reason },
+			},
+			{
+				action: 'tools/zz_raw/server/index.ts :: bare',
+				door,
+				cell: { verdict: 'new-record', reason },
+			},
+			{
+				action: 'tools/zz_twin/server/index.ts :: updateMatrixKeyData',
+				door,
+				cell: { verdict: 'PENDING', closes: 'a named closure item', reason },
+			},
+		];
+		expect(bypassRuleProblems(closure, injected)).toEqual({
+			raw: injected.map(({ action }) => `${action} × ${door}`).sort(),
+			bypass: injected.map(({ action }) => `${action} × ${door}`).sort(),
+			refused: [
+				`tools/zz_raw/server/index.ts :: bare × ${door}`,
+				`tools/zz_raw/server/index.ts :: unlocked × ${door}`,
+			],
+		});
+		const proofs: CensusCell[] = [
+			{
+				action: 'a :: real',
+				door: 'd',
+				cell: { verdict: 'lossless', proof: LEGS.timecode, reason },
+			},
+			{
+				action: 'a :: invented',
+				door: 'd',
+				cell: { verdict: 'lossless', proof: 'LEG 9 — nothing' as LegTitle, reason },
+			},
+		];
+		expect(losslessProblems(closure, [...injected, ...proofs], Object.values(LEGS))).toEqual([
+			"a :: invented × d: proof 'LEG 9 — nothing' is not a behavioural leg",
+			`tools/zz_raw/server/index.ts :: unlocked × ${door}: claims a locked read the action never takes`,
+		]);
+	});
+
+	test('a LITERAL dynamic import naming no corpus file is REPORTED in every form — joined to the out-of-corpus report', () => {
+		// Each handled form used to bind only a RESOLVED target and blank the site either
+		// way: an out-of-corpus writer behind `const { w } = await import('../x.ts')`
+		// had no cell and no report, and skipped the target-class judgment a static
+		// import of the same file faces.
+		const file = 'tools/zz_o/server/index.ts';
+		const { closure, cells } = injected({
+			[MATRIX_WRITE]: MATRIX_WRITE_CONTROL,
+			[file]: [
+				'export async function act(deps?: unknown): Promise<unknown> {',
+				"\tconst { w } = await import('./helper_missing.ts');",
+				"\tconst ns = await import('../../../src/nowhere.ts');",
+				"\tconst [{ a }] = await Promise.all([import('./pa.ts')]);",
+				"\timport('./then.ts').then(({ t }) => t());",
+				"\tawait (await import('./gone.ts')).w();",
+				"\tawait import('../../../install/zz_side.ts');",
+				"\tconst m = deps ?? (await import('./held.ts'));",
+				"\treturn import('./escaped.ts');",
+				'}',
+			].join('\n'),
+		});
+		expect(cells).toEqual({});
+		expect(
+			closure
+				.outOfCorpusImports(file)
+				.map(({ site, target }) => `${site.split(': ')[0]} ${target}`)
+				.sort(),
+		).toEqual([
+			`${file}:2 tools/zz_o/server/helper_missing.ts`,
+			`${file}:3 src/nowhere.ts`,
+			`${file}:4 tools/zz_o/server/pa.ts`,
+			`${file}:5 tools/zz_o/server/then.ts`,
+			`${file}:6 tools/zz_o/server/gone.ts`,
+			`${file}:7 install/zz_side.ts`,
+			`${file}:8 tools/zz_o/server/held.ts`,
+			`${file}:9 tools/zz_o/server/escaped.ts`,
+		]);
+		// a literal is never a COMPUTED-specifier site
+		expect(closure.unresolvedDynamicImports(file)).toEqual([]);
+	});
+
+	test('a LOCKED-READ claim needs a RESOLVED edge — an escaping matrix_write namespace takes no lock', () => {
+		const file = 'tools/zz_l/server/index.ts';
+		const { closure, cells } = injected({
+			[MATRIX_WRITE]: MATRIX_WRITE_CONTROL,
+			[file]: [
+				`import { updateMatrixKeyData } from '${MW_FROM_TOOL}';`,
+				'function helper(m: unknown): void {}',
+				// the namespace handed on whole: an ESCAPE reaches readMatrixKeyForUpdate too
+				'export async function escaped(): Promise<void> {',
+				`\tconst mw = await import('${MW_FROM_TOOL}');`,
+				'\thelper(mw);',
+				"\tawait updateMatrixKeyData('t');",
+				'}',
+				// the DI seam, a member call only: bound, and no lock referenced at all
+				'export async function seam(deps?: unknown): Promise<void> {',
+				`\tconst m = deps ?? (await import('${MW_FROM_TOOL}'));`,
+				"\tawait m.updateMatrixKeyData('t');",
+				'}',
+			].join('\n'),
+		});
+		const lock = `${MATRIX_WRITE}#readMatrixKeyForUpdate`;
+		expect(closure.edgesOf(`${file}#escaped`).has(lock)).toBe(true);
+		expect(closure.preciseEdgesOf(`${file}#escaped`).has(lock)).toBe(false);
+		expect(closure.preciseEdgesOf(`${file}#seam`).has(lock)).toBe(false);
+		const reason = 'r'.repeat(61);
+		const claimed: CensusCell[] = Object.entries(cells).flatMap(([action, doors]) =>
+			Object.keys(doors).map((door) => ({
+				action,
+				door,
+				cell: { verdict: 'lossless', lockedRead: true, readVerified: true, reason } as Cell,
+			})),
+		);
+		expect(claimed.map(({ action, door }) => `${action} × ${door}`).sort()).toEqual([
+			`${file} :: escaped × updateMatrixKeyData`,
+			`${file} :: seam × updateMatrixKeyData`,
+		]);
+		expect(bypassRuleProblems(closure, claimed).refused).toEqual([
+			`${file} :: escaped × updateMatrixKeyData`,
+			`${file} :: seam × updateMatrixKeyData`,
+		]);
+		expect(losslessProblems(closure, claimed, Object.values(LEGS))).toEqual([
+			`${file} :: escaped × updateMatrixKeyData: claims a locked read the action never takes`,
+			`${file} :: seam × updateMatrixKeyData: claims a locked read the action never takes`,
+		]);
+	});
+
+	test('a local HOLDING a value-position import is bound: its member calls count per SITE, a new call is red', () => {
+		// Before, `deps ?? (await import(x))` only ESCAPED: every export got ONE site per
+		// occurrence of the import, so 1 and 3 raw calls both derived `sites: 1`.
+		const file = 'tools/zz_h/server/index.ts';
+		const withCalls = (calls: number) =>
+			injected({
+				[MATRIX_WRITE]: MATRIX_WRITE_CONTROL,
+				[file]: [
+					'export async function act(deps?: unknown, c = false): Promise<void> {',
+					`\tconst m = deps ?? (await import('${MW_FROM_TOOL}'));`,
+					...Array.from({ length: calls }, () => "\tawait m.updateMatrixKeyData('t');"),
+					'}',
+					'export async function branch(c: boolean): Promise<void> {',
+					'\tconst b = c',
+					'\t\t? null',
+					`\t\t: await import('${MW_FROM_TOOL}');`,
+					"\tawait b?.updateMatrixKeyData('t');",
+					'}',
+				].join('\n'),
+			});
+		expect(withCalls(1).cells).toEqual({
+			[`${file} :: act`]: { updateMatrixKeyData: 1 },
+			[`${file} :: branch`]: { updateMatrixKeyData: 1 },
+		});
+		expect(withCalls(3).cells[`${file} :: act`]).toEqual({ updateMatrixKeyData: 3 });
+		const { closure } = withCalls(1);
+		// precise, and no over-approximated edge to the module's OTHER exports — the
+		// optional-chained `b?.member` of a held import included
+		for (const unit of ['act', 'branch']) {
+			expect([...closure.edgesOf(`${file}#${unit}`).keys()], unit).toEqual([
+				`${MATRIX_WRITE}#updateMatrixKeyData`,
+			]);
+		}
+		expect(closure.reachesPrecisely(`${file}#act`, `${MATRIX_WRITE}#updateMatrixKeyData`)).toBe(
+			true,
+		);
+	});
+
+	test('the REFUSES rule reads CODE — a string naming the refusal vouches for nothing, in the action or in its evidence — and needs a RESOLVED path to the evidence', () => {
+		const file = 'tools/zz_rf/server/index.ts';
+		const guards = 'src/zz_rf/guards.ts';
+		const { closure, cells } = injected({
+			[MATRIX_WRITE]: MATRIX_WRITE_CONTROL,
+			[guards]: [
+				'export function guard(x: unknown): boolean {',
+				'\treturn x !== null;',
+				'}',
+				'export function holdsForeignValue(x: unknown): boolean {',
+				'\treturn guard(x);',
+				'}',
+			].join('\n'),
+			[file]: [
+				`import { updateMatrixKeyData } from '${MW_FROM_TOOL}';`,
+				'function holdsForeignValue(x: unknown): boolean {',
+				'\treturn x !== null;',
+				'}',
+				'function spokenGuard(x: unknown): boolean {',
+				"\tconsole.log('holdsForeignValue(x)', x);",
+				'\treturn false;',
+				'}',
+				'function realGuard(x: unknown): boolean {',
+				'\treturn holdsForeignValue(x);',
+				'}',
+				'export async function spoken(x: unknown): Promise<void> {',
+				"\tconsole.log('holdsForeignValue(x)', x);",
+				"\tawait updateMatrixKeyData('t');",
+				'}',
+				'export async function real(x: unknown): Promise<void> {',
+				'\tif (holdsForeignValue(x)) return;',
+				"\tawait updateMatrixKeyData('t');",
+				'}',
+				'export async function spokenVia(x: unknown): Promise<void> {',
+				'\tspokenGuard(x);',
+				"\tawait updateMatrixKeyData('t');",
+				'}',
+				'export async function realVia(x: unknown): Promise<void> {',
+				'\tif (realGuard(x)) return;',
+				"\tawait updateMatrixKeyData('t');",
+				'}',
+				'export async function unreached(): Promise<void> {',
+				"\tawait updateMatrixKeyData('t');",
+				'}',
+				// the guards namespace handed on whole: an ESCAPE edge to every export, no call
+				'function hand(m: unknown): void {}',
+				'export async function escaped(): Promise<void> {',
+				"\tconst g = await import('../../../src/zz_rf/guards.ts');",
+				'\thand(g);',
+				"\tawait updateMatrixKeyData('t');",
+				'}',
+			].join('\n'),
+		});
+		const evidenceOf: Record<string, string> = {
+			spokenVia: `${file}#spokenGuard`,
+			realVia: `${file}#realGuard`,
+			unreached: `${file}#realGuard`,
+			escaped: `${guards}#holdsForeignValue`,
+		};
+		const judged: CensusCell[] = Object.entries(cells).flatMap(([action, doors]) =>
+			Object.keys(doors).map((door) => {
+				const unit = action.slice(action.indexOf(' :: ') + 4);
+				const evidence = evidenceOf[unit];
+				return {
+					action,
+					door,
+					cell: {
+						verdict: 'refuses',
+						must_contain: 'holdsForeignValue(',
+						...(evidence === undefined ? {} : { evidence }),
+						reason: 'r'.repeat(61),
+					} as Cell,
+				};
+			}),
+		);
+		expect(judged.map(({ action }) => action).sort()).toEqual(
+			['escaped', 'real', 'realVia', 'spoken', 'spokenVia', 'unreached'].map(
+				(unit) => `${file} :: ${unit}`,
+			),
+		);
+		// the escape IS an edge (enough for a cell), just not a proof
+		expect(closure.reaches(`${file}#escaped`, `${guards}#holdsForeignValue`)).toBe(true);
+		const bodyOf = (action: string) => closure.bodies.get(closureKey(action)) ?? '';
+		// the spelling IS in the raw text of both spoken bodies: only reading CODE refuses them
+		expect(bodyOf(`${file} :: spoken`)).toContain('holdsForeignValue(');
+		expect(closure.bodies.get(`${file}#spokenGuard`)).toContain('holdsForeignValue(');
+		expect(refusesProblems(closure, judged, bodyOf)).toEqual([
+			`${file} :: escaped × updateMatrixKeyData: ${guards}#holdsForeignValue is not reached through RESOLVED references`,
+			`${file} :: spoken × updateMatrixKeyData: holdsForeignValue( is not in its code`,
+			`${file} :: spokenVia × updateMatrixKeyData: holdsForeignValue( is not in the code of ${file}#spokenGuard`,
+			`${file} :: unreached × updateMatrixKeyData: ${file}#realGuard is not reached through RESOLVED references`,
+		]);
+	});
+
+	test('the BYPASS rule is PATH-based: a raw write one or two DIFFERENTLY-NAMED wrappers deep is judged, a write through a chokepoint is not', () => {
+		// The TOOLS-6 shape moved one declaration deeper: updateCache calling a src
+		// wrapper that only calls updateMatrixKeyData. A door-based raw rule saw a
+		// non-raw door and let a `lossless` verdict pass — and BOTH pins then read
+		// "shrank, lower it". Judged by path, the wrapper is the same bypass.
+		const tool = 'tools/tool_update_cache/server/index.ts';
+		const { closure, cells } = injected({
+			[MATRIX_WRITE]: MATRIX_WRITE_CONTROL,
+			'src/core/media/wrap.ts': [
+				"import { updateMatrixKeyData } from '../db/matrix_write.ts';",
+				'export async function writeRefreshedMedia(): Promise<void> {',
+				"\tawait updateMatrixKeyData('t');",
+				'}',
+			].join('\n'),
+			'src/zz_deep/outer.ts': [
+				"import { writeRefreshedMedia } from '../core/media/wrap.ts';",
+				'async function middle(): Promise<void> {',
+				'\tawait writeRefreshedMedia();',
+				'}',
+				'export async function outer(): Promise<void> {',
+				'\tawait middle();',
+				'}',
+			].join('\n'),
+			// a CHOKEPOINT stand-in (the cut below), a door through it, and a door that
+			// goes through it AND around it
+			'src/zz_cp/record.ts': [
+				"import { updateMatrixKeyData } from '../core/db/matrix_write.ts';",
+				'export async function persist(): Promise<void> {',
+				"\tawait updateMatrixKeyData('t');",
+				'}',
+			].join('\n'),
+			'src/zz_cp/door.ts': [
+				"import { persist } from './record.ts';",
+				"import { writeRefreshedMedia } from '../core/media/wrap.ts';",
+				'export async function saveVia(): Promise<void> {',
+				'\tawait persist();',
+				'}',
+				'export async function mixed(): Promise<void> {',
+				'\tawait persist();',
+				'\tawait writeRefreshedMedia();',
+				'}',
+			].join('\n'),
+			[tool]: [
+				"import { writeRefreshedMedia } from '../../../src/core/media/wrap.ts';",
+				"import { outer } from '../../../src/zz_deep/outer.ts';",
+				"import { mixed, saveVia } from '../../../src/zz_cp/door.ts';",
+				'export async function updateCache(): Promise<void> {',
+				'\tawait writeRefreshedMedia();',
+				'}',
+				'export async function deep(): Promise<void> {',
+				'\tawait outer();',
+				'}',
+				'export async function viaChokepoint(): Promise<void> {',
+				'\tawait saveVia();',
+				'}',
+				'export async function both(): Promise<void> {',
+				'\tawait mixed();',
+				'}',
+			].join('\n'),
+		});
+		expect(cells).toEqual({
+			[`${tool} :: both`]: { mixed: 1 },
+			[`${tool} :: deep`]: { outer: 1 },
+			[`${tool} :: updateCache`]: { writeRefreshedMedia: 1 },
+			[`${tool} :: viaChokepoint`]: { saveVia: 1 },
+		});
+		const cut = new Set(['src/zz_cp/record.ts#persist']);
+		const reason = 'r'.repeat(61);
+		const claimed = (cell: Cell): CensusCell[] =>
+			Object.entries(cells).flatMap(([action, doors]) =>
+				Object.keys(doors).map((door) => ({ action, door, cell })),
+			);
+		const lossless = bypassRuleProblems(
+			closure,
+			claimed({ verdict: 'lossless', readVerified: true, reason }),
+			cut,
+		);
+		const bypassing = [
+			`${tool} :: both × mixed`,
+			`${tool} :: deep × outer`,
+			`${tool} :: updateCache × writeRefreshedMedia`,
+		];
+		// the door-based rule's view: NO raw door at all …
+		expect(lossless.raw).toEqual([]);
+		// … the path-based one: every write that avoids the cut, however deep
+		expect(lossless.bypass).toEqual(bypassing);
+		expect(lossless.refused).toEqual(bypassing);
+		expect(bypassOf(closure, 'outer', cut)).toEqual([
+			'src/zz_deep/outer.ts#outer',
+			'src/zz_deep/outer.ts#middle',
+			'src/core/media/wrap.ts#writeRefreshedMedia',
+			`${MATRIX_WRITE}#updateMatrixKeyData`,
+		]);
+		expect(bypassOf(closure, 'saveVia', cut)).toBeNull();
+		// with NO cut the chokepoint stand-in is just another wrapper: saveVia bypasses too
+		expect(bypassOf(closure, 'saveVia', new Set())).not.toBeNull();
+		// PENDING and a stated bypass_reason are the ways out; a lossless readVerified is not
+		expect(
+			bypassRuleProblems(
+				closure,
+				claimed({ verdict: 'PENDING', closes: 'a named closure item', reason }),
+				cut,
+			).refused,
+		).toEqual([]);
+		expect(
+			bypassRuleProblems(
+				closure,
+				claimed({ verdict: 'derived-state', reason, bypass_reason: reason }),
+				cut,
+			).refused,
+		).toEqual([]);
+		expect(
+			bypassRuleProblems(
+				closure,
+				claimed({ verdict: 'derived-state', reason, bypass_reason: 'too short' }),
+				cut,
+			).refused,
+		).toEqual(bypassing);
+	});
+
+	test('a psql SEED is found by BINDING — aliased import, namespace member, `deps ?? runPsql` — never by the bare name', () => {
+		const pgExec = 'src/core/install/pg_exec.ts';
+		const tool = 'tools/zz_p/server/index.ts';
+		const { closure, cells } = injected({
+			[MATRIX_WRITE]: MATRIX_WRITE_CONTROL,
+			[pgExec]:
+				'export async function runPsql(args: string[]): Promise<number> {\n\treturn args.length;\n}',
+			'src/zz_p/io.ts': [
+				"import { runPsql as psql } from '../core/install/pg_exec.ts';",
+				"import * as pg from '../core/install/pg_exec.ts';",
+				"import { runPsql } from '../core/install/pg_exec.ts';",
+				'export async function aliased(): Promise<void> {',
+				'\tawait psql([`UPDATE matrix_x SET a = 1`]);',
+				'}',
+				'export async function namespaced(): Promise<void> {',
+				'\tawait pg.runPsql([`DELETE FROM matrix_x WHERE a = 1`]);',
+				'}',
+				'export async function seam(deps?: (a: string[]) => Promise<number>): Promise<void> {',
+				'\tconst run = deps ?? runPsql;',
+				'\tawait run([`TRUNCATE matrix_x`]);',
+				'}',
+			].join('\n'),
+			// a LOCAL function that merely shares the name: the NAME view calls it a psql
+			// writer, the binding knows it is not pg_exec's
+			'src/zz_p/decoy.ts': [
+				'function runPsql(args: string[]): string[] {',
+				'\treturn args;',
+				'}',
+				'export function fake(): void {',
+				'\trunPsql([`UPDATE matrix_x SET a = 1`]);',
+				'}',
+			].join('\n'),
+			[tool]: [
+				"import { aliased, namespaced, seam } from '../../../src/zz_p/io.ts';",
+				"import { fake } from '../../../src/zz_p/decoy.ts';",
+				"import { runPsql as sh } from '../../../src/core/install/pg_exec.ts';",
+				'export async function act(): Promise<void> {',
+				'\tawait aliased();',
+				'\tawait namespaced();',
+				'\tawait seam();',
+				'\tfake();',
+				'}',
+				'export async function local(): Promise<void> {',
+				"\tawait sh(['-c', `UPDATE matrix SET a = 1`]);",
+				"\tawait sh(['-c', `UPDATE matrix SET a = 2`]);",
+				'}',
+			].join('\n'),
+		});
+		expect(closure.psqlSeeds).toEqual([
+			'src/zz_p/io.ts#aliased',
+			'src/zz_p/io.ts#namespaced',
+			'src/zz_p/io.ts#seam',
+			`${tool}#local`,
+		]);
+		expect(isPsqlMatrixWriter(closure.bodies.get('src/zz_p/decoy.ts#fake') ?? '')).toBe(true);
+		expect(isPsqlMatrixWriter(closure.bodies.get('src/zz_p/io.ts#aliased') ?? '')).toBe(false);
+		expect(cells).toEqual({
+			[`${tool} :: act`]: { aliased: 1, namespaced: 1, seam: 1 },
+			// the SELF cell counts the resolved runPsql reference sites, alias included
+			[`${tool} :: local`]: { [`${tool}#local`]: 2 },
+		});
+		const judged = bypassRuleProblems(
+			closure,
+			Object.entries(cells).flatMap(([action, doors]) =>
+				Object.keys(doors).map((door) => ({
+					action,
+					door,
+					cell: { verdict: 'derived-state', reason: 'r'.repeat(61) } as Cell,
+				})),
+			),
+		);
+		expect(judged.raw).toEqual([
+			`${tool} :: act × aliased`,
+			`${tool} :: act × namespaced`,
+			`${tool} :: act × seam`,
+			`${tool} :: local × ${tool}#local`,
+		]);
+		expect(judged.refused).toEqual(judged.raw);
+	});
+
+	test('a tool-server unit that IS a psql seed carries a SELF cell — an action and a same-tool helper — and the raw rule refuses it unreasoned', () => {
+		const file = 'tools/zz_r/server/index.ts';
+		const { closure, cells } = injected({
+			[MATRIX_WRITE]: MATRIX_WRITE_CONTROL,
+			'src/core/install/pg_exec.ts':
+				'export async function runPsql(args: string[]): Promise<number> {\n\treturn args.length;\n}',
+			[file]: [
+				"import { runPsql } from '../../../src/core/install/pg_exec.ts';",
+				'export async function act(): Promise<void> {',
+				"\tawait runPsql(['-c', `UPDATE matrix_x SET a = 1`]);",
+				"\tawait runPsql(['-c', `UPDATE matrix SET a = 2`]);",
+				'}',
+				'async function helper(): Promise<void> {',
+				'\tawait runPsql([`DELETE FROM matrix_y`]);',
+				'}',
+				// reaches the seed IN-HOME: censused once, on the helper's own cell
+				'export async function act2(): Promise<void> {',
+				'\tawait helper();',
+				'}',
+			].join('\n'),
+		});
+		expect(closure.psqlSeeds).toEqual([`${file}#act`, `${file}#helper`]);
+		expect(cells).toEqual({
+			[`${file} :: act`]: { [`${file}#act`]: 2 },
+			[`${file} :: helper`]: { [`${file}#helper`]: 1 },
+		});
+		const reason = 'r'.repeat(61);
+		const judged = bypassRuleProblems(
+			closure,
+			Object.entries(cells).flatMap(([action, doors]) =>
+				Object.keys(doors).map((door) => ({
+					action,
+					door,
+					cell: { verdict: 'derived-state', reason } as Cell,
+				})),
+			),
+		);
+		expect(judged.raw).toEqual([
+			`${file} :: act × ${file}#act`,
+			`${file} :: helper × ${file}#helper`,
+		]);
+		expect(judged.refused).toEqual(judged.raw);
+	});
+
+	test('the declaration splitter keeps the doors’ ORDER and splits a tool’s apiActions per action', () => {
+		const source = [
+			'export async function two(): Promise<void> {',
+			"\tawait insertMatrixRecordWithCounter('t', 's');",
+			"\tawait updateMatrixRecord('t', 's', 1, {});",
+			'}',
+		].join('\n');
+		expect(declarationDoorCalls('src/x.ts', source, RAW_PRIMITIVES)[0]?.doors).toEqual(
+			RAW_PRIMITIVES.filter((name) =>
+				['insertMatrixRecordWithCounter', 'updateMatrixRecord'].includes(name),
+			),
+		);
+		expect(
+			declarationDoorCalls('tools/zz_ctl/server/index.ts', TOOL, ['w2']).map((entry) => entry.name),
+		).toEqual(['tool.apiActions.run']);
+	});
+
+	test('a door CALL is the bare name: `obj.<door>(` and `<prefix><door>(` are not calls', () => {
+		// callsName's contract; without this control a lookbehind drop stayed green
+		const source = [
+			'export async function decoys(): Promise<void> {',
+			"\tawait repo.updateMatrixRecord('t', 's', 1, {});",
+			"\tawait zzupdateMatrixRecord('t');",
+			'}',
+			'export async function real(): Promise<void> {',
+			"\tawait updateMatrixRecord('t', 's', 1, {});",
+			'}',
+		].join('\n');
+		expect(
+			declarationDoorCalls('src/x.ts', source, ['updateMatrixRecord']).map((entry) => [
+				entry.name,
+				entry.doors,
+			]),
+		).toEqual([['real', ['updateMatrixRecord']]]);
+	});
+
+	test('the judge reports a missing door, an extra site and a vanished cell', () => {
+		const derived = new Map([
+			[
+				'a :: x',
+				new Map([
+					['saveComponentData', 2],
+					['zzNewDoor', 1],
+				]),
+			],
+			['a :: y', new Map([['persistRecordKeys', 1]])],
+		]);
+		const census: Record<string, CensusRow> = {
+			'a :: x': {
+				doors: {
+					saveComponentData: { verdict: 'new-record', reason: 'r' },
+					zzGone: { verdict: 'new-record', reason: 'r' },
+				},
+			},
+			'a :: stale': { doors: { saveComponentData: { verdict: 'new-record', reason: 'r' } } },
+		};
+		expect(censusProblems(derived, census)).toEqual({
+			missingActions: ['a :: y'],
+			staleActions: ['a :: stale'],
+			missingCells: ['a :: x × zzNewDoor', 'a :: y × persistRecordKeys'],
+			staleCells: ['a :: stale × saveComponentData', 'a :: x × zzGone'],
+			siteMismatch: ['a :: x × saveComponentData: 2 site(s) in the source, 1 in the census'],
+		});
+	});
+});
+
+describe('LEG 4 — the verdicts are true of the source, not just of the table', () => {
+	test("every 'confirmed' cell’s action really asks before writing", () => {
+		for (const { action, door, cell } of CELLS) {
+			if (cell.verdict !== 'confirmed') continue;
+			const body = actionBody(action);
+			expect(body.length, `${action}: could not locate the action's body`).toBeGreaterThan(0);
 			expect(
 				body.includes('confirm('),
-				`${key} now confirms before writing — move its row to 'confirmed' and lower PENDING_COUNT.`,
+				`${action} × ${door} is marked 'confirmed' but its own body never calls confirm()`,
+			).toBe(true);
+		}
+	});
+
+	test("every 'refuses' cell really carries its refusal — in the action's CODE, or in evidence it REACHES", () => {
+		expect(CELLS.filter(({ cell }) => cell.verdict === 'refuses').length).toBeGreaterThan(0);
+		expect(refusesProblems(CLOSURE, CELLS, actionBody)).toEqual([]);
+	});
+
+	test("every 'lossless' claim is PROVED here or declared read-verified; a locked-read claim really locks", () => {
+		// The honesty rule: a lossless verdict is the strongest claim in the table, so it
+		// may not be a bare assertion. Either a behavioural leg in this file proves it —
+		// and the cell names that leg by its REAL title (LEGS, the list the describe()
+		// calls use) — or the cell says out loud that it was verified by reading.
+		expect(losslessProblems(CLOSURE, CELLS, Object.values(LEGS))).toEqual([]);
+	});
+
+	test("every 'PENDING' cell is tethered — a client one has NO confirmation, a server one names its closure", () => {
+		for (const { action, door, cell } of CELLS) {
+			if (cell.verdict !== 'PENDING') continue;
+			expect(
+				cell.closes.length,
+				`${action} × ${door}: name the item that closes it`,
+			).toBeGreaterThan(10);
+			if (isServerAction(action)) continue; // key + SERVER_PENDING_TETHERS (the next test)
+			const body = actionBody(action);
+			expect(body.length, `${action}: could not locate the action's body`).toBeGreaterThan(0);
+			expect(
+				body.includes('confirm('),
+				`${action} now confirms before writing — move its cell to 'confirmed' and lower PENDING_COUNT.`,
 			).toBe(false);
 		}
 	});
 
+	test('every SERVER PENDING cell is tethered to a FACT of its defect — an in-place fix that keeps the door is red too', () => {
+		// The (action, door) key only catches a fix that CHANGES the door. Each server
+		// PENDING cell therefore names the tether that turns red when the defect is fixed
+		// in place: a behaviour test (the translation cells), or a derived fact of the
+		// action's own resolved references.
+		const tethered = new Set(Object.keys(SERVER_PENDING_TETHERS));
+		const serverPending = CELLS.filter(
+			({ action, cell }) => cell.verdict === 'PENDING' && isServerAction(action),
+		).map(({ action, door }) => `${action} × ${door}`);
+		expect(
+			serverPending.sort(),
+			'a server PENDING cell with no tether (or a stale tether)',
+		).toEqual([...tethered].sort());
+		for (const [label, tether] of Object.entries(SERVER_PENDING_TETHERS)) {
+			const action = label.slice(0, label.lastIndexOf(' × '));
+			if (typeof tether !== 'function') {
+				// its own test() below — which must really be REGISTERED and running
+				expect(
+					REGISTERED_BEHAVIOUR_TETHERS.has(tether.behaviour),
+					`${label}: behaviour tether '${tether.behaviour}' is not a registered, running test`,
+				).toBe(true);
+				continue;
+			}
+			for (const problem of tether(action)) expect.unreachable(`${label}: ${problem}`);
+		}
+	});
+
 	test('the PENDING list is SHRINK-ONLY', () => {
-		const pending = Object.values(CENSUS).filter((row) => row.verdict === 'PENDING').length;
+		const pending = CELLS.filter(({ cell }) => cell.verdict === 'PENDING').length;
 		expect(
 			pending,
 			`PENDING grew (${pending} > ${PENDING_COUNT}). A new tool action that writes back over a stored component value must be LOSSLESS or CONFIRMED, not added to the backlog.`,
@@ -924,5 +3487,280 @@ describe('LEG 4 — the verdicts are true of the source, not just of the table',
 			pending,
 			`PENDING shrank to ${pending} — lower PENDING_COUNT so the ratchet keeps biting.`,
 		).toBe(PENDING_COUNT);
+	});
+	behaviourTether(EMPTY_BODY_TETHER, async () => {
+		// The WHOLE server write path — translateAndWrite with the REAL babelProvider (its
+		// guarded fetch, its response screen) and the real item loop, locked merge and
+		// chokepoint write — on a scratch record of the SUITE database, with only the
+		// network replaced by an HTTP 200 whose body is empty. A refusal landing ANYWHERE
+		// on that path (the provider, translateItems, translateAndWrite) turns this red:
+		// then move both automatic_translation cells to 'refuses' (evidence: the
+		// declaration that now refuses) and lower PENDING_COUNT by 2.
+		const table = 'matrix_test';
+		const sectionTipo = 'test2';
+		const componentTipo = 'testmint1002'; // input_text, translatable → 'string' column
+		const sectionId = 917491;
+		const human = { id: 1, lang: 'lg-eng', value: 'The text a curator already translated.' };
+		const realFetch = globalThis.fetch;
+		const stubbedCalls: string[] = [];
+		try {
+			await cleanScratchRecord(sectionTipo, sectionId, table);
+			const values: Record<string, unknown> = {};
+			for (const name of MATRIX_JSONB_COLUMNS) values[name] = null;
+			values.string = {
+				[componentTipo]: [{ id: 1, lang: 'lg-spa', value: 'El texto de origen.' }, human],
+			};
+			expect(await updateMatrixRecord(table, sectionTipo, sectionId, values)).toBe('inserted');
+			// The stub COUNTS its calls: if the provider's transport ever stops going
+			// through the global fetch, the count below is red (the provider has no
+			// injectable transport today — integrator request for a seam).
+			globalThis.fetch = (async (input: unknown) => {
+				stubbedCalls.push(String(input instanceof Request ? input.url : input));
+				return new Response('', { status: 200 });
+			}) as unknown as typeof fetch;
+			const outcome = await translateAndWrite({
+				model: 'component_input_text',
+				componentTipo,
+				sectionTipo,
+				sectionId,
+				sourceLang: 'lg-spa',
+				targetLang: 'lg-eng',
+				provider: babelProvider,
+				// a PUBLIC IP literal: the guard's no-lookup path, never dialled (fetch is stubbed)
+				uri: 'https://93.184.216.34/translate',
+				key: 'k',
+				userId: -1,
+			});
+			globalThis.fetch = realFetch;
+			// one source item → one provider call, answered by the stub (never the network)
+			expect(
+				stubbedCalls.length,
+				`provider calls seen by the stub: ${stubbedCalls.join(', ')}`,
+			).toBe(1);
+			const record = await readMatrixRecord(table, sectionTipo, sectionId);
+			const stored = ((record?.columns.string ?? {}) as Record<string, unknown>)[componentTipo];
+			const english = (Array.isArray(stored) ? stored : []).filter(
+				(item) => (item as { lang?: string }).lang === 'lg-eng',
+			);
+			expect(
+				{ ok: outcome.ok, english },
+				'the server no longer writes an empty provider body over the target language — move both automatic_translation cells to refuses and lower PENDING_COUNT by 2',
+			).toEqual({ ok: true, english: [{ id: 1, lang: 'lg-eng', value: '' }] });
+		} finally {
+			globalThis.fetch = realFetch;
+			await cleanScratchRecord(sectionTipo, sectionId, table);
+		}
+	});
+});
+
+// ---------------------------------------------------------------------------
+// THE SERVER `refuses` CELLS, EXECUTED
+// ---------------------------------------------------------------------------
+
+import { sql } from '../../src/core/db/postgres.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
+import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
+import { saveComponentData } from '../../src/core/section/record/save_component.ts';
+import { resolvePrincipal } from '../../src/core/security/permissions.ts';
+import {
+	dropSituation,
+	ensureSituation,
+	situation,
+} from '../../src/core/test_data/situations/situation.ts';
+import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
+import { saveTranscriptionResult } from '../../src/core/tools/transcription_asr.ts';
+import { toolTimeMachineBulkRevert } from '../../tools/tool_time_machine/server/bulk_revert.ts';
+
+/**
+ * A `refuses` verdict's `must_contain` is a SPELLING: `if (holdsForeignValue(…)) log();
+ * return null` keeps it and loses the refusal. So each server `refuses` cell is ALSO
+ * executed here, on records of a scratch situation in the SUITE database, with its
+ * counterfactual (the refusal is not a blanket refusal). A red here means the refusal is
+ * gone: the cell's verdict is false — restate it (PENDING, with its closure item) and
+ * raise nothing silently.
+ */
+describe('LEG 4 — TETHERS of the server `refuses` cells (behaviour, not spelling)', () => {
+	const TLD = 'zzlwt';
+	const SECTION = `${TLD}1`;
+	const TEXT = `${TLD}2`; // input_text, translatable (lang-SLICED)
+	const DATE = `${TLD}3`;
+	const TABLE = 'matrix_test';
+	const USER_ID = -1;
+	const SITUATION = situation({
+		tld: TLD,
+		name: 'tool_lossless_writeback_tethers',
+		nodes: [
+			{ tipo: SECTION, parent: 'test1', model: 'section', term: { 'lg-eng': 'Tethers' } },
+			{
+				tipo: TEXT,
+				parent: SECTION,
+				model: 'component_input_text',
+				term: { 'lg-eng': 'Text' },
+				is_translatable: true,
+			},
+			{ tipo: DATE, parent: SECTION, model: 'component_date', term: { 'lg-eng': 'Date' } },
+		],
+	});
+	/** dd800 run records (and the revert's own) — outside the situation's section. */
+	const runs: number[] = [];
+	let bulkTable = '';
+
+	const setText = async (id: number, lang: string, value: string, bulk: number | null) => {
+		const saved = await saveComponentData({
+			componentTipo: TEXT,
+			sectionTipo: SECTION,
+			sectionId: id,
+			lang,
+			changedData: [{ action: 'set_data', value: [{ id: 1, lang, value }] }] as never,
+			userId: USER_ID,
+			bulkProcessId: bulk,
+		});
+		expect(saved.ok).toBe(true);
+	};
+	const stored = async (id: number) => {
+		const record = await readMatrixRecord(TABLE, SECTION, id);
+		if (record === null) return null;
+		const column = (name: 'string' | 'date', tipo: string) =>
+			((record.columns[name] ?? {}) as Record<string, unknown>)[tipo];
+		return { text: column('string', TEXT), date: column('date', DATE) };
+	};
+
+	beforeAll(async () => {
+		await assertTestDatabase('tool_lossless_writeback_tethers');
+		await ensureSituation(SITUATION);
+		bulkTable = (await getMatrixTableFromTipo('dd800')) as string;
+		expect(await getMatrixTableFromTipo(SECTION)).toBe(TABLE);
+	}, 60_000);
+
+	afterAll(async () => {
+		await assertTestDatabase('tool_lossless_writeback_tethers');
+		await sql.unsafe('DELETE FROM matrix_time_machine WHERE section_tipo = $1', [SECTION]);
+		await sql.unsafe('DELETE FROM dedalo_ts_record_generation WHERE section_tipo = $1', [SECTION]);
+		await sql.unsafe(`DELETE FROM "${TABLE}" WHERE section_tipo = $1`, [SECTION]);
+		for (const id of runs) {
+			await sql.unsafe(
+				`DELETE FROM "${bulkTable}" WHERE section_tipo = 'dd800' AND section_id = $1`,
+				[id],
+			);
+			await sql.unsafe(
+				`DELETE FROM matrix_time_machine WHERE section_tipo = 'dd800' AND section_id = $1`,
+				[id],
+			);
+		}
+		await sql.unsafe(`DELETE FROM matrix_activity WHERE data->>'section_tipo' = $1`, [SECTION]);
+		expect(await dropSituation(SITUATION)).toBe(0);
+	});
+
+	test('deleteIfSafe × deleteSectionRecord: the revert KEEPS a record it created that someone else wrote to — and deletes one nobody did', async () => {
+		const run = await createSectionRecord('dd800', USER_ID);
+		runs.push(run);
+		const curated = await createSectionRecord(SECTION, USER_ID, new Date(), undefined, {
+			bulkProcessId: run,
+		});
+		await setText(curated, 'lg-spa', 'imported', run);
+		// a value the run did not write: a curator's, after the run
+		const foreign = await saveComponentData({
+			componentTipo: DATE,
+			sectionTipo: SECTION,
+			sectionId: curated,
+			lang: 'lg-nolan',
+			changedData: [{ action: 'insert', value: { start: { year: 1999 } } }] as never,
+			userId: USER_ID,
+		});
+		expect(foreign.ok).toBe(true);
+		const untouched = await createSectionRecord(SECTION, USER_ID, new Date(), undefined, {
+			bulkProcessId: run,
+		});
+		await setText(untouched, 'lg-spa', 'imported', run);
+
+		const response = await toolTimeMachineBulkRevert({
+			principal: await resolvePrincipal(USER_ID),
+			userId: USER_ID,
+			options: { bulk_process_id: run },
+			background: false,
+		});
+		expect(response.ok).toBe(true);
+		const data = response.data as {
+			bulk_process_id: number;
+			skipped: { reason: string; section_id: number }[];
+		};
+		runs.push(data.bulk_process_id);
+
+		const kept = await stored(curated);
+		expect(kept, 'the revert DELETED a record holding a curator’s value').not.toBeNull();
+		expect(kept?.date, 'the curator’s value did not survive the revert').toBeDefined();
+		expect(data.skipped.map(({ reason, section_id }) => `${reason}:${section_id}`)).toEqual([
+			`created_record_kept:${curated}`,
+		]);
+		// the counterfactual: a record holding only the run's own values IS deleted
+		expect(await stored(untouched), 'the refusal became a blanket refusal').toBeNull();
+	});
+
+	test('backgroundTranscriberPoll × pollTranscriptionCompletion: a finished ASR result does NOT replace a non-empty target slice — and fills an empty one', async () => {
+		const curated = await createSectionRecord(SECTION, USER_ID);
+		await setText(curated, 'lg-eng', 'A curator’s own transcript.', null);
+		const ddo = (sectionId: number) => ({
+			component_tipo: TEXT,
+			section_tipo: SECTION,
+			section_id: sectionId,
+		});
+		const segments = [{ start: 0, end: 4, text: ' Machine words.' }];
+		const refused = await saveTranscriptionResult({
+			lang: 'lg-eng',
+			transcriptionDdo: ddo(curated),
+			segments,
+			userId: USER_ID,
+		});
+		expect(refused.saved, 'the ASR result was saved over an existing transcript').toBe(false);
+		const values = (items: unknown) =>
+			(Array.isArray(items) ? items : []).map((item) => {
+				const { lang, value } = item as { lang?: string; value?: unknown };
+				return `${lang}:${String(value)}`;
+			});
+		expect(values((await stored(curated))?.text)).toEqual(['lg-eng:A curator’s own transcript.']);
+		// the counterfactual: an EMPTY target slice receives the transcript
+		const empty = await createSectionRecord(SECTION, USER_ID);
+		const filled = await saveTranscriptionResult({
+			lang: 'lg-eng',
+			transcriptionDdo: ddo(empty),
+			segments,
+			userId: USER_ID,
+		});
+		expect(filled.saved, filled.msg).toBe(true);
+		expect(values((await stored(empty))?.text).join()).toContain('Machine words.');
+	});
+
+	test('the spelling checks read CODE: a string or a comment naming the call cannot vouch for it', () => {
+		expect(codeOnly("log('holdsForeignValue(x)'); // holdsForeignValue(y)")).not.toContain(
+			'holdsForeignValue(',
+		);
+		expect(codeOnly('if (holdsForeignValue(x)) return;')).toContain('holdsForeignValue(');
+	});
+
+	test('the out-of-corpus tools .js classes are checked, not assumed — the client leg, or a LEAF', () => {
+		const paragraphs = 'tools/tool_transcription/transcribers/lib/paragraphs.js';
+		// the SERVER-run transcription lib is not a client file: only the leaf class admits it
+		expect(CLIENT_FILES.includes(paragraphs)).toBe(false);
+		expect(isImportFreeLeaf(paragraphs)).toBe(true);
+		// a module that imports is no leaf
+		expect(isImportFreeLeaf('tools/tool_lang/js/browser_translation.js')).toBe(false);
+		// the CLASS judge, not only its predicates: the server-run lib only as a leaf; a
+		// client file only as client JS; a tools .js OUTSIDE the client leg that IMPORTS
+		// (the whisper worker pulls ../lib/*.js) in no class — so a widened class is red
+		expect(admittedBy(paragraphs)).toEqual(['tools-js-leaf']);
+		const client = 'tools/tool_lang/js/browser_translation.js';
+		expect(CLIENT_FILES.includes(client)).toBe(true);
+		expect(admittedBy(client)).toEqual(['tool-client-js']);
+		const importer = 'tools/tool_transcription/transcribers/browser_whisper/browser_whisper.js';
+		expect(existsSync(join(ROOT, importer))).toBe(true);
+		expect(CLIENT_FILES.includes(importer)).toBe(false);
+		expect(admittedBy(importer)).toEqual([]);
+		expect(OUT_OF_CORPUS_TARGETS.map((entry) => entry.id)).toEqual([
+			'suite',
+			'migration-runner',
+			'json-data',
+			'tool-client-js',
+			'tools-js-leaf',
+		]);
 	});
 });

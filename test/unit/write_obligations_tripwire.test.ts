@@ -45,11 +45,23 @@
  *
  * The behavioural twin — write_obligations_native.test.ts — drives every door
  * on the suite database and asserts each obligation's observable effect.
+ *
+ * Leg A's primitive derivation, declaration splitter and rawCallsIn live in the
+ * shared analyser test/helpers/matrix_writer_closure.ts (with tool_lossless_writeback).
  */
 
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import {
+	MATRIX_WRITE,
+	MATRIX_WRITE_NON_DML,
+	moduleRuntimeExports,
+	RAW_PRIMITIVES,
+	type RawCall,
+	rawCallsIn,
+	topLevelBlocks,
+} from '../helpers/matrix_writer_closure.ts';
 import { stripComments } from '../helpers/strip_comments.ts';
 import {
 	REPO_ROOT,
@@ -61,7 +73,6 @@ const read = (rel: string): string => readFileSync(join(REPO_ROOT, rel), 'utf8')
 /** Source with comments stripped — every assertion below reads CODE, never prose. */
 const code = (rel: string): string => stripComments(read(rel));
 
-const MATRIX_WRITE = 'src/core/db/matrix_write.ts';
 const RECORD_WRITE = 'src/core/section_record/record_write.ts';
 const SAVE_EVENT = 'src/core/section_record/save_event.ts';
 const SAVE_COMPONENT = 'src/core/section/record/save_component.ts';
@@ -85,90 +96,12 @@ const CHOKEPOINT_REACH = ['persistRecordKeys(', 'persistRecordColumns(', 'afterR
 // A. THE CENSUS
 // ---------------------------------------------------------------------------
 
-/**
- * Exports of db/matrix_write.ts that are NOT matrix DML. Each needs a reason: the
- * point of deriving the primitive list from the module is that classifying a new
- * export is a decision somebody makes HERE, not an omission nobody notices.
- */
-const MATRIX_WRITE_NON_DML: Record<string, string> = {
-	readMatrixKeyForUpdate:
-		'a locked READ (SELECT … FOR UPDATE); the write that follows it is a primitive.',
-	allocateComponentItemId:
-		'writes the per-component item COUNTER in `meta`, never a component value; the value write that consumes the id is a primitive.',
-	absorbComponentItemIds: 'raises the same item counter after a value write; no component value.',
-	counterTableFor: 'a pure name derivation (matrix table → its counter table).',
-	counterFloorExpression: 'a pure SQL fragment builder for the counter floor.',
-	insertMatrixRowSequenceId:
-		'DML on a SEQUENCE-ID table (matrix_activity — the door refuses any other, SEQUENCE_ID_MATRIX_TABLES): an audit row, not a curated record — no component value, no stamp, no TM, no RAG obligation. Moved into the writer home by P1-15 (T2), classified here so the census stays TOTAL over the module.',
-	appendMatrixUpdateRow:
-		'DML on matrix_updates (the update-process version / marker rows): system bookkeeping, not a curated record — no component value, no stamp, no TM, no RAG obligation. Moved into the writer home by P1-15 (T2).',
-};
-
-/** The raw DML primitives, DERIVED from the module's exports minus the declared non-DML. */
-function deriveRawPrimitives(): string[] {
-	const source = read(MATRIX_WRITE);
-	const primitives: string[] = [];
-	for (const match of source.matchAll(/^export (?:async )?function ([A-Za-z0-9_]+)/gm)) {
-		const name = match[1];
-		if (name === undefined || MATRIX_WRITE_NON_DML[name] !== undefined) continue;
-		primitives.push(name);
-	}
-	return primitives;
-}
-
-const RAW_PRIMITIVES = deriveRawPrimitives();
-
-/** One raw primitive call, resolved to the top-level declaration that contains it. */
-interface RawCall {
-	file: string;
-	/** `<file>#<declaration>` — the census key. */
-	key: string;
-	primitive: string;
-	body: string;
-}
-
-/**
- * Split a (comment-stripped) module into its top-level declarations: every
- * `function`/`const`/`let`/`class` that starts at column 0 opens a block that
- * runs to the next such line. Good enough for this tree (biome-formatted, one
- * declaration per top-level statement) and, crucially, verified below against
- * a positive control so a formatting drift that broke the splitter would be
- * red, not silently green.
- */
-function topLevelBlocks(source: string): { name: string; body: string }[] {
-	const lines = source.split('\n');
-	const starts: { index: number; name: string }[] = [];
-	const declaration =
-		/^(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:function\*?|const|let|class)\s+([A-Za-z0-9_$]+)/;
-	lines.forEach((line, index) => {
-		const match = declaration.exec(line);
-		if (match?.[1] !== undefined) starts.push({ index, name: match[1] });
-	});
-	const blocks: { name: string; body: string }[] = [];
-	// Everything before the first declaration (imports, module-level calls).
-	blocks.push({
-		name: '<module>',
-		body: lines.slice(0, starts[0]?.index ?? lines.length).join('\n'),
-	});
-	starts.forEach((start, position) => {
-		const end = starts[position + 1]?.index ?? lines.length;
-		blocks.push({ name: start.name, body: lines.slice(start.index, end).join('\n') });
-	});
-	return blocks;
-}
-
-function rawCallsIn(file: string, source: string): RawCall[] {
-	const calls: RawCall[] = [];
-	for (const block of topLevelBlocks(source)) {
-		for (const primitive of RAW_PRIMITIVES) {
-			// A CALL (or an arrow body that is one), never the import binding.
-			if (new RegExp(`(?<![.\\w])${primitive}\\(`).test(block.body)) {
-				calls.push({ file, key: `${file}#${block.name}`, primitive, body: block.body });
-			}
-		}
-	}
-	return calls;
-}
+// The primitive list (DERIVED from matrix_write.ts's exports minus the declared
+// non-DML ones, MATRIX_WRITE_NON_DML with its reasons), the top-level
+// declaration splitter and `rawCallsIn` live in the shared analyser
+// test/helpers/matrix_writer_closure.ts — tool_lossless_writeback_tripwire
+// derives its server doors from the same primitives and cross-checks this
+// name-based census against its import-resolved edges.
 
 /**
  * Raw callers that legitimately do NOT reach the chokepoint, per declaration.
@@ -294,13 +227,18 @@ describe('A. the raw matrix_write caller census is TOTAL', () => {
 			expect(RAW_PRIMITIVES, `${name} is not derived as a primitive`).toContain(name);
 		}
 		// every declared non-DML export still exists (a stale row is a hole that reads as coverage)
-		const source = read(MATRIX_WRITE);
+		// (every RUNTIME export form — function, const/let/class, `export { … }` — so a
+		// non-function writer is a primitive until classified, and a classified
+		// constant that disappears is stale)
+		const exported = moduleRuntimeExports(read(MATRIX_WRITE));
 		for (const [name, reason] of Object.entries(MATRIX_WRITE_NON_DML)) {
-			expect(source, `${name} is no longer exported by ${MATRIX_WRITE}`).toMatch(
-				new RegExp(`^export (?:async )?function ${name}\\b`, 'm'),
-			);
+			expect(exported, `${name} is no longer exported by ${MATRIX_WRITE}`).toContain(name);
 			expect(reason.length).toBeGreaterThan(30);
 		}
+		// and the derivation is exactly exports minus the classified
+		expect(RAW_PRIMITIVES).toEqual(
+			exported.filter((name) => MATRIX_WRITE_NON_DML[name] === undefined),
+		);
 	});
 
 	test('the corpus and the scan are non-vacuous', () => {
