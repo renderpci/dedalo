@@ -11,16 +11,17 @@
  *
  * So the package copy is pinned to the engine's `isPrivateIp` by a truth table rather than
  * by review: the edges (first, first+1, last-1, last, and the address just outside on each
- * side) of every block in the PACKAGE's own exported tables and of a hand-kept copy of the
- * engine's (IPv4 and IPv6), the IPv6 translation and tunnel prefixes with a private and a
- * public carried IPv4, the IPv4-mapped spellings, and a seeded random IPv4 sample.
+ * side) of every block in the PACKAGE's own exported tables and in the ENGINE's
+ * (`SSRF_ADDRESS_TABLES`, IPv4 and IPv6 — the deprecated embeddings and the local-use NAT64
+ * block included, so "refused because outside 2000::/3" is compared at their edges too), the
+ * IPv6 translation and tunnel prefixes with a private and a public carried IPv4, the
+ * IPv4-mapped spellings, and a seeded random IPv4 sample.
  *
- * WHAT IT FOLLOWS, honestly: a block added to the PACKAGE is probed at its edges
- * automatically (its tables are read, not copied). A block added only to the ENGINE's
- * `ssrf_guard.ts` is probed only if it is in the hand list below or happens to hold a seeded
- * sample (≈300/2^24 for a /24) — `ssrf_guard.ts` does not export its CIDR tables yet. Until
- * it does, adding an engine block means adding it to `ENGINE_V4_BLOCKS`/`ENGINE_V6_BLOCKS`
- * here in the same change.
+ * WHAT IT FOLLOWS: a block added to EITHER side is probed at its edges automatically — both
+ * sides' tables are read, never copied (LEAD-1 review 2026-09-30, S3: the hand-kept engine
+ * copy this replaced had already missed three engine blocks). Floors on the engine tables'
+ * sizes keep an emptied export from making the derivation vacuous. The only hand list left
+ * is `IANA_PUBLIC_V4`: registry entries BOTH sides treat as public, so neither table has them.
  *
  * Anchors keep it from being vacuous: two classifiers that both answered a constant would
  * agree on every row, so a handful of rows are ALSO stated absolutely.
@@ -39,6 +40,7 @@ import { join } from 'node:path';
 import {
 	isPrivateIp,
 	nat64DiscoveryState,
+	SSRF_ADDRESS_TABLES,
 	setNat64DiscoveryForTests,
 } from '../../src/core/security/ssrf_guard.ts';
 
@@ -95,45 +97,34 @@ function intToV4(n: number): string {
 }
 
 /**
- * The ENGINE's IPv4 blocks (plus IANA registry entries both treat as public), hand-kept —
- * `ssrf_guard.ts` does not export its tables (see the header).
+ * IANA special-purpose registry entries that BOTH classifiers treat as public (AS112, AMT
+ * relay anycast, direct-delegation AS112): in neither side's table, so hand-listed here to
+ * probe that neither side starts refusing them alone.
  */
-const ENGINE_V4_BLOCKS = [
-	'0.0.0.0/8',
-	'10.0.0.0/8',
-	'100.64.0.0/10',
-	'127.0.0.0/8',
-	'169.254.0.0/16',
-	'172.16.0.0/12',
-	'192.0.0.0/24',
-	'192.0.2.0/24',
-	'192.31.196.0/24',
-	'192.52.193.0/24',
-	'192.88.99.0/24',
-	'192.168.0.0/16',
-	'192.175.48.0/24',
-	'198.18.0.0/15',
-	'198.51.100.0/24',
-	'203.0.113.0/24',
-	'224.0.0.0/4',
-	'240.0.0.0/4',
+const IANA_PUBLIC_V4 = ['192.31.196.0/24', '192.52.193.0/24', '192.175.48.0/24'];
+
+/** The ENGINE's IPv4 blocks — read from `ssrf_guard.ts`'s exported table, never copied. */
+const ENGINE_V4_BLOCKS: readonly string[] = SSRF_ADDRESS_TABLES.nonPublicIpv4;
+
+/**
+ * The ENGINE's IPv6 blocks — carriers, tunnels, global unicast, special-purpose, and the
+ * CLAIM-only tables (deprecated embeddings, local-use NAT64) the verdict refuses as
+ * outside global unicast. Read, never copied.
+ */
+const ENGINE_V6_BLOCKS: readonly string[] = [
+	...SSRF_ADDRESS_TABLES.wellKnownIpv4Carriers,
+	...SSRF_ADDRESS_TABLES.tunnelIpv6,
+	SSRF_ADDRESS_TABLES.globalUnicastIpv6,
+	...SSRF_ADDRESS_TABLES.nonPublicGlobalIpv6,
+	...SSRF_ADDRESS_TABLES.deprecatedIpv4Embeddings,
+	...SSRF_ADDRESS_TABLES.localUseNat64,
 ];
 
-/** The engine's IPv6 blocks (carriers, global unicast, tunnels, special-purpose), hand-kept. */
-const ENGINE_V6_BLOCKS = [
-	'::ffff:0:0/96',
-	'64:ff9b::/96',
-	'2000::/3',
-	'2002::/16',
-	'2001::/32',
-	'2001::/23',
-	'2001:db8::/32',
-	'3fff::/20',
+/** Every IPv4 block probed: the engine's table ∪ the package's ∪ the both-public registry rows. */
+const V4_BLOCKS = [
+	...new Set([...ENGINE_V4_BLOCKS, ...classifier.NON_PUBLIC_IPV4_CIDRS, ...IANA_PUBLIC_V4]),
 ];
-
-/** Every IPv4 block probed: the hand-kept engine copy ∪ the package's own exported table. */
-const V4_BLOCKS = [...new Set([...ENGINE_V4_BLOCKS, ...classifier.NON_PUBLIC_IPV4_CIDRS])];
-/** Every IPv6 block probed: the hand-kept engine copy ∪ the package's own exported tables. */
+/** Every IPv6 block probed: the engine's exported tables ∪ the package's own. */
 const V6_BLOCKS = [
 	...new Set([
 		...ENGINE_V6_BLOCKS,
@@ -327,6 +318,45 @@ describe('the site builder classifies addresses exactly as the engine', () => {
 			classifier.GLOBAL_UNICAST_CIDR,
 			...classifier.NON_PUBLIC_GLOBAL_IPV6_CIDRS,
 		]) {
+			const [net, bits] = block.split('/') as [string, string];
+			const first = v6ToBig(net);
+			const last = first + (1n << BigInt(128 - Number(bits))) - 1n;
+			expect({ block, first: rows.has(bigToV6(first)), last: rows.has(bigToV6(last)) }).toEqual({
+				block,
+				first: true,
+				last: true,
+			});
+		}
+	});
+
+	test('every block in the ENGINE tables is probed at its edges — derived, not copied', () => {
+		// Floors: an export emptied (or renamed to an empty table) must not make this vacuous.
+		// Today's sizes; a table may grow, never silently shrink below what was measured.
+		const floors: Record<keyof typeof SSRF_ADDRESS_TABLES, number> = {
+			nonPublicIpv4: 15,
+			wellKnownIpv4Carriers: 2,
+			tunnelIpv6: 2,
+			globalUnicastIpv6: 1,
+			nonPublicGlobalIpv6: 3,
+			deprecatedIpv4Embeddings: 2,
+			localUseNat64: 1,
+		};
+		for (const [table, floor] of Object.entries(floors)) {
+			const value = SSRF_ADDRESS_TABLES[table as keyof typeof SSRF_ADDRESS_TABLES];
+			const size = typeof value === 'string' ? 1 : value.length;
+			expect({ table, atLeastFloor: size >= floor }).toEqual({ table, atLeastFloor: true });
+		}
+		const rows = new Set(TABLE);
+		for (const block of ENGINE_V4_BLOCKS) {
+			const [net, bits] = block.split('/') as [string, string];
+			const last = intToV4(v4ToInt(net) + 2 ** (32 - Number(bits)) - 1);
+			expect({ block, first: rows.has(net), last: rows.has(last) }).toEqual({
+				block,
+				first: true,
+				last: true,
+			});
+		}
+		for (const block of ENGINE_V6_BLOCKS) {
 			const [net, bits] = block.split('/') as [string, string];
 			const first = v6ToBig(net);
 			const last = first + (1n << BigInt(128 - Number(bits))) - 1n;

@@ -892,7 +892,21 @@ export async function runConfined(
   } finally {
     // The run's egress gate and its per-run environment residence go away on every path —
     // timeout and throw included, which is why it is a `finally` and not a line after the
-    // await.
-    await confined.cleanup();
+    // await. A gate that fails to close (an unlink the host refuses) must not REPLACE the
+    // run's own result or throw — a finished build reported as an EACCES — so, exactly as
+    // the turn's teardown (process.ts), it is a line in this run's log, never a silence.
+    // `cleanup()` removes the env file in its own `finally`, so the secret goes regardless.
+    try {
+      await confined.cleanup();
+    } catch (closeError) {
+      try {
+        opts.onStdout?.(
+          `[egress] this run's egress gate did not close cleanly (${String(closeError)}); its per-run directory may remain under the daemon's runtime directory.\n`,
+        );
+      } catch {
+        // A broken sink must not replace the run's result either.
+      }
+      console.error('[confinement] a run egress gate failed to close:', closeError);
+    }
   }
 }

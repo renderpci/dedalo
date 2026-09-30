@@ -2086,6 +2086,53 @@ describe('the egress gate lives exactly as long as the run, on every exit path',
     expect(runner.egressListing()).toEqual(['proxy.sock']);
     expect(egressEntries(runner.policy)).toEqual([]);
   });
+
+  test('a build door whose gate FAILS to close still returns its own result, with an [egress] line in its log', async () => {
+    // runConfined's `finally`: `await confined.cleanup()` rejecting replaced the run's result (a
+    // finished build) with the unlink error of the teardown — the same class the turn teardown
+    // closed (LEAD-1 review 2026-09-30, S3). Made real as there: the unit "runs", then the egress
+    // parent is unwritable, so the gate's `rm` of its per-run directory is EACCES.
+    const runner = recordingPolicy();
+    const egressParent = join(dirname(runner.policy.listenSocket), 'egress');
+    writeFileSync(
+      runner.policy.systemdRunBin,
+      readFileSync(runner.policy.systemdRunBin, 'utf8').replace(/exit 0\n$/, `chmod 0500 ${egressParent}\nexit 0\n`),
+      { mode: 0o755 },
+    );
+    const log: string[] = [];
+    let outcome: { result: Awaited<ReturnType<typeof runConfined>> | null; error: unknown };
+    let leftBehind: string[];
+    try {
+      outcome = await runConfined(
+        {
+          door: 'build',
+          argv: ['bun', 'run', 'build'],
+          cwd: runner.cwd,
+          env: {},
+          timeoutMs: 5_000,
+          onStdout: chunk => log.push(chunk),
+        } as Parameters<typeof runConfined>[0],
+        runner.policy,
+      ).then(
+        result => ({ result, error: null }),
+        error => ({ result: null, error }),
+      );
+      // The control: the close really failed — the per-run directory is still there.
+      leftBehind = existsSync(egressParent) ? readdirSync(egressParent) : [];
+    } finally {
+      if (existsSync(egressParent)) chmodSync(egressParent, 0o700);
+    }
+    expect({
+      closeFailed: leftBehind.length > 0,
+      rejected: outcome.error !== null ? String(outcome.error) : null,
+      exitCode: outcome.result?.exitCode,
+    }).toEqual({ closeFailed: true, rejected: null, exitCode: 0 });
+    // The failure is a line in the build log a museum reads, not a silence.
+    expect(log.some(line => line.includes("[egress] this run's egress gate did not close cleanly"))).toBe(true);
+    // The per-run secret went regardless.
+    const turns = join(dirname(runner.policy.listenSocket), 'turns');
+    expect(existsSync(turns) ? readdirSync(turns) : []).toEqual([]);
+  });
 });
 
 /* ────────────────────────────────────────────────────────────────────────────────────

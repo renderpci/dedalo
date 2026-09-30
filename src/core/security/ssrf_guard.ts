@@ -147,7 +147,7 @@ export function packBlocks(blocks: readonly string[]): readonly PackedCidr[] {
  * CIDR text on purpose — a reader can check each against its RFC — packed once
  * here so no request re-parses a constant.
  */
-const NON_PUBLIC_IPV4: readonly PackedCidr[] = packBlocks([
+const NON_PUBLIC_IPV4_CIDRS: readonly string[] = Object.freeze([
 	'0.0.0.0/8', // "this" network / 0.0.0.0
 	'10.0.0.0/8', // private
 	'100.64.0.0/10', // CGNAT
@@ -164,6 +164,7 @@ const NON_PUBLIC_IPV4: readonly PackedCidr[] = packBlocks([
 	'224.0.0.0/4', // multicast
 	'240.0.0.0/4', // reserved, incl. broadcast 255.255.255.255
 ]);
+const NON_PUBLIC_IPV4: readonly PackedCidr[] = packBlocks(NON_PUBLIC_IPV4_CIDRS);
 
 /** True when 4 packed bytes are private / loopback / link-local / reserved. */
 function isNonPublicIpv4(bytes: Uint8Array): boolean {
@@ -194,10 +195,11 @@ function isPrivateIpv4(ip: string): boolean {
  *     (DEDALO_NAT64_PREFIXES) — and then it is honoured like any other.
  * All three are still CLAIMED (`possibleIpv4s`, for `claimedIpv4s`) — never to accept.
  */
-const WELL_KNOWN_IPV4_CARRIERS: readonly PackedCidr[] = packBlocks([
+const WELL_KNOWN_IPV4_CARRIER_CIDRS: readonly string[] = Object.freeze([
 	'::ffff:0:0/96', // IPv4-mapped (RFC 4291)
 	'64:ff9b::/96', // NAT64 well-known prefix (RFC 6052)
 ]);
+const WELL_KNOWN_IPV4_CARRIERS: readonly PackedCidr[] = packBlocks(WELL_KNOWN_IPV4_CARRIER_CIDRS);
 
 /**
  * TUNNELS, refused WHOLE — never judged by an embedded IPv4:
@@ -211,10 +213,12 @@ const WELL_KNOWN_IPV4_CARRIERS: readonly PackedCidr[] = packBlocks([
  *     tunnel, not a destination. (Also inside the refused `2001::/23` below; listed
  *     here so `isTunnelIpv6` names both tunnels in one place.)
  */
-const TUNNEL_IPV6: readonly PackedCidr[] = packBlocks(['2002::/16', '2001::/32']);
+const TUNNEL_IPV6_CIDRS: readonly string[] = Object.freeze(['2002::/16', '2001::/32']);
+const TUNNEL_IPV6: readonly PackedCidr[] = packBlocks(TUNNEL_IPV6_CIDRS);
 
 /** Global unicast — the only IPv6 space the public internet routes (RFC 4291). */
-const GLOBAL_UNICAST_IPV6: PackedCidr = packBlocks(['2000::/3'])[0] as PackedCidr;
+const GLOBAL_UNICAST_IPV6_CIDR = '2000::/3';
+const GLOBAL_UNICAST_IPV6: PackedCidr = packBlocks([GLOBAL_UNICAST_IPV6_CIDR])[0] as PackedCidr;
 
 /**
  * Special-purpose blocks INSIDE global unicast that are still not a public host.
@@ -229,11 +233,12 @@ const GLOBAL_UNICAST_IPV6: PackedCidr = packBlocks(['2000::/3'])[0] as PackedCid
  * inside a security predicate; the benchmarking `2001:2::/48` and Teredo sit right
  * beside them.
  */
-const NON_PUBLIC_GLOBAL_IPV6: readonly PackedCidr[] = packBlocks([
+const NON_PUBLIC_GLOBAL_IPV6_CIDRS: readonly string[] = Object.freeze([
 	'2001::/23', // IETF protocol assignments: Teredo, benchmarking, ORCHID (see above)
 	'2001:db8::/32', // documentation
 	'3fff::/20', // documentation (RFC 9637)
 ]);
+const NON_PUBLIC_GLOBAL_IPV6: readonly PackedCidr[] = packBlocks(NON_PUBLIC_GLOBAL_IPV6_CIDRS);
 
 /** True when packed IPv6 bytes are inside a 6to4 or Teredo tunnel block. */
 export function isTunnelIpv6(bytes: Uint8Array): boolean {
@@ -481,7 +486,13 @@ export function embeddedIpv4(bytes: Uint8Array): string | null {
  * metadata endpoint, so a caller that ALLOWS some private space (the on-premise
  * transcriber's exemption) must still see the IPv4 they claim. CLAIMS only.
  */
-const DEPRECATED_IPV4_EMBEDDINGS: readonly PackedCidr[] = packBlocks(['::/96', '::ffff:0:0:0/96']);
+const DEPRECATED_IPV4_EMBEDDING_CIDRS: readonly string[] = Object.freeze([
+	'::/96',
+	'::ffff:0:0:0/96',
+]);
+const DEPRECATED_IPV4_EMBEDDINGS: readonly PackedCidr[] = packBlocks(
+	DEPRECATED_IPV4_EMBEDDING_CIDRS,
+);
 
 /**
  * RFC 8215's LOCAL-USE NAT64 block, `64:ff9b:1::/48`. A translator's prefix is carved
@@ -490,8 +501,27 @@ const DEPRECATED_IPV4_EMBEDDINGS: readonly PackedCidr[] = packBlocks(['::/96', '
  * the whole block (not global unicast) unless the operator declares a prefix in it;
  * for CLAIMS every layout is read, since each can only add a refusal.
  */
-const LOCAL_USE_NAT64: readonly PackedCidr[] = packBlocks(['64:ff9b:1::/48']);
+const LOCAL_USE_NAT64_CIDRS: readonly string[] = Object.freeze(['64:ff9b:1::/48']);
+const LOCAL_USE_NAT64: readonly PackedCidr[] = packBlocks(LOCAL_USE_NAT64_CIDRS);
 const LOCAL_USE_LAYOUTS: readonly number[] = Object.freeze([48, 56, 64, 96]);
+
+/**
+ * The guard's CIDR tables AS TEXT, read-only (every array frozen). Exported for ONE
+ * reader: a second classifier that cannot import this module — the site-builder
+ * daemon's `isPublicAddress` — is pinned to THESE tables by
+ * test/unit/site_builder_public_address_differential.test.ts, which probes every block's
+ * edges on both sides, so a block added here is compared without anyone copying it.
+ * Never a verdict input outside this module: `isPrivateIp` / `assertPublicUrl` judge.
+ */
+export const SSRF_ADDRESS_TABLES = Object.freeze({
+	nonPublicIpv4: NON_PUBLIC_IPV4_CIDRS,
+	wellKnownIpv4Carriers: WELL_KNOWN_IPV4_CARRIER_CIDRS,
+	tunnelIpv6: TUNNEL_IPV6_CIDRS,
+	globalUnicastIpv6: GLOBAL_UNICAST_IPV6_CIDR,
+	nonPublicGlobalIpv6: NON_PUBLIC_GLOBAL_IPV6_CIDRS,
+	deprecatedIpv4Embeddings: DEPRECATED_IPV4_EMBEDDING_CIDRS,
+	localUseNat64: LOCAL_USE_NAT64_CIDRS,
+});
 
 function inAnyBlock(bytes: Uint8Array, blocks: readonly PackedCidr[]): boolean {
 	return blocks.some((block) => packedInBlock(bytes, block));

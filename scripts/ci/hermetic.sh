@@ -368,6 +368,10 @@ HERMETIC_TRIPWIRES=(
 	test/unit/baselines_bank_native.test.ts
 	test/unit/ci_local_native.test.ts
 	test/unit/pre_push_gate_native.test.ts
+	# --- 2026-09-30 (LEAD-1 review r2): the daemon/engine address-classifier differential.
+	#     DB-free: pure classifier calls over both sides' exported tables; measured with
+	#     DB_PORT=1 (6/6 pass before the S3 table export, 7/7 after).
+	test/unit/site_builder_public_address_differential.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"
