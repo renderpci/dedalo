@@ -7,7 +7,6 @@
 // imports
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {render_footer} from '../../../core/tools_common/js/render_tool_common.js'
 	import {request_failed, response_data, ApiError, CLIENT_ERROR} from '../../../core/common/js/api_error.js'
 	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
 
@@ -115,7 +114,6 @@ render_tool_pdf_extractor.prototype.edit = async function (options) {
 *  4. `button_select` — selects all content of the preview div via
 *     `window.getSelection().selectAllChildren(preview)` for easy copy/paste.
 *  5. Commented-out `info` block — left intentionally for future use.
-*  6. `footer_node` — standard tool footer (icon + developer attribution).
 *
 * The `id_base` used for the event channel is constructed as
 * `<caller.section_tipo>_<caller.section_id>_<caller.tipo>`, matching the
@@ -390,10 +388,6 @@ const get_content_data = async function(self) {
 		// 	inner_html		: '<label>Caller component</label>' + self.caller.model,
 		// 	parent			: info
 		// })
-
-	// footer_node
-		const footer_node = render_footer(self)
-		fragment.appendChild(footer_node)
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)

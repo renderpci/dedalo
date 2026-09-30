@@ -6,7 +6,6 @@
 
 // imports
 @import (once) '../../../client/dedalo/core/page/css/layout/vars';
-@import (once, reference) '../../../client/dedalo/core/tools_common/css/tool_mixins';
 
 // local vars
 :root {
@@ -153,13 +152,18 @@
 
 		>.buttons_container {
 			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: 0.75rem;
 			padding: 1rem;
 			position: relative;
 
-			.button_apply {
-				.tool_action_button();
-				padding-left: 1.5rem;
-				padding-right: 1.5rem;
+			// .button_apply is a plain `button.primary`: tool_common.less paints
+			// it (.tool_action_button()), no local override
+
+			.records_total {
+				color: @color_grey_6;
+				font-variant-numeric: tabular-nums;
 			}
 
 			.response_message {

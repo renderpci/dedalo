@@ -12410,10 +12410,6 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
     padding: 0.5rem;
     padding-top: 1rem;
   }
-  .wrapper_tool > .content_data > .footer_node {
-    padding: 1.5rem 0.5rem;
-    flex-wrap: wrap;
-  }
   .wrapper_tool img,
   .wrapper_tool video,
   .wrapper_tool canvas,
@@ -12572,22 +12568,6 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   width: 100%;
   padding: 1rem;
   padding-top: 2rem;
-}
-.wrapper_tool > .content_data > .footer_node {
-  contain: content;
-  padding: 3rem;
-  padding-top: 4rem;
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  align-items: center;
-}
-.wrapper_tool > .content_data > .footer_node > .icon {
-  height: 2rem;
-  vertical-align: center;
-}
-.wrapper_tool > .content_data > .footer_node > .info {
-  font-size: 1.3rem;
 }
 .wrapper_tool > .content_data.content_data_error.tool_error {
   display: block;

@@ -8,7 +8,6 @@
 	import {ui} from '../../../core/common/js/ui.js'
 	import {render_stream} from '../../../core/common/js/render_common.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	import {render_footer} from '../../../core/tools_common/js/render_tool_common.js'
 	import {request_failed} from '../../../core/common/js/api_error.js'
 	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
 	import {error_text} from '../../../core/common/js/render_api_error.js'
@@ -124,8 +123,8 @@ render_tool_update_cache.prototype.edit = async function(options) {
 *     <ul> (from render_components_list)
 *   buttons_container
 *     button.button_apply  — triggers the cache-update background process
+*     span.records_total   — the scope: caller list's matched total
 *   div.response_message   — live SSE progress output area
-*   footer_node            — standard tool footer (from render_tool_common)
 *
 * On mount, `check_process_data` immediately consults IndexedDB (key
 * `process_update_cache`) and, if a pid/pfile pair is found there, reconnects
@@ -199,12 +198,21 @@ const get_content_data = async function(self) {
 		})
 
 	// button_apply (Update records)
-		// Label shows total record count sourced from self.caller.total so the
-		// editor knows the scope of the operation before confirming.
+		// The tool's primary action: `primary` gets the tool colour with its
+		// matched ink (tool_common.less → .tool_action_button()), `reload` the icon.
 		const button_apply = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'success button_apply',
-			inner_html		: (get_label.update || 'Update') +' '+ (self.get_tool_label('records') || 'Records') + ': ' + self.caller.total,
+			class_name		: 'primary reload button_apply',
+			text_content	: get_label.update || 'Update',
+			parent			: buttons_container
+		})
+	// records_total. Scope of the operation (self.caller.total), shown beside
+	// the action — not concatenated into its label — so the editor knows it
+	// before confirming.
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'records_total',
+			text_content	: (self.get_tool_label('records') || 'Records') + ': ' + (self.caller.total ?? '?'),
 			parent			: buttons_container
 		})
 		const click_handler = async (e) => {
@@ -252,6 +260,7 @@ const get_content_data = async function(self) {
 					// text, never innerHTML: this is server text
 					response_message.textContent = error_text(api_response.error)
 					handle_api_error(api_response.error, {wrapper: response_message.parentNode});
+					ui.reveal(response_message)
 					return
 				}
 
@@ -260,7 +269,6 @@ const get_content_data = async function(self) {
 				// SSE stream can be opened to track the background process.
 				update_process_status({
 					pid							: api_response.pid,
-					ui.reveal(response_message)
 					pfile						: api_response.pfile,
 					local_db_id					: local_db_id,
 					container					: response_message,
@@ -304,10 +312,6 @@ const get_content_data = async function(self) {
 			})
 		}
 		check_process_data()
-
-	// footer_node
-		const footer_node = render_footer(self)
-		fragment.appendChild(footer_node)
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)

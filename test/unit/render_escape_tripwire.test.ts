@@ -1098,7 +1098,7 @@ const REMAINDER_RATCHET: Readonly<Record<string, number>> = {
 	'client/dedalo/core/services/service_autocomplete/js/view_default_autocomplete.js': 5,
 	'client/dedalo/core/services/service_ckeditor/js/render_text_editor.js': 2,
 	'client/dedalo/core/services/service_upload/js/render_edit_service_upload.js': 5,
-	'client/dedalo/core/tools_common/js/render_tool_common.js': 2,
+	'client/dedalo/core/tools_common/js/render_tool_common.js': 1,
 	'client/dedalo/core/tools_common/js/tool_common.js': 3,
 	'client/dedalo/core/ts_object/js/render_ts_dialogs.js': 1,
 	'client/dedalo/core/ts_object/js/render_ts_line.js': 5,
@@ -1149,7 +1149,7 @@ const REMAINDER_RATCHET: Readonly<Record<string, number>> = {
 	'tools/tool_tr_print/js/render_tool_tr_print.js': 8,
 	'tools/tool_transcription/js/render_tool_transcription.js': 24,
 	'tools/tool_transcription/js/tool_transcription.js': 7,
-	'tools/tool_update_cache/js/render_tool_update_cache.js': 12,
+	'tools/tool_update_cache/js/render_tool_update_cache.js': 11,
 };
 
 // ---------------------------------------------------------------------------

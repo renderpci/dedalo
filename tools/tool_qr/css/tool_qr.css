@@ -112,8 +112,7 @@
     display: none !important;
   }
   .wrapper_tool.tool_qr .tool_header.tool_qr,
-  .wrapper_tool.tool_qr .info_container,
-  .wrapper_tool.tool_qr .footer_node {
+  .wrapper_tool.tool_qr .info_container {
     display: none !important;
   }
 }
