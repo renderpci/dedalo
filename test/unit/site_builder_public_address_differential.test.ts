@@ -1,7 +1,7 @@
 /**
  * DIFFERENTIAL — the site builder's egress classifier answers exactly as the engine's
  * SSRF guard (LEAD-1 / SURF-2), IN THE STATE WHERE NO NAT64 NETWORK-SPECIFIC PREFIX IS
- * DECLARED OR DISCOVERED.
+ * DECLARED OR DISCOVERED — a state this file PINS (beforeEach below), never inherits.
  *
  * The site-builder daemon is its own package and cannot import the engine, so its egress
  * gate carries its own `isPublicAddress` (`publication/site_builder/src/egress/public_address.ts`).
@@ -34,9 +34,33 @@
  * prefix declared) rather than letting "exactly as the engine" claim it covered.
  */
 
-import { describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
-import { isPrivateIp } from '../../src/core/security/ssrf_guard.ts';
+import {
+	isPrivateIp,
+	nat64DiscoveryState,
+	setNat64DiscoveryForTests,
+} from '../../src/core/security/ssrf_guard.ts';
+
+/**
+ * THE STATE THE HEADER NAMES, PINNED — not inherited from the machine. `isPrivateIp` reads
+ * `DEDALO_NAT64_PREFIXES` per call (process env, else ../private/.env through readEnv) and the
+ * process's RFC 7050 discovery cache; an operator who declared a prefix, or a discovery that
+ * ran earlier in the same process, would otherwise decide what this differential measures.
+ * Pinned to '' rather than deleted: a deleted key falls back to ../private/.env.
+ */
+const NAT64_SETTING = 'DEDALO_NAT64_PREFIXES';
+const originalNat64 = process.env[NAT64_SETTING];
+const originalDiscovery = nat64DiscoveryState();
+beforeEach(() => {
+	process.env[NAT64_SETTING] = '';
+	setNat64DiscoveryForTests({ prefixes: [], expiresAt: Number.POSITIVE_INFINITY });
+});
+afterEach(() => {
+	if (originalNat64 === undefined) delete process.env[NAT64_SETTING];
+	else process.env[NAT64_SETTING] = originalNat64;
+	setNat64DiscoveryForTests(originalDiscovery);
+});
 
 const CLASSIFIER = join(
 	import.meta.dir,

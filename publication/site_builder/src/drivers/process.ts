@@ -185,9 +185,7 @@ export function spawnAgentProcess(
     // otherwise be lost and the whole turn would run. Undo what confineTurn opened; spawn nothing.
     if (interruptRequested) {
       queue.push({ type: 'error', message: 'interrupted before start', retriable: true });
-      await confined.cleanup();
-      await runCleanup(plan);
-      queue.close();
+      await teardown(confined, plan, queue);
       return;
     }
 
@@ -203,9 +201,7 @@ export function spawnAgentProcess(
       });
     } catch (error) {
       queue.push({ type: 'error', message: `spawn failed: ${errText(error)}`, retriable: false });
-      await confined.cleanup();
-      await runCleanup(plan);
-      queue.close();
+      await teardown(confined, plan, queue);
       return;
     }
 
@@ -248,9 +244,7 @@ export function spawnAgentProcess(
       // The per-turn credential residence goes away here, on every path — including the
       // timeout above and the interrupt below, which are the two paths a `rm` written after
       // the read loop would never reach.
-      await confined?.cleanup();
-      await runCleanup(plan);
-      queue.close();
+      await teardown(confined, plan, queue);
     }
   })();
 
@@ -275,6 +269,26 @@ export function spawnAgentProcess(
       await running;
     },
   };
+}
+
+/**
+ * EVERYTHING A TURN OPENED, UNDONE — each step on its own. The gate's close can reject (an
+ * unlink the host refuses), and a rejection here used to skip the driver's cleanup and
+ * `queue.close()`: the manager's `for await` never ended and the session sat in 'running'.
+ * A gate that did not close is a line in the session's own log, never a silence.
+ */
+async function teardown(confined: ConfinedTurn | null, plan: TurnPlan, queue: EventQueue): Promise<void> {
+  try {
+    await confined?.cleanup();
+  } catch (error) {
+    queue.push({
+      type: 'text',
+      text: `[egress] this run's egress gate did not close cleanly (${errText(error)}); its per-run directory may remain under the daemon's runtime directory.`,
+    });
+    console.error('[agent] a turn egress gate failed to close:', error);
+  }
+  await runCleanup(plan);
+  queue.close();
 }
 
 /** The driver's own teardown. A failing cleanup must never fail the turn it belongs to. */

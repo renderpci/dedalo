@@ -744,8 +744,19 @@ export async function confineTurn(
     };
     await writeFile(envFile, renderEnvironmentFile(unitEnv), { encoding: 'utf8', mode: 0o600 });
   } catch (error) {
-    await gate?.close();
-    await rm(envFile, { force: true });
+    // Each step on its own, and the REFUSAL is what the caller reports: a gate that fails to
+    // close must neither keep the env file resident nor replace the reason this run was refused.
+    try {
+      await gate?.close();
+    } catch (closeError) {
+      try {
+        opts.onEgress?.(`[egress] this run's egress gate did not close cleanly (${String(closeError)}).`);
+      } catch {
+        // A broken sink must not replace the refusal either.
+      }
+    } finally {
+      await rm(envFile, { force: true });
+    }
     throw error;
   }
 

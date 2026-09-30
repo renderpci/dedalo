@@ -1985,6 +1985,90 @@ describe('the egress gate lives exactly as long as the run, on every exit path',
     expect(existsSync(turns) ? readdirSync(turns) : []).toEqual([]);
   });
 
+  test('a gate that FAILS to close still ends the turn: the stream terminates, the driver cleanup and the env file go', async () => {
+    // The failure, made real rather than stubbed: while the unit "runs", the egress parent is
+    // made unwritable, so the gate's own `rm` of its per-run directory is EACCES and close()
+    // rejects. The turn's teardown must not ride on that one step: a throw there skipped the
+    // driver's cleanup and `queue.close()`, and the session sat in 'running' forever.
+    const runner = recordingPolicy();
+    const egressParent = join(dirname(runner.policy.listenSocket), 'egress');
+    writeFileSync(
+      runner.policy.systemdRunBin,
+      readFileSync(runner.policy.systemdRunBin, 'utf8').replace(/exit 0\n$/, `chmod 0500 ${egressParent}\nexit 0\n`),
+      { mode: 0o755 },
+    );
+    let driverCleanups = 0;
+    const proc = spawnAgentProcess(
+      start(runner.cwd, { SECRET: 'turn-secret' }),
+      async () => ({
+        argv: ['/opt/claude'],
+        parseLine: () => [],
+        cleanup: async () => {
+          driverCleanups++;
+        },
+      }),
+      runner.policy,
+    );
+    let outcome: { ended: boolean; events: AgentEvent[] };
+    let leftBehind: string[];
+    try {
+      outcome = await Promise.race([
+        drain(proc).then(events => ({ ended: true, events })),
+        Bun.sleep(10_000).then(() => ({ ended: false, events: [] as AgentEvent[] })),
+      ]);
+      // The control: the close really failed — the per-run directory is still there.
+      leftBehind = existsSync(egressParent) ? readdirSync(egressParent) : [];
+    } finally {
+      // Writable again, so the scratch sweep can remove what the failed close left.
+      if (existsSync(egressParent)) chmodSync(egressParent, 0o700);
+    }
+    expect({ ended: outcome.ended, driverCleanups, closeFailed: leftBehind.length > 0 }).toEqual({
+      ended: true,
+      driverCleanups: 1,
+      closeFailed: true,
+    });
+    expect(outcome.events.some(event => event.type === 'result')).toBe(true);
+    // The failure is a line in the session's own log, not a silence.
+    expect(outcome.events.some(event => event.type === 'text' && event.text.includes('[egress]'))).toBe(true);
+    // The per-run secret went regardless.
+    const turns = join(dirname(runner.policy.listenSocket), 'turns');
+    expect(existsSync(turns) ? readdirSync(turns) : []).toEqual([]);
+  });
+
+  test('a refusal after the gate opened is reported AS itself, even when the gate then fails to close', async () => {
+    // confineTurn's own catch: `await gate.close()` rejecting replaced the refusal the operator
+    // must read (a control character in the env) with the unlink error of the teardown.
+    const runner = recordingPolicy();
+    const egressParent = join(dirname(runner.policy.listenSocket), 'egress');
+    const policy = {
+      ...runner.policy,
+      egressSeams: {
+        ...runner.policy.egressSeams,
+        beforeServe: () => chmodSync(egressParent, 0o500),
+      },
+    } as ConfinementPolicy;
+    let events: AgentEvent[];
+    let leftBehind: string[];
+    try {
+      events = await drain(
+        spawnAgentProcess(
+          start(runner.cwd, { EVIL: 'a\nExecStart=/bin/sh' }),
+          async () => ({ argv: ['/opt/claude'], parseLine: () => [] }),
+          policy,
+        ),
+      );
+      leftBehind = existsSync(egressParent) ? readdirSync(egressParent) : [];
+    } finally {
+      if (existsSync(egressParent)) chmodSync(egressParent, 0o700);
+    }
+    const refusal = events.find(event => event.type === 'error');
+    const message = refusal?.type === 'error' ? refusal.message : '';
+    expect({ closeFailed: leftBehind.length > 0, controlCharacter: /control character/i.test(message) }).toEqual({
+      closeFailed: true,
+      controlCharacter: true,
+    });
+  });
+
   test('a build door that fails still closes its gate', async () => {
     const runner = recordingPolicy();
     writeFileSync(

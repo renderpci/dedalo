@@ -97,3 +97,55 @@ describe('the replacement keys are held to the gate’s hostname grammar AT BOOT
     });
   }
 });
+
+describe('the configured hosts ARE the plan each door is served — config → policy → gate', () => {
+  // The grammar rows above prove a key PARSES; nothing proved the parsed value reaches the gate.
+  // `policyFromConfig()` is where the two keys become each door's plan, and a swap or a dropped
+  // key there serves a build the provider and a turn the registry, with every row above green.
+  const CONFINEMENT = join(PACKAGE, 'src', 'drivers', 'confinement.ts');
+  const NETWORK = join(PACKAGE, 'src', 'drivers', 'network_profile.ts');
+
+  function plansWith(extra: string): { exitCode: number; output: string; plans: Record<string, unknown> | null } {
+    const script =
+      `const { policyFromConfig } = await import(${JSON.stringify(CONFINEMENT)});` +
+      `const { egressPlanFor } = await import(${JSON.stringify(NETWORK)});` +
+      'const facts = policyFromConfig().egressFacts;' +
+      "console.log('PLANS ' + JSON.stringify({ facts, build: egressPlanFor('build', facts).hosts, " +
+      "turn: egressPlanFor('turn', facts).hosts, git: egressPlanFor('git', facts).hosts }));";
+    const result = Bun.spawnSync([process.execPath, '-e', script], {
+      cwd: PACKAGE,
+      env: { PATH: process.env.PATH ?? '/usr/bin:/bin', NODE_ENV: 'test', DEDALO_SITE_ENV_FILE: envFileWith(extra) },
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    const stdout = result.stdout.toString();
+    const line = stdout.split('\n').find(entry => entry.startsWith('PLANS '));
+    return {
+      exitCode: result.exitCode ?? -1,
+      output: `${stdout}\n${result.stderr.toString()}`,
+      plans: line ? (JSON.parse(line.slice('PLANS '.length)) as Record<string, unknown>) : null,
+    };
+  }
+
+  test('an opencode host: the provider list is the TURN plan, the registry list the BUILD plan, git none', () => {
+    const run = plansWith(
+      'AGENT_DRIVER=opencode\nAGENT_PROVIDER_HOSTS=api.provider.example\nBUILD_REGISTRY_HOSTS=registry.example.com',
+    );
+    expect({ exitCode: run.exitCode, output: run.exitCode === 0 ? '' : run.output }).toEqual({ exitCode: 0, output: '' });
+    expect(run.plans).toEqual({
+      facts: { driver: 'opencode', providerHosts: ['api.provider.example'], registryHosts: ['registry.example.com'] },
+      build: ['registry.example.com'],
+      turn: ['api.provider.example'],
+      git: [],
+    });
+  });
+
+  test('BUILD_REGISTRY_HOSTS unset: a build is served the npm registry — the hostname default is real', () => {
+    const run = plansWith('AGENT_DRIVER=opencode\nAGENT_PROVIDER_HOSTS=api.provider.example');
+    expect({ exitCode: run.exitCode, output: run.exitCode === 0 ? '' : run.output }).toEqual({ exitCode: 0, output: '' });
+    expect({ build: run.plans?.build, turn: run.plans?.turn }).toEqual({
+      build: ['registry.npmjs.org'],
+      turn: ['api.provider.example'],
+    });
+  });
+});
