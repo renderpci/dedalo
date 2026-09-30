@@ -416,6 +416,13 @@ Merged since the last release; these ship with the next one.
     example which address was refused) and the request id to find it in the
     server log.
 
+- **The Update ontology panel scrolls to its result**
+
+    The result of an ontology update — success, warnings or a failure — appeared
+    below the submit button, out of sight unless the admin scrolled down, so the
+    panel looked idle. It now scrolls to the version change while the import runs,
+    and then to the outcome, as the Update code panel already does.
+
 - **Updating the ontology works from every configured master, not only the first**
 
     When `ONTOLOGY_SERVERS` listed several masters sharing the same access code,
