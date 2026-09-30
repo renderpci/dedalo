@@ -39,6 +39,7 @@
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import { collectOpsCounters } from '../../src/core/api/counters.ts';
+import { DedaloError } from '../../src/core/errors/index.ts';
 import { JOB_LANES, type JobLane, MediaJobManager } from '../../src/core/media/jobs.ts';
 import { fetchBoundedText } from '../../src/core/security/ssrf_guard.ts';
 import { mustGet } from '../helpers/assert.ts';
@@ -242,6 +243,19 @@ describe('per-job deadlines actually fire (PERF-11)', () => {
 	});
 });
 
+/**
+ * WHY the transport gave up, read off its TYPED failure (SURF-2, 2026-09-30: the
+ * transport reports `security.outbound_failed {reason, stage}` instead of Bun's raw
+ * `AbortError`): `aborted` is the JOB's signal, `timeout` its own deadline. Any other
+ * error is printed whole, so a red case says what happened instead.
+ */
+function stopReason(error: unknown): string {
+	if (error instanceof DedaloError && error.code === 'security.outbound_failed') {
+		return String(error.coordinates?.reason);
+	}
+	return `unexpected:${String(error)}`;
+}
+
 describe('the abort REACHES an awaited outbound call (PERF-11)', () => {
 	// A loopback peer that accepts the connection and then never answers — the
 	// shape of a wedged sidecar. `fetchBoundedText`'s own timeout is set far out,
@@ -280,7 +294,7 @@ describe('the abort REACHES an awaited outbound call (PERF-11)', () => {
 					});
 					outcome = 'returned';
 				} catch (error) {
-					outcome = (error as Error).name;
+					outcome = stopReason(error);
 				} finally {
 					elapsed = Date.now() - startedAt;
 				}
@@ -290,8 +304,8 @@ describe('the abort REACHES an awaited outbound call (PERF-11)', () => {
 		);
 
 		await until(() => outcome !== '', 5000);
-		// The fetch ended, and it ended because of the ABORT, not the 30 s timeout.
-		expect(outcome).toBe('AbortError');
+		// The fetch ended, and it ended because of the JOB's abort, not the 30 s timeout.
+		expect(outcome).toBe('aborted');
 		expect(elapsed).toBeLessThan(5000);
 		await until(() => manager.status(record.id)?.status === 'stopped');
 		expect(manager.status(record.id)?.status).toBe('stopped');
@@ -314,7 +328,7 @@ describe('the abort REACHES an awaited outbound call (PERF-11)', () => {
 					});
 					outcome = 'returned';
 				} catch (error) {
-					outcome = (error as Error).name;
+					outcome = stopReason(error);
 				}
 				return null;
 			},
@@ -323,7 +337,7 @@ describe('the abort REACHES an awaited outbound call (PERF-11)', () => {
 		await until(() => started);
 		expect(manager.stop(record.id)).toBe(true);
 		await until(() => outcome !== '', 5000);
-		expect(outcome).toBe('AbortError');
+		expect(outcome).toBe('aborted');
 	});
 
 	test('outside a job the transport keeps its OWN timeout and nothing else', async () => {
@@ -331,14 +345,18 @@ describe('the abort REACHES an awaited outbound call (PERF-11)', () => {
 		// fetch is the transport's own timeout — proving the composition ADDED the
 		// job's cancellation rather than replacing the guarantee that was there.
 		const startedAt = Date.now();
-		let name = '';
+		let reason = '';
 		try {
 			await fetchBoundedText(`http://127.0.0.1:${server.port}/transcribe`, { timeoutMs: 120 });
 		} catch (error) {
-			name = (error as Error).name;
+			reason = stopReason(error);
 		}
-		expect(name).toBe('AbortError');
-		expect(Date.now() - startedAt).toBeGreaterThanOrEqual(100);
+		const elapsed = Date.now() - startedAt;
+		expect(reason).toBe('timeout');
+		expect(elapsed).toBeGreaterThanOrEqual(100);
+		// ...and it is the CALLER's 120 ms, not the 15 s default: an ignored
+		// `timeoutMs` also ends as reason timeout, inside the runner's 30 s budget.
+		expect(elapsed).toBeLessThan(2000);
 	});
 });
 

@@ -160,6 +160,9 @@ HERMETIC_TRIPWIRES=(
 	test/unit/client_store_principal_key_tripwire.test.ts
 	test/unit/component_teardown_tripwire.test.ts
 	test/unit/outbound_fetch_tripwire.test.ts
+	# SURF-2 (2026-09-30): the pinned single-call door, hermetic by seams (injected
+	# lookup/socket, loopback peers). Verified DB-less (DB_PORT=59999): 26 pass / 0 fail.
+	test/unit/guarded_text_pin_native.test.ts
 	test/unit/strip_comments_tripwire.test.ts
 	test/unit/private_state_mode_tripwire.test.ts
 	test/unit/wire_disclosure_tripwire.test.ts

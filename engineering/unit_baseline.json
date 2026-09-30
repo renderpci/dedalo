@@ -1711,6 +1711,11 @@
 			"skipped": 0,
 			"assertions": 14
 		},
+		"test/unit/guarded_text_pin_native.test.ts": {
+			"tests": 26,
+			"skipped": 0,
+			"assertions": 91
+		},
 		"test/unit/harvest_door_native.test.ts": {
 			"tests": 75,
 			"skipped": 0,

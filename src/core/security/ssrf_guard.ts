@@ -16,12 +16,20 @@
  *
  * DNS REBINDING (a hostile resolver answering "public" to the check and
  * "127.0.0.1" to the socket) is closed by PINNING the socket to the vetted
- * address: `pinToVettedAddress`, used by `fetchPinnedHop` here and by the
- * external-services door (src/external/transport.ts). `fetchGuardedText` does
- * NOT pin — it re-resolves at connect time, so its callers accept that residual.
+ * address: `pinToVettedAddress`, used by `fetchPinnedHop` here — and so by
+ * `fetchGuardedText`, which is that hop used once (SURF-2, 2026-09-30) — and by the
+ * external-services door (src/external/transport.ts). Every public-destination
+ * door connects to the address it vetted; none resolves the name a second time.
  * REDIRECTS are never followed by this module: `fetchGuardedText` refuses them,
  * and `fetchPinnedHop` hands the `Location` back to its caller, which must vet
  * the next hop as a NEW target (core/harvest/ does exactly that, hop by hop).
+ *
+ * "WHICH IPv4 DOES THIS ADDRESS REACH" has ONE owner, this module: the verdict
+ * reads the authoritative carriers, and `claimedIpv4s` answers for every carrier
+ * (tighten-only) so a caller with its own policy needs no carrier table of its own.
+ * The on-premise transcriber (core/tools/transcription_local_asr.ts) reads it for
+ * every form of its host; PENDING: it still unions a redundant copy of the
+ * deprecated/local-use tables into its metadata check, and that copy is to be deleted.
  */
 
 import { lookup as systemDnsLookup } from 'node:dns/promises';
@@ -184,6 +192,7 @@ function isPrivateIpv4(ip: string): boolean {
  *   - the local-use NAT64 prefix `64:ff9b:1::/48` (RFC 8215): which layout it uses
  *     is the network's own choice, so only the operator can declare it
  *     (DEDALO_NAT64_PREFIXES) — and then it is honoured like any other.
+ * All three are still CLAIMED (`possibleIpv4s`, for `claimedIpv4s`) — never to accept.
  */
 const WELL_KNOWN_IPV4_CARRIERS: readonly PackedCidr[] = packBlocks([
 	'::ffff:0:0/96', // IPv4-mapped (RFC 4291)
@@ -465,16 +474,70 @@ export function embeddedIpv4(bytes: Uint8Array): string | null {
 }
 
 /**
- * EVERY IPv4 some carrier says this address reaches, dotted: the authoritative fold
- * (`embeddedIpv4`) AND the one an already-discovered prefix claims. TIGHTEN-ONLY by
- * contract: a caller may refuse an address because one of these is forbidden, never
- * accept it because one is not — the discovered one is a resolver's unverified word
- * (RFC 7050 §7), exactly as strong as a reason to say no and no stronger.
+ * The DEPRECATED IPv6 forms that embed an IPv4 in bytes 12-15: IPv4-compatible `::/96`
+ * (RFC 4291 §2.5.5.1) and the SIIT "IPv4-translated" `::ffff:0:0:0/96` (RFC 2765). The
+ * verdict refuses both (outside global unicast) and the fold never reads them — but an
+ * old or odd stack that still honours one puts `[::ffff:0:a9fe:a9fe]` straight onto the
+ * metadata endpoint, so a caller that ALLOWS some private space (the on-premise
+ * transcriber's exemption) must still see the IPv4 they claim. CLAIMS only.
+ */
+const DEPRECATED_IPV4_EMBEDDINGS: readonly PackedCidr[] = packBlocks(['::/96', '::ffff:0:0:0/96']);
+
+/**
+ * RFC 8215's LOCAL-USE NAT64 block, `64:ff9b:1::/48`. A translator's prefix is carved
+ * from it at any RFC 6052 length from /48 to /96, so an address inside may carry its
+ * IPv4 in ANY of those layouts — which one only the network knows. The verdict refuses
+ * the whole block (not global unicast) unless the operator declares a prefix in it;
+ * for CLAIMS every layout is read, since each can only add a refusal.
+ */
+const LOCAL_USE_NAT64: readonly PackedCidr[] = packBlocks(['64:ff9b:1::/48']);
+const LOCAL_USE_LAYOUTS: readonly number[] = Object.freeze([48, 56, 64, 96]);
+
+function inAnyBlock(bytes: Uint8Array, blocks: readonly PackedCidr[]): boolean {
+	return blocks.some((block) => packedInBlock(bytes, block));
+}
+
+/**
+ * The IPv4s an address MAY reach on a stack that honours a carrier the guard does not
+ * trust: the deprecated embeddings' bytes 12-15, and a local-use address read in every
+ * layout. Never a verdict input — only `claimedIpv4s`, tighten-only.
+ *
+ * NONE for an address an AUTHORITATIVE carrier already reads (well-known or DECLARED):
+ * the operator's `64:ff9b:1::/48` declaration IS the network's layout, so reading the
+ * same bytes at /56, /64 and /96 invents addresses no packet can reach — the zero
+ * suffix of a /48 embedding reads as 0.0.0.0 at /96, and a caller that refuses any
+ * claimed non-public IPv4 (the transcriber, exemption OFF) would then refuse a
+ * declared public address the guard accepts (measured 2026-09-30).
+ */
+function possibleIpv4s(bytes: Uint8Array): Uint8Array[] {
+	if (carriedIpv4(bytes, []) !== null) return [];
+	const deprecated = inAnyBlock(bytes, DEPRECATED_IPV4_EMBEDDINGS) ? [bytes.slice(12, 16)] : [];
+	const layouts = inAnyBlock(bytes, LOCAL_USE_NAT64) ? LOCAL_USE_LAYOUTS : [];
+	return [...deprecated, ...layouts.flatMap((bits) => extractRfc6052Ipv4(bytes, bits) ?? [])];
+}
+
+/**
+ * EVERY IPv4 any carrier says this address reaches, dotted — standardized (mapped,
+ * NAT64 /96), DECLARED, DISCOVERED, and — only where no authoritative carrier reads
+ * the address — DEPRECATED (IPv4-compatible, SIIT) and LOCAL-USE in any RFC 6052
+ * layout. This module is the ONE owner of "which IPv4 does this
+ * address reach": a caller with a policy of its own asks here instead of keeping a
+ * second carrier table (two copies drift). The transcriber judges every form this
+ * returns — metadata refusal and, exemption OFF, the private-host rule — and still
+ * unions a REDUNDANT copy of the deprecated/local-use tables into its metadata check:
+ * PENDING deletion.
+ *
+ * TIGHTEN-ONLY by contract: a caller may refuse an address because one of these is
+ * forbidden, never accept it because one is not — only the authoritative fold
+ * (`embeddedIpv4`) says where an address GOES; the rest are an untrusted resolver's
+ * word (RFC 7050 §7) or a stack's possible reading, exactly as strong as a reason to
+ * say no and no stronger. Tunnels (6to4, Teredo) claim nothing: they are refused whole.
  */
 export function claimedIpv4s(bytes: Uint8Array): string[] {
 	if (bytes.length !== 16) return [];
 	const claims = [carriedIpv4(bytes, []), carriedBy(bytes, nat64Discovered.prefixes, false)];
-	return claims.flatMap((carried) => (carried === null ? [] : [formatIpv4(carried.ipv4)]));
+	const carried = claims.flatMap((claim) => (claim === null ? [] : [claim.ipv4]));
+	return [...carried, ...possibleIpv4s(bytes)].map(formatIpv4);
 }
 
 /**
@@ -1056,7 +1119,7 @@ export async function readBytesCapped(
 }
 
 // ---------------------------------------------------------------------------
-// fetchGuardedText / fetchBoundedText — the unpinned, no-redirect text fetch
+// The job's signal and the text doors' options
 // ---------------------------------------------------------------------------
 
 /**
@@ -1074,79 +1137,19 @@ function withJobSignal(own: AbortSignal, job: AbortSignal | undefined): AbortSig
 export interface GuardedFetchOptions {
 	/** Max response bytes read before abort (default 25 MiB). */
 	maxBytes?: number;
-	/** Abort after this many ms (default 15s). */
+	/** The TOTAL deadline, in ms — resolve, connect, headers and body (default 15s). */
 	timeoutMs?: number;
-	/** Extra fetch init (method/headers/body). Redirects are always 'error'. */
+	/**
+	 * Extra fetch init (method/headers/body). Redirects are always refused. Through
+	 * `fetchGuardedText` ONLY those three keys, the method GET or POST and the body a
+	 * string or `URLSearchParams` — what the pinned hop can carry and re-send; anything
+	 * else is refused (`request.invalid_data`), never silently dropped.
+	 */
 	init?: RequestInit;
 }
 
-/**
- * Fetch an outbound URL after the SSRF check, with NO redirect following, a
- * timeout, and a hard body cap (closes the gzip-bomb / unbounded-read DoS —
- * DOS-05/06). Returns the decoded text. Throws on any violation.
- *
- * This is the PUBLIC-DESTINATION entry: the address policy is "must be public".
- * A caller whose destination is legitimately private — an on-premise sidecar on
- * the institution's own LAN — must NOT copy this function to get the transport
- * guarantees; it applies its OWN named address policy and then calls
- * `fetchBoundedText`, which is this function minus the address check. One
- * hardened primitive, two entry policies (CARRY-14: the second copy is how six
- * fetch sites ended up with no timeout, no signal and no byte cap at all).
- *
- * NOT PINNED: the socket re-resolves the name, so the DNS-rebinding window stays
- * open here (see the file header). There is no pinned single-call door: a caller
- * that needs the window closed harvests through `harvestFetch` (core/harvest/) or
- * calls a record service through `src/external/` — `fetchPinnedHop` itself has one
- * caller by rule (engineering/OUTBOUND_SPEC.md §4).
- */
-export async function fetchGuardedText(
-	uri: string,
-	options: GuardedFetchOptions = {},
-): Promise<string> {
-	const { url } = await assertPublicUrl(uri);
-	return fetchBoundedText(url.toString(), options);
-}
-
-/** A non-2xx answer to a text fetch, typed. */
-function httpStatusFailure(status: number): DedaloError {
-	return new DedaloError('security.outbound_failed', {
-		message: `HTTP ${status}`,
-		coordinates: { status },
-	});
-}
-
-/**
- * The transport half of `fetchGuardedText`, on a URL the CALLER has already
- * judged: no redirect following (a redirect re-chooses the target, and the
- * caller's policy was applied to the target it chose), an abort timeout composed
- * with the running job's signal, and the streamed byte ceiling (`readBytesCapped`)
- * so a hostile or broken peer cannot feed the process without bound.
- *
- * It applies NO address policy. Every caller must have applied one — see
- * `assertPublicUrl` for the public case and `isSafeLocalAsrUrl` for the
- * config-gated private-host exemption.
- */
-export async function fetchBoundedText(
-	url: string,
-	options: GuardedFetchOptions = {},
-): Promise<string> {
-	const maxBytes = options.maxBytes ?? 25 * 1024 * 1024;
-	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 15_000);
-	const signal = withJobSignal(controller.signal, currentJobSignal());
-	try {
-		const res = await fetch(url, {
-			...options.init,
-			redirect: 'error', // a redirect re-chooses the target — refuse it
-			signal,
-		});
-		if (!res.ok) throw httpStatusFailure(res.status);
-		const { bytes } = await readBytesCapped(res, maxBytes, { signal });
-		return new TextDecoder().decode(bytes);
-	} finally {
-		clearTimeout(timer);
-	}
-}
+const TEXT_MAX_BYTES = 25 * 1024 * 1024;
+const TEXT_TIMEOUT_MS = 15_000;
 
 // ---------------------------------------------------------------------------
 // The socket pin
@@ -1211,7 +1214,11 @@ export interface PinnedHopRequest {
 	url: URL;
 	method: 'GET' | 'POST';
 	headers: Headers;
-	body?: string;
+	/**
+	 * Passed to the socket UNCHANGED: a `URLSearchParams` body is re-sendable on the
+	 * next vetted address, and Bun sets the form content type from it.
+	 */
+	body?: string | URLSearchParams;
 	/** Max response bytes read (see `overflow`). */
 	maxBytes: number;
 	/** The TOTAL deadline, in ms: resolve, connect, headers AND body. */
@@ -1233,6 +1240,15 @@ export interface PinnedHopRequest {
 	 */
 	acceptBody?: (status: number, headers: Headers) => boolean;
 }
+
+/**
+ * What the budget and the reader need of a request — shared by the pinned hop and
+ * the unpinned transport (`fetchBoundedText`), so the two cannot drift apart.
+ */
+type HopLimits = Pick<
+	PinnedHopRequest,
+	'maxBytes' | 'timeoutMs' | 'idleTimeoutMs' | 'detachedFromJob' | 'overflow' | 'acceptBody'
+>;
 
 /** What one hop answered. */
 export interface PinnedHopResponse {
@@ -1273,7 +1289,7 @@ function hopFailureReason(deadline: AbortSignal, job: AbortSignal | undefined): 
 	return job?.aborted === true ? 'aborted' : 'transport';
 }
 
-function openHopBudget(request: PinnedHopRequest): HopBudget {
+function openHopBudget(request: HopLimits): HopBudget {
 	const deadline = new AbortController();
 	const timer = setTimeout(() => deadline.abort(), request.timeoutMs);
 	const job = request.detachedFromJob === true ? undefined : currentJobSignal();
@@ -1307,11 +1323,39 @@ function pinnedAttempt(
 }
 
 /**
+ * The socket-open failures: the connection was never established, so not one byte of
+ * the request left. Bun reports a refused connection as `ConnectionRefused` (measured,
+ * Bun 1.4); the errno spellings cover the unreachable routes. A reset or a close
+ * (`ECONNRESET`) is NOT here: it may come after the request was sent.
+ */
+const NOTHING_SENT_CODES: ReadonlySet<string> = new Set([
+	'ConnectionRefused',
+	'FailedToOpenSocket',
+	'ECONNREFUSED',
+	'EHOSTUNREACH',
+	'ENETUNREACH',
+	'EADDRNOTAVAIL',
+]);
+
+/**
+ * May a failed attempt be sent AGAIN to the next vetted address? A GET always may
+ * (idempotent). A POST only when the failure proves nothing was sent — RFC 9110
+ * §9.2.2: a client must not automatically retry a non-idempotent request, and a
+ * re-sent `transcribe` POST starts a second (billed) job.
+ */
+function mayResend(method: PinnedHopRequest['method'], error: unknown): boolean {
+	if (method === 'GET') return true;
+	const code = (error as { code?: unknown } | null)?.code;
+	return typeof code === 'string' && NOTHING_SENT_CODES.has(code);
+}
+
+/**
  * Connect to the first vetted address that answers. A CONNECT-level failure (the
  * fetch rejected before any response) moves on to the next vetted address — a
  * dual-stack name whose AAAA is unreachable from this host must not fail when its A
- * works. Never after an HTTP answer: a 500 is the server speaking, not a dead route.
- * Never after our own signal fired: a deadline or a stopped job ends the hop.
+ * works — but a POST only when nothing was sent (`mayResend`). Never after an HTTP
+ * answer: a 500 is the server speaking, not a dead route. Never after our own signal
+ * fired: a deadline or a stopped job ends the hop.
  */
 async function connectPinned(
 	request: PinnedHopRequest,
@@ -1325,7 +1369,9 @@ async function connectPinned(
 		try {
 			return await untilAborted(fetchImpl(attempt.url, attempt.init), budget.signal);
 		} catch (error) {
-			if (budget.signal.aborted) throw budget.failure('connect', error);
+			if (budget.signal.aborted || !mayResend(request.method, error)) {
+				throw budget.failure('connect', error);
+			}
 			lastError = error;
 		}
 	}
@@ -1339,7 +1385,7 @@ function redirectLocation(response: Response): string | null {
 
 /** Read the body under the cap and the idle limit; a non-typed failure is `body`. */
 async function readHopBody(
-	request: PinnedHopRequest,
+	request: HopLimits,
 	response: Response,
 	budget: HopBudget,
 ): Promise<CappedRead> {
@@ -1377,7 +1423,7 @@ async function vetWithinBudget(
 
 /** Turn the answer into a hop result: redirect / refused body handed back unread. */
 async function readHopResponse(
-	request: PinnedHopRequest,
+	request: HopLimits,
 	response: Response,
 	budget: HopBudget,
 ): Promise<PinnedHopResponse> {
@@ -1409,7 +1455,8 @@ async function readHopResponse(
  * The public-address check runs HERE, not in the caller, so this can never be
  * called on an unvetted target. And the connection goes to the vetted IP, not the
  * name (`pinToVettedAddress`, self-checked): re-resolving at connect time is exactly
- * the DNS-rebinding window `fetchGuardedText` leaves open.
+ * the DNS-rebinding window. `fetchGuardedText` is this hop used ONCE, its redirect
+ * refused.
  *
  * Bounded: a TOTAL deadline (`timeoutMs`, from the address check's DNS resolution
  * through the last body byte) composed with the running job's signal unless
@@ -1429,6 +1476,165 @@ export async function fetchPinnedHop(
 		const vetted = await vetWithinBudget(request, budget, deps);
 		const response = await connectPinned(request, vetted, budget, deps.fetch ?? fetch);
 		return await readHopResponse(request, response, budget);
+	} finally {
+		budget.close();
+	}
+}
+
+// ---------------------------------------------------------------------------
+// fetchGuardedText / fetchBoundedText — the single-call text doors
+// ---------------------------------------------------------------------------
+
+/** A 3xx whose `Location` a single-call door will not follow, typed. */
+function redirectRefusal(status: number): DedaloError {
+	return new DedaloError('security.outbound_failed', {
+		message: `redirect refused (HTTP ${status})`,
+		coordinates: { reason: 'redirect', status },
+	});
+}
+
+/**
+ * Only a 2xx body is worth reading: a text door throws on any other status, so an error
+ * page is cancelled UNREAD (`bodySkipped`) — never paid for under the cap and the
+ * deadline, and never able to turn `HTTP <n>` into a timeout or a body_cap.
+ */
+function successBodyOnly(status: number): boolean {
+	return status >= 200 && status <= 299;
+}
+
+/** A non-2xx answer to a text fetch, typed. */
+function httpStatusFailure(status: number): DedaloError {
+	return new DedaloError('security.outbound_failed', {
+		message: `HTTP ${status}`,
+		coordinates: { status },
+	});
+}
+
+/** The body of a 2xx answer as text; a redirect or any other status is a typed throw. */
+function textOfAnswer(answer: PinnedHopResponse): string {
+	if (answer.location !== null) throw redirectRefusal(answer.status);
+	if (answer.status < 200 || answer.status > 299) throw httpStatusFailure(answer.status);
+	return new TextDecoder().decode(answer.bytes);
+}
+
+/** A caller's init the pinned hop cannot carry — refused loudly, before any socket. */
+function unsupportedInit(what: string): DedaloError {
+	return new DedaloError('request.invalid_data', {
+		message: `fetchGuardedText: ${what} is not supported (method GET/POST, headers, a string or URLSearchParams body)`,
+	});
+}
+
+/** GET (the default) or POST; anything else throws. */
+function textMethod(method: string | undefined): 'GET' | 'POST' {
+	const normalized = (method ?? 'GET').toUpperCase();
+	if (normalized === 'GET' || normalized === 'POST') return normalized;
+	throw unsupportedInit(`method ${normalized}`);
+}
+
+/** No body, a string or `URLSearchParams` — passed through unchanged; anything else throws. */
+function textBody(body: RequestInit['body']): string | URLSearchParams | undefined {
+	if (body === undefined || body === null) return undefined;
+	if (typeof body === 'string' || body instanceof URLSearchParams) return body;
+	throw unsupportedInit(`body ${Object.prototype.toString.call(body)}`);
+}
+
+/** The init keys the pinned hop carries; any other (a signal, a redirect mode…) would be silently dropped. */
+const CARRIED_INIT_KEYS: ReadonlySet<string> = new Set(['method', 'headers', 'body']);
+
+/** Refuse, loudly, an init key the hop would otherwise drop without a word. */
+function assertCarriedInit(init: RequestInit): void {
+	const dropped = Object.keys(init).filter((key) => !CARRIED_INIT_KEYS.has(key));
+	if (dropped.length > 0) throw unsupportedInit(`init ${dropped.join(', ')}`);
+}
+
+/** The pinned-hop request a `fetchGuardedText` call stands for. */
+function guardedTextRequest(uri: string, options: GuardedFetchOptions): PinnedHopRequest {
+	const init = options.init ?? {};
+	assertCarriedInit(init);
+	const request: PinnedHopRequest = {
+		url: parseOutboundUrl(uri),
+		method: textMethod(init.method),
+		headers: new Headers(init.headers),
+		maxBytes: options.maxBytes ?? TEXT_MAX_BYTES,
+		timeoutMs: options.timeoutMs ?? TEXT_TIMEOUT_MS,
+		acceptBody: successBodyOnly,
+	};
+	const body = textBody(init.body);
+	if (body !== undefined) request.body = body;
+	return request;
+}
+
+/**
+ * THE PUBLIC-DESTINATION single-call text fetch: vetted, PINNED, bounded, no
+ * redirect. It is `fetchPinnedHop` used once — the address check runs inside the hop,
+ * the socket connects to the address that was vetted (a hostile resolver answering
+ * "public" to the check and "127.0.0.1" to a second lookup gets no second lookup),
+ * a TOTAL deadline covers resolve, connect and body, the job's signal is composed in,
+ * and the body is read under the streamed ceiling (defaults 25 MiB, 15s).
+ *
+ * Every failure is typed: `security.ssrf_blocked` for an address refusal;
+ * `security.outbound_failed` with `reason` redirect (a 3xx with a `Location` — a
+ * redirect re-chooses the target, so a caller that must follow one goes through the
+ * harvesting door, core/harvest/), with `status` for any other non-2xx (message
+ * `HTTP <n>`, the error page cancelled unread), with `reason` timeout | aborted |
+ * transport and its `stage`, or
+ * body_cap. A method other than GET/POST, or a body other than a string or
+ * `URLSearchParams`, is `request.invalid_data`, thrown before anything leaves.
+ *
+ * A caller whose destination is legitimately PRIVATE (an on-premise sidecar) must not
+ * copy this to get the transport guarantees: it applies its own named address policy
+ * and calls `fetchBoundedText` — the same transport core, without the address check
+ * and without the pin (CARRY-14: the second copy is how six fetch sites ended up with
+ * no timeout, no signal and no byte cap at all).
+ */
+export async function fetchGuardedText(
+	uri: string,
+	options: GuardedFetchOptions = {},
+	deps: PinnedHopDeps = {},
+): Promise<string> {
+	return textOfAnswer(await fetchPinnedHop(guardedTextRequest(uri, options), deps));
+}
+
+/** Connect by NAME (no pin, no address policy), inside the budget; failures typed. */
+async function connectUnpinned(
+	url: string,
+	init: RequestInit | undefined,
+	budget: HopBudget,
+): Promise<Response> {
+	try {
+		// The real fetch honours `budget.signal` itself; there is no seam here for one
+		// that would not, so no race is needed (or could be gated).
+		return await fetch(url, { ...init, redirect: 'error', signal: budget.signal });
+	} catch (error) {
+		throw budget.failure('connect', error);
+	}
+}
+
+/**
+ * The transport half of `fetchGuardedText`, on a URL the CALLER has already judged —
+ * the SAME core (`openHopBudget`, `readHopResponse`, the typed failures, the job's
+ * signal, the streamed ceiling) minus the address check and minus the pin. It refuses
+ * any 3xx: a redirect re-chooses the target, and the caller's policy was applied to
+ * the target it chose (Bun's `redirect: 'error'` fails the connect; a 3xx that still
+ * answers is a typed `status` failure).
+ *
+ * It applies NO address policy. Every caller must have applied one — see
+ * `assertPublicUrl` for the public case and `isSafeLocalAsrUrl` for the
+ * config-gated private-host exemption (outbound_fetch_tripwire censuses them).
+ */
+export async function fetchBoundedText(
+	url: string,
+	options: GuardedFetchOptions = {},
+): Promise<string> {
+	const limits: HopLimits = {
+		maxBytes: options.maxBytes ?? TEXT_MAX_BYTES,
+		timeoutMs: options.timeoutMs ?? TEXT_TIMEOUT_MS,
+		acceptBody: successBodyOnly,
+	};
+	const budget = openHopBudget(limits);
+	try {
+		const response = await connectUnpinned(url, options.init, budget);
+		return textOfAnswer(await readHopResponse(limits, response, budget));
 	} finally {
 		budget.close();
 	}

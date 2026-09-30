@@ -37,3 +37,12 @@ public sentence, not a log line.
 
 No parity gate covers `get_rdf_data` (no fixture in the frozen store); no
 re-harvest is involved. The TS-native gates above carry the contract.
+
+## Addendum 2026-09-30 — a transport failure's `error` is now typed
+
+`fetchGuardedText` now connects pinned and types its network failures
+(`WC-2026-09-30-guarded-text-pinned-typed-transport`): a timeout, a failed
+connect, a stopped job or a refused redirect reaches `errors[i].error` as the
+`security.outbound_failed` body (category `unavailable`, retryable, the
+registry's fixed sentence) instead of `internal.unexpected`. The `{uri, error}`
+shape is unchanged.

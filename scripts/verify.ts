@@ -103,6 +103,7 @@ const TRIPWIRES = [
 	'test/unit/client_store_principal_key_tripwire.test.ts',
 	'test/unit/component_teardown_tripwire.test.ts',
 	'test/unit/outbound_fetch_tripwire.test.ts',
+	'test/unit/guarded_text_pin_native.test.ts',
 	'test/unit/strip_comments_tripwire.test.ts',
 	'test/unit/private_state_mode_tripwire.test.ts',
 	'test/unit/wire_disclosure_tripwire.test.ts',
