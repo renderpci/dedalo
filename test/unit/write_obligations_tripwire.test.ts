@@ -76,6 +76,7 @@ const INFO_EMIT = 'src/core/components/component_info/emit.ts';
 const TM_TOOL = 'tools/tool_time_machine/server/tool_time_machine.ts';
 const REVERT_UNDO = 'tools/tool_time_machine/server/bulk_revert_undo.ts';
 const REVERT_RECORDS = 'tools/tool_time_machine/server/bulk_revert_records.ts';
+const TRANSLATION = 'src/core/tools/translation.ts';
 
 /** What a raw caller must reach to be a chokepoint writer (any one of these). */
 const CHOKEPOINT_REACH = ['persistRecordKeys(', 'persistRecordColumns(', 'afterRecordWrite('];
@@ -677,6 +678,26 @@ const MATRIX: DoorRow[] = [
 		],
 		mustNot: ['fireSaveEvent(', 'fireRagRecordEvent(', 'maintainRelationSearchIndex('],
 		empty: {},
+	},
+	// TRANSLATION (tool_lang / tool_lang_multi): a locked RMW of one literal key
+	// through the chokepoint writer, then its history in the TARGET lane.
+	// A SPELLING row: an early return before recordMainHistory( stays green here
+	// (measured 2026-09-30). The history OUTCOME is gated by the behavioural twins
+	// tm_composed_rows_native / tm_two_lanes_native (red on that mutation).
+	{
+		file: TRANSLATION,
+		fn: 'translateAndWrite',
+		must: [
+			'withTransaction(',
+			'readMatrixKeyForUpdate(',
+			'persistRecordKeys(',
+			'recordMainHistory(',
+		],
+		mustNot: ['updateMatrixKeyData(', 'fireSaveEvent(', 'fireRagRecordEvent('],
+		empty: {
+			observers:
+				'LATENT GAP (TOOLS-1), not a design: persistRecordKeys fires afterRecordWrite only, never propagateToObservers, so a component_info / use_self_section edge on a translatable literal would go stale. The vendored ontology holds only `{filter:false}` no-ops today. Closure: the CLOSURE_PLAN Step 2 obligation ledger (record_write.ts), which retires this cell.',
+		},
 	},
 ];
 

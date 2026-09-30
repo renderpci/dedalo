@@ -72,7 +72,6 @@ import {
 	slotsFromBag,
 } from '../../relations/dataframe_slots.ts';
 import { NOLAN } from '../../relations/main_lanes.ts';
-import { currentDataLang } from '../../resolve/request_lang.ts';
 import { fireRagRecordEvent, fireSaveEvent } from '../../section_record/save_event.ts';
 import { bulkIdOf } from './bulk_capture.ts';
 
@@ -835,11 +834,10 @@ interface WipeMain {
 	extraSlots: string[];
 }
 
-/** The wipe's record: the locked pre-wipe row, and the data lang of the door's tag rule. */
+/** The wipe's record: the locked pre-wipe row. */
 interface WipeContext {
 	target: SlotTarget;
 	record: Record<MatrixJsonbColumn, unknown>;
-	dataLang: string;
 }
 
 /** A jsonb column value as a key bag (`{}` when null or not an object). */
@@ -999,10 +997,12 @@ async function recordWipeHistory(
 	for (const main of await wipeMains(ctx, wiped)) {
 		const slotsBefore = await slotsFromBag(main.tipo, relationBefore, main.extraSlots);
 		const slotsAfter = await slotsFromBag(main.tipo, relationAfter, slotsBefore.slots);
-		// The door's lane: the data lang for a translatable SLICED main, else
-		// lg-nolan — every unsliced main, whatever its ontology flag (main_lanes.ts laneLaw).
-		const lane = await mainIdentity(main.tipo, ctx.dataLang);
-		const identity = { ...lane, lang: lane.translatable ? ctx.dataLang : NOLAN };
+		// The wipe is DOORLESS (it removes every lane): the same identity its
+		// undelete uses (bulk_revert_records wipedMainIdentity) — lg-nolan, or
+		// the request's data lang for a translatable SLICED main (mainRowLang).
+		// currentDataLang(), NOT config.menu.dataLang (P0-7/DATA-01): the wipe,
+		// its backfill and a bulk revert's undelete sit in ONE timeline — the curator's.
+		const identity = await mainIdentity(main.tipo, NOLAN);
 		const before = { value: main.stored ?? undefined, slots: slotsBefore };
 		const after = { value: main.newData ?? undefined, slots: slotsAfter };
 		await recordMainBackfill(
@@ -1119,11 +1119,6 @@ export async function deleteSectionData(
 		if (realTipo !== sectionTipo) components = await childrenOf(realTipo);
 	}
 
-	// currentDataLang(), NOT config.menu.dataLang (P0-7/DATA-01): a translatable
-	// main's wipe rows follow the main-lang rule every other door uses
-	// (dataframe_slots.ts mainRowLang), so the wipe, its backfill and a bulk
-	// revert's undelete sit in ONE timeline — the curator's.
-	const dataLang = currentDataLang();
 	const backfillStamp = stamp(new Date(now.getTime() - 60_000));
 	const nowStamp = stamp(now);
 	const { DATAFRAME_RELATION_TYPE } = await import('../../concepts/subdatum.ts');
@@ -1254,7 +1249,7 @@ export async function deleteSectionData(
 			for (const slot of stripped) {
 				await reindexEmptiedRelation(slot.column, slot.tipo, slot.newData);
 			}
-			await recordWipeHistory({ target, record, dataLang }, wiped, {
+			await recordWipeHistory({ target, record }, wiped, {
 				userId,
 				bulkId: null,
 				backfillStamp,

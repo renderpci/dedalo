@@ -1,5 +1,12 @@
 /**
- * CANONICAL JSON — the ONE structural-equality / digest form of a JSON value.
+ * CANONICAL JSON — the engine's canonical structural-equality / digest form of
+ * a JSON value, used by the archive digest and ontology-row equality
+ * (archive/manifest.ts ontologyDigest, ontologyRowsEqual), the agent
+ * change-plan hash (ai/agent/change_plan.ts hashChangePlan), item-value
+ * equality (concepts/item_value.ts sameItemValue) and the CSV append merge's
+ * duplicate test (section/record/append_merge.ts literalDuplicateIds) — each
+ * DRIVEN by test/unit/canonical_json.test.ts on a reordered value holding an
+ * `undefined` property and a Date.
  *
  * Keys sorted at every depth (UTF-16 code-unit order, `Array.prototype.sort`'s
  * default), no whitespace, and otherwise EXACTLY `JSON.stringify`'s semantics:
@@ -23,6 +30,9 @@
  * produce the same text as this one; they now import it, so the undo log's
  * no-op test, the append merge's identity test and the two digests cannot
  * drift into three notions of "the same value".
+ *
+ * `ontology_state.ts` `stable()` is a DIFFERENT form by design (it collapses
+ * empty shapes), not a copy.
  *
  * (!) The archive digest is a PERSISTED FORMAT (engineering/ARCHIVE_FORMAT.md
  * `ontology.digest`): changing the output of this function for any JSON value

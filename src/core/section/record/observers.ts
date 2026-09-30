@@ -8,11 +8,16 @@
  * save door propagates (dispatch, imports, MCP tools, transcription). The
  * 2026-07-24 audit found the api-layer wiring only covered the interactive
  * dispatch save; bulk imports left hierarchy93-style mirrors permanently
- * stale (dc1 §2 was the reported case). Doors that mutate relation slots
- * WITHOUT saveComponentData call propagateToObservers themselves
- * (deletePortalLocator, delete_record's inverse cleanup); remaining bulk
- * doors (tool_propagate, delete_data wipe, portalize migration) are healed by
- * scripts/observer_reconcile.ts.
+ * stale (dc1 §2 was the reported case).
+ *
+ * THE LAW (the door list lives in the census, never here — S2-45):
+ * saveComponentData is the chokepoint. A door that writes an observed value
+ * WITHOUT it calls propagateToObservers itself — census: the DOORS matrix of
+ * test/unit/write_obligations_tripwire.test.ts; outcomes: the "bypass doors
+ * fire the observer cascade" describe in test/unit/observer_native.test.ts. A
+ * door that does NOT propagate says so AT ITS OWN SITE with the reason, and
+ * is healed by scripts/observer_reconcile.ts (standing case: the v6→v7
+ * update lane, portalize included).
  *
  * EVERY door states BOTH halves of what changed — the saved value AND the
  * locators the change REMOVED (ObservedChange, 2026-08-06). Propagation used
@@ -1103,8 +1108,8 @@ function droppedItemIds(before: readonly unknown[], after: readonly unknown[]): 
  * references appended with the next item id.
  *
  * EXPORTED for scripts/observer_reconcile.ts: the reconciler heals mirrors
- * that bulk doors (imports, tool_propagate, portalize, delete_data) left
- * stale by replaying THIS exact recompute per candidate record — one law,
+ * that doors outside the chokepoint that state they do not propagate (see
+ * the module header) left stale by replaying THIS exact recompute per candidate record — one law,
  * one implementation. `write:false` = dry run (diff only, no persist/TM).
  *
  * CONCURRENCY (review 2026-07-24): the write phase runs inside ONE

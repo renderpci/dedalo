@@ -1741,6 +1741,11 @@
 			"skipped": 0,
 			"assertions": 24
 		},
+		"test/unit/history_door_lane_agreement_native.test.ts": {
+			"tests": 17,
+			"skipped": 0,
+			"assertions": 70
+		},
 		"test/unit/html_sanitize.test.ts": {
 			"tests": 6,
 			"skipped": 0,

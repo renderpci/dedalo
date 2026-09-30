@@ -366,6 +366,12 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Duplicating a record now files the history of a transliterable or IRI field in the language it was saved in.**
+
+    When a record was duplicated, a field that keeps per-language versions beside a base value (a transliterable field) or an IRI field got its history row in the language-neutral lane, next to an empty extra row, while a normal save of the same field files it in the working language. The Time Machine of the copy therefore listed the change under the wrong language. The copy's history now lands in the working language, exactly where a save puts it, and the empty extra row is gone. The rule that decides which language a history row belongs to is now one rule shared by every door that writes history.
+
+    Wire contract: `WC-2026-09-27-bulk-revert-undo-log`.
+
 - **Error reports now include logged client errors**
 
     The "Report a problem" tool now attaches errors the client caught and logged (`console.error`), not only uncaught ones, so a report of real breakage no longer says "0 errors". Only a short message and stack are kept; repeats are counted, not duplicated.
@@ -375,6 +381,8 @@ Merged since the last release; these ship with the next one.
     When an ontology or code update server had no `DEDALO_HOST` set (or set it to `localhost`), it still answered other installations, but every download link in its answer pointed at `http://localhost`. The installation being updated rightly refused them, with an "origin mismatch" error that seemed to blame its own setup.
 
     The server now refuses those requests itself, and its message names the setting to fix: set `DEDALO_HOST` (and `DEDALO_PROTOCOL`) on the update server. Requests from the same machine are still served, so local development setups keep working.
+
+    Wire contract: `WC-2026-09-30-update-manifest-local-origin-refusal`.
 
 - **Time machine restore no longer fails on installs whose outbound host allowlist is empty.**
 
@@ -473,7 +481,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 54 entries"
+??? note "Wire contract — 55 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -529,6 +537,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-29-rdf-per-uri-error-wire-body`
     - `WC-2026-09-29-select-family-mode-datalist`
     - `WC-2026-09-29-tm-preview-frame-children-as-of`
+    - `WC-2026-09-30-update-manifest-local-origin-refusal`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

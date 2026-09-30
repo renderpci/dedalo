@@ -98,7 +98,7 @@
  * correct", never "someone rewrote the marker somewhere else".
  */
 
-import { describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { Glob } from 'bun';
@@ -1318,6 +1318,68 @@ describe('rule 8 — concurrent lane builds serialize the cluster-shared role st
 	};
 	const CONCURRENCY = 8;
 
+	/**
+	 * THE GATE NEVER TOUCHES THE SHARED ROLE (F8, 2026-09-30). `dedalo_test_ro`
+	 * is CLUSTER-shared: every lane's build and client run uses it. A gate that
+	 * rewrites it (ALTER ROLE … PASSWORD, and an UNLOCKED positive control that
+	 * contends on it by design) collides with another lane's `test:db:setup`
+	 * step 5b — the very `tuple concurrently updated` this rule exists to
+	 * prevent. So the gate runs the SAME text on a PROBE role named per lane
+	 * (`probeSql`: every `dedalo_test_ro` rewritten, the lock line kept), swept
+	 * before and after — a crashed run leaves nothing the next run of the same
+	 * lane does not reclaim. Measured by OUTCOME: the shared role's catalog
+	 * tuple version (pg_authid.xmin — every ALTER ROLE writes a new one) is
+	 * unchanged by the whole describe. HONEST LIMIT: another lane's build in
+	 * the same window rewrites it legitimately and would red that cell; re-run
+	 * it alone.
+	 */
+	const SHARED_ROLE = 'dedalo_test_ro';
+	let db = '';
+	let probe = '';
+	/** The role-step text retargeted at this lane's probe role, never the shared one. */
+	function probeSql(text: string): string {
+		const out = text.replaceAll(SHARED_ROLE, probe);
+		expect(out, 'probeSql left the shared role in the text').not.toMatch(/\bdedalo_test_ro\b/);
+		expect(out).toContain(`SELECT pg_advisory_xact_lock(${READ_ONLY_ROLE_LOCK_KEY});`);
+		return out;
+	}
+	/** Drop this lane's probe role (its CONNECT grant first), if a run left one. */
+	async function sweepProbe(): Promise<void> {
+		const text = `DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${probe}') THEN
+    EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM %I', '${db}', '${probe}');
+  END IF;
+END $$;
+DROP ROLE IF EXISTS ${probe};
+`;
+		const run = await runPsql(admin, ['-v', 'ON_ERROR_STOP=1', '-q', '-f', '-'], { stdin: text });
+		expect(run.exitCode, `probe role sweep failed: ${run.stderr}`).toBe(0);
+	}
+	async function probeRoles(): Promise<string[]> {
+		const rows = (await sql.unsafe('SELECT rolname FROM pg_roles WHERE rolname = $1', [probe])) as {
+			rolname: string;
+		}[];
+		return rows.map((row) => row.rolname);
+	}
+	async function sharedRoleVersion(): Promise<string | null> {
+		const rows = (await sql.unsafe('SELECT xmin::text AS v FROM pg_authid WHERE rolname = $1', [
+			SHARED_ROLE,
+		])) as { v: string }[];
+		return rows[0]?.v ?? null;
+	}
+	let sharedBefore: string | null = null;
+	beforeAll(async () => {
+		await assertTestDatabase('test_db_marker_tripwire rule 8');
+		db = await currentDatabaseName();
+		probe = `dedalo_test_ro_probe_${db.replace(/[^A-Za-z0-9_]/g, '_')}`.toLowerCase().slice(0, 63);
+		sharedBefore = await sharedRoleVersion();
+		await sweepProbe();
+	});
+	afterAll(async () => {
+		// Nothing this describe creates may outlive it (a failed run included).
+		if (probe !== '') await sweepProbe();
+	});
+
 	/** Fire `CONCURRENCY` psql runs of `text` at once; return the failed ones' stderr. */
 	async function concurrentFailures(text: string): Promise<string[]> {
 		const runs = await Promise.all(
@@ -1340,8 +1402,7 @@ describe('rule 8 — concurrent lane builds serialize the cluster-shared role st
 	});
 
 	test('positive control: the same text WITHOUT the lock collides (the harness contends)', async () => {
-		const db = await currentDatabaseName();
-		const unlocked = readOnlyRoleClusterSql(db).replace(
+		const unlocked = probeSql(readOnlyRoleClusterSql(db)).replace(
 			`SELECT pg_advisory_xact_lock(${READ_ONLY_ROLE_LOCK_KEY});\n`,
 			'',
 		);
@@ -1358,11 +1419,24 @@ describe('rule 8 — concurrent lane builds serialize the cluster-shared role st
 	}, 60_000);
 
 	test('the serialized text: every concurrent run succeeds', async () => {
-		const locked = readOnlyRoleClusterSql(await currentDatabaseName());
+		const locked = probeSql(readOnlyRoleClusterSql(db));
 		for (let round = 0; round < 3; round++) {
 			expect(await concurrentFailures(locked)).toEqual([]);
 		}
 	}, 60_000);
+
+	test('the cluster-shared role was never rewritten by this gate, and no probe role outlives it', async () => {
+		expect(sharedBefore, `the suite build creates ${SHARED_ROLE} (anti-vacuity)`).not.toBeNull();
+		expect(
+			await sharedRoleVersion(),
+			`${SHARED_ROLE} was rewritten while rule 8 ran: the gate mutates the role every lane shares`,
+		).toBe(sharedBefore);
+		expect(await probeRoles(), 'the probe was created by the runs above (anti-vacuity)').toEqual([
+			probe,
+		]);
+		await sweepProbe();
+		expect(await probeRoles()).toEqual([]);
+	});
 });
 
 // ---------------------------------------------------------------------------

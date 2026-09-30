@@ -316,7 +316,10 @@ export async function getTranslatableByTipo(tipo: string): Promise<boolean> {
  * Αύγουστος lg-ell) and for component_iri (which slices by the request lang
  * either way); `lg-nolan` otherwise. The ONE rule of every door that saves a
  * lang slice, echoes it or cuts the slice it will save back — never a local
- * copy. (The component READ, resolve/component_data.ts, keeps PHP
+ * copy. That covers every SPEAKING door; a DOORLESS history door (lg-nolan
+ * request) files by dataframe_slots.ts slicedRowLang (gate:
+ * test/unit/history_door_lane_agreement_native.test.ts). (The component
+ * READ, resolve/component_data.ts, keeps PHP
  * get_element_lang's nolan-forcing of a non-translatable string component.)
  */
 export async function effectiveSaveLang(

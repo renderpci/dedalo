@@ -258,9 +258,16 @@ export function resolveTranslationProvider(engine: string): {
 /**
  * Read a component's source-lang items, translate them, and write the target-lang
  * slot (PHP automatic_translation save path). Empty source → nothing saved. Uses
- * the verified direct-write path (persistRecordKeys + recordComposedRow, stamping
- * the record's modified metadata like PHP's component->save()). Shared
- * by tool_lang (one target) and tool_lang_multi (looped targets).
+ * the verified direct-write path (persistRecordKeys + recordMainHistory
+ * (dataframe_slots.ts, two lanes), stamping the record's modified metadata like
+ * PHP's component->save()). Shared by tool_lang (one target) and tool_lang_multi
+ * (looped targets).
+ *
+ * OBSERVERS (TOOLS-1, latent): writes via persistRecordKeys, which fires
+ * afterRecordWrite only, never propagateToObservers. A component_info or
+ * use_self_section edge on a translatable literal would go stale. The vendored
+ * ontology has only `{filter:false}` no-ops. Closure: the CLOSURE_PLAN Step 2
+ * obligation ledger.
  *
  * THE LOCK (audit 2026-08 §5.6). The merge is a read-modify-write of ONE jsonb
  * key holding EVERY language of the component, so it is only safe under the

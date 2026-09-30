@@ -832,15 +832,18 @@ async function duplicateRecordMediaFiles(
  * stores (no model — a node removed from the ontology — or a model with no
  * matrix column) is recorded the way the wipe and revert doors record it: one
  * unsliced, non-translatable lane, lg-nolan (bulk_revert_records.ts
- * wipedMainIdentity). Otherwise currentDataLang(), NOT config.menu.dataLang
- * (P0-7/DATA-01): the lane this picks is the one the duplicate's save row is
- * stamped with, so the install default silently audited the copy under a
- * language the operator was not working in.
+ * wipedMainIdentity). Otherwise the door lane of the working data lang —
+ * currentDataLang(), NOT config.menu.dataLang (P0-7/DATA-01): the lane this
+ * picks is the one the duplicate's save row is stamped with, so the install
+ * default silently audited the copy under a language the operator was not
+ * working in.
  */
 async function copiedKeyIdentity(tipo: string, storable: boolean): Promise<LaneIdentity> {
 	if (!storable) return { tipo, sliced: false, translatable: false, lang: NOLAN };
-	const main = await mainIdentity(tipo, currentDataLang());
-	return { ...main, lang: main.translatable ? currentDataLang() : NOLAN };
+	// A SPEAKING door (WC-2026-09-27 addendum 2026-09-30): the lane its save
+	// writes — effectiveSaveLang(currentDataLang()) via mainIdentity — never a
+	// local override (a transliterable/iri copy files where its save does).
+	return mainIdentity(tipo, currentDataLang());
 }
 
 /**
@@ -852,9 +855,10 @@ async function copiedKeyIdentity(tipo: string, storable: boolean): Promise<LaneI
  *       stamped one minute EARLIER to order before the save) — one row per
  *       language lane holding a value, and the lg-nolan row (the lg-nolan value
  *       + the copy's re-minted frames) when it holds anything;
- *   (b) the SAVE row of the re-save loop's instance lang (the data lang for a
- *       translatable component, lg-nolan otherwise): that lane's value — for
- *       lg-nolan, the value + the frames.
+ *   (b) the SAVE row of the re-save loop's instance lang
+ *       (= effectiveSaveLang(currentDataLang()): the data lang for a
+ *       translatable, transliterable or iri component, lg-nolan otherwise):
+ *       that lane's value — for lg-nolan, the value + the frames.
  * A dataframe SLOT gets no row of its own (its frames ride in the main's
  * lg-nolan lane, and apply_value refuses a slot row).
  */
