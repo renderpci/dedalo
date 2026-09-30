@@ -190,6 +190,15 @@ Merged since the last release; these ship with the next one.
     active field went under the dialog title when that field was the first one. The
     form now starts a little lower, so the bar is always fully visible.
 
+- **A tall dialog title no longer covers the dialog's content.**
+
+    When a dialog's title took several lines (a long tool name and description, or a
+    small screen), the title bar kept a fixed height and the extra lines covered the
+    top of the dialog's content. The title bar now grows with its text, also after resizing the dialog by hand, and the content
+    always starts below it. Tool titles also use the space better: the description sits
+    beside the tool name when there is room and moves below it when there is not,
+    instead of squeezing both into narrow columns.
+
 - **The Ontology parser button in the Ontology area is readable again**
 
     In the Ontology area, the *Ontology parser* button was painted solid green with

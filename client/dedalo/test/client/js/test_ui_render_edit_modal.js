@@ -248,3 +248,69 @@ describe('DD_MODAL edit form clearance', function() {
 		}
 	})
 })
+
+
+
+/**
+* DD_MODAL — a tall header pushes the body down, never covers it
+* The shadow .modal-header is a sticky in-flow bar with a 3.66rem FLOOR
+* (dd-modal.js), not a fixed height: a slotted header that wraps (a long tool
+* name/description, a narrow screen) must grow the bar. With a fixed height the
+* taller header overflowed it and painted over the body's first rows.
+*/
+describe('DD_MODAL tall header', function() {
+
+	this.timeout(10000)
+
+	it('the body starts below a header taller than the bar floor', async function() {
+		const header = ui.create_dom_element({ element_type:'div', class_name:'header' })
+		header.style.height = '12rem' // well above the 3.66rem floor
+		const body = ui.create_dom_element({ element_type:'div', text_content:'first row' })
+		const modal = ui.attach_to_modal({ header:header, body:body, transient:true })
+		await new Promise(resolve => requestAnimationFrame(resolve))
+		try {
+			const bar = modal.shadowRoot.querySelector('.modal-header').getBoundingClientRect()
+			const h = header.getBoundingClientRect()
+			const b = body.getBoundingClientRect()
+			assert.ok(bar.bottom >= h.bottom - 0.5, `bar grows with its header (bar ${bar.bottom}, header ${h.bottom})`)
+			assert.ok(b.top >= h.bottom - 0.5, `body below header (body ${b.top}, header ${h.bottom})`)
+		} finally {
+			await modal.close()
+		}
+	})
+
+	it('a manual resize (explicit height) never shrinks a tall header', async function() {
+		// resize: auto sets an inline height on .modal-content; an auto grid row
+		// then shrank to the header's min-height floor and clipped it
+		const header = ui.create_dom_element({ element_type:'div', class_name:'header' })
+		header.style.height = '12rem'
+		const body = ui.create_dom_element({ element_type:'div', text_content:'first row' })
+		body.style.height = '40rem'
+		const modal = ui.attach_to_modal({ header:header, body:body, transient:true })
+		const content = modal.shadowRoot.querySelector('.modal-content')
+		content.style.height = '15rem'
+		await new Promise(resolve => requestAnimationFrame(resolve))
+		try {
+			const bar = modal.shadowRoot.querySelector('.modal-header').getBoundingClientRect()
+			const h = header.getBoundingClientRect()
+			const b = body.getBoundingClientRect()
+			assert.ok(bar.bottom >= h.bottom - 0.5, `bar keeps its header height (bar ${bar.bottom}, header ${h.bottom})`)
+			assert.ok(b.top >= h.bottom - 0.5, `body below header (body ${b.top}, header ${h.bottom})`)
+		} finally {
+			await modal.close()
+		}
+	})
+
+	it('a short header still fills the bar floor (no double header line)', async function() {
+		const header = ui.create_dom_element({ element_type:'div', class_name:'header_custom', text_content:'short' })
+		const modal = ui.attach_to_modal({ header:header, body:ui.create_dom_element({ element_type:'div' }), transient:true })
+		await new Promise(resolve => requestAnimationFrame(resolve))
+		try {
+			const bar = modal.shadowRoot.querySelector('.modal-header').getBoundingClientRect()
+			const h = header.getBoundingClientRect()
+			assert.closeTo(h.height, bar.height, 0.5)
+		} finally {
+			await modal.close()
+		}
+	})
+})

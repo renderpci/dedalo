@@ -5565,7 +5565,6 @@ dd-modal .header.mini .wrapper_tool {
   display: none;
 }
 dd-modal .header_custom {
-  height: 100%;
   padding: 0.5rem;
   display: flex;
   align-items: center;
@@ -12613,12 +12612,21 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   margin-right: 1em;
   padding-right: 1rem;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  column-gap: 2rem;
+  row-gap: 0.35rem;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .tool_header > .tool_name_container > .label {
   font-size: 1.4rem;
+  line-height: 1.25;
   display: flex;
   align-items: center;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 .tool_header > .tool_name_container > .label > .button {
   background-color: var(--fg_default) !important;
@@ -12629,9 +12637,14 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .tool_header > .tool_name_container > .description {
   font-weight: 200;
   color: var(--fg_muted);
-  padding-left: 1rem;
-  padding-right: 1rem;
   line-height: 1.4rem;
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+@media screen and (max-width: 600px) {
+  .tool_header > .tool_name_container > .description {
+    flex: none;
+  }
 }
 .tool_header > .tool_buttons_container {
   contain: content;

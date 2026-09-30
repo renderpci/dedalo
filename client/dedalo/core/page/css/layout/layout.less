@@ -794,10 +794,9 @@
 		}
 
 		.header_custom {
-			// Slotted into the shadow .modal-header (fixed height 3.66rem):
-			// fill it exactly or the two orange bars + two box-shadows render
-			// as a double header line.
-			height: 100%;
+			// Slotted into the shadow .modal-header (a flex bar, min-height
+			// 3.66rem): stretched to its full height by the bar itself, so the
+			// two orange bars + two box-shadows coincide (no double header line).
 			padding: 0.5rem;
 			display: flex;
 			align-items: center;
