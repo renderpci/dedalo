@@ -274,7 +274,8 @@ const get_content_data = async function(self) {
 					container					: response_message,
 					button						: button_apply,
 					components_list_container	: components_list_container,
-					self						: self
+					self						: self,
+					reveal						: true
 				})
 		}
 		button_apply.addEventListener('click', click_handler)
@@ -779,6 +780,8 @@ const render_regenerate_options = function(self, item) {
 *                                          div; receives 'loading' class to block
 *                                          changes while a run is in progress.
 * @param {Object}        options.self    - The owning `tool_update_cache` instance.
+* @param {boolean}       [options.reveal=false] - Scroll the progress panel into
+*                                          view once built (user submit only).
 * @returns {void}
 */
 const update_process_status = (options) => {
@@ -790,6 +793,9 @@ const update_process_status = (options) => {
 	const container					= options.container
 	const components_list_container	= options.components_list_container
 	const self						= options.self
+	// reveal: scroll the progress panel into view once it exists. Only the
+	// user's submit asks for it — a page-load re-attach must not move the page.
+	const reveal					= options.reveal===true
 
 	// locks the button submit
 	button.classList.add('loading')
@@ -830,6 +836,10 @@ const update_process_status = (options) => {
 			pid			: pid,
 			pfile		: pfile
 		})
+		// it lands below the components list, under the fold on a long selection
+		if (reveal) {
+			ui.reveal(container)
+		}
 
 		// on_read event (called on every chunk from stream reader)
 		const on_read = (sse_response) => {

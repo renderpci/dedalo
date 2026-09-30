@@ -12347,10 +12347,10 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .tool_header.tool_update_cache,
 .wrapper_tool.tool_update_cache {
-  --tool_edge: var(--tool_update_cache, #62866a);
-  --tool_fill: #65896d;
-  --tool_fill_hover: #779b7e;
-  --tool_on_fill: #16181b;
+  --tool_edge: var(--tool_update_cache, #5f8367);
+  --tool_fill: #5b7f63;
+  --tool_fill_hover: #4a6d52;
+  --tool_on_fill: #ffffff;
 }
 :root[data-theme="dark"] :is(.tool_header.tool_update_cache, .wrapper_tool.tool_update_cache) {
   --tool_edge: var(--tool_update_cache, #80a888);
@@ -12820,7 +12820,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   border-color: var(--tool_fill);
   color: var(--tool_on_fill);
 }
-:is(.wrapper_tool, .tool_header) button.primary::before {
+:is(.wrapper_tool, .tool_header) button.primary:not(.button_spinner)::before {
   background-color: var(--button-bg-color, var(--tool_on_fill)) !important;
 }
 :is(.wrapper_tool, .tool_header) button.primary:hover {

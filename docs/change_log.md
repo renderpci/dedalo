@@ -127,6 +127,17 @@ Merged since the last release; these ship with the next one.
     toolbar buttons next to it (*Search*, *Show all*): outlined at rest and
     highlighted on hover.
 
+- **Tool action buttons show a spinning ring while working, not a solid disc.**
+
+    The main action button of several tools (*Update cache*, *Diffusion*, *Hierarchy*,
+    *Import RDF*, *Ontology*, *Ontology parser*, *Propagate component data*) showed a
+    still, solid disc while its process ran. It now shows the rotating ring used by every
+    other button.
+
+    *Update cache*: pressing *Update* now scrolls to the progress panel as soon as it
+    appears, instead of leaving it below the component list, and the button label is
+    white in the light theme.
+
 - **The Update cache tool scrolls to its result**
 
     When an Update cache run finished, its summary (or a refusal) appeared below

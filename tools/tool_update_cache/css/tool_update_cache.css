@@ -4,7 +4,7 @@
 * Loaded on tool init
 */
 :root {
-  --tool_update_cache: #62866a;
+  --tool_update_cache: #5f8367;
 }
 .wrapper_tool.tool_update_cache .spinner {
   background-color: var(--tool_update_cache);

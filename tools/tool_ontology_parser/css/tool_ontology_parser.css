@@ -296,7 +296,7 @@
   border-color: var(--tool_fill);
   color: var(--tool_on_fill);
 }
-.wrapper_tool.tool_ontology_parser > .content_data > .buttons_container button.gear::before {
+.wrapper_tool.tool_ontology_parser > .content_data > .buttons_container button.gear:not(.button_spinner)::before {
   background-color: var(--button-bg-color, var(--tool_on_fill)) !important;
 }
 .wrapper_tool.tool_ontology_parser > .content_data > .buttons_container button.gear:hover {

@@ -211,7 +211,7 @@
   border-color: var(--tool_fill);
   color: var(--tool_on_fill);
 }
-.wrapper_tool.tool_diffusion > .content_data .publication_items > .publication_item_body > .publication_items_grid .container_bottom > .buttons_container .publication_button::before {
+.wrapper_tool.tool_diffusion > .content_data .publication_items > .publication_item_body > .publication_items_grid .container_bottom > .buttons_container .publication_button:not(.button_spinner)::before {
   background-color: var(--button-bg-color, var(--tool_on_fill)) !important;
 }
 .wrapper_tool.tool_diffusion > .content_data .publication_items > .publication_item_body > .publication_items_grid .container_bottom > .buttons_container .publication_button:hover {
