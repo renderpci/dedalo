@@ -715,7 +715,7 @@ function startDumpJob(dump: DumpJob, userId: number): StartedDump {
 						stdout: 'ignore',
 						stderr: Bun.file(dump.logPath),
 						env: {
-							...(process.env as Record<string, string>),
+							...inheritedEnvironment(),
 							// Password auth (S2-35): pg_dump has no config file here; without
 							// this it fails fe_sendauth on every password-auth install.
 							...(config.db.password !== '' ? { PGPASSWORD: config.db.password } : {}),
@@ -1252,10 +1252,14 @@ interface SidecarRecord {
  * read — a read killed from outside, an I/O error, a pg_restore older than the
  * archive — and they are on field installs. Those records carry no generation,
  * so every one of them is re-derived once by the byte-only classifier: a good
- * archive the old rule misjudged is never refused, or retired, forever. Bump it
- * whenever what a cached reason MEANS changes.
+ * archive the old rule misjudged is never refused, or retired, forever. 3 = the
+ * same classifier reading pg_restore's words in the C locale
+ * (`pgRestoreEnvironment`): generation 2 read them in the SERVER's locale, and a
+ * translated host failure repeated on the re-read was cached as a disproof — so
+ * every generation-2 record is re-derived once too. Bump it whenever what a
+ * cached reason MEANS changes.
  */
-const SIDECAR_CLASSIFIER = 2;
+const SIDECAR_CLASSIFIER = 3;
 
 /** The reasons a sidecar may record — and the only ones a sidecar is TRUSTED for. */
 const CACHEABLE_REASONS: ReadonlySet<string> = new Set([
@@ -1427,10 +1431,37 @@ interface PgRestoreOutcome {
 }
 
 /**
+ * The server's environment as a child process inherits it — the ONE raw env read
+ * in this module (config_env_tripwire allowlist). Read per call: a child gets the
+ * environment of the moment it is spawned.
+ */
+function inheritedEnvironment(): Record<string, string> {
+	return { ...(process.env as Record<string, string>) };
+}
+
+/**
+ * pg_restore's environment: the server's own (a Debian `pg_wrapper` picks its
+ * version from PGCLUSTER / ~/.postgresqlrc — dropping those could swap the
+ * binary), with two deliberate differences:
+ * - the MESSAGE LOCALE IS C. The host-vs-bytes verdict reads pg_restore's words
+ *   (HOST_BOUND_FAILURE / ARCHIVE_DAMAGE); an NLS build translates them under the
+ *   server's LANG, and a translated "unsupported version (1.99)" matched neither
+ *   list, repeated on the re-read and was CACHED as a disproof of a good archive
+ *   (OPS-6/PERF-11 review). LC_ALL outranks LANG and every LC_*, and under C
+ *   gettext ignores LANGUAGE — so the words are the ones the lists were measured on.
+ * - NO PGPASSWORD: every mode used here reads a file, never a database.
+ */
+function pgRestoreEnvironment(): Record<string, string> {
+	const { PGPASSWORD: _credential, LANGUAGE: _languages, ...env } = inheritedEnvironment();
+	return { ...env, LC_ALL: 'C', LC_MESSAGES: 'C', LANG: 'C' };
+}
+
+/**
  * Run pg_restore ASYNCHRONOUSLY under `budgetMs`; its stderr is the detail.
  * No PGPASSWORD and no connection parameters: every mode used here READS THE
  * FILE (`--list`, and `-f` to a path) and never opens a database, so the child
- * has no business carrying the credential.
+ * has no business carrying the credential. Its message locale is pinned to C
+ * (`pgRestoreEnvironment`): the verdict below classifies its words.
  *
  * `timedOut` is OUR timer's flag and nothing else. A child killed from outside
  * also dies by signal: that is `signaled` — the verdict must say what WE did, and
@@ -1443,7 +1474,11 @@ async function runPgRestore(
 	args: string[],
 	budgetMs: number,
 ): Promise<PgRestoreOutcome> {
-	const child = Bun.spawn([bin, ...args], { stdout: 'ignore', stderr: 'pipe' });
+	const child = Bun.spawn([bin, ...args], {
+		stdout: 'ignore',
+		stderr: 'pipe',
+		env: pgRestoreEnvironment(),
+	});
 	let timedOut = false;
 	const timer = setTimeout(
 		() => {
@@ -1470,7 +1505,8 @@ async function runPgRestore(
 /**
  * pg_restore's words for a failure that is about THIS FILE'S BYTES — the only
  * failures that may DISPROVE an artifact (and be cached, and get a file
- * retired). Measured with pg_restore 18 on real archives: a cut anywhere reads
+ * retired). Measured with pg_restore 18 on real archives, in the C message
+ * locale every spawn pins (`pgRestoreEnvironment`): a cut anywhere reads
  * "could not read from input file: end of file"; garbage after the magic reads
  * "unsupported version (<not 1>.<n>) in file header". The rest are the archive
  * reader's own corruption messages (pg_backup_archiver.c / pg_backup_custom.c).

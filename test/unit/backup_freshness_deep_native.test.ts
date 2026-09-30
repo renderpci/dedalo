@@ -863,3 +863,197 @@ describe.if(REAL_BYTES_READY)('OPS-1 review: sharing, generations, what a failur
 		expect(existsSync(`${path}.verified`)).toBe(false);
 	});
 });
+
+/* ------------------------------------------------------------------------- *
+ * OPS-6/PERF-11 review (S2): THE HOST'S LOCALE NEVER DECIDES THE VERDICT.
+ *
+ * The host-vs-bytes call (HOST_BOUND_FAILURE / ARCHIVE_DAMAGE) reads pg_restore's
+ * words. An NLS-built pg_restore translates them under the server's LANG — so on
+ * a Spanish/German host a pg_restore older than the archive, or an unopenable
+ * file, matched neither list, repeated word for word on the re-read, and was
+ * cached as a DISPROOF of a GOOD archive. Every leg runs the verification in a
+ * CHILD SERVER PROCESS started under a non-C locale: Bun.spawn without `env`
+ * hands the child the process's ORIGINAL environment, so mutating process.env
+ * in this process would not reproduce what a server started under es_ES does.
+ * ------------------------------------------------------------------------- */
+
+const BACKUP_MODULE = join(import.meta.dir, '../../src/core/area_maintenance/backup.ts');
+const REPO_ROOT = join(import.meta.dir, '../..');
+const LOCALE_CHILD = join(scratch, 'locale_verify_child.ts');
+writeFileSync(
+	LOCALE_CHILD,
+	`import { verifyBackupArtifact } from ${JSON.stringify(BACKUP_MODULE)};
+const [path, bin] = Bun.argv.slice(2);
+const verdict = await verifyBackupArtifact(path, { pgRestoreBin: bin });
+await Bun.write(Bun.stdout, JSON.stringify(verdict));
+process.exit(0);
+`,
+);
+
+/** Verify `path` in a child process whose whole environment carries `locale`. */
+async function verifyUnderLocale(
+	path: string,
+	bin: string,
+	locale: string,
+	extraEnv: Record<string, string> = {},
+): Promise<BackupVerdict> {
+	const child = Bun.spawn([process.execPath, LOCALE_CHILD, path, bin], {
+		cwd: REPO_ROOT,
+		stdout: 'pipe',
+		stderr: 'pipe',
+		env: {
+			...(process.env as Record<string, string>),
+			LANG: locale,
+			LC_ALL: locale,
+			LC_MESSAGES: locale,
+			LANGUAGE: locale.slice(0, 2),
+			...extraEnv,
+		},
+	});
+	const [exitCode, out, err] = await Promise.all([
+		child.exited,
+		new Response(child.stdout).text(),
+		new Response(child.stderr).text(),
+	]);
+	if (exitCode !== 0) throw new Error(`locale child exited ${exitCode}: ${err}`);
+	return JSON.parse(out) as BackupVerdict;
+}
+
+/** A copy of the real archive whose header claims format 1.99 (newer than any pg_restore). */
+function placeFutureFormat(dir: string, name: string): string {
+	const path = placeComplete(dir, name, 60);
+	const fd = openSync(path, 'r+');
+	try {
+		// "PGDMP" + vmaj + vmin + vrev: vmin = 99.
+		writeSync(fd, Buffer.from([99]), 0, 1, 6);
+	} finally {
+		closeSync(fd);
+	}
+	return path;
+}
+
+/**
+ * The first installed locale under which THIS host's pg_restore really translates
+ * its words — measured on real bytes, never assumed (the CI image is C.UTF-8 only,
+ * and a glibc without the locale generated answers in English).
+ */
+function translatingLocale(): string | null {
+	if (!REAL_BYTES_READY) return null;
+	const dir = freshDir('locale_probe');
+	const probe = placeFutureFormat(dir, 'probe.custom.backup');
+	for (const locale of ['es_ES.UTF-8', 'es_ES.utf8', 'de_DE.UTF-8', 'de_DE.utf8', 'fr_FR.UTF-8']) {
+		const run = Bun.spawnSync([pgRestore as string, '--list', probe], {
+			stdout: 'ignore',
+			stderr: 'pipe',
+			env: {
+				...(process.env as Record<string, string>),
+				LANG: locale,
+				LC_ALL: locale,
+				LC_MESSAGES: locale,
+			},
+		});
+		const words = new TextDecoder().decode(run.stderr ?? new Uint8Array());
+		if (run.exitCode !== 0 && words.includes('1.99') && !/unsupported version/i.test(words)) {
+			return locale;
+		}
+	}
+	return null;
+}
+const TRANSLATING_LOCALE = translatingLocale();
+if (REAL_BYTES_READY && TRANSLATING_LOCALE === null) {
+	console.warn(
+		'[backup_freshness_deep] translated-locale legs SKIPPED (not passed): no installed locale makes this pg_restore translate (the env leg still runs)',
+	);
+}
+
+describe('OPS-6/PERF-11 review: the verdict never depends on the host locale', () => {
+	test('S1 — pg_restore is spawned under the C message locale and without the credential, whatever the server runs under', async () => {
+		// Host-independent (no real pg_restore needed): the child's OWN environment
+		// is what gettext reads, so it is what this leg measures.
+		const dir = freshDir('S1_child_env');
+		const path = join(dir, 'probe.custom.backup');
+		writeFileSync(path, `PGDMP${'x'.repeat(64)}`);
+		ageMinutes(path, 60);
+		const envLog = join(scratch, 'S1_restore.env');
+		const bin = script('S1_restore.sh', `env > '${envLog}'\nexit 0`);
+		const verdict = await verifyUnderLocale(path, bin, 'es_ES.UTF-8', {
+			PGPASSWORD: 'locale-leg-sentinel',
+		});
+		expect(verdict.reason).toBe('verified_deep');
+		const seen = Object.fromEntries(
+			readFileSync(envLog, 'utf-8')
+				.split('\n')
+				.filter((line) => line.includes('='))
+				.map((line) => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]),
+		);
+		// LC_ALL outranks LANG/LC_MESSAGES, and under C gettext ignores LANGUAGE.
+		expect(seen.LC_ALL).toBe('C');
+		expect(seen.PGPASSWORD).toBeUndefined();
+	});
+
+	test.if(REAL_BYTES_READY)(
+		'S5 — a disproof cached by the generation-2 classifier (locale-blind) is read again',
+		async () => {
+			// Generation 2 classified a TRANSLATED host failure as a disproof and cached
+			// it; those records are on field installs, keyed to size+mtime. They are
+			// re-derived once, and the fresh verdict is cached under the current generation.
+			const dir = freshDir('S5_generation_2');
+			const path = placeComplete(dir, 'complete.custom.backup', 60);
+			const stats = statSync(path);
+			writeFileSync(
+				`${path}.verified`,
+				JSON.stringify({
+					size: stats.size,
+					mtimeMs: stats.mtimeMs,
+					verifiedAt: 1,
+					classifier: 2,
+					reason: 'not_an_archive',
+					detail: 'pg_restore: error: versión no soportada (1.16) en el encabezado del archivo',
+				}),
+			);
+			const restore = countingRestore('S5_restore.sh');
+			const verdict = await verify(path, { pgRestoreBin: restore.bin });
+			expect(verdict.reason).toBe('verified_deep');
+			expect(fullReads(restore.log)).toBe(1);
+			await verify(path, { pgRestoreBin: restore.bin });
+			expect(fullReads(restore.log)).toBe(1);
+		},
+	);
+
+	describe.if(TRANSLATING_LOCALE !== null)('on a host whose pg_restore translates', () => {
+		const locale = TRANSLATING_LOCALE as string;
+
+		test('S2 — a pg_restore OLDER than the archive stays a host limit under a translated locale', async () => {
+			const dir = freshDir('S2_future_format_translated');
+			const path = placeFutureFormat(dir, 'future.custom.backup');
+			const verdict = await verifyUnderLocale(path, pgRestore as string, locale);
+			expect(verdict.reason).toBe('unverifiable_read_failed');
+			expect(existsSync(`${path}.verified`)).toBe(false);
+		});
+
+		test('S3 — a file pg_restore cannot open stays a host failure under a translated locale', async () => {
+			const dir = freshDir('S3_unopenable_translated');
+			const path = placeComplete(dir, 'complete.custom.backup', 60);
+			const missing = join(dir, 'gone.custom.backup');
+			// The engine's own stat/magic checks see the real file; pg_restore is
+			// then pointed at a path that does not exist — its real, localized words.
+			const bin = script(
+				'S3_restore.sh',
+				`if [ "$1" = "--list" ]; then exec '${pgRestore}' --list '${missing}'; fi\nexec '${pgRestore}' -f /dev/null '${missing}'`,
+			);
+			const verdict = await verifyUnderLocale(path, bin, locale);
+			expect(verdict.reason).toBe('unverifiable_read_failed');
+			expect(existsSync(`${path}.verified`)).toBe(false);
+		});
+
+		test('S4 (control) — under the same locale real damage is still disproved and a good archive still proved', async () => {
+			const dir = freshDir('S4_control_translated');
+			const cut = placeTruncated(dir, 'died-at-60.custom.backup', 60);
+			const good = placeComplete(dir, 'complete.custom.backup', 60);
+			expect((await verifyUnderLocale(cut, pgRestore as string, locale)).reason).toBe('truncated');
+			expect((await verifyUnderLocale(good, pgRestore as string, locale)).reason).toBe(
+				'verified_deep',
+			);
+		});
+	});
+});
