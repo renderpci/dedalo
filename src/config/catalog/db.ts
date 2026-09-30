@@ -113,9 +113,12 @@ keeping them apart means the request pool's ceiling is never lifted on a connect
 request could later be handed. The pool is opened only when maintenance work first
 runs, and its idle connections close after 30 seconds.
 
-Count these connections in the installation's budget: every process may open up to
-\`DB_POOL_MAX + DB_MAINTENANCE_POOL_MAX\` connections, and all processes together must
-stay below the PostgreSQL server's \`max_connections\`.
+Count these connections in the installation's budget TWICE: every process may hold up
+to \`DB_POOL_MAX + 2 × DB_MAINTENANCE_POOL_MAX + 2\` connections (16 with the defaults).
+The index-rebuild lane (REINDEX/VACUUM) is a second set of these connections that keeps
+its own idle ones for 30 seconds, and a stop or an update verdict opens up to 2
+short-lived connections of its own. All processes together (the server, each diffusion
+runner) must stay below the PostgreSQL server's \`max_connections\`.
 
 \`\`\`bash
 DB_MAINTENANCE_POOL_MAX=2

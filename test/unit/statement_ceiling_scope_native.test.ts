@@ -41,6 +41,10 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { SQL } from 'bun';
 import {
+	DEDICATED_CONNECTIONS_MAX,
+	maintenanceConnectionsPerProcess,
+} from '../../src/core/db/connection_budget.ts';
+import {
 	parseStatementTimeoutDirective,
 	registerCommitAction,
 	sql,
@@ -511,7 +515,60 @@ console.log('RESULT ' + JSON.stringify(results));
 process.exit(0);
 `;
 
+/**
+ * THE CONNECTION-BUDGET LEG (its own child: pool sizes are frozen at import;
+ * DB_POOL_MAX=2, DB_MAINTENANCE_POOL_MAX=2). The budget every consumer states
+ * (src/core/db/connection_budget.ts — test_shard's per-child allowance, the ops
+ * arithmetic) must be a bound on PHYSICAL backends, not on gate slots: the gate
+ * counts connections in use, a Bun pool keeps idle ones open. Measured in
+ * pg_stat_activity, by this child's own application_names:
+ *  - maintenance: scoped statements fill the maintenance pool, THEN
+ *    non-transactional ones fill its twin (the optimize door's order) — both
+ *    pools' idle connections are still open when they are counted;
+ *  - dedicated: many concurrent pg_xact_status verdicts (each on a dedicated
+ *    connection that takes no pool slot), sampled while they run.
+ */
+const BUDGET_DRIVER = `
+import * as pg from ${repoModule('src/core/db/postgres.ts')};
+import { config } from ${repoModule('src/config/config.ts')};
+import { assertTestDatabase } from ${repoModule('src/core/test_data/test_database_marker.ts')};
+await assertTestDatabase('statement_ceiling_scope_native:budget');
+const { sql, withTransaction, withUnboundedStatements, runWithoutStatementTimeout, readTransactionStatus } = pg;
+const maintenancePoolMax = config.ops.dbMaintenancePoolMax;
+const countApps = async (pattern) => Number((await sql.unsafe(
+	"SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname = current_database() AND application_name LIKE $1",
+	[pattern]))[0].n);
+const SLEEP = 'SELECT pg_sleep(0.3)';
+await Promise.all(Array.from({ length: maintenancePoolMax }, () => withUnboundedStatements(() => sql.unsafe(SLEEP, []))));
+await Promise.all(Array.from({ length: maintenancePoolMax }, () => runWithoutStatementTimeout(SLEEP)));
+const maintenance = await countApps('dedalo_maintenance:%' + process.pid + ':%');
+// A committed xid for the verdicts to read.
+const xid = await withTransaction(async () => (await sql.unsafe('SELECT pg_current_xact_id()::text AS x', []))[0].x);
+const DEDICATED_APP = 'dedalo_xact_status:' + process.pid;
+let dedicatedPeak = 0;
+let sampling = true;
+const sampler = (async () => {
+	while (sampling) {
+		dedicatedPeak = Math.max(dedicatedPeak, await countApps(DEDICATED_APP));
+	}
+})();
+const verdicts = await Promise.all(Array.from({ length: 32 }, () => readTransactionStatus(xid).catch((e) => 'THREW ' + String(e?.code ?? e))));
+// Let the background closes land, then take one last sample.
+await Bun.sleep(50);
+sampling = false;
+await sampler;
+console.log('RESULT ' + JSON.stringify({ poolMax: config.ops.dbPoolMax, maintenancePoolMax, maintenance, dedicatedPeak, verdicts }));
+process.exit(0);
+`;
+
 const driver = childDriver('dedalo-statement-ceiling');
+let budget: {
+	poolMax: number;
+	maintenancePoolMax: number;
+	maintenance: number;
+	dedicatedPeak: number;
+	verdicts: string[];
+} | null = null;
 let zeroCeiling: Record<string, LegResult> = {};
 let legs: Record<string, LegResult> = {};
 let shutdown: {
@@ -560,6 +617,15 @@ beforeAll(async () => {
 		throw new Error(`zero-ceiling driver exited ${unconfigured.exitCode}:\n${unconfigured.stderr}`);
 	}
 	zeroCeiling = driverResult(unconfigured.stdout, unconfigured.stderr);
+	const budgeted = await driver.run('ceiling_budget_driver.ts', BUDGET_DRIVER, {
+		DB_POOL_MAX: '2',
+		DB_MAINTENANCE_POOL_MAX: '2',
+		DB_POOL_ACQUIRE_TIMEOUT_MS: '0',
+	});
+	if (budgeted.exitCode !== 0) {
+		throw new Error(`budget driver exited ${budgeted.exitCode}:\n${budgeted.stderr}`);
+	}
+	budget = driverResult(budgeted.stdout, budgeted.stderr);
 }, 120000);
 
 afterAll(() => driver.dispose());
@@ -1058,6 +1124,37 @@ describe('shutdown closes the maintenance pool bounded', () => {
 		expect(cancelled, "this process's shutdown cancelled another process's maintenance").toEqual(
 			[],
 		);
+	});
+});
+
+describe('the connection budget is physical (what pg_stat_activity counts, not gate slots)', () => {
+	test('both maintenance pools linger after an optimize-shaped run, and the budget counts them', () => {
+		expect(budget, 'budget leg did not run').not.toBeNull();
+		const { maintenancePoolMax, maintenance } = budget as NonNullable<typeof budget>;
+		expect(maintenancePoolMax).toBe(2);
+		// Non-vacuity: the second pool is real — more backends than ONE pool's max.
+		expect(maintenance, 'the non-transactional lane opened no pool of its own').toBeGreaterThan(
+			maintenancePoolMax,
+		);
+		expect(
+			maintenance,
+			'the maintenance lane holds more backends than the stated budget counts',
+		).toBeLessThanOrEqual(maintenanceConnectionsPerProcess(maintenancePoolMax));
+	});
+
+	test('dedicated connections (cancel / xact-status verdicts) never exceed DEDICATED_CONNECTIONS_MAX at once', () => {
+		expect(budget, 'budget leg did not run').not.toBeNull();
+		const { dedicatedPeak, verdicts } = budget as NonNullable<typeof budget>;
+		// Every verdict completed (a bounded wait for a dedicated slot is inside
+		// its budget, not a failure) — and a committed xid reads 'committed'.
+		expect(verdicts).toEqual(Array(32).fill('committed'));
+		expect(dedicatedPeak, 'no dedicated connection was ever sampled (vacuous leg)').toBeGreaterThan(
+			0,
+		);
+		expect(
+			dedicatedPeak,
+			'more dedicated connections were open at once than the budget counts',
+		).toBeLessThanOrEqual(DEDICATED_CONNECTIONS_MAX);
 	});
 });
 

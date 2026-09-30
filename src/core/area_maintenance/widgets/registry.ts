@@ -20,7 +20,7 @@
  */
 
 import { config } from '../../../config/config.ts';
-import { withUnboundedStatements } from '../../db/postgres.ts';
+import { typedMaintenanceLockWait, withUnboundedStatements } from '../../db/postgres.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { getLabels } from '../../labels/catalog.ts';
 import { currentApplicationLang } from '../../resolve/request_lang.ts';
@@ -374,8 +374,15 @@ export async function dispatchWidgetRequest(
 	// maintenance pool is small, and a cheap read must not queue behind a
 	// REINDEX. Background jobs a handler submits are detached and inherit
 	// nothing: the ones that must be unbounded declare their own scope.
+	// The CEILING is lifted, the LOCK-WAIT bound is not: the maintenance pool is
+	// born with a lock_timeout (postgres.ts MAINTENANCE_LOCK_TIMEOUT), so an
+	// action queued for ACCESS EXCLUSIVE behind a long reader gives up instead of
+	// stalling every reader queued behind it; escaping, it is the typed 503.
 	const run = () => handler((options ?? {}) as Record<string, unknown>, principal);
-	return isUnboundedAction(module, method) ? withUnboundedStatements(run) : run();
+	if (!isUnboundedAction(module, method)) return run();
+	return withUnboundedStatements(run).catch((error: unknown) => {
+		throw typedMaintenanceLockWait(error);
+	});
 }
 
 /** Whether `method` is one of the actions `module` declares maintenance (see WidgetModule). */

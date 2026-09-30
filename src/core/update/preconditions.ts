@@ -179,14 +179,25 @@ export async function requireFreshBackup(
  * update_data_version's WARNINGS (it never refuses on a backup): the three
  * byte-frozen sentences once the verdict is settled, or — when the bounded wait
  * ran out — a fourth, saying the newest backup is still being verified. Never an
- * "all clear" that nobody established.
+ * "all clear" that nobody established. A check that FAILS (the scan rejects: a
+ * pg_restore that cannot be spawned, an unreadable directory) is a fifth
+ * warning, never a throw — a throw here would refuse the migration on a backup,
+ * which this door promises never to do; the cause goes to the server log.
  */
 export async function backupWarningsWithin(
 	maxWaitMs: number,
 	backupDir?: string,
 	verify: BackupVerifyOptions = {},
 ): Promise<string[]> {
-	const answer = await backupFreshnessWithin(maxWaitMs, backupDir, verify);
+	let answer: Freshness | PendingFreshness;
+	try {
+		answer = await backupFreshnessWithin(maxWaitMs, backupDir, verify);
+	} catch (error) {
+		console.error('[update] the database backup check failed:', error);
+		return [
+			'Warning. The database backup could not be checked (see the server log) — make sure a restorable backup exists before updating',
+		];
+	}
 	if ('pending' in answer) {
 		const name = answer.candidate === null ? '' : ` ('${basename(answer.candidate)}')`;
 		return [`Warning. The newest database backup${name} is still being verified — retry shortly`];

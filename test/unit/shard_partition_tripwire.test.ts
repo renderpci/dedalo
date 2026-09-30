@@ -81,6 +81,7 @@ import {
 	SHARD_MAINTENANCE_POOL_MAX,
 	SHARD_POOL_MAX,
 } from '../../scripts/test_shard.ts';
+import { connectionsPerProcess } from '../../src/core/db/connection_budget.ts';
 import { stripComments } from '../helpers/strip_comments.ts';
 import { testDatabaseName } from '../helpers/test_database.ts';
 import { bandOf, classifyTestFile, type TestFootprint } from '../helpers/test_footprint.ts';
@@ -496,10 +497,15 @@ describe('shard budgets — refusal driven by synthetic inputs, both directions'
 		expect(verdict.arithmetic).toContain('max_connections 100');
 	});
 
-	test('connections: the shipped shard shape PASSES — counting BOTH pools per process', () => {
-		// A process may open its request pool AND its maintenance pool (PERF-11);
-		// budgeting only the first under-counts every child.
-		expect(SHARD_CONNECTIONS_PER_PROCESS).toBe(SHARD_POOL_MAX + SHARD_MAINTENANCE_POOL_MAX);
+	test('connections: the shipped shard shape PASSES — counting every PHYSICAL backend per process', () => {
+		// A child may hold its request pool, BOTH maintenance pools (the
+		// non-transactional lane is a second Bun pool: the gate bounds slots in
+		// use, not idle sockets) and the dedicated cancel/verdict connections —
+		// the formula statement_ceiling_scope_native measures in pg_stat_activity.
+		// Budgeting only the gate slots under-counts every child.
+		expect(SHARD_CONNECTIONS_PER_PROCESS).toBe(
+			connectionsPerProcess(SHARD_POOL_MAX, SHARD_MAINTENANCE_POOL_MAX),
+		);
 		const verdict = assessConnectionBudget({
 			maxConnections: 100,
 			superuserReserved: 3,

@@ -134,6 +134,30 @@ describe('backupWarningsWithin — the data-migration WARNING (never refuses)', 
 			'Warning. Newest database backup is about 10 hours old — make a fresh backup before updating',
 		]);
 	});
+
+	test('a backup check that FAILS (pg_restore cannot be spawned) is a warning, never a refusal', async () => {
+		// A real custom-format header, so the verdict must READ it — through a
+		// pg_restore that does not exist: the scan itself rejects (spawn ENOENT).
+		// The data migration must still run: its caller gets a warning, not a throw.
+		const dir = join(scratch, 'unreadable');
+		mkdirSync(dir, { recursive: true });
+		const file = join(dir, 'db.custom.backup');
+		writeFileSync(file, 'PGDMP\u0001\u000e\u0000 not a whole archive');
+		const at = (Date.now() - 3600000) / 1000;
+		utimesSync(file, at, at);
+		const missingBin = join(scratch, 'no_such_pg_restore');
+		let warnings: string[] | undefined;
+		let thrown: unknown;
+		try {
+			warnings = await backupWarningsWithin(60_000, dir, { pgRestoreBin: missingBin });
+		} catch (error) {
+			thrown = error;
+		}
+		expect(thrown, 'the backup check threw — the migration would be refused').toBeUndefined();
+		expect(warnings).toEqual([
+			'Warning. The database backup could not be checked (see the server log) — make sure a restorable backup exists before updating',
+		]);
+	});
 });
 
 describe('requireFreshBackup — the code-update REFUSAL', () => {

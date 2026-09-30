@@ -37,6 +37,7 @@ import { SQL } from 'bun';
 import { config } from '../../config/config.ts';
 import { recordPoolWait } from '../api/counters.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
+import { DEDICATED_CONNECTIONS_MAX } from './connection_budget.ts';
 import { observeStatement } from './query_tap.ts';
 import {
 	DO_BLOCK,
@@ -116,31 +117,58 @@ const QUERY_CANCELED = '57014';
 const LOCK_NOT_AVAILABLE = '55P03';
 
 /**
+ * THE MAINTENANCE LOCK BOUND — the transactional maintenance pool's STARTUP
+ * `lock_timeout`, and the data-update unit's default `SET LOCAL lock_timeout`.
+ * Lifting the statement ceiling must NOT lift the bound on a lock WAIT: a
+ * maintenance statement queued for ACCESS EXCLUSIVE (a store rebuild's TRUNCATE,
+ * an ALTER) behind a long reader holds every LATER reader of that table queued
+ * behind it — Postgres grants locks in queue order — for as long as the long
+ * reader runs. Bounded, the waiter gives up (SQLSTATE 55P03, its transaction
+ * rolls back) and the readers behind it proceed. Only the WAIT is bounded; a
+ * granted lock is held for the work's whole span. The NON-TRANSACTIONAL lane
+ * (REINDEX / CREATE / DROP INDEX CONCURRENTLY, VACUUM) keeps no bound: its waits
+ * block neither reads nor writes, and a cancelled CONCURRENTLY build leaves an
+ * INVALID index behind (getNonTransactionalLane).
+ */
+export const MAINTENANCE_LOCK_TIMEOUT = '5s';
+
+/**
  * PostgreSQL's own `sslmode` vocabulary, which Bun.sql accepts verbatim for
  * `tls`. Spelled out rather than derived from @types/bun so a types change
  * cannot silently widen what the catalog is allowed to hand the driver.
  */
 type PostgresSslMode = 'disable' | 'allow' | 'prefer' | 'require' | 'verify-ca' | 'verify-full';
 
+/** The startup parameters that have a value (an undefined one is not sent at all). */
+function definedParameters(values: Record<string, string | undefined>): Record<string, string> {
+	return Object.fromEntries(
+		Object.entries(values).filter((entry): entry is [string, string] => entry[1] !== undefined),
+	);
+}
+
 /**
  * Build the Bun SQL options for the configured database. `statementTimeoutMs`
  * is the pool's STARTUP `statement_timeout` (sent in the startup packet, so it
  * takes precedence over ALTER ROLE / ALTER DATABASE defaults — `pg_settings.source`
  * reads `client`); `undefined` sends none (the request pool with the ceiling
- * disabled keeps the server's own default).
+ * disabled keeps the server's own default). `lockTimeout` likewise is the
+ * STARTUP `lock_timeout` — only the transactional maintenance pool sends one
+ * (MAINTENANCE_LOCK_TIMEOUT).
  */
 function buildSqlOptions(
 	max: number,
 	statementTimeoutMs: number | undefined,
 	applicationName?: string,
+	lockTimeout?: string,
 ): ConstructorParameters<typeof SQL>[0] {
 	const { database, host, port, user, password, sslMode } = config.db;
 	// Startup parameters (sent in the startup packet — they outrank ALTER ROLE /
 	// ALTER DATABASE defaults). Omitted entirely when there are none.
-	const startupParameters: Record<string, string> = {
-		...(statementTimeoutMs === undefined ? {} : { statement_timeout: String(statementTimeoutMs) }),
-		...(applicationName === undefined ? {} : { application_name: applicationName }),
-	};
+	const startupParameters = definedParameters({
+		statement_timeout: statementTimeoutMs?.toString(),
+		application_name: applicationName,
+		lock_timeout: lockTimeout,
+	});
 	const commonOptions = {
 		database,
 		username: user,
@@ -293,7 +321,10 @@ const mainLane: PoolLane = {
  * The MAINTENANCE pool, built on first use (most processes — a diffusion
  * runner, a CLI — never run maintenance). Its startup `statement_timeout` is an
  * EXPLICIT '0', which overrides both the catalog ceiling and any ALTER ROLE /
- * ALTER DATABASE default. Process-wide like the request pool; holds no identity.
+ * ALTER DATABASE default; its startup `lock_timeout` is MAINTENANCE_LOCK_TIMEOUT
+ * (the ceiling is lifted, the lock-wait bound never is — a 55P03 that escapes a
+ * declared widget action reaches the wire as `db.lock_timeout`,
+ * typedMaintenanceLockWait). Process-wide like the request pool; holds no identity.
  */
 let maintenanceLane: PoolLane | null = null;
 
@@ -301,7 +332,12 @@ function getMaintenanceLane(): PoolLane {
 	maintenanceLane ??= {
 		name: 'maintenance',
 		pool: new SQL({
-			...buildSqlOptions(MAINTENANCE_POOL_MAX, 0, MAINTENANCE_APPLICATION_NAME),
+			...buildSqlOptions(
+				MAINTENANCE_POOL_MAX,
+				0,
+				MAINTENANCE_APPLICATION_NAME,
+				MAINTENANCE_LOCK_TIMEOUT,
+			),
 			idleTimeout: MAINTENANCE_IDLE_TIMEOUT_S,
 		} as ConstructorParameters<typeof SQL>[0]),
 		gate: makeSlotGate('maintenance', MAINTENANCE_POOL_MAX),
@@ -314,8 +350,11 @@ function getMaintenanceLane(): PoolLane {
  * The maintenance pool's NON-TRANSACTIONAL twin — the one lane of
  * runWithoutStatementTimeout (REINDEX / CREATE / DROP INDEX CONCURRENTLY,
  * VACUUM). Same GATE as the maintenance pool (DB_MAINTENANCE_POOL_MAX bounds
- * both together), same startup `statement_timeout` 0, its OWN application_name,
- * which the shutdown cancel does NOT name (cancelMaintenanceStatements).
+ * the two lanes' IN-USE connections together — not their open sockets: each Bun
+ * pool keeps its own idle connections, so the physical budget counts both,
+ * connection_budget.ts), same startup `statement_timeout` 0, its OWN
+ * application_name, which the shutdown cancel does NOT name
+ * (cancelMaintenanceStatements).
  *
  * WHY A SEPARATE IDENTITY: these statements are not transactions. A cancelled
  * transaction rolls back; a cancelled `REINDEX … CONCURRENTLY` leaves an INVALID
@@ -411,6 +450,25 @@ export async function withUnboundedStatements<T>(work: () => Promise<T>): Promis
 	} finally {
 		lift.expired = true;
 	}
+}
+
+/**
+ * A lock wait that ran out MAINTENANCE_LOCK_TIMEOUT (SQLSTATE 55P03, raw) →
+ * the typed, retryable 503 `db.lock_timeout`, its SQLSTATE kept as `cause`
+ * (sqlStateOf still reads 55P03). Anything else — a DedaloError already typed
+ * by its handler included — is returned unchanged. For a door that ran work in
+ * `withUnboundedStatements` (the maintenance widget door); the data-update unit
+ * retries its own 55P03 (withMaintenanceTransaction) and classifies the rest.
+ */
+export function typedMaintenanceLockWait(error: unknown): unknown {
+	if (error instanceof DedaloError || sqlStateOf(error) !== LOCK_NOT_AVAILABLE) return error;
+	return new DedaloError('db.lock_timeout', {
+		message:
+			`postgres: a maintenance statement waited past its ${MAINTENANCE_LOCK_TIMEOUT} lock_timeout ` +
+			'for a lock another session holds — nothing of that transaction persisted',
+		cause: error,
+		coordinates: { lane: 'maintenance', lock_timeout: MAINTENANCE_LOCK_TIMEOUT },
+	});
 }
 
 /** A transaction the scope may join: maintenance lane still at 0, or an explicit `SET LOCAL … = 0`. */
@@ -1687,33 +1745,82 @@ async function cancelMaintenanceStatements(): Promise<void> {
 }
 
 /**
+ * The DEDICATED-connection counter: at most DEDICATED_CONNECTIONS_MAX open at
+ * once, so the per-process budget (connection_budget.ts) is a bound on physical
+ * backends and not a hope. A slot is held from before the connection opens until
+ * its close SETTLES — not until the work returns: an open socket is what
+ * max_connections counts. FIFO; no timeout of its own (the caller's budget
+ * races the wait — onDedicatedConnection).
+ */
+function makeDedicatedCounter(max: number): { acquire(): Promise<void>; release(): void } {
+	let available = max;
+	const waiters: (() => void)[] = [];
+	return {
+		acquire() {
+			if (available > 0) {
+				available--;
+				return Promise.resolve();
+			}
+			return new Promise<void>((grant) => waiters.push(grant));
+		},
+		release() {
+			const next = waiters.shift();
+			if (next === undefined) available++;
+			else next();
+		},
+	};
+}
+
+const dedicatedConnections = makeDedicatedCounter(DEDICATED_CONNECTIONS_MAX);
+
+/**
  * Run `work` on a SHORT-LIVED DEDICATED connection (application_name
  * `dedalo_<label>:<pid>`), bounded by `budgetMs`: `{ value }`, or 'timed out'
  * (a rejection propagates). Never a pooled connection: both pools — and their
  * gates — may be saturated exactly when this is needed (a stop under load, a
  * shutdown, the verdict of a run whose released slot went straight to the next
  * queued maintenance waiter), and work queued behind the traffic it should
- * relieve or judge is no bound at all. The connection takes no gate slot and is
- * closed in the background right after (a statement still pending past the
- * budget gets one more second, then the connection is closed forcibly).
+ * relieve or judge is no bound at all. The connection takes no pool slot — only
+ * one of the DEDICATED_CONNECTIONS_MAX dedicated slots (makeDedicatedCounter),
+ * whose wait counts inside `budgetMs` — and is closed in the background right
+ * after (a statement still pending past the budget gets one more second, then
+ * the connection is closed forcibly); its slot returns when the close settles.
  */
 async function onDedicatedConnection<T>(
 	label: string,
 	work: (connection: SQL) => Promise<T>,
 	budgetMs: number,
 ): Promise<{ value: T } | 'timed out'> {
-	const connection = new SQL(buildSqlOptions(1, undefined, `dedalo_${label}:${process.pid}`));
-	const running = work(connection).then((value) => ({ value }));
+	let connection: SQL | null = null;
+	let finished = false;
+	const closeOnce = () => {
+		if (connection === null) return;
+		const opened = connection;
+		connection = null;
+		void opened
+			.close({ timeout: 1 })
+			.catch((error: unknown) =>
+				console.error(`[${label}] dedicated connection close failed:`, error),
+			)
+			.finally(() => dedicatedConnections.release());
+	};
+	const running = (async () => {
+		await dedicatedConnections.acquire();
+		// The budget ran out while this waited for a slot: hand it straight back.
+		if (finished) {
+			dedicatedConnections.release();
+			throw new Error(`[${label}] dedicated connection slot granted after its budget`);
+		}
+		connection = new SQL(buildSqlOptions(1, undefined, `dedalo_${label}:${process.pid}`));
+		return { value: await work(connection) };
+	})();
 	// A rejection after the budget lost the race must not surface as unhandled.
 	running.catch(() => undefined);
 	try {
 		return await Promise.race([running, Bun.sleep(budgetMs).then(() => 'timed out' as const)]);
 	} finally {
-		void connection
-			.close({ timeout: 1 })
-			.catch((error: unknown) =>
-				console.error(`[${label}] dedicated connection close failed:`, error),
-			);
+		finished = true;
+		closeOnce();
 	}
 }
 

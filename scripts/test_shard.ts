@@ -69,6 +69,7 @@
 import { existsSync, readFileSync, statfsSync } from 'node:fs';
 import { join } from 'node:path';
 import { Glob } from 'bun';
+import { connectionsPerProcess } from '../src/core/db/connection_budget.ts';
 import { testDatabaseName } from '../test/helpers/test_database.ts';
 import { bandOf, classifyTestFile, type TestFootprint } from '../test/helpers/test_footprint.ts';
 import { childEnv } from './lib/parity_census.ts';
@@ -92,8 +93,16 @@ export const DISK_HEADROOM_BYTES = 8 * 1024 ** 3;
 export const SHARD_POOL_MAX = 3;
 /** Per-child MAINTENANCE pool (PERF-11): the unbounded lane a maintenance leg opens lazily. */
 export const SHARD_MAINTENANCE_POOL_MAX = 1;
-/** The connections one child process may open: both pools. The budget counts THIS. */
-export const SHARD_CONNECTIONS_PER_PROCESS = SHARD_POOL_MAX + SHARD_MAINTENANCE_POOL_MAX;
+/**
+ * The PHYSICAL backends one child process may hold — the request pool, BOTH
+ * maintenance pools (the gate bounds slots in use; each Bun pool keeps its idle
+ * sockets), the dedicated cancel/verdict connections. The budget counts THIS
+ * (src/core/db/connection_budget.ts, measured by statement_ceiling_scope_native).
+ */
+export const SHARD_CONNECTIONS_PER_PROCESS = connectionsPerProcess(
+	SHARD_POOL_MAX,
+	SHARD_MAINTENANCE_POOL_MAX,
+);
 /**
  * Non-zero ON PURPOSE, and PINNED explicitly: the catalog default
  * (src/config/catalog/db.ts) is still 0 — wait forever — until the PERF-11
@@ -308,7 +317,7 @@ export interface ConnectionBudgetInput {
 	superuserReserved: number;
 	liveBackends: number;
 	children: number;
-	/** Connections ONE process may open — its request pool PLUS its maintenance pool. */
+	/** Physical backends ONE process may hold (connectionsPerProcess — every pool, idle included). */
 	poolMaxPerChild: number;
 	expectedConcurrentGrandchildren: number;
 }

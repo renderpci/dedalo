@@ -1567,6 +1567,8 @@ export const ERROR_REGISTRY = {
 	// show — not a 500 `internal.unexpected` indistinguishable from an engine
 	// bug. Raised ONLY by core/db/postgres.ts; the numbers (lane, ceiling, pool)
 	// ride in operator-only `coordinates`.
+	// A 57014 at or past the lane ceiling (DB_STATEMENT_TIMEOUT_MS, or a recorded SET
+	// LOCAL). An operator cancel, an abort cancel and the reserved lane stay raw.
 	'db.statement_timeout': {
 		category: 'unavailable',
 		status: 503,
@@ -1575,9 +1577,22 @@ export const ERROR_REGISTRY = {
 		severity: 'warn',
 		disclosure: 'public',
 		retryable: false,
-		reason:
-			'A 57014 at or past the lane ceiling (DB_STATEMENT_TIMEOUT_MS, or a recorded SET LOCAL). An operator cancel, an abort cancel and the reserved lane stay raw.',
 	},
+	// A 55P03 escaping a declared maintenance widget action: the maintenance pool
+	// lifts the statement ceiling but keeps a startup lock_timeout
+	// (MAINTENANCE_LOCK_TIMEOUT), so readers never queue behind its waiting ACCESS
+	// EXCLUSIVE request. The transaction rolled back.
+	'db.lock_timeout': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_db_lock_timeout',
+		message: 'A maintenance action waited too long for a database lock',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: true,
+	},
+	// The acquire gate waited DB_POOL_ACQUIRE_TIMEOUT_MS for a pooled connection
+	// (every path that takes a connection takes a slot).
 	'db.pool_exhausted': {
 		category: 'unavailable',
 		status: 503,
@@ -1586,8 +1601,6 @@ export const ERROR_REGISTRY = {
 		severity: 'warn',
 		disclosure: 'public',
 		retryable: true,
-		reason:
-			'The acquire gate waited DB_POOL_ACQUIRE_TIMEOUT_MS for a pooled connection (every path that takes a connection takes a slot).',
 	},
 
 	// ── internal ────────────────────────────────────────────────────────────
@@ -1600,6 +1613,9 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 	},
+	// Engine invariant / uncovered-scope throws (P3 burn-down): the fail-loud typed
+	// form of a former `throw new Error(...)`. Coordinates carry the module + input;
+	// the sentence stays server-side.
 	'internal.invariant': {
 		category: 'internal',
 		status: 500,
@@ -1608,8 +1624,6 @@ export const ERROR_REGISTRY = {
 		severity: 'error',
 		disclosure: 'operator',
 		retryable: false,
-		reason:
-			'Engine invariant / uncovered-scope throws (P3 burn-down): the fail-loud typed form of a former `throw new Error(...)`. Coordinates carry the module + input; the sentence stays server-side.',
 	},
 	'internal.module_poisoned': {
 		category: 'internal',

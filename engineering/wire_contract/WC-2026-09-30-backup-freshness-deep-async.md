@@ -126,3 +126,12 @@ update_data_version run's bounded warning), `test/unit/backup_restorability_nati
 `verified_toc` gone, `unverifiable_timeout` covered), `test/unit/update_status_native.test.ts`,
 `test/unit/update_preconditions.test.ts`, and `bun run test:update` step 6d
 (an unwaived update over a real 60% cut is refused end to end).
+
+### Addendum (same day, OPS-6/PERF-11 review r2)
+
+- `update_data_version` (inline) `errors[]`: a scan that REJECTS (a `pg_restore`
+  that cannot be spawned, an unreadable backup directory) used to escape
+  `backupWarningsWithin` and refuse the migration. It is now a FIFTH warning,
+  byte-frozen: `Warning. The database backup could not be checked (see the server
+  log) — make sure a restorable backup exists before updating`; the cause goes to
+  the server log only. Gate: `test/unit/update_preconditions.test.ts`.

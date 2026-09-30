@@ -92,6 +92,7 @@ import { appendMatrixUpdateRow } from '../db/matrix_write.ts';
 import {
 	isInTransaction,
 	isTransactionEndedMidUnit,
+	MAINTENANCE_LOCK_TIMEOUT,
 	type MaintenanceTransactionContext,
 	readTransactionStatus,
 	sql,
@@ -194,7 +195,7 @@ export interface UpdateEngineSeams {
 		sublawRefused?: number;
 		bigResultRefused?: number;
 	}>;
-	/** The run's `SET LOCAL lock_timeout` (default '5s'). */
+	/** The run's `SET LOCAL lock_timeout` (default MAINTENANCE_LOCK_TIMEOUT — the maintenance pool's own bound). */
 	lockTimeout?: string;
 	/** Delays before each whole-unit retry on a lock timeout (default 1s/2s/4s/8s). */
 	lockRetryDelaysMs?: readonly number[];
@@ -827,7 +828,7 @@ async function runAtomically(
 				await writeVersionRow(target);
 			},
 			{
-				lockTimeout: run.seams.lockTimeout ?? '5s',
+				lockTimeout: run.seams.lockTimeout ?? MAINTENANCE_LOCK_TIMEOUT,
 				signal: run.signal,
 				lockRetryDelaysMs: run.seams.lockRetryDelaysMs,
 				onLockRetry: (number, delayMs) => {

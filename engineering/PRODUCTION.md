@@ -264,12 +264,24 @@ scope — a ceiling that ships on while a boot store build or the retention
 prune still runs under it would fail those every day on a large install. The
 flip, its config-census leg and those wraps land in ONE commit.
 
-**Connection budget.** Each process may open `DB_POOL_MAX +
-DB_MAINTENANCE_POOL_MAX` connections: the server, each diffusion runner (up to
+**Connection budget.** Count PHYSICAL backends, not gate slots: the acquire
+gates bound connections IN USE, and a Bun pool keeps an idle connection open
+until its idle timeout. Each process may hold `DB_POOL_MAX +
+2 × DB_MAINTENANCE_POOL_MAX + 2` connections to the matrix database
+(`src/core/db/connection_budget.ts`, measured against `pg_stat_activity` by
+`statement_ceiling_scope_native`): the request pool; BOTH maintenance pools —
+the transactional one and its non-transactional twin
+(`runWithoutStatementTimeout`, which the shutdown cancel must tell apart), which
+share one slot gate but each keep up to `DB_MAINTENANCE_POOL_MAX` idle
+connections for 30 s after an optimize run; and at most 2 short-lived dedicated
+connections (a cancel, a transaction-status verdict), which take no pool slot.
+Every engine process counts: the server, each diffusion runner (up to
 `DEDALO_DIFFUSION_MAX_RUNNERS`), the RAG drain. All together must stay under
-Postgres `max_connections` (typically 100). Defaults: server + 2 runners ×
-(10 + 2) = 36 → fine; 8 runners × 12 → NOT. `sql.reserve()` takes a gate slot
-until its `release()` — nothing can exhaust a pool behind the gate.
+Postgres `max_connections` (typically 100). Defaults: 10 + 2 × 2 + 2 = 16 per
+process; server + 2 runners = 48 → fine; server + 8 runners = 144 → NOT. The
+vector store's own pool (a separate database on the same cluster, when it is
+one) comes on top. `sql.reserve()` takes a gate slot until its `release()` —
+nothing can exhaust a pool behind the gate.
 
 All keys are live in `src/core/db/postgres.ts`: an acquire gate fronts EACH
 pool so saturation is observable (`db_pool_waits` counter, `getPoolStats()` —
@@ -337,16 +349,28 @@ pool and never queues behind a long one. Two long actions at once (a
 background data update and a REINDEX) make a THIRD long action queue — for
 `DB_POOL_ACQUIRE_TIMEOUT_MS`, then `db.pool_exhausted`. Raise
 `DB_MAINTENANCE_POOL_MAX` on an install whose operators run maintenance in
-parallel (and count it in the budget). Known limit: the maintenance pool sets
-no `lock_timeout`, so a declared action that needs ACCESS EXCLUSIVE (a store
-rebuild's TRUNCATE, VACUUM FULL) queues behind a long reader, and the readers
-after it queue behind it; the data-update engine is the one lane with
-`SET LOCAL lock_timeout` + whole-unit retry. (The CONCURRENTLY/VACUUM
-statements, whose lock waits a startup `lock_timeout` would abort, now run on
-the separate non-transactional lane, so a startup bound on the transactional
-maintenance pool is possible — it needs each declared transactional action to
-retry its own unit on 55P03 first, or an operator action fails instead of
-waiting. Pending, with the default ceiling flip.)
+parallel (and count it in the budget).
+
+**The ceiling is lifted; the lock-wait bound is not.** The transactional
+maintenance pool is born with `lock_timeout = 5s` (startup packet,
+`MAINTENANCE_LOCK_TIMEOUT` in `src/core/db/postgres.ts` — also the data-update
+unit's default `SET LOCAL lock_timeout`). PostgreSQL grants locks in queue
+order, so a declared action waiting for ACCESS EXCLUSIVE (a store rebuild's
+TRUNCATE, an ALTER, a `LOCK TABLE`) behind a long reader would otherwise hold
+EVERY later reader of that table queued behind it for as long as the long
+reader runs. Bounded, the waiter gives up after 5 s (SQLSTATE 55P03, its
+transaction rolls back — nothing of it persists) and the readers proceed. Only
+the WAIT is bounded: a granted lock is held for the work's whole span (a
+backfill still blocks its store while it rebuilds it). A widget action does not
+retry — it is not guaranteed to be one re-runnable unit: a 55P03 that escapes
+the action is the typed, retryable 503 `db.lock_timeout` ("try again in a
+moment"); one the action catches itself (the backfill's per-store line) is
+reported in its `errors`. The data-update engine retries its whole unit
+(1s/2s/4s/8s). The NON-TRANSACTIONAL lane (CONCURRENTLY/VACUUM) keeps no bound:
+its waits block neither reads nor writes, and an aborted concurrent build would
+leave an invalid index. Gate: `test/unit/maintenance_door_unbounded_native.test.ts`
+(a later reader gets through while the long reader still holds; the escaping
+wait is `db.lock_timeout`).
 
 Census of the legitimately long statements (who is unbounded, and how):
 
