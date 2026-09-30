@@ -1016,12 +1016,20 @@ describe('config.menu lang reads outside src/config/ (P0-7 census)', () => {
 		// `config.lang.dataLangDefault`, or a module-level capture, reproduces the
 		// defect (a write landing in a language the operator was not editing) with
 		// the census green. Pin the positive shape at each closed door.
+		//
+		// The duplicate door is a SPEAKING door (WC-2026-09-27 addendum
+		// 2026-09-30): its lane is effectiveSaveLang(currentDataLang()) through
+		// mainIdentity — no local translatable/NOLAN override (that override was
+		// the S0-CHECKPOINT F3 defect: transliterable/iri copies filed in
+		// lg-nolan while their save filed in the data lang). This pin is only a
+		// pointer; its OUTCOME twin is history_door_lane_agreement_native cell
+		// (2), which duplicates under a request data lang that is asserted to
+		// differ from BOTH install defaults, so a door reading
+		// config.menu.dataLang, config.lang.dataLangDefault or a module-level
+		// capture files the copy in the wrong lane there and reds it.
 		for (const [file, expected] of [
 			['tools/tool_update_cache/server/index.ts', "translatable ? currentDataLang() : 'lg-nolan'"],
-			[
-				'src/core/section/record/duplicate_record.ts',
-				'main.translatable ? currentDataLang() : NOLAN',
-			],
+			['src/core/section/record/duplicate_record.ts', 'mainIdentity(tipo, currentDataLang())'],
 			['tools/tool_posterframe/server/index.ts', 'translatable ? currentDataLang() : null'],
 		] as const) {
 			const src = readFileSync(join(import.meta.dir, '..', '..', file), 'utf8');

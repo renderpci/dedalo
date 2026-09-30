@@ -35,13 +35,14 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { config } from '../../src/config/config.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import {
 	mainIdentity,
 	resolveDataframeSlotTipos,
 } from '../../src/core/relations/dataframe_slots.ts';
-import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
+import { currentDataLang, runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { duplicateSectionRecord } from '../../src/core/section/record/duplicate_record.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
@@ -291,6 +292,18 @@ describe('(1) the SAVE lane equals the door identity mainIdentity(K, L)', () => 
 // ---------------------------------------------------------------- 2
 
 describe('(2) the DUPLICATE’s save row sits in the lanes its source’s save used', () => {
+	// This cell is ALSO the DATA-01 outcome twin (module_state_tripwire's
+	// positive pin on duplicate_record.ts is only a pointer): the duplicate runs
+	// under a request data lang that differs from every install-wide default, so
+	// a door that reads config.menu.dataLang / config.lang.dataLangDefault, or
+	// captures currentDataLang() at module level (outside a request scope it
+	// falls back to the default), files K1/K3/K4 in the wrong lane and reds the
+	// comparison below. Without this precondition the cell could not tell them
+	// apart on an install whose default happened to be ${ELL}.
+	test(`precondition: ${ELL} is none of the install-default data langs`, () => {
+		const defaults = [config.menu.dataLang, config.lang.dataLangDefault, currentDataLang()];
+		expect(defaults, 'cell (2) cannot discriminate DATA-01').not.toContain(ELL);
+	});
 	for (const [name, tipo] of ALL) {
 		test(`${name}, duplicated under data lang ${ELL}`, async () => {
 			const source = await rec();
