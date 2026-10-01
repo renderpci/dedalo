@@ -105,9 +105,10 @@ describe('seeded register.json corpus', () => {
 	test('every declared tool has a directory (a deleted tool is named, not miscounted)', () => {
 		const present = new Set(toolDirs);
 		const missing = [...SEEDED, ...TS_AUTHORED].filter((name) => !present.has(name));
-		expect(missing, 'declared tools with no directory under tools/ — remove the line with the tool:').toEqual(
-			[],
-		);
+		expect(
+			missing,
+			'declared tools with no directory under tools/ — remove the line with the tool:',
+		).toEqual([]);
 	});
 
 	for (const name of toolDirs) {
