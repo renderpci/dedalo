@@ -502,6 +502,19 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **The maintenance *Unit test area* only offers the JS test runner and the test-table reset where they can work.**
+
+    *Open JS unit test* is shown only on a development server (`DEDALO_DEV_MODE`) whose
+    dev dependencies are installed. A production install (the default Docker image, or
+    one kept current by the code updater) does not have the browser test libraries, so
+    the runner page used to open and fail with unreadable MIME-type errors; the panel now
+    says which libraries are missing instead. *Truncate test table and Create new empty
+    test record* is shown only on a development server, and the server refuses it
+    elsewhere (`maintenance.dev_mode_required`). *Run long process* stays available
+    everywhere.
+
+    Wire contract: `WC-2026-10-01-unit-test-widget-dev-gate`.
+
 - **The official update server for v7 installations is v7.master.dedalo.dev.**
 
     Code and ontology updates are now split by version. v7 installations update from `https://v7.master.dedalo.dev/dedalo/core/api/v1/json/` — the address the configuration examples for `CODE_SERVERS` and `ONTOLOGY_SERVERS` now show. v6 installations keep updating from their own server exactly as before; a v7 update server answers only v7 installations.
@@ -663,7 +676,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 59 entries"
+??? note "Wire contract — 60 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -724,6 +737,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-29-tm-preview-frame-children-as-of`
     - `WC-2026-09-30-password-hash-never-served`
     - `WC-2026-09-30-password-policy-enforced`
+    - `WC-2026-10-01-unit-test-widget-dev-gate`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

@@ -217,7 +217,7 @@ read-only panel: it reports state through `getValue` or an eager catalog value.
 | `publication_api` | diffusion | *(read-only panel)* |
 | `diffusion_server_control` | diffusion | `cancel_process`, `requeue_job`, `purge_jobs`, `set_scheduler`, `retry_pending_deletions` |
 | `dedalo_api_test_environment`, `sqo_test_environment` | dev | *(interactive consoles)* |
-| `unit_test` | dev | `create_test_record` |
+| `unit_test` | dev | `create_test_record` (development servers only: refused unless `DEDALO_DEV_MODE` is on), `long_process_stream` |
 
 The `system` category also carries a **runtime panel** reporting the running
 engine's version, pid, memory and uptime, and offering real cache and session

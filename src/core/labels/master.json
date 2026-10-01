@@ -226,6 +226,7 @@
 	"error_mailer_send_failed": "The message could not be sent",
 	"error_maintenance_action_failed": "The maintenance action failed",
 	"error_maintenance_action_refused": "The maintenance action was refused",
+	"error_maintenance_dev_mode_required": "This action is only available on a development server (DEDALO_DEV_MODE)",
 	"error_maintenance_invalid_fn_action": "Invalid widget action",
 	"error_maintenance_mode_required": "This action requires maintenance mode to be enabled",
 	"error_maintenance_store_missing": "A required search store does not exist; recreate the database assets first",

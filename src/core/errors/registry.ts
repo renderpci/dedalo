@@ -1823,6 +1823,15 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 	},
+	'maintenance.dev_mode_required': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_maintenance_dev_mode_required',
+		message: 'This action is only available on a development server (DEDALO_DEV_MODE)',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
 
 	// ── the restore door (audit 2026-08-26 S-7, src/core/area_maintenance/restore_door.ts) ──
 	// A DATA restore the engine owns, CLI-only with the engine stopped. Each
