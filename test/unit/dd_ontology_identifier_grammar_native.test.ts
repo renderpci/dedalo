@@ -49,7 +49,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { readdirSync, readFileSync, rmSync } from 'node:fs';
+import { readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { extractArchive } from '../../src/core/archive/extract.ts';
@@ -68,9 +68,9 @@ import { ensureSituation, situation } from '../../src/core/test_data/situations/
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import { DB_READY } from '../helpers/db_ready.ts';
 import { resetMediaRoot } from '../helpers/media_scratch_root.ts';
+import { MIGRATIONS_DIR, migrationFileNames } from '../helpers/migrations_corpus.ts';
 
 const TLD = 'zzgram';
-const MIGRATIONS_DIR = join(import.meta.dir, '../../install/db/migrations');
 const MIGRATION_SUFFIX = '_dd_ontology_identifier_grammar.sql';
 const SCRATCH = join(tmpdir(), `dedalo_surf1_grammar_${process.pid}`);
 
@@ -107,9 +107,15 @@ function surfExport<T>(name: string): T {
 const violationsOf = (row: Partial<DdOntologyNode>): Violation[] =>
 	surfExport<(row: Partial<DdOntologyNode>) => Violation[]>('ddOntologyIdentifierViolations')(row);
 
-/** The migration text, located by its stable suffix (the integrator assigns the number). */
+/**
+ * The grammar migration(s), located by stable suffix (the integrator assigns the
+ * number) in the boot migrations corpus — the one lister that owns the root.
+ */
+const GRAMMAR_MIGRATIONS = migrationFileNames().filter((name) => name.endsWith(MIGRATION_SUFFIX));
+
+/** The migration text. Exactly one file may carry the suffix (the floor test pins it). */
 function grammarMigrationText(): string {
-	const file = readdirSync(MIGRATIONS_DIR).find((name) => name.endsWith(MIGRATION_SUFFIX));
+	const [file] = GRAMMAR_MIGRATIONS;
 	if (file === undefined) {
 		throw new Error(
 			`SURF-1 not landed: no install/db/migrations/*${MIGRATION_SUFFIX} — dd_ontology has no identifier CHECK`,
@@ -420,6 +426,13 @@ function tsVerdict(column: LawColumn, cell: Cell): string {
 		return `threw: ${(error as Error).message}`;
 	}
 }
+
+describe('SURF-1 — the grammar migration is found through the boot migrations corpus', () => {
+	test('the corpus names exactly one identifier-grammar migration', () => {
+		expect(GRAMMAR_MIGRATIONS.length).toBeGreaterThan(0);
+		expect(GRAMMAR_MIGRATIONS).toHaveLength(1);
+	});
+});
 
 describe.if(DB_READY)('SURF-1 write — dd_ontology identifier grammar (G3)', () => {
 	beforeAll(() => rmSync(SCRATCH, { recursive: true, force: true }));

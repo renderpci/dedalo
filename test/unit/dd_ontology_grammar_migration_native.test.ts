@@ -52,7 +52,7 @@
  */
 
 import { describe, expect, spyOn, test } from 'bun:test';
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import * as ddOntology from '../../src/core/db/dd_ontology.ts';
 import { sql, sqlStateOf, withTransaction } from '../../src/core/db/postgres.ts';
@@ -61,10 +61,10 @@ import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invali
 import type { ReconcileDefinition } from '../../src/core/reconcile/registry.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import { DB_READY } from '../helpers/db_ready.ts';
+import { MIGRATIONS_DIR, migrationFileNames } from '../helpers/migrations_corpus.ts';
 
 const TLD = 'zzgmig';
 const SOURCE_SECTION = `${TLD}0`;
-const MIGRATIONS_DIR = join(import.meta.dir, '../../install/db/migrations');
 const MIGRATION_SUFFIX = '_dd_ontology_identifier_grammar.sql';
 const GRAMMAR_CONSTRAINTS = [
 	'dd_ontology_alias_of_grammar',
@@ -89,8 +89,15 @@ const VIOLATING_ROW_SQL = `
 	    AND (jsonb_typeof(properties->'alias_of') <> 'string' OR properties->>'alias_of' !~ '^[a-z]+[0-9]+$'
 	         OR char_length(properties->>'alias_of') > 32))`;
 
+/**
+ * The grammar migration(s), located by stable suffix (the integrator assigns the
+ * number) in the boot migrations corpus — the one lister that owns the root.
+ */
+const GRAMMAR_MIGRATIONS = migrationFileNames().filter((name) => name.endsWith(MIGRATION_SUFFIX));
+
+/** The migration text. Exactly one file may carry the suffix (the floor test pins it). */
 function grammarMigrationText(): string {
-	const file = readdirSync(MIGRATIONS_DIR).find((name) => name.endsWith(MIGRATION_SUFFIX));
+	const [file] = GRAMMAR_MIGRATIONS;
 	if (file === undefined) {
 		throw new Error(
 			`SURF-1 not landed: no install/db/migrations/*${MIGRATION_SUFFIX} — dd_ontology has no identifier CHECK`,
@@ -270,6 +277,13 @@ const grammarStates = (states: Record<string, string>) =>
 	Object.fromEntries(GRAMMAR_CONSTRAINTS.map((name) => [name, states[name] ?? 'absent']));
 const allAre = (state: string) =>
 	Object.fromEntries(GRAMMAR_CONSTRAINTS.map((name) => [name, state]));
+
+describe('SURF-1 — the grammar migration is found through the boot migrations corpus', () => {
+	test('the corpus names exactly one identifier-grammar migration', () => {
+		expect(GRAMMAR_MIGRATIONS.length).toBeGreaterThan(0);
+		expect(GRAMMAR_MIGRATIONS).toHaveLength(1);
+	});
+});
 
 describe.if(DB_READY)('SURF-1 write — the identifier CHECK migration + repair (G4)', () => {
 	test('the migrated suite database carries the six CHECKs and refuses a raw violating INSERT', async () => {
