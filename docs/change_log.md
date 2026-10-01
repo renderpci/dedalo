@@ -899,6 +899,10 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-10-01-ontology-overwrite-scoped`.
 
+- **The Publication server API maintenance panel shows its "Open Swagger UI" buttons again.**
+
+    The panel (Maintenance → Publication → Publication server API) never showed the buttons that open the interactive documentation of the publication server API v1, because `API_WEB_USER_CODE_MULTIPLE` was not read. It is a configuration key again: list each publication database and its API code, e.g. `API_WEB_USER_CODE_MULTIPLE=[{"db_name":"web_my_entity","code":"my_api_code"}]`, optionally with `api_ui` when the API runs on another server — see [the configuration reference](./config/config.md). A v6 configuration migrated with the config migrator now carries the value across.
+
 - **Creating a site twice at the same moment can no longer overwrite or delete the first site.**
 
     When two requests created a site with the same name at nearly the same time, the second one could pass its checks while the first was still being set up. It then wrote its own settings over the finished site, and if anything later failed, it deleted the whole site folder, including the first site's work. The site folder is now claimed by exactly one request: the second request is refused with "a site with this name already exists", and the first site is left untouched.

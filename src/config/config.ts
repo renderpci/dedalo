@@ -45,6 +45,7 @@ import {
 	readNumber,
 	readOptionalList,
 	readOptionalString,
+	readPublicationApiUsers,
 	readServerList,
 	readString,
 	readToolRoots,
@@ -727,6 +728,12 @@ export interface DiffusionConfig {
 	readonly langsMalformed: readonly string[];
 	/** Element tipos the native engine may publish. [] = permissive; ['all'] = every one. */
 	readonly nativeElements: readonly string[];
+	/** Publication server API v1 users (API_WEB_USER_CODE_MULTIPLE): the docu launchers. */
+	readonly publicationApiUsers: readonly {
+		readonly db_name: string;
+		readonly code: string;
+		readonly api_ui: string | null;
+	}[];
 }
 
 export interface DedaloConfig {
@@ -1239,6 +1246,7 @@ export const config: DedaloConfig = Object.freeze({
 		// [] is PERMISSIVE (every element publishes) — the staged-migration lever is
 		// opt-in; ['all'] is the explicit "every element" spelling of the same thing.
 		nativeElements: readList('DEDALO_DIFFUSION_NATIVE_ELEMENTS'),
+		publicationApiUsers: readPublicationApiUsers('API_WEB_USER_CODE_MULTIPLE'),
 	}),
 	geoip: Object.freeze({
 		enabled: readBool('DEDALO_GEOIP_ENABLED'),

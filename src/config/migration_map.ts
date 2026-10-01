@@ -41,7 +41,7 @@ export interface MigrationRule {
 }
 
 // ---------------------------------------------------------------------------
-// SAME — the v6 constant name IS the v7 env key (85).
+// SAME — the v6 constant name IS the v7 env key (92).
 // ---------------------------------------------------------------------------
 
 const SAME_KEYS: readonly string[] = [
@@ -165,6 +165,10 @@ const SAME_KEYS: readonly string[] = [
 	// migration-day snapshot. A genuinely different set (or order) is migrated.
 	'DEDALO_DIFFUSION_LANGS',
 	'DEDALO_DIFFUSION_RESOLVE_LEVELS',
+	// The publication server API v1 (PHP, `publication/server_api/v1`) still ships
+	// for existing websites; the maintenance panel needs its db_name/code pairs to
+	// open the v1 Swagger docu.
+	'API_WEB_USER_CODE_MULTIPLE',
 ];
 
 // ---------------------------------------------------------------------------
@@ -296,7 +300,6 @@ const DROPPED: Readonly<Record<string, MigrationRule>> = {
 			'DEDALO_ADITIONAL_CSS',
 			'DEDALO_MCP_PROXY_URL',
 			'DEDALO_API_URL_UNIT_TEST',
-			'API_WEB_USER_CODE_MULTIPLE',
 			'GEONAMES_ACCOUNT_USERNAME',
 			'DEDALO_RECOVERY_KEY',
 			'DEDALO_BACKUP_ON_LOGIN',

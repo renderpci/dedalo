@@ -846,6 +846,11 @@
 			"skipped": 0,
 			"assertions": 83
 		},
+		"test/unit/config_publication_api_users.test.ts": {
+			"tests": 6,
+			"skipped": 0,
+			"assertions": 18
+		},
 		"test/unit/conform_locator_existence_native.test.ts": {
 			"tests": 5,
 			"skipped": 0,
