@@ -37,6 +37,9 @@ describe('readPublicationApiUsers', () => {
 				{ db_name: 'web_c', code: 'c3', api_ui: '/dedalo/publication/server_api/v1/docu/ui/' },
 			]),
 		);
+		// The floor: the reader yields entries at all — so the toEqual([]) verdicts
+		// below are refusals, not a reader that returns nothing (gate_vacuity).
+		expect(users).toHaveLength(3);
 		expect(users).toEqual([
 			{ db_name: 'web_a', code: 'c1', api_ui: null },
 			{ db_name: 'web_b', code: 'c2', api_ui: 'https://example.org/docu/ui/' },
