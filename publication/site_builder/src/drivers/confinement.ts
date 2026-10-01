@@ -579,10 +579,12 @@ export async function assertConfinementAvailable(
   slug?: string,
 ): Promise<void> {
   if (policy.mode === 'none') return;
-  // The host first (can it confine at all?), then this site (can IT run?).
+  // The host first (can it confine at all?), then this site (can IT run?) — its identity, and
+  // what PID 1 loaded for its door (a drop-in, a stale unit): refused here, before anything is
+  // reserved, as the run would refuse it when it opens.
   const problems = await confinementProblems(policy, door, driver);
   if (problems.length > 0) throw new ConfinementUnavailableError(problems.join(' '));
-  if (slug !== undefined) admissibleOrdinal(policy, slug, door);
+  if (slug !== undefined) await conformance(admissibleOrdinal(policy, slug, door), door, policy);
 }
 
 /**
@@ -881,6 +883,18 @@ export async function confinementProblems(policy: ConfinementPolicy, door: Confi
       if (problem) problems.push(problem);
     }
   }
+  // THE TURN'S SYSTEM gitconfig — a host fact (one root-rendered file for every site's turn): not
+  // as root rendered it, every turn is refused when it opens, so it is asked here too — at
+  // admission and at boot — never first met by a run.
+  if (door === 'turn' && isAbsolute(policy.agentStateRoot ?? '')) {
+    const gitconfig = turnGitconfigProblem(policy);
+    if (gitconfig) {
+      problems.push(
+        `the turn units' system git configuration ${gitconfig}. The turn unit binds it over /etc/gitconfig so the ` +
+          `agent CLI's git never takes the workspace root for a bare repository. Run provision apply.`,
+      );
+    }
+  }
   // THE STOP GRANT, PROVED: without it no run can be interrupted or timed out (a run whose
   // shim ignores EOF holds its site quarantined until RuntimeMaxSec), and the boot reconcile
   // cannot clean a crash's leftover — so it is asked before any run starts, never discovered at
@@ -919,6 +933,20 @@ export async function bootConfinementProblems(policy: ConfinementPolicy = policy
   const out: string[] = [];
   for (const door of DOORS) {
     for (const problem of await confinementProblems(policy, door)) if (!out.includes(problem)) out.push(problem);
+  }
+  // …and what PID 1 loaded for every declared site's every door: a drop-in or a stale unit
+  // refuses that site's door at every run, so it is a boot line, not a green /health.
+  if (out.length === 0) {
+    for (const [slug, k] of [...identitiesOf(policy).entries()].sort((a, b) => a[1] - b[1])) {
+      for (const door of DOORS) {
+        try {
+          const { warnings } = await conformance(k, door, policy);
+          for (const warning of warnings) console.warn(`[confinement] ${warning}`);
+        } catch (error) {
+          out.push(`site '${slug}' (s${k}) ${door}: ${(error as Error).message}`);
+        }
+      }
+    }
   }
   return out;
 }
@@ -2057,6 +2085,28 @@ export function workspaceDirProblem(workspace: string, sitesRoot: string = confi
   return real === expected ? null : `it resolves to '${real}', not '${expected}'`;
 }
 
+/**
+ * Why a TURN-masked path (`turnMaskedPaths`: `<workspace>/.git`) is not the real directory the
+ * unit masks, or null. The second path inside the workspace PID 1 resolves as root
+ * (`InaccessiblePaths=` chases a link like `ReadWritePaths=` does), and the BUILD door — the same
+ * site identity, the workspace read-write — can rename a link into its place. lstat'd, never
+ * followed: absent, a link (to anything, or nothing) and a non-directory are all refused. The
+ * workspace above it was proved real (`workspaceDirProblem`), so a real directory here is
+ * `<real workspace>/.git`.
+ */
+export function turnMaskedPathProblem(path: string): string | null {
+  let facts: Stats | null;
+  try {
+    facts = lstatOrNull(path);
+  } catch (error) {
+    return `cannot be examined (${String(error)})`;
+  }
+  if (facts === null) return 'is absent: the workspace has no repository';
+  if (facts.isSymbolicLink()) return 'is a symbolic link';
+  if (!facts.isDirectory()) return 'is not a directory';
+  return null;
+}
+
 /** Read frames off `socket` until one arrives (or it ends / times out). */
 function firstFrame(socket: Socket, decoder: FrameDecoder, timeoutMs: number): Promise<{ type: string; payload: Uint8Array; rest: Array<{ type: string; payload: Uint8Array }> } | null> {
   return new Promise(resolveFrame => {
@@ -2161,8 +2211,9 @@ async function openConfinedRun(opts: ConfineOptions, policy: ConfinementPolicy):
     // 3. CHECKED against what PID 1 loaded.
     const { warnings } = await conformance(k, door, policy);
     for (const warning of warnings) console.warn(`[confinement] ${warning}`);
-    // …and the ONE bind source the daemon's uid could still swap: `ReadWritePaths=` names the
+    // …and the bind source the daemon's uid could still swap: `ReadWritePaths=` names the
     // workspace, and PID 1 follows a symlink there AS ROOT when it builds the unit's namespace.
+    // (A TURN has a second such path, inside the workspace: its masked `.git` — below.)
     const swapped = workspaceDirProblem(workspace);
     if (swapped) {
       throw new ConfinementUnavailableError(
@@ -2176,11 +2227,14 @@ async function openConfinedRun(opts: ConfineOptions, policy: ConfinementPolicy):
     // that its own CLI's next git reads. Refused here first, typed, before anything connects.
     if (door === 'turn') {
       for (const path of turnMaskedPaths(workspace)) {
-        if (!existsSync(path)) {
+        const problem = turnMaskedPathProblem(path);
+        if (problem) {
           throw new ConfinementUnavailableError(
-            `site '${slug}''s workspace has no repository at '${path}' (absent, or a link to nothing). The turn unit ` +
-              `masks it so the agent CLI's own git cannot run a planted filter, and does not start without it. ` +
-              `Restore the site's repository (it is created with the site). Nothing was opened.`,
+            `site '${slug}''s workspace repository '${path}' ${problem}. The turn unit masks it (InaccessiblePaths=) so ` +
+              `the agent CLI's own git cannot run a planted filter, and does not start without it — and PID 1 resolves ` +
+              `that path AS ROOT, so a link there (a build runs as the site identity, the workspace read-write) would ` +
+              `mask whatever host path it names inside the turn (root's managed CLI policy among them). Restore the ` +
+              `site's repository as a real directory (it is created with the site). Nothing was opened.`,
           );
         }
       }

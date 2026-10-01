@@ -445,8 +445,14 @@ export async function sweepOnBoot(): Promise<void> {
       if (recorded) delete meta.recovery_pending;
       else meta.recovery_pending = true;
       if (wasRunning) meta.state = 'interrupted';
-      await writeMeta(meta);
-      if (wasRunning) await persist(slug, sessionId, { type: 'turn_end', state: 'interrupted' });
+      try {
+        await writeMeta(meta);
+        if (wasRunning) await persist(slug, sessionId, { type: 'turn_end', state: 'interrupted' });
+      } catch (error) {
+        // The same ONE-site incident as a refused read (a `.builder` swapped mid-sweep): said,
+        // and the sweep of every other site goes on.
+        console.error(`[sessions] boot sweep: the meta of session ${sessionId} of '${slug}' could not be written:`, error);
+      }
     }
   }
 }

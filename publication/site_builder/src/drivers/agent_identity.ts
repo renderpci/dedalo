@@ -273,7 +273,13 @@ export function egressDirForSite(agentSocketDir: string, k: number): string {
  * by a git run from there (every measured CLI call runs in, or `-C`, the workspace root); a
  * `HEAD` the turn's own Write creates mid-turn is refused by the daemon's check only at the NEXT
  * turn — within the turn, only the configuration of layer 2 stands (git >= 2.38 reading
- * `/etc/gitconfig`). The live probe (`deploy/probes/claude_plant_probe.ts` C5/P5, P5b for the
+ * `/etc/gitconfig`). And layer 2 is the SYSTEM file only: git's GLOBAL configuration is protected
+ * too and read after it, and for a turn it lives in the turn's own persistent, identity-writable
+ * HOME (`~/.gitconfig`, `~/.config/git/config`). A turn whose Write reaches HOME (unmeasured on
+ * 2.1.286: acceptEdits answers edits under the workspace) could say `safe.bareRepository = all`
+ * there, and in the same turn the planted root would be used by a later git of that turn — open,
+ * not closed here (binding root's file over those paths needs PID 1 to create mount points
+ * inside an agent-writable directory, which is its own root-resolved path). The live probe (`deploy/probes/claude_plant_probe.ts` C5/P5, P5b for the
  * bare root) re-measures the CLI's git per release, and under `AGENT_CONFINEMENT=none` (declared
  * unconfined, the daemon's own uid) nothing is masked at all.
  */

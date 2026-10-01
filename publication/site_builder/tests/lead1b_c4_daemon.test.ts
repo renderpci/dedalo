@@ -481,6 +481,33 @@ describe('an owed recovery commit stays owed until one is recorded', () => {
     expect({ state: meta.state, pending: meta.recovery_pending }).toEqual({ state: 'interrupted', pending: true });
   }, 30_000);
 
+  test('ONE site’s planted `.builder` (a link a build left) is that site’s incident: every OTHER site is still swept, recovered and resolvable', async () => {
+    const { renameSync, symlinkSync } = await import('node:fs');
+    const { allSessionMetaFiles } = await import('../src/sessions/store');
+    const { slugForSession } = await import('../src/sessions/manager');
+    await makeSite('swept-alpha');
+    await makeSite('planted-beta');
+    const sessionId = await runningSession('swept-alpha');
+    // A build's postinstall in beta: a same-parent rename needs no permission on `.builder` itself.
+    const beta = workspacePath('planted-beta');
+    renameSync(join(beta, '.builder'), join(beta, '.builder-moved'));
+    symlinkSync(shortScratch('elsewhere'), join(beta, '.builder'));
+    await sweepOnBoot();
+    const meta = (await readMeta('swept-alpha', sessionId)) as unknown as Record<string, unknown>;
+    expect({ state: meta.state, pending: 'recovery_pending' in meta, subject: await lastSubject('swept-alpha') }).toEqual({
+      state: 'interrupted',
+      pending: false,
+      subject: `agent: recovered after restart (session ${sessionId})`,
+    });
+    // …and after the boot: a session the index has never seen still resolves from disk.
+    const later = crypto.randomUUID();
+    await writeMeta({ session_id: later, slug: 'swept-alpha', driver: 'claude_code', started_at: new Date().toISOString(), turns: 0, state: 'idle', resume_token: null });
+    expect({
+      listed: (await allSessionMetaFiles()).filter(entry => entry.slug === 'swept-alpha').map(entry => entry.sessionId).sort(),
+      resolved: await slugForSession(later),
+    }).toEqual({ listed: [sessionId, later].sort(), resolved: 'swept-alpha' });
+  }, 30_000);
+
   test('runTurn: a commit refused for ANY reason (not only daemon_stopping) is owed, and the next boot records the work', async () => {
     await makeSite('owed-turn');
     let finish: () => void = () => {};

@@ -228,7 +228,17 @@ export async function listSessions(slug: string): Promise<SessionSummary[]> {
   return summaries.sort((a, b) => b.started_at.localeCompare(a.started_at));
 }
 
-/** Lists all session ids across all sites (boot sweep needs this). */
+/**
+ * Lists all session ids across all sites (boot sweep needs this, and so does resolving a
+ * pre-restart session's site).
+ *
+ * ONE SITE'S INCIDENT STAYS ONE SITE'S. A site's `.builder` is in its workspace, which its own
+ * runs write: a build's postinstall or a git hook can rename it away and leave a link or a fifo
+ * in its place (a same-parent rename needs no permission on the directory itself). The chain
+ * walk refuses it — and that refusal skips THAT site, loudly, never the listing: a throw here
+ * would cancel the boot sweep of every other site (no 'running' marked interrupted, no owed
+ * recovery commit made) and answer every other site's pre-restart session 500.
+ */
 export async function allSessionMetaFiles(): Promise<Array<{ slug: string; sessionId: string }>> {
   const out: Array<{ slug: string; sessionId: string }> = [];
   if (!existsSync(config.SITES_ROOT)) return out;
@@ -236,7 +246,13 @@ export async function allSessionMetaFiles(): Promise<Array<{ slug: string; sessi
     .filter(e => e.isDirectory() && !e.name.startsWith('.'))
     .map(e => e.name);
   for (const slug of slugs) {
-    const names = await readdirShared(config.SITES_ROOT, underSitesRoot(sessionsDir(slug)));
+    let names: string[] | null;
+    try {
+      names = await readdirShared(config.SITES_ROOT, underSitesRoot(sessionsDir(slug)));
+    } catch (error) {
+      console.error(`[sessions] the sessions of '${slug}' were not listed — its session directory was refused:`, error);
+      continue;
+    }
     if (names === null) continue;
     for (const file of names) {
       if (file.endsWith('.meta.json')) {

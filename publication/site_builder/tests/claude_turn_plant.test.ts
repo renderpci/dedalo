@@ -759,6 +759,52 @@ describe('P12 — the turn’s own git sees no repository (a planted filter neve
       end(slug, 'turn');
     }
   });
+  test('a turn whose `.git` is a LINK (to a real host path) or not a directory is refused, typed, before anything connects — PID 1 resolves the mask as root', async () => {
+    const slug = 'site-gitlink';
+    const host = await lead1bPolicy({ identities: new Map([[slug, 1]]) });
+    hosts.push(host);
+    const ws = workspacePath(slug);
+    rmSync(ws, { recursive: true, force: true });
+    mkdirSync(ws, { recursive: true });
+    scratch.push(ws);
+    const { runConfined } = await import('../src/drivers/confinement');
+    // A build (the site identity, the workspace read-write) swaps `.git` for a link to a path the
+    // turn's CLI relies on (root's managed policy) — PID 1 would mask THAT inside the turn.
+    const target = scratchDir('host-path-');
+    for (const [label, plant] of [
+      ['a link to an existing directory', () => symlinkSync(target, join(ws, '.git'))],
+      ['a link to an existing file', () => { writeFileSync(join(target, 'managed-settings.json'), '{}\n'); symlinkSync(join(target, 'managed-settings.json'), join(ws, '.git')); }],
+      ['a regular file', () => writeFileSync(join(ws, '.git'), 'gitdir: /elsewhere\n')],
+    ] as const) {
+      plant();
+      const before = host.standIn.connects.length;
+      expect(tryBegin(slug, 'turn')).toBe(true);
+      let refused: unknown = null;
+      try {
+        await runConfined({ door: 'turn', slug, argv: ['true'], cwd: ws, env: { PATH: '/usr/bin:/bin' }, timeoutMs: 5_000 }, host.policy);
+      } catch (error) {
+        refused = error;
+      } finally {
+        end(slug, 'turn');
+      }
+      expect({
+        label,
+        typed: (refused as Error | null)?.name,
+        named: String((refused as Error | null)?.message ?? '').includes(join(ws, '.git')),
+        connects: host.standIn.connects.length - before,
+      }).toEqual({ label, typed: 'ConfinementUnavailableError', named: true, connects: 0 });
+      rmSync(join(ws, '.git'), { recursive: true, force: true });
+    }
+    // Control: a real directory connects.
+    mkdirSync(join(ws, '.git'));
+    expect(tryBegin(slug, 'turn')).toBe(true);
+    try {
+      const ok = await runConfined({ door: 'turn', slug, argv: ['true'], cwd: ws, env: { PATH: '/usr/bin:/bin' }, timeoutMs: 5_000 }, host.policy);
+      expect(ok.exitCode).toBe(0);
+    } finally {
+      end(slug, 'turn');
+    }
+  });
 });
 
 /* ────────────────────────────────────────────────────────────────────────────────────
@@ -965,10 +1011,17 @@ describe('P12b — with .git masked, the workspace ROOT is no repository either'
     const { turnSystemGitconfigPath } = await import('../src/drivers/agent_identity');
     const file = turnSystemGitconfigPath(host.agentStateRoot);
     const good = readFileSync(file, 'utf8');
+    // The owner is a HOST fact (this uid stands in for root): a file owned by anyone else — the
+    // daemon's uid, which could rewrite it (`safe.directory = *`) before PID 1 binds it — is
+    // planted by stating another provisioner.
+    const hostFacts = host.policy.host as { provisionerUid: number };
+    const provisioner = hostFacts.provisionerUid;
     for (const [label, plant] of [
       ['absent', () => rmSync(file)],
       ['a link', () => { const real = `${file}.real`; writeFileSync(real, good); rmSync(file); symlinkSync(real, file); }],
+      ['foreign-owned (not the provisioner’s)', () => { hostFacts.provisionerUid = provisioner + 1; }],
       ['group-writable', () => chmodSync(file, 0o664)],
+      ['others-writable', () => chmodSync(file, 0o646)],
       ['a safe.directory added', () => writeFileSync(file, `${good}[safe]\n\tdirectory = *\n`)],
       ['the directive dropped', () => writeFileSync(file, '# nothing\n')],
     ] as const) {
@@ -980,6 +1033,7 @@ describe('P12b — with .git masked, the workspace ROOT is no repository either'
         named: true,
         connects: 0,
       });
+      hostFacts.provisionerUid = provisioner;
       rmSync(file, { force: true });
       rmSync(`${file}.real`, { force: true });
       writeFileSync(file, good, { mode: 0o644 });
@@ -987,5 +1041,50 @@ describe('P12b — with .git masked, the workspace ROOT is no repository either'
     }
     const ok = await turnOutcome(slug, host, ws);
     expect({ typed: ok.typed, connects: ok.connects }).toEqual({ typed: undefined, connects: 1 });
+  });
+
+  test('a host-level refusal of EVERY turn — the gitconfig not as root rendered it, a drop-in on the turn template — is SAID at boot and refused at admission, not first met when a run opens', async () => {
+    const { assertConfinementAvailable, bootConfinementProblems } = await import('../src/drivers/confinement');
+    const { conformingShow, plantShow } = await import('./support/lead1b_host');
+    const { turnSystemGitconfigPath } = await import('../src/drivers/agent_identity');
+    const slug = 'site-admit';
+    const host = await lead1bPolicy({ identities: new Map([[slug, 1]]) });
+    hosts.push(host);
+    const ws = workspacePath(slug);
+    const file = turnSystemGitconfigPath(host.agentStateRoot);
+    const good = readFileSync(file, 'utf8');
+    const admit = async (): Promise<Error | null> => {
+      try {
+        await assertConfinementAvailable('turn', host.policy, 'claude_code', slug);
+        return null;
+      } catch (error) {
+        return error as Error;
+      }
+    };
+    const said = async (needle: string) => ({
+      boot: (await bootConfinementProblems(host.policy)).some(problem => problem.includes(needle)),
+      admission: await (async () => {
+        const refused = await admit();
+        return { typed: refused?.name ?? null, named: String(refused?.message ?? '').includes(needle) };
+      })(),
+    });
+    // Control: a conforming host says nothing and admits.
+    expect(await bootConfinementProblems(host.policy)).toEqual([]);
+    expect(await admit()).toBeNull();
+    // The turn's system gitconfig, absent (a restored /var/lib, a hand-cleaned state root).
+    rmSync(file);
+    expect(await said(file)).toEqual({ boot: true, admission: { typed: 'ConfinementUnavailableError', named: true } });
+    writeFileSync(file, good, { mode: 0o644 });
+    chmodSync(file, 0o644);
+    // A drop-in on the turn template (what PID 1 loaded drops the repository mask).
+    const turn = conformingShow(host, ws, 1, 'turn', 255);
+    plantShow(host, 1, 'turn', { ...turn, service: turn.service.replace(` ${ws}/.git`, '') });
+    const dropIn = await said('InaccessiblePaths');
+    expect({ boot: dropIn.boot, admission: dropIn.admission.named, typed: dropIn.admission.typed }).toEqual({
+      boot: true,
+      admission: true,
+      typed: 'ConfinementRefusedError',
+    });
+    expect(host.standIn.connects.length).toBe(0);
   });
 });
