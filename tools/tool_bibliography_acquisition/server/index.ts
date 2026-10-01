@@ -6,6 +6,7 @@
  */
 
 import { NO_LANG } from '../../../src/config/data_langs.ts';
+import { sanitizeClientSqo } from '../../../src/core/concepts/sqo.ts';
 import { sql, withTransaction } from '../../../src/core/db/postgres.ts';
 import { DedaloError } from '../../../src/core/errors/dedalo_error.ts';
 import { ok } from '../../../src/core/errors/index.ts';
@@ -21,8 +22,8 @@ import {
 	nameKeysForQuality,
 	persistUploadedMedia,
 } from '../../../src/core/media/tools/files_info_persist.ts';
-import { getMatrixTableFromTipo } from '../../../src/core/ontology/resolver.ts';
 import { currentDataLang } from '../../../src/core/resolve/request_lang.ts';
+import { buildSearchSql } from '../../../src/core/search/sql_assembler.ts';
 import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
 import { saveComponentData } from '../../../src/core/section/record/save_component.ts';
 import {
@@ -135,7 +136,8 @@ async function previewUrl(context: ToolActionContext): Promise<ToolResponse> {
 	const publications = acquisition.pages.flatMap((page) => adapter.parsePublications(page, url));
 
 	const seriesName = series.name?.trim() ?? '';
-	const existingSeriesSectionId = seriesName !== '' ? await findExistingSeries(seriesName) : null;
+	const existingSeriesSectionId =
+		seriesName !== '' ? await findExistingSeries(seriesName, context) : null;
 
 	return ok(
 		{
@@ -183,7 +185,8 @@ async function previewHtml(context: ToolActionContext): Promise<ToolResponse> {
 	const publications = adapter.parsePublications(page, url);
 
 	const seriesName = series.name?.trim() ?? '';
-	const existingSeriesSectionId = seriesName !== '' ? await findExistingSeries(seriesName) : null;
+	const existingSeriesSectionId =
+		seriesName !== '' ? await findExistingSeries(seriesName, context) : null;
 
 	return ok(
 		{
@@ -287,40 +290,58 @@ async function writeDateField(
 	}
 }
 
-/** Exact Code match - lets a re-import reuse the existing rsc205 record instead of duplicating it. */
-async function findExistingPublication(identifier: string): Promise<number | null> {
-	const table = await getMatrixTableFromTipo(PUBLICATION_TIPO);
-	if (table === null) {
-		throw new DedaloError('tool.action_failed', {
-			message: `No matrix table for section '${PUBLICATION_TIPO}'.`,
-		});
-	}
-	const existing = (await sql.unsafe(
-		`SELECT section_id FROM "${table}"
-		 WHERE section_tipo = $1
-		   AND string->'${CODE_TIPO}'->0->>'value' = $2
-		 LIMIT 1`,
-		[PUBLICATION_TIPO, identifier],
-	)) as { section_id: number }[];
-	return existing[0]?.section_id ?? null;
+/** Exact Code match - lets a re-import reuse the existing rsc205 record instead of duplicating it.
+ * An SQO run WITH the caller's principal (buildSearchSql), not a hand-written SQL WHERE: the raw
+ * SQL bypassed the projects filter, so a non-admin could get back the section_id of a publication
+ * outside their projects, or see "skipped: true" for a record they cannot actually open (review
+ * item B3). */
+async function findExistingPublication(
+	identifier: string,
+	context: ToolActionContext,
+): Promise<number | null> {
+	const sqo = sanitizeClientSqo({
+		section_tipo: [PUBLICATION_TIPO],
+		limit: 1,
+		filter: {
+			$and: [
+				{
+					q: `==${identifier}`,
+					path: [{ section_tipo: PUBLICATION_TIPO, component_tipo: CODE_TIPO }],
+				},
+			],
+		},
+	});
+	const built = await buildSearchSql(sqo, { principal: context.principal });
+	const rows = (await sql.unsafe(built.sql, built.params as (string | number | null)[])) as {
+		section_id: number;
+	}[];
+	return rows[0]?.section_id ?? null;
 }
 
-/** Exact name match - used by previewUrl (check only) and findOrCreateSeries. */
-async function findExistingSeries(name: string): Promise<number | null> {
-	const table = await getMatrixTableFromTipo(SERIES_SECTION_TIPO);
-	if (table === null) {
-		throw new DedaloError('tool.action_failed', {
-			message: `No matrix table for section '${SERIES_SECTION_TIPO}'.`,
-		});
-	}
-	const existing = (await sql.unsafe(
-		`SELECT section_id FROM "${table}"
-		 WHERE section_tipo = $1
-		   AND string->'${SERIES_NAME_TIPO}'->0->>'value' = $2
-		 LIMIT 1`,
-		[SERIES_SECTION_TIPO, name],
-	)) as { section_id: number }[];
-	return existing[0]?.section_id ?? null;
+/** Exact name match - used by previewUrl (check only) and findOrCreateSeries. An SQO run WITH the
+ * caller's principal, not a hand-written SQL WHERE (review item B3, same reasoning as
+ * findExistingPublication above). */
+async function findExistingSeries(
+	name: string,
+	context: ToolActionContext,
+): Promise<number | null> {
+	const sqo = sanitizeClientSqo({
+		section_tipo: [SERIES_SECTION_TIPO],
+		limit: 1,
+		filter: {
+			$and: [
+				{
+					q: `==${name}`,
+					path: [{ section_tipo: SERIES_SECTION_TIPO, component_tipo: SERIES_NAME_TIPO }],
+				},
+			],
+		},
+	});
+	const built = await buildSearchSql(sqo, { principal: context.principal });
+	const rows = (await sql.unsafe(built.sql, built.params as (string | number | null)[])) as {
+		section_id: number;
+	}[];
+	return rows[0]?.section_id ?? null;
 }
 
 /** A transaction-scoped advisory lock on an arbitrary dedup key - same primitive as
@@ -340,12 +361,12 @@ async function findOrCreateSeries(
 	context: ToolActionContext,
 	name: string,
 ): Promise<{ sectionId: number; created: boolean }> {
-	const found = await findExistingSeries(name);
+	const found = await findExistingSeries(name, context);
 	if (found !== null) return { sectionId: found, created: false };
 
 	return withTransaction(async () => {
 		await acquireDedupLock(`rsc212:name:${name.trim().toLowerCase()}`);
-		const existing = await findExistingSeries(name);
+		const existing = await findExistingSeries(name, context);
 		if (existing !== null) return { sectionId: existing, created: false };
 		const sectionId = await createSectionRecord(SERIES_SECTION_TIPO, context.userId);
 		await writeField(sectionId, SERIES_SECTION_TIPO, SERIES_NAME_TIPO, name, context.userId);
@@ -425,26 +446,36 @@ async function linkFixedTerm(
 	}
 }
 
-/** Exact (Surname, Given name) match - used by findOrCreatePerson. */
+/** Exact (Surname, Given name) match - used by findOrCreatePerson. An SQO run WITH the caller's
+ * principal, not a hand-written SQL WHERE (review item B3, same reasoning as
+ * findExistingPublication above). A null givenName matches an EMPTY given name ('!*'), the SQO
+ * equivalent of the original SQL's `IS NOT DISTINCT FROM NULL`. */
 async function findExistingPerson(
 	surname: string,
 	givenName: string | null,
+	context: ToolActionContext,
 ): Promise<number | null> {
-	const table = await getMatrixTableFromTipo(PEOPLE_SECTION_TIPO);
-	if (table === null) {
-		throw new DedaloError('tool.action_failed', {
-			message: `No matrix table for section '${PEOPLE_SECTION_TIPO}'.`,
-		});
-	}
-	const existing = (await sql.unsafe(
-		`SELECT section_id FROM "${table}"
-		 WHERE section_tipo = $1
-		   AND string->'${PERSON_SURNAME_TIPO}'->0->>'value' = $2
-		   AND string->'${PERSON_GIVEN_NAME_TIPO}'->0->>'value' IS NOT DISTINCT FROM $3
-		 LIMIT 1`,
-		[PEOPLE_SECTION_TIPO, surname, givenName],
-	)) as { section_id: number }[];
-	return existing[0]?.section_id ?? null;
+	const sqo = sanitizeClientSqo({
+		section_tipo: [PEOPLE_SECTION_TIPO],
+		limit: 1,
+		filter: {
+			$and: [
+				{
+					q: `==${surname}`,
+					path: [{ section_tipo: PEOPLE_SECTION_TIPO, component_tipo: PERSON_SURNAME_TIPO }],
+				},
+				{
+					q: givenName === null ? '!*' : `==${givenName}`,
+					path: [{ section_tipo: PEOPLE_SECTION_TIPO, component_tipo: PERSON_GIVEN_NAME_TIPO }],
+				},
+			],
+		},
+	});
+	const built = await buildSearchSql(sqo, { principal: context.principal });
+	const rows = (await sql.unsafe(built.sql, built.params as (string | number | null)[])) as {
+		section_id: number;
+	}[];
+	return rows[0]?.section_id ?? null;
 }
 
 /** Finds an existing rsc197 Person record, or creates one when none matches. Locked and
@@ -456,14 +487,14 @@ async function findOrCreatePerson(
 	surname: string,
 	givenName: string | null,
 ): Promise<{ sectionId: number; created: boolean }> {
-	const found = await findExistingPerson(surname, givenName);
+	const found = await findExistingPerson(surname, givenName, context);
 	if (found !== null) return { sectionId: found, created: false };
 
 	return withTransaction(async () => {
 		await acquireDedupLock(
 			`rsc197:name:${surname.trim().toLowerCase()}|${(givenName ?? '').trim().toLowerCase()}`,
 		);
-		const existing = await findExistingPerson(surname, givenName);
+		const existing = await findExistingPerson(surname, givenName, context);
 		if (existing !== null) return { sectionId: existing, created: false };
 		const sectionId = await createSectionRecord(PEOPLE_SECTION_TIPO, context.userId);
 		await writeField(sectionId, PEOPLE_SECTION_TIPO, PERSON_SURNAME_TIPO, surname, context.userId);
@@ -731,7 +762,7 @@ async function commitOnePublication(
 			: null;
 
 	if (identifier !== null) {
-		const existingSectionId = await findExistingPublication(identifier);
+		const existingSectionId = await findExistingPublication(identifier, context);
 		if (existingSectionId !== null) {
 			return {
 				publication_identifier: p.publicationIdentifier,
@@ -771,7 +802,7 @@ async function commitOnePublication(
 	const coreResult = await withTransaction(async () => {
 		if (identifier !== null) {
 			await acquireDedupLock(`rsc205:code:${identifier}`);
-			const existing = await findExistingPublication(identifier);
+			const existing = await findExistingPublication(identifier, context);
 			if (existing !== null) {
 				return { created: false as const, sectionId: existing };
 			}
