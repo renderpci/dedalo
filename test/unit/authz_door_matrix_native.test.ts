@@ -126,6 +126,7 @@ import {
 	AUTHZ_IMAGE,
 	AUTHZ_PROJECT_P,
 	AUTHZ_SECTION,
+	AUTHZ_STUB_MODEL_ID,
 	AUTHZ_TEXT,
 	AUTHZ_TEXT_2,
 	AUTHZ_TEXT_AREA,
@@ -134,6 +135,7 @@ import {
 	type AuthzIdentities,
 	assertAuthzDoorContrast,
 	authzProjectLocator,
+	authzStubAgentModels,
 	createDoorRecord,
 	installAuthzDoorFixture,
 	removeAuthzDoorFixture,
@@ -1612,7 +1614,7 @@ async function deriveCensus(): Promise<Census> {
 				action === 'mcp_proxy'
 					? { jsonrpc: '2.0', id: 1, method: 'initialize', params: {} }
 					: action.startsWith('agent_chat')
-						? { question: 'zzauthz matrix', model: 'zzstub' }
+						? { question: 'zzauthz matrix', model: AUTHZ_STUB_MODEL_ID }
 						: action === 'agent_apply'
 							? { plan: { ops: [] }, plan_hash: 'zzauthz-not-a-hash' }
 							: {},
@@ -1873,16 +1875,7 @@ describe.if(DB_READY)('Step 3 — the authorization-door matrix', () => {
 		process.env.DEDALO_AGENT_HTTP_ENABLED = 'true';
 		delete process.env.DEDALO_AGENT_ALLOW_WRITE;
 		delete process.env.ANTHROPIC_API_KEY;
-		process.env.DEDALO_AGENT_MODELS = JSON.stringify([
-			{
-				id: 'zzstub',
-				label: 'zzauthz stub',
-				provider: 'openai_compatible',
-				model: 'zzstub-native',
-				endpoint: `http://127.0.0.1:${provider.port}/v1/chat/completions`,
-				egress: 'local',
-			},
-		]);
+		process.env.DEDALO_AGENT_MODELS = authzStubAgentModels(provider.port);
 		await installAuthzDoorFixture();
 		await ensureSituation(COMPANION_SITUATION);
 		recordId = await createDoorRecord(AUTHZ_SECTION, AUTHZ_PROJECT_P, [

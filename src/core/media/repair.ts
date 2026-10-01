@@ -196,10 +196,7 @@ export function rescanMediaItems(
 			lang: (item.lang as string | null) ?? null,
 		};
 		const fresh = refreshStoredFilesInfo(item, options.spec, identity, options.pathOpts);
-		if (
-			options.holdShrink &&
-			existingFileCount(fresh.files_info) < existingFileCount(item.files_info)
-		) {
+		if (isHeldShrink(item, fresh, options.holdShrink)) {
 			heldShrinks++;
 			refreshed.push(item); // stored index kept — see holdShrink
 			continue;
@@ -207,6 +204,15 @@ export function rescanMediaItems(
 		refreshed.push(fresh);
 	}
 	return { items: refreshed, heldShrinks };
+}
+
+/** Under `holdShrink`, a rescan that finds FEWER existing files than stored is held. */
+function isHeldShrink(
+	stored: Record<string, unknown>,
+	fresh: Record<string, unknown>,
+	holdShrink: boolean,
+): boolean {
+	return holdShrink && existingFileCount(fresh.files_info) < existingFileCount(stored.files_info);
 }
 
 /**

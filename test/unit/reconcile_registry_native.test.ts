@@ -24,7 +24,8 @@
  *   - the shared `zzot` observer situation (test/helpers/observer_term_seed.ts).
  *   - the suite media root's `.publication/pub` marker store, and its
  *     `.publication/dbs` ground truth (the public_tier pair, scoped to zzrc1).
- *   - `zzri` TLD: one dd_ontology row whose parent is not a tipo, planted the
+ *   - `zzrg` TLD (its OWN — `zzri` belongs to relation_index_store, and the
+ *     sweep below is TLD-wide): one dd_ontology row whose parent is not a tipo, planted the
  *     way a legacy install carries it (the parent CHECK re-added NOT VALID);
  *     the ontology_identifiers pair (SURF-1). Swept, the CHECK re-VALIDATEd.
  */
@@ -90,7 +91,7 @@ const ONTO_TLD = 'zzro';
 const ONTO_SECTION = `${ONTO_TLD}0`;
 
 /** A grammar violator: a valid tipo whose PARENT is not a tipo (SURF-1 legacy shape). */
-const GRAMMAR_VIOLATOR = { tipo: 'zzri1', tld: 'zzri', parent: "zzri0'" };
+const GRAMMAR_VIOLATOR = { tipo: 'zzrg1', tld: 'zzrg', parent: "zzrg0'" };
 const PARENT_GRAMMAR = 'dd_ontology_parent_grammar';
 
 const HIER_TLD = 'zzrh';
@@ -470,7 +471,7 @@ const PLANTERS: Record<string, Planter> = {
 					[
 						GRAMMAR_VIOLATOR.tipo,
 						GRAMMAR_VIOLATOR.parent,
-						JSON.stringify({ 'lg-eng': 'zzri violator' }),
+						JSON.stringify({ 'lg-eng': 'zzrg violator' }),
 						GRAMMAR_VIOLATOR.tld,
 					],
 				);

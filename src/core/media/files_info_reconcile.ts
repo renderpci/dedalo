@@ -171,12 +171,18 @@ export function isForeignItem(item: unknown, identityBase: Omit<MediaIdentity, '
 	if (typeof stored.external_source === 'string' && stored.external_source !== '') return false;
 	if (!Array.isArray(stored.files_info)) return false;
 	return stored.files_info.some((entry) => {
-		const e = entry as Record<string, unknown> | null;
-		if (e === null || e.file_exist !== true || e.external === true) return false;
-		if (typeof e.file_path !== 'string' || e.file_path === '') return false;
-		const owner = cloneSignatureId(baseName(e.file_path), identityBase);
+		const path = existingLocalPath(entry);
+		if (path === null) return false;
+		const owner = cloneSignatureId(baseName(path), identityBase);
 		return owner !== null && owner !== identityBase.sectionId;
 	});
+}
+
+/** A files_info entry's path when it names an EXISTING, non-external file; else null. */
+function existingLocalPath(entry: unknown): string | null {
+	const e = entry as Record<string, unknown> | null;
+	if (e === null || e.file_exist !== true || e.external === true) return null;
+	return typeof e.file_path === 'string' && e.file_path !== '' ? e.file_path : null;
 }
 
 /**
@@ -189,6 +195,11 @@ function cloneSignatureId(name: string, identityBase: Omit<MediaIdentity, 'lang'
 	if (!name.startsWith(prefix)) return null;
 	const match = /^([1-9][0-9]*)(?:$|[._])/.exec(name.slice(prefix.length));
 	return match === null ? null : Number(match[1]);
+}
+
+/** A stored item that is an object (anything else is carried through untouched). */
+function isObjectItem(raw: unknown): raw is object {
+	return raw !== null && typeof raw === 'object';
 }
 
 /** One component's adjudication: the items to write and what kind of change it is. */
@@ -224,7 +235,7 @@ function adjudicate(
 	let storedChanged = 0;
 	let freshChanged = 0;
 	const newItems = stored.map((raw, index) => {
-		if (raw === null || typeof raw !== 'object') return raw;
+		if (!isObjectItem(raw)) return raw;
 		scanned++;
 		const storedIndex = existingIndex((raw as Record<string, unknown>).files_info);
 		const freshItem = refreshed[index] as Record<string, unknown>;
@@ -297,155 +308,261 @@ export async function sweepFilesInfo(
 ): Promise<FilesInfoSweepSummary> {
 	const log = options.log ?? ((): void => {});
 	const root = guardedMediaRoot();
-	const allowShrink = options.allowShrink === true;
-	const section = options.section ?? null;
-	const id = options.id ?? null;
-	const component = options.component ?? null;
-
-	const changes: FilesInfoChange[] = [];
-	const skippedModels = new Set<string>();
-	let scannedRows = 0;
-	let scannedItems = 0;
+	const scope = sweepScope(options);
+	const scan: SweepScan = {
+		changes: [],
+		skippedModels: new Set(),
+		scannedRows: 0,
+		scannedItems: 0,
+	};
 
 	for (const table of MATRIX_TABLE_ALLOWLIST) {
-		let rows: { section_tipo: string; section_id: number; media_text: string }[];
-		try {
-			const filters = ['media IS NOT NULL', "media::text NOT IN ('{}', 'null')"];
-			const params: (string | number)[] = [];
-			if (section !== null) {
-				params.push(section);
-				filters.push(`section_tipo = $${params.length}`);
-			}
-			if (id !== null) {
-				params.push(id);
-				filters.push(`section_id = $${params.length}`);
-			}
-			rows = (await sql.unsafe(
-				`SELECT section_tipo, section_id, media::text AS media_text
-				 FROM "${table}" WHERE ${filters.join(' AND ')}
-				 ORDER BY section_tipo, section_id`,
-				params,
-			)) as unknown as typeof rows;
-		} catch (error) {
-			// Non-standard table shape (no media column) — name it, keep sweeping.
-			log(`  note: skipping table ${table}: ${(error as Error).message}`);
-			continue;
-		}
-
-		for (const row of rows) {
-			scannedRows++;
-			let media: Record<string, unknown>;
-			try {
-				media = JSON.parse(row.media_text) as Record<string, unknown>;
-			} catch {
-				log(`  note: ${table} ${row.section_tipo}/${row.section_id}: unparseable media column`);
-				continue;
-			}
-			for (const [componentTipo, rawItems] of Object.entries(media)) {
-				if (component !== null && componentTipo !== component) continue;
-				if (!Array.isArray(rawItems) || rawItems.length === 0) continue;
-				const model = await getModelByTipo(componentTipo);
-				if (model === null) continue;
-				if (mediaTypeOf(model) === null) {
-					skippedModels.add(model);
-					continue;
-				}
-				const { refreshedItems } = await refreshMediaItems({
-					componentTipo,
-					sectionTipo: row.section_tipo,
-					sectionId: Number(row.section_id),
-					model,
-					items: rawItems,
-					regenerate: false, // sweep never re-encodes files (header SCOPE)
-					holdShrink: false, // raw scan — the GROW/DIFF/SHRINK adjudication below guards
-				});
-				const verdict = adjudicate(
-					rawItems,
-					refreshedItems,
-					{
-						componentTipo,
-						sectionTipo: row.section_tipo,
-						sectionId: Number(row.section_id),
-					},
-					allowShrink,
-				);
-				scannedItems += verdict.scanned;
-				if (!verdict.changed) continue;
-				changes.push({
-					table,
-					sectionTipo: row.section_tipo,
-					sectionId: Number(row.section_id),
-					componentTipo,
-					model,
-					storedCount: verdict.storedCount,
-					freshCount: verdict.freshCount,
-					kind: verdict.kind,
-					newItems: verdict.newItems,
-					writtenItems: verdict.writtenItems,
-					heldItems: verdict.heldItems,
-				});
-			}
-		}
+		const rows = await sweepRows(table, scope, log);
+		for (const row of rows) await scanRow(table, row, scope, scan, log);
 	}
 
+	const { changes } = scan;
 	const applicable = changes.filter(applies);
 	const held = changes.filter((c) => c.heldItems > 0);
+	for (const change of changes) logChange(change, log);
 
-	for (const change of changes) {
-		const heldNote =
-			change.heldItems === 0
-				? ''
-				: change.writtenItems === 0
-					? ' — HELD (pass --allow-shrink)'
-					: ` — ${change.heldItems} SHRINK item(s) HELD (pass --allow-shrink)`;
-		log(
-			`  ${change.kind.padEnd(7)} ${change.table} ${change.sectionTipo}/${change.sectionId} ` +
-				`${change.componentTipo} (${change.model}): ${change.storedCount} -> ${change.freshCount} existing file(s)${heldNote}`,
-		);
-	}
-
-	let repaired = 0;
-	const tally = { missing: 0, locked: 0, heldOnApply: 0, unchangedOnApply: 0 };
-	if (options.apply) {
-		for (const change of applicable) {
-			const { outcome, heldItems } = await applyChange(change, allowShrink);
-			const where = `${change.table} ${change.sectionTipo}/${change.sectionId} ${change.componentTipo}`;
-			if (outcome === 'written') {
-				repaired++;
-				log(`  APPLIED ${where}`);
-				if (heldItems > change.heldItems) {
-					tally.heldOnApply++;
-					log(
-						`  HELD    ${where} — under the lock ${heldItems} item(s) are a SHRINK, kept as stored`,
-					);
-				}
-			} else if (outcome === 'missing') {
-				tally.missing++;
-				log(`  MISSING ${where} — the record was deleted during the sweep; nothing written`);
-			} else if (outcome === 'locked') {
-				tally.locked++;
-				log(`  LOCKED  ${where} — the row stayed locked past the lock timeout; nothing written`);
-			} else if (outcome === 'held') {
-				tally.heldOnApply++;
-				log(`  HELD    ${where} — under the lock the rescan is a SHRINK (pass --allow-shrink)`);
-			} else {
-				tally.unchangedOnApply++;
-				log(`  CURRENT ${where} — the locked items needed no change`);
-			}
-		}
-	}
+	const applied = options.apply
+		? await applyChanges(applicable, scope.allowShrink, log)
+		: { repaired: 0, tally: emptyApplyTally() };
 
 	return {
 		root,
-		scannedRows,
-		scannedItems,
+		scannedRows: scan.scannedRows,
+		scannedItems: scan.scannedItems,
 		changes,
 		applicable: applicable.length,
 		held: held.length,
-		repaired,
-		...tally,
-		skippedModels: [...skippedModels],
+		repaired: applied.repaired,
+		...applied.tally,
+		skippedModels: [...scan.skippedModels],
 	};
+}
+
+/** What one sweep narrows to, and whether a SHRINK may be written. */
+interface SweepScope {
+	section: string | null;
+	id: number | null;
+	component: string | null;
+	allowShrink: boolean;
+}
+
+/** The sweep's running census (mutated by the row scan). */
+interface SweepScan {
+	changes: FilesInfoChange[];
+	skippedModels: Set<string>;
+	scannedRows: number;
+	scannedItems: number;
+}
+
+function sweepScope(options: FilesInfoSweepOptions): SweepScope {
+	return {
+		section: options.section ?? null,
+		id: options.id ?? null,
+		component: options.component ?? null,
+		allowShrink: options.allowShrink === true,
+	};
+}
+
+type SweepRow = { section_tipo: string; section_id: number; media_text: string };
+
+/** Per-outcome counts of an applied sweep. */
+type ApplyTally = Pick<
+	FilesInfoSweepSummary,
+	'missing' | 'locked' | 'heldOnApply' | 'unchangedOnApply'
+>;
+
+function emptyApplyTally(): ApplyTally {
+	return { missing: 0, locked: 0, heldOnApply: 0, unchangedOnApply: 0 };
+}
+
+/**
+ * One table's rows carrying media, narrowed to the scope's section/record. A
+ * non-standard table shape (no media column) is named and skipped (`[]`) — the
+ * sweep keeps going.
+ */
+async function sweepRows(
+	table: string,
+	scope: SweepScope,
+	log: (line: string) => void,
+): Promise<SweepRow[]> {
+	try {
+		const filters = ['media IS NOT NULL', "media::text NOT IN ('{}', 'null')"];
+		const params: (string | number)[] = [];
+		if (scope.section !== null) {
+			params.push(scope.section);
+			filters.push(`section_tipo = $${params.length}`);
+		}
+		if (scope.id !== null) {
+			params.push(scope.id);
+			filters.push(`section_id = $${params.length}`);
+		}
+		return (await sql.unsafe(
+			`SELECT section_tipo, section_id, media::text AS media_text
+			 FROM "${table}" WHERE ${filters.join(' AND ')}
+			 ORDER BY section_tipo, section_id`,
+			params,
+		)) as unknown as SweepRow[];
+	} catch (error) {
+		log(`  note: skipping table ${table}: ${(error as Error).message}`);
+		return [];
+	}
+}
+
+/** Scan one row's media column: every in-scope, non-empty component is adjudicated. */
+async function scanRow(
+	table: string,
+	row: SweepRow,
+	scope: SweepScope,
+	scan: SweepScan,
+	log: (line: string) => void,
+): Promise<void> {
+	scan.scannedRows++;
+	const media = parseMediaColumn(table, row, log);
+	if (media === null) return;
+	for (const [componentTipo, rawItems] of Object.entries(media)) {
+		if (!isSweptComponent(scope, componentTipo, rawItems)) continue;
+		await scanComponent(table, row, componentTipo, rawItems, scope.allowShrink, scan);
+	}
+}
+
+/** A component the sweep adjudicates: in the scope's component filter, with stored items. */
+function isSweptComponent(
+	scope: SweepScope,
+	componentTipo: string,
+	rawItems: unknown,
+): rawItems is unknown[] {
+	if (scope.component !== null && componentTipo !== scope.component) return false;
+	return Array.isArray(rawItems) && rawItems.length > 0;
+}
+
+/** A row's media column as an object; null (named in the report) when unparseable. */
+function parseMediaColumn(
+	table: string,
+	row: SweepRow,
+	log: (line: string) => void,
+): Record<string, unknown> | null {
+	try {
+		return JSON.parse(row.media_text) as Record<string, unknown>;
+	} catch {
+		log(`  note: ${table} ${row.section_tipo}/${row.section_id}: unparseable media column`);
+		return null;
+	}
+}
+
+/** Rescan one component's stored items against the disk and record its verdict. */
+async function scanComponent(
+	table: string,
+	row: SweepRow,
+	componentTipo: string,
+	rawItems: unknown[],
+	allowShrink: boolean,
+	scan: SweepScan,
+): Promise<void> {
+	const model = await getModelByTipo(componentTipo);
+	if (model === null) return;
+	if (mediaTypeOf(model) === null) {
+		scan.skippedModels.add(model);
+		return;
+	}
+	const sectionId = Number(row.section_id);
+	const { refreshedItems } = await refreshMediaItems({
+		componentTipo,
+		sectionTipo: row.section_tipo,
+		sectionId,
+		model,
+		items: rawItems,
+		regenerate: false, // sweep never re-encodes files (header SCOPE)
+		holdShrink: false, // raw scan — the GROW/DIFF/SHRINK adjudication below guards
+	});
+	const verdict = adjudicate(
+		rawItems,
+		refreshedItems,
+		{ componentTipo, sectionTipo: row.section_tipo, sectionId },
+		allowShrink,
+	);
+	scan.scannedItems += verdict.scanned;
+	if (!verdict.changed) return;
+	scan.changes.push({
+		table,
+		sectionTipo: row.section_tipo,
+		sectionId,
+		componentTipo,
+		model,
+		storedCount: verdict.storedCount,
+		freshCount: verdict.freshCount,
+		kind: verdict.kind,
+		newItems: verdict.newItems,
+		writtenItems: verdict.writtenItems,
+		heldItems: verdict.heldItems,
+	});
+}
+
+/** The report line of one adjudicated change (its held SHRINK items named). */
+function logChange(change: FilesInfoChange, log: (line: string) => void): void {
+	const heldNote =
+		change.heldItems === 0
+			? ''
+			: change.writtenItems === 0
+				? ' — HELD (pass --allow-shrink)'
+				: ` — ${change.heldItems} SHRINK item(s) HELD (pass --allow-shrink)`;
+	log(
+		`  ${change.kind.padEnd(7)} ${change.table} ${change.sectionTipo}/${change.sectionId} ` +
+			`${change.componentTipo} (${change.model}): ${change.storedCount} -> ${change.freshCount} existing file(s)${heldNote}`,
+	);
+}
+
+/** APPLY every applicable change through the locked transform; count each outcome. */
+async function applyChanges(
+	applicable: readonly FilesInfoChange[],
+	allowShrink: boolean,
+	log: (line: string) => void,
+): Promise<{ repaired: number; tally: ApplyTally }> {
+	let repaired = 0;
+	const tally = emptyApplyTally();
+	for (const change of applicable) {
+		const { outcome, heldItems } = await applyChange(change, allowShrink);
+		const where = `${change.table} ${change.sectionTipo}/${change.sectionId} ${change.componentTipo}`;
+		if (outcome === 'written') {
+			repaired++;
+			log(`  APPLIED ${where}`);
+			if (heldItems > change.heldItems) {
+				tally.heldOnApply++;
+				log(
+					`  HELD    ${where} — under the lock ${heldItems} item(s) are a SHRINK, kept as stored`,
+				);
+			}
+		} else {
+			tallyUnwritten(outcome, where, tally, log);
+		}
+	}
+	return { repaired, tally };
+}
+
+/** Count and report an applied change that wrote nothing. */
+function tallyUnwritten(
+	outcome: 'noop' | 'held' | 'missing' | 'locked',
+	where: string,
+	tally: ApplyTally,
+	log: (line: string) => void,
+): void {
+	if (outcome === 'missing') {
+		tally.missing++;
+		log(`  MISSING ${where} — the record was deleted during the sweep; nothing written`);
+	} else if (outcome === 'locked') {
+		tally.locked++;
+		log(`  LOCKED  ${where} — the row stayed locked past the lock timeout; nothing written`);
+	} else if (outcome === 'held') {
+		tally.heldOnApply++;
+		log(`  HELD    ${where} — under the lock the rescan is a SHRINK (pass --allow-shrink)`);
+	} else {
+		tally.unchangedOnApply++;
+		log(`  CURRENT ${where} — the locked items needed no change`);
+	}
 }
 
 /**

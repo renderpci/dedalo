@@ -33,7 +33,9 @@ import { createSession, getSession, type Session } from '../../src/core/security
 import {
 	AUTHZ_CONTROL_USER_ID,
 	AUTHZ_DD128_ADMIN_USER_ID,
+	AUTHZ_STUB_MODEL_ID,
 	AUTHZ_TOOL_GRANTED_USER_ID,
+	authzStubAgentModels,
 	installAuthzDoorFixture,
 	removeAuthzDoorFixture,
 	resolveAuthzIdentities,
@@ -53,7 +55,7 @@ function optionsFor(action: string): Record<string, unknown> {
 			return { jsonrpc: '2.0', id: 1, method: 'initialize', params: {} };
 		case 'agent_chat':
 		case 'agent_chat_stream':
-			return { question: 'zzauthz hello', model: 'zzstub' };
+			return { question: 'zzauthz hello', model: AUTHZ_STUB_MODEL_ID };
 		case 'agent_apply':
 			return { plan: { ops: [] }, plan_hash: 'zzauthz-not-a-hash' };
 		default:
@@ -122,16 +124,7 @@ describe.if(DB_READY)('SEC-3 — the agent door asks the flag AND the tool grant
 		process.env.DEDALO_AGENT_HTTP_ENABLED = 'true';
 		delete process.env.DEDALO_AGENT_ALLOW_WRITE;
 		delete process.env.ANTHROPIC_API_KEY;
-		process.env.DEDALO_AGENT_MODELS = JSON.stringify([
-			{
-				id: 'zzstub',
-				label: 'zzauthz stub',
-				provider: 'openai_compatible',
-				model: 'zzstub-native',
-				endpoint: `http://127.0.0.1:${provider.port}/v1/chat/completions`,
-				egress: 'local',
-			},
-		]);
+		process.env.DEDALO_AGENT_MODELS = authzStubAgentModels(provider.port);
 		await installAuthzDoorFixture();
 		const ids = await resolveAuthzIdentities();
 		for (const [label, principal] of [

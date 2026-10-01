@@ -744,7 +744,7 @@ export async function recomputeMirrorAndHop(
 		// can still withhold a drop is a DEGRADED SEED, and the kernel derives
 		// that for itself — see recomputeExternalRelation. A record born VERBATIM
 		// in this operation keeps its snapshot's stamps (CascadeGuard.verbatim).
-		guard.verbatim?.has(`${sectionTipo}|${String(sectionId)}`) === true ? { stamp: false } : {},
+		verbatimStampOptions(guard, sectionTipo, sectionId),
 	);
 	if (outcome.wrote === true) {
 		await emitCascadeHop(
@@ -760,6 +760,51 @@ export async function recomputeMirrorAndHop(
 		return;
 	}
 	if (always) await hopUnlessEmitted(guard, observerTipo, sectionTipo, sectionId, userId, now);
+}
+
+/**
+ * The references a mirror does not hold yet, as new mirror locators appended
+ * with the next item ids (PHP save id assignment). Deduped against ALL existing
+ * keys (identical to deduping against the kept half: an existing entry outside
+ * the reference set has, by construction, no matching reference).
+ */
+function mirrorAdditions(
+	existing: readonly StoredLocator[],
+	references: readonly { section_tipo: string; section_id: unknown }[],
+	observerTipo: string,
+): StoredLocator[] {
+	const presentKeys = new Set(
+		existing.map((entry) => `${entry.section_tipo}|${String(entry.section_id)}`),
+	);
+	let nextId = nextObserverItemId(existing as StoredLocator[]);
+	const additions: StoredLocator[] = [];
+	for (const reference of references) {
+		const key = `${reference.section_tipo}|${String(reference.section_id)}`;
+		if (presentKeys.has(key)) continue;
+		presentKeys.add(key);
+		additions.push({
+			id: nextId++,
+			type: 'dd151',
+			// Stored mirror locator: canonical INT
+			// (WC-2026-08-10-section-id-int-canonical). Not a blind Number():
+			// a non-convertible id (external remote ref) survives verbatim.
+			section_id: canonicalizeStoredSectionId(reference.section_id) as number | string,
+			section_tipo: reference.section_tipo,
+			from_component_tipo: observerTipo,
+		});
+	}
+	return additions;
+}
+
+/** A record born VERBATIM in this operation is recomputed without modified stamps. */
+function verbatimStampOptions(
+	guard: CascadeGuard,
+	sectionTipo: string,
+	sectionId: number,
+): { stamp: false } | Record<string, never> {
+	return guard.verbatim?.has(`${sectionTipo}|${String(sectionId)}`) === true
+		? { stamp: false }
+		: {};
 }
 
 /** The external mirror's hop, unless this operation already emitted it (the guard's visited key). */
@@ -1484,29 +1529,7 @@ export async function recomputeExternalRelation(
 		const kept: StoredLocator[] = existing.filter((entry) =>
 			referenceKeys.has(`${entry.section_tipo}|${String(entry.section_id)}`),
 		);
-		// Dedupe additions against ALL existing keys (identical to deduping
-		// against kept: an existing entry outside referenceKeys has, by
-		// construction, no matching reference).
-		const presentKeys = new Set(
-			existing.map((entry) => `${entry.section_tipo}|${String(entry.section_id)}`),
-		);
-		let nextId = nextObserverItemId(existing);
-		const additions: StoredLocator[] = [];
-		for (const reference of references) {
-			const key = `${reference.section_tipo}|${String(reference.section_id)}`;
-			if (presentKeys.has(key)) continue;
-			presentKeys.add(key);
-			additions.push({
-				id: nextId++,
-				type: 'dd151',
-				// Stored mirror locator: canonical INT
-				// (WC-2026-08-10-section-id-int-canonical). Not a blind Number():
-				// a non-convertible id (external remote ref) survives verbatim.
-				section_id: canonicalizeStoredSectionId(reference.section_id) as number | string,
-				section_tipo: reference.section_tipo,
-				from_component_tipo: observerTipo,
-			});
-		}
+		const additions = mirrorAdditions(existing, references, observerTipo);
 		return {
 			exists: true,
 			existing,

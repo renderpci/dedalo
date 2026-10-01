@@ -151,7 +151,7 @@ function plantBrokenLane(paths: ReturnType<typeof suiteMariadbPaths>): void {
 
 function fakeServer(paths: ReturnType<typeof suiteMariadbPaths>): ReturnType<typeof Bun.spawn> {
 	const server = Bun.spawn(
-		['bun', '-e', 'await Bun.sleep(120000)', 'mariadbd', `--datadir=${paths.datadir}`],
+		[process.execPath, '-e', 'await Bun.sleep(120000)', 'mariadbd', `--datadir=${paths.datadir}`],
 		{ stdout: 'ignore', stderr: 'ignore' },
 	);
 	servers.push(server);
@@ -259,12 +259,15 @@ describe('the shard sweep owns the suite MariaDB surface', () => {
 		plantLane(CLI_UNMARKED, false);
 		plantBrokenLane(CLI_BROKEN);
 		const sweep = async (template: string, args: string[] = ['--sweep']) => {
-			const child = Bun.spawn(['bun', join(REPO_ROOT, 'scripts', 'test_shard.ts'), ...args], {
-				cwd: REPO_ROOT,
-				env: { ...process.env, DEDALO_TEST_DATABASE: template },
-				stdout: 'pipe',
-				stderr: 'pipe',
-			});
+			const child = Bun.spawn(
+				[process.execPath, join(REPO_ROOT, 'scripts', 'test_shard.ts'), ...args],
+				{
+					cwd: REPO_ROOT,
+					env: { ...process.env, DEDALO_TEST_DATABASE: template },
+					stdout: 'pipe',
+					stderr: 'pipe',
+				},
+			);
 			const [stdout, stderr, code] = await Promise.all([
 				new Response(child.stdout).text(),
 				new Response(child.stderr).text(),
@@ -408,7 +411,7 @@ describe('the shard sweep owns the suite MariaDB surface', () => {
 	});
 
 	test("a KILLED run's plant is cleared by the next run of its slot; an unmarked root, another content, or a LIVE planter's plant is kept", async () => {
-		const dead = Bun.spawn(['bun', '-e', '0'], { stdout: 'ignore', stderr: 'ignore' });
+		const dead = Bun.spawn([process.execPath, '-e', '0'], { stdout: 'ignore', stderr: 'ignore' });
 		await dead.exited;
 		const base = suiteMariadbPaths(`${PROBE}__shard1`).root;
 		const at = (suffix: string) => join(base, '..', `${PROBE}__plant_${suffix}`);

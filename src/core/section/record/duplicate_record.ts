@@ -248,143 +248,22 @@ export async function duplicateSectionRecord(
 	remintChain: ReadonlySet<string> = new Set(),
 	mediaOptions: DuplicateMediaOptions = {},
 ): Promise<number> {
-	// Consultation-only sections are read-only for every caller (engine backstop;
-	// the API handler denies earlier with a clean 403). See concepts/section.ts.
-	if (isConsultationOnlySection(sectionTipo)) {
-		throw new DedaloError('perm.denied', {
-			message: `duplicateSectionRecord: section '${sectionTipo}' is consultation-only (read-only)`,
-			coordinates: {
-				section_tipo: sectionTipo,
-				section_id: sourceSectionId,
-				operation: 'duplicate',
-			},
-		});
-	}
-	// PHP refuses duplicating non-positive records even for root (API duplicate →
-	// assert_record_in_user_scope → user_can_access_record false for section_id<1);
-	// engine backstop mirroring the delete_record.ts guards.
-	if (sourceSectionId < 1) {
-		throw new DedaloError('section_id.not_an_address', {
-			message: `duplicateSectionRecord: refusing to duplicate non-positive section_id ${sourceSectionId}`,
-			coordinates: {
-				section_tipo: sectionTipo,
-				section_id: sourceSectionId,
-				operation: 'duplicate',
-			},
-		});
-	}
-	const table = await getMatrixTableFromTipo(sectionTipo);
-	if (table === null) {
-		throw new DedaloError('section.no_matrix_table', {
-			message: `duplicateSectionRecord: no matrix table for section '${sectionTipo}'`,
-			coordinates: { section_tipo: sectionTipo },
-		});
-	}
-	const source = await readMatrixRecord(table, sectionTipo, sourceSectionId);
-	if (source === null) {
-		throw new DedaloError('resource.not_found', {
-			message: `duplicateSectionRecord: source record ${sectionTipo}/${sourceSectionId} not found`,
-			coordinates: { section_tipo: sectionTipo, section_id: sourceSectionId },
-		});
-	}
+	const { table, source } = await readDuplicableSource(sectionTipo, sourceSectionId);
 
 	// 1. Copy component columns (audit tipos dropped — fresh stamps below;
-	//    covered-observer mirror slots dropped too — see below; media items
-	//    copied WITHOUT their index — see the header).
-	const values: Partial<Record<MatrixJsonbColumn, unknown>> = {};
-	const copied: CopiedComponent[] = [];
-	/** Existing files each media component's SOURCE index claims (the verdict's floor). */
-	const claimed = new Map<string, number>();
-	const { isCoveredObserverTipo } = await import('./observers.ts');
-	/** The covered mirror mains step 1 left out (their frames go too — step 1b). */
-	const coveredMains: string[] = [];
-	for (const column of MATRIX_JSONB_COLUMNS) {
-		if (SKIP_COPY_COLUMNS.has(column)) continue;
-		const columnData = source.columns[column] as Record<string, unknown> | null | undefined;
-		if (columnData == null || typeof columnData !== 'object') continue;
-		const copy: Record<string, unknown> = {};
-		for (const [tipo, items] of Object.entries(columnData)) {
-			if (AUDIT_TIPOS.has(tipo)) continue;
-			// Observer mirror slots are NEVER copied (Phase-0 disarm 2026-08-02):
-			// the source's bag mirrors the SOURCE's referencers, and nothing can
-			// reference a record that does not exist yet — the copy's correct bag
-			// is EMPTY BY CONSTRUCTION (absent slot), no recompute law needed.
-			// The old copy-then-shrink shape relied on recomputeExternalRelation,
-			// which now REFUSES unported-sub-law nodes (numisdata679/965): a
-			// copied bag there would persist ~1,000 phantom, index-fed locators
-			// per duplicate with no repair path until D3. Stripping also keeps
-			// the matrix_relation_index sync trigger from indexing the phantoms.
-			if (column === 'relation' && (await isCoveredObserverTipo(tipo))) {
-				coveredMains.push(tipo);
-				continue;
-			}
-			// A MEDIA component's index is the SOURCE's files (source-id paths): the
-			// clone is inserted with none (external URL entries kept) and re-indexed
-			// at its own identity after the copy (step 4b). What the source claimed
-			// is remembered — a copy that lands fewer files is a verdict.
-			const stored =
-				column === 'media' && Array.isArray(items) && (await isMediaComponent(tipo))
-					? stripSourceIndex(items, tipo, claimed)
-					: items;
-			copy[tipo] = stored;
-			if (Array.isArray(stored)) {
-				copied.push({ column, tipo, items: stored as CopiedComponent['items'] });
-			}
-		}
-		if (Object.keys(copy).length > 0) values[column] = copy;
-	}
-	// 1b. The FRAMES of every covered mirror left out go with it (the covered
-	//     UNIT, record_write.ts dropCoveredObserverUnits): they pair with the
-	//     SOURCE's referencer ids, and the clone's first recompute mints 1..N —
-	//     a source referencer's frame would land on the clone's. Dropped before
-	//     the frame-target re-mint (3b), which would otherwise deep-copy targets
-	//     for frames the clone never stores; `copied` follows the drop.
+	//    covered-observer mirror slots dropped too — see copyComponentColumns;
+	//    media items copied WITHOUT their index — see the header). 1b: the FRAMES
+	//    of every covered mirror left out go with it (followRelationDrop).
+	const { values, copied, claimed, coveredMains } = await copyComponentColumns(source);
 	if (coveredMains.length > 0) {
 		await dropCoveredObserverUnits(values as MatrixWriteValues, coveredMains);
-		const relation = (values.relation ?? {}) as Record<string, unknown>;
-		for (let index = copied.length - 1; index >= 0; index--) {
-			const component = copied[index];
-			if (component === undefined || component.column !== 'relation') continue;
-			const stored = relation[component.tipo];
-			if (Array.isArray(stored)) component.items = stored as CopiedComponent['items'];
-			else copied.splice(index, 1);
-		}
+		followRelationDrop(copied, (values.relation ?? {}) as Record<string, unknown>);
 	}
 
-	// 2. Fresh audit metadata: created AND modified stamps (the PHP re-save loop
-	//    layers 'update_record' modification data over the creation stamps).
-	values.data = await buildRecordMetadata(sectionTipo, userId, now);
-	values.relation = {
-		...((values.relation as Record<string, unknown>) ?? {}),
-		[MODIFIED_BY_USER]: [auditUserLocator(userId, MODIFIED_BY_USER)],
-		[CREATED_BY_USER]: [auditUserLocator(userId, CREATED_BY_USER)],
-	};
-	values.date = {
-		...((values.date as Record<string, unknown>) ?? {}),
-		[CREATED_DATE]: [auditDateItem(now)],
-		[MODIFIED_DATE]: [auditDateItem(now)],
-	};
-
-	// 3. meta: the re-save loop's per-component counter for every copied tipo
-	//    ([{count: maxItemId}], PHP canonical array shape).
-	const meta: Record<string, unknown> = {
-		...((source.columns.meta as Record<string, unknown>) ?? {}),
-	};
-	for (const component of copied) {
-		const maxId = component.items.reduce(
-			(max, item) => (typeof item.id === 'number' && item.id > max ? item.id : max),
-			0,
-		);
-		if (maxId > 0) meta[component.tipo] = [{ count: maxId }];
-	}
-	if (Object.keys(meta).length > 0) values.meta = meta;
-	// relation_search: the source's index is the BASE only — every `_hi` key is
-	// re-derived from the relation the clone will actually carry, by the
-	// chokepoint's birth step right before the insert (step 4). Copied verbatim it
-	// kept the index of the covered mirror slot step 1 dropped: an index for a
-	// value the clone does not hold, matched by every broader-term search.
-	if (source.columns.relation_search != null)
-		values.relation_search = source.columns.relation_search;
+	// 2. Fresh audit metadata: created AND modified stamps (stampDuplicateAudit).
+	await stampDuplicateAudit(values, sectionTipo, userId, now);
+	// 3. meta counters + the source's relation_search as the BASE (copyMetaAndIndexBase).
+	copyMetaAndIndexBase(values, source, copied);
 
 	// 3b. Dataframe frame targets: RE-MINT or REFUSE, before the duplicate
 	//     exists. Runs AFTER relation_search is attached so the census covers
@@ -492,6 +371,203 @@ export async function duplicateSectionRecord(
 	return newSectionId;
 }
 
+/** The matrix record a duplication reads (never null past {@link readDuplicableSource}). */
+type DuplicateSource = NonNullable<Awaited<ReturnType<typeof readMatrixRecord>>>;
+
+/**
+ * The engine backstops a duplication passes BEFORE anything is copied, then the
+ * source row. Consultation-only sections are read-only for every caller (the
+ * API handler denies earlier with a clean 403 — see concepts/section.ts); a
+ * non-positive record is refused even for root (PHP API duplicate →
+ * assert_record_in_user_scope → user_can_access_record false for
+ * section_id<1), mirroring the delete_record.ts guards.
+ */
+async function readDuplicableSource(
+	sectionTipo: string,
+	sourceSectionId: number,
+): Promise<{ table: string; source: DuplicateSource }> {
+	if (isConsultationOnlySection(sectionTipo)) {
+		throw new DedaloError('perm.denied', {
+			message: `duplicateSectionRecord: section '${sectionTipo}' is consultation-only (read-only)`,
+			coordinates: {
+				section_tipo: sectionTipo,
+				section_id: sourceSectionId,
+				operation: 'duplicate',
+			},
+		});
+	}
+	if (sourceSectionId < 1) {
+		throw new DedaloError('section_id.not_an_address', {
+			message: `duplicateSectionRecord: refusing to duplicate non-positive section_id ${sourceSectionId}`,
+			coordinates: {
+				section_tipo: sectionTipo,
+				section_id: sourceSectionId,
+				operation: 'duplicate',
+			},
+		});
+	}
+	const table = await getMatrixTableFromTipo(sectionTipo);
+	if (table === null) {
+		throw new DedaloError('section.no_matrix_table', {
+			message: `duplicateSectionRecord: no matrix table for section '${sectionTipo}'`,
+			coordinates: { section_tipo: sectionTipo },
+		});
+	}
+	const source = await readMatrixRecord(table, sectionTipo, sourceSectionId);
+	if (source === null) {
+		throw new DedaloError('resource.not_found', {
+			message: `duplicateSectionRecord: source record ${sectionTipo}/${sourceSectionId} not found`,
+			coordinates: { section_tipo: sectionTipo, section_id: sourceSectionId },
+		});
+	}
+	return { table, source };
+}
+
+/** Step 1's product: the clone's columns and what it copied. */
+interface ComponentCopy {
+	values: Partial<Record<MatrixJsonbColumn, unknown>>;
+	copied: CopiedComponent[];
+	/** Existing files each media component's SOURCE index claims (the verdict's floor). */
+	claimed: Map<string, number>;
+	/** The covered mirror mains step 1 left out (their frames go too — step 1b). */
+	coveredMains: string[];
+}
+
+/** Step 1: copy every copyable column of the source (see {@link copyColumnKeys}). */
+async function copyComponentColumns(source: DuplicateSource): Promise<ComponentCopy> {
+	const copy: ComponentCopy = { values: {}, copied: [], claimed: new Map(), coveredMains: [] };
+	const { isCoveredObserverTipo } = await import('./observers.ts');
+	for (const column of MATRIX_JSONB_COLUMNS) {
+		if (SKIP_COPY_COLUMNS.has(column)) continue;
+		const columnData = source.columns[column] as Record<string, unknown> | null | undefined;
+		if (columnData == null || typeof columnData !== 'object') continue;
+		const columnCopy = await copyColumnKeys(column, columnData, copy, isCoveredObserverTipo);
+		if (Object.keys(columnCopy).length > 0) copy.values[column] = columnCopy;
+	}
+	return copy;
+}
+
+/** Copy ONE column's keys (audit tipos and covered mirror slots left out). */
+async function copyColumnKeys(
+	column: MatrixJsonbColumn,
+	columnData: Record<string, unknown>,
+	copy: ComponentCopy,
+	isCoveredObserverTipo: (tipo: string) => Promise<boolean>,
+): Promise<Record<string, unknown>> {
+	const columnCopy: Record<string, unknown> = {};
+	for (const [tipo, items] of Object.entries(columnData)) {
+		if (AUDIT_TIPOS.has(tipo)) continue;
+		// Observer mirror slots are NEVER copied (Phase-0 disarm 2026-08-02):
+		// the source's bag mirrors the SOURCE's referencers, and nothing can
+		// reference a record that does not exist yet — the copy's correct bag
+		// is EMPTY BY CONSTRUCTION (absent slot), no recompute law needed.
+		// The old copy-then-shrink shape relied on recomputeExternalRelation,
+		// which now REFUSES unported-sub-law nodes (numisdata679/965): a
+		// copied bag there would persist ~1,000 phantom, index-fed locators
+		// per duplicate with no repair path until D3. Stripping also keeps
+		// the matrix_relation_index sync trigger from indexing the phantoms.
+		if (column === 'relation' && (await isCoveredObserverTipo(tipo))) {
+			copy.coveredMains.push(tipo);
+			continue;
+		}
+		const stored = await copiedKeyValue(column, tipo, items, copy.claimed);
+		columnCopy[tipo] = stored;
+		if (Array.isArray(stored)) {
+			copy.copied.push({ column, tipo, items: stored as CopiedComponent['items'] });
+		}
+	}
+	return columnCopy;
+}
+
+/**
+ * The value a copied key is stored with. A MEDIA component's index is the
+ * SOURCE's files (source-id paths): the clone is inserted with none (external
+ * URL entries kept) and re-indexed at its own identity after the copy (step
+ * 4b). What the source claimed is remembered — a copy that lands fewer files is
+ * a verdict. Every other key is copied as is.
+ */
+async function copiedKeyValue(
+	column: MatrixJsonbColumn,
+	tipo: string,
+	items: unknown,
+	claimed: Map<string, number>,
+): Promise<unknown> {
+	return column === 'media' && Array.isArray(items) && (await isMediaComponent(tipo))
+		? stripSourceIndex(items, tipo, claimed)
+		: items;
+}
+
+/**
+ * Step 1b. The FRAMES of every covered mirror left out go with it (the covered
+ * UNIT, record_write.ts dropCoveredObserverUnits): they pair with the SOURCE's
+ * referencer ids, and the clone's first recompute mints 1..N — a source
+ * referencer's frame would land on the clone's. Dropped before the frame-target
+ * re-mint (3b), which would otherwise deep-copy targets for frames the clone
+ * never stores; `copied` follows the drop: its relation components are re-read
+ * from the post-drop relation (gone ⇒ removed), in place.
+ */
+function followRelationDrop(copied: CopiedComponent[], relation: Record<string, unknown>): void {
+	for (let index = copied.length - 1; index >= 0; index--) {
+		const component = copied[index];
+		if (component === undefined || component.column !== 'relation') continue;
+		const stored = relation[component.tipo];
+		if (Array.isArray(stored)) component.items = stored as CopiedComponent['items'];
+		else copied.splice(index, 1);
+	}
+}
+
+/**
+ * Step 2. Fresh audit metadata: created AND modified stamps (the PHP re-save
+ * loop layers 'update_record' modification data over the creation stamps).
+ */
+async function stampDuplicateAudit(
+	values: Partial<Record<MatrixJsonbColumn, unknown>>,
+	sectionTipo: string,
+	userId: number,
+	now: Date,
+): Promise<void> {
+	values.data = await buildRecordMetadata(sectionTipo, userId, now);
+	values.relation = {
+		...((values.relation as Record<string, unknown>) ?? {}),
+		[MODIFIED_BY_USER]: [auditUserLocator(userId, MODIFIED_BY_USER)],
+		[CREATED_BY_USER]: [auditUserLocator(userId, CREATED_BY_USER)],
+	};
+	values.date = {
+		...((values.date as Record<string, unknown>) ?? {}),
+		[CREATED_DATE]: [auditDateItem(now)],
+		[MODIFIED_DATE]: [auditDateItem(now)],
+	};
+}
+
+/**
+ * Step 3. meta: the re-save loop's per-component counter for every copied tipo
+ * ([{count: maxItemId}], PHP canonical array shape). relation_search: the
+ * source's index is the BASE only — every `_hi` key is re-derived from the
+ * relation the clone will actually carry, by the chokepoint's birth step right
+ * before the insert (step 4). Copied verbatim it kept the index of the covered
+ * mirror slot step 1 dropped: an index for a value the clone does not hold,
+ * matched by every broader-term search.
+ */
+function copyMetaAndIndexBase(
+	values: Partial<Record<MatrixJsonbColumn, unknown>>,
+	source: DuplicateSource,
+	copied: readonly CopiedComponent[],
+): void {
+	const meta: Record<string, unknown> = {
+		...((source.columns.meta as Record<string, unknown>) ?? {}),
+	};
+	for (const component of copied) {
+		const maxId = component.items.reduce(
+			(max, item) => (typeof item.id === 'number' && item.id > max ? item.id : max),
+			0,
+		);
+		if (maxId > 0) meta[component.tipo] = [{ count: maxId }];
+	}
+	if (Object.keys(meta).length > 0) values.meta = meta;
+	if (source.columns.relation_search != null)
+		values.relation_search = source.columns.relation_search;
+}
+
 /**
  * THE VERDICT-BEARING DOOR: duplicate a record and answer, beside the new id,
  * one media VERDICT per copied media component (CORE-5 — see the header and
@@ -549,15 +625,21 @@ function stripSourceIndex(
 	let count = 0;
 	const stripped = items.map((item) => {
 		if (item === null || typeof item !== 'object' || isExternalItem(item)) return item;
-		const filesInfo = (item as { files_info?: unknown }).files_info;
-		for (const entry of Array.isArray(filesInfo) ? filesInfo : []) {
-			const e = entry as { file_exist?: unknown; external?: unknown } | null;
-			if (e?.file_exist === true && e.external !== true) count++;
-		}
+		count += claimedFileCount((item as { files_info?: unknown }).files_info);
 		return { ...(item as Record<string, unknown>), files_info: [] };
 	});
 	claimed.set(tipo, count);
 	return stripped;
+}
+
+/** The existing, non-external entries of one item's `files_info` (what its index claims). */
+function claimedFileCount(filesInfo: unknown): number {
+	let count = 0;
+	for (const entry of Array.isArray(filesInfo) ? filesInfo : []) {
+		const e = entry as { file_exist?: unknown; external?: unknown } | null;
+		if (e?.file_exist === true && e.external !== true) count++;
+	}
+	return count;
 }
 
 /**

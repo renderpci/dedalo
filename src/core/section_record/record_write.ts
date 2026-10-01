@@ -304,24 +304,39 @@ async function planKeyObligations(
 	savePath: readonly SavePathItem[],
 	mode: KeyWriteMode,
 ): Promise<{ observed: SavePathItem[]; indexed: SavePathItem[]; recomputed: string[] }> {
-	const observed: SavePathItem[] = [];
-	const indexed: SavePathItem[] = [];
 	// A restored covered slot is RECOMPUTED, never declared as a change (see mode.coveredSlots).
 	const recomputed =
 		mode.ledger && mode.coveredSlots === 'recompute' ? await coveredSlotKeys(savePath) : [];
-	if (mode.ledger) {
-		for (const item of savePath) {
-			if (recomputed.includes(item.key)) continue;
-			if (await isObservedTipo(item.key)) observed.push(item);
-		}
-	}
-	const { relationSearchLaw } = await import('../relations/save.ts');
+	const observed = mode.ledger ? await observedItems(savePath, recomputed) : [];
+	return { observed, indexed: await indexedRelationItems(savePath, mode.law), recomputed };
+}
+
+/** The savePath items an observer watches, minus the recomputed covered slots. */
+async function observedItems(
+	savePath: readonly SavePathItem[],
+	recomputed: readonly string[],
+): Promise<SavePathItem[]> {
+	const observed: SavePathItem[] = [];
 	for (const item of savePath) {
-		if (item.column === 'relation' && (await relationSearchLaw(item.key, mode.law))) {
+		if (recomputed.includes(item.key)) continue;
+		if (await isObservedTipo(item.key)) observed.push(item);
+	}
+	return observed;
+}
+
+/** The relation items the `relation_search` law indexes. */
+async function indexedRelationItems(
+	savePath: readonly SavePathItem[],
+	law: RelationSearchLaw,
+): Promise<SavePathItem[]> {
+	const { relationSearchLaw } = await import('../relations/save.ts');
+	const indexed: SavePathItem[] = [];
+	for (const item of savePath) {
+		if (item.column === 'relation' && (await relationSearchLaw(item.key, law))) {
 			indexed.push(item);
 		}
 	}
-	return { observed, indexed, recomputed };
+	return indexed;
 }
 
 /**
@@ -883,9 +898,23 @@ async function rederiveHiIndex(
 	liveColumns: Record<string, unknown> | null,
 ): Promise<void> {
 	if (!('relation' in values)) return;
-	const { relationSearchLaw, deriveRelationSearch } = await import('../relations/save.ts');
 	const relation = bagOf(values.relation);
-	const base = {
+	const base = hiIndexBase(values, liveColumns);
+	const candidates = new Set([
+		...Object.keys(relation),
+		...Object.keys(bagOf(liveColumns?.relation)),
+		...Object.keys(base),
+	]);
+	if (!(await rederiveIndexedKeys(candidates, relation, base))) return;
+	values.relation_search = Object.keys(base).length > 0 ? base : null;
+}
+
+/** The index a whole-record write re-derives ONTO: the caller's, else the live one (a copy). */
+function hiIndexBase(
+	values: MatrixWriteValues,
+	liveColumns: Record<string, unknown> | null,
+): Record<string, unknown> {
+	return {
 		...bagOf(
 			values.relation_search !== undefined
 				? values.relation_search
@@ -894,11 +923,18 @@ async function rederiveHiIndex(
 					: liveColumns.relation_search,
 		),
 	};
-	const candidates = new Set([
-		...Object.keys(relation),
-		...Object.keys(bagOf(liveColumns?.relation)),
-		...Object.keys(base),
-	]);
+}
+
+/**
+ * Re-derive, IN PLACE on `base`, every candidate key the save law indexes
+ * (absent or empty ⇒ the key goes). True when any candidate was indexed.
+ */
+async function rederiveIndexedKeys(
+	candidates: ReadonlySet<string>,
+	relation: Record<string, unknown>,
+	base: Record<string, unknown>,
+): Promise<boolean> {
+	const { relationSearchLaw, deriveRelationSearch } = await import('../relations/save.ts');
 	let touched = false;
 	for (const tipo of candidates) {
 		if (!(await relationSearchLaw(tipo, 'save'))) continue;
@@ -907,8 +943,7 @@ async function rederiveHiIndex(
 		if (index !== null && index.length > 0) base[tipo] = index;
 		else delete base[tipo];
 	}
-	if (!touched) return;
-	values.relation_search = Object.keys(base).length > 0 ? base : null;
+	return touched;
 }
 
 /** The before/after of every key in the written columns (the ledger keeps the observed ones). */
@@ -920,12 +955,22 @@ function wholeRecordChanges(
 	const changes: KeyChange[] = [];
 	for (const [column, value] of Object.entries(values)) {
 		if (column === 'relation_search' || column === 'data' || column === 'meta') continue;
-		const after = bagOf(value);
-		const before = bagOf(liveColumns[column]);
-		for (const tipo of new Set([...Object.keys(before), ...Object.keys(after)])) {
-			if (column === 'relation' && pinned.includes(tipo)) continue;
-			changes.push({ column, tipo, before: asItems(before[tipo]), after: asItems(after[tipo]) });
-		}
+		changes.push(...columnKeyChanges(column, bagOf(liveColumns[column]), bagOf(value), pinned));
+	}
+	return changes;
+}
+
+/** The before/after of every key of ONE written column (pinned covered slots of `relation` skipped). */
+function columnKeyChanges(
+	column: string,
+	before: Record<string, unknown>,
+	after: Record<string, unknown>,
+	pinned: readonly string[],
+): KeyChange[] {
+	const changes: KeyChange[] = [];
+	for (const tipo of new Set([...Object.keys(before), ...Object.keys(after)])) {
+		if (column === 'relation' && pinned.includes(tipo)) continue;
+		changes.push({ column, tipo, before: asItems(before[tipo]), after: asItems(after[tipo]) });
 	}
 	return changes;
 }

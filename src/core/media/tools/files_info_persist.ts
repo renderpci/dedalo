@@ -203,12 +203,15 @@ export async function transformStoredMediaItems(
 				: { action: 'written', affected, items: decision.write };
 		});
 	} catch (error) {
-		if (sqlStateOf(error) === '55P03') return { action: 'locked', affected: 0 };
-		if (error instanceof DedaloError && error.code === 'db.lock_timeout') {
-			return { action: 'locked', affected: 0 };
-		}
+		if (isLockTimeout(error)) return { action: 'locked', affected: 0 };
 		throw error;
 	}
+}
+
+/** The row lock was not granted within the wait (raw SQLSTATE 55P03, or its typed twin). */
+function isLockTimeout(error: unknown): boolean {
+	if (sqlStateOf(error) === '55P03') return true;
+	return error instanceof DedaloError && error.code === 'db.lock_timeout';
 }
 
 export interface FilesInfoReconcileResult {

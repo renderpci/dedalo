@@ -973,8 +973,7 @@ async function writeRowPassOne(
 ): Promise<PlannedColumn[]> {
 	const secondPass: PlannedColumn[] = [];
 	for (const column of record.columns) {
-		if (!(await columnAuthorized(column, record.row, ctx))) continue;
-		if (!collectConformIssues(column, record.row, ctx)) continue;
+		if (!(await columnWritable(column, record.row, ctx))) continue;
 		Object.assign(metadata, metadataPatchFor(column));
 
 		const isSlot = column.model === DATAFRAME_MODEL;
@@ -986,6 +985,15 @@ async function writeRowPassOne(
 		publishColumn(column.tipo);
 	}
 	return secondPass;
+}
+
+/** Authorized for this caller, THEN conform-clean (an unauthorized column reports no conform issue). */
+async function columnWritable(
+	column: PlannedColumn,
+	row: number,
+	ctx: RowWriteContext & { failed: ImportRowIssue[] },
+): Promise<boolean> {
+	return (await columnAuthorized(column, row, ctx)) && collectConformIssues(column, row, ctx);
 }
 
 /**

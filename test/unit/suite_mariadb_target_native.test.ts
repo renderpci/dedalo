@@ -502,7 +502,13 @@ describe('suite MariaDB target — pure', () => {
 			for (const paths of [marked, other])
 				writeFileSync(join(paths.root, SUITE_MARIADB_MARKER_FILE), '{}\n');
 			server = Bun.spawn(
-				['bun', '-e', 'await Bun.sleep(120000)', 'mariadbd', `--datadir=${marked.datadir}`],
+				[
+					process.execPath,
+					'-e',
+					'await Bun.sleep(120000)',
+					'mariadbd',
+					`--datadir=${marked.datadir}`,
+				],
 				{ stdout: 'ignore', stderr: 'ignore' },
 			);
 			writeFileSync(marked.pidFile, `${server.pid}\n`);
@@ -541,13 +547,19 @@ describe('suite MariaDB target — pure', () => {
 			mkdirSync(paths.datadir, { recursive: true });
 			writeFileSync(join(paths.root, SUITE_MARIADB_MARKER_FILE), '{}\n');
 			server = Bun.spawn(
-				['bun', '-e', 'await Bun.sleep(120000)', 'mariadbd', `--datadir=${paths.datadir}`],
+				[
+					process.execPath,
+					'-e',
+					'await Bun.sleep(120000)',
+					'mariadbd',
+					`--datadir=${paths.datadir}`,
+				],
 				{ stdout: 'ignore', stderr: 'ignore' },
 			);
 			writeFileSync(paths.pidFile, `${server.pid}\n`);
 			holder = Bun.spawn(
 				[
-					'bun',
+					process.execPath,
 					'-e',
 					`import { existsSync } from 'node:fs';
 const { acquireSuiteMariadbLock } = await import(${JSON.stringify(lockModule)});
@@ -614,7 +626,7 @@ console.log(JSON.stringify({ released: at }));`,
 			for (let i = 0; i < 3_000; i++) writeFileSync(join(paths.datadir, `f${i}`), 'x');
 			const sweeper = Bun.spawn(
 				[
-					'bun',
+					process.execPath,
 					'-e',
 					`const { sweepSuiteMariadb } = await import(${JSON.stringify(lanesModule)});
 console.log(JSON.stringify(await sweepSuiteMariadb(${JSON.stringify(lane)})));`,
@@ -671,7 +683,7 @@ console.log(JSON.stringify(await sweepSuiteMariadb(${JSON.stringify(lane)})));`,
 			for (let i = 0; i < 500; i++) writeFileSync(join(paths.datadir, `f${i}`), 'x');
 			server = Bun.spawn(
 				[
-					'bun',
+					process.execPath,
 					'-e',
 					`const fs = require('node:fs');
 process.on('SIGTERM', async () => {
@@ -693,7 +705,7 @@ await Bun.sleep(120000);`,
 			expect(existsSync(sigterm), 'the sweep reached its locked stop').toBe(true);
 			waiter = Bun.spawn(
 				[
-					'bun',
+					process.execPath,
 					'-e',
 					`import { existsSync } from 'node:fs';
 const { acquireSuiteMariadbLock } = await import(${JSON.stringify(lockModule)});
@@ -800,7 +812,11 @@ try {
 		}
 		const env = { ...process.env, PATH: `${bin}:${process.env.PATH ?? ''}` };
 		const runChild = async (script: string) => {
-			const child = Bun.spawn(['bun', '-e', script], { env, stdout: 'pipe', stderr: 'pipe' });
+			const child = Bun.spawn([process.execPath, '-e', script], {
+				env,
+				stdout: 'pipe',
+				stderr: 'pipe',
+			});
 			const killer = setTimeout(() => child.kill('SIGKILL'), 20_000);
 			const [out, err] = await Promise.all([
 				new Response(child.stdout).text(),
@@ -937,7 +953,11 @@ process.exit(0);`);
 		env: Record<string, string | undefined>,
 		killAfterMs = 30_000,
 	): Promise<T> {
-		const child = Bun.spawn(['bun', '-e', script], { env, stdout: 'pipe', stderr: 'pipe' });
+		const child = Bun.spawn([process.execPath, '-e', script], {
+			env,
+			stdout: 'pipe',
+			stderr: 'pipe',
+		});
 		const killer = setTimeout(() => child.kill('SIGKILL'), killAfterMs);
 		const [out, err] = await Promise.all([
 			new Response(child.stdout).text(),
@@ -1079,7 +1099,7 @@ process.exit(0);`;
 			expect(existsSync(join(paths.root, SUITE_MARIADB_MARKER_FILE))).toBe(true);
 			holder = Bun.spawn(
 				[
-					'bun',
+					process.execPath,
 					'-e',
 					`const { acquireSuiteMariadbLock } = await import(${JSON.stringify(lockModule)});
 await acquireSuiteMariadbLock(${JSON.stringify(lane)}, 20_000);
@@ -1126,7 +1146,7 @@ await Bun.sleep(120_000);`,
 		const rootName = new RegExp(`^${prefix}_\\d+$`);
 		const claimer = Bun.spawn(
 			[
-				'bun',
+				process.execPath,
 				'-e',
 				`import { renameSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -1179,7 +1199,7 @@ for (let i = 0; ; i++) {
 
 		// A KILLED claim leaves its marked temp root: the next lane sweep collects it; the
 		// temp root of a claim still in progress (a live pid) is kept.
-		const dead = Bun.spawn(['bun', '-e', '0'], { stdout: 'ignore', stderr: 'ignore' });
+		const dead = Bun.spawn([process.execPath, '-e', '0'], { stdout: 'ignore', stderr: 'ignore' });
 		await dead.exited;
 		const template = `zz_claimtrash_probe_${process.pid}`;
 		const killed = join(base, `.${template}__shard1.claim-${dead.pid}-1`);
@@ -1232,7 +1252,7 @@ for (let i = 0; ; i++) {
 const out = m.suiteServerEnvironment({ suiteDb: ${JSON.stringify(LANE)}, port: 1, ...m.suiteServerPaths() });
 const keys = ['DEDALO_DIFFUSION_DB_SOCKET', 'DEDALO_DIFFUSION_DB_HOST', 'DEDALO_DIFFUSION_DB_PORT'];
 console.log(JSON.stringify(Object.fromEntries(keys.map((k) => [k, out[k] ?? null]))));`;
-		const child = Bun.spawnSync(['bun', '-e', script], { cwd: REPO_ROOT, env });
+		const child = Bun.spawnSync([process.execPath, '-e', script], { cwd: REPO_ROOT, env });
 		expect(child.exitCode, child.stderr.toString()).toBe(0);
 		const served = JSON.parse(
 			child.stdout.toString().trim().split('\n').at(-1) as string,
@@ -2492,7 +2512,7 @@ describe('suite MariaDB target — live, through the engine', () => {
 		const holder = (holdMs: number) =>
 			Bun.spawn(
 				[
-					'bun',
+					process.execPath,
 					'-e',
 					`const { acquireSuiteMariadbLock } = await import(${JSON.stringify(lockModule)});
 const release = await acquireSuiteMariadbLock(${JSON.stringify(LANE)}, 60_000);

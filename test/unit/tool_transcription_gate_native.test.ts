@@ -28,10 +28,13 @@
  * (AV 1, transcript 2) gets the SAME answer (past the gate) from every door; the
  * TEXT_ONLY one (AV 0) the same refusal ON the AV from every door.
  *
- * THE ACTION CENSUS IS TOTAL over `tool.apiActions`: every action is either a
- * RECORD door (a payload builder below) or an enumerated install-level
- * exemption (admin-only / configuration) with its reason. A new action that is
- * neither reddens the census test.
+ * THE LOCAL ACTION SET IS PINNED EXACTLY (key equality against
+ * `tool.apiActions`): every action is either a RECORD door (a payload builder
+ * below) or an enumerated install-level exemption (admin-only /
+ * configuration) with its reason. A new action that is neither reddens the
+ * pin. The cross-tool door census — derived from every loaded tool — is owned
+ * by authz_door_matrix_native, which classifies these same actions probed or
+ * NOT_YET_PROBED; this pin is the per-tool half, not a second census.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
@@ -215,7 +218,7 @@ describe.if(DB_READY)('TOOLS-3 — tool_transcription record doors through the w
 		expect(await dropSituation(SUBTITLE_SITUATION)).toBe(0);
 	});
 
-	test('the action census is TOTAL: every action is a record door or an enumerated exemption', () => {
+	test('the action set is pinned exactly: every action is a record door or an enumerated exemption', () => {
 		const classified = [...Object.keys(RECORD_DOORS), ...Object.keys(INSTALL_LEVEL_EXEMPT)].sort();
 		expect(Object.keys(tool.apiActions).sort()).toEqual(classified);
 	});

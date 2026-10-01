@@ -171,27 +171,35 @@ const LEDGER_GUARD = Symbol('obligation_ledger.guard');
  */
 export function removedLocators(before: readonly unknown[], after: unknown): unknown[] {
 	if (before.length === 0) return [];
-	const key = (entry: unknown): string | null => {
-		if (entry === null || typeof entry !== 'object') return null;
-		const locator = entry as { section_tipo?: unknown; section_id?: unknown; type?: unknown };
-		if (typeof locator.section_tipo !== 'string' || locator.section_id === undefined) return null;
-		if (locator.type === DATAFRAME_RELATION_TYPE) return null;
-		return `${locator.section_tipo}|${String(locator.section_id)}`;
-	};
-	const afterKeys = new Set<string>();
-	for (const entry of Array.isArray(after) ? after : []) {
-		const entryKey = key(entry);
-		if (entryKey !== null) afterKeys.add(entryKey);
-	}
+	const afterKeys = edgeTargetKeys(after);
 	const removed: unknown[] = [];
 	const seen = new Set<string>();
 	for (const entry of before) {
-		const entryKey = key(entry);
+		const entryKey = edgeTargetKey(entry);
 		if (entryKey === null || afterKeys.has(entryKey) || seen.has(entryKey)) continue;
 		seen.add(entryKey);
 		removed.push(entry);
 	}
 	return removed;
+}
+
+/** The record an EDGE locator points at (`section_tipo|section_id`); null for a non-locator or a dd490 frame. */
+function edgeTargetKey(entry: unknown): string | null {
+	if (entry === null || typeof entry !== 'object') return null;
+	const locator = entry as { section_tipo?: unknown; section_id?: unknown; type?: unknown };
+	if (typeof locator.section_tipo !== 'string' || locator.section_id === undefined) return null;
+	if (locator.type === DATAFRAME_RELATION_TYPE) return null;
+	return `${locator.section_tipo}|${String(locator.section_id)}`;
+}
+
+/** {@link edgeTargetKey} of every entry of a value (a non-array value has none). */
+function edgeTargetKeys(value: unknown): Set<string> {
+	const keys = new Set<string>();
+	for (const entry of Array.isArray(value) ? value : []) {
+		const entryKey = edgeTargetKey(entry);
+		if (entryKey !== null) keys.add(entryKey);
+	}
+	return keys;
 }
 
 /**
@@ -256,16 +264,31 @@ function declaredChanges(observed: ObservedDeclaration): readonly KeyChange[] {
 	}
 }
 
+/** A declaration the ledger enqueues (`none` / `cascade-owned` never reach it). */
+type LedgerObserved = Exclude<ObservedDeclaration, { kind: 'none' } | { kind: 'cascade-owned' }>;
+
 /** Build the entry: the OBSERVED keys only, each with its saved/removed halves. */
 async function buildEntry(
 	target: RecordWriteTarget,
-	observed: Exclude<ObservedDeclaration, { kind: 'none' } | { kind: 'cascade-owned' }>,
+	observed: LedgerObserved,
 	receipt: WriteReceipt | undefined,
 ): Promise<LedgerEntry> {
+	return {
+		target,
+		changes: await observedKeyChanges(observed),
+		selfRecompute: selfRecomputeSlots(observed),
+		verbatim: isVerbatimDeclaration(observed),
+		actor: observed.actor,
+		now: observed.now ?? new Date(),
+		receipt,
+	};
+}
+
+/** The declared changes on OBSERVED tipos, one per tipo (a key is observed by tipo, whatever column holds it). */
+async function observedKeyChanges(observed: LedgerObserved): Promise<LedgerEntry['changes']> {
 	const changes: LedgerEntry['changes'] = [];
 	const seen = new Set<string>();
 	for (const change of declaredChanges(observed)) {
-		// one entry per tipo — a key is observed by tipo, whatever column holds it
 		if (seen.has(change.tipo)) continue;
 		seen.add(change.tipo);
 		if (!(await isObservedTipo(change.tipo))) continue;
@@ -275,22 +298,25 @@ async function buildEntry(
 			removed: removedLocators(change.before, change.after),
 		});
 	}
-	const selfRecompute =
-		observed.kind === 'replace' || observed.kind === 'birth'
-			? [...(observed.selfRecompute ?? [])]
-			: observed.kind === 'recompute'
-				? [...observed.slots]
-				: [];
-	return {
-		target,
-		changes,
-		selfRecompute,
-		verbatim:
-			(observed.kind === 'birth' || observed.kind === 'recompute') && observed.verbatim === true,
-		actor: observed.actor,
-		now: observed.now ?? new Date(),
-		receipt,
-	};
+	return changes;
+}
+
+/** The covered slots the write itself recomputes (never propagated — see DERIVED). */
+function selfRecomputeSlots(observed: LedgerObserved): string[] {
+	switch (observed.kind) {
+		case 'replace':
+		case 'birth':
+			return [...(observed.selfRecompute ?? [])];
+		case 'recompute':
+			return [...observed.slots];
+		default:
+			return [];
+	}
+}
+
+/** A birth/recompute declared verbatim writes its mirrors without modified stamps. */
+function isVerbatimDeclaration(observed: LedgerObserved): boolean {
+	return (observed.kind === 'birth' || observed.kind === 'recompute') && observed.verbatim === true;
 }
 
 /** A fresh root guard (the propagation's own root shape, one chain label). */
@@ -386,12 +412,22 @@ export async function enqueueObservedChange(
 	if (entry.changes.length === 0 && entry.selfRecompute.length === 0) return;
 	if (!isInTransaction()) {
 		const guard = await rootGuard(`ledger:${target.sectionTipo}/${target.sectionId}`);
-		if (entry.verbatim) guard.verbatim?.add(verbatimAddress(target.sectionTipo, target.sectionId));
-		await drainEntry(entry, guard);
+		await drainEntry(entry, markVerbatim(entry, guard));
 		return;
 	}
-	const guard = await transactionGuard();
-	if (entry.verbatim) guard.verbatim?.add(verbatimAddress(target.sectionTipo, target.sectionId));
+	queueOnCommit(entry, markVerbatim(entry, await transactionGuard()));
+}
+
+/** A verbatim entry marks its record on the guard it drains under (see {@link transactionGuard}). */
+function markVerbatim(entry: LedgerEntry, guard: CascadeGuard): CascadeGuard {
+	const { sectionTipo, sectionId } = entry.target;
+	if (entry.verbatim) guard.verbatim?.add(verbatimAddress(sectionTipo, sectionId));
+	return guard;
+}
+
+/** Queue the entry's drain on the ambient transaction's commit-only lane. */
+function queueOnCommit(entry: LedgerEntry, guard: CascadeGuard): void {
+	const target = entry.target;
 	if (!registerCommitAction(() => drainEntry(entry, guard))) {
 		// The ambient handle is present but its commit lane already settled: a
 		// LEAKED CONTINUATION (an unawaited write that outlived its

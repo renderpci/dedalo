@@ -329,7 +329,21 @@ export function classifyReconcileOutcome(
 	counted: ReconcileCounts;
 	log: string | null;
 } {
-	const counted: ReconcileCounts = {
+	const counted = emptyReconcileCounts();
+	if (!outcome.changed) return classifyAgreeingValue(outcome, tuple, sectionId, apply, counted);
+	const { dropped, added } = countDrift(outcome, counted);
+	return {
+		drifted: true,
+		record: reconcileRecordOf(outcome, tuple, sectionId, dropped, added),
+		counted,
+		log: driftLog(outcome, tuple, sectionId, apply, counted),
+	};
+}
+
+type ReconcileClassification = ReturnType<typeof classifyReconcileOutcome>;
+
+function emptyReconcileCounts(): ReconcileCounts {
+	return {
 		droppedRecords: 0,
 		droppedLocators: 0,
 		degradedSeedRecords: 0,
@@ -338,58 +352,89 @@ export function classifyReconcileOutcome(
 		repaired: 0,
 		reindexed: 0,
 	};
-	if (!outcome.changed) {
-		if (outcome.indexDrift !== true) return { drifted: false, record: null, counted, log: null };
-		// The value is right; only its `_hi` ancestor index was missing or stale.
-		counted.reindexed = 1;
-		return {
-			drifted: false,
-			record: null,
-			counted,
-			log: `  ${tuple.hostSection} §${sectionId} ${tuple.observerTipo}: value agrees, _hi ancestor index ${apply ? 'rewritten' : 'disagrees — an apply would rewrite it'}`,
-		};
-	}
-	// A value the kernel refused or withheld (the freeze, a pure degraded-seed
-	// shrink) stays as stored — and its `_hi` index is swept all the same.
-	const reindexNote =
-		outcome.indexDrift === true
-			? `; _hi ancestor index ${apply ? 'rewritten' : 'disagrees — an apply would rewrite it'}`
-			: '';
+}
+
+/** An unchanged value: clean, or an index-only drift (its `_hi` ancestor index missing or stale). */
+function classifyAgreeingValue(
+	outcome: ExternalRecomputeOutcome,
+	tuple: ReconcileTuple,
+	sectionId: number,
+	apply: boolean,
+	counted: ReconcileCounts,
+): ReconcileClassification {
+	if (outcome.indexDrift !== true) return { drifted: false, record: null, counted, log: null };
+	counted.reindexed = 1;
+	return {
+		drifted: false,
+		record: null,
+		counted,
+		log: `  ${tuple.hostSection} §${sectionId} ${tuple.observerTipo}: value agrees, _hi ancestor index ${apply ? 'rewritten' : 'disagrees — an apply would rewrite it'}`,
+	};
+}
+
+/**
+ * The census of a drifted value (see the classifier's header: MEMBERSHIP
+ * counts, a length delta only when the kernel gave none). A value the kernel
+ * refused or withheld (the freeze, a pure degraded-seed shrink) stays as
+ * stored — and its `_hi` index is swept all the same.
+ */
+function countDrift(
+	outcome: ExternalRecomputeOutcome,
+	counted: ReconcileCounts,
+): { dropped: number; added: number } {
 	if (outcome.indexDrift === true) counted.reindexed = 1;
-	const isShrink = outcome.after < outcome.before;
-	const droppedHere = outcome.dropped ?? Math.max(0, outcome.before - outcome.after);
-	const addedHere = outcome.added ?? Math.max(0, outcome.after - outcome.before);
-	if (droppedHere > 0) {
+	const dropped = outcome.dropped ?? Math.max(0, outcome.before - outcome.after);
+	const added = outcome.added ?? Math.max(0, outcome.after - outcome.before);
+	if (dropped > 0) {
 		counted.droppedRecords++;
-		counted.droppedLocators += droppedHere;
+		counted.droppedLocators += dropped;
 	}
 	if (outcome.seedDefects !== undefined) counted.degradedSeedRecords++;
-	const record: ReconcileRecord = {
+	return { dropped, added };
+}
+
+function reconcileRecordOf(
+	outcome: ExternalRecomputeOutcome,
+	tuple: ReconcileTuple,
+	sectionId: number,
+	dropped: number,
+	added: number,
+): ReconcileRecord {
+	return {
 		observerTipo: tuple.observerTipo,
 		hostSection: tuple.hostSection,
 		sectionId,
 		before: outcome.before,
 		after: outcome.after,
-		dropped: droppedHere,
-		added: addedHere,
+		dropped,
+		added,
 		...(outcome.seedDefects !== undefined ? { seedDefects: outcome.seedDefects } : {}),
-		...(outcome.refusedBigResult === true
-			? ({ refusal: 'big_result' } as const)
-			: outcome.skippedShrink === true
-				? ({ refusal: 'degraded_seed' } as const)
-				: {}),
+		...kernelRefusal(outcome),
 	};
+}
+
+/** Which kernel refusal fired: the >2000-reference freeze wins over a degraded seed. */
+function kernelRefusal(outcome: ExternalRecomputeOutcome): Pick<ReconcileRecord, 'refusal'> {
+	if (outcome.refusedBigResult === true) return { refusal: 'big_result' };
+	if (outcome.skippedShrink === true) return { refusal: 'degraded_seed' };
+	return {};
+}
+
+/** The report line of a drifted value; moves the refusal / repaired counters. */
+function driftLog(
+	outcome: ExternalRecomputeOutcome,
+	tuple: ReconcileTuple,
+	sectionId: number,
+	apply: boolean,
+	counted: ReconcileCounts,
+): string {
+	const head = `  ${tuple.hostSection} §${sectionId} ${tuple.observerTipo}: ${outcome.before} → ${outcome.after} entrie(s)`;
 	if (outcome.refusedBigResult === true) {
 		// PHP >2000-reference freeze: the kernel computed the diff but
 		// persisted nothing — never count it as repaired (a refused record
 		// reported clean is the sub-law lesson all over again).
 		counted.bigResultRefused++;
-		return {
-			drifted: true,
-			record,
-			counted,
-			log: `  ${tuple.hostSection} §${sectionId} ${tuple.observerTipo}: ${outcome.before} → ${outcome.after} entrie(s) [>2000-reference FREEZE — ${apply ? 'not written' : 'an apply would refuse'}${reindexNote}]`,
-		};
+		return `${head} [>2000-reference FREEZE — ${apply ? 'not written' : 'an apply would refuse'}${reindexNote(outcome, apply)}]`;
 	}
 	if (outcome.skippedShrink === true) {
 		// DEGRADED SEED — the only remaining shrink escape. Additions HAVE
@@ -397,20 +442,26 @@ export function classifyReconcileOutcome(
 		// this record's seed could not be built completely. Not fixable by
 		// a flag: fix the ontology the defects name, then re-run.
 		counted.shrinksSkipped++;
-		return {
-			drifted: true,
-			record,
-			counted,
-			log: `  ${tuple.hostSection} §${sectionId} ${tuple.observerTipo}: ${outcome.before} → ${outcome.after} entrie(s) [SHRINK held — DEGRADED SEED: ${(outcome.seedDefects ?? []).join(', ')}; grows applied${reindexNote}]`,
-		};
+		return `${head} [SHRINK held — DEGRADED SEED: ${(outcome.seedDefects ?? []).join(', ')}; grows applied${reindexNote(outcome, apply)}]`;
 	}
+	return cleanDriftLog(head, outcome, apply, counted);
+}
+
+/** A drift the kernel wrote (apply) or would write (dry run). */
+function cleanDriftLog(
+	head: string,
+	outcome: ExternalRecomputeOutcome,
+	apply: boolean,
+	counted: ReconcileCounts,
+): string {
 	if (apply) counted.repaired++;
-	return {
-		drifted: true,
-		record,
-		counted,
-		log: `  ${tuple.hostSection} §${sectionId} ${tuple.observerTipo}: ${outcome.before} → ${outcome.after} entrie(s)${isShrink ? ' [shrink]' : ''}${apply ? ' [repaired]' : ''}`,
-	};
+	return `${head}${outcome.after < outcome.before ? ' [shrink]' : ''}${apply ? ' [repaired]' : ''}`;
+}
+
+/** The `_hi` note a refused/withheld value carries (its index is swept all the same). */
+function reindexNote(outcome: ExternalRecomputeOutcome, apply: boolean): string {
+	if (outcome.indexDrift !== true) return '';
+	return `; _hi ancestor index ${apply ? 'rewritten' : 'disagrees — an apply would rewrite it'}`;
 }
 
 /**

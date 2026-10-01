@@ -1451,7 +1451,6 @@ async function removePortalLocatorUnderGrant(
 	// target — never the request it was authorized from (no `source` or
 	// principal is in scope here).
 	const { componentTipo: tipo, sectionTipo, sectionId } = grant;
-	const msg: string[] = [];
 	const { getMatrixTableFromTipo, getModelByTipo, getColumnNameByModel } = await import(
 		'../ontology/resolver.ts'
 	);
@@ -1609,6 +1608,16 @@ async function removePortalLocatorUnderGrant(
 		};
 	});
 
+	return removalResponse(outcome, model, tipo);
+}
+
+/** The door's response to one removal outcome (PHP remove_locator_from_data's messages). */
+function removalResponse(
+	outcome: { emptyData: boolean; typeMismatch: boolean; removed: number },
+	model: string,
+	tipo: string,
+): PortalLocatorRemoval {
+	const msg: string[] = [];
 	if (outcome.emptyData) {
 		msg.push(`No locators are removed (${model} - ${tipo}). The component data is empty`);
 		return { removed: 0, msg };

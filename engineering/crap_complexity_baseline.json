@@ -4,10 +4,10 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 582,
-		"functions": 6654,
-		"functionsOverCap": 683,
-		"filesOverCap": 265
+		"files": 587,
+		"functions": 6825,
+		"functionsOverCap": 681,
+		"filesOverCap": 264
 	},
 	"ledger": [
 		{
@@ -71,6 +71,11 @@
 			"generated": "2026-09-30",
 			"functionsOverCap": 683,
 			"filesOverCap": 265
+		},
+		{
+			"generated": "2026-10-01",
+			"functionsOverCap": 681,
+			"filesOverCap": 264
 		}
 	],
 	"files": {
@@ -188,7 +193,6 @@
 		"src/core/media/file_date.ts": 9,
 		"src/core/media/file_ops.ts": 18,
 		"src/core/media/files_info.ts": 12,
-		"src/core/media/files_info_reconcile.ts": 26,
 		"src/core/media/ingest/add_file.ts": 8,
 		"src/core/media/ingest/companion_writes.ts": 7,
 		"src/core/media/ingest/process_uploaded_file.ts": 21,
@@ -282,14 +286,14 @@
 		"src/core/section/read.ts": 81,
 		"src/core/section/read_facade.ts": 61,
 		"src/core/section/read_source.ts": 11,
-		"src/core/section/record/delete_record.ts": 26,
-		"src/core/section/record/duplicate_record.ts": 25,
+		"src/core/section/record/delete_record.ts": 25,
+		"src/core/section/record/duplicate_record.ts": 19,
 		"src/core/section/record/observer_reconcile.ts": 16,
 		"src/core/section/record/observer_subscriptions.ts": 44,
-		"src/core/section/record/observers.ts": 40,
+		"src/core/section/record/observers.ts": 37,
 		"src/core/section/record/record_defaults.ts": 23,
 		"src/core/section/record/record_metadata.ts": 10,
-		"src/core/section/record/save_component.ts": 97,
+		"src/core/section/record/save_component.ts": 89,
 		"src/core/section/record/temporal.ts": 21,
 		"src/core/section/record/temporal_store.ts": 11,
 		"src/core/section/record_loader.ts": 12,

@@ -152,6 +152,32 @@ export const AUTHZ_TEXT_2 = 'test162';
  */
 export const AUTHZ_SUBTITLE_TEXT_AREA = 'zzauthz1';
 
+/**
+ * The stub agent MODEL both agent-door gates (agent_access_native,
+ * authz_door_matrix_native) configure — a model id in `DEDALO_AGENT_MODELS`,
+ * not a tipo. It is spelled ONCE, here: the zz-literal census
+ * (scratch_tld_uniqueness_tripwire) reads any `'zz…` literal as a TLD, and two
+ * gates spelling it would be a shared TLD by that rule.
+ */
+export const AUTHZ_STUB_MODEL_ID = 'zzstub';
+
+/** `DEDALO_AGENT_MODELS` naming {@link AUTHZ_STUB_MODEL_ID} on a local stand-in provider. */
+export function authzStubAgentModels(providerPort: number | undefined): string {
+	if (providerPort === undefined) {
+		throw new Error('authzStubAgentModels: the stand-in provider has no port (not listening?)');
+	}
+	return JSON.stringify([
+		{
+			id: AUTHZ_STUB_MODEL_ID,
+			label: 'zzauthz stub',
+			provider: 'openai_compatible',
+			model: `${AUTHZ_STUB_MODEL_ID}-native`,
+			endpoint: `http://127.0.0.1:${providerPort}/v1/chat/completions`,
+			egress: 'local',
+		},
+	]);
+}
+
 /** The components the WRITE door is about — granted 2 / explicitly 0. */
 export const AUTHZ_MEDIA_COMPONENTS = [AUTHZ_AV, AUTHZ_3D, AUTHZ_TEXT_AREA] as const;
 
