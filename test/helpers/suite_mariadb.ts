@@ -328,7 +328,7 @@ function binaries(): Binaries {
  * Is `pid` a RUNNING process? A ZOMBIE is not: it has exited and only waits to be
  * reaped, yet `kill(pid, 0)` still answers for it. The suite server is spawned
  * DETACHED, so once killed it waits on PID 1 — and in the CI container PID 1 never
- * reaps orphans (`runuser` in ci:local's driver, `tail -f /dev/null` in a GitHub
+ * reaps orphans (perl waiting on its own child in ci:local's driver, `tail -f /dev/null` in a GitHub
  * container job). Measured 2026-10-01: a stopped never-answering server read as
  * alive forever there (leg o), and a killed claimer's leftover was never
  * collectable (leg r). Linux exposes the state in /proc/<pid>/stat (`Z`); without
