@@ -526,6 +526,15 @@ console.log(
 	`[test-db] test TLD ontology materialized from JSON: ${testTld.nodes} records in ${testTld.tlds.join(', ')} — ${testTld.rebuilt.join('; ')}${testTld.strays.length > 0 ? ` (STRAY records not in the JSON: ${testTld.strays.join(', ')})` : ''}`,
 );
 
+// 3b. The ENGINE-OWNED ontology (src/core/ontology/engine_ontology.json — the
+// sections the engine itself writes, e.g. the AI spend ledger), through the same
+// idempotent door production boot and the installer run.
+const { ensureEngineOntology } = await import('../src/core/ontology/engine_ontology.ts');
+const engineOntology = await ensureEngineOntology();
+console.log(
+	`[test-db] engine ontology ${engineOntology.changed ? `materialized (${engineOntology.written} records)` : 'already current'}${engineOntology.strays.length > 0 ? ` (STRAY records: ${engineOntology.strays.join(', ')})` : ''}`,
+);
+
 // 4. The numisdata TEST ontology — definitions only, no records.
 //
 // The vendored `numisdata` ontology fixture was REMOVED here on 2026-08-21,

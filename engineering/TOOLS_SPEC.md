@@ -741,12 +741,12 @@ was deleted with the PHP engine.
 
 ## Server-module coverage (2026-07-28)
 
-**25 of the 37 tool packages ship a `server/index.ts`; 12 do not.** The 12 have
-client code only: registration warns (`no server module: tool_request will refuse
+**25 of the 38 tool packages ship a `server/index.ts`; 13 do not.** Twelve have
+client code only (the thirteenth, `tool_rag`, is grant-only and ships no code — below): registration warns (`no server module: tool_request will refuse
 this tool`) and dispatch refuses at gate 5 (`tool has no server module`,
 `unauthorized_method`).
 
-**None of the 12 is a gap, and that registration warning is INFORMATIONAL, not a
+**None of the 13 is a gap, and that registration warning is INFORMATIONAL, not a
 TODO** (2026-07-28 audit — the opposite reading is what produced a whole wrong
 starting premise). A tool needs a server module only if it has a remote surface,
 and these do not: **no client in the 12 posts `tool_request` at all**, while all
@@ -767,12 +767,20 @@ WITH a server module (25): `tool_dev_template`, `tool_error_report`,
 `tool_sitebuilder`, `tool_tc`, `tool_time_machine`, `tool_transcription`,
 `tool_update_cache`, `tool_upload`.
 
-WITHOUT one (12): `tool_assistant`, `tool_cataloging`, `tool_dd_label`,
+WITHOUT one (13): `tool_assistant`, `tool_cataloging`, `tool_dd_label`,
 `tool_diffusion`, `tool_indexation`, `tool_numisdata_epigraphy`,
-`tool_numisdata_order_coins`, `tool_print`, `tool_qr`, `tool_subtitles`,
+`tool_numisdata_order_coins`, `tool_print`, `tool_qr`, `tool_rag`, `tool_subtitles`,
 `tool_tr_print`, `tool_user_admin`.
 
-Two of the 12 additionally carry core wiring a reader would otherwise look for in
+`tool_rag` is the first GRANT-ONLY tool (2026-10-01, TOOLS-4): a registry row with
+no client, no stylesheet and no server module (`properties.grant_only: true`),
+which exists to be granted in the profile editor and asked by an engine door —
+`dd_rag_api` `ask` calls `assertToolGranted(principal, 'tool_rag')`. The UI
+gates (the phone ratchet, one entry sheet per tool) exempt it by that
+declaration; the grant-only law that keeps the declaration true is in
+`tools_register_validate.test.ts`.
+
+Two of the 13 additionally carry core wiring a reader would otherwise look for in
 the (absent) module: `tool_diffusion`'s availability has a core fallback in
 `registry.ts` (the diffusion section-map walk), and `tool_user_admin` is the
 install's only `always_active` tool. `tool_user_admin`'s server-side rules are

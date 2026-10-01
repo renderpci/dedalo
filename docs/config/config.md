@@ -4022,6 +4022,98 @@ ANTHROPIC_API_KEY="sk-ant-..."
 
 ---
 
+### Defining the daily semantic-search budget per user
+
+DEDALO_AI_USER_DAILY_EMBED_QUERIES `int`
+
+This parameter defines how many semantic-search queries (each one embeds the query text with the embedding model) one user may spend in one day (a UTC day, reset
+at midnight UTC).
+
+Every AI request is first RESERVED against the user's usage ledger (the engine-owned
+`AI usage` section under Administration, one record per user and day); a request that would go
+past this budget is refused with a message saying when the budget resets, before any model is
+called. Nobody is exempt — administrators and the root user included. Counted per query: a semantic search, a passage retrieval, a text-to-image search and the retrieval step of a generated answer each count one. The searches the assistant makes INSIDE a conversation are part of that conversation and are not counted here.
+
+`0` refuses every such request. There is no "unlimited" value: a model spend always has a
+limit.
+
+```bash
+DEDALO_AI_USER_DAILY_EMBED_QUERIES=2000
+```
+
+*Default: 2000*
+
+---
+
+### Defining the daily assistant-run budget per user
+
+DEDALO_AI_USER_DAILY_RUNS `int`
+
+This parameter defines how many model runs one user may spend in one day (a UTC day, reset
+at midnight UTC).
+
+Every AI request is first RESERVED against the user's usage ledger (the engine-owned
+`AI usage` section under Administration, one record per user and day); a request that would go
+past this budget is refused with a message saying when the budget resets, before any model is
+called. Nobody is exempt — administrators and the root user included. A run is one assistant conversation turn (which may call the model up to twelve times) or one generated answer over the collection (`ask`).
+
+`0` refuses every such request. There is no "unlimited" value: a model spend always has a
+limit.
+
+```bash
+DEDALO_AI_USER_DAILY_RUNS=50
+```
+
+*Default: 50*
+
+---
+
+### Defining the daily model-token budget per user
+
+DEDALO_AI_USER_DAILY_TOKENS `int`
+
+This parameter defines how many model tokens one user may spend in one day (a UTC day, reset
+at midnight UTC).
+
+Every AI request is first RESERVED against the user's usage ledger (the engine-owned
+`AI usage` section under Administration, one record per user and day); a request that would go
+past this budget is refused with a message saying when the budget resets, before any model is
+called. Nobody is exempt — administrators and the root user included. Each run reserves the most output it can produce (the per-turn output limit times the turns it may take) and is then charged what the model reports it used; a model that reports no usage keeps the whole reservation charged.
+
+`0` refuses every such request. There is no "unlimited" value: a model spend always has a
+limit.
+
+```bash
+DEDALO_AI_USER_DAILY_TOKENS=1000000
+```
+
+*Default: 1000000*
+
+---
+
+### Defining the daily vision-model budget per user
+
+DEDALO_AI_USER_DAILY_VISION `int`
+
+This parameter defines how many vision-model calls one user may spend in one day (a UTC day, reset
+at midnight UTC).
+
+Every AI request is first RESERVED against the user's usage ledger (the engine-owned
+`AI usage` section under Administration, one record per user and day); a request that would go
+past this budget is refused with a message saying when the budget resets, before any model is
+called. Nobody is exempt — administrators and the root user included. Counted per call: the identification tool's vision proposals and an image identification that sends the photograph to an external image encoder each count one.
+
+`0` refuses every such request. There is no "unlimited" value: a model spend always has a
+limit.
+
+```bash
+DEDALO_AI_USER_DAILY_VISION=50
+```
+
+*Default: 50*
+
+---
+
 ### Allowing record content to reach external models
 
 DEDALO_AGENT_ALLOW_EXTERNAL_PROVIDER_DEFAULT `bool`

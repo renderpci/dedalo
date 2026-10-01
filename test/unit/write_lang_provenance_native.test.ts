@@ -96,6 +96,8 @@ const OTHER_TEXT = 'test17';
 const OTHER_MODEL = 'component_text_area';
 const TABLE = 'matrix_test';
 const USER = 987672;
+/** The importing PRINCIPAL (req 10: the executor asks the write door as it) — the superuser, so the door is not this gate's subject. */
+const IMPORTER = { userId: -1, isGlobalAdmin: true, isDeveloper: true } as const;
 /** Scratch ids owned by THIS gate (reserved ≥ 900000 band). */
 const IMPORT_ID = 941701;
 const SET_FIELD_ID = 941702;
@@ -503,7 +505,7 @@ describe('a write lands in the SESSION’s data language, not the install defaul
 				importMappedRecords(
 					[{ sectionId: IMPORT_ID, fields: [{ component_tipo: TEXT, values: ['import value'] }] }],
 					SECTION,
-					USER,
+					IMPORTER,
 				),
 		);
 		rememberBulkProcess(report.bulkProcessId);
@@ -570,7 +572,7 @@ describe('a write lands in the SESSION’s data language, not the install defaul
 				importMappedRecords(
 					[{ sectionId: IMPORT_ID, fields: [{ component_tipo: TEXT, values: [''] }] }],
 					SECTION,
-					USER,
+					IMPORTER,
 				),
 		);
 		rememberBulkProcess(report.bulkProcessId);

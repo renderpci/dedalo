@@ -1,0 +1,260 @@
+{
+	"_doc": "The ENGINE-OWNED ontology (TLD `ddengine`) — THE SOURCE OF RECORD for the sections the engine itself writes. Materialized into every installation by src/core/ontology/engine_ontology.ts (boot, install, the suite setup) through the engine's own doors: matrix_ontology `ddengine0` records via the inverse parser, then rebuildOntology derives dd_ontology. Never hand-edit the database copy: an edit there is drift that the next boot rewrites from this file. Gate: test/unit/ai_spend_budget_native.test.ts (engine ontology legs).",
+	"tld": "ddengine",
+	"nodes": [
+		{
+			"tipo": "ddengine0",
+			"parent": "ontologytype5",
+			"term": {
+				"lg-eng": "Engine | ddengine",
+				"lg-spa": "Motor | ddengine"
+			},
+			"model": "section",
+			"order_number": null,
+			"relations": [
+				{
+					"tipo": "ontology1"
+				},
+				{
+					"tipo": "dd1201"
+				}
+			],
+			"tld": "ddengine",
+			"properties": {
+				"color": "#2d8894",
+				"main_tld": "ddengine"
+			},
+			"model_tipo": "dd6",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": true,
+			"propiedades": null
+		},
+		{
+			"tipo": "ddengine1",
+			"parent": "dd207",
+			"term": {
+				"lg-eng": "AI usage",
+				"lg-spa": "Uso de IA",
+				"lg-cat": "Ús d'IA"
+			},
+			"model": "section",
+			"order_number": 9,
+			"relations": null,
+			"tld": "ddengine",
+			"properties": null,
+			"model_tipo": "dd6",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "ddengine2",
+			"parent": "ddengine1",
+			"term": {
+				"lg-eng": "General",
+				"lg-spa": "General",
+				"lg-cat": "General"
+			},
+			"model": "section_group",
+			"order_number": 1,
+			"relations": null,
+			"tld": "ddengine",
+			"properties": null,
+			"model_tipo": "dd8",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "ddengine3",
+			"parent": "ddengine2",
+			"term": {
+				"lg-eng": "Id",
+				"lg-spa": "Id",
+				"lg-cat": "Id"
+			},
+			"model": "component_section_id",
+			"order_number": 1,
+			"relations": null,
+			"tld": "ddengine",
+			"properties": null,
+			"model_tipo": "dd1747",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "ddengine4",
+			"parent": "ddengine2",
+			"term": {
+				"lg-eng": "User",
+				"lg-spa": "Usuario",
+				"lg-cat": "Usuari"
+			},
+			"model": "component_portal",
+			"order_number": 2,
+			"relations": [
+				{
+					"tipo": "dd128"
+				},
+				{
+					"tipo": "dd132"
+				}
+			],
+			"tld": "ddengine",
+			"properties": {
+				"show_interface": {
+					"tools": false,
+					"read_only": true
+				}
+			},
+			"model_tipo": "dd592",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "ddengine5",
+			"parent": "ddengine2",
+			"term": {
+				"lg-eng": "Day (UTC)",
+				"lg-spa": "Día (UTC)",
+				"lg-cat": "Dia (UTC)"
+			},
+			"model": "component_input_text",
+			"order_number": 3,
+			"relations": null,
+			"tld": "ddengine",
+			"properties": {
+				"show_interface": {
+					"tools": false,
+					"read_only": true
+				}
+			},
+			"model_tipo": "dd9",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "ddengine6",
+			"parent": "ddengine2",
+			"term": {
+				"lg-eng": "Model runs",
+				"lg-spa": "Ejecuciones de modelo",
+				"lg-cat": "Execucions de model"
+			},
+			"model": "component_number",
+			"order_number": 4,
+			"relations": null,
+			"tld": "ddengine",
+			"properties": null,
+			"model_tipo": "dd43",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "ddengine7",
+			"parent": "ddengine2",
+			"term": {
+				"lg-eng": "Model tokens",
+				"lg-spa": "Tokens de modelo",
+				"lg-cat": "Tokens de model"
+			},
+			"model": "component_number",
+			"order_number": 5,
+			"relations": null,
+			"tld": "ddengine",
+			"properties": null,
+			"model_tipo": "dd43",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "ddengine8",
+			"parent": "ddengine2",
+			"term": {
+				"lg-eng": "Query embeddings",
+				"lg-spa": "Consultas vectorizadas",
+				"lg-cat": "Consultes vectoritzades"
+			},
+			"model": "component_number",
+			"order_number": 6,
+			"relations": null,
+			"tld": "ddengine",
+			"properties": null,
+			"model_tipo": "dd43",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "ddengine9",
+			"parent": "ddengine2",
+			"term": {
+				"lg-eng": "Vision calls",
+				"lg-spa": "Llamadas de visión",
+				"lg-cat": "Crides de visió"
+			},
+			"model": "component_number",
+			"order_number": 7,
+			"relations": null,
+			"tld": "ddengine",
+			"properties": null,
+			"model_tipo": "dd43",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "ddengine10",
+			"parent": "ddengine1",
+			"term": {
+				"lg-eng": "List",
+				"lg-spa": "Listado",
+				"lg-cat": "Llistat"
+			},
+			"model": "section_list",
+			"order_number": 2,
+			"relations": [
+				{
+					"tipo": "ddengine4"
+				},
+				{
+					"tipo": "ddengine5"
+				},
+				{
+					"tipo": "ddengine6"
+				},
+				{
+					"tipo": "ddengine7"
+				},
+				{
+					"tipo": "ddengine8"
+				},
+				{
+					"tipo": "ddengine9"
+				}
+			],
+			"tld": "ddengine",
+			"properties": null,
+			"model_tipo": "dd91",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		}
+	]
+}

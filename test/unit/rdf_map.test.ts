@@ -20,6 +20,8 @@ import { applyRdfMap, parseRdfXml, type RdfMapEntry } from '../../src/core/tools
 const SECTION = 'test2966';
 const INPUT_TEXT = 'test2968';
 const USER = -1;
+/** The importing PRINCIPAL (req 10: the executor asks the write door as it) — the superuser, so the door is not this gate's subject. */
+const IMPORTER = { userId: -1, isGlobalAdmin: true, isDeveloper: true } as const;
 
 const ZOTERO = `<?xml version="1.0"?>
 <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:z="http://www.zotero.org/namespaces/export#">
@@ -70,7 +72,7 @@ describe('Zotero import drive (scratch-twin, real DB)', () => {
 	test.if(dbAvailable)('mapped Zotero subject → created record with the mapped value', async () => {
 		const { subjects } = parseRdfXml(ZOTERO);
 		const mapped = applyRdfMap(subjects, [{ predicate: 'dc:title', component_tipo: INPUT_TEXT }]);
-		const report = await importMappedRecords(mapped, SECTION, USER);
+		const report = await importMappedRecords(mapped, SECTION, IMPORTER);
 		createdIds.push(...report.createdIds);
 		expect(report.created).toBe(1);
 		const newId = report.createdIds[0]!;

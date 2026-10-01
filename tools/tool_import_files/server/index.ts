@@ -68,6 +68,10 @@ import { saveComponentData } from '../../../src/core/section/record/save_compone
 import { getPermissions, type Principal } from '../../../src/core/security/permissions.ts';
 import { assertRecordWriteTarget } from '../../../src/core/security/record_scope.ts';
 import {
+	authorizeRecordAccess,
+	authorizeSectionTarget,
+} from '../../../src/core/security/write_door.ts';
+import {
 	basenamesMatch,
 	type FileProcessorOutput,
 	fileBasename,
@@ -632,14 +636,16 @@ export async function setComponentsData(options: SetComponentsDataOptions): Prom
 			sectionId,
 			targetSectionId,
 		);
-		// The RECORD half of the write authorization, at the write: the
-		// declarative 'targets' gate proved the (section, component) PAIR; the
-		// record it lands in is only known here. Same rule as the save door.
-		await assertRecordWriteTarget(
-			ddoSectionTipo,
-			destinationSectionId,
+		// THE WRITE DOOR, at the write (closure Step 3 req 10): the declarative
+		// 'targets' gate proved the (section, component) PAIR with no record named;
+		// the record it lands in is only known here, so the door is asked for the
+		// whole triple — grammar, section floor, the dd128-aware pair (the
+		// own-record downgrade needs the record), the write scope. Its grant
+		// addresses the save.
+		const grant = await authorizeRecordAccess(
 			principal,
-			`tool_import_files.import_files ${role}`,
+			{ section_tipo: ddoSectionTipo, component_tipo: tipo, section_id: destinationSectionId },
+			{ mode: 'write', level: 2, sectionFloor: 1, door: `tool_import_files.import_files.${role}` },
 		);
 
 		switch (role) {
@@ -652,9 +658,9 @@ export async function setComponentsData(options: SetComponentsDataOptions): Prom
 				if (existing.length > 0) break;
 				const value = filenameValueFor(currentFileName, ddo.only_basename === true);
 				const save = await saveComponentData({
-					componentTipo: tipo,
-					sectionTipo: ddoSectionTipo,
-					sectionId: destinationSectionId,
+					componentTipo: grant.componentTipo,
+					sectionTipo: grant.sectionTipo,
+					sectionId: grant.sectionId,
 					lang,
 					changedData: [{ action: 'set_data', id: null, value: [{ value, lang }] }],
 					userId,
@@ -679,9 +685,9 @@ export async function setComponentsData(options: SetComponentsDataOptions): Prom
 				// Persisted shape (PHP :1683-1686 + component_date::save add_time):
 				// one data element {start: dd_date} with the server-computed 'time'.
 				const save = await saveComponentData({
-					componentTipo: tipo,
-					sectionTipo: ddoSectionTipo,
-					sectionId: destinationSectionId,
+					componentTipo: grant.componentTipo,
+					sectionTipo: grant.sectionTipo,
+					sectionId: grant.sectionId,
 					lang,
 					changedData: [
 						{ action: 'set_data', id: null, value: [{ start: withDedaloTime(mediaDate) }] },
@@ -738,9 +744,9 @@ export async function setComponentsData(options: SetComponentsDataOptions): Prom
 				}
 				for (const [groupLang, groupItems] of groups) {
 					const save = await saveComponentData({
-						componentTipo: tipo,
-						sectionTipo: ddoSectionTipo,
-						sectionId: destinationSectionId,
+						componentTipo: grant.componentTipo,
+						sectionTipo: grant.sectionTipo,
+						sectionId: grant.sectionId,
 						lang: groupLang,
 						changedData: [{ action: 'set_data', id: null, value: groupItems }],
 						userId,
@@ -914,8 +920,10 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 	const writableRecords = new Set<string>();
 	const recordKey = (recordSectionTipo: string, recordSectionId: number): string =>
 		`${recordSectionTipo}/${recordSectionId}`;
+	const bornRecords = new Set<string>();
 	const bornInThisRun = (recordSectionTipo: string, recordSectionId: number): void => {
 		writableRecords.add(recordKey(recordSectionTipo, recordSectionId));
+		bornRecords.add(recordKey(recordSectionTipo, recordSectionId));
 	};
 	const assertWritableRecord = async (
 		recordSectionTipo: string,
@@ -930,6 +938,41 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 			'tool_import_files.import_files',
 		);
 		writableRecords.add(key);
+	};
+	// THE WRITE DOOR PER COMPONENT (closure Step 3 req 10). assertWritableRecord
+	// proves the RECORD (scope) at its binding point; the component this run
+	// writes INTO that record — the media component, the portal that links the
+	// new media record — is asked of the door as a triple: section floor, the
+	// dd128-aware pair (the own-record downgrade needs the record), the scope. A
+	// record born in this run has no prior state to scope: its pair is asked as
+	// a section target (the create rule). Memoized per (record, component).
+	const writableComponents = new Set<string>();
+	const assertWritableComponent = async (
+		recordSectionTipo: string,
+		recordSectionId: number,
+		componentTipo: string,
+	): Promise<void> => {
+		const key = `${recordKey(recordSectionTipo, recordSectionId)}/${componentTipo}`;
+		if (writableComponents.has(key)) return;
+		const door = 'tool_import_files.import_files';
+		if (bornRecords.has(recordKey(recordSectionTipo, recordSectionId))) {
+			await authorizeSectionTarget(
+				ctx.principal,
+				{ section_tipo: recordSectionTipo, tipo: componentTipo },
+				{ level: 2, door },
+			);
+		} else {
+			await authorizeRecordAccess(
+				ctx.principal,
+				{
+					section_tipo: recordSectionTipo,
+					component_tipo: componentTipo,
+					section_id: recordSectionId,
+				},
+				{ mode: 'write', level: 2, sectionFloor: 1, door },
+			);
+		}
+		writableComponents.add(key);
 	};
 
 	const namedGroups = new Map<string, number>();
@@ -970,9 +1013,11 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 		extension: string,
 		originalFileName: string,
 	): Promise<void> => {
-		// The media write lands on THIS record: prove it writable first (memoized —
-		// the loop below has usually already done so at the binding point).
+		// The media write lands on THIS record's media component: prove the record
+		// writable (memoized — usually already done at the binding point) and the
+		// component through the write door (req 10).
 		await assertWritableRecord(targetSectionTipo, targetSectionId);
+		await assertWritableComponent(targetSectionTipo, targetSectionId, targetComponentTipo);
 		// The context is RE-RESOLVED per call (stored items read fresh), so importing
 		// several files into the SAME record accumulates instead of each one clobbering
 		// the last.
@@ -1208,6 +1253,9 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 			// the record is created in it. Runs on the declared form too: cheap
 			// (cached), and it keeps the handler honest if the extractor drifts.
 			await assertPortalTargetWritable(ctx.principal, portalTarget, targetComponentTipo);
+			// The portal on the HOST record is written (the new locator): asked of the
+			// write door for that triple (req 10).
+			await assertWritableComponent(portalSectionTipo, resolvedSectionId, portalTipo);
 			// Create + link the media record through the portal — the
 			// add_new_element relation hook (relations/save.ts) inside the
 			// tx-wrapped, TM-audited saveComponentData (PHP :1217-1232).
@@ -1318,6 +1366,8 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 		// is named by the PROCESSOR (crop_50's custom_arguments), which the
 		// declarative extractor sees even less of. Authorize before creating.
 		await assertPortalTargetWritable(ctx.principal, portalTarget, targetComponentTipo);
+		// The processor's portal on the HOST record — the write door's triple (req 10).
+		await assertWritableComponent(sectionTipo, hostSectionId, portalComponentTipo);
 		const save = await saveComponentData({
 			componentTipo: portalComponentTipo,
 			sectionTipo,

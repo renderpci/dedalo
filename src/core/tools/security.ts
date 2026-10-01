@@ -388,15 +388,23 @@ async function toCheck(
 }
 
 /**
- * THE TOOL GRANT — the caller's profile must authorize `toolName` (PHP
- * tool_common::get_user_tools: the profile's dd1067 grants plus the
- * always_active tools; the superuser -1 gets every tool). Global admins are
- * NOT exempt — the tool ACL has no admin flag anywhere (registry.getUserTools).
- * THROWS `tool.not_authorized`.
+ * THE TOOL GRANT DECISION — the ONE home of "does this user's profile authorize
+ * `toolName`" (closure Step 3 req 8): the tool must be ACTIVE in the registry
+ * (dd1324) and in the user's authorized list (PHP tool_common::get_user_tools:
+ * the profile's dd1067 grants plus the always_active tools; the superuser -1
+ * gets every active tool). Global admins are NOT exempt — the tool ACL has no
+ * admin flag anywhere (registry.getUserTools). Every door that asks a grant —
+ * the tool dispatcher's gates 3+4, the agent door, the vision spend, the
+ * generative RAG answer, tool_export's download route — asks it HERE.
  */
+export async function isToolGranted(userId: number, toolName: string): Promise<boolean> {
+	const tools = await getUserTools(userId);
+	return tools.some((tool) => tool.name === toolName);
+}
+
+/** {@link isToolGranted}, THROWING `tool.not_authorized` when it is not. */
 export async function assertToolGranted(principal: Principal, toolName: string): Promise<void> {
-	const tools = await getUserTools(principal.userId);
-	if (tools.some((tool) => tool.name === toolName)) return;
+	if (await isToolGranted(principal.userId, toolName)) return;
 	throw new DedaloError('tool.not_authorized', {
 		message: `the profile of user ${principal.userId} does not authorize ${toolName}`,
 		coordinates: { tool: toolName, user_id: principal.userId },

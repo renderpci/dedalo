@@ -169,18 +169,22 @@ describe('component toolbar stamp is gated on MODE, not on permissions', () => {
 		for (const name of seen) expect(authorized.has(name)).toBe(true);
 		for (const name of denied) expect(seen).not.toContain(name);
 
-		// ...and a GLOBAL ADMIN in the same scope keeps the full list, so the
-		// filter is the profile, not a blanket suppression.
-		const adminSeen = await runWithRequestContext(
-			{
-				principal: { userId: 1, isGlobalAdmin: true, isDeveloper: false },
-				session: null,
-				requestId: 'test',
-				clientIp: '127.0.0.1',
-			},
-			async () => toolNamesOf(USER_IMAGE_TIPO, USERS_SECTION, 'edit', 2),
+		// ...the SUPERUSER in the same scope keeps the full list, so the filter is
+		// the profile, not a blanket suppression…
+		const scoped = (principal: Principal) =>
+			runWithRequestContext(
+				{ principal, session: null, requestId: 'test', clientIp: '127.0.0.1' },
+				async () => toolNamesOf(USER_IMAGE_TIPO, USERS_SECTION, 'edit', 2),
+			);
+		expect(await scoped({ userId: -1, isGlobalAdmin: true, isDeveloper: true })).toEqual(
+			unfiltered.tools.map((t) => t.name),
 		);
-		expect(adminSeen).toEqual(unfiltered.tools.map((t) => t.name));
+		// …and the GLOBAL-ADMIN FLAG widens nothing (closure Step 3 req 8 — the
+		// same rule as getUserTools and the dispatcher's gate 4): the same user
+		// claiming admin sees exactly what its profile grants. Before req 8 this
+		// stamp opened with `isGlobalAdmin → no filter`, offering every tool the
+		// dispatcher then refused.
+		expect(await scoped({ ...nonAdmin, isGlobalAdmin: true })).toEqual(seen);
 	});
 
 	test('the per-user grants cache is dropped by BOTH invalidation channels', async () => {

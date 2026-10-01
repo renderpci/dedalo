@@ -228,6 +228,19 @@ describe('gate 3 — the tool must be ACTIVE in dd1324', () => {
 });
 
 describe('gate 4 — the tool must be authorized for the caller', () => {
+	// THE ADMIN FLAG GRANTS NOTHING (closure Step 3 req 8): a NON-superuser global
+	// admin whose profile does not grant a real, active tool is refused
+	// AUTHORIZATION — the same answer as anyone else, from the one grant decision
+	// (security.ts isToolGranted). Before req 8 gate 4 keyed its refusal code on
+	// the flag and told this caller `tool.invalid_name` (the tool exists).
+	test('a NON-superuser global admin without the grant is tool.not_authorized, never tool.invalid_name', async () => {
+		const admin: Principal = { userId: 999_998, isGlobalAdmin: true, isDeveloper: false };
+		const error = await refusal(
+			dispatchToolRequest(admin, admin.userId, { model: TEMPLATE, action: 'status' }, {}),
+		);
+		expect(error.code).toBe('tool.not_authorized');
+	});
+
 	test('a user with no profile grant is refused a real, active, loadable tool', async () => {
 		const error = await refusal(
 			dispatchToolRequest(PLAIN_USER, PLAIN_USER.userId, { model: TEMPLATE, action: 'status' }, {}),

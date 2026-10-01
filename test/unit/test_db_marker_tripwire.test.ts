@@ -322,6 +322,12 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 			}),
 	},
 	{
+		// The AI spend ledger sweep (test/helpers/ai_spend_ledger.ts): a DELETE of
+		// every ledger row — refused, writing nothing, on an unmarked database.
+		name: 'sweepAiSpendLedger',
+		run: async () => (await import('../helpers/ai_spend_ledger.ts')).sweepAiSpendLedger(),
+	},
+	{
 		name: 'ensureTestCorpus',
 		run: async () =>
 			(await import('../../src/core/test_data/test_corpus/ensure.ts')).ensureTestCorpus('dd128'),

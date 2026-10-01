@@ -287,12 +287,22 @@ const CENSUS: Record<string, CensusRow> = {
 		reason:
 			'writes its own hard-bound stats section as userId -1; the maintenance area is already global-admin/developer gated.',
 	},
+	'src/core/ontology/engine_ontology.ts': {
+		verdict: 'system',
+		reason:
+			'the ENGINE-OWNED ontology door: writes only `ddengine0` matrix_ontology source records (persistRecordColumns, actor -1) from the repo-owned engine_ontology.json — refused unless every node is under the engine TLD — at boot, install and suite setup. No request, no principal.',
+	},
 	'src/core/area_maintenance/widgets/export_hierarchy.ts': {
 		verdict: 'system',
 		reason: 'maintenance-area hierarchy export; hard-bound hierarchy/lang sections.',
 	},
 
 	// --- NOT dd128 --------------------------------------------------------
+	'src/core/security/ai_spend.ts': {
+		verdict: 'not-dd128',
+		reason:
+			'the AI spend ledger: its only writes are the HARD-BOUND ledger section (AI_SPEND_LEDGER.section, `ddengine1` — createSectionRecord for the day, persistRecordKeys for its user/day/counter components); the caller supplies a principal and amounts, never a section or a component, so no dd128 component is reachable through it.',
+	},
 	'src/core/security/section_permissions.ts': {
 		verdict: 'not-dd128',
 		reason:
@@ -318,18 +328,19 @@ const CENSUS: Record<string, CensusRow> = {
 			'the tag-delete engine; its ONLY importer is dd_component_text_area_api (DERIVED on every run — DELEGATING_ENGINES), whose delete_tag runs authorizeRecordAccess (write, level 2) before it and hands it the grant’s address.',
 	},
 	'src/core/tools/translation.ts': {
-		verdict: 'PENDING',
+		verdict: 'delegates',
 		reason:
-			'takes section_tipo + component_tipo from caller options and gates on the raw getPermissions of that pair.',
+			'runAutomaticTranslation mints a RecordGrant through authorizeRecordAccess (write, level 2, section floor 1: grammar, the dd128-aware pair, the write scope) before any provider call; the writer translateAndWrite TAKES the grant (branded, only write_door mints it) and builds its target and actor from it, so no importer reaches the write ungated. Matrix tool:tool_lang / tool_lang_multi automatic_translation DD1725 legs (closure Step 3 req 10).',
 	},
 	'src/core/tools/import_execute.ts': {
-		verdict: 'PENDING',
+		verdict: 'delegates',
 		reason:
-			'the import executor writes caller-declared (section, component) pairs; its gate is the declarative tool gate, which reads the raw level.',
+			'importMappedRecords takes the importing PRINCIPAL and asks the write door per field: a matched record through authorizeRecordAccess (write, level 2, section floor 1, dd128-aware pair, write scope), a new record and its fields through authorizeSectionTarget before the create; a refused field is reported IGNORED and never written (req 10). Matrix engine:import_execute.importMappedRecords DD1725 leg.',
 	},
 	'src/core/tools/import_csv_execute.ts': {
-		verdict: 'PENDING',
-		reason: 'the CSV import executor — same caller-declared pair, same raw-level gate.',
+		verdict: 'delegates',
+		reason:
+			'executeCsvImport takes the importing PRINCIPAL: a row that creates its record asks authorizeSectionTarget (section) first; every column — and every slot a legacy frame envelope names — of an existing record asks authorizeRecordAccess (write, level 2, section floor 1, dd128-aware pair, write scope), of a new one authorizeSectionTarget (the pair); a refused column is reported IGNORED, never written, its metadata never applied (req 10). Matrix engine:import_csv_execute.executeCsvImport DD1725 leg.',
 	},
 	'src/core/tools/transcription_asr.ts': {
 		verdict: 'PENDING',
@@ -337,21 +348,24 @@ const CENSUS: Record<string, CensusRow> = {
 			'the transcript writer: pollTranscriptionCompletion REQUIRES its caller’s save (no default since closure Step 3), and tool_transcription passes one that re-runs the write door for a live principal — but the exported saveTranscriptionResult itself checks no pair, dd128 or scope (any future importer writes ungated), and no matrix door drives the poll’s save with a (dd128, dd1725) manager, so the file claims nothing of its own.',
 	},
 	'src/core/media/ingest/companion_writes.ts': {
-		verdict: 'PENDING',
+		verdict: 'delegates',
 		reason:
-			'media-ingest companion writes take sectionTipo/componentTipo from their input; the ingest doors gate at the raw level.',
+			'every ontology-declared companion (target_filename / target_duration) is asked of authorizeRecordAccess AS THE UPLOADER (write, level 2, section floor 1, dd128-aware pair, write scope) before saveComponentData, which the grant addresses; a refusal is a message, never a write (req 10). Matrix engine:media_ingest.companion_writes DD1725 leg (a scratch media component whose target_filename names dd1725).',
 	},
 	'tools/tool_import_files/server/index.ts': {
-		verdict: 'PENDING',
-		reason: 'caller-supplied (section_tipo, component_tipo) behind the declarative tipo gate.',
+		verdict: 'delegates',
+		reason:
+			'every component this run writes into a record bound at RUN TIME asks the write door for the whole triple (req 10): the ddo_map role writes (setComponentsData → authorizeRecordAccess, whose grant addresses the save), the media component and the host portal (assertWritableComponent → authorizeRecordAccess; a record born in the run → authorizeSectionTarget). Matrix tool:tool_import_files:import_files:roles DD1725 leg.',
 	},
 	'tools/tool_import_dedalo_csv/server/index.ts': {
-		verdict: 'PENDING',
-		reason: 'caller-supplied section/component import behind the declarative tipo gate.',
+		verdict: 'not-dd128',
+		reason:
+			'its OWN writes are the hard-bound dd800 run record (createSectionRecord + its label save); every data row is written by executeCsvImport (import_csv_execute.ts — `delegates`, the write door per row and column, req 10), handed the request principal.',
 	},
 	'tools/tool_posterframe/server/index.ts': {
-		verdict: 'PENDING',
-		reason: 'declarative record_tipo gate — raw level on a caller-supplied pair.',
+		verdict: 'delegates',
+		reason:
+			'create_identifying_image: the AV SOURCE behind the declarative record_tipo/1 gate, the HOST portal of the host record through authorizeRecordAccess in the handler (write, level 2, section floor 1, dd128-aware pair, write scope with the non-positive-id refusal ahead of the admin bypass — req 10) whose GRANT addresses the portal save, and the new record\u2019s image through authorizeSectionTarget. Matrix tool:tool_posterframe:create_identifying_image:host DD1725 leg.',
 	},
 	'tools/tool_tc/server/index.ts': {
 		verdict: 'PENDING',
@@ -359,9 +373,9 @@ const CENSUS: Record<string, CensusRow> = {
 			'its one writer, change_all_timecodes, is behind the declarative record_tipo kind — the write door, proven for the GATE by the security.ts row — but that the handler writes exactly the pair the gate authorized is not measured (the matrix never runs the handler), so this row claims nothing of its own.',
 	},
 	'tools/tool_update_cache/server/index.ts': {
-		verdict: 'PENDING',
+		verdict: 'delegates',
 		reason:
-			'gated at permission:’section’ yet its handlers rewrite COMPONENTS, so a section-level grant admits a component write the per-component rule never sees.',
+			'update_cache: the declarative targets gate authorizes the (sqo section, component) pairs, and the handler asks authorizeRecordAccess (write, level 2, section floor 1, dd128-aware pair, write scope) for EVERY matched row × component before touching it — the grant addresses the save / the media transform; a refused target is skipped and reported (req 10). Matrix tool:tool_update_cache:update_cache DD1725 leg.',
 	},
 	'tools/tool_time_machine/server/bulk_revert.ts': {
 		verdict: 'not-dd128',
@@ -369,9 +383,9 @@ const CENSUS: Record<string, CensusRow> = {
 			'Since the undo-log rewrite (2026-09-27) the orchestrator writes ONLY its own run record: the dd800 row (createSectionRecord) and its dd796 label (persistRecordKeys) — never a dd128 component. The component writes moved to bulk_revert_undo.ts (PENDING, SEC-03 carried over) and the record writes to bulk_revert_records.ts.',
 	},
 	'tools/tool_time_machine/server/bulk_revert_undo.ts': {
-		verdict: 'PENDING',
+		verdict: 'delegates',
 		reason:
-			'SEC-03, named (carried over from bulk_revert.ts, 2026-09-27): the bulk revert’s per-unit component write (undo-log exact path + legacy inference, and a dataframe main’s composed unit — the main and its own frames, planned by bulk_revert_composed.ts), gated by the orchestrator’s unitInScope, which reads the raw level of every (section_tipo, tipo) key pair — and every slot a composed unit may write — and the record scope, never the own-record component rule.',
+			'every component a revert unit WRITES — the key, each slot its frame plan restores, each key of a composed unit — asks authorizeRecordAccess (write, level 2, section floor 1, the dd128-aware pair, the write scope) with the reverting principal, behind the unit\u2019s lock and after any undelete (authorizeKeyWrite, req 10); a refusal is the unit\u2019s out_of_scope skip, rolled back. Matrix tool:tool_time_machine:bulk_revert_process:units DD1725 leg (the orchestrator\u2019s raw-pair pre-gate does not see the own-record rule, so the leg measures this writer).',
 	},
 	'tools/tool_time_machine/server/bulk_revert_records.ts': {
 		verdict: 'section-level',
@@ -410,7 +424,7 @@ const EXTRA_ROWS: Record<string, CensusRow> = {
 };
 
 /** PINNED. Shrink-only: this may go DOWN, never up. */
-const PENDING_COUNT = 13;
+const PENDING_COUNT = 4;
 
 /**
  * THE DELEGATING ENGINES — a `delegates` row on a file with no principal of its

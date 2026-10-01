@@ -713,6 +713,14 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		'test/unit/portal_locator_door_native.test.ts',
 		'It mints scratch projects, profiles and users through the counter on the suite database, creates the host records it unlinks from, and measures every refusal on the stored portal and slot bytes and the Time Machine row count, so it cannot run without a live suite Postgres.',
 	],
+	[
+		'test/unit/ai_spend_budget_native.test.ts',
+		"It materializes the engine ontology into the suite database's dd_ontology, reserves and settles against the shipped ledger section's rows (concurrent reservations racing on its row locks) and drives the metered doors as fixture users resolved from the suite database, so it cannot run without a live suite Postgres.",
+	],
+	[
+		'test/unit/change_plan_write_door_native.test.ts',
+		"It installs the authz door fixture's scratch projects, profiles and users on the suite database, creates the record its plans address, and validates every plan through the write door's real permission and scope resolution, so it cannot run without a live suite Postgres.",
+	],
 ]);
 
 /**

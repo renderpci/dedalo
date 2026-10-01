@@ -95,12 +95,21 @@ import { mcpApiActions } from '../../src/core/api/handlers/dd_mcp_api.ts';
 import { resolveMediaActionContext } from '../../src/core/api/handlers/media_action_context.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
+import { writeMediaCompanions } from '../../src/core/media/ingest/companion_writes.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
 import { type Principal, resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { READ_DOOR_GATE, READ_DOOR_POSTURE } from '../../src/core/security/read_door.ts';
 import { createSession, getSession, type Session } from '../../src/core/security/session_store.ts';
+import {
+	dropSituation,
+	ensureSituation,
+	situation,
+} from '../../src/core/test_data/situations/situation.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
+import { planCsvImport } from '../../src/core/tools/import_csv.ts';
+import { executeCsvImport } from '../../src/core/tools/import_csv_execute.ts';
+import { importMappedRecords } from '../../src/core/tools/import_execute.ts';
 import { loadToolModules } from '../../src/core/tools/loader.ts';
 import type {
 	GatedToolActionSpec,
@@ -108,13 +117,17 @@ import type {
 	ToolActionSpec,
 } from '../../src/core/tools/module.ts';
 import { assertActionPermission } from '../../src/core/tools/security.ts';
+import { setComponentsData } from '../../tools/tool_import_files/server/index.ts';
+import { toolTimeMachineBulkRevert } from '../../tools/tool_time_machine/server/bulk_revert.ts';
 import {
 	AUTHZ_3D,
 	AUTHZ_AV,
 	AUTHZ_FILTER,
+	AUTHZ_IMAGE,
 	AUTHZ_PROJECT_P,
 	AUTHZ_SECTION,
 	AUTHZ_TEXT,
+	AUTHZ_TEXT_2,
 	AUTHZ_TEXT_AREA,
 	AUTHZ_USER_MANAGER_PROFILE_ID,
 	AUTHZ_USER_MANAGER_USER_ID,
@@ -640,6 +653,426 @@ function transcriptionProbe(
 	};
 }
 
+/**
+ * tool_lang / tool_lang_multi `automatic_translation` (closure Step 3 req 10) —
+ * an in-handler door: the REAL handler, whose first act after the parameter
+ * check is the write door on (section, component, record). Every refused cell is
+ * refused before any provider call. CONTROL is served PAST the door: its source
+ * language holds nothing (`lg-zzz`), so the run ends on the empty slice — or on
+ * the missing translator config — and never reaches a translator.
+ */
+function translationProbe(handler: ToolActionSpec['handler']): Probe {
+	return {
+		expect: { ...FULL, DD1725: 'refused', READ_COMPONENT: 'refused', READ_ONLY: 'refused' },
+		refusalTipo: { NO_COMPONENT: AUTHZ_TEXT, READ_COMPONENT: AUTHZ_TEXT },
+		run: (identity) => {
+			const principal = principalOf(identity);
+			const target = recordTarget(identity, AUTHZ_TEXT);
+			const context = {
+				principal,
+				userId: principal.userId,
+				options: {
+					section_tipo: target.section_tipo,
+					component_tipo: target.tipo,
+					section_id: target.section_id,
+					source_lang: 'lg-zzz',
+					target_lang: 'lg-spa',
+					translator: 'babel',
+				},
+				background: false,
+			};
+			return outcomeOf(() => handler(context as ToolActionContext));
+		},
+	};
+}
+
+/**
+ * tool_posterframe `create_identifying_image`'s HOST (closure Step 3 req 10): the
+ * in-handler write door on (host section, host portal, host record) — a door the
+ * declarative gate (the AV SOURCE, record_tipo/1) never sees, so it is probed
+ * through the REAL handler under its own key. The DD1725 leg aims the host at the
+ * manager's own (dd128, dd1725). CONTROL is served PAST the door: its host
+ * "portal" is a text component with no target section, so the handler stops at
+ * `tool.unsupported_target` — before the image grant, the portal save, the frame
+ * extract or any write.
+ */
+function posterframeHostProbe(handler: ToolActionSpec['handler']): Probe {
+	return {
+		expect: { ...FULL, DD1725: 'refused', READ_COMPONENT: 'refused' },
+		refusalTipo: { NO_COMPONENT: AUTHZ_TEXT, READ_COMPONENT: AUTHZ_TEXT },
+		run: (identity) => {
+			const principal = principalOf(identity);
+			const host = recordTarget(identity, AUTHZ_TEXT);
+			const context = {
+				principal,
+				userId: principal.userId,
+				options: {
+					section_tipo: AUTHZ_SECTION,
+					section_id: recordId,
+					component_tipo: AUTHZ_AV,
+					current_time: '1',
+					item_value: {
+						section_tipo: host.section_tipo,
+						section_id: host.section_id,
+						component_portal: host.tipo,
+						component_image: AUTHZ_IMAGE,
+					},
+				},
+				background: false,
+			};
+			return outcomeOf(() => handler(context as ToolActionContext));
+		},
+	};
+}
+
+/**
+ * tool_update_cache `update_cache` (closure Step 3 req 10): its declarative
+ * `targets` gate names (section, component) PAIRS with no record, so the per-ROW
+ * write door in the handler is the half that judges the rows the sqo matches —
+ * the dd128 own-record downgrade above all. Driven through the REAL handler with
+ * an sqo pinned to the identity's one target; a refused row is SKIPPED and
+ * reported (`data.refused`), never written, so a run that wrote nothing and
+ * refused its row IS the refusal. The dd800 run record each run mints is swept.
+ */
+function updateCacheRowProbe(handler: ToolActionSpec['handler']): Probe {
+	return {
+		expect: { DD1725: 'refused', CONTROL: 'served' },
+		run: async (identity) => {
+			const principal = principalOf(identity);
+			const target = recordTarget(identity, AUTHZ_TEXT);
+			const context = {
+				principal,
+				userId: principal.userId,
+				options: {
+					section_tipo: target.section_tipo,
+					sqo: {
+						section_tipo: [target.section_tipo],
+						filter_by_locators: [
+							{ section_tipo: target.section_tipo, section_id: target.section_id },
+						],
+					},
+					components_selection: [{ tipo: target.tipo }],
+				},
+				background: false,
+			};
+			try {
+				const response = (await handler(context as ToolActionContext)) as {
+					data?: { refused?: number; regenerated?: number; bulk_process_id?: number };
+				};
+				const data = response.data ?? {};
+				if (typeof data.bulk_process_id === 'number') {
+					disposable.push({ sectionTipo: 'dd800', sectionId: data.bulk_process_id });
+				}
+				if ((data.refused ?? 0) > 0 && (data.regenerated ?? 0) === 0) {
+					return {
+						verdict: 'refused',
+						detail: `refused ${data.refused} row target(s)`,
+						code: 'perm.denied',
+						opaque: true,
+					};
+				}
+				return { verdict: 'served', detail: `regenerated ${data.regenerated ?? 0}` };
+			} catch (error) {
+				if (error instanceof DedaloError) return errorOutcome(error);
+				throw error;
+			}
+		},
+	};
+}
+
+/**
+ * THE INGEST COMPANIONS (closure Step 3 req 10, media/ingest/companion_writes.ts):
+ * the ontology-declared siblings an upload writes (`target_filename` /
+ * `target_duration`) are asked of the write door AS THE UPLOADER. Two scratch
+ * media components declare their target: one names the manager's own dd1725
+ * (the DD1725 leg — a dd128 field an ontology could point a companion at), the
+ * other test162 (the CONTROL / NO_COMPONENT legs). The engine is driven directly
+ * (it is the writer every ingest door shares); a refused companion is a MESSAGE
+ * and nothing is written, so a "not writable" message IS the refusal.
+ */
+const COMPANION_SITUATION = situation({
+	tld: 'zzcmp',
+	name: 'authz matrix — ingest companions',
+	nodes: [
+		{ tipo: 'zzcmp1', parent: 'test1', model: 'section', term: { 'lg-eng': 'zz companions' } },
+		{
+			tipo: 'zzcmp2',
+			parent: 'zzcmp1',
+			model: 'component_image',
+			term: { 'lg-eng': 'zz image → dd1725' },
+			properties: { target_filename: 'dd1725' },
+		},
+		{
+			tipo: 'zzcmp3',
+			parent: 'zzcmp1',
+			model: 'component_image',
+			term: { 'lg-eng': 'zz image → test162' },
+			properties: { target_filename: AUTHZ_TEXT_2 },
+		},
+	],
+});
+
+function companionProbe(): Probe {
+	return {
+		expect: { DD1725: 'refused', NO_COMPONENT: 'refused', CONTROL: 'served' },
+		refusalTipo: { NO_COMPONENT: AUTHZ_TEXT_2 },
+		run: (identity) =>
+			outcomeOf(async () => {
+				const principal = principalOf(identity);
+				const dd128 = identity === 'DD1725';
+				const messages = await writeMediaCompanions({
+					componentTipo: dd128 ? 'zzcmp2' : 'zzcmp3',
+					sectionTipo: dd128 ? USERS : AUTHZ_SECTION,
+					sectionId: dd128 ? AUTHZ_USER_MANAGER_USER_ID : recordId,
+					userId: principal.userId,
+					originalFileName: 'zzauthz companion.jpg',
+					mediaFilePath: '/zzauthz/no/such/file.jpg',
+				});
+				// The engine's own sentence names the refused target and the door's code:
+				// "<role> '<tipo>': not writable by the uploader (<code>) — …".
+				for (const message of messages) {
+					const refused = /^\w+ '([a-z]+[0-9]+)': not writable by the uploader \(([a-z_.]+)\)/.exec(
+						message,
+					);
+					if (refused !== null) {
+						throw new DedaloError(refused[2] as 'perm.denied', {
+							message,
+							coordinates: { tipo: refused[1] as string },
+						});
+					}
+				}
+				return messages;
+			}),
+	};
+}
+
+/**
+ * THE MAPPED-RECORD IMPORTER (closure Step 3 req 10, core/tools/import_execute.ts
+ * — MARC21 / Zotero / RDF): every field of a MATCHED record is asked of the write
+ * door as the importing principal. Its doors gate the SECTION once (no record
+ * named); this engine is where a row's record meets the dd128 own-record rule.
+ * A refused field is reported (`failed`, IGNORED — not written); the engine's
+ * own sentence carries the door's code, and the failure names the field. The
+ * run's dd800 record is swept.
+ */
+function importExecuteProbe(): Probe {
+	return {
+		expect: { DD1725: 'refused', NO_COMPONENT: 'refused', CONTROL: 'served' },
+		refusalTipo: { NO_COMPONENT: AUTHZ_TEXT },
+		run: (identity) =>
+			outcomeOf(async () => {
+				const principal = principalOf(identity);
+				const target = recordTarget(identity, AUTHZ_TEXT);
+				const field = identity === 'CONTROL' ? AUTHZ_TEXT_2 : target.tipo;
+				const report = await importMappedRecords(
+					[
+						{
+							sectionId: target.section_id,
+							fields: [{ component_tipo: field, values: ['zzauthz import'] }],
+						},
+					],
+					target.section_tipo,
+					principal,
+					{ bulkLabel: 'authz matrix import probe' },
+				);
+				if (report.bulkProcessId !== null) {
+					disposable.push({ sectionTipo: 'dd800', sectionId: report.bulkProcessId });
+				}
+				for (const failure of report.failed) {
+					const refused = /not writable by the importer \(([a-z_.]+)\)/.exec(String(failure.msg));
+					if (refused !== null) {
+						throw new DedaloError(refused[1] as 'perm.denied', {
+							message: String(failure.msg),
+							coordinates: { tipo: String(failure.component_tipo) },
+						});
+					}
+				}
+				return report;
+			}),
+	};
+}
+
+/**
+ * THE CSV IMPORTER (closure Step 3 req 10, core/tools/import_csv_execute.ts):
+ * every column of an EXISTING row's record is asked of the write door as the
+ * importer — the file door's `section_list` gate named the section once. A
+ * one-row plan through the engine's own planner (`planCsvImport`): the row's
+ * section_id is the identity's target record, its one column the target
+ * component. A refused column is reported (IGNORED) and never written. The
+ * probe mints the dd800 run record the executor stamps its saves with (the
+ * tool's own door does that before calling it), and sweeps it.
+ */
+function csvImportProbe(): Probe {
+	return {
+		expect: { DD1725: 'refused', NO_COMPONENT: 'refused', CONTROL: 'served' },
+		refusalTipo: { NO_COMPONENT: AUTHZ_TEXT },
+		run: (identity) =>
+			outcomeOf(async () => {
+				const principal = principalOf(identity);
+				const target = recordTarget(identity, AUTHZ_TEXT);
+				const field = identity === 'CONTROL' ? AUTHZ_TEXT_2 : target.tipo;
+				const { getModelByTipo } = await import('../../src/core/ontology/resolver.ts');
+				const model = (await getModelByTipo(field)) ?? 'component_input_text';
+				const plan = await planCsvImport(
+					[[String(target.section_id), 'zzauthz csv']],
+					[
+						{
+							tipo: 'section_id',
+							model: 'component_section_id',
+							columnName: 'section_id',
+							lang: 'lg-nolan',
+						},
+						{ tipo: field, model, columnName: field, lang: 'lg-nolan' },
+					],
+					target.section_tipo,
+				);
+				const bulkProcessId = await createSectionRecord('dd800', -1);
+				disposable.push({ sectionTipo: 'dd800', sectionId: bulkProcessId });
+				const report = await executeCsvImport({
+					plan,
+					sectionTipo: target.section_tipo,
+					principal,
+					bulkProcessId,
+					errors: [],
+					notices: [],
+					progress: {
+						file: 'zzauthz.csv',
+						fileIndex: 1,
+						filesTotal: 1,
+						labels: new Map(),
+						publish: () => {},
+					},
+				});
+				for (const failure of report.failed) {
+					const refused = /not writable by the importer \(([a-z_.]+)\)/.exec(String(failure.msg));
+					if (refused !== null) {
+						throw new DedaloError(refused[1] as 'perm.denied', {
+							message: String(failure.msg),
+							coordinates: { tipo: String(failure.component_tipo) },
+						});
+					}
+				}
+				return report;
+			}),
+	};
+}
+
+/**
+ * tool_import_files' ROLE WRITES (closure Step 3 req 10): an `input_component`
+ * ddo writes the operator's value into the caller/target record at RUN TIME,
+ * so its triple is asked of the write door at the write (`setComponentsData`).
+ * The DD1725 leg aims the role at the manager's own (dd128, dd1725); CONTROL
+ * writes test162 on the scratch record.
+ */
+function importFilesRoleProbe(): Probe {
+	return {
+		expect: {
+			DD1725: 'refused',
+			NO_COMPONENT: 'refused',
+			OUT_OF_SCOPE: 'refused',
+			CONTROL: 'served',
+		},
+		refusalTipo: { NO_COMPONENT: AUTHZ_TEXT },
+		run: (identity) =>
+			outcomeOf(() => {
+				const principal = principalOf(identity);
+				const target = recordTarget(identity, AUTHZ_TEXT);
+				const field = identity === 'CONTROL' ? AUTHZ_TEXT_2 : target.tipo;
+				return setComponentsData({
+					ddoMap: [{ role: 'input_component', tipo: field, section_tipo: target.section_tipo }],
+					sectionTipo: target.section_tipo,
+					sectionId: target.section_id,
+					targetSectionTipo: target.section_tipo,
+					targetSectionId: target.section_id,
+					currentFileName: 'zzauthz.jpg',
+					mediaFilePath: null,
+					targetComponentModel: 'component_image',
+					componentsTempData: [
+						{
+							tipo: field,
+							section_tipo: target.section_tipo,
+							entries: [{ value: 'zzauthz role' }],
+						},
+					],
+					userId: principal.userId,
+					principal,
+					dataLang: 'lg-eng',
+				});
+			}),
+	};
+}
+
+/**
+ * THE BULK REVERT'S WRITER (closure Step 3 req 10,
+ * tool_time_machine/server/bulk_revert_undo.ts): every component a revert
+ * unit writes is asked of the write door behind the unit's lock. The
+ * orchestrator's pre-gate reads the RAW pair level, which the dd128 own-record
+ * rule does not reach — so this probe measures the writer's door alone. A run
+ * is built per cell: the superuser re-saves the identity's target under a fresh
+ * dd800 id (the manager's OWN dd132 username for DD1725 — level 2 in the
+ * profile, 1 by the own-record downgrade; test162 on the scratch record for
+ * CONTROL), then the identity reverts it through the REAL handler. A refused
+ * unit is SKIPPED `out_of_scope` and never written; the run and revert dd800
+ * records are swept.
+ */
+function bulkRevertProbe(): Probe {
+	return {
+		expect: { DD1725: 'refused', CONTROL: 'served' },
+		run: async (identity) => {
+			const principal = principalOf(identity);
+			const dd128 = identity === 'DD1725';
+			const target = dd128
+				? { section_tipo: USERS, tipo: 'dd132', section_id: AUTHZ_USER_MANAGER_USER_ID }
+				: { section_tipo: AUTHZ_SECTION, tipo: AUTHZ_TEXT_2, section_id: recordId };
+			const runId = await createSectionRecord('dd800', -1);
+			disposable.push({ sectionTipo: 'dd800', sectionId: runId });
+			const saved = await saveComponentData({
+				componentTipo: target.tipo,
+				sectionTipo: target.section_tipo,
+				sectionId: target.section_id,
+				lang: 'lg-nolan',
+				changedData: [
+					{
+						action: 'set_data',
+						key: null,
+						value: [{ id: 1, lang: 'lg-nolan', value: `zzauthz_run_${crypto.randomUUID()}` }],
+					} as never,
+				],
+				userId: -1,
+				bulkProcessId: runId,
+			});
+			if (!saved.ok) throw new Error(`bulk revert probe: the run save failed (${saved.message})`);
+			try {
+				const response = (await toolTimeMachineBulkRevert({
+					principal,
+					userId: principal.userId,
+					options: { bulk_process_id: runId, section_tipo: target.section_tipo },
+					background: false,
+				} as unknown as ToolActionContext)) as {
+					data?: { counter?: number; bulk_process_id?: number; skipped?: { reason?: string }[] };
+				};
+				const data = response.data ?? {};
+				if (typeof data.bulk_process_id === 'number') {
+					disposable.push({ sectionTipo: 'dd800', sectionId: data.bulk_process_id });
+				}
+				const refused = (data.skipped ?? []).some((skip) => skip.reason === 'out_of_scope');
+				if (refused && (data.counter ?? 0) === 0) {
+					return {
+						verdict: 'refused',
+						detail: 'unit skipped out_of_scope',
+						code: 'perm.denied',
+						opaque: true,
+					};
+				}
+				return { verdict: 'served', detail: `reverted ${data.counter ?? 0}` };
+			} catch (error) {
+				if (error instanceof DedaloError) return errorOutcome(error);
+				throw error;
+			}
+		},
+	};
+}
+
 function mcpSearchProbe(run: (principal: Principal) => Promise<unknown>): Probe {
 	return {
 		expect: { NO_SECTION: 'refused', CONTROL: 'served' },
@@ -801,8 +1234,6 @@ const NOT_YET_PROBED: Readonly<Record<string, string>> = {
 	'tool:tool_import_files:import_files': 'targets kind: extractor-specific payload (import batch)',
 	'tool:tool_import_marc21:import_files': 'targets kind: extractor-specific payload (import batch)',
 	'tool:tool_import_zotero:import_files': 'targets kind: extractor-specific payload (import batch)',
-	'tool:tool_update_cache:update_cache':
-		'targets kind: extractor-specific payload (component list)',
 	// section_list kind — the batch's section targets ride an action-specific payload.
 	'tool:tool_dev_template:batch_demo': 'section_list kind: extractor-specific payload',
 	'tool:tool_identify:cluster': 'section_list kind: extractor-specific payload (cluster scope)',
@@ -815,10 +1246,6 @@ const NOT_YET_PROBED: Readonly<Record<string, string>> = {
 		'section_list kind: extractor-specific payload (component list)',
 	// permission: null — gated IN the handler (the named exemption; its
 	// gatedInHandler prose is pinned by tool_permission_census_tripwire).
-	'tool:tool_lang:automatic_translation':
-		'OPEN record-WRITING door gated in-handler (assertTranslationPermissions: a raw getPermissions pair + the record kind, src/core/tools/translation.ts) — not yet on the write door, not probed (outside lane 2)',
-	'tool:tool_lang_multi:automatic_translation':
-		'OPEN record-WRITING door — the same in-handler assertTranslationPermissions as tool_lang (outside lane 2)',
 	'tool:tool_propagate_component_data:propagate_component_data':
 		'OPEN record-WRITING batch door gated in-handler (raw getPermissions pair up front + per-row re-authorization) — not probed (tools/tool_propagate_component_data is outside lane 2)',
 	'tool:tool_error_report:send_report': 'global-admin check in-handler — no record target',
@@ -858,9 +1285,12 @@ const NOT_YET_PROBED: Readonly<Record<string, string>> = {
  * total over the tool registry (every apiActions entry, not only the
  * record-addressed kinds): 28 in-handler `permission: null` doors and 6
  * `section_list` doors that were simply never counted. 65 → 64: SEC-2
- * `dd_component_portal_api:delete_locator` probed (the write door).
+ * `dd_component_portal_api:delete_locator` probed (the write door). 64 → 62:
+ * req 10 — tool_lang / tool_lang_multi `automatic_translation` on the write door,
+ * probed through the real handler (translationProbe). 62 → 61: req 10 —
+ * tool_update_cache `update_cache`'s per-row write door (updateCacheRowProbe).
  */
-const NOT_YET_PROBED_CEILING = 64;
+const NOT_YET_PROBED_CEILING = 61;
 
 interface Census {
 	probes: Map<string, Probe>;
@@ -930,6 +1360,13 @@ async function deriveCensus(): Promise<Census> {
 				probes.set(key, sectionKindProbe(spec));
 			} else if (spec.permission === 'developer') {
 				probes.set(key, developerKindProbe(spec));
+			} else if (
+				(toolName === 'tool_lang' || toolName === 'tool_lang_multi') &&
+				action === 'automatic_translation'
+			) {
+				probes.set(key, translationProbe(spec.handler));
+			} else if (toolName === 'tool_update_cache' && action === 'update_cache') {
+				probes.set(key, updateCacheRowProbe(spec.handler));
 			} else if (toolName === 'tool_transcription' && TRANSCRIPTION_OPTIONS[action] !== undefined) {
 				probes.set(
 					key,
@@ -945,6 +1382,28 @@ async function deriveCensus(): Promise<Census> {
 			}
 		}
 	}
+	// The posterframe HOST door — an in-handler write door behind the AV gate,
+	// probed under its own key (it is not a separate action: the declarative
+	// probe above keeps the action's own key).
+	const posterframe = (await loadToolModules()).get('tool_posterframe');
+	const createIdentifying = posterframe?.module.apiActions.create_identifying_image;
+	if (createIdentifying === undefined) {
+		throw new Error('tool_posterframe.create_identifying_image is not loaded');
+	}
+	probes.set(
+		'tool:tool_posterframe:create_identifying_image:host',
+		posterframeHostProbe(createIdentifying.handler),
+	);
+	// The ingest companions' engine (req 10) — the writer every ingest door shares.
+	probes.set('engine:media_ingest.companion_writes', companionProbe());
+	// The mapped-record importer's engine (req 10) — MARC21 / Zotero / RDF write through it.
+	probes.set('engine:import_execute.importMappedRecords', importExecuteProbe());
+	// The CSV importer's engine (req 10) — tool_import_dedalo_csv writes through it.
+	probes.set('engine:import_csv_execute.executeCsvImport', csvImportProbe());
+	// tool_import_files' run-time role writes (req 10).
+	probes.set('tool:tool_import_files:import_files:roles', importFilesRoleProbe());
+	// The bulk revert's per-component writer door (req 10).
+	probes.set('tool:tool_time_machine:bulk_revert_process:units', bulkRevertProbe());
 	// No stale probe: every TRANSCRIPTION_OPTIONS key is a live tool_transcription action.
 	const staleTranscription = Object.keys(TRANSCRIPTION_OPTIONS).filter(
 		(action) => !transcriptionActions.has(action),
@@ -1425,6 +1884,7 @@ describe.if(DB_READY)('Step 3 — the authorization-door matrix', () => {
 			},
 		]);
 		await installAuthzDoorFixture();
+		await ensureSituation(COMPANION_SITUATION);
 		recordId = await createDoorRecord(AUTHZ_SECTION, AUTHZ_PROJECT_P, [
 			{ tipo: AUTHZ_TEXT, lang: 'lg-eng', value: [{ id: 1, lang: 'lg-eng', value: MATRIX_TEXT }] },
 		]);
@@ -1441,6 +1901,7 @@ describe.if(DB_READY)('Step 3 — the authorization-door matrix', () => {
 			else process.env[key] = savedEnv[key];
 		}
 		await removeAuthzDoorFixture();
+		expect(await dropSituation(COMPANION_SITUATION)).toBe(0);
 	});
 
 	test('the contrast is live (guards every cell)', async () => {

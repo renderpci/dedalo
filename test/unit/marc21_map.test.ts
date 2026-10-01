@@ -28,6 +28,8 @@ import {
 const SECTION = 'test2966';
 const INPUT_TEXT = 'test2968';
 const USER = -1;
+/** The importing PRINCIPAL (req 10: the executor asks the write door as it) — the superuser, so the door is not this gate's subject. */
+const IMPORTER = { userId: -1, isGlobalAdmin: true, isDeveloper: true } as const;
 const FT = '\x1e';
 const SD = '\x1f';
 const RT = '\x1d';
@@ -132,7 +134,7 @@ describe('MARC21 import drive (scratch-twin, real DB)', () => {
 			const created = await importMappedRecords(
 				[{ sectionId: null, fields: mapped.fields }],
 				SECTION,
-				USER,
+				IMPORTER,
 			);
 			createdIds.push(...created.createdIds);
 			expect(created.created).toBe(1);

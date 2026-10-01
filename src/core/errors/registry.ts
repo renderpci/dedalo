@@ -1557,6 +1557,36 @@ export const ERROR_REGISTRY = {
 		hint: 'Retry; if it persists, check the server model configuration.',
 	},
 
+	// THE AI SPEND BUDGET (closure Step 3, TOOLS-4; WC-2026-10-01-ai-spend-budget).
+	// Every model spend — an agent run, a generative RAG answer, a query embedding,
+	// a vision call — is RESERVED against the caller's per-day ledger
+	// (security/ai_spend.ts) before the provider is touched. `limit` (429): the
+	// same request succeeds after `window_resets_at` (the next UTC midnight) or
+	// once an administrator raises the DEDALO_AI_USER_DAILY_* budget.
+	'ai.budget_exhausted': {
+		category: 'limit',
+		status: 429,
+		label_key: 'error_ai_budget_exhausted',
+		message: 'The daily AI budget for this user is used up',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+		details_keys: ['budget_kind', 'limit', 'window_resets_at'],
+		hint: 'Stop: the user has no AI budget left today. It resets at window_resets_at (UTC); an administrator can raise the DEDALO_AI_USER_DAILY_* budgets.',
+	},
+	// The ledger could not be read or written (its engine ontology is missing, or
+	// the database failed): FAIL CLOSED — an unmetered spend is never admitted.
+	'ai.budget_unavailable': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_ai_budget_unavailable',
+		message: 'The AI usage ledger is unavailable, so no AI request is admitted (see server logs)',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: true,
+		hint: 'Retry later; if it persists, the server log names why the AI usage ledger cannot be used.',
+	},
+
 	// ── install wizard ──────────────────────────────────────────────────────
 	'install.unknown_step': {
 		category: 'caller',

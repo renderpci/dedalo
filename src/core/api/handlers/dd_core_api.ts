@@ -33,7 +33,6 @@ import {
 	saveComponentData,
 } from '../../section/record/save_component.ts';
 import { getPermissions, type Principal } from '../../security/permissions.ts';
-import type { Session } from '../../security/session_store.ts';
 import { getTermByLocator, getTermTipos } from '../../ts_object/term_resolver.ts';
 import {
 	type ActionHandler,
@@ -1143,11 +1142,10 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		// context entry, type='tool'). The tool must be authorized for the caller.
 		const toolParam = pick(searchObj.tool);
 		if (toolParam !== null && /^tool_[a-z0-9_]+$/.test(toolParam)) {
-			const { getUserTools, buildToolElementContext } = await import('../../tools/registry.ts');
-			const authorizedTools = await getUserTools(context.session.userId, principal.isGlobalAdmin);
-			if (!authorizedTools.some((tool) => tool.name === toolParam)) {
-				throw new DedaloError('tool.not_authorized', { coordinates: { tool: toolParam } });
-			}
+			const { buildToolElementContext } = await import('../../tools/registry.ts');
+			// The one grant decision (tools/security.ts — closure Step 3 req 8).
+			const { assertToolGranted } = await import('../../tools/security.ts');
+			await assertToolGranted(principal, toolParam);
 			const toolElementContext = await buildToolElementContext(toolParam);
 			const toolStartContext: unknown[] = [];
 			if ((rqo.options as { menu?: boolean } | undefined)?.menu === true) {
@@ -1397,20 +1395,14 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			typeof source.model === 'string' &&
 			/^tool_[a-z0-9_]+$/.test(source.model)
 		) {
-			const { getUserTools, buildToolElementContext } = await import('../../tools/registry.ts');
+			const { buildToolElementContext } = await import('../../tools/registry.ts');
 			const toolName = source.model;
-			// LEDGER — coverage plan §4.4 D8 (a.k.a. L6), KNOWN-OPEN AND UNGATED:
-			// `context.session` is dereferenced through a cast with NO null check, so a
-			// session-less call reaching this branch THROWS (a 500 envelope) instead of
-			// returning the 40x every other arm of this handler returns. `requirePrincipal`
-			// above does not guarantee a session object — it guarantees a principal.
-			const authorized = await getUserTools(
-				(context.session as Session).userId,
-				principal.isGlobalAdmin,
-			);
-			if (!authorized.some((tool) => tool.name === toolName)) {
-				throw new DedaloError('tool.not_authorized', { coordinates: { tool: toolName } });
-			}
+			// The one grant decision (tools/security.ts — closure Step 3 req 8), asked
+			// of the PRINCIPAL `requirePrincipal` guarantees — never of a session
+			// object it does not (the coverage plan's D8/L6 null dereference: a
+			// session-less call used to THROW a 500 here instead of the 403).
+			const { assertToolGranted } = await import('../../tools/security.ts');
+			await assertToolGranted(principal, toolName);
 			const toolContext = await buildToolElementContext(toolName);
 			return {
 				status: 200,

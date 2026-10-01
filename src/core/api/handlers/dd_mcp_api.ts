@@ -94,6 +94,7 @@ import type {
 import {
 	type CatalogModel,
 	ModelCatalogError,
+	modelTurnMaxTokens,
 	publicModelList,
 	resolveProvider,
 } from '../../../ai/agent/model_catalog.ts';
@@ -118,6 +119,8 @@ import {
 	toErrorBody,
 	toStreamFrame,
 } from '../../errors/index.ts';
+import { type AiSpendReservation, reserveAiSpend } from '../../security/ai_spend.ts';
+import type { Principal } from '../../security/permissions.ts';
 import type { Session } from '../../security/session_store.ts';
 import { assertToolGranted } from '../../tools/security.ts';
 import type { ActionHandler, ApiRequestContext } from '../handler_context.ts';
@@ -448,6 +451,27 @@ function transcriptSummary(run: AgentRunResult): Record<string, unknown>[] {
 	});
 }
 
+/**
+ * THE AGENT RUN IS METERED (closure Step 3, TOOLS-4; WC-2026-10-01-ai-spend-budget):
+ * one run + the run's token reservation (the most output it can produce,
+ * `agentRunTokenReservation`) are RESERVED against the caller's daily ledger
+ * BEFORE the provider is touched — before `agent_chat_stream` opens its SSE
+ * stream, so a refusal (`ai.budget_exhausted`, 429) is a JSON envelope. The
+ * caller settles with the run's reported usage in `finally`.
+ */
+async function reserveAgentRun(
+	principal: Principal,
+	door: string,
+	model: CatalogModel,
+	agentRunTokenReservation: (maxTokensPerTurn: number) => number,
+): Promise<AiSpendReservation> {
+	return reserveAiSpend(principal, {
+		door,
+		runs: 1,
+		tokens: agentRunTokenReservation(modelTurnMaxTokens(model)),
+	});
+}
+
 /** Build a JSON-RPC 2.0 success body. */
 function rpcResult(id: unknown, result: unknown): Record<string, unknown> {
 	return { jsonrpc: '2.0', id: id ?? null, result };
@@ -588,17 +612,31 @@ export const mcpApiActions: Record<string, ActionHandler> = gateAgentActions({
 		}
 		const gates = requestGates(context);
 
-		const { runAgent } = await import('../../../ai/agent/loop.ts');
+		const { runAgent, agentRunTokenReservation, reportedRunTokens } = await import(
+			'../../../ai/agent/loop.ts'
+		);
 		// Catalog/config problems throw a public `ai.*` code — dispatch converts.
 		const setup = buildAgentRun(parsed.value, gates);
-		const run = await runAgent(
+		const reservation = await reserveAgentRun(
 			principal,
-			parsed.value.images !== undefined
-				? { text: parsed.value.question, images: parsed.value.images }
-				: parsed.value.question,
-			setup.provider,
-			setup.runOptions,
+			'dd_mcp_api.agent_chat',
+			setup.model,
+			agentRunTokenReservation,
 		);
+		let run: AgentRunResult | undefined;
+		try {
+			run = await runAgent(
+				principal,
+				parsed.value.images !== undefined
+					? { text: parsed.value.question, images: parsed.value.images }
+					: parsed.value.question,
+				setup.provider,
+				setup.runOptions,
+			);
+		} finally {
+			// A failed run reports nothing: the reservation stays charged.
+			await reservation.settle({ tokens: reportedRunTokens(run?.usage) ?? undefined });
+		}
 		return {
 			status: 200,
 			body: ok(
@@ -631,9 +669,18 @@ export const mcpApiActions: Record<string, ActionHandler> = gateAgentActions({
 		}
 		const gates = requestGates(context);
 
-		const { runAgent } = await import('../../../ai/agent/loop.ts');
+		const { runAgent, agentRunTokenReservation, reportedRunTokens } = await import(
+			'../../../ai/agent/loop.ts'
+		);
 		const setup = buildAgentRun(parsed.value, gates);
 		const { model, provider, mode, runOptions } = setup;
+		// Reserved HERE, before the stream exists: a refusal is a JSON envelope.
+		const reservation = await reserveAgentRun(
+			principal,
+			'dd_mcp_api.agent_chat_stream',
+			model,
+			agentRunTokenReservation,
+		);
 		const requestId = context.requestId;
 		const parsedValue = parsed.value;
 
@@ -700,8 +747,9 @@ export const mcpApiActions: Record<string, ActionHandler> = gateAgentActions({
 				};
 
 				void (async () => {
+					let run: AgentRunResult | undefined;
 					try {
-						const run = await runAgent(
+						run = await runAgent(
 							principal,
 							parsedValue.images !== undefined
 								? { text: parsedValue.question, images: parsedValue.images }
@@ -722,6 +770,9 @@ export const mcpApiActions: Record<string, ActionHandler> = gateAgentActions({
 					} catch (error) {
 						send('error', agentErrorFrame(agentRunError(error, requestId)));
 					} finally {
+						// The loop runs to completion even after a client cancel, so the
+						// settlement always sees the whole run's reported usage.
+						await reservation.settle({ tokens: reportedRunTokens(run?.usage) ?? undefined });
 						clearInterval(heartbeat);
 						closed = true;
 						try {

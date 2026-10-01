@@ -37,6 +37,7 @@ import {
 import { babelProvider, translateAndWrite } from '../../src/core/tools/translation.ts';
 import { toolTimeMachineBulkRevert } from '../../tools/tool_time_machine/server/bulk_revert.ts';
 import { WRITEBACK_TETHER_TITLES, WRITEBACK_TETHERS } from '../helpers/tool_writeback_tethers.ts';
+import { superuserTranslationGrant } from '../helpers/translation_grant.ts';
 
 /** Titles registered through `behaviourTether` — filled at collection, read at run time. */
 const REGISTERED = new Set<string>();
@@ -173,19 +174,18 @@ describe('tool_lossless_writeback — the server cells, EXECUTED (behaviour, not
 				stubbedCalls.push(String(input instanceof Request ? input.url : input));
 				return new Response('', { status: 200 });
 			}) as unknown as typeof fetch;
-			const outcome = await translateAndWrite({
-				model: 'component_input_text',
-				componentTipo: TEXT,
-				sectionTipo: SECTION,
-				sectionId,
-				sourceLang: 'lg-spa',
-				targetLang: 'lg-eng',
-				provider: babelProvider,
-				// a PUBLIC IP literal: the guard's no-lookup path, never dialled (fetch is stubbed)
-				uri: 'https://93.184.216.34/translate',
-				key: 'k',
-				userId: USER_ID,
-			});
+			const outcome = await translateAndWrite(
+				await superuserTranslationGrant(SECTION, TEXT, sectionId),
+				{
+					model: 'component_input_text',
+					sourceLang: 'lg-spa',
+					targetLang: 'lg-eng',
+					provider: babelProvider,
+					// a PUBLIC IP literal: the guard's no-lookup path, never dialled (fetch is stubbed)
+					uri: 'https://93.184.216.34/translate',
+					key: 'k',
+				},
+			);
 			globalThis.fetch = realFetch;
 			// one source item → one provider call, answered by the stub (never the network)
 			expect(

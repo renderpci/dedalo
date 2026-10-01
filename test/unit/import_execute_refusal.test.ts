@@ -30,6 +30,8 @@ import { importMappedRecords } from '../../src/core/tools/import_execute.ts';
 const SECTION = 'test3';
 const GEO = 'test100'; // component_geolocation under test45 → test3
 const USER = 987671;
+/** The importing PRINCIPAL (req 10: the executor asks the write door as it) — the superuser, so the door is not this gate's subject. */
+const IMPORTER = { userId: -1, isGlobalAdmin: true, isDeveloper: true } as const;
 const ID = 900701; // far outside the canonical test3 ids
 const TABLE = 'matrix_test';
 
@@ -64,7 +66,7 @@ function runImport(values: string[]) {
 	return importMappedRecords(
 		[{ sectionId: ID, fields: [{ component_tipo: GEO, values }] }],
 		SECTION,
-		USER,
+		IMPORTER,
 	);
 }
 

@@ -7,10 +7,9 @@
 // Migrated to the generic `test` TLD 2026-08-19: the translated component is an opaque
 // input_text tipo, so it now names the generic `test52`.
 
-import { afterAll, describe, expect, mock, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { isDedaloError } from '../../src/core/errors/index.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
-import * as realPermissions from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import {
 	babelDirection,
@@ -24,14 +23,6 @@ import { mustGet } from '../helpers/assert.ts';
 
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 const NO_ACCESS: Principal = { userId: 999999, isGlobalAdmin: false, isDeveloper: false };
-const SCOPED: Principal = { userId: 16, isGlobalAdmin: false, isDeveloper: false };
-
-// mock.module is process-GLOBAL and mock.restore() does NOT revert it — snapshot
-// the real exports at import time and re-install them (dedalo-ts-testing).
-const REAL_PERMISSIONS = { ...realPermissions };
-afterAll(() => {
-	mock.module('../../src/core/security/permissions.ts', () => REAL_PERMISSIONS);
-});
 
 const cfg = { uri: 'https://tr.example.org', key: 'k', sourceLang: 'lg-eng', targetLang: 'lg-spa' };
 
@@ -173,26 +164,20 @@ describe('runAutomaticTranslation — gates and loud failures', () => {
 		expect(refusal?.code).toBe('perm.denied');
 	});
 
-	test('the (section_tipo, component_tipo) WRITE pair is asserted, not just the section', async () => {
-		// PHP asserts assert_tipo_permission(section_tipo, component_tipo, 2) AND
-		// assert_record_in_user_scope; the port had only the record half, so a
-		// caller with SECTION write but no grant on the COMPONENT slipped through.
-		// The two are only distinguishable with a principal whose levels differ
-		// per target, hence the mock (process-global — restored in afterEach).
-		mock.module('../../src/core/security/permissions.ts', () => ({
-			...REAL_PERMISSIONS,
-			getPermissions: async (_p: unknown, sectionTipo: string, tipo: string) =>
-				sectionTipo === tipo ? 2 : 0, // section: write. component: nothing.
-		}));
-		try {
+	// The (section_tipo, component_tipo) WRITE PAIR — the half PHP asserted and the
+	// port once dropped — is the WRITE DOOR's (closure Step 3 req 10): it is driven
+	// with REAL identities, no mock, by authz_door_matrix_native's
+	// tool:tool_lang:automatic_translation cells (NO_COMPONENT, READ_COMPONENT,
+	// DD1725 — refused ON the component), not here.
+	test('a malformed record id is a grammar refusal, never record 0 (the write door)', async () => {
+		for (const section_id of [undefined, 1.5, 'abc']) {
 			const refusal = await refusalOf(() =>
-				runAutomaticTranslation({ options, userId: 16, principal: SCOPED }, 'tool_lang'),
+				runAutomaticTranslation(
+					{ options: { ...options, section_id }, userId: -1, principal: SUPERUSER },
+					'tool_lang',
+				),
 			);
-			expect(refusal?.code).toBe('perm.denied');
-			// the WHICH-half detail is LOG-side (perm.denied is operator-disclosure)
-			expect(refusal?.message).toContain('insufficient permissions on the target component');
-		} finally {
-			mock.module('../../src/core/security/permissions.ts', () => REAL_PERMISSIONS);
+			expect(refusal?.code).toBe('request.invalid');
 		}
 	});
 

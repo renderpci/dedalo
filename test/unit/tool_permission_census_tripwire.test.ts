@@ -256,12 +256,12 @@ const CENSUS: Record<string, CensusEntry> = {
 	'tool_lang:automatic_translation': {
 		entry: 'runAutomaticTranslation',
 		files: ['src/core/tools/translation.ts'],
-		gate: 'assertTranslationPermissions',
+		gate: 'authorizeRecordAccess',
 	},
 	'tool_lang_multi:automatic_translation': {
 		entry: 'runAutomaticTranslation',
 		files: ['src/core/tools/translation.ts'],
-		gate: 'assertTranslationPermissions',
+		gate: 'authorizeRecordAccess',
 	},
 	'tool_propagate_component_data:propagate_component_data': {
 		entry: 'propagateComponentData',

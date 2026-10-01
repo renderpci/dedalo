@@ -81,6 +81,7 @@ import { toolTimeMachineApplyValue } from '../../tools/tool_time_machine/server/
 import { mustGet } from '../helpers/assert.ts';
 import { demoteToLegacyRun, insertLegacyBulkRow } from '../helpers/legacy_bulk_run.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
+import { superuserTranslationGrant } from '../helpers/translation_grant.ts';
 
 const TLD = 'zztcr';
 const SECTION = `${TLD}1`;
@@ -959,17 +960,13 @@ describe('a tool_lang translation of a framed main', () => {
 		await seed(id, 'string', LMAIN, [eng]);
 		await seed(id, 'relation', LSLOT, slot);
 		const mark = await watermark();
-		const outcome = await translateAndWrite({
+		const outcome = await translateAndWrite(await superuserTranslationGrant(SECTION, LMAIN, id), {
 			model: 'component_input_text',
-			componentTipo: LMAIN,
-			sectionTipo: SECTION,
-			sectionId: id,
 			sourceLang: 'lg-eng',
 			targetLang: 'lg-spa',
 			provider: async (request) => ({ ok: true, text: `ES ${request.text}`, msg: 'OK' }),
 			uri: 'http://translator.invalid',
 			key: '',
-			userId: USER_ID,
 		});
 		expect(outcome.ok).toBe(true);
 		const rows = await tmRows(SECTION, id, mark);

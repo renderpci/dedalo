@@ -17,6 +17,7 @@ Merged since the last release; these ship with the next one.
 
 !!! warning "Action needed when you update"
 
+    - Every AI request now counts against a daily budget per user, and generated answers need their own permission.
     - The site builder's Claude Code agent no longer loads configuration from the site's own files, and refuses a Claude Code that cannot be told not to.
     - The site builder's agent can no longer choose its own agent program, read another site's activity, or stall a turn with a planted brief.
     - The site builder runs each site's AI agent as that site's own system user, from units that root installs. systemd 248 is now enough, and `provision apply` must run before the updated daemon starts.
@@ -330,6 +331,20 @@ Merged since the last release; these ship with the next one.
 
 #### Security
 
+- **Every AI request now counts against a daily budget per user, and generated answers need their own permission.** *(action needed)*
+
+    Until now any logged-in user could run the assistant, ask for generated answers and run semantic searches without any limit, so one session could exhaust an installation's model budget (or its local GPU). Every request that calls a model is now checked against the user's daily budget before the model is called: assistant runs and model tokens, semantic-search queries, and vision calls of the identification tool. When a budget is used up the request is refused with a message saying when it resets (midnight UTC). Nobody is exempt, administrators and root included. The four budgets are `DEDALO_AI_USER_DAILY_RUNS` (50), `DEDALO_AI_USER_DAILY_TOKENS` (1000000), `DEDALO_AI_USER_DAILY_EMBED_QUERIES` (2000) and `DEDALO_AI_USER_DAILY_VISION` (50) — see [the configuration reference](./config/config.md). The day's usage of every user is listed in the new **AI usage** section under Administration.
+
+    **Action needed:** generated answers over the collection now require the **Generated answers** tool permission (`tool_rag`). Run *Register tools* after the update to add it, then grant it in the profile editor to the profiles that should use generated answers. Semantic search does not need it.
+
+    Wire contract: `WC-2026-10-01-ai-spend-budget`.
+
+- **The assistant no longer proposes changes its own apply step would refuse.**
+
+    In write mode the assistant proposes a change plan that a person confirms before it runs. The check made before the plan was shown was weaker than the one made when it runs: some plans that named a record outside the user's projects, a field the user may not edit, or a read-only section were shown as valid and then failed when applied. Plans are now checked by the same permission rules that apply when they run, so what the person confirms is what the user is allowed to do.
+
+    Wire contract: `WC-2026-10-01-change-plan-write-door`.
+
 - **Removing a linked record from a portal now checks the portal field and the record's projects.**
 
     Removing a linked record from a portal (the unlink button, and the "delete index" of the indexation tool) used to check only the section's permission. A profile that could edit the section but only read the portal field could still unlink from it, a record outside the user's projects could be changed, and a user manager could unlink their own profile, active or administrator flag. Removing a link now requires write access to that portal field and to the record itself (its projects), checked before anything is read or locked; a user manager can no longer unlink their own profile, active or administrator flag; and a record id of 0 or below is refused for every user, administrators included.
@@ -392,6 +407,12 @@ Merged since the last release; these ship with the next one.
     - Adding a site later also needs `provision apply`, which restarts the daemon.
 
     See [the site builder internals](./development/site_builder_internals.md).
+
+- **Translation, imports, cache rebuilds, uploads and bulk reverts now check permissions on every record and field they write.**
+
+    Several tools checked a user's permission on a section and field but not on the specific record they then wrote, so the rule that keeps a user from changing parts of their own account (for example their own profile) did not apply there. Automatic translation, the poster-frame tool, the cache rebuild, file and CSV/MARC21/Zotero imports, the fields an upload fills in automatically, and the bulk revert of a process now check each record and field exactly as the edit form does. A field or row the user may not change is reported and left untouched; CSV imports now need permission on every imported column, including the creation and modification metadata columns.
+
+    Wire contract: `WC-2026-10-01-write-door-delegations`.
 
 - **The assistant can no longer search or count records of a section the user may not read.**
 
@@ -550,6 +571,12 @@ Merged since the last release; these ship with the next one.
     Wire contract: `WC-2026-09-28-maintenance-serve-ontology-widget`.
 
 #### Fixed
+
+- **Administrators' toolbars now show only the tools their profile grants.**
+
+    Global administrators (other than root) saw every installed tool in their toolbars, even tools their profile does not grant — and clicking one was then refused. The toolbar and every tool door now follow the same rule: a tool is available when the user's profile grants it (or it is always active); only the root account holds every tool. An administrator who asks for a tool their profile does not grant now gets "not authorized" rather than "unknown tool".
+
+    Wire contract: `WC-2026-10-01-tool-grant-one-decision`.
 
 - **A database backup counts only once it has been read back completely.**
 
@@ -801,7 +828,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 77 entries"
+??? note "Wire contract — 81 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -877,9 +904,13 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-30-update-engine-atomic`
     - `WC-2026-09-30-update-manifest-local-origin-refusal`
     - `WC-2026-09-30-write-door`
+    - `WC-2026-10-01-ai-spend-budget`
+    - `WC-2026-10-01-change-plan-write-door`
     - `WC-2026-10-01-delete-locator-write-door`
     - `WC-2026-10-01-identify-vision-grant`
     - `WC-2026-10-01-site-builder-confinement-codes`
+    - `WC-2026-10-01-tool-grant-one-decision`
+    - `WC-2026-10-01-write-door-delegations`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

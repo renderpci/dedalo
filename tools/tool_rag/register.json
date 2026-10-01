@@ -1,0 +1,26 @@
+{
+	"$schema": "../../src/core/tools/register.schema.json",
+	"name": "tool_rag",
+	"version": "1.0.0",
+	"label": {
+		"lg-eng": "Generated answers",
+		"lg-spa": "Respuestas generadas",
+		"lg-cat": "Respostes generades",
+		"lg-fra": "Réponses générées",
+		"lg-deu": "Generierte Antworten",
+		"lg-ita": "Risposte generate",
+		"lg-por": "Respostas geradas"
+	},
+	"description": {
+		"lg-eng": "Permission to ask a language model for an answer written from the collection's records (the generative answer, with citations). It has no window of its own: granting it to a profile is what lets that profile's users request generated answers. Semantic search does not need it.",
+		"lg-spa": "Permiso para pedir a un modelo de lenguaje una respuesta redactada a partir de los registros de la colección (la respuesta generada, con citas). No tiene ventana propia: concederlo a un perfil es lo que permite a sus usuarios pedir respuestas generadas. La búsqueda semántica no lo necesita."
+	},
+	"developer": "Dédalo team",
+	"dedalo_version_min": "7.0.0",
+	"affected_models": [],
+	"show_in_inspector": false,
+	"show_in_component": false,
+	"always_active": false,
+	"active": true,
+	"properties": { "grant_only": true }
+}

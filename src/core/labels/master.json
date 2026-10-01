@@ -134,6 +134,8 @@
 	"entity_label": "Entity label",
 	"environment": "Environment",
 	"error": "Error",
+	"error_ai_budget_exhausted": "Your daily AI budget is used up ({budget_kind}: {limit}). It resets at {window_resets_at} (UTC), or your administrator can raise it",
+	"error_ai_budget_unavailable": "AI requests are paused: the usage ledger cannot be reached. Try again later",
 	"error_ai_model_catalog_invalid": "The assistant model catalog is invalid (assistant disabled)",
 	"error_ai_model_integrity": "The model artifact failed its integrity check and was refused",
 	"error_ai_model_no_vision": "The selected model does not accept images",

@@ -15,7 +15,7 @@ export const tool: ToolServerModule = {
 		automatic_translation: {
 			permission: null,
 			gatedInHandler:
-				'assertTranslationPermissions(...) inside runAutomaticTranslation (src/core/tools/translation.ts): getPermissions on the (section_tipo, component_tipo) PAIR at level 2 — which a section-level check does not imply — followed by assertActionPermission with the `record` kind for the record-in-scope half (TOOLS-10). Both run before any provider call or write.',
+				'authorizeRecordAccess(...) inside runAutomaticTranslation (src/core/tools/translation.ts): THE WRITE DOOR on the (section_tipo, component_tipo, section_id) target at write level 2 — grammar, section floor 1, the dd128-aware pair, the write scope with the non-positive-id refusal ahead of the admin bypass (closure Step 3 req 10; TOOLS-10). It runs before any provider call; the grant it returns is what translateAndWrite writes through.',
 			handler: async (ctx) => (await runAutomaticTranslation(ctx, 'tool_lang')) as ToolResponse,
 		},
 	},

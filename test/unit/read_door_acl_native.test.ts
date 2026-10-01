@@ -530,6 +530,9 @@ describe.if(DB_READY)('read door ACL — every component door, paired', () => {
 				requireToolGrant: async () => {
 					throw new Error('a LOCAL encoder spends nothing: the vision grant must never be asked');
 				},
+				chargeVision: async () => {
+					throw new Error('a LOCAL encoder spends nothing: no vision call may be charged');
+				},
 				ragEnabled: () => true,
 				mediaEnabled: () => true,
 				config: () => ({ provider: 'local', imageEgressPolicy: 'local_only' }) as never,

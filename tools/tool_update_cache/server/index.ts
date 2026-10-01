@@ -26,11 +26,13 @@
  */
 
 import { isMediaModel, mediaTypeOf } from '../../../src/core/concepts/media.ts';
-import { DedaloError, ok } from '../../../src/core/errors/index.ts';
+import { DedaloError, isDedaloError, ok } from '../../../src/core/errors/index.ts';
 import type { StoredMediaItem } from '../../../src/core/media/tools/files_info_persist.ts';
 import { getModelByTipo } from '../../../src/core/ontology/resolver.ts';
 import { currentDataLang } from '../../../src/core/resolve/request_lang.ts';
 import { buildSectionElementsContext } from '../../../src/core/resolve/section_elements_context.ts';
+import type { Principal } from '../../../src/core/security/permissions.ts';
+import { authorizeRecordAccess, type RecordGrant } from '../../../src/core/security/write_door.ts';
 import {
 	type ToolActionContext,
 	type ToolResponse,
@@ -195,6 +197,8 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 	let lockedOut = 0;
 	let stopped = false;
 	const mediaErrors: string[] = [];
+	/** Row × component targets the WRITE DOOR refused (nothing written to them). */
+	const refusedTargets: string[] = [];
 	// The run is held in the active-run registry while it writes: a revert of
 	// it is refused until it ends (decision D5).
 	await withLiveBulkRun(bulkProcessId, async () => {
@@ -225,6 +229,20 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 				const tipo = String(sel.tipo ?? '');
 				const model = tipo !== '' ? await getModelByTipo(tipo) : null;
 				if (model === null) continue;
+				// THE WRITE DOOR, PER ROW (closure Step 3 req 10). The declarative
+				// `targets` gate authorized each (sqo section, component) PAIR with no
+				// record named — so the dd128 own-record downgrade (a user-manager's
+				// own dd1725 is read-only) never applied to the ROWS the sqo matched,
+				// and a section grant re-saved a component the per-component rule
+				// never saw. Every row × component is now asked of the door — grammar,
+				// section floor, the dd128-aware pair, the write scope — and its GRANT
+				// addresses the write. A refused target is skipped and reported, never
+				// written (tool_propagate_component_data's per-row precedent).
+				const grant = await authorizeRowComponent(ctx.principal, row, tipo);
+				if (grant === null) {
+					refusedTargets.push(`${tipo}#${row.section_id}: not writable by the caller`);
+					continue;
+				}
 				const spec = isMediaModel(model) ? mediaTypeOf(model) : null;
 				if (spec !== null) {
 					// MEDIA repair, in the kernel's two halves (core/media/repair.ts): the
@@ -275,7 +293,11 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 					);
 					let heldShrinks = 0;
 					const outcome = await transformStoredMediaItems(
-						{ sectionTipo: row.section_tipo, sectionId: row.section_id, componentTipo: tipo },
+						{
+							sectionTipo: grant.sectionTipo,
+							sectionId: grant.sectionId,
+							componentTipo: grant.componentTipo,
+						},
 						(locked) => {
 							// Removed since the snapshot: nothing left to refresh.
 							if (locked.length === 0) return { skip: 'noop' };
@@ -346,12 +368,12 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 				const groups = groupItemsByLang(items, componentLang);
 				for (const [lang, group] of groups) {
 					await saveComponentData({
-						componentTipo: tipo,
-						sectionTipo: row.section_tipo,
-						sectionId: row.section_id,
+						componentTipo: grant.componentTipo,
+						sectionTipo: grant.sectionTipo,
+						sectionId: grant.sectionId,
 						lang,
 						changedData: [{ action: 'set_data', id: null, value: group }],
-						userId: ctx.userId,
+						userId: grant.userId,
 						// THE UNDO LOG (decision D1, WC bulk-revert-undo-log): a save
 						// under a bulk id records its BEFORE/AFTER pair whatever saveTm
 						// says, and the after-row is ordinary visible history — so the
@@ -373,7 +395,11 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 		? `Stopped. update_cache regenerated ${regenerated} component(s) across ${processed} of ${rows.length} matched record(s) before the stop.`
 		: `OK. update_cache regenerated ${regenerated} component(s) across ${rows.length} record(s).`;
 	const rebuildFailures = mediaErrors.length - vanished - lockedOut;
-	const msg = `${summaryMsg}${rebuildFailures > 0 ? ` ${rebuildFailures} media derivative rebuild(s) failed (files_info still refreshed).` : ''}${mediaHeld > 0 ? ` ${mediaHeld} stored media index(es) kept (files not on this server — shrink held).` : ''}${vanished > 0 ? ` ${vanished} record(s) deleted during the run (nothing written).` : ''}${lockedOut > 0 ? ` ${lockedOut} record(s) stayed locked (nothing written).` : ''}`;
+	const refusedNote =
+		refusedTargets.length > 0
+			? ` ${refusedTargets.length} target(s) the caller may not write were skipped (nothing written to them).`
+			: '';
+	const msg = `${summaryMsg}${refusedNote}${rebuildFailures > 0 ? ` ${rebuildFailures} media derivative rebuild(s) failed (files_info still refreshed).` : ''}${mediaHeld > 0 ? ` ${mediaHeld} stored media index(es) kept (files not on this server — shrink held).` : ''}${vanished > 0 ? ` ${vanished} record(s) deleted during the run (nothing written).` : ''}${lockedOut > 0 ? ` ${lockedOut} record(s) stayed locked (nothing written).` : ''}`;
 	// Final frame: the client renders the summary from the last pfile data.
 	publish({
 		msg,
@@ -388,8 +414,9 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 	return ok(
 		{
 			summary: msg,
-			errors: mediaErrors,
+			errors: [...mediaErrors, ...refusedTargets],
 			regenerated,
+			refused: refusedTargets.length,
 			records: rows.length,
 			processed,
 			stopped,
@@ -401,6 +428,34 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 		},
 		{ requestId: toolRequestId(ctx) },
 	);
+}
+
+/**
+ * The write door for ONE matched row's component (req 10): the grant, or null
+ * when the door REFUSES it (perm.* / a target that is not a record address).
+ * Any other failure is not a refusal and propagates — a broken database must
+ * never read as "skipped".
+ */
+async function authorizeRowComponent(
+	principal: Principal,
+	row: { section_tipo: string; section_id: number },
+	componentTipo: string,
+): Promise<RecordGrant | null> {
+	try {
+		return await authorizeRecordAccess(
+			principal,
+			{ section_tipo: row.section_tipo, component_tipo: componentTipo, section_id: row.section_id },
+			{ mode: 'write', level: 2, sectionFloor: 1, door: 'tool_update_cache.update_cache' },
+		);
+	} catch (error) {
+		if (
+			isDedaloError(error) &&
+			(error.code.startsWith('perm.') || error.code === 'request.invalid')
+		) {
+			return null;
+		}
+		throw error;
+	}
 }
 
 /** A recovered original name (see resolveOriginalNameRepair). */

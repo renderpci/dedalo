@@ -323,7 +323,7 @@
 		"src/core/tools/security.ts": 22,
 		"src/core/tools/serving.ts": 8,
 		"src/core/tools/transcription_asr.ts": 17,
-		"src/core/tools/translation.ts": 15,
+		"src/core/tools/translation.ts": 14,
 		"src/core/ts_object/node_repository.ts": 40,
 		"src/core/ts_object/search.ts": 8,
 		"src/core/ts_object/term_resolver.ts": 13,

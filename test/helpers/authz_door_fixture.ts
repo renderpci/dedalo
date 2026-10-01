@@ -39,7 +39,8 @@
  *   944004/944014 OUT_OF_SCOPE     No      Q        = CONTROL
  *   944005/944015 USER_MANAGER     No      P        dd128=2, dd128.dd1725=2, dd128.dd132=2
  *   944006/944016 DD128_ADMIN      YES     P        dd128=2, dd128.dd133=2 + CONTROL's test3 grants
- *   944007/944017 TOOL_GRANTED     No      P        = CONTROL, plus dd1067 → tool_assistant
+ *   944007/944017 TOOL_GRANTED     No      P        = CONTROL, plus dd1067 → tool_assistant,
+ *                                                   tool_identify, tool_rag
  *   944008/944018 LEVEL_1          No      P        test3=1 + MEDIA_COMPONENTS=1 + test101=1 (read, never write)
  *   944009/944019 TEXT_ONLY        No      P        test3=2, test17=2, AUTHZ_SUBTITLE_TEXT_AREA=2, test94=0
  *                                                   (the transcript is writable, its AV is not)
@@ -60,7 +61,8 @@
  *   SECTION_ONLY's zeros are EXPLICIT on every component a NO_COMPONENT cell
  *   is probed on (the media components, test52, zzauthz1) — a present-but-zero
  *   row, never an absent one; TOOL_GRANTED authorizes tool_assistant (the agent
- *   door) AND tool_identify (the vision spend, TOOLS-4's grant half).
+ *   door), tool_identify (the vision spend, TOOLS-4's grant half) AND tool_rag
+ *   (the generative RAG answer, TOOLS-4's budget half).
  *
  * RECORDS are ENGINE-BUILT (never raw INSERTs, never a phantom id):
  * `createDoorRecord` runs `createSectionRecord` with the project locator as its
@@ -157,6 +159,8 @@ export const AUTHZ_MEDIA_COMPONENTS = [AUTHZ_AV, AUTHZ_3D, AUTHZ_TEXT_AREA] as c
 export const AUTHZ_GRANTED_TOOL = 'tool_assistant';
 /** The second tool it authorizes: the vision spend's grant (TOOLS-4). */
 export const AUTHZ_GRANTED_VISION_TOOL = 'tool_identify';
+/** The generative-RAG grant (TOOLS-4's budget half: `dd_rag_api` `ask` asks it). */
+export const AUTHZ_GRANTED_RAG_TOOL = 'tool_rag';
 
 const USERS_SECTION = 'dd128';
 const PROFILES_SECTION = 'dd234';
@@ -319,7 +323,7 @@ const IDENTITIES: readonly IdentitySpec[] = [
 		admin: false,
 		project: AUTHZ_PROJECT_P,
 		grants: CONTROL_GRANTS,
-		tools: [AUTHZ_GRANTED_TOOL, AUTHZ_GRANTED_VISION_TOOL],
+		tools: [AUTHZ_GRANTED_TOOL, AUTHZ_GRANTED_VISION_TOOL, AUTHZ_GRANTED_RAG_TOOL],
 	},
 ];
 

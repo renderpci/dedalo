@@ -329,6 +329,10 @@ const TRIPWIRES = [
 	'test/unit/duplicate_record_media_verdict_native.test.ts',
 	// SEC-2-delete_locator — the portal unlink through the write door (closure Step 3, 2026-10-01).
 	'test/unit/portal_locator_door_native.test.ts',
+	// TOOLS-4 budget half — the AI spend ledger (closure Step 3, 2026-10-01).
+	'test/unit/ai_spend_budget_native.test.ts',
+	// Closure Step 3 req 7 — the change-plan validator asks the write door (2026-10-01).
+	'test/unit/change_plan_write_door_native.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

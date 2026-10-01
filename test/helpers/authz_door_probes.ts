@@ -48,6 +48,38 @@ export const DD128_PROBED: Readonly<Record<string, readonly string[]>> = {
 	// refuses DD1725 before the engine runs, so its leg proves nothing of it.
 	'src/core/api/handlers/dd_component_portal_api.ts': ['dd_component_portal_api:delete_locator'],
 	'src/core/relations/save.ts': ['dd_component_portal_api:delete_locator'],
+	// tool_lang / tool_lang_multi automatic_translation (closure Step 3 req 10):
+	// the handler's own authorizeRecordAccess, driven through the REAL handler
+	// with the manager's own (dd128, dd1725) as the translation target.
+	'src/core/tools/translation.ts': [
+		'tool:tool_lang:automatic_translation',
+		'tool:tool_lang_multi:automatic_translation',
+	],
+	// tool_posterframe create_identifying_image — the HOST write door in its
+	// handler (req 10), probed through the real handler under its own key.
+	'tools/tool_posterframe/server/index.ts': ['tool:tool_posterframe:create_identifying_image:host'],
+	// tool_update_cache update_cache — the per-ROW write door in its handler
+	// (req 10): the manager's own dd1725 row is refused, skipped, never written.
+	'tools/tool_update_cache/server/index.ts': ['tool:tool_update_cache:update_cache'],
+	// The ingest companions' engine — every companion through the write door as
+	// the uploader (req 10); its probe aims a scratch media component's
+	// target_filename at the manager's own dd1725.
+	'src/core/media/ingest/companion_writes.ts': ['engine:media_ingest.companion_writes'],
+	// The mapped-record importer (MARC21 / Zotero / RDF) — every matched
+	// record's field through the write door as the importer (req 10).
+	'src/core/tools/import_execute.ts': ['engine:import_execute.importMappedRecords'],
+	// The CSV importer — every existing row's column through the write door as
+	// the importer (req 10).
+	'src/core/tools/import_csv_execute.ts': ['engine:import_csv_execute.executeCsvImport'],
+	// tool_import_files — the run-time role writes (and the media / host-portal
+	// components) through the write door's triple (req 10).
+	'tools/tool_import_files/server/index.ts': ['tool:tool_import_files:import_files:roles'],
+	// The bulk revert's writer — every component a unit writes through the write
+	// door behind the unit's lock (req 10); the orchestrator's pre-gate reads the
+	// raw pair, so this leg measures the writer alone.
+	'tools/tool_time_machine/server/bulk_revert_undo.ts': [
+		'tool:tool_time_machine:bulk_revert_process:units',
+	],
 	// (transcription_asr.ts is NOT here: its exported saveTranscriptionResult is
 	// an UNGATED writer any importer may call, and no matrix door drives the
 	// poll's save with the DD1725 manager — PENDING until one does.)

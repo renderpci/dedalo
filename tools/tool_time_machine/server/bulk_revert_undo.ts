@@ -49,6 +49,7 @@ import {
 } from '../../../src/core/db/matrix_write.ts';
 import { withTransaction } from '../../../src/core/db/postgres.ts';
 import { decodeTmImage, TM_ROLE } from '../../../src/core/db/time_machine.ts';
+import { isDedaloError } from '../../../src/core/errors/dedalo_error.ts';
 import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
@@ -79,6 +80,7 @@ import {
 	type RecordWriteTarget,
 } from '../../../src/core/section_record/index.ts';
 import type { Principal } from '../../../src/core/security/permissions.ts';
+import { authorizeRecordAccess } from '../../../src/core/security/write_door.ts';
 import type { BulkRevertInexactBasis } from './bulk_revert.ts';
 import { planLegacyKey } from './bulk_revert_legacy.ts';
 import {
@@ -512,6 +514,11 @@ export async function writeComposedUnit(
 	context: UnitContext,
 ): Promise<void> {
 	const { target } = scope;
+	// THE WRITE DOOR for every key this composed unit writes — the main and each
+	// of its slots (req 10); refused → the unit rolls back, reported out_of_scope.
+	for (const write of writes) {
+		await authorizeKeyWrite(scope.key, target.sectionTipo, target.sectionId, write.tipo, context);
+	}
 	if (writes.length > 0) {
 		await persistRestoredKeys(
 			target,
@@ -599,6 +606,45 @@ export async function lockUnitRecord(
 }
 
 /**
+ * THE WRITE DOOR, per written component (closure Step 3 req 10). The
+ * orchestrator's unitInScope pre-judged the unit on the caller's levels; the
+ * WRITE itself — behind the unit's lock, after any undelete restored the row —
+ * asks the door for the triple: grammar, section floor 1, the dd128-aware pair
+ * (a user-manager reverting a run that touched their OWN dd128 record must not
+ * restore their own dd1725 / dd132 through it), the write scope with the
+ * non-positive-id refusal ahead of the admin bypass. A refusal is the unit's
+ * `out_of_scope` (one code for both halves, as the pre-gate) — rolled back,
+ * reported, never written. Anything else propagates as the failure it is.
+ */
+async function authorizeKeyWrite(
+	reportKey: RevertKey,
+	sectionTipo: string,
+	sectionId: number,
+	componentTipo: string,
+	context: UnitContext,
+): Promise<void> {
+	try {
+		await authorizeRecordAccess(
+			context.principal,
+			{ section_tipo: sectionTipo, component_tipo: componentTipo, section_id: sectionId },
+			{ mode: 'write', level: 2, sectionFloor: 1, door: 'tool_time_machine.bulk_revert_process' },
+		);
+	} catch (error) {
+		if (
+			isDedaloError(error) &&
+			(error.code.startsWith('perm.') || error.code === 'request.invalid')
+		) {
+			throw new RevertRefusal(
+				'out_of_scope',
+				reportKey,
+				`${describeKey(reportKey)}: the write door refused ${sectionTipo}/${componentTipo}#${sectionId} (${error.code})`,
+			);
+		}
+		throw error;
+	}
+}
+
+/**
  * Lock the record, read the key behind the lock, plan it, and write it.
  * `frameUnit`: the unit when this key carries the main's frame half
  * (a legacy key: bulk_revert_legacy.ts), null when it restores its region only.
@@ -624,6 +670,10 @@ async function revertKey(
 				principal: context.principal,
 			});
 	if (plan.kind === 'unchanged') return null;
+	// THE WRITE DOOR for the key and every slot its frame plan restores (req 10).
+	for (const tipo of new Set([key.tipo, ...plan.framePlan.map((restore) => restore.slotTipo)])) {
+		await authorizeKeyWrite(key, key.sectionTipo, key.sectionId, tipo, context);
+	}
 	await writeRevertedKey(key, target, live, plan, context, deferred);
 	const twinInexact = await rederiveMetadataTwin(key, record, plan.value);
 	return {

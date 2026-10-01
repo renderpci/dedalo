@@ -13,12 +13,12 @@
 
 import type { MatrixJsonbColumn } from '../db/matrix.ts';
 import { DedaloError, ok } from '../errors/index.ts';
-import { LEGACY_TOKEN_MAP } from '../errors/registry.ts';
 import type { ApiEnvelope } from '../errors/schema.ts';
 import { currentDataLang } from '../resolve/request_lang.ts';
 import type { Principal } from '../security/permissions.ts';
 import { currentRequestContext } from '../security/request_context.ts';
 import { fetchGuardedText, isSsrfRefusal } from '../security/ssrf_guard.ts';
+import { authorizeRecordAccess, type RecordGrant } from '../security/write_door.ts';
 import { addBabelNotransTags, processBabelResponse } from './babel.ts';
 
 export interface TranslateRequest {
@@ -281,19 +281,39 @@ export function resolveTranslationProvider(engine: string): {
  * request that can take minutes, so it happens BEFORE the transaction opens.
  * The row lock is then taken for the merge only, and the merge base is the
  * freshly locked re-read — never the pre-translation snapshot.
+ *
+ * AUTHORIZED BY ITS GRANT: the caller passes the write door's RecordGrant
+ * (`authorizeRecordAccess`, write level 2) — `runAutomaticTranslation` is the
+ * door that mints it.
  */
-export async function translateAndWrite(input: {
-	model: string;
-	componentTipo: string;
-	sectionTipo: string;
-	sectionId: number;
-	sourceLang: string;
-	targetLang: string;
-	provider: TranslationProvider;
-	uri: string;
-	key: string;
-	userId: number;
-}): Promise<{ ok: boolean; msg: string; count: number; providerError?: boolean }> {
+export async function translateAndWrite(
+	grant: RecordGrant,
+	options: {
+		model: string;
+		sourceLang: string;
+		targetLang: string;
+		provider: TranslationProvider;
+		uri: string;
+		key: string;
+	},
+): Promise<{ ok: boolean; msg: string; count: number; providerError?: boolean }> {
+	// THE EFFECT IS BUILT FROM THE GRANT (closure Step 3 req 10): the record, the
+	// component and the audit actor are the write door's authorized coordinates —
+	// a branded RecordGrant only security/write_door.ts mints — never raw request
+	// values. An importer cannot reach this writer without asking the door.
+	if (grant.mode !== 'write') {
+		throw new DedaloError('internal.invariant', {
+			message: `translateAndWrite: a ${grant.mode} grant cannot write (door ${grant.door})`,
+			coordinates: { section_tipo: grant.sectionTipo, section_id: grant.sectionId },
+		});
+	}
+	const input = {
+		...options,
+		componentTipo: grant.componentTipo,
+		sectionTipo: grant.sectionTipo,
+		sectionId: grant.sectionId,
+		userId: grant.userId,
+	};
 	const { getColumnNameByModel, getMatrixTableFromTipo } = await import('../ontology/resolver.ts');
 	const { readMatrixRecord } = await import('../db/matrix.ts');
 	const { readComponentItems, filterItemsByLang } = await import('../resolve/component_data.ts');
@@ -447,7 +467,6 @@ export async function runAutomaticTranslation(
 	const o = ctx.options;
 	const componentTipo = String(o.component_tipo ?? '');
 	const sectionTipo = String(o.section_tipo ?? '');
-	const sectionId = Number(o.section_id ?? 0);
 	const sourceLang = String(o.source_lang ?? defaultTranslationSourceLang());
 	const targetLang = String(o.target_lang ?? '');
 	const engine = String(o.translator ?? 'babel');
@@ -459,16 +478,21 @@ export async function runAutomaticTranslation(
 		});
 	}
 
-	// PHP asserts BOTH halves (tool_lang :164/:167, tool_lang_multi :122/:124;
-	// TOOLS-10, 2026-07-28 audit): assert_tipo_permission(section_tipo,
-	// component_tipo, 2) — the SCHEMA pair, which a section-level check does not
-	// imply when the component carries its own dd774 grant, so a user with
-	// section write but NOT write on THIS component cannot translate-overwrite
-	// it — and assert_record_in_user_scope(section_tipo, section_id). The
-	// 'record' gate below is the second half only, so the pair is asserted
-	// explicitly first. (Both branches added this same check in parallel; merged
-	// 2026-07-29.)
-	await assertTranslationPermissions(ctx.principal, sectionTipo, componentTipo, sectionId);
+	// THE WRITE DOOR (closure Step 3 req 10; WC-2026-09-30-write-door): PHP
+	// asserted BOTH halves (tool_lang :164/:167, tool_lang_multi :122/:124;
+	// TOOLS-10) — the (section_tipo, component_tipo) pair at write and the
+	// record in the user's scope. The door asks them in its one order, with
+	// what the raw pair read never could: the section floor, the dd128
+	// own-record downgrade on the PAIR (a user-manager's own dd1725 is
+	// read-only), the integer id grammar (a missing / fractional / garbage id
+	// is request.invalid, never record 0) and the non-positive-id refusal ahead
+	// of the admin bypass. Before any provider call; the grant addresses the
+	// write.
+	const grant = await authorizeRecordAccess(
+		ctx.principal,
+		{ section_tipo: o.section_tipo, component_tipo: o.component_tipo, section_id: o.section_id },
+		{ mode: 'write', level: 2, sectionFloor: 1, door: `${configToolName}.automatic_translation` },
+	);
 
 	const { provider, error: providerError } = resolveTranslationProvider(engine);
 	if (provider === null) {
@@ -486,25 +510,21 @@ export async function runAutomaticTranslation(
 	}
 
 	const { getModelByTipo } = await import('../ontology/resolver.ts');
-	const model = await getModelByTipo(componentTipo);
+	const model = await getModelByTipo(grant.componentTipo);
 	if (model === null) {
 		throw new DedaloError('request.invalid_tipo', {
-			message: `unknown component tipo: ${componentTipo}`,
-			coordinates: { tipo: componentTipo },
+			message: `unknown component tipo: ${grant.componentTipo}`,
+			coordinates: { tipo: grant.componentTipo },
 		});
 	}
 
-	const outcome = await translateAndWrite({
+	const outcome = await translateAndWrite(grant, {
 		model,
-		componentTipo,
-		sectionTipo,
-		sectionId,
 		sourceLang,
 		targetLang,
 		provider,
 		uri: cfg.uri,
 		key: cfg.key,
-		userId: ctx.userId,
 	});
 	if (!outcome.ok) throw translationFailure(outcome);
 	return ok(true, {
@@ -514,53 +534,6 @@ export async function runAutomaticTranslation(
 		extend: { msg: outcome.msg, count: outcome.count },
 	});
 }
-
-/**
- * The two PHP permission asserts of automatic_translation, as ONE throwing gate
- * (tool_lang :164/:167, tool_lang_multi :122/:124; TOOLS-10, 2026-07-28 audit):
- * assert_tipo_permission(section_tipo, component_tipo, 2) — the SCHEMA pair,
- * which a section-level check does NOT imply when the component carries its own
- * dd774 grant, so a user with section write but NOT write on THIS component
- * cannot translate-overwrite it — and assert_record_in_user_scope(section_tipo,
- * section_id). The 'record' gate is the second half only, so the pair is
- * asserted explicitly here.
- */
-async function assertTranslationPermissions(
-	principal: Principal,
-	sectionTipo: string,
-	componentTipo: string,
-	sectionId: number,
-): Promise<void> {
-	const { getPermissions } = await import('../security/permissions.ts');
-	if ((await getPermissions(principal, sectionTipo, componentTipo)) < 2) {
-		throw new DedaloError('perm.denied', {
-			message: 'insufficient permissions on the target component',
-			coordinates: { section_tipo: sectionTipo, component_tipo: componentTipo },
-		});
-	}
-	const { assertActionPermission } = await import('./security.ts');
-	const gate = await assertActionPermission(
-		{ permission: 'record', minLevel: 2, handler: unreachableHandler },
-		{ section_tipo: sectionTipo, section_id: sectionId },
-		principal,
-	);
-	if (!gate.ok) {
-		// security.ts still answers with a legacy token; mapped through the ONE
-		// translation table until its own sweep makes it throw (tools/dispatch.ts
-		// does exactly this).
-		throw new DedaloError(LEGACY_TOKEN_MAP[gate.errors?.[0] ?? ''] ?? 'perm.denied', {
-			message: gate.msg,
-			coordinates: { section_tipo: sectionTipo, section_id: sectionId },
-		});
-	}
-}
-
-/** Never called: assertActionPermission only consults the spec's gate fields. */
-const unreachableHandler = async (): Promise<never> => {
-	throw new DedaloError('internal.unexpected', {
-		message: 'translation permission probe handler must never run',
-	});
-};
 
 /**
  * A failed translateAndWrite → the thrown refusal.

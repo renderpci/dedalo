@@ -67,7 +67,7 @@ import {
 	getUserProjects,
 	type Principal,
 } from '../../../src/core/security/permissions.ts';
-import { getUserTools } from '../../../src/core/tools/registry.ts';
+import { isToolGranted } from '../../../src/core/tools/security.ts';
 import { assertExportDeclarationReadable } from '../../../src/diffusion/api/export.ts';
 import { type ExportManifest, exportExpired } from './artifact_store.ts';
 import { assertExportSqoSections } from './tool_export.ts';
@@ -185,9 +185,9 @@ const EXPORT_TOOL_NAME = 'tool_export';
 
 /**
  * Is tool_export ACTIVE (dd1324) and AUTHORIZED for `userId`? The dispatcher's
- * Gates 3+4, asked through the same function (registry getUserTools), never a
- * mirror of it.
+ * Gates 3+4, asked through the SAME decision (core/tools/security.ts
+ * isToolGranted), never a mirror of it.
  */
 export async function exportToolAuthorized(userId: number): Promise<boolean> {
-	return (await getUserTools(userId)).some((tool) => tool.name === EXPORT_TOOL_NAME);
+	return isToolGranted(userId, EXPORT_TOOL_NAME);
 }
