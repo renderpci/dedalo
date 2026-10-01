@@ -15,8 +15,15 @@
  *   process_id in every wire payload. Authorization is NEVER by id knowledge:
  *   status/cancel are owner-scoped (or global admin).
  *
- * All timing math uses DB now() (single clock); JS Date appears only in the
- * SSE projection layer (sse.ts) where the client expects epoch ms.
+ * All timing math uses the DB clock (single clock); JS Date appears only in
+ * the SSE projection layer (sse.ts) where the client expects epoch ms. A
+ * LIVENESS stamp (`heartbeat_at`, the terminal `finished_at`) is the WALL clock
+ * (`clock_timestamp()`), never `now()`: `now()` is the TRANSACTION START, and
+ * since DIFF-2 the progress/checkpoint/finish writes ride the runner's fenced
+ * unit — a `now()` there would set the heartbeat BACK to when a long unit
+ * began, overwriting the interval heartbeat's fresher stamp, and the sweeper
+ * (its KEY SHARE gone at commit) would revoke a live runner. Gate:
+ * diffusion_target_fence_native "liveness stamps".
  *
  * LEASE MODEL (PUB-13, WC-2026-09-05-diffusion-lease-epoch-fence). A row can be
  * claimed more than once: the sweeper requeues a stale-heartbeat run and a later
@@ -41,7 +48,19 @@
  * The only unfenced writers are the control plane's own: the claim (which
  * ISSUES the epoch), the sweeper (which REVOKES it), the owner-scoped cancel
  * flag, the queued-row finalizer and the admin requeue — each state-guarded on
- * its own terms and enumerated in `queue_fence_tripwire`.
+ * its own terms and enumerated in `queue_fence_tripwire` (which also censuses
+ * the job-scoped run ledger, jobs/run_ledger.ts, on the same epoch).
+ *
+ * THE TARGET FENCE (DIFF-2). The epoch fences the job ROW; the runner's writes
+ * to its publication TARGET are fenced by jobs/target_fence.ts: each batch is
+ * one transaction holding the target's advisory lock and the job row `FOR KEY
+ * SHARE` on the lease. The sweeper takes stale rows `FOR UPDATE SKIP LOCKED`,
+ * so a runner inside a batch is never revoked; heartbeat, progress and the
+ * cancel flag (plain UPDATEs, NO KEY UPDATE) never wait on a batch.
+ *
+ * ATTACH IS OWNER-SCOPED (DIFF-3). One ACTIVE run per (element, section) — the
+ * partial unique index — and a second request attaches only when it is the
+ * same owner's identical run; otherwise `diffusion.target_busy` (409).
  */
 
 import { sql, withTransaction } from '../../core/db/postgres.ts';
@@ -51,6 +70,13 @@ import { DIFFUSION_JOBS_TABLE, ensureDiffusionJobTables } from './schema.ts';
 
 /** Postgres NOTIFY channel bumped on every observable job change. */
 export const JOB_PROGRESS_CHANNEL = 'diffusion_job_progress';
+
+/**
+ * The heartbeat a lease-holder stamps: the wall clock, and never BACKWARDS (a
+ * write that lands after a fresher one keeps the fresher). See the header.
+ * Gates: diffusion_target_fence_native H (wall clock) + H2 (never backwards).
+ */
+const LIVENESS_NOW = 'GREATEST(heartbeat_at, clock_timestamp())';
 
 /** The immutable enqueue spec (sanitized BEFORE it gets here — never raw client SQO). */
 export interface DiffusionJobSpec {
@@ -156,16 +182,53 @@ function assertLeaseHeld(rows: unknown, lease: JobLease, operation: string): voi
 
 export interface EnqueueResult {
 	job: DiffusionJobRow;
-	/** True when an ACTIVE run for the same element+section already existed —
-	 * the caller attaches to it instead of starting a duplicate. */
+	/** True when the caller's OWN identical request was already active — the
+	 * caller attaches to it instead of starting a duplicate. */
 	attached: boolean;
 }
 
+/** Stable JSON: object keys sorted at every depth (arrays keep their order). */
+function stableJson(value: unknown): string {
+	if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+	if (value !== null && typeof value === 'object') {
+		const entries = Object.entries(value as Record<string, unknown>)
+			.filter(([, entry]) => entry !== undefined)
+			.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+		return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${stableJson(entry)}`).join(',')}}`;
+	}
+	return JSON.stringify(value) ?? 'null';
+}
+
 /**
- * Enqueue a diffusion run, or ATTACH to the already-active one for the same
- * element+section (the partial unique index is the arbiter — no read-check
- * race). Attach mirrors the copied client's UX: a re-click / page reload on a
- * running publication reconnects rather than double-publishing.
+ * The RUN a spec asks for, canonically (DIFF-3): its format, its record
+ * selection and its runner options — minus the display-only estimate
+ * (`estimated_total`, `options.total`). Element and section are the conflict
+ * key itself. Two requests with the same canonical spec are the same run.
+ */
+export function canonicalRunSpec(spec: DiffusionJobSpec): string {
+	const { total: _displayOnly, ...options } = (spec.options ?? {}) as Record<string, unknown>;
+	return stableJson({ type: spec.type, sqo: spec.sqo, options });
+}
+
+/** How many INSERT → read-the-live-row rounds enqueue makes before it gives up. */
+const ENQUEUE_ATTEMPTS = 3;
+
+/**
+ * Enqueue a diffusion run — or, when an ACTIVE run already holds the same
+ * (element, section), ATTACH to it only if it is the caller's own identical
+ * request. The partial unique index is the arbiter (no read-check race), and
+ * it stays keyed by the TARGET, not the owner: it is what keeps two writers
+ * off one publication target.
+ *
+ * ATTACH IS SCOPED (DIFF-3, WC-2026-09-30-diffusion-attach-scope): the live
+ * run is handed back only when its owner IS the caller (strict — admins
+ * included) and its canonical spec equals the request's (canonicalRunSpec). A
+ * re-click / page reload on one's own running publication reconnects, as the
+ * copied client expects; anyone else — another user, or the same user asking
+ * for another selection — is refused with `diffusion.target_busy` (409,
+ * retryable), whose body names nothing of the live run (no id, owner or
+ * label): user B never receives user A's run, and A's second selection is
+ * never silently dropped into the first.
  */
 export async function enqueueDiffusionJob(input: {
 	ownerUserId: number;
@@ -173,47 +236,60 @@ export async function enqueueDiffusionJob(input: {
 	spec: DiffusionJobSpec;
 }): Promise<EnqueueResult> {
 	await ensureDiffusionJobTables();
-	const rows = (await sql.unsafe(
-		`INSERT INTO "${DIFFUSION_JOBS_TABLE}" (client_process_id, owner_user_id, spec, totals)
-		 VALUES ($1, $2, $3::jsonb, $4::jsonb)
-		 ON CONFLICT ((spec->>'diffusion_element_tipo'), (spec->>'section_tipo'))
-			WHERE state IN ('queued','running')
-		 DO NOTHING
-		 RETURNING ${JOB_COLUMNS}`,
-		[
-			input.clientProcessId,
-			input.ownerUserId,
-			// Objects, NEVER JSON.stringify: a pre-stringified value binds as a
-			// jsonb STRING scalar (spec->>'key' = NULL, unique index inert) —
-			// verified against Bun 1.4.0 (2026-08-25; unchanged since 1.3.9). Bun
-			// serializes objects to jsonb objects.
-			input.spec,
-			{
-				counter: 0,
-				total: input.spec.estimated_total,
-				msg: 'Starting diffusion...',
-			},
-		],
-	)) as unknown;
-	const inserted = normalizeJobRows(rows)[0];
-	if (inserted !== undefined) {
-		await notifyProgress(inserted.job_id);
-		return { job: inserted, attached: false };
+	for (let attempt = 0; attempt < ENQUEUE_ATTEMPTS; attempt++) {
+		const rows = (await sql.unsafe(
+			`INSERT INTO "${DIFFUSION_JOBS_TABLE}" (client_process_id, owner_user_id, spec, totals)
+			 VALUES ($1, $2, $3::jsonb, $4::jsonb)
+			 ON CONFLICT ((spec->>'diffusion_element_tipo'), (spec->>'section_tipo'))
+				WHERE state IN ('queued','running')
+			 DO NOTHING
+			 RETURNING ${JOB_COLUMNS}`,
+			[
+				input.clientProcessId,
+				input.ownerUserId,
+				// Objects, NEVER JSON.stringify: a pre-stringified value binds as a
+				// jsonb STRING scalar (spec->>'key' = NULL, unique index inert) —
+				// verified against Bun 1.4.0 (2026-08-25; unchanged since 1.3.9). Bun
+				// serializes objects to jsonb objects.
+				input.spec,
+				{
+					counter: 0,
+					total: input.spec.estimated_total,
+					msg: 'Starting diffusion...',
+				},
+			],
+		)) as unknown;
+		const inserted = normalizeJobRows(rows)[0];
+		if (inserted !== undefined) {
+			await notifyProgress(inserted.job_id);
+			return { job: inserted, attached: false };
+		}
+		// Conflict path: read the live run for this target.
+		const active = normalizeJobRows(
+			await sql.unsafe(
+				`SELECT ${JOB_COLUMNS} FROM "${DIFFUSION_JOBS_TABLE}"
+				 WHERE spec->>'diffusion_element_tipo' = $1 AND spec->>'section_tipo' = $2
+				   AND state IN ('queued','running')
+				 ORDER BY created_at DESC LIMIT 1`,
+				[input.spec.diffusion_element_tipo, input.spec.section_tipo],
+			),
+		)[0];
+		// The active run finished between INSERT and SELECT — try the INSERT again.
+		if (active === undefined) continue;
+		if (
+			active.owner_user_id === input.ownerUserId &&
+			canonicalRunSpec(active.spec) === canonicalRunSpec(input.spec)
+		) {
+			return { job: active, attached: true };
+		}
+		break;
 	}
-	// Conflict path: return the live run for this target.
-	const active = (await sql.unsafe(
-		`SELECT ${JOB_COLUMNS} FROM "${DIFFUSION_JOBS_TABLE}"
-		 WHERE spec->>'diffusion_element_tipo' = $1 AND spec->>'section_tipo' = $2
-		   AND state IN ('queued','running')
-		 ORDER BY created_at DESC LIMIT 1`,
-		[input.spec.diffusion_element_tipo, input.spec.section_tipo],
-	)) as unknown;
-	const activeJob = normalizeJobRows(active)[0];
-	if (activeJob === undefined) {
-		// The active run finished between INSERT and SELECT — retry once.
-		return enqueueDiffusionJob(input);
-	}
-	return { job: activeJob, attached: true };
+	throw new DedaloError('diffusion.target_busy', {
+		coordinates: {
+			element_tipo: input.spec.diffusion_element_tipo,
+			section_tipo: input.spec.section_tipo,
+		},
+	});
 }
 
 /**
@@ -289,7 +365,7 @@ export async function recordRunnerPid(lease: JobLease, pid: number): Promise<voi
  */
 export async function heartbeatJob(lease: JobLease): Promise<void> {
 	const rows = (await sql.unsafe(
-		`UPDATE "${DIFFUSION_JOBS_TABLE}" SET heartbeat_at = now()
+		`UPDATE "${DIFFUSION_JOBS_TABLE}" SET heartbeat_at = ${LIVENESS_NOW}
 		 WHERE job_id = $1 AND attempt = $2::int AND state = 'running'
 		 RETURNING job_id`,
 		[lease.job_id, lease.attempt],
@@ -318,7 +394,7 @@ export async function updateJobProgress(
 	const rows = (await sql.unsafe(
 		`UPDATE "${DIFFUSION_JOBS_TABLE}"
 		 SET totals = totals || $3::jsonb,
-		     heartbeat_at = now(),
+		     heartbeat_at = ${LIVENESS_NOW},
 		     errors = CASE WHEN $4::text IS NULL THEN errors ELSE errors || to_jsonb($4::text) END
 		 WHERE job_id = $1 AND attempt = $2::int AND state = 'running'
 		 RETURNING job_id`,
@@ -335,7 +411,7 @@ export async function checkpointJob(
 ): Promise<void> {
 	const rows = (await sql.unsafe(
 		`UPDATE "${DIFFUSION_JOBS_TABLE}"
-		 SET checkpoint = $3::jsonb, heartbeat_at = now()
+		 SET checkpoint = $3::jsonb, heartbeat_at = ${LIVENESS_NOW}
 		 WHERE job_id = $1 AND attempt = $2::int AND state = 'running'
 		 RETURNING job_id`,
 		[lease.job_id, lease.attempt, checkpoint],
@@ -378,7 +454,7 @@ export async function finishJob(
 ): Promise<void> {
 	const rows = (await sql.unsafe(
 		`UPDATE "${DIFFUSION_JOBS_TABLE}"
-		 SET state = $3, result = $4::jsonb, finished_at = now(),
+		 SET state = $3, result = $4::jsonb, finished_at = clock_timestamp(),
 		     totals = totals || jsonb_build_object('msg', $5::text)
 		 WHERE job_id = $1 AND attempt = $2::int AND state = 'running'
 		 RETURNING job_id`,
@@ -461,6 +537,24 @@ export async function getJobById(jobId: string): Promise<DiffusionJobRow | null>
 	const rows = (await sql.unsafe(
 		`SELECT ${JOB_COLUMNS} FROM "${DIFFUSION_JOBS_TABLE}" WHERE job_id = $1`,
 		[jobId],
+	)) as unknown;
+	return normalizeJobRows(rows)[0] ?? null;
+}
+
+/**
+ * One job by id, OWNER-SCOPED (DIFF-3): null unless `ownerUserId` enqueued it.
+ * The follow stream of a `diffuse` reads its job through this — a stream is a
+ * view of the caller's own run, never of whichever run holds the target. (The
+ * runner, which owns no user, reads through the unscoped getJobById.)
+ */
+export async function getOwnedJobById(
+	jobId: string,
+	ownerUserId: number,
+): Promise<DiffusionJobRow | null> {
+	await ensureDiffusionJobTables();
+	const rows = (await sql.unsafe(
+		`SELECT ${JOB_COLUMNS} FROM "${DIFFUSION_JOBS_TABLE}" WHERE job_id = $1 AND owner_user_id = $2::int`,
+		[jobId, ownerUserId],
 	)) as unknown;
 	return normalizeJobRows(rows)[0] ?? null;
 }
@@ -703,6 +797,13 @@ export async function purgeTerminalJobs(olderThanHours: number): Promise<{ purge
  * boot and on an interval (spec §4.2 crash recovery). Chunk determinism +
  * idempotent writes make the re-run safe.
  *
+ * NEVER MID-BATCH (DIFF-2): the stale rows are taken `FOR UPDATE SKIP LOCKED`,
+ * which conflicts with the `FOR KEY SHARE` a fenced batch holds on its job row
+ * (jobs/target_fence.ts) — a runner writing its target right now is skipped,
+ * whatever its heartbeat says, and revoked (if still stale) once its batch
+ * committed. A runner only WAITING for a busy target holds nothing and stays
+ * revocable: it re-reads its lease after the lock, before it writes.
+ *
  * CRASH-ATOMIC (audit S3-63): both transitions happen in ONE statement — the
  * old two-step (mark 'interrupted', then requeue/fail per job) could crash
  * between the UPDATEs and strand a job in 'interrupted', a black-hole state
@@ -738,8 +839,15 @@ export async function sweepStaleJobs(staleAfterSeconds: number): Promise<{
 		 -- liveness could only ever cover the local deployment. The epoch fence is
 		 -- the structural closure: whichever process lost the row cannot write to
 		 -- it again, alive or not (PUB-13).
+		 -- FOR UPDATE SKIP LOCKED (DIFF-2): a runner INSIDE a fenced batch holds
+		 -- its row FOR KEY SHARE (jobs/target_fence.ts) — the sweeper skips it
+		 -- rather than revoke a lease whose batch is writing the target now.
 		 WHERE state = 'running'
-		   AND (heartbeat_at IS NULL OR heartbeat_at < now() - make_interval(secs => $1))
+		   AND job_id IN (
+		       SELECT job_id FROM "${DIFFUSION_JOBS_TABLE}"
+		        WHERE state = 'running'
+		          AND (heartbeat_at IS NULL OR heartbeat_at < now() - make_interval(secs => $1))
+		        FOR UPDATE SKIP LOCKED)
 		 RETURNING job_id, state`,
 		[staleAfterSeconds, runnerLost],
 	)) as { job_id: string; state: string }[];

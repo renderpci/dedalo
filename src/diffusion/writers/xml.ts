@@ -47,15 +47,20 @@
  *   source of truth on this side.
  */
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync } from 'node:fs';
+import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
 import type { PublicationPlan, SectionPlan } from '../plan/types.ts';
 import type { ProjectedRow } from '../project/lang_ladder.ts';
 import {
 	atomicWriteFile,
 	createZip,
 	formatTargetDir,
+	manifestPaths,
 	planColumnNames,
+	readManifestPart,
 	recordFileName,
+	sweepStaleTemps,
+	WriterRunLog,
+	withTrailingPath,
 } from './files.ts';
 import {
 	CONSOLIDATED_MERGED_PREFIX,
@@ -63,10 +68,16 @@ import {
 	escapeXmlText,
 	langToAlpha2,
 	requireFilesTarget,
+	StreamedMergeOutput,
 } from './rdf.ts';
 import type {
+	ArtifactEvent,
 	DiffusionWriter,
+	ManifestEntry,
 	WriteBatchResult,
+	WriterCloseContext,
+	WriterContinuity,
+	WriterOpenContext,
 	WriterRunSummary,
 	WriterSession,
 } from './types.ts';
@@ -135,76 +146,105 @@ export function renderXmlRecord(section: SectionPlan, rows: ProjectedRow[]): str
 	return `${lines.join('\n')}\n`;
 }
 
+/** The xml part's inner block under `rootName` (the part trimmed when it has no such root). */
+function xmlInnerBlock(part: string, rootName: string): string {
+	const open = part.indexOf(`<${rootName}`);
+	const openEnd = part.indexOf('>', open);
+	const close = part.lastIndexOf(`</${rootName}>`);
+	if (open === -1 || close === -1 || openEnd === -1 || close <= openEnd) return part.trim();
+	return part.slice(openEnd + 1, close).trim();
+}
+
 /**
- * Generic XML consolidation — VERBATIM port of the old engine's
- * merge_xml_parts (rdf_file_utils.ts:96-121): root element (name + attrs)
- * from the FIRST part, every part's root-children concatenated under it.
- * Parts without the first root are included whole (old-engine behavior).
- * Single part returns untouched; empty input returns ''.
+ * Generic XML consolidation, STREAMED (PERF-2/DIFF-4) — the old engine's
+ * merge_xml_parts (rdf_file_utils.ts:96-121), byte for byte (the frozen
+ * in-memory port is test/helpers/merge_oracle.ts; gate:
+ * diffusion_rdfxml_writers "streamed merge == frozen oracle"): root element
+ * (name + attrs) from the FIRST non-empty part, every part's root-children
+ * joined by a blank line under it. When the first part has no root, the parts
+ * are joined by a newline (old-engine behaviour); a later part without the
+ * root is included trimmed. A single part is written untouched. Parts are read
+ * one at a time; memory is bounded by the two largest. Returns how many
+ * non-empty parts were merged (zero ⇒ nothing written).
  */
-export function mergeXmlParts(rawParts: string[]): string {
-	const nonEmpty = rawParts.filter((part) => part && part.trim().length > 0);
-	if (nonEmpty.length === 0) return '';
-	if (nonEmpty.length === 1) return nonEmpty[0] as string;
-
-	const first = nonEmpty[0] as string;
-	const rootMatch =
-		first.match(/<\?xml[^>]*\?>\s*<([A-Za-z_][\w:.-]*)([^>]*)>/) ??
-		first.match(/^\s*<([A-Za-z_][\w:.-]*)([^>]*)>/);
-	if (!rootMatch) return nonEmpty.join('\n');
-
-	const rootName = rootMatch[1] as string;
-	const rootAttrs = rootMatch[2] ?? '';
-
-	const innerBlocks = nonEmpty
-		.map((part) => {
-			const open = part.indexOf(`<${rootName}`);
-			const openEnd = part.indexOf('>', open);
-			const close = part.lastIndexOf(`</${rootName}>`);
-			if (open === -1 || close === -1 || openEnd === -1 || close <= openEnd) return part.trim();
-			return part.slice(openEnd + 1, close).trim();
-		})
-		.filter((block) => block.length > 0)
-		.join('\n\n');
-
-	return `<?xml version="1.0" encoding="utf-8"?>\n<${rootName}${rootAttrs}>\n\n${innerBlocks}\n\n</${rootName}>\n`;
+export async function writeMergedXml(
+	paths: AsyncIterable<string>,
+	outPath: string,
+	onMissing: (path: string) => void = () => {},
+): Promise<{ parts: number }> {
+	const output = new StreamedMergeOutput(outPath);
+	let first: string | null = null;
+	let root: { name: string; attrs: string } | null = null;
+	let parts = 0;
+	let blocks = 0;
+	const writeBlock = async (block: string): Promise<void> => {
+		if (block.length === 0) return;
+		await output.write(blocks > 0 ? `\n\n${block}` : block);
+		blocks++;
+	};
+	try {
+		for await (const path of paths) {
+			const part = readManifestPart(path);
+			if (part === null) {
+				onMissing(path); // gone since the manifest pass saw it: a line, not a crash
+				continue;
+			}
+			if (part.trim().length === 0) continue;
+			parts++;
+			if (first === null) {
+				first = part; // held back: alone, it is the result verbatim
+				continue;
+			}
+			if (parts === 2) {
+				const rootMatch =
+					first.match(/<\?xml[^>]*\?>\s*<([A-Za-z_][\w:.-]*)([^>]*)>/) ??
+					first.match(/^\s*<([A-Za-z_][\w:.-]*)([^>]*)>/);
+				if (rootMatch) {
+					root = { name: rootMatch[1] as string, attrs: rootMatch[2] ?? '' };
+					await output.write(
+						`<?xml version="1.0" encoding="utf-8"?>\n<${root.name}${root.attrs}>\n\n`,
+					);
+					await writeBlock(xmlInnerBlock(first, root.name));
+				} else {
+					await output.write(first);
+				}
+			}
+			if (root === null) await output.write(`\n${part}`);
+			else await writeBlock(xmlInnerBlock(part, root.name));
+		}
+		if (parts === 1) await output.write(first as string);
+		else if (root !== null) await output.write(`\n\n</${root.name}>\n`);
+		await output.commit();
+		return { parts };
+	} catch (error) {
+		await output.discard();
+		throw error;
+	}
 }
 
 /** Consolidated artifact names — old grammar minus the wall-clock date tag. */
 const XML_MERGED_NAME = 'diffusion_xml_merged.xml';
 const XML_ZIP_NAME = 'diffusion_xml.zip';
 
-/** Per-table counters feeding the close() summary (markdown writer shape). */
-interface XmlTableCounters {
-	records_affected: number;
-	records_count: number;
-}
-
 class XmlWriterSession implements WriterSession {
 	private readonly serviceName: string;
 	private readonly targetDir: string;
-	/** Insertion-ordered so close() reports tables in plan order. */
-	private readonly counters = new Map<string, XmlTableCounters>();
-	private readonly errors: string[] = [];
-	/** Files THIS RUN finalized, insertion-ordered — merge + zip manifest. */
-	private readonly writtenFiles = new Set<string>();
+	private readonly sections: Map<string, SectionPlan>;
+	private readonly log: WriterRunLog;
 	private schemaEnsured = false;
 
-	constructor(plan: PublicationPlan) {
+	constructor(plan: PublicationPlan, context?: WriterOpenContext) {
 		this.serviceName = requireFilesTarget('xml', plan);
 		this.targetDir = formatTargetDir('xml', this.serviceName);
-		for (const section of plan.sections) {
-			this.counters.set(section.tableName, { records_affected: 0, records_count: 0 });
-		}
+		this.sections = new Map(plan.sections.map((section) => [section.sectionTipo, section]));
+		this.log = new WriterRunLog(
+			plan.sections.map((section) => section.tableName),
+			context,
+		);
 	}
 
-	private countersFor(tableName: string): XmlTableCounters {
-		let counters = this.counters.get(tableName);
-		if (counters === undefined) {
-			counters = { records_affected: 0, records_count: 0 };
-			this.counters.set(tableName, counters);
-		}
-		return counters;
+	get continuity(): WriterContinuity {
+		return this.log.continuity;
 	}
 
 	/**
@@ -245,11 +285,13 @@ class XmlWriterSession implements WriterSession {
 			group.rows.push(row);
 		}
 		for (const group of grouped.values()) {
-			const filePath = this.recordPath(section, group.sectionId);
-			atomicWriteFile(filePath, renderXmlRecord(section, group.rows));
-			this.writtenFiles.add(filePath);
+			atomicWriteFile(
+				this.recordPath(section, group.sectionId),
+				renderXmlRecord(section, group.rows),
+			);
+			this.log.note('wrote', section.sectionTipo, group.sectionId);
 		}
-		const counters = this.countersFor(section.tableName);
+		const counters = this.log.countersFor(section.tableName);
 		counters.records_affected += grouped.size;
 		counters.records_count += rows.length;
 		return { written: rows.length, deleted: 0 };
@@ -271,30 +313,60 @@ class XmlWriterSession implements WriterSession {
 				unlinkSync(filePath);
 				deleted++;
 			}
-			this.writtenFiles.delete(filePath); // never merge/zip a file we just removed
+			this.log.note('removed', section.sectionTipo, sectionId); // never merged/zipped again
 		}
-		this.countersFor(section.tableName).records_affected += deleted;
+		this.log.countersFor(section.tableName).records_affected += deleted;
 		return { written: 0, deleted };
 	}
 
+	takeArtifacts(): ArtifactEvent[] {
+		return this.log.take();
+	}
+
+	/** Every record file already landed via temp+rename; the state is the counters. */
+	async checkpoint(): Promise<unknown> {
+		return this.log.checkpoint();
+	}
+
+	runSummary(): WriterRunSummary {
+		return this.log.summary();
+	}
+
 	/**
-	 * Consolidate: merge every per-record document this run wrote under the
-	 * first document's root (mergeXmlParts), then ZIP the per-record files +
-	 * the merged document (old engine index.ts:543-563), everything
-	 * temp+rename. Consolidated paths ride the summary as prefixed
-	 * zero-count table entries — see rdf.ts CONSOLIDATED_MERGED_PREFIX for
-	 * the runner mapping.
+	 * Consolidate the RUN: merge every per-record document of the run's
+	 * manifest under the first document's root (writeMergedXml, streamed), then
+	 * ZIP the per-record files + the merged document (old engine
+	 * index.ts:543-563) — two manifest passes, everything temp+rename, memory
+	 * bounded. Consolidated paths ride the summary as prefixed zero-count table
+	 * entries — see rdf.ts CONSOLIDATED_MERGED_PREFIX for the runner mapping.
 	 */
-	async close(): Promise<WriterRunSummary> {
-		const consolidated: { table_name: string; records_affected: number; records_count: number }[] =
-			[];
-		if (this.writtenFiles.size > 0) {
-			const files = [...this.writtenFiles];
-			const merged = mergeXmlParts(files.map((path) => readFileSync(path, 'utf-8')));
-			const mergedPath = `${this.targetDir}/${XML_MERGED_NAME}`;
-			atomicWriteFile(mergedPath, merged);
-			const zipPath = `${this.targetDir}/${XML_ZIP_NAME}`;
-			await createZip([...files, mergedPath], zipPath);
+	async close(context?: WriterCloseContext): Promise<WriterRunSummary> {
+		const run = this.log.closeContext(context);
+		await sweepStaleTemps(this.targetDir, run);
+		const pathOf = (entry: ManifestEntry): string | null => {
+			const section = this.sections.get(entry.sectionTipo);
+			return section === undefined ? null : this.recordPath(section, entry.sectionId);
+		};
+		const consolidated: WriterRunSummary['tables'] = [];
+		const mergedPath = `${this.targetDir}/${XML_MERGED_NAME}`;
+		const missing = (path: string): void => {
+			this.log.errors.add(`xml close: published file missing, left out of the archive: ${path}`);
+		};
+		const { parts } = await writeMergedXml(
+			manifestPaths(run, pathOf, missing),
+			mergedPath,
+			missing,
+		);
+		if (parts > 0) {
+			// The zip pass reports what the merge pass could not see: a record
+			// unpublished between the two (the merged document then names a record
+			// the archive omits — the line says so; the files-unlink door is
+			// unfenced, WC R2).
+			await createZip(
+				withTrailingPath(manifestPaths(run, pathOf, missing), mergedPath),
+				`${this.targetDir}/${XML_ZIP_NAME}`,
+				{ onMissing: missing },
+			);
 			const relativeDir = `/xml/${this.serviceName}`;
 			consolidated.push(
 				{
@@ -309,37 +381,27 @@ class XmlWriterSession implements WriterSession {
 				},
 			);
 		}
-		return {
-			tables: [
-				...[...this.counters.entries()].map(([tableName, counters]) => ({
-					table_name: tableName,
-					records_affected: counters.records_affected,
-					records_count: counters.records_count,
-				})),
-				...consolidated,
-			],
-			errors: [...this.errors],
-		};
+		return this.log.summary(consolidated);
 	}
 
 	/**
 	 * Per-record files land via their own temp+rename (atomicWriteFile cleans
 	 * its temp on failure) and stay finalized — the PHP per-record save
-	 * posture. Consolidation temps only exist inside close(); this sweep is a
-	 * defensive cleanup of any '.tmp-*' sibling a crash left behind.
+	 * posture; consolidation temps clean themselves (writeMergedXml,
+	 * createZip). NOTHING is swept here: abort may run unfenced, and a `.tmp-*`
+	 * in the shared directory may be another session's in-flight write (DIFF-2).
+	 * A crashed holder's leftovers are swept by the next FENCED close
+	 * (sweepStaleTemps).
 	 */
 	async abort(): Promise<void> {
-		if (!existsSync(this.targetDir)) return;
-		for (const name of readdirSync(this.targetDir)) {
-			if (name.includes('.tmp-')) unlinkSync(`${this.targetDir}/${name}`);
-		}
+		// no-op by design
 	}
 }
 
 /** The 'xml' format writer (registry entry). */
 export const xmlWriter: DiffusionWriter = {
 	format: 'xml',
-	async open(plan: PublicationPlan): Promise<WriterSession> {
-		return new XmlWriterSession(plan);
+	async open(plan: PublicationPlan, context?: WriterOpenContext): Promise<WriterSession> {
+		return new XmlWriterSession(plan, context);
 	},
 };

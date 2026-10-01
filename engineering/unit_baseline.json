@@ -1126,6 +1126,16 @@
 			"skipped": 0,
 			"assertions": 40
 		},
+		"test/unit/diffusion_artifact_rss_native.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 4025
+		},
+		"test/unit/diffusion_attach_scope_native.test.ts": {
+			"tests": 6,
+			"skipped": 0,
+			"assertions": 27
+		},
 		"test/unit/diffusion_boundaries.test.ts": {
 			"tests": 5,
 			"skipped": 0,
@@ -1190,6 +1200,11 @@
 			"tests": 19,
 			"skipped": 0,
 			"assertions": 93
+		},
+		"test/unit/diffusion_frontier_replay.test.ts": {
+			"tests": 11,
+			"skipped": 0,
+			"assertions": 63
 		},
 		"test/unit/diffusion_frontier_scope_native.test.ts": {
 			"tests": 3,
@@ -1301,6 +1316,11 @@
 			"skipped": 0,
 			"assertions": 37
 		},
+		"test/unit/diffusion_resume_ledger_native.test.ts": {
+			"tests": 11,
+			"skipped": 0,
+			"assertions": 76
+		},
 		"test/unit/diffusion_retry_queue_native.test.ts": {
 			"tests": 9,
 			"skipped": 0,
@@ -1355,6 +1375,11 @@
 			"tests": 2,
 			"skipped": 0,
 			"assertions": 8
+		},
+		"test/unit/diffusion_target_fence_native.test.ts": {
+			"tests": 21,
+			"skipped": 0,
+			"assertions": 117
 		},
 		"test/unit/dispatch_error_native.test.ts": {
 			"tests": 15,
@@ -2350,6 +2375,11 @@
 			"tests": 11,
 			"skipped": 0,
 			"assertions": 51
+		},
+		"test/unit/media_index_reconcile_fence_native.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 18
 		},
 		"test/unit/media_index_store.test.ts": {
 			"tests": 15,

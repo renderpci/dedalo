@@ -5772,10 +5772,11 @@ the format writer, so that a section of hundreds of thousands of records never h
 fit in memory at once. A smaller batch lowers the memory ceiling of a publication run;
 a larger one reduces the number of round trips to the database.
 
-The engine currently resolves in fixed batches of **500** records. This key is read for
-the diffusion panel of the maintenance dashboard, which reports the configured value —
-the resolver does not yet take it as an override, so leave it unset unless you were
-told otherwise.
+Unset, a run resolves **500** records per batch. Each publication run reads the key when
+it starts (a resumed run reads it again), so a change applies from the next start. Each
+batch is also one durable step: its records, its checkpoint and its run-ledger rows are
+written together, so a smaller batch means less work to redo when a run is resumed. The
+diffusion panel of the maintenance dashboard reports the configured value.
 
 ```bash
 DEDALO_DIFFUSION_BATCH_RECORDS=500

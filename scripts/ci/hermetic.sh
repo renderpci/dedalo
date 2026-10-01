@@ -372,6 +372,11 @@ HERMETIC_TRIPWIRES=(
 	#     DB-free: pure classifier calls over both sides' exported tables; measured with
 	#     DB_PORT=1 (6/6 pass before the S3 table export, 7/7 after).
 	test/unit/site_builder_public_address_differential.test.ts
+	# --- 2026-10-01 (PERF-2/DIFF-4): the artifact peak-RSS gate. DB-free: a spawned child
+	#     zips/merges files it writes under a MARKED scratch media root (~1.2 GiB temp disk,
+	#     ~4 s); verified with the hermetic env (DB_HOST=127.0.0.1 DB_PORT=59999,
+	#     DB_NAME=ci_hermetic_no_db: 3 pass / 0 fail).
+	test/unit/diffusion_artifact_rss_native.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

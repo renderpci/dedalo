@@ -1,10 +1,10 @@
 /**
  * THE ENGINE'S ZIP ENCODER — a neutral kernel (no subsystem owns it): the
- * APPNOTE record encoders, the in-memory STORE archive (`buildStoreZip`, which
- * diffusion's `createZip` writes) and `openZipStream`, the streaming,
- * DEFLATE/STORE, ZIP64-capable writer (tool_export's XLSX / ODS / media ZIP).
- * One implementation, two drivers. Diffusion and the tools import it from
- * here; it imports nothing of theirs.
+ * APPNOTE record encoders and `openZipStream`, the streaming, DEFLATE/STORE,
+ * ZIP64-capable writer — tool_export's XLSX / ODS / media ZIP, and diffusion's
+ * `createZip` through its STORE-from-source door (`addStoredSource` /
+ * `addStoredFile`: deterministic bytes, bounded memory — PERF-2/DIFF-4).
+ * Diffusion and the tools import it from here; it imports nothing of theirs.
  *
  * ONE IN-PROCESS ZIP ENCODER — gated, not just stated:
  * test/unit/zip_encoder_census_tripwire.test.ts scans src/ and tools/ for ZIP
@@ -14,71 +14,26 @@
  * exemptions it names (with reasons). A second encoder is red, not quiet.
  */
 
+import { type FileHandle, open as openFileHandle } from 'node:fs/promises';
 import { createDeflateRaw, deflateRawSync, crc32 as zlibCrc32 } from 'node:zlib';
 import { DedaloError } from '../errors/index.ts';
-
-/**
- * The in-memory archive (diffusion's `createZip`, src/diffusion/writers/files.ts):
- * method STORE, zeroed mod time/date,
- * entries in insertion order — deterministic bytes for identical inputs. Built
- * from the SAME record encoders as the streaming writer below (one ZIP
- * implementation, two drivers), so the diffusion archives keep their bytes
- * (gate: test/unit/zip_stream_native.test.ts pins them against the frozen
- * pre-upgrade writer) and gain what the encoders add: the UTF-8 name flag
- * (bit 11, set ONLY for a non-ASCII name — an ASCII-named archive is
- * byte-identical) and ZIP64 records past the 32/16-bit limits.
- */
-export function buildStoreZip(entries: Record<string, Uint8Array>): Uint8Array {
-	const parts: Uint8Array[] = [];
-	const records: ZipCentralRecord[] = [];
-	let offset = 0;
-	for (const [name, data] of Object.entries(entries)) {
-		const record: ZipCentralRecord = {
-			nameBytes: TEXT_ENCODER.encode(name),
-			flags: 0,
-			method: ZIP_METHOD_STORE,
-			dosTime: 0,
-			dosDate: 0,
-			crc: zipCrc32(data),
-			compressedSize: data.byteLength,
-			uncompressedSize: data.byteLength,
-			offset,
-			zip64Sizes: false,
-		};
-		record.flags = nameFlags(record.nameBytes);
-		record.zip64Sizes = needsZip64(data.byteLength, ZIP64_DEFAULT_LIMITS.size);
-		const header = encodeLocalHeader(record, record.zip64Sizes ? 'sizes' : 'none');
-		parts.push(header, data);
-		records.push(record);
-		offset += header.byteLength + data.byteLength;
-	}
-	parts.push(...encodeCentralDirectory(records, offset, ZIP64_DEFAULT_LIMITS));
-	return concatBytes(parts);
-}
-
-function concatBytes(arrays: Uint8Array[]): Uint8Array {
-	const total = arrays.reduce((sum, array) => sum + array.length, 0);
-	const out = new Uint8Array(total);
-	let position = 0;
-	for (const array of arrays) {
-		out.set(array, position);
-		position += array.length;
-	}
-	return out;
-}
 
 // ===========================================================================
 // ZIP — the record encoders and the STREAMING writer
 // ===========================================================================
 //
-// One ZIP implementation for the engine (APPNOTE 6.3.x). `createZip` above
-// drives it in memory; `openZipStream` drives it onto a byte sink, entry by
-// entry, in bounded memory whatever the archive's size:
+// One ZIP implementation for the engine (APPNOTE 6.3.x). `openZipStream`
+// drives it onto a byte sink, entry by entry, in bounded memory whatever the
+// archive's size:
 //
 //  - an entry's bytes go straight to the sink: `addEntry` (bytes in hand:
 //    sizes + CRC in the local header, no data descriptor), `openEntry` /
 //    `addStream` / `addDiskFile` (streamed: bit 3, CRC and sizes in a data
-//    descriptor after the data);
+//    descriptor after the data), `addStoredSource` / `addStoredFile` (STORE
+//    read TWICE from a re-openable source — pass 1 for CRC + size, pass 2 for
+//    the bytes — so sizes and CRC sit in the local header with no descriptor:
+//    the byte format of the frozen in-memory STORE writer, deterministic for
+//    identical inputs, gate zip_stream_native A/F);
 //  - DEFLATE through node:zlib `createDeflateRaw` (streamed) or
 //    `deflateRawSync` (bytes in hand), or STORE — per entry;
 //  - ZIP64 exactly when needed: an entry size or local-header offset that
@@ -153,6 +108,60 @@ export interface ZipEntryInfo {
 	zip64: boolean;
 }
 
+/** Options of a STORE-from-source entry (addStoredSource / addStoredFile). */
+export interface StoredSourceOptions {
+	/** Called once per chunk of either pass — a long entry's keepalive hook. */
+	onChunk?: () => void | Promise<void>;
+}
+
+/** Bytes per read of a stored disk file (both passes). */
+const STORED_READ_BYTES = 1024 * 1024;
+
+/**
+ * An OPEN file as bounded chunks read into `buffer` — POSITIONED reads from
+ * byte 0, so the SAME handle serves both passes of a stored entry. `buffer` is
+ * the CALLER's, REUSED across reads (and across files: one per writer), so
+ * archiving N files allocates nothing per file. A yielded chunk is valid until
+ * the consumer asks for the next one (the writer consumes each chunk before it
+ * does: CRC, then an awaited sink write). The caller owns (and closes) the
+ * handle.
+ */
+async function* readHandleChunks(
+	handle: FileHandle,
+	buffer: Uint8Array,
+): AsyncIterable<Uint8Array> {
+	let position = 0;
+	for (;;) {
+		const { bytesRead } = await handle.read(buffer, 0, buffer.byteLength, position);
+		if (bytesRead === 0) return;
+		position += bytesRead;
+		yield bytesRead === buffer.byteLength ? buffer : buffer.subarray(0, bytesRead);
+	}
+}
+
+/**
+ * One pass over a STORE source: its CRC-32 and size. With `emitChunk`, every
+ * chunk is also written (pass 2) — stopping at the first chunk past `limit`
+ * (a source that grew is refused by the caller, never over-written).
+ */
+async function measureSource(
+	openSource: () => AsyncIterable<Uint8Array>,
+	onChunk: (() => void | Promise<void>) | undefined,
+	limit = Number.POSITIVE_INFINITY,
+	emitChunk?: (chunk: Uint8Array) => Promise<void>,
+): Promise<{ crc: number; size: number }> {
+	let crc = 0;
+	let size = 0;
+	for await (const chunk of openSource()) {
+		crc = zipCrc32(chunk, crc);
+		size += chunk.byteLength;
+		if (size > limit) break;
+		await emitChunk?.(chunk);
+		await onChunk?.();
+	}
+	return { crc, size };
+}
+
 /** A streamed entry: write its bytes, then close it (or abort the archive). */
 export interface ZipEntryStream {
 	readonly name: string;
@@ -171,6 +180,13 @@ export interface ZipStreamResult {
 export interface ZipStreamWriter {
 	/** Bytes written to the sink so far. */
 	readonly bytes: number;
+	/**
+	 * Whether an entry may still be added: no entry open, neither finished nor
+	 * aborted. A STORE source that fails in PASS 1 leaves it true (nothing was
+	 * written — the caller may skip that source and go on); one that fails in
+	 * pass 2 leaves it false (a partial entry is in the sink).
+	 */
+	readonly writable: boolean;
 	/** An entry whose bytes are in hand (sizes and CRC in the local header). */
 	addEntry(
 		name: string,
@@ -187,6 +203,28 @@ export interface ZipStreamWriter {
 	): Promise<ZipEntryInfo>;
 	/** Stream a file from disk into one entry (bounded reads). */
 	addDiskFile(name: string, path: string, options?: ZipEntryOptions): Promise<ZipEntryInfo>;
+	/**
+	 * A STORE entry read TWICE from a re-openable source: pass 1 streams it for
+	 * CRC + size (nothing is written, and the NAME is claimed only after it — a
+	 * source that fails there leaves the archive as it was), pass 2 streams it
+	 * to the sink under a local header that already carries CRC and sizes (no
+	 * data descriptor, zeroed time/date: deterministic bytes). A source whose
+	 * pass-2 bytes differ from pass 1 is the typed `internal.invariant` — the
+	 * archive is then unusable (abort it). `onChunk` runs once per chunk of
+	 * either pass (a caller's keepalive).
+	 */
+	addStoredSource(
+		name: string,
+		open: () => AsyncIterable<Uint8Array>,
+		options?: StoredSourceOptions,
+	): Promise<ZipEntryInfo>;
+	/**
+	 * `addStoredSource` over a file on disk (bounded reads of STORED_READ_BYTES),
+	 * both passes through ONE handle opened first: a file missing at that open
+	 * fails before pass 1 (the archive as it was); an unlink after it cannot
+	 * break the entry.
+	 */
+	addStoredFile(name: string, path: string, options?: StoredSourceOptions): Promise<ZipEntryInfo>;
 	/** Write the central directory and end records. Nothing may be added after. */
 	finish(): Promise<ZipStreamResult>;
 	/** Release an open entry's compressor; the archive is unusable afterwards (the caller discards the sink). */
@@ -568,6 +606,8 @@ export function openZipStream(sink: ZipByteSink, options: ZipStreamOptions = {})
 	const renameNext = new Map<string, number>();
 	let offset = 0;
 	let open: { name: string; deflate: DeflatePipe | null } | null = null;
+	/** addStoredFile's read buffer: one per writer, reused for every file. */
+	let readBuffer: Uint8Array | null = null;
 	let state: 'open' | 'finished' | 'aborted' = 'open';
 
 	const emit = async (chunk: Uint8Array): Promise<void> => {
@@ -615,6 +655,10 @@ export function openZipStream(sink: ZipByteSink, options: ZipStreamOptions = {})
 	const writer: ZipStreamWriter = {
 		get bytes() {
 			return offset;
+		},
+
+		get writable() {
+			return state === 'open' && open === null;
 		},
 
 		async addEntry(requestedName, data, entryOptions = {}) {
@@ -741,6 +785,61 @@ export function openZipStream(sink: ZipByteSink, options: ZipStreamOptions = {})
 				Bun.file(path).stream() as unknown as AsyncIterable<Uint8Array>,
 				entryOptions,
 			);
+		},
+
+		async addStoredSource(requestedName, openSource, sourceOptions = {}) {
+			assertWritable('addStoredSource');
+			// Pass 1 — CRC + size, nothing written, the name not yet claimed.
+			const measured = await measureSource(openSource, sourceOptions.onChunk);
+			assertWritable('addStoredSource');
+			const name = claimName(requestedName);
+			const nameBytes = TEXT_ENCODER.encode(name);
+			const record: ZipCentralRecord = {
+				nameBytes,
+				flags: nameFlags(nameBytes),
+				method: ZIP_METHOD_STORE,
+				...dosDateTime(undefined),
+				crc: measured.crc,
+				compressedSize: measured.size,
+				uncompressedSize: measured.size,
+				offset,
+				zip64Sizes: needsZip64(measured.size, limits.size),
+			};
+			// Pass 2 — the bytes, under a header that already carries CRC + sizes.
+			// Until it completes the archive holds a partial entry: a failure here
+			// leaves the writer ABORTED (the caller discards the sink).
+			state = 'aborted';
+			await emit(encodeLocalHeader(record, record.zip64Sizes ? 'sizes' : 'none'));
+			const streamed = await measureSource(openSource, sourceOptions.onChunk, measured.size, emit);
+			if (streamed.crc !== measured.crc || streamed.size !== measured.size) {
+				throw new DedaloError('internal.invariant', {
+					message: `zip: entry '${name.slice(0, 120)}' changed between its two passes (${measured.size} → ${streamed.size} bytes) — the source must be stable while it is archived`,
+				});
+			}
+			state = 'open';
+			records.push(record);
+			return info(name, record);
+		},
+
+		async addStoredFile(name, path, sourceOptions) {
+			assertWritable('addStoredFile');
+			readBuffer ??= new Uint8Array(STORED_READ_BYTES);
+			const buffer = readBuffer;
+			// ONE handle for both passes: a file missing at the open fails HERE,
+			// before pass 1 (nothing written, no name claimed — the caller may skip
+			// it); once open, an unlink of the path cannot break the entry (the
+			// inode lives until the handle closes), so a file unpublished while it
+			// is archived is archived whole, never a half-written entry.
+			const handle = await openFileHandle(path, 'r');
+			try {
+				return await writer.addStoredSource(
+					name,
+					() => readHandleChunks(handle, buffer),
+					sourceOptions,
+				);
+			} finally {
+				await handle.close();
+			}
 		},
 
 		async finish() {

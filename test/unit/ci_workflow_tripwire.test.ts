@@ -653,6 +653,26 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		'test/unit/ontology_state_identifier_grammar_native.test.ts',
 		"It seeds ontology source records into matrix_ontology and runs rebuildOntology, which rewrites the scratch tld's dd_ontology rows under the live grammar CHECKs, so it cannot run without a live suite Postgres.",
 	],
+	[
+		'test/unit/diffusion_target_fence_native.test.ts',
+		"It holds the publication-target advisory locks from second Postgres sessions, runs the real runner on the suite database's diffusion jobs/dd1758/ledger tables, spawns a runner child on a one- and two-connection pool, and publishes into the lane's suite MariaDB, so it needs a live suite Postgres (and the suite MariaDB the DB tier starts).",
+	],
+	[
+		'test/unit/diffusion_resume_ledger_native.test.ts',
+		"It crashes and resumes real publication runs (in-process and a SIGKILLed runner child) on the suite database's diffusion jobs, dd1758 and run-ledger tables, with test triggers planted on them, so it cannot run without a live suite Postgres.",
+	],
+	[
+		'test/unit/diffusion_frontier_replay.test.ts',
+		"Its cut-by-cut resume legs resolve the zzdif publication against the suite database's matrix records and replay a run ledger stored in the suite database's ledger table, and its manifest/paging legs read that table through SQL, so it needs a live suite Postgres.",
+	],
+	[
+		'test/unit/diffusion_attach_scope_native.test.ts',
+		"It enqueues real diffusion jobs on the suite database's jobs table through diffuseAction and resolves the ACL fixture's principals from matrix_users/matrix_profiles, so it cannot run without a live suite Postgres.",
+	],
+	[
+		'test/unit/media_index_reconcile_fence_native.test.ts',
+		'It models a runner batch holding the publication-target advisory lock from a second Postgres session while the media-index reconcile and rebuild doors run, so the exclusion it proves exists only on a live suite Postgres.',
+	],
 ]);
 
 /**

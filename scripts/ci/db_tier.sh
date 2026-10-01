@@ -168,6 +168,11 @@ DB_TIER_TRIPWIRES=(
 	test/unit/dd_ontology_identifier_grammar_native.test.ts
 	test/unit/dd_ontology_grammar_migration_native.test.ts
 	test/unit/ontology_state_identifier_grammar_native.test.ts
+	test/unit/diffusion_target_fence_native.test.ts
+	test/unit/diffusion_resume_ledger_native.test.ts
+	test/unit/diffusion_frontier_replay.test.ts
+	test/unit/diffusion_attach_scope_native.test.ts
+	test/unit/media_index_reconcile_fence_native.test.ts
 )
 
 # ── THE STAGES ARE INDEPENDENT ───────────────────────────────────────────────

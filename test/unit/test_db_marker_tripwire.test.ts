@@ -156,6 +156,10 @@ const WRITE_SEAMS: readonly RegExp[] = [
 	/\bupsertDdOntologyNode\s*\(/,
 	/\bdeleteTldNodes\s*\(/,
 	/\b(?:writeFileSync|copyFileSync|mkdirSync|rmSync)\s*\(/,
+	// ENGINE write drivers a helper can call without a single SQL string in
+	// its own source — a spawned runner child (runJob writes job, dd1758 and
+	// run-ledger rows and files), a component save, the ledgers' appenders.
+	/\b(?:runJob|saveComponent|appendRunLedger|logDiffusionActivity)\s*\(/,
 ];
 
 /**
@@ -219,6 +223,9 @@ describe('rule 1 — every test-data writer asks the marker', () => {
 			'src/core/test_data/situations/situation.ts',
 			'test/helpers/test_data.ts',
 			'test/helpers/acl_identity_fixture.ts',
+			// The spawned runner children's door: its only write seam is the
+			// engine's runJob() — no SQL string in its source.
+			'test/helpers/diffusion_runner_door.ts',
 			// `observer_term_seed.ts` was pinned here until 2026-08-20, when it
 			// stopped writing directly and became a composition over
 			// situations/situation.ts (pinned above). A file that writes nothing
@@ -469,6 +476,16 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 		name: 'removeScopeBindingFixture',
 		run: async () =>
 			(await import('../helpers/scope_binding_fixture.ts')).removeScopeBindingFixture(),
+	},
+	{
+		// The spawned runner children (kill / pool legs) reach runJob only here;
+		// a child process cannot run inside this rollback, the door can.
+		name: 'runGuardedDiffusionJob',
+		run: async () =>
+			(await import('../helpers/diffusion_runner_door.ts')).runGuardedDiffusionJob(
+				'00000000-0000-4000-8000-000000000000',
+				1,
+			),
 	},
 	// NOT LISTED, deliberately: `test/helpers/observer_term_seed.ts`. Until
 	// 2026-08-20 it wrote an install thesaurus (`on1`) with its own

@@ -480,6 +480,13 @@ const T2_UNRESOLVED_OWNER_TARGETS: Readonly<Record<string, { targets: number; re
 		reason:
 			'`${DIFFUSION_JOBS_TABLE}` = resolveJobsTable() (dedalo_ts_diffusion_jobs or its seam).',
 	},
+	'src/diffusion/jobs/run_ledger.ts': {
+		// DIFF-1 (audit 2026-09-26): the job-scoped run ledger — one self-fenced
+		// append per committed batch, one fenced clear when the run completes.
+		targets: 2,
+		reason:
+			'`${DIFFUSION_JOB_LEDGER_TABLE}` = schema.ts (dedalo_ts_diffusion_job_ledger, or `<jobs seam>_ledger`).',
+	},
 };
 
 /**

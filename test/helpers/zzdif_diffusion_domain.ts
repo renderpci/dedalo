@@ -49,6 +49,19 @@
  *           zzdif82  field_varchar 'title'  | zzdif83 field_varchar 'code'
  *           zzdif84  field_int 'counter'    | zzdif85 field_enum 'publication' (exclude_column)
  *
+ *       zzdif90  diffusion_element  {"diffusion":{"type":"markdown","service_name":"zzdif_md_hop"}}
+ *         zzdif91  table 'zzdif_hop_primary_md' → section zzdif1   ← the FILE element WITH A HOP
+ *           zzdif92  field_varchar 'title' | zzdif93 field_text 'linked_ids' (portal zzdif7)
+ *           zzdif94  field_enum 'publication' (exclude_column)
+ *         zzdif95  table 'zzdif_hop_linked_md' → section zzdif20
+ *           zzdif96  field_varchar 'name'  | zzdif97 field_enum 'publication' (exclude_column)
+ *
+ *   The HOP file element (2026-09-30, DIFF-1) exists so a run has a FRONTIER:
+ *   with `levels: 1` the portal field queues 940101/940102 and the run's output is
+ *   the primary files PLUS the linked section's `zzdif20_<id>.md` — a crash
+ *   inside the drain, and a resume that must rebuild it, become observable on
+ *   disk (test/unit/diffusion_resume_ledger_native.test.ts).
+ *
  *   The file element (2026-09-02) exists so the RUNNER gate can drive the real
  *   `runJob` end to end on Postgres + a scratch files root alone: the sql
  *   element needs a MariaDB target the suite does not own, a markdown target
@@ -117,6 +130,13 @@ export const ZZDIF_FILE_FORMAT = 'markdown';
 export const ZZDIF_FILE_SERVICE_NAME = 'zzdif_md';
 /** The table label under the file element — the `tables[].table_name` a run reports. */
 export const ZZDIF_FILE_TABLE_NAME = 'zzdif_primary_md';
+/** The markdown FILE element WITH A PORTAL HOP (DIFF-1) — its runs have a frontier. */
+export const ZZDIF_HOP_FILE_ELEMENT = 'zzdif90';
+/** Its `service_name`: the directory label under `<files root>/markdown/`. */
+export const ZZDIF_HOP_SERVICE_NAME = 'zzdif_md_hop';
+/** Its primary and linked table labels (`tables[].table_name`). */
+export const ZZDIF_HOP_PRIMARY_TABLE_NAME = 'zzdif_hop_primary_md';
+export const ZZDIF_HOP_LINKED_TABLE_NAME = 'zzdif_hop_linked_md';
 /** The parser fn no registry entry exists for — the loud-failure subject. */
 export const ZZDIF_UNKNOWN_PARSER_FN = 'parser_zzdif::no_such_fn';
 
@@ -460,6 +480,70 @@ function buildSituation(): Situation {
 				order_number: 3,
 			},
 			{ ...publicationField('zzdif85', 'zzdif6'), parent: 'zzdif81', order_number: 4 },
+
+			// element 5 — the FILE element WITH A HOP (DIFF-1, see the header note):
+			// the primary table carries the portal field, and the linked section has
+			// its OWN table in the same element, so the frontier it queues publishes.
+			{
+				tipo: ZZDIF_HOP_FILE_ELEMENT,
+				parent: 'zzdif41',
+				model: 'diffusion_element',
+				term: { 'lg-spa': 'zzdif markdown hop element' },
+				properties: {
+					diffusion: { type: ZZDIF_FILE_FORMAT, service_name: ZZDIF_HOP_SERVICE_NAME },
+				},
+				order_number: 5,
+			},
+			{
+				tipo: 'zzdif91',
+				parent: ZZDIF_HOP_FILE_ELEMENT,
+				model: 'table',
+				term: { 'lg-spa': ZZDIF_HOP_PRIMARY_TABLE_NAME },
+				relations: [{ tipo: 'zzdif1' }],
+				order_number: 1,
+			},
+			{
+				tipo: 'zzdif92',
+				parent: 'zzdif91',
+				model: 'field_varchar',
+				term: { 'lg-spa': 'title' },
+				relations: [{ tipo: 'zzdif2' }],
+				properties: { varchar: 500 },
+				order_number: 1,
+			},
+			{
+				tipo: 'zzdif93',
+				parent: 'zzdif91',
+				model: 'field_text',
+				term: { 'lg-spa': 'linked_ids' },
+				relations: [{ tipo: ZZDIF_PORTAL }],
+				properties: {
+					process: {
+						parser: [{ fn: 'parser_locator::get_v6_section_id' }],
+						output_format: 'json',
+					},
+				},
+				order_number: 2,
+			},
+			{ ...publicationField('zzdif94', 'zzdif6'), parent: 'zzdif91', order_number: 3 },
+			{
+				tipo: 'zzdif95',
+				parent: ZZDIF_HOP_FILE_ELEMENT,
+				model: 'table',
+				term: { 'lg-spa': ZZDIF_HOP_LINKED_TABLE_NAME },
+				relations: [{ tipo: 'zzdif20' }],
+				order_number: 2,
+			},
+			{
+				tipo: 'zzdif96',
+				parent: 'zzdif95',
+				model: 'field_varchar',
+				term: { 'lg-spa': 'name' },
+				relations: [{ tipo: 'zzdif21' }],
+				properties: { varchar: 500 },
+				order_number: 1,
+			},
+			{ ...publicationField('zzdif97', 'zzdif22'), parent: 'zzdif95', order_number: 2 },
 		],
 		records: [
 			{

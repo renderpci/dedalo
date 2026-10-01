@@ -21,6 +21,8 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { promises as fs } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { sql } from '../../src/core/db/postgres.ts';
+import { MEDIA_INDEX_RECONCILE } from '../../src/diffusion/api/reconcile.ts';
 import {
 	applyTableState,
 	getMediaIndexStatus,
@@ -131,6 +133,31 @@ describe('media_index marker store (S2-31 native port)', () => {
 		expect(await fileExists(join(base, 'pub/test3_1'))).toBe(true);
 		expect(await fileExists(join(base, 'pub/test3_999'))).toBe(false);
 	});
+
+	test('the reconcile APPLY holds every marker database’s publication-target fence: nothing is healed while a writer holds one (DIFF-2)', async () => {
+		await fs.mkdir(join(base, 'dbs/web_db/t'), { recursive: true });
+		await fs.writeFile(join(base, 'dbs/web_db/t/test3_7'), '');
+		// The fence key is the cross-door contract (jobs/target_fence.ts):
+		// (17580002, hashtext('sql:<database>')), held from ANOTHER session.
+		const connection = await sql.reserve();
+		const lockArgs = [17580002, 'sql:web_db'];
+		let healedWhileHeld = true;
+		let pending: Promise<unknown> | null = null;
+		try {
+			await connection.unsafe('SELECT pg_advisory_lock($1::int, hashtext($2))', lockArgs);
+			pending = MEDIA_INDEX_RECONCILE.run({ apply: true });
+			await Bun.sleep(1_000);
+			healedWhileHeld = await fileExists(join(base, 'pub/test3_7'));
+		} finally {
+			await connection.unsafe('SELECT pg_advisory_unlock($1::int, hashtext($2))', lockArgs);
+			connection.release();
+		}
+		await pending;
+		expect(healedWhileHeld, 'the apply wrote pub/ while a writer held a marker database').toBe(
+			false,
+		);
+		expect(await fileExists(join(base, 'pub/test3_7'))).toBe(true);
+	}, 30_000);
 
 	test('auth/ (PHP-owned login markers) is never touched', async () => {
 		await fs.mkdir(join(base, 'auth'), { recursive: true });

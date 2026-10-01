@@ -46,6 +46,10 @@ export const MEDIA_INDEX_RECONCILE: ReconcileDefinition = {
 				detail: { enabled: true, to_add: diff.toAdd, to_remove: diff.toRemove },
 			};
 		}
+		// The pub/ union is derived from EVERY database's dbs/ subtree: the store's
+		// one apply door holds the fence of every database that can write a marker
+		// pair, and applies nothing from a round a new subtree appeared in
+		// (media_index.ts reconcileMediaIndex, DIFF-2).
 		const healed = await reconcileMediaIndex();
 		if (healed === null) return { drift: 0, applied: 0, detail: { enabled: false } };
 		const drift = healed.added + healed.removed;

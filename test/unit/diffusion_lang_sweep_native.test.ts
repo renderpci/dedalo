@@ -15,7 +15,10 @@
  *  - a lang that IS in the publication policy is refused, and cannot reach a
  *    DELETE even if the policy changed after the caller's report;
  *  - an unknown target database is refused;
- *  - the API action is REGISTERED, admin-only, and needs confirm:true.
+ *  - the API action is REGISTERED, admin-only, and needs confirm:true;
+ *  - each database is swept under its publication-target fence
+ *    (jobs/target_fence.ts, DIFF-2): no DELETE while another writer holds it
+ *    (the fence is a Postgres advisory lock — the suite DB, not MariaDB).
  *
  * No live MariaDB and no ontology: the module takes its whole outside world as
  * an injected `LangSweepDependencies`, so the decision logic is gated as pure
@@ -26,6 +29,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { ApiRequestContext } from '../../src/core/api/handler_context.ts';
 import { diffusionApiActions } from '../../src/core/api/handlers/dd_diffusion_api.ts';
+import { sql } from '../../src/core/db/postgres.ts';
 import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import {
@@ -264,6 +268,29 @@ describe('sweep — the DELETE is as narrow as the audit that justified it', () 
 		expect(result.swept).toEqual([]);
 		expect(log.filter((statement) => statement.sql.startsWith('DELETE'))).toHaveLength(0);
 	});
+
+	test('the sweep waits for the database’s publication-target fence: no DELETE while another writer holds it (DIFF-2)', async () => {
+		// The fence key is the cross-door contract (jobs/target_fence.ts):
+		// (17580002, hashtext('sql:<database>')) — the lock a publication run's
+		// batch holds on this database. Held from ANOTHER session here.
+		const connection = await sql.reserve();
+		const lockArgs = [17580002, `sql:${TARGET_DB}`];
+		const log: RecordedStatement[] = [];
+		let deletesWhileHeld = -1;
+		let pending: Promise<unknown> | null = null;
+		try {
+			await connection.unsafe('SELECT pg_advisory_lock($1::int, hashtext($2))', lockArgs);
+			pending = sweepPhantomLangs({ langs: [PHANTOM] }, buildDependencies(log));
+			await Bun.sleep(1_000);
+			deletesWhileHeld = log.filter((statement) => statement.sql.startsWith('DELETE')).length;
+		} finally {
+			await connection.unsafe('SELECT pg_advisory_unlock($1::int, hashtext($2))', lockArgs);
+			connection.release();
+		}
+		const result = (await pending) as Awaited<ReturnType<typeof sweepPhantomLangs>>;
+		expect(deletesWhileHeld, 'the sweep deleted inside a target another writer holds').toBe(0);
+		expect(result.total_rows).toBe(7);
+	}, 30_000);
 
 	test('an unknown target database is refused', async () => {
 		const log: RecordedStatement[] = [];

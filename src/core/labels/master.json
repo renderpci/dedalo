@@ -173,6 +173,7 @@
 	"error_diffusion_run_failed": "An unexpected error stopped the diffusion run",
 	"error_diffusion_runner_lost": "The diffusion runner was lost after {attempts} attempts",
 	"error_diffusion_runner_spawn_failed": "The diffusion runner process could not be started",
+	"error_diffusion_target_busy": "The publication target is busy with another run; retry when it finishes",
 	"error_diffusion_unknown_format": "No diffusion writer serves that publication format",
 	"error_diffusion_unported_fn": "The publication uses an ontology function this engine does not implement yet",
 	"error_engine_uncovered_scope": "This operation is not available on this server",

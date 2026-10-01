@@ -309,6 +309,13 @@ const TRIPWIRES = [
 	'test/unit/dd_ontology_identifier_grammar_native.test.ts',
 	'test/unit/dd_ontology_grammar_migration_native.test.ts',
 	'test/unit/ontology_state_identifier_grammar_native.test.ts',
+	// DIFF-1/DIFF-2/DIFF-3/PERF-2 (audit 2026-09-26, 2026-10-01).
+	'test/unit/diffusion_target_fence_native.test.ts',
+	'test/unit/diffusion_resume_ledger_native.test.ts',
+	'test/unit/diffusion_frontier_replay.test.ts',
+	'test/unit/diffusion_attach_scope_native.test.ts',
+	'test/unit/diffusion_artifact_rss_native.test.ts',
+	'test/unit/media_index_reconcile_fence_native.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

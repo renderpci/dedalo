@@ -109,6 +109,10 @@ defaults — a server and two runners — the installation uses at most 36 conne
 which leaves ample room. Raise this only when the database server has the connections
 to spare.
 
+A publication runner needs at least **2**: each batch holds one connection for its whole
+write to the publication target, and the runner's heartbeat needs another beside it. A
+runner started with `DB_POOL_MAX=1` refuses to start, naming this key.
+
 ```bash
 DB_POOL_MAX=10
 ```

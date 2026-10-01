@@ -735,6 +735,11 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		roots: [['docs'], ['docs']],
 		scope: 'the manual — every docs/**/*.md page, the one lister a docs-censusing gate imports',
 	},
+	'test/helpers/scratch_run_entries.ts': {
+		roots: [],
+		scope:
+			"NOT a corpus: `scratchRunEntries` lists the scratch directory a diffusion gate's OWN publication run wrote (a run directory, a files target); the CALLER hands its own scratch root",
+	},
 	'test/helpers/zzarc_media_digests.ts': {
 		roots: [],
 		scope:

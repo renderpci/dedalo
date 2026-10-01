@@ -403,11 +403,14 @@ describe('runJob — cancellation and idempotent restarts', () => {
 		expect(finished?.result?.msg).toBe(CANCELLED_MSG);
 	}, 120_000);
 
-	test('a RESUMED job continues after its checkpoint: cursor honoured, processed carried, run_started_at NOT re-stamped', async () => {
-		// The runner's checkpoint read (runner.ts runPublicationJob). A crashed
-		// runner's job is re-claimed with the checkpoint of its last COMMITTED
-		// batch; the resume must publish only the primaries AFTER the cursor,
-		// count on from `processed`, and keep the FIRST attempt's timestamp.
+	test('a LEGACY checkpoint (no `v:2`) RESTARTS the run from zero: every publishable id, run_started_at kept (DIFF-1)', async () => {
+		// The pre-ledger resume contract was the cursor alone: a checkpoint
+		// {cursor, run_started_at, processed} resumed AFTER the cursor, and the
+		// relation frontier + the run's artifact list — which lived only in the
+		// dead runner's memory — were lost (DIFF-1, audit 2026-09-26). A checkpoint
+		// without the run ledger (`v:2`) cannot say what the run already published,
+		// so it is honoured as a TIMESTAMP only: the run restarts from zero, keeps
+		// the first attempt's `run_started_at`, and republishes everything.
 		rmSync(outputDir(), { recursive: true, force: true });
 		await sql.unsafe(
 			`DELETE FROM "${activityTable()}" WHERE section_tipo = 'dd1758'
@@ -415,29 +418,23 @@ describe('runJob — cancellation and idempotent restarts', () => {
 			[ZZDIF_SECTION],
 		);
 		const job = await enqueueAndClaim(ZZDIF_FILE_ELEMENT);
-		// the first attempt "committed" the primaries up to the dd64/no record
-		const cursor = ZZDIF_UNPUBLISHABLE_ID;
-		const alreadyProcessed = 2; // 940001 + 940002
 		const firstAttemptStartedAt = 1_800_000_000; // a pinned past instant
 		await checkpointJob(
 			{ job_id: job.job_id, attempt: job.attempt },
 			{
-				cursor,
+				cursor: ZZDIF_UNPUBLISHABLE_ID,
 				run_started_at: firstAttemptStartedAt,
-				processed: alreadyProcessed,
+				processed: 2,
 			},
 		);
 		await runJob(job.job_id, job.attempt);
 		const finished = await getJobById(job.job_id);
 		expect(finished?.state).toBe('completed');
-		const remaining = PUBLISHABLE_IDS.filter((id) => id > cursor);
-		expect(remaining.length).toBeGreaterThan(0);
-		expect(publishedIds()).toEqual(remaining);
-		expect(await publishedActivityIds()).toEqual(remaining);
-		expect(finished?.totals.counter).toBe(alreadyProcessed + remaining.length);
-		expect(finished?.checkpoint.processed).toBe(alreadyProcessed + remaining.length);
+		expect(publishedIds()).toEqual(PUBLISHABLE_IDS);
+		expect(await publishedActivityIds()).toEqual(PUBLISHABLE_IDS);
+		// every primary seen by the restarted run (publish AND unpublish)
+		expect(finished?.totals.counter).toBe(PUBLISHABLE_IDS.length + 1);
 		expect(Number(finished?.checkpoint.run_started_at)).toBe(firstAttemptStartedAt);
-		expect(Number(finished?.checkpoint.cursor)).toBe(Math.max(...remaining));
 	}, 120_000);
 
 	test('a job that is not running (queued, never claimed) is left untouched', async () => {

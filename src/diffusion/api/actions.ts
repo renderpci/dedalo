@@ -39,7 +39,7 @@ import type { DiffusionJobRow } from '../jobs/queue.ts';
 import {
 	enqueueDiffusionJob,
 	getJobByClientProcessId,
-	getJobById,
+	getOwnedJobById,
 	listActiveJobs,
 	listJobsForCaller,
 	requestCancel,
@@ -622,10 +622,16 @@ export async function diffuseAction(rqo: Rqo, principal: Principal): Promise<Api
 	// Immediate spawn attempt — no 2s scheduler-tick latency on the first chunk.
 	void schedulerTick();
 
+	// DIFF-3: the stream follows the caller's OWN run (enqueue only attaches a
+	// caller to their own identical request, and the getter is owner-scoped
+	// too — a view never resolves to a run the caller does not own).
 	return sseResult(
-		buildJobFollowStream(() => getJobById(job.job_id), clientProcessId, DIFFUSE_POLL_MS, {
-			commentHeartbeat: false,
-		}),
+		buildJobFollowStream(
+			() => getOwnedJobById(job.job_id, principal.userId),
+			clientProcessId,
+			DIFFUSE_POLL_MS,
+			{ commentHeartbeat: false },
+		),
 	);
 }
 
@@ -738,13 +744,29 @@ export async function getEngineAdvisoryAction(_rqo: Rqo, principal: Principal): 
 	};
 }
 
+/**
+ * THE PATIENT RETRY DRAIN — the one door of every EXPLICIT pending-unpublish
+ * drain: the `retry_pending_deletions` action and the maintenance widget's
+ * retry (core reaches it through this facade). The drain runs inside
+ * `withPatientDeleteWait`: a target an exclusive writer holds (a run's unit,
+ * the lang sweep, the media rebuild) is waited for on ONE bounded budget for the
+ * whole drain, never given up at once (WC-2026-09-30-diffusion-target-fence R3;
+ * gate: diffusion_target_fence_native D2).
+ */
+export async function retryPendingDeletionsPatiently(
+	limit?: number,
+): Promise<{ total: number; retried: number; remaining: number }> {
+	const { retryPendingDiffusion } = await import('../../core/diffusion_bridge/diffusion_delete.ts');
+	const { withPatientDeleteWait } = await import('../targets/mariadb/delete_record.ts');
+	return withPatientDeleteWait(() => retryPendingDiffusion(limit));
+}
+
 /** `retry_pending_deletions` — native dd1758 pending-unpublish retry. */
 export async function retryPendingDeletionsAction(
 	_rqo: Rqo,
 	_principal: Principal,
 ): Promise<ApiResult> {
-	const { retryPendingDiffusion } = await import('../../core/diffusion_bridge/diffusion_delete.ts');
-	const summary = await retryPendingDiffusion();
+	const summary = await retryPendingDeletionsPatiently();
 	return {
 		status: 200,
 		body: ok(

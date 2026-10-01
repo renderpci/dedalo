@@ -62,7 +62,6 @@
 		"src/diffusion/targets/mariadb/sql_generator.ts": 2,
 		"src/diffusion/targets/mediastore/media_index.ts": 1,
 		"src/diffusion/writers/csv.ts": 1,
-		"src/diffusion/writers/files.ts": 1,
 		"src/diffusion/writers/json.ts": 1,
 		"src/diffusion/writers/mariadb_sql.ts": 1,
 		"src/diffusion/writers/markdown.ts": 1,
@@ -71,7 +70,7 @@
 		"src/server.ts": 1
 	},
 	"summary": {
-		"files": 67,
-		"total": 126
+		"files": 66,
+		"total": 125
 	}
 }

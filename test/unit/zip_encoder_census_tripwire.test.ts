@@ -163,7 +163,7 @@ describe('one ZIP encoder (src/core/files/zip.ts) — census', () => {
 			.map(([file, found]) => `${file}: ${found.join(', ')}`);
 		expect(
 			outside,
-			`a second ZIP producer — import src/core/files/zip.ts (openZipStream / buildStoreZip) instead, or ledger a delegation in EXEMPTIONS with its reason:`,
+			`a second ZIP producer — import src/core/files/zip.ts (openZipStream — addStoredFile for a deterministic STORE archive) instead, or ledger a delegation in EXEMPTIONS with its reason:`,
 		).toEqual([]);
 	});
 

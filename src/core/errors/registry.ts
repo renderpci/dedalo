@@ -1424,6 +1424,19 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 	},
+	// DIFF-3: a second diffuse on an (element, section) with an ACTIVE run that
+	// is not the caller's own identical request (another owner, or another
+	// selection). The body names nothing of the live run (queue.ts
+	// enqueueDiffusionJob; WC-2026-09-30-diffusion-attach-scope).
+	'diffusion.target_busy': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_diffusion_target_busy',
+		message: 'The publication target is busy with another run; retry when it finishes',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: true,
+	},
 	'diffusion.runner_spawn_failed': {
 		category: 'unavailable',
 		status: 503,

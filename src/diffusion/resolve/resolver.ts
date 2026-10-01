@@ -97,6 +97,12 @@ import {
 	parseTagValueToHtml,
 } from './ddo_fns.ts';
 import { defaultPublicationValue } from './default_value.ts';
+import {
+	frontierKey,
+	type ResumeState,
+	type RunLedgerEvent,
+	recordKey,
+} from './frontier_ledger.ts';
 import type { FieldIR, RecordIR, ResolvedLink } from './record_ir.ts';
 import type { RewriterEnv } from './rewriters.ts';
 import { buildRewriterFns } from './rewriters.ts';
@@ -127,12 +133,20 @@ export interface ResolvedBatch {
 	/** Records whose gate said 'unpublish' — writers remove their artifacts. */
 	unpublishIds: (number | string)[];
 	/**
-	 * Durable checkpoint: the highest PRIMARY section_id fully processed.
-	 * Frontier batches repeat the final primary cursor (they are derived work;
-	 * resuming from the cursor re-derives the remaining frontier).
+	 * The PRIMARY keyset position: the highest primary section_id fully
+	 * processed (frontier batches repeat the final primary cursor). It is only
+	 * that — the frontier does NOT re-derive from it: a resume restarts the
+	 * primaries after it and takes the frontier from the job's run ledger
+	 * (`ledger` below, ResolveOptions.resume — DIFF-1).
 	 */
 	cursor: number;
 	errors: FieldResolutionError[];
+	/**
+	 * The run-state transitions (frontier queue/open, used) since the previous
+	 * batch, in order — what the runner appends to the run ledger in this
+	 * batch's own transaction (frontier_ledger.ts).
+	 */
+	ledger: readonly RunLedgerEvent[];
 }
 
 export interface ResolveOptions {
@@ -162,6 +176,14 @@ export interface ResolveOptions {
 	 * only their in-scope records. Omitted / global-admin ⇒ unscoped selection.
 	 */
 	principal?: Principal;
+	/**
+	 * Resume a run (DIFF-1): the frontier / used / publishable state replayed
+	 * from the job's run ledger (frontier_ledger.ts replayFrontier). The
+	 * primaries restart after `afterSectionId`; a key that was being drained
+	 * finishes its remainder first; then the frontier drains on. Copied, never
+	 * mutated.
+	 */
+	resume?: ResumeState;
 }
 
 // ---------------------------------------------------------------------------
@@ -254,10 +276,14 @@ export interface RunContext {
 	geoPairCache: Map<string, string | null>;
 	/** PHP is_used bitmask twin: records already emitted top-level this run. */
 	usedRecords: Set<string>;
-	/** PHP dd_diffusion_api::$publishable_overrides — inherited gate results. */
-	publishableOverrides: Map<string, boolean>;
 	/** PHP $datum_unresolved: `${level}:${section_tipo}` → queued ids (FIFO). */
 	frontier: Map<string, Set<number | string>>;
+	/**
+	 * Run-state events not yet handed out (flushed into the next yielded batch's
+	 * `ledger`). Mutated ONLY through enqueueFrontier / markUsed / the drain's
+	 * open — every change to frontier and usedRecords.
+	 */
+	pendingLedger: RunLedgerEvent[];
 }
 
 /** Bound above which the record cache is dropped whole (O(1) eviction). */
@@ -307,8 +333,53 @@ export function getBoundedRunMemo<K, V>(map: Map<K, V>, key: K): V | undefined {
 	return value;
 }
 
-const RECORD_KEY = (sectionTipo: string, sectionId: number | string): string =>
-	`${sectionTipo}:${sectionId}`;
+const RECORD_KEY = recordKey;
+
+/**
+ * THE run-state mutators (DIFF-1): every change to the frontier and the used
+ * set goes through these, and each emits its ledger event only when the state
+ * actually changed — so replaying the ledger (frontier_ledger.ts) rebuilds
+ * exactly this state.
+ *
+ * NO queue-time publishable decision is carried (the PHP
+ * dd_diffusion_api::$publishable_overrides snapshot is deliberately not
+ * ported — WC-2026-09-30-diffusion-run-ledger). What PHP snapshotted is the
+ * very gate resolveGate evaluates at drain time (the target section's
+ * table-node override, else the record's own publication value), so the
+ * snapshot adds nothing but STALENESS. Within one run the drain reads the
+ * record through the run's memo anyway (loadRecords) — one run, one view. But a
+ * snapshot REPLAYED on resume is days old (a cancelled job's ledger lives until
+ * the purge; an admin requeue resumes it), and a stale "publish" fails OPEN: a
+ * record a curator unpublished in between would be republished to the public
+ * site. So the ledger carries no gate decision and the resumed drain asks the
+ * gate against the record as it is NOW. Gate: diffusion_resume_ledger_native
+ * ("stale publish").
+ */
+function enqueueFrontier(
+	ctx: RunContext,
+	level: number,
+	sectionTipo: string,
+	sectionId: number | string,
+): void {
+	const key = frontierKey(level, sectionTipo);
+	const bucket = ctx.frontier.get(key);
+	if (bucket === undefined) ctx.frontier.set(key, new Set([sectionId]));
+	else if (!bucket.has(sectionId)) bucket.add(sectionId);
+	else return;
+	ctx.pendingLedger.push({ kind: 'queue', level, sectionTipo, sectionId });
+}
+
+function markUsed(ctx: RunContext, sectionTipo: string, sectionId: number | string): void {
+	const key = RECORD_KEY(sectionTipo, sectionId);
+	if (ctx.usedRecords.has(key)) return;
+	ctx.usedRecords.add(key);
+	ctx.pendingLedger.push({ kind: 'used', sectionTipo, sectionId });
+}
+
+/** The events since the previous batch — handed out with the batch being yielded. */
+function takeLedger(ctx: RunContext): RunLedgerEvent[] {
+	return ctx.pendingLedger.splice(0);
+}
 
 // ---------------------------------------------------------------------------
 // Ontology lookups (cached per run; per-run maps, not module state)
@@ -492,10 +563,6 @@ export async function resolveGate(
 		const override = ctx.sectionPublishableOverride.get(record.section_tipo);
 		if (override === true) return { status: 'publish' };
 		if (override === false) return { status: 'unpublish' };
-		const inherited = ctx.publishableOverrides.get(
-			RECORD_KEY(record.section_tipo, record.section_id),
-		);
-		if (inherited !== undefined) return { status: inherited ? 'publish' : 'unpublish' };
 		return { status: (await isRecordPublishable(ctx, record)) ? 'publish' : 'unpublish' };
 	} catch (error) {
 		// Fail-closed (spec §8.5): a gate resolution error NEVER publishes — but it
@@ -1830,11 +1897,7 @@ async function resolveHop(
 		// budget, section must have a SectionPlan, unpublishable records queue
 		// too (writers must delete them). relation_list hops NEVER queue (:274).
 		if (level > 0 && hop.model !== 'relation_list' && ctx.sectionPlans.has(sectionTipo)) {
-			if (currentPublishable) ctx.publishableOverrides.set(key, true);
-			const frontierKey = `${level - 1}:${sectionTipo}`;
-			const bucket = ctx.frontier.get(frontierKey);
-			if (bucket === undefined) ctx.frontier.set(frontierKey, new Set([sectionId]));
-			else bucket.add(sectionId);
+			enqueueFrontier(ctx, level - 1, sectionTipo, sectionId);
 		}
 
 		// FIELD-LEVEL is_publishable OVERRIDE (v6 is_publicable). v6 reads it as
@@ -2238,7 +2301,7 @@ async function processBatch(
 		console.warn(
 			`[diffusion] ${sectionPlan.sectionTipo} id '${String(rawId)}' is not a record address — dropped: no local record to publish, never read, never unpublished`,
 		);
-		ctx.usedRecords.add(RECORD_KEY(sectionPlan.sectionTipo, rawId));
+		markUsed(ctx, sectionPlan.sectionTipo, rawId);
 	}
 	let visibleIds = addressedIds;
 	const runPrincipal = ctx.options.principal;
@@ -2277,7 +2340,7 @@ async function processBatch(
 			// record. Marking it 'unpublish' would let a caller who cannot READ a
 			// record REMOVE it from the public target — a write through a door
 			// that only ever had a read question to answer.
-			ctx.usedRecords.add(RECORD_KEY(sectionPlan.sectionTipo, sectionId));
+			markUsed(ctx, sectionPlan.sectionTipo, sectionId);
 		}
 		visibleIds = kept;
 	}
@@ -2291,7 +2354,7 @@ async function processBatch(
 
 	for (const sectionId of visibleIds) {
 		const record = byId.get(String(sectionId));
-		ctx.usedRecords.add(RECORD_KEY(sectionPlan.sectionTipo, sectionId));
+		markUsed(ctx, sectionPlan.sectionTipo, sectionId);
 		if (record === undefined) {
 			// Selected/queued but no longer present → unpublish (fail-closed).
 			unpublishIds.push(sectionId);
@@ -2318,7 +2381,31 @@ async function processBatch(
 		unpublishIds,
 		cursor,
 		errors,
+		ledger: takeLedger(ctx),
 	};
+}
+
+/**
+ * Drain ONE frontier key: its ids not yet used, in batches. Extracted so a
+ * resumed run can finish the remainder of the key a dead run was draining
+ * (ResolveOptions.resume.draining) before the frontier loop continues.
+ */
+async function* drainKey(
+	ctx: RunContext,
+	level: number,
+	sectionTipo: string,
+	queued: Iterable<number | string>,
+	cursor: number,
+): AsyncGenerator<ResolvedBatch> {
+	const sectionPlan = ctx.sectionPlans.get(sectionTipo);
+	if (sectionPlan === undefined) return;
+	const pendingIds = [...queued].filter(
+		(sectionId) => !ctx.usedRecords.has(RECORD_KEY(sectionTipo, sectionId)),
+	);
+	for (let offset = 0; offset < pendingIds.length; offset += ctx.batchSize) {
+		const slice = pendingIds.slice(offset, offset + ctx.batchSize);
+		yield await processBatch(ctx, sectionPlan, slice, level, cursor, true);
+	}
 }
 
 /**
@@ -2392,9 +2479,15 @@ export async function* resolvePublication(
 		typologyElementCache: new Map(),
 		sectionLabelCache: new Map(),
 		geoPairCache: new Map(),
-		usedRecords: new Set(),
-		publishableOverrides: new Map(),
-		frontier: new Map(),
+		// A resumed run starts from the replayed ledger state (copies — the
+		// caller's ResumeState is never mutated).
+		usedRecords: new Set(options.resume?.used ?? []),
+		frontier: new Map(
+			[...(options.resume?.frontier ?? new Map<string, Set<number | string>>())].map(
+				([key, ids]) => [key, new Set(ids)],
+			),
+		),
+		pendingLedger: [],
 	};
 
 	// Stage C: primary selection, keyset-batched.
@@ -2411,27 +2504,27 @@ export async function* resolvePublication(
 		yield await processBatch(ctx, primaryPlan, batch.sectionIds, ctx.maxLevels, batch.cursor);
 	}
 
+	// A resumed run first finishes the key the dead run was draining (its
+	// replayed remainder — the ids not yet used), exactly where it stopped.
+	const draining = options.resume?.draining ?? null;
+	if (draining !== null) {
+		yield* drainKey(ctx, draining.level, draining.sectionTipo, draining.ids, primaryCursor);
+	}
+
 	// Frontier drain — FIFO over `${level}:${section_tipo}` keys (PHP
-	// dd_diffusion_api :270-307), per-run dedup via usedRecords.
+	// dd_diffusion_api :270-307), per-run dedup via usedRecords. Opening a key
+	// is a ledger event: from here its ids are the DRAINING set.
 	while (ctx.frontier.size > 0) {
-		const [frontierKey, queued] = ctx.frontier.entries().next().value as [
+		const [openedKey, queued] = ctx.frontier.entries().next().value as [
 			string,
 			Set<number | string>,
 		];
-		ctx.frontier.delete(frontierKey);
-		const separatorIndex = frontierKey.indexOf(':');
-		const level = Number(frontierKey.slice(0, separatorIndex));
-		const sectionTipo = frontierKey.slice(separatorIndex + 1);
-		const sectionPlan = ctx.sectionPlans.get(sectionTipo);
-		if (sectionPlan === undefined) continue;
-
-		const pendingIds = [...queued].filter(
-			(sectionId) => !ctx.usedRecords.has(RECORD_KEY(sectionTipo, sectionId)),
-		);
-		for (let offset = 0; offset < pendingIds.length; offset += ctx.batchSize) {
-			const slice = pendingIds.slice(offset, offset + ctx.batchSize);
-			yield await processBatch(ctx, sectionPlan, slice, level, primaryCursor, true);
-		}
+		ctx.frontier.delete(openedKey);
+		const separatorIndex = openedKey.indexOf(':');
+		const level = Number(openedKey.slice(0, separatorIndex));
+		const sectionTipo = openedKey.slice(separatorIndex + 1);
+		ctx.pendingLedger.push({ kind: 'open', level, sectionTipo });
+		yield* drainKey(ctx, level, sectionTipo, queued, primaryCursor);
 	}
 }
 

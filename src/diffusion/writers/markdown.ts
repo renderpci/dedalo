@@ -24,12 +24,15 @@
  *     :459-476 — values are NOT HTML-escaped, LLM readability is the goal).
  *
  * removeRecords unlinks the per-record file; missing file = idempotent
- * success (the diffusion_delete.ts markdown posture). close() zips the run's
+ * success (the diffusion_delete.ts markdown posture). close() zips the RUN's
  * files (`diffusion_md.zip` — the old engine's `diffusion_md_<date>.zip`
  * grammar minus the wall-clock tag; ZIP only, no merged document, PHP
- * parity). abort() is a documented no-op: every per-record file lands via
- * its own temp+rename, so there are no run-scoped temps — already-finalized
- * records stay, exactly like a crashed PHP per-record save loop.
+ * parity), read from the run's MANIFEST (WriterCloseContext — the job's run
+ * ledger, so a resumed run archives what the whole run published, DIFF-1); a
+ * manifest record whose file is gone is a summary error, skipped. abort() is a
+ * documented no-op: every per-record file lands via its own temp+rename, so
+ * there are no run-scoped temps — already-finalized records stay, exactly like
+ * a crashed PHP per-record save loop — and it never consolidates.
  */
 
 import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
@@ -40,12 +43,20 @@ import {
 	createZip,
 	fileTargetDirLabel,
 	formatTargetDir,
+	manifestPaths,
 	planColumnNames,
 	recordFileName,
+	sweepStaleTemps,
+	WriterRunLog,
 } from './files.ts';
 import type {
+	ArtifactEvent,
 	DiffusionWriter,
+	ManifestEntry,
 	WriteBatchResult,
+	WriterCloseContext,
+	WriterContinuity,
+	WriterOpenContext,
 	WriterRunSummary,
 	WriterSession,
 } from './types.ts';
@@ -107,37 +118,25 @@ export function renderMarkdownRecord(
 	return `${md.trimEnd()}\n`;
 }
 
-/** Per-table counters feeding the close() summary (mariadb writer shape). */
-interface MarkdownTableCounters {
-	records_affected: number;
-	records_count: number;
-}
-
 class MarkdownWriterSession implements WriterSession {
 	private readonly plan: PublicationPlan;
 	private readonly targetDir: string;
-	/** Insertion-ordered so close() reports tables in plan order. */
-	private readonly counters = new Map<string, MarkdownTableCounters>();
-	private readonly errors: string[] = [];
-	/** Files THIS RUN finalized — the zip manifest. */
-	private readonly writtenFiles = new Set<string>();
+	private readonly sections: Map<string, SectionPlan>;
+	private readonly log: WriterRunLog;
 	private schemaEnsured = false;
 
-	constructor(plan: PublicationPlan) {
+	constructor(plan: PublicationPlan, context?: WriterOpenContext) {
 		this.plan = plan;
 		this.targetDir = formatTargetDir('markdown', fileTargetDirLabel(plan));
-		for (const section of plan.sections) {
-			this.counters.set(section.tableName, { records_affected: 0, records_count: 0 });
-		}
+		this.sections = new Map(plan.sections.map((section) => [section.sectionTipo, section]));
+		this.log = new WriterRunLog(
+			plan.sections.map((section) => section.tableName),
+			context,
+		);
 	}
 
-	private countersFor(tableName: string): MarkdownTableCounters {
-		let counters = this.counters.get(tableName);
-		if (counters === undefined) {
-			counters = { records_affected: 0, records_count: 0 };
-			this.counters.set(tableName, counters);
-		}
-		return counters;
+	get continuity(): WriterContinuity {
+		return this.log.continuity;
 	}
 
 	private recordPath(section: SectionPlan, sectionId: number | string): string {
@@ -173,14 +172,13 @@ class MarkdownWriterSession implements WriterSession {
 			group.rows.push(row);
 		}
 		for (const group of grouped.values()) {
-			const filePath = this.recordPath(section, group.sectionId);
 			atomicWriteFile(
-				filePath,
+				this.recordPath(section, group.sectionId),
 				renderMarkdownRecord(this.plan, section, group.sectionId, group.rows),
 			);
-			this.writtenFiles.add(filePath);
+			this.log.note('wrote', section.sectionTipo, group.sectionId);
 		}
-		const counters = this.countersFor(section.tableName);
+		const counters = this.log.countersFor(section.tableName);
 		counters.records_affected += grouped.size;
 		counters.records_count += rows.length;
 		return { written: rows.length, deleted: 0 };
@@ -202,25 +200,46 @@ class MarkdownWriterSession implements WriterSession {
 				unlinkSync(filePath);
 				deleted++;
 			}
-			this.writtenFiles.delete(filePath); // never zip a file we just removed
+			this.log.note('removed', section.sectionTipo, sectionId); // never zipped again
 		}
-		this.countersFor(section.tableName).records_affected += deleted;
+		this.log.countersFor(section.tableName).records_affected += deleted;
 		return { written: 0, deleted };
 	}
 
-	/** ZIP the run's files (ZIP only, no merged document — PHP parity). */
-	async close(): Promise<WriterRunSummary> {
-		if (this.writtenFiles.size > 0) {
-			await createZip([...this.writtenFiles], `${this.targetDir}/diffusion_md.zip`);
-		}
-		return {
-			tables: [...this.counters.entries()].map(([tableName, counters]) => ({
-				table_name: tableName,
-				records_affected: counters.records_affected,
-				records_count: counters.records_count,
-			})),
-			errors: [...this.errors],
+	takeArtifacts(): ArtifactEvent[] {
+		return this.log.take();
+	}
+
+	/** Every record file already landed via temp+rename; the state is the counters. */
+	async checkpoint(): Promise<unknown> {
+		return this.log.checkpoint();
+	}
+
+	runSummary(): WriterRunSummary {
+		return this.log.summary();
+	}
+
+	/** ZIP the RUN's files (ZIP only, no merged document — PHP parity). */
+	async close(context?: WriterCloseContext): Promise<WriterRunSummary> {
+		const run = this.log.closeContext(context);
+		await sweepStaleTemps(this.targetDir, run);
+		const pathOf = (entry: ManifestEntry): string | null => {
+			const section = this.sections.get(entry.sectionTipo);
+			return section === undefined ? null : this.recordPath(section, entry.sectionId);
 		};
+		// ONE pass: a vanished record file is a summary line, never a crash — at
+		// the manifest's existence check or at the zip's open (the files-unlink
+		// door is unfenced, WC R2); none left ⇒ no archive, not a failed run.
+		const missing = (path: string): void => {
+			this.log.errors.add(
+				`markdown close: published file missing, left out of the archive: ${path}`,
+			);
+		};
+		await createZip(manifestPaths(run, pathOf, missing), `${this.targetDir}/diffusion_md.zip`, {
+			onMissing: missing,
+			empty: 'none',
+		});
+		return this.log.summary();
 	}
 
 	/**
@@ -236,7 +255,7 @@ class MarkdownWriterSession implements WriterSession {
 /** The 'markdown' format writer (registry entry). */
 export const markdownWriter: DiffusionWriter = {
 	format: 'markdown',
-	async open(plan: PublicationPlan): Promise<WriterSession> {
-		return new MarkdownWriterSession(plan);
+	async open(plan: PublicationPlan, context?: WriterOpenContext): Promise<WriterSession> {
+		return new MarkdownWriterSession(plan, context);
 	},
 };

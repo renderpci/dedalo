@@ -168,6 +168,9 @@ export const ROW_CONTRACT: ReadonlyMap<string, RowContract> = new Map<string, Ro
 	['test/integration/publication_api_v2_smoke.test.ts', { rises: ['rows_inserted'] }],
 	['test/unit/unpublish_debt_native.test.ts', { rises: ['rows_inserted', 'rows_deleted'] }],
 	['test/unit/diffusion_runner_native.test.ts', { rises: ['rows_inserted', 'rows_deleted'] }],
+	// DIFF-2 (measured 2026-10-01, l3: +93 inserted, +17 deleted, 0 updated): the sql
+	// element's fenced publications and the fenced delete doors' unpublishes.
+	['test/unit/diffusion_target_fence_native.test.ts', { rises: ['rows_inserted', 'rows_deleted'] }],
 	[MEASURE_SELF_GATE, { rises: ['rows_inserted', 'rows_deleted'] }],
 	[
 		'test/unit/diffusion_native_delete.test.ts',
