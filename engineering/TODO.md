@@ -31,7 +31,7 @@
 
 ## Ontology
 
-- [ ] Overwritting Ontology nodes (with localontlogy definitions -localontlogy0-) (see https://github.com/renderpci/dedalo/blob/v7_php_frozen/docs/core/ontology/ontology_class.md). Ensure the functionality is implemented in v7 ts. Note that the overwrite is made on parse the ontology (creating dd_ontology resolved records) and is not calculated never again until a new parse.
+- [x] Overwrite ontology nodes (with local ontology definitions, e.g. localontlogy0) (see https://github.com/renderpci/dedalo/blob/v7_php_frozen/docs/core/ontology/ontology_class.md). Ensure that this functionality is implemented in v7 TS. Note that the overwrite occurs when parsing the ontology (creating dd_ontology resolved records), and will not be recalculated until a new parse. (2026-10-01: implemented in `src/core/ontology/parser.ts` — link = ontology42 only; tld/translatable/order/is_model canonical-only; term merged per lang; properties per top-level key, `null` removes; override records never parsed as nodes. WC-2026-10-01-ontology-overwrite-scoped; gate test/unit/ontology_overwrite_native.test.ts; admin guide docs/core/ontology/local_ontology_overrides.md.)
 - [ ] Ontology: Default lang will be english. Review the entire workflow to ensure it works correctly, especially publication (current definition is only in spanish).
 
 ## Deploy & Migration

@@ -2611,6 +2611,11 @@
 			"skipped": 0,
 			"assertions": 16
 		},
+		"test/unit/ontology_overwrite_native.test.ts": {
+			"tests": 14,
+			"skipped": 0,
+			"assertions": 34
+		},
 		"test/unit/ontology_parser.test.ts": {
 			"tests": 10,
 			"skipped": 0,

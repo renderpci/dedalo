@@ -568,6 +568,21 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Local ontology overrides now apply to the node they point at, and change only what they state.**
+
+    A record in the local ontology (`localontology0`) overrides a shared node through
+    its **Overwrite** field. Before, any link in the record counted as an override (so
+    its parent was overridden too), and re-parsing the node could move it to the
+    `localontology` namespace, erase its other translations, drop its layout CSS and
+    make it translatable. Now only the Overwrite field links an override; the node's
+    TLD, translatable flag, order and model flag stay as shared; the term merges per
+    language, and each property the override fills (CSS included) replaces the shared
+    one whole while the others are kept — set a property to `null` to remove it. Local
+    records are no longer parsed as nodes of their own. See
+    [Overriding shared ontology nodes](./core/ontology/local_ontology_overrides.md).
+
+    Wire contract: `WC-2026-10-01-ontology-overwrite-scoped`.
+
 - **A failed ontology update now says why, inside the Update ontology panel**
 
     When fetching the master's file list or importing the ontology failed, the
@@ -699,7 +714,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 60 entries"
+??? note "Wire contract — 61 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -760,6 +775,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-29-tm-preview-frame-children-as-of`
     - `WC-2026-09-30-password-hash-never-served`
     - `WC-2026-09-30-password-policy-enforced`
+    - `WC-2026-10-01-ontology-overwrite-scoped`
     - `WC-2026-10-01-unit-test-widget-dev-gate`
 
 ## 7.0.0-beta.4 — 2026-08-24

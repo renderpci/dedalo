@@ -78,7 +78,13 @@ import {
 } from './ontology_tipos.ts';
 import { getTermIdFromLocator, parseSectionRecordToOntologyNode } from './parser.ts';
 import { getMatrixTableFromTipo } from './resolver.ts';
-import { getSectionIdFromTipo, getTldFromTipo, mapTldToTargetSectionTipo, safeTld } from './tld.ts';
+import {
+	getSectionIdFromTipo,
+	getTldFromTipo,
+	LOCAL_ONTOLOGY_SECTION,
+	mapTldToTargetSectionTipo,
+	safeTld,
+} from './tld.ts';
 
 const RELATION_TYPE_FILTER = 'dd675'; // DEDALO_RELATION_TYPE_FILTER
 const LANG_SECTION = 'lg1';
@@ -644,6 +650,16 @@ export async function setRecordsInDdOntology(
 		total: 0,
 		processed_count: 0,
 	};
+
+	// An override record is not a node (parser.ts): re-parse the node it
+	// overrides instead. Refused loudly, never skipped as "0 processed".
+	if (target.sectionTipo === LOCAL_ONTOLOGY_SECTION) {
+		response.errors.push(
+			`'${LOCAL_ONTOLOGY_SECTION}' records are overrides, not nodes — re-parse the overridden node (ontology42) instead`,
+		);
+		response.msg = `Error. Refusing to parse override records of '${LOCAL_ONTOLOGY_SECTION}' as nodes`;
+		return response;
+	}
 
 	const table = await getMatrixTableFromTipo(target.sectionTipo);
 	if (table === null) {
