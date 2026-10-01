@@ -1,16 +1,38 @@
-import { fetchPublicPage, type RawSource } from '../../acquisition/http.ts';
-import { assertSafeOaiUrl } from '../../acquisition/url-safety.ts';
-import type { AcquisitionProgress, MultiPageAcquisition } from '../types.ts';
+import { harvestFetch } from '../../../../../../src/core/harvest/harvest.ts';
+import type { AcquisitionProgress, MultiPageAcquisition, RawSource } from '../types.ts';
 import { extractArticleIds, extractDownloadUrl, extractGalleyViewUrl } from './parser.ts';
-
-export const OAI_FETCH_OPTIONS = {
-	assertSafeUrl: assertSafeOaiUrl,
-	// Multi-host protocol, not one fixed domain - e.g. Persée redirects www.persee.fr -> oai.persee.fr.
-	allowRedirectHost: () => true,
-};
 
 const METADATA_PREFIX = 'oai_dc';
 const ARTICLE_URL_PATTERN = /\/article\/view\/(\d+)(?:\/\d+)?(?:[/?#].*)?$/i;
+
+/**
+ * One GET through the harvesting door - OAI-PMH is spoken by many independent
+ * hosts (hosts:'public'), still https-only (requireHttps), same as the
+ * deleted url-safety.ts enforced. harvestFetch returns a non-2xx rather than
+ * throwing, so that half of the old fetchPublicPage contract is reproduced
+ * here explicitly.
+ */
+async function fetchOaiPage(
+	url: string,
+	onWait?: (ms: number, origin: string) => void,
+): Promise<RawSource> {
+	const response = await harvestFetch({
+		url,
+		hosts: 'public',
+		requireHttps: true,
+		headers: { Accept: 'text/xml,application/xml,text/html,application/xhtml+xml' },
+		onWait,
+	});
+	if (!response.ok) {
+		throw new Error(`Server returned HTTP ${response.status} for ${url}.`);
+	}
+	return {
+		html: response.text(),
+		finalUrl: response.url,
+		httpStatus: response.status,
+		contentType: response.contentType,
+	};
+}
 
 /**
  * Normalizes whatever URL the user pasted to the journal's real OAI-PMH base URL - either the OAI
@@ -48,7 +70,7 @@ function singleArticleId(rawUrl: string): string | null {
  * one checked this session happened to be the PKP default, "ojs.pkp.sfu.ca", but nothing about the
  * protocol guarantees that), so it's read from a real Identify call rather than assumed. */
 async function repositoryId(baseUrl: string): Promise<string> {
-	const identify = await fetchPublicPage(`${baseUrl}?verb=Identify`, OAI_FETCH_OPTIONS);
+	const identify = await fetchOaiPage(`${baseUrl}?verb=Identify`);
 	const match = identify.html.match(/<repositoryIdentifier>([^<]+)<\/repositoryIdentifier>/);
 	if (!match) {
 		throw new Error("Could not read this journal's OAI repository identifier from Identify.");
@@ -79,12 +101,16 @@ export async function acquireArticleSet(
 		throw new Error("Could not determine this journal's OAI-PMH endpoint from the given URL.");
 	}
 
+	const onWait = (ms: number, origin: string): void => {
+		onProgress?.(0, 0, `Waiting ${Math.round(ms / 1000)}s for ${origin}`);
+	};
+
 	let articleIds: string[];
 	const singleId = singleArticleId(rawUrl);
 	if (singleId !== null) {
 		articleIds = [singleId];
 	} else {
-		const listing = await fetchPublicPage(rawUrl, OAI_FETCH_OPTIONS);
+		const listing = await fetchOaiPage(rawUrl, onWait);
 		articleIds = extractArticleIds(listing.html);
 		if (articleIds.length === 0) {
 			throw new Error(
@@ -101,7 +127,9 @@ export async function acquireArticleSet(
 		const identifier = `oai:${repoId}:article/${articleIds[i]}`;
 		const requestUrl = `${baseUrl}?verb=GetRecord&identifier=${encodeURIComponent(identifier)}&metadataPrefix=${METADATA_PREFIX}`;
 		try {
-			const raw = await fetchPublicPage(requestUrl, OAI_FETCH_OPTIONS);
+			const raw = await fetchOaiPage(requestUrl, (ms, origin) =>
+				onProgress?.(i + 1, articleIds.length, `Waiting ${Math.round(ms / 1000)}s for ${origin}`),
+			);
 			const oaiError = extractOaiErrorMessage(raw.html);
 			if (oaiError) throw new Error(oaiError);
 			pages.push(raw);
@@ -135,10 +163,10 @@ export async function acquireArticleSet(
  * than throwing when the landing page is unreachable (e.g. blocked) or has no PDF galley link.
  */
 export async function resolvePdfUrl(landingPageUrl: string): Promise<string | null> {
-	const landing = await fetchPublicPage(landingPageUrl, OAI_FETCH_OPTIONS);
+	const landing = await fetchOaiPage(landingPageUrl);
 	const galleyUrl = extractGalleyViewUrl(landing.html, landing.finalUrl);
 	if (!galleyUrl) return null;
 
-	const galleyPage = await fetchPublicPage(galleyUrl, OAI_FETCH_OPTIONS);
+	const galleyPage = await fetchOaiPage(galleyUrl);
 	return extractDownloadUrl(galleyPage.html, galleyPage.finalUrl);
 }
