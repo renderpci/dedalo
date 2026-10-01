@@ -41,6 +41,7 @@ import {
   type Door,
 } from './support/lead1b_contract';
 import {
+  BUS_TIMEOUT,
   conformingShow,
   GATE_IDS,
   type GatePolicy,
@@ -73,7 +74,8 @@ async function hostWith(
 ): Promise<GatePolicy> {
   const host = await lead1bPolicy({ identities: new Map(entries), ...options });
   hosts.push(host);
-  for (const [slug] of entries) mkdirSync(workspacePath(slug), { recursive: true });
+  // With its repository: the TURN unit masks `<workspace>/.git` and does not start without it.
+  for (const [slug] of entries) mkdirSync(join(workspacePath(slug), '.git'), { recursive: true });
   return host;
 }
 
@@ -326,6 +328,148 @@ describe('G10 — one run per site, one connect per run, freed only on proven de
       named: String((refused as Error).message).includes('busy sockets: build'),
       connects: host.standIn.connects.length,
     }).toEqual({ code: true, named: true, connects: 0 });
+  }, 30_000);
+
+  /**
+   * "PID 1 CANNOT SAY" IS NEVER "IDLE" OR "DEAD". A systemctl timeout, a D-Bus or polkit hiccup
+   * (`systemctlVia` makes each a non-zero code), a `show` that answers without the property
+   * asked for: each must hold the slot and quarantine, never release it early. The stand-in
+   * used to answer code 0 with every property for every allowed verb, so eight fail-open
+   * mutations of the idle and death proofs survived the whole package suite; each row below
+   * names the mutation it turns red.
+   */
+  const SLOW_PROBE = { reprobeWindowMs: 300, pollMs: 20, helloTimeoutMs: 3_000, deathGraceMs: 150, quarantinePollMs: 1_000 };
+  const isInstance = (unit: string) => /@\d/.test(unit);
+  const isSocket = (unit: string) => unit.endsWith('.socket');
+
+  for (const [what, fault] of [
+    ['answers non-zero (a bus timeout)', BUS_TIMEOUT],
+    ['never answers (the wrapper throws)', 'throw'],
+  ] as const) {
+    test(`(o) IDLE: list-units ${what} → refused identity_quarantined, nothing connected — never read as "no live unit" (mutations: idleState live===null → idle; liveInstancesOf code≠0 → [])`, async () => {
+      const { leaseSnapshot } = await import('../src/drivers/confinement');
+      const host = await hostWith([['alpha', 1]]);
+      host.standIn.fault = verb => (verb === 'list-units' ? fault : null);
+      const refused = await reserved('alpha', () => caught(() => run(host, 'alpha', 'git')));
+      expect({
+        code: hasConfinementCode(refused, 'identity_quarantined'),
+        named: String((refused as Error).message).includes('could not list'),
+        connects: host.standIn.connects.length,
+        lease: leaseSnapshot(host.policy as never).quarantined.map(entry => entry.k),
+      }).toEqual({ code: true, named: true, connects: 0, lease: [1] });
+      // …and once PID 1 answers again, the background probe frees it.
+      host.standIn.fault = () => null;
+      await waitUntil(() => leaseSnapshot(host.policy as never).quarantined.length === 0, 5_000, 'the quarantine to lift');
+    }, 30_000);
+  }
+
+  test('(p) IDLE: a door socket whose NConnections PID 1 does not report → refused, quarantined, nothing connected (mutations: idleState skips an unreadable socket; connectionsOf reads it as 0)', async () => {
+    const host = await hostWith([['alpha', 1]]);
+    host.standIn.fault = (verb, units) => (verb === 'show' && units.some(isSocket) ? { drop: ['NConnections'] } : null);
+    const refused = await reserved('alpha', () => caught(() => run(host, 'alpha', 'git')));
+    expect({
+      code: hasConfinementCode(refused, 'identity_quarantined'),
+      named: String((refused as Error).message).includes('could not report'),
+      connects: host.standIn.connects.length,
+    }).toEqual({ code: true, named: true, connects: 0 });
+  }, 30_000);
+
+  test('(q) DEATH: the instance’s `show` fails → the slot stays held (quarantined, the site named); freed only once PID 1 answers (mutation: awaitDeath counts a failed show as dead)', async () => {
+    const { leaseSnapshot } = await import('../src/drivers/confinement');
+    const host = await hostWith([['alpha', 1]], { overrides: { timing: SLOW_PROBE } });
+    host.standIn.fault = (verb, units) => (verb === 'show' && units.some(isInstance) ? BUS_TIMEOUT : null);
+    expect((await reserved('alpha', () => run(host, 'alpha', 'git'))).exitCode).toBe(0);
+    expect(leaseSnapshot(host.policy as never)).toMatchObject({ runs: ['alpha'], quarantined: [{ k: 1, heldSlug: 'alpha' }] });
+    host.standIn.fault = () => null;
+    await waitUntil(() => leaseSnapshot(host.policy as never).runs.length === 0, 5_000, 'the slot to be freed');
+  }, 30_000);
+
+  test('(r) DEATH: an inactive instance whose `show` has NO TasksCurrent is not proved empty → held, quarantined (mutation: tasksGone(undefined) → gone)', async () => {
+    const { leaseSnapshot } = await import('../src/drivers/confinement');
+    const host = await hostWith([['alpha', 1]], { overrides: { timing: SLOW_PROBE } });
+    host.standIn.fault = (verb, units) => (verb === 'show' && units.some(isInstance) ? { drop: ['TasksCurrent'] } : null);
+    expect((await reserved('alpha', () => run(host, 'alpha', 'git'))).exitCode).toBe(0);
+    expect(leaseSnapshot(host.policy as never)).toMatchObject({ runs: ['alpha'], quarantined: [{ k: 1, heldSlug: 'alpha' }] });
+    // Freed by the background probe's own READABLE answer (the unit is no longer listed and no
+    // socket counts a connection), never by the unreadable one.
+    await waitUntil(() => leaseSnapshot(host.policy as never).runs.length === 0, 5_000, 'the slot to be freed');
+  }, 30_000);
+
+  test('(s) DEATH: the door socket’s NConnections unreadable after the run → held, quarantined; freed once it reads 0 (mutation: awaitDeath reads null NConnections as 0)', async () => {
+    const { leaseSnapshot } = await import('../src/drivers/confinement');
+    const host = await hostWith([['alpha', 1]]);
+    host.standIn.script = () => {
+      host.standIn.fault = (verb, units) => (verb === 'show' && units.some(isSocket) ? { drop: ['NConnections'] } : null);
+      return { kind: 'exit', code: 0 };
+    };
+    expect((await reserved('alpha', () => run(host, 'alpha', 'git'))).exitCode).toBe(0);
+    expect(leaseSnapshot(host.policy as never)).toMatchObject({ runs: ['alpha'], quarantined: [{ k: 1, heldSlug: 'alpha' }] });
+    host.standIn.fault = () => null;
+    await waitUntil(() => leaseSnapshot(host.policy as never).runs.length === 0, 5_000, 'the slot to be freed');
+  }, 30_000);
+
+  test('(t) DEATH with no hello: the site’s unit list unreadable → held, quarantined; freed once PID 1 lists again (mutation: awaitDeath’s no-hello branch reads a null list as dead)', async () => {
+    const { leaseSnapshot } = await import('../src/drivers/confinement');
+    const host = await hostWith([['alpha', 1]]);
+    host.standIn.script = () => {
+      host.standIn.fault = verb => (verb === 'list-units' ? BUS_TIMEOUT : null);
+      return { kind: 'mute' };
+    };
+    const refused = await reserved('alpha', () => caught(() => run(host, 'alpha', 'git')));
+    expect(hasConfinementCode(refused, 'unit_refused')).toBe(true);
+    expect(leaseSnapshot(host.policy as never)).toMatchObject({ runs: ['alpha'], quarantined: [{ k: 1, heldSlug: 'alpha' }] });
+    host.standIn.fault = () => null;
+    await waitUntil(() => leaseSnapshot(host.policy as never).runs.length === 0, 5_000, 'the slot to be freed');
+  }, 30_000);
+
+  test('(u) a STOP PID 1 REFUSES (the polkit grant not in effect) is named — in the refusal and the quarantine — never an unexplained "still alive"', async () => {
+    const { leaseSnapshot } = await import('../src/drivers/confinement');
+    const host = await hostWith([['alpha', 1]]);
+    const leftover = host.standIn.plantLive(1, 'git');
+    host.standIn.fault = verb => (verb === 'stop' ? { code: 4, stderr: `Failed to stop ${leftover.name}: Access denied` } : null);
+    const refused = await reserved('alpha', () => caught(() => run(host, 'alpha', 'git')));
+    const message = String((refused as Error).message);
+    const reason = leaseSnapshot(host.policy as never).quarantined[0]?.reason ?? '';
+    expect({
+      code: hasConfinementCode(refused, 'identity_quarantined'),
+      refusedNamed: /REFUSED by PID 1 \(exit 4: Failed to stop .*Access denied\)/.test(message),
+      polkit: message.includes('polkit'),
+      quarantineNamed: reason.includes('Access denied'),
+      connects: host.standIn.connects.length,
+    }).toEqual({ code: true, refusedNamed: true, polkit: true, quarantineNamed: true, connects: 0 });
+  }, 30_000);
+
+  /**
+   * THE WORKSPACE BIND SOURCE. `ReadWritePaths=<SITES_ROOT>/<slug>` is resolved by PID 1 AS ROOT
+   * when it builds the unit's namespace, and SITES_ROOT is the service user's (2770): a link
+   * left where the workspace was would be bound read-write — any host directory, a /home the
+   * daemon's own unit hides included. conformance() compares only the string; this row holds
+   * the daemon's own lstat before it connects. (A COMPROMISED daemon skips its own check — the
+   * accepted residual in engineering/SITE_BUILDER_INSTANCES.md.)
+   */
+  test('(v) a workspace that is a SYMLINK (or not a directory) is refused before anything connects — typed, naming it; the real directory runs', async () => {
+    const host = await hostWith([['alpha', 1]]);
+    const workspace = workspacePath('alpha');
+    const elsewhere = shortScratch('elsewhere');
+    rmSync(workspace, { recursive: true, force: true });
+    symlinkSync(elsewhere, workspace);
+    try {
+      const refused = await reserved('alpha', () => caught(() => run(host, 'alpha', 'git')));
+      expect({
+        code: hasConfinementCode(refused, 'unavailable'),
+        named: /symbolic link/.test(String((refused as Error)?.message ?? '')),
+        connects: host.standIn.connects.length,
+      }).toEqual({ code: true, named: true, connects: 0 });
+      rmSync(workspace, { force: true });
+      writeFileSync(workspace, 'not a directory');
+      const file = await reserved('alpha', () => caught(() => run(host, 'alpha', 'git')));
+      expect({ code: hasConfinementCode(file, 'unavailable'), connects: host.standIn.connects.length }).toEqual({ code: true, connects: 0 });
+    } finally {
+      rmSync(workspace, { recursive: true, force: true });
+      mkdirSync(workspace, { recursive: true });
+    }
+    // Control: the real directory runs.
+    expect((await reserved('alpha', () => run(host, 'alpha', 'git'))).exitCode).toBe(0);
   }, 30_000);
 
   for (const [what, spelling] of [
@@ -921,8 +1065,53 @@ describe('G11 — boot: reconcile (from PID 1) → sweep → listen', () => {
         report: message => void seen.push(message),
       }),
     ).catch(error => seen.push(`boot threw: ${String(error)}`));
-    expect(seen).toEqual(['[boot] agent unit reconciliation failed:', 'sweep', 'listen']);
+    expect(seen).toEqual(['[boot] the confinement probe failed; every run asks again and refuses on failure:', '[boot] agent unit reconciliation failed:', 'sweep', 'listen']);
   });
+
+  /**
+   * A MISPROVISIONED HOST IS SAID AT BOOT. The boot probed the agent CLI and reconciled units, and
+   * never asked the host-level questions every run asks (`confinementProblems`): PID 1 below the
+   * floor or unreadable, no identity, an identity that does not resolve, the daemon outside a
+   * private group… — so such a host booted green and failed its first request. Never stops the
+   * boot; a provisioned host says nothing.
+   */
+  test('1c: a host that cannot confine is REPORTED before reconcile — naming why — and the boot still listens; a provisioned one says nothing', async () => {
+    const { bootSequence, daemonBootSteps } = await import('../src/boot');
+    for (const [what, options, needle] of [
+      ['PID 1 unreadable', { hostOverrides: { pid1Version: () => null } }, 'cannot be read'],
+      ['no site identity resolves', { hostOverrides: { resolveAgent: () => null } }, 'does not exist on this host'],
+      ['the daemon outside a private group', { hostOverrides: { ownGroups: () => [GATE_IDS.instanceGid] } }, 'not (yet) in the private group'],
+    ] as const) {
+      const host = await hostWith([['alpha', 1]], options);
+      const seen: string[] = [];
+      await bootSequence(
+        daemonBootSteps({
+          policy: () => host.policy as never,
+          preflight: () => {},
+          sweepOnBoot: async () => void seen.push('sweep'),
+          listen: async () => void seen.push('listen'),
+          report: (message, detail) => void seen.push(`${message} ${String(detail)}`),
+        }),
+      );
+      expect({ what, said: seen.some(line => line.startsWith('[boot] this host cannot run a confined agent run') && line.includes(needle)), tail: seen.slice(-2) }).toEqual({
+        what,
+        said: true,
+        tail: ['sweep', 'listen'],
+      });
+    }
+    const clean = await hostWith([['alpha', 1]]);
+    const said: string[] = [];
+    await bootSequence(
+      daemonBootSteps({
+        policy: () => clean.policy as never,
+        preflight: () => {},
+        sweepOnBoot: async () => {},
+        listen: async () => {},
+        report: message => void said.push(message),
+      }),
+    );
+    expect(said).toEqual([]);
+  }, 30_000);
 
   test('the daemon’s entry point boots and stops THROUGH the factories — it names neither the reconciler nor the refusal itself', () => {
     // index.ts is the process entry (top-level await, a bound server) and cannot be imported;

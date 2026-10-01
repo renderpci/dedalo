@@ -135,6 +135,12 @@ export interface SystemctlAnswer {
   readonly stderr: string;
 }
 
+/** What the fault seam makes one `systemctl` call do instead of answering. */
+export type SystemctlFault = 'throw' | { readonly code: number; readonly stderr: string } | { readonly drop: readonly string[] };
+
+/** A bus that times out, as `systemctlVia` reports it (a non-numeric error code → 1). */
+export const BUS_TIMEOUT: SystemctlFault = Object.freeze({ code: 1, stderr: 'Failed to connect to bus: Connection timed out' });
+
 export interface StandInOptions {
   /** The museum's agent unit prefix (`dedalo-site-<inst>-agent-`). */
   readonly prefix: string;
@@ -189,6 +195,16 @@ export class StandInHost {
    * idle proofs (the backstop for an instance its list does not see) is never exercised.
    */
   readonly connectionsOverride = new Map<string, number>();
+  /**
+   * WHEN PID 1 (or the bus between) DOES NOT ANSWER — the fault seam. Asked per `systemctl`
+   * call with its verb and units: `throw` (a D-Bus timeout the wrapper never resolved), a
+   * non-zero `{ code, stderr }` (what `systemctlVia` makes of a timeout, a polkit denial, a
+   * PID 1 busy reloading), or `{ drop }` — a `show` that answers WITHOUT the named properties.
+   * null = answer normally. Without it every verb answered code 0 with every property present,
+   * so no gate could put "PID 1 cannot say" in front of the lease (eight fail-open mutations
+   * of the idle and death proofs survived the whole suite).
+   */
+  fault: (verb: string, units: readonly string[]) => SystemctlFault | null = () => null;
 
   private readonly servers: Server[] = [];
   private nr = 0;
@@ -419,7 +435,13 @@ export class StandInHost {
       }
     }
     const [verb, ...units] = positional;
-    if (verb === 'show') return { code: 0, stdout: units.map(unit => this.show(unit, properties, valueOnly)).join('\n\n'), stderr: '' };
+    const fault = this.fault(String(verb), units);
+    if (fault === 'throw') throw new Error('stand-in systemctl: the bus never answered');
+    if (fault && 'code' in fault) return { code: fault.code, stdout: '', stderr: fault.stderr };
+    const dropped = fault && 'drop' in fault ? fault.drop : [];
+    if (verb === 'show') {
+      return { code: 0, stdout: units.map(unit => this.show(unit, properties, valueOnly, dropped)).join('\n\n'), stderr: '' };
+    }
     if (verb === 'list-units') {
       const lines: string[] = [];
       // Every live instance — and every DEAD one whose cgroup still holds a process, which
@@ -455,12 +477,17 @@ export class StandInHost {
     return { code: 1, stdout: '', stderr: `stand-in systemctl: verb '${verb}' is not one the daemon may use` };
   };
 
-  private show(unit: string, properties: readonly string[], valueOnly: boolean): string {
+  private show(unit: string, properties: readonly string[], valueOnly: boolean, dropped: readonly string[] = []): string {
     const all = this.propertiesOf(unit);
     const wanted = properties.length > 0 ? properties : Object.keys(all);
     return wanted
-      .filter(key => key in all)
-      .map(key => (valueOnly ? all[key] : `${key}=${all[key]}`))
+      .filter(key => key in all && !dropped.includes(key))
+      .flatMap(key => {
+        const value = all[key] as string;
+        // As systemctl-show.c prints them: a struct-array property ONE LINE PER ENTRY.
+        const entries = PER_ENTRY_PROPERTIES.has(key) ? value.split(/\s+/).filter(Boolean) : [value];
+        return (entries.length > 0 ? entries : ['']).map(entry => (valueOnly ? entry : `${key}=${entry}`));
+      })
       .join('\n');
   }
 
@@ -492,12 +519,24 @@ export class StandInHost {
   }
 }
 
-/** `systemctl show` text → map (last assignment wins). */
+/**
+ * The properties `systemctl show` prints ONE LINE PER ENTRY (systemctl-show.c print_property:
+ * the struct arrays `(ss)` / `(ssbt)`), where a string array is one space-joined line. The
+ * stand-in and the unit model print them that way, so a comparator that kept only a repeated
+ * key's last line is red here, as it would be on a real host.
+ */
+export const PER_ENTRY_PROPERTIES: ReadonlySet<string> = new Set(['TemporaryFileSystem', 'BindPaths', 'BindReadOnlyPaths']);
+
+/** `systemctl show` text → map; a REPEATED key (one line per entry) accumulates, space-joined. */
 export function parseShow(text: string): Record<string, string> {
   const out: Record<string, string> = {};
   for (const line of text.split('\n')) {
     const eq = line.indexOf('=');
-    if (eq > 0) out[line.slice(0, eq)] = line.slice(eq + 1);
+    if (eq <= 0) continue;
+    const key = line.slice(0, eq);
+    const value = line.slice(eq + 1);
+    const before = out[key];
+    out[key] = before === undefined || before === '' ? value : value === '' ? before : `${before} ${value}`;
   }
   return out;
 }
@@ -834,8 +873,12 @@ export function conformingShow(
     `PrivateIPC=yes`,
     ...(version >= 257 ? ['PrivatePIDs=yes'] : []),
     `ReadWritePaths=${workspace}`,
-    `TemporaryFileSystem=/run:ro /dev/shm:mode=1777,nosuid,nodev ${host.agentStateRoot}:ro /sys/fs/cgroup:ro`,
-    `InaccessiblePaths=-/var/lib/mysql -/var/lib/mariadb -/var/lib/pgsql -/var/lib/postgresql`,
+    // One line per entry, as systemctl-show.c prints a struct array.
+    `TemporaryFileSystem=/run:ro`,
+    `TemporaryFileSystem=/dev/shm:mode=1777,nosuid,nodev`,
+    `TemporaryFileSystem=${host.agentStateRoot}:ro`,
+    `TemporaryFileSystem=/sys/fs/cgroup:ro`,
+    `InaccessiblePaths=-/var/lib/mysql -/var/lib/mariadb -/var/lib/pgsql -/var/lib/postgresql${door === 'turn' ? ` ${workspace}/.git` : ''}`,
     `BindPaths=${binds}`,
     `BindReadOnlyPaths=${readOnlyBinds}`,
     `IPAddressDeny=0.0.0.0/0 ::/0`,

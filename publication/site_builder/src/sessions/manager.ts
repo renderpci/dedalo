@@ -402,7 +402,15 @@ export async function sweepOnBoot(): Promise<void> {
   const all = await allSessionMetaFiles();
   for (const { slug, sessionId } of all) {
     slugBySession.set(sessionId, slug);
-    const meta = await readMeta(slug, sessionId);
+    let meta: SessionMeta | null;
+    try {
+      meta = await readMeta(slug, sessionId);
+    } catch (error) {
+      // A PLANTED sidecar (a `.builder` a run recreated as its own, a link, a fifo) is refused —
+      // and is ONE site's incident: the sweep of every other site goes on.
+      console.error(`[sessions] boot sweep: the meta of session ${sessionId} of '${slug}' was refused:`, error);
+      continue;
+    }
     if (!meta) continue;
     // 'running' is a process that died mid-turn; `recovery_pending` a commit that was owed and
     // not recorded (sessions/events.ts). Both leave work only a recovery commit records.

@@ -157,7 +157,8 @@ async function standIn(
 ): Promise<GatePolicy> {
   const host = await lead1bPolicy({ identities: new Map(entries), ...options });
   hosts.push(host);
-  for (const [slug] of entries) mkdirSync(workspacePath(slug), { recursive: true });
+  // Each site's workspace — with its repository, which the TURN unit masks and does not start without.
+  for (const [slug] of entries) mkdirSync(join(workspacePath(slug), '.git'), { recursive: true });
   return host;
 }
 
@@ -1333,6 +1334,34 @@ describe('a workspace is created so the OTHER uid can actually work in it', () =
         // An absent file is `null` from both doors — an ordinary answer, never a refusal.
         expect(await readFilePrivate(dir, join('ws', '.builder', 'nope.json'))).toBeNull();
         expect(await readFileShared(dir, join('ws', 'nope.json'))).toBeNull();
+      });
+    });
+
+    /**
+     * THE DIRECTORY CHAIN IS THE DAEMON'S TOO. A build's postinstall or a git hook can
+     * `mv .builder .x` (a same-parent rename in the 2770 workspace) and recreate `.builder` as
+     * its own, then rename a daemon-owned single-linked file it could already write (`site.json`,
+     * 0660) into place as a session meta — `"driver":"opencode"` for a claude_code site, the
+     * PLANT bypass driver_record.ts closed. The file passes the file-level owner check; its
+     * directory does not. (A non-root suite cannot chown a directory to another uid: the seam
+     * states the owner the chain is read as.)
+     */
+    test('a private file in a directory this daemon does not own (a recreated .builder) is refused; the workspace level is not asked', async () => {
+      await underDaemonUmask(async dir => {
+        await mkdirShared(dir, 'ws');
+        await mkdirPrivate(dir, join('ws', '.builder', 'sessions'));
+        await writeFilePrivate(dir, join('ws', '.builder', 'sessions', 's.meta.json'), '{"driver":"opencode"}');
+        const foreignAt = (suffix: string) => (path: string, uid: number) => (path.endsWith(suffix) ? 4_242_424 : uid);
+        for (const level of ['/ws/.builder', '/ws/.builder/sessions']) {
+          await expect(
+            readFilePrivate(dir, join('ws', '.builder', 'sessions', 's.meta.json'), foreignAt(level)),
+          ).rejects.toBeInstanceOf(ForeignOwnerError);
+        }
+        // The workspace itself (depth 0, under a root no run can write) is shared by construction.
+        expect(await readFilePrivate(dir, join('ws', '.builder', 'sessions', 's.meta.json'), foreignAt('/ws'))).toBe('{"driver":"opencode"}');
+        // …and the SHARED door never asks.
+        await writeFileShared(dir, join('ws', 'site.json'), '{"slug":"x"}');
+        expect(await readFileShared(dir, join('ws', 'site.json'))).toBe('{"slug":"x"}');
       });
     });
 

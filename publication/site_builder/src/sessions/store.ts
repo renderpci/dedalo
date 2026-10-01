@@ -163,11 +163,21 @@ export async function readMeta(slug: string, sessionId: string): Promise<Session
   if (path === null) return null;
   const text = await readFilePrivate(config.SITES_ROOT, underSitesRoot(path));
   if (text === null) return null;
+  let meta: SessionMeta;
   try {
-    return JSON.parse(text) as SessionMeta;
+    meta = JSON.parse(text) as SessionMeta;
   } catch {
     return null;
   }
+  // A meta whose CONTENT names another session or another site is not this one's. The turn takes
+  // its slug from here (`runTurn` acts on, and persists into, `meta.slug`), so a sidecar saying
+  // `"slug":"other"` would have run a turn of the caller's session against ANOTHER site — and
+  // left the caller's own reservation held. Not this session: absent, as an unknown id is.
+  if (meta === null || typeof meta !== 'object' || meta.slug !== slug || meta.session_id !== sessionId) {
+    console.error(`[sessions] the meta sidecar at '${path}' names another session or site; it is not read as '${sessionId}'.`);
+    return null;
+  }
+  return meta;
 }
 
 /**

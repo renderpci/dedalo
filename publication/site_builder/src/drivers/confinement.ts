@@ -57,10 +57,10 @@
  */
 
 import { execFile, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readlinkSync, realpathSync, statSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readlinkSync, realpathSync, statSync } from 'node:fs';
 import { connect as netConnect, type Socket } from 'node:net';
 import { userInfo } from 'node:os';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { config } from '../config';
 import { openEgressGate, provisionedDirProblem, type EgressGate, type EgressGateOptions } from '../egress/gate';
 import { ConfinementRefusedError, ConfinementUnavailableError } from '../errors';
@@ -76,6 +76,7 @@ import {
   egressDirForSite,
   legacyTransientUnitGlob,
   legacyTransientUnitRegex,
+  turnMaskedPaths,
   unitFixedEnvironment,
 } from './agent_identity';
 import {
@@ -844,6 +845,23 @@ export async function confinementProblems(policy: ConfinementPolicy, door: Confi
 }
 
 /**
+ * EVERY REASON THIS HOST CANNOT CONFINE A RUN, ASKED AT BOOT — the union over the doors (a turn's
+ * provider plan is the per-run question: it depends on the site's driver). Empty under `none`.
+ * Never cached: each run asks `confinementProblems` again and refuses; this only SAYS it before
+ * the first request (`src/boot.ts` step 1c), so a misprovisioned host — a site added and the env
+ * hand-edited without a restart, a group membership the daemon has not picked up — is a boot line
+ * instead of a host that boots green and fails every run.
+ */
+export async function bootConfinementProblems(policy: ConfinementPolicy = policyFromConfig()): Promise<string[]> {
+  if (policy.mode !== 'systemd_scope') return [];
+  const out: string[] = [];
+  for (const door of DOORS) {
+    for (const problem of await confinementProblems(policy, door)) if (!out.includes(problem)) out.push(problem);
+  }
+  return out;
+}
+
+/**
  * NO OTHER PRINCIPAL SHARES A SITE'S UID OR ITS PRIVATE GROUP — host-wide, not only among this
  * instance's identities. A uid another account holds (another museum's identity after a merged
  * or restored /etc/passwd, an NSS/LDAP entry, `usermod -o -u`, `nobody`) is ONE principal to the
@@ -948,11 +966,24 @@ function egressFactsFor(policy: ConfinementPolicy, driver: DriverId | undefined)
  * PID 1's state — the one authority on whether a run is alive
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
-function parseShow(text: string): Record<string, string> {
+/**
+ * `systemctl show` text → property map, with a REPEATED key ACCUMULATED (space-joined), never
+ * last-wins. `systemctl show` prints a struct-array property ONE LINE PER ENTRY
+ * (systemctl-show.c: `TemporaryFileSystem=`, `BindPaths=`, `BindReadOnlyPaths=`, each
+ * `ExecStart=` command) and a string array on one line; both spellings parse to the same set.
+ * Last-wins kept only the final entry: every agent unit's four tmpfs entries read as one, and
+ * every confined run of a real 252/255 host would have been refused `TemporaryFileSystem` — and
+ * a second `ExecStart=` record would have been read as the only one.
+ */
+export function parseShow(text: string): Record<string, string> {
   const out: Record<string, string> = {};
   for (const line of text.split('\n')) {
     const eq = line.indexOf('=');
-    if (eq > 0) out[line.slice(0, eq)] = line.slice(eq + 1);
+    if (eq <= 0) continue;
+    const key = line.slice(0, eq);
+    const value = line.slice(eq + 1);
+    const before = out[key];
+    out[key] = before === undefined || before === '' ? value : value === '' ? before : `${before} ${value}`;
   }
   return out;
 }
@@ -1052,12 +1083,34 @@ async function idleState(policy: ConfinementPolicy, k: number): Promise<{ idle: 
   };
 }
 
-async function stopUnit(policy: ConfinementPolicy, unit: string): Promise<void> {
+/**
+ * ASK PID 1 TO STOP `unit` — and KEEP its answer. null when PID 1 accepted the stop; otherwise
+ * what it said, for the quarantine reason and the log.
+ *
+ * The answer used to be thrown away, so a stop the polkit grant did not cover (the rule file
+ * deleted, polkitd masked or crashed, a host where `pkaction` exists and no polkitd runs) was
+ * DENIED on every call while the only symptom was an unexplained `identity_quarantined` — "still
+ * alive after it was asked to stop" — for as long as RuntimeMaxSec let the unit live. A refused
+ * stop is now named where the operator reads: the refusal, the quarantine, the log.
+ */
+async function stopUnit(policy: ConfinementPolicy, unit: string): Promise<string | null> {
+  let answer: SystemctlAnswer;
   try {
-    await policy.host.systemctl(['stop', unit]);
-  } catch {
+    answer = await policy.host.systemctl(['stop', unit]);
+  } catch (error) {
     // Unanswered is not a pass: the caller re-probes, and a unit still alive quarantines.
+    const refusal = `the stop of ${unit} got no answer from PID 1 (${String(error)})`;
+    console.error(`[confinement] ${refusal}`);
+    return refusal;
   }
+  if (answer.code === 0) return null;
+  const said = answer.stderr.trim() || answer.stdout.trim() || '(no message)';
+  const authorization = /access denied|not authorized|interactive authentication required/i.test(said)
+    ? ` — is the polkit rule provision apply renders (/etc/polkit-1/rules.d/) present and polkitd running? It is what grants this daemon STOP on its sites' runs`
+    : '';
+  const refusal = `the stop of ${unit} was REFUSED by PID 1 (exit ${answer.code}: ${said})${authorization}`;
+  console.error(`[confinement] ${refusal}`);
+  return refusal;
 }
 
 const sleep = (ms: number) => new Promise<void>(resolveSleep => setTimeout(resolveSleep, ms));
@@ -1193,7 +1246,11 @@ export async function proveIdle(policy: ConfinementPolicy, k: number): Promise<v
   const timing = timingOf(policy);
   let probe = await idleState(policy, k);
   if (probe.idle) return;
-  for (const unit of probe.live) await stopUnit(policy, unit);
+  const refusals: string[] = [];
+  for (const unit of probe.live) {
+    const refusal = await stopUnit(policy, unit);
+    if (refusal) refusals.push(refusal);
+  }
   const deadline = Date.now() + timing.reprobeWindowMs;
   for (;;) {
     probe = await idleState(policy, k);
@@ -1201,7 +1258,8 @@ export async function proveIdle(policy: ConfinementPolicy, k: number): Promise<v
     if (Date.now() >= deadline) break;
     await sleep(timing.pollMs);
   }
-  const reason = `a run is still alive after it was asked to stop (${probe.why})`;
+  const reason =
+    `a run is still alive after it was asked to stop (${probe.why})` + (refusals.length > 0 ? `; ${refusals.join('; ')}` : '');
   quarantine(policy, k, reason);
   throw new ConfinementRefusedError(
     'identity_quarantined',
@@ -1238,7 +1296,12 @@ export async function reconcileAgentUnits(policy: ConfinementPolicy = policyFrom
  * that still hold a process included. Past the grace the instance is stopped (awaited) and
  * re-probed.
  */
-async function awaitDeath(policy: ConfinementPolicy, k: number, door: ConfinementDoor, instance: string | null): Promise<boolean> {
+async function awaitDeath(
+  policy: ConfinementPolicy,
+  k: number,
+  door: ConfinementDoor,
+  instance: string | null,
+): Promise<{ readonly dead: true } | { readonly dead: false; readonly stopRefused: string | null }> {
   const timing = timingOf(policy);
   const dead = async (): Promise<boolean> => {
     if (instance) {
@@ -1256,17 +1319,22 @@ async function awaitDeath(policy: ConfinementPolicy, k: number, door: Confinemen
   };
   const grace = Date.now() + timing.deathGraceMs;
   for (;;) {
-    if (await dead()) return true;
+    if (await dead()) return { dead: true };
     if (Date.now() >= grace) break;
     await sleep(Math.min(timing.pollMs, 50));
   }
-  if (instance) await stopUnit(policy, instance);
+  const stopRefused = instance ? await stopUnit(policy, instance) : null;
   const window = Date.now() + timing.reprobeWindowMs;
   for (;;) {
-    if (await dead()) return true;
-    if (Date.now() >= window) return false;
+    if (await dead()) return { dead: true };
+    if (Date.now() >= window) return { dead: false, stopRefused };
     await sleep(timing.pollMs);
   }
+}
+
+/** The quarantine reason of a run that did not die, with PID 1's refused stop if there was one. */
+function undeadReason(base: string, death: { readonly dead: false; readonly stopRefused: string | null }): string {
+  return death.stopRefused ? `${base}; ${death.stopRefused}` : base;
 }
 
 /* ────────────────────────────────────────────────────────────────────────────────────
@@ -1576,8 +1644,11 @@ export async function conformance(k: number, door: ConfinementDoor, policy: Conf
   if (!sameSet(tmpfs, ['/run:ro', '/dev/shm:mode=1777,nosuid,nodev', `${policy.agentStateRoot}:ro`, CGROUPFS_MASK])) {
     refuse('TemporaryFileSystem', `loaded '${svc.TemporaryFileSystem ?? ''}'`);
   }
-  if (!sameSet(words(svc.InaccessiblePaths), DATABASE_SOCKET_DIRS.map(dir => `-${dir}`))) {
-    refuse('InaccessiblePaths', `loaded '${svc.InaccessiblePaths ?? ''}'`);
+  // The database sockets on every door — and on the TURN door its workspace's repository
+  // (`turnMaskedPaths`: the agent CLI's own git must find no `.git` to run a planted filter from).
+  const masked = [...DATABASE_SOCKET_DIRS.map(dir => `-${dir}`), ...(door === 'turn' ? turnMaskedPaths(workspace) : [])];
+  if (!sameSet(words(svc.InaccessiblePaths), masked)) {
+    refuse('InaccessiblePaths', `loaded '${svc.InaccessiblePaths ?? ''}', expected '${masked.join(' ')}'`);
   }
   const expectedBinds = proxy ? [`${agentHomeFor(policy.agentStateRoot, k, door)}:${agentHomeFor(policy.agentStateRoot, k, door)}`] : [];
   if (!sameSet(bindPairs(svc.BindPaths), expectedBinds)) {
@@ -1790,6 +1861,40 @@ function declaredUnconfined(opts: ConfineOptions, policy: ConfinementPolicy): Co
   };
 }
 
+/**
+ * WHY THE WORKSPACE IS NOT WHAT `ReadWritePaths=` MUST BIND, or null: a real directory (lstat —
+ * never a symlink, never another kind of file) whose resolved path is `<real SITES_ROOT>/<slug>`.
+ *
+ * The same class §2.7 closed for the egress directory: a bind source PID 1 resolves as root
+ * that a non-root uid could re-point. `SITES_ROOT` is the service user's (2770), so its uid can
+ * rename `<slug>` and leave a link in its place; PID 1 would then bind the link's TARGET
+ * read-write, before the shim runs. HONEST LIMIT: this is the daemon checking itself, so it
+ * catches a stray rename by anything of the service uid and a daemon bug — not a COMPROMISED
+ * daemon, which skips its own check. That residual is stated in
+ * engineering/SITE_BUILDER_INSTANCES.md (accepted residuals); closing it needs root-provisioned
+ * per-site mount sources, and sites are created at runtime.
+ */
+export function workspaceDirProblem(workspace: string, sitesRoot: string = config.SITES_ROOT): string | null {
+  let facts: ReturnType<typeof lstatSync>;
+  try {
+    facts = lstatSync(workspace);
+  } catch {
+    return 'it does not exist';
+  }
+  if (facts.isSymbolicLink()) return 'it is a symbolic link (PID 1 would bind its target)';
+  if (!facts.isDirectory()) return 'it is not a directory';
+  let real: string;
+  let rootReal: string;
+  try {
+    real = realpathSync(workspace);
+    rootReal = realpathSync(sitesRoot);
+  } catch (error) {
+    return `it cannot be resolved (${String(error)})`;
+  }
+  const expected = join(rootReal, relative(resolve(sitesRoot), resolve(workspace)));
+  return real === expected ? null : `it resolves to '${real}', not '${expected}'`;
+}
+
 /** Read frames off `socket` until one arrives (or it ends / times out). */
 function firstFrame(socket: Socket, decoder: FrameDecoder, timeoutMs: number): Promise<{ type: string; payload: Uint8Array; rest: Array<{ type: string; payload: Uint8Array }> } | null> {
   return new Promise(resolveFrame => {
@@ -1894,6 +1999,30 @@ async function openConfinedRun(opts: ConfineOptions, policy: ConfinementPolicy):
     // 3. CHECKED against what PID 1 loaded.
     const { warnings } = await conformance(k, door, policy);
     for (const warning of warnings) console.warn(`[confinement] ${warning}`);
+    // …and the ONE bind source the daemon's uid could still swap: `ReadWritePaths=` names the
+    // workspace, and PID 1 follows a symlink there AS ROOT when it builds the unit's namespace.
+    const swapped = workspaceDirProblem(workspace);
+    if (swapped) {
+      throw new ConfinementUnavailableError(
+        `site '${slug}''s workspace '${workspace}' is not the real directory the unit binds: ${swapped}. PID 1 ` +
+          `resolves ReadWritePaths= as root, so it would bind whatever this names read-write into the run. ` +
+          `Nothing was opened.`,
+      );
+    }
+    // …and a TURN's masked repository must EXIST: the unit masks it with no `-` (PID 1 refuses
+    // to start the unit without it), because a turn in a workspace with no `.git` could Write one
+    // that its own CLI's next git reads. Refused here first, typed, before anything connects.
+    if (door === 'turn') {
+      for (const path of turnMaskedPaths(workspace)) {
+        if (!existsSync(path)) {
+          throw new ConfinementUnavailableError(
+            `site '${slug}''s workspace has no repository at '${path}' (absent, or a link to nothing). The turn unit ` +
+              `masks it so the agent CLI's own git cannot run a planted filter, and does not start without it. ` +
+              `Restore the site's repository (it is created with the site). Nothing was opened.`,
+          );
+        }
+      }
+    }
     // 4. GATED — the site's own ROOT-PROVISIONED directory (the source of a bind PID 1
     // resolves as root: nothing this daemon's uid could re-point), its private group, before
     // anything is served.
@@ -1987,8 +2116,9 @@ async function openConfinedRun(opts: ConfineOptions, policy: ConfinementPolicy):
     }
     if (socket) {
       // A connection was made: the site is released only on proven death.
-      if (await awaitDeath(policy, k, door, null)) release();
-      else quarantine(policy, k, `the unit that refused the run did not die`, slug);
+      const death = await awaitDeath(policy, k, door, null);
+      if (death.dead) release();
+      else quarantine(policy, k, undeadReason(`the unit that refused the run did not die`, death), slug);
     } else {
       // Nothing reached PID 1 from this run: its slot is free (a quarantine, if proveIdle set
       // one, is what holds the identity).
@@ -2078,6 +2208,8 @@ function relay(
       // EOF is the shim's signal to end its child (SIGTERM, then SIGKILL); PID 1 is asked too,
       // through the rule's stop grant, because a stop must not depend on the unit cooperating.
       socket.destroy();
+      // A refused stop is logged by stopUnit and named again by cleanup's quarantine if the
+      // unit then outlives its connection.
       await stopUnit(run.policy, run.instance);
     },
     cleanup() {
@@ -2089,8 +2221,9 @@ function relay(
         } catch (error) {
           closeError = error;
         }
-        if (await awaitDeath(run.policy, run.k, run.door, run.instance)) run.release();
-        else quarantine(run.policy, run.k, `its ${run.door} run (${run.instance}) outlived its connection`, run.slug);
+        const death = await awaitDeath(run.policy, run.k, run.door, run.instance);
+        if (death.dead) run.release();
+        else quarantine(run.policy, run.k, undeadReason(`its ${run.door} run (${run.instance}) outlived its connection`, death), run.slug);
         if (closeError) throw closeError;
       })();
       return cleaned;

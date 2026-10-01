@@ -28,7 +28,7 @@ Other changes:
 
 **Action needed:** as root, run `provision apply` for every instance before the updated daemon starts, or in the same maintenance window as the code update. This includes an update installed from within the application.
 
-- The daemon no longer starts while its environment still sets `AGENT_USER`, `AGENT_HOME` or `SYSTEMD_RUN_BIN`. `provision apply` removes those keys and writes `AGENT_IDENTITIES`, `AGENT_SOCKET_DIR`, `AGENT_STATE_ROOT`, `SYSTEMCTL_BIN` and `AGENT_IDENTITY_EPOCH`.
+- The daemon no longer starts while its environment still sets `AGENT_USER`, `AGENT_HOME` or `SYSTEMD_RUN_BIN`. `provision apply` removes those keys and writes `AGENT_IDENTITIES`, `AGENT_SOCKET_DIR`, `AGENT_STATE_ROOT` and `AGENT_IDENTITY_EPOCH`. It does not write `SYSTEMCTL_BIN`: the daemon uses `/usr/bin/systemctl` unless that key is set, so set it by hand only on a host where `systemctl` is somewhere else.
 - The first run of `provision apply` stops the daemon, gives each site's files that the old agent user wrote to the site's new user, installs the units, and starts the daemon again.
 - It also opens to the instance group the files and directories in each existing workspace that are owned by the service user, except `.builder/`. Sites created before 2026-09-05 have these: back then turns and `git` ran as the service user and left `.git` closed to the group, so the site's new user could not commit. The service user keeps owning them.
 - It locks the old agent user without deleting it.

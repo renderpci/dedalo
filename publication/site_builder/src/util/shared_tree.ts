@@ -217,7 +217,7 @@ export class ForeignOwnerError extends Error {
     readonly uid: number,
   ) {
     super(
-      `shared_tree: refusing '${path}': the file is owned by uid ${uid}, not by this ` +
+      `shared_tree: refusing '${path}': it is owned by uid ${uid}, not by this ` +
         `daemon. Everything this module writes it creates itself, so a file under another ` +
         `uid was put there by the agent; writing into it would hand it the body and leave ` +
         `the mode its own. Nothing was written or read.`,
@@ -301,15 +301,49 @@ async function mkdirLevel(path: string, mode: number): Promise<void> {
   await chmodHandle(path, FS.O_RDONLY | FS.O_DIRECTORY, mode);
 }
 
-/** Walk (without creating) every directory component below `root`, refusing a link. */
-async function assertRealChain(root: string, segments: readonly string[]): Promise<void> {
+/**
+ * Walk (without creating) every directory component below `root`, refusing a link — and, with
+ * `ownedFrom`, refusing a component at or past that depth that is not THIS daemon's inode.
+ */
+async function assertRealChain(
+  root: string,
+  segments: readonly string[],
+  ownedFrom = Number.POSITIVE_INFINITY,
+  ownerOf: OwnerSeam = (_path, uid) => uid,
+): Promise<void> {
   let path = resolve(root);
-  for (const segment of segments) {
+  for (const [depth, segment] of segments.entries()) {
     path = join(path, segment);
     const handle = await openNoFollow(path, FS.O_RDONLY | FS.O_DIRECTORY);
-    await handle.close();
+    try {
+      if (depth >= ownedFrom) {
+        const uid = ownerOf(path, (await handle.stat()).uid);
+        if (uid !== process.getuid?.()) throw new ForeignOwnerError(path, uid);
+      }
+    } finally {
+      await handle.close();
+    }
   }
 }
+
+/**
+ * WHERE THE DAEMON'S OWN WORD STARTS IN A CHAIN — the depth from which `readFilePrivate` requires
+ * every directory to be the daemon's inode. Depth 0 (`<slug>`, or `.driver_records`) is a direct
+ * child of the trusted root: no run can rename or create one there (the root is read-only in
+ * every agent unit), and a workspace is shared by construction. Everything BELOW it is in a
+ * directory a run CAN write: a build's postinstall or a git hook can `mv .builder .x` (a
+ * same-parent rename needs no permission on the renamed directory) and recreate `.builder` as
+ * its own — then rename a daemon-owned, single-linked file it could already write (`site.json`,
+ * 0660) into place as `.builder/sessions/<sid>.meta.json`. The file passes the file-level
+ * owner check; the directory above it does not.
+ */
+const PRIVATE_CHAIN_OWNED_FROM = 1;
+
+/**
+ * A GATE'S SEAM for the owner a directory of the chain is read as — a non-root suite cannot make
+ * a directory another uid's. Production never passes one (the owner is the inode's).
+ */
+export type OwnerSeam = (path: string, uid: number) => number;
 
 async function ensureDir(root: string, relative: string, mode: number | ((segment: string) => number)): Promise<string> {
   const { target, segments } = segmentsUnder(root, relative);
@@ -538,10 +572,10 @@ export async function appendFilePrivate(
  * Every reader, not only the bounded one: a fifo at `site.json` or at a session meta parks a
  * blocking read-open until a writer comes, exactly as it parks the write side.
  */
-async function openForRead(root: string, relative: string, requireOwn: boolean): Promise<FileHandle | null> {
+async function openForRead(root: string, relative: string, requireOwn: boolean, ownerOf?: OwnerSeam): Promise<FileHandle | null> {
   const { target, segments } = segmentsUnder(root, relative);
   try {
-    await assertRealChain(root, segments.slice(0, -1));
+    await assertRealChain(root, segments.slice(0, -1), requireOwn ? PRIVATE_CHAIN_OWNED_FROM : Number.POSITIVE_INFINITY, ownerOf);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
     throw error;
@@ -618,8 +652,9 @@ async function readThroughHandle(
   root: string,
   relative: string,
   requireOwn: boolean,
+  ownerOf?: OwnerSeam,
 ): Promise<string | null> {
-  const handle = await openForRead(root, relative, requireOwn);
+  const handle = await openForRead(root, relative, requireOwn, ownerOf);
   if (handle === null) return null;
   try {
     return await handle.readFile('utf8');
@@ -640,9 +675,12 @@ export async function readFileShared(root: string, relative: string): Promise<st
   return readThroughHandle(root, relative, false);
 }
 
-/** Read one of the DAEMON's OWN files back: link-free, single-named, and its own inode. */
-export async function readFilePrivate(root: string, relative: string): Promise<string | null> {
-  return readThroughHandle(root, relative, true);
+/**
+ * Read one of the DAEMON's OWN files back: link-free, single-named, its own inode — in its own
+ * directories (every component below the root's first level the daemon's: PRIVATE_CHAIN_OWNED_FROM).
+ */
+export async function readFilePrivate(root: string, relative: string, ownerSeam?: OwnerSeam): Promise<string | null> {
+  return readThroughHandle(root, relative, true, ownerSeam);
 }
 
 /**

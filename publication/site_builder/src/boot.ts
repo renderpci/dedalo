@@ -6,6 +6,12 @@
  *      so when one a turn needs is missing (drivers/claude_code.ts bootProbeClaudeCli): every
  *      Claude Code turn is then refused, typed, per request. Never stops the boot (another
  *      driver may run), never writes.
+ *   1c. PROBE THE HOST'S CONFINEMENT — every reason this host cannot run a confined run through
+ *      a door (PID 1 below the floor or unreadable, AGENT_IDENTITIES empty, an identity that does
+ *      not resolve or is in the wrong groups, the daemon not in a private group, an untrustworthy
+ *      shim or runtime…), SAID at boot (drivers/confinement.ts bootConfinementProblems). Each
+ *      run asks again and refuses; this makes a misprovisioned host a boot line instead of a
+ *      host that boots green and fails its first request. Never stops the boot, never writes.
  *   2. RECONCILE — ask PID 1 whether any agent run of this museum's site identities is still
  *      alive (a killed daemon's `BindsTo=` stop that has not finished, a unit that will not
  *      die), and QUARANTINE any identity that is — rebuilt from PID 1's state, never from
@@ -23,12 +29,14 @@
  * hands over what it alone owns (the preflight, the sweep, the listener, the drain).
  */
 
-import { type ConfinementPolicy, reconcileAgentUnits, stopOpeningRuns } from './drivers/confinement';
+import { bootConfinementProblems, type ConfinementPolicy, reconcileAgentUnits, stopOpeningRuns } from './drivers/confinement';
 
 export interface BootSteps {
   readonly preflight: () => void | Promise<void>;
   /** Optional: the agent-CLI probe (absent in a gate that does not state one). */
   readonly probeAgentCli?: () => void | Promise<void>;
+  /** Optional: the host's confinement probe (absent in a gate that does not state one). */
+  readonly probeConfinement?: () => void | Promise<void>;
   readonly reconcileAgentUnits: () => void | Promise<void>;
   readonly sweepOnBoot: () => void | Promise<void>;
   readonly listen: () => void | Promise<void>;
@@ -38,6 +46,7 @@ export interface BootSteps {
 export async function bootSequence(steps: BootSteps): Promise<void> {
   await steps.preflight();
   await steps.probeAgentCli?.();
+  await steps.probeConfinement?.();
   await steps.reconcileAgentUnits();
   await steps.sweepOnBoot();
   await steps.listen();
@@ -55,6 +64,11 @@ export interface DaemonBootDeps {
    * runnable). Production: `bootProbeClaudeCli`.
    */
   readonly probeAgentCli?: () => Promise<readonly string[]>;
+  /**
+   * The host's confinement problems (empty = every door can run). Default: the confinement's own
+   * questions of `policy()` (`bootConfinementProblems`).
+   */
+  readonly probeConfinement?: () => Promise<readonly string[]>;
   /** Where a failed step is reported (production: console.error). */
   readonly report?: (message: string, error: unknown) => void;
 }
@@ -84,6 +98,16 @@ export function daemonBootSteps(deps: DaemonBootDeps): BootSteps {
           },
         }
       : {}),
+    probeConfinement: async () => {
+      try {
+        const problems = await (deps.probeConfinement ?? (() => bootConfinementProblems(deps.policy())))();
+        if (problems.length > 0) {
+          report('[boot] this host cannot run a confined agent run; every run will be refused (confinement_unavailable):', problems.join(' '));
+        }
+      } catch (error) {
+        report('[boot] the confinement probe failed; every run asks again and refuses on failure:', error);
+      }
+    },
     reconcileAgentUnits: async () => {
       try {
         await reconcileAgentUnits(deps.policy());

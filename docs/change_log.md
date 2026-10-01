@@ -20,6 +20,7 @@ Merged since the last release; these ship with the next one.
     - Every AI request now counts against a daily budget per user, and generated answers need their own permission.
     - The site builder's Claude Code agent no longer loads configuration from the site's own files, and refuses a Claude Code that cannot be told not to.
     - The site builder's agent can no longer choose its own agent program, read another site's activity, or stall a turn with a planted brief.
+    - A site's AI turn no longer runs commands planted in the site's git settings, and the site builder says why it refuses a run.
     - The site builder runs each site's AI agent as that site's own system user, from units that root installs. systemd 248 is now enough, and `provision apply` must run before the updated daemon starts.
     - Only profiles granted the assistant tool can use the assistant.
     - The site builder can no longer start its agent units through polkit
@@ -373,6 +374,17 @@ Merged since the last release; these ship with the next one.
     - **An unusable Claude Code is reported, not hidden.** A Claude Code binary the site builder cannot run (missing, not executable, or under `/home`, which the site builder's service cannot see) was a generic, retryable error. It is now refused with "cannot run its agent safely on this server", naming the binary. A Claude Code check that fails once on a busy server, for example by timing out, is asked again at the next turn. It no longer refuses every turn until the site builder restarts.
     - **Unsaved agent work is no longer lost to a failed save.** After each turn the site builder saves the agent's work as a restore point. When that save failed for any reason other than the site builder shutting down, or when the restart's own recovery save failed or had to wait, the work was left unsaved and never retried. The next turn then saved it under its own name. Any save that did not happen is now retried at every start of the site builder until it succeeds.
 
+- **A site's AI turn no longer runs commands planted in the site's git settings, and the site builder says why it refuses a run.** *(action needed)*
+
+    Six gaps around the site builder's confined agent are closed.
+
+    - **A turn no longer runs commands planted in the site's git settings.** Claude Code runs `git` itself when a turn starts. It switches off git's hooks for that, but not its content filters. A build script, a git hook or the agent itself could add a filter to the site's `.git/config`, and the next turn then ran that filter's command as the site's user, with the AI provider's key and the museum connection. Setting git's own environment variables does not help: Claude Code removes them. Each turn now runs with the site's `.git` folder hidden, so no `git` the turn starts finds a repository. **Action needed:** run `provision apply` after updating. Until the units are re-rendered, the site builder finds them different from what it expects and refuses every turn. A site whose folder has no `.git` is now refused a turn, with a message that names the missing folder.
+    - **The site builder reads systemd's answers correctly on Ubuntu 24.04 and Debian 12.** systemd prints some settings, such as `TemporaryFileSystem=`, as one line per entry. The site builder kept only the last line, so on those systems it would have refused every agent run as "not what this daemon expects". It now reads every line.
+    - **"systemd cannot say" never frees a site.** When systemd does not answer a question about a run (a timeout, a D-Bus or polkit error, an answer with a value missing), the site stays held until systemd answers. It is never treated as finished or idle.
+    - **A refused stop is named.** When systemd refuses to stop a run, for example because the polkit rule is missing or polkitd is not running, the refusal and the site's "unavailable" message now quote systemd's answer and point at the polkit rule.
+    - **A host that cannot confine runs says so at start.** The site builder now checks the host when it starts: the systemd version, each site's user and groups, and the files a run starts from. If something is wrong, it writes the reason to its log at start, instead of failing the first request. It still starts, and refuses each run until the host is fixed.
+    - **Session records and site folders are checked before a run.** A session's saved settings are used only if they name that same session and site, and only from folders the site builder created itself. A site folder that has been replaced by a link is refused before any run starts.
+
 - **The site builder runs each site's AI agent as that site's own system user, from units that root installs. systemd 248 is now enough, and `provision apply` must run before the updated daemon starts.** *(action needed)*
 
     Until now, every site of a museum ran its AI turns, builds and `git` commands as one agent user, so one site's run could read or change another site's agent state. The daemon also asked systemd to start those runs itself, which the previous release had to stop allowing (see the entry on the narrowed polkit rule).
@@ -398,7 +410,7 @@ Merged since the last release; these ship with the next one.
 
     **Action needed:** as root, run `provision apply` for every instance before the updated daemon starts, or in the same maintenance window as the code update. This includes an update installed from within the application.
 
-    - The daemon no longer starts while its environment still sets `AGENT_USER`, `AGENT_HOME` or `SYSTEMD_RUN_BIN`. `provision apply` removes those keys and writes `AGENT_IDENTITIES`, `AGENT_SOCKET_DIR`, `AGENT_STATE_ROOT`, `SYSTEMCTL_BIN` and `AGENT_IDENTITY_EPOCH`.
+    - The daemon no longer starts while its environment still sets `AGENT_USER`, `AGENT_HOME` or `SYSTEMD_RUN_BIN`. `provision apply` removes those keys and writes `AGENT_IDENTITIES`, `AGENT_SOCKET_DIR`, `AGENT_STATE_ROOT` and `AGENT_IDENTITY_EPOCH`. It does not write `SYSTEMCTL_BIN`: the daemon uses `/usr/bin/systemctl` unless that key is set, so set it by hand only on a host where `systemctl` is somewhere else.
     - The first run of `provision apply` stops the daemon, gives each site's files that the old agent user wrote to the site's new user, installs the units, and starts the daemon again.
     - It also opens to the instance group the files and directories in each existing workspace that are owned by the service user, except `.builder/`. Sites created before 2026-09-05 have these: back then turns and `git` ran as the service user and left `.git` closed to the group, so the site's new user could not commit. The service user keeps owning them.
     - It locks the old agent user without deleting it.

@@ -1301,8 +1301,12 @@ still decided by the site identity's DAC, which grants it nothing the compromise
 could not already write through the shared instance group. Every other path PID 1 resolves
 for an agent unit is root's: the socket directory, the egress directories, the agent state
 root and each site's state directory (`s<k>`, root 0755; only the door HOMEs inside are the
-identity's). What would close it: a root-owned per-site workspace directory, which moves site
-creation into `provision apply`.
+identity's). The daemon checks the workspace before every connect (`workspaceDirProblem`,
+`drivers/confinement.ts`: a real directory, never a link, resolving to `<real SITES_ROOT>/<slug>`;
+G10 (v)) — which stops a stray swap by anything else of the service uid and a daemon bug, and by
+construction NOT a compromised daemon, which skips its own check: that case is this residual.
+What would close it: a root-owned per-site workspace directory, which moves site creation into
+`provision apply`.
 
 **8. Below systemd 254, a daemon CRASH does not stop its runs through `BindsTo=`.** The daemon
 unit is `Restart=always`. Before 254 (no `RestartMode=`, no failed-before-auto-restart state) a
@@ -1333,7 +1337,12 @@ renderer and the comparator cannot drift apart on a key both spell alike (M33: a
 rendered on the git door is red) — and the same capture is what would let the widening check
 become an ALLOWLIST (every key PID 1 reports set is rendered or a known default); today
 `UNIT_UNSET_WIDENING` is a denylist, and a widening key a future systemd adds is not on it.
-The live leg is 255-ONLY: Debian 12 and RHEL 9 (252) are supported on the strength of the
+One spelling is no longer assumed: `systemctl show` prints a struct-array property
+(`TemporaryFileSystem=`, `BindPaths=`, `BindReadOnlyPaths=`, each `ExecStart=` command) ONE LINE
+PER ENTRY, and the comparator's parser ACCUMULATES a repeated key (last-wins read every agent
+unit's four tmpfs entries as one — every confined run of a real host refused); the stand-in and
+the unit model print those keys per entry, so the round trip is red on a last-wins parser. The
+live leg is 255-ONLY: Debian 12 and RHEL 9 (252) are supported on the strength of the
 floor, and no 252 host has run the probe — its `systemctl show` spellings, its instance-name
 grammar and its `TasksCurrent` for a pruned cgroup are the 255 model's, unmeasured on 252. A
 252 run of the probe, committed as a second capture beside the 255 one, is what closes that half.

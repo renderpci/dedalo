@@ -69,6 +69,7 @@ import {
   agentSocketPath,
   agentUnitNames,
   egressDirForSite,
+  turnMaskedPaths,
   unitFixedEnvironment,
 } from '../../drivers/agent_identity';
 import { CGROUPFS_MASK, DOOR_PROFILE, DOORS, type ConfinementDoor, unitNetworkProperties } from '../../drivers/network_profile';
@@ -299,6 +300,13 @@ export const agentUnitsRenderer: Renderer = {
           `TemporaryFileSystem=${CGROUPFS_MASK}`,
           ...(door === 'git' ? [] : [`BindPaths=${unitPath('the door HOME', agentHomeFor(stateRoot, k, door))}`]),
           ...network.map(networkLine),
+          ...(door === 'turn'
+            ? [
+                `# THE TURN'S OWN git SEES NO REPOSITORY: the agent CLI runs git itself and would run a`,
+                `# planted .git/config filter (no '-': a workspace without .git does not start a turn).`,
+                `InaccessiblePaths=${turnMaskedPaths(workspace).map(path => unitPath('the turn-masked repository', path)).join(' ')}`,
+              ]
+            : []),
           `MemoryMax=${memoryMax}`,
           `CPUQuota=${cpuQuota}`,
           `TasksMax=${caps.tasksMax}`,

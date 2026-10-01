@@ -19,11 +19,13 @@
  * the next one cannot be added without a decision about what it runs as.
  *
  *   §1 THE CENSUS. Every file under `publication/site_builder/src/` that can start a process —
- *      derived from its IMPORTS (`child_process`, `cluster`, `bun`, `bun:ffi`) and its
+ *      derived from its IMPORTS (`child_process`, `cluster`, `bun`, `bun:ffi`, `module`) and its
  *      scope-resolved references (aliases, namespaces, the `Bun` global, `Bun.$`), never from a
  *      call's spelling — with a floor; each one an enumerated exemption carrying its reason
- *      and its EXACT reference count. A dynamic import or require of a process module, and the
- *      escapes no binding names, are refused everywhere.
+ *      and its EXACT reference and import counts. A dynamic import or require of a process
+ *      module, a re-export of one, and the escapes no binding names (the loader/evaluator
+ *      globals, a non-literal `require`, a non-inert `process` member, `import.meta.require`, a
+ *      `.constructor` access) are refused everywhere.
  *   §2 THE UNIT. The three directives that are about the agent rather than the daemon
  *      (`ProtectProc=invisible`, `RestrictSUIDSGID`, `LockPersonality`), beside the
  *      hardening set that was already there — asserted on a real render.
@@ -133,10 +135,24 @@ const DECLARATION = join(PACKAGE, 'deploy/examples/instance.example.json');
  *      that shadows the binding. Every sentinel left is one process-capable reference.
  *      `Bun.<member>` counts unless the member is in the closed inert list (`BUN_INERT`); a
  *      bare `Bun` (an alias, a destructure) always counts.
- *   3. THE ESCAPES no binding names — `globalThis` (`globalThis.Bun.spawn`), `process.binding`
- *      / `dlopen`, a computed `import(…)` / `require(…)` — are refused outside the exemptions.
- *   4. EXACT COUNTS. Each exemption pins its reference count, as `sql_confinement` pins its
- *      sites: one more reference (or one fewer) is red, and a new one is a decision in review.
+ *   3. THE ESCAPES no binding names are refused EVERYWHERE, exempt files included — and they are
+ *      found the same scope-aware way, not by spelling: every GLOBAL that reaches a loader or an
+ *      evaluator (`globalThis`, `global`, `self`, `window`, `eval`, `Function`, `module`) is
+ *      `define`d to a sentinel, so `global.Bun.spawn` / `self.Bun` / `Function('return Bun')()`
+ *      are references however spelled while a local of that name or a string ('self' in a CSP)
+ *      is not; `require` is allowed only as a direct call with a literal of a NON-process module;
+ *      `process` only through a CLOSED list of inert members (`PROCESS_INERT` — so
+ *      `process.getBuiltinModule`, `process.mainModule.require`, `process.binding`, a computed
+ *      `process[…]` are escapes); `import.meta` only as `dir`/`url`/`main`/… (so
+ *      `import.meta.require` is one); a `.constructor` access (`(() => {}).constructor` IS
+ *      `Function`); and a computed `import(…)` / `require(…)`. `node:module` (`createRequire`)
+ *      is a process module.
+ *   4. RE-EXPORTS. `export { spawnSync as x } from 'node:child_process'` (or `export *`) makes
+ *      no local binding — the reference count does not move while every importer of the file
+ *      holds a spawn — so a re-export of a process module is refused everywhere.
+ *   5. EXACT COUNTS. Each exemption pins its reference count AND its static import count, as
+ *      `sql_confinement` pins its sites: one more (or one fewer) is red, and a new one is a
+ *      decision in review.
  */
 const PROCESS_MODULES: ReadonlySet<string> = new Set([
 	'node:child_process',
@@ -147,7 +163,66 @@ const PROCESS_MODULES: ReadonlySet<string> = new Set([
 	'bun',
 	// A foreign call can posix_spawn.
 	'bun:ffi',
+	// `createRequire(import.meta.url)('child_process')`: a loader, so a process module.
+	'node:module',
+	'module',
 ]);
+
+/** `process.<member>` reads that cannot start a process or load a module. Closed. */
+const PROCESS_INERT: ReadonlySet<string> = new Set([
+	'arch',
+	'argv',
+	'cwd',
+	'emitWarning',
+	'env',
+	'execPath',
+	'exit',
+	'exitCode',
+	'getegid',
+	'geteuid',
+	'getgid',
+	'getgroups',
+	'getuid',
+	'hrtime',
+	'kill',
+	'memoryUsage',
+	'nextTick',
+	'off',
+	'on',
+	'once',
+	'pid',
+	'platform',
+	'stderr',
+	'stdin',
+	'stdout',
+	'umask',
+	'uptime',
+	'version',
+	'versions',
+]);
+
+/** `import.meta.<member>` reads that load nothing. Closed (`require`, `resolve` are not on it). */
+const IMPORT_META_INERT: ReadonlySet<string> = new Set([
+	'dir',
+	'dirname',
+	'env',
+	'file',
+	'filename',
+	'main',
+	'path',
+	'url',
+]);
+
+/** Globals that reach a loader or an evaluator: ANY reference is an escape. */
+const ESCAPE_GLOBALS: readonly string[] = [
+	'globalThis',
+	'global',
+	'self',
+	'window',
+	'eval',
+	'Function',
+	'module',
+];
 
 /** `Bun.<member>` reads that cannot start a process. Closed: any other member is a reference. */
 const BUN_INERT: ReadonlySet<string> = new Set([
@@ -165,12 +240,19 @@ const BUN_INERT: ReadonlySet<string> = new Set([
 
 const PROCESS_REF = '__DEDALO_PROCESS_REF__';
 const BUN_GLOBAL = '__DEDALO_BUN_GLOBAL__';
+const ESCAPE_GLOBAL = '__DEDALO_ESCAPE_GLOBAL_';
+const REQUIRE_REF = '__DEDALO_REQUIRE__';
+const PROCESS_GLOBAL = '__DEDALO_PROCESS_GLOBAL__';
 /** A static import as the transpiler prints it: one line, `import <clause> from "<module>";`. */
 const IMPORT_LINE = /^import\s+(.+?)\s+from\s*["']([^"']+)["'];?[ \t]*$/gm;
+/** A re-export as the transpiler prints it: `export <clause> from "<module>";`. */
+const EXPORT_FROM_LINE = /^export\s+(.+?)\s+from\s*["']([^"']+)["'];?[ \t]*$/gm;
+/** The lexical escapes left once the globals are sentinels (run on the transpiled code). */
 const ESCAPES: readonly RegExp[] = [
-	/\bglobalThis\b/g,
-	/\bprocess\s*\.\s*(?:binding|_linkedBinding|dlopen)\b/g,
-	/\b(?:import|require)\s*\(\s*(?!["'])/g,
+	new RegExp(`${ESCAPE_GLOBAL}[A-Za-z]+__`, 'g'),
+	/\bimport\s*\(\s*(?!["'])/g,
+	/\bimport\s*\.\s*meta\b(?!\s*\.\s*[A-Za-z_$])/g,
+	/\.\s*constructor\b|\[\s*["'`]constructor["'`]\s*\]/g,
 ];
 
 /** The local names an import clause binds: `a`, `* as ns`, `{ x, y as z }`, or a mix. */
@@ -211,12 +293,24 @@ const TS = new Bun.Transpiler({ loader: 'ts' });
 function processReach(code: string, file: string): ProcessReach {
 	const imports = TS.scanImports(code).filter((entry) => PROCESS_MODULES.has(entry.path));
 	const bindings: string[] = [];
-	const js = TS.transformSync(code).replace(IMPORT_LINE, (line, clause: string, from: string) => {
-		if (!PROCESS_MODULES.has(from)) return line;
-		bindings.push(...bindingsOf(clause));
-		return '';
-	});
-	const define: Record<string, string> = { Bun: BUN_GLOBAL };
+	const reexports: string[] = [];
+	const js = TS.transformSync(code)
+		.replace(IMPORT_LINE, (line, clause: string, from: string) => {
+			if (!PROCESS_MODULES.has(from)) return line;
+			bindings.push(...bindingsOf(clause));
+			return '';
+		})
+		.replace(EXPORT_FROM_LINE, (line, _clause: string, from: string) => {
+			if (!PROCESS_MODULES.has(from)) return line;
+			reexports.push(`re-export ${from}`);
+			return '';
+		});
+	const define: Record<string, string> = {
+		Bun: BUN_GLOBAL,
+		require: REQUIRE_REF,
+		process: PROCESS_GLOBAL,
+	};
+	for (const name of ESCAPE_GLOBALS) define[name] = `${ESCAPE_GLOBAL}${name}__`;
 	for (const name of bindings) define[name] = PROCESS_REF;
 	const out = new Bun.Transpiler({ loader: 'js', define }).transformSync(js);
 	let refs = out.split(PROCESS_REF).length - 1;
@@ -225,14 +319,40 @@ function processReach(code: string, file: string): ProcessReach {
 	)) {
 		if (!(match[2] && BUN_INERT.has(match[2]))) refs++;
 	}
-	return {
-		file,
-		staticImports: imports.filter((entry) => entry.kind === 'import-statement').length,
-		unresolvable: imports
+	const escapes = ESCAPES.flatMap((pattern) => [...out.matchAll(pattern)].map((match) => match[0]));
+	// `require` only as `require("<literal>")` of a module that is not a process module (a
+	// process one is already `unresolvable`); an alias, a member (`require.call`) or a computed
+	// argument is an escape.
+	const requires: string[] = [];
+	for (const match of out.matchAll(
+		new RegExp(`${REQUIRE_REF}(\\s*\\(\\s*"([^"]*)"\\s*\\))?`, 'g'),
+	)) {
+		if (match[2] === undefined) escapes.push('require (not a literal call)');
+		else if (PROCESS_MODULES.has(match[2])) requires.push(`require-call ${match[2]}`);
+	}
+	for (const match of out.matchAll(
+		new RegExp(`${PROCESS_GLOBAL}(\\s*\\.\\s*([A-Za-z_$][\\w$]*))?`, 'g'),
+	)) {
+		if (!(match[2] && PROCESS_INERT.has(match[2])))
+			escapes.push(`process${match[2] ? `.${match[2]}` : ' (bare or computed)'}`);
+	}
+	for (const match of out.matchAll(/\bimport\s*\.\s*meta\s*\.\s*([A-Za-z_$][\w$]*)/g)) {
+		if (!IMPORT_META_INERT.has(match[1] as string)) escapes.push(`import.meta.${match[1]}`);
+	}
+	const unresolvable = [
+		...imports
 			.filter((entry) => entry.kind !== 'import-statement')
 			.map((entry) => `${entry.kind} ${entry.path}`),
+		...reexports,
+	];
+	for (const entry of requires) if (!unresolvable.includes(entry)) unresolvable.push(entry);
+	return {
+		file,
+		staticImports:
+			imports.filter((entry) => entry.kind === 'import-statement').length - reexports.length,
+		unresolvable,
 		refs,
-		escapes: ESCAPES.flatMap((pattern) => [...out.matchAll(pattern)].map((match) => match[0])),
+		escapes,
 	};
 }
 
@@ -268,47 +388,52 @@ function plant(planted: string[], path: string, body: string): string {
  * that grew, is a new decision about what runs as whom, and it belongs in a review rather than
  * in a diff nobody reads.
  */
-const EXEMPT: Readonly<Record<string, { readonly refs: number; readonly reason: string }>> =
-	Object.freeze({
-		'provision/apply.ts': {
-			refs: 11,
-			reason:
-				'the PROVISIONER, not the daemon: an operator-run root process reading the host (id, ' +
-				'getent, systemctl) and setting ownership (chown). It never executes agent-authored ' +
-				'text, and confining it under the agent uid would be a root tool asking permission to ' +
-				'do the thing it exists to do.',
-		},
-		'drivers/confinement.ts': {
-			refs: 4,
-			reason:
-				"the confinement's OWN control plane, which starts nothing: `systemctl show/list-units` " +
-				"(is a site's run alive? what did PID 1 load? which release is it?) and `systemctl stop " +
-				"<a live instance>` through the polkit rule's stop grant (the rule grants no start — F2), " +
-				'plus `id` / `getent group`, pinned root-owned binaries asked which uid and groups each ' +
-				'site identity has, so the trust check can ask whether ANY identity can change what the ' +
-				'units execute first. None of them runs anything agent-authored.',
-		},
-		'util/spawn.ts': {
-			refs: 2,
-			reason:
-				'runBinary / spawnChild — the ONE place a process is created, and the door itself. It ' +
-				'REFUSES a cwd inside SITES_ROOT without the confinement token (`CONFINED_ARGV`), which ' +
-				'only the confinement holds: under systemd_scope nothing is spawned for a run at all (the ' +
-				"daemon connects to the site's socket and PID 1 starts the unit), and spawnChild is the " +
-				'DECLARED-unconfined run of AGENT_CONFINEMENT=none, announced in its own log. What is ' +
-				'left is the driver VERSION PROBE, a pinned binary run with --version outside every ' +
-				'workspace. §6 holds the import side of that rule.',
-		},
-		'drivers/egress_shim.ts': {
-			refs: 1,
-			reason:
-				"in-unit exec of the spec's argv: the shim IS the ExecStart of the unit root rendered for " +
-				'the site (User= its identity), so its one child_process spawn runs inside the unit PID 1 ' +
-				'already started, in its private network namespace — after it has refused a namespace ' +
-				'that is not in effect (§8) and a spec that sets a key the unit fixes. It widens nothing ' +
-				'the unit did not already grant.',
-		},
-	});
+const EXEMPT: Readonly<
+	Record<string, { readonly refs: number; readonly imports: number; readonly reason: string }>
+> = Object.freeze({
+	'provision/apply.ts': {
+		refs: 11,
+		imports: 1,
+		reason:
+			'the PROVISIONER, not the daemon: an operator-run root process reading the host (id, ' +
+			'getent, systemctl) and setting ownership (chown). It never executes agent-authored ' +
+			'text, and confining it under the agent uid would be a root tool asking permission to ' +
+			'do the thing it exists to do.',
+	},
+	'drivers/confinement.ts': {
+		refs: 4,
+		imports: 1,
+		reason:
+			"the confinement's OWN control plane, which starts nothing: `systemctl show/list-units` " +
+			"(is a site's run alive? what did PID 1 load? which release is it?) and `systemctl stop " +
+			"<a live instance>` through the polkit rule's stop grant (the rule grants no start — F2), " +
+			'plus `id` / `getent group`, pinned root-owned binaries asked which uid and groups each ' +
+			'site identity has, so the trust check can ask whether ANY identity can change what the ' +
+			'units execute first. None of them runs anything agent-authored.',
+	},
+	'util/spawn.ts': {
+		refs: 2,
+		imports: 0,
+		reason:
+			'runBinary / spawnChild — the ONE place a process is created, and the door itself. It ' +
+			'REFUSES a cwd inside SITES_ROOT without the confinement token (`CONFINED_ARGV`), which ' +
+			'only the confinement holds: under systemd_scope nothing is spawned for a run at all (the ' +
+			"daemon connects to the site's socket and PID 1 starts the unit), and spawnChild is the " +
+			'DECLARED-unconfined run of AGENT_CONFINEMENT=none, announced in its own log. What is ' +
+			'left is the driver VERSION PROBE, a pinned binary run with --version outside every ' +
+			'workspace. §6 holds the import side of that rule.',
+	},
+	'drivers/egress_shim.ts': {
+		refs: 1,
+		imports: 1,
+		reason:
+			"in-unit exec of the spec's argv: the shim IS the ExecStart of the unit root rendered for " +
+			'the site (User= its identity), so its one child_process spawn runs inside the unit PID 1 ' +
+			'already started, in its private network namespace — after it has refused a namespace ' +
+			'that is not in effect (§8) and a spec that sets a key the unit fixes. It widens nothing ' +
+			'the unit did not already grant.',
+	},
+});
 
 /* ────────────────────────────────────────────────────────────────────────────────────
  * §1 The census
@@ -358,13 +483,16 @@ describe('every process the site-builder daemon starts is accounted for', () => 
 		).toEqual([]);
 		// EXACT, both directions: one more reference in an exempt file is a new spawn nobody
 		// decided on; one fewer is an exemption that would silently cover the next one.
-		const counted = Object.fromEntries(reachers.map((reach) => [reach.file, reach.refs]));
-		for (const [file, { refs, reason }] of Object.entries(EXEMPT)) {
-			expect({ file, refs: counted[file] ?? 0, stated: reason.length > 60 }).toEqual({
+		// The IMPORT count too: a second process import in an exempt file is a new door even
+		// before anything references it (a re-export is refused outright, above).
+		const counted = Object.fromEntries(reachers.map((reach) => [reach.file, reach]));
+		for (const [file, { refs, imports, reason }] of Object.entries(EXEMPT)) {
+			expect({
 				file,
-				refs,
-				stated: true,
-			});
+				refs: counted[file]?.refs ?? 0,
+				imports: counted[file]?.staticImports ?? 0,
+				stated: reason.length > 60,
+			}).toEqual({ file, refs, imports, stated: true });
 		}
 	});
 
@@ -389,6 +517,30 @@ describe('every process the site-builder daemon starts is accounted for', () => 
 			'required.ts': "export const go = () => require('child_process').spawnSync('/bin/sh');\n",
 			'bunalias.ts': 'const B = Bun;\nexport const go = () => B.spawn(["/bin/sh"]);\n',
 			'global.ts': 'export const go = () => globalThis.Bun.spawn(["/bin/sh"]);\n',
+			// The shapes the scope-resolved census of round 4 still passed (measured: a probe file
+			// with the first four spawned `git add -A` in a workspace, census green at 49/0).
+			'nodeglobal.ts': 'export const go = () => global.Bun.spawn(["/bin/sh"]);\n',
+			'selfglobal.ts': 'export const go = () => self.Bun.spawn(["/bin/sh"]);\n',
+			'metarequire.ts':
+				"export const go = () => import.meta.require('node:child_process').spawnSync('/bin/sh');\n",
+			'builtin.ts':
+				"export const go = () => process.getBuiltinModule('node:child_process').spawnSync('/bin/sh');\n",
+			'mainmodule.ts':
+				"export const go = () => process.mainModule.require('child_process').spawnSync('/bin/sh');\n",
+			'processcomputed.ts':
+				"const k = 'getBuilt' + 'inModule';\nexport const go = () => process[k]('child_process');\n",
+			'createrequire.ts':
+				"import { createRequire } from 'node:module';\nexport const go = () => createRequire(import.meta.url)('child_process').spawnSync('/bin/sh');\n",
+			'functionctor.ts': "export const go = () => Function('return Bun')().spawn(['/bin/sh']);\n",
+			'evaluated.ts': "export const go = () => eval('Bun').spawn(['/bin/sh']);\n",
+			'constructor.ts':
+				"export const go = () => (() => 0).constructor('return Bun')().spawn(['/bin/sh']);\n",
+			'requirealias.ts':
+				"const r = require;\nexport const go = () => r('child_process').spawnSync('/bin/sh');\n",
+			'modulerequire.ts':
+				"export const go = () => module.require('child_process').spawnSync('/bin/sh');\n",
+			'reexport.ts': "export { spawnSync as hostRun } from 'node:child_process';\n",
+			'reexportstar.ts': "export * from 'child_process';\n",
 		};
 		for (const [name, body] of Object.entries(shapes)) plant(planted, join(dir, name), body);
 		// …and prose, a string, an inert Bun member and a shadowing local are NOT reports.
@@ -396,17 +548,41 @@ describe('every process the site-builder daemon starts is accounted for', () => 
 			planted,
 			join(dir, 'prose.ts'),
 			"// Bun.spawn(argv) is what this module replaces.\nexport const msg = 'spawn( Bun.spawn(';\n" +
-				'export const nap = () => Bun.sleep(1);\nexport const local = (spawn: (x: string) => void) => spawn("x");\n',
+				'export const nap = () => Bun.sleep(1);\nexport const local = (spawn: (x: string) => void) => spawn("x");\n' +
+				// …nor a CSP's 'self', a local named like an escape global, an inert process or
+				// import.meta member, or a literal require of a non-process module.
+				'export const csp = "script-src \'self\'; no eval, no global, no Function";\n' +
+				'export const shadow = (self: { a: number }, global: number) => self.a + global;\n' +
+				"export const facts = () => [process.env.X, process.getuid?.(), import.meta.dir, require('node:path')];\n",
 		);
 		const found = processReachers(planted, dir);
 		expect(found.map((reach) => reach.file).sort()).toEqual(Object.keys(shapes).sort());
 
 		// AND A FIFTH CALL IN AN EXEMPT FILE is a count that moved, not a covered call.
 		const exemptFile = join(SOURCE_ROOT, 'drivers/confinement.ts');
-		const grown = `${readFileSync(exemptFile, 'utf8')}\nexport const rogue = () => spawnSync('/bin/sh', ['-c', 'id']);\n`;
+		const exemptBody = readFileSync(exemptFile, 'utf8');
+		const grown = `${exemptBody}\nexport const rogue = () => spawnSync('/bin/sh', ['-c', 'id']);\n`;
 		expect(processReach(grown, 'drivers/confinement.ts').refs).toBe(
 			(EXEMPT['drivers/confinement.ts']?.refs ?? 0) + 1,
 		);
+		// …and a RE-EXPORT from an exempt file (its importers hold a spawn while its own count
+		// stays put) is refused there too; so is a second static import of a process module.
+		const reexported = processReach(
+			`${exemptBody}\nexport { spawnSync as hostRun } from 'node:child_process';\n`,
+			'drivers/confinement.ts',
+		);
+		expect({
+			refs: reexported.refs,
+			unresolvable: reexported.unresolvable,
+		}).toEqual({
+			refs: EXEMPT['drivers/confinement.ts']?.refs ?? 0,
+			unresolvable: ['re-export node:child_process'],
+		});
+		const imported = processReach(
+			`import * as cluster from 'node:cluster';\n${exemptBody}`,
+			'drivers/confinement.ts',
+		);
+		expect(imported.staticImports).toBe((EXEMPT['drivers/confinement.ts']?.imports ?? 0) + 1);
 	});
 });
 

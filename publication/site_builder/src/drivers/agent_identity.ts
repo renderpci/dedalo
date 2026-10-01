@@ -231,6 +231,37 @@ export function egressDirForSite(agentSocketDir: string, k: number): string {
 }
 
 /**
+ * THE TURN'S git SEES NO REPOSITORY. The agent CLI runs git ITSELF — Claude Code 2.1.286, at
+ * startup: `git -c core.fsmonitor= -c core.hooksPath=/dev/null … status --short`, `ls-files`,
+ * `log`, `config` in the workspace — and neutralises the fsmonitor and the hooks but not
+ * `filter.<x>.clean`. So a `.git/config` filter plus an attributes line (planted by a build's
+ * postinstall, a git hook, or the turn's own Write) ran arbitrary commands, through sh, as the
+ * site identity INSIDE THE TURN UNIT — the provider key, the MCP gate, the persistent turn HOME —
+ * despite the Bash deny and every PLANT closure of the argv.
+ *
+ * NOT AN ENVIRONMENT VARIABLE. `GIT_DIR=/nonexistent` in the turn's environment was measured
+ * USELESS: the CLI builds its own environment for those calls and drops `GIT_DIR` and
+ * `GIT_CONFIG_GLOBAL` (kept only for `git remote`), so the planted filter still ran. So the
+ * turn unit MASKS the repository: `InaccessiblePaths=<workspace>/.git`, rendered by root,
+ * compared by conformance — every git the turn starts finds `.git` unreadable and no repository
+ * (nothing above the workspace is agent-writable). No `-` prefix: a turn whose workspace has no
+ * `.git` at all does not start (PID 1 refuses the mount, and the daemon refuses it first, typed)
+ * — never a turn in which the agent's own Write could create a repository its next git reads.
+ * The masked path is the TURN's only: the git door works on that repository, the build door
+ * runs agent code by definition. HONEST LIMIT: it masks the repository every measured CLI git
+ * call uses (its cwd and `-C` are the workspace root); a repository planted in a SUBDIRECTORY is
+ * reached only by a git run from there. The live probe (`deploy/probes/claude_plant_probe.ts`
+ * C5/P5) re-measures the CLI's git per release, and under `AGENT_CONFINEMENT=none` (declared
+ * unconfined, the daemon's own uid) nothing is masked at all.
+ */
+export const TURN_MASKED_REPOSITORY = '.git';
+
+/** The paths the TURN unit masks inside its workspace (InaccessiblePaths=, no `-`). */
+export function turnMaskedPaths(workspace: string): readonly string[] {
+  return Object.freeze([join(workspace, TURN_MASKED_REPOSITORY)]);
+}
+
+/**
  * THE ENVIRONMENT A UNIT FIXES — rendered as `Environment=` lines by root, and the only
  * environment the run did not receive from the daemon. The shim refuses a spec that tries to
  * set any of these keys (`unit_frames.ts` FIXED_ENV_KEYS), and they win over the spec's.

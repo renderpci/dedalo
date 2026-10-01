@@ -21,6 +21,10 @@
  *   - `--settings '{"disableAllHooks":true}'` alone: no hook fires, from any source.
  *   - `--strict-mcp-config` alone: only `--mcp-config` servers.
  *   - a settings source that fails validation is ignored WHOLE (here: invalid JSON).
+ *   - at startup it runs `git -c core.fsmonitor= -c core.hooksPath=/dev/null --no-optional-locks
+ *     status --short --ignore-submodules=dirty` in the workspace, in an environment it builds
+ *     (its GIT_* dropped — a `GIT_DIR` given to the CLI does not reach this git) — so a repository
+ *     `filter.<x>.clean` runs (the fake runs that git for real: `gitStatus`).
  *
  * The honest limit: this is a model of one release. A release that changes those semantics
  * is caught by the probe only as far as `--help` changes; the semantics themselves are
@@ -133,6 +137,19 @@ for (let i = 0; i < args.length; i++) {
 }
 const cwd = process.cwd();
 const home = process.env.HOME;
+// THE CLI'S OWN STARTUP git — measured on 2.1.286 (a PATH shim logged argv and env): it asks
+// the workspace for its status with the fsmonitor and the hooks neutralised, NOT the
+// repository's filters, in an environment IT builds — every GIT_* of its own dropped
+// (GIT_DIR, GIT_CONFIG_GLOBAL…), GIT_CONFIG_NOSYSTEM=1 set. Run for real here, so a planted
+// \`.git/config\` filter runs exactly as it would.
+const gitEnv = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')));
+const gitStatus = require('node:child_process').spawnSync(
+  'git',
+  ['-c', 'core.fsmonitor=', '-c', 'core.hooksPath=/dev/null', '--no-optional-locks', 'status', '--short', '--ignore-submodules=dirty'],
+  // PLANT_PROBE_TURN_GIT marks this git's process tree, so a gate's planted filter can tell the
+  // turn's git from any other git that happens to look at the same workspace.
+  { cwd, env: { ...gitEnv, GIT_CONFIG_NOSYSTEM: '1', PLANT_PROBE_TURN_GIT: '1' }, stdio: 'ignore', timeout: 10000 },
+).status;
 const sources = '--setting-sources' in opts ? String(opts['--setting-sources']).split(',').map(s => s.trim()).filter(Boolean) : ['user', 'project', 'local'];
 const readJson = path => { try { return JSON.parse(readFileSync(path, 'utf8')); } catch { return null; } };
 const files = [];
@@ -162,7 +179,7 @@ for (const kind of ['skills', 'commands', 'agents']) {
   if (sources.includes('project') && existsSync(join(cwd, '.claude', kind))) for (const e of readdirSync(join(cwd, '.claude', kind))) extensions.push('project:' + kind + ':' + e);
   if (sources.includes('user') && home && existsSync(join(home, '.claude', kind))) for (const e of readdirSync(join(home, '.claude', kind))) extensions.push('user:' + kind + ':' + e);
 }
-const report = { sources, settingsFrom: loaded.map(l => l.from), hooks, mcp, memory, extensions, prompt: positional[0] ?? null, positional, appendSystemPrompt: opts['--append-system-prompt'] ?? null, dropped, argv: args };
+const report = { gitStatus, sources, settingsFrom: loaded.map(l => l.from), hooks, mcp, memory, extensions, prompt: positional[0] ?? null, positional, appendSystemPrompt: opts['--append-system-prompt'] ?? null, dropped, argv: args };
 console.log(JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'FAKE_LOAD ' + JSON.stringify(report) }] } }));
 console.log(JSON.stringify({ type: 'result', session_id: 'fake-session', duration_ms: 1 }));
 `;

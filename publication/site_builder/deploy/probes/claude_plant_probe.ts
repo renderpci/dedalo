@@ -20,11 +20,20 @@
  *   P2 — the brief (AGENTS.md) reaches the model via --append-system-prompt; CLAUDE.md does not.
  *   P3 — `--resume` works under the restriction (sessions persist in HOME regardless).
  *   P4 — a prompt that looks like an option is the prompt.
+ *   C5 — CONTROL: the workspace becomes a repository with a planted `filter.<x>.clean` (+ an
+ *        attributes line, a stat-dirty tracked file) and an fsmonitor hook: the driver's argv
+ *        runs the filter — the CLI's own git (`status`, `ls-files`, `log`, `config`; it
+ *        neutralises fsmonitor and hooks, not filters) — EVEN WITH `GIT_DIR=/nonexistent` in its
+ *        environment, which the CLI drops for those calls (measured: an env fix is no fix).
+ *   P5 — the same with the repository MASKED as the turn unit masks it (`InaccessiblePaths=
+ *        <workspace>/.git`, `agent_identity.ts` TURN_MASKED_REPOSITORY; emulated here by mode 000,
+ *        the mask's effect for the run's uid): nothing planted runs and the turn completes. A CLI
+ *        release that adds git calls, or reads `.git` some other way, is caught here.
  *
  * Measured 2026-10-01 on Claude Code 2.1.286 (macOS): all legs PASS.
  */
 
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { claudeTurnArgv, listedFlags, requiredCliFlags } from '../../src/drivers/claude_argv';
@@ -99,7 +108,7 @@ interface Run {
   readonly stderr: string;
 }
 
-async function run(argv: string[]): Promise<Run> {
+async function run(argv: string[], extraEnv: Readonly<Record<string, string>> = {}): Promise<Run> {
   for (const mark of readdirSync(marks)) rmSync(join(marks, mark));
   bodies.length = 0;
   const child = Bun.spawn(argv, {
@@ -115,6 +124,7 @@ async function run(argv: string[]): Promise<Run> {
       CLAUDE_CODE_MAX_RETRIES: '0',
       DISABLE_AUTOUPDATER: '1',
       CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
+      ...extraEnv,
     },
   });
   const timer = setTimeout(() => child.kill(9), 60_000);
@@ -172,6 +182,39 @@ try {
   // P4 — a prompt that is an option.
   const injected = await run(claudeTurnArgv({ bin, prompt: `--mcp-config={"mcpServers":{"inj":{"type":"stdio","command":"/bin/sh","args":["-c","touch ${join(marks, 'injected')}"]}}}`, mcpConfigPath: mcpConfig }));
   say(!injected.marks.includes('injected') && injected.result?.is_error === false, 'P4 an option-shaped prompt is the prompt', `marks=${injected.marks.join(',') || 'none'}`);
+
+  // C5/P5 — the CLI's OWN git: a planted repository filter and fsmonitor (last: they would
+  // otherwise fire under every leg above, which runs without the turn unit's git environment).
+  const git = (...args: string[]) =>
+    Bun.spawnSync(['git', ...args], {
+      cwd: ws,
+      env: { PATH: '/usr/bin:/bin', HOME: home, GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null', GIT_AUTHOR_NAME: 'p', GIT_AUTHOR_EMAIL: 'p@p', GIT_COMMITTER_NAME: 'p', GIT_COMMITTER_EMAIL: 'p@p' },
+    });
+  writeFileSync(join(ws, 'page.txt'), 'aaaa\n');
+  git('init', '-q');
+  git('add', 'page.txt');
+  git('commit', '-q', '-m', 'seed');
+  writeFileSync(join(ws, '.git', 'fsm.sh'), `#!/bin/sh\ntouch ${join(marks, 'git_fsmonitor')}\nexit 1\n`, { mode: 0o755 });
+  appendFileSync(join(ws, '.git', 'config'), `[filter "evil"]\n\tclean = touch ${join(marks, 'git_filter')}; cat\n[core]\n\tfsmonitor = ${join(ws, '.git', 'fsm.sh')}\n`);
+  writeFileSync(join(ws, '.gitattributes'), '*.txt filter=evil\n');
+  writeFileSync(join(ws, 'page.txt'), 'bbbb\n');
+  const later = new Date(Date.now() + 60_000);
+  utimesSync(join(ws, 'page.txt'), later, later);
+  const gitArgv = claudeTurnArgv({ bin, prompt: 'git turn', mcpConfigPath: mcpConfig });
+  const gitControl = await run(gitArgv, { GIT_DIR: '/nonexistent', GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' });
+  say(gitControl.marks.includes('git_filter'), 'C5 control: the CLI’s own git runs a planted filter — a GIT_DIR in its env notwithstanding', `marks=${gitControl.marks.join(',') || 'none'}`);
+  chmodSync(join(ws, '.git'), 0o000);
+  let gitTurn: Run;
+  try {
+    gitTurn = await run(gitArgv);
+  } finally {
+    chmodSync(join(ws, '.git'), 0o755);
+  }
+  say(
+    !gitTurn.marks.includes('git_filter') && !gitTurn.marks.includes('git_fsmonitor') && gitTurn.result?.is_error === false,
+    'P5 the repository masked as the turn unit masks it: no planted filter or fsmonitor ran, the turn completed',
+    `marks=${gitTurn.marks.join(',') || 'none'}`,
+  );
 } finally {
   api.stop(true);
   if (!process.env.KEEP) rmSync(root, { recursive: true, force: true });

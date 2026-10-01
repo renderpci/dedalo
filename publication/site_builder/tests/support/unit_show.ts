@@ -13,7 +13,9 @@
  * `conformance()`:
  *
  *   - list-valued directives ACCUMULATE across lines (an empty assignment resets them);
- *     scalars: the last assignment wins;
+ *     scalars: the last assignment wins; SHOWN as systemctl-show.c prints them — a struct
+ *     array (`TemporaryFileSystem=`, `BindPaths=`, `BindReadOnlyPaths=`) one line per entry,
+ *     a string array on one line;
  *   - the `…Sec=` time settings are shown as `…USec=` in `format_timespan` spelling;
  *     `CPUQuota=N%` as `CPUQuotaPerSecUSec`; `MemoryMax=` in bytes (1024-based);
  *     `ListenStream=` as `Listen=<path> (Stream)`; a signal NAME as its number;
@@ -232,5 +234,15 @@ export function showOfRendered(body: string, kind: UnitKind): string {
   for (const [key, value] of Object.entries(PID1_DEFAULTS[kind] ?? {})) if (!props.has(key)) set(key, value);
   const implicit = IMPLICIT_AFTER[kind] ?? [];
   if (implicit.length > 0) add('After', implicit);
-  return [...props.entries()].map(([key, values]) => `${key}=${values.join(' ')}`).join('\n');
+  // A struct-array property ONE LINE PER ENTRY (systemctl-show.c print_property), a string
+  // array on one line — the shape a real host prints, so a comparator that keeps only a
+  // repeated key's last line is refused here as it would be there.
+  return [...props.entries()]
+    .flatMap(([key, values]) =>
+      PER_ENTRY_KEYS.has(key) && values.length > 0 ? values.map(value => `${key}=${value}`) : [`${key}=${values.join(' ')}`],
+    )
+    .join('\n');
 }
+
+/** Printed one line per entry by `systemctl show` (the `(ss)` / `(ssbt)` struct arrays). */
+const PER_ENTRY_KEYS: ReadonlySet<string> = new Set(['TemporaryFileSystem', 'BindPaths', 'BindReadOnlyPaths']);

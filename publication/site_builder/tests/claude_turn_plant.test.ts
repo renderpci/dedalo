@@ -25,7 +25,7 @@
  */
 
 import { afterEach, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { bootSequence, daemonBootSteps } from '../src/boot';
@@ -51,6 +51,7 @@ import { mkdirPrivate, writeFileShared } from '../src/util/shared_tree';
 import { busyReason, end, tryBegin } from '../src/workspace_activity';
 import { LEGACY_HELP, MODERN_HELP, loadReport, writeFakeClaude } from './support/fake_claude';
 import { type GatePolicy, lead1bPolicy } from './support/lead1b_host';
+import { caught } from './support/lead1b_contract';
 import { roots, workspacePath } from './fixtures/instance';
 
 const scratch: string[] = [];
@@ -328,7 +329,8 @@ describe('P6 — confined: the spec frame PID 1’s unit receives carries the re
     hosts.push(host);
     host.standIn.script = () => ({ kind: 'exit', code: 0, stdout: '' });
     const ws = workspacePath(slug);
-    mkdirSync(ws, { recursive: true });
+    // The site's repository: the turn unit masks it, and does not start without one.
+    mkdirSync(join(ws, '.git'), { recursive: true });
     await mkdirPrivate(roots.sitesRoot, join(slug, '.builder'));
     expect(tryBegin(slug, 'turn')).toBe(true);
     try {
@@ -619,4 +621,142 @@ describe('P11 — the driver record is where no run can reach it, and an absent 
       await resetInstance();
     }
   }, 30_000);
+});
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * P12 — the turn's OWN git sees no repository (agent_identity.ts TURN_MASKED_REPOSITORY)
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * A planted filter runs only under the TURN's git — the process tree carrying this mark (the fake
+ * CLI sets it on its git): measured, an editor's own git integration (Sublime Text's) ran this
+ * very filter in a workspace under the checkout, which an unconditional marker would read as the
+ * turn's. (Not `DEDALO_*`: the shim refuses a spec key in that namespace.)
+ */
+const TURN_GIT_MARK = 'PLANT_PROBE_TURN_GIT';
+
+/**
+ * A workspace whose repository runs a command for git: a `filter.<x>.clean` with an attributes
+ * line, an fsmonitor hook, and a tracked file edited SAME-SIZE (stat-dirty, so `git status` must
+ * hash it — through the clean filter). Planted exactly as a build's postinstall, a git hook or the
+ * turn's own Write could. Each marker is a file the plant creates when it runs.
+ */
+function gitPlantedWorkspace(ws: string): { filterRan: string; fsmonitorRan: string } {
+  const markers = scratchDir('git-plant-');
+  const filterRan = join(markers, 'FILTER_RAN');
+  const fsmonitorRan = join(markers, 'FSMONITOR_RAN');
+  const env = { PATH: '/usr/bin:/bin', GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1', GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' };
+  const git = (...args: string[]) => {
+    const result = Bun.spawnSync(['git', ...args], { cwd: ws, env, stdout: 'ignore', stderr: 'pipe' });
+    if (result.exitCode !== 0) throw new Error(`git ${args.join(' ')}: ${result.stderr.toString()}`);
+  };
+  git('init', '-q');
+  writeFileSync(join(ws, 'page.txt'), 'aaaa\n');
+  git('add', 'page.txt');
+  git('commit', '-q', '-m', 'seed');
+  const fsmonitor = join(ws, '.git', 'fsm.sh');
+  writeFileSync(fsmonitor, `#!/bin/sh\n[ x$${TURN_GIT_MARK} = x1 ] && touch '${fsmonitorRan}'\nexit 1\n`, { mode: 0o755 });
+  writeFileSync(
+    join(ws, '.git', 'config'),
+    `${readFileSync(join(ws, '.git', 'config'), 'utf8')}[filter "evil"]\n\tclean = [ x$${TURN_GIT_MARK} = x1 ] && touch '${filterRan}'; cat\n[core]\n\tfsmonitor = ${fsmonitor}\n`,
+  );
+  writeFileSync(join(ws, '.gitattributes'), '*.txt filter=evil\n');
+  writeFileSync(join(ws, 'page.txt'), 'bbbb\n');
+  const later = new Date(Date.now() + 60_000);
+  utimesSync(join(ws, 'page.txt'), later, later);
+  return { filterRan, fsmonitorRan };
+}
+
+/** Run the fake CLI (it runs its measured startup git, with the env it builds) in `ws`. */
+function fakeTurnIn(ws: string, bin: string, env: Record<string, string> = {}): Record<string, any> | null {
+  const result = Bun.spawnSync([bin, '-p', '--output-format', 'stream-json', '--verbose', '--', 'p'], {
+    cwd: ws,
+    env: { PATH: '/usr/bin:/bin', HOME: scratchDir('fake-home-'), ...env },
+  });
+  const lines = result.stdout.toString().split('\n').filter(Boolean).map(line => JSON.parse(line));
+  return loadReport(lines.flatMap(line => (line.type === 'assistant' ? line.message.content.map((part: { text: string }) => part.text) : [])));
+}
+
+describe('P12 — the turn’s own git sees no repository (a planted filter never runs in the turn)', () => {
+  test('MEASURED SHAPE (positive control): the CLI’s startup git, in a planted workspace, runs the filter — and a GIT_DIR in the turn’s env does NOT stop it (the CLI drops it)', () => {
+    const { modern } = bins();
+    const ws = scratchDir('turn-ws-');
+    const { filterRan } = gitPlantedWorkspace(ws);
+    const report = fakeTurnIn(ws, modern, { GIT_DIR: '/nonexistent', GIT_CONFIG_GLOBAL: '/dev/null' });
+    expect({ ran: report?.gitStatus, filter: existsSync(filterRan) }).toEqual({ ran: 0, filter: true });
+  });
+
+  test('the repository MASKED as the turn unit masks it (unreadable to the run): the same git runs no filter and no fsmonitor', () => {
+    const { modern } = bins();
+    const ws = scratchDir('turn-ws-');
+    const { filterRan, fsmonitorRan } = gitPlantedWorkspace(ws);
+    // InaccessiblePaths= mounts a mode-000 node over the path; for the run's uid that is a `.git`
+    // it can neither read nor traverse — what chmod 000 makes it for its owner here.
+    chmodSync(join(ws, '.git'), 0o000);
+    try {
+      const report = fakeTurnIn(ws, modern);
+      expect({ ran: typeof report?.gitStatus === 'number' && report.gitStatus !== 0, filter: existsSync(filterRan), fsmonitor: existsSync(fsmonitorRan) }).toEqual({
+        ran: true,
+        filter: false,
+        fsmonitor: false,
+      });
+    } finally {
+      chmodSync(join(ws, '.git'), 0o755);
+    }
+  });
+
+  test('ONLY the turn unit renders the mask — `InaccessiblePaths=<workspace>/.git`, no `-`; conformance refuses a turn unit without it, and a git or build unit with it', async () => {
+    const { conformance } = await import('../src/drivers/confinement');
+    const { conformingShow, plantShow } = await import('./support/lead1b_host');
+    const slug = 'site-mask';
+    const host = await lead1bPolicy({ identities: new Map([[slug, 1]]) });
+    hosts.push(host);
+    const ws = workspacePath(slug);
+    const turn = conformingShow(host, ws, 1, 'turn', 255);
+    expect(turn.service).toContain(`InaccessiblePaths=-/var/lib/mysql -/var/lib/mariadb -/var/lib/pgsql -/var/lib/postgresql ${ws}/.git`);
+    expect(await conformance(1, 'turn', host.policy)).toEqual({ warnings: [] });
+    plantShow(host, 1, 'turn', { ...turn, service: turn.service.replace(` ${ws}/.git`, '') });
+    expect(String(((await caught(() => conformance(1, 'turn', host.policy))) as Error | null)?.message ?? '')).toContain('InaccessiblePaths');
+    plantShow(host, 1, 'turn', { ...turn, service: turn.service.replace(` ${ws}/.git`, ` -${ws}/.git`) });
+    expect(String(((await caught(() => conformance(1, 'turn', host.policy))) as Error | null)?.message ?? '')).toContain('InaccessiblePaths');
+    for (const door of ['git', 'build'] as const) {
+      const shown = conformingShow(host, ws, 1, door, 255);
+      plantShow(host, 1, door, { ...shown, service: shown.service.replace(/^InaccessiblePaths=(.*)$/m, `InaccessiblePaths=$1 ${ws}/.git`) });
+      expect({ door, refused: String(((await caught(() => conformance(1, door, host.policy))) as Error | null)?.message ?? '').includes('InaccessiblePaths') }).toEqual({ door, refused: true });
+    }
+  });
+
+  test('a turn whose workspace has NO .git is refused, typed, before anything connects (PID 1 would refuse the mount; a turn without one could Write a repository its own git then reads)', async () => {
+    const slug = 'site-nogit';
+    const host = await lead1bPolicy({ identities: new Map([[slug, 1]]) });
+    hosts.push(host);
+    const ws = workspacePath(slug);
+    rmSync(ws, { recursive: true, force: true });
+    mkdirSync(ws, { recursive: true });
+    scratch.push(ws);
+    const { runConfined } = await import('../src/drivers/confinement');
+    expect(tryBegin(slug, 'turn')).toBe(true);
+    let refused: unknown = null;
+    try {
+      await runConfined({ door: 'turn', slug, argv: ['true'], cwd: ws, env: { PATH: '/usr/bin:/bin' }, timeoutMs: 5_000 }, host.policy);
+    } catch (error) {
+      refused = error;
+    } finally {
+      end(slug, 'turn');
+    }
+    expect({
+      typed: (refused as Error | null)?.name,
+      named: /no repository/.test(String((refused as Error | null)?.message ?? '')),
+      connects: host.standIn.connects.length,
+    }).toEqual({ typed: 'ConfinementUnavailableError', named: true, connects: 0 });
+    // Control: with its repository, the same turn connects.
+    mkdirSync(join(ws, '.git'));
+    expect(tryBegin(slug, 'turn')).toBe(true);
+    try {
+      const ok = await runConfined({ door: 'turn', slug, argv: ['true'], cwd: ws, env: { PATH: '/usr/bin:/bin' }, timeoutMs: 5_000 }, host.policy);
+      expect(ok.exitCode).toBe(0);
+    } finally {
+      end(slug, 'turn');
+    }
+  });
 });
