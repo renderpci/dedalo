@@ -127,15 +127,26 @@ export class ConfinementUnavailableError extends ApiError {
  *     named by property (a unit file silently ignores keys its systemd does not know).
  *   - `daemon_stopping` — the daemon is shutting down; nothing is opened, because a connect
  *     would start a unit whose start cancels the daemon's own stop. Retry after the restart.
+ *   - `agent_cli_unsupported` — the installed agent CLI does not list a flag the turn's argv
+ *     needs to keep agent-written configuration (hooks, MCP servers, settings) out of the turn
+ *     (PLANT). An operator must upgrade the CLI; nothing was started.
+ *
+ * `CONFINEMENT_CODES` is the runtime list the engine's mapping (tools/tool_sitebuilder/server/
+ * wire.ts) is gated against: a code added here without a mapping there is red.
  */
-export type ConfinementCode =
-  | 'site_busy'
-  | 'identity_missing'
-  | 'identity_quarantined'
-  | 'unit_refused'
-  | 'unit_nonconformant'
+export const CONFINEMENT_CODES = Object.freeze([
+  'site_busy',
+  'identity_missing',
+  'identity_quarantined',
+  'unit_refused',
+  'unit_nonconformant',
   /** The daemon is shutting down: a connect would start a unit, and that start would cancel the daemon's stop. */
-  | 'daemon_stopping';
+  'daemon_stopping',
+  /** The installed agent CLI cannot be told to ignore agent-written configuration. */
+  'agent_cli_unsupported',
+] as const);
+
+export type ConfinementCode = (typeof CONFINEMENT_CODES)[number];
 
 export class ConfinementRefusedError extends ApiError {
   constructor(

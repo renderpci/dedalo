@@ -19,6 +19,7 @@
 import { chmodSync, existsSync, unlinkSync } from 'node:fs';
 import { bootSequence, daemonBootSteps, daemonShutdownSteps, shutdownSequence } from './boot';
 import { config } from './config';
+import { bootProbeClaudeCli } from './drivers/claude_code';
 import { policyFromConfig } from './drivers/confinement';
 import { bootPreflight } from './instance/roots';
 import { routeRequest } from './router';
@@ -101,6 +102,9 @@ await bootSequence(
         process.exit(1);
       }
     },
+    // The installed Claude Code CLI, asked which flags it lists: a binary that cannot keep
+    // agent-written hooks/MCP/settings out of a turn is a loud boot line, and refused per turn.
+    probeAgentCli: () => bootProbeClaudeCli(),
     // What PID 1 says is alive — this process remembers nothing of a previous one.
     policy: policyFromConfig,
     // Sessions a dead process left 'running' (or whose last commit a shutdown refused):

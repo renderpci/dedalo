@@ -1256,6 +1256,37 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: true,
 	},
+	/**
+	 * THE DAEMON WILL NOT RUN THE AGENT ON THIS HOST AS IT STANDS (2026-10-01). Its 503
+	 * `confinement_unavailable` / `confinement.*` refusals that an OPERATOR must act on: the
+	 * host cannot confine a run, a site has no agent identity, PID 1 loaded a unit that is not
+	 * what the daemon expects, a unit refused to start, or the installed agent CLI cannot be
+	 * told to ignore agent-written configuration (PLANT). Not retryable: nothing changes until
+	 * someone does. The daemon's own sentence (which names the key or command) is log-only.
+	 */
+	'site_builder.confinement_unavailable': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_site_builder_confinement_unavailable',
+		message: 'The site builder cannot run its agent safely on this server',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	/**
+	 * THE SITE IS BUSY ON THE DAEMON'S SIDE (2026-10-01): a run of this site is still alive or
+	 * being proved dead (`confinement.site_busy`, `identity_quarantined`), or the daemon is
+	 * restarting (`daemon_stopping`). Retryable — it clears without anyone acting.
+	 */
+	'site_builder.busy': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_site_builder_busy',
+		message: 'The site builder is busy with this site',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: true,
+	},
 
 	// ── mailer ──────────────────────────────────────────────────────────────
 	'mailer.not_configured': {

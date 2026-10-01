@@ -636,7 +636,8 @@ const RUNNER_IMPORTERS: Readonly<Record<string, string>> = Object.freeze({
 		'the holder of the token: runConfined() wraps the argv under the agent uid first, and is ' +
 		'the only way a command runs inside a site workspace.',
 	'drivers/claude_code.ts':
-		'the driver VERSION PROBE — a pinned binary run with --version, outside every workspace.',
+		'the driver VERSION AND FLAG PROBE — a pinned binary run with --version and --help (PLANT: ' +
+		'a turn is refused unless --help lists every flag its argv needs), cwd /, outside every workspace.',
 	'drivers/opencode.ts':
 		'the driver VERSION PROBE — the same shape as claude_code above: a pinned binary asked ' +
 		'for its version, with no cwd and nothing agent-authored anywhere near it.',

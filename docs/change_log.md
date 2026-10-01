@@ -17,6 +17,7 @@ Merged since the last release; these ship with the next one.
 
 !!! warning "Action needed when you update"
 
+    - The site builder's Claude Code agent no longer loads configuration from the site's own files, and refuses a Claude Code that cannot be told not to.
     - The site builder runs each site's AI agent as that site's own system user, from units that root installs. systemd 248 is now enough, and `provision apply` must run before the updated daemon starts.
     - Only profiles granted the assistant tool can use the assistant.
     - The site builder can no longer start its agent units through polkit
@@ -333,6 +334,12 @@ Merged since the last release; these ship with the next one.
     Proposals from a vision model and image identification through an external service call a paid model and may send the object's photograph off the server. Any user who could read the section could start them. They now require the user's profile to include the identification tool; without it the request is refused before any model is called. Matching by record, proposals voted by similar records and a locally run image encoder cost nothing and are unchanged. Grant the identification tool to the profiles that should use the vision source.
 
     Wire contract: `WC-2026-10-01-identify-vision-grant`.
+
+- **The site builder's Claude Code agent no longer loads configuration from the site's own files, and refuses a Claude Code that cannot be told not to.** *(action needed)*
+
+    Claude Code reads hooks, MCP servers, skills and settings from the project it works in and from its home directory. In a site builder workspace both are written by the agent itself (and by the site's build scripts), so a file planted in one turn ran as a shell command in the next, although the agent is denied a shell. Each Claude Code turn now loads its settings only from the site builder (no user, project or local source; only the site builder's own MCP server), and the site brief (AGENTS.md) is handed to the agent by the site builder instead of being read from the workspace. **Action needed:** the installed Claude Code must list `--setting-sources`, `--settings` and `--strict-mcp-config` in `claude --help` (verified on 2.1.286). The site builder checks this at start and before every turn; an older Claude Code is reported in the start log and every turn is refused until it is upgraded. In the site builder tool these refusals now read "cannot run its agent safely on this server" (an administrator must act) or "busy with this site" (try again in a moment) instead of a generic error.
+
+    Wire contract: `WC-2026-10-01-site-builder-confinement-codes`.
 
 - **The site builder runs each site's AI agent as that site's own system user, from units that root installs. systemd 248 is now enough, and `provision apply` must run before the updated daemon starts.** *(action needed)*
 
@@ -777,7 +784,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 75 entries"
+??? note "Wire contract — 76 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -854,6 +861,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-30-update-manifest-local-origin-refusal`
     - `WC-2026-09-30-write-door`
     - `WC-2026-10-01-identify-vision-grant`
+    - `WC-2026-10-01-site-builder-confinement-codes`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

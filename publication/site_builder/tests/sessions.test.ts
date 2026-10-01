@@ -261,6 +261,10 @@ describe('workspace mutual exclusion (turns vs builds)', () => {
     manifest.build = { install: 'sleep 1', build: 'true', output: 'src' };
     await writeManifest(manifest);
 
+    // The driver is the gate's stand-in from the start: the REAL claude_code driver answers its
+    // own admission first (an unconfigured CLI is a 503 before any reservation — PLANT), and
+    // this row is about the reservation, not the CLI.
+    __setTestDriver('claude_code', fakeDriver([{ type: 'result', ok: true, durationMs: 1 }]));
     const { build_id } = await startBuild('excl-b');
     await expect(startSession('excl-b', 'while building')).rejects.toThrow(/build is running/);
 
@@ -272,7 +276,6 @@ describe('workspace mutual exclusion (turns vs builds)', () => {
       if (Date.now() - start > 8000) throw new Error('build never settled');
       await new Promise(r => setTimeout(r, 25));
     }
-    __setTestDriver('claude_code', fakeDriver([{ type: 'result', ok: true, durationMs: 1 }]));
     const { session_id } = await startSession('excl-b', 'after build');
     expect(session_id).toBeTruthy();
     await collectStream(sessionEventStream('excl-b', session_id, -1));

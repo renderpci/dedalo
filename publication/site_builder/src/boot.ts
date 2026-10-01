@@ -2,6 +2,10 @@
  * THE BOOT ORDER, as a function a gate can hold (LEAD-1b, spec §2.4).
  *
  *   1. PREFLIGHT — prove whose roots these are before anything is written (instance/roots.ts).
+ *   1b. PROBE THE AGENT CLI — ask the installed Claude Code binary which flags it lists, and SAY
+ *      so when one a turn needs is missing (drivers/claude_code.ts bootProbeClaudeCli): every
+ *      Claude Code turn is then refused, typed, per request. Never stops the boot (another
+ *      driver may run), never writes.
  *   2. RECONCILE — ask PID 1 whether any agent run of this museum's site identities is still
  *      alive (a killed daemon's `BindsTo=` stop that has not finished, a unit that will not
  *      die), and QUARANTINE any identity that is — rebuilt from PID 1's state, never from
@@ -22,6 +26,8 @@ import { type ConfinementPolicy, reconcileAgentUnits, stopOpeningRuns } from './
 
 export interface BootSteps {
   readonly preflight: () => void | Promise<void>;
+  /** Optional: the agent-CLI probe (absent in a gate that does not state one). */
+  readonly probeAgentCli?: () => void | Promise<void>;
   readonly reconcileAgentUnits: () => void | Promise<void>;
   readonly sweepOnBoot: () => void | Promise<void>;
   readonly listen: () => void | Promise<void>;
@@ -30,6 +36,7 @@ export interface BootSteps {
 /** Run the boot steps in THE order. A step that throws stops the boot there. */
 export async function bootSequence(steps: BootSteps): Promise<void> {
   await steps.preflight();
+  await steps.probeAgentCli?.();
   await steps.reconcileAgentUnits();
   await steps.sweepOnBoot();
   await steps.listen();
@@ -42,6 +49,11 @@ export interface DaemonBootDeps {
   readonly preflight: () => void | Promise<void>;
   readonly sweepOnBoot: () => Promise<void>;
   readonly listen: () => void | Promise<void>;
+  /**
+   * The agent-CLI probe: the problems that refuse every turn of the configured CLI (empty =
+   * runnable). Production: `bootProbeClaudeCli`.
+   */
+  readonly probeAgentCli?: () => Promise<readonly string[]>;
   /** Where a failed step is reported (production: console.error). */
   readonly report?: (message: string, error: unknown) => void;
 }
@@ -54,8 +66,23 @@ export interface DaemonBootDeps {
  */
 export function daemonBootSteps(deps: DaemonBootDeps): BootSteps {
   const report = deps.report ?? ((message: string, error: unknown) => console.error(message, error));
+  const probe = deps.probeAgentCli;
   return {
     preflight: deps.preflight,
+    ...(probe
+      ? {
+          probeAgentCli: async () => {
+            try {
+              const problems = await probe();
+              if (problems.length > 0) {
+                report('[boot] the agent CLI cannot run a turn; every turn of it will be refused (confinement.agent_cli_unsupported):', problems.join(' '));
+              }
+            } catch (error) {
+              report('[boot] the agent CLI probe failed; every turn re-probes and refuses on failure:', error);
+            }
+          },
+        }
+      : {}),
     reconcileAgentUnits: async () => {
       try {
         await reconcileAgentUnits(deps.policy());

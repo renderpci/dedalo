@@ -100,5 +100,13 @@ export interface AgentDriver {
   readonly capabilities: DriverCapabilities;
   /** Returns null when the binary is absent or its version is outside the tested range. */
   detect(): Promise<DriverInfo | null>;
+  /**
+   * THE DRIVER'S OWN ADMISSION, asked by the session manager before it reserves anything:
+   * throws a typed 503 when this driver cannot run a turn as stated (claude_code: the installed
+   * CLI does not list a flag the argv needs to keep agent-written configuration out). Absent =
+   * nothing beyond the confinement's own questions. The turn's setup asks again — this is the
+   * courtesy, that is the guarantee.
+   */
+  admit?(): Promise<void>;
   startTurn(opts: SessionStartOptions): AgentProcess;
 }

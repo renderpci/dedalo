@@ -135,6 +135,10 @@ export async function startSession(
   // for a provider list it does not use.
   const driver = driverOverride ?? (await readManifest(slug)).driver;
   await assertConfinementAvailable('turn', policy, driver, slug);
+  // And the DRIVER's own question (claude_code: does the installed CLI list every flag that
+  // keeps agent-written settings, hooks and MCP servers out of the turn?) — 503, before any
+  // reservation, in either confinement mode.
+  await getDriver(driver).admit?.();
 
   // Reserve the workspace SYNCHRONOUSLY — check-and-mark with no await in between, and
   // cross-exclusive with builds (workspace_activity.ts). From here every failure path
@@ -200,6 +204,7 @@ export async function sendMessage(
   const known = await readMeta(slug, sessionId);
   if (!known) throw new NotFoundError(`No session '${sessionId}'`);
   await assertConfinementAvailable('turn', policy, known.driver, slug);
+  await getDriver(known.driver).admit?.();
 
   // Same synchronous reservation as startSession (cross-exclusive with builds).
   if (!tryBeginTurn(slug)) {
