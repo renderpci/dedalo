@@ -302,6 +302,7 @@ describe('P5 — a CLI that cannot carry the restriction is refused, typed', () 
     const steps = (bin: string) =>
       daemonBootSteps({
         policy: () => ({}) as never,
+        listenTarget: () => ({ kind: 'unix', path: join(scratchDir('claim-'), 'absent.sock') }),
         preflight: () => void order.push('preflight'),
         probeAgentCli: async () => {
           order.push('probe');

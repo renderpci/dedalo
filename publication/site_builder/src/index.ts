@@ -11,7 +11,9 @@
  * THE BOOT RUNS THROUGH ONE ORDER (`src/boot.ts`): the preflight first — `sweepOnBoot()`
  * WRITES (it commits recovered work and rewrites session metadata), and a check that ran
  * after it would already have let a daemon pointed at the wrong tree touch that tree (see
- * src/instance/roots.ts) — then the reconciliation of the agent units with PID 1 (LEAD-1b:
+ * src/instance/roots.ts) — then the INSTANCE CLAIM (this process, and no other daemon, may act
+ * for the instance: the listen target unserved, and PID 1 naming this process the daemon unit's
+ * main process), then the reconciliation of the agent units with PID 1 (LEAD-1b:
  * a run a killed daemon left alive quarantines its site's identity before anything runs
  * git as it), then the sweep, then listen.
  */
@@ -21,6 +23,7 @@ import { bootSequence, daemonBootSteps, daemonShutdownSteps, shutdownSequence } 
 import { config } from './config';
 import { bootProbeClaudeCli } from './drivers/claude_code';
 import { policyFromConfig } from './drivers/confinement';
+import { type ListenTarget, listenTargetHeld } from './instance/listen_target';
 import { bootPreflight } from './instance/roots';
 import { routeRequest } from './router';
 import { problem } from './util/response';
@@ -102,6 +105,14 @@ await bootSequence(
         process.exit(1);
       }
     },
+    // WHERE listen() will bind: the claim refuses the boot when something already answers there.
+    listenTarget,
+    // A refused claim is one line and exit 1, the preflight's shape: another process holds this
+    // instance, and nothing of it was stopped, swept or written.
+    refuse: message => {
+      console.error(message);
+      process.exit(1);
+    },
     // The installed Claude Code CLI, asked which flags it lists: a binary that cannot keep
     // agent-written hooks/MCP/settings out of a turn is a loud boot line, and refused per turn.
     probeAgentCli: () => bootProbeClaudeCli(),
@@ -133,6 +144,13 @@ console.log(`Workspaces: ${config.SITES_ROOT}`);
 // publishes into its OWN webspace under this base (src/sites/webspace.ts).
 console.log(`Webspaces:  ${config.WEBSPACE_BASE}`);
 
+/** Where `listen()` binds — the instance claim asks whether something already answers there. */
+function listenTarget(): ListenTarget {
+  return config.LISTEN_KIND === 'unix'
+    ? { kind: 'unix', path: config.LISTEN_SOCKET }
+    : { kind: 'tcp', hostname: config.HOST, port: config.PORT };
+}
+
 /**
  * The socket, and the one stale-socket question worth asking.
  *
@@ -156,7 +174,7 @@ async function resolveListenTarget(): Promise<{ unix: string } | { port: number;
     process.exit(1);
   }
   if (existsSync(path)) {
-    if (await socketAcceptsConnections(path)) {
+    if (await listenTargetHeld({ kind: 'unix', path })) {
       console.error(
         `[listen] '${path}' is already accepting connections — instance ` +
           `'${config.DEDALO_SITE_INSTANCE}' is already being served by another process. Two ` +
@@ -167,16 +185,6 @@ async function resolveListenTarget(): Promise<{ unix: string } | { port: number;
     unlinkSync(path);
   }
   return { unix: path };
-}
-
-async function socketAcceptsConnections(path: string): Promise<boolean> {
-  try {
-    const socket = await Bun.connect({ unix: path, socket: { data() {}, open() {}, error() {} } });
-    socket.end();
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 /**

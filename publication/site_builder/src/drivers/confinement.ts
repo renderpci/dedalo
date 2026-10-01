@@ -1412,8 +1412,41 @@ export async function proveIdle(policy: ConfinementPolicy, k: number): Promise<v
 }
 
 /**
- * RECONCILE AT BOOT — before the session sweep and before the daemon listens (`src/boot.ts`).
- * Every declared identity is proved idle; one that is not is quarantined (and stays so until
+ * THE INSTANCE CLAIM, PID 1's half — asked by the boot BEFORE `reconcileAgentUnits` (`src/boot.ts`).
+ *
+ * Reconcile STOPS every live run of this museum's sites, through the polkit grant the service
+ * user holds — and that grant cannot tell the unit's daemon from a second process running as the
+ * same uid (an operator's hand run beside the service). Such a process used to stop the serving
+ * daemon's live turns and sweep its sessions before its own listen step noticed the socket was
+ * served. So under `systemd_scope` this process must be what PID 1 says runs the daemon unit:
+ * its `MainPID` (the unit is `Type=simple` and execs bun on the entry, so the main process IS
+ * this one). PID 1 holds one main process per unit — two processes cannot both pass.
+ *
+ * "PID 1 cannot say" (no answer, a failed `show`, no `MainPID`) is a problem, never a pass. Mode
+ * `none` stops nothing and asks nothing: null. Returns null when the claim holds, otherwise why not.
+ */
+export async function daemonClaimProblem(policy: ConfinementPolicy, pid: number): Promise<string | null> {
+  if (policy.mode !== 'systemd_scope') return null;
+  let unit: string;
+  try {
+    unit = daemonUnitName(policy.instance);
+  } catch (error) {
+    return `the daemon unit of instance '${policy.instance}' has no name (${(error as Error).message}).`;
+  }
+  const state = await show(policy, unit, ['MainPID', 'ActiveState']);
+  const main = state?.MainPID;
+  if (main === undefined || !/^\d+$/.test(main)) {
+    return `PID 1 could not say which process runs ${unit}, so this process (PID ${pid}) cannot prove it is that unit's daemon.`;
+  }
+  if (Number(main) === pid) return null;
+  return Number(main) === 0
+    ? `PID 1 says ${unit} is not running, so this process (PID ${pid}) is not the unit's daemon: start the instance with systemctl, never by hand.`
+    : `PID 1 says ${unit}'s main process is PID ${main}, not this process (PID ${pid}): another daemon serves this instance.`;
+}
+
+/**
+ * RECONCILE AT BOOT — after the instance claim (`daemonClaimProblem`), before the session sweep and
+ * before the daemon listens (`src/boot.ts`). Every declared identity is proved idle; one that is not is quarantined (and stays so until
  * PID 1 says otherwise). Never throws: a boot that could not reconcile a site refuses that
  * site's runs, it does not refuse to boot.
  */

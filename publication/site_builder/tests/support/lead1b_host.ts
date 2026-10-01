@@ -151,6 +151,12 @@ export interface StandInOptions {
   readonly ordinals: readonly number[];
   /** The service user's uid, for the `<nr>-<pid>-<uid>` instance name form. */
   readonly serviceUid: number;
+  /**
+   * The museum's DAEMON unit (`dedalo-site-builder@<inst>.service`), spelled here, not imported:
+   * the boot's instance claim asks PID 1 for its `MainPID`, and a daemon that asked about the
+   * wrong name must not pass because both ends share one spelling.
+   */
+  readonly daemonUnit?: string;
 }
 
 export function socketPathFor(agentSocketDir: string, k: number, door: Door): string {
@@ -206,6 +212,12 @@ export class StandInHost {
    * of the idle and death proofs survived the whole suite).
    */
   fault: (verb: string, units: readonly string[]) => SystemctlFault | null = () => null;
+  /**
+   * The daemon unit's main process as PID 1 reports it (`MainPID`; 0 = the unit is not running).
+   * Default: THIS process — the gate plays the daemon PID 1 started. A gate sets another pid to
+   * play a second daemon started beside the unit's (an operator's hand run as the service user).
+   */
+  daemonMainPid: number = process.pid;
 
   private readonly servers: Server[] = [];
   private nr = 0;
@@ -502,6 +514,17 @@ export class StandInHost {
       const count = this.connectionsOverride.get(`${k}:${door}`) ?? this.live(k, door).length;
       return { ...base, NConnections: String(count), ActiveState: 'active', LoadState: 'loaded' };
     }
+    if (this.options.daemonUnit !== undefined && unit === this.options.daemonUnit) {
+      const running = this.daemonMainPid > 0;
+      return {
+        ...base,
+        Id: unit,
+        LoadState: 'loaded',
+        ActiveState: running ? 'active' : 'inactive',
+        SubState: running ? 'running' : 'dead',
+        MainPID: String(this.daemonMainPid),
+      };
+    }
     const instance = this.instances.get(unit);
     if (instance) {
       return {
@@ -660,7 +683,13 @@ export async function lead1bPolicy(options: GatePolicyOptions): Promise<GatePoli
   const prefix = `dedalo-site-${instance}-agent-`;
   const ordinals = [...new Set(options.identities.values())];
 
-  const standIn = new StandInHost({ prefix, agentSocketDir, ordinals, serviceUid: GATE_IDS.serviceUid });
+  const standIn = new StandInHost({
+    prefix,
+    agentSocketDir,
+    ordinals,
+    serviceUid: GATE_IDS.serviceUid,
+    daemonUnit: `dedalo-site-builder@${instance}.service`,
+  });
   await standIn.start();
   // THE EGRESS DIRECTORIES, as root's tmpfiles.d line leaves them: `<agentSocketDir>/egress`
   // 0755 and one `s<k>` per site, 0770. This host cannot make them root's nor give them a

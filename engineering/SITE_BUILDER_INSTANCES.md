@@ -867,6 +867,36 @@ is EROFS the first time that museum publishes, at night, on a live site. Probing
 converts it into a refusal that names the root, which systemd reports and an operator can
 act on before anyone is looking at a broken page.
 
+### 5.2 The instance claim — before anything is stopped or swept
+
+Right after the preflight, and before the boot reconciles agent units or sweeps sessions,
+the daemon proves that no other process holds its instance (`src/boot.ts` `claimInstance`).
+Two checks, and either one stops the boot with exit 1:
+
+- **The listen target is not already served.** If something accepts a connection on the
+  configured unix socket or tcp port, another process holds the instance
+  (`src/instance/listen_target.ts`). `listen()` asks the same question again before it
+  removes a dead socket file.
+- **Under `systemd_scope`, PID 1 names this process.** The `MainPID` of
+  `dedalo-site-builder@<instance>.service` must be this process
+  (`drivers/confinement.ts` `daemonClaimProblem`). A unit that is not running, or a `show`
+  that fails or omits `MainPID`, counts as a refusal, never as a pass.
+
+Why it comes first: the reconcile step STOPS every live agent run of the instance's sites,
+through a polkit grant that cannot tell the unit's daemon from a second process running as
+the same uid. The sweep then rewrites 'running' sessions. Before the claim existed, a second
+process started by hand beside the service killed the serving daemon's turns and rewrote
+its sessions, and only then refused at `listen`. Gate:
+`publication/site_builder/tests/lead1b_c4_lease.test.ts` G11b.
+
+Honest limit: in mode `none`, only the listener check applies. Two processes started at the
+same instant could both find no listener. Nothing is stopped in that mode, but both would
+sweep. Under systemd, the unit is single-instance in any case. The claim depends on a fact
+not yet measured on a real host: under the rendered `Type=simple` unit, `MainPID` is the bun
+process that runs the entry. `deploy/probes/lead1b_pid1_probe.sh` P10 checks it on that unit
+shape (`<bun> run <entry>`, `Type=simple`); it has not been run on a host yet. If the fact were false, every
+boot would refuse loudly (fail closed); it would never pass silently.
+
 ## 6. The webspace, and the hard rule
 
 One site, one webspace, named by its production domain:

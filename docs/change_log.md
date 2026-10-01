@@ -606,6 +606,12 @@ Merged since the last release; these ship with the next one.
 
     A site folder that exists but has no `site.json` (left by a create that was interrupted, or by a site whose settings file was removed) is no longer reused. Creating a site with that name is refused with the reason `workspace_exists`, and nothing in the folder is changed. An administrator must inspect the folder and remove it before the name can be used.
 
+- **A second Site Builder started by hand no longer stops the running service's agent runs.**
+
+    When the Site Builder daemon was started a second time for an instance that was already running (for example, by hand as the service user while debugging), the second process stopped the running service's agent turns and marked its sessions interrupted. Only after that did it notice the instance was already served and exit.
+
+    The daemon now checks first. If the instance's socket or port already answers, or (with systemd confinement) systemd says another process is the service's main process, the second start exits with one line saying why. It stops nothing and writes nothing. Start the service with `systemctl`, not by hand.
+
 - **Administrators' toolbars now show only the tools their profile grants.**
 
     Global administrators (other than root) saw every installed tool in their toolbars, even tools their profile does not grant — and clicking one was then refused. The toolbar and every tool door now follow the same rule: a tool is available when the user's profile grants it (or it is always active); only the root account holds every tool. An administrator who asks for a tool their profile does not grant now gets "not authorized" rather than "unknown tool".

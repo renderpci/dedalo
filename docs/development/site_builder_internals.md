@@ -76,7 +76,10 @@ and delivered by the generated systemd unit; the daemon never reads a hand-writt
 *The provisioner* below.
 
 `src/index.ts` is the `Bun.serve` boundary. It boots through ONE sequence
-(`src/boot.ts`): the roots preflight, then `reconcileAgentUnits()` — every site's live agent
+(`src/boot.ts`): the roots preflight, then the instance claim (the listen target is not
+already served and, under `systemd_scope`, PID 1 names this process as the daemon unit's main
+process; otherwise the boot exits before anything is stopped or swept), then
+`reconcileAgentUnits()` — every site's live agent
 runs read back from PID 1, a leftover quarantining its site until PID 1 reports it dead, and
 a still-running pre-per-site-identity transient run of the museum quarantining every site —
 then `sweepOnBoot()` (session recovery, below), and only then does it listen. The steps

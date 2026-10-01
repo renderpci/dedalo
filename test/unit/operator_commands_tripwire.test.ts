@@ -414,6 +414,9 @@ describe('every daemon environment key an operator page names is one the daemon 
 			"the POSIX open(2) FLAG the daemon's shared writer passes on every descriptor, named in the internals page; it is a kernel constant, never an environment key",
 		AGENTS: 'the agent brief file AGENTS.md, named in a workspace listing',
 		CLAUDE: 'the symlink CLAUDE.md beside it, named in the same listing',
+		HOME: "the POSIX home-directory variable, named in the internals page as one an agent run's environment never carries from the daemon and the egress shim refuses in a spec (the unit fixes it); never a daemon or engine config key",
+		DEDALO_:
+			'the engine key PREFIX with a trailing wildcard (`DEDALO_*`), naming every engine key the egress shim refuses in a spec',
 	});
 
 	/**

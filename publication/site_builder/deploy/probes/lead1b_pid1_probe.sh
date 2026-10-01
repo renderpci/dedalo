@@ -320,5 +320,37 @@ T9b=$(systemctl show -p TasksCurrent --value "$I9" 2>/dev/null)
 kill $C9 2>/dev/null
 rm -f /etc/systemd/system/$P-s2-turn@.service.d/nokill.conf; systemctl daemon-reload; systemctl reset-failed "$P-"'*' 2>/dev/null
 
+# --- P10: the INSTANCE CLAIM's premise (src/drivers/confinement.ts daemonClaimProblem). The daemon unit is
+# Type=simple, ExecStart=<pinned bun> run <entry> (src/provision/render/unit.ts), and the claim refuses the
+# boot unless PID 1's MainPID for it equals the daemon's own process.pid — measured here on that shape.
+# No bun on the host is a FAIL, never a skip: the premise would stay unmeasured.
+BUN=${BUN:-$(command -v bun)}
+if [ -z "$BUN" ] || [ ! -x "$BUN" ]; then
+  bad "P10 no bun binary (run with BUN=<the pinned bun>): the claim's MainPID premise is unmeasured"
+else
+  cat > /usr/local/lib/$P/claim.ts <<'EOF'
+require('node:fs').writeFileSync(process.argv[2], String(process.pid));
+setInterval(() => {}, 1 << 30);
+EOF
+  chmod 0644 /usr/local/lib/$P/claim.ts
+  cat > /etc/systemd/system/$P-claim.service <<EOF
+[Service]
+Type=simple
+User=$P-svc
+WorkingDirectory=/usr/local/lib/$P
+ExecStart=$BUN run /usr/local/lib/$P/claim.ts /srv/$P/claim.pid
+EOF
+  systemctl daemon-reload; rm -f /srv/$P/claim.pid
+  systemctl start $P-claim.service
+  for _ in 1 2 3 4 5 6 7 8 9 10; do [ -s /srv/$P/claim.pid ] && break; sleep 1; done
+  M10=$(systemctl show -p MainPID --value $P-claim.service); O10=$(cat /srv/$P/claim.pid 2>/dev/null)
+  [ -n "$O10" ] && [ "$M10" = "$O10" ] \
+    && ok "P10 Type=simple '<bun> run <entry>': MainPID $M10 IS the daemon's process.pid (the claim's premise)" \
+    || bad "P10 MainPID '$M10' != the daemon's process.pid '$O10': every boot would refuse its claim"
+  systemctl stop $P-claim.service
+  M10b=$(systemctl show -p MainPID --value $P-claim.service)
+  [ "$M10b" = 0 ] && ok "P10 a stopped daemon unit reads MainPID 0 (the claim refuses it)" || bad "P10 a stopped daemon unit reads MainPID '$M10b'"
+fi
+
 kill $E1 $E2 2>/dev/null
 [ $fail = 0 ] && echo "LEAD-1b PROBE: ALL PASS on systemd $V" || echo "LEAD-1b PROBE: FAILURES on systemd $V"

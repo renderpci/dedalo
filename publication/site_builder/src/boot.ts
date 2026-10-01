@@ -2,6 +2,14 @@
  * THE BOOT ORDER, as a function a gate can hold (LEAD-1b, spec §2.4).
  *
  *   1. PREFLIGHT — prove whose roots these are before anything is written (instance/roots.ts).
+ *   1a. CLAIM THE INSTANCE — prove this process is the one that may act for it, before anything
+ *      that stops a unit or writes: the listen target must not already be served
+ *      (instance/listen_target.ts), and under `systemd_scope` PID 1 must name this process as the
+ *      daemon unit's main process (drivers/confinement.ts daemonClaimProblem). A second process
+ *      of the instance (a hand run as the service user beside the unit's daemon) used to reach
+ *      step 2 — which STOPS live runs through a grant that cannot tell the two apart — and the
+ *      sweep, which rewrote the serving daemon's sessions, before listen noticed. A claim that
+ *      fails STOPS the boot (`refuse`, then a throw): nothing stopped, swept or written.
  *   1b. PROBE THE AGENT CLI — ask the installed Claude Code binary which flags it lists, and SAY
  *      so when one a turn needs is missing (drivers/claude_code.ts bootProbeClaudeCli): every
  *      Claude Code turn is then refused, typed, per request. Never stops the boot (another
@@ -29,10 +37,13 @@
  * hands over what it alone owns (the preflight, the sweep, the listener, the drain).
  */
 
-import { bootConfinementProblems, type ConfinementPolicy, reconcileAgentUnits, stopOpeningRuns } from './drivers/confinement';
+import { bootConfinementProblems, type ConfinementPolicy, daemonClaimProblem, reconcileAgentUnits, stopOpeningRuns } from './drivers/confinement';
+import { type ListenTarget, listenTargetHeld } from './instance/listen_target';
 
 export interface BootSteps {
   readonly preflight: () => void | Promise<void>;
+  /** The instance claim: throws (stopping the boot) when this process may not act for it. */
+  readonly claimInstance: () => void | Promise<void>;
   /** Optional: the agent-CLI probe (absent in a gate that does not state one). */
   readonly probeAgentCli?: () => void | Promise<void>;
   /** Optional: the host's confinement probe (absent in a gate that does not state one). */
@@ -45,6 +56,7 @@ export interface BootSteps {
 /** Run the boot steps in THE order. A step that throws stops the boot there. */
 export async function bootSequence(steps: BootSteps): Promise<void> {
   await steps.preflight();
+  await steps.claimInstance();
   await steps.probeAgentCli?.();
   await steps.probeConfinement?.();
   await steps.reconcileAgentUnits();
@@ -59,6 +71,15 @@ export interface DaemonBootDeps {
   readonly preflight: () => void | Promise<void>;
   readonly sweepOnBoot: () => Promise<void>;
   readonly listen: () => void | Promise<void>;
+  /** Where `listen` will bind — the claim asks whether something already answers there. */
+  readonly listenTarget: () => ListenTarget;
+  /**
+   * How a refused claim is said before the boot stops (production: one line and exit 1, the
+   * preflight's shape). Whatever it does, the step then throws: a refused claim never continues.
+   */
+  readonly refuse?: (message: string) => void;
+  /** This process, as PID 1 would name it (default `process.pid`; a gate's seam). */
+  readonly pid?: number;
   /**
    * The agent-CLI probe: the problems that refuse every turn of the configured CLI (empty =
    * runnable). Production: `bootProbeClaudeCli`.
@@ -74,7 +95,10 @@ export interface DaemonBootDeps {
 }
 
 /**
- * THE DAEMON'S BOOT STEPS. Reconcile asks PID 1 about THIS policy's identities — a run a killed
+ * THE DAEMON'S BOOT STEPS. The claim comes first and is the one step besides the preflight that
+ * STOPS the boot: a listen target already served, or (systemd_scope) a PID 1 that does not name
+ * this process the daemon unit's main process — or cannot say — refuses before anything is
+ * stopped or swept. Reconcile asks PID 1 about THIS policy's identities — a run a killed
  * daemon left alive is stopped, or quarantines its site, before the sweep's recovery commit
  * runs git as that site. Neither reconcile nor the sweep stops the boot when it fails: a site
  * that could not be proved idle is refused per run, not by refusing to listen.
@@ -82,8 +106,47 @@ export interface DaemonBootDeps {
 export function daemonBootSteps(deps: DaemonBootDeps): BootSteps {
   const report = deps.report ?? ((message: string, error: unknown) => console.error(message, error));
   const probe = deps.probeAgentCli;
+  // ONE POLICY FOR THE WHOLE BOOT — its value, or its failure. The claim and the reconcile must be
+  // about the same policy: a policy the claim could not build is one no later step can stop a
+  // unit with either (each meets the same remembered throw), which is why the claim may skip PID
+  // 1's half then and still never let a unit be stopped unclaimed.
+  let remembered: { readonly policy: ConfinementPolicy } | { readonly error: unknown } | null = null;
+  const policy = (): ConfinementPolicy => {
+    if (remembered === null) {
+      try {
+        remembered = { policy: deps.policy() };
+      } catch (error) {
+        remembered = { error };
+      }
+    }
+    if ('error' in remembered) throw remembered.error;
+    return remembered.policy;
+  };
   return {
     preflight: deps.preflight,
+    claimInstance: async () => {
+      const problems: string[] = [];
+      const held = await listenTargetHeld(deps.listenTarget());
+      if (held) problems.push(`${held} — the instance is already being served by another process.`);
+      let claimed: ConfinementPolicy | null = null;
+      try {
+        claimed = policy();
+      } catch {
+        // Reported by the probe and the reconcile steps, which meet the same failure: no unit is
+        // stopped under a policy that cannot be built.
+      }
+      if (claimed) {
+        const pid1 = await daemonClaimProblem(claimed, deps.pid ?? process.pid);
+        if (pid1) problems.push(pid1);
+      }
+      if (problems.length === 0) return;
+      const message =
+        `[claim] this process may not act for the instance: ${problems.join(' ')} Two daemons on one ` +
+        `instance would stop each other's agent runs and both write its sessions. Nothing was ` +
+        `stopped, swept or written.`;
+      deps.refuse?.(message);
+      throw new Error(message);
+    },
     ...(probe
       ? {
           probeAgentCli: async () => {
@@ -100,7 +163,7 @@ export function daemonBootSteps(deps: DaemonBootDeps): BootSteps {
       : {}),
     probeConfinement: async () => {
       try {
-        const problems = await (deps.probeConfinement ?? (() => bootConfinementProblems(deps.policy())))();
+        const problems = await (deps.probeConfinement ?? (() => bootConfinementProblems(policy())))();
         if (problems.length > 0) {
           report('[boot] this host cannot run a confined agent run; every run will be refused (confinement_unavailable):', problems.join(' '));
         }
@@ -110,7 +173,7 @@ export function daemonBootSteps(deps: DaemonBootDeps): BootSteps {
     },
     reconcileAgentUnits: async () => {
       try {
-        await reconcileAgentUnits(deps.policy());
+        await reconcileAgentUnits(policy());
       } catch (error) {
         report('[boot] agent unit reconciliation failed:', error);
       }

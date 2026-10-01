@@ -991,17 +991,22 @@ describe('G9 — conformance: what PID 1 loaded is what this daemon expects, str
  * G11 — boot reconciles from PID 1 first
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
+/** A listen target nothing serves (a path that does not exist): the claim's listener half passes. */
+const UNHELD = () => ({ kind: 'unix' as const, path: join(shortScratch('unheld'), 'absent.sock') });
+
+
 describe('G11 — boot: reconcile (from PID 1) → sweep → listen', () => {
   test('bootSequence runs the steps in that order, and never listens before reconciling', async () => {
     const bootSequence = await contractExport<(steps: Record<string, () => unknown>) => Promise<void>>('boot.ts', 'bootSequence');
     const order: string[] = [];
     await bootSequence({
       preflight: () => void order.push('preflight'),
+      claimInstance: async () => void order.push('claim'),
       reconcileAgentUnits: async () => void order.push('reconcile'),
       sweepOnBoot: async () => void order.push('sweep'),
       listen: async () => void order.push('listen'),
     });
-    expect(order).toEqual(['preflight', 'reconcile', 'sweep', 'listen']);
+    expect(order).toEqual(['preflight', 'claim', 'reconcile', 'sweep', 'listen']);
   });
 
   test('the daemon’s reconcile STEP (daemonBootSteps, what index.ts boots) reconciles the policy it is handed: a stubborn s2-build is asked to stop and quarantines site 2 — BEFORE any run', async () => {
@@ -1012,7 +1017,7 @@ describe('G11 — boot: reconcile (from PID 1) → sweep → listen', () => {
       ['beta', 2],
     ]);
     const leftover = host.standIn.plantLive(2, 'build', { stubborn: true });
-    const steps = daemonBootSteps({ policy: () => host.policy as never, preflight: () => {}, sweepOnBoot: async () => {}, listen: async () => {} });
+    const steps = daemonBootSteps({ policy: () => host.policy as never, preflight: () => {}, listenTarget: UNHELD, sweepOnBoot: async () => {}, listen: async () => {} });
     await steps.reconcileAgentUnits();
     // Read straight after the step: no run has asked anything, so nothing but the step acted.
     const lease = leaseSnapshot(host.policy as never);
@@ -1032,7 +1037,7 @@ describe('G11 — boot: reconcile (from PID 1) → sweep → listen', () => {
       ['beta', 2],
     ]);
     const leftover = host.standIn.plantLive(2, 'build');
-    await daemonBootSteps({ policy: () => host.policy as never, preflight: () => {}, sweepOnBoot: async () => {}, listen: async () => {} }).reconcileAgentUnits();
+    await daemonBootSteps({ policy: () => host.policy as never, preflight: () => {}, listenTarget: UNHELD, sweepOnBoot: async () => {}, listen: async () => {} }).reconcileAgentUnits();
     expect({ state: leftover.state, lease: leaseSnapshot(host.policy as never) }).toEqual({ state: 'inactive', lease: { runs: [], quarantined: [] } });
   }, 30_000);
 
@@ -1047,6 +1052,7 @@ describe('G11 — boot: reconcile (from PID 1) → sweep → listen', () => {
     const seen: string[] = [];
     await bootSequence(
       daemonBootSteps({
+        listenTarget: UNHELD,
         policy: () => host.policy as never,
         preflight: () => void seen.push('preflight'),
         sweepOnBoot: async () => void seen.push(`sweep sees quarantined ${JSON.stringify(leaseSnapshot(host.policy as never).quarantined.map(({ k }) => k))}`),
@@ -1061,6 +1067,7 @@ describe('G11 — boot: reconcile (from PID 1) → sweep → listen', () => {
     const seen: string[] = [];
     await bootSequence(
       daemonBootSteps({
+        listenTarget: UNHELD,
         policy: () => {
           throw new Error('no policy (gate)');
         },
@@ -1091,6 +1098,7 @@ describe('G11 — boot: reconcile (from PID 1) → sweep → listen', () => {
       const seen: string[] = [];
       await bootSequence(
         daemonBootSteps({
+          listenTarget: UNHELD,
           policy: () => host.policy as never,
           preflight: () => {},
           sweepOnBoot: async () => void seen.push('sweep'),
@@ -1108,6 +1116,7 @@ describe('G11 — boot: reconcile (from PID 1) → sweep → listen', () => {
     const said: string[] = [];
     await bootSequence(
       daemonBootSteps({
+        listenTarget: UNHELD,
         policy: () => clean.policy as never,
         preflight: () => {},
         sweepOnBoot: async () => {},
@@ -1163,6 +1172,186 @@ describe('G11 — boot: reconcile (from PID 1) → sweep → listen', () => {
     }
     expect(freed).toBe(true);
   }, 60_000);
+});
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * G11b — THE INSTANCE CLAIM comes before anything that stops a unit or writes
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * A SECOND PROCESS OF THE SAME INSTANCE (an operator's hand run as the service user, beside the
+ * unit's daemon) used to reach `reconcileAgentUnits` — which STOPS every live agent run of the
+ * instance's sites, through the polkit grant this uid holds — and then the sweep, which marks the
+ * serving daemon's 'running' sessions interrupted and recovery-commits them, before the listen
+ * step finally noticed the socket was served and exited 1. The claim now comes first: PID 1 must
+ * name THIS process as the daemon unit's main process (systemd_scope), and the listen target must
+ * not already be served (every mode). Each row is the serving daemon's outcome: its live turn
+ * still active, no stop, no list, no sweep, no listen.
+ */
+describe('G11b — the instance claim precedes reconcile, sweep and listen', () => {
+  const DAEMON_UNIT = 'dedalo-site-builder@test.service';
+
+  async function bootAsSecond(host: GatePolicy, target: () => { kind: 'unix'; path: string } | { kind: 'tcp'; hostname: string; port: number } = UNHELD) {
+    const { bootSequence, daemonBootSteps } = await import('../src/boot');
+    const seen: string[] = [];
+    const refused = await caught(() =>
+      bootSequence(
+        daemonBootSteps({
+          listenTarget: target,
+          policy: () => host.policy as never,
+          preflight: () => void seen.push('preflight'),
+          sweepOnBoot: async () => void seen.push('sweep'),
+          listen: async () => void seen.push('listen'),
+          refuse: message => void seen.push(`refused: ${message}`),
+        }),
+      ),
+    );
+    const systemctl = host.standIn.systemctlCalls;
+    return {
+      refused: refused instanceof Error && !/expected a refusal/.test(refused.message),
+      seen: seen.map(line => (line.startsWith('refused: ') ? 'refused' : line)),
+      said: seen.find(line => line.startsWith('refused: ')) ?? '',
+      stops: systemctl.filter(argv => argv.includes('stop')).length,
+      lists: systemctl.filter(argv => argv.includes('list-units')).length,
+    };
+  }
+
+  test('PID 1 names ANOTHER main process for the daemon unit: refused at the claim — the serving daemon’s live turn is not stopped, nothing is listed, swept or listened', async () => {
+    const host = await hostWith([['alpha', 1]]);
+    const serving = host.standIn.plantLive(1, 'turn');
+    host.standIn.daemonMainPid = process.pid + 1;
+    const outcome = await bootAsSecond(host);
+    expect({ ...outcome, said: /main process is PID \d+, not this process/.test(outcome.said), turn: serving.state }).toEqual({
+      refused: true,
+      seen: ['preflight', 'refused'],
+      said: true,
+      stops: 0,
+      lists: 0,
+      turn: 'active',
+    });
+  });
+
+  test('“PID 1 cannot say” is never “mine”: the unit not running, a show that throws, fails or omits MainPID — each refused before reconcile', async () => {
+    const cases: Array<[string, (host: GatePolicy) => void]> = [
+      ['not running (MainPID=0)', host => void (host.standIn.daemonMainPid = 0)],
+      ['the bus never answered', host => void (host.standIn.fault = (verb, units) => (verb === 'show' && units.includes(DAEMON_UNIT) ? 'throw' : null))],
+      ['show failed', host => void (host.standIn.fault = (verb, units) => (verb === 'show' && units.includes(DAEMON_UNIT) ? BUS_TIMEOUT : null))],
+      ['MainPID absent', host => void (host.standIn.fault = (verb, units) => (verb === 'show' && units.includes(DAEMON_UNIT) ? { drop: ['MainPID'] } : null))],
+    ];
+    for (const [what, plant] of cases) {
+      const host = await hostWith([['alpha', 1]]);
+      const serving = host.standIn.plantLive(1, 'turn');
+      plant(host);
+      const outcome = await bootAsSecond(host);
+      expect({ what, refused: outcome.refused, seen: outcome.seen, stops: outcome.stops, lists: outcome.lists, turn: serving.state }).toEqual({
+        what,
+        refused: true,
+        seen: ['preflight', 'refused'],
+        stops: 0,
+        lists: 0,
+        turn: 'active',
+      });
+    }
+  });
+
+  test('the claim asks PID 1 about THIS instance’s daemon unit, by name', async () => {
+    const host = await hostWith([['alpha', 1]]);
+    await bootAsSecond(host);
+    expect(host.standIn.systemctlCalls.some(argv => argv.includes('show') && argv.includes(DAEMON_UNIT) && argv.join(' ').includes('MainPID'))).toBe(true);
+  });
+
+  test('the listen target already SERVED (unix socket, tcp port): refused before reconcile, even with PID 1 naming this process', async () => {
+    const dir = shortScratch('held');
+    const path = join(dir, 'daemon.sock');
+    const unix = Bun.listen({ unix: path, socket: { data() {} } });
+    const tcp = Bun.listen({ hostname: '127.0.0.1', port: 0, socket: { data() {} } });
+    try {
+      for (const target of [() => ({ kind: 'unix' as const, path }), () => ({ kind: 'tcp' as const, hostname: '127.0.0.1', port: tcp.port })]) {
+        const host = await hostWith([['alpha', 1]]);
+        const serving = host.standIn.plantLive(1, 'turn');
+        const outcome = await bootAsSecond(host, target);
+        expect({ kind: target().kind, refused: outcome.refused, seen: outcome.seen, served: /already being served/.test(outcome.said), stops: outcome.stops, turn: serving.state }).toEqual({
+          kind: target().kind,
+          refused: true,
+          seen: ['preflight', 'refused'],
+          served: true,
+          stops: 0,
+          turn: 'active',
+        });
+      }
+    } finally {
+      unix.stop(true);
+      tcp.stop(true);
+    }
+  });
+
+  test('the listener half alone: a served socket/port is held; an absent path, a non-socket file and a closed port are not', async () => {
+    const listenTargetHeld = await contractExport<(target: unknown) => Promise<string | null>>('instance/listen_target.ts', 'listenTargetHeld');
+    const dir = shortScratch('lt');
+    const path = join(dir, 'd.sock');
+    const unix = Bun.listen({ unix: path, socket: { data() {} } });
+    const tcp = Bun.listen({ hostname: '127.0.0.1', port: 0, socket: { data() {} } });
+    const port = tcp.port;
+    const file = join(dir, 'not-a-socket');
+    writeFileSync(file, '');
+    const held = {
+      unix: (await listenTargetHeld({ kind: 'unix', path })) !== null,
+      tcp: (await listenTargetHeld({ kind: 'tcp', hostname: '127.0.0.1', port })) !== null,
+      absent: (await listenTargetHeld({ kind: 'unix', path: join(dir, 'absent.sock') })) !== null,
+      file: (await listenTargetHeld({ kind: 'unix', path: file })) !== null,
+    };
+    unix.stop(true);
+    tcp.stop(true);
+    const closed = (await listenTargetHeld({ kind: 'tcp', hostname: '127.0.0.1', port })) !== null;
+    expect({ ...held, closed }).toEqual({ unix: true, tcp: true, absent: false, file: false, closed: false });
+  });
+
+  test('control: PID 1 names THIS process — the claim passes and reconcile then stops the leftover (claim first, in the log)', async () => {
+    const host = await hostWith([['alpha', 1]]);
+    const leftover = host.standIn.plantLive(1, 'build');
+    const outcome = await bootAsSecond(host);
+    const log = host.standIn.log;
+    const claimAt = log.findIndex(line => line.startsWith('systemctl show') && line.includes(DAEMON_UNIT));
+    const firstList = log.findIndex(line => line.includes('list-units'));
+    expect({ refused: outcome.refused, seen: outcome.seen, leftover: leftover.state, claimFirst: claimAt > -1 && claimAt < firstList }).toEqual({
+      refused: false,
+      seen: ['preflight', 'sweep', 'listen'],
+      leftover: 'inactive',
+      claimFirst: true,
+    });
+  }, 30_000);
+
+  test('a policy the claim could not build is never built later in the same boot: reconcile stops nothing unclaimed', async () => {
+    const { bootSequence, daemonBootSteps } = await import('../src/boot');
+    const host = await hostWith([['alpha', 1]]);
+    const serving = host.standIn.plantLive(1, 'turn');
+    host.standIn.daemonMainPid = process.pid + 1;
+    let asked = 0;
+    const seen: string[] = [];
+    await bootSequence(
+      daemonBootSteps({
+        listenTarget: UNHELD,
+        // Fails the FIRST time only — the claim's ask — and would hand reconcile a policy after.
+        policy: () => {
+          asked++;
+          if (asked === 1) throw new Error('transient (gate)');
+          return host.policy as never;
+        },
+        preflight: () => {},
+        sweepOnBoot: async () => void seen.push('sweep'),
+        listen: async () => void seen.push('listen'),
+        report: message => void seen.push(message),
+      }),
+    );
+    expect({ asked, stops: host.standIn.systemctlCalls.filter(argv => argv.includes('stop')).length, turn: serving.state }).toEqual({ asked: 1, stops: 0, turn: 'active' });
+  });
+
+  test('mode none (declared unconfined, nothing is ever stopped): PID 1 is not asked — a host without systemd still boots', async () => {
+    const host = await hostWith([['alpha', 1]], { overrides: { mode: 'none' } });
+    host.standIn.daemonMainPid = 0;
+    const outcome = await bootAsSecond(host);
+    expect({ refused: outcome.refused, seen: outcome.seen, asked: host.standIn.systemctlCalls.length }).toEqual({ refused: false, seen: ['preflight', 'sweep', 'listen'], asked: 0 });
+  });
 });
 
 /* ────────────────────────────────────────────────────────────────────────────────────
