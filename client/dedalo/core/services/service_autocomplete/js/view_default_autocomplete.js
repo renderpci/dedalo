@@ -1257,6 +1257,12 @@ const render_option_checkbox = function(self, datalist_item) {
 
 
 
+// pause after the last keystroke before a per-field input searches (same
+// cadence as the main search input)
+const FILTER_INPUT_DEBOUNCE_MS = 320
+
+
+
 /**
 * RENDER_INPUTS_LIST
 * Build a set of labelled text inputs — one per filter_free item — that allow
@@ -1268,10 +1274,10 @@ const render_option_checkbox = function(self, datalist_item) {
 * stripped before display).
 *
 * Each input:
-*  - Sets filter_item.q on 'change' then fires self.autocomplete_search() and
-*    calls render_datalist().
-*  - On 'keyup' stops propagation and triggers the change handler when Enter
-*    is pressed.
+*  - Sets filter_item.q and fires run_search() FILTER_INPUT_DEBOUNCE_MS after
+*    the user stops typing ('input'), or at once on 'change' / Enter; a value
+*    already searched is not searched again, except on Enter (explicit retry).
+*  - Labels a deep path with every step's label (Modelo › Término).
 *  - Stores a back-reference (component_input.filter_item = filter_item) so
 *    the main search input's input_handler can also update the q values via
 *    self.filter_free_nodes.
@@ -1297,10 +1303,13 @@ const render_inputs_list = function(self) {
 
 			const filter_item = filter_group[i]
 
-			const current_ddo		= filter_item.path[filter_item.path.length-1]
-			const component_label	= current_ddo.label
-				? current_ddo.label.replace(/(<([^>]+)>)/ig, '')
-				: '';
+			// label. A deep path (a relation column searched through what it
+			// displays, e.g. Modelo › Término) names every step, so two
+			// 'Término' inputs stay distinguishable
+			const component_label = filter_item.path
+				.map(ddo => ddo.label ? ddo.label.replace(/(<([^>]+)>)/ig, '') : '')
+				.filter(Boolean)
+				.join(' › ')
 
 			// input_group
 			const input_group = ui.create_dom_element({
@@ -1330,7 +1339,20 @@ const render_inputs_list = function(self) {
 			component_input.filter_item = filter_item
 
 			// change event
-			const change_handler = async () => {
+			// typing searches after a pause (input_handler); 'change' and Enter
+			// search at once. A value already in filter_item.q (searched by the
+			// debounce, or set by the main search input) is not searched again,
+			// except on Enter (force), the explicit retry. A detached input (the
+			// service was destroyed while a pause was pending) never searches.
+			let timeout = null
+			const change_handler = async (force=false) => {
+				clearTimeout(timeout)
+				if (!component_input.isConnected) {
+					return
+				}
+				if (force!==true && component_input.value===(filter_item.q ?? '')) {
+					return
+				}
 				// reset search cache (a per-field input changes the query, like every other control)
 				self.search_cache = {}
 				// update filter_item q value from input
@@ -1338,13 +1360,21 @@ const render_inputs_list = function(self) {
 				// force search (sequenced to avoid out-of-order renders)
 				await run_search(self)
 			}
-			component_input.addEventListener('change', change_handler)
+			component_input.addEventListener('change', () => change_handler())
+
+			// input event. Debounced search while typing
+			const input_handler = (e) => {
+				e.stopPropagation()
+				clearTimeout(timeout)
+				timeout = setTimeout(() => change_handler(), FILTER_INPUT_DEBOUNCE_MS)
+			}
+			component_input.addEventListener('input', input_handler)
 
 			// keyup event
 			const keyup_handler = (e) => {
 				e.stopPropagation()
 				if (e.key==='Enter') {
-					change_handler()
+					change_handler(true)
 				}
 			}
 			component_input.addEventListener('keyup', keyup_handler)

@@ -703,6 +703,12 @@ export interface ParsedRequestConfigItem {
 	choose: { ddo_map: ProcessedDdo[]; sqo_config?: unknown } | null;
 	hide: { ddo_map: ProcessedDdo[] } | null;
 	/**
+	 * The filter_free search paths, emitted only when they differ from the
+	 * search/show map (relation columns spelled through what they display) —
+	 * ./search_display_paths.ts. Read only by the client's build_rqo_search.
+	 */
+	search_paths?: ProcessedDdo[];
+	/**
 	 * The TARGET SECTION's external binding, shaped for publication
 	 * (src/external/config.ts publishApiConfig). `null` on every dedalo item —
 	 * PHP emits the key unconditionally and the client's portal edit handler

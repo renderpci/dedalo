@@ -1124,7 +1124,15 @@ export async function buildStructureContext(options: {
 				);
 			}
 		}
-		entry.request_config = parsedConfig;
+		// A relation column in a picker's search map is searched through what it
+		// DISPLAYS: its display ddos are written under it in the item's own
+		// `search_paths` key, so the client mints explicit deep filter paths
+		// instead of sending a word to a locator column; show/search/choose stay
+		// untouched (WC-2026-10-01-relation-search-display-paths).
+		const { withSearchDisplayPaths } = await import(
+			'../relations/request_config/search_display_paths.ts'
+		);
+		entry.request_config = await withSearchDisplayPaths(parsedConfig, options.tipo, core.model);
 
 		// columns_map exposure (PHP :1679): the base ontology value (section_list
 		// child in list mode) when a request_config exists, [] fallback. The

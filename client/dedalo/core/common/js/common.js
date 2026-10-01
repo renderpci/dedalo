@@ -1915,7 +1915,8 @@ common.prototype.build_rqo_show = async function(_request_config_object, action,
 *  4. Resolve `limit`/`offset` from choose.sqo_config → sqo_config → choose_limit_default (25).
 *     The choose.sqo_config branch is kept in sync with the server-side chain in
 *     request_config_v6 parse_choose_config.
-*  5. Build `filter_free` by walking search.ddo_map (or show.ddo_map as fallback)
+*  5. Build `filter_free` by walking search_paths (server-emitted, when present),
+*     else search.ddo_map (or show.ddo_map as fallback)
 *     through get_ar_inverted_paths(), reversing each path to server order, and
 *     adding one `{q:'', path:[...]}` entry per leaf per operator group.
 *     component_dataframe paths are skipped (they have their own independent sqo).
@@ -2008,10 +2009,18 @@ common.prototype.build_rqo_search = async function(request_config_object, action
 						mode			: 'list'
 					}]
 
-			if (search_ddo_map) {
+			// search_paths — server-emitted filter paths (relation columns spelled
+			// through what they display: Modelo › Término; search_display_paths.ts).
+			// Used for the filter_free paths ONLY: the result columns below keep
+			// choose → search → show.
+			const paths_ddo_map = Array.isArray(request_config_object.search_paths) && request_config_object.search_paths.length > 0
+				? request_config_object.search_paths
+				: search_ddo_map
+
+			if (paths_ddo_map) {
 				// get the sub elements with the ddo_map, the method is recursive,
 				// it get only the items that don't has relations and is possible get values (component_input_text, component_text_area, compomnent_select, etc )
-				const ar_paths = get_ar_inverted_paths(search_ddo_map)
+				const ar_paths = get_ar_inverted_paths(paths_ddo_map)
 				// change the order of the paths to correct order for sqo and set all ddo to 'list' mode
 				const paths_length = ar_paths.length
 				paths: for (let i = 0; i < paths_length; i++) {

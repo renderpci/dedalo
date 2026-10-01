@@ -164,6 +164,22 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Autocomplete searches work again in pickers with a related-record field, and the field inputs search as you type**
+
+    In an autocomplete whose search fields include a related-record field (for
+    example the ontology "Sobrescritura" picker, with its "Modelo" field), typing in
+    the main search box answered "No se ha podido completar la búsqueda". Such a
+    field is now searched through the values it shows, each with its own input
+    under the search box ("Modelo › Término", "Modelo › Código"): "section" there
+    finds the terms whose model is *section*. A related-record field that shows
+    nothing searchable (only an image, for example) no longer gets a search input.
+
+    The per-field inputs under the search box (Término, Código, tld…) also search
+    on their own a moment after you stop typing; before, the search waited until you
+    moved to another input.
+
+    Wire contract: `WC-2026-10-01-relation-search-display-paths`.
+
 - **Small editing forms no longer show tool buttons they turn off.**
 
     Some forms turn off the tool buttons on their fields, but the buttons were still
@@ -714,7 +730,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 61 entries"
+??? note "Wire contract — 62 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -776,6 +792,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-30-password-hash-never-served`
     - `WC-2026-09-30-password-policy-enforced`
     - `WC-2026-10-01-ontology-overwrite-scoped`
+    - `WC-2026-10-01-relation-search-display-paths`
     - `WC-2026-10-01-unit-test-widget-dev-gate`
 
 ## 7.0.0-beta.4 — 2026-08-24
