@@ -28,8 +28,12 @@
  *      calls; the stream variant refuses as JSON, never an opened stream; the
  *      generative `ask` without `tool_rag` is 403 before any provider call, and
  *      its granted twin is served (a grounding miss refunds the run, the query
- *      embedding stays charged); `embed_groups` spends nothing; embed budget 1:
- *      the second semantic_search is 429.
+ *      embedding stays charged); `embed_groups` spends nothing. THE dd_rag_api
+ *      CENSUS (refuter-surviving S2, 2026-10-01): the door table equals
+ *      `ragApiActions`; with both embedding sidecars at the counting stand-in,
+ *      every action is driven once and a model call that moved no ledger is RED;
+ *      every door MEASURED spending an embedding gets embed budget 1 — the
+ *      second call is 429 with no embedding made.
  *
  * THE LEDGER IS THE SHIPPED ONE (`ddengine1`) — the gate materializes it through
  * the production door, sweeps the fixture users' rows before and after, and
@@ -42,6 +46,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { ragApiActions } from '../../src/ai/rag/api.ts';
 import type { MultimodalEmbeddingProvider } from '../../src/ai/rag/multimodal_embedding_provider.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { ApiRequestContext } from '../../src/core/api/handler_context.ts';
@@ -127,6 +132,13 @@ const OTHER_KEYS = [
 	'DEDALO_RAG_LLM_MODEL',
 	'DEDALO_RAG_LLM_API_KEY',
 	'DEDALO_RAG_EMBEDDING_PROVIDER',
+	// The C-census legs arm the embedding sidecars at the counting stand-in.
+	'DEDALO_RAG_EMBEDDING_ENDPOINT',
+	'DEDALO_RAG_EMBEDDING_MODEL',
+	'DEDALO_RAG_MEDIA_ENABLED',
+	'DEDALO_RAG_MULTIMODAL_ENDPOINT',
+	'DEDALO_RAG_MULTIMODAL_PROVIDER',
+	'DEDALO_RAG_MULTIMODAL_MODEL',
 ];
 
 /** The provider stand-in reports this usage on every turn (3 in + 2 out). */
@@ -137,6 +149,14 @@ let root: Principal;
 let seedId = 0;
 let provider: ReturnType<typeof Bun.serve> | null = null;
 let providerCalls = 0;
+/** Embedding calls the stand-in answered (text sidecar `/embed`, multimodal `/text` + `/image`). */
+let embedCalls = 0;
+/** The stand-in's embedding paths (sidecar contracts: embedding_provider.ts, multimodal_embedding_provider.ts). */
+const EMBED_PATHS: Record<string, string> = {
+	'/zzembed/embed': 'input',
+	'/zzmm/text': 'input',
+	'/zzmm/image': 'images',
+};
 const savedEnv: Record<string, string | undefined> = {};
 const sessions = new Map<number, Session>();
 
@@ -196,6 +216,15 @@ describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 			port: 0,
 			hostname: '127.0.0.1',
 			async fetch(request) {
+				const field = EMBED_PATHS[new URL(request.url).pathname];
+				if (field !== undefined) {
+					// An EMBEDDING model call: counted apart from the chat turns, so the
+					// existing "zero provider calls" legs keep meaning chat turns.
+					embedCalls++;
+					const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+					const items = Array.isArray(body[field]) ? (body[field] as unknown[]) : [];
+					return Response.json({ embeddings: items.map(() => [1, 0, 0, 0, 0, 0, 0, 0]) });
+				}
 				providerCalls++;
 				const body = (await request.json().catch(() => ({}))) as { stream?: boolean };
 				const usage = { prompt_tokens: 3, completion_tokens: 2, total_tokens: TURN_TOKENS };
@@ -600,27 +629,163 @@ describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 			expect(await readAiSpend(ids.control)).toEqual({ runs: 0, tokens: 0, embeds: 0, vision: 0 });
 		});
 
-		test('embed budget 1: the SECOND semantic_search is ai.budget_exhausted (429)', async () => {
-			budgets({ embeds: 1 });
-			await sweepAiSpendLedger([AUTHZ_CONTROL_USER_ID]);
-			const first = await call(
-				'dd_rag_api',
-				'semantic_search',
-				{ query: 'zzspend first', section_tipo: AUTHZ_SECTION },
-				ids.control,
+		// ── EVERY MODEL CALL A dd_rag_api DOOR MAKES IS METERED (refuter-surviving
+		// S2, 2026-10-01). The census is OUTCOME-DERIVED and TOTAL over the action
+		// table: both embedding sidecars point at the counting stand-in, every
+		// action in ragApiActions is driven once, and a door that made a model
+		// call (an embedding or a chat turn) without moving the caller's ledger is
+		// RED. A new action without a row here is RED (the table must equal the
+		// registry), and every door MEASURED to spend an embedding gets the
+		// budget-1 leg below — derived from the census, never a hand list.
+		const RAG_DOORS: Record<
+			keyof typeof ragApiActions,
+			{ options: () => Record<string, unknown>; who: () => Principal }
+		> = {
+			semantic_search: {
+				options: () => ({ query: 'zzspend census', section_tipo: AUTHZ_SECTION }),
+				who: () => ids.control,
+			},
+			retrieve: {
+				options: () => ({ query: 'zzspend census', section_tipo: AUTHZ_SECTION }),
+				who: () => ids.control,
+			},
+			get_agent_context: {
+				options: () => ({ query: 'zzspend census', section_tipo: AUTHZ_SECTION }),
+				who: () => ids.control,
+			},
+			search_by_text_image: {
+				options: () => ({ query: 'zzspend census', section_tipo: [AUTHZ_SECTION] }),
+				who: () => ids.control,
+			},
+			// `ask` is GRANTED (tool_rag): the census drives the granted principal.
+			ask: {
+				options: () => ({ query: 'zzspend census', section_tipo: AUTHZ_SECTION }),
+				who: () => ids.toolGranted,
+			},
+			embed_groups: { options: () => ({ section_tipo: AUTHZ_SECTION }), who: () => ids.control },
+			similar_to: {
+				options: () => ({ section_tipo: AUTHZ_SECTION, section_id: seedId }),
+				who: () => ids.control,
+			},
+			similar_objects: {
+				options: () => ({ section_tipo: AUTHZ_SECTION, section_id: seedId }),
+				who: () => ids.control,
+			},
+			characterize_object: {
+				options: () => ({ section_tipo: AUTHZ_SECTION, section_id: seedId }),
+				who: () => ids.control,
+			},
+		};
+		/** The census result: per door, the model calls it made and the ledger it moved. */
+		const measured = new Map<string, { modelCalls: number; embeds: number; spent: number }>();
+		const armSidecars = () => {
+			process.env.DEDALO_RAG_EMBEDDING_PROVIDER = 'sidecar';
+			process.env.DEDALO_RAG_EMBEDDING_ENDPOINT = `http://127.0.0.1:${provider?.port}/zzembed`;
+			process.env.DEDALO_RAG_EMBEDDING_MODEL = 'zzspend-embed';
+			process.env.DEDALO_RAG_MEDIA_ENABLED = 'true';
+			process.env.DEDALO_RAG_MULTIMODAL_ENDPOINT = `http://127.0.0.1:${provider?.port}/zzmm`;
+			process.env.DEDALO_RAG_MULTIMODAL_PROVIDER = 'local';
+			process.env.DEDALO_RAG_MULTIMODAL_MODEL = 'zzspend-mm';
+		};
+		const disarmSidecars = () => {
+			process.env.DEDALO_RAG_EMBEDDING_PROVIDER = 'stub';
+			for (const key of [
+				'DEDALO_RAG_EMBEDDING_ENDPOINT',
+				'DEDALO_RAG_EMBEDDING_MODEL',
+				'DEDALO_RAG_MEDIA_ENABLED',
+				'DEDALO_RAG_MULTIMODAL_ENDPOINT',
+				'DEDALO_RAG_MULTIMODAL_PROVIDER',
+				'DEDALO_RAG_MULTIMODAL_MODEL',
+			]) {
+				delete process.env[key];
+			}
+		};
+		const ledgerTotal = (spend: Awaited<ReturnType<typeof readAiSpend>>) =>
+			spend.runs + spend.tokens + spend.embeds + spend.vision;
+
+		test('CENSUS: the door table is the dd_rag_api registry — a new action needs its row', () => {
+			expect(Object.keys(RAG_DOORS).sort()).toEqual(Object.keys(ragApiActions).sort());
+		});
+
+		test("CENSUS: every dd_rag_api door that calls a model moves the caller's ledger", async () => {
+			budgets({});
+			armSidecars();
+			try {
+				for (const [action, door] of Object.entries(RAG_DOORS)) {
+					const principal = door.who();
+					await sweepAiSpendLedger([principal.userId]);
+					const before = embedCalls + providerCalls;
+					const result = await call('dd_rag_api', action, door.options(), principal);
+					// Served — a door that answered with an error proved nothing about its spend.
+					expect({ action, status: result.status }).toEqual({ action, status: 200 });
+					const spend = await readAiSpend(principal);
+					measured.set(action, {
+						modelCalls: embedCalls + providerCalls - before,
+						embeds: spend.embeds,
+						spent: ledgerTotal(spend),
+					});
+				}
+			} finally {
+				disarmSidecars();
+			}
+			const unmetered = [...measured]
+				.filter(([, row]) => row.modelCalls > 0 && row.spent === 0)
+				.map(([action]) => action);
+			expect(unmetered).toEqual([]);
+			// Non-degeneracy: the census really saw the model doors call a model (a
+			// stand-in nobody reached would make every row "no call, no spend").
+			const calling = [...measured].filter(([, row]) => row.modelCalls > 0).map(([a]) => a);
+			expect(calling).toEqual(
+				expect.arrayContaining([
+					'semantic_search',
+					'retrieve',
+					'get_agent_context',
+					'search_by_text_image',
+					'ask',
+				]),
 			);
-			expect(first.status).toBe(200);
-			const second = await call(
-				'dd_rag_api',
-				'semantic_search',
-				{ query: 'zzspend second', section_tipo: AUTHZ_SECTION },
-				ids.control,
+		});
+
+		test('embed budget 1: for EVERY door the census measured spending an embedding, the SECOND call is ai.budget_exhausted (429)', async () => {
+			const embedDoors = [...measured].filter(([, row]) => row.embeds > 0).map(([a]) => a);
+			// Derived, so it must not be empty (the census ran first, in file order).
+			expect(embedDoors).toEqual(
+				expect.arrayContaining([
+					'semantic_search',
+					'retrieve',
+					'get_agent_context',
+					'search_by_text_image',
+				]),
 			);
-			expect({ status: second.status, code: errorCode(second.body) }).toEqual({
-				status: 429,
-				code: 'ai.budget_exhausted',
-			});
-			expect((await readAiSpend(ids.control)).embeds).toBe(1);
+			armSidecars();
+			try {
+				for (const action of embedDoors) {
+					const door = RAG_DOORS[action as keyof typeof RAG_DOORS];
+					const principal = door.who();
+					budgets({ embeds: 1 });
+					await sweepAiSpendLedger([principal.userId]);
+					const first = await call('dd_rag_api', action, door.options(), principal);
+					const before = embedCalls;
+					const second = await call('dd_rag_api', action, door.options(), principal);
+					expect({
+						action,
+						first: first.status,
+						second: second.status,
+						code: errorCode(second.body),
+						embedsAfterRefusal: embedCalls - before,
+						ledger: (await readAiSpend(principal)).embeds,
+					}).toEqual({
+						action,
+						first: 200,
+						second: 429,
+						code: 'ai.budget_exhausted',
+						embedsAfterRefusal: 0,
+						ledger: 1,
+					});
+				}
+			} finally {
+				disarmSidecars();
+			}
 		});
 
 		// ── identify: the vision spend (granted by tool_identify — its own gate) ──

@@ -71,5 +71,8 @@
   reserves at budget 1 admit one, an administrator's correction survives a racing reserve,
   missing vs reported usage, release, nobody exempt, fail closed; the doors: zero provider
   calls on every refusal, the stream refused as JSON, `ask` granted vs ungranted,
-  `embed_groups` untouched, the embed and vision budgets); the grant-only law in
+  `embed_groups` untouched, the embed and vision budgets; and — amended 2026-10-01,
+  refuter-surviving S2 — the dd_rag_api CENSUS: the door table equals the action registry,
+  a door whose model call moved no ledger is red, and every door measured spending an
+  embedding is refused at embed budget 1); the grant-only law in
   `test/unit/tools_register_validate.test.ts`.

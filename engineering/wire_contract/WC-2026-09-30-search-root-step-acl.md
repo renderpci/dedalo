@@ -59,9 +59,18 @@
   wildcard, the public list-value fallback — mints nothing, because the rule's own bound
   (dd655's owner predicate, …) does not travel into an unbounded search of the target
   section. A refused source is the ordinary KEYED search, not an error. Read off the
-  ontology (cached per source as an ontology fact), never off the client payload or ALS.
-  PHP get_subdatum's floor: an autocomplete on a target component the profile holds 0 on
-  is served.
+  source's own request_config, never off the client payload. PHP get_subdatum's floor: an
+  autocomplete on a target component the profile holds 0 on is served.
+- **The floor is the CALLER'S OWN subdatum map (amended 2026-10-01, refuter-surviving
+  S1):** it is built per call for the VERIFIED principal (the request context's principal
+  set to it for the build) and NEVER cached across principals. An IMPLICIT request_config
+  (no `source.request_config`) keeps only the ddos the principal holds >= 1 on
+  (`filterAuthorizedRelated`, PHP STEP 5), so a principal-free cache served whoever
+  populated it first: the superuser first handed a 0-grant user the search of a component
+  her own portal does not show her; she first narrowed every later caller's floor. A
+  principal-free BUILD would floor permanently what the implicit builder authorizes away.
+  Through a config-less portal, a component the caller holds 0 on therefore stays KEYED
+  (as PHP: it is not in her subdatum).
 - **Open, ledgered:** the multi-hop JOIN binds the step's TABLE, not its section (PHP
   `build_sql_join` parity — the `target_section_tipo` binding is commented out there), so
   a hop's component key and record predicate are asked of the DECLARED step section. That
@@ -77,7 +86,10 @@
   dd200 for a non-admin and a global admin; the ORDER leg; the loud notice; the read-floor
   leg; the end-to-end AUTOCOMPLETE legs through `readSectionRows` — served through the
   portal source, keyed without it, keyed for a field the portal does not name, keyed for a
-  source the caller does not hold; the FORGED-SOURCE legs (a test3 portal named under dd655,
+  source the caller does not hold; the IMPLICIT-SOURCE legs (a config-less portal naming
+  test162: each principal's floor is his own whichever populated first, keyed for her
+  through read and count, and outside any request scope or under another principal's
+  scope the THREADED principal decides); the FORGED-SOURCE legs (a test3 portal named under dd655,
   a dd655 member, a dd1324 member, a test65 component paired with test3 through a stray
   matrix pair, a test65 member without the section grant: read AND count keyed) beside the
   virtual-section source (zzvmain1 → test3) still served; the autocomplete COUNT equal to the rows the read serves;

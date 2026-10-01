@@ -61,6 +61,7 @@ import { sanitizeClientSqo } from '../../src/core/concepts/sqo.ts';
 import { encodeForJsonb } from '../../src/core/db/json_codec.ts';
 import { deleteMatrixRecord } from '../../src/core/db/matrix_write.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
 import { buildSearchSql } from '../../src/core/search/sql_assembler.ts';
 import { clearUserFilterRecordsCache } from '../../src/core/security/filter_records.ts';
 import {
@@ -70,6 +71,7 @@ import {
 	getPermissions,
 	type Principal,
 } from '../../src/core/security/permissions.ts';
+import { runWithRequestContext } from '../../src/core/security/request_context.ts';
 import {
 	dropSituation,
 	ensureSituation,
@@ -128,6 +130,11 @@ const FLOOR_FOREIGN_SOURCE = 'zzfloor3';
 const FLOOR_PRESET_SOURCE = 'zzfloor4';
 /** The same filter_by_list source, a member of dd1324 (every principal holds 1 there by rule). */
 const FLOOR_TOOLS_SOURCE = 'zzfloor5';
+/**
+ * A zz portal → test3 with NO request_config: its IMPLICIT config's ddo is
+ * test162 — which the implicit builder drops per user (filterAuthorizedRelated).
+ */
+const FLOOR_IMPLICIT_SOURCE = 'zzfloor6';
 /** The one project the scoped user holds. */
 const MY_PROJECT_ID = 931021;
 /** A project she does NOT hold — the hidden record's project. */
@@ -359,6 +366,8 @@ async function install(): Promise<void> {
 				// zzfloor3 on its OWN section test65 — but NOT test65 itself: the read
 				// door's pair wants the section grant too.
 				grant(9, SPOOF_GRANTED_SECTION, FLOOR_FOREIGN_SOURCE, 1),
+				// The IMPLICIT source (no request_config; relations test3 + test162).
+				grant(10, SECTION, FLOOR_IMPLICIT_SOURCE, 1),
 			],
 		},
 	});
@@ -1051,6 +1060,17 @@ const FLOOR_SOURCES_SITUATION = situation({
 				filter_by_list: [{ section_tipo: SECTION, component_tipo: 'test162' }],
 			}),
 		})),
+		// THE IMPLICIT twin (refuter-surviving S1 on the floor cache): no
+		// request_config at all, so the IMPLICIT builder resolves it from its
+		// relations — target test3, one ddo test162 — and DROPS that ddo for a
+		// principal who holds 0 on it (filterAuthorizedRelated, PHP STEP 5).
+		{
+			tipo: FLOOR_IMPLICIT_SOURCE,
+			parent: 'test45',
+			model: 'component_portal',
+			term: { 'lg-eng': 'zzfloor implicit source' },
+			relations: [{ tipo: SECTION }, { tipo: ROOT_HIDDEN_LEAF }],
+		},
 	],
 });
 
@@ -1519,6 +1539,72 @@ describe.if(DB_READY)('SEC-1 — the ROOT step of a search path is keyed too', (
 		const missRqo = autocomplete('zzroot alphx*', ROOT_HIDDEN_LEAF, source);
 		expect((await readIds(hitRqo, FLOOR_USER)).includes(alphaId)).toBe(true);
 		expect(await countOf(hitRqo)).toBeGreaterThan(await countOf(missRqo));
+	});
+	// THE FLOOR IS THE CALLER'S OWN SUBDATUM MAP, never the first caller's
+	// (refuter-surviving S1, 2026-10-01). An IMPLICIT config is built per user:
+	// the implicit builder keeps only the ddos the request's principal holds >= 1
+	// on. The floor cached that per-user build under a principal-free key, so
+	// whoever populated it first decided everyone's floor — the superuser first
+	// handed her test162 (a prefix oracle on a component her own portal does not
+	// show her), she first narrowed the superuser's. Both orders, under the
+	// request ALS exactly as dispatchRqo seeds it: each principal gets HIS map.
+	const asRequest = <T>(principal: Principal, fn: () => Promise<T>): Promise<T> =>
+		runWithRequestContext(
+			{ principal, session: null, requestId: 'zzfloor-implicit', clientIp: '127.0.0.1' },
+			fn,
+		);
+	const implicitSource = { ...portalSource, tipo: FLOOR_IMPLICIT_SOURCE };
+	const implicitFloorHas = (principal: Principal): Promise<boolean> =>
+		asRequest(principal, async () => {
+			const { subdatumReadFloor } = await import('../../src/core/security/read_floor.ts');
+			const floor = await subdatumReadFloor(principal, implicitSource);
+			return floor?.has(`${SECTION}_${ROOT_HIDDEN_LEAF}`) === true;
+		});
+	for (const [label, order] of [
+		['the superuser populates first', [SUPERUSER, FLOOR_USER]],
+		['she populates first', [FLOOR_USER, SUPERUSER]],
+	] as const) {
+		test(`IMPLICIT SOURCE (${label}): each principal's floor is his own map — read and count keyed for her`, async () => {
+			await clearOntologyDerivedCaches();
+			clearCaches();
+			expect(await getPermissions(FLOOR_USER, SECTION, FLOOR_IMPLICIT_SOURCE)).toBe(1);
+			expect(await getPermissions(FLOOR_USER, SECTION, ROOT_HIDDEN_LEAF)).toBe(0);
+			const has = new Map<number, boolean>();
+			for (const principal of order) has.set(principal.userId, await implicitFloorHas(principal));
+			expect({ superuser: has.get(SUPERUSER.userId), her: has.get(FLOOR_USER.userId) }).toEqual({
+				superuser: true,
+				her: false,
+			});
+			// End to end, AFTER both populated: her autocomplete through the implicit
+			// source stays KEYED on test162 (HIT and MISS identical), read and count.
+			const hitRqo = autocomplete('zzroot alpha*', ROOT_HIDDEN_LEAF, implicitSource);
+			const missRqo = autocomplete('zzroot alphx*', ROOT_HIDDEN_LEAF, implicitSource);
+			expect(await asRequest(FLOOR_USER, () => readIds(hitRqo, FLOOR_USER))).toEqual(
+				await asRequest(FLOOR_USER, () => readIds(missRqo, FLOOR_USER)),
+			);
+			expect(await asRequest(FLOOR_USER, () => countOf(hitRqo))).toBe(
+				await asRequest(FLOOR_USER, () => countOf(missRqo)),
+			);
+		});
+	}
+	test('IMPLICIT SOURCE outside any request scope, or under ANOTHER principal: the THREADED principal decides — keyed for her', async () => {
+		// A direct engine call threads `principal` with no ALS around it (a job, a
+		// harness), or inside a scope seeded for someone else. The implicit
+		// builder alone would answer for the ALS (no principal: every ddo; the
+		// superuser: every ddo); the floor builds for the principal it verified.
+		await clearOntologyDerivedCaches();
+		clearCaches();
+		const { subdatumReadFloor } = await import('../../src/core/security/read_floor.ts');
+		const pairsOf = (floor: ReadonlySet<string> | undefined) => [
+			...(floor ?? new Set(['no floor minted'])),
+		];
+		expect(pairsOf(await subdatumReadFloor(FLOOR_USER, implicitSource))).toEqual([]);
+		expect(
+			pairsOf(await asRequest(SUPERUSER, () => subdatumReadFloor(FLOOR_USER, implicitSource))),
+		).toEqual([]);
+		const hitRqo = autocomplete('zzroot alpha*', ROOT_HIDDEN_LEAF, implicitSource);
+		const missRqo = autocomplete('zzroot alphx*', ROOT_HIDDEN_LEAF, implicitSource);
+		expect(await readIds(hitRqo, FLOOR_USER)).toEqual(await readIds(missRqo, FLOOR_USER));
 	});
 	test("NOT OVER-EAGER: a VIRTUAL section source (zzvmain1 → test3) borrows test3's components and mints the floor", async () => {
 		expect(await getPermissions(FLOOR_USER, VIRTUAL_MAIN, FLOOR_FILTER_BY_LIST_SOURCE)).toBe(1);

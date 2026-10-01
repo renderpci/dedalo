@@ -37,21 +37,38 @@
  *      target section — the SEC-02 prefix oracle again (refuter-surviving S1,
  *      2026-10-01). The superuser basis passes (level 3 everywhere already).
  *
- * The pairs are read off the ONTOLOGY (the source's own request_config), never
- * off the client payload and never off ALS. A section source (tipo ===
- * section_tipo, a plain list) has no subdatum and no floor. A refused source is
- * not a refusal of the search — it is the ordinary keyed search — so nothing is
- * noted. Gate: test/unit/search_path_acl_native.test.ts ("FORGED SOURCE").
+ * The pairs are read off the source's own request_config, never off the client
+ * payload. A section source (tipo === section_tipo, a plain list) has no
+ * subdatum and no floor. A refused source is not a refusal of the search — it
+ * is the ordinary keyed search — so nothing is noted. Gate:
+ * test/unit/search_path_acl_native.test.ts ("FORGED SOURCE").
  *
- * CACHED per (section, component) as an ontology fact: the pair set depends on
- * the node definitions only (the principal is consulted for the grant, never
- * for the pairs), so it lives in an ontology cache the dd_ontology write hub
- * clears.
+ * THE FLOOR IS THE CALLER'S OWN SUBDATUM MAP — built for THE VERIFIED
+ * PRINCIPAL, per call, never cached across principals (refuter-surviving S1,
+ * 2026-10-01). PHP get_subdatum floors the ddos of the caller's OWN
+ * request_config, and that config is not a pure ontology fact: an IMPLICIT one
+ * (no source.request_config — every config-less portal / select /
+ * component_filter) keeps only the ddos the principal holds >= 1 on
+ * (relations/request_config/implicit.ts filterAuthorizedRelated, which reads
+ * the request ALS). A floor cached under a principal-free key therefore served
+ * whoever populated it first: the superuser first handed a 0-grant user the
+ * search of components her own portal does not show her (the prefix oracle the
+ * floor bounds), she first narrowed every later caller's floor. A
+ * principal-free build is no fix either: it would PERMANENTLY floor what the
+ * implicit builder authorizes away. So the build runs with the request
+ * context's principal set to the one this module verified (`asCaller` — in
+ * production dispatchRqo seeded that same principal, so it is the identity;
+ * a caller outside any scope gets one), and nothing is kept between calls.
+ * Gate: search_path_acl_native ("IMPLICIT SOURCE", both population orders).
  */
 
-import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { getModelByTipo, tipoBelongsToSection } from '../ontology/resolver.ts';
 import { getPermissionGrant, type Principal } from './permissions.ts';
+import {
+	currentRequestContext,
+	type RequestContext,
+	runWithRequestContext,
+} from './request_context.ts';
 
 /** The client-declared read source, as far as the floor cares. */
 export interface ReadFloorSource {
@@ -76,7 +93,34 @@ export async function subdatumReadFloor(
 	if (!(await profileReadPair(principal, coordinates.sectionTipo, coordinates.tipo))) {
 		return undefined;
 	}
-	return floorPairsOf(coordinates.sectionTipo, coordinates.tipo);
+	return asCaller(principal, () => floorPairsOf(coordinates.sectionTipo, coordinates.tipo));
+}
+
+/**
+ * Run `fn` with the request context's principal = the VERIFIED principal, so
+ * every ALS reader in the request_config build (the implicit per-user drop)
+ * answers for the caller whose floor this is. The ambient context already
+ * carrying that principal (dispatchRqo seeds it) is used as is; otherwise a
+ * derived one keeps the request's id / session / ip and forwards the ONE
+ * mutable field (frontierRefusals) to the ambient context, so a refusal noted
+ * inside still reaches the request's notices.
+ */
+function asCaller<T>(principal: Principal, fn: () => Promise<T>): Promise<T> {
+	const ambient = currentRequestContext();
+	if (ambient?.principal === principal) return fn();
+	const derived: RequestContext = {
+		principal,
+		session: ambient?.session ?? null,
+		requestId: ambient?.requestId ?? '',
+		clientIp: ambient?.clientIp ?? '',
+		get frontierRefusals() {
+			return ambient?.frontierRefusals;
+		},
+		set frontierRefusals(refusals) {
+			if (ambient !== undefined) ambient.frontierRefusals = refusals;
+		},
+	};
+	return runWithRequestContext(derived, fn);
 }
 
 /**
@@ -112,13 +156,12 @@ async function isComponentTipo(tipo: string): Promise<boolean> {
 	return typeof model === 'string' && model.startsWith('component_');
 }
 
-const floorCache = createOntologyCache<string, ReadonlySet<string>>();
-
-/** The ontology-derived pair set of one component source (cached). */
+/**
+ * The pair set of one component source's request_config, as built for the
+ * principal in scope (see `asCaller`). Never cached: the value is
+ * principal-dependent (module header).
+ */
 async function floorPairsOf(sectionTipo: string, tipo: string): Promise<ReadonlySet<string>> {
-	const key = `${sectionTipo}|${tipo}`;
-	const cached = floorCache.get(key);
-	if (cached !== undefined) return cached;
 	const pairs = new Set<string>();
 	const { getEffectivePropertiesByTipo } = await import('../ontology/alias.ts');
 	const properties = await getEffectivePropertiesByTipo(tipo);
@@ -131,9 +174,7 @@ async function floorPairsOf(sectionTipo: string, tipo: string): Promise<Readonly
 	});
 	for (const item of items) addItemDdoPairs(pairs, item);
 	addDeclaredFilterPairs(pairs, properties);
-	const frozen: ReadonlySet<string> = pairs;
-	floorCache.set(key, frozen);
-	return frozen;
+	return pairs;
 }
 
 type ConfigItem = Awaited<
