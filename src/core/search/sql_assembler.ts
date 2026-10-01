@@ -1099,11 +1099,13 @@ function buildPathScope(
 	principal: Principal | undefined,
 	skipProjectsFilter: boolean,
 	params: ParamsCollector,
+	mainSections: readonly string[],
 ): SqlFrontierScope {
 	return {
 		...(principal === undefined ? {} : { principal }),
 		surface: 'search',
 		door: 'search.path',
+		mainSections,
 		recordPredicate: async ({ sectionTipo: hopSection, table: hopTable, alias: hopAlias }) => {
 			const parts: string[] = [];
 			if (hopNeedsProjectsFilter(principal, skipProjectsFilter, hopTable, hopSection)) {
@@ -1368,7 +1370,12 @@ async function buildPlainSearchSql(sqo: Sqo, options: SearchOptions): Promise<Bu
 	// would blank the thesaurus for every non-admin — see
 	// PROJECTS_FILTER_EXEMPT_TABLES). The dd478 allow-list applies to admins too.
 	const principal = options.principal;
-	const pathScope = buildPathScope(principal, sqo.skip_projects_filter === true, params);
+	const pathScope = buildPathScope(
+		principal,
+		sqo.skip_projects_filter === true,
+		params,
+		sectionTipos,
+	);
 
 	// --- WHERE: user filter tree -------------------------------------------
 	const whereParts: string[] = [];
@@ -1390,7 +1397,12 @@ async function buildPlainSearchSql(sqo: Sqo, options: SearchOptions): Promise<Bu
 		// The hop ACL of a FILTER chain binds through named tokens: a leaf that
 		// renders nothing (refused, inert) must leave no orphan `$N` behind.
 		const filterAcl = new NamedTokenCollector(HOP_ACL_TOKEN_PREFIX);
-		const filterScope = buildPathScope(principal, sqo.skip_projects_filter === true, filterAcl);
+		const filterScope = buildPathScope(
+			principal,
+			sqo.skip_projects_filter === true,
+			filterAcl,
+			sectionTipos,
+		);
 		const conformed = await planDeepFilters(
 			await conformFilter(sqo.filter as Record<string, unknown>, alias, matrixTable, filterScope),
 			tables,

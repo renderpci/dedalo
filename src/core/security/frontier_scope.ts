@@ -193,6 +193,14 @@ export interface FrontierStep {
  */
 export interface SqlFrontierScope extends FrontierScope {
 	recordPredicate(step: { sectionTipo: string; table: string; alias: string }): Promise<string>;
+	/**
+	 * The sections the SEARCH itself spans (sqo.section_tipo) — where a path's
+	 * FIRST hop starts. A hop's reachable sections are its component's
+	 * configured targets resolved from EVERY section the previous step can
+	 * hold (search/hop_scope.ts), not only the one a client step declares.
+	 * Absent → the first step's declared section.
+	 */
+	readonly mainSections?: readonly string[];
 }
 
 /**

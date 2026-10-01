@@ -93,6 +93,8 @@ const SECTION_TABLE = 'matrix_test';
 const FILTER_COMPONENT = 'test101';
 /** component_relation_related — the HOP: it stores the locator we traverse. */
 const HOP_COMPONENT = 'test54';
+// "created by user" — on every section, configured target dd128 (the users section).
+const USERS_HOP = 'dd200';
 /** component_input_text — the LEAF whose value the oracle used to extract. */
 const LEAF_COMPONENT = 'test52';
 /** A component of the same section the profile grants NOTHING on. */
@@ -508,12 +510,17 @@ describe.if(DB_READY)('SEC-02 — the ACL holds at EVERY hop of a search path', 
 	});
 
 	test('CENSUS: the audit repro shape — a hop into dd128 — carries the users rule', async () => {
-		// The finding's literal repro: `path [{test3,test54},{dd128,dd132}]`. dd128
+		// The finding's repro: a hop into the users section, `{dd128,dd132}`. dd128
 		// carries no component_filter, so the GENERIC branch emits nothing for it
 		// — the users-section visibility rule (own record / created_by / shared
 		// project) is what must ride the hop alias, and it is the only statement
 		// of that rule in the engine.
-		const auditSqo = () =>
+		// The hop is dd200 ("created by user", on every section; its configured
+		// target IS dd128). The audit's literal hop was test54, whose configured
+		// target is test3 only: since WC-2026-10-01-search-hop-configured-targets a
+		// hop reaches only its component's configured targets, so that shape now
+		// matches nothing at all (asserted at the end).
+		const auditSqo = (hop = USERS_HOP) =>
 			sanitizeClientSqo({
 				section_tipo: [SECTION],
 				limit: 50,
@@ -523,7 +530,7 @@ describe.if(DB_READY)('SEC-02 — the ACL holds at EVERY hop of a search path', 
 						{
 							q: 'zzhop02*',
 							path: [
-								{ section_tipo: SECTION, component_tipo: HOP_COMPONENT },
+								{ section_tipo: SECTION, component_tipo: hop },
 								{ section_tipo: USERS_SECTION, component_tipo: 'dd132' },
 							],
 						},
@@ -564,9 +571,13 @@ describe.if(DB_READY)('SEC-02 — the ACL holds at EVERY hop of a search path', 
 			const aliases = joinAliases(built.sql);
 			expect(aliases.length).toBe(1);
 			const on = onClauseOf(built.sql, aliases[0] as string);
+			expect(on).toContain(`${aliases[0]}.section_tipo IN ('${USERS_SECTION}')`);
 			expect(on).toContain(`${aliases[0]}.section_id > 0`);
 			expect(on).toContain(`${aliases[0]}.data @> `);
 			expect(on).toContain(`${aliases[0]}.relation @> `);
+			// The literal audit hop (test54 targets test3 only) reaches nothing.
+			const outside = await buildSearchSql(auditSqo(HOP_COMPONENT), { principal: SCOPED });
+			expect(onClauseOf(outside.sql, joinAliases(outside.sql)[0] as string)).toContain('(FALSE)');
 		} finally {
 			await setGrants(grants);
 		}
