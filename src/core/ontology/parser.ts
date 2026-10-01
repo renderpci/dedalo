@@ -162,13 +162,13 @@ interface PropertySet {
 }
 
 async function readPropertySet(record: MatrixRecord | null): Promise<PropertySet> {
-	const valueOf = async (tipo: string): Promise<unknown> =>
+	const firstValue = async (tipo: string): Promise<unknown> =>
 		((await getComponentItems(record, tipo))?.[0] as { value?: unknown } | undefined)?.value;
-	const keys = await valueOf(ONTOLOGY_PROPERTIES);
+	const keys = await firstValue(ONTOLOGY_PROPERTIES);
 	return {
 		keys: isPlainObject(keys) ? { ...keys } : {},
-		css: await valueOf(ONTOLOGY_CSS),
-		source: await valueOf(ONTOLOGY_SOURCE),
+		css: await firstValue(ONTOLOGY_CSS),
+		source: await firstValue(ONTOLOGY_SOURCE),
 	};
 }
 
@@ -216,6 +216,87 @@ function isYesLocator(items: unknown[] | null): boolean {
 	const first = items?.[0] as Locator | undefined;
 	if (first === undefined) return false;
 	return Number(first.section_id) === SI_NO_YES;
+}
+
+/**
+ * The node's properties: canonical ontology18 keys + .css (ontology16) +
+ * .source (ontology17). Override: the TOP-LEVEL KEY is the unit. Each key the
+ * override states replaces the canonical key WHOLE (no deep merge — css
+ * included); unstated keys are kept; a key stated as `null` in the override's
+ * ontology18 REMOVES it. Removing css/source in ontology18 while filling
+ * ontology16/17 is a contradiction: refused, never resolved by picking a winner.
+ */
+async function resolveProperties(
+	canonicalRecord: MatrixRecord | null,
+	overwriteRecord: MatrixRecord | null,
+	at: { sectionTipo: string; sectionId: number | string; overrideLabel: string },
+): Promise<Record<string, unknown>> {
+	const canonicalSet = await readPropertySet(canonicalRecord);
+	const properties: Record<string, unknown> = { ...canonicalSet.keys };
+	if (canonicalSet.css !== undefined) properties.css = canonicalSet.css;
+	if (canonicalSet.source !== undefined) properties.source = canonicalSet.source;
+	if (overwriteRecord === null) return properties;
+	const stated = statedOverrideKeys(await readPropertySet(overwriteRecord), at);
+	for (const [key, value] of Object.entries(stated)) {
+		if (value === null) delete properties[key];
+		else properties[key] = value;
+	}
+	return properties;
+}
+
+/** The top-level keys an override states (ontology18 + its css/source), `null` = remove. */
+function statedOverrideKeys(
+	overwriteSet: PropertySet,
+	at: { sectionTipo: string; sectionId: number | string; overrideLabel: string },
+): Record<string, unknown> {
+	const stated: Record<string, unknown> = { ...overwriteSet.keys };
+	for (const [key, value] of [
+		['css', overwriteSet.css],
+		['source', overwriteSet.source],
+	] as const) {
+		if (value === undefined) continue;
+		if (stated[key] === null) {
+			throw new DedaloError('ontology.invalid_node', {
+				message: `parseSectionRecordToOntologyNode: override ${at.overrideLabel} of ${at.sectionTipo}/${at.sectionId} both removes '${key}' (null in ${ONTOLOGY_PROPERTIES}) and fills it (${key === 'css' ? ONTOLOGY_CSS : ONTOLOGY_SOURCE})`,
+				coordinates: { section_tipo: at.sectionTipo, section_id: String(at.sectionId) },
+			});
+		}
+		stated[key] = value;
+	}
+	return stated;
+}
+
+/** A record's ontology term, keyed by lang (null = no term component). */
+async function readTerm(record: MatrixRecord | null): Promise<Record<string, string> | null> {
+	const items = await getComponentItems(record, ONTOLOGY_TERM);
+	if (items === null) return null;
+	const term: Record<string, string> = {};
+	for (const item of items) {
+		const literal = item as { lang?: string; value?: unknown };
+		if (typeof literal.lang === 'string') {
+			term[literal.lang] = String(literal.value ?? '');
+		}
+	}
+	return term;
+}
+
+/**
+ * The node's term, MERGED per lang with an override: a lang the override fills
+ * wins, every other lang keeps the canonical value (an override naming only
+ * lg-spa must not erase the node's other translations). Empty values in the
+ * override do not count as filled.
+ */
+async function resolveMergedTerm(
+	canonicalRecord: MatrixRecord | null,
+	overwriteRecord: MatrixRecord | null,
+): Promise<Record<string, string> | null> {
+	const term = await readTerm(canonicalRecord);
+	const overwriteTerm = overwriteRecord === null ? null : await readTerm(overwriteRecord);
+	if (overwriteTerm === null) return term;
+	const filled = Object.fromEntries(
+		Object.entries(overwriteTerm).filter(([, value]) => value !== ''),
+	);
+	return Object.keys(filled).length > 0 ? { ...(term ?? {}), ...filled } : term;
 }
 
 /**
@@ -456,64 +537,15 @@ export async function parseSectionRecordToOntologyNodeWithDefects(
 	}
 
 	// Properties (ontology18) + .css (ontology16) + .source (ontology17), empty→null.
-	const canonicalSet = await readPropertySet(canonicalRecord);
-	const properties: Record<string, unknown> = { ...canonicalSet.keys };
-	if (canonicalSet.css !== undefined) properties.css = canonicalSet.css;
-	if (canonicalSet.source !== undefined) properties.source = canonicalSet.source;
-	// Override: the TOP-LEVEL KEY is the unit. Each key the override states
-	// replaces the canonical key WHOLE (no deep merge — css included); unstated
-	// keys are kept; a key stated as `null` in the override's ontology18 REMOVES
-	// it. Removing css/source in ontology18 while filling ontology16/17 is a
-	// contradiction: refused, never resolved by picking a winner.
-	if (overwriteRecord !== null) {
-		const overwriteSet = await readPropertySet(overwriteRecord);
-		const stated: Record<string, unknown> = { ...overwriteSet.keys };
-		for (const [key, value] of [
-			['css', overwriteSet.css],
-			['source', overwriteSet.source],
-		] as const) {
-			if (value === undefined) continue;
-			if (stated[key] === null) {
-				throw new DedaloError('ontology.invalid_node', {
-					message: `parseSectionRecordToOntologyNode: override ${String(overwriteLocator?.section_tipo)}/${String(overwriteLocator?.section_id)} of ${sectionTipo}/${sectionId} both removes '${key}' (null in ${ONTOLOGY_PROPERTIES}) and fills it (${key === 'css' ? ONTOLOGY_CSS : ONTOLOGY_SOURCE})`,
-					coordinates: { section_tipo: sectionTipo, section_id: String(sectionId) },
-				});
-			}
-			stated[key] = value;
-		}
-		for (const [key, value] of Object.entries(stated)) {
-			if (value === null) delete properties[key];
-			else properties[key] = value;
-		}
-	}
+	const properties = await resolveProperties(canonicalRecord, overwriteRecord, {
+		sectionTipo,
+		sectionId,
+		overrideLabel: `${String(overwriteLocator?.section_tipo)}/${String(overwriteLocator?.section_id)}`,
+	});
 	const propertiesOrNull = projectProperties(properties, defects);
 
-	// Term — all langs. MERGED per lang with an override: a lang the override
-	// fills wins, every other lang keeps the canonical value (an override naming
-	// only lg-spa must not erase the node's other translations). Empty values in
-	// the override do not count as filled.
-	const resolveTerm = async (
-		record: MatrixRecord | null,
-	): Promise<Record<string, string> | null> => {
-		const items = await getComponentItems(record, ONTOLOGY_TERM);
-		if (items === null) return null;
-		const term: Record<string, string> = {};
-		for (const item of items) {
-			const literal = item as { lang?: string; value?: unknown };
-			if (typeof literal.lang === 'string') {
-				term[literal.lang] = String(literal.value ?? '');
-			}
-		}
-		return term;
-	};
-	let term = await resolveTerm(canonicalRecord);
-	const overwriteTerm = overwriteRecord !== null ? await resolveTerm(overwriteRecord) : null;
-	if (overwriteTerm !== null) {
-		const filled = Object.fromEntries(
-			Object.entries(overwriteTerm).filter(([, value]) => value !== ''),
-		);
-		if (Object.keys(filled).length > 0) term = { ...(term ?? {}), ...filled };
-	}
+	// Term — all langs, merged per lang with an override (resolveMergedTerm).
+	const term = await resolveMergedTerm(canonicalRecord, overwriteRecord);
 
 	const node: DdOntologyNode = {
 		tipo,
