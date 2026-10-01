@@ -305,6 +305,29 @@ describe('G2 host-wide — the ledger is proved against EVERY account and group,
     expect(String((sibling as Error).message)).toContain(`which '${id2}' also has`);
   });
 
+  test('REFUSED: an identity listed in ANY group beyond its own private group (another museum’s instance group, adm, shadow) — a run carries every group of its identity', async () => {
+    // Round 5: the ledger kept only this instance's groups, so a `usermod -aG adm` (or a merged
+    // /etc/group) never reached the plan — and PID 1's initgroups under User= hands the run that
+    // group: the host journal, /etc/shadow, another museum's 2770 drafts.
+    const a = await museum('museo', 900, 900);
+    const b = await museum('museob', 800, 800);
+    const [id1, id2] = await Promise.all([identityName('museo', 1), identityName('museo', 2)]);
+    const accounts = [...a.accounts, ...b.accounts];
+    const withExtra = (extra: LedgerGroup[]) => [...a.groups, ...b.groups, ...extra];
+    const adm = await caught(async () => planFor('museo', ['alpha', 'bravo'], accounts, withExtra([{ name: 'adm', gid: 4, members: ['syslog', id1] }])));
+    expect(String((adm as Error).message)).toContain(`'${id1}' is a member of 'adm'`);
+    // Another museum's INSTANCE group (its drafts are 2770 to it).
+    const foreign = b.groups.map(group => (group.name === svcOf('museob') ? { ...group, members: [id2] } : group));
+    const cross = await caught(async () => planFor('museo', ['alpha', 'bravo'], accounts, [...a.groups, ...foreign]));
+    expect(String((cross as Error).message)).toContain(`'${id2}' is a member of '${svcOf('museob')}'`);
+    // A sibling site's PRIVATE group (the per-site boundary) is refused too — as a foreign member there.
+    const sibling = a.groups.map(group => (group.name === id2 ? { ...group, members: [...group.members, id1] } : group));
+    expect(String(((await caught(async () => planFor('museo', ['alpha', 'bravo'], accounts, [...sibling, ...b.groups]))) as Error).message)).toContain(`'${id1}' is a member of '${id2}'`);
+    // CONTROL: listed in its OWN instance group (its primary anyway) plans.
+    const own = a.groups.map(group => (group.name === svcOf('museo') ? { ...group, members: [id1] } : group));
+    expect(() => planFor('museo', ['alpha', 'bravo'], accounts, [...own, ...b.groups])).not.toThrow();
+  });
+
   test('REFUSED: an account whose PRIMARY gid is a private group’s (a restored passwd line, an LDAP gidNumber) — the membership no group line lists', async () => {
     const a = await museum('museo', 900, 900);
     const [id1, id2] = await Promise.all([identityName('museo', 1), identityName('museo', 2)]);

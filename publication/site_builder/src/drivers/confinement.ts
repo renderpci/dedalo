@@ -710,7 +710,9 @@ export async function confinementProblems(policy: ConfinementPolicy, door: Confi
   if (!isAbsolute(policy.systemctlBin ?? '') || !existsSync(policy.systemctlBin)) {
     problems.push(
       `SYSTEMCTL_BIN ('${policy.systemctlBin}') is not an absolute path to a file that exists: the ` +
-        `daemon cannot ask PID 1 whether a run is alive, nor stop one.`,
+        `daemon cannot ask PID 1 whether a run is alive, nor stop one. On a provisioned host declare ` +
+        `agent.systemctl_bin in the instance declaration and run provision apply (a hand edit to the ` +
+        `rendered env is reverted by the next apply).`,
     );
   }
   for (const [key, value] of [
@@ -798,6 +800,18 @@ export async function confinementProblems(policy: ConfinementPolicy, door: Confi
     if (privateGid === null || !identity.gids.includes(privateGid)) {
       problems.push(`the identity '${name}' is not in its private group '${name}'. Run provision apply.`);
     }
+    // EXACTLY {instance group, private group} — a set, not a superset. PID 1 applies initgroups
+    // under User=, so every group the identity holds rides into every run of the site: `adm` /
+    // `systemd-journal` (the host journal), `shadow`, another museum's instance group (its 2770
+    // drafts — ProtectSystem=strict makes paths read-only, it does not hide them). `id -G` asks
+    // NSS by name, so this holds where enumeration (`getent group`) is off.
+    const extraGids = [...new Set(identity.gids)].filter(gid => gid !== instanceGid && gid !== privateGid);
+    if (extraGids.length > 0) {
+      problems.push(
+        `the identity '${name}' is also in group(s) ${extraGids.join(', ')} — beyond its instance group and its ` +
+          `private group, and a run carries every group of its identity. Remove the membership (gpasswd -d ${name} <group>).`,
+      );
+    }
     const members = answer.members;
     const expected = [policy.serviceUser, name].sort();
     if (!members || [...members].sort().join(',') !== expected.join(',')) {
@@ -869,6 +883,12 @@ export async function bootConfinementProblems(policy: ConfinementPolicy = policy
  * PrivatePIDs) can ptrace each other. A private gid another group holds opens the site's gate
  * sockets (0660) to that group's members. Enumerated on EVERY run (PID 1 resolves `User=` when
  * it starts the unit); a host that cannot be enumerated is refused, never assumed clean.
+ *
+ * HONEST LIMIT: an ENUMERATION sees only the NSS sources that enumerate. An entry held only in
+ * one that does not (sssd's default `enumerate = false`, most LDAP setups) is invisible here, and
+ * a by-id lookup would not prove uniqueness either (it answers the first source's entry — the
+ * identity itself). The identity's own GROUP SET is the exception: `id -G <name>` resolves by
+ * name through every source, and confinementProblems refuses anything beyond {instance, private}.
  */
 function hostWideProblems(
   policy: ConfinementPolicy,

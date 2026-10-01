@@ -502,9 +502,9 @@ the daemon *reads*, not as something anyone writes:
   `none` only where it is declared and never under `NODE_ENV=production`),
   `AGENT_IDENTITIES` (declared slug → its identity's ordinal, from the host's ledger),
   `AGENT_UNIT_PREFIX`, `AGENT_SOCKET_DIR`, `AGENT_STATE_ROOT` and `AGENT_IDENTITY_EPOCH`
-  (all derived per instance and rendered), plus the host-shaped `SYSTEMCTL_BIN` (NOT rendered:
-  it defaults to `/usr/bin/systemctl` and is set by hand only where `systemctl` lives
-  elsewhere), the per-run
+  (all derived per instance and rendered), plus the host-shaped `SYSTEMCTL_BIN` (rendered only
+  from the declaration's `agent.systemctl_bin`, where `systemctl` is not `/usr/bin/systemctl`;
+  never set by hand, because the plan reverts a hand edit to the rendered env), the per-run
   caps `AGENT_TURN_MEMORY_MAX` / `AGENT_TURN_CPU_QUOTA` / `AGENT_TURN_TASKS_MAX` (the same
   numbers root renders into every agent unit) and `GIT_TIMEOUT_MS`. The pre-LEAD-1b keys
   `AGENT_USER`, `AGENT_HOME` and `SYSTEMD_RUN_BIN` are RETIRED: an env that still carries one

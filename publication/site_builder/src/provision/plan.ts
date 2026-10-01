@@ -455,6 +455,7 @@ export type ExecStep =
   | 'agent_sockets_start'
   | 'agent_sockets_restart'
   | 'unit_enable'
+  | 'unit_reset_failed'
   | 'unit_start'
   | 'unit_restart'
   | 'web_configtest'
@@ -692,8 +693,9 @@ export function agentPlan(layout: InstanceLayout, host: HostState): AgentPlan {
   if (host.polkitVersion === null) {
     throw new Error(
       `plan(${layout.instance}): polkit's release could not be read (pkaction --version). The daemon's only ` +
-        `authority over its runs — stop and kill — is a JavaScript rules.d rule, which polkit reads from 0.${POLKIT_JS_RULES_FLOOR}; ` +
-        `nothing was planned.`,
+        `authority over its runs — stop and kill — is a JavaScript rules.d rule, which polkit reads from 0.${POLKIT_JS_RULES_FLOOR}. ` +
+        `A server or minimal install often lacks polkit altogether: install it (Debian/Ubuntu: \`apt install polkitd\`; ` +
+        `RHEL/Fedora: \`dnf install polkit\`) and run the plan again. Nothing was planned.`,
     );
   }
   if (host.polkitVersion !== undefined && host.polkitVersion < POLKIT_JS_RULES_FLOOR) {
@@ -2133,6 +2135,22 @@ function serviceActions(layout: InstanceLayout, host: HostState, planned: Action
   }
 
   if (!host.unitActive || stopped) {
+    // A START-LIMITED DAEMON CANNOT BE STARTED. New code that boots before this apply (a reboot
+    // or crash after an in-app update) refuses the retired env keys and exits; Restart=always
+    // with StartLimitBurst=5 per 300 s puts it at start-limit-hit in ~15 s, and a plain `start`
+    // then fails 'Start request repeated too quickly' — halting this apply before the web reload
+    // and the retire phase, for the rest of the window. Clearing the failed state first is a
+    // no-op on a unit that never failed. Only for a unit that was ENABLED (it existed and may have
+    // looped); a first install's unit has never started.
+    if (!host.unitActive && host.unitEnabled) {
+      actions.push({
+        kind: 'exec',
+        phase: 'service',
+        step: 'unit_reset_failed',
+        argv: ['systemctl', 'reset-failed', layout.unitName],
+        reason: `'${layout.unitName}' is not running and may be start-limited (a crash loop): its failed state is cleared so it can be started`,
+      });
+    }
     actions.push({
       kind: 'exec',
       phase: 'service',

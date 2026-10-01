@@ -1304,6 +1304,13 @@ describe('G2/G14 daemon half — confinementProblems proves every identity, ever
     ['two identities sharing one uid (R1c)', { resolveAgent: (name: string) => ({ ...clean(name, kOf(name)), uid: uidOf(1) }) }, /'dedalo-a-test_1' and 'dedalo-a-test_2' share uid/],
     ['a primary gid that is not the instance group', { resolveAgent: (name: string) => (kOf(name) === 2 ? { ...clean(name, 2), gid: 12345 } : clean(name, kOf(name))) }, /dedalo-a-test_2' has primary gid 12345/],
     ['an identity outside its private group', { resolveAgent: (name: string) => (kOf(name) === 1 ? { ...clean(name, 1), gids: [GATE_IDS.instanceGid] } : clean(name, kOf(name))) }, /dedalo-a-test_1' is not in its private group/],
+    // Round 5: a SUPERSET passed (`includes`) — an extra host group (adm 4, another museum's
+    // instance group) rides into every run under User= (initgroups). Exactly {instance, private}.
+    [
+      'an identity in a group beyond {instance, private} (usermod -aG adm)',
+      { resolveAgent: (name: string) => (kOf(name) === 1 ? { ...clean(name, 1), gids: [GATE_IDS.instanceGid, GATE_IDS.privateGid(1), 4] } : clean(name, kOf(name))) },
+      /dedalo-a-test_1' is also in group\(s\) 4/,
+    ],
     [
       'a foreign member in a private group',
       { groupMembers: (name: string) => (kOf(name) === 2 ? ['dedalo-site-test', name, 'dedalo-a-test_1'] : ['dedalo-site-test', name]) },

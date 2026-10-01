@@ -160,6 +160,7 @@ never restates.**
 | `agent.bins` | yes for the selected driver | Driver → ABSOLUTE path. Never a bare command name: PATH is shared between instances. |
 | `agent.provider_hosts` | for an opencode/pi driver | The model provider's API HOSTNAMES a turn may reach through the egress gate (rendered as `AGENT_PROVIDER_HOSTS`). Claude Code's host is derived. Never an IP literal, `localhost`, a local special-use name or a wildcard: loopback and LAN providers are unreachable by design. |
 | `agent.registry_hosts` | no | The package registry HOSTNAMES a build may reach (`BUILD_REGISTRY_HOSTS`; the daemon's default is `registry.npmjs.org`). Same grammar. |
+| `agent.systemctl_bin` | no | The absolute path of `systemctl`, only where it is not `/usr/bin/systemctl` (rendered as `SYSTEMCTL_BIN`; absent, the daemon's default applies). Declared rather than hand-set: the plan reverts any hand edit to the rendered env. |
 | `secrets` | no | Credential KEY → the ABSOLUTE PATH of a 0600 file. NAMES and PATHS only; each becomes one `LoadCredential=`. |
 | `limits.*` | no | Per-instance caps. **Optional with NO defaults** — see §2.5. |
 | `resources.*` | no | `memory_max`, `memory_high`, `cpu_quota`, `tasks_max`, rendered into the unit. Absent means the host's default. |

@@ -201,8 +201,9 @@ function isDoor(value: unknown): value is ConfinementDoor {
 
 /**
  * THE SPEC, closed: exactly `{v, door, argv, env, hostNetns}`, `v === 1`, a known door, a
- * non-empty argv of strings, an env of string values, a non-empty hostNetns — and nothing
- * else, in at most MAX_SPEC_BYTES. Anything else throws.
+ * non-empty argv of strings (argv[0] non-empty; later elements may be ''), an env of string
+ * values, a non-empty hostNetns — and nothing else, in at most MAX_SPEC_BYTES. Anything else
+ * throws.
  */
 export function parseSpec(payload: Uint8Array): RunSpec {
   if (payload.length > MAX_SPEC_BYTES) throw new FrameError(`the spec is ${payload.length} bytes, over ${MAX_SPEC_BYTES}`);
@@ -214,8 +215,12 @@ export function parseSpec(payload: Uint8Array): RunSpec {
   if (value.v !== 1) throw new FrameError(`spec version ${String(value.v)} is not 1`);
   if (!isDoor(value.door)) throw new FrameError(`'${String(value.door)}' is not a door`);
   const argv = value.argv;
-  if (!Array.isArray(argv) || argv.length === 0 || argv.some(entry => typeof entry !== 'string' || entry === '')) {
-    throw new FrameError('argv must be a non-empty array of non-empty strings');
+  // argv[0] names the program and must be non-empty; every LATER element may be '' — an empty
+  // argument is a real argument (claudeTurnArgv's `--setting-sources ''` means "no source"), and
+  // refusing it refused every turn. A NUL byte is not refused here: spawn() throws on it and the
+  // shim answers that with X {127} (gated).
+  if (!Array.isArray(argv) || argv.length === 0 || argv.some(entry => typeof entry !== 'string') || argv[0] === '') {
+    throw new FrameError('argv must be a non-empty array of strings whose first element (the program) is non-empty');
   }
   const env = value.env;
   if (env === null || typeof env !== 'object' || Array.isArray(env)) throw new FrameError('env must be an object');

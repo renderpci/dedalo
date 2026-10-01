@@ -17,7 +17,7 @@
  */
 
 import { afterEach, describe, expect, test } from 'bun:test';
-import { existsSync, realpathSync } from 'node:fs';
+import { chmodSync, existsSync, realpathSync } from 'node:fs';
 import { createServer, type Socket, connect as netConnect } from 'node:net';
 import { join } from 'node:path';
 import { contractModule, shortScratch, sweepScratch } from './support/lead1b_contract';
@@ -397,4 +397,68 @@ describe('G7 — the child never holds the connection: a forged X written to fd 
       fd0Written: false,
     });
   }, 30_000);
+});
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * The REAL turn argv crosses the frame — byte for byte (round-5 S1)
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+describe('G7 — the argv a Claude Code turn really sends survives parseSpec and the shim byte for byte', () => {
+  // claudeTurnArgv carries an EMPTY element (`--setting-sources ''`: no user/project/local
+  // source). A spec schema that refuses '' refused EVERY turn (shim exit 65, no X), and no gate
+  // ever sent the real argv through the frame — this one does, every optional branch on.
+  async function turnArgv(bin: string): Promise<string[]> {
+    const argvModule = await contractModule('drivers/claude_argv.ts');
+    return (argvModule.claudeTurnArgv as (input: Record<string, unknown>) => string[])({
+      bin,
+      prompt: '--not-an-option',
+      mcpConfigPath: '/probe/mcp.json',
+      brief: 'brief',
+      resumeToken: 'resume-token',
+    });
+  }
+
+  test('parseSpec accepts it and returns it unchanged (the empty element included)', async () => {
+    const frames = await contractModule('drivers/unit_frames.ts');
+    const argv = await turnArgv('/usr/local/bin/claude');
+    expect(argv).toContain('');
+    const payload = new TextEncoder().encode(JSON.stringify(specFor(argv, { door: 'turn' })));
+    const spec = (frames.parseSpec as (payload: Uint8Array) => { argv: readonly string[] })(payload);
+    expect([...spec.argv]).toEqual(argv);
+  });
+
+  test('argv[0] is still required to be a non-empty string; a non-string element is still refused', async () => {
+    const frames = await contractModule('drivers/unit_frames.ts');
+    const parseSpec = frames.parseSpec as (payload: Uint8Array) => unknown;
+    const bytes = (argv: unknown) => new TextEncoder().encode(JSON.stringify(specFor(argv as string[])));
+    expect(() => parseSpec(bytes(['', '-p']))).toThrow();
+    expect(() => parseSpec(bytes(['git', '', 1]))).toThrow();
+    expect(() => parseSpec(bytes(['git', '']))).not.toThrow();
+  });
+
+  test('through the shim main(): the child receives exactly claudeTurnArgv(...).slice(1)', async () => {
+    const workdir = shortScratch('wd');
+    const tools = shortScratch('bin');
+    const echo = join(tools, 'echo_argv.js');
+    await Bun.write(echo, 'process.stdout.write(JSON.stringify(process.argv.slice(2)));');
+    const bin = join(tools, 'claude');
+    await Bun.write(bin, `#!/bin/sh\nexec ${JSON.stringify(process.execPath)} ${JSON.stringify(echo)} "$@"\n`);
+    chmodSync(bin, 0o755);
+    const argv = await turnArgv(bin);
+
+    const run = await startShim(workdir, 'turn');
+    await waitForFrames(run, 1);
+    run.daemon.write(frame('S', specFor(argv, { door: 'turn' })));
+    const code = await run.exit;
+    await run.closed.catch(() => {});
+    await new Promise(resolve => setTimeout(resolve, 20));
+    const stdout = Buffer.concat(run.frames.filter(each => each.type === 'O').map(each => each.payload)).toString('utf8');
+    const exits = run.frames.filter(each => each.type === 'X');
+    expect({ code, exits: exits.length, x: exits[0] ? json(exits[0]).code : null, received: stdout ? JSON.parse(stdout) : null }).toEqual({
+      code: 0,
+      exits: 1,
+      x: 0,
+      received: argv.slice(1),
+    });
+  }, 15_000);
 });

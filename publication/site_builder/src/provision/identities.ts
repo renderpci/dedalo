@@ -31,8 +31,19 @@
  * private group exists and holds exactly {service user, itself}; its uid is distinct from
  * every other identity's, from root's, from the service user's AND FROM EVERY OTHER ACCOUNT THE
  * HOST ENUMERATES (another museum's identities included); its private group's gid likewise
- * from every other group. A violation REFUSES the instance's plan, naming the account — never
- * a silent repair of an account this tool did not create.
+ * from every other group; and it is listed in NO group but its own private group (and,
+ * harmlessly, its instance group) — PID 1 applies initgroups under User=, so a membership in
+ * `adm` or another museum's instance group would ride into every run. A violation REFUSES the
+ * instance's plan, naming the account — never a silent repair of an account this tool did not
+ * create.
+ *
+ * HONEST LIMIT — ENUMERATION. The host-wide proofs read `getent passwd` / `getent group`
+ * ENUMERATIONS. An NSS source that does not enumerate (sssd's default `enumerate = false`, most
+ * LDAP setups) lists nothing there, so a uid, gid or membership held only in such a source is
+ * not seen by the PLAN. A lookup by id does not close it either (`getent passwd <uid>` answers
+ * the FIRST source's entry, which is the identity itself). What does hold there is the RUN-TIME
+ * proof (drivers/confinement.ts `confinementProblems`): `id -G <identity>` resolves the
+ * identity's groups through NSS by name, so an extra group from any source refuses every run.
  *
  * TWO THINGS AN INTERRUPTED APPLY LEAVES are handled, not wedged on: a private group whose
  * `useradd` never ran (no foreign member, a gid of its own) is ADOPTED by the identity that
@@ -124,6 +135,11 @@ export interface AgentLedger {
   readonly hostGroups?: readonly HostId[];
   /** Where `--system` ids come from; the plan refuses a run that would exhaust them. */
   readonly systemIds?: SystemIdRanges;
+  /**
+   * For each name in this instance's identity namespace: EVERY enumerated group whose member
+   * list names it (host-wide — another museum's, `adm`, `shadow`). Absent in a hand-built ledger.
+   */
+  readonly identityMemberships?: ReadonlyMap<string, readonly string[]>;
 }
 
 export const EMPTY_LEDGER: AgentLedger = Object.freeze({ accounts: Object.freeze([]), groups: Object.freeze([]) });
@@ -205,11 +221,18 @@ export function parseAgentLedger(layout: InstanceLayout, text: LedgerText): Agen
     );
   }
   const groups: LedgerGroup[] = [];
+  const memberships = new Map<string, string[]>();
   for (const line of (text.group ?? '').split('\n')) {
     const [name, , gid, members] = line.split(':');
     if (!name || !/^\d+$/.test(gid ?? '')) continue;
+    const listed = (members ?? '').split(',').filter(Boolean);
+    // HOST-WIDE: which groups list one of THIS instance's identities (its full membership).
+    for (const member of listed) {
+      if (parseAgentIdentityName(member)?.instance !== layout.instance) continue;
+      memberships.set(member, [...(memberships.get(member) ?? []), name]);
+    }
     if (!(name === layout.identity.group || wanted(name))) continue;
-    groups.push(Object.freeze({ name, gid: Number(gid), members: Object.freeze((members ?? '').split(',').filter(Boolean)) }));
+    groups.push(Object.freeze({ name, gid: Number(gid), members: Object.freeze(listed) }));
   }
   return Object.freeze({
     accounts: Object.freeze(accounts),
@@ -217,6 +240,7 @@ export function parseAgentLedger(layout: InstanceLayout, text: LedgerText): Agen
     hostAccounts: Object.freeze(hostAccountIds(text.passwd)),
     hostGroups: Object.freeze(hostIds(text.group)),
     systemIds: parseLoginDefs(text.loginDefs),
+    identityMemberships: new Map([...memberships].map(([member, names]) => [member, Object.freeze(names)])),
   });
 }
 
@@ -356,6 +380,18 @@ export function allocateIdentities(layout: InstanceLayout, ledger: AgentLedger =
       continue;
     }
     activeBySlug.set(slug, k);
+    // ITS GROUPS ARE {instance group, private group}, nothing else: PID 1's initgroups hands a
+    // run EVERY group its identity is listed in.
+    const beyond = [...new Set(ledger.identityMemberships?.get(account.name) ?? [])].filter(
+      name => name !== account.name && name !== layout.identity.group,
+    );
+    if (beyond.length > 0) {
+      problems.push(
+        `'${account.name}' is a member of ${beyond.map(name => `'${name}'`).join(', ')} — beyond its instance group ` +
+          `and its own private group; every run of site '${slug}' would carry ${beyond.length === 1 ? 'it' : 'them'} ` +
+          `(initgroups under User=). Remove the membership (gpasswd -d ${account.name} <group>).`,
+      );
+    }
     if (instanceGid === undefined) {
       problems.push(`'${account.name}' exists but the instance group '${layout.identity.group}' does not.`);
     } else if (account.gid !== instanceGid) {

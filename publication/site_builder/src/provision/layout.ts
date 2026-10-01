@@ -816,6 +816,8 @@ export interface ManifestAgent {
   readonly provider_hosts?: readonly string[];
   /** The package registry HOSTNAMES a build may reach (BUILD_REGISTRY_HOSTS). */
   readonly registry_hosts?: readonly string[];
+  /** `systemctl`, ABSOLUTE, only where it is not `/usr/bin/systemctl` (SYSTEMCTL_BIN). */
+  readonly systemctl_bin?: string;
 }
 
 /** The per-museum caps. Every field is optional and NONE has a default — see LIMIT_ENV. */
@@ -1785,6 +1787,11 @@ function buildEnvVars(
   for (const [driver, bin] of Object.entries(manifest.agent.bins ?? {})) {
     if (!bin) continue;
     env[DRIVER_BIN_ENV[driver as AgentDriverId]] = absoluteRoot(`agent.bins.${driver}`, bin);
+  }
+  // THE CONTROL PLANE'S systemctl, only when declared (a host where it is not /usr/bin): the
+  // rendered env is the daemon's only env, and a hand edit to it is reverted by the next apply.
+  if (manifest.agent.systemctl_bin) {
+    env.SYSTEMCTL_BIN = absoluteRoot('agent.systemctl_bin', manifest.agent.systemctl_bin);
   }
 
   // EGRESS HOSTNAMES, only when declared: the daemon's defaults (Claude Code's own host, the

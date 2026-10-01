@@ -334,6 +334,17 @@ describe('every field the schema accepts reaches the derived layout', () => {
     expect(plain.envVars.BUILD_REGISTRY_HOSTS).toBeUndefined();
   });
 
+  test('agent.systemctl_bin reaches the rendered env as SYSTEMCTL_BIN — the one durable spelling (round 5)', () => {
+    // The rendered env is the daemon's ONLY env and plan.ts REVERTS a hand edit to it, so a
+    // hand-set SYSTEMCTL_BIN vanished on the next apply and every run was refused. Declared, it
+    // survives every apply; undeclared, it is absent and the daemon's default applies.
+    const layout = layoutFrom(
+      docWith({ agent: { driver: 'claude_code', bins: { claude_code: '/usr/local/bin/claude' }, systemctl_bin: '/bin/systemctl' } }),
+    );
+    expect(layout.envVars.SYSTEMCTL_BIN).toBe('/bin/systemctl');
+    expect(layoutFrom(docWith({})).envVars.SYSTEMCTL_BIN).toBeUndefined();
+  });
+
   test('secrets become derivable credential paths', () => {
     const layout = layoutFrom(
       docWith({ secrets: { ANTHROPIC_API_KEY: '/etc/x/secrets/ANTHROPIC_API_KEY' } }),
@@ -531,6 +542,12 @@ describe('the declaration refuses what it must', () => {
     expect(refusal(docWith({ agent: { driver: 'claude_code', bins: { claude_code: 'claude' } } }))).toMatch(
       /ABSOLUTE paths, never bare command names/,
     );
+  });
+
+  test('a BARE systemctl — a PATH lookup is a substitution vector', () => {
+    expect(
+      refusal(docWith({ agent: { driver: 'claude_code', bins: { claude_code: '/usr/local/bin/claude' }, systemctl_bin: 'systemctl' } })),
+    ).toMatch(/agent\.systemctl_bin/);
   });
 
   test('duplicate slugs', () => {

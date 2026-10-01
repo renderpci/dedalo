@@ -19,13 +19,14 @@
  * the next one cannot be added without a decision about what it runs as.
  *
  *   §1 THE CENSUS. Every file under `publication/site_builder/src/` that can start a process —
- *      derived from its IMPORTS (`child_process`, `cluster`, `bun`, `bun:ffi`, `module`) and its
- *      scope-resolved references (aliases, namespaces, the `Bun` global, `Bun.$`), never from a
- *      call's spelling — with a floor; each one an enumerated exemption carrying its reason
- *      and its EXACT reference and import counts. A dynamic import or require of a process
- *      module, a re-export of one, and the escapes no binding names (the loader/evaluator
- *      globals, a non-literal `require`, a non-inert `process` member, `import.meta.require`, a
- *      `.constructor` access) are refused everywhere.
+ *      derived from its IMPORTS (`child_process`, `cluster`, `bun`, `bun:ffi`, `module`, and the
+ *      evaluators `vm`, `worker_threads`, `inspector`, `repl`) and its scope-resolved references
+ *      (aliases, namespaces, the `Bun` global, `Bun.$`), never from a call's spelling — with a
+ *      floor; each one an enumerated exemption carrying its reason and its EXACT reference and
+ *      import counts. A dynamic import or require of a process module, a re-export of one, and
+ *      the escapes no binding names (the loader/evaluator globals incl. `Worker` and `Reflect`,
+ *      a non-literal `require`, a non-inert `process` member — the global or `node:process`
+ *      imported — `import.meta.require`, a `.constructor` access) are refused everywhere.
  *   §2 THE UNIT. The three directives that are about the agent rather than the daemon
  *      (`ProtectProc=invisible`, `RestrictSUIDSGID`, `LockPersonality`), beside the
  *      hardening set that was already there — asserted on a real render.
@@ -41,12 +42,14 @@
  *   §6 THE OTHER DOOR. A build step, an install script and a `git add` are agent-authored
  *      text too, executed on a routine publisher-triggered path. No module that runs a
  *      command inside a site workspace may reach the UNCONFINED runner: `util/spawn.ts` is
- *      imported by the confinement and the version probes, and by nothing else.
+ *      imported by the confinement and the version probes, and by nothing else — read off the
+ *      MODULE GRAPH (resolved specifiers), with any dynamic reach or re-export of it refused.
  *   §7 THE TREE THE TWO UIDS SHARE. The modes that make a confined turn able to write at
  *      all — one constant for the provisioned roots and the runtime workspaces — and the
  *      audit trail closed to the group the agent is in. Plus the two censuses that keep the
  *      tree's DOORS in one module: every path-based MUTATION and every path-based CONTENT
- *      READ under `src/`, each enumerated with a destination, because a lexical
+ *      READ under `src/` — read off the fs IMPORTS and their scope-resolved bindings, never a
+ *      call's spelling — each enumerated with a destination, because a lexical
  *      `confinedPath` follows a planted link in both directions — the write plant truncates
  *      the daemon's own audit trail, and the read plant serves the daemon's own
  *      `SERVICE_TOKEN` back through `GET /sites/<slug>/builds/<id>`.
@@ -71,7 +74,7 @@
 import { describe, expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, relative } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import {
 	agentIdentityName,
 	agentSocketPath,
@@ -166,7 +169,29 @@ const PROCESS_MODULES: ReadonlySet<string> = new Set([
 	// `createRequire(import.meta.url)('child_process')`: a loader, so a process module.
 	'node:module',
 	'module',
+	// THE EVALUATORS (round 5, each measured spawning `id -u` with the census green): source
+	// text run in this realm (`vm.runInThisContext('Bun.spawn(…)')`), in a thread
+	// (`new Worker(code, {eval: true})`), or through the debugger protocol (`Runtime.evaluate`).
+	'node:vm',
+	'vm',
+	'node:worker_threads',
+	'worker_threads',
+	'node:inspector',
+	'inspector',
+	'node:inspector/promises',
+	'inspector/promises',
+	'node:repl',
+	'repl',
 ]);
+
+/**
+ * `node:process` IMPORTED — the `process` global under another name. Not a process module (its
+ * inert members are everyday reads), but held to the SAME closed member rule: a default or
+ * namespace binding is the global (`proc.getBuiltinModule` is an escape), a named binding is
+ * allowed only for an inert member (`{ getBuiltinModule }` is one), and a dynamic import,
+ * a `require` or a re-export of it is refused everywhere.
+ */
+const PROCESS_ALIAS_MODULES: ReadonlySet<string> = new Set(['node:process', 'process']);
 
 /** `process.<member>` reads that cannot start a process or load a module. Closed. */
 const PROCESS_INERT: ReadonlySet<string> = new Set([
@@ -222,6 +247,14 @@ const ESCAPE_GLOBALS: readonly string[] = [
 	'eval',
 	'Function',
 	'module',
+	// The web `Worker` (a module URL, a blob, a data: URL is code), and `Reflect`, which reaches
+	// `.constructor` — i.e. `Function` — without spelling a member access (`Reflect.get(fn,
+	// 'constructor')`). HONEST LIMIT: a computed member with a non-literal key on any function
+	// value (`fn[k]`, k = 'constructor') is the same reach and is not statically decidable; that
+	// is a respelling a REVIEW catches, and the runtime boundary (the run's own uid, units) is
+	// what holds regardless.
+	'Worker',
+	'Reflect',
 ];
 
 /** `Bun.<member>` reads that cannot start a process. Closed: any other member is a reference. */
@@ -243,10 +276,15 @@ const BUN_GLOBAL = '__DEDALO_BUN_GLOBAL__';
 const ESCAPE_GLOBAL = '__DEDALO_ESCAPE_GLOBAL_';
 const REQUIRE_REF = '__DEDALO_REQUIRE__';
 const PROCESS_GLOBAL = '__DEDALO_PROCESS_GLOBAL__';
-/** A static import as the transpiler prints it: one line, `import <clause> from "<module>";`. */
-const IMPORT_LINE = /^import\s+(.+?)\s+from\s*["']([^"']+)["'];?[ \t]*$/gm;
-/** A re-export as the transpiler prints it: `export <clause> from "<module>";`. */
-const EXPORT_FROM_LINE = /^export\s+(.+?)\s+from\s*["']([^"']+)["'];?[ \t]*$/gm;
+/**
+ * A static import as the transpiler prints it: `import <clause> from "<module>";` — on ONE line
+ * or on SEVERAL (a clause written over several lines is printed over several lines, measured;
+ * the one-line version of this pattern missed every one of them). The clause holds no quote
+ * and no `;`, so it cannot run from one statement into the next.
+ */
+const IMPORT_LINE = /^import\s+([^;"'`]+?)\s+from\s*["']([^"']+)["'];?[ \t]*$/gm;
+/** A re-export as the transpiler prints it: `export <clause> from "<module>";`, likewise. */
+const EXPORT_FROM_LINE = /^export\s+([^;"'`]+?)\s+from\s*["']([^"']+)["'];?[ \t]*$/gm;
 /** The lexical escapes left once the globals are sentinels (run on the transpiled code). */
 const ESCAPES: readonly RegExp[] = [
 	new RegExp(`${ESCAPE_GLOBAL}[A-Za-z]+__`, 'g'),
@@ -255,25 +293,37 @@ const ESCAPES: readonly RegExp[] = [
 	/\.\s*constructor\b|\[\s*["'`]constructor["'`]\s*\]/g,
 ];
 
-/** The local names an import clause binds: `a`, `* as ns`, `{ x, y as z }`, or a mix. */
-function bindingsOf(clause: string): string[] {
-	const names: string[] = [];
+/** One binding an import clause makes: what it imports (`*`, `default` or a name) and its local. */
+interface ImportBinding {
+	readonly imported: string;
+	readonly local: string;
+}
+
+/** The bindings an import clause makes: `a`, `* as ns`, `{ x, y as z }`, or a mix. */
+function importBindings(clause: string): ImportBinding[] {
+	const out: ImportBinding[] = [];
 	const namespace = clause.match(/\*\s*as\s+([\w$]+)/);
-	if (namespace?.[1]) names.push(namespace[1]);
+	if (namespace?.[1]) out.push({ imported: '*', local: namespace[1] });
 	const braces = clause.match(/\{([^}]*)\}/);
 	for (const part of (braces?.[1] ?? '')
 		.split(',')
 		.map((p) => p.trim())
 		.filter(Boolean)) {
-		names.push((part.split(/\s+as\s+/)[1] ?? part).trim());
+		const [imported, local] = part.split(/\s+as\s+/).map((name) => name.trim());
+		out.push({ imported: imported as string, local: local ?? (imported as string) });
 	}
 	const fallback = clause
 		.replace(/\{[^}]*\}/, '')
 		.replace(/\*\s*as\s+[\w$]+/, '')
 		.replace(/,/g, ' ')
 		.trim();
-	if (fallback) names.push(fallback);
-	return names;
+	if (fallback) out.push({ imported: 'default', local: fallback });
+	return out;
+}
+
+/** The local names an import clause binds. */
+function bindingsOf(clause: string): string[] {
+	return importBindings(clause).map((binding) => binding.local);
 }
 
 interface ProcessReach {
@@ -291,17 +341,28 @@ const TS = new Bun.Transpiler({ loader: 'ts' });
 
 /** What one source file can reach that starts a process. */
 function processReach(code: string, file: string): ProcessReach {
-	const imports = TS.scanImports(code).filter((entry) => PROCESS_MODULES.has(entry.path));
+	const scanned = TS.scanImports(code);
+	const imports = scanned.filter((entry) => PROCESS_MODULES.has(entry.path));
 	const bindings: string[] = [];
+	const processAliases: string[] = [];
 	const reexports: string[] = [];
+	const aliasEscapes: string[] = [];
 	const js = TS.transformSync(code)
 		.replace(IMPORT_LINE, (line, clause: string, from: string) => {
+			if (PROCESS_ALIAS_MODULES.has(from)) {
+				for (const { imported, local } of importBindings(clause)) {
+					if (imported === '*' || imported === 'default') processAliases.push(local);
+					else if (!PROCESS_INERT.has(imported))
+						aliasEscapes.push(`process.${imported} (imported from ${from})`);
+				}
+				return '';
+			}
 			if (!PROCESS_MODULES.has(from)) return line;
 			bindings.push(...bindingsOf(clause));
 			return '';
 		})
 		.replace(EXPORT_FROM_LINE, (line, _clause: string, from: string) => {
-			if (!PROCESS_MODULES.has(from)) return line;
+			if (!PROCESS_MODULES.has(from) && !PROCESS_ALIAS_MODULES.has(from)) return line;
 			reexports.push(`re-export ${from}`);
 			return '';
 		});
@@ -312,6 +373,7 @@ function processReach(code: string, file: string): ProcessReach {
 	};
 	for (const name of ESCAPE_GLOBALS) define[name] = `${ESCAPE_GLOBAL}${name}__`;
 	for (const name of bindings) define[name] = PROCESS_REF;
+	for (const name of processAliases) define[name] = PROCESS_GLOBAL;
 	const out = new Bun.Transpiler({ loader: 'js', define }).transformSync(js);
 	let refs = out.split(PROCESS_REF).length - 1;
 	for (const match of out.matchAll(
@@ -319,7 +381,10 @@ function processReach(code: string, file: string): ProcessReach {
 	)) {
 		if (!(match[2] && BUN_INERT.has(match[2]))) refs++;
 	}
-	const escapes = ESCAPES.flatMap((pattern) => [...out.matchAll(pattern)].map((match) => match[0]));
+	const escapes = [
+		...aliasEscapes,
+		...ESCAPES.flatMap((pattern) => [...out.matchAll(pattern)].map((match) => match[0])),
+	];
 	// `require` only as `require("<literal>")` of a module that is not a process module (a
 	// process one is already `unresolvable`); an alias, a member (`require.call`) or a computed
 	// argument is an escape.
@@ -328,7 +393,8 @@ function processReach(code: string, file: string): ProcessReach {
 		new RegExp(`${REQUIRE_REF}(\\s*\\(\\s*"([^"]*)"\\s*\\))?`, 'g'),
 	)) {
 		if (match[2] === undefined) escapes.push('require (not a literal call)');
-		else if (PROCESS_MODULES.has(match[2])) requires.push(`require-call ${match[2]}`);
+		else if (PROCESS_MODULES.has(match[2]) || PROCESS_ALIAS_MODULES.has(match[2]))
+			requires.push(`require-call ${match[2]}`);
 	}
 	for (const match of out.matchAll(
 		new RegExp(`${PROCESS_GLOBAL}(\\s*\\.\\s*([A-Za-z_$][\\w$]*))?`, 'g'),
@@ -340,7 +406,8 @@ function processReach(code: string, file: string): ProcessReach {
 		if (!IMPORT_META_INERT.has(match[1] as string)) escapes.push(`import.meta.${match[1]}`);
 	}
 	const unresolvable = [
-		...imports
+		...scanned
+			.filter((entry) => PROCESS_MODULES.has(entry.path) || PROCESS_ALIAS_MODULES.has(entry.path))
 			.filter((entry) => entry.kind !== 'import-statement')
 			.map((entry) => `${entry.kind} ${entry.path}`),
 		...reexports,
@@ -349,7 +416,9 @@ function processReach(code: string, file: string): ProcessReach {
 	return {
 		file,
 		staticImports:
-			imports.filter((entry) => entry.kind === 'import-statement').length - reexports.length,
+			imports.filter((entry) => entry.kind === 'import-statement').length -
+			reexports.filter((entry) => !PROCESS_ALIAS_MODULES.has(entry.slice('re-export '.length)))
+				.length,
 		unresolvable,
 		refs,
 		escapes,
@@ -541,6 +610,29 @@ describe('every process the site-builder daemon starts is accounted for', () => 
 				"export const go = () => module.require('child_process').spawnSync('/bin/sh');\n",
 			'reexport.ts': "export { spawnSync as hostRun } from 'node:child_process';\n",
 			'reexportstar.ts': "export * from 'child_process';\n",
+			// The shapes round 5 measured passing GREEN (each one really spawned `id -u` under Bun
+			// 1.4.2): the EVALUATOR and LOADER modules, `node:process` as an imported binding, the
+			// web `Worker` global, and `Reflect` reaching `.constructor` without spelling it.
+			'vm.ts':
+				"import { runInThisContext } from 'node:vm';\nexport const go = () => runInThisContext('Bun.spawn([\"id\"])');\n",
+			'vmns.ts':
+				"import * as vm from 'vm';\nexport const go = () => vm.runInNewContext('1', {});\n",
+			'workereval.ts':
+				"import { Worker as W } from 'node:worker_threads';\nexport const go = () => new W('Bun.spawn([\"id\"])', { eval: true });\n",
+			'webworker.ts': "export const go = () => new Worker('data:text/javascript,0');\n",
+			'processdefault.ts':
+				"import proc from 'node:process';\nexport const go = () => proc.getBuiltinModule('child_process').spawnSync('id');\n",
+			'processnamed.ts':
+				"import { getBuiltinModule as gbm } from 'process';\nexport const go = () => gbm('child_process').spawnSync('id');\n",
+			'processdynamic.ts':
+				"export const go = async () => (await import('node:process')).getBuiltinModule('child_process');\n",
+			'reflectctor.ts':
+				"export const go = () => Reflect.get(() => 0, 'constructor')('return Bun')().spawn(['id']);\n",
+			'inspector.ts':
+				"import { Session } from 'node:inspector';\nexport const go = () => new Session();\n",
+			// A clause the transpiler prints over SEVERAL lines (as written) is an import too.
+			'multiline.ts':
+				"import {\n  spawn as run,\n  type ChildProcess,\n} from 'node:child_process';\nexport const go = (): ChildProcess => run('/bin/sh');\n",
 		};
 		for (const [name, body] of Object.entries(shapes)) plant(planted, join(dir, name), body);
 		// …and prose, a string, an inert Bun member and a shadowing local are NOT reports.
@@ -554,6 +646,13 @@ describe('every process the site-builder daemon starts is accounted for', () => 
 				'export const csp = "script-src \'self\'; no eval, no global, no Function";\n' +
 				'export const shadow = (self: { a: number }, global: number) => self.a + global;\n' +
 				"export const facts = () => [process.env.X, process.getuid?.(), import.meta.dir, require('node:path')];\n",
+		);
+		// …nor `node:process` imported for an INERT member, default or named: the member rule
+		// is the one the `process` global answers to.
+		plant(
+			planted,
+			join(dir, 'processinert.ts'),
+			"import proc, { env as e } from 'node:process';\nexport const facts = () => [proc.env.X, e.Y, proc.pid];\n",
 		);
 		const found = processReachers(planted, dir);
 		expect(found.map((reach) => reach.file).sort()).toEqual(Object.keys(shapes).sort());
@@ -969,19 +1068,124 @@ const RUNNER_IMPORTERS: Readonly<Record<string, string>> = Object.freeze({
 		'turn at all until it is implemented.',
 });
 
-/** Every file under a tree that imports the unconfined runner, derived from the tree. */
-function runnerImporters(files: readonly string[], root: string): string[] {
-	const found: string[] = [];
-	for (const path of files) {
-		const source = readFileSync(path, 'utf8');
-		if (/from '(?:\.\.?\/)+util\/spawn'/.test(source)) found.push(relative(root, path));
+/**
+ * Does an import specifier, written in `fromFile`, name `target`? RESOLVED, never matched: the
+ * specifier is resolved against the importing file's directory and compared with the target's
+ * path with the extension normalised (`.ts` / `.js` / none) — so `'../util/spawn.ts'`,
+ * `"../util/spawn"`, `'./spawn'` from a sibling and `'../util/spawn.js'` are all the runner.
+ */
+function resolvesTo(fromFile: string, specifier: string, target: string): boolean {
+	if (!(specifier.startsWith('.') || isAbsolute(specifier))) return false;
+	const stem = (path: string) => path.replace(/\.(?:[cm]?[jt]s|tsx|jsx)$/, '');
+	return stem(resolve(dirname(fromFile), specifier)) === stem(target);
+}
+
+/** Escape a binding name for a pattern (`$` is legal in one). */
+const escapeName = (name: string) => name.replace(/[$]/g, '\\$');
+
+/** Does transpiled code hand a local binding on as an export (a list, a default, an alias)? */
+function exportsBinding(js: string, local: string): boolean {
+	for (const match of js.matchAll(/^export\s*\{([^}]*)\}\s*;?[ \t]*$/gm)) {
+		const named = (match[1] ?? '')
+			.split(',')
+			.map((part) => (part.trim().split(/\s+as\s+/)[0] ?? '').trim());
+		if (named.includes(local)) return true;
 	}
-	return found.sort();
+	const name = escapeName(local);
+	return (
+		new RegExp(`^export\\s+default\\s+${name}\\b`, 'm').test(js) ||
+		new RegExp(`^export\\s+(?:const|let|var)\\s+[^=;]+=\\s*${name}\\s*[;,\\n]`, 'm').test(js)
+	);
+}
+
+interface RunnerReach {
+	/** Files that statically import the runner (a re-export from it included). */
+	readonly importers: readonly string[];
+	/** Refused everywhere, exempt files included: dynamic import / require of it, a re-export. */
+	readonly refused: readonly string[];
+}
+
+/**
+ * WHO REACHES THE UNCONFINED RUNNER — derived from the MODULE GRAPH, as §1 is (round 5: the
+ * spelling census `from '(\.\.?\/)+util\/spawn'` passed a `.ts` suffix, double quotes, a dynamic
+ * import, a `.js` suffix and a sibling's `./spawn` re-export, measured). Every import
+ * `Bun.Transpiler.scanImports` sees — static, dynamic, `require`, export-from — is RESOLVED
+ * against its file. A static importer must be enumerated; a dynamic import or a require of the
+ * runner yields bindings no scan follows, and a re-export (export-from, or a binding imported
+ * from it handed on by `export { … }` / `export default` / `export const x = …`) makes every
+ * importer of the re-exporter a runner importer the list never names — so both are refused
+ * EVERYWHERE, exempt files included. HONEST LIMIT: a WRAPPER (`export const run = (…a) =>
+ * runBinary(…a)`) in an exempt file is a function of its own, which is why the exemptions are
+ * few, reasoned, and reviewed.
+ */
+function runnerReach(files: readonly string[], root: string): RunnerReach {
+	const target = join(root, 'util/spawn.ts');
+	const importers: string[] = [];
+	const refused: string[] = [];
+	for (const path of files) {
+		const file = relative(root, path);
+		if (file === 'util/spawn.ts') continue;
+		const code = readFileSync(path, 'utf8');
+		const hits = TS.scanImports(code).filter((entry) => resolvesTo(path, entry.path, target));
+		if (hits.length === 0) continue;
+		if (hits.some((entry) => entry.kind === 'import-statement')) importers.push(file);
+		for (const entry of hits) {
+			if (entry.kind !== 'import-statement') refused.push(`${file}: ${entry.kind} ${entry.path}`);
+		}
+		const js = TS.transformSync(code);
+		const locals: string[] = [];
+		for (const match of js.matchAll(IMPORT_LINE)) {
+			if (resolvesTo(path, match[2] as string, target))
+				locals.push(...bindingsOf(match[1] as string));
+		}
+		for (const match of js.matchAll(EXPORT_FROM_LINE)) {
+			if (resolvesTo(path, match[2] as string, target))
+				refused.push(`${file}: re-export ${match[2]}`);
+		}
+		for (const local of locals) {
+			if (exportsBinding(js, local)) refused.push(`${file}: re-exports ${local}`);
+		}
+	}
+	return { importers: importers.sort(), refused };
+}
+
+const CALL_REF = '__DEDALO_IMPORTED_CALL__';
+const CALL_NS = '__DEDALO_IMPORTED_NS__';
+
+/**
+ * How many CALLS a file makes to `name` imported from `targetRel` — scope-resolved, the §1 way:
+ * the import is resolved (not matched), its line removed, its local binding (or namespace)
+ * `define`d to a sentinel, so a comment, a string, a type-only import and a local of the same
+ * name are not calls, and an alias or a namespace member is.
+ */
+function importedCalls(code: string, fileRel: string, targetRel: string, name: string): number {
+	const base = '/census';
+	const from = join(base, fileRel);
+	const target = join(base, targetRel);
+	const locals: string[] = [];
+	const namespaces: string[] = [];
+	const js = TS.transformSync(code).replace(IMPORT_LINE, (line, clause: string, spec: string) => {
+		if (!resolvesTo(from, spec, target)) return line;
+		for (const { imported, local } of importBindings(clause)) {
+			if (imported === name) locals.push(local);
+			else if (imported === '*') namespaces.push(local);
+		}
+		return '';
+	});
+	const define: Record<string, string> = {};
+	for (const local of locals) define[local] = CALL_REF;
+	for (const local of namespaces) define[local] = CALL_NS;
+	const out = new Bun.Transpiler({ loader: 'js', define }).transformSync(js);
+	return (
+		[...out.matchAll(new RegExp(`${CALL_REF}\\s*\\(`, 'g'))].length +
+		[...out.matchAll(new RegExp(`${CALL_NS}\\s*\\.\\s*${escapeName(name)}\\s*\\(`, 'g'))].length
+	);
 }
 
 describe('a build step, an install script and a git hook run as the agent, never as the daemon', () => {
 	const files = siteBuilderDaemonFiles();
-	const importers = runnerImporters(files, SOURCE_ROOT);
+	const reach = runnerReach(files, SOURCE_ROOT);
+	const importers = [...reach.importers];
 
 	test('the corpus is the tree, and the runner really is imported somewhere', () => {
 		expect(files.length).toBeGreaterThan(40);
@@ -990,6 +1194,8 @@ describe('a build step, an install script and a git hook run as the agent, never
 
 	test('only the confinement and the version probes reach the unconfined runner', () => {
 		expect(importers).toEqual(Object.keys(RUNNER_IMPORTERS).sort());
+		// …and nobody reaches it a way the list cannot see, or hands it on (exempt files too).
+		expect(reach.refused).toEqual([]);
 		// The two modules whose commands run over agent-authored bytes must NOT be among
 		// them — this is the exact shape the refutation reproduced.
 		expect(importers).not.toContain('build/builder.ts');
@@ -1000,9 +1206,12 @@ describe('a build step, an install script and a git hook run as the agent, never
 	});
 
 	test('the two modules that execute agent-authored commands go through the confinement', () => {
+		// A scope-resolved CALL of the confinement's runConfined — not the substring, which a
+		// comment satisfies.
 		for (const file of ['build/builder.ts', 'sites/git.ts']) {
 			const source = readFileSync(join(SOURCE_ROOT, file), 'utf8');
-			expect({ file, confined: /runConfined\(/.test(source) }).toEqual({ file, confined: true });
+			const calls = importedCalls(source, file, 'drivers/confinement.ts', 'runConfined');
+			expect({ file, confined: calls > 0 }).toEqual({ file, confined: true });
 		}
 		// And the door is a REFUSAL, not a convention: the runner itself stops a spawn whose
 		// cwd is inside the workspaces root. (Its behaviour — the refusal, the resolved-path
@@ -1012,20 +1221,79 @@ describe('a build step, an install script and a git hook run as the agent, never
 		expect(runner).toContain('config.SITES_ROOT');
 	});
 
-	test('the scanner really finds an importer — a planted one is reported', () => {
+	test('the scanner really finds an importer — every spelling of one is reported', () => {
+		// Round 5: the spelling census (`from '../util/spawn'`, single quotes, no suffix) passed
+		// each of these GREEN, measured — and `runBinary` with no cwd skips the runner's
+		// workspace refusal entirely, so any one of them was `git -C <ws>` as the daemon uid.
 		const dir = mkdtempSync(join(tmpdir(), 'agent-confinement-runner-'));
+		for (const sub of ['build', 'sites', 'util']) mkdirSync(join(dir, sub));
 		const planted: string[] = [];
-		plant(
+		const rows: Record<string, string> = {
+			'build/rogue.ts':
+				"import { runBinary } from '../util/spawn';\nrunBinary(['sh'], { timeoutMs: 1 });\n",
+			'build/suffix.ts':
+				"import { runBinary } from '../util/spawn.ts';\nrunBinary(['git'], { timeoutMs: 1 });\n",
+			'build/js_suffix.ts':
+				"import { runBinary } from '../util/spawn.js';\nrunBinary(['git'], { timeoutMs: 1 });\n",
+			'build/double.ts':
+				'import { runBinary as r } from "../util/spawn";\nr(["git"], { timeoutMs: 1 });\n',
+			'sites/multiline.ts':
+				"import {\n  runBinary,\n} from '../util/spawn';\nrunBinary(['git'], { timeoutMs: 1 });\n",
+			'util/sibling.ts': "export { runBinary as run } from './spawn';\n",
+		};
+		for (const [rel, body] of Object.entries(rows)) plant(planted, join(dir, rel), body);
+		const dynamic = plant(
 			planted,
-			join(dir, 'rogue.ts'),
-			"import { runBinary } from '../util/spawn';\nrunBinary(['sh'], { timeoutMs: 1 });\n",
+			join(dir, 'sites/dynamic.ts'),
+			"export const go = async () => (await import('../util/spawn')).runBinary(['git'], { timeoutMs: 1 });\n",
+		);
+		// …and an EXEMPT importer that hands the runner on (a re-export makes every importer of
+		// it a runner importer while the census's own list stays put) is refused, too.
+		const laundered = plant(
+			planted,
+			join(dir, 'drivers_claude_code.ts'),
+			"import { runBinary } from './util/spawn';\nexport { runBinary as probe };\n",
 		);
 		plant(
 			planted,
 			join(dir, 'quiet.ts'),
 			"import { join } from 'node:path';\nexport const x = join;\n",
 		);
-		expect(runnerImporters(planted, dir)).toEqual(['rogue.ts']);
+		plant(
+			planted,
+			join(dir, 'prose.ts'),
+			"// import { runBinary } from '../util/spawn';\nexport const s = \"from '../util/spawn'\";\n",
+		);
+		const reach = runnerReach(planted, dir);
+		expect(reach.importers).toEqual([...Object.keys(rows), relative(dir, laundered)].sort());
+		expect([...reach.refused].sort()).toEqual(
+			[
+				`${relative(dir, dynamic)}: dynamic-import ../util/spawn`,
+				`${relative(dir, laundered)}: re-exports runBinary`,
+				'util/sibling.ts: re-export ./spawn',
+			].sort(),
+		);
+	});
+
+	test('the scope-resolved call scanner really tells a call from a mention', () => {
+		const call = (code: string) =>
+			importedCalls(code, 'build/x.ts', 'drivers/confinement.ts', 'runConfined');
+		expect(
+			call("import { runConfined } from '../drivers/confinement';\nawait runConfined({});\n"),
+		).toBe(1);
+		expect(
+			call('import { runConfined as rc } from "../drivers/confinement.ts";\nawait rc({});\n'),
+		).toBe(1);
+		expect(call("import * as c from '../drivers/confinement';\nawait c.runConfined({});\n")).toBe(
+			1,
+		);
+		// A comment, a string, a type position and a local of the same name are NOT calls.
+		expect(
+			call(
+				"import type { runConfined } from '../drivers/confinement';\n// runConfined(x)\nconst s = 'runConfined(';\nconst f = (runConfined: () => void) => runConfined();\n",
+			),
+		).toBe(0);
+		expect(call('const runConfined = () => 0;\nrunConfined();\n')).toBe(0);
 	});
 });
 
@@ -1096,8 +1364,126 @@ describe('the shared tree is writable to the agent, and the daemon’s own state
  * `symlink(2)`, which creates a link and never writes through one). Never "its modes are
  * someone else's business".
  */
-const RAW_FS_WRITE =
-	/(?:\bBun\.write\s*\(|\bcreateWriteStream\s*\(|(?<![.\w])(?:mkdir|writeFile|appendFile|copyFile|cp|chmod|rename|symlink|link|open)(?:Sync)?\s*\()/;
+/** The fs modules whose bindings the two censuses follow. */
+const FS_MODULES: ReadonlySet<string> = new Set([
+	'node:fs',
+	'fs',
+	'node:fs/promises',
+	'fs/promises',
+]);
+
+/** Path-based MUTATIONS (each with its `Sync` twin). Closed: `open` counts (an O_CREAT open is a write). */
+const FS_WRITE_NAMES: ReadonlySet<string> = new Set([
+	...[
+		'mkdir',
+		'mkdtemp',
+		'writeFile',
+		'appendFile',
+		'copyFile',
+		'cp',
+		'chmod',
+		'chown',
+		'truncate',
+		'utimes',
+		'rename',
+		'symlink',
+		'link',
+		'open',
+	].flatMap((name) => [name, `${name}Sync`]),
+	'createWriteStream',
+]);
+
+/** Path-based CONTENT reads. Closed (listings are names, not content — see the read census). */
+const FS_READ_NAMES: ReadonlySet<string> = new Set([
+	'readFile',
+	'readFileSync',
+	'createReadStream',
+]);
+
+const FS_NAMED = '__DEDALO_FS_N_';
+const FS_NS = '__DEDALO_FS_NS__';
+const FS_BUN = '__DEDALO_FS_BUN__';
+
+/** One fs reference: the fs name it reaches, and the code from there to the end of its line. */
+interface FsCall {
+	readonly name: string;
+	readonly text: string;
+}
+
+interface FsReach {
+	readonly writes: readonly FsCall[];
+	readonly reads: readonly FsCall[];
+	/** A namespace used bare / computed / destructured, a dynamic import, a require, a re-export. */
+	readonly unresolvable: readonly string[];
+}
+
+/**
+ * WHAT A FILE CAN DO TO THE FILESYSTEM BY PATH — read off its IMPORTS, the §1 way (round 5).
+ * The spelling census (`(?<![.\w])writeFile(` …) kept a HANDLE's `handle.readFile` out with a
+ * lookbehind, and with it every member call — `fs.readFile(join(ws,'site.json'))`,
+ * `fsp.rename(a,b)` — and an alias (`const rf = readFile; rf(p)`) never names the call at all.
+ * Measured: all of them passed GREEN. So: the file is transpiled (types and comments gone), its
+ * fs imports removed, and each binding they made `define`d to a sentinel — a named one to its
+ * IMPORTED name (an alias is the same function), a default/namespace one (or `promises`) to a
+ * namespace sentinel whose MEMBER is then the name. `define` replaces only unbound references,
+ * so a string, a comment, a property name and a shadowing local are not references, and a
+ * handle's method is told apart by its RECEIVER (it is no fs binding). `Bun.write` / `Bun.file`
+ * are the `Bun` global's. A namespace used any other way (bare, computed, destructured), a
+ * dynamic import, a `require` or a re-export of an fs module leaves bindings no scan follows —
+ * reported as both a write and a read, so no exemption is silent about it.
+ */
+function fsReach(code: string): FsReach {
+	const unresolvable = TS.scanImports(code)
+		.filter((entry) => FS_MODULES.has(entry.path) && entry.kind !== 'import-statement')
+		.map((entry) => `${entry.kind} ${entry.path}`);
+	const define: Record<string, string> = { Bun: FS_BUN };
+	const js = TS.transformSync(code)
+		.replace(IMPORT_LINE, (line, clause: string, from: string) => {
+			if (!FS_MODULES.has(from)) return line;
+			for (const { imported, local } of importBindings(clause)) {
+				define[local] =
+					imported === '*' || imported === 'default' || imported === 'promises'
+						? FS_NS
+						: `${FS_NAMED}${imported}__`;
+			}
+			return '';
+		})
+		.replace(EXPORT_FROM_LINE, (line, _clause: string, from: string) => {
+			if (!FS_MODULES.has(from)) return line;
+			unresolvable.push(`re-export ${from}`);
+			return '';
+		});
+	const out = new Bun.Transpiler({ loader: 'js', define }).transformSync(js);
+	const writes: FsCall[] = [];
+	const reads: FsCall[] = [];
+	const rest = (index: number) =>
+		out.slice(index, out.indexOf('\n', index) < 0 ? undefined : out.indexOf('\n', index));
+	const classify = (name: string, text: string) => {
+		if (FS_WRITE_NAMES.has(name)) writes.push({ name, text });
+		else if (FS_READ_NAMES.has(name)) reads.push({ name, text });
+	};
+	for (const match of out.matchAll(new RegExp(`${FS_NAMED}([\\w$]+?)__`, 'g'))) {
+		const name = match[1] as string;
+		classify(name, `${name}${rest((match.index ?? 0) + match[0].length)}`.trim());
+	}
+	for (const match of out.matchAll(
+		new RegExp(`${FS_NS}(?:\\s*\\.\\s*promises)?(?:\\s*\\.\\s*([A-Za-z_$][\\w$]*))?`, 'g'),
+	)) {
+		const name = match[1];
+		if (name === undefined || name === 'promises')
+			unresolvable.push('an fs namespace used bare, computed or destructured');
+		else classify(name, `${name}${rest((match.index ?? 0) + match[0].length)}`.trim());
+	}
+	for (const match of out.matchAll(
+		new RegExp(`${FS_BUN}(?:\\s*\\.\\s*([A-Za-z_$][\\w$]*))?`, 'g'),
+	)) {
+		const text = `Bun.${match[1] ?? ''}${rest((match.index ?? 0) + match[0].length)}`.trim();
+		if (match[1] === 'write') writes.push({ name: 'Bun.write', text });
+		else if (match[1] === 'file') reads.push({ name: 'Bun.file', text });
+		else if (match[1] === undefined) unresolvable.push('Bun used bare or computed');
+	}
+	return { writes, reads, unresolvable };
+}
 
 const RAW_FS_EXEMPT: Readonly<Record<string, string>> = Object.freeze({
 	'audit.ts':
@@ -1136,8 +1522,8 @@ const RAW_FS_EXEMPT: Readonly<Record<string, string>> = Object.freeze({
 		'read-only to a turn under `ProtectSystem=strict`.',
 	'index.ts':
 		'`chmodSync` on the LISTEN SOCKET this process just bound, in the daemon runtime ' +
-		'directory outside `SITES_ROOT`; the other match is the `open()` handler of a ' +
-		'`Bun.connect` socket, which is not a filesystem call at all.',
+		'directory outside `SITES_ROOT` (the `open()` handler of a `Bun.connect` socket, which ' +
+		'the spelling census also matched, is no fs binding and no longer counts).',
 	'instance/roots.ts':
 		'The BOOT PREFLIGHT probes. The audit append is `AUDIT_DIR`, outside `SITES_ROOT`; ' +
 		'the create probe DOES land at the root of `SITES_ROOT`, which is 2770, ' +
@@ -1170,16 +1556,14 @@ const THE_WRITER = 'util/shared_tree.ts';
 
 /** Every file in the tree that mutates the filesystem by PATH rather than through the writer. */
 function rawFsWriters(files: readonly string[], root: string): string[] {
-	const found = new Set<string>();
+	const found: string[] = [];
 	for (const path of files) {
 		const file = relative(root, path);
 		if (file === THE_WRITER) continue;
-		for (const line of readFileSync(path, 'utf8').split('\n')) {
-			const code = line.replace(/^\s*(\/\/|\*|\/\*).*$/, '');
-			if (RAW_FS_WRITE.test(code)) found.add(file);
-		}
+		const reach = fsReach(readFileSync(path, 'utf8'));
+		if (reach.writes.length > 0 || reach.unresolvable.length > 0) found.push(file);
 	}
-	return [...found].sort();
+	return found.sort();
 }
 
 describe('a site workspace is CREATED shared, not created and hoped over', () => {
@@ -1270,28 +1654,32 @@ describe('a site workspace is CREATED shared, not created and hoped over', () =>
 	 * structural, and asserted here, is that the module cannot regress to a path-based write:
 	 * the mode is set on a DESCRIPTOR, and every descriptor is opened O_NOFOLLOW.
 	 */
-	const PATH_BASED_MUTATION = /(?<![.\w])(?:chmod|writeFile|appendFile|mkdir)\s*\(/;
-
-	/** Lines of a module that mutate the filesystem by PATH rather than through a handle. */
+	/**
+	 * The fs references of a module that mutate by PATH rather than through a handle — every
+	 * write name of the census EXCEPT the two the module is built from: `open` (the ONE wrapper
+	 * that adds O_NOFOLLOW, counted below) and `rename` (the atomic swap, which replaces a NAME
+	 * and never writes through one). Scope-resolved, from the imports (round 5), not spelled.
+	 */
 	function pathBasedMutations(source: string): string[] {
-		const out: string[] = [];
-		for (const line of source.split('\n')) {
-			const code = line.replace(/^\s*(\/\/|\*|\/\*).*$/, '');
-			if (!PATH_BASED_MUTATION.test(code)) continue;
-			// `mkdir(path)` with no mode and no recursion is the ONE allowed path call: it
-			// creates a level that is then opened and moded through its descriptor, and it
-			// fails EEXIST — it never follows anything.
-			if (/(?<![.\w])mkdir\s*\(\s*path\s*\)/.test(code)) continue;
-			out.push(code.trim());
-		}
-		return out;
+		const reach = fsReach(source);
+		return [
+			...reach.unresolvable,
+			...reach.writes
+				.filter((call) => !['open', 'rename'].includes(call.name))
+				// `mkdir(path)` with no mode and no recursion is the ONE allowed path call: it
+				// creates a level that is then opened and moded through its descriptor, and it
+				// fails EEXIST — it never follows anything.
+				.filter((call) => !/^mkdir\s*\(\s*path\s*\)/.test(call.text))
+				.map((call) => call.text.replace(/;\s*$/, '')),
+		];
 	}
 
 	test('the shared writers open descriptors, never paths — O_NOFOLLOW is the door', () => {
 		const source = readFileSync(join(SOURCE_ROOT, 'util/shared_tree.ts'), 'utf8');
-		// Every open in the module goes through the one wrapper, and the wrapper sets it.
+		// Every open in the module goes through the one wrapper, and the wrapper sets it — ONE
+		// reference to the fs `open`, scope-resolved (an alias or a namespace member counts).
 		expect(source).toContain('flags | FS.O_NOFOLLOW');
-		expect((source.match(/(?<![.\w])open\s*\(/g) ?? []).length).toBe(1);
+		expect(fsReach(source).writes.filter((call) => call.name === 'open').length).toBe(1);
 		// The mode is stated on the HANDLE (fchmod), so the thing moded is the thing written.
 		expect(source).toContain('handle.chmod(');
 		// And nothing in it mutates a path directly, which is what followed a planted link.
@@ -1340,16 +1728,22 @@ describe('a site workspace is CREATED shared, not created and hoped over', () =>
 	test('the path-based scanner really finds one — a planted regression is reported', () => {
 		// The positive control for the leg above: without it, `pathBasedMutations` returning
 		// [] would be satisfied by a regex that matches nothing.
-		expect(pathBasedMutations('await chmod(target, 0o660);')).toEqual([
-			'await chmod(target, 0o660);',
+		const I = "import { chmod, mkdir, writeFile } from 'node:fs/promises';\n";
+		expect(pathBasedMutations(`${I}await chmod(target, mode);`)).toEqual(['chmod(target, mode)']);
+		expect(pathBasedMutations(`${I}await writeFile(path, body);`)).toEqual([
+			'writeFile(path, body)',
 		]);
-		expect(pathBasedMutations('await writeFile(path, body);')).toEqual([
-			'await writeFile(path, body);',
-		]);
+		// A namespace member and an alias are the same mutation (round 5).
+		expect(
+			pathBasedMutations(
+				"import * as fsp from 'node:fs/promises';\nawait fsp.chmod(target, mode);",
+			),
+		).toEqual(['chmod(target, mode)']);
+		expect(pathBasedMutations(`${I}const c = chmod;\nawait c(target, mode);`)).toEqual(['chmod']);
 		// …and does not report the two shapes the module legitimately holds.
-		expect(pathBasedMutations('await mkdir(path);')).toEqual([]);
-		expect(pathBasedMutations('// writeFile(path, body) is what this replaces.')).toEqual([]);
-		expect(pathBasedMutations('await handle.chmod(mode);')).toEqual([]);
+		expect(pathBasedMutations(`${I}await mkdir(path);`)).toEqual([]);
+		expect(pathBasedMutations(`${I}// writeFile(path, body) is what this replaces.`)).toEqual([]);
+		expect(pathBasedMutations(`${I}await handle.chmod(mode);`)).toEqual([]);
 	});
 
 	test('the scanner really finds a raw write — a planted one is reported', () => {
@@ -1357,29 +1751,94 @@ describe('a site workspace is CREATED shared, not created and hoped over', () =>
 		const planted: string[] = [];
 		const sites = join(dir, 'sites');
 		mkdirSync(sites);
-		plant(planted, join(sites, 'rogue.ts'), 'await mkdir(dir, { recursive: true });\n');
+		const P =
+			"import { mkdir, mkdirSync, writeFileSync, createWriteStream, openSync, symlink } from 'node:fs';\n";
+		plant(planted, join(sites, 'rogue.ts'), `${P}await mkdir(dir, { recursive: true });\n`);
 		plant(planted, join(sites, 'quiet.ts'), 'await mkdirShared(dir);\n');
 		plant(
 			planted,
 			join(sites, 'prose.ts'),
-			'// mkdir(dir) is what this replaces.\nexport const x = 1;\n',
+			`${P}// mkdir(dir) is what this replaces.\nexport const x = 'mkdir(';\n`,
 		);
-		// A member call is a different thing (`io.mkdir`), like RegExp.exec in the spawn census.
-		plant(planted, join(sites, 'member.ts'), 'await io.mkdir(dir);\n');
-		plant(planted, join(dir, 'top_level.ts'), 'await symlink(a, b);\n');
+		// A member call on a HANDLE is a different thing (`io.mkdir`), told apart by its receiver —
+		// an `io` that is not an fs binding — never by a lookbehind on the spelling.
+		plant(planted, join(sites, 'member.ts'), `${P}await io.mkdir(dir);\n`);
+		plant(planted, join(dir, 'top_level.ts'), `${P}await symlink(a, b);\n`);
 		// AND THE SPELLING IS NOT A HIDING PLACE. Each of these passed the census green while
 		// the `(` had to follow the bare name — the middle one is the exact planted probe
 		// (`mkdirSync` + `writeFileSync` straight into a workspace) that was measured GREEN.
-		plant(planted, join(sites, 'sync.ts'), 'mkdirSync(p, { recursive: true });\n');
-		plant(planted, join(sites, 'sync_write.ts'), 'writeFileSync(join(p, "y.txt"), body);\n');
+		plant(planted, join(sites, 'sync.ts'), `${P}mkdirSync(p, { recursive: true });\n`);
+		plant(planted, join(sites, 'sync_write.ts'), `${P}writeFileSync(join(p, "y.txt"), body);\n`);
 		plant(planted, join(sites, 'bun_write.ts'), 'await Bun.write(p, body);\n');
-		plant(planted, join(sites, 'stream.ts'), 'createWriteStream(p).end(body);\n');
-		plant(planted, join(sites, 'open_sync.ts'), "openSync(p, 'w');\n");
+		plant(planted, join(sites, 'stream.ts'), `${P}createWriteStream(p).end(body);\n`);
+		plant(planted, join(sites, 'open_sync.ts'), `${P}openSync(p, 'w');\n`);
+		// ROUND 5: the lookbehind that kept `handle.chmod` out kept EVERY member call out — a
+		// namespace's `fs.writeFile`, `fsp.rename` — and an alias never names the call at all.
+		plant(
+			planted,
+			join(sites, 'ns_write.ts'),
+			"import * as fsp from 'node:fs/promises';\nawait fsp.writeFile(p, x);\n",
+		);
+		plant(
+			planted,
+			join(sites, 'ns_rename.ts'),
+			"import * as fsp from 'fs/promises';\nawait fsp.rename(a, b);\n",
+		);
+		plant(planted, join(sites, 'ns_sync.ts'), "import fs from 'node:fs';\nfs.renameSync(a, b);\n");
+		plant(
+			planted,
+			join(sites, 'ns_promises.ts'),
+			"import * as fs from 'fs';\nawait fs.promises.appendFile(p, x);\n",
+		);
+		plant(
+			planted,
+			join(sites, 'alias.ts'),
+			"import { writeFile } from 'node:fs/promises';\nconst wf = writeFile;\nawait wf(p, x);\n",
+		);
+		plant(
+			planted,
+			join(sites, 'renamed.ts'),
+			"import { writeFile as put } from 'node:fs/promises';\nawait put(p, x);\n",
+		);
+		// …and the shapes no binding follows are refused (reported) outright: a destructured
+		// namespace, a dynamic import, a require, a re-export.
+		plant(
+			planted,
+			join(sites, 'destructure.ts'),
+			"import * as fs from 'node:fs';\nconst { writeFileSync: w } = fs;\nw(p, x);\n",
+		);
+		plant(
+			planted,
+			join(sites, 'dynamic.ts'),
+			"const { writeFile } = await import('node:fs/promises');\nawait writeFile(p, x);\n",
+		);
+		plant(planted, join(sites, 'required.ts'), "require('fs').writeFileSync(p, x);\n");
+		plant(
+			planted,
+			join(sites, 'reexport.ts'),
+			"export { writeFile as put } from 'node:fs/promises';\n",
+		);
+		// An INERT member of a namespace is not a write.
+		plant(
+			planted,
+			join(sites, 'ns_inert.ts'),
+			"import * as fs from 'node:fs';\nexport const e = fs.existsSync(p) && fs.constants.O_RDONLY;\n",
+		);
 		// TOTAL over the tree, not over a directory list: the top-level file is reported too,
 		// which is the half the first version of this census could not see.
 		expect(rawFsWriters(planted, dir)).toEqual([
+			'sites/alias.ts',
 			'sites/bun_write.ts',
+			'sites/destructure.ts',
+			'sites/dynamic.ts',
+			'sites/ns_promises.ts',
+			'sites/ns_rename.ts',
+			'sites/ns_sync.ts',
+			'sites/ns_write.ts',
 			'sites/open_sync.ts',
+			'sites/reexport.ts',
+			'sites/renamed.ts',
+			'sites/required.ts',
 			'sites/rogue.ts',
 			'sites/stream.ts',
 			'sites/sync.ts',
@@ -1409,7 +1868,6 @@ describe('a site workspace is CREATED shared, not created and hoped over', () =>
  * anyway, which is the stronger statement, and the honest limit is that a bare `readdir` of
  * a trusted root is not a finding here.
  */
-const RAW_FS_READ = /(?:\bBun\.file\s*\(|\bcreateReadStream\s*\(|(?<![.\w])readFile(?:Sync)?\s*\()/;
 
 const RAW_READ_EXEMPT: Readonly<Record<string, string>> = Object.freeze({
 	'audit.ts':
@@ -1449,16 +1907,14 @@ const RAW_READ_EXEMPT: Readonly<Record<string, string>> = Object.freeze({
 
 /** Every file that reads a path's CONTENT rather than reading through the shared door. */
 function rawFsReaders(files: readonly string[], root: string): string[] {
-	const found = new Set<string>();
+	const found: string[] = [];
 	for (const path of files) {
 		const file = relative(root, path);
 		if (file === THE_WRITER) continue;
-		for (const line of readFileSync(path, 'utf8').split('\n')) {
-			const code = line.replace(/^\s*(\/\/|\*|\/\*).*$/, '');
-			if (RAW_FS_READ.test(code)) found.add(file);
-		}
+		const reach = fsReach(readFileSync(path, 'utf8'));
+		if (reach.reads.length > 0 || reach.unresolvable.length > 0) found.push(file);
 	}
-	return [...found].sort();
+	return found.sort();
 }
 
 describe('what the daemon reads back out of an agent-writable tree is proved, not trusted', () => {
@@ -1500,20 +1956,40 @@ describe('what the daemon reads back out of an agent-writable tree is proved, no
 		const planted: string[] = [];
 		const sites = join(dir, 'sites');
 		mkdirSync(sites);
-		plant(planted, join(sites, 'rogue.ts'), "const t = await readFile(p, 'utf8');\n");
-		plant(planted, join(sites, 'sync.ts'), "const t = readFileSync(p, 'utf8');\n");
+		const R =
+			"import { readFile } from 'node:fs/promises';\nimport { readFileSync } from 'node:fs';\n";
+		plant(planted, join(sites, 'rogue.ts'), `${R}const t = await readFile(p, 'utf8');\n`);
+		plant(planted, join(sites, 'sync.ts'), `${R}const t = readFileSync(p, 'utf8');\n`);
 		plant(planted, join(sites, 'bun.ts'), 'const t = await Bun.file(p).text();\n');
 		plant(planted, join(sites, 'quiet.ts'), 'const t = await readFilePrivate(root, rel);\n');
 		plant(
 			planted,
 			join(sites, 'prose.ts'),
-			'// readFile(p) is what this replaces.\nexport const x = 1;\n',
+			`${R}// readFile(p) is what this replaces.\nexport const x = 'readFile(';\n`,
 		);
-		plant(planted, join(sites, 'member.ts'), 'const t = await handle.readFile(p);\n');
-		plant(planted, join(dir, 'top_level.ts'), "const t = readFileSync(p, 'utf8');\n");
+		// A HANDLE's read is told apart by its receiver (not an fs binding)…
+		plant(planted, join(sites, 'member.ts'), `${R}const t = await handle.readFile(p);\n`);
+		plant(planted, join(dir, 'top_level.ts'), `${R}const t = readFileSync(p, 'utf8');\n`);
+		// …while a NAMESPACE's read, an aliased read and a stream are reads (round 5: the
+		// lookbehind passed the first two green — the exact link-following read of a workspace
+		// path that serves SERVICE_TOKEN back).
+		plant(
+			planted,
+			join(sites, 'ns_read.ts'),
+			"import * as fs from 'node:fs/promises';\nconst t = await fs.readFile(join(ws, 'site.json'));\n",
+		);
+		plant(planted, join(sites, 'alias.ts'), `${R}const rf = readFile;\nconst t = await rf(p);\n`);
+		plant(
+			planted,
+			join(sites, 'stream.ts'),
+			"import { createReadStream as crs } from 'fs';\ncrs(p);\n",
+		);
 		expect(rawFsReaders(planted, dir)).toEqual([
+			'sites/alias.ts',
 			'sites/bun.ts',
+			'sites/ns_read.ts',
 			'sites/rogue.ts',
+			'sites/stream.ts',
 			'sites/sync.ts',
 			'top_level.ts',
 		]);

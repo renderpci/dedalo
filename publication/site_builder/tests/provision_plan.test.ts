@@ -1001,6 +1001,28 @@ describe('systemd and the web server', () => {
   });
 
   /**
+   * A START-LIMITED DAEMON IS STARTABLE (round 5). New code that starts before `provision apply`
+   * (a reboot or crash after an in-app update) exits 1 on the retired env keys, and Restart=always
+   * + StartLimitBurst=5/300 s puts it at start-limit-hit in ~15 s — where a plain `systemctl start`
+   * fails 'Start request repeated too quickly' and apply halts before the web reload and the
+   * retire phase. So an enabled daemon that is not running is `reset-failed` IMMEDIATELY before
+   * its start; a running one, and a first install (its unit was never started), get none.
+   */
+  test('an enabled daemon that is not running is reset-failed immediately before unit_start — and only then', () => {
+    const decl = declare();
+    const { host } = settle(decl);
+    const down = planFor(decl, { ...host, unitActive: false });
+    const steps = execSteps(down);
+    const at = steps.indexOf('unit_start');
+    expect(at).toBeGreaterThan(0);
+    expect(steps[at - 1]).toBe('unit_reset_failed');
+    const reset = down.find(action => action.kind === 'exec' && action.step === 'unit_reset_failed');
+    expect(reset?.kind === 'exec' ? reset.argv : null).toEqual(['systemctl', 'reset-failed', decl.layout.unitName]);
+    expect(execSteps(planFor(decl, host))).not.toContain('unit_reset_failed');
+    expect(execSteps(planFor(decl, bareHost()))).not.toContain('unit_reset_failed');
+  });
+
+  /**
    * ENABLED IS NOT LISTENING. A socket that hit its trigger limit is FAILED and stays so; one
    * stopped by hand stays stopped — `is-enabled` says yes to both. The plan starts exactly the
    * enabled sockets that are not active, and nothing on a host where every one listens (or

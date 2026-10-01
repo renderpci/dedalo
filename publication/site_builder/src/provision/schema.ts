@@ -197,6 +197,21 @@ const agentBinSchema = z
   })
   .transform(tidyPath);
 
+/**
+ * `systemctl`, pinned — the daemon's control plane (`show` / `list-units` / `stop`). Only for a
+ * host where it is not at the daemon's default `/usr/bin/systemctl`. DECLARED because the
+ * rendered env is the daemon's only env and the plan reverts any hand edit to it: a hand-set
+ * key vanished on the next apply and every run was then refused. Absolute, like every bin.
+ */
+const systemctlBinSchema = z
+  .string()
+  .refine(value => isAbsolute(value.trim()), {
+    message: 'agent.systemctl_bin must be an ABSOLUTE path, never a bare command name resolved through the shared PATH',
+    abort: true,
+  })
+  .transform(tidyPath)
+  .optional();
+
 /** A unix user or group name the host already owns, or an adopted instance already uses. */
 function unixNameSchema(what: string) {
   return z
@@ -346,6 +361,8 @@ const agentSchema = z.strictObject({
   provider_hosts: egressHostsSchema('agent.provider_hosts'),
   /** A build's package registry host(s) → BUILD_REGISTRY_HOSTS. */
   registry_hosts: egressHostsSchema('agent.registry_hosts'),
+  /** `systemctl` where it is not `/usr/bin/systemctl` → SYSTEMCTL_BIN (absent: the daemon's default). */
+  systemctl_bin: systemctlBinSchema,
 });
 
 /**

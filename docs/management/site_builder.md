@@ -120,7 +120,9 @@ three. Nothing about it is special to being the fourth: the same six steps add t
       before it accepts work.
     - **polkit 0.106 or newer.** The grant that lets the daemon stop its own runs is a
       JavaScript rules file. polkit 0.105 (Ubuntu 22.04) ignores it, so `provision apply`
-      refuses that host.
+      refuses that host. Server and minimal installs often have no polkit at all, and then
+      `provision apply` refuses because it cannot read polkit's version. Install it first:
+      `apt install polkitd` on Debian and Ubuntu, `dnf install polkit` on RHEL.
     - **A Claude Code binary the daemon can execute**, at an absolute path outside `/home`,
       `/root`, `/tmp` and `/run`. The daemon's own unit hides those directories, so the
       native installer's `~/.local/bin/claude` is unreachable. Install it under `/usr/local`

@@ -47,6 +47,9 @@ describe('the polkit floor — the rendered rule must be one polkit reads', () =
   test('0.105 (Ubuntu 22.04) is refused by name; unreadable is refused; 106, 0.117 (RHEL 9), 122 (Debian 12), 124 (Ubuntu 24.04) plan', () => {
     expect(verdict(105)).toContain('polkit is 0.105, which reads only .pkla files');
     expect(verdict(null)).toContain("polkit's release could not be read");
+    // …and says how to fix it: a server/minimal Debian 12 or Ubuntu install lacks the package (round 5).
+    expect(verdict(null)).toContain('apt install polkitd');
+    expect(verdict(null)).toContain('dnf install polkit');
     for (const version of [106, 117, 122, 124]) expect({ version, verdict: verdict(version) }).toEqual({ version, verdict: 'planned' });
     // A hand-built state (no observation) is not refused on it — the same law as pid1Version.
     expect(verdict(undefined)).toBe('planned');
