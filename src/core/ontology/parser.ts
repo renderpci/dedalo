@@ -258,7 +258,7 @@ function statedOverrideKeys(
 		if (stated[key] === null) {
 			throw new DedaloError('ontology.invalid_node', {
 				message: `parseSectionRecordToOntologyNode: override ${at.overrideLabel} of ${at.sectionTipo}/${at.sectionId} both removes '${key}' (null in ${ONTOLOGY_PROPERTIES}) and fills it (${key === 'css' ? ONTOLOGY_CSS : ONTOLOGY_SOURCE})`,
-				coordinates: { section_tipo: at.sectionTipo, section_id: String(at.sectionId) },
+				coordinates: { section_tipo: at.sectionTipo, section_id: at.sectionId },
 			});
 		}
 		stated[key] = value;
@@ -436,7 +436,7 @@ export async function parseSectionRecordToOntologyNodeWithDefects(
 	if (sectionTipo === LOCAL_ONTOLOGY_SECTION) {
 		throw new DedaloError('ontology.invalid_node', {
 			message: `parseSectionRecordToOntologyNode: '${LOCAL_ONTOLOGY_SECTION}/${sectionId}' is an override record, not a node — parse the node it overrides (${ONTOLOGY_OVERWRITE}) instead`,
-			coordinates: { section_tipo: sectionTipo, section_id: String(sectionId) },
+			coordinates: { section_tipo: sectionTipo, section_id: sectionId },
 		});
 	}
 	const defects: OntologyNodeDefect[] = [];

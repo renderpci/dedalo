@@ -180,52 +180,55 @@ async function hostsFor(principal: Principal, q: string): Promise<number[]> {
 		.sort();
 }
 
-describe.if(DB_READY)('search hop rule — a REAL restricted user (profile grants, own project)', () => {
-	let A: Principal;
-	let root: Principal;
+describe.if(DB_READY)(
+	'search hop rule — a REAL restricted user (profile grants, own project)',
+	() => {
+		let A: Principal;
+		let root: Principal;
 
-	beforeAll(async () => {
-		await installScopeBindingFixture();
-		await ensureSituation(S);
-		hostToReal = await createSectionRecord(HOST, SB_USER_A);
-		hostToVirt = await createSectionRecord(HOST, SB_USER_A);
-		await stampHost(hostToReal, REAL, R1);
-		await stampHost(hostToVirt, VIRT, V1);
-		root = await resolvePrincipal(-1);
-	});
-	afterAll(async () => {
-		if (hostToReal > 0) await deleteSectionRecord(HOST, hostToReal, -1);
-		if (hostToVirt > 0) await deleteSectionRecord(HOST, hostToVirt, -1);
-		await dropSituation(S);
-		await removeScopeBindingFixture();
-	});
+		beforeAll(async () => {
+			await installScopeBindingFixture();
+			await ensureSituation(S);
+			hostToReal = await createSectionRecord(HOST, SB_USER_A);
+			hostToVirt = await createSectionRecord(HOST, SB_USER_A);
+			await stampHost(hostToReal, REAL, R1);
+			await stampHost(hostToVirt, VIRT, V1);
+			root = await resolvePrincipal(-1);
+		});
+		afterAll(async () => {
+			if (hostToReal > 0) await deleteSectionRecord(HOST, hostToReal, -1);
+			if (hostToVirt > 0) await deleteSectionRecord(HOST, hostToVirt, -1);
+			await dropSituation(S);
+			await removeScopeBindingFixture();
+		});
 
-	test('non-degeneracy: root reaches both twins through the hop', async () => {
-		expect(await hostsFor(root, 'zzreal visible')).toEqual([hostToReal]);
-		expect(await hostsFor(root, 'zzreal secret')).toEqual([hostToVirt]);
-	});
+		test('non-degeneracy: root reaches both twins through the hop', async () => {
+			expect(await hostsFor(root, 'zzreal visible')).toEqual([hostToReal]);
+			expect(await hostsFor(root, 'zzreal secret')).toEqual([hostToVirt]);
+		});
 
-	test('A granted on REAL only: reaches REAL, NOT the virtual twin (the leak, closed)', async () => {
-		await setGrantsOfA([REAL]);
-		A = await resolvePrincipal(SB_USER_A);
-		expect(A.isGlobalAdmin).toBe(false);
-		expect(await hostsFor(A, 'zzreal visible')).toEqual([hostToReal]);
-		expect(await hostsFor(A, 'zzreal secret')).toEqual([]);
-		// hit and miss on the hidden twin answer alike: a prefix probe learns nothing
-		expect(await hostsFor(A, 'zzreal sec')).toEqual(await hostsFor(A, 'zzreal nomatch'));
-	});
+		test('A granted on REAL only: reaches REAL, NOT the virtual twin (the leak, closed)', async () => {
+			await setGrantsOfA([REAL]);
+			A = await resolvePrincipal(SB_USER_A);
+			expect(A.isGlobalAdmin).toBe(false);
+			expect(await hostsFor(A, 'zzreal visible')).toEqual([hostToReal]);
+			expect(await hostsFor(A, 'zzreal secret')).toEqual([]);
+			// hit and miss on the hidden twin answer alike: a prefix probe learns nothing
+			expect(await hostsFor(A, 'zzreal sec')).toEqual(await hostsFor(A, 'zzreal nomatch'));
+		});
 
-	test('A granted on both twins: reaches both', async () => {
-		await setGrantsOfA([REAL, VIRT]);
-		A = await resolvePrincipal(SB_USER_A);
-		expect(await hostsFor(A, 'zzreal visible')).toHaveLength(1);
-		expect(await hostsFor(A, 'zzreal secret')).toEqual([hostToVirt]);
-	});
+		test('A granted on both twins: reaches both', async () => {
+			await setGrantsOfA([REAL, VIRT]);
+			A = await resolvePrincipal(SB_USER_A);
+			expect(await hostsFor(A, 'zzreal visible')).toHaveLength(1);
+			expect(await hostsFor(A, 'zzreal secret')).toEqual([hostToVirt]);
+		});
 
-	test('A with no grant on either twin: the hop reaches nothing', async () => {
-		await setGrantsOfA([]);
-		A = await resolvePrincipal(SB_USER_A);
-		expect(await hostsFor(A, 'zzreal visible')).toEqual([]);
-		expect(await hostsFor(A, 'zzreal secret')).toEqual([]);
-	});
-});
+		test('A with no grant on either twin: the hop reaches nothing', async () => {
+			await setGrantsOfA([]);
+			A = await resolvePrincipal(SB_USER_A);
+			expect(await hostsFor(A, 'zzreal visible')).toEqual([]);
+			expect(await hostsFor(A, 'zzreal secret')).toEqual([]);
+		});
+	},
+);
