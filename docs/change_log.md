@@ -628,6 +628,18 @@ Merged since the last release; these ship with the next one.
 
     A site folder that exists but has no `site.json` (left by a create that was interrupted, or by a site whose settings file was removed) is no longer reused. Creating a site with that name is refused with the reason `workspace_exists`, and nothing in the folder is changed. An administrator must inspect the folder and remove it before the name can be used.
 
+- **Site builder state survives a power cut, and a damaged driver record is reported at startup.**
+
+    The site builder's own state (each site's driver record, session and build
+    records, `site.json`) was written atomically but not forced to disk. After a
+    power cut or kernel crash, a newly written driver record could come back
+    empty. The site then refused every session that did not name its driver, on
+    every restart, and nothing explained why until a session was attempted. These
+    files, and the directories they are created in, are now forced to disk before
+    the write is reported done. A driver record that is present but unreadable is
+    now named in the startup log with the steps to fix it. It is left as found
+    and never rebuilt from `site.json`, which the agent can edit.
+
 - **A second Site Builder started by hand no longer stops the running service's agent runs.**
 
     When the Site Builder daemon was started a second time for an instance that was already running (for example, by hand as the service user while debugging), the second process stopped the running service's agent turns and marked its sessions interrupted. Only after that did it notice the instance was already served and exit.

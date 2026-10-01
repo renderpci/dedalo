@@ -97,7 +97,7 @@
 import { constants as FS } from 'node:fs';
 import { lstat, mkdir, open, readdir, rename } from 'node:fs/promises';
 import type { FileHandle } from 'node:fs/promises';
-import { isAbsolute, join, relative as relativePath, resolve, sep } from 'node:path';
+import { dirname, isAbsolute, join, relative as relativePath, resolve, sep } from 'node:path';
 import { confinedPath } from './paths';
 
 /** Directories both uids work in: setgid, group-writable, world-closed. */
@@ -267,6 +267,37 @@ async function chmodHandle(path: string, flags: number, mode: number): Promise<v
   }
 }
 
+/**
+ * THE DURABILITY HALF — a `rename` is ATOMIC against a process death, not DURABLE against a power
+ * cut or a kernel crash. Only what was forced to disk survives one: a file's BYTES once its
+ * handle was synced after the last write, a DIRECTORY ENTRY (a mkdir, a rename) once its
+ * directory was synced after the change. On ext4/XFS with delayed allocation a NEW inode renamed
+ * into place and never synced comes back ZERO-LENGTH — and the driver record
+ * (`sites/driver_record.ts`) is exactly that, and fail-closed: an empty one locked its site out of
+ * every driver-less session, boot after boot. So the atomic doors sync the tmp's bytes before the
+ * rename and the directory after it, and a level `ensureDir` / `mkdirSharedFresh` CREATES is made
+ * durable in its parent. Gate: `tests/durable_state.test.ts` (a page-cache model over these calls).
+ *
+ * The directory is opened through the same `O_NOFOLLOW` door as everything else here (a link in
+ * its place is an incident, said, never followed). A filesystem that cannot fsync a directory
+ * (some network/FUSE ones: EINVAL, ENOTSUP) is SAID, not failed: the bytes are as durable as that
+ * filesystem can make them, and refusing the write would lose them for certain.
+ */
+const DIRECTORY_SYNC_UNSUPPORTED = new Set(['EINVAL', 'ENOTSUP', 'EOPNOTSUPP']);
+
+async function syncDirectory(path: string): Promise<void> {
+  const handle = await openNoFollow(path, FS.O_RDONLY | FS.O_DIRECTORY);
+  try {
+    await handle.sync();
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === undefined || !DIRECTORY_SYNC_UNSUPPORTED.has(code)) throw error;
+    console.warn(`[shared_tree] the filesystem of '${path}' refuses a directory fsync (${code}): entries in it are not power-cut durable`);
+  } finally {
+    await handle.close();
+  }
+}
+
 /** The components of `relative` under `root`, refused if the spelling escapes. */
 function segmentsUnder(root: string, relative: string): { target: string; segments: string[] } {
   const target = confinedPath(root, relative);
@@ -310,6 +341,8 @@ async function mkdirLevel(path: string, mode: number): Promise<void> {
     return;
   }
   await chmodHandle(path, FS.O_RDONLY | FS.O_DIRECTORY, mode);
+  // CREATED here: its entry lives in the parent, durable only once the parent is synced.
+  await syncDirectory(dirname(path));
 }
 
 /**
@@ -407,6 +440,7 @@ export async function mkdirSharedFresh(root: string, relative: string): Promise<
   if (segments.length > 1) await ensureDir(root, segments.slice(0, -1).join(sep), SHARED_DIR_MODE);
   if (!(await makeLevel(target))) return false;
   await chmodHandle(target, FS.O_RDONLY | FS.O_DIRECTORY, SHARED_DIR_MODE);
+  await syncDirectory(dirname(target));
   return true;
 }
 
@@ -469,6 +503,7 @@ async function writeThroughHandle(
   body: string,
   mode: number,
   flags: number,
+  durable = false,
 ): Promise<string> {
   const { target, segments } = segmentsUnder(root, relative);
   await assertRealChain(root, segments.slice(0, -1));
@@ -495,6 +530,8 @@ async function writeThroughHandle(
     if ((flags & FS.O_APPEND) === 0) await handle.truncate(0);
     await handle.writeFile(body, 'utf8');
     await handle.chmod(mode);
+    // The bytes AND the mode on disk before anything (a rename) may publish this inode.
+    if (durable) await handle.sync();
   } finally {
     await handle.close();
   }
@@ -523,10 +560,12 @@ export async function writeFileSharedAtomic(
   relative: string,
   body: string,
 ): Promise<void> {
-  const tmp = await writeThroughHandle(root, `${relative}.tmp`, body, SHARED_FILE_MODE, 0);
+  const tmp = await writeThroughHandle(root, `${relative}.tmp`, body, SHARED_FILE_MODE, 0, true);
   // `rename` does not follow a symlink at the destination — it replaces it — and the
   // directory chain above it was just proved link-free.
-  await rename(tmp, confinedPath(root, relative));
+  const target = confinedPath(root, relative);
+  await rename(tmp, target);
+  await syncDirectory(dirname(target));
 }
 
 /** Write one of the DAEMON's own files (0600) inside a tree the agent can write. */
@@ -555,8 +594,10 @@ export async function writeFilePrivateAtomic(
   relative: string,
   body: string,
 ): Promise<void> {
-  const tmp = await writeThroughHandle(root, `${relative}.tmp`, body, PRIVATE_FILE_MODE, 0);
-  await rename(tmp, confinedPath(root, relative));
+  const tmp = await writeThroughHandle(root, `${relative}.tmp`, body, PRIVATE_FILE_MODE, 0, true);
+  const target = confinedPath(root, relative);
+  await rename(tmp, target);
+  await syncDirectory(dirname(target));
 }
 
 /**

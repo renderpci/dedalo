@@ -92,23 +92,50 @@ export async function readSiteDriver(slug: string): Promise<DriverId> {
   const driver = parseDriver(raw);
   if (driver === null) {
     throw new ConfinementUnavailableError(
-      `site '${slug}': the daemon's driver record (${DRIVER_RECORDS_DIR}/${slug}.json) is unreadable; refusing to guess a driver.`,
+      `site '${slug}': the daemon's driver record (${DRIVER_RECORDS_DIR}/${slug}.json) is unreadable; refusing to guess a driver ` +
+        `(the boot names it; an operator restores or removes it).`,
     );
   }
   return driver;
 }
 
+/** A site the boot could not give a usable record, and why — said, and returned to the caller. */
+export interface SeedRefusal {
+  slug: string;
+  reason: string;
+}
+
 /**
- * SEED the record of every site that has none — at boot, never per request. Returns the slugs
- * seeded. One site's failure (a planted `.builder/driver.json`, an unreadable `site.json`) is
- * said and skipped: that site then refuses every driver-less session until an operator acts,
- * which is the fail-closed answer; the others are seeded.
+ * SEED the record of every site that has none — at boot, never per request. One site's failure
+ * (a planted `.builder/driver.json`, an unreadable `site.json`) is said and skipped: that site then
+ * refuses every driver-less session until an operator acts, which is the fail-closed answer; the
+ * others are seeded.
+ *
+ * A record that is PRESENT BUT UNREADABLE (empty — what a power cut leaves of a new inode renamed
+ * into place before its bytes reached the disk, the writers now sync but older records were not —
+ * unparseable, or naming no known driver) is NOT absent and is NOT re-seeded: the only source a
+ * seed could fall back to for a site that already had a record is `site.json`, which the agent
+ * can rewrite, so re-seeding from it would hand the driver choice to the run the record exists
+ * to exclude. It is REFUSED BY NAME here, so the operator learns it at boot instead of through a
+ * 503 per session, and it is left exactly as it is (the evidence).
  */
-export async function seedDriverRecords(slugs: readonly string[]): Promise<string[]> {
+export async function seedDriverRecords(slugs: readonly string[]): Promise<{ seeded: string[]; refused: SeedRefusal[] }> {
   const seeded: string[] = [];
+  const refused: SeedRefusal[] = [];
   for (const slug of slugs) {
     try {
-      if ((await readFilePrivate(config.SITES_ROOT, recordPath(slug))) !== null) continue;
+      const present = await readFilePrivate(config.SITES_ROOT, recordPath(slug));
+      if (present !== null) {
+        if (parseDriver(present) !== null) continue;
+        const reason =
+          `its driver record (${DRIVER_RECORDS_DIR}/${slug}.json under SITES_ROOT, ${Buffer.byteLength(present)} bytes) ` +
+          `is present but unreadable${present.length === 0 ? ' (empty: a write a power cut tore)' : ''}; it is NOT ` +
+          `re-seeded (site.json is agent-writable) and its driver-less sessions are refused. ` +
+          `An operator restores it ({"driver":"<id>"}) or removes it to re-seed it from the site's own records.`;
+        refused.push({ slug, reason });
+        console.error(`[boot] driver record of '${slug}': ${reason}`);
+        continue;
+      }
       // The daemon's OWN first record, if it is still where it was put (an agent-authored or
       // linked one is thrown by the own-inode reader, never read).
       const own = await readFilePrivate(config.SITES_ROOT, workspaceRecordPath(slug));
@@ -122,11 +149,12 @@ export async function seedDriverRecords(slugs: readonly string[]): Promise<strin
       await writeSiteDriver(slug, driver);
       seeded.push(slug);
     } catch (error) {
+      refused.push({ slug, reason: error instanceof Error ? error.message : String(error) });
       console.error(
         `[boot] the driver record of '${slug}' could not be seeded; its driver-less sessions are refused until it is:`,
         error,
       );
     }
   }
-  return seeded;
+  return { seeded, refused };
 }
