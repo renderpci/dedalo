@@ -10,7 +10,14 @@
  *     assertValidTipo* family), so no unvalidated identifier reaches the
  *     assembler;
  *   - `buildSearchSql({...}, {principal})`, which applies the per-record
- *     projects filter (§7.4) exactly as the web search does.
+ *     projects filter (§7.4) exactly as the web search does;
+ *   - AND, BEFORE any of that, the SECTION read grant (closure Step 3, SEC-1):
+ *     the projects filter is a RECORD key only — the human read's Gate B
+ *     refuses a section the profile holds 0 on, and this door did not, so a
+ *     readerless profile listed, counted and value-probed the section. The
+ *     grant is asked through the read door (`authorizeComponentRead`) when the
+ *     SQO is built, and the page/count runners accept ONLY an SQO that went
+ *     through that builder (the `GatedSqo` brand) — a new runner cannot skip it.
  */
 
 import { z } from 'zod';
@@ -26,6 +33,7 @@ import {
 } from '../../../core/search/identifier_gate.ts';
 import { buildSearchSql } from '../../../core/search/sql_assembler.ts';
 import type { Principal } from '../../../core/security/permissions.ts';
+import { authorizeComponentRead } from '../../../core/security/read_door.ts';
 import { buildPagination, Page } from '../envelope.ts';
 import { pickUnambiguous, resolveFieldCandidates } from '../label_resolution.ts';
 import { defineTool, type ToolSpec } from '../tool_spec.ts';
@@ -212,21 +220,33 @@ const rawSqoSchema = z.object({
 	full_count: z.boolean().optional(),
 });
 
+declare const gatedSqoBrand: unique symbol;
+
+/** An SQO whose section read grant was asked for its principal (buildGatedSqo only). */
+export type GatedSqo = Sqo & { readonly [gatedSqoBrand]: true };
+
 /**
  * Build the engine SQO from the tool input: typed filter and/or raw_sqo, both
  * gated. `section_tipo` is ALWAYS the validated argument — a raw_sqo can never
- * retarget the search.
+ * retarget the search. The SECTION read grant is asked FIRST — before the
+ * ontology is walked for field labels — through the read door, which throws
+ * `perm.denied` (a typed, single question: "may you read this section?").
  */
-async function buildGatedSqo(input: {
-	section_tipo: string;
-	filter?: McpFilter;
-	raw_sqo?: unknown;
-	limit?: number;
-	offset?: number;
-	order?: { field: string; direction?: 'ASC' | 'DESC' }[];
-	full_count?: boolean;
-}): Promise<{ sqo: Sqo; sectionTipo: string; limit: number; offset: number }> {
+export async function buildGatedSqo(
+	principal: Principal,
+	input: {
+		section_tipo: string;
+		filter?: McpFilter;
+		raw_sqo?: unknown;
+		limit?: number;
+		offset?: number;
+		order?: { field: string; direction?: 'ASC' | 'DESC' }[];
+		full_count?: boolean;
+	},
+	door: string,
+): Promise<{ sqo: GatedSqo; sectionTipo: string; limit: number; offset: number }> {
 	const sectionTipo = assertValidTipo(input.section_tipo, 'mcp.search.section_tipo');
+	await authorizeComponentRead({ principal, door }, { sectionTipo, componentTipo: sectionTipo });
 	const fieldNodes = (await getOrderedSubtree(sectionTipo)).filter(
 		(node) => typeof node.model === 'string' && node.model.startsWith('component_'),
 	);
@@ -298,12 +318,12 @@ async function buildGatedSqo(input: {
 	sqo.limit = limit;
 	const offset = typeof sqo.offset === 'number' ? sqo.offset : 0;
 
-	return { sqo, sectionTipo, limit, offset };
+	return { sqo: sqo as GatedSqo, sectionTipo, limit, offset };
 }
 
-async function runLocatorPage(
+export async function runLocatorPage(
 	principal: Principal,
-	sqo: Sqo,
+	sqo: GatedSqo,
 ): Promise<{ section_tipo: string; section_id: number }[]> {
 	const pageQuery = await buildSearchSql(sqo, { principal });
 	// matrix.section_id is an INT column, so the row carries the address typed
@@ -319,7 +339,7 @@ async function runLocatorPage(
 	}));
 }
 
-async function runGatedCount(principal: Principal, sqo: Sqo): Promise<number> {
+export async function runGatedCount(principal: Principal, sqo: GatedSqo): Promise<number> {
 	const countQuery = await buildSearchSql(
 		{ ...sqo, full_count: true, limit: undefined, offset: undefined },
 		{ principal },
@@ -348,7 +368,11 @@ export async function searchRecords(
 		full_count?: boolean;
 	},
 ): Promise<Page<{ section_tipo: string; hits: { section_tipo: string; section_id: number }[] }>> {
-	const { sqo, sectionTipo, limit, offset } = await buildGatedSqo(input);
+	const { sqo, sectionTipo, limit, offset } = await buildGatedSqo(
+		principal,
+		input,
+		'mcp.dedalo_search_records',
+	);
 	const hits = await runLocatorPage(principal, sqo);
 	const total = input.full_count === true ? await runGatedCount(principal, sqo) : null;
 	return new Page(
@@ -362,7 +386,7 @@ export async function countRecords(
 	principal: Principal,
 	input: { section_tipo: string; filter?: McpFilter; raw_sqo?: unknown },
 ): Promise<{ section_tipo: string; total: number }> {
-	const { sqo, sectionTipo } = await buildGatedSqo(input);
+	const { sqo, sectionTipo } = await buildGatedSqo(principal, input, 'mcp.dedalo_count_records');
 	return { section_tipo: sectionTipo, total: await runGatedCount(principal, sqo) };
 }
 

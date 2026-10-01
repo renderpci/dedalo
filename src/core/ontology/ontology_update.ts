@@ -44,7 +44,11 @@ import { basename, join } from 'node:path';
 import { z } from 'zod';
 import { config } from '../../config/config.ts';
 import { privateDir } from '../../config/env.ts';
-import { readDdOntologyRow, searchDdOntology } from '../db/dd_ontology.ts';
+import {
+	readDdOntologyRow,
+	searchDdOntology,
+	validateDdOntologyIdentifierConstraints,
+} from '../db/dd_ontology.ts';
 import { MATRIX_COPY_COLUMNS } from '../db/matrix_write.ts';
 import { connFromConfig, type DbConnDescriptor, runPsql } from '../install/pg_exec.ts';
 import { engineOwnsInstall } from '../update/ownership.ts';
@@ -224,6 +228,35 @@ function resolveUpdateDeps(deps: UpdateOntologyDeps): {
 	catalog: OntologyUpdateCatalog;
 } {
 	return { conn: deps.conn ?? connFromConfig(), catalog: deps.catalog ?? config.ontologyIo };
+}
+
+/**
+ * VALIDATE the dd_ontology identifier-grammar constraints that are clean and
+ * report what is not (SURF-1): at most ONE line naming the violating-row count,
+ * the first 10 `tipo:rule`, and the repair. A failure of the validation itself
+ * is reported the same way — the ontology update it follows has already landed.
+ */
+async function identifierGrammarLines(): Promise<string[]> {
+	try {
+		const outcome = await validateDdOntologyIdentifierConstraints();
+		if (outcome.violators.length === 0) return [];
+		const named = outcome.violators
+			.slice(0, 10)
+			.flatMap((row) =>
+				row.violations.map((v) => `${JSON.stringify(row.tipo).slice(0, 64)}:${v.column}`),
+			)
+			.join(', ');
+		return [
+			`dd_ontology: ${outcome.violators.length} row(s) break the identifier grammar (${named}) — their CHECK constraints stay NOT VALID; run reconcile ontology_identifiers`,
+		];
+	} catch (error) {
+		// Best-effort tail step (the update already landed): the failure goes to the
+		// log; the operator line is a deliberate sentence, never the raw text (SEC-18).
+		console.error('[ontology_update] identifier-grammar validation failed', error);
+		return [
+			'dd_ontology identifier-grammar validation failed (see the server log) — run reconcile ontology_identifiers',
+		];
+	}
 }
 
 /**
@@ -424,6 +457,13 @@ export async function updateOntology(
 			messages.push(rebuilt.msg);
 			if (rebuilt.ok !== true) response.errors.push(...rebuilt.errors);
 		}
+
+		// SURF-1: the re-derive above never projects a non-grammar identifier, so
+		// an update is where a legacy install's NOT VALID grammar constraints turn
+		// VALID. Rows still breaking a rule keep theirs NOT VALID and are REPORTED
+		// (never a failed update — owner decision 2026-09-30); the operator repairs
+		// them with the reconcile.
+		response.errors.push(...(await identifierGrammarLines()));
 
 		const optimizeErrors = await optimizeTables(OPTIMIZE_TABLES, conn);
 		response.errors.push(...optimizeErrors);

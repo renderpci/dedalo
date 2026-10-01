@@ -28,6 +28,7 @@ import { buildRelationIndexFragment } from '../../src/core/search/builders/build
 import { buildSectionIdFragment } from '../../src/core/search/builders/builder_section_id.ts';
 import { buildStringFragment } from '../../src/core/search/builders/builder_string.ts';
 import type { BuilderContext, BuilderResult } from '../../src/core/search/builders/types.ts';
+import { asSqlTipo } from '../../src/core/search/identifier_gate.ts';
 
 type Rendered = { result: BuilderResult } | { error: string };
 
@@ -35,7 +36,7 @@ function base(overrides: Partial<BuilderContext>): BuilderContext {
 	return {
 		alias: 'te3',
 		column: 'string',
-		tipo: 'test52',
+		tipo: asSqlTipo('test52', 'test context'),
 		sectionTipo: 'test3',
 		table: 'matrix_test',
 		lang: 'lg-spa',
@@ -250,13 +251,13 @@ export async function renderShallowBuilderCases(): Promise<Record<string, Render
 	const relationContexts: Record<string, BuilderContext> = {
 		plain: base({
 			column: 'relation',
-			tipo: 'test80',
+			tipo: asSqlTipo('test80', 'test context'),
 			model: 'component_portal',
 			lang: 'lg-nolan',
 		}),
 		tm: base({
 			column: 'relation',
-			tipo: 'dd578',
+			tipo: asSqlTipo('dd578', 'test context'),
 			sectionTipo: 'dd15',
 			table: 'matrix_time_machine',
 			model: 'component_portal',
@@ -265,7 +266,7 @@ export async function renderShallowBuilderCases(): Promise<Record<string, Render
 		activity: base({
 			alias: 'ma',
 			column: 'relation',
-			tipo: 'dd543',
+			tipo: asSqlTipo('dd543', 'test context'),
 			sectionTipo: 'dd542',
 			table: 'matrix_activity',
 			model: 'component_portal',
@@ -292,7 +293,7 @@ export async function renderShallowBuilderCases(): Promise<Record<string, Render
 
 	const childrenCtx = base({
 		column: 'relation',
-		tipo: 'test201',
+		tipo: asSqlTipo('test201', 'test context'),
 		model: 'component_relation_children',
 		lang: 'lg-nolan',
 	});
@@ -309,7 +310,7 @@ export async function renderShallowBuilderCases(): Promise<Record<string, Render
 
 	const indexCtx = base({
 		column: 'relation',
-		tipo: 'test25',
+		tipo: asSqlTipo('test25', 'test context'),
 		model: 'component_relation_index',
 		lang: 'lg-nolan',
 	});

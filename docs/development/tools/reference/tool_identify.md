@@ -50,7 +50,7 @@ It calls the engine's own class directly, through `data_manager.request` (`use_w
 | Endpoint · action | Request | Answer |
 | --- | --- | --- |
 | `dd_identify_api:find_matches` | `{ section_tipo, section_id, limit }` — limit clamped server-side to `[1,50]`, default 20 | `{ seed, profile, results, more_available, blind_criteria, restricted_criteria }` |
-| `dd_identify_api:get_proposals` | `{ section_tipo, section_id, source }` — the vision source is opt-in per run | `{ seed, profile, sources, proposals }` |
+| `dd_identify_api:get_proposals` | `{ section_tipo, section_id, source }` — the vision source is opt-in per run, and requires the caller's profile to authorize `tool_identify` (a model call is a spend; refused `tool.not_authorized` before any model runs) | `{ seed, profile, sources, proposals }` |
 | `dd_identify_api:resolve_type_link` | `{ section_tipo, records? }` — the cluster's members, capped at 300 | `{ type_section, links, existing_types, members_surveyed }` |
 
 Response shape (snake_case at the API boundary, converted there from the subsystem's camelCase):

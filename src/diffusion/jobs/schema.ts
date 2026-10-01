@@ -61,6 +61,20 @@ export const DIFFUSION_JOB_EVENTS_TABLE =
 		? 'dedalo_ts_diffusion_job_events'
 		: `${DIFFUSION_JOBS_TABLE}_events`;
 
+/**
+ * THE RUN LEDGER (DIFF-1): one row per run-state event of a job — the relation
+ * frontier's queue/open/used transitions and the per-record artifacts the
+ * run's writer wrote/removed — appended in the SAME transaction as the batch's
+ * checkpoint (jobs/run_ledger.ts). A resumed runner replays it to the exact
+ * frontier and artifact manifest the dead one held in memory. Job-scoped
+ * (ON DELETE CASCADE with the job), cleared when the run completes. Seam twin
+ * of the events table: `<jobs table>_ledger` under DIFFUSION_JOBS_TABLE.
+ */
+export const DIFFUSION_JOB_LEDGER_TABLE =
+	DIFFUSION_JOBS_TABLE === 'dedalo_ts_diffusion_jobs'
+		? 'dedalo_ts_diffusion_job_ledger'
+		: `${DIFFUSION_JOBS_TABLE}_ledger`;
+
 /** Job lifecycle states (checked constraint below must match). */
 export type DiffusionJobState =
 	| 'queued'
@@ -142,6 +156,22 @@ async function createTables(): Promise<void> {
 	await sql.unsafe(`
 		CREATE INDEX IF NOT EXISTS ${DIFFUSION_JOB_EVENTS_TABLE}_job_idx
 			ON "${DIFFUSION_JOB_EVENTS_TABLE}" (job_id, event_id)
+	`);
+	// The run ledger (DIFF-1). (job_id, batch_seq, ord) is the key: the runner
+	// numbers its batches, so a second append of one batch is a KEY VIOLATION,
+	// never a silent duplicate. section_id is jsonb: the frontier tells 940101
+	// from '940101' and so must its replay.
+	await sql.unsafe(`
+		CREATE TABLE IF NOT EXISTS "${DIFFUSION_JOB_LEDGER_TABLE}" (
+			job_id        uuid NOT NULL REFERENCES "${DIFFUSION_JOBS_TABLE}" (job_id) ON DELETE CASCADE,
+			batch_seq     integer NOT NULL,
+			ord           integer NOT NULL,
+			kind          text NOT NULL CHECK (kind IN ('queue','open','used','wrote','removed')),
+			level         integer,
+			section_tipo  text NOT NULL,
+			section_id    jsonb,
+			PRIMARY KEY (job_id, batch_seq, ord)
+		)
 	`);
 }
 

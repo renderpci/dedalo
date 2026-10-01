@@ -69,7 +69,7 @@ async function updateCodeGetValue(
 			// <DEDALO_BACKUP_PATH>/.code_staging — and the client no longer
 			// displays it. The config-catalog key is a retirement candidate.
 			is_a_code_server: config.update.isCodeServer,
-			consumer: consumerStatus(principal),
+			consumer: await consumerStatus(principal),
 		},
 	};
 }
@@ -101,10 +101,14 @@ async function updateCodeOwned(
 	const { mediaJobs } = await import('../../media/jobs.ts');
 	const record = mediaJobs.submit(
 		'update_code',
-		async ({ onData }) => {
+		async ({ onData, signal }) => {
 			// core/update/** REFUSES BY THROWING (update.refused / update.failed);
-			// phase frames stream through the job's data channel as it advances.
-			return await updateCode(options, principal, { onPhase: (frame) => onData(frame) });
+			// phase frames stream through the job's data channel as it advances. The
+			// job's signal lets a STOP end the run before the swap (refuseIfStopped).
+			return await updateCode(options, principal, {
+				onPhase: (frame) => onData(frame),
+				signal,
+			});
 		},
 		// THE lane starvation this class exists to end: an operator's code update
 		// must never queue behind a transcode backlog (PERF-11).

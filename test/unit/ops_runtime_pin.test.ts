@@ -75,15 +75,38 @@ describe('runtime pin (S2-36)', () => {
 		expect(floor[1]).toBe(minor);
 	});
 
-	test('diffusion zip writer has no Bun.zip runtime probe', () => {
-		const source = readFileSync(join(ROOT, 'src/diffusion/writers/files.ts'), 'utf-8');
-		// The deterministic STORE writer must be UNCONDITIONAL: no feature-probe
-		// of the runtime may switch the archive byte format (S2-36 scenario b).
-		// Comments may mention Bun.zip (they document the removal); CODE may not
-		// probe it.
-		expect(source).not.toMatch(/\bbunZip\b/);
-		expect(source).not.toMatch(/\{\s*zip\?:/);
-		expect(source).toContain('atomicWriteFile(zipPath, buildStoreZip(entries))');
+	test('the diffusion archive bytes do not depend on the runtime shipping a Bun.zip', async () => {
+		// The S2-36 property, measured as an OUTCOME (it was three source-spelling
+		// pins, which a rename defeats): whatever `Bun.zip` the runtime carries — none,
+		// one that throws, one that returns foreign bytes — createZip's archive is
+		// byte-identical. A writer that probed the runtime would change bytes (or
+		// throw) under at least one of the stubs.
+		const dir = mkdtempSync(join(tmpdir(), 'dedalo_zip_probe_'));
+		const bunObject = Bun as unknown as Record<string, unknown>;
+		const hadZip = Object.hasOwn(bunObject, 'zip');
+		const originalZip = bunObject.zip;
+		const stub = (value: unknown): void => {
+			Object.defineProperty(bunObject, 'zip', { value, configurable: true, writable: true });
+		};
+		try {
+			writeFileSync(join(dir, 'a.txt'), 'alpha content');
+			writeFileSync(join(dir, 'b.bin'), new Uint8Array([0, 1, 2, 250, 251, 252]));
+			const inputs = [join(dir, 'a.txt'), join(dir, 'b.bin')];
+			await createZip(inputs, join(dir, 'plain.zip'));
+			const plain = readFileSync(join(dir, 'plain.zip'));
+			stub(() => {
+				throw new Error('a runtime Bun.zip was called');
+			});
+			await createZip(inputs, join(dir, 'throwing.zip'));
+			stub(async () => new Uint8Array([0x66, 0x6f, 0x72, 0x65, 0x69, 0x67, 0x6e]));
+			await createZip(inputs, join(dir, 'foreign.zip'));
+			expect(readFileSync(join(dir, 'throwing.zip')).equals(plain)).toBe(true);
+			expect(readFileSync(join(dir, 'foreign.zip')).equals(plain)).toBe(true);
+		} finally {
+			if (hadZip) stub(originalZip);
+			else Reflect.deleteProperty(bunObject, 'zip');
+			rmSync(dir, { recursive: true, force: true });
+		}
 	});
 });
 

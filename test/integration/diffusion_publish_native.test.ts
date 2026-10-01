@@ -15,21 +15,21 @@
  *      it compares our output with our output. Portable.
  *
  * This file is 1 and 3, over the `zzdif` domain the suite builds
- * (test/helpers/zzdif_diffusion_domain.ts). It runs on any deployment with a
- * scratch MariaDB schema, which is what the install-bound original never could.
+ * (test/helpers/zzdif_diffusion_domain.ts), published into the suite's own
+ * MariaDB server — which is what the install-bound original never could.
  *
- * ── THE TARGET SCHEMA ────────────────────────────────────────────────────────
- * `CREATE DATABASE` is deliberately NOT granted to the diffusion user
- * (src/diffusion/targets/mariadb/db.ts), so this gate cannot mint its own target
- * and has to find a disposable one: a schema whose name ends `_difftest`, which
- * is the naming this repo already uses for a throwaway publication target. If
- * there is none it SKIPS, visibly and with the reason — it never falls back to a
- * real publication database, because this gate writes tables and an
- * installation's published data is not ours to touch.
+ * ── THE TARGET DATABASE (PUB-05, audit 2026-09-26) ─────────────────────────
+ * The plan compiled from the zzdif domain names its OWN target database
+ * (`zzdif_publication_db`, the situation's `database` node) and the gate
+ * publishes into exactly that — only the TABLE name is overridden, so a run
+ * never collides with another gate's tables. The database lives on the lane's
+ * suite MariaDB server (test/preload/suite_mariadb.ts arms this process at it)
+ * and `beforeAll` acquires it through `requireSuiteMariadb()`: an unarmed
+ * process, a database the situations do not declare, or a marker row naming
+ * another lane is a THROW. Before PUB-05 this gate went looking for any schema
+ * named `*_difftest` on whatever server `../private/.env` named, and SKIPPED
+ * green when there was none — on every runner. There is no skip now.
  *
- * That discovery is deliberately NOT an env key: `../private/.env` is
- * append-only with a typed catalog, and a whole new documented key naming a
- * throwaway schema would be a heavier contract than the convention it replaces.
  * Every table it creates is prefixed `dedalo_ts_zzdif_` and dropped in afterAll.
  */
 
@@ -39,8 +39,9 @@ import type { PublicationPlan, SectionPlan } from '../../src/diffusion/plan/type
 import { buildVirtualDiffusionTree } from '../../src/diffusion/plan/virtual_tree.ts';
 import type { ProjectedRow } from '../../src/diffusion/project/lang_ladder.ts';
 import { resolvePublication } from '../../src/diffusion/resolve/resolver.ts';
-import { getTargetPool } from '../../src/diffusion/targets/mariadb/db.ts';
+import { closeAllTargetPools, getTargetPool } from '../../src/diffusion/targets/mariadb/db.ts';
 import { getDiffusionWriter } from '../../src/diffusion/writers/registry.ts';
+import { databasesOf, requireSuiteMariadb } from '../helpers/suite_mariadb.ts';
 import {
 	dropZzdifDomain,
 	ensureZzdifDomain,
@@ -48,6 +49,7 @@ import {
 	ZZDIF_ELEMENT,
 	ZZDIF_PUBLISHABLE_ID,
 	ZZDIF_SECTION,
+	ZZDIF_SITUATION,
 	ZZDIF_UNPUBLISHABLE_ID,
 } from '../helpers/zzdif_diffusion_domain.ts';
 
@@ -60,41 +62,24 @@ const TABLE_RESUMED = 'dedalo_ts_zzdif_resumed';
  */
 const RUN_STARTED_AT = Math.floor(Date.parse('2026-08-21T10:00:00.000Z') / 1000);
 
-/** A disposable schema, or null — see the header. Never a real publication target. */
-async function resolveScratchSchema(): Promise<{ database: string | null; reason: string }> {
-	try {
-		const pool = getTargetPool('information_schema');
-		const rows = (await pool.unsafe(
-			"SELECT schema_name FROM schemata WHERE schema_name LIKE '%\\_difftest' ORDER BY schema_name",
-		)) as { schema_name: string }[];
-		const found = rows[0]?.schema_name;
-		if (found !== undefined) return { database: found, reason: `discovered '${found}'` };
-		return {
-			database: null,
-			reason: 'no MariaDB schema named *_difftest — create one to run this gate',
-		};
-	} catch (error) {
-		return { database: null, reason: `MariaDB unreachable: ${String(error).slice(0, 160)}` };
-	}
-}
-
-const SCRATCH = await resolveScratchSchema();
-const AVAILABLE = SCRATCH.database !== null;
-if (!AVAILABLE) {
-	console.warn(`[diffusion_publish_native] SKIPPED — ${SCRATCH.reason}`);
-}
+/** The zzdif situation's target databases — the plan's own target is one of them. */
+const TARGET_DATABASES = databasesOf(ZZDIF_SITUATION);
 
 let plan: PublicationPlan;
 
-/** Clone the plan down to ONE section under a scratch table name and schema. */
+/** The database the compiled plan publishes into (its own `database` node). */
+function planDatabase(source: PublicationPlan): string {
+	if (source.target.kind !== 'table')
+		throw new Error(`plan target is ${source.target.kind}, not a table`);
+	return source.target.database;
+}
+
+/** Clone the plan down to ONE section under a scratch table name — the database stays the plan's own. */
 function scratchPlan(source: PublicationPlan, tableName: string): PublicationPlan {
 	const section = source.sections.find((entry) => entry.sectionTipo === ZZDIF_SECTION);
 	if (section === undefined) throw new Error(`plan has no section ${ZZDIF_SECTION}`);
 	const cloned = JSON.parse(JSON.stringify(source)) as PublicationPlan;
 	cloned.sections = [{ ...(JSON.parse(JSON.stringify(section)) as SectionPlan), tableName }];
-	if (cloned.target.kind === 'table') {
-		cloned.target.database = SCRATCH.database as string;
-	}
 	return cloned;
 }
 
@@ -139,7 +124,7 @@ async function publish(
 }
 
 async function tableRows(table: string): Promise<Record<string, unknown>[]> {
-	const pool = getTargetPool(SCRATCH.database as string);
+	const pool = getTargetPool(planDatabase(plan));
 	return (await pool.unsafe(`SELECT * FROM \`${table}\` ORDER BY section_id, lang`)) as Record<
 		string,
 		unknown
@@ -147,94 +132,103 @@ async function tableRows(table: string): Promise<Record<string, unknown>[]> {
 }
 
 beforeAll(async () => {
-	if (!AVAILABLE) return;
+	await requireSuiteMariadb(import.meta.path, TARGET_DATABASES);
 	await ensureZzdifDomain();
 	const tree = await buildVirtualDiffusionTree(ZZDIF_DOMAIN_NAME);
 	if (tree === null) throw new Error(`no dd1190 domain named '${ZZDIF_DOMAIN_NAME}' after ensure`);
 	plan = await compileElementPlan(ZZDIF_ELEMENT, { tree });
-});
+	// The plan's own target is a suite target (acquired above), never a typed name.
+	expect(TARGET_DATABASES).toContain(planDatabase(plan));
+}, 120_000);
 
 afterAll(async () => {
-	if (AVAILABLE) {
-		const pool = getTargetPool(SCRATCH.database as string);
-		for (const table of [TABLE_FRESH, TABLE_RESUMED]) {
-			await pool.unsafe(`DROP TABLE IF EXISTS \`${table}\``).catch(() => {});
+	// The MariaDB cleanup may fail (the lane server stopped or swept mid-run, a refused
+	// DROP): that failure is REPORTED, after the Postgres teardown below has run anyway —
+	// a MariaDB error must never leave the zzdif scratch ontology in the suite DB.
+	let mariadbCleanupError: unknown;
+	try {
+		if (plan !== undefined) {
+			// Every dedalo_ts_zzdif_* table on the plan's database — the two this run made,
+			// and any an aborted earlier run left.
+			const pool = getTargetPool(planDatabase(plan));
+			const rows = (await pool.unsafe(
+				"SELECT TABLE_NAME AS name FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME LIKE 'dedalo\\_ts\\_zzdif\\_%'",
+				[planDatabase(plan)],
+			)) as { name: string }[];
+			for (const { name } of rows) await pool.unsafe(`DROP TABLE IF EXISTS \`${name}\``);
 		}
+	} catch (error) {
+		mariadbCleanupError = error;
+	} finally {
+		await closeAllTargetPools();
+		// Residue asserted, not trusted — the scratch ontology goes whatever happened.
+		expect(await dropZzdifDomain()).toBe(0);
 	}
-	// Residue asserted, not trusted — the scratch ontology goes whatever happened.
-	expect(await dropZzdifDomain()).toBe(0);
+	if (mariadbCleanupError !== undefined) throw mariadbCleanupError;
 });
 
 describe('diffusion publish, end to end, on a BUILT domain', () => {
-	test.if(AVAILABLE)(
-		'FUNCTIONAL: the table is created, typed and filled per lang',
-		async () => {
-			const fresh = scratchPlan(plan, TABLE_FRESH);
-			const outcome = await publish(fresh, { batchSize: 5 });
+	test('FUNCTIONAL: the table is created, typed and filled per lang', async () => {
+		const fresh = scratchPlan(plan, TABLE_FRESH);
+		const outcome = await publish(fresh, { batchSize: 5 });
 
-			// It wrote something — the floor every assertion below rests on.
-			expect(outcome.rowsWritten).toBeGreaterThan(0);
-			const rows = await tableRows(TABLE_FRESH);
-			expect(rows.length).toBe(outcome.rowsWritten);
+		// It wrote something — the floor every assertion below rests on.
+		expect(outcome.rowsWritten).toBeGreaterThan(0);
+		const rows = await tableRows(TABLE_FRESH);
+		expect(rows.length).toBe(outcome.rowsWritten);
 
-			// The PUBLISHABLE record is present, the UNPUBLISHABLE one is not: the
-			// publication gate is part of the pipeline under test, not a detail.
-			const ids = new Set(rows.map((row) => Number(row.section_id)));
-			expect(ids.has(ZZDIF_PUBLISHABLE_ID)).toBe(true);
-			expect(ids.has(ZZDIF_UNPUBLISHABLE_ID)).toBe(false);
+		// The PUBLISHABLE record is present, the UNPUBLISHABLE one is not: the
+		// publication gate is part of the pipeline under test, not a detail.
+		const ids = new Set(rows.map((row) => Number(row.section_id)));
+		expect(ids.has(ZZDIF_PUBLISHABLE_ID)).toBe(true);
+		expect(ids.has(ZZDIF_UNPUBLISHABLE_ID)).toBe(false);
 
-			// The typed columns the plan declares all exist on the created table —
-			// asserted against the PLAN, so a column silently dropped by the writer
-			// reddens here rather than surfacing as a missing value much later.
-			// `excludeColumn` fields are NOT a gap: they participate in the publication
-			// decision and are deliberately never written (compile.ts:527) — the
-			// fixture's `publication` enum is exactly one, so this assertion also pins
-			// that exclusion, in both directions.
-			const fields = (fresh.sections[0] as SectionPlan).fields;
-			const present = new Set(Object.keys(rows[0] ?? {}));
-			const planned = fields
-				.filter((field) => field.excludeColumn !== true)
-				.map((field) => field.columnName);
-			expect(planned.length).toBeGreaterThan(0);
-			expect(planned.filter((column) => !present.has(column))).toEqual([]);
-			const excluded = fields.filter((field) => field.excludeColumn === true);
-			expect(excluded.length).toBeGreaterThan(0); // or the rule above is untested
-			expect(excluded.filter((field) => present.has(field.columnName))).toEqual([]);
+		// The typed columns the plan declares all exist on the created table —
+		// asserted against the PLAN, so a column silently dropped by the writer
+		// reddens here rather than surfacing as a missing value much later.
+		// `excludeColumn` fields are NOT a gap: they participate in the publication
+		// decision and are deliberately never written (compile.ts:527) — the
+		// fixture's `publication` enum is exactly one, so this assertion also pins
+		// that exclusion, in both directions.
+		const fields = (fresh.sections[0] as SectionPlan).fields;
+		const present = new Set(Object.keys(rows[0] ?? {}));
+		const planned = fields
+			.filter((field) => field.excludeColumn !== true)
+			.map((field) => field.columnName);
+		expect(planned.length).toBeGreaterThan(0);
+		expect(planned.filter((column) => !present.has(column))).toEqual([]);
+		const excluded = fields.filter((field) => field.excludeColumn === true);
+		expect(excluded.length).toBeGreaterThan(0); // or the rule above is untested
+		expect(excluded.filter((field) => present.has(field.columnName))).toEqual([]);
 
-			// One row per configured lang for the publishable record.
-			const langs = rows
-				.filter((row) => Number(row.section_id) === ZZDIF_PUBLISHABLE_ID)
-				.map((row) => String(row.lang));
-			expect(langs.length).toBeGreaterThan(0);
-			expect(new Set(langs).size).toBe(langs.length); // no duplicate lang rows
-		},
-		120000,
-	);
+		// One row per configured lang for the publishable record.
+		const langs = rows
+			.filter((row) => Number(row.section_id) === ZZDIF_PUBLISHABLE_ID)
+			.map((row) => String(row.lang));
+		expect(langs.length).toBeGreaterThan(0);
+		expect(new Set(langs).size).toBe(langs.length); // no duplicate lang rows
+	}, 120000);
 
-	test.if(AVAILABLE)(
-		'RESUME: an interrupted run resumed from its checkpoint is byte-identical',
-		async () => {
-			const resumed = scratchPlan(plan, TABLE_RESUMED);
-			// Interrupt after one batch, then continue from the checkpoint cursor.
-			const first = await publish(resumed, { batchSize: 1, stopAfterBatches: 1 });
-			expect(first.rowsWritten).toBeGreaterThan(0);
-			await publish(resumed, { afterSectionId: first.cursor, batchSize: 5 });
+	test('RESUME: an interrupted run resumed from its checkpoint is byte-identical', async () => {
+		const resumed = scratchPlan(plan, TABLE_RESUMED);
+		// Interrupt after one batch, then continue from the checkpoint cursor.
+		const first = await publish(resumed, { batchSize: 1, stopAfterBatches: 1 });
+		expect(first.rowsWritten).toBeGreaterThan(0);
+		await publish(resumed, { afterSectionId: first.cursor, batchSize: 5 });
 
-			// Same instant, same plan, same section: the only difference was the
-			// interruption. If resume double-wrote, skipped, or reordered, these
-			// diverge.
-			// PROVEN TO BITE (2026-08-21): a resume cursor advanced 1000 past its
-			// checkpoint reddens this with a 120-line diff. A resume from 0 does
-			// NOT redden, and should not — the writer upserts on (section_id, lang),
-			// so re-publishing rows it already wrote is idempotent by design.
-			const resumedRows = await tableRows(TABLE_RESUMED);
-			const freshRows = await tableRows(TABLE_FRESH);
-			// Two EMPTY tables are also equal, and would make the comparison free —
-			// so the content floor is asserted before the comparison, not implied by
-			// the sibling test having run first.
-			expect(resumedRows.length).toBeGreaterThan(0);
-			expect(resumedRows).toEqual(freshRows);
-		},
-		120000,
-	);
+		// Same instant, same plan, same section: the only difference was the
+		// interruption. If resume double-wrote, skipped, or reordered, these
+		// diverge.
+		// PROVEN TO BITE (2026-08-21): a resume cursor advanced 1000 past its
+		// checkpoint reddens this with a 120-line diff. A resume from 0 does
+		// NOT redden, and should not — the writer upserts on (section_id, lang),
+		// so re-publishing rows it already wrote is idempotent by design.
+		const resumedRows = await tableRows(TABLE_RESUMED);
+		const freshRows = await tableRows(TABLE_FRESH);
+		// Two EMPTY tables are also equal, and would make the comparison free —
+		// so the content floor is asserted before the comparison, not implied by
+		// the sibling test having run first.
+		expect(resumedRows.length).toBeGreaterThan(0);
+		expect(resumedRows).toEqual(freshRows);
+	}, 120000);
 });

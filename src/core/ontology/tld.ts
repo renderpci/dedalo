@@ -11,15 +11,17 @@
  *   - an ONTOLOGY main section is ALWAYS `<tld>0` (e.g. `dd0`, `rsc0`) — real
  *     nodes start at 1, so 0 is reserved for the section root.
  *
- * No SQL, no imports: these are byte-for-byte ports of the PHP helpers
+ * No SQL, one leaf import (the TLD shape): these are byte-for-byte ports of the PHP helpers
  * (shared/core_functions.php: safe_tld :2272, get_tld_from_tipo :2356,
  * get_section_id_from_tipo :2331; ontology::map_tld_to_target_section_tipo
  * :1449), unit-tested against the PHP edge cases. Shared by the parser, the
  * write drivers, provisioning and deletion so the derivation lives in ONE place.
+ * The TLD shape itself (PHP safe_tld) is `concepts/ontology.ts TLD_PATTERN` —
+ * one copy, shared with the dd_ontology identifier grammar (SURF-1).
  */
 
-/** PHP safe_tld: a valid TLD is two-or-more lowercase letters, nothing else. */
-const SAFE_TLD_RE = /^[a-z]{2,}$/;
+import { isValidTld } from '../concepts/ontology.ts';
+
 /** PHP get_tld_from_tipo: the leading run of two-or-more lowercase letters. */
 const TLD_PREFIX_RE = /^[a-z]{2,}/;
 /** PHP get_section_id_from_tipo: the first run of digits anywhere in the tipo. */
@@ -31,7 +33,7 @@ const SECTION_ID_RE = /[0-9]+/;
  * `safe_tld('es-x')` and `safe_tld('dd1')` are both false.
  */
 export function safeTld(tld: string): string | null {
-	return SAFE_TLD_RE.test(tld) ? tld : null;
+	return isValidTld(tld) ? tld : null;
 }
 
 /**

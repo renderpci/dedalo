@@ -28,23 +28,11 @@ function testFiles(): string[] {
  * The config keys that name a filesystem root — the CURRENT set, kept in step with
  * src/config.ts as roots arrive and leave. `PREPROD_ROOT` / `PROD_ROOT` were here until the
  * surfaces became per-site webspace pairs and the two keys were deleted from the daemon
- * altogether; a forbidden-list entry for a key that no longer exists is a gate slowly
- * turning into decoration.
+ * altogether, and `AGENT_HOME` until LEAD-1b retired it for `AGENT_STATE_ROOT`; a
+ * forbidden-list entry for a key that no longer exists is a gate slowly turning into
+ * decoration.
  */
-const ROOT_KEYS = ['SITES_ROOT', 'AGENT_HOME', 'AUDIT_DIR', 'WEBSPACE_BASE', 'SITE_TABLE_FILE'];
-
-/**
- * The files that NAME a root key as text rather than READING one — and the narrower rule
- * they are held to instead.
- *
- * `agent_boundary.test.ts` asserts what three modules CONSTRUCT (`HOME: config.AGENT_HOME`,
- * and never `config.SITES_ROOT`), so the identifiers are its subject matter: it reads the
- * daemon's SOURCE, not the daemon's configuration. An exemption that stopped there would be
- * a hole — the file could then read a root off the singleton like the seven helpers this
- * fixture replaced — so the property the seam actually wants is asserted directly below: an
- * exempt file may not import the config at all.
- */
-const SOURCE_QUOTING_FILES = new Set(['agent_boundary.test.ts']);
+const ROOT_KEYS = ['SITES_ROOT', 'AGENT_STATE_ROOT', 'AUDIT_DIR', 'WEBSPACE_BASE', 'SITE_TABLE_FILE'];
 
 /**
  * Path SEGMENTS a test must not build a path out of, now that a served surface is a PAIR
@@ -69,23 +57,10 @@ describe('the test-instance seam', () => {
       for (const key of ROOT_KEYS) {
         // This file necessarily names them; it is the gate.
         if (file === 'seam_tripwire.test.ts') continue;
-        if (SOURCE_QUOTING_FILES.has(file)) continue; // see below — held to a stricter rule
         if (body.includes(`config.${key}`)) offenders.push(`${file} → config.${key}`);
       }
     }
     expect(offenders).toEqual([]);
-  });
-
-  test('a file that QUOTES a root key may not READ one', () => {
-    // The exemption above costs nothing only while this holds: a test that never imports
-    // the daemon's config cannot read a root off it, whatever strings it happens to contain.
-    for (const file of SOURCE_QUOTING_FILES) {
-      const body = readFileSync(join(TESTS_DIR, file), 'utf8');
-      expect({ file, importsConfig: body.includes("from '../src/config'") }).toEqual({
-        file,
-        importsConfig: false,
-      });
-    }
   });
 
   test('no test file spells a webspace layout path for itself', () => {

@@ -95,17 +95,17 @@ const TOOL_LINKED = 'zzwt8';
 /** Wired too (TOOL_CARRIER_FREE), but declares NO target — the exemption's control. */
 const TOOL_LINKED_FREE = 'zzwt9';
 /** Carries `properties.tool_config`: the wired pair + an unwired portal. */
-const TOOL_CARRIER = 'zzwta';
+const TOOL_CARRIER = 'zzwt10';
 /** Holds the WIRED linker role, but is a component_select — not the portal family. */
-const TOOL_SIBLING_SELECT = 'zzwtb';
+const TOOL_SIBLING_SELECT = 'zzwt11';
 /** The exemption's carrier: wires TOOL_LINKED_FREE, which declares no target. */
-const TOOL_CARRIER_FREE = 'zzwtc';
+const TOOL_CARRIER_FREE = 'zzwt12';
 /** A PORTAL in a role the tool never publishes into (the live rsc1368 shape). */
-const TOOL_UNWIRED_PORTAL = 'zzwtd';
+const TOOL_UNWIRED_PORTAL = 'zzwt13';
 /** Carrier wiring TOOL_SIBLING_SELECT into the linker role. */
-const TOOL_CARRIER_SELECT = 'zzwte';
+const TOOL_CARRIER_SELECT = 'zzwt14';
 /** The main component the FRAMED slot's frames extend (a name; never resolved). */
-const FRAMED_MAIN = 'zzwtm';
+const FRAMED_MAIN = 'zzwt15';
 
 const HOST = 'test3';
 const HOST_ID = 926201;
@@ -207,7 +207,7 @@ async function buildCallerNode(
 		[
 			tipo,
 			// Orphan parent: no section walk can reach these nodes.
-			`${CALLER_TLD}x`,
+			`${CALLER_TLD}999999`, // a valid tipo no node carries (SURF-1 grammar)
 			CALLER_TLD,
 			JSON.stringify({ 'lg-spa': `scratch insert caller ${tipo}` }),
 			JSON.stringify(properties),

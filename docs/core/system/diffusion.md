@@ -103,9 +103,13 @@ never blocks the work-system delete.
 Publishing is a **durable job**: the `diffuse` action enqueues a job in a
 Postgres-backed queue and streams progress back to the client, while a spawned
 runner process does the actual resolve-and-write work in batches, checkpointing
-after each one. A crashed or interrupted run resumes from its checkpoint and
-produces byte-identical output; a closed browser changes nothing — the tool
-reconnects to the running job later.
+after each one together with a run ledger of what the run has queued and
+published. A crashed or interrupted run resumes from its checkpoint and ledger
+and produces byte-identical output; a closed browser changes nothing — the tool
+reconnects to the running job later. One publication target (a database, a
+files directory) is written by one batch at a time; while another user's run
+holds the same element and section, a second *Publish* is refused as busy
+rather than attached to that run.
 
 ```mermaid
 flowchart LR

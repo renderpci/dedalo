@@ -231,7 +231,7 @@ beforeAll(async () => {
 	await deleteTldNodes(CAP_TLD);
 	await upsertDdOntologyNode({
 		tipo: CAPPED,
-		parent: `${CAP_TLD}x`,
+		parent: `${CAP_TLD}999999`, // orphan: a valid tipo no node carries (SURF-1 grammar)
 		model: 'component_portal',
 		tld: CAP_TLD,
 		term: { 'lg-spa': 'scratch append cap portal' },

@@ -213,9 +213,15 @@ export async function getProfileGrantedToolIds(userId: number): Promise<Set<numb
 
 /**
  * The tool NAMES the CURRENT request's actor may see, or null for "no filter"
- * (a global admin — every active tool — or no request scope at all: internal
+ * (the SUPERUSER — every active tool — or no request scope at all: internal
  * resolutions, background warmups and test harnesses, the same posture
  * ddoIsAuthorized takes for an undefined principal).
+ *
+ * THE SAME RULE AS getUserTools (closure Step 3 req 8, 2026-10-01): the
+ * unfiltered set belongs to the superuser ID alone. This stamp used to open
+ * with `principal.isGlobalAdmin → null`, the admin-flag over-grant
+ * getUserTools shed on 2026-08-09 — so a non-superuser global admin's toolbar
+ * offered every tool and the dispatcher (gate 4) then refused the click.
  *
  * WHY THE ALS BACKSTOP: PHP's common::get_tools reads `logged_user_id()`
  * directly, and getElementTools is a leaf with no principal parameter to reach
@@ -226,7 +232,7 @@ export async function getProfileGrantedToolIds(userId: number): Promise<Set<numb
 async function currentActorToolNames(): Promise<ReadonlySet<string> | null> {
 	const { currentPrincipal } = await import('../security/request_context.ts');
 	const principal = currentPrincipal();
-	if (principal === undefined || principal.isGlobalAdmin) return null;
+	if (principal === undefined || principal.userId === SUPERUSER_ID) return null;
 	const [granted, registered] = await Promise.all([
 		getProfileGrantedToolIds(principal.userId),
 		getRegisteredTools(),

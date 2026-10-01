@@ -37,6 +37,7 @@ import {
 	withTmEpoch,
 	withTmHistory,
 } from '../../src/core/db/record_generation.ts';
+import { stripComments } from '../helpers/strip_comments.ts';
 import {
 	REPO_ROOT,
 	WRITE_PATH_CORPUS_FLOOR,
@@ -53,11 +54,6 @@ const TM_READ = /(?<!DELETE\s+)\b(?:FROM|JOIN)\s+matrix_time_machine\b/gi;
 /** The two ways a statement declares itself visibility-narrowed. */
 const TM_VISIBLE = /\bwithTmHistory\(|\btmVisiblePredicate\(/g;
 
-/** Strip `//` and block comments so prose that names the table is not a statement. */
-function code(source: string): string {
-	return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/.*$/gm, '$1');
-}
-
 interface TmReader {
 	file: string;
 	reads: number;
@@ -66,7 +62,12 @@ interface TmReader {
 }
 
 function measure(file: string, source: string): TmReader {
-	const body = code(source).replace(/function\s+(withTmHistory|tmVisiblePredicate)\(/g, '');
+	// Comments stripped by the shared SCANNER (literal content kept): prose that
+	// names the table is not a statement, and a `//` inside a literal hides nothing.
+	const body = stripComments(source).replace(
+		/function\s+(withTmHistory|tmVisiblePredicate)\(/g,
+		'',
+	);
 	return {
 		file,
 		reads: (body.match(TM_READ) ?? []).length,
@@ -195,6 +196,19 @@ describe('TM history visibility tripwire', () => {
 		expect(prose.reads).toBe(0);
 		const joined = measure('x.ts', 'q(`SELECT 1 FROM x JOIN matrix_time_machine tm ON true`);');
 		expect(joined.reads).toBe(1);
+		// A comment STRIPPER that does not know string literals hides a real
+		// reader: a non-URL `//` inside a literal ate the rest of the line, and a
+		// '/*' … '*/' pair of literals ate everything between them.
+		const slashes = measure(
+			'x.ts',
+			"sql.unsafe(`SELECT data->>'uri' LIKE 'https://x//y' AS u FROM matrix_time_machine WHERE id = $1`);",
+		);
+		expect([slashes.reads, slashes.visible]).toEqual([1, 0]);
+		const blockPair = measure(
+			'x.ts',
+			"const p='/*'; await sql`SELECT data FROM matrix_time_machine`; const q='*/';",
+		);
+		expect([blockPair.reads, blockPair.visible]).toEqual([1, 0]);
 	});
 
 	test('every TM reader is visibility-narrowed, or exempt with a reason', () => {

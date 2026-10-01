@@ -22,7 +22,10 @@
  */
 
 // imports
+import { ui } from '../../../core/common/js/ui.js';
 import { component_dataframe } from '../../../core/component_dataframe/js/component_dataframe.js';
+import { view_default_list_dataframe } from '../../../core/component_dataframe/js/view_default_list_dataframe.js';
+import { view_mini_list_dataframe } from '../../../core/component_dataframe/js/view_mini_list_dataframe.js';
 
 // fixtures
 const SLOT_TIPO = 'test6744';
@@ -31,7 +34,7 @@ const FRAME_TIPO = 'test6100';
 const TARGET_ID = 585;
 
 // a rating frame child as the server emits it into the shared list datum
-const rating_item = function (row_section_id, value) {
+const rating_item = (row_section_id, value) => {
 	const item = {
 		tipo: RATING_TIPO,
 		section_tipo: FRAME_TIPO,
@@ -45,7 +48,7 @@ const rating_item = function (row_section_id, value) {
 };
 
 // a slot of one listed row, sharing `datum` with every other row
-const make_slot = function (datum, row_section_id) {
+const make_slot = (datum, row_section_id) => {
 	const data = {
 		entries: [{ section_tipo: FRAME_TIPO, section_id: TARGET_ID, id_key: 1 }],
 	};
@@ -63,8 +66,8 @@ const make_slot = function (datum, row_section_id) {
 
 const get_rating = (slot) => component_dataframe.prototype.get_rating.call(slot);
 
-describe('component_dataframe — the rating chip reads its own row', function () {
-	it('two listed rows sharing a frame target each read THEIR copy of the rating (row_section_id)', function () {
+describe('component_dataframe — the rating chip reads its own row', () => {
+	it('two listed rows sharing a frame target each read THEIR copy of the rating (row_section_id)', () => {
 		// newest-first list: row 102's copy (the live value) is emitted first
 		const datum = { data: [rating_item(102, 'live'), rating_item(101, 'as_of_101')] };
 
@@ -81,22 +84,140 @@ describe('component_dataframe — the rating chip reads its own row', function (
 		);
 	});
 
-	it('the row key compares ids across number/string shapes', function () {
+	it('the row key compares ids across number/string shapes', () => {
 		const datum = { data: [rating_item(102, 'live'), rating_item('101', 'as_of_101')] };
 		assert.strictEqual(get_rating(make_slot(datum, 101)).entries[0].value, 'as_of_101');
 	});
 
-	it("a row with no copy of its own gets NO rating, never another row's", function () {
+	it("a row with no copy of its own gets NO rating, never another row's", () => {
 		const datum = { data: [rating_item(102, 'live')] };
 		assert.strictEqual(get_rating(make_slot(datum, 101)), undefined);
 	});
 
-	it('without row stamps (either side) the lookup is the unscoped one', function () {
+	it('without row stamps (either side) the lookup is the unscoped one', () => {
 		const unstamped = { data: [rating_item(undefined, 'only')] };
 		assert.strictEqual(get_rating(make_slot(unstamped, 101)).entries[0].value, 'only');
 		const stamped = { data: [rating_item(102, 'live')] };
 		assert.strictEqual(get_rating(make_slot(stamped, undefined)).entries[0].value, 'live');
 	});
+});
+
+/**
+ * ONE RATING, EMITTED ONCE PER DDO (the tool_time_machine apply crash).
+ * The server emits the rating component once per ddo naming it
+ * (WC-2026-08-05-multi-engine-ddo-expansion): the show ddo in mode 'edit' WITH a
+ * datalist and the hide `role:"rating"` ddo in mode 'solved', which may come
+ * WITHOUT one. After a time machine apply the portal refresh merged them into
+ * the datum reversed (solved first), get_rating took the first match and the
+ * chip threw `rating_data.datalist.find` on undefined, killing the refresh.
+ */
+// identity fixtures: get_rating's choice is asserted by datalist identity, so the
+// literal is only a marker (the paint test below builds its own, from the palette)
+const DATALIST_A = [{ section_id: 3, hide: [{ literal: 'option_a' }] }];
+const DATALIST_B = [{ section_id: 3, hide: [{ literal: 'option_b' }] }];
+
+// the same frame child emitted in `mode`, optionally with a datalist
+const moded_item = (mode, datalist) => {
+	const item = {
+		tipo: RATING_TIPO,
+		section_tipo: FRAME_TIPO,
+		section_id: TARGET_ID,
+		from_component_tipo: SLOT_TIPO,
+		mode: mode,
+		entries: [{ section_tipo: 'test6200', section_id: 3 }],
+	};
+	if (datalist) item.datalist = datalist;
+	return item;
+};
+
+// a slot whose rating ddo declares `mode` (undefined: no mode declared)
+const moded_slot = (datum, mode) => {
+	const slot = make_slot(datum, undefined);
+	const ddo = { tipo: RATING_TIPO, role: 'rating' };
+	if (mode !== undefined) ddo.mode = mode;
+	slot.request_config_object = { hide: { ddo_map: [ddo] } };
+	return slot;
+};
+
+describe('component_dataframe — the rating emitted once per ddo (edit + solved)', () => {
+	it('solved FIRST (no datalist), edit second: the datalist-bearing item is chosen', () => {
+		const datum = { data: [moded_item('solved'), moded_item('edit', DATALIST_A)] };
+		for (const mode of ['solved', undefined]) {
+			const found = get_rating(moded_slot(datum, mode));
+			assert.ok(found, `found (ddo mode ${mode})`);
+			assert.strictEqual(found.mode, 'edit', `ddo mode ${mode}: the item WITH a datalist`);
+			assert.strictEqual(found.datalist, DATALIST_A);
+		}
+	});
+
+	it("a mode-matched item WITH a datalist wins over another mode's", () => {
+		const datum = { data: [moded_item('edit', DATALIST_A), moded_item('solved', DATALIST_B)] };
+		const found = get_rating(moded_slot(datum, 'solved'));
+		assert.strictEqual(found.mode, 'solved');
+		assert.strictEqual(found.datalist, DATALIST_B);
+	});
+
+	it('no item carries a datalist: the mode-matched one is still returned (the view guards)', () => {
+		const datum = { data: [moded_item('edit'), moded_item('solved')] };
+		assert.strictEqual(get_rating(moded_slot(datum, 'solved')).mode, 'solved');
+		assert.strictEqual(get_rating(moded_slot(datum, undefined)).mode, 'edit');
+	});
+});
+
+describe('component_dataframe — a rating without datalist paints the default colour', () => {
+	// a live list slot whose get_rating returns `rating_data`
+	const render_slot = (rating_data) => ({
+		model: 'component_dataframe',
+		type: 'component',
+		mode: 'list',
+		tipo: SLOT_TIPO,
+		section_tipo: 'test6099',
+		section_id: 7,
+		permissions: 2,
+		show_interface: {},
+		context: {},
+		properties: { label: 'R' },
+		target_section: [{ tipo: FRAME_TIPO, label: 'Frame' }],
+		request_config_object: { hide: { ddo_map: [] } },
+		data: { entries: [{ section_tipo: FRAME_TIPO, section_id: TARGET_ID, id_key: 1 }] },
+		datum: { data: [] },
+		get_rating() {
+			return rating_data;
+		},
+	});
+
+	// the browser-normalized form of a CSS colour
+	const normalized = (color) => {
+		const probe = document.createElement('span');
+		probe.style.backgroundColor = color;
+		return probe.style.backgroundColor;
+	};
+	// read from the page palette, never spelled here (colour_literal_ratchet_tripwire)
+	const default_color = () => normalized(ui.css_var('--color_blue_3'));
+
+	const views = {
+		view_default_list_dataframe: view_default_list_dataframe,
+		view_mini_list_dataframe: view_mini_list_dataframe,
+	};
+
+	for (const [name, view] of Object.entries(views)) {
+		const chip_color = async (rating_data) => {
+			const node = await view.render(render_slot(rating_data), { render_level: 'content' });
+			return node.querySelector('.button.activate').style.backgroundColor;
+		};
+
+		it(`${name}: control — a datalist option paints its literal`, async () => {
+			// a palette colour that is NOT the default, so the control discriminates
+			const literal = ui.css_var('--color_orange_dedalo');
+			assert.notStrictEqual(normalized(literal), default_color());
+			const datalist = [{ section_id: 3, hide: [{ literal }] }];
+			assert.strictEqual(await chip_color(moded_item('edit', datalist)), normalized(literal));
+		});
+
+		it(`${name}: a set rating WITHOUT datalist does not throw and paints the default`, async () => {
+			assert.strictEqual(await chip_color(moded_item('solved')), default_color());
+		});
+	}
 });
 
 // @license-end

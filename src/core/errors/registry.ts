@@ -1266,6 +1266,37 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: true,
 	},
+	/**
+	 * THE DAEMON WILL NOT RUN THE AGENT ON THIS HOST AS IT STANDS (2026-10-01). Its 503
+	 * `confinement_unavailable` / `confinement.*` refusals that an OPERATOR must act on: the
+	 * host cannot confine a run, a site has no agent identity, PID 1 loaded a unit that is not
+	 * what the daemon expects, a unit refused to start, or the installed agent CLI cannot be
+	 * told to ignore agent-written configuration (PLANT). Not retryable: nothing changes until
+	 * someone does. The daemon's own sentence (which names the key or command) is log-only.
+	 */
+	'site_builder.confinement_unavailable': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_site_builder_confinement_unavailable',
+		message: 'The site builder cannot run its agent safely on this server',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	/**
+	 * THE SITE IS BUSY ON THE DAEMON'S SIDE (2026-10-01): a run of this site is still alive or
+	 * being proved dead (`confinement.site_busy`, `identity_quarantined`), or the daemon is
+	 * restarting (`daemon_stopping`). Retryable — it clears without anyone acting.
+	 */
+	'site_builder.busy': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_site_builder_busy',
+		message: 'The site builder is busy with this site',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: true,
+	},
 
 	// ── mailer ──────────────────────────────────────────────────────────────
 	'mailer.not_configured': {
@@ -1434,6 +1465,19 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 	},
+	// DIFF-3: a second diffuse on an (element, section) with an ACTIVE run that
+	// is not the caller's own identical request (another owner, or another
+	// selection). The body names nothing of the live run (queue.ts
+	// enqueueDiffusionJob; WC-2026-09-30-diffusion-attach-scope).
+	'diffusion.target_busy': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_diffusion_target_busy',
+		message: 'The publication target is busy with another run; retry when it finishes',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: true,
+	},
 	'diffusion.runner_spawn_failed': {
 		category: 'unavailable',
 		status: 503,
@@ -1523,6 +1567,36 @@ export const ERROR_REGISTRY = {
 		hint: 'Retry; if it persists, check the server model configuration.',
 	},
 
+	// THE AI SPEND BUDGET (closure Step 3, TOOLS-4; WC-2026-10-01-ai-spend-budget).
+	// Every model spend — an agent run, a generative RAG answer, a query embedding,
+	// a vision call — is RESERVED against the caller's per-day ledger
+	// (security/ai_spend.ts) before the provider is touched. `limit` (429): the
+	// same request succeeds after `window_resets_at` (the next UTC midnight) or
+	// once an administrator raises the DEDALO_AI_USER_DAILY_* budget.
+	'ai.budget_exhausted': {
+		category: 'limit',
+		status: 429,
+		label_key: 'error_ai_budget_exhausted',
+		message: 'The daily AI budget for this user is used up',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+		details_keys: ['budget_kind', 'limit', 'window_resets_at'],
+		hint: 'Stop: the user has no AI budget left today. It resets at window_resets_at (UTC); an administrator can raise the DEDALO_AI_USER_DAILY_* budgets.',
+	},
+	// The ledger could not be read or written (its engine ontology is missing, or
+	// the database failed): FAIL CLOSED — an unmetered spend is never admitted.
+	'ai.budget_unavailable': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_ai_budget_unavailable',
+		message: 'The AI usage ledger is unavailable, so no AI request is admitted (see server logs)',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: true,
+		hint: 'Retry later; if it persists, the server log names why the AI usage ledger cannot be used.',
+	},
+
 	// ── install wizard ──────────────────────────────────────────────────────
 	'install.unknown_step': {
 		category: 'caller',
@@ -1572,6 +1646,48 @@ export const ERROR_REGISTRY = {
 		retryable: false,
 	},
 
+	// ── db (PERF-11) ────────────────────────────────────────────────────────
+	// The two database ceilings, typed so a fired bound is a 503 the client can
+	// show — not a 500 `internal.unexpected` indistinguishable from an engine
+	// bug. Raised ONLY by core/db/postgres.ts; the numbers (lane, ceiling, pool)
+	// ride in operator-only `coordinates`.
+	// A 57014 at or past the lane ceiling (DB_STATEMENT_TIMEOUT_MS, or a recorded SET
+	// LOCAL). An operator cancel, an abort cancel and the reserved lane stay raw.
+	'db.statement_timeout': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_db_statement_timeout',
+		message: 'A database statement ran past the configured statement ceiling',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+	},
+	// A 55P03 escaping a declared maintenance widget action: the maintenance pool
+	// lifts the statement ceiling but keeps a startup lock_timeout
+	// (MAINTENANCE_LOCK_TIMEOUT), so readers never queue behind its waiting ACCESS
+	// EXCLUSIVE request. The transaction that waited rolled back — not
+	// necessarily the whole action (units it committed earlier stand).
+	'db.lock_timeout': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_db_lock_timeout',
+		message: 'A maintenance action waited too long for a database lock',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: true,
+	},
+	// The acquire gate waited DB_POOL_ACQUIRE_TIMEOUT_MS for a pooled connection
+	// (every path that takes a connection takes a slot).
+	'db.pool_exhausted': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_db_pool_exhausted',
+		message: 'No database connection became available in time',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: true,
+	},
+
 	// ── internal ────────────────────────────────────────────────────────────
 	'internal.unexpected': {
 		category: 'internal',
@@ -1582,6 +1698,9 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 	},
+	// Engine invariant / uncovered-scope throws (P3 burn-down): the fail-loud typed
+	// form of a former `throw new Error(...)`. Coordinates carry the module + input;
+	// the sentence stays server-side.
 	'internal.invariant': {
 		category: 'internal',
 		status: 500,
@@ -1590,8 +1709,6 @@ export const ERROR_REGISTRY = {
 		severity: 'error',
 		disclosure: 'operator',
 		retryable: false,
-		reason:
-			'Engine invariant / uncovered-scope throws (P3 burn-down): the fail-loud typed form of a former `throw new Error(...)`. Coordinates carry the module + input; the sentence stays server-side.',
 	},
 	'internal.module_poisoned': {
 		category: 'internal',
@@ -1974,6 +2091,35 @@ export const ERROR_REGISTRY = {
 		severity: 'warn',
 		disclosure: 'public',
 		retryable: false,
+	},
+	// A request carries more items than the action processes in one call (an
+	// interactive action bounded by its caller's wait: tool_import_rdf dereferences
+	// at most RDF_MAX_URIS IRIs, each paced by the harvesting door). `caller`, not
+	// `limit`: the same request is refused every time — send fewer items.
+	'tool.too_many_items': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_tool_too_many_items',
+		message: 'The request has more items than this action processes at once',
+		severity: 'info',
+		disclosure: 'public',
+		retryable: false,
+		details_keys: ['count', 'limit'],
+	},
+	// A remote source a tool reads interactively did not answer in time, dropped
+	// the connection, answered 5xx/408/429, or could not deliver its robots.txt
+	// (tool_import_rdf, RDF_IRI_DEADLINE_MS). For the cataloguer the source is out
+	// of service: the label says so and sends them to its maintainer. `site` is the
+	// origin of the address the cataloguer gave, never a redirect target.
+	'tool.source_unavailable': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_tool_source_unavailable',
+		message: 'The remote server is not responding or is out of service',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: true,
+		details_keys: ['site'],
 	},
 	'tool.target_not_found': {
 		category: 'not_found',

@@ -5,48 +5,57 @@
  * the diffusion ENGINE's responsibility) — the mysql list is always empty.
  */
 
+import type { Principal } from '../../security/permissions.ts';
 import { failAction, type WidgetModule, type WidgetResponse } from './support.ts';
 
 /**
- * LEDGER — coverage plan §4.4 D14, KNOWN-OPEN AND UNGATED: the backup FILENAME
- * GRAMMAR is implemented TWICE. The literal built below duplicates
- * `timestampName()` + the `fileName` template in ../backup.ts (:68, :172), which
- * is what `initBackupSequence` — the code that actually names the dump — uses.
- * The panel therefore ADVERTISES one filename while the dump may land at
- * another (they already differ in the forced/skip-time-range arm). The fix is
- * DE-DUPLICATION — one exported builder, gated once — not a test that re-asserts
- * this string; a test over the copy would freeze the divergence.
+ * The name the NEXT forced dump will get, from THE builder `initBackupSequence`
+ * names its dumps with (`backupFileName`) — one grammar, gated by
+ * test/unit/backup_inflight_native.test.ts leg f. (Until 2026-09-30 this widget
+ * carried its own copy of the grammar, coverage plan §4.4 D14.)
  */
 async function makeBackupGetValue(): Promise<WidgetResponse> {
-	const { getBackupDir, getCurrentDataVersion } = await import('../backup.ts');
+	const { backupFileName, getBackupDir, getCurrentDataVersion } = await import('../backup.ts');
 	const { config } = await import('../../../config/config.ts');
 	const db = config.db as { database?: string };
-	const now = new Date();
-	const pad = (value: number) => String(value).padStart(2, '0');
-	const fileName =
-		`${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
-		`_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}` +
-		`.${db.database ?? 'dedalo'}.postgresql_-1_forced_dbv${(await getCurrentDataVersion()).join('-')}.custom.backup`;
 	return {
 		data: {
 			dedalo_db_management: true,
 			backup_path: getBackupDir(),
-			file_name: fileName,
+			// The make_psql_backup action below always forces, by user -1.
+			file_name: backupFileName({
+				now: new Date(),
+				database: String(db.database ?? 'dedalo'),
+				userId: -1,
+				forced: true,
+				version: await getCurrentDataVersion(),
+			}),
 			mysql_db: null,
 		},
 	};
 }
 
 /**
- * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
- * engineering/crap_coverage_exempt.json): a six-field forward of
- * `initBackupSequence`, which is gated in test/unit/ops_backup.test.ts.
- * INVOKING IT spawns a detached `pg_dump` of the live database and writes a
- * multi-GB artifact to disk — no scratch surface can contain that.
+ * A six-field forward of `initBackupSequence` (gated in test/unit/ops_backup.test.ts).
+ * No longer coverage-exempt (its old reason, "invoking it spawns a pg_dump of the
+ * live database", stopped holding): backup_inflight_native leg r EXECUTES it with
+ * the configured backup dir and pg binaries pointed at scratch (a fake pg_dump), so
+ * the caller-owns-the-job wiring below is measured, not assumed.
+ *
+ * `extend.file_path` names the FINAL artifact, which exists only once the dump
+ * has been promoted (pg_dump exit 0 + a full read, OPS-2): while it runs the
+ * bytes live at `<file_path>.part`, invisible to get_dedalo_backup_files.
+ *
+ * The FILE is named by -1 (the forced dump's grammar, what `get_value` shows);
+ * the JOB belongs to the caller — the record's `user_id`, who may stream and
+ * stop it (WC-2026-09-30-backup-part-promotion, third addendum).
  */
-async function makeBackupPsql(): Promise<WidgetResponse> {
+async function makeBackupPsql(
+	_options: Record<string, unknown>,
+	principal: Principal,
+): Promise<WidgetResponse> {
 	const { initBackupSequence } = await import('../backup.ts');
-	const outcome = await initBackupSequence(-1, true);
+	const outcome = await initBackupSequence(-1, true, {}, principal.userId);
 	if (!outcome.ok) {
 		failAction(
 			outcome.errors.length === 0 ? outcome.msg : `${outcome.msg} (${outcome.errors.join('; ')})`,
@@ -57,7 +66,9 @@ async function makeBackupPsql(): Promise<WidgetResponse> {
 		msg: outcome.msg,
 		// pid + pfile: the copied widget feeds them straight into
 		// update_process_status → dd_utils_api:get_process_status (SSE) so the
-		// operator watches the dump live and sees the failure tail (S2-35).
+		// operator watches the dump live and sees the failure tail (S2-35). The
+		// pid is the job's owner (this server) — never null, even while the job
+		// is queued behind a full maintenance lane; the pfile names the job.
 		extend: {
 			pid: outcome.pid ?? null,
 			file_path: outcome.file_path ?? null,

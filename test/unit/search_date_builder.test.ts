@@ -34,12 +34,13 @@ import { describe, expect, test } from 'bun:test';
 import { conformTmFilter, type ParamSink } from '../../src/core/resolve/tm_filter.ts';
 import { buildDateFragment } from '../../src/core/search/builders/builder_date.ts';
 import type { BuilderContext } from '../../src/core/search/builders/types.ts';
+import { asSqlTipo } from '../../src/core/search/identifier_gate.ts';
 
 function ctx(overrides: Partial<BuilderContext> = {}): BuilderContext {
 	return {
 		alias: 'dd542',
 		column: 'date',
-		tipo: 'dd547',
+		tipo: asSqlTipo('dd547', 'test context'),
 		sectionTipo: 'dd542',
 		table: 'matrix_activity',
 		lang: 'lg-nolan',
@@ -147,7 +148,11 @@ describe('builder_date — time-machine tables (matrix_activity)', () => {
 });
 
 describe('builder_date — ordinary sections (JSONB, PHP interval overlap)', () => {
-	const ordinary = ctx({ alias: 'test6813', table: 'matrix', tipo: 'test6867' });
+	const ordinary = ctx({
+		alias: 'test6813',
+		table: 'matrix',
+		tipo: asSqlTipo('test6867', 'test context'),
+	});
 
 	test('object q resolves to the PHP interval overlap (no longer dropped, no longer a point)', () => {
 		// GOLDEN MOVED 2026-08-09. This used to expect the single-point

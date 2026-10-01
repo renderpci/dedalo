@@ -45,6 +45,7 @@ import { sql } from '../db/postgres.ts';
 import { readFrameStateRowAt, recordBulkPair, recordTimeMachine } from '../db/time_machine.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import {
+	effectiveSaveLang,
 	getColumnNameByModel,
 	getModelByTipo,
 	getNode,
@@ -581,14 +582,25 @@ export type LaneIdentity = Pick<MainIdentity, 'tipo' | 'lang' | 'sliced' | 'tran
 
 /**
  * THE DOOR LANE OF A MAIN for a request lang — derived from the MAIN, never
- * from the door that wrote. An UNSLICED main (every relation) speaks `lg-nolan`
- * whatever its ontology flag (decision 2026-09-29, main_lanes.ts laneLaw). A
- * sliced main that is neither translatable nor an iri speaks `lg-nolan` (a
- * non-translatable iri: the request lang its save uses, lg-nolan from a
- * language-less door). A translatable sliced main speaks the request's lang —
- * and when the door speaks no language (`lg-nolan`: a frame strip, a revert),
- * the request's DATA lang (currentDataLang), the lang the main's own saves from
- * the same page use.
+ * from the door that wrote. ONE LAW for every history row a door files
+ * (WC-2026-09-27-bulk-revert-undo-log, addendum 2026-09-30):
+ *
+ * - An UNSLICED main (every relation) speaks `lg-nolan` whatever its ontology
+ *   flag (decision 2026-09-29, main_lanes.ts laneLaw).
+ * - A SPEAKING door (a request lang: the save, the duplicate's re-save row,
+ *   translation) files a sliced main in `effectiveSaveLang(tipo, model,
+ *   pageLang)` — the lang its own save writes (resolver.ts, the one rule): the
+ *   page lang for a translatable, a `with_lang_versions` (transliterable) or an
+ *   iri main; `lg-nolan` for any other.
+ * - A DOORLESS door (`lg-nolan` / '': the wipe, the undelete, the observer, the
+ *   slot/frame lane) files in `lg-nolan` — except a TRANSLATABLE sliced main,
+ *   which files in the request's DATA lang (currentDataLang), the lang the
+ *   main's own saves from the same page use.
+ *
+ * KNOWN ASYMMETRY (open, owner decision): a translatable save from a
+ * lang-less request is filed in `lg-nolan` by the save door (effectiveSaveLang
+ * keeps the request lang) but in currentDataLang by this rule.
+ * Gate: test/unit/history_door_lane_agreement_native.test.ts.
  */
 async function mainRowLang(tipo: string, model: string, requestLang: string): Promise<string> {
 	if (!isLangSlicedModel(model)) return NOLAN;
@@ -599,8 +611,7 @@ async function mainRowLang(tipo: string, model: string, requestLang: string): Pr
 async function slicedRowLang(tipo: string, model: string, requestLang: string): Promise<string> {
 	const doorless = requestLang === '' || requestLang === NOLAN;
 	if (await getTranslatableByTipo(tipo)) return doorless ? currentDataLang() : requestLang;
-	// A non-translatable iri keeps the request lang, as its save does (save_component.ts).
-	return model === 'component_iri' && !doorless ? requestLang : NOLAN;
+	return doorless ? NOLAN : effectiveSaveLang(tipo, model, requestLang);
 }
 
 /** A main's model and matrix column; null when the tipo has no model or no storable column. */

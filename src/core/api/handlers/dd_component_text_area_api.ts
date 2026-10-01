@@ -136,6 +136,26 @@ export const componentTextAreaApiActions: Record<string, ActionHandler> = {
 					'delete_tag: source.tipo, source.section_tipo and a positive source.section_id are mandatory',
 			});
 		}
+		// SEC — THE WRITE DOOR (closure Step 3): level >= 2 on the (section,
+		// component) pair WITH the dd128 own-record rule, then the record scope
+		// (the non-positive-id refusal ahead of the admin bypass). Asked BEFORE the
+		// options are read: an unauthorized caller learns nothing about the
+		// action's own grammar.
+		//
+		// sectionFloor 0 — THE SAVE DOOR'S NAMED EXCEPTION, on its twin: deleting a
+		// tag IS an edit of this text_area's value (the same inline-edit write on the
+		// same component the `save` door authorizes at floor 0 — a subdatum portal
+		// target the profile holds 0 on at the section). Asking the section here
+		// would refuse a tag delete on a text_area its editor may save. It converges
+		// WITH the save door (WC-2026-09-30-write-door owner-review item), never
+		// apart from it.
+		const { authorizeRecordAccess } = await import('../../security/write_door.ts');
+		const grant = await authorizeRecordAccess(
+			principal,
+			{ section_tipo: sectionTipo, component_tipo: tipo, section_id: sectionId },
+			{ mode: 'write', level: 2, sectionFloor: 0, door: 'dd_component_text_area_api.delete_tag' },
+		);
+
 		if (tagId === '') {
 			throw new DedaloError('request.invalid_options', {
 				publicMessage: 'options.tag_id is mandatory',
@@ -154,34 +174,17 @@ export const componentTextAreaApiActions: Record<string, ActionHandler> = {
 			});
 		}
 
-		// SEC — the canonical write gate (same as dd_core_api save): level >= 2 on
-		// the (section, component) pair, then the per-record projects scope for
-		// non-admins. A level-2 user must not rewrite a record they cannot see.
-		const { getPermissions } = await import('../../security/permissions.ts');
-		if ((await getPermissions(principal, sectionTipo, tipo)) < 2) {
-			throw new DedaloError('perm.denied', {
-				coordinates: { section_tipo: sectionTipo, tipo, required: 2 },
-			});
-		}
-		if (!principal.isGlobalAdmin) {
-			const { isRecordInScope } = await import('../../security/record_scope.ts');
-			if (!(await isRecordInScope(sectionTipo, sectionId, principal))) {
-				throw new DedaloError('perm.out_of_scope', {
-					coordinates: { section_tipo: sectionTipo, section_id: sectionId },
-				});
-			}
-		}
-
 		const { deleteTagFromAllLangs } = await import(
 			'../../components/component_text_area/tag_delete.ts'
 		);
 		const { getModelByTipo } = await import('../../ontology/resolver.ts');
 		let outcome: Awaited<ReturnType<typeof deleteTagFromAllLangs>>;
 		try {
+			// The effect addresses what was AUTHORIZED — the grant, never the rqo.
 			outcome = await deleteTagFromAllLangs({
-				componentTipo: tipo,
-				sectionTipo,
-				sectionId,
+				componentTipo: grant.componentTipo,
+				sectionTipo: grant.sectionTipo,
+				sectionId: grant.sectionId,
 				tagId,
 				tagType: tagType as 'index' | 'reference',
 				userId: principal.userId,

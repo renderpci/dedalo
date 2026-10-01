@@ -30,7 +30,7 @@ import {
 } from '../../src/core/db/matrix_write.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { recordEpoch } from '../../src/core/db/record_generation.ts';
-import { recordTimeMachine } from '../../src/core/db/time_machine.ts';
+import { readTimeMachineHistory, recordTimeMachine } from '../../src/core/db/time_machine.ts';
 import { isDedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { countTimeMachineData, readTimeMachineData } from '../../src/core/resolve/read_tm.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
@@ -167,6 +167,28 @@ describe('record generation (P0-14, second half)', () => {
 			WHERE section_tipo = ${TIPO} AND section_id = ${reborn}
 		`) as { n: number }[];
 		expect(Number(all[0]?.n)).toBe(3);
+	});
+
+	test('readTimeMachineHistory serves only the living generation', async () => {
+		// time_machine.ts is EXEMPT from tm_epoch_tripwire's census (it hosts the
+		// PK reader that must see every generation), so the census cannot see
+		// this reader lose its epoch narrowing: this OUTCOME is its gate.
+		const dead = await mint();
+		await writeHistory(dead, 'dead-1');
+		await writeHistory(dead, 'dead-2');
+		const reborn = await forceRemintOf(dead);
+		expect(reborn).toBe(dead);
+		await writeHistory(reborn, 'mine-1');
+		// CONTROL: all three rows sit at the one address.
+		const all = (await sql`
+			SELECT count(*)::int AS n FROM matrix_time_machine
+			WHERE section_tipo = ${TIPO} AND section_id = ${reborn}
+		`) as { n: number }[];
+		expect(Number(all[0]?.n)).toBe(3);
+		const served = await readTimeMachineHistory(TIPO, reborn, COMPONENT);
+		expect(served.map((row) => (row.data as { value?: unknown } | null)?.value)).toEqual([
+			'mine-1',
+		]);
 	});
 
 	test('a RESTORE from a dead generation is refused, not performed', async () => {

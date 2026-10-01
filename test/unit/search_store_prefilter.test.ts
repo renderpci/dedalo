@@ -22,6 +22,7 @@ import { afterAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
 import { buildStringFragment } from '../../src/core/search/builders/builder_string.ts';
 import type { BuilderContext, Fragment } from '../../src/core/search/builders/types.ts';
+import { asSqlTipo } from '../../src/core/search/identifier_gate.ts';
 
 /** Seed-shipped ontology, spelled out of the install-TLD census's token grammar. */
 const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
@@ -36,7 +37,7 @@ function ctx(overrides: Partial<BuilderContext> = {}): BuilderContext {
 	return {
 		alias: 'mix',
 		column: 'string',
-		tipo: STORE_COMPONENT,
+		tipo: asSqlTipo(STORE_COMPONENT, 'test context'),
 		sectionTipo: STORE_SECTION,
 		table: 'matrix',
 		lang: 'lg-nolan',

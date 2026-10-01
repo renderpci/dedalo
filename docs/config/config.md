@@ -3175,15 +3175,43 @@ Making the backups is the operating system's job — a nightly timer, described 
 - **Whether the maintenance "Make backup" button would skip.** It never does today: that
   button always forces a dump, so the throttle it belongs to is not reached.
 
-Age is judged by the newest backup file's modification time. Keep the value in step with how
-often the nightly job actually runs — set it below the real interval and the updater refuses
-on an installation that is backing up perfectly well.
+Age is judged by the modification time of the newest backup that PostgreSQL's own
+`pg_restore` can read back end to end. A dump that is cut short, or whose read did not finish
+within its time budget (see `DEDALO_BACKUP_VERIFY_SECONDS_PER_GB`), does not count, however
+recent it is. Keep the value in step with how often the nightly job actually runs — set it
+below the real interval and the updater refuses on an installation that is backing up
+perfectly well.
 
 ```bash
 DEDALO_BACKUP_TIME_RANGE=8
 ```
 
 *Default: 8*
+
+---
+
+### Defining the backup verification budget
+
+DEDALO_BACKUP_VERIFY_SECONDS_PER_GB `int`
+
+How long the engine may spend proving that a database backup can be restored, in
+**seconds per gigabyte** of dump. Before a backup counts — for the code updater's "is there a
+recent backup" check, for the update panel, and for a dump the maintenance button just made —
+the engine reads the whole archive back with PostgreSQL's `pg_restore`, because only a full
+read can tell a complete dump from one that stopped part way. That read gets this many seconds
+for every started gigabyte, and never less than one minute.
+
+A read that does not finish within its budget proves nothing, so that backup does **not**
+count: the code updater refuses (it can still be waived explicitly) and says so, naming this
+key. On an installation whose backups live on slow storage (a network share, a USB disk), raise
+the value until the read fits; a verification that succeeded is remembered, so the cost is paid
+once per backup file.
+
+```bash
+DEDALO_BACKUP_VERIFY_SECONDS_PER_GB=60
+```
+
+*Default: 60*
 
 ---
 
@@ -3991,6 +4019,98 @@ ANTHROPIC_API_KEY="sk-ant-..."
 ```
 
 *Default: (unset)*
+
+---
+
+### Defining the daily semantic-search budget per user
+
+DEDALO_AI_USER_DAILY_EMBED_QUERIES `int`
+
+This parameter defines how many semantic-search queries (each one embeds the query text with the embedding model) one user may spend in one day (a UTC day, reset
+at midnight UTC).
+
+Every AI request is first RESERVED against the user's usage ledger (the engine-owned
+`AI usage` section under Administration, one record per user and day); a request that would go
+past this budget is refused with a message saying when the budget resets, before any model is
+called. Nobody is exempt — administrators and the root user included. Counted per query: a semantic search, a passage retrieval, a text-to-image search and the retrieval step of a generated answer each count one. The searches the assistant makes INSIDE a conversation are part of that conversation and are not counted here.
+
+`0` refuses every such request. There is no "unlimited" value: a model spend always has a
+limit.
+
+```bash
+DEDALO_AI_USER_DAILY_EMBED_QUERIES=2000
+```
+
+*Default: 2000*
+
+---
+
+### Defining the daily assistant-run budget per user
+
+DEDALO_AI_USER_DAILY_RUNS `int`
+
+This parameter defines how many model runs one user may spend in one day (a UTC day, reset
+at midnight UTC).
+
+Every AI request is first RESERVED against the user's usage ledger (the engine-owned
+`AI usage` section under Administration, one record per user and day); a request that would go
+past this budget is refused with a message saying when the budget resets, before any model is
+called. Nobody is exempt — administrators and the root user included. A run is one assistant conversation turn (which may call the model up to twelve times) or one generated answer over the collection (`ask`).
+
+`0` refuses every such request. There is no "unlimited" value: a model spend always has a
+limit.
+
+```bash
+DEDALO_AI_USER_DAILY_RUNS=50
+```
+
+*Default: 50*
+
+---
+
+### Defining the daily model-token budget per user
+
+DEDALO_AI_USER_DAILY_TOKENS `int`
+
+This parameter defines how many model tokens one user may spend in one day (a UTC day, reset
+at midnight UTC).
+
+Every AI request is first RESERVED against the user's usage ledger (the engine-owned
+`AI usage` section under Administration, one record per user and day); a request that would go
+past this budget is refused with a message saying when the budget resets, before any model is
+called. Nobody is exempt — administrators and the root user included. Each run reserves the most output it can produce (the per-turn output limit times the turns it may take) and is then charged what the model reports it used; a model that reports no usage keeps the whole reservation charged.
+
+`0` refuses every such request. There is no "unlimited" value: a model spend always has a
+limit.
+
+```bash
+DEDALO_AI_USER_DAILY_TOKENS=1000000
+```
+
+*Default: 1000000*
+
+---
+
+### Defining the daily vision-model budget per user
+
+DEDALO_AI_USER_DAILY_VISION `int`
+
+This parameter defines how many vision-model calls one user may spend in one day (a UTC day, reset
+at midnight UTC).
+
+Every AI request is first RESERVED against the user's usage ledger (the engine-owned
+`AI usage` section under Administration, one record per user and day); a request that would go
+past this budget is refused with a message saying when the budget resets, before any model is
+called. Nobody is exempt — administrators and the root user included. Counted per call: the identification tool's vision proposals and an image identification that sends the photograph to an external image encoder each count one.
+
+`0` refuses every such request. There is no "unlimited" value: a model spend always has a
+limit.
+
+```bash
+DEDALO_AI_USER_DAILY_VISION=50
+```
+
+*Default: 50*
 
 ---
 
@@ -5752,10 +5872,11 @@ the format writer, so that a section of hundreds of thousands of records never h
 fit in memory at once. A smaller batch lowers the memory ceiling of a publication run;
 a larger one reduces the number of round trips to the database.
 
-The engine currently resolves in fixed batches of **500** records. This key is read for
-the diffusion panel of the maintenance dashboard, which reports the configured value —
-the resolver does not yet take it as an override, so leave it unset unless you were
-told otherwise.
+Unset, a run resolves **500** records per batch. Each publication run reads the key when
+it starts (a resumed run reads it again), so a change applies from the next start. Each
+batch is also one durable step: its records, its checkpoint and its run-ledger rows are
+written together, so a smaller batch means less work to redo when a run is resumed. The
+diffusion panel of the maintenance dashboard reports the configured value.
 
 ```bash
 DEDALO_DIFFUSION_BATCH_RECORDS=500

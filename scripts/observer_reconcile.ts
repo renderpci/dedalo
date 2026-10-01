@@ -11,7 +11,8 @@
  * by the save-chokepoint observer cascade. Writes that bypass every cascade
  * door leave them stale: v6→v7 migrated/updated data (the reported case —
  * dc1 §2 had 3 rsc387 referencers and a NULL hierarchy93 mirror, zero TM
- * rows), the delete_data wipe, tool_propagate_component_data, portalize.
+ * rows) and portalize — plus any door that states at its own site that it
+ * does not propagate (observers.ts module header).
  *
  * The kernel replays the ONE recompute law (recomputeExternalRelation —
  * row-locked, order-preserved keep, next-id append, TM audit pair) per

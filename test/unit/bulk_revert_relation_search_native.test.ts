@@ -220,7 +220,8 @@ describe('restoring a relation key re-derives relation_search by the SAVE law', 
 			0,
 			SECTION,
 			address,
-			null,
+			false,
+			USER_ID,
 		);
 		expect(restored).not.toBeNull();
 		expect((await keys(address)).index).toEqual(expected);

@@ -825,7 +825,7 @@ export const ui = {
 		*
 		* @param {Object} component - The full component instance to activate.
 		* @param {boolean} [focus=true] - Whether to auto-focus the first input inside the component.
-		* @returns {Promise<boolean>} Resolves false if the component was undefined or already active;
+		* @returns {Promise<boolean>} Resolves false if the component was undefined, destroyed (no node) or already active;
 		*   true when activation completed successfully.
 		*/
 		activate : async (component, focus=true) => {
@@ -833,6 +833,16 @@ export const ui = {
 			// component mandatory check
 				if (typeof component==='undefined') {
 					console.warn('[ui.component.active]: WARNING. Received undefined component!');
+					return false
+				}
+
+			// destroyed component case. A remembered selection can outlive its
+			// instance: a section refresh (a tool such as tool_import_rdf refreshes
+			// its section after an import) rebuilds the page's components, and both
+			// the modal teardown and page.restore_section_selection then re-activate
+			// the old one. A destroyed instance has no node; activating it threw in
+			// focus_first_input.
+				if (!component.node) {
 					return false
 				}
 

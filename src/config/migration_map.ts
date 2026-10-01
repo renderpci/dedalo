@@ -588,6 +588,8 @@ export const NEW_IN_V7: readonly string[] = [
 	'DB_POOL_MAX',
 	'DB_POOL_ACQUIRE_TIMEOUT_MS',
 	'DB_STATEMENT_TIMEOUT_MS',
+	// the maintenance pool (PERF-11): the separate connections withUnboundedStatements routes to
+	'DB_MAINTENANCE_POOL_MAX',
 	// Postgres TLS mode. NEW_IN_V7 and, more precisely, new in Bun 1.4: that
 	// release taught Bun.sql to fall back to the ambient PGSSLMODE/PG_SSLMODE
 	// when no `tls` option is given, so the engine now passes this value
@@ -735,6 +737,9 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_3D_ALTERNATIVE_EXTENSIONS',
 	// ops
 	'DEDALO_BACKUP_DIR',
+	// The full-read budget of backup verification (OPS-1, 2026-09-30). NEW_IN_V7 by
+	// construction: v6 never read a dump back, so there is no v6 constant to rename.
+	'DEDALO_BACKUP_VERIFY_SECONDS_PER_GB',
 	'DEDALO_TRANSFORM_DEFINITIONS_DIR',
 	'DEDALO_TS_STATE_PATH',
 	// runtime-path census (2026-08-23): the ontology recovery dump moved out of
@@ -854,6 +859,12 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_AGENT_WRITE_SECTIONS',
 	'DEDALO_AGENT_SYSTEM_PROMPT_APPEND',
 	'DEDALO_AGENT_ALLOW_EXTERNAL_PROVIDER_DEFAULT',
+	// The per-user daily AI budgets (closure Step 3, TOOLS-4). No v6 equivalent —
+	// v6 metered no model spend.
+	'DEDALO_AI_USER_DAILY_RUNS',
+	'DEDALO_AI_USER_DAILY_TOKENS',
+	'DEDALO_AI_USER_DAILY_EMBED_QUERIES',
+	'DEDALO_AI_USER_DAILY_VISION',
 	'DEDALO_MCP_USER_ID',
 	'DEDALO_MCP_ALLOW_WRITE',
 	'DEDALO_MCP_WRITE_SECTIONS',

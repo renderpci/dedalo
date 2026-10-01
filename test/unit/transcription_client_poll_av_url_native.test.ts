@@ -48,6 +48,7 @@ import {
 	statusPollAvUrl,
 	tool,
 } from '../../tools/tool_transcription/server/index.ts';
+import { issuePollHandle } from '../../tools/tool_transcription/server/poll_handle.ts';
 import { scratchMediaRoot } from '../helpers/media_scratch_root.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
@@ -141,11 +142,20 @@ async function pollWithEngine(
 			options: {
 				media_ddo: { component_tipo: 'test94', section_tipo: 'test3', section_id: 1 },
 				transcriber_engine: engine,
-				pid: 'job-7',
+				// The handle automatic_transcription would have issued for this user,
+				// this engine and this record: the poll's job id and engine are ITS.
+				pid: issuePollHandle({
+					pid: 'job-7',
+					engine,
+					userId: 16,
+					sectionTipo: 'test3',
+					componentTipo: 'test94',
+					sectionId: 1,
+				}),
 			},
 		},
 		{
-			gate: async () => {},
+			gate: async () => ({ sectionTipo: 'test3', componentTipo: 'test94', sectionId: 1 }),
 			transcriberConfig: async () => ({ uri: 'https://asr.example.org/api', key: 'k' }),
 			mediaContext: async () => ({
 				spec: AV_SPEC,

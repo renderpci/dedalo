@@ -29,6 +29,7 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
+import { coreApiActions } from '../../src/core/api/handlers/dd_core_api.ts';
 import { getPermissions, resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
 import {
@@ -142,6 +143,30 @@ describe.if(DB_READY)('dd_core_api.get_element_context', () => {
 			expect(refused.status).toBe(403);
 			expect(refused.body.ok).toBe(false);
 			expect(errorCodeOf(refused.body)).toBe('tool.not_authorized');
+		});
+
+		test('the grant is asked of the PRINCIPAL: a session-less call is the 403, not a 500 (req 8, D8/L6)', async () => {
+			// requirePrincipal guarantees a principal, never a session object. The
+			// branch used to read `(context.session as Session).userId` and THROW a
+			// TypeError (a 500) here; the one grant decision takes the principal.
+			const handler = coreApiActions.get_element_context;
+			if (handler === undefined) throw new Error('get_element_context is not registered');
+			const nonAdmin = await resolvePrincipal(ACL_NON_ADMIN_USER_ID);
+			let code = 'served';
+			try {
+				await handler(
+					elementRqo({ model: RESTRICTED_TOOL }) as never,
+					{
+						requestId: 'zzcnt',
+						clientIp: '127.0.0.1',
+						session: null,
+						principal: nonAdmin,
+					} as never,
+				);
+			} catch (error) {
+				code = (error as { code?: string }).code ?? `untyped: ${String(error)}`;
+			}
+			expect(code).toBe('tool.not_authorized');
 		});
 
 		test('an always_active tool IS authorized for the non-admin (the check is per-tool, not per-role)', async () => {

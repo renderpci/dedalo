@@ -128,22 +128,6 @@ export async function loadMediaSource(
 	return { bytes, fileName: source.filename };
 }
 
-/** Server-authoritative write gate: level >= 2 on (section_tipo, tipo) or throw. */
-async function assertWritePermission(
-	principal: Principal,
-	sectionTipo: string,
-	tipo: string,
-): Promise<void> {
-	const { getPermissions } = await import('../../../core/security/permissions.ts');
-	const level = await getPermissions(principal, sectionTipo, tipo);
-	if (level < 2) {
-		throw new DedaloError('perm.denied', {
-			message: `Insufficient permissions to write (${sectionTipo}/${tipo}): level ${level} < 2`,
-			coordinates: { section_tipo: sectionTipo, tipo, level },
-		});
-	}
-}
-
 async function assertRecordInScope(
 	principal: Principal,
 	sectionTipo: string,
@@ -189,10 +173,16 @@ export async function uploadMedia(
 	job_id?: unknown;
 }> {
 	const sectionTipo = assertValidTipo(input.section_tipo, 'mcp.media.section_tipo');
-	const sectionId = Math.floor(input.section_id);
 	const fieldTipo = await resolveFieldReference(sectionTipo, input.field);
-	await assertWritePermission(principal, sectionTipo, fieldTipo);
-	await assertRecordInScope(principal, sectionTipo, sectionId);
+	// THE WRITE DOOR (closure Step 3): the section floor, the dd128-aware pair,
+	// the record scope — the raw section-less getPermissions this door used to
+	// read never saw the own-record rule. The id is an INTEGER, never floored.
+	const { authorizeRecordAccess } = await import('../../../core/security/write_door.ts');
+	const { sectionId } = await authorizeRecordAccess(
+		principal,
+		{ section_tipo: sectionTipo, component_tipo: fieldTipo, section_id: input.section_id },
+		{ mode: 'write', level: 2, sectionFloor: 1, door: 'mcp.upload_media' },
+	);
 
 	const { bytes, fileName } = await loadMediaSource(input.source);
 

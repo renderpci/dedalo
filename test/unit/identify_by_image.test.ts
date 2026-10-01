@@ -162,6 +162,9 @@ function fakeDeps(overrides: Partial<IdentifyByImageDeps> = {}): IdentifyByImage
 		labelComponent: async () => 'test52',
 		readValues: async () => ({ kind: 'text', values: ['A bronze coin'] }),
 		loadProfile: async () => null,
+		requireToolGrant: async () => {},
+		// The budget is ai_spend_budget_native's subject; here every vision call is admitted.
+		chargeVision: async () => {},
 		...overrides,
 	};
 }

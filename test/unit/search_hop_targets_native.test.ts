@@ -145,6 +145,8 @@ function scopeFor(principal: Principal | undefined, granted: [string, string][])
 		...(principal === undefined ? {} : { principal }),
 		surface: 'search',
 		door: 'search.path',
+		// none → firstHopSources falls back to the declared first step
+		mainSectionTipos: [],
 		componentGrant: async (_principal, sectionTipo, componentTipo) =>
 			granted.some(([s, c]) => s === sectionTipo && c === componentTipo) ? 2 : 0,
 		recordPredicate: async () => '',
@@ -240,7 +242,7 @@ describe.if(DB_READY)('search hop: configured targets the caller may read', () =
 				[REAL, TEXT],
 				[VIRT, TEXT],
 			]),
-			mainSections: [REAL, VIRT],
+			mainSectionTipos: [REAL, VIRT],
 		};
 		const chain = await buildJoinChain(
 			[

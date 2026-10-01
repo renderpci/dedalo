@@ -1,7 +1,8 @@
 /**
  * THE ENGINE'S ZIP WRITER — behavioural gate for src/core/files/zip.ts
- * (`openZipStream` + the record encoders diffusion's `createZip`,
- * src/diffusion/writers/files.ts, shares through `buildStoreZip`).
+ * (`openZipStream` + the record encoders; diffusion's `createZip`,
+ * src/diffusion/writers/files.ts, drives its STORE-from-disk door
+ * `addStoredFile` — PERF-2/DIFF-4).
  *
  * What is asserted is OUTCOMES read back by an INDEPENDENT strict reader
  * (test/helpers/zip_xml_reader.ts — central directory, ZIP64 end/locator,
@@ -15,13 +16,23 @@
  *     offsets, entry count, end record) driven with injected small limits;
  *  D. names: UTF-8 flag only when non-ASCII, uniqueness (case-insensitive,
  *     refuse / rename), unsafe names refused;
- *  E. misuse: two open entries, writes after finish — refused loudly.
+ *  E. misuse: two open entries, writes after finish — refused loudly;
+ *  F. STORE from disk: bytes == the frozen writer, a source unstable between
+ *     its two passes refused, duplicates / zero entries refused leaving nothing.
  *
  * Scratch files live in a temp dir this file creates and sweeps.
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { crc32 } from 'node:zlib';
@@ -449,5 +460,124 @@ describe('E. misuse is loud', () => {
 		aborted.abort();
 		await expectDedalo(() => open.write('more'), 'internal.invariant');
 		await expectDedalo(() => aborted.finish(), 'internal.invariant');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// F. STORE FROM DISK (PERF-2/DIFF-4) — createZip streams each file twice (CRC +
+// size, then bytes) instead of holding every entry in memory, and the archive
+// bytes stay the frozen writer's. Duplicates and empty archives are refused
+// loudly, leaving nothing behind.
+
+type StoredSource = (
+	name: string,
+	open: () => AsyncIterable<Uint8Array>,
+	options?: { onChunk?: () => void | Promise<void> },
+) => Promise<unknown>;
+
+describe('F. createZip stores from disk with unchanged bytes; refusals leave nothing', () => {
+	test('zero-length, multi-chunk (> the 64 KiB stream chunk) and non-ASCII entries: bytes == frozen writer', async () => {
+		const dir = scratch();
+		const files: Record<string, Uint8Array> = {
+			'zero.bin': new Uint8Array(0),
+			'multi_chunk.bin': noise(3 * 1024 * 1024 + 17, 11),
+			'after.txt': new TextEncoder().encode('tail'),
+		};
+		for (const [name, data] of Object.entries(files)) writeFileSync(join(dir, name), data);
+		await createZip(
+			Object.keys(files).map((name) => join(dir, name)),
+			join(dir, 'out.zip'),
+		);
+		const built = new Uint8Array(readFileSync(join(dir, 'out.zip')));
+		expect(Buffer.from(built).equals(Buffer.from(legacyStoreZip(files)))).toBe(true);
+		const read = readZip(built);
+		expect(read.entries.map((e) => e.name)).toEqual(Object.keys(files));
+	});
+
+	test('the kernel door: a source whose bytes CHANGE between the two passes is refused (typed), never archived', async () => {
+		const addStoredSource = (openZipStream(memorySink()) as unknown as Record<string, unknown>)
+			.addStoredSource;
+		expect(typeof addStoredSource, 'the zip kernel has no STORE-from-source door').toBe('function');
+		const sink = memorySink();
+		const zip = openZipStream(sink) as unknown as { addStoredSource: StoredSource; abort(): void };
+		let pass = 0;
+		const shifting = async function* (): AsyncIterable<Uint8Array> {
+			pass++;
+			yield new TextEncoder().encode(pass === 1 ? 'first pass bytes' : 'SECOND pass bytes!');
+		};
+		await expectDedalo(() => zip.addStoredSource('shifting.txt', shifting), 'internal.invariant');
+		zip.abort();
+	});
+
+	test('the kernel door: a source REWRITTEN IN PLACE at the same size between its passes is refused (the CRC, not the length)', async () => {
+		// Same length, different bytes: only the pass-2 CRC comparison can see it —
+		// archived, the header CRC would not match the entry's bytes (a corrupt zip).
+		const sink = memorySink();
+		const zip = openZipStream(sink) as unknown as {
+			addStoredSource: StoredSource;
+			readonly writable: boolean;
+		};
+		let pass = 0;
+		const rewritten = async function* (): AsyncIterable<Uint8Array> {
+			pass++;
+			yield new TextEncoder().encode(pass === 1 ? 'aaaa' : 'bbbb');
+		};
+		await expectDedalo(() => zip.addStoredSource('rewritten.txt', rewritten), 'internal.invariant');
+		expect(pass).toBe(2);
+		// No entry recorded: the archive is abandoned, never finished with it.
+		expect(zip.writable).toBe(false);
+	});
+
+	test('the kernel door: a source missing in pass 1 does not claim its name', async () => {
+		const sink = memorySink();
+		const zip = openZipStream(sink) as unknown as {
+			addStoredSource?: StoredSource;
+			finish(): Promise<unknown>;
+		};
+		expect(typeof zip.addStoredSource).toBe('function');
+		const missing = async function* (): AsyncIterable<Uint8Array> {
+			yield* [];
+			throw Object.assign(new Error('ENOENT: gone'), { code: 'ENOENT' });
+		};
+		let failed = false;
+		try {
+			await zip.addStoredSource?.('a.txt', missing);
+		} catch {
+			failed = true;
+		}
+		expect(failed).toBe(true);
+		const present = async function* (): AsyncIterable<Uint8Array> {
+			yield new TextEncoder().encode('present');
+		};
+		await zip.addStoredSource?.('a.txt', present);
+		await zip.finish();
+		expect(readZip(sink.result()).entries.map((e) => e.name)).toEqual(['a.txt']);
+	});
+
+	test('createZip REFUSES duplicate entry names (case-insensitive) — never a silently dropped or shadowed entry; nothing is left', async () => {
+		for (const [first, second] of [
+			['one/Same.txt', 'two/same.txt'],
+			['one/exact.txt', 'two/exact.txt'],
+		] as const) {
+			const dir = scratch();
+			for (const path of [first, second]) {
+				mkdirSync(join(dir, path, '..'), { recursive: true });
+				writeFileSync(join(dir, path), path);
+			}
+			const out = join(dir, 'out.zip');
+			await expectDedalo(
+				() => createZip([join(dir, first), join(dir, second)], out),
+				'internal.invariant',
+			);
+			expect(existsSync(out), `an archive was published for ${first} + ${second}`).toBe(false);
+			expect(readdirSync(dir).filter((name) => name.includes('.tmp-'))).toEqual([]);
+		}
+	});
+
+	test('createZip over zero valid entries is the TYPED internal.invariant and leaves nothing', async () => {
+		const dir = scratch();
+		const out = join(dir, 'out.zip');
+		await expectDedalo(() => createZip([join(dir, 'missing.txt')], out), 'internal.invariant');
+		expect(readdirSync(dir)).toEqual([]);
 	});
 });

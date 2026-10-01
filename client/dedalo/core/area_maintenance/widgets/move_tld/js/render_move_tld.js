@@ -6,6 +6,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {update_process_status} from '../../../../common/js/common.js'
+	import {init_move_transform_form} from '../../../js/move_transform.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 
 	// hljs
@@ -87,10 +88,11 @@ render_move_tld.prototype.list = async function(options) {
 *   includes a collapsible syntax-highlighted preview of its JSON content.
 * - Maintains the `files_selected` array in closure scope; checkboxes push to
 *   or splice from it on change.
-* - Wires the submit form (via `self.caller.init_form`) so that clicking
-*   "Move TLD terms" fires `self.exec_move_tld(files_selected)` and then
-*   subscribes the `body_response` node to the returned background-process
-*   SSE stream via `update_process_status`.
+* - Wires the shared move_* run flow (`init_move_transform_form`,
+*   core/area_maintenance/js/move_transform.js): the submit runs the PREVIEW
+*   (dry run) job of the checked files and streams it into `body_response`; a
+*   preview that ends clean reveals the Execute control, which runs exactly the
+*   previewed files (dry_run:false) as a job after an explicit confirm.
 * - On every render, also checks IndexedDB for a previously running process
 *   (key `'process_move_tld'`) so that a page reload re-attaches to an
 *   in-flight operation.
@@ -251,41 +253,17 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// form init
-		// Wire the submit form provided by the parent caller (area_maintenance
-		// widget chrome). `init_form` is optional — it may not exist when
-		// render_level === 'content' or when the caller is not a full widget.
-		if (self.caller?.init_form) {
-			self.caller.init_form({
-				submit_label	: 'Move TLD terms',
-				// confirm_text	: confirm_text,
-				body_info		: content_data,
-				body_response	: body_response,
-				on_submit	: (e, values) => {
-
-					// Guard: at least one file must be checked before submitting.
-					// (!) Uses alert() for validation feedback — a browser-native
-					//     modal that blocks the thread. This is intentional for
-					//     this maintenance tool context.
-					if (!files_selected.length) {
-						alert("Error: no files are selected");
-						return
-					}
-
-					// move_tld
-					// Fire the long-running background process and then attach
-					// body_response to its SSE stream for live progress display.
-					self.exec_move_tld(files_selected)
-					.then(function(response){
-						update_process_status(
-							local_db_id,
-							response.pid,
-							response.pfile,
-							body_response
-						)
-					})
-				}
-			})
-		}
+		// PREVIEW (dry run) first, then EXECUTE exactly the previewed selection —
+		// the one run flow of the five move_* widgets (move_transform.js). Both runs
+		// are server jobs answering {pid, pfile}; their streams render in body_response.
+		init_move_transform_form(self, {
+			model			: 'move_tld',
+			submit_label	: 'Move TLD terms',
+			files_selected	: files_selected,
+			content_data	: content_data,
+			body_response	: body_response,
+			local_db_id		: local_db_id
+		})
 
 		// check process status always
 		// On every render (including page reloads) check IndexedDB for a

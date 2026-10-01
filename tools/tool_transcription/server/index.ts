@@ -13,17 +13,36 @@
  *     background poll (PHP exec_background_check_transcription) that writes the
  *     transcript back on completion.
  *   check_server_transcriber_status: the CLIENT's non-destructive poll of a
- *     running job (delete_result=false).
+ *     running job (delete_result=false) — of ITS OWN job only: the `pid` it
+ *     accepts is the sealed poll handle automatic_transcription issued
+ *     (poll_handle.ts), bound to the submitting user and the media record, and
+ *     it answers the job's STATUS, never its transcript.
  *
  * VTT builder:
  *   build_subtitles_file: build a WEBVTT file from the transcription text and
  *     write it under the AV subtitles folder (dir must already exist — PHP).
  *
- * PERMISSION: PHP gates imperatively inside each method against the NESTED
- * `media_ddo`/top-level locator (write level 2 — or READ level 1 for the status
- * poll — plus record-in-scope), not a top-level target. So apiActions uses
- * `permission: null` and each handler runs the exact same gate via
- * assertActionPermission on the lifted locator.
+ * PERMISSION (closure Step 3, TOOLS-3; WC-2026-09-30-transcription-record-tipo):
+ * the target of every record action is a NESTED ddo (`media_ddo`,
+ * `transcription_ddo`) or a top-level (section, component, record) triple, so
+ * apiActions uses `permission: null` and each handler runs `gateRecord` — the
+ * WRITE DOOR (`security/write_door.authorizeRecordAccess`) on the LIFTED ddo:
+ * grammar, the section floor, the (section, COMPONENT) pair, the record scope.
+ * Every gate is UNCONDITIONAL and runs BEFORE validation, any config lookup,
+ * any ASR call and any file; a ddo without its component_tipo is refused
+ * (`request.invalid`), never read as a section-only target. Effects are built
+  * from the returned GRANT. The background completion poll re-runs the write
+ * door immediately before it saves (a grant revoked after the enqueue writes
+ * nothing).
+ *
+ * ONE LEVEL PER RELATION, ON EVERY PATH. The AV is only ever a SOURCE here: the
+ * throwaway speech WAV (browser ASR, local engine), the `audio` quality (remote
+ * ASR) and the duration a VTT is cut to are all DERIVED from it, never a change
+ * to it — so every path asks READ (1) on the AV, and WRITE (2) only on what the
+ * action really authors: the transcript (text_area). A transcriber who may hear
+ * the recording and write its transcript gets the same answer from every engine;
+ * a profile at 0 on the AV gets none of them.
+
  *
  * BACKGROUND: check_background_transcriber_status is in backgroundRunnable but
  * deliberately NOT in apiActions — it is unroutable from the client and only
@@ -66,7 +85,7 @@ import {
 } from '../../../src/core/ai/model_store.ts';
 import type { MediaTypeSpec } from '../../../src/core/concepts/media.ts';
 import { readMatrixRecord } from '../../../src/core/db/matrix.ts';
-import { DedaloError, LEGACY_TOKEN_MAP, ok } from '../../../src/core/errors/index.ts';
+import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import { probeFormat } from '../../../src/core/media/engine/ffmpeg.ts';
 import { mediaJobs } from '../../../src/core/media/jobs.ts';
 import {
@@ -91,6 +110,8 @@ import {
 } from '../../../src/core/ontology/resolver.ts';
 import { filterItemsByLang, readComponentItems } from '../../../src/core/resolve/component_data.ts';
 import { getAlpha2FromCode } from '../../../src/core/resolve/lang_names.ts';
+import { resolveLivePrincipal } from '../../../src/core/security/live_principal.ts';
+import { authorizeRecordAccess, type RecordGrant } from '../../../src/core/security/write_door.ts';
 import { scheduleBackground } from '../../../src/core/tools/background.ts';
 import { getToolConfig } from '../../../src/core/tools/config.ts';
 import { getLoadedTool } from '../../../src/core/tools/loader.ts';
@@ -100,7 +121,6 @@ import {
 	type ToolServerModule,
 	toolRequestId,
 } from '../../../src/core/tools/module.ts';
-import { assertActionPermission } from '../../../src/core/tools/security.ts';
 import {
 	LOCAL_ASR_ENGINE,
 	mapTranscriberEngine,
@@ -108,8 +128,11 @@ import {
 	resolveTranscriberConfig,
 	resolveTranscriberProvider,
 	resolveTranscriberStatusProvider,
+	saveTranscriptionResult,
 	statusPollNeedsExternalAudioUrl,
+	type TranscriberStatusProvider,
 } from '../../../src/core/tools/transcription_asr.ts';
+import { bindingMatches, issuePollHandle, readPollHandle } from './poll_handle.ts';
 
 export interface MediaDdo {
 	component_tipo?: unknown;
@@ -119,30 +142,6 @@ export interface MediaDdo {
 
 /** The background poll action name (PHP babel_transcriber BACKGROUND_RUNNABLE). */
 const BACKGROUND_POLL_ACTION = 'check_background_transcriber_status';
-
-/**
- * The unreachable handler a synthetic ToolActionSpec needs when a gate is run
- * imperatively (assertActionPermission takes a whole spec). It is never called;
- * calling it is an engine invariant break, so it throws.
- */
-async function unreachableHandler(): Promise<ToolResponse> {
-	throw new DedaloError('internal.unexpected', {
-		message: 'tool_transcription: the synthetic permission-gate handler was invoked',
-	});
-}
-
-/**
- * A gate refusal from `assertActionPermission`, as the registered code the
- * dispatch chokepoint converts. security.ts still answers with a legacy token
- * (its own sweep is separate), so the token is mapped here exactly as
- * src/core/tools/dispatch.ts maps it.
- */
-function permissionRefusal(check: { msg: string; errors: string[] }, action: string): DedaloError {
-	return new DedaloError(LEGACY_TOKEN_MAP[check.errors[0] ?? ''] ?? 'perm.denied', {
-		coordinates: { tool: 'tool_transcription', action },
-		message: check.msg,
-	});
-}
 
 /** PHP empty() for required-parameter checks. */
 function phpEmpty(value: unknown): boolean {
@@ -166,19 +165,66 @@ function readMediaDdo(options: Record<string, unknown>): MediaDdo {
 	};
 }
 
-/** PHP in-method gate: level `minLevel` on the ddo section + record-in-scope. */
-async function gateRecord(ddo: MediaDdo, ctx: ToolActionContext, minLevel: number): Promise<void> {
-	const check = await assertActionPermission(
-		{ permission: 'record', minLevel, handler: unreachableHandler },
-		{ section_tipo: ddo.section_tipo, section_id: ddo.section_id },
-		ctx.principal,
-	);
-	if (!check.ok) throw permissionRefusal(check, `record gate (level ${minLevel})`);
+/** Read the nested transcription_ddo locator (the WRITE target of automatic_transcription). */
+function readTranscriptionDdo(options: Record<string, unknown>): MediaDdo {
+	const raw = (options.transcription_ddo ?? {}) as MediaDdo;
+	return {
+		component_tipo: raw.component_tipo,
+		section_id: raw.section_id,
+		section_tipo: raw.section_tipo,
+	};
 }
 
-/** PHP in-method gate: WRITE level 2 on the media_ddo section + record-in-scope. */
-async function gateRecordWrite(ddo: MediaDdo, ctx: ToolActionContext): Promise<void> {
-	await gateRecord(ddo, ctx, 2);
+/**
+ * THE RECORD GATE of every record action — the write door on the LIFTED ddo
+ * (closure Step 3, TOOLS-3). `mode` is the ACTION's relation to that record:
+ * 'write' (level 2) for what it authors (the transcript), 'read' (level 1)
+ * for a source it only reads or derives throwaway files from (the AV). The section floor is 1; the (section, COMPONENT)
+ * pair is asked — the component_tipo is REQUIRED (an absent one would collapse
+ * the pair to the section, which is the hole this gate closes); the record
+ * scope is asked with the non-positive-id refusal ahead of the admin bypass.
+ * THROWS the write door's code; returns the grant the effect is built from.
+ */
+async function gateRecord(
+	ddo: MediaDdo,
+	ctx: ToolActionContext,
+	mode: 'read' | 'write',
+	door: string,
+	/** The section half's floor: 1, except the shared WAV's create / delete (2 — see their handlers). */
+	sectionFloor: 1 | 2 = 1,
+): Promise<RecordGrant> {
+	if (
+		ddo.component_tipo === undefined ||
+		ddo.component_tipo === null ||
+		ddo.component_tipo === ''
+	) {
+		throw new DedaloError('request.invalid', {
+			message: `${door}: the ddo names no component_tipo`,
+			coordinates: { door, key: 'component_tipo' },
+		});
+	}
+	return authorizeRecordAccess(
+		ctx.principal,
+		{
+			section_tipo: ddo.section_tipo,
+			component_tipo: ddo.component_tipo,
+			section_id: ddo.section_id,
+		},
+		{ mode, level: mode === 'write' ? 2 : 1, sectionFloor, door },
+	);
+}
+
+/** The media-tool option shape of a grant (the effect addresses what was authorized). */
+function grantTarget(grant: RecordGrant): {
+	component_tipo: string;
+	section_tipo: string;
+	section_id: number;
+} {
+	return {
+		component_tipo: grant.componentTipo,
+		section_tipo: grant.sectionTipo,
+		section_id: grant.sectionId,
+	};
 }
 
 /**
@@ -259,8 +305,12 @@ export function statusPollAvUrl(engine: string, audioRelativePath: string): stri
  * function, so the gate cannot drift onto a copy the wire never reaches).
  */
 export interface StatusPollSeams {
-	/** PHP's in-method READ gate (level 1) on the media_ddo record. */
-	readonly gate?: (ddo: MediaDdo, ctx: ToolActionContext) => Promise<void>;
+	/**
+	 * The in-method READ gate (level 1) on the media_ddo record — the write door's
+	 * read mode. Returns the GRANT: the poll handle is matched against it and the
+	 * media context is built from it.
+	 */
+	readonly gate?: (ddo: MediaDdo, ctx: ToolActionContext) => Promise<PollGrant>;
 	/** The transcriber's uri/key entry for this engine, or null when unconfigured. */
 	readonly transcriberConfig?: (engine: string) => Promise<{ uri: string; key: string } | null>;
 	/** Media spec/identity/path options for the polled component_av record. */
@@ -268,6 +318,9 @@ export interface StatusPollSeams {
 	/** Engine → status provider routing. */
 	readonly statusProvider?: typeof resolveTranscriberStatusProvider;
 }
+
+/** The part of a RecordGrant the status poll binds and builds from. */
+export type PollGrant = Pick<RecordGrant, 'sectionTipo' | 'componentTipo' | 'sectionId'>;
 
 /** Config entry by the ORIGINAL engine name (PHP $transcriber_name). */
 async function defaultTranscriberConfig(
@@ -277,27 +330,43 @@ async function defaultTranscriberConfig(
 }
 
 async function createTranscribableAudioFile(ctx: ToolActionContext): Promise<ToolResponse> {
-	const ddo = readMediaDdo(ctx.options);
-	await gateRecordWrite(ddo, ctx);
+	// READ on the AV: the WAV is a derivative of the recording (the same WAV the
+	// local engine of automatic_transcription builds behind the same read gate).
+	// The SECTION at WRITE (2), HEAD's level — the same as its delete (see there):
+	// whoever may build the shared WAV may remove it, so a build never leaves a
+	// copy of the interview its builder cannot delete.
+	const grant = await gateRecord(
+		readMediaDdo(ctx.options),
+		ctx,
+		'read',
+		'tool_transcription.create_transcribable_audio_file',
+		2,
+	);
 
-	const { spec, identity, pathOpts } = await resolveMediaToolContext({
-		component_tipo: ddo.component_tipo,
-		section_tipo: ddo.section_tipo,
-		section_id: ddo.section_id,
-	});
+	const { spec, identity, pathOpts } = await resolveMediaToolContext(grantTarget(grant));
 	const relativePath = await ensureTranscribableAudio(spec, identity, pathOpts);
 	return ok(clientMediaUrl(relativePath), { requestId: toolRequestId(ctx) });
 }
 
 async function deleteTranscribableAudioFile(ctx: ToolActionContext): Promise<ToolResponse> {
-	const ddo = readMediaDdo(ctx.options);
-	await gateRecordWrite(ddo, ctx);
+	// READ on the AV (the WAV is a derivative, never the AV) — but the SECTION at
+	// WRITE (2), the level HEAD asked (TOOLS-3 review r8), like its creation.
+	// Deleting it is an effect on OTHER users: it is ONE file per record
+	// (transcribableAudioLocation), so an unlink breaks a concurrent user's
+	// browser-ASR fetch of it, or a local-engine submit that has built it but not
+	// yet read its bytes — a read-only viewer of the recording may not do that.
+	// Create and delete share the level, so no builder is left unable to remove
+	// the copy. (The race between two users who BOTH may delete is
+	// level-independent — WC-2026-09-30-transcription-record-tipo, owner review.)
+	const grant = await gateRecord(
+		readMediaDdo(ctx.options),
+		ctx,
+		'read',
+		'tool_transcription.delete_transcribable_audio_file',
+		2,
+	);
 
-	const { spec, identity, pathOpts } = await resolveMediaToolContext({
-		component_tipo: ddo.component_tipo,
-		section_tipo: ddo.section_tipo,
-		section_id: ddo.section_id,
-	});
+	const { spec, identity, pathOpts } = await resolveMediaToolContext(grantTarget(grant));
 	// `deleted` says whether a file was actually there — a FACT of the payload
 	// (the legacy body carried it only inside its `msg` prose).
 	const deleted = deleteTranscribableAudio(spec, identity, pathOpts);
@@ -313,32 +382,34 @@ async function deleteTranscribableAudioFile(ctx: ToolActionContext): Promise<Too
  */
 async function automaticTranscription(ctx: ToolActionContext): Promise<ToolResponse> {
 	const o = ctx.options;
-	const transcriptionDdo = (o.transcription_ddo ?? {}) as MediaDdo;
-	const mediaDdo = (o.media_ddo ?? {}) as MediaDdo;
+	// THE GATES FIRST (closure Step 3, TOOLS-3): unconditional, before any
+	// validation, config lookup or provider call. WRITE on the transcription
+	// target — its component_tipo REQUIRED (the write gate used to be section-only
+	// by construction) — then READ on the media SOURCE (TOOLS-06: without it a
+	// caller who can write their OWN transcription target could transcribe the
+	// restricted audio of ANY AV record into a record they control).
+	const transcriptionGrant = await gateRecord(
+		readTranscriptionDdo(o),
+		ctx,
+		'write',
+		'tool_transcription.automatic_transcription.transcription_ddo',
+	);
+	const mediaGrant = await gateRecord(
+		readMediaDdo(o),
+		ctx,
+		'read',
+		'tool_transcription.automatic_transcription.media_ddo',
+	);
+
 	const sourceLang = String(o.source_lang ?? '');
 	const engine = String(o.transcriber_engine ?? 'babel_transcriber');
 	const quality = String(o.transcriber_quality ?? '');
-	if (
-		sourceLang === '' ||
-		quality === '' ||
-		!mediaDdo.component_tipo ||
-		!transcriptionDdo.section_tipo
-	) {
+	if (sourceLang === '' || quality === '') {
 		throw new DedaloError('request.invalid_options', {
 			publicMessage:
 				'Missing required parameters: source_lang, transcriber_quality, media_ddo, transcription_ddo',
 		});
 	}
-
-	// WRITE gate on the transcription target (PHP assert_section_permission 2 + scope).
-	await gateRecordWrite(transcriptionDdo, ctx);
-
-	// TOOLS-06 (2026-07-28 audit): ALSO gate READ on the media SOURCE.
-	// Transcription reads the audio CONTENT of media_ddo — without this a
-	// caller who can write their OWN transcription target could transcribe the
-	// restricted audio of ANY AV record (one they cannot read) into a record
-	// they control. Read level 1 + record-in-scope on the source media record.
-	await gateRecord(mediaDdo, ctx, 1);
 
 	const { provider, error: providerError } = resolveTranscriberProvider(engine);
 	if (provider === null) {
@@ -358,11 +429,7 @@ async function automaticTranscription(ctx: ToolActionContext): Promise<ToolRespo
 	}
 	const mappedEngine = mapTranscriberEngine(engine);
 
-	const { spec, identity, pathOpts } = await resolveMediaToolContext({
-		component_tipo: mediaDdo.component_tipo,
-		section_tipo: mediaDdo.section_tipo,
-		section_id: mediaDdo.section_id,
-	});
+	const { spec, identity, pathOpts } = await resolveMediaToolContext(grantTarget(mediaGrant));
 
 	// Two ways to hand a recogniser the audio, and the choice is not cosmetic:
 	//  - an EXTERNAL service fetches a public URL (and so needs one to exist);
@@ -412,7 +479,7 @@ async function automaticTranscription(ctx: ToolActionContext): Promise<ToolRespo
 			{
 				permission: null,
 				gatedInHandler:
-					'UNGATED BY DESIGN — a BACKGROUND-ONLY spec: BACKGROUND_POLL_ACTION is absent from apiActions, so it is unroutable from the wire and can only be enqueued from here, after automaticTranscription has run its gateRecordWrite/gateRecord pair. Principal, user and target ddo are captured at enqueue time (isolation Rule 6), so the poll never re-derives authority.',
+					'A BACKGROUND-ONLY spec: BACKGROUND_POLL_ACTION is absent from apiActions, so it is unroutable from the wire and can only be enqueued from here, after automaticTranscription has run its gateRecord pair. User and target ddo are captured at enqueue time (isolation Rule 6); the SAVE re-runs the write door (authorizeRecordAccess on a freshly resolved principal) immediately before the transcript is written, so a grant revoked after the enqueue writes nothing.',
 				handler: backgroundTranscriberPoll,
 			},
 			{
@@ -427,11 +494,7 @@ async function automaticTranscription(ctx: ToolActionContext): Promise<ToolRespo
 				engine: mappedEngine,
 				user_id: ctx.userId,
 				entity_name: config.entity,
-				transcription_ddo: {
-					component_tipo: String(transcriptionDdo.component_tipo ?? ''),
-					section_tipo: String(transcriptionDdo.section_tipo ?? ''),
-					section_id: Number(transcriptionDdo.section_id ?? 0),
-				},
+				transcription_ddo: grantTarget(transcriptionGrant),
 				pid: result.pid,
 			},
 			ctx.principal,
@@ -443,39 +506,88 @@ async function automaticTranscription(ctx: ToolActionContext): Promise<ToolRespo
 		);
 	}
 
-	// WC-007: the legacy body's success msg is dropped — `ok` IS the success.
-	return ok({ pid: result.pid }, { requestId: toolRequestId(ctx) });
+	// THE CLIENT GETS A HANDLE, NOT THE JOB ID (TOOLS-3 review r7): the raw id
+	// stays server-side (the background poll above holds it); the sealed handle
+	// binds it to this user, this engine and the media GRANT, and is the only
+	// `pid` check_server_transcriber_status accepts. The client stores and echoes
+	// it unchanged. WC-007: the legacy body's success msg is dropped.
+	const pollHandle = issuePollHandle({
+		pid: result.pid,
+		engine,
+		userId: ctx.userId,
+		sectionTipo: mediaGrant.sectionTipo,
+		componentTipo: mediaGrant.componentTipo,
+		sectionId: mediaGrant.sectionId,
+	});
+	return ok({ pid: pollHandle }, { requestId: toolRequestId(ctx) });
+}
+
+/**
+ * The seams of the detached completion poll — each defaulting to production.
+ * A gate drives the REVOCATION leg through them (loopback ASR is SSRF-refused
+ * by design, so the status provider is injected, not served).
+ */
+export interface BackgroundPollSeams {
+	/** The status provider itself (production: routed from the job's engine). */
+	readonly statusProvider?: TranscriberStatusProvider;
+	/** Observes a transcript that WAS written (gates count it). */
+	readonly onSaved?: () => void;
+	readonly maxAttempts?: number;
+	readonly intervalMs?: number;
 }
 
 /**
  * The detached completion poll (PHP babel_transcriber::
  * check_background_transcriber_status). Runs under the background executor;
  * reads its whole world from the options captured at enqueue time.
+ *
+ * THE SAVE RE-GATES (closure Step 3, TOOLS-3). The poll runs for up to half an
+ * hour after the enqueue; the grant that admitted the enqueue may be revoked in
+ * between. So the save seam resolves the principal AFRESH and re-runs the write
+ * door on the transcription target immediately before the write — a refusal is
+ * the job's terminal state (nothing written), never a silent pass.
  */
-async function backgroundTranscriberPoll(ctx: ToolActionContext): Promise<ToolResponse> {
+export async function backgroundTranscriberPoll(
+	ctx: ToolActionContext,
+	seams: BackgroundPollSeams = {},
+): Promise<ToolResponse> {
 	const o = ctx.options;
 	const ddo = (o.transcription_ddo ?? {}) as MediaDdo;
 	const lang = String(o.lang ?? '');
 	const cleanupPath = String(o.cleanup_path ?? '');
-	const outcome = await pollTranscriptionCompletion({
-		status: {
-			uri: String(o.url ?? ''),
-			key: String(o.key ?? ''),
-			avUrl: String(o.av_url ?? ''),
-			engine: String(o.engine ?? ''),
-			userId: Number(o.user_id ?? ctx.userId),
-			entityName: String(o.entity_name ?? ''),
-			pid: (o.pid ?? '') as string | number,
+	const outcome = await pollTranscriptionCompletion(
+		{
+			status: {
+				uri: String(o.url ?? ''),
+				key: String(o.key ?? ''),
+				avUrl: String(o.av_url ?? ''),
+				engine: String(o.engine ?? ''),
+				userId: Number(o.user_id ?? ctx.userId),
+				entityName: String(o.entity_name ?? ''),
+				pid: (o.pid ?? '') as string | number,
+				lang,
+			},
 			lang,
+			transcriptionDdo: {
+				component_tipo: String(ddo.component_tipo ?? ''),
+				section_tipo: String(ddo.section_tipo ?? ''),
+				section_id: Number(ddo.section_id ?? 0),
+			},
+			userId: ctx.userId,
 		},
-		lang,
-		transcriptionDdo: {
-			component_tipo: String(ddo.component_tipo ?? ''),
-			section_tipo: String(ddo.section_tipo ?? ''),
-			section_id: Number(ddo.section_id ?? 0),
+		{
+			...(seams.statusProvider === undefined ? {} : { provider: seams.statusProvider }),
+			...(seams.maxAttempts === undefined ? {} : { maxAttempts: seams.maxAttempts }),
+			...(seams.intervalMs === undefined ? {} : { intervalMs: seams.intervalMs }),
+			save: async (input) => {
+				const refusal = await authorizeBackgroundSave(ctx.userId, input.transcriptionDdo);
+				if (refusal !== null) return { saved: false, msg: refusal };
+				const saved = await saveTranscriptionResult(input);
+				if (saved.saved) seams.onSaved?.();
+				return saved;
+			},
 		},
-		userId: ctx.userId,
-	});
+	);
 
 	// The job is over (saved, failed or given up on): drop the temporary audio.
 	// Unconditional on purpose — the one previous cleanup path ran on success
@@ -503,10 +615,55 @@ async function backgroundTranscriberPoll(ctx: ToolActionContext): Promise<ToolRe
 }
 
 /**
+ * The background save's re-gate: the write door on the transcription target,
+ * for the principal resolved NOW (not the one captured at enqueue) — and only
+ * for a LIVE account: a deactivated (dd131 = No) or deleted user writes nothing
+ * even while their profile still grants the pair (`resolveLivePrincipal`).
+ * Returns null when authorized, else the refusal sentence the job records — a
+ * typed refusal must not escape the poll, or the temporary-audio cleanup after
+ * it would be skipped.
+ */
+async function authorizeBackgroundSave(
+	userId: number,
+	target: { component_tipo: string; section_tipo: string; section_id: number },
+): Promise<string | null> {
+	try {
+		const principal = await resolveLivePrincipal(userId, 'tool_transcription.background_save');
+		await authorizeRecordAccess(principal, target, {
+			mode: 'write',
+			level: 2,
+			sectionFloor: 1,
+			door: 'tool_transcription.background_save',
+		});
+		return null;
+	} catch (error) {
+		if (!(error instanceof DedaloError)) throw error;
+		console.error(
+			`[tool_transcription] the background save was refused (${error.code}): ${error.message}`,
+		);
+		return `the transcript was not saved: ${error.code}`;
+	}
+}
+
+/**
  * check_server_transcriber_status — the CLIENT's poll of a running job (PHP
  * :669-788). READ gate (level 1) on media_ddo: polling reconstructs the audio
  * URL but writes nothing. delete_result=false — only the server-side
  * background poll may let babel clean up the finished result.
+ *
+ * ITS OWN JOB, AND ONLY ITS STATUS (TOOLS-3 review r7). `pid` must be the poll
+ * handle automatic_transcription issued (poll_handle.ts): sealed by this
+ * process, bound to THIS user and to the record of THIS poll's read grant. The
+ * job id and the engine polled are the HANDLE's — never the payload's (the
+ * client's `transcriber_engine` is not read). A handle that does not verify or
+ * does not match — a raw or guessed job id, another user's handle (a shared
+ * workstation's IndexedDB), a handle from before a restart — is answered with
+ * status 1, the protocol's "no process matching this pid": truthful for this
+ * caller, the same answer whether or not such a job exists (no oracle), and the
+ * answer that lets the client drop the stale handle instead of erroring on every
+ * reload. Nothing is looked up or polled for it. The answer carries the STATUS
+ * alone: the finished transcript is written server-side by the background save,
+ * and the client never needed it (it reads only `status`).
  *
  * `seams` defaults to the production collaborators; see StatusPollSeams for why
  * the gate that matters has to invoke THIS function.
@@ -515,26 +672,40 @@ export async function checkServerTranscriberStatus(
 	ctx: ToolActionContext,
 	seams: StatusPollSeams = {},
 ): Promise<ToolResponse> {
-	// PHP gates BEFORE validation, only when media_ddo->section_tipo is present.
+	// The READ gate, UNCONDITIONAL and BEFORE validation (closure Step 3,
+	// TOOLS-3): PHP gated only when media_ddo->section_tipo was present, so a
+	// payload without it reached the config lookup ungated — now it is a gate
+	// refusal (request.invalid), before any seam is touched.
 	const ddo = readMediaDdo(ctx.options);
-	if (!phpEmpty(ddo.section_tipo)) {
-		const gate = seams.gate ?? ((target, context) => gateRecord(target, context, 1));
-		await gate(ddo, ctx);
-	}
+	const gate =
+		seams.gate ??
+		((target: MediaDdo, context: ToolActionContext) =>
+			gateRecord(target, context, 'read', 'tool_transcription.check_server_transcriber_status'));
+	const grant = await gate(ddo, ctx);
 
 	const rawDdo = ctx.options.media_ddo ?? null;
-	const engine = String(ctx.options.transcriber_engine ?? '');
-	const pid = ctx.options.pid;
+	const handle = ctx.options.pid;
 
 	const missing: string[] = [];
 	if (rawDdo === null) missing.push('media_ddo');
-	if (phpEmpty(engine)) missing.push('transcriber_engine');
-	if (phpEmpty(pid)) missing.push('pid');
+	if (phpEmpty(handle)) missing.push('pid');
 	if (missing.length > 0) {
 		throw new DedaloError('request.invalid_options', {
 			publicMessage: `Missing required parameters: ${missing.join(', ')}`,
 		});
 	}
+
+	// THE JOB IS THE HANDLE'S, AND THE HANDLE IS THIS CALLER'S ON THIS RECORD.
+	const binding = readPollHandle(handle);
+	if (binding === null || !bindingMatches(binding, ctx.userId, grant)) {
+		if (binding !== null) {
+			console.warn(
+				`[tool_transcription] a poll handle of user ${binding.userId} on ${binding.sectionTipo}/${binding.componentTipo}/${binding.sectionId} was presented by user ${ctx.userId} on ${grant.sectionTipo}/${grant.componentTipo}/${grant.sectionId} — answered as no job`,
+			);
+		}
+		return ok({ status: 1 }, { requestId: toolRequestId(ctx) });
+	}
+	const engine = binding.engine;
 
 	const cfg = await (seams.transcriberConfig ?? defaultTranscriberConfig)(engine);
 	if (cfg === null) {
@@ -560,14 +731,14 @@ export async function checkServerTranscriberStatus(
 	// on-premise engine was submitted no URL at all (audioUrl '') and must be
 	// polled with none: see statusPollAvUrl.
 	const { spec, identity, pathOpts } = await (seams.mediaContext ?? resolveMediaToolContext)({
-		component_tipo: ddo.component_tipo,
-		section_tipo: ddo.section_tipo,
-		section_id: ddo.section_id,
+		component_tipo: grant.componentTipo,
+		section_tipo: grant.sectionTipo,
+		section_id: grant.sectionId,
 	});
 	if (spec.model !== 'component_av') {
 		throw new DedaloError('tool.unsupported_target', {
-			publicMessage: `'${String(ddo.component_tipo)}' is not component_av`,
-			coordinates: { tipo: String(ddo.component_tipo ?? ''), model: spec.model },
+			publicMessage: `'${grant.componentTipo}' is not component_av`,
+			coordinates: { tipo: grant.componentTipo, model: spec.model },
 		});
 	}
 	// PURE path build (PHP: $component->get_url('audio')) — a READ-gated poll
@@ -588,7 +759,7 @@ export async function checkServerTranscriberStatus(
 		engine: mapTranscriberEngine(engine),
 		userId: ctx.userId,
 		entityName: config.entity,
-		pid: pid as string | number,
+		pid: binding.pid,
 		deleteResult: false,
 	});
 
@@ -623,8 +794,14 @@ export async function checkServerTranscriberStatus(
 		});
 	}
 
-	// WC-007: the legacy body's success msg is dropped — `ok` IS the success.
-	return ok(result, { requestId: toolRequestId(ctx) });
+	// THE STATUS ONLY (see the header): a finished job's `transcription_data` —
+	// the whole transcript — never rides the client poll. WC-007: the legacy
+	// body's success msg is dropped — `ok` IS the success.
+	const { status, msg } = result as { status?: unknown; msg?: unknown };
+	return ok(
+		{ status: status ?? null, ...(typeof msg === 'string' ? { msg } : {}) },
+		{ requestId: toolRequestId(ctx) },
+	);
 }
 
 /**
@@ -691,37 +868,44 @@ async function resolveAvDuration(
  */
 async function buildSubtitlesFile(ctx: ToolActionContext): Promise<ToolResponse> {
 	const o = ctx.options;
-	const sectionTipo = String(o.section_tipo ?? '');
-	const componentTipo = String(o.component_tipo ?? '');
-	const sectionId = Number(o.section_id ?? 0);
 
-	// PHP SEC-024 gate (before validation, when both tipos are present):
-	// assert_tipo_permission(section, component, 2) + record-in-scope.
-	if (!phpEmpty(o.section_tipo) && !phpEmpty(o.component_tipo)) {
-		const tipoGate = await assertActionPermission(
-			{ permission: 'tipo', minLevel: 2, handler: unreachableHandler },
-			{ section_tipo: sectionTipo, tipo: componentTipo },
-			ctx.principal,
-		);
-		if (!tipoGate.ok) throw permissionRefusal(tipoGate, 'build_subtitles_file (tipo)');
-		if (!phpEmpty(o.section_id)) {
-			const scopeGate = await assertActionPermission(
-				{ permission: 'record', minLevel: 2, handler: unreachableHandler },
-				{ section_tipo: sectionTipo, section_id: sectionId },
-				ctx.principal,
-			);
-			if (!scopeGate.ok) throw permissionRefusal(scopeGate, 'build_subtitles_file (record)');
-		}
+	// THE GATES FIRST, UNCONDITIONAL (closure Step 3, TOOLS-3): WRITE on the
+	// transcript's (section, text_area, record) — a missing tipo or id is a gate
+	// refusal, not a validation list; the VTT is the transcript's own derivative —
+	// then READ on the RELATED AV, whose duration this reads and beside which the
+	// VTT is stored: a transcript-writer holding 0 on the AV gets nothing, one who
+	// may hear the recording gets what every other transcription path gives them.
+	const textGrant = await gateRecord(
+		{ section_tipo: o.section_tipo, component_tipo: o.component_tipo, section_id: o.section_id },
+		ctx,
+		'write',
+		'tool_transcription.build_subtitles_file',
+	);
+	const sectionTipo = textGrant.sectionTipo;
+	const componentTipo = textGrant.componentTipo;
+	const sectionId = textGrant.sectionId;
+
+	// Resolve the related AV component (the ontology 'related' pairing —
+	// PHP get_related_component_av_tipo).
+	const avTipo = await relatedTipoByModel(componentTipo, 'component_av');
+	if (avTipo === null) {
+		throw new DedaloError('tool.unsupported_target', {
+			publicMessage: `No component_av is related to '${componentTipo}'`,
+			coordinates: { tipo: componentTipo },
+		});
 	}
+	const avGrant = await gateRecord(
+		{ section_tipo: sectionTipo, component_tipo: avTipo, section_id: sectionId },
+		ctx,
+		'read',
+		'tool_transcription.build_subtitles_file.av',
+	);
 
 	const lang = String(o.lang ?? '');
 	const key = Number(o.key ?? 0); // fixed component dato key, default 0
 	const maxCharline = Number(o.max_charline ?? 0);
 
 	const missing: string[] = [];
-	if (phpEmpty(o.component_tipo)) missing.push('component_tipo');
-	if (phpEmpty(o.section_tipo)) missing.push('section_tipo');
-	if (phpEmpty(o.section_id)) missing.push('section_id');
 	if (phpEmpty(o.lang)) missing.push('lang');
 	if (phpEmpty(o.max_charline)) missing.push('max_charline');
 	if (missing.length > 0) {
@@ -748,27 +932,13 @@ async function buildSubtitlesFile(ctx: ToolActionContext): Promise<ToolResponse>
 		});
 	}
 
-	// Resolve the related AV component (the ontology 'related' pairing —
-	// PHP get_related_component_av_tipo).
-	const avTipo = await relatedTipoByModel(componentTipo, 'component_av');
-	if (avTipo === null) {
-		throw new DedaloError('tool.unsupported_target', {
-			publicMessage: `No component_av is related to '${componentTipo}'`,
-			coordinates: { tipo: componentTipo },
-		});
-	}
-
 	// AV duration → total_ms (PHP get_duration * 1000, rounded).
 	const {
 		spec: avSpec,
 		identity: avIdentity,
 		pathOpts: avPathOpts,
 		items: avItems,
-	} = await resolveMediaToolContext({
-		component_tipo: avTipo,
-		section_tipo: sectionTipo,
-		section_id: sectionId,
-	});
+	} = await resolveMediaToolContext(grantTarget(avGrant));
 	const duration = await resolveAvDuration(avSpec, avIdentity, avPathOpts, avItems);
 	const totalMs = Math.round(duration * 1000);
 
@@ -1642,8 +1812,9 @@ async function runModelRepair(
 export const tool: ToolServerModule = {
 	name: 'tool_transcription',
 	// `permission: null` throughout, because the target of every media action is a
-	// NESTED `media_ddo` (or a model name), not the top-level section_tipo/tipo the
-	// declarative gate reads. Each string below is the P2-8(a) census entry
+	// NESTED ddo (or a model name) or a (section, component, record) triple the
+	// declarative kinds cannot express on BOTH halves (build_subtitles_file gates
+	// the transcript AND its related AV). Each string below is the P2-8(a) census entry
 	// (test/unit/tool_permission_census_tripwire.test.ts) naming the in-handler gate.
 	apiActions: {
 		get_model_sources: {
@@ -1673,31 +1844,31 @@ export const tool: ToolServerModule = {
 		create_transcribable_audio_file: {
 			permission: null,
 			gatedInHandler:
-				'gateRecordWrite(ddo, ctx) — gateRecord(ddo, ctx, 2), i.e. assertActionPermission with the `record` kind on the LIFTED media_ddo (section write level + record-in-scope), before the WAV is built. It does NOT assert the (section, component) PAIR: the media component_tipo in the ddo is never consulted.',
+				'gateRecord(media_ddo, ctx, read, 2) — the WRITE DOOR (authorizeRecordAccess) in READ mode on the LIFTED media_ddo: the SECTION at WRITE (2 — the shared per-record WAV, the same level as its delete), the (section, component) pair at level 1 (component_tipo REQUIRED — the WAV is a derivative of the AV, the level every WAV-deriving path asks), the record scope — the first statement, before the WAV is built from the grant.',
 			handler: createTranscribableAudioFile,
 		},
 		delete_transcribable_audio_file: {
 			permission: null,
 			gatedInHandler:
-				'gateRecordWrite(ddo, ctx) — the same lifted `record` gate at level 2 (section write + record-in-scope, pair NOT asserted), before the throwaway WAV is unlinked.',
+				'gateRecord(media_ddo, ctx, read, 2) — the write door on the lifted media_ddo: the SECTION at WRITE (2 — the shared per-record WAV is unlinked for every user of the record, so a read-only viewer may not), the AV pair at READ (1), the scope — the first statement, before the WAV is unlinked.',
 			handler: deleteTranscribableAudioFile,
 		},
 		automatic_transcription: {
 			permission: null,
 			gatedInHandler:
-				'gateRecordWrite(transcriptionDdo, ctx) on the WRITE target plus gateRecord(mediaDdo, ctx, 1) on the media SOURCE (TOOLS-06) — both lifted `record` gates (section level + record-in-scope, pair NOT asserted), before anything is submitted to the ASR server.',
+				'gateRecord(transcription_ddo, ctx, write) on the WRITE target (component_tipo REQUIRED) plus gateRecord(media_ddo, ctx, read) on the media SOURCE (TOOLS-06) — both the write door (section floor, the pair, the scope), UNCONDITIONAL and before validation, the provider lookup and any ASR call. The background save re-runs the door (authorizeRecordAccess) before writing.',
 			handler: automaticTranscription,
 		},
 		check_server_transcriber_status: {
 			permission: null,
 			gatedInHandler:
-				'CONDITIONAL — gateRecord(ddo, ctx, 1), a lifted `record` READ gate (section level + record-in-scope), but only when media_ddo.section_tipo is present (PHP parity). A payload with no section_tipo in the ddo reaches the poll ungated; it then fails validation, which is not the same thing as being authorized.',
+				'gateRecord(media_ddo, ctx, read) — the write door in READ mode (section floor, the component read grant, the scope), UNCONDITIONAL and before validation: a ddo without section_tipo is a gate refusal, never an ungated poll.',
 			handler: checkServerTranscriberStatus,
 		},
 		build_subtitles_file: {
 			permission: null,
 			gatedInHandler:
-				'CONDITIONAL — assertActionPermission with `tipo` (level 2) and then `record` (level 2), but only when BOTH section_tipo and component_tipo are present in the options (PHP SEC-024 parity); section_id is scoped only when it too is present.',
+				'gateRecord(text_area, ctx, write) on (section_tipo, component_tipo, section_id) and then gateRecord(related AV, ctx, read) — the write door twice (write on the transcript it derives the VTT from, read on the AV source), UNCONDITIONAL, before the record is read and before the VTT is written into the AV media tree.',
 			handler: buildSubtitlesFile,
 		},
 	},

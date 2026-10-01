@@ -18,7 +18,7 @@
  */
 
 import { rm, readdir, stat } from 'node:fs/promises';
-import { applySharedModes, mkdirPrivate, mkdirShared } from '../util/shared_tree';
+import { applySharedModes, mkdirPrivate, mkdirSharedFresh } from '../util/shared_tree';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { confinedPath } from '../util/paths';
@@ -26,12 +26,15 @@ import { config } from '../config';
 import { isValidSlug } from '../util/slug';
 import { DOMAIN_PATTERN, type Surface } from '../provision/layout';
 import { ValidationError, ConflictError, LimitExceededError, NotFoundError } from '../errors';
+import { removeSiteDriver, writeSiteDriver } from './driver_record';
 import { manifestSchema, readManifest, writeManifest, type SiteManifest } from './manifest';
 import { scaffold, templateExists } from './template';
 import { writeAgentsFile } from '../context/agents_md';
 import { initRepo } from './git';
+import { assertConfinementAvailable, policyFromConfig, type ConfinementPolicy } from '../drivers/confinement';
 import { assertWebspace, declaredSurface, siteSurface, WebspaceError } from './webspace';
 import type { Actor } from '../security/auth';
+import { busyDetail, busyReason, end, tryBegin } from '../workspace_activity';
 
 export interface CreateSiteInput {
   slug: string;
@@ -94,7 +97,7 @@ async function siteOwningDomain(domain: string): Promise<string | null> {
  * failure past the mkdir rolls the whole directory back (see the catch), so a failed create
  * leaves nothing behind and is retryable with the same slug.
  */
-export async function createSite(input: CreateSiteInput): Promise<SiteManifest> {
+export async function createSite(input: CreateSiteInput, policy: ConfinementPolicy = policyFromConfig()): Promise<SiteManifest> {
   if (!isValidSlug(input.slug)) {
     throw new ValidationError(
       'slug must be 2–40 chars, lowercase letters/digits/hyphens, starting with a letter',
@@ -143,6 +146,39 @@ export async function createSite(input: CreateSiteInput): Promise<SiteManifest> 
   // names, proved to exist, to declare itself ours and to be writable.
   assertWebspace(input.slug, domain);
 
+  // THE SITE IS HELD FROM THE `tryBegin` BELOW UNTIL ITS REPOSITORY EXISTS (LEAD-1b), taken
+  // before the first write (not before the first await — the admission awaits come first):
+  // from `writeManifest` on the site EXISTS for every other door, and
+  // `initRepo` runs git — agent-authored text's interpreter — in its workspace. Unreserved,
+  // a turn or a build could start on the half-made site, and under per-site identities a
+  // confined run of this site is refused without a reservation at all.
+  //
+  // The reservation alone does NOT stop a second create of the same slug: the existence check
+  // above runs before two awaits, and a create whose awaits outlast another's WHOLE create
+  // finds the reservation free again. What stops it is inside the hold — the workspace
+  // directory is claimed exclusively (`createReservedSite`), so the one create that made it is
+  // the only one that writes into it or rolls it back.
+  //
+  // AND ITS FIRST GIT RUN MUST BE POSSIBLE — asked BEFORE the reservation and before anything
+  // is written, exactly as a turn and a build ask it: the host (floor, units, identities) and
+  // then THIS site (an identity? quarantined?). Unasked, a create in the window between
+  // `provision apply` (the site's webspace row is live) and the daemon's restart (its
+  // AGENT_IDENTITIES lacks the slug) scaffolded a whole workspace, failed at `git init`
+  // (identity_missing) and rolled it back: the refusal came, but after the write.
+  await assertConfinementAvailable('git', policy, undefined, input.slug);
+  if (!tryBegin(input.slug, 'init')) {
+    const reason = busyReason(input.slug) ?? 'site_initializing';
+    throw new ConflictError(busyDetail(reason, input.slug), reason);
+  }
+  try {
+    return await createReservedSite(input, domain, policy);
+  } finally {
+    end(input.slug, 'init');
+  }
+}
+
+/** The create itself, run while `createSite` holds the site's `init` reservation. */
+async function createReservedSite(input: CreateSiteInput, domain: string, policy: ConfinementPolicy): Promise<SiteManifest> {
   const existing = await listSlugs();
   if (existing.length >= config.MAX_SITES) {
     throw new LimitExceededError(`Site limit reached (${config.MAX_SITES})`, 'max_sites');
@@ -158,7 +194,26 @@ export async function createSite(input: CreateSiteInput): Promise<SiteManifest> 
   // this museum's group (drivers/confinement.ts), and a workspace created with the daemon's
   // own umask is a site the agent can read and never write — a turn that starts, is
   // authorized, and fails on its first Write.
-  await mkdirShared(config.SITES_ROOT, input.slug);
+  //
+  // CLAIMED, NOT ENSURED: this `mkdir(2)` is the create's ownership of the path. A directory
+  // already there is a site another create finished while this one waited in its admission
+  // (the reservation it held was released before this one took it), or what a site whose
+  // site.json is gone — or a create killed mid-scaffold — left behind. Neither is this
+  // request's: scaffolding over it rewrote a finished site's manifest, driver record and
+  // history, and this create's rollback below then `rm -rf`'d it. Refused, typed, before a
+  // byte is written — and so the rollback only ever removes a directory this call made.
+  if (!(await mkdirSharedFresh(config.SITES_ROOT, input.slug))) {
+    if (siteExists(input.slug)) {
+      throw new ConflictError(`A site named '${input.slug}' already exists`, 'slug_exists');
+    }
+    throw new ConflictError(
+      `Something already stands at the workspace path of '${input.slug}' and it is not a site ` +
+        `(it has no site.json): an interrupted create, or a site whose manifest was removed. ` +
+        `It was not touched. An operator must inspect and remove it before this slug can be ` +
+        `created.`,
+      'workspace_exists',
+    );
+  }
 
   try {
     await scaffold(input.slug, templateId);
@@ -174,11 +229,15 @@ export async function createSite(input: CreateSiteInput): Promise<SiteManifest> 
       build: {},
       published: null,
     });
+    // THE DRIVER, the daemon's own record, outside the workspace: site.json is the agent's to
+    // rewrite (driver_record.ts). BEFORE site.json — from `writeManifest` on the site exists,
+    // and a site that exists without a record is one whose sessions are refused.
+    await writeSiteDriver(input.slug, manifest.driver);
     await writeManifest(manifest);
     await writeAgentsFile(manifest);
     // The one exception in the tree: the daemon's own per-site state, 0700.
     await mkdirPrivate(config.SITES_ROOT, join(input.slug, '.builder'));
-    await initRepo(input.slug);
+    await initRepo(input.slug, policy);
     // LAST, over everything: `git init` and `cp` both create entries with modes of their
     // own, and the shared pair has to hold over the whole workspace, not only over what
     // this module wrote itself. (`.builder` is skipped — see shared_tree.ts.)
@@ -189,6 +248,7 @@ export async function createSite(input: CreateSiteInput): Promise<SiteManifest> 
     // Roll back a half-created workspace so a failed create is retryable with the same
     // slug rather than wedged behind a directory that has no valid manifest.
     await rm(dir, { recursive: true, force: true }).catch(() => {});
+    await removeSiteDriver(input.slug).catch(() => {});
     throw error;
   }
 }
@@ -230,11 +290,32 @@ export async function deleteSite(slug: string, purgeProd: boolean): Promise<Dele
   if (!siteExists(slug)) {
     throw new NotFoundError(`No site named '${slug}'`);
   }
+  // THE DELETE HOLDS THE SITE, like every other mutator of its working tree
+  // (workspace_activity.ts) — taken synchronously, before the first await, and held until the
+  // workspace, the driver record and the served surfaces are gone. Unheld, a DELETE that landed
+  // during a turn removed the workspace under it, and the turn's own session writes re-created
+  // `<slug>/.builder/sessions/`: a directory with no site.json and no repository, its commit
+  // owed forever (every boot retried it), and a slug no create could claim again
+  // (`workspace_exists`). Refused while anything runs; the caller stops the turn or waits.
+  if (!tryBegin(slug, 'delete')) {
+    const reason = busyReason(slug) ?? 'site_deleting';
+    throw new ConflictError(busyDetail(reason, slug), reason);
+  }
+  try {
+    return await deleteReservedSite(slug, purgeProd);
+  } finally {
+    end(slug, 'delete');
+  }
+}
+
+/** The delete itself, run while `deleteSite` holds the site's `delete` reservation. */
+async function deleteReservedSite(slug: string, purgeProd: boolean): Promise<DeleteSiteResult> {
   // Read BEFORE the workspace goes: the manifest is what names the site in the table. A
   // manifest too broken to read costs the served cleanup, not the delete.
   const manifest = await readManifest(slug).catch(() => null);
 
   await rm(workspaceDir(slug), { recursive: true, force: true });
+  await removeSiteDriver(slug);
 
   const surfaces: Surface[] = purgeProd ? ['preprod', 'prod'] : ['preprod'];
   const removed: Surface[] = [];

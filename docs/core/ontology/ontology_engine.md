@@ -24,7 +24,7 @@ cached functions rather than per-node objects:
 | --- | --- |
 | `src/core/ontology/resolver.ts` | Cached, read-only access to the fields the engines actually consume: `model`, `parent`, `translatable`, `properties`, `relations`, plus the derived `getMatrixTableFromTipo()` / `getComponentFilterTipo()` / `getRecursiveChildrenTipos()` lookups and the ordered subtree walkers. Keyed by `tipo`, module-level `Map` caches (no per-tipo object instance). |
 | `src/core/db/dd_ontology.ts` — `readDdOntologyRow()` | The full 13-column row (adds `tld`, `model_tipo`, `is_model`, `is_main`, `order_number`, `propiedades`) — **uncached**, used by the parser/write pipeline which needs the current on-disk state, not the process-wide cache. |
-| `src/core/db/dd_ontology.ts` — the rest | The multi-node/TLD helpers: `searchDdOntology()` (generic column-filter search), `getActiveTlds()`, `deleteTldNodes()`, and the backup-table protocol (`createBackupTable()` / `restoreFromBackupTable()` / `dropBackupTable()`). |
+| `src/core/db/dd_ontology.ts` — the rest | The multi-node/TLD helpers: `searchDdOntology()` (generic column-filter search), `getActiveTlds()`, `deleteTldNodes()`, and the identifier grammar (`ddOntologyIdentifierViolations()`, see [the identifier grammar](../system/db.md#the-identifier-grammar)). |
 | `src/core/ontology/labels.ts` | `labelByTipo(tipo, lang)` — the common UI-label entry point (app-lang first, then first non-empty), cached per `(lang, tipo)`. |
 | `src/core/ontology/alias.ts` | Alias resolution: a node may point at another node for its data (`resolveDataTipo()`, `resolveAliasTargetTipo()`, `getEffectivePropertiesByTipo()`). |
 
@@ -214,8 +214,8 @@ Grouped by concern, naming the real export and its module.
 
 | function | module | purpose |
 | --- | --- | --- |
-| `upsertDdOntologyNode(node)` | `db/dd_ontology.ts` | Whole-row `INSERT … ON CONFLICT (tipo) DO UPDATE` — an omitted/cleared field overwrites the existing column with its default, so a re-parse never leaves stale data. Callers build a full `DdOntologyNode` object literal and upsert it whole; there is no mutable node object to set fields on. |
-| `updateDdOntologyColumns(tipo, values)` | `db/dd_ontology.ts` | Partial `SET`, with an INSERT fallback on 0 matched rows (the `syncOrderToDdOntology()` sibling-reorder path relies on that fallback). |
+| `upsertDdOntologyNode(node)` | `db/dd_ontology.ts` | Whole-row `INSERT … ON CONFLICT (tipo) DO UPDATE` — an omitted/cleared field overwrites the existing column with its default, so a re-parse never leaves stale data. Callers build a full `DdOntologyNode` object literal and upsert it whole; there is no mutable node object to set fields on. A node whose identifiers break the grammar is refused (`ontology.invalid_node`) before any SQL. |
+| `updateDdOntologyColumns(tipo, values)` | `db/dd_ontology.ts` | Partial `SET` of an existing row (the `syncOrderToDdOntology()` sibling-reorder path). An absent tipo answers `false` and inserts nothing. The tipo and every identifier column given are checked against the grammar. |
 | `deleteDdOntologyNode(tipo)` | `db/dd_ontology.ts` | Delete one row by tipo. |
 
 ### Multi-node & TLD helpers
@@ -225,7 +225,7 @@ Grouped by concern, naming the real export and its module.
 | `searchDdOntology(filters, ...)` | `db/dd_ontology.ts` | A generic allowlisted column/operator search: "every tipo of this model", "every tipo of this model_tipo", and so on, as one parameterized primitive. |
 | `getActiveTlds()` | `db/dd_ontology.ts` | The installed-TLD list, module-cached. |
 | `deleteTldNodes(tld)` | `db/dd_ontology.ts` | Destructive: delete every `dd_ontology` row of a TLD (TLD-validated, refuses on a mismatch). |
-| `createBackupTable(tlds)` / `dropBackupTable()` / `restoreFromBackupTable(tlds)` | `db/dd_ontology.ts` | The legacy `dd_ontology_bk` snapshot/restore helpers. The retired `regenerateRecordsInDdOntology()` used them as its rollback; `rebuildOntology()` (`ontology_state.ts`) now uses a transaction instead. |
+| `dropBackupTable()` | `db/dd_ontology.ts` | Removes the legacy `dd_ontology_bk` table an upgraded installation may still hold. The snapshot/restore helpers are gone: `rebuildOntology()` (`ontology_state.ts`) is one transaction. |
 
 ## How it fits with the rest of Dédalo
 

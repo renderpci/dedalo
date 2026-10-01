@@ -20,8 +20,17 @@
  *      is `planCodeBuild`'s own verdict rather than a second opinion.
  */
 
-import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { afterAll, describe, expect, test } from 'bun:test';
+import {
+	chmodSync,
+	existsSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	utimesSync,
+	writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { projectRoot } from '../../src/config/env.ts';
 import { SUPERUSER_ID } from '../../src/core/security/permissions.ts';
@@ -49,6 +58,32 @@ const labels = JSON.parse(
 	readFileSync(join(projectRoot, 'src/core/labels/master.json'), 'utf8'),
 ) as Record<string, string>;
 
+/**
+ * The DATABASE backup dir the panel's `backup_fresh` line judges — a scratch dir
+ * holding one stub, never the installation's ../private/backups/db: asking the
+ * real dir would deep-read its newest archive and write a verification sidecar
+ * beside it (OPS-1 made every ask the full read).
+ */
+const PANEL_BACKUP_DIR = mkdtempSync(join(tmpdir(), 'dedalo_status_db_backups_'));
+{
+	// Not a custom-format archive: counted on every host (foreign-format
+	// degradation), aged past the in-progress window, and fresh. Named `db.backup`
+	// — under our own `.custom.backup` suffix the missing archive magic makes it
+	// `not_an_archive` (OPS-2 review).
+	const stubPath = join(PANEL_BACKUP_DIR, 'db.backup');
+	writeFileSync(stubPath, 'x');
+	const at = (Date.now() - 30 * 60_000) / 1000;
+	utimesSync(stubPath, at, at);
+}
+afterAll(() => {
+	rmSync(PANEL_BACKUP_DIR, { recursive: true, force: true });
+});
+
+/** The consumer panel, pinned to the scratch backup dir. */
+function panel(principal: never) {
+	return consumerStatus(principal, { backupDir: PANEL_BACKUP_DIR, waitMs: 60_000 });
+}
+
 function byId(checks: StatusCheck[], id: string): StatusCheck {
 	const found = checks.find((entry) => entry.id === id);
 	if (found === undefined)
@@ -57,8 +92,8 @@ function byId(checks: StatusCheck[], id: string): StatusCheck {
 }
 
 describe('consumer status', () => {
-	test('answers without throwing and states a verdict', () => {
-		const status = consumerStatus(superuser);
+	test('answers without throwing and states a verdict', async () => {
+		const status = await panel(superuser);
 		expect(typeof status.ready).toBe('boolean');
 		expect(status.checks.length).toBeGreaterThan(0);
 		expect(status.engine.version).toMatch(/^\d+\.\d+\.\d+$/);
@@ -74,77 +109,112 @@ describe('consumer status', () => {
 		expect(status.engine).toHaveProperty('install_digest');
 	});
 
-	test('every check uses the closed state vocabulary', () => {
-		for (const check of consumerStatus(superuser).checks) {
+	test('every check uses the closed state vocabulary', async () => {
+		for (const check of (await panel(superuser)).checks) {
 			expect(STATES.has(check.state)).toBe(true);
 			// A fact, never a sentence — the panel owns the wording.
 			if (check.detail !== undefined) expect(typeof check.detail).toBe('string');
 		}
 	});
 
-	test('every check id carries a label (never renders as a bare id)', () => {
-		const missing = consumerStatus(superuser)
-			.checks.map((check) => `update_code_check_${check.id}`)
+	test('every check id carries a label (never renders as a bare id)', async () => {
+		const missing = (await panel(superuser)).checks
+			.map((check) => `update_code_check_${check.id}`)
 			.filter((key) => labels[key] === undefined);
 		expect(missing, 'add these to src/core/labels/master.json').toEqual([]);
 	});
 
-	test('`ready` is exactly "no check is blocked"', () => {
-		const status = consumerStatus(superuser);
+	test('`ready` is exactly "no check is blocked"', async () => {
+		const status = await panel(superuser);
 		expect(status.ready).toBe(!status.checks.some((check) => check.state === 'blocked'));
 	});
 
-	test('the supervisor line agrees with the refusal it predicts', () => {
-		const check = byId(consumerStatus(superuser).checks, 'supervisor');
+	test('the supervisor line agrees with the refusal it predicts', async () => {
+		const check = byId((await panel(superuser)).checks, 'supervisor');
 		expect(check.state).toBe(isSupervised() ? 'ok' : 'blocked');
 	});
 
-	test('the channel line agrees with detectDeploymentChannel', () => {
-		const check = byId(consumerStatus(superuser).checks, 'channel');
+	test('the channel line agrees with detectDeploymentChannel', async () => {
+		const check = byId((await panel(superuser)).checks, 'channel');
 		const channel = detectDeploymentChannel(projectRoot);
 		expect(check.detail).toBe(channel);
 		expect(check.state).toBe(channel === 'image' ? 'blocked' : 'ok');
 	});
 
-	test('the backup-freshness line is WAIVABLE, never a hard block', () => {
+	test('the backup-freshness line is WAIVABLE, never a hard block', async () => {
 		// A code update refuses without a recent DATABASE backup — but that is the
 		// ONE gate the request can waive, and since 2026-08-25 the update_code
 		// modal offers the waiver. `blocked` here would headline "Update blocked"
 		// over a run the pipeline accepts: the panel/pipeline disagreement
 		// status.ts forbids. So it is `warn`, and it never forces `ready:false`.
-		const status = consumerStatus(superuser);
+		const status = await panel(superuser);
 		const check = byId(status.checks, 'backup_fresh');
 		expect(check.state).not.toBe('blocked');
-		const { hours, stale } = backupFreshness();
+		// SETTLED: the panel's bounded wait (60 s here) outlasts a scratch-dir scan,
+		// so it answers the pipeline's own verdict, not `verifying`.
+		const { hours, stale } = await backupFreshness(PANEL_BACKUP_DIR);
 		expect(check.state).toBe(hours !== null && !stale ? 'ok' : 'warn');
 		// the age FACT survives — the panel words it, the server measures it
 		expect(check.detail).toBe(hours === null ? 'none' : String(Math.round(hours)));
 	});
 
-	test('the backup-root line agrees with backupRootIsInsideTree', () => {
-		const status = consumerStatus(superuser);
+	test('the backup-root line agrees with backupRootIsInsideTree', async () => {
+		const status = await panel(superuser);
 		const check = byId(status.checks, 'backup_root_outside_tree');
 		const inside = backupRootIsInsideTree(status.tree.backup_root, projectRoot);
 		expect(check.state).toBe(inside ? 'blocked' : 'ok');
 	});
 
-	test('a non-superuser is blocked on identity, exactly as preconditions refuses', () => {
-		expect(byId(consumerStatus(mortal).checks, 'superuser').state).toBe('blocked');
-		expect(consumerStatus(mortal).ready).toBe(false);
+	test('a non-superuser is blocked on identity, exactly as preconditions refuses', async () => {
+		expect(byId((await panel(mortal)).checks, 'superuser').state).toBe('blocked');
+		expect((await panel(mortal)).ready).toBe(false);
 		// …and the superuser is not blocked for that reason.
-		expect(byId(consumerStatus(superuser).checks, 'superuser').state).toBe('ok');
+		expect(byId((await panel(superuser)).checks, 'superuser').state).toBe('ok');
 	});
 
-	test('the root-entries line reports INPUTS, never a guessed verdict', () => {
-		const status = consumerStatus(superuser);
+	test("a non-superuser's panel starts NO archive read (the backup line is not theirs to ask)", async () => {
+		// OPS-1 review: every panel ask may start full pg_restore reads, and the
+		// panel is open to any global admin — who cannot run the update. Nothing is
+		// read on their behalf; the SUPERUSER's panel is the positive control.
+		const dir = mkdtempSync(join(tmpdir(), 'dedalo_status_mortal_'));
+		try {
+			const archive = join(dir, '2026-01-01_000000.zz.postgresql_-1_forced_dbv7.custom.backup');
+			writeFileSync(archive, 'PGDMP a header-shaped stub');
+			const at = (Date.now() - 30 * 60_000) / 1000;
+			utimesSync(archive, at, at);
+			const log = join(dir, 'pg_restore.argv');
+			const recorder = join(dir, 'pg_restore.sh');
+			writeFileSync(recorder, `#!/bin/sh\nprintf '%s\\n' "$*" >> '${log}'\nexit 0\n`);
+			chmodSync(recorder, 0o755);
+			const reads = () => (existsSync(log) ? readFileSync(log, 'utf8').trim().split('\n') : []);
+			const seams = { backupDir: dir, backupVerify: { pgRestoreBin: recorder }, waitMs: 60_000 };
+
+			const mortalLine = byId((await consumerStatus(mortal, seams)).checks, 'backup_fresh');
+			expect(mortalLine).toEqual({
+				id: 'backup_fresh',
+				state: 'unknown',
+				detail: 'superuser_required',
+			});
+			expect(reads()).toEqual([]);
+
+			const superLine = byId((await consumerStatus(superuser, seams)).checks, 'backup_fresh');
+			expect(superLine.state).toBe('ok');
+			expect(reads().length).toBeGreaterThan(0);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	test('the root-entries line reports INPUTS, never a guessed verdict', async () => {
+		const status = await panel(superuser);
 		// The verdict needs the release's own file list (refuseUnaccountedLiveEntries
 		// runs against the extracted archive), so this check must never claim one.
 		expect(byId(status.checks, 'root_entries').state).toBe('unknown');
 		expect(Array.isArray(status.tree.unaccounted_root_entries)).toBe(true);
 	});
 
-	test('restore points report the rollback-bootability contract', () => {
-		for (const point of consumerStatus(superuser).restore_points) {
+	test('restore points report the rollback-bootability contract', async () => {
+		for (const point of (await panel(superuser)).restore_points) {
 			expect(typeof point.bootable).toBe('boolean');
 			// NO `bytes`: it used to be statSync(dir).size — the directory
 			// INODE's size (measured 672 B–1.6 KB for multi-GB trees) — rendered

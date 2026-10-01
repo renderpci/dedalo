@@ -106,6 +106,9 @@ Registered actions (`src/core/api/handlers/dd_identify_api.ts`): `find_matches`,
 !!! danger
     An `ok` answer with **zero results** means the corpus was searched and nothing came close. `identify.empty_index` means nothing has ever been indexed. Collapsing the two lets a curator read "we have nothing like this object" off an installation that simply never ran the image indexer.
 
+!!! warning "An external encoder needs the tool grant"
+    When the configured multimodal encoder is **external** (the photograph leaves the host), the caller's profile must authorize `tool_identify`: without it the answer is `tool.not_authorized` (403), before the image is embedded. A local encoder spends nothing and needs no grant. Global admins are not exempt.
+
 !!! note
     This path is read-only and leaves nothing behind: the bytes live in memory for one request and are dropped. The image is a query, not a document — indexing it would put an unaccessioned object into the corpus that answers everybody else's searches.
 
@@ -138,7 +141,7 @@ Registered actions (`src/core/api/handlers/dd_identify_api.ts`): `find_matches`,
     - `model_id`: string (optional) — the vision model to use.
 
 !!! warning
-    The **vision source is opt-in, always**. It calls a paid model and, depending on the deployment, sends the record's photograph off the host — never a side effect of opening a panel. An unknown source name is **refused**, not narrowed to the default: a client that misspells `vision` and silently gets the vote would report a corpus consensus as a model's opinion.
+        The **vision source is opt-in, always**. It calls a paid model and, depending on the deployment, sends the record's photograph off the host — never a side effect of opening a panel. Asking for it (`vision` / `vision_model` / `all`) also requires the caller's profile to authorize `tool_identify`: without the grant the whole request is refused as `tool.not_authorized` (403) before the profile is loaded or any model is called. An unknown source name is **refused**, not narrowed to the default: a client that misspells `vision` and silently gets the vote would report a corpus consensus as a model's opinion.
 
 ### Returns
 

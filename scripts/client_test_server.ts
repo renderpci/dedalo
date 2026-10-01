@@ -46,6 +46,7 @@ import { join } from 'node:path';
 import { readEnv } from '../src/config/env.ts';
 import { applicationDatabaseName, testDatabaseName } from '../test/helpers/test_database.ts';
 import { ensureTestMediaRoot } from '../test/helpers/test_media_root.ts';
+import { suiteRagDatabaseName } from '../test/helpers/test_rag_database.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..');
 
@@ -150,6 +151,15 @@ export function repointProcessToSuiteDatabase(suiteDb: string, sessionDbPath?: s
 	// The suite database NAME is passed explicitly: the tree is keyed by it, and the
 	// default derivation (`<DB_NAME>_test`) has just been invalidated two lines up.
 	process.env.DEDALO_TEST_MEDIA_ROOT = ensureTestMediaRoot(suiteDb);
+	// AND THE VECTOR DATABASE — the third surface of the one fixture
+	// (test/helpers/test_rag_database.ts). Without it the spawned server's
+	// `ragSql` resolved to the INSTALLATION's semantic index: semantic search and
+	// identify answered with an install's vectors naming another corpus's
+	// section_ids, and any vector write door ran unarmed. `<suite db>_rag` is the
+	// database `test:db:setup` builds and marks beside this suite database, so
+	// each lane (DEDALO_TEST_DATABASE) gets its own; the key also arms the
+	// `dedalo_test_rag_marker` refusal. Same derivation as test/preload/rag_db.ts.
+	process.env.DEDALO_TEST_RAG_DB_NAME = suiteRagDatabaseName(suiteDb);
 	// Only when the run owns its server. Against an EXTERNAL --url server the
 	// runner must mint into the store that server reads — its default one.
 	if (sessionDbPath !== undefined) process.env.DEDALO_SESSION_DB_PATH = sessionDbPath;
@@ -180,6 +190,8 @@ export function suiteServerEnvironment(options: {
 		// repointProcessToSuiteDatabase; `repoint…` above has already created and
 		// marked it, so the spawned server inherits a root that exists).
 		DEDALO_TEST_MEDIA_ROOT: process.env.DEDALO_TEST_MEDIA_ROOT as string,
+		// The run's OWN vector database (see repointProcessToSuiteDatabase).
+		DEDALO_TEST_RAG_DB_NAME: process.env.DEDALO_TEST_RAG_DB_NAME as string,
 		SERVER_TCP_PORT: String(options.port),
 		// Never the developer's socket: the running `bun run dev` owns that one and
 		// the server refuses to steal it (and rightly so).

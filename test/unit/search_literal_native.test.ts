@@ -35,6 +35,7 @@ import { sql } from '../../src/core/db/postgres.ts';
 import { buildStringFragment } from '../../src/core/search/builders/builder_string.ts';
 import type { BuilderContext, Fragment } from '../../src/core/search/builders/types.ts';
 import { REGEX_META } from '../../src/core/search/builders/types.ts';
+import { asSqlTipo } from '../../src/core/search/identifier_gate.ts';
 import { buildSearchSql } from '../../src/core/search/sql_assembler.ts';
 import {
 	ZZSCALE_CONTAINS_TERM,
@@ -168,7 +169,7 @@ describe('a search term is matched literally', () => {
 		const ctx: BuilderContext = {
 			alias: 'm',
 			column: 'string',
-			tipo: ZZSCALE_TERM_COMPONENT,
+			tipo: asSqlTipo(ZZSCALE_TERM_COMPONENT, 'test context'),
 			sectionTipo: ZZSCALE_SECTION,
 			table: 'matrix_test',
 			lang: 'lg-eng',
@@ -198,7 +199,7 @@ function emittedOperand(valueExpression: string): string {
 	const ctx: BuilderContext = {
 		alias: 'm',
 		column: 'string',
-		tipo: ZZSCALE_TERM_COMPONENT,
+		tipo: asSqlTipo(ZZSCALE_TERM_COMPONENT, 'test context'),
 		sectionTipo: ZZSCALE_SECTION,
 		table: 'matrix_test',
 		lang: 'lg-eng',

@@ -162,6 +162,11 @@ async function renderUnit(
 	for (const clause of clauses.filter((candidate) => candidate.neg)) {
 		items.push(await semijoin(clause, plan, positive, ctx));
 	}
+	// SEC-1 row-section key (conform.ts rowKeyedLeaf): every leaf of one unit
+	// shares the chain, hence the root component, hence the same key — ANDed
+	// once, outside the semi-join(s), on the MAIN row.
+	const rowKey = (unit[0] as DeepLeafNode).rowKey;
+	if (rowKey !== undefined && rowKey !== false) items.unshift({ kind: 'leaf', fragment: rowKey });
 	return items.length === 1 ? (items[0] as ConformedFilter) : { kind: 'group', op: '$and', items };
 }
 

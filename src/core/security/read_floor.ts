@@ -1,0 +1,273 @@
+/**
+ * THE SUBDATUM READ FLOOR OF A SEARCH (closure Step 3, SEC-1;
+ * WC-2026-09-30-search-root-step-acl).
+ *
+ * WHAT IT IS. PHP `common::get_subdatum` floors every component reached THROUGH
+ * a component the caller is authorized on to read (1), even when the profile
+ * holds 0 on it (`inheritSubdatumPermission`): a portal / autocomplete must
+ * show its resolved values and let the user pick, whatever the grant on the
+ * target section's own components. The search path's ROOT key
+ * (search/conform.ts) would otherwise refuse exactly those searches — an
+ * autocomplete that looks a term up by a component its user holds 0 on would
+ * answer nothing. The floor is the set of `${section}_${component}` pairs such a
+ * search may FILTER and SORT on:
+ *
+ *   - every ddo of the source component's request_config maps (show / search /
+ *     choose / hide), at every section it resolves to;
+ *   - every path step its `fixed_filter` names (the pre-applied SQO clauses);
+ *   - every `filter_by_list` field (the autocomplete's pre-filter checkboxes).
+ *
+ * VERIFIED, NEVER TRUSTED. The source arrives in the client's `rqo.source` —
+ * TWO independent client strings — and `count` has no Gate A at all, so this
+ * module re-asks everything itself. A floor is minted ONLY when all three hold:
+ *
+ *   1. MEMBERSHIP — `tipo` is a component OF `section_tipo` in the ontology
+ *      (`tipoBelongsToSection`, virtual-aware). Without it a caller pairs a
+ *      section she can read with ANY component tipo whose request_config names
+ *      the field she wants, and the matrix — data, not ontology — may even
+ *      hold that stray pair.
+ *   2. THE READ DOOR'S PAIR — the section read grant AND the component's own
+ *      (`authorizeComponentRead`'s predicate, security/read_door.ts), not the
+ *      component level alone.
+ *   3. A PROFILE BASIS on both halves (`getPermissionGrant`, GrantBasis) —
+ *      never a RULE grant. getPermissions answers dd655 = 2 and dd1324 = 1 for
+ *      ANY tipo and any principal; those rules are bounded where they were
+ *      written (dd655 by the assembler's owner predicate), and the floor
+ *      would carry the grant past that bound into an UNBOUNDED search of the
+ *      target section — the SEC-02 prefix oracle again (refuter-surviving S1,
+ *      2026-10-01). The superuser basis passes (level 3 everywhere already).
+ *
+ * The pairs are read off the source's own request_config, never off the client
+ * payload. A section source (tipo === section_tipo, a plain list) has no
+ * subdatum and no floor. A refused source is not a refusal of the search — it
+ * is the ordinary keyed search — so nothing is noted. Gate:
+ * test/unit/search_path_acl_native.test.ts ("FORGED SOURCE").
+ *
+ * THE FLOOR IS THE CALLER'S OWN SUBDATUM MAP — built for THE VERIFIED
+ * PRINCIPAL, per call, never cached across principals (refuter-surviving S1,
+ * 2026-10-01). PHP get_subdatum floors the ddos of the caller's OWN
+ * request_config, and that config is not a pure ontology fact: an IMPLICIT one
+ * (no source.request_config — every config-less portal / select /
+ * component_filter) keeps only the ddos the principal holds >= 1 on
+ * (relations/request_config/implicit.ts filterAuthorizedRelated, which reads
+ * the request ALS). A floor cached under a principal-free key therefore served
+ * whoever populated it first: the superuser first handed a 0-grant user the
+ * search of components her own portal does not show her (the prefix oracle the
+ * floor bounds), she first narrowed every later caller's floor. A
+ * principal-free build is no fix either: it would PERMANENTLY floor what the
+ * implicit builder authorizes away. So the build runs with the request
+ * context's principal set to the one this module verified (`asCaller` — in
+ * production dispatchRqo seeded that same principal, so it is the identity;
+ * a caller outside any scope gets one), and nothing is kept between calls.
+ * Gate: search_path_acl_native ("IMPLICIT SOURCE", both population orders).
+ */
+
+import { getModelByTipo, tipoBelongsToSection } from '../ontology/resolver.ts';
+import { getPermissionGrant, type Principal } from './permissions.ts';
+import {
+	currentRequestContext,
+	type RequestContext,
+	runWithRequestContext,
+} from './request_context.ts';
+
+/** The client-declared read source, as far as the floor cares. */
+export interface ReadFloorSource {
+	readonly section_tipo?: unknown;
+	readonly tipo?: unknown;
+}
+
+/**
+ * The floor for one search read, or undefined when there is none: no principal
+ * (internal read — nothing is keyed), no component source, or a source the
+ * caller holds no read grant on.
+ */
+export async function subdatumReadFloor(
+	principal: Principal | undefined,
+	source: ReadFloorSource | undefined,
+): Promise<ReadonlySet<string> | undefined> {
+	if (principal === undefined) return undefined;
+	const coordinates = componentSource(source);
+	if (coordinates === null) return undefined;
+	if (!(await isComponentTipo(coordinates.tipo))) return undefined;
+	if (!(await tipoBelongsToSection(coordinates.tipo, coordinates.sectionTipo))) return undefined;
+	if (!(await profileReadPair(principal, coordinates.sectionTipo, coordinates.tipo))) {
+		return undefined;
+	}
+	return asCaller(principal, () => floorPairsOf(coordinates.sectionTipo, coordinates.tipo));
+}
+
+/**
+ * Run `fn` with the request context's principal = the VERIFIED principal, so
+ * every ALS reader in the request_config build (the implicit per-user drop)
+ * answers for the caller whose floor this is. The ambient context already
+ * carrying that principal (dispatchRqo seeds it) is used as is; otherwise a
+ * derived one keeps the request's id / session / ip and forwards the ONE
+ * mutable field (frontierRefusals) to the ambient context, so a refusal noted
+ * inside still reaches the request's notices.
+ */
+function asCaller<T>(principal: Principal, fn: () => Promise<T>): Promise<T> {
+	const ambient = currentRequestContext();
+	if (ambient?.principal === principal) return fn();
+	const derived: RequestContext = {
+		principal,
+		session: ambient?.session ?? null,
+		requestId: ambient?.requestId ?? '',
+		clientIp: ambient?.clientIp ?? '',
+		get frontierRefusals() {
+			return ambient?.frontierRefusals;
+		},
+		set frontierRefusals(refusals) {
+			if (ambient !== undefined) ambient.frontierRefusals = refusals;
+		},
+	};
+	return runWithRequestContext(derived, fn);
+}
+
+/**
+ * The read door's pair (section read grant, then the component's own), each
+ * answered by the caller's PROFILE (or the superuser), never by a rule — see
+ * the module header, step 3.
+ */
+async function profileReadPair(
+	principal: Principal,
+	sectionTipo: string,
+	tipo: string,
+): Promise<boolean> {
+	for (const pairTipo of [sectionTipo, tipo]) {
+		const grant = await getPermissionGrant(principal, sectionTipo, pairTipo);
+		if (grant.level < 1 || grant.basis === 'rule') return false;
+	}
+	return true;
+}
+
+/** (section, component) of a component source, or null for anything else. */
+function componentSource(
+	source: ReadFloorSource | undefined,
+): { sectionTipo: string; tipo: string } | null {
+	const sectionTipo = source?.section_tipo;
+	const tipo = source?.tipo;
+	if (typeof sectionTipo !== 'string' || sectionTipo === '') return null;
+	if (typeof tipo !== 'string' || tipo === '' || tipo === sectionTipo) return null;
+	return { sectionTipo, tipo };
+}
+
+async function isComponentTipo(tipo: string): Promise<boolean> {
+	const model = await getModelByTipo(tipo);
+	return typeof model === 'string' && model.startsWith('component_');
+}
+
+/**
+ * The pair set of one component source's request_config, as built for the
+ * principal in scope (see `asCaller`). Never cached: the value is
+ * principal-dependent (module header).
+ */
+async function floorPairsOf(sectionTipo: string, tipo: string): Promise<ReadonlySet<string>> {
+	const pairs = new Set<string>();
+	const { getEffectivePropertiesByTipo } = await import('../ontology/alias.ts');
+	const properties = await getEffectivePropertiesByTipo(tipo);
+	const { buildRequestConfigForElement } = await import('../relations/request_config/build.ts');
+	const items = await buildRequestConfigForElement(properties ?? null, {
+		ownerTipo: tipo,
+		ownerSectionTipo: sectionTipo,
+		mode: 'edit',
+		ownerIsSection: false,
+	});
+	for (const item of items) addItemDdoPairs(pairs, item);
+	addDeclaredFilterPairs(pairs, properties);
+	return pairs;
+}
+
+type ConfigItem = Awaited<
+	ReturnType<typeof import('../relations/request_config/build.ts').buildRequestConfigForElement>
+>[number];
+
+const DDO_MAPS = ['show', 'search', 'choose', 'hide'] as const;
+
+/** Every ddo of one config item's maps, at every section it resolves to. */
+function addItemDdoPairs(pairs: Set<string>, item: ConfigItem): void {
+	const targets = itemTargets(item);
+	for (const mapName of DDO_MAPS) {
+		const ddos = item[mapName]?.ddo_map;
+		if (!Array.isArray(ddos)) continue;
+		for (const ddo of ddos) addDdoPairs(pairs, ddo, targets);
+	}
+}
+
+/** The item's resolved sqo target sections (flat tipos). */
+function itemTargets(item: ConfigItem): string[] {
+	return (item.sqo.section_tipo ?? [])
+		.map((entry) => (typeof entry === 'string' ? entry : entry?.tipo))
+		.filter((tipo): tipo is string => typeof tipo === 'string' && tipo !== '');
+}
+
+function addDdoPairs(
+	pairs: Set<string>,
+	ddo: { tipo?: unknown; section_tipo?: unknown },
+	targets: readonly string[],
+): void {
+	if (typeof ddo.tipo !== 'string' || ddo.tipo === '') return;
+	for (const sectionTipo of ddoSections(ddo.section_tipo, targets)) {
+		pairs.add(`${sectionTipo}_${ddo.tipo}`);
+	}
+}
+
+/** A ddo's sections: its declared string / list; absent or 'self' = the item's targets. */
+function ddoSections(declared: unknown, targets: readonly string[]): readonly string[] {
+	if (typeof declared === 'string') return declared === 'self' ? targets : [declared];
+	if (Array.isArray(declared)) {
+		return declared.filter((tipo): tipo is string => typeof tipo === 'string' && tipo !== '');
+	}
+	return targets;
+}
+
+/**
+ * The `fixed_filter` path steps and `filter_by_list` fields, read off the RAW
+ * declaration: the expanded forms depend on record data (a component_data
+ * fixed_filter resolves nothing without its caller record), the declared paths
+ * do not.
+ */
+function addDeclaredFilterPairs(pairs: Set<string>, properties: unknown): void {
+	for (const sqo of declaredSqos(properties)) {
+		collectPathPairs(pairs, (sqo as { fixed_filter?: unknown }).fixed_filter);
+		collectFieldPairs(pairs, (sqo as { filter_by_list?: unknown }).filter_by_list);
+	}
+}
+
+/** The raw `source.request_config[].sqo` objects of a node's properties. */
+function declaredSqos(properties: unknown): object[] {
+	const config = (properties as { source?: { request_config?: unknown } } | null)?.source
+		?.request_config;
+	if (!Array.isArray(config)) return [];
+	return config
+		.map((item) => (item as { sqo?: unknown } | null)?.sqo)
+		.filter((sqo): sqo is object => sqo !== null && typeof sqo === 'object');
+}
+
+/** Every `{section_tipo, component_tipo}` step of every `path` array under `value`. */
+function collectPathPairs(pairs: Set<string>, value: unknown): void {
+	if (value === null || typeof value !== 'object') return;
+	const entries = Array.isArray(value)
+		? value.map((entry) => ['', entry] as const)
+		: Object.entries(value);
+	for (const [key, entry] of entries) collectEntryPairs(pairs, key, entry);
+}
+
+/** One key/value of a declaration: a `path` list is harvested, anything else walked. */
+function collectEntryPairs(pairs: Set<string>, key: string, entry: unknown): void {
+	if (key === 'path' && Array.isArray(entry)) collectFieldPairs(pairs, entry);
+	else collectPathPairs(pairs, entry);
+}
+
+/** `{section_tipo, component_tipo}` entries of a list. */
+function collectFieldPairs(pairs: Set<string>, list: unknown): void {
+	if (!Array.isArray(list)) return;
+	for (const step of list) {
+		const { section_tipo: sectionTipo, component_tipo: componentTipo } = (step ?? {}) as {
+			section_tipo?: unknown;
+			component_tipo?: unknown;
+		};
+		if (typeof sectionTipo === 'string' && typeof componentTipo === 'string') {
+			pairs.add(`${sectionTipo}_${componentTipo}`);
+		}
+	}
+}

@@ -72,7 +72,7 @@ export function firstHopSources(
 	scope: SqlFrontierScope | undefined,
 	path: readonly { section_tipo?: string }[],
 ): readonly string[] {
-	if (scope?.mainSections !== undefined && scope.mainSections.length > 0) return scope.mainSections;
+	if (scope !== undefined && scope.mainSectionTipos.length > 0) return scope.mainSectionTipos;
 	const declared = path[0]?.section_tipo;
 	return declared === undefined ? [] : [declared];
 }

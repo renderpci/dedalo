@@ -265,7 +265,7 @@ Reading a component's data means reading the same `relation` JSONB column off th
 
 ### In the `relation_search` auxiliary column
 
-Hierarchical-search components additionally write ancestor locators into the auxiliary **`relation_search`** column (`maintainRelationSearchIndex()` in `src/core/relations/save.ts` walks the parent chain), so a search for a node also matches its descendants.
+Hierarchical-search components additionally write ancestor locators into the auxiliary **`relation_search`** column (`deriveRelationSearch()` in `src/core/relations/save.ts` walks the parent chain, and the record-write chokepoint writes the result in the same update as the value), so a search for a node also matches its descendants.
 
 ## Inverse relations and resolution
 

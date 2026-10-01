@@ -32,6 +32,7 @@ import { sql } from '../../src/core/db/postgres.ts';
 import { runWithQueryTap } from '../../src/core/db/query_tap.ts';
 import { buildRelationIndexFragment } from '../../src/core/search/builders/builder_relation_index.ts';
 import type { BuilderContext, BuilderResult } from '../../src/core/search/builders/types.ts';
+import { asSqlTipo } from '../../src/core/search/identifier_gate.ts';
 import { ParamsCollector } from '../../src/core/search/params.ts';
 import { findInverseReferenceLocators } from '../../src/core/search/search_related.ts';
 import {
@@ -76,7 +77,7 @@ function contextFor(sectionTipo: string): BuilderContext {
 	return {
 		alias: ALIAS,
 		column: 'relation',
-		tipo: `${sectionTipo}_index`,
+		tipo: asSqlTipo(`${EMPTY_TLD}9`, 'test context'), // the builder keys on sectionTipo, never on tipo
 		sectionTipo,
 		table: TABLE,
 		lang: 'lg-nolan',

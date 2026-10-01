@@ -54,6 +54,7 @@ const NAME_BINDINGS = new Set([
 	'activityTable',
 	'DIFFUSION_JOBS_TABLE',
 	'DIFFUSION_JOB_EVENTS_TABLE',
+	'DIFFUSION_JOB_LEDGER_TABLE',
 ]);
 
 /**

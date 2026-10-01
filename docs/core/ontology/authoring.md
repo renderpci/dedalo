@@ -471,8 +471,8 @@ flowchart TD
 4. **Compile a single node** with
    `insertDdOntologyRecord(sectionTipo, sectionId)`.
 5. **Cache invalidation is automatic, not a manual step.** Every `dd_ontology`
-   write (`upsertDdOntologyNode`, `updateDdOntologyColumns`, `deleteTldNodes`,
-   `restoreFromBackupTable`) ends by calling `clearOntologyDerivedCaches()` —
+   write (`upsertDdOntologyNode`, `updateDdOntologyColumns`, `deleteTldNodes`)
+   ends by calling `clearOntologyDerivedCaches()` —
    the single chokepoint in `src/core/ontology/cache_invalidation.ts` that every
    cache-owning module (the resolver's node/matrix-table/filter caches,
    `section_map.ts`, `term_resolver.ts`, the active-TLD set, …) registers with at

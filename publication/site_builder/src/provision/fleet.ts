@@ -55,6 +55,7 @@ import {
   type InstanceManifest,
 } from './layout';
 import { parseManifest } from './schema';
+import { parseAgentIdentityName } from '../drivers/agent_identity';
 
 /* ────────────────────────────────────────────────────────────────────────────────────
  * What a fleet is
@@ -420,7 +421,8 @@ function readPathsInsideForeignWritableTrees(members: readonly InstanceLayout[])
 
   const writableTrees = (layout: InstanceLayout): { label: string; path: string }[] => [
     { label: 'workspaces root', path: layout.roots.workspaces },
-    { label: 'agent HOME', path: layout.roots.home },
+    { label: 'retired shared agent HOME', path: layout.roots.home },
+    { label: 'agent state root (every site identity writes its own HOME there)', path: layout.agentStateRoot },
     ...layout.sites.map(site => ({ label: `site '${site.slug}'s webspace`, path: site.webspace })),
   ];
 
@@ -484,6 +486,7 @@ export function fleetViolations(
   }
 
   violations.push(...nameCollisions(members));
+  violations.push(...identityNamespaceViolations(members));
   violations.push(...pathCollisions(members));
   violations.push(...readPathsInsideForeignWritableTrees(members));
   violations.push(...hostnameCollisions(members));
@@ -576,6 +579,65 @@ function nameCollisions(members: readonly InstanceLayout[]): FleetViolation[] {
   return violations;
 }
 
+/**
+ * NO MUSEUM'S IDENTITY IS ANOTHER'S AGENT (LEAD-1b).
+ *
+ * The site identities (`dedalo-a-<instance>_<k>`) are created by `provision apply` from the
+ * host's ledger, so the fleet cannot list them by name — but it can say which NAMESPACES they
+ * live in, and an ADOPTED service identity (the one thing a declaration may name for itself)
+ * must not stand in any of them: a museum whose service user IS another museum's site identity
+ * would own that site's runs, their HOMEs and their private group; one that is another's
+ * retired per-museum agent would own every file that agent left. The derived forms cannot
+ * collide (the three stems differ at characters 8 and 9); only an adopted name can, and this is
+ * where it is refused.
+ *
+ * The per-(site, door) unit names and the rule's instance REGEXES need no census of their own:
+ * anchored at both ends, `<prefix>s<k>-<door>@<instance>.service` parses from the right, so two
+ * instances' regexes can only match each other's units when the instance names are equal —
+ * which the instance census already refuses (`ab` and `ab-agent` included). ROOT'S
+ * `systemctl stop` GLOBS are a different grammar (a `*` spans anything) and hold for another
+ * reason: each is spelled with the literal `<prefix>s<k>-<door>@` before its only `*`
+ * (`plan.ts::agentRunGlobs`), and the pre-LEAD-1b name is exact-length with no `*` at all
+ * (`agent_identity.ts::legacyTransientUnitGlob`) — gated against the `ab` / `ab-agent-s2` pair.
+ */
+function identityNamespaceViolations(members: readonly InstanceLayout[]): FleetViolation[] {
+  const violations: FleetViolation[] = [];
+  for (const layout of members) {
+    for (const [what, name] of [
+      ['user', layout.identity.user],
+      ['group', layout.identity.group],
+    ] as const) {
+      const parsed = parseAgentIdentityName(name);
+      if (parsed) {
+        violations.push({
+          kind: what,
+          instances: [layout.instance, parsed.instance],
+          shared: name,
+          message:
+            `instance '${layout.instance}' declares its service ${what} as '${name}', which is instance ` +
+            `'${parsed.instance}'s site identity s${parsed.ordinal} — the service ${what} would own that ` +
+            `site's agent runs, their HOMEs and its private group. Adopt a name outside the site-identity ` +
+            `namespace.`,
+        });
+      }
+      for (const other of members) {
+        if (name === other.identity.agentUser) {
+          violations.push({
+            kind: what,
+            instances: [layout.instance, other.instance],
+            shared: name,
+            message:
+              `instance '${layout.instance}' declares its service ${what} as '${name}', the retired ` +
+              `per-museum agent of instance '${other.instance}' — it would own every file that agent ` +
+              `left on the host.`,
+          });
+        }
+      }
+    }
+  }
+  return violations;
+}
+
 /* ────────────────────────────────────────────────────────────────────────────────────
  * The census — paths
  * ──────────────────────────────────────────────────────────────────────────────────── */
@@ -617,7 +679,9 @@ function pathClaims(layout: InstanceLayout): PathClaim[] {
     { label: 'the instance config directory', path: layout.configDir },
     { label: 'the state directory', path: layout.stateDir },
     { label: 'roots.workspaces', path: layout.roots.workspaces },
-    { label: 'roots.home', path: layout.roots.home },
+    { label: 'roots.home (the retired shared agent HOME)', path: layout.roots.home },
+    { label: 'the agent state root', path: layout.agentStateRoot },
+    { label: 'the agent socket directory', path: layout.agentSocketDir },
     { label: 'roots.audit', path: layout.roots.audit },
     { label: 'the runtime directory', path: layout.runtimeDir },
     { label: 'the daemon socket', path: layout.socketPath },

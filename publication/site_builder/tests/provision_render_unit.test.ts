@@ -232,7 +232,6 @@ describe('ReadWritePaths= is readWritePaths(layout)', () => {
 
     for (const path of [
       layout.roots.workspaces,
-      layout.roots.home,
       layout.roots.audit,
       layout.runtimeDir,
       ...layout.sites.map(site => site.webspace),
@@ -243,6 +242,10 @@ describe('ReadWritePaths= is readWritePaths(layout)', () => {
       expect(isWritablePath(layout, join(path, 'a-file'))).toBe(true);
     }
     expect(declared).toContain('/srv/legacy/two');
+    // LEAD-1b: neither the retired shared agent HOME nor the agent state root is the daemon's
+    // to write — each site identity writes only its own HOME, through its own unit.
+    expect(declared).not.toContain(layout.roots.home);
+    expect(declared).not.toContain(layout.agentStateRoot);
     expect(declared).toContain('/srv/audit/gate');
   });
 

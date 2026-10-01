@@ -38,6 +38,7 @@ import type {
 	BuilderTwin,
 	LeafPolarity,
 } from '../../src/core/search/builders/types.ts';
+import { asSqlTipo } from '../../src/core/search/identifier_gate.ts';
 import { ParamsCollector } from '../../src/core/search/params.ts';
 import {
 	isNumberNotEqualCase,
@@ -70,7 +71,7 @@ describe('shallow builder SQL is byte-identical across the classifier refactor',
 const numberCtx: BuilderContext = {
 	alias: 'te3',
 	column: 'number',
-	tipo: 'test211',
+	tipo: asSqlTipo('test211', 'test context'),
 	sectionTipo: 'test3',
 	table: 'matrix_test',
 	lang: 'lg-nolan',
@@ -293,7 +294,7 @@ describe('classifiers: polarity table + every twin is positive', () => {
 const textCtx = (column: string, lang = 'lg-spa'): BuilderContext => ({
 	alias: 'e1_1',
 	column,
-	tipo: 'test52',
+	tipo: asSqlTipo('test52', 'test context'),
 	sectionTipo: 'test3',
 	table: 'matrix_test',
 	lang,

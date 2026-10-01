@@ -72,6 +72,7 @@ import {
 	truncateProviderMessage,
 } from '../../src/core/tools/translation.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
+import { superuserTranslationGrant } from '../helpers/translation_grant.ts';
 
 // A PUBLIC IP LITERAL, deliberately. The provider now goes through
 // `fetchGuardedText`, which RESOLVES a DNS name before fetching — so a
@@ -413,18 +414,17 @@ describe('translateAndWrite — a provider error is NEVER persisted', () => {
 		await seed(ERROR_ID, [{ id: 1, lang: 'lg-eng', value: 'the retreat' }]);
 		stubBabel(() => 'Error: Mode eng-spa is not installed');
 
-		const outcome = await translateAndWrite({
-			model: MODEL,
-			componentTipo: COMPONENT_TIPO,
-			sectionTipo: SECTION_TIPO,
-			sectionId: ERROR_ID,
-			sourceLang: 'lg-eng',
-			targetLang: 'lg-spa',
-			provider: babelProvider,
-			uri: URI,
-			key: 'k',
-			userId: -1,
-		});
+		const outcome = await translateAndWrite(
+			await superuserTranslationGrant(SECTION_TIPO, COMPONENT_TIPO, ERROR_ID),
+			{
+				model: MODEL,
+				sourceLang: 'lg-eng',
+				targetLang: 'lg-spa',
+				provider: babelProvider,
+				uri: URI,
+				key: 'k',
+			},
+		);
 
 		expect(outcome.ok).toBe(false);
 		expect(outcome.msg).toContain('Error: Mode');
@@ -449,18 +449,17 @@ describe('translateAndWrite — a LEGACY non-array stored value survives the mer
 			text: `${req.text} (es)`,
 			msg: 'ok',
 		});
-		const outcome = await translateAndWrite({
-			model: MODEL,
-			componentTipo: COMPONENT_TIPO,
-			sectionTipo: SECTION_TIPO,
-			sectionId: LEGACY_ID,
-			sourceLang: 'lg-eng',
-			targetLang: 'lg-spa',
-			provider: stub,
-			uri: URI,
-			key: 'k',
-			userId: -1,
-		});
+		const outcome = await translateAndWrite(
+			await superuserTranslationGrant(SECTION_TIPO, COMPONENT_TIPO, LEGACY_ID),
+			{
+				model: MODEL,
+				sourceLang: 'lg-eng',
+				targetLang: 'lg-spa',
+				provider: stub,
+				uri: URI,
+				key: 'k',
+			},
+		);
 
 		expect(outcome.ok).toBe(true);
 		const items = await storedItems(LEGACY_ID);
@@ -498,18 +497,15 @@ describe('translateAndWrite — locked read-modify-write', () => {
 				return { ok: true, text: `${req.text} [${label}]`, msg: 'ok' };
 			};
 
+		const raceGrant = await superuserTranslationGrant(SECTION_TIPO, COMPONENT_TIPO, RACE_ID);
 		const run = (targetLang: string, label: string) =>
-			translateAndWrite({
+			translateAndWrite(raceGrant, {
 				model: MODEL,
-				componentTipo: COMPONENT_TIPO,
-				sectionTipo: SECTION_TIPO,
-				sectionId: RACE_ID,
 				sourceLang: 'lg-eng',
 				targetLang,
 				provider: provider(label),
 				uri: URI,
 				key: 'k',
-				userId: -1,
 			});
 
 		const [spa, fra] = await Promise.all([run('lg-spa', 'spa'), run('lg-fra', 'fra')]);

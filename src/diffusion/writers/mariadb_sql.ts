@@ -51,21 +51,21 @@ import {
 	tableColumnFields,
 } from '../targets/mariadb/sql_generator.ts';
 import { applyTableState } from '../targets/mediastore/media_index.ts';
+import { WriterRunLog } from './files.ts';
 import type {
+	ArtifactEvent,
 	DiffusionWriter,
+	TableCounters,
 	WriteBatchResult,
+	WriterCloseContext,
+	WriterContinuity,
+	WriterOpenContext,
 	WriterRunSummary,
 	WriterSession,
 } from './types.ts';
 
 /** Max section_ids per DELETE statement (IN-list kept boring and bounded). */
 const DELETE_BATCH_IDS = 500;
-
-/** Per-table running counters feeding the close() summary. */
-interface TableCounters {
-	records_affected: number;
-	records_count: number;
-}
 
 /** Row cap per upsert statement (plan D1: DEDALO_DIFFUSION_BATCH_ROWS, default 200). */
 function upsertBatchRows(): number {
@@ -78,26 +78,25 @@ function upsertBatchRows(): number {
 class MariadbWriterSession implements WriterSession {
 	private readonly plan: PublicationPlan;
 	private readonly database: string;
-	/** Insertion-ordered so close() reports tables in plan order. */
-	private readonly counters = new Map<string, TableCounters>();
-	private readonly errors: string[] = [];
+	/** Per-table counters (restored on resume: the summary counts the whole run). */
+	private readonly log: WriterRunLog;
 	private schemaEnsured = false;
 
-	constructor(plan: PublicationPlan, database: string) {
+	constructor(plan: PublicationPlan, database: string, context?: WriterOpenContext) {
 		this.plan = plan;
 		this.database = database;
-		for (const section of plan.sections) {
-			this.counters.set(section.tableName, { records_affected: 0, records_count: 0 });
-		}
+		this.log = new WriterRunLog(
+			plan.sections.map((section) => section.tableName),
+			context,
+		);
+	}
+
+	get continuity(): WriterContinuity {
+		return this.log.continuity;
 	}
 
 	private countersFor(tableName: string): TableCounters {
-		let counters = this.counters.get(tableName);
-		if (counters === undefined) {
-			counters = { records_affected: 0, records_count: 0 };
-			this.counters.set(tableName, counters);
-		}
-		return counters;
+		return this.log.countersFor(tableName);
 	}
 
 	/**
@@ -229,16 +228,23 @@ class MariadbWriterSession implements WriterSession {
 		return { written: 0, deleted: deletedRows };
 	}
 
+	/** SQL targets publish rows, not files: no artifact ever enters the run manifest. */
+	takeArtifacts(): ArtifactEvent[] {
+		return [];
+	}
+
+	/** Every write committed in MariaDB inside its call; the state is the counters. */
+	async checkpoint(): Promise<unknown> {
+		return this.log.checkpoint();
+	}
+
+	runSummary(): WriterRunSummary {
+		return this.log.summary();
+	}
+
 	/** Final per-table counts — the old engine_response.tables shape. */
-	async close(): Promise<WriterRunSummary> {
-		return {
-			tables: [...this.counters.entries()].map(([tableName, counters]) => ({
-				table_name: tableName,
-				records_affected: counters.records_affected,
-				records_count: counters.records_count,
-			})),
-			errors: [...this.errors],
-		};
+	async close(_context?: WriterCloseContext): Promise<WriterRunSummary> {
+		return this.log.summary();
 	}
 
 	/**
@@ -254,7 +260,7 @@ class MariadbWriterSession implements WriterSession {
 /** The 'sql' format writer (registry entry; 'socrata' aliases it, dormant). */
 export const mariadbSqlWriter: DiffusionWriter = {
 	format: 'sql',
-	async open(plan: PublicationPlan): Promise<WriterSession> {
+	async open(plan: PublicationPlan, context?: WriterOpenContext): Promise<WriterSession> {
 		if (plan.target.kind !== 'table') {
 			throw new DedaloError('diffusion.invalid_target', {
 				message:
@@ -265,6 +271,6 @@ export const mariadbSqlWriter: DiffusionWriter = {
 		}
 		// Loud config gate: unreachable/ungranted database fails the run HERE.
 		await probeTargetDatabase(plan.target.database);
-		return new MariadbWriterSession(plan, plan.target.database);
+		return new MariadbWriterSession(plan, plan.target.database, context);
 	},
 };

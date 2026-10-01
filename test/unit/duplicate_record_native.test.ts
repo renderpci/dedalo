@@ -27,7 +27,7 @@
  *  - instants (created_date, dd199/dd201 starts): normalized by the
  *    differential; asserted here as fresh + virtual-calendar consistent.
  *
- * Media files_info duplication is covered by duplicate_record_media.test.ts
+ * Media files_info duplication is covered by duplicate_record_media_verdict_native.test.ts
  * — deliberately NOT re-asserted. Driven at the ENGINE chokepoint
  * (duplicateSectionRecord); the dispatch envelope/activity row have their
  * own native gates. Fixture: one test3 source with a two-lang test52 value

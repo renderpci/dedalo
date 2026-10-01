@@ -237,10 +237,11 @@ Plain relation data only records the exact target a record points at. For
 should also match a record linked to *Madrid*. To make that work, the
 hierarchical-search component (legacy model `component_autocomplete_hi`,
 normalized to `component_portal` on read) denormalizes its ancestor chain
-into the auxiliary **`relation_search`** JSONB column on save:
-`maintainRelationSearchIndex()` (`src/core/relations/save.ts`) walks each
+into the auxiliary **`relation_search`** JSONB column whenever the record is
+written: `deriveRelationSearch()` (`src/core/relations/save.ts`) walks each
 stored locator's ancestor chain and emits one entry per ancestor, tagged with
-this component's tipo and relation type.
+this component's tipo and relation type, and the record-write chokepoint
+stores it in the same update as the value.
 
 The emitted ancestor locators carry `section_tipo`, `section_id`,
 `from_component_tipo` (the searching component) and `type`, so a search that hits

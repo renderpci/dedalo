@@ -95,9 +95,9 @@ DEDALO_BACKUP_PATH="/srv/dedalo/backups/code"
 		//
 		// The two live readers, verified 2026-08-30 (kept HERE rather than in the rendered
 		// prose: config.md is the operator's manual and internal paths are noise there) —
-		// `backupFreshness` in src/core/update/preconditions.ts, which turns this into the
-		// waivable `update.refused` of a code update and into the update panel's
-		// `backup_fresh` line (src/core/update/status.ts); and the non-forced branch of
+		// `backupFreshness` in src/core/update/preconditions.ts — applied by `requireFreshBackup`
+		// as the waivable `update.refused` of a code update, and by `backupFreshnessWithin` as
+		// the update panel's `backup_fresh` line (src/core/update/status.ts); and the non-forced branch of
 		// `initBackupSequence` (src/core/area_maintenance/backup.ts), whose only engine
 		// caller — the make_backup widget — always forces, so it does not fire today.
 		doc: `This parameter is the **freshness threshold**, in hours, applied to database backups: it
@@ -116,12 +116,44 @@ Making the backups is the operating system's job — a nightly timer, described 
 - **Whether the maintenance "Make backup" button would skip.** It never does today: that
   button always forces a dump, so the throttle it belongs to is not reached.
 
-Age is judged by the newest backup file's modification time. Keep the value in step with how
-often the nightly job actually runs — set it below the real interval and the updater refuses
-on an installation that is backing up perfectly well.
+Age is judged by the modification time of the newest backup that PostgreSQL's own
+\`pg_restore\` can read back end to end. A dump that is cut short, or whose read did not finish
+within its time budget (see \`DEDALO_BACKUP_VERIFY_SECONDS_PER_GB\`), does not count, however
+recent it is. Keep the value in step with how often the nightly job actually runs — set it
+below the real interval and the updater refuses on an installation that is backing up
+perfectly well.
 
 \`\`\`bash
 DEDALO_BACKUP_TIME_RANGE=8
+\`\`\``,
+	},
+	DEDALO_BACKUP_VERIFY_SECONDS_PER_GB: {
+		type: 'number',
+		scope: 'operator',
+		default: 60,
+		heading: 'Defining the backup verification budget',
+		typeLabel: 'int',
+		// The reader is `verifyBudgetMs` (src/core/area_maintenance/backup.ts): budget =
+		// max(60 s, ceil(size / 1 GiB) x this x 1000 ms), per pg_restore stage. Measured
+		// 2026-08-30: a full read costs ~7.4 s per GB on this project's hardware, so the
+		// default is ~8x headroom. A verification that runs out of budget is NOT a backup
+		// (OPS-1, 2026-09-30): the code update refuses and names this key as the remedy,
+		// which is why a slow-storage install needs a key rather than a permanent waiver.
+		doc: `How long the engine may spend proving that a database backup can be restored, in
+**seconds per gigabyte** of dump. Before a backup counts — for the code updater's "is there a
+recent backup" check, for the update panel, and for a dump the maintenance button just made —
+the engine reads the whole archive back with PostgreSQL's \`pg_restore\`, because only a full
+read can tell a complete dump from one that stopped part way. That read gets this many seconds
+for every started gigabyte, and never less than one minute.
+
+A read that does not finish within its budget proves nothing, so that backup does **not**
+count: the code updater refuses (it can still be waived explicitly) and says so, naming this
+key. On an installation whose backups live on slow storage (a network share, a USB disk), raise
+the value until the read fits; a verification that succeeded is remembered, so the cost is paid
+once per backup file.
+
+\`\`\`bash
+DEDALO_BACKUP_VERIFY_SECONDS_PER_GB=60
 \`\`\``,
 	},
 	DEDALO_DEBUG_API_ERRORS: {

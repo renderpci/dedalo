@@ -43,12 +43,21 @@ import { join, relative } from 'node:path';
 import { basename, dirname, join as joinPosix, normalize as normalizePosix } from 'node:path/posix';
 import { parse } from '@babel/parser';
 import { Glob } from 'bun';
+import type { DedaloError } from '../../src/core/errors/index.ts';
+import { extractRfc6052Ipv4, packCidr } from '../../src/core/security/ip_address.ts';
 import {
+	type AddressLookup,
+	assertPublicUrl,
+	claimedIpv4s,
+	isAddressRefusal,
 	isLoopbackHost,
 	isPrivateIp,
 	isPublicUrl,
+	nat64DiscoveryState,
 	SSRF_REFUSAL_KINDS,
+	setNat64DiscoveryForTests,
 } from '../../src/core/security/ssrf_guard.ts';
+import { isSafeLocalAsrUrl } from '../../src/core/tools/transcription_local_asr.ts';
 // String-literal aware. The regex version this replaced ate 71 lines of
 // dd_mcp_api.ts, because the literal 'image/*' opens a block comment that runs
 // to the next `*/` — and a marker planted in that window scanned as absent.
@@ -291,6 +300,8 @@ const OPAQUE = '<non-literal import()>';
 /**
  * The ONLY production importer of `fetchPinnedHop`. Exact in both directions: a
  * second importer is refused, and this row fails if its file stops importing it.
+ * (Inside the guard, `fetchGuardedText` uses the hop ONCE and refuses any `Location`
+ * — no redirect loop, so not a second caller in the sense above.)
  */
 const PINNED_HOP_IMPORTERS: Record<string, string> = {
 	'src/core/harvest/follow.ts':
@@ -314,21 +325,12 @@ const FOLLOW_VETTED_IMPORTERS: Record<string, string> = {
 };
 
 /**
- * Tools that hold a RAW door instead of `harvestFetch`. SHRINK-ONLY: a row may be
- * deleted or narrowed, never widened, and it fails when its file no longer
- * holds every door it lists. Each says what the tool fetches and why it has not
- * moved — never "it is safe".
+ * Tools hold NO raw door. This was a SHRINK-ONLY list of reasoned rows; its last
+ * row (tool_import_rdf, which refused the 303/301 every linked-data server answers
+ * with) moved to `harvestFetch` on 2026-10-01, and a shrink-only list at zero stays
+ * at zero. A tool harvests through `harvestFetch`; a single API call to a
+ * configured service belongs in engine code (`src/core/tools/translation.ts`).
  */
-const TOOL_RAW_DOOR_IMPORTERS: Record<string, { doors: readonly string[]; reason: string }> = {
-	'tools/tool_import_rdf/server/index.ts': {
-		doors: ['fetchGuardedText'],
-		reason:
-			'Dereferences each RDF URI the cataloguer typed (`<uri>.rdf`), one user-initiated ' +
-			'request per URI — not a crawl — with redirects REFUSED, not followed. NOT YET on the ' +
-			'harvesting door: a linked-data server that redirects the document is refused today ' +
-			'instead of followed under per-hop vetting; moving to harvestFetch deletes this row.',
-	},
-};
 
 type AstNode = { type: string; [key: string]: unknown };
 
@@ -669,13 +671,12 @@ function doorCensus(
 }
 
 function toolViolations(file: string, doors: Set<string>): string[] {
-	const allowed = new Set(TOOL_RAW_DOOR_IMPORTERS[file]?.doors ?? []);
 	return [...doors]
-		.filter((door) => door !== OPAQUE && !allowed.has(door))
+		.filter((door) => door !== OPAQUE)
 		.map(
 			(door) =>
 				`${file}: a tool holds ${door}. Harvest pages through harvestFetch (${HARVEST_DOOR}); ` +
-				'one API call through fetchGuardedText needs a TOOL_RAW_DOOR_IMPORTERS row with its reason',
+				'one API call to a configured service belongs in engine code, not in a tool',
 		);
 }
 
@@ -719,10 +720,17 @@ describe('who holds which door (import-graph census)', () => {
 		expect(census.get('src/core/tools/transcription_local_asr.ts')?.has('fetchBoundedText')).toBe(
 			true,
 		);
-		expect(census.get('tools/tool_import_rdf/server/index.ts')?.has('fetchGuardedText')).toBe(true);
+		// The harvesting tool holds the door it should, and through it no raw one.
+		const rdf = 'tools/tool_import_rdf/server/index.ts';
+		const withHarvest = doorCensus(
+			new Map(scanned.map((entry) => [entry.file, entry.code])),
+			OUTBOUND_DOOR_SEEDS,
+		);
+		expect([...(withHarvest.get(rdf) ?? [])]).toEqual(['harvestFetch']);
+		expect(census.has(rdf)).toBe(false);
 	});
 
-	test('the pinned hop has one holder, and a tool holds a raw door only by a written reason', () => {
+	test('the pinned hop has one holder, and no tool holds a raw door', () => {
 		const violations = doorViolations(census);
 		expect(
 			violations,
@@ -739,12 +747,6 @@ describe('who holds which door (import-graph census)', () => {
 		for (const file of Object.keys(FOLLOW_VETTED_IMPORTERS)) {
 			if (census.get(file)?.has(FOLLOW_DOOR) !== true)
 				stale.push(`${file}: no longer holds ${FOLLOW_DOOR}`);
-		}
-		for (const [file, row] of Object.entries(TOOL_RAW_DOOR_IMPORTERS)) {
-			const unused = row.doors.filter((door) => census.get(file)?.has(door) !== true);
-			if (unused.length > 0)
-				stale.push(`${file}: no longer holds ${unused.join(', ')} — narrow or delete the row`);
-			expect(row.reason.length, `${file}: an exemption needs a real reason`).toBeGreaterThan(80);
 		}
 		expect(stale, 'a row for a debt already paid hides that it was paid').toEqual([]);
 	});
@@ -790,6 +792,12 @@ describe('who holds which door (import-graph census)', () => {
 				`import { harvestFetch } from '${up}/harvest/harvest.ts';\n` +
 					`import type { fetchPinnedHop as HopType, PinnedHopRequest } from '${up}/security/ssrf_guard.ts';\n` +
 					`import { isPrivateIp, type fetchPinnedHop } from '${up}/security/ssrf_guard.ts';`,
+			],
+			// A tool importing a raw door directly: no row can excuse it any more —
+			// neither an arbitrary tool nor the one the last row used to exempt.
+			[
+				'tools/tool_raw/server/index.ts',
+				`import { fetchGuardedText } from '${up}/security/ssrf_guard.ts';`,
 			],
 			[
 				'tools/tool_import_rdf/server/index.ts',
@@ -857,7 +865,9 @@ describe('who holds which door (import-graph census)', () => {
 				'tools/tool_computed/server/index.ts',
 				'tools/tool_default/server/index.ts',
 				'tools/tool_dynamic/server/index.ts',
+				'tools/tool_import_rdf/server/index.ts',
 				'tools/tool_opaque/server/index.ts',
+				'tools/tool_raw/server/index.ts',
 				'tools/tool_require/server/index.ts',
 			].sort(),
 		);
@@ -1047,4 +1057,945 @@ describe('the IPv4-mapped IPv6 bypass (found 2026-08-31, pre-existing)', () => {
 			expect(await isPublicUrl(uri), `${uri} must be refused`).toBe(false);
 		}
 	});
+});
+
+// ---------------------------------------------------------------------------
+// THE ATTACKER-AAAA TRUTH TABLE (SURF-2, 2026-09-30)
+// ---------------------------------------------------------------------------
+
+/*
+ * Every way an IPv6 address can CARRY an IPv4 — standardized (mapped, NAT64 /96),
+ * local-use NAT64 in every RFC 6052 layout, the deprecated IPv4-compatible and SIIT
+ * forms, the 6to4 and Teredo tunnels, a DISCOVERED network-specific prefix and a
+ * DECLARED one at every layout — crossed with non-public and public payloads, plus the
+ * special blocks, a first-hextet allowlist sweep and multi-record answers. Each row is
+ * the AAAA an attacker's own DNS server hands out for `attacker.test`, and it is driven
+ * through EVERY consumer of the address policy:
+ *
+ *   1. assertPublicUrl('http://attacker.test/', {lookup}) — refused `private_resolved`,
+ *      or passes returning exactly the row;
+ *   2. assertPublicUrl on the literal `http://[row]/` — `private_literal`, or passes;
+ *   3. isPrivateIp(row) — the synchronous verdict, equal to 2;
+ *   4. isSafeLocalAsrUrl('http://[row]/') — the on-premise transcriber's policy. With
+ *      the private-host exemption ON it refuses iff the row reaches a cloud metadata
+ *      address through ANY carrier (or is one, or is a tunnel) and ALLOWS loopback and
+ *      RFC 1918 payloads (so the exemption is not over-blocked); OFF it equals 2.
+ *   5. claimedIpv4s(row) — the guard's ONE answer to "which IPv4 may this reach", which
+ *      the transcriber already reads for every form of its host (consumer 4 judges each
+ *      claim; its own redundant copy of the deprecated/local-use tables is PENDING
+ *      deletion): it must hold every IPv4 the oracle says the row's carrier may deliver
+ *      (tighten-only superset) — and, under an authoritative carrier, no spurious
+ *      layout reading, or consumer 4 with the exemption OFF refuses what 2 accepts.
+ *
+ * THE ORACLE IS THE TEST'S OWN: an RFC 6052 §2.2 encoder/decoder, a byte parser, the
+ * metadata set and the tunnel blocks are written here, never read from the guard — a
+ * table derived from the code under test agrees with any bug in it.
+ *
+ * A REGRESSION LOCK, not a red-first reproduction: at the sha this block was written
+ * the guard's verdict path already matched it (the allowlist landed 2026-09-29), and
+ * the one open class — the transcriber judging carriers with tables of its own — is
+ * behaviour-equal until one copy drifts. Its teeth are the mutations recorded below
+ * (SURF-2 closure plan §D), each of which must turn this block red.
+ *
+ * MUTATIONS — run 2026-09-30 against src/core/security/ssrf_guard.ts, each applied
+ * alone, each RED (this file + guarded_text_pin_native + outbound_fetch_tripwire):
+ *   M1  TUNNEL_IPV6 = []                     6to4 public rows pass 1-3; tunnel metadata allowed (4 on)
+ *   M1b drop '2001::/32' only                Teredo rows allowed by the transcriber (4 on)
+ *   M2  drop '64:ff9b::/96'                  NAT64 public control refused
+ *   M3  drop '::ffff:0:0/96'                 mapped public control refused
+ *   M4  no 2000::/3 check (a blocklist)      sweep, fec0::1, 100::1, compat rows pass
+ *   M5  carried isNonPublicIpv4 deleted      mapped / NAT64 / declared non-public rows pass
+ *   M6  drop 2001:db8::/32 | 3fff::/20 | 2001::/23, one at a time — its row passes
+ *   M7  discovered prefix authoritative      hostile-mode public rows pass (3, 4 off)
+ *   M8  discoveredNat64 → []                 discovered non-public rows pass (1, 2)
+ *   M9  no unbracket                         literal rows answer dns_failed
+ *   M10 vet addresses.slice(0, 1)            multi-record rows pass
+ *   M11 declaredNat64 → no prefixes          declared non-public rows pass
+ *   M12 deprecated embeddings not claimed    compat/SIIT rows: claimedIpv4s misses the payload (5)
+ *   M13 LOCAL_USE_LAYOUTS = [96]             local-use /48-/64 rows: claimedIpv4s misses it (5)
+ *   M14 fetchGuardedText = assertPublicUrl + fetchBoundedText — pin gate red (rebinding case)
+ *   M15 fetchGuardedText follows the Location — the pin gate's 3xx case red
+ *   M16 possibleIpv4s also read under an authoritative carrier — declared local-use
+ *       rows: the transcriber (4, exemption OFF) refuses the public payload the guard
+ *       accepts, and claimedIpv4s is not the declared reading (5)
+ * M12/M13 bite through consumer 5 while the transcriber still carries its own copy of
+ * those tables; once it reads only `claimedIpv4s` they bite through consumer 4 too.
+ */
+
+/** The test's OWN IPv6 text → 16 bytes (hex groups and at most one `::`). */
+function oracleV6(text: string): Uint8Array {
+	const [head = '', tail] = text.split('::');
+	const groups = (part: string): number[] =>
+		part === '' ? [] : part.split(':').map((group) => Number.parseInt(group, 16));
+	const left = groups(head);
+	const right = tail === undefined ? [] : groups(tail);
+	const zeros = new Array<number>(8 - left.length - right.length).fill(0);
+	return Uint8Array.from([...left, ...zeros, ...right].flatMap((h) => [h >> 8, h & 0xff]));
+}
+
+/** 16 bytes → uncompressed IPv6 text (valid for isIP and URL). */
+function oracleText(bytes: Uint8Array): string {
+	const hextets: string[] = [];
+	for (let at = 0; at < 16; at += 2) {
+		hextets.push((((bytes[at] ?? 0) << 8) | (bytes[at + 1] ?? 0)).toString(16));
+	}
+	return hextets.join(':');
+}
+
+function oracleV4(text: string): Uint8Array {
+	return Uint8Array.from(text.split('.').map(Number));
+}
+
+/** The byte positions an RFC 6052 layout of `bits` puts the IPv4 in (byte 8, the u octet, skipped). */
+function layoutPositions(bits: number): number[] {
+	const positions: number[] = [];
+	for (let at = bits >> 3; positions.length < 4; at++) if (at !== 8) positions.push(at);
+	return positions;
+}
+
+/** RFC 6052 §2.2: `prefix`'s first `bits`, then the IPv4 around the u octet, zero suffix. */
+function embedV4(prefix: string, bits: number, v4: Uint8Array): Uint8Array {
+	const bytes = new Uint8Array(16);
+	bytes.set(oracleV6(prefix).subarray(0, bits >> 3));
+	layoutPositions(bits).forEach((position, index) => {
+		bytes[position] = v4[index] ?? 0;
+	});
+	return bytes;
+}
+
+function decodeV4(bytes: Uint8Array, bits: number): Uint8Array {
+	return Uint8Array.from(layoutPositions(bits).map((position) => bytes[position] ?? 0));
+}
+
+const NON_PUBLIC_PAYLOADS = [
+	'127.0.0.1',
+	'10.0.0.1',
+	'172.16.0.1',
+	'192.168.0.1',
+	'169.254.169.254',
+	'100.100.100.200',
+	'100.64.0.1',
+	'0.0.0.0',
+	'192.0.0.170',
+	'198.18.0.1',
+	'224.0.0.1',
+	'240.0.0.1',
+] as const;
+const PUBLIC_PAYLOADS = ['93.184.216.34', '8.8.8.8'] as const;
+const PAYLOADS = [
+	...NON_PUBLIC_PAYLOADS.map((text) => ({ text, public: false })),
+	...PUBLIC_PAYLOADS.map((text) => ({ text, public: true })),
+];
+
+/**
+ * The documented cloud metadata set (transcription_local_asr's header): 169.254/16,
+ * 100.100.100.200, 192.0.0.192, AWS IPv6 IMDS, GCE IPv6 metadata. Held HERE; its
+ * equality with the transcriber's set is measured at the boundaries below.
+ */
+function isMetadataV4(v4: Uint8Array): boolean {
+	const dotted = [...v4].join('.');
+	return (
+		(v4[0] === 169 && v4[1] === 254) || dotted === '100.100.100.200' || dotted === '192.0.0.192'
+	);
+}
+const METADATA_V6 = ['fd00:ec2::254', 'fd20:ce::254'].map((text) => oracleText(oracleV6(text)));
+function isMetadataV6(bytes: Uint8Array): boolean {
+	return METADATA_V6.includes(oracleText(bytes));
+}
+
+/** 6to4 2002::/16 and Teredo 2001::/32, by the test's own bytes. */
+function isTunnelOracle(bytes: Uint8Array): boolean {
+	const first = ((bytes[0] ?? 0) << 8) | (bytes[1] ?? 0);
+	return first === 0x2002 || (first === 0x2001 && bytes[2] === 0 && bytes[3] === 0);
+}
+
+interface TruthRow {
+	readonly label: string;
+	readonly address: string;
+	/** Refused by the public-address guard (consumers 1-3; 4 with the exemption off). */
+	readonly refused: boolean;
+	/** Refused by the transcriber with the private-host exemption ON. */
+	readonly asrForbidden: boolean;
+	/** Extra `ipv4only.arpa` AAAA answers this row's network reports (RFC 7050). */
+	readonly discovery: readonly string[];
+	/** Every IPv4 (dotted) the oracle says this row's carrier may deliver to. */
+	readonly carried: readonly string[];
+}
+
+/** A row from bytes and the IPv4s its carrier may deliver to. */
+function truthRow(
+	label: string,
+	bytes: Uint8Array,
+	refused: boolean,
+	carried: readonly Uint8Array[],
+	discovery: readonly string[] = [],
+): TruthRow {
+	const asrForbidden = isTunnelOracle(bytes) || isMetadataV6(bytes) || carried.some(isMetadataV4);
+	const dotted = carried.map((v4) => [...v4].join('.'));
+	return { label, address: oracleText(bytes), refused, asrForbidden, discovery, carried: dotted };
+}
+
+interface Carrier {
+	readonly label: string;
+	readonly place: (v4: Uint8Array) => Uint8Array;
+	/** A public payload settles it as public (the carrier is authoritative and routable). */
+	readonly publicPasses: boolean;
+	/** Every layout the carrier may be read in (the transcriber refuses a metadata hit in any). */
+	readonly layouts: readonly number[];
+	readonly discovery?: readonly string[];
+}
+
+const LOCAL_USE_LAYOUTS = [48, 56, 64, 96] as const;
+
+function tunnelPlace(first: number, at: number): (v4: Uint8Array) => Uint8Array {
+	return (v4) => {
+		const bytes = new Uint8Array(16);
+		bytes[0] = first >> 8;
+		bytes[1] = first & 0xff;
+		bytes.set(v4, at);
+		if (first === 0x2002) bytes[15] = 1; // 2002:V4::1
+		return bytes;
+	};
+}
+
+const CARRIERS: readonly Carrier[] = [
+	{
+		label: 'mapped ::ffff:0:0/96',
+		place: (v4) => embedV4('::ffff:0:0', 96, v4),
+		publicPasses: true,
+		layouts: [96],
+	},
+	{
+		label: 'NAT64 64:ff9b::/96',
+		place: (v4) => embedV4('64:ff9b::', 96, v4),
+		publicPasses: true,
+		layouts: [96],
+	},
+	...LOCAL_USE_LAYOUTS.map((bits) => ({
+		label: `local-use 64:ff9b:1::/48 at /${bits} (undeclared)`,
+		place: (v4: Uint8Array) => embedV4('64:ff9b:1::', bits, v4),
+		publicPasses: false,
+		layouts: LOCAL_USE_LAYOUTS,
+	})),
+	{
+		label: 'IPv4-compatible ::/96',
+		place: (v4) => embedV4('::', 96, v4),
+		publicPasses: false,
+		layouts: [96],
+	},
+	{
+		label: 'SIIT ::ffff:0:0:0/96',
+		place: (v4) => embedV4('::ffff:0:0:0', 96, v4),
+		publicPasses: false,
+		layouts: [96],
+	},
+	{ label: '6to4 2002:V4::1', place: tunnelPlace(0x2002, 2), publicPasses: false, layouts: [] },
+	{ label: 'Teredo 2001:0:V4::', place: tunnelPlace(0x2001, 4), publicPasses: false, layouts: [] },
+	{
+		label: 'discovered 2c0f:f248:64::/96',
+		place: (v4) => embedV4('2c0f:f248:64::', 96, v4),
+		publicPasses: true,
+		layouts: [96],
+		discovery: ['2c0f:f248:64::c000:aa'],
+	},
+];
+
+function carrierRows(carrier: Carrier): TruthRow[] {
+	return PAYLOADS.map((payload) => {
+		const bytes = carrier.place(oracleV4(payload.text));
+		const carried = carrier.layouts.map((bits) => decodeV4(bytes, bits));
+		const refused = !payload.public || !carrier.publicPasses;
+		return truthRow(
+			`${carrier.label} ← ${payload.text}`,
+			bytes,
+			refused,
+			carried,
+			carrier.discovery,
+		);
+	});
+}
+
+const SPECIAL_REFUSED = [
+	'fec0::1',
+	'2001:db8::1',
+	'2001:db8:64::a9fe:a9fe',
+	'3fff::1',
+	'2001:2::1',
+	'::',
+	'::1',
+	'fe80::1',
+	'fc00::1',
+	'fd00:ec2::254',
+	'ff02::1',
+	'100::1',
+];
+const SPECIAL_PASS = ['2606:4700:4700::1111', '2a00:1450:4001:830::200e'];
+
+function specialRows(): TruthRow[] {
+	return [
+		...SPECIAL_REFUSED.map((text) => truthRow(`special ${text}`, oracleV6(text), true, [])),
+		...SPECIAL_PASS.map((text) => truthRow(`special ${text}`, oracleV6(text), false, [])),
+	];
+}
+
+/** `XX00::1` for every first octet: only 0x20-0x3f (2000::/3) is public. */
+function sweepRows(): TruthRow[] {
+	return Array.from({ length: 256 }, (_, octet) => {
+		const text = `${octet.toString(16)}00::1`;
+		return truthRow(`sweep ${text}`, oracleV6(text), octet < 0x20 || octet > 0x3f, []);
+	});
+}
+
+const TRUTH_ROWS: readonly TruthRow[] = [
+	...CARRIERS.flatMap(carrierRows),
+	...specialRows(),
+	...sweepRows(),
+];
+
+/** Multi-record answers: ONE bad record among good ones refuses the name. */
+const MULTI_RECORD_ROWS: readonly (readonly string[])[] = [
+	['2606:4700:4700::1111', '64:ff9b::7f00:1'],
+	['93.184.216.34', '::ffff:7f00:1'],
+];
+
+interface DiscoveryMode {
+	readonly name: string;
+	/** What `ipv4only.arpa` answers on this network. */
+	readonly ipv4only: readonly string[];
+	/** Rows only this network's (hostile) discovery makes meaningful. */
+	readonly extraRows: readonly TruthRow[];
+}
+
+/**
+ * A HOSTILE resolver that says "your NAT64 prefix is fd00::/96" must not turn a
+ * unique-local address into an accepted one: every row inside it stays refused, and a
+ * metadata payload it claims is still refused by the transcriber.
+ */
+const HOSTILE_ULA_ROWS: readonly TruthRow[] = PAYLOADS.map((payload) => {
+	const bytes = embedV4('fd00::', 96, oracleV4(payload.text));
+	return truthRow(`hostile-discovered fd00::/96 ← ${payload.text}`, bytes, true, [
+		decodeV4(bytes, 96),
+	]);
+});
+
+const DISCOVERY_MODES: readonly DiscoveryMode[] = [
+	{ name: 'no DNS64', ipv4only: ['192.0.0.170'], extraRows: [] },
+	{ name: 'hostile ULA', ipv4only: ['fd00::c000:aa'], extraRows: HOSTILE_ULA_ROWS },
+	// 64:ff9b:1::5db8:d822 is a local-use /96 row above: refused whatever discovery says.
+	{ name: 'hostile local-use', ipv4only: ['64:ff9b:1::c000:aa'], extraRows: [] },
+];
+
+/** The attacker's DNS: `attacker.test` → the row, `ipv4only.arpa` → the mode, else ENOTFOUND. */
+function attackerLookup(records: readonly string[], ipv4only: readonly string[]): AddressLookup {
+	return async (host) => {
+		const answer = host === 'attacker.test' ? records : host === 'ipv4only.arpa' ? ipv4only : null;
+		if (answer === null) throw new Error(`ENOTFOUND ${host}`);
+		return answer.map((address) => ({ address, family: address.includes(':') ? 6 : 4 }));
+	};
+}
+
+/** `pass:<addresses>`, the refusal reason, or `unexpected:<error>` (never an address refusal). */
+async function guardOutcome(uri: string, lookup: AddressLookup): Promise<string> {
+	try {
+		const { addresses } = await assertPublicUrl(uri, { lookup });
+		return `pass:${addresses.join(',')}`;
+	} catch (error) {
+		if (!isAddressRefusal(error)) return `unexpected:${String(error)}`;
+		return String((error as DedaloError).coordinates?.reason);
+	}
+}
+
+/** The discovery cache a synchronous consumer on this network would hold: every /96 reported. */
+function seededPrefixes(answers: readonly string[]): { network: Uint8Array; prefixBits: number }[] {
+	return answers
+		.filter((answer) => answer.includes(':'))
+		.map((answer) => {
+			const network = oracleV6(answer);
+			network.fill(0, 12);
+			return packCidr(`${oracleText(network)}/96`) as { network: Uint8Array; prefixBits: number };
+		});
+}
+
+const EXEMPTION = 'DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS';
+const originalExemption = process.env[EXEMPTION];
+
+/** Pinned, never deleted: a deleted key falls back to ../private/.env through readEnv. */
+function setExemption(on: boolean): void {
+	process.env[EXEMPTION] = on ? 'true' : '';
+}
+
+/** Per-consumer pass/refusal tallies and the executed-row count (anti-vacuity). */
+const tally = {
+	rows: 0,
+	resolved: { pass: 0, refused: 0 },
+	literal: { pass: 0, refused: 0 },
+	isPrivateIp: { pass: 0, refused: 0 },
+	asr: { pass: 0, refused: 0 },
+	/** Rows whose carried IPv4s were checked against claimedIpv4s (consumer 5). */
+	claims: 0,
+};
+
+function count(consumer: { pass: number; refused: number }, refused: boolean): void {
+	if (refused) consumer.refused++;
+	else consumer.pass++;
+}
+
+/** Consumers 1 and 2 on one row, mismatches as sentences. */
+async function guardMismatches(row: TruthRow, mode: DiscoveryMode): Promise<string[]> {
+	const lookup = attackerLookup([row.address], [...mode.ipv4only, ...row.discovery]);
+	const resolved = await guardOutcome('http://attacker.test/', lookup);
+	const literal = await guardOutcome(`http://[${row.address}]/`, lookup);
+	count(tally.resolved, !resolved.startsWith('pass:'));
+	count(tally.literal, !literal.startsWith('pass:'));
+	const wantResolved = row.refused ? 'private_resolved' : `pass:${row.address}`;
+	const wantLiteral = row.refused ? 'private_literal' : 'pass';
+	const problems: string[] = [];
+	if (resolved !== wantResolved) problems.push(`[resolved] want ${wantResolved} got ${resolved}`);
+	if (literal.split(':')[0] !== wantLiteral)
+		problems.push(`[literal] want ${wantLiteral} got ${literal}`);
+	return problems.map((problem) => `${mode.name} / ${row.label} (${row.address}) ${problem}`);
+}
+
+/** Consumers 3 and 4 (synchronous) on one row, with the network's discovery cached. */
+function syncMismatches(row: TruthRow, mode: DiscoveryMode): string[] {
+	setNat64DiscoveryForTests({
+		prefixes: seededPrefixes([...mode.ipv4only, ...row.discovery]),
+		expiresAt: Date.now() + 10 * 60_000,
+	});
+	const uri = `http://[${row.address}]/`;
+	const privateVerdict = isPrivateIp(row.address);
+	setExemption(true);
+	const asrOn = isSafeLocalAsrUrl(uri);
+	setExemption(false);
+	const asrOff = isSafeLocalAsrUrl(uri);
+	const claimed = claimedIpv4s(oracleV6(row.address));
+	const unclaimed = row.carried.filter((v4) => !claimed.includes(v4));
+	if (row.carried.length > 0) tally.claims++;
+	count(tally.isPrivateIp, privateVerdict);
+	count(tally.asr, !asrOn);
+	const problems: string[] = [];
+	if (privateVerdict !== row.refused)
+		problems.push(`[isPrivateIp] want ${row.refused} got ${privateVerdict}`);
+	if (asrOn !== !row.asrForbidden)
+		problems.push(`[asr exemption ON] want allowed=${!row.asrForbidden} got ${asrOn}`);
+	if (asrOff !== !row.refused)
+		problems.push(`[asr exemption OFF] want allowed=${!row.refused} got ${asrOff}`);
+	if (unclaimed.length > 0)
+		problems.push(`[claimedIpv4s] missing ${unclaimed.join(',')} (got ${claimed.join(',')})`);
+	return problems.map((problem) => `${mode.name} / ${row.label} (${row.address}) ${problem}`);
+}
+
+describe('the attacker-AAAA truth table (SURF-2): every carrier × payload through every consumer', () => {
+	const originalDiscovery = nat64DiscoveryState();
+	beforeEach(() => {
+		// Empty and UNEXPIRED: no consumer here may trigger a real ipv4only.arpa query.
+		setNat64DiscoveryForTests({ prefixes: [], expiresAt: Date.now() + 10 * 60_000 });
+		setExemption(false);
+	});
+	afterEach(() => {
+		setNat64DiscoveryForTests(originalDiscovery);
+		process.env[EXEMPTION] = originalExemption ?? '';
+	});
+
+	test('the oracle: the encoder round-trips through the guard’s RFC 6052 reader, at every layout', () => {
+		for (const bits of [32, 40, 48, 56, 64, 96]) {
+			for (const payload of PAYLOADS) {
+				const v4 = oracleV4(payload.text);
+				const bytes = embedV4('2a0b:4e00:6400:6400:64:6400::', bits, v4);
+				expect([...(extractRfc6052Ipv4(bytes, bits) ?? [])], `/${bits} ${payload.text}`).toEqual([
+					...v4,
+				]);
+				expect([...decodeV4(bytes, bits)]).toEqual([...v4]);
+				expect(bytes[8], `/${bits}: the u octet carries no address bit`).toBe(
+					bits >= 72 ? bytes[8] : 0,
+				);
+			}
+		}
+	});
+
+	test('the payloads are what they claim: non-public refused, public not', () => {
+		for (const text of NON_PUBLIC_PAYLOADS) expect(isPrivateIp(text), text).toBe(true);
+		for (const text of PUBLIC_PAYLOADS) expect(isPrivateIp(text), text).toBe(false);
+	});
+
+	test('the metadata set held here IS the transcriber’s, measured at its boundaries', () => {
+		setExemption(true);
+		const members = [
+			'169.254.0.0',
+			'169.254.255.255',
+			'100.100.100.200',
+			'192.0.0.192',
+			'[fd00:ec2::254]',
+			'[fd20:ce::254]',
+		];
+		const neighbours = [
+			'169.253.255.255',
+			'169.255.0.0',
+			'100.100.100.199',
+			'100.100.100.201',
+			'192.0.0.191',
+			'192.0.0.193',
+			'[fd00:ec2::253]',
+			'[fd20:ce::255]',
+		];
+		for (const host of members)
+			expect(isSafeLocalAsrUrl(`http://${host}/`), `${host} is metadata`).toBe(false);
+		for (const host of neighbours)
+			expect(isSafeLocalAsrUrl(`http://${host}/`), `${host} is not`).toBe(true);
+	});
+
+	test('the table is not vacuous: row floor, and every carrier row is really an IPv6 literal', () => {
+		expect(TRUTH_ROWS.length).toBeGreaterThanOrEqual(400);
+		expect(new Set(TRUTH_ROWS.map((row) => row.address)).size).toBeGreaterThan(380);
+		expect(TRUTH_ROWS.some((row) => row.asrForbidden)).toBe(true);
+		expect(TRUTH_ROWS.some((row) => !row.asrForbidden && row.refused)).toBe(true);
+	});
+
+	for (const mode of DISCOVERY_MODES) {
+		const rows = [...TRUTH_ROWS, ...mode.extraRows];
+
+		test(`${mode.name}: assertPublicUrl — the attacker's AAAA and the literal`, async () => {
+			const problems: string[] = [];
+			for (const row of rows) problems.push(...(await guardMismatches(row, mode)));
+			tally.rows += rows.length;
+			expect(problems).toEqual([]);
+		});
+
+		test(`${mode.name}: isPrivateIp and isSafeLocalAsrUrl (exemption on and off)`, () => {
+			const problems = rows.flatMap((row) => syncMismatches(row, mode));
+			expect(problems).toEqual([]);
+		});
+
+		test(`${mode.name}: multi-record answers — one bad record refuses the name`, async () => {
+			for (const records of MULTI_RECORD_ROWS) {
+				const outcome = await guardOutcome(
+					'http://attacker.test/',
+					attackerLookup(records, mode.ipv4only),
+				);
+				expect(outcome, records.join(' + ')).toBe('private_resolved');
+			}
+		});
+	}
+
+	test('every row ran, and every consumer both passed and refused something', () => {
+		const expected = DISCOVERY_MODES.reduce(
+			(sum, mode) => sum + TRUTH_ROWS.length + mode.extraRows.length,
+			0,
+		);
+		expect(tally.rows).toBe(expected);
+		expect(tally.claims, 'consumer 5 checked no carried IPv4 at all').toBeGreaterThan(100);
+		for (const consumer of [tally.resolved, tally.literal, tally.isPrivateIp, tally.asr]) {
+			expect(consumer.pass).toBeGreaterThan(0);
+			expect(consumer.refused).toBeGreaterThan(0);
+		}
+	});
+});
+
+/*
+ * A DECLARED network-specific prefix (DEDALO_NAT64_PREFIXES) is the operator's word:
+ * AUTHORITATIVE. At every RFC 6052 layout a non-public payload is refused and a public
+ * one passes, and the transcriber refuses a metadata payload through it. The prefixes
+ * are synthetic global space, verified here to sit outside every special-purpose and
+ * tunnel block, so it is the declaration — not some other rule — deciding each row.
+ */
+const DECLARED_PREFIXES: readonly (readonly [string, number])[] = [
+	['2a0b:4e00::', 32],
+	['2a0b:4e01:6400::', 40],
+	['2a0b:4e02:64::', 48],
+	['2a0b:4e03:64:6400::', 56],
+	['2a0b:4e04:64:64::', 64],
+	['2a0b:4e05:64:64:0:64::', 96],
+];
+
+/** The test's own copy of the special blocks inside 2000::/3 (prefix text, bits). */
+const SPECIAL_GLOBAL_BLOCKS: readonly (readonly [string, number])[] = [
+	['2001::', 23],
+	['2001:db8::', 32],
+	['3fff::', 20],
+	['2002::', 16],
+	['2001::', 32],
+];
+
+function inBlock(bytes: Uint8Array, block: readonly [string, number]): boolean {
+	const network = oracleV6(block[0]);
+	for (let bit = 0; bit < block[1]; bit++) {
+		const mask = 0x80 >> (bit & 7);
+		if (((bytes[bit >> 3] ?? 0) & mask) !== ((network[bit >> 3] ?? 0) & mask)) return false;
+	}
+	return true;
+}
+
+describe('the attacker-AAAA truth table: a DECLARED NAT64 prefix at every layout', () => {
+	const originalDiscovery = nat64DiscoveryState();
+	beforeEach(() => {
+		process.env[NAT64_SETTING] = DECLARED_PREFIXES.map(
+			([prefix, bits]) => `${prefix}/${bits}`,
+		).join(',');
+		setNat64DiscoveryForTests({ prefixes: [], expiresAt: Date.now() + 10 * 60_000 });
+		setExemption(false);
+	});
+	afterEach(() => {
+		setNat64DiscoveryForTests(originalDiscovery);
+		process.env[EXEMPTION] = originalExemption ?? '';
+	});
+
+	const rows = DECLARED_PREFIXES.flatMap(([prefix, bits]) =>
+		PAYLOADS.map((payload) => {
+			const bytes = embedV4(prefix, bits, oracleV4(payload.text));
+			return truthRow(`declared ${prefix}/${bits} ← ${payload.text}`, bytes, !payload.public, [
+				decodeV4(bytes, bits),
+			]);
+		}),
+	);
+
+	test('the declared prefixes are global unicast outside every special and tunnel block', () => {
+		for (const [prefix] of DECLARED_PREFIXES) {
+			const bytes = oracleV6(prefix);
+			expect(inBlock(bytes, ['2000::', 3]), prefix).toBe(true);
+			for (const block of SPECIAL_GLOBAL_BLOCKS)
+				expect(inBlock(bytes, block), `${prefix} in ${block[0]}/${block[1]}`).toBe(false);
+		}
+		expect(rows.length).toBe(DECLARED_PREFIXES.length * PAYLOADS.length);
+	});
+
+	test('assertPublicUrl, isPrivateIp and isSafeLocalAsrUrl honour the declaration', async () => {
+		const mode = DISCOVERY_MODES[0] as DiscoveryMode;
+		const problems: string[] = [];
+		for (const row of rows)
+			problems.push(...(await guardMismatches(row, mode)), ...syncMismatches(row, mode));
+		expect(problems).toEqual([]);
+		expect(rows.some((row) => row.refused) && rows.some((row) => !row.refused)).toBe(true);
+	});
+});
+
+/*
+ * A DECLARED prefix INSIDE RFC 8215's local-use block, `64:ff9b:1::/48` — the case the
+ * guard documents as "honoured like any other", and the one the global-unicast
+ * declared table above cannot build. The declaration fixes the layout: a public
+ * payload passes every consumer, and the transcriber with the exemption OFF must
+ * EQUAL the guard (consumer 4 = consumer 2). Measured 2026-09-30: reading the other
+ * local-use layouts too (the zero suffix of a /48 embedding reads as 0.0.0.0 at /96)
+ * made the transcriber refuse `64:ff9b:1:5db8:d8:2200::` — 93.184.216.34, declared
+ * public — while the guard accepted it. One prefix per run: two overlapping
+ * declarations would let the first one's layout read the second one's addresses.
+ */
+const DECLARED_LOCAL_USE: readonly (readonly [string, number])[] = [
+	['64:ff9b:1::', 48],
+	['64:ff9b:1::', 96],
+];
+
+for (const [prefix, bits] of DECLARED_LOCAL_USE) {
+	describe(`the attacker-AAAA truth table: a DECLARED local-use prefix ${prefix}/${bits}`, () => {
+		const originalDiscovery = nat64DiscoveryState();
+		beforeEach(() => {
+			process.env[NAT64_SETTING] = `${prefix}/${bits}`;
+			setNat64DiscoveryForTests({ prefixes: [], expiresAt: Date.now() + 10 * 60_000 });
+			setExemption(false);
+		});
+		afterEach(() => {
+			setNat64DiscoveryForTests(originalDiscovery);
+			process.env[EXEMPTION] = originalExemption ?? '';
+		});
+
+		const rows = PAYLOADS.map((payload) => {
+			const bytes = embedV4(prefix, bits, oracleV4(payload.text));
+			return truthRow(`declared ${prefix}/${bits} ← ${payload.text}`, bytes, !payload.public, [
+				decodeV4(bytes, bits),
+			]);
+		});
+
+		test('the prefix really is inside the local-use block (so the declaration decides)', () => {
+			for (const row of rows)
+				expect(inBlock(oracleV6(row.address), ['64:ff9b:1::', 48])).toBe(true);
+			expect(rows.some((row) => !row.refused)).toBe(true);
+		});
+
+		test('assertPublicUrl, isPrivateIp and isSafeLocalAsrUrl (exemption OFF equals the guard)', async () => {
+			const mode = DISCOVERY_MODES[0] as DiscoveryMode;
+			const problems: string[] = [];
+			for (const row of rows)
+				problems.push(...(await guardMismatches(row, mode)), ...syncMismatches(row, mode));
+			expect(problems).toEqual([]);
+		});
+
+		test('claimedIpv4s under the declaration is exactly the declared reading', () => {
+			for (const row of rows) {
+				expect(claimedIpv4s(oracleV6(row.address)), row.label).toEqual([...row.carried]);
+			}
+		});
+	});
+}
+
+// ---------------------------------------------------------------------------
+// WHO READS CARRIERS (SURF-2 class: an address judged by carrier knowledge that is
+// not the guard's)
+// ---------------------------------------------------------------------------
+
+/*
+ * The truth table above measures the consumers it NAMES. A third module that builds
+ * its own carrier table out of the byte primitives — an RFC 6052 reader, a block
+ * matcher, a block packer — would judge addresses unmeasured, and that is exactly how
+ * the transcriber's copy came to exist. So the primitives are censused by import
+ * BINDING (the same resolver as the door census: renames, namespaces, barrels,
+ * re-exports), and outside `src/core/security/` a module holds one only by a row
+ * here. The rows may only SHRINK: a row whose module no longer holds the primitive is
+ * red until it is deleted.
+ *
+ * ITS LIMIT: it sees the four NAMED block / RFC 6052 primitives, not a hand-rolled
+ * comparison — a module that takes `packIpv6` (legitimately needed elsewhere), compares
+ * the leading bytes to `::ffff:0:0/96` itself and slices `subarray(12, 16)` holds none
+ * of them. That wider class is closed by OUTCOME in the next block (WHO JUDGES
+ * ADDRESSES): every module outside the guard holding ANY address byte primitive is
+ * registered, and an outbound one is driven through the truth table.
+ */
+const IP_ADDRESS = 'src/core/security/ip_address.ts';
+const CARRIER_PRIMITIVE_SEEDS: Record<string, readonly string[]> = {
+	[IP_ADDRESS]: ['extractRfc6052Ipv4', 'packedInBlock', 'packCidr'],
+	[GUARD]: ['packBlocks'],
+};
+
+const CARRIER_PRIMITIVE_IMPORTERS: Record<
+	string,
+	{ primitives: readonly string[]; reason: string }
+> = {
+	'src/core/tools/transcription_local_asr.ts': {
+		primitives: ['extractRfc6052Ipv4', 'packBlocks', 'packedInBlock'],
+		reason:
+			'PENDING DELETION (SURF-2 integrator request 1): its LEGACY_IPV4_EMBEDDINGS / ' +
+			'LOCAL_USE_NAT64 tables re-read carriers the guard’s claimedIpv4s already answers — ' +
+			'extractRfc6052Ipv4 goes with them. packBlocks/packedInBlock stay for METADATA_BLOCKS, ' +
+			'the cloud metadata endpoints: a destination list, not a carrier.',
+	},
+};
+
+function carrierViolations(census: Map<string, Set<string>>): string[] {
+	const found: string[] = [];
+	for (const [file, held] of census) {
+		if (file.startsWith('src/core/security/')) continue;
+		const allowed = new Set(CARRIER_PRIMITIVE_IMPORTERS[file]?.primitives ?? []);
+		for (const primitive of held) {
+			if (primitive === OPAQUE)
+				found.push(`${file}: names a carrier module but loads a non-literal import()`);
+			else if (!allowed.has(primitive))
+				found.push(
+					`${file}: holds ${primitive} — ask the guard (claimedIpv4s / embeddedIpv4 / isPrivateIp) ` +
+						'which IPv4 an address reaches instead of building a carrier table of your own',
+				);
+		}
+	}
+	return found.sort();
+}
+
+describe('who reads carriers (import-graph census of the address primitives)', () => {
+	const census = doorCensus(
+		new Map(sourceFiles().map((entry) => [entry.file, entry.code])),
+		CARRIER_PRIMITIVE_SEEDS,
+	);
+
+	test('no module outside the guard builds a carrier table without a written row', () => {
+		expect(carrierViolations(census)).toEqual([]);
+	});
+
+	test('the rows may only SHRINK, and each carries a real reason', () => {
+		const stale: string[] = [];
+		for (const [file, row] of Object.entries(CARRIER_PRIMITIVE_IMPORTERS)) {
+			expect(row.reason.length, file).toBeGreaterThan(80);
+			const unused = row.primitives.filter(
+				(primitive) => census.get(file)?.has(primitive) !== true,
+			);
+			if (unused.length > 0)
+				stale.push(`${file}: no longer holds ${unused.join(', ')} — narrow or delete the row`);
+		}
+		expect(stale).toEqual([]);
+	});
+
+	test('the census sees a namespace, a rename and a barrel (synthetic tree)', () => {
+		const synthetic = new Map<string, string>([
+			[IP_ADDRESS, 'export function extractRfc6052Ipv4() {}'],
+			[GUARD, 'export function packBlocks() {}'],
+			[
+				'src/core/x/namespace.ts',
+				"import * as ip from '../security/ip_address.ts';\nexport const read = ip.extractRfc6052Ipv4;",
+			],
+			[
+				'src/core/x/rename.ts',
+				"import { packBlocks as blocks } from '../security/ssrf_guard.ts';\nblocks([]);",
+			],
+			[
+				'src/core/x/barrel.ts',
+				"export { packedInBlock as inside } from '../security/ip_address.ts';",
+			],
+			['tools/tool_y/server/index.ts', "import { inside } from '../../../src/core/x/barrel.ts';"],
+			['src/core/x/clean.ts', "import { formatIpv4 } from '../security/ip_address.ts';"],
+		]);
+		const found = carrierViolations(doorCensus(synthetic, CARRIER_PRIMITIVE_SEEDS));
+		const holders = new Set(found.map((line) => line.split(':')[0]));
+		expect([...holders].sort()).toEqual([
+			'src/core/x/barrel.ts',
+			'src/core/x/namespace.ts',
+			'src/core/x/rename.ts',
+			'tools/tool_y/server/index.ts',
+		]);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// WHO JUDGES ADDRESSES (the wider SURF-2 class, closed by outcome)
+// ---------------------------------------------------------------------------
+
+/*
+ * The carrier census above names four primitives; a module can still judge an address
+ * with a table of its own built from the plain byte parsers (`packIpv6`, `packAddress`
+ * …). So EVERY address byte primitive of ip_address.ts (and the guard's block packer)
+ * is censused by binding, and outside `src/core/security/` a holder needs a row saying
+ * which way it judges:
+ *
+ *   - `outbound` — it decides where the server may CONNECT. Its row names the exported
+ *     predicate `(uri) => boolean | Promise<boolean>` (true = allowed), and that
+ *     predicate is DRIVEN here through every truth-table row with every exemption OFF:
+ *     it must equal the guard. Registering a new outbound module is what puts it under
+ *     the table — the verdict is measured, not the spelling.
+ *   - `inbound` — it judges a CLIENT's address against an operator allowlist (no
+ *     destination, no carrier question); its reason says so.
+ *
+ * Rows may only SHRINK (a row whose module holds no primitive is red). The census's
+ * own limit: a module that parses addresses with NO primitive of ip_address.ts (its own
+ * regex, `node:net`) is invisible to it — review-diff's ssrf-egress lens owns that.
+ */
+const ADDRESS_BYTE_SEEDS: Record<string, readonly string[]> = {
+	[IP_ADDRESS]: [
+		'peerBytes',
+		'sameBytes',
+		'sameAddress',
+		'packIpv4',
+		'packIpv6',
+		'packAddress',
+		'ipInCidr',
+		'peerBlock',
+		'packCidr',
+		'packedInBlock',
+		'extractRfc6052Ipv4',
+	],
+	[GUARD]: ['packBlocks'],
+};
+
+type AddressJudgeRow =
+	| { direction: 'outbound'; predicate: string; reason: string }
+	| { direction: 'inbound'; reason: string };
+
+const ADDRESS_JUDGES: Record<string, AddressJudgeRow> = {
+	'src/core/tools/transcription_local_asr.ts': {
+		direction: 'outbound',
+		predicate: 'isSafeLocalAsrUrl',
+		reason:
+			'the on-premise transcriber’s destination policy (the private-host exemption); with ' +
+			'the exemption OFF it must be the guard, which the drive below measures row by row.',
+	},
+	'src/core/install/gate.ts': {
+		direction: 'inbound',
+		reason:
+			'the installer’s CLIENT-IP allowlist (DEDALO_INSTALL_ALLOWED_IPS, loopback by ' +
+			'default): matches the caller’s address against operator CIDRs; no destination is chosen.',
+	},
+};
+
+function addressJudgeViolations(census: Map<string, Set<string>>): string[] {
+	const found: string[] = [];
+	for (const [file, held] of census) {
+		if (file.startsWith('src/core/security/')) continue;
+		if (held.has(OPAQUE))
+			found.push(`${file}: names an address module but loads a non-literal import()`);
+		else if (ADDRESS_JUDGES[file] === undefined)
+			found.push(
+				`${file}: holds ${[...held].sort().join(', ')} — register it in ADDRESS_JUDGES ` +
+					'(outbound: its predicate is driven through the truth table; inbound: why no ' +
+					'destination is judged), or ask the guard instead',
+			);
+	}
+	return found.sort();
+}
+
+describe('who judges addresses (every holder of an address byte primitive is registered)', () => {
+	const census = doorCensus(
+		new Map(sourceFiles().map((entry) => [entry.file, entry.code])),
+		ADDRESS_BYTE_SEEDS,
+	);
+
+	test('no module outside the guard judges addresses without a row', () => {
+		expect(addressJudgeViolations(census)).toEqual([]);
+	});
+
+	test('the rows may only SHRINK, and each carries a real reason', () => {
+		const stale: string[] = [];
+		for (const [file, row] of Object.entries(ADDRESS_JUDGES)) {
+			expect(row.reason.length, file).toBeGreaterThan(80);
+			if ((census.get(file)?.size ?? 0) === 0)
+				stale.push(`${file}: holds no address primitive — delete the row`);
+		}
+		expect(stale).toEqual([]);
+	});
+
+	test('the census sees a plain byte parser behind a barrel (synthetic tree)', () => {
+		const synthetic = new Map<string, string>([
+			[IP_ADDRESS, 'export function packIpv6() {}'],
+			[GUARD, 'export function packBlocks() {}'],
+			[
+				'src/core/x/hand_rolled.ts',
+				"import { packIpv6 as parse } from '../security/ip_address.ts';\n" +
+					'export const isOk = (h) => parse(h)?.subarray(12, 16);',
+			],
+			['src/core/x/barrel.ts', "export * from '../security/ip_address.ts';"],
+			['tools/tool_y/server/index.ts', "import { packIpv6 } from '../../../src/core/x/barrel.ts';"],
+		]);
+		const found = addressJudgeViolations(doorCensus(synthetic, ADDRESS_BYTE_SEEDS));
+		expect(found.map((line) => line.split(':')[0])).toEqual([
+			'src/core/x/barrel.ts',
+			'src/core/x/hand_rolled.ts',
+			'tools/tool_y/server/index.ts',
+		]);
+	});
+});
+
+describe('every OUTBOUND address judge equals the guard on the truth table (exemptions off)', () => {
+	const originalDiscovery = nat64DiscoveryState();
+	beforeEach(() => setExemption(false));
+	afterEach(() => {
+		setNat64DiscoveryForTests(originalDiscovery);
+		process.env[EXEMPTION] = originalExemption ?? '';
+	});
+
+	const outbound = Object.entries(ADDRESS_JUDGES).flatMap(([file, row]) =>
+		row.direction === 'outbound' ? [{ file, predicate: row.predicate }] : [],
+	);
+
+	test('at least one outbound judge is registered (the drive is not vacuous)', () => {
+		expect(outbound.length).toBeGreaterThan(0);
+	});
+
+	for (const { file, predicate } of outbound) {
+		test(`${file} ${predicate}: allowed exactly when the guard allows, every row`, async () => {
+			const module = (await import(join(process.cwd(), file))) as Record<string, unknown>;
+			const judge = module[predicate];
+			expect(typeof judge, `${file} exports ${predicate}`).toBe('function');
+			const mode = DISCOVERY_MODES[0] as DiscoveryMode;
+			const problems: string[] = [];
+			let allowed = 0;
+			for (const row of TRUTH_ROWS) {
+				setNat64DiscoveryForTests({
+					prefixes: seededPrefixes([...mode.ipv4only, ...row.discovery]),
+					expiresAt: Date.now() + 10 * 60_000,
+				});
+				const verdict = await (judge as (uri: string) => boolean | Promise<boolean>)(
+					`http://[${row.address}]/`,
+				);
+				if (verdict) allowed++;
+				if (verdict !== !row.refused)
+					problems.push(
+						`${row.label} (${row.address}) want allowed=${!row.refused} got ${verdict}`,
+					);
+			}
+			expect(problems).toEqual([]);
+			expect(allowed > 0 && allowed < TRUTH_ROWS.length, 'both verdicts occurred').toBe(true);
+		});
+	}
 });

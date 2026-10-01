@@ -76,6 +76,7 @@ import { toolTimeMachineBulkRevert } from '../../tools/tool_time_machine/server/
 import { toolTimeMachineApplyValue } from '../../tools/tool_time_machine/server/tool_time_machine.ts';
 import { mustGet } from '../helpers/assert.ts';
 import { insertLegacyBulkRow } from '../helpers/legacy_bulk_run.ts';
+import { superuserTranslationGrant } from '../helpers/translation_grant.ts';
 
 const TLD = 'zztwl';
 const SECTION = `${TLD}1`;
@@ -359,11 +360,8 @@ async function transliterate(
 	targetLang: string,
 	dictionary: Record<string, string>,
 ): Promise<void> {
-	const outcome = await translateAndWrite({
+	const outcome = await translateAndWrite(await superuserTranslationGrant(SECTION, main.tipo, id), {
 		model: 'component_input_text',
-		componentTipo: main.tipo,
-		sectionTipo: SECTION,
-		sectionId: id,
 		sourceLang: NOLAN,
 		targetLang,
 		provider: async (req) => ({
@@ -373,7 +371,6 @@ async function transliterate(
 		}),
 		uri: 'test://transliterate',
 		key: '',
-		userId: USER_ID,
 	});
 	expect(outcome.ok).toBe(true);
 }

@@ -36,7 +36,11 @@ import {
 	sweepStaleJobs,
 	updateJobProgress,
 } from '../../src/diffusion/jobs/queue.ts';
-import { DIFFUSION_JOBS_TABLE } from '../../src/diffusion/jobs/schema.ts';
+import { appendRunLedger, clearRunLedger } from '../../src/diffusion/jobs/run_ledger.ts';
+import {
+	DIFFUSION_JOB_LEDGER_TABLE,
+	DIFFUSION_JOBS_TABLE,
+} from '../../src/diffusion/jobs/schema.ts';
 import { ensureDiffusionScratchTables } from '../helpers/diffusion_scratch_tables.ts';
 
 /**
@@ -125,6 +129,56 @@ describe('diffusion job queue (durable, Postgres-backed)', () => {
 		});
 		createdJobIds.push(other.job.job_id);
 		expect(other.attached).toBe(false);
+	});
+
+	test('attach is SCOPED (DIFF-3): another owner, or another spec, on an active target is refused typed diffusion.target_busy', async () => {
+		const active = await enqueueDiffusionJob({
+			ownerUserId: OWNER_A,
+			clientProcessId: `process_diffusion_${OWNER_A}_jobtest3_jobsec3`,
+			spec: spec('jobtest3', 'jobsec3'),
+		});
+		createdJobIds.push(active.job.job_id);
+		expect(active.attached).toBe(false);
+
+		/** The enqueue outcome, or the refusal it threw. */
+		async function attempt(owner: number, jobSpec: DiffusionJobSpec) {
+			try {
+				const result = await enqueueDiffusionJob({
+					ownerUserId: owner,
+					clientProcessId: `process_diffusion_${owner}_jobtest3_jobsec3`,
+					spec: jobSpec,
+				});
+				if (!result.attached) createdJobIds.push(result.job.job_id);
+				return { attached: result.attached, jobId: result.job.job_id, code: null };
+			} catch (error) {
+				return { attached: false, jobId: null, code: (error as { code?: string }).code ?? null };
+			}
+		}
+
+		// Another OWNER on the same target: refused, never handed the live run.
+		const byB = await attempt(OWNER_B, spec('jobtest3', 'jobsec3'));
+		expect(byB.jobId, "owner B was attached to owner A's run").toBeNull();
+		expect(byB.code).toBe('diffusion.target_busy');
+
+		// The same owner asking for ANOTHER selection: refused as well.
+		const otherSelection = {
+			...spec('jobtest3', 'jobsec3'),
+			sqo: { section_tipo: ['jobsec3'], limit: 99, offset: 0 },
+		};
+		const bySpec = await attempt(OWNER_A, otherSelection);
+		expect(bySpec.jobId, 'a different selection was attached to the active run').toBeNull();
+		expect(bySpec.code).toBe('diffusion.target_busy');
+
+		// CONTROL: the same owner, the same run attaches — the display-only totals
+		// (estimated_total, options.total: the client's count, which moves between
+		// two clicks) are not part of the run.
+		const again = await attempt(OWNER_A, {
+			...spec('jobtest3', 'jobsec3'),
+			estimated_total: 42,
+			options: { total: 42 },
+		});
+		expect(again.attached).toBe(true);
+		expect(again.jobId).toBe(active.job.job_id);
 	});
 
 	test('claim transitions queued → running exactly once per job', async () => {
@@ -306,6 +360,39 @@ describe('diffusion job queue (durable, Postgres-backed)', () => {
 		]);
 		expect(await requeueTerminalJob(job.job.job_id)).toBeNull();
 		expect((await getJobById(job.job.job_id))?.state).toBe('running');
+	});
+
+	test('the run ledger is SELF-FENCED (DIFF-1): a stale lease appends and clears nothing', async () => {
+		const enqueued = await enqueueDiffusionJob({
+			ownerUserId: OWNER_A,
+			clientProcessId: `process_diffusion_${OWNER_A}_jobtest9_jobsec9`,
+			spec: spec('jobtest9', 'jobsec9'),
+		});
+		createdJobIds.push(enqueued.job.job_id);
+		const lease = await claimThisJob(enqueued.job.job_id);
+		const stale: JobLease = { job_id: lease.job_id, attempt: lease.attempt - 1 };
+		const event = { kind: 'used' as const, sectionTipo: 'jobsec9', sectionId: 1 };
+		const ledgerRows = async (): Promise<number> => {
+			const rows = (await sql.unsafe(
+				`SELECT count(*)::int AS n FROM "${DIFFUSION_JOB_LEDGER_TABLE}" WHERE job_id = $1`,
+				[lease.job_id],
+			)) as { n: number }[];
+			return rows[0]?.n ?? 0;
+		};
+
+		const refused = await appendRunLedger(stale, 1, [event]).then(
+			() => null,
+			(error: unknown) => error,
+		);
+		expect((refused as { code?: string } | null)?.code).toBe('diffusion.lease_revoked');
+		expect(await ledgerRows(), 'a stale lease appended to the run ledger').toBe(0);
+
+		await appendRunLedger(lease, 1, [event]);
+		expect(await ledgerRows()).toBe(1);
+		await clearRunLedger(stale);
+		expect(await ledgerRows(), 'a stale lease cleared the run ledger').toBe(1);
+		await clearRunLedger(lease);
+		expect(await ledgerRows()).toBe(0);
 	});
 
 	test('purgeTerminalJobs removes only aged terminal rows', async () => {

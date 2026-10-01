@@ -2243,7 +2243,14 @@ export async function readSectionRows(
 	// signal is sqo.mode (the SOURCE mode stays 'list'/'edit' — PHP mirrors this:
 	// sqo->mode 'tm' picks search_tm while the read action is still 'search').
 	const readSource = await pickReadSource((sqo as { mode?: string }).mode);
-	const rows = await readSource.getRows(sqo, principal);
+	// The subdatum READ FLOOR (closure Step 3, SEC-1): a portal / autocomplete
+	// search may filter its target section by the components its VERIFIED
+	// source's request_config names, although the profile holds 0 on them (PHP
+	// get_subdatum's floor). Computed from the ontology, re-verified against the
+	// principal — never read from the client payload.
+	const { subdatumReadFloor } = await import('../security/read_floor.ts');
+	const readFloor = await subdatumReadFloor(principal, source);
+	const rows = await readSource.getRows(sqo, principal, readFloor);
 
 	// --- envelope (PHP sections_json.php :136) ------------------------------
 	// Each entry is {section_tipo, section_id, paginated_key} plus any

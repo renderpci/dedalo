@@ -139,6 +139,8 @@ export const widget: WidgetModule = {
 		class: 'success width_100',
 		label: { kind: 'label_concat', keys: ['install', 'hierarchies'] },
 	},
+	// A thesaurus import / reset writes every term of a hierarchy: maintenance (PERF-11).
+	unboundedActions: ['install_hierarchies', 'reset_hierarchies'],
 	getValue: addHierarchyGetValue,
 	apiActions: {
 		install_hierarchies: addHierarchyInstall,

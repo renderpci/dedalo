@@ -45,3 +45,9 @@
   a synthetic release in a TEMP tree). The live projectRoot swap + restart is
   an operator drill on a scratch instance (ledgered — no automated surface
   swaps the running tree).
+
+## Addendum 2026-09-30 — local-origin refusal
+
+See also `WC-2026-09-30-update-manifest-local-origin-refusal`: `get_code_update_info`
+now refuses an authorized REMOTE caller with `update_server.refused` when this
+master's public origin is local (`DEDALO_HOST` unset or loopback).

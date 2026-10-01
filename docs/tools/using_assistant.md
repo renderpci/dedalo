@@ -18,7 +18,7 @@ It works on your private work data inside the editing application. It is not the
 
 ## Where to find it
 
-The assistant opens as a chat panel from the work application (it opens as a modal). It is available where your installation has enabled and configured it — the assistant, its model and its privacy controls all live on the Dédalo server, so whether it appears, and which models you can pick, depends on how an administrator set it up.
+The assistant opens as a chat panel from the work application (it opens as a modal). It is available where your installation has enabled and configured it, **and your profile grants the assistant tool** — the assistant, its model and its privacy controls all live on the Dédalo server, so whether it appears, and which models you can pick, depends on how an administrator set it up. If the assistant answers that you are not authorized, ask an administrator to grant the assistant tool to your profile.
 
 ## Using it
 

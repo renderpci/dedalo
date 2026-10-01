@@ -1022,7 +1022,9 @@ component_common.prototype.set_value = function(value) {
 *  - Existing items are matched by (tipo, section_tipo, section_id, mode) plus,
 *    for dataframe sub-entries, by (id_key, main_component_tipo).
 *  - Matching items have their `entries` and `fallback_value` updated in place.
-*  - New items that have no match are appended to datum.data.
+*  - New items that have no match are appended to datum.data, in the order the
+*    server emitted them (readers such as component_dataframe.get_rating may
+*    see one component emitted once per ddo, e.g. mode 'edit' then 'solved').
 *  - When new_datum.data is empty the matched item's entries are cleared to []
 *    (server sends no data node when a component has no value).
 *
@@ -1090,7 +1092,16 @@ component_common.prototype.update_datum = async function(new_datum) {
 
 		// datum (global shared with section)
 			// DATA
-			// remove the component old data in the datum (from down to top array items)
+			// update matching items in place; append unseen ones.
+			// The loop runs from down to top (historical), so a plain push appended the
+			// new items REVERSED — e.g. a rating frame child emitted [edit (datalist),
+			// solved] landed as [solved, edit], and the first-match readers painted
+			// from the datalist-less one. Unseen items are INSERTED at the end of the
+			// pre-merge datum instead: iterating backwards, each earlier item goes in
+			// front of the later ones, so the server's emission order is kept. They are
+			// still in the datum while the loop runs, so a later match sees them exactly
+			// as before (same in-place update semantics, only the order changed).
+				const append_at = self.datum.data.length
 				for (let i = new_data_length - 1; i >= 0; i--) {
 
 					const data_item			= new_data[i]
@@ -1125,8 +1136,8 @@ component_common.prototype.update_datum = async function(new_datum) {
 								  current_data_element.fallback_value	= data_item.fallback_value
 						}
 					}else{
-						// add new data item
-						self.datum.data.push(data_item)
+						// add new data item (in emission order, see append_at)
+						self.datum.data.splice(append_at, 0, data_item)
 					}
 				}
 
@@ -1141,6 +1152,9 @@ component_common.prototype.update_datum = async function(new_datum) {
 		// datum (global shared with section)
 			// adds new elements to the datum if they do not already exist
 			// Note that since 12-10-2023, the mode is taken into account here
+			// New items keep the server's emission order (inserted at the pre-merge end,
+			// as the DATA loop above does — a push from this backwards loop reversed them).
+				const context_append_at = self.datum.context.length
 				for (let i = new_context_length - 1; i >= 0; i--) {
 
 					const context_item	= new_context[i]
@@ -1152,8 +1166,8 @@ component_common.prototype.update_datum = async function(new_datum) {
 					)
 
 					if (!found_item) {
-						// add new context item
-						self.datum.context.push(context_item)
+						// add new context item (in emission order)
+						self.datum.context.splice(context_append_at, 0, context_item)
 					}
 				}
 

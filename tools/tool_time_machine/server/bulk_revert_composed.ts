@@ -36,7 +36,7 @@
  *      alone, a live frame added after the run must not be left pairing an
  *      item the revert removes.
  *   6. WRITE (bulk_revert_undo.ts writeComposedUnit — the revert's one write
- *      door), one `persistRecordKeys`: the main key, and every slot whose
+ *      door), one `persistRestoredKeys`: the main key, and every slot whose
  *      content changes — the other mains' frames kept in place, this main's
  *      recorded frames put back (restoreSlot); a slot left empty is REMOVED.
  *      Then relation_search and the item-id counters of every written key,
@@ -513,7 +513,7 @@ async function composedScope(unit: RevertUnit): Promise<ComposedScope> {
 	};
 }
 
-/** A written key as the post-commit observer cascade and activity row see it. */
+/** A written key as the post-commit activity row and the report see it. */
 function writtenOf(write: ComposedKeyWrite, scope: ComposedScope): WrittenKey {
 	const isMain = write.tipo === scope.mainTipo;
 	const key: RevertKey = isMain
@@ -522,8 +522,6 @@ function writtenOf(write: ComposedKeyWrite, scope: ComposedScope): WrittenKey {
 	return {
 		key,
 		table: scope.target.table,
-		before: asItems(write.before),
-		after: write.after,
 		inexact: null,
 	};
 }

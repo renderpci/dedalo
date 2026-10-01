@@ -17,8 +17,11 @@
  * main restored without its frames leaves orphan pairings behind. The restore
  * then writes a fresh TM audit row carrying main + frames, so the restore
  * itself is revertible (PHP: "the new save immediately creates a fresh TM
- * entry"; component restores do NOT delete the consumed TM row), and finally
- * fires the observer cascade like every PHP `element->save()` did.
+ * entry"; component restores do NOT delete the consumed TM row). The observer
+ * cascade every PHP `element->save()` fired is the write chokepoint's own
+ * obligation (section_record/record_write.ts §3e — the ledger drains it after
+ * COMMIT, from the before-image read under the row lock), for this branch and
+ * the section branch alike.
  *
  * SECTION branch (recover a whole deleted/edited record): the TM snapshot's
  * data is a full matrix-columns object; it overwrites the live record via the
@@ -59,7 +62,6 @@ import type { MatrixJsonbColumn } from '../../../src/core/db/matrix.ts';
 import { MATRIX_JSONB_COLUMNS, readMatrixRecord } from '../../../src/core/db/matrix.ts';
 import {
 	absorbComponentItemIds,
-	insertMatrixRecordIfAbsent,
 	readMatrixKeyForUpdate,
 } from '../../../src/core/db/matrix_write.ts';
 import { withTransaction } from '../../../src/core/db/postgres.ts';
@@ -87,10 +89,10 @@ import {
 } from '../../../src/core/relations/dataframe_slots.ts';
 import { NOLAN } from '../../../src/core/relations/main_lanes.ts';
 import {
-	reindexRelationColumnLikeSave,
-	reindexRelationSearchLikeSave,
-} from '../../../src/core/relations/save.ts';
-import { persistRecordColumns, persistRecordKeys } from '../../../src/core/section_record/index.ts';
+	persistRecordBirth,
+	persistRecordColumns,
+	persistRestoredKeys,
+} from '../../../src/core/section_record/index.ts';
 import { principalCanAccessRecord } from '../../../src/core/security/record_scope.ts';
 import { readRowLaneState, restoredLaneValue } from '../../../src/core/tm_record/lane_state.ts';
 import {
@@ -106,7 +108,6 @@ import {
 	type FrameSlice,
 	planDataframeRestore,
 } from './dataframe_restore.ts';
-import { propagateRestoreToObservers } from './restore_common.ts';
 
 /**
  * SECTION restore (PHP apply_value model==='section'): the snapshot is a full
@@ -168,7 +169,15 @@ async function recordRecoverRow(
 
 /**
  * The ROW half of {@link restoreSection}: write the snapshot's jsonb columns
- * back (section ids converged, see below) and answer the columns AS WRITTEN.
+ * back (section ids converged, see below) and answer the snapshot's columns.
+ * Through the whole-record chokepoint (section_record/record_write.ts
+ * persistRecordColumns), which owns every derived write (§3e): the
+ * `relation_search` index re-derived for the `_hi` keys the restore touches
+ * (the snapshot's is the chain of its day), the covered observer slots kept
+ * LIVE and recomputed (a snapshot's mirror is whoever referenced the record
+ * THEN), and the observer cascade of every key it replaces — its before-image
+ * read under the row lock. An absent row makes it an undelete (a birth at the
+ * address). CORE-1 was this door writing the row and remembering none of it.
  * Joins an ambient transaction — the bulk revert undeletes a cascade target
  * (a record a revert's D2 deleted) inside the transaction of the unit that re-links it, so a refused unit rolls
  * the undelete back with it. The FILE half ({@link restoreSectionMedia}) must
@@ -182,8 +191,12 @@ export async function restoreSectionRow(
 	userId: number,
 ): Promise<Partial<Record<MatrixJsonbColumn, unknown>>> {
 	const { table, columns } = await snapshotColumns(snapshot, tmId, sectionTipo, sectionId);
-	await persistRecordColumns({ table, sectionTipo, sectionId }, columns, { userId });
-	await reindexRelationColumnLikeSave(table, sectionTipo, sectionId, columns.relation);
+	await persistRecordColumns(
+		{ table, sectionTipo, sectionId },
+		columns,
+		{ userId },
+		{ actor: userId },
+	);
 	return columns;
 }
 
@@ -196,33 +209,32 @@ export async function restoreSectionRow(
  * lock), so there is no window between a check and the write. The bulk
  * revert's cascade undelete.
  *
- * `userId: null` writes the snapshot VERBATIM — no dd197/dd201 stamp. The bulk
+ * `stamp: false` writes the snapshot VERBATIM — no dd197/dd201 stamp. The bulk
  * revert's undeletes pass it: the snapshot carries its own stamps, and a run
  * may own them (a CSV import carrying dd197/dd201 columns has undo pairs on
  * those keys). Stamping "now" there made every stamp unit of the undeleted
  * record refuse `changed_since_run`, so reverting a revert was not exact.
+ * `actor` is who the undelete's observer recomputes are attributed to — a
+ * verbatim row still has an actor.
+ *
+ * ONE insert through the chokepoint's birth entry (persistRecordBirth): the
+ * covered observer slots left out and recomputed from truth, the `_hi` index
+ * re-derived from today's thesaurus (the snapshot's is the delete-time chain),
+ * the record's edges declared to the observer ledger — every target's mirror
+ * lists the record again (CORE-1). Answers the columns AS WRITTEN.
  */
 export async function restoreAbsentSectionRow(
 	snapshot: unknown,
 	tmId: number,
 	sectionTipo: string,
 	sectionId: number,
-	userId: number | null,
+	stamp: { userId: number } | false,
+	actor: number,
 ): Promise<Partial<Record<MatrixJsonbColumn, unknown>> | null> {
 	const { table, columns } = await snapshotColumns(snapshot, tmId, sectionTipo, sectionId);
-	if (!(await insertMatrixRecordIfAbsent(table, sectionTipo, sectionId, columns))) return null;
-	// The row is ours: the ordinary whole-record write (stamped unless verbatim)
-	// fires the record-write obligations (save event, security reaction, RAG index).
-	await persistRecordColumns(
-		{ table, sectionTipo, sectionId },
-		columns,
-		userId === null ? false : { userId },
-	);
-	// The snapshot's relation_search is the delete-time chain; a save would
-	// derive it from today's thesaurus (a term moved since answers for its
-	// NEW broader terms), so the undelete re-derives it the same way.
-	await reindexRelationColumnLikeSave(table, sectionTipo, sectionId, columns.relation);
-	return columns;
+	return (await persistRecordBirth({ table, sectionTipo, sectionId }, columns, stamp, {
+		actor,
+	})) as Partial<Record<MatrixJsonbColumn, unknown>> | null;
 }
 
 /** A TM section snapshot's jsonb columns (section ids converged), and its table. */
@@ -526,22 +538,11 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 
 	// What the restore WRITES, computed under the row lock below.
 	let restoredValue: unknown = null;
-	// The observer cascade needs the locators this restore DROPS (targets whose
-	// mirror still references the record). Read under the lock, with everything
-	// else this plan depends on.
-	let preRestoreItems: unknown[] = [];
 
 	await withTransaction(async () => {
 		// THE ROW LOCK, FIRST AND UNCONDITIONALLY (P1-9 / DATA-30): everything the
 		// plan depends on is read INSIDE the transaction and BEHIND the lock.
-		const lockedItems = await readMatrixKeyForUpdate(
-			table,
-			sectionTipo,
-			sectionId,
-			column as MatrixJsonbColumn,
-			tipo,
-		);
-		preRestoreItems = Array.isArray(lockedItems) ? lockedItems : [];
+		await readMatrixKeyForUpdate(table, sectionTipo, sectionId, column as MatrixJsonbColumn, tipo);
 		const before = await readMainState(writeTarget, identity);
 		// THE STATE AT THE ROW (two lanes — tm_record/lane_state.ts, the reader
 		// the preview shares): the row's own lane value, and the frame state AS OF
@@ -575,17 +576,24 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 				restoredValue,
 				identity.sliced,
 			),
+			userId,
 		);
-		// Chokepoint write: restored value + the record's modified stamps in one
-		// update (PHP: apply_value restores via element->save(), which stamps).
-		await persistRecordKeys(
+		// Chokepoint write, the COMPONENT-RESTORE entry: restored value + the
+		// record's modified stamps + the save law's relation_search in one update
+		// (PHP: apply_value restores via element->save(), which stamps, indexes
+		// and — post-commit, through the ledger — propagates to the observers,
+		// diffed against what is WRITTEN: fed the slice, it would report every
+		// surviving sibling language as a removed target). A COVERED OBSERVER
+		// MIRROR's history row is a past DERIVATION: its value (and the frames
+		// paired to its items) stands for this transaction, is never propagated,
+		// and the slot converges on truth after COMMIT — a referencer that left
+		// since is never written back as a phantom (record_write §3e).
+		await persistRestoredKeys(
 			writeTarget,
 			[{ column: column as MatrixJsonbColumn, key: tipo, value: restoredValue }],
 			{ userId },
+			{ actor: userId },
 		);
-		// The save's relation_search law: the ancestor index moves with the
-		// restored locators (a component save re-derives it; so must a restore).
-		await reindexRelationSearchLikeSave(table, sectionTipo, sectionId, tipo, restoredValue);
 		// Restored items carry explicit ids; raise the counter so a later insert
 		// cannot mint a duplicate (PHP raises on every set_data). For a
 		// dataframe-paired main this is load-bearing: a duplicated main item id
@@ -616,24 +624,6 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 			{ userId, timestamp: dbTimestamp(), bulkId: null },
 		);
 	});
-	// Observer cascade, POST-COMMIT (PHP: apply_value restores through
-	// element->save(), whose last act is propagate_to_observers — this port
-	// wrote through the chokepoint directly and skipped it, so a TM restore of
-	// an observed component left every mirror stale and logged no observer TM
-	// row). Post-commit because a cascade hop refuses to run inside an ambient
-	// transaction (B6, observers.ts).
-	// The cascade diffs against what was WRITTEN, not against the snapshot: fed
-	// the slice, it would report every surviving sibling language as a removed
-	// target and unwire mirrors the restore never touched.
-	await propagateRestoreToObservers(
-		tipo,
-		sectionTipo,
-		sectionId,
-		preRestoreItems,
-		restoredValue,
-		userId,
-	);
-
 	await logRecoverActivity(
 		context,
 		'RECOVER COMPONENT',

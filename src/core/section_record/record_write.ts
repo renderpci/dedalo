@@ -44,6 +44,30 @@
  *      fire" has exactly one answer. Gated by
  *      test/unit/write_obligations_tripwire.test.ts (doors × obligations, census
  *      TOTAL over the raw matrix_write callers) + write_obligations_native.test.ts.
+ *   3e. THE DERIVED WRITES (CLOSURE_PLAN Step 2 — the obligation ledger,
+ *      WC-2026-09-30-record-write-obligation-ledger). The chokepoint OWNS every
+ *      derived write of a record write, so no door has one to remember:
+ *        - the OBSERVER cascade — every writer here declares WHAT changed
+ *          (`observed`, REQUIRED on afterRecordWrite): per key, the value before
+ *          (read under the row lock, in the write's transaction) and after; the
+ *          ledger (obligation_ledger.ts) drains it after COMMIT;
+ *        - the `relation_search` ancestor index — derived from the value in the
+ *          SAME UPDATE (relations/save.ts deriveRelationSearch), under the SAVE
+ *          law for every writer but the three REMOVAL doors'
+ *          (persistRelationRemovalKeys);
+ *        - a COVERED OBSERVER slot (a mirror) and its frames are ONE unit
+ *          (pinCoveredObserverSlots): a whole-record write over a live row keeps
+ *          the live unit; a NEW record's birth stores none; an undelete stores
+ *          the snapshot's (its ids pair its frames) — never declared, always
+ *          recomputed from truth after COMMIT, whose hop tells the slot's own
+ *          observers.
+ *      The three escape hatches are separate ENTRY FUNCTIONS, not flag values,
+ *      so the write census can see exactly who takes them (write_obligations leg
+ *      B4): the removal law (persistRelationRemovalKeys — the three removal
+ *      doors), the cascade-owned mirror write (persistObserverMirrorKeys — the
+ *      recompute alone) and the component restore (persistRestoredKeys — a
+ *      restored covered slot is recomputed, never propagated). A write with no
+ *      observed and no indexed key pays nothing: no transaction, no extra read.
  *   4. THE COMPONENT_IMAGE SVG ENVELOPE — a `media`-column write persists any
  *      `svg_file_data` its items carry to the .svg overlay file BEFORE the row
  *      write (PHP component_image::save → create_svg_file, which likewise
@@ -59,15 +83,30 @@
  * for the mapping of the concept onto TS.
  */
 
+import { canonicalJson } from '../concepts/canonical_json.ts';
 import { ACTIVITY_SECTION_TIPO, AUDIT_TIPOS } from '../concepts/section.ts';
+import { type MatrixJsonbColumn, readMatrixRecord } from '../db/matrix.ts';
 import {
+	appendMatrixKeyItems,
+	insertMatrixRecordIfAbsent,
 	type MatrixKeyWrite,
 	type MatrixWriteValues,
+	readMatrixKeyForUpdate,
 	updateMatrixKeysData,
 	updateMatrixRecord,
 } from '../db/matrix_write.ts';
+import { withTransaction } from '../db/postgres.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
+import type { RelationSearchLaw } from '../relations/save.ts';
 import { auditDateItem, auditUserLocator } from '../section/record/create_record.ts';
+import {
+	assertObservedDeclared,
+	enqueueObservedChange,
+	isObservedTipo,
+	type KeyChange,
+	type ObservedDeclaration,
+	type WriteReceipt,
+} from './obligation_ledger.ts';
 import { fireRagRecordEvent, fireSaveEvent } from './save_event.ts';
 
 /** The record a write targets. The table comes from the ontology (getMatrixTableFromTipo). */
@@ -90,6 +129,20 @@ export type SavePathItem = MatrixKeyWrite;
  * not touch the modified metadata, e.g. cache regeneration).
  */
 export type AuditStamp = { userId: number; now?: Date } | false;
+
+/**
+ * WHO the derived writes run as, and where the interactive caller wants the
+ * drain's same-record observer data (§3e). REQUIRED on every entry: the actor of
+ * a write is a fact the caller holds, and an omitted one used to default to
+ * nothing at all — the compiler now makes every door name it.
+ */
+export interface WriteDerivation {
+	/** The principal the observer recomputes are attributed to (their TM rows, stamps). */
+	actor: number;
+	now?: Date;
+	/** Filled after COMMIT with the same-record observer data (PHP observers_data). */
+	receipt?: WriteReceipt;
+}
 
 /**
  * Build the modified-audit savePath items (PHP get_modified_section_save_path
@@ -118,7 +171,8 @@ export function buildModifiedAuditWrites(sectionTipo: string, audit: AuditStamp)
 
 /**
  * Persist one or more component keys of a record — value(s) + modified-audit
- * stamps in ONE UPDATE, then empty-column pruning, then the save event.
+ * stamps + the derived `relation_search` keys in ONE UPDATE, then the post-write
+ * hook with the keys' before/after (§3e).
  *
  * This is the PHP save_component_data contract; with audit=false it degrades
  * to plain save_key_data.
@@ -127,10 +181,218 @@ export async function persistRecordKeys(
 	target: RecordWriteTarget,
 	savePath: readonly SavePathItem[],
 	audit: AuditStamp,
+	derived: WriteDerivation,
+): Promise<void> {
+	await writeKeys(target, savePath, audit, derived, {
+		door: 'persistRecordKeys',
+		law: 'save',
+		ledger: true,
+		coveredSlots: 'change',
+	});
+}
+
+/**
+ * THE COMPONENT-RESTORE entry (§3e): persistRecordKeys for a door that writes a
+ * key's PAST value — the Time Machine's apply_value and the bulk revert-undo's
+ * key write (enumerated by write_obligations_tripwire leg B4). Identical to
+ * persistRecordKeys for every key but a COVERED OBSERVER slot (a
+ * set_dato_external mirror): its past value is a past DERIVATION — whoever
+ * referenced the record THEN. It is written (it stands for the transaction, so
+ * the frames the restore puts back pair to its items), but it is NEVER declared
+ * as a change: propagated, the transient value reaches the slot's own observers
+ * as truth — a phantom referencer's back-mirror would list this record again,
+ * and the per-operation recompute dedup would keep it there. The slot is queued
+ * instead for its recompute from truth after COMMIT (requestCoveredSlotRecompute,
+ * same stamp posture), and THAT write hops with what it dropped (observers.ts
+ * recomputeMirrorAndHop). Gated by obligation_ledger_native cases 14 and 14b–d.
+ */
+export async function persistRestoredKeys(
+	target: RecordWriteTarget,
+	savePath: readonly SavePathItem[],
+	audit: AuditStamp,
+	derived: WriteDerivation,
+): Promise<void> {
+	await writeKeys(target, savePath, audit, derived, {
+		door: 'persistRestoredKeys',
+		law: 'save',
+		ledger: true,
+		coveredSlots: 'recompute',
+	});
+}
+
+/**
+ * THE REMOVAL-LAW entry (§3e): identical to persistRecordKeys, except that EVERY
+ * relation key it writes is re-indexed (P1-7 — the removal doors' law), not only
+ * an autocomplete_hi one. Exactly three doors may take it — the portal locator
+ * delete (relations/save.ts deletePortalLocator), the record delete's
+ * inverse-reference strip and the data wipe (delete_record.ts) — enumerated by
+ * write_obligations_tripwire leg B4.
+ */
+export async function persistRelationRemovalKeys(
+	target: RecordWriteTarget,
+	savePath: readonly SavePathItem[],
+	audit: AuditStamp,
+	derived: WriteDerivation,
+): Promise<void> {
+	await writeKeys(target, savePath, audit, derived, {
+		door: 'persistRelationRemovalKeys',
+		law: 'removal',
+		ledger: true,
+		coveredSlots: 'change',
+	});
+}
+
+/**
+ * THE CASCADE-OWNED entry (§3e): the observer recompute's mirror write
+ * (observers.ts recomputeExternalRelation). The save law applies — an `_hi`
+ * mirror gets its ancestor index from what is actually STORED, a withheld
+ * shrink included (CORE-2) — but NO ledger entry is made: the cascade hops the
+ * written observer itself (emitCascadeHop, bounded and deduplicated), and a
+ * ledger entry would re-enter it. Only the recompute may take it (leg B4).
+ */
+export async function persistObserverMirrorKeys(
+	target: RecordWriteTarget,
+	savePath: readonly SavePathItem[],
+	audit: AuditStamp,
+	derived: WriteDerivation,
+): Promise<void> {
+	await writeKeys(target, savePath, audit, derived, {
+		door: 'persistObserverMirrorKeys',
+		law: 'save',
+		ledger: false,
+		coveredSlots: 'change',
+	});
+}
+
+interface KeyWriteMode {
+	door: string;
+	law: RelationSearchLaw;
+	/** false = cascade-owned (no ledger entry, no before-image read). */
+	ledger: boolean;
+	/**
+	 * What a written COVERED OBSERVER slot declares: `change` — like any key (an
+	 * ordinary save of a mirror is the curator's value, owner decision pending in
+	 * WC-2026-09-30-record-write-obligation-ledger); `recompute` — a restored past
+	 * derivation: never propagated, recomputed after COMMIT (persistRestoredKeys).
+	 */
+	coveredSlots: 'change' | 'recompute';
+}
+
+/** The COVERED OBSERVER slots among a savePath's relation keys (a restored past derivation). */
+async function coveredSlotKeys(savePath: readonly SavePathItem[]): Promise<string[]> {
+	const { isCoveredObserverTipo } = await import('../section/record/observers.ts');
+	const slots: string[] = [];
+	for (const item of savePath) {
+		if (item.column === 'relation' && (await isCoveredObserverTipo(item.key))) {
+			slots.push(item.key);
+		}
+	}
+	return slots;
+}
+
+/** A stored or written key value as an item list (`[]` when absent / not an array). */
+function asItems(value: unknown): unknown[] {
+	return Array.isArray(value) ? value : [];
+}
+
+/**
+ * The derived obligations of a savePath: the keys an observer watches (they need
+ * a before-image) and the relation keys the law indexes. Both empty ⇒ the plain
+ * write, exactly as before the ledger — no transaction, no extra read.
+ */
+async function planKeyObligations(
+	savePath: readonly SavePathItem[],
+	mode: KeyWriteMode,
+): Promise<{ observed: SavePathItem[]; indexed: SavePathItem[]; recomputed: string[] }> {
+	// A restored covered slot is RECOMPUTED, never declared as a change (see mode.coveredSlots).
+	const recomputed =
+		mode.ledger && mode.coveredSlots === 'recompute' ? await coveredSlotKeys(savePath) : [];
+	const observed = mode.ledger ? await observedItems(savePath, recomputed) : [];
+	return { observed, indexed: await indexedRelationItems(savePath, mode.law), recomputed };
+}
+
+/** The savePath items an observer watches, minus the recomputed covered slots. */
+async function observedItems(
+	savePath: readonly SavePathItem[],
+	recomputed: readonly string[],
+): Promise<SavePathItem[]> {
+	const observed: SavePathItem[] = [];
+	for (const item of savePath) {
+		if (recomputed.includes(item.key)) continue;
+		if (await isObservedTipo(item.key)) observed.push(item);
+	}
+	return observed;
+}
+
+/** The relation items the `relation_search` law indexes. */
+async function indexedRelationItems(
+	savePath: readonly SavePathItem[],
+	law: RelationSearchLaw,
+): Promise<SavePathItem[]> {
+	const { relationSearchLaw } = await import('../relations/save.ts');
+	const indexed: SavePathItem[] = [];
+	for (const item of savePath) {
+		if (item.column === 'relation' && (await relationSearchLaw(item.key, law))) {
+			indexed.push(item);
+		}
+	}
+	return indexed;
+}
+
+/**
+ * Whether a stored `relation_search[tipo]` disagrees with the index the SAVE law
+ * derives from `value` — the READ half of the derivation, owned here with it (so
+ * the law has one home): the observer recompute asks it when a mirror's value
+ * already agrees, to find a mirror written before its index was (CORE-2). False
+ * for a tipo the law keeps no index for; an empty derivation equals an absent key.
+ */
+export async function hiIndexDisagrees(
+	tipo: string,
+	value: readonly unknown[],
+	storedIndex: unknown,
+): Promise<boolean> {
+	const { deriveRelationSearch } = await import('../relations/save.ts');
+	const derived = await deriveRelationSearch(tipo, value, 'save');
+	if (derived === null) return false;
+	const stored = Array.isArray(storedIndex) ? storedIndex : [];
+	return canonicalJson(stored) !== canonicalJson(derived);
+}
+
+/** The derived `relation_search` writes of the indexed keys (empty ⇒ key removed). */
+async function relationSearchWrites(
+	indexed: readonly SavePathItem[],
+	law: RelationSearchLaw,
+): Promise<SavePathItem[]> {
+	const { deriveRelationSearch } = await import('../relations/save.ts');
+	const writes: SavePathItem[] = [];
+	for (const item of indexed) {
+		const index = await deriveRelationSearch(item.key, asItems(item.value), law);
+		if (index === null) continue;
+		writes.push({
+			column: 'relation_search',
+			key: item.key,
+			value: index.length > 0 ? index : null,
+		});
+	}
+	return writes;
+}
+
+/**
+ * THE KEY WRITE shared by the four key entries: the SVG envelope (§4), then —
+ * inside ONE transaction when anything derived is owed — the before-image of
+ * every observed key under the row lock, ONE UPDATE carrying the values, the
+ * derived index keys and the stamps, and the post-write hook with the change.
+ */
+async function writeKeys(
+	target: RecordWriteTarget,
+	savePath: readonly SavePathItem[],
+	audit: AuditStamp,
+	derived: WriteDerivation,
+	mode: KeyWriteMode,
 ): Promise<void> {
 	if (savePath.length === 0) {
 		throw new DedaloError('internal.invariant', {
-			message: 'persistRecordKeys: empty savePath',
+			message: `${mode.door}: empty savePath`,
 			coordinates: {
 				table: target.table,
 				section_tipo: target.sectionTipo,
@@ -155,27 +417,192 @@ export async function persistRecordKeys(
 		await persistSvgEnvelopesForKeys(target, savePath);
 	}
 
-	const writes: SavePathItem[] = [
-		...savePath,
-		...buildModifiedAuditWrites(target.sectionTipo, audit),
-	];
-	const affected = await updateMatrixKeysData(
-		target.table,
-		target.sectionTipo,
-		target.sectionId,
-		writes,
-	);
-	assertRecordStillExists(affected, target, 'persistRecordKeys');
+	const auditWrites = buildModifiedAuditWrites(target.sectionTipo, audit);
+	const touchedKeys = [...savePath, ...auditWrites].map((item) => item.key);
+	const plan = await planKeyObligations(savePath, mode);
 
-	await afterRecordWrite(target, {
-		door: 'persistRecordKeys',
-		touchedKeys: writes.map((item) => item.key),
-		rag: 'index',
+	if (plan.observed.length === 0 && plan.indexed.length === 0) {
+		const affected = await updateMatrixKeysData(
+			target.table,
+			target.sectionTipo,
+			target.sectionId,
+			[...savePath, ...auditWrites],
+		);
+		assertRecordStillExists(affected, target, mode.door);
+		await afterRecordWrite(target, {
+			door: mode.door,
+			touchedKeys,
+			rag: 'index',
+			observed: mode.ledger
+				? { kind: 'keys', changes: [], actor: derived.actor, now: derived.now }
+				: { kind: 'cascade-owned' },
+			receipt: derived.receipt,
+		});
+		await requestRestoredSlotRecompute(target, plan.recomputed, audit, derived);
+		return;
+	}
+
+	await withTransaction(async () => {
+		// The BEFORE-IMAGE, under the row lock (joining the caller's lock when it
+		// already holds one): what an observer needs to learn which records this
+		// write DROPPED. A vanished row is the S2-02 conflict, before anything is
+		// written.
+		const changes: KeyChange[] = [];
+		for (const item of plan.observed) {
+			const before = await readMatrixKeyForUpdate(
+				target.table,
+				target.sectionTipo,
+				target.sectionId,
+				item.column,
+				item.key,
+			);
+			if (before === null) assertRecordStillExists(0, target, mode.door);
+			changes.push({
+				column: item.column,
+				tipo: item.key,
+				before: before ?? [],
+				after: asItems(item.value),
+			});
+		}
+		const indexWrites = await relationSearchWrites(plan.indexed, mode.law);
+		const affected = await updateMatrixKeysData(
+			target.table,
+			target.sectionTipo,
+			target.sectionId,
+			[...savePath, ...indexWrites, ...auditWrites],
+		);
+		assertRecordStillExists(affected, target, mode.door);
+		await afterRecordWrite(target, {
+			door: mode.door,
+			touchedKeys,
+			rag: 'index',
+			observed: mode.ledger
+				? { kind: 'keys', changes, actor: derived.actor, now: derived.now }
+				: { kind: 'cascade-owned' },
+			receipt: derived.receipt,
+		});
+		await requestRestoredSlotRecompute(target, plan.recomputed, audit, derived);
 	});
 }
 
 /**
- * The downstream obligations of ONE persisted record write (§3, §3b, §3c).
+ * The restored covered slots' recompute (persistRestoredKeys): queued on the
+ * ledger in the write's own transaction, drained after its COMMIT — with the
+ * write's stamp posture (a restore whose run owns the stamps leaves them).
+ */
+async function requestRestoredSlotRecompute(
+	target: RecordWriteTarget,
+	slots: readonly string[],
+	audit: AuditStamp,
+	derived: WriteDerivation,
+): Promise<void> {
+	if (slots.length === 0) return;
+	await requestCoveredSlotRecompute(
+		target,
+		audit,
+		{ actor: derived.actor, now: derived.now },
+		slots,
+	);
+}
+
+/**
+ * THE ATOMIC-APPEND entry (saveComponentData's pure-insert branch): the items
+ * are CONCATENATED inside the UPDATE (`COALESCE(col->key,'[]') || $n`, so two
+ * concurrent inserts both survive — a deliberate divergence from the
+ * read-modify-write shape), then ONE UPDATE carries the modified stamps and the
+ * derived `relation_search` of the key AS STORED (read back under the row lock
+ * the append took), then the hook — whose before-image is the stored value minus
+ * the appended items (an append removes nothing by construction).
+ */
+export async function persistAppendedKeyItems(
+	target: RecordWriteTarget,
+	column: MatrixJsonbColumn,
+	key: string,
+	inserts: readonly unknown[],
+	audit: AuditStamp,
+	derived: WriteDerivation,
+): Promise<void> {
+	await withTransaction(async () => {
+		const appended = await appendMatrixKeyItems(
+			target.table,
+			target.sectionTipo,
+			target.sectionId,
+			column,
+			key,
+			inserts,
+		);
+		assertRecordStillExists(appended, target, 'persistAppendedKeyItems');
+		const item: SavePathItem = { column, key, value: null };
+		const plan = await planKeyObligations([item], {
+			door: 'persistAppendedKeyItems',
+			law: 'save',
+			ledger: true,
+			coveredSlots: 'change',
+		});
+		const changes: KeyChange[] = [];
+		let indexWrites: SavePathItem[] = [];
+		if (plan.observed.length > 0 || plan.indexed.length > 0) {
+			// The append's UPDATE holds the row lock: this read sees the key as stored.
+			const stored =
+				(await readMatrixKeyForUpdate(
+					target.table,
+					target.sectionTipo,
+					target.sectionId,
+					column,
+					key,
+				)) ?? [];
+			if (plan.observed.length > 0) {
+				changes.push({
+					column,
+					tipo: key,
+					before: withoutAppended(stored, inserts),
+					after: stored,
+				});
+			}
+			indexWrites = await relationSearchWrites(
+				plan.indexed.map((indexed) => ({ ...indexed, value: stored })),
+				'save',
+			);
+		}
+		const auditWrites = buildModifiedAuditWrites(target.sectionTipo, audit);
+		const writes = [...indexWrites, ...auditWrites];
+		if (writes.length > 0) {
+			const affected = await updateMatrixKeysData(
+				target.table,
+				target.sectionTipo,
+				target.sectionId,
+				writes,
+			);
+			assertRecordStillExists(affected, target, 'persistAppendedKeyItems');
+		}
+		await afterRecordWrite(target, {
+			door: 'persistAppendedKeyItems',
+			touchedKeys: [key, ...auditWrites.map((write) => write.key)],
+			rag: 'index',
+			observed: { kind: 'keys', changes, actor: derived.actor, now: derived.now },
+			receipt: derived.receipt,
+		});
+	});
+}
+
+/**
+ * The stored items minus ONE occurrence of each appended item. Matched on
+ * CANONICAL JSON: jsonb re-orders an object's keys, so the stored twin of an
+ * appended item never serializes like the item the caller built.
+ */
+function withoutAppended(stored: readonly unknown[], inserts: readonly unknown[]): unknown[] {
+	const pending = inserts.map((insert) => canonicalJson(insert));
+	const kept: unknown[] = [];
+	for (const entry of stored) {
+		const index = pending.indexOf(canonicalJson(entry));
+		if (index >= 0) pending.splice(index, 1);
+		else kept.push(entry);
+	}
+	return kept;
+}
+
+/**
+ * The downstream obligations of ONE persisted record write (§3, §3b, §3c, §3e).
  *
  * `touchedKeys` — the component tipos the write landed on (the security reaction
  * decides on them; the audit stamps may ride along, they are inert there).
@@ -184,11 +611,17 @@ export async function persistRecordKeys(
  * fires its own index event — stated by the caller, never defaulted, so the
  * tripwire can pin every null.
  * `door` — the writer's name, threaded into the revocation log line.
+ * `observed` — WHAT changed, for the observer cascade (obligation_ledger.ts);
+ * REQUIRED, like `rag`: a writer states `none` with its reason rather than
+ * omitting it.
+ * `receipt` — where the interactive caller collects the same-record observer data.
  */
 export interface RecordWriteObligations {
 	door: string;
 	touchedKeys: readonly string[];
 	rag: 'index' | null;
+	observed: ObservedDeclaration;
+	receipt?: WriteReceipt;
 }
 
 /**
@@ -197,13 +630,19 @@ export interface RecordWriteObligations {
  * COMMIT/ROLLBACK under an ambient transaction — save_event.ts), then the
  * security reaction (idempotent clears on the deferred lane, the revocation on
  * the COMMIT-ONLY lane), then the RAG seam (best-effort; the enqueue joins the
- * ambient transaction so a rolled-back write leaves no marker). None of the
- * three may fail the write: each swallows and logs its own failure.
+ * ambient transaction so a rolled-back write leaves no marker), then the
+ * observer obligation (§3e — queued on the COMMIT-ONLY lane, or drained inline
+ * with no transaction). None of the first three may fail the write: each
+ * swallows and logs its own failure. The ledger only refuses a write whose
+ * transaction already settled (a leaked continuation).
  */
 export async function afterRecordWrite(
 	target: RecordWriteTarget,
 	obligations: RecordWriteObligations,
 ): Promise<void> {
+	// FIRST, before any fan-out: a caller that declared no observer change is a
+	// typed refusal naming its door, never a TypeError from inside the ledger.
+	assertObservedDeclared(target, obligations.observed, obligations.door);
 	await fireSaveEvent(target.sectionTipo);
 	await reactToSecurityWrite(target, obligations.touchedKeys, obligations.door);
 	if (obligations.rag !== null) {
@@ -213,6 +652,7 @@ export async function afterRecordWrite(
 			sectionId: target.sectionId,
 		});
 	}
+	await enqueueObservedChange(target, obligations.observed, obligations.receipt);
 }
 
 /**
@@ -275,10 +715,10 @@ function assertRecordStillExists(
 
 /**
  * Persist ONLY the modified-audit stamps (PHP update_modified_section_data,
- * class.section_record.php:1530) — used by writers whose data write cannot go
- * through updateMatrixKeysData (e.g. the atomic-insert concatenation in
- * save_component.ts) but that must still refresh dd197/dd201 like every PHP
- * component save. No-op for the Activity section / missing user (PHP :1584).
+ * class.section_record.php:1530) — used by writers that refresh a record's
+ * dd197/dd201 once after several unstamped key writes (the delete pipeline's
+ * owners, the data wipe). No-op for the Activity section / missing user
+ * (PHP :1584).
  */
 export async function persistModifiedStamp(
 	target: RecordWriteTarget,
@@ -293,15 +733,246 @@ export async function persistModifiedStamp(
 		writes,
 	);
 	assertRecordStillExists(affected, target, 'persistModifiedStamp');
-	// rag: null — a stamp-only write. The DATA door that called this (the
-	// atomic-insert branch of saveComponentData, the delete pipeline) fires the
-	// index event for the content it wrote; firing it twice here would only
-	// dedupe in the queue. Pinned as the one null cell of the obligations matrix.
+	// rag: null — a stamp-only write. The DATA door that called this (the delete
+	// pipeline, the data wipe) fires the index event for the content it wrote;
+	// firing it twice here would only dedupe in the queue. Pinned as the one null
+	// cell of the obligations matrix. Nothing observable changed either.
 	await afterRecordWrite(target, {
 		door: 'persistModifiedStamp',
 		touchedKeys: [],
 		rag: null,
+		observed: { kind: 'none', reason: 'stamp-only' },
 	});
+}
+
+/** A jsonb column value as a key bag (`{}` when null / absent / not an object). */
+function bagOf(value: unknown): Record<string, unknown> {
+	return value !== null && value !== undefined && typeof value === 'object' && !Array.isArray(value)
+		? (value as Record<string, unknown>)
+		: {};
+}
+
+/**
+ * Merge the modified stamps into the column objects of a whole-record write (the
+ * caller passes the FULL intended content of any column it includes).
+ */
+function mergeAuditStamps(values: MatrixWriteValues, sectionTipo: string, audit: AuditStamp): void {
+	for (const write of buildModifiedAuditWrites(sectionTipo, audit)) {
+		const bag = { ...bagOf(values[write.column]) };
+		bag[write.key] = write.value;
+		values[write.column] = bag;
+	}
+}
+
+/** Every component tipo inside the column bags of a whole-record write. */
+function columnKeys(values: MatrixWriteValues): string[] {
+	return Object.values(values).flatMap((bag) =>
+		bag !== null && bag !== undefined && typeof bag === 'object' ? Object.keys(bag) : [],
+	);
+}
+
+/**
+ * THE COVERED UNIT (§3e): a COVERED OBSERVER slot (a set_dato_external mirror —
+ * DERIVED state, "who references me") AND the frames its dataframe slots hold
+ * for it. The two are one unit of meaning: a frame pairs with a mirror ITEM by
+ * `id_key → id`, and the recompute keeps the id of every referencer still
+ * present (its order-preserving merge) but mints fresh ids — 1..N in reference
+ * order — into an EMPTY mirror. So a write that keeps or drops the main without
+ * its frames re-pairs a curator's frame onto ANOTHER referencer the moment the
+ * recompute runs. Every whole-record law below moves the unit whole.
+ *
+ * The slots of the unit: the main's declared dataframe slots ∪ every key of
+ * either bag holding one of its frames (relations/dataframe_slots.ts
+ * slotsFromBag — the slot set of every TM reader). Within a slot only the
+ * MAIN's frames move (isOwnFrame — a shared slot's other mains' frames stay as
+ * written); a slot left with nothing is removed.
+ */
+async function coveredUnitSlots(
+	main: string,
+	written: Record<string, unknown>,
+	source: Record<string, unknown>,
+): Promise<string[]> {
+	const { slotsFromBag } = await import('../relations/dataframe_slots.ts');
+	const slots = new Set((await slotsFromBag(main, written)).slots);
+	for (const slot of (await slotsFromBag(main, source)).slots) slots.add(slot);
+	return [...slots];
+}
+
+/**
+ * Set a covered unit inside `relation` (in place) to its image in `source`: the
+ * main to `source[main]` (absent ⇒ removed), and in every slot of the unit the
+ * main's own frames to the ones `source` holds (none ⇒ dropped). `source` `{}`
+ * DROPS the unit (a birth of a NEW record: nothing references it yet).
+ */
+async function setCoveredUnit(
+	relation: Record<string, unknown>,
+	main: string,
+	source: Record<string, unknown>,
+): Promise<void> {
+	const { isFrameEntry, isOwnFrame, restoreSlot } = await import('../relations/dataframe_slots.ts');
+	const ownFrames = (value: unknown): unknown[] =>
+		(Array.isArray(value) ? value : []).filter(
+			(entry) => isFrameEntry(entry) && isOwnFrame(entry, main),
+		);
+	for (const slot of await coveredUnitSlots(main, relation, source)) {
+		if (slot === main) continue;
+		const next = restoreSlot(relation[slot], main, ownFrames(source[slot]));
+		if (next.length > 0) relation[slot] = next;
+		else delete relation[slot];
+	}
+	if (main in source) relation[main] = source[main];
+	else delete relation[main];
+}
+
+/** The COVERED OBSERVER slots among a relation bag's keys (and `extra` keys). */
+async function coveredSlotsOf(
+	relation: Record<string, unknown>,
+	extra: Record<string, unknown> = {},
+): Promise<string[]> {
+	const { isCoveredObserverTipo } = await import('../section/record/observers.ts');
+	const covered: string[] = [];
+	for (const tipo of new Set([...Object.keys(relation), ...Object.keys(extra)])) {
+		if (await isCoveredObserverTipo(tipo)) covered.push(tipo);
+	}
+	return covered;
+}
+
+/**
+ * The COVERED UNITS of a whole-record write over a LIVE row never come from the
+ * caller (§3e): a mirror is DERIVED state, and a snapshot's copy of it is
+ * whatever the referencers were THEN — a restored term brought its phantom
+ * referencers back verbatim (CORE-1, case 9). Each unit keeps its LIVE image —
+ * the main AND its frames, so every frame still pairs with the live item it was
+ * written for (a live main beside the snapshot's frames re-paired them) — and
+ * the main is queued for a recompute from truth. `relation` untouched by the
+ * write ⇒ nothing to pin. Returns the pinned mains.
+ */
+async function pinCoveredObserverSlots(
+	values: MatrixWriteValues,
+	live: Record<string, unknown>,
+): Promise<string[]> {
+	if (!('relation' in values)) return [];
+	const relation = { ...bagOf(values.relation) };
+	const pinned = await coveredSlotsOf(relation, live);
+	if (pinned.length === 0) return [];
+	for (const main of pinned) await setCoveredUnit(relation, main, live);
+	values.relation = relation;
+	return pinned;
+}
+
+/**
+ * The COVERED UNITS of a NEW record's birth (create, duplicate) are DROPPED,
+ * main and frames: nothing can reference a record that does not exist yet, so
+ * its mirror is empty by construction — a duplicate's copy of its source's
+ * mirror (and the frames on it) are the SOURCE's referencers', and a create's
+ * `dato_default` on a covered slot is a phantom (case 7d). Frames left behind
+ * would pair with the ids the first recompute mints (1..N): a frame of the
+ * source's referencer landing on the clone's. In place. Returns the dropped
+ * mains (each still recomputed after the insert).
+ */
+export async function dropCoveredObserverUnits(
+	values: MatrixWriteValues,
+	/** Covered mains whose frames may be present WITHOUT the main (a door that already left the main out). */
+	knownMains: readonly string[] = [],
+): Promise<string[]> {
+	if (!('relation' in values)) return [];
+	const relation = { ...bagOf(values.relation) };
+	const dropped = [...new Set([...(await coveredSlotsOf(relation)), ...knownMains])];
+	if (dropped.length === 0) return [];
+	for (const main of dropped) await setCoveredUnit(relation, main, {});
+	values.relation = relation;
+	return dropped;
+}
+
+/**
+ * THE INDEX OF A WHOLE-RECORD WRITE (§3e). Untouched when no `_hi` key is in
+ * play — the column is written exactly as the caller gave it (or not at all).
+ * Otherwise every `_hi` key of the old relation, the new relation and the base
+ * index is RE-DERIVED from the new relation value (absent or empty ⇒ the key
+ * goes): the base is the caller's index, else the live one — a snapshot taken
+ * before the index existed (PHP-era history) carries none, and falling back to
+ * `{}` would silently drop every other key.
+ */
+async function rederiveHiIndex(
+	values: MatrixWriteValues,
+	liveColumns: Record<string, unknown> | null,
+): Promise<void> {
+	if (!('relation' in values)) return;
+	const relation = bagOf(values.relation);
+	const base = hiIndexBase(values, liveColumns);
+	const candidates = new Set([
+		...Object.keys(relation),
+		...Object.keys(bagOf(liveColumns?.relation)),
+		...Object.keys(base),
+	]);
+	if (!(await rederiveIndexedKeys(candidates, relation, base))) return;
+	values.relation_search = Object.keys(base).length > 0 ? base : null;
+}
+
+/** The index a whole-record write re-derives ONTO: the caller's, else the live one (a copy). */
+function hiIndexBase(
+	values: MatrixWriteValues,
+	liveColumns: Record<string, unknown> | null,
+): Record<string, unknown> {
+	return {
+		...bagOf(
+			values.relation_search !== undefined
+				? values.relation_search
+				: liveColumns === null
+					? undefined
+					: liveColumns.relation_search,
+		),
+	};
+}
+
+/**
+ * Re-derive, IN PLACE on `base`, every candidate key the save law indexes
+ * (absent or empty ⇒ the key goes). True when any candidate was indexed.
+ */
+async function rederiveIndexedKeys(
+	candidates: ReadonlySet<string>,
+	relation: Record<string, unknown>,
+	base: Record<string, unknown>,
+): Promise<boolean> {
+	const { relationSearchLaw, deriveRelationSearch } = await import('../relations/save.ts');
+	let touched = false;
+	for (const tipo of candidates) {
+		if (!(await relationSearchLaw(tipo, 'save'))) continue;
+		touched = true;
+		const index = await deriveRelationSearch(tipo, relation[tipo], 'save');
+		if (index !== null && index.length > 0) base[tipo] = index;
+		else delete base[tipo];
+	}
+	return touched;
+}
+
+/** The before/after of every key in the written columns (the ledger keeps the observed ones). */
+function wholeRecordChanges(
+	values: MatrixWriteValues,
+	liveColumns: Record<string, unknown>,
+	pinned: readonly string[],
+): KeyChange[] {
+	const changes: KeyChange[] = [];
+	for (const [column, value] of Object.entries(values)) {
+		if (column === 'relation_search' || column === 'data' || column === 'meta') continue;
+		changes.push(...columnKeyChanges(column, bagOf(liveColumns[column]), bagOf(value), pinned));
+	}
+	return changes;
+}
+
+/** The before/after of every key of ONE written column (pinned covered slots of `relation` skipped). */
+function columnKeyChanges(
+	column: string,
+	before: Record<string, unknown>,
+	after: Record<string, unknown>,
+	pinned: readonly string[],
+): KeyChange[] {
+	const changes: KeyChange[] = [];
+	for (const tipo of new Set([...Object.keys(before), ...Object.keys(after)])) {
+		if (column === 'relation' && pinned.includes(tipo)) continue;
+		changes.push({ column, tipo, before: asItems(before[tipo]), after: asItems(after[tipo]) });
+	}
+	return changes;
 }
 
 /**
@@ -314,29 +985,27 @@ export async function persistModifiedStamp(
  * upsert — the caller must therefore pass the FULL intended content of any
  * column it includes (whole-column writes replace, they do not patch).
  *
+ * UNDER THE ROW LOCK, in one transaction (§3e): the live row is read first — the
+ * before-image of every key the write replaces, the base of the derived index,
+ * the live value of each covered observer slot. An ABSENT row makes the write a
+ * BIRTH at that address (an undelete: the same record continuing, so no
+ * generation epoch) — `'inserted'`; a row that appears under a racing insert is
+ * then replaced under its lock like any live one.
+ *
  * Ends in afterRecordWrite like every writer here (save event, security
  * reaction, the RAG 'index' seam — PHP save() :564 enqueues the record for
- * re-indexing on every full save).
+ * re-indexing on every full save — and the observer ledger).
  */
 export async function persistRecordColumns(
 	target: RecordWriteTarget,
 	columns: MatrixWriteValues,
-	audit: AuditStamp = false,
+	audit: AuditStamp,
+	derived: WriteDerivation,
 ): Promise<'updated' | 'inserted'> {
-	const values: MatrixWriteValues = { ...columns };
-
-	const auditWrites = buildModifiedAuditWrites(target.sectionTipo, audit);
-	for (const write of auditWrites) {
-		const current = values[write.column];
-		const bag =
-			current !== null && current !== undefined && typeof current === 'object'
-				? { ...(current as Record<string, unknown>) }
-				: {};
-		bag[write.key] = write.value;
-		values[write.column] = bag;
-	}
-
-	if (Object.keys(values).length === 0) {
+	if (
+		Object.keys(columns).length === 0 &&
+		buildModifiedAuditWrites(target.sectionTipo, audit).length === 0
+	) {
 		throw new DedaloError('internal.invariant', {
 			message: 'persistRecordColumns: empty columns payload',
 			coordinates: {
@@ -346,27 +1015,221 @@ export async function persistRecordColumns(
 			},
 		});
 	}
+	return withTransaction(async () => {
+		if ((await lockRecordRow(target)) === null) {
+			if ((await writeBirth(target, columns, audit, derived, 'persistRecordColumns')) !== null) {
+				return 'inserted';
+			}
+			// A row landed at the address between the lock probe and the insert:
+			// it is live now, and replaced under its own lock like any other.
+			if ((await lockRecordRow(target)) === null) {
+				assertRecordStillExists(0, target, 'persistRecordColumns');
+			}
+		}
+		const live = (await readMatrixRecord(target.table, target.sectionTipo, target.sectionId))
+			?.columns as Record<string, unknown> | undefined;
+		if (live === undefined) assertRecordStillExists(0, target, 'persistRecordColumns');
+		const liveColumns = live ?? {};
+		const values: MatrixWriteValues = { ...columns };
+		const pinned = await pinCoveredObserverSlots(values, bagOf(liveColumns.relation));
+		await rederiveHiIndex(values, liveColumns);
+		mergeAuditStamps(values, target.sectionTipo, audit);
+		const changes = wholeRecordChanges(values, liveColumns, pinned);
+		await updateMatrixRecord(target.table, target.sectionTipo, target.sectionId, values);
+		// The WHOLE-COLUMN door — the Time Machine's full-record restore. Its keys are the
+		// component tipos inside each column bag, so a restore that puts back an old dd133
+		// or flips dd131 is an account transition exactly like a per-key save, and used to
+		// be the one shape that reached nothing at all.
+		await afterRecordWrite(target, {
+			door: 'persistRecordColumns',
+			touchedKeys: columnKeys(values),
+			rag: 'index',
+			observed: {
+				kind: 'replace',
+				changes,
+				selfRecompute: pinned,
+				actor: derived.actor,
+				now: derived.now,
+			},
+			receipt: derived.receipt,
+		});
+		return 'updated';
+	});
+}
 
-	const result = await updateMatrixRecord(
+/**
+ * The row lock of a whole-record write (any tipo-grammar key works: the lock is
+ * the row's). `null` = no row at the address.
+ */
+async function lockRecordRow(target: RecordWriteTarget): Promise<unknown[] | null> {
+	return readMatrixKeyForUpdate(
 		target.table,
 		target.sectionTipo,
 		target.sectionId,
-		values,
+		'date',
+		AUDIT_TIPOS.modifiedDate,
 	);
+}
 
-	// The WHOLE-COLUMN door — the Time Machine's full-record restore. Its keys are the
-	// component tipos inside each column bag, so a restore that puts back an old dd133
-	// or flips dd131 is an account transition exactly like a per-key save, and used to
-	// be the one shape that reached nothing at all.
-	await afterRecordWrite(target, {
-		door: 'persistRecordColumns',
-		touchedKeys: Object.values(values).flatMap((bag) =>
-			bag !== null && bag !== undefined && typeof bag === 'object'
-				? Object.keys(bag as Record<string, unknown>)
-				: [],
-		),
-		rag: 'index',
+/**
+ * THE INSERT-IF-ABSENT entry — a record BIRTH at a known address (the undelete:
+ * the time machine's and the bulk revert's). Answers the columns AS WRITTEN, or
+ * `null` — nothing written — when a row stands at the address (never
+ * overwritten: a record created there since the delete is someone else's).
+ *
+ * What it writes (§3e), in ONE insert: the columns as given — its COVERED
+ * UNITS included, the snapshot's mirror beside the frames that pair with it —
+ * the `_hi` index re-derived from today's thesaurus (the snapshot's is the
+ * delete-time chain), and the stamps unless `audit` is false (a verbatim
+ * undelete). The record CONTINUES at its address, so its mirror ids are the
+ * pairing keys of its frames: written back, every referencer still present
+ * keeps its id (and its frame) through the recompute's merge; dropped, the
+ * recompute minted fresh ids 1..N and each frame landed on another referencer.
+ * The snapshot's mirror is a past DERIVATION, so it is never DECLARED: the
+ * birth's edges exclude every covered slot (a phantom referencer must not reach
+ * the mirror's own observers), and every covered slot the section declares is
+ * recomputed from truth after COMMIT — its hop then tells those observers
+ * (obligation_ledger.ts drainEntry). The hook declares the rest as a birth:
+ * every edge the record carries is new to its targets' mirrors. Never reads the
+ * row back — inside the caller's transaction it would only see what it just
+ * wrote.
+ */
+export async function persistRecordBirth(
+	target: RecordWriteTarget,
+	columns: MatrixWriteValues,
+	audit: AuditStamp,
+	derived: WriteDerivation,
+): Promise<MatrixWriteValues | null> {
+	return withTransaction(() => writeBirth(target, columns, audit, derived, 'persistRecordBirth'));
+}
+
+/**
+ * THE BIRTH COLUMNS (§3e) — what every NEW record stores, whichever door
+ * inserts it: its covered units LEFT OUT, main and frames
+ * (dropCoveredObserverUnits — nothing references a new record; each main is
+ * recomputed from truth — the returned tipos) and the
+ * `_hi` ancestor index RE-DERIVED from the relation the row will actually
+ * carry (the base index given in `values.relation_search` is kept for every
+ * other key; an `_hi` key whose relation value is absent loses its index). In
+ * place; no read, no write. Shared by the chokepoint's own birth entry and the
+ * two INSERT doors that bypass it by design (create_record.ts,
+ * duplicate_record.ts) — a clone that copied its source's index verbatim while
+ * dropping the mirror it indexes stored an index for a value it did not hold,
+ * and a broader-term search matched it.
+ */
+export async function prepareBirthColumns(values: MatrixWriteValues): Promise<string[]> {
+	const dropped = await dropCoveredObserverUnits(values);
+	await rederiveHiIndex(values, null);
+	return dropped;
+}
+
+/**
+ * Every COVERED OBSERVER slot a section DECLARES (the one section census the
+ * wipe shares — section/record/declared_components.ts: own ∪ real subtree,
+ * crossing nested sections), whatever a given row stores. A record that
+ * CONTINUES at its address after a gap (an undelete, a wiped record restored)
+ * may have referencers that re-appeared while it was gone — a referencer
+ * undeleted first carries its locator onto the missing record — so its mirrors
+ * are recomputed from truth by DECLARATION, not only the keys its snapshot
+ * happened to carry (a snapshot taken after its last referencer left has none).
+ */
+async function declaredCoveredSlots(sectionTipo: string): Promise<string[]> {
+	const { declaredSectionComponents } = await import('../section/record/declared_components.ts');
+	const { isCoveredObserverTipo } = await import('../section/record/observers.ts');
+	const slots: string[] = [];
+	for (const component of await declaredSectionComponents(sectionTipo)) {
+		if (await isCoveredObserverTipo(component.tipo)) slots.push(component.tipo);
+	}
+	return slots;
+}
+
+/**
+ * THE COVERED-SLOT RECOMPUTE entry (§3e): nothing is written — the record's
+ * COVERED OBSERVER slots are queued for a recompute from truth after the
+ * caller's COMMIT (inline with no transaction). A mirror is derived state, so a
+ * restore never leaves one as its history said it was — the snapshot's copy is
+ * whoever referenced the record THEN. Two kinds of door take it (enumerated by
+ * write_obligations_tripwire leg B4):
+ *   - a door that puts a record's keys back one by one and never passes a
+ *     whole-record entry (the bulk revert's soft-cascade restore): EVERY slot
+ *     the section declares (`only` omitted — the census the wipe shares);
+ *   - the COMPONENT-RESTORE entry (persistRestoredKeys — the Time Machine's
+ *     apply_value of a mirror's history row, the bulk revert-undo's key write,
+ *     the soft-cascade restore's key write), for the covered slots it wrote:
+ *     `only` = exactly those (each already proved covered by
+ *     isCoveredObserverTipo — never narrowed by the census, which a slot it
+ *     misses would leave written and never recomputed). The restored value
+ *     stands for the transaction — its dataframe frames pair to its items, and
+ *     the items that still reference the record keep their ids (the
+ *     recompute's order-preserving merge), so their frames survive — and
+ *     converges on truth after COMMIT: a phantom referencer is dropped with its
+ *     frame, and the recompute's hop tells the slot's own observers.
+ */
+export async function requestCoveredSlotRecompute(
+	target: RecordWriteTarget,
+	audit: AuditStamp,
+	derived: WriteDerivation,
+	only?: readonly string[],
+): Promise<void> {
+	const slots = only === undefined ? await declaredCoveredSlots(target.sectionTipo) : [...only];
+	if (slots.length === 0) return;
+	await enqueueObservedChange(target, {
+		kind: 'recompute',
+		slots,
+		// The caller's stamp posture: a restore that leaves the record's stamps
+		// alone (its run owns them) has its mirrors recomputed without them too.
+		verbatim: audit === false,
+		actor: derived.actor,
+		now: derived.now,
 	});
+}
 
-	return result;
+/** The birth write shared by persistRecordBirth and persistRecordColumns' absent-row path. */
+async function writeBirth(
+	target: RecordWriteTarget,
+	columns: MatrixWriteValues,
+	audit: AuditStamp,
+	derived: WriteDerivation,
+	door: string,
+): Promise<MatrixWriteValues | null> {
+	const values: MatrixWriteValues = { ...columns };
+	// The covered units stand as given (see persistRecordBirth); only the index
+	// is re-derived from what the row carries.
+	const kept = await coveredSlotsOf(bagOf(values.relation));
+	await rederiveHiIndex(values, null);
+	// A birth at a KNOWN address is a record continuing there (an undelete): its
+	// mirrors are recomputed by declaration, not only the slots its snapshot held
+	// (declaredCoveredSlots) — and never declared as edges (the ledger excludes
+	// every selfRecompute slot from a birth's changes).
+	const selfRecompute = [
+		...new Set([...kept, ...(await declaredCoveredSlots(target.sectionTipo))]),
+	];
+	mergeAuditStamps(values, target.sectionTipo, audit);
+	if (
+		!(await insertMatrixRecordIfAbsent(
+			target.table,
+			target.sectionTipo,
+			target.sectionId,
+			values as Partial<Record<MatrixJsonbColumn, unknown>>,
+		))
+	) {
+		return null;
+	}
+	await afterRecordWrite(target, {
+		door,
+		touchedKeys: columnKeys(values),
+		rag: 'index',
+		observed: {
+			kind: 'birth',
+			columns: values,
+			selfRecompute,
+			// No stamps merged = the snapshot's own kept: a VERBATIM birth, whose
+			// covered-slot recomputes must not stamp it either (obligation_ledger.ts).
+			verbatim: audit === false,
+			actor: derived.actor,
+			now: derived.now,
+		},
+		receipt: derived.receipt,
+	});
+	return values;
 }

@@ -581,17 +581,27 @@ export interface OpsConfig {
 	readonly accessLog: boolean;
 	/** Requests slower than this log a warn line, 0 = off (DEDALO_SLOW_REQUEST_MS). */
 	readonly slowRequestMs: number;
-	/** DB statements slower than this log a warn line, 0 = off (DEDALO_SLOW_QUERY_MS).
-	 * Consumed by the db layer (core/db/postgres.ts wiring is WS-A's). */
+	/** DB statements slower than this log a warn line, 0 = off (DEDALO_SLOW_QUERY_MS,
+	 * default 0). Applied by core/db/query_tap.ts on every lane. */
 	readonly slowQueryMs: number;
 	/** Postgres pool max per process (DB_POOL_MAX; cross-process budget in PRODUCTION.md). */
 	readonly dbPoolMax: number;
-	/** Max ms a query may QUEUE for a pooled connection before erroring, 0 = wait
-	 * forever — the pre-audit behavior (DB_POOL_ACQUIRE_TIMEOUT_MS). */
+	/** Max ms a query may QUEUE for a connection (either pool) before failing with
+	 * the typed 503 `db.pool_exhausted`, 0 = wait forever (DB_POOL_ACQUIRE_TIMEOUT_MS,
+	 * default 0; PRODUCTION.md recommends 30000). */
 	readonly dbAcquireTimeoutMs: number;
-	/** Server-side statement_timeout ms, 0 = off (DB_STATEMENT_TIMEOUT_MS).
-	 * PRODUCTION.md recommends a non-zero value in production. */
+	/** The request pool's statement_timeout ms (startup GUC), 0 = off
+	 * (DB_STATEMENT_TIMEOUT_MS, default 0; PRODUCTION.md recommends 60000 — the
+	 * on-by-default flip waits for every legitimately long statement to be in the
+	 * unbounded scope, PRODUCTION.md §4 census). A fired ceiling is the typed 503
+	 * `db.statement_timeout`. Maintenance is NOT sized around it: it runs inside
+	 * `withUnboundedStatements` (core/db/postgres.ts), on the maintenance pool. */
 	readonly dbStatementTimeoutMs: number;
+	/** Connections of the separate MAINTENANCE pool, whose startup statement_timeout
+	 * is 0 (DB_MAINTENANCE_POOL_MAX, default 2, min 1). Built lazily, on the first
+	 * statement issued inside `withUnboundedStatements`; counts in the cross-process
+	 * connection budget (PRODUCTION.md). */
+	readonly dbMaintenancePoolMax: number;
 	/** List offset from which default-ordered searches use the late-row-lookup
 	 * rewrite, -1 = never (SEARCH_LATE_ROW_LOOKUP_OFFSET). */
 	readonly searchLateRowLookupOffset: number;
@@ -610,6 +620,9 @@ export interface OpsConfig {
 	readonly pgBinPath: string | undefined;
 	/** Min hours between backups — the make_backup throttle window (PHP DEDALO_BACKUP_TIME_RANGE). */
 	readonly backupTimeRangeHours: number;
+	/** Seconds per started GiB a full `pg_restore` read of a backup may take before it is an
+	 * unproven (NOT usable) backup (DEDALO_BACKUP_VERIFY_SECONDS_PER_GB, default 60, min 1). */
+	readonly backupVerifySecondsPerGb: number;
 	/**
 	 * Base directory of the ontology data IO exchange (PHP ONTOLOGY_DATA_IO_DIR
 	 * = DEDALO_INSTALL_PATH.'/import/ontology'). A DERIVED key: defaults to the
@@ -1292,6 +1305,7 @@ export const config: DedaloConfig = Object.freeze({
 		dbPoolMax: Math.max(1, readNumber('DB_POOL_MAX')),
 		dbAcquireTimeoutMs: Math.max(0, readNumber('DB_POOL_ACQUIRE_TIMEOUT_MS')),
 		dbStatementTimeoutMs: Math.max(0, readNumber('DB_STATEMENT_TIMEOUT_MS')),
+		dbMaintenancePoolMax: Math.max(1, readNumber('DB_MAINTENANCE_POOL_MAX')),
 		searchLateRowLookupOffset: Math.max(-1, readNumber('SEARCH_LATE_ROW_LOOKUP_OFFSET')),
 		tmCountCacheTtlMs: Math.max(0, readNumber('TM_COUNT_CACHE_TTL_MS')),
 		idleTimeoutSeconds: Math.min(255, Math.max(1, readNumber('SERVER_IDLE_TIMEOUT_S'))),
@@ -1299,6 +1313,7 @@ export const config: DedaloConfig = Object.freeze({
 		backupDir: readEnv('DEDALO_BACKUP_DIR'),
 		pgBinPath: readEnv('DEDALO_PG_BIN_PATH'),
 		backupTimeRangeHours: Math.max(0, readNumber('DEDALO_BACKUP_TIME_RANGE')),
+		backupVerifySecondsPerGb: Math.max(1, readNumber('DEDALO_BACKUP_VERIFY_SECONDS_PER_GB')),
 		ontologyDataIoDir: readString('ONTOLOGY_DATA_IO_DIR'),
 		transformDefinitionsDir: readString('DEDALO_TRANSFORM_DEFINITIONS_DIR'),
 		exportArtifactsDir: readString('DEDALO_EXPORT_ARTIFACTS_DIR'),

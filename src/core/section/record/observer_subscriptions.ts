@@ -98,7 +98,7 @@
 
 import { config } from '../../../config/config.ts';
 import { incrementCounter } from '../../api/counters.ts';
-import { getTransactionMemo, isInTransaction } from '../../db/postgres.ts';
+import { getTransactionMemo, isInTransaction, registerCommitAction } from '../../db/postgres.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { createOntologyCache } from '../../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../../ontology/cache_invalidation.ts';
@@ -757,6 +757,24 @@ export async function getSubscriptionRegistry(): Promise<SubscriptionIndex> {
 		// the tx-scoped memo instead — one build per transaction, not one per
 		// component save inside it.
 		txMemo?.set(TX_MEMO_KEY, index);
+		// WARM AFTER COMMIT. Every chokepoint write asks "is this key observed?"
+		// INSIDE its transaction (the obligation ledger), so a cold cache — cold
+		// after EVERY dd_ontology write, the hub clears it — would otherwise stay
+		// cold for as long as only in-transaction lookups ask: each curator save
+		// paying a full registry build (two dd_ontology scans + host resolution)
+		// until some out-of-transaction lookup happened to seed it. The commit lane
+		// runs OUTSIDE the transaction, on committed state, so this is the
+		// build-of-record, seeded under the same token guard (S1-14-safe). Once
+		// per transaction (the memo above short-circuits every later in-tx call);
+		// a rolled-back transaction warms nothing, and a failed warm is only a
+		// missed optimisation.
+		registerCommitAction(async () => {
+			try {
+				await getSubscriptionRegistry();
+			} catch (error) {
+				console.error('observer subscription registry: post-commit warm failed:', error);
+			}
+		});
 		return index;
 	}
 	const errors = validateSubscriptionContract(index);

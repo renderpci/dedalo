@@ -133,9 +133,14 @@ export async function installDbFromSeed(conn?: DbConnDescriptor): Promise<DbRest
 				allowAnyDatabase: true,
 				scope: 'core',
 			});
+			// The ENGINE-OWNED ontology (the sections the engine writes — the AI
+			// spend ledger): the same idempotent door boot runs, so a fresh install
+			// is complete before its first boot (ontology/engine_ontology.ts).
+			const { ensureEngineOntology } = await import('../ontology/engine_ontology.ts');
+			const engine = await ensureEngineOntology();
 			return {
 				ok: true,
-				msg: `Database installed from seed + canonical test3 playground + test TLD ontology (${testTld.nodes} nodes in ${testTld.tlds.join(', ')}) — OK`,
+				msg: `Database installed from seed + canonical test3 playground + test TLD ontology (${testTld.nodes} nodes in ${testTld.tlds.join(', ')}) + engine ontology (${engine.written} records) — OK`,
 			};
 		}
 		return {

@@ -70,7 +70,7 @@ function code(rel: string): string {
 const BOUNDED_BY: Record<string, { sites: number; how: string }> = {
 	'src/core/security/ssrf_guard.ts': {
 		sites: 2,
-		how: "THE primitive: the ONE streamed capped reader (readBytesCapped) cancels the body on breach — in fetchBoundedText (a call) and in fetchPinnedHop (a seam: `deps.fetch ?? fetch`), the harvesting door's one hop, whose redirect body is cancelled unread",
+		how: "THE primitive: ONE transport core (openHopBudget's total deadline + readHopResponse → readBytesCapped, the ONE streamed capped reader that cancels the body on breach) under fetchBoundedText (a call, unpinned) and fetchPinnedHop (a seam: `deps.fetch ?? fetch`, pinned) — the harvesting door's hop and fetchGuardedText's one call, a redirect body cancelled unread",
 	},
 	'src/core/update/status.ts': {
 		sites: 1,
@@ -199,7 +199,8 @@ const SIGNAL_SET_ON_INIT = new Set(['src/external/transport.ts']);
  * thing that keeps it safe is this census, not the function.
  */
 const ADDRESS_POLICY: Record<string, string> = {
-	'src/core/security/ssrf_guard.ts': 'fetchGuardedText applies assertPublicUrl before delegating',
+	'src/core/security/ssrf_guard.ts':
+		'defines fetchBoundedText (no policy, no pin); fetchGuardedText vets, pins and caps through fetchPinnedHop and never calls it',
 	'src/core/tools/transcription_local_asr.ts':
 		'isSafeLocalAsrUrl: http(s) only, private hosts ONLY behind DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS',
 };
@@ -671,10 +672,11 @@ describe('no outbound fetch is unbounded', () => {
 		expect(guarded.calls, 'fetchGuardedText must still apply the address policy').toContain(
 			'assertPublicUrl',
 		);
-		expect(
-			guarded.calls,
-			'fetchGuardedText must delegate the transport, not re-implement it',
-		).toContain('fetchBoundedText');
+		// SURF-2 (2026-09-30): that the public door CONNECTS TO WHAT IT VETTED (one
+		// connection, to the vetted IP, the name resolved once) is an OUTCOME, and its
+		// gate of record is test/unit/guarded_text_pin_native.test.ts (a rebinding
+		// resolver through the door's seam) — not helper names in this closure, which a
+		// rename would defeat.
 
 		const transport = guardClosure('fetchBoundedText');
 		expect(
@@ -684,6 +686,10 @@ describe('no outbound fetch is unbounded', () => {
 
 		// AND IT MUST ENFORCE WHAT BOUNDED_BY CLAIMS FOR IT. A written claim nobody
 		// checks is worth nothing, and this one is load-bearing for every delegator.
+		// These are STRUCTURE checks, secondary: the OUTCOMES — a 302 refused with its
+		// Location never contacted, a closed port typed transport/connect, the caller's
+		// deadline and the 15 s default, the job's stop reaching the connect — are gated
+		// on a loopback peer in guarded_text_pin_native (its fetchBoundedText describe).
 		expect(transport.abortTimer, 'no abort timer').toBe(true);
 		expect(transport.calls, 'the byte ceiling is not the shared capped reader').toContain(
 			'readBytesCapped',

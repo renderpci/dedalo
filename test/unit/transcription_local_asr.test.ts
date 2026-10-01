@@ -26,14 +26,14 @@ import {
 	privateTranscriberHostsAllowed,
 } from '../../src/core/tools/transcription_local_asr.ts';
 
-/** The exemption is read through the config chain; set it the same way tests do elsewhere. */
+/**
+ * The exemption is read through the config chain. "Unset" is PINNED to '' — never
+ * deleted: a deleted key falls back to ../private/.env through readEnv, so an
+ * operator's own `DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS=true` would silently turn
+ * every "exemption off" case into an "exemption on" one.
+ */
 function setExemption(value: string | undefined): void {
-	if (value === undefined) {
-		// unsetting an env var is the point
-		delete process.env.DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS;
-		return;
-	}
-	process.env.DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS = value;
+	process.env.DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS = value ?? '';
 }
 
 /** The guard's discovery cache as this file found it — restored after every case. */

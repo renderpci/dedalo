@@ -96,8 +96,9 @@ export interface RelationEmitContext {
 
 /**
  * One relation model's particularity. Phase A surface: row emission. The
- * resolver decides internally per mode (e.g. the select family only diverges
- * from the portal path in list/edit modes — exactly like the PHP controllers).
+ * resolver decides internally per mode (e.g. the select family answers label
+ * strings in list mode and locators + datalist in every other mode — exactly
+ * like the PHP controllers' `case 'edit': default:`).
  */
 export interface RelationModelResolver {
 	/** Canonical model name(s) this resolver serves (registration is explicit below). */

@@ -10,12 +10,13 @@
 import { describe, expect, test } from 'bun:test';
 import { buildJsonFragment } from '../../src/core/search/builders/builder_json.ts';
 import type { BuilderContext } from '../../src/core/search/builders/types.ts';
+import { asSqlTipo } from '../../src/core/search/identifier_gate.ts';
 
 function ctx(overrides: Partial<BuilderContext> = {}): BuilderContext {
 	return {
 		alias: 'dd542',
 		column: 'misc',
-		tipo: 'dd551',
+		tipo: asSqlTipo('dd551', 'test context'),
 		sectionTipo: 'dd542',
 		table: 'matrix_activity',
 		lang: 'lg-nolan',

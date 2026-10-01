@@ -483,13 +483,11 @@ const PRIVATE_ROOT_WALKERS: Readonly<Record<string, string>> = {
 	'test/unit/tier_assignment_tripwire.test.ts': 'ROOTS: `scripts`; `scripts/ci` ×2; `test`.',
 	'test/unit/tier_execution_tripwire.test.ts': 'ROOTS: `scripts/ci`.',
 	'test/unit/tier_wiring_tripwire.test.ts':
-		'ROOTS: `.github/workflows`; `.github/workflows-selfhosted`; `scripts/ci`; `test` ×2.',
+		'ROOTS: `.github/workflows`; `.github/workflows-selfhosted`; `scripts/ci` ×2; `test` ×3.',
 	'test/unit/tm_epoch_tripwire.test.ts': 'ROOTS: `src` `tools` — CENSUS_ROOTS.',
 	'test/unit/tm_lang_slice_restore_native.test.ts': 'ROOTS: `tools/tool_time_machine/server`.',
 	'test/unit/tm_mode_retired_tripwire.test.ts': 'ROOTS: `client/dedalo` `src` `tools`.',
 	'test/unit/tool_header_contract_tripwire.test.ts': 'ROOTS: `tools` — `*/css/*.less`.',
-	'test/unit/tool_lossless_writeback_tripwire.test.ts':
-		'ROOTS: `src` `tools` — src/ beside tools/.',
 	'test/unit/tool_permission_census_tripwire.test.ts': 'ROOTS: `tools`.',
 	'test/unit/tool_picker_wiring_tripwire.test.ts': 'ROOTS: `tools` ×2.',
 	'test/unit/tools_cache_invalidation.test.ts': 'ROOTS: `src/core/tools` ×2.',
@@ -525,6 +523,11 @@ interface SharedLister {
  * repo knows about is written next to the roots it is a subset of.
  */
 const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
+	'scripts/ci/mariadb_tier.ts': {
+		roots: [['test/integration', 'test/unit', 'test/parity']],
+		scope:
+			"the MariaDB tier's test corpus — every test file under test/integration, test/unit and test/parity (the preload arms all three), from which it walks the RUNTIME import graph (Bun's transpiler) to derive the set that acquires the suite MariaDB and the no-contact population that reaches the pool module; its SEAM_EDGES rows add each computed-import seam's glob (tools/*/server/**, src/core/**). Read by the stage itself, by suite_mariadb_target_native and by tier_wiring leg J (the starter classification).",
+	},
 	'test/helpers/write_path_corpus.ts': {
 		roots: [['scripts', 'src', 'tools']],
 		scope: 'the code that runs in the engine process — the write-path class corpus',
@@ -560,7 +563,7 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 			['client/dedalo', 'tools'],
 		],
 		scope:
-			"the first-party browser trees — every served .js of the app client and of every tool client, vendored libraries excluded (browserSources is git's view, firstPartyClientFiles the on-disk walk)",
+			"browserSources: git's view minus vendored lib/vendor/min; browserSourcesUnfiltered: the same git view UNFILTERED (tool_lossless_writeback's client census — a tool's own lib/ helper is its code)",
 	},
 	'test/helpers/deploy_conf_corpus.ts': {
 		roots: [
@@ -718,19 +721,44 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		roots: [],
 		scope: 'NOT a corpus: `readdirSync` lists the suite media base for marked shard twins to sweep',
 	},
+	'test/helpers/suite_mariadb_lanes.ts': {
+		roots: [],
+		scope:
+			"NOT a corpus: `suiteMariadbLaneEntries` lists the suite MariaDB lane base (`../private/test_mariadb/`, outside the repo — the module's own root, never a caller's) for the lanes and killed-sweep/claim leftovers a sweep visits; the second site lists one swept lane's trash to delete it marker-last. Kept out of test/helpers/suite_mariadb.ts so the gates that only ACQUIRE the target are not walkers.",
+	},
 	'test/helpers/agent_skills_corpus.ts': {
 		roots: [['.agents/skills'], ['.']],
 		scope:
 			'the project skills — every `.agents/skills/*/SKILL.md` (the real path, never the `.claude` alias), and the git index a skill may point at (`git ls-files` at the repo root: a clone is what a skill is read on)',
 	},
+	'test/helpers/agent_workflows_corpus.ts': {
+		roots: [['.agents/workflows']],
+		scope:
+			'the multi-agent workflow scripts — every `.agents/workflows/*.js` (the real path, never the `.claude` alias), the corpus agent_workflows_parse_tripwire compiles',
+	},
 	'test/helpers/docs_corpus.ts': {
 		roots: [['docs'], ['docs']],
 		scope: 'the manual — every docs/**/*.md page, the one lister a docs-censusing gate imports',
+	},
+	'test/helpers/scratch_run_entries.ts': {
+		roots: [],
+		scope:
+			"NOT a corpus: `scratchRunEntries` lists the scratch directory a diffusion gate's OWN publication run wrote (a run directory, a files target); the CALLER hands its own scratch root",
+	},
+	'test/helpers/power_loss_model.ts': {
+		roots: [],
+		scope:
+			"NOT a corpus: `startPowerLossModel` snapshots the entries already under the CALLER's scratch root (a gate's marked files root) when the model starts — what predates the test is durable by assumption; never a repo directory",
 	},
 	'test/helpers/zzarc_media_digests.ts': {
 		roots: [],
 		scope:
 			'NOT a corpus: `zzarcMediaDigests` fingerprints the scratch media tree the zzarc situation plants; the CALLER hands its own scratch root',
+	},
+	'test/helpers/media_seed_sweep.ts': {
+		roots: [],
+		scope:
+			"NOT a corpus: `sweepSeededMediaEntries` deletes, by name, the media files a gate seeded under the CALLER's marked test media root (the lane's suite root or a scratch root — refused without `.dedalo_test_media`); never a repo directory",
 	},
 	'scripts/seed_diffusion_type_rewrite.ts': {
 		roots: [['install/import/ontology/7.0']],
@@ -777,12 +805,16 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 	},
 };
 
-/** The four gates that census the write path; each must use the shared corpus. */
+/**
+ * The four gates that census the write path; each must use the shared corpus.
+ * (write_obligations_tripwire replaced section_record's grep gate with CLOSURE_PLAN
+ * Step 2 — that gate's regex never matched a single-key writer, so it held nothing.)
+ */
 const WRITE_PATH_GATES: readonly string[] = [
 	'test/unit/sql_confinement_tripwire.test.ts',
 	'test/unit/ws_a_tripwires.test.ts',
 	'test/unit/matrix_counter_monotonic_tripwire.test.ts',
-	'test/unit/section_record.test.ts',
+	'test/unit/write_obligations_tripwire.test.ts',
 ];
 
 /** Positive control: a script that mass-rewrites matrix jsonb, outside src/ and tools/. */

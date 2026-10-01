@@ -2914,6 +2914,7 @@ describe('the undelete of a MISSING row is one transaction, and insert-only', ()
 			marker.id,
 			SECTION,
 			role,
+			{ userId: USER_ID },
 			USER_ID,
 		);
 		expect(restored).toBeNull();

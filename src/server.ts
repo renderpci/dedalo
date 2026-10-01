@@ -1845,6 +1845,33 @@ export async function startServer() {
 				error,
 			);
 		}
+
+		// THE ENGINE-OWNED ONTOLOGY (ontology/engine_ontology.ts, 2026-10-01): the
+		// sections the engine itself writes (the AI spend ledger) are defined in
+		// the repository and materialized HERE — a code update reaches an install
+		// through a restart, so boot is its update lane. Idempotent: it writes only
+		// when dd_ontology differs from engine_ontology.json. A failure logs and the
+		// server serves (S1-15); every consumer of an engine section fails CLOSED
+		// without it (AI requests refuse `ai.budget_unavailable`).
+		try {
+			const { ensureEngineOntology } = await import('./core/ontology/engine_ontology.ts');
+			const engine = await ensureEngineOntology();
+			if (engine.changed) {
+				console.warn(
+					`[boot] engine ontology materialized (${engine.written} records; drift was: ${engine.drift.join('; ')})`,
+				);
+			}
+			if (engine.strays.length > 0) {
+				console.warn(
+					`[boot] engine ontology: records the definitions do not declare (left in place): ${engine.strays.join(', ')}`,
+				);
+			}
+		} catch (error) {
+			console.error(
+				'[boot] engine ontology materialization FAILED (AI requests will refuse ai.budget_unavailable until it succeeds):',
+				error,
+			);
+		}
 	}
 
 	// Timers this boot armed that the shutdown drain stops (handles stay local

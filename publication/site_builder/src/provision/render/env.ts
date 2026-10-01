@@ -14,7 +14,8 @@
  * at `$CREDENTIALS_DIRECTORY/<KEY>`. That is precisely what makes it safe for this file to
  * be group-readable at all.
  *
- * WHAT IT CONTAINS: `layout.envVars`, verbatim, and nothing else.
+ * WHAT IT CONTAINS: `layout.envVars`, verbatim, plus two HOST facts (`AGENT_IDENTITIES`,
+ * `AGENT_IDENTITY_EPOCH` — see `envAssignments`), and nothing else.
  *
  * Not "roughly that" — exactly that. layout.ts's `envVars` is documented as *what this file
  * must contain*, and it is the same object the rest of the subsystem derives its paths from,
@@ -40,9 +41,9 @@
  * renderer refuses those characters and escapes the rest, on its own account.
  */
 
-import type { InstanceLayout } from '../layout';
+import type { InstanceLayout, InstanceManifest } from '../layout';
 import { DESCRIPTION_PATTERN, SECRET_KEY_PATTERN, SECRET_LOOKING_KEY } from '../layout';
-import type { Renderer } from './types';
+import type { Renderer, RenderFacts } from './types';
 import { artifact } from './types';
 
 /* ────────────────────────────────────────────────────────────────────────────────────
@@ -159,7 +160,7 @@ function assignment(key: string, value: string): string {
 
 export const envRenderer: Renderer = {
   kind: 'env',
-  render(layout) {
+  render(layout: InstanceLayout, _manifest: InstanceManifest, facts?: RenderFacts) {
     return [
       artifact(layout, {
         kind: 'env',
@@ -168,7 +169,7 @@ export const envRenderer: Renderer = {
         // configuration; group-readable so it can read it — which is only defensible
         // because of the refusals above.
         mode: 'envFile',
-        body: renderEnvBody(layout),
+        body: renderEnvBody(layout, facts),
       }),
     ];
   },
@@ -185,7 +186,28 @@ export const envRenderer: Renderer = {
  * block, because any grouping into sections would be a second census of the key names
  * layout owns; a total order taken from the data itself cannot fall out of step with it.
  */
-function renderEnvBody(layout: InstanceLayout): string {
+/**
+ * THE ASSIGNMENTS: `layout.envVars`, plus the two HOST facts the daemon needs and the
+ * declaration cannot know (LEAD-1b) — which ordinal each declared site's identity holds
+ * (`AGENT_IDENTITIES`, JSON, sorted by slug) and the resume epoch
+ * (`AGENT_IDENTITY_EPOCH`). Without facts they render as "no identity" and epoch 0, and the
+ * daemon refuses every confined run: an env rendered blind to the host grants nothing.
+ */
+export function envAssignments(layout: InstanceLayout, facts?: RenderFacts): Readonly<Record<string, string>> {
+  const identities: Record<string, number> = {};
+  for (const [slug, k] of [...(facts?.agentIdentities ?? new Map<string, number>()).entries()].sort((a, b) =>
+    a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0,
+  )) {
+    identities[slug] = k;
+  }
+  return Object.freeze({
+    ...layout.envVars,
+    AGENT_IDENTITIES: JSON.stringify(identities),
+    AGENT_IDENTITY_EPOCH: String(facts?.identityEpoch ?? 0),
+  });
+}
+
+function renderEnvBody(layout: InstanceLayout, facts?: RenderFacts): string {
   const lines: string[] = [
     `# GENERATED FILE — do not edit.`,
     `#`,
@@ -232,8 +254,10 @@ function renderEnvBody(layout: InstanceLayout): string {
     ``,
   );
 
-  // ONE ASSIGNMENT PER KEY OF layout.envVars, sorted. Nothing added, nothing dropped.
-  for (const key of Object.keys(layout.envVars).sort()) {
+  // ONE ASSIGNMENT PER KEY OF envAssignments(), sorted: layout.envVars plus the two host
+  // facts. Nothing else added, nothing dropped.
+  const assignments = envAssignments(layout, facts);
+  for (const key of Object.keys(assignments).sort()) {
     if (key in layout.secrets) {
       throw new Error(
         `render(env): '${key}' is both an environment value and a declared credential for ` +
@@ -242,7 +266,7 @@ function renderEnvBody(layout: InstanceLayout): string {
           `credential was ever used. Rename one of the two. Nothing was rendered.`,
       );
     }
-    lines.push(assignment(key, layout.envVars[key] as string));
+    lines.push(assignment(key, assignments[key] as string));
   }
 
   return `${lines.join('\n')}\n`;

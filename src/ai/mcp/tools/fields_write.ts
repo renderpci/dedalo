@@ -39,33 +39,64 @@ import { searchRecords } from './search.ts';
 const LINK_COLUMN = 'relation';
 
 /**
- * Server-authoritative write gate: level >= 2 on (section_tipo, tipo) or throw.
- *
- * `sectionId` is REQUIRED (P1-2, SEC-03). It used to be absent from this signature, so
- * the dd128 own-record rule could not be consulted here even in principle — and a
- * principal holding level 2 on `(dd128, dd1725)` was refused by the human save door and
- * SUCCEEDED through `dedalo_set_field`. Pass `null` only where the gate genuinely
- * addresses no record (a section-level create), and the resolver falls through to the
- * raw matrix exactly as before.
+ * THE WRITE DOOR (closure Step 3; WC-2026-09-30-write-door) — the one
+ * record-addressed write authorization, shared with the human save door and the
+ * primitive MCP write tools: grammar (an INTEGER id — never floored), the
+ * SECTION floor 1, the (section, component) pair with the dd128 own-record rule
+ * (P1-2, SEC-03: a `(dd128, dd1725)` manager is refused here as at the human
+ * door), then the record scope with the non-positive-id refusal ahead of the
+ * admin bypass. The effect is addressed by the returned grant.
  */
-async function assertWritePermission(
+async function authorizeWrite(
 	principal: Principal,
-	sectionTipo: string,
-	tipo: string,
-	sectionId: number | null,
-): Promise<void> {
-	const { getRecordComponentPermission } = await import('../../../core/security/permissions.ts');
-	const level = await getRecordComponentPermission(principal, sectionTipo, tipo, sectionId);
-	if (level < 2) {
-		throw new DedaloError('perm.denied', {
-			message: `Insufficient permissions to write (${sectionTipo}/${tipo}): level ${level} < 2`,
-			coordinates: { section_tipo: sectionTipo, tipo, level },
-		});
-	}
+	raw: { section_tipo: string; component_tipo: string; section_id: unknown },
+	door: string,
+) {
+	const { authorizeRecordAccess } = await import('../../../core/security/write_door.ts');
+	return authorizeRecordAccess(principal, raw, {
+		mode: 'write',
+		level: 2,
+		sectionFloor: 1,
+		door,
+	});
 }
 
-/** Per-record projects scope gate (shared record_scope helper — AI-01). */
-async function assertRecordInScope(
+/**
+ * A section target at write level (2), consultation-capped: with `tipo` named,
+ * the (section, COMPONENT) pair of a record not yet born (the section floor 1,
+ * then the pair level — find_or_create's pre-flight); without it, the section
+ * level of a create.
+ */
+async function authorizeSectionWrite(
+	principal: Principal,
+	raw: { section_tipo: string; tipo?: string },
+	door: string,
+) {
+	const { authorizeSectionTarget } = await import('../../../core/security/write_door.ts');
+	return authorizeSectionTarget(principal, raw, { level: 2, door });
+}
+
+/**
+ * A whole-record effect (duplicate): the consultation-capped section level +
+ * the scope of the record, whose id the DOOR requires — an absent one is
+ * `request.invalid`, never read as a create.
+ */
+async function authorizeSectionRecordWrite(
+	principal: Principal,
+	raw: { section_tipo: string; section_id: unknown },
+	door: string,
+) {
+	const { authorizeSectionRecord } = await import('../../../core/security/write_door.ts');
+	return authorizeSectionRecord(principal, raw, { level: 2, door });
+}
+
+/**
+ * The link TARGET must be reachable by the caller (a user may only wire records
+ * they can reach — the search would never have shown them the target). A READ
+ * scope question, not a write: principalCanAccessRecord (non-positive ids
+ * refused ahead of the admin bypass).
+ */
+async function assertTargetReachable(
 	principal: Principal,
 	sectionTipo: string,
 	sectionId: number,
@@ -135,10 +166,12 @@ export async function setField(
 	},
 ): Promise<{ section_tipo: string; section_id: number; tipo: string; data: unknown }> {
 	const sectionTipo = assertValidTipo(input.section_tipo, 'mcp.set_field.section_tipo');
-	const sectionId = Math.floor(input.section_id);
 	const fieldTipo = await resolveFieldReference(sectionTipo, input.field);
-	await assertWritePermission(principal, sectionTipo, fieldTipo, sectionId);
-	await assertRecordInScope(principal, sectionTipo, sectionId);
+	const { sectionId } = await authorizeWrite(
+		principal,
+		{ section_tipo: sectionTipo, component_tipo: fieldTipo, section_id: input.section_id },
+		'mcp.set_field',
+	);
 
 	const model = (await getModelByTipo(fieldTipo)) ?? '';
 	const column = getColumnNameByModel(model);
@@ -157,7 +190,7 @@ export async function setField(
 		const locator = conformLocatorValue(input.value, fieldTipo);
 		// Linking demands scope on the TARGET too: a user may only wire records
 		// they can reach (the search would never have shown them the target).
-		await assertRecordInScope(principal, locator.section_tipo, locator.section_id);
+		await assertTargetReachable(principal, locator.section_tipo, locator.section_id);
 		changedData =
 			mode === 'replace'
 				? [{ action: 'set_data', id: null, value: [locator] }]
@@ -237,10 +270,12 @@ export async function portalUnlink(
 	},
 ): Promise<{ unlinked: boolean }> {
 	const sectionTipo = assertValidTipo(input.section_tipo, 'mcp.unlink.section_tipo');
-	const sectionId = Math.floor(input.section_id);
 	const fieldTipo = await resolveFieldReference(sectionTipo, input.field);
-	await assertWritePermission(principal, sectionTipo, fieldTipo, sectionId);
-	await assertRecordInScope(principal, sectionTipo, sectionId);
+	const { sectionId } = await authorizeWrite(
+		principal,
+		{ section_tipo: sectionTipo, component_tipo: fieldTipo, section_id: input.section_id },
+		'mcp.portal_unlink',
+	);
 
 	// compareLocators is STRICT on any property present on one side only (the
 	// stored locator carries its allocated item id) — so resolve the exact
@@ -325,20 +360,43 @@ export async function findOrCreate(
 	}
 
 	// No hit: create + fill (match fields first — they define the identity).
-	// null: a create addresses no record yet, so the own-record rule cannot apply.
-	await assertWritePermission(principal, sectionTipo, sectionTipo, null);
-	const { createSectionRecord } = await import('../../../core/section/record/create_record.ts');
-	const sectionId = await createSectionRecord(sectionTipo, principal.userId);
-	for (const rule of [...input.match, ...(input.set ?? [])]) {
-		await setField(principal, {
-			section_tipo: sectionTipo,
-			section_id: sectionId,
-			field: rule.field,
-			value: rule.value,
-			lang: rule.lang,
-			mode: 'append',
-		});
+	//
+	// AUTHORIZED BEFORE THE EFFECT, ATOMIC AFTER IT (closure Step 3 review r8).
+	// The create used to be authorized on the section level alone and the fills
+	// judged one by one AFTER the record existed: a caller holding the section
+	// at 2 but a match field at 0 (or whose new record fell outside their scope)
+	// left an empty record behind on every call. Now:
+	//   1. the section level of the create, then EVERY match/set field's
+	//      (section, component) pair at write level — before anything is written;
+	//   2. the create and every fill run in ONE transaction, so a fill the full
+	//      write door still refuses (the scope of the new record, a link target
+	//      out of reach, a value the engine rejects) rolls the create back.
+	const rules = [...input.match, ...(input.set ?? [])];
+	await authorizeSectionWrite(principal, { section_tipo: sectionTipo }, 'mcp.find_or_create');
+	for (const rule of rules) {
+		const fieldTipo = await resolveFieldReference(sectionTipo, rule.field);
+		await authorizeSectionWrite(
+			principal,
+			{ section_tipo: sectionTipo, tipo: fieldTipo },
+			'mcp.find_or_create.field',
+		);
 	}
+	const { withTransaction } = await import('../../../core/db/postgres.ts');
+	const { createSectionRecord } = await import('../../../core/section/record/create_record.ts');
+	const sectionId = await withTransaction(async () => {
+		const createdId = await createSectionRecord(sectionTipo, principal.userId);
+		for (const rule of rules) {
+			await setField(principal, {
+				section_tipo: sectionTipo,
+				section_id: createdId,
+				field: rule.field,
+				value: rule.value,
+				lang: rule.lang,
+				mode: 'append',
+			});
+		}
+		return createdId;
+	});
 	return { section_tipo: sectionTipo, section_id: sectionId, created: true };
 }
 
@@ -348,15 +406,17 @@ export async function duplicateRecord(
 	input: { section_tipo: string; section_id: number },
 ): Promise<{ section_tipo: string; section_id: number }> {
 	const sectionTipo = assertValidTipo(input.section_tipo, 'mcp.duplicate.section_tipo');
-	const sourceId = Math.floor(input.section_id);
 	// Section-level gate on a section-level operation: the own-record rule is
 	// per-COMPONENT, so it has nothing to say about a whole-record duplicate.
-	await assertWritePermission(principal, sectionTipo, sectionTipo, sourceId);
-	await assertRecordInScope(principal, sectionTipo, sourceId);
+	const grant = await authorizeSectionRecordWrite(
+		principal,
+		{ section_tipo: sectionTipo, section_id: input.section_id },
+		'mcp.duplicate',
+	);
 	const { duplicateSectionRecord } = await import(
 		'../../../core/section/record/duplicate_record.ts'
 	);
-	const newId = await duplicateSectionRecord(sectionTipo, sourceId, principal.userId);
+	const newId = await duplicateSectionRecord(grant.sectionTipo, grant.sectionId, principal.userId);
 	return { section_tipo: sectionTipo, section_id: newId };
 }
 

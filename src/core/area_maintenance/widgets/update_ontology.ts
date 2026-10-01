@@ -180,5 +180,7 @@ export const widget: WidgetModule = {
 			'it regenerates the PHP tree JS lang files',
 		),
 	},
+	// The ontology import rewrites dd_ontology wholesale: maintenance (PERF-11).
+	unboundedActions: ['update_ontology'],
 	getValue: updateOntologyGetValue,
 };

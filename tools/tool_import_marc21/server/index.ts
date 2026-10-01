@@ -324,7 +324,7 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 
 	// The identifiers become addresses HERE, once, before anything is written.
 	const records = await resolveImportCodes(mapped, sectionTipo, idTarget, ctx.principal);
-	const report = await importMappedRecords(records, sectionTipo, ctx.userId);
+	const report = await importMappedRecords(records, sectionTipo, ctx.principal);
 	// CONSUME the staging form (WC-079). This tool's client builds a
 	// service_tmp_section, so it accumulates scratch rows under its own scope —
 	// clearing here is what stops the next batch inheriting this run's values.

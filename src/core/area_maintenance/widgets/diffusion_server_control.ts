@@ -258,8 +258,10 @@ async function diffusionRetryPending(options: Record<string, unknown>): Promise<
 	// gate would act on other agents' data. It is already gated by a SUBPROCESS test
 	// (prior-plan drop) — do not re-propose an in-process one.
 	const limit = typeof options.limit === 'number' ? options.limit : 100;
-	const { retryPendingDiffusion } = await import('../../diffusion_bridge/diffusion_delete.ts');
-	const outcome = await retryPendingDiffusion(limit);
+	// Through the facade's PATIENT drain: a target a run holds is waited for (one
+	// bounded budget), so the widget heals while a publication runs (R3).
+	const { retryPendingDeletionsPatiently } = await import('../../../diffusion/api/actions.ts');
+	const outcome = await retryPendingDeletionsPatiently(limit);
 	return {
 		data: { total: outcome.total, retried: outcome.retried, remaining: outcome.remaining },
 		msg: `OK. Retried ${outcome.retried} of ${outcome.total} pending deletion(s); ${outcome.remaining} remaining`,

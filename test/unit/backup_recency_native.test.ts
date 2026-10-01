@@ -69,6 +69,13 @@ describe('newestBackupMtimeMs', () => {
 		expect(newestBackupMtimeMs(dir)).toBe(T_MID * 1000);
 	});
 
+	test('a NEWER in-flight .backup.part does NOT count as a backup (OPS-2)', () => {
+		// pg_dump writes `<final>.part` until the dump is promoted; the partial
+		// bytes are the freshest file in the directory for the whole dump.
+		put('2020-01-01_000001.db.custom.backup.part', T_NEW);
+		expect(newestBackupMtimeMs(dir)).toBe(T_MID * 1000);
+	});
+
 	test('a directory holding ONLY a .backup.log reports NO backup (0)', () => {
 		const logsOnly = mkdtempSync(join(tmpdir(), 'dedalo-backup-logs-'));
 		try {

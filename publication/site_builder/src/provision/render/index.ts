@@ -2,8 +2,10 @@
  * THE RENDERER REGISTRY — every artifact this subsystem generates, in one list, and the one
  * function that produces all of them.
  *
- * `renderAll(layout, manifest)` is the whole of the RENDER move: hand it a derived layout
- * and it returns the complete set of files the host must hold for that museum, each with
+ * `renderAll(layout, manifest, facts)` is the whole of the RENDER move: hand it a derived
+ * layout — and the host facts the per-site agent artifacts need (which ordinal each site's
+ * identity holds, PID 1's release; `RenderFacts`) — and it returns the complete set of files
+ * the host must hold for that museum, each with
  * its bytes, its path, its owner and its mode. The provisioner's `apply` and `check` both
  * consume exactly this list, which is the property that matters — a `check` that walked a
  * different set from the one `apply` writes would report a host as clean while an artifact
@@ -24,10 +26,11 @@
 
 import type { InstanceLayout, InstanceManifest } from '../layout';
 import { hasDrifted, parseStamp } from '../hash';
-import type { Artifact, ArtifactKind, Renderer } from './types';
+import type { Artifact, ArtifactKind, Renderer, RenderFacts } from './types';
 import { ARTIFACT_KINDS } from './types';
 
 import { unitRenderer } from './unit';
+import { agentUnitsRenderer } from './agent_units';
 import { agentAuthorizationRenderer } from './agent_authorization';
 import { envRenderer } from './env';
 import { nginxRenderer } from './nginx';
@@ -35,12 +38,13 @@ import { apacheRenderer } from './apache';
 import { engineFragmentRenderer } from './engine_fragment';
 import { sitesRenderer } from './sites';
 
-export type { Artifact, ArtifactInput, ArtifactKind, ModeKey, Renderer } from './types';
+export type { Artifact, ArtifactInput, ArtifactKind, ModeKey, Renderer, RenderFacts } from './types';
 export { ARTIFACT_KINDS, artifact } from './types';
 
 /** THE REGISTRY. Order is irrelevant — `renderAll` sorts by path — so add lines, not care. */
 export const RENDERERS: readonly Renderer[] = Object.freeze([
   unitRenderer,
+  agentUnitsRenderer,
   agentAuthorizationRenderer,
   envRenderer,
   sitesRenderer,
@@ -104,12 +108,12 @@ export const RENDERER_BY_KIND: ReadonlyMap<ArtifactKind, Renderer> = (() => {
  * wrong unit or a vhost for the wrong surface. Since `apply` runs as root against a live
  * host, "nothing was rendered" is the only acceptable answer to an incoherent set.
  */
-export function renderAll(layout: InstanceLayout, manifest: InstanceManifest): Artifact[] {
+export function renderAll(layout: InstanceLayout, manifest: InstanceManifest, facts?: RenderFacts): Artifact[] {
   const artifacts: Artifact[] = [];
 
   for (const renderer of RENDERERS) {
     if (renderer.appliesTo && !renderer.appliesTo(layout)) continue;
-    for (const produced of renderer.render(layout, manifest)) {
+    for (const produced of renderer.render(layout, manifest, facts)) {
       if (produced.kind !== renderer.kind) {
         throw new Error(
           `render: the '${renderer.kind}' renderer produced an artifact of kind ` +

@@ -69,7 +69,21 @@
  * WIRE SHAPE: snake_case, like every other API payload in this engine
  * (`section_tipo`/`section_id`), converted at this boundary from the subsystem's
  * TS-side camelCase.
+ *
+ * THE VISION SPEND IS A GRANTED TOOL (closure Step 3, TOOLS-4's grant half;
+ * WC-2026-10-01-identify-vision-grant). A model call is a resource with an
+ * owner: `get_proposals` with the vision source, and `identify_by_image` on an
+ * EXTERNAL multimodal provider, require the caller's profile to authorize
+ * `tool_identify` (the same dd1067 grant the tool itself is opened with; no
+ * admin flag — `assertToolGranted`). Refused as `tool.not_authorized` BEFORE
+ * the profile is loaded, the image embedded or any model is called. The
+ * structural halves (find_matches, the neighbour vote, a local encoder) spend
+ * nothing and stay ungranted. The per-user budget is the other half of TOOLS-4
+ * and lands with its ledger.
  */
+
+/** The tool whose grant authorizes a vision-model spend. */
+export const VISION_SPEND_TOOL = 'tool_identify';
 
 import {
 	type ElementProposal,
@@ -129,9 +143,11 @@ import {
 } from '../../ontology/resolver.ts';
 import { getSectionMapValue } from '../../ontology/section_map.ts';
 import { currentDataLang } from '../../resolve/request_lang.ts';
+import { chargeAiSpend } from '../../security/ai_spend.ts';
 import { getPermissions, type Principal } from '../../security/permissions.ts';
 import { doorComponentAllowed, readDoorNotices } from '../../security/read_door.ts';
 import { scopeRecordHits } from '../../security/record_scope.ts';
+import { assertToolGranted } from '../../tools/security.ts';
 import { type ActionHandler, requirePrincipal } from '../handler_context.ts';
 import type { ApiResult } from '../response.ts';
 
@@ -621,10 +637,23 @@ export interface IdentifyByImageDeps {
 	): Promise<CriterionValue | null>;
 	/** The section's identification profile. Null = none; throws ProfileError when malformed. */
 	loadProfile(sectionTipo: string): Promise<IdentificationProfile | null>;
+	/** THROWS `tool.not_authorized` unless the profile grants the tool (`assertToolGranted`). */
+	requireToolGrant(principal: Principal, toolName: string): Promise<void>;
+	/**
+	 * CHARGES one vision call to the caller's daily AI budget (security/ai_spend.ts);
+	 * THROWS `ai.budget_exhausted` / `ai.budget_unavailable` — before the model is called.
+	 */
+	chargeVision(principal: Principal, door: string): Promise<void>;
 }
+
+/** One vision call against the daily AI budget (TOOLS-4). */
+const chargeOneVisionCall = (principal: Principal, door: string): Promise<void> =>
+	chargeAiSpend(principal, { door, vision: 1 });
 
 export function defaultIdentifyByImageDeps(): IdentifyByImageDeps {
 	return {
+		requireToolGrant: assertToolGranted,
+		chargeVision: chargeOneVisionCall,
 		ragEnabled: isRagEnabled,
 		// ONE env snapshot per read, applying the documented precedence (real
 		// process environment over ../private/.env) — the buildMediaStack posture.
@@ -794,6 +823,14 @@ export function buildIdentifyByImage(deps: IdentifyByImageDeps): ActionHandler {
 						: 'identify.provider_unavailable',
 					message,
 				);
+			}
+
+			// AN EXTERNAL ENCODER IS A SPEND (TOOLS-4): granted by tool_identify, asked
+			// before the image leaves the host. A local encoder spends nothing.
+			// …and METERED (one vision call against the daily budget), still before it leaves.
+			if (provider.isExternal()) {
+				await deps.requireToolGrant(principal, VISION_SPEND_TOOL);
+				await deps.chargeVision(principal, 'dd_identify_api.identify_by_image');
 			}
 
 			const model = provider.model();
@@ -1162,10 +1199,19 @@ export interface IdentifyProposalsDeps {
 		records: { section_tipo: string; section_id: number }[],
 		principal: Principal,
 	): Promise<{ section_tipo: string; section_id: number }[]>;
+	/** THROWS `tool.not_authorized` unless the profile grants the tool (`assertToolGranted`). */
+	requireToolGrant(principal: Principal, toolName: string): Promise<void>;
+	/**
+	 * CHARGES one vision call to the caller's daily AI budget (security/ai_spend.ts);
+	 * THROWS `ai.budget_exhausted` / `ai.budget_unavailable` — before the model is called.
+	 */
+	chargeVision(principal: Principal, door: string): Promise<void>;
 }
 
 export function defaultIdentifyProposalsDeps(): IdentifyProposalsDeps {
 	return {
+		requireToolGrant: assertToolGranted,
+		chargeVision: chargeOneVisionCall,
 		loadProfile: (sectionTipo) => loadProfileForSection(sectionTipo),
 		runNeighbourVote: proposeElements,
 		runVision: proposeFromVision,
@@ -1445,6 +1491,11 @@ export function buildGetProposals(deps: IdentifyProposalsDeps): ActionHandler {
 
 			const requested = readProposalSources(options?.source);
 			if (!requested.ok) decline('identify.invalid_source', requested.msg);
+			// THE VISION SPEND IS GRANTED (TOOLS-4): asked for, it needs tool_identify —
+			// refused before the profile is loaded or any model is called.
+			if (requested.sources.includes('vision_model')) {
+				await deps.requireToolGrant(principal, VISION_SPEND_TOOL);
+			}
 
 			let profile: IdentificationProfile | null;
 			try {
@@ -1547,6 +1598,10 @@ export function buildGetProposals(deps: IdentifyProposalsDeps): ActionHandler {
 
 			// ── the vision model (opt-in) ────────────────────────────────────────────
 			if (requested.sources.includes('vision_model')) {
+				// METERED (TOOLS-4): one vision call, charged right before the model is
+				// asked and OUTSIDE the source's try — a refused budget is the request's
+				// 429, never a quiet "source_failed" decline.
+				await deps.chargeVision(principal, 'dd_identify_api.get_proposals');
 				try {
 					const report = await deps.runVision({
 						profile,

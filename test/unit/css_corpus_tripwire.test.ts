@@ -110,6 +110,7 @@ import { basename, join } from 'node:path';
 import { entrypoints, SEARCH_DIRS } from '../../scripts/build_css.ts';
 import { thirdPartyCensus } from '../../scripts/lib/third_party_census.ts';
 import { cssReferenceFiles, trackedRepoFiles } from '../helpers/css_reference_corpus.ts';
+import { isGrantOnlyTool } from '../helpers/tool_directory_corpus.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 
@@ -393,7 +394,11 @@ const DECLARED: ReadonlyArray<Classification> = [
  */
 const registeredTools = trackedFiles
 	.filter((file) => /^tools\/[^/]+\/register\.json$/.test(file))
-	.map((file) => file.split('/')[1] as string);
+	.map((file) => file.split('/')[1] as string)
+	// A GRANT-ONLY tool (tool_directory_corpus.isGrantOnlyTool) is a registry row to
+	// GRANT, never loaded by tool_common.js — it has no sheet to serve, and the
+	// grant-only law (tools_register_validate) proves it ships none.
+	.filter((tool) => !isGrantOnlyTool(tool));
 const toolEntrypoint = (tool: string) => `tools/${tool}/css/${tool}.less`;
 
 /** Tracked text the client could name a stylesheet from. `.css` itself is excluded:

@@ -22,6 +22,7 @@ import { DedaloError } from '../errors/dedalo_error.ts';
 import { COUNTERS_MEDIA_RECONCILE } from '../media/counter_reconcile.ts';
 import { FILES_INFO_RECONCILE } from '../media/files_info_reconcile.ts';
 import { HIERARCHY_RECONCILE } from '../ontology/hierarchy_state.ts';
+import { ONTOLOGY_IDENTIFIERS_RECONCILE } from '../ontology/identifier_grammar.ts';
 import { ONTOLOGY_RECONCILE } from '../ontology/ontology_state.ts';
 import { OBSERVER_MIRRORS_RECONCILE } from '../section/record/observer_reconcile.ts';
 import {
@@ -43,6 +44,7 @@ export async function loadAllReconciles(): Promise<readonly ReconcileDefinition[
 		MEDIA_INDEX_RECONCILE,
 		RAG_INDEX_RECONCILE,
 		ONTOLOGY_RECONCILE,
+		ONTOLOGY_IDENTIFIERS_RECONCILE,
 		HIERARCHY_RECONCILE,
 		PUBLIC_TIER_RECONCILE,
 	];

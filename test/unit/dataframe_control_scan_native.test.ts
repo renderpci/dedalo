@@ -458,9 +458,13 @@ describe('dataframeControlScan — table scoping and coverage', () => {
 		const bad = result.coverage[0];
 		expect(bad?.table).toBe(BAD_VIEW);
 		expect(bad?.status).toBe('error');
-		expect(bad?.reason ?? '').toContain('batch at id > 0 failed:');
+		// The failure's CODE (a SQLSTATE here) and a deliberate sentence — the raw
+		// driver message goes to the server log, never into the report (SEC-18).
+		expect(bad?.reason ?? '').toMatch(
+			/^batch at id > 0 failed \([0-9A-Z]{5}; see the server log\)/,
+		);
 		expect(bad?.reason ?? '').toContain('rows with id > 0 were NOT examined');
-		expect(result.errors[0] ?? '').toContain(`${BAD_VIEW} | batch at id > 0 failed:`);
+		expect(result.errors[0] ?? '').toContain(`${BAD_VIEW} | batch at id > 0 failed (`);
 
 		// The SECOND table was still walked — that is the whole point.
 		expect(result.coverage[1]?.status).toBe('complete');

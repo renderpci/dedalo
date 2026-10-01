@@ -116,7 +116,15 @@ import {
 } from './disk_space.ts';
 import { INSTALL_STAMP_PATH, type InstallChannel, parseInstallStamp } from './install_stamp.ts';
 import { engineOwnsInstall } from './ownership.ts';
-import { backupFreshness, checkUpdatePreconditions } from './preconditions.ts';
+import {
+	type BackupVerifyOptions,
+	backupFreshnessWithin,
+	checkUpdatePreconditions,
+	type Freshness,
+	PANEL_WAIT_MS,
+	type PendingFreshness,
+	requireFreshBackup,
+} from './preconditions.ts';
 import { refuseUpdate, rethrowOrRefuseUpdate } from './refuse.ts';
 import { smokeBootQuarantine } from './smoke_boot.ts';
 import { compareVersionArrays, DEDALO_VERSION_TRIPLE, parseVersionString } from './version.ts';
@@ -303,6 +311,19 @@ export interface CodeUpdateSeams {
 	onPhase?: (frame: UpdatePhaseFrame) => void;
 	/** Disk-space measurement (tests inject a full filesystem; see disk_space.ts). */
 	space?: SpaceSeams;
+	/** The DATABASE backup dir the backup precondition judges (default: the configured
+	 * one) — tests point it at scratch so no suite run reads, or writes verification
+	 * sidecars into, the installation's backups. */
+	databaseBackupDir?: string;
+	/** How that dir's artifacts are verified (a slow or recording pg_restore) — the
+	 * gate that proves the precondition is re-asserted after a long verification. */
+	databaseBackupVerify?: BackupVerifyOptions;
+	/** The running JOB's abort signal (the widget passes the job's own; a test
+	 * passes a controller's). A STOP — the operator's, or the lane deadline's —
+	 * marks the job terminal without stopping its worker, so the pipeline asks it
+	 * at its two long boundaries and never swaps under a job already shown as
+	 * stopped (`refuseIfStopped`). */
+	signal?: AbortSignal;
 }
 
 function sha256Of(filePath: string): string {
@@ -903,29 +924,74 @@ interface UpdateRequest {
  *
  * Extracted from parseUpdateRequest (2026-08-27): the caller carries the
  * DECISION, this carries the diagnostic, which is what keeps the door under the
- * complexity cap. No behaviour change.
+ * complexity cap. No behaviour change. 2026-09-30 (OPS-1): asynchronous and
+ * BOUNDED — it races the shared verification scan and says "still unverified"
+ * rather than delay the run it only annotates.
  */
-function warnBackupWaiver(waiveBackup: boolean, principal: Principal): void {
-	if (!waiveBackup) return;
-	const { hours, stale } = backupFreshness();
-	if (hours !== null && !stale) return;
+async function warnBackupWaiver(
+	principal: Principal,
+	databaseBackupDir?: string,
+	databaseBackupVerify?: BackupVerifyOptions,
+): Promise<void> {
+	// A bounded look, never a blocking one: the operator chose not to wait for a
+	// backup, so the audit line must not make them wait for a verification either.
+	const subject = waivedBackupSubject(
+		await backupFreshnessWithin(PANEL_WAIT_MS, databaseBackupDir, databaseBackupVerify),
+	);
+	if (subject === null) return;
 	console.warn(
-		`[code update] BACKUP REQUIREMENT WAIVED by user ${principal.userId} — proceeding with ${
-			hours === null
-				? 'NO database backup at all'
-				: `a database backup about ${Math.round(hours)} hours old`
-		}`,
+		`[code update] BACKUP REQUIREMENT WAIVED by user ${principal.userId} — proceeding with ${subject}`,
 	);
 }
 
-function parseUpdateRequest(rawOptions: unknown, principal: Principal): UpdateRequest {
+/** What the waiver skipped, in words — null when the backup was fresh and proven (no line). */
+function waivedBackupSubject(answer: Freshness | PendingFreshness): string | null {
+	if ('pending' in answer) {
+		const name = answer.candidate === null ? '' : ` ('${answer.candidate}')`;
+		return `a database backup that is still UNVERIFIED${name}`;
+	}
+	const { hours, stale, rejected } = answer;
+	if (hours !== null)
+		return stale ? `a database backup about ${Math.round(hours)} hours old` : null;
+	const refused = rejected[0];
+	return refused === undefined
+		? 'NO database backup at all'
+		: `NO usable database backup (the newest did not verify: ${refused.reason})`;
+}
+
+/**
+ * Identity → maintenance mode → the database backup → identity and maintenance
+ * mode AGAIN (the backup wait can be long) → the request shape, in that order.
+ * The backup verdict is the FULL read of the newest dump (OPS-1),
+ * AWAITED here because `updateCode` runs inside its background maintenance job,
+ * never inside the HTTP request that submitted it. A waiver skips the refusal
+ * and only records what it skipped — detached, so the audit line never delays
+ * the run.
+ */
+async function parseUpdateRequest(
+	rawOptions: unknown,
+	principal: Principal,
+	seams: CodeUpdateSeams,
+): Promise<UpdateRequest> {
 	const options = (rawOptions ?? {}) as UpdateCodeOptions;
 	const waiveBackup = options.waive_backup === true;
-	checkUpdatePreconditions(
-		principal,
-		waiveBackup ? { backupWarn: false } : { backupRequire: true },
-	);
-	warnBackupWaiver(waiveBackup, principal);
+	const { databaseBackupDir, databaseBackupVerify } = seams;
+	checkUpdatePreconditions(principal);
+	if (waiveBackup) {
+		void warnBackupWaiver(principal, databaseBackupDir, databaseBackupVerify).catch(
+			(error: unknown) => console.error('[code update] waiver audit line failed:', error),
+		);
+	} else {
+		await requireFreshBackup(databaseBackupDir, databaseBackupVerify);
+		// RE-ASSERT after the wait. The verdict is a settled full read — minutes on
+		// a large archive, plus its turn in the one-read-at-a-time slot — and in
+		// that time the job may have been STOPPED, or maintenance mode switched
+		// off: the swap must never run for a job the panel already shows as
+		// stopped, nor on an install that is live and public again. Cheap and
+		// synchronous.
+		refuseIfStopped(seams.signal, 'while the database backup was being verified');
+		checkUpdatePreconditions(principal);
+	}
 	const request: UpdateRequest = { ...readReleaseFields(options), backupWaived: waiveBackup };
 	assertReleaseShape(request);
 	return request;
@@ -1491,7 +1557,22 @@ async function refuseOnInsufficientSpace(
 	);
 }
 
-/** The full code-update pipeline. Seam-driven; production passes no seams. */
+/**
+ * Refuse when the job this run belongs to was STOPPED (an operator's stop, the
+ * lane deadline). The job manager marks such a job terminal but cannot stop an
+ * awaiting worker, so the pipeline asks at its long boundaries — after the
+ * backup verification and before the swap — rather than install and restart
+ * under a job the panel already reports as stopped.
+ */
+function refuseIfStopped(signal: AbortSignal | undefined, where: string): void {
+	if (signal?.aborted !== true) return;
+	refuseUpdate(
+		'update.refused',
+		`Error. Code update stopped ${where} — nothing was swapped and the live tree is untouched`,
+	);
+}
+
+/** The full code-update pipeline. Seam-driven; production passes no seams but the job's `onPhase` and `signal`. */
 export async function updateCode(
 	rawOptions: unknown,
 	principal: Principal,
@@ -1502,7 +1583,7 @@ export async function updateCode(
 	}
 	// Preconditions + request shape FIRST — a malformed request (including a
 	// missing/malformed sha) refuses BEFORE any network fetch, by contract.
-	const request = parseUpdateRequest(rawOptions, principal);
+	const request = await parseUpdateRequest(rawOptions, principal, seams);
 	const { version } = request;
 
 	const targetRoot = seams.targetRoot ?? projectRoot;
@@ -1533,6 +1614,10 @@ export async function updateCode(
 
 		await prepareQuarantine(codeRoot, targetRoot, stagingDir, seams, phases);
 
+		// The LAST point of no consequence: past it the live tree moves. A job
+		// stopped during the download, the deps install or the smoke boot ends
+		// here, with the live tree, the sentinel and the backups untouched.
+		refuseIfStopped(seams.signal, 'before the swap');
 		phases.start('swap');
 		const stamp = new Date().toISOString().slice(0, 19).replaceAll(':', '-');
 		const previousVersion = DEDALO_VERSION_TRIPLE.join('.');

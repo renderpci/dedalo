@@ -70,6 +70,30 @@
  *      day its raise line is restored. Measured: `bun run test:update || true` in
  *      instance_tier.sh left legs A–F green (leg D credits the invocation, leg E only
  *      asks that tier_status is raised SOMEWHERE).
+ *   I. Every `scripts/ci/*.ts` — the directory holds programs; a library belongs in
+ *      scripts/lib/ (derived from the directory, never from an `import.meta.main` spelling) — is
+ *      invoked BY NAME from a reached script or executing workflow, or carries a reason
+ *      in the shrink-only LOCAL_ONLY_CI_MODULES map (ceiling 0, reason > 60 characters,
+ *      both asserted); leg H then holds that the line
+ *      carries its verdict. Measured 2026-09-30 (PUB-05): deleting db_tier.sh's whole
+ *      MariaDB-tier stage (`bun run scripts/ci/mariadb_tier.ts`) left legs A–H,
+ *      ci_workflow, tier_execution, tier_assignment and test_timeout all green — a
+ *      stage module is not a package.json script, so leg D never saw it.
+ *   J. Every tier root that STARTS the suite MariaDB (an explicit start, the MariaDB
+ *      stage, or a `bun test` / TierSpec module over a file that acquires it — derived
+ *      from mariadb_tier's own set) STOPS it on exit. EXECUTED, not read: the real root
+ *      runs with `bun`/`bunx`/`git`/`apt-get`/`mkdir` stubbed to record-and-do-nothing;
+ *      its run must end with `suite_mariadb.ts stop`, and a second run SIGTERMed at its
+ *      first start must still reach the stop. Measured (C6/C7): deleting the EXIT-trap
+ *      stop left every other gate green; a later `trap … EXIT` replaces it silently.
+ *   K. In every tier root that runs the MariaDB stage (`bun run scripts/ci/mariadb_tier.ts`)
+ *      the stage runs LAST: in the same executed, stubbed run as leg J, the only command
+ *      recorded after it is the EXIT trap's `suite_mariadb.ts stop`. Its re-runs (8 set
+ *      files, a ~170-file armed no-contact batch) write to the suite Postgres, so a stage
+ *      ahead of the unit or parity baseline check moves the database those baselines were
+ *      recorded on — the parity verdict could move with no code change. Measured (H1,
+ *      round 4): the stage block moved before the DB-backed tripwires left tier_wiring,
+ *      tier_execution, tier_assignment, ci_workflow and test_timeout all green.
  *
  * WHAT IS NOT GATED, and said so rather than pretended: GitHub branch protection is
  * owner-only and unobservable from the repo. The required checks (`ci / hermetic`,
@@ -83,9 +107,22 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import {
+	chmodSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	realpathSync,
+	rmSync,
+	statSync,
+	writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import type { TierSpec } from '../../scripts/lib/red_baseline.ts';
+import { mariadbTierSet, realListing } from '../../scripts/ci/mariadb_tier.ts';
+import { ciImageFingerprint } from '../../scripts/lib/ci_image.ts';
+import type { FileCounts } from '../../scripts/lib/parity_census.ts';
+import { loadBaseline, type RedBaseline, type TierSpec } from '../../scripts/lib/red_baseline.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 const read = (rel: string) => readFileSync(join(ROOT, rel), 'utf8');
@@ -254,7 +291,12 @@ function testDirectories(): string[] {
  * spec — the same binding tier_assignment_tripwire uses.
  */
 async function claimedByExecutingSpecs(corpus: Corpus): Promise<Set<string>> {
-	const claimed = new Set<string>();
+	return new Set((await specsClaiming(corpus)).keys());
+}
+
+/** Each claimed path → the executing TierSpec(s) that claim it (their baselines hold its floors). */
+async function specsClaiming(corpus: Corpus): Promise<Map<string, TierSpec[]>> {
+	const claimed = new Map<string, TierSpec[]>();
 	const modules = new Set<string>();
 	for (const line of hostedChainLines(corpus)) {
 		for (const m of line.matchAll(/\bbun run (scripts\/[A-Za-z0-9_./-]+\.ts)/g))
@@ -269,10 +311,236 @@ async function claimedByExecutingSpecs(corpus: Corpus): Promise<Set<string>> {
 		const loaded = (await import(join(ROOT, module))) as Record<string, unknown>;
 		for (const name of names) {
 			const spec = loaded[name] as TierSpec | undefined;
-			for (const path of spec?.paths ?? []) claimed.add(path);
+			if (spec === undefined) continue;
+			for (const path of spec.paths) claimed.set(path, [...(claimed.get(path) ?? []), spec]);
 		}
 	}
 	return claimed;
+}
+
+// ── Leg B, the VACUITY law (PUB-05, audit 2026-09-26) ────────────────────────────
+//
+// A path "claimed by an executing TierSpec" was, until this law, DELIVERED by name alone.
+// A file under it whose every case SKIPS runs nothing wherever it is delivered, and the
+// claim hid that: the MariaDB integration gates skipped green on every runner without
+// the installation's socket while the leg reported the parked `bun test` payload as
+// delivered. So a claimed file is delivered only when its FROZEN per-file floor (the
+// claiming spec's baseline `per_file`, bun's own JUnit counts) shows it ran something.
+//
+// NO TWIN EXCUSES A VACUOUS FILE (review 2026-09-30). The first form let an
+// engineering/twin_map.json twin that ran something ADMIT its all-skipped target. But the
+// map DERIVES a twin's status from the target: `retired` (the target is gone — it is in no
+// claimed path), `frozen-record` (the target survives WITH frozen reds — so it runs), and
+// `supplement` (the target survives with no red — which an all-skipped target always
+// does). So the only twin that could ever admit was a `supplement`, whose own rule says it
+// ADDS coverage and does not replace the target: one `@twin-of` header on any running test
+// excused a new all-skipped file with no reason and no ceiling. The admission was a
+// spelling excusing vacuity, and it is gone: an idle claimed file is excused ONLY by a
+// reasoned, shrink-only VACUOUS_DELIVERY_EXEMPT row.
+
+/** All cases skipped — including 0/0, a file that reports no case at all. */
+function allSkipped(counts: FileCounts): boolean {
+	return counts.tests === counts.skipped;
+}
+
+interface VacuityInput {
+	/** On-disk *.test.ts under the claimed paths. */
+	files: readonly string[];
+	/** The frozen per-file floor of a file, from the baseline of the spec claiming it. */
+	floorOf: (file: string) => FileCounts | undefined;
+	exempt: ReadonlyMap<string, string>;
+}
+
+interface VacuityVerdict {
+	/** file → why it is delivered by name but runs nothing. */
+	faults: Map<string, string>;
+	/** Exempt rows that no longer describe the tree — red both ways. */
+	stale: string[];
+	checked: number;
+}
+
+/** PURE. Every claimed file ran something on its floor of record, or holds an exempt row. */
+function vacuousFloors(input: VacuityInput): VacuityVerdict {
+	const faults = new Map<string, string>();
+	for (const file of input.files) {
+		const floor = input.floorOf(file);
+		if (floor === undefined) {
+			faults.set(
+				file,
+				`${file}: no per_file floor — nothing proves it runs (record it: the tier's --record-new)`,
+			);
+			continue;
+		}
+		if (!allSkipped(floor)) continue;
+		if (input.exempt.has(file)) continue;
+		faults.set(
+			file,
+			`${file}: every recorded case SKIPS (${floor.tests}/${floor.skipped}) — delivered by name, runs nothing, and no VACUOUS_DELIVERY_EXEMPT row says why`,
+		);
+	}
+	const stale: string[] = [];
+	for (const [file, reason] of input.exempt) {
+		const floor = input.floorOf(file);
+		if (!input.files.includes(file))
+			stale.push(`VACUOUS_DELIVERY_EXEMPT names ${file}, which no longer exists — delete the row`);
+		else if (floor !== undefined && !allSkipped(floor))
+			stale.push(
+				`VACUOUS_DELIVERY_EXEMPT names ${file}, which now RUNS (${floor.tests}/${floor.skipped}) — delete the row`,
+			);
+		if (reason.length < 80)
+			stale.push(`VACUOUS_DELIVERY_EXEMPT row ${file}: the reason must say why (>= 80 characters)`);
+	}
+	return { faults, stale, checked: input.files.length };
+}
+
+/**
+ * SHRINK-ONLY (ceiling VACUOUS_DELIVERY_CEILING). A claimed file that is all-skipped on
+ * the floor of record, and a reason (>= 80 characters) why it may stay delivered-but-idle.
+ * A row whose file is gone or now runs is red.
+ */
+const VACUOUS_DELIVERY_EXEMPT: ReadonlyMap<string, string> = new Map([
+	[
+		'test/unit/install_e2e.test.ts',
+		'Needs an ADMIN Postgres connection (CREATE DATABASE for a throwaway install); the hosted tier composes none, so both cases skip. Owner decision pending (closure plan integrator request 10): export DB_ADMIN_* from the job Postgres in hosted_env.sh, then delete this row.',
+	],
+	[
+		'test/integration/diffusion_publish_e2e.test.ts',
+		"Unreachable under suite arming BY CONSTRUCTION: it publishes an INSTALLATION's real diffusion element into that element's own database, which the suite MariaDB does not and must not hold. Its portable halves live in diffusion_publish_native. Owner: retire (closure plan integrator request 10).",
+	],
+	[
+		'test/parity/delete_children_guard_differential.test.ts',
+		'A LIVE-PHP-oracle differential (describe.if(hasLivePhpOracle())): the oracle is decommissioned, so it can never run again. It has no TS-native twin in twin_map.json yet. Owner decision pending (closure plan integrator request 10): twin it or delete it.',
+	],
+	[
+		'test/parity/info_observer_differential.test.ts',
+		'A LIVE-PHP-oracle differential (describe.if(hasLivePhpOracle())): the oracle is decommissioned, so it can never run again. It has no TS-native twin in twin_map.json yet. Owner decision pending (closure plan integrator request 10): twin it or delete it.',
+	],
+	[
+		// Was the one twin ADMISSION of record; the admission is gone (see the law above),
+		// so the idle file now says why it is idle instead of borrowing a twin's run.
+		'test/parity/get_widget_data_differential.test.ts',
+		'A LIVE-PHP-oracle differential (describe.if(hasLivePhpOracle())): the oracle is decommissioned, so it can never run again. Its three twin_map twins (user_stats_interval/merge/range_native) are SUPPLEMENTS for the user-activity producers only; the state, archive-weights and refusal legs have no TS-native twin. Owner decision pending (closure plan integrator request 10): twin those legs or delete it.',
+	],
+]);
+
+/**
+ * The exempt rows' ceiling: the four of day one plus get_widget_data, which was excused
+ * by a twin admission until that admission was removed — the SAME five idle files as
+ * before, now each with a written reason. Lower it with every retired row.
+ */
+const VACUOUS_DELIVERY_CEILING = 5;
+
+/**
+ * SHRINK-ONLY — held, not declared: the baselines whose per-file floors leg B still
+ * reads WITHOUT an `image_fingerprint` stamp, each with why (> 60 characters). The
+ * provenance check (a stamp from another image is red) cannot fail on an unstamped
+ * baseline, so each one is named here rather than printed: a NEW unstamped baseline,
+ * or one that LOSES its stamp, is red; a row whose baseline is stamped now is stale.
+ * Step 1C (the GATE-1 in-image re-record) stamps both and deletes the rows — the
+ * ceiling then drops to 0 (review 2026-09-30, S3).
+ */
+const UNSTAMPED_BASELINES: ReadonlyMap<string, string> = new Map([
+	[
+		'engineering/unit_baseline.json',
+		'recorded before the CI-image provenance stamp existed; Step 1C re-records it in the image and stamps it',
+	],
+	[
+		'engineering/parity_baseline.json',
+		'recorded before the CI-image provenance stamp existed; Step 1C re-records it in the image and stamps it',
+	],
+]);
+/** The ceiling on UNSTAMPED_BASELINES: lower it with every retired row, never raise it. */
+const UNSTAMPED_CEILING = 2;
+
+/** PURE. Unstamped baselines no row names, rows whose baseline is stamped, short reasons. */
+function unstampedFaults(
+	unstamped: readonly string[],
+	allowed: ReadonlyMap<string, string>,
+): string[] {
+	const faults: string[] = [];
+	for (const path of unstamped)
+		if (!allowed.has(path))
+			faults.push(
+				`${path}: floors read with no image_fingerprint and no UNSTAMPED_BASELINES row — re-record it in the CI image`,
+			);
+	for (const [path, reason] of allowed) {
+		if (!unstamped.includes(path))
+			faults.push(
+				`UNSTAMPED_BASELINES names ${path}, which is stamped now (or no longer read) — delete the row and lower the ceiling`,
+			);
+		if (reason.trim().length <= 60)
+			faults.push(
+				`UNSTAMPED_BASELINES row ${path}: the reason must say why its provenance is unproven (> 60 characters)`,
+			);
+	}
+	return faults;
+}
+
+/** Recursive on-disk *.test.ts under a repo-relative directory. */
+function testFilesUnder(rel: string): string[] {
+	const out: string[] = [];
+	const walk = (dir: string): void => {
+		for (const entry of readdirSync(join(ROOT, dir)).sort()) {
+			const path = `${dir}/${entry}`;
+			if (statSync(join(ROOT, path)).isDirectory()) walk(path);
+			else if (entry.endsWith('.test.ts')) out.push(path);
+		}
+	};
+	walk(rel);
+	return out;
+}
+
+/**
+ * The real vacuity verdict over every claimed path, plus the provenance faults of the
+ * baselines it read: a baseline stamped with an `image_fingerprint` must be THIS
+ * checkout's CI image (floors recorded in another image describe another runner).
+ */
+async function realVacuity(corpus: Corpus): Promise<{
+	verdict: VacuityVerdict;
+	provenance: string[];
+	unstamped: string[];
+	floorOf: (file: string) => FileCounts | undefined;
+}> {
+	const specs = await specsClaiming(corpus);
+	const baselines = new Map<string, RedBaseline>();
+	const provenance: string[] = [];
+	const unstamped: string[] = [];
+	const fingerprint = ciImageFingerprint(ROOT);
+	for (const list of specs.values()) {
+		for (const spec of list) {
+			if (baselines.has(spec.baselinePath)) continue;
+			const baseline = loadBaseline(spec);
+			baselines.set(spec.baselinePath, baseline);
+			const stamp = (baseline as RedBaseline & { image_fingerprint?: unknown }).image_fingerprint;
+			if (stamp === undefined) unstamped.push(spec.baselinePath);
+			else if (stamp !== fingerprint)
+				provenance.push(
+					`${spec.baselinePath}: its floors were recorded in CI image ${String(stamp).slice(0, 12)}, not this checkout's ${fingerprint.slice(0, 12)} — re-record in the image`,
+				);
+		}
+	}
+	const floorOf = (file: string): FileCounts | undefined => {
+		for (const [path, list] of specs) {
+			if (file !== path && !file.startsWith(`${path}/`)) continue;
+			for (const spec of list) {
+				const floor = baselines.get(spec.baselinePath)?.per_file[file];
+				if (floor !== undefined) return floor;
+			}
+		}
+		return undefined;
+	};
+	// ONE literal root (`test`), sifted per file by the claimed paths: the walk's feed stays
+	// readable by census_derivation_tripwire instead of being a runtime list of roots.
+	const claimedPaths = [...specs.keys()];
+	const files = testFilesUnder('test').filter((file) =>
+		claimedPaths.some((path) => file === path || file.startsWith(`${path}/`)),
+	);
+	return {
+		verdict: vacuousFloors({ files, floorOf, exempt: VACUOUS_DELIVERY_EXEMPT }),
+		provenance,
+		unstamped,
+		floorOf,
+	};
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -400,6 +668,64 @@ const LOCAL_ONLY_SCRIPTS: ReadonlyMap<string, string> = new Map([
 	],
 ]);
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Leg I — executable scripts/ci/*.ts stage modules.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * SHRINK-ONLY — held, not declared: its size may never exceed LOCAL_ONLY_CI_CEILING
+ * (lower the ceiling with the row, never raise it), and every row's reason must say why
+ * (> 60 characters, the sibling maps' rule). An executable scripts/ci/*.ts no hosted
+ * chain runs, with the reason. One row plus a deleted invocation would otherwise
+ * re-open exactly the hole this leg closes (review 2026-09-30, mutation I1).
+ */
+const LOCAL_ONLY_CI_MODULES: ReadonlyMap<string, string> = new Map();
+/** The day-one ceiling on LOCAL_ONLY_CI_MODULES: no row. */
+const LOCAL_ONLY_CI_CEILING = 0;
+
+/**
+ * Every scripts/ci/*.ts — the DIRECTORY is the entry set, never a spelling inside the
+ * file. It used to keep only files containing the text `import.meta.main`, so a module
+ * run as a program without that guard (a top-level `process.exit(await main())`) was
+ * never checked (review 2026-09-30, S3). scripts/ci/ holds programs; a library shared
+ * by them belongs in scripts/lib/, where this leg does not look.
+ */
+function ciEntryModules(dir = join(ROOT, 'scripts', 'ci')): string[] {
+	return readdirSync(dir)
+		.filter((entry) => entry.endsWith('.ts'))
+		.sort()
+		.map((entry) => `scripts/ci/${entry}`);
+}
+
+/** PURE. Every executable CI module no chain line runs (and no row excuses), plus stale rows. */
+function ciModuleOrphans(
+	modules: readonly string[],
+	lines: string[],
+	localOnly: ReadonlyMap<string, string>,
+): string[] {
+	const orphans: string[] = [];
+	for (const rel of modules) {
+		const run = invokedByName(rel, lines);
+		if (run && localOnly.has(rel))
+			orphans.push(`${rel}: listed LOCAL_ONLY but a hosted chain runs it — delete the row`);
+		if (!run && !localOnly.has(rel))
+			orphans.push(
+				`${rel}: an executable CI module no hosted chain runs, and no reason given (a library belongs in scripts/lib/)`,
+			);
+	}
+	for (const [rel, reason] of localOnly) {
+		if (!modules.includes(rel))
+			orphans.push(
+				`LOCAL_ONLY_CI_MODULES names ${rel}, which is no longer an executable scripts/ci module — delete the row`,
+			);
+		if (reason.trim().length <= 60)
+			orphans.push(
+				`LOCAL_ONLY_CI_MODULES row ${rel}: the reason must say why no hosted chain runs it (> 60 characters)`,
+			);
+	}
+	return orphans;
+}
+
 function packageTestScripts(): Map<string, string> {
 	const pkg = JSON.parse(read('package.json')) as { scripts: Record<string, string> };
 	const found = new Map<string, string>();
@@ -421,6 +747,259 @@ function invokedByName(name: string, lines: string[]): boolean {
 	const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 	const re = new RegExp(`^(?:[A-Z0-9_]+=\\S*\\s+)*bun run ${escaped}(?=[\\s"'|&;)]|$)`);
 	return lines.some((line) => re.test(line));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Leg J — the suite MariaDB a tier starts is STOPPED when the tier exits.
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// A MariaDB gate's first acquisition cold-installs and starts a DETACHED mariadbd (the
+// helper's `ensureSuiteMariadb`): nothing but the tier script stops it, through ONE EXIT
+// trap. A later `trap … EXIT` REPLACES that trap in bash, silently, and a trap set after
+// the first start leaves the window before it unguarded. Measured (mutations C6, C7):
+// deleting either EXIT-trap stop left every gate green. So the leg EXECUTES each tier
+// root — the real script, with `bun`, `bunx`, `git`, `apt-get` and `mkdir` replaced by a
+// stub on PATH that records its argv and cwd and does nothing — and judges the OUTCOME:
+//   1. the stubbed run completes (exit 0), so every stage line was walked;
+//   2. a root whose run STARTS the suite server (an invocation that starts it, or runs a
+//      test file that acquires it — derived from mariadb_tier's own set) must END with
+//      `bun run scripts/ci/suite_mariadb.ts stop`: an EXIT trap that a later one replaced
+//      ends with something else;
+//   3. the same root, SIGTERMed at its FIRST starting invocation, must still run the stop
+//      (bash runs the EXIT trap on SIGTERM): a trap set after that line never fires.
+// NOT CLOSED HERE, said so: a module that spawns `bun test` over acquirers WITHOUT
+// declaring a TierSpec (or naming mariadb_tier / suite_mariadb start) is not classified
+// as a starter; SIGKILL runs no trap at all (nothing in bash can).
+
+interface DrillInvocation {
+	/** The stubbed command's name (`bun`, `bunx`, `git`, …). */
+	command: string;
+	cwd: string;
+	argv: string[];
+}
+
+interface DrillRun {
+	code: number;
+	invocations: DrillInvocation[];
+}
+
+const STUBBED_COMMANDS = ['bun', 'bunx', 'git', 'apt-get', 'mkdir'] as const;
+
+/** The stub every STUBBED_COMMANDS name resolves to: record, answer the two reads, do nothing. */
+const DRILL_STUB = `#!/bin/sh
+{ printf '%s\\037' "$(basename "$0")" "$PWD"; for a in "$@"; do printf '%s\\037' "$a"; done; printf '\\036'; } >> "$DRILL_LOG"
+case "$(basename "$0")" in
+	bun) [ "$1" = "--version" ] && cat "$DRILL_PIN" ;;
+	git) case "$1" in rev-parse|merge-base) echo 0000000000000000000000000000000000000000 ;; esac ;;
+esac
+if [ -n "\${DRILL_KILL_ON:-}" ] && [ "$*" = "$DRILL_KILL_ON" ] && [ ! -e "$DRILL_LOG.killed" ]; then
+	: > "$DRILL_LOG.killed"
+	kill -TERM "$DRILL_TARGET_PID"
+fi
+exit 0
+`;
+
+/**
+ * Run one script with every STUBBED_COMMANDS name recording instead of acting. `killOn`
+ * (the space-joined argv of one invocation) SIGTERMs the script's own shell at that
+ * invocation, once. The script runs from the repo root, as CI runs it.
+ */
+function drillScript(script: string, killOn?: string): DrillRun {
+	const dir = mkdtempSync(join(tmpdir(), 'tier_wiring_trap_'));
+	try {
+		const bin = join(dir, 'bin');
+		const log = join(dir, 'drill.log');
+		Bun.spawnSync(['/bin/mkdir', bin]);
+		for (const name of STUBBED_COMMANDS) {
+			writeFileSync(join(bin, name), DRILL_STUB);
+			chmodSync(join(bin, name), 0o755);
+		}
+		writeFileSync(log, '');
+		const result = Bun.spawnSync(
+			// `exec` keeps the PID: the stub's SIGTERM reaches the script's own shell.
+			['bash', '-c', 'export DRILL_TARGET_PID=$$; exec bash "$0"', script],
+			{
+				cwd: ROOT,
+				env: {
+					...process.env,
+					PATH: `${bin}:${process.env.PATH ?? '/usr/bin:/bin'}`,
+					TMPDIR: dir,
+					DRILL_LOG: log,
+					DRILL_PIN: join(ROOT, '.bun-version'),
+					// The drill measures the tier AS THE RUNNER RUNS IT. The pre-push hook's
+					// `ci:local --skip-advisory` exports this into the suite; inherited, it skips
+					// db_tier's unit stage and K reads a shape the runner never runs.
+					DEDALO_CI_SKIP_ADVISORY: '0',
+					...(killOn === undefined ? {} : { DRILL_KILL_ON: killOn }),
+				},
+				stdout: 'ignore',
+				stderr: 'ignore',
+			},
+		);
+		const invocations = readFileSync(log, 'utf8')
+			.split('\x1e')
+			.filter((record) => record !== '')
+			.map((record) => {
+				const [command, cwd, ...argv] = record.split('\x1f').slice(0, -1);
+				return { command: command as string, cwd: cwd as string, argv };
+			});
+		return { code: result.exitCode ?? -1, invocations };
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+}
+
+interface StarterContext {
+	/** Test files that acquire the suite MariaDB target (mariadb_tier's derived set). */
+	acquirers: readonly string[];
+	/** The TierSpec paths a `bun run scripts/X.ts` module declares (null: none). */
+	specPaths: (module: string) => readonly string[] | null;
+	/** package.json scripts. */
+	packageScripts: Readonly<Record<string, string>>;
+}
+
+/** Does this `bun` argv START the suite server? PURE given the context. */
+function argvStartsSuiteServer(argv: readonly string[], ctx: StarterContext, depth = 0): boolean {
+	if (depth > 4) return false;
+	const [verb, ...rest] = argv;
+	const operands = rest.filter((arg) => !arg.startsWith('-'));
+	const covers = (paths: readonly string[]) =>
+		ctx.acquirers.some((file) =>
+			paths.some((path) => {
+				const dir = path.replace(/\/+$/, '');
+				return dir === '' || file === dir || file.startsWith(`${dir}/`);
+			}),
+		);
+	if (verb === 'test') return covers(operands.length === 0 ? [''] : operands);
+	if (verb !== 'run') return false;
+	const [first, second] = operands;
+	if (first === undefined) return false;
+	if (first.endsWith('.ts')) {
+		if (first === 'scripts/ci/suite_mariadb.ts') return second === 'start';
+		if (first === 'scripts/ci/mariadb_tier.ts') return true;
+		const paths = ctx.specPaths(first);
+		return paths !== null && covers(paths);
+	}
+	// Package script name(s) — `--parallel` may list several.
+	return operands.some((name) => {
+		const command = ctx.packageScripts[name];
+		if (command === undefined) return false;
+		return command.split(/&&|\|\||;/).some((part) => {
+			const bun = part.trim().match(/^bun\s+(.+)$/);
+			return bun !== null && argvStartsSuiteServer((bun[1] as string).split(/\s+/), ctx, depth + 1);
+		});
+	});
+}
+
+const isSuiteStop = (inv: DrillInvocation): boolean =>
+	inv.command === 'bun' &&
+	inv.argv[0] === 'run' &&
+	inv.argv[1] === 'scripts/ci/suite_mariadb.ts' &&
+	inv.argv[2] === 'stop';
+
+/** The drill's verdict on one script (both runs). `starters` is empty for a non-starting root. */
+function exitTrapFaults(
+	rel: string,
+	script: string,
+	ctx: StarterContext,
+): { starters: string[]; faults: string[] } {
+	const root = realpathSync(ROOT);
+	const starts = (inv: DrillInvocation) =>
+		inv.command === 'bun' &&
+		(() => {
+			try {
+				return realpathSync(inv.cwd) === root;
+			} catch {
+				return false;
+			}
+		})() &&
+		argvStartsSuiteServer(inv.argv, ctx);
+	const faults: string[] = [];
+	const normal = drillScript(script);
+	if (normal.code !== 0)
+		faults.push(
+			`${rel}: the stubbed run exited ${normal.code} — the drill could not walk its stages, so nothing it starts is proven stopped`,
+		);
+	const starters = normal.invocations.filter(starts).map((inv) => inv.argv.join(' '));
+	if (starters.length === 0) return { starters, faults };
+	const shown = (argv: string) => (argv.length > 100 ? `${argv.slice(0, 100)}…` : argv);
+	const last = normal.invocations.at(-1);
+	if (last === undefined || !isSuiteStop(last))
+		faults.push(
+			`${rel}: starts the suite MariaDB (\`bun ${shown(starters[0] as string)}\`) but its run does not END with \`bun run scripts/ci/suite_mariadb.ts stop\` (the last call is \`${last?.command} ${shown(last?.argv.join(' ') ?? '')}\`) — no EXIT trap stops the server, or a later \`trap … EXIT\` REPLACED that stop; chain it instead`,
+		);
+	const killOn = starters[0] as string;
+	const killed = drillScript(script, killOn);
+	const at = killed.invocations.findIndex(
+		(inv) => inv.command === 'bun' && inv.argv.join(' ') === killOn,
+	);
+	if (at === -1 || killed.code === 0)
+		faults.push(
+			`${rel}: the drill could not terminate the script at \`bun ${shown(killOn)}\` (exit ${killed.code}) — the SIGTERM leg is unproven`,
+		);
+	else if (!killed.invocations.slice(at + 1).some(isSuiteStop))
+		faults.push(
+			`${rel}: terminated at its FIRST server start (\`bun ${shown(killOn)}\`), nothing ran \`suite_mariadb.ts stop\` — the EXIT trap is set after that line, or not at all`,
+		);
+	return { starters, faults };
+}
+
+/** The real context: mariadb_tier's own derived set, the TierSpec modules, package.json. */
+async function realStarterContext(): Promise<StarterContext> {
+	const { set } = mariadbTierSet(realListing());
+	const packageScripts = (JSON.parse(read('package.json')) as { scripts: Record<string, string> })
+		.scripts;
+	const specs = new Map<string, readonly string[] | null>();
+	const modules = new Set<string>();
+	for (const line of [...CHAIN_LINES, ...Object.values(packageScripts)])
+		for (const m of line.matchAll(/\bbun run (scripts\/[A-Za-z0-9_./-]+\.ts)/g))
+			modules.add(m[1] as string);
+	for (const module of modules) {
+		const names = [...read(module).matchAll(/^export const ([A-Za-z0-9_]+): TierSpec\b/gm)].map(
+			(m) => m[1] as string,
+		);
+		if (names.length === 0) {
+			specs.set(module, null);
+			continue;
+		}
+		const loaded = (await import(join(ROOT, module))) as Record<string, TierSpec | undefined>;
+		specs.set(
+			module,
+			names.flatMap((name) => loaded[name]?.paths ?? []),
+		);
+	}
+	return {
+		acquirers: [...new Set([...set.files, ...set.mustAcquire])],
+		specPaths: (module) => specs.get(module) ?? null,
+		packageScripts,
+	};
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Leg K — the MariaDB stage runs LAST (nothing measured on the suite Postgres follows it).
+// ─────────────────────────────────────────────────────────────────────────────
+
+const isMariadbStage = (inv: DrillInvocation): boolean =>
+	inv.command === 'bun' && inv.argv[0] === 'run' && inv.argv[1] === 'scripts/ci/mariadb_tier.ts';
+
+/**
+ * PURE over one drilled run. `runs`: the root runs the MariaDB stage. Each command recorded
+ * AFTER its first invocation, other than the EXIT trap's suite stop, is one fault.
+ */
+function stageOrderFaults(
+	rel: string,
+	invocations: readonly DrillInvocation[],
+): { runs: boolean; faults: string[] } {
+	const at = invocations.findIndex(isMariadbStage);
+	if (at === -1) return { runs: false, faults: [] };
+	const faults = invocations
+		.slice(at + 1)
+		.filter((inv) => !isSuiteStop(inv))
+		.map(
+			(inv) =>
+				`${rel}: \`${inv.command} ${inv.argv.join(' ')}\` runs AFTER the MariaDB stage — its re-runs write to the suite Postgres, so every unit / parity measurement must come first; move the stage to the end`,
+		);
+	return { runs: true, faults };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -536,6 +1115,7 @@ describe('tier wiring — every gate is reached by a workflow that executes', ()
 		const claimed = await claimedByExecutingSpecs(CORPUS);
 		const allTestDirs = testDirectories();
 		expect(allTestDirs.length).toBeGreaterThanOrEqual(3);
+		const vacuity = await realVacuity(CORPUS);
 		const undelivered: string[] = [];
 		let payloadsSeen = 0;
 		for (const rel of files) {
@@ -573,10 +1153,15 @@ describe('tier wiring — every gate is reached by a workflow that executes', ()
 						.filter((t) => t !== '' && !t.startsWith('-'));
 					const wanted = paths.length === 0 ? allTestDirs : paths;
 					const unclaimed = wanted.filter((p) => !claimed.has(p));
-					if (unclaimed.length === 0) continue;
-					undelivered.push(
-						`${rel}: ${command} — no executing TierSpec claims ${unclaimed.join(', ')}`,
-					);
+					if (unclaimed.length > 0)
+						undelivered.push(
+							`${rel}: ${command} — no executing TierSpec claims ${unclaimed.join(', ')}`,
+						);
+					// Claimed is not delivered when the file runs nothing (the vacuity law).
+					for (const [file, why] of vacuity.verdict.faults) {
+						if (wanted.some((p) => file === p || file.startsWith(`${p}/`)))
+							undelivered.push(`${rel}: ${command} — ${why}`);
+					}
 					continue;
 				}
 				undelivered.push(
@@ -593,6 +1178,119 @@ describe('tier wiring — every gate is reached by a workflow that executes', ()
 			'Steps of the parked self-hosted tier that NO executing hosted chain delivers. The private mirror is not wired, so anything only these steps run, runs nowhere:\n  ' +
 				undelivered.join('\n  '),
 		).toEqual([]);
+
+		// The vacuity law's own honesty on the real tree.
+		expect(
+			vacuity.verdict.checked,
+			'the vacuity law checked too few files — the claimed-path walk changed shape',
+		).toBeGreaterThanOrEqual(900);
+		expect(vacuity.verdict.stale, vacuity.verdict.stale.join('\n')).toEqual([]);
+		// THE LAW BY ITSELF, over every claimed file — not only the paths some parked
+		// payload happens to want. The per-payload attribution above is the better
+		// message; this is the guarantee: were the parked nightly's bare `bun test` narrowed
+		// to explicit paths, or its workflow exempted or removed, a claimed file that runs
+		// nothing would otherwise be computed here and dropped silently.
+		const vacuousClaimed = [...vacuity.verdict.faults].map(([file, why]) => `${file}: ${why}`);
+		expect(
+			vacuousClaimed,
+			`claimed test files that run nothing (all cases skipped, or none):\n  ${vacuousClaimed.join('\n  ')}`,
+		).toEqual([]);
+		expect(vacuity.provenance, vacuity.provenance.join('\n')).toEqual([]);
+		// Provenance of the floors themselves: an unstamped baseline is NAMED, shrink-only —
+		// never a console line (review 2026-09-30, S3: no baseline carried a stamp, so the
+		// check above could not fail and nothing said so).
+		const unstamped = unstampedFaults(vacuity.unstamped, UNSTAMPED_BASELINES);
+		expect(unstamped, unstamped.join('\n')).toEqual([]);
+		expect(UNSTAMPED_BASELINES.size).toBeLessThanOrEqual(UNSTAMPED_CEILING);
+		// SHRINK-ONLY ceiling.
+		expect(VACUOUS_DELIVERY_EXEMPT.size).toBeLessThanOrEqual(VACUOUS_DELIVERY_CEILING);
+	});
+
+	test('B. provenance controls: an unstamped baseline without a row is red, a row for a stamped one is stale, a short reason is red', () => {
+		const why = 'recorded before the image stamp existed; the in-image re-record stamps it';
+		expect(unstampedFaults(['a.json'], new Map())).toEqual([
+			expect.stringMatching(/^a\.json: floors read with no image_fingerprint/),
+		]);
+		expect(unstampedFaults(['a.json'], new Map([['a.json', why]]))).toEqual([]);
+		expect(unstampedFaults([], new Map([['a.json', why]]))).toEqual([
+			expect.stringMatching(/^UNSTAMPED_BASELINES names a\.json, which is stamped/),
+		]);
+		expect(unstampedFaults(['a.json'], new Map([['a.json', 'x']]))).toEqual([
+			expect.stringMatching(/^UNSTAMPED_BASELINES row a\.json: the reason/),
+		]);
+	});
+
+	test('B. vacuity controls: all-skipped (incl. 0/0) is caught, a partial skip is not, only a reasoned row excuses — never a running twin — stale rows are red', () => {
+		const floors: Record<string, FileCounts> = {
+			'a.test.ts': { tests: 5, skipped: 5, assertions: 0 },
+			'b.test.ts': { tests: 5, skipped: 4, assertions: 3 },
+			'c.test.ts': { tests: 0, skipped: 0, assertions: 0 },
+			'd.test.ts': { tests: 3, skipped: 1, assertions: 2 },
+			'f.test.ts': { tests: 2, skipped: 2, assertions: 0 },
+		};
+		const reason = 'r'.repeat(80);
+		const verdict = vacuousFloors({
+			files: [...Object.keys(floors), 'unrecorded.test.ts'],
+			floorOf: (file) => floors[file],
+			exempt: new Map([
+				['d.test.ts', reason],
+				['f.test.ts', reason],
+				['gone.test.ts', reason],
+			]),
+		});
+		expect([...verdict.faults.keys()].sort()).toEqual([
+			'a.test.ts',
+			'c.test.ts',
+			'unrecorded.test.ts',
+		]);
+		expect(verdict.stale).toEqual([
+			expect.stringMatching(/d\.test\.ts, which now RUNS/),
+			expect.stringMatching(/gone\.test\.ts, which no longer exists/),
+		]);
+		// An exempt ALL-skipped file is silent; a short reason is red.
+		const exempted = vacuousFloors({
+			files: ['a.test.ts'],
+			floorOf: (file) => floors[file],
+			exempt: new Map([['a.test.ts', 'too short']]),
+		});
+		expect(exempted.faults.size).toBe(0);
+		expect(exempted.stale).toEqual([expect.stringMatching(/a\.test\.ts: the reason must say why/)]);
+
+		// NO TWIN EXCUSES A VACUOUS FILE — held HERE, independent of the real-tree legs above
+		// (review 2026-09-30: placed after the real-floor expectations, this control never
+		// executed while those were red, and a re-added twin admission went unseen).
+		// Real corpus: get_widget_data has twin_map twins, and its twins RUN (planted floors,
+		// so the verdict does not wait on recorded ones); without its exempt row, its
+		// all-skipped floor is a fault all the same. The input also carries the twins, so
+		// an admission re-added through either channel (reading the map, or an input field)
+		// turns this red.
+		const twins = (
+			JSON.parse(read('engineering/twin_map.json')) as { twins: { file: string; target: string }[] }
+		).twins;
+		const widget = 'test/parity/get_widget_data_differential.test.ts';
+		const widgetTwins = twins.filter((twin) => twin.target === widget).map((twin) => twin.file);
+		expect(
+			widgetTwins.length,
+			'the control needs the target to have twins — the twin map changed shape',
+		).toBeGreaterThan(0);
+		const running: FileCounts = { tests: 4, skipped: 0, assertions: 9 };
+		const idle: FileCounts = { tests: 5, skipped: 5, assertions: 0 };
+		const withTwins: VacuityInput & { twins: typeof twins } = {
+			files: [widget, ...widgetTwins],
+			floorOf: (file) => (file === widget ? idle : running),
+			exempt: new Map(),
+			twins,
+		};
+		expect([...vacuousFloors(withTwins).faults.keys()]).toEqual([widget]);
+		// Planted: a target whose one twin runs is still a fault.
+		expect([
+			...vacuousFloors({
+				files: ['target.test.ts', 'twin.test.ts'],
+				floorOf: (file) => (file === 'target.test.ts' ? idle : running),
+				exempt: new Map(),
+				twins: [{ file: 'twin.test.ts', target: 'target.test.ts' }],
+			} as VacuityInput).faults.keys(),
+		]).toEqual(['target.test.ts']);
 	});
 
 	// Leg C
@@ -684,6 +1382,239 @@ describe('tier wiring — every gate is reached by a workflow that executes', ()
 		expect(invokedByName('test:update', ['TMPDIR=/tmp/dd bun run test:update'])).toBe(true);
 		expect(invokedByName('test:update', ['echo "== drill (bun run test:update)"'])).toBe(false);
 	});
+
+	// Leg I
+	test('I. every executable scripts/ci/*.ts is run BY NAME on a hosted chain, or is local-only with a reason', () => {
+		const modules = ciEntryModules();
+		expect(
+			modules.length,
+			'no executable scripts/ci/*.ts found — the derivation is blind',
+		).toBeGreaterThanOrEqual(3);
+		// SHRINK-ONLY, held: the map may not grow past its ceiling.
+		expect(
+			LOCAL_ONLY_CI_MODULES.size,
+			'LOCAL_ONLY_CI_MODULES grew — a stage module must be run by a hosted chain, not excused',
+		).toBeLessThanOrEqual(LOCAL_ONLY_CI_CEILING);
+		const orphans = ciModuleOrphans(modules, CHAIN_LINES, LOCAL_ONLY_CI_MODULES);
+		expect(orphans, `CI stage modules with no executing home:\n  ${orphans.join('\n  ')}`).toEqual(
+			[],
+		);
+		// The PUB-05 stage and its server control are among them (the floor that makes
+		// this leg mean something for the finding it was written for).
+		expect(modules).toContain('scripts/ci/mariadb_tier.ts');
+		expect(modules).toContain('scripts/ci/suite_mariadb.ts');
+		// Controls: an invocation, never a mention — a comment or an echo label is not a
+		// run, and a trap body (a stop at EXIT) does not credit the module either.
+		expect(invokedByName('scripts/ci/x.ts', ['bun run scripts/ci/x.ts || x_rc=$?'])).toBe(true);
+		expect(invokedByName('scripts/ci/x.ts', ['echo "bun run scripts/ci/x.ts"'])).toBe(false);
+		expect(invokedByName('scripts/ci/x.ts', ["trap 'bun run scripts/ci/x.ts stop' EXIT"])).toBe(
+			false,
+		);
+		expect(invokedByName('scripts/ci/x.ts', ['bun run scripts/ci/x.tsx'])).toBe(false);
+		// Control: the entry set is the DIRECTORY, not a spelling. A module that runs as a
+		// program without an `import.meta.main` guard (a top-level
+		// `process.exit(await main())`) is an entry all the same — found by the text
+		// search, it was never checked (review 2026-09-30, S3).
+		const entriesDir = mkdtempSync(join(tmpdir(), 'dedalo_ci_entries_'));
+		try {
+			writeFileSync(join(entriesDir, 'guarded.ts'), 'if (import.meta.main) process.exit(0);\n');
+			writeFileSync(join(entriesDir, 'unguarded.ts'), 'process.exit(await main());\n');
+			writeFileSync(join(entriesDir, 'notes.md'), 'not a module\n');
+			expect(ciEntryModules(entriesDir)).toEqual([
+				'scripts/ci/guarded.ts',
+				'scripts/ci/unguarded.ts',
+			]);
+		} finally {
+			rmSync(entriesDir, { recursive: true, force: true });
+		}
+		// Planted: an unrun module is an orphan; a reasoned row for a run module, or for
+		// a module that is gone, is stale; a row whose reason does not say why is red
+		// even when it excuses a real orphan.
+		const planted = ['scripts/ci/a.ts', 'scripts/ci/b.ts'];
+		const lines = ['bun run scripts/ci/a.ts || a_rc=$?'];
+		const why = 'a reason long enough to say why no hosted chain can run this module';
+		expect(ciModuleOrphans(planted, lines, new Map())).toEqual([
+			expect.stringMatching(/^scripts\/ci\/b\.ts: an executable CI module no hosted chain runs/),
+		]);
+		expect(ciModuleOrphans(planted, lines, new Map([['scripts/ci/b.ts', why]]))).toEqual([]);
+		expect(
+			ciModuleOrphans(
+				planted,
+				lines,
+				new Map([
+					['scripts/ci/a.ts', why],
+					['scripts/ci/b.ts', why],
+					['scripts/ci/gone.ts', why],
+				]),
+			),
+		).toEqual([
+			expect.stringMatching(/^scripts\/ci\/a\.ts: listed LOCAL_ONLY but a hosted chain runs it/),
+			expect.stringMatching(/names scripts\/ci\/gone\.ts, which is no longer an executable/),
+		]);
+		expect(ciModuleOrphans(planted, lines, new Map([['scripts/ci/b.ts', 'x']]))).toEqual([
+			expect.stringMatching(
+				/^LOCAL_ONLY_CI_MODULES row scripts\/ci\/b\.ts: the reason must say why/,
+			),
+		]);
+	});
+
+	// Leg J
+	test('J. a tier root that starts the suite MariaDB stops it on exit — run to the end, and SIGTERMed at the first start (executed, stubbed)', async () => {
+		const ctx = await realStarterContext();
+		expect(
+			ctx.acquirers.length,
+			"mariadb_tier's derived set is too small — the starter classification would be blind",
+		).toBeGreaterThanOrEqual(5);
+		// Classification controls: an acquirer run, a directory holding one, a bare run, a
+		// tier module whose TierSpec claims one and the stage module start; not a stop, not
+		// a pure gate. The parity tier IS one since 2026-10-01: widgets_differential
+		// acquires (check_config's eager language audit opens pools), so a root that runs
+		// it must stop the server on exit like any other.
+		const acquirer = ctx.acquirers[0] as string;
+		const starts = (argv: string[]) => argvStartsSuiteServer(argv, ctx);
+		expect(starts(['test', '--timeout=30000', acquirer])).toBe(true);
+		expect(starts(['test', acquirer.split('/').slice(0, 2).join('/')])).toBe(true);
+		expect(starts(['test'])).toBe(true);
+		expect(starts(['run', 'scripts/unit_baseline.ts', '--check'])).toBe(true);
+		expect(starts(['run', 'scripts/ci/mariadb_tier.ts'])).toBe(true);
+		expect(starts(['run', 'scripts/ci/suite_mariadb.ts', 'start'])).toBe(true);
+		expect(starts(['run', 'scripts/ci/suite_mariadb.ts', 'stop'])).toBe(false);
+		expect(starts(['test', 'test/unit/config_env_tripwire.test.ts'])).toBe(false);
+		expect(starts(['run', 'scripts/parity_baseline.ts', '--check'])).toBe(true);
+
+		// Planted scripts, drilled for real: each defect is red, the chained form is green.
+		const dir = mkdtempSync(join(tmpdir(), 'tier_wiring_trap_plant_'));
+		try {
+			const stop = "trap 'bun run scripts/ci/suite_mariadb.ts stop >/dev/null 2>&1 || :' EXIT\n";
+			const start = 'bun run scripts/ci/suite_mariadb.ts start\n';
+			// A pure gate: a NON-starter (the parity tier stopped being one, 2026-10-01).
+			const after = 'bun test test/unit/config_env_tripwire.test.ts\n';
+			const plant = (name: string, body: string) => {
+				const path = join(dir, `${name}.sh`);
+				writeFileSync(path, `set -euo pipefail\n${body}`);
+				return exitTrapFaults(`plant/${name}.sh`, path, ctx);
+			};
+			const good = plant('good', stop + start + after);
+			expect(good.faults).toEqual([]);
+			expect(good.starters).toEqual(['run scripts/ci/suite_mariadb.ts start']);
+			expect(
+				plant(
+					'chained',
+					`${stop + start}trap 'echo other; bun run scripts/ci/suite_mariadb.ts stop' EXIT\n${after}`,
+				).faults,
+			).toEqual([]);
+			expect(plant('idle', after)).toEqual({ starters: [], faults: [] });
+			expect(plant('no_trap', start + after).faults).toEqual([
+				expect.stringMatching(/^plant\/no_trap\.sh: starts the suite MariaDB .* does not END with/),
+				expect.stringMatching(/^plant\/no_trap\.sh: terminated at its FIRST server start/),
+			]);
+			expect(plant('replaced', `${stop + start}trap 'echo other' EXIT\n${after}`).faults).toEqual([
+				expect.stringMatching(/^plant\/replaced\.sh: .*a later `trap … EXIT` REPLACED that stop/),
+			]);
+			expect(plant('late', start + stop + after).faults).toEqual([
+				expect.stringMatching(/^plant\/late\.sh: terminated at its FIRST server start/),
+			]);
+			// A starter through an acquiring test file, not only the explicit start.
+			expect(plant('by_gate', `bun test ${acquirer}\n`).faults).toHaveLength(2);
+			expect(plant('broken', `${stop + start}false\n`).faults).toEqual([
+				expect.stringMatching(/^plant\/broken\.sh: the stubbed run exited 1/),
+			]);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+
+		// THE REAL ROOTS.
+		const starting: string[] = [];
+		const faults: string[] = [];
+		for (const rel of [...REAL.roots].sort()) {
+			const verdict = exitTrapFaults(rel, join(ROOT, rel), ctx);
+			faults.push(...verdict.faults);
+			if (verdict.starters.length > 0) starting.push(rel);
+		}
+		expect(
+			faults,
+			`Tier roots that can leave the suite MariaDB running after they exit:\n  ${faults.join('\n  ')}`,
+		).toEqual([]);
+		// The floor: the DB tier starts it (its MariaDB stage and unit tier run acquirers).
+		expect(starting).toContain('scripts/ci/db_tier.sh');
+	}, 60_000);
+
+	test('K. the MariaDB stage runs LAST in every root that runs it — after the unit and parity baseline checks (executed, stubbed)', () => {
+		const trap = "trap 'bun run scripts/ci/suite_mariadb.ts stop >/dev/null 2>&1 || :' EXIT\n";
+		const unit = 'bun run scripts/unit_baseline.ts --check\n';
+		const parity = 'bun run scripts/parity_baseline.ts --check\n';
+		const stage = 'bun run scripts/ci/mariadb_tier.ts\n';
+		const dir = mkdtempSync(join(tmpdir(), 'tier_wiring_order_plant_'));
+		try {
+			const plant = (name: string, body: string) => {
+				const path = join(dir, `${name}.sh`);
+				writeFileSync(path, `set -euo pipefail\n${trap}${body}`);
+				const run = drillScript(path);
+				expect(run.code, `plant/${name}.sh must run to its end`).toBe(0);
+				return stageOrderFaults(`plant/${name}.sh`, run.invocations);
+			};
+			// Last, with the trap's stop after it: green.
+			expect(plant('last', unit + parity + stage)).toEqual({ runs: true, faults: [] });
+			// Ahead of parity: red, naming the parity check.
+			expect(plant('before_parity', unit + stage + parity).faults).toEqual([
+				expect.stringMatching(
+					/^plant\/before_parity\.sh: `bun run scripts\/parity_baseline\.ts --check` runs AFTER the MariaDB stage/,
+				),
+			]);
+			// Mutation H1's shape — ahead of the unit tier too: one fault per later check.
+			expect(plant('h1', stage + unit + parity).faults).toEqual([
+				expect.stringMatching(
+					/^plant\/h1\.sh: `bun run scripts\/unit_baseline\.ts --check` runs AFTER/,
+				),
+				expect.stringMatching(
+					/^plant\/h1\.sh: `bun run scripts\/parity_baseline\.ts --check` runs AFTER/,
+				),
+			]);
+			// Any later suite measurement, not only the two baselines.
+			expect(
+				plant('late_test', `${unit + parity + stage}bun test test/unit\n`).faults,
+			).toHaveLength(1);
+			// A root without the stage is not judged.
+			expect(plant('none', unit + parity)).toEqual({ runs: false, faults: [] });
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+
+		// THE REAL ROOTS.
+		const running: string[] = [];
+		const faults: string[] = [];
+		for (const rel of [...REAL.roots].sort()) {
+			const run = drillScript(join(ROOT, rel));
+			const verdict = stageOrderFaults(rel, run.invocations);
+			faults.push(...verdict.faults);
+			if (!verdict.runs) continue;
+			running.push(rel);
+			// The finding's two named predecessors, explicitly: both ran, both before it.
+			const stageAt = run.invocations.findIndex(isMariadbStage);
+			for (const module of ['scripts/unit_baseline.ts', 'scripts/parity_baseline.ts']) {
+				const at = run.invocations.findIndex(
+					(inv) =>
+						inv.command === 'bun' &&
+						inv.argv[0] === 'run' &&
+						inv.argv[1] === module &&
+						inv.argv.includes('--check'),
+				);
+				expect(at, `${rel}: \`bun run ${module} --check\` is not recorded`).toBeGreaterThanOrEqual(
+					0,
+				);
+				expect(
+					at,
+					`${rel}: \`bun run ${module} --check\` must precede the MariaDB stage`,
+				).toBeLessThan(stageAt);
+			}
+		}
+		expect(
+			faults,
+			`Tier roots that measure the suite Postgres AFTER the MariaDB stage:\n  ${faults.join('\n  ')}`,
+		).toEqual([]);
+		// The floor: the DB tier runs the stage (leg I holds that it is run by name).
+		expect(running).toContain('scripts/ci/db_tier.sh');
+	}, 60_000);
 
 	// Leg E
 	test('E. every tier root keeps the independent-stage accumulator, and every suite-building job has its own service', () => {

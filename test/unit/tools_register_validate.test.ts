@@ -3,17 +3,22 @@
  * validates (the TS analogue of PHP's v6-corpus guard), and the authoring→v7
  * conversion produces a record that passes validateRegister.
  *
- * Corpus census 37 = the 34 PHP-seeded column-keyed registers + the three
- * TS-only tools (tool_error_report WC-019, tool_sitebuilder, tool_identify),
- * which are AUTHORED in the authoring format and must convert+validate
- * instead. The pin is deliberately a hard number: a new tool that forgets to
- * declare which format it ships in is exactly what this census catches
- * (tool_error_report landed 2026-07-10 and tool_sitebuilder 2026-07-15 without
- * bumping it; both reconciled here).
+ * The corpus census is a SET law, not a count. Every tool directory is
+ * declared in exactly ONE of two lists, and each list names only directories
+ * that exist:
+ *   - SEEDED: the 34 PHP-seeded column-keyed registers. FROZEN since the
+ *     cutover — the PHP seeder is gone, so this list can only shrink (a tool
+ *     retired) and never grows.
+ *   - TS_AUTHORED: tools AUTHORED in the authoring format, which must
+ *     convert+validate. A new tool adds ONE line here.
+ * A tool that declares neither, or the wrong one, fails by NAME; a deleted
+ * tool fails by NAME. The former hard count ("there are 38") caught nothing
+ * the set does not, and made every two tool contributions conflict on a
+ * number neither author could know (PR #114 vs tool_rag, 2026-10-01).
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readdirSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
 	applyActiveOverride,
@@ -21,6 +26,7 @@ import {
 	detectFormat,
 	validateRegister,
 } from '../../src/core/tools/register.ts';
+import { isGrantOnlyTool } from '../helpers/tool_directory_corpus.ts';
 
 const TOOLS_ROOT = resolve(import.meta.dir, '../../tools');
 
@@ -37,12 +43,72 @@ describe('detectFormat', () => {
 describe('seeded register.json corpus', () => {
 	const toolDirs = readdirSync(TOOLS_ROOT).filter((name) => /^tool_[a-z0-9_]+$/.test(name));
 
-	/** TS-authored tools (never PHP-seeded): register.json in the authoring
-	 * format, converted at registration (WC-019 precedent). */
-	const TS_AUTHORED = new Set(['tool_error_report', 'tool_sitebuilder', 'tool_identify']);
+	/** PHP-seeded column-keyed registers. FROZEN: shrink-only, never grows
+	 * (no seeder exists since the cutover). Sorted. */
+	const SEEDED = new Set([
+		'tool_assistant',
+		'tool_cataloging',
+		'tool_dd_label',
+		'tool_dev_template',
+		'tool_diffusion',
+		'tool_export',
+		'tool_hierarchy',
+		'tool_image_rotation',
+		'tool_import_dedalo_csv',
+		'tool_import_files',
+		'tool_import_marc21',
+		'tool_import_rdf',
+		'tool_import_zotero',
+		'tool_indexation',
+		'tool_lang',
+		'tool_lang_multi',
+		'tool_media_versions',
+		'tool_numisdata_epigraphy',
+		'tool_numisdata_order_coins',
+		'tool_ontology',
+		'tool_ontology_parser',
+		'tool_pdf_extractor',
+		'tool_posterframe',
+		'tool_print',
+		'tool_propagate_component_data',
+		'tool_qr',
+		'tool_subtitles',
+		'tool_tc',
+		'tool_time_machine',
+		'tool_tr_print',
+		'tool_transcription',
+		'tool_update_cache',
+		'tool_upload',
+		'tool_user_admin',
+	]);
 
-	test('every tool has a register.json and there are 37 (34 seeded + 3 TS-authored)', () => {
-		expect(toolDirs.length).toBe(37);
+	/** TS-authored tools (never PHP-seeded): register.json in the authoring
+	 * format, converted at registration (WC-019 precedent). A new tool adds its
+	 * name here. Sorted, one per line, so parallel additions merge by union. */
+	const TS_AUTHORED = new Set([
+		'tool_error_report',
+		'tool_identify',
+		'tool_rag',
+		'tool_sitebuilder',
+	]);
+
+	test('every tool directory is declared in exactly one list', () => {
+		const undeclared = toolDirs.filter((name) => !SEEDED.has(name) && !TS_AUTHORED.has(name));
+		const both = toolDirs.filter((name) => SEEDED.has(name) && TS_AUTHORED.has(name));
+		expect(
+			undeclared,
+			'tool directories in NEITHER list — a new tool adds its name to TS_AUTHORED (SEEDED is frozen):',
+		).toEqual([]);
+		expect(both, 'tool directories declared in BOTH lists:').toEqual([]);
+	});
+
+	test('every declared tool has a directory (a deleted tool is named, not miscounted)', () => {
+		const present = new Set(toolDirs);
+		const missing = [...SEEDED, ...TS_AUTHORED].filter((name) => !present.has(name));
+		expect(
+			missing,
+			'declared tools with no directory under tools/ — remove the line with the tool:',
+		).toEqual([]);
 	});
 
 	for (const name of toolDirs) {
@@ -131,4 +197,56 @@ describe('authoring → v7 conversion', () => {
 		const errors = validateRegister(record, 'tool_b');
 		expect(errors.some((e) => e.includes('does not match its directory'))).toBe(true);
 	});
+});
+
+/**
+ * THE GRANT-ONLY LAW (2026-10-01, TOOLS-4 — first instance `tool_rag`, the
+ * generative RAG answer). A grant-only tool is a registry row that exists to be
+ * GRANTED in the profile editor and ASKED by an engine door; it is never opened.
+ * The UI gates exempt it by its own declaration (tool_directory_corpus.isGrantOnlyTool),
+ * so the declaration must be TRUE: no client, no stylesheet, no server module,
+ * no place it shows, never handed to every profile. That an engine door ASKS
+ * for it is an outcome, not a spelling: ai_spend_budget_native drives `ask`
+ * with the granted / ungranted pair (refused before any provider call, served
+ * when granted).
+ */
+describe('grant-only tools', () => {
+	const toolDirs = readdirSync(TOOLS_ROOT).filter((name) => /^tool_[a-z0-9_]+$/.test(name));
+	const grantOnly = toolDirs.filter(isGrantOnlyTool);
+
+	test('the class is non-empty (anti-vacuity: tool_rag)', () => {
+		expect(grantOnly).toContain('tool_rag');
+	});
+
+	for (const name of grantOnly) {
+		test(`${name}: ships no client, stylesheet or server module`, () => {
+			const surfaces = ['js', 'css', 'server'].filter((dir) =>
+				existsSync(resolve(TOOLS_ROOT, name, dir)),
+			);
+			expect(surfaces).toEqual([]);
+		});
+
+		test(`${name}: shows nowhere and is never handed to every profile`, async () => {
+			const raw = (await Bun.file(resolve(TOOLS_ROOT, name, 'register.json')).json()) as {
+				affected_models?: unknown[];
+				affected_tipos?: unknown[];
+				show_in_inspector?: boolean;
+				show_in_component?: boolean;
+				always_active?: boolean;
+			};
+			expect({
+				affected_models: raw.affected_models ?? [],
+				affected_tipos: raw.affected_tipos ?? [],
+				show_in_inspector: raw.show_in_inspector ?? false,
+				show_in_component: raw.show_in_component ?? false,
+				always_active: raw.always_active ?? false,
+			}).toEqual({
+				affected_models: [],
+				affected_tipos: [],
+				show_in_inspector: false,
+				show_in_component: false,
+				always_active: false,
+			});
+		});
+	}
 });

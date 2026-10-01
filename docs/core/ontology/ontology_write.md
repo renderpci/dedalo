@@ -175,7 +175,16 @@ module, `src/core/ontology/ontology_state.ts`. Nothing else wipe-and-rebuilds a 
 | function | module | purpose |
 | --- | --- | --- |
 | `inspectOntology(tld)` | `ontology/ontology_state.ts` | **Pure read.** The drift of one TLD: nodes `missing` / `stale` / `orphaned` vs the parsed source, plus `mainNodeOk` and `inSync`. Compared by meaning (jsonb key order normalized, empty ≡ null, `propiedades` parsed) so formatting is not false drift. |
-| `rebuildOntology(tld, userId?)` | `ontology/ontology_state.ts` | **Transactional wipe-and-rebuild** — the ONE writer. The delete + reinsert run in one `withTransaction`, so the new projection is published atomically: no reader ever observes the empty window, a failure rolls back, and no backup table is involved. |
+| `rebuildOntology(tld, userId?, {reclaimIds?})` | `ontology/ontology_state.ts` | **Transactional wipe-and-rebuild** — the ONE writer. The delete + reinsert run in one `withTransaction`, so the new projection is published atomically: no reader ever observes the empty window, a failure rolls back, and no backup table is involved. `reclaimIds` deletes further rows by id in the same transaction (the identifier-grammar repair). |
+
+!!! note "A malformed reference is dropped and reported, never projected"
+    When a source record's parent, model or related-term locator composes into something
+    that is not a tipo (a `section_id` of `'1 OR'` would give `zzgs1 OR`), or its
+    `properties.alias_of` is not one, the parser drops that reference from the node
+    (`parent` / `model_tipo` become null, the relation entry is skipped, `alias_of` is
+    removed) and the rebuild names the source record in its message and in
+    `state.invalidReferenceRecords` (`{source, tipo, column, value}`). It is a warning, like
+    `tldlessRecords`, not drift: one bad record never fails its whole TLD.
 
 !!! note "The incremental `ensureOntology` companion was removed (2026-08-11)"
     A second, non-destructive writer used to apply only the delta. Its sole advantage over
@@ -188,7 +197,7 @@ module, `src/core/ontology/ontology_state.ts`. Nothing else wipe-and-rebuilds a 
 
 | function | module | purpose |
 | --- | --- | --- |
-| `getTermIdFromLocator(locator)` | `ontology/parser.ts` | Build a node's term-id (`<tld><section_id>`, e.g. `dd55`) from a locator: fast path from the TLD string, slow fallback reading the TLD component off the pointed record. Returns `null` if unresolvable. |
+| `getTermIdFromLocator(locator)` | `ontology/parser.ts` | Build a node's term-id (`<tld><section_id>`, e.g. `dd55`) from a locator: fast path from the TLD string, slow fallback reading the TLD component off the pointed record. Returns `null` if unresolvable, or if the result is not a valid tipo. |
 | `getOverwriteLocator(sectionTipo, sectionId)` | `ontology/parser.ts` | Find the local-ontology override (`localontology0`) linked to this node through `ontology42`, or `null` (lowest `section_id` when several). Returns `null` for model nodes (canonical `ontology30`) and for local-ontology records themselves. |
 | `root_terms` projection | `area/tree.ts` | The children that seed a thesaurus tree view (`hierarchy45`, or `hierarchy59` in the model view) — folded into the tree-area boot payload rather than a standalone helper. |
 
@@ -254,9 +263,12 @@ the read half, `resolver.ts`:
   calls `getModelByTipo()` / `getMatrixTableFromTipo()` while parsing.
 - **`src/core/db/dd_ontology.ts`** provides the low-level `dd_ontology`
   operations the write layer leans on: `getActiveTlds()` / `deleteTldNodes()`,
-  plus the backup-table protocol (`createBackupTable()` /
-  `restoreFromBackupTable()` / `dropBackupTable()`) that regenerate uses as its
-  rollback.
+  and the write doors `upsertDdOntologyNode()` / `updateDdOntologyColumns()`,
+  which refuse a node whose identifiers break the grammar
+  (`ontology.invalid_node`) before any SQL. The same grammar is enforced by six
+  CHECK constraints on the table — see
+  [the identifier grammar](../system/db.md#the-identifier-grammar). There is no
+  backup table: a rebuild is one transaction.
 - **Import/export** moves *shared* ontologies between installations as files
   (`data_io.ts` / `data_io_import.ts`), driven by the developer-only
   `tool_ontology_parser` (actions `get_ontologies`, `inspect_ontologies`,

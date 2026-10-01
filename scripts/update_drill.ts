@@ -44,9 +44,15 @@
  *        get_widget_value (reachability probe against OUR master) →
  *        get_code_update_info (manifest, code-gated; wrong code refused) →
  *        set_maintenance_mode ON → widget_request update_code;
- *     7. NEGATIVE first: a tampered sha256 must die in the VERIFY phase frame,
- *        leave the live tree byte-identical, no backup dir, no sentinel;
- *     8. then the happy path: {pid,pfile} handle → get_process_status SSE
+ *    6d. NEGATIVE, UNWAIVED (OPS-1): the consumer's database-backup dir holds
+ *        only a REAL archive cut to 60% — the dump every cheap check calls a
+ *        backup. The unwaived update must refuse (`update.refused`, naming
+ *        `truncated`) and leave the version, package.json, the code-backup dir
+ *        and the sentinel exactly as they were;
+ *     7. NEGATIVE: a tampered sha256 must die in the VERIFY phase frame,
+ *        leave the live tree byte-identical, no backup dir, no sentinel — this
+ *        one is sent WAIVED, so the waiver door is exercised end to end;
+ *     8. then the happy path, UNWAIVED over a complete real archive: {pid,pfile} handle → get_process_status SSE
  *        frames download→…→restart(expected_version) → the process DIES
  *        mid-stream (the designed handoff) → the supervisor respawns the NEW
  *        tree → /health answers the RELEASE version with no .dev tag (both
@@ -60,9 +66,13 @@
  *
  * WHAT STANDS IN FOR WHAT (honest limits): the systemd units are a bash loop;
  * the release commit is made in the throwaway clone (never in this checkout);
- * the recent-backup precondition is waived via `waive_backup:true` exactly as
- * the API allows (a real pg_dump of the suite DB adds minutes and tests the
- * backup widget, not the updater). Everything else — build, manifest auth,
+ * the database backup the precondition judges is a REAL custom-format archive of
+ * the suite database's dd_ontology table (`pg_dump -F c -t dd_ontology`, a READ,
+ * ~0.2 s), not a dump of the whole database — the precondition's question is
+ * whether pg_restore can read the newest archive end to end, and a real archive
+ * of one table answers it exactly as a whole-database one would. It lives in the
+ * consumer's OWN backup dir (DEDALO_BACKUP_DIR, scratch). The earlier claim that
+ * a real dump "adds minutes" was measured false. Everything else — build, manifest auth,
  * serving, probe, job stream, refusal battery, swap, restart, boot confirm —
  * is the production code path with no seams.
  *
@@ -83,7 +93,16 @@
  * secrets on disk in TMPDIR: delete the scratch dir when the post-mortem is done.
  */
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	readFileSync,
+	renameSync,
+	rmSync,
+	utimesSync,
+	writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { privateDir, projectRoot } from '../src/config/env.ts';
@@ -182,7 +201,7 @@ const DRILL_CODE = 'dedalo_update_drill_shared_code';
 const API_PATH = '/api/v1/json';
 /**
  * The whole-run ceiling. It must stay ABOVE the sum of the per-step budgets
- * below (boots 120s + 150s, streams 180s + 420s, post-restart health 150s,
+ * below (boots 120s + 150s, streams 120s + 180s + 420s, post-restart health 150s,
  * plus the git/copy/build work) — otherwise a cold machine trips this generic
  * deadline instead of the step that is actually slow, and the failure names
  * the wrong thing. Warm runtime is 2–5 min; this is a hang-breaker, not a
@@ -217,6 +236,8 @@ interface JobFrame {
 	data: PhaseFrame | null;
 	errors: string[];
 	total_time: number;
+	/** The typed failure body of a job that threw (media/jobs.ts frameOf). */
+	error?: { code?: string; message?: string };
 }
 
 interface Auth {
@@ -527,16 +548,21 @@ function setVersionTriple(text: string, tripleLiteral: string, whose: string): s
 /**
  * The exact body update_code.js::update_code puts on the wire. Since
  * 2026-08-25 that includes `waive_backup` (the version modal's checkbox), so
- * this is the client's body verbatim — the drill waives because a scratch
- * clone has no database backup at all.
+ * this is the client's body verbatim. UNWAIVED by default: the consumer has a
+ * real database backup (see the header), and the precondition is part of what
+ * the drill rehearses. Only the tampered-digest leg waives, to keep the waiver
+ * door exercised end to end.
  */
-function updateRequestBody(file: {
-	version: string;
-	url: string;
-	sha256?: string;
-	/** Forwarded VERBATIM from the manifest item — the dev channel travels here. */
-	channel?: string;
-}): Record<string, unknown> {
+function updateRequestBody(
+	file: {
+		version: string;
+		url: string;
+		sha256?: string;
+		/** Forwarded VERBATIM from the manifest item — the dev channel travels here. */
+		channel?: string;
+	},
+	{ waiveBackup = false }: { waiveBackup?: boolean } = {},
+): Record<string, unknown> {
 	return {
 		dd_api: 'dd_area_maintenance_api',
 		action: 'widget_request',
@@ -551,9 +577,75 @@ function updateRequestBody(file: {
 				entity: 'drill',
 				host: '',
 			},
-			waive_backup: true,
+			waive_backup: waiveBackup,
 		},
 	};
+}
+
+/**
+ * A REAL custom-format archive of the suite database's `dd_ontology` (a READ),
+ * made with the engine's own pg_dump resolver. The unwaived legs are only worth
+ * running when pg_restore can judge what they plant, so a host without the
+ * PostgreSQL client tools REFUSES here — never a silent skip.
+ */
+async function buildDrillArchive(scratch: string, suiteDb: string): Promise<string> {
+	// Dynamic: config.ts freezes the connection at import, and main() has
+	// repointed DB_NAME at the suite database before this runs.
+	const { resolvePgDump, resolvePgRestore } = await import(
+		'../src/core/area_maintenance/backup.ts'
+	);
+	const { config } = await import('../src/config/config.ts');
+	if (config.db.database !== suiteDb) {
+		throw new Error(
+			`the drill's config resolved database '${config.db.database}', not the suite database '${suiteDb}' — refusing to read anything else`,
+		);
+	}
+	if (resolvePgRestore() === null) {
+		throw new Error(
+			'no pg_restore on this host: the unwaived backup legs (6d, 8) cannot prove anything. Install the PostgreSQL client tools (or set DEDALO_PG_BIN_PATH).',
+		);
+	}
+	const out = join(scratch, 'drill_source.custom.backup');
+	const dump = Bun.spawnSync(
+		[
+			resolvePgDump(),
+			'-h',
+			config.db.host,
+			'-p',
+			String(config.db.port),
+			'-U',
+			config.db.user,
+			'-F',
+			'c',
+			'-b',
+			'-t',
+			'dd_ontology',
+			'-f',
+			out,
+			config.db.database,
+		],
+		{
+			stdout: 'ignore',
+			stderr: 'pipe',
+			env: {
+				...(process.env as Record<string, string>),
+				...(config.db.password !== '' ? { PGPASSWORD: config.db.password } : {}),
+			},
+		},
+	);
+	if (dump.exitCode !== 0 || !existsSync(out)) {
+		throw new Error(
+			`pg_dump of ${config.db.database}.dd_ontology failed: ${new TextDecoder().decode(dump.stderr ?? new Uint8Array()).trim()}`,
+		);
+	}
+	return out;
+}
+
+/** Plant `bytes` as a database backup `minutesOld` minutes old. */
+function plantDatabaseBackup(path: string, bytes: Uint8Array, minutesOld: number): void {
+	writeFileSync(path, bytes, { mode: 0o600 });
+	const when = new Date(Date.now() - minutesOld * 60_000);
+	utimesSync(path, when, when);
 }
 
 /**
@@ -813,6 +905,11 @@ async function main(): Promise<void> {
 		const consumerEnvFile = join(consumerPrivateDir, '.env');
 		writeFileSync(consumerEnvFile, renderEnvFile(operatorConfig()), { mode: 0o600 });
 		const consumerBackupRoot = join(scratch, 'consumer_code_backups');
+		// The consumer's DATABASE backups (what the update precondition judges) —
+		// its own scratch dir, never the operator's backups.
+		const consumerDbBackupDir = join(scratch, 'consumer_db_backups');
+		mkdirSync(consumerDbBackupDir, { recursive: true });
+		const drillArchive = await buildDrillArchive(scratch, suiteDb);
 		const consumerPort = await findFreePort(masterPort + 1);
 		const consumerOrigin = `http://127.0.0.1:${consumerPort}`;
 		const consumerEnv = instanceEnvironment({
@@ -825,6 +922,7 @@ async function main(): Promise<void> {
 			extra: {
 				DRILL_ROLE: 'consumer',
 				DEDALO_TEST_MEDIA_ROOT: testMediaRoot,
+				DEDALO_BACKUP_DIR: consumerDbBackupDir,
 				CODE_SERVERS: JSON.stringify([
 					{ name: 'drill master', url: `${masterOrigin}${API_PATH}`, code: DRILL_CODE },
 				]),
@@ -966,12 +1064,77 @@ async function main(): Promise<void> {
 		must(flipped.ok === true, `set_maintenance_mode refused: ${JSON.stringify(flipped.error)}`);
 
 		// ---------------------------------------------------------------
+		// STEP 6d — NEGATIVE, UNWAIVED: a truncated dump is not a restore point
+		// ---------------------------------------------------------------
+		// The finding (OPS-1): the precondition asked `pg_restore --list`, which
+		// reads only the header and TOC at the FRONT of the archive, so a dump
+		// that died at 60% counted as a fresh backup and the unwaived update swapped
+		// the tree. Plant exactly that — a REAL archive's first 60%, ten minutes
+		// old — and nothing else.
+		const archiveBytes = readFileSync(drillArchive);
+		const cutPath = join(consumerDbBackupDir, 'drill_died_at_60_percent.custom.backup');
+		plantDatabaseBackup(
+			cutPath,
+			archiveBytes.subarray(0, Math.floor(archiveBytes.length * 0.6)),
+			10,
+		);
+		console.log('[drill] submitting the UNWAIVED update over a truncated dump (must refuse)…');
+		const unwaived = await apiPost(consumerOrigin, updateRequestBody(file), consumerAuth);
+		must(unwaived.ok === true, 'unwaived submit should still answer ok (background job)');
+		const unwaivedPid = typeof unwaived.pid === 'number' ? unwaived.pid : 0;
+		const unwaivedPfile = typeof unwaived.pfile === 'string' ? unwaived.pfile : '';
+		must(unwaivedPid !== 0 && unwaivedPfile !== '', 'no pid/pfile handle returned (unwaived)');
+		const unwaivedFrames = await followJobStream(
+			consumerOrigin,
+			consumerAuth,
+			unwaivedPid,
+			unwaivedPfile,
+			120_000,
+		);
+		const lastUnwaived = unwaivedFrames.at(-1);
+		must(
+			lastUnwaived !== undefined && lastUnwaived.is_running === false,
+			`unwaived job never ended (phases: ${unwaivedFrames.map((frame) => frame.data?.phase).join(' -> ')})`,
+		);
+		must(
+			lastUnwaived.error?.code === 'update.refused',
+			`an unwaived update over a truncated dump was not refused: ${JSON.stringify(lastUnwaived)}`,
+		);
+		must(
+			JSON.stringify(lastUnwaived).includes('truncated'),
+			`the refusal does not name the truncated dump: ${JSON.stringify(lastUnwaived)}`,
+		);
+		const healthyAfterUnwaived = await fetchHealth(consumerOrigin);
+		must(
+			healthyAfterUnwaived.version === CURRENT_VERSION,
+			'server moved off the old version on a refused (unwaived) update',
+		);
+		must(
+			readFileSync(join(consumerTree, 'package.json'), 'utf8') === livePackageJsonBefore,
+			'live tree changed on a refused (unwaived) update',
+		);
+		must(
+			readdirSync(consumerBackupRoot).filter((n) => n.startsWith('dedalo_')).length === 0,
+			'a code backup dir appeared on a refused (unwaived) update',
+		);
+		must(
+			!existsSync(join(consumerBackupRoot, 'last_code_update.json')),
+			'a sentinel appeared on a refused (unwaived) update',
+		);
+		// Retire the cut the way the engine does (kept, renamed out of the
+		// `*.backup` grammar) and plant the complete archive, NEWER, so steps 7–8
+		// run over a genuine restore point.
+		renameSync(cutPath, `${cutPath}.failed`);
+		plantDatabaseBackup(join(consumerDbBackupDir, 'drill_complete.custom.backup'), archiveBytes, 5);
+
+		// ---------------------------------------------------------------
 		// STEP 7 — NEGATIVE: a tampered digest dies in VERIFY, touches nothing
 		// ---------------------------------------------------------------
 		console.log('[drill] submitting the TAMPERED-digest update (must fail in verify)…');
 		const tampered = await apiPost(
 			consumerOrigin,
-			updateRequestBody({ ...file, sha256: 'a'.repeat(64) }),
+			// WAIVED on purpose: the one leg that keeps the waiver door exercised.
+			updateRequestBody({ ...file, sha256: 'a'.repeat(64) }, { waiveBackup: true }),
 			consumerAuth,
 		);
 		must(tampered.ok === true, 'tampered submit should still answer ok (background job)');

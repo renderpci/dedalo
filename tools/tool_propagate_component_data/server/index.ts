@@ -29,7 +29,9 @@
  *      with that language alone (M2);
  *   3. `saveComponentData` `set_data` joins the transaction. It records the
  *      run's BEFORE/AFTER pair under the bulk id (one language per row), stamps
- *      the modified metadata and fires the observers post-commit.
+ *      the modified metadata and runs the first-level observer recompute
+ *      INSIDE the per-record transaction (a failure rolls the record back,
+ *      B6); cascade hops are deferred to commit.
  * It used to read unlocked, write with no transaction, and stamp every
  * language into one TM row under the request lang.
  *

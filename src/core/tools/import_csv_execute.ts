@@ -37,7 +37,7 @@ import {
 	readMatrixKeyForUpdate,
 } from '../db/matrix_write.ts';
 import { withTransaction } from '../db/postgres.ts';
-import { DedaloError } from '../errors/index.ts';
+import { DedaloError, isDedaloError } from '../errors/index.ts';
 import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
@@ -50,7 +50,7 @@ import {
 	literalDuplicateIds,
 	literalEqualityFamilyOf,
 } from '../section/record/append_merge.ts';
-import { createSectionRecord } from '../section/record/create_record.ts';
+import { bornInCurrentTransaction, createSectionRecord } from '../section/record/create_record.ts';
 import {
 	metadataPatchFromAuditValue,
 	type RecordMetadataPatch,
@@ -61,6 +61,8 @@ import {
 	type SaveResult,
 	saveComponentData,
 } from '../section/record/save_component.ts';
+import type { Principal } from '../security/permissions.ts';
+import { authorizeRecordAccess, authorizeSectionTarget } from '../security/write_door.ts';
 import type { PlannedColumn, PlannedRecord } from './import_csv.ts';
 import { groupItemsByLang } from './import_data.ts';
 import type { ImportFileReport, ImportProgressFrame, ImportRowIssue } from './import_wire.ts';
@@ -94,7 +96,13 @@ async function saveOrRefuse(request: Parameters<typeof saveComponentData>[0]): P
 export interface CsvExecuteRequest {
 	plan: PlannedRecord[];
 	sectionTipo: string;
-	userId: number;
+	/**
+	 * The importing PRINCIPAL (closure Step 3 req 10): every row's create and
+	 * every column's component is asked of the write door as it — the file
+	 * door's `section_list` gate named the section only. Its `userId` is the
+	 * actor of every save.
+	 */
+	principal: Principal;
 	/**
 	 * The dd800 run every save is attributed to — the revert handle. Every save
 	 * under it records its BEFORE/AFTER undo pair and a visible after-row
@@ -143,6 +151,14 @@ interface RowWriteContext {
 	sectionTipo: string;
 	sectionId: number;
 	userId: number;
+	/** The importer, for the write door (req 10). */
+	principal: Principal;
+	/**
+	 * The row CREATED its record: a column is asked as a section target, not a
+	 * record. Seeded from the existence snapshot, then settled by the insert's
+	 * real outcome (bornInCurrentTransaction) before any column is written.
+	 */
+	isNew: boolean;
 	bulkProcessId: number;
 	skipModifiedStamp: boolean;
 	row: number;
@@ -875,6 +891,78 @@ async function assertReplaceSlotSparesAppendMains(
 type RowMetadata = { createdDate?: string; createdByUserId?: number };
 
 /**
+ * THE WRITE DOOR for one column (closure Step 3 req 10), as the importer: the
+ * column's component of an EXISTING record through authorizeRecordAccess
+ * (grammar, section floor 1, the dd128-aware pair — a CSV row naming a
+ * user-manager's own dd128 record must not set their dd1725 — and the write
+ * scope); of a record this row CREATES through authorizeSectionTarget (the
+ * pair level). A refused column is reported and SKIPPED — never written, and
+ * its metadata never applied — exactly like a column whose values were refused.
+ * Anything that is not the door's refusal propagates (the row rolls back).
+ */
+async function columnAuthorized(
+	column: PlannedColumn,
+	row: number,
+	ctx: RowWriteContext & { failed: ImportRowIssue[] },
+): Promise<boolean> {
+	const tipos = [column.tipo, ...legacyFrameSlots(column)];
+	for (const tipo of new Set(tipos)) {
+		const refusal = await componentRefusal(ctx, tipo);
+		if (refusal === null) continue;
+		ctx.failed.push({
+			section_id: ctx.sectionId,
+			component_tipo: tipo,
+			msg: refusal,
+			data: null,
+			row,
+		});
+		return false;
+	}
+	return true;
+}
+
+/** The slots a legacy {data, dataframe} envelope's frames name (their own components). */
+function legacyFrameSlots(column: PlannedColumn): string[] {
+	const slots: string[] = [];
+	for (const frame of column.dataframe ?? []) {
+		const slot = isObject(frame) ? frame.from_component_tipo : undefined;
+		if (typeof slot === 'string' && slot !== '') slots.push(slot);
+	}
+	return slots;
+}
+
+/** The door's refusal sentence for one component of the row's record, or null. */
+async function componentRefusal(
+	ctx: RowWriteContext,
+	componentTipo: string,
+): Promise<string | null> {
+	try {
+		if (ctx.isNew) {
+			await authorizeSectionTarget(
+				ctx.principal,
+				{ section_tipo: ctx.sectionTipo, tipo: componentTipo },
+				{ level: 2, door: 'import_csv.column' },
+			);
+		} else {
+			await authorizeRecordAccess(
+				ctx.principal,
+				{ section_tipo: ctx.sectionTipo, component_tipo: componentTipo, section_id: ctx.sectionId },
+				{ mode: 'write', level: 2, sectionFloor: 1, door: 'import_csv.column' },
+			);
+		}
+		return null;
+	} catch (error) {
+		if (
+			isDedaloError(error) &&
+			(error.code.startsWith('perm.') || error.code === 'request.invalid')
+		) {
+			return `IGNORED: not writable by the importer (${error.code}) — the column was NOT written`;
+		}
+		throw error;
+	}
+}
+
+/**
  * PASS 1 — the main columns. Conform errors go to `failed` (the column is
  * skipped), conform warnings to `warnings`. Dataframe slot columns and legacy
  * envelope frames wait for pass 2 (returned): an append frame's id_key is
@@ -889,7 +977,7 @@ async function writeRowPassOne(
 ): Promise<PlannedColumn[]> {
 	const secondPass: PlannedColumn[] = [];
 	for (const column of record.columns) {
-		if (!collectConformIssues(column, record.row, ctx)) continue;
+		if (!(await columnWritable(column, record.row, ctx))) continue;
 		Object.assign(metadata, metadataPatchFor(column));
 
 		const isSlot = column.model === DATAFRAME_MODEL;
@@ -901,6 +989,15 @@ async function writeRowPassOne(
 		publishColumn(column.tipo);
 	}
 	return secondPass;
+}
+
+/** Authorized for this caller, THEN conform-clean (an unauthorized column reports no conform issue). */
+async function columnWritable(
+	column: PlannedColumn,
+	row: number,
+	ctx: RowWriteContext & { failed: ImportRowIssue[] },
+): Promise<boolean> {
+	return (await columnAuthorized(column, row, ctx)) && collectConformIssues(column, row, ctx);
 }
 
 /**
@@ -949,7 +1046,8 @@ function hasLegacyFrames(column: PlannedColumn): boolean {
  * and the relations that point at them.
  */
 export async function executeCsvImport(request: CsvExecuteRequest): Promise<ImportFileReport> {
-	const { plan, sectionTipo, userId, bulkProcessId, progress } = request;
+	const { plan, sectionTipo, principal, bulkProcessId, progress } = request;
+	const userId = principal.userId;
 	const startedAt = performance.now();
 
 	const created: number[] = [];
@@ -1026,6 +1124,8 @@ export async function executeCsvImport(request: CsvExecuteRequest): Promise<Impo
 			sectionTipo,
 			sectionId,
 			userId,
+			principal,
+			isNew,
 			bulkProcessId,
 			skipModifiedStamp: carriesModifiedMetadata,
 			row: record.row,
@@ -1041,15 +1141,29 @@ export async function executeCsvImport(request: CsvExecuteRequest): Promise<Impo
 			// ONE transaction for the row: create + every component + its frames.
 			await withTransaction(async () => {
 				if (isNew) {
-					// conflictTolerant: a concurrent writer may have taken the id; then the
-					// insert is a no-op and we simply save the components onto it.
-					// bulkProcessId: a REAL insert writes the run's birth marker (tm_role
-					// 3), so a revert knows this run created the record (decision D2);
-					// the conflict no-op writes none — the record is not the run's.
+					// THE WRITE DOOR (req 10): a create at the section level — refused,
+					// the row rolls back and is reported like any row failure.
+					await authorizeSectionTarget(
+						principal,
+						{ section_tipo: sectionTipo },
+						{ level: 2, door: 'import_csv.create' },
+					);
+					// conflictTolerant: a concurrent writer may have taken the id since the
+					// existence snapshot; the insert is then a no-op. bulkProcessId: a REAL
+					// insert writes the run's birth marker (tm_role 3), so a revert knows
+					// this run created the record (decision D2); the no-op writes none.
 					await createSectionRecord(sectionTipo, userId, new Date(), sectionId, {
 						conflictTolerant: true,
 						bulkProcessId,
 					});
+					// THE ROW IS NEW ONLY IF IT CREATED ITS RECORD (refuter-surviving S2,
+					// 2026-10-01). The snapshot said the id was free; a concurrent create
+					// that took it made the insert a no-op, and the record is SOMEONE
+					// ELSE'S — outside the importer's scope, perhaps a dd128 account. A
+					// section-target grant authorizes a create only; from here every
+					// column is asked as a write to THAT record (scope + the dd128-aware
+					// pair), and the row is reported updated, never created.
+					ctx.isNew = await bornInCurrentTransaction(table, sectionTipo, sectionId);
 				}
 
 				const secondPass = await writeRowPassOne(record, ctx, metadata, publishColumn);
@@ -1074,7 +1188,7 @@ export async function executeCsvImport(request: CsvExecuteRequest): Promise<Impo
 				});
 			}
 
-			if (isNew) {
+			if (ctx.isNew) {
 				created.push(sectionId);
 				// DATA-21: the existence set was read ONCE before the loop and never
 				// added to, so a file carrying the same section_id twice reported TWO

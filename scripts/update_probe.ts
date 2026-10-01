@@ -927,6 +927,9 @@ Or let the probe drive it: bun run probe:update${devChannel ? ' --dev' : ''} --d
 			action: 'widget_request',
 			prevent_lock: true,
 			source: { type: 'widget', model: 'update_code', action: 'update_code' },
+			// WAIVED, with a reason: this probes the REAL docker museum stack, whose
+			// database this probe must never dump — so there is no backup for the
+			// precondition to judge. The unwaived leg is update_drill's (6d, 8).
 			options: { file: { ...file, sha256: 'a'.repeat(64) }, waive_backup: true },
 		},
 		auth,
@@ -953,6 +956,8 @@ Or let the probe drive it: bun run probe:update${devChannel ? ' --dev' : ''} --d
 			action: 'widget_request',
 			prevent_lock: true,
 			source: { type: 'widget', model: 'update_code', action: 'update_code' },
+			// WAIVED for the same reason as the tampered leg above: the real museum
+			// stack's database is not this probe's to dump.
 			options: { file, waive_backup: true },
 		},
 		auth,

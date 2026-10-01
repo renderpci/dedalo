@@ -100,7 +100,7 @@ describe('in-tx reads never seed shared ontology caches (S1-14 residual)', () =>
 	test('a rolled-back node read leaves no cache poison', async () => {
 		await expect(
 			withTransaction(async () => {
-				await sql`INSERT INTO dd_ontology (tipo, model, tld) VALUES (${GUARD_TIPO}, 'section', 'zzwsbg')`;
+				await sql`INSERT INTO dd_ontology (tipo, model, tld) VALUES (${GUARD_TIPO}, 'section', 'zzwsbguard')`;
 				const inTx = await getNode(GUARD_TIPO);
 				expect(inTx).not.toBeNull(); // the tx sees its own uncommitted write
 				throw new Error('wsb-force-rollback');
@@ -134,6 +134,8 @@ describe('ordinary section save invalidates the term cache (S2-10)', () => {
 			persistRecordColumns(
 				{ table: TERM_TABLE, sectionTipo: TERM_SECTION, sectionId: TERM_ID },
 				{ string: { [TERM_COMPONENT]: [{ id: 1, lang: 'lg-eng', value }] } },
+				false,
+				{ actor: -1 },
 			);
 
 		await write('WSB term A');

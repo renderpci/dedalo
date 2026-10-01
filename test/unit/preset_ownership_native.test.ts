@@ -185,7 +185,9 @@ async function savePresetName(principal: Principal, sectionId: number, value: st
 
 describe.if(DB_READY)('preset_ownership — a dd655 row belongs to its owner', () => {
 	beforeAll(async () => {
-		await installScopeBindingFixture();
+		// A reads the hop component itself: the SEC-1 root-step key (conform.ts
+		// rootStepKey) refuses a path rooted on a component the profile holds 0 on.
+		await installScopeBindingFixture([[SB_GRANTED_SECTION, PRESET_HOP]]);
 		await ensureSituation(PRESET_HOP_SITUATION);
 		A = await resolvePrincipal(SB_USER_A);
 		B = await resolvePrincipal(SB_USER_B);

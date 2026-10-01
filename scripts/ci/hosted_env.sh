@@ -146,7 +146,11 @@ export DIFFUSION_JOBS_TABLE DIFFUSION_ACTIVITY_TABLE DEDALO_SESSION_DB_PATH DEDA
 # DELIBERATELY UNSET, each for a reason:
 #   ORACLE_MODE              -- defaults to `fixtures`; the parity store replays credless.
 #   PHP_API_*                -- the oracle is decommissioned; live legs must stay off.
-#   DEDALO_DIFFUSION_DB_*    -- no MariaDB here, so test/integration skips loudly.
+#   DEDALO_DIFFUSION_DB_*    -- composed PER LANE by test/preload/suite_mariadb.ts (the
+#                               socket of the suite's own MariaDB server, its user, a
+#                               blank host/port), never exported here: db_tier.sh starts
+#                               that server, the instance tier starts none. An export here
+#                               would be overwritten by the preload anyway (PUB-05).
 #   DEDALO_DEBUG_API_ERRORS  -- moves the error-disclosure ladder; 28 test references.
 #   DEDALO_RAG_*             -- the gates that need it set it themselves.
 

@@ -17,7 +17,7 @@ Dédalo keeps ontology in TWO layers, bridged by a parser. The frozen PHP tree (
 
 ## Layers
 ```
-src/core/db/dd_ontology.ts        # PHP dd_ontology_db_manager: upsert/read/update/delete/search + getActiveTlds + deleteTldNodes + createBackupTable/restore/drop. Every write ends with clearOntologyDerivedCaches().
+src/core/db/dd_ontology.ts        # PHP dd_ontology_db_manager: upsert/read/update/delete/search + getActiveTlds + deleteTldNodes + dropBackupTable (legacy dd_ontology_bk cleanup only) + the identifier grammar (ddOntologyIdentifierViolations; both write doors refuse ontology.invalid_node before SQL; six NOT VALID CHECKs, migration 0013; repair = reconcile ontology_identifiers). Every write ends with clearOntologyDerivedCaches().
 src/core/ontology/parser.ts       # parseSectionRecordToOntologyNode + getOverwriteLocator + getTermIdFromLocator + phpPrettyJsonEncode
 src/core/ontology/ontology_write.ts  # insertDdOntologyRecord, setRecordsInDdOntology, createDdOntologyRootNode, createParentGrouper, addMainSection, getMainTld/Typology/NameData, syncOrderToDdOntology
 src/core/ontology/hierarchy_provision.ts  # generateVirtualSection (ONE tx; refuses an already-provisioned tld)

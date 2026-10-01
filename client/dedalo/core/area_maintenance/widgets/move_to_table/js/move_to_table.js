@@ -5,9 +5,9 @@
 
 
 // imports
-	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
 	import {area_maintenance} from '../../../js/area_maintenance.js'
+	import {exec_move_transform} from '../../../js/move_transform.js'
 	import {render_move_to_table} from './render_move_to_table.js'
 
 
@@ -104,61 +104,23 @@ export const move_to_table = function() {
 
 /**
 * EXEC_MOVE_TO_TABLE
-* Sends the 'move_to_table' action to the server-side widget handler and triggers
-* the background data-migration process.
+* Fire one move_to_table run through the shared move_* flow (move_transform.js). The
+* server runs it as a JOB and answers {pid, pfile, dry_run} at once; the
+* caller streams it with update_process_status.
 *
-* The call dispatches to:
-*   dd_area_maintenance_api → widget_request → move_to_table::move_to_table (PHP)
-*   → transform_data::move_data_between_matrix_tables
-*
-* `background_running: true` instructs the PHP layer to spawn a detached CLI
-* process so that the HTTP connection does not need to stay open for the full
-* duration.  The response therefore returns quickly with a `pid` and `pfile`
-* that the caller passes to `update_process_status` for async progress polling.
-*
-* `prevent_lock: true` prevents the request from acquiring a record-write lock,
-* which is inappropriate for a bulk migration task.
-*
-* (!) This method is defined as an arrow function (`async (files_selected) =>`),
-* which means `this` inside the body is lexically bound to the module scope, not
-* to the widget instance.  Any future code that needs `this` inside this method
-* must convert it to a regular function.
-*
-* @param {Array} files_selected - Non-empty array of JSON definition file names to
-*   process, e.g. ['location_ubication1_to_hierarchy.json'].  Each name must match
-*   a file returned by the server's `get_value` call.
-* @returns {Promise<Object>} API response object with shape:
-*   { result: boolean|Object, msg: string, errors: Array, pid: number, pfile: string }
-*   Returns `undefined` (early return) if `files_selected` is empty or nullish.
+* @param {Array<string>} files_selected - Non-empty array of definition file names.
+* @param {boolean} [dry_run=true] - true = PREVIEW (writes nothing); false =
+*        EXECUTE (rewrites stored data — the server mutates only on exactly false).
+* @returns {Promise<Object|undefined>} The API response, or `undefined` when
+*        `files_selected` is empty.
 */
-move_to_table.prototype.exec_move_to_table = async (files_selected) => {
+move_to_table.prototype.exec_move_to_table = async (files_selected, dry_run=true) => {
 
-	if (!files_selected?.length) {
-		console.error('No files selected');
+	if (!files_selected.length) {
 		return
 	}
 
-	// move_to_table process fire
-	const response = await data_manager.request({
-		body : {
-			dd_api			: 'dd_area_maintenance_api',
-			action			: 'widget_request',
-			prevent_lock	: true,
-			source			: {
-				type	: 'widget',
-				model	: 'move_to_table',
-				action	: 'move_to_table'
-			},
-			options : {
-				background_running	: true, // set run in background CLI
-				files_selected		: files_selected // array e.g. ['finds_numisdata279_to_tchi1.json']
-			}
-		},
-		retries : 1, // one try only
-		timeout : 3600 * 1000 // 1 hour waiting response
-	})
-
-	return response
+	return exec_move_transform('move_to_table', files_selected, dry_run)
 }//end exec_move_to_table
 
 

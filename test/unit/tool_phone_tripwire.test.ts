@@ -26,6 +26,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { trackedRepoFiles } from '../helpers/css_reference_corpus.ts';
+import { isGrantOnlyTool } from '../helpers/tool_directory_corpus.ts';
 import {
 	NOT_YET_PHONE,
 	PHONE_CASES,
@@ -63,8 +64,13 @@ describe('tool phone ratchet', () => {
 	test('every tool is in exactly one list, no stale names', () => {
 		const proven = Object.keys(PHONE_CASES);
 		const pending = Object.keys(NOT_YET_PHONE);
+		// A GRANT-ONLY tool has no surface to open on a phone — DERIVED from its own
+		// register.json (tool_directory_corpus.isGrantOnlyTool), never listed; that it
+		// really ships no client is the grant-only law (tools_register_validate).
+		const grantOnly = toolDirs.filter(isGrantOnlyTool);
 		expect(proven.filter((name) => pending.includes(name))).toEqual([]);
-		expect([...proven, ...pending].sort()).toEqual(toolDirs);
+		expect([...proven, ...pending].filter((name) => grantOnly.includes(name))).toEqual([]);
+		expect([...proven, ...pending, ...grantOnly].sort()).toEqual(toolDirs);
 	});
 
 	test('every pending entry carries a substantive reason', () => {

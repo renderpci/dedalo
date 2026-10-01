@@ -884,7 +884,7 @@ describe('the restore-door census', () => {
 
 	/**
 	 * A door is a file that writes a value back onto a live record
-	 * (`persistRecordKeys`) AND audits that write in the time machine — through
+	 * (`persistRecordKeys` / `persistRestoredKeys`) AND audits that write in the time machine — through
 	 * the plain door (`recordTimeMachine`) or the undo-log pair writer
 	 * (`recordBulkPair`, WC-2026-09-27-bulk-revert-undo-log) — or through the
 	 * two-lane writer over them (relations/dataframe_slots.ts
@@ -894,13 +894,19 @@ describe('the restore-door census', () => {
 	 * `bulk_revert.ts` is the orchestrator and persists only its own dd800 label.
 	 */
 	const TM_WRITERS = ['recordTimeMachine', 'recordBulkPair', 'recordMainHistory'] as const;
+	/**
+	 * The key entries a write-back goes through: persistRecordKeys, or the
+	 * COMPONENT-RESTORE entry persistRestoredKeys (a key's past value — its
+	 * covered observer slot recomputed, never propagated; record_write.ts §3e).
+	 */
+	const KEY_WRITERS = ['persistRecordKeys', 'persistRestoredKeys'] as const;
 	const restoreDoors = (): string[] =>
 		readdirSync(DOOR_DIR)
 			.filter((file) => file.endsWith('.ts'))
 			.filter((file) => {
 				const source = doorSource(file);
 				return (
-					callsHelper(source, 'persistRecordKeys') &&
+					KEY_WRITERS.some((writer) => callsHelper(source, writer)) &&
 					TM_WRITERS.some((writer) => callsHelper(source, writer))
 				);
 			})

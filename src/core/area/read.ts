@@ -39,7 +39,12 @@ import {
 	resolvePickerConstraint,
 } from '../relations/picker_constraint.ts';
 import { buildStructureContext } from '../resolve/structure_context.ts';
-import { getPermissions, type Principal, SUPERUSER_ID } from '../security/permissions.ts';
+import {
+	getPermissionGrant,
+	getPermissions,
+	type Principal,
+	SUPERUSER_ID,
+} from '../security/permissions.ts';
 import { currentRequestId } from '../security/request_context.ts';
 import { readAreaHierarchyData } from './tree.ts';
 
@@ -75,54 +80,6 @@ interface ResolvedPickerCaller {
 }
 
 /**
- * Derive the picker facts from the declared caller (engineering/AREA_SPEC.md §5 — the whole
- * point of the caller-declared design).
- *
- * RELATION MODE IS GRANTED, NEVER READ FROM THE REQUEST. All three conditions
- * must hold: the caller's RESOLVED view is the picker view (resolved through
- * the ordinary structure-context seam, so a ddo_map-injected view counts too),
- * its model is relation-family, and the principal holds EDIT on it. Any of them
- * missing is not an error — the read proceeds in `default` mode and the picker
- * intent is simply not granted.
- *
- * Relation-family is asked STRUCTURALLY (`getColumnNameByModel(model) ===
- * 'relation'` — does this model store locators?) rather than against a second
- * hand-kept model list, and it is the SAME question
- * relations/picker_constraint.ts asks before counting: pre-checking it here is
- * what keeps that resolver's contract throw from firing on an ordinary
- * mis-wired request.
- *
- * The client-input failures (an unknown element, a section that holds no
- * records) refuse as 400 with named reasons. Everything the constraint resolver
- * still throws on — an ontology node declaring an unusable `data_limit` — is a
- * definition defect, not request input, and propagates loudly: degrading it to
- * "uncapped" would silently unbind the very cap the write path re-resolves.
- */
-/**
- * Does `tipo` actually live under `sectionTipo`? The honesty check on the
- * caller declaration's two independent client strings.
- *
- * Answered with the ontology's own ancestry walk (virtual-aware through
- * `getSectionRealTipo`, because a virtual section borrows the real one's
- * children — a caller on `rsc170` legitimately names a component defined under
- * `rsc2`). A pair the ontology does not describe is malformed input, not a
- * degraded mode.
- */
-async function tipoBelongsToSection(tipo: string, sectionTipo: string): Promise<boolean> {
-	const { getAncestorSectionTipo } = await import('../ontology/resolver.ts');
-	const { getSectionRealTipo } = await import('../resolve/security_access_datalist.ts');
-	const ownSection = await getAncestorSectionTipo(tipo);
-	if (ownSection === null) return false;
-	if (ownSection === sectionTipo) return true;
-	// A VIRTUAL section borrows the real section's children, so a caller on
-	// `rsc170` legitimately names a component whose ontology position is under
-	// `rsc2`. `getAncestorSectionTipo` reports the REAL position (a virtual
-	// section is never on a parent chain), so the declared side is the one that
-	// has to be resolved.
-	return (await getSectionRealTipo(sectionTipo)) === ownSection;
-}
-
-/**
  * The `view` this component is given by its SECTION's ddo_map, or null when the
  * map does not name it (the ordinary case — the node's own `properties.view`
  * then answers).
@@ -149,6 +106,40 @@ export async function ddoMapViewFor(tipo: string, sectionTipo: string): Promise<
 	}
 }
 
+/**
+ * Derive the picker facts from the declared caller (engineering/AREA_SPEC.md §5 — the whole
+ * point of the caller-declared design).
+ *
+ * RELATION MODE IS GRANTED, NEVER READ FROM THE REQUEST. All three conditions
+ * must hold: the caller's RESOLVED view is the picker view (resolved through
+ * the ordinary structure-context seam, so a ddo_map-injected view counts too),
+ * its model is relation-family, and the principal holds EDIT on it FROM ITS
+ * PROFILE (or is the superuser). Any of them missing is not an error — the read
+ * proceeds in `default` mode and the picker intent is simply not granted.
+ *
+ * A RULE-BASIS EDIT IS NOT A PICKER GRANT. The grant EXTENDS the caller's edit
+ * level into a capability of another surface (relation mode, the caller's
+ * resolved targets, cap and held count on a thesaurus read). The rule levels
+ * are bounded where they were written — the dd655 editing-preset rule answers 2
+ * for every tipo under dd655 and every principal, its only bound being the
+ * preset assembler's owner predicate — and none of those bounds travels into a
+ * thesaurus read. So the level is asked with its authority
+ * (`getPermissionGrant`, GrantBasis) and a 'rule' basis is refused, the read
+ * floor's law (security/read_floor.ts).
+ *
+ * Relation-family is asked STRUCTURALLY (`getColumnNameByModel(model) ===
+ * 'relation'` — does this model store locators?) rather than against a second
+ * hand-kept model list, and it is the SAME question
+ * relations/picker_constraint.ts asks before counting: pre-checking it here is
+ * what keeps that resolver's contract throw from firing on an ordinary
+ * mis-wired request.
+ *
+ * The client-input failures (an unknown element, a section that holds no
+ * records) refuse as 400 with named reasons. Everything the constraint resolver
+ * still throws on — an ontology node declaring an unusable `data_limit` — is a
+ * definition defect, not request input, and propagates loudly: degrading it to
+ * "uncapped" would silently unbind the very cap the write path re-resolves.
+ */
 async function resolvePickerCaller(
 	caller: PickerCaller,
 	principal: Principal,
@@ -177,7 +168,8 @@ async function resolvePickerCaller(
 	// surface answers 2 for any tipo beneath it), so a forged pair could obtain
 	// relation mode — and with it the caller's resolved targets and cap — for a
 	// component that never declared a picker. The grant is only as honest as the
-	// pair it is derived from.
+	// pair it is derived from (the ontology's one membership law, virtual-aware).
+	const { tipoBelongsToSection } = await import('../ontology/resolver.ts');
 	if (!(await tipoBelongsToSection(caller.tipo, caller.section_tipo))) {
 		throw new DedaloError('area.picker_caller_invalid', {
 			publicMessage: PICKER_CALLER_UNKNOWN_MESSAGE,
@@ -185,7 +177,8 @@ async function resolvePickerCaller(
 		});
 	}
 
-	const permissions = await getPermissions(principal, caller.section_tipo, caller.tipo);
+	const grant = await getPermissionGrant(principal, caller.section_tipo, caller.tipo);
+	const permissions = grant.level;
 	const constraint = await resolvePickerConstraint(
 		caller.tipo,
 		caller.section_tipo,
@@ -215,7 +208,9 @@ async function resolvePickerCaller(
 		view: injectedView,
 	});
 	const granted =
-		callerContext?.view === PICKER_CALLER_VIEW && permissions >= PICKER_CALLER_MIN_PERMISSIONS;
+		callerContext?.view === PICKER_CALLER_VIEW &&
+		grant.basis !== 'rule' &&
+		grant.level >= PICKER_CALLER_MIN_PERMISSIONS;
 
 	return { mode: granted ? 'relation' : 'default', constraint };
 }
