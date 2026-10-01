@@ -750,7 +750,7 @@ describe('the login-time password COST UPGRADE is not a revocation', () => {
 				sectionTipo: USERS,
 				sectionId: userId,
 				lang: 'lg-nolan',
-				changedData: [{ action: 'set_data', value: [{ id: 1, value: 'suppressed_write_66' }] }],
+				changedData: [{ action: 'set_data', value: [{ id: 1, value: 'Suppressed_write_66' }] }],
 				userId,
 			});
 			expect(outcome.ok).toBe(true);
@@ -777,7 +777,7 @@ describe('the login-time password COST UPGRADE is not a revocation', () => {
 					sectionTipo: USERS,
 					sectionId: suppressedId,
 					lang: 'lg-nolan',
-					changedData: [{ action: 'set_data', value: [{ id: 1, value: 'suppressed_race_77' }] }],
+					changedData: [{ action: 'set_data', value: [{ id: 1, value: 'Suppressed_race_77' }] }],
 					userId: suppressedId,
 				});
 			}),
