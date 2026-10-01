@@ -726,6 +726,9 @@ describe('the CLI (`bun run dedalo:restore`) refuses a malformed invocation befo
 	const run = (args: string[]) => {
 		const child = Bun.spawnSync(['bun', CLI, ...args], {
 			cwd: join(import.meta.dir, '..', '..'),
+			// EXPLICIT: a bare spawn inherits the LAUNCH env, not the preload's pins (the
+			// MariaDB tier launches with DB_NAME stripped, and config throws at import).
+			env: { ...process.env },
 			stdout: 'pipe',
 			stderr: 'pipe',
 		});
