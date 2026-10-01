@@ -631,7 +631,10 @@ console.log(JSON.stringify({ released: at }));`,
 					`const { sweepSuiteMariadb } = await import(${JSON.stringify(lanesModule)});
 console.log(JSON.stringify(await sweepSuiteMariadb(${JSON.stringify(lane)})));`,
 				],
-				{ stdout: 'pipe', stderr: 'pipe' },
+				// env EXPLICIT: a bare Bun.spawn inherits the LAUNCH environment, not the
+				// preload's process.env (DB_NAME pinned there). Under the MariaDB tier the
+				// launch env has DB_NAME stripped (childEnv), so the child's config threw.
+				{ stdout: 'pipe', stderr: 'pipe', env: { ...process.env } },
 			);
 			let exposed = 0;
 			let samples = 0;
@@ -1148,7 +1151,10 @@ for (let i = 0; ; i++) {
 	rmSync(gone, { recursive: true, force: true });
 }`,
 			],
-			{ stdout: 'pipe', stderr: 'pipe' },
+			// env EXPLICIT: a bare Bun.spawn inherits the LAUNCH environment, not the
+			// preload's process.env (DB_NAME pinned there). Under the MariaDB tier the
+			// launch env has DB_NAME stripped (childEnv), so the child's config threw.
+			{ stdout: 'pipe', stderr: 'pipe', env: { ...process.env } },
 		);
 		const stopped = () =>
 			Bun.spawnSync(['ps', '-o', 'stat=', '-p', String(claimer.pid)])
@@ -1158,7 +1164,12 @@ for (let i = 0; ; i++) {
 		let seen = 0;
 		try {
 			const reader = (claimer.stdout as ReadableStream<Uint8Array>).getReader();
-			expect(new TextDecoder().decode((await reader.read()).value)).toContain('ready');
+			const first = new TextDecoder().decode((await reader.read()).value);
+			// A child that died before 'ready' says WHY — its stderr, not an empty string.
+			const why = first.includes('ready')
+				? ''
+				: `the claimer died before 'ready' (exit ${await claimer.exited}): ${(await new Response(claimer.stderr).text()).slice(-1500)}`;
+			expect(first, why).toContain('ready');
 			await Bun.sleep(100);
 			for (let sample = 0; sample < 150; sample++) {
 				await Bun.sleep(Math.random() * 3);
@@ -1679,7 +1690,7 @@ process.exit(0);`;
 		}
 	});
 
-	test('tier set: integration minus the install-bound rows, plus every unit acquirer; floor and stale rows', () => {
+	test('tier set: integration minus the install-bound rows, plus every unit and parity acquirer; floor and stale rows', () => {
 		const HELPER = 'test/helpers/suite_mariadb.ts';
 		const listing = (extraUnit: number): MariadbTierListing => {
 			const units = Array.from({ length: extraUnit }, (_, i) => `test/unit/u${i}.test.ts`);
@@ -1741,6 +1752,15 @@ process.exit(0);`;
 			'test/unit/u3.test.ts',
 		]);
 		expect(five.set.mustAcquire).toEqual(five.set.files);
+		// A test/parity file that acquires joins the set exactly like a unit one.
+		const parityAcquirer = listing(4);
+		parityAcquirer.parity.push('test/parity/p0.test.ts');
+		(parityAcquirer.imports as Map<string, string[]>).set('test/parity/p0.test.ts', [HELPER]);
+		const parityContract = new Map(contractFor(4));
+		parityContract.set('test/parity/p0.test.ts', { none: 'y'.repeat(61) });
+		const parityRun = mariadbTierSet(parityAcquirer, exempt, parityContract, noSeams, noIdle);
+		expect(parityRun.set.files).toContain('test/parity/p0.test.ts');
+		expect(parityRun.set.mustAcquire).toContain('test/parity/p0.test.ts');
 		// Below the floor.
 		expect(setOf(3).faults).toEqual([
 			expect.stringMatching(/tier set has 4 file\(s\), below the floor of 5/),
@@ -1977,11 +1997,14 @@ process.exit(0);`;
 		// The finding's parity examples (review 2026-09-30) are measured, not declared.
 		for (const file of [
 			'test/parity/count_differential.test.ts',
-			'test/parity/widgets_differential.test.ts',
 			'test/parity/ts_mutations_differential.test.ts',
 			'test/parity/area_dashboard_differential.test.ts',
 		])
 			expect(derived.set.noContact, file).toContain(file);
+		// widgets_differential was one of them until it was measured CONTACTING (2026-10-01,
+		// check_config's eager language audit): it now acquires, so it is in the SET.
+		expect(derived.set.files).toContain('test/parity/widgets_differential.test.ts');
+		expect(derived.set.noContact).not.toContain('test/parity/widgets_differential.test.ts');
 		// The finding's own examples are in the population — each reaches the pool module
 		// only TRANSITIVELY (never by a direct import), which the one-hop leg could not see.
 		for (const file of [

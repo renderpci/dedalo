@@ -16,7 +16,7 @@
  *
  * WHAT IS MEASURED (outcomes, never spellings):
  *   1. the SET — every test/integration file, minus the shrink-only INSTALL_BOUND_EXEMPT
- *      rows, plus every test/unit file that IMPORTS test/helpers/suite_mariadb.ts at
+ *      rows, plus every test/unit AND test/parity file that IMPORTS test/helpers/suite_mariadb.ts at
  *      runtime (Bun's own transpiler resolves the imports: type-only imports are erased,
  *      dynamic ones count). Floor: MARIADB_TIER_FILE_FLOOR files.
  *   1b. THE NO-CONTACT POPULATION — every test/unit AND test/parity file OUTSIDE the set
@@ -182,6 +182,26 @@ export const ROW_CONTRACT: ReadonlyMap<string, RowContract> = new Map<string, Ro
 		'test/unit/diffusion_connection_status.test.ts',
 		{
 			none: 'Its live legs run the real connection probe (the memo leg on a suite target and the granted-never-created control; the payload leg on the zzd situation’s two sql targets) — a reader by design, it changes no MariaDB row; every other probe is injected',
+		},
+	],
+	// Measured 2026-10-01 (CI domain `test`): both reach MariaDB only through READ audits
+	// of the ontology's diffusion targets, and are acquirers so those pools are proved armed.
+	[
+		'test/unit/restore_door_native.test.ts',
+		{
+			none: 'Leg 10 runs the REAL post-restore plan, whose public-tier reconcile is a DRY step (apply:false): it reads each declared target database and table to measure drift and writes nothing — measured 0/0/0',
+		},
+	],
+	[
+		'test/parity/widgets_differential.test.ts',
+		{
+			none: 'The maintenance-area read computes check_config’s eager value, whose published-language coherence AUDIT discovers tables and counts their langs per declared target database — read only, measured 0/0/0',
+		},
+	],
+	[
+		'test/unit/server_state.test.ts',
+		{
+			none: 'check_config (get_value and the eager catalog value) runs the published-language coherence AUDIT: it discovers tables and counts their langs in each declared target database, read only — measured 0/0/0',
 		},
 	],
 ]);
@@ -381,8 +401,11 @@ export function mariadbTierSet(
 			);
 	}
 	const integration = listing.integration.filter((file) => !exempt.has(file));
-	const unit = listing.unit.filter(acquires);
-	const files = [...new Set([...integration, ...unit])].sort();
+	// test/parity acquirers too (2026-10-01): the preload arms parity files exactly like
+	// unit ones, and a parity gate whose real read opens a pool (widgets_differential —
+	// check_config's eager language audit) must be able to acquire rather than hide it.
+	const acquirers = [...listing.unit, ...listing.parity].filter(acquires);
+	const files = [...new Set([...integration, ...acquirers])].sort();
 	const mustAcquire = files.filter(acquires);
 	if (files.length < MARIADB_TIER_FILE_FLOOR) {
 		faults.push(

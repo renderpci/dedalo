@@ -1467,7 +1467,9 @@ describe('tier wiring — every gate is reached by a workflow that executes', ()
 		).toBeGreaterThanOrEqual(5);
 		// Classification controls: an acquirer run, a directory holding one, a bare run, a
 		// tier module whose TierSpec claims one and the stage module start; not a stop, not
-		// a pure gate, not the parity tier.
+		// a pure gate. The parity tier IS one since 2026-10-01: widgets_differential
+		// acquires (check_config's eager language audit opens pools), so a root that runs
+		// it must stop the server on exit like any other.
 		const acquirer = ctx.acquirers[0] as string;
 		const starts = (argv: string[]) => argvStartsSuiteServer(argv, ctx);
 		expect(starts(['test', '--timeout=30000', acquirer])).toBe(true);
@@ -1478,14 +1480,15 @@ describe('tier wiring — every gate is reached by a workflow that executes', ()
 		expect(starts(['run', 'scripts/ci/suite_mariadb.ts', 'start'])).toBe(true);
 		expect(starts(['run', 'scripts/ci/suite_mariadb.ts', 'stop'])).toBe(false);
 		expect(starts(['test', 'test/unit/config_env_tripwire.test.ts'])).toBe(false);
-		expect(starts(['run', 'scripts/parity_baseline.ts', '--check'])).toBe(false);
+		expect(starts(['run', 'scripts/parity_baseline.ts', '--check'])).toBe(true);
 
 		// Planted scripts, drilled for real: each defect is red, the chained form is green.
 		const dir = mkdtempSync(join(tmpdir(), 'tier_wiring_trap_plant_'));
 		try {
 			const stop = "trap 'bun run scripts/ci/suite_mariadb.ts stop >/dev/null 2>&1 || :' EXIT\n";
 			const start = 'bun run scripts/ci/suite_mariadb.ts start\n';
-			const after = 'bun run scripts/parity_baseline.ts --check\n';
+			// A pure gate: a NON-starter (the parity tier stopped being one, 2026-10-01).
+			const after = 'bun test test/unit/config_env_tripwire.test.ts\n';
 			const plant = (name: string, body: string) => {
 				const path = join(dir, `${name}.sh`);
 				writeFileSync(path, `set -euo pipefail\n${body}`);

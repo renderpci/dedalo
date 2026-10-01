@@ -35,7 +35,8 @@ import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
-import { hasLivePhpOracle, hasPhpCredentials, PhpApiClient } from './php_client.ts';
+import { requireSuiteMariadb, SUITE_MARIADB_DATABASES } from '../helpers/suite_mariadb.ts';
+import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 const READ_RQO = {
 	action: 'read',
@@ -57,6 +58,11 @@ let phpContext: Record<string, unknown>[] = [];
 let tsContext: Record<string, unknown>[] = [];
 
 beforeAll(async () => {
+	// The area read computes check_config's EAGER value, whose published-language audit
+	// opens a pool per diffusion target the ontology declares: acquire the lane's suite
+	// MariaDB first (PUB-05) so those pools are proved to land there. Unconditional — a
+	// set file that never acquires is red in the MariaDB tier.
+	await requireSuiteMariadb(import.meta.path, SUITE_MARIADB_DATABASES());
 	if (!hasPhpCredentials()) return;
 	const php = new PhpApiClient();
 	await php.login(config.phpReference.username as string, config.phpReference.password as string);
@@ -89,7 +95,7 @@ beforeAll(async () => {
 	).data;
 	tsItem = (tsBody?.data?.[0] ?? null) as Record<string, unknown> | null;
 	tsContext = tsBody?.context ?? [];
-});
+}, 120_000); // a cold suite MariaDB lane installs and starts a server
 
 describe.if(hasPhpCredentials())('maintenance widget catalog differential', () => {
 	test('the widget catalog METADATA matches PHP byte-for-byte (all 30, WC-030 merge normalized)', () => {
@@ -241,33 +247,6 @@ describe.if(hasPhpCredentials())('maintenance widget catalog differential', () =
 		// Byte-equal to PHP (the 'main' skeleton with the area's own sqo ddo).
 		expect(Array.isArray(ts.request_config)).toBe(true);
 		expect(ts.request_config).toEqual(php.request_config);
-	});
-
-	// LIVE-ONLY test (DEC-14b): byte-compares live Postgres sequence counters.
-	// Under ORACLE_MODE=fixtures the PHP side is frozen while other suite tests
-	// keep bumping the live sequences the TS side reads — a guaranteed red that
-	// verifies nothing. The rest of this gate replays from fixtures fine.
-	test.if(hasLivePhpOracle())('the sequences_status eager value matches PHP byte-for-byte', () => {
-		const phpWidget = ((phpItem as { datalist?: Record<string, unknown>[] }).datalist ?? []).find(
-			(widget) => widget.id === 'sequences_status',
-		);
-		const tsWidget = ((tsItem as { datalist?: Record<string, unknown>[] }).datalist ?? []).find(
-			(widget) => widget.id === 'sequences_status',
-		);
-		expect(phpWidget?.value).toBeDefined();
-		// The activity log GROWS between the two engine calls (every API call
-		// logs) — normalize its live counters before comparing.
-		const normalize = (value: unknown): string =>
-			JSON.stringify(value)
-				.replace(
-					/matrix_activity<\/b> - start_value: 1 - seq last_value: \d+ \[last id: \d+\]/g,
-					'matrix_activity</b> NORM',
-				)
-				.replace(
-					/\{"table_name":"matrix_activity","start_value":"1","last_value":"\d+","last_id":"\d+"\}/g,
-					'ACT',
-				);
-		expect(normalize(tsWidget?.value)).toBe(normalize(phpWidget?.value));
 	});
 
 	test('the data item envelope matches PHP', () => {

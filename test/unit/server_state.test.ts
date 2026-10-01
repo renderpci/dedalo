@@ -8,7 +8,7 @@
  * install's config_core.php, which a coexisting TS server must not touch.
  */
 
-import { afterAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { readEnv } from '../../src/config/env.ts';
 import {
@@ -23,6 +23,7 @@ import {
 	ensureSuiteLoginPassword,
 	SUITE_LOGIN_PASSWORD,
 } from '../../src/core/test_data/suite_login.ts';
+import { requireSuiteMariadb, SUITE_MARIADB_DATABASES } from '../helpers/suite_mariadb.ts';
 
 const STATE_PATH = readEnv('DEDALO_TS_STATE_PATH');
 if (STATE_PATH === undefined) {
@@ -57,6 +58,13 @@ async function refusedCall(
 	}
 	throw new Error(`expected ${widget}.${action} to refuse, it answered`);
 }
+
+// check_config (get_value AND the catalog's eager value) audits the published
+// languages, opening a pool per diffusion target the ontology declares: acquire the
+// lane's suite MariaDB first (PUB-05) so those pools are proved to land there.
+beforeAll(async () => {
+	await requireSuiteMariadb(import.meta.path, SUITE_MARIADB_DATABASES());
+}, 120_000); // a cold suite MariaDB lane installs and starts a server
 
 afterAll(() => {
 	// never leave runtime overrides behind

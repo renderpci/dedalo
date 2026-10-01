@@ -106,6 +106,7 @@ import {
 import { lastReconcileRun, REGISTERED_NAMES } from '../../src/core/reconcile/registry.ts';
 import { getServerState, setServerState } from '../../src/core/resolve/server_state.ts';
 import { sweepOrphanScratchDatabases } from '../helpers/scratch_database.ts';
+import { requireSuiteMariadb, SUITE_MARIADB_DATABASES } from '../helpers/suite_mariadb.ts';
 
 const SCRATCH_PREFIX = 'dedalo_rdoor';
 const TARGET = `${SCRATCH_PREFIX}${process.pid}`;
@@ -244,6 +245,10 @@ function nextStamp(): string {
 
 beforeAll(async () => {
 	if (!READY) return;
+	// Leg 10 runs the REAL post-restore plan, whose public-tier reconcile opens a pool
+	// per diffusion target the ontology declares: acquire the lane's suite MariaDB first
+	// (PUB-05) so every such pool is proved to land there, never on an installation's.
+	await requireSuiteMariadb(import.meta.path, SUITE_MARIADB_DATABASES());
 	await sweepOrphanScratchDatabases(admin, SCRATCH_PREFIX, { derivedSuffix: DERIVED });
 	for (const name of await databasesLike(TARGET)) {
 		await runPsql(admin, ['-c', `DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`]);
@@ -260,7 +265,7 @@ beforeAll(async () => {
 	]);
 	expect(seeded.stderr).toBe('');
 	setServerState({ maintenance_mode: false });
-});
+}, 120_000); // a cold suite MariaDB lane installs and starts a server
 
 afterAll(async () => {
 	for (const name of await databasesLike(TARGET).catch(() => [] as string[])) {
