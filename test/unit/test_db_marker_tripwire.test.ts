@@ -177,6 +177,8 @@ const EXEMPT_WRITERS: Readonly<Record<string, string>> = {
 		"WRITES NO DATA — it plants the `.dedalo_test_media` marker in a gate's scratch directory so the media doors will write there. Filesystem only, no database.",
 	'test/helpers/child_driver.ts':
 		"WRITES NO DATA — its one write is a throwaway TS driver file in its own mkdtemp scratch dir (removed on cleanup), run in a CHILD bun process that inherits this run's environment: the preload-repointed suite DB and marked media root. It holds no database connection itself; every driver it runs writes only through test-data doors that call assertTestDatabase (PERF-11/OPS-6 gates).",
+	'test/helpers/diffusion_rss_child.ts':
+		"WRITES NO DATA OF ITS OWN — its one direct write is `5` to `/proc/self/clear_refs` (Linux), which resets the process's own peak-RSS mark at the measurement baseline; no file, no database. Its record files go through the diffusion writer under the parent gate's MARKED scratch media root (DEDALO_DIFFUSION_FILES_ROOT, the media guard inherited armed); it holds no database connection (diffusion_artifact_rss_native, PERF-2).",
 	'test/helpers/suite_mariadb_lock.ts':
 		"WRITES NO DÉDALO DATA — its one write is the diagnostic pid line of the suite MariaDB lane lock, `../private/test_mariadb/<suite db>/.lock`, inside a root the suite created and marked `.dedalo_test_mariadb` (it refuses a lane with no root). The lock itself is a kernel-held flock; the file's content decides nothing. No database connection of any kind. Guarded by test/unit/suite_mariadb_target_native.test.ts leg (i) (PUB-05).",
 	'test/helpers/suite_mariadb.ts':

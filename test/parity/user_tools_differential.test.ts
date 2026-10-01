@@ -46,6 +46,7 @@ const TS_ONLY_TOOLS: ReadonlySet<string> = new Set(['tool_error_report']);
  */
 const POST_HARVEST_TS_TOOLS: ReadonlyMap<string, string> = new Map([
 	['tool_identify', 'WC-062'],
+	['tool_rag', 'WC-2026-10-01-ai-spend-budget'],
 	['tool_sitebuilder', 'WC-035'],
 ]);
 

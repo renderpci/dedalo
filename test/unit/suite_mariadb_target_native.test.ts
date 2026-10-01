@@ -872,14 +872,8 @@ process.exit(0);`);
 				? readFileSync(pids, 'utf8').trim().split('\n').filter(Boolean).map(Number)
 				: [];
 			expect(started.length, 'the fakes ran').toBeGreaterThanOrEqual(2);
-			const alive = started.filter((pid) => {
-				try {
-					process.kill(pid, 0);
-					return true;
-				} catch {
-					return false;
-				}
-			});
+			// Zombie-aware (helper's pidAlive): the CI container's PID 1 never reaps.
+			const alive = started.filter((pid) => helper().pidAlive(pid));
 			expect(alive, 'a timed-out client/installer is killed, not orphaned').toEqual([]);
 		} finally {
 			if (existsSync(pids))
@@ -924,14 +918,8 @@ process.exit(0);`);
 			existsSync(pids)
 				? readFileSync(pids, 'utf8').trim().split('\n').filter(Boolean).map(Number)
 				: [];
-		const isAlive = (pid: number) => {
-			try {
-				process.kill(pid, 0);
-				return true;
-			} catch {
-				return false;
-			}
-		};
+		// Zombie-aware (helper's pidAlive): the CI container's PID 1 never reaps.
+		const isAlive = (pid: number) => helper().pidAlive(pid);
 		return {
 			bin,
 			pids,

@@ -324,14 +324,31 @@ function binaries(): Binaries {
 	return { mariadbd, installDb, client };
 }
 
-function pidAlive(pid: number): boolean {
+/**
+ * Is `pid` a RUNNING process? A ZOMBIE is not: it has exited and only waits to be
+ * reaped, yet `kill(pid, 0)` still answers for it. The suite server is spawned
+ * DETACHED, so once killed it waits on PID 1 — and in the CI container PID 1 never
+ * reaps orphans (`runuser` in ci:local's driver, `tail -f /dev/null` in a GitHub
+ * container job). Measured 2026-10-01: a stopped never-answering server read as
+ * alive forever there (leg o), and a killed claimer's leftover was never
+ * collectable (leg r). Linux exposes the state in /proc/<pid>/stat (`Z`); without
+ * /proc (macOS) a killed child is reaped by its waiting parent and kill(0) stands.
+ */
+export function pidAlive(pid: number): boolean {
 	if (!Number.isInteger(pid) || pid <= 0) return false;
 	try {
 		process.kill(pid, 0);
-		return true;
 	} catch (error) {
 		return (error as NodeJS.ErrnoException).code === 'EPERM';
 	}
+	let stat: string;
+	try {
+		stat = readFileSync(`/proc/${pid}/stat`, 'utf8');
+	} catch {
+		return true; // no /proc (macOS), or gone between the two reads: kill(0) said alive
+	}
+	// `pid (comm) S …` — comm may hold spaces and parens, so the state follows the LAST ')'.
+	return stat.slice(stat.lastIndexOf(')') + 2, stat.lastIndexOf(')') + 3) !== 'Z';
 }
 
 function readPid(file: string): number | undefined {
