@@ -461,6 +461,16 @@ export const ERROR_REGISTRY = {
 			'Client-minted (component_date.js) for browser-side date validation before any ' +
 			'request leaves; the `validation.*` CORE_POLICY entry renders it inline.',
 	},
+	'validation.password_policy': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_validation_password_policy',
+		message: 'The password does not meet the password policy',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+		details_keys: ['rule'],
+	},
 	'request.invalid_context': {
 		category: 'caller',
 		status: 400,
@@ -1926,6 +1936,15 @@ export const ERROR_REGISTRY = {
 		status: 409,
 		label_key: 'error_maintenance_mode_required',
 		message: 'This action requires maintenance mode to be enabled',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'maintenance.dev_mode_required': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_maintenance_dev_mode_required',
+		message: 'This action is only available on a development server (DEDALO_DEV_MODE)',
 		severity: 'warn',
 		disclosure: 'operator',
 		retryable: false,

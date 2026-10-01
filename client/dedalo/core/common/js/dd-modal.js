@@ -210,6 +210,12 @@ class DDModal extends HTMLElement {
 
 			.modal-content {
 				display: grid;
+				/* row 1 = .modal-header: max-content, never auto. A manual resize
+				   (resize: auto below) gives this box an explicit height, and an
+				   auto row then shrinks to the item's min-height (the header's
+				   3.66rem floor), clipping a taller header. The body and footer
+				   rows stay auto: the overflow scrolls under the sticky header. */
+				grid-template-rows: max-content;
 				position: relative;
 				background-color: var(--modal_content_bg, #fefefe);
 				margin: auto;
@@ -299,13 +305,23 @@ class DDModal extends HTMLElement {
 				z-index: 4;
 				background-color: var(--modal_header_bg, var(--bg_surface_alt));
 				color: var(--modal_header_color, var(--fg_default));
-				/* no shadow of its own: this bar is a fixed 3.66rem, the slotted header
-				   is not (a tool header runs taller), so a shadow here cut across it.
-				   The slotted .header carries the one shadow (layout.less / tool_common) */
+				/* no shadow of its own: the slotted .header carries the one shadow
+				   (layout.less / tool_common) */
 				box-shadow: none;
 				/* brand accent stripe on top edge; painted, so height is unchanged */
 				background-image: linear-gradient(var(--modal_header_accent, transparent) 0 4px, transparent 4px);
-				height: 3.66rem;
+				/* a FLOOR, never a fixed height: a slotted header that wraps (a long
+				   tool name/description, a narrow screen) grows the bar, and the
+				   sticky in-flow bar pushes the body down. A fixed height let the
+				   taller header overflow it and paint over the body's first rows.
+				   flex: the slotted header stretches to the bar's full height (the
+				   window buttons are absolute, so it is the only flex item) */
+				display: flex;
+				min-height: 3.66rem;
+			}
+			.modal-header > slot[name="header"]::slotted(*) {
+				flex: 1 1 auto;
+				min-width: 0;
 			}
 
 			.modal-body {

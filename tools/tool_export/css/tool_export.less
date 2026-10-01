@@ -114,10 +114,28 @@
 					width: 100%;
 				}
 
+				// free room below the rows (part of the one drop zone). While the
+				// list is empty it carries the drop hint.
 				>.empty_space {
-					height: 100%;
-					max-height: 100%;
+					flex: 1 1 auto;
+					min-height: 4rem;
 					width: 100%;
+
+					>.drop_hint {
+						display: none;
+					}
+				}
+				>.user_selection_list:empty + .empty_space >.drop_hint {
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					min-height: 6rem;
+					padding: 1rem;
+					border: 2px dashed @color_grey_12;
+					border-radius: 4px;
+					color: @color_grey_9;
+					font-size: 0.9rem;
+					text-align: center;
 				}
 
 				// h1 list_title
@@ -127,8 +145,29 @@
 				}
 				.user_selection_list{
 
-					&.dragover {
-						outline: 1px solid @tool_color;
+					// insertion marker: where the dragged element will land. Zero
+					// net height (the negative margins), so rows never move under
+					// the pointer; a dot anchors the line's start.
+					>.drop_marker {
+						position: relative;
+						z-index: 2;
+						height: 3px;
+						margin: -1.5px 0;
+						background-color: var(--tool_export_fill);
+						border-radius: 2px;
+						pointer-events: none;
+
+						&:before {
+							content: "";
+							position: absolute;
+							left: -4px;
+							top: 50%;
+							width: 9px;
+							height: 9px;
+							border-radius: 50%;
+							background-color: var(--tool_export_fill);
+							transform: translateY(-50%);
+						}
 					}
 
 					>.list_title {
@@ -153,23 +192,6 @@
 						border-left: 1px solid @color_orange_dedalo;
 						border-bottom: 1px solid @color_grey_14;
 						transition: opacity 150ms;
-
-						&:last-of-type {
-
-							&:after {
-								content: " ";
-								display: block;
-								height: 4rem;
-								width: 100%;
-								position: absolute;
-								top: 1.7rem;
-								left: 0;
-							}
-						}
-
-						&.displaced {
-							padding-top: 2rem;
-						}
 
 						&:hover {
 							cursor: move;
@@ -247,13 +269,15 @@
 						}
 
 						&.dragging {
-							opacity: 0.2;
-							width: auto;
+							opacity: 0.35;
 						}
 
-						&.dragover {
-							opacity: 0.5;
-							pointer-events: none;
+						// dragging an element that is already in the list: point at
+						// its row (the drop itself is refused)
+						&.drop_duplicate {
+							background-color: var(--tool_export_lighten_40);
+							outline: 2px dashed var(--tool_export_fill);
+							outline-offset: -2px;
 						}
 					}
 				}
@@ -271,36 +295,39 @@
 				}
 
 				// export_presets. User saved export configurations (per user, DB backed).
-				// Compact, themed, collapsible block at the top of the config column.
+				// Compact, collapsible block at the top of the config column. A
+				// SECONDARY surface: neutral fill, the identity hue only as ink and as
+				// the applied row's accent, so the solid fill stays reserved for the
+				// Export action. ONE gutter (@presets_gutter) aligns the header text,
+				// the save button and the rows' indicator on the same left edge.
+				@presets_gutter: 0.75rem;
 				>.export_presets {
+					margin-top: 0;
+					margin-left: -1rem;
+					margin-right: -1rem;
 					margin-bottom: 1.5rem;
 					border: 1px solid @color_grey_13;
-					border-radius: 3px;
+					border-radius: 4px;
 					overflow: hidden;
-
-					&.open {
-						background-color: @color_grey_15;
-					}
+					background-color: @color_white;
 
 					// header. title + new + collapse toggle
 					>.export_presets_header {
 						display: flex;
 						align-items: center;
-						gap: 0.33rem;
-						padding: 0.5rem 0.66rem;
-						background-color: var(--tool_export_fill); // carries text: the fill, not the edge hue
-						color: @color_white;
+						gap: 0.25rem;
+						min-height: 2.5rem;
+						padding: 0.4rem 0.4rem 0.4rem @presets_gutter;
+						color: var(--tool_export_fill); // hue as ink on the neutral surface
 						cursor: pointer;
 
 						>.export_presets_title {
 							flex: 1 1 auto;
+							min-width: 0;
 							font-weight: 600;
 							font-size: 0.9rem;
-							text-transform: uppercase;
-							letter-spacing: 1px;
-							white-space: nowrap;
-							overflow: hidden;
-							text-overflow: ellipsis;
+							line-height: 1.25;
+							overflow-wrap: break-word; // long translations wrap at words, never truncate
 						}
 
 						// new (+) and toggle buttons
@@ -311,12 +338,10 @@
 							display: flex;
 							align-items: center;
 							justify-content: center;
-							background-color: @color_white;
-							color: var(--tool_export_fill); // the header pair reversed: same token, same ratio
-							width: 1.25rem;
-							height: 1.25rem;
-							border-radius: 2px;
-							position: relative;
+							color: var(--tool_export_fill);
+							width: 1.75rem;
+							height: 1.75rem;
+							border-radius: 3px;
 
 							&:hover {
 								background-color: var(--tool_export_lighten_40);
@@ -325,8 +350,8 @@
 
 						// new (+) glyph
 						>.export_presets_new {
-							font-size: 1.1rem;
-							font-weight: 700;
+							font-size: 1.25rem;
+							font-weight: 600;
 							line-height: 1;
 						}
 
@@ -348,21 +373,26 @@
 
 					// panel. collapsible body
 					>.export_presets_panel {
+						border-top: 1px solid @color_grey_13;
 
 						&.display_none {
 							display: none;
 						}
 
-						// save changes button
+						// save changes. Secondary (outline): shown while a preset is
+						// applied, to write the current configuration back into it
 						>.export_presets_save {
 							display: block;
-							width: calc(100% - 1rem);
-							margin: 0.5rem;
-							background-color: var(--tool_export_fill); // ink is core button.success's --color_white
-							border-color: var(--tool_export_border);
+							width: calc(100% - 2 * @presets_gutter);
+							margin: @presets_gutter;
+							padding: 0.35rem 0.5rem;
+							font-size: 0.85rem;
+							background-color: @color_white;
+							color: var(--tool_export_fill);
+							border: 1px solid var(--tool_export_fill);
 
 							&:hover {
-								background-color: var(--tool_export_lighten_10);
+								background-color: var(--tool_export_lighten_40);
 							}
 
 							&.hide {
@@ -370,12 +400,18 @@
 							}
 						}
 
+						// no save button: the panel's own top border already separates
+						// the first row from the header (else a doubled 2px line)
+						>.export_presets_save.hide + .export_presets_list .content_data >.section_record:first-child {
+							border-top: none;
+						}
+
 						// presets list (section list view)
 						>.export_presets_list {
 
 							.export_presets_loading {
 								display: block;
-								padding: 0.5rem;
+								padding: 0.5rem @presets_gutter;
 								font-size: 0.85rem;
 							}
 
@@ -384,67 +420,160 @@
 
 								>.paginator_container {
 									height: unset;
-									padding: 0 0.5rem;
+									padding: 0 @presets_gutter;
 								}
 
 								>.list_body {
 									display: block;
 
+									>.content_data {
+										padding: 0;
+									}
+
+									// row: indicator | name | edit | delete. The action tracks
+									// are implicit, so a read-only user (no delete column)
+									// gets no dangling empty track.
 									.section_record {
+										position: relative;
 										display: grid;
-										grid-template-columns: 1.4rem 1.2rem 1fr 1.4rem;
+										grid-template-columns: 1rem minmax(0, 1fr);
+										grid-auto-flow: column;
+										grid-auto-columns: 1.75rem;
+										column-gap: 0.5rem;
 										align-items: center;
+										min-height: 2.25rem;
+										padding: 0 0.25rem 0 @presets_gutter;
 										border-top: 1px solid @color_grey_13;
-										padding: 0.15rem 0.5rem;
 										cursor: pointer;
 
 										&:hover {
 											background-color: var(--tool_export_lighten_40);
 										}
 
-										// applied / selected preset
+										// applied / selected preset: tint + accent edge, the text
+										// keeps its own ink (no inverted fill)
 										&.selected {
-											background-color: var(--tool_export_fill); // carries the row's text
-											color: @color_white;
+											background-color: var(--tool_export_lighten_40);
+											box-shadow: inset 3px 0 0 var(--tool_export_fill);
 
-											.button.icon {
-												background-color: @color_white;
-											}
+											.column_section,
 											.wrapper_component {
-												color: @color_white;
+												font-weight: 600;
 											}
 										}
 
-										// name column. truncate long names
-										.column_section,
-										.wrapper_component {
-											min-width: 0;
-											pointer-events: none;
-
-											>span {
-												display: block;
-												overflow: hidden;
-												text-overflow: ellipsis;
-												white-space: nowrap;
-												padding: 0.1rem 0.25rem;
-												font-size: 0.85rem;
-											}
-										}
-
-										// control columns (apply / edit / delete)
-										.column {
+										// every cell: no core list-cell chrome (padding, the
+										// 1px separator shadow that underlined the name, and the
+										// wrap + align-content:flex-start that pinned content to
+										// the top of the row)
+										>.column {
 											outline: none;
+											padding: 0;
+											box-shadow: none;
+											display: flex;
+											flex-wrap: nowrap;
+											align-content: center;
+											align-items: center;
+											justify-content: center;
+											height: 100%;
 
 											.button.icon {
 												background-color: @color_grey_10;
 												margin: 0;
-												height: 1rem;
-												width: 1rem;
+												height: 1.1rem;
+												width: 1.1rem;
+
+												&:hover {
+													background-color: var(--tool_export_fill);
+												}
 											}
 										}
 
-										.column_apply_preset .button_apply_preset {
-											transform: scaleX(-1);
+										// name column. truncate long names
+										>.column_section {
+											justify-content: flex-start;
+											min-width: 0;
+											pointer-events: none;
+
+											.wrapper_component {
+												display: flex;
+												align-items: center;
+												min-width: 0;
+												width: 100%;
+
+												>span {
+													display: block;
+													min-width: 0;
+													overflow: hidden;
+													text-overflow: ellipsis;
+													white-space: nowrap;
+													font-size: 0.85rem;
+												}
+											}
+										}
+
+										// apply = selection indicator (radio ring). The whole row
+										// applies; the ring shows which preset is applied.
+										// (.button.icon: outranks the grey icon fill of >.column above)
+										>.column_apply_preset .button_apply_preset.button.icon {
+											-webkit-mask: none;
+											mask: none;
+											background-color: transparent;
+											border: 2px solid @color_grey_10;
+											border-radius: 50%;
+											// a true circle: core .button's min-width (1rem) had
+											// widened it to 13×11.7 — an oval
+											flex: none;
+											box-sizing: border-box;
+											width: 0.9rem;
+											height: 0.9rem;
+											min-width: 0;
+											min-height: 0;
+											aspect-ratio: 1;
+										}
+										&:hover >.column_apply_preset .button_apply_preset.button.icon {
+											background-color: transparent;
+											border-color: var(--tool_export_fill);
+										}
+										&.selected >.column_apply_preset .button_apply_preset.button.icon {
+											border-color: var(--tool_export_fill);
+											background-color: var(--tool_export_fill);
+											box-shadow: inset 0 0 0 2px @color_white;
+										}
+
+										// Where a pointer can hover, edit / delete leave the grid and
+										// float over the row's right end on hover / keyboard focus:
+										// the name gets the full width the rest of the time. Touch
+										// keeps them as always-visible grid tracks.
+										@media (hover: hover) {
+											>.column_edit,
+											>.column_delete {
+												position: absolute;
+												top: 0;
+												bottom: 0;
+												width: 1.75rem;
+												background-color: var(--tool_export_lighten_40);
+												opacity: 0;
+												pointer-events: none;
+												transition: opacity 120ms;
+											}
+											>.column_delete,
+											>.column_edit:last-child {
+												right: 0.25rem;
+											}
+											>.column_edit {
+												right: 2rem;
+												// fade the name out under the buttons instead of a hard cut
+												box-shadow: -0.75rem 0 0.5rem -0.25rem var(--tool_export_lighten_40);
+											}
+											&:hover,
+											&:focus-within {
+												>.column_edit,
+												>.column_delete {
+													opacity: 1;
+													pointer-events: auto;
+												}
+											}
 										}
 									}
 								}

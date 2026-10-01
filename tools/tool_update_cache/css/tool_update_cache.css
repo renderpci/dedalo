@@ -4,7 +4,7 @@
 * Loaded on tool init
 */
 :root {
-  --tool_update_cache: #62866a;
+  --tool_update_cache: #5f8367;
 }
 .wrapper_tool.tool_update_cache .spinner {
   background-color: var(--tool_update_cache);
@@ -102,22 +102,15 @@
 }
 .wrapper_tool.tool_update_cache > .content_data > .buttons_container {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
   padding: 1rem;
   position: relative;
 }
-.wrapper_tool.tool_update_cache > .content_data > .buttons_container .button_apply {
-  background-color: var(--tool_fill);
-  border-color: var(--tool_fill);
-  color: var(--tool_on_fill);
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
-}
-.wrapper_tool.tool_update_cache > .content_data > .buttons_container .button_apply::before {
-  background-color: var(--button-bg-color, var(--tool_on_fill)) !important;
-}
-.wrapper_tool.tool_update_cache > .content_data > .buttons_container .button_apply:hover {
-  background-color: var(--tool_fill_hover);
-  border-color: var(--tool_fill_hover);
+.wrapper_tool.tool_update_cache > .content_data > .buttons_container .records_total {
+  color: var(--color_grey_6);
+  font-variant-numeric: tabular-nums;
 }
 .wrapper_tool.tool_update_cache > .content_data > .buttons_container .response_message {
   padding: 0.5rem;

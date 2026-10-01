@@ -616,7 +616,7 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 	'scripts/tool_colors.ts': {
 		roots: [['tools']],
 		scope:
-			"every tool's identity hue — the `--<tool>` (or `--<tool>_color`) declaration in each `tools/tool_<name>/css/tool_<name>.less`, the input of the GENERATED tool_colors.less; read by tool_color_contrast_tripwire to prove the generated file is fresh",
+			"every tool's identity hue — the `--<tool>` declaration in each `tools/tool_<name>/css/tool_<name>.less`, the input of the GENERATED tool_colors.less; read by tool_color_contrast_tripwire to prove the generated file is fresh",
 	},
 	'test/helpers/migrations_corpus.ts': {
 		roots: [['install/db/migrations']],

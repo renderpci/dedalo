@@ -209,6 +209,7 @@ Server-side the filter is turned into SQL by `src/core/search/builders/builder_n
 | `!*` | is empty |
 | `value1...value2` | between (inclusive range), e.g. `10...20` |
 | `>=` / `<=` / `>` / `<` | comparison |
+| `!=42` | different: the record has a value and none of its values is `42` (the rest after `!=` reads with the same grammar, so `!=1...5` is "not between"). A record without a value does not match. Before 2026-09-29 this searched `= 0`. |
 | `42` (no operator) | equality |
 
 ## Import / export model

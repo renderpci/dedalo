@@ -4,10 +4,10 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 587,
-		"functions": 6853,
-		"functionsOverCap": 681,
-		"filesOverCap": 264
+		"files": 590,
+		"functions": 6972,
+		"functionsOverCap": 683,
+		"filesOverCap": 263
 	},
 	"ledger": [
 		{
@@ -76,6 +76,29 @@
 			"generated": "2026-10-01",
 			"functionsOverCap": 681,
 			"filesOverCap": 264
+		},
+		{
+			"generated": "2026-09-29",
+			"functionsOverCap": 699,
+			"filesOverCap": 272,
+			"reason": "Deep-path search fix (WC-2026-09-29-search-deep-leaf-mixed-rule) adds one operator classifier per builder family - classifyIri, classifyJson, classifyNumber, classifyRelation, classifySectionId, classifyString - each the ONE precedence-ordered parse of its family's operator grammar that both the shallow builder and the deep polarity dispatch on; a flat if-chain over the grammar is clearer than a rule table. The builders' own max complexity DROPS (iri 22->20, json 22->20, number 12->10, section_id 19->17, string 33->32) because the parse moved out of them, and sql_assembler loses collectJoins."
+		},
+		{
+			"generated": "2026-09-29",
+			"functionsOverCap": 698,
+			"filesOverCap": 271
+		},
+		{
+			"generated": "2026-09-29",
+			"functionsOverCap": 688,
+			"filesOverCap": 268,
+			"reason": "Merge of the two master lines (local 698/271, remote 686/269): the remote's 686 was measured without the local deep-path operator classifiers reasoned at the 2026-09-29 699 line; merged tree measures 688/268 — the remote's splits kept, the classifiers are the +2"
+		},
+		{
+			"generated": "2026-10-01",
+			"functionsOverCap": 683,
+			"filesOverCap": 263,
+			"reason": "Merge of the two master lines (local 681/264, remote 688/268 at f53ef34a3d): the merged tree measures 683/263 — below the remote and +2 functions over the local, those being the remote's own over-cap functions brought in by the merge; conform.ts conformLeafBody brought back under its 32 cap (date_mode lookup extracted)"
 		}
 	],
 	"files": {
@@ -267,15 +290,15 @@
 		"src/core/resolve/truncate_html.ts": 36,
 		"src/core/search/bare_count.ts": 7,
 		"src/core/search/builders/builder_date.ts": 18,
-		"src/core/search/builders/builder_iri.ts": 22,
-		"src/core/search/builders/builder_json.ts": 22,
-		"src/core/search/builders/builder_number.ts": 12,
+		"src/core/search/builders/builder_iri.ts": 20,
+		"src/core/search/builders/builder_json.ts": 20,
+		"src/core/search/builders/builder_number.ts": 10,
 		"src/core/search/builders/builder_relation.ts": 13,
 		"src/core/search/builders/builder_relation_children.ts": 9,
-		"src/core/search/builders/builder_section_id.ts": 19,
-		"src/core/search/builders/builder_string.ts": 33,
+		"src/core/search/builders/builder_section_id.ts": 17,
+		"src/core/search/builders/builder_string.ts": 32,
 		"src/core/search/builders/types.ts": 7,
-		"src/core/search/conform.ts": 32,
+		"src/core/search/conform.ts": 31,
 		"src/core/search/order_path.ts": 13,
 		"src/core/search/search_related.ts": 24,
 		"src/core/search/sql_assembler.ts": 75,
@@ -333,7 +356,6 @@
 		"src/core/ts_object/term_resolver.ts": 13,
 		"src/core/ts_object/ts_api.ts": 12,
 		"src/core/ts_object/ts_object.ts": 22,
-		"src/core/update/code_build_plan.ts": 7,
 		"src/core/update/code_download.ts": 7,
 		"src/core/update/transform/definitions.ts": 9,
 		"src/core/update/transform/lang.ts": 16,

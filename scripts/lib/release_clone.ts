@@ -33,8 +33,14 @@ export interface ReleaseCloneOptions {
 	source: string;
 	/** Where the clone lands; must not exist. */
 	cloneDir: string;
-	/** The branch the release commit is born on (`master` claims the release name). */
+	/** The branch the release commit is born on (`master` = the developer channel's ref). */
 	releaseBranch: string;
+	/**
+	 * A release TAG to put on the commit (`v7.0.1`) — only a tag build claims the
+	 * published `<v>.zip` name (code_build_plan.ts, policy 2026-09-29). Omitted
+	 * for a developer-channel rehearsal, which builds the branch tip.
+	 */
+	tag?: string;
 	/** Applies the release edits inside the clone, before `add -A` + commit. */
 	edit: (cloneDir: string) => void | Promise<void>;
 	/** The release commit's message. */
@@ -42,12 +48,12 @@ export interface ReleaseCloneOptions {
 }
 
 /**
- * clone → `checkout -B <releaseBranch>` → edit → add -A → commit. Order matters: the
+ * clone → `checkout -B <releaseBranch>` → edit → add -A → commit (→ tag). Order matters: the
  * branch switch happens while the tree is still pristine, so a failure there leaves
  * nothing half-edited, and the commit lands on the branch the build will be asked for.
  */
 export async function cloneForReleaseCommit(options: ReleaseCloneOptions): Promise<void> {
-	const { source, cloneDir, releaseBranch, edit, message } = options;
+	const { source, cloneDir, releaseBranch, edit, message, tag } = options;
 	await runGit(['clone', '--shared', '--quiet', source, cloneDir], 'clone');
 	// NOT `branch -m`: that verb refuses a detached HEAD (a PR checkout).
 	await runGit(
@@ -71,6 +77,11 @@ export async function cloneForReleaseCommit(options: ReleaseCloneOptions): Promi
 		],
 		'commit',
 	);
+	// `-f`: the shared clone inherits the source's tags, and a rehearsal of an
+	// already-tagged version must tag THIS commit, not the historical one.
+	if (tag !== undefined) {
+		await runGit(['-C', cloneDir, 'tag', '-f', tag], `tag ${tag}`);
+	}
 }
 
 /** The branch a clone is on, or null when its HEAD is detached. */

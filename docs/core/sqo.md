@@ -522,8 +522,8 @@ See this situation:
 
 The `Oral History` section [oh1](https://dedalo.dev/ontology/oh1) is linked to the `People under study` section [rsc197](https://dedalo.dev/ontology/rsc197) by the component `Informants` [oh24](https://dedalo.dev/ontology/oh24).
 
-!!! note "SQL equivalence"
-    The path is equivalent to a JOIN statement in SQL: the sections are equivalent to tables, and the components are the columns that link those tables.
+!!! note "What a condition on a path means"
+    A condition on a path is answered over the **related records** the path reaches, not row by row on a join: a positive condition means "some related record matches", a negation (`-`, `!*`, `$not`…) means "no related record matches", and `!=` means "some related record has a value and none equals it". Positive conditions on **different** fields of the same path, joined by `$and`, describe **one** related record; the same field repeated is matched on its own record each time. See [Deep-path filters](system/search.md#deep-path-filters) for the full table.
 
 To search interviews of informants born in 1928, the SQO follows the path above to locate the date of birth component [rsc89](https://dedalo.dev/ontology/rsc89).
 

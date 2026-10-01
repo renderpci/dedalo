@@ -36,7 +36,50 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-30-search-root-step-acl`.
 
+- **A search whose conditions are joined by OR at the top level no longer returns records outside the user's projects.**
+
+    When every condition of a search was joined by OR (for example "title contains
+    X **or** title contains Y"), one of the conditions was checked without the
+    user's project restrictions and the other without the section being searched.
+    A user limited to some projects could therefore see records of projects they
+    do not hold. The conditions are now always kept inside those restrictions.
+    Administrators without project restrictions see no difference.
+
+    Wire contract: `WC-2026-09-29-search-where-parts-parenthesized`.
+
 #### Changed
+
+- **The password field shows its requirements and says clearly whether a password was saved.**
+
+    Before, the password field of a user record was an opaque box: a rejected password
+    only turned the border red, without saying why, and nothing confirmed a successful
+    change. Now the field lists the password requirements and ticks each one as you
+    type, asks you to repeat the new password, and saves only when you press **Save**
+    (or Enter) — then says *Password saved*, or why it was not saved. A password typed
+    but not saved is marked as such, and leaving the record or closing the tab asks
+    before discarding it — as it now does for any change the automatic save could
+    not store, which was previously dropped without a word.
+
+    The same requirements now apply everywhere a password is set — this field, the
+    login screen's password recovery and the installer's root password — and the server
+    enforces them too: at least 8 (and at most 64) characters, with a lowercase letter,
+    an uppercase letter and a number, no `&`, no common words such as "password", and no
+    runs like `abcd` or `1234`. Existing passwords keep working; the rules apply when a
+    password is changed. A program that sets passwords through the API receives a
+    `validation.password_policy` error naming the first rule the password breaks.
+
+    Wire contract: `WC-2026-09-30-password-policy-enforced`.
+
+- **Tools no longer show a “Developed by” footer; *Update cache* uses the standard tool action button.**
+
+    *Update cache*, *PDF extractor* and *QR* ended their panel with the tool icon and a
+    “Developed by Dédalo team” line — noise below the work area. It is gone; the tool's
+    identity stays in its header.
+
+    *Update cache*'s action button now follows the shared tool style: the tool colour
+    with its contrast-checked label colour, a reload icon, and the label *Update*. The
+    number of records it will process is shown beside the button (“Records: 8583”)
+    instead of being joined into the label.
 
 - **The history of a field that links records is one timeline, whatever the working language.**
 
@@ -111,17 +154,99 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Small editing forms no longer show tool buttons they turn off.**
+
+    Some forms turn off the tool buttons on their fields, but the buttons were still
+    shown. Now they are hidden where the form asks for it:
+
+    - the dialogs for editing a saved *Export* preset or a saved search preset;
+    - the fields of the *User administration* tool (the user image keeps its buttons,
+      so a picture can still be uploaded).
+
+    A field whose own configuration sets these options keeps its configured settings.
+
 - **A duplicated record never points at the original record's image or document files.**
 
     Duplicating a record copies its image, audio, video and document files to the new record. If a copy failed, the new record could keep pointing at the ORIGINAL record's files, with no message anywhere — and deleting either record later moved files the other still showed. The duplicate is now saved with no file list of its own, the files are copied (into the record's named folder when the media field stores its files by a folder name taken from another field), and the new record's file list is then built from the files it really has. A copy that did not complete is reported to the administrator (the `duplicate_media_incomplete` counter and a `media.operation_failed` line in the server log); the duplicate itself is still created.
 
     Wire contract: `WC-2026-09-30-media-key-locked-transform`.
 
+- **Export — a marker shows where a dragged column will land.**
+
+    In *Export*, dropping a field just below the *Active elements* list put it above the
+    last column instead of at the end. Now, while you drag a field or a column over the
+    list, a line shows exactly where it will be placed: before or after the row under
+    the pointer, depending on which half of the row you are over, and at the end when
+    you are below the list. The rows no longer shift while you drag.
+
+    Dragging a field that is already in the list highlights the existing column instead,
+    and the drop is refused. An empty list shows a "Drag a field here" area.
+
+- **Export preset editor — the name field no longer offers a second value.**
+
+    In the dialog for editing a saved *Export* preset, the name field showed an "add
+    value" button, as if a preset could have several names, and its floating button bar
+    overlapped the dialog title. A preset has one name: the button is gone, so nothing
+    covers the title any more.
+
+- **Export presets panel — one-line rows, lighter design, click a row to apply.**
+
+    In *Export*, each saved preset showed on two lines, with its delete button wrapped
+    below and blank cells in between. Each preset now fits on one line, and the name gets the
+    full width: the edit and delete buttons appear when the pointer is over the row
+    (they stay visible on touch screens). The same cause (the list received every configured column
+    instead of only the name) is fixed for the search presets list too.
+
+    The panel is lighter, so *Export* stays the one prominent button: a neutral header
+    with the tool colour as text, an outlined *Save changes* button, and a tinted row with
+    a filled ring for the applied preset. Header, button and rows share one left margin. Click anywhere on a row to apply the preset.
+    Deleting a preset now asks in an application dialog that names the preset.
+
+- **Dialogs with an edit form leave room for the field's button bar.**
+
+    When a dialog shows a record to edit (editing a saved preset, or opening a linked
+    record from a portal, a select list or a dataframe), the floating button bar of the
+    active field went under the dialog title when that field was the first one. The
+    form now starts a little lower, so the bar is always fully visible.
+
+- **A tall dialog title no longer covers the dialog's content.**
+
+    When a dialog's title took several lines (a long tool name and description, or a
+    small screen), the title bar kept a fixed height and the extra lines covered the
+    top of the dialog's content. The title bar now grows with its text, also after resizing the dialog by hand, and the content
+    always starts below it. Tool titles also use the space better: the description sits
+    beside the tool name when there is room and moves below it when there is not,
+    instead of squeezing both into narrow columns.
+
+- **The Ontology parser button in the Ontology area is readable again**
+
+    In the Ontology area, the *Ontology parser* button was painted solid green with
+    dark grey text and icon, which made it hard to read. It now looks like the other
+    toolbar buttons next to it (*Search*, *Show all*): outlined at rest and
+    highlighted on hover.
+
 - **Restoring or undeleting a record now updates every list and search that shows who references it.**
 
     Some fields are filled in automatically from other records — for example a thesaurus term that lists every object indexed with it, or a broader-term search that finds an object indexed with a narrower term. Restoring a record from the Time Machine, undeleting it (from the Time Machine or by reverting a bulk operation) and recalculating such an automatic list did not always bring these up to date: an undeleted object could stay missing from the term that indexes it, an undeleted term could come back listing objects that no longer point at it, and a broader-term search could miss an object until someone saved it again. Every way of writing a record now brings them up to date, right after the change is saved. During a CSV import, the automatic lists are updated after each row is committed; a failure there is reported to the administrator (the `observers_propagation_failed` counter and the server log) and repaired by the observer reconcile, and it no longer undoes the imported row. A duplicated record no longer matches a broader-term search for terms only its original is listed under. Reverting a bulk revert that brought back a term together with the objects indexed with it now deletes them again, instead of keeping them as records someone else changed. Restoring an automatic list from its Time Machine history (or reverting a bulk operation that changed one) no longer brings back objects that have stopped pointing at the record since: the restored list is recalculated right after the restore, and the objects still listed keep their extra data. When such a list is itself shown in another record's automatic list, an object that stops pointing at a record now also leaves that second list. Extra data attached to the entries of such an automatic list (for example a rating on each object a term lists) now stays with the right object when the record is undeleted, restored or duplicated: it used to be reattached to a different object after an undelete, kept for objects no longer listed after a restore, and copied onto the duplicate. For a virtual section that has a field of its own, deleting a record's data now also empties its automatic lists, and restoring it recalculates them.
 
     Wire contract: `WC-2026-09-30-record-write-obligation-ledger`.
+
+- **Tool action buttons show a spinning ring while working, not a solid disc.**
+
+    The main action button of several tools (*Update cache*, *Diffusion*, *Hierarchy*,
+    *Import RDF*, *Ontology*, *Ontology parser*, *Propagate component data*) showed a
+    still, solid disc while its process ran. It now shows the rotating ring used by every
+    other button.
+
+    *Update cache*: pressing *Update* now scrolls to the progress panel as soon as it
+    appears, instead of leaving it below the component list, and the button label is
+    white in the light theme.
+
+- **The Update cache tool scrolls to its result**
+
+    When an Update cache run finished, its summary (or a refusal) appeared below
+    the components list, out of sight on a long selection. The tool now scrolls to
+    it, with the same mechanism the Update code and Update ontology panels use.
 
 - **Reverting the same bulk run a second time no longer reports records as "not reverted" when nothing changed.**
 
@@ -153,6 +278,13 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-29-dataframe-hard-delete-retired`.
 
+- **Choosing an option in a radio-button field no longer makes the field flicker.**
+
+    Clicking an option used to dim the whole field while the value saved and, for a
+    moment, show both the previous and the new option as selected. The new option is
+    now highlighted at once and the previous one cleared. Any field that saves on a
+    click (radio buttons, check boxes…) only dims when a save takes noticeably long.
+
 - **Applying a Time Machine value no longer breaks a record's rated portal.**
 
     A portal whose items carry a rating (the coloured chip of a dataframe, such as
@@ -166,6 +298,28 @@ Merged since the last release; these ship with the next one.
     colour instead of failing when a rating has no options.
 
     Wire contract: `WC-2026-09-29-select-family-mode-datalist`.
+
+- **Searches through a related section now answer negations and combined conditions correctly.**
+
+    A search condition that looks inside a related record (for example *Movements →
+    Municipality*) now means what it says:
+
+    - **Negations mean "none".** "Does not contain X", "is empty" and "different
+      from X" now return the records where *no* related record matches. Before, a
+      record linked to one matching and one non-matching record was returned too,
+      so the result was silently too large (on one installation, 38,749 records
+      instead of 18,635).
+    - **Two conditions on the same field** joined with AND can now be met by
+      different related records: "Municipality = Madrid AND Municipality =
+      Valencia" finds people with one movement to each. Before it always found
+      nobody.
+    - **Conditions on different fields** joined with AND still describe the same
+      related record: "Municipality = Madrid AND Year = 1939" finds a movement to
+      Madrid in 1939, not one to Madrid and another in 1939.
+    - A number search "different from *n*" now returns the records whose value is
+      not *n*. Before, it returned the records whose value is zero.
+
+    Wire contract: `WC-2026-09-29-search-deep-leaf-mixed-rule`, `WC-2026-09-29-number-not-equal`.
 
 - **The time machine shows a field's frames and their values as they were at the chosen change.**
 
@@ -468,6 +622,16 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-30-ontology-identifier-grammar`.
 
+- **Stored password hashes are no longer sent to the browser.**
+
+    Until now, anyone able to open a user record received the stored password hash
+    of that account (and, for accounts not yet migrated from v6, the reversible
+    legacy value) — material an attacker could try to crack offline. Every screen
+    and API answer now shows a fixed mask (`****************`) instead: it says only
+    that a password is set. Logins, password changes and imports are unaffected.
+
+    Wire contract: `WC-2026-09-30-password-hash-never-served`.
+
 - **Site builder agent turns and builds run in a private network namespace and reach the outside only by hostname, through the daemon's egress gate; the Publication API key no longer reaches the agent, and AGENT_EGRESS_ALLOW is refused.**
 
     A confined agent turn used to be allowed "any" address with loopback and the private ranges denied. systemd's address filter lets the allow list win over the deny list, so that turn could in fact reach the database, the engine, the local network and a cloud host's metadata service. Every confined run (a turn, a build step, a git command) now runs in its own private network namespace with `/run` hidden. Loopback, the LAN, the metadata service and the host's own sockets do not exist inside it. A turn or a build reaches the outside only through its site's socket directory, served by the site-builder daemon: an HTTPS proxy that connects only to the hostnames that run may use, on port 443, and refuses any name that resolves to a non-public address. It forwards nothing until the connection's TLS handshake names that same hostname, so a hostname behind a shared CDN is not a way to other sites on that CDN. A git command gets no network at all. The database socket directories some distributions keep outside `/run` (RHEL's MariaDB uses `/var/lib/mysql/mysql.sock`) are hidden from every run too, and each run gets its own `/dev/shm` instead of the host's shared one. A run cannot reach another site's socket directory: only its own site's is mounted, and runs of different sites run as different users, so a concurrent run cannot be reached through `/proc` either. Each blocked destination is written as one line in the session or build log. A run on a host that silently ignores the namespace setting is refused before anything starts.
@@ -574,11 +738,38 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **The maintenance *Unit test area* only offers the JS test runner and the test-table reset where they can work.**
+
+    *Open JS unit test* is shown only on a development server (`DEDALO_DEV_MODE`) whose
+    dev dependencies are installed. A production install (the default Docker image, or
+    one kept current by the code updater) does not have the browser test libraries, so
+    the runner page used to open and fail with unreadable MIME-type errors; the panel now
+    says which libraries are missing instead. *Truncate test table and Create new empty
+    test record* is shown only on a development server, and the server refuses it
+    elsewhere (`maintenance.dev_mode_required`). *Run long process* stays available
+    everywhere.
+
+    Wire contract: `WC-2026-10-01-unit-test-widget-dev-gate`.
+
 - **Hitting a database limit now shows a clear "try again" error, and maintenance runs on its own database connections.**
 
     When a database statement runs past `DB_STATEMENT_TIMEOUT_MS`, or a request waits past `DB_POOL_ACQUIRE_TIMEOUT_MS` for a free database connection, the user now sees a "took longer than the server allows" or "the server is busy, try again" message instead of a generic server error. Maintenance no longer runs under the statement limit: the long maintenance-area actions (rebuilds, VACUUM and REINDEX, bulk transforms, imports) and data updates use a separate set of database connections without it, sized by the new `DB_MAINTENANCE_POOL_MAX` (default 2 per process). Count it TWICE in your connection budget, plus 2: each engine process may hold `DB_POOL_MAX + 2 × DB_MAINTENANCE_POOL_MAX + 2` connections (16 with the defaults), because the index-rebuild lane keeps its own idle connections and a stop or an update verdict opens up to 2 short-lived ones of their own (see [the database settings](./config/config_db.md)). The other maintenance-area actions keep the limit and never wait behind a long one, and the dataframe integrity scan now stops a batch that runs past its time budget instead of running on. When the server stops, it cancels only its own running maintenance statements: another installation sharing the same PostgreSQL server is never touched. The defaults of the three limits are unchanged (`0`, off); `60000`, `30000` and `5000` are the recommended production values, and the database settings page lists the long operations to measure on a large installation before you set the statement limit. A concurrent index rebuild, plain VACUUM or ANALYZE that is still running when the server stops is left to finish on the database instead of being cancelled, because a cancelled concurrent rebuild leaves a broken index behind (the blocking forms — the `REINDEX TABLE` and `VACUUM FULL` of "Re-create db assets" — wait at most 5 seconds for their table like any other maintenance step, are retried a few times, and are cancelled at shutdown, which undoes them cleanly; before, such a statement queued behind a long backup kept every later reader of the table waiting for the whole backup); and "Optimize tables" now first removes any such broken index an earlier interrupted rebuild left on the tables it optimizes. A long maintenance action still gives up after 5 seconds of waiting for a table another operation is using, so it never holds up the users reading that table: the step it was on is undone, steps it had already finished are kept, and the action reports "try again in a moment" (or, for the search-store rebuild, an error line for that store). The bulk transforms (move TLD, move locator, move to portal, move to table, move language) now apply each definition file all-or-nothing: a file that waits too long is retried a few times and, if it still cannot finish, is left completely unapplied and named in the report. Before, a file could stop part-way with some tables already changed, leaving a section's records split between the old and the new tipo. Rebuilding the database constraints, triggers or indexes is now all-or-nothing for each table: if the new constraint, trigger or index cannot be created (including after that 5-second wait), the old one is kept instead of being left removed, and the action lists the failure by constraint, trigger or index, table and database error code (the full database message is in the server log). An index is now built next to the old one, which keeps serving searches until the new one takes its place, so the table stays readable during the rebuild.
 
     Wire contract: `WC-2026-09-30-db-typed-503`.
+
+- **The official update server for v7 installations is v7.master.dedalo.dev.**
+
+    Code and ontology updates are now split by version. v7 installations update from `https://v7.master.dedalo.dev/dedalo/core/api/v1/json/` — the address the configuration examples for `CODE_SERVERS` and `ONTOLOGY_SERVERS` now show. v6 installations keep updating from their own server exactly as before; a v7 update server answers only v7 installations.
+
+    For an installation that serves updates to others, the suggested layout keeps the release archives in `/srv/dedalo/code` (`DEDALO_CODE_FILES_DIR`) and the ontology files in `/srv/dedalo/ontology` (`ONTOLOGY_DATA_IO_DIR`), next to the media in `/srv/dedalo/media`. Nothing changes for an installation that leaves these settings unset.
+
+- **A published code release is now built from a release tag (`vX.Y.Z`); developer builds come from `master`.**
+
+    On a code server, **Serve Code**'s *Build release* button used to archive the tip of the `master` branch, and *Build developer release* whatever other branch the server had checked out. Now a published release is always a tagged version: *Build release* archives the newest `vX.Y.Z` tag of this engine in the build checkout (prerelease tags such as betas are not releases, earlier-engine `v6` tags are never candidates, and a tag whose version file disagrees with its name is refused), and *Build developer release* archives the tip of `master` — the latest integrated code, before its release. The branch the server has checked out no longer matters.
+
+    What to do on a code server: tag each release commit (`git tag v7.0.1`, pushed to the remote) and fetch tags into the build checkout (`git fetch --tags`) before building; until a tag exists the panel reports that nothing can be published. While v7 is in beta this is the expected state: installations receive v7 code only as developer builds. See [Updating code](./management/updates/updating_code.md).
+
+    Wire contract: `WC-2026-09-29-code-release-channel-refs`.
 
 - **Building and serving code releases now has its own maintenance panel, Serve Code.**
 
@@ -745,6 +936,30 @@ Merged since the last release; these ship with the next one.
     Running a move transform for real (Move TLD, Move locator, Move to portal, Move to table, Move lang with `dry_run: false`) used to happen inside the web request. Nothing could stop it except restarting the server. It kept every record it had changed locked until the end of each definition file. If it was sent again it waited behind itself and then reported a failure while the first run carried on unseen. Now the transform runs as a background process that answers at once, reports its progress in the maintenance panel and has no time limit. Stopping it cancels the definition file it is working on and undoes that file completely; the files after it are reported as not run. A second transform started while one is running is refused ("Another move_* transform is running") instead of waiting. The maintenance panel can now actually run a transform: until now the five move widgets only ever sent a dry run, so no button reached the real run. The submit button now runs a preview (dry run); when the preview ends without errors an Execute button appears, which asks for confirmation and runs exactly the files that were previewed (change the selection and it asks you to preview again). The preview also runs in the background, with the same progress panel and Stop button. A run that fails — a definition file undone, a file refused because another transform is running, an unknown outcome — now ends as an error in the panel, with the reason; before, the panel said "Process completed" and the failure was visible only in the raw report. If a definition file fails at the moment its changes are being saved (a lost database connection, a server shutdown), the report now says what the database actually did with it: applied, undone, or, when that cannot be read back, an unknown outcome that stops the run and asks you to check the data before running that file again. Before, every failed file was reported as undone, and running a Move locator file again after it had in fact been applied moved its locators twice.
 
     Wire contract: `WC-2026-09-30-move-transform-execute-job`.
+
+- **A failed ontology update now says why, inside the Update ontology panel**
+
+    When fetching the master's file list or importing the ontology failed, the
+    panel showed nothing — the error only reached the browser console. The panel
+    now shows the failure in place: the error, the server's explanation (for
+    example which address was refused) and the request id to find it in the
+    server log.
+
+- **The Update ontology panel scrolls to its result**
+
+    The result of an ontology update — success, warnings or a failure — appeared
+    below the submit button, out of sight unless the admin scrolled down, so the
+    panel looked idle. It now scrolls to the version change while the import runs,
+    and then to the outcome, as the Update code panel already does.
+
+- **Updating the ontology works from every configured master, not only the first**
+
+    When `ONTOLOGY_SERVERS` listed several masters sharing the same access code,
+    choosing any of them except the first failed every file with
+    `Download failed … (origin mismatch: <chosen> != <first>)`. The engine now
+    identifies the chosen master by its address, so each listed server updates
+    from itself. A server address that is not in `ONTOLOGY_SERVERS` is still
+    refused before anything is downloaded.
 
 - **A site builder turn whose egress gate fails to close now still ends, instead of leaving the session running forever.**
 
@@ -916,7 +1131,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 81 entries"
+??? note "Wire contract — 88 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -968,8 +1183,12 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-27-external-allowlist-at-door-only`
     - `WC-2026-09-28-maintenance-serve-code-widget`
     - `WC-2026-09-28-maintenance-serve-ontology-widget`
+    - `WC-2026-09-29-code-release-channel-refs`
     - `WC-2026-09-29-dataframe-hard-delete-retired`
+    - `WC-2026-09-29-number-not-equal`
     - `WC-2026-09-29-rdf-per-uri-error-wire-body`
+    - `WC-2026-09-29-search-deep-leaf-mixed-rule`
+    - `WC-2026-09-29-search-where-parts-parenthesized`
     - `WC-2026-09-29-select-family-mode-datalist`
     - `WC-2026-09-29-tm-preview-frame-children-as-of`
     - `WC-2026-09-30-agent-tool-grant`
@@ -986,6 +1205,8 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-30-media-pair-scope`
     - `WC-2026-09-30-move-transform-execute-job`
     - `WC-2026-09-30-ontology-identifier-grammar`
+    - `WC-2026-09-30-password-hash-never-served`
+    - `WC-2026-09-30-password-policy-enforced`
     - `WC-2026-09-30-record-write-obligation-ledger`
     - `WC-2026-09-30-search-root-step-acl`
     - `WC-2026-09-30-transcription-record-tipo`
@@ -998,6 +1219,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-01-identify-vision-grant`
     - `WC-2026-10-01-site-builder-confinement-codes`
     - `WC-2026-10-01-tool-grant-one-decision`
+    - `WC-2026-10-01-unit-test-widget-dev-gate`
     - `WC-2026-10-01-write-door-delegations`
 
 ## 7.0.0-beta.4 — 2026-08-24

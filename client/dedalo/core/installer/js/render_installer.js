@@ -16,6 +16,8 @@
 	import {when_in_viewport} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {component_password} from '../../component_password/js/component_password.js'
+	import {check_password} from '../../component_password/js/password_policy.js'
+	import {format_label} from '../../common/js/common.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {toggle_theme, get_theme} from '../../page/js/theme.js'
 	import {request_failed, response_data, response_extension} from '../../common/js/api_error.js'
@@ -2135,16 +2137,9 @@ const render_installer_db_block = function(self) {
 * Paste is disabled on the retype field to force manual retyping.
 * A show/hide checkbox toggles both fields between 'password' and 'text' type.
 *
-* password_validation_options contract (passed to validate_password_format):
-*   lower / upper / numeric : minimum required character counts (0 = not required)
-*   alpha                   : combined lower+upper count (0 = not required separately)
-*   special                 : minimum special character count
-*   length                  : [min, max] character length
-*   custom                  : array of additional regexes or functions
-*   badWords                : forbidden substrings
-*   badSequenceLength       : disallow sequential repeated chars of this length
-*   noQwertySequences       : reject keyboard-row sequences
-*   noSequential            : reject ascending/descending letter or digit runs
+* The policy is the engine's ONE password policy (component_password/js/
+* password_policy.js): its rules are listed under the description, and the
+* server (root_pw.ts) refuses what breaks them — no installer-local options.
 *
 * On successful save (API result===true), set_root_password_block.change_root_pw_button is
 * removed and login_block is revealed. API response messages are always set via textContent
@@ -2157,34 +2152,26 @@ const render_set_root_password_block = function(self) {
 
 	const fragment = new DocumentFragment()
 
-	// password_validation_options
-	// These constraints define "strong enough" for a Dédalo superuser credential.
-	// Adjust here to tighten/loosen policy; the validate_password_format call site
-	// is in component_password and receives this object verbatim.
-		const password_validation_options = {
-			lower				: 1,
-			upper				: 1,
-			alpha				: 0, /* lower + upper */
-			numeric				: 1,
-			special				: 0,
-			length				: [8, 32],
-			custom				: [ /* regexes and/or functions  (?=.*\d)(?=.*[a-z])(?=.*[A-Z])\w{6,} */ ],
-			badWords			: ['password','contraseña','clave','Mynew2Pass5K','dios','micontraseña'],
-			badSequenceLength	: 4,
-			noQwertySequences	: false,
-			noSequential		: true
-		}
-
-	// description
+	// description + the policy's rules (password_policy.js — the ONE policy the
+	// server enforces on this step too: root_pw.ts refuses what breaks it)
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'description',
-			inner_html		: get_label.type_root_password || `Type and retype your desired superuser password and keep it in a safe place.
-							  Use a strong password from 8 to 32 characters containing, at least, an upper-case letter, a lower-case
-							  letter, and a number. Identical characters in sequential order are not allowed ('aa', '11', 'BB', etc.).
-							  Numerical ('123', '345', etc.) nor alphabetical ('aBC', 'hIjK', etc.) order are allowed.`,
+			inner_html		: get_label.root_password_intro || 'Type and retype your desired superuser password and keep it in a safe place.',
 			parent			: fragment
 		})
+		const rules_list = ui.create_dom_element({
+			element_type	: 'ul',
+			class_name		: 'description password_rules',
+			parent			: fragment
+		})
+		for (const rule of check_password('').rules) {
+			ui.create_dom_element({
+				element_type	: 'li',
+				text_content	: format_label(get_label[rule.label] || rule.label, rule.params),
+				parent			: rules_list
+			})
+		}
 
 	// input_new_pw field
 	// Both 'keyup' and 'change' fire set_message so that inline validation runs both
@@ -2200,20 +2187,14 @@ const render_set_root_password_block = function(self) {
 		input_new_pw.autocomplete = 'new-password'
 		input_new_pw.addEventListener('keyup', function(e) {
 			e.preventDefault()
-			const validated_obj = component_password.prototype.validate_password_format(
-				input_new_pw.value,
-				password_validation_options
-			)
+			const validated_obj = component_password.prototype.validate_password_format(input_new_pw.value)
 			set_message(validated_obj, input_new_pw)
 		})
 		input_new_pw.addEventListener('change', function(e) {
 			e.preventDefault()
 
 			// validated. Test password is acceptable string
-				const validated_obj = component_password.prototype.validate_password_format(
-					input_new_pw.value,
-					password_validation_options
-				)
+				const validated_obj = component_password.prototype.validate_password_format(input_new_pw.value)
 
 			// message
 				set_message(validated_obj, input_new_pw)
@@ -2282,10 +2263,7 @@ const render_set_root_password_block = function(self) {
 
 		input_new_pw_retype.addEventListener('keyup', function(e) {
 			e.preventDefault()
-			const validated_obj = component_password.prototype.validate_password_format(
-				input_new_pw.value,
-				password_validation_options
-			)
+			const validated_obj = component_password.prototype.validate_password_format(input_new_pw.value)
 			set_message(
 				{
 					valid	: input_new_pw_retype.value===input_new_pw.value && validated_obj.valid===true,
@@ -2336,10 +2314,7 @@ const render_set_root_password_block = function(self) {
 		change_root_pw_button.addEventListener('mouseup', async function() {
 
 			// validate again first password input
-				const validated_obj = component_password.prototype.validate_password_format(
-					input_new_pw.value,
-					password_validation_options
-				)
+				const validated_obj = component_password.prototype.validate_password_format(input_new_pw.value)
 				if (validated_obj.valid!==true) {
 					set_message(validated_obj, input_new_pw)
 					return false

@@ -38,25 +38,6 @@
 		width: 100%;
 		padding: 1rem;
 		padding-top: 2rem;
-
-		// common footer
-		>.footer_node {
-			contain: content;
-			padding: 3rem;
-			padding-top: 4rem;
-			display: flex;
-			justify-content: center;
-			gap: 1rem;
-			align-items: center;
-
-			>.icon {
-				height: 2rem;
-				vertical-align: center;
-			}
-			>.info {
-				font-size: 1.3rem;
-			}
-		}
 	}
 
 	>.content_data.content_data_error.tool_error {
@@ -181,16 +162,30 @@
 		border-radius: 0.25rem;
 	}
 
+	// title + subtitle. They sit side by side while both fit; when the header
+	// is narrow (small screen, narrow modal) the subtitle drops BELOW the title
+	// at full width instead of squeezing both into tall word-per-line columns —
+	// a header that runs tall pushes the body down (dd-modal's bar grows), so
+	// every wasted line is content the user no longer sees.
 	>.tool_name_container {
 		margin-right: 1em;
 		padding-right: 1rem;
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
+		column-gap: 2rem;
+		row-gap: 0.35rem;
+		flex: 1 1 auto;
+		min-width: 0;
 
 		>.label {
 			font-size: 1.4rem;
+			line-height: 1.25;
 			display: flex;
 			align-items: center;
+			flex: 0 1 auto;
+			min-width: 0;
+			overflow-wrap: break-word; // only a word longer than the row breaks
 
 			>.button {
 				// the mask fill IS the icon colour; it follows the header title ink
@@ -206,13 +201,21 @@
 
 		// the subtitle steps back from the title: on the old saturated bar both
 		// were the same white, so the tool name had no weight of its own
+		// basis 18rem: beside the title only when it gets a readable measure,
+		// otherwise its own row (the column-gap spaces it when side by side)
 		>.description {
 			font-weight: 200;
 			color: var(--fg_muted);
-			// margin-top: 0.3rem;
-			padding-left: 1rem;
-    		padding-right: 1rem;
 			line-height: 1.4rem;
+			flex: 1 1 18rem;
+			min-width: 0;
+
+			// phone: the container is a COLUMN (tool_responsive.less), where the
+			// 18rem basis would be a height. Stated HERE, not in tool_responsive:
+			// that sheet is imported above this block and loses the cascade.
+			@media screen and (max-width: @width_break_point_phone) {
+				flex: none;
+			}
 		}
 	}
 
@@ -587,7 +590,7 @@
 //
 // Scoped to the wrapper AND the header because in a modal the header is
 // promoted into dd-modal's slot and is no longer inside .wrapper_tool.
-// Every tool has a hue now (tool_ontology via --tool_ontology_color).
+// Every tool has a hue (`--<tool>`, one name for all).
 :is(.wrapper_tool, .tool_header) button.primary {
 	.tool_action_button();
 }

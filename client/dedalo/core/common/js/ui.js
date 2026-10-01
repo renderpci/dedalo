@@ -818,8 +818,8 @@ export const ui = {
 		*     override this to handle cursor placement themselves).
 		*  6. Updates page_globals.component_active.
 		*  7. Publishes the 'activate_component' event via event_manager.
-		*  8. Calls check_unsaved_data so that a pending mousedown on another component
-		*     triggers a save-before-navigate prompt.
+		*  8. Calls check_unsaved_data({flush_only:true}) so a pending edit of another
+		*     component is flushed (no prompt: moving between fields is not navigation).
 		*  9. Persists the last selected component tipo for this section in the local DB
 		*     (used to restore the selection on back-navigation).
 		*
@@ -965,7 +965,7 @@ export const ui = {
 			// unsaved_data case
 			// This allow catch page mousedown event (inside any component) and check for unsaved components
 			// usually happens in component_text_area editions because the delay (500 ms) to set as changed
-				check_unsaved_data()
+				check_unsaved_data({flush_only: true})
 
 			// section last selection store
 				data_manager.set_local_db_data(
@@ -4015,6 +4015,47 @@ export const ui = {
 
 		return true
 	},//end hilite
+
+
+
+	/**
+	* REVEAL
+	* Scroll a just-appended response node (a result, a failure, a report) into
+	* view. A response surface usually lands LAST, below the form that fired it,
+	* so the outcome sits under the fold and the panel looks idle unless the user
+	* scrolls. One mechanism for every widget/tool with that shape.
+	* Load-bearing (measured in update_code, 2026-08-28): the scroll is issued in
+	* the NEXT frame. scrollIntoView aims at an offset computed when it is issued;
+	* issued in the tick that is still appending nodes, it lands short.
+	* Reduced motion downgrades 'smooth' to 'auto'. Guarded on the method: render
+	* gates drive callers against DOM stubs.
+	* @param {HTMLElement} node
+	* @param {Object} [options]
+	* @param {string} [options.block='start'] - scrollIntoView block
+	* @param {string} [options.behavior='smooth'] - 'smooth' | 'auto'
+	* @returns {HTMLElement} node - so a caller can wrap the append: ui.reveal(parent.appendChild(x))
+	*/
+	reveal : function(node, options={}) {
+
+		if (!node || typeof node.scrollIntoView!=='function') {
+			return node
+		}
+
+		const block				= options.block || 'start'
+		const reduced_motion	= typeof window!=='undefined' && typeof window.matchMedia==='function'
+			? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+			: false
+		const behavior			= reduced_motion ? 'auto' : (options.behavior || 'smooth')
+
+		const bring_into_view = () => node.scrollIntoView({ behavior, block })
+		if (typeof requestAnimationFrame==='function') {
+			requestAnimationFrame(bring_into_view)
+		} else {
+			bring_into_view()
+		}
+
+		return node
+	},//end reveal
 
 
 

@@ -49,6 +49,7 @@ import { DedaloError } from '../errors/index.ts';
 import { cleanEmail, isValidEmail, sendMail } from '../mailer/mailer.ts';
 import { ARGON2_OPTIONS } from './argon2_params.ts';
 import { normalizeTiming } from './auth.ts';
+import { passwordPolicyFailure } from './password_policy.ts';
 import { revokeAccountAccess } from './revocation.ts';
 import {
 	buildThrottleKey,
@@ -67,9 +68,6 @@ const PASSWORD_COMPONENT = 'dd133';
 const EMAIL_COMPONENT = 'dd134';
 /** component_radio_button dd131; item[0] pointing at list entry 1 (Yes) means active. */
 const ACTIVE_ACCOUNT_COMPONENT = 'dd131';
-
-/** Minimum new-password length (mirrors the login strlen<8 guard). */
-const MIN_PASSWORD_LENGTH = 8;
 
 /**
  * Step 1's answer — ALWAYS this shape, whatever the identifier resolved to
@@ -402,11 +400,12 @@ export async function confirmPasswordReset(
 
 	// Validate the new password BEFORE consuming a verify attempt: a weak
 	// password is the user's own input problem, not a wrong-code guess.
-	if (newPassword.length < MIN_PASSWORD_LENGTH) {
-		// The minimum is engine policy, not caller data: it rides as a log-only
-		// coordinate; the client renders the code's label.
+	// The policy is the engine's ONE password policy (password_policy.ts); the
+	// broken rule rides as a log-only coordinate, the client renders the label.
+	const brokenRule = passwordPolicyFailure(newPassword);
+	if (brokenRule !== null) {
 		throw new DedaloError('password_reset.weak_password', {
-			coordinates: { min_length: MIN_PASSWORD_LENGTH },
+			coordinates: { rule: brokenRule },
 		});
 	}
 

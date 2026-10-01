@@ -9,15 +9,10 @@
 .area_ontology {
 	height: 100%;
 
-	>.buttons_container {
-
-		// button tool_ontology_export in area
-		button.tool_ontology_parser {
-			background-color: @color_green_ontology;
-			border: none;
-		}
-
-	}
+	// (!) the tool_ontology_parser launcher in >.buttons_container is NOT
+	// repainted here: it is a toolbar button (buttons.less, homogeneous row, no
+	// fill at rest). A raw green fill under the .warning ink measured ~2.5:1.
+	// Gate: tool_color_contrast_tripwire (no core sheet repaints a launcher).
 
 	>.content_data {
 

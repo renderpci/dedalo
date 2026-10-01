@@ -361,6 +361,11 @@
 			"skipped": 0,
 			"assertions": 16
 		},
+		"test/unit/builder_shallow_snapshot.test.ts": {
+			"tests": 19,
+			"skipped": 0,
+			"assertions": 296
+		},
 		"test/unit/bulk_operation_atomicity_native.test.ts": {
 			"tests": 18,
 			"skipped": 0,
@@ -640,6 +645,11 @@
 			"tests": 5,
 			"skipped": 0,
 			"assertions": 22
+		},
+		"test/unit/client_ui_reveal.test.ts": {
+			"tests": 5,
+			"skipped": 0,
+			"assertions": 14
 		},
 		"test/unit/client_unsaved_registry.test.ts": {
 			"tests": 14,
@@ -2141,11 +2151,6 @@
 			"skipped": 0,
 			"assertions": 44
 		},
-		"test/unit/legacy_dialect_boundary_native.test.ts": {
-			"tests": 4,
-			"skipped": 0,
-			"assertions": 20
-		},
 		"test/unit/legacy_password_migration.test.ts": {
 			"tests": 6,
 			"skipped": 0,
@@ -2245,11 +2250,6 @@
 			"tests": 18,
 			"skipped": 0,
 			"assertions": 81
-		},
-		"test/unit/master_legacy_routing_tripwire.test.ts": {
-			"tests": 12,
-			"skipped": 0,
-			"assertions": 110
 		},
 		"test/unit/matrix_copy_columns_tripwire.test.ts": {
 			"tests": 1,
@@ -2901,6 +2901,11 @@
 			"skipped": 0,
 			"assertions": 21
 		},
+		"test/unit/password_policy_native.test.ts": {
+			"tests": 28,
+			"skipped": 0,
+			"assertions": 70
+		},
 		"test/unit/password_reset_native.test.ts": {
 			"tests": 11,
 			"skipped": 0,
@@ -3526,6 +3531,11 @@
 			"skipped": 0,
 			"assertions": 16
 		},
+		"test/unit/search_deep_semantics_native.test.ts": {
+			"tests": 22,
+			"skipped": 0,
+			"assertions": 48
+		},
 		"test/unit/search_duplicated_uncorrelated_native.test.ts": {
 			"tests": 8,
 			"skipped": 0,
@@ -3602,9 +3612,9 @@
 			"assertions": 5
 		},
 		"test/unit/search_path_acl_native.test.ts": {
-			"tests": 16,
+			"tests": 18,
 			"skipped": 0,
-			"assertions": 53
+			"assertions": 70
 		},
 		"test/unit/search_pattern_escape_tripwire.test.ts": {
 			"tests": 9,
@@ -4705,6 +4715,11 @@
 			"tests": 5,
 			"skipped": 0,
 			"assertions": 22
+		},
+		"test/unit/unit_test_dev_gate_native.test.ts": {
+			"tests": 7,
+			"skipped": 0,
+			"assertions": 18
 		},
 		"test/unit/unpublish_debt_native.test.ts": {
 			"tests": 5,

@@ -20,7 +20,7 @@ At the phone tier (`@width_break_point_phone`, 600px) and down to the floor `@mi
 
 | Surface | Phone behaviour |
 |---|---|
-| `.tool_header` | Title above description, description capped at two lines, sticky. |
+| `.tool_header` | Title above description, description capped at two lines, sticky. The dialog title bar grows with it; the body starts below. |
 | `.tool_header > .tool_buttons_container` | Controls wrap and become 44px tall. |
 | `.wrapper_tool` inputs, selects, buttons | 44px targets; inputs at 16px text (iOS zooms the page on focus of anything smaller). |
 | images, video, canvas | `max-width: 100%`. |

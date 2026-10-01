@@ -220,6 +220,8 @@ Everything else is derived from it. `bun run css:tool-colors` writes, per tool a
 Three rules keep every tool readable and consistent:
 
 - **Do not style the header surface.** The header — its light surface tinted with the tool colour, the coloured top edge, the shadow and the text colours — is shared by every tool, in a modal and in its own window. A rule setting `background` or `box-shadow` on `.tool_header` in a tool stylesheet is refused by the test suite. Style the header's *children* (a wider select, an extra control) freely.
+
+    The header's height follows its content, and so does the dialog's title bar that holds it. The description sits beside the tool name when it gets at least about 18rem of width, and moves to its own line below the name when it does not. The dialog body always starts below the header, also after the user resizes the dialog, and scrolls under it. So do not give `.tool_header` or `.tool_name_container` a fixed or maximum height: the text would be cut off.
 - **Never put text on the raw colour.** Identity colours are mid-tones chosen to be recognisable: about half of them are unreadable under white text, the other half under black. A button in the tool colour uses the shared mixin, which applies the fill, the label colour and the icon colour together:
 
     ``` less

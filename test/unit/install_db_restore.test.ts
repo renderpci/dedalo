@@ -30,7 +30,7 @@ import { sweepOrphanScratchDatabases } from '../helpers/scratch_database.ts';
 
 const SCRATCH_PREFIX = 'dedalo_install_p3_';
 const SCRATCH_DB = `${SCRATCH_PREFIX}${process.pid}`;
-const ROOT_PW = 'Testpw12345';
+const ROOT_PW = 'Testpw-Root-8';
 
 /** Admin descriptor (target the maintenance DB to CREATE/DROP the scratch one). */
 const admin: DbConnDescriptor = {
@@ -115,7 +115,7 @@ describe('db_restore + set_root_pw (P3, load-bearing)', () => {
 
 	test('set_root_pw refuses when a password already exists', async () => {
 		if (!available) return;
-		const error = await setRootPassword('Another12345', scratch).then(
+		const error = await setRootPassword('Another-Root-9', scratch).then(
 			() => null,
 			(caught: unknown) => caught,
 		);

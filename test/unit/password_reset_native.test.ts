@@ -67,7 +67,7 @@ const RUN_TAG = `pwreset_scratch_${process.pid}_${Math.random().toString(36).sli
 const USERNAME = RUN_TAG;
 const EMAIL = `${RUN_TAG}@example.test`;
 const OLD_PASSWORD = 'old_password_123';
-const NEW_PASSWORD = 'brand_new_password_9';
+const NEW_PASSWORD = 'Brand_new_Secret_9';
 
 /** The dd131 'active account' locator as real user records carry it. */
 const ACTIVE_LOCATOR = {

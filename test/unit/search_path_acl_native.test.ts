@@ -562,6 +562,26 @@ describe.if(DB_READY)('SEC-02 — the ACL holds at EVERY hop of a search path', 
 		).toEqual([]);
 	});
 
+	test('CENSUS: a NEGATED deep leaf (NOT EXISTS) carries the ACL on every hop', async () => {
+		// Negations are never reversed (WC-2026-09-29-search-deep-leaf-mixed-rule):
+		// they render as a correlated NOT EXISTS whose hop joins must carry the
+		// same record ACL as a positive leaf — at one hop and at two.
+		for (const [built, hops] of [
+			[await buildSearchSql(twoHopSqo('-zzhop02'), { principal: SCOPED }), 1],
+			[await buildSearchSql(twoHopSqo('!*'), { principal: SCOPED }), 1],
+			[await buildSearchSql(threeHopSqo('-zzhop02'), { principal: SCOPED }), 2],
+		] as const) {
+			expect(built.sql).toContain('NOT EXISTS (SELECT 1 FROM');
+			const aliases = joinAliases(built.sql);
+			expect(aliases.length).toBe(hops);
+			for (const alias of aliases) {
+				expect(onClauseOf(built.sql, alias)).toContain(`${alias}.relation @> `);
+			}
+			// Runs: every bound value is referenced (no orphan `$n`).
+			await idsOf(built);
+		}
+	});
+
 	test('CENSUS: the ORDER path twin is covered too (it shares buildJoinChain)', async () => {
 		const built = await buildSearchSql(
 			sanitizeClientSqo({
@@ -614,12 +634,12 @@ describe.if(DB_READY)('SEC-02 — the ACL holds at EVERY hop of a search path', 
 	});
 
 	test('CENSUS: the audit repro shape — a hop into dd128 — carries the users rule', async () => {
-		// The finding's literal repro: `path [{test3,test54},{dd128,dd132}]` run by
-		// a caller the read door answers 403 for. dd128 carries no component_filter,
-		// so the GENERIC branch emits nothing for it — the users-section visibility
-		// rule (own record / created_by / shared project) is what must ride the hop
-		// alias, and it is the only statement of that rule in the engine.
-		const built = await buildSearchSql(
+		// The finding's literal repro: `path [{test3,test54},{dd128,dd132}]`. dd128
+		// carries no component_filter, so the GENERIC branch emits nothing for it
+		// — the users-section visibility rule (own record / created_by / shared
+		// project) is what must ride the hop alias, and it is the only statement
+		// of that rule in the engine.
+		const auditSqo = () =>
 			sanitizeClientSqo({
 				section_tipo: [SECTION],
 				limit: 50,
@@ -635,19 +655,89 @@ describe.if(DB_READY)('SEC-02 — the ACL holds at EVERY hop of a search path', 
 						},
 					],
 				},
-			} as never),
-			{ principal: SCOPED },
+			} as never);
+
+		// (1) As run by a caller the read door answers 403 for: dd132 is not
+		// granted, so the leaf is 1=0 and — being a semi-join over the related
+		// records (WC-2026-09-29-search-deep-leaf-mixed-rule) — it opens NO hop at
+		// all: nothing reads the hidden dd128 record.
+		const refused = await buildSearchSql(auditSqo(), { principal: SCOPED });
+		expect(refused.sql).toContain('1=0');
+		expect(joinAliases(refused.sql)).toEqual([]);
+		expect(await idsOf(refused)).toEqual([]);
+
+		// (2) With dd128.dd132 granted, the hop IS read — and carries the users rule.
+		const grants = [
+			grant(1, SECTION, SECTION, 1),
+			grant(2, SECTION, HOP_COMPONENT, 1),
+			grant(3, SECTION, LEAF_COMPONENT, 1),
+		];
+		const setGrants = async (rows: ReturnType<typeof grant>[]) => {
+			await sql.unsafe(
+				`UPDATE matrix_profiles SET misc = $1::text::jsonb WHERE section_tipo = $2 AND section_id = $3`,
+				[encodeForJsonb({ dd774: rows }), PROFILES_SECTION, SCOPED_PROFILE_ID],
+			);
+			clearCaches();
+		};
+		// Restore the profile's ORIGINAL grants afterwards — not a hand-written
+		// subset: a narrower restore leaks into every later test of this file
+		// (the SEC-1 root ORDER key reads test101 from this same profile).
+		const [original] = await sql.unsafe(
+			`SELECT misc::text AS misc FROM matrix_profiles WHERE section_tipo = $1 AND section_id = $2`,
+			[PROFILES_SECTION, SCOPED_PROFILE_ID],
 		);
-		const aliases = joinAliases(built.sql);
-		expect(aliases.length).toBe(1);
-		const on = onClauseOf(built.sql, aliases[0] as string);
-		expect(on).toContain(`${aliases[0]}.section_id > 0`);
-		expect(on).toContain(`${aliases[0]}.data @> `);
-		expect(on).toContain(`${aliases[0]}.relation @> `);
-		// dd132 is not granted to this profile either, so the leaf is 1=0 as well —
-		// the two halves of the fix are independent and BOTH fire here.
-		expect(built.sql).toContain('1=0');
-		expect(await idsOf(built)).toEqual([]);
+		await setGrants([
+			...grants,
+			grant(4, USERS_SECTION, USERS_SECTION, 1),
+			grant(5, USERS_SECTION, 'dd132', 1),
+		]);
+		try {
+			const built = await buildSearchSql(auditSqo(), { principal: SCOPED });
+			expect(built.sql).not.toContain('1=0');
+			const aliases = joinAliases(built.sql);
+			expect(aliases.length).toBe(1);
+			const on = onClauseOf(built.sql, aliases[0] as string);
+			expect(on).toContain(`${aliases[0]}.section_id > 0`);
+			expect(on).toContain(`${aliases[0]}.data @> `);
+			expect(on).toContain(`${aliases[0]}.relation @> `);
+		} finally {
+			await sql.unsafe(
+				`UPDATE matrix_profiles SET misc = $1::text::jsonb WHERE section_tipo = $2 AND section_id = $3`,
+				[(original as { misc: string }).misc, PROFILES_SECTION, SCOPED_PROFILE_ID],
+			);
+			clearCaches();
+		}
+	});
+
+	test('a ROOT $or filter stays inside the section pin and the record ACL', async () => {
+		// The client filter tree is rendered to ONE WHERE part and ANDed with the
+		// section pin and the ACL parts. A root `$or` rendered bare
+		// (`pin AND A OR B AND acl`) binds as `(pin AND A) OR (B AND acl)`:
+		// branch A escapes the ACL, branch B the section pin
+		// (WC-2026-09-29-search-where-parts-parenthesized).
+		const rootOr = () =>
+			sanitizeClientSqo({
+				section_tipo: [SECTION],
+				limit: 50,
+				offset: 0,
+				filter: {
+					$or: [
+						{ q: HIDDEN_VALUE, path: [{ section_tipo: SECTION, component_tipo: LEAF_COMPONENT }] },
+						{ q: VISIBLE_VALUE, path: [{ section_tipo: SECTION, component_tipo: LEAF_COMPONENT }] },
+					],
+				},
+			} as never);
+
+		// Non-degeneracy: the admin (no record ACL) sees both records.
+		const admin = await idsOf(await buildSearchSql(rootOr(), { principal: ADMIN }));
+		expect(admin).toContain(HIDDEN_ID);
+		expect(admin).toContain(VISIBLE_ID);
+
+		// The scoped caller sees only the record in her own project.
+		const scoped = await buildSearchSql(rootOr(), { principal: SCOPED });
+		const ids = await idsOf(scoped);
+		expect(ids).toContain(VISIBLE_ID);
+		expect(ids).not.toContain(HIDDEN_ID);
 	});
 
 	// --- (b) the oracle itself ---------------------------------------------

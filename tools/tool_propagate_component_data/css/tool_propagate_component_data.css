@@ -44,7 +44,7 @@
   border-color: var(--tool_fill);
   color: var(--tool_on_fill);
 }
-.wrapper_tool.tool_propagate_component_data > .content_data > .buttons_container button::before {
+.wrapper_tool.tool_propagate_component_data > .content_data > .buttons_container button:not(.button_spinner)::before {
   background-color: var(--button-bg-color, var(--tool_on_fill)) !important;
 }
 .wrapper_tool.tool_propagate_component_data > .content_data > .buttons_container button:hover {

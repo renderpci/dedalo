@@ -13,10 +13,13 @@
  * matrix_time_machine (_tm) builder twin. It throws.
  */
 
-import type { BuilderContext, BuilderResult, Fragment } from './types.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
+import type { BuilderContext, BuilderOpts, BuilderResult, Classified, Fragment } from './types.ts';
 import {
+	aggAclClause,
 	anchoredRegexOperand,
 	compound,
+	effectiveOf,
 	extractNormalizedQ,
 	fragment,
 	isLiteralQ,
@@ -119,8 +122,14 @@ function withStorePrefilter(
  * complexity cap: the branch carries its own lang/store decisions and none of
  * them depend on q.
  */
-function buildDuplicatedFragment(context: BuilderContext): Fragment {
-	const dupLang = context.lang === 'all' ? 'all' : context.translatable ? context.lang : 'lg-nolan';
+/** The lang a '!!' duplicate compares within ('all' = lang-blind). */
+function duplicateLang(context: BuilderContext): string {
+	if (context.lang === 'all') return 'all';
+	return context.translatable ? context.lang : 'lg-nolan';
+}
+
+function buildDuplicatedFragment(context: BuilderContext, opts?: BuilderOpts): Fragment {
+	const dupLang = duplicateLang(context);
 	const jsonPath =
 		dupLang === 'all' ? `$.${context.tipo}[*]` : `$.${context.tipo}[*] ? (@.lang == "${dupLang}")`;
 	const duplicatedSet = `(${context.alias}.section_tipo, ${context.alias}.section_id) IN (
@@ -129,9 +138,9 @@ function buildDuplicatedFragment(context: BuilderContext): Fragment {
     SELECT dv.section_tipo AS section_tipo, array_agg(DISTINCT dv.section_id) AS ids
     FROM (SELECT m2.section_tipo AS section_tipo, m2.section_id AS section_id,
                  f_unaccent(m2_elem->>'value') AS val
-          FROM ${context.table} AS m2,
+          FROM ${opts?.aggTable ?? context.table} AS m2,
                jsonb_path_query(m2.${context.column}, '${jsonPath}') AS m2_elem
-          WHERE m2_elem->>'value' IS NOT NULL) dv
+          WHERE m2_elem->>'value' IS NOT NULL${aggAclClause(opts)}) dv
     GROUP BY dv.section_tipo, dv.val
     HAVING count(DISTINCT dv.section_id) > 1
   ) dup, unnest(dup.ids) AS dup_id
@@ -153,20 +162,120 @@ function buildDuplicatedFragment(context: BuilderContext): Fragment {
 	return fragment(duplicatedSet, {});
 }
 
+/** The one parsed operator of a string leaf (what the builder dispatches on). */
+export type StringOp =
+	| 'none'
+	| 'empty'
+	| 'notEmpty'
+	| 'duplicated'
+	| 'different'
+	| 'exact'
+	| 'equal'
+	| 'notContains'
+	| 'literal'
+	| 'wildcard'
+	| 'contains'
+	| 'containsRaw'
+	| 'hasEntries'
+	| 'differentTwin';
+
+/**
+ * THE string-family classifier — the ONE parse of '<op><q>' (PHP precedence)
+ * and its deep-search polarity (types.ts LeafPolarity). buildStringFragment
+ * calls it at its top and dispatches on `op`, so the shallow SQL and the deep
+ * polarity can never read the operator differently.
+ *
+ * Polarity: '!*' neg(twin '*'), '-x' neg(twin containsRaw x, lang kept),
+ * '!=x' neq(has hasEntries, twin differentTwin x); everything else pos.
+ * q_split is NOT decided here — a split q is classified per token by the
+ * caller (positive tokens share one semi-join, negative ones get their own).
+ */
+export function classifyString(
+	rawQ: unknown,
+	qOperator: string | null,
+	opts?: BuilderOpts,
+): Classified<StringOp> {
+	if (
+		opts?.mode === 'containsRaw' ||
+		opts?.mode === 'hasEntries' ||
+		opts?.mode === 'differentTwin'
+	) {
+		return { kind: 'pos', op: opts.mode };
+	}
+	if (opts?.mode !== undefined) {
+		throw new DedaloError('internal.invariant', {
+			message: `builder_string: unsupported internal mode '${opts.mode}'`,
+		});
+	}
+	const effective = effectiveOf(rawQ, qOperator);
+	if (effective === '') return { kind: 'pos', op: 'none' };
+	if (effective.startsWith('!*')) {
+		return { kind: 'neg', op: 'empty', twin: { q: '*', qOperator: null } };
+	}
+	if (effective === '*') return { kind: 'pos', op: 'notEmpty' };
+	if (effective.startsWith('!!')) return { kind: 'pos', op: 'duplicated' };
+	if (effective.startsWith('!=')) {
+		return {
+			kind: 'neq',
+			op: 'different',
+			has: { q: '', qOperator: null, opts: { mode: 'hasEntries' } },
+			twin: { q: effective.slice(2), qOperator: null, opts: { mode: 'differentTwin' } },
+		};
+	}
+	if (effective.startsWith('==')) return { kind: 'pos', op: 'exact' };
+	if (effective.startsWith('=')) return { kind: 'pos', op: 'equal' };
+	if (effective.startsWith('-')) {
+		return {
+			kind: 'neg',
+			op: 'notContains',
+			twin: { q: effective.slice(1), qOperator: null, opts: { mode: 'containsRaw' } },
+		};
+	}
+	if (isLiteralQ(effective)) return { kind: 'pos', op: 'literal' };
+	if (effective.startsWith('*') || effective.endsWith('*')) return { kind: 'pos', op: 'wildcard' };
+	return { kind: 'pos', op: 'contains' };
+}
+
+/** The '!=' match logic over the term after '!=' (wildcards read as anchors). */
+function differentMatchLogic(rest: string): string {
+	const hasLead = rest.startsWith('*');
+	const hasTrail = rest.endsWith('*');
+	return hasLead && hasTrail
+		? `f_unaccent(elem->>'value') ~* ${regexOperand('_Q1_')}`
+		: hasLead
+			? `f_unaccent(elem->>'value') ~* ${anchoredRegexOperand('_Q1_', 'ends')}`
+			: hasTrail
+				? `f_unaccent(elem->>'value') ~* ${anchoredRegexOperand('_Q1_', 'begins')}`
+				: `f_unaccent(elem->>'value') = f_unaccent(_Q1_)`;
+}
+
+/** The '-' match body (raw term, lang as bound _Q2_, no lang in the path). */
+function notContainsBody(context: BuilderContext, qClean: string): Fragment {
+	const langFilter = context.lang !== 'all' ? ` AND elem->>'lang' = _Q2_` : '';
+	const tokenValues: Record<string, unknown> =
+		context.lang !== 'all' ? { _Q1_: qClean, _Q2_: context.lang } : { _Q1_: qClean };
+	return fragment(
+		`SELECT 1 FROM jsonb_path_query(${context.alias}.${context.column}, '$.${context.tipo}[*]') AS elem ` +
+			`WHERE elem->>'value' IS NOT NULL AND f_unaccent(elem->>'value') ~* ${regexOperand('_Q1_')}${langFilter}`,
+		tokenValues,
+	);
+}
+
 export function buildStringFragment(
 	rawQ: unknown,
 	qOperator: string | null,
 	qSplit: boolean,
 	context: BuilderContext,
+	opts?: BuilderOpts,
 ): BuilderResult {
 	const q = extractNormalizedQ(rawQ) ?? '';
 	const operator = qOperator ?? '';
-	if (q === '' && operator === '') {
+	if (opts?.mode === undefined && q === '' && operator === '') {
 		return false;
 	}
 
 	// q_split: fan each word out as an independent leaf, AND-joined.
-	if (qSplit && q !== '') {
+	if (opts?.mode === undefined && qSplit && q !== '') {
 		const tokens = splitSearchTerms(q);
 		if (tokens.length > 1) {
 			return compound(
@@ -177,171 +286,165 @@ export function buildStringFragment(
 	}
 
 	// Operator prefixes may arrive glued to q (e.g. '!=word') — PHP dispatches
-	// on the leading characters of q when q_operator is not set.
+	// on the leading characters of q when q_operator is not set. The ONE parse
+	// is classifyString's.
 	const effective = operator !== '' ? operator + q : q;
+	const { op } = classifyString(rawQ, qOperator, opts);
 
-	// '!*' — empty (no value for this lang, or column NULL)
-	if (effective === '!*' || effective.startsWith('!*')) {
-		const path =
-			context.lang === 'all'
-				? `$.${context.tipo}[*].value ? (@ != "" && @ != null)`
-				: `$.${context.tipo}[*] ? (@.lang == "${context.lang}" && @.value != "" && @.value != null)`;
-		return fragment(
-			`(${context.alias}.${context.column} IS NULL OR NOT (${context.alias}.${context.column} @? (_Q1_)::jsonpath))`,
-			{ _Q1_: path },
-		);
+	switch (op) {
+		case 'none':
+			return false;
+		case 'containsRaw': {
+			const body = notContainsBody(context, q);
+			return fragment(`EXISTS (${body.sentence})`, body.tokenValues);
+		}
+		case 'hasEntries':
+			return fragment(`(${context.alias}.${context.column} @? '${buildJsonPath(context)}')`);
+		case 'differentTwin': {
+			const jsonPath = buildJsonPath(context);
+			return fragment(
+				`EXISTS (SELECT 1 FROM jsonb_path_query(${context.alias}.${context.column}, '${jsonPath}') AS elem ` +
+					`WHERE ${differentMatchLogic(q)})`,
+				{ _Q1_: q.replaceAll('*', '') },
+			);
+		}
+		case 'empty': {
+			// '!*' — empty (no value for this lang, or column NULL)
+			const path =
+				context.lang === 'all'
+					? `$.${context.tipo}[*].value ? (@ != "" && @ != null)`
+					: `$.${context.tipo}[*] ? (@.lang == "${context.lang}" && @.value != "" && @.value != null)`;
+			return fragment(
+				`(${context.alias}.${context.column} IS NULL OR NOT (${context.alias}.${context.column} @? (_Q1_)::jsonpath))`,
+				{ _Q1_: path },
+			);
+		}
+		case 'notEmpty': {
+			const path =
+				context.lang === 'all'
+					? `$.${context.tipo}[*].value ? (@ != "" && @ != null)`
+					: `$.${context.tipo}[*] ? (@.lang == "${context.lang}" && @.value != "" && @.value != null)`;
+			return fragment(`${context.alias}.${context.column} @? (_Q1_)::jsonpath`, { _Q1_: path });
+		}
+		// '!!' — DUPLICATED values: rows whose value (this lang) also appears on
+		// ANOTHER record of the same section, unaccent-compared (PHP
+		// resolve_duplicated_sql; non-translatable components force nolan).
+		//
+		// ONE UNCORRELATED SELF-AGGREGATE, materialised once per query (PERF-07,
+		// 2026-09-05). The PHP shape this replaces was a CORRELATED EXISTS whose
+		// inner FROM cross-joined the WHOLE matrix table with two
+		// jsonb_path_query calls and was re-executed for EVERY outer row — O(n^2)
+		// jsonpath evaluations, which on a museum-scale section is not slow but
+		// unfinishable. The duplicate set does not depend on the outer row at all:
+		// it is `group the lang-projected values, keep the groups holding more than
+		// one record`, computed ONCE. Same rows, O(n log n).
+		//
+		// Section-exact by TUPLE, not by id: the groups are keyed by section_tipo
+		// as well, and membership is asked as (section_tipo, section_id) — a bare
+		// `section_id IN (…)` would let a duplicate pair in ANOTHER tipo of the
+		// same physical table match a same-numbered record here.
+		//
+		// Lang-exact WITHOUT the store: `matrix_string_search` has no lang column
+		// (db_pg_definitions.json), so it can only ever be a SUPERSET pre-filter,
+		// and only when the comparison itself is lang-blind ('all'). No lang column
+		// is added to the store here.
+		//
+		// VALUELESS ENTRIES ARE NOT DUPLICATES. The retired correlated shape
+		// compared `f_unaccent(a) = f_unaccent(b)`, and NULL never equals NULL, so
+		// entries carrying no `value` key could not pair. `GROUP BY` treats NULLs as
+		// EQUAL, so the aggregate would report every such record as a duplicate of
+		// every other — a widening of the answer, not of the plan. The inner
+		// projection drops them.
+		case 'duplicated':
+			return buildDuplicatedFragment(context, opts);
+		case 'different': {
+			// '!=' — has data for the lang AND no entry matches. The term travels
+			// RAW in every arm: the wildcard arms make it literal in SQL
+			// (`regexOperand`, after f_unaccent), the plain arm compares with '='
+			// and must keep it raw (DATA-34 boundary).
+			const rest = effective.slice(2);
+			const jsonPath = buildJsonPath(context);
+			return fragment(
+				`(${context.alias}.${context.column} @? '${jsonPath}') AND NOT EXISTS (` +
+					`SELECT 1 FROM jsonb_path_query(${context.alias}.${context.column}, '${jsonPath}') AS elem ` +
+					`WHERE ${differentMatchLogic(rest)})`,
+				{ _Q1_: rest.replaceAll('*', '') },
+			);
+		}
+		case 'exact': {
+			// '==' — exactly equal (accent/case-insensitive)
+			const qClean = effective.slice(2);
+			return withStorePrefilter(
+				context,
+				existsEnvelope(context, `f_unaccent(elem->>'value') = f_unaccent(_Q1_)`),
+				{ _Q1_: qClean },
+				qClean,
+			);
+		}
+		case 'equal': {
+			// '=' — exactly equal, the single-char twin of '==' (TS-BEYOND-PHP,
+			// owner-directed 2026-07-09: PHP has no single '=' operator — it
+			// silently STRIPS the '=' and runs contains, so short names like
+			// 'Ea'/'Ye'/'Ibi' drowned in 1000+ contains-matches and could never be
+			// picked. The splitSearchTerms tokenizer already glued '=' to its word;
+			// q_split multi-word input fans out per-word, each exact). Quoted
+			// literals ('Ea') keep working as before on both engines.
+			const qClean = effective.slice(1).replaceAll("'", '');
+			if (qClean === '') return false;
+			return withStorePrefilter(
+				context,
+				existsEnvelope(context, `f_unaccent(elem->>'value') = f_unaccent(_Q1_)`),
+				{ _Q1_: qClean },
+				qClean,
+			);
+		}
+		case 'notContains': {
+			// '-' — not contain (lang as bound param _Q2_, no lang in path)
+			const body = notContainsBody(context, effective.slice(1));
+			return fragment(`NOT EXISTS (${body.sentence})`, body.tokenValues);
+		}
+		case 'literal': {
+			// Literal 'text' — exact equality, quotes stripped, no wildcard handling.
+			const qClean = effective.slice(1, -1);
+			return withStorePrefilter(
+				context,
+				existsEnvelope(context, `f_unaccent(elem->>'value') = f_unaccent(_Q1_)`),
+				{ _Q1_: qClean },
+				qClean,
+			);
+		}
+		case 'wildcard': {
+			// Wildcard anchoring: leading '*' = ends-with, trailing '*' = begins-with.
+			const hasLead = effective.startsWith('*');
+			const hasTrail = effective.endsWith('*');
+			const qClean = effective.replaceAll('*', '').replaceAll("'", '');
+			const matchLogic =
+				hasLead && hasTrail
+					? `f_unaccent(elem->>'value') ~* ${regexOperand('_Q1_')}`
+					: hasLead
+						? `f_unaccent(elem->>'value') ~* ${anchoredRegexOperand('_Q1_', 'ends')}`
+						: `f_unaccent(elem->>'value') ~* ${anchoredRegexOperand('_Q1_', 'begins')}`;
+			// Anchored variants still pre-filter on the plain (unanchored) RAW q —
+			// a value matching '^q'/'q$' contains q, so the superset holds.
+			return withStorePrefilter(
+				context,
+				existsEnvelope(context, matchLogic),
+				{ _Q1_: qClean },
+				qClean,
+			);
+		}
+		case 'contains': {
+			// Default: contains (regex, accent/case-insensitive). Strip '+ * ='.
+			const qClean = effective.replace(/[+*=]/g, '');
+			if (qClean === '') {
+				return false;
+			}
+			return withStorePrefilter(
+				context,
+				existsEnvelope(context, `f_unaccent(elem->>'value') ~* ${regexOperand('_Q1_')}`),
+				{ _Q1_: qClean },
+				qClean,
+			);
+		}
 	}
-
-	// '*' — not-empty
-	if (effective === '*') {
-		const path =
-			context.lang === 'all'
-				? `$.${context.tipo}[*].value ? (@ != "" && @ != null)`
-				: `$.${context.tipo}[*] ? (@.lang == "${context.lang}" && @.value != "" && @.value != null)`;
-		return fragment(`${context.alias}.${context.column} @? (_Q1_)::jsonpath`, { _Q1_: path });
-	}
-
-	// '!!' — DUPLICATED values: rows whose value (this lang) also appears on
-	// ANOTHER record of the same section, unaccent-compared (PHP
-	// resolve_duplicated_sql; non-translatable components force nolan).
-	//
-	// ONE UNCORRELATED SELF-AGGREGATE, materialised once per query (PERF-07,
-	// 2026-09-05). The PHP shape this replaces was a CORRELATED EXISTS whose
-	// inner FROM cross-joined the WHOLE matrix table with two
-	// jsonb_path_query calls and was re-executed for EVERY outer row — O(n^2)
-	// jsonpath evaluations, which on a museum-scale section is not slow but
-	// unfinishable. The duplicate set does not depend on the outer row at all:
-	// it is `group the lang-projected values, keep the groups holding more than
-	// one record`, computed ONCE. Same rows, O(n log n).
-	//
-	// Section-exact by TUPLE, not by id: the groups are keyed by section_tipo
-	// as well, and membership is asked as (section_tipo, section_id) — a bare
-	// `section_id IN (…)` would let a duplicate pair in ANOTHER tipo of the
-	// same physical table match a same-numbered record here.
-	//
-	// Lang-exact WITHOUT the store: `matrix_string_search` has no lang column
-	// (db_pg_definitions.json), so it can only ever be a SUPERSET pre-filter,
-	// and only when the comparison itself is lang-blind ('all'). No lang column
-	// is added to the store here.
-	//
-	// VALUELESS ENTRIES ARE NOT DUPLICATES. The retired correlated shape
-	// compared `f_unaccent(a) = f_unaccent(b)`, and NULL never equals NULL, so
-	// entries carrying no `value` key could not pair. `GROUP BY` treats NULLs as
-	// EQUAL, so the aggregate would report every such record as a duplicate of
-	// every other — a widening of the answer, not of the plan. The inner
-	// projection drops them.
-	if (effective.startsWith('!!')) {
-		return buildDuplicatedFragment(context);
-	}
-
-	// '!=' — has data for the lang AND no entry matches
-	if (effective.startsWith('!=')) {
-		const qClean = effective.slice(2).replaceAll('*', '');
-		const hasLead = effective.slice(2).startsWith('*');
-		const hasTrail = effective.slice(2).endsWith('*');
-		const matchLogic =
-			hasLead && hasTrail
-				? `f_unaccent(elem->>'value') ~* ${regexOperand('_Q1_')}`
-				: hasLead
-					? `f_unaccent(elem->>'value') ~* ${anchoredRegexOperand('_Q1_', 'ends')}`
-					: hasTrail
-						? `f_unaccent(elem->>'value') ~* ${anchoredRegexOperand('_Q1_', 'begins')}`
-						: `f_unaccent(elem->>'value') = f_unaccent(_Q1_)`;
-		const jsonPath = buildJsonPath(context);
-		// The term travels RAW in every arm: the wildcard arms make it literal in
-		// SQL (`regexOperand`, after f_unaccent), the plain arm compares with '='
-		// and must keep it raw (DATA-34 boundary).
-		return fragment(
-			`(${context.alias}.${context.column} @? '${jsonPath}') AND NOT EXISTS (` +
-				`SELECT 1 FROM jsonb_path_query(${context.alias}.${context.column}, '${jsonPath}') AS elem ` +
-				`WHERE ${matchLogic})`,
-			{ _Q1_: qClean },
-		);
-	}
-
-	// '==' — exactly equal (accent/case-insensitive)
-	if (effective.startsWith('==')) {
-		const qClean = effective.slice(2);
-		return withStorePrefilter(
-			context,
-			existsEnvelope(context, `f_unaccent(elem->>'value') = f_unaccent(_Q1_)`),
-			{ _Q1_: qClean },
-			qClean,
-		);
-	}
-
-	// '=' — exactly equal, the single-char twin of '==' (TS-BEYOND-PHP,
-	// owner-directed 2026-07-09: PHP has no single '=' operator — it silently
-	// STRIPS the '=' and runs contains, so short names like 'Ea'/'Ye'/'Ibi'
-	// drowned in 1000+ contains-matches and could never be picked. The
-	// splitSearchTerms tokenizer already glued '=' to its word; q_split
-	// multi-word input fans out per-word, each exact). Quoted literals ('Ea')
-	// keep working as before on both engines.
-	if (effective.startsWith('=')) {
-		const qClean = effective.slice(1).replaceAll("'", '');
-		if (qClean === '') return false;
-		return withStorePrefilter(
-			context,
-			existsEnvelope(context, `f_unaccent(elem->>'value') = f_unaccent(_Q1_)`),
-			{ _Q1_: qClean },
-			qClean,
-		);
-	}
-
-	// '-' — not contain (lang as bound param _Q2_, no lang in path)
-	if (effective.startsWith('-')) {
-		const qClean = effective.slice(1);
-		const langFilter = context.lang !== 'all' ? ` AND elem->>'lang' = _Q2_` : '';
-		const tokenValues: Record<string, unknown> =
-			context.lang !== 'all' ? { _Q1_: qClean, _Q2_: context.lang } : { _Q1_: qClean };
-		return fragment(
-			`NOT EXISTS (SELECT 1 FROM jsonb_path_query(${context.alias}.${context.column}, '$.${context.tipo}[*]') AS elem ` +
-				`WHERE elem->>'value' IS NOT NULL AND f_unaccent(elem->>'value') ~* ${regexOperand('_Q1_')}${langFilter})`,
-			tokenValues,
-		);
-	}
-
-	// Literal 'text' — exact equality, quotes stripped, no wildcard handling.
-	if (isLiteralQ(effective)) {
-		const qClean = effective.slice(1, -1);
-		return withStorePrefilter(
-			context,
-			existsEnvelope(context, `f_unaccent(elem->>'value') = f_unaccent(_Q1_)`),
-			{ _Q1_: qClean },
-			qClean,
-		);
-	}
-
-	// Wildcard anchoring: leading '*' = ends-with, trailing '*' = begins-with.
-	const hasLead = effective.startsWith('*');
-	const hasTrail = effective.endsWith('*');
-	if (hasLead || hasTrail) {
-		const qClean = effective.replaceAll('*', '').replaceAll("'", '');
-		const matchLogic =
-			hasLead && hasTrail
-				? `f_unaccent(elem->>'value') ~* ${regexOperand('_Q1_')}`
-				: hasLead
-					? `f_unaccent(elem->>'value') ~* ${anchoredRegexOperand('_Q1_', 'ends')}`
-					: `f_unaccent(elem->>'value') ~* ${anchoredRegexOperand('_Q1_', 'begins')}`;
-		// Anchored variants still pre-filter on the plain (unanchored) RAW q —
-		// a value matching '^q'/'q$' contains q, so the superset holds.
-		return withStorePrefilter(
-			context,
-			existsEnvelope(context, matchLogic),
-			{ _Q1_: qClean },
-			qClean,
-		);
-	}
-
-	// Default: contains (regex, accent/case-insensitive). Strip '+ * ='.
-	const qClean = effective.replace(/[+*=]/g, '');
-	if (qClean === '') {
-		return false;
-	}
-	return withStorePrefilter(
-		context,
-		existsEnvelope(context, `f_unaccent(elem->>'value') ~* ${regexOperand('_Q1_')}`),
-		{ _Q1_: qClean },
-		qClean,
-	);
 }

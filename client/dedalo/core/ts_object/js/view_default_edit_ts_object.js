@@ -41,22 +41,22 @@
 */
 
 // imports
-	import {ui} from '../../common/js/ui.js'
-	import {when_in_viewport, dd_request_idle_callback} from '../../common/js/events.js'
-	import {data_manager} from '../../common/js/data_manager.js'
-	import {create_row_window} from '../../common/js/row_window.js'
-	import {
-		on_dragstart,
-		on_dragend,
-		on_drop,
-		on_dragover,
-		on_dragleave
-	} from './drag_and_drop.js'
-	import * as touch_pick from '../../common/js/touch_pick.js'
-	import {ts_object} from '../../ts_object/js/ts_object.js'
 	import {a11y} from '../../common/js/a11y.js'
-	import {render_ts_line} from './render_ts_line.js'
+	import {data_manager} from '../../common/js/data_manager.js'
+	import {dd_request_idle_callback, when_in_viewport } from '../../common/js/events.js'
+	import {create_row_window} from '../../common/js/row_window.js'
+	import * as touch_pick from '../../common/js/touch_pick.js'
+	import {ui} from '../../common/js/ui.js'
+	import {ts_object} from '../../ts_object/js/ts_object.js'
+	import {
+		on_dragend,
+		on_dragleave,
+		on_dragover,
+		on_dragstart,
+		on_drop
+	} from './drag_and_drop.js'
 	import {render_id_column} from './render_ts_id_column.js'
+	import {render_ts_line} from './render_ts_line.js'
 
 
 
@@ -833,7 +833,13 @@ const render_wrapper = function(self) {
 				e.stopPropagation()
 				on_drop(self, touch_pick.as_drop_event(), wrap_ts_object)
 			}
-			wrap_ts_object.addEventListener('click', touch_place_handler)
+			// role null + tabindex -1: the wrapper is a tree row, not a button,
+			// and must not become a tab stop; Enter/Space on a focused term drops too.
+			a11y.make_activable(wrap_ts_object, {
+				on_activate	: touch_place_handler,
+				role		: null,
+				tabindex	: -1
+			})
 		}
 
 

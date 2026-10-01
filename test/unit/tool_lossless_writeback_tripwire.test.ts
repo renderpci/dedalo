@@ -1354,7 +1354,7 @@ const UNRESOLVED_DYNAMIC_IMPORT_EXEMPT: Record<string, { sites: number; reason: 
 			'the CI tier loads the suite MariaDB helper (test/helpers/suite_mariadb.ts, outside the matrix corpus) by a joined absolute path; it provisions MariaDB, never a matrix row.',
 	},
 	'scripts/tool_viewport_check.ts': {
-		sites: 6,
+		sites: 7,
 		reason:
 			'every site runs INSIDE page.evaluate: a browser-side import of a SERVED client URL (/dedalo/…/instances.js, a tool module) in headless Chrome — not a server module, no matrix writer.',
 	},
@@ -1407,6 +1407,12 @@ const OUT_OF_CORPUS_TARGETS: {
 		matches: (target) => /^tools\/.+\.js$/.test(target) && isImportFreeLeaf(target),
 		reason:
 			'a tools/**/*.js module OUTSIDE the client leg (e.g. transcribers/lib/paragraphs.js, which src/core/tools/transcription_asr.ts runs SERVER-side) admitted only as a mechanically checked LEAF: no import, no require(, no Bun./process./fetch( — it can reach no module, no database and no network, so it can write nothing.',
+	},
+	{
+		id: 'client-js-leaf',
+		matches: (target) => /^client\/dedalo\/.+\.js$/.test(target) && isImportFreeLeaf(target),
+		reason:
+			'a client/dedalo/**/*.js module the SERVER also imports so both sides run the SAME bytes (e.g. component_password/js/password_policy.js, which src/core/security/password_policy.ts enforces) — admitted only as a mechanically checked LEAF: no import, no require(, no Bun./process./fetch(, so it can write nothing.',
 	},
 ];
 
@@ -3576,6 +3582,7 @@ describe('LEG 4 — the spelling reader and the out-of-corpus classes', () => {
 			'json-data',
 			'tool-client-js',
 			'tools-js-leaf',
+			'client-js-leaf',
 		]);
 	});
 });

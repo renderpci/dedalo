@@ -221,3 +221,55 @@ describe('update_ontology server picker: no cross-widget event bleed', () => {
 		expect(src).toContain('publish_active_server(servers, on_server_change)');
 	});
 });
+
+describe('update_ontology failures render IN the panel', () => {
+	// Real, 2026-09-30: a refused import (`maintenance.action_failed`, origin
+	// mismatch) showed NOTHING — handle_api_error routed it to a toast, and the
+	// toast lands in the inspector bubble container this area does not show. The
+	// page-wide 'api_error' channel still runs the policy (relogin, error report);
+	// the panel owns the visible failure.
+	const fn_start = src.indexOf('export const build_failure');
+	const fn_body = src.slice(fn_start, src.indexOf('}//end build_failure', fn_start));
+
+	test('both phases append build_failure to body_response; no widget-level toast', () => {
+		expect(fn_start).toBeGreaterThan(-1);
+		expect(src).toContain(
+			'body_response.appendChild(build_failure(server_ontology_api_response.error))',
+		);
+		expect(src).toContain('body_response.appendChild(build_failure(api_response.error))');
+		expect(/handle_api_error\s*\(/.test(src), 'a toast is invisible in this area').toBe(false);
+	});
+
+	test('the server message and request_id ride with the label — as text nodes', () => {
+		// the label ('The maintenance action failed') alone hides the cause
+		expect(fn_body).toContain('error_text(api_error)');
+		expect(fn_body).toContain('api_error?.message');
+		expect(fn_body).toContain('api_error?.request_id');
+		expect(fn_body).toContain('document.createTextNode(line)');
+		expect(/inner_html|innerHTML/.test(fn_body), 'server text never reaches an HTML sink').toBe(
+			false,
+		);
+	});
+});
+
+describe('update_ontology results are scrolled into view', () => {
+	// The response surface sits below the TLD reference block and the submit
+	// button: a result or a failure landed under the fold and the panel looked
+	// idle unless the operator scrolled. The mechanism is the shared ui.reveal
+	// (pinned in client_ui_reveal.test.ts); no local copy.
+	test('every ending reveals its node', () => {
+		expect(src).not.toContain('scrollIntoView');
+		// Phase 1 + Phase 2 failures (envelope and non-envelope), the version
+		// change shown while Phase 2 runs, and the success status line
+		expect(src).toContain(
+			'ui.reveal(body_response.appendChild(build_failure(server_ontology_api_response.error)))',
+		);
+		expect(src).toContain(
+			'ui.reveal(body_response.appendChild(build_failure(api_response.error)))',
+		);
+		expect(src).toContain(
+			'ui.reveal(body_response.appendChild(build_version_change(current_ontology, result.info)))',
+		);
+		expect(src.match(/ui\.reveal\(ui\.create_dom_element\(/g)?.length).toBe(3);
+	});
+});

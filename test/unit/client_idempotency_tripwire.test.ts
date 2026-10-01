@@ -569,7 +569,7 @@ describe('C — the client census (TOTAL over client/ and tools/**/js)', () => {
 		).toEqual([
 			// The installer helper forwards its caller's value and DEFAULTS to
 			// retries:1, so the unreadable case is the safe one.
-			'client/dedalo/core/installer/js/render_installer.js:317',
+			'client/dedalo/core/installer/js/render_installer.js:319',
 		]);
 	});
 

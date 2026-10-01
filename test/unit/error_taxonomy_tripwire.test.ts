@@ -485,7 +485,7 @@ const FAILURE_LITERAL_BASELINE: Readonly<Record<string, number>> = {
 	'src/core/tools/transcription_asr.ts': 5,
 	'src/core/tools/transcription_local_asr.ts': 6,
 	'src/core/tools/translation.ts': 5,
-	'src/core/update/code_build_plan.ts': 6,
+	'src/core/update/code_build_plan.ts': 2,
 	'src/core/update/engine.ts': 2,
 	'src/core/update/transform/engine.ts': 1,
 	'tools/tool_import_dedalo_csv/server/index.ts': 1,

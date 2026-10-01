@@ -98,7 +98,48 @@ function classSupportsTranslation(model: string): boolean {
 	return getComponentModel(model)?.classSupportsTranslation === true;
 }
 
+/**
+ * What a `secretValue` model's stored value resolves as, on every display
+ * door: "something is set", never the value (see ComponentModel.secretValue).
+ * Sent back, it cannot become a credential — it breaks the password policy.
+ */
+export const SECRET_MASK = '****************';
+
+/** Whether a stored scalar is empty ("no value" stays visible through the mask). */
+function isEmptyStored(value: unknown): boolean {
+	return value === null || value === undefined || value === '';
+}
+
+/** One item with its stored value replaced by SECRET_MASK (empty stays empty). */
+function maskSecretItem(item: unknown): unknown {
+	if (item === null || typeof item !== 'object' || !('value' in item)) {
+		return isEmptyStored(item) ? item : SECRET_MASK;
+	}
+	return isEmptyStored((item as { value: unknown }).value)
+		? item
+		: { ...(item as object), value: SECRET_MASK };
+}
+
+/** Replace every non-empty stored value in an item array with SECRET_MASK. */
+export function maskSecretItems(items: unknown[] | null): unknown[] | null {
+	return items === null ? null : items.map(maskSecretItem);
+}
+
 export async function resolveComponentValue(
+	record: MatrixRecord,
+	componentTipo: string,
+	model: string,
+	lang: string,
+): Promise<{ value: unknown[] | null; fallbackValue: unknown[] | null }> {
+	const resolved = await resolveStoredComponentValue(record, componentTipo, model, lang);
+	if (getComponentModel(model)?.secretValue !== true) return resolved;
+	return {
+		value: maskSecretItems(resolved.value),
+		fallbackValue: maskSecretItems(resolved.fallbackValue),
+	};
+}
+
+async function resolveStoredComponentValue(
 	record: MatrixRecord,
 	componentTipo: string,
 	model: string,

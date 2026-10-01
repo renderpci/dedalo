@@ -20,6 +20,10 @@
 			margin-top: 0;
 		}
 
+		.dd_readout {
+			grid-template-columns: minmax(min-content, 20rem) 1fr;
+		}
+
 		// BUILD AND PUBLISH — one row per channel: the action button in the
 		// key cell, the archive it writes in the value cell. The key cell is
 		// the readout's label column, so its label styling (uppercase, small)
@@ -32,6 +36,7 @@
 				padding: 0.4rem 0.5rem;
 				text-transform: none;
 				letter-spacing: normal;
+				white-space: normal;
 
 				// a channel with no branch to build: stated, not blank —
 				// the same muted-italic voice as an unbuilt artifact cell

@@ -81,6 +81,8 @@
  *       [--audit-base <sha>]      # the push's `before`: what the remote had (the pre-push
  *                                 # hook passes its remote sha; default: host upstream)
  *   Any mode: [--summary <file.json>]
+ *             [--skip-advisory]   # desk only: skip the db tier's ADVISORY unit stage (~5 min);
+ *                                 # it cannot change the verdict, and the runner still runs it
  *
  * The db and instance tiers each DROP AND REBUILD their own suite database. In host mode
  * that is `dedalo_ci_test` on your Postgres (distinct from the one `bun run
@@ -168,6 +170,7 @@ const BOOLEAN_FLAGS = new Set([
 	'--docker',
 	'--build',
 	'--fail-fast',
+	'--skip-advisory',
 	'--help',
 	'-h',
 ]);
@@ -247,6 +250,17 @@ export function gitScrubbedEnv(
 			([key]) => !local.has(key) && !/^GIT_CONFIG_(KEY|VALUE)_\d+$/.test(key),
 		),
 	);
+}
+
+/**
+ * `--skip-advisory` → `DEDALO_CI_SKIP_ADVISORY` for the tier scripts. ALWAYS set, to '1' or
+ * '0', so a value exported in the caller's shell never reaches a tier unasked. Only an
+ * ADVISORY stage honours it (db_tier.sh's unit stage — it cannot fail the tier), so the
+ * verdict is the same with or without it; what the desk loses is the early print of a new
+ * unit red, which the runner still prints. No workflow may set it (ci_local_native).
+ */
+export function advisoryEnv(args: Pick<Args, 'flags'>): { DEDALO_CI_SKIP_ADVISORY: '0' | '1' } {
+	return { DEDALO_CI_SKIP_ADVISORY: args.flags.has('--skip-advisory') ? '1' : '0' };
 }
 
 /** Could-not-run: exit 2, distinct from a red tier (1). */
@@ -381,6 +395,13 @@ export function parseStages(
 		if (text.startsWith('RED in ')) {
 			if (stage !== undefined) {
 				stage.verdict = 'red';
+				stage.notes.push(text);
+			}
+		} else if (text.startsWith('SKIPPED')) {
+			// the tier skipped its OWN open stage (db_tier.sh's --skip-advisory); a red or
+			// advisory verdict already recorded is never downgraded
+			if (stage !== undefined && stage.verdict === 'green') {
+				stage.verdict = 'skipped';
 				stage.notes.push(text);
 			}
 		} else if (/^(RED|GREEN|OK)\b/.test(text)) {
@@ -628,6 +649,7 @@ async function runOnHost(args: Args, tiers: readonly Tier[]): Promise<TierResult
 				.map((key) => [key, process.env[key]]),
 		),
 		DEDALO_PRIVATE_DIR: privateDir,
+		...advisoryEnv(args),
 		...(binPath === undefined ? {} : { DEDALO_PG_BIN_PATH: binPath }),
 	};
 
@@ -997,6 +1019,7 @@ async function runInDocker(args: Args, tiers: readonly Tier[]): Promise<TierResu
 		DEDALO_CI_BASE_REF: base ?? '',
 		DEDALO_CI_AUDIT_BASE: auditBase,
 		DEDALO_CI_OVERLAY: overlay ? '1' : '0',
+		...advisoryEnv(args),
 		// compose.yml REQUIRES this (`:?`) for every command it parses, `down` included —
 		// without it the teardown fails to interpolate and leaks the project's network.
 		DEDALO_CI_TIER_SCRIPT: 'none',

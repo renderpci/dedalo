@@ -58,6 +58,11 @@ list in the center. Each dropped component becomes one column of the export.
 - **Order matters.** The export columns follow the exact order of the *Active
   elements* list. **Drag the items up and down** to reorder them; the output
   columns (and every download) follow that order.
+- **Where it lands.** While you drag (a new component or an item being
+  reordered), a line shows exactly where it will be placed: before the row under
+  the pointer when you are over its upper half, after it over the lower half, and
+  at the end when you are below the list. A component that is already in the list
+  is highlighted instead, and cannot be added twice.
 - **Remove** a column with the **×** on its item.
 - **Activate all columns / Deactivate all columns** add or clear the whole set at
   once.
@@ -257,12 +262,16 @@ In the **presets** block at the top of the configuration panel:
 
 - **＋ (New)** — saves the current configuration (selected columns + format +
   breakdown + all options) as a new preset and opens a small editor to give it a
-  **name**, and optionally mark it **Public** (shared with all users) or **Default**.
-- **Apply** (on a preset row) — loads that preset: it rebuilds the selected columns
-  in order and restores the format and options.
-- **Save changes** — updates the currently selected preset with the current
+  **name** (one per preset), and optionally mark it **Public** (shared with all
+  users) or **Default**. The editor's fields show no tool buttons.
+- **Click a preset row** to apply it: it rebuilds the selected columns in order and
+  restores the format and options. The applied preset is marked with a filled
+  circle.
+- **Save changes** — shown while a preset is applied; updates it with the current
   configuration.
-- **Edit / Delete** — rename/flag or remove a preset.
+- **Edit / Delete** — rename/flag or remove a preset. The two buttons appear at the
+  end of a row when the pointer is over it (on a touch screen they are always
+  visible). Delete asks for confirmation, naming the preset.
 
 Presets are **scoped to the section** you are exporting (a preset created on one
 section does not appear on another). Public presets are visible to every user; your

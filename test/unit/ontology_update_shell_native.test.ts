@@ -209,9 +209,9 @@ function remoteCatalog(origin: string): {
 
 function optionsFor(origin: string, tlds: readonly string[]): unknown {
 	return {
-		// The client-supplied url is IGNORED (WC-023 D5) — point it somewhere
-		// else entirely so a shell that trusted it would fetch the wrong host.
-		server: { name: 'zzd master', url: 'http://never.trusted.example/', code: 'zzdmaster' },
+		// The client url only SELECTS a configured server by origin (WC-023 D5);
+		// the files are still origin-pinned to the catalog entry it selects.
+		server: { name: 'zzd master', url: `${origin}/api/`, code: 'zzdmaster' },
 		files: tlds.map((tld) => ({ tld, url: `${origin}/${tld}.copy.gz` })),
 	};
 }
@@ -397,7 +397,7 @@ afterAll(async () => {
 // ---------------------------------------------------------------------------
 
 describe('target refusal short-circuits before any artifact exists', () => {
-	test('an unknown server code is refused with NO io dir, staging dir or recovery dir', async () => {
+	test('an unconfigured server is refused with NO io dir, staging dir or recovery dir', async () => {
 		const { ioBaseDir, changesDir } = makeDirs();
 		const out = await updateOntology(optionsFor('http://x.example', [TLD]), -1, {
 			catalog: {
@@ -409,7 +409,7 @@ describe('target refusal short-circuits before any artifact exists', () => {
 		});
 
 		expect(out.ok).toBe(false);
-		expect(out.errors).toEqual(['unknown ontology server code: zzdmaster']);
+		expect(out.errors).toEqual(['unknown ontology server: http://x.example']);
 		expect(out.msg).toBe('Error. The selected server is not configured on this instance');
 		// The refusal is BEFORE setOntologyIoPath: nothing at all was created.
 		// A future edit that trusted the client-supplied `server.url` (WC-023 D5
@@ -430,7 +430,7 @@ describe('target refusal short-circuits before any artifact exists', () => {
 			ioBaseDir,
 			changesDir,
 		});
-		expect(refused.errors).toEqual(['unknown ontology server code: localhost']);
+		expect(refused.errors).toEqual(['unknown ontology server: http://localhost']);
 		expect(readdirSync(ioBaseDir)).toEqual([]);
 
 		// Same call, same client bytes — only the INJECTED catalog differs. This

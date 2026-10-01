@@ -465,3 +465,45 @@ describe('both doors refuse a remote peer when this master would advertise a loc
 		}, 30_000);
 	}
 });
+
+describe('publicOriginIsLocal — the predicate BOTH the refusal above and the boot warning read', () => {
+	// localOriginRefusal is tested with an INJECTED boolean; this is the thing that
+	// produces it. Behaviour, not a source grep: an earlier text-window assertion of
+	// this predicate matched the COMMENT above the code and stayed green with the
+	// loopback branch deleted.
+	const withHost = async (host: string): Promise<boolean> => {
+		const { publicOriginIsLocal } = await import('../../src/core/resolve/public_origin.ts');
+		const previous = process.env.DEDALO_HOST;
+		process.env.DEDALO_HOST = host;
+		try {
+			return publicOriginIsLocal();
+		} finally {
+			if (previous === undefined) delete process.env.DEDALO_HOST;
+			else process.env.DEDALO_HOST = previous;
+		}
+	};
+
+	test('unset is local — the documented `localhost` fallback', async () => {
+		expect(await withHost('')).toBe(true);
+	});
+
+	test.each(['localhost', 'LocalHost', '127.0.0.1', '127.1.2.3', '::1', '[::1]', 'localhost:4001'])(
+		'an EXPLICIT loopback name (%p) is local too — it advertises the same useless urls',
+		async (host) => {
+			expect(await withHost(host)).toBe(true);
+		},
+	);
+
+	test.each(['v7.master.dedalo.dev', 'dedalo.example.org', 'localhost.dedalo.dev', '10.0.0.5'])(
+		'a real name (%p) is NOT local — or every server would be refused or warned forever',
+		async (host) => {
+			expect(await withHost(host)).toBe(false);
+		},
+	);
+
+	test('a server with no usable public name says so at boot (role-gated, warned not dropped)', () => {
+		const server = readFileSync(join(import.meta.dir, '../../src/server.ts'), 'utf8');
+		expect(server).toMatch(/isOntologyServer\s*\|\|\s*config\.update\.isCodeServer/);
+		expect(server).toMatch(/publicOriginIsLocal\(\)\s*\)\s*\{[\s\S]{0,600}?console\.warn\(/);
+	});
+});

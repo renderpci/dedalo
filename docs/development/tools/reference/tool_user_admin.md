@@ -34,7 +34,7 @@ The behaviour that would let a low-privilege user edit their own data regardless
   | `dd134` | `component_email` | email — editable |
   | `dd522` | `component_image` | user image — editable (upload tool enabled via `show_interface.tools: true`) |
 
-  All non-image components set `show_interface.tools: false` to hide inline tooling; the image keeps `tools: true` so the upload tool is available. (A `dd170` projects/filter ddo is present but commented out.)
+  All non-image components set `show_interface.tools: false` to hide inline tooling; the image keeps `tools: true` so the upload tool is available. These declarations are applied by the client, not the server (see [`properties.show_interface` on a client-sent ddo](../../../core/dd_object.md#propertiesshow_interface-on-a-client-sent-ddo)). (A `dd170` projects/filter ddo is present but commented out.)
 - **Rendering.** `render_tool_user_admin.js::edit` builds a standard tool wrapper (`ui.tool.build_wrapper_edit`); `get_content_data` lays out one `component_column` per ddo inside a CSS grid `components_container`, resolving each ddo to a live instance via `self.get_component(ddo)` (which itself fixes `section_id = page_globals.user_id`, `section_tipo = 'dd128'`, `lang = page_globals.dedalo_data_lang`) and rendering them in parallel.
 - **Demo guard.** `build()` throws (and the panel surfaces an error instead of editable fields) when `page_globals.dedalo_entity === 'dedalo_demo'` and `page_globals.username === 'dedalo'`, so the demo's shared account cannot be mutated; the comment notes the server security controls already enforce this independently.
 - **Close.** `on_close_actions('modal')` destroys the tool instance without refreshing the caller (the caller is the menu, not a `component_json`).

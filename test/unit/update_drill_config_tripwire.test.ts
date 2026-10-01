@@ -234,6 +234,9 @@ describe('update drill config — operator config, catalog keys only', () => {
 			writeFileSync(join(source, 'a.txt'), 'a\n');
 			await git(source, 'add', '-A');
 			await commit(source, 'one');
+			// a HISTORICAL tag of the very version the rehearsal cuts: the shared clone
+			// inherits it, and the release tag must be moved onto the new commit
+			await git(source, 'tag', 'v7.0.1');
 			await commit(source, 'two');
 			await git(source, 'checkout', '--quiet', '--detach');
 			await commit(source, 'pr merge commit');
@@ -266,6 +269,7 @@ describe('update drill config — operator config, catalog keys only', () => {
 				source,
 				cloneDir,
 				releaseBranch: 'master',
+				tag: 'v7.0.1',
 				message: 'release 7.0.1 (gate)',
 				edit: (dir) => {
 					editedIn = dir;
@@ -280,6 +284,12 @@ describe('update drill config — operator config, catalog keys only', () => {
 				stdout: 'pipe',
 			});
 			expect(head.stdout.toString().trim()).toBe('release 7.0.1 (gate)');
+			// only a release TAG publishes (code_build_plan.ts): it names the release commit
+			const tagged = Bun.spawnSync(
+				['git', '-C', cloneDir, 'log', '-1', '--format=%s', 'refs/tags/v7.0.1'],
+				{ stdout: 'pipe' },
+			);
+			expect(tagged.stdout.toString().trim()).toBe('release 7.0.1 (gate)');
 			const clean = Bun.spawnSync(['git', '-C', cloneDir, 'status', '--porcelain'], {
 				stdout: 'pipe',
 			});
@@ -295,17 +305,23 @@ describe('update drill config — operator config, catalog keys only', () => {
 			).toBe(0);
 
 			// CONTROL — the attached (push-event) shape still works, including the `--dev`
-			// spelling where the release branch is NOT the branch the source is on.
+			// spelling: `master` while the source is on another branch, and NO tag.
 			await git(source, 'checkout', '--quiet', 'v7');
 			const attached = join(scratch, 'attached_clone');
 			await cloneForReleaseCommit({
 				source,
 				cloneDir: attached,
-				releaseBranch: 'drill_dev_branch',
+				releaseBranch: 'master',
 				message: 'release dev (gate)',
 				edit: (dir) => writeFileSync(join(dir, '.bun-version'), 'x.y.z\n'),
 			});
-			expect(currentBranch(attached)).toBe('drill_dev_branch');
+			expect(currentBranch(attached)).toBe('master');
+			// the inherited historical tag stays where it was: a dev pass tags nothing
+			const untouched = Bun.spawnSync(
+				['git', '-C', attached, 'log', '-1', '--format=%s', 'refs/tags/v7.0.1'],
+				{ stdout: 'pipe' },
+			);
+			expect(untouched.stdout.toString().trim()).toBe('one');
 			expect(existsSync(join(attached, 'a.txt'))).toBe(true);
 		} finally {
 			rmSync(scratch, { recursive: true, force: true });

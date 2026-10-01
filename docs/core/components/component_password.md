@@ -36,17 +36,14 @@
 }
 ```
 
-!!! danger "Real values are not masked on read"
-    `sample_value` above shows the *intended* mask `****************`, but that
-    masking is **not implemented**. `component_password` is meant to be a
-    write-only credential field, yet no module under `src/` substitutes a mask
-    for the stored value on read — `readComponentItems`
-    (`src/core/resolve/component_data.ts`) returns the stored item array
-    verbatim for every model, and there is no `component_password`-specific
-    override or `emitHook` in its descriptor. A section/get_data read of a
-    `component_password` node today returns the **real Argon2id hash** to any
-    caller with read permission, not a mask. Treat this as an open security
-    gap, not as documented behaviour to rely on.
+!!! note "Stored values are served masked"
+    `component_password` is a write-only credential field. Its descriptor
+    declares `secretValue: true`, and `resolveComponentValue`
+    (`src/core/resolve/component_data.ts`) — the resolver every display door
+    reads through (section read and `get_data`, the save response, the Time
+    Machine history, portal list values, datalists) — serves each non-empty
+    stored value as the constant mask `****************`, keeping the item's
+    `id`. An empty value stays empty, so "no password" remains visible.
 
 ## Definition
 
@@ -67,26 +64,22 @@ three behaviours layered on top of that plain string storage:
    hashes of the same password differ. Comparison must go through a
    constant-time verify call, never a string equality check.
 
-!!! danger "Current status: (1) and (3) are implemented, (2) is not"
+!!! note "Where each behaviour lives"
     Hashing on write (1) is a single chokepoint: `src/core/section/record/save_component.ts`
     detects `model === 'component_password'` and routes the change through
-    `hashPasswordChanges` (`src/core/security/password_hash.ts`) before the
-    value reaches the matrix write — every write door (client API, MCP tools,
-    the agent change-plan, CSV import) funnels through `save_component.ts`, so
-    this is the one gate a plaintext password must pass. Verification (3) is
-    implemented in the **auth flow** (`src/core/security/auth.ts`), which
-    verifies with `Bun.password.verify()` (native Argon2id). Read-time masking
-    (2) is **not implemented** as a property of the `component_password` model
-    (see the warning under [Overview](#overview)). The safety net today is that
-    the users section (`dd128`) cannot be read through the generic raw-view
-    endpoint (`src/core/api/raw_view.ts` hard-denies it), not that the
-    component masks itself.
+    `hashPasswordChanges` (`src/core/security/password_hash.ts`), which first
+    refuses a plaintext that breaks the password policy and then hashes it —
+    every write door (client API, MCP tools, the agent change-plan, CSV import)
+    funnels through `save_component.ts`. Masking on read (2) is the descriptor
+    facet `secretValue` applied by `resolveComponentValue`
+    (`src/core/resolve/component_data.ts`). Verification (3) is implemented in
+    the **auth flow** (`src/core/security/auth.ts`), which reads the stored
+    hash directly and verifies with `Bun.password.verify()` (native Argon2id).
 
 **Why it exists.** Dédalo needs to authenticate users without ever holding a
 recoverable copy of their password. This component is the credential field:
-hashing on write and verification on login are implemented; read-time masking
-and the legacy-hash upgrade path are not — see the gaps called out throughout
-this page.
+hashing on write, masking on read and verification on login are implemented;
+the legacy-hash upgrade path is a one-time migration (see [Notes](#notes)).
 
 **When to use it.** Only for actual secret credentials that must be verified but
 never displayed — most prominently the user account password field
@@ -136,13 +129,9 @@ Legacy reversible AES blob (base64), still readable during the migration window 
 ```
 
 !!! note "What the client/API actually receives"
-    The intent is that, on read, the datum `data` item delivered to the front
-    end keeps the real entry `id` but replaces the value with a mask, always
-    `{ "id": 7, "value": "****************" }`. **No such substitution exists
-    today** — see the danger note above. The verified sample at
-    `src/core/components/component_password/samples/data.json` is the flat
-    item array `[{"id":7,"value":"<hash>"}]` with no masking step applied
-    anywhere in the pipeline.
+    On read, the datum `data` item keeps the real entry `id` but its value is
+    the mask: `{ "id": 7, "value": "****************" }`. The mask can never be
+    saved back as a credential — it breaks the password policy and is refused.
 
 ## Ontology instantiation
 
@@ -207,13 +196,20 @@ Standard generic framing properties (e.g. `css`, `request_config`) still apply
 through the common datum `context`, but there are no password-only options to
 configure.
 
-!!! note "Validation is client-side and not ontology-driven"
-    Password format rules (length `[6, 32]`, at least one lowercase, one uppercase,
-    one numeric, banned words/chars, sequential-character ban) live in the JS model
-    method `validate_password_format(pw, options)` in `component_password.js`. They
-    are applied before save in `handle_password_change()`. These are JS option
-    defaults, **not** ontology properties; if you need different policy, verify in
-    the JS model rather than the ontology node.
+!!! note "The password policy is engine-wide, enforced on the server, and not ontology-driven"
+    One policy applies to every door that sets a password: at least 8 and at most
+    64 characters (counted in code points), at least one lowercase letter, one
+    uppercase letter and one digit (Unicode-aware), no `&`, no common words such as
+    `password`/`contraseña`, and no run of 4 consecutive letters or digits
+    (`abcd`, `1234`). The rules and their evaluator are ONE pure module,
+    `client/dedalo/core/component_password/js/password_policy.js`, run by the
+    browser (the live checklist) and by the server
+    (`src/core/security/password_policy.ts` re-exports it). The write engine
+    refuses a new plaintext that breaks a rule with `validation.password_policy`
+    (`details.rule` = the first broken rule) before hashing; the password
+    recovery flow and the installer's root step apply the same rules. A replayed
+    Argon2id hash (import round-trip) is not judged. It is not an ontology
+    property: there is no per-node policy.
 
 There are no deprecated component properties.
 
@@ -225,36 +221,36 @@ non-edit modes render the masked read-only output.
 
 | view | mode | renderer | output |
 | --- | --- | --- | --- |
-| `default` | edit | `view_default_edit_password` | `<input type="password">` pre-filled with the mask; `autocomplete="new-password"` |
-| `line` | edit | `view_default_edit_password` (no label node) | same input, compact wrapper |
+| `default` | edit | `view_default_edit_password` | the password editor (see below) |
+| `line` | edit | `view_default_edit_password` (no label node) | same editor, compact wrapper |
 | `print` | edit | `view_default_edit_password` (forces `permissions=1`) | read-only masked `content_value` |
 | `mini` | edit / list | `view_mini_password` | masked mini wrapper |
 | `default` | list | `view_default_list_password` | masked list wrapper |
 | `text` | list | `view_text_list_password` | masked `<span>` text node |
 
-!!! note "Edit input behaviour"
-    The edit input shows the mask `****************` as its initial value. On
-    `change`, `handle_password_change()` validates the typed value, builds a frozen
-    `changed_data_item` and calls `change_value(... refresh:false ...)` to save
-    immediately. `click`/`mousedown` propagation is stopped so the input does not
-    trigger row selection. Empty input is treated as a `remove` action.
+!!! note "Edit: the password editor"
+    The field is always **empty** (a stored hash is never a value to edit); an
+    idle status line says whether a password is set. Typing shows the policy
+    checklist, each rule painted pending / met / broken as you type, plus a
+    confirm field and a "both passwords match" row. **Save** is enabled only
+    when every rule passes and both fields match; Save or Enter commits through
+    `save_password()` (`component_password.js`), never on blur. The status line
+    then reads *Password saved*, or the reason it was not saved (a server
+    `validation.password_policy` refusal renders there, not as a toast).
+    Escape or Cancel discards the draft. A draft arms the page's unsaved-work
+    guard (a tab close asks) without becoming `changed_data`, so the
+    navigation auto-save sweep never commits an unconfirmed password. The
+    editor does not offer removing a password.
 
-The CSS surface is minimal (`component_password.less`): `view_default` content-data
-hook and `view_line` set to `display: block`.
+The CSS (`component_password.less`) styles the editor (`.password_editor`:
+field + toggle, confirm, `.password_rules` checklist keyed on `data-state`,
+actions, `.password_status`); `view_line` is `display: block`.
 
 ## Import / export model
 
-!!! danger "Gap: export is not hash-aware"
-    Export runs through the generic export-atoms path
-    (`src/diffusion/export/atoms.ts`, reached via `tools/tool_export/server/tool_export.ts`
-    -> `src/diffusion/export/index.ts` `exportGridUnified()`) as any other string
-    component — it has no mask substitution, so a `component_password` column
-    exported today would leak the real Argon2id hash. Do not export real user
-    credentials until this is fixed.
-
-**Export.** A `component_password` column is exported as a plain scalar atom
-carrying the stored value — the real hash, unmasked (see the gap above); it is
-intended to instead emit a fixed mask:
+**Export.** A `component_password` column is not offered for export
+(`section_elements_context.ts` skips the model), and a value that reaches the
+export grid through the shared emission is the mask, never the hash:
 
 ```json
 { "label": "Password", "value": "****************" }
@@ -339,10 +335,8 @@ non-translatable) and no `tool_add_component_data`/`tool_replace_component_data`
 
 - Never compare stored values with `===`; always go through `Bun.password.verify()`
   (`src/core/security/auth.ts`).
-- Until read-time masking is implemented (see the danger note under
-  [Overview](#overview)), the datum value a caller with read permission receives
-  today is the **real Argon2id hash**, not a mask — do not build client behaviour
-  that assumes masking, and do not treat that value as safe to display.
+- The value a reader receives is always the mask (or empty). Do not build
+  client behaviour on it beyond "a password is set".
 - `hashPasswordForStorage`'s "already hashed" check is a simple prefix test
   (`startsWith('$argon2')`). A plaintext password that happens to start with
   that literal string would be stored verbatim, unhashed, instead of being

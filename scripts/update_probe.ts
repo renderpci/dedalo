@@ -25,7 +25,8 @@
  *      fresh process.
  *   2. RELEASE — a throwaway `git clone --shared` gets the release commit
  *      (version triple [7,0,1], .bun-version pinned to the CONSUMER'S Bun,
- *      agent-alias export-ignore rules), commits it on branch `master`, cuts
+ *      agent-alias export-ignore rules), commits it on branch `master`, tags it
+ *      `v<version>` (a published release IS a tag — policy 2026-09-29), cuts
  *      the archive with the builder's exact mechanics
  *      (`git archive --format=zip --prefix=dedalo_code/`) into the master's
  *      real DEDALO_CODE_FILES_DIR layout (<repo>/code/7/7.0/) beside its
@@ -259,10 +260,10 @@ async function main(): Promise<void> {
 	const args = process.argv.slice(2);
 	const drive = args.includes('--drive');
 	/**
-	 * `--dev` rehearses the DEVELOPER CHANNEL: the archive is cut from a branch
-	 * that is NOT `master` (so it is built and served as `<v>-dev.zip`) and
-	 * installed over THE SAME VERSION — no bump, which is how unreleased branch
-	 * work reaches a museum install. It is also the BOOTSTRAP: a museum whose
+	 * `--dev` rehearses the DEVELOPER CHANNEL: the archive is cut from the
+	 * untagged tip of `master` (so it is built and served as `<v>-dev.zip`) and
+	 * installed over THE SAME VERSION — no bump, which is how integrated,
+	 * unreleased work reaches a museum install. It is also the BOOTSTRAP: a museum whose
 	 * tree predates the channel is re-materialized from HEAD on the way through.
 	 */
 	const devChannel = args.includes('--dev');
@@ -575,12 +576,16 @@ async function main(): Promise<void> {
 		],
 		'release commit',
 	);
-	// Only a ref named `master` claims the published `<v>.zip` name
-	// (code_build_plan.ts). The dev cycle deliberately names it otherwise, so
-	// the artifact is a real developer build and can never overwrite the
-	// published release of the same version.
-	const releaseBranch = devChannel ? 'probe_dev_branch' : 'master';
-	await run(['git', '-C', cloneDir, 'branch', '-m', releaseBranch], `branch ${releaseBranch}`);
+	// Both cycles commit on `master` (the developer channel's ref); only a
+	// release TAG claims the published `<v>.zip` name (code_build_plan.ts), so
+	// the release cycle tags the commit and archives the TAG, while the dev
+	// cycle archives the untagged `master` tip — a real developer build that can
+	// never overwrite the published release of the same version.
+	await run(['git', '-C', cloneDir, 'branch', '-M', 'master'], 'branch master');
+	const releaseRef = devChannel ? 'master' : `refs/tags/v${RELEASE_VERSION}`;
+	if (!devChannel) {
+		await run(['git', '-C', cloneDir, 'tag', '-f', `v${RELEASE_VERSION}`], 'release tag');
+	}
 	const targetDir = join(CODE_FILES_DIR, '7', '7.0');
 	mkdirSync(targetDir, { recursive: true });
 	const zipPath = join(targetDir, RELEASE_FILE);
@@ -594,7 +599,7 @@ async function main(): Promise<void> {
 			'--prefix=dedalo_code/',
 			'-o',
 			zipPath,
-			releaseBranch,
+			releaseRef,
 		],
 		'cut archive',
 	);

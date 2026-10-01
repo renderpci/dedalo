@@ -319,10 +319,15 @@ inserts on `requestAnimationFrame`, and deduplicate by selector.
 
 The page owns the last line of defence between a half-typed record and a closed
 tab: the derived flag `window.unsaved_data`. It is read by
-`check_unsaved_data()` (auto-save sweep + the discard prompt on navigation,
-modal close and component activation) and by the page's own `beforeunload`
-listener, which sets `event.returnValue` so the browser shows its native
-"leave site?" dialog.
+`check_unsaved_data()` and by the page's own `beforeunload` listener, which
+sets `event.returnValue` so the browser shows its native "leave site?" dialog.
+`check_unsaved_data()` first runs the auto-save sweep (every component still
+carrying `changed_data` is saved). Navigation and modal close then show the
+discard prompt for whatever the sweep could NOT store — a save the server
+refused, or a draft that is deliberately never auto-saved (component_password
+commits only through its own Save). Component activation, a click outside every
+component and the `beforeunload` listener call it with `{flush_only: true}`:
+they flush and never prompt, so moving between fields raises no dialog.
 
 ### The flag is DERIVED, never assigned
 
@@ -339,8 +344,10 @@ overwritten by the next recompute.
 An entry may only ever retire **itself**. This is the point of the registries:
 one component reverting its own edit must not disarm the guard for every other
 dirty component on the page. Only `reset_unsaved_data()` clears everything, and
-only from `check_unsaved_data`'s two resolutions — "everything was just flushed
-by the auto-save sweep" and "the user accepted the loss".
+only from `check_unsaved_data`'s one resolution — "the user accepted the loss".
+The auto-save sweep never resets: each successful save retires its own entry,
+and what remains was not flushed, so it must reach the prompt (until 2026-09-30
+the sweep reset the whole registry and such changes were dropped silently).
 
 ### Why typing has its own registry
 

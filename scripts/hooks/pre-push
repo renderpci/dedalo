@@ -42,6 +42,9 @@
 #      in HERMETIC_ONLY_PATHS below — or always, with DEDALO_PREPUSH=full. CI
 #      itself runs them on every push; skipping them here is a desk-time trade,
 #      and it is only taken where it is PROVABLY not a hole (see the list).
+#      With them goes `--skip-advisory`: the db tier's ADVISORY unit stage (~5 min)
+#      cannot change the verdict, so the desk does not wait for it; the runner still
+#      runs and prints it.
 #
 # THE GATED TREE IS THE PUSHED COMMIT. ci:local gets `--ref <HEAD sha>`: the
 # container checks out exactly that commit, no working-tree overlay; and the
@@ -519,8 +522,9 @@ cleanup_bank
 # ── 2 + 3. the CI tiers, in the CI image ────────────────────────────────────
 # --fail-fast: the verdict is RED once one tier is red, so a red hermetic does
 # not wait ~11 more minutes for db + instance before the push is refused.
+# --skip-advisory: only a stage that CANNOT fail its tier honours it (see step 3).
 if [ "$level" = full ]; then
-	set -- --docker --fail-fast --hermetic --db --instance
+	set -- --docker --fail-fast --skip-advisory --hermetic --db --instance
 else
 	set -- --docker --fail-fast --hermetic
 fi

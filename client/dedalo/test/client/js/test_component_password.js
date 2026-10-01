@@ -331,7 +331,7 @@ describe(`COMPONENT_PASSWORD DATA OPERATIONS`, function() {
 
 	it(`validate_password_format validates correctly`, async function() {
 
-		// valid password (meets all rules: lower, upper, numeric, length 6-32)
+		// valid password (meets every rule of the one policy: password_policy.js)
 		assert.equal(instance.validate_password_format('V4l1dP4ss').valid, true, 'expected valid password')
 		// invalid password (too short)
 		assert.equal(instance.validate_password_format('Ab1').valid, false, 'expected too short password invalid')
@@ -360,6 +360,112 @@ describe(`COMPONENT_PASSWORD DATA OPERATIONS`, function() {
 			while (component_container.firstChild) {
 				component_container.removeChild(component_container.firstChild)
 			}
+	});
+});
+
+
+
+describe(`COMPONENT_PASSWORD EDITOR (policy checklist + explicit save)`, function() {
+
+	this.timeout(15000);
+
+	let instance	= null
+	let node		= null
+
+	const type_into = (input, value) => {
+		input.value = value
+		input.dispatchEvent(new Event('input', {bubbles:true}))
+	}
+	const q = (sel) => node.querySelector(sel)
+
+	it(`renders an EMPTY field, a checklist of every policy rule + match, and a disabled Save`, async function() {
+
+		instance = await get_instance({
+			model			: 'component_password',
+			tipo			: tipo,
+			section_tipo	: section_tipo,
+			section_id		: section_id,
+			lang			: lang,
+			mode			: 'edit',
+			view			: 'default',
+			id_variant		: 'editor_' + Math.random()
+		})
+		await instance.build(true)
+		node = await instance.render()
+		component_container.appendChild(node)
+
+		assert.equal(q('.password_value').value, '', 'field expected empty (the stored hash is never a value)')
+		const rules = [...node.querySelectorAll('.password_rule')].map(el => el.dataset.rule)
+		assert.deepEqual(rules, ['length','lower','upper','digit','banned_chars','banned_words','sequence','match'], 'every rule expected, in policy order')
+		assert.isOk(rules.every(id => node.querySelector(`[data-rule="${id}"]`).textContent.length > 0), 'every rule expected to have text')
+		assert.isOk(!node.querySelector('.password_rule').textContent.includes('${'), 'rule text expected with placeholders filled')
+		assert.equal(q('.password_save').disabled, true, 'Save expected disabled with nothing typed')
+		assert.equal(q('.password_status').dataset.state, 'idle', 'status expected idle')
+	});
+
+	it(`paints each rule live and names the draft as not saved`, async function() {
+
+		type_into(q('.password_value'), 'clave1234')
+
+		const state = (id) => node.querySelector(`[data-rule="${id}"]`).dataset.state
+		assert.equal(state('length'), 'ok')
+		assert.equal(state('upper'), 'fail')
+		assert.equal(state('banned_words'), 'fail')
+		assert.equal(state('sequence'), 'fail')
+		assert.equal(state('match'), 'pending', 'match expected pending until the confirm field is typed')
+		assert.equal(q('.password_save').disabled, true, 'Save expected disabled while a rule fails')
+		assert.equal(q('.password_status').dataset.state, 'draft', 'status expected draft (not saved yet)')
+		assert.equal(window.unsaved_data, true, 'a draft expected to arm the unsaved guard')
+		assert.equal((instance.data.changed_data || []).length, 0, 'a draft must NOT be changed_data (the auto-save sweep would commit it)')
+	});
+
+	it(`a mismatch keeps Save disabled; Enter refuses with the reason`, async function() {
+
+		type_into(q('.password_value'), 'Museo-Norte-97')
+		type_into(q('.password_confirm_value'), 'Museo-Norte-96')
+		assert.equal(node.querySelector('[data-rule="match"]').dataset.state, 'fail')
+		assert.equal(q('.password_save').disabled, true)
+
+		q('.password_confirm_value').dispatchEvent(new KeyboardEvent('keydown', {key:'Enter', bubbles:true}))
+		assert.equal(q('.password_status').dataset.state, 'error', 'Enter on an unacceptable draft expected an error status')
+	});
+
+	it(`Save stores it and says so`, async function() {
+
+		type_into(q('.password_confirm_value'), 'Museo-Norte-97')
+		assert.equal(q('.password_save').disabled, false, 'Save expected enabled: all rules pass and both fields match')
+
+		q('.password_save').click()
+		// wait for the round trip
+		for (let i = 0; i < 50 && q('.password_status').dataset.state!=='saved' && q('.password_status').dataset.state!=='error'; i++) {
+			await new Promise(r => setTimeout(r, 100))
+		}
+		assert.equal(q('.password_status').dataset.state, 'saved', 'status expected saved: ' + q('.password_status').textContent)
+		assert.equal(q('.password_value').value, '', 'field expected cleared after save')
+		// the stored credential is never served: the save echo carries the mask, not the hash
+		assert.equal(instance.data.entries?.[0]?.value, '****************', 'saved value expected served as the mask')
+		assert.isOk(!JSON.stringify(instance.data).includes('$argon2'), 'no hash expected in client data')
+	});
+
+	it(`the server refuses a weak password with validation.password_policy`, async function() {
+
+		const response = await instance.change_value({
+			changed_data	: [Object.freeze({action:'update', id:instance.data.entries?.[0]?.id ?? null, value:{value:'weak'}})],
+			refresh			: false
+		})
+		assert.equal(response?.ok, false, 'weak password expected refused')
+		assert.equal(response?.error?.code, 'validation.password_policy')
+		assert.equal(response?.error?.details?.rule, 'length')
+		instance.data.changed_data = []
+	});
+
+	it(`destroy editor`, async function() {
+
+		await instance.destroy(true)
+		assert.equal(instance.status, 'destroyed')
+		while (component_container.firstChild) {
+			component_container.removeChild(component_container.firstChild)
+		}
 	});
 });
 

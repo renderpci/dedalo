@@ -57,6 +57,11 @@ export const CORE_POLICY = Object.freeze({
 	'record.delete_children_refused' : {action:'inline', severity:'warning'},
 	// caller-data faults belong next to the field
 	'validation.*'				: {action:'inline'},
+	// component_password renders its refusal in its OWN status line, next to the
+	// live policy checklist (save_password → view_default_edit_password); the
+	// generic inline box would say it twice. component_password is the only
+	// client door that writes a password.
+	'validation.password_policy'	: {action:'silent'},
 	// transport
 	'client.network'			: {action:'toast', severity:'warning'},
 	'client.timeout'			: {action:'toast', severity:'warning'},

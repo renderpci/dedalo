@@ -26,6 +26,8 @@
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import puppeteer, { type Page } from 'puppeteer';
+import { readEnv } from '../src/config/env.ts';
+import { compareLocators, type Locator } from '../src/core/concepts/locator.ts';
 import {
 	NOT_YET_PHONE,
 	PHONE_CASES,
@@ -103,7 +105,14 @@ const server = await startClientTestServer({
 });
 
 const verdicts: Verdict[] = [];
-const browser = await puppeteer.launch({ headless: !headful });
+// Same launch as scripts/client_test_runner.ts: the CI image runs chromium as an
+// unprivileged user with no usable sandbox, and PUPPETEER_EXECUTABLE_PATH names it.
+const executablePath = readEnv('PUPPETEER_EXECUTABLE_PATH');
+const browser = await puppeteer.launch({
+	headless: !headful,
+	args: ['--no-sandbox', '--disable-setuid-sandbox'],
+	...(executablePath ? { executablePath } : { channel: 'chrome' as const }),
+});
 try {
 	// real login, cookie injected over CDP (HttpOnly) — as client_test_runner
 	const { login } = await import('../src/core/security/auth.ts');
@@ -450,7 +459,6 @@ async function openProbe(
 		const result = await page.evaluate(
 			async (model: string, method: string) => {
 				const spec = '/dedalo/core/common/js/instances.js';
-				// biome-ignore lint/suspicious/noExplicitAny: a live instance of the untyped client JS, read inside the page
 				const { get_all_instances } = (await import(spec)) as {
 					get_all_instances: () => Array<Record<string, any>>;
 				};
@@ -545,7 +553,6 @@ async function openProbe(
 			const present = await page.evaluate(
 				async (toolName: string, tipo: string) => {
 					const spec = '/dedalo/core/common/js/instances.js';
-					// biome-ignore lint/suspicious/noExplicitAny: a live instance of the untyped client JS, read inside the page
 					const { get_all_instances } = (await import(spec)) as {
 						get_all_instances: () => Array<Record<string, any>>;
 					};
@@ -570,11 +577,39 @@ async function openProbe(
 		}
 	}
 
+	// The section_id match obeys the locator law (compareLocators: loose-numeric,
+	// stored '05' matches 5) — decided HERE in Node, since the page cannot
+	// import src/. The page lists its live candidates; Node picks by instance id.
+	const liveIds = await page.evaluate(async (f: typeof find) => {
+		const spec = '/dedalo/core/common/js/instances.js';
+		const { get_all_instances } = (await import(spec)) as {
+			get_all_instances: () => Array<Record<string, any>>;
+		};
+		return get_all_instances()
+			.filter((i) => i.tipo === f.tipo && i.section_tipo === f.sectionTipo && i.mode === f.mode)
+			.map((i) => ({
+				id: String(i.id),
+				section_tipo: String(i.section_tipo),
+				section_id: i.section_id,
+			}));
+	}, find);
+	const matchIds = liveIds
+		.filter(
+			(c) =>
+				find.sectionId === null ||
+				find.mode === 'list' ||
+				compareLocators(
+					{ section_tipo: c.section_tipo, section_id: c.section_id } as Locator,
+					{ section_tipo: c.section_tipo, section_id: find.sectionId } as Locator,
+					['section_tipo', 'section_id'],
+				),
+		)
+		.map((c) => c.id);
+
 	const opened = await page.evaluate(
-		async (toolName: string, f: typeof find) => {
+		async (toolName: string, f: typeof find, ids: string[]) => {
 			const instancesSpec = '/dedalo/core/common/js/instances.js';
 			const toolSpec = '/dedalo/core/tools_common/js/tool_common.js';
-			// biome-ignore lint/suspicious/noExplicitAny: a live instance of the untyped client JS, read inside the page
 			const { get_all_instances } = (await import(instancesSpec)) as {
 				get_all_instances: () => Array<Record<string, any>>;
 			};
@@ -583,11 +618,7 @@ async function openProbe(
 			};
 			const all = get_all_instances();
 			// biome-ignore lint/suspicious/noExplicitAny: a live instance of the untyped client JS, read inside the page
-			const matches = (i: Record<string, any>) =>
-				i.tipo === f.tipo &&
-				i.section_tipo === f.sectionTipo &&
-				i.mode === f.mode &&
-				(f.sectionId === null || f.mode === 'list' || String(i.section_id) === f.sectionId);
+			const matches = (i: Record<string, any>) => ids.includes(String(i.id));
 			if (f.via === 'button') {
 				const section = all.find((i) => matches(i) && i.model === 'section');
 				const button = (section?.context?.buttons ?? []).find(
@@ -629,6 +660,7 @@ async function openProbe(
 		},
 		tool,
 		find,
+		matchIds,
 	);
 	if ('error' in opened) throw new Error(opened.error as string);
 	return follow(opened.openAs as string);

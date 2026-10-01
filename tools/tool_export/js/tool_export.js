@@ -44,10 +44,11 @@
 	import {render_tool_export} from './render_tool_export.js'
 	import {
 		on_dragstart,
-		// on_dragend,
+		on_dragend,
 		on_dragover,
 		on_dragleave,
-		on_drop
+		on_drop,
+		set_sort_payload
 	} from './drag_tool_export.js'
 
 
@@ -128,6 +129,8 @@ export const tool_export = function () {
 	tool_export.prototype.on_dragover					= on_dragover
 	tool_export.prototype.on_dragleave					= on_dragleave
 	tool_export.prototype.on_drop						= on_drop
+	tool_export.prototype.on_dragend					= on_dragend
+	tool_export.prototype.set_sort_payload				= set_sort_payload
 
 
 

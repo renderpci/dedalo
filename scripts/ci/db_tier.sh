@@ -258,9 +258,20 @@ bun test --timeout=30000 "${DB_TIER_TRIPWIRES[@]}" || tw_rc=$?
 # set on three consecutive clean-fixture runs, at least one of them on a loaded runner.
 # That is a determinism campaign against the timing-sensitive gates, ledgered as such —
 # not something to switch on because the numbers happened to line up once.
+#
+# DESK SKIP. `DEDALO_CI_SKIP_ADVISORY=1` (set only by `ci:local --skip-advisory`, which the
+# pre-push hook passes) skips this stage: it cannot change the tier's verdict, so the
+# desk gate spends ~5 min for a print the runner makes anyway. No workflow file names it
+# (ci_workflow_tripwire scans the workflows — a repo-text gate, not a runtime check). The day
+# the line below is restored this stage stops being advisory — and the skip must go with
+# it (ci_local_native pins this stage's exact code).
 echo "== db_tier: unit tier (test/unit + test/integration) vs its frozen red baseline [ADVISORY]"
 unit_rc=0
-bun run scripts/unit_baseline.ts --check || unit_rc=$?
+if [ "${DEDALO_CI_SKIP_ADVISORY:-0}" = 1 ]; then
+	echo "== db_tier: SKIPPED — advisory stage, DEDALO_CI_SKIP_ADVISORY=1 (desk gate); the runner runs it"
+else
+	bun run scripts/unit_baseline.ts --check || unit_rc=$?
+fi
 [ "$unit_rc" -eq 0 ] || echo "== db_tier: unit-tier drift (exit $unit_rc) — ADVISORY, not failing the tier; see the block above"
 # [ "$unit_rc" -eq 0 ] || tier_status=1   # <- the line to restore, per the criterion above
 

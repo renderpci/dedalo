@@ -122,13 +122,15 @@ describe('full_count SELECT shape', () => {
 			}),
 		);
 
-	test('multi-hop FORWARD join filter keeps count(DISTINCT (LATERAL multiplies rows)', async () => {
-		// '!*' (is empty) is TRUE on the all-NULL row, so deep_path.ts keeps the
-		// forward LATERAL unnest + LEFT JOIN chain, and the count must dedup.
+	test('multi-hop NEGATED filter is a NOT EXISTS semi-join → plain count(*)', async () => {
+		// '!*' (is empty) on a deep path = "no related record holds a value"
+		// (deep_path.ts): a correlated NOT EXISTS, never a join in the main FROM,
+		// so there is no fan-out to dedup.
 		const { sql: builtSql } = await buildSearchSql(deepSqo('!*'), {});
-		expect(builtSql).toContain('LEFT JOIN LATERAL');
-		expect(builtSql).toContain('count(DISTINCT');
-		expect(builtSql).not.toContain('count(*) as full_count');
+		expect(builtSql).toContain('NOT EXISTS (SELECT 1 FROM jsonb_array_elements(');
+		expect(builtSql).not.toContain('LEFT JOIN LATERAL');
+		expect(builtSql).not.toContain('count(DISTINCT');
+		expect(builtSql).toContain('count(*) as full_count');
 	});
 
 	test('multi-hop REVERSED filter has no fan-out → plain count(*)', async () => {

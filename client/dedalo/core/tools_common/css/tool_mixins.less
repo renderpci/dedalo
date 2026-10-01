@@ -17,8 +17,10 @@
 	background-color: var(--tool_fill);
 	border-color: var(--tool_fill);
 	color: var(--tool_on_fill);
-	// the icon glyph is a mask painted with background-color
-	&::before {
+	// the icon glyph is a mask painted with background-color. NOT while
+	// .button_spinner: its ::before is a transparent ring drawn with a
+	// currentColor border, and this !important fill would turn it into a disc.
+	&:not(.button_spinner)::before {
 		background-color: var(--button-bg-color, var(--tool_on_fill)) !important;
 	}
 	// hover moves further AWAY from the ink: it can only raise contrast

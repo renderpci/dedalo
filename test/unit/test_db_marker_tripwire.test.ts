@@ -392,7 +392,7 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 		run: async () =>
 			(await import('../../src/core/test_data/suite_login.ts')).ensureSuiteLoginPassword(
 				'root',
-				'dedalo_suite_client_tests',
+				'Dedalo-Suite-Client-7',
 			),
 	},
 	{

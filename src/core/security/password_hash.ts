@@ -21,6 +21,7 @@
  */
 
 import { ARGON2_OPTIONS } from './argon2_params.ts';
+import { assertPasswordPolicy } from './password_policy.ts';
 
 /** An Argon2 (any variant) PHC string, as produced by Bun.password / PHP password_hash. */
 export function isArgon2Hash(value: unknown): boolean {
@@ -58,16 +59,29 @@ async function hashItem(item: unknown): Promise<unknown> {
 	if (item === null || typeof item !== 'string') {
 		if (item !== null && typeof item === 'object' && 'value' in (item as object)) {
 			const record = item as { value: unknown };
-			return { ...record, value: await hashPasswordForStorage(record.value) };
+			return { ...record, value: await hashNewPassword(record.value) };
 		}
 		return item;
 	}
 	// A bare string item (some doors send the value unwrapped).
-	return await hashPasswordForStorage(item);
+	return await hashNewPassword(item);
 }
 
 /**
- * Hash every password value carried by a save's changed_data. Applied by
+ * A save carries a NEW password: plaintext must satisfy the policy before it is
+ * hashed (password_policy.ts). A replayed hash and an empty value are not new
+ * passwords and pass through `hashPasswordForStorage` untouched.
+ */
+async function hashNewPassword(value: unknown): Promise<unknown> {
+	if (typeof value === 'string' && value !== '' && !isArgon2Hash(value)) {
+		assertPasswordPolicy(value);
+	}
+	return await hashPasswordForStorage(value);
+}
+
+/**
+ * Hash every password value carried by a save's changed_data, refusing a new
+ * plaintext that breaks the password policy (`validation.password_policy`). Applied by
  * `save_component.ts` for model `component_password` ONLY — every write door
  * (client API, MCP tools, the agent change-plan, import) funnels through there, so
  * this is the single gate.

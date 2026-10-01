@@ -6,6 +6,12 @@
 * Included from main.less file
 */
 
+// component_buttons_offset. How far the active component's tool strip
+// (.buttons_container) floats ABOVE its field. Shared with the room a modal
+// edit form leaves above its first field (dd-modal below), so the two cannot
+// drift apart and the strip never slides under the modal header.
+@component_buttons_offset: 2.4rem;
+
 // hilite (used on focus)
 	.hilite_mixin(@outline_offset:0) {
 		outline-offset: @outline_offset;
@@ -181,6 +187,18 @@
 			align-content: start;
 		}
 
+		// save lock (component_common.save adds 'loading'). Pointer lock is
+		// immediate; the global .loading dim is DEFERRED so a fast save does not
+		// blink the whole component (click-to-save chips: radio, check_box…).
+		// Only a slow save fades to the loading opacity.
+		&.loading {
+			opacity: 1;
+			animation: wrapper_loading_dim 0.2s ease-out 0.4s forwards;
+			// !important: exec_save_successfully_animation leaves an inline
+			// animationPlayState='paused' on the wrapper (its line lives on ::before)
+			animation-play-state: running !important;
+		}
+
 		&.modified {
 			&:after {
 				content: " ";
@@ -231,7 +249,7 @@
 			right: 0px;
 			width: auto;
 			padding: 0px;
-			top: -2.4rem; // small air gap: the strip floats instead of docking
+			top: -@component_buttons_offset; // small air gap: the strip floats instead of docking
 			max-height: 2rem;
 			border-radius: var(--radius-pill);
 			font-size: 1.1rem;
@@ -564,6 +582,9 @@
 			}//end >.content_data
 		}//end .section_record &, .wrapper_tool &
 	}//end .wrapper_component
+	@keyframes wrapper_loading_dim {
+		to { opacity: 0.4; }
+	}
 
 // ---- FIELD GRID (every edit field, wherever it is drawn) ----
 // Before this block every family carried its own inset, so three different
@@ -691,6 +712,17 @@
 			margin: 1rem;
 		}
 
+		// an edit FORM as the modal body — a section in edit mode, slotted directly
+		// or as the direct child of the body (preset editors, the portal / select /
+		// dataframe "open record" dialogs). The active field's tool strip floats
+		// @component_buttons_offset above it: without room the first field's strip
+		// slid under the header. Deeper sections (inside a tool's own layout) are
+		// not matched.
+		>.wrapper_section.edit[slot="body"],
+		>[slot="body"] >.wrapper_section.edit {
+			padding-top: calc(@component_buttons_offset + 0.25rem);
+		}
+
 		.header {
 			display: flex;
 			padding: 1rem;
@@ -762,10 +794,9 @@
 		}
 
 		.header_custom {
-			// Slotted into the shadow .modal-header (fixed height 3.66rem):
-			// fill it exactly or the two orange bars + two box-shadows render
-			// as a double header line.
-			height: 100%;
+			// Slotted into the shadow .modal-header (a flex bar, min-height
+			// 3.66rem): stretched to its full height by the bar itself, so the
+			// two orange bars + two box-shadows coincide (no double header line).
 			padding: 0.5rem;
 			display: flex;
 			align-items: center;

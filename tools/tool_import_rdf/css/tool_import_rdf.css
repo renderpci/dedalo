@@ -35,7 +35,7 @@
   border-color: var(--tool_fill);
   color: var(--tool_on_fill);
 }
-.wrapper_tool.tool_import_rdf .components_container .button_apply::before {
+.wrapper_tool.tool_import_rdf .components_container .button_apply:not(.button_spinner)::before {
   background-color: var(--button-bg-color, var(--tool_on_fill)) !important;
 }
 .wrapper_tool.tool_import_rdf .components_container .button_apply:hover {

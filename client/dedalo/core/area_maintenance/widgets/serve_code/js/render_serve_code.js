@@ -170,7 +170,9 @@ const render_code_server_status = function (parent, code_server, mount_builder, 
 		get_label.serve_code_publish_ready || 'Ready to publish',
 		get_label.serve_code_publish_blocked || 'Cannot publish',
 	);
-	for (const check of code_server.checks || []) check_row(role, check);
+	(code_server.checks || []).forEach((check) => {
+		check_row(role, check);
+	});
 
 	// the tree releases are built FROM
 	const source = code_server.source || {};
@@ -196,36 +198,39 @@ const render_code_server_status = function (parent, code_server, mount_builder, 
 	);
 	fact_row(build_source, get_label.update_code_bun || 'Bun runtime', source.bun_pin, true);
 
-	// THE RELEASE REF — what a published release is actually built from. It is
-	// its own block because it is routinely NOT the checked-out branch, and the
-	// publish checks above all read it: without these rows a red check on a
-	// fix the operator just committed is unexplainable from the panel.
-	const release = section(wrapper, get_label.serve_code_release_ref || 'Release ref');
-	fact_row(release, get_label.serve_code_release_ref || 'Release ref', source.release_ref, true);
+	// THE CHANNEL REFS — what each build is actually made from. Their own block
+	// because neither is the checked-out branch: a RELEASE is the newest
+	// `vX.Y.Z` tag, a DEVELOPER build the tip of `master` (policy 2026-09-29),
+	// and every publish check above reads one of them.
+	const release = section(wrapper, get_label.serve_code_release_ref || 'Release tag');
+	fact_row(release, get_label.serve_code_release_ref || 'Release tag', source.release_ref, true);
 	fact_row(
 		release,
-		get_label.serve_code_release_commit || 'Release ref commit',
+		get_label.serve_code_release_commit || 'Release commit',
 		source.release_sha,
 		true,
 	);
+	fact_row(release, get_label.serve_code_release_date || 'Release date', source.release_date, true);
+	fact_row(release, get_label.serve_code_dev_ref || 'Development branch', source.dev_ref, true);
+	fact_row(release, get_label.serve_code_dev_commit || 'Development commit', source.dev_sha, true);
 	fact_row(
 		release,
-		get_label.serve_code_release_date || 'Release ref date',
-		source.release_date,
+		get_label.serve_code_dev_version || 'Development version',
+		source.dev_version,
 		true,
 	);
 	if (source.divergence) {
 		const behind_row = fact_row(
 			release,
-			get_label.serve_code_behind || 'Commits not in the release ref',
+			get_label.serve_code_behind || "Commits on 'master' not in the release",
 			String(source.divergence.behind),
 		);
 		if (source.divergence.behind > 0) {
 			const behind_value = behind_row.querySelector('.dd_v');
 			ui.create_dom_element({
 				element_type: 'span',
-				class_name: 'dd_badge pill_warning',
-				text_content: source.branch || 'HEAD',
+				class_name: 'dd_badge',
+				text_content: source.dev_ref || 'master',
 				parent: behind_value,
 			});
 			ui.create_dom_element({
@@ -243,10 +248,19 @@ const render_code_server_status = function (parent, code_server, mount_builder, 
 	// They were two blocks ('Code builders from GIT' below a 'Published
 	// releases' list) and nothing on screen said the first writes the second —
 	// nor which of two same-sized archives belonged to which button. The pairing
-	// key is the version a build WOULD produce (source.release_version), so the
-	// row shows the artifact that the button beside it would overwrite.
+	// key is the version a build of THAT channel would produce — the release
+	// tag's declared version, or master's (they differ once master is bumped
+	// ahead of the last tag) — so the row shows the artifact the button beside
+	// it would overwrite.
 	const releases = code_server.releases || [];
-	const target_version = (code_server.source || {}).release_version || null;
+	const target_versions = {
+		master: source.release_version || null,
+		dev: source.dev_version || null,
+	};
+	const is_target = (release) => {
+		const target = target_versions[release.channel];
+		return target === null || target === undefined || release.version === target;
+	};
 	const build = section(wrapper, get_label.serve_code_build_publish || 'Build and publish');
 	CHANNELS.forEach((channel) => {
 		const row = ui.create_dom_element({
@@ -269,11 +283,7 @@ const render_code_server_status = function (parent, code_server, mount_builder, 
 			class_name: 'dd_v build_file',
 			parent: row,
 		});
-		const built = releases.find(
-			(release) =>
-				release.channel === channel &&
-				(target_version === null || release.version === target_version),
-		);
+		const built = releases.find((release) => release.channel === channel && is_target(release));
 		if (mount_builder) {
 			mount_builder(channel, action, value, built || null);
 		} else {
@@ -292,12 +302,10 @@ const render_code_server_status = function (parent, code_server, mount_builder, 
 	});
 
 	// Archives on disk for OTHER versions. They have no builder (a build always
-	// produces the release ref's version), but hiding them would leave an
+	// produces its channel ref's version), but hiding them would leave an
 	// operator wondering where the disk space went — and a stale archive of a
 	// neighbouring version is exactly what a manifest may still advertise.
-	const others = releases.filter(
-		(release) => target_version !== null && release.version !== target_version,
-	);
+	const others = releases.filter((release) => !is_target(release));
 	if (others.length) {
 		const other_block = section(
 			wrapper,
@@ -335,9 +343,9 @@ const render_code_server_status = function (parent, code_server, mount_builder, 
 			);
 			return;
 		}
-		for (const file of rung.files) {
+		rung.files.forEach((file) => {
 			fact_row(offered, `${rung.for_version} → ${file.version}`, file.url, true);
-		}
+		});
 	});
 
 	return wrapper;
@@ -354,10 +362,13 @@ const render_code_server_status = function (parent, code_server, mount_builder, 
  * side by side) and calls back here to mount the action, which is the only part
  * that needs the widget's wire machinery (`self.caller.init_form`).
  *
- * Two channels, and the difference is load-bearing:
- *   - 'master' → `<v>.zip`     — the published release
- *   - 'dev'    → `<v>-dev.zip` — a branch build; never overwrites the master
- *                                 archive of the same version
+ * Two channels, and the difference is load-bearing (policy 2026-09-29):
+ *   - 'master' → `<v>.zip`     — the published release, built from the newest
+ *                                 `vX.Y.Z` release TAG (the wire keeps the
+ *                                 historical token 'master')
+ *   - 'dev'    → `<v>-dev.zip` — the tip of branch `master`; never overwrites
+ *                                 the release archive of the same version
+ * The button sends only the CHANNEL; the server resolves the ref.
  *
  * No cross-widget event on completion: a build writes an archive for OTHER
  * installations and changes nothing this install runs, so no other panel has
@@ -393,41 +404,58 @@ const make_builder_mounter = function (self, body_response, code_server, on_buil
 		}
 	};
 
-	// version parts (shared by both confirm texts)
-	// THE VERSION THE PUBLISH WILL ACTUALLY PRODUCE — the one the release
-	// REF declares, which the server sends as source.release_version. The
-	// running process's own version (page_globals.dedalo_version) is only a
-	// fallback: naming the artifact after it is exactly the bug that let a
-	// 7.0.0 master publish an uninstallable 7.0.0.zip, and it silently
-	// mislabels every build made by a master left running across a bump.
-	const ref_version = code_server && code_server.source && code_server.source.release_version;
-	const ar_version = String(ref_version || page_globals.dedalo_version).split('.');
-	const major_version = ar_version[0];
-	const version = [ar_version[0], ar_version[1], ar_version[2]].join('.');
-	const release_dir = `<DEDALO_CODE_FILES_DIR>/${major_version}/${ar_version[0]}.${ar_version[1]}/`;
-
-	// THE DEVELOPER CHANNEL'S REF IS THE SERVER'S CHECKED-OUT BRANCH. The
-	// server sends it as source.branch; source.release_ref is the master
-	// channel's ref, and a branch equal to it publishes nothing new.
+	// THE VERSION EACH BUILD WILL ACTUALLY PRODUCE — the one its REF declares,
+	// which the server sends as source.release_version (the release tag's) and
+	// source.dev_version (master's). NEVER the running process's version
+	// (page_globals.dedalo_version): naming the artifact after it is exactly the
+	// bug that let a 7.0.0 master publish an uninstallable 7.0.0.zip. A channel
+	// whose ref declares no readable version offers no button at all (below).
 	const source = (code_server && code_server.source) || {};
-	const release_ref = source.release_ref || 'master';
-	const dev_branch =
-		source.branch && source.branch !== release_ref && source.branch !== 'HEAD'
-			? source.branch
-			: null;
+	const version_parts = (declared) => {
+		const ar_version = String(declared || '?.?.?').split('.');
+		return {
+			version: [ar_version[0], ar_version[1], ar_version[2]].join('.'),
+			release_dir: `<DEDALO_CODE_FILES_DIR>/${ar_version[0]}/${ar_version[0]}.${ar_version[1]}/`,
+		};
+	};
+	const release_parts = version_parts(source.release_version);
+	const dev_parts = version_parts(source.dev_version);
+
+	// THE REFS ARE THE SERVER'S. A release is the newest `vX.Y.Z` tag
+	// (source.release_ref, null when the checkout has none); a developer build
+	// is the tip of source.dev_ref (`master`). Neither is ever a literal baked
+	// into the client — the old hardcoded 'v7' refused on every server that did
+	// not carry that branch.
+	const release_tag = source.release_ref || null;
+	const dev_ref = source.dev_ref || 'master';
+	// a ref whose own version file cannot be read cannot name its archive
+	const version_unknown = (ref) =>
+		(
+			get_label.serve_code_build_version_unknown ||
+			"Nothing to build: the version of '%ref%' cannot be read from its src/core/update/version.ts"
+		).replaceAll('%ref%', String(ref));
 
 	const channels = {
 		master: {
 			// the panel's main publishing action — filled (widget_kit .primary)
 			button_class: 'primary',
-			submit_label: get_label.serve_code_build_master || 'Build master release',
+			submit_label: get_label.serve_code_build_master || 'Build release',
+			// %tag% is NAMED, not positional (see the dev text below)
 			confirm_text: (
 				get_label.serve_code_build_master_confirm ||
-				"A release of version %s will be created from branch 'master' as: %s"
+				"A release of version %s will be created from tag '%tag%' as: %s"
 			)
-				.replace('%s', version)
-				.replace('%s', `\n\n${release_dir}${version}.zip\n`),
-			branch: 'master',
+				.replace('%s', release_parts.version)
+				.replace('%s', `\n\n${release_parts.release_dir}${release_parts.version}.zip\n`)
+				.replaceAll('%tag%', String(release_tag)),
+			// no publishable tag is the normal state while a major is in beta:
+			// its code then reaches installations only as developer builds
+			unavailable: !release_tag
+				? get_label.serve_code_build_master_unavailable ||
+					'No release yet: a release is built from a vX.Y.Z tag of this engine, and pre-release (beta) tags are never published. Until one exists, installations get this code only as developer builds'
+				: !source.release_version
+					? version_unknown(release_tag)
+					: null,
 		},
 		dev: {
 			// secondary, but still unmistakably a control (see .build_action button)
@@ -438,14 +466,27 @@ const make_builder_mounter = function (self, body_response, code_server, on_buil
 			// would land wherever that language happens to put it.
 			confirm_text: (
 				get_label.serve_code_build_developer_confirm ||
-				"A developer release of version %s will be created from branch '%branch%' as: %s The master build of the same version is kept."
+				"A developer release of version %s will be created from branch '%branch%' as: %s The release build of the same version is kept."
 			)
-				.replace('%s', version)
-				.replace('%s', `\n\n${release_dir}${version}-dev.zip\n\n`)
+				.replace('%s', dev_parts.version)
+				.replace('%s', `\n\n${dev_parts.release_dir}${dev_parts.version}-dev.zip\n\n`)
 				// LAST: a branch name may legally contain '%s', and substituting it
 				// first would hand the positional pass a token of its own.
-				.replaceAll('%branch%', String(dev_branch)),
-			branch: dev_branch,
+				.replaceAll('%branch%', String(dev_ref)),
+			// No `master`, nothing to build. And when master IS the release
+			// commit there is no development work to publish: a '<v>-dev.zip'
+			// byte-identical to the release would be a lie, so the row says so
+			// instead of offering a button.
+			unavailable:
+				source.has_master_ref === false
+					? get_label.serve_code_build_developer_no_ref ||
+						"No 'master' branch in the build checkout"
+					: !source.dev_version
+						? version_unknown(dev_ref)
+						: source.divergence && source.divergence.behind === 0
+							? get_label.serve_code_build_developer_unavailable ||
+								"Nothing to build: 'master' has no commits beyond the release tag"
+							: null,
 		},
 	};
 
@@ -455,18 +496,10 @@ const make_builder_mounter = function (self, body_response, code_server, on_buil
 			return;
 		}
 
-		// A DEVELOPER BUILD IS A BUILD OF THE BRANCH THIS SERVER HAS CHECKED
-		// OUT — never a branch name baked into the client. The hardcoded 'v7'
-		// refused on every server that does not carry that branch ("Could not
-		// read src/core/update/version.ts at ref 'v7'"). When HEAD IS the
-		// release ref there is no development work to publish, and a
-		// '<v>-dev.zip' that is byte-identical to the master build would be a
-		// lie: the row says so instead of offering a button.
-		if (channel === 'dev' && !dev_branch) {
+		// a channel with nothing to build says why, instead of a button
+		if (def.unavailable) {
 			node.classList.add('none');
-			node.textContent =
-				get_label.serve_code_build_developer_unavailable ||
-				'No developer branch: this code server has the release branch checked out';
+			node.textContent = def.unavailable;
 			return;
 		}
 
@@ -483,8 +516,9 @@ const make_builder_mounter = function (self, body_response, code_server, on_buil
 					model: 'serve_code',
 					action: 'build_version_from_git_master',
 				},
+				// the CHANNEL only — the server resolves its ref
 				options: {
-					branch: def.branch,
+					channel: channel,
 				},
 			},
 			// the mark travels from the row that was pressed to the row that

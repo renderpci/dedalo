@@ -51,7 +51,7 @@
 	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {event_manager} from '../../../../common/js/event_manager.js'
 	import {request_failed, response_data, response_extension} from '../../../../common/js/api_error.js'
-	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
+	import {error_text} from '../../../../common/js/render_api_error.js'
 
 
 
@@ -213,6 +213,47 @@ const build_version_change = function (installed, incoming) {
 
 	return wrap
 }//end build_version_change
+
+
+
+/**
+* BUILD_FAILURE
+* The failure of a Phase 1/Phase 2 request, IN the panel. The page-wide
+* 'api_error' channel (data_manager → page.js → handle_api_error) already runs
+* the policy (relogin, error report signal), but its toast lands in the
+* inspector bubble container, which this area does not show — so a refused
+* update used to surface in the console only.
+* The label alone ('The maintenance action failed') is useless to an operator:
+* the server message carries the cause (e.g. an origin mismatch naming both
+* hosts), and the request_id joins the server log. Text nodes only — server
+* text never reaches an HTML sink.
+*
+* @param {Object} api_error - envelope `error` (ApiError or its plain shape)
+* @returns {HTMLElement}
+*/
+export const build_failure = function (api_error) {
+
+	const node = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'error'
+	})
+
+	const headline	= String(error_text(api_error))
+	const message	= typeof api_error?.message==='string' ? api_error.message : ''
+	const lines		= [headline]
+	if (message.length && message!==headline) {
+		lines.push(...message.split(/\n/))
+	}
+	if (typeof api_error?.request_id==='string' && api_error.request_id.length) {
+		lines.push(`request_id: ${api_error.request_id}`)
+	}
+	lines.forEach((line, i) => {
+		if (i>0) node.appendChild(document.createElement('br'))
+		node.appendChild(document.createTextNode(line))
+	})
+
+	return node
+}//end build_failure
 
 
 
@@ -820,21 +861,20 @@ const get_content_data_edit = async function(self) {
 						const result = response_data(server_ontology_api_response)
 						if(request_failed(server_ontology_api_response) || !result){
 							if (request_failed(server_ontology_api_response)) {
-								// ONE error model: policy + renderer decide the surface
-								await handle_api_error(server_ontology_api_response.error, {wrapper: body_response})
+								ui.reveal(body_response.appendChild(build_failure(server_ontology_api_response.error)))
 							} else {
-								ui.create_dom_element({
+								ui.reveal(ui.create_dom_element({
 									element_type	: 'div',
 									class_name		: 'error',
 									text_content	: String(response_extension(server_ontology_api_response, 'msg') || get_label.update_ontology_unreachable_error || 'Could not reach the master server.'),
 									parent			: body_response
-								})
+								}))
 							}
 							return
 						}
 
 					// show installed → incoming before the import completes
-						body_response.appendChild(build_version_change(current_ontology, result.info))
+						ui.reveal(body_response.appendChild(build_version_change(current_ontology, result.info)))
 
 					// build the file list: user-selected TLDs, enriched, with matrix_dd always first
 						const files_filtered = result.files.filter( el => ar_active_ontology_tlds.find(item => item === el.tld) )
@@ -862,26 +902,25 @@ const get_content_data_edit = async function(self) {
 					// fail case
 						if(request_failed(api_response) || !response_data(api_response)){
 							if (request_failed(api_response)) {
-								// ONE error model: policy + renderer decide the surface
-								await handle_api_error(api_response.error, {wrapper: body_response})
+								ui.reveal(body_response.appendChild(build_failure(api_response.error)))
 							} else {
-								ui.create_dom_element({
+								ui.reveal(ui.create_dom_element({
 									element_type	: 'div',
 									class_name		: 'error',
 									text_content	: String(response_extension(api_response, 'msg') || get_label.update_ontology_import_failed || 'The ontology import failed.'),
 									parent			: body_response
-								})
+								}))
 							}
 							return
 						}
 
-					// status line
-						ui.create_dom_element({
+					// status line (revealed: the whole result reads down from it)
+						ui.reveal(ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'ok',
 							inner_html		: (get_label.update_ontology_done || 'Ontology updated.'),
 							parent			: body_response
-						})
+						}))
 
 					// version compatibility warning
 						const required_version = api_response.root_info?.properties?.version || null
@@ -1065,7 +1104,7 @@ export const render_servers_list = function (value, env_key='ONTOLOGY_SERVERS', 
 			const change_handler = () => {
 				servers.forEach( el => delete el.active )
 				current_server.active = input_radio.checked
-				picker.querySelectorAll('.server_row').forEach( el => el.classList.remove('on') )
+				picker.querySelectorAll('.server_row').forEach( el => { el.classList.remove('on') } )
 				server_row.classList.add('on')
 				store_server(storage_key, current_server.url)
 				if (typeof on_change==='function') {

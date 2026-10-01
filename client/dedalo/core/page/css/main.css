@@ -5076,6 +5076,11 @@ input::placeholder {
   grid-template-rows: var(--component_label_height) minmax(auto, 100%);
   align-content: start;
 }
+.wrapper_component.loading {
+  opacity: 1;
+  animation: wrapper_loading_dim 0.2s ease-out 0.4s forwards;
+  animation-play-state: running !important;
+}
 .wrapper_component.modified:after {
   content: " ";
   display: block;
@@ -5426,6 +5431,11 @@ dd-modal .wrapper_component > .content_data.vertical,
   justify-content: center;
   flex-flow: unset;
 }
+@keyframes wrapper_loading_dim {
+  to {
+    opacity: 0.4;
+  }
+}
 .wrapper_component.edit.component_input_text > .content_data,
 .wrapper_component.edit.component_number > .content_data,
 .wrapper_component.edit.component_date > .content_data,
@@ -5483,6 +5493,10 @@ dd-modal {
 dd-modal .spinner_modal {
   position: relative;
   margin: 1rem;
+}
+dd-modal > .wrapper_section.edit[slot="body"],
+dd-modal > [slot="body"] > .wrapper_section.edit {
+  padding-top: calc(2.4rem + 0.25rem);
 }
 dd-modal .header {
   display: flex;
@@ -5551,7 +5565,6 @@ dd-modal .header.mini .wrapper_tool {
   display: none;
 }
 dd-modal .header_custom {
-  height: 100%;
   padding: 0.5rem;
   display: flex;
   align-items: center;
@@ -12168,13 +12181,13 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .tool_header.tool_ontology,
 .wrapper_tool.tool_ontology {
-  --tool_edge: var(--tool_ontology_color, #276f67);
+  --tool_edge: var(--tool_ontology, #276f67);
   --tool_fill: #276f67;
   --tool_fill_hover: #0f5e56;
   --tool_on_fill: #ffffff;
 }
 :root[data-theme="dark"] :is(.tool_header.tool_ontology, .wrapper_tool.tool_ontology) {
-  --tool_edge: var(--tool_ontology_color, #3a6d65);
+  --tool_edge: var(--tool_ontology, #3a6d65);
   --tool_fill: #3a6d65;
   --tool_fill_hover: #285c54;
   --tool_on_fill: #ffffff;
@@ -12337,10 +12350,10 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .tool_header.tool_update_cache,
 .wrapper_tool.tool_update_cache {
-  --tool_edge: var(--tool_update_cache, #62866a);
-  --tool_fill: #65896d;
-  --tool_fill_hover: #779b7e;
-  --tool_on_fill: #16181b;
+  --tool_edge: var(--tool_update_cache, #5f8367);
+  --tool_fill: #5b7f63;
+  --tool_fill_hover: #4a6d52;
+  --tool_on_fill: #ffffff;
 }
 :root[data-theme="dark"] :is(.tool_header.tool_update_cache, .wrapper_tool.tool_update_cache) {
   --tool_edge: var(--tool_update_cache, #80a888);
@@ -12399,10 +12412,6 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
     min-width: 0;
     padding: 0.5rem;
     padding-top: 1rem;
-  }
-  .wrapper_tool > .content_data > .footer_node {
-    padding: 1.5rem 0.5rem;
-    flex-wrap: wrap;
   }
   .wrapper_tool img,
   .wrapper_tool video,
@@ -12563,22 +12572,6 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   padding: 1rem;
   padding-top: 2rem;
 }
-.wrapper_tool > .content_data > .footer_node {
-  contain: content;
-  padding: 3rem;
-  padding-top: 4rem;
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  align-items: center;
-}
-.wrapper_tool > .content_data > .footer_node > .icon {
-  height: 2rem;
-  vertical-align: center;
-}
-.wrapper_tool > .content_data > .footer_node > .info {
-  font-size: 1.3rem;
-}
 .wrapper_tool > .content_data.content_data_error.tool_error {
   display: block;
   background-color: var(--color_white);
@@ -12619,12 +12612,21 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   margin-right: 1em;
   padding-right: 1rem;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  column-gap: 2rem;
+  row-gap: 0.35rem;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .tool_header > .tool_name_container > .label {
   font-size: 1.4rem;
+  line-height: 1.25;
   display: flex;
   align-items: center;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 .tool_header > .tool_name_container > .label > .button {
   background-color: var(--fg_default) !important;
@@ -12635,9 +12637,14 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .tool_header > .tool_name_container > .description {
   font-weight: 200;
   color: var(--fg_muted);
-  padding-left: 1rem;
-  padding-right: 1rem;
   line-height: 1.4rem;
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+@media screen and (max-width: 600px) {
+  .tool_header > .tool_name_container > .description {
+    flex: none;
+  }
 }
 .tool_header > .tool_buttons_container {
   contain: content;
@@ -12830,7 +12837,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   border-color: var(--tool_fill);
   color: var(--tool_on_fill);
 }
-:is(.wrapper_tool, .tool_header) button.primary::before {
+:is(.wrapper_tool, .tool_header) button.primary:not(.button_spinner)::before {
   background-color: var(--button-bg-color, var(--tool_on_fill)) !important;
 }
 :is(.wrapper_tool, .tool_header) button.primary:hover {
@@ -17555,12 +17562,16 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .wrapper_widget.serve_code > .content_data > .serve_code_body > .update_status:first-child {
   margin-top: 0;
 }
+.wrapper_widget.serve_code > .content_data .dd_readout {
+  grid-template-columns: minmax(min-content, 20rem) 1fr;
+}
 .wrapper_widget.serve_code > .content_data .build_row > .dd_k.build_action {
   display: flex;
   align-items: center;
   padding: 0.4rem 0.5rem;
   text-transform: none;
   letter-spacing: normal;
+  white-space: normal;
 }
 .wrapper_widget.serve_code > .content_data .build_row > .dd_k.build_action.none {
   color: var(--fg_muted);
@@ -19402,10 +19413,6 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 */
 .area_ontology {
   height: 100%;
-}
-.area_ontology > .buttons_container button.tool_ontology_parser {
-  background-color: var(--color_green_ontology);
-  border: none;
 }
 .area_ontology > .content_data > .thesaurus_list_wrapper {
   background-color: unset;
@@ -24024,9 +24031,146 @@ body.inspector_resizing {
 * component_password
 *
 * Included from main.less file
+*
+* Edit view = the password editor (view_default_edit_password.js):
+* field + show/hide toggle, confirm field, live policy checklist, explicit
+* Save/Cancel and a status line. The checklist shows on focus or while a draft
+* exists; confirm + actions only while a draft exists.
 */
 .component_password.view_line {
   display: block;
+}
+.component_password .password_editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 32rem;
+}
+.component_password .password_editor .password_field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.component_password .password_editor .password_field > input {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+.component_password .password_editor .password_field > input::placeholder {
+  color: var(--fg_muted);
+  font-style: normal;
+}
+.component_password .password_editor .password_field > .password_toggle {
+  flex: 0 0 auto;
+  margin: 0;
+  opacity: 0.55;
+}
+.component_password .password_editor .password_field > .password_toggle.active,
+.component_password .password_editor .password_field > .password_toggle:hover {
+  opacity: 1;
+}
+.component_password .password_editor .password_confirm {
+  display: none;
+  padding-right: calc(1.5rem + var(--space-2));
+}
+.component_password .password_editor .password_rules {
+  display: none;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border_default);
+  border-radius: var(--radius-md);
+  background-color: var(--bg_surface_alt);
+  font-size: 0.875rem;
+}
+.component_password .password_editor .password_rules .password_rules_title {
+  color: var(--fg_muted);
+  margin-bottom: var(--space-2);
+}
+.component_password .password_editor .password_rules ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-1);
+}
+.component_password .password_editor .password_rules .password_rule {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  color: var(--fg_default);
+}
+.component_password .password_editor .password_rules .password_rule::before {
+  flex: 0 0 1rem;
+  text-align: center;
+  font-weight: 700;
+}
+.component_password .password_editor .password_rules .password_rule[data-state="pending"] {
+  color: var(--fg_muted);
+}
+.component_password .password_editor .password_rules .password_rule[data-state="pending"]::before {
+  content: '○';
+}
+.component_password .password_editor .password_rules .password_rule[data-state="ok"]::before {
+  content: '✓';
+  color: var(--color_success);
+}
+.component_password .password_editor .password_rules .password_rule[data-state="fail"] {
+  color: var(--color_danger);
+}
+.component_password .password_editor .password_rules .password_rule[data-state="fail"]::before {
+  content: '✗';
+}
+.component_password .password_editor .password_actions {
+  display: none;
+  gap: var(--space-3);
+}
+.component_password .password_editor .password_actions > button {
+  margin: 0;
+}
+.component_password .password_editor .password_actions > button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.component_password .password_editor .password_status {
+  font-size: 0.875rem;
+}
+.component_password .password_editor .password_status:empty {
+  display: none;
+}
+.component_password .password_editor .password_status::before {
+  font-weight: 700;
+  margin-right: var(--space-2);
+}
+.component_password .password_editor .password_status[data-state="idle"] {
+  color: var(--fg_muted);
+}
+.component_password .password_editor .password_status[data-state="draft"] {
+  color: var(--color_warning);
+}
+.component_password .password_editor .password_status[data-state="draft"]::before {
+  content: '●';
+}
+.component_password .password_editor .password_status[data-state="saved"] {
+  color: var(--color_success);
+}
+.component_password .password_editor .password_status[data-state="saved"]::before {
+  content: '✓';
+}
+.component_password .password_editor .password_status[data-state="error"] {
+  color: var(--color_danger);
+}
+.component_password .password_editor .password_status[data-state="error"]::before {
+  content: '✗';
+}
+.component_password .password_editor:focus-within .password_rules,
+.component_password .password_editor.has_draft .password_rules {
+  display: block;
+}
+.component_password .password_editor.has_draft .password_confirm {
+  display: flex;
+}
+.component_password .password_editor.has_draft .password_actions {
+  display: flex;
 }
 /**
 * component_pdf

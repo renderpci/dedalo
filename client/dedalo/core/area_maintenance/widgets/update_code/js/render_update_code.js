@@ -361,7 +361,7 @@ const get_content_data_edit = async function(self) {
 		}
 
 	// dev_channel switch — ask the code server for DEVELOPER BUILDS too.
-	// A developer build is a branch build (any ref but 'master'), so it carries
+	// A developer build is a build of the 'master' tip (a release is a tag), so it carries
 	// NO version bump and installs over the same version: it is how unreleased
 	// work is tested on a real installation. Flipping this switch is the ARMING
 	// on this side — everything else (superuser, maintenance mode, a recent
@@ -398,7 +398,7 @@ const get_content_data_edit = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'dd_note dev_channel_note',
-			text_content	: get_label.update_code_dev_channel_note || 'Also offers unreleased builds made from a development branch. They carry the same version number as the installed one, so they are installed over it. Use them to test development work, never on a production installation.',
+			text_content	: get_label.update_code_dev_channel_note || "Also offers developer builds made from the 'master' branch: the latest integrated code, not yet released. A developer build may carry the same version number as the installed one, and is then installed over it. Use them to test development work, never on a production installation.",
 			parent			: dev_channel_row
 		})
 
@@ -417,7 +417,7 @@ const get_content_data_edit = async function(self) {
 			e.stopPropagation()
 
 			// clean previous inline feedback
-				body_response.querySelectorAll('.error').forEach(el => el.remove())
+				body_response.querySelectorAll('.error').forEach(el => { el.remove() })
 				servers_list.classList.remove('empty')
 
 			// busy guard: a running update OR restore owns the panel (make_backup
@@ -780,13 +780,8 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 	// with the surface complete lands at 26 exactly. rAF lets the appended nodes
 	// lay out first — without it the offset is computed from a stale layout
 	// again, just one frame earlier.
-		if (scroll_into_view===true && typeof body_response.scrollIntoView==='function') {
-			const bring_into_view = () => body_response.scrollIntoView({ behavior:'auto', block:'start' })
-			if (typeof requestAnimationFrame==='function') {
-				requestAnimationFrame(bring_into_view)
-			} else {
-				bring_into_view()
-			}
+		if (scroll_into_view===true) {
+			ui.reveal(body_response, { behavior:'auto', block:'start' })
 		}
 
 	// frame feed. update_process_status/render_stream expose no per-chunk hook
@@ -837,14 +832,9 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 		// short window (update_code.less caps it for exactly this reason), so a
 		// refusal, a rollback or a lost connection landed in space the operator
 		// never saw: the panel looked like it had simply stopped. The track's
-		// cap makes room; this puts the sentence IN it. Guarded on the method
-		// because the render gate drives this file against a DOM stub.
-		const reveal = (node) => {
-			if (node && typeof node.scrollIntoView==='function') {
-				node.scrollIntoView({ behavior:'smooth', block:'center' })
-			}
-			return node
-		}
+		// cap makes room; this puts the sentence IN it (ui.reveal: next frame,
+		// DOM-stub guarded).
+		const reveal = (node) => ui.reveal(node, { block:'center' })
 
 		const finish_success = async (version) => {
 			end_tracking()
@@ -1284,9 +1274,9 @@ export const render_info_modal = function( self, versions_info, body_response ) 
 
 			// change event handler
 			const change_handler = () => {
-				files.forEach( el => delete el.active )
+				files.forEach( el => { delete el.active } )
 				current_version.active = input_radio.checked
-				body.querySelectorAll('.version_label, .value').forEach( el => el.classList.remove('active') )
+				body.querySelectorAll('.version_label, .value').forEach( el => { el.classList.remove('active') } )
 				version_label.classList.add('active')
 				value_node.classList.add('active')
 				date_node.classList.add('active')

@@ -214,9 +214,10 @@ export const deregister_unsaved_instance = function(instance) {
 * RESET_UNSAVED_DATA
 * Clear the WHOLE registry and the coarse assertion, then re-derive
 * window.unsaved_data (false). This is the deliberate page-wide reset for
-* check_unsaved_data's two resolutions ONLY: "every dirty component was just
-* flushed by the auto-save sweep" and "the user explicitly accepted losing
-* the remaining changes". Nothing else may clear state it does not own.
+* check_unsaved_data's ONE resolution: "the user explicitly accepted losing
+* the remaining changes". (The auto-save sweep does NOT reset: each save
+* retires its own entry, and what remains was not flushed.) Nothing else may
+* clear state it does not own.
 *
 * @returns {boolean} The recomputed window.unsaved_data value (false here)
 */

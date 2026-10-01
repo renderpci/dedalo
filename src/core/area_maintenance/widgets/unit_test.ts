@@ -12,9 +12,45 @@
  * test/parity/widget_request_differential.test.ts.
  */
 
+import { CLIENT_LIBS, isDevMode } from '../../client_libs/registry.ts';
+import { resolveClientLibPath } from '../../client_libs/serving.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import type { Principal } from '../../security/permissions.ts';
 import { resetTestSection } from '../../test_data/seed.ts';
 import type { WidgetModule, WidgetResponse } from './support.ts';
+
+/**
+ * What this installation can offer the unit-test panel — the catalog `value` the
+ * client renders from, so the browser never decides on its own:
+ *  - `dev_mode`: DEDALO_DEV_MODE. Gates the matrix_test reset (server-refused
+ *    below, button hidden client-side).
+ *  - `harness_missing`: the `devOnly` client libs (mocha/chai) that do not
+ *    resolve. A production install (`bun install --production`: the Dockerfile
+ *    default target, the code updater) drops them even with dev mode on, and the
+ *    runner page then dies on JSON 404s — so dev mode alone does not make the
+ *    "Open JS unit test" button honest.
+ *  - `harness_available`: dev mode AND nothing missing.
+ * Resolved through `resolveClientLibPath` — the SAME door that serves
+ * /dedalo/lib/*, so the panel cannot disagree with what the browser will get.
+ */
+export function unitTestPosture(): {
+	dev_mode: boolean;
+	harness_available: boolean;
+	harness_missing: string[];
+} {
+	const devMode = isDevMode();
+	const missing = devMode
+		? Object.entries(CLIENT_LIBS)
+				.filter(([, lib]) => lib.devOnly === true)
+				.filter(([id, lib]) => resolveClientLibPath(id, lib.probe) === null)
+				.map(([id]) => id)
+		: [];
+	return {
+		dev_mode: devMode,
+		harness_available: devMode && missing.length === 0,
+		harness_missing: missing,
+	};
+}
 
 /**
  * COVERAGE-EXEMPT — THE LOUDEST EXEMPTION IN THE TREE (coverage plan §5.2; reason
@@ -27,6 +63,13 @@ import type { WidgetModule, WidgetResponse } from './support.ts';
  * through `restoreCanonicalTest3()`.
  */
 async function unitTestCreateTestRecord(): Promise<WidgetResponse> {
+	// Dev-server-only: the button is hidden elsewhere, but an admin can POST the
+	// action directly — the refusal is the guarantee, the hidden button is not.
+	if (!isDevMode()) {
+		throw new DedaloError('maintenance.dev_mode_required', {
+			coordinates: { widget_action: 'unit_test.create_test_record' },
+		});
+	}
 	await resetTestSection();
 	return { data: true, msg: 'OK. Request done unit_test::create_test_record' };
 }
@@ -112,6 +155,7 @@ async function unitTestLongProcessStream(
 
 export const widget: WidgetModule = {
 	spec: { id: 'unit_test', category: 'dev', label: { kind: 'literal', text: 'Unit test area' } },
+	eagerValue: async () => unitTestPosture(),
 	apiActions: {
 		create_test_record: unitTestCreateTestRecord,
 		long_process_stream: unitTestLongProcessStream,

@@ -2579,4 +2579,14 @@ describe('CI workflow tripwire', () => {
 			);
 		}
 	});
+
+	test('no CI definition names DEDALO_CI_SKIP_ADVISORY — the runner always runs the advisory stage', () => {
+		// `ci:local --skip-advisory` (the pre-push hook's) skips db_tier.sh's ADVISORY unit
+		// stage on the DESK only; ci_local_native pins that stage and its one reader.
+		const hosts = [...allWorkflows, { rel: '.gitlab-ci.yml', src: read('.gitlab-ci.yml') }];
+		expect(hosts.length).toBeGreaterThan(2);
+		expect(
+			hosts.filter(({ src }) => src.includes('DEDALO_CI_SKIP_ADVISORY')).map(({ rel }) => rel),
+		).toEqual([]);
+	});
 });

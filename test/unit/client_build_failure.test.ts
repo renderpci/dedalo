@@ -44,6 +44,10 @@ type FakeNode = {
 
 const globals = globalThis as unknown as Record<string, unknown>;
 const saved: Record<string, unknown> = {};
+/** modules snapshotted + restored. ui.js is NOT: its real import needs a browser
+ * lib bun cannot resolve, and it has ONE export, so the stub never narrows it. */
+const MOCKED = ['data_manager.js', 'error_dispatch.js'] as const;
+const REAL: Record<string, Record<string, unknown>> = {};
 let render_build_failure: (o: Record<string, unknown>) => FakeNode;
 let ApiError: new (f: Record<string, unknown>) => object;
 let build_autoload: (self: Record<string, unknown>) => Promise<unknown>;
@@ -75,16 +79,6 @@ const make_node = (o: Record<string, unknown>): FakeNode => {
 	return node;
 };
 
-const UI_PATH = join(CLIENT_COMMON, 'ui.js');
-const DATA_MANAGER_PATH = join(CLIENT_COMMON, 'data_manager.js');
-const ERROR_DISPATCH_PATH = join(CLIENT_COMMON, 'error_dispatch.js');
-/** The real modules, captured before they are stubbed and restored after. */
-const real: Record<'ui' | 'data_manager' | 'error_dispatch', Record<string, unknown>> = {
-	ui: {},
-	data_manager: {},
-	error_dispatch: {},
-};
-
 beforeAll(async () => {
 	for (const key of ['window', 'SHOW_DEBUG', 'SHOW_DEVELOPER', 'get_label'])
 		saved[key] = globals[key];
@@ -92,39 +86,28 @@ beforeAll(async () => {
 	globals.SHOW_DEBUG = false;
 	globals.SHOW_DEVELOPER = false;
 	globals.get_label = {};
-	// SPREAD, never truncate: mock.module is process-global, so each stub keeps
-	// every real export and overrides only what this file drives. The real
-	// modules are captured here (after the browser globals above exist) and
-	// put back in afterAll.
-	real.ui = await import(UI_PATH);
-	real.data_manager = await import(DATA_MANAGER_PATH);
-	real.error_dispatch = await import(ERROR_DISPATCH_PATH);
-	mock.module(UI_PATH, () => ({
-		...real.ui,
-		ui: { ...(real.ui.ui as object), create_dom_element: make_node },
-	}));
+	// Snapshot the REAL modules (spread copies, before any mock) so each stub
+	// overrides only what it needs and afterAll can re-mock them back.
+	mock.module(join(CLIENT_COMMON, 'ui.js'), () => ({ ui: { create_dom_element: make_node } }));
+	for (const name of MOCKED)
+		REAL[name] = { ...((await import(join(CLIENT_COMMON, name))) as object) };
 	({ render_build_failure } = (await import(join(CLIENT_COMMON, 'render_api_error.js'))) as never);
 	({ ApiError } = (await import(join(CLIENT_COMMON, 'api_error.js'))) as never);
-	mock.module(DATA_MANAGER_PATH, () => ({
-		...real.data_manager,
-		data_manager: {
-			...(real.data_manager.data_manager as object),
-			request: async () => responses.shift(),
-		},
+	mock.module(join(CLIENT_COMMON, 'data_manager.js'), () => ({
+		...REAL['data_manager.js'],
+		data_manager: { request: async () => responses.shift() },
 	}));
-	mock.module(ERROR_DISPATCH_PATH, () => ({
-		...real.error_dispatch,
+	mock.module(join(CLIENT_COMMON, 'error_dispatch.js'), () => ({
+		...REAL['error_dispatch.js'],
 		handle_api_error: async () => ({ recovered }),
 	}));
 	({ build_autoload } = (await import(join(CLIENT_COMMON, 'common.js'))) as never);
 });
 
 afterAll(() => {
-	// Put the real modules back for every later file in the tier, then drop the stubs.
-	mock.module(UI_PATH, () => real.ui);
-	mock.module(DATA_MANAGER_PATH, () => real.data_manager);
-	mock.module(ERROR_DISPATCH_PATH, () => real.error_dispatch);
-	mock.restore();
+	// `mock.restore()` does NOT revert `mock.module` in bun: re-mock each module
+	// back to its snapshot so no later file inherits the stubs.
+	for (const name of MOCKED) mock.module(join(CLIENT_COMMON, name), () => REAL[name]);
 	for (const key of ['window', 'SHOW_DEBUG', 'SHOW_DEVELOPER', 'get_label'])
 		globals[key] = saved[key];
 });

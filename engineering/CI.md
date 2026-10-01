@@ -37,7 +37,7 @@ by a hosted one (`tier_wiring_tripwire` leg B).
 | Workflow | Trigger | Runner | Runs |
 |---|---|---|---|
 | `.github/workflows/ci.yml` | pull_request + push master/v7 | hosted ubuntu, `hermetic` in the CI image (uid 1001) | `dedupe` → `hermetic` (`scripts/ci/hermetic.sh`) |
-| `.github/workflows/db.yml` | pull_request + push master/v7 + dispatch | hosted ubuntu, each tier job in the CI image (uid 1001) + a `pgvector` service (digest-pinned) reached as `postgres` | `dedupe` → `db` (`scripts/ci/db_tier.sh`: builds the suite database from repo-vendored bytes, starts the suite MariaDB target, then, in this order, the DB-backed tripwires → the unit tier (advisory — Part 2) → the parity tier → the MariaDB tier (blocking — PUB-05, LAST on purpose: see *CI tiers → DB* below; tier_wiring leg K)) and `instance` (`scripts/ci/instance_tier.sh`: its OWN fresh suite database, then the browser client suite via `scripts/ci/client_gate.sh` and both update drills). Both source `scripts/ci/hosted_env.sh` |
+| `.github/workflows/db.yml` | pull_request + push master/v7 + dispatch | hosted ubuntu, each tier job in the CI image (uid 1001) + a `pgvector` service (digest-pinned) reached as `postgres` | `dedupe` → `db` (`scripts/ci/db_tier.sh`: builds the suite database from repo-vendored bytes, starts the suite MariaDB target, then, in this order, the DB-backed tripwires → the unit tier (advisory — Part 2) → the parity tier → the MariaDB tier (blocking — PUB-05, LAST on purpose: see *CI tiers → DB* below; tier_wiring leg K)) and `instance` (`scripts/ci/instance_tier.sh`: its OWN fresh suite database, then the browser client suite via `scripts/ci/client_gate.sh`, the tool phone contract and both update drills). Both source `scripts/ci/hosted_env.sh` |
 | `.github/workflows/nightly.yml` | cron 04:17 UTC daily + dispatch | hosted ubuntu | the TIME-BASED checks the push gate defers: `scripts/ci/audit.ts --force --require-network` with the vendor calendar ON; `image_pin` (`bun run ci:image:pin --check`: the lock is the latest published build); `report` keeps one `ci-nightly` issue open/updated/closed |
 | `.github/workflows/ci-image.yml` | push master/v7 touching the image definition + weekly cron (cache OFF) + dispatch | hosted ubuntu-24.04 amd64 + arm64 (native, no QEMU) | builds `ci/Dockerfile`, smoke-tests the exact bytes, pushes `ghcr.io/renderpci/dedalo-ci` (`fp-<fingerprint>`, `<YYYYMMDD>`, `latest`) as a multi-arch manifest list |
 | `.github/workflows/security.yml` | PR + push master + weekly cron + dispatch | hosted ubuntu | secret scan (gitleaks, digest-pinned image): working tree every run, FULL HISTORY weekly |
@@ -126,6 +126,8 @@ re-recorded. The same verdict now happens on the desk.
         [--base <branch>]    # behave as a pull_request against <branch>
         [--audit-base <sha>] # the push's `before` (the audit's skip base)
     any mode: [--fail-fast]  # stop after the first red tier; the rest report `not_run`
+              [--skip-advisory] # skip the db tier's ADVISORY unit stage (desk only; no
+                                # workflow sets it — ci_local_native)
               [--summary <file.json>]
 
 It runs `scripts/ci/hermetic.sh`, `db_tier.sh` and `instance_tier.sh` UNCHANGED with an
@@ -212,7 +214,9 @@ against local bare remotes with stubbed bank/ci:local). For the pushed refs it:
 3. adds `--db --instance` unless every file the pushed range touches (renames count
    both paths; a merge is diffed against its first parent; >500 new commits or a URL
    remote count as everything) is in its `HERMETIC_ONLY_PATHS` allow-list (anything
-   unlisted selects the full gate), or always with `DEDALO_PREPUSH=full`.
+   unlisted selects the full gate), or always with `DEDALO_PREPUSH=full`. With them
+   goes `--skip-advisory`: the db tier's ADVISORY unit stage (~5 min) cannot change the
+   verdict, so the desk skips it; the runner still runs it on every push.
 
 **The audit base is the remote's sha**, per ref as git hands it: one gated remote sha
 this clone has → that sha; a new branch (`000…`), an unfetched remote tip, or gated refs
@@ -294,7 +298,8 @@ exactly these shas. `--dry-run` prints the plan. No flag skips the gate.
   database (the unit stage pollutes the fixture the client baseline was measured on),
   then the browser client suite (`scripts/ci/client_gate.sh` → `bun run test:client`:
   own server on the suite DB, real login, pinned diffusion domain + projects fixture,
-  Mocha in the system browser) and `bun run test:update` / `test:update:dev` (a real
+  Mocha in the system browser), `bun run test:tools:phone` (every tool at 360×740, same suite
+  server door) and `bun run test:update` / `test:update:dev` (a real
   master builds and serves a release; a supervised consumer copy installs it across the
   planned-death restart). The checkout is `fetch-depth: 0` (the drills `git clone` it);
   the release commit is cut with `git checkout -B` (a PR checkout is a detached HEAD).

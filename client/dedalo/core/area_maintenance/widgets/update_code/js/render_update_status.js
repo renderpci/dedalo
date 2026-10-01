@@ -422,7 +422,7 @@ const render_readiness = function(parent, consumer) {
 			? (get_label.update_code_ready_with_waiver || 'Ready to update, but only with a waiver')
 			: undefined
 	)
-	;(consumer.checks || []).forEach(check => check_row(readiness, check))
+	;(consumer.checks || []).forEach(check => { check_row(readiness, check) })
 
 	return readiness.parentNode
 }//end render_readiness
@@ -526,7 +526,7 @@ export const render_consumer_status = function(parent, consumer, on_restore, on_
 		const posture_text = engine.posture==='release'
 			? (get_label.update_code_posture_release || 'Release build')
 			: engine.install_channel==='dev'
-				? (get_label.update_code_posture_dev_build || 'Developer build (unreleased branch code)')
+				? (get_label.update_code_posture_dev_build || "Developer build (unreleased code from 'master')")
 				: (get_label.update_code_posture_dev || 'Development checkout')
 		fact_row(
 			installation,

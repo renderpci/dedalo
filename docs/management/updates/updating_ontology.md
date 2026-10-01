@@ -73,6 +73,11 @@ ONTOLOGY_SERVERS=[{"name":"Dédalo Ontology server","url":"https://myserverdomai
 `code` is the `ONTOLOGY_SERVER_CODE` configured on **that** server; a wrong or missing one makes
 the master answer as *Unreachable* in the picker. Add one object per master.
 
+A master is identified by its `url`, never by its `code`: several masters may share the same
+access code (the official one and a local copy of it, for example), and the update downloads
+only from the address of the master you picked. A file whose address is on any other host is
+refused before it is written.
+
 The client's own engine must also allow the connection: the browser's Content-Security-Policy has to name the master in `connect-src`, or the fetch is refused before it leaves. The engine derives this automatically from the master URLs in [`ONTOLOGY_SERVERS`](../../config/config.md#ontology-servers) — there is no second setting — but the policy is built at **boot**, so a client that has just added or changed a master must be **restarted** before the panel can reach it.
 
 !!! warning "The panel can report a master as *ready* and still fail on submit"
@@ -81,7 +86,12 @@ The client's own engine must also allow the connection: the browser's Content-Se
     * `violates the following Content Security Policy directive: "connect-src …"` — the **client** does not list the master. Check `ONTOLOGY_SERVERS` on the client, and restart it.
     * a CORS or network error naming the master — the **master** does not accept the client's origin. Check `DEDALO_CORS_ALLOWED_ORIGINS` on the master.
 
-    Both surface in the panel as the same unhelpful `Max retries reached, request failed`, so read the console, not the panel.
+    Both surface in the panel as the same unhelpful `Max retries reached, request failed`, so read the console for these two.
+
+A refusal that comes **from the server** — a download refused, a file that fails validation, an
+import rolled back — is shown in the panel under the button: the error, the server's explanation
+(for example `origin mismatch: <file host> != <picked master>`) and a `request_id` that finds the
+same request in the server log.
 
 ## Update process
 

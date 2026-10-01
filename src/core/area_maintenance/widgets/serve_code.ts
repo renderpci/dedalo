@@ -86,23 +86,39 @@ async function withReachability(
  */
 async function buildVersionOwned(options: Record<string, unknown>): Promise<WidgetResponse> {
 	const { buildVersionFromGit } = await import('../../update/code_build.ts');
-	// The panel's two buttons send a BRANCH ('master' / 'developer') and nothing
-	// else. The release they build is the version THE REF DECLARES — no longer
-	// the engine's current version: taking the name from the running process
-	// while the bytes came from a ref meant a master left running across a
-	// version bump published mislabelled archives, and a master whose ref
-	// declares its OWN version published a same-version zip that
-	// assertLinearUpgrade refuses as a downgrade (measured 2026-08-24: a 7.0.0
-	// master produced an uninstallable 7.0.0.zip). An explicit `version` from an
-	// API caller is now a CLAIM, checked against the ref and refused on mismatch.
-	const branch = typeof options.branch === 'string' ? options.branch : undefined;
-	const ref = typeof options.ref === 'string' ? options.ref : branch;
+	// The panel's two buttons send a CHANNEL ('master' = release, 'dev') and
+	// nothing else: the ref is resolved on the server (code_build.ts
+	// resolveBuildRefOrRefuse — release = the newest `vX.Y.Z` tag, dev = the tip
+	// of `master`), never baked into the client. The release is named after the
+	// version THE REF DECLARES, not the running process: taking the name from the
+	// process while the bytes came from a ref published mislabelled archives
+	// (measured 2026-08-24: a 7.0.0 master produced an uninstallable 7.0.0.zip).
+	// An explicit `ref` / `version` from an API caller is honoured, the version
+	// as a CLAIM checked against the ref and refused on mismatch.
+	const channel = channelOption(options.channel);
+	const ref = refOption(options);
 	return fromEnvelope(
 		await buildVersionFromGit({
 			...(typeof options.version === 'string' ? { version: options.version } : {}),
 			...(ref === undefined ? {} : { ref }),
+			...(channel === undefined ? {} : { channel }),
 		}),
 	);
+}
+
+/** The panel's channel, or undefined for anything that is not exactly one. */
+function channelOption(value: unknown): 'master' | 'dev' | undefined {
+	return value === 'dev' || value === 'master' ? value : undefined;
+}
+
+/**
+ * The explicit ref: `ref`, else `branch` — the pre-2026-09-29 client's key,
+ * honoured as the explicit ref it always was (so a cached page builds what it
+ * names, under today's channel rule), never reinterpreted as a channel.
+ */
+function refOption(options: Record<string, unknown>): string | undefined {
+	if (typeof options.ref === 'string') return options.ref;
+	return typeof options.branch === 'string' ? options.branch : undefined;
 }
 
 export const widget: WidgetModule = {

@@ -5,7 +5,7 @@
 
 
 
-import {section_record} from '../../../core/section_record/js/section_record.js'
+import {section_record, apply_caller_show_interface} from '../../../core/section_record/js/section_record.js'
 import {get_section_records} from '../../../core/section/js/section.js'
 import {get_dataframe} from '../../../core/component_common/js/dataframe.js'
 import {event_manager} from '../../../core/common/js/event_manager.js'
@@ -1145,6 +1145,176 @@ describe(`SECTION_RECORD (time machine keying)`, async () => {
 		})
 		assert.equal(sr.id, expected_key, 'no matrix_id / data_source segment in the key of a plain section record')
 		assert.strictEqual(sr.matrix_id, null, 'matrix_id stays null')
+	})
+})
+
+
+
+/**
+* SECTION_RECORD (caller show_interface)
+* A page that hands a section its own request_config may declare, per ddo,
+* `properties.show_interface` (the preset editors and tool_user_admin declare
+* `{tools:false}`). The server never sees it (client ddo whitelist, spec §7.8),
+* so section_record applies it to the child's context clone
+* (apply_caller_show_interface). Pinned: the declaration reaches the child; and
+* every limit that keeps other behaviour unchanged — only show_interface; the
+* element's own interface wins (request_config show.interface overlaid by
+* properties.show_interface, the set_context_vars precedence); only a section
+* caller's main dedalo show.ddo_map, matched by tipo + section_tipo + parent;
+* malformed values ignored; nothing shared with the page.
+*/
+describe(`SECTION_RECORD (caller show_interface)`, async () => {
+
+	const ctx = (extra={}) => ({
+		model			: 'component_input_text',
+		tipo			: 'csi_1',
+		section_tipo	: 'csi_st',
+		mode			: 'edit',
+		properties		: {},
+		...extra
+	})
+	const caller_with = (ddo_properties, extra_ddo={}, caller_extra={}) => ({
+		model			: 'section',
+		request_config	: [{
+			api_engine	: 'dedalo',
+			type		: 'main',
+			show		: { ddo_map : [{ tipo:'csi_1', section_tipo:'csi_st', parent:'csi_st', properties:ddo_properties, ...extra_ddo }] }
+		}],
+		...caller_extra
+	})
+
+	it(`the caller's show_interface reaches the child context`, function() {
+		const context = ctx()
+		const applied = apply_caller_show_interface({ tipo:'csi_st', caller:caller_with({show_interface:{tools:false, button_add:false}}) }, context)
+		assert.equal(applied, true)
+		assert.deepEqual(context.properties.show_interface, {tools:false, button_add:false})
+	})
+
+	it(`the ontology wins a conflicting key; the caller only adds`, function() {
+		const context = ctx({ properties:{ show_interface:{tools:true, button_add:true} } })
+		apply_caller_show_interface({ tipo:'csi_st', caller:caller_with({show_interface:{tools:false, button_fullscreen:false}}) }, context)
+		assert.deepEqual(context.properties.show_interface, {tools:true, button_add:true, button_fullscreen:false})
+	})
+
+	it(`no other properties key is taken from the caller`, function() {
+		const context = ctx({ properties:{ css:{a:1} } })
+		apply_caller_show_interface({ tipo:'csi_st', caller:caller_with({show_interface:{tools:false}, css:{b:2}, view:'line', source:{}}) }, context)
+		assert.deepEqual(context.properties, { css:{a:1}, show_interface:{tools:false} })
+	})
+
+	it(`only a section caller, only its main dedalo show.ddo_map`, function() {
+		const decl = {show_interface:{tools:false}}
+		const cases = [
+			{ caller:null },
+			{ caller:{...caller_with(decl), model:'component_portal'} },
+			{ caller:{ model:'section', request_config:null } },
+			{ caller:{ model:'section', request_config:[{ api_engine:'zenon', type:'main', show:{ ddo_map:[{tipo:'csi_1', properties:decl}] } }] } },
+			{ caller:{ model:'section', request_config:[{ api_engine:'dedalo', type:'secondary', show:{ ddo_map:[{tipo:'csi_1', properties:decl}] } }] } }
+		]
+		for (const self of cases) {
+			const context = ctx()
+			assert.equal(apply_caller_show_interface({ tipo:'csi_st', ...self }, context), false)
+			assert.deepEqual(context.properties, {}, 'context untouched')
+		}
+	})
+
+	it(`the ddo is matched by tipo AND section_tipo ('self', absent and arrays match)`, function() {
+		const decl = {show_interface:{tools:false}}
+		const match = (extra_ddo) => apply_caller_show_interface({ tipo:'csi_st', caller:caller_with(decl, extra_ddo) }, ctx())
+		assert.equal(match({section_tipo:'self'}), true)
+		assert.equal(match({section_tipo:undefined}), true)
+		assert.equal(match({section_tipo:['x', 'csi_st']}), true)
+		assert.equal(match({section_tipo:'other_st'}), false, 'same tipo in another section is another element')
+		assert.equal(match({tipo:'csi_2'}), false)
+	})
+
+	it(`a malformed show_interface is ignored`, function() {
+		for (const bad of ['tools:false', [{tools:false}], null, 7, undefined]) {
+			const context = ctx()
+			assert.equal(apply_caller_show_interface({ tipo:'csi_st', caller:caller_with({show_interface:bad}) }, context), false)
+			assert.deepEqual(context.properties, {})
+		}
+	})
+
+	it(`the element's own show.interface (request_config) is kept, properties overlaying it`, function() {
+		// set_context_vars reads properties.show_interface INSTEAD of
+		// request_config_object.show.interface once the former exists, so the
+		// merge must seed from both or an ontology show.interface is lost
+		const context = ctx({
+			request_config : [{ api_engine:'dedalo', type:'main', show:{ interface:{ button_tree:true, tools:true, button_link:false } } }],
+			properties : { show_interface:{ tools:false } }
+		})
+		apply_caller_show_interface({ tipo:'csi_st', caller:caller_with({show_interface:{tools:true, button_link:true, button_add:false}}) }, context)
+		assert.deepEqual(context.properties.show_interface, {
+			tools		: false, // properties over show.interface over the caller
+			button_tree	: true,  // element show.interface
+			button_link	: false, // element show.interface over the caller
+			button_add	: false  // caller, unset by the element
+		})
+	})
+
+	it(`the ddo is matched by parent too ('self'/absent = the row's section)`, function() {
+		const decl = {show_interface:{tools:false}}
+		const match = (extra_ddo) => apply_caller_show_interface({ tipo:'csi_st', caller:caller_with(decl, extra_ddo) }, ctx())
+		assert.equal(match({parent:'self'}), true)
+		assert.equal(match({parent:undefined}), true)
+		assert.equal(match({parent:'csi_portal'}), false, 'a deeper ddo of the same tipo/section is another element')
+	})
+
+	it(`nothing is shared with the page's request_config`, function() {
+		const caller = caller_with({show_interface:{tools:false, button_edit_options:{action_mousedown:'navigate'}}})
+		const context = ctx()
+		apply_caller_show_interface({ tipo:'csi_st', caller }, context)
+		context.properties.show_interface.button_edit_options.action_mousedown = 'changed'
+		context.properties.show_interface.tools = true
+		const declared = caller.request_config[0].show.ddo_map[0].properties.show_interface
+		assert.equal(declared.button_edit_options.action_mousedown, 'navigate')
+		assert.equal(declared.tools, false)
+	})
+
+	it(`end to end: a child built by get_ar_instances_edit gets show_interface.tools false`, async function() {
+
+		this.timeout(8000)
+
+		const caller = {
+			...caller_with({show_interface:{tools:false}}),
+			section_tipo	: 'csi_st',
+			section_id		: 1,
+			permissions		: {}
+		}
+		const sr = new section_record()
+		await sr.init({
+			model			: 'section_record',
+			tipo			: 'csi_st',
+			section_tipo	: 'csi_st',
+			section_id		: 1,
+			mode			: 'edit',
+			lang			: 'lg-eng',
+			context			: {},
+			datum			: { context:[], data:[] },
+			caller			: caller,
+			id_variant		: 'csi_e2e'
+		})
+		sr.datum.context = [{
+			...ctx(),
+			parent			: 'csi_st',
+			type			: 'component',
+			lang			: 'lg-nolan',
+			permissions		: 2,
+			tools			: [{ name:'tool_time_machine' }]
+		}]
+
+		const built = await sr.get_ar_instances_edit()
+		try {
+			assert.equal(built.length, 1, 'one child built')
+			assert.equal(built[0].show_interface.tools, false, 'the declared tools:false reached the component')
+			assert.equal(built[0].show_interface.button_add, true, 'undeclared keys keep the defaults')
+			assert.deepEqual(sr.datum.context[0].properties, {}, 'the shared datum.context is untouched')
+		} finally {
+			for (const instance of built) {
+				await instance.destroy?.()
+			}
+		}
 	})
 })
 

@@ -1779,7 +1779,7 @@ export async function startServer() {
 		console.warn(`[boot] ${describeInstallAllowPolicy()}`);
 	}
 
-	// A MASTER must know its own public name. Both manifests hand OTHER machines
+	// An UPDATE SERVER must know its own public name. Both manifests hand OTHER machines
 	// absolute urls built from `publicOrigin()` (DEDALO_PROTOCOL + DEDALO_HOST), and
 	// the consumer then ORIGIN-PINS every download to the url it was configured with
 	// (WC-023 D5). With DEDALO_HOST unset that origin falls back to `localhost`, so a
@@ -1788,7 +1788,7 @@ export async function startServer() {
 	// here. The fallback itself stays (a same-machine dev master depends on it —
 	// src/core/resolve/public_origin.ts), so this is a loud line, not a refusal; without
 	// it the misconfiguration is invisible on the only box that could fix it.
-	// engineering/MASTER_SERVER.md §5. Gate: master_legacy_routing_tripwire.
+	// Gate: utils_update_manifest_native (the predicate, by behaviour, + this wiring).
 	if (config.ontologyIo.isOntologyServer || config.update.isCodeServer) {
 		if (publicOriginIsLocal()) {
 			const roles = [
@@ -1798,7 +1798,7 @@ export async function startServer() {
 				.filter((role) => role !== '')
 				.join(' + ');
 			console.warn(
-				`[boot] ${roles} is on but this install has no public name — every manifest it serves will advertise ${publicOrigin()}, which a remote install resolves to ITSELF. Set DEDALO_HOST to this master's public name.`,
+				`[boot] ${roles} is on but this install has no public name — every manifest it serves will advertise ${publicOrigin()}, which a remote install resolves to ITSELF. Set DEDALO_HOST to this server's public name.`,
 			);
 		}
 	}
