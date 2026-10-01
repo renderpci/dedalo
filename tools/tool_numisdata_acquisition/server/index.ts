@@ -26,11 +26,12 @@ import {
 	nameKeysForQuality,
 	persistUploadedMedia,
 } from '../../../src/core/media/tools/files_info_persist.ts';
-import { getMatrixTableFromTipo } from '../../../src/core/ontology/resolver.ts';
+import { getColumnNameByModel, getModelByTipo } from '../../../src/core/ontology/resolver.ts';
 import { currentDataLang } from '../../../src/core/resolve/request_lang.ts';
 import { buildSearchSql } from '../../../src/core/search/sql_assembler.ts';
 import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
 import { saveComponentData } from '../../../src/core/section/record/save_component.ts';
+import { isRecordInScope } from '../../../src/core/security/record_scope.ts';
 import {
 	type ToolActionContext,
 	type ToolResponse,
@@ -755,19 +756,41 @@ type CatalogueIndex = Map<string, number>;
 
 /** Loads every real, currently-curated Catalogue name, so a scraped citation
  * is matched against what this Dédalo instance actually curates, never a
- * hardcoded/guessed abbreviation list. */
-async function loadCatalogueIndex(): Promise<CatalogueIndex> {
-	const table = await getMatrixTableFromTipo(CATALOGUE_SECTION_TIPO);
+ * hardcoded/guessed abbreviation list. An SQO run WITH the caller's principal
+ * (buildSearchSql), not a hand-written SQL WHERE that bypassed the projects
+ * filter and could leak a curator's out-of-scope Catalogue names into every
+ * citation match (review item B3). `limit: 'all'` (set after sanitization,
+ * the same override matchFreeName in tool_import_files uses): the index must
+ * see every name the caller can read, not just the first page of them. */
+async function loadCatalogueIndex(context: ToolActionContext): Promise<CatalogueIndex> {
 	const index: CatalogueIndex = new Map();
-	if (table === null) return index;
-	const rows = (await sql.unsafe(
-		`SELECT section_id, string->'${CATALOGUE_NAME_TIPO}'->0->>'value' AS name
-		 FROM "${table}"
-		 WHERE section_tipo = $1`,
-		[CATALOGUE_SECTION_TIPO],
-	)) as { section_id: number; name: string | null }[];
+	const sqo = sanitizeClientSqo({ section_tipo: [CATALOGUE_SECTION_TIPO] });
+	// Server-side override AFTER the gate (same as tool_import_files' matchFreeName):
+	// the index must see every Catalogue name the caller can read, not just a page of them.
+	sqo.limit = 'all';
+	const built = await buildSearchSql(sqo, { principal: context.principal });
+	const rows = (await sql.unsafe(built.sql, built.params as (string | number | null)[])) as ({
+		section_id: number;
+	} & Record<string, unknown>)[];
+
+	// The rows already carry the component's data column — same extraction as
+	// matchFreeName, no per-record read needed.
+	const model = await getModelByTipo(CATALOGUE_NAME_TIPO);
+	const column = model !== null ? getColumnNameByModel(model) : null;
+	if (column === null) return index;
 	for (const row of rows) {
-		if (row.name) index.set(row.name, row.section_id);
+		const payload = row[column] as Record<string, unknown> | null | undefined;
+		const rawItems = payload?.[CATALOGUE_NAME_TIPO];
+		const items = (Array.isArray(rawItems) ? rawItems : rawItems == null ? [] : [rawItems]).filter(
+			(item) => item !== null && item !== '',
+		);
+		const first = items[0];
+		if (first === null || first === undefined) continue;
+		const name =
+			typeof first === 'object'
+				? String((first as { value?: unknown }).value ?? '')
+				: String(first);
+		if (name) index.set(name, row.section_id);
 	}
 	return index;
 }
@@ -801,24 +824,44 @@ function extractCatalogueCitation(
 }
 
 /** Finds an EXISTING numisdata3 Type record matching a catalog citation —
- * deliberately never creates one (see TYPE_* constants for why). Matches on
- * the exact Catalogue relation + exact Code text. */
-async function findExistingType(catalogueSectionId: number, code: string): Promise<number | null> {
-	const table = await getMatrixTableFromTipo(TYPE_SECTION_TIPO);
-	if (table === null) {
-		throw new DedaloError('tool.action_failed', {
-			message: `No matrix table for section '${TYPE_SECTION_TIPO}'.`,
-		});
-	}
-	const existing = (await sql.unsafe(
-		`SELECT section_id FROM "${table}"
-		 WHERE section_tipo = $1
-		   AND relation->'${TYPE_CATALOGUE_RELATION_TIPO}'->0->>'section_id' = $2
-		   AND string->'${TYPE_CODE_TIPO}'->0->>'value' = $3
-		 LIMIT 1`,
-		[TYPE_SECTION_TIPO, String(catalogueSectionId), code],
-	)) as { section_id: number }[];
-	return existing[0]?.section_id ?? null;
+ * deliberately never creates one (see TYPE_* constants for why). A
+ * `format:'relation'` SQO leaf over the Catalogue relation + exact Code
+ * text, run WITH the caller's principal (same pattern as findExistingAuction,
+ * review item B3) — never a hand-written SQL WHERE that bypassed the
+ * engine's search subsystem and its projects filter. */
+async function findExistingType(
+	catalogueSectionId: number,
+	code: string,
+	context: ToolActionContext,
+): Promise<number | null> {
+	const sqo = sanitizeClientSqo({
+		section_tipo: [TYPE_SECTION_TIPO],
+		limit: 1,
+		filter: {
+			$and: [
+				{
+					q: [
+						{
+							section_tipo: CATALOGUE_SECTION_TIPO,
+							section_id: catalogueSectionId,
+							from_component_tipo: TYPE_CATALOGUE_RELATION_TIPO,
+						},
+					],
+					path: [{ section_tipo: TYPE_SECTION_TIPO, component_tipo: TYPE_CATALOGUE_RELATION_TIPO }],
+					format: 'relation',
+				},
+				{
+					q: `==${code}`,
+					path: [{ section_tipo: TYPE_SECTION_TIPO, component_tipo: TYPE_CODE_TIPO }],
+				},
+			],
+		},
+	});
+	const built = await buildSearchSql(sqo, { principal: context.principal });
+	const rows = (await sql.unsafe(built.sql, built.params as (string | number | null)[])) as {
+		section_id: number;
+	}[];
+	return rows[0]?.section_id ?? null;
 }
 
 /** Links numisdata4's Type field to an EXISTING numisdata3 record — same
@@ -1097,7 +1140,7 @@ async function commitOneLot(
 		const citation = extractCatalogueCitation(description, catalogueIndex);
 		if (citation !== null) {
 			typeCitation = `${citation.catalogueName}-${citation.code}`;
-			typeSectionId = await findExistingType(citation.catalogueSectionId, citation.code);
+			typeSectionId = await findExistingType(citation.catalogueSectionId, citation.code, context);
 			if (typeSectionId !== null) {
 				await linkType(context, sectionId, typeSectionId);
 				fieldsWritten.push(TYPE_RELATION_TIPO);
@@ -1176,9 +1219,23 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 		rawSelection !== null && typeof rawSelection === 'object'
 			? (rawSelection as Record<string, unknown>)
 			: null;
+	// A client-sent section_id is trusted with no existence/read check -
+	// review item B2. isRecordInScope runs the SAME principal-scoped
+	// existence search the permission gate itself uses (src/core/security/
+	// record_scope.ts), so a fabricated or out-of-scope id is caught here
+	// instead of linking the Auction's Company to a record the caller can't
+	// even see.
+	const candidateEntityId =
+		s !== null && Number.isInteger(s.section_id) && Number(s.section_id) > 0
+			? Number(s.section_id)
+			: null;
+	const candidateEntityReadable =
+		candidateEntityId !== null &&
+		(context.principal.isGlobalAdmin ||
+			(await isRecordInScope(ENTITY_SECTION_TIPO, candidateEntityId, context.principal)));
 	let companySelection: CompanySelection;
-	if (s !== null && Number.isInteger(s.section_id) && Number(s.section_id) > 0) {
-		companySelection = { sectionId: Number(s.section_id) };
+	if (candidateEntityId !== null && candidateEntityReadable) {
+		companySelection = { sectionId: candidateEntityId };
 	} else if (
 		s !== null &&
 		s.create === true &&
@@ -1195,7 +1252,7 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 	}
 
 	const auctionCache = new Map<string, ResolvedAuction>();
-	const catalogueIndex = await loadCatalogueIndex();
+	const catalogueIndex = await loadCatalogueIndex(context);
 	const results: CommitOneLotResult[] = [];
 	let counter = 0;
 	for (const lot of lots) {
