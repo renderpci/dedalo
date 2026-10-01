@@ -12,9 +12,9 @@
  *   filter, then append the link locator (PHP
  *   component_relation_common::add_new_element, :3770 — the §8.7
  *   filter-inheritance security carry-over);
- * - relation_search ancestor index maintenance for the legacy
+ * - the relation_search ancestor-index DERIVATION for the legacy
  *   component_autocomplete_hi model (hierarchical 'search Spain matches
- *   Madrid' index);
+ *   Madrid' index) — derived here, WRITTEN by the record-write chokepoint;
  * - delete_locator: the dd_component_portal_api partial-locator removal.
  *
  * Phase A: verbatim strangler extraction — semantics unchanged. Phase C adds
@@ -369,24 +369,59 @@ export async function applyAddNewElement(
 }
 
 /**
- * Write relation_search[componentTipo] = the recursive PARENT locators of
- * every stored target (dedup, closest-first, tagged with the items' relation
- * type) — the autocomplete_hi ancestor index. Exported for the observer
- * DEFAULT branch (same-record refresh after tag-text saves).
+ * The two `relation_search` LAWS. `relation_search[tipo]` is the autocomplete_hi
+ * ancestor index: the recursive PARENT locators of every stored target (dedup,
+ * closest-first, tagged with the items' relation type) — what `conform.ts` reads
+ * for a broader-term search ('search Spain matches Madrid').
+ *
+ *  - `'save'`: only a node whose OWN stored model is the legacy
+ *    `component_autocomplete_hi` keeps an index — the exact test `conform.ts`
+ *    applies before it READS one. Every other model is left untouched (PHP
+ *    save_component_dato).
+ *  - `'removal'` (P1-7 / DATA-12): the three REMOVAL doors (the portal locator
+ *    delete, the inverse-reference strip of a record delete, the data wipe)
+ *    re-index every relation key they rewrite. The caller restricts it to the
+ *    `relation` column; here it is unconditional.
+ *
+ * WHO APPLIES IT (CLOSURE_PLAN Step 2, the obligation ledger): the write
+ * chokepoint itself (section_record/record_write.ts), in the SAME UPDATE as the
+ * value — never a door. The per-door helpers that used to write it
+ * (maintainRelationSearchIndex / reindexRelationSearchLikeSave /
+ * reindexRelationColumnLikeSave) are gone; a door that restored a relation key
+ * without remembering them left the index naming the ancestors of the value it
+ * replaced (CORE-2). Gated by write_obligations_tripwire leg B3.
  */
-export async function maintainRelationSearchIndex(
-	table: string,
-	sectionTipo: string,
-	sectionId: number,
+export type RelationSearchLaw = 'save' | 'removal';
+
+/** Whether `law` keeps an ancestor index for `componentTipo` (see RelationSearchLaw). */
+export async function relationSearchLaw(
 	componentTipo: string,
-	items: unknown[],
-): Promise<void> {
+	law: RelationSearchLaw,
+): Promise<boolean> {
+	if (law === 'removal') return true;
+	const { getNode } = await import('../ontology/resolver.ts');
+	return (await getNode(componentTipo))?.model === 'component_autocomplete_hi';
+}
+
+/**
+ * DERIVE `relation_search[componentTipo]` from the value being written — PURE
+ * (it reads the thesaurus parent chains, it writes nothing). `null` when the law
+ * keeps no index for this tipo (the caller leaves the column untouched); an
+ * array otherwise — EMPTY when the value names no target with ancestors, which
+ * the chokepoint writes as a key REMOVAL (PHP delete_key).
+ */
+export async function deriveRelationSearch(
+	componentTipo: string,
+	items: unknown,
+	law: RelationSearchLaw,
+): Promise<Record<string, unknown>[] | null> {
+	if (!(await relationSearchLaw(componentTipo, law))) return null;
+	const values = Array.isArray(items) ? items : [];
 	const { getParentChainLocators } = await import('../resolve/dd_info.ts');
-	const { updateMatrixKeyData } = await import('../db/matrix_write.ts');
-	const relationType = ((items[0] as { type?: string } | null)?.type ?? 'dd151') || 'dd151';
+	const relationType = ((values[0] as { type?: string } | null)?.type ?? 'dd151') || 'dd151';
 	const seenAncestors = new Set<string>();
 	const searchValue: Record<string, unknown>[] = [];
-	for (const item of items) {
+	for (const item of values) {
 		const locator = item as { section_tipo?: string; section_id?: unknown } | null;
 		if (typeof locator?.section_tipo !== 'string' || locator.section_id === undefined) continue;
 		for (const parent of await getParentChainLocators(
@@ -404,60 +439,7 @@ export async function maintainRelationSearchIndex(
 			});
 		}
 	}
-	await updateMatrixKeyData(
-		table,
-		sectionTipo,
-		sectionId,
-		'relation_search',
-		componentTipo,
-		searchValue.length > 0 ? searchValue : null, // null → delete_key
-	);
-}
-
-/**
- * THE SAVE'S `relation_search` LAW, shared by every door that writes a
- * relation key WITH SAVE SEMANTICS (the component save, the time machine's
- * restores and the bulk revert's key writes, 2026-09-27): only a node whose
- * OWN stored model is the legacy `component_autocomplete_hi` keeps an ancestor
- * index — the exact test `conform.ts` applies before it READS one — and for it
- * the index is re-derived from the value just written (empty/absent value →
- * the key is removed). Every other model is a no-op, as in the save. A door
- * that restores a relation key without this leaves `relation_search` naming
- * the ancestors of the value it replaced, and a broader-term search answers
- * for a value the record no longer holds.
- */
-export async function reindexRelationSearchLikeSave(
-	table: string,
-	sectionTipo: string,
-	sectionId: number,
-	componentTipo: string,
-	value: unknown,
-): Promise<void> {
-	const { getNode } = await import('../ontology/resolver.ts');
-	if ((await getNode(componentTipo))?.model !== 'component_autocomplete_hi') return;
-	await maintainRelationSearchIndex(
-		table,
-		sectionTipo,
-		sectionId,
-		componentTipo,
-		Array.isArray(value) ? value : [],
-	);
-}
-
-/**
- * The same law over a whole restored `relation` column (a record undelete
- * writes every key at once): each key re-derives as its own save would.
- */
-export async function reindexRelationColumnLikeSave(
-	table: string,
-	sectionTipo: string,
-	sectionId: number,
-	relationColumn: unknown,
-): Promise<void> {
-	if (relationColumn === null || typeof relationColumn !== 'object') return;
-	for (const [componentTipo, value] of Object.entries(relationColumn as Record<string, unknown>)) {
-		await reindexRelationSearchLikeSave(table, sectionTipo, sectionId, componentTipo, value);
-	}
+	return searchValue;
 }
 
 /**
@@ -1438,7 +1420,7 @@ export async function deletePortalLocator(
 		'../ontology/resolver.ts'
 	);
 	const { readMatrixRecord } = await import('../db/matrix.ts');
-	const { persistRecordKeys } = await import('../section_record/index.ts');
+	const { persistRelationRemovalKeys } = await import('../section_record/index.ts');
 	const model = (await getModelByTipo(tipo)) ?? '';
 	const column = getColumnNameByModel(model) ?? 'relation';
 	const table = (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix';
@@ -1559,29 +1541,27 @@ export async function deletePortalLocator(
 					principal.userId,
 				);
 			}
-			// THE ANCESTOR INDEX MOVES WITH THE LOCATORS (P1-7 / DATA-12) — see the
-			// same call in delete_record.ts. `relation_search` is read by
-			// conform.ts, so writing `relation` alone leaves the two stores
-			// disagreeing permanently.
-			if (column === 'relation') {
-				await maintainRelationSearchIndex(table, sectionTipo, Number(sectionId), tipo, kept);
-			}
-			// THE SURVIVORS GO THROUGH THE WRITE CHOKEPOINT (P1-8 / DATA-16 + DATA-17,
-			// 2026-09-03). This door used to re-persist them with the raw per-key
-			// primitive, so the record's own dd197/dd201 kept naming the PREVIOUS
-			// edit while the Time Machine said "user U changed this at T" — every
-			// modified-date sort and provenance read was wrong about the one change
-			// that actually happened (PHP's delete_locator → $component->Save() DID
-			// refresh the stamps) — and nothing enqueued the record for re-index, so
-			// the vector store kept naming the removed target. persistRecordKeys
-			// merges the stamps into the SAME UPDATE, and its post-write hook fires
-			// the save event (deferred to COMMIT), the security reaction (a removed
+			// THE SURVIVORS GO THROUGH THE WRITE CHOKEPOINT — its REMOVAL-LAW entry
+			// (P1-8 / DATA-16 + DATA-17; CLOSURE_PLAN Step 2). This door used to
+			// re-persist them with the raw per-key primitive, so the record's own
+			// dd197/dd201 kept naming the PREVIOUS edit while the Time Machine said
+			// "user U changed this at T" (PHP's delete_locator → $component->Save()
+			// DID refresh the stamps), and nothing enqueued the record for re-index.
+			// The chokepoint merges the stamps into the SAME UPDATE, derives
+			// `relation_search` there too (P1-7 / DATA-12: the ancestor index moves
+			// with the locators — this is one of the three removal doors, so every
+			// relation key is re-indexed), and its post-write hook fires the save
+			// event (deferred to COMMIT), the security reaction (a removed
 			// dd244/dd131 locator is an account transition — the revocation rides the
-			// COMMIT-ONLY lane) and the RAG index event (joins this transaction).
-			await persistRecordKeys(
+			// COMMIT-ONLY lane), the RAG index event (joins this transaction) AND the
+			// observer cascade: the ledger records the key's before-image read under
+			// this door's row lock and drains `{saved: kept, removed}` after COMMIT
+			// (PHP delete_locator → Save() → propagate_to_observers).
+			await persistRelationRemovalKeys(
 				{ table, sectionTipo, sectionId: Number(sectionId) },
 				[{ column: column as MatrixJsonbColumn, key: tipo, value: kept }],
 				{ userId: principal.userId },
+				{ actor: principal.userId },
 			);
 			// The history, two lanes (dataframe_slots.ts recordMainHistory): the
 			// portal's kept locators in its value lane, and — when the cascade
@@ -1622,26 +1602,10 @@ export async function deletePortalLocator(
 		// transaction above, the revocation to its COMMIT-ONLY lane — so by this
 		// line they have all run against the committed bag. Nothing to remember
 		// here any more; the census gate pins the reach.
-		// Observer cascade (2026-07-24): this door bypasses saveComponentData,
-		// so it fires propagation itself. This is a PURE REMOVAL door — the
-		// removed locators name the records whose mirrors must recompute, and
-		// nothing was saved. Until 2026-08-06 they rode the `saved` slot, which
-		// happened to work only because the two sets were then handled
-		// identically; ObservedChange makes the semantics explicit. The
-		// recompute reads truth from matrix_relation_index, so the removal is
-		// already reflected. Dynamic import: runtime-only relations→section
-		// edge, no static SCC. Post-COMMIT (W11/B6): the recompute must read the
-		// committed removal.
-		{
-			const { propagateToObservers } = await import('../section/record/observers.ts');
-			await propagateToObservers(
-				tipo,
-				sectionTipo,
-				Number(sectionId),
-				{ saved: [], removed: outcome.removedLocators },
-				principal.userId,
-			);
-		}
+		// The observer cascade is NOT fired here any more: the removal-law write
+		// above declared it to the obligation ledger, which drained it after the
+		// COMMIT of the transaction above — `{saved: kept, removed}` from the
+		// before-image read under the row lock (CLOSURE_PLAN Step 2, CORE-1).
 		msg.push(`Deleted ${removed} locators (${model} - ${tipo})`);
 	} else {
 		msg.push(`No locators are removed (${model} - ${tipo})`);

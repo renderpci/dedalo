@@ -13,10 +13,12 @@
  *   run is still executing (tool.bulk_run_live).
  *
  * Both write doors restore the DATAFRAME half of a paired component
- * (dataframe_restore.ts) and fire the observer cascade post-commit
- * (restore_common.ts) — a restore that touched only the main column left
- * orphan frames and stale observer mirrors behind
- * (WC-2026-08-09-time-machine-restore-replays-paired-dataframe-frames).
+ * (dataframe_restore.ts) — a restore that touched only the main column left
+ * orphan frames behind
+ * (WC-2026-08-09-time-machine-restore-replays-paired-dataframe-frames) — and
+ * write through the record-write chokepoint, whose obligation ledger fires the
+ * observer cascade post-commit for every restore and undelete
+ * (WC-2026-09-30-record-write-obligation-ledger).
  * isAvailable: hidden on component_relation_children callers (PHP is_available),
  * relocated here from the core registry fallback.
  */

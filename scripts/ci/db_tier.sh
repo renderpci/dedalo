@@ -179,6 +179,9 @@ DB_TIER_TRIPWIRES=(
 	test/unit/tool_transcription_gate_native.test.ts
 	test/unit/identify_vision_grant_native.test.ts
 	test/unit/mcp_record_door_native.test.ts
+	test/unit/obligation_ledger_native.test.ts
+	test/unit/media_files_info_lost_update_native.test.ts
+	test/unit/duplicate_record_media_verdict_native.test.ts
 )
 
 # ── THE STAGES ARE INDEPENDENT ───────────────────────────────────────────────

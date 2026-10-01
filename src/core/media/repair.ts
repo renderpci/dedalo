@@ -14,14 +14,28 @@
  *   fresh files_info into each stored item, preserving the sibling keys
  *   (original_* / modified_* / lib_data / external_source).
  *
+ * TWO HALVES, because they belong on two sides of a row lock
+ * (CLOSURE_PLAN Step 2, TOOLS-5):
+ * - regenerateMediaDerivatives — the FILE work (seconds per record): outside any
+ *   lock, keyed by the identities of a snapshot;
+ * - rescanMediaItems — SYNCHRONOUS, a pure function of the items it is handed:
+ *   it runs INSIDE files_info_persist.ts transformStoredMediaItems, on the items
+ *   read under the row lock, so a value a curator committed while the files were
+ *   being rebuilt is what gets refreshed — never overwritten by a snapshot.
+ * refreshMediaItems composes the two for a caller that only reads (the sweep's
+ * dry-run adjudication).
+ *
  * Callers and their division of labor:
- * - tools/tool_update_cache (in-app, per-section, SQO-driven): regenerate:true,
- *   persists every refreshed component;
- * - scripts/media_repair_files_info.ts (terminal, cross-section ops sweep):
- *   regenerate:false, adjudicates GROW/DIFF/SHRINK before persisting.
- * PERSISTENCE IS THE CALLER'S STEP (per-key jsonb via updateMatrixKeyData, NO
- * Time Machine entry — the files_info_persist.ts discipline): the sweep must
- * be able to scan without writing (dry-run), so the kernel never touches the DB.
+ * - tools/tool_update_cache (in-app, per-section, SQO-driven): regenerate, then
+ *   the locked rescan with holdShrink;
+ * - core/media/files_info_reconcile.ts sweepFilesInfo (scripts/
+ *   media_repair_files_info.ts, the reconcile registry): no regeneration; a
+ *   dry-run adjudication on the snapshot, then per change a locked rescan that
+ *   re-judges GROW/DIFF/SHRINK on the locked items;
+ * - section/record/duplicate_record.ts: the clone's locked rescan at its own
+ *   identity.
+ * PERSISTENCE IS THE TRANSFORM'S (files_info_persist.ts — NO Time Machine entry,
+ * files_info is a filesystem cache): the kernel never touches the DB.
  */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -68,13 +82,141 @@ function existingFileCount(filesInfo: unknown): number {
 		.length;
 }
 
+/** The rebuild options of regenerateMediaDerivatives (see refreshMediaItems). */
+export interface MediaRegenerateInput {
+	componentTipo: string;
+	sectionTipo: string;
+	sectionId: number;
+	/** The component's resolved model (must satisfy mediaTypeOf(model) !== null). */
+	model: string;
+	/** The items whose identities (lang) and upload cues (original name) key the rebuild. */
+	items: readonly unknown[];
+	/** v6 delete_normalized_files — see refreshMediaItems. */
+	deleteNormalized?: boolean;
+	/** The dd800 bulk-process run id: deleted files land in `deleted/<id>/`. */
+	bulkProcessId?: number | null;
+	/** Record-scoped path options; resolved here when absent. */
+	pathOpts?: MediaPathOptions;
+}
+
+/** The media type spec of a model, or the programming-error throw. */
+function mediaSpecOf(model: string, componentTipo: string, sectionTipo: string): MediaTypeSpec {
+	const spec = mediaTypeOf(model);
+	if (spec === null) {
+		throw new DedaloError('request.invalid_model', {
+			message: `media repair: '${model}' is not a media model`,
+			coordinates: { model, component_tipo: componentTipo, section_tipo: sectionTipo },
+		});
+	}
+	return spec;
+}
+
 /**
- * Refresh every stored media item of one component on one record.
- *
- * With `regenerate: true` the derivative files are rebuilt from the original
- * first (image/pdf/svg/3d — a no-op when the original is absent on this box;
+ * THE FILE HALF: rebuild the MISSING derivative files of every item (v6
+ * regenerate_component parity — see regenerateMissingDerivatives), keyed by
+ * each item's identity. Runs OUTSIDE any row lock — this is the slow part.
+ * Returns the non-fatal failures, one message each.
+ */
+export async function regenerateMediaDerivatives(input: MediaRegenerateInput): Promise<string[]> {
+	const { componentTipo, sectionTipo, sectionId, model } = input;
+	const spec = mediaSpecOf(model, componentTipo, sectionTipo);
+	const pathOpts =
+		input.pathOpts ?? (await resolveMediaPathOptions(componentTipo, sectionTipo, sectionId));
+	const errors: string[] = [];
+	for (const raw of input.items) {
+		if (raw === null || typeof raw !== 'object') continue;
+		const item = raw as Record<string, unknown>;
+		const identity = {
+			componentTipo,
+			sectionTipo,
+			sectionId,
+			lang: (item.lang as string | null) ?? null,
+		};
+		// The raw upload extension (e.g. the '.png' behind a normalized '.jpg')
+		// steers resolveMasterSource to the right original file.
+		const rawName = item.original_normalized_name;
+		const rawExtension = typeof rawName === 'string' ? (rawName.split('.').pop() ?? null) : null;
+		try {
+			// Non-fatal per-file failures (a twin this host cannot encode) come
+			// back as values; only a fatal one throws. Both land in `errors`.
+			errors.push(
+				...(await regenerateMissingDerivatives(model, spec, identity, pathOpts, {
+					rawExtension,
+					deleteNormalized: input.deleteNormalized === true,
+					bulkProcessId: input.bulkProcessId ?? null,
+				})),
+			);
+		} catch (error) {
+			errors.push((error as Error).message);
+		}
+	}
+	return errors;
+}
+
+/** The rescan's context (see rescanMediaItems). */
+export interface MediaRescanOptions {
+	spec: MediaTypeSpec;
+	/** The record the items belong to — each item's own `lang` completes its identity. */
+	identityBase: Omit<MediaIdentity, 'lang'>;
+	/** Record-scoped path options (resolved by the caller, BEFORE the lock). */
+	pathOpts: MediaPathOptions;
+	/**
+	 * KEEP an item's stored files_info when the rescan finds FEWER existing files
+	 * than stored. On a box holding a PARTIAL media copy (dev laptops — buckets not
+	 * synced) an unguarded rescan destroys the valid index of every record whose
+	 * files live elsewhere; a runaway tool_update_cache sweep did exactly that
+	 * (2026-07-19, ~86k rsc170 records, restored from the pinned backup). Bulk/tool
+	 * callers MUST pass true; only a caller that adjudicates shrinks itself (the
+	 * sweep's --allow-shrink, the duplicate's own fresh copy) passes false.
+	 */
+	holdShrink: boolean;
+}
+
+/**
+ * THE INDEX HALF — SYNCHRONOUS and pure over the filesystem: re-scan each item
+ * FROM ITS OWN lang and its own scan cues (scanContextFromItem: the external
+ * source, the original/modified normalized names), never matched to another
+ * list by index. Non-object items pass through untouched. Built to run inside
+ * the locked transform (files_info_persist.ts), on the items read under the lock.
+ */
+export function rescanMediaItems(
+	items: readonly unknown[],
+	options: MediaRescanOptions,
+): { items: unknown[]; heldShrinks: number } {
+	const refreshed: unknown[] = [];
+	let heldShrinks = 0;
+	for (const raw of items) {
+		if (raw === null || typeof raw !== 'object') {
+			refreshed.push(raw);
+			continue;
+		}
+		const item = raw as Record<string, unknown>;
+		const identity: MediaIdentity = {
+			...options.identityBase,
+			lang: (item.lang as string | null) ?? null,
+		};
+		const fresh = refreshStoredFilesInfo(item, options.spec, identity, options.pathOpts);
+		if (
+			options.holdShrink &&
+			existingFileCount(fresh.files_info) < existingFileCount(item.files_info)
+		) {
+			heldShrinks++;
+			refreshed.push(item); // stored index kept — see holdShrink
+			continue;
+		}
+		refreshed.push(fresh);
+	}
+	return { items: refreshed, heldShrinks };
+}
+
+/**
+ * Refresh every stored media item of one component on one record — the two
+ * halves composed, for a caller that READS (the sweep's dry-run adjudication):
+ * with `regenerate: true` the derivative files are rebuilt first
+ * (image/pdf/svg/3d — a no-op when the original is absent on this box;
  * component_av is never transcoded here, that is an async job owned by
- * tool_media_versions). Non-object items pass through untouched.
+ * tool_media_versions), then each item is re-scanned. A caller that WRITES the
+ * result runs the rescan inside transformStoredMediaItems instead.
  *
  * Throws when `model` is not a media model — callers gate on isMediaModel/
  * mediaTypeOf, so reaching here with anything else is a programming error.
@@ -104,74 +246,33 @@ export async function refreshMediaItems(input: {
 	/** The dd800 bulk-process run id: deleted files land in `deleted/<id>/` (v6
 	 * move_deleted_file bulk mode), tying the moved files to the run. */
 	bulkProcessId?: number | null;
-	/**
-	 * KEEP the stored files_info when the rescan finds FEWER existing files than
-	 * stored. On a box holding a PARTIAL media copy (dev laptops — buckets not
-	 * synced) an unguarded rescan destroys the valid index of every record whose
-	 * files live elsewhere; a runaway tool_update_cache sweep did exactly that
-	 * (2026-07-19, ~86k rsc170 records, restored from the pinned backup).
-	 * Bulk/tool callers MUST pass true; only a caller that adjudicates shrinks
-	 * itself (scripts/media_repair_files_info.ts --allow-shrink) passes false.
-	 */
+	/** See MediaRescanOptions.holdShrink. */
 	holdShrink: boolean;
 }): Promise<MediaItemsRefreshResult> {
-	const { componentTipo, sectionTipo, sectionId, model, items, regenerate, holdShrink } = input;
-	const deleteNormalized = input.deleteNormalized === true;
-	const spec = mediaTypeOf(model);
-	if (spec === null) {
-		throw new DedaloError('request.invalid_model', {
-			message: `refreshMediaItems: '${model}' is not a media model`,
-			coordinates: { model, component_tipo: componentTipo, section_tipo: sectionTipo },
-		});
-	}
-	const pathOpts = await resolveMediaPathOptions(componentTipo, sectionTipo);
-
-	const refreshedItems: unknown[] = [];
-	const errors: string[] = [];
-	let heldShrinks = 0;
-	for (const raw of items) {
-		if (raw === null || typeof raw !== 'object') {
-			refreshedItems.push(raw);
-			continue;
-		}
-		const item = raw as Record<string, unknown>;
-		const identity = {
-			componentTipo,
-			sectionTipo,
-			sectionId,
-			lang: (item.lang as string | null) ?? null,
-		};
-		// The raw upload extension (e.g. the '.png' behind a normalized '.jpg')
-		// steers resolveMasterSource to the right original file.
-		const rawName = item.original_normalized_name;
-		const rawExtension = typeof rawName === 'string' ? (rawName.split('.').pop() ?? null) : null;
-		if (regenerate) {
-			try {
-				// Non-fatal per-file failures (a twin this host cannot encode) come
-				// back as values; only a fatal one throws. Both land in `errors`.
-				errors.push(
-					...(await regenerateMissingDerivatives(model, spec, identity, pathOpts, {
-						rawExtension,
-						deleteNormalized,
-						bulkProcessId: input.bulkProcessId ?? null,
-					})),
-				);
-			} catch (error) {
-				errors.push((error as Error).message);
-			}
-		}
-		const refreshed = refreshStoredFilesInfo(item, spec, identity, pathOpts);
-		if (
-			holdShrink &&
-			existingFileCount(refreshed.files_info) < existingFileCount(item.files_info)
-		) {
-			heldShrinks++;
-			refreshedItems.push(item); // stored index kept — see holdShrink doc
-			continue;
-		}
-		refreshedItems.push(refreshed);
-	}
-	return { refreshedItems, errors, heldShrinks };
+	const { componentTipo, sectionTipo, sectionId, model, items, holdShrink } = input;
+	const spec = mediaSpecOf(model, componentTipo, sectionTipo);
+	// RECORD-scoped (the third argument): `properties.additional_path` names a
+	// per-record bucket, and a rescan of the numeric bucket would index nothing.
+	const pathOpts = await resolveMediaPathOptions(componentTipo, sectionTipo, sectionId);
+	const errors = input.regenerate
+		? await regenerateMediaDerivatives({
+				componentTipo,
+				sectionTipo,
+				sectionId,
+				model,
+				items,
+				deleteNormalized: input.deleteNormalized,
+				bulkProcessId: input.bulkProcessId,
+				pathOpts,
+			})
+		: [];
+	const rescan = rescanMediaItems(items, {
+		spec,
+		identityBase: { componentTipo, sectionTipo, sectionId },
+		pathOpts,
+		holdShrink,
+	});
+	return { refreshedItems: rescan.items, errors, heldShrinks: rescan.heldShrinks };
 }
 
 /**

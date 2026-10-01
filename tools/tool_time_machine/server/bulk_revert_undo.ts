@@ -69,14 +69,13 @@ import {
 	NOLAN,
 	restoreLane,
 } from '../../../src/core/relations/main_lanes.ts';
-import { reindexRelationSearchLikeSave } from '../../../src/core/relations/save.ts';
 import {
 	isMetadataTwinned,
 	metadataPatchFromAuditValue,
 	setRecordMetadata,
 } from '../../../src/core/section/record/record_metadata.ts';
 import {
-	persistRecordKeys,
+	persistRestoredKeys,
 	type RecordWriteTarget,
 } from '../../../src/core/section_record/index.ts';
 import type { Principal } from '../../../src/core/security/permissions.ts';
@@ -119,14 +118,14 @@ export interface UnitContext {
 	goneBorn: ReadonlySet<string>;
 }
 
-/** One key this unit WROTE — the post-commit observer cascade and activity row need it. */
+/**
+ * One key this unit WROTE — the post-commit activity row and the report need it.
+ * (The observer cascade no longer does: the write chokepoint declared each key's
+ * before/after to the obligation ledger, which drains after the unit's COMMIT.)
+ */
 export interface WrittenKey {
 	key: RevertKey;
 	table: string;
-	/** The key's items before the revert (the cascade's removed-diff). */
-	before: unknown[];
-	/** The value written (`undefined` = removed). */
-	after: unknown;
 	inexact: BulkRevertInexactBasis | null;
 }
 
@@ -311,7 +310,7 @@ export function rawKeyValue(
 	return (bag as Record<string, unknown>)[tipo];
 }
 
-/** The key's value as an item list (the observer cascade's before/after shape). */
+/** The key's value as an item list. */
 export function asItems(value: unknown): unknown[] {
 	return Array.isArray(value) ? value : [];
 }
@@ -367,21 +366,27 @@ async function writeRevertedKey(
 		key.tipo,
 		plan.framePlan.map((restore) => restore.slotTipo),
 	);
-	await applyDataframeRestore(writeTarget, key.tipo, plan.framePlan, plan.frameSlice ?? null);
-	await persistRecordKeys(
+	await applyDataframeRestore(
+		writeTarget,
+		key.tipo,
+		plan.framePlan,
+		plan.frameSlice ?? null,
+		context.userId,
+	);
+	// The chokepoint owns the key's derived writes (the COMPONENT-RESTORE
+	// entry): the save law's relation_search (the ancestor index moves with the
+	// restored locators) in the same UPDATE, and the observer cascade — declared
+	// with the key's before-image, drained after the unit's COMMIT. A reverted
+	// COVERED OBSERVER MIRROR is never propagated: it converges on truth after
+	// the unit's COMMIT, never on the run's image of it (record_write §3e) —
+	// with the key write's stamp posture.
+	const stamp = runOwnsModifiedStamps(key, context) ? false : { userId: context.userId };
+	await persistRestoredKeys(
 		writeTarget,
 		// null REMOVES the key (updateMatrixKeysData), which is what an absent image restores.
 		[{ column: target.column, key: key.tipo, value: plan.value === undefined ? null : plan.value }],
-		runOwnsModifiedStamps(key, context) ? false : { userId: context.userId },
-	);
-	// The save's post-write obligation the chokepoint does not own: the
-	// relation_search ancestor index moves with the restored locators.
-	await reindexRelationSearchLikeSave(
-		target.table,
-		key.sectionTipo,
-		key.sectionId,
-		key.tipo,
-		plan.value,
+		stamp,
+		{ actor: context.userId },
 	);
 	// Restored items carry explicit ids; raise the counter so a later insert
 	// cannot mint a duplicate (a duplicated main id breaks the id_key pairing).
@@ -490,8 +495,11 @@ export interface ComposedHistory {
 
 /**
  * WRITE a COMPOSED unit (bulk_revert_composed.ts plans it): every changed key —
- * the main and its slots — in ONE chokepoint call, each key's post-write
- * obligations (relation_search, the item-id counter), then the revert's own
+ * the main and its slots — in ONE chokepoint call, the COMPONENT-RESTORE entry
+ * (which owns each key's derived writes: relation_search, the observer ledger —
+ * and a covered observer mirror main is recomputed after COMMIT, never
+ * propagated as the run saw it), the item-id counter
+ * per key, then the revert's own
  * two-lane history (recordMainHistory → recordMainPairs: the lg-nolan pair —
  * lg-nolan value + every slot's frames — FIRST, then one pair per language
  * lane, each cut from the state the previous step left). Inside the unit's
@@ -505,7 +513,7 @@ export async function writeComposedUnit(
 ): Promise<void> {
 	const { target } = scope;
 	if (writes.length > 0) {
-		await persistRecordKeys(
+		await persistRestoredKeys(
 			target,
 			// null REMOVES the key (updateMatrixKeysData), which is what an absent image restores.
 			writes.map((write) => ({
@@ -516,16 +524,10 @@ export async function writeComposedUnit(
 			runOwnsRecordStamps(context.keyAddresses, target.sectionTipo, target.sectionId)
 				? false
 				: { userId: context.userId },
+			{ actor: context.userId },
 		);
 	}
 	for (const write of writes) {
-		await reindexRelationSearchLikeSave(
-			target.table,
-			target.sectionTipo,
-			target.sectionId,
-			write.tipo,
-			write.after,
-		);
 		// Restored items carry explicit ids: raise each key's counter so a later
 		// insert cannot mint a duplicate (a duplicated main id breaks the id_key pairing).
 		await absorbComponentItemIds(
@@ -627,8 +629,6 @@ async function revertKey(
 	return {
 		key,
 		table: target.table,
-		before: asItems(live),
-		after: plan.value,
 		inexact: plan.inexact ?? (twinInexact ? 'metadata_twin' : null),
 	};
 }

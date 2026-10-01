@@ -134,6 +134,8 @@ describe('ordinary section save invalidates the term cache (S2-10)', () => {
 			persistRecordColumns(
 				{ table: TERM_TABLE, sectionTipo: TERM_SECTION, sectionId: TERM_ID },
 				{ string: { [TERM_COMPONENT]: [{ id: 1, lang: 'lg-eng', value }] } },
+				false,
+				{ actor: -1 },
 			);
 
 		await write('WSB term A');

@@ -110,11 +110,11 @@
  *                     a tether to a FACT of its defect (SERVER_PENDING_TETHERS, total over
  *                     the server PENDING cells), so an in-place fix is red too: the
  *                     translation cells by a behaviour test (the WHOLE translateAndWrite
- *                     path on a scratch suite-DB record, in the DB-tier tethers file),
- *                     updateCache by its own resolved
- *                     references (no readMatrixKeyForUpdate, no recordTimeMachine — a fix
- *                     that locks or records elsewhere, in a helper it calls, is NOT seen).
- *                     SHRINK-ONLY, counted per cell.
+ *                     path on a scratch suite-DB record, in the DB-tier tethers file).
+ *                     (updateCache's raw media write, the TOOLS-5 cell tethered by its
+ *                     own resolved references, closed with CLOSURE_PLAN Step 2: it writes
+ *                     through the locked media-key transform now.) SHRINK-ONLY, counted
+ *                     per cell.
  *
  * WHAT THIS GATE DOES NOT PROVE — stated because an unstated gap reads as coverage:
  *   - it does not prove the two fixed tools are lossless for EVERY input. The
@@ -569,6 +569,7 @@ import {
 	RAW_PRIMITIVES,
 	RECORD_WRITE_CHOKEPOINTS,
 	rawCallsIn,
+	SANCTIONED_DERIVED_WRITERS,
 	toolServerCells,
 	type WriterClosure,
 } from '../helpers/matrix_writer_closure.ts';
@@ -658,13 +659,9 @@ const TRANSLATION_EMPTY_BODY =
  */
 const BYPASS = {
 	filesInfo:
-		'files_info is written by media/tools/files_info_persist.ts#writeItems (updateMatrixKeysData) past the chokepoint BY DESIGN (write_obligations RAW_CALLER_EXEMPT): technical metadata derived from the files on disk — no modified stamp, no Time Machine row, no obligation hook. The stored items are RE-READ under readMatrixKeyForUpdate inside the writer’s own transaction (runReconcile / persistUploadedMedia), so a concurrent write is not reverted; what goes unrecorded is files_info’s own history, which a disk re-scan re-derives.',
-	relationIndex:
-		'the relation_search ancestor index is written by relations/save.ts#maintainRelationSearchIndex (updateMatrixKeyData) past the chokepoint BY DESIGN (write_obligations RAW_CALLER_EXEMPT): a derived, read-only-to-users search column re-derived from the relation value this same unit has just written THROUGH the chokepoint — no stamp and no history of its own, and nothing curated is replaced.',
+		'files_info is written by media/tools/files_info_persist.ts#writeItems (updateMatrixKeysData) past the chokepoint BY DESIGN (a SANCTIONED_DERIVED_WRITERS unit, write_obligations RAW_CALLER_EXEMPT): technical metadata derived from the files on disk — no modified stamp, no Time Machine row, no obligation hook. Its ONE caller is the LOCKED TRANSFORM (transformStoredMediaItems, CLOSURE_PLAN Step 2 / TOOLS-5): the stored items are read under readMatrixKeyForUpdate and the new ones computed FROM THEM in the same transaction, so a concurrent write is never reverted; what goes unrecorded is files_info’s own history, which a disk re-scan re-derives.',
 	metadataTwin:
 		'the `data`-column METADATA twin is written by section/record/record_metadata.ts#setRecordMetadata (updateMatrixRecord) past the chokepoint BY DESIGN (write_obligations RAW_CALLER_EXEMPT): system bookkeeping MERGED into the column (created_date / created_by_user_id only; label and diffusion_info kept), mirrored from the dd199/dd200 audit value — no component value changes, so no stamp, no history, no index.',
-	observers:
-		'the observer cascade reaches two writers past the chokepoint BY DESIGN (write_obligations RAW_CALLER_EXEMPT): the relation_search index (relations/save.ts#maintainRelationSearchIndex) and the dataframe SLOT strip of a removed main item (#removeDataframeDataById, REL-01 — no TM row by contract: the main’s own chokepoint write records the full state). Measured 2026-09-30, these are the only bypassing writers the cascade reaches; neither replaces a curated value.',
 	hierarchy:
 		'the HIERARCHY INVARIANT single writer (ontology/hierarchy_state.ts#write, #nameRootTerm), the `<tld>0` provisioning (hierarchy_provision.ts#provisionVirtualSections) and the ontology definition writers (ontology_write.ts#addMainSection, #createParentGrouper) write past the chokepoint BY DESIGN (write_obligations RAW_CALLER_EXEMPT): registry, descriptor and definition rows derived from the hierarchy record, with unstamped saves as in PHP — no Time Machine row, no obligation hook.',
 	ontology:
@@ -724,11 +721,11 @@ const CENSUS: Record<string, CensusRow> = {
 				reason:
 					'two calls. (1) The regenerate re-saves, per language group, the items it just READ from the record (readComponentItems → groupItemsByLang → set_data per lang), under the run’s bulkProcessId: the undo log records each BEFORE/AFTER pair, and a canonical no-op writes none (WC-2026-09-27-bulk-revert-undo-log retired the v6 "TM disabled for the sweep"). (2) The dd800 run label on the bulk-process record created in the same transaction. Honest limit: the items are read outside any lock, so a concurrent edit between the read and the re-save is replaced — it is kept in the BEFORE row and the Time Machine.',
 			},
-			updateMatrixKeyData: {
-				verdict: 'PENDING',
-				closes: 'TOOLS-5 / CLOSURE_PLAN Step 2 locked files_info TRANSFORM',
+			transformStoredMediaItems: {
+				verdict: 'derived-state',
+				bypass_reason: BYPASS.filesInfo,
 				reason:
-					'the MEDIA branch replaces the WHOLE `media -> <tipo>` key with refreshedItems built from the readMatrixRecord snapshot taken at the top of the row, outside any lock, through the RAW primitive: no row lock, no undo pair, no Time Machine row, no chokepoint obligation. A concurrent files_info write-back (an AV job, an upload) committed between the read and this write is silently reverted.',
+					'the MEDIA branch (CLOSURE_PLAN Step 2, TOOLS-5 closed): the derivative files are rebuilt from this run’s snapshot OUTSIDE any lock, then the files_info index is re-derived from the items read UNDER the row lock (a shrink only the locked value shows is held) and written by the one media-key writer — a curator’s concurrent upload is refreshed, never reverted to the snapshot. files_info is disk-derived state; no curated value is transformed (decision D4: no undo pair).',
 			},
 			createSectionRecord: {
 				verdict: 'new-record',
@@ -908,16 +905,10 @@ const CENSUS: Record<string, CensusRow> = {
 	},
 	'tools/tool_time_machine/server/tool_time_machine.ts :: toolTimeMachineApplyValue': {
 		doors: {
-			persistRecordKeys: {
+			persistRestoredKeys: {
 				verdict: 'operator-value',
 				reason:
-					'restores the component value of the Time Machine version the operator picked. Overwriting the current value IS the operation, the replaced value stays in the Time Machine, and the restored value is a stored version — nothing is derived or reshaped.',
-			},
-			reindexRelationSearchLikeSave: {
-				verdict: 'derived-state',
-				bypass_reason: BYPASS.relationIndex,
-				reason:
-					'rebuilds the relation_search ancestor index of the restored relation value, exactly as a save would: a derived search column, never a curated value.',
+					'restores the component value of the Time Machine version the operator picked, through the COMPONENT-RESTORE chokepoint entry. Overwriting the current value IS the operation, the replaced value stays in the Time Machine, and the restored value is a stored version — nothing is derived or reshaped. (Its relation_search index and observer cascade are the chokepoint’s own derived writes since CLOSURE_PLAN Step 2; when the component is a COVERED set_dato_external mirror, its history row is a past DERIVATION: it lands, is never propagated, and the entry queues the slot’s recompute from the records that reference it NOW — obligation_ledger_native cases 14 and 14d.)',
 			},
 		},
 	},
@@ -928,33 +919,14 @@ const CENSUS: Record<string, CensusRow> = {
 				reason:
 					'the ROW half of the whole-record restore of an operator-picked Time Machine version (restoreSection), written through persistRecordColumns — also the bulk revert’s undelete of a record the run’s cascade deleted, inside the unit that re-links it. Same shape as apply_value: a stored version replaces the current one and the current one remains in the Time Machine.',
 			},
-			reindexRelationColumnLikeSave: {
-				verdict: 'derived-state',
-				bypass_reason: BYPASS.relationIndex,
-				reason:
-					'rebuilds the relation_search index of the restored relation column, as a save would: derived search state, re-derived from the value just restored.',
-			},
 		},
 	},
 	'tools/tool_time_machine/server/tool_time_machine.ts :: restoreAbsentSectionRow': {
 		doors: {
-			insertMatrixRecordIfAbsent: {
-				verdict: 'operator-value',
-				bypass_reason:
-					'INSERT-ONLY under the explicit-id lock (insertExplicitIdRow, ON CONFLICT DO NOTHING): it can only fill a VACANT address with the stored TM snapshot, and the action answers null when anything stands there — no current value is read, transformed or replaced. The row’s obligations then run through persistRecordColumns in the same unit.',
-				reason:
-					'the bulk revert’s undelete of a record the run’s cascade deleted (WC-2026-09-27-bulk-revert-undo-log): the operator-picked stored snapshot is materialized at its old address only if that address is empty.',
-			},
-			persistRecordColumns: {
+			persistRecordBirth: {
 				verdict: 'operator-value',
 				reason:
-					'the INSERT-ONLY twin of restoreSectionRow: once the vacancy is filled, the same snapshot columns go through the chokepoint (stamps, hook). A stored version fills a vacancy; nothing is derived or reshaped.',
-			},
-			reindexRelationColumnLikeSave: {
-				verdict: 'derived-state',
-				bypass_reason: BYPASS.relationIndex,
-				reason:
-					'rebuilds the relation_search index of the undeleted record’s relation column, as a save would: derived search state, never a curated value.',
+					'the bulk revert’s undelete of a record the run’s cascade deleted (WC-2026-09-27-bulk-revert-undo-log): the operator-picked stored snapshot is materialized at its old address through the chokepoint’s INSERT-ONLY birth entry — nothing is written when anything stands there, so no current value is read, transformed or replaced. Its covered observer slots are recomputed, never restored, and its relation_search re-derived (the chokepoint’s own derived writes).',
 			},
 		},
 	},
@@ -969,31 +941,19 @@ const CENSUS: Record<string, CensusRow> = {
 	},
 	'tools/tool_time_machine/server/bulk_revert_undo.ts :: writeRevertedKey': {
 		doors: {
-			persistRecordKeys: {
+			persistRestoredKeys: {
 				verdict: 'operator-value',
 				reason:
-					'writes back, per key of an operator-selected bulk run, the region that run REPLACED — read from the run’s undo log (the exact BEFORE image), or inferred from visible history for a pre-undo-log run and reported inexact. The live value is only cut to put the other languages back beside it, never reshaped; the revert writes its own undo pair, so it is reversible in turn.',
-			},
-			reindexRelationSearchLikeSave: {
-				verdict: 'derived-state',
-				bypass_reason: BYPASS.relationIndex,
-				reason:
-					'rebuilds the relation_search ancestor index of the reverted relation key, as a save would: derived search state, re-derived from the value just written back.',
+					'writes back, per key of an operator-selected bulk run, the region that run REPLACED — read from the run’s undo log (the exact BEFORE image), or inferred from visible history for a pre-undo-log run and reported inexact. The live value is only cut to put the other languages back beside it, never reshaped; the revert writes its own undo pair, so it is reversible in turn. Through the COMPONENT-RESTORE entry: a reverted COVERED set_dato_external mirror is the run’s image of a past derivation — never propagated, recomputed from the records that reference it after the unit’s COMMIT with the key write’s stamp posture (obligation_ledger_native cases 14b/14c).',
 			},
 		},
 	},
 	'tools/tool_time_machine/server/bulk_revert_undo.ts :: writeComposedUnit': {
 		doors: {
-			persistRecordKeys: {
+			persistRestoredKeys: {
 				verdict: 'operator-value',
 				reason:
 					'writes back, for a dataframe main of an operator-selected bulk run, the main region and its OWN frames that run REPLACED — both read from the run’s composed undo log (the exact BEFORE image; amendment 2026-09-27). The other mains’ frames of a shared slot are kept in place, never reshaped; the revert writes its own composed undo pairs, so it is reversible in turn.',
-			},
-			reindexRelationSearchLikeSave: {
-				verdict: 'derived-state',
-				bypass_reason: BYPASS.relationIndex,
-				reason:
-					'rebuilds the relation_search ancestor index of the reverted main, as a save would: derived search state, re-derived from the value just written back.',
 			},
 		},
 	},
@@ -1009,16 +969,19 @@ const CENSUS: Record<string, CensusRow> = {
 	},
 	'tools/tool_time_machine/server/bulk_revert_records.ts :: writeWipedKey': {
 		doors: {
-			persistRecordKeys: {
+			persistRestoredKeys: {
 				verdict: 'operator-value',
 				reason:
-					'writes back, for a frame target record a SOFT dataframe cascade of an operator-selected bulk run wiped, the pre-wipe value of each key — read from the run’s role-4 snapshot. Only keys still in the state the wipe left (isWipedState: empty, or the default-project filter) are written; any other live value refuses the whole record. No transform of the current value; the restore records composed undo pairs per main (recordWipedHistory), so the revert is reversible in turn.',
+					'writes back, for a frame target record a SOFT dataframe cascade of an operator-selected bulk run wiped, the pre-wipe value of each key — read from the run’s role-4 snapshot. Only keys still in the state the wipe left (isWipedState: empty, or the default-project filter) are written; any other live value refuses the whole record. No transform of the current value; the restore records composed undo pairs per main (recordWipedHistory), so the revert is reversible in turn. Through the COMPONENT-RESTORE entry: a COVERED set_dato_external mirror is put back beside its frames (its ids pair them) but never propagated — recomputed from the records that reference it after COMMIT (obligation_ledger_native case 17b).',
 			},
-			reindexRelationSearchLikeSave: {
+		},
+	},
+	'tools/tool_time_machine/server/bulk_revert_records.ts :: restoreWipedRecord': {
+		doors: {
+			requestCoveredSlotRecompute: {
 				verdict: 'derived-state',
-				bypass_reason: BYPASS.relationIndex,
 				reason:
-					'rebuilds the relation_search ancestor index of the restored key, as a save would: derived search state, re-derived from the pre-wipe value just written back.',
+					'after a SOFT-cascade restore puts a wiped record’s keys back (writeWipedKey — a covered observer slot through the COMPONENT-RESTORE entry, never propagated), queues a recompute of every set_dato_external mirror the section declares (the census the wipe shares): the value written is re-derived from the records that reference it, never the snapshot’s copy and never a transform of the live value. (The entry is a RECORD_WRITE_CHOKEPOINT: its drain writes each mirror through persistObserverMirrorKeys.)',
 			},
 		},
 	},
@@ -1032,17 +995,6 @@ const CENSUS: Record<string, CensusRow> = {
 			},
 		},
 	},
-	'tools/tool_time_machine/server/restore_common.ts :: propagateRestoreToObservers': {
-		doors: {
-			propagateToObservers: {
-				verdict: 'derived-state',
-				bypass_reason: BYPASS.observers,
-				reason:
-					'propagates a restored relation value to its observers, exactly as a save does: the observer mirrors (component_info, set_dato_external) are state the engine re-derives from the observed value, never a curated value of their own.',
-			},
-		},
-	},
-
 	// --- NEW RECORD -------------------------------------------------------
 	'tools/tool_export/js/export_user_presets.js :: create_new_export_preset': {
 		doors: {
@@ -1306,33 +1258,44 @@ const CENSUS: Record<string, CensusRow> = {
  * PRE-EXISTING defects — updateCache's raw media write (misfiled as lossless; TOOLS-5,
  * one cell) and the server translation's accepted empty body (one engine, two tool
  * cells). Each cell names its defect and closure item in `closes`; any further raise
- * needs one named pre-existing defect and its closure item.
+ * needs one named pre-existing defect and its closure item. 4 → 3 (CLOSURE_PLAN
+ * Step 2): updateCache writes through the locked media-key transform (TOOLS-5).
  */
-const PENDING_COUNT = 4;
+const PENDING_COUNT = 3;
 
 /**
  * PINNED, EQUALITY. Tool cells whose door is ITSELF a RAW `matrix_write.ts` primitive or
  * an OFF-HOME psql writer — the subset of BYPASS_TOOL_CELLS with no wrapper at all.
- * Shrink-only: CLOSURE_PLAN Step 2 (TOOLS-5) retires updateCache × updateMatrixKeyData.
- * 2026-09-30: 2 → 3, not new backlog — seeding the closure with the off-home psql
- * writers surfaced the PRE-EXISTING repair_tlds × normalizeOntologyTld. A raw cell
- * that moves behind a wrapper leaves this pin but NOT the bypass pin: the bypass rule
- * judges it where it lands.
+ * Shrink-only. 2026-09-30: 2 → 3, not new backlog — seeding the closure with the
+ * off-home psql writers surfaced the PRE-EXISTING repair_tlds × normalizeOntologyTld;
+ * 3 → 1 (CLOSURE_PLAN Step 2): updateCache × updateMatrixKeyData retired (TOOLS-5 —
+ * the media write moved behind the locked transform), and restoreAbsentSectionRow ×
+ * insertMatrixRecordIfAbsent retired (the undelete is the chokepoint's birth entry,
+ * persistRecordBirth). A raw cell that moves behind a wrapper leaves this pin but NOT
+ * the bypass pin: the bypass rule judges it where it lands (updateCache ×
+ * transformStoredMediaItems is a bypass with its reason).
  */
-const RAW_TOOL_CELLS = 3;
+const RAW_TOOL_CELLS = 1;
 
 /**
  * PINNED, EQUALITY. Tool cells whose door reaches a seed on a path that avoids EVERY
  * record-write chokepoint (RECORD_WRITE_CHOKEPOINTS, `bypassPath`) — a raw primitive
  * reached directly or through any number of off-chokepoint wrappers. Each is PENDING,
  * lossless over a locked read, or carries its `bypass_reason`. Measured 2026-09-30:
- * 25 (1 PENDING — updateCache × updateMatrixKeyData; 24 reasoned: the relation_search
- * index rebuilds, the files_info writers, the ontology/hierarchy writers, the metadata
- * twin, the observer mirrors, the TM undelete insert and the repair_tlds psql rewrite).
- * A new bypassing cell is red here AND must state its reason; a vanished one is red
- * until this is lowered.
+ * 25 (1 PENDING — updateCache × updateMatrixKeyData; 24 reasoned). 25 → 17 (CLOSURE_PLAN
+ * Step 2): the chokepoints own the relation_search index and the observer cascade, so
+ * the six relation-index rebuild cells, the observer-mirror cell and the TM undelete
+ * insert are gone (each is a chokepoint write now); updateCache's media cell stays a
+ * bypass, as the locked transform with its reason. All 17 are reasoned: the files_info
+ * writers, the ontology/hierarchy writers, the metadata twin and the repair_tlds psql
+ * rewrite. A new bypassing cell is red here AND must state its reason; a vanished one
+ * is red until this is lowered. (The ledger's covered-slot recompute entry,
+ * requestCoveredSlotRecompute, is itself a RECORD_WRITE_CHOKEPOINT — it writes nothing
+ * of its own and its drain lands each mirror through persistObserverMirrorKeys — so the
+ * restores that call it are not bypasses; nor are the component restores, whose
+ * persistRestoredKeys entry queues it for a restored mirror.)
  */
-const BYPASS_TOOL_CELLS = 25;
+const BYPASS_TOOL_CELLS = 17;
 
 /**
  * The tether of every SERVER PENDING cell: what turns red when the defect is fixed
@@ -1351,27 +1314,6 @@ const SERVER_PENDING_TETHERS: Record<
 		{ behaviour: WRITEBACK_TETHERS.emptyBody },
 	'tools/tool_lang_multi/server/index.ts :: tool.apiActions.automatic_translation × runAutomaticTranslation':
 		{ behaviour: WRITEBACK_TETHERS.emptyBody },
-	// TOOLS-5: the media branch writes the whole key from an UNLOCKED snapshot with no
-	// TM row. A fix that keeps updateMatrixKeyData must take the row lock and record
-	// the replaced value — either one, in the action's own unit, is this tether's red.
-	'tools/tool_update_cache/server/index.ts :: updateCache × updateMatrixKeyData': (action) => {
-		const own = CLOSURE.preciseEdgesOf(closureKey(action));
-		const problems: string[] = [];
-		if (takesLockedRead(CLOSURE, action)) {
-			problems.push(
-				'now takes readMatrixKeyForUpdate — the TOOLS-5 snapshot race may be fixed: restate the cell (lossless + lockedRead) and lower PENDING_COUNT',
-			);
-		}
-		if (own.has('src/core/db/time_machine.ts#recordTimeMachine')) {
-			problems.push(
-				'now records a Time Machine row itself — restate the cell and lower PENDING_COUNT',
-			);
-		}
-		if (!own.has(`${MATRIX_WRITE}#updateMatrixKeyData`)) {
-			problems.push('no longer calls updateMatrixKeyData itself — the cell is stale');
-		}
-		return problems;
-	},
 };
 
 /**
@@ -1848,15 +1790,19 @@ describe('LEG 4 — the tool write-back census is TOTAL by derivation', () => {
 			),
 		).toBe(true);
 		// Measured 2026-09-30: 35 server actions, 54 server cells, 16 client actions.
+		// 54 → 47 server cells with CLOSURE_PLAN Step 2: the relation_search rebuild and
+		// observer-propagation doors of the time-machine actions are the chokepoint's
+		// own derived writes now, not cells of their own.
 		expect(SERVER_CELLS.size).toBeGreaterThanOrEqual(31);
 		const serverCellCount = [...SERVER_CELLS.values()].reduce((sum, doors) => sum + doors.size, 0);
-		expect(serverCellCount).toBeGreaterThanOrEqual(48);
+		expect(serverCellCount).toBeGreaterThanOrEqual(42);
 		expect(CLIENT_CELLS.size).toBeGreaterThanOrEqual(14);
-		// The write the four hand-listed doors could not see: a RAW primitive, reached
-		// through a dynamic-destructure import, inside a tool action.
+		// The write the four hand-listed doors could not see (a RAW primitive then; the
+		// locked media-key transform since CLOSURE_PLAN Step 2), reached through a
+		// dynamic-destructure import, inside a tool action.
 		expect(
 			SERVER_CELLS.get('tools/tool_update_cache/server/index.ts :: updateCache')?.get(
-				'updateMatrixKeyData',
+				'transformStoredMediaItems',
 			),
 		).toBe(1);
 		// and the two P0-12 actions, by their real names
@@ -1969,6 +1915,39 @@ describe('LEG 4 — the tool write-back census is TOTAL by derivation', () => {
 			({ door, cell }) => cell.bypass_reason !== undefined && bypassOf(CLOSURE, door) === null,
 		).map(({ action, door }) => `${action} × ${door}`);
 		expect(stale, 'bypass_reason on a cell whose door goes through the chokepoint').toEqual([]);
+	});
+
+	test('every REASONED bypass lands on a SANCTIONED derived writer — the one list both censuses read', () => {
+		// SANCTIONED_DERIVED_WRITERS (test/helpers/matrix_writer_closure.ts) is THE list
+		// of units that write past every chokepoint by design (derived state: files_info,
+		// the metadata twin, the hierarchy / ontology definition rows, the dataframe slot
+		// strip). A stale name is red; and a reasoned bypass cell whose write path reaches
+		// NONE of them is writing past the chokepoint through a writer nobody sanctioned —
+		// its `bypass_reason` then restates a contract no list holds.
+		const sanctioned = Object.keys(SANCTIONED_DERIVED_WRITERS);
+		expect(sanctioned.length).toBeGreaterThanOrEqual(6);
+		for (const [key, reason] of Object.entries(SANCTIONED_DERIVED_WRITERS)) {
+			expect(CLOSURE.members.has(key), `${key} is not a writer-closure member (stale?)`).toBe(true);
+			expect(reason.length, `${key}: a sanctioned writer needs its reason`).toBeGreaterThan(40);
+		}
+		const reasoned = CELLS.filter(
+			({ door, cell }) =>
+				cell.verdict !== 'PENDING' &&
+				typeof cell.bypass_reason === 'string' &&
+				!isRawDoor(CLOSURE, door),
+		);
+		expect(reasoned.length, 'no reasoned bypass cell — the check is vacuous').toBeGreaterThan(5);
+		const unsanctioned = reasoned
+			.filter(
+				({ door }) => !(bypassOf(CLOSURE, door) ?? []).some((unit) => sanctioned.includes(unit)),
+			)
+			.map(
+				({ action, door }) => `${action} × ${door}: ${(bypassOf(CLOSURE, door) ?? []).join(' → ')}`,
+			);
+		expect(
+			unsanctioned,
+			'a reasoned bypass whose write path reaches no SANCTIONED_DERIVED_WRITERS unit',
+		).toEqual([]);
 	});
 
 	test('no corpus file loads a module through a dynamic import the analyser cannot resolve, beyond the named exemptions', () => {
@@ -2745,7 +2724,7 @@ describe('LEG 4 — the analyser and the judge, on injected inputs (positive con
 		]);
 		expect(isPsqlMatrixWriter('await runPsql([`TRUNCATE TABLE matrix_x`]);')).toBe(true);
 		// the MAIN `matrix` table, bare or quoted, and its \\copy import
-		expect(isPsqlMatrixWriter("await runPsql(conn, ['-c', `UPDATE matrix SET a = 1`]);")).toBe(
+		expect(isPsqlMatrixWriter("await runPsql(conn, ['-c', `UPDATE matrix_test SET a = 1`]);")).toBe(
 			true,
 		);
 		expect(isPsqlMatrixWriter('await runPsql([`DELETE FROM "matrix" WHERE a = 1`]);')).toBe(true);
@@ -3300,8 +3279,8 @@ describe('LEG 4 — the analyser and the judge, on injected inputs (positive con
 				'\tfake();',
 				'}',
 				'export async function local(): Promise<void> {',
-				"\tawait sh(['-c', `UPDATE matrix SET a = 1`]);",
-				"\tawait sh(['-c', `UPDATE matrix SET a = 2`]);",
+				"\tawait sh(['-c', `UPDATE matrix_test SET a = 1`]);",
+				"\tawait sh(['-c', `UPDATE matrix_test SET a = 2`]);",
 				'}',
 			].join('\n'),
 		});
@@ -3347,7 +3326,7 @@ describe('LEG 4 — the analyser and the judge, on injected inputs (positive con
 				"import { runPsql } from '../../../src/core/install/pg_exec.ts';",
 				'export async function act(): Promise<void> {',
 				"\tawait runPsql(['-c', `UPDATE matrix_x SET a = 1`]);",
-				"\tawait runPsql(['-c', `UPDATE matrix SET a = 2`]);",
+				"\tawait runPsql(['-c', `UPDATE matrix_test SET a = 2`]);",
 				'}',
 				'async function helper(): Promise<void> {',
 				'\tawait runPsql([`DELETE FROM matrix_y`]);',

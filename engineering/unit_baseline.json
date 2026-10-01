@@ -1421,10 +1421,10 @@
 			"skipped": 0,
 			"assertions": 111
 		},
-		"test/unit/duplicate_record_media.test.ts": {
-			"tests": 1,
+		"test/unit/duplicate_record_media_verdict_native.test.ts": {
+			"tests": 9,
 			"skipped": 0,
-			"assertions": 13
+			"assertions": 75
 		},
 		"test/unit/duplicate_record_native.test.ts": {
 			"tests": 6,
@@ -2391,6 +2391,11 @@
 			"skipped": 0,
 			"assertions": 62
 		},
+		"test/unit/media_files_info_lost_update_native.test.ts": {
+			"tests": 15,
+			"skipped": 0,
+			"assertions": 86
+		},
 		"test/unit/media_files_info_repair.test.ts": {
 			"tests": 11,
 			"skipped": 0,
@@ -2630,6 +2635,11 @@
 			"tests": 1,
 			"skipped": 0,
 			"assertions": 1
+		},
+		"test/unit/obligation_ledger_native.test.ts": {
+			"tests": 46,
+			"skipped": 0,
+			"assertions": 364
 		},
 		"test/unit/observer_cascade_native.test.ts": {
 			"tests": 15,

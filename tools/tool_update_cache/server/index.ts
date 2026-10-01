@@ -9,10 +9,14 @@
  *
  * SCOPE: PHP `regenerate_component()` is a per-model dispatch. Here:
  * - MEDIA components REPAIR the media (PHP parity) via the shared kernel
- *   core/media/repair.ts refreshMediaItems (regenerate:true): rebuild the
- *   derivative files from the original where it is present on this box
+ *   core/media/repair.ts, in its two halves: regenerateMediaDerivatives rebuilds
+ *   the derivative files from the original where it is present on this box
  *   (processing.ts regenerate twins — the same seams upload ingest uses),
- *   then re-scan the disk and persist a fresh files_info per item. A record
+ *   OUTSIDE any lock; then the LOCKED TRANSFORM (files_info_persist.ts
+ *   transformStoredMediaItems) re-scans the items read under the row lock and
+ *   writes the fresh files_info — so an upload a curator committed while the
+ *   files were being rebuilt is refreshed, never reverted to this run's
+ *   snapshot (TOOLS-5, WC-2026-09-30-media-key-locked-transform). A record
  *   whose stored files_info is stale (e.g. written while MEDIA_PATH pointed at
  *   the wrong tree) is repaired by exactly this. AV derivatives are an ASYNC
  *   transcode (jobs.ts) — update_cache refreshes the av files_info from disk
@@ -21,8 +25,9 @@
  *   re-running the save path's derivation.
  */
 
-import { isMediaModel } from '../../../src/core/concepts/media.ts';
+import { isMediaModel, mediaTypeOf } from '../../../src/core/concepts/media.ts';
 import { DedaloError, ok } from '../../../src/core/errors/index.ts';
+import type { StoredMediaItem } from '../../../src/core/media/tools/files_info_persist.ts';
 import { getModelByTipo } from '../../../src/core/ontology/resolver.ts';
 import { currentDataLang } from '../../../src/core/resolve/request_lang.ts';
 import { buildSectionElementsContext } from '../../../src/core/resolve/section_elements_context.ts';
@@ -105,8 +110,13 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 	);
 	const { saveComponentData } = await import('../../../src/core/section/record/save_component.ts');
 	const { groupItemsByLang } = await import('../../../src/core/tools/import_data.ts');
-	const { refreshMediaItems } = await import('../../../src/core/media/repair.ts');
-	const { updateMatrixKeyData } = await import('../../../src/core/db/matrix_write.ts');
+	const { regenerateMediaDerivatives, rescanMediaItems } = await import(
+		'../../../src/core/media/repair.ts'
+	);
+	const { transformStoredMediaItems } = await import(
+		'../../../src/core/media/tools/files_info_persist.ts'
+	);
+	const { resolveMediaPathOptions } = await import('../../../src/core/media/ontology_path.ts');
 
 	// Matched records: the client SQO, REQUIRED (no limit; pagination stripped so
 	// the whole matched set — not just the visible page — is processed). There is
@@ -179,6 +189,10 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 
 	let regenerated = 0;
 	let mediaHeld = 0;
+	/** Media components whose record was DELETED during the run (nothing written). */
+	let vanished = 0;
+	/** Media components whose row stayed locked past the lock timeout (nothing written). */
+	let lockedOut = 0;
 	let stopped = false;
 	const mediaErrors: string[] = [];
 	// The run is held in the active-run registry while it writes: a revert of
@@ -211,60 +225,99 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 				const tipo = String(sel.tipo ?? '');
 				const model = tipo !== '' ? await getModelByTipo(tipo) : null;
 				if (model === null) continue;
-				if (isMediaModel(model)) {
-					// MEDIA repair: the shared kernel (core/media/repair.ts) builds only the
-					// MISSING derivatives (v6 regenerate_component parity — an existing file
-					// is never re-encoded; image thumb always; envelope create-or-fix) and
-					// re-scans files_info per item. The persist here is the established
-					// files_info write-back (per-key jsonb, NO Time Machine entry —
-					// files_info is a filesystem cache; media/tools/files_info_persist.ts).
+				const spec = isMediaModel(model) ? mediaTypeOf(model) : null;
+				if (spec !== null) {
+					// MEDIA repair, in the kernel's two halves (core/media/repair.ts): the
+					// FILE work first, from this run's snapshot and OUTSIDE any lock — it
+					// builds only the MISSING derivatives (v6 regenerate_component parity:
+					// an existing file is never re-encoded; image thumb always; envelope
+					// create-or-fix); then the LOCKED TRANSFORM re-scans the items as they
+					// stand under the row lock and writes them (files_info_persist.ts — the
+					// one media-key writer; per-key jsonb, NO Time Machine entry — files_info
+					// is a filesystem cache).
 					//
 					// NAMED EXEMPTION from the undo log (decision D4, WC
-					// bulk-revert-undo-log): this write records no BEFORE/AFTER pair,
-					// so a bulk revert of this run leaves it in place. files_info is
-					// DERIVED from the files on disk, and the files this pass moves to
-					// deleted/<bulk id>/ or rebuilds are not database state a revert
-					// could put back — restoring the old files_info would describe
-					// files that are no longer where it says. The next update_cache
-					// re-derives it from whatever the disk then holds.
+					// bulk-revert-undo-log, addendum WC-2026-09-30-media-key-locked-transform):
+					// this write records no BEFORE/AFTER pair, so a bulk revert of this run
+					// leaves it in place. files_info is DERIVED from the files on disk, and
+					// the files this pass moves to deleted/<bulk id>/ or rebuilds are not
+					// database state a revert could put back — restoring the old files_info
+					// would describe files that are no longer where it says. The next
+					// update_cache re-derives it from whatever the disk then holds.
 					const storedItems = (readComponentItems(record, tipo, model) ?? []) as unknown[];
 					if (storedItems.length === 0) continue;
 					const regenerateOptions = (sel.regenerate_options ?? null) as {
 						delete_normalized_files?: unknown;
 					} | null;
-					const { refreshedItems, errors, heldShrinks } = await refreshMediaItems({
+					const pathOpts = await resolveMediaPathOptions(tipo, row.section_tipo, row.section_id);
+					const errors = await regenerateMediaDerivatives({
 						componentTipo: tipo,
 						sectionTipo: row.section_tipo,
 						sectionId: row.section_id,
 						model,
 						items: storedItems,
-						regenerate: true,
 						// v6 delete_normalized_files (the client's per-component regenerate
 						// checkbox): move the normalized default-quality files to
 						// deleted/<bulk id>/ before the rebuild.
 						deleteNormalized: regenerateOptions?.delete_normalized_files === true,
 						bulkProcessId,
-						// NEVER shrink from a tool sweep: on a partial-media box the rescan
-						// would wipe the valid index of every record whose files are not
-						// local (the 2026-07-19 incident). Shrinks need the ops script's
-						// explicit --allow-shrink adjudication.
-						holdShrink: true,
+						pathOpts,
 					});
 					mediaErrors.push(...errors.map((message) => `${tipo}#${row.section_id}: ${message}`));
-					mediaHeld += heldShrinks;
-					// v6 media_common regenerate (:2670-2705): restore a missing
-					// original_file_name from the section's target_filename component
-					// (properties.target_filename, e.g. rsc398 'Original file name'),
-					// deriving original_normalized_name from it.
-					await restoreOriginalNames(refreshedItems, tipo, record, row.section_tipo);
-					await updateMatrixKeyData(
-						table,
+					// v6 media_common regenerate (:2670-2705): a missing original_file_name
+					// is recovered from the section's target_filename component — resolved
+					// HERE (it reads the ontology and the record), applied under the lock.
+					const nameRepair = await resolveOriginalNameRepair(
+						tipo,
+						record,
 						row.section_tipo,
 						row.section_id,
-						'media',
-						tipo,
-						refreshedItems,
 					);
+					let heldShrinks = 0;
+					const outcome = await transformStoredMediaItems(
+						{ sectionTipo: row.section_tipo, sectionId: row.section_id, componentTipo: tipo },
+						(locked) => {
+							// Removed since the snapshot: nothing left to refresh.
+							if (locked.length === 0) return { skip: 'noop' };
+							const rescan = rescanMediaItems(locked, {
+								spec,
+								identityBase: {
+									componentTipo: tipo,
+									sectionTipo: row.section_tipo,
+									sectionId: row.section_id,
+								},
+								pathOpts,
+								// NEVER shrink from a tool sweep: on a partial-media box the rescan
+								// would wipe the valid index of every record whose files are not
+								// local (the 2026-07-19 incident). Judged on the LOCKED items: a
+								// shrink only the committed value shows is held too.
+								holdShrink: true,
+							});
+							heldShrinks = rescan.heldShrinks;
+							return {
+								write: applyOriginalNameRepair(rescan.items, nameRepair) as StoredMediaItem[],
+							};
+						},
+						// A run over many records: one held row is THAT record's `locked`,
+						// never a wait that stalls (or, under a statement ceiling, aborts)
+						// the run — the request pool bounds no lock wait on its own.
+						{ lockWait: 'per-record' },
+					);
+					if (outcome.action === 'missing') {
+						vanished += 1;
+						mediaErrors.push(
+							`${tipo}#${row.section_id}: record deleted during the run — nothing written`,
+						);
+						continue;
+					}
+					if (outcome.action === 'locked') {
+						lockedOut += 1;
+						mediaErrors.push(
+							`${tipo}#${row.section_id}: the record stayed locked past the lock timeout — nothing written`,
+						);
+						continue;
+					}
+					mediaHeld += heldShrinks;
 					regenerated += 1;
 					continue;
 				}
@@ -319,7 +372,8 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 	const summaryMsg = stopped
 		? `Stopped. update_cache regenerated ${regenerated} component(s) across ${processed} of ${rows.length} matched record(s) before the stop.`
 		: `OK. update_cache regenerated ${regenerated} component(s) across ${rows.length} record(s).`;
-	const msg = `${summaryMsg}${mediaErrors.length > 0 ? ` ${mediaErrors.length} media derivative rebuild(s) failed (files_info still refreshed).` : ''}${mediaHeld > 0 ? ` ${mediaHeld} stored media index(es) kept (files not on this server — shrink held).` : ''}`;
+	const rebuildFailures = mediaErrors.length - vanished - lockedOut;
+	const msg = `${summaryMsg}${rebuildFailures > 0 ? ` ${rebuildFailures} media derivative rebuild(s) failed (files_info still refreshed).` : ''}${mediaHeld > 0 ? ` ${mediaHeld} stored media index(es) kept (files not on this server — shrink held).` : ''}${vanished > 0 ? ` ${vanished} record(s) deleted during the run (nothing written).` : ''}${lockedOut > 0 ? ` ${lockedOut} record(s) stayed locked (nothing written).` : ''}`;
 	// Final frame: the client renders the summary from the last pfile data.
 	publish({
 		msg,
@@ -342,9 +396,18 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 			bulk_process_id: bulkProcessId,
 			media_errors: mediaErrors.length,
 			media_held: mediaHeld,
+			vanished,
+			locked: lockedOut,
 		},
 		{ requestId: toolRequestId(ctx) },
 	);
+}
+
+/** A recovered original name (see resolveOriginalNameRepair). */
+interface OriginalNameRepair {
+	fileName: string;
+	/** `<identifier>.<ext of the recovered name>`, when the name has an extension. */
+	normalizedName: string | null;
 }
 
 /**
@@ -353,18 +416,15 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
  * target-filename component (the component tipo named by the media component's
  * `properties.target_filename`, e.g. rsc398 'Original file name'), and derives
  * `original_normalized_name` (`<identifier>.<ext of the recovered name>`) when
- * that is missing too. Mutates the (already-cloned) refreshed items in place.
+ * that is missing too. The RESOLUTION half — async (the ontology, the record's
+ * sibling value), run BEFORE the lock; `null` = nothing to recover.
  */
-async function restoreOriginalNames(
-	refreshedItems: unknown[],
+async function resolveOriginalNameRepair(
 	componentTipo: string,
 	record: { columns: Record<string, unknown> },
 	sectionTipo: string,
-): Promise<void> {
-	const first = refreshedItems[0] as Record<string, unknown> | undefined;
-	if (first === undefined || first === null || typeof first !== 'object') return;
-	if (typeof first.original_file_name === 'string' && first.original_file_name !== '') return;
-
+	sectionId: number,
+): Promise<OriginalNameRepair | null> {
 	const { getPropertiesByTipo, getModelByTipo: modelByTipo } = await import(
 		'../../../src/core/ontology/resolver.ts'
 	);
@@ -376,24 +436,48 @@ async function restoreOriginalNames(
 	} | null;
 	const targetTipo =
 		typeof properties?.target_filename === 'string' ? properties.target_filename : null;
-	if (targetTipo === null) return;
+	if (targetTipo === null) return null;
 	const targetModel = await modelByTipo(targetTipo);
-	if (targetModel === null) return;
+	if (targetModel === null) return null;
 	const targetItems = (readItems(record as never, targetTipo, targetModel) ?? []) as {
 		value?: unknown;
 	}[];
 	const fileName = targetItems.find((item) => typeof item?.value === 'string' && item.value !== '')
 		?.value as string | undefined;
-	if (fileName === undefined) return;
+	if (fileName === undefined) return null;
+	const extension = fileName.includes('.') ? (fileName.split('.').pop() ?? '') : '';
+	return {
+		fileName,
+		normalizedName:
+			extension !== '' ? `${componentTipo}_${sectionTipo}_${sectionId}.${extension}` : null,
+	};
+}
 
-	first.original_file_name = fileName;
-	if (typeof first.original_normalized_name !== 'string' || first.original_normalized_name === '') {
-		const extension = fileName.includes('.') ? (fileName.split('.').pop() ?? '') : '';
-		const sectionId = (record as { columns: unknown } & { section_id?: unknown }).section_id;
-		if (extension !== '' && sectionId !== undefined) {
-			first.original_normalized_name = `${componentTipo}_${sectionTipo}_${sectionId}.${extension}`;
-		}
+/**
+ * The APPLICATION half — pure, run on the items read under the row lock: the
+ * FIRST item gets the recovered name only when it has none (a curator's upload
+ * committed since the snapshot wins). Never mutates the items it is handed.
+ */
+function applyOriginalNameRepair(
+	items: readonly unknown[],
+	repair: OriginalNameRepair | null,
+): unknown[] {
+	const result = [...items];
+	const first = result[0] as Record<string, unknown> | undefined;
+	if (repair === null || first === undefined || first === null || typeof first !== 'object') {
+		return result;
 	}
+	if (typeof first.original_file_name === 'string' && first.original_file_name !== '')
+		return result;
+	const named: Record<string, unknown> = { ...first, original_file_name: repair.fileName };
+	if (
+		(typeof first.original_normalized_name !== 'string' || first.original_normalized_name === '') &&
+		repair.normalizedName !== null
+	) {
+		named.original_normalized_name = repair.normalizedName;
+	}
+	result[0] = named;
+	return result;
 }
 
 /** The section targets of a component-list request — the 'section_list' gate reads

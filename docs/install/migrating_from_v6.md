@@ -654,7 +654,9 @@ bun scripts/media_repair_files_info.ts --apply
 
 - It **refuses to run** unless the media root exists and holds the image originals — precisely so a wrong root cannot re-corrupt every index. If it refuses, fix `MEDIA_PATH` first.
 - It does not rebuild derivatives and writes no time machine version; it only re-reads the disk.
-- A rescan that finds **fewer** files than are stored is reported and skipped unless you pass `--allow-shrink`. That is the expected signal of an incomplete media copy — finish the copy, do not force it through.
+- A rescan that finds **fewer** files than are stored is reported and skipped unless you pass `--allow-shrink`. That is the expected signal of an incomplete media copy — finish the copy, do not force it through. It is judged per media item: one item whose files are missing keeps its stored list even when another item of the same field is repaired.
+- A media list that names **another record's** files (what a failed duplicate could leave) is always rewritten from the record's own files. A file named some other way (for example by an image id) is never mistaken for another record's.
+- Each record is written under its row lock from what it holds at that moment, so an upload made while the sweep runs is kept. A record another user holds for more than a few seconds is reported as locked and skipped; re-run to pick it up.
 
 To rebuild *missing derivatives* as well, use [tool_update_cache](../tools/using_update_cache.md) instead.
 

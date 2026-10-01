@@ -745,6 +745,11 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		scope:
 			'NOT a corpus: `zzarcMediaDigests` fingerprints the scratch media tree the zzarc situation plants; the CALLER hands its own scratch root',
 	},
+	'test/helpers/media_seed_sweep.ts': {
+		roots: [],
+		scope:
+			"NOT a corpus: `sweepSeededMediaEntries` deletes, by name, the media files a gate seeded under the CALLER's marked test media root (the lane's suite root or a scratch root — refused without `.dedalo_test_media`); never a repo directory",
+	},
 	'scripts/seed_diffusion_type_rewrite.ts': {
 		roots: [['install/import/ontology/7.0']],
 		scope:
@@ -790,12 +795,16 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 	},
 };
 
-/** The four gates that census the write path; each must use the shared corpus. */
+/**
+ * The four gates that census the write path; each must use the shared corpus.
+ * (write_obligations_tripwire replaced section_record's grep gate with CLOSURE_PLAN
+ * Step 2 — that gate's regex never matched a single-key writer, so it held nothing.)
+ */
 const WRITE_PATH_GATES: readonly string[] = [
 	'test/unit/sql_confinement_tripwire.test.ts',
 	'test/unit/ws_a_tripwires.test.ts',
 	'test/unit/matrix_counter_monotonic_tripwire.test.ts',
-	'test/unit/section_record.test.ts',
+	'test/unit/write_obligations_tripwire.test.ts',
 ];
 
 /** Positive control: a script that mass-rewrites matrix jsonb, outside src/ and tools/. */

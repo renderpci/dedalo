@@ -263,11 +263,11 @@ export function resolveTranslationProvider(engine: string): {
  * PHP's component->save()). Shared by tool_lang (one target) and tool_lang_multi
  * (looped targets).
  *
- * OBSERVERS (TOOLS-1, latent): writes via persistRecordKeys, which fires
- * afterRecordWrite only, never propagateToObservers. A component_info or
- * use_self_section edge on a translatable literal would go stale. The vendored
- * ontology has only `{filter:false}` no-ops. Closure: the CLOSURE_PLAN Step 2
- * obligation ledger.
+ * OBSERVERS (TOOLS-1, the observer half closed by CLOSURE_PLAN Step 2): the
+ * write goes through persistRecordKeys, whose post-write hook declares the
+ * key's before/after to the obligation ledger — so a component_info or
+ * use_self_section edge on a translatable literal recomputes after the COMMIT,
+ * exactly as it does for a save.
  *
  * THE LOCK (audit 2026-08 §5.6). The merge is a read-modify-write of ONE jsonb
  * key holding EVERY language of the component, so it is only safe under the
@@ -392,6 +392,7 @@ export async function translateAndWrite(input: {
 			{ table, sectionTipo: input.sectionTipo, sectionId: input.sectionId },
 			[{ column: column as MatrixJsonbColumn, key: input.componentTipo, value: merged }],
 			{ userId: input.userId },
+			{ actor: input.userId },
 		);
 		// The history through the capture's own writer (dataframe_slots.ts
 		// recordMainHistory — two lanes): ONE row in the TARGET language's lane,

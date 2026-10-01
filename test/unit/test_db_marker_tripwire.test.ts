@@ -185,6 +185,8 @@ const EXEMPT_WRITERS: Readonly<Record<string, string>> = {
 		"WRITES NO DÉDALO DATA — the suite MariaDB lane SWEEP: it deletes only lane roots under ../private/test_mariadb/ (and a killed sweep's or claim's leftover beside one) that carry `.dedalo_test_mariadb`, the marker the suite writes when it creates a lane; an unmarked root or look-alike is refused and kept. Marker-last, so an interrupted delete stays sweepable. No database connection of any kind (the stop goes through suite_mariadb.ts). Guarded by test/unit/suite_mariadb_target_native.test.ts legs (k)-(m), (r) and test/unit/shard_mariadb_sweep_native.test.ts (PUB-05).",
 	'test/helpers/matrix_writer_closure.ts':
 		'WRITES NO DATA — a STATIC analyser (the write-path census shared by write_obligations and tool_lossless_writeback): it reads source text and holds no database connection. Its `PSQL_MATRIX_DML` regex NAMES the SQL keywords (`TRUNCATE`, `INSERT INTO`…) it looks for in other files, which is what the seam scan matches.',
+	'test/helpers/media_seed_sweep.ts':
+		"WRITES NO DATABASE DATA — it deletes, by name, the media FILES a gate seeded under the caller's test media root, and REFUSES (throws, deletes nothing) a root without the `.dedalo_test_media` marker: the filesystem twin of the marker law. No database connection.",
 	'test/helpers/real_backup_archive.ts':
 		"WRITES NO DÉDALO DATA — it READS the suite database (`pg_dump -F c -t dd_ontology`) and writes the archive bytes, a truncated copy and an mtime into the CALLER's scratch directory (the backup gates' mkdtemp). No database write, no media root.",
 	'src/core/test_data/seed.ts':
@@ -462,6 +464,11 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 		name: 'createDoorRecord',
 		run: async () =>
 			(await import('../helpers/authz_door_fixture.ts')).createDoorRecord('test3', 944021),
+	},
+	{
+		name: 'sweepActivityRows',
+		run: async () =>
+			(await import('../helpers/activity_rows.ts')).sweepActivityRows('zzmk1', [999_997]),
 	},
 	{
 		name: 'dropDoorRecords',

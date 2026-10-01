@@ -1104,6 +1104,48 @@ export const RECORD_WRITE_CHOKEPOINTS: Readonly<Record<string, string>> = {
 		'the record-CLONE door: every column at once, then afterRecordWrite.',
 	'src/core/section/record/delete_record.ts#deleteSectionRecord':
 		'the record-DELETE door: the row delete under its lock, TM delete row, holders rewritten through persistRecordKeys, save/RAG events and the observer cascade.',
+	// CLOSURE_PLAN Step 2 (the obligation ledger): the chokepoint owns every derived
+	// write — each entry below carries its own observer (ledger) and relation_search
+	// obligations, so no door remembers them. write_obligations_tripwire leg B.
+	[`${RECORD_WRITE}#persistRecordBirth`]:
+		'the insert-if-absent chokepoint (a record undelete): the birth columns + derived relation_search, covered observer slots recomputed, then afterRecordWrite with a birth ledger entry.',
+	[`${RECORD_WRITE}#persistAppendedKeyItems`]:
+		'the atomic-append chokepoint (saveComponentData’s insert branch): the appended items, stamps and derived relation_search, then afterRecordWrite with a keys ledger entry.',
+	[`${RECORD_WRITE}#persistRelationRemovalKeys`]:
+		'the REMOVAL-law key chokepoint (every relation model re-indexed, P1-7): only the enumerated removal doors call it; ends in afterRecordWrite with a keys ledger entry.',
+	[`${RECORD_WRITE}#persistRestoredKeys`]:
+		'the COMPONENT-RESTORE key chokepoint (a key’s PAST value — apply_value, the bulk revert-undo): persistRecordKeys, except that a restored COVERED observer slot is never declared as a change — it is queued for its recompute (requestCoveredSlotRecompute) after COMMIT; ends in afterRecordWrite. Its callers are enumerated by write_obligations_tripwire leg B4.',
+	[`${RECORD_WRITE}#requestCoveredSlotRecompute`]:
+		'the covered-slot RECOMPUTE entry: writes nothing itself — it queues the recompute of a record’s set_dato_external mirrors on the ledger, whose drain writes each mirror through persistObserverMirrorKeys (the one sanctioned path past it is the drain’s dataframe SLOT strip of a dropped mirror item, removeDataframeDataById, exactly as for every other entry’s drain). Its callers are enumerated by write_obligations_tripwire leg B4.',
+	[`${RECORD_WRITE}#persistObserverMirrorKeys`]:
+		'the observer-MIRROR key chokepoint (cascade-owned, no ledger entry — the cascade hops itself): only recomputeExternalRelation calls it; relation_search derived from what is stored; ends in afterRecordWrite.',
+};
+
+/**
+ * THE SANCTIONED DERIVED WRITERS — the units that write the matrix PAST every
+ * record-write chokepoint by design, because what they write is DERIVED state with no
+ * curated value, stamp or history of its own (technical metadata, the hierarchy and
+ * ontology definition rows, the dataframe slot strip). ONE list: tool_lossless's BYPASS
+ * reasons name these writers and write_obligations' census exempts them; neither may
+ * restate one differently. Each key must be a closure member (a stale name is red).
+ */
+export const SANCTIONED_DERIVED_WRITERS: Readonly<Record<string, string>> = {
+	'src/core/section/record/record_metadata.ts#setRecordMetadata':
+		'the `data`-column METADATA twin (created_date / created_by_user_id, label, diffusion_info): system bookkeeping, no component value.',
+	'src/core/media/tools/files_info_persist.ts#writeItems':
+		'files_info — technical metadata derived from the files on disk; its ONE caller is the locked transform (transformStoredMediaItems).',
+	'src/core/relations/save.ts#removeDataframeDataById':
+		'the dataframe SLOT strip of a removed main item (REL-01): no TM row by contract — the main’s own chokepoint write records the full state.',
+	'src/core/ontology/hierarchy_state.ts#write':
+		'the HIERARCHY INVARIANT single writer on the hierarchy registry rows — system state, not curated content.',
+	'src/core/ontology/hierarchy_state.ts#nameRootTerm':
+		'the hierarchy single writer naming a root term record — see #write.',
+	'src/core/ontology/hierarchy_provision.ts#provisionVirtualSections':
+		'hierarchy PROVISIONING of the `<tld>0` descriptor / model twin records at fixed ids.',
+	'src/core/ontology/ontology_write.ts#addMainSection':
+		'ONTOLOGY definition rows (dd_ontology main node records in matrix_ontology).',
+	'src/core/ontology/ontology_write.ts#createParentGrouper':
+		'ontology definition rows — see #addMainSection.',
 };
 
 /**

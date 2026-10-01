@@ -2,8 +2,8 @@
  * THE write-path census corpus — one lister, shared by every gate that claims
  * a TOTAL census over "the code that can write the shared database":
  * `sql_confinement_tripwire` (T1/T3/T4), `ws_a_tripwires` (jsonb binds, the
- * locator law), `matrix_counter_monotonic_tripwire` (counter DML) and the
- * `section_record` write-chokepoint grep gate.
+ * locator law), `matrix_counter_monotonic_tripwire` (counter DML) and
+ * `write_obligations_tripwire` (the raw matrix_write caller census).
  *
  * WHY ONE COPY. Each of those gates carried its own `['src', 'tools']` walk, and
  * the 2026-08-26 audit found what a per-gate root list does over time: ONE gate

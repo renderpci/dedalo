@@ -90,6 +90,16 @@ export interface ReconcileSummary {
 	droppedLocators: number;
 	/** Records whose drop half was withheld because their seed was degraded. */
 	degradedSeedRecords: number;
+	/**
+	 * Records whose `_hi` ancestor index disagreed with the value AS STORED (a
+	 * mirror written before CORE-2: value, no index), where the sweep leaves that
+	 * value in place: a value that agrees with the law (NOT in `drifted` — the
+	 * value is right), or one the kernel refused or withheld (the >2000 freeze,
+	 * a pure degraded-seed shrink — ALSO in `drifted`: two findings, the value
+	 * and the index). Dry run = would be re-indexed, apply = re-indexed
+	 * (recomputeExternalRelation indexDrift).
+	 */
+	reindexed: number;
 }
 
 /**
@@ -154,7 +164,7 @@ export interface ReconcileIO {
 		id: number,
 		userId: number,
 		at: Date,
-		opts: { write: boolean },
+		opts: { write: boolean; repairIndex: true },
 	): Promise<ExternalRecomputeOutcome>;
 }
 
@@ -293,6 +303,8 @@ export interface ReconcileCounts {
 	bigResultRefused: number;
 	shrinksSkipped: number;
 	repaired: number;
+	/** 1 when the outcome is an index-only drift (see ReconcileSummary.reindexed). */
+	reindexed: number;
 }
 
 /**
@@ -324,8 +336,26 @@ export function classifyReconcileOutcome(
 		bigResultRefused: 0,
 		shrinksSkipped: 0,
 		repaired: 0,
+		reindexed: 0,
 	};
-	if (!outcome.changed) return { drifted: false, record: null, counted, log: null };
+	if (!outcome.changed) {
+		if (outcome.indexDrift !== true) return { drifted: false, record: null, counted, log: null };
+		// The value is right; only its `_hi` ancestor index was missing or stale.
+		counted.reindexed = 1;
+		return {
+			drifted: false,
+			record: null,
+			counted,
+			log: `  ${tuple.hostSection} §${sectionId} ${tuple.observerTipo}: value agrees, _hi ancestor index ${apply ? 'rewritten' : 'disagrees — an apply would rewrite it'}`,
+		};
+	}
+	// A value the kernel refused or withheld (the freeze, a pure degraded-seed
+	// shrink) stays as stored — and its `_hi` index is swept all the same.
+	const reindexNote =
+		outcome.indexDrift === true
+			? `; _hi ancestor index ${apply ? 'rewritten' : 'disagrees — an apply would rewrite it'}`
+			: '';
+	if (outcome.indexDrift === true) counted.reindexed = 1;
 	const isShrink = outcome.after < outcome.before;
 	const droppedHere = outcome.dropped ?? Math.max(0, outcome.before - outcome.after);
 	const addedHere = outcome.added ?? Math.max(0, outcome.after - outcome.before);
@@ -358,7 +388,7 @@ export function classifyReconcileOutcome(
 			drifted: true,
 			record,
 			counted,
-			log: `  ${tuple.hostSection} §${sectionId} ${tuple.observerTipo}: ${outcome.before} → ${outcome.after} entrie(s) [>2000-reference FREEZE — ${apply ? 'not written' : 'an apply would refuse'}]`,
+			log: `  ${tuple.hostSection} §${sectionId} ${tuple.observerTipo}: ${outcome.before} → ${outcome.after} entrie(s) [>2000-reference FREEZE — ${apply ? 'not written' : 'an apply would refuse'}${reindexNote}]`,
 		};
 	}
 	if (outcome.skippedShrink === true) {
@@ -371,7 +401,7 @@ export function classifyReconcileOutcome(
 			drifted: true,
 			record,
 			counted,
-			log: `  ${tuple.hostSection} §${sectionId} ${tuple.observerTipo}: ${outcome.before} → ${outcome.after} entrie(s) [SHRINK held — DEGRADED SEED: ${(outcome.seedDefects ?? []).join(', ')}; grows applied]`,
+			log: `  ${tuple.hostSection} §${sectionId} ${tuple.observerTipo}: ${outcome.before} → ${outcome.after} entrie(s) [SHRINK held — DEGRADED SEED: ${(outcome.seedDefects ?? []).join(', ')}; grows applied${reindexNote}]`,
 		};
 	}
 	if (apply) counted.repaired++;
@@ -501,6 +531,7 @@ export async function reconcileObserverMirrors(
 		droppedRecords: 0,
 		droppedLocators: 0,
 		degradedSeedRecords: 0,
+		reindexed: 0,
 	};
 	const tuples = await discoverTuples(
 		options.onlyObserver ?? null,
@@ -541,10 +572,16 @@ export async function reconcileObserverMirrors(
 				id,
 				SYSTEM_USER_ID,
 				new Date(),
-				{ write: apply },
+				// The legacy `_hi` index sweep is the reconcile's (see the kernel's
+				// repairIndex): the interactive cascade never pays the chain walk.
+				{ write: apply, repairIndex: true },
 			);
 			const verdict = classifyReconcileOutcome(outcome, tuple, id, apply);
-			if (!verdict.drifted) continue;
+			summary.reindexed += verdict.counted.reindexed;
+			if (!verdict.drifted) {
+				if (verdict.log !== null) log(verdict.log);
+				continue;
+			}
 			drifted++;
 			summary.droppedRecords += verdict.counted.droppedRecords;
 			summary.droppedLocators += verdict.counted.droppedLocators;
@@ -600,6 +637,7 @@ export const OBSERVER_MIRRORS_RECONCILE: ReconcileDefinition = {
 			droppedRecords: 0,
 			droppedLocators: 0,
 			degradedSeedRecords: 0,
+			reindexed: 0,
 		};
 		const records: ReconcileRecord[] = [];
 		// One sweep per scoped section (the kernel narrows by ONE section), or one
@@ -616,6 +654,11 @@ export const OBSERVER_MIRRORS_RECONCILE: ReconcileDefinition = {
 				summary[key] += part[key];
 			}
 		}
-		return { drift: summary.drifted, applied: summary.repaired, detail: { ...summary, records } };
+		// An index-only drift is drift the registry reports (and an apply repairs).
+		return {
+			drift: summary.drifted + summary.reindexed,
+			applied: summary.repaired + (apply ? summary.reindexed : 0),
+			detail: { ...summary, records },
+		};
 	},
 };

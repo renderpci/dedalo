@@ -1151,8 +1151,9 @@ async function conformLeafBody(
 		// there. This is the last place holding the tipo — PHP resolves the same
 		// question the same way, via ontology_node::get_legacy_model_by_tipo.
 		//
-		// The test must match the WRITER exactly (save_component.ts reads the
-		// node's OWN stored model before calling maintainRelationSearchIndex):
+		// The test must match the WRITER exactly (relations/save.ts
+		// relationSearchLaw reads the node's OWN stored model for the save law the
+		// write chokepoint applies, section_record/record_write.ts):
 		// wrapping a leaf whose index is never maintained would widen nothing and
 		// would cost a second GIN probe per row. TM tables carry no such index
 		// (their relation datum is the scalar user_id column) and are excluded.

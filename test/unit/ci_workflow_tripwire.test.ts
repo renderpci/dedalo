@@ -697,6 +697,18 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		'test/unit/mcp_record_door_native.test.ts',
 		"It asserts the section table's row count and its row-id sequence around the MCP delete/duplicate/find_or_create doors, run as fixture principals, so the measure itself is the suite database's stored state.",
 	],
+	[
+		'test/unit/obligation_ledger_native.test.ts',
+		'Every case builds the zzot / zzoh observer fixtures on the suite database, drives a real restore, undelete, bulk revert, create, duplicate or delete door, and reads back the stored mirrors, relation_search and Time Machine rows after COMMIT; the ledger it tests drains through the transaction commit lane, which exists only on a live suite Postgres.',
+	],
+	[
+		'test/unit/media_files_info_lost_update_native.test.ts',
+		'Its legs are two-connection interleaves on the suite database: a second session holds an uncommitted write on the zzmu row while the update_cache and files_info doors run, and the wait is proven by pg_blocking_pids and a real 55P03 lock timeout, so the lost update it gates cannot be reproduced without a live suite Postgres.',
+	],
+	[
+		'test/unit/duplicate_record_media_verdict_native.test.ts',
+		"It duplicates zzdm records it creates on the suite database (with the section's own counter, so the clone's id is known in advance) and reads back the clone's stored and Time Machine file_path values beside the files copied under the lane's marked media root, so every case needs the suite Postgres.",
+	],
 ]);
 
 /**

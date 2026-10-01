@@ -116,7 +116,6 @@ import {
 	undeleteCascadeRecord,
 } from './bulk_revert_records.ts';
 import { revertUnit, type UnitResult } from './bulk_revert_undo.ts';
-import { propagateRestoreToObservers } from './restore_common.ts';
 
 const BULK_PROCESS_SECTION_TIPO = 'dd800';
 const BULK_PROCESS_LABEL_TIPO = 'dd796';
@@ -228,6 +227,7 @@ async function createRevertBulkProcess(label: string, userId: number): Promise<n
 						},
 					],
 					{ userId },
+					{ actor: userId },
 				);
 			}
 		} catch {
@@ -795,9 +795,10 @@ interface ActivitySink {
 }
 
 /**
- * POST-COMMIT for one unit (a cascade hop refuses to run inside a
- * transaction): the observer cascade, then ONE activity row PER WRITTEN KEY —
- * PHP logs inside its loop too (tool_time_machine :419).
+ * POST-COMMIT for one unit: ONE activity row PER WRITTEN KEY — PHP logs inside
+ * its loop too (tool_time_machine :419). The observer cascade of the unit's
+ * keys is not fired here: every key went through the write chokepoint, whose
+ * obligation ledger drained it after the unit's COMMIT (CLOSURE_PLAN Step 2).
  */
 async function afterUnitCommit(
 	result: UnitResult,
@@ -815,14 +816,6 @@ async function afterUnitCommit(
 		const { key } = written;
 		if (written.inexact === null) report.tally.exactDone += 1;
 		else report.markInexact(locateKey(key), written.inexact);
-		await propagateRestoreToObservers(
-			key.tipo,
-			key.sectionTipo,
-			key.sectionId,
-			written.before,
-			written.after,
-			activity.userId,
-		);
 		await activity.logActivity({
 			what: 'RECOVER COMPONENT',
 			tipo: key.sectionTipo, // WHERE = the SECTION tipo (PHP), not the component

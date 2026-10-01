@@ -32,7 +32,8 @@
  *   3. the depth budget (MAX_CASCADE_DEPTH, pinned at 8 — a backstop over
  *      the measured depth-≤2 graph) refuses the over-budget hop LOUDLY —
  *      observers_cascade_depth_exceeded counted, cycle counter untouched;
- *   4. inside an ambient transaction the hop is DEFERRED to the commit lane:
+ *   4. a write inside an ambient transaction propagates after COMMIT, never
+ *      inside it (the chokepoint's obligation ledger, CLOSURE_PLAN Step 2):
  *      ROLLBACK discards it (no mirror), COMMIT fires it (mirror lands);
  *   5. runObserverCascadeHop REFUSES an ambient transaction (throw naming
  *      the chain — B6);
@@ -49,8 +50,9 @@
  *      degrades to the stored bag);
  *  10. a leaked continuation (S2-14 class) whose commit lane already closed
  *      DROPS the hop loudly (observers_cascade_hop_dropped) — never silently;
- *  11. a level-0 propagation failure RETHROWS inside an ambient transaction
- *      (B6 — the owner must see the abort) and stays swallowed outside one.
+ *  11. propagation REFUSES to run inside a transaction (B6 — the ledger drains
+ *      post-commit, so an in-transaction call is a caller bug, thrown before
+ *      anything runs); a level-0 failure outside one is swallowed and counted.
  *
  * Scratch hygiene: ontology nodes in the test9992x band (tld 'test' — swept
  * BEFORE seeding, residue-tolerant); matrix_test rows in the
@@ -81,6 +83,7 @@ import {
 	propagateToObservers,
 	runObserverCascadeHop,
 } from '../../src/core/section/record/observers.ts';
+import { persistRecordKeys } from '../../src/core/section_record/index.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 
@@ -716,36 +719,41 @@ describe('recompute hops are gated on wrote:true', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 4. Ambient transaction: the hop rides the COMMIT-ONLY lane (B6/W12).
+// 4. Ambient transaction: a WRITE's propagation rides the COMMIT-ONLY lane
+//    (B6/W12) — through the record-write chokepoint's obligation ledger, the one
+//    door every write takes (the import doors' per-row wrap is this shape).
 // ---------------------------------------------------------------------------
 
-describe('ambient transaction — hops are commit-gated', () => {
-	test('ROLLBACK discards the relay hop: no mirror, no TM', async () => {
+describe('ambient transaction — a write propagates after COMMIT', () => {
+	/** REF_TX's OBSERVED key rewritten through the chokepoint (its stored value). */
+	const writeObserved = (): Promise<void> =>
+		persistRecordKeys(
+			{ table: SCRATCH_TABLE, sectionTipo: REF_SECTION, sectionId: REF_TX },
+			[
+				{
+					column: 'relation',
+					key: OBSERVED,
+					value: JSON.parse(observedReferencer(TERM_TX))[OBSERVED],
+				},
+			],
+			false,
+			{ actor: -1 },
+		);
+
+	test('ROLLBACK discards the write’s propagation: no mirror, no TM', async () => {
 		await expect(
 			withTransaction(async () => {
-				await propagateToObservers(
-					OBSERVED,
-					REF_SECTION,
-					REF_TX,
-					{ saved: [{ section_tipo: TERM_SECTION, section_id: TERM_TX }], removed: [] },
-					-1,
-				);
+				await writeObserved();
 				throw new Error('forced rollback');
 			}),
 		).rejects.toThrow('forced rollback');
 		expect(await bagOf(MIRROR, TERM_TX)).toBeNull();
 	});
 
-	test('COMMIT fires the deferred hop: the mirror lands post-commit', async () => {
+	test('COMMIT fires the propagation: the mirror lands post-commit, never inside', async () => {
 		await withTransaction(async () => {
-			await propagateToObservers(
-				OBSERVED,
-				REF_SECTION,
-				REF_TX,
-				{ saved: [{ section_tipo: TERM_SECTION, section_id: TERM_TX }], removed: [] },
-				-1,
-			);
-			// still inside the outer tx: the hop has NOT run yet
+			await writeObserved();
+			// still inside the outer tx: nothing has propagated yet
 			expect(await bagOf(MIRROR, TERM_TX)).toBeNull();
 		});
 		// the commit lane drained before withTransaction resolved
@@ -813,17 +821,19 @@ describe('leaked continuation — the hop drop is loud', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 11. B6 completion: a LEVEL-0 propagation failure inside an ambient
-//     transaction RETHROWS (the outer tx is already aborted — swallowing
-//     would hide the cause and poison every later statement); outside a
-//     transaction the historical swallow stands. BROKEN_SECTION's matrix
-//     table does not exist, so its recompute fails deterministically.
+// 11. B6: propagation never runs inside a transaction. The ledger drains every
+//     write's propagation post-commit, so an in-transaction call is a caller
+//     bug — refused BEFORE anything runs (it used to run, and on failure
+//     rethrow into the caller's transaction). Outside one, a level-0 failure is
+//     swallowed and counted. BROKEN_SECTION's matrix table does not exist, so
+//     its recompute fails deterministically.
 // ---------------------------------------------------------------------------
 
-describe('level-0 propagation failure — swallow only outside a transaction', () => {
+describe('level-0 propagation — refused inside a transaction, swallowed outside', () => {
 	const brokenItems = [{ section_tipo: BROKEN_SECTION, section_id: 1 }];
 
-	test('inside an ambient transaction the real failure surfaces to the tx owner', async () => {
+	test('inside an ambient transaction propagation REFUSES before running (B6)', async () => {
+		const failedBefore = getCounters().observers_propagation_failed ?? 0;
 		await expect(
 			withTransaction(async () => {
 				await propagateToObservers(
@@ -834,10 +844,13 @@ describe('level-0 propagation failure — swallow only outside a transaction', (
 					-1,
 				);
 			}),
-		).rejects.toThrow(/ambient transaction \(B6\)/);
+		).rejects.toThrow(/refusing to run inside a transaction/);
+		// refused, not attempted: no recompute ran, so no failure was counted
+		expect((getCounters().observers_propagation_failed ?? 0) - failedBefore).toBe(0);
 	});
 
-	test('outside a transaction the same failure is swallowed (never throws)', async () => {
+	test('outside a transaction the same failure is swallowed (never throws) and counted', async () => {
+		const failedBefore = getCounters().observers_propagation_failed ?? 0;
 		const result = await propagateToObservers(
 			RELAY,
 			TERM_SECTION,
@@ -846,6 +859,7 @@ describe('level-0 propagation failure — swallow only outside a transaction', (
 			-1,
 		);
 		expect(result).toEqual([]);
+		expect((getCounters().observers_propagation_failed ?? 0) - failedBefore).toBeGreaterThan(0);
 	});
 });
 
@@ -854,14 +868,16 @@ describe('level-0 propagation failure — swallow only outside a transaction', (
 // ---------------------------------------------------------------------------
 
 describe('W11: deletePortalLocator lock', () => {
-	test('static pin: the RMW runs under withTransaction with a FOR UPDATE read, observers post-commit', () => {
+	test('static pin: the RMW runs under withTransaction with a FOR UPDATE read, the write through the removal-law chokepoint', () => {
 		const source = readFileSync(join(REPO_ROOT, 'src/core/relations/save.ts'), 'utf-8');
 		const body = source.slice(source.indexOf('export async function deletePortalLocator'));
 		expect(body).toContain('await withTransaction(');
 		expect(body).toContain('FOR UPDATE');
-		// the lock precedes the read; the observer fan-out follows the commit
+		// the lock precedes the read; the write is the chokepoint's removal-law
+		// entry, whose ledger fans the observers out after the COMMIT — the door
+		// itself propagates nothing (write_obligations_tripwire leg B4 derives it)
 		expect(body.indexOf('FOR UPDATE')).toBeLessThan(body.indexOf('readMatrixRecord('));
-		expect(body.indexOf('propagateToObservers(')).toBeGreaterThan(body.indexOf('FOR UPDATE'));
+		expect(body.indexOf('persistRelationRemovalKeys(')).toBeGreaterThan(body.indexOf('FOR UPDATE'));
 		// ZERO-ROW GUARD (review 2026-08-02): a FOR UPDATE matching no row locks
 		// NOTHING; under READ COMMITTED the later read could then see a freshly
 		// committed row and run the whole RMW unlocked. The lock result MUST be

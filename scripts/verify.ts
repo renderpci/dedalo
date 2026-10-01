@@ -323,6 +323,10 @@ const TRIPWIRES = [
 	'test/unit/tool_transcription_gate_native.test.ts',
 	'test/unit/identify_vision_grant_native.test.ts',
 	'test/unit/mcp_record_door_native.test.ts',
+	// CORE-1 / CORE-2 residual / TOOLS-5 / CORE-5 — the obligation ledger + locked media-key transform (closure Step 2, 2026-10-01).
+	'test/unit/obligation_ledger_native.test.ts',
+	'test/unit/media_files_info_lost_update_native.test.ts',
+	'test/unit/duplicate_record_media_verdict_native.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

@@ -31,11 +31,12 @@
  * and legacy-key stripping. Item-id counters absorb explicit ids on every
  * save (PHP set_data :1009-1019).
  *
- * POST-SAVE CASCADE (header re-dated 2026-07-07, S2-45): the observer
- * propagation (PHP propagate_to_observers) and the activity log run at the
- * DISPATCH chokepoint after this save returns (api/dispatch.ts save handler)
- * — they are covered, not uncovered; this module deliberately keeps only the
- * data write + TM audit. The dataframe removal cascade (PHP
+ * POST-SAVE CASCADE (re-dated 2026-09-30, CLOSURE_PLAN Step 2): the observer
+ * propagation (PHP propagate_to_observers) is an obligation of the WRITE
+ * CHOKEPOINT (section_record/record_write.ts → obligation_ledger.ts), drained
+ * after this save's COMMIT; the activity log runs at the DISPATCH door after
+ * this save returns (api/dispatch.ts save handler). This module keeps the data
+ * write + TM audit. The dataframe removal cascade (PHP
  * remove_dataframe_data_by_id on item remove) is covered here (S1-05,
  * relations/save.ts removeDataframeDataById). Coverage-state lists live in
  * rewrite/STATUS.md, never in this header.
@@ -56,11 +57,7 @@ import { isConsultationOnlySection } from '../../concepts/section.ts';
 import type { DataframePairing } from '../../concepts/subdatum.ts';
 import { dbTimestamp } from '../../db/db_timestamp.ts';
 import { MATRIX_JSONB_COLUMNS, type MatrixJsonbColumn } from '../../db/matrix.ts';
-import {
-	absorbComponentItemIds,
-	allocateComponentItemId,
-	appendMatrixKeyItems,
-} from '../../db/matrix_write.ts';
+import { absorbComponentItemIds, allocateComponentItemId } from '../../db/matrix_write.ts';
 import { deferPostTransaction, sql, withTransaction } from '../../db/postgres.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { ONTOLOGY_TLD } from '../../ontology/ontology_tipos.ts';
@@ -84,16 +81,16 @@ import {
 	applySortByColumn,
 	applySortData,
 	type RelationInsertContext,
-	reindexRelationSearchLikeSave,
 	removeDataframeDataById,
 	type SortByColumnChange,
 	type SortDataChange,
 	validateRelationInsert,
 } from '../../relations/save.ts';
 import {
-	afterRecordWrite,
-	persistModifiedStamp,
+	persistAppendedKeyItems,
 	persistRecordKeys,
+	removedLocators,
+	type WriteReceipt,
 } from '../../section_record/index.ts';
 import type { Principal } from '../../security/permissions.ts';
 import type { AppendMergeResult, RelationAppendValidator } from './append_merge.ts';
@@ -232,17 +229,18 @@ export interface SaveResult {
 	data?: unknown[];
 	/**
 	 * Recomputed observer data items whose target IS the saved record (PHP
-	 * observers_data) — filled post-commit by the observer cascade; the
-	 * dispatch save handler merges them into the response so the client
-	 * refreshes info widgets in place.
+	 * observers_data) — filled post-commit by the chokepoint's observer ledger
+	 * (the receipt); EMPTY when a caller's transaction defers the drain past
+	 * this save's return. The dispatch save handler merges them into the
+	 * response so the client refreshes info widgets in place.
 	 */
 	observersData?: unknown[];
 	/**
 	 * INTERNAL, never on the wire: the relation locators present BEFORE this
-	 * save and absent after it. Feeds the observer cascade's removed-target set
-	 * (ObservedChange in ./observers.ts) — those records' mirrors still list the
-	 * saved record and only a visit can drop that dead entry. Absent when the
-	 * save removed nothing, and for every literal (non-relation) component.
+	 * save and absent after it (the ONE rule, obligation_ledger.ts
+	 * removedLocators). The observer cascade computes its own from the
+	 * chokepoint's before-image; this is for the callers that report it. Absent
+	 * when the save removed nothing, and for every literal (non-relation) component.
 	 */
 	removedItems?: unknown[];
 	/**
@@ -846,7 +844,7 @@ async function cascadeAppliedRemoves(input: {
 }
 
 /**
- * The pre-save snapshot the observer removed-set diff compares against: the
+ * The pre-save snapshot the removed-set diff (result.removedItems) compares against: the
  * full slot for a relation column (a shallow copy suffices — every mutation
  * path REBINDS `items`), nothing for a literal (no locators to remove).
  */
@@ -1063,7 +1061,13 @@ export async function saveComponentData(request: SaveRequest): Promise<SaveResul
 	// refuses per column first; this holds for any other caller.
 	await assertAppendImportRequest(effectiveRequest);
 
-	const result = await runSaveAtomically(effectiveRequest);
+	// THE RECEIPT (CLOSURE_PLAN Step 2): the write chokepoint's observer ledger
+	// drains after the save's COMMIT — before runSaveAtomically returns, since
+	// withTransaction awaits its commit-only lane — and hands back the recomputed
+	// observer items whose target IS this record (PHP observers_data). Under a
+	// caller's transaction the drain waits for THAT commit, so it stays empty.
+	const receipt: WriteReceipt = { observersData: [] };
+	const result = await runSaveAtomically(effectiveRequest, receipt);
 
 	// Post-commit side effect — deliberately OUTSIDE the transaction (S1-14
 	// posture: clearing a shared cache mid-tx invites repopulation with
@@ -1099,28 +1103,14 @@ export async function saveComponentData(request: SaveRequest): Promise<SaveResul
 		// it returns false when there is no ambient transaction, which is the
 		// interactive path, and then the clear runs inline exactly as before.
 		if (!deferPostTransaction(invalidate)) invalidate();
-		// Server-side observers (PHP propagate_to_observers) fire at THIS
-		// chokepoint so every save door propagates — dispatch, imports, MCP
-		// tools, transcription (2026-07-24: the api-layer-only wiring left
-		// import-written rsc387 data with permanently stale hierarchy93
-		// mirrors). Post-commit like the cache invalidation above: observer
-		// mirror writes run their own row updates against committed state.
-		// No-op for the vast majority of components (no `observers` in
-		// ontology properties — the first check inside). Never throws HERE
-		// (no ambient tx at this point on the interactive path); under an
-		// OUTER transaction (import_csv row wrap) a propagation failure
-		// rethrows so the row owner sees the real error (B6, observers.ts).
-		const { propagateToObservers } = await import('./observers.ts');
-		result.observersData = await propagateToObservers(
-			effectiveRequest.componentTipo,
-			effectiveRequest.sectionTipo,
-			Number(effectiveRequest.sectionId),
-			{
-				saved: Array.isArray(result.data) ? result.data : [],
-				removed: Array.isArray(result.removedItems) ? result.removedItems : [],
-			},
-			effectiveRequest.userId,
-		);
+		// Server-side observers (PHP propagate_to_observers) are NOT fired here any
+		// more: the write chokepoint declares every key change to the obligation
+		// ledger (section_record/obligation_ledger.ts), which drains post-commit
+		// for EVERY writer — this door, the restores, the undeletes, the bulk
+		// revert (CLOSURE_PLAN Step 2, CORE-1). What the interactive door still
+		// owes its caller is the same-record observer data, collected on the
+		// receipt. A copy: the receipt belongs to the ledger.
+		result.observersData = [...receipt.observersData];
 	}
 	return result;
 }
@@ -1160,16 +1150,19 @@ class SaveRefusedRollback extends DedaloError {
 }
 
 /** Apply the save; a refusal becomes a throw so the enclosing transaction rolls it back. */
-async function applyOrThrowRefusal(request: SaveRequest): Promise<SaveResult> {
-	const result = await applySaveComponentData(request);
+async function applyOrThrowRefusal(
+	request: SaveRequest,
+	receipt: WriteReceipt,
+): Promise<SaveResult> {
+	const result = await applySaveComponentData(request, receipt);
 	if (!result.ok) throw new SaveRefusedRollback(result);
 	return result;
 }
 
 /** One save, atomically: committed whole on success, no trace on a refusal. */
-async function runSaveAtomically(request: SaveRequest): Promise<SaveResult> {
+async function runSaveAtomically(request: SaveRequest, receipt: WriteReceipt): Promise<SaveResult> {
 	try {
-		return await withTransaction(() => applyOrThrowRefusal(request));
+		return await withTransaction(() => applyOrThrowRefusal(request, receipt));
 	} catch (error) {
 		if (error instanceof SaveRefusedRollback) return error.result;
 		throw error;
@@ -1486,7 +1479,10 @@ async function lockComponentKey(
 	};
 }
 
-async function applySaveComponentData(request: SaveRequest): Promise<SaveResult> {
+async function applySaveComponentData(
+	request: SaveRequest,
+	receipt: WriteReceipt,
+): Promise<SaveResult> {
 	const { componentTipo, sectionTipo, sectionId, lang, userId } = request;
 	const callerDataframe = request.callerDataframe ?? null;
 
@@ -1572,7 +1568,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 		callerMain: callerDataframe?.main_component_tipo ?? null,
 	});
 
-	// PRE-SAVE SNAPSHOT for the observer cascade (2026-08-06). Taken here, on
+	// PRE-SAVE SNAPSHOT for result.removedItems (2026-08-06). Taken here, on
 	// the FULL slot under the lock and before any narrowing, so it matches what
 	// `result.data` reports on both the dataframe and non-dataframe paths. A
 	// shallow copy suffices: every mutation path REBINDS `items` (applyUpdate
@@ -2046,6 +2042,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 			writeTarget,
 			[{ column, key: componentTipo, value: merged }],
 			auditStamp,
+			{ actor: userId, receipt },
 		);
 		items = merged ?? [];
 	} else if (hasUpdates) {
@@ -2055,27 +2052,21 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 			writeTarget,
 			[{ column, key: componentTipo, value: items }],
 			auditStamp,
+			{ actor: userId, receipt },
 		);
 	} else if (atomicInserts.length > 0) {
 		// Pure inserts: atomic concatenation — concurrent inserts both survive.
-		// (Deliberate divergence from the read-modify-write chokepoint shape;
-		// the modified stamps are refreshed right after, like every PHP save.)
-		// The statement lives in matrix_write.ts (T2): this file issues no DML.
-		await appendMatrixKeyItems(table, sectionTipo, sectionId, column, componentTipo, atomicInserts);
-		if (auditStamp !== false) await persistModifiedStamp(writeTarget, auditStamp);
-		// THE OBLIGATIONS of the one branch that does NOT go through persistRecordKeys
-		// (P1-4, 2026-08-28; unified on the chokepoint's own hook P1-8, 2026-09-03).
-		// This path writes the component key with a raw atomic concatenation, so it
-		// reaches neither the chokepoint's cache invalidation, nor the revocation
-		// seam (the branch a FIRST dd244 grant takes — an `insert` onto a record
-		// that carried no flag yet, i.e. exactly a promotion), nor the RAG index
-		// event. It declares all three through the SAME hook every chokepoint
-		// writer ends in, instead of remembering them one by one; persistModifiedStamp
-		// above is stamp-only (rag: null), so the content write fires the index here.
-		await afterRecordWrite(writeTarget, {
-			door: 'saveComponentData atomic insert',
-			touchedKeys: [componentTipo],
-			rag: 'index',
+		// (Deliberate divergence from the read-modify-write chokepoint shape.) The
+		// chokepoint's APPEND entry carries every obligation of the branch: the
+		// modified stamps and the derived relation_search in one UPDATE after the
+		// append, then the post-write hook (the cache fan-out, the revocation seam
+		// — the branch a FIRST dd244 grant takes, an `insert` onto a record that
+		// carried no flag yet, i.e. exactly a promotion — the RAG index event and
+		// the observer ledger). The statements live in matrix_write.ts (T2): this
+		// file issues no DML.
+		await persistAppendedKeyItems(writeTarget, column, componentTipo, atomicInserts, auditStamp, {
+			actor: userId,
+			receipt,
 		});
 	}
 
@@ -2098,12 +2089,9 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 
 	// relation_search ancestor index (PHP save_component_dato: for LEGACY
 	// component_autocomplete_hi, the save ALSO writes relation_search[tipo] =
-	// the recursive PARENT locators of every stored target — the hierarchical
-	// search index ('search Spain matches Madrid'). Empty data clears the key.
-	// The model test lives in the shared helper, so every door that writes a
-	// relation key with save semantics (TM restore, bulk revert) applies the
-	// SAME law instead of re-implementing it.
-	await reindexRelationSearchLikeSave(table, sectionTipo, sectionId, componentTipo, items);
+	// the recursive PARENT locators of every stored target). It is DERIVED by the
+	// write chokepoint in the SAME UPDATE as the value (record_write.ts §3e), for
+	// every branch above and for every other writer of a relation key.
 
 	// THE SAVE'S HISTORY — TWO LANES, one of two laws (bulk_capture.ts, WC
 	// …-bulk-revert-undo-log "two lanes"): under a bulk id the undo-log pairs
@@ -2121,9 +2109,9 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 
 	// RAG re-index event (S2-13): PHP save() enqueues the record for re-indexing
 	// on every component save (class.section_record.php:988). Since P1-8
-	// (2026-09-03) it is an obligation of the write chokepoint itself — the two
-	// persistRecordKeys branches above fire it from afterRecordWrite, and the
-	// atomic-insert branch fires the same hook explicitly — so no branch of this
+	// (2026-09-03) it is an obligation of the write chokepoint itself — every
+	// branch above (persistRecordKeys, persistAppendedKeyItems) fires it from
+	// afterRecordWrite — so no branch of this
 	// save, and no other caller of the chokepoint, can forget it. The enqueue
 	// joins this transaction (the queue writes through the ambient sql handle),
 	// so a rolled-back save never leaves a marker; with RAG disabled the hook is
@@ -2135,43 +2123,14 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 	if (createdSectionId !== null) {
 		result.created_section_id = createdSectionId;
 	}
-	// The locators this save DROPPED — the observer cascade's removed-target
-	// set (see ObservedChange in ./observers.ts). Keyed on
-	// (section_tipo, section_id), NEVER on the item id: an `update` that
-	// retargets a locator replaces the object IN PLACE keeping its id, so an
-	// id-keyed diff would see neither the old target leaving nor the new one
-	// arriving.
-	//
-	// BOTH SIDES ARE THE FULL SLOT. `preSaveItems` is snapshotted before the
-	// dataframe narrowing, and on the dataframe path `items` is REBOUND to
-	// `merged` (the caller's subset merged back over its untouched siblings)
-	// before we get here — so this never compares a full slot against a
-	// caller subset and reports every sibling as removed. dd490 frames are
-	// excluded on top of that: they are pairing records, not edges, exactly as
-	// getStoredWithReferences excludes them from the seed.
-	if (preSaveItems.length > 0) {
-		const { DATAFRAME_RELATION_TYPE } = await import('../../concepts/subdatum.ts');
-		const locatorKey = (entry: unknown): string | null => {
-			if (entry === null || typeof entry !== 'object') return null;
-			const locator = entry as { section_tipo?: unknown; section_id?: unknown; type?: unknown };
-			if (typeof locator.section_tipo !== 'string' || locator.section_id === undefined) return null;
-			if (locator.type === DATAFRAME_RELATION_TYPE) return null;
-			return `${locator.section_tipo}|${String(locator.section_id)}`;
-		};
-		const postKeys = new Set<string>();
-		for (const entry of items) {
-			const key = locatorKey(entry);
-			if (key !== null) postKeys.add(key);
-		}
-		const removed: unknown[] = [];
-		const seenRemoved = new Set<string>();
-		for (const entry of preSaveItems) {
-			const key = locatorKey(entry);
-			if (key === null || postKeys.has(key) || seenRemoved.has(key)) continue;
-			seenRemoved.add(key);
-			removed.push(entry);
-		}
-		if (removed.length > 0) result.removedItems = removed;
-	}
+	// The locators this save DROPPED, for the callers that report them (the
+	// observer cascade itself no longer reads this: the chokepoint's ledger
+	// computes the removed set from the before-image it read under the row lock).
+	// THE ONE RULE (section_record/obligation_ledger.ts removedLocators): keyed on
+	// the target, dd490 frames excluded. BOTH SIDES ARE THE FULL SLOT:
+	// `preSaveItems` is snapshotted before the dataframe narrowing, and on the
+	// dataframe path `items` is REBOUND to `merged` before we get here.
+	const removed = removedLocators(preSaveItems, items);
+	if (removed.length > 0) result.removedItems = removed;
 	return result;
 }

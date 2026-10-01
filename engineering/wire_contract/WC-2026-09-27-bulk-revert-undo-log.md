@@ -1312,3 +1312,44 @@ non-translatable branch returning the request lang → 3 red (K2); the
 `mainIdentity(tipo, dataLang)` → 2 red (cell 3). No other expectation moved
 (tm_*, bulk_*, delete_*, duplicate_*, observer_*, translation_pipeline_native
 green on the lane DB). No fixture edit, no re-harvest.
+
+## Addendum 2026-09-30 — D4's media write is a locked transform; restores and undeletes propagate through the chokepoint
+
+CLOSURE_PLAN Step 2 (TOOLS-5, CORE-1).
+
+- **D4 stands, its write changed.** `update_cache`'s media repair still records no
+  BEFORE/AFTER pair (files_info is derived from the disk; a revert could not put the
+  moved/rebuilt files back). It is no longer a raw write of this run's snapshot: the
+  derivatives are rebuilt outside the lock, then the items read UNDER the row lock are
+  re-scanned and written through `files_info_persist.ts transformStoredMediaItems`, so a
+  curator's upload committed during the run survives. See
+  WC-2026-09-30-media-key-locked-transform.
+- **The revert's observer leg moved into the chokepoint.** The key units, the composed
+  units, the cascade undelete (`restoreDeletedRecord`, still VERBATIM — no stamp) and the
+  soft-cascade restore no longer call the observer cascade themselves: every write
+  declares its before/after to the obligation ledger, which drains after the unit's
+  COMMIT (the undelete as a BIRTH: its covered observer slots recomputed, never restored
+  from the snapshot). The mirror recomputes write their own Time Machine rows with
+  `bulk_id` null — derived state, never a pair of this run, so the revert-of-the-revert
+  judges no mirror key. See WC-2026-09-30-record-write-obligation-ledger.
+- **A covered observer slot is DERIVED to every judge of the revert** (review round
+  2026-09-30). Once the undelete propagated, a mirror stopped being inert state the
+  judges could compare:
+  - D2's foreign-value check (`holdsForeignValue`) skips covered observer keys — a born
+    term whose recomputed mirror lists its (also born) referencer is not "written by
+    someone else" (it was refused `created_record_kept`, FINAL);
+  - D2's reference check (`isReferenced`) counts LINKS only: a locator held in a covered
+    observer slot is the mirror of the record's own edge. Counted, a born term and its
+    born referencer each "referenced" the other and neither could be deleted;
+  - the soft-cascade restore (`wipedKeysOf`) never puts a covered slot back and never
+    judges one a write since the wipe (a mirror recomputed by a referencer's save after
+    the wipe made the record `kept`, wiped); every covered slot the section DECLARES is
+    recomputed after the unit's COMMIT (`record_write.ts requestCoveredSlotRecompute`).
+- **VERBATIM stays verbatim.** A missing-row undelete (`restoreDeletedRecord`, no stamp)
+  marks its record on the transaction's cascade guard: every covered-slot recompute of
+  THAT record in the same transaction's drain writes the mirror without dd197/dd201, so
+  the run's stamp units still compare against the snapshot's stamps. A soft-cascade
+  restore whose run owns the record's stamps recomputes the same way. LIMIT, stated: a
+  recompute of that record driven by a LATER transaction (a referencer undeleted in a
+  unit of its own) stamps it like any live record's.
+- Gates: `obligation_ledger_native` cases 10, 10b and 11.

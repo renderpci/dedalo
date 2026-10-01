@@ -65,6 +65,13 @@ import { describe, expect, test } from 'bun:test';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { DD128_PROBED } from '../helpers/authz_door_probes.ts';
+import {
+	AFTER_RECORD_WRITE,
+	buildWriterClosure,
+	RECORD_WRITE_CHOKEPOINTS,
+	SANCTIONED_DERIVED_WRITERS,
+	type WriterClosure,
+} from '../helpers/matrix_writer_closure.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 
@@ -111,6 +118,14 @@ const NON_PRIMITIVE_EXPORTS: Record<string, string> = {
 		'a PURE PREDICATE over a changed_data array (P0-8, 2026-08-30): it answers with a refusal message when a `remove` names no item, and writes nothing at all. It is exported so the in-memory temporal door can refuse exactly what the persisted door refuses — one law, two doors — which is the opposite of a second write path.',
 	persistModifiedStamp:
 		'DOES write the matrix, but only the modified-by/modified-date audit columns of a record a primitive is already writing. It can never carry a dd131/dd244/dd133 value, so it is not an account transition and adding it to the primitive list would widen the door set to every save path twice over.',
+	prepareBirthColumns:
+		'the NEW-record birth-column law (CLOSURE_PLAN Step 2): drops the covered observer units (mirror + its frames) out of a whole-record column set and re-derives its `_hi` relation_search, IN MEMORY — the create/duplicate primitives persist what it returns; it writes nothing.',
+	dropCoveredObserverUnits:
+		'the covered-unit half of the birth law, IN MEMORY: removes each covered observer mirror AND its own dataframe frames from a column set (the duplicate calls it before its frame-target re-mint); it writes nothing.',
+	requestCoveredSlotRecompute:
+		'writes NOTHING itself: it queues a recompute of the record’s covered observer slots on the obligation ledger; the recompute writes the mirror through persistObserverMirrorKeys, a chokepoint primitive below. A mirror slot is derived state, never a credential.',
+	hiIndexDisagrees:
+		'a PURE comparison of a stored `_hi` ancestor index against the save law’s derivation; reads the thesaurus chain, writes nothing.',
 	afterRecordWrite:
 		'writes NOTHING to the matrix: it is the post-write obligation hook (P1-8, 2026-09-03) every primitive ends in — save event, the security reaction, the RAG seam — and the two insert doors call it AFTER their own primitive. A caller of it is already a caller of a primitive; listing it would double-count every door.',
 };
@@ -128,6 +143,15 @@ const WRITE_PRIMITIVES = [
 	'deleteSectionRecord(',
 	'deleteSectionData(',
 	'deletePortalLocator(',
+	// The chokepoint's own ENTRIES (CLOSURE_PLAN Step 2, the obligation ledger): each
+	// persists a record's keys or columns and ends in afterRecordWrite — so a file that
+	// calls one IS a write door, exactly like a persistRecordKeys caller.
+	'persistRelationRemovalKeys(',
+	'persistRestoredKeys(',
+	'persistObserverMirrorKeys(',
+	'persistAppendedKeyItems(',
+	'persistRecordBirth(',
+	'duplicateSectionRecordWithVerdict(',
 ];
 
 /** The resolver that carries the rule. */
@@ -222,7 +246,7 @@ const CENSUS: Record<string, CensusRow> = {
 	'src/core/section/record/observers.ts': {
 		verdict: 'system',
 		reason:
-			'the observer mirror propagation. It runs as the engine after a committed save, with no actor to judge; gating it would make a mirror depend on who happened to trigger it.',
+			'the observer mirror propagation (its recompute writes through persistObserverMirrorKeys). It runs as the engine after a committed save, with no actor to judge; gating it would make a mirror depend on who happened to trigger it.',
 	},
 	'src/core/update/transform/portalize.ts': {
 		verdict: 'system',
@@ -660,6 +684,10 @@ describe('the revocation trigger set is stated ONCE', () => {
  *                (P1-8, 2026-09-03 — it used to write with a direct updateMatrixKeyData
  *                and call invalidatePermissionsForWrite post-commit for itself). Nothing
  *                is asked of the caller: this is the point of moving the seam here.
+ *                The obligation ledger's entries (persistRelationRemovalKeys,
+ *                persistRestoredKeys, persistObserverMirrorKeys, persistAppendedKeyItems,
+ *                persistRecordBirth — CLOSURE_PLAN Step 2) are the same class. Every 'chokepoint' verdict
+ *                is MEASURED on the writer closure's call graph (reaches afterRecordWrite).
  *   callee     — a different function owns it, so its callers inherit the reach. No
  *                primitive is in this class today; the verdict stays defined so the
  *                next door that reaches the seam through a callee has a name for it.
@@ -681,7 +709,39 @@ const PRIMITIVE_REACH: Record<string, 'chokepoint' | 'callee' | 'n/a' | 'caller'
 	'deletePortalLocator(': 'chokepoint',
 	'deleteSectionRecord(': 'caller',
 	'deleteSectionData(': 'caller',
+	// The ledger's entries (record_write.ts): each ends in afterRecordWrite — asserted
+	// on the CALL GRAPH below, not on a body's spelling.
+	'persistRelationRemovalKeys(': 'chokepoint',
+	'persistRestoredKeys(': 'chokepoint',
+	'persistObserverMirrorKeys(': 'chokepoint',
+	'persistAppendedKeyItems(': 'chokepoint',
+	'persistRecordBirth(': 'chokepoint',
+	// the duplicate's verdict-returning twin: writes a NEW record, like duplicateSectionRecord.
+	'duplicateSectionRecordWithVerdict(': 'n/a',
 };
+
+/** The security reaction the post-write hook must reach (security/revocation.ts). */
+const REACTION = 'src/core/security/revocation.ts#reactToRecordComponentWrite';
+/** The hook's private step that fires it (record_write.ts). */
+const REACT_TO_SECURITY_WRITE = 'src/core/section_record/record_write.ts#reactToSecurityWrite';
+
+/** Built once, on first use: the writer closure (test/helpers/matrix_writer_closure.ts). */
+let closureMemo: WriterClosure | undefined;
+function writerClosure(): WriterClosure {
+	closureMemo ??= buildWriterClosure();
+	return closureMemo;
+}
+
+/** `file#name` of the module that EXPORTS a primitive (the write modules + relations/save.ts). */
+function definitionKey(name: string): string | null {
+	for (const module of [...WRITE_MODULES, 'src/core/relations/save.ts']) {
+		const source = readFileSync(join(ROOT, module), 'utf8');
+		if (new RegExp(`^export (?:async )?function ${name}\\(`, 'm').test(source)) {
+			return `${module}#${name}`;
+		}
+	}
+	return null;
+}
 
 /** Any of these in a file's source means it reaches the seam explicitly. */
 const SEAM_SYMBOLS = [
@@ -765,32 +825,48 @@ describe('every record-write door REACHES the revocation seam', () => {
 	});
 
 	test('the CHOKEPOINT really fires the reaction (or every "chokepoint" verdict is a lie)', () => {
-		const source = readFileSync(join(ROOT, 'src/core/section_record/record_write.ts'), 'utf8');
-		expect(source).toContain('reactToRecordComponentWrite');
-		// The reaction lives inside the ONE post-write hook, and every writer of the
-		// module ends in that hook — the per-key door, the whole-column door (the Time
-		// Machine's full-record restore, which was the one shape that reached nothing
-		// at all) and the stamp-only door. Asserted on function BODIES, not on a call
-		// count: a hook nobody calls would still match a count.
-		const hookBody = /export async function afterRecordWrite\([\s\S]*?\n\}/.exec(source)?.[0] ?? '';
-		expect(hookBody, 'afterRecordWrite does not fire the security reaction').toContain(
-			'reactToSecurityWrite(',
-		);
-		for (const writer of ['persistRecordKeys', 'persistRecordColumns', 'persistModifiedStamp']) {
-			const body =
-				new RegExp(`export async function ${writer}\\([\\s\\S]*?\\n\\}`).exec(source)?.[0] ?? '';
-			expect(body, `${writer} does not end in afterRecordWrite`).toContain('afterRecordWrite(');
+		// MEASURED ON THE CALL GRAPH (the writer closure's RESOLVED references), never on
+		// a body's spelling: a chokepoint that delegates to a shared key-write body still
+		// reaches the hook, and one that stops reaching it is red however its body reads.
+		// (The body-regex version of this test went red on a pure delegation refactor and
+		// would have stayed green on a hook moved behind an unresolvable indirection.)
+		const closure = writerClosure();
+		// 1. The hook fires the security reaction.
+		expect(
+			closure.reachesPrecisely(AFTER_RECORD_WRITE, REACTION),
+			'afterRecordWrite does not reach the security reaction',
+		).toBe(true);
+		// 2. Every primitive whose verdict is 'chokepoint', and the stamp-only writer,
+		//    reaches the hook — the verdict is true of the code, or it is a lie.
+		const chokepoints = Object.entries(PRIMITIVE_REACH)
+			.filter(([, kind]) => kind === 'chokepoint')
+			.map(([primitive]) => primitive.slice(0, -1));
+		expect(chokepoints.length).toBeGreaterThan(4);
+		for (const name of [...chokepoints, 'persistModifiedStamp']) {
+			const key = definitionKey(name);
+			expect(
+				key,
+				`${name}: no module under scan exports it — the verdict names nothing`,
+			).not.toBeNull();
+			expect(
+				closure.reachesPrecisely(key as string, AFTER_RECORD_WRITE),
+				`${key} does not reach afterRecordWrite — its 'chokepoint' verdict is a lie`,
+			).toBe(true);
 		}
-		// And the reaction is fired from the hook ALONE — a second inline call would be
-		// a door remembering again.
-		expect((source.match(/reactToSecurityWrite\(/g) ?? []).length).toBe(2); // definition + hook
-		// deletePortalLocator's chokepoint verdict: its survivors are persisted through
-		// persistRecordKeys, not through the raw per-key primitive.
-		const relations = readFileSync(join(ROOT, 'src/core/relations/save.ts'), 'utf8');
-		const door =
-			/export async function deletePortalLocator\([\s\S]*?\n\}/.exec(relations)?.[0] ?? '';
-		expect(door).toContain('persistRecordKeys(');
-		expect(door).not.toContain('updateMatrixKeyData(');
+		// 3. The reaction is fired from the hook ALONE — a second direct caller would be
+		//    a door remembering again.
+		const direct = [...closure.bodies.keys()].filter((key) =>
+			closure.preciseEdgesOf(key).has(REACT_TO_SECURITY_WRITE),
+		);
+		expect(direct).toEqual([AFTER_RECORD_WRITE]);
+		// 4. deletePortalLocator's chokepoint verdict: nothing it writes reaches the
+		//    matrix past a chokepoint, except a sanctioned DERIVED writer (the dataframe
+		//    slot strip) — however many wrappers deep.
+		const cut = new Set([
+			...Object.keys(RECORD_WRITE_CHOKEPOINTS),
+			...Object.keys(SANCTIONED_DERIVED_WRITERS),
+		]);
+		expect(closure.bypassPath('src/core/relations/save.ts#deletePortalLocator', cut)).toBeNull();
 	});
 
 	test('the revocation is on the COMMIT-ONLY lane, and the cache clear is not', () => {

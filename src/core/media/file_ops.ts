@@ -553,6 +553,76 @@ function restoreNewest(versions: string[], live: string, mediaRoot?: string): st
 	return target;
 }
 
+/** What the duplicate's copy did for ONE media component (duplicateSectionMediaFiles). */
+export interface ComponentMediaCopy {
+	tipo: string;
+	/** The source's managed files found on disk (every quality × managed extension). */
+	sourceFiles: number;
+	/** Files copied to the target identity. */
+	copiedFiles: number;
+	/** Why the component's copy stopped (a refused bucket, a failed copy) — absent when it ran. */
+	error?: string;
+}
+
+/**
+ * COPY a record's media files to its duplicate (PHP section_record::duplicate →
+ * duplicate_component_media_files :1999), per media component, through the SAME
+ * record-scoped walk as the delete/restore pair — so `properties.additional_path`'s
+ * NAMED bucket is resolved from the SOURCE record's own sibling value (the
+ * snapshot `sourceColumns`), the per-lang identity fan-out is the one the other
+ * two directions use, and every path passes the media-root chokepoint. The clone
+ * carries the same sibling value, so the target lands in the same bucket.
+ *
+ * NEVER THROWS for a component and never swallows: each component answers what
+ * it found and copied, and why it stopped (`error`) — the duplicate turns that
+ * into its VERDICT (section/record/duplicate_record.ts, CORE-5). A copy that
+ * fails half-way still reports the files it had copied.
+ */
+export async function duplicateSectionMediaFiles(
+	sectionTipo: string,
+	sourceSectionId: number,
+	targetSectionId: number,
+	sourceColumns: Record<string, unknown>,
+	options: { mediaRoot?: string } = {},
+): Promise<{ perComponent: ComponentMediaCopy[] }> {
+	const mediaColumn = sourceColumns.media as Record<string, unknown[]> | null | undefined;
+	const perComponent: ComponentMediaCopy[] = [];
+	if (mediaColumn === null || mediaColumn === undefined || typeof mediaColumn !== 'object') {
+		return { perComponent };
+	}
+	for (const [componentTipo, items] of Object.entries(mediaColumn)) {
+		const copy: ComponentMediaCopy = { tipo: componentTipo, sourceFiles: 0, copiedFiles: 0 };
+		const outcome = await walkSectionMedia(
+			sectionTipo,
+			sourceSectionId,
+			{ [componentTipo]: items },
+			{ mediaRoot: options.mediaRoot, snapshot: sourceColumns },
+			async (spec, identity, pathOpts) => {
+				const target: MediaIdentity = { ...identity, sectionId: targetSectionId };
+				for (const [quality, extension] of managedFileSlots(spec)) {
+					const from = buildMediaLocation(
+						spec,
+						identity,
+						quality,
+						extension,
+						pathOpts,
+					).absolutePath;
+					if (existsSync(from)) copy.sourceFiles++;
+				}
+				const created = await duplicateMediaFiles(spec, identity, target, {
+					source: pathOpts,
+					target: pathOpts,
+				});
+				copy.copiedFiles += created.length;
+				return created;
+			},
+		);
+		if (outcome.errors.length > 0) copy.error = outcome.errors.join('; ');
+		perComponent.push(copy);
+	}
+	return { perComponent };
+}
+
 /**
  * ENUMERATE a record's media files as they exist on disk RIGHT NOW — the
  * read-only third direction of the walk, for the archive extraction

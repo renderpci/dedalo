@@ -31,6 +31,7 @@ import { dbTimestamp } from '../../db/db_timestamp.ts';
 import {
 	insertMatrixRecordWithCounter,
 	insertMatrixRecordWithExplicitId,
+	type MatrixWriteValues,
 } from '../../db/matrix_write.ts';
 import { sql, withTransaction } from '../../db/postgres.ts';
 import { openEpochIfReborn } from '../../db/record_generation.ts';
@@ -320,6 +321,13 @@ export async function createSectionRecord(
 	// 'NEW' activity row below, and a bulk run's BIRTH marker (a surplus one
 	// would let the run's revert delete a record it never created). The marker
 	// joins the insert's transaction, after any epoch the insert opened.
+	// THE BIRTH COLUMNS (record_write.ts prepareBirthColumns — the one law every
+	// record birth stores by): a relation default on an `_hi` component gets its
+	// ancestor index in the insert, and a default on a covered observer slot is
+	// left out (a mirror is derived — recomputed after the birth). Dynamic import:
+	// record_write.ts statically imports this module (import_scc_tripwire).
+	const { prepareBirthColumns } = await import('../../section_record/record_write.ts');
+	const pinned = await prepareBirthColumns(jsonbColumns as MatrixWriteValues);
 	const { newSectionId, inserted } = await withTransaction(async () => {
 		const id =
 			sectionId === undefined
@@ -362,6 +370,10 @@ export async function createSectionRecord(
 	//  - the RAG index event (DATA-18): a born-empty record enqueues cheaply
 	//    (ON CONFLICT dedupes in the queue) and uniformly — the alternative was
 	//    one lifecycle door exempt "because it is nearly harmless".
+	//  - the observer ledger (CLOSURE_PLAN Step 2): the record's BIRTH — its
+	//    relation defaults (a projects filter, a `dato_default` locator) are new
+	//    edges, and every target an observer mirrors must list the record; a
+	//    race loser created nothing, and declares nothing.
 	// Fired unconditionally, including the conflictTolerant no-op (the S1-02
 	// materialize-on-save race loser) — that path is inside a transaction and
 	// every obligation self-defers or joins it. Dynamic import: record_write.ts
@@ -376,6 +388,9 @@ export async function createSectionRecord(
 				bag !== null && typeof bag === 'object' ? Object.keys(bag) : [],
 			),
 			rag: 'index',
+			observed: inserted
+				? { kind: 'birth', columns: jsonbColumns, selfRecompute: pinned, actor: userId, now }
+				: { kind: 'none', reason: 'the materialize-on-save race loser created nothing' },
 		},
 	);
 

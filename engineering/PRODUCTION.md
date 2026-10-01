@@ -467,17 +467,30 @@ install (a large export) exceeds it; measure first with `DEDALO_SLOW_QUERY_MS`.
   cycle counter indicates one. `observers_recompute_lock_slow` ticks when a
   recompute held its target row lock >2s (the D3 closure + uncapped search
   run under the lock) — steady ticks mean editor-visible contention on hot
-  terms. `observers_propagation_failed_in_tx` counts level-0 propagation
-  failures that happened INSIDE an ambient transaction (e.g. a CSV-import
-  row) — those rethrow to the transaction owner instead of being swallowed,
-  so the import row's error names the real cause. Its sibling
-  `observers_propagation_failed` counts the INTERACTIVE lane — the save
-  calls propagation post-commit and a failure there is swallowed by design
-  (a post-commit side effect must never fail the save), so this counter is
+  terms. `observers_propagation_failed` counts every propagation or
+  covered-slot recompute that failed — propagation NEVER runs inside a
+  transaction any more (CLOSURE_PLAN Step 2: every record write enqueues its
+  observed change on the obligation ledger, which drains AFTER COMMIT —
+  `WC-2026-09-30-record-write-obligation-ledger`), so it covers the
+  interactive save, the restore / undelete / bulk-revert doors, a CSV-import
+  row (drained after that row commits; the failure no longer undoes the row)
+  and the ledger drain itself. A failure there is swallowed by design (a
+  post-commit side effect must never fail the write), so this counter is
   the only ops-visible signal that a STORED, searchable mirror was left
   stale; the log line names the observed tipo and record, and
   `scripts/observer_reconcile.ts` repairs the drift. It should stay at zero;
-  the residual deadlock window documented in `observers.ts` lands here.
+  the residual deadlock window documented in `observers.ts` lands here. (The
+  former `observers_propagation_failed_in_tx` sibling is retired with the
+  in-transaction rethrow lane.) `observers_index_repaired` ticks when the
+  observer RECONCILE finds an `_hi` mirror whose value is already right but
+  whose ancestor index (`relation_search`) disagreed, and rewrites it
+  unstamped — legacy rows written before the recompute indexed its mirror;
+  it should fall to zero after one reconcile pass.
+  `duplicate_media_incomplete` ticks when a duplicated record's media copy
+  did not complete (no media root, a walk or copy failure, a failed rescan,
+  fewer files copied than the source's index claimed): the duplicate is still
+  created, its file index names only the files it really has, and a
+  `media.operation_failed` log line carries the coordinates and the stage.
   Cascade hops always run
   post-COMMIT (a rolled-back import fires nothing) and the relay writes
   nothing (`WC-2026-08-02-observer-relay-writes-nothing`).
@@ -959,7 +972,7 @@ and demands it be here):
 | name | stores | schedule | apply |
 | --- | --- | --- | --- |
 | `counters_media` | `matrix_counter` ↔ media file names | operator | raise-only (§6.1 step 5) |
-| `files_info` | media column `files_info` ↔ media tree | operator | GROW/DIFF rewritten, SHRINK held (`scripts/media_repair_files_info.ts --allow-shrink`) |
+| `files_info` | media column `files_info` ↔ media tree | operator | judged PER ITEM: GROW/DIFF and FOREIGN (another record's files — the clone signature) rewritten, SHRINK held (`scripts/media_repair_files_info.ts --allow-shrink`); each change re-judged under the row lock through the one locked media-key writer (`missing` / `locked` / `heldOnApply` in `detail`) |
 | `observer_mirrors` | `matrix_relation_index` ↔ observer mirror slots | operator | full-law recompute (`scripts/observer_reconcile.ts` keeps `--budget`) |
 | `media_index` | `.publication/dbs` ↔ `.publication/pub` | **boot, auto-apply** | pub/ is a pure derivation: recomputed after every listen |
 | `rag_index` | matrix records ↔ `rag_embeddings` | operator | enqueues index/delete for the drain (§11) |

@@ -438,7 +438,15 @@ async function writeRecordRow(line: ArchiveRecordLine, ctx: RowWriteContext): Pr
 	);
 	await afterRecordWrite(
 		{ table: ctx.table, sectionTipo: ctx.sectionTipo, sectionId: line.section_id },
-		{ door: 'restoreArchive', touchedKeys: touchedKeysOf(snapshot), rag: 'index' },
+		{
+			door: 'restoreArchive',
+			touchedKeys: touchedKeysOf(snapshot),
+			rag: 'index',
+			observed: {
+				kind: 'none',
+				reason: 'PENDING: archive restore → persistRecordColumns/persistRecordBirth (owner step)',
+			},
+		},
 	);
 }
 

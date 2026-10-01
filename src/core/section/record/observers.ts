@@ -4,25 +4,25 @@
  * observers recompute.
  *
  * HOME (moved from api/handlers 2026-07-24): this is WRITE-CASCADE domain
- * logic, fired from the saveComponentData chokepoint post-commit — so EVERY
- * save door propagates (dispatch, imports, MCP tools, transcription). The
- * 2026-07-24 audit found the api-layer wiring only covered the interactive
- * dispatch save; bulk imports left hierarchy93-style mirrors permanently
- * stale (dc1 §2 was the reported case).
+ * logic. Since CLOSURE_PLAN Step 2 (the obligation ledger) it is fired by the
+ * RECORD-WRITE CHOKEPOINT itself, never by a door: every writer in
+ * section_record/record_write.ts declares what it changed to afterRecordWrite,
+ * and section_record/obligation_ledger.ts drains the propagation post-commit.
+ * So EVERY write propagates — the save, the time machine's restores and
+ * undeletes, the bulk revert, the delete doors, a duplicate, a create with
+ * relation defaults. The doors that used to call propagateToObservers
+ * themselves (and the ones that forgot to — CORE-1) are gone; the exclusivity
+ * is gated (write_obligations_tripwire leg B4: the ledger's drain and the
+ * cascade hop are the ONLY callers). A writer that does NOT reach the
+ * chokepoint is in that census with its reason and is healed by
+ * scripts/observer_reconcile.ts (standing case: the v6→v7 update lane,
+ * portalize included).
  *
- * THE LAW (the door list lives in the census, never here — S2-45):
- * saveComponentData is the chokepoint. A door that writes an observed value
- * WITHOUT it calls propagateToObservers itself — census: the DOORS matrix of
- * test/unit/write_obligations_tripwire.test.ts; outcomes: the "bypass doors
- * fire the observer cascade" describe in test/unit/observer_native.test.ts. A
- * door that does NOT propagate says so AT ITS OWN SITE with the reason, and
- * is healed by scripts/observer_reconcile.ts (standing case: the v6→v7
- * update lane, portalize included).
- *
- * EVERY door states BOTH halves of what changed — the saved value AND the
- * locators the change REMOVED (ObservedChange, 2026-08-06). Propagation used
- * to see the post-save value alone, so a dropped locator's mirror was never
- * revisited and kept a dead reference forever.
+ * EVERY write states BOTH halves of what changed — the saved value AND the
+ * locators the change REMOVED (ObservedChange, 2026-08-06), computed by the
+ * ledger from the before-image the chokepoint read under the row lock.
+ * Propagation used to see the post-save value alone, so a dropped locator's
+ * mirror was never revisited and kept a dead reference forever.
  *
  * Coverage (measured on this ontology):
  *   - 58/66 observer configs are CLIENT-only (no `server` key) → nothing to
@@ -143,6 +143,15 @@ export interface CascadeGuard {
 	 * WC-2026-08-02-observer-cascade-bounded-flag).
 	 */
 	recomputed: Set<string>;
+	/**
+	 * Records born VERBATIM in this logical operation (`section_tipo|section_id`,
+	 * obligation_ledger.ts verbatimAddress): a bulk revert's undelete keeps the
+	 * snapshot's own modified stamps, so a recompute of a covered slot ON such a
+	 * record writes the mirror WITHOUT stamping it — a derived write must not
+	 * turn a verbatim undelete into a stamped one (a revert of the revert
+	 * compares those stamps). SHARED like `visited`; absent = none.
+	 */
+	verbatim?: Set<string>;
 	/** Per-branch human-readable path (`tipo@section/id`) for loud failures. */
 	chain: string[];
 }
@@ -180,6 +189,12 @@ export async function emitCascadeHop(
 	sectionId: number,
 	userId: number,
 	now: Date,
+	/**
+	 * The locators the written observer DROPPED (an external recompute's
+	 * `droppedLocators`): the hop propagates their removal, so an observer of
+	 * this observer re-derives the records that left it. Absent = none.
+	 */
+	removed: readonly unknown[] = [],
 ): Promise<void> {
 	// Leaf pre-gate (Act 2: registry, not the node's own `observers` array):
 	// a hop is worth scheduling only when the observer's OWN saves would
@@ -226,11 +241,12 @@ export async function emitCascadeHop(
 		maxDepth: guard.maxDepth,
 		visited: guard.visited,
 		recomputed: guard.recomputed,
+		verbatim: guard.verbatim,
 		depth: nextDepth,
 		chain: [...guard.chain, chainLabel],
 	};
 	const hop = () =>
-		runObserverCascadeHop(observerTipo, sectionTipo, sectionId, userId, now, childGuard);
+		runObserverCascadeHop(observerTipo, sectionTipo, sectionId, userId, now, childGuard, removed);
 	if (isInTransaction()) {
 		if (!registerCommitAction(hop)) {
 			// The commit lane refused the registration: the ambient tx context is
@@ -275,6 +291,7 @@ export async function runObserverCascadeHop(
 	userId: number,
 	now: Date,
 	guard: CascadeGuard,
+	removed: readonly unknown[] = [],
 ): Promise<void> {
 	if (isInTransaction()) {
 		incrementCounter('observers_cascade_in_transaction_refused');
@@ -303,9 +320,11 @@ export async function runObserverCascadeHop(
 			sectionTipo,
 			sectionId,
 			// A hop is a CURRENT-STATE event: it re-reads the observer's value and
-			// re-enters propagation. It carries no removal knowledge of its own —
-			// the root propagation already consumed the save's removed set.
-			{ saved: payload, removed: [] },
+			// re-enters propagation. Its removal knowledge is what the WRITE that
+			// scheduled it dropped (an external recompute's droppedLocators): without
+			// it, an observer of this observer never re-derives a record that left —
+			// that record is in no current value, so no saved target reaches it.
+			{ saved: payload, removed: [...removed] },
 			userId,
 			now,
 			guard,
@@ -322,19 +341,23 @@ export async function runObserverCascadeHop(
 }
 
 /**
- * Fires the server-side observers of a just-saved component. Never throws
- * OUTSIDE an ambient transaction (failures are swallowed loudly); INSIDE one
- * it rethrows — a swallowed error there would leave the caller's transaction
- * aborted-and-poisoned while hiding the cause (B6, see the catch below).
+ * Fires the server-side observers of a just-written component. REFUSES to run
+ * inside a transaction (B6): the recomputes read COMMITTED state and open their
+ * own transactions, and the ledger (section_record/obligation_ledger.ts)
+ * drains every write's propagation post-commit — so an in-transaction call is
+ * a programming error, thrown before anything runs. Below that assert it never
+ * throws: a failure is swallowed loudly and counted
+ * (`observers_propagation_failed`), because a committed write must never be
+ * undone by a DERIVED recompute — observer_reconcile repairs the mirror.
  * Returns the recomputed observer DATA ITEMS whose target IS the saved
  * record (PHP observers_data — merged into the save response so the
  * actively-edited record's info widget refreshes client-side).
  *
- * `cascade` is INTERNAL (D2): the bounded-dispatch guard threaded through
- * relay/recompute re-entries. External callers (save_component, relations/
- * save, duplicate_record) never pass it — the root propagation creates it
- * unconditionally (the cascade always fires for a declared edge; see the
- * CascadeGuard header).
+ * `cascade` is the bounded-dispatch guard (D2) threaded through relay /
+ * recompute re-entries; the ledger passes ONE per transaction, so every write
+ * of one logical operation shares its visited/recomputed sets. Absent, the
+ * root guard is created here (the cascade always fires for a declared edge;
+ * see the CascadeGuard header).
  */
 
 /**
@@ -364,6 +387,14 @@ export async function propagateToObservers(
 	now: Date = new Date(),
 	cascade?: CascadeGuard,
 ): Promise<unknown[]> {
+	// B6 — see the docstring. Outside the try: this is the caller's bug, not a
+	// recompute failure to swallow.
+	if (isInTransaction()) {
+		throw new DedaloError('internal.invariant', {
+			message: `propagateToObservers: refusing to run inside a transaction — '${observedTipo}' @ ${sectionTipo}/${sectionId}. Propagation reads committed state and opens its own transactions (B6); a write declares its change to the obligation ledger (section_record/obligation_ledger.ts), which drains after COMMIT.`,
+			coordinates: { tipo: observedTipo, section_tipo: sectionTipo, section_id: sectionId },
+		});
+	}
 	const observersData: unknown[] = [];
 	try {
 		// Act 2 discovery: the ontology-wide subscription registry (forward
@@ -404,11 +435,10 @@ export async function propagateToObservers(
 			incrementCounter('observers_removed_targets_visited', removedTargets.length);
 		}
 
-		// Recompute dedup, keyed observerTipo|targetKey. Lives on the GUARD, not
-		// here: a door that propagates in a loop shares one guard, so an
+		// Recompute dedup (recomputeMirrorAndHop) lives on the GUARD: every write
+		// of one transaction shares it through the ledger, so an
 		// already-recomputed target is skipped across the whole operation (see
 		// CascadeGuard.recomputed).
-		const done = guard.recomputed;
 		for (const sub of subscriptions) {
 			const observerTipo = sub.observerTipo;
 			// entryServerBlock is THE dispatchability predicate: undefined for a
@@ -602,23 +632,18 @@ export async function propagateToObservers(
 				}
 			}
 			// DETERMINISTIC ACQUISITION ORDER within one propagation. Each
-			// recompute takes the target row's FOR UPDATE lock, and withTransaction
-			// JOINS an ambient tx (import_csv wraps whole rows), so the locks
-			// accumulate to the outer COMMIT. With the class expansion above a
-			// single save can lock every class member, so the ORDER it takes them
-			// in matters: unsorted, two concurrent operations walking the same
+			// recompute takes the target row's FOR UPDATE lock. With the class
+			// expansion above a single save can touch every class member, so the
+			// ORDER matters: unsorted, two concurrent operations walking the same
 			// class from different roots take the same locks in different orders.
 			//
-			// HONEST LIMIT (review 2026-08-06): this does NOT make the whole
-			// system's lock order global, and must not be read as doing so. The
-			// saving record's own FOR UPDATE (save_component.ts, taken before the
-			// cascade runs at all) is not a member of this set, so a residual
-			// deadlock window remains for two import rows that each edit a record
-			// belonging to the other's equivalence class. Closing that needs the
-			// save lock folded into the same order, which is a wider change than
-			// this one. What the sort buys is that the EXPANSION itself — the part
-			// that multiplied the lock count from ~2 to the class size — cannot be
-			// the thing that introduces order divergence.
+			// Since the obligation ledger (CLOSURE_PLAN Step 2) propagation runs
+			// only after COMMIT, never inside an import row's transaction, so the
+			// saving record's own FOR UPDATE is released before any of these is
+			// taken — the residual deadlock window the 2026-08-06 review named (two
+			// import rows each editing a record of the other's equivalence class)
+			// no longer exists. The order still keeps two concurrent recomputes of
+			// one class from taking its locks in different orders.
 			//
 			// Comparator is total: section_id falls back to a string compare when
 			// either side is non-numeric, so a malformed locator cannot produce a
@@ -632,61 +657,28 @@ export async function propagateToObservers(
 				return String(a.section_id).localeCompare(String(b.section_id));
 			});
 			for (const target of observableTargets) {
-				const key = `${observerTipo}|${target.section_tipo}|${target.section_id}`;
-				if (done.has(key)) continue;
-				done.add(key);
-				const outcome = await recomputeExternalRelation(
+				await recomputeMirrorAndHop(
 					observerTipo,
 					String(target.section_tipo),
 					Number(target.section_id),
 					userId,
 					now,
-					// The full law persists, drops included (2026-08-06). The only
-					// thing that can still withhold a drop is a DEGRADED SEED, and
-					// the kernel derives that for itself — see recomputeExternalRelation.
-					{},
+					guard,
+					// the dispatch loop: a written observer hops, a no-drift one has nothing new to say
+					'on-write',
 				);
-				// D2: a PERSISTED recompute is a save — PHP's Save() re-enters
-				// propagate_to_observers, so the written observer fires its own
-				// observers, bounded and post-commit. A refused/withheld/no-drift
-				// recompute wrote nothing → no hop (PHP: `$changed=false` skips
-				// the Save and therefore the propagation too).
-				if (outcome.wrote === true) {
-					await emitCascadeHop(
-						guard,
-						observerTipo,
-						'external',
-						String(target.section_tipo),
-						Number(target.section_id),
-						userId,
-						now,
-					);
-				}
 			}
 		}
 	} catch (error) {
-		// B6 completion (review 2026-08-02): the swallow is legal ONLY when no
-		// ambient transaction can be poisoned. Inside one (import_csv wraps whole
-		// rows; the terminal recompute's withTransaction JOINS it), a failed SQL
-		// statement has already ABORTED the outer transaction — swallowing hides
-		// the real error and every later statement fails with "current
-		// transaction is aborted", pointing the operator at a phantom bug.
-		// Rethrow so the transaction OWNER sees the real failure and fails fast.
-		if (isInTransaction()) {
-			incrementCounter('observers_propagation_failed_in_tx');
-			throw new DedaloError('internal.invariant', {
-				message: `observer propagation failed inside an ambient transaction (B6) — '${observedTipo}' @ ${sectionTipo}/${sectionId}; rethrown so the transaction owner sees the real failure: ${error instanceof Error ? error.message : String(error)}`,
-				coordinates: { tipo: observedTipo, section_tipo: sectionTipo, section_id: sectionId },
-				cause: error,
-			});
-		}
-		// The INTERACTIVE lane — the save calls this post-commit, so the swallow
-		// is the documented posture (a post-commit side effect must never fail
-		// the save). COUNTED (P1-8 / DATA-29, 2026-09-03): the mirror is STORED,
-		// SEARCHABLE relation data, and this file documents a residual deadlock
-		// window whose abort lands exactly here — every other swallow in this
-		// file is loud AND counted, and this was the one lane every user save
-		// takes that no operator could see on /api/v1/counters.
+		// Post-commit by construction (the B6 assert above): no ambient
+		// transaction can be poisoned, so the swallow is the documented posture —
+		// a derived recompute must never fail the write it follows. COUNTED
+		// (P1-8 / DATA-29, 2026-09-03): the mirror is STORED, SEARCHABLE relation
+		// data, and every other swallow in this file is loud AND counted. The
+		// in-transaction rethrow lane (and its `_in_tx` counter) is gone with the
+		// ledger: propagation never runs inside a transaction any more, which
+		// also closed the residual deadlock window two import rows editing each
+		// other's equivalence class used to open.
 		console.error(
 			`observer propagation failed (swallowed) — '${observedTipo}' @ ${sectionTipo}/${sectionId}; the mirrors are stale until observer_reconcile:`,
 			error,
@@ -694,6 +686,128 @@ export async function propagateToObservers(
 		incrementCounter('observers_propagation_failed');
 	}
 	return observersData;
+}
+
+/**
+ * ONE external-mirror recompute and, when it wrote, the cascade hop it owes —
+ * the unit of work both the dispatch loop above and the obligation ledger's
+ * covered-slot recompute (a whole-record restore never writes a mirror back —
+ * section_record/record_write.ts §3e) perform.
+ *
+ * Deduplicated on the guard (`observerTipo|section_tipo|section_id` — the
+ * recompute identity): a recompute is idempotent and reads truth, so doing it
+ * twice within one operation is pure waste. D2: a PERSISTED recompute is a
+ * save — PHP's Save() re-enters propagate_to_observers, so the written observer
+ * fires its own observers, bounded and post-commit — with the locators it
+ * DROPPED as the hop's removed set, like any save's before-image, so an
+ * observer of this mirror re-derives the records that left it. A
+ * refused/withheld/no-drift recompute wrote nothing → no hop (PHP:
+ * `$changed=false` skips the Save and therefore the propagation too).
+ *
+ * The dedup premise ("reads truth") holds because no TRANSIENT mirror value is
+ * ever propagated: a restored covered slot is declared as its recompute, never
+ * as a change (record_write.ts persistRestoredKeys) — else an observer of it
+ * would be recomputed once on the transient value and never again.
+ *
+ * `hop` 'always' (the obligation ledger's covered-slot recompute): the slot
+ * was written by a door that never declared it — an undelete's snapshot mirror,
+ * a restored past value — so its observers were told nothing, and a no-drift
+ * recompute (the written value IS truth) must hop all the same. Once per
+ * operation: a recompute already done on this guard (a referencer's propagation
+ * reached the slot first) is not redone, and a hop it already emitted is not
+ * emitted twice.
+ */
+export async function recomputeMirrorAndHop(
+	observerTipo: string,
+	sectionTipo: string,
+	sectionId: number,
+	userId: number,
+	now: Date,
+	guard: CascadeGuard,
+	/** When the recompute hops: only after it WROTE, or ALWAYS (see above). Required — every caller states it. */
+	hop: 'on-write' | 'always',
+): Promise<void> {
+	const key = `${observerTipo}|${sectionTipo}|${sectionId}`;
+	const always = hop === 'always';
+	if (guard.recomputed.has(key)) {
+		if (always) await hopUnlessEmitted(guard, observerTipo, sectionTipo, sectionId, userId, now);
+		return;
+	}
+	guard.recomputed.add(key);
+	const outcome = await recomputeExternalRelation(
+		observerTipo,
+		sectionTipo,
+		sectionId,
+		userId,
+		now,
+		// The full law persists, drops included (2026-08-06). The only thing that
+		// can still withhold a drop is a DEGRADED SEED, and the kernel derives
+		// that for itself — see recomputeExternalRelation. A record born VERBATIM
+		// in this operation keeps its snapshot's stamps (CascadeGuard.verbatim).
+		guard.verbatim?.has(`${sectionTipo}|${String(sectionId)}`) === true ? { stamp: false } : {},
+	);
+	if (outcome.wrote === true) {
+		await emitCascadeHop(
+			guard,
+			observerTipo,
+			'external',
+			sectionTipo,
+			sectionId,
+			userId,
+			now,
+			outcome.droppedLocators ?? [],
+		);
+		return;
+	}
+	if (always) await hopUnlessEmitted(guard, observerTipo, sectionTipo, sectionId, userId, now);
+}
+
+/** The external mirror's hop, unless this operation already emitted it (the guard's visited key). */
+async function hopUnlessEmitted(
+	guard: CascadeGuard,
+	observerTipo: string,
+	sectionTipo: string,
+	sectionId: number,
+	userId: number,
+	now: Date,
+): Promise<void> {
+	if (guard.visited.has(`${observerTipo}|external|${sectionTipo}|${sectionId}`)) return;
+	await emitCascadeHop(guard, observerTipo, 'external', sectionTipo, sectionId, userId, now);
+}
+
+/**
+ * Covered-observer detection (the set_dato_external mirror family): such a
+ * component's stored bag is DERIVED state ("who references me"), never source
+ * data. With the frames its dataframe slots hold for it, it is one UNIT
+ * (section_record/record_write.ts §3e): a duplicate copies neither, a replace
+ * keeps the live unit, an undelete writes the snapshot's back (its item ids pair
+ * its frames) — never declared, always recomputed, and the recompute hops
+ * (gated by observer_reconcile_native's duplicate-strip test and
+ * obligation_ledger_native cases 2b, 9, 17a–d).
+ *
+ * DELIBERATELY reads the node's raw `observe` SHAPE, not the Act-2 registry:
+ * the decision is "is this bag derived state by declaration?", which needs only
+ * the declaration itself. Consistent with the dispatch rule (the ontology
+ * decides — a declared server edge fires, reverse-only included): every covered
+ * observer's edges dispatch, so a stripped bag is recomputed by the
+ * cascade/reconciler the moment its observed component saves again.
+ */
+export async function isCoveredObserverTipo(tipo: string): Promise<boolean> {
+	const observe = (
+		(await getNode(tipo))?.properties as {
+			observe?: {
+				server?: {
+					config?: { use_observable_dato?: boolean };
+					perform?: { function?: string };
+				};
+			}[];
+		} | null
+	)?.observe;
+	return (Array.isArray(observe) ? observe : []).some(
+		(entry) =>
+			entry?.server?.config?.use_observable_dato === true &&
+			entry.server.perform?.function === 'set_dato_external',
+	);
 }
 
 /**
@@ -1146,7 +1260,31 @@ export async function recomputeExternalRelation(
 	targetId: number,
 	userId: number,
 	now: Date,
-	options: { write?: boolean; referencesLimit?: number },
+	options: {
+		write?: boolean;
+		referencesLimit?: number;
+		/**
+		 * `false` = write the mirror WITHOUT the owner's modified stamps: the
+		 * record was born VERBATIM in this operation (CascadeGuard.verbatim — a
+		 * bulk revert's undelete keeps its snapshot's stamps). Absent = stamped,
+		 * like every PHP observer Save().
+		 */
+		stamp?: false;
+		/**
+		 * `true` = THE RECONCILE'S LEGACY-INDEX SWEEP: whenever the VALUE stays
+		 * as stored (it agrees, the >2000 freeze, a pure degraded-seed withheld
+		 * shrink), also compare the stored `_hi` ancestor index with the save law's
+		 * derivation and (apply) rewrite it — see `indexDrift`. Absent on the
+		 * interactive propagation path ON PURPOSE: the comparison walks every
+		 * mirror item's thesaurus chain (one SELECT per ancestor level per item,
+		 * uncached), and under the row lock of every no-drift recompute that is
+		 * N×D queries paid forever for a condition only a mirror written before
+		 * CORE-2 (or a raw drift) can be in — every mirror write since derives its
+		 * index in the same UPDATE. The one-off repair is the reconcile's
+		 * (scripts/observer_reconcile.ts, the reconcile registry).
+		 */
+		repairIndex?: true;
+	},
 ): Promise<{
 	changed: boolean;
 	before: number;
@@ -1174,6 +1312,24 @@ export async function recomputeExternalRelation(
 	 * hops on this — PHP re-propagates only after a real Save()). Absent on
 	 * dry runs, refusals, no-drift skips and pure withheld shrinks. */
 	wrote?: boolean;
+	/**
+	 * (`options.repairIndex` only — the reconcile's sweep.) The VALUE stays as
+	 * stored — it agrees with the law (`changed` false), or its write is
+	 * refused/withheld: the freeze, a pure degraded-seed shrink (`changed`
+	 * true) — but the stored `_hi` ancestor index (`relation_search[observerTipo]`)
+	 * does not agree with it: a mirror the recompute wrote before CORE-2 carries
+	 * a value and no index. Dry run: an apply would rewrite the index; apply: the
+	 * index was rewritten (through the cascade-owned chokepoint entry, UNSTAMPED
+	 * — nothing a curator sees changed). `wrote` stays absent: the value did not
+	 * move, so there is nothing to hop.
+	 */
+	indexDrift?: boolean;
+	/**
+	 * (`wrote` only.) The stored locators this write DROPPED
+	 * (section_record removedLocators — the ledger's one removal rule): the
+	 * cascade hop propagates their removal (recomputeMirrorAndHop).
+	 */
+	droppedLocators?: unknown[];
 }> {
 	const unchanged = { changed: false, before: 0, after: 0 };
 	// REFERENCES_LIMIT IS NEVER HONOURED (deliberate divergence from PHP —
@@ -1272,6 +1428,8 @@ export async function recomputeExternalRelation(
 	): Promise<{
 		exists: boolean;
 		existing: StoredLocator[];
+		/** The stored `relation_search[observerTipo]` (null = absent). */
+		storedIndex: unknown;
 		kept: StoredLocator[];
 		additions: StoredLocator[];
 		referenceCount: number;
@@ -1281,13 +1439,14 @@ export async function recomputeExternalRelation(
 		defects: string[];
 	}> => {
 		const rows = (await sql.unsafe(
-			`SELECT relation->$3 AS bag FROM "${table}" WHERE section_tipo = $1 AND section_id = $2${lock ? ' FOR UPDATE' : ''}`,
+			`SELECT relation->$3 AS bag, relation_search->$3 AS idx FROM "${table}" WHERE section_tipo = $1 AND section_id = $2${lock ? ' FOR UPDATE' : ''}`,
 			[targetSection, targetId, observerTipo],
-		)) as { bag: StoredLocator[] | null }[];
+		)) as { bag: StoredLocator[] | null; idx: unknown }[];
 		if (rows.length === 0) {
 			return {
 				exists: false,
 				existing: [],
+				storedIndex: null,
 				kept: [],
 				additions: [],
 				referenceCount: 0,
@@ -1295,6 +1454,7 @@ export async function recomputeExternalRelation(
 			};
 		}
 		const existing = rows[0]?.bag ?? [];
+		const storedIndex = rows[0]?.idx ?? null;
 		const { findInverseReferences } = await import('../../search/search_related.ts');
 		// THE D3 SEED (see collectExternalSeed): the target PLUS its
 		// data_from_field equivalents (dd621 closure), every entry re-stamped
@@ -1350,6 +1510,7 @@ export async function recomputeExternalRelation(
 		return {
 			exists: true,
 			existing,
+			storedIndex,
 			kept,
 			additions,
 			referenceCount: references.length,
@@ -1362,12 +1523,30 @@ export async function recomputeExternalRelation(
 	// skippedShrink when an apply under these options would withhold drops and
 	// refusedBigResult when an apply would hit the PHP >2000 freeze.
 	if (options.write === false) {
-		const { exists, existing, kept, additions, referenceCount, defects } = await compute(false);
+		const { exists, existing, storedIndex, kept, additions, referenceCount, defects } =
+			await compute(false);
 		if (!exists) return unchanged;
 		const replaced = [...kept, ...additions];
 		const changed = JSON.stringify(replaced) !== JSON.stringify(existing);
 		const wouldWithhold = kept.length < existing.length && defects.length > 0;
 		const wouldFreeze = changed && referenceCount > EXTERNAL_REFERENCES_FREEZE;
+		// An apply that would leave the VALUE as stored — no drift, the freeze, or a
+		// pure withheld shrink — is where the index sweep acts (see keepStoredValue).
+		const valueStays = !changed || wouldFreeze || (wouldWithhold && additions.length === 0);
+		const indexDrift =
+			valueStays &&
+			options.repairIndex === true &&
+			(await legacyIndexDisagrees(observerTipo, existing, storedIndex));
+		if (!changed) {
+			return {
+				changed: false,
+				before: existing.length,
+				after: replaced.length,
+				dropped: 0,
+				added: 0,
+				...(indexDrift ? { indexDrift: true } : {}),
+			};
+		}
 		return {
 			changed,
 			before: existing.length,
@@ -1376,6 +1555,7 @@ export async function recomputeExternalRelation(
 			added: additions.length,
 			...(wouldWithhold ? { skippedShrink: true, seedDefects: [...defects] } : {}),
 			...(wouldFreeze ? { refusedBigResult: true } : {}),
+			...(indexDrift ? { indexDrift: true } : {}),
 		};
 	}
 
@@ -1390,7 +1570,8 @@ export async function recomputeExternalRelation(
 		// locked compute is logged + counted so contention shows up in the
 		// counters page before it shows up as editor stalls.
 		const lockedStart = performance.now();
-		const { exists, existing, kept, additions, referenceCount, defects } = await compute(true);
+		const { exists, existing, storedIndex, kept, additions, referenceCount, defects } =
+			await compute(true);
 		const lockedMs = performance.now() - lockedStart;
 		if (lockedMs > 2000) {
 			console.warn(
@@ -1400,6 +1581,31 @@ export async function recomputeExternalRelation(
 		}
 		if (!exists) return unchanged; // target record does not exist
 		const replaced = [...kept, ...additions];
+		// THE VALUE STAYS AS STORED (no drift, the freeze, a pure withheld shrink):
+		// the VALUE not moving does not make its `_hi` index agree — a mirror
+		// written before CORE-2 holds its value and no index. On the RECONCILE's
+		// sweep (options.repairIndex — never the interactive path, see the option)
+		// the index alone is rewritten: same value, derived index, under this lock,
+		// NO stamps and no history (nothing a curator can see changed), and no hop.
+		// Every branch that returns without writing the value asks it — a frozen
+		// or degraded-seed mirror is exactly the one no later write re-indexes.
+		const keepStoredValue = async (): Promise<{ indexDrift?: true }> => {
+			if (
+				options.repairIndex !== true ||
+				!(await legacyIndexDisagrees(observerTipo, existing, storedIndex))
+			) {
+				return {};
+			}
+			const { persistObserverMirrorKeys } = await import('../../section_record/index.ts');
+			await persistObserverMirrorKeys(
+				{ table, sectionTipo: targetSection, sectionId: targetId },
+				[{ column: 'relation', key: observerTipo, value: existing }],
+				false,
+				{ actor: userId, now },
+			);
+			incrementCounter('observers_index_repaired');
+			return { indexDrift: true };
+		};
 		// No drift → no write (PHP re-saves anyway; we skip the no-op to
 		// avoid TM noise — the stored VALUE converges either way).
 		if (JSON.stringify(replaced) === JSON.stringify(existing)) {
@@ -1409,6 +1615,7 @@ export async function recomputeExternalRelation(
 				after: replaced.length,
 				dropped: 0,
 				added: 0,
+				...(await keepStoredValue()),
 			};
 		}
 		// BIG-RESULT FREEZE (PHP :2087 ported as a write refusal — see
@@ -1428,6 +1635,7 @@ export async function recomputeExternalRelation(
 				dropped: existing.length - kept.length,
 				added: additions.length,
 				refusedBigResult: true,
+				...(await keepStoredValue()),
 			};
 		}
 		// DEGRADED-SEED SHRINK REFUSAL (2026-08-06) — the ONE thing that can
@@ -1483,10 +1691,11 @@ export async function recomputeExternalRelation(
 				added: additions.length,
 				skippedShrink: true,
 				seedDefects: [...defects],
+				...(await keepStoredValue()),
 			};
 		}
 
-		const { persistRecordKeys } = await import('../../section_record/index.ts');
+		const { persistObserverMirrorKeys } = await import('../../section_record/index.ts');
 		const { mainIdentity, readMainSlots, readMainState, recordMainBackfill, recordMainHistory } =
 			await import('../../relations/dataframe_slots.ts');
 		const { removeDataframeDataById } = await import('../../relations/save.ts');
@@ -1530,12 +1739,18 @@ export async function recomputeExternalRelation(
 			hasHistory,
 			{ emptyDoorLane: true },
 		);
-		// Chokepoint write: observer value + the owner's modified stamps (dd197/
-		// dd201) in ONE update, like every PHP component save.
-		await persistRecordKeys(
+		// Chokepoint write — its CASCADE-OWNED entry: observer value + the
+		// owner's modified stamps (dd197/dd201) + the derived `relation_search`
+		// of an `_hi` mirror, in ONE update, like every PHP component save. The
+		// index is derived from `finalData` — what is actually STORED, a withheld
+		// shrink included (CORE-2: this write used to leave an `_hi` mirror with
+		// no ancestor index, so a broader-term search missed it). No ledger
+		// entry: the caller's recomputeMirrorAndHop hops the written observer.
+		await persistObserverMirrorKeys(
 			target,
 			[{ column: 'relation', key: observerTipo, value: finalData.length > 0 ? finalData : [] }],
-			{ userId, now },
+			options.stamp === false ? false : { userId, now },
+			{ actor: userId, now },
 		);
 		// A dropped locator takes its paired frames with it (the component save's
 		// remove cascade, PHP remove_dataframe_data_by_id) — else they stay in the
@@ -1552,6 +1767,7 @@ export async function recomputeExternalRelation(
 		);
 		// `after` = the full-law target (see the return contract). When drops
 		// were withheld the record actually holds existing+additions entries.
+		const { removedLocators } = await import('../../section_record/index.ts');
 		return {
 			changed: true,
 			before: existing.length,
@@ -1559,7 +1775,18 @@ export async function recomputeExternalRelation(
 			dropped: existing.length - kept.length,
 			added: additions.length,
 			wrote: true,
+			droppedLocators: removedLocators(existing, finalData),
 			...(withheld ? { skippedShrink: true, seedDefects: [...defects] } : {}),
 		};
 	});
+}
+
+/** The reconcile's legacy-index question (record_write.ts hiIndexDisagrees). */
+async function legacyIndexDisagrees(
+	observerTipo: string,
+	existing: readonly unknown[],
+	storedIndex: unknown,
+): Promise<boolean> {
+	const { hiIndexDisagrees } = await import('../../section_record/index.ts');
+	return hiIndexDisagrees(observerTipo, existing, storedIndex);
 }

@@ -115,6 +115,7 @@ describe('classifyReconcileOutcome', () => {
 			bigResultRefused: 0,
 			shrinksSkipped: 0,
 			repaired: 0,
+			reindexed: 0,
 		});
 	});
 
@@ -459,7 +460,7 @@ describe('expandTuplesByIndexSections', () => {
 
 interface Spy {
 	candidateIdsCalls: number;
-	recomputeCalls: { id: number; opts: { write: boolean }; userId: number }[];
+	recomputeCalls: { id: number; opts: { write: boolean; repairIndex?: true }; userId: number }[];
 }
 
 function stubIO(
@@ -540,7 +541,7 @@ describe('reconcileObserverMirrors (stubbed IO)', () => {
 		const spy = freshSpy();
 		await reconcileObserverMirrors({}, stubIO({}, spy, [edge()]));
 		expect(spy.recomputeCalls.length).toBe(1);
-		expect(spy.recomputeCalls[0]?.opts).toEqual({ write: false });
+		expect(spy.recomputeCalls[0]?.opts).toEqual({ write: false, repairIndex: true });
 		// The sweep always acts as the SYSTEM user.
 		expect(spy.recomputeCalls[0]?.userId).toBe(-1);
 	});
@@ -548,14 +549,14 @@ describe('reconcileObserverMirrors (stubbed IO)', () => {
 	test('apply:true threads { write: true }; any other truthy-ish value does NOT', async () => {
 		const applied = freshSpy();
 		await reconcileObserverMirrors({ apply: true }, stubIO({}, applied, [edge()]));
-		expect(applied.recomputeCalls[0]?.opts).toEqual({ write: true });
+		expect(applied.recomputeCalls[0]?.opts).toEqual({ write: true, repairIndex: true });
 
 		const coerced = freshSpy();
 		await reconcileObserverMirrors(
 			{ apply: 1 as unknown as boolean },
 			stubIO({}, coerced, [edge()]),
 		);
-		expect(coerced.recomputeCalls[0]?.opts).toEqual({ write: false });
+		expect(coerced.recomputeCalls[0]?.opts).toEqual({ write: false, repairIndex: true });
 	});
 
 	test('onlySection matches a face reachable ONLY through the index fan-out', async () => {

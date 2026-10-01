@@ -107,6 +107,18 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **A duplicated record never points at the original record's image or document files.**
+
+    Duplicating a record copies its image, audio, video and document files to the new record. If a copy failed, the new record could keep pointing at the ORIGINAL record's files, with no message anywhere — and deleting either record later moved files the other still showed. The duplicate is now saved with no file list of its own, the files are copied (into the record's named folder when the media field stores its files by a folder name taken from another field), and the new record's file list is then built from the files it really has. A copy that did not complete is reported to the administrator (the `duplicate_media_incomplete` counter and a `media.operation_failed` line in the server log); the duplicate itself is still created.
+
+    Wire contract: `WC-2026-09-30-media-key-locked-transform`.
+
+- **Restoring or undeleting a record now updates every list and search that shows who references it.**
+
+    Some fields are filled in automatically from other records — for example a thesaurus term that lists every object indexed with it, or a broader-term search that finds an object indexed with a narrower term. Restoring a record from the Time Machine, undeleting it (from the Time Machine or by reverting a bulk operation) and recalculating such an automatic list did not always bring these up to date: an undeleted object could stay missing from the term that indexes it, an undeleted term could come back listing objects that no longer point at it, and a broader-term search could miss an object until someone saved it again. Every way of writing a record now brings them up to date, right after the change is saved. During a CSV import, the automatic lists are updated after each row is committed; a failure there is reported to the administrator (the `observers_propagation_failed` counter and the server log) and repaired by the observer reconcile, and it no longer undoes the imported row. A duplicated record no longer matches a broader-term search for terms only its original is listed under. Reverting a bulk revert that brought back a term together with the objects indexed with it now deletes them again, instead of keeping them as records someone else changed. Restoring an automatic list from its Time Machine history (or reverting a bulk operation that changed one) no longer brings back objects that have stopped pointing at the record since: the restored list is recalculated right after the restore, and the objects still listed keep their extra data. When such a list is itself shown in another record's automatic list, an object that stops pointing at a record now also leaves that second list. Extra data attached to the entries of such an automatic list (for example a rating on each object a term lists) now stays with the right object when the record is undeleted, restored or duplicated: it used to be reattached to a different object after an undelete, kept for objects no longer listed after a restore, and copied onto the duplicate. For a virtual section that has a field of its own, deleting a record's data now also empties its automatic lists, and restoring it recalculates them.
+
+    Wire contract: `WC-2026-09-30-record-write-obligation-ledger`.
+
 - **Reverting the same bulk run a second time no longer reports records as "not reverted" when nothing changed.**
 
     Reverting a bulk revert, or a run whose dataframe removal had emptied a record,
@@ -583,6 +595,12 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-27-bulk-revert-undo-log`.
 
+- **Regenerating the media cache no longer undoes an upload made while it runs.**
+
+    The "Update cache" tool (media components) and the media files repair (`scripts/media_repair_files_info.ts`, and the `files_info` entry of the reconcile tools) rebuild files and then record which files a record has. They used to record that from what they had read at the start, so a file a curator uploaded to the same record while they ran — and its original file name — was silently undone. They now record it from the record as it stands at that moment, so the curator's upload is kept. "Update cache" also reports records deleted while it ran (and rows that stayed locked) instead of counting them as regenerated. The repair now also fixes a record whose media list names another record's files (what a failed duplicate could leave), and reports records it could not write instead of counting them as repaired. It judges each media item on its own: an item whose files are not on this server keeps its record of them (unless you allow shrinking), even when another item of the same field is repaired, and a file named some other way (for example by an image id) is never mistaken for another record's. Both tools now give up on a record another user is holding after a few seconds, report it, and go on with the next one, instead of waiting indefinitely.
+
+    Wire contract: `WC-2026-09-30-media-key-locked-transform`.
+
 - **A move_* data transform can be stopped, and only one runs at a time.**
 
     Running a move transform for real (Move TLD, Move locator, Move to portal, Move to table, Move lang with `dry_run: false`) used to happen inside the web request. Nothing could stop it except restarting the server. It kept every record it had changed locked until the end of each definition file. If it was sent again it waited behind itself and then reported a failure while the first run carried on unseen. Now the transform runs as a background process that answers at once, reports its progress in the maintenance panel and has no time limit. Stopping it cancels the definition file it is working on and undoes that file completely; the files after it are reported as not run. A second transform started while one is running is refused ("Another move_* transform is running") instead of waiting. A dry run is unchanged: it still answers directly with its report. If a definition file fails at the moment its changes are being saved (a lost database connection, a server shutdown), the report now says what the database actually did with it: applied, undone, or, when that cannot be read back, an unknown outcome that stops the run and asks you to check the data before running that file again. Before, every failed file was reported as undone, and running a Move locator file again after it had in fact been applied moved its locators twice.
@@ -759,7 +777,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 73 entries"
+??? note "Wire contract — 75 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -825,9 +843,11 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-09-30-diffusion-zip-streamed`
     - `WC-2026-09-30-guarded-text-pinned-typed-transport`
     - `WC-2026-09-30-mcp-search-section-grant`
+    - `WC-2026-09-30-media-key-locked-transform`
     - `WC-2026-09-30-media-pair-scope`
     - `WC-2026-09-30-move-transform-execute-job`
     - `WC-2026-09-30-ontology-identifier-grammar`
+    - `WC-2026-09-30-record-write-obligation-ledger`
     - `WC-2026-09-30-search-root-step-acl`
     - `WC-2026-09-30-transcription-record-tipo`
     - `WC-2026-09-30-update-engine-atomic`
