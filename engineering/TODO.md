@@ -27,7 +27,7 @@
   The process of accepting or rejecting values must be very clear to the user.
 - [ ] Responsive CSS. Improve the current mobile view: buttons, layout, list, etc.
 - [ ] Responsive design: ensure all main tools are responsive
-- [ ] Messages from request when the server takes more time than expected: valorate the improve the messges manager policy to be less intrusive.
+- [x] Messages from request when the server takes more time than expected: valorate the improve the messges manager policy to be less intrusive. (2026-10-01: the per-request "Awaiting for busy server.." bubble (raised by the /health probe at timeout/2, one per request, lingering on its own timer) is replaced by ONE page state — common/js/request_activity.js, painted by page/js/request_activity_indicator.js: nothing <1.5 s, a thin top bar after, + one sentence (label server_slow_response) after 8 s, gone when the last request settles; background polls (lock heartbeat/status, job tray) and declared long operations (timeout > 60 s) excluded by default, busy_notice opts in/out; a CSRF resend keeps the same wait; the status text is an always-present live region. Identical page bubbles merge into one ×N (prepend_bubble). Gates test/unit/request_activity_native + client suite test_request_activity. Left: label awaiting_busy_server now unreferenced — removal is a WC-034-class edit.)
 
 ## Ontology
 

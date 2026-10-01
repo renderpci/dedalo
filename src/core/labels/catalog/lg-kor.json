@@ -474,6 +474,7 @@
 	"serve_ontology_state_off": "설정되지 않음",
 	"serve_ontology_state_on": "사용함",
 	"serve_ontology_title": "이 온톨로지를 다른 설치본에 제공",
+	"server_slow_response": "서버 응답이 평소보다 오래 걸리고 있습니다…",
 	"session_expiry_warning": "세션이 %s분 후 만료됩니다. 로그인 상태를 유지하려면 계속 작업하십시오.",
 	"set_img_layer": "이미지 레이어 설정",
 	"set_root_pw_label": "루트 비밀번호 설정",

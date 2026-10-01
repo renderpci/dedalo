@@ -3216,6 +3216,11 @@
 			"skipped": 0,
 			"assertions": 163
 		},
+		"test/unit/request_activity_native.test.ts": {
+			"tests": 6,
+			"skipped": 0,
+			"assertions": 16
+		},
 		"test/unit/request_config_children_narrowing.test.ts": {
 			"tests": 6,
 			"skipped": 0,

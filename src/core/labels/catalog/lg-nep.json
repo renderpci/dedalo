@@ -474,6 +474,7 @@
 	"serve_ontology_state_off": "कन्फिगर गरिएको छैन",
 	"serve_ontology_state_on": "सक्रिय",
 	"serve_ontology_title": "यो अन्टोलोजी अन्य स्थापनाहरूलाई उपलब्ध गराउनुहोस्",
+	"server_slow_response": "सर्भरले सामान्यभन्दा बढी समय लिइरहेको छ…",
 	"session_expiry_warning": "तपाईंको सत्र %s मिनेटमा समाप्त हुन्छ। लग इन रहन काम जारी राख्नुहोस्।",
 	"set_img_layer": "छवि तह सेट गर्नुहोस्",
 	"set_root_pw_label": "रुट पासवर्ड सेट गर्नुहोस्",

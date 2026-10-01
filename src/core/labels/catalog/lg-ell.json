@@ -474,6 +474,7 @@
 	"serve_ontology_state_off": "Μη ρυθμισμένο",
 	"serve_ontology_state_on": "Ενεργό",
 	"serve_ontology_title": "Διάθεση αυτής της οντολογίας σε άλλες εγκαταστάσεις",
+	"server_slow_response": "Ο διακομιστής αργεί περισσότερο από το συνηθισμένο…",
 	"session_expiry_warning": "Η συνεδρία σας λήγει σε %s λεπτά. Συνεχίστε να εργάζεστε για να παραμείνετε συνδεδεμένοι.",
 	"set_img_layer": "Ορισμός στρώσης εικόνας",
 	"set_root_pw_label": "Ορισμός κωδικού root",

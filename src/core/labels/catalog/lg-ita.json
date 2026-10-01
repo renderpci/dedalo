@@ -474,6 +474,7 @@
 	"serve_ontology_state_off": "Non configurato",
 	"serve_ontology_state_on": "Attivo",
 	"serve_ontology_title": "Servire questa ontologia ad altre installazioni",
+	"server_slow_response": "Il server sta impiegando più tempo del solito…",
 	"session_expiry_warning": "La vostra sessione scade tra %s min. Continuate a lavorare per restare collegati.",
 	"set_img_layer": "Imposta livello immagine",
 	"set_root_pw_label": "Imposta password di root",

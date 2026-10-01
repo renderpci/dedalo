@@ -50,7 +50,8 @@
 		object_to_url_vars,
 		generate_hash
 	} from '../../common/js/utils/index.js'
-	import {render_node_info} from '../../common/js/utils/notifications.js'
+	import {render_node_info, prepend_bubble} from '../../common/js/utils/notifications.js'
+	import {mount_request_activity_indicator} from './request_activity_indicator.js'
 	import {cookie_manager} from '../../common/js/utils/cookie_manager.js'
 	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
 	import {ApiError, CLIENT_ERROR, request_failed, response_data, response_extension} from '../../common/js/api_error.js'
@@ -231,6 +232,10 @@ page.prototype.scroll_component_into_view = function(component) {
 *   'render_page'          → restores section selection after full renders
 *   'render_instance'      → restores section selection after pagination
 *   'notification'         → prepends inspector bubble to bubbles_notification_container
+*                            (identical bubbles merge into one with a ×N count)
+*
+* Also mounts the slow-server cue (request_activity_indicator.js), which
+* subscribes to 'request_activity' itself.
 *   'quit'                 → calls delete_cache to clear local storage
 *   'change_lang'          → calls delete_cache so stale translations are dropped
 *   'api_error'            → hands the ApiError to the policy (relogin, no-access, toast)
@@ -472,14 +477,20 @@ page.prototype.init = async function(options) {
 						// render notification bubble
 							const node_info = render_node_info(options)
 
-						// prepend node (at top of the list)
-							container.prepend(node_info)
+						// prepend node (at top of the list), merging an identical one
+							prepend_bubble(container, node_info)
 					}
 				)
 			}
 			self.events_tokens.push(
 				event_manager.subscribe('notification', notifications_handler)
 			)
+
+		// slow-server cue
+			// A STATE, not a notification: one top-edge bar (+ one sentence after a
+			// long wait) driven by data_manager's request_activity, gone the instant
+			// the last request settles. Document-level and idempotent.
+			mount_request_activity_indicator()
 
 		// event quit
 			const quit_handler = () => {

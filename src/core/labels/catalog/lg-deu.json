@@ -474,6 +474,7 @@
 	"serve_ontology_state_off": "Nicht konfiguriert",
 	"serve_ontology_state_on": "Aktiviert",
 	"serve_ontology_title": "Diese Ontologie anderen Installationen bereitstellen",
+	"server_slow_response": "Der Server braucht länger als üblich…",
 	"session_expiry_warning": "Ihre Sitzung läuft in %s Min. ab. Arbeiten Sie weiter, um angemeldet zu bleiben.",
 	"set_img_layer": "Bildebene festlegen",
 	"set_root_pw_label": "Root-Passwort festlegen",
