@@ -280,6 +280,20 @@ function segmentsUnder(root: string, relative: string): { target: string; segmen
 }
 
 /**
+ * THE ONE `mkdir(2)` of the module: `true` when this call created `path`, `false` when anything
+ * at all already stood there (never followed, never opened). Every other errno is thrown.
+ */
+async function makeLevel(path: string): Promise<boolean> {
+  try {
+    await mkdir(path);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+    return false;
+  }
+}
+
+/**
  * Create one level and state its mode on the handle — or, if it was already there, prove it
  * is a real directory and leave its mode alone.
  *
@@ -288,10 +302,7 @@ function segmentsUnder(root: string, relative: string): { target: string; segmen
  * the daemon's own) was re-opened to 2770 by the first build under it.
  */
 async function mkdirLevel(path: string, mode: number): Promise<void> {
-  try {
-    await mkdir(path);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+  if (!(await makeLevel(path))) {
     // Existing: the ONE question left is whether it is a directory or a link planted where
     // one was expected. `O_DIRECTORY|O_NOFOLLOW` asks it and answers nothing else.
     const handle = await openNoFollow(path, FS.O_RDONLY | FS.O_DIRECTORY);
@@ -355,6 +366,17 @@ async function ensureDir(root: string, relative: string, mode: number | ((segmen
   return target;
 }
 
+/** A shared path never runs through the daemon's private state (see `mkdirShared`). */
+function refuseSharedThroughPrivate(relative: string, segments: readonly string[]): void {
+  const priv = segments.find((segment) => PRIVATE_NAMES.includes(segment));
+  if (priv) {
+    throw new Error(
+      `shared_tree: '${relative}' passes through '${priv}', which is the daemon's own ` +
+        `state and is never created shared. Use mkdirPrivate.`,
+    );
+  }
+}
+
 /**
  * Create a directory (and its missing parents) that BOTH uids can work in.
  *
@@ -367,14 +389,25 @@ export async function mkdirShared(root: string, relative: string): Promise<strin
   // hand the agent the directory this module exists to keep. The private door states the
   // private mode; there is no spelling that reaches one through the other.
   const { segments } = segmentsUnder(root, relative);
-  const priv = segments.find((segment) => PRIVATE_NAMES.includes(segment));
-  if (priv) {
-    throw new Error(
-      `shared_tree: '${relative}' passes through '${priv}', which is the daemon's own ` +
-        `state and is never created shared. Use mkdirPrivate.`,
-    );
-  }
+  refuseSharedThroughPrivate(relative, segments);
   return ensureDir(root, relative, SHARED_DIR_MODE);
+}
+
+/**
+ * Create a SHARED directory that must NOT exist yet — the claim of a path by the one caller
+ * that will own everything under it. Parents are made as `mkdirShared` makes them; the final
+ * level by a single `mkdir(2)`, which is the atomic check: `true` when this call created it,
+ * `false` when anything at all already stood there (a directory, a file, a link — none is
+ * followed, none is touched). A caller that gets `false` owns nothing at that path and must
+ * neither write into it nor remove it.
+ */
+export async function mkdirSharedFresh(root: string, relative: string): Promise<boolean> {
+  const { target, segments } = segmentsUnder(root, relative);
+  refuseSharedThroughPrivate(relative, segments);
+  if (segments.length > 1) await ensureDir(root, segments.slice(0, -1).join(sep), SHARED_DIR_MODE);
+  if (!(await makeLevel(target))) return false;
+  await chmodHandle(target, FS.O_RDONLY | FS.O_DIRECTORY, SHARED_DIR_MODE);
+  return true;
 }
 
 /**

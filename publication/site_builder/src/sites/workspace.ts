@@ -18,7 +18,7 @@
  */
 
 import { rm, readdir, stat } from 'node:fs/promises';
-import { applySharedModes, mkdirPrivate, mkdirShared } from '../util/shared_tree';
+import { applySharedModes, mkdirPrivate, mkdirSharedFresh } from '../util/shared_tree';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { confinedPath } from '../util/paths';
@@ -146,12 +146,18 @@ export async function createSite(input: CreateSiteInput, policy: ConfinementPoli
   // names, proved to exist, to declare itself ours and to be writable.
   assertWebspace(input.slug, domain);
 
-  // THE SITE IS HELD FROM HERE UNTIL ITS REPOSITORY EXISTS (LEAD-1b). Synchronously, before
-  // the first await: from `writeManifest` on the site EXISTS for every other door, and
+  // THE SITE IS HELD FROM THE `tryBegin` BELOW UNTIL ITS REPOSITORY EXISTS (LEAD-1b), taken
+  // before the first write (not before the first await — the admission awaits come first):
+  // from `writeManifest` on the site EXISTS for every other door, and
   // `initRepo` runs git — agent-authored text's interpreter — in its workspace. Unreserved,
   // a turn or a build could start on the half-made site, and under per-site identities a
-  // confined run of this site is refused without a reservation at all. A second create of
-  // the same slug in the same window is refused here too.
+  // confined run of this site is refused without a reservation at all.
+  //
+  // The reservation alone does NOT stop a second create of the same slug: the existence check
+  // above runs before two awaits, and a create whose awaits outlast another's WHOLE create
+  // finds the reservation free again. What stops it is inside the hold — the workspace
+  // directory is claimed exclusively (`createReservedSite`), so the one create that made it is
+  // the only one that writes into it or rolls it back.
   //
   // AND ITS FIRST GIT RUN MUST BE POSSIBLE — asked BEFORE the reservation and before anything
   // is written, exactly as a turn and a build ask it: the host (floor, units, identities) and
@@ -188,7 +194,26 @@ async function createReservedSite(input: CreateSiteInput, domain: string, policy
   // this museum's group (drivers/confinement.ts), and a workspace created with the daemon's
   // own umask is a site the agent can read and never write — a turn that starts, is
   // authorized, and fails on its first Write.
-  await mkdirShared(config.SITES_ROOT, input.slug);
+  //
+  // CLAIMED, NOT ENSURED: this `mkdir(2)` is the create's ownership of the path. A directory
+  // already there is a site another create finished while this one waited in its admission
+  // (the reservation it held was released before this one took it), or what a site whose
+  // site.json is gone — or a create killed mid-scaffold — left behind. Neither is this
+  // request's: scaffolding over it rewrote a finished site's manifest, driver record and
+  // history, and this create's rollback below then `rm -rf`'d it. Refused, typed, before a
+  // byte is written — and so the rollback only ever removes a directory this call made.
+  if (!(await mkdirSharedFresh(config.SITES_ROOT, input.slug))) {
+    if (siteExists(input.slug)) {
+      throw new ConflictError(`A site named '${input.slug}' already exists`, 'slug_exists');
+    }
+    throw new ConflictError(
+      `Something already stands at the workspace path of '${input.slug}' and it is not a site ` +
+        `(it has no site.json): an interrupted create, or a site whose manifest was removed. ` +
+        `It was not touched. An operator must inspect and remove it before this slug can be ` +
+        `created.`,
+      'workspace_exists',
+    );
+  }
 
   try {
     await scaffold(input.slug, templateId);

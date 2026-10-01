@@ -1749,7 +1749,9 @@ describe('a site workspace is CREATED shared, not created and hoped over', () =>
 		// The positive side of the same rule, read off the three files that make a site: the
 		// directory, the manifest and the agent's brief.
 		for (const [file, helper] of [
-			['sites/workspace.ts', 'mkdirShared'],
+			// CLAIMED, not ensured: the create owns the workspace only if its mkdir made it (a
+			// second create of the same slug scaffolded over — and rolled back — a finished site).
+			['sites/workspace.ts', 'mkdirSharedFresh'],
 			['sites/manifest.ts', 'writeFileSharedAtomic'],
 			['context/agents_md.ts', 'writeFileShared'],
 			['sites/template.ts', 'applySharedModes'],

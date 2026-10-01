@@ -596,6 +596,12 @@ Merged since the last release; these ship with the next one.
 
     "Reset to seed" (Add hierarchy) and the installer's hierarchy step now apply each hierarchy all-or-nothing. The reset used to delete the hierarchy's terms first and load the seed in a separate step: if the seed then failed to load, the hierarchy was left empty — every edit and addition gone and the seed not restored. A models file that failed to load, or a failed update of the record counter, was ignored and the hierarchy reported as imported. Now the delete, the terms, the models and the counter are one database transaction: if any part fails, nothing changes and the hierarchy is reported as failed with the reason.
 
+- **Creating a site twice at the same moment can no longer overwrite or delete the first site.**
+
+    When two requests created a site with the same name at nearly the same time, the second one could pass its checks while the first was still being set up. It then wrote its own settings over the finished site, and if anything later failed, it deleted the whole site folder, including the first site's work. The site folder is now claimed by exactly one request: the second request is refused with "a site with this name already exists", and the first site is left untouched.
+
+    A site folder that exists but has no `site.json` (left by a create that was interrupted, or by a site whose settings file was removed) is no longer reused. Creating a site with that name is refused with the reason `workspace_exists`, and nothing in the folder is changed. An administrator must inspect the folder and remove it before the name can be used.
+
 - **Administrators' toolbars now show only the tools their profile grants.**
 
     Global administrators (other than root) saw every installed tool in their toolbars, even tools their profile does not grant — and clicking one was then refused. The toolbar and every tool door now follow the same rule: a tool is available when the user's profile grants it (or it is always active); only the root account holds every tool. An administrator who asks for a tool their profile does not grant now gets "not authorized" rather than "unknown tool".
