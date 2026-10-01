@@ -359,7 +359,7 @@ reaches root's dd128/-1). Rules every kind shares:
 - **`assertToolGranted(principal, tool)`** is the one tool-ACL check for doors outside
   the declarative gate (the agent door's `tool_assistant`, identify's `tool_identify`
   vision spend).
-- **tool_transcription gates in-handler** (`permission: null`): the write door on BOTH
+- **tool_transcription gates in-handler** (its permission kind is `null`): the write door on BOTH
   ddos, read (1) on the AV source on every path and write (2) on the transcript; its
   background save re-runs the door for a LIVE principal, and its status poll takes a
   server-issued poll handle (WC-2026-09-30-transcription-record-tipo).

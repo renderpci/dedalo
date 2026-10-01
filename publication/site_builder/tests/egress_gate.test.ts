@@ -55,7 +55,7 @@ interface GateModule {
 const OWN_UID = process.getuid?.() ?? 0;
 
 async function gateModule(): Promise<GateModule> {
-  return (await import('../src/egress/gate' as string)) as GateModule;
+  return (await import('../src/egress/gate')) as unknown as GateModule;
 }
 
 const cleanups: Array<() => unknown> = [];
@@ -443,7 +443,7 @@ describe('proxy.sock: the tunnel carries TLS to the CONNECT host, and nothing el
   });
 
   test('parseClientHello: every length is checked — a lie is a refusal, never a read past the buffer', async () => {
-    const { parseClientHello } = (await import('../src/egress/gate' as string)) as {
+    const { parseClientHello } = (await import('../src/egress/gate')) as unknown as {
       parseClientHello(bytes: Buffer): { kind: string; why?: string; serverName?: string };
     };
     const good = helloBytes('registry.npmjs.org');

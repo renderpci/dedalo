@@ -75,6 +75,11 @@ const LEDGERED_NAMES: Record<string, { names: Readonly<Record<string, number>>; 
 			reason:
 				'The vision spend (closure Step 3, TOOLS-4 grant half) asks the caller’s profile for THE tool this API class serves: dd_identify_api IS tool_identify’s server half (the tool has no ToolServerModule of its own), so its grant is named where its door is (`VISION_SPEND_TOOL`). A real name-keyed coupling, ADDED 2026-10-01 with owner-visible reason (WC-2026-10-01-identify-vision-grant). Clears when tool_identify gets a ToolServerModule whose actions are these and the dispatch asks the grant by construction.',
 		},
+		'src/ai/rag/api.ts': {
+			names: { tool_rag: 1 },
+			reason:
+				'The generative RAG spend (closure Step 3, TOOLS-4 budget half) asks the caller’s profile for THE tool that opens the generative answer (`GENERATIVE_RAG_TOOL`): dd_rag_api is the server half of tool_rag (which has no ToolServerModule of its own; retrieval stays ungranted core search), so its grant is named where its door is. A real name-keyed coupling, ADDED 2026-10-01 with owner-visible reason (WC-2026-10-01-ai-spend-budget). Clears when tool_rag gets a ToolServerModule whose actions are these and the dispatch asks the grant by construction.',
+		},
 		'src/core/db/matrix_index_policy.ts': {
 			names: { tool_time_machine: 1 },
 			reason:

@@ -39,7 +39,7 @@ interface ShimModule {
 }
 
 async function shim(): Promise<ShimModule> {
-  return (await import('../src/drivers/egress_shim' as string)) as ShimModule;
+  return (await import('../src/drivers/egress_shim')) as unknown as ShimModule;
 }
 
 const LO: Interfaces = { lo: [{ internal: true, address: '127.0.0.1', family: 'IPv4' }] };
