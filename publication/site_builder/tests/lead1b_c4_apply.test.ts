@@ -245,7 +245,9 @@ function makeIo(s: Omit<Synthetic, 'io'>): ProvisionIo {
       // host's tree, where every entry the gate created is the service user's — so the gate
       // reads the modes the real command leaves, not the argv it was handed.
       if (argv[0] === 'find') {
-        const real = argv.map((arg, index) => (index > 0 && argv[index - 1] === '-user' && arg === SVC ? userInfo().username : arg));
+        // The NUMERIC uid, never the name: a CI container runs as a uid with no passwd entry
+        // (GitHub: --user 1001), where the name reads 'unknown' and `find -user` refuses it.
+        const real = argv.map((arg, index) => (index > 0 && argv[index - 1] === '-user' && arg === SVC ? String(process.getuid?.() ?? userInfo().uid) : arg));
         const ran = spawnSync(real[0] as string, real.slice(1), { encoding: 'utf8' });
         return { code: ran.status ?? 1, stdout: ran.stdout ?? '', stderr: ran.stderr ?? '' };
       }

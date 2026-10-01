@@ -59,7 +59,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { config } from '../../src/config/config.ts';
@@ -115,6 +115,9 @@ const CLAIMED_QUALITIES = image.qualities
 	.slice(0, 2);
 
 const bulkRuns: number[] = [];
+/** The image/original tier this gate built for the sweep's root guard (removed if still empty). */
+let originalTier = '';
+let createdOriginalTier = false;
 let bulkTable = '';
 
 const identityOf = (sectionId: number): MediaIdentity => ({
@@ -289,9 +292,27 @@ beforeAll(async () => {
 	expect(PLAIN_QUALITY).toBeDefined();
 	expect(CLAIMED_QUALITIES).toHaveLength(2);
 	bulkTable = (await getMatrixTableFromTipo('dd800')) as string;
+	// BUILD the tree the sweep's root guard demands of a real install (guardedMediaRoot:
+	// `image/original` must exist, or it refuses as "the wrong tree" BEFORE any lock). A
+	// fresh lane root has none — measured 2026-10-01 on the hosted runner, where every
+	// sweep leg refused at once (media.not_configured) and never reached the row lock;
+	// locally another gate in the lane had happened to create it first.
+	originalTier = join(config.media.rootPath as string, 'image', 'original');
+	createdOriginalTier = !existsSync(originalTier);
+	mkdirSync(originalTier, { recursive: true });
 }, 60_000);
 
 afterAll(async () => {
+	// Ours, and still empty: remove it. rmdir refuses a non-empty directory, so a tier
+	// another gate filled meanwhile is left alone (ENOTEMPTY) — no listing needed.
+	if (createdOriginalTier) {
+		try {
+			rmdirSync(originalTier);
+		} catch (error) {
+			const code = (error as NodeJS.ErrnoException).code;
+			if (code !== 'ENOTEMPTY' && code !== 'ENOENT') throw error;
+		}
+	}
 	for (const id of bulkRuns) {
 		await sql.unsafe(
 			`DELETE FROM "${bulkTable}" WHERE section_tipo = 'dd800' AND section_id = $1`,
