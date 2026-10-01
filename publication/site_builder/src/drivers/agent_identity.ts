@@ -241,17 +241,40 @@ export function egressDirForSite(agentSocketDir: string, k: number): string {
  *
  * NOT AN ENVIRONMENT VARIABLE. `GIT_DIR=/nonexistent` in the turn's environment was measured
  * USELESS: the CLI builds its own environment for those calls and drops `GIT_DIR` and
- * `GIT_CONFIG_GLOBAL` (kept only for `git remote`), so the planted filter still ran. So the
- * turn unit MASKS the repository: `InaccessiblePaths=<workspace>/.git`, rendered by root,
- * compared by conformance — every git the turn starts finds `.git` unreadable and no repository
- * (nothing above the workspace is agent-writable). No `-` prefix: a turn whose workspace has no
- * `.git` at all does not start (PID 1 refuses the mount, and the daemon refuses it first, typed)
- * — never a turn in which the agent's own Write could create a repository its next git reads.
- * The masked path is the TURN's only: the git door works on that repository, the build door
- * runs agent code by definition. HONEST LIMIT: it masks the repository every measured CLI git
- * call uses (its cwd and `-C` are the workspace root); a repository planted in a SUBDIRECTORY is
- * reached only by a git run from there. The live probe (`deploy/probes/claude_plant_probe.ts`
- * C5/P5) re-measures the CLI's git per release, and under `AGENT_CONFINEMENT=none` (declared
+ * `GIT_CONFIG_GLOBAL` (kept only for `git remote`), so the planted filter still ran.
+ *
+ * THREE LAYERS, all in the TURN unit (the git door works on that repository; the build door runs
+ * agent code by definition):
+ *
+ *   1. THE REPOSITORY IS MASKED: `InaccessiblePaths=<workspace>/.git`, rendered by root, compared
+ *      by conformance. No `-` prefix: a turn whose workspace has no `.git` does not start (PID 1
+ *      refuses the mount, and the daemon refuses it first, typed) — never a turn in which the
+ *      agent's own Write could create a repository its next git reads.
+ *   2. THE WORKSPACE ITSELF IS NO REPOSITORY EITHER. With `.git` unreadable, git's discovery
+ *      next tests the workspace ROOT as an implicit BARE repository (setup.c: `HEAD`, `objects/`,
+ *      `refs/`). Measured 2026-10-01, git 2.54: `rev-parse --git-dir` answers `.`, and a plain
+ *      `git log` runs a planted `gpg.program`; Claude Code 2.1.286's own `git log` read the
+ *      planted commit into the model's context (it passes `-c log.showSignature=false`, and its
+ *      `status` dies — a root that IS the git dir is no work tree — so no planted program ran on
+ *      that release; the next release's git calls are the probe's to see). So the turn unit
+ *      binds a ROOT-RENDERED system configuration read-only over `/etc/gitconfig`
+ *      (`turnSystemGitconfigPath`, saying `safe.bareRepository = explicit` and nothing else — no
+ *      `safe.directory`; the host's own `/etc/gitconfig`, which might say `safe.directory = *`, is
+ *      shadowed; on a host with none, PID 1 creates the empty mount point): a PROTECTED
+ *      setting no repository-local config can override, so git refuses to use a discovered bare
+ *      repository (git >= 2.38; measured on 2.54). And — for a git older than that, or one
+ *      whose system configuration is not `/etc/gitconfig` — the daemon refuses, typed, before
+ *      connecting, a turn whose workspace root carries `HEAD` (`TURN_BARE_REPOSITORY_MARKER`:
+ *      every git's `is_git_directory` requires it, reftable included).
+ *   3. NOTHING ABOVE THE WORKSPACE IS AGENT-WRITABLE inside a unit (`ProtectSystem=strict`,
+ *      `ReadWritePaths=` the workspace alone), so the walk upward finds nothing planted.
+ *
+ * HONEST LIMIT: a repository planted in a SUBDIRECTORY with a `.git` of its own is reached only
+ * by a git run from there (every measured CLI call runs in, or `-C`, the workspace root); a
+ * `HEAD` the turn's own Write creates mid-turn is refused by the daemon's check only at the NEXT
+ * turn — within the turn, only the configuration of layer 2 stands (git >= 2.38 reading
+ * `/etc/gitconfig`). The live probe (`deploy/probes/claude_plant_probe.ts` C5/P5, P5b for the
+ * bare root) re-measures the CLI's git per release, and under `AGENT_CONFINEMENT=none` (declared
  * unconfined, the daemon's own uid) nothing is masked at all.
  */
 export const TURN_MASKED_REPOSITORY = '.git';
@@ -259,6 +282,43 @@ export const TURN_MASKED_REPOSITORY = '.git';
 /** The paths the TURN unit masks inside its workspace (InaccessiblePaths=, no `-`). */
 export function turnMaskedPaths(workspace: string): readonly string[] {
   return Object.freeze([join(workspace, TURN_MASKED_REPOSITORY)]);
+}
+
+/** A workspace ROOT carrying this is git-dir shaped (bare discovery needs it): a turn is refused. */
+export const TURN_BARE_REPOSITORY_MARKER = 'HEAD';
+
+/** Where that marker would be: directly in the workspace root (lstat'd — a link to nothing counts). */
+export function turnBareRepositoryMarker(workspace: string): string {
+  return join(workspace, TURN_BARE_REPOSITORY_MARKER);
+}
+
+/** Where the turn unit mounts its system git configuration (git's `$(sysconfdir)/gitconfig`). */
+export const TURN_SYSTEM_GITCONFIG_MOUNT = '/etc/gitconfig';
+
+/**
+ * The turn's system git configuration — its ONLY directives (comments aside; the renderer adds
+ * its stamp and a header). `safe.bareRepository` is honoured only from protected configuration
+ * (system, global, command line), never from a repository's own `config`.
+ */
+export const TURN_SYSTEM_GITCONFIG_DIRECTIVES: readonly string[] = Object.freeze(['[safe]', '\tbareRepository = explicit']);
+
+/**
+ * The rendered file: root's, under the agent state root (root 0755). The unit masks that root
+ * (`TemporaryFileSystem=`), which hides it from the run but not from PID 1, which resolves a
+ * bind source on the host before it builds the namespace — the door HOMEs are bound the same way.
+ */
+export function turnSystemGitconfigPath(agentStateRoot: string): string {
+  return join(agentStateRoot, 'turn.gitconfig');
+}
+
+/** The TURN unit's read-only bind of that file over git's system configuration (`source:dest`). */
+export function turnGitconfigBind(agentStateRoot: string): string {
+  return `${turnSystemGitconfigPath(agentStateRoot)}:${TURN_SYSTEM_GITCONFIG_MOUNT}`;
+}
+
+/** A gitconfig body's DIRECTIVES — every line that is not blank and not a `#`/`;` comment. */
+export function gitconfigDirectives(body: string): string[] {
+  return body.split('\n').filter(line => line.trim() !== '' && !/^\s*[#;]/.test(line));
 }
 
 /**

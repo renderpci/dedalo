@@ -46,6 +46,7 @@ import {
   GATE_IDS,
   type GatePolicy,
   lead1bPolicy,
+  TRAVERSABLE_STAT,
   parseShow,
   plantShow,
   type ShowFixtures,
@@ -426,7 +427,11 @@ describe('G10 — one run per site, one connect per run, freed only on proven de
     const { leaseSnapshot } = await import('../src/drivers/confinement');
     const host = await hostWith([['alpha', 1]]);
     const leftover = host.standIn.plantLive(1, 'git');
-    host.standIn.fault = verb => (verb === 'stop' ? { code: 4, stderr: `Failed to stop ${leftover.name}: Access denied` } : null);
+    // Denied for the LIVE run only: a host that denies every stop is refused earlier, at admission,
+    // by the grant probe (round 6, the describe below) — this is the runtime layer behind it (a
+    // grant withdrawn between the probe and the stop).
+    host.standIn.fault = (verb, units) =>
+      verb === 'stop' && units.includes(leftover.name) ? { code: 4, stderr: `Failed to stop ${leftover.name}: Access denied` } : null;
     const refused = await reserved('alpha', () => caught(() => run(host, 'alpha', 'git')));
     const message = String((refused as Error).message);
     const reason = leaseSnapshot(host.policy as never).quarantined[0]?.reason ?? '';
@@ -1439,13 +1444,13 @@ describe('G17 — what a unit executes first may not be ANY identity’s to chan
   ] as const;
 
   async function problemsWith(stat: (path: string) => { uid: number; gid: number; mode: number } | null): Promise<string[]> {
-    const { confinementProblems, HOST_FACTS } = await import('../src/drivers/confinement');
+    const { confinementProblems } = await import('../src/drivers/confinement');
     const host = await hostWith(
       [
         ['alpha', 1],
         ['beta', 2],
       ],
-      { hostOverrides: { stat: (path: string) => stat(path) ?? HOST_FACTS.stat(path) } },
+      { hostOverrides: { stat: (path: string) => stat(path) ?? TRAVERSABLE_STAT(path) } },
     );
     return (await confinementProblems(host.policy, 'git'));
   }
@@ -1465,10 +1470,106 @@ describe('G17 — what a unit executes first may not be ANY identity’s to chan
     });
   }
 
+  test('an ancestor the identities cannot TRAVERSE (0750, a group none is in) is refused, naming the directory (round 6)', async () => {
+    const dir = dirname(shimDir());
+    const problems = await problemsWith(asked => (asked === dir ? { uid: 0, gid: 4_000_009_999, mode: 0o40750 } : null));
+    expect(problems.some(problem => problem.includes(`'${dir}'`) && /search|traverse/.test(problem))).toBe(true);
+    // Control: the same directory 0755 is no problem of traversal.
+    const open = await problemsWith(asked => (asked === dir ? { uid: 0, gid: 4_000_009_999, mode: 0o40755 } : null));
+    expect(open.filter(problem => problem.includes(`'${dir}'`))).toEqual([]);
+  });
+
+  test('CLAUDE_CODE_BIN is held to the same rule on the TURN door — a CLI under a daemon-only 0700 directory is refused at admission (and said at boot); the git door does not ask', async () => {
+    const { confinementProblems, bootConfinementProblems } = await import('../src/drivers/confinement');
+    const dir = shortScratch('cli');
+    const bin = join(dir, 'claude');
+    writeFileSync(bin, '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+    chmodSync(bin, 0o755);
+    const real = realpathSync(bin);
+    const stat = (asked: string) => (asked === dirname(real) ? { uid: GATE_IDS.serviceUid, gid: GATE_IDS.serviceUid, mode: 0o40700 } : null);
+    const host = await hostWith([['alpha', 1]], { hostOverrides: { stat: (path: string) => stat(path) ?? TRAVERSABLE_STAT(path) } });
+    const policy = { ...host.policy, unitExec: { ...host.policy.unitExec, agentClis: { claude_code: bin } } };
+    const named = (problems: readonly string[]) => problems.some(problem => problem.includes('CLAUDE_CODE_BIN') && problem.includes(dirname(real)));
+    expect({
+      turn: named(await confinementProblems(policy as never, 'turn', 'claude_code')),
+      boot: named(await bootConfinementProblems(policy as never)),
+      git: named(await confinementProblems(policy as never, 'git')),
+    }).toEqual({ turn: true, boot: true, git: false });
+    // Control: a traversable directory is no refusal.
+    const fine = await hostWith([['beta', 2]]);
+    const finePolicy = { ...fine.policy, unitExec: { ...fine.policy.unitExec, agentClis: { claude_code: bin } } };
+    expect(named(await confinementProblems(finePolicy as never, 'turn', 'claude_code'))).toBe(false);
+  });
+
   test('the shim in a directory identity #2 can write (its private group, 0775) is refused', async () => {
     const dir = shimDir();
     const problems = await problemsWith(asked => (asked === dir ? { uid: 0, gid: GATE_IDS.privateGid(2), mode: 0o40775 } : null));
     expect(problems.some(problem => problem.includes(dir) && (problem.includes(String(GATE_IDS.identityUid(2))) || problem.includes('_2')))).toBe(true);
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * The polkit stop grant — PROVED before work, not discovered at the first interrupt (round 6)
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+describe('the polkit STOP grant is proved at boot and admission, not discovered at the first interrupt', () => {
+  const DENIED = { code: 4, stderr: 'Failed to stop dedalo-site-test-agent-s1-git@0-0-0.service: Access denied' };
+
+  test('a PID 1 that DENIES the stop (rule removed, polkitd masked or absent) is a named problem on every door and at boot — before any run starts', async () => {
+    const { confinementProblems, bootConfinementProblems } = await import('../src/drivers/confinement');
+    const host = await hostWith([['alpha', 1]]);
+    const probed: string[][] = [];
+    host.standIn.fault = (verb, units) => {
+      if (verb !== 'stop') return null;
+      probed.push([...units]);
+      return DENIED;
+    };
+    const named = (problems: readonly string[]) => problems.some(problem => /polkit/.test(problem) && problem.includes('@0-0-0.service'));
+    expect({
+      git: named(await confinementProblems(host.policy, 'git')),
+      turn: named(await confinementProblems(host.policy, 'turn')),
+      boot: named(await bootConfinementProblems(host.policy)),
+    }).toEqual({ git: true, turn: true, boot: true });
+    // The probe is a no-op stop of a never-instantiated instance of a DECLARED site (pid 0, uid 0:
+    // no real run is ever that), inside the rule's grammar — never a live run, never a start.
+    expect([...new Set(probed.flat())]).toEqual([`${host.policy.unitPrefix}s1-git@0-0-0.service`]);
+    // …and it is refused at admission, typed, with nothing connected.
+    const { assertConfinementAvailable } = await import('../src/drivers/confinement');
+    const refused = await caught(() => assertConfinementAvailable('git', host.policy, undefined, 'alpha'));
+    expect({ typed: (refused as Error | null)?.name, polkit: /polkit/.test(String((refused as Error | null)?.message)), connects: host.standIn.connects.length }).toEqual({
+      typed: 'ConfinementUnavailableError',
+      polkit: true,
+      connects: 0,
+    });
+  });
+
+  test('a GRANTED stop is believed briefly (no probe per run); a refusal is never remembered', async () => {
+    const { confinementProblems } = await import('../src/drivers/confinement');
+    const host = await hostWith([['alpha', 1]]);
+    let stops = 0;
+    let deny = false;
+    host.standIn.fault = verb => {
+      if (verb !== 'stop') return null;
+      stops++;
+      return deny ? DENIED : null;
+    };
+    const polkit = (problems: readonly string[]) => problems.some(problem => /polkit/.test(problem));
+    expect(polkit(await confinementProblems(host.policy, 'git'))).toBe(false);
+    expect(polkit(await confinementProblems(host.policy, 'git'))).toBe(false);
+    expect(stops).toBe(1);
+    // A refusal on a fresh host is asked again on the next run, and recovers the moment it holds.
+    const other = await hostWith([['beta', 2]]);
+    let otherStops = 0;
+    other.standIn.fault = verb => {
+      if (verb !== 'stop') return null;
+      otherStops++;
+      return deny ? DENIED : null;
+    };
+    deny = true;
+    expect(polkit(await confinementProblems(other.policy, 'git'))).toBe(true);
+    deny = false;
+    expect(polkit(await confinementProblems(other.policy, 'git'))).toBe(false);
+    expect(otherStops).toBe(2);
   });
 });
 

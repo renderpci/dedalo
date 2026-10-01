@@ -339,9 +339,26 @@ interface ProcessReach {
 
 const TS = new Bun.Transpiler({ loader: 'ts' });
 
+/**
+ * EVERY IMPORT A FILE MAKES, as the module graph sees it — the STATIC ones from the source (the
+ * transpiler elides an import used only as a type, which is no edge), and every DYNAMIC import
+ * and `require` from the CONSTANT-FOLDED output. Round 6, measured: `import('node:' +
+ * 'child_process')`, ``import(`node:${'child_process'}`)`` and `import('../util/' + 'spawn')` are
+ * literals only after the transpiler folds them, so a source-level scan reported NOTHING (no
+ * reacher, no refusal) while the computed-import escape — which runs on the folded output — saw
+ * a literal and passed it too. One scan, folded, for all three censuses and the leaf rule; an
+ * argument that does not fold stays computed and is the `import(` escape.
+ */
+function scanAll(code: string): ReturnType<typeof TS.scanImports> {
+	return [
+		...TS.scanImports(code).filter((entry) => entry.kind === 'import-statement'),
+		...TS.scanImports(TS.transformSync(code)).filter((entry) => entry.kind !== 'import-statement'),
+	];
+}
+
 /** What one source file can reach that starts a process. */
 function processReach(code: string, file: string): ProcessReach {
-	const scanned = TS.scanImports(code);
+	const scanned = scanAll(code);
 	const imports = scanned.filter((entry) => PROCESS_MODULES.has(entry.path));
 	const bindings: string[] = [];
 	const processAliases: string[] = [];
@@ -630,6 +647,17 @@ describe('every process the site-builder daemon starts is accounted for', () => 
 				"export const go = () => Reflect.get(() => 0, 'constructor')('return Bun')().spawn(['id']);\n",
 			'inspector.ts':
 				"import { Session } from 'node:inspector';\nexport const go = () => new Session();\n",
+			// A CONSTANT-FOLDED specifier is a literal only after the transpiler folds it (round 6,
+			// measured: `import('node:' + 'child_process')` spawned `id -u` with the census green —
+			// the source-level scan reported nothing, and the escape pattern ran on the folded code).
+			'folded.ts':
+				"export const go = async () => (await import('node:' + 'child_process')).spawnSync('id', ['-u']);\n",
+			'foldedtemplate.ts':
+				"export const go = async () => (await import(`node:${'child_process'}`)).spawnSync('id');\n",
+			'foldedvm.ts':
+				"export const go = async () => (await import('node:' + 'vm')).runInThisContext('1');\n",
+			'foldedrequire.ts':
+				"export const go = () => require('node:' + 'child_process').spawnSync('id');\n",
 			// A clause the transpiler prints over SEVERAL lines (as written) is an import too.
 			'multiline.ts':
 				"import {\n  spawn as run,\n  type ChildProcess,\n} from 'node:child_process';\nexport const go = (): ChildProcess => run('/bin/sh');\n",
@@ -1126,7 +1154,7 @@ function runnerReach(files: readonly string[], root: string): RunnerReach {
 		const file = relative(root, path);
 		if (file === 'util/spawn.ts') continue;
 		const code = readFileSync(path, 'utf8');
-		const hits = TS.scanImports(code).filter((entry) => resolvesTo(path, entry.path, target));
+		const hits = scanAll(code).filter((entry) => resolvesTo(path, entry.path, target));
 		if (hits.length === 0) continue;
 		if (hits.some((entry) => entry.kind === 'import-statement')) importers.push(file);
 		for (const entry of hits) {
@@ -1247,6 +1275,13 @@ describe('a build step, an install script and a git hook run as the agent, never
 			join(dir, 'sites/dynamic.ts'),
 			"export const go = async () => (await import('../util/spawn')).runBinary(['git'], { timeoutMs: 1 });\n",
 		);
+		// …and a CONSTANT-FOLDED one (round 6, measured: `'../util/' + 'spawn'` was no importer
+		// and no refusal — git run as the daemon uid with §6 green).
+		const folded = plant(
+			planted,
+			join(dir, 'sites/folded.ts'),
+			"export const go = async () => (await import('../util/' + 'spawn')).runBinary(['git'], { timeoutMs: 1 });\n",
+		);
 		// …and an EXEMPT importer that hands the runner on (a re-export makes every importer of
 		// it a runner importer while the census's own list stays put) is refused, too.
 		const laundered = plant(
@@ -1269,6 +1304,7 @@ describe('a build step, an install script and a git hook run as the agent, never
 		expect([...reach.refused].sort()).toEqual(
 			[
 				`${relative(dir, dynamic)}: dynamic-import ../util/spawn`,
+				`${relative(dir, folded)}: dynamic-import ../util/spawn`,
 				`${relative(dir, laundered)}: re-exports runBinary`,
 				'util/sibling.ts: re-export ./spawn',
 			].sort(),
@@ -1433,7 +1469,7 @@ interface FsReach {
  * reported as both a write and a read, so no exemption is silent about it.
  */
 function fsReach(code: string): FsReach {
-	const unresolvable = TS.scanImports(code)
+	const unresolvable = scanAll(code)
 		.filter((entry) => FS_MODULES.has(entry.path) && entry.kind !== 'import-statement')
 		.map((entry) => `${entry.kind} ${entry.path}`);
 	const define: Record<string, string> = { Bun: FS_BUN };
@@ -1548,6 +1584,96 @@ const REFUSAL_BY_CONSTRUCTION: Readonly<Record<string, string>> = Object.freeze(
 });
 
 /**
+ * A call's DESTINATION KEY: `name(arg, …)` — its argument list as the transpiler prints it (an
+ * object literal as `{…}`, a binding sentinel as the name it stands for), cut at the call's own
+ * `)` or at the end of its line. A reference that is not a call (`const wf = writeFile`) keys as
+ * its bare text. Exact strings, so an exemption names WHERE each call writes or reads.
+ */
+function callKey(call: FsCall): string {
+	const text = call.text
+		.replace(new RegExp(`${FS_NAMED}([\\w$]+?)__`, 'g'), '$1')
+		.replaceAll(FS_NS, 'fs')
+		.replaceAll(FS_BUN, 'Bun');
+	const open = text.indexOf('(');
+	if (open < 0) return text;
+	const args: string[] = [];
+	let depth = 0;
+	let quote = '';
+	let current = '';
+	for (let i = open + 1; i < text.length; i++) {
+		const ch = text[i] as string;
+		if (quote) {
+			current += ch;
+			if (ch === '\\') current += text[++i] ?? '';
+			else if (ch === quote) quote = '';
+			continue;
+		}
+		if (ch === '"' || ch === "'" || ch === '`') quote = ch;
+		else if (ch === '(' || ch === '[' || ch === '{') depth++;
+		else if (ch === ')' || ch === ']' || ch === '}') {
+			if (depth === 0) break;
+			depth--;
+		} else if (ch === ',' && depth === 0) {
+			args.push(current.trim());
+			current = '';
+			continue;
+		}
+		current += ch;
+	}
+	if (current.trim()) args.push(current.trim());
+	return `${text.slice(0, open)}(${args.map((arg) => (arg.startsWith('{') ? '{…}' : arg)).join(', ')})`;
+}
+
+/** The destination keys of a file's raw writes (`side: 'writes'`) or reads, sorted. */
+function callKeys(code: string, side: 'writes' | 'reads'): string[] {
+	return fsReach(code)[side].map(callKey).sort();
+}
+
+/**
+ * EVERY EXEMPTED WRITE, KEYED BY DESTINATION — per file, the exact calls (`callKey`). The reason
+ * above says why a file may write raw; this says WHAT it writes, so a second write added to an
+ * exempt file (`writeFile(join(config.SITES_ROOT, slug, 'site.json'), …)` beside the one it
+ * already has) is red — the per-FILE key alone passed it (round 6, the §1 "fifth call" shape).
+ * Its keys are the exemption's keys, both ways.
+ */
+const RAW_FS_CALLS: Readonly<Record<string, readonly string[]>> = Object.freeze({
+	'audit.ts': ['appendFile(auditPath(), serialized + `)', 'mkdir(config.AUDIT_DIR, {…})'],
+	// THE ONE write: the declared-unconfined run's HOME (`AGENT_CONFINEMENT=none` only).
+	'drivers/confinement.ts': ['mkdirSync(home, {…})'],
+	'provision/apply.ts': [
+		'chmodSync(path, mode)',
+		'chmodSync(temporary, mode)',
+		'mkdirSync(path, {…})',
+		'renameSync(from, to)',
+		'renameSync(temporary, path)',
+		'symlinkSync(target, path)',
+		'writeFileSync(temporary, body, {…})',
+	],
+	'provision/adopt.ts': ['renameSync(from, to)'],
+	'context/agents_md.ts': ['symlink("AGENTS.md", claudePath)'],
+	'sites/template.ts': ['cp(src, dest, {…})'],
+	'build/promote.ts': [
+		'copyFile(source, destination)',
+		'mkdir(surface.storeDir, {…})',
+		'mkdir(to, {…})',
+		'rename(staging, target)',
+		'rename(tmp, surface.linkPath)',
+		'symlink(relativeTarget, tmp)',
+	],
+	'sites/webspace.ts': ['writeFileSync(probe, "", {…})'],
+	'index.ts': ['chmodSync(config.LISTEN_SOCKET, 432)'],
+	'instance/roots.ts': [
+		'openSync(path, "a")',
+		'openSync(probe, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 384)',
+	],
+	'egress/gate.ts': [
+		'chmod(mcpPath, SOCKET_MODE)',
+		'chmod(proxyPath, SOCKET_MODE)',
+		'chown(path, uid, gid)',
+	],
+});
+
+/**
  * The one module every daemon-side write into an agent-writable tree goes through. It is
  * excluded from the census because it IS the answer to it — and it is held to a stricter
  * rule of its own, three legs below.
@@ -1583,6 +1709,22 @@ describe('a site workspace is CREATED shared, not created and hoped over', () =>
 				file,
 				live: true,
 				stated: true,
+			});
+		}
+		// KEYED BY DESTINATION: each exempt file makes exactly its pinned calls — one more, one
+		// fewer or one aimed elsewhere is a decision, not a covered call — and nothing no binding
+		// follows (an exempt file's unresolvable fs reach would hide calls from the key).
+		expect(Object.keys(RAW_FS_CALLS).sort()).toEqual(Object.keys(RAW_FS_EXEMPT).sort());
+		for (const file of Object.keys(RAW_FS_EXEMPT)) {
+			const code = readFileSync(join(SOURCE_ROOT, file), 'utf8');
+			expect({
+				file,
+				writes: callKeys(code, 'writes'),
+				unresolvable: fsReach(code).unresolvable,
+			}).toEqual({
+				file,
+				writes: [...(RAW_FS_CALLS[file] ?? [])].sort(),
+				unresolvable: [],
 			});
 		}
 		// And an exemption that claims to be REFUSED BY CONSTRUCTION rather than out of the
@@ -1813,6 +1955,12 @@ describe('a site workspace is CREATED shared, not created and hoped over', () =>
 			"const { writeFile } = await import('node:fs/promises');\nawait writeFile(p, x);\n",
 		);
 		plant(planted, join(sites, 'required.ts'), "require('fs').writeFileSync(p, x);\n");
+		// …a CONSTANT-FOLDED specifier included (round 6, measured: writes [] and unresolvable []).
+		plant(
+			planted,
+			join(sites, 'folded.ts'),
+			"const { writeFile } = await import('node:' + 'fs/promises');\nawait writeFile(p, x);\n",
+		);
 		plant(
 			planted,
 			join(sites, 'reexport.ts'),
@@ -1831,6 +1979,7 @@ describe('a site workspace is CREATED shared, not created and hoped over', () =>
 			'sites/bun_write.ts',
 			'sites/destructure.ts',
 			'sites/dynamic.ts',
+			'sites/folded.ts',
 			'sites/ns_promises.ts',
 			'sites/ns_rename.ts',
 			'sites/ns_sync.ts',
@@ -1891,6 +2040,11 @@ const RAW_READ_EXEMPT: Readonly<Record<string, string>> = Object.freeze({
 	'provision/fleet.ts':
 		'The fleet index of instance declarations under the provisioner config root, outside ' +
 		'`SITES_ROOT` and root-owned.',
+	'drivers/confinement.ts':
+		"The TURN units' system gitconfig `<AGENT_STATE_ROOT>/turn.gitconfig` (round 6): ROOT's file " +
+		'in the root 0755 agent state root — outside `SITES_ROOT` and every workspace, renamed by ' +
+		'nobody but root — lstat-proved a regular non-link file of the provisioner, writable by ' +
+		'nobody else, BEFORE it is read; its directives are compared, never served.',
 	'drivers/egress_shim.ts':
 		'NOT the daemon: the shim runs INSIDE the unit root rendered for the site, as the ' +
 		"site's identity. Its one read is `/proc/self/cgroup` — its OWN unit's name, which it " +
@@ -1903,6 +2057,35 @@ const RAW_READ_EXEMPT: Readonly<Record<string, string>> = Object.freeze({
 		'The TEMPLATE catalogue under `TEMPLATES_DIR` — a repo-owned, read-only tree outside ' +
 		'`SITES_ROOT`. The one read INSIDE a workspace (the placeholder rewrite) goes through ' +
 		'`readFileShared`, which is the required-call leg below.',
+});
+
+/**
+ * EVERY EXEMPTED READ, KEYED BY SOURCE — the read side of `RAW_FS_CALLS`: a second read in an
+ * exempt file (`readFile(join(ws, '.builder/builds/b1.log'))` beside `sites/template.ts`'s
+ * catalogue read — the measured confused-deputy plant) is red, not covered by the file's key.
+ */
+const RAW_READ_CALLS: Readonly<Record<string, readonly string[]>> = Object.freeze({
+	'audit.ts': ['readFile(path, "utf8")'],
+	'config.ts': [
+		'readFileSync(apiKeyFile, "utf8")',
+		'readFileSync(envFilePath, "utf8")',
+		'readFileSync(path, "utf8")',
+	],
+	'instance/roots.ts': ['readFileSync(marker, "utf8")'],
+	'provision/apply.ts': [
+		'readFileSync("/etc/login.defs", "utf8")',
+		'readFileSync(path, "utf8")',
+		'readFileSync(path, "utf8")',
+		'readFileSync(path, "utf8")',
+	],
+	'provision/adopt.ts': ['readFileSync(join(root, INSTANCE_MARKER), "utf8")'],
+	'provision/fleet.ts': ['readFileSync(manifestPath, "utf8")'],
+	// THE ONE read: root's turn gitconfig, lstat-proved first (`turnGitconfigProblem`).
+	'drivers/confinement.ts': ['readFileSync(path, "utf8")'],
+	// THE ONE read: its own unit's cgroup, said in its hello frame.
+	'drivers/egress_shim.ts': ['readFileSync("/proc/self/cgroup", "utf8")'],
+	'sites/site_table.ts': ['readFileSync(path, "utf8")'],
+	'sites/template.ts': ['readFile(metaPath, "utf8")'],
 });
 
 /** Every file that reads a path's CONTENT rather than reading through the shared door. */
@@ -1932,6 +2115,50 @@ describe('what the daemon reads back out of an agent-writable tree is proved, no
 				stated: true,
 			});
 		}
+		// KEYED BY SOURCE, both ways — as the mutation census.
+		expect(Object.keys(RAW_READ_CALLS).sort()).toEqual(Object.keys(RAW_READ_EXEMPT).sort());
+		for (const file of Object.keys(RAW_READ_EXEMPT)) {
+			const code = readFileSync(join(SOURCE_ROOT, file), 'utf8');
+			expect({
+				file,
+				reads: callKeys(code, 'reads'),
+				unresolvable: fsReach(code).unresolvable,
+			}).toEqual({
+				file,
+				reads: [...(RAW_READ_CALLS[file] ?? [])].sort(),
+				unresolvable: [],
+			});
+		}
+	});
+
+	test('a SECOND call in an exempt file is red — the key is the destination, not the file (round 6)', () => {
+		// The measured plants, appended to the real files: each one leaves the file exempt by
+		// NAME, so only the destination key can see it.
+		const confinement = readFileSync(join(SOURCE_ROOT, 'drivers/confinement.ts'), 'utf8');
+		const template = readFileSync(join(SOURCE_ROOT, 'sites/template.ts'), 'utf8');
+		const plantedWrite = callKeys(
+			`${confinement}\nexport const plant = (slug: string) => mkdirSync(join(config.SITES_ROOT, slug, '.builder'), { recursive: true });\n`,
+			'writes',
+		);
+		const plantedRead = callKeys(
+			`${template}\nexport const plant = (ws: string) => readFile(join(ws, '.builder/builds/b1.log'), 'utf8');\n`,
+			'reads',
+		);
+		// …only when the planted name is an fs binding the file already imports: prove it is.
+		expect(plantedWrite.length).toBe((RAW_FS_CALLS['drivers/confinement.ts'] ?? []).length + 1);
+		expect(plantedRead.length).toBe((RAW_READ_CALLS['sites/template.ts'] ?? []).length + 1);
+		expect(plantedWrite).not.toEqual([...(RAW_FS_CALLS['drivers/confinement.ts'] ?? [])].sort());
+		expect(plantedRead).not.toEqual([...(RAW_READ_CALLS['sites/template.ts'] ?? [])].sort());
+		// …and the SAME count aimed elsewhere is red too (the key is the argument list).
+		expect(
+			callKey({
+				name: 'mkdirSync',
+				text: 'mkdirSync(join(config.SITES_ROOT, slug), { recursive: true });',
+			}),
+		).toBe('mkdirSync(join(config.SITES_ROOT, slug), {…})');
+		expect(
+			callKey({ name: 'mkdirSync', text: 'mkdirSync(home, { recursive: true, mode: 448 });' }),
+		).toBe('mkdirSync(home, {…})');
 	});
 
 	test('the doors that serve a tree back to the museum read through the shared helpers', () => {
@@ -1984,9 +2211,16 @@ describe('what the daemon reads back out of an agent-writable tree is proved, no
 			join(sites, 'stream.ts'),
 			"import { createReadStream as crs } from 'fs';\ncrs(p);\n",
 		);
+		// …and a CONSTANT-FOLDED specifier (round 6, measured: reads [] and unresolvable []).
+		plant(
+			planted,
+			join(sites, 'folded.ts'),
+			"const { readFile } = await import('node:' + 'fs/promises');\nconst t = await readFile(p);\n",
+		);
 		expect(rawFsReaders(planted, dir)).toEqual([
 			'sites/alias.ts',
 			'sites/bun.ts',
+			'sites/folded.ts',
 			'sites/ns_read.ts',
 			'sites/rogue.ts',
 			'sites/stream.ts',
@@ -2489,8 +2723,8 @@ describe('§8 a confined run reaches its own egress door and nothing else', () =
 		// The module graph as BUN resolves it (static imports, re-exports, dynamic import() and
 		// require()), not a regex over the text: a string literal in an `export const` is not
 		// an import, and a multi-line import is still one.
-		const transpiler = new Bun.Transpiler({ loader: 'ts' });
-		const specifiersOf = (code: string) => transpiler.scanImports(code).map((entry) => entry.path);
+		// …folded first (`scanAll`): `import('../' + 'config')` is an import of the config.
+		const specifiersOf = (code: string) => scanAll(code).map((entry) => entry.path);
 		for (const [file, extra] of Object.entries(allowed)) {
 			const specifiers = specifiersOf(readFileSync(file, 'utf8'));
 			expect({ file: relative(PACKAGE, file), scanned: specifiers.length > 0 }).toEqual({

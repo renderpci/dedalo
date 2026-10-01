@@ -561,7 +561,14 @@ Read the design out of five of those rows:
   retired shared `home/` row (2770, one HOME for every site of a museum — the cross-site
   plant channel), which `provision apply` archives BESIDE ITSELF (`<home>.retired-<utc>`: a
   rename never leaves its filesystem, and `roots.home` may be declared on any volume) rather
-  than copying anywhere. The retirement (locks, archives) is the plan's LAST phase, after the
+  than copying anywhere — CLOSED first: the directory itself re-owned root:root and re-moded
+  0700 before the rename (never recursively), or every site identity, whose primary group is
+  the instance group, could read every site's pre-migration `~/.claude` there. Beside the
+  `s<k>` directories the root holds one root-rendered file, `turn.gitconfig` (0644), which every
+  TURN unit binds read-only over `/etc/gitconfig`: `safe.bareRepository = explicit` and nothing
+  else, because with the workspace's `.git` masked git's discovery takes the workspace ROOT for
+  a bare repository (`drivers/agent_identity.ts`); the daemon refuses a turn when the file is
+  absent or says anything else, and when the workspace root carries `HEAD`. The retirement (locks, archives) is the plan's LAST phase, after the
   daemon is started and the vhosts reloaded: one that fails halts only itself, and a re-run
   whose env already binds every site, with the legacy agent retired, is not a migration —
   it stops nothing, re-owns nothing and leaves the resume epoch alone; it retries the

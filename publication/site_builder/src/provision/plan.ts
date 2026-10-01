@@ -496,6 +496,10 @@ export interface ExecAction extends ActionBase {
  *   - `into`: to `<dir>/<stem>.<utc>` — a removed site's state, whose `<agentStateRoot>` and
  *     `retiredDir` are siblings under the state dir.
  *
+ * CLOSED FIRST: apply re-owns and re-modes the directory itself root:root 0700 (`ARCHIVE_MODE`,
+ * never recursively) BEFORE the rename — the retired shared HOME is 2770 <svc>:<instance group>,
+ * and beside itself it would stay readable to every site identity (whose primary group that is).
+ *
  * The instant is apply's, so the plan stays pure. Absent at apply time is a skip.
  */
 export interface ArchiveAction extends ActionBase {
@@ -1991,8 +1995,8 @@ function retireActions(layout: InstanceLayout, host: HostState, agents: AgentPla
       // a rename across filesystems is EXDEV.
       to: { beside: true },
       reason:
-        `the shared agent HOME is retired — archived beside itself, NOT copied into any site's HOME: it ` +
-        `was the one directory every site's runs could plant in for every other site`,
+        `the shared agent HOME is retired — closed to root:root 0700 and archived beside itself, NOT copied ` +
+        `into any site's HOME: it was the one directory every site's runs could plant in for every other site`,
     });
   }
   for (const removed of agents.allocation.removed) {
@@ -2358,7 +2362,7 @@ export function describe(action: Action): string {
     case 'exec':
       return `exec    ${action.argv.join(' ')} — ${action.reason}`;
     case 'archive':
-      return `archive ${action.from} -> ${'beside' in action.to ? `${action.from}.retired-<utc>` : `${action.to.dir}/${action.to.stem}.<utc>`} — ${action.reason}`;
+      return `archive ${action.from} (closed root:root 0700) -> ${'beside' in action.to ? `${action.from}.retired-<utc>` : `${action.to.dir}/${action.to.stem}.<utc>`} — ${action.reason}`;
     case 'unlink':
       return `unlink  ${action.path} — ${action.reason}`;
     default: {

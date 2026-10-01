@@ -538,6 +538,19 @@ describe('G18 — provision apply, in the spec §5 order', () => {
     const archived = readdirSync(homeParent).filter(name => name.startsWith(`${homeName}.retired-`));
     expect({ archived: archived.length, homeGone: existsSync(onHost(s.prefix, s.layout.roots.home)) }).toEqual({ archived: 1, homeGone: false });
     expect(existsSync(join(homeParent, archived[0] as string, '.claude', 'settings.json'))).toBe(true);
+    // …and CLOSED before it moves: root:root 0700, the directory itself (never recursive through
+    // whatever the shared agent planted in it). Left as it was (2770 <svc>:<instance group>), the
+    // archive beside it sits in a root 0755 state dir every site identity can traverse, and every
+    // site's run — the instance group is each identity's PRIMARY group — could read every other
+    // site's pre-migration `~/.claude` (round 6, S3).
+    const home = s.layout.roots.home;
+    const opIndex = (op: string, ...args: unknown[]) => s.ops.findIndex(entry => entry.op === op && JSON.stringify(entry.args) === JSON.stringify(args));
+    const moved = s.ops.findIndex(entry => entry.op === 'rename' && entry.args[0] === home);
+    expect({
+      chownedFirst: opIndex('chown', home, 'root', 'root') >= 0 && opIndex('chown', home, 'root', 'root') < moved,
+      closedFirst: opIndex('chmod', home, 0o700) > opIndex('chown', home, 'root', 'root') && opIndex('chmod', home, 0o700) < moved,
+      recursive: s.ops.some(entry => entry.op === 'exec' && /^chown -R|^chmod -R/.test((entry.args[0] as string[]).join(' ')) && (entry.args[0] as string[]).includes(home)),
+    }).toEqual({ chownedFirst: true, closedFirst: true, recursive: false });
     const stateRoot = (s.layout as unknown as Record<string, string>).agentStateRoot as string;
     const planted: string[] = [];
     const walk = (dir: string) => {

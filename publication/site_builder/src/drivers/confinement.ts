@@ -57,7 +57,7 @@
  */
 
 import { execFile, spawnSync } from 'node:child_process';
-import { existsSync, lstatSync, mkdirSync, readlinkSync, realpathSync, statSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, realpathSync, type Stats, statSync } from 'node:fs';
 import { connect as netConnect, type Socket } from 'node:net';
 import { userInfo } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
@@ -75,8 +75,14 @@ import {
   agentUnitNames,
   egressDirForSite,
   legacyTransientUnitGlob,
+  gitconfigDirectives,
   legacyTransientUnitRegex,
+  TURN_BARE_REPOSITORY_MARKER,
+  TURN_SYSTEM_GITCONFIG_DIRECTIVES,
+  turnBareRepositoryMarker,
+  turnGitconfigBind,
   turnMaskedPaths,
+  turnSystemGitconfigPath,
   unitFixedEnvironment,
 } from './agent_identity';
 import {
@@ -214,6 +220,12 @@ export interface ConfinementPolicy {
     readonly runtime: string;
     readonly shim: string;
     readonly maskedPrefixes: readonly string[];
+    /**
+     * What the TURN unit's shim executes next: each driver's configured CLI (CLAUDE_CODE_BIN).
+     * Held to the same trust rule as the runtime — probed as the daemon, it says nothing about
+     * whether the site identities can reach it. Absent = not configured (the driver refuses).
+     */
+    readonly agentClis?: Readonly<Partial<Record<DriverId, string>>>;
   };
   /** Each door's wall-clock ceiling (ms): the unit's RuntimeMaxSec is this + 15 s. */
   readonly doorTimeoutsMs: Readonly<Record<ConfinementDoor, number>>;
@@ -514,7 +526,12 @@ export function policyFromConfig(): ConfinementPolicy {
       providerHosts: parseHostList(config.AGENT_PROVIDER_HOSTS),
       registryHosts: parseHostList(config.BUILD_REGISTRY_HOSTS),
     },
-    unitExec: { runtime: process.execPath, shim: SHIM_PATH, maskedPrefixes: UNIT_MASKED_PREFIXES },
+    unitExec: {
+      runtime: process.execPath,
+      shim: SHIM_PATH,
+      maskedPrefixes: UNIT_MASKED_PREFIXES,
+      agentClis: config.CLAUDE_CODE_BIN ? { claude_code: config.CLAUDE_CODE_BIN } : {},
+    },
     doorTimeoutsMs: {
       turn: config.SESSION_TURN_TIMEOUT_MS,
       build: Math.max(config.INSTALL_TIMEOUT_MS, config.BUILD_TIMEOUT_MS),
@@ -682,6 +699,16 @@ function executableProblem(
           `own file over what every site's unit executes first.`
         );
       }
+      // …and every directory on the way must be SEARCHABLE by it: the file's own bits say
+      // nothing about reaching it, and a 0750 directory of another group makes every run
+      // fail at its first exec (203/EXEC, or the shim's 127) after the gate opened — nameless.
+      if ((bitsFor(parent, identity) & 0o1) === 0) {
+        return (
+          `${label} ('${real}') lies under '${dir}', which ${who} cannot search (mode ` +
+          `${(parent.mode & 0o7777).toString(8)}, owner ${parent.uid}, group ${parent.gid}) — the unit runs AS that ` +
+          `identity, so it could never reach it. Make the directory traversable (o+x) or install it elsewhere.`
+        );
+      }
       if (dir === dirname(dir)) break;
     }
   }
@@ -840,6 +867,27 @@ export async function confinementProblems(policy: ConfinementPolicy, door: Confi
     ['the unit property table', join(shimDir, 'unit_properties.ts'), 'read'],
   ] as const) {
     const problem = executableProblem(label, path, need, policy, resolved);
+    if (problem) problems.push(problem);
+  }
+  // THE TURN'S CLI — the next thing its unit executes, as every identity: the run's driver's at
+  // admission, every configured one at boot (no driver: the sites may differ).
+  if (door === 'turn') {
+    const clis = Object.entries(policy.unitExec.agentClis ?? {}).filter(
+      ([id, bin]) => typeof bin === 'string' && bin !== '' && (driver === undefined || id === driver),
+    );
+    for (const [id, bin] of clis) {
+      const key = id === 'claude_code' ? 'CLAUDE_CODE_BIN' : `the ${id} binary`;
+      const problem = executableProblem(`the ${id} CLI (${key})`, bin as string, 'execute', policy, resolved);
+      if (problem) problems.push(problem);
+    }
+  }
+  // THE STOP GRANT, PROVED: without it no run can be interrupted or timed out (a run whose
+  // shim ignores EOF holds its site quarantined until RuntimeMaxSec), and the boot reconcile
+  // cannot clean a crash's leftover — so it is asked before any run starts, never discovered at
+  // the first interrupt. One declared site's probe stands for all: the rule grants them together.
+  const firstDeclared = ordered[0]?.[1];
+  if (firstDeclared !== undefined && UNIT_PREFIX_PATTERN.test(policy.unitPrefix)) {
+    const problem = await stopGrantProblem(policy, firstDeclared);
     if (problem) problems.push(problem);
   }
   try {
@@ -1101,6 +1149,53 @@ async function idleState(policy: ConfinementPolicy, k: number): Promise<{ idle: 
       .filter(Boolean)
       .join('; '),
   };
+}
+
+/** How long a PROVED stop grant is believed before it is asked again (a refusal never is). */
+export const STOP_GRANT_TTL_MS = 30_000;
+
+/** Per (systemctl, probe unit): when the grant was last proved. */
+const stopGrants = new Map<string, number>();
+
+/**
+ * The instance the grant probe stops: `<prefix>s<k>-git@0-0-0.service` — inside the rule's
+ * grammar (render/agent_authorization.ts), never a real run (PID 1 names an accepted connection
+ * after its peer's pid and uid, and no peer is pid 0, uid 0), so the stop is a no-op job on a
+ * unit that is not running: it exercises exactly polkit's manage-units check with verb=stop.
+ */
+export function stopGrantProbeUnit(prefix: string, k: number): string {
+  return `${agentUnitNames(prefix, k, 'git').instanceStem}0-0-0.service`;
+}
+
+/**
+ * THE POLKIT STOP GRANT, ASKED OF PID 1 — the plan's `pkaction --version` proves only that a
+ * polkit able to read the rule is installed, not that the rule is there or polkitd answers. A
+ * granted answer is believed for STOP_GRANT_TTL_MS; a refusal is never remembered. null = proved.
+ */
+export async function stopGrantProblem(policy: ConfinementPolicy, k: number, now: () => number = Date.now): Promise<string | null> {
+  const unit = stopGrantProbeUnit(policy.unitPrefix, k);
+  const key = `${policy.systemctlBin}\u0000${unit}`;
+  const proved = stopGrants.get(key);
+  if (proved !== undefined && now() - proved < STOP_GRANT_TTL_MS) return null;
+  let answer: SystemctlAnswer;
+  try {
+    answer = await policy.host.systemctl(['stop', unit]);
+  } catch (error) {
+    return `PID 1 did not answer the stop-grant probe (systemctl stop ${unit}: ${String(error)}), so it is unknown whether this daemon may stop its sites' runs.`;
+  }
+  if (answer.code === 0) {
+    stopGrants.set(key, now());
+    return null;
+  }
+  const said = answer.stderr.trim() || answer.stdout.trim() || '(no message)';
+  if (/access denied|not authorized|interactive authentication required/i.test(said)) {
+    return (
+      `the polkit rule that grants this daemon STOP on its sites' runs is absent or polkitd is not running: the probe ` +
+      `'systemctl stop ${unit}' was denied (exit ${answer.code}: ${said}). Without it no run can be interrupted or timed ` +
+      `out. Run provision apply (it renders /etc/polkit-1/rules.d/) and make sure polkitd is installed and running.`
+    );
+  }
+  return `PID 1 refused the stop-grant probe 'systemctl stop ${unit}' (exit ${answer.code}: ${said}).`;
 }
 
 /**
@@ -1433,6 +1528,48 @@ function execCommand(value: string | undefined): { path: string; argv: string[];
 }
 
 /** `BindPaths=src:dst:rbind …` → `src:dst` pairs. */
+/** lstat, or null when the path does not exist (a dangling link EXISTS: lstat sees the link). */
+function lstatOrNull(path: string): Stats | null {
+  try {
+    return lstatSync(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
+/**
+ * THE TURN'S SYSTEM gitconfig, as root rendered it (`turnSystemGitconfigPath`) — or why not: a
+ * regular file (never a link), the PROVISIONER's, writable by nobody else, whose only directives
+ * are `TURN_SYSTEM_GITCONFIG_DIRECTIVES`. PID 1 binds whatever is there into every turn: absent,
+ * the unit would not start (a nameless failure); widened (`safe.directory = *`), it would OPEN the
+ * repository the mask closes.
+ */
+export function turnGitconfigProblem(policy: ConfinementPolicy): string | null {
+  const path = turnSystemGitconfigPath(policy.agentStateRoot);
+  let facts: Stats | null;
+  try {
+    facts = lstatOrNull(path);
+  } catch (error) {
+    return `'${path}' cannot be examined (${String(error)})`;
+  }
+  if (facts === null) return `'${path}' is absent`;
+  if (!facts.isFile()) return `'${path}' is not a regular file`;
+  if (facts.uid !== policy.host.provisionerUid) return `'${path}' is owned by uid ${facts.uid}, not the provisioner's`;
+  if ((Number(facts.mode) & 0o022) !== 0) return `'${path}' is writable by its group or by others (mode ${(Number(facts.mode) & 0o7777).toString(8)})`;
+  let body: string;
+  try {
+    body = readFileSync(path, 'utf8');
+  } catch (error) {
+    return `'${path}' cannot be read (${String(error)})`;
+  }
+  const directives = gitconfigDirectives(body);
+  if (JSON.stringify(directives) !== JSON.stringify(TURN_SYSTEM_GITCONFIG_DIRECTIVES)) {
+    return `'${path}' says ${JSON.stringify(directives)}, not exactly ${JSON.stringify(TURN_SYSTEM_GITCONFIG_DIRECTIVES)}`;
+  }
+  return null;
+}
+
 function bindPairs(value: string | undefined): string[] {
   return words(value).map(token => {
     const bare = token.replace(/^-/, '');
@@ -1675,7 +1812,12 @@ export async function conformance(k: number, door: ConfinementDoor, policy: Conf
     refuse('BindPaths', `loaded '${svc.BindPaths ?? ''}', expected '${expectedBinds.join(' ')}'`);
   }
   // The egress gate: root's directory, bound READ-ONLY (connect(2) needs no writable mount).
-  const expectedReadOnlyBinds = proxy ? [`${egressDirForSite(policy.agentSocketDir, k)}:${EGRESS_MOUNT}`] : [];
+  // …and, on the TURN door, root's system gitconfig over git's own (`turnGitconfigBind`: the
+  // agent CLI's git must not take the workspace ROOT for a bare repository once .git is masked).
+  const expectedReadOnlyBinds = [
+    ...(proxy ? [`${egressDirForSite(policy.agentSocketDir, k)}:${EGRESS_MOUNT}`] : []),
+    ...(door === 'turn' ? [turnGitconfigBind(policy.agentStateRoot)] : []),
+  ];
   if (!sameSet(bindPairs(svc.BindReadOnlyPaths), expectedReadOnlyBinds)) {
     refuse('BindReadOnlyPaths', `loaded '${svc.BindReadOnlyPaths ?? ''}', expected '${expectedReadOnlyBinds.join(' ')}'`);
   }
@@ -2041,6 +2183,25 @@ async function openConfinedRun(opts: ConfineOptions, policy: ConfinementPolicy):
               `Restore the site's repository (it is created with the site). Nothing was opened.`,
           );
         }
+      }
+      // …and the workspace ROOT must not be a repository itself: with `.git` masked, git's
+      // discovery takes a root carrying HEAD (+ objects/, refs/) for a BARE repository and runs
+      // its planted config. The unit's system gitconfig refuses that (git >= 2.38); this refuses
+      // it for every git, before anything connects (agent_identity.ts, layer 2).
+      const marker = turnBareRepositoryMarker(workspace);
+      if (lstatOrNull(marker) !== null) {
+        throw new ConfinementUnavailableError(
+          `site '${slug}''s workspace root carries '${TURN_BARE_REPOSITORY_MARKER}' ('${marker}'): it is shaped like a bare ` +
+            `repository, which the agent CLI's own git would use (and run a planted filter from) once the unit masks ` +
+            `'.git'. Remove it (nothing the site builds needs a '${TURN_BARE_REPOSITORY_MARKER}' at the root). Nothing was opened.`,
+        );
+      }
+      const gitconfig = turnGitconfigProblem(policy);
+      if (gitconfig) {
+        throw new ConfinementUnavailableError(
+          `the turn units' system git configuration ${gitconfig}. The turn unit binds it over /etc/gitconfig so the agent ` +
+            `CLI's git never takes the workspace root for a bare repository. Run provision apply. Nothing was opened.`,
+        );
       }
     }
     // 4. GATED — the site's own ROOT-PROVISIONED directory (the source of a bind PID 1

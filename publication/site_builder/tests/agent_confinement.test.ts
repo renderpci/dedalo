@@ -440,6 +440,8 @@ describe("the unit's ExecStart is the shim, and a shim the unit cannot trust is 
       runtime: process.execPath,
       shim: SHIM_PATH,
       maskedPrefixes: UNIT_MASKED_PREFIXES,
+      // …and the turn's CLI, held to the same trust rule as every identity (round 6).
+      agentClis: config.CLAUDE_CODE_BIN ? { claude_code: config.CLAUDE_CODE_BIN } : {},
     });
     expect([...UNIT_MASKED_PREFIXES].sort()).toEqual(['/home', '/root', '/run', '/tmp', '/var/tmp']);
   });

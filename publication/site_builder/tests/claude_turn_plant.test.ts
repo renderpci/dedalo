@@ -25,7 +25,7 @@
  */
 
 import { afterEach, describe, expect, test } from 'bun:test';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { bootSequence, daemonBootSteps } from '../src/boot';
@@ -758,5 +758,234 @@ describe('P12 — the turn’s own git sees no repository (a planted filter neve
     } finally {
       end(slug, 'turn');
     }
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * P12b — with `.git` masked, the WORKSPACE ROOT is no repository either (round 6)
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * A BARE repository planted at the workspace ROOT — `HEAD`, `objects/`, `refs/`, an `index` and a
+ * `config` — beside a real `.git`, which is then masked as the turn unit masks it. Exactly what a
+ * build's postinstall (the site identity, `.git` unmasked in the build unit) or the turn's own
+ * Write could leave. Its config runs a command for the CLI's `git log` (measured, git 2.54: a
+ * root that IS the git dir is no work tree, so `status` dies — but `log.showSignature` with a
+ * planted `gpg.program` runs that program for a commit carrying a `gpgsig` header) and keeps the
+ * clean filter for any git that does reach a work tree. Each marker is a file the plant creates.
+ */
+function bareRootPlantedWorkspace(ws: string): { subject: string; gpgRan: string; filterRan: string } {
+  const env = { PATH: '/usr/bin:/bin', GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1', GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' };
+  const git = (cwd: string, ...args: string[]): string => {
+    const result = Bun.spawnSync(['git', ...args], { cwd, env, stdout: 'pipe', stderr: 'pipe' });
+    if (result.exitCode !== 0) throw new Error(`git ${args.join(' ')}: ${result.stderr.toString()}`);
+    return result.stdout.toString().trim();
+  };
+  const markers = scratchDir('bare-plant-');
+  const gpgRan = join(markers, 'BARE_GPG_RAN');
+  const filterRan = join(markers, 'BARE_FILTER_RAN');
+  git(ws, 'init', '-q', '-b', 'main');
+  writeFileSync(join(ws, 'page.txt'), 'aaaa\n');
+  git(ws, 'add', 'page.txt');
+  git(ws, 'commit', '-q', '-m', 'seed');
+  // The bare repository AT THE ROOT: the same objects, refs and index…
+  for (const entry of ['HEAD', 'objects', 'refs', 'index']) cpSync(join(ws, '.git', entry), join(ws, entry), { recursive: true });
+  // …a HEAD commit that carries a signature (any bytes: git hands them to gpg.program)…
+  const subject = 'planted-bare-root';
+  const commit = join(markers, 'commit.txt');
+  writeFileSync(
+    commit,
+    `tree ${git(ws, 'rev-parse', 'HEAD^{tree}')}\nauthor t <t@t> 1700000000 +0000\ncommitter t <t@t> 1700000000 +0000\n` +
+      `gpgsig -----BEGIN PGP SIGNATURE-----\n \n AAAA\n -----END PGP SIGNATURE-----\n\n${subject}\n`,
+  );
+  const sha = git(ws, '--git-dir=.', 'hash-object', '-t', 'commit', '-w', commit);
+  writeFileSync(join(ws, 'refs', 'heads', 'main'), `${sha}\n`);
+  // …and the planted config: a program for `log`, a filter for anything with a work tree.
+  const gpg = join(markers, 'gpg.sh');
+  writeFileSync(gpg, `#!/bin/sh\n[ x$${TURN_GIT_MARK} = x1 ] && touch '${gpgRan}'\nexit 1\n`, { mode: 0o755 });
+  writeFileSync(
+    join(ws, 'config'),
+    `[core]\n\tworktree = ${ws}\n[log]\n\tshowSignature = true\n[gpg]\n\tprogram = ${gpg}\n` +
+      `[filter "evil"]\n\tclean = [ x$${TURN_GIT_MARK} = x1 ] && touch '${filterRan}'; cat\n`,
+  );
+  writeFileSync(join(ws, '.gitattributes'), '*.txt filter=evil\n');
+  return { subject, gpgRan, filterRan };
+}
+
+/** The CLI's own git, as it runs (GIT_* dropped), with the system configuration `system` names. */
+function turnGit(ws: string, system: string | null, ...args: string[]): { exitCode: number; stdout: string; stderr: string } {
+  const env: Record<string, string> = { PATH: '/usr/bin:/bin', GIT_CONFIG_GLOBAL: '/dev/null', [TURN_GIT_MARK]: '1' };
+  // The unit binds the rendered file over /etc/gitconfig; this host cannot, so git is pointed at
+  // it the way git itself allows (GIT_CONFIG_SYSTEM, git >= 2.32) — the same file, read as SYSTEM.
+  if (system === null) env.GIT_CONFIG_NOSYSTEM = '1';
+  else env.GIT_CONFIG_SYSTEM = system;
+  const result = Bun.spawnSync(['git', '-c', 'core.fsmonitor=', '-c', 'core.hooksPath=/dev/null', '--no-optional-locks', ...args], { cwd: ws, env });
+  return { exitCode: result.exitCode, stdout: result.stdout.toString().trim(), stderr: result.stderr.toString() };
+}
+
+describe('P12b — with .git masked, the workspace ROOT is no repository either', () => {
+  test('MEASURED SHAPE (positive control): `.git` masked, git takes the workspace ROOT as a bare repository and USES what was planted there', () => {
+    const ws = scratchDir('turn-bare-');
+    const { subject, gpgRan } = bareRootPlantedWorkspace(ws);
+    chmodSync(join(ws, '.git'), 0o000);
+    try {
+      expect({
+        gitDir: turnGit(ws, null, 'rev-parse', '--git-dir').stdout,
+        log: turnGit(ws, null, 'log', '-1', '--format=%s').stdout,
+        // …and the planted program RAN, as the turn's git.
+        ran: existsSync(gpgRan),
+      }).toEqual({ gitDir: '.', log: subject, ran: true });
+    } finally {
+      chmodSync(join(ws, '.git'), 0o755);
+    }
+  });
+
+  test('the turn’s RENDERED system configuration refuses it: no repository, nothing planted is read (git ≥ 2.38)', async () => {
+    const { gateInstance, renderTurnGitconfig } = await import('./support/lead1b_contract');
+    const rendered = await renderTurnGitconfig(gateInstance('museo', ['alpha']));
+    const system = join(scratchDir('turn-sysconfig-'), 'gitconfig');
+    writeFileSync(system, rendered?.body ?? '');
+    const ws = scratchDir('turn-bare-');
+    const { gpgRan, filterRan } = bareRootPlantedWorkspace(ws);
+    chmodSync(join(ws, '.git'), 0o000);
+    try {
+      for (const args of [['rev-parse', '--git-dir'], ['log', '-1', '--format=%s'], ['status', '--short'], ['ls-files']]) {
+        const answer = turnGit(ws, system, ...args);
+        expect({ args, refused: answer.exitCode !== 0, stdout: answer.stdout, why: /cannot use bare repository/.test(answer.stderr) }).toEqual({
+          args,
+          refused: true,
+          stdout: '',
+          why: true,
+        });
+      }
+      expect({ gpg: existsSync(gpgRan), filter: existsSync(filterRan) }).toEqual({ gpg: false, filter: false });
+    } finally {
+      chmodSync(join(ws, '.git'), 0o755);
+    }
+  });
+
+  test('the rendered file is root:root 0644 under the agent state root, its ONLY directive is safe.bareRepository=explicit; ONLY the turn unit binds it over /etc/gitconfig', async () => {
+    const { gateInstance, renderAgentUnits, renderTurnGitconfig, unitValues } = await import('./support/lead1b_contract');
+    const { gitconfigDirectives, turnSystemGitconfigPath } = await import('../src/drivers/agent_identity');
+    const gate = gateInstance('museo', ['alpha', 'beta']);
+    const file = await renderTurnGitconfig(gate);
+    expect({ path: file?.path, owner: file?.owner, group: file?.group, mode: file?.mode, directives: gitconfigDirectives(file?.body ?? '') }).toEqual({
+      path: turnSystemGitconfigPath(gate.layout.agentStateRoot),
+      owner: 'root',
+      group: 'root',
+      mode: 0o644,
+      directives: ['[safe]', '\tbareRepository = explicit'],
+    });
+    const bind = `${turnSystemGitconfigPath(gate.layout.agentStateRoot)}:/etc/gitconfig`;
+    for (const version of [255, 257]) {
+      const units = await renderAgentUnits(gate, version);
+      const templates = [...units.values()].filter(unit => unit.name.endsWith('@.service'));
+      expect(templates.length).toBe(6);
+      for (const unit of templates) {
+        const turn = /-turn@\.service$/.test(unit.name);
+        expect({ unit: unit.name, binds: unitValues(unit.body, 'BindReadOnlyPaths').flatMap(value => value.split(/\s+/)).includes(bind) }).toEqual({
+          unit: unit.name,
+          binds: turn,
+        });
+      }
+    }
+  });
+
+  test('conformance refuses a turn unit WITHOUT the bind, and a git or build unit WITH it', async () => {
+    const { conformance } = await import('../src/drivers/confinement');
+    const { conformingShow, plantShow } = await import('./support/lead1b_host');
+    const { turnGitconfigBind } = await import('../src/drivers/agent_identity');
+    const slug = 'site-bare';
+    const host = await lead1bPolicy({ identities: new Map([[slug, 1]]) });
+    hosts.push(host);
+    const ws = workspacePath(slug);
+    const bind = turnGitconfigBind(host.agentStateRoot);
+    const turn = conformingShow(host, ws, 1, 'turn', 255);
+    expect(turn.service).toContain(`${bind}:rbind`);
+    expect(await conformance(1, 'turn', host.policy)).toEqual({ warnings: [] });
+    plantShow(host, 1, 'turn', { ...turn, service: turn.service.replace(` ${bind}:rbind`, '') });
+    expect(String(((await caught(() => conformance(1, 'turn', host.policy))) as Error | null)?.message ?? '')).toContain('BindReadOnlyPaths');
+    for (const door of ['git', 'build'] as const) {
+      const shown = conformingShow(host, ws, 1, door, 255);
+      plantShow(host, 1, door, { ...shown, service: shown.service.replace(/^BindReadOnlyPaths=(.*)$/m, (_line, value: string) => `BindReadOnlyPaths=${`${value} ${bind}:rbind`.trim()}`) });
+      expect({ door, refused: String(((await caught(() => conformance(1, door, host.policy))) as Error | null)?.message ?? '').includes('BindReadOnlyPaths') }).toEqual({ door, refused: true });
+    }
+  });
+
+  async function turnOutcome(slug: string, host: GatePolicy, ws: string): Promise<{ typed: string | undefined; message: string; connects: number }> {
+    const { runConfined } = await import('../src/drivers/confinement');
+    const before = host.standIn.connects.length;
+    expect(tryBegin(slug, 'turn')).toBe(true);
+    let refused: unknown = null;
+    try {
+      await runConfined({ door: 'turn', slug, argv: ['true'], cwd: ws, env: { PATH: '/usr/bin:/bin' }, timeoutMs: 5_000 }, host.policy);
+    } catch (error) {
+      refused = error;
+    } finally {
+      end(slug, 'turn');
+    }
+    return { typed: (refused as Error | null)?.name, message: String((refused as Error | null)?.message ?? ''), connects: host.standIn.connects.length - before };
+  }
+
+  test('G21 — a workspace ROOT carrying HEAD (a file, a directory, a dangling link) is refused, typed, before anything connects', async () => {
+    const slug = 'site-bareroot';
+    const host = await lead1bPolicy({ identities: new Map([[slug, 1]]) });
+    hosts.push(host);
+    const ws = workspacePath(slug);
+    rmSync(ws, { recursive: true, force: true });
+    mkdirSync(join(ws, '.git'), { recursive: true });
+    scratch.push(ws);
+    for (const plant of [
+      () => writeFileSync(join(ws, 'HEAD'), 'ref: refs/heads/main\n'),
+      () => mkdirSync(join(ws, 'HEAD')),
+      () => symlinkSync(join(ws, 'nowhere'), join(ws, 'HEAD')),
+    ]) {
+      plant();
+      const outcome = await turnOutcome(slug, host, ws);
+      expect({ typed: outcome.typed, named: /bare repository/.test(outcome.message), connects: outcome.connects }).toEqual({
+        typed: 'ConfinementUnavailableError',
+        named: true,
+        connects: 0,
+      });
+      rmSync(join(ws, 'HEAD'), { recursive: true, force: true });
+    }
+    // Control: without it, the same turn connects.
+    const ok = await turnOutcome(slug, host, ws);
+    expect({ typed: ok.typed, connects: ok.connects }).toEqual({ typed: undefined, connects: 1 });
+  });
+
+  test('G21 — a turn whose system gitconfig is absent, foreign-owned, writable or says anything else is refused, typed, before anything connects', async () => {
+    const slug = 'site-sysconfig';
+    const host = await lead1bPolicy({ identities: new Map([[slug, 1]]) });
+    hosts.push(host);
+    const ws = workspacePath(slug);
+    rmSync(ws, { recursive: true, force: true });
+    mkdirSync(join(ws, '.git'), { recursive: true });
+    scratch.push(ws);
+    const { turnSystemGitconfigPath } = await import('../src/drivers/agent_identity');
+    const file = turnSystemGitconfigPath(host.agentStateRoot);
+    const good = readFileSync(file, 'utf8');
+    for (const [label, plant] of [
+      ['absent', () => rmSync(file)],
+      ['a link', () => { const real = `${file}.real`; writeFileSync(real, good); rmSync(file); symlinkSync(real, file); }],
+      ['group-writable', () => chmodSync(file, 0o664)],
+      ['a safe.directory added', () => writeFileSync(file, `${good}[safe]\n\tdirectory = *\n`)],
+      ['the directive dropped', () => writeFileSync(file, '# nothing\n')],
+    ] as const) {
+      plant();
+      const outcome = await turnOutcome(slug, host, ws);
+      expect({ label, typed: outcome.typed, named: outcome.message.includes(file), connects: outcome.connects }).toEqual({
+        label,
+        typed: 'ConfinementUnavailableError',
+        named: true,
+        connects: 0,
+      });
+      rmSync(file, { force: true });
+      rmSync(`${file}.real`, { force: true });
+      writeFileSync(file, good, { mode: 0o644 });
+      chmodSync(file, 0o644);
+    }
+    const ok = await turnOutcome(slug, host, ws);
+    expect({ typed: ok.typed, connects: ok.connects }).toEqual({ typed: undefined, connects: 1 });
   });
 });

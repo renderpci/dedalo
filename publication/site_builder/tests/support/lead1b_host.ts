@@ -21,11 +21,12 @@
  * today's code reaches the checks the gates ask about instead of crashing on a missing field.
  */
 
-import { chmodSync, existsSync, lstatSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, lstatSync, mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { connect as netConnect, createServer, type Server, type Socket } from 'node:net';
 import { dirname, join } from 'node:path';
 import { roots } from '../fixtures/instance';
 import { type Door, DOORS, shortScratch } from './lead1b_contract';
+import { TURN_SYSTEM_GITCONFIG_DIRECTIVES, turnGitconfigBind, turnSystemGitconfigPath } from '../../src/drivers/agent_identity';
 
 /* ────────────────────────────────────────────────────────────────────────────────────
  * The wire format (spec §2.3), independently
@@ -574,6 +575,22 @@ export const GATE_IDS = Object.freeze({
   privateGid: (k: number) => 4_000_002_000 + k,
 });
 
+/**
+ * `stat(2)` as THIS host answers it — except that every DIRECTORY is stated traversable (o+x) by
+ * the gate's identities. They are fictional uids: on a developer's macOS checkout (`~/Desktop` is
+ * 0700) no real directory grants them search, and a CI runner's home may not either. A gate that
+ * asks about traversal states its own directory facts on top of this (G17).
+ */
+export function TRAVERSABLE_STAT(path: string): { uid: number; gid: number; mode: number } {
+  const facts = HOST_STAT(path);
+  return (facts.mode & 0o170000) === 0o040000 ? { ...facts, mode: facts.mode | 0o001 } : facts;
+}
+
+function HOST_STAT(path: string): { uid: number; gid: number; mode: number } {
+  const facts = statSync(path);
+  return { uid: facts.uid, gid: facts.gid, mode: facts.mode };
+}
+
 export interface GateHostFacts {
   readonly instance: string;
   readonly serviceUser: string;
@@ -630,6 +647,14 @@ export async function lead1bPolicy(options: GatePolicyOptions): Promise<GatePoli
   const agentStateRoot = join(dir, 'state');
   mkdirSync(runtimeDir, { recursive: true, mode: 0o750 });
   mkdirSync(agentStateRoot, { recursive: true, mode: 0o755 });
+  // THE TURN'S SYSTEM gitconfig, as root's renderer leaves it (root 0644 — here this uid's, which
+  // the host states as the provisioner's below): a turn is refused without it.
+  writeFileSync(
+    turnSystemGitconfigPath(agentStateRoot),
+    `# rendered\n${TURN_SYSTEM_GITCONFIG_DIRECTIVES.join('\n')}\n`,
+    { mode: 0o644 },
+  );
+  chmodSync(turnSystemGitconfigPath(agentStateRoot), 0o644);
   const serviceUser = `dedalo-site-${instance}`;
   const identityName = (k: number) => `dedalo-a-${instance}_${k}`;
   const prefix = `dedalo-site-${instance}-agent-`;
@@ -668,7 +693,7 @@ export async function lead1bPolicy(options: GatePolicyOptions): Promise<GatePoli
   const host = {
     runtimePrefix: dir,
     readNetns: () => 'net:[4026531840]',
-    stat: HOST_FACTS.stat,
+    stat: TRAVERSABLE_STAT,
     pid1Version: () => version,
     // pre-LEAD-1b spelling of the same fact (`systemd-run --version`)
     systemdVersion: () => version,
@@ -844,7 +869,10 @@ export function conformingShow(
   const binds = proxy
     ? `${host.agentStateRoot}/s${k}/${door}:${host.agentStateRoot}/s${k}/${door}:rbind`
     : '';
-  const readOnlyBinds = proxy ? `${host.agentSocketDir}/egress/s${k}:/run/dedalo-egress:rbind` : '';
+  const readOnlyBinds = [
+    ...(proxy ? [`${host.agentSocketDir}/egress/s${k}:/run/dedalo-egress:rbind`] : []),
+    ...(door === 'turn' ? [`${turnGitconfigBind(host.agentStateRoot)}:rbind`] : []),
+  ].join(' ');
   const service = [
     `Type=exec`,
     `User=${host.facts.identityName(k)}`,

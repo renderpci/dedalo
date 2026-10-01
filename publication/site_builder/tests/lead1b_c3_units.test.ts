@@ -293,7 +293,11 @@ describe('G3 — root renders one socket, target and template per (site, door)',
             });
             expect({ door, readOnly }).toEqual({
               door,
-              readOnly: door === 'git' ? [] : [`${join(gate.layout.agentSocketDir, 'egress', `s${k}`)}:/run/dedalo-egress`],
+              readOnly: [
+                ...(door === 'git' ? [] : [`${join(gate.layout.agentSocketDir, 'egress', `s${k}`)}:/run/dedalo-egress`]),
+                // …and on the TURN, root's system gitconfig over git's own (no bare-root repository).
+                ...(door === 'turn' ? [`${stateRoot}/turn.gitconfig:/etc/gitconfig`] : []),
+              ],
             });
 
             // THE FIXED ENVIRONMENT, and nothing else: no secret rides a unit property.

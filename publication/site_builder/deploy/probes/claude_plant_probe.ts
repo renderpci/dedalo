@@ -29,13 +29,27 @@
  *        <workspace>/.git`, `agent_identity.ts` TURN_MASKED_REPOSITORY; emulated here by mode 000,
  *        the mask's effect for the run's uid): nothing planted runs and the turn completes. A CLI
  *        release that adds git calls, or reads `.git` some other way, is caught here.
+ *   C5b — CONTROL: with `.git` still masked, a BARE repository planted at the workspace ROOT
+ *        (`HEAD` at a commit carrying a `gpgsig`, `objects/`, `refs/`, `index`, a `config` with
+ *        `log.showSignature` + `gpg.program`, core.worktree and a filter): git's discovery takes
+ *        the root for a bare repository once `.git` is unreadable, and the CLI's own git USES it:
+ *        its `git log` reads the planted commit into the model's context, and any planted program
+ *        a git it runs reaches executes. (Measured 2026-10-01, 2.1.286 + git 2.54: the READ; the
+ *        CLI passes `-c log.showSignature=false` and its `status` dies — a root that IS the git
+ *        dir is no work tree — so no planted program ran on that release. A plain `git log` runs
+ *        the planted `gpg.program`: tests/claude_turn_plant.test.ts P12b.)
+ *   P5b — the same under the turn unit's SYSTEM gitconfig (`agent_identity.ts`
+ *        TURN_SYSTEM_GITCONFIG_DIRECTIVES, bound over /etc/gitconfig; emulated here by a `git`
+ *        first on PATH that names that file as git's system configuration — so a CLI that set
+ *        GIT_CONFIG_NOSYSTEM for its git would be caught): nothing planted runs, the turn completes.
  *
- * Measured 2026-10-01 on Claude Code 2.1.286 (macOS): all legs PASS.
+ * Measured 2026-10-01 on Claude Code 2.1.286 (macOS, git 2.54): all legs PASS.
  */
 
-import { appendFileSync, chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { appendFileSync, chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { TURN_SYSTEM_GITCONFIG_DIRECTIVES } from '../../src/drivers/agent_identity';
 import { claudeTurnArgv, listedFlags, requiredCliFlags } from '../../src/drivers/claude_argv';
 
 const bin = process.argv[2] ?? Bun.which('claude') ?? '';
@@ -214,6 +228,56 @@ try {
     !gitTurn.marks.includes('git_filter') && !gitTurn.marks.includes('git_fsmonitor') && gitTurn.result?.is_error === false,
     'P5 the repository masked as the turn unit masks it: no planted filter or fsmonitor ran, the turn completed',
     `marks=${gitTurn.marks.join(',') || 'none'}`,
+  );
+
+  // C5b/P5b — the workspace ROOT as a BARE repository, `.git` still masked.
+  // A root that IS the git dir is no work tree (`status` dies, git 2.54), so the plant also gives
+  // `log` a program to run: `log.showSignature` + `gpg.program`, for a HEAD carrying a `gpgsig`.
+  for (const entry of ['HEAD', 'objects', 'refs', 'index']) cpSync(join(ws, '.git', entry), join(ws, entry), { recursive: true });
+  const tree = git('rev-parse', 'HEAD^{tree}').stdout.toString().trim();
+  const signed = join(root, 'signed.txt');
+  writeFileSync(signed, `tree ${tree}\nauthor p <p@p> 1700000000 +0000\ncommitter p <p@p> 1700000000 +0000\ngpgsig -----BEGIN PGP SIGNATURE-----\n \n AAAA\n -----END PGP SIGNATURE-----\n\nBARE_ROOT_LOG_MARKER\n`);
+  const signedSha = git('--git-dir=.', 'hash-object', '-t', 'commit', '-w', signed).stdout.toString().trim();
+  const branch = git('--git-dir=.', 'symbolic-ref', 'HEAD').stdout.toString().trim();
+  writeFileSync(join(ws, ...branch.split('/')), `${signedSha}\n`);
+  writeFileSync(join(root, 'gpg.sh'), `#!/bin/sh\ntouch ${join(marks, 'bare_gpg')}\nexit 1\n`, { mode: 0o755 });
+  writeFileSync(
+    join(ws, 'config'),
+    `[core]\n\tworktree = ${ws}\n[log]\n\tshowSignature = true\n[gpg]\n\tprogram = ${join(root, 'gpg.sh')}\n[filter "bare"]\n\tclean = touch ${join(marks, 'bare_filter')}; cat\n`,
+  );
+  writeFileSync(join(ws, '.gitattributes'), '*.txt filter=bare\n');
+  mkdirSync(join(ws, 'info'), { recursive: true });
+  writeFileSync(join(ws, 'info', 'attributes'), '*.txt filter=bare\n');
+  writeFileSync(join(ws, 'page.txt'), 'cccc\n');
+  const latest = new Date(Date.now() + 120_000);
+  utimesSync(join(ws, 'page.txt'), latest, latest);
+  // The turn unit's system configuration, and a `git` that reads it as SYSTEM (the unit binds it
+  // over /etc/gitconfig; this host cannot).
+  const sysconfig = join(root, 'turn.gitconfig');
+  writeFileSync(sysconfig, `# the turn unit's /etc/gitconfig\n${TURN_SYSTEM_GITCONFIG_DIRECTIVES.join('\n')}\n`);
+  const shimDir = join(root, 'gitshim');
+  mkdirSync(shimDir);
+  const realGit = Bun.which('git', { PATH: '/usr/bin:/bin' }) ?? '/usr/bin/git';
+  writeFileSync(join(shimDir, 'git'), `#!/bin/sh\nGIT_CONFIG_SYSTEM='${sysconfig}' exec '${realGit}' "$@"\n`, { mode: 0o755 });
+  chmodSync(join(ws, '.git'), 0o000);
+  let bareControl: Run;
+  let bareTurn: Run;
+  try {
+    bareControl = await run(gitArgv);
+    bareTurn = await run(gitArgv, { PATH: `${shimDir}:/usr/bin:/bin` });
+  } finally {
+    chmodSync(join(ws, '.git'), 0o755);
+  }
+  // USED = the planted commit's subject reached the model (the CLI's `git log` read the planted
+  // repository) or a planted program ran. 2.1.286 passes `-c log.showSignature=false` and its
+  // `status` dies without a work tree, so on that release the reach measured is the READ.
+  const bareUsed = (r: Run) => r.marks.includes('bare_filter') || r.marks.includes('bare_gpg') || r.bodies.includes('BARE_ROOT_LOG_MARKER');
+  say(bareUsed(bareControl), 'C5b control: `.git` masked, the CLI’s own git takes the workspace ROOT for a bare repository and uses what is planted there', `marks=${bareControl.marks.join(',') || 'none'} read=${bareControl.bodies.includes('BARE_ROOT_LOG_MARKER')}`);
+  if (!bareUsed(bareControl)) console.log('   (this CLI’s git does not use a bare-root plant even unprotected: P5b proves nothing here)');
+  say(
+    !bareUsed(bareTurn) && bareTurn.result?.is_error === false,
+    'P5b under the turn unit’s system gitconfig (safe.bareRepository=explicit): nothing planted was read or ran, the turn completed',
+    `marks=${bareTurn.marks.join(',') || 'none'}`,
   );
 } finally {
   api.stop(true);

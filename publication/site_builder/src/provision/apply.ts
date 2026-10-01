@@ -114,6 +114,9 @@ export interface ExecResult {
   readonly stderr: string;
 }
 
+/** An archived tree (the retired shared HOME, a removed site's agent state): root:root, this. */
+export const ARCHIVE_MODE = 0o700;
+
 /**
  * EVERYTHING `apply` IS ALLOWED TO DO, as one injected interface.
  *
@@ -510,6 +513,17 @@ function executeOne(action: Action, io: ProvisionIo, state: RunState): ActionOut
       if (io.stat(to)) {
         return { action, status: 'failed', detail: `'${to}' already exists; an archive is never overwritten` };
       }
+      // CLOSED BEFORE IT MOVES: an archive is root's alone. The retired shared HOME was 2770
+      // <svc>:<instance group>, and `beside` leaves it in the state dir (root 0755) — readable to
+      // every site identity, whose PRIMARY group is the instance group, so every site's run could
+      // read every other site's pre-migration `~/.claude`. The directory ITSELF is re-owned and
+      // re-moded (never recursively: nothing is followed through what an agent planted inside),
+      // and only a directory: `chmod` follows a link.
+      if (facts.type !== 'dir') {
+        return { action, status: 'failed', detail: `'${action.from}' is a ${facts.type}, not a directory; an archive is never a link` };
+      }
+      io.chown(action.from, 'root', 'root');
+      io.chmod(action.from, ARCHIVE_MODE);
       io.rename(action.from, to);
       state.written.push(to);
       return { action, status: 'done', detail: `archived ${action.from} -> ${to}` };

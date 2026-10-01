@@ -243,8 +243,10 @@ export async function renderAgentUnits(gate: GateInstance, systemdVersion: numbe
   const facts: RenderFacts = { agentIdentities: gate.identities, systemdVersion };
   const files = new Map<string, RenderedFile>();
   for (const artifact of renderer.render(gate.layout, gate.manifest, facts)) {
-    // The UNIT files: the egress directories' tmpfiles.d declaration is `renderAgentTmpfiles`.
+    // The UNIT files: the egress directories' tmpfiles.d declaration is `renderAgentTmpfiles`,
+    // the turn's system gitconfig `renderTurnGitconfig`.
     if (artifact.path === gate.layout.agentTmpfilesPath) continue;
+    if (!/\.(socket|target|service)$/.test(String(artifact.path))) continue;
     const name = String(artifact.path).split('/').pop() as string;
     files.set(name, {
       path: artifact.path,
@@ -264,6 +266,19 @@ export async function renderAgentTmpfiles(gate: GateInstance, systemdVersion = 2
   const facts: RenderFacts = { agentIdentities: gate.identities, systemdVersion };
   const found = (agentUnitsRenderer.render as (...args: unknown[]) => any[])(gate.layout, gate.manifest, facts).find(
     artifact => artifact.path === gate.layout.agentTmpfilesPath,
+  );
+  if (!found) return null;
+  return { path: found.path, name: String(found.path).split('/').pop() as string, body: found.body, owner: found.owner, group: found.group, mode: found.mode };
+}
+
+/** The rendered system gitconfig every TURN unit binds over /etc/gitconfig (null when none is rendered). */
+export async function renderTurnGitconfig(gate: GateInstance, systemdVersion = 255): Promise<RenderedFile | null> {
+  const { agentUnitsRenderer } = await import('../../src/provision/render/agent_units');
+  const { turnSystemGitconfigPath } = await import('../../src/drivers/agent_identity');
+  const facts: RenderFacts = { agentIdentities: gate.identities, systemdVersion };
+  const path = turnSystemGitconfigPath(gate.layout.agentStateRoot);
+  const found = (agentUnitsRenderer.render as (...args: unknown[]) => any[])(gate.layout, gate.manifest, facts).find(
+    artifact => artifact.path === path,
   );
   if (!found) return null;
   return { path: found.path, name: String(found.path).split('/').pop() as string, body: found.body, owner: found.owner, group: found.group, mode: found.mode };
