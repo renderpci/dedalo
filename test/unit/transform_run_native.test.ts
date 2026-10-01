@@ -892,10 +892,19 @@ describe('runTransform execute: a stop rolls the running file back; a concurrent
 		}
 		expect(performance.now() - stoppedAt).toBeLessThan(5000);
 		expect(record?.status).toBe('stopped');
+		// A user's own stop is not a failure: no typed error, no errors[] line on the frame.
+		expect(record?.error).toBeUndefined();
+		expect(record?.errors).toEqual([]);
 		expect(await tags()).toEqual([]);
 		expect(sleeping.ran).toEqual([1]);
-		const data = record?.data as { result?: boolean; errors?: string[]; dry_run?: boolean };
-		expect(data?.result).toBe(false);
+		const data = record?.data as Record<string, unknown> & {
+			ok?: boolean;
+			errors?: string[];
+			dry_run?: boolean;
+		};
+		expect(data?.ok).toBe(false);
+		// ERRORS_SPEC §5.3: a frame never carries `result:false/msg/errors`.
+		expect(Object.hasOwn(data ?? {}, 'result')).toBe(false);
 		expect(data?.dry_run).toBe(false);
 		expect(data?.errors).toEqual([
 			'a.json: aborted (stop) — rolled back: nothing of this file was applied',
@@ -917,9 +926,89 @@ describe('runTransform execute: a stop rolls the running file back; a concurrent
 			finished = mediaJobs.status(againId);
 		}
 		expect(finished?.status).toBe('done');
-		expect((finished?.data as { result?: boolean })?.result).toBe(true);
+		expect((finished?.data as { ok?: boolean })?.ok).toBe(true);
 		expect(await tags()).toEqual(['n2']);
 	}, 40000);
+
+	/** Poll a job until it leaves queued/running (or the budget runs out). */
+	async function settledJob(id: string) {
+		const { mediaJobs } = await import('../../src/core/media/jobs.ts');
+		let record = mediaJobs.status(id);
+		const deadline = Date.now() + 15000;
+		while (record !== null && (record.status === 'queued' || record.status === 'running')) {
+			if (Date.now() > deadline) break;
+			await Bun.sleep(25);
+			record = mediaJobs.status(id);
+		}
+		return record;
+	}
+
+	test('THE DOOR: a FAILED execute (a file rolled back) ends `error` with the typed maintenance.action_failed body — never a `done` frame carrying the failure — and its report stays the job data', async () => {
+		const { dispatchWidgetRequest } = await import(
+			'../../src/core/area_maintenance/widgets/registry.ts'
+		);
+		const ROOT = { userId: -1, isGlobalAdmin: true, isDeveloper: true } as never;
+		CATALOG = { 'a.json': { n: 1 }, 'b.json': { n: 2 } };
+		doorExecutor = async (items, recorder) => {
+			const n = (items as { n: number }).n;
+			await sql.unsafe(`INSERT INTO "${SCRATCH}" (tag) VALUES ($1)`, [`n${n}`]);
+			recorder.record({ op: 'insert', table: SCRATCH, target: `n${n}` });
+			if (n === 1) throw new Error('unique violation stand-in');
+		};
+		const response = await dispatchWidgetRequest(
+			ROOT,
+			{ model: 'move_tld', action: 'move_tld' },
+			{ dry_run: false, files_selected: ['a.json', 'b.json'] },
+		);
+		const jobId = String(response.extend?.pfile ?? '').slice(0, -'.json'.length);
+		const record = await settledJob(jobId);
+		expect(record?.status).toBe('error');
+		expect(record?.error?.code).toBe('maintenance.action_failed');
+		// The failure's own sentence is what the frame says (the admin's answer).
+		expect(record?.errors.join(' ')).toContain(
+			'a.json: unique violation stand-in — rolled back: nothing of this file was applied',
+		);
+		const data = record?.data as Record<string, unknown> & { ok?: boolean; errors?: string[] };
+		expect(data?.ok).toBe(false);
+		expect(Object.hasOwn(data ?? {}, 'result')).toBe(false);
+		expect(data?.errors).toEqual([
+			'a.json: unique violation stand-in — rolled back: nothing of this file was applied',
+		]);
+		// File b still applied (a rolled-back file does not abort the run).
+		expect(await tags()).toEqual(['n2']);
+	}, 30000);
+
+	test("THE DOOR: an execute REFUSED by another process's run lock ends `error` (typed), not `done`", async () => {
+		const { dispatchWidgetRequest } = await import(
+			'../../src/core/area_maintenance/widgets/registry.ts'
+		);
+		const { TRANSFORM_RUN_LOCK_KEY } = await import('../../src/core/update/transform/engine.ts');
+		const ROOT = { userId: -1, isGlobalAdmin: true, isDeveloper: true } as never;
+		CATALOG = { 'a.json': { n: 2 } };
+		doorExecutor = sleepingExecutor(() => {}).executor;
+		const holder = await sql.reserve();
+		try {
+			await holder.unsafe('BEGIN', []);
+			await holder.unsafe('SELECT pg_advisory_xact_lock($1::bigint)', [TRANSFORM_RUN_LOCK_KEY]);
+			const response = await dispatchWidgetRequest(
+				ROOT,
+				{ model: 'move_tld', action: 'move_tld' },
+				{ dry_run: false, files_selected: ['a.json'] },
+			);
+			const record = await settledJob(
+				String(response.extend?.pfile ?? '').slice(0, -'.json'.length),
+			);
+			expect(record?.status).toBe('error');
+			expect(record?.error?.code).toBe('maintenance.action_failed');
+			expect((record?.data as { errors?: string[] })?.errors).toEqual([
+				'a.json: refused — another move_* transform is running; nothing of this file was applied',
+			]);
+		} finally {
+			await holder.unsafe('ROLLBACK', []);
+			holder.release();
+		}
+		expect(await tags()).toEqual([]);
+	}, 30000);
 
 	test('THE DOOR: an execute stopped while still QUEUED for a maintenance slot frees the door (its worker never ran)', async () => {
 		const { dispatchWidgetRequest } = await import(
@@ -1019,25 +1108,92 @@ describe('runTransform execute: a stop rolls the running file back; a concurrent
 		expect(record?.status).toBe('done');
 	}, 30000);
 
-	test('THE DOOR: a DRY RUN stays an inline report (writes nothing, holds no claim)', async () => {
+	test('THE DOOR: a DRY RUN is a stoppable, owned maintenance job too (the vendored client renders a job stream): it writes nothing, holds no claim, and its report is the job data', async () => {
+		const { dispatchWidgetRequest } = await import(
+			'../../src/core/area_maintenance/widgets/registry.ts'
+		);
+		const { mediaJobs } = await import('../../src/core/media/jobs.ts');
+		const ROOT = { userId: -1, isGlobalAdmin: true, isDeveloper: true } as never;
+		const SOURCE = { model: 'move_tld', action: 'move_tld' };
+		CATALOG = { 'a.json': { n: 2 } };
+		const { executor, ran } = sleepingExecutor(() => {});
+		const release = deferred();
+		const dryEntered = deferred();
+		let dryLane = '';
+		doorExecutor = async (items, recorder) => {
+			if (recorder.dryRun) {
+				ran.push((items as { n: number }).n);
+				// The job is detached from the door's scope: it must declare its own,
+				// or its full-table reads run under the request pool's ceiling.
+				const [row] = (await sql.unsafe(
+					"SELECT current_setting('application_name') AS name",
+					[],
+				)) as { name: string }[];
+				dryLane = row?.name ?? '';
+				recorder.record({ op: 'update', table: 'matrix', target: 'would' });
+				dryEntered.resolve();
+				await release.promise;
+			} else await executor(items, recorder);
+		};
+		const submittedAt = performance.now();
+		const response = await dispatchWidgetRequest(ROOT, SOURCE, { files_selected: ['a.json'] });
+		expect(performance.now() - submittedAt).toBeLessThan(3000);
+		expect(response.extend?.dry_run).toBe(true);
+		expect(response.extend?.pid).toBe(process.pid);
+		const pfile = String(response.extend?.pfile ?? '');
+		expect(pfile, JSON.stringify(response)).toEndWith('.json');
+		const jobId = pfile.slice(0, -'.json'.length);
+		const queued = mediaJobs.status(jobId);
+		expect(queued?.lane).toBe('maintenance');
+		expect(queued?.deadline_ms).toBe(0);
+		expect(queued?.user_id).toBe(-1);
+		await dryEntered.promise;
+		// No claim: an execute submitted while the dry run runs is ACCEPTED.
+		const execute = await dispatchWidgetRequest(ROOT, SOURCE, {
+			dry_run: false,
+			files_selected: ['a.json'],
+		});
+		release.resolve();
+		const record = await settledJob(jobId);
+		expect(record?.status).toBe('done');
+		const data = record?.data as Record<string, unknown> & {
+			ok?: boolean;
+			dry_run?: boolean;
+			counts?: Record<string, number>;
+		};
+		expect(data?.ok).toBe(true);
+		expect(data?.dry_run).toBe(true);
+		expect(Object.hasOwn(data ?? {}, 'result')).toBe(false);
+		expect(ran).toEqual([2]);
+		expect(dryLane).toMatch(/^dedalo_maintenance:\d+:/);
+		const executed = await settledJob(
+			String(execute.extend?.pfile ?? '').slice(0, -'.json'.length),
+		);
+		expect(executed?.status).toBe('done');
+		// Only the EXECUTE wrote.
+		expect(await tags()).toEqual(['n2']);
+	}, 30000);
+
+	test('THE DOOR: a FAILED dry run (an executor that throws) ends `error`, typed — the same failure channel as an execute', async () => {
 		const { dispatchWidgetRequest } = await import(
 			'../../src/core/area_maintenance/widgets/registry.ts'
 		);
 		const ROOT = { userId: -1, isGlobalAdmin: true, isDeveloper: true } as never;
 		CATALOG = { 'a.json': { n: 2 } };
-		const { executor, ran } = sleepingExecutor(() => {});
-		doorExecutor = async (items, recorder) => {
-			if (recorder.dryRun) ran.push((items as { n: number }).n);
-			else await executor(items, recorder);
+		doorExecutor = async () => {
+			throw new Error('a definition the executor cannot plan');
 		};
 		const response = await dispatchWidgetRequest(
 			ROOT,
 			{ model: 'move_tld', action: 'move_tld' },
 			{ files_selected: ['a.json'] },
 		);
-		expect(response.extend?.dry_run).toBe(true);
-		expect(response.extend?.pfile).toBeUndefined();
-		expect(ran).toEqual([2]);
+		const record = await settledJob(String(response.extend?.pfile ?? '').slice(0, -'.json'.length));
+		expect(record?.status).toBe('error');
+		expect(record?.error?.code).toBe('maintenance.action_failed');
+		expect((record?.data as { errors?: string[]; dry_run?: boolean })?.errors).toEqual([
+			'a.json: a definition the executor cannot plan',
+		]);
 		expect(await tags()).toEqual([]);
-	});
+	}, 30000);
 });

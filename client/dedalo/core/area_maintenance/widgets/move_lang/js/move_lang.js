@@ -38,9 +38,9 @@
 
 
 // imports
-	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
 	import {area_maintenance} from '../../../js/area_maintenance.js'
+	import {exec_move_transform} from '../../../js/move_transform.js'
 	import {render_move_lang} from './render_move_lang.js'
 
 
@@ -113,63 +113,23 @@ export const move_lang = function() {
 
 /**
 * EXEC_MOVE_LANG
+* Fire one move_lang run through the shared move_* flow (move_transform.js). The
+* server runs it as a JOB and answers {pid, pfile, dry_run} at once; the
+* caller streams it with update_process_status.
 *
-* Fires the server-side `move_lang` action via the area_maintenance API and
-* returns the response once the server has spawned the background process.
-*
-* The server dispatches `transform_data::change_data_lang` as a long-running
-* CLI process (background_running: true).  The immediate response therefore
-* contains the process identifiers needed for progress polling — not the final
-* result:
-*
-*   response.pid   {string|number} - OS process id of the spawned CLI worker.
-*   response.pfile {string}        - Server-side path to the process status file
-*                                    read by update_process_status (SSE stream).
-*
-* The caller (render_move_lang → on_submit) pipes these values into
-* `update_process_status` to display a live status feed while the job runs.
-*
-* Request options:
-*   retries : 1       — no automatic retry; the process may already be running.
-*   timeout : 3600 s  — large timeout to accommodate very long database sweeps
-*                       (the operation iterates all relevant records).
-*
-* (!) `prevent_lock: true` is set so that no section record lock is acquired for
-*     this maintenance operation, which touches many records across multiple tables.
-*
-* @param {Array<string>} files_selected - Non-empty array of JSON definition
-*        file names to process, e.g. ['change_hierarchy89_to_nolan.json'].
-*        The server validates each name against the known definition files.
-* @returns {Promise<Object|undefined>} Resolves to the API response object on
-*        success, or `undefined` if `files_selected` is empty (early return).
+* @param {Array<string>} files_selected - Non-empty array of definition file names.
+* @param {boolean} [dry_run=true] - true = PREVIEW (writes nothing); false =
+*        EXECUTE (rewrites stored data — the server mutates only on exactly false).
+* @returns {Promise<Object|undefined>} The API response, or `undefined` when
+*        `files_selected` is empty.
 */
-move_lang.prototype.exec_move_lang = async (files_selected) => {
+move_lang.prototype.exec_move_lang = async (files_selected, dry_run=true) => {
 
 	if (!files_selected.length) {
 		return
 	}
 
-	// move_lang process fire
-	const response = await data_manager.request({
-		body : {
-			dd_api			: 'dd_area_maintenance_api',
-			action			: 'widget_request',
-			prevent_lock	: true,
-			source			: {
-				type	: 'widget',
-				model	: 'move_lang',
-				action	: 'move_lang'
-			},
-			options : {
-				background_running	: true, // set run in background CLI
-				files_selected		: files_selected // array e.g. ['finds_numisdata279_to_tchi1.json']
-			}
-		},
-		retries : 1, // one try only
-		timeout : 3600 * 1000 // 1 hour waiting response
-	})
-
-	return response
+	return exec_move_transform('move_lang', files_selected, dry_run)
 }//end exec_move_lang
 
 

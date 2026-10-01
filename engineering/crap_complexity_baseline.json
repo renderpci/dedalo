@@ -5,7 +5,7 @@
 	"root": "src/core",
 	"summary": {
 		"files": 587,
-		"functions": 6825,
+		"functions": 6853,
 		"functionsOverCap": 681,
 		"filesOverCap": 264
 	},
@@ -174,7 +174,7 @@
 		"src/core/install/db_restore.ts": 8,
 		"src/core/install/directories.ts": 12,
 		"src/core/install/engine.ts": 19,
-		"src/core/install/hierarchy_import.ts": 18,
+		"src/core/install/hierarchy_import.ts": 13,
 		"src/core/install/lang_catalog.ts": 9,
 		"src/core/install/mailer_probe.ts": 12,
 		"src/core/install/media_tree.ts": 20,

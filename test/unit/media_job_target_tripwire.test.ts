@@ -36,7 +36,7 @@ const EXEMPT_SUBMITTERS: ReadonlyMap<string, string> = new Map([
 	],
 	[
 		'src/core/area_maintenance/widgets/move_common.ts',
-		'The move_* bulk transform EXECUTE: it rewrites definition-file-selected tipos/locators across every matrix table of the install — no single section/component owns it (the same class as the data-migration job above).',
+		'The move_* bulk transform (its EXECUTE and its DRY RUN): it rewrites — or, dry, reads — definition-file-selected tipos/locators across every matrix table of the install — no single section/component owns it (the same class as the data-migration job above).',
 	],
 	[
 		'src/core/area_maintenance/backup.ts',

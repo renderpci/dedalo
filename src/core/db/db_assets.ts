@@ -305,7 +305,11 @@ export function rebuildIndexes(selectedTables: string[] = []): Promise<AssetResp
 export async function execMaintenance(): Promise<AssetResponse> {
 	const response = newResponse();
 	// Every ar_maintenance sentence is a REINDEX/VACUUM (incl. VACUUM FULL) — the
-	// long-by-design class, so they run unbounded (WC-055).
+	// long-by-design class, so they run without a statement ceiling (WC-055).
+	// The non-CONCURRENTLY `REINDEX TABLE` and `VACUUM FULL` are STRONG-lock: they
+	// wait under MAINTENANCE_LOCK_TIMEOUT (postgres.ts nonTransactionalLockClass),
+	// so behind a long reader (a pg_dump) they give up — `db.lock_timeout` in
+	// `errors` — instead of queueing every later reader of the table behind them.
 	for (const sentence of definitions.ar_maintenance as string[]) {
 		if (await execLongSql(cleanSql(sentence), response.errors)) response.success++;
 	}

@@ -6,6 +6,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {update_process_status} from '../../../../common/js/common.js'
+	import {init_move_transform_form} from '../../../js/move_transform.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 
 	// hljs
@@ -29,9 +30,9 @@
 *   at /dedalo/core/base/transform_definition_files/move_to_table/.
 * - `get_value` (PHP) reads the directory and returns the file list with their
 *   parsed contents; this module renders those files as selectable checkboxes.
-* - When the form is submitted, `exec_move_to_table` (move_to_table.js) fires
-*   the `move_to_table` PHP action which runs
-*   `transform_data::move_data_between_matrix_tables` in background mode.
+* - The shared move_* run flow (`init_move_transform_form`, move_transform.js):
+*   the submit runs the PREVIEW (dry run) job; a clean preview reveals the
+*   Execute control, which runs the previewed files (dry_run:false) as a job.
 * - Progress is tracked via `update_process_status`, polling an SSE stream
 *   keyed by the `pid`/`pfile` pair returned in the initial response.
 *
@@ -125,10 +126,8 @@ render_move_to_table.prototype.list = async function(options) {
 *          highlighting (via highlight.js).  The collapsed/expanded state is
 *          persisted in IndexedDB under the key
 *          'collapsed_move_to_table_file_<file_name>'.
-*   4. Wires up a form via `self.caller.init_form` with submit label
-*      "Move data between matrix tables".  On submit, the currently checked
-*      filenames are passed to `self.exec_move_to_table`, which fires the
-*      background PHP process.
+*   4. Wires the shared move_* run flow (`init_move_transform_form`): PREVIEW
+*      (dry run) job on submit, then Execute of exactly the previewed files.
 *   5. Immediately after form creation, `check_process_data` reads any
 *      previously persisted process state from IndexedDB and re-attaches the
 *      SSE progress stream if a migration was already running.
@@ -298,37 +297,16 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// form init
-		// Wires the submit form into the widget body via the parent
-		// area_maintenance instance.  `on_submit` is invoked in place of the
-		// default API trigger, giving this widget full control of the call flow.
-		self.caller.init_form({
+		// PREVIEW (dry run) first, then EXECUTE exactly the previewed selection —
+		// the one run flow of the five move_* widgets (move_transform.js). Both runs
+		// are server jobs answering {pid, pfile}; their streams render in body_response.
+		init_move_transform_form(self, {
+			model			: 'move_to_table',
 			submit_label	: 'Move data between matrix tables',
-			// confirm_text	: confirm_text,
-			body_info		: content_data,
+			files_selected	: files_selected,
+			content_data	: content_data,
 			body_response	: body_response,
-			on_submit	: (e, values) => {
-
-				// Guard: at least one file must be selected before the migration
-				// can proceed.  alert() is used here intentionally — this is a
-				// maintenance-only admin tool, not a user-facing UI.
-				if (!files_selected.length) {
-					alert("Error: no files are selected");
-					return
-				}
-
-				// move_to_table
-				// Fire the background migration and hand off PID/pfile to the
-				// progress tracker so the SSE stream can be attached.
-				self.exec_move_to_table(files_selected)
-				.then(function(response){
-					update_process_status(
-						local_db_id,
-						response.pid,
-						response.pfile,
-						body_response
-					)
-				})
-			}
+			local_db_id		: local_db_id
 		})
 
 		// check process status always

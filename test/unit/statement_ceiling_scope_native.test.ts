@@ -363,7 +363,13 @@ const sourceOf = async () => (await sql.unsafe("SELECT source FROM pg_settings W
 await leg('no_session_source', async () => ({
 	pooled: await Promise.all(Array.from({ length: getPoolStats().max * 2 }, () => sourceOf())),
 	maintenance: await scope()(() => Promise.all(Array.from({ length: getPoolStats().maintenance.max * 2 }, () => sourceOf()))),
-	nontx: (await runWithoutStatementTimeout("SELECT source FROM pg_settings WHERE name = 'statement_timeout'"))[0].source,
+	// runWithoutStatementTimeout routes a text by its LOCK CLASS (postgres.ts
+	// nonTransactionalLockClass): a SELECT is not one of the weak forms the
+	// non-transactional lane admits (VACUUM / ANALYZE / CONCURRENTLY — none of
+	// which can read a setting or set one), so it runs on the bounded
+	// maintenance pool, and its source is read there.
+	helper: (await runWithoutStatementTimeout(
+		"SELECT source, current_setting('application_name') AS app FROM pg_settings WHERE name = 'statement_timeout'"))[0],
 }));
 
 console.log('RESULT ' + JSON.stringify(results));
@@ -413,8 +419,16 @@ const running = withUnboundedStatements(() => sql.unsafe('SELECT pg_sleep(20) /*
 	.then(() => 'completed', (e) => String(e?.errno ?? e?.code ?? e));
 // A NON-TRANSACTIONAL statement (runWithoutStatementTimeout — REINDEX/DROP INDEX
 // CONCURRENTLY in production) is running too: it does not roll back, so the
-// shutdown must let the server finish it, never cancel it.
-const nontx = pg.runWithoutStatementTimeout('SELECT pg_sleep(2.5) /*${NONTX_MARKER}*/')
+// shutdown must let the server finish it, never cancel it. Only the WEAK-lock
+// forms ride that lane (postgres.ts nonTransactionalLockClass), so the stand-in
+// is a real one: a VACUUM held ~2.5s behind a SHARE UPDATE EXCLUSIVE holder.
+const NONTX_TABLE = 'dedalo_ts_test_ceil_' + process.pid;
+await checker.unsafe('CREATE TABLE IF NOT EXISTS "' + NONTX_TABLE + '" (id int)', []);
+const lockHolder = connect(config.db.database);
+await lockHolder.unsafe('BEGIN', []);
+await lockHolder.unsafe('LOCK TABLE "' + NONTX_TABLE + '" IN SHARE UPDATE EXCLUSIVE MODE', []);
+const lockReleased = Bun.sleep(2500).then(() => lockHolder.unsafe('COMMIT', []));
+const nontx = pg.runWithoutStatementTimeout('VACUUM ANALYZE "' + NONTX_TABLE + '" /*${NONTX_MARKER}*/')
 	.then(() => 'completed', (e) => String(e?.errno ?? e?.code ?? e));
 let own = [];
 for (let i = 0; i < 100 && own.length === 0; i++) { await Bun.sleep(20); own = await activeWith('${SHUTDOWN_MARKER}'); }
@@ -455,6 +469,9 @@ for (const [leg, entry] of Object.entries(foreign)) {
 	await entry.done;
 	await entry.connection.close({ timeout: 1 });
 }
+await lockReleased;
+await lockHolder.close({ timeout: 1 });
+await checker.unsafe('DROP TABLE IF EXISTS "' + NONTX_TABLE + '"', []);
 await checker.close({ timeout: 1 });
 console.log('RESULT ' + JSON.stringify({ seen, closeMs, statement, ownName, foreignSeen, foreignAfter, nontxName, nontxOutcome }));
 process.exit(0);
@@ -540,7 +557,20 @@ const countApps = async (pattern) => Number((await sql.unsafe(
 	[pattern]))[0].n);
 const SLEEP = 'SELECT pg_sleep(0.3)';
 await Promise.all(Array.from({ length: maintenancePoolMax }, () => withUnboundedStatements(() => sql.unsafe(SLEEP, []))));
-await Promise.all(Array.from({ length: maintenancePoolMax }, () => runWithoutStatementTimeout(SLEEP)));
+// The non-transactional twin admits only the WEAK-lock forms (postgres.ts
+// nonTransactionalLockClass): fill it with real ones — VACUUMs held ~0.3s
+// behind a SHARE UPDATE EXCLUSIVE holder, each on its own connection.
+const NONTX_TABLE = 'dedalo_ts_test_ceilb_' + process.pid;
+await sql.unsafe('CREATE TABLE IF NOT EXISTS "' + NONTX_TABLE + '" (id int)', []);
+const lockHolder = await sql.reserve();
+await lockHolder.unsafe('BEGIN', []);
+await lockHolder.unsafe('LOCK TABLE "' + NONTX_TABLE + '" IN SHARE UPDATE EXCLUSIVE MODE', []);
+const vacuums = Promise.all(Array.from({ length: maintenancePoolMax }, () => runWithoutStatementTimeout('VACUUM ANALYZE "' + NONTX_TABLE + '"')));
+await Bun.sleep(300);
+await lockHolder.unsafe('COMMIT', []);
+lockHolder.release();
+await vacuums;
+await sql.unsafe('DROP TABLE IF EXISTS "' + NONTX_TABLE + '"', []);
 const maintenance = await countApps('dedalo_maintenance:%' + process.pid + ':%');
 // A committed xid for the verdicts to read.
 const xid = await withTransaction(async () => (await sql.unsafe('SELECT pg_current_xact_id()::text AS x', []))[0].x);
@@ -993,12 +1023,16 @@ describe('no pooled GUC is ever mutated', () => {
 		const sources = legValue('no_session_source') as {
 			pooled: string[];
 			maintenance: string[];
-			nontx: string;
+			helper: { source: string; app: string };
 		};
 		// Startup parameters read 'client' — never 'session'.
 		expect(sources.pooled).toEqual(Array(4).fill('client'));
 		expect(sources.maintenance).toEqual(Array(2).fill('client'));
-		expect(sources.nontx).toBe('client');
+		expect(sources.helper.source).toBe('client');
+		// A non-weak text never reaches the non-transactional lane (which admits
+		// only VACUUM / ANALYZE / CONCURRENTLY — no statement there can set state).
+		expect(sources.helper.app).toStartWith('dedalo_maintenance:');
+		expect(sources.helper.app).not.toStartWith('dedalo_maintenance:nontx:');
 	});
 	test('the driver never hung (its watchdog did not fire)', () => {
 		expect(legs.__watchdog, JSON.stringify(legs.__watchdog)).toBeUndefined();

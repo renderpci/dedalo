@@ -33,7 +33,7 @@ import { safeTld } from '../ontology/data_io.ts';
 import { activateHierarchy } from './hierarchy_activate.ts';
 import { hierarchyMetaByTld } from './hierarchy_meta.ts';
 import { HIERARCHY_IMPORT_DIR } from './paths.ts';
-import { connFromConfig, type DbConnDescriptor, runPsql } from './pg_exec.ts';
+import { connFromConfig, type DbConnDescriptor, type PsqlRunResult, runPsql } from './pg_exec.ts';
 
 const HIERARCHY_TABLE = 'matrix_hierarchy';
 
@@ -72,39 +72,20 @@ export interface InstallHierarchiesOptions {
 	replace?: boolean;
 }
 
-/** Load one `<name>.copy.gz` into matrix_hierarchy via \copy FROM STDIN. */
-async function importCopyFile(
-	conn: DbConnDescriptor,
-	fileName: string,
-): Promise<{ ok: boolean; msg: string }> {
-	const path = join(HIERARCHY_IMPORT_DIR, fileName);
-	if (!existsSync(path)) return { ok: false, msg: `missing import file ${fileName}` };
-	let text: Uint8Array;
-	try {
-		text = gunzipSync(readFileSync(path));
-	} catch (error) {
-		return { ok: false, msg: `decompress failed: ${(error as Error).message}` };
-	}
-	// Table FORCED to matrix_hierarchy (PHP parity), explicit column order.
-	const copyCmd = `\\copy ${HIERARCHY_TABLE} (${MATRIX_COPY_COLUMNS.join(', ')}) FROM STDIN`;
-	const res = await runPsql(conn, ['-v', 'ON_ERROR_STOP=1', '-c', copyCmd], { stdin: text });
-	if (res.exitCode !== 0) return { ok: false, msg: res.stderr || 'copy failed' };
-	return { ok: true, msg: 'copied' };
-}
-
 /**
- * Realign matrix_counter after a raw COPY: for EVERY imported section_tipo of
+ * The counter realignment after a raw COPY: for EVERY imported section_tipo of
  * this tld (e.g. es1, es2), raise the counter to the section's high-water mark
  * — MAX(section_id) over live rows AND over the surviving time-machine rows of
- * deleted ones — so the next insert allocates a genuinely fresh id. `tld` is safeTld-validated before this runs, so
- * the anchored regex literal is safe to embed.
+ * deleted ones — so the next insert allocates a genuinely fresh id. `tld` is
+ * safeTld-validated before this runs, so the anchored regex literal is safe to
+ * embed.
  */
-async function consolidateHierarchyCounter(conn: DbConnDescriptor, tld: string): Promise<void> {
+function consolidateCounterSql(tld: string): string {
 	// The seeded value is the HIGH-WATER MARK, not MAX(live section_id): a row
 	// this CREATES would otherwise restart inside the ids of records deleted
 	// before the re-import, and matrix_time_machine outlives those records
 	// (P0-14; same floor as src/core/db/matrix_write.ts counterFloorExpression).
-	const sql = `INSERT INTO matrix_counter (tipo, value)
+	return `INSERT INTO matrix_counter (tipo, value)
 		SELECT live.section_tipo,
 		       GREATEST(live.max_id, COALESCE((
 		         SELECT MAX(tm.section_id) FROM matrix_time_machine tm
@@ -114,7 +95,6 @@ async function consolidateHierarchyCounter(conn: DbConnDescriptor, tld: string):
 		         GROUP BY section_tipo) live
 		ON CONFLICT (tipo) DO UPDATE
 		  SET value = GREATEST(matrix_counter.value, EXCLUDED.value);`;
-	await runPsql(conn, ['-v', 'ON_ERROR_STOP=1', '-c', sql]).catch(() => {});
 }
 
 /**
@@ -131,23 +111,110 @@ async function hierarchyRowsPresent(conn: DbConnDescriptor, tld: string): Promis
 	return res !== null && res.exitCode === 0 && res.stdout === '1';
 }
 
+/** One seed file, decompressed: its COPY text, or the problem that kept it unread. */
+function readSeedFile(
+	importDir: string,
+	fileName: string,
+): { text: Uint8Array } | { problem: string } {
+	const path = join(importDir, fileName);
+	if (!existsSync(path)) return { problem: `missing import file ${fileName}` };
+	try {
+		return { text: gunzipSync(readFileSync(path)) };
+	} catch (error) {
+		return { problem: `decompress failed (${fileName}): ${(error as Error).message}` };
+	}
+}
+
+/** `\copy … FROM STDIN` of one COPY text, inline in a psql script (its data ends at `\.`). */
+function inlineCopy(text: Uint8Array): Buffer[] {
+	const copyCmd = `\\copy ${HIERARCHY_TABLE} (${MATRIX_COPY_COLUMNS.join(', ')}) FROM STDIN\n`;
+	const endsWithNewline = text.length === 0 || text[text.length - 1] === 0x0a;
+	// COPY text format escapes every backslash in the data, so no data line can
+	// be the bare `\.` terminator.
+	return [
+		Buffer.from(copyCmd),
+		Buffer.from(text),
+		Buffer.from(endsWithNewline ? '\\.\n' : '\n\\.\n'),
+	];
+}
+
 /**
- * DELETE every `<tld>N` section (es1 terms, es2 models…) from matrix_hierarchy before a
- * REPLACE re-import — the PHP scoped pre-delete (backup::import_from_copy_file). Anchored
- * regex on the safeTld-validated tld. Destructive by design (the caller confirmed it).
+ * The IMPORT half of one tld (no activation) — ONE ATOMIC UNIT (OPS-6/PERF-11
+ * review): every write of the tld runs in ONE psql session under
+ * `--single-transaction` + `ON_ERROR_STOP`, so it applies whole or not at all:
+ *   (replace) the scoped DELETE of every `<tld>N` section (the PHP pre-delete,
+ *   backup::import_from_copy_file — destructive by design, the caller confirmed
+ *   it), the terms `\copy` (`<tld>1.copy.gz`, required), the models `\copy`
+ *   (`<tld>2.copy.gz`, when the file exists) and the counter realignment.
+ * Each used to be its own psql call: a terms file that failed to load left the
+ * hierarchy DELETED (operator edits and additions gone, the seed not restored),
+ * a failed models file and a failed counter were ignored and the tld reported
+ * imported. Both seed files are read and decompressed BEFORE anything is sent.
+ * Without `replace`, a tld whose `<tld>1` rows exist is skipped (the raw `\copy`
+ * is insert-only). Table FORCED to matrix_hierarchy (PHP parity), explicit
+ * column order. Gate: test/unit/hierarchy_import_atomic_native.test.ts.
  */
-async function deleteHierarchyRows(
+export async function importHierarchyRows(
 	conn: DbConnDescriptor,
 	tld: string,
-): Promise<{ ok: boolean; msg: string }> {
-	const res = await runPsql(conn, [
-		'-v',
-		'ON_ERROR_STOP=1',
-		'-c',
-		`DELETE FROM ${HIERARCHY_TABLE} WHERE section_tipo ~ '^${tld}[0-9]+$'`,
+	options: { replace?: boolean; importDir?: string } = {},
+): Promise<{ ok: boolean; msg: string; skipped?: boolean }> {
+	const replace = options.replace === true;
+	if (!replace && (await hierarchyRowsPresent(conn, tld))) {
+		return { ok: true, msg: 'already installed — skipped', skipped: true };
+	}
+	const seeds = readSeedFiles(options.importDir ?? HIERARCHY_IMPORT_DIR, tld);
+	if ('problem' in seeds) return { ok: false, msg: seeds.problem };
+	const res = await runImportUnit(conn, tld, replace, seeds);
+	if (res.exitCode === 0) return { ok: true, msg: 'copied' };
+	return { ok: false, msg: failedImportMessage(replace, res) };
+}
+
+/**
+ * THE WRITE: the tld's whole import as ONE psql session, one transaction —
+ * (reset) the scoped DELETE, the terms and models `\copy`, the counter. A
+ * failing statement stops the script (ON_ERROR_STOP) and rolls all of it back.
+ */
+function runImportUnit(
+	conn: DbConnDescriptor,
+	tld: string,
+	replace: boolean,
+	seeds: SeedFiles,
+): Promise<PsqlRunResult> {
+	const reset = replace
+		? [Buffer.from(`DELETE FROM ${HIERARCHY_TABLE} WHERE section_tipo ~ '^${tld}[0-9]+$';\n`)]
+		: [];
+	const models = seeds.models === null ? [] : inlineCopy(seeds.models);
+	const script = Buffer.concat([
+		...reset,
+		...inlineCopy(seeds.terms),
+		...models,
+		Buffer.from(`${consolidateCounterSql(tld)}\n`),
 	]);
-	if (res.exitCode !== 0) return { ok: false, msg: res.stderr || 'delete failed' };
-	return { ok: true, msg: 'deleted' };
+	return runPsql(conn, ['-v', 'ON_ERROR_STOP=1', '--single-transaction', '--quiet', '-f', '-'], {
+		stdin: script,
+	});
+}
+
+/** The decompressed seeds of a tld (models optional). */
+interface SeedFiles {
+	terms: Uint8Array;
+	models: Uint8Array | null;
+}
+
+/** Both seed files of a tld, read and decompressed, or the problem that kept one unread. */
+function readSeedFiles(importDir: string, tld: string): SeedFiles | { problem: string } {
+	const terms = readSeedFile(importDir, `${tld}1.copy.gz`);
+	if ('problem' in terms) return terms;
+	if (!existsSync(join(importDir, `${tld}2.copy.gz`))) return { terms: terms.text, models: null };
+	const models = readSeedFile(importDir, `${tld}2.copy.gz`);
+	return 'problem' in models ? models : { terms: terms.text, models: models.text };
+}
+
+/** A failed import unit rolled back whole: nothing of the tld changed. */
+function failedImportMessage(replace: boolean, res: PsqlRunResult): string {
+	const step = replace ? 'reset failed — nothing changed' : 'import failed — nothing imported';
+	return `${step}: ${res.stderr || `psql exited ${res.exitCode}`}`;
 }
 
 /**
@@ -189,34 +256,16 @@ export async function installHierarchies(
 			continue;
 		}
 
-		// Already installed? Skip (default) or DELETE-then-recopy (explicit reset). The
-		// raw `\copy` is insert-only, so without this an already-present tld throws a PK
-		// violation instead of doing something sensible.
-		const present = await hierarchyRowsPresent(connection, tld);
-		if (present && !replace) {
-			responses.push({ tld, ok: true, msg: 'already installed — skipped', skipped: true });
+		const imported = await importHierarchyRows(connection, tld, { replace });
+		if (imported.skipped === true) {
+			responses.push({ tld, ok: true, msg: imported.msg, skipped: true });
 			continue;
 		}
-		if (present && replace) {
-			const del = await deleteHierarchyRows(connection, tld);
-			if (!del.ok) {
-				responses.push({ tld, ok: false, msg: `reset failed: ${del.msg}` });
-				errors.push(`${tld}: ${del.msg}`);
-				continue;
-			}
-		}
-
-		// Terms file is required; the model file is optional.
-		const terms = await importCopyFile(connection, `${tld}1.copy.gz`);
-		if (!terms.ok) {
-			responses.push({ tld, ok: false, msg: terms.msg });
-			errors.push(`${tld}: ${terms.msg}`);
+		if (!imported.ok) {
+			responses.push({ tld, ok: false, msg: imported.msg });
+			errors.push(`${tld}: ${imported.msg}`);
 			continue;
 		}
-		if (existsSync(join(HIERARCHY_IMPORT_DIR, `${tld}2.copy.gz`))) {
-			await importCopyFile(connection, `${tld}2.copy.gz`); // best-effort model import
-		}
-		await consolidateHierarchyCounter(connection, tld);
 
 		// The engine's writes land in the CONFIGURED database. When the import target is a
 		// different one, activating would write into the wrong DB — refuse, loudly.

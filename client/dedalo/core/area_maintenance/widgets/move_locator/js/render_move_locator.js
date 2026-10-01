@@ -6,6 +6,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {update_process_status} from '../../../../common/js/common.js'
+	import {init_move_transform_form} from '../../../js/move_transform.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 
 	// hljs
@@ -31,8 +32,8 @@
 *     JSON definition files (supplied by class.area_maintenance::get_definitions_files).
 *   - Render each definition file as a checkbox + collapsible syntax-highlighted
 *     JSON preview using highlight.js.
-*   - Wire a form (via self.caller.init_form) that fires exec_move_locator() on
-*     the selected file set and streams the background process status via SSE.
+*   - Wire the shared move_* run flow (init_move_transform_form, move_transform.js):
+*     PREVIEW (dry run) job first, then Execute of exactly the previewed files.
 *   - On widget mount, re-attach any in-progress process found in IndexedDB so the
 *     user can re-open the widget and still see live progress.
 *
@@ -117,11 +118,10 @@ render_move_locator.prototype.list = async function(options) {
 *        - An expand/collapse arrow to preview the file's parsed JSON content,
 *          rendered with highlight.js syntax highlighting.
 *      Collapsible state is persisted via `ui.collapse_toggle_track` (IndexedDB).
-*   3. A submission form wired through `self.caller.init_form`. The on_submit
-*      callback validates that at least one file is selected (alert on failure),
-*      then calls `self.exec_move_locator(files_selected)` which fires the API
-*      request with `background_running: true`. The returned `{ pid, pfile }` is
-*      handed to `update_process_status` to open an SSE stream in `body_response`.
+*   3. The shared move_* run flow (`init_move_transform_form`): the submit runs
+*      the PREVIEW (dry run) job, a clean preview reveals the Execute control
+*      (dry_run:false on the previewed files, after a confirm); each job's
+*      `{ pid, pfile }` is streamed into `body_response`.
 *   4. An on-mount check (`check_process_data`) that reads IndexedDB for a
 *      previously stored PID under the key `'process_move_locator'` / `'status'`.
 *      If found, re-attaches `update_process_status` so the user sees progress
@@ -291,36 +291,16 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// form init
-		// Uses optional chaining because the widget can be embedded outside
-		// area_maintenance where caller (and therefore init_form) is absent.
-		self.caller?.init_form({
+		// PREVIEW (dry run) first, then EXECUTE exactly the previewed selection —
+		// the one run flow of the five move_* widgets (move_transform.js). Both runs
+		// are server jobs answering {pid, pfile}; their streams render in body_response.
+		init_move_transform_form(self, {
+			model			: 'move_locator',
 			submit_label	: 'Move locators',
-			// confirm_text	: confirm_text,
-			body_info		: content_data,
+			files_selected	: files_selected,
+			content_data	: content_data,
 			body_response	: body_response,
-			on_submit	: (e, values) => {
-
-				// Validate that the user selected at least one definition file.
-				// (!) Uses alert() as the error channel — see module-level note.
-				if (!files_selected.length) {
-					alert("Error: no files are selected");
-					return
-				}
-
-				// Fire the long-running background process and wire SSE progress.
-				// exec_move_locator sends background_running:true so the server
-				// spawns a CLI child process and returns { pid, pfile } immediately;
-				// update_process_status then polls that process via SSE stream.
-				self.exec_move_locator(files_selected)
-				.then(function(response){
-					update_process_status(
-						local_db_id,
-						response.pid,
-						response.pfile,
-						body_response
-					)
-				})
-			}
+			local_db_id		: local_db_id
 		})
 
 	// check process status always

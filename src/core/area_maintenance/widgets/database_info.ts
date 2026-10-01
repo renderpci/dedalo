@@ -460,18 +460,17 @@ async function databaseInfoConsolidateTables(
 }
 
 /**
- * database_info.rebuild_user_stats — per user: DELETE the dd1521 aggregates
- * and recompute every day from matrix_activity (PHP widget rebuild_user_stats
- * → diffusion_section_stats delete + update). (!) Intentionally lossy when
- * the activity log is shorter than the stats history — an admin decision.
+ * database_info.rebuild_user_stats — per user: recompute every day from
+ * matrix_activity and REPLACE the dd1521 aggregates, one atomic unit per user
+ * (user_stats.ts rebuildUserActivityStats: a failure rolls that user back, its
+ * previous aggregates stand). (PHP widget rebuild_user_stats →
+ * diffusion_section_stats delete + update.) (!) Intentionally lossy when the
+ * activity log is shorter than the stats history — an admin decision.
  */
-export type UserStatsDeps = Pick<
-	typeof import('../user_stats.ts'),
-	'deleteUserActivityStats' | 'updateUserActivityStats'
->;
+export type UserStatsDeps = Pick<typeof import('../user_stats.ts'), 'rebuildUserActivityStats'>;
 
 /**
- * Resolve the aggregate writer pair — the injected one in a gate, the real
+ * Resolve the aggregate rebuilder — the injected one in a gate, the real
  * module in production. A named helper, not an inline `??`, so the seam costs
  * the already-branchy handler no cyclomatic complexity (the crap ratchet caps
  * that file's max at its frozen 13).
@@ -492,25 +491,23 @@ export async function databaseInfoRebuildUserStats(
 		refuseAction('Error. Request failed [rebuild_user_stats]. Empty users value');
 	}
 	// SEAM (test injection only): the guard above returns BEFORE this line, so a
-	// gate can prove the dd1521 aggregate DELETE was never reached.
-	const { deleteUserActivityStats, updateUserActivityStats } = await resolveUserStatsDeps(deps);
+	// gate can prove the dd1521 rebuild was never reached.
+	const { rebuildUserActivityStats } = await resolveUserStatsDeps(deps);
+	const rebuilt: number[] = [];
 	for (const rawUserId of users) {
 		const userId = Number(rawUserId);
-		const deleted = await deleteUserActivityStats(userId);
-		if (!deleted) {
-			errors.push(`failed delete user stats. User: ${userId}`);
-			continue;
-		}
-		const update = await updateUserActivityStats(userId);
-		// A run that did not complete is the aggregate writer's own refusal — it
-		// used to be returned VERBATIM as the widget body (`update.result===false`);
-		// now it throws with the writer's sentence, which is the same information
-		// on the wire under the coded shape.
-		if (!update.ok) {
-			failAction(update.msg, { coordinates: { user_id: userId } });
-		}
+		const update = await rebuildUserActivityStats(userId).catch((error: unknown) =>
+			failAction(userRebuildFailure(userId, rebuilt), {
+				cause: error,
+				coordinates: { user_id: userId },
+			}),
+		);
+		// A run that did not complete is the aggregate writer's own refusal: it
+		// throws with the writer's sentence (the coded shape of the old body).
+		if (!update.ok) failAction(update.msg, { coordinates: { user_id: userId } });
 		errors.push(...update.errors);
 		updatedDays.push(update.value);
+		rebuilt.push(userId);
 	}
 	return {
 		data: errors.length === 0,
@@ -518,6 +515,12 @@ export async function databaseInfoRebuildUserStats(
 		...(errors.length === 0 ? {} : { errors }),
 		extend: { updated_days: updatedDays },
 	};
+}
+
+/** The public sentence of a user whose rebuild failed — and of the users already rebuilt. */
+function userRebuildFailure(userId: number, rebuilt: number[]): string {
+	const before = rebuilt.length === 0 ? '' : `; users rebuilt before it: ${rebuilt.join(', ')}`;
+	return `Error. The statistics rebuild of user ${userId} failed — rolled back, its previous statistics are unchanged${before}`;
 }
 
 /**

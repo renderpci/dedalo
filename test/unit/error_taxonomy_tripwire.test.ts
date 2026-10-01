@@ -233,11 +233,6 @@ const RAW_ON_WIRE_EXEMPTIONS: Readonly<Record<string, { count: number; reason: s
 		reason:
 			"zod's `parsed.error.message` describes the MCP caller's own tool input against the declared schema; publicMessage under a public-disclosure code",
 	},
-	'src/core/install/hierarchy_import.ts': {
-		count: 1,
-		reason:
-			'internal `{ok:false, msg}` outcome shape of the installer hierarchy import (B1-ratcheted), consumed by the install area, not a wire body',
-	},
 	'src/core/media/tools/versions.ts': {
 		count: 1,
 		reason:
@@ -470,7 +465,7 @@ const FAILURE_LITERAL_BASELINE: Readonly<Record<string, number>> = {
 	'src/core/geoip/download.ts': 6,
 	'src/core/install/config_persist.ts': 4,
 	'src/core/install/hierarchy_activate.ts': 1,
-	'src/core/install/hierarchy_import.ts': 10,
+	'src/core/install/hierarchy_import.ts': 7,
 	'src/core/install/mailer_probe.ts': 2,
 	'src/core/mailer/mailer.ts': 4,
 	'src/core/media/tools/versions.ts': 1,

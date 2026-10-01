@@ -330,8 +330,9 @@ slot goes straight to the next queued maintenance waiter), and a run still
 waiting for its maintenance slot leaves the queue at once.
 An unbounded statement therefore can neither hang the shutdown nor survive it
 holding its locks (a cancelled data update rolls back; the rerun is the resume).
-The one exception is deliberate: `runWithoutStatementTimeout`'s statements
-(REINDEX / CREATE / DROP INDEX CONCURRENTLY, VACUUM) run on a NON-TRANSACTIONAL
+The one exception is deliberate: `runWithoutStatementTimeout`'s WEAK-LOCK
+statements (REINDEX / CREATE / DROP INDEX CONCURRENTLY, plain VACUUM / ANALYZE —
+`nonTransactionalLockClass`) run on a NON-TRANSACTIONAL
 twin of the maintenance pool — same gate, its own `application_name`
 (`dedalo_maintenance:nontx:<pid>:<nonce>`) — which the shutdown never cancels:
 a cancelled CONCURRENTLY build is not rolled back, it leaves an INVALID
@@ -387,18 +388,28 @@ cancels the running statement and rolls that file back; later files are reported
 before a job exists, and each file's unit takes the advisory try-lock
 `TRANSFORM_RUN_LOCK_KEY` (7_020_926_003), so a run from another process is
 refused at once instead of queueing behind the first run's row locks. Gate:
-`test/unit/transform_run_native.test.ts`. The NON-TRANSACTIONAL lane (CONCURRENTLY/VACUUM) keeps no bound:
-its waits block neither reads nor writes, and an aborted concurrent build would
-leave an invalid index. Gate: `test/unit/maintenance_door_unbounded_native.test.ts`
+`test/unit/transform_run_native.test.ts`. The NON-TRANSACTIONAL lane keeps no bound,
+and only the weak-lock class runs on it (CONCURRENTLY, plain VACUUM / ANALYZE —
+SHARE UPDATE EXCLUSIVE, which no reader or writer conflicts with, queued or
+granted; an aborted concurrent build would leave an invalid index). Every OTHER
+statement `runWithoutStatementTimeout` is handed — the db-assets recreate's
+`ar_maintenance` `REINDEX TABLE matrix_dd` (SHARE: blocks writers) and `VACUUM
+FULL … matrix_dd` (ACCESS EXCLUSIVE: blocks everything) — is STRONG: it runs on
+the transactional maintenance pool as an autocommit statement, under the same
+bound, retried after 1s/2s/4s/8s (no lock is queued during a delay), and escapes
+as `db.lock_timeout`; the classifier is an allowlist of the weak forms, so an
+unrecognised statement is bounded. Gates: `test/unit/maintenance_door_unbounded_native.test.ts`
 (a later reader gets through while the long reader still holds; the escaping
-wait is `db.lock_timeout`).
+wait is `db.lock_timeout`) and `test/unit/maintenance_nontx_lock_bound_native.test.ts`
+(VACUUM FULL behind a long reader, REINDEX TABLE behind a writer, the weak forms
+still unbounded, the routing by `application_name`).
 
 Census of the legitimately long statements (who is unbounded, and how):
 
 | Lane | Handling |
 |---|---|
 | Maintenance-area ACTIONS a widget declares maintenance (`unboundedActions`: every database_info action — VACUUM/ANALYZE, REINDEX, the store rebuilds and backfill, the relation-index report, consolidate, user stats —, every `move_*` transform — the inline dry run; an execute is a stoppable, single-flight maintenance job, one atomic, lock-retried unit per definition file —, update_ontology, the dd_ontology recovery build/restore, add_hierarchy install/reset, export_hierarchy, reconcile_status run) | The widget door wraps THOSE handlers in the scope; every other action and every panel load stays bounded. `dataframe_control` is not maintenance: each batch runs under `SET LOCAL statement_timeout` = what is left of its per-table/total budgets (WC-071/072), never above the pool ceiling. |
-| `runWithoutStatementTimeout` (REINDEX/VACUUM/DROP INDEX CONCURRENTLY) | The non-transactional maintenance lane (same gate, never cancelled by shutdown — see above); refused inside a transaction. |
+| `runWithoutStatementTimeout` (REINDEX/VACUUM/DROP INDEX CONCURRENTLY) | By lock class: the WEAK forms (CONCURRENTLY, plain VACUUM / ANALYZE) on the non-transactional maintenance lane (same gate, no lock bound, never cancelled by shutdown — see above); every other statement (`REINDEX TABLE`, `VACUUM FULL`) on the maintenance pool under `MAINTENANCE_LOCK_TIMEOUT`, retried, typed `db.lock_timeout` on escape. Refused inside a transaction. |
 | Data-update engine (`src/core/update/engine.ts`) | Its own atomic unit: `withMaintenanceTransaction` (one transaction, `SET LOCAL lock_timeout` + `SET LOCAL statement_timeout = 0`, whole-unit retry on 55P03 — each discarded attempt logged to update.log — abort cancels the running statement). The background job has NO deadline (`deadlineMs: 0`, overriding the maintenance lane's 6 h): a clock that fired mid-run would roll the whole unit back, every time. The verdict of record is the `matrix_updates` version row (it commits with the steps); update.log is advisory: a `BEGIN atomic run … [xact <xid>]` line per attempt that won the single-flight claim (a refused one writes only `REFUSED [xact <xid>] (…)`) and an fsynced `COMMITTED <version> [xact <xid>]` line after the COMMIT succeeded, but a failed log write (full or read-only private dir) only reaches the server log and never changes the verdict — and a crash between COMMIT and that line leaves a committed run without it, so read `matrix_updates` when in doubt. A statement cancelled from outside (a shutdown, an operator) is reported as an interruption, never as the step's SQL failing. A failure the engine did not raise itself (a connection lost during COMMIT) is classified by `pg_xact_status` of the run's own transaction (read on a dedicated connection, ≤ 2 s per read) — committed, rolled back, or "outcome unknown" — never by re-reading the version. Once a run is aborted, no further statement of it is sent. No step can end the unit: transaction control is refused before it is sent; should the between-steps checkpoint ever see the transaction id change anyway, the run is reported `PARTIAL` (what ran before persisted, the version is not stamped) — never "rolled back". Known limit: `lock_timeout` bounds EVERY lock wait, row locks too — a long migration that meets a row lock held > 5 s is retried whole (maintenance mode excludes ordinary editors; a background import or runner started before it does not). |
 | Boot migrations (`install/db/migrate.ts`) | Already `SET LOCAL statement_timeout = 0` per file (the recorder sees it); the ONLINE lane uses a reserved connection with a session 0 it RESETs. |
 | `db_assets` store builds at boot (`ensureSearchStores` → one whole-table `INSERT … SELECT` backfill per matrix table; `rebuildIndexes` & co.) / `test:db:setup` / `migrate_section_id_locators`; `observer_reconcile` CLI | To enter the scope at the source (the `db_assets` builders, `reconcileObserverMirrors`). PENDING — until then they run under the ceiling, so the default flip ships together with those wraps. |

@@ -126,9 +126,13 @@ const LOCK_NOT_AVAILABLE = '55P03';
  * reader runs. Bounded, the waiter gives up (SQLSTATE 55P03, its transaction
  * rolls back) and the readers behind it proceed. Only the WAIT is bounded; a
  * granted lock is held for the work's whole span. The NON-TRANSACTIONAL lane
- * (REINDEX / CREATE / DROP INDEX CONCURRENTLY, VACUUM) keeps no bound: its waits
- * block neither reads nor writes, and a cancelled CONCURRENTLY build leaves an
- * INVALID index behind (getNonTransactionalLane).
+ * keeps no bound, and only the WEAK-LOCK class runs on it (REINDEX / CREATE /
+ * DROP INDEX CONCURRENTLY, plain VACUUM / ANALYZE — SHARE UPDATE EXCLUSIVE, which
+ * no reader or writer conflicts with, queued or granted; and a cancelled
+ * CONCURRENTLY build leaves an INVALID index behind). Every other statement
+ * `runWithoutStatementTimeout` is handed — `REINDEX TABLE` (SHARE: blocks
+ * writers), `VACUUM FULL` (ACCESS EXCLUSIVE: blocks everything) — waits under
+ * THIS bound on the maintenance pool (nonTransactionalLockClass).
  */
 export const MAINTENANCE_LOCK_TIMEOUT = '5s';
 
@@ -347,9 +351,9 @@ function getMaintenanceLane(): PoolLane {
 }
 
 /**
- * The maintenance pool's NON-TRANSACTIONAL twin — the one lane of
- * runWithoutStatementTimeout (REINDEX / CREATE / DROP INDEX CONCURRENTLY,
- * VACUUM). Same GATE as the maintenance pool (DB_MAINTENANCE_POOL_MAX bounds
+ * The maintenance pool's NON-TRANSACTIONAL twin — the lane of
+ * runWithoutStatementTimeout's WEAK-LOCK class (REINDEX / CREATE / DROP INDEX
+ * CONCURRENTLY, plain VACUUM / ANALYZE — nonTransactionalLockClass). Same GATE as the maintenance pool (DB_MAINTENANCE_POOL_MAX bounds
  * the two lanes' IN-USE connections together — not their open sockets: each Bun
  * pool keeps its own idle connections, so the physical budget counts both,
  * connection_budget.ts), same startup `statement_timeout` 0, its OWN
@@ -921,12 +925,66 @@ function recordTimeoutDirective(handle: TransactionHandle, text: string): void {
 }
 
 /**
+ * Which lock class a runWithoutStatementTimeout text is (OPS-6/PERF-11 review).
+ *
+ * 'weak' — EVERY statement is one whose locks are at most SHARE UPDATE EXCLUSIVE
+ * (no reader's ACCESS SHARE nor writer's ROW EXCLUSIVE conflicts with it, queued
+ * or granted, so its wait stalls nobody): `REINDEX … CONCURRENTLY`, `CREATE
+ * [UNIQUE] INDEX CONCURRENTLY`, `DROP INDEX CONCURRENTLY`, `ANALYZE`, and a
+ * `VACUUM` without FULL. These run UNBOUNDED on the non-transactional lane —
+ * a lock_timeout firing mid-CONCURRENTLY leaves an INVALID index behind.
+ *
+ * 'strong' — anything else: `REINDEX TABLE`/`INDEX` (SHARE — blocks writers),
+ * `VACUUM FULL` (ACCESS EXCLUSIVE — blocks everything), a CLUSTER, a text the
+ * lexer cannot split. Queued behind a long reader (a pg_dump holds ACCESS SHARE
+ * on every table for hours) such a statement holds every LATER conflicting
+ * request queued behind it — PostgreSQL grants locks in queue order — so it
+ * waits under MAINTENANCE_LOCK_TIMEOUT. The rule is an ALLOWLIST of the weak
+ * forms: an unrecognised statement is bounded, never the reverse. Literals,
+ * comments and quoted identifiers are blanked first (a table called "full" is
+ * no FULL option). A `FULL` anywhere in a VACUUM (even `(FULL false)`) bounds it.
+ */
+export function nonTransactionalLockClass(text: string): 'weak' | 'strong' {
+	const statements = sqlStatements(text, 'blank');
+	if (statements === null || statements.length === 0) return 'strong';
+	return statements.every(({ stripped }) => isWeakLockStatement(stripped)) ? 'weak' : 'strong';
+}
+
+/** The weak-lock forms (see nonTransactionalLockClass), on a STRIPPED statement. */
+const WEAK_LOCK_STATEMENTS: readonly RegExp[] = [
+	/^ANALY[SZ]E\b/i,
+	/^REINDEX\b(?:\s*\([^)]*\))?\s*(?:TABLE|INDEX|SCHEMA|DATABASE|SYSTEM)\s+CONCURRENTLY\b/i,
+	/^REINDEX\s*\([^)]*\bCONCURRENTLY\b(?!\s+(?:false|off|0)\b)[^)]*\)/i,
+	/^CREATE\s+(?:UNIQUE\s+)?INDEX\s+CONCURRENTLY\b/i,
+	/^DROP\s+INDEX\s+CONCURRENTLY\b/i,
+];
+
+function isWeakLockStatement(stripped: string): boolean {
+	if (/^VACUUM\b/i.test(stripped)) return !/\bFULL\b/i.test(stripped);
+	return WEAK_LOCK_STATEMENTS.some((rule) => rule.test(stripped));
+}
+
+/** The default lock-retry schedule of a strong-lock statement (withMaintenanceTransaction's). */
+const STRONG_LOCK_RETRY_DELAYS_MS: readonly number[] = [1000, 2000, 4000, 8000];
+
+/**
  * Run ONE deliberately long, NON-TRANSACTIONAL maintenance statement with no
  * statement ceiling — REINDEX / VACUUM / DROP INDEX CONCURRENTLY on a
- * production-scale table (WC-055) — on the non-transactional maintenance lane
- * (getNonTransactionalLane: startup `statement_timeout` 0, the maintenance gate,
- * and an identity the shutdown cancel spares — a cancelled CONCURRENTLY build
- * is not rolled back, it leaves an invalid index behind).
+ * production-scale table (WC-055). Routed by its lock class
+ * (nonTransactionalLockClass):
+ *  - WEAK (CONCURRENTLY, plain VACUUM / ANALYZE): the non-transactional lane
+ *    (getNonTransactionalLane: startup `statement_timeout` 0, NO lock bound, the
+ *    maintenance gate, and an identity the shutdown cancel spares — a cancelled
+ *    CONCURRENTLY build is not rolled back, it leaves an invalid index behind);
+ *  - STRONG (`REINDEX TABLE`, `VACUUM FULL`, …): the maintenance pool as an
+ *    autocommit statement — startup `statement_timeout` 0 AND its startup
+ *    `lock_timeout` MAINTENANCE_LOCK_TIMEOUT. A lock wait past the bound gives
+ *    up (nothing applied: these statements are atomic), is retried after each
+ *    of `options.lockRetryDelaysMs` (default 1s/2s/4s/8s — no lock is queued
+ *    during a delay, so the readers behind it run), and escapes as the typed
+ *    503 `db.lock_timeout`. Shutdown cancels it like any maintenance statement;
+ *    it rolls back cleanly.
+ *  Gate: test/unit/maintenance_nontx_lock_bound_native.test.ts.
  *
  * Before PERF-11 this cleared the GUC with a session `SET` on a reserved
  * connection and `RESET` it before release — correct only as long as every
@@ -940,6 +998,7 @@ function recordTimeoutDirective(handle: TransactionHandle, text: string): void {
 export async function runWithoutStatementTimeout(
 	statement: string,
 	params: (string | number | null)[] = [],
+	options: { lockRetryDelaysMs?: readonly number[] } = {},
 ): Promise<unknown[]> {
 	if (transactionStore.getStore() !== undefined) {
 		throw new DedaloError('internal.invariant', {
@@ -949,11 +1008,24 @@ export async function runWithoutStatementTimeout(
 		});
 	}
 	refuseSessionState(statement);
-	return runOnPool(
-		getNonTransactionalLane(),
-		async (target) => (await target.unsafe(statement, params)) as unknown[],
-		describeText(statement),
-	);
+	const run = (lane: PoolLane) =>
+		runOnPool(
+			lane,
+			async (target) => (await target.unsafe(statement, params)) as unknown[],
+			describeText(statement),
+		);
+	if (nonTransactionalLockClass(statement) === 'weak') return run(getNonTransactionalLane());
+	return retryOnLockNotAvailable(
+		() => run(getMaintenanceLane()),
+		options.lockRetryDelaysMs ?? STRONG_LOCK_RETRY_DELAYS_MS,
+		(attempt, delayMs) => {
+			console.warn(
+				`[maintenance] strong-lock statement waited past its lock bound (attempt ${attempt}); retrying in ${delayMs}ms`,
+			);
+		},
+	).catch((error: unknown) => {
+		throw typedMaintenanceLockWait(error);
+	});
 }
 
 /**

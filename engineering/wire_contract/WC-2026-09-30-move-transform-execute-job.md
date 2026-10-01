@@ -41,6 +41,46 @@
     later file is `not run — the transform was stopped (an earlier file's outcome is
     uncertain) before it started`.
   - A dry run (`dry_run` anything but `false`) is unchanged: inline, the report as the response.
+    (SUPERSEDED 2026-10-01 — the dry run is a job too; see the addendum.)
+- **Correction to "Shape before" (2026-10-01):** a FAILED inline execute (a rolled-back file, a
+  run-lock refusal, any report with `ok:false`) did not answer the report — it THREW the typed
+  `maintenance.action_failed` (`failAction`), sentence = the report msg + its per-file lines.
+  Only a successful execute answered `{result: true, msg, …}`.
+
+### Addendum (2026-10-01, OPS-6/PERF-11 review survivors) — the failure channel, `ok`, and the dry run as a job
+
+- **A failed run ends `error`, typed.** The job worker used to RETURN the report for every
+  outcome, so a rolled-back file, a run-lock refusal, an UNKNOWN or PARTIAL outcome ended
+  `done` with no `error` — the client (`normalize_stream_error` finds no coded error) rendered
+  "Process completed" in success styling. Now a run whose report is not ok keeps the report as
+  the job's `data` and ends `error` with the typed `maintenance.action_failed` body (public
+  sentence: the report msg + its per-file lines; that sentence is also the frame's `errors[0]`)
+  — the same code the pre-job inline execute threw. A STOPPED run is not a failure: it still
+  ends `stopped`, its report the data, no `error`, `errors: []`.
+- **The job's report data is `{ok, msg, errors, dry_run, counts, sample}`** — `ok` replaces
+  `result` (ERRORS_SPEC §5.3: a frame never carries `result:false/msg/errors`).
+- **A DRY RUN is a job too.** `dry_run` anything but `false` now answers at once `{result: true,
+  msg: "OK. Running <widget> (dry run) <pid>", pid, pfile, dry_run: true}`, owned by the
+  submitter, `maintenance` lane, NO deadline, its own unbounded scope; its final `data` is the
+  report (a failed dry run ends `error` exactly like an execute). It takes NO single-flight
+  claim (it writes nothing). Its stop is honoured between definition files (the reads hold no
+  lock that blocks anyone). Before: the dry run answered the report inline. The vendored client
+  sends `background_running: true` and streams `{pid, pfile}` for every run — the inline
+  answer gave it two undefineds, so the panel rendered nothing.
+- **The client now reaches the execute** (`client/dedalo/core/area_maintenance/js/
+  move_transform.js`, shared by the five widgets): every request carries `dry_run`
+  explicitly. The submit runs the PREVIEW; only a preview whose final frame ended clean (no
+  coded `error`, `data.ok`, `data.dry_run`) reveals Execute, which refuses a selection changed
+  since the preview, asks a confirm, and sends exactly the previewed files with
+  `dry_run: false`. Before: the widgets sent no `dry_run`, so no control could execute.
+  `update_process_status`'s optional callback now receives the last frame read.
+- **Gates:** `test/unit/transform_run_native.test.ts` (THE DOOR legs: failed execute and
+  run-lock-refused execute end `error` with the code; stop ends `stopped` with no error and no
+  errors line; the dry run's job shape, lane, owner, no claim, its statements on the
+  maintenance identity; a failed dry run ends `error`), `test/unit/maintenance_door_unbounded_native.test.ts`
+  (reads `data.ok`), and the client suite `test_move_transform` (request body, the clean-preview
+  rule, the preview → execute flow, the tracker's last-frame callback).
+
 - **Reason:** a lock-holding bulk rewrite with its ceiling lifted must be endable and must not
   run twice at once. The vendored client already sends `background_running: true` and expects
   `{pid, pfile}` (it renders the job stream).

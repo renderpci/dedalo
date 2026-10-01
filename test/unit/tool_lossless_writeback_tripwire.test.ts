@@ -1772,7 +1772,7 @@ describe('LEG 4 — the tool write-back census is TOTAL by derivation', () => {
 		for (const key of [
 			'src/core/ontology/data_io_import.ts#normalizeOntologyTld',
 			'src/core/ontology/data_io_import.ts#importFromCopyFile',
-			'src/core/install/hierarchy_import.ts#importCopyFile',
+			'src/core/install/hierarchy_import.ts#runImportUnit',
 			'src/core/install/root_pw.ts#setRootPassword',
 		]) {
 			expect(CLOSURE.psqlSeeds, `${key} is not a derived psql seed`).toContain(key);
@@ -2054,7 +2054,9 @@ describe('LEG 4 — the tool write-back census is TOTAL by derivation', () => {
 			)
 			.map(([key]) => key)
 			.sort();
-		expect(CLOSURE.psqlSeeds.length).toBeGreaterThanOrEqual(7);
+		// 5 since 2026-10-01: hierarchy_import's three psql writers (the reset DELETE,
+		// the `\copy`, the counter) became ONE atomic psql unit, runImportUnit.
+		expect(CLOSURE.psqlSeeds.length).toBeGreaterThanOrEqual(5);
 		expect(CLOSURE.psqlSeeds, 'psql seeds by binding vs psql writers by name').toEqual(byName);
 		for (const seed of CLOSURE.psqlSeeds) {
 			expect(CLOSURE.preciseEdgesOf(seed).has(PSQL_DOOR), `${seed}: no resolved runPsql edge`).toBe(

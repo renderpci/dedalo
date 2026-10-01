@@ -11,7 +11,7 @@
  * bound connections IN USE; a Bun pool keeps an IDLE connection open until its
  * idleTimeout. The maintenance lane is TWO Bun pools (postgres.ts): the
  * transactional maintenance pool and its non-transactional twin
- * (runWithoutStatementTimeout — the shutdown cancel must be able to tell them
+ * (runWithoutStatementTimeout's weak-lock class — the shutdown cancel must be able to tell them
  * apart, so they cannot share connections). They share ONE slot gate, but each
  * keeps up to DB_MAINTENANCE_POOL_MAX idle connections for 30 s, so one
  * optimize run (pooled reads, then REINDEX/VACUUM) leaves both populated.

@@ -155,7 +155,7 @@ async function holdLock(statement, table) {
  * A move_* EXECUTE through the door is a maintenance JOB (OPS-6/PERF-11 r3): the
  * door answers {pid, pfile} at once; the report is the job's final data. Resolves
  * to the report like the pre-job inline response, and rejects the same way a
- * failed report used to (a thrown maintenance.action_failed).
+ * failed run ends (the job's status 'error' with a typed maintenance.action_failed).
  */
 async function runExecute(source, options) {
 	const response = await dispatchWidgetRequest(ROOT, source, options);
@@ -166,7 +166,7 @@ async function runExecute(source, options) {
 		await Bun.sleep(50);
 		status = mediaJobs.status(id);
 	}
-	if (status?.status !== 'done' || status.data?.result !== true) {
+	if (status?.status !== 'done' || status.data?.ok !== true) {
 		throw Object.assign(new Error(\`\${source.model} job \${id} ended \${status?.status}: \${status?.data?.msg} \${JSON.stringify(status?.data?.errors ?? status?.errors)}\`), { code: 'maintenance.action_failed' });
 	}
 	return { msg: status.data.msg, ...(status.data.errors.length === 0 ? {} : { errors: status.data.errors }) };
