@@ -1,4 +1,3 @@
-import { assertSafeOaiUrl } from '../../acquisition/url-safety.ts';
 import type { SourceAdapter } from '../types.ts';
 import {
 	acquireArticleSet,
@@ -26,8 +25,6 @@ export const ojsOaiAdapter: SourceAdapter = {
 	matchesUrl(rawUrl) {
 		return deriveOaiBaseUrl(rawUrl) !== null;
 	},
-
-	assertSafeUrl: assertSafeOaiUrl,
 
 	parseSeriesIdentifier: oaiSeriesIdentifier,
 

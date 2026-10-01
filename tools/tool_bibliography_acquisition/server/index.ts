@@ -9,6 +9,7 @@ import { NO_LANG } from '../../../src/config/data_langs.ts';
 import { sql } from '../../../src/core/db/postgres.ts';
 import { DedaloError } from '../../../src/core/errors/dedalo_error.ts';
 import { ok } from '../../../src/core/errors/index.ts';
+import { harvestFetch } from '../../../src/core/harvest/harvest.ts';
 import {
 	processUploadedFile,
 	requireMediaSpec,
@@ -29,10 +30,9 @@ import {
 	type ToolServerModule,
 	toolRequestId,
 } from '../../../src/core/tools/module.ts';
-import { downloadFileBytes } from './lib/acquisition/file_fetch.ts';
-import type { RawSource } from './lib/acquisition/http.ts';
 import { parseDcDate, splitAuthorName } from './lib/extraction/parser-utils.ts';
 import { ojsOaiAdapter } from './lib/sources/ojs_oai/adapter.ts';
+import type { RawSource } from './lib/sources/types.ts';
 
 // rsc205 is a VIRTUAL section (relations -> rsc3) but real records are stamped section_tipo='rsc205'
 // itself, not rsc3 - confirmed against rsc170 (the coin tool's own virtual image section), whose
@@ -167,7 +167,15 @@ async function previewHtml(context: ToolActionContext): Promise<ToolResponse> {
 	}
 
 	const adapter = findAdapterOrThrow(url);
-	await adapter.assertSafeUrl(url);
+	// No live fetch happens on this path (the operator supplies the HTML), so there is nothing here
+	// for the harvesting door to guard - just the same https-only shape check previewUrl's real
+	// fetch would also enforce.
+	if (new URL(url).protocol !== 'https:') {
+		throw new DedaloError('tool.action_failed', {
+			message: `preview_html: only https:// URLs are supported, got ${url}.`,
+			publicMessage: 'Only https:// URLs are supported.',
+		});
+	}
 
 	const page: RawSource = { html, finalUrl: url, httpStatus: 200, contentType: 'text/xml' };
 	const series = adapter.parseSeries(page, url);
@@ -523,7 +531,21 @@ async function importDocumentForPublication(
 		};
 	}
 
-	const { bytes } = await downloadFileBytes(pdfUrl, adapter.assertSafeUrl, 'application/pdf');
+	const pdfResponse = await harvestFetch({
+		url: pdfUrl,
+		hosts: 'public',
+		requireHttps: true,
+		expectContentType: ['application/pdf'],
+		maxBytes: 50 * 1024 * 1024,
+	});
+	if (!pdfResponse.ok) {
+		return {
+			pdfUrl,
+			documentImported: false,
+			documentError: `Server returned HTTP ${pdfResponse.status} for the PDF.`,
+		};
+	}
+	const bytes = pdfResponse.bytes;
 	const fileName = `${PUBLICATION_TIPO}_${sectionId}.pdf`;
 
 	const staged = receiveUpload(
