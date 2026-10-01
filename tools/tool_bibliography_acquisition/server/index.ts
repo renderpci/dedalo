@@ -22,6 +22,7 @@ import {
 	persistUploadedMedia,
 } from '../../../src/core/media/tools/files_info_persist.ts';
 import { getMatrixTableFromTipo } from '../../../src/core/ontology/resolver.ts';
+import { currentDataLang } from '../../../src/core/resolve/request_lang.ts';
 import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
 import { saveComponentData } from '../../../src/core/section/record/save_component.ts';
 import {
@@ -207,12 +208,18 @@ async function writeField(
 	componentTipo: string,
 	value: string | number,
 	userId: number,
+	// Defaults to NO_LANG for the (majority) non-translatable call sites; the
+	// one translatable field here (rsc221, Abstract - review item C5) must
+	// instead pass currentDataLang(), or the write lands in a slot the edit
+	// form never shows, and the operator's first real edit creates a SECOND
+	// value instead of replacing it.
+	lang: string = NO_LANG,
 ): Promise<void> {
 	const save = await saveComponentData({
 		componentTipo,
 		sectionTipo,
 		sectionId,
-		lang: NO_LANG,
+		lang,
 		userId,
 		changedData: [{ action: 'set_data', value: [{ id: 1, value }] }],
 	});
@@ -316,9 +323,19 @@ async function findExistingSeries(name: string): Promise<number | null> {
 	return existing[0]?.section_id ?? null;
 }
 
-/** Finds an existing rsc212 Series record, or creates one when none matches. The create path is
- * its own transaction - a failed name write used to leave an unnamed orphan Series behind (review
- * item C1). */
+/** A transaction-scoped advisory lock on an arbitrary dedup key - same primitive as
+ * acquireNodeLock (src/core/db/postgres.ts) for an existing node, just keyed on a find-or-create
+ * dedup key instead of a section_id, since the record doesn't exist yet when the race happens.
+ * Serializes two concurrent commits that would otherwise both miss the lookup and both create
+ * (review item C4). Must be called inside withTransaction - the lock releases at commit/rollback. */
+async function acquireDedupLock(key: string): Promise<void> {
+	await sql.unsafe('SELECT pg_advisory_xact_lock(hashtext($1))', [key]);
+}
+
+/** Finds an existing rsc212 Series record, or creates one when none matches. Locked and
+ * RE-CHECKED under the lock before creating, inside one transaction: the first check ran before
+ * any lock was held, so two concurrent commits for the same new series name used to both miss it
+ * and both create one, and a failed name write left an unnamed orphan behind (review items C1, C4). */
 async function findOrCreateSeries(
 	context: ToolActionContext,
 	name: string,
@@ -327,6 +344,9 @@ async function findOrCreateSeries(
 	if (found !== null) return { sectionId: found, created: false };
 
 	return withTransaction(async () => {
+		await acquireDedupLock(`rsc212:name:${name.trim().toLowerCase()}`);
+		const existing = await findExistingSeries(name);
+		if (existing !== null) return { sectionId: existing, created: false };
 		const sectionId = await createSectionRecord(SERIES_SECTION_TIPO, context.userId);
 		await writeField(sectionId, SERIES_SECTION_TIPO, SERIES_NAME_TIPO, name, context.userId);
 		return { sectionId, created: true };
@@ -427,9 +447,10 @@ async function findExistingPerson(
 	return existing[0]?.section_id ?? null;
 }
 
-/** Finds an existing rsc197 Person record, or creates one when none matches. The create path is
- * its own transaction - a failed name write used to leave an unnamed orphan Person behind (review
- * item C1). */
+/** Finds an existing rsc197 Person record, or creates one when none matches. Locked and
+ * RE-CHECKED under the lock before creating, inside one transaction: the first check ran before
+ * any lock was held, so two concurrent commits for the same new person used to both miss it and
+ * both create one, and a failed name write left an unnamed orphan behind (review items C1, C4). */
 async function findOrCreatePerson(
 	context: ToolActionContext,
 	surname: string,
@@ -439,6 +460,11 @@ async function findOrCreatePerson(
 	if (found !== null) return { sectionId: found, created: false };
 
 	return withTransaction(async () => {
+		await acquireDedupLock(
+			`rsc197:name:${surname.trim().toLowerCase()}|${(givenName ?? '').trim().toLowerCase()}`,
+		);
+		const existing = await findExistingPerson(surname, givenName);
+		if (existing !== null) return { sectionId: existing, created: false };
 		const sectionId = await createSectionRecord(PEOPLE_SECTION_TIPO, context.userId);
 		await writeField(sectionId, PEOPLE_SECTION_TIPO, PERSON_SURNAME_TIPO, surname, context.userId);
 		if (givenName !== null) {
@@ -640,11 +666,24 @@ async function resolvePersonCached(
 	return resolved;
 }
 
-/** OAI identifiers are "scheme:repository-id:local-id" (colon-delimited by protocol convention) -
- * the local-id alone reads far cleaner in the Code column than the full string. */
-function shortPublicationCode(identifier: string): string {
+/**
+ * OAI identifiers are "scheme:repository-id:local-id" (colon-delimited by protocol convention) -
+ * the local-id alone reads far cleaner in the Code column than the full string, BUT the repository
+ * id is not actually unique: many independent OJS installs share the PKP default
+ * ("ojs.pkp.sfu.ca"), so two different journals' article 123 both reduced to the identical
+ * "article/123" and looked like the same publication (review item C2). The landing page's own
+ * hostname IS unique per journal, so prefixing the local-id with it disambiguates while staying
+ * just as short - "revistas.usal.es/article/123", not the full OAI URN.
+ */
+function shortPublicationCode(identifier: string, landingPageUrl: string | null): string {
 	const lastColon = identifier.lastIndexOf(':');
-	return lastColon === -1 ? identifier : identifier.slice(lastColon + 1);
+	const localId = lastColon === -1 ? identifier : identifier.slice(lastColon + 1);
+	if (landingPageUrl === null) return identifier;
+	try {
+		return `${new URL(landingPageUrl).hostname}/${localId}`;
+	} catch {
+		return identifier;
+	}
 }
 
 /** One publication's outcome from commitPublications. */
@@ -685,7 +724,10 @@ async function commitOnePublication(
 	const p = publication;
 	const identifier =
 		typeof p.publicationIdentifier === 'string' && p.publicationIdentifier !== ''
-			? shortPublicationCode(p.publicationIdentifier)
+			? shortPublicationCode(
+					p.publicationIdentifier,
+					typeof p.landingPageUrl === 'string' ? p.landingPageUrl : null,
+				)
 			: null;
 
 	if (identifier !== null) {
@@ -722,8 +764,19 @@ async function commitOnePublication(
 	// re-import see "already imported" and skip a record with no title
 	// forever (review item C1). Series/author/document stay OUTSIDE it,
 	// unchanged — they are already individually best-effort against a record
-	// that, past this point, is real and complete.
-	const { sectionId, fieldsWritten } = await withTransaction(async () => {
+	// that, past this point, is real and complete. Locked and RE-CHECKED under
+	// the lock before creating: the FIRST check (above) ran before any lock was
+	// held, so two concurrent commits of the same publication used to both
+	// miss it and both create one (review item C4).
+	const coreResult = await withTransaction(async () => {
+		if (identifier !== null) {
+			await acquireDedupLock(`rsc205:code:${identifier}`);
+			const existing = await findExistingPublication(identifier);
+			if (existing !== null) {
+				return { created: false as const, sectionId: existing };
+			}
+		}
+
 		const newSectionId = await createSectionRecord(PUBLICATION_TIPO, context.userId);
 		const written: string[] = [];
 
@@ -740,7 +793,14 @@ async function commitOnePublication(
 			written.push(PAGES_TIPO);
 		}
 		if (typeof p.abstract === 'string' && p.abstract.trim() !== '') {
-			await writeField(newSectionId, PUBLICATION_TIPO, ABSTRACT_TIPO, p.abstract, context.userId);
+			await writeField(
+				newSectionId,
+				PUBLICATION_TIPO,
+				ABSTRACT_TIPO,
+				p.abstract,
+				context.userId,
+				currentDataLang(),
+			);
 			written.push(ABSTRACT_TIPO);
 		}
 		if (typeof p.publisher === 'string' && p.publisher.trim() !== '') {
@@ -821,8 +881,27 @@ async function commitOnePublication(
 			);
 			written.push(STANDARD_NUMBER_TYPE_RELATION_TIPO);
 		}
-		return { sectionId: newSectionId, fieldsWritten: written };
+		return { created: true as const, sectionId: newSectionId, fieldsWritten: written };
 	});
+
+	if (!coreResult.created) {
+		return {
+			publication_identifier: p.publicationIdentifier,
+			section_tipo: PUBLICATION_TIPO,
+			section_id: coreResult.sectionId,
+			error: null,
+			skipped: true,
+			fields_written: [],
+			series_section_id: null,
+			series_created: null,
+			series_error: null,
+			author_section_ids: [],
+			author_errors: [],
+			document_imported: false,
+			document_error: null,
+		};
+	}
+	const { sectionId, fieldsWritten } = coreResult;
 
 	let seriesSectionId: number | null = null;
 	let seriesCreated: boolean | null = null;

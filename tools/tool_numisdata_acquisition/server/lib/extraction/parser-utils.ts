@@ -130,16 +130,24 @@ function parseEuropeanAmount(raw: string): number | null {
 }
 
 /** Extracts "Weight: 7.68g." style fields from free-text lot descriptions. */
+/** Normalises a comma decimal ("7,68") to a period one ("7.68") - same fix jesusvico's own local
+ * extractJesusvicoWeight/Diameter already apply, needed here too since biddr/sixbid/numisbids share
+ * this extractor: parseLeadingNumber (index.ts) stops at the first non-period character, so an
+ * un-normalised "7,68 g" silently became 7, not 7.68 (review item D1). */
+function normalizeDecimalComma(value: string): string {
+	return value.replace(',', '.');
+}
+
 export function extractWeight(text: string | null | undefined): string | null {
 	if (!text) return null;
 	const match = text.match(/weight[:\s]*([\d.,]+\s*(?:g|gr|grams?|grammes?|kg))\b/i);
-	return match ? match[1]!.trim() : null;
+	return match ? normalizeDecimalComma(match[1]!.trim()) : null;
 }
 
 export function extractDiameter(text: string | null | undefined): string | null {
 	if (!text) return null;
 	const match = text.match(/diameter[:\s]*([\d.,]+\s*mm)\b/i);
-	return match ? match[1]!.trim() : null;
+	return match ? normalizeDecimalComma(match[1]!.trim()) : null;
 }
 
 const KNOWN_MATERIALS = [
