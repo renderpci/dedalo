@@ -44,10 +44,13 @@ The tool is **component-level**: it renders as an **Import RDF** button inline o
     For safety the tool only fetches ordinary `http`/`https` IRIs. It refuses loopback, private-network and cloud-metadata addresses, so an IRI that does not point at a public web resource will not resolve.
 
 !!! note "How the resource is fetched"
-    The tool asks the IRI itself for RDF/XML, the way linked-data servers expect, and follows the server's redirects to the document. If the server answers with something else (a web page, or "not found"), the tool tries once more at the IRI with `.rdf` appended. If the server is down or busy, the tool does not try again: run it later. Requests to the same site are spaced at least a few seconds apart (longer if the site asks for it), so a run can take several seconds, and on a slow site it can run out of time; try again later.
+    The tool asks the IRI itself for RDF/XML, the way linked-data servers expect, and follows the server's redirects to the document. If the server answers with something else (a web page, or "not found"), the tool tries once more at the IRI with `.rdf` appended. Requests to the same site are spaced a few seconds apart, so a run can take several seconds.
 
 !!! note "Some sites do not allow automated access"
-    Before fetching, Dédalo reads the site's `robots.txt` and follows it. If the site does not allow automated access to that address, the IRI is not fetched and the result says so (for example *The robots.txt of https://example.org does not allow automated access to this address*). The same happens, for a few minutes, when the site's `robots.txt` cannot be read. This is intended: Dédalo does not fetch from a site that has asked not to be fetched. Copy the values by hand, or ask the site.
+    Before fetching, Dédalo reads the site's `robots.txt` and follows it. If the site does not allow automated access to that address, the IRI is not fetched and the result says so (for example *The robots.txt of https://example.org does not allow automated access to this address*). This is intended: Dédalo does not fetch from a site that has asked not to be fetched. Copy the values by hand, or ask the site.
+
+!!! warning "A server that does not answer is out of service"
+    The tool waits at most 15 seconds for each IRI. If the remote server does not answer in that time, drops the connection, reports an error of its own, or cannot deliver its `robots.txt`, the result says the server is out of service (for example *The server http://numismatics.org is not responding or is out of service. Contact its maintainer*). Nothing in Dédalo needs fixing: contact whoever maintains that server, or try again later.
 
 !!! note "At most three IRIs per run"
     One run fetches at most three IRIs. The tool's own form sends one.

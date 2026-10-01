@@ -20,7 +20,7 @@
  * plus the result pane (`render_rdf_payload`), driven with payload literals.
  */
 
-import {render_rdf_payload} from '../../../tools/tool_import_rdf/js/render_tool_import_rdf.js'
+import {render_component_dato, render_rdf_payload} from '../../../tools/tool_import_rdf/js/render_tool_import_rdf.js'
 import {tool_import_rdf} from '../../../tools/tool_import_rdf/js/tool_import_rdf.js'
 
 
@@ -96,6 +96,26 @@ describe('TOOL_IMPORT_RDF CLIENT TEST', function() {
 		assert.equal(wrapper.querySelector('h4').textContent, 'https://ld.test/id/athens')
 		assert.ok(wrapper.querySelector('pre.rdf_subjects').textContent.includes('athens'))
 		assert.ok(wrapper.querySelector('pre.error'), 'expected the failure line too')
+	})
+
+	it('the IRI picker lists the component_iri ENTRIES (the v7 data envelope)', function() {
+		const self = {main_element : {data : {entries : [
+			{id : 1, iri : 'https://ld.test/id/rome', lang : 'lg-nolan'},
+			{id : 2, iri : '<img src=x onerror=alert(1)>', lang : 'lg-nolan'},
+			{id : 3, iri : null, lang : 'lg-nolan'}
+		]}}}
+		const container = render_component_dato(self)
+		const radios = container.querySelectorAll('input.component_data')
+		assert.equal(radios.length, 2, 'one radio per non-empty IRI')
+		assert.equal(radios[0].value, 'https://ld.test/id/rome')
+		assert.equal(container.querySelectorAll('img').length, 0, 'an IRI is text, never parsed as HTML')
+		assert.equal(container.querySelectorAll('label.error').length, 1, 'the empty IRI is flagged')
+	})
+
+	it('a single IRI is pre-checked', function() {
+		const self = {main_element : {data : {entries : [{id : 1, iri : 'https://ld.test/id/rome'}]}}}
+		const container = render_component_dato(self)
+		assert.ok(container.querySelector('input.component_data').checked)
 	})
 
 	it('nothing loaded and nothing failed is an empty result', function() {

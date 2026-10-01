@@ -2106,6 +2106,21 @@ export const ERROR_REGISTRY = {
 		retryable: false,
 		details_keys: ['count', 'limit'],
 	},
+	// A remote source a tool reads interactively did not answer in time, dropped
+	// the connection, answered 5xx/408/429, or could not deliver its robots.txt
+	// (tool_import_rdf, RDF_IRI_DEADLINE_MS). For the cataloguer the source is out
+	// of service: the label says so and sends them to its maintainer. `site` is the
+	// origin of the address the cataloguer gave, never a redirect target.
+	'tool.source_unavailable': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_tool_source_unavailable',
+		message: 'The remote server is not responding or is out of service',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: true,
+		details_keys: ['site'],
+	},
 	'tool.target_not_found': {
 		category: 'not_found',
 		status: 404,

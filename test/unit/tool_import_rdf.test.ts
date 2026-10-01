@@ -20,6 +20,7 @@ import { DedaloError, toErrorBody } from '../../src/core/errors/index.ts';
 import type { HarvestDeps } from '../../src/core/harvest/harvest.ts';
 import { clearPacingForTests } from '../../src/core/harvest/pacing.ts';
 import { clearRobotsCache } from '../../src/core/harvest/robots.ts';
+import { currentJobSignal } from '../../src/core/media/job_scope.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import type {
 	AddressLookup,
@@ -30,6 +31,7 @@ import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import {
 	loadRdf,
 	loadRdfBatch,
+	RDF_IRI_DEADLINE_MS,
 	RDF_MAX_URIS,
 	type RdfOutcome,
 	rdfFileUrl,
@@ -165,7 +167,7 @@ describe('tool_import_rdf: a transport failure is published as the typed registr
 		return outcome.failure.error as unknown as ReturnType<typeof failureOf>;
 	}
 
-	test('a refused connection: security.outbound_failed, unavailable, retryable, no host or runtime text', async () => {
+	test('a refused connection: tool.source_unavailable naming the IRI’s site, no address or runtime text', async () => {
 		const asked: string[] = [];
 		const outcome = await loadRdf('https://vocab.example.test/term/1', [], {
 			pinned: {
@@ -184,15 +186,18 @@ describe('tool_import_rdf: a transport failure is published as the typed registr
 		expect(outcome.kind === 'failed' && outcome.failure.uri).toBe(
 			'https://vocab.example.test/term/1',
 		);
-		expect(body.code).toBe('security.outbound_failed');
+		// For the cataloguer a source that does not answer is out of service: the
+		// label names its site and sends them to its maintainer.
+		expect(body.code).toBe('tool.source_unavailable');
 		expect(body.category).toBe('unavailable');
 		expect(body.retryable).toBe(true);
-		expect(body.message).toBe('The outbound request could not be completed');
+		expect((body as { label_key?: string }).label_key).toBe('error_tool_source_unavailable');
+		expect((body as { details?: unknown }).details).toEqual({ site: 'https://vocab.example.test' });
 		// A transport failure is final: no `.rdf` retry against the same dead host.
 		// (The pinned socket is handed the VETTED address, not the name.)
 		expect(asked).toEqual(['https://93.184.216.34/robots.txt', 'https://93.184.216.34/term/1']);
 		const wire = JSON.stringify(publicPart(body));
-		for (const leak of ['vocab.example.test', '93.184.216.34', 'Unable to connect', 'hop connect'])
+		for (const leak of ['/term/1', '93.184.216.34', 'Unable to connect', 'hop connect'])
 			expect(wire, leak).not.toContain(leak);
 	});
 
@@ -322,7 +327,7 @@ describe('tool_import_rdf: dereferencing an IRI through the harvesting door', ()
 		expect(outcome.kind === 'loaded' && outcome.entry.uri).toBe('https://ld.test/id/rome');
 		expect(documentsAsked(site)).toEqual(['https://ld.test/id/rome']);
 		const accept = site.sent.find((r) => r.url.pathname === '/id/rome')?.headers.get('accept');
-		expect(accept).toBe('application/rdf+xml, application/xml;q=0.9, text/xml;q=0.8');
+		expect(accept).toBe('application/rdf+xml');
 	});
 
 	test('a 303 See Other is followed to the document', async () => {
@@ -370,9 +375,7 @@ describe('tool_import_rdf: dereferencing an IRI through the harvesting door', ()
 		const documents = site.sent.filter((r) => r.url.pathname !== '/robots.txt');
 		expect(documents).toHaveLength(2);
 		for (const request of documents) {
-			expect(request.headers.get('accept')).toBe(
-				'application/rdf+xml, application/xml;q=0.9, text/xml;q=0.8',
-			);
+			expect(request.headers.get('accept')).toBe('application/rdf+xml');
 			// Bounded well inside the client's 60 s wait (the door's default is 120 s).
 			expect(request.timeoutMs).toBe(15_000);
 			// The door's 30 s idle default, clamped to the total.
@@ -524,7 +527,10 @@ describe('tool_import_rdf: dereferencing an IRI through the harvesting door', ()
 			'https://a.test/id/1': RDF_OK,
 			'https://down.test/id/2': {
 				status: 0,
-				error: new DedaloError('security.outbound_failed', { message: 'connect refused' }),
+				error: new DedaloError('security.outbound_failed', {
+					message: 'connect refused',
+					coordinates: { reason: 'transport', stage: 'connect' },
+				}),
 			},
 			'https://c.test/id/3': RDF_OK,
 		});
@@ -538,7 +544,7 @@ describe('tool_import_rdf: dereferencing an IRI through the harvesting door', ()
 			'https://c.test/id/3',
 		]);
 		expect(batch.errors.map((entry) => [entry.uri, entry.error.code])).toEqual([
-			['https://down.test/id/2', 'security.outbound_failed'],
+			['https://down.test/id/2', 'tool.source_unavailable'],
 		]);
 	});
 
@@ -583,6 +589,18 @@ describe('tool_import_rdf: which failures end the attempt, and which one is told
 		]);
 	});
 
+	test('a 406 Not Acceptable (a server matching Accept literally) falls back to `.rdf`', async () => {
+		const site = linkedDataSite({
+			'https://ld.test/id/rome': { status: 406 },
+			'https://ld.test/id/rome.rdf': RDF_OK,
+		});
+		subjectsOf(await loadRdf('https://ld.test/id/rome', [], site.deps));
+		expect(documentsAsked(site)).toEqual([
+			'https://ld.test/id/rome',
+			'https://ld.test/id/rome.rdf',
+		]);
+	});
+
 	test('two wrong media types: the IRI’s own is told, not the guess’s', async () => {
 		const site = linkedDataSite({
 			'https://ld.test/id/rome': { status: 200, contentType: 'text/turtle', body: '@prefix' },
@@ -616,11 +634,11 @@ describe('tool_import_rdf: which failures end the attempt, and which one is told
 				'https://ld.test/id/rome': { status },
 				'https://ld.test/id/rome.rdf': RDF_OK,
 			});
-			const outcome = await withDebugErrors(() =>
-				loadRdf('https://ld.test/id/rome', [], site.deps),
-			);
-			expect(codeOf(outcome)).toBe('security.outbound_failed');
-			expect(statusOf(outcome)).toBe(status);
+			const outcome = await loadRdf('https://ld.test/id/rome', [], site.deps);
+			expect(codeOf(outcome)).toBe('tool.source_unavailable');
+			expect(outcome.kind === 'failed' && outcome.failure.error.details).toEqual({
+				site: 'https://ld.test',
+			});
 			expect(documentsAsked(site)).toEqual(['https://ld.test/id/rome']);
 		});
 	}
@@ -643,15 +661,91 @@ describe('tool_import_rdf: which failures end the attempt, and which one is told
 		expect(documentsAsked(site)).toEqual(['https://ld.test/id/rome']);
 	});
 
-	test('an unreadable robots.txt is harvest.robots_unavailable: nothing is fetched', async () => {
+	test('an unreadable robots.txt: the source is out of service, nothing is fetched', async () => {
 		const site = linkedDataSite({
 			'https://ld.test/robots.txt': { status: 500 },
 			'https://ld.test/id/rome': RDF_OK,
 			'https://ld.test/id/rome.rdf': RDF_OK,
 		});
 		const outcome = await loadRdf('https://ld.test/id/rome', [], site.deps);
-		expect(codeOf(outcome)).toBe('harvest.robots_unavailable');
+		expect(codeOf(outcome)).toBe('tool.source_unavailable');
 		expect(documentsAsked(site)).toEqual([]);
+	});
+
+	test('a source slower than the deadline is out of service, told in time', async () => {
+		// A hop that never answers on its own — it ends only when the job signal
+		// aborts, as the real primitive does (core/security/ssrf_guard.ts).
+		const site = linkedDataSite({});
+		const hung: HarvestDeps = {
+			...site.deps,
+			hop: (request) => {
+				if (request.url.pathname === '/robots.txt') return site.deps.hop!(request);
+				return new Promise((_, reject) => {
+					const signal = currentJobSignal();
+					signal?.addEventListener('abort', () =>
+						reject(
+							new DedaloError('security.outbound_failed', {
+								coordinates: { reason: 'aborted', stage: 'connect' },
+							}),
+						),
+					);
+				});
+			},
+		};
+		const started = Date.now();
+		const outcome = await loadRdf('https://slow.test/id/rome', [], hung, 50);
+		expect(codeOf(outcome)).toBe('tool.source_unavailable');
+		expect(outcome.kind === 'failed' && outcome.failure.error.details).toEqual({
+			site: 'https://slow.test',
+		});
+		expect(Date.now() - started).toBeLessThan(5_000);
+	});
+
+	test('the batch passes the deadline to every IRI', async () => {
+		const site = linkedDataSite({});
+		const hung: HarvestDeps = {
+			...site.deps,
+			hop: (request) =>
+				request.url.pathname === '/robots.txt'
+					? site.deps.hop!(request)
+					: new Promise((_, reject) => {
+							currentJobSignal()?.addEventListener('abort', () =>
+								reject(
+									new DedaloError('security.outbound_failed', {
+										coordinates: { reason: 'aborted', stage: 'connect' },
+									}),
+								),
+							);
+						}),
+		};
+		const batch = await loadRdfBatch(['https://slow.test/id/1'], [], hung, 50);
+		expect(batch.errors.map((entry) => entry.error.code)).toEqual(['tool.source_unavailable']);
+	});
+
+	test('only a site that does not answer is an outage: another transport failure stays generic', async () => {
+		const site = linkedDataSite({
+			'https://ld.test/id/rome': {
+				status: 0,
+				error: new DedaloError('security.outbound_failed', {
+					coordinates: { reason: 'redirect', stage: 'connect' },
+				}),
+			},
+		});
+		expect(codeOf(await loadRdf('https://ld.test/id/rome', [], site.deps))).toBe(
+			'security.outbound_failed',
+		);
+	});
+
+	test('the deadline is the cataloguer’s wait: 15 s per IRI, inside the client’s 60 s', () => {
+		expect(RDF_IRI_DEADLINE_MS).toBe(15_000);
+		expect(RDF_IRI_DEADLINE_MS * RDF_MAX_URIS).toBeLessThan(60_000);
+	});
+
+	test('a 404 is not an outage: the source answered', async () => {
+		const site = linkedDataSite({});
+		expect(codeOf(await loadRdf('https://ld.test/id/rome', [], site.deps))).toBe(
+			'security.outbound_failed',
+		);
 	});
 
 	test('any public host is reachable (hosts: public, not an allowlist)', async () => {

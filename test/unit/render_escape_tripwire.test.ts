@@ -1123,7 +1123,7 @@ const REMAINDER_RATCHET: Readonly<Record<string, number>> = {
 	'tools/tool_image_rotation/js/tool_image_rotation.js': 3,
 	'tools/tool_import_dedalo_csv/js/render_tool_import_dedalo_csv.js': 11,
 	'tools/tool_import_files/js/render_tool_import_files.js': 15,
-	'tools/tool_import_rdf/js/render_tool_import_rdf.js': 2,
+	'tools/tool_import_rdf/js/render_tool_import_rdf.js': 1,
 	'tools/tool_indexation/js/render_tool_indexation.js': 7,
 	'tools/tool_indexation/js/tag_note.js': 1,
 	'tools/tool_lang/js/browser_translation.js': 5,

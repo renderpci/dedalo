@@ -33,6 +33,8 @@ import {
 	type HarvestRequest,
 	harvestFetch,
 } from '../../../src/core/harvest/harvest.ts';
+import { siteOf } from '../../../src/core/harvest/refusals.ts';
+import { currentJobSignal, runWithJobSignal } from '../../../src/core/media/job_scope.ts';
 import { getPermissions } from '../../../src/core/security/permissions.ts';
 import {
 	type ToolActionContext,
@@ -126,8 +128,13 @@ function rdfMap(options: Record<string, unknown>): RdfMapEntry[] {
 
 /** The media types an RDF/XML document is served as. */
 const RDF_XML_TYPES = ['application/rdf+xml', 'application/xml', 'text/xml'];
-/** Content negotiation: RDF/XML first, generic XML after. */
-const RDF_XML_ACCEPT = 'application/rdf+xml, application/xml;q=0.9, text/xml;q=0.8';
+/**
+ * Content negotiation: the ONE media type RDF/XML is registered as. A single type,
+ * not a weighted list: linked-data servers that match the header literally
+ * (numismatics.org's OCRE, measured 2026-10-01) answer `application/rdf+xml` and
+ * refuse any list with 406 Not Acceptable — which the `.rdf` fallback then covers.
+ */
+const RDF_XML_ACCEPT = 'application/rdf+xml';
 /**
  * The `.rdf` form names the file itself, and static file servers often label it
  * as bytes or text; an HTML page is still refused.
@@ -135,11 +142,21 @@ const RDF_XML_ACCEPT = 'application/rdf+xml, application/xml;q=0.9, text/xml;q=0
 const RDF_FILE_TYPES = [...RDF_XML_TYPES, 'application/octet-stream', 'text/plain'];
 /** The body ceiling (a large authority graph). */
 const RDF_MAX_BYTES = 20 * 1024 * 1024;
-/**
- * Total time per hop, body included. Bounds one hop, not the call: a hung hop
- * fails inside the client's 60 s wait; the pace between hops is not counted.
- */
+/** Total time per hop, body included (the IRI's deadline below bounds them all). */
 const RDF_HOP_TIMEOUT_MS = 15_000;
+/**
+ * How long ONE IRI may take, everything included: robots.txt, the site's pace,
+ * every redirect, the `.rdf` retry. A cataloguer waits for the answer, and a
+ * source that needs longer is, for them, out of service (`tool.source_unavailable`).
+ * At `RDF_MAX_URIS` IRIs a call stays inside the client's 60 s wait.
+ */
+export const RDF_IRI_DEADLINE_MS = 15_000;
+/**
+ * The guard's reasons for a request that ended because the SITE did not answer
+ * (core/security/ssrf_guard.ts `hopFailureReason` + the idle body): a deadline
+ * (ours included — it aborts the job signal), a dropped connection, a stall.
+ */
+const SITE_DOWN_REASONS: readonly string[] = ['timeout', 'transport', 'idle', 'aborted'];
 
 /** The door request for one RDF document. */
 function rdfRequest(url: string, accepted: readonly string[]): HarvestRequest {
@@ -261,16 +278,56 @@ export async function loadRdf(
 	uri: string,
 	map: RdfMapEntry[],
 	deps: HarvestDeps = {},
+	deadlineMs: number = RDF_IRI_DEADLINE_MS,
 ): Promise<RdfOutcome> {
 	try {
-		const { subjects } = parseRdfXml(await fetchRdfXml(uri, deps));
+		const xml = await withDeadline(deadlineMs, () => fetchRdfXml(uri, deps));
+		const { subjects } = parseRdfXml(xml);
 		// A class-map yields the mapped fields (the dd_object the client form
 		// consumes); without one, the raw subjects.
 		const mapped = map.length > 0 ? applyRdfMap(subjects, map) : subjects;
 		return { kind: 'loaded', entry: { uri, subjects: mapped } };
 	} catch (error) {
-		return { kind: 'failed', failure: { uri, error: toErrorBody(toDedaloError(error)) } };
+		return { kind: 'failed', failure: { uri, error: toErrorBody(reported(uri, error)) } };
 	}
+}
+
+/**
+ * Run `work` under a deadline: the door ends every wait and request of the IRI
+ * when the job signal aborts, so the deadline IS a job signal — composed with an
+ * enclosing job's, when there is one.
+ */
+function withDeadline<T>(ms: number, work: () => Promise<T>): Promise<T> {
+	const deadline = AbortSignal.timeout(ms);
+	const job = currentJobSignal();
+	return runWithJobSignal(job === undefined ? deadline : AbortSignal.any([job, deadline]), work);
+}
+
+/**
+ * Whether a failure means the site is not answering: no answer in time, a dropped
+ * connection, a 5xx / 408 / 429, or a robots.txt it could not deliver.
+ */
+function siteIsDown(error: DedaloError): boolean {
+	if (error.code === 'harvest.robots_unavailable') return true;
+	if (error.code !== 'security.outbound_failed') return false;
+	const { reason, status } = error.coordinates ?? {};
+	if (typeof status === 'number') return !meansNotHere(status);
+	return SITE_DOWN_REASONS.includes(String(reason));
+}
+
+/**
+ * What the cataloguer is told: a site that is not answering is `tool.source_unavailable`
+ * (out of service — contact its maintainer), naming the IRI's own origin, never a
+ * redirect target; anything else as it was thrown.
+ */
+function reported(uri: string, error: unknown): DedaloError {
+	const typed = toDedaloError(error);
+	if (!siteIsDown(typed)) return typed;
+	return new DedaloError('tool.source_unavailable', {
+		details: { site: siteOf(uri) },
+		coordinates: { tool: 'tool_import_rdf', cause_code: typed.code },
+		cause: typed,
+	});
 }
 
 /** What one call reports: each loaded IRI's subjects, each failed IRI's wire body. */
@@ -287,10 +344,11 @@ export async function loadRdfBatch(
 	values: readonly string[],
 	map: RdfMapEntry[],
 	deps: HarvestDeps = {},
+	deadlineMs: number = RDF_IRI_DEADLINE_MS,
 ): Promise<RdfBatch> {
 	const batch: RdfBatch = { rdf: [], errors: [] };
 	for (const raw of values) {
-		const outcome = await loadRdf(raw, map, deps);
+		const outcome = await loadRdf(raw, map, deps, deadlineMs);
 		if (outcome.kind === 'loaded') batch.rdf.push(outcome.entry);
 		else batch.errors.push(outcome.failure);
 	}

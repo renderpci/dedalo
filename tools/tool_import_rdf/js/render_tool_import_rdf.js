@@ -18,8 +18,9 @@
 * tool_import_rdf.js to its own prototype chain).
 *
 * Data shape consumed:
-*   self.main_element.data.value — Array<{iri: string}>
-*     Each entry is an IRI object from the main component_iri component.
+*   self.main_element.data.entries — Array<{id, iri, lang, title?}>
+*     Each entry is an IRI item of the main component_iri component (the v7
+*     data envelope keys a component's items as `entries`, never `value`).
 *   self.main_element.context.properties.ar_tools_name.tool_import_rdf.external_ontology — string|null
 *     Optional ontology tipo override; when absent, null is passed to get_rdf_data.
 *   The owning section instance (resolved by model via get_caller_by_model) is
@@ -227,9 +228,7 @@ const get_content_data_edit = async function(self) {
 			// mappings and class/property correspondence for the import.
 			// Falls back to null when the property is absent (ontology_tipo=null tells
 			// the server to skip external-ontology resolution).
-				const ontology_tipo = self.main_element.context.properties.ar_tools_name.tool_import_rdf.external_ontology
-					? self.main_element.context.properties.ar_tools_name.tool_import_rdf.external_ontology
-					: null
+				const ontology_tipo = self.main_element.context?.properties?.ar_tools_name?.tool_import_rdf?.external_ontology || null
 
 				self.get_rdf_data(ontology_tipo, ar_values)
 				.then(function(response){
@@ -360,8 +359,8 @@ export const render_rdf_payload = function(wrapper, rdf_payload) {
 * RENDER_COMPONENT_DATO
 * Build the IRI radio-button list from the main_element's component_iri data.
 *
-* Iterates over `self.main_element.data.value` — an Array<{iri: string}> where
-* each entry represents one IRI stored in the linked component_iri component.
+* Iterates over `self.main_element.data.entries` — the component_iri items
+* (`{id, iri, lang, title?}`), one per IRI stored in the linked component.
 * For each entry:
 *   - A <label> is created. When the iri is missing or empty the label gets the
 *     CSS class 'error' and the entry is skipped (no radio rendered).
@@ -370,16 +369,18 @@ export const render_rdf_payload = function(wrapper, rdf_payload) {
 *   - When there is exactly one IRI, its radio is pre-checked so the user can
 *     submit immediately without an explicit selection step.
 *
+* The IRI is caller data: it is written as text, never parsed as HTML.
+*
 * The returned container is queried by the button click handler via
 * `.querySelectorAll('.component_data:checked')` to collect selected IRIs.
 *
 * @param {Object} self - The tool_import_rdf instance.
 * @returns {HTMLElement} source_component_container — <div> holding all radio labels.
 */
-const render_component_dato = function(self) {
+export const render_component_dato = function(self) {
 
 	const data				= self.main_element.data || {}
-	const component_value	= data.value || []
+	const component_value	= Array.isArray(data.entries) ? data.entries : []
 
 	const source_component_container = ui.create_dom_element({
 		element_type	: 'div',
@@ -389,14 +390,14 @@ const render_component_dato = function(self) {
 	const component_value_len = component_value.length
 	for (let i = 0; i < component_value_len; i++) {
 
-		const iri = component_value[i].iri
+		const iri = component_value[i] ? component_value[i].iri : null
 
 		// Render the label first regardless of whether iri is valid so users can
 		// see the error state and understand why a radio button is absent.
 		const radio_label = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'component_data_label' + ((!iri || !iri.length) ? ' error' : ''),
-			inner_html		: iri || 'IRI value is empty',
+			text_content	: iri || 'IRI value is empty',
 			parent			: source_component_container
 		})
 
